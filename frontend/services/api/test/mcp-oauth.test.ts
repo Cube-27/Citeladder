@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { Hono } from 'hono';
+import { parse, type DefaultTreeAdapterMap } from 'parse5';
 import { afterAll, beforeEach, expect, it } from 'vitest';
 import { createApp } from '../src/app.ts';
 import { configEnvironment, policy } from '../src/config.ts';
@@ -371,9 +372,9 @@ it('binds CSRF, explicit selection, PKCE and redirect before a code can be consu
   const c = await client('client_secret_basic');
   const transaction = await pending(c.client_id);
   expect((await consent(transaction, [tenant.workspaceId], 'wrong')).status).toBe(403);
-  expect((await consent(transaction, [])).status).toBe(403);
+  expect((await consent(transaction, [])).status).toBe(400);
   const foreign = await fixtures.tenant();
-  expect((await consent(transaction, [foreign.workspaceId])).status).toBe(403);
+  expect((await consent(transaction, [foreign.workspaceId])).status).toBe(400);
   const approved = await consent(transaction);
   expect(approved.status).toBe(303);
   expect((await consent(transaction)).status).toBe(403);
@@ -695,4 +696,115 @@ it('caps tool calls per connection and refuses the next with a retry time', asyn
   expect(refused).toBeInstanceOf(ApiError);
   expect((refused as ApiError).status).toBe(429);
   expect(Number((refused as ApiError).headers?.['retry-after'])).toBeGreaterThan(0);
+});
+
+/** What a person sees on a consent page: its form inputs and its visible text. */
+function consentDocument(source: string) {
+  const inputs: Record<string, string>[] = [];
+  let text = '';
+  const walk = (node: DefaultTreeAdapterMap['node']) => {
+    if (node.nodeName === 'style') return;
+    if (node.nodeName === 'input' && 'attrs' in node)
+      inputs.push(Object.fromEntries(node.attrs.map((attr) => [attr.name, attr.value])));
+    if (node.nodeName === '#text' && 'value' in node) text += node.value;
+    if ('childNodes' in node) for (const child of node.childNodes) walk(child);
+  };
+  walk(parse(source));
+  return {
+    workspaces: inputs.filter(
+      (input) => input.type === 'checkbox' && input.name !== 'accept_terms',
+    ),
+    terms: inputs.find((input) => input.name === 'accept_terms'),
+    text: text.replace(/\s+/gu, ' '),
+  };
+}
+async function consentView(transaction: string) {
+  const page = await app.request(
+    `${browser}/mcp/oauth/consent?transaction=${encodeURIComponent(transaction)}`,
+    { headers: { cookie } },
+  );
+  return { status: page.status, ...consentDocument(await page.text()) };
+}
+function approve(transaction: string, selected: string[], extra: Record<string, string> = {}) {
+  const form = new URLSearchParams({
+    transaction,
+    csrf_token: consentCsrf(config, session, transaction),
+    decision: 'approve',
+    ...extra,
+  });
+  for (const id of selected) form.append('workspace_id', id);
+  return app.request(`${browser}/mcp/oauth/consent`, {
+    method: 'POST',
+    headers: { cookie, 'content-type': 'application/x-www-form-urlencoded' },
+    body: form,
+  });
+}
+
+it('pre-selects the only shareable workspace and names the signed-in account', async () => {
+  await db
+    .updateTable('workspaces')
+    .set({ name: 'Acme' })
+    .where('id', '=', tenant.workspaceId)
+    .execute();
+  const view = await consentView(await pending((await client()).client_id));
+  expect(view.status).toBe(200);
+  expect(view.workspaces).toEqual([
+    {
+      type: 'checkbox',
+      name: 'workspace_id',
+      value: tenant.workspaceId,
+      checked: '',
+      required: '',
+    },
+  ]);
+  expect(view.text).toContain(`Signed in as ${tenant.userId}@example.test`);
+  expect(view.text).toContain('Acme');
+  expect(view.text).not.toContain(tenant.workspaceId);
+  expect(view.terms).toBeUndefined();
+});
+
+it('accepts the current Terms on the consent page and explains an inactive workspace', async () => {
+  const fresh = await fixtures.ownedWorkspace(tenant.userId);
+  const lapsed = await fixtures.ownedWorkspace(tenant.userId, { access: false });
+  await db.updateTable('workspaces').set({ name: 'Lapsed' }).where('id', '=', lapsed).execute();
+  const transaction = await pending((await client()).client_id);
+  const view = await consentView(transaction);
+  expect(view.workspaces.map((input) => [input.value ?? 'none', 'disabled' in input])).toEqual(
+    expect.arrayContaining([
+      [tenant.workspaceId, false],
+      [fresh, false],
+      ['none', true],
+    ]),
+  );
+  expect(view.text).toContain('Lapsed Its trial or subscription is not active');
+  expect(view.terms).toEqual({ type: 'checkbox', name: 'accept_terms', value: 'yes' });
+
+  const inactive = await approve(transaction, [lapsed]);
+  expect(inactive.status).toBe(400);
+  expect(consentDocument(await inactive.text()).text).toContain(
+    'Select only workspaces that can be shared right now.',
+  );
+  const unaccepted = await approve(transaction, [fresh]);
+  expect(unaccepted.status).toBe(400);
+  expect(consentDocument(await unaccepted.text()).text).toContain(
+    'Accept the Terms of Service to share these workspaces.',
+  );
+  const approved = await approve(transaction, [fresh], { accept_terms: 'yes' });
+  expect(approved.status).toBe(303);
+  expect(new URL(approved.headers.get('location')!).searchParams.get('code')).toBeTruthy();
+  expect(
+    await db
+      .selectFrom('policy_acceptances')
+      .select(['context', 'terms_revision'])
+      .where('workspace_id', '=', fresh)
+      .where('actor_id', '=', tenant.userId)
+      .execute(),
+  ).toEqual([{ context: 'mcp_consent', terms_revision: policy.mcp.terms_revision }]);
+});
+
+it('explains an expired approval link instead of a bare error', async () => {
+  const view = await consentView('expired-or-unknown');
+  expect(view.status).toBe(403);
+  expect(view.text).toContain('This approval link has expired');
+  expect(view.text).toContain('connect CiteLadder again');
 });

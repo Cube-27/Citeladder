@@ -6,6 +6,7 @@ import { policy, type ServiceConfig } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { strings } from '../db/json.ts';
 import { compareText } from '../text-order.ts';
+import { recordPolicyAcceptance } from '../workspaces/policies.ts';
 import { READ_ROLES } from './data.ts';
 import { accountAllowed, loadMcpConfig, mcpPolicy, type McpConfig } from './config.ts';
 import type { McpPrincipal } from './types.ts';
@@ -98,36 +99,67 @@ async function revokeGrant(
     .execute();
   await recordSecurityEvent(trx, event, grant.user_id, null, grant.id);
 }
-export async function consentableWorkspaces(db: Database, userId: string) {
+/**
+ * Why a workspace can or cannot be approved right now. `terms` is resolvable on
+ * the consent page itself; `inactive` needs its trial or subscription fixed.
+ */
+export type ConsentWorkspace = Readonly<{
+  id: string;
+  name: string;
+  hasProject: boolean;
+  state: 'ready' | 'terms' | 'inactive';
+}>;
+
+/** Every workspace the account could share, each with what approving it needs. */
+export async function consentWorkspaces(db: Database, userId: string): Promise<ConsentWorkspace[]> {
   const rows = await db
     .selectFrom('workspaces as w')
     .innerJoin('workspace_members as m', 'm.workspace_id', 'w.id')
-    .select(['w.id', 'w.name'])
-    .where('m.user_id', '=', userId)
-    .where('m.role', 'in', READ_ROLES)
-    .where('w.is_system', '=', false)
-    .where(({ exists, selectFrom }) =>
+    .select(({ exists, selectFrom }) => [
+      'w.id',
+      'w.name',
       exists(
         selectFrom('policy_acceptances as p')
           .select('p.id')
           .whereRef('p.workspace_id', '=', 'w.id')
           .where('p.actor_id', '=', userId)
           .where('p.terms_revision', '=', policy.mcp.terms_revision),
-      ),
-    )
+      ).as('accepted'),
+      exists(
+        selectFrom('projects as pr').select('pr.id').whereRef('pr.workspace_id', '=', 'w.id'),
+      ).as('has_project'),
+    ])
+    .where('m.user_id', '=', userId)
+    .where('m.role', 'in', READ_ROLES)
+    .where('w.is_system', '=', false)
     .orderBy('w.name')
     .orderBy('w.id')
     .execute();
   const access = await Promise.all(rows.map((row) => workspaceAccess(db, row.id)));
-  return rows.filter((_, index) => ['active', 'trial_active'].includes(access[index]!.status));
+  return rows.map((row, index) => {
+    let state: ConsentWorkspace['state'] = 'ready';
+    if (!['active', 'trial_active'].includes(access[index]!.status)) state = 'inactive';
+    else if (!row.accepted) state = 'terms';
+    return { id: row.id, name: row.name, hasProject: Boolean(row.has_project), state };
+  });
 }
+
+/** A refused approval the person can correct on the same consent page. */
+export class ConsentSelectionError extends Error {}
+/** The transaction was used, expired or never existed; only the client can restart it. */
+export class ConsentExpiredError extends OAuthError {
+  constructor() {
+    super('access_denied', 'Authorization request is invalid or expired');
+  }
+}
+
 export function completeConsent(
   db: Database,
   config: ServiceConfig,
   mcp: McpConfig,
   transaction: string,
   userId: string,
-  selected: string[] | null,
+  decision: { selected: string[]; acceptTerms: boolean } | null,
 ): Promise<string> {
   return db.transaction().execute(async (trx) => {
     const request = await trx
@@ -138,13 +170,12 @@ export function completeConsent(
       .where('expires_at', '>', new Date())
       .forUpdate()
       .executeTakeFirst();
-    if (!request)
-      throw new OAuthError('access_denied', 'Authorization request is invalid or expired');
+    if (!request) throw new ConsentExpiredError();
     const destination = new URL(request.redirect_uri);
     if (request.state) destination.searchParams.set('state', request.state);
     // RFC 9207: the client can confirm which server answered.
     destination.searchParams.set('iss', mcp.origin);
-    if (selected === null) destination.searchParams.set('error', 'access_denied');
+    if (decision === null) destination.searchParams.set('error', 'access_denied');
     else {
       const user = await trx
         .selectFrom('users')
@@ -157,10 +188,21 @@ export function completeConsent(
         !accountAllowed(config, mcp, user.email)
       )
         throw new OAuthError('access_denied', 'This account is not enabled for MCP access');
-      const unique = [...new Set(selected)].sort(compareText);
-      const allowed = new Set((await consentableWorkspaces(trx, userId)).map((w) => w.id));
-      if (!unique.length || unique.some((id) => !allowed.has(id)))
-        throw new OAuthError('access_denied', 'Select at least one currently accessible workspace');
+      const unique = [...new Set(decision.selected)].sort(compareText);
+      if (!unique.length) throw new ConsentSelectionError('Select at least one workspace.');
+      const states = new Map((await consentWorkspaces(trx, userId)).map((w) => [w.id, w.state]));
+      if (unique.some((id) => states.get(id) === undefined || states.get(id) === 'inactive'))
+        throw new ConsentSelectionError('Select only workspaces that can be shared right now.');
+      const needTerms = unique.filter((id) => states.get(id) === 'terms');
+      if (needTerms.length && !decision.acceptTerms)
+        throw new ConsentSelectionError('Accept the Terms of Service to share these workspaces.');
+      for (const workspaceId of needTerms)
+        await recordPolicyAcceptance(trx, {
+          workspaceId,
+          actorId: userId,
+          revision: policy.mcp.terms_revision,
+          context: 'mcp_consent',
+        });
       const code = mintToken();
       await trx
         .insertInto('mcp_authorization_codes')

@@ -13,6 +13,8 @@ import {
 } from '@/lib/api/brand-discoveries';
 import { queryKeys } from '@/lib/api/query-keys';
 import { brandDiscoveryKeys } from '@/lib/api/query-keys/brand-discovery';
+import { safeAuthReturnPath } from '@/lib/auth/auth-return-path';
+import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import { projectDestination } from '@/lib/navigation/project-destination';
 import {
   brandStepSchema,
@@ -95,6 +97,7 @@ export function useOnboardingFlow(transactionKey: string) {
     };
   }, []);
   const isAdditional = searchParams?.get('new') === '1';
+  const returnTo = safeAuthReturnPath(searchParams?.get('return_to'));
   const initialDiscoveryId = searchParams?.get('discovery') ?? null;
   const initialStepParameter = searchParams?.get('step') ?? null;
   const [step, setStep] = useState<OnboardingStep>(() =>
@@ -215,10 +218,16 @@ export function useOnboardingFlow(transactionKey: string) {
         });
       }
       setActiveProjectId(projectId);
+      // A flow that sent the reader here to set up a project (MCP consent)
+      // continues where it started; that page is served outside this app.
+      if (returnTo) {
+        hardNavigate(returnTo);
+        return;
+      }
       startOnboardingNavigationHandoff(projectId);
       router(projectDestination('/projects', null, projectId), { replace: true });
     },
-    [activeWorkspaceId, queryClient, router, setActiveProjectId],
+    [activeWorkspaceId, queryClient, returnTo, router, setActiveProjectId],
   );
 
   const complete = useMutation({

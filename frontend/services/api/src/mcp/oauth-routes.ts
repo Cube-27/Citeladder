@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { Hono, type Context } from 'hono';
 import { getCookie } from 'hono/cookie';
-import { html } from 'hono/html';
 import { sessionUser } from '../auth/session.ts';
 import { trustedClientIdentity } from '../auth/client-identity.ts';
 import { configEnvironment, demoAccessExpired, type ServiceConfig } from '../config.ts';
@@ -12,9 +11,12 @@ import { scalarText } from '../text-order.ts';
 import { ApiError, onError } from '../errors.ts';
 import { createSecretCipher } from '../integrations/fernet.ts';
 import { loadMcpConfig, mcpPolicy, type McpConfig } from './config.ts';
+import { consentMessage, consentPage } from './consent-page.ts';
 import {
   completeConsent,
-  consentableWorkspaces,
+  ConsentExpiredError,
+  ConsentSelectionError,
+  consentWorkspaces,
   consentCsrf,
   equalSecret,
   exchangeToken,
@@ -322,93 +324,89 @@ export function registerOAuthRoutes(
     c.header('cache-control', 'no-store');
     await next();
   });
-  app.get('/mcp/oauth/consent', async (c) => {
-    const transaction = c.req.query('transaction') ?? '';
-    if (!transaction || transaction.length > 256)
-      return c.text('Invalid MCP authorization request.', 400);
+  const restart = {
+    title: 'This approval link has expired',
+    message:
+      'Approval links last a few minutes and work once. Go back to your assistant and connect CiteLadder again.',
+  };
+  /** Render the approval form for a live transaction, or explain why it is gone. */
+  async function renderConsent(c: Context<AppEnv>, transaction: string, error: string | null) {
     const row = await db
       .selectFrom('mcp_authorization_requests as r')
       .innerJoin('mcp_oauth_clients as cl', 'cl.client_id', 'r.client_id')
-      .select(['r.redirect_uri', 'r.scopes', 'cl.client_metadata'])
+      .select(['r.redirect_uri', 'cl.client_metadata'])
       .where('r.transaction_hash', '=', tokenHash(config, transaction))
       .where('r.consumed_at', 'is', null)
       .where('r.expires_at', '>', new Date())
       .executeTakeFirst();
-    if (!row) return c.text('Authorization request is invalid or expired', 403);
-    const metadata = record(row.client_metadata);
-    const workspaces = await consentableWorkspaces(db, c.get('user').id);
+    if (!row) return c.html(consentMessage(restart), 403);
+    const userId = c.get('user').id;
+    const account = await db
+      .selectFrom('users')
+      .select('email')
+      .where('id', '=', userId)
+      .executeTakeFirstOrThrow();
     const redirect = new URL(row.redirect_uri);
     c.header('x-frame-options', 'DENY');
     c.header(
       'content-security-policy',
       `${mcpPolicy.consent_csp}; form-action 'self' ${redirect.origin}`,
     );
-    const csrf = consentCsrf(config, getCookie(c, config.session.cookieName) ?? '', transaction);
     // hono/html escapes every interpolated value; client metadata is untrusted.
-    const choices = workspaces.map(
-      (w) =>
-        html`<p>
-          <label><input type="checkbox" name="workspace_id" value="${w.id}" /> ${w.name}</label>
-        </p>`,
-    );
     return c.html(
-      html`<!doctype html>
-        <html lang="en">
-          <head>
-            <meta charset="utf-8" />
-            <meta name="viewport" content="width=device-width, initial-scale=1" />
-            <title>Authorize MCP access</title>
-          </head>
-          <body>
-            <main>
-              <h1>Authorize MCP access</h1>
-              <p>
-                <strong>${scalarText(metadata.client_name) || 'MCP client'}</strong>
-                <span>Unverified application</span>
-              </p>
-              <p>
-                This name was supplied by the application and has not been verified by CiteLadder.
-                Approve only if you started this connection and recognize
-                <strong>${redirect.host}</strong>.
-              </p>
-              <p>
-                Read-only access to the workspaces you select. Joining another workspace does not
-                grant this connection access. Losing membership removes access.
-              </p>
-              <p>Sends you back to <code>${row.redirect_uri}</code></p>
-              <form method="post" action="/mcp/oauth/consent">
-                <input type="hidden" name="transaction" value="${transaction}" /><input
-                  type="hidden"
-                  name="csrf_token"
-                  value="${csrf}"
-                />
-                <fieldset>
-                  <legend>Workspaces to authorize</legend>
-                  ${choices}
-                </fieldset>
-                <button name="decision" value="approve">Approve access</button
-                ><button name="decision" value="deny">Deny access</button>
-              </form>
-            </main>
-          </body>
-        </html>`,
+      consentPage({
+        clientName: scalarText(record(row.client_metadata).client_name) || 'MCP client',
+        redirectHost: redirect.host,
+        redirectUri: row.redirect_uri,
+        email: account.email,
+        transaction,
+        csrf: consentCsrf(config, getCookie(c, config.session.cookieName) ?? '', transaction),
+        workspaces: await consentWorkspaces(db, userId),
+        error,
+        appOrigin: mcp.browserOrigin,
+        websiteOrigin: mcp.origin,
+      }),
+      error ? 400 : 200,
     );
+  }
+  const invalidTransaction = (value: string) => !value || value.length > 256;
+  app.get('/mcp/oauth/consent', async (c) => {
+    const transaction = c.req.query('transaction') ?? '';
+    if (invalidTransaction(transaction)) return c.html(consentMessage(restart), 400);
+    return renderConsent(c, transaction, null);
   });
   app.post('/mcp/oauth/consent', async (c) => {
     const form = new URLSearchParams(await c.req.text());
     const transaction = form.get('transaction') ?? '';
-    if (!transaction || transaction.length > 256)
-      return c.text('Invalid MCP authorization request.', 400);
+    if (invalidTransaction(transaction)) return c.html(consentMessage(restart), 400);
+    const back = {
+      href: `${mcp.browserOrigin}/mcp/oauth/consent?transaction=${encodeURIComponent(transaction)}`,
+      label: 'Back to the approval page',
+    };
     if (
       !equalSecret(
         consentCsrf(config, getCookie(c, config.session.cookieName) ?? '', transaction),
         form.get('csrf_token') ?? '',
       )
     )
-      return c.text('Invalid consent token.', 403);
+      return c.html(
+        consentMessage({
+          title: 'Your session changed',
+          message: 'Open the approval page again to continue as the account you are signed in to.',
+          action: back,
+        }),
+        403,
+      );
     const decision = form.get('decision');
     if (decision !== 'approve' && decision !== 'deny')
-      return c.text('Explicit consent decision required.', 403);
+      return c.html(
+        consentMessage({
+          title: 'Choose Approve or Deny',
+          message: 'The connection needs an explicit decision.',
+          action: back,
+        }),
+        403,
+      );
     try {
       return c.redirect(
         await completeConsent(
@@ -417,12 +415,25 @@ export function registerOAuthRoutes(
           mcp,
           transaction,
           c.get('user').id,
-          decision === 'deny' ? null : form.getAll('workspace_id'),
+          decision === 'deny'
+            ? null
+            : {
+                selected: form.getAll('workspace_id'),
+                acceptTerms: form.get('accept_terms') === 'yes',
+              },
         ),
         303,
       );
     } catch (error) {
-      if (error instanceof OAuthError) return c.text(error.message, 403);
+      if (error instanceof ConsentSelectionError)
+        return renderConsent(c, transaction, error.message);
+      if (error instanceof OAuthError)
+        return c.html(
+          error instanceof ConsentExpiredError
+            ? consentMessage(restart)
+            : consentMessage({ title: 'Access cannot be approved', message: error.message }),
+          403,
+        );
       throw error;
     }
   });
