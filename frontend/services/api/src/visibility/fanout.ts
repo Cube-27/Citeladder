@@ -39,12 +39,13 @@ function fanoutPosition(options: FanoutOptions, filters: Record<string, unknown>
       queryAfter: sql<boolean>`(event_count < ${count} or (event_count = ${count} and query collate "C" > ${position[2]}))`,
     };
   }
-  if (!Number.isFinite(Date.parse(position[1]!)) || !parseUuid(position[2]))
+  const [, createdAt, answerId] = position;
+  if (createdAt === undefined || !Number.isFinite(Date.parse(createdAt)) || !parseUuid(answerId))
     throw new InvalidCursorError('invalid fanout cursor');
   return {
     asOf,
     queryAfter: all,
-    answerAfter: sql<boolean>`(created_at, id) < (${storedInstant(position[1]!)}, ${position[2]}::uuid)`,
+    answerAfter: sql<boolean>`(created_at, id) < (${storedInstant(createdAt)}, ${answerId}::uuid)`,
   };
 }
 

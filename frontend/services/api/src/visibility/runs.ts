@@ -19,6 +19,7 @@ import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { storedInstant, timestamptz, utcTextOf } from '../db/timestamps.ts';
 import type { ParsedDatetime } from '../http/datetimes.ts';
+import { onlyOf } from '../lists.ts';
 import {
   cohortMetrics,
   engineMetrics,
@@ -181,7 +182,7 @@ function sourceModel(provenance: readonly ModelProvenance[], engine: string | nu
     return provenance.find((item) => item.logical_engine === engine)?.transport_model ?? null;
   }
   const models = new Set(provenance.map((item) => item.transport_model));
-  return models.size === 1 ? [...models][0]! : null;
+  return onlyOf([...models]) ?? null;
 }
 
 /**

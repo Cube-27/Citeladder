@@ -62,9 +62,11 @@ function sourcePosition(query: SourceQuery, filters: Record<string, unknown>) {
   const asOf =
     position?.[0] ?? pydanticUtcOf(query.asOf ?? fromEpochMicros(BigInt(Date.now()) * 1000n));
   if (!position) return { position, asOf };
+  const direction = position[3];
   if (
     position.length !== 4 ||
-    !['next', 'prev'].includes(position[3]!) ||
+    direction === undefined ||
+    !['next', 'prev'].includes(direction) ||
     !Number.isFinite(Date.parse(asOf)) ||
     !Number.isSafeInteger(Number(position[1])) ||
     Number(position[1]) < 0

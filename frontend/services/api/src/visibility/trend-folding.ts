@@ -133,7 +133,7 @@ function retrievalOrder(value: boolean | null): number {
  * blends two formulas: runs of another version fold into their own point.
  */
 export function bucketPoints(sources: readonly TrendSource[], granularity: string): TrendPoint[] {
-  const grouped = new Map<string, { start: string; sources: TrendSource[] }>();
+  const grouped = new Map<string, { start: string; sources: [TrendSource, ...TrendSource[]] }>();
   for (const source of sources) {
     const start = bucketStart(source.completedAt, granularity);
     const key = JSON.stringify([
@@ -142,16 +142,16 @@ export function bucketPoints(sources: readonly TrendSource[], granularity: strin
       source.analyzerVersion,
       source.scoringRuleVersion,
     ]);
-    const group = grouped.get(key) ?? { start, sources: [] };
-    group.sources.push(source);
-    grouped.set(key, group);
+    const group = grouped.get(key);
+    if (group) group.sources.push(source);
+    else grouped.set(key, { start, sources: [source] });
   }
   const buckets = [...grouped.values()];
   // Partitions sharing a boundary order by what a reader can see: the model
   // and whether retrieval was on, never by the comparison hash.
   return buckets
     .toSorted((left, right) => {
-      const [a, b] = [left.sources[0]!, right.sources[0]!];
+      const [a, b] = [left.sources[0], right.sources[0]];
       return (
         compareText(left.start, right.start) ||
         compareText(a.transportModel ?? '', b.transportModel ?? '') ||

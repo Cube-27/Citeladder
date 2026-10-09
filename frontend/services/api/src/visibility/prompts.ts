@@ -241,8 +241,8 @@ function outcome(engine: string, model: string, responses: Response[], tasks: Ta
 function groupBy<T>(
   rows: readonly T[],
   key: (row: T) => string | number,
-): Map<string | number, T[]> {
-  const groups = new Map<string | number, T[]>();
+): Map<string | number, [T, ...T[]]> {
+  const groups = new Map<string | number, [T, ...T[]]>();
   for (const row of rows) {
     const id = key(row);
     const group = groups.get(id);
@@ -397,8 +397,8 @@ async function enrichOutcomes(
     );
     item.outcomes = [...cellsByRoute.values()]
       .map((values) => ({
-        engine: values[0]!.logical_engine,
-        model: values[0]!.transport_model,
+        engine: values[0].logical_engine,
+        model: values[0].transport_model,
         values,
       }))
       .sort(
@@ -510,8 +510,8 @@ function poolPrompt(rows: readonly PromptRow[]): PromptRow {
           }
         }
         return {
-          logical_engine: entries[0]!.logical_engine,
-          transport_model: entries[0]!.transport_model,
+          logical_engine: entries[0].logical_engine,
+          transport_model: entries[0].transport_model,
           counts: pooled,
           visibility_rate: ratio(pooled.brand_responses, pooled.responses),
           owned_citation_rate: ratio(pooled.owned_citation_responses, pooled.responses),
