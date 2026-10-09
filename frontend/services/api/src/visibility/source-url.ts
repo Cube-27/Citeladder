@@ -9,7 +9,9 @@
  */
 import { sql } from 'kysely';
 
+import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
+import { passageTexts } from '../source-pages/reading.ts';
 import { pydanticUtcOrNull, utcText } from '../db/timestamps.ts';
 import { brandIdentities, identityKey } from './brand-identities.ts';
 import { authorizedSelection, evidenceScope, observedAt, type RunSelection } from './selection.ts';
@@ -44,6 +46,23 @@ export type SourceUrlDetail = {
     logo_url: string | null;
     website: string | null;
   }[];
+  page: {
+    state: string;
+    reason: string | null;
+    read_at: string | null;
+    extracted_chars: number | null;
+    page_format: string;
+    page_format_method: string | null;
+    source_class: string | null;
+    entities: {
+      kind: 'brand' | 'competitor';
+      name: string;
+      presence: string;
+      match_method: string;
+      passages: string[];
+    }[];
+    action_id: string | null;
+  } | null;
 };
 
 function scopeOf(db: Database, selection: RunSelection) {
@@ -188,6 +207,96 @@ async function brands(
   });
 }
 
+const EARNED_TARGET_PREFIX = policy.opportunity.earned_actions.EARNED_PAGE_TARGET_PREFIX;
+
+/**
+ * What this project knows about the page itself: whether and when it was
+ * read, what kind of page it is and how that was established, who is named on
+ * it with the quoted line, and the open Action to get listed on it.
+ *
+ * Presence comes from the latest SUCCESSFUL reading only, so a later failed
+ * attempt never erases what was learned, and a page nobody read carries no
+ * verdicts at all. One bounded read by page identity; it never fetches.
+ */
+async function pageSection(
+  db: Database,
+  selection: RunSelection,
+  urlHash: string | null | undefined,
+): Promise<SourceUrlDetail['page']> {
+  if (!urlHash) return null;
+  const page = await db
+    .selectFrom('source_pages')
+    .select([
+      'id',
+      'url_hash',
+      'inspection_state',
+      'inspection_reason',
+      'page_format',
+      'page_format_method',
+      'source_class',
+    ])
+    .where('workspace_id', '=', selection.workspaceId)
+    .where('project_id', '=', selection.projectId)
+    .where('url_hash', '=', urlHash)
+    .executeTakeFirst();
+  if (!page) return null;
+  const reading = await db
+    .selectFrom('source_page_snapshots')
+    .select(['id', 'extracted_chars', 'evidence_passages', utcText(sql.ref('fetched_at')).as('at')])
+    .where('workspace_id', '=', selection.workspaceId)
+    .where('project_id', '=', selection.projectId)
+    .where('source_page_id', '=', page.id)
+    .where('outcome', '=', 'inspected')
+    .orderBy('fetched_at', 'desc')
+    .orderBy('id', 'desc')
+    .limit(1)
+    .executeTakeFirst();
+  const presences = reading
+    ? await db
+        .selectFrom('source_page_entity_presences')
+        .select(['entity_kind', 'entity_name', 'presence', 'match_method', 'passage_refs'])
+        .where('workspace_id', '=', selection.workspaceId)
+        .where('project_id', '=', selection.projectId)
+        .where('snapshot_id', '=', reading.id)
+        .orderBy(sql`entity_kind <> 'brand'`)
+        .orderBy('entity_name')
+        .execute()
+    : [];
+  const action = await db
+    .selectFrom('opportunities as opportunity')
+    .innerJoin('actions as action', (join) =>
+      join
+        .onRef('action.project_id', '=', 'opportunity.project_id')
+        .on(sql<boolean>`action.member_opportunity_ids @> jsonb_build_array(opportunity.id::text)`),
+    )
+    .select('action.id')
+    .where('opportunity.workspace_id', '=', selection.workspaceId)
+    .where('opportunity.project_id', '=', selection.projectId)
+    .where('opportunity.target_key', '=', `${EARNED_TARGET_PREFIX}${page.url_hash}`)
+    .where('opportunity.superseded_at', 'is', null)
+    .where('action.workspace_id', '=', selection.workspaceId)
+    .orderBy('opportunity.priority_score', 'desc')
+    .limit(1)
+    .executeTakeFirst();
+  return {
+    state: page.inspection_state,
+    reason: page.inspection_reason,
+    read_at: pydanticUtcOrNull(reading?.at ?? null),
+    extracted_chars: reading?.extracted_chars ?? null,
+    page_format: page.page_format,
+    page_format_method: page.page_format_method,
+    source_class: page.source_class,
+    entities: presences.map((row) => ({
+      kind: row.entity_kind === 'brand' ? 'brand' : 'competitor',
+      name: row.entity_name,
+      presence: row.presence,
+      match_method: row.match_method,
+      passages: passageTexts(reading?.evidence_passages, row.passage_refs),
+    })),
+    action_id: action?.id ?? null,
+  };
+}
+
 export async function getSourceUrlDetail(
   db: Database,
   requested: RunSelection,
@@ -224,6 +333,12 @@ export async function getSourceUrlDetail(
     .orderBy('scope.observed_at', 'desc')
     .limit(1)
     .executeTakeFirst();
+  // The page identity these citations resolved to, if any did.
+  const identity = await matching
+    .where('citation.url_hash', 'is not', null)
+    .select('citation.url_hash')
+    .limit(1)
+    .executeTakeFirst();
   const retrievals = Number(overview.retrievals);
   return {
     url,
@@ -239,5 +354,6 @@ export async function getSourceUrlDetail(
     engines: await engines(db, cited),
     prompt_rows: await promptRows(db, cited),
     brands: await brands(db, selection, cited),
+    page: await pageSection(db, selection, identity?.url_hash),
   };
 }

@@ -152,7 +152,7 @@ function sortProps(sort: SortState, onSort: (column: string) => void, column: st
   };
 }
 
-/** A source's type, with the basis for the claim behind a tooltip. */
+/** A source's type, with the basis for the claim behind a tooltip and in hidden text. */
 function TypeChip({
   token,
   dimension,
@@ -165,7 +165,15 @@ function TypeChip({
   if (!label) return <MissingValue />;
   const chip = <Badge variant="neutral">{label}</Badge>;
   const basis = pageFormatBasis(method);
-  return basis ? <Tooltip content={basis}>{chip}</Tooltip> : chip;
+  if (!basis) return chip;
+  // The tooltip serves a pointer; the hidden text gives keyboard and screen
+  // reader users the same basis, since the chip itself cannot take focus.
+  return (
+    <>
+      <Tooltip content={basis}>{chip}</Tooltip>
+      <span className="sr-only">{`, ${basis}`}</span>
+    </>
+  );
 }
 
 /**
@@ -341,7 +349,7 @@ export function UrlTable({
           />
           <HintedHead
             label="URL type"
-            hint="What kind of page this is. Pages nobody has read yet, and pages on your own domain, carry no type."
+            hint="What kind of page this is: from the page itself once it has been read, otherwise from its address. A page whose kind is not evident shows as Other."
             className={URL_COLUMNS[1]}
           />
           <SortableTableHead

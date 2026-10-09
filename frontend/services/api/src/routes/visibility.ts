@@ -341,6 +341,7 @@ export const visibilityRoutes = [
         engine: { scalar: { kind: 'str' } },
         cohort: COHORT,
         domain: { scalar: { kind: 'str', maxLength: 255 } },
+        url: { scalar: { kind: 'str', minLength: 1, maxLength: MAX_URL_LENGTH } },
         source_type: { scalar: { kind: 'str', maxLength: 64 } },
         ...WINDOW,
         limit: {
@@ -358,6 +359,7 @@ export const visibilityRoutes = [
           dimension: query.dimension,
           granularity: query.granularity,
           domain: query.domain,
+          url: query.url,
           sourceClass: query.source_type,
           limit: query.limit,
         }),

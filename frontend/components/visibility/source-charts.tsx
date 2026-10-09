@@ -24,9 +24,12 @@ import { cn } from '@/lib/utils';
 export function UsageCard({
   dimension,
   query,
+  heading,
 }: Readonly<{
   dimension: 'domain' | 'url';
   query: ReturnType<typeof useSourceSeries>;
+  /** A single page's own line titles itself; the inventory's names its leaders. */
+  heading?: { title: string; description: string };
 }>) {
   const series = toChartSeries(query.data);
   const urls = dimension === 'url';
@@ -34,9 +37,12 @@ export function UsageCard({
     <Card className="relative">
       <BusyBar active={query.isFetching} label="Updating usage" />
       <CardHeader>
-        <CardTitle>{urls ? 'Source usage by URL' : 'Source usage by domain'}</CardTitle>
+        <CardTitle>
+          {heading?.title ?? (urls ? 'Source usage by URL' : 'Source usage by domain')}
+        </CardTitle>
         <CardDescription>
-          {`How often each of the leading ${urls ? 'pages' : 'domains'} was used as a source, as a share of the answers in each period.`}
+          {heading?.description ??
+            `How often each of the leading ${urls ? 'pages' : 'domains'} was used as a source, as a share of the answers in each period.`}
         </CardDescription>
       </CardHeader>
       <CardContent>

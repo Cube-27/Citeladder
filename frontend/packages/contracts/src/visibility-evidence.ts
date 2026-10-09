@@ -221,6 +221,29 @@ export const visibilitySourceUrlSchema = responseObject({
       website: z.string().nullable(),
     }),
   ),
+  // The page itself, as this project last read it; null until the project
+  // has a record of the page. `entities` come from the latest successful
+  // reading only, so an unread page carries none rather than absences.
+  page: responseObject({
+    state: z.string(),
+    reason: z.string().nullable(),
+    read_at: z.string().nullable(),
+    extracted_chars: z.number().int().nullable(),
+    page_format: z.string(),
+    page_format_method: z.string().nullable(),
+    source_class: z.string().nullable(),
+    entities: z.array(
+      responseObject({
+        kind: z.enum(['brand', 'competitor']),
+        name: z.string(),
+        presence: z.string(),
+        match_method: z.string(),
+        passages: z.array(z.string()),
+      }),
+    ),
+    // The open Action to get listed here, when competitors are on the page and you are not.
+    action_id: uuid().nullable(),
+  }).nullable(),
 });
 
 export const visibilityFanoutSummarySchema = responseObject({

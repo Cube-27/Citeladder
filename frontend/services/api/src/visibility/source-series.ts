@@ -73,6 +73,8 @@ export async function getSourceSeries(
     dimension: SourceDimension;
     granularity: SeriesGranularity;
     domain: string | null;
+    /** One page's own line, for its detail view. */
+    url?: string | null;
     sourceClass: string | null;
     limit: number;
   },
@@ -104,6 +106,7 @@ export async function getSourceSeries(
     .where(key, 'is not', null)
     .where(key, '!=', '');
   if (options.domain) counted = counted.where('citation.domain', '=', options.domain);
+  if (options.url) counted = counted.where('citation.url', '=', options.url);
   if (options.sourceClass) {
     counted = pages
       ? counted

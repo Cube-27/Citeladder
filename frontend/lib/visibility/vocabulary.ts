@@ -109,6 +109,6 @@ export function urlTypeLabel(token: string | null | undefined): string | null {
 export function pageFormatBasis(method: string | null | undefined): string | null {
   if (method === 'structured_data') return 'From the page’s own structured data';
   if (method === 'heading_evidence') return 'From the page’s headings';
-  if (method === 'url_pattern') return 'From the address; the page has not been read';
+  if (method === 'url_pattern') return 'From the page’s address';
   return null;
 }
