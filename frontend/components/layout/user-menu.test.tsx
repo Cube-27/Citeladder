@@ -91,20 +91,23 @@ describe('UserMenu', () => {
 
     const settingsIndex = labels.findIndex((label) => /settings/i.test(label));
     const billingIndex = labels.findIndex((label) => /^billing$/i.test(label));
-    const mcpIndex = labels.findIndex((label) => /^mcp$/i.test(label));
+    const connectIndex = labels.findIndex((label) => /^connect ai assistants$/i.test(label));
     const signOutIndex = labels.findIndex((label) => /sign out/i.test(label));
 
-    // Order: Settings → Billing → MCP → Sign out.
+    // Order: Settings → Billing → Connect AI assistants → Sign out.
     expect(settingsIndex).toBeGreaterThanOrEqual(0);
     expect(billingIndex).toBe(settingsIndex + 1);
-    expect(mcpIndex).toBe(billingIndex + 1);
-    expect(signOutIndex).toBe(mcpIndex + 1);
+    expect(connectIndex).toBe(billingIndex + 1);
+    expect(signOutIndex).toBe(connectIndex + 1);
 
     // asChild renders the menuitem as the Link anchor itself.
     expect(items[settingsIndex]).toHaveAttribute('href', `/settings?workspace=${WORKSPACE}`);
     expect(items[billingIndex]).toHaveAttribute('href', `/billing?workspace=${WORKSPACE}`);
-    expect(items[mcpIndex]).toHaveAttribute('href', 'https://docs.citeladder.com/mcp/');
-    expect(items[mcpIndex]).toHaveAttribute('target', '_blank');
+    expect(items[connectIndex]).toHaveAttribute(
+      'href',
+      `/settings?tab=connections&workspace=${WORKSPACE}`,
+    );
+    expect(items[connectIndex]).not.toHaveAttribute('target');
   });
 
   it('keeps settings and sign out reachable from the compact mobile trigger', async () => {

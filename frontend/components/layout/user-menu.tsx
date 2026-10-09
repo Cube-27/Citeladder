@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation } from '@tanstack/react-query';
-import { ArrowUpRight, LogOut } from 'lucide-react';
+import { LogOut, Plug } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 
@@ -14,7 +14,6 @@ import {
   DropdownTrigger,
 } from '@/components/ui/dropdown';
 import { authApi } from '@/lib/api/auth';
-import { docsHref } from '@/lib/config/docs';
 import { useSession } from '@/lib/auth/session-guard';
 import { ICONS } from '@/lib/icons';
 import { workspaceDestination } from '@/lib/navigation/project-destination';
@@ -52,6 +51,13 @@ function UserMenuContent({ presenter }: Readonly<{ presenter: UserMenuPresenter 
   const billingHref = activeWorkspaceId
     ? workspaceDestination('/billing', null, activeWorkspaceId)
     : '/billing';
+  const connectHref = activeWorkspaceId
+    ? workspaceDestination(
+        '/settings',
+        new URLSearchParams({ tab: 'connections' }),
+        activeWorkspaceId,
+      )
+    : '/settings?tab=connections';
   return (
     <DropdownContent
       align={compact ? 'end' : 'start'}
@@ -73,10 +79,10 @@ function UserMenuContent({ presenter }: Readonly<{ presenter: UserMenuPresenter 
         </Link>
       </DropdownItem>
       <DropdownItem asChild>
-        <a href={docsHref('/mcp/')} target="_blank" rel="noreferrer">
-          <ArrowUpRight className="size-4 shrink-0" aria-hidden />
-          <span>MCP</span>
-        </a>
+        <Link to={connectHref}>
+          <Plug className="size-4 shrink-0" aria-hidden />
+          <span>Connect AI assistants</span>
+        </Link>
       </DropdownItem>
       <DropdownSeparator />
       <DropdownItem

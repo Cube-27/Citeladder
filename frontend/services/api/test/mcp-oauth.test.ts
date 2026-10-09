@@ -553,15 +553,35 @@ it('lets workspace admins remove only their authorization while users cannot rev
     .set({ workspace_ids: JSON.stringify([tenant.workspaceId, other]) })
     .where('id', '=', principal.grantId)
     .execute();
+  await db
+    .updateTable('workspaces')
+    .set({ name: 'Acme' })
+    .where('id', '=', tenant.workspaceId)
+    .execute();
+  await db.updateTable('workspaces').set({ name: 'Beta' }).where('id', '=', other).execute();
   const admin = await fixtures.user();
   await fixtures.member(tenant.workspaceId, admin, 'admin');
   const adminCookie = `${config.session.cookieName}=${await sessionToken({ sub: admin, ver: 0 })}`;
   const product = createApp(config, db);
+  const own = await product.request('/api/v1/mcp/connections', { headers: { cookie } });
+  expect(await own.json()).toEqual([
+    expect.objectContaining({
+      workspaces: [
+        { id: tenant.workspaceId, name: 'Acme' },
+        { id: other, name: 'Beta' },
+      ],
+      user_email: null,
+      last_used_at: null,
+    }),
+  ]);
   const list = await product.request(`/api/v1/workspaces/${tenant.workspaceId}/mcp/connections`, {
     headers: { cookie: adminCookie },
   });
   expect(await list.json()).toEqual([
-    expect.objectContaining({ workspace_ids: [tenant.workspaceId] }),
+    expect.objectContaining({
+      workspaces: [{ id: tenant.workspaceId, name: 'Acme' }],
+      user_email: `${tenant.userId}@example.test`,
+    }),
   ]);
   expect(
     (
