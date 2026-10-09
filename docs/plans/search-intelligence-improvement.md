@@ -126,7 +126,16 @@ a refresh when a keyword dataset publishes. No schema change.
   an Action link to it.
 - **Versions.** Rule, grouping, diagnosis and verifier versions bump.
 
-Owner decisions for PR 2 are listed in the tracker log once answered.
+Owner decisions for PR 2 (2026-10-09):
+
+1. **Automatic, gated promotion**, like Demand signals; rows that do not qualify
+   keep Ask agent.
+2. **Competitor-named keywords are excluded** from promotion by default.
+3. **Balanced gates**, all configuration: search volume ≥ 50, competitor rank ≤
+   10, at most 25 new gaps per refresh, datasets up to 90 days old, partial
+   datasets allowed with a limitation.
+4. **A 90-day measurement window** for the keyword-presence check only; other
+   Actions keep 30 days.
 
 ## Deferred to the backlog
 
