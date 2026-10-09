@@ -5,9 +5,9 @@ export function isNonEmpty<T>(items: readonly T[]): items is NonEmpty<T> {
   return items.length > 0;
 }
 
-/** The last item of a list that holds at least one. */
+/** The last item of a list that holds at least one, even when that item is nullish. */
 export function lastOf<T>(items: NonEmpty<T>): T {
-  return items[items.length - 1] ?? items[0];
+  return items.reduce((_, item) => item);
 }
 
 /**

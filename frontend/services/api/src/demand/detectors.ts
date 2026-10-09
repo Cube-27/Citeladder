@@ -149,12 +149,10 @@ export function detectCtrGap(rows: QueryInput[]): Evaluation {
   );
   const candidates: Candidate[] = [];
   let usable = 0;
-  const sorted = [...cohorts.values()].sort((a, b) =>
-    a[0].row.property_ref < b[0].row.property_ref
-      ? -1
-      : a[0].row.property_ref > b[0].row.property_ref
-        ? 1
-        : Math.floor(a[0].a.position!) - Math.floor(b[0].a.position!),
+  const sorted = [...cohorts.values()].sort(
+    (a, b) =>
+      compareText(a[0].row.property_ref, b[0].row.property_ref) ||
+      Math.floor(a[0].a.position!) - Math.floor(b[0].a.position!),
   );
   for (const cohort of sorted) {
     const total = cohort.reduce((n, r) => n + r.a.impressions, 0);

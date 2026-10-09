@@ -143,7 +143,7 @@ export function detectSiteIssueOpportunities(e: SiteEvidence): DetectorHit[] {
     });
   }
   return hits
-    .sort(
+    .toSorted(
       (a, b) =>
         compareText(a.hit.rule_id, b.hit.rule_id) ||
         compareText(a.hit.target_key, b.hit.target_key) ||

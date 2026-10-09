@@ -44,6 +44,15 @@ const joined = (value: unknown) =>
   !value || (Array.isArray(value) && !value.length) ? '' : JSON.stringify(value);
 const pct = (value: unknown) => (typeof value === 'number' ? `${round(value * 100, 0)}%` : '—');
 const usd = (value: unknown) => (typeof value === 'number' ? `$${value.toFixed(4)}` : '—');
+/** The prompt-panel line: unavailable, all non-branded, or the mixed class counts. */
+function promptPanel(classes: [string, unknown][]): string {
+  if (!classes.length) return 'Prompt classification unavailable until executions complete.';
+  if (onlyOf(classes)?.[0] === 'non_branded') return 'All prompts are unaided/non-branded.';
+  return `Mixed panel: ${classes
+    .toSorted(([left], [right]) => compareText(left, right))
+    .map(([key, count]) => `${key}=${count}`)
+    .join(', ')}.`;
+}
 const md = (value: unknown) =>
   String(value ?? '')
     .replaceAll('|', '\\|')
@@ -120,14 +129,7 @@ export async function exportAudit(
   const brand = md(config.brand_name ?? 'Brand'),
     mode = String(config.benchmark_mode ?? audit.benchmark_mode);
   const classes = Object.entries(record(summary.prompt_class_counts)).filter(([, count]) => count);
-  const panel = !classes.length
-    ? 'Prompt classification unavailable until executions complete.'
-    : onlyOf(classes)?.[0] === 'non_branded'
-      ? 'All prompts are unaided/non-branded.'
-      : `Mixed panel: ${classes
-          .toSorted(([left], [right]) => compareText(left, right))
-          .map(([key, count]) => `${key}=${count}`)
-          .join(', ')}.`;
+  const panel = promptPanel(classes);
   const lines = [`# AI Search Visibility Audit — ${brand}`, '', '## Methodology', ''];
   if (provenance.length)
     lines.push(

@@ -10,6 +10,7 @@ describe('list reads', () => {
   it('reads the last item of a non-empty list', () => {
     expect(lastOf(['a'])).toBe('a');
     expect(lastOf(['a', 'b', 'c'])).toBe('c');
+    expect(lastOf(['a', null])).toBeNull();
   });
 
   it('reads the item only when the collection holds exactly one', () => {
