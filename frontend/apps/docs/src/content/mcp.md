@@ -1,6 +1,6 @@
 ---
 title: 'Connect with MCP'
-description: 'Use CiteLadder''s saved evidence in an external AI assistant through a read-only connection.'
+description: "Use CiteLadder's saved evidence in an external AI assistant through a read-only connection."
 group: 'Connect with MCP'
 order: 300
 ---

@@ -1,6 +1,6 @@
 ---
 title: 'Workspaces and access'
-description: 'Keep each team''s projects, evidence and permissions in the right place.'
+description: "Keep each team's projects, evidence and permissions in the right place."
 group: 'Start here'
 order: 30
 ---
