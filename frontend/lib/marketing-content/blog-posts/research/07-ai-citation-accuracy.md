@@ -37,7 +37,7 @@ The safest habit is to verify the claim-source relationship before reusing an an
 
 These failures require different remedies. Fixing a broken URL will not repair a claim that the underlying study never supported.
 
-## What public studies actually measured
+## What public studies measured
 
 We compared three research designs rather than combining their percentages into a misleading engine league table.
 
@@ -77,7 +77,7 @@ That link can help corroborate a statement, but counting it as an original citat
 
 A paragraph may contain several claims supported by one marker. Split them before checking.
 
-For example, “This platform supports offline work, costs less than its competitors and is the market leader” contains three different assertions. A product page might support the first, a price comparison the second, and neither the third.
+For example, "This platform supports offline work, costs less than its competitors and is the market leader" contains three different assertions. A product page might support the first, a price comparison the second, and neither the third.
 
 ### 2. Verify the source's identity
 
@@ -115,15 +115,15 @@ Use a small set of labels:
 - Unverifiable with available access.
 - Reference not found after the documented search.
 
-Do not merge “unverifiable” and “fabricated.” Save a short note explaining the verdict and the passage used.
+Do not merge "unverifiable" and "fabricated." Save a short note explaining the verdict and the passage used.
 
 ## A worked verification example
 
-Suppose an AI answer says, “A study proved this content change increases sales by 40%,” and cites a paper about visibility in generated answers.
+Suppose an AI answer says, "A study proved this content change increases sales by 40%," and cites a paper about visibility in generated answers.
 
 The source may be real, but the answer has changed both the outcome and the certainty. A visibility measure is not sales, and a result from one experimental setting does not prove a universal effect.
 
-The verdict should identify the mismatch, not merely mark the URL as valid. A corrected sentence would name the actual visibility metric, experimental setting and limitation.
+The verdict should identify the mismatch, not just mark the URL as valid. A corrected sentence would name the visibility metric, experimental setting and limitation.
 
 This is an illustrative verification exercise, not a newly observed failure by a named engine.
 
@@ -144,11 +144,11 @@ Use this [citation-audit template](/research/citeladder-2026-10/07-citation-audi
 
 ## What citation errors mean for brands
 
-A citation to your website can still misrepresent your product. That makes accuracy review part of brand monitoring, not just an academic concern.
+A citation to your website can still misrepresent your product. That makes accuracy review part of brand monitoring.
 
 Prioritise material errors: unavailable features, incorrect pricing, wrong markets, obsolete policies or misleading comparisons. Identify the source of the claim where visible, correct your own information where necessary, and document the issue before seeking a legitimate correction elsewhere.
 
-[AI citation tracking](/ai-citation-tracking) helps preserve the source and answer context. It does not replace the human judgement needed to decide whether a claim is actually supported.
+[AI citation tracking](/ai-citation-tracking) helps preserve the source and answer context. It does not replace the human judgement needed to decide whether a claim is supported.
 
 ## Frequently asked questions
 
@@ -158,7 +158,7 @@ No. A DOI can establish a publication's identity, but the paper may not support 
 
 ### Are paid AI tools always more accurate?
 
-Do not infer accuracy from price alone. Evaluate the actual task, model, retrieval mode and evidence. A tool that declines an uncertain question also needs to be evaluated differently from one that always supplies an answer.
+Do not infer accuracy from price alone. Evaluate the task, model, retrieval mode and evidence. A tool that declines an uncertain question also needs to be evaluated differently from one that always supplies an answer.
 
 ### Should I stop using AI for research?
 

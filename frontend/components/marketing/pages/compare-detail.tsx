@@ -130,8 +130,8 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
             <p className="website-body text-muted" key={item.url}>
               <a className="ed-link" href={item.url} target="_blank" rel="noreferrer">
                 {item.label}
-              </a>{' '}
-              —{' '}
+              </a>
+              {'. '}
               <time dateTime={item.reviewedDate}>
                 Source reviewed {formatBlogDate(item.reviewedDate)}
               </time>

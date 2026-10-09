@@ -5,7 +5,7 @@ group: 'Measure and understand'
 order: 100
 ---
 
-A prompt is a question you want to investigate in AI search. Topics organize related questions; the prompt’s cohort preserves what kind of question it is.
+A prompt is a question you want to investigate in AI search. Topics organize related questions; the prompt's cohort preserves what kind of question it is.
 
 ## Start with a decision, not a keyword list
 
@@ -13,9 +13,9 @@ Write questions a buyer could ask while understanding a problem, comparing appro
 
 For a fictional analytics company:
 
-- “What should a small ecommerce team use to understand repeat purchases?”
-- “Which analytics tools support a team without a data engineer?”
-- “How does Example Analytics compare with another named product?”
+- "What should a small ecommerce team use to understand repeat purchases?"
+- "Which analytics tools support a team without a data engineer?"
+- "How does Example Analytics compare with another named product?"
 
 The comparison prompt names a brand. Keep that framing separate from discovery questions where the answer has to introduce brands itself.
 
@@ -23,7 +23,7 @@ The comparison prompt names a brand. Keep that framing separate from discovery q
 
 Generated prompts use your project context. If the context is wrong, fix it before growing the portfolio. Check for irrelevant markets, unsupported product claims and repetitive questions.
 
-A suggestion is not permission to activate or run it. Use the review and activation controls provided in the app, then select the portfolio you want to measure.
+A suggestion is not permission to activate or run it. Use the review and activation controls in the app, then select the portfolio you want to measure.
 
 ## Keep a stable baseline
 

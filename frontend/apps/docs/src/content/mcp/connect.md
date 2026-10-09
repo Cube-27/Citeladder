@@ -15,16 +15,16 @@ The connection uses browser OAuth with the read scope `citeladder:read`. Do not 
 
 ## Connect your client
 
-1. Add a remote MCP server in the client’s MCP or connector settings.
+1. Add a remote MCP server in the client's MCP or connector settings.
 2. Name it **CiteLadder** and enter the endpoint above.
-3. Start the client’s authentication flow.
+3. Start the client's authentication flow.
 4. Sign in to the intended CiteLadder account in the browser.
 5. Review the requested read access and explicitly approve or deny it.
 6. Return to the client and check its reported connection status.
 
-The grant follows the account’s authorized workspaces. It is not restricted to the project currently visible in your browser. Choose the project explicitly when you begin analysis.
+The grant follows the account's authorized workspaces. It is not restricted to the project currently visible in your browser. Choose the project explicitly when you begin analysis.
 
-Client menus and command syntax vary by version. Use the installed client’s remote HTTP MCP instructions; the required endpoint and OAuth flow remain the same.
+Client menus and command syntax vary by version. Use the installed client's remote HTTP MCP instructions; the required endpoint and OAuth flow remain the same.
 
 ## Check the connection
 

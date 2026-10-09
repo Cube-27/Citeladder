@@ -1,6 +1,6 @@
 ---
 title: 'Workspaces and access'
-description: 'Keep each team’s projects, evidence and permissions in the right place.'
+description: "Keep each team's projects, evidence and permissions in the right place."
 group: 'Start here'
 order: 30
 ---
@@ -11,7 +11,7 @@ For agency work, check the selected workspace and project before connecting a pr
 
 ## Choose the right project
 
-Use the application’s workspace and project controls to select your working context. Dashboard measurements, Actions and Agent chats belong to that project.
+Use the application's workspace and project controls to select your working context. Dashboard measurements, Actions and Agent chats belong to that project.
 
 An Agent chat stays with the project where it started. Start a separate chat when you need to work on another project; asking the Agent to switch projects does not change its access.
 
@@ -29,7 +29,7 @@ A direct link to an object does not grant access to it.
 
 ## Share context carefully
 
-Links help colleagues return to the same project record, but each person still needs permission to read it. External AI clients connected through MCP also recheck the account’s current workspace access.
+Links help colleagues return to the same project record, but each person still needs permission to read it. External AI clients connected through MCP also recheck the account's current workspace access.
 
 If an invited colleague cannot open a record, verify membership rather than copying private evidence into an unrelated workspace.
 

@@ -5,11 +5,11 @@ group: 'Measure and understand'
 order: 140
 ---
 
-Performance brings imported provider evidence into your project. Connecting an account and choosing a project property are separate steps: the account grants access, and the mapping selects which property this project reads.
+Performance brings imported provider evidence into your project. Connecting an account and choosing a project property are separate steps. The account grants access, and the mapping selects which property this project reads.
 
 ## Connect and map
 
-Open the app’s integration controls, connect a supported provider and choose the matching website property. Check the selected project before confirming.
+Open the app's integration controls, connect a supported provider and choose the matching website property. Check the selected project before confirming.
 
 Search Console supplies search performance evidence. Google Analytics supplies analytics evidence, including the report used for AI Referrals. Available integrations and connection permissions depend on your workspace.
 
@@ -21,7 +21,7 @@ If data is missing, check the property, credentials, date range and import statu
 
 ## Read Performance
 
-Choose an available preset or explicit date range. Check the exact window and comparison dates, especially when the provider’s most recent complete day is earlier than today.
+Choose an available preset or explicit date range. Check the exact window and comparison dates, especially when the provider's most recent complete day is earlier than today.
 
 Headline Search Console totals use the date-only report. Query, page, country and device tables are separate breakdowns. Privacy filtering and report grain mean their rows may not add up to the headline.
 
@@ -29,9 +29,9 @@ Do not interpret a missing headline as zero or reconstruct it from a partial que
 
 ## Investigate a difference
 
-Compare compatible periods, then inspect the relevant dimension. A query-level observation and a page-level observation are not automatically evidence for a specific query–page pair.
+Compare compatible periods, then inspect the relevant dimension. A query-level observation and a page-level observation are not automatically evidence for a specific query-page pair.
 
-For that relationship, use the saved query-page evidence surfaced through [Search Demand](/demand/).
+For that relationship, use the saved query-page evidence in [Search Demand](/demand/).
 
 ## Fix a connection problem
 

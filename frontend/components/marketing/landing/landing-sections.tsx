@@ -54,7 +54,7 @@ export function Teams() {
     <section className="lp-section" id="teams">
       <div className="lp-wrap lp-stack">
         <div className="lp-head lp-head-split">
-          <h2 className="website-section-heading">Built for every team that answers to search.</h2>
+          <h2 className="website-section-heading">Built for the teams responsible for search.</h2>
           <TextLink href="/solutions">Explore solutions</TextLink>
         </div>
         <ul className="lp-teams">
@@ -99,7 +99,7 @@ export function Trust() {
     <section className="lp-section lp-soft" id="trust">
       <div className="lp-wrap lp-stack">
         <div className="lp-head lp-head-split">
-          <h2 className="website-section-heading">Built to be trusted with your evidence.</h2>
+          <h2 className="website-section-heading">How CiteLadder handles your data.</h2>
           <TextLink href="/enterprise">Enterprise</TextLink>
         </div>
         <ul className="lp-trust">

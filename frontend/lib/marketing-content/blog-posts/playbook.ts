@@ -30,7 +30,7 @@ export const POST_PLAYBOOK: BlogPost = {
   body: [
     {
       type: 'paragraph',
-      text: 'When an AI answer cites another website, the useful next question is what information that source provides. The citation may point to a comparison, an official product page, a review or material that addresses a narrow part of the buyer’s question.',
+      text: "When an AI answer cites another website, the useful next question is what information that source provides. The citation may point to a comparison, an official product page, a review or material that addresses a narrow part of the buyer's question.",
     },
     {
       type: 'paragraph',
@@ -57,17 +57,17 @@ export const POST_PLAYBOOK: BlogPost = {
     { type: 'heading', text: 'Read the source in context' },
     {
       type: 'paragraph',
-      text: 'Open the cited page and locate the material relevant to the buyer’s question. Look for concrete details such as supported use cases, eligibility, pricing conditions, compatibility, limitations or implementation requirements.',
+      text: "Open the cited page and locate the material relevant to the buyer's question. Look for concrete details such as supported use cases, eligibility, pricing conditions, compatibility, limitations or implementation requirements.",
     },
     {
       type: 'paragraph',
-      text: 'If the page is a comparison, examine the criteria. If it is a review, distinguish the reviewer’s experience from the vendor’s factual claims. If it is outdated, note what has changed and find the primary evidence for a correction.',
+      text: "If the page is a comparison, examine the criteria. If it is a review, distinguish the reviewer's experience from the vendor's factual claims. If it is outdated, note what has changed and find the primary evidence for a correction.",
     },
     {
       type: 'paragraph',
       text: 'Avoid assuming that every website appearing in an answer is a worthwhile backlink target.',
     },
-    { type: 'heading', text: 'Choose a gap you can actually address' },
+    { type: 'heading', text: 'Choose a gap you can address' },
     {
       type: 'paragraph',
       text: 'A useful content gap is a question that matters to the audience and lacks a clear, supported answer on the appropriate page.',
@@ -100,7 +100,7 @@ export const POST_PLAYBOOK: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'First verify the actual product behavior. If offline functionality exists only for selected actions, document those actions and their limits. Update the relevant product or help page if the explanation is incomplete.',
+      text: 'First verify how the product behaves. If offline functionality exists only for selected actions, document those actions and their limits. Update the relevant product or help page if the explanation is incomplete.',
     },
     {
       type: 'paragraph',
@@ -135,11 +135,11 @@ export const POST_PLAYBOOK: BlogPost = {
     { type: 'heading', text: 'Connect related explanations' },
     {
       type: 'paragraph',
-      text: 'Link the improved page from relevant product, help and educational content. Use anchor text that describes the destination, such as “supported offline actions” or “service coverage areas”.',
+      text: 'Link the improved page from relevant product, help and educational content. Use anchor text that describes the destination, such as "supported offline actions" or "service coverage areas".',
     },
     {
       type: 'paragraph',
-      text: 'Internal links should help a reader continue the task. Avoid repeating the same exact-match phrase across unrelated pages simply to increase link count.',
+      text: 'Internal links should help a reader continue the task. Avoid repeating the same exact-match phrase across unrelated pages to increase link count.',
     },
     { type: 'heading', text: 'Keep a change record' },
     {
@@ -156,7 +156,7 @@ export const POST_PLAYBOOK: BlogPost = {
         'Google explains that its AI search features build on existing SEO practices and do not require special AI markup. That guidance applies to Google; other providers have their own systems and controls. ',
         {
           type: 'link',
-          text: 'Google’s guidance on AI features',
+          text: "Google's guidance on AI features",
           href: BLOG_SOURCES.googleAiFeatures.url,
         },
         '.',

@@ -17,9 +17,9 @@ publication_status: 'editorial_review'
 
 A search engine can remain heavily used while sending fewer visits to a particular publisher. An AI assistant can become a popular research tool while users still open product pages to check prices, evidence or availability.
 
-For a website owner, the useful question is not whether an acronym survives. It is how customers discover information and what makes visiting your website worthwhile.
+For a website owner, the useful question is how customers discover information and what makes visiting your website worthwhile.
 
-## Three different meanings of “AI replacing SEO”
+## Three different meanings of "AI replacing SEO"
 
 | Claim                                | Evidence needed                                       | What it would mean for a website                   |
 | ------------------------------------ | ----------------------------------------------------- | -------------------------------------------------- |
@@ -47,7 +47,7 @@ The distinction matters when someone turns an observational headline into a reve
 
 ### What newer research adds
 
-An August 2026 preprint reports a preregistered field experiment involving 1,100 participants and finds that removing AI search features increased publisher click-through in its setting.[\[2\]](#source-2) That offers a different research design from an observational panel, but it still does not predict the effect for every query, industry or future interface.
+An August 2026 preprint reports a preregistered field experiment involving 1,100 participants and finds that removing AI search features increased publisher click-through in its setting.[\[2\]](#source-2) This is a different research design from an observational panel, but it still does not predict the effect for every query, industry or future interface.
 
 A separate July 2026 journal article, based on a 266-person survey, found patterns more consistent with complementary use of search and generative AI than immediate replacement.[\[3\]](#source-3) Its non-random, predominantly younger sample and self-reported preferences limit generalisation.
 
@@ -55,7 +55,7 @@ Read these findings together as evidence of changing behaviour, not as a single 
 
 ## Why zero-click discovery changes the value of a page
 
-Some questions can be satisfied in the answer itself. If your page merely restates a short public definition, readers may have less reason to open it after receiving a usable summary.
+Some questions can be satisfied in the answer itself. If your page only restates a short public definition, readers may have less reason to open it after receiving a usable summary.
 
 Other tasks still benefit from a destination:
 
@@ -70,7 +70,7 @@ This is an editorial opportunity, not a guarantee of traffic. Ask what the reade
 
 ## Which SEO work is likely to change?
 
-AI tools can assist with drafting, grouping questions, summarising crawl findings and preparing analysis. That changes how work is performed; it does not remove the need to check whether the output is accurate and appropriate.
+AI tools can assist with drafting, grouping questions, summarising crawl findings and preparing analysis. That changes how people do the work; it does not remove the need to check whether the output is accurate and appropriate.
 
 A useful division of responsibility is:
 
@@ -96,7 +96,7 @@ Search and retrieval systems need a usable path to public information. Broken pa
 
 ### Distinctive value
 
-Original examples, first-hand knowledge, transparent research and genuinely useful tools provide reasons for people to use a page. Merely rewriting the same summary in a new tone offers little differentiation.
+Original examples, first-hand knowledge, transparent research and useful tools give people reasons to use a page. Rewriting the same summary in a new tone offers little differentiation.
 
 ### Measurement discipline
 
@@ -108,7 +108,7 @@ Clicks, mentions, citations and conversions answer different questions. A busine
 
 Separate informational pages from product, support, local and transactional journeys. Examine which queries and landing pages changed, along with seasonality, technical changes and competition.
 
-Do not assign every decline to AI simply because AI adoption is increasing.
+Do not assign every decline to AI because AI adoption is increasing.
 
 ### 2. Upgrade the pages most vulnerable to summary-only answers
 
@@ -128,7 +128,7 @@ For prioritising overlapping work, see [GEO vs SEO](/blog/geo-vs-seo).
 
 ### 5. Report business outcomes and uncertainty together
 
-A useful report might say: “Search visits to these explanatory pages declined, AI citation observations increased on this fixed panel, and qualified enquiries were unchanged.” That is more informative than declaring either total collapse or total success from one metric.
+A useful report might say: "Search visits to these explanatory pages declined, AI citation observations increased on this fixed panel, and qualified enquiries were unchanged." That is more informative than declaring either total collapse or total success from one metric.
 
 ## What would stronger evidence of replacement look like?
 
@@ -136,7 +136,7 @@ It would require comparable longitudinal behaviour, clear definitions of a searc
 
 It would also need to distinguish adoption from substitution. A person starting to use an AI assistant does not necessarily stop using search engines.
 
-For staffing claims, the evidence would need to measure completed work, quality, oversight and costs. Demonstrating that a tool can generate a draft is not equivalent to demonstrating that it can own a search programme.
+For staffing claims, the evidence would need to measure completed work, quality, oversight and costs. Demonstrating that a tool can generate a draft is not the same as demonstrating that it can own a search programme.
 
 ## The practical answer
 

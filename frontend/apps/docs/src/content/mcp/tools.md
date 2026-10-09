@@ -25,7 +25,7 @@ Start with project discovery, inspect available evidence, then ask for the concr
 
 The generic `search` tool returns supported `citeladder://` record references. Pass a returned reference to `fetch` to read that record. Arbitrary URLs, SQL and filesystem paths are not valid substitutes.
 
-Keep the exact audit, dataset or date-window identity in your analysis. A query table and a page table do not automatically establish query–page evidence.
+Keep the exact audit, dataset or date-window identity in your analysis. A query table and a page table do not automatically establish query-page evidence.
 
 ## Preserve missing-data states
 

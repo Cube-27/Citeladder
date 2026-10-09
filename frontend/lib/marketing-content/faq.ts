@@ -55,7 +55,7 @@ export const FAQ_GROUPS: readonly FaqGroup[] = [
       ),
       faqItem(
         'How is the product organized?',
-        'CiteLadder brings AI visibility, source analysis, Site Health and connected workflows into a shared project. Use the evidence behind each observation to decide what to investigate next.',
+        'CiteLadder keeps AI visibility, source analysis, Site Health and connected workflows in one project. Open the evidence behind each observation to decide what to investigate next.',
       ),
       faqItem(
         'How does the growth loop work?',
@@ -63,7 +63,7 @@ export const FAQ_GROUPS: readonly FaqGroup[] = [
       ),
       faqItem(
         'Does CiteLadder measure AI visibility?',
-        'Yes. AI Visibility is the Track station. The product observes how answer engines mention and cite your brand and competitors and traces every metric to persisted responses under a versioned prompt portfolio.',
+        'Yes. AI Visibility is the Track station. It records how answer engines mention and cite your brand and competitors. Every metric traces back to stored responses from a versioned prompt portfolio.',
       ),
       faqItem(
         'Can CiteLadder create content?',
@@ -77,15 +77,15 @@ export const FAQ_GROUPS: readonly FaqGroup[] = [
       ),
       faqItem(
         'What do I actually have to do?',
-        'You make the product decisions that matter: save a piece of content, and run or schedule an audit. There is no approval queue or review inbox. The evidence work between those decisions is shown with its source, status, and limitations.',
+        'You make the product decisions that matter: save a piece of content, and run or schedule an audit. There is no approval queue or review inbox. CiteLadder shows the evidence work between those decisions with its source, status, and limitations.',
       ),
       faqItem(
         'What does "evidence-grounded" mean concretely?',
-        'Every derived number opens the artifact it came from: the crawl, the imported row, or the engine answer, stored as it was observed. A claim with no resolvable source does not render as a conclusion. Scores show their coverage beside them rather than being rescaled over whatever happened to be measurable, because missing evidence usually marks a weakness rather than a neutral gap.',
+        'Every derived number opens the artifact it came from: the crawl, the imported row, or the engine answer, stored as it was observed. A claim with no resolvable source does not render as a conclusion. Scores show their coverage beside them. They are not rescaled over whatever happened to be measurable, because missing evidence usually marks a weakness rather than a neutral gap.',
       ),
       faqItem(
         'What does CiteLadder not claim?',
-        'It does not claim that a change caused a ranking, traffic, or revenue outcome. Verification is descriptive: it recrawls and reports what is observed afterwards. Aggregate correlations are not presented as causal. Unavailable, not configured, and genuinely zero are three different states, not one empty chart.',
+        'It does not claim that a change caused a ranking, traffic, or revenue outcome. Verification recrawls and reports what it observes afterwards. CiteLadder does not present aggregate correlations as causal. Unavailable, not configured, and genuinely zero are three different states, not one empty chart.',
       ),
     ],
   },
@@ -94,7 +94,7 @@ export const FAQ_GROUPS: readonly FaqGroup[] = [
     items: [
       faqItem(
         'What does Site Health analyze?',
-        'Site Health safely crawls your website, records the acquired page as evidence, classifies its structural purpose, and applies deterministic checks suited to that page type. It persists scores, issues, architecture snapshots, changes, and prioritized opportunities so every result remains inspectable.',
+        'Site Health safely crawls your website, records the acquired page as evidence, classifies its structural purpose, and applies deterministic checks suited to that page type. It persists scores, issues, architecture snapshots, changes, and prioritized opportunities so you can inspect every result.',
       ),
       faqItem(
         'How does CiteLadder decide which checks apply to a page?',
@@ -102,7 +102,7 @@ export const FAQ_GROUPS: readonly FaqGroup[] = [
       ),
       faqItem(
         'What happens when a page cannot be classified confidently?',
-        'The page is classified as other rather than forced into the wrong type. General checks can still run, while page-type-specific rules stay out of scoring until the evidence supports a reliable classification.',
+        'CiteLadder classifies the page as other instead of forcing it into the wrong type. General checks can still run, while page-type-specific rules stay out of scoring until the evidence supports a reliable classification.',
       ),
     ],
   },
@@ -111,7 +111,7 @@ export const FAQ_GROUPS: readonly FaqGroup[] = [
     items: [
       faqItem(
         'How is my data isolated?',
-        'Every customer fact is scoped to its workspace and project and never crosses workspaces. Product rules and analyzers are versioned independently so persisted results retain their source and can be interpreted in context.',
+        'Every customer fact is scoped to its workspace and project and never crosses workspaces. CiteLadder versions product rules and analyzers independently, so stored results keep their source and you can read them against the rules that produced them.',
       ),
       faqItem(
         'Can I see the evidence behind a recommendation?',
@@ -119,7 +119,7 @@ export const FAQ_GROUPS: readonly FaqGroup[] = [
       ),
       faqItem(
         'Does anything publish or change automatically?',
-        'No. Saving content and running or scheduling an audit are your decisions, and both are enforced at the API, not just in the interface. Crawling, classification, gap detection, and prioritization run without asking. The result is shown with the evidence behind it.',
+        'No. Saving content and running or scheduling an audit are your decisions, and the API enforces both, not only the interface. Crawling, classification, gap detection, and prioritization run without asking, and each result appears with the evidence behind it.',
       ),
       faqItem(
         'Do I need my own API keys?',

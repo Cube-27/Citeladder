@@ -44,9 +44,9 @@ Choose the tool for the task:
 | Format a reference list             | Reference manager or formatting assistance              | Check metadata against the original record              |
 | Monitor sources cited about a brand | A defined AI-answer observation panel                   | Preserve prompt, answer, URLs and collection conditions |
 
-No tool removes the need to check whether the cited material actually says what you claim.
+No tool removes the need to check whether the cited material says what you claim.
 
-## Why asking for “five references” can go wrong
+## Why asking for "five references" can go wrong
 
 A language model can produce text that resembles a bibliography. Plausible formatting is not evidence of retrieval.
 
@@ -63,13 +63,13 @@ Formatting the reference in APA or another style comes after those checks, not b
 
 ### Step 1: turn your claim into a research question
 
-Instead of asking for references that “prove AI has replaced search,” ask a question that allows contradictory evidence:
+Instead of asking for references that "prove AI has replaced search," ask a question that allows contradictory evidence:
 
 > Find research comparing how people use AI assistants and traditional search. Separate adoption, outbound-click behaviour and task performance. Include studies that do not support replacement.
 
 This avoids building a bibliography around a conclusion you decided in advance.
 
-State relevant dates, geography, source types and exclusions. If a recent preprint is acceptable, say so; if you need peer-reviewed studies, ask for that distinction explicitly.
+State relevant dates, geography, source types and exclusions. If a recent preprint is acceptable, say so; if you need peer-reviewed studies, ask for that distinction.
 
 ### Step 2: request retrieved candidates, not a polished bibliography first
 
@@ -85,7 +85,7 @@ Open the publisher, official report page or trusted bibliographic record. Compar
 
 Crossref's Simple Text Query can help match a reference list to DOI records.[\[3\]](#source-3) A match still needs inspection when several papers have similar titles or metadata is incomplete.
 
-If a source cannot be found, keep it out of the final bibliography until resolved. Do not accept “the model says it exists” as independent verification.
+If a source cannot be found, keep it out of the final bibliography until resolved. Do not accept "the model says it exists" as independent verification.
 
 ### Step 4: read the material relevant to your claim
 
@@ -110,7 +110,7 @@ Ask the assistant to use only the sources you have checked:
 
 Then review the resulting claim-source pairs. Do not assume that supplying good sources prevents the summary from overstating them.
 
-### Step 6: format and disclose appropriately
+### Step 6: format and disclose AI assistance
 
 Use a reference manager or your required style guide to format the verified records. Follow your institution's, employer's or publisher's rules on disclosing AI assistance.
 
@@ -145,7 +145,7 @@ Over time, compare recurring sources, competitor-owned pages and inaccurate desc
 
 1. Identify whether the problem is the reference, URL, attribution or claim.
 2. Search for the intended source using verified title/author information.
-3. Replace the citation only if the replacement actually supports the sentence.
+3. Replace the citation only if the replacement supports the sentence.
 4. Otherwise change or remove the sentence.
 5. Keep a note of what was corrected and why.
 
@@ -161,7 +161,7 @@ No. Availability, identity and claim support are separate checks. Read the passa
 
 ### Can ChatGPT format citations?
 
-It can assist with formatting, but review the source metadata and required style. Correct punctuation cannot fix a nonexistent publication or wrong author list.
+It can help with formatting, but review the source metadata and required style. Correct punctuation cannot fix a nonexistent publication or wrong author list.
 
 ### What if the source is paywalled?
 

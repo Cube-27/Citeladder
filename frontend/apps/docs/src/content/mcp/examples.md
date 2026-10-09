@@ -61,7 +61,7 @@ Wait for me to choose a dataset before reading its rows.
 Do not acquire or refresh data.
 ```
 
-After choosing, narrow the question to a keyword, competitor or backlink investigation at that dataset’s actual grain.
+After choosing, narrow the question to a keyword, competitor or backlink investigation at that dataset's actual grain.
 
 ## Check a proposed next step
 
@@ -73,4 +73,4 @@ For each proposal, state what is measured, what is inferred and which
 later observation would be needed to evaluate it.
 ```
 
-Treat the assistant’s proposal as reviewable work, not a completed implementation.
+Treat the assistant's proposal as reviewable work, not a completed implementation.

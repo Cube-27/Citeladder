@@ -72,7 +72,7 @@ const AGREEMENT = [
   {
     title: 'Monthly audit runs',
     unit: 'Prompt × engine × repetition',
-    desc: 'Sized to concurrent evaluation across your active brand topics.',
+    desc: 'Sized to the brand topics you evaluate at the same time.',
   },
   {
     title: 'Monitored URLs',
@@ -82,7 +82,7 @@ const AGREEMENT = [
   {
     title: 'Projects and seats',
     unit: 'Per enterprise workspace',
-    desc: 'Each project keeps its own prompts, competitors, engines and trails.',
+    desc: 'Each project keeps its own prompts, competitors, engines and audit history.',
   },
   {
     title: 'Evidence retention',
@@ -92,7 +92,7 @@ const AGREEMENT = [
   {
     title: 'Engine connections',
     unit: 'OpenAI, Google, Anthropic',
-    desc: 'The supported direct transports, each on workspace BYOK credentials.',
+    desc: "Direct provider connections, each using your workspace's own API keys.",
   },
   {
     title: 'Support and SLA',
@@ -181,7 +181,7 @@ export function EnterpriseDataFlow() {
     <Section aria-label="How a request travels">
       <SectionHeader
         title="How a request travels."
-        lead="Managed cloud, one same-origin boundary. Provider keys are resolved only when a worker calls an engine."
+        lead="CiteLadder runs in a managed cloud behind one same-origin boundary. Provider keys are resolved only when a worker calls an engine."
         headingId="enterprise-flow-title"
       />
       <ol className="cm-flow">
@@ -201,8 +201,8 @@ export function EnterpriseFit() {
   return (
     <Section id="fit" tone="soft" aria-label="Who Enterprise is for">
       <SectionHeader
-        title="Built for high-trust teams."
-        lead="Enterprise is the right conversation when your program needs more operating context than a self-serve plan provides."
+        title="Who Enterprise is for."
+        lead="Enterprise fits when your program needs more scope and review than a self-serve plan provides."
         headingId="enterprise-fit-title"
       />
       <ul className="mk-highlights">
@@ -248,7 +248,7 @@ export function EnterpriseContactCta() {
       <div className="flex flex-col items-center gap-8 text-center" data-cta-placement="closing">
         <SectionHeader
           title="Bring your volumes and your review process."
-          lead="Tell us about your constraints and provider setup. We will map the conversation to the evidence your team needs."
+          lead="Tell us about your constraints and provider setup. We will focus the demo on the evidence your team needs."
           align="center"
         />
         <div className="flex flex-wrap justify-center gap-3">

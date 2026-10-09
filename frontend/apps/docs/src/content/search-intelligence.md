@@ -17,7 +17,7 @@ The review itself does not buy data. Confirmation is the separate decision that 
 
 Domain-plus-subdomains research and exact-host research answer different questions. A saved dataset retains the scope chosen when it was acquired, even if you later change acquisition preferences.
 
-When comparing a competitor with your site, check both datasets’ scope and market before interpreting a difference.
+When comparing a competitor with your site, check both datasets' scope and market before interpreting a difference.
 
 ## Understand the grain
 

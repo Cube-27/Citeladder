@@ -93,7 +93,7 @@ export function CookieBanner() {
       <div className="pb-[max(1rem,env(safe-area-inset-bottom))]">
         <div className="border-border-strong bg-panel shadow-overlay grid gap-4 rounded-[var(--radius-card)] border p-5">
           <div className="grid gap-2">
-            <h2 className="website-feature-heading text-foreground">Cookie Settings</h2>
+            <h2 className="website-feature-heading text-foreground">Cookie settings</h2>
             <p className="website-body text-muted">
               We use essential cookies to keep you signed in and secure. With your permission,
               non-essential cookies help us understand site usage. Read our{' '}

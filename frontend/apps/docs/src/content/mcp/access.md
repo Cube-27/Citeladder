@@ -15,7 +15,7 @@ Once an external client reads a record, it receives that data. Review its provid
 
 ## Revoke access
 
-Removing the server from a client’s local configuration may only remove the local connection. To invalidate the server-side grant, use a client action that performs OAuth revocation.
+Removing the server from a client's local configuration may only remove the local connection. To invalidate the server-side grant, use a client action that performs OAuth revocation.
 
 Removing workspace membership independently blocks reads for the affected workspace. For broader account concerns, contact your workspace administrator.
 
@@ -23,12 +23,12 @@ Removing workspace membership independently blocks reads for the affected worksp
 
 | Symptom                                   | Next step                                                           |
 | ----------------------------------------- | ------------------------------------------------------------------- |
-| Authentication is expired or denied       | Restart the client’s OAuth flow and review the browser consent      |
+| Authentication is expired or denied       | Restart the client's OAuth flow and review the browser consent      |
 | A project is missing                      | Confirm the account and its current workspace membership            |
 | A tool works but returns unavailable data | Inspect dataset inventory and integration status                    |
 | Evidence is stale                         | Refresh it through the appropriate in-app workflow, then read again |
 | An exact date window is unavailable       | Choose a reported saved window and name it explicitly               |
-| A tool is absent                          | Use the server’s actual catalog; do not invent another tool         |
+| A tool is absent                          | Use the server's actual catalog; do not invent another tool         |
 | The client cannot complete sign-in        | Check support for remote Streamable HTTP MCP with browser OAuth     |
 
 ## Use a minimal diagnostic sequence

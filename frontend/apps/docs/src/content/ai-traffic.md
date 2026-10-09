@@ -28,10 +28,10 @@ tracked citations and latest Site Health findings. Each measure shows its own
 coverage and availability. Filter by folder, resource class and verification,
 choose the sort, page through saved results or export matching rows as CSV.
 Open a path from Pages, referral landing pages, crawler drill-downs or Site Health
-to see its first/last crawl, first referral, citation dates and links to each
+to see its first and last crawl, first referral, citation dates and links to each
 owning view. Query strings and fragments are excluded from path identity.
 
-Observed crawl coverage compares recognized AI search/user-fetch requests with
+Observed crawl coverage compares recognized AI search and user-fetch requests with
 known URLs in the latest terminal Site Health inventory. It requires complete
 or declared-complete collection and shows the inventory date and sampling limits.
 It does not prove that a page is indexed.
@@ -53,8 +53,8 @@ through Settings → Integrations and sync before interpreting the Referrals tab
 - **Complete:** an unsampled live source covers a completed reporting day with
   no receipt gap above the configured bound, including empty heartbeats.
 - **Declared complete:** a completed file scan reports a full day. This is
-  explicitly client-reported, not independently verified provider coverage.
-- **Partial:** sampled/filtered logs, delivery gaps, incomplete scans or
+  client-reported, not independently verified provider coverage.
+- **Partial:** sampled or filtered logs, delivery gaps, incomplete scans or
   best-effort Worker delivery. Worker-template collection is always at most partial.
 - **Unknown:** no usable observations or coverage evidence for the day.
 
@@ -63,15 +63,15 @@ absence means no matching requests were observed in the available logs. Review
 source diagnostics, sampling and receipt gaps before drawing conclusions.
 Reporting days use the captured GA4 property timezone, or UTC before capture.
 Older rollups retain their recorded timezone; a mismatch marks the crawl and
-referral measures non-comparable. Thresholding, other-row loss, sampling or a
-failed/truncated replacement report are disclosed as quality flags. A failed
+referral measures non-comparable. Quality flags disclose thresholding, other-row
+loss, sampling or a failed or truncated replacement report. A failed
 partition uses the prior complete revision; missing flagged evidence never
 becomes measured zero. Requests, path-level pages, sessions and
 citations have separate meanings; no cross-unit conversion rate is calculated.
 
 The default verification filter includes verified and unverifiable requests.
 Failed verification is separately available. Unverifiable reasons distinguish
-missing IPs, absent published ranges and missing/stale range snapshots. A
+missing IPs, absent published ranges and missing or stale range snapshots. A
 malformed IP is unverifiable rather than a failed range check. A
 historical import may be verified against a **later snapshot** rather than one
 contemporaneous with the request; Activity discloses that basis.
@@ -146,7 +146,7 @@ and [Cloudflare request headers](https://developers.cloudflare.com/fundamentals/
 Field names, RFC3339 output and the HTTP probe/header protocol follow
 [Cloudflare's HTTP requests fields](https://developers.cloudflare.com/logs/logpush/logpush-job/datasets/zone/http_requests/)
 and [HTTP destination guide](https://developers.cloudflare.com/logs/logpush/logpush-job/enable-destinations/http/).
-Keep source IP enabled only when verification is desired; no IP is persisted.
+Keep source IP enabled only when you want verification; CiteLadder does not persist IPs.
 
 ## Custom webhook
 
@@ -170,21 +170,21 @@ Custom JSON records use these field names:
 `timestamp`, `path` and `user_agent` must be present. Timestamp includes a timezone;
 status must be a valid numeric HTTP status. Host defaults to the declared source
 host when unavailable. IP and request ID are optional. Do not include cookies,
-authorization headers or bodies. Query strings/fragments are stripped; configured
-secret path segments are redacted and cannot join an exact page identity.
+authorization headers or bodies. CiteLadder strips query strings and fragments and
+redacts configured secret path segments, which cannot join an exact page identity.
 
 Send POST to the issued HTTPS endpoint with the Bearer header. Send
 `Content-Encoding: gzip` for compressed batches. Use a stable `Idempotency-Key`
-for each retry; absent a key, SHA-256 of the body is used. Empty heartbeats need
+for each retry; without a key, the receiver uses the body's SHA-256. Empty heartbeats need
 a **distinct key for each interval** because their bodies are identical.
 Without a provider request ID, identical mapped lines from one source collapse;
 distinct requests with identical fields cannot be distinguished.
 
 Batch at least 60 seconds apart and keep within the bounds above. Current
-configuration permits 120 batch attempts/source/hour and one million accepted
-lines/project/day. A 202 response acknowledges durable receipt and queues
-processing; 401 rejects the token, 409 means disabled/revoked or conflicting state,
-415 rejects unsupported encoding/media, 422 rejects unsupported fields, and 429
+configuration permits 120 batch attempts per source per hour and one million
+accepted lines per project per day. A 202 response acknowledges durable receipt and
+queues processing; 401 rejects the token, 409 means a disabled, revoked or
+conflicting state, 415 rejects an unsupported encoding or media type, 422 rejects unsupported fields, and 429
 includes `Retry-After`. Keep a durable retry queue and honor that delay. Do not
 log request bodies, IPs or tokens in your shipper. Current backdating admission
 is 80 days and future clock skew is bounded to one hour.
@@ -196,7 +196,7 @@ gzipped. Your browser streams and decompresses the file, checks a header sample
 and sends only recognized lines. The server reapplies scope, verification,
 privacy, quotas and deduplication; local filtering is not an authorization boundary.
 
-Progress shows scanned/recognized counts and the acknowledged batch. Save the
+Progress shows scanned and recognized counts and the acknowledged batch. Save the
 upload ID and select the original file to resume. Scan counts, timestamp span and
 full-day declarations are client-reported. A zero-match file can complete its
 scan without sending unmatched lines. A partial-day scan remains partial.
@@ -210,5 +210,5 @@ derived status and coverage projections remain, with their versions and source
 receipt provenance. Folder breakdowns are bounded; verification reason breakdowns
 and Activity exports cover retained raw evidence. These implementation defaults
 do not constitute approved plan entitlements or contractual retention promises.
-Plans/quotas, retention acceptance and privacy/DPA wording gate production
-enablement. No setup here enables collection automatically.
+Production enablement depends on plans and quotas, retention acceptance and the
+privacy and DPA wording. No setup here enables collection automatically.

@@ -53,7 +53,7 @@ The practical implication is narrower: **inspect source exposure alongside menti
 
 Start with the problems customers are trying to solve, then the conditions that affect their choice.
 
-For a warehouse application, “best warehouse software” is less actionable than:
+For a warehouse application, "best warehouse software" is less actionable than:
 
 - How do I track inventory across two warehouses?
 - What happens when a scanner loses connectivity?
@@ -62,13 +62,13 @@ For a warehouse application, “best warehouse software” is less actionable th
 
 Map each question to an existing page before commissioning new content. A product limitation may belong in documentation, not a new blog post.
 
-Keep one primary intent per page. If two proposed articles would give the same reader essentially the same answer, merge the brief or give each a clearly different job.
+Keep one primary intent per page. If two proposed articles would give the same reader the same answer, merge the brief or give each a clearly different job.
 
 ## 2. Fix access for the relevant AI surface
 
 Use [Site Health](/platform/site-health) to inspect captured page evidence before choosing a correction.
 
-Review access separately for search crawlers, training crawlers and user-triggered fetches. The [GEO guide's engine comparison](/generative-engine-optimization) explains why one generic “allow AI” setting is inadequate.
+Review access separately for search crawlers, training crawlers and user-triggered fetches. The [GEO guide's engine comparison](/generative-engine-optimization) explains why one generic "allow AI" setting is inadequate.
 
 Use server and CDN logs to investigate real response failures, not merely the presence of a crawler name. Check the affected URL, response status, redirects and whether essential information was available.
 
@@ -97,9 +97,9 @@ Before adding another FAQ section, ask what evidence would resolve the uncertain
 
 Consider this illustrative rewrite:
 
-**Before:** “Our integration is seamless and enterprise-ready.”
+**Before:** "Our integration is seamless and enterprise-ready."
 
-**After:** “The integration imports new orders every 15 minutes. It requires administrator approval and does not synchronise historical refunds. The setup guide shows the required permissions and how to reconcile failed imports.”
+**After:** "The integration imports new orders every 15 minutes. It requires administrator approval and does not synchronise historical refunds. The setup guide shows the required permissions and how to reconcile failed imports."
 
 The second version is useful because it supplies decision-relevant facts. It is not presented as a tested formula for winning citations.
 
@@ -113,7 +113,7 @@ You do not need a proprietary dataset to contribute something new. You can:
 - Analyse public records with transparent inclusion rules.
 - Publish an expert explanation of why a common interpretation is wrong.
 
-Separate the original data owner from your analysis. Give the collection dates, units, exclusions, calculation and limitations. Do not rename a collection of other companies' statistics “our study.”
+Separate the original data owner from your analysis. Give the collection dates, units, exclusions, calculation and limitations. Do not rename a collection of other companies' statistics "our study."
 
 If the sample is small or selected for convenience, say so. Readers can still use a careful result without pretending it describes an entire market.
 
@@ -125,7 +125,7 @@ When several pages answer the same question with conflicting details, decide whi
 
 Microsoft's guidance identifies duplicate and near-duplicate content as a source-selection and clarity problem, including for AI experiences.[\[2\]](#source-2) That supports an audit, not a rule that every similar page must be deleted. Localised pages and distinct use cases can serve different readers when their differences are meaningful.
 
-Maintain a revision log for important claims. “Updated” should mean that someone checked and changed the substance, not simply that the date was refreshed.
+Maintain a revision log for important claims. "Updated" should mean that someone checked and changed the substance, not simply that the date was refreshed.
 
 ## 7. Build credible third-party coverage
 
@@ -153,7 +153,7 @@ Use this editorial triage, not an invented AI ranking score:
 4. **Unexplained one-off fluctuation:** observe again before spending heavily.
 5. **Speculative tactic without a mechanism or evidence:** test narrowly or defer.
 
-Assign an owner, an expected outcome and a review date to each task. A backlog entry such as “improve GEO” is too broad to verify.
+Assign an owner, an expected outcome and a review date to each task. A backlog entry such as "improve GEO" is too broad to verify.
 
 ## Run one bounded experiment
 
@@ -181,7 +181,7 @@ Start with [checking your AI visibility](/blog/verify-improve-ai-search-visibili
 
 ### Can a small business improve AI visibility without buying software?
 
-Yes. A small manual question panel, accurate website information and a few genuinely useful pages provide a practical starting point. Automation becomes valuable when repeated collection and comparison are the bottleneck.
+Yes. A small manual question panel, accurate website information and a few useful pages provide a practical starting point. Automation becomes valuable when repeated collection and comparison are the bottleneck.
 
 ### Will publishing more articles improve AI visibility?
 

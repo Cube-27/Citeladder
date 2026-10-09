@@ -5,7 +5,7 @@ group: 'Improve with Agent'
 order: 240
 ---
 
-Open **Agent → Context** to review the brand profile and the project’s Agent instructions. Good context helps the Agent produce work that fits your business without inventing missing details.
+Open **Agent → Context** to review the brand profile and the project's Agent instructions. Good context helps the Agent produce work that fits your business without inventing missing details.
 
 ## Review company facts first
 
@@ -23,7 +23,7 @@ Describe requirements that apply across tasks:
 - Evidence requirements for factual statements.
 - Constraints such as product names, regional language or content boundaries.
 
-For example: “Write for small in-house marketing teams. Explain technical terms on first use. Do not invent customer counts, price claims or performance statistics.”
+For example: "Write for small in-house marketing teams. Explain technical terms on first use. Do not invent customer counts, price claims or performance statistics."
 
 Keep task-specific requests in the chat rather than turning the standing instructions into a single long brief.
 
@@ -41,6 +41,6 @@ Missing optional evidence remains missing. Ask the Agent to state the limitation
 
 ## Understand timing
 
-A run uses the context and instructions captured when it starts. Editing the project’s context does not rewrite an earlier run or its output history.
+A run uses the context and instructions captured when it starts. Editing the project's context does not rewrite an earlier run or its output history.
 
 Update the context for future work, then request a new turn if you want an existing deliverable revised against the corrected facts.

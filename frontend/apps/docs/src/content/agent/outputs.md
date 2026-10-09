@@ -11,11 +11,11 @@ The output is the working document for a chat. It appears in the conversation ri
 
 Check the target, intended audience and supporting sources. Each reply lists the sources CiteLadder read for it, grouped by kind and linked to the screen that shows them; a revised document keeps the sources of the version before it. Separate measured facts from recommendations. If the Agent reports omitted or unavailable evidence, decide whether you can proceed with those limits.
 
-Ask for a focused revision when necessary: “Keep the structure, remove the unsupported claim, and explain which data supports the second recommendation.”
+Ask for a focused revision when necessary: "Keep the structure, remove the unsupported claim, and explain which data supports the second recommendation."
 
 ## Approve an outline before drafting
 
-Long-form content, such as articles, web pages and YouTube scripts, and prompt portfolios are outline-first. Short formats, such as social posts and forum answers, are drafted directly. Review the outline’s scope, structure and factual assumptions, then explicitly approve the outline revision you want to use.
+Long-form content, such as articles, web pages and YouTube scripts, and prompt portfolios are outline-first. Short formats, such as social posts and forum answers, are drafted directly. Review the outline's scope, structure and factual assumptions, then explicitly approve the outline revision you want to use.
 
 Approval allows the draft to be written. It does not publish the draft or declare an Action implemented.
 
@@ -31,7 +31,7 @@ If the output changed since you opened it, reload the latest revision before sav
 
 ## Copy or export
 
-Use the output pane’s copy or Markdown export controls to move reviewed work into your team’s publishing or implementation workflow.
+Use the output pane's copy or Markdown export controls to move reviewed work into your team's publishing or implementation workflow.
 
 Review the destination after pasting, especially tables, links and formatting. Exporting content is separate from publishing it.
 
@@ -39,10 +39,10 @@ Review the destination after pasting, especially tables, links and formatting. E
 
 After your team makes the actual change, use **Mark implemented** for the attached Action and confirm the revision you shipped. CiteLadder preserves that relationship for later measurement.
 
-Do not declare an outline, a speculative draft or a different Action’s output as implemented.
+Do not declare an outline, a speculative draft or a different Action's output as implemented.
 
 ## Recover from an interrupted turn
 
-Use **Stop** in the composer to end a turn that is running. A stopped, failed or budget-limited turn is not a completed new revision: the Agent replies with what happened and what to do next, and nothing from that turn is saved.
+Use **Stop** in the composer to end a turn that is running. A stopped, failed or budget-limited turn is not a completed new revision. The Agent replies with what happened and what to do next, and nothing from that turn is saved.
 
-Choose **Try again** to send the same request as a new turn, or **Edit last request** to change it first. After a finished reply, **Regenerate** asks for a fresh answer the same way. If the reply says the request was too large, make it smaller, for example one section at a time. Earlier completed revisions stay part of the chat’s history.
+Choose **Try again** to send the same request as a new turn, or **Edit last request** to change it first. After a finished reply, **Regenerate** asks for a fresh answer the same way. If the reply says the request was too large, make it smaller, for example one section at a time. Earlier completed revisions stay part of the chat's history.

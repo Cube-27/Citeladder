@@ -8,7 +8,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
     description:
       'Crawl your site for technical SEO, answer-readiness and AI crawler access issues, with page-level evidence for every finding.',
     heading: 'Find the site issues that keep you out of answers.',
-    lead: 'Crawl your site and get page-level findings with the evidence attached — from indexing and structured data to which AI crawlers your robots.txt lets in.',
+    lead: 'Crawl your site and get page-level findings with the evidence attached. Checks cover indexing, structured data and which AI crawlers your robots.txt lets in.',
     cta: 'demo',
     visual: 'site-health',
     visualTitle: 'Site Health',
@@ -22,7 +22,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
         body: 'robots.txt permissions by crawler purpose: AI search, training and user-triggered fetches.',
       },
       {
-        title: 'Honest coverage',
+        title: 'Coverage beside every score',
         body: 'Scores come with what was checked, so a partial crawl never reads as a full audit.',
       },
     ],
@@ -72,7 +72,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
     description:
       'Turn Search Console queries and landing pages into ranked opportunities: striking-distance queries, CTR gaps, competing pages and demand shifts.',
     heading: 'Find the opportunities already in your search data.',
-    lead: 'Connect Search Console to see which queries reach which pages, and surface the signals worth acting on — instead of another unranked keyword list.',
+    lead: 'Connect Search Console to see which queries reach which pages, and get the signals worth acting on instead of another unranked keyword list.',
     cta: 'demo',
     visual: 'demand',
     visualTitle: 'Search Demand',
@@ -83,7 +83,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
       },
       {
         title: 'CTR gaps',
-        body: 'Pages earning fewer clicks than your property’s norm for their position.',
+        body: "Pages earning fewer clicks than your property's norm for their position.",
       },
       {
         title: 'Demand shifts',
@@ -93,7 +93,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
     features: [
       {
         title: 'Queries in their landing-page context.',
-        body: 'See what each page actually appears for before deciding how it should change. Where the page can be read, its title, H1 and content are compared with the queries it wins.',
+        body: 'See what each page appears for before you decide how to change it. Where the page can be read, its title, H1 and content are compared with the queries it wins.',
         points: [
           'Grouped by page or by query',
           'Reporting window and source on every row',
@@ -105,8 +105,8 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
         title: 'From a signal to a reviewable edit.',
         body: 'Open the evidence behind any page Action and hand it to the Agent to draft a focused change. Later data shows what happened next.',
         points: [
-          'Signals promote into page Actions',
-          'Evidence travels with the handoff',
+          'Signals become page Actions',
+          'The handoff includes the evidence',
           'Changes measured against the earlier window',
         ],
         visual: 'actions',
@@ -136,7 +136,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
     description:
       'Research keywords, competing domains, top pages and backlinks with optional DataForSEO datasets, priced and confirmed before collection.',
     heading: 'Keyword and backlink research beside your AI evidence.',
-    lead: 'Add external research when your own data cannot answer the question: ranked keywords, competitors, top pages and backlinks — each collection reviewed and priced before you confirm.',
+    lead: 'Add external research when your own data cannot answer the question: ranked keywords, competitors, top pages and backlinks. Each collection shows its scope and price before you confirm it.',
     cta: 'setup',
     visual: 'search',
     visualTitle: 'Search Intelligence',
@@ -190,7 +190,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
     description:
       'Prepare content briefs, page edits and internal-link plans from your CiteLadder evidence, and review every revision before it ships.',
     heading: 'Content work that starts from the evidence.',
-    lead: 'Turn a site finding, buyer question or citation pattern into a brief, a page edit or an internal-link plan — drafted by the Agent with your project evidence in view, and reviewed by your team.',
+    lead: 'Turn a site finding, buyer question or citation pattern into a brief, a page edit or an internal-link plan. The Agent drafts it from your project evidence, and your team reviews it.',
     cta: 'demo',
     visual: 'agent',
     visualTitle: 'Agent · Output',
@@ -224,7 +224,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
     faqs: [
       {
         q: 'Is this a separate application?',
-        a: 'No. Content workflows run in CiteLadder’s Agent, connected to your project evidence and Actions.',
+        a: "No. Content workflows run in CiteLadder's Agent, connected to your project evidence and Actions.",
       },
       {
         q: 'Does it publish automatically?',
@@ -244,7 +244,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
     path: '/platform/agents',
     title: 'AI SEO Assistant Grounded in Your Evidence | CiteLadder',
     description:
-      'An AI assistant that reads your saved CiteLadder evidence and produces briefs, edits and plans you review — it never publishes on its own.',
+      'An AI assistant that reads your saved CiteLadder evidence and produces briefs, edits and plans you review. It never publishes on its own.',
     heading: 'An assistant that starts from your evidence.',
     lead: 'Ask a question or pick up an Action. The Agent reads your saved project evidence, explains what it found, and drafts the brief, edit or plan you asked for.',
     cta: 'demo',
@@ -268,7 +268,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
     features: [
       {
         title: 'Hand off from any finding.',
-        body: 'Ask agent from Site Health, Demand or Search Intelligence and the evidence travels with you. Mention open Actions to bring their diagnoses into the conversation.',
+        body: 'Ask agent from Site Health, Demand or Search Intelligence and the evidence comes with it. Mention open Actions to bring their diagnoses into the conversation.',
         points: [
           'Typed handoffs, no copy and paste',
           'One deliverable per conversation',
@@ -301,7 +301,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
     description:
       'Read your CiteLadder visibility, site and search evidence from compatible AI assistants through read-only MCP tools.',
     heading: 'Your CiteLadder evidence, in your AI assistant.',
-    lead: 'Connect a compatible MCP client to read the projects you are authorized to see — visibility, site findings, demand and opportunities — without copying screenshots around.',
+    lead: 'Connect a compatible MCP client to read visibility, site findings, demand and opportunities for the projects you are authorized to see, without passing screenshots around.',
     cta: 'mcp',
     visual: 'mcp',
     visualTitle: 'MCP client',
@@ -349,8 +349,8 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
     title: 'Search, Analytics & AI Integrations | CiteLadder',
     description:
       'Connect Google Search Console, GA4, Bing Webmaster Tools, model providers, DataForSEO and MCP clients to CiteLadder.',
-    heading: 'Connect the data behind better decisions.',
-    lead: 'Bring in first-party search and analytics data, configure model providers, and add research when it helps. Each connection has a clear purpose — and none is required to start.',
+    heading: 'Connect your search, analytics and research data.',
+    lead: 'Bring in first-party search and analytics data, configure model providers, and add research when it helps. Each connection does a specific job, and you can start without any of them.',
     cta: 'setup',
     visual: 'integrations',
     visualTitle: 'Integrations',
@@ -370,7 +370,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
     ],
     features: [
       {
-        title: 'Know what is connected — and what is missing.',
+        title: 'Know what is connected and what is missing.',
         body: 'Property mapping, imported windows, freshness and quality notes sit with every connection, so a missing number is never read as zero.',
         points: [
           'Search Console queries and pages',

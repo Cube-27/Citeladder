@@ -5,7 +5,7 @@ group: 'Start here'
 order: 20
 ---
 
-You will need access to a CiteLadder workspace, your website address and a clear idea of the market you serve. Available runs and features depend on your workspace’s access and allowances.
+You will need access to a CiteLadder workspace, your website address and a clear idea of the market you serve. Available runs and features depend on your workspace's access and allowances.
 
 ## 1. Review your company facts
 
@@ -19,7 +19,7 @@ Suggestions are a starting point. Remove companies that do not compete for your 
 
 Open **Prompts** after the initial portfolio finishes generating. Read the questions as if you were a potential customer. Keep a focused set that covers the decisions buyers make, and distinguish general discovery questions from questions that name your brand.
 
-For a fictional scheduling product, a useful discovery question might be “Which scheduling tools work well for a small consultancy?” A question such as “How does Example Scheduler handle reminders?” answers a different, brand-specific question.
+For a fictional scheduling product, a useful discovery question might be "Which scheduling tools work well for a small consultancy?" A question such as "How does Example Scheduler handle reminders?" answers a different, brand-specific question.
 
 See [Prompts and topics](/prompts/) before expanding the portfolio.
 
@@ -43,7 +43,7 @@ The goal is one finding you can explain with evidence, rather than a long list o
 
 Open a relevant **Action** and select **Work on this**, or use **Ask agent** on a supported evidence screen. Check the attached references in the composer, then describe the outcome you need.
 
-Try: “Explain this finding, show the evidence behind it, and propose a small page edit for review.”
+Try: "Explain this finding, show the evidence behind it, and propose a small page edit for review."
 
 Review the result before using it. Once your team actually makes the change, follow [implementation and measurement](/agent/actions/#declare-implementation).
 

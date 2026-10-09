@@ -4,7 +4,7 @@ import { BLOG_SOURCES } from '../blog-sources';
 
 export const POST_BUYER_PROMPTS: BlogPost = {
   slug: 'ai-search-buyer-prompt-generation',
-  title: 'From Keywords to Buyer Questions: How CiteLadder Builds AI Search Prompt Portfolios',
+  title: 'From keywords to buyer questions: how CiteLadder builds AI search prompt portfolios',
   seoTitle: 'AI Search Prompt Generation: Build Buyer Questions Worth Tracking',
   seoDescription:
     'How CiteLadder turns confirmed offerings, buyer context and business constraints into reviewable AI-search prompts instead of a noisy auto-generated keyword list.',
@@ -95,11 +95,11 @@ export const POST_BUYER_PROMPTS: BlogPost = {
     { type: 'heading', text: 'Generate from compatible cells, not every combination' },
     {
       type: 'paragraph',
-      text: 'CiteLadder combines those inputs into a bounded set of generation cells. It never enumerates every combination: excluded pairs never share a cell, only a controlled surplus of candidates is planned, and values are spread across topics, buyer stages, audiences, situations, attributes and markets.',
+      text: 'CiteLadder combines those inputs into a bounded set of generation cells. It never enumerates every combination. Excluded pairs never share a cell, only a controlled surplus of candidates is planned, and values are spread across topics, buyer stages, audiences, situations, attributes and markets.',
     },
     {
       type: 'paragraph',
-      text: 'The generative model then has a narrower job: turn each grounded cell into a natural buyer question. It is not asked to rediscover the business for every prompt.',
+      text: 'The generative model then only has to turn each grounded cell into a natural buyer question. It is not asked to rediscover the business for every prompt.',
     },
     { type: 'heading', text: 'Code rejects what code can know' },
     {
@@ -176,7 +176,7 @@ export const POST_BUYER_PROMPTS: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'Generating suggestions and running an audit are separate actions. Generation never launches provider measurements on its own: you review the portfolio first, then choose when and where to run it.',
+      text: 'Generating suggestions and running an audit are separate actions. Generation never launches provider measurements on its own. You review the portfolio first, then choose when and where to run it.',
     },
     { type: 'heading', text: 'What the workflow avoids' },
     {
@@ -192,7 +192,7 @@ export const POST_BUYER_PROMPTS: BlogPost = {
     {
       type: 'richParagraph',
       content: [
-        'Once the portfolio is active, the next job is evidence: use ',
+        'Once the portfolio is active, use ',
         {
           type: 'link',
           text: 'AI visibility measurement',
