@@ -2,6 +2,7 @@
 import { policy } from '../config.ts';
 import { hash } from '../traffic/normalization.ts';
 import { compareText } from '../text-order.ts';
+import { groupBy } from '../lists.ts';
 import type { Classification } from './classification.ts';
 
 const p = policy.demand;
@@ -182,16 +183,6 @@ export function classificationCounts(rows: QueryInput[]) {
   for (const row of rows) counts[row.classification] = (counts[row.classification] ?? 0) + 1;
   return counts;
 }
-export function grouped<T>(rows: T[], key: (row: T) => string): Map<string, [T, ...T[]]> {
-  const groups = new Map<string, [T, ...T[]]>();
-  for (const row of rows) {
-    const k = key(row);
-    const group = groups.get(k);
-    if (group) group.push(row);
-    else groups.set(k, [row]);
-  }
-  return groups;
-}
 export function queryCandidate(
   type: string,
   query: string,
@@ -231,7 +222,7 @@ export function detectStrikingDistance(rows: QueryInput[]): Evaluation {
     if (!usable) abstained++;
     return usable;
   });
-  const groups = grouped(eligible, (r) =>
+  const groups = groupBy(eligible, (r) =>
     JSON.stringify([r.classification, r.normalized_query, r.resolved_page_url]),
   );
   const candidates: Candidate[] = [];

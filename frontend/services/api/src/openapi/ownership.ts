@@ -14,7 +14,7 @@ export function routeOwnershipFailures(inputs: OwnershipInputs): string[] {
   for (const [path, item] of Object.entries(inputs.typescript.paths)) {
     if (path !== inputs.apiPrefix && !path.startsWith(`${inputs.apiPrefix}/`)) continue;
     for (const [method, operation] of Object.entries(item)) {
-      const family = onlyOf([...new Set(operation.tags ?? [])]);
+      const family = onlyOf(new Set(operation.tags ?? []));
       if (family === undefined) {
         failures.push(`${method.toUpperCase()} ${path} must carry exactly one family tag`);
         continue;

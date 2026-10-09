@@ -169,14 +169,12 @@ function planners(context: PlanContext, suggestions: OfferingMap[]): Planner[] {
 function nextCombo(plan: Planner, combos: NonEmpty<Facet[]>): Facet[] {
   const used = (facet: Facet) => plan.usage.get(`${facet.dimension}:${facet.value}`) ?? 0;
   const score = (combo: Facet[]) => combo.reduce((sum, facet) => sum + used(facet), 0);
-  const ordered: [Facet[], ...Facet[][]] = [...combos];
-  ordered.sort(
-    (a, b) =>
-      score(a) - score(b) ||
-      Number(a.some((facet) => facet.suggested)) - Number(b.some((facet) => facet.suggested)) ||
-      a.length - b.length,
-  );
-  return ordered[0];
+  const compare = (a: Facet[], b: Facet[]) =>
+    score(a) - score(b) ||
+    Number(a.some((facet) => facet.suggested)) - Number(b.some((facet) => facet.suggested)) ||
+    a.length - b.length;
+  // The first of the least: the head of a stable sort.
+  return combos.reduce((best, combo) => (compare(combo, best) < 0 ? combo : best));
 }
 
 /**
@@ -201,11 +199,10 @@ export function planSlots(
       const plan = plans[index % plans.length]!;
       plan.cells += 1;
       const used = (key: string) => plan.usage.get(key) ?? 0;
-      const least = (key: string, options: NonEmpty<string>) => {
-        const ordered: [string, ...string[]] = [...options];
-        ordered.sort((a, b) => used(`${key}:${a}`) - used(`${key}:${b}`));
-        return ordered[0];
-      };
+      const least = (key: string, options: NonEmpty<string>) =>
+        options.reduce((best, option) =>
+          used(`${key}:${option}`) < used(`${key}:${best}`) ? option : best,
+        );
       const stage = least('stage', stages);
       const combo =
         plan.cells > G.stages.length &&

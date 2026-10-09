@@ -18,8 +18,8 @@ import { hash } from './normalization.ts';
 import { windowDays } from './performance.ts';
 import { record } from '../db/json.ts';
 import { TrafficProjectionBuilder, type Projection } from './projection.ts';
-import { compareText } from '../text-order.ts';
-import { isNonEmpty, lastOf, type NonEmpty } from '../lists.ts';
+import { textSpan } from '../text-order.ts';
+import { isNonEmpty, type NonEmpty } from '../lists.ts';
 import {
   selectedPartition,
   partitionQuality,
@@ -38,16 +38,6 @@ type Target = {
   verifies: boolean;
   builder: TrafficProjectionBuilder;
 };
-
-/** The earliest start and latest end across the targets. */
-function targetSpan(targets: NonEmpty<Target>): { start: string; end: string } {
-  let { start, end } = targets[0];
-  for (const target of targets) {
-    if (compareText(target.start, start) < 0) start = target.start;
-    if (compareText(target.end, end) > 0) end = target.end;
-  }
-  return { start, end };
-}
 
 /**
  * The Demand handoff revision: an order-independent digest (XOR of BLAKE2b-128
@@ -227,7 +217,7 @@ async function scan(
     'id',
   ] as const;
   const cursor = sql`(${sql.join(columns.map((c) => sql.ref(c)))})`;
-  const { start, end } = targetSpan(targets);
+  const { start, end } = textSpan(targets);
   let after: MetricRow | null = null;
   for (;;) {
     await checkCancelled('metric-row batch');
@@ -250,8 +240,9 @@ async function scan(
     const inputs = rows.map((r) => ({ ...r, date: r.day, metrics: record(r.metrics) }));
     for (const target of targets) target.builder.addBatch(inputs, true);
     for (const row of inputs) demand.add(row);
-    if (inputs.length < p.TRAFFIC_METRIC_ROW_BATCH_SIZE || !isNonEmpty(inputs)) break;
-    after = lastOf(inputs);
+    const last = inputs.at(-1);
+    if (inputs.length < p.TRAFFIC_METRIC_ROW_BATCH_SIZE || !last) break;
+    after = last;
   }
 }
 
@@ -374,7 +365,7 @@ function executor(displayOnly: boolean): Executor {
       await subjectXactLock(trx, `traffic_snapshot:${projectId}`);
       const verifying: string[] = [];
       const allQuality: Record<string, Awaited<ReturnType<typeof partitionQuality>>> = {};
-      const qualityScope = { workspaceId: task.workspace_id, projectId, ...targetSpan(targets) };
+      const qualityScope = { workspaceId: task.workspace_id, projectId, ...textSpan(targets) };
       // Reads and writes share the snapshot transaction, so they run in order.
       for (const dataset of p.TRAFFIC_PROJECTED_DATASETS)
         allQuality[dataset] = await partitionQuality(trx, qualityScope, dataset); // NOSONAR

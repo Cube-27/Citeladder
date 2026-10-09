@@ -3,7 +3,6 @@ import { addDays } from '../referrals/projection.ts';
 import {
   aggregate,
   classificationCounts,
-  grouped,
   queryCandidate,
   round,
   unique,
@@ -12,7 +11,7 @@ import {
   type QueryInput,
 } from './projection.ts';
 import { compareText } from '../text-order.ts';
-import { onlyOf } from '../lists.ts';
+import { groupBy, onlyOf } from '../lists.ts';
 
 const p = policy.demand;
 const resolved = (row: QueryInput) => ['exact', 'resolved'].includes(row.resolution_outcome);
@@ -20,7 +19,7 @@ const resolved = (row: QueryInput) => ['exact', 'resolved'].includes(row.resolut
 export function detectCannibalization(rows: QueryInput[]): Evaluation {
   const candidates: Candidate[] = [];
   let abstained = 0;
-  const groups = grouped(rows, (r) => r.normalized_query);
+  const groups = groupBy(rows, (r) => r.normalized_query);
   for (const query of [...groups.keys()].sort(compareText)) {
     const group = groups.get(query)!;
     if (group[0].classification !== 'non_branded') continue;
@@ -28,7 +27,7 @@ export function detectCannibalization(rows: QueryInput[]): Evaluation {
       abstained++;
       continue;
     }
-    const pages = [...grouped(group, (r) => r.resolved_page_url)].map(([url, items]) => ({
+    const pages = [...groupBy(group, (r) => r.resolved_page_url)].map(([url, items]) => ({
       url,
       ...aggregate(items),
     }));
@@ -140,11 +139,11 @@ export function detectCtrGap(rows: QueryInput[]): Evaluation {
       r.classification === 'non_branded' && resolved(r) && r.position !== null && r.impressions > 0,
   );
   const aggregates = [
-    ...grouped(eligible, (r) =>
+    ...groupBy(eligible, (r) =>
       JSON.stringify([r.property_ref, r.normalized_query, r.resolved_page_url]),
     ),
   ].map(([, items]) => ({ row: items[0], a: aggregate(items) }));
-  const cohorts = grouped(
+  const cohorts = groupBy(
     aggregates.filter((r) => r.a.position !== null),
     (r) => JSON.stringify([r.row.property_ref, Math.floor(r.a.position!)]),
   );
@@ -272,7 +271,7 @@ export function detectTrends(rows: QueryInput[], windowEnd: string): Evaluation 
       limitations: [`At least ${p.DEMAND_TREND_REQUIRED_DAYS} days of coverage are required.`],
     };
   const candidates: Candidate[] = [];
-  const groups = grouped(
+  const groups = groupBy(
     rows.filter((r) => r.classification === 'non_branded'),
     (r) => r.normalized_query,
   );

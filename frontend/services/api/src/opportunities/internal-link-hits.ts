@@ -3,6 +3,7 @@ import { internalLinkAnalysisSchema } from '@citeladder/contracts/site-health';
 import { policy } from '../config.ts';
 import type { DetectorHit } from '../analysis/opportunities/evidence.ts';
 import type { Database } from '../db/database.ts';
+import { groupBy } from '../lists.ts';
 import type { Scope } from './sources.ts';
 
 /** The crawl's newest finished internal-link run with a result, if any. */
@@ -35,13 +36,7 @@ export async function internalLinkHits(
     .where('id', '=', runId)
     .executeTakeFirstOrThrow();
   const result = internalLinkAnalysisSchema.parse(run.result);
-  type Link = (typeof result.recommendations)[number];
-  const sources = new Map<string, [Link, ...Link[]]>();
-  for (const link of result.recommendations) {
-    const links = sources.get(link.source.site_url_id);
-    if (links) links.push(link);
-    else sources.set(link.source.site_url_id, [link]);
-  }
+  const sources = groupBy(result.recommendations, (link) => link.source.site_url_id);
   return [...sources].map(([id, links]) => {
     const source = links[0].source;
     return {

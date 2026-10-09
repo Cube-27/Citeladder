@@ -180,7 +180,7 @@ export function observedPrice(
   );
   const currency =
     marker === '$'
-      ? (onlyOf([...currencies]) ?? '')
+      ? (onlyOf(currencies) ?? '')
       : ({ '£': 'GBP', '€': 'EUR', '₹': 'INR' }[marker] ?? marker);
   return { price: localizedPrice(amount), currency };
 }

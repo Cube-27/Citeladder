@@ -182,7 +182,7 @@ function sourceModel(provenance: readonly ModelProvenance[], engine: string | nu
     return provenance.find((item) => item.logical_engine === engine)?.transport_model ?? null;
   }
   const models = new Set(provenance.map((item) => item.transport_model));
-  return onlyOf([...models]) ?? null;
+  return onlyOf(models) ?? null;
 }
 
 /**

@@ -264,7 +264,7 @@ const uuidText = (value: unknown) => scalarText(value).toLowerCase();
 /** A check's target page; an untargeted check applies to a single-target event's page. */
 function checkTarget(check: Record<string, unknown>, targets: Set<string>) {
   if (check.target_site_url_id != null) return uuidText(check.target_site_url_id);
-  return onlyOf([...targets]) ?? null;
+  return onlyOf(targets) ?? null;
 }
 /** The field a check now satisfies on its target page, keyed for linkage. */
 function satisfiedCheck(raw: unknown, targets: Set<string>, byUrl: Map<string, ChangePage>) {

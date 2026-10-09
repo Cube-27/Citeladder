@@ -19,7 +19,7 @@ import type { Database } from '../db/database.ts';
 import { pydanticUtc, pydanticUtcOf, utcText, utcTextOf } from '../db/timestamps.ts';
 import { epochMicros, fromEpochMicros, toUtc, type ParsedDatetime } from '../http/datetimes.ts';
 import { compareText } from '../text-order.ts';
-import { isNonEmpty, lastOf, type NonEmpty } from '../lists.ts';
+import { groupBy, isNonEmpty, lastOf, type NonEmpty } from '../lists.ts';
 import {
   applyRankingComparison,
   compareSelection,
@@ -281,15 +281,12 @@ function rangeGroups(
   key: string;
   sources: NonEmpty<TrendSource>;
 } {
-  const groups = new Map<string, [TrendSource, ...TrendSource[]]>();
-  for (const run of runs) {
-    const source = trendSource(run, query.logicalEngine, query.cohort);
-    if (source === null) continue;
-    const group = configurationGroup(source);
-    const members = groups.get(group);
-    if (members) members.push(source);
-    else groups.set(group, [source]);
-  }
+  const groups = groupBy(
+    runs
+      .map((run) => trendSource(run, query.logicalEngine, query.cohort))
+      .filter((source) => source !== null),
+    configurationGroup,
+  );
   if (groups.size === 0) throw new AnalysisNotFoundError('No measurements in the selected period');
   // The configuration measured most recently, unless the reader chose one.
   let key = query.configurationKey;

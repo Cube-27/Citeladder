@@ -1,6 +1,7 @@
 import { policy } from '../config.ts';
 import { numberRecord, strings } from '../db/json.ts';
 import { scalarText, compareText } from '../text-order.ts';
+import { groupBy } from '../lists.ts';
 import { competitorPosition } from './position.ts';
 import { citationDomain, type ScoringConfig } from './scoring.ts';
 import { rateCard } from '../audits/costs.ts';
@@ -202,12 +203,7 @@ function composite(group: AggregateExecution[], config: ScoringConfig) {
   };
 }
 export function promptMetrics(rows: AggregateExecution[], config: ScoringConfig) {
-  const grouped = new Map<number, [AggregateExecution, ...AggregateExecution[]]>();
-  for (const row of rows) {
-    const group = grouped.get(row.prompt_index);
-    if (group) group.push(row);
-    else grouped.set(row.prompt_index, [row]);
-  }
+  const grouped = groupBy(rows, (row) => row.prompt_index);
   return [...grouped]
     .map(([index, group]) => {
       const values = composite(group, config),

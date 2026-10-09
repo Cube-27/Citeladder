@@ -154,8 +154,8 @@ function resolveSelection(
       };
     selected = corroborated;
   }
-  // `selected` holds candidate indexes, so one selected index is one chosen candidate.
-  const chosen = onlyOf(candidates.filter((_, index) => selected.has(index)));
+  const index = onlyOf(selected);
+  const chosen = index === undefined ? undefined : candidates[index];
   if (chosen) return { outcome: 'satisfied', blocks: [chosen], evidence };
   if (selected.size > 1 || candidates.length > 1)
     return {

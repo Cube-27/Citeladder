@@ -97,9 +97,8 @@ export async function publishFinalPageAnalyses(db: Database, crawl: Crawl) {
     };
   });
   // Chunked only to stay under PostgreSQL's 65535 bind-parameter limit.
-  const chunk = Math.floor(
-    65_535 / Object.keys(firstOf(revisions, 'a revision of an unfinalized analysis')).length,
-  );
+  const first = firstOf(revisions, 'a revision of an unfinalized analysis');
+  const chunk = Math.floor(65_535 / Object.keys(first).length);
   for (let offset = 0; offset < revisions.length; offset += chunk)
     await db // NOSONAR: in order in the caller's one publication transaction.
       .insertInto('site_page_analyses')

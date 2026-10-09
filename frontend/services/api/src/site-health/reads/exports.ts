@@ -193,7 +193,7 @@ function treeLines(
   seen: Set<string>,
 ): string[] {
   const group = children.get(nodeId) ?? [];
-  const kind = onlyOf([...new Set(group.map((node) => node.page_kind))]);
+  const kind = onlyOf(new Set(group.map((node) => node.page_kind)));
   // A large homogeneous set of leaf pages reads as one count, not a URL list.
   const collapse =
     nodeId !== null &&

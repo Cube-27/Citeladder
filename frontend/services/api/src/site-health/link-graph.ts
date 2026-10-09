@@ -44,7 +44,7 @@ function aliasesFor(pages: LinkPage[]) {
       claims.set(url, owners);
     }
   for (const [url, owners] of claims) {
-    const owner = onlyOf([...owners]);
+    const owner = onlyOf(owners);
     if (owner !== undefined) result.set(url, owner);
   }
   return result;

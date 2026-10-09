@@ -10,7 +10,7 @@ import type { QueueTask } from '../queue/task-queue.ts';
 import { fenceInspectionTask } from './task-fence.ts';
 import { compareText, scalarText } from '../text-order.ts';
 import { lexicalTokens } from '../analysis/lexical.ts';
-import { firstOf } from '../lists.ts';
+import { groupBy } from '../lists.ts';
 
 const p = policy.content_differentiation;
 const strings = (value: unknown): string[] =>
@@ -241,9 +241,9 @@ export async function refreshDifferentiation(
       .orderBy('url.id')
       .limit(p.max_owned_page_candidates)
       .execute();
-    const groups = Map.groupBy(candidates, (row) => row.audit_task_id);
+    const groups = groupBy(candidates, (row) => row.audit_task_id);
     for (const [taskId, rows] of groups) {
-      const first = firstOf(rows, 'a candidate in each audit-task group');
+      const [first] = rows;
       const terms = lexicalTokens(first.query_text);
       const selected = ownedRows
         .map((row) => {

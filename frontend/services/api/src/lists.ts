@@ -20,7 +20,25 @@ export function firstOf<T>(items: readonly T[], what: string): T {
   return items[0];
 }
 
-/** The item of a one-item list; undefined when the list holds none or several. */
-export function onlyOf<T>(items: readonly T[]): T | undefined {
-  return items.length === 1 ? items[0] : undefined;
+/** The item of a one-item collection; undefined when it holds none or several. */
+export function onlyOf<T>(items: Iterable<T>): T | undefined {
+  let only: T | undefined;
+  let seen = 0;
+  for (const item of items) {
+    if (++seen > 1) return undefined;
+    only = item;
+  }
+  return only;
+}
+
+/** Rows grouped by key in first-seen order; a group exists only once it holds a row. */
+export function groupBy<T, K>(rows: Iterable<T>, key: (row: T) => K): Map<K, [T, ...T[]]> {
+  const groups = new Map<K, [T, ...T[]]>();
+  for (const row of rows) {
+    const id = key(row);
+    const group = groups.get(id);
+    if (group) group.push(row);
+    else groups.set(id, [row]);
+  }
+  return groups;
 }
