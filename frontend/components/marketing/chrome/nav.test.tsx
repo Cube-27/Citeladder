@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
 import { MarketingNav } from './nav';
+import { NavigationPath } from './nav-items';
 
 afterEach(() => vi.unstubAllEnvs());
 
@@ -24,6 +25,26 @@ describe('marketing navigation', () => {
     for (const link of signUps) {
       expect(link).toHaveAttribute('href', 'https://app.citeladder.com/register');
     }
+  });
+
+  it('announces the MCP page above the bar on the homepage only', () => {
+    const announcement = /connect CiteLadder to Claude/;
+    const { rerender } = render(
+      <NavigationPath value="/">
+        <MarketingNav />
+      </NavigationPath>,
+    );
+    expect(screen.getByRole('link', { name: announcement })).toHaveAttribute(
+      'href',
+      '/platform/mcp',
+    );
+
+    rerender(
+      <NavigationPath value="/pricing">
+        <MarketingNav />
+      </NavigationPath>,
+    );
+    expect(screen.queryByRole('link', { name: announcement })).not.toBeInTheDocument();
   });
 
   it('offers log in but no sign-up while self-serve sign-up is closed', async () => {

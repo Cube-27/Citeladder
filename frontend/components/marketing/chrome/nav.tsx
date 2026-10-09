@@ -1,14 +1,15 @@
 'use client';
 
 import { LogoMark } from '@/components/ui/logo-mark';
-import { Menu, X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { ArrowRight, Menu, X } from 'lucide-react';
+import { useContext, useEffect, useRef, useState } from 'react';
 
 import { NAV_DROPS, type NavDropKey } from '@/lib/marketing-content/nav';
 import { cn } from '@/lib/utils';
 
 import { ButtonLink } from '../primitives/button';
 import { DesktopNavigation } from './nav-desktop';
+import { NavigationPath } from './nav-items';
 import { MobileNavigation } from './nav-mobile';
 import { appHref } from '@/lib/config/app-link';
 import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';
@@ -260,6 +261,7 @@ export function MarketingNav() {
   const scrolled = useScrolled();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openAcc, setOpenAcc] = useState<NavDropKey | null>(null);
+  const home = useContext(NavigationPath) === '/';
   const chromeRef = useRef<HTMLDivElement>(null);
   const {
     navRef,
@@ -331,6 +333,7 @@ export function MarketingNav() {
         mobileOpen ? 'bg-panel' : 'bg-transparent',
       )}
     >
+      {home ? <Announcement /> : null}
       <nav
         ref={navRef}
         aria-label="Main navigation"
@@ -367,6 +370,18 @@ export function MarketingNav() {
       <div hidden={!mobileOpen}>
         <MobileNavigation openAcc={openAcc} setOpenAcc={setOpenAcc} closeMenu={closeMenu} />
       </div>
+    </div>
+  );
+}
+
+/** The homepage's one announcement, above the bar: assistants connect from the MCP page. */
+function Announcement() {
+  return (
+    <div className="lp-announcement" data-cta-placement="announcement">
+      <a href="/platform/mcp" className="website-label" data-marketing-cta="">
+        <span className="truncate">New: connect CiteLadder to Claude, ChatGPT and more</span>
+        <ArrowRight aria-hidden className="size-4 shrink-0" />
+      </a>
     </div>
   );
 }
