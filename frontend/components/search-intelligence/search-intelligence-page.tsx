@@ -50,6 +50,7 @@ export function SearchIntelligencePage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [costOpen, setCostOpen] = useState(false);
   const [citationOpen, setCitationOpen] = useState(false);
+  const [citationOrigin, setCitationOrigin] = useState<string>();
   const [comparison, setComparison] = useState<SearchIntelligenceDataset | null>(null);
   const [market, setMarket] = useState('');
   const [scope, setScope] = useState('');
@@ -269,14 +270,17 @@ export function SearchIntelligencePage() {
                 selected={value === 'competitors' ? comparison : null}
                 onSelect={setComparison}
                 onExpand={() => openReview('increase_depth')}
-                action={
+                action={(targetOrigin) => (
                   <CollectionAction
                     tab={value}
                     datasets={datasets}
                     onSeed={() => openReview('seed')}
-                    onMatch={() => setCitationOpen(true)}
+                    onMatch={() => {
+                      setCitationOrigin(targetOrigin);
+                      setCitationOpen(true);
+                    }}
                   />
-                }
+                )}
               />
             </TabPanel>
           ))}
@@ -287,7 +291,9 @@ export function SearchIntelligencePage() {
             description="Find the sources AI answers cite that already link to your website."
           >
             <SearchIntelligenceCitationMatcher
+              key={citationOrigin}
               datasets={datasets}
+              targetOrigin={citationOrigin}
               onDerived={async () => {
                 setCitationOpen(false);
                 await invalidateReadiness();

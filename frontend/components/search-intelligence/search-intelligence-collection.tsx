@@ -50,7 +50,8 @@ export function SearchIntelligenceCollection({
   competitors: SearchIntelligenceReadiness['competitors'];
   selected: SearchIntelligenceDataset | null;
   onSelect: (dataset: SearchIntelligenceDataset | null) => void;
-  action?: ReactNode;
+  /** The tab's next step, given the website the reader is looking at. */
+  action?: (targetOrigin: string | undefined) => ReactNode;
   onExpand?: () => void;
 }>) {
   const [kind, setKind] = useState(VIEWS[tab][0].value);
@@ -155,7 +156,7 @@ export function SearchIntelligenceCollection({
             />
           ) : null}
         </div>
-        {action}
+        {action?.(activeTarget)}
       </div>
       <CollectionResult
         dataset={dataset}

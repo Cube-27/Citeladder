@@ -24,16 +24,25 @@ import { referringLists } from './search-intelligence-format';
 
 export function SearchIntelligenceCitationMatcher({
   datasets,
+  targetOrigin,
   onDerived,
-}: Readonly<{ datasets: SearchIntelligenceDataset[]; onDerived: () => Promise<unknown> }>) {
+}: Readonly<{
+  datasets: SearchIntelligenceDataset[];
+  /** The website the Backlinks tab shows; its list is the one matched first. */
+  targetOrigin?: string;
+  onDerived: () => Promise<unknown>;
+}>) {
   const { activeProject } = useProjectContext();
   const timeZone = useDisplayTimeZone();
   const { notify } = useToast();
   const [selectedAudits, setSelectedAudits] = useState<string[]>([]);
-  // The reader picks which website's list to match.
+  // The reader picks which website's list to match, starting from the one on screen.
   const lists = referringLists(datasets);
   const [listId, setListId] = useState('');
-  const referring = lists.find((dataset) => dataset.id === listId) ?? lists[0];
+  const referring =
+    lists.find((dataset) => dataset.id === listId) ??
+    lists.find((dataset) => dataset.target_origin === targetOrigin) ??
+    lists[0];
   const audits = useQuery({
     queryKey: queryKeys.runs.list({ project_id: activeProject?.id }),
     queryFn: ({ signal }) =>
