@@ -418,6 +418,7 @@ export function generatedBlocks(tokenCss, websiteCss) {
  */
 export function refreshGeneratedBlocks(document, blocks) {
   let text = document;
+  const eol = document.includes('\r\n') ? '\r\n' : '\n';
   const stale = [];
   const missing = [];
   for (const [name, block] of blocks) {
@@ -431,7 +432,9 @@ export function refreshGeneratedBlocks(document, blocks) {
     }
     const fresh = `\n${block}\n`;
     if (match[2].replaceAll('\r\n', '\n') !== fresh) stale.push(name);
-    text = text.replace(pattern, (_, start, __, end) => `${start}${fresh}${end}`);
+    // Write in the document's own line endings: no mixed endings on a CRLF checkout.
+    const written = fresh.replaceAll('\n', eol);
+    text = text.replace(pattern, (_, start, __, end) => `${start}${written}${end}`);
   }
   return { text, stale, missing };
 }

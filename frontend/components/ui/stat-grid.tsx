@@ -112,10 +112,10 @@ function StatValue({
   size: StatValueSize;
   tone: StatTone;
 }>) {
-  if (loading || value === null || typeof value === 'string' || typeof value === 'number') {
+  if (loading || value == null || typeof value === 'string' || typeof value === 'number') {
     return (
       <MetricValue
-        value={value === null ? null : String(value ?? '')}
+        value={value == null ? null : String(value)}
         label={missingLabel}
         size={size}
         loading={loading}
