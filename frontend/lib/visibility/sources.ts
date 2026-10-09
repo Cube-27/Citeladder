@@ -27,8 +27,7 @@ export type SeriesData = z.infer<typeof visibilitySourceSeriesSchema>;
 
 /** A source's own type token — one per row, so it can also be a filter value. */
 export function itemType(item: SourceItem): string | null {
-  const [only, ...others] = item.categories;
-  return only !== undefined && !others.length ? only : null;
+  return item.categories.length === 1 ? (item.categories[0] ?? null) : null;
 }
 
 /**

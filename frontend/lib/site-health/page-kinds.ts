@@ -8,7 +8,7 @@
  */
 import { pageKindSchema } from '@citeladder/contracts/site-health';
 import type { PageKind, PageKindScoreSummary } from '@/lib/api/types';
-import { titleCaseStatus } from '@/lib/utils';
+import { ownValue, titleCaseStatus } from '@/lib/utils';
 
 /**
  * Every page type in stable display order (filter control + breakdown
@@ -106,11 +106,9 @@ const PAGE_TRAIT_LABELS: Readonly<Record<string, string>> = {
 };
 
 export function pageTraitLabel(trait: string): string {
-  // Own properties only. A plain object literal still inherits `constructor`,
-  // `toString` and `__proto__`, so a bare lookup on an untrusted token returns
-  // a function or the prototype rather than a label — and React throws when
-  // asked to render one as a child.
-  return (Object.hasOwn(PAGE_TRAIT_LABELS, trait) ? PAGE_TRAIT_LABELS[trait] : undefined) ?? trait;
+  // Own properties only: an inherited value is a function or the prototype,
+  // and React throws when asked to render one as a child.
+  return ownValue(PAGE_TRAIT_LABELS, trait) ?? trait;
 }
 
 export function pageKindConfidenceLabel(confidence: string, tier: string): string {

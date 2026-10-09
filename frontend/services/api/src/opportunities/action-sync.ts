@@ -51,21 +51,25 @@ function actionMember(
 
 type Group = ReturnType<typeof groupMembers>[number];
 
-/** The columns one group writes onto its Action, in the batched update's order. */
-const GROUP_COLUMNS = [
-  'target_label',
-  'target_url',
-  'target_prompt_id',
-  'priority_score',
-  'families',
-  'approach',
-  'skill_id',
-  'diagnosis',
-  'member_opportunity_ids',
-  'opportunity_snapshot_id',
-  'evidence_cleared_at',
+/**
+ * The columns one group writes onto its Action with their PostgreSQL types, in
+ * the batched update's VALUES order.
+ */
+const GROUP_COLUMN_TYPES = [
+  ['target_label', 'varchar'],
+  ['target_url', 'text'],
+  ['target_prompt_id', 'uuid'],
+  ['priority_score', 'float8'],
+  ['families', 'jsonb'],
+  ['approach', 'varchar'],
+  ['skill_id', 'varchar'],
+  ['diagnosis', 'jsonb'],
+  ['member_opportunity_ids', 'jsonb'],
+  ['opportunity_snapshot_id', 'uuid'],
+  ['evidence_cleared_at', 'timestamptz'],
 ] as const;
-type GroupColumn = (typeof GROUP_COLUMNS)[number];
+type GroupColumn = (typeof GROUP_COLUMN_TYPES)[number][0];
+const GROUP_COLUMNS = GROUP_COLUMN_TYPES.map(([column]) => column);
 
 /** The persisted fields one group writes onto its Action. */
 function groupFields(group: Group, snapshotId: string) {
@@ -84,20 +88,6 @@ function groupFields(group: Group, snapshotId: string) {
   } satisfies Record<GroupColumn, unknown>;
 }
 
-/** PostgreSQL type of each group field, for the batched update's VALUES list. */
-const GROUP_FIELD_TYPES: Record<GroupColumn, string> = {
-  target_label: 'varchar',
-  target_url: 'text',
-  target_prompt_id: 'uuid',
-  priority_score: 'float8',
-  families: 'jsonb',
-  approach: 'varchar',
-  skill_id: 'varchar',
-  diagnosis: 'jsonb',
-  member_opportunity_ids: 'jsonb',
-  opportunity_snapshot_id: 'uuid',
-  evidence_cleared_at: 'timestamptz',
-};
 // PostgreSQL binds at most 65,535 parameters per statement. Each row binds its
 // id plus every group column; the statement adds updated_at and workspace_id.
 const MAX_BIND_PARAMETERS = 65_535;
@@ -127,9 +117,7 @@ async function updateActionBatch(
     ({ id, fields }) =>
       sql`(${sql.join([
         sql`${id}::uuid`,
-        ...GROUP_COLUMNS.map(
-          (column) => sql`${fields[column]}::${sql.raw(GROUP_FIELD_TYPES[column])}`,
-        ),
+        ...GROUP_COLUMN_TYPES.map(([column, type]) => sql`${fields[column]}::${sql.raw(type)}`),
       ])})`,
   );
   await sql`update actions

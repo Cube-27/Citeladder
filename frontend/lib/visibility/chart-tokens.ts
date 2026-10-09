@@ -1,4 +1,5 @@
 import { dataFillClass } from '@/components/ui/data-tone';
+import { cycled } from '@/lib/utils';
 
 const SERIES = [1, 2, 3, 4, 5, 6, 7, 8] as const;
 type ChartSeries = (typeof SERIES)[number];
@@ -14,11 +15,6 @@ const STROKE: Record<ChartSeries, string> = {
   7: 'stroke-chart-7',
   8: 'stroke-chart-8',
 };
-
-/** The entry for position `index`, wrapping around a list that is never empty. */
-function cycled<T>(items: readonly [T, ...T[]], index: number): T {
-  return items[index % items.length] ?? items[0];
-}
 
 /**
  * The tokens for the `index`th series, wrapping after eight: its line stroke,

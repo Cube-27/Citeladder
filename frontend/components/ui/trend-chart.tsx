@@ -92,12 +92,12 @@ function chartDescription(data: readonly TrendPoint[], label?: string): string {
   const [first] = data;
   const last = data.at(-1);
   let summary = 'No trend data';
-  if (first && last && data.length === 1) {
-    summary = `Single point ${first.label} (${valueText(first.value)})`;
-  } else if (first && last) {
+  if (first && last) {
     summary =
-      `Trend from ${first.label} (${valueText(first.value)}) ` +
-      `to ${last.label} (${valueText(last.value)})`;
+      data.length === 1
+        ? `Single point ${first.label} (${valueText(first.value)})`
+        : `Trend from ${first.label} (${valueText(first.value)}) ` +
+          `to ${last.label} (${valueText(last.value)})`;
   }
   const gapNote = data.some((entry) => entry.value === null)
     ? ' Some points are unavailable and shown as gaps.'

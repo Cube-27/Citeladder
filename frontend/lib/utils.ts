@@ -30,6 +30,23 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * A table's own value for `key`. A plain object literal still inherits
+ * `constructor`, `toString` and `__proto__`, so a bare lookup on an untrusted
+ * key can return a function or the prototype instead of a value.
+ */
+export function ownValue<V>(table: Readonly<Record<string, V>>, key: string): V | undefined {
+  return Object.hasOwn(table, key) ? table[key] : undefined;
+}
+
+/** The entry for position `index`, wrapping around a list that is never empty. */
+export function cycled<Items extends readonly [unknown, ...unknown[]]>(
+  items: Items,
+  index: number,
+): Items[number] {
+  return items[index % items.length] ?? items[0];
+}
+
+/**
  * Two-letter avatar initials from an email address, taken from the local part
  * (before the `@`) and upper-cased. Falls back to the raw value when there is
  * no `@`, and yields `''` for an empty string. Shared by the sidebar user menu

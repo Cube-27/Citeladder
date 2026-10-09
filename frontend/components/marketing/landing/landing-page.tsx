@@ -5,7 +5,7 @@ import { Check } from 'lucide-react';
 
 import { appHref } from '@/lib/config/app-link';
 import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';
-import { cn } from '@/lib/utils';
+import { cn, cycled } from '@/lib/utils';
 
 import { EngineLogo, type OfficialEngineKey } from '../primitives/engine-logo';
 import { ButtonLink, DemoButtonLink } from '../primitives/button';
@@ -127,9 +127,7 @@ function HeroTour() {
             onKeyDown={(event) => {
               if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
               const index = TOUR.findIndex((entry) => entry.id === active);
-              const next =
-                TOUR[(index + (event.key === 'ArrowRight' ? 1 : TOUR.length - 1)) % TOUR.length];
-              if (!next) return;
+              const next = cycled(TOUR, index + (event.key === 'ArrowRight' ? 1 : TOUR.length - 1));
               setActive(next.id);
               document.getElementById(`tour-tab-${next.id}`)?.focus();
             }}
