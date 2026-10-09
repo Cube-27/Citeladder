@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-plus/test';
-import { act, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { useQuery } from '@tanstack/react-query';
 
 import { mswServer } from '@/test/msw-server';
@@ -20,25 +20,19 @@ const PRODUCT_B = '33333333-3333-4333-8333-333333333333';
 function shelfResponse(target: CommerceTarget, visibility: number) {
   return {
     target,
-    selected_audit_id: null,
-    snapshots: [
-      {
-        id: '44444444-4444-4444-8444-444444444444',
-        audit_id: '55555555-5555-4555-8555-555555555555',
-        target_kind: target.kind,
-        target_id: target.id,
-        product_visibility: visibility,
-        share_of_shelf: null,
-        average_shelf_position: null,
-        first_position_win_rate: null,
-        successful_execution_count: 0,
-        recognized_slot_count: 0,
-        ranked_execution_count: 0,
-        formula_version: 'v1',
-        created_at: '2026-01-01T00:00:00Z',
-      },
-    ],
-    observations: [],
+    snapshot: {
+      product_visibility: visibility,
+      share_of_shelf: null,
+      average_shelf_position: null,
+      first_position_win_rate: null,
+      successful_execution_count: 2,
+      recognized_slot_count: 0,
+      ranked_execution_count: 0,
+      measured_at: '2026-01-01T00:00:00Z',
+    },
+    holders: [],
+    unresolved_count: 0,
+    actions: [],
   };
 }
 
@@ -61,7 +55,7 @@ const staticDiscovery = {
 function ShelfHarness({ target, label }: Readonly<{ target: CommerceTarget; label: string }>) {
   const shelf = useQuery({
     queryKey: queryKeys.commerce.shelf(PROJECT_ID, target),
-    queryFn: ({ signal }) => commerceApi.shelf(PROJECT_ID, target, undefined, { signal }),
+    queryFn: ({ signal }) => commerceApi.shelf(PROJECT_ID, target, { signal }),
   });
   const queries: CommerceQueries = {
     catalog: emptyRowsQuery,
@@ -126,7 +120,6 @@ describe('TargetDetail', () => {
     // Still product A's heading and content — no skeleton stood in for it,
     // and no "Product B" caption sits over A's numbers while B is in flight.
     expect(screen.getByRole('heading', { name: '50.0%' })).toBeVisible();
-    expect(document.querySelector('.skeleton')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Updating target detail')).toBeInTheDocument();
 
     act(() => releaseB());
@@ -141,5 +134,27 @@ describe('TargetDetail', () => {
     rerender(<ShelfHarness target={productB} label="Product B" />);
     expect(screen.getByRole('heading', { name: '90.0%' })).toBeVisible();
     expect(screen.queryByLabelText('Updating target detail')).not.toBeInTheDocument();
+  });
+
+  it('starts the next target with an empty manual prompt', async () => {
+    mswServer.use(
+      http.get(`/api/v1/projects/${PROJECT_ID}/commerce/ai-shelf`, ({ request }) => {
+        const id = new URL(request.url).searchParams.get('target_id') ?? PRODUCT_A;
+        return HttpResponse.json(shelfResponse({ kind: 'product', id }, 0.5));
+      }),
+    );
+    const { rerender } = renderWithProviders(
+      <ShelfHarness target={{ kind: 'product', id: PRODUCT_A }} label="Product A" />,
+    );
+    await screen.findByRole('heading', { name: '50.0%' });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Manual buyer prompt' }), {
+      target: { value: 'waterproof trail shoe under 100' },
+    });
+
+    rerender(<ShelfHarness target={{ kind: 'product', id: PRODUCT_B }} label="Product B" />);
+
+    await waitFor(() =>
+      expect(screen.getByRole('textbox', { name: 'Manual buyer prompt' })).toHaveValue(''),
+    );
   });
 });

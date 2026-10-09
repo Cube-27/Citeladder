@@ -14,8 +14,7 @@ import { CommerceWorkspace } from './commerce-workspace';
  * each one re-asked the same noun, so the target selector was duplicated three
  * times over three selection states that never agreed. The catalog is the
  * navigation now and everything else is a view of the selected target, held in
- * `?target=`. A legacy `?tab=` value is simply ignored, which lands on the
- * workspace rather than a route that no longer exists.
+ * `?target=`.
  */
 export function ProductsScreen() {
   const { activeProject, isLoading } = useProjectContext();

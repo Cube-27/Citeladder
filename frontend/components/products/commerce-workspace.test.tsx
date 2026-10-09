@@ -6,30 +6,14 @@ import { renderWithProviders } from '@/test/render';
 import { BulkActions } from './commerce-workspace';
 
 describe('BulkActions', () => {
-  it('keeps a stable disabled action area before targets are selected', () => {
-    renderWithProviders(
-      <BulkActions
-        count={0}
-        hasCheckedKeys={false}
-        pending={false}
-        onDiscover={vi.fn()}
-        onClear={vi.fn()}
-      />,
-    );
-
-    expect(screen.getByText('No targets selected')).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Find competitors' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Clear selection' })).toBeDisabled();
-  });
-
   it('enables bulk actions and reports the checked target count', () => {
     const onDiscover = vi.fn();
     const onClear = vi.fn();
     renderWithProviders(
       <BulkActions
         count={2}
-        hasCheckedKeys
         pending={false}
+        error={null}
         onDiscover={onDiscover}
         onClear={onClear}
       />,
@@ -42,20 +26,36 @@ describe('BulkActions', () => {
     expect(onClear).toHaveBeenCalledOnce();
   });
 
-  it('allows stale checked keys to be cleared when no catalog targets match', () => {
-    const onClear = vi.fn();
+  it('refuses a selection over the per-request limit and says why', () => {
+    const onDiscover = vi.fn();
     renderWithProviders(
       <BulkActions
-        count={0}
-        hasCheckedKeys
+        count={11}
         pending={false}
-        onDiscover={vi.fn()}
-        onClear={onClear}
+        error={null}
+        onDiscover={onDiscover}
+        onClear={vi.fn()}
       />,
     );
 
     expect(screen.getByRole('button', { name: 'Find competitors' })).toBeDisabled();
-    fireEvent.click(screen.getByRole('button', { name: 'Clear selection' }));
-    expect(onClear).toHaveBeenCalledOnce();
+    expect(
+      screen.getByText('Competitors can be found for up to 10 targets at a time.'),
+    ).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Clear selection' })).toBeEnabled();
+  });
+
+  it('shows why a discovery request failed', () => {
+    renderWithProviders(
+      <BulkActions
+        count={2}
+        pending={false}
+        error={new Error('The search provider is offline.')}
+        onDiscover={vi.fn()}
+        onClear={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('alert')).toHaveTextContent('The search provider is offline.');
   });
 });

@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { sql } from 'kysely';
 import { afterAll, describe, expect, it } from 'vitest';
 import { loadWorkerSettings, policy } from '../src/config.ts';
 import { importCatalog } from '../src/commerce/import.ts';
@@ -234,9 +235,10 @@ describe('catalog projection PostgreSQL boundary', () => {
       .selectAll()
       .where('id', '=', own.tasks[0]!)
       .executeTakeFirstOrThrow();
+    // Terminal: a retry cannot find it either, so the task must not spend its attempts.
     await expect(
       projectCatalog({ ...task, payload: { source_analysis_id: foreign.analyses[1]! } }, context),
-    ).rejects.toThrow('Source Site Health analysis not found');
+    ).rejects.toMatchObject({ code: 'commerce_source_missing' });
     expect((await catalog(db, own)).products).toEqual([]);
     for (const s of [own, foreign])
       await db
@@ -244,6 +246,74 @@ describe('catalog projection PostgreSQL boundary', () => {
         .set({ status: 'cancelled' })
         .where('workspace_id', '=', s.workspaceId)
         .execute();
+  }, 20_000);
+});
+
+describe('catalog projection outcomes', () => {
+  it('skips an unidentifiable product page and keeps uncategorized products without a sentinel category', async () => {
+    const sold = await seed();
+    const artifact = await db
+      .selectFrom('site_page_analyses')
+      .select('artifact_id')
+      .where('id', '=', sold.analyses[1]!)
+      .executeTakeFirstOrThrow();
+    // A sold-out PDP: no SKU, no price, no product cards. As a "shelf" it
+    // would take its own heading's name and claim products it does not list.
+    await db
+      .updateTable('site_fetch_artifacts')
+      .set({
+        normalized_facts: sql`jsonb_set(normalized_facts, '{structured_data}', '{}'::jsonb)`,
+      })
+      .where('id', '=', artifact.artifact_id)
+      .execute();
+    for (const task of [...sold.tasks].reverse()) await execute(task);
+    const soldCatalog = await catalog(db, sold);
+    expect(soldCatalog.products).toEqual([]);
+    expect(soldCatalog.categories.map((row) => row.name)).toEqual(['Tools']);
+
+    const lone = await seed();
+    for (const task of lone.tasks) {
+      const row = await db
+        .selectFrom('analytics_tasks')
+        .select('payload')
+        .where('id', '=', task)
+        .executeTakeFirstOrThrow();
+      if (record(row.payload).source_analysis_id === lone.analyses[1]) await execute(task);
+    }
+    const loneCatalog = await catalog(db, lone);
+    expect(loneCatalog.products.map((row) => [row.name, row.category_ids])).toEqual([
+      ['Widget', []],
+    ]);
+    expect(
+      await db
+        .selectFrom('commerce_categories')
+        .select('name')
+        .where('workspace_id', '=', lone.workspaceId)
+        .execute(),
+    ).toEqual([]);
+    for (const s of [sold, lone])
+      await db
+        .updateTable('analytics_tasks')
+        .set({ status: 'succeeded' })
+        .where('workspace_id', '=', s.workspaceId)
+        .execute();
+  }, 20_000);
+  it("reports live projections, then only the latest crawl's failures", async () => {
+    const s = await seed();
+    expect((await catalog(db, s)).projection).toEqual({ applies: true, in_flight: 2, failed: 0 });
+    await db
+      .updateTable('analytics_tasks')
+      .set({ status: 'failed' })
+      .where('id', '=', s.tasks[0]!)
+      .execute();
+    await db
+      .updateTable('analytics_tasks')
+      .set({ status: 'succeeded' })
+      .where('id', '=', s.tasks[1]!)
+      .execute();
+    expect((await catalog(db, s)).projection).toEqual({ applies: true, in_flight: 0, failed: 1 });
+    await businessContext(s, { business_model: 'b2b_saas' });
+    expect((await catalog(db, s)).projection.applies).toBe(false);
   }, 20_000);
 });
 
@@ -329,6 +399,16 @@ describe('projection decisions over stored facts', () => {
     expect(
       categoryTitle(
         readFacts({ commerce: { breadcrumbs: ['/', '»'] }, headings: { h1_texts: ['Tools'] } }),
+        '',
+      ),
+    ).toBe('Tools');
+    // An index crumb or the platform default names no shelf.
+    expect(
+      categoryTitle(
+        readFacts({
+          commerce: { breadcrumbs: ['Tools', 'Shop all', 'Uncategorized'] },
+          headings: { h1_texts: ['Shop all'] },
+        }),
         '',
       ),
     ).toBe('Tools');

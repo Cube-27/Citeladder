@@ -1,3 +1,5 @@
+import type { CompetitorCandidate } from '@citeladder/contracts/commerce-suite';
+
 import type { StatusValue } from '@/components/ui/badge-variants';
 
 /**
@@ -5,19 +7,19 @@ import type { StatusValue } from '@/components/ui/badge-variants';
  * Interpolating the raw value produced "Discovery for this category is
  * succeeded", and `unavailable` read as success to anyone skimming.
  */
+const FAILURES: Record<string, (kind: string) => string> = {
+  unusable_target: (kind) => `This ${kind} needs a clearer name before competitors can be found.`,
+  provider_unavailable: () =>
+    'Competitor discovery is unavailable: no search provider is configured.',
+  provider_failed: () => 'The search provider did not respond. Try again later.',
+  commerce_target_unavailable: (kind) => `This ${kind} is no longer in the catalog.`,
+};
+
 export function discoveryMessage(status: string, kind: string, errorCode: string): string {
   if (status === 'succeeded') return `Discovery finished for this ${kind}.`;
   if (status === 'cancelled') return `Discovery was cancelled for this ${kind}.`;
-  if (status === 'failed') {
-    if (errorCode === 'unusable_target') {
-      return `This ${kind} needs a clearer name before competitors can be found.`;
-    }
-    if (errorCode === 'provider_unavailable') {
-      return 'Competitor discovery is unavailable: no search provider is configured.';
-    }
-    const code = errorCode ? ` (${errorCode})` : '';
-    return `Discovery failed for this ${kind}${code}.`;
-  }
+  if (status === 'failed')
+    return FAILURES[errorCode]?.(kind) ?? `Discovery failed for this ${kind}. Try again later.`;
   return `Finding competitors for this ${kind}…`;
 }
 
@@ -30,13 +32,16 @@ export function competitorHost(url: string): string {
   }
 }
 
-const COMPETITOR_TONES: Record<string, StatusValue> = {
-  approved: 'success',
-  rejected: 'danger',
-  excluded: 'danger',
-  pending: 'info',
+const COMPETITOR_STATES: Record<
+  CompetitorCandidate['state'],
+  { tone: StatusValue; label: string }
+> = {
+  approved: { tone: 'success', label: 'Approved' },
+  rejected: { tone: 'danger', label: 'Rejected' },
+  excluded: { tone: 'danger', label: 'Excluded' },
+  pending: { tone: 'info', label: 'Needs review' },
 };
 
-export function competitorTone(state: string): StatusValue {
-  return COMPETITOR_TONES[state] ?? 'info';
+export function competitorState(state: CompetitorCandidate['state']) {
+  return COMPETITOR_STATES[state];
 }

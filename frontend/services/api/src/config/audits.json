@@ -322,8 +322,8 @@
   },
   "commerce_versions": {
     "template_version": "commerce-buyer-prompts-1",
-    "parser_version": "commerce-recommendation-parser-1",
-    "matcher_version": "commerce-recommendation-matcher-1",
-    "formula_version": "commerce-shelf-formulas-1"
+    "parser_version": "commerce-recommendation-parser-2",
+    "matcher_version": "commerce-recommendation-matcher-2",
+    "formula_version": "commerce-shelf-formulas-2"
   }
 }

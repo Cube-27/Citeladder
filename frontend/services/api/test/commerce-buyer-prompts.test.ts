@@ -149,3 +149,56 @@ it('generates target-bound prompts and fails atomically on unusable or foreign t
     'best waterproof shoe for rainy commutes',
   ]);
 });
+
+it("keeps each target's usable prompts and binds category prompts through the category's own name", async () => {
+  await importCatalog(db, scope, {
+    content: 'canonical_url,name,category\nhttps://shop.test/shell,Storm shell,Rain jackets\n',
+    filename: 'jackets.csv',
+    content_type: 'text/csv',
+  });
+  const category = await db
+    .selectFrom('commerce_categories')
+    .select('id')
+    .where('project_id', '=', scope.projectId)
+    .where('normalized_name', '=', 'rain jackets')
+    .executeTakeFirstOrThrow();
+  const answers = [
+    // Binds only through the category name: no product or term says "jacket".
+    ['cheap rain jacket that packs small for cycling'],
+    // Every prompt for the product is unusable.
+    ['What do you prefer in Trail master?'],
+  ];
+  const io = {
+    fetch: vi.fn<typeof fetch>(async () =>
+      Response.json({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                prompts: (answers.shift() ?? []).map((text) => ({ text })),
+              }),
+            },
+          },
+        ],
+      }),
+    ),
+    sleep: async () => {},
+  };
+  const gateway = () =>
+    createModelGateway(
+      { ...gatewaySettings({}), apiKey: 'test-only', model: 'test', baseUrl: 'https://model.test' },
+      io,
+    );
+  const rows = await generateBuyerPrompts(
+    db,
+    scope,
+    buyerGenerateInput.parse({
+      targets: [{ kind: 'category', id: category.id }, target],
+      count: 2,
+    }),
+    gateway,
+  );
+  expect(rows.map((row) => [row.target.kind, row.text])).toEqual([
+    ['category', 'cheap rain jacket that packs small for cycling'],
+  ]);
+});

@@ -8,13 +8,58 @@ import { frozenShelfIds } from './shelf.ts';
 
 type Observation = Pick<
   Selectable<CommerceRecommendationObservations>,
-  'id' | 'task_id' | 'classification' | 'rank' | 'order_observable'
+  | 'id'
+  | 'task_id'
+  | 'classification'
+  | 'rank'
+  | 'order_observable'
+  | 'product_id'
+  | 'competitor_candidate_id'
 >;
+
+/** A rank only an ordered answer supplies. */
+export const orderedRank = (row: Pick<Observation, 'order_observable' | 'rank'>) =>
+  row.order_observable ? row.rank : null;
+
+/**
+ * The product or competitor an observation recommends, or null when it names
+ * neither: unresolved, or any classification the shelf does not recognize.
+ */
+export function holderIdentity(
+  row: Pick<Observation, 'classification' | 'product_id' | 'competitor_candidate_id'>,
+): string | null {
+  if (row.classification === 'owned') return row.product_id;
+  if (
+    row.classification === 'approved_competitor' ||
+    row.classification === 'ai_observed_competitor'
+  )
+    return row.competitor_candidate_id;
+  return null;
+}
+
+/**
+ * One slot per product or competitor per execution, at its best rank: an
+ * answer that names the same product in three sentences recommends it once.
+ */
+function shelfSlots(observations: Observation[]) {
+  const held = new Map<string, Observation>();
+  for (const row of observations) {
+    const holder = holderIdentity(row);
+    if (holder === null) continue;
+    const key = JSON.stringify([row.task_id, row.classification, holder]);
+    const kept = held.get(key);
+    const rank = orderedRank(row),
+      keptRank = kept ? orderedRank(kept) : null;
+    if (!kept || (rank !== null && (keptRank === null || rank < keptRank))) held.set(key, row);
+  }
+  return [...held.values()];
+}
+
 export function shelfMetrics(taskIds: string[], observations: Observation[]) {
-  const recognized = observations.filter((row) => row.classification !== 'unresolved');
+  const recognized = shelfSlots(observations);
   const owned = recognized.filter((row) => row.classification === 'owned');
   const ownedTasks = new Set(owned.map((row) => row.task_id));
-  const rankedOwned = owned.filter((row) => row.order_observable && row.rank !== null);
+  const rankedOwned = owned.filter((row) => orderedRank(row) !== null);
   // The first-ranked observation of each execution that ranked any.
   const ranked = taskIds
     .map(
@@ -25,6 +70,8 @@ export function shelfMetrics(taskIds: string[], observations: Observation[]) {
     )
     .filter((row) => row !== undefined);
   return {
+    // The column is not nullable: with no successful execution the read
+    // reports visibility unavailable from `successful_execution_count`.
     product_visibility: taskIds.length
       ? taskIds.filter((id) => ownedTasks.has(id)).length / taskIds.length
       : 0,
@@ -55,9 +102,11 @@ export async function finalizeCommerceShelf(db: Database, audit: Selectable<Audi
       typeof frozen[key] === 'string' ? frozen[key] : value,
     ]),
   );
+  // Several prompts share one target; each target gets one snapshot.
   const targets = await db
     .selectFrom('commerce_prompt_targets')
-    .selectAll()
+    .select(['target_kind', 'target_id'])
+    .distinct()
     .where('workspace_id', '=', audit.workspace_id)
     .where('project_id', '=', audit.project_id)
     .where('id', 'in', ids)

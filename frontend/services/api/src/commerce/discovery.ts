@@ -1,6 +1,6 @@
 /** Discovery admission freezes targets; publication fences the claim after bounded network work. */
 import { randomUUID } from 'node:crypto';
-import { commerceTargetSchema } from '@citeladder/contracts/commerce-suite';
+import { commerceTargetSchema, commerceTargetsSchema } from '@citeladder/contracts/commerce-suite';
 import { z } from 'zod';
 import { loadWorkerSettings, policy, resolveSettingSpec } from '../config.ts';
 import type { Database } from '../db/database.ts';
@@ -18,10 +18,10 @@ import {
   type SearchOutcome,
 } from './discovery-provider.ts';
 import {
-  competitorHost,
   contextText,
   discoveryQuery,
   exclusion,
+  ownedHosts,
   prepareResults,
   searchableName,
   verifyPage,
@@ -29,12 +29,11 @@ import {
 
 const p = policy.commerce.discovery;
 export const discoveryInput = z.object({
-  targets: z.array(commerceTargetSchema).min(1).max(policy.commerce.buyer_prompts.targets_max),
+  targets: commerceTargetsSchema,
 });
 const payloadSchema = z.object({
   target: commerceTargetSchema,
-  target_context: z.record(z.string(), z.unknown()).optional(),
-  target_name: z.string().optional(),
+  target_context: z.record(z.string(), z.unknown()),
   locale: z.string().default(''),
 });
 
@@ -109,24 +108,6 @@ export function enqueueDiscoveries(
   });
 }
 
-async function ownedHosts(db: Database, task: QueueTask, projectId: string) {
-  const project = await db
-    .selectFrom('projects')
-    .select('website_url')
-    .where('workspace_id', '=', task.workspace_id)
-    .where('id', '=', projectId)
-    .executeTakeFirstOrThrow();
-  const domains = await db
-    .selectFrom('owned_domains as d')
-    .innerJoin('projects as p', 'p.id', 'd.project_id')
-    .select('d.domain')
-    .where('p.workspace_id', '=', task.workspace_id)
-    .where('d.project_id', '=', projectId)
-    .execute();
-  return [project.website_url, ...domains.map((row) => row.domain)]
-    .map(competitorHost)
-    .filter(Boolean);
-}
 type Prepared = ReturnType<typeof prepareResults>;
 async function validate(
   db: Database,
@@ -148,12 +129,15 @@ async function validate(
   const candidates = items.filter((item) => !item.validation_outcome && item.canonical);
   let next = 0;
   const verified = new Set<string>();
+  const attempted = new Set<string>();
   await Promise.all(
     Array.from({ length: Math.min(p.verify_concurrency, candidates.length) }, async () => {
       // Each consumer verifies one page at a time; parallelizing the loop
-      // would exceed the configured acquisition concurrency.
-      while (next < candidates.length) {
+      // would exceed the configured acquisition concurrency. Fetching stops
+      // once enough pages verified to fill the accept limit.
+      while (next < candidates.length && verified.size < p.result_limit) {
         const item = candidates[next++]!;
+        attempted.add(item.canonical!);
         try {
           const page = await acquirer.fetch(item.canonical!, {
             maxBytes: setting('max_response_wire_bytes'),
@@ -177,7 +161,8 @@ async function validate(
   return items.map((item) => {
     let verdict = item.validation_outcome;
     if (!verdict) {
-      if (!verified.has(item.canonical!)) verdict = 'excluded_unavailable';
+      if (!attempted.has(item.canonical!)) verdict = 'excluded_limit';
+      else if (!verified.has(item.canonical!)) verdict = 'excluded_unavailable';
       else verdict = accepted++ < p.result_limit ? 'accepted' : 'excluded_limit';
     }
     return { ...item, validation_outcome: verdict };
@@ -196,7 +181,7 @@ async function publish(
   const trx = db;
   await lockCatalog(trx, { workspaceId: task.workspace_id, projectId });
   await targetContext(trx, { workspaceId: task.workspace_id, projectId }, payload.target, true);
-  const currentOwned = await ownedHosts(trx, task, projectId);
+  const currentOwned = await ownedHosts(trx, { workspaceId: task.workspace_id, projectId });
   items = items.map((item) => ({
     ...item,
     validation_outcome:
@@ -278,11 +263,11 @@ export function competitorDiscovery(
     const projectId = await taskProject(db, task),
       payload = payloadSchema.parse(task.payload);
     await targetContext(db, { workspaceId: task.workspace_id, projectId }, payload.target, true);
-    const context = payload.target_context ?? { name: payload.target_name ?? '' };
+    const context = payload.target_context;
     if (!searchableName(contextText(context.name)))
       throw new TerminalExecutorError('unusable_target', 'Commerce target name is not searchable');
     const query = discoveryQuery(payload.target, context);
-    const owned = await ownedHosts(db, task, projectId);
+    const owned = await ownedHosts(db, { workspaceId: task.workspace_id, projectId });
     await checkCancelled('competitor search');
     const outcome = await (options.search ?? competitorSearch())(query, payload.locale);
     await checkCancelled('competitor verification');

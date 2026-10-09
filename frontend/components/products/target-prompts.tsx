@@ -16,16 +16,21 @@ import { commerceApi } from '@/lib/api/commerce';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { CommerceTarget } from '@citeladder/contracts/commerce-suite';
 import { LaunchDialog } from '@/components/runs/launch-dialog';
+import { ProjectLink } from '@/components/layout/scoped-link';
+import { useRunEvents } from '@/lib/runs/use-run-events';
+import { sameTarget } from '@/lib/products/use-commerce-target';
 
 import type { CommerceQueries } from './commerce-queries';
 import { ledgerClasses } from '@/components/ui/workspace';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
+const GENERATED_COUNT = 5;
+
 function forTarget(
   rows: NonNullable<CommerceQueries['buyerPrompts']['data']>,
   target: CommerceTarget,
 ) {
-  return rows.filter((row) => row.target.kind === target.kind && row.target.id === target.id);
+  return rows.filter((row) => sameTarget(row.target, target));
 }
 
 export function TargetPrompts({
@@ -43,11 +48,19 @@ export function TargetPrompts({
   const workspaceId = useActiveWorkspaceId();
   const [text, setText] = useState('');
   const [launchOpen, setLaunchOpen] = useState(false);
+  const [launchedAuditId, setLaunchedAuditId] = useState<string | null>(null);
+  const [shortfall, setShortfall] = useState<number | null>(null);
+  // The audit stream refreshes AI Shelf and Actions here when the run finishes.
+  useRunEvents(launchedAuditId, projectId, Boolean(launchedAuditId));
   const refresh = () =>
     client.invalidateQueries({ queryKey: queryKeys.commerce.buyerPrompts(projectId) });
   const generate = useMutation({
-    mutationFn: () => commerceApi.generateBuyerPrompts(projectId, [target], 5, { workspaceId }),
-    onSuccess: refresh,
+    mutationFn: () =>
+      commerceApi.generateBuyerPrompts(projectId, [target], GENERATED_COUNT, { workspaceId }),
+    onSuccess: async (created) => {
+      setShortfall(created.length < GENERATED_COUNT ? created.length : null);
+      await refresh();
+    },
   });
   const manual = useMutation({
     mutationFn: () => commerceApi.addBuyerPrompt(projectId, target, text, { workspaceId }),
@@ -74,7 +87,7 @@ export function TargetPrompts({
         actions={
           <>
             <Button variant="secondary" disabled={busy} onClick={() => generate.mutate()}>
-              {generate.isPending ? 'Generating…' : 'Generate 5'}
+              {generate.isPending ? 'Generating…' : `Generate ${GENERATED_COUNT}`}
             </Button>
             <Button disabled={!approvedIds.length || busy} onClick={() => setLaunchOpen(true)}>
               Review and launch
@@ -83,11 +96,26 @@ export function TargetPrompts({
         }
       >
         <CardTitle>Prompts that measure it</CardTitle>
-        <CardDescription>Generated prompts stay disabled until you approve them.</CardDescription>
+        <CardDescription>
+          {approvedIds.length
+            ? 'Generated prompts stay disabled until you approve them.'
+            : 'Approve at least one prompt to launch an audit for this target.'}
+        </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-3">
         {failed ? (
           <Alert tone="danger">The buyer-prompt update failed. Please try again.</Alert>
+        ) : null}
+        {shortfall !== null ? (
+          <Alert tone="info">
+            {shortfall} of {GENERATED_COUNT} generated prompts were usable. Generate again for more.
+          </Alert>
+        ) : null}
+        {launchedAuditId ? (
+          <Alert tone="info">
+            Audit launched. Shelf metrics update here when it finishes.{' '}
+            <ProjectLink href={`/runs/${launchedAuditId}`}>View the run</ProjectLink>
+          </Alert>
         ) : null}
         <LaunchDialog
           open={launchOpen}
@@ -96,6 +124,7 @@ export function TargetPrompts({
           fixedPromptIds={approvedIds}
           promptSelectionLabel={`${approvedIds.length} approved prompts for ${targetLabel}`}
           auditScope="commerce"
+          onLaunched={(audit) => setLaunchedAuditId(audit.id)}
         />
         <PromptRows
           query={query}

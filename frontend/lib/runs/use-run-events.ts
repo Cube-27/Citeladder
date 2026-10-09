@@ -5,7 +5,7 @@ import { useCallback, useRef } from 'react';
 
 import { API_BASE_URL } from '@/lib/api/client';
 import { invalidationsFor, parseAuditEvent, type RawSseFrame } from '@/lib/api/run-events';
-import { queryKeys } from '@/lib/api/query-keys';
+import { AUDIT_RESULT_QUERY_ROOTS, queryKeys } from '@/lib/api/query-keys';
 import {
   RUN_STREAM_INVALIDATE_DEBOUNCE_MS,
   RUN_STREAM_RECONNECT_BASE_MS,
@@ -49,7 +49,8 @@ export function useRunEvents(
     if (families.has('executions'))
       void queryClient.invalidateQueries({ queryKey: queryKeys.runs.executions(auditId) });
     if (families.has('visibility') && projectId)
-      void queryClient.invalidateQueries({ queryKey: queryKeys.visibility.all });
+      for (const queryKey of AUDIT_RESULT_QUERY_ROOTS)
+        void queryClient.invalidateQueries({ queryKey });
   }, [auditId, projectId, queryClient]);
 
   useSseEventStream({

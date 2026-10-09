@@ -9,11 +9,16 @@ export function targetKey(target: CommerceTarget): string {
   return `${target.kind}:${target.id}`;
 }
 
+/** Whether two targets name the same category or product. */
+export function sameTarget(a: CommerceTarget, b: CommerceTarget): boolean {
+  return a.kind === b.kind && a.id === b.id;
+}
+
+/** A well-formed `?target=` value, or undefined: a malformed one never reaches the API. */
 export function parseTargetKey(value: string | null | undefined): CommerceTarget | undefined {
   const [kind, id] = (value ?? '').split(':');
-  const parsed = commerceTargetSchema.shape.kind.safeParse(kind);
-  if (!parsed.success || !id) return undefined;
-  return { kind: parsed.data, id };
+  const parsed = commerceTargetSchema.safeParse({ kind, id });
+  return parsed.success ? parsed.data : undefined;
 }
 
 /**
@@ -37,9 +42,6 @@ export function useCommerceTarget() {
   const target = parseTargetKey(searchParams?.get('target'));
   const selectTarget = (next: CommerceTarget | undefined) => {
     const params = new URLSearchParams(searchParams?.toString() ?? '');
-    // The legacy `?tab=` values are all views of a target now; drop the key so
-    // an old link resolves to the workspace rather than a tab that is gone.
-    params.delete('tab');
     if (next) params.set('target', targetKey(next));
     else params.delete('target');
     const query = params.toString();

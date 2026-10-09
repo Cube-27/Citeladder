@@ -4,10 +4,10 @@ import { commerceCategorySchema } from '@citeladder/contracts/commerce-suite';
 
 import { loadWorkerSettings, policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
-import { jsonObject, record, strings } from '../db/json.ts';
+import { jsonObject } from '../db/json.ts';
 import { enqueueTask } from '../referrals/enqueue.ts';
 import type { CommerceProducts } from '../generated/db-schema.ts';
-import type { Executor } from '../workers/executor.ts';
+import { TerminalExecutorError, type Executor } from '../workers/executor.ts';
 import {
   addMembership,
   appendObservation,
@@ -15,7 +15,7 @@ import {
   lockCatalog,
   newProduct,
 } from './catalog-store.ts';
-import { commerceMissing, type CommerceScope } from './reads.ts';
+import type { CommerceScope } from './reads.ts';
 import {
   catalogUrl,
   categoryKey,
@@ -26,6 +26,7 @@ import {
   productCategories,
   productFacts,
   readFacts,
+  sellsCatalog,
   shelfLinks,
   type CatalogFacts,
 } from './projection-facts.ts';
@@ -57,7 +58,12 @@ async function sourceOf(db: Database, scope: CommerceScope, id: string) {
     .where('u.project_id', '=', scope.projectId)
     .where('a.id', '=', id)
     .executeTakeFirst();
-  return source ?? commerceMissing('Source Site Health analysis not found');
+  if (!source)
+    throw new TerminalExecutorError(
+      'commerce_source_missing',
+      'Source Site Health analysis not found',
+    );
+  return source;
 }
 
 async function projectCategory(
@@ -68,6 +74,8 @@ async function projectCategory(
   url: string,
 ) {
   const name = categoryTitle(facts, source.latest_title);
+  // A listing with no name of its own cannot be told apart from another shelf.
+  if (!name) return null;
   const key = categoryKey(name);
   // The category owning this name wins over one matched by URL, so the rename
   // below can never collide with the (project_id, normalized_name) key.
@@ -131,8 +139,14 @@ async function projectProduct(
     .executeTakeFirst();
   if (prior) return null;
   const projection = productFacts(facts, url);
-  // A listing page the classifier called a product is projected as the shelf it is.
-  if (!projection.identified) return projectCategory(db, scope, source, facts, url);
+  // A listing page the classifier called a product is projected as the shelf it
+  // is. An unidentifiable product page that lists no products (a sold-out PDP
+  // without identifiers or price) is skipped: projected as a category, its
+  // parent breadcrumb would take over that real shelf.
+  if (!projection.identified)
+    return facts.commerce.product_cards.length
+      ? projectCategory(db, scope, source, facts, url)
+      : null;
   const existing = await db
     .selectFrom('commerce_products')
     .selectAll()
@@ -196,16 +210,7 @@ async function projectProduct(
     classifier_version: source.classifier_version,
     projector_version: policy.commerce.projector_version,
   });
-  const names = productCategories(facts, url, [source.final_url, source.requested_url]);
-  const membership = await db
-    .selectFrom('commerce_product_categories')
-    .select('id')
-    .where('workspace_id', '=', scope.workspaceId)
-    .where('project_id', '=', scope.projectId)
-    .where('product_id', '=', product.id)
-    .limit(1)
-    .executeTakeFirst();
-  for (const name of names.length || membership ? names : ['Uncategorized']) {
+  for (const name of productCategories(facts, url, [source.final_url, source.requested_url])) {
     const category = await categoryByName(db, scope, name.slice(0, 255));
     await addMembership(db, scope, product.id, category.id, observation);
   }
@@ -292,30 +297,9 @@ async function linkShelves(db: Database, scope: CommerceScope, crawlId: string, 
   const productsByUrl = new Map(
     (await productQuery.execute()).map((row) => [catalogUrl(row.canonical_url), row.id]),
   );
-  const claimed = new Set<string>();
   for (const shelf of shelves)
-    for (const productId of listedProducts(shelf.links, identities, productsByUrl)) {
+    for (const productId of listedProducts(shelf.links, identities, productsByUrl))
       await addMembership(db, scope, productId, shelf.id, null);
-      claimed.add(productId);
-    }
-  if (!claimed.size) return;
-  // A product a real shelf claims is no longer uncategorized.
-  await db
-    .deleteFrom('commerce_product_categories')
-    .where('workspace_id', '=', scope.workspaceId)
-    .where('project_id', '=', scope.projectId)
-    .where('product_id', 'in', [...claimed])
-    .where(
-      'category_id',
-      'in',
-      db
-        .selectFrom('commerce_categories')
-        .select('id')
-        .where('workspace_id', '=', scope.workspaceId)
-        .where('project_id', '=', scope.projectId)
-        .where('normalized_name', '=', 'uncategorized'),
-    )
-    .execute();
 }
 
 export const projectCatalog: Executor = async (task, { db, checkCancelled }) => {
@@ -327,9 +311,20 @@ export const projectCatalog: Executor = async (task, { db, checkCancelled }) => 
     await lockCatalog(trx, scope);
     const source = await sourceOf(trx, scope, analysisId);
     if (source.page_kind !== 'product' && source.page_kind !== 'category') return;
-    const facts = readFacts(source.normalized_facts);
+    // A source that cannot be read or has no URL fails the same way on every
+    // retry, so it ends the task at once.
+    let facts: CatalogFacts;
+    try {
+      facts = readFacts(source.normalized_facts);
+    } catch {
+      throw new TerminalExecutorError('commerce_facts_invalid', 'Catalog source facts are invalid');
+    }
     const url = pageIdentity(facts, source.final_url || source.normalized_url);
-    if (!url) throw new Error('Catalog source has no usable URL');
+    if (!url)
+      throw new TerminalExecutorError(
+        'commerce_source_url_missing',
+        'Catalog source has no usable URL',
+      );
     const projected =
       source.page_kind === 'category'
         ? await projectCategory(trx, scope, source, facts, url)
@@ -337,8 +332,6 @@ export const projectCatalog: Executor = async (task, { db, checkCancelled }) => 
     if (projected) await linkShelves(trx, scope, source.crawl_id, projected);
   });
 };
-
-const CATALOG_MODELS = new Set(policy.discovery.constants.commerce_business_models);
 
 /**
  * Queue projection of a catalog page's analysis, once per analysis and
@@ -356,9 +349,7 @@ export async function enqueueCatalogProjection(
     .where('workspace_id', '=', scope.workspaceId)
     .where('project_id', '=', scope.projectId)
     .executeTakeFirst();
-  const context = record(profile?.business_context);
-  const models = [context.business_model, ...strings(context.secondary_business_models)];
-  if (!models.some((model) => typeof model === 'string' && CATALOG_MODELS.has(model))) return;
+  if (!sellsCatalog(profile?.business_context)) return;
   await enqueueTask(db, {
     workspaceId: scope.workspaceId,
     projectId: scope.projectId,

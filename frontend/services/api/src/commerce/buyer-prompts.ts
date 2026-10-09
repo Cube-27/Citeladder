@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import { commerceTargetsSchema } from '@citeladder/contracts/commerce-suite';
 import { sql } from 'kysely';
 import { z } from 'zod';
 
@@ -23,7 +24,7 @@ const stringField = (value: unknown) => (typeof value === 'string' ? value.trim(
 const targetSchema = z.object({ kind: z.enum(['product', 'category']), id: z.uuid() });
 type Target = z.infer<typeof targetSchema>;
 export const buyerGenerateInput = z.object({
-  targets: z.array(targetSchema).min(1).max(P.targets_max),
+  targets: commerceTargetsSchema,
   count: z.number().int().min(P.min).max(P.max).default(P.default),
 });
 export const buyerManualInput = z.object({
@@ -68,6 +69,7 @@ async function targetContext(db: Database, scope: CommerceScope, target: Target)
           .where('pc.category_id', '=', target.id)
           .where('p.workspace_id', '=', scope.workspaceId)
           .where('p.project_id', '=', scope.projectId)
+          .where('p.lifecycle_state', '=', 'active')
           .orderBy('p.name')
           .limit(P.product_limit)
           .execute()
@@ -102,8 +104,10 @@ function admittedTexts(texts: string[], context: TargetContext, tracked: Set<str
       context.sells,
       ...context.category_terms,
       ...context.products_on_this_shelf,
-      ...(context.target_kind === 'product'
-        ? [context.name, 'description' in context ? context.description : '']
+      // A category's own name ("trail running shoes") is what its buyers type.
+      context.name,
+      ...(context.target_kind === 'product' && 'description' in context
+        ? [context.description]
         : []),
     ].flatMap((value) => [...bindingTokens(value)]),
   );
@@ -325,31 +329,42 @@ export async function generateBuyerPrompts(
         ).map((row) => row.normalized_text_hash)
       : [],
   );
+  let gateway: ModelGateway;
   try {
-    const gateway = gatewayFactory();
-    await enforceWorkspaceRequest(db, scope.workspaceId, agentCallLimit(input.targets.length));
-    const batches = [];
-    for (const [index, context] of contexts.entries()) {
-      const response = await gateway.structured(
+    gateway = gatewayFactory();
+  } catch (error) {
+    if (error instanceof ModelError) throw unavailable();
+    throw error;
+  }
+  await enforceWorkspaceRequest(db, scope.workspaceId, agentCallLimit(input.targets.length));
+  // Each target keeps what it admitted, so one weak batch or a later model
+  // failure does not discard the prompts already paid for. Only a request that
+  // admitted nothing at all is unavailable.
+  const batches = [];
+  for (const [index, context] of contexts.entries()) {
+    let response;
+    try {
+      response = await gateway.structured(
         commerceBuyerPromptSystem(context.business_model),
         JSON.stringify({ count: input.count, context }),
         // Unusable items are dropped one by one during admission, never the batch.
         z.object({ prompts: z.array(z.object({ text: z.string() })) }),
       );
-      const texts = admittedTexts(
-        response.value.prompts.map((row) => row.text),
-        context,
-        tracked,
-      ).slice(0, input.count);
-      if (texts.length !== input.count) throw unavailable();
-      for (const kept of texts) tracked.add(promptTextHash(kept));
-      const target = input.targets[index]!;
-      const { content: _content, ...model } = response.result;
-      batches.push({ target, texts, evidence: { target, template_version: P.version, model } });
+    } catch (error) {
+      if (error instanceof ModelError) break;
+      throw error;
     }
-    return await persist(db, scope, batches);
-  } catch (error) {
-    if (error instanceof ModelError) throw unavailable();
-    throw error;
+    const texts = admittedTexts(
+      response.value.prompts.map((row) => row.text),
+      context,
+      tracked,
+    ).slice(0, input.count);
+    if (!texts.length) continue;
+    for (const kept of texts) tracked.add(promptTextHash(kept));
+    const target = input.targets[index]!;
+    const { content: _content, ...model } = response.result;
+    batches.push({ target, texts, evidence: { target, template_version: P.version, model } });
   }
+  if (!batches.length) throw unavailable();
+  return persist(db, scope, batches);
 }

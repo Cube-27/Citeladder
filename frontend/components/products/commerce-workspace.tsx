@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { InlineEmpty } from '@/components/ui/inline-empty';
 import { ResizableSplitPane } from '@/components/ui/split-pane';
-import type { CommerceTarget } from '@citeladder/contracts/commerce-suite';
+import { COMMERCE_TARGETS_MAX, type CommerceTarget } from '@citeladder/contracts/commerce-suite';
+import { humanizeApiError } from '@/lib/api/errors';
 import { useCompetitorDiscovery } from '@/lib/products/competitor-discovery';
 import {
   DEFAULT_PANE_WIDTH,
@@ -28,41 +29,47 @@ import { useActiveWorkspaceId } from '@/lib/project/project-context';
 /** Selection-only bulk actions, including stale keys that still need a clear path. */
 export function BulkActions({
   count,
-  hasCheckedKeys,
   pending,
+  error,
   onDiscover,
   onClear,
 }: Readonly<{
   count: number;
-  hasCheckedKeys: boolean;
   pending: boolean;
+  error: unknown;
   onDiscover: () => void;
   onClear: () => void;
 }>) {
   const noun = count === 1 ? 'target' : 'targets';
+  const tooMany = count > COMMERCE_TARGETS_MAX;
+  let hint = 'Check categories or products to use bulk actions.';
+  if (tooMany)
+    hint = `Competitors can be found for up to ${COMMERCE_TARGETS_MAX} targets at a time.`;
+  else if (count) hint = 'Find competitors for every checked target.';
   return (
     <Card className="flex min-h-16 flex-wrap items-center justify-between gap-3 px-3 py-2">
       <div className="grid gap-0.5">
         <span aria-live="polite" className={textRole('itemTitle')}>
           {count ? `${count} ${noun} selected` : 'No targets selected'}
         </span>
-        <span className="type-caption">
-          {count
-            ? 'Find competitors for every checked target.'
-            : 'Check categories or products to use bulk actions.'}
-        </span>
+        <span className="type-caption">{hint}</span>
+        {error ? (
+          <span role="alert" className="type-caption text-danger">
+            {humanizeApiError(error, 'Competitor discovery could not start.').message}
+          </span>
+        ) : null}
       </div>
       <div className="flex flex-wrap items-center gap-1">
         <Button
           size="sm"
-          disabled={!count}
+          disabled={!count || tooMany}
           pending={pending}
           pendingLabel="Finding…"
           onClick={onDiscover}
         >
           Find competitors
         </Button>
-        <Button size="sm" variant="ghost" disabled={!hasCheckedKeys || pending} onClick={onClear}>
+        <Button size="sm" variant="ghost" disabled={pending} onClick={onClear}>
           Clear selection
         </Button>
       </div>
@@ -108,8 +115,8 @@ export function CommerceWorkspace({ projectId }: Readonly<{ projectId: string }>
         {checked.length ? (
           <BulkActions
             count={checkedTargets.length}
-            hasCheckedKeys
             pending={discovery.discover.isPending}
+            error={discovery.discover.error}
             onDiscover={() => discovery.discover.mutate(checkedTargets)}
             onClear={() => setChecked([])}
           />

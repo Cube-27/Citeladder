@@ -7,6 +7,9 @@ import type { DeriveExecution, ExecutionResult } from '../audits/result-persiste
 import { analyzeExecution } from '../analysis/execution.ts';
 import { auditPolicy } from '../audits/config.ts';
 import { createModelGateway, gatewaySettings } from '../models/gateway.ts';
+import { agentCallLimit, enforceWorkspaceRequest } from '../abuse/usage.ts';
+import { lockCatalog } from './catalog-store.ts';
+import { ownedHosts } from './discovery-validation.ts';
 import {
   boundedText,
   frozenTargetSchema,
@@ -31,11 +34,11 @@ export function configuredShelfResolver(
     const gateway = createModelGateway(gatewaySettings(env));
     return {
       model: gateway.model,
-      resolve: async (span) =>
+      resolve: async (spans) =>
         (
           await gateway.structured(
-            'Extract only recommended products from this bounded answer span. Keep product identity separate from merchant and citation URLs. Set product_url only when the URL identifies the recommended PDP; set merchant_url only for a seller link. Return an empty list when uncertain.',
-            JSON.stringify({ span }),
+            'Extract only recommended products from these numbered answer spans. For each product, set span to the index of the span that recommends it. Keep product identity separate from merchant and citation URLs. Set product_url only when a URL written in that span identifies the recommended PDP; set merchant_url only for a seller link. Omit any span you are uncertain about.',
+            JSON.stringify({ spans: spans.map((text, index) => ({ index, text })) }),
             resolvedBatchSchema,
             signal,
           )
@@ -44,6 +47,26 @@ export function configuredShelfResolver(
   } catch {
     return undefined;
   }
+}
+
+/**
+ * Each resolver call spends one unit of the workspace model quota first. An
+ * exhausted quota throws inside the resolver, which leaves the answer's spans
+ * unresolved instead of failing the execution.
+ */
+function metered(
+  db: Database,
+  workspaceId: string,
+  resolver: ShelfResolver | null | undefined,
+): ShelfResolver | undefined {
+  if (!resolver) return undefined;
+  return {
+    model: resolver.model,
+    resolve: async (spans) => {
+      await enforceWorkspaceRequest(db, workspaceId, agentCallLimit(1));
+      return resolver.resolve(spans);
+    },
+  };
 }
 
 /** Read frozen context, then finish optional model I/O before the caller opens its persistence transaction. */
@@ -87,8 +110,12 @@ export async function prepareShelfExecution(
   const prepared = await prepareRecommendations(
     result.answer_text,
     catalog,
-    resolver === undefined ? configuredShelfResolver() : (resolver ?? undefined),
+    metered(db, task.workspace_id, resolver === undefined ? configuredShelfResolver() : resolver),
   );
+  const owned = await ownedHosts(db, {
+    workspaceId: task.workspace_id,
+    projectId: audit.project_id,
+  });
   const versions = {
     parser:
       typeof frozen.parser_version === 'string'
@@ -153,7 +180,11 @@ export async function prepareShelfExecution(
       let candidateId = matched.competitor?.id ?? null;
       let observedCandidate: { product_name: string; brand_name: string } | undefined;
       if (!matched.product && !matched.competitor && resolved) {
-        const url = resolvedCompetitorUrl(resolved.product_url, sourceUrls);
+        const url = resolvedCompetitorUrl(resolved.product_url, {
+          answer: artifact.answer_text,
+          citations: sourceUrls,
+          ownedHosts: owned,
+        });
         if (url) {
           let candidate = await trx
             .selectFrom('commerce_competitor_candidates')
@@ -166,13 +197,7 @@ export async function prepareShelfExecution(
             .executeTakeFirst();
           if (!candidate) {
             // Concurrent audit completions serialize new pending candidates on the owning project.
-            await trx
-              .selectFrom('projects')
-              .select('id')
-              .where('workspace_id', '=', task.workspace_id)
-              .where('id', '=', audit.project_id)
-              .forUpdate()
-              .executeTakeFirstOrThrow();
+            await lockCatalog(trx, { workspaceId: task.workspace_id, projectId: audit.project_id });
             candidate = await trx
               .selectFrom('commerce_competitor_candidates')
               .selectAll()
@@ -212,11 +237,14 @@ export async function prepareShelfExecution(
           observedCandidate = candidate;
         }
       }
-      const price =
-        resolved?.price !== null && resolved?.price !== undefined
-          ? { price: resolved.price, currency: resolved.currency.toUpperCase() }
-          : observedPrice(span.text, locale);
-      const merchant = observedMerchant(span.text, resolved?.merchant_url);
+      // Price and seller come from the answer's own text; a resolver-supplied
+      // merchant link counts only when the answer carries it.
+      const price = observedPrice(span.text, locale);
+      const merchantUrl = resolved?.merchant_url.trim() ?? '';
+      const merchant = observedMerchant(
+        span.text,
+        merchantUrl && artifact.answer_text.includes(merchantUrl) ? merchantUrl : undefined,
+      );
       const id = randomUUID();
       await trx
         .insertInto('commerce_recommendation_observations')

@@ -1,4 +1,5 @@
 import {
+  COMMERCE_TARGETS_MAX,
   buyerPromptSchema,
   catalogImportSchema,
   commerceCatalogSchema,
@@ -49,7 +50,7 @@ const candidateBody = z.object({
 const promptBody = z.object({ approved: z.boolean() });
 const executeDiscoveriesBody = z
   .object({
-    task_ids: z.array(z.uuid()).min(1).max(policy.commerce.buyer_prompts.targets_max),
+    task_ids: z.array(z.uuid()).min(1).max(COMMERCE_TARGETS_MAX),
   })
   .strict();
 
@@ -205,7 +206,6 @@ export const commerceRoutes = [
     params: {
       path: projectPath,
       query: {
-        audit_id: { scalar: { kind: 'uuid' } },
         target_id: { scalar: { kind: 'uuid' } },
         target_kind: { scalar: { kind: 'literal', values: ['category', 'product'] } },
       },
@@ -217,7 +217,7 @@ export const commerceRoutes = [
         throw new ApiError(422, 'AI Shelf requires a product or category target', {
           code: 'commerce_target_required',
         });
-      return shelf(db, scope, { kind: query.target_kind, id: query.target_id }, query.audit_id);
+      return shelf(db, scope, { kind: query.target_kind, id: query.target_id });
     },
   }),
 ];

@@ -1,6 +1,7 @@
 /** Target-aware candidate filtering over shared Site Health facts and classification. */
 import type { CommerceTarget } from '@citeladder/contracts/commerce-suite';
 import { policy } from '../config.ts';
+import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import type { FetchedPage } from '../projects/safe-fetch.ts';
 import { canonicalUrl } from '../site-health/url-identity.ts';
@@ -11,7 +12,7 @@ import type { SearchResult } from './discovery-provider.ts';
 const p = policy.commerce.discovery;
 const editorial = p.editorial_patterns.map((pattern) => new RegExp(pattern, 'iu'));
 export const contextText = (value: unknown) => (typeof value === 'string' ? value : '');
-export function competitorHost(value: string) {
+function competitorHost(value: string) {
   try {
     return new URL(value.includes('://') ? value : `https://${value}`).hostname
       .toLowerCase()
@@ -20,6 +21,25 @@ export function competitorHost(value: string) {
   } catch {
     return '';
   }
+}
+/** The business's own hosts: its website and every owned domain. */
+export async function ownedHosts(db: Database, scope: { workspaceId: string; projectId: string }) {
+  const project = await db
+    .selectFrom('projects')
+    .select('website_url')
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('id', '=', scope.projectId)
+    .executeTakeFirstOrThrow();
+  const domains = await db
+    .selectFrom('owned_domains as d')
+    .innerJoin('projects as p', 'p.id', 'd.project_id')
+    .select('d.domain')
+    .where('p.workspace_id', '=', scope.workspaceId)
+    .where('d.project_id', '=', scope.projectId)
+    .execute();
+  return [project.website_url, ...domains.map((row) => row.domain)]
+    .map(competitorHost)
+    .filter(Boolean);
 }
 const belongs = (host: string, domains: readonly string[]) =>
   domains.some((domain) => domain && (host === domain || host.endsWith(`.${domain}`)));

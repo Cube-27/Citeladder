@@ -202,7 +202,12 @@ function CatalogTree({
           ];
           const selectedCount = selectionKeys.filter((key) => checkedKeys.has(key)).length;
           const hasProducts = Boolean(category.children?.length);
-          const expanded = hasProducts && (expandedByKey[category.key] ?? searching);
+          // A deep-linked product opens its category so the selection is visible.
+          const holdsSelection = (category.children ?? []).some(
+            (child) => child.key === selectedKey,
+          );
+          const expanded =
+            hasProducts && (expandedByKey[category.key] ?? (searching || holdsSelection));
           return (
             <CatalogRow
               key={category.key}
@@ -264,6 +269,16 @@ function CatalogTree({
   );
 }
 
+/**
+ * Crawled pages project into the catalog only for a business that sells one,
+ * so a crawl is advice only there; any business can import a CSV.
+ */
+function emptyCatalogHint(crawlProjects: boolean | undefined): string {
+  return crawlProjects
+    ? 'Run a Site Health crawl or import a CSV.'
+    : 'Crawled pages become catalog products only for businesses that sell a product catalog. Import a CSV to add products.';
+}
+
 function filteredCatalog(
   categories: CatalogEntry[],
   products: CatalogEntry[],
@@ -322,10 +337,7 @@ export function CatalogList({
     );
   return (
     <div className="grid min-w-0 content-start">
-      <div
-        data-testid="catalog-search-controls"
-        className="border-border-subtle bg-panel sticky top-0 z-20 grid gap-2 border-b p-[var(--card-padding)]"
-      >
+      <div className="border-border-subtle bg-panel sticky top-0 z-20 grid gap-2 border-b p-[var(--card-padding)]">
         <SearchField
           aria-label="Search the catalog"
           placeholder="Search categories and products"
@@ -343,7 +355,7 @@ export function CatalogList({
             icon={needle ? SearchX : PackageOpen}
             headingLevel={3}
             heading={needle ? `Nothing matches “${search.trim()}”.` : 'Nothing projected yet.'}
-            description={needle ? undefined : 'Run a Site Health crawl or import a CSV.'}
+            description={needle ? undefined : emptyCatalogHint(query.data?.projection.applies)}
             className="px-2"
           />
         ) : (

@@ -4,15 +4,17 @@ import {
   commerceProductSchema,
   competitorCandidateSchema,
   competitorDiscoveryTaskSchema,
-  recommendationObservationSchema,
+  shelfHolderSchema,
   shelfSchema,
-  shelfSnapshotSchema,
 } from '@citeladder/contracts/commerce-suite';
+import { sql } from 'kysely';
 import { z } from 'zod';
 
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { jsonObject } from '../db/json.ts';
+import { sellsCatalog, UNCATEGORIZED_KEY } from './projection-facts.ts';
+import { holderIdentity, orderedRank } from './shelf-metrics.ts';
 import { ApiError } from '../errors.ts';
 
 export type CommerceScope = { workspaceId: string; projectId: string };
@@ -28,6 +30,7 @@ function numeric(value: string | null): number | null {
 }
 
 export async function catalog(db: Database, scope: CommerceScope) {
+  const projection = projectionState(db, scope);
   const products = await db
     .selectFrom('commerce_products')
     .selectAll()
@@ -36,26 +39,24 @@ export async function catalog(db: Database, scope: CommerceScope) {
     .orderBy('name')
     .orderBy('canonical_url')
     .execute();
+  // A row named "Uncategorized" (the platform default) is no category: its
+  // products read as uncategorized.
   const categories = await db
     .selectFrom('commerce_categories')
     .selectAll()
     .where('workspace_id', '=', scope.workspaceId)
     .where('project_id', '=', scope.projectId)
+    .where('normalized_name', '!=', UNCATEGORIZED_KEY)
     .execute();
-  const memberships = await db
-    .selectFrom('commerce_product_categories')
-    .select(['product_id', 'category_id'])
-    .where('workspace_id', '=', scope.workspaceId)
-    .where('project_id', '=', scope.projectId)
-    .execute();
-  const tasks = await db
-    .selectFrom('analytics_tasks')
-    .select(['status', db.fn.countAll<string>().as('count')])
-    .where('workspace_id', '=', scope.workspaceId)
-    .where('project_id', '=', scope.projectId)
-    .where('task_kind', '=', 'commerce_catalog_projection')
-    .groupBy('status')
-    .execute();
+  const shown = new Set(categories.map((row) => row.id));
+  const memberships = (
+    await db
+      .selectFrom('commerce_product_categories')
+      .select(['product_id', 'category_id'])
+      .where('workspace_id', '=', scope.workspaceId)
+      .where('project_id', '=', scope.projectId)
+      .execute()
+  ).filter((row) => shown.has(row.category_id));
   const byProduct = new Map<string, string[]>();
   const counts = new Map<string, number>();
   for (const row of memberships) {
@@ -85,8 +86,55 @@ export async function catalog(db: Database, scope: CommerceScope) {
           a.name.localeCompare(b.name) ||
           a.id.localeCompare(b.id),
       ),
-    projection_tasks: Object.fromEntries(tasks.map((row) => [row.status, Number(row.count)])),
+    projection: await projection,
   });
+}
+
+const PROJECTION_TASK = 'commerce_catalog_projection';
+
+/**
+ * Projection progress for the catalog header: live tasks, and the failures of
+ * the latest projected crawl only, so one old failure is not reported forever.
+ */
+async function projectionState(db: Database, scope: CommerceScope) {
+  const terminal = [...policy.task_queue.terminal];
+  const profile = await db
+    .selectFrom('brand_profiles')
+    .select('business_context')
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('project_id', '=', scope.projectId)
+    .executeTakeFirst();
+  const tasks = db
+    .selectFrom('analytics_tasks as t')
+    .where('t.workspace_id', '=', scope.workspaceId)
+    .where('t.project_id', '=', scope.projectId)
+    .where('t.task_kind', '=', PROJECTION_TASK);
+  const inFlight = tasks
+    .select(db.fn.countAll<string>().as('count'))
+    .where('t.status', 'not in', terminal)
+    .executeTakeFirstOrThrow();
+  const sources = tasks
+    .innerJoin('site_page_analyses as a', (join) =>
+      join.on(sql`a.id::text`, '=', sql`t.payload->>'source_analysis_id'`),
+    )
+    .where('a.workspace_id', '=', scope.workspaceId);
+  const latest = await sources
+    .select('a.crawl_id')
+    .orderBy('t.created_at', 'desc')
+    .limit(1)
+    .executeTakeFirst();
+  const failed = latest
+    ? await sources
+        .select(db.fn.countAll<string>().as('count'))
+        .where('a.crawl_id', '=', latest.crawl_id)
+        .where('t.status', 'in', ['failed', 'cancelled'])
+        .executeTakeFirstOrThrow()
+    : { count: '0' };
+  return {
+    applies: sellsCatalog(profile?.business_context),
+    in_flight: Number((await inFlight).count),
+    failed: Number(failed.count),
+  };
 }
 
 const candidateFields = [
@@ -179,19 +227,26 @@ export async function buyerPrompts(db: Database, scope: CommerceScope, id?: stri
   );
 }
 
+type HolderKind = z.infer<typeof shelfHolderSchema>['kind'];
+const SETTLED_ACTION_STATUSES = ['done', 'dismissed'];
+
+/**
+ * The latest measurement of one target, the recommendations behind it and the
+ * Actions open against it.
+ *
+ * Holders come from exactly the observations the snapshot was computed from,
+ * so the list and the numbers above it always describe the same answers.
+ */
 export async function shelf(
   db: Database,
   scope: CommerceScope,
-  target: { kind: string; id: string },
-  auditId: string | null,
+  target: { kind: 'category' | 'product'; id: string },
 ) {
-  const snapshots = await db
+  // Independent of the snapshot; read alongside it.
+  const actions = targetActions(db, scope, target);
+  const snapshot = await db
     .selectFrom('commerce_shelf_snapshots')
     .select([
-      'id',
-      'audit_id',
-      'target_kind',
-      'target_id',
       'product_visibility',
       'share_of_shelf',
       'average_shelf_position',
@@ -199,7 +254,7 @@ export async function shelf(
       'successful_execution_count',
       'recognized_slot_count',
       'ranked_execution_count',
-      'formula_version',
+      'source_observation_ids',
       'created_at',
     ])
     .where('workspace_id', '=', scope.workspaceId)
@@ -208,58 +263,117 @@ export async function shelf(
     .where('target_id', '=', target.id)
     .orderBy('created_at', 'desc')
     .orderBy('id')
-    .execute();
-  const selected = auditId ?? snapshots[0]?.audit_id ?? null;
-  const observations =
-    selected === null
-      ? []
-      : await db
-          .selectFrom('commerce_recommendation_observations')
-          .select([
-            'id',
-            'audit_id',
-            'target_kind',
-            'target_id',
-            'product_id',
-            'competitor_candidate_id',
-            'observed_product',
-            'observed_brand',
-            'classification',
-            'observed_title',
-            'observed_price',
-            'observed_currency',
-            'merchant_url',
-            'merchant_domain',
-            'surface_kind',
-            'rank',
-            'order_observable',
-            'match_confidence',
-            'artifact_id',
-          ])
-          .where('workspace_id', '=', scope.workspaceId)
-          .where('project_id', '=', scope.projectId)
-          .where('target_kind', '=', target.kind)
-          .where('target_id', '=', target.id)
-          .where('audit_id', '=', selected)
-          .orderBy('created_at', 'desc')
-          .orderBy('id')
-          .execute();
+    .limit(1)
+    .executeTakeFirst();
+  const sourceIds = z.array(z.uuid()).parse(snapshot?.source_observation_ids ?? []);
+  const observations = sourceIds.length
+    ? await db
+        .selectFrom('commerce_recommendation_observations')
+        .select([
+          'task_id',
+          'classification',
+          'product_id',
+          'competitor_candidate_id',
+          'observed_product',
+          'observed_brand',
+          'merchant_domain',
+          'rank',
+          'order_observable',
+        ])
+        .where('workspace_id', '=', scope.workspaceId)
+        .where('project_id', '=', scope.projectId)
+        .where('id', 'in', sourceIds)
+        .orderBy('created_at')
+        .orderBy('id')
+        .execute()
+    : [];
+  const holders = new Map<
+    string,
+    {
+      kind: HolderKind;
+      name: string;
+      brand: string;
+      merchant_domain: string;
+      tasks: Set<string>;
+      best_rank: number | null;
+    }
+  >();
+  let unresolved = 0;
+  for (const row of observations) {
+    const identity = holderIdentity(row);
+    const kind = shelfHolderSchema.shape.kind.safeParse(row.classification);
+    if (identity === null || !kind.success) {
+      unresolved++;
+      continue;
+    }
+    const key = JSON.stringify([kind.data, identity]);
+    const holder = holders.get(key) ?? {
+      kind: kind.data,
+      name: row.observed_product,
+      brand: row.observed_brand,
+      merchant_domain: row.merchant_domain,
+      tasks: new Set<string>(),
+      best_rank: null,
+    };
+    holder.tasks.add(row.task_id);
+    holder.merchant_domain ||= row.merchant_domain;
+    const rank = orderedRank(row);
+    if (rank !== null && (holder.best_rank === null || rank < holder.best_rank))
+      holder.best_rank = rank;
+    holders.set(key, holder);
+  }
   return shelfSchema.parse({
     target,
-    selected_audit_id: selected,
-    snapshots: snapshots
-      .filter((row) => !auditId || row.audit_id === auditId)
-      .map((row) =>
-        shelfSnapshotSchema.parse({
-          ...row,
-          created_at: row.created_at.toISOString(),
-        }),
+    snapshot: snapshot
+      ? {
+          product_visibility: snapshot.successful_execution_count
+            ? snapshot.product_visibility
+            : null,
+          share_of_shelf: snapshot.share_of_shelf,
+          average_shelf_position: snapshot.average_shelf_position,
+          first_position_win_rate: snapshot.first_position_win_rate,
+          successful_execution_count: snapshot.successful_execution_count,
+          recognized_slot_count: snapshot.recognized_slot_count,
+          ranked_execution_count: snapshot.ranked_execution_count,
+          measured_at: snapshot.created_at.toISOString(),
+        }
+      : null,
+    holders: [...holders.values()]
+      .map(({ tasks, ...holder }) => ({ ...holder, appearances: tasks.size }))
+      .sort(
+        (a, b) =>
+          b.appearances - a.appearances ||
+          (a.best_rank ?? Infinity) - (b.best_rank ?? Infinity) ||
+          a.name.localeCompare(b.name),
       ),
-    observations: observations.map((row) =>
-      recommendationObservationSchema.parse({
-        ...row,
-        observed_price: numeric(row.observed_price),
-      }),
-    ),
+    unresolved_count: unresolved,
+    actions: await actions,
   });
+}
+
+/** Live commerce Opportunities keyed to the target, by the Action that holds them. */
+async function targetActions(
+  db: Database,
+  scope: CommerceScope,
+  target: { kind: 'category' | 'product'; id: string },
+) {
+  const rows = await db
+    .selectFrom('opportunities as o')
+    .innerJoin('actions as a', 'a.id', 'o.action_id')
+    .select(['a.id', 'a.status', 'o.title'])
+    .where('o.workspace_id', '=', scope.workspaceId)
+    .where('o.project_id', '=', scope.projectId)
+    .where('a.workspace_id', '=', scope.workspaceId)
+    .where('o.opportunity_type', '=', 'commerce')
+    .where('o.target_key', '=', `${target.kind}:${target.id}`)
+    .where('o.superseded_at', 'is', null)
+    .where('a.status', 'not in', SETTLED_ACTION_STATUSES)
+    .orderBy('o.priority_score', 'desc')
+    .orderBy('a.id')
+    .execute();
+  // An Action holding several of the target's Opportunities is listed once,
+  // under its highest-priority title.
+  const byAction = new Map<string, (typeof rows)[number]>();
+  for (const row of rows) if (!byAction.has(row.id)) byAction.set(row.id, row);
+  return [...byAction.values()];
 }

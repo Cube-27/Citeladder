@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 
-import { Alert } from '@/components/ui/alert';
 import { BusyBar } from '@/components/ui/busy-bar';
 import type { CommerceTarget } from '@citeladder/contracts/commerce-suite';
 import type { useCompetitorDiscovery } from '@/lib/products/competitor-discovery';
@@ -10,7 +9,10 @@ import type { useCompetitorDiscovery } from '@/lib/products/competitor-discovery
 import type { CommerceQueries } from './commerce-queries';
 import { TargetCompetitors } from './target-competitors';
 import { TargetPrompts } from './target-prompts';
-import { TargetShelfBand, hasShelfMeasurement } from './target-shelf-band';
+import { TargetNextStep } from './target-next-step';
+import { TargetShelfBand } from './target-shelf-band';
+import { TargetShelfEvidence } from './target-shelf-evidence';
+import { sameTarget, targetKey } from '@/lib/products/use-commerce-target';
 import { Stack } from '@/components/ui/layout';
 
 type ShownTarget = Readonly<{
@@ -81,12 +83,24 @@ export function TargetDetail({
     <Stack gap="workspace" className="relative content-start" aria-busy={queries.shelf.isFetching}>
       <BusyBar active={queries.shelf.isFetching} label="Updating target detail" />
       <TargetShelfBand query={shown.shelf} />
-      {hasShelfMeasurement(shown.shelf) ? null : (
-        <Alert tone="info">
-          This target has not been measured yet. Approve prompts below and launch an audit to
-          produce shelf metrics.
-        </Alert>
-      )}
+      {shown.shelf.data ? (
+        <>
+          {/* A pending or failed read is not an empty list: no advice from it. */}
+          {queries.competitors.isSuccess && queries.buyerPrompts.isSuccess ? (
+            <TargetNextStep
+              kind={shown.target.kind}
+              competitors={(queries.competitors.data ?? []).filter((row) =>
+                sameTarget({ kind: row.target_kind, id: row.target_id }, shown.target),
+              )}
+              prompts={(queries.buyerPrompts.data ?? []).filter((row) =>
+                sameTarget(row.target, shown.target),
+              )}
+              shelf={shown.shelf.data}
+            />
+          ) : null}
+          <TargetShelfEvidence shelf={shown.shelf.data} />
+        </>
+      ) : null}
       <TargetCompetitors
         projectId={projectId}
         target={shown.target}
@@ -94,6 +108,8 @@ export function TargetDetail({
         discovery={discovery}
       />
       <TargetPrompts
+        // Typed text and launch state belong to one target, not the next.
+        key={targetKey(shown.target)}
         projectId={projectId}
         target={shown.target}
         targetLabel={shown.label}

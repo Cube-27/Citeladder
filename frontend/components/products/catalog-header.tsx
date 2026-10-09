@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { Alert } from '@/components/ui/alert';
@@ -12,9 +12,11 @@ import { textRole } from '@/components/ui/typography';
 import { commerceApi } from '@/lib/api/commerce';
 import { queryKeys } from '@/lib/api/query-keys';
 import { siteHealthApi, siteHealthQueries } from '@/lib/api/site-health';
+import { pluralCount } from '@/lib/format';
 import { crawlBadgeValue, crawlPollInterval, statusLabel } from '@/lib/site-health/status';
 
 import type { SiteCrawl } from '@/lib/api/types';
+import type { CommerceCatalog } from '@citeladder/contracts/commerce-suite';
 
 import type { CommerceQueries } from './commerce-queries';
 
@@ -35,23 +37,35 @@ function analyzedLabel(crawl: SiteHealthCrawl): string | null {
   return `${crawl.analyzed_count}/${Math.max(known, crawl.analyzed_count)}`;
 }
 
-/** In-flight projection work, or '' when the queue is idle. */
-function projectionLabel(tasks: Record<string, number> | undefined): string {
-  const pending = Object.entries(tasks ?? {})
-    .filter(([status, count]) => count > 0 && status !== 'succeeded')
-    .reduce((total, [, count]) => total + count, 0);
-  return pending ? `${pending} projecting` : '';
+type Projection = CommerceCatalog['projection'];
+
+/**
+ * Pages still being turned into catalog rows, then pages of the latest crawl
+ * that could not be. A finished, clean projection shows nothing.
+ */
+function projectionBadge(projection: Projection | undefined) {
+  if (projection?.in_flight)
+    return (
+      <Badge variant="status" value="info">
+        {projection.in_flight} projecting
+      </Badge>
+    );
+  if (projection?.failed)
+    return (
+      <Badge variant="status" value="danger">
+        {pluralCount(projection.failed, 'page')} not projected
+      </Badge>
+    );
+  return null;
 }
 
 /** The catalog-wide metrics half of the toolbar: counts, crawl, queue. */
 function CatalogStats({
   counts,
   crawl,
-  projecting,
 }: Readonly<{
   counts: CommerceQueries['catalog']['data'];
   crawl: SiteHealthCrawl;
-  projecting: string;
 }>) {
   const items: (StatItemProps & { key: string })[] = [
     {
@@ -77,17 +91,8 @@ function CatalogStats({
       ),
     },
   ];
-  if (projecting) {
-    items.push({
-      key: 'projection',
-      label: 'Projection',
-      value: (
-        <Badge variant="status" value="info">
-          {projecting}
-        </Badge>
-      ),
-    });
-  }
+  const projection = projectionBadge(counts?.projection);
+  if (projection) items.push({ key: 'projection', label: 'Projection', value: projection });
   return <StatGrid surface="open" size="figure" items={items} />;
 }
 
@@ -123,6 +128,13 @@ export function useCatalogHeader({
       return crawl ? crawlPollInterval(crawl) : false;
     },
   });
+  // A running crawl enqueues projections as pages are analyzed; re-read the
+  // catalog as that count moves, so its own polling starts with the first task.
+  const analyzed = dashboard.data?.crawl?.analyzed_count;
+  useEffect(() => {
+    if (analyzed !== undefined)
+      void client.invalidateQueries({ queryKey: queryKeys.commerce.catalog(projectId) });
+  }, [analyzed, client, projectId]);
   const invalidateCatalog = () =>
     client.invalidateQueries({
       queryKey: queryKeys.commerce.catalog(projectId),
@@ -147,7 +159,6 @@ export function useCatalogHeader({
   });
   const crawl = dashboard.data?.crawl ?? null;
   const counts = query.data;
-  const projecting = projectionLabel(counts?.projection_tasks);
   return {
     actions: (
       <CatalogActions
@@ -160,7 +171,7 @@ export function useCatalogHeader({
         }
       />
     ),
-    stats: <CatalogStats counts={counts} crawl={crawl} projecting={projecting} />,
+    stats: <CatalogStats counts={counts} crawl={crawl} />,
     notices: (
       <CatalogNotices
         result={result}

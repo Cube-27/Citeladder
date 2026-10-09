@@ -18,11 +18,6 @@ import {
 
 const path = (projectId: string, suffix: string) => `/projects/${projectId}/commerce/${suffix}`;
 
-/** The audit is optional, and an empty `&audit_id=` is not the same request. */
-function auditParameter(auditId: string | undefined): string {
-  return auditId ? `&audit_id=${encodeURIComponent(auditId)}` : '';
-}
-
 export const commerceApi = {
   catalog: async (projectId: string, options?: ApiRequestOptions) =>
     strictValidate(
@@ -140,16 +135,11 @@ export const commerceApi = {
       await apiClient.patch(path(projectId, `buyer-prompts/${promptId}`), { approved }, options),
       'commerce.decideBuyerPrompt',
     ),
-  shelf: async (
-    projectId: string,
-    target: CommerceTarget,
-    auditId?: string,
-    options?: ApiRequestOptions,
-  ) =>
+  shelf: async (projectId: string, target: CommerceTarget, options?: ApiRequestOptions) =>
     strictValidate(
       shelfSchema,
       await apiClient.get(
-        `${path(projectId, 'ai-shelf')}?target_kind=${target.kind}&target_id=${encodeURIComponent(target.id)}${auditParameter(auditId)}`,
+        `${path(projectId, 'ai-shelf')}?target_kind=${target.kind}&target_id=${encodeURIComponent(target.id)}`,
         options,
       ),
       'commerce.shelf',
