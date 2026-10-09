@@ -184,11 +184,10 @@ export function createController(host: Host) {
       const { selection: resolved, data } = await readSelection(host, selection);
       if (epoch !== generation) return;
       const application = new URL(
-        resolved.view === 'site_health' ? '/website' : '/visibility',
+        resolved.view === 'site_health' ? '/site' : '/visibility',
         links.application,
       );
       application.searchParams.set('project', resolved.project_id);
-      if (resolved.audit_id) application.searchParams.set('run', resolved.audit_id);
       set({
         result: analyticsResultSchema.parse({
           surface: 'citeladder_analytics',
@@ -353,7 +352,7 @@ export function createController(host: Host) {
             result: null,
             answers: [],
             busy: false,
-            error: 'Prioritized findings are unavailable. Retry or reconnect.',
+            error: 'Actions are unavailable. Retry or reconnect.',
           });
           context(null, generation);
         }
