@@ -14,7 +14,7 @@ import {
 import { textRole } from '@/components/ui/typography';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
 import type { AppState, Controller } from './controller';
-import { rate, text } from './format';
+import { moment, rate, text } from './format';
 
 const sourceSchema = z.object({
   items: z.array(
@@ -124,7 +124,9 @@ export function SourcesView({ state, controller }: Props) {
               ? answer.answer_text
               : 'Fetch the referenced answer for its retained text.'}
           </p>
-          <p className={textRole('caption')}>{text(answer.record_uri)}</p>
+          <p className={textRole('caption')}>
+            {text(answer.logical_engine, 'Engine unknown')} · {moment(answer.completed_at)}
+          </p>
           {typeof answer.record_uri === 'string' && (
             <Button
               variant="ghost"
@@ -161,9 +163,10 @@ const siteSchema = z.object({
   classification_source_artifact_ids: z.array(z.string()).nullable(),
   classification_source_task_ids: z.array(z.string()).nullable(),
 });
-function sourceIds(ids: string[] | null) {
+/** Provenance stays countable for people; the references themselves stay with the model. */
+function recorded(ids: string[] | null) {
   if (ids === null) return 'Unknown';
-  return ids.length ? ids.join(', ') : 'No recorded IDs';
+  return ids.length ? `${ids.length} recorded` : 'None recorded';
 }
 export function SiteHealthView({ state, controller }: Props) {
   const [findings, setFindings] = useState<Awaited<ReturnType<Controller['siteFindings']>>>(null);
@@ -195,8 +198,8 @@ export function SiteHealthView({ state, controller }: Props) {
         {rate(site.scores.aeo_measurement_coverage)}
       </p>
       <p className={textRole('caption')}>
-        Observed {site.observed_at} · {site.coverage.analyzed_urls} analyzed /{' '}
-        {site.coverage.selected_urls} selected URLs · crawl {site.crawl_id}
+        Observed {moment(site.observed_at)} · {site.coverage.analyzed_urls} analyzed /{' '}
+        {site.coverage.selected_urls} selected URLs
       </p>
       <p className={textRole('caption')}>
         {Object.entries(site.measurement_states)
@@ -208,7 +211,6 @@ export function SiteHealthView({ state, controller }: Props) {
         Existing prioritized findings are current actions and may refer to different evidence.
       </p>
       <Disclosure title="Snapshot evidence and processing versions">
-        <p className={textRole('caption')}>Snapshot {site.snapshot_id}</p>
         <dl className={textRole('caption', 'space-y-2 break-all')}>
           {Object.entries(site.versions).map(([kind, version]) => (
             <div key={kind}>
@@ -230,7 +232,7 @@ export function SiteHealthView({ state, controller }: Props) {
           ).map(([label, ids]) => (
             <div key={label}>
               <dt>{label}</dt>
-              <dd>{sourceIds(ids)}</dd>
+              <dd>{recorded(ids)}</dd>
             </div>
           ))}
         </dl>
@@ -294,7 +296,12 @@ export function SiteHealthView({ state, controller }: Props) {
           <h3 className={textRole('itemTitle')}>
             {text(finding.target_label, text(finding.title, 'Existing finding'))}
           </h3>
-          <p className={textRole('caption')}>{text(finding.record_uri)}</p>
+          {typeof finding.remediation === 'string' && (
+            <p className={textRole('body')}>{finding.remediation}</p>
+          )}
+          {typeof finding.target_url === 'string' && (
+            <p className={textRole('caption')}>{finding.target_url}</p>
+          )}
         </article>
       ))}
       {pages.map((page, index) => (
@@ -302,7 +309,9 @@ export function SiteHealthView({ state, controller }: Props) {
           <h3 className={textRole('itemTitle')}>
             {text(page.display_url, text(page.normalized_url, text(page.title, 'Page evidence')))}
           </h3>
-          <p className={textRole('caption')}>{text(page.record_uri)}</p>
+          {text(page.title) && text(page.title) !== text(page.display_url) && (
+            <p className={textRole('caption')}>{text(page.title)}</p>
+          )}
         </article>
       ))}
     </div>
