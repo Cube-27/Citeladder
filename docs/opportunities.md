@@ -44,12 +44,14 @@ mentions/citations. Opportunity evidence retains their availability and coverage
 rather than replacing missing inputs with zero or a guessed confidence.
 Human status changes remain separate from immutable source observations.
 
-Search-intelligence promotion is deliberately narrower than observation. A
-substantial content update is history, not an action. Only modification-date
-inconsistency and date-only cosmetic refresh promote, and only with complete,
-extractor-compatible text coverage. Query relevance may enrich the existing CTR
+Site change and relevance signals promote more narrowly than they observe.
+Unexpected changes in a regression or critical-regression class promote by
+class, from the approved change snapshot for the exact newer crawl. A
+substantial content update is history, not an action. Among content changes,
+only modification-date inconsistency and date-only cosmetic refresh promote,
+and only with complete, extractor-compatible text coverage. Query relevance may enrich the existing CTR
 gap action over the same scope; it never creates a duplicate action or asserts
-causation. Anchor diagnostics and topical outliers do not promote by default.
+causation. Anchor diagnostics do not promote.
 
 Source routing distinguishes owned and earned actions and exposes the persisted
 source mix. The [content handoff](../frontend/services/api/src/opportunities/projection.ts)

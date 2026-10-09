@@ -16,6 +16,7 @@ import { competitorTarget, ownedTargets, type CanonicalTarget } from './targets.
 import {
   buildRequest,
   canonicalJson,
+  pageEstimateMicrousd,
   quoteDataset,
   scopeHash,
   si,
@@ -250,11 +251,8 @@ export async function createReview(
       total += quote.costMicrousd;
       plannedRows += depth;
       for (let page = 0; page < quote.calls; page++) {
-        const request = buildRequest({
-          ...o,
-          limit: Math.min(depth - page * si.page_size, si.page_size),
-          offset: page * si.page_size,
-        });
+        const pageRows = Math.min(depth - page * si.page_size, si.page_size);
+        const request = buildRequest({ ...o, limit: pageRows, offset: page * si.page_size });
         plan.push({
           dataset_key: `${index}:${hash}`,
           dataset_kind: selection.kind,
@@ -266,7 +264,8 @@ export async function createReview(
           endpoint: request.endpoint,
           request: request.payload,
           page,
-          estimated_cost_usd: String(quote.costMicrousd / 1e6 / quote.calls),
+          // Each page's own price; the pages sum to the dataset's quote.
+          estimated_cost_usd: String(pageEstimateMicrousd(selection.kind, pageRows) / 1e6),
         });
       }
     }

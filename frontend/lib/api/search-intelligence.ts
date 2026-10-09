@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { apiClient, type ApiRequestOptions } from './client';
 import {
+  researchScopeSchema,
   searchDatasetPageSchema,
   searchDatasetSchema,
   searchPreferencesSchema,
@@ -15,6 +16,7 @@ export type SearchIntelligenceReadiness = z.infer<typeof searchReadinessSchema>;
 export type SearchIntelligenceRun = z.infer<typeof searchRunSchema>;
 export type SearchIntelligenceDataset = z.infer<typeof searchDatasetSchema>;
 export type SearchIntelligenceRow = z.infer<typeof searchRowSchema>;
+export type ResearchScope = z.infer<typeof researchScopeSchema>;
 export type DatasetSelection = {
   kind: string;
   competitor_id?: string | null;
@@ -25,7 +27,7 @@ export type DatasetSelection = {
   min_volume?: number;
 };
 export type ReviewPayload = {
-  research_scope?: 'exact_host' | 'domain_subdomains';
+  research_scope?: ResearchScope;
   action: string;
   owned_target_id?: string | null;
   connection_id?: string | null;

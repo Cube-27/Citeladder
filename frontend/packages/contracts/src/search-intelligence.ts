@@ -10,8 +10,9 @@ export const searchTargetSchema = responseObject({
   origin: z.string(),
   source_kind: z.string(),
 });
+export const researchScopeSchema = z.enum(['exact_host', 'domain_subdomains']);
 export const searchPreferencesSchema = responseObject({
-  research_scope: z.enum(['exact_host', 'domain_subdomains']).optional(),
+  research_scope: researchScopeSchema.optional(),
   owned_target_id: z.string().nullable(),
   competitor_ids: z.array(z.uuid()),
   location_code: z.number().int().nullable(),
@@ -43,7 +44,7 @@ export const searchRunSchema = responseObject({
   created_at: z.string(),
 });
 export const searchDatasetSchema = responseObject({
-  research_scope: z.enum(['exact_host', 'domain_subdomains']),
+  research_scope: researchScopeSchema,
   id: z.uuid(),
   run_id: z.uuid(),
   dataset_kind: z.string(),

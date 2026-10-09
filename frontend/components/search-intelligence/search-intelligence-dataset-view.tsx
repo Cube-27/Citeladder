@@ -25,8 +25,14 @@ import {
 import { searchIntelligenceKeys } from '@/lib/api/query-keys/search-intelligence';
 import { useProjectContext } from '@/lib/project/project-context';
 import { cursorControls, pageRange, useCursorTable } from '@/lib/table/use-cursor-table';
-import { formatEvidenceValue, formatSearchNumber } from './search-intelligence-format';
-import { searchScopeLabel } from '@/lib/config/search-intelligence';
+import { MissingValue } from '@/components/ui/unavailable-value';
+import { useDisplayTimeZone } from '@/lib/display-timezone';
+import { evidenceFields, searchNumber } from './search-intelligence-format';
+import {
+  KEYWORD_DATASET_KINDS,
+  SEARCH_COLUMNS_BY_KIND,
+  searchScopeLabel,
+} from '@/lib/config/search-intelligence';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { SearchIntelligenceExport } from './search-intelligence-export';
@@ -99,12 +105,7 @@ export function SearchIntelligenceDatasetView({
     params,
   );
   useRowsPanelSeed(dataset.id, selected, page?.rows, title);
-  const keywordDataset = [
-    'ranking_keywords',
-    'keyword_suggestions',
-    'missing_keywords',
-    'shared_keywords',
-  ].includes(dataset.dataset_kind);
+  const keywordDataset = KEYWORD_DATASET_KINDS.includes(dataset.dataset_kind);
   if (query.isPending && !page) return <Skeleton className="h-80 w-full" />;
   if (!page)
     return <ReadError {...readErrorProps(query)} fallback="Dataset rows could not be loaded." />;
@@ -240,8 +241,8 @@ function EvidenceDrawer({
       onOpenChange={(open) => {
         if (!open) onClose();
       }}
-      title="Provider evidence"
-      description="Persisted normalized row and provider metadata."
+      title="Row details"
+      description="What the provider reported for this result when it was saved."
     >
       {selected ? (
         <Button size="sm" variant="secondary" asChild className="w-fit">
@@ -259,17 +260,25 @@ function EvidenceDrawer({
           View in Sources
         </TextLink>
       ) : null}
-      {selected ? (
-        <dl className="type-body grid gap-3">
-          {Object.entries(selected).map(([key, item]) => (
-            <div key={key} className="border-border-subtle grid gap-1 border-b pb-2">
-              <dt className="text-muted">{key.replaceAll('_', ' ')}</dt>
-              <dd className="break-all">{formatEvidenceValue(item)}</dd>
-            </div>
-          ))}
-        </dl>
-      ) : null}
+      {selected ? <RowFields row={selected} /> : null}
     </Drawer>
+  );
+}
+
+function RowFields({ row }: Readonly<{ row: SearchIntelligenceRow }>) {
+  const timeZone = useDisplayTimeZone();
+  const labels = Object.fromEntries(
+    (SEARCH_COLUMNS_BY_KIND[row.row_kind] ?? []).map((column) => [column.field, column.label]),
+  );
+  return (
+    <dl className="type-body grid gap-3">
+      {evidenceFields(row, labels, timeZone).map((field) => (
+        <div key={field.key} className="border-border-subtle grid gap-1 border-b pb-2">
+          <dt className="text-muted">{field.label}</dt>
+          <dd className="break-all">{field.value ?? <MissingValue />}</dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 
@@ -290,7 +299,7 @@ function EmptyDataset({
         </p>
         <p className={textRole('body')}>
           Requests can incur charges even when no results are returned. Check the website and market
-          in Analysis settings before reviewing another fetch.
+          before reviewing another analysis.
         </p>
         <p className={textRole('caption')}>
           {dataset.target_hostname}
@@ -368,9 +377,9 @@ function DatasetHeader({
     <CardHeader bordered>
       <CardTitle>{title}</CardTitle>
       <p className={textRole('caption')}>
-        {formatSearchNumber(dataset.unique_rows_saved)} saved rows
+        {searchNumber(dataset.unique_rows_saved)} saved rows
         {dataset.provider_total !== null
-          ? ` of ${formatSearchNumber(dataset.provider_total)} available`
+          ? ` of ${searchNumber(dataset.provider_total)} available`
           : ''}
         {' · '}
         {dataset.target_hostname}

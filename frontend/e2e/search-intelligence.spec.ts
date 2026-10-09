@@ -177,7 +177,6 @@ for (const viewport of [
     await page.screenshot({ path: testInfo.outputPath('overview.png'), fullPage: true });
     await page.getByRole('tab', { name: 'Keywords', exact: true }).click();
     await expect(page.getByRole('cell', { name: '8', exact: true }).first()).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Inspect', exact: true })).toHaveCount(0);
     await page.screenshot({ path: testInfo.outputPath('keywords.png'), fullPage: true });
     await page.getByRole('combobox', { name: 'Saved market' }).click();
     await page.getByRole('option', { name: 'Australia · en' }).click();
@@ -189,7 +188,7 @@ for (const viewport of [
     await page.getByRole('combobox', { name: 'Saved market' }).click();
     await page.getByRole('option', { name: 'United States · en' }).click();
     await page.getByRole('tab', { name: 'Competitors', exact: true }).click();
-    await page.getByRole('button', { name: 'shared keywords for Kmart' }).click();
+    await page.getByRole('button', { name: 'Kmart: Keywords you both rank for' }).click();
     await expect(
       page.getByText('The provider returned no data for this saved scope.'),
     ).toBeVisible();
@@ -201,7 +200,6 @@ for (const viewport of [
     await expect(
       page.getByText('The provider returned no data for this saved scope.'),
     ).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Create content brief' })).toHaveCount(0);
     await page.screenshot({ path: testInfo.outputPath('backlinks.png'), fullPage: true });
     await page.getByRole('combobox', { name: 'Saved scope' }).click();
     await page.getByRole('option', { name: 'Domain + subdomains' }).click();
@@ -218,7 +216,7 @@ for (const viewport of [
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
       viewport.width,
     );
-    await page.getByRole('button', { name: 'Analysis settings' }).click();
+    await page.getByRole('button', { name: 'New analysis' }).click();
     await expect(page.getByRole('combobox', { name: 'Market' })).toHaveText('Australia');
     expect(writes).toEqual([]);
   });

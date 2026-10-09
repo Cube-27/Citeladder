@@ -11,6 +11,8 @@ import { createSecretCipher } from '../src/integrations/fernet.ts';
 import { WorkspaceScope } from '../src/db/workspace-scope.ts';
 import { ProviderError } from '../src/answer-engines/contracts.ts';
 import { reconcileResearch } from '../src/search-intelligence/maintenance.ts';
+import { pageEstimateMicrousd } from '../src/search-intelligence/requests.ts';
+import { policy } from '../src/config.ts';
 import { testDatabase } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
 
@@ -216,6 +218,89 @@ describe('durable paid acquisition boundaries', () => {
     });
     await reconcileResearch(db);
     expect(await saved.state.run().executeTakeFirst()).toMatchObject({ completed_calls: 1 });
+  });
+  it('closes a recovered run whose saved receipt the schema refuses', async () => {
+    const t = await run(),
+      prep = dispatched(await t.state.prepare(t.plans[0]!, 0));
+    await t.state.dispatch(prep);
+    const task = response.body.tasks[0]!;
+    const oversized = {
+      keyword_data: { keyword: 'shoes' },
+      ranked_serp_element: { url: `https://www.example.com/${'a'.repeat(5000)}`, rank_group: 1 },
+    };
+    await t.state.saveResponse(prep.call.id, {
+      ...response,
+      body: { ...response.body, tasks: [{ ...task, result: [{ items: [oversized] }] }] },
+    });
+    await db
+      .updateTable('analytics_tasks')
+      .set({ status: 'failed', lease_owner: null, lease_expires_at: null })
+      .where('id', '=', t.task.id)
+      .execute();
+    await reconcileResearch(db);
+    // The project is free for a new acquisition; the paid receipt and its cost remain.
+    expect(await t.state.run().executeTakeFirst()).toMatchObject({
+      status: 'failed',
+      provider_reported_cost_usd: '0.01200000',
+    });
+    expect(await t.state.calls().executeTakeFirst()).toMatchObject({
+      status: 'failed',
+      error_code: 'normalization_failed',
+      response_sha256: response.hash,
+    });
+  });
+  it('never sends a call that could pass the confirmed estimate', async () => {
+    const t = await run();
+    const { estimated_cost_usd } = await t.state.run().executeTakeFirstOrThrow();
+    await db
+      .updateTable('search_intelligence_runs')
+      .set({ provider_reported_cost_usd: estimated_cost_usd })
+      .where('id', '=', t.runId)
+      .execute();
+    expect((await t.state.prepare(t.plans[0]!, 0)).action).toBe('stop');
+    expect(await t.state.run().executeTakeFirst()).toMatchObject({
+      status: 'failed',
+      error_code: 'cost_ceiling_reached',
+    });
+  });
+  it('sends a short last page after a full first page charged its own price', async () => {
+    const t = await run(1001);
+    // A full page costs more than the dataset's average per page; that is not overspend.
+    const fullPage = (
+      pageEstimateMicrousd('ranking_keywords', policy.search_intelligence.page_size) / 1e6
+    ).toFixed(6);
+    await db
+      .updateTable('search_intelligence_runs')
+      .set({ provider_reported_cost_usd: fullPage, completed_calls: 1 })
+      .where('id', '=', t.runId)
+      .execute();
+    expect((await t.state.prepare(t.plans[1]!, 1)).action).toBe('dispatch');
+  });
+  it('stops the run on a refused credential, whether found locally or by the provider', async () => {
+    const local = await run(),
+      prep = dispatched(await local.state.prepare(local.plans[0]!, 0));
+    await local.state.refuse(prep, new ProviderError('auth_failure'));
+    expect(await local.state.run().executeTakeFirst()).toMatchObject({
+      status: 'failed',
+      error_code: 'auth_failure',
+      uncertain_calls: 0,
+    });
+    // Nothing was sent, so there is no dispatch evidence to read as possible spend.
+    expect(
+      await db
+        .selectFrom('search_intelligence_dispatch_attempts')
+        .select('id')
+        .where('call_id', '=', prep.call.id)
+        .execute(),
+    ).toEqual([]);
+
+    const remote = await run(),
+      sent = dispatched(await remote.state.prepare(remote.plans[0]!, 0));
+    await remote.state.dispatch(sent);
+    expect(await remote.state.fail(sent, new ProviderError('auth_failure'))).toMatchObject({
+      stop: true,
+    });
+    expect((await remote.state.run().executeTakeFirst())?.error_code).toBe('auth_failure');
   });
   it('recovers a saved response with exact row provenance and settles it once', async () => {
     const t = await run(),

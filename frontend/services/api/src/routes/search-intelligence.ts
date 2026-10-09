@@ -1,6 +1,6 @@
 /**
  * Search Intelligence: readiness, run confirmation and cancellation, saved
- * preferences, published dataset rows, content handoff and citation matches.
+ * preferences, published dataset rows and citation matches.
  * Authorized by the project in the path; native review creation resolves
  * competitor websites before freezing the bounded acquisition plan.
  */
@@ -21,7 +21,6 @@ import { ApiError } from '../errors.ts';
 import { createReview } from '../search-intelligence/reviews.ts';
 import { deriveCitationMatches } from '../search-intelligence/citations.ts';
 import {
-  contentHandoff,
   datasetPage,
   getRun,
   listRuns,
@@ -30,13 +29,7 @@ import {
 } from '../search-intelligence/reads.ts';
 import { cancelRun, confirmRun, savePreferences } from '../search-intelligence/runs.ts';
 import { defineGetRoute, definePostRoute, definePutRoute } from './define.ts';
-import {
-  citationMatchBody,
-  contentHandoffBody,
-  contentHandoffResponse,
-  preferencesBody,
-  reviewBody,
-} from './search-intelligence-contracts.ts';
+import { citationMatchBody, preferencesBody, reviewBody } from './search-intelligence-contracts.ts';
 
 const family = 'search-intelligence';
 const authorize = 'project';
@@ -179,19 +172,6 @@ export const searchIntelligenceRoutes = [
         minVolume: query.min_volume,
         intent: query.intent.trim(),
       });
-    },
-  }),
-  definePostRoute({
-    family,
-    authorize,
-    path: `${root}/content-handoff`,
-    capability: 'write',
-    params: { path: projectPath, query: {} },
-    body: contentHandoffBody,
-    response: contentHandoffResponse,
-    async handle({ c, db }, { path }) {
-      const body = await readBody(c, contentHandoffBody);
-      return contentHandoff(db, scopeOf(c, path.project_id), body.dataset_id, body.row_ids);
     },
   }),
   definePostRoute({

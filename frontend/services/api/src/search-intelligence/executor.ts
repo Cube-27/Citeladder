@@ -6,7 +6,7 @@ import { acquireCapacity, releaseCapacity, type CapacityRequest } from '../provi
 import type { Executor } from '../workers/executor.ts';
 import { record } from '../db/json.ts';
 import { AcquisitionState } from './acquisition-state.ts';
-import { executeLive } from './live.ts';
+import { resolveLive, sendLive, type LiveTarget } from './live.ts';
 import { si } from './requests.ts';
 
 /** Finite frozen plan: park without spending queue attempts; an ambiguous paid dispatch is never repeated. */
@@ -27,8 +27,24 @@ export function acquisitionExecutor(
       if (prepared.action === 'stop') return;
       if (prepared.action === 'skip') continue;
       if (prepared.action === 'publish') {
-        if (await state.publish(plan, prepared.call.id, plans.slice(sequence + 1))) return;
+        if (await state.settle(plan, prepared.call.id, plans.slice(sequence + 1))) return;
         continue;
+      }
+      let target: LiveTarget;
+      try {
+        target = resolveLive(
+          {
+            encryptedSecret: prepared.secret,
+            encryptionKey,
+            baseUrl: prepared.baseUrl,
+            endpoint: prepared.call.endpoint,
+          },
+          options.env,
+        );
+      } catch (cause) {
+        if (!(cause instanceof ProviderError)) throw cause;
+        await state.refuse(prepared, cause);
+        return;
       }
       const capacity: CapacityRequest = {
         taskId: null,
@@ -51,16 +67,7 @@ export function acquisitionExecutor(
         await context.checkCancelled('paid research dispatch');
         if (!(await state.dispatch(prepared))) return;
         sent = true;
-        const response = await executeLive(
-          {
-            encryptedSecret: prepared.secret,
-            encryptionKey,
-            baseUrl: prepared.baseUrl,
-            endpoint: prepared.call.endpoint,
-            payload: record(prepared.call.sanitized_request),
-          },
-          options,
-        );
+        const response = await sendLive(target, record(prepared.call.sanitized_request), options);
         await state.saveResponse(prepared.call.id, response);
       } catch (cause) {
         if (!sent || !(cause instanceof ProviderError)) throw cause;
@@ -78,7 +85,7 @@ export function acquisitionExecutor(
           return;
         }
         if (result.stop) return;
-      } else if (await state.publish(plan, prepared.call.id, plans.slice(sequence + 1))) return;
+      } else if (await state.settle(plan, prepared.call.id, plans.slice(sequence + 1))) return;
     }
     await state.finish();
   };

@@ -55,6 +55,9 @@ export function datasetView(dataset: Dataset): z.input<typeof searchDatasetSchem
     dataset.provider_filters,
     'search_intelligence_datasets.provider_filters',
   );
+  const summary = jsonObject(dataset.summary, 'search_intelligence_datasets.summary');
+  // A provider total beyond the integer column is kept in the summary.
+  const oversizedTotal = typeof summary.provider_total === 'number' ? summary.provider_total : null;
   return {
     id: dataset.id,
     run_id: dataset.run_id,
@@ -72,9 +75,9 @@ export function datasetView(dataset: Dataset): z.input<typeof searchDatasetSchem
     requested_rows: dataset.requested_rows,
     raw_rows_received: dataset.raw_rows_received,
     unique_rows_saved: dataset.unique_rows_saved,
-    provider_total: dataset.provider_total,
+    provider_total: dataset.provider_total ?? oversizedTotal,
     truncated: dataset.truncated,
-    summary: jsonObject(dataset.summary, 'search_intelligence_datasets.summary'),
+    summary,
     collection_started_at: iso(dataset.collection_started_at),
     collection_ended_at: iso(dataset.collection_ended_at),
     published_at: iso(dataset.published_at),

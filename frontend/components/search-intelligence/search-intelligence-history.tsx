@@ -3,6 +3,7 @@ import { Line, LineChart, XAxis, YAxis, Tooltip } from 'recharts';
 import { axisProps, ChartContainer, LegendSwatch } from '@/components/ui/chart';
 import { InlineEmpty } from '@/components/ui/inline-empty';
 import { ReadError, readErrorProps } from '@/components/ui/read-error';
+import { Skeleton } from '@/components/ui/skeleton';
 import { textRole } from '@/components/ui/typography';
 import {
   searchIntelligenceApi,
@@ -31,7 +32,8 @@ export function SearchIntelligenceHistory({
   });
   if (query.isError)
     return <ReadError {...readErrorProps(query)} fallback="Saved history could not be loaded." />;
-  const rows = query.data?.rows ?? [];
+  if (query.isPending) return <Skeleton className="h-48 w-full" />;
+  const rows = query.data.rows;
   const observations = rows
     .map((row) => ({
       date: String(row.auxiliary.date ?? '').slice(0, 10),

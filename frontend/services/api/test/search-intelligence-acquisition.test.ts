@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { executeLive } from '../src/search-intelligence/live.ts';
-import { normalizeResponse } from '../src/search-intelligence/normalization.ts';
+import { ProviderError } from '../src/answer-engines/contracts.ts';
+import { resolveLive, sendLive } from '../src/search-intelligence/live.ts';
+import { INT4_MAX, normalizeResponse } from '../src/search-intelligence/normalization.ts';
 import { createSecretCipher } from '../src/integrations/fernet.ts';
 
 const key = 'research-test-key',
@@ -14,6 +15,9 @@ const input = {
   payload: { target: 'example.com' },
   baseUrl: '',
 };
+/** The executor's dispatch path: local checks first, then one send. */
+const executeLive = async (live: typeof input, options: Parameters<typeof sendLive>[2]) =>
+  sendLive(resolveLive(live), live.payload, options);
 const body = (result: unknown, cost: unknown = 0.012) => ({
   status_code: 20000,
   cost: 99,
@@ -52,6 +56,21 @@ describe('single-dispatch research transport and scoped normalization', () => {
       }),
     ).rejects.toMatchObject({ code: 'connection' });
     expect(sent).toBe(2);
+  });
+  it('refuses an unreadable credential or unknown endpoint without sending', async () => {
+    let sent = 0;
+    const send = async () => {
+      sent++;
+      return Response.json(body({ items: [] }));
+    };
+    await expect(
+      executeLive({ ...input, encryptedSecret: 'not-a-secret' }, { send }),
+    ).rejects.toMatchObject({ code: 'auth_failure' });
+    expect(() => resolveLive({ ...input, endpoint: '/v3/unknown/live' })).toThrow(ProviderError);
+    expect(() => resolveLive({ ...input, baseUrl: 'https://elsewhere.example' })).toThrow(
+      ProviderError,
+    );
+    expect(sent).toBe(0);
   });
   it('preserves explicit rate limits and rejects malformed or oversized responses', async () => {
     await expect(
@@ -118,6 +137,25 @@ describe('single-dispatch research transport and scoped normalization', () => {
         { ...plan, research_scope: 'domain_subdomains' },
       ).rows,
     ).toHaveLength(1);
+  });
+  it('fits provider values to their columns without losing them', () => {
+    const item = {
+      keyword_data: {
+        keyword: 'shoes',
+        search_intent_info: {
+          foreign_intent: ['commercial', 'informational', 'navigational', 'transactional'],
+        },
+      },
+      ranked_serp_element: { url: 'https://www.example.com/shoes' },
+    };
+    const total = INT4_MAX + 1;
+    const result = normalizeResponse(
+      'ranking_keywords',
+      body({ items: [item], total_count: total }),
+      plan,
+    );
+    expect(result.rows[0]?.intent).toBe('commercial, informational');
+    expect([result.total, result.summary.provider_total]).toEqual([total, total]);
   });
   it('distinguishes empty evidence from unavailable results and enforces backlink/date scope', () => {
     expect(

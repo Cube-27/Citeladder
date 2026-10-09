@@ -11,6 +11,19 @@ const numeric = (value: unknown): string | null =>
     : null;
 const integer = (value: unknown) =>
   numeric(value) !== null && Number.isSafeInteger(Number(value)) ? Number(value) : null;
+/** The typed integer columns are 32-bit; a larger provider count lives in the summary instead. */
+export const INT4_MAX = 2_147_483_647;
+const INTENT_LENGTH = 32;
+/** Whole intents only, as many as the intent column holds. */
+function intentLabel(values: string[]) {
+  let label = '';
+  for (const value of values) {
+    const next = label ? `${label}, ${value}` : value;
+    if (next.length > INTENT_LENGTH) break;
+    label = next;
+  }
+  return label;
+}
 const organic = (value: unknown) => {
   const item = record(value),
     result = record('serp_item' in item ? item.serp_item : item);
@@ -67,7 +80,7 @@ function keyword(item: Record<string, unknown>, suggestion = false) {
     keyword: text(data.keyword),
     search_volume: integer(info.search_volume),
     difficulty: integer(properties.keyword_difficulty),
-    intent: Array.isArray(intent) ? intent.map(text).join(', ') : text(intent),
+    intent: intentLabel(Array.isArray(intent) ? intent.map(text) : [text(intent)]),
     auxiliary: {
       cpc: numeric(info.cpc),
       cpc_currency: 'USD',
@@ -335,6 +348,7 @@ export function normalizeResponse(
       ...summary,
       result_available: Object.keys(result).length > 0,
       provider_items_received: received,
+      ...(total !== null && total > INT4_MAX ? { provider_total: total } : {}),
     },
     rows,
     total,

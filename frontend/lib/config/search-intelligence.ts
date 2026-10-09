@@ -77,6 +77,68 @@ export const SEARCH_COLUMNS_BY_KIND: Record<string, SearchColumn[]> = {
   ],
 };
 
+/** The one browser vocabulary of dataset kinds; the server owns their semantics. */
+export const SEARCH_DATASET_LABELS: Readonly<Record<string, string>> = {
+  footprint: 'Keyword footprint',
+  ranking_keywords: 'Ranked keywords',
+  keyword_suggestions: 'Keyword suggestions',
+  backlink_summary: 'Backlink summary',
+  referring_domains: 'Referring domains',
+  destination_pages: 'Destination pages',
+  missing_keywords: 'Keywords they rank for and you don’t',
+  shared_keywords: 'Keywords you both rank for',
+  organic_pages: 'Organic top pages',
+  backlinks: 'Individual backlinks',
+  backlink_history: 'Backlink history (past year)',
+  citation_matches: 'Citation matches',
+};
+export const OWNED_DATASET_KINDS = [
+  'footprint',
+  'ranking_keywords',
+  'keyword_suggestions',
+  'backlink_summary',
+  'referring_domains',
+  'destination_pages',
+  'organic_pages',
+  'backlinks',
+  'backlink_history',
+] as const;
+export const COMPETITOR_DATASET_KINDS = [
+  'footprint',
+  'missing_keywords',
+  'shared_keywords',
+  'backlink_summary',
+  'backlinks',
+  'referring_domains',
+  'destination_pages',
+  'organic_pages',
+  'backlink_history',
+] as const;
+/** Backlink datasets need no search market. */
+export const BACKLINK_DATASET_KINDS: readonly string[] = [
+  'backlink_summary',
+  'referring_domains',
+  'destination_pages',
+  'backlinks',
+  'backlink_history',
+];
+/** One provider observation each; their depth is not a choice. */
+export const FIXED_DEPTH_KINDS: readonly string[] = [
+  'footprint',
+  'backlink_summary',
+  'backlink_history',
+];
+export const KEYWORD_DATASET_KINDS: readonly string[] = [
+  'ranking_keywords',
+  'keyword_suggestions',
+  'missing_keywords',
+  'shared_keywords',
+];
+/** Keyword comparisons: read for the owned site against one competitor's domain. */
+export const COMPARISON_DATASET_KINDS: readonly string[] = ['missing_keywords', 'shared_keywords'];
+/** A first analysis starts small: the owned site plus one competitor's keyword comparisons. */
+export const PRESET_OWNED_KINDS: readonly string[] = ['footprint', 'ranking_keywords'];
+
 export const SEARCH_DEFAULT_DEPTHS = {
   footprint: 1,
   ranking_keywords: 200,
@@ -95,7 +157,7 @@ export function searchScopeLabel(scope?: string): string {
   return scope === 'domain_subdomains' ? 'Domain + subdomains' : 'Exact host';
 }
 
-// Mirrors the curated DataForSEO location codes in backend/app/core/config/dataforseo.py.
+// Mirrors the curated location codes in services/api/src/config/dataforseo.json.
 const SEARCH_LOCATION_COUNTRIES: Record<number, string> = {
   2840: 'US',
   2826: 'GB',

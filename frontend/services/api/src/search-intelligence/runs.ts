@@ -26,7 +26,14 @@ const RUN_QUEUED = 'queued';
 const RUN_SUCCEEDED = 'succeeded';
 const RUN_CANCELLED = 'cancelled';
 const ACTIVE_RUN_STATUSES = [RUN_QUEUED, 'running'];
-const FINISHED_RUN_STATUSES = new Set([RUN_SUCCEEDED, 'failed', RUN_CANCELLED, 'partial']);
+// An uncertain run may have spent money; cancelling must not relabel it.
+const FINISHED_RUN_STATUSES = new Set([
+  RUN_SUCCEEDED,
+  'failed',
+  RUN_CANCELLED,
+  'partial',
+  'uncertain',
+]);
 
 const conflict = (code: ApiErrorCode, message: string) => new ApiError(409, message, { code });
 

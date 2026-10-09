@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, expect, it, vi } from 'vite-plus/test';
@@ -179,7 +179,7 @@ it.each([
   },
 );
 
-it('rounds estimated traffic in the table and opens evidence from the keyword', async () => {
+it('rounds estimated traffic in the table and opens readable details from the keyword', async () => {
   const result = {
     ...row('33333333-3333-4333-8333-333333333333', 'Family outfits'),
     etv: '7.55999994',
@@ -195,9 +195,12 @@ it('rounds estimated traffic in the table and opens evidence from the keyword', 
   });
   expect(await screen.findByRole('cell', { name: '8' })).toBeInTheDocument();
   expect(screen.getByRole('cell', { name: '3,600' })).toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Inspect' })).not.toBeInTheDocument();
   await userEvent.click(screen.getByRole('button', { name: 'View evidence for Family outfits' }));
-  expect(screen.getByRole('dialog', { name: 'Provider evidence' })).toBeInTheDocument();
+  const details = screen.getByRole('dialog', { name: 'Row details' });
+  expect(within(details).getByText('3,600')).toBeInTheDocument();
+  // Record identities stay out of what the reader sees.
+  expect(details).not.toHaveTextContent(result.id);
+  expect(details).not.toHaveTextContent(dataset.id);
 });
 
 it('explains a paid empty scope', async () => {

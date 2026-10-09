@@ -4,6 +4,11 @@ import type { CanonicalTarget } from './targets.ts';
 
 export const si = policy.search_intelligence;
 export type DatasetKind = keyof typeof si.endpoints;
+/** A stored dataset kind, refused rather than priced as some other kind. */
+export function datasetKind(value: unknown): DatasetKind {
+  if (typeof value === 'string' && Object.hasOwn(si.endpoints, value)) return value as DatasetKind;
+  throw new Error(`Unknown Search Intelligence dataset kind: ${String(value)}`);
+}
 type ResearchScope = 'exact_host' | 'domain_subdomains';
 export type RequestOptions = {
   kind: DatasetKind;
@@ -250,4 +255,8 @@ export function quoteDataset(kind: DatasetKind, rows: number) {
       : micro(labs ? si.rates.labs_task : si.rates.backlinks_request) * calls +
         micro(labs ? si.rates.labs_item : si.rates.backlinks_row) * rows;
   return { calls, rows, costMicrousd: cost };
+}
+/** One request's own estimate: a short final page costs less than a full one. */
+export function pageEstimateMicrousd(kind: DatasetKind, pageRows: number) {
+  return quoteDataset(kind, Math.max(1, Math.trunc(pageRows) || 1)).costMicrousd;
 }

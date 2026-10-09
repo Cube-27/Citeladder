@@ -152,6 +152,23 @@ retention, access and cost decisions must precede their dependent implementation
 Owners: [Google Cloud operations](../operations/GOOGLE_CLOUD.md),
 [GCP runbook](../operations/GCP_RUNBOOK.md) and [Workers runbook](../operations/WORKERS_RUNBOOK.md).
 
+### Search Intelligence remainder
+
+Deferred by the [Search Intelligence review](search-intelligence-improvement.md):
+
+- Per-workspace acquisition limits (feature 11): an entitlement-owned depth and
+  spend limit so enterprise workspaces can run exhaustive research. Today
+  `max_depth` is one configuration value and the confirmed estimate is the
+  per-run ceiling.
+- Bounded readiness and dataset paging indexes: readiness loads every published
+  dataset, and each row page counts with `ilike`. Neither is slow at current
+  volumes; revisit with production row counts.
+- Raw response retention: receipts (up to 8 MB each) are append-only
+  provenance. Retention needs the same reference inventory as the Connected data
+  snapshot-retention item.
+
+Owner: [Connected data](../integrations-traffic-analytics.md#search-intelligence-acquisition).
+
 ### Design system remainder
 
 The [design system consistency plan](design-system-consistency.md) shipped in

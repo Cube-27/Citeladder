@@ -109,10 +109,118 @@ describe('SearchIntelligenceReviewDrawer', () => {
         busy={false}
       />,
     );
-    for (const name of ['Keyword footprint', 'Ranked keywords', 'Organic top pages'])
+    for (const name of ['Keyword footprint', 'Ranked keywords', 'Referring domains'])
       await userEvent.click(screen.getByRole('checkbox', { name }));
     await userEvent.click(screen.getByRole('button', { name: 'Review cost' }));
-    expect(review).toHaveBeenCalledWith(expect.objectContaining({ location_code: null }));
+    expect(review).toHaveBeenCalledWith(
+      expect.objectContaining({
+        location_code: null,
+        datasets: [expect.objectContaining({ kind: 'referring_domains' })],
+      }),
+    );
+  });
+
+  it('starts from a small preset: your site and one competitor’s keyword gaps', async () => {
+    const review = vi.fn().mockResolvedValue(reviewedRun);
+    const competitor = (identity: string, label: string) => ({
+      identity,
+      label,
+      registrable_domain: `${identity}.test`,
+      hostname: `${identity}.test`,
+      origin: `https://${identity}.test`,
+      source_kind: 'competitor',
+    });
+    render(
+      <SearchIntelligenceReviewDrawer
+        open
+        action="analysis"
+        readiness={{
+          ...readiness,
+          competitors: [competitor('rival', 'Rival'), competitor('other', 'Other')],
+        }}
+        onOpenChange={vi.fn()}
+        onReview={review}
+        onConfirm={vi.fn()}
+        busy={false}
+      />,
+    );
+    // A depth can be cleared while typing; review waits for a valid number.
+    const depth = screen.getByRole('textbox', { name: 'Ranked keywords: number of results' });
+    await userEvent.clear(depth);
+    expect(screen.getByRole('button', { name: 'Review cost' })).toBeDisabled();
+    await userEvent.type(depth, '50');
+    await userEvent.click(screen.getByRole('button', { name: 'Review cost' }));
+    const datasets = review.mock.calls[0]![0].datasets.map(
+      (item: { kind: string; competitor_id?: string; depth: number }) =>
+        [item.kind, item.competitor_id ?? null, item.depth] as const,
+    );
+    expect(datasets).toEqual([
+      ['footprint', null, 1],
+      ['ranking_keywords', null, 50],
+      ['missing_keywords', 'rival', 100],
+      ['shared_keywords', 'rival', 100],
+    ]);
+  });
+
+  it('offers every competitor, remembered ones first', async () => {
+    const competitor = (identity: string, label: string) => ({
+      identity,
+      label,
+      registrable_domain: `${identity}.test`,
+      hostname: `${identity}.test`,
+      origin: `https://${identity}.test`,
+      source_kind: 'competitor',
+    });
+    render(
+      <SearchIntelligenceReviewDrawer
+        open
+        action="analysis"
+        readiness={{
+          ...readiness,
+          competitors: [competitor('rival', 'Rival'), competitor('other', 'Other')],
+          preferences: { ...readiness.preferences, competitor_ids: ['other'] },
+        }}
+        onOpenChange={vi.fn()}
+        onReview={vi.fn()}
+        onConfirm={vi.fn()}
+        busy={false}
+      />,
+    );
+    // The remembered competitor leads; the other one is still one disclosure away.
+    expect(screen.getByRole('group', { name: 'Other' })).toBeInTheDocument();
+    expect(screen.getByText('Other competitors (1)')).toBeInTheDocument();
+  });
+
+  it('refuses exact-host comparisons ordered by traffic before asking for a price', async () => {
+    render(
+      <SearchIntelligenceReviewDrawer
+        open
+        action="analysis"
+        readiness={{
+          ...readiness,
+          competitors: [
+            {
+              identity: 'rival',
+              label: 'Rival',
+              registrable_domain: 'rival.test',
+              hostname: 'rival.test',
+              origin: 'https://rival.test',
+              source_kind: 'competitor',
+            },
+          ],
+          preferences: { ...readiness.preferences, research_scope: 'exact_host' },
+        }}
+        onOpenChange={vi.fn()}
+        onReview={vi.fn()}
+        onConfirm={vi.fn()}
+        busy={false}
+      />,
+    );
+    await userEvent.click(screen.getByText('Advanced options'));
+    await userEvent.click(screen.getByRole('combobox', { name: 'Keyword order' }));
+    await userEvent.click(screen.getByRole('option', { name: 'Most estimated traffic' }));
+    expect(screen.getByRole('button', { name: 'Review cost' })).toBeDisabled();
+    expect(screen.getByText(/Keyword comparisons on an exact host/)).toBeInTheDocument();
   });
 
   it('passes suggestion acquisition controls to review', async () => {
@@ -128,12 +236,10 @@ describe('SearchIntelligenceReviewDrawer', () => {
         busy={false}
       />,
     );
-    await userEvent.click(screen.getByRole('combobox', { name: 'Ranking acquisition order' }));
-    await userEvent.click(screen.getByRole('option', { name: 'Acquire by cpc' }));
-    await userEvent.type(
-      screen.getByRole('spinbutton', { name: 'Minimum acquisition search volume' }),
-      '10',
-    );
+    await userEvent.click(screen.getByText('Advanced options'));
+    await userEvent.click(screen.getByRole('combobox', { name: 'Keyword order' }));
+    await userEvent.click(screen.getByRole('option', { name: 'Highest cost per click' }));
+    await userEvent.type(screen.getByRole('spinbutton', { name: 'Minimum search volume' }), '10');
     await userEvent.type(
       screen.getByRole('textbox', { name: 'Keyword suggestion seed' }),
       'analytics',
@@ -169,18 +275,18 @@ describe('SearchIntelligenceReviewDrawer', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Review cost' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Review expired');
     await userEvent.click(screen.getByRole('button', { name: 'Review cost' }));
-    const confirmation = await screen.findByRole('button', { name: 'Confirm $0.1442 acquisition' });
+    const confirmation = await screen.findByRole('button', { name: 'Confirm $0.1442 analysis' });
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     await userEvent.click(confirmation);
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Acquisition could not be confirmed.',
+      'The analysis could not be started.',
     );
     await userEvent.click(confirmation);
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(confirm).toHaveBeenCalledTimes(2);
   });
 
-  it('previews the frozen quote before allowing an explicit paid confirmation', async () => {
+  it('shows the estimate before allowing an explicit paid confirmation', async () => {
     const review = vi.fn().mockResolvedValue(reviewedRun);
     const confirm = vi.fn().mockResolvedValue(undefined);
     render(
@@ -195,16 +301,12 @@ describe('SearchIntelligenceReviewDrawer', () => {
       />,
     );
 
-    expect(screen.getByText(/No provider request is made until you confirm/)).toBeInTheDocument();
-    expect(confirm).not.toHaveBeenCalled();
-
     await userEvent.click(screen.getByRole('button', { name: 'Review cost' }));
     expect(review).toHaveBeenCalledTimes(1);
     expect(confirm).not.toHaveBeenCalled();
     expect(await screen.findByText('$0.1442')).toBeInTheDocument();
-    expect(screen.getByText('2', { selector: 'dd' })).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Confirm $0.1442 acquisition' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Confirm $0.1442 analysis' }));
     expect(confirm).toHaveBeenCalledWith(RUN_ID);
   });
 });

@@ -2,28 +2,24 @@
 
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { RefreshCw, Settings2, Unplug } from 'lucide-react';
+import { Settings2, Unplug } from 'lucide-react';
 
 import { PageLoading } from '@/components/layout/page-loading';
 import { PageShell } from '@/components/layout/page-shell';
-import { DisplayTime } from '@/components/ui/display-time';
 import { SearchIntelligenceCitationMatcher } from '@/components/search-intelligence/search-intelligence-citation-matcher';
 import { SearchIntelligenceCollection } from './search-intelligence-collection';
 import { SearchIntelligenceReviewDrawer } from '@/components/search-intelligence/search-intelligence-review-drawer';
 import { SearchIntelligenceOverview } from '@/components/search-intelligence/search-intelligence-overview';
-import { formatSearchNumber, reportedCost } from './search-intelligence-format';
+import { referringLists } from './search-intelligence-format';
+import { CostDetails, RunNotice } from './search-intelligence-runs';
+import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Drawer } from '@/components/ui/drawer';
-import { InlineEmpty } from '@/components/ui/inline-empty';
-import { panelClasses } from '@/components/ui/panel';
 import { ReadError, readErrorProps } from '@/components/ui/read-error';
-import { Skeleton } from '@/components/ui/skeleton';
-import { StatGrid } from '@/components/ui/stat-grid';
 import { TextLink } from '@/components/ui/text-link';
 import { SavedViewControls, ScopeBand } from './search-intelligence-scope';
 import { Stack } from '@/components/ui/layout';
-import { textRole } from '@/components/ui/typography';
 import { TabPanel, TabsBar, TabsRoot } from '@/components/ui/tabs';
 import {
   searchIntelligenceApi,
@@ -35,6 +31,7 @@ import { searchMarketLabel } from '@/lib/config/search-intelligence';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { useProjectContext } from '@/lib/project/project-context';
 
+const PROVIDER_SETTINGS = '/settings?tab=providers';
 const TABS = [
   { value: 'overview', label: 'Overview' },
   { value: 'keywords', label: 'Keywords' },
@@ -53,6 +50,7 @@ export function SearchIntelligencePage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [costOpen, setCostOpen] = useState(false);
   const [citationOpen, setCitationOpen] = useState(false);
+  const [citationOrigin, setCitationOrigin] = useState<string>();
   const [comparison, setComparison] = useState<SearchIntelligenceDataset | null>(null);
   const [market, setMarket] = useState('');
   const [scope, setScope] = useState('');
@@ -77,6 +75,17 @@ export function SearchIntelligencePage() {
       }),
     enabled: Boolean(activeProject && costOpen),
   });
+  const invalidateReadiness = () =>
+    queryClient.invalidateQueries({
+      queryKey: searchIntelligenceKeys.readiness(activeProject?.workspace_id, activeProject?.id),
+    });
+  const cancelMutation = useMutation({
+    mutationFn: (runId: string) =>
+      searchIntelligenceApi.cancel(activeProject!.id, runId, {
+        workspaceId: activeProject!.workspace_id,
+      }),
+    onSettled: invalidateReadiness,
+  });
   const reviewMutation = useMutation({
     mutationFn: (payload: Parameters<typeof searchIntelligenceApi.review>[1]) =>
       searchIntelligenceApi.review(activeProject!.id, payload, {
@@ -91,12 +100,7 @@ export function SearchIntelligencePage() {
     onSuccess: async () => {
       setDrawerOpen(false);
       await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: searchIntelligenceKeys.readiness(
-            activeProject?.workspace_id,
-            activeProject?.id,
-          ),
-        }),
+        invalidateReadiness(),
         queryClient.invalidateQueries({
           queryKey: searchIntelligenceKeys.runs(activeProject?.workspace_id, activeProject?.id),
         }),
@@ -178,8 +182,8 @@ export function SearchIntelligencePage() {
           <EmptyState
             icon={Unplug}
             heading="Connect DataForSEO"
-            description="Search Intelligence needs an enabled workspace DataForSEO credential before it can prepare a priced acquisition."
-            action={<TextLink href="/settings?tab=providers">Open provider settings</TextLink>}
+            description="Search Intelligence uses your workspace’s own DataForSEO account. Add its login once; every analysis shows its cost before anything is fetched."
+            action={<TextLink href={PROVIDER_SETTINGS}>Open provider settings</TextLink>}
           />
         </PageShell>
       </TabsRoot>
@@ -190,12 +194,14 @@ export function SearchIntelligencePage() {
         <PageShell tabs={tabs}>
           <EmptyState
             icon={Settings2}
-            heading="Set a canonical project URL"
-            description="A normalized apex or www project target is required before paid acquisition can be scoped safely."
+            heading="Add your website address"
+            description="Search Intelligence researches the project’s own website, so the project needs its homepage address (for example https://www.example.com)."
+            action={<TextLink href="/projects">Edit the project</TextLink>}
           />
         </PageShell>
       </TabsRoot>
     );
+  const firstRun = <Button onClick={() => openReview('analysis')}>Review first analysis</Button>;
   return (
     <TabsRoot value={tab} onValueChange={setTab}>
       <PageShell
@@ -235,13 +241,24 @@ export function SearchIntelligencePage() {
         }
       >
         <Stack gap="workspace" className="min-w-0">
-          <RunNotice run={data.latest_run} />
+          {data.connected ? null : (
+            <Alert>
+              DataForSEO is not connected, so saved results can be read but not refreshed.{' '}
+              <TextLink href={PROVIDER_SETTINGS}>Open provider settings</TextLink>
+            </Alert>
+          )}
+          <RunNotice
+            run={data.latest_run}
+            onCancel={(runId) => cancelMutation.mutate(runId)}
+            cancelling={cancelMutation.isPending}
+          />
           <TabPanel value="overview" className="min-w-0">
             <SearchIntelligenceOverview
               datasets={datasets}
               competitors={data.competitors}
               ownedHostname={data.owned_targets[0]?.hostname ?? ''}
               onOpen={openComparison}
+              firstRun={firstRun}
             />
           </TabPanel>
           {TABS.filter((item) => item.value !== 'overview').map(({ value }) => (
@@ -253,39 +270,34 @@ export function SearchIntelligencePage() {
                 selected={value === 'competitors' ? comparison : null}
                 onSelect={setComparison}
                 onExpand={() => openReview('increase_depth')}
-                action={
-                  value === 'keywords' ? (
-                    <Button variant="secondary" size="sm" onClick={() => openReview('seed')}>
-                      Research a keyword
-                    </Button>
-                  ) : null
-                }
+                action={(targetOrigin) => (
+                  <CollectionAction
+                    tab={value}
+                    datasets={datasets}
+                    onSeed={() => openReview('seed')}
+                    onMatch={() => {
+                      setCitationOrigin(targetOrigin);
+                      setCitationOpen(true);
+                    }}
+                  />
+                )}
               />
-              {value === 'backlinks' &&
-              datasets.some(
-                (item) => item.dataset_kind === 'referring_domains' && item.unique_rows_saved > 0,
-              ) ? (
-                <Button variant="ghost" size="sm" onClick={() => setCitationOpen(true)}>
-                  Match with Visibility citations
-                </Button>
-              ) : null}
             </TabPanel>
           ))}
           <Drawer
             open={citationOpen}
             onOpenChange={setCitationOpen}
             title="Match Visibility citations"
+            description="Find the sources AI answers cite that already link to your website."
           >
             <SearchIntelligenceCitationMatcher
+              key={citationOrigin}
               datasets={datasets}
-              onDerived={() =>
-                queryClient.invalidateQueries({
-                  queryKey: searchIntelligenceKeys.readiness(
-                    activeProject?.workspace_id,
-                    activeProject?.id,
-                  ),
-                })
-              }
+              targetOrigin={citationOrigin}
+              onDerived={async () => {
+                setCitationOpen(false);
+                await invalidateReadiness();
+              }}
             />
           </Drawer>
           <CostDetails
@@ -330,109 +342,47 @@ function PageActions({
       <Button variant="ghost" size="sm" onClick={onCost}>
         Cost details
       </Button>
-      <Button variant="secondary" size="sm" onClick={() => onReview('analysis')}>
-        Analysis settings
-      </Button>
-      <Button size="sm" onClick={() => onReview(hasDatasets ? 'refresh' : 'analysis')}>
-        {hasDatasets ? 'Refresh' : 'Run first analysis'}
-      </Button>
+      {hasDatasets ? (
+        <>
+          <Button variant="secondary" size="sm" onClick={() => onReview('analysis')}>
+            New analysis
+          </Button>
+          <Button size="sm" onClick={() => onReview('refresh')}>
+            Refresh
+          </Button>
+        </>
+      ) : (
+        <Button size="sm" onClick={() => onReview('analysis')}>
+          Review first analysis
+        </Button>
+      )}
     </>
   );
 }
 
-function RunNotice({ run }: Readonly<{ run: SearchIntelligenceRun | null }>) {
-  if (!run) return null;
-  if (run.status === 'queued' || run.status === 'running')
-    return (
-      <div className="type-body bg-info-bg text-info-text flex items-center gap-2 rounded-[var(--radius-control)] p-3">
-        <RefreshCw className="size-4 animate-spin" aria-hidden />
-        Acquisition in progress: {run.completed_calls} of {run.planned_calls} calls complete.
-      </div>
-    );
-  if (!['partial', 'failed', 'uncertain'].includes(run.status)) return null;
-  return (
-    <output className="type-body bg-warning-bg block rounded-[var(--radius-control)] p-3">
-      <Stack gap="tight">
-        <p className={textRole('itemTitle', 'capitalize')}>Acquisition {run.status}</p>
-        <p className="text-muted">
-          {run.error_detail ||
-            `${run.completed_calls} of ${run.planned_calls} reviewed calls completed. Published datasets remain available below.`}
-        </p>
-      </Stack>
-    </output>
-  );
-}
-
-function CostDetails({
-  open,
-  onOpenChange,
-  runs,
-  pending,
-  error,
-  onRetry,
+/** The tab's own next step beside its view switcher. */
+function CollectionAction({
+  tab,
+  datasets,
+  onSeed,
+  onMatch,
 }: Readonly<{
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  runs: SearchIntelligenceRun[] | undefined;
-  pending: boolean;
-  /** The failed read, or null when the history loaded. */
-  error: unknown;
-  onRetry: () => void;
+  tab: string;
+  datasets: SearchIntelligenceDataset[];
+  onSeed: () => void;
+  onMatch: () => void;
 }>) {
-  let content = <InlineEmpty>No Search Intelligence operation has been recorded.</InlineEmpty>;
-  if (runs?.length) {
-    content = (
-      <ul className="grid gap-3">
-        {runs.map((run) => (
-          <li key={run.id} className={panelClasses({ tone: 'well' }, 'grid gap-3')}>
-            <div className="grid gap-1">
-              <p className={textRole('itemTitle', 'capitalize')}>
-                {run.action.replaceAll('_', ' ')} · {run.status.replaceAll('_', ' ')}
-              </p>
-              <p className={textRole('caption')}>
-                <DisplayTime value={run.created_at} />
-              </p>
-            </div>
-            <StatGrid
-              columns={2}
-              items={[
-                {
-                  key: 'estimated',
-                  label: 'Estimated',
-                  value: `$${formatSearchNumber(run.estimated_cost_usd, 6)}`,
-                },
-                { key: 'reported', label: 'Provider reported', value: reportedCost(run) },
-                {
-                  key: 'calls',
-                  label: 'Calls completed',
-                  value: `${run.completed_calls} of ${run.planned_calls}`,
-                },
-                {
-                  key: 'rows',
-                  label: 'Saved result rows',
-                  value: formatSearchNumber(run.received_rows),
-                },
-                { key: 'uncertain', label: 'Uncertain calls', value: run.uncertain_calls },
-              ]}
-            />
-          </li>
-        ))}
-      </ul>
+  if (tab === 'keywords')
+    return (
+      <Button variant="secondary" size="sm" onClick={onSeed}>
+        Research a keyword
+      </Button>
     );
-  }
-  if (error)
-    content = (
-      <ReadError error={error} fallback="Cost history could not be loaded." onRetry={onRetry} />
+  if (tab === 'backlinks' && referringLists(datasets).length)
+    return (
+      <Button variant="secondary" size="sm" onClick={onMatch}>
+        Match with Visibility citations
+      </Button>
     );
-  if (pending) content = <Skeleton className="h-32 w-full" />;
-  return (
-    <Drawer
-      open={open}
-      onOpenChange={onOpenChange}
-      title="Cost details"
-      description="Recorded Search Intelligence usage for recent operations."
-    >
-      {content}
-    </Drawer>
-  );
+  return null;
 }

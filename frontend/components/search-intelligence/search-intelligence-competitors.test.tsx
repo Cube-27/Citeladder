@@ -30,7 +30,10 @@ it('distinguishes empty comparisons from unfetched data and opens the saved www 
     />,
   );
   expect(screen.getByText('No results')).toBeInTheDocument();
-  expect(screen.getByText('Not fetched')).toBeInTheDocument();
-  await userEvent.click(screen.getByRole('button', { name: 'missing keywords for Rival' }));
+  // The footprint and shared-keyword comparison were never fetched: not a missing measurement.
+  expect(screen.getAllByText('Not fetched')).toHaveLength(3);
+  await userEvent.click(
+    screen.getByRole('button', { name: 'Rival: Keywords they rank for and you don’t' }),
+  );
   expect(onOpen).toHaveBeenCalledWith(dataset);
 });
