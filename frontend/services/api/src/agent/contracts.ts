@@ -91,8 +91,6 @@ export type StepSpec = {
   output?: false | { formatIds?: readonly string[] };
 };
 const ANY_STEP: StepSpec = { actions: ['use_skill', 'call_tool', 'respond'] };
-// Parsing reads every action so a refused one is recorded as a refused read, not a malformed step.
-const ALL_ACTIONS = ANY_STEP.actions;
 
 /** Strict providers need every field present (nullable); parsing accepts an omitted null. */
 function field<T extends z.ZodType>(type: T, strict: boolean) {
@@ -124,7 +122,8 @@ function stepSchema(spec: StepSpec, strict: boolean) {
         );
   return z
     .object({
-      action: z.enum(strict ? spec.actions : ALL_ACTIONS),
+      // Parsing reads every action so a refused one is recorded as a refused read, not a malformed step.
+      action: z.enum(strict ? spec.actions : ANY_STEP.actions),
       skill_id: choice(spec.skillIds, strict),
       tool: field(z.string(), strict),
       // Tool arguments differ per tool; a strict schema cannot hold an open object.
@@ -163,10 +162,8 @@ export function parseStep(
       'Match the supplied schema exactly: action, skill_id, tool, arguments_json, reply and output. Put deliverable fields inside output.',
     );
   const value = parsed.data;
-  if (
-    value.skill_id &&
-    (spec.skillIds?.includes(value.skill_id) ?? skills?.has(value.skill_id)) === false
-  )
+  const allowed = spec.skillIds ?? (skills ? [...skills.keys()] : undefined);
+  if (value.skill_id && allowed && !allowed.includes(value.skill_id))
     throw new AgentProtocolError(
       spec.skillIds?.length
         ? `Set skill_id to null or one of: ${spec.skillIds.join(', ')}. Do not use a label or output kind as skill_id.`
