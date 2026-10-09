@@ -36,9 +36,12 @@ design system's light palette inline (the CSP loads no stylesheet or font). It
 names the signed-in account and lists every workspace the account could share
 with what approving it needs. A single shareable workspace is pre-selected and
 required. A workspace without the current Terms acceptance is shareable once the
-person accepts the Terms on the page; that acceptance is recorded with the
-`mcp_consent` context in the same transaction as the code. A workspace whose
-trial or subscription is inactive is shown, not selectable, with a billing link.
+person accepts the Terms on the page; the form carries the revision it showed,
+a submission for an older revision is refused with nothing recorded, and the
+acceptance is recorded with the `mcp_consent` context in the same transaction as
+the code. A workspace whose trial or subscription has ended is shown, not
+selectable, with a billing link; one whose access cannot be resolved is shown as
+unconfirmed, without a billing fix.
 A workspace without a project links to onboarding, whose `return_to` brings the
 person back to consent, so a visitor can register, verify, set up a project and
 approve in one pass. A refused selection re-renders the form with the reason

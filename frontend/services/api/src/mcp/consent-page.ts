@@ -76,6 +76,8 @@ export type ConsentView = Readonly<{
   csrf: string;
   workspaces: readonly ConsentWorkspace[];
   error: string | null;
+  /** The Terms revision shown; a POST accepting an older one is refused. */
+  termsRevision: string;
   /** The app origin, for project setup and billing links. */
   appOrigin: string;
   /** The public site, for the Terms and Privacy Policy. */
@@ -85,15 +87,22 @@ export type ConsentView = Readonly<{
 function workspaceChoice(view: ConsentView, workspace: ConsentWorkspace, preselect: boolean) {
   const consentPath = `/mcp/oauth/consent?transaction=${encodeURIComponent(view.transaction)}`;
   const workspaceParam = `workspace=${encodeURIComponent(workspace.id)}`;
-  if (workspace.state === 'inactive')
+  if (workspace.state === 'inactive' || workspace.state === 'unresolved')
     return html`<div class="choice off">
       <input type="checkbox" disabled aria-labelledby="w-${workspace.id}" />
       <span>
         <span class="name" id="w-${workspace.id}">${workspace.name}</span>
-        <span class="meta"
-          >Its trial or subscription is not active, so it cannot be shared.
-          <a href="${view.appOrigin}/billing?${workspaceParam}">Review billing</a></span
-        >
+        ${
+          workspace.state === 'inactive'
+            ? html`<span class="meta"
+                >Its trial or subscription has ended, so it cannot be shared.
+                <a href="${view.appOrigin}/billing?${workspaceParam}">Review billing</a></span
+              >`
+            : html`<span class="meta"
+                >Its access could not be confirmed right now, so it cannot be shared. Try again in a
+                few minutes; contact support if this continues.</span
+              >`
+        }
       </span>
     </div>`;
   const setup = new URLSearchParams({ workspace: workspace.id, return_to: consentPath });
@@ -125,7 +134,9 @@ function workspaceChoice(view: ConsentView, workspace: ConsentWorkspace, presele
 
 /** The approval form: who is asking, for which account, and which workspaces. */
 export function consentPage(view: ConsentView) {
-  const shareable = view.workspaces.filter((workspace) => workspace.state !== 'inactive');
+  const shareable = view.workspaces.filter(
+    (workspace) => workspace.state === 'ready' || workspace.state === 'terms',
+  );
   const needsTerms = shareable.some((workspace) => workspace.state === 'terms');
   const termsOnly = needsTerms && shareable.every((workspace) => workspace.state === 'terms');
   const consentPath = `/mcp/oauth/consent?transaction=${encodeURIComponent(view.transaction)}`;
@@ -147,6 +158,11 @@ export function consentPage(view: ConsentView) {
       <form method="post" action="/mcp/oauth/consent" class="stack">
         <input type="hidden" name="transaction" value="${view.transaction}" />
         <input type="hidden" name="csrf_token" value="${view.csrf}" />
+        ${
+          needsTerms
+            ? html`<input type="hidden" name="terms_revision" value="${view.termsRevision}" />`
+            : ''
+        }
         ${
           view.workspaces.length
             ? html`<fieldset>

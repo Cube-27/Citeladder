@@ -14,6 +14,7 @@ import { ApiError } from '../src/errors.ts';
 import { registerMcpRoutes } from '../src/mcp/server.ts';
 import { cleanupMcpProtocol } from '../src/mcp/maintenance.ts';
 import { mcpPolicy } from '../src/mcp/config.ts';
+import { billingAccount, grant as accountGrant } from './prompt-fixtures.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
 
@@ -720,6 +721,7 @@ function consentDocument(source: string) {
       (input) => input.type === 'checkbox' && input.name !== 'accept_terms',
     ),
     terms: inputs.find((input) => input.name === 'accept_terms'),
+    termsRevision: inputs.find((input) => input.name === 'terms_revision')?.value,
     text: text.replace(/\s+/gu, ' '),
   };
 }
@@ -768,10 +770,33 @@ it('pre-selects the only shareable workspace and names the signed-in account', a
   expect(view.terms).toBeUndefined();
 });
 
-it('accepts the current Terms on the consent page and explains an inactive workspace', async () => {
+/** A workspace whose public trial ended yesterday. */
+async function endedTrialWorkspace() {
+  const workspaceId = await fixtures.ownedWorkspace(tenant.userId, { access: false });
+  const trial = await accountGrant(db, await billingAccount(db, workspaceId), {
+    key: 'workspace_access',
+    value: 1,
+    validFrom: new Date(Date.now() - 8 * 86_400_000),
+    validUntil: new Date(Date.now() - 86_400_000),
+  });
+  await db
+    .updateTable('account_grants')
+    .set({ profile_key: policy.entitlements.public_trial.profile })
+    .where('id', '=', trial)
+    .execute();
+  return workspaceId;
+}
+
+it('accepts the shown Terms on the consent page and tells ended access from unresolved access', async () => {
   const fresh = await fixtures.ownedWorkspace(tenant.userId);
-  const lapsed = await fixtures.ownedWorkspace(tenant.userId, { access: false });
-  await db.updateTable('workspaces').set({ name: 'Lapsed' }).where('id', '=', lapsed).execute();
+  const ended = await endedTrialWorkspace();
+  const unresolved = await fixtures.ownedWorkspace(tenant.userId, { access: false });
+  await db.updateTable('workspaces').set({ name: 'Ended' }).where('id', '=', ended).execute();
+  await db
+    .updateTable('workspaces')
+    .set({ name: 'Pending' })
+    .where('id', '=', unresolved)
+    .execute();
   const transaction = await pending((await client()).client_id);
   const view = await consentView(transaction);
   expect(view.workspaces.map((input) => [input.value ?? 'none', 'disabled' in input])).toEqual(
@@ -781,20 +806,27 @@ it('accepts the current Terms on the consent page and explains an inactive works
       ['none', true],
     ]),
   );
-  expect(view.text).toContain('Lapsed Its trial or subscription is not active');
+  expect(view.text).toContain('Ended Its trial or subscription has ended');
+  expect(view.text).toContain('Pending Its access could not be confirmed right now');
   expect(view.terms).toEqual({ type: 'checkbox', name: 'accept_terms', value: 'yes' });
+  expect(view.termsRevision).toBe(policy.mcp.terms_revision);
 
-  const inactive = await approve(transaction, [lapsed]);
-  expect(inactive.status).toBe(400);
-  expect(consentDocument(await inactive.text()).text).toContain(
-    'Select only workspaces that can be shared right now.',
-  );
+  for (const blocked of [ended, unresolved]) {
+    const refused = await approve(transaction, [blocked]);
+    expect(refused.status).toBe(400);
+    expect(consentDocument(await refused.text()).text).toContain(
+      'Select only workspaces that can be shared right now.',
+    );
+  }
   const unaccepted = await approve(transaction, [fresh]);
   expect(unaccepted.status).toBe(400);
   expect(consentDocument(await unaccepted.text()).text).toContain(
     'Accept the Terms of Service to share these workspaces.',
   );
-  const approved = await approve(transaction, [fresh], { accept_terms: 'yes' });
+  const approved = await approve(transaction, [fresh], {
+    accept_terms: 'yes',
+    terms_revision: policy.mcp.terms_revision,
+  });
   expect(approved.status).toBe(303);
   expect(new URL(approved.headers.get('location')!).searchParams.get('code')).toBeTruthy();
   expect(
@@ -805,6 +837,32 @@ it('accepts the current Terms on the consent page and explains an inactive works
       .where('actor_id', '=', tenant.userId)
       .execute(),
   ).toEqual([{ context: 'mcp_consent', terms_revision: policy.mcp.terms_revision }]);
+});
+
+it('refuses Terms accepted from a page showing an older revision and records nothing', async () => {
+  const fresh = await fixtures.ownedWorkspace(tenant.userId);
+  const transaction = await pending((await client()).client_id);
+  const stale = await approve(transaction, [fresh], {
+    accept_terms: 'yes',
+    terms_revision: 'superseded-revision',
+  });
+  expect(stale.status).toBe(400);
+  const page = consentDocument(await stale.text());
+  expect(page.text).toContain('The Terms of Service changed since this page loaded.');
+  expect(page.termsRevision).toBe(policy.mcp.terms_revision);
+  expect(
+    await db
+      .selectFrom('policy_acceptances')
+      .select('id')
+      .where('workspace_id', '=', fresh)
+      .where('actor_id', '=', tenant.userId)
+      .execute(),
+  ).toEqual([]);
+  const approved = await approve(transaction, [fresh], {
+    accept_terms: 'yes',
+    terms_revision: page.termsRevision!,
+  });
+  expect(approved.status).toBe(303);
 });
 
 it('explains an expired approval link instead of a bare error', async () => {

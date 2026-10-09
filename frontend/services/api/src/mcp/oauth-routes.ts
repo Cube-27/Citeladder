@@ -3,7 +3,7 @@ import { Hono, type Context } from 'hono';
 import { getCookie } from 'hono/cookie';
 import { sessionUser } from '../auth/session.ts';
 import { trustedClientIdentity } from '../auth/client-identity.ts';
-import { configEnvironment, demoAccessExpired, type ServiceConfig } from '../config.ts';
+import { configEnvironment, demoAccessExpired, policy, type ServiceConfig } from '../config.ts';
 import type { AppEnv } from '../context.ts';
 import type { Database } from '../db/database.ts';
 import { record, strings } from '../db/json.ts';
@@ -363,6 +363,7 @@ export function registerOAuthRoutes(
         csrf: consentCsrf(config, getCookie(c, config.session.cookieName) ?? '', transaction),
         workspaces: await consentWorkspaces(db, userId),
         error,
+        termsRevision: policy.mcp.terms_revision,
         appOrigin: mcp.browserOrigin,
         websiteOrigin: mcp.origin,
       }),
@@ -419,7 +420,8 @@ export function registerOAuthRoutes(
             ? null
             : {
                 selected: form.getAll('workspace_id'),
-                acceptTerms: form.get('accept_terms') === 'yes',
+                acceptedTermsRevision:
+                  form.get('accept_terms') === 'yes' ? (form.get('terms_revision') ?? '') : null,
               },
         ),
         303,
