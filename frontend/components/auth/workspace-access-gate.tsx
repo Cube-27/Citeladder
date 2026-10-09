@@ -89,7 +89,7 @@ export function WorkspaceAccessGate({ children }: Readonly<{ children: ReactNode
       }),
     // The bootstrap loader has just fetched this answer; reuse it rather than
     // asking again on mount. Expiry, product 403s and focus still recheck.
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: 'always',
   });
   const deadline = access.data?.expires_at ? Date.parse(access.data.expires_at) : null;
   const { refetch } = access;
