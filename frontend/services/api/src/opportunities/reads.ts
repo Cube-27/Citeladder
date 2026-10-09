@@ -21,6 +21,7 @@ import {
   type OpportunityRow,
 } from './projection.ts';
 import type { Scope } from './sources.ts';
+import { isNonEmpty, lastOf } from '../lists.ts';
 
 const o = policy.opportunity.opportunities;
 const LIST_SCOPE = 'opportunities';
@@ -136,12 +137,15 @@ export async function listOpportunities(
     .execute();
   let nextCursor: string | null = null;
   if (rows.length > limit) {
-    rows = rows.slice(0, limit);
-    const last = rows.at(-1)!;
-    nextCursor = encodeKeysetCursor(LIST_SCOPE, fingerprint, [
-      String(last.priority_score),
-      last.id,
-    ]);
+    const kept = rows.slice(0, limit);
+    rows = kept;
+    if (isNonEmpty(kept)) {
+      const last = lastOf(kept);
+      nextCursor = encodeKeysetCursor(LIST_SCOPE, fingerprint, [
+        String(last.priority_score),
+        last.id,
+      ]);
+    }
   }
   const order = await new WorkspaceScope(scope.workspaceId)
     .selectFrom(db, 'opportunity_orders')

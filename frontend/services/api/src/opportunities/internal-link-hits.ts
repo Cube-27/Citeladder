@@ -35,9 +35,15 @@ export async function internalLinkHits(
     .where('id', '=', runId)
     .executeTakeFirstOrThrow();
   const result = internalLinkAnalysisSchema.parse(run.result);
-  const sources = Map.groupBy(result.recommendations, (link) => link.source.site_url_id);
+  type Link = (typeof result.recommendations)[number];
+  const sources = new Map<string, [Link, ...Link[]]>();
+  for (const link of result.recommendations) {
+    const links = sources.get(link.source.site_url_id);
+    if (links) links.push(link);
+    else sources.set(link.source.site_url_id, [link]);
+  }
   return [...sources].map(([id, links]) => {
-    const source = links[0]!.source;
+    const source = links[0].source;
     return {
       rule_id: 'site_contextual_links',
       target_key: `internal-links:${id}`,

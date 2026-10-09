@@ -65,6 +65,7 @@ import {
   type DemandSource,
   type Scope,
 } from './sources.ts';
+import { firstOf } from '../lists.ts';
 
 type Projections = [Record<string, unknown>, Record<string, unknown>, Record<string, unknown>[]];
 type Collected = {
@@ -268,7 +269,7 @@ async function writeRefresh(
   const { rows: clock } = await sql<{
     now: string;
   }>`select clock_timestamp()::text as now`.execute(trx);
-  const now = clock[0]!.now;
+  const now = firstOf(clock, 'the database clock row').now;
   if (live.length) {
     await trx
       .updateTable('opportunities')
