@@ -339,6 +339,14 @@ describe('sanitized durable admission', () => {
       lines_matched: 1,
       lines_rejected: 1,
     });
+    // An identifiable line with an invalid status proves the format, though nothing is admitted.
+    const invalid = await ingest(
+      db,
+      source,
+      body(event({ status: 'not-a-status' }), { path: '/missing-fields' }),
+      { key: 'invalid-and-missing' },
+    );
+    expect(invalid).toMatchObject({ status: 'accepted', lines_matched: 0, lines_rejected: 2 });
     await expect(
       ingest(db, source, body({ path: '/a' }, { path: '/b' }), { key: 'unsupported' }),
     ).rejects.toThrow(/crawler identification/);

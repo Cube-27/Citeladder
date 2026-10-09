@@ -103,11 +103,13 @@ export function prepareBatch(input: Input) {
   const prepared: Insertable<BotRequests>[] = [];
   let first: Date | null = null,
     last: Date | null = null,
-    unsupported: UnsupportedLogFormat | null = null;
+    unsupported: UnsupportedLogFormat | null = null,
+    formatErrors = 0;
   for (const line of input.lines) {
     const result = prepareLineOrFormatError(line, input);
     if (result instanceof UnsupportedLogFormat) {
       unsupported ??= result;
+      formatErrors++;
       counts.lines_rejected++;
       continue;
     }
@@ -120,6 +122,6 @@ export function prepareBatch(input: Input) {
     else counts[result.kind]++;
   }
   // The batch is unsupported only when no line carried the fields at all.
-  if (counts.lines_parsed > 0 || counts.lines_rejected < input.lines.length) unsupported = null;
+  if (formatErrors < input.lines.length) unsupported = null;
   return { counts, prepared, first, last, unsupported };
 }
