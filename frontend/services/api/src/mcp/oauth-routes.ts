@@ -65,7 +65,7 @@ async function registrationBody(request: Request): Promise<unknown> {
  * A loopback redirect matches on any port (RFC 8252 §7.3): native apps bind a
  * free port per sign-in. The URI actually requested is the one bound.
  */
-export function registeredRedirect(registered: string[], requested: string | null) {
+function registeredRedirect(registered: string[], requested: string | null) {
   if (requested === null) {
     const [only, ...others] = registered;
     return only !== undefined && !others.length ? only : null;

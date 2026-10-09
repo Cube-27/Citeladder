@@ -57,7 +57,7 @@ const crawlPage = {
   limit: optional(z.number().int().min(1).max(crawlLogs.max_page_size)),
 };
 const verification = optional(z.enum(['verified', 'unverifiable', 'failed_verification']));
-export const contextSections = [
+const contextSections = [
   'profile',
   'prompts',
   'visibility',
@@ -475,7 +475,7 @@ export const definitions = {
     }),
   }),
 };
-export type ToolName = keyof typeof definitions;
+type ToolName = keyof typeof definitions;
 export const presentationTools: ReadonlySet<string> = new Set<ToolName>([
   'render_visibility',
   'render_site_health',
@@ -502,7 +502,7 @@ function compact(node: unknown): unknown {
   }
   return out;
 }
-export function inputSchema(schema: z.ZodType) {
+function inputSchema(schema: z.ZodType) {
   return compact(z.toJSONSchema(schema, { io: 'input' }));
 }
 const annotations = {
