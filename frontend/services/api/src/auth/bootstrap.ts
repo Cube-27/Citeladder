@@ -8,6 +8,7 @@ import { issueDevelopmentAccess } from '../entitlements/bootstrap.ts';
 import { lockAccount } from '../entitlements/grants.ts';
 import { createIdentity } from './service.ts';
 import { hashPassword, passwordSchema, verifyPassword } from './password.ts';
+import { onlyOf } from '../lists.ts';
 
 export function requireLocalDevelopment(config: ServiceConfig) {
   const target = new URL(config.databaseUrl.replace('postgresql+asyncpg:', 'postgresql:'));
@@ -34,8 +35,9 @@ export async function bootstrapWorkspace(db: Database, userId: string) {
     .where('workspace_members.role', '=', 'owner')
     .where('workspaces.is_system', '=', false)
     .execute();
-  if (owned.length !== 1) throw new Error('bootstrap_workspace_ambiguous');
-  const workspaceId = owned[0]!.id;
+  const only = onlyOf(owned);
+  if (!only) throw new Error('bootstrap_workspace_ambiguous');
+  const workspaceId = only.id;
   const account = await db
     .selectFrom('billing_accounts')
     .select('id')

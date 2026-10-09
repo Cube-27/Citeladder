@@ -9,6 +9,7 @@ import ipaddr from 'ipaddr.js';
 import { getDomain } from 'tldts';
 
 import { policy } from '../config.ts';
+import { isNonEmpty } from '../lists.ts';
 
 export class FetchError extends Error {
   readonly code: string;
@@ -283,11 +284,11 @@ export function createWebsiteFetcher(
         const addresses = isIP(host)
           ? [{ address: host, family: isIP(host) }]
           : await abortable(dns(host), hopSignal);
-        if (!addresses.length) throw new FetchError('dns_resolution_failed');
+        if (!isNonEmpty(addresses)) throw new FetchError('dns_resolution_failed');
         for (const target of addresses) validateAddress(target.address);
         const started = performance.now();
         try {
-          const response = await send(url, addresses[0]!, options, hopSignal);
+          const response = await send(url, addresses[0], options, hopSignal);
           options.onCall?.({
             url: url.href,
             status: response.status,

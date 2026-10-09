@@ -8,6 +8,7 @@ import { mcpPolicy } from './config.ts';
 import { decodeCursor, encodeCursor, pagination } from './data.ts';
 import type { ReadArguments } from './evidence.ts';
 import { McpInputError, type Evidence, type ReadScope } from './types.ts';
+import { isNonEmpty, lastOf } from '../lists.ts';
 
 export async function readSiteEvidence(
   db: Database,
@@ -73,7 +74,10 @@ export async function readSiteEvidence(
       project_id: scope.projectId,
       crawl_id: crawl.id,
       items,
-      pagination: pagination(items, rows.length > count ? encodeCursor(selected.at(-1)!.id) : null),
+      pagination: pagination(
+        items,
+        rows.length > count && isNonEmpty(selected) ? encodeCursor(lastOf(selected).id) : null,
+      ),
       limitations: [
         'aggregate_metrics_are_not_individual_edges',
         'placement_is_reported_only_when_captured_in_bounded_neighbors',

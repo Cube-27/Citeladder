@@ -4,6 +4,7 @@ import type { Database } from '../db/database.ts';
 import { record, strings } from '../db/json.ts';
 import { compareText } from '../text-order.ts';
 import { policy } from '../config.ts';
+import { firstOf } from '../lists.ts';
 
 const landingDimensions = JSON.stringify(policy.integrations.datasets.ga4_landing_daily.dimensions);
 const aliased = (alias: string, name: string) => sql.ref(`${alias}.${name}`);
@@ -46,7 +47,7 @@ export async function partitionEpoch(
     where r.workspace_id=${scope.workspaceId}::uuid and r.project_id=${scope.projectId}::uuid`.execute(
     db,
   );
-  return result.rows[0]!.epoch;
+  return firstOf(result.rows, 'the partition epoch aggregate row').epoch;
 }
 /** The latest day covered by a complete partition of `dataset`, rows or not. */
 export async function partitionAnchor(

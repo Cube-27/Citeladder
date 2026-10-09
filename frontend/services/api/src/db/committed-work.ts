@@ -91,13 +91,12 @@ class ConnectionWork {
       this.reset(false);
       return true;
     }
-    const prefix = /^(savepoint|rollback to(?: savepoint)?|release(?: savepoint)?)\s+/iu.exec(
-      command,
-    );
-    if (!prefix) return false;
-    const name = command.slice(prefix[0].length).trim();
+    const [prefix, action] =
+      /^(savepoint|rollback to(?: savepoint)?|release(?: savepoint)?)\s+/iu.exec(command) ?? [];
+    if (prefix === undefined || action === undefined) return false;
+    const name = command.slice(prefix.length).trim();
     const identifier = name.startsWith('"') ? name : name.toLowerCase();
-    this.savepoint(prefix[1]!.toLowerCase(), identifier);
+    this.savepoint(action.toLowerCase(), identifier);
     return true;
   }
 
