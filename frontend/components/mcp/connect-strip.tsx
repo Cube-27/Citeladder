@@ -41,9 +41,10 @@ function useHoverMenu() {
     open,
     /** Opened by hover, so closing must not pull focus back to the trigger. */
     hovered,
+    /** The menu's own open and close (keyboard, click, Escape) restore focus as usual. */
     setOpen: (next: boolean) => {
       cancelClose();
-      if (!next) hovered.current = false;
+      hovered.current = false;
       setOpen(next);
     },
     enter: (event: PointerEvent) => {
@@ -55,10 +56,8 @@ function useHoverMenu() {
     leave: (event: PointerEvent) => {
       if (!isMouse(event) || !hovered.current) return;
       cancelClose();
-      closeTimer.current = setTimeout(() => {
-        hovered.current = false;
-        setOpen(false);
-      }, HOVER_CLOSE_DELAY_MS);
+      // `hovered` stays set until the next open, so the close keeps focus where it is.
+      closeTimer.current = setTimeout(() => setOpen(false), HOVER_CLOSE_DELAY_MS);
     },
   };
 }

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect, it } from 'vite-plus/test';
 
@@ -40,4 +40,14 @@ it('opens the assistant menu on hover', async () => {
     'href',
     'https://gemini.google.com/apps',
   );
+});
+
+it('closes a hover-opened menu without moving focus to the chevron', async () => {
+  const user = userEvent.setup();
+  render(<ConnectStrip />);
+  await user.hover(screen.getByRole('link', { name: 'Connect to Claude' }));
+  expect(screen.getByRole('menu')).toBeInTheDocument();
+  await user.unhover(screen.getByRole('link', { name: 'Connect to Claude' }));
+  await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument());
+  expect(screen.getByRole('button', { name: 'Connect another assistant' })).not.toHaveFocus();
 });
