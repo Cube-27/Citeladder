@@ -152,6 +152,15 @@ retention, access and cost decisions must precede their dependent implementation
 Owners: [Google Cloud operations](../operations/GOOGLE_CLOUD.md),
 [GCP runbook](../operations/GCP_RUNBOOK.md) and [Workers runbook](../operations/WORKERS_RUNBOOK.md).
 
+### Design system remainder
+
+The [design system consistency plan](design-system-consistency.md) shipped in
+#318–#320. Its [known remainder](design-system-consistency.md#known-remainder)
+stays ratcheted by `pnpm check:policy`: hand-rolled `TrendChart` axes,
+section-level skeletons, drawer and table width roles, accent check marks in
+dropdowns, and the blog illustration palette. Each names the owner to change
+first. Owner: [Design](../design.md).
+
 ## Deferred proposals
 
 Optional later assignments, not prerequisites for completed features:
@@ -223,8 +232,9 @@ Retain unresolved approvals under the
 ## Completed baseline
 
 TypeScript migration/Python retirement (#268), backend debt (#256), security
-hardening (#255) and design contracts (#230) are complete implementation history,
-not new assignments. Their operational/legal exceptions are retained above.
+hardening (#255), design contracts (#230) and design-system consistency
+(#318–#320) are complete implementation history, not new assignments. Their
+operational/legal exceptions are retained above.
 
 Invitation delivery is implemented, the prompt-generation policy is published and
 internal-links work is merged. Do not reopen these tasks from stale historical text.

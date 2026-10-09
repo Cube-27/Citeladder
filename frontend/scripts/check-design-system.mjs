@@ -3,6 +3,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { extname, join, relative, resolve } from 'node:path';
 
 import {
+  appSourceViolations,
   editorialTypographyViolations,
   cardHeaderLayoutViolations,
   nestedCardViolations,
@@ -46,6 +47,8 @@ const violations = [];
 const advisories = [];
 // Ratcheted findings: counted per file and rule against the baseline.
 const findings = [];
+// Script sources, for the app's Tailwind @source coverage.
+const scriptSources = [];
 
 function files(directory) {
   return readdirSync(directory).flatMap((name) => {
@@ -59,6 +62,7 @@ for (const path of files(root)) {
   if (!sourceExtensions.has(extname(path))) continue;
   const source = readFileSync(path, 'utf8');
   const label = relative(root, path).replaceAll('\\', '/');
+  if (/\.tsx?$/.test(label) && !/\.test\.tsx?$/.test(label)) scriptSources.push({ label, source });
   const legacyIdentifiers = [
     ['Search', 'ify'].join(''),
     ['search', 'ify'].join(''),
@@ -156,6 +160,10 @@ violations.push(
   ...textContrastViolations(root),
   ...productContractViolations(root),
   ...landingThemeViolations(root),
+  ...appSourceViolations(
+    readFileSync(join(root, 'apps', 'app', 'src', 'app.css'), 'utf8'),
+    scriptSources,
+  ),
 );
 
 // Fonts live in the private Cube-27/cube27-fonts repo (some are licensed for

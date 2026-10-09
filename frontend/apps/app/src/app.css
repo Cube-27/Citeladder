@@ -24,6 +24,7 @@
 @source '../../../components/auth';
 @source '../../../components/billing';
 @source '../../../components/demand';
+@source '../../../components/integrations';
 @source '../../../components/intelligence';
 @source '../../../components/knowledge-base';
 @source '../../../components/layout';

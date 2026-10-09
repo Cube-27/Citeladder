@@ -288,9 +288,10 @@ function ChangeSummaryCard({ data }: Readonly<{ data: SiteHealthOverview['change
  */
 function ChangeDelta({ metricKey, delta }: Readonly<{ metricKey: string; delta: number | null }>) {
   const coverage = metricKey.endsWith('_coverage');
+  const scale = coverage ? 100 : 1;
   return (
     <Delta
-      value={delta === null ? null : delta * (coverage ? 100 : 1)}
+      value={delta === null ? null : delta * scale}
       precision={0}
       unit={coverage ? ' pp' : ''}
     />

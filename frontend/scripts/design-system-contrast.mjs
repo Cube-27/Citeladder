@@ -124,6 +124,23 @@ function topLevelRules(clean) {
   return rules;
 }
 
+/**
+ * A rule body's own `--token: value;` declarations, skipping nested blocks.
+ * Split on `;` rather than scanned with one regex, so parsing stays linear.
+ */
+function customProperties(body) {
+  // A nested block becomes a separator, leaving its prelude as a segment
+  // that is not a declaration. CSS may omit the final `;`, so the last
+  // segment counts when it is a complete declaration.
+  const segments = body.replace(/\{[^{}]*\}/g, ';').split(';');
+  return segments.flatMap((segment) => {
+    const colon = segment.indexOf(':');
+    const token = segment.slice(0, colon).trim();
+    const value = segment.slice(colon + 1).trim();
+    return colon > 0 && /^--[\w-]+$/.test(token) && value ? [[token, value]] : [];
+  });
+}
+
 /** The raw declared value of every token a scope sees, before alias resolution. */
 export function paletteDeclarations(source, selector) {
   const clean = source.replace(/\/\*[\s\S]*?\*\//g, '');
@@ -134,11 +151,7 @@ export function paletteDeclarations(source, selector) {
   const declarations = (scope) =>
     rules
       .filter(({ selectors }) => selectors.includes(scope))
-      .flatMap(({ body }) =>
-        [...body.replace(/\{[^{}]*\}/g, '').matchAll(/(--[\w-]+)\s*:([^;{}]+);/g)].map(
-          ([, token, value]) => [token, value.trim()],
-        ),
-      );
+      .flatMap(({ body }) => customProperties(body));
   return new Map([
     ...declarations('@theme'),
     ...declarations(':root'),

@@ -1,11 +1,11 @@
 # Design system consistency plan
 
 A cross-surface audit and rebuild of the design system: tokens, brand marks,
-geometry, type, shared primitives and every product route. **Status: implemented
-(2026-10-09), pending owner review; owner decisions below are settled. Phases
-1–3 and 6 ship in the first PR; Phase 4 with the Site Health, Visibility and
-Overview migrations in the second; the remaining routes in the third (the
-second PR alone would have passed 100 files).** Shipped visual rules are owned
+geometry, type, shared primitives and every product route. **Status: shipped
+(2026-10-09) in #318 (Phases 1–3 and 6), #319 (Phase 4 with the Site Health,
+Visibility and Overview migrations) and #320 (the remaining routes); owner
+decisions below are settled. The [known remainder](#known-remainder) is queued
+in the [backlog](backlog.md).** Shipped visual rules are owned
 by [Design](../design.md), not by this plan. Visual work does not change factual
 copy, data, claims, scripted preview content or workflows.
 

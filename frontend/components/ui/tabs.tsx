@@ -89,16 +89,36 @@ export function TabsBar<T extends string>({
 }: Readonly<TabsBarProps<T>>) {
   const value = useContext(ActiveTabContext);
   return (
-    <TabsPrimitive.List
-      aria-label={ariaLabel}
-      className={cn(
-        'border-border relative flex w-full max-w-full flex-nowrap gap-[var(--tab-gap)] overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
-        variant === 'section' && 'border-b',
-        // Labels retain intrinsic width; narrow strips scroll as one row.
-        fill && 'gap-0',
-        className,
-      )}
-    >
+    // The rule sits on the wrapper; the strip overhangs it by the tab padding,
+    // so a padded tab's label still starts on the content edge.
+    <div className={cn('min-w-0', variant === 'section' && 'border-border border-b')}>
+      <TabsPrimitive.List
+        aria-label={ariaLabel}
+        className={cn(
+          'relative flex flex-nowrap gap-[var(--tab-gap)] overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+          // Labels retain intrinsic width; narrow strips scroll as one row.
+          fill ? 'gap-0' : '-mx-[var(--tab-pad-x)]',
+          className,
+        )}
+      >
+        <TabTriggers items={items} value={value} fill={fill} onIntent={onIntent} />
+      </TabsPrimitive.List>
+    </div>
+  );
+}
+
+/**
+ * Each tab is a padded, button-shaped target: hover fills a rounded box inset
+ * from the strip, and the active underline spans the label.
+ */
+function TabTriggers<T extends string>({
+  items,
+  value,
+  fill,
+  onIntent,
+}: Readonly<Pick<TabsBarProps<T>, 'items' | 'onIntent'> & { value: unknown; fill: boolean }>) {
+  return (
+    <>
       {items.map((item) => (
         <TabsPrimitive.Trigger
           key={item.value}
@@ -112,20 +132,25 @@ export function TabsBar<T extends string>({
           className={cn(
             textRole(
               'label',
-              'focus-ring text-secondary enabled:hover:bg-hover enabled:hover:text-foreground enabled:active:bg-active data-[state=active]:text-foreground relative inline-flex h-[var(--tab-height)] items-center px-0 whitespace-nowrap transition-colors disabled:bg-disabled disabled:text-muted',
+              'focus-ring text-secondary enabled:hover:text-foreground data-[state=active]:text-foreground disabled:text-muted relative inline-flex h-[var(--tab-height)] items-center rounded-[var(--radius-control)] px-[var(--tab-pad-x)] whitespace-nowrap transition-colors',
             ),
-            fill ? 'min-w-max flex-1 basis-0 justify-center px-3' : 'shrink-0',
+            'before:absolute before:inset-x-0 before:inset-y-1 before:rounded-[var(--radius-control)] before:transition-colors enabled:hover:before:bg-hover enabled:active:before:bg-active disabled:before:bg-disabled',
+            fill ? 'min-w-max flex-1 basis-0 justify-center' : 'shrink-0',
           )}
         >
-          {item.label}
+          {/* Positioned, so the label paints above the hover fill. */}
+          <span className="relative">{item.label}</span>
           {item.value === value ? (
             <span
-              className={cn('bg-accent absolute bottom-0 h-0.5', fill ? 'inset-x-0' : 'inset-x-2')}
+              className={cn(
+                'bg-accent absolute bottom-0 h-0.5',
+                fill ? 'inset-x-0' : 'inset-x-[var(--tab-pad-x)]',
+              )}
             />
           ) : null}
         </TabsPrimitive.Trigger>
       ))}
-    </TabsPrimitive.List>
+    </>
   );
 }
 

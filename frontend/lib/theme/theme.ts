@@ -15,11 +15,28 @@ export const THEME_STORAGE_KEY = 'citeladder.theme';
 
 const listeners = new Set<() => void>();
 
+/**
+ * Run a palette swap with transitions paused. Fields, selects and selected rows
+ * transition their colours, so a live swap would fade every one of them
+ * between palettes at once. Transitions return only after a frame has painted
+ * the new colours, so nothing animates.
+ */
+function withoutTransitions(change: () => void) {
+  const pause = document.createElement('style');
+  pause.textContent = '*,*::before,*::after{transition:none!important}';
+  document.head.append(pause);
+  change();
+  // The first frame paints the new palette with transitions still off.
+  window.requestAnimationFrame(() => window.requestAnimationFrame(() => pause.remove()));
+}
+
 function applyTheme(theme: Theme) {
   const root = document.documentElement;
-  if (theme === 'dark') root.dataset.theme = 'dark';
-  else delete root.dataset.theme;
-  document.querySelector('meta[name="color-scheme"]')?.setAttribute('content', theme);
+  withoutTransitions(() => {
+    if (theme === 'dark') root.dataset.theme = 'dark';
+    else delete root.dataset.theme;
+    document.querySelector('meta[name="color-scheme"]')?.setAttribute('content', theme);
+  });
   for (const listener of listeners) listener();
 }
 

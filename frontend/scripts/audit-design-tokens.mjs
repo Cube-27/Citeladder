@@ -291,7 +291,11 @@ function resolveLength(value, declarations, seen = new Set()) {
   if (alias && !seen.has(alias) && declarations.has(alias)) {
     return resolveLength(declarations.get(alias), declarations, new Set([...seen, alias]));
   }
-  return value.replace(/(-?[\d.]+)rem\b/g, (_, number) => `${Number(number) * 16}px`);
+  // Convert whole rem words; splitting first keeps the match linear.
+  return value
+    .split(/([\s,()/]+)/)
+    .map((word) => (/^-?[\d.]+rem$/.test(word) ? `${Number(word.slice(0, -3)) * 16}px` : word))
+    .join('');
 }
 
 /** Which table column a rule's media query feeds: base, wide, or none. */
