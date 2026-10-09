@@ -41,37 +41,27 @@ export const hairlineBandItemClasses = 'min-w-0 py-3 sm:px-4 sm:first:ps-0 sm:la
  *   `main-aside`  — the primary surface beside supporting context.
  *   `peers`       — two equal surfaces read side by side (e.g. two tables).
  *
- * Both stack below `lg`, with the first child first, and share the workspace
+ * All stack below `lg`, with the first child first, and share the workspace
  * gap. Columns align to the top so a short aside never stretches.
  */
 const SPLIT_PANE = {
   'list-detail': 'lg:grid-cols-[var(--pane-list-detail)]',
+  /**
+   * The list at the reader's width: three tracks — the list at
+   * `--split-pane-list-width`, the separator, the detail — with the gap carried
+   * by the separator itself. `ResizableSplitPane` owns the width and the
+   * separator; use it rather than this role alone.
+   */
+  'list-detail-resizable':
+    'lg:grid-cols-[var(--split-pane-list-width)_auto_minmax(0,1fr)] lg:gap-0',
   'main-aside': 'lg:grid-cols-[var(--pane-main-aside)]',
   peers: 'lg:grid-cols-2',
 } as const;
 
 export type SplitPaneRole = keyof typeof SPLIT_PANE;
 
-/**
- * `resizable` (list-detail only) makes the list track the reader's to size:
- * three tracks — the list at `--split-pane-list-width`, the separator, the
- * detail — with the gap carried by the separator itself. `ResizableSplitPane`
- * in `split-pane.tsx` owns the width and the separator; use that rather than
- * these classes alone.
- */
-export type SplitPaneOptions = Readonly<{ resizable?: boolean; className?: string }>;
-
-const RESIZABLE_LIST_DETAIL =
-  'lg:grid-cols-[var(--split-pane-list-width)_auto_minmax(0,1fr)] lg:gap-0';
-
-export function splitPaneClasses(role: SplitPaneRole, options?: string | SplitPaneOptions) {
-  const { resizable = false, className } =
-    typeof options === 'string' || options === undefined ? { className: options } : options;
-  return cn(
-    'grid min-w-0 items-start gap-[var(--workspace-gap)]',
-    resizable && role === 'list-detail' ? RESIZABLE_LIST_DETAIL : SPLIT_PANE[role],
-    className,
-  );
+export function splitPaneClasses(role: SplitPaneRole, className?: string) {
+  return cn('grid min-w-0 items-start gap-[var(--workspace-gap)]', SPLIT_PANE[role], className);
 }
 
 /**

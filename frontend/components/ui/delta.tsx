@@ -2,18 +2,12 @@ import { ArrowDown, ArrowUp, Minus } from 'lucide-react';
 
 import { MissingValue } from '@/components/ui/unavailable-value';
 import { textRole } from '@/components/ui/typography';
-import type { DataAvailabilityState } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 /**
  * Delta — the one change indicator.
  *
- * Three treatments had grown apart: "+1.2 vs previous" in secondary ink on the
- * dashboard, "+0.5 pp" with no direction mark on Visibility and Prompts, and an
- * arrow glyph beside a rounded number on Site Health. None of them said
- * whether the movement was good, and one used colour alone.
- *
- * Here the direction is always carried three ways — the sign, the arrow and
+ * The direction is always carried three ways — the sign, the arrow and
  * (where the metric has one) the outcome tone — so colour is never the only
  * signal. The tone is a policy, not a guess: `higher-is-better` paints a rise
  * as success, `lower-is-better` (rank, latency, errors) paints it as danger,
@@ -24,9 +18,9 @@ import { cn } from '@/lib/utils';
  * movement of +0.04 never prints as "+0.0" claiming a direction it does not
  * have; a displayed zero is flat and muted.
  *
- * A missing or non-comparable change is not zero. It renders the availability
- * vocabulary (`MissingValue`: the muted dash, the state as its accessible name,
- * and the optional reason on hover/focus).
+ * A missing change (null, undefined or non-finite) is not zero. It renders the
+ * availability vocabulary (`MissingValue`: the muted dash, "Not measured" as its
+ * accessible name, and the optional reason on hover/focus).
  */
 export type DeltaPolicy = 'higher-is-better' | 'lower-is-better' | 'neutral';
 
@@ -61,18 +55,11 @@ function roundedChange(value: number, precision: number) {
   return { direction, magnitude: Math.abs(rounded) };
 }
 
-function defaultFormat(magnitude: number, precision: number): string {
-  return magnitude.toFixed(precision);
-}
-
 export function Delta({
   value,
   policy = 'higher-is-better',
   precision = 1,
   unit = '',
-  format,
-  comparable = true,
-  missingState = 'not_measured',
   missingReason,
   context,
   className,
@@ -85,27 +72,21 @@ export function Delta({
   precision?: number;
   /** Appended to the magnitude, e.g. `' pp'`, `'%'`. */
   unit?: string;
-  /** Formats the (already rounded, non-negative) magnitude. */
-  format?: (magnitude: number) => string;
-  /** False when the two windows cannot be compared (different cohort, engine set). */
-  comparable?: boolean;
-  /** The availability state shown when there is no comparable change. */
-  missingState?: DataAvailabilityState;
   /** Why there is no change, e.g. "No comparable run" — shown on hover/focus. */
   missingReason?: string;
   /** A trailing qualifier in the same run, e.g. "vs previous". */
   context?: string;
   className?: string;
 }>) {
-  if (typeof value !== 'number' || !Number.isFinite(value) || !comparable) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
     return (
       <span className={textRole('delta', cn('text-muted', className))}>
-        <MissingValue state={missingState} reason={missingReason} />
+        <MissingValue reason={missingReason} />
       </span>
     );
   }
   const { direction, magnitude } = roundedChange(value, precision);
-  const text = format ? format(magnitude) : defaultFormat(magnitude, precision);
+  const text = magnitude.toFixed(precision);
   const Icon = ICONS[direction];
   const outcome = outcomeOf(direction, policy);
   return (

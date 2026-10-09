@@ -1,9 +1,9 @@
 'use client';
 
 import { Meter } from './meter';
-import { scoreBand, scoreBandFill } from './score-band';
+import { scoreBand, scoreBandTone } from './score-band';
 
-/** A 0–100 score as a `Meter` on the score-band fill, sweeping in like ScoreRing. */
+/** A 0–100 score as a `Meter` in the score-band tone, sweeping in like ScoreRing. */
 export function ScoreBar({
   value,
   label,
@@ -17,7 +17,7 @@ export function ScoreBar({
       valueText={`${clamped} out of 100`}
       size="md"
       sweep
-      fillClassName={scoreBandFill[scoreBand(clamped)]}
+      tone={scoreBandTone[scoreBand(clamped)]}
       className={className}
     />
   );

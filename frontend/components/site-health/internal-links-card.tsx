@@ -1,12 +1,9 @@
-import { ProjectLink } from '@/components/layout/scoped-link';
-
 import { Badge } from '@/components/ui/badge';
 import { InlineEmpty } from '@/components/ui/inline-empty';
+import { StatGrid } from '@/components/ui/stat-grid';
 import { TextLink } from '@/components/ui/text-link';
 import { Label, textRole } from '@/components/ui/typography';
-import { UnavailableValue } from '@/components/ui/unavailable-value';
 import type { PageDetail } from '@/lib/api/types';
-import { PLACEHOLDER } from '@/lib/site-health/status';
 import { ledgerClasses } from '@/components/ui/workspace';
 
 /**
@@ -55,7 +52,7 @@ export function InternalLinksCard({
     },
     {
       label: 'Depth from home',
-      value: links.depth_from_home === null ? PLACEHOLDER : links.depth_from_home,
+      value: links.depth_from_home,
     },
   ];
   return (
@@ -63,20 +60,7 @@ export function InternalLinksCard({
       <p className={textRole('caption')}>
         {`Modelled over ${links.source_page_count} observed crawl page${links.source_page_count === 1 ? '' : 's'}${links.observed_crawl_incomplete ? '; this crawl is incomplete or sampled' : ''}`}
       </p>
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-4">
-        {metrics.map((metric) => (
-          <div key={metric.label} className="grid gap-0.5">
-            <Label>{metric.label}</Label>
-            <dd className={textRole('itemTitle', 'tabular-nums')}>
-              {metric.value === PLACEHOLDER ? (
-                <UnavailableValue state="not_measured" />
-              ) : (
-                metric.value
-              )}
-            </dd>
-          </div>
-        ))}
-      </dl>
+      <StatGrid columns={4} items={metrics.map((metric) => ({ key: metric.label, ...metric }))} />
       <div className="grid min-w-0 gap-4 lg:grid-cols-2">
         <NeighbourList
           heading="Top linking pages"
@@ -122,16 +106,12 @@ function NeighbourList({
                   no detail route to link to. */}
               {neighbour.site_url_id ? (
                 <TextLink
-                  asChild
                   text="caption"
                   className="min-w-0 [overflow-wrap:anywhere] tabular-nums"
+                  href={`/site/crawls/${crawlId}/pages/${neighbour.site_url_id}`}
+                  title={neighbour.url}
                 >
-                  <ProjectLink
-                    href={`/site/crawls/${crawlId}/pages/${neighbour.site_url_id}`}
-                    title={neighbour.url}
-                  >
-                    {neighbour.url}
-                  </ProjectLink>
+                  {neighbour.url}
                 </TextLink>
               ) : (
                 <span

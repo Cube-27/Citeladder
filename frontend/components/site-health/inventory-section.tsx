@@ -26,7 +26,7 @@ import { warmQuery } from '@/lib/api/query-client';
 import { siteHealthQueries, type PagesParams, type PagesSort } from '@/lib/api/site-health';
 import type { PagesPage, SiteCrawl } from '@/lib/api/types';
 import { Tabs } from '@/components/ui/tabs';
-import { pageRange, useCursorTable } from '@/lib/table/use-cursor-table';
+import { cursorControls, pageRange, useCursorTable } from '@/lib/table/use-cursor-table';
 import { statusLabel, type InventoryMode } from '@/lib/site-health/status';
 
 /**
@@ -163,10 +163,7 @@ function DiscoveringInventory({ crawl }: Readonly<{ crawl: SiteCrawl }>) {
         // so the range alone is the honest reading — a total that can drift
         // from the rows beneath it is worse than no total.
         pageSize={{ value: pager.pageSize, onChange: pager.setPageSize }}
-        canPrev={pager.canPrev}
-        canNext={Boolean(nextCursor)}
-        onPrev={pager.pop}
-        onNext={() => pager.push(nextCursor)}
+        {...cursorControls(pager, nextCursor)}
         busy={inventoryQuery.isFetching}
       />
     </div>
@@ -394,10 +391,7 @@ function ScoredInventoryState({
         // exists to avoid, so the range stands alone rather than carrying an
         // invented or expensive total.
         pageSize={{ value: pager.pageSize, onChange: pager.setPageSize }}
-        canPrev={pager.canPrev}
-        canNext={Boolean(nextCursor)}
-        onPrev={pager.pop}
-        onNext={() => pager.push(nextCursor)}
+        {...cursorControls(pager, nextCursor)}
         busy={pagesQuery.isFetching}
       />
     </div>

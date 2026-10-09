@@ -1,30 +1,16 @@
 'use client';
 
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+
+export { useTablePage } from './pager';
 
 /**
  * Table pagination: a "from–to of total" page indicator (sans label, tabular-nums
  * numerals) plus ghost Prev/Next buttons, pinned to the table card's bottom
- * border. Shared by the runs and prompts tables.
- *
- * `useTablePage` owns the page state with clamp-only reconciliation: when the
- * underlying list shrinks (filters, deletes, polling refetches) the rendered
- * page clamps into range instead of resetting, so a background refetch never
- * yanks the user back to page 1.
+ * border. Shared by the runs and prompts tables; page state is `useTablePage`.
  */
-export function useTablePage(total: number, pageSize: number) {
-  const [page, setPage] = useState(1);
-  const safePageSize = Math.max(1, pageSize);
-  const pageCount = Math.max(1, Math.ceil(total / safePageSize));
-  const safePage = Math.max(1, Math.min(page, pageCount));
-  const from = total === 0 ? 0 : (safePage - 1) * safePageSize + 1;
-  const to = Math.min(total, safePage * safePageSize);
-  return { page: safePage, setPage, pageCount, from, to };
-}
-
 export function TablePagination({
   page,
   pageCount,

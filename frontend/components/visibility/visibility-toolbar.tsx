@@ -31,8 +31,6 @@ import {
   GRANULARITY_OPTIONS,
   RANGE_OPTIONS,
   TREND_ENGINES,
-  granularityLabel,
-  rangeLabel,
   type TrendGranularity,
   type TrendRange,
 } from '@/lib/visibility/trends';
@@ -112,30 +110,22 @@ export function VisibilityToolbar(props: ToolbarProps) {
   );
 }
 
+const COHORT_OPTIONS = (['core', 'comparison'] as const).map((value) => ({
+  value,
+  label: COHORT_LABELS[value],
+}));
+
 function CohortFilter({ cohort, onChangeCohort }: ToolbarProps) {
   return (
-    <Dropdown>
-      <DropdownTrigger asChild>
-        <FilterTrigger
-          label="Filter by prompt type"
-          hideLabel
-          value={COHORT_LABELS[cohort]}
-          active={cohort !== 'core'}
-          icon={ICONS.prompts}
-        />
-      </DropdownTrigger>
-      <DropdownContent>
-        <DropdownLabel>Prompt type</DropdownLabel>
-        <DropdownRadioGroup value={cohort}>
-          <DropdownRadioItem value="core" onSelect={() => onChangeCohort('core')}>
-            {COHORT_LABELS.core}
-          </DropdownRadioItem>
-          <DropdownRadioItem value="comparison" onSelect={() => onChangeCohort('comparison')}>
-            {COHORT_LABELS.comparison}
-          </DropdownRadioItem>
-        </DropdownRadioGroup>
-      </DropdownContent>
-    </Dropdown>
+    <AnalysisChoice
+      label="Filter by prompt type"
+      menuLabel="Prompt type"
+      value={cohort}
+      defaultValue="core"
+      options={COHORT_OPTIONS}
+      onChange={onChangeCohort}
+      icon={ICONS.prompts}
+    />
   );
 }
 
@@ -255,60 +245,28 @@ function EngineFilterControl({ engine, onChangeEngine }: ToolbarProps) {
 
 function RangeFilter({ range, onChangeRange }: ToolbarProps) {
   return (
-    <Dropdown>
-      <DropdownTrigger asChild>
-        <FilterTrigger
-          label="Select date range"
-          hideLabel
-          value={rangeLabel(range)}
-          active={range !== '90d'}
-          icon={CalendarRange}
-        />
-      </DropdownTrigger>
-      <DropdownContent>
-        <DropdownLabel>Period</DropdownLabel>
-        <DropdownRadioGroup value={range}>
-          {RANGE_OPTIONS.map((option) => (
-            <DropdownRadioItem
-              key={option.value}
-              value={option.value}
-              onSelect={() => onChangeRange(option.value)}
-            >
-              {option.label}
-            </DropdownRadioItem>
-          ))}
-        </DropdownRadioGroup>
-      </DropdownContent>
-    </Dropdown>
+    <AnalysisChoice
+      label="Select date range"
+      menuLabel="Period"
+      value={range}
+      defaultValue="90d"
+      options={RANGE_OPTIONS}
+      onChange={onChangeRange}
+      icon={CalendarRange}
+    />
   );
 }
 
 function GranularityFilter({ granularity, onChangeGranularity }: ToolbarProps) {
   return (
-    <Dropdown>
-      <DropdownTrigger asChild>
-        <FilterTrigger
-          label="Select granularity"
-          hideLabel
-          value={granularityLabel(granularity)}
-          active={granularity !== 'run'}
-        />
-      </DropdownTrigger>
-      <DropdownContent>
-        <DropdownLabel>Group history by</DropdownLabel>
-        <DropdownRadioGroup value={granularity}>
-          {GRANULARITY_OPTIONS.map((option) => (
-            <DropdownRadioItem
-              key={option.value}
-              value={option.value}
-              onSelect={() => onChangeGranularity(option.value)}
-            >
-              {option.label}
-            </DropdownRadioItem>
-          ))}
-        </DropdownRadioGroup>
-      </DropdownContent>
-    </Dropdown>
+    <AnalysisChoice
+      label="Select granularity"
+      menuLabel="Group history by"
+      value={granularity}
+      defaultValue="run"
+      options={GRANULARITY_OPTIONS}
+      onChange={onChangeGranularity}
+    />
   );
 }
 

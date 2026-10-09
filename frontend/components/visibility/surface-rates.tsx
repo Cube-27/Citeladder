@@ -7,6 +7,7 @@ import { BusyBar } from '@/components/ui/busy-bar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ReadError } from '@/components/ui/read-error';
 import { StatGrid } from '@/components/ui/stat-grid';
+import { MissingValue } from '@/components/ui/unavailable-value';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Label, textRole } from '@/components/ui/typography';
 import { ledgerClasses } from '@/components/ui/workspace';
@@ -33,6 +34,11 @@ const DENOMINATOR_COPY: Record<string, string> = {
   observations_with_ai_overview: 'searches that showed an overview',
 };
 
+/** A rate's value as a percentage to one decimal place. */
+function ratePercent(value: number): string {
+  return `${Math.round(value * 1000) / 10}%`;
+}
+
 function denominatorCopy(rate: AioRate): string {
   const scope = DENOMINATOR_COPY[rate.denominator_kind] ?? 'observations counted';
   return `${rate.numerator} of ${rate.denominator} ${scope}`;
@@ -51,7 +57,7 @@ function rateStat({
   return {
     key,
     label,
-    value: rate.value === null ? null : `${Math.round(rate.value * 1000) / 10}%`,
+    value: rate.value === null ? null : ratePercent(rate.value),
     missingLabel: 'Unavailable',
     detail: (
       <>
@@ -82,12 +88,10 @@ function CompetitorRates({ rates }: Readonly<{ rates: SurfaceRates['competitor_m
             <span className={textRole('body', 'min-w-0 truncate')}>{entry.name}</span>
             <span className="shrink-0 text-right">
               {entry.rate.value === null ? (
-                <span className="type-body">Unavailable</span>
+                <MissingValue state="unavailable" className="type-body" />
               ) : (
                 <>
-                  <span className="type-body tabular-nums">
-                    {`${Math.round(entry.rate.value * 1000) / 10}%`}
-                  </span>
+                  <span className="type-body tabular-nums">{ratePercent(entry.rate.value)}</span>
                   {/* The denominator is stated once for the list above; the
                       numerator is not, and it is what separates one competitor
                       named in a single overview from one named in fifty. */}

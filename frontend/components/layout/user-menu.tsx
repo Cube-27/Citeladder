@@ -115,7 +115,7 @@ export function UserMenuTrigger({
             compact ? 'min-h-11' : 'py-1',
           )}
         >
-          <Avatar name={email} size="sm" decorative />
+          <Avatar name={email} size="sm" />
           {compact ? null : <span className="type-body min-w-0 flex-1 truncate">{email}</span>}
         </DropdownTrigger>
         {open ? <UserMenuContent presenter={presenter} /> : null}

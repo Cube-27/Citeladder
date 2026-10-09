@@ -8,10 +8,8 @@ import { cn } from '@/lib/utils';
  * InlineEmpty — the one-line "No …" inside a section or card that otherwise
  * has content: "No orphaned pages.", "No competitor rates yet."
  *
- * About thirty of these were set at five different roles (body, caption,
- * label, item title, a bare `<p>`), so the same kind of absence read as a
- * heading on one card and a footnote on the next. One role now: `body` in
- * muted ink, with an optional leading icon and one trailing action.
+ * One role: `body` in muted ink, with an optional leading icon and one
+ * trailing action.
  *
  * A region whose whole purpose is empty (first use, no results for a filter)
  * is an `EmptyState`, not this.

@@ -24,10 +24,6 @@ export const GRANULARITY_OPTIONS: readonly { value: TrendGranularity; label: str
   { value: 'month', label: 'Monthly' },
 ] as const;
 
-export function granularityLabel(value: TrendGranularity): string {
-  return GRANULARITY_OPTIONS.find((option) => option.value === value)?.label ?? value;
-}
-
 /** Date-range presets. `all` sends no bounds; the rest send a UTC `from`. */
 export type TrendRange = 'all' | '30d' | '90d' | '1y';
 
@@ -37,10 +33,6 @@ export const RANGE_OPTIONS: readonly { value: TrendRange; label: string }[] = [
   { value: '1y', label: 'Last 12 months' },
   { value: 'all', label: 'All time' },
 ] as const;
-
-export function rangeLabel(value: TrendRange): string {
-  return RANGE_OPTIONS.find((option) => option.value === value)?.label ?? value;
-}
 
 /** Engines offered by the trend engine filter (canonical display order). */
 export const TREND_ENGINES: readonly LogicalEngine[] = ENGINE_ORDER;

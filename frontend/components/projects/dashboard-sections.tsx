@@ -27,7 +27,13 @@ import { DisplayTime } from '@/components/ui/display-time';
 import { cn } from '@/lib/utils';
 
 import { ProjectControls } from './dashboard-controls';
-import { ActionRow, metricValue, MovementChart, StateMetric } from './dashboard-primitives';
+import {
+  ActionRow,
+  metricValue,
+  MovementChart,
+  StateMetric,
+  VS_PREVIOUS_RUN,
+} from './dashboard-primitives';
 import { Stack } from '@/components/ui/layout';
 import { Tooltip } from '@/components/ui/tooltip';
 
@@ -268,11 +274,7 @@ function Track({ data }: Readonly<{ data: CommandCenter }>) {
         />
         {data.track.observed_at ? (
           <div>
-            <Delta
-              value={data.track.citation_share.delta}
-              context="vs previous"
-              missingReason="No comparable run"
-            />
+            <Delta value={data.track.citation_share.delta} {...VS_PREVIOUS_RUN} />
           </div>
         ) : (
           <p className={textRole('caption')}>{data.track.limitations[0]}</p>

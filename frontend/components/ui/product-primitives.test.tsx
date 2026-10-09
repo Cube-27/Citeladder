@@ -9,7 +9,6 @@ import { LegendSwatch } from './chart';
 import { Delta } from './delta';
 import { FilterRow, FilterTrigger } from './filter-row';
 import { InlineEmpty } from './inline-empty';
-import { ListRow } from './list-row';
 import { Meter } from './meter';
 import { NoProjectState } from './no-project-state';
 import { Pager, pageNumberControls } from './pager';
@@ -93,6 +92,13 @@ describe('Meter', () => {
       '40%',
     );
   });
+
+  it('announces an unmeasured value instead of drawing it as zero', () => {
+    render(<Meter label="Mention rate" value={null} />);
+    const meter = screen.getByRole('meter', { name: 'Mention rate' });
+    expect(meter).not.toHaveAttribute('aria-valuenow');
+    expect(meter).toHaveAttribute('aria-valuetext', 'Not measured');
+  });
 });
 
 describe('SortableTableHead', () => {
@@ -164,6 +170,7 @@ describe('TextLink', () => {
     );
     expect(screen.queryByRole('link')).toBeNull();
     expect(screen.getByText('unsafe')).toBeInTheDocument();
+    expect(screen.queryByText('(opens in a new tab)')).toBeNull();
   });
 
   it('routes a back link through the router', () => {
@@ -188,19 +195,6 @@ describe('FilterRow and FilterTrigger', () => {
     );
     expect(screen.getByRole('button', { name: 'Surface: ChatGPT' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^Filter\W+2 active$/ })).toBeInTheDocument();
-  });
-});
-
-describe('ListRow', () => {
-  it('marks the selected row as current', () => {
-    render(
-      <ul>
-        <ListRow selected>Shoes</ListRow>
-        <ListRow>Bags</ListRow>
-      </ul>,
-    );
-    expect(screen.getByText('Shoes')).toHaveAttribute('aria-current', 'true');
-    expect(screen.getByText('Bags')).not.toHaveAttribute('aria-current');
   });
 });
 
@@ -278,11 +272,9 @@ describe('LegendSwatch', () => {
 });
 
 describe('Avatar', () => {
-  it('is named when standalone and hidden beside the visible name', () => {
-    const { rerender } = render(<Avatar name="test.user@example.test" />);
-    expect(screen.getByRole('img', { name: 'test.user@example.test' })).toHaveTextContent('TE');
-
-    rerender(<Avatar name="test.user@example.test" decorative />);
+  it('shows the initials but stays out of the accessibility tree', () => {
+    render(<Avatar name="test.user@example.test" />);
+    expect(screen.getByText('TE')).toHaveAttribute('aria-hidden', 'true');
     expect(screen.queryByRole('img')).toBeNull();
   });
 });

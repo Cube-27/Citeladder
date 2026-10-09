@@ -61,6 +61,23 @@ export function useCursorTable(scopeKey: string) {
 }
 
 /**
+ * The `Pager` step handlers for a cursor table: back pops the stack, forward
+ * pushes the server's continuation cursor, and there is a next page only when
+ * the server returned one.
+ */
+export function cursorControls(
+  pager: Pick<ReturnType<typeof useCursorTable>, 'canPrev' | 'pop' | 'push'>,
+  nextCursor: string | null | undefined,
+) {
+  return {
+    canPrev: pager.canPrev,
+    canNext: Boolean(nextCursor),
+    onPrev: pager.pop,
+    onNext: () => pager.push(nextCursor ?? null),
+  };
+}
+
+/**
  * The one-based row range this page covers, for the footer's "1–10 of 412".
  *
  * Derived from the page position and the rows actually returned, so the last

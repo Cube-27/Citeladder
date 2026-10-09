@@ -8,13 +8,12 @@
  */
 'use client';
 
-import { ProjectLink } from '@/components/layout/scoped-link';
-
 import { Drawer } from '@/components/ui/drawer';
 import { Stack } from '@/components/ui/layout';
 import { StatItem } from '@/components/ui/stat-grid';
 import { TextLink } from '@/components/ui/text-link';
 import type { SiteArchitecture } from '@/lib/api/types';
+import { pluralCount } from '@/lib/format';
 
 // Scope, in the metric's own words. The count is a fact about the pages this
 // crawl fetched; it is not the stronger claim that nothing anywhere links to
@@ -41,7 +40,7 @@ export function OrphanMetric({
     pages.length > 0
       ? {
           onSelect: onOpen,
-          actionLabel: `View ${total} orphaned ${total === 1 ? 'page' : 'pages'}`,
+          actionLabel: `View ${pluralCount(total, 'orphaned page')}`,
         }
       : {};
   return <StatItem label="Orphaned pages" value={total} detail={ORPHAN_SCOPE_NOTE} {...action} />;
@@ -76,10 +75,12 @@ export function OrphanPageDrawer({
               {/* Openable, like every other page reference in this tab. A count
                 nobody can act on is the failure this whole change is undoing. */}
               {crawlId ? (
-                <TextLink asChild text="body" className="truncate">
-                  <ProjectLink href={`/site/crawls/${crawlId}/pages/${page.site_url_id}`}>
-                    {page.title || page.url}
-                  </ProjectLink>
+                <TextLink
+                  text="body"
+                  className="truncate"
+                  href={`/site/crawls/${crawlId}/pages/${page.site_url_id}`}
+                >
+                  {page.title || page.url}
                 </TextLink>
               ) : (
                 <span className="type-body truncate">{page.title || page.url}</span>

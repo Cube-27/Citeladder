@@ -207,10 +207,8 @@ const SORT_ALIGN = {
  * `th` (it describes the column, and that is where a screen reader looks for
  * it), the glyph after the label.
  *
- * Four tables had their own: two glyph sets, accent ink on the active column
- * in two of them, the arrow before the label in two and after it in two, and a
- * full ghost Button in one. Now the active column takes primary ink (the
- * header row's own `aria-sort` rule) and the glyph is muted until active. The
+ * The active column takes primary ink (the header row's own `aria-sort` rule)
+ * and the glyph is muted until active. The
  * button's name is the visible label (plus the sublabel when present), so it
  * is pressed with Enter or Space like any other button.
  */

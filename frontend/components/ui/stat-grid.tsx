@@ -1,7 +1,6 @@
 'use client';
 
 import { createContext, useContext, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
 
 import { listRowClasses } from '@/components/ui/list-row';
 import { MetricValue } from '@/components/ui/metric-value';
@@ -15,9 +14,8 @@ import { cn } from '@/lib/utils';
  * figures: a URL's delivery facts, an execution's evidence counts, a catalog's
  * inventory, a surface's rates.
  *
- * Nine local tiles did this job with four label roles, three ways of showing
- * absence and their own boxes. A stat here is always the same anatomy, in
- * this order, with the 4px label→value rhythm the cell owns:
+ * A stat is always the same anatomy, in this order, with the 4px label→value
+ * rhythm the cell owns:
  *
  *   label (`label` role, optional marker at its end)
  *   value (`figureSm` by default; `figure` for a grid of headline-weight facts)
@@ -35,7 +33,7 @@ import { cn } from '@/lib/utils';
  *   - `well`  — each fact on a recessed well (evidence inside a drawer).
  *   - `band`  — one strip divided by hairlines, like a `MetricGroup` that wraps.
  *
- * An item with `onSelect` or `href` is pressable: the whole cell is the target,
+ * An item with `onSelect` is pressable: the whole cell is the target,
  * reached by Tab and named by `actionLabel` (the visible number alone, "3", is
  * not a name anyone can act on). `selected` makes a toggle (`aria-pressed`)
  * and paints the shared selected-row face.
@@ -63,9 +61,8 @@ const TONE = {
 type StatTone = keyof typeof TONE;
 
 type StatAction =
-  | { onSelect?: undefined; href?: undefined; actionLabel?: undefined; selected?: undefined }
-  | { onSelect: () => void; href?: undefined; actionLabel: string; selected?: boolean }
-  | { href: string; onSelect?: undefined; actionLabel: string; selected?: undefined };
+  | { onSelect?: undefined; actionLabel?: undefined; selected?: undefined }
+  | { onSelect: () => void; actionLabel: string; selected?: boolean };
 
 export type StatItemProps = Readonly<
   {
@@ -150,17 +147,13 @@ function StatAnatomy({ item, size }: Readonly<{ item: StatItemProps; size: StatV
 
 /** The stretched target: the whole cell is pressable, the facts stay a `dl`. */
 function StatTarget({ item }: Readonly<{ item: StatItemProps }>) {
-  const cover = 'focus-ring absolute inset-0 rounded-[inherit]';
-  if (item.href) {
-    return <Link to={item.href} aria-label={item.actionLabel} className={cover} />;
-  }
   return (
     <button
       type="button"
       onClick={item.onSelect}
       aria-label={item.actionLabel}
       aria-pressed={item.selected}
-      className={cover}
+      className="focus-ring absolute inset-0 rounded-[inherit]"
     />
   );
 }
@@ -173,14 +166,13 @@ const StatGridContext = createContext<{ size: StatValueSize; surface: StatGridSu
 
 export function StatItem(item: StatItemProps) {
   const { size, surface } = useContext(StatGridContext);
-  const pressable = Boolean(item.onSelect || item.href);
+  const pressable = Boolean(item.onSelect);
   return (
     <div
       className={cn(
         'grid min-w-0 content-start gap-1',
         SURFACE_ITEM[surface],
-        pressable &&
-          cn('relative', listRowClasses({ selected: item.selected ?? false, interactive: true })),
+        pressable && cn('relative', listRowClasses({ selected: item.selected ?? false })),
         item.className,
       )}
     >

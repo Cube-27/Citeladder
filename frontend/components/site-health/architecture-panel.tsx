@@ -1,6 +1,5 @@
 'use client';
 
-import { ProjectLink } from '@/components/layout/scoped-link';
 import { Fragment, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronDown, ChevronRight, Link2, ListTree } from 'lucide-react';
@@ -314,13 +313,13 @@ function PageKindPages({
             {pages.map((page) => (
               <li key={page.site_url_id} className="min-w-0">
                 {crawlId ? (
-                  <TextLink asChild text="body" className="min-w-0 truncate">
-                    <ProjectLink
-                      href={`/site/crawls/${crawlId}/pages/${page.site_url_id}`}
-                      title={page.url}
-                    >
-                      {page.url}
-                    </ProjectLink>
+                  <TextLink
+                    text="body"
+                    className="min-w-0 truncate"
+                    href={`/site/crawls/${crawlId}/pages/${page.site_url_id}`}
+                    title={page.url}
+                  >
+                    {page.url}
                   </TextLink>
                 ) : (
                   <span className="type-body text-foreground min-w-0 truncate">{page.url}</span>
@@ -383,7 +382,7 @@ function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
               <div key={bucket.key} className="grid grid-cols-[4.5rem_1fr_auto] items-center gap-3">
                 <span className="type-caption">{DEPTH_LABELS[bucket.key]}</span>
                 <Meter
-                  value={Math.round((bucket.percentage ?? 0) * 100)}
+                  value={bucket.percentage === null ? null : Math.round(bucket.percentage * 100)}
                   label={`${DEPTH_LABELS[bucket.key]} share of pages`}
                   tone={{ series: 1 }}
                 />
@@ -400,8 +399,8 @@ function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
           </CardContent>
         </Card>
       </div>
-      <TextLink asChild className="justify-self-start">
-        <ProjectLink href="/site?tab=internal-links">Review internal link suggestions</ProjectLink>
+      <TextLink className="justify-self-start" href="/site?tab=internal-links">
+        Review internal link suggestions
       </TextLink>
     </>
   );

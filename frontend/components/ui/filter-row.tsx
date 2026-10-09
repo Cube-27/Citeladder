@@ -10,16 +10,15 @@ import { cn } from '@/lib/utils';
  * FilterRow — the control band's one composition: search, then filters, then
  * a status line, then trailing actions (export, columns) pushed to the end.
  *
- * Seven filter rows had grown their own recipe, and the search field had a
- * different width on every page (224, 256, 288, 320, 384px, and "flex-1 with
- * a minimum"). The width is a role now, decided here once:
+ * The search width is a role, decided here once:
  *
  *   - `sm` (224px) — a short list or a secondary search inside a card.
  *   - `md` (288px) — the default for a route's control band.
  *   - `lg` (up to 384px, growing into spare width) — search is the row's
  *     primary control (Prompts, Internal links).
  *
- * Below `sm` the search takes the full row and the filters wrap beneath it.
+ * Below `sm` the search and every filter take the full row, stacking beneath
+ * each other; a filter never sizes itself for narrow screens.
  * The row adds no box, rule or height of its own: the `PageShell` control band
  * (or the card header holding it) owns those.
  */
@@ -53,7 +52,11 @@ export function FilterRow({
   return (
     <div className={cn('flex w-full min-w-0 flex-wrap items-center gap-2', className)}>
       {search ? <div className={cn('min-w-0', SEARCH_WIDTH[searchWidth])}>{search}</div> : null}
-      {children}
+      {children ? (
+        // `contents` keeps the filters as the row's own flex items; it only
+        // scopes the narrow-screen width to them (not the status or actions).
+        <div className="contents max-sm:[&>*]:w-full">{children}</div>
+      ) : null}
       {/* A row that reports status keeps its live region mounted even while
           idle (`status={null}`), so the first update is announced. */}
       {status === undefined ? null : (
@@ -69,9 +72,8 @@ export function FilterRow({
 /**
  * FilterTrigger — the button that opens a filter menu.
  *
- * Replaces Visibility's `FilterButton` (whose `aria-label` replaced the visible
- * value, so the name a voice user had to say was not on screen), Analytics'
- * range trigger and the Prompts "Filter" button with its accent count pill.
+ * The accessible name always contains the visible value, so a voice user can
+ * say what is on screen.
  *
  *   - `label` names the filter ("Surface"). With a `value` it prints as a
  *     muted prefix ("Surface: All surfaces"); `hideLabel` keeps it for

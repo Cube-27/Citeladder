@@ -23,6 +23,7 @@ import {
 } from '@/lib/site-health/issues';
 import { formatAudited } from '@/lib/site-health/status';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
+import { cursorControls, useCursorTable } from '@/lib/table/use-cursor-table';
 
 import { UrlDetailView } from './url-detail-view';
 import { ledgerClasses } from '@/components/ui/workspace';
@@ -168,11 +169,10 @@ function IssueHistory({
   crawlId,
   siteUrlId,
 }: Readonly<{ workspaceId: string; crawlId: string; siteUrlId: string }>) {
-  const [cursorStack, setCursorStack] = useState<string[]>([]);
-  const cursor = cursorStack.at(-1);
+  const pager = useCursorTable(`${workspaceId}|${crawlId}|${siteUrlId}`);
   const historyQuery = useQuery(
     siteHealthQueries.issueHistory(workspaceId, crawlId, siteUrlId, {
-      cursor,
+      cursor: pager.cursor,
       limit: HISTORY_LIMIT,
     }),
   );
@@ -198,19 +198,7 @@ function IssueHistory({
           <InlineEmpty>No prior issue records for this page.</InlineEmpty>
         ) : null}
         {rows.length > 0 ? <HistoryRows rows={rows} /> : null}
-        {rows.length > 0 ? (
-          <Pager
-            canPrev={cursorStack.length > 0}
-            canNext={Boolean(nextCursor)}
-            onPrev={() => setCursorStack((previous) => previous.slice(0, -1))}
-            onNext={() =>
-              nextCursor &&
-              setCursorStack((previous) =>
-                previous.at(-1) === nextCursor ? previous : [...previous, nextCursor],
-              )
-            }
-          />
-        ) : null}
+        {rows.length > 0 ? <Pager {...cursorControls(pager, nextCursor)} /> : null}
       </CardContent>
     </Card>
   );
