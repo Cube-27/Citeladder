@@ -14,7 +14,7 @@ import {
 import { textRole } from '@/components/ui/typography';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
 import type { AppState, Controller } from './controller';
-import { rate, text } from './format';
+import { moment, rate, text } from './format';
 
 const sourceSchema = z.object({
   items: z.array(
@@ -115,7 +115,7 @@ export function SourcesView({ state, controller }: Props) {
         Names in cited answers are co-occurrence, not proof of presence on the publisher page.
       </p>
       {state.answers.map((answer, index) => (
-        <article key={text(answer.id, `answer-${index}`)} className="space-y-2">
+        <article key={text(answer.task_id, `answer-${index}`)} className="space-y-2">
           <h3 className={textRole('itemTitle')}>
             {typeof answer.prompt_text === 'string' ? answer.prompt_text : 'Answer evidence'}
           </h3>
@@ -124,7 +124,9 @@ export function SourcesView({ state, controller }: Props) {
               ? answer.answer_text
               : 'Fetch the referenced answer for its retained text.'}
           </p>
-          <p className={textRole('caption')}>{text(answer.record_uri)}</p>
+          <p className={textRole('caption')}>
+            {text(answer.logical_engine, 'Engine unknown')} · {moment(answer.completed_at)}
+          </p>
           {typeof answer.record_uri === 'string' && (
             <Button
               variant="ghost"
@@ -151,20 +153,8 @@ const siteSchema = z.object({
   }),
   coverage: z.object({ selected_urls: z.number(), analyzed_urls: z.number() }),
   measurement_states: z.record(z.string(), z.string()),
-  versions: z.record(z.string(), z.string()),
-  source_analysis_ids: z.array(z.string()).nullable(),
-  source_artifact_ids: z.array(z.string()).nullable(),
-  source_attempt_ids: z.array(z.string()).nullable(),
-  source_evaluation_ids: z.array(z.string()).nullable(),
-  source_task_ids: z.array(z.string()).nullable(),
-  classification_source_analysis_ids: z.array(z.string()).nullable(),
-  classification_source_artifact_ids: z.array(z.string()).nullable(),
-  classification_source_task_ids: z.array(z.string()).nullable(),
+  versions: z.record(z.string(), z.string().nullable()),
 });
-function sourceIds(ids: string[] | null) {
-  if (ids === null) return 'Unknown';
-  return ids.length ? ids.join(', ') : 'No recorded IDs';
-}
 export function SiteHealthView({ state, controller }: Props) {
   const [findings, setFindings] = useState<Awaited<ReturnType<Controller['siteFindings']>>>(null);
   const [loadingFindings, setLoadingFindings] = useState(false);
@@ -195,8 +185,8 @@ export function SiteHealthView({ state, controller }: Props) {
         {rate(site.scores.aeo_measurement_coverage)}
       </p>
       <p className={textRole('caption')}>
-        Observed {site.observed_at} · {site.coverage.analyzed_urls} analyzed /{' '}
-        {site.coverage.selected_urls} selected URLs · crawl {site.crawl_id}
+        Observed {moment(site.observed_at)} · {site.coverage.analyzed_urls} analyzed /{' '}
+        {site.coverage.selected_urls} selected URLs
       </p>
       <p className={textRole('caption')}>
         {Object.entries(site.measurement_states)
@@ -205,32 +195,14 @@ export function SiteHealthView({ state, controller }: Props) {
       </p>
       <p className={textRole('caption')}>
         Incomplete coverage is partial evidence. This snapshot has no historical period filter.
-        Existing prioritized findings are current actions and may refer to different evidence.
+        Actions are current and may refer to different evidence than this snapshot.
       </p>
-      <Disclosure title="Snapshot evidence and processing versions">
-        <p className={textRole('caption')}>Snapshot {site.snapshot_id}</p>
+      <Disclosure title="Processing versions">
         <dl className={textRole('caption', 'space-y-2 break-all')}>
           {Object.entries(site.versions).map(([kind, version]) => (
             <div key={kind}>
               <dt>{kind.replaceAll('_', ' ')} version</dt>
-              <dd>{version}</dd>
-            </div>
-          ))}
-          {(
-            [
-              ['Analyses', site.source_analysis_ids],
-              ['Artifacts', site.source_artifact_ids],
-              ['Attempts', site.source_attempt_ids],
-              ['Evaluations', site.source_evaluation_ids],
-              ['Tasks', site.source_task_ids],
-              ['Classification analyses', site.classification_source_analysis_ids],
-              ['Classification artifacts', site.classification_source_artifact_ids],
-              ['Classification tasks', site.classification_source_task_ids],
-            ] as const
-          ).map(([label, ids]) => (
-            <div key={label}>
-              <dt>{label}</dt>
-              <dd>{sourceIds(ids)}</dd>
+              <dd>{version ?? 'Not recorded'}</dd>
             </div>
           ))}
         </dl>
@@ -249,7 +221,7 @@ export function SiteHealthView({ state, controller }: Props) {
             .finally(() => setLoadingFindings(false));
         }}
       >
-        Read existing prioritized findings
+        Read current Actions
       </Button>
       <Button
         variant="secondary"
@@ -269,7 +241,7 @@ export function SiteHealthView({ state, controller }: Props) {
       </Button>
       {findingsError && (
         <p role="alert" className={textRole('body')}>
-          Findings are unavailable. Retry or reconnect.
+          Actions are unavailable. Retry or reconnect.
         </p>
       )}
       {pagesError && (
@@ -278,31 +250,31 @@ export function SiteHealthView({ state, controller }: Props) {
         </p>
       )}
       {loadingPages && <output>Loading persisted pages…</output>}
-      {loadingFindings && <output>Loading persisted findings…</output>}
+      {loadingFindings && <output>Loading Actions…</output>}
       {findings?.state === 'unavailable' && (
         <output className={textRole('body', 'block')}>
-          {findings.reason === 'no_opportunities'
-            ? 'No persisted prioritized findings are available.'
-            : 'Prioritized findings are unavailable. Retry or reconnect.'}
+          Actions are unavailable. Retry or reconnect.
         </output>
       )}
       {findings?.state === 'available' && !findings.items.length && (
-        <output className={textRole('body', 'block')}>No findings in this selection.</output>
+        <output className={textRole('body', 'block')}>No open Actions for this project.</output>
       )}
-      {(findings?.state === 'available' ? findings.items : []).map((finding, index) => (
-        <article key={text(finding.id, `finding-${index}`)}>
-          <h3 className={textRole('itemTitle')}>
-            {text(finding.target_label, text(finding.title, 'Existing finding'))}
-          </h3>
-          <p className={textRole('caption')}>{text(finding.record_uri)}</p>
+      {(findings?.state === 'available' ? findings.items : []).map((action, index) => (
+        <article key={text(action.id, `action-${index}`)}>
+          <h3 className={textRole('itemTitle')}>{text(action.target_label, 'Action')}</h3>
+          {text(action.approach) && <p className={textRole('body')}>{text(action.approach)}</p>}
+          <p className={textRole('caption')}>
+            {text(action.status, 'Status unknown').replaceAll('_', ' ')}
+            {text(action.target_url) && ` · ${text(action.target_url)}`}
+          </p>
         </article>
       ))}
       {pages.map((page, index) => (
-        <article key={text(page.id, `page-${index}`)}>
-          <h3 className={textRole('itemTitle')}>
-            {text(page.display_url, text(page.normalized_url, text(page.title, 'Page evidence')))}
-          </h3>
-          <p className={textRole('caption')}>{text(page.record_uri)}</p>
+        <article key={text(page.site_url_id, `page-${index}`)}>
+          <h3 className={textRole('itemTitle')}>{text(page.url, text(page.title, 'Page'))}</h3>
+          {text(page.title) && text(page.title) !== text(page.url) && (
+            <p className={textRole('caption')}>{text(page.title)}</p>
+          )}
         </article>
       ))}
     </div>

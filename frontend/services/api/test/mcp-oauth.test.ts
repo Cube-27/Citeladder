@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { Hono } from 'hono';
+import { parse, type DefaultTreeAdapterMap } from 'parse5';
 import { afterAll, beforeEach, expect, it } from 'vitest';
 import { createApp } from '../src/app.ts';
 import { configEnvironment, policy } from '../src/config.ts';
@@ -13,6 +14,7 @@ import { ApiError } from '../src/errors.ts';
 import { registerMcpRoutes } from '../src/mcp/server.ts';
 import { cleanupMcpProtocol } from '../src/mcp/maintenance.ts';
 import { mcpPolicy } from '../src/mcp/config.ts';
+import { billingAccount, grant as accountGrant } from './prompt-fixtures.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
 
@@ -371,9 +373,9 @@ it('binds CSRF, explicit selection, PKCE and redirect before a code can be consu
   const c = await client('client_secret_basic');
   const transaction = await pending(c.client_id);
   expect((await consent(transaction, [tenant.workspaceId], 'wrong')).status).toBe(403);
-  expect((await consent(transaction, [])).status).toBe(403);
+  expect((await consent(transaction, [])).status).toBe(400);
   const foreign = await fixtures.tenant();
-  expect((await consent(transaction, [foreign.workspaceId])).status).toBe(403);
+  expect((await consent(transaction, [foreign.workspaceId])).status).toBe(400);
   const approved = await consent(transaction);
   expect(approved.status).toBe(303);
   expect((await consent(transaction)).status).toBe(403);
@@ -553,15 +555,40 @@ it('lets workspace admins remove only their authorization while users cannot rev
     .set({ workspace_ids: JSON.stringify([tenant.workspaceId, other]) })
     .where('id', '=', principal.grantId)
     .execute();
+  await db
+    .updateTable('workspaces')
+    .set({ name: 'Acme' })
+    .where('id', '=', tenant.workspaceId)
+    .execute();
+  await db.updateTable('workspaces').set({ name: 'Beta' }).where('id', '=', other).execute();
   const admin = await fixtures.user();
   await fixtures.member(tenant.workspaceId, admin, 'admin');
   const adminCookie = `${config.session.cookieName}=${await sessionToken({ sub: admin, ver: 0 })}`;
   const product = createApp(config, db);
+  const used = await db
+    .selectFrom('mcp_oauth_grants')
+    .select('last_used_at')
+    .where('id', '=', principal.grantId)
+    .executeTakeFirstOrThrow();
+  const own = await product.request('/api/v1/mcp/connections', { headers: { cookie } });
+  expect(await own.json()).toEqual([
+    expect.objectContaining({
+      workspaces: [
+        { id: tenant.workspaceId, name: 'Acme' },
+        { id: other, name: 'Beta' },
+      ],
+      user_email: null,
+      last_used_at: used.last_used_at!.toISOString(),
+    }),
+  ]);
   const list = await product.request(`/api/v1/workspaces/${tenant.workspaceId}/mcp/connections`, {
     headers: { cookie: adminCookie },
   });
   expect(await list.json()).toEqual([
-    expect.objectContaining({ workspace_ids: [tenant.workspaceId] }),
+    expect.objectContaining({
+      workspaces: [{ id: tenant.workspaceId, name: 'Acme' }],
+      user_email: `${tenant.userId}@example.test`,
+    }),
   ]);
   expect(
     (
@@ -675,4 +702,172 @@ it('caps tool calls per connection and refuses the next with a retry time', asyn
   expect(refused).toBeInstanceOf(ApiError);
   expect((refused as ApiError).status).toBe(429);
   expect(Number((refused as ApiError).headers?.['retry-after'])).toBeGreaterThan(0);
+});
+
+/** What a person sees on a consent page: its form inputs and its visible text. */
+function consentDocument(source: string) {
+  const inputs: Record<string, string>[] = [];
+  let text = '';
+  const walk = (node: DefaultTreeAdapterMap['node']) => {
+    if (node.nodeName === 'style') return;
+    if (node.nodeName === 'input' && 'attrs' in node)
+      inputs.push(Object.fromEntries(node.attrs.map((attr) => [attr.name, attr.value])));
+    if (node.nodeName === '#text' && 'value' in node) text += node.value;
+    if ('childNodes' in node) for (const child of node.childNodes) walk(child);
+  };
+  walk(parse(source));
+  return {
+    workspaces: inputs.filter(
+      (input) => input.type === 'checkbox' && input.name !== 'accept_terms',
+    ),
+    terms: inputs.find((input) => input.name === 'accept_terms'),
+    termsRevision: inputs.find((input) => input.name === 'terms_revision')?.value,
+    text: text.replace(/\s+/gu, ' '),
+  };
+}
+async function consentView(transaction: string) {
+  const page = await app.request(
+    `${browser}/mcp/oauth/consent?transaction=${encodeURIComponent(transaction)}`,
+    { headers: { cookie } },
+  );
+  return { status: page.status, ...consentDocument(await page.text()) };
+}
+function approve(transaction: string, selected: string[], extra: Record<string, string> = {}) {
+  const form = new URLSearchParams({
+    transaction,
+    csrf_token: consentCsrf(config, session, transaction),
+    decision: 'approve',
+    ...extra,
+  });
+  for (const id of selected) form.append('workspace_id', id);
+  return app.request(`${browser}/mcp/oauth/consent`, {
+    method: 'POST',
+    headers: { cookie, 'content-type': 'application/x-www-form-urlencoded' },
+    body: form,
+  });
+}
+
+it('pre-selects the only shareable workspace and names the signed-in account', async () => {
+  await db
+    .updateTable('workspaces')
+    .set({ name: 'Acme' })
+    .where('id', '=', tenant.workspaceId)
+    .execute();
+  const view = await consentView(await pending((await client()).client_id));
+  expect(view.status).toBe(200);
+  expect(view.workspaces).toEqual([
+    {
+      type: 'checkbox',
+      name: 'workspace_id',
+      value: tenant.workspaceId,
+      checked: '',
+      required: '',
+    },
+  ]);
+  expect(view.text).toContain(`Signed in as ${tenant.userId}@example.test`);
+  expect(view.text).toContain('Acme');
+  expect(view.text).not.toContain(tenant.workspaceId);
+  expect(view.terms).toBeUndefined();
+});
+
+/** A workspace whose public trial ended yesterday. */
+async function endedTrialWorkspace() {
+  const workspaceId = await fixtures.ownedWorkspace(tenant.userId, { access: false });
+  const trial = await accountGrant(db, await billingAccount(db, workspaceId), {
+    key: 'workspace_access',
+    value: 1,
+    validFrom: new Date(Date.now() - 8 * 86_400_000),
+    validUntil: new Date(Date.now() - 86_400_000),
+  });
+  await db
+    .updateTable('account_grants')
+    .set({ profile_key: policy.entitlements.public_trial.profile })
+    .where('id', '=', trial)
+    .execute();
+  return workspaceId;
+}
+
+it('accepts the shown Terms on the consent page and tells ended access from unresolved access', async () => {
+  const fresh = await fixtures.ownedWorkspace(tenant.userId);
+  const ended = await endedTrialWorkspace();
+  const unresolved = await fixtures.ownedWorkspace(tenant.userId, { access: false });
+  await db.updateTable('workspaces').set({ name: 'Ended' }).where('id', '=', ended).execute();
+  await db
+    .updateTable('workspaces')
+    .set({ name: 'Pending' })
+    .where('id', '=', unresolved)
+    .execute();
+  const transaction = await pending((await client()).client_id);
+  const view = await consentView(transaction);
+  expect(view.workspaces.map((input) => [input.value ?? 'none', 'disabled' in input])).toEqual(
+    expect.arrayContaining([
+      [tenant.workspaceId, false],
+      [fresh, false],
+      ['none', true],
+    ]),
+  );
+  expect(view.text).toContain('Ended Its trial or subscription has ended');
+  expect(view.text).toContain('Pending Its access could not be confirmed right now');
+  expect(view.terms).toEqual({ type: 'checkbox', name: 'accept_terms', value: 'yes' });
+  expect(view.termsRevision).toBe(policy.mcp.terms_revision);
+
+  for (const blocked of [ended, unresolved]) {
+    const refused = await approve(transaction, [blocked]);
+    expect(refused.status).toBe(400);
+    expect(consentDocument(await refused.text()).text).toContain(
+      'Select only workspaces that can be shared right now.',
+    );
+  }
+  const unaccepted = await approve(transaction, [fresh]);
+  expect(unaccepted.status).toBe(400);
+  expect(consentDocument(await unaccepted.text()).text).toContain(
+    'Accept the Terms of Service to share these workspaces.',
+  );
+  const approved = await approve(transaction, [fresh], {
+    accept_terms: 'yes',
+    terms_revision: policy.mcp.terms_revision,
+  });
+  expect(approved.status).toBe(303);
+  expect(new URL(approved.headers.get('location')!).searchParams.get('code')).toBeTruthy();
+  expect(
+    await db
+      .selectFrom('policy_acceptances')
+      .select(['context', 'terms_revision'])
+      .where('workspace_id', '=', fresh)
+      .where('actor_id', '=', tenant.userId)
+      .execute(),
+  ).toEqual([{ context: 'mcp_consent', terms_revision: policy.mcp.terms_revision }]);
+});
+
+it('refuses Terms accepted from a page showing an older revision and records nothing', async () => {
+  const fresh = await fixtures.ownedWorkspace(tenant.userId);
+  const transaction = await pending((await client()).client_id);
+  const stale = await approve(transaction, [fresh], {
+    accept_terms: 'yes',
+    terms_revision: 'superseded-revision',
+  });
+  expect(stale.status).toBe(400);
+  const page = consentDocument(await stale.text());
+  expect(page.text).toContain('The Terms of Service changed since this page loaded.');
+  expect(page.termsRevision).toBe(policy.mcp.terms_revision);
+  expect(
+    await db
+      .selectFrom('policy_acceptances')
+      .select('id')
+      .where('workspace_id', '=', fresh)
+      .where('actor_id', '=', tenant.userId)
+      .execute(),
+  ).toEqual([]);
+  const approved = await approve(transaction, [fresh], {
+    accept_terms: 'yes',
+    terms_revision: page.termsRevision!,
+  });
+  expect(approved.status).toBe(303);
+});
+
+it('explains an expired approval link instead of a bare error', async () => {
+  const view = await consentView('expired-or-unknown');
+  expect(view.status).toBe(403);
+  expect(view.text).toContain('This approval link has expired');
+  expect(view.text).toContain('connect CiteLadder again');
 });

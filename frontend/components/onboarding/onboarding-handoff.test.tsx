@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { createMemoryRouter, Outlet, RouterProvider } from 'react-router-dom';
-import { afterAll, afterEach, beforeAll, beforeEach, expect, it } from 'vite-plus/test';
+import { afterAll, afterEach, beforeAll, beforeEach, expect, it, vi } from 'vite-plus/test';
 
 import { OnboardingGate } from '@/components/layout/onboarding-gate';
 import { ProjectSwitcher } from '@/components/layout/project-switcher';
@@ -17,6 +17,9 @@ import { makeProject } from '@/test/fixtures/project';
 import { mswServer } from '@/test/msw-server';
 
 import { OnboardingPageClient } from './onboarding-page-client';
+
+const { hardNavigate } = vi.hoisted(() => ({ hardNavigate: vi.fn<(url: string) => void>() }));
+vi.mock('@/lib/navigation/hard-navigate', () => ({ hardNavigate }));
 
 /**
  * The first-project hand-off through the REAL selection and entitlement
@@ -255,4 +258,17 @@ it('opens the first project when setup runs start to finish in one visit', async
   await waitFor(() => expect(review).toBeEnabled());
   await user.click(review);
   await createProject(router);
+});
+
+it('returns to the MCP approval page that sent the reader to set up a project', async () => {
+  const consent = '/mcp/oauth/consent?transaction=abc123';
+  const router = renderSetup(
+    `/onboarding?workspace=${WORKSPACE}&discovery=${DISCOVERY}&step=review&return_to=${encodeURIComponent(consent)}`,
+  );
+  const create = await screen.findByRole('button', { name: 'Create project' });
+  await waitFor(() => expect(create).toBeEnabled());
+  await userEvent.setup().click(create);
+  await waitFor(() => expect(hardNavigate).toHaveBeenCalledWith(consent));
+  expect(router.state.location.pathname).toBe('/onboarding');
+  router.dispose();
 });

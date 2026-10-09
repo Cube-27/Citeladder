@@ -21,27 +21,49 @@ export async function policyStatus(db: Database, workspaceId: string, actorId: s
 }
 
 export function acceptPolicy(db: Database, workspaceId: string, actorId: string, revision: string) {
-  if (revision !== policy.auth.terms_revision)
+  return db.transaction().execute(async (trx) => {
+    await recordPolicyAcceptance(trx, {
+      workspaceId,
+      actorId,
+      revision,
+      context: 'authenticated_onboarding',
+    });
+    return policyStatus(trx, workspaceId, actorId);
+  });
+}
+
+/**
+ * Record the current Terms decision inside the caller's transaction, so a
+ * flow that depends on it (MCP consent) commits both or neither.
+ */
+export async function recordPolicyAcceptance(
+  trx: Database,
+  input: {
+    workspaceId: string;
+    actorId: string;
+    revision: string;
+    context: 'authenticated_onboarding' | 'mcp_consent';
+  },
+) {
+  if (input.revision !== policy.auth.terms_revision)
     throw new ApiError(409, 'The Terms changed. Review the current revision before accepting.', {
       code: 'policy_revision_changed',
     });
-  return db.transaction().execute(async (trx) => {
-    await lockAuthorizedWorkspace(trx, workspaceId, actorId, 'read');
-    const row = await trx
-      .insertInto('policy_acceptances')
-      .values({
-        id: randomUUID(),
-        actor_id: actorId,
-        workspace_id: workspaceId,
-        terms_revision: revision,
-        privacy_notice_revision: policy.auth.privacy_revision,
-        context: 'authenticated_onboarding',
-        accepted_at: new Date(),
-      })
-      .onConflict((conflict) => conflict.constraint('uq_policy_acceptance_revision').doNothing())
-      .returning('id')
-      .executeTakeFirst();
-    if (row) await recordSecurityEvent(trx, 'policy.accept', actorId, workspaceId, row.id);
-    return policyStatus(trx, workspaceId, actorId);
-  });
+  await lockAuthorizedWorkspace(trx, input.workspaceId, input.actorId, 'read');
+  const row = await trx
+    .insertInto('policy_acceptances')
+    .values({
+      id: randomUUID(),
+      actor_id: input.actorId,
+      workspace_id: input.workspaceId,
+      terms_revision: input.revision,
+      privacy_notice_revision: policy.auth.privacy_revision,
+      context: input.context,
+      accepted_at: new Date(),
+    })
+    .onConflict((conflict) => conflict.constraint('uq_policy_acceptance_revision').doNothing())
+    .returning('id')
+    .executeTakeFirst();
+  if (row)
+    await recordSecurityEvent(trx, 'policy.accept', input.actorId, input.workspaceId, row.id);
 }

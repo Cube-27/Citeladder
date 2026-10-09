@@ -18,37 +18,140 @@ const result = (project_id = project) => ({
   links,
   evidence: { state: 'unavailable', reason: 'no_completed_measurement' },
 });
+const answerId = '44444444-4444-4444-8444-444444444444';
+const uuid = /[0-9a-f]{8}-[0-9a-f]{4}-/u;
+/** Everything a person or assistive technology can read, including collapsed sections. */
+function shownText() {
+  const labelled = [...document.querySelectorAll('[aria-label],[title],[alt]')].flatMap((node) =>
+    ['aria-label', 'title', 'alt'].map((name) => node.getAttribute(name) ?? ''),
+  );
+  return [document.body.textContent ?? '', ...labelled].join(' ');
+}
+const overviewEvidence = {
+  project_id: project,
+  audit_id: audit,
+  audit_status: 'completed',
+  analyzer_version: '1',
+  scoring_rule_version: '1',
+  total_completed: 2,
+  total_failed: 0,
+  visibility_score: null,
+  visibility_rate: 0.5,
+  owned_citation_rate: 0,
+  rankings: [
+    {
+      name: 'Competitor',
+      is_brand: false,
+      mention_rate: 0.25,
+      citation_rate: null,
+      share_of_voice: null,
+      mention_count: 1,
+      sentiment: null,
+      avg_position: null,
+    },
+  ],
+  per_engine: [],
+  sentiment: null,
+  avg_position: null,
+  created_at: '2026-10-03T12:00:00Z',
+};
 const siteEvidence = {
   state: 'available',
   snapshot_id: audit,
   crawl_id: foreign,
-  observed_at: '2026-10-01T00:00:00Z',
+  observed_at: '2026-10-01T12:00:00Z',
   scores: { web_fundamentals: 50, aeo_readiness: null, aeo_measurement_coverage: 0.5 },
   coverage: { selected_urls: 2, analyzed_urls: 1 },
   measurement_states: { coverage: 'partial', aeo: 'unknown' },
-  versions: { analyzer: 'retained-analyzer', coverage_formula: 'retained-coverage' },
-  source_analysis_ids: [project],
-  source_artifact_ids: [foreign],
-  source_attempt_ids: null,
-  source_evaluation_ids: [],
-  source_task_ids: [audit],
-  classification_source_analysis_ids: null,
-  classification_source_artifact_ids: null,
-  classification_source_task_ids: null,
+  versions: { analyzer: 'retained-analyzer', scoring: 'retained-scoring' },
 };
 
 describe('CiteLadder MCP App', () => {
-  it('shows a persisted crawl page URL and retained analysis reference', async () => {
+  it('labels overview and source answers by project, date and prompt, never by ID', async () => {
     const user = userEvent.setup();
-    const page = {
-      id: project,
-      display_url: 'https://acme.example/product',
-      normalized_url: 'https://acme.example/product',
-      title: '',
-      record_uri: `citeladder://site_page/${project}`,
+    const answer = {
+      task_id: answerId,
+      record_uri: `citeladder://visibility_result/${answerId}`,
+      audit_id: audit,
+      prompt_text: 'Best CRM for a small agency?',
+      answer_text: 'Acme and Competitor are popular choices.',
+      logical_engine: 'chatgpt',
+      completed_at: '2026-10-03T12:00:00Z',
+    };
+    const responses: Record<string, unknown> = {
+      list_projects: {
+        projects: [{ id: project, workspace_name: 'Team', name: 'Acme' }],
+        pagination: { next_cursor: null },
+      },
+      read_visibility_overview: overviewEvidence,
+      read_visibility_sources: {
+        items: [
+          {
+            key: 'publisher.example',
+            responses: 2,
+            annotations: 1,
+            citation_rate: 0.5,
+            citation_share: 1,
+          },
+        ],
+        coverage: { responses: 2, prompts: 1, citations: 1 },
+        pagination: { next_cursor: null },
+      },
+      read_visibility_results: { state: 'available', audit_id: audit, items: [answer] },
     };
     const controller = createController({
-      call: vi.fn(async () => ({ state: 'available', items: [page] })),
+      call: vi.fn(async (name: string) => responses[name]),
+      context: vi.fn(async () => undefined),
+    });
+    await controller.loadProjects();
+    controller.receive({ ...result(), evidence: overviewEvidence });
+    render(<Analytics controller={controller} />);
+    expect(screen.getByText('Acme · Audit of 3 Oct 2026')).toBeVisible();
+    expect(shownText()).not.toMatch(uuid);
+    await act(() => controller.select({ ...controller.getSnapshot().selection, view: 'sources' }));
+    await user.click(screen.getByRole('button', { name: 'Answers' }));
+    expect(screen.getByRole('heading', { name: answer.prompt_text })).toBeVisible();
+    expect(screen.getByText(answer.answer_text)).toBeVisible();
+    expect(screen.getByText('Acme · Selected audit')).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Open CiteLadder' })).toHaveAttribute(
+      'href',
+      `https://app.example.test/visibility?project=${project}`,
+    );
+    expect(shownText()).not.toMatch(uuid);
+    expect(shownText()).not.toContain('citeladder://');
+  });
+  it('labels Site Health by snapshot date, page URL and Action target, never by ID', async () => {
+    const user = userEvent.setup();
+    const responses: Record<string, unknown> = {
+      read_site_pages: {
+        state: 'available',
+        items: [
+          {
+            site_url_id: foreign,
+            url: 'https://acme.example/product',
+            title: 'Acme product',
+            link: `https://app.example.test/site/pages/${foreign}?project=${project}`,
+            record_uri: `citeladder://site_page/${answerId}`,
+          },
+        ],
+      },
+      read_actions: {
+        state: 'available',
+        items: [
+          {
+            id: answerId,
+            target_label: 'Pricing page',
+            target_url: 'https://acme.example/pricing',
+            approach: 'Answer common pricing questions on the page.',
+            status: 'in_progress',
+            priority_score: 0.8,
+            link: `https://app.example.test/agent/actions/${answerId}?project=${project}`,
+          },
+        ],
+      },
+    };
+    const controller = createController({
+      call: vi.fn(async (name: string) => responses[name]),
       context: vi.fn(async () => undefined),
     });
     controller.receive({
@@ -57,9 +160,17 @@ describe('CiteLadder MCP App', () => {
       evidence: siteEvidence,
     });
     render(<Analytics controller={controller} />);
+    expect(screen.getByText('Site Health snapshot of 1 Oct 2026')).toBeVisible();
+    await user.click(screen.getByText('Processing versions'));
+    expect(screen.getByText('retained-scoring')).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Read pages from this crawl' }));
-    expect(screen.getByText(page.display_url)).toBeVisible();
-    expect(screen.getByText(page.record_uri)).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Read current Actions' }));
+    expect(screen.getByRole('heading', { name: 'https://acme.example/product' })).toBeVisible();
+    expect(screen.getByText('Acme product')).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Pricing page' })).toBeVisible();
+    expect(screen.getByText('in progress · https://acme.example/pricing')).toBeVisible();
+    expect(shownText()).not.toMatch(uuid);
+    expect(shownText()).not.toContain('citeladder://');
   });
   it.each([
     {
@@ -218,11 +329,9 @@ describe('CiteLadder MCP App', () => {
       ).not.toBeInTheDocument();
     },
   );
-  it('retains snapshot provenance and distinguishes missing findings from an available empty selection', async () => {
+  it('tells an empty Actions list apart from an unavailable read', async () => {
     const user = userEvent.setup();
-    const call = vi.fn(
-      async () => ({ state: 'unavailable', reason: 'no_opportunities' }) as unknown,
-    );
+    const call = vi.fn(async (): Promise<unknown> => ({ state: 'available', items: [] }));
     const controller = createController({ call, context: vi.fn(async () => undefined) });
     controller.receive({
       ...result(),
@@ -230,18 +339,13 @@ describe('CiteLadder MCP App', () => {
       evidence: siteEvidence,
     });
     render(<Analytics controller={controller} />);
-    await user.click(screen.getByText('Snapshot evidence and processing versions'));
-    expect(screen.getByText(siteEvidence.versions.coverage_formula)).toBeVisible();
-    expect(screen.getByText(siteEvidence.source_artifact_ids[0]!)).toBeVisible();
-    await user.click(screen.getByRole('button', { name: 'Read existing prioritized findings' }));
-    expect(screen.getByRole('status').textContent).toMatch(/No persisted prioritized findings/);
-    call.mockResolvedValueOnce({ state: 'available', items: [] });
-    await user.click(screen.getByRole('button', { name: 'Read existing prioritized findings' }));
-    expect(screen.getByRole('status').textContent).toMatch(/No findings in this selection/);
+    await user.click(screen.getByRole('button', { name: 'Read current Actions' }));
+    expect(screen.getByRole('status').textContent).toBe('No open Actions for this project.');
     call.mockResolvedValueOnce({ state: 'unavailable', reason: 'projection_unavailable' });
-    await user.click(screen.getByRole('button', { name: 'Read existing prioritized findings' }));
-    expect(screen.getByRole('status').textContent).toMatch(/unavailable/);
-    expect(screen.queryByText(/No findings in this selection/)).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Read current Actions' }));
+    expect(screen.getByRole('status').textContent).toBe(
+      'Actions are unavailable. Retry or reconnect.',
+    );
   });
   it('rejects mismatched host filters and invalidates old host replies on local reads and disconnect', async () => {
     let finish!: (value: unknown) => void;
@@ -291,8 +395,9 @@ describe('CiteLadder MCP App', () => {
     );
     const pending = controller.fetchAnswer(`citeladder://visibility_result/${audit}`);
     await controller.select({ project_id: foreign });
-    const application = new URL(controller.getSnapshot().result!.links.application);
-    expect(application.searchParams.get('run')).toBe(audit);
+    expect(controller.getSnapshot().result!.links.application).toBe(
+      `https://app.example.test/visibility?project=${foreign}`,
+    );
     fail(new Error('old fetch timed out'));
     await pending;
     expect(controller.getSnapshot().selection?.project_id).toBe(foreign);
@@ -321,37 +426,7 @@ describe('CiteLadder MCP App', () => {
       call,
       context,
     });
-    controller.receive({
-      ...result(),
-      evidence: {
-        project_id: project,
-        audit_id: audit,
-        audit_status: 'completed',
-        analyzer_version: '1',
-        scoring_rule_version: '1',
-        total_completed: 2,
-        total_failed: 0,
-        visibility_score: null,
-        visibility_rate: 0.5,
-        owned_citation_rate: 0,
-        rankings: [
-          {
-            name: 'Competitor',
-            is_brand: false,
-            mention_rate: 0.25,
-            citation_rate: null,
-            share_of_voice: null,
-            mention_count: 1,
-            sentiment: null,
-            avg_position: null,
-          },
-        ],
-        per_engine: [],
-        sentiment: null,
-        avg_position: null,
-        created_at: '2026-10-01T00:00:00Z',
-      },
-    });
+    controller.receive({ ...result(), evidence: overviewEvidence });
     render(<Analytics controller={controller} />);
     expect(screen.getByText('50.0%')).toBeInTheDocument();
     expect(screen.getByText('0.0%')).toBeInTheDocument();

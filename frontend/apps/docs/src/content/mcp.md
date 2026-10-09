@@ -29,7 +29,7 @@ If evidence is stale or unavailable, refresh or acquire it through the appropria
 
 ## Before you connect
 
-You need a CiteLadder account with access to the relevant workspace and a client that supports remote Streamable HTTP MCP with browser OAuth.
+You need a CiteLadder account with access to the relevant workspace and a client that supports remote Streamable HTTP MCP with browser OAuth. Setup covers Claude, ChatGPT, Gemini, Cursor, Grok, Claude Code and Codex, and the CiteLadder app's **Settings → MCP connections** has a Connect button for each.
 
 Your client receives the records you ask it to read. Check your team's policy and the client's handling of that data before using sensitive information.
 

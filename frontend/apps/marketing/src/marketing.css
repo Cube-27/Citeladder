@@ -21,6 +21,7 @@
 @source '../../../components/marketing';
 @source '../../../components/analytics';
 @source '../../../components/billing';
+@source '../../../components/mcp';
 @source '../../../components/ui';
 @source '../../../lib';
 

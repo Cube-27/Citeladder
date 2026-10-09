@@ -22,7 +22,7 @@ import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { appPolicy } from './config';
 import type { AppState, Controller } from './controller';
 import { SourcesView, SiteHealthView } from './evidence-views';
-import { rate } from './format';
+import { day, moment, rate } from './format';
 
 const views = [
   { value: 'overview', label: 'Overview' },
@@ -82,9 +82,9 @@ function Overview({
         </div>
       </div>
       <p className={textRole('caption')}>
-        Observed {projection.created_at} · {projection.counts?.state ?? projection.audit_status} ·{' '}
-        {projection.total_completed} responses · comparison:{' '}
-        {projection.comparison?.status ?? 'unavailable'}
+        Observed {moment(projection.created_at)} ·{' '}
+        {projection.counts?.state ?? projection.audit_status} · {projection.total_completed}{' '}
+        responses · comparison: {projection.comparison?.status ?? 'unavailable'}
       </p>
       <p className={textRole('caption')}>
         Analyzer {projection.analyzer_version} · scoring {projection.scoring_rule_version} ·{' '}
@@ -187,7 +187,7 @@ function Trends({
         data={points.map((point, index) => {
           const previous = points[index - 1];
           return {
-            label: point.completed_at,
+            label: day(point.completed_at),
             value: value(point),
             breakBefore:
               previous !== undefined &&
@@ -212,7 +212,7 @@ function Trends({
         <TableBody>
           {points.map((point) => (
             <TableRow key={point.source_snapshot_ids.join(',')}>
-              <TableCell>{point.completed_at}</TableCell>
+              <TableCell>{moment(point.completed_at)}</TableCell>
               <TableCell>{rate(value(point))}</TableCell>
               <TableCell>
                 {point.counts?.state ?? 'unknown'} · {point.transport_model ?? 'mixed / unknown'} ·
@@ -251,10 +251,25 @@ function Trends({
   );
 }
 
-function selectedEvidenceLabel(selection: AnalyticsSelection) {
-  if (selection.audit_id) return `Audit ${selection.audit_id}`;
-  if (selection.snapshot_id) return `Snapshot ${selection.snapshot_id}`;
-  return 'No audit selected';
+/** Human scope label. Selections carry IDs for reads; the UI never shows them. */
+function evidenceLabel(
+  selection: AnalyticsSelection,
+  evidence: Record<string, unknown> | undefined,
+) {
+  switch (selection.view) {
+    case 'site_health':
+      return evidence?.observed_at
+        ? `Site Health snapshot of ${day(evidence.observed_at)}`
+        : 'Latest Site Health snapshot';
+    case 'trends':
+      return selection.from_at && selection.to_at
+        ? `${day(selection.from_at)} to ${day(selection.to_at)}`
+        : `Last ${appPolicy.historyDays} days`;
+    case 'overview':
+    case 'sources':
+      if (evidence?.created_at) return `Audit of ${day(evidence.created_at)}`;
+      return selection.audit_id ? 'Selected audit' : 'Latest audit';
+  }
 }
 
 function viewContent(view: AnalyticsSelection['view'], state: AppState, controller: Controller) {
@@ -294,6 +309,7 @@ function viewContent(view: AnalyticsSelection['view'], state: AppState, controll
 export function Analytics({ controller }: Readonly<{ controller: Controller }>) {
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot);
   const selection = state.selection;
+  const project = state.projects.find((item) => item.id === selection?.project_id);
   const changeView = (view: AnalyticsSelection['view']) => {
     if (!selection) return;
     const to = new Date().toISOString();
@@ -365,7 +381,8 @@ export function Analytics({ controller }: Readonly<{ controller: Controller }>) 
       {selection && (
         <>
           <p className={textRole('caption')}>
-            Project {selection.project_id} · {selectedEvidenceLabel(selection)}
+            {project ? `${project.name} · ` : ''}
+            {evidenceLabel(selection, state.result?.evidence)}
           </p>
           {selection.view !== 'site_health' && (
             <div className="flex flex-wrap gap-3">
