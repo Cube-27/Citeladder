@@ -24,6 +24,8 @@ vi.mock('../src/mcp/app-resource.ts', async (importOriginal) => ({
 }));
 
 vi.mock('../src/mcp/oauth.ts', () => ({ authenticateMcp: vi.fn() }));
+// Budgets are PostgreSQL counters, covered with the OAuth owner.
+vi.mock('../src/mcp/registration.ts', () => ({ admitToolCall: vi.fn() }));
 vi.mock('../src/mcp/oauth-routes.ts', () => ({
   registerOAuthRoutes: (app: Hono) => {
     app.get('/mcp/oauth/consent', (c) => c.text('consent'));

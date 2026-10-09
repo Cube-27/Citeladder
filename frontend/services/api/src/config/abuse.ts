@@ -28,6 +28,7 @@ const defaults = {
   active_agent_runs_per_workspace: 5,
   agent_runs_per_workspace_daily: 200,
   active_job_retry_after_seconds: 60,
+  usage_window_cleanup_batch: 500,
 };
 
 export const abuse = Object.fromEntries(

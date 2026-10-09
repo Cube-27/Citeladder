@@ -81,7 +81,18 @@ export const mcp = {
     max_redirect_uri_length: 2048,
     max_client_name_length: 200,
     supported_grant_types: ['authorization_code', 'refresh_token'],
-    supported_response_types: ['code'],
     unused_client_prune_batch: 100,
+    // Native apps call back on a private-use scheme (RFC 8252 §7.1): reverse-domain,
+    // or one of these editor schemes. Web schemes stay HTTPS-only.
+    native_redirect_schemes: ['cursor', 'vscode', 'vscode-insiders', 'windsurf', 'zed'],
+    refused_redirect_schemes: ['javascript', 'data', 'file', 'blob', 'about', 'ftp', 'ws', 'wss'],
+    // A superseded refresh token replayed after this grace revokes its grant.
+    refresh_reuse_grace_seconds: 60,
+    grant_max_lifetime_seconds: 15552000,
+    last_used_resolution_seconds: 300,
+    tool_call_window_seconds: 60,
+    tool_call_grant_limit: 120,
+    tool_call_user_limit: 600,
+    protocol_retention_seconds: 7776000,
   },
 };

@@ -5,6 +5,7 @@ import type { AppEnv } from '../context.ts';
 import type { Database } from '../db/database.ts';
 import { loadMcpConfig, mcpPolicy } from './config.ts';
 import { authenticateMcp } from './oauth.ts';
+import { admitToolCall } from './registration.ts';
 import { registerOAuthRoutes } from './oauth-routes.ts';
 import { dispatchTool, presentationTools, tools } from './tools.ts';
 import { callerMessage } from './types.ts';
@@ -24,6 +25,13 @@ const MCP_PROTOCOL_PATHS = [
   '/.well-known/oauth-authorization-server',
   '/.well-known/oauth-protected-resource/mcp',
 ] as const;
+const PUBLIC_OAUTH_PATHS: ReadonlySet<string> = new Set([
+  '/mcp/register',
+  '/token',
+  '/revoke',
+  '/.well-known/oauth-authorization-server',
+  '/.well-known/oauth-protected-resource/mcp',
+]);
 const VERSIONS = ['2026-07-28', '2025-11-25'];
 const INSTRUCTIONS = [
   "Read-only CiteLadder data about a business's visibility in AI answers and search.",
@@ -83,7 +91,8 @@ export function registerMcpRoutes(app: Hono<AppEnv>, config: ServiceConfig, db: 
         settings.origin !== settings.browserOrigin
       )
         return c.text('Consent moved. Restart the MCP authorization request.', 409);
-      const supplied = c.req.header('origin');
+      // Credential-free OAuth endpoints serve browser-hosted clients from any origin.
+      const supplied = PUBLIC_OAUTH_PATHS.has(c.req.path) ? undefined : c.req.header('origin');
       if (hostOrigin !== allowed || (supplied && origin(supplied) !== allowed))
         return c.text('Invalid MCP request origin.', 403);
       c.header('Cache-Control', 'no-store');
@@ -238,6 +247,7 @@ export function registerMcpRoutes(app: Hono<AppEnv>, config: ServiceConfig, db: 
           if (!toolNames.has(params.name))
             return c.json(rpcError(message.id, -32602, `Unknown tool: ${params.name}`), 400);
           try {
+            await admitToolCall(db, principal.grantId, principal.userId);
             const value = await dispatchTool(
               db,
               principal,

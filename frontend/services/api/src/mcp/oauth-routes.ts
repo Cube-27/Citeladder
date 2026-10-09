@@ -26,8 +26,8 @@ import {
 import {
   admitAuthorization,
   admitRegistration,
+  isLoopback,
   registerClient,
-  RegistrationLimit,
 } from './registration.ts';
 
 async function registrationBody(request: Request): Promise<unknown> {
@@ -60,6 +60,27 @@ async function registrationBody(request: Request): Promise<unknown> {
     throw new OAuthError('invalid_client_metadata', 'Registration body must be UTF-8 JSON');
   }
 }
+/**
+ * The registered redirect a request names, or the only one when it names none.
+ * A loopback redirect matches on any port (RFC 8252 §7.3): native apps bind a
+ * free port per sign-in. The URI actually requested is the one bound.
+ */
+export function registeredRedirect(registered: string[], requested: string | null) {
+  if (requested === null) {
+    const [only, ...others] = registered;
+    return only !== undefined && !others.length ? only : null;
+  }
+  if (registered.includes(requested)) return requested;
+  const asked = URL.parse(requested);
+  if (!asked || !isLoopback(asked)) return null;
+  const portless = (uri: URL) => `${uri.protocol}//${uri.hostname}${uri.pathname}${uri.search}`;
+  return registered.some((value) => {
+    const uri = URL.parse(value);
+    return !!uri && isLoopback(uri) && portless(uri) === portless(asked);
+  })
+    ? requested
+    : null;
+}
 async function authenticatedClient(
   db: Database,
   mcp: McpConfig,
@@ -89,7 +110,9 @@ async function authenticatedClient(
     .where('client_id', '=', clientId)
     .executeTakeFirst();
   const metadata = record(row?.client_metadata);
-  if (!row || (metadata.token_endpoint_auth_method ?? 'client_secret_post') !== method)
+  // A secret is a secret in the body or the header; a public client sends none.
+  const registered = metadata.token_endpoint_auth_method === 'none' ? 'none' : 'secret';
+  if (!row || registered !== (method === 'none' ? 'none' : 'secret'))
     throw new OAuthError('invalid_client', 'Invalid client authentication');
   if (row.client_secret_encrypted) {
     try {
@@ -114,23 +137,35 @@ export function registerOAuthRoutes(
 ) {
   const app = new Hono<AppEnv>();
   app.onError((error, c) => {
-    if (error instanceof OAuthError)
+    if (error instanceof OAuthError) {
+      if (error.error === 'invalid_client')
+        c.header('www-authenticate', 'Basic realm="citeladder"');
       return c.json(
         { error: error.error, error_description: error.message },
         error.error === 'invalid_client' ? 401 : 400,
       );
-    if (error instanceof RegistrationLimit) {
-      c.header('retry-after', String(error.retryAfter));
+    }
+    if (error instanceof ApiError && error.status === 429) {
+      for (const [name, value] of Object.entries(error.headers ?? {})) c.header(name, value);
       return c.json({ error: 'temporarily_unavailable', error_description: error.message }, 429);
     }
     return onError(error, c);
   });
   const resource = `${mcp.origin}/mcp`;
-  // Protocol endpoints are guarded by the transport owner before dispatch.
-  for (const path of ['/mcp/register', '/authorize', '/token', '/revoke'])
+  // Protocol endpoints are guarded by the transport owner before dispatch. The
+  // credential-free OAuth endpoints answer browser-hosted clients too.
+  for (const path of ['/mcp/register', '/authorize', '/token', '/revoke', '/.well-known/*'])
     app.use(path, async (c, next) => {
       c.header('cache-control', 'no-store');
       c.header('access-control-allow-origin', '*');
+      if (c.req.method === 'OPTIONS') {
+        c.header('access-control-allow-methods', 'GET, POST, OPTIONS');
+        c.header(
+          'access-control-allow-headers',
+          'authorization, content-type, mcp-protocol-version',
+        );
+        return c.body(null, 204);
+      }
       await next();
     });
   app.get('/.well-known/oauth-authorization-server', (c) =>
@@ -142,9 +177,10 @@ export function registerOAuthRoutes(
       revocation_endpoint: `${mcp.origin}/revoke`,
       scopes_supported: [mcpPolicy.read_scope],
       response_types_supported: ['code'],
-      grant_types_supported: ['authorization_code', 'refresh_token'],
+      grant_types_supported: mcpPolicy.supported_grant_types,
       token_endpoint_auth_methods_supported: ['none', 'client_secret_post', 'client_secret_basic'],
       code_challenge_methods_supported: ['S256'],
+      authorization_response_iss_parameter_supported: true,
     }),
   );
   const protectedMetadata = (c: Context<AppEnv>) =>
@@ -157,12 +193,6 @@ export function registerOAuthRoutes(
       resource_documentation: mcpPolicy.documentation_url,
     });
   app.get('/.well-known/oauth-protected-resource/mcp', protectedMetadata);
-  app.options('/mcp/register', (c) => {
-    c.header('access-control-allow-origin', '*');
-    c.header('access-control-allow-methods', 'POST, OPTIONS');
-    c.header('access-control-allow-headers', 'content-type');
-    return c.body(null, 204);
-  });
   app.post('/mcp/register', async (c) => {
     const identity = trustedClientIdentity(c, config);
     await admitRegistration(db, identity, configEnvironment(config));
@@ -177,58 +207,82 @@ export function registerOAuthRoutes(
     )
       throw new OAuthError('invalid_request', 'Authorization query is too large');
     const transaction = mintToken();
-    await db.transaction().execute(async (trx) => {
-      const client = await trx
-        .selectFrom('mcp_oauth_clients')
-        .select(['client_id', 'client_metadata'])
-        .where('client_id', '=', q.get('client_id') ?? '')
-        .forUpdate()
-        .executeTakeFirst();
-      if (!client) throw new OAuthError('invalid_client', 'Client is not registered');
-      const redirects = strings(record(client.client_metadata).redirect_uris);
-      const redirect = q.get('redirect_uri') ?? (redirects.length === 1 ? redirects[0] : undefined);
-      if (!redirect || !redirects.includes(redirect))
-        throw new OAuthError('invalid_request', 'Redirect URI is not registered');
-      if (
-        q.get('response_type') !== 'code' ||
-        q.get('code_challenge_method') !== 'S256' ||
-        !/^[A-Za-z0-9_-]{43}$/u.test(q.get('code_challenge') ?? '')
-      )
-        throw new OAuthError('invalid_request', 'S256 PKCE is required');
-      const scopes = (q.get('scope') ?? mcpPolicy.read_scope).split(/\s+/u).filter(Boolean);
-      if (!scopes.length || scopes.some((scope) => scope !== mcpPolicy.read_scope))
-        throw new OAuthError('invalid_scope', 'Unsupported scope');
-      if (q.has('resource') && q.get('resource')?.replace(/\/$/u, '') !== resource)
-        throw new OAuthError('invalid_target', 'The requested resource is not this MCP server');
-      const now = new Date();
-      const outstanding = await trx
-        .selectFrom('mcp_authorization_requests')
-        .select(({ fn }) => fn.countAll<string>().as('count'))
-        .where('client_id', '=', client.client_id)
-        .where('consumed_at', 'is', null)
-        .where('expires_at', '>', now)
-        .executeTakeFirstOrThrow();
-      if (Number(outstanding.count) >= mcpPolicy.authorization_outstanding_limit)
-        throw new RegistrationLimit(Math.max(1, mcp.requestTtl));
-      await admitAuthorization(trx, client.client_id, trustedClientIdentity(c, config));
-      await trx
-        .insertInto('mcp_authorization_requests')
-        .values({
-          id: randomUUID(),
-          transaction_hash: tokenHash(config, transaction),
-          client_id: client.client_id,
-          state: q.get('state') ?? '',
-          scopes: JSON.stringify(scopes),
-          code_challenge: q.get('code_challenge') ?? '',
-          redirect_uri: redirect,
-          redirect_uri_provided_explicitly: q.has('redirect_uri'),
-          resource,
-          expires_at: new Date(now.getTime() + mcp.requestTtl * 1000),
-          consumed_at: null,
-          created_at: now,
-        })
-        .execute();
-    });
+    // Once the redirect is proven, errors go back to the client (RFC 6749 §4.1.2.1).
+    let callback = null as string | null;
+    try {
+      await db.transaction().execute(async (trx) => {
+        const client = await trx
+          .selectFrom('mcp_oauth_clients')
+          .select(['client_id', 'client_metadata'])
+          .where('client_id', '=', q.get('client_id') ?? '')
+          .forUpdate()
+          .executeTakeFirst();
+        if (!client) throw new OAuthError('invalid_client', 'Client is not registered');
+        const redirect = registeredRedirect(
+          strings(record(client.client_metadata).redirect_uris),
+          q.get('redirect_uri'),
+        );
+        if (!redirect) throw new OAuthError('invalid_request', 'Redirect URI is not registered');
+        callback = redirect;
+        if (
+          q.get('response_type') !== 'code' ||
+          q.get('code_challenge_method') !== 'S256' ||
+          !/^[A-Za-z0-9_-]{43}$/u.test(q.get('code_challenge') ?? '')
+        )
+          throw new OAuthError('invalid_request', 'S256 PKCE is required');
+        // Unknown extras such as offline_access are narrowed away (RFC 6749 §3.3).
+        const requested = (q.get('scope') ?? mcpPolicy.read_scope).split(/\s+/u).filter(Boolean);
+        if (requested.length && !requested.includes(mcpPolicy.read_scope))
+          throw new OAuthError('invalid_scope', 'Unsupported scope');
+        const scopes = [mcpPolicy.read_scope];
+        if (q.has('resource') && q.get('resource')?.replace(/\/$/u, '') !== resource)
+          throw new OAuthError('invalid_target', 'The requested resource is not this MCP server');
+        const now = new Date();
+        const outstanding = await trx
+          .selectFrom('mcp_authorization_requests')
+          .select(({ fn }) => fn.countAll<string>().as('count'))
+          .where('client_id', '=', client.client_id)
+          .where('consumed_at', 'is', null)
+          .where('expires_at', '>', now)
+          .executeTakeFirstOrThrow();
+        if (Number(outstanding.count) >= mcpPolicy.authorization_outstanding_limit)
+          throw new ApiError(429, 'Too many pending authorization requests; retry later', {
+            headers: { 'retry-after': String(Math.max(1, mcp.requestTtl)) },
+          });
+        await admitAuthorization(trx, client.client_id, trustedClientIdentity(c, config));
+        await trx
+          .insertInto('mcp_authorization_requests')
+          .values({
+            id: randomUUID(),
+            transaction_hash: tokenHash(config, transaction),
+            client_id: client.client_id,
+            state: q.get('state') ?? '',
+            scopes: JSON.stringify(scopes),
+            code_challenge: q.get('code_challenge') ?? '',
+            redirect_uri: redirect,
+            redirect_uri_provided_explicitly: q.has('redirect_uri'),
+            resource,
+            expires_at: new Date(now.getTime() + mcp.requestTtl * 1000),
+            consumed_at: null,
+            created_at: now,
+          })
+          .execute();
+      });
+    } catch (error) {
+      const code =
+        error instanceof OAuthError
+          ? error.error
+          : error instanceof ApiError && error.status === 429
+            ? 'temporarily_unavailable'
+            : null;
+      if (callback === null || code === null) throw error;
+      const target = new URL(callback);
+      target.searchParams.set('error', code);
+      target.searchParams.set('error_description', (error as Error).message);
+      if (q.get('state')) target.searchParams.set('state', q.get('state')!);
+      target.searchParams.set('iss', mcp.origin);
+      return c.redirect(target.href, 302);
+    }
     return c.redirect(
       `${mcp.browserOrigin}/mcp/oauth/consent?transaction=${encodeURIComponent(transaction)}`,
       302,
@@ -239,7 +293,9 @@ export function registerOAuthRoutes(
       const form = new URLSearchParams(await c.req.text());
       const { row, metadata } = await authenticatedClient(db, mcp, c, form);
       if (path === '/revoke') {
-        await revokeToken(db, config, row.client_id, form.get('token') ?? '');
+        const token = form.get('token');
+        if (!token) throw new OAuthError('invalid_request', 'token is required');
+        await revokeToken(db, config, row.client_id, token);
         return c.json({});
       }
       if (!strings(metadata.grant_types).includes(form.get('grant_type') ?? ''))

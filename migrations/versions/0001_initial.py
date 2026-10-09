@@ -313,6 +313,10 @@ def upgrade() -> None:
         sa.Column("access_expires_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("refresh_expires_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("revoked_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("previous_refresh_token_hash", sa.String(length=64), nullable=True),
+        sa.Column("refresh_rotated_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("authorization_code_id", sa.UUID(), nullable=True),
+        sa.Column("last_used_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(
@@ -328,6 +332,8 @@ def upgrade() -> None:
             "user_id",
             "access_expires_at",
             "refresh_expires_at",
+            "previous_refresh_token_hash",
+            "authorization_code_id",
         ),
     )
     op.create_index(

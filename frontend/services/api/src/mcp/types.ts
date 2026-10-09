@@ -37,6 +37,8 @@ export function callerMessage(error: unknown): string | null {
   )
     return error.message;
   if (error instanceof AnalysisNotFoundError) return 'Selected measurement is unavailable';
+  if (error instanceof ApiError && error.status === 429)
+    return `${error.message}; retry in ${error.headers?.['retry-after'] ?? 'a few'} seconds`;
   if (error instanceof ApiError && error.status >= 400 && error.status < 500) return error.message;
   return null;
 }

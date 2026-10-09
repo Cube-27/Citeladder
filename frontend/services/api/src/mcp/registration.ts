@@ -1,71 +1,77 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
 import { z } from 'zod';
+import { enforceSubjectRequest } from '../abuse/usage.ts';
 import { policy, resolveSettingSpec } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { createSecretCipher } from '../integrations/fernet.ts';
 import { mcpPolicy, type McpConfig } from './config.ts';
 import { mintToken, OAuthError } from './oauth.ts';
 
+const LOOPBACK = ['localhost', '127.0.0.1', '[::1]'];
+// Unsupported extras (an extra grant, `offline_access`) are narrowed away, not refused.
 const metadataSchema = z.object({
   redirect_uris: z.array(z.string()).min(1).max(mcpPolicy.max_redirect_uris),
   client_name: z.string().max(mcpPolicy.max_client_name_length).optional(),
-  grant_types: z
-    .array(z.enum(['authorization_code', 'refresh_token']))
-    .default(['authorization_code', 'refresh_token']),
-  response_types: z.array(z.literal('code')).default(['code']),
+  grant_types: z.array(z.string()).default(['authorization_code', 'refresh_token']),
+  response_types: z.array(z.string()).default(['code']),
+  // RFC 7591 §2: an omitted method is client_secret_basic.
   token_endpoint_auth_method: z
     .enum(['none', 'client_secret_post', 'client_secret_basic'])
-    .default('client_secret_post'),
-  scope: z.literal(mcpPolicy.read_scope).default(mcpPolicy.read_scope),
+    .default('client_secret_basic'),
+  scope: z.string().optional(),
 });
+
+export function isLoopback(uri: URL) {
+  return uri.protocol === 'http:' && LOOPBACK.includes(uri.hostname);
+}
+/** HTTPS, loopback HTTP, or a native app's private-use scheme. */
+function acceptedRedirect(raw: string, uri: URL) {
+  const scheme = uri.protocol.slice(0, -1);
+  if (raw.length > mcpPolicy.max_redirect_uri_length || uri.username || uri.password || uri.hash)
+    return false;
+  if (uri.protocol === 'https:') return !!uri.hostname && !uri.host.includes('*');
+  if (uri.protocol === 'http:') return isLoopback(uri);
+  return (
+    /^[a-z][a-z0-9+.-]*$/u.test(scheme) &&
+    !mcpPolicy.refused_redirect_schemes.includes(scheme) &&
+    (scheme.includes('.') || mcpPolicy.native_redirect_schemes.includes(scheme))
+  );
+}
 function validateRegistration(input: unknown) {
   const parsed = metadataSchema.safeParse(input);
   if (
     !parsed.success ||
-    parsed.data.response_types.length !== 1 ||
+    !parsed.data.response_types.includes('code') ||
     !parsed.data.grant_types.includes('authorization_code')
   )
     throw new OAuthError('invalid_client_metadata', 'Unsupported client metadata');
   for (const raw of parsed.data.redirect_uris) {
-    let uri: URL;
-    try {
-      uri = new URL(raw);
-    } catch {
-      throw new OAuthError('invalid_redirect_uri', 'Invalid redirect URI');
-    }
-    if (
-      raw.length > mcpPolicy.max_redirect_uri_length ||
-      uri.username ||
-      uri.password ||
-      uri.hash ||
-      uri.host.includes('*') ||
-      !uri.hostname ||
-      (uri.protocol !== 'https:' &&
-        !(uri.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(uri.hostname)))
-    )
+    const uri = URL.parse(raw);
+    if (!uri || !acceptedRedirect(raw, uri))
       throw new OAuthError(
         'invalid_redirect_uri',
-        'Redirect URIs must use HTTPS or loopback HTTP without credentials or fragments',
+        'Redirect URIs must be HTTPS, loopback HTTP or a native app scheme, without credentials or fragments',
       );
   }
-  return parsed.data;
+  return {
+    ...parsed.data,
+    grant_types: mcpPolicy.supported_grant_types.filter((grant) =>
+      parsed.data.grant_types.includes(grant),
+    ),
+    response_types: ['code'],
+    scope: mcpPolicy.read_scope,
+  };
 }
-export class RegistrationLimit extends Error {
-  readonly retryAfter: number;
-  constructor(retryAfter: number) {
-    super('Too many client registrations; retry later');
-    this.retryAfter = retryAfter;
-  }
-}
-export async function admitRegistration(
+
+export function admitRegistration(
   db: Database,
   client: string,
   env: Record<string, string | undefined> = process.env,
 ) {
   const value = (name: keyof typeof policy.abuse) =>
     Number(resolveSettingSpec(policy.abuse[name], env));
-  const budgets = [
+  return admitBudgets(db, [
     [
       'client',
       client,
@@ -87,8 +93,7 @@ export async function admitRegistration(
       value('mcp_register_global_limit'),
       value('mcp_register_global_window_seconds'),
     ],
-  ] as const;
-  await db.transaction().execute((trx) => admitBudgets(trx, budgets));
+  ]);
 }
 
 export function admitAuthorization(db: Database, clientId: string, source: string) {
@@ -106,42 +111,29 @@ export function admitAuthorization(db: Database, clientId: string, source: strin
   ]);
 }
 
-async function admitBudgets(
-  trx: Database,
-  budgets: readonly (readonly [string, string, string, number, number])[],
-) {
-  const now = new Date();
-  for (const [kind, subject, operation, limit, window] of budgets) {
-    const epoch = Math.floor(now.getTime() / 1000);
-    const start = epoch - (epoch % window);
-    const expires = new Date((start + window) * 1000);
-    const charged = await trx
-      .insertInto('usage_windows')
-      .values({
-        id: randomUUID(),
-        subject_kind: kind,
-        subject_hash: createHash('sha256').update(subject.trim().toLowerCase()).digest('hex'),
-        operation,
-        count: 1,
-        window_started_at: new Date(start * 1000),
-        expires_at: expires,
-        created_at: now,
-        updated_at: now,
-      })
-      .onConflict((c) =>
-        c
-          .constraint('uq_usage_window_subject_operation_start')
-          .doUpdateSet({ count: sql`usage_windows.count + 1`, updated_at: now })
-          .where(sql<boolean>`usage_windows.count + 1 <= ${limit}`),
-      )
-      .returning('count')
-      .executeTakeFirst();
-    if (!charged)
-      throw new RegistrationLimit(
-        Math.max(1, Math.ceil((expires.getTime() - now.getTime()) / 1000)),
-      );
-  }
+/** One budget per grant and per account; a client over its own budget spends no other. */
+export function admitToolCall(db: Database, grantId: string, userId: string) {
+  const window = mcpPolicy.tool_call_window_seconds;
+  return admitBudgets(db, [
+    ['mcp_grant', grantId, 'mcp.tool_call.grant', mcpPolicy.tool_call_grant_limit, window],
+    ['user', userId, 'mcp.tool_call.user', mcpPolicy.tool_call_user_limit, window],
+  ]);
 }
+
+async function admitBudgets(
+  db: Database,
+  budgets: readonly (readonly [
+    Parameters<typeof enforceSubjectRequest>[1],
+    string,
+    string,
+    number,
+    number,
+  ])[],
+) {
+  for (const [kind, subject, operation, limit, windowSeconds] of budgets)
+    await enforceSubjectRequest(db, kind, subject, { operation, limit, windowSeconds });
+}
+
 export async function registerClient(db: Database, mcp: McpConfig, input: unknown) {
   if (!mcp.enabled) throw new OAuthError('invalid_client_metadata', 'MCP access is not enabled');
   const metadata = validateRegistration(input);

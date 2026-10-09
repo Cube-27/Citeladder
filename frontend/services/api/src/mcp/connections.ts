@@ -11,7 +11,7 @@ export async function listConnections(
   let query = db
     .selectFrom('mcp_oauth_grants as g')
     .innerJoin('mcp_oauth_clients as c', 'c.client_id', 'g.client_id')
-    .select(['g.id', 'g.workspace_ids', 'g.created_at', 'c.client_metadata'])
+    .select(['g.id', 'g.workspace_ids', 'g.created_at', 'g.last_used_at', 'c.client_metadata'])
     .where('g.revoked_at', 'is', null)
     .where('g.refresh_expires_at', '>', new Date());
   if (scope.workspaceId)
@@ -27,6 +27,7 @@ export async function listConnections(
     ),
     workspace_ids: scope.workspaceId ? [scope.workspaceId] : strings(row.workspace_ids),
     created_at: row.created_at.toISOString(),
+    last_used_at: row.last_used_at?.toISOString() ?? null,
     requires_consent: strings(row.workspace_ids).length === 0,
   }));
 }

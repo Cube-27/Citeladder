@@ -29,6 +29,7 @@ type SecurityEvent =
   | 'membership.join'
   | 'mcp.consent'
   | 'mcp.revoke'
+  | 'mcp.token_reuse'
   | 'mcp.workspace_revoke';
 
 /** Append in the mutation transaction; no arbitrary payload or secrets. */
