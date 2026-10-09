@@ -136,7 +136,7 @@ function PostChecklist({
               <span className="cp-node-title">{item.title}</span>
               {item.badge && <span className="cp-chip">{item.badge}</span>}
             </span>
-            <p className="website-body text-muted">{item.description}</p>
+            <p className="website-body">{item.description}</p>
           </li>
         ))}
       </ul>

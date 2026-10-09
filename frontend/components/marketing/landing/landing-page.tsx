@@ -237,7 +237,7 @@ function BentoTile({
     <a href={href} className={cn('lp-tile', className)}>
       <div className="lp-tile-copy">
         <h3 className="website-feature-heading">{title}</h3>
-        <p className="website-body text-muted">{body}</p>
+        <p className="website-body">{body}</p>
       </div>
       <div className="lp-tile-visual product-fit app-type-scale" aria-hidden>
         {children}
@@ -253,7 +253,7 @@ function Loop() {
       <div className="lp-wrap lp-stack">
         <div className="lp-head">
           <h2 className="website-section-heading">From an AI answer to the fix that moves it.</h2>
-          <p className="website-lead text-muted">
+          <p className="website-lead">
             Measure the questions your buyers ask, trace each result to its sources, and turn what
             you find into reviewable work. Then measure again.
           </p>
@@ -316,7 +316,7 @@ function DeepDive({
     <div className={cn('mk-dive', reverse && 'mk-dive-reverse')}>
       <div className="mk-dive-copy">
         <h3 className="website-page-title mk-dive-title">{title}</h3>
-        <p className="website-body text-muted">{body}</p>
+        <p className="website-body">{body}</p>
         <ul className="mk-checks">
           {points.map((point) => (
             <li key={point}>
@@ -419,7 +419,7 @@ function Closing() {
     <section className="lp-section marketing-closing-band" id="get-started">
       <div className="lp-wrap lp-closing">
         <h2 className="website-section-heading">See what AI says about you today.</h2>
-        <p className="website-lead text-muted">
+        <p className="website-lead">
           Add your site and a few questions your buyers ask. Get your first baseline, then decide
           what to fix.
         </p>

@@ -103,7 +103,7 @@
   gap: 0.5rem;
   padding: 0.25rem 0.5rem;
   color: var(--color-foreground);
-  font-size: var(--text-label);
+  font-size: var(--text-sm);
   font-weight: 500;
 }
 
@@ -183,7 +183,7 @@
   padding: 0 0.5rem;
   border-radius: var(--radius-control);
   color: var(--color-secondary);
-  font-size: var(--text-label);
+  font-size: var(--text-sm);
   font-weight: 500;
 }
 
@@ -263,7 +263,7 @@
 .pv-tabs span {
   padding: 0.25rem 0 0.5rem;
   color: var(--color-secondary);
-  font-size: var(--text-label);
+  font-size: var(--text-sm);
   font-weight: 500;
 }
 
@@ -352,7 +352,7 @@
 
 .pv-panel-title {
   color: var(--color-foreground);
-  font-size: var(--text-label);
+  font-size: var(--text-sm);
   font-weight: 500;
 }
 
@@ -846,7 +846,7 @@ li[data-own] .pv-rank {
   border-radius: var(--radius-control);
   background: var(--color-accent);
   color: var(--color-accent-fg);
-  font-size: var(--text-label);
+  font-size: var(--text-sm);
   font-weight: 500;
 }
 

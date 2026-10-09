@@ -47,7 +47,7 @@ function ArticleRow({ post }: Readonly<{ post: BlogPostSummary }>) {
             {post.title}
           </a>
         </h2>
-        <p className="website-body text-muted md:line-clamp-2">{post.excerpt}</p>
+        <p className="website-body md:line-clamp-2">{post.excerpt}</p>
         {(post.author || post.readTime) && (
           <p className="cp-meta">
             {post.author && <span>{post.author}</span>}
@@ -112,7 +112,7 @@ export function BlogIndexExplorer({ posts }: Readonly<{ posts: readonly BlogPost
         ) : (
           <div className="cp-empty">
             <h2 className="website-feature-heading">No articles match this filter.</h2>
-            <p className="website-body text-muted">Show every topic to see all guides.</p>
+            <p className="website-body">Show every topic to see all guides.</p>
             <button
               type="button"
               className="cp-filter focus-ring"

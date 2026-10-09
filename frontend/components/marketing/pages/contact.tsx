@@ -84,7 +84,7 @@ function ContactForm() {
         <h2 id="contact-sent-title" className="website-feature-heading text-foreground">
           Message sent
         </h2>
-        <p className="website-body text-muted">
+        <p className="website-body">
           Thanks for reaching out. We&apos;ll get back to you at the email address you provided.
         </p>
         <Button variant="secondary" onClick={() => setState('idle')}>
@@ -203,7 +203,7 @@ export function ContactPage() {
           <div className="cm-contact-copy">
             <header className="grid gap-5">
               <h1 className="website-page-title text-foreground">Talk to the CiteLadder team.</h1>
-              <p className="website-lead text-muted">
+              <p className="website-lead">
                 Ask a question, book a demo or check whether CiteLadder fits your team.
               </p>
             </header>
@@ -213,12 +213,12 @@ export function ContactPage() {
                 {NEXT_STEPS.map((step) => (
                   <li key={step.title}>
                     <h3 className="website-feature-heading text-foreground">{step.title}</h3>
-                    <p className="website-body text-muted">{step.body}</p>
+                    <p className="website-body">{step.body}</p>
                   </li>
                 ))}
               </ol>
             </div>
-            <p className="website-body text-muted">
+            <p className="website-body">
               Prefer email?{' '}
               <a href={`mailto:${CONTACT_EMAIL}`} className="mk-text-link">
                 {CONTACT_EMAIL}
@@ -231,7 +231,7 @@ export function ContactPage() {
                   <section key={section.id} id={section.id} className="grid gap-3">
                     <h2 className="website-feature-heading text-foreground">{section.title}</h2>
                     {section.paragraphs?.map((paragraph) => (
-                      <p key={paragraph} className="website-body text-muted">
+                      <p key={paragraph} className="website-body">
                         <Linkify text={paragraph} />
                       </p>
                     ))}

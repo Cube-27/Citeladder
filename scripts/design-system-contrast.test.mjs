@@ -30,9 +30,10 @@ function palette(ink, paper, marks, charts) {
       ]),
     ),
     ...Object.fromEntries(
-      ['foreground', 'secondary', 'muted', 'ink-soft', 'ink-icon', 'border-bold', 'state-ink'].map(
-        (role) => [`--color-${role}`, ink],
-      ),
+      ['foreground', 'secondary', 'muted', 'brand-ink', 'border-bold', 'state-ink'].map((role) => [
+        `--color-${role}`,
+        ink,
+      ]),
     ),
     '--color-hover': 'color-mix(in srgb, var(--color-panel), var(--color-state-ink) 4%)',
     '--color-selected': 'color-mix(in srgb, var(--color-panel), var(--color-state-ink) 8%)',

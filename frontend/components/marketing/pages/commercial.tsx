@@ -57,7 +57,7 @@ export function CommercialEntryPage({
             <article className="ed-prose">
               <section id="definitions" className="ed-prose-section">
                 <h2 className="website-section-heading">{page.overview.heading}</h2>
-                <p className="website-lead text-muted">{page.overview.lead}</p>
+                <p className="website-lead">{page.overview.lead}</p>
                 {page.definitions.map((definition) => (
                   <div key={definition.heading} className="ed-subsection">
                     <h3 className="website-feature-heading">{definition.heading}</h3>
@@ -157,7 +157,7 @@ function WorkedExample() {
           <div>
             <dt className="website-label text-muted">Share of tracked brand appearances</dt>
             <dd className="website-feature-heading">Not calculated here</dd>
-            <dd className="website-body text-muted">
+            <dd className="website-body">
               Needs competitor counts and a stated counting rule. Several brands can appear in one
               answer.
             </dd>

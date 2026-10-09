@@ -86,7 +86,7 @@ export async function MarketingFooter() {
             <a href="/" aria-label="CiteLadder home" className="focus-ring inline-block rounded-xs">
               <LogoMark />
             </a>
-            <p className="website-body text-muted max-w-[30ch]">
+            <p className="website-body max-w-[30ch]">
               See what AI answers say about your brand, and what to fix next.
             </p>
           </div>

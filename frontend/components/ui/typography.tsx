@@ -13,11 +13,11 @@ import { cn } from '@/lib/utils';
  * Size carries the hierarchy; weight only separates reading text from
  * everything else: 400 for sentences and captions, 500 for titles, figures,
  * labels and controls. Ink steps from `foreground` (titles, values) through
- * `secondary` (sentences) and `ink-soft` (labels) to `muted` (captions, meta).
+ * `secondary` (sentences, labels) to `muted` (captions, meta): three inks only.
  * The sizes below are the `.type-*` recipes in globals.css (size/leading in px).
  */
 const TEXT_ROLES = {
-  /** The route `h1`. 20/28, 500, −0.016em, foreground, display face. One per page. */
+  /** The route `h1`. 20/28, 500, −0.01em, foreground, display face. One per page. */
   pageTitle: 'type-page-title',
   /** A section, card, drawer or dialog heading. 16/24, 500, −0.011em, foreground. */
   sectionTitle: 'type-section-title',
@@ -25,9 +25,9 @@ const TEXT_ROLES = {
   itemTitle: 'type-item-title',
   /** Sentences: descriptions, prose, table cell text. 14/20, 400, secondary. */
   body: 'type-body',
-  /** Buttons, navigation, tabs, links. 13/18, 500; ink comes from state. */
+  /** Buttons, navigation, tabs, links. 14/20, 500; ink comes from state. */
   control: 'type-control',
-  /** Names a value: metric, field and column labels. 13/18, 500, ink-soft. */
+  /** Names a value: metric, field and column labels. 14/20, 500, secondary. */
   label: 'type-label',
   /** Timestamps, counts, help, footnotes. 12/16, 400, muted. */
   caption: 'type-caption',

@@ -191,7 +191,7 @@ export function FaqList({ faqs }: Readonly<{ faqs: readonly { q: string; a: stri
             {faq.q}
             <ChevronDown aria-hidden className="size-4" />
           </summary>
-          <p className="website-body text-muted">{faq.a}</p>
+          <p className="website-body">{faq.a}</p>
         </details>
       ))}
     </div>
@@ -226,7 +226,7 @@ export function PlatformPageContent({ page }: Readonly<{ page: PlatformPage }>) 
           {page.highlights.map((highlight) => (
             <li key={highlight.title}>
               <h2 className="website-feature-heading">{highlight.title}</h2>
-              <p className="website-body text-muted">{highlight.body}</p>
+              <p className="website-body">{highlight.body}</p>
             </li>
           ))}
         </ul>
@@ -242,7 +242,7 @@ export function PlatformPageContent({ page }: Readonly<{ page: PlatformPage }>) 
               >
                 <div className="mk-dive-copy">
                   <h2 className="website-page-title mk-dive-title">{feature.title}</h2>
-                  <p className="website-body text-muted">{feature.body}</p>
+                  <p className="website-body">{feature.body}</p>
                   <ul className="mk-checks">
                     {feature.points.map((point) => (
                       <li key={point}>
@@ -348,7 +348,7 @@ export function ProductModule({
       <div className="mk-dive">
         <div className="mk-dive-copy">
           <h2 className="website-section-heading">{heading}</h2>
-          <p className="website-body text-muted">{children}</p>
+          <p className="website-body">{children}</p>
           <a className="mk-text-link" href={path}>
             Explore {platformLabel(path)}
             <ArrowRight aria-hidden className="size-4" />

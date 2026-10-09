@@ -26,8 +26,8 @@
   column-gap: 0.5rem;
   row-gap: 0.25rem;
   color: var(--color-muted);
-  font-size: var(--text-label);
-  line-height: var(--text-label--line-height);
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
   font-variant-numeric: tabular-nums;
 }
 
@@ -155,8 +155,8 @@
   border-radius: var(--radius-full);
   background: var(--color-panel);
   color: var(--color-secondary);
-  font-size: var(--text-label);
-  line-height: var(--text-label--line-height);
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
   font-weight: 500;
   cursor: pointer;
   transition:
@@ -194,8 +194,8 @@
 .cp-row-date {
   padding-top: 0.25rem;
   color: var(--color-muted);
-  font-size: var(--text-label);
-  line-height: var(--text-label--line-height);
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
   font-variant-numeric: tabular-nums;
 }
 
@@ -314,8 +314,8 @@
   align-items: center;
   gap: 0.5rem;
   color: var(--color-muted);
-  font-size: var(--text-label);
-  line-height: var(--text-label--line-height);
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
 }
 
 .cp-crumbs li + li::before {
@@ -387,8 +387,8 @@
   padding: 0.25rem 0 0.25rem 0.75rem;
   border-left: 1px solid transparent;
   color: var(--color-muted);
-  font-size: var(--text-label);
-  line-height: var(--text-label--line-height);
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
   transition:
     color var(--motion-fast) var(--ease-standard),
     border-color var(--motion-fast) var(--ease-standard);
@@ -433,8 +433,8 @@
 .cp-prose > ul,
 .cp-prose > ol {
   margin-block: 0 1.25rem;
-  font-size: var(--text-base);
-  line-height: var(--text-base--line-height);
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
 }
 
 /* Only article lists: diagrams, checklists and the related list are lists too,
@@ -530,8 +530,8 @@
 
 .cp-prose > blockquote p {
   margin: 0;
-  font-size: var(--text-base);
-  line-height: var(--text-base--line-height);
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
 }
 
 .cp-prose > pre {
@@ -589,8 +589,8 @@
   padding: 0.75rem 1rem 0.5rem 0;
   border-bottom: 1px solid var(--color-border);
   color: var(--color-muted);
-  font-size: var(--text-label);
-  line-height: var(--text-label--line-height);
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
   font-weight: 500;
   vertical-align: bottom;
 }
@@ -732,8 +732,8 @@
 
 .cp-callout p {
   color: var(--color-secondary);
-  font-size: var(--text-base);
-  line-height: var(--text-base--line-height);
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
 }
 
 /* ── Article end: sources, related, previous/next ──────────────────────── */
@@ -863,8 +863,8 @@
 .cp-tool-row-input {
   display: none;
   color: var(--color-muted);
-  font-size: var(--text-label);
-  line-height: var(--text-label--line-height);
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
 }
 
 @media (min-width: 48rem) {
@@ -973,8 +973,8 @@
   background: var(--color-background-alt);
   color: var(--color-secondary);
   font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: var(--text-label);
-  line-height: var(--text-label--line-height);
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }

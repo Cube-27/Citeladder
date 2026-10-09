@@ -107,9 +107,7 @@ export function LegalDocumentView({ document }: Readonly<{ document: LegalDocume
                       </table>
                     </div>
                   ) : null}
-                  {section.note ? (
-                    <p className="ed-note website-body text-muted">{section.note}</p>
-                  ) : null}
+                  {section.note ? <p className="ed-note website-body">{section.note}</p> : null}
                 </section>
               ))}
 

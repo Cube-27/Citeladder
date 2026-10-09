@@ -25,7 +25,7 @@ import { cn } from '@/lib/utils';
  * (an outer shadow, so it never changes the box); inside a Card the ring drops
  * and the flush fill melts into the card.
  *
- * Column headers take the `label` role (13/18, 500, ink-soft): a header names the
+ * Column headers take the `label` role (14/20, 500, secondary): a header names the
  * values beneath it, exactly as a metric label does.
  */
 const tableHeadClasses = 'type-label whitespace-nowrap';

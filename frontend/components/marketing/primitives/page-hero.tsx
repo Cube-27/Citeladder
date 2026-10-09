@@ -67,9 +67,7 @@ export function PageHero({
           {title}
         </h1>
         {lead && (
-          <p className={cn('website-lead text-muted mt-5 max-w-[72ch]', centered && 'mx-auto')}>
-            {lead}
-          </p>
+          <p className={cn('website-lead mt-5 max-w-[72ch]', centered && 'mx-auto')}>{lead}</p>
         )}
         {children}
       </Container>

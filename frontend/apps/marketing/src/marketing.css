@@ -99,8 +99,8 @@
 .nav-row-desc {
   display: block;
   color: var(--color-muted);
-  font-size: var(--text-label);
-  line-height: var(--text-label--line-height);
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
 }
 
 .nav-row .nav-row-title + .nav-row-desc {
@@ -131,8 +131,8 @@
   justify-content: space-between;
   padding-block: 1rem;
   color: var(--color-foreground);
-  font-size: var(--text-base);
-  line-height: var(--text-base--line-height);
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
   font-weight: 500;
   text-align: left;
 }
@@ -147,8 +147,8 @@
 .footer-heading {
   color: var(--color-foreground);
   font-family: var(--font-sans);
-  font-size: var(--text-label);
-  line-height: var(--text-label--line-height);
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
   font-weight: 500;
   letter-spacing: 0;
 }
@@ -158,8 +158,8 @@
   align-items: center;
   gap: 0.25rem;
   color: var(--color-muted);
-  font-size: var(--text-label);
-  line-height: var(--text-label--line-height);
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
   transition: color var(--motion-fast) var(--ease-standard);
 }
 
@@ -241,8 +241,8 @@
 
 .product-caption {
   color: var(--color-muted);
-  font-size: var(--text-label);
-  line-height: var(--text-label--line-height);
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
 }
 
 /* ── Closing band ───────────────────────────────────────────────────────── */
@@ -275,8 +275,8 @@
   gap: 0.25rem;
   width: fit-content;
   color: var(--color-foreground);
-  font-size: var(--text-base);
-  line-height: var(--text-base--line-height);
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
   font-weight: 500;
   transition: color var(--motion-fast) var(--ease-standard);
 }
@@ -308,8 +308,8 @@
 .mk-group-label {
   margin-bottom: 0.5rem;
   color: var(--color-muted);
-  font-size: var(--text-label);
-  line-height: var(--text-label--line-height);
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
   font-weight: 500;
 }
 
@@ -441,8 +441,8 @@
   display: flex;
   gap: 0.5rem;
   color: var(--color-secondary);
-  font-size: var(--text-base);
-  line-height: var(--text-base--line-height);
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
 }
 
 .mk-checks svg {
