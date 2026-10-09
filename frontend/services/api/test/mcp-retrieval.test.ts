@@ -4,12 +4,15 @@ import { mcpPolicy } from '../src/mcp/config.ts';
 import { parseRecordId, retrievalDocument } from '../src/mcp/retrieval.ts';
 import { McpInputError } from '../src/mcp/types.ts';
 
-it('returns same-origin links for internal record reads without an HTTP origin', () => {
+it('links each record to the app screen that shows it, relative for internal reads', () => {
   const id = randomUUID();
-  const record = { status: 'completed', evidence: { missing: ['price'] } };
-  const result = retrievalDocument('site_crawl', id, 0, record, 'Crawl', id, null, '');
-  expect(result.url).toBe(`/website?project=${id}&evidence=${id}`);
-  expect(JSON.parse(String(result.text))).toEqual(record);
+  const crawl = randomUUID();
+  const record = { crawl_id: crawl, site_url_id: id, status: 'completed' };
+  const page = retrievalDocument('site_page', id, 0, record, 'Page', id, null, '');
+  expect(page.url).toBe(`/site/crawls/${crawl}/pages/${id}?project=${id}`);
+  expect(JSON.parse(String(page.text))).toEqual(record);
+  const prompt = retrievalDocument('prompt', id, 0, {}, 'Prompt', id, null, 'https://app.test');
+  expect(prompt.url).toBe(`https://app.test/prompts?project=${id}`);
 });
 
 it.each([mcpPolicy.max_document_bytes, 12000])(

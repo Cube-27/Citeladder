@@ -476,13 +476,3 @@ function coverageQuality(
   if (judged && covered.size === expected * hosts.size) return 'declared_complete';
   return all.some((row) => row.coverage !== 'unknown') ? 'partial' : 'unknown';
 }
-
-/** Persisted projection references for bounded MCP evidence provenance. */
-export async function crawlReadArtifacts(db: Database, scope: CrawlScope, input: CrawlReadOptions) {
-  const options = await withReportingTimezone(db, scope, input);
-  return rollups(db, scope, options)
-    .select(['id', 'formula_version', 'source_batch_ids'])
-    .orderBy('id')
-    .limit(crawlLogs.max_page_size + 1)
-    .execute();
-}

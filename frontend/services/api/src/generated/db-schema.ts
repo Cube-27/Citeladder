@@ -1544,10 +1544,14 @@ export interface McpOauthClients {
 export interface McpOauthGrants {
   access_expires_at: Timestamp;
   access_token_hash: string;
+  authorization_code_id: string | null;
   client_id: string;
   created_at: Timestamp;
   id: string;
+  last_used_at: Timestamp | null;
+  previous_refresh_token_hash: string | null;
   refresh_expires_at: Timestamp;
+  refresh_rotated_at: Timestamp | null;
   refresh_token_hash: string;
   resource: string;
   revoked_at: Timestamp | null;

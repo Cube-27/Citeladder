@@ -50,7 +50,15 @@ export async function enforceWorkspaceRequest(
 /** Autocommitted atomic counters, before hashing or provider I/O. */
 export async function enforceSubjectRequest(
   db: Database,
-  subjectKind: 'workspace' | 'client' | 'email' | 'crawl_source' | 'crawl_project',
+  subjectKind:
+    | 'workspace'
+    | 'client'
+    | 'email'
+    | 'crawl_source'
+    | 'crawl_project'
+    | 'global'
+    | 'mcp_grant'
+    | 'user',
   subjectValue: string,
   { operation, limit, windowSeconds, amount = 1 }: UsageLimit,
   now: Date = new Date(),
@@ -95,4 +103,35 @@ export async function enforceSubjectRequest(
   if (consumed !== undefined) return;
   getLogger('api.abuse').info('request.throttled', { operation, subject_kind: subjectKind });
   throw exhausted();
+}
+
+/** Delete a bounded batch of expired windows; live windows are never touched. */
+export async function pruneUsageWindows(
+  db: Database,
+  now: Date,
+  batch: number,
+  canAdmit: () => boolean = () => true,
+): Promise<number> {
+  if (!canAdmit()) return 0;
+  return db.transaction().execute(async (trx) => {
+    const rows = await trx
+      .selectFrom('usage_windows')
+      .select('id')
+      .where('expires_at', '<=', now)
+      .orderBy('expires_at')
+      .limit(batch)
+      .forUpdate()
+      .skipLocked()
+      .execute();
+    if (!rows.length) return 0;
+    const deleted = await trx
+      .deleteFrom('usage_windows')
+      .where(
+        'id',
+        'in',
+        rows.map((row) => row.id),
+      )
+      .executeTakeFirst();
+    return Number(deleted.numDeletedRows);
+  });
 }

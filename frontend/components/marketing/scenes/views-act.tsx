@@ -58,7 +58,7 @@ export function McpView() {
       </div>
       <div className="pv-tool-call">
         <span className="pv-tool-name">
-          <Bot className="size-3.5" aria-hidden /> citeladder · read_opportunities
+          <Bot className="size-3.5" aria-hidden /> citeladder · read_actions
         </span>
         <span className="pv-meta">read-only</span>
       </div>
@@ -183,7 +183,7 @@ export function McpToolsView() {
     ['read_visibility_sources', 'Cited domains and URLs'],
     ['read_site_health', 'Crawl findings and coverage'],
     ['read_demand', 'Search Console demand signals'],
-    ['read_opportunities', 'Ranked opportunities'],
+    ['read_actions', 'Ranked opportunities'],
   ] as const;
   return (
     <div className="pv-view">

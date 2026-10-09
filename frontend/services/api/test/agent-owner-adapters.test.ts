@@ -1,3 +1,4 @@
+import { readdir, readFile } from 'node:fs/promises';
 import { afterAll, describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import * as sharedTools from '../src/mcp/tools.ts';
@@ -75,6 +76,25 @@ describe('Agent bindings to the evidence and Action owners', () => {
     expect([...named].filter((name) => !offered.has(name))).toEqual([]);
     const chatOnly = ['list_projects', 'render_visibility', 'render_site_health', 'open_analytics'];
     expect(chatOnly.filter((name) => offered.has(name))).toEqual([]);
+    // The public plugin's twins call the same catalogue.
+    const plugin = new URL('../../../../plugins/citeladder/skills/', import.meta.url);
+    const pluginNamed = new Set(
+      (
+        await Promise.all(
+          (await readdir(plugin)).map((skill) =>
+            readFile(new URL(`${skill}/SKILL.md`, plugin), 'utf8'),
+          ),
+        )
+      ).flatMap((body) =>
+        [...body.matchAll(/`((?:read|list|get|render|open)_[a-z_]+|search|fetch)`/gu)].map(
+          (match) => match[1]!,
+        ),
+      ),
+    );
+    expect(pluginNamed.size).toBeGreaterThan(0);
+    expect(
+      [...pluginNamed].filter((name) => !Object.hasOwn(sharedTools.definitions, name)),
+    ).toEqual([]);
   });
   it('pins shared MCP reads and fetches to one project and rechecks the member', async () => {
     const scope = await fixtures.scope(),
@@ -106,7 +126,7 @@ describe('Agent bindings to the evidence and Action owners', () => {
     for (const id of [sibling, foreign.projectId]) {
       expect(
         await tools.execute(db, scope, 'fetch', { id: `citeladder://project/${id}` }, signal()),
-      ).toMatchObject({ status: 'failed', refs: [] });
+      ).toMatchObject({ status: 'refused', refs: [] });
     }
     await db
       .deleteFrom('workspace_members')
@@ -122,12 +142,10 @@ describe('Agent bindings to the evidence and Action owners', () => {
     const tools = agentTools(db);
     const read = vi.spyOn(sharedTools, 'dispatchTool');
     try {
-      for (const state of [undefined, 'unexpected']) {
-        read.mockResolvedValueOnce(state === undefined ? {} : { state });
-        expect(await tools.execute(db, scope, 'read_demand', {}, signal())).toMatchObject({
-          status: 'failed',
-        });
-      }
+      read.mockResolvedValueOnce({ state: 'unexpected' });
+      expect(await tools.execute(db, scope, 'read_demand', {}, signal())).toMatchObject({
+        status: 'failed',
+      });
       read.mockResolvedValueOnce({ state: 'available', artifact_refs: [{ wrong: 'malformed' }] });
       expect(await tools.execute(db, scope, 'read_demand', {}, signal())).toMatchObject({
         status: 'failed',
@@ -162,18 +180,18 @@ describe('Agent bindings to the evidence and Action owners', () => {
     const action = await attach(scope.projectId, 'Buyer guide'),
       other = await attach(sibling, 'Other guide');
     const tools = agentTools(db);
-    const own = await tools.execute(db, scope, 'get_action', { action_id: action.id }, signal());
+    const own = await tools.execute(db, scope, 'read_actions', { action_id: action.id }, signal());
     expect(own.status).toBe('completed');
     expect(JSON.parse(own.text).action).toMatchObject({
       id: action.id,
       target_label: 'Buyer guide',
     });
     expect(
-      await tools.execute(db, scope, 'get_action', { action_id: other.id }, signal()),
-    ).toMatchObject({ status: 'failed' });
+      await tools.execute(db, scope, 'read_actions', { action_id: other.id }, signal()),
+    ).toMatchObject({ status: 'refused', text: 'Action was not found in this project' });
     expect(
-      JSON.parse((await tools.execute(db, scope, 'list_actions', {}, signal())).text).items,
-    ).toHaveLength(1);
+      JSON.parse((await tools.execute(db, scope, 'read_actions', {}, signal())).text).items,
+    ).toEqual([expect.objectContaining({ id: action.id })]);
   });
   it('offers earlier reads as re-read hints and lists only this turn’s reads as sources', async () => {
     const scope = await fixtures.scope();

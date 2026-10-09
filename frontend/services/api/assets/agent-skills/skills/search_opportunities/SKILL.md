@@ -18,7 +18,7 @@ Decide which buyer needs to serve, on which existing or new pages, and why.
 
 - `get_project_business_context` for offers, audience, markets and conversion pages.
 - `read_demand` for demand clusters.
-- `read_performance_table` for Search Console queries and pages (separate tables; they do not say which query belongs to which page).
+- `read_performance` with `dimension` `query` or `page` for Search Console queries and pages (separate tables; they do not say which query belongs to which page).
 - `read_search_intelligence` to list keyword, SERP and competitor datasets, then `read_search_dataset` to page through one.
 - `read_visibility_results` and `read_visibility_sources` for AI answer gaps.
 - `read_site_pages` for existing pages.

@@ -16,7 +16,7 @@ Say whether an implemented change was followed by a meaningful measured change, 
 
 ## Inputs
 
-- What changed and when: `list_actions` and `get_action` (implementation declaration and verification), earlier results in this chat, or the user's description.
+- What changed and when: `read_actions` (with `action_id` for the implementation declaration and verification), earlier results in this chat, or the user's description.
 - AI visibility over time: `read_visibility_trends` with an explicit `from_at`/`to_at` window; `read_visibility_overview` with `audit_id` and `baseline_id` for a direct comparison of two audits.
 - Search: `read_performance` with a comparison period; `read_query_evidence` for a page's queries.
 - Data gaps: `read_integration_status`.

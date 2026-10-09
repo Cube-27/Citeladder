@@ -16,7 +16,7 @@ Decide whether a repeatable family of pages is justified, and if so specify a sm
 
 ## Inputs
 
-You need the verified offer and audience (`get_project_business_context`), a repeated buyer task, and a real source of differentiated data or functionality for each page. Useful extras: search demand (`read_search_intelligence`, `read_search_dataset`, `read_performance_table`), existing pages (`read_site_pages`), and AI prompt gaps (`read_prompt_portfolio`).
+You need the verified offer and audience (`get_project_business_context`), a repeated buyer task, and a real source of differentiated data or functionality for each page. Useful extras: search demand (`read_search_intelligence`, `read_search_dataset`, `read_performance` with a `dimension`), existing pages (`read_site_pages`), and AI prompt gaps (`read_prompt_portfolio`).
 
 ## Method
 

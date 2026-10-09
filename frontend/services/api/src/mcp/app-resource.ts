@@ -1,16 +1,15 @@
 import { readFile } from 'node:fs/promises';
 import { mcpPolicy } from './config.ts';
 
-export const presentationTools = new Set([
-  'render_visibility',
-  'render_site_health',
-  'open_analytics',
-]);
-export function appToolMetadata(name: string, extensions = false) {
-  if (!presentationTools.has(name)) return {};
+/**
+ * MCP Apps metadata for a presentation tool. ChatGPT also opens the picker as
+ * sidebar (`global`) and conversation-panel (`thread`) entries; hosts without
+ * plugin extensions ignore the key.
+ */
+export function appToolMetadata(name: string) {
   return {
     ui: { resourceUri: mcpPolicy.ui_resource_uri },
-    ...(extensions && name === 'open_analytics'
+    ...(name === 'open_analytics'
       ? { 'openai/ui': { entrypoints: [{ type: 'global' }, { type: 'thread' }] } }
       : {}),
   };

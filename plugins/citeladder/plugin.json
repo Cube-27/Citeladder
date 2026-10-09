@@ -28,7 +28,7 @@
               "description": "Use two compatible measured runs plus a run with changed model/retrieval identity in an explicit UTC window.",
               "prompt": "What changed in our AI search visibility during this period?",
               "tools_triggered": "read_visibility_trends; read_visibility_overview with concrete audit_id and baseline_id; optionally render_visibility",
-              "expected_behavior": "Report domain-owned comparison status/deltas and matched coverage. Changed identities or missing values remain gaps or limited comparisons, with exact source IDs. No unqualified cross-model change is claimed."
+              "expected_behavior": "Report domain-owned comparison status/deltas and matched coverage. Changed identities or missing values remain gaps or limited comparisons, with their run dates. No unqualified cross-model change is claimed."
             },
             {
               "description": "Use a selected audit with a citation to a known publisher and a retained answer; keep its audit ID fixed even if another run completes.",
@@ -39,7 +39,7 @@
             {
               "description": "Use a project with a persisted partial Site Health snapshot, retained page evidence and existing prioritized Opportunities.",
               "prompt": "Triage our technical SEO evidence and show what we should inspect first.",
-              "tools_triggered": "read_site_health; read_site_pages pinned to crawl_id; read_opportunities; fetch returned references; optionally render_site_health",
+              "tools_triggered": "read_site_health; read_site_pages pinned to crawl_id; read_actions; read_ai_crawlability; fetch returned references; optionally render_site_health",
               "expected_behavior": "Pin snapshot/crawl IDs and distinguish scores from partial/unknown coverage. Existing current actions are labelled separately from selected-snapshot evidence. No crawl or Action is created."
             }
           ],

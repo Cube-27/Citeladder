@@ -1210,8 +1210,8 @@ describe('persisted analytics and coverage decisions', () => {
       dispatchTool(
         db,
         principal,
-        'list_bot_requests',
-        { project_id: other.projectId },
+        'read_crawl_logs',
+        { project_id: other.projectId, view: 'requests' },
         'https://citeladder.test',
       ),
     ).rejects.toThrow();

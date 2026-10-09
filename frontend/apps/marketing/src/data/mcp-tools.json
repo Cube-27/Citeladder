@@ -1,13 +1,12 @@
 {
-  "server_version": "1.1.0",
+  "server_version": "2.0.0",
   "access": "read_only",
   "tools": [
     {
       "name": "fetch",
-      "title": "Fetch a CiteLadder record",
-      "description": "Fetch an authorized citeladder:// record URI. Large documents return bounded parts and continuation URIs.",
+      "title": "Fetch a record",
+      "description": "Read one record by the citeladder:// id another read returned.",
       "input_schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
           "id": {
@@ -21,106 +20,34 @@
     },
     {
       "name": "get_project_business_context",
-      "title": "Get complete project business context",
-      "description": "Read persisted project profile, prompt portfolio, Site Health, demand, opportunities, visibility, traffic and connection coverage. Missing projections stay unavailable.",
+      "title": "Get project overview",
+      "description": "One overview of a project: business profile, competitors, active prompts, latest visibility, top Actions, Site Health and connected data. Pass sections to read fewer.",
       "input_schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            "format": "uuid"
           },
           "sections": {
-            "anyOf": [
-              {
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "enum": [
-                    "profile",
-                    "prompts",
-                    "site_health",
-                    "crawlability",
-                    "crawl_logs",
-                    "demand",
-                    "opportunities",
-                    "visibility",
-                    "performance",
-                    "referrals",
-                    "integrations",
-                    "search_intelligence"
-                  ]
-                }
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        },
-        "required": ["project_id"],
-        "additionalProperties": false
-      },
-      "read_only": true
-    },
-    {
-      "name": "list_bot_requests",
-      "title": "List sanitized bot requests",
-      "description": "Read retained path-level automated requests, privacy redaction and IP verification provenance. No IPs, queries or full user agents are returned.",
-      "input_schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "type": "object",
-        "properties": {
-          "project_id": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-          },
-          "bot_id": {
-            "type": ["string", "null"]
-          },
-          "status": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 100,
-                "maximum": 599
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "folder": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 2048
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "resource_class": {
-            "type": ["string", "null"]
-          },
-          "cursor": {
-            "type": ["string", "null"]
-          },
-          "limit": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 1,
-                "maximum": 100
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "profile",
+                "visibility",
+                "actions",
+                "prompts",
+                "site_health",
+                "crawlability",
+                "demand",
+                "performance",
+                "referrals",
+                "crawl_logs",
+                "integrations",
+                "search_intelligence"
+              ]
+            }
           }
         },
         "required": ["project_id"],
@@ -130,26 +57,18 @@
     },
     {
       "name": "list_projects",
-      "title": "List CiteLadder projects",
-      "description": "List a bounded page of projects visible to the connected account; follow next_cursor to enumerate the rest.",
+      "title": "List projects",
+      "description": "List the projects this connection can read. Start here when no project is known.",
       "input_schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
           "cursor": {
             "type": ["string", "null"]
           },
           "limit": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 1,
-                "maximum": 200
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200
           }
         },
         "additionalProperties": false
@@ -158,10 +77,9 @@
     },
     {
       "name": "open_analytics",
-      "title": "Open CiteLadder analytics",
-      "description": "Open the analytics project picker. Select an authorized project before reading evidence.",
+      "title": "Open CiteLadder",
+      "description": "Open the CiteLadder project picker.",
       "input_schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {},
         "additionalProperties": false
@@ -169,29 +87,52 @@
       "read_only": true
     },
     {
-      "name": "read_ai_crawlability",
-      "title": "Read AI crawlability",
-      "description": "Read persisted per-bot robots policy, root access, fetch status, snapshot ID and catalog version. Pass crawl_id for exact historical scope; omitted selects latest. Unobserved robots evidence is unavailable, never allowed or zero. Robots policy describes permission, not observed retrieval.",
+      "name": "read_actions",
+      "title": "Read Actions",
+      "description": "The prioritized Actions to improve visibility, with status. Pass action_id for one Action with its findings, remediation and measured outcome.",
       "input_schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            "format": "uuid"
+          },
+          "action_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["open", "in_progress", "implemented", "measuring", "done", "dismissed"]
+          },
+          "cursor": {
+            "type": ["string", "null"]
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200
+          }
+        },
+        "required": ["project_id"],
+        "additionalProperties": false
+      },
+      "read_only": true
+    },
+    {
+      "name": "read_ai_crawlability",
+      "title": "Read AI crawler access",
+      "description": "Whether robots.txt lets each AI crawler in, for the latest or a chosen crawl. Permission, not observed visits.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid"
           },
           "crawl_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid",
-                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string",
+            "format": "uuid"
           }
         },
         "required": ["project_id"],
@@ -202,50 +143,52 @@
     {
       "name": "read_ai_referrals",
       "title": "Read AI referral traffic",
-      "description": "Read persisted property-wide referral sessions, share, key events per source, host-scoped landing pages, quality flags and channel comparison.",
+      "description": "Visits from AI assistants (GA4): sessions, share of traffic, key events, landing pages.",
       "input_schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            "format": "uuid"
           },
           "range": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": ["30d", "90d", "1y"]
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string",
+            "enum": ["30d", "90d", "1y"]
           },
           "start_date": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date",
-                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
           },
           "end_date": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date",
-                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+          }
+        },
+        "required": ["project_id"],
+        "additionalProperties": false
+      },
+      "read_only": true
+    },
+    {
+      "name": "read_ai_shelf",
+      "title": "Read the AI Shelf",
+      "description": "Product recommendations in AI answers. Without a target, lists categories and products; with one, its visibility, share of shelf and who holds the shelf.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "target_kind": {
+            "type": "string",
+            "enum": ["category", "product"]
+          },
+          "target_id": {
+            "type": "string",
+            "format": "uuid"
           }
         },
         "required": ["project_id"],
@@ -255,51 +198,28 @@
     },
     {
       "name": "read_ai_traffic_insights",
-      "title": "Read AI Traffic insights",
-      "description": "Read persisted coverage-gated co-occurrence patterns. Never implies causation or starts refresh work.",
+      "title": "Read AI traffic insights",
+      "description": "Patterns across AI crawler, referral and citation data. Co-occurrence, not cause.",
       "input_schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            "format": "uuid"
           },
           "range": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": ["30d", "90d", "1y"]
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string",
+            "enum": ["30d", "90d", "1y"]
           },
           "start_date": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date",
-                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
           },
           "end_date": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date",
-                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
           }
         },
         "required": ["project_id"],
@@ -309,116 +229,58 @@
     },
     {
       "name": "read_ai_traffic_pages",
-      "title": "Read AI Traffic pages",
-      "description": "Read path-level crawler requests, AI referral sessions, tracked citations and Site Health findings with independent leg states.",
+      "title": "Read AI traffic by page",
+      "description": "Per page: AI crawler requests, AI referral sessions, citations and Site Health findings, each with its own coverage.",
       "input_schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            "format": "uuid"
           },
           "range": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": ["30d", "90d", "1y"]
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string",
+            "enum": ["30d", "90d", "1y"]
           },
           "start_date": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date",
-                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
           },
           "end_date": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date",
-                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
           },
           "folder": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 2048
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string",
+            "maxLength": 2048
           },
           "resource_class": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 24
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string",
+            "maxLength": 24
           },
           "verification": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 128
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string",
+            "enum": ["verified", "unverifiable", "failed_verification"]
           },
           "sort": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "requests_desc",
-                  "sessions_desc",
-                  "key_events_desc",
-                  "citations_desc",
-                  "url_asc"
-                ]
-              },
-              {
-                "type": "null"
-              }
+            "type": "string",
+            "enum": [
+              "requests_desc",
+              "sessions_desc",
+              "key_events_desc",
+              "citations_desc",
+              "url_asc"
             ]
           },
           "cursor": {
             "type": ["string", "null"]
           },
           "limit": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 1,
-                "maximum": 100
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
           }
         },
         "required": ["project_id"],
@@ -428,16 +290,14 @@
     },
     {
       "name": "read_ai_traffic_url",
-      "title": "Read AI Traffic for a URL",
-      "description": "Read a persisted path timeline for a canonical same-origin project URL. Refuses off-origin URLs.",
+      "title": "Read AI traffic for a URL",
+      "description": "The AI traffic timeline of one page on the project site.",
       "input_schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            "format": "uuid"
           },
           "url": {
             "type": "string",
@@ -445,39 +305,18 @@
             "maxLength": 4096
           },
           "range": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": ["30d", "90d", "1y"]
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string",
+            "enum": ["30d", "90d", "1y"]
           },
           "start_date": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date",
-                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
           },
           "end_date": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date",
-                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
           }
         },
         "required": ["project_id", "url"],
@@ -486,83 +325,79 @@
       "read_only": true
     },
     {
-      "name": "read_crawl_logs",
-      "title": "Read crawl log analytics",
-      "description": "Read persisted recognized automated requests with inclusive date windows. verification describes crawler identity evidence, not crawl success. Requests, sessions and citations are separate units. Missing coverage never implies zero.",
+      "name": "read_content_differentiation",
+      "title": "Read content comparisons",
+      "description": "How cited competitor pages differ from yours, from pages CiteLadder has read.",
       "input_schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            "format": "uuid"
+          }
+        },
+        "required": ["project_id"],
+        "additionalProperties": false
+      },
+      "read_only": true
+    },
+    {
+      "name": "read_crawl_logs",
+      "title": "Read AI crawler visits",
+      "description": "AI crawler requests from server logs: summary, per crawler, log coverage, or individual requests (view requests). Missing coverage is not zero.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid"
           },
           "view": {
             "default": "summary",
             "type": "string",
-            "enum": ["summary", "crawlers", "coverage"]
+            "enum": ["summary", "crawlers", "coverage", "requests"]
           },
           "range": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": ["30d", "90d", "1y"]
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string",
+            "enum": ["30d", "90d", "1y"]
           },
           "start_date": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date",
-                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
           },
           "end_date": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date",
-                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
           },
           "verification": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": ["verified", "unverifiable", "failed_verification"]
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string",
+            "enum": ["verified", "unverifiable", "failed_verification"]
+          },
+          "bot_id": {
+            "type": ["string", "null"]
+          },
+          "status": {
+            "type": "integer",
+            "minimum": 100,
+            "maximum": 599
+          },
+          "folder": {
+            "type": "string",
+            "maxLength": 2048
+          },
+          "resource_class": {
+            "type": "string",
+            "maxLength": 24
           },
           "cursor": {
             "type": ["string", "null"]
           },
           "limit": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 1,
-                "maximum": 100
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
           }
         },
         "required": ["project_id"],
@@ -572,16 +407,14 @@
     },
     {
       "name": "read_demand",
-      "title": "Read latest demand intelligence",
-      "description": "Read the latest persisted demand snapshot, coverage and comparison.",
+      "title": "Read search demand",
+      "description": "Latest search demand: what people search for in this market and how it changed.",
       "input_schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            "format": "uuid"
           }
         },
         "required": ["project_id"],
@@ -591,53 +424,14 @@
     },
     {
       "name": "read_integration_status",
-      "title": "Read data connection status",
-      "description": "Read mapped connections, live grant status, history import progress and projection coverage. No connection is an available observed state.",
+      "title": "Read connected data",
+      "description": "Which data sources are connected and how far their import has got.",
       "input_schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-          }
-        },
-        "required": ["project_id"],
-        "additionalProperties": false
-      },
-      "read_only": true
-    },
-    {
-      "name": "read_opportunities",
-      "title": "Read ranked opportunities",
-      "description": "Read current ranked opportunities with evidence references and optional workflow status.",
-      "input_schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "type": "object",
-        "properties": {
-          "project_id": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-          },
-          "cursor": {
-            "type": ["string", "null"]
-          },
-          "limit": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 1,
-                "maximum": 200
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "status": {
-            "type": ["string", "null"]
+            "format": "uuid"
           }
         },
         "required": ["project_id"],
@@ -647,182 +441,58 @@
     },
     {
       "name": "read_performance",
-      "title": "Read Search Console performance",
-      "description": "Read persisted Search Console and GA4 performance for a range, with an optional comparison. Custom ranges require start_date and end_date.",
+      "title": "Read search performance",
+      "description": "Search Console and GA4 totals for a range with an optional comparison. Pass dimension for a breakdown by query, page, country, device or day.",
       "input_schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            "format": "uuid"
           },
           "range": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": ["3_months", "6_months", "custom", "day", "last_synced", "month", "week"]
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string",
+            "enum": ["3_months", "6_months", "custom", "day", "last_synced", "month", "week"]
           },
           "start_date": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date",
-                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
           },
           "end_date": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date",
-                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
           },
           "granularity": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": ["day", "month", "week"]
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string",
+            "enum": ["day", "month", "week"]
           },
           "compare": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": ["custom", "none", "previous", "year_over_year"]
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string",
+            "enum": ["custom", "none", "previous", "year_over_year"]
           },
           "compare_start_date": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date",
-                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
           },
           "compare_end_date": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date",
-                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        },
-        "required": ["project_id"],
-        "additionalProperties": false
-      },
-      "read_only": true
-    },
-    {
-      "name": "read_performance_table",
-      "title": "Read a performance breakdown",
-      "description": "Read a paged persisted performance breakdown. Supply snapshot_id or a range; custom ranges require start_date and end_date.",
-      "input_schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "type": "object",
-        "properties": {
-          "project_id": {
             "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-          },
-          "range": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": ["3_months", "6_months", "custom", "day", "last_synced", "month", "week"]
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "start_date": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date",
-                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "end_date": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date",
-                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
           },
           "dimension": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "query",
-                  "page",
-                  "country",
-                  "device",
-                  "search_appearance",
-                  "day",
-                  "bing_query",
-                  "bing_page"
-                ]
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "snapshot_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid",
-                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-              },
-              {
-                "type": "null"
-              }
+            "type": "string",
+            "enum": [
+              "query",
+              "page",
+              "country",
+              "device",
+              "search_appearance",
+              "day",
+              "bing_query",
+              "bing_page"
             ]
           },
           "sort": {
@@ -831,28 +501,9 @@
           "cursor": {
             "type": ["string", "null"]
           },
-          "page_size": {
-            "anyOf": [
-              {
-                "type": "number",
-                "enum": [10, 25, 50, 100]
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "compare_snapshot_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid",
-                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-              },
-              {
-                "type": "null"
-              }
-            ]
+          "limit": {
+            "type": "number",
+            "enum": [10, 25, 50, 100]
           }
         },
         "required": ["project_id"],
@@ -862,46 +513,34 @@
     },
     {
       "name": "read_prompt_portfolio",
-      "title": "Read the prompt portfolio",
-      "description": "Enumerate persisted prompts with activation status, provenance and pagination. Core is the canonical scoring cohort; comparison is a separate panel. Empty available results mean no matching prompts.",
+      "title": "Read prompts",
+      "description": "The tracked prompts with topic, intent and status. Core prompts are scored; comparison prompts are reported separately.",
       "input_schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            "format": "uuid"
+          },
+          "prompt_set_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cohort": {
+            "type": "string",
+            "enum": ["core", "comparison"]
+          },
+          "active_only": {
+            "default": false,
+            "type": "boolean"
           },
           "cursor": {
             "type": ["string", "null"]
           },
           "limit": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 1,
-                "maximum": 200
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "prompt_set_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid",
-                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "cohort": {
-            "type": ["string", "null"]
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200
           }
         },
         "required": ["project_id"],
@@ -911,31 +550,14 @@
     },
     {
       "name": "read_query_evidence",
-      "title": "Read page-linked query evidence",
-      "description": "Read an exact saved query/page/date window (inclusive dates). Missing windows never fall back. resolution_outcome filters persisted URL binding, not performance. Observed zero differs from unavailable.",
+      "title": "Read queries by page",
+      "description": "Search Console queries matched to site pages for an exact saved window (inclusive dates).",
       "input_schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-          },
-          "cursor": {
-            "type": ["string", "null"]
-          },
-          "limit": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 1,
-                "maximum": 200
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "format": "uuid"
           },
           "window_start": {
             "type": "string",
@@ -951,19 +573,19 @@
             "type": ["string", "null"]
           },
           "site_url_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid",
-                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string",
+            "format": "uuid"
           },
           "resolution_outcome": {
             "type": ["string", "null"]
+          },
+          "cursor": {
+            "type": ["string", "null"]
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200
           }
         },
         "required": ["project_id", "window_start", "window_end"],
@@ -973,36 +595,18 @@
     },
     {
       "name": "read_search_dataset",
-      "title": "Read a Search Intelligence dataset",
-      "description": "Page through a published dataset. Referring-domain and destination-page aggregates are not individual backlink edges.",
+      "title": "Read a research dataset",
+      "description": "Rows of one keyword or backlink dataset. Referring-domain and page totals are aggregates, not individual links.",
       "input_schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-          },
-          "cursor": {
-            "type": ["string", "null"]
-          },
-          "limit": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 1,
-                "maximum": 200
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "format": "uuid"
           },
           "dataset_id": {
             "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            "format": "uuid"
           },
           "sort": {
             "type": ["string", "null"]
@@ -1011,6 +615,14 @@
             "default": "asc",
             "type": "string",
             "enum": ["asc", "desc"]
+          },
+          "cursor": {
+            "type": ["string", "null"]
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200
           }
         },
         "required": ["project_id", "dataset_id"],
@@ -1020,16 +632,14 @@
     },
     {
       "name": "read_search_intelligence",
-      "title": "Read Search Intelligence",
-      "description": "Inspect the persisted Search Intelligence dataset inventory and run provenance.",
+      "title": "Read keyword and backlink research",
+      "description": "The keyword, competitor and backlink datasets researched for this project.",
       "input_schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            "format": "uuid"
           }
         },
         "required": ["project_id"],
@@ -1039,28 +649,18 @@
     },
     {
       "name": "read_site_health",
-      "title": "Read latest Site Health",
-      "description": "Read the latest persisted Site Health score and coverage projection.",
+      "title": "Read Site Health",
+      "description": "Site Health scores, coverage and top issues for the latest crawl, or a chosen snapshot_id.",
       "input_schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            "format": "uuid"
           },
           "snapshot_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid",
-                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string",
+            "format": "uuid"
           }
         },
         "required": ["project_id"],
@@ -1070,100 +670,65 @@
     },
     {
       "name": "read_site_links",
-      "title": "Read Site Health link metrics",
-      "description": "Read aggregate page link metrics with bounded captured neighbors; aggregates are not individual backlink edges.",
+      "title": "Read internal links",
+      "description": "Internal link counts per page for a crawl, with sampled linking pages and anchors.",
       "input_schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            "format": "uuid"
+          },
+          "crawl_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "site_url_id": {
+            "type": "string",
+            "format": "uuid"
           },
           "cursor": {
             "type": ["string", "null"]
           },
           "limit": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 1,
-                "maximum": 200
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "crawl_id": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-          },
-          "site_url_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid",
-                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200
           }
         },
-        "required": ["project_id", "crawl_id"],
+        "required": ["project_id"],
         "additionalProperties": false
       },
       "read_only": true
     },
     {
       "name": "read_site_pages",
-      "title": "Read Site Health pages",
-      "description": "Read bounded persisted page facts, analysis references, issue counts, coverage and applicability from a crawl.",
+      "title": "Read site pages",
+      "description": "Pages from a crawl with page type, scores and issue counts.",
       "input_schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-          },
-          "cursor": {
-            "type": ["string", "null"]
-          },
-          "limit": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 1,
-                "maximum": 200
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "format": "uuid"
           },
           "crawl_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid",
-                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string",
+            "format": "uuid"
           },
           "page_kind": {
             "type": ["string", "null"]
           },
           "status": {
             "type": ["string", "null"]
+          },
+          "cursor": {
+            "type": ["string", "null"]
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200
           }
         },
         "required": ["project_id"],
@@ -1172,86 +737,75 @@
       "read_only": true
     },
     {
-      "name": "read_visibility_audit",
-      "title": "Read latest visibility audit",
-      "description": "Read an audit status and summary. Use its audit_id with read_visibility_results or read_visibility_sources for diagnosis.",
+      "name": "read_source_url",
+      "title": "Read a cited page",
+      "description": "One cited URL: the prompts and engines that cite it, the brands it lists and whether your brand is on it. Omit audit_id for every run.",
       "input_schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            "format": "uuid"
+          },
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8192
           },
           "audit_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid",
-                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-              },
-              {
-                "type": "null"
-              }
+            "type": "string",
+            "format": "uuid"
+          },
+          "engine": {
+            "type": "string",
+            "enum": [
+              "chatgpt",
+              "claude",
+              "gemini",
+              "google_ai_overview",
+              "chatgpt_search",
+              "gemini_consumer"
             ]
           },
-          "completed_baseline": {
-            "default": false,
-            "type": "boolean"
+          "cohort": {
+            "default": "core",
+            "type": "string",
+            "enum": ["core", "comparison"]
           }
         },
-        "required": ["project_id"],
+        "required": ["project_id", "url"],
         "additionalProperties": false
       },
       "read_only": true
     },
     {
       "name": "read_visibility_overview",
-      "title": "Read visibility measures",
-      "description": "Read canonical persisted visibility rates, counts, rankings, model provenance and comparison status. Latest resolves to a concrete audit_id. Missing measurements remain unavailable.",
+      "title": "Read AI visibility",
+      "description": "Mention rate, citation rate, rankings against competitors and run status for the latest or a chosen run. Pass baseline_id to compare two runs.",
       "input_schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            "format": "uuid"
           },
           "audit_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid",
-                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string",
+            "format": "uuid"
           },
           "baseline_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid",
-                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string",
+            "format": "uuid"
           },
           "engine": {
-            "anyOf": [
-              {
-                "type": "string",
-                "minLength": 1
-              },
-              {
-                "type": "null"
-              }
+            "type": "string",
+            "enum": [
+              "chatgpt",
+              "claude",
+              "gemini",
+              "google_ai_overview",
+              "chatgpt_search",
+              "gemini_consumer"
             ]
           },
           "cohort": {
@@ -1267,79 +821,55 @@
     },
     {
       "name": "read_visibility_results",
-      "title": "Read visibility results",
-      "description": "Read persisted answers and observations for one audit. Core is the canonical scoring panel; comparison is separately reported. Empty results differ from unavailable audit evidence. No provider rerun occurs.",
+      "title": "Read AI answers",
+      "description": "The answers engines gave in one run, with mentions and cited sources. Filter by prompt, cited domain or URL.",
       "input_schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            "format": "uuid"
           },
           "audit_id": {
             "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            "format": "uuid"
           },
           "engine": {
-            "type": ["string", "null"]
+            "type": "string",
+            "enum": [
+              "chatgpt",
+              "claude",
+              "gemini",
+              "google_ai_overview",
+              "chatgpt_search",
+              "gemini_consumer"
+            ]
           },
           "cohort": {
             "default": "core",
             "type": "string",
             "enum": ["core", "comparison"]
           },
+          "prompt_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "domain": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 253
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
           "cursor": {
             "type": ["string", "null"]
           },
           "limit": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 1,
-                "maximum": 200
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "prompt_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid",
-                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "domain": {
-            "anyOf": [
-              {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 253
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "url": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uri"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200
           }
         },
         "required": ["project_id", "audit_id"],
@@ -1349,44 +879,34 @@
     },
     {
       "name": "read_visibility_sources",
-      "title": "Read visibility sources",
-      "description": "Read source usage and denominators for one audit. Answer citation co-occurrence remains distinct from inspected publisher-page presence.",
+      "title": "Read cited sources",
+      "description": "Which domains or URLs engines cited in one run, how often, and whether you or competitors are listed on them.",
       "input_schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            "format": "uuid"
           },
           "audit_id": {
             "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            "format": "uuid"
           },
           "engine": {
-            "type": ["string", "null"]
+            "type": "string",
+            "enum": [
+              "chatgpt",
+              "claude",
+              "gemini",
+              "google_ai_overview",
+              "chatgpt_search",
+              "gemini_consumer"
+            ]
           },
           "cohort": {
             "default": "core",
             "type": "string",
             "enum": ["core", "comparison"]
-          },
-          "cursor": {
-            "type": ["string", "null"]
-          },
-          "limit": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 1,
-                "maximum": 200
-              },
-              {
-                "type": "null"
-              }
-            ]
           },
           "level": {
             "default": "domain",
@@ -1394,16 +914,17 @@
             "enum": ["domain", "url"]
           },
           "domain": {
-            "anyOf": [
-              {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 253
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 253
+          },
+          "cursor": {
+            "type": ["string", "null"]
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200
           }
         },
         "required": ["project_id", "audit_id"],
@@ -1414,15 +935,13 @@
     {
       "name": "read_visibility_trends",
       "title": "Read visibility trends",
-      "description": "Read bounded persisted trend points for an explicit window. Preserve comparison keys, model/retrieval identity, cohort, versions, source snapshot IDs and gaps. Never compare incompatible points as measured change.",
+      "description": "Visibility over time for an explicit window. Points with different comparison keys are not comparable; gaps are missing runs, not zero.",
       "input_schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            "format": "uuid"
           },
           "from_at": {
             "type": "string",
@@ -1435,14 +954,14 @@
             "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
           },
           "engine": {
-            "anyOf": [
-              {
-                "type": "string",
-                "minLength": 1
-              },
-              {
-                "type": "null"
-              }
+            "type": "string",
+            "enum": [
+              "chatgpt",
+              "claude",
+              "gemini",
+              "google_ai_overview",
+              "chatgpt_search",
+              "gemini_consumer"
             ]
           },
           "cohort": {
@@ -1456,15 +975,8 @@
             "enum": ["run", "day", "week", "month"]
           },
           "transport_model": {
-            "anyOf": [
-              {
-                "type": "string",
-                "minLength": 1
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string",
+            "minLength": 1
           },
           "retrieval_enabled": {
             "type": ["boolean", "null"]
@@ -1478,27 +990,17 @@
     {
       "name": "render_site_health",
       "title": "Show Site Health",
-      "description": "Render the latest persisted Site Health snapshot or pin snapshot_id. No crawl starts. Visibility and period filters are unsupported.",
+      "description": "Show an interactive Site Health view for the latest or a chosen snapshot.",
       "input_schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            "format": "uuid"
           },
           "snapshot_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid",
-                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string",
+            "format": "uuid"
           }
         },
         "required": ["project_id"],
@@ -1508,16 +1010,14 @@
     },
     {
       "name": "render_visibility",
-      "title": "Show AI Visibility",
-      "description": "Render Overview, Trends or Sources from canonical persisted evidence. Latest resolves once to a concrete audit. Trends requires from_at and to_at; Sources is one audit, never a period aggregate.",
+      "title": "Show AI visibility",
+      "description": "Show an interactive visibility view: overview, trends over a window, or cited sources for one run.",
       "input_schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            "format": "uuid"
           },
           "view": {
             "default": "overview",
@@ -1525,39 +1025,16 @@
             "enum": ["overview", "trends", "sources"]
           },
           "audit_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid",
-                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string",
+            "format": "uuid"
           },
           "snapshot_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid",
-                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string",
+            "format": "uuid"
           },
           "engine": {
-            "anyOf": [
-              {
-                "type": "string",
-                "minLength": 1
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string",
+            "minLength": 1
           },
           "cohort": {
             "default": "core",
@@ -1565,54 +1042,26 @@
             "enum": ["core", "comparison"]
           },
           "from_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time",
-                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
           },
           "to_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time",
-                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
           },
           "transport_model": {
-            "anyOf": [
-              {
-                "type": "string",
-                "minLength": 1
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string",
+            "minLength": 1
           },
           "retrieval_enabled": {
             "type": ["boolean", "null"]
           },
           "competitor": {
-            "anyOf": [
-              {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 200
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
           },
           "level": {
             "default": "domain",
@@ -1620,27 +1069,13 @@
             "enum": ["domain", "url"]
           },
           "domain": {
-            "anyOf": [
-              {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 253
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 253
           },
           "cursor": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 8192
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string",
+            "maxLength": 8192
           },
           "limit": {
             "default": 50,
@@ -1656,10 +1091,9 @@
     },
     {
       "name": "search",
-      "title": "Search CiteLadder business context",
-      "description": "Search authorized persisted projects, opportunities and prompts. Pass returned citeladder:// record URIs to fetch.",
+      "title": "Search",
+      "description": "Find projects, active Actions and prompts by text. Pass a result id to fetch.",
       "input_schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
           "query": {
@@ -1667,16 +1101,8 @@
             "minLength": 1
           },
           "project_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid",
-                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string",
+            "format": "uuid"
           },
           "limit": {
             "default": 10,

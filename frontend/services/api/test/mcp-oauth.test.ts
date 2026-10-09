@@ -7,7 +7,9 @@ import type { AppEnv } from '../src/context.ts';
 import { loadMcpConfig } from '../src/mcp/config.ts';
 import { authorizedWorkspaceIds, authorizeProject } from '../src/mcp/data.ts';
 import { authenticateMcp, consentCsrf, tokenHash } from '../src/mcp/oauth.ts';
-import { admitRegistration, registerClient, RegistrationLimit } from '../src/mcp/registration.ts';
+import { admitRegistration, admitToolCall, registerClient } from '../src/mcp/registration.ts';
+import { pruneUsageWindows } from '../src/abuse/usage.ts';
+import { ApiError } from '../src/errors.ts';
 import { registerMcpRoutes } from '../src/mcp/server.ts';
 import { cleanupMcpProtocol } from '../src/mcp/maintenance.ts';
 import { mcpPolicy } from '../src/mcp/config.ts';
@@ -156,10 +158,16 @@ it('serializes parallel authorization admission at the per-client outstanding ca
       app.request(`${protocol}/authorize?${authorizationQuery(c.client_id)}`),
     ),
   );
-  expect(responses.filter((response) => response.status === 302)).toHaveLength(
+  const targets = responses.map((response) => new URL(response.headers.get('location')!));
+  expect(targets.filter((url) => url.origin === browser)).toHaveLength(
     mcpPolicy.authorization_outstanding_limit,
   );
-  expect(responses.filter((response) => response.status === 429)).toHaveLength(7);
+  // Over the cap, the error goes back to the client's proven redirect.
+  expect(
+    targets
+      .filter((url) => url.origin !== browser)
+      .map((url) => [url.searchParams.get('error'), url.searchParams.get('state')]),
+  ).toEqual(Array.from({ length: 7 }, () => ['temporarily_unavailable', 'bound-state']));
   expect(
     await db
       .selectFrom('mcp_authorization_requests')
@@ -201,13 +209,16 @@ it('bounds query bytes and decoded state before writing usage or requests', asyn
 });
 
 it.each([
+  ['mcp.authorize.client', 'client', null, mcpPolicy.authorization_client_limit],
   ['mcp.authorize.source', 'client', 'unavailable', mcpPolicy.authorization_source_limit],
   ['mcp.authorize.global', 'global', 'mcp.authorize', mcpPolicy.authorization_global_limit],
 ] as const)(
   'refuses an exhausted %s budget before allocating a request',
   async (operation, kind, subject, limit) => {
     const c = await client();
-    const hash = createHash('sha256').update(subject).digest('hex');
+    const hash = createHash('sha256')
+      .update(subject ?? c.client_id)
+      .digest('hex');
     const now = new Date();
     const start = Math.floor(now.getTime() / 60000) * 60000;
     await db
@@ -230,9 +241,10 @@ it.each([
       )
       .execute();
     try {
-      expect(
-        (await app.request(`${protocol}/authorize?${authorizationQuery(c.client_id)}`)).status,
-      ).toBe(429);
+      const refused = await app.request(`${protocol}/authorize?${authorizationQuery(c.client_id)}`);
+      expect(new URL(refused.headers.get('location')!).searchParams.get('error')).toBe(
+        'temporarily_unavailable',
+      );
       expect(
         await db
           .selectFrom('mcp_authorization_requests')
@@ -249,24 +261,6 @@ it.each([
     }
   },
 );
-
-it('enforces the client rate budget without allocating another request', async () => {
-  const c = await client();
-  for (let i = 0; i < mcpPolicy.authorization_client_limit; i++) {
-    const transaction = await pending(c.client_id);
-    expect((await consent(transaction, [], undefined, 'deny')).status).toBe(303);
-  }
-  expect(
-    (await app.request(`${protocol}/authorize?${authorizationQuery(c.client_id)}`)).status,
-  ).toBe(429);
-  expect(
-    await db
-      .selectFrom('mcp_authorization_requests')
-      .select('id')
-      .where('client_id', '=', c.client_id)
-      .execute(),
-  ).toHaveLength(10);
-});
 
 it('cleans only expired unconsumed protocol rows and preserves grants and audit data', async () => {
   const issued = await grant();
@@ -329,7 +323,21 @@ it('cleans only expired unconsumed protocol rows and preserves grants and audit 
       updated_at: expired,
     })
     .execute();
+  const ancient = randomUUID();
+  await db
+    .insertInto('mcp_authorization_codes')
+    .values({
+      ...code,
+      workspace_ids: JSON.stringify(code.workspace_ids),
+      scopes: JSON.stringify(code.scopes),
+      id: ancient,
+      code_hash: randomUUID(),
+      consumed_at: new Date(0),
+      expires_at: new Date(0),
+    })
+    .execute();
   await cleanupMcpProtocol(db);
+  await pruneUsageWindows(db, new Date(), 1000);
   expect(
     await db
       .selectFrom('mcp_authorization_requests')
@@ -337,6 +345,7 @@ it('cleans only expired unconsumed protocol rows and preserves grants and audit 
       .where('client_id', '=', c.client_id)
       .execute(),
   ).toHaveLength(2);
+  // Recently consumed audit stays; past retention it goes, like stale unconsumed codes.
   expect(
     await db
       .selectFrom('mcp_authorization_codes')
@@ -390,7 +399,7 @@ it('binds CSRF, explicit selection, PKCE and redirect before a code can be consu
   expect(exchanges.map((r) => r.status).sort()).toEqual([200, 400]);
   const row = await db
     .selectFrom('mcp_oauth_grants')
-    .select(['workspace_ids', 'access_token_hash'])
+    .select(['workspace_ids', 'access_token_hash', 'revoked_at'])
     .where('client_id', '=', c.client_id)
     .executeTakeFirstOrThrow();
   expect(row.workspace_ids).toEqual([tenant.workspaceId]);
@@ -398,6 +407,8 @@ it('binds CSRF, explicit selection, PKCE and redirect before a code can be consu
     access_token: string;
   };
   expect(row.access_token_hash).toBe(tokenHash(config, success.access_token));
+  // The second presentation of the code was a replay: what it minted is revoked.
+  expect(row.revoked_at).not.toBeNull();
 });
 
 it('renders untrusted client metadata inert on the consent page', async () => {
@@ -420,11 +431,45 @@ it('consumes denial without minting a grant and safely binds untrusted registrat
   const denied = await consent(transaction, [], consentCsrf(config, session, transaction), 'deny');
   expect(new URL(denied.headers.get('location')!).searchParams.get('error')).toBe('access_denied');
   expect((await consent(transaction)).status).toBe(403);
-  await expect(
-    registerClient(db, loadMcpConfig(config), {
-      redirect_uris: ['http://remote.example/callback'],
-    }),
-  ).rejects.toThrow('Redirect URIs');
+  for (const redirect of ['http://remote.example/callback', 'javascript://x/%0aalert(1)'])
+    await expect(
+      registerClient(db, loadMcpConfig(config), { redirect_uris: [redirect] }),
+    ).rejects.toThrow('Redirect URIs');
+  const native = await registerClient(db, loadMcpConfig(config), {
+    redirect_uris: ['cursor://anysphere.cursor-retrieval/oauth/callback'],
+    grant_types: ['authorization_code', 'refresh_token', 'client_credentials'],
+    scope: 'citeladder:read offline_access',
+  });
+  clients.push(native.client_id);
+  expect(native).toMatchObject({
+    grant_types: ['authorization_code', 'refresh_token'],
+    scope: mcpPolicy.read_scope,
+    token_endpoint_auth_method: 'client_secret_basic',
+  });
+});
+
+it('matches loopback redirects on any port and returns later errors to the client', async () => {
+  const registered = await registerClient(db, loadMcpConfig(config), {
+    redirect_uris: ['http://127.0.0.1:3000/callback'],
+    token_endpoint_auth_method: 'none',
+  });
+  clients.push(registered.client_id);
+  const query = authorizationQuery(registered.client_id);
+  query.set('redirect_uri', 'http://127.0.0.1:51234/callback');
+  query.set('scope', 'citeladder:read offline_access');
+  const accepted = await app.request(`${protocol}/authorize?${query}`);
+  expect(new URL(accepted.headers.get('location')!).origin).toBe(browser);
+  query.set('code_challenge_method', 'plain');
+  const refused = new URL(
+    (await app.request(`${protocol}/authorize?${query}`)).headers.get('location')!,
+  );
+  expect([
+    refused.origin,
+    refused.searchParams.get('error'),
+    refused.searchParams.get('iss'),
+  ]).toEqual(['http://127.0.0.1:51234', 'invalid_request', protocol]);
+  query.set('redirect_uri', 'http://127.0.0.1:51234/elsewhere');
+  expect((await app.request(`${protocol}/authorize?${query}`)).status).toBe(400);
 });
 
 it('rotates refresh tokens once and excludes membership changes, new tenants and stale loaded tokens', async () => {
@@ -456,11 +501,22 @@ it('rotates refresh tokens once and excludes membership changes, new tenants and
   expect(await authorizedWorkspaceIds(db, live)).toEqual([]);
   await fixtures.member(tenant.workspaceId, tenant.userId, 'viewer');
   expect(await authorizedWorkspaceIds(db, live)).toEqual([tenant.workspaceId]);
-  await app.request(`${protocol}/revoke`, {
-    method: 'POST',
-    body: new URLSearchParams({ client_id: c.client_id, token: rotated.refresh_token }),
-  });
+  await db
+    .updateTable('mcp_oauth_grants')
+    .set({ refresh_rotated_at: new Date(Date.now() - 120_000) })
+    .where('id', '=', live.grantId)
+    .execute();
+  // The superseded token presented after the grace window: it leaked.
+  expect((await token(c.client_id, refresh)).status).toBe(400);
   expect(await authorizedWorkspaceIds(db, live)).toEqual([]);
+  expect(
+    (
+      await token(c.client_id, {
+        grant_type: 'refresh_token',
+        refresh_token: rotated.refresh_token,
+      })
+    ).status,
+  ).toBe(400);
 });
 
 it('keeps the grant on a blank refresh scope and refuses grant types the client did not register', async () => {
@@ -550,7 +606,7 @@ it('meters malformed and oversized registrations, exempts preflight, and seriali
   expect(
     outcomes
       .filter((r) => r.status === 'rejected')
-      .every((r) => r.reason instanceof RegistrationLimit),
+      .every((r) => r.reason instanceof ApiError && r.reason.status === 429),
   ).toBe(true);
   // The route has no socket peer in Hono's request harness: all calls share
   // the explicit unavailable identity, never a spoofed forwarded header.
@@ -559,7 +615,14 @@ it('meters malformed and oversized registrations, exempts preflight, and seriali
     .deleteFrom('usage_windows')
     .where('subject_hash', '=', createHash('sha256').update('unavailable').digest('hex'))
     .execute();
-  expect((await app.request(`${protocol}/mcp/register`, { method: 'OPTIONS' })).status).toBe(204);
+  const preflight = await app.request(`${protocol}/mcp/register`, {
+    method: 'OPTIONS',
+    headers: { origin: 'http://localhost:6274' },
+  });
+  expect([preflight.status, preflight.headers.get('access-control-allow-origin')]).toEqual([
+    204,
+    '*',
+  ]);
   expect(
     (await app.request(`${protocol}/mcp/register`, { method: 'POST', body: '{' })).status,
   ).toBe(400);
@@ -600,4 +663,16 @@ it('prunes expired unused clients while preserving a live authorization request'
         .execute()
     ).map((r) => r.client_id),
   ).toEqual([live.client_id]);
+});
+
+it('caps tool calls per connection and refuses the next with a retry time', async () => {
+  const { principal } = await grant();
+  for (let call = 0; call < mcpPolicy.tool_call_grant_limit; call++)
+    await admitToolCall(db, principal.grantId, principal.userId);
+  const refused = await admitToolCall(db, principal.grantId, principal.userId).catch(
+    (error: unknown) => error,
+  );
+  expect(refused).toBeInstanceOf(ApiError);
+  expect((refused as ApiError).status).toBe(429);
+  expect(Number((refused as ApiError).headers?.['retry-after'])).toBeGreaterThan(0);
 });

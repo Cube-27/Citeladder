@@ -20,7 +20,7 @@ If the user only asks what data is available, answer with the data, dates and ga
 
 Start with `get_project_business_context` and `read_integration_status`. Then read only what the plan needs:
 
-- Existing priorities: `list_actions` (and `get_action` for one Action's evidence), `read_opportunities`.
+- Existing priorities: `read_actions` (pass `action_id` for one Action's evidence).
 - Search performance: `read_performance` for the latest complete comparable period.
 - AI visibility: `read_visibility_overview`.
 - Site health: `read_site_health`.

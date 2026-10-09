@@ -1,27 +1,52 @@
-/** Presentation composes canonical persisted readers; it owns no metrics. */
+/** Visibility reads compose the canonical visibility owners; they own no metrics. */
 import type { AnalyticsSelection } from '@citeladder/contracts/mcp-app';
 import { visibilitySchema } from '@citeladder/contracts/visibility';
 import { visibilityTrendListSchema } from '@citeladder/contracts/visibility-trends';
+import { WorkspaceScope } from '../db/workspace-scope.ts';
 import type { Database } from '../db/database.ts';
 import { parseDatetime } from '../http/datetimes.ts';
 import { getVisibility } from '../visibility/dashboard.ts';
+import { getVisibilityEvidence } from '../visibility/evidence.ts';
+import { getVisibilitySources } from '../visibility/sources.ts';
+import { getSourceUrlDetail } from '../visibility/source-url.ts';
 import { getVisibilityTrends } from '../visibility/trends.ts';
 import {
   AnalysisNotFoundError,
-  TrendQueryError,
   authorizeRunSet,
+  type RunSelection,
 } from '../visibility/selection.ts';
-import { readEvidence, type ReadArguments } from './evidence.ts';
-import { McpInputError, type Evidence, type ReadScope } from './types.ts';
+import { siteSnapshot } from './evidence-site.ts';
+import { appLink } from './links.ts';
+import { pagination, reference, unavailable } from './data.ts';
+import { McpInputError, type Evidence, type ProjectRead, type ReadScope } from './types.ts';
 import { mcpPolicy } from './config.ts';
 
-const ref = (kind: string, id: string) => ({ kind, id, record_uri: `citeladder://${kind}/${id}` });
-const textArg = (args: ReadArguments, key: string) =>
-  typeof args[key] === 'string' ? args[key] : null;
+type Selection = {
+  audit_id?: string | null;
+  engine?: string | null;
+  cohort: string;
+};
+type Page = { cursor?: string | null; limit?: number | null };
+const runs = (scope: ReadScope, args: Selection): RunSelection => ({
+  ...scope,
+  auditId: args.audit_id ?? null,
+  auditIds: null,
+  logicalEngine: args.engine ?? null,
+  cohort: args.cohort,
+  fromAt: null,
+  toAt: null,
+});
 
-async function readTrends(db: Database, scope: ReadScope, args: ReadArguments): Promise<Evidence> {
-  if (typeof args.from_at !== 'string' || typeof args.to_at !== 'string')
-    throw new McpInputError('Trends requires an explicit window');
+export async function visibilityTrends(
+  { db, scope }: ProjectRead,
+  args: Selection & {
+    from_at: string;
+    to_at: string;
+    granularity: string;
+    transport_model?: string | null;
+    retrieval_enabled?: boolean | null;
+  },
+): Promise<Evidence> {
   const fromAt = parseDatetime(args.from_at);
   const toAt = parseDatetime(args.to_at);
   if (!fromAt || !toAt) throw new McpInputError('Trends window must contain valid datetimes');
@@ -32,74 +57,148 @@ async function readTrends(db: Database, scope: ReadScope, args: ReadArguments): 
     throw new McpInputError(`Trend windows are limited to ${mcpPolicy.trend_max_window_days} days`);
   const points = visibilityTrendListSchema.parse(
     await getVisibilityTrends(db, scope, {
-      logicalEngine: textArg(args, 'engine'),
+      logicalEngine: args.engine ?? null,
       fromAt,
       toAt,
-      granularity: textArg(args, 'granularity') ?? 'run',
-      transportModel: textArg(args, 'transport_model'),
-      retrievalEnabled: typeof args.retrieval_enabled === 'boolean' ? args.retrieval_enabled : null,
-      cohort: textArg(args, 'cohort') ?? 'core',
+      granularity: args.granularity,
+      transportModel: args.transport_model ?? null,
+      retrievalEnabled: args.retrieval_enabled ?? null,
+      cohort: args.cohort,
     }),
   );
+  if (!points.length) return { ...unavailable('no_measured_runs'), window: args };
   return {
-    state: points.length ? 'available' : 'unavailable',
-    reason: points.length ? null : 'no_measured_runs',
+    state: 'available',
     window: { from_at: args.from_at, to_at: args.to_at },
     points,
     artifact_refs: [...new Set(points.flatMap((p) => p.source_audit_ids ?? []))].map((id) =>
-      ref('audit', id),
+      reference('audit', id),
     ),
-    limitations: [
-      'Bounded persisted history; compare only matching comparison keys and versions. Missing points are not zero.',
-    ],
   };
 }
 
-export async function readAnalytics(
-  db: Database,
-  scope: ReadScope,
-  name: string,
-  args: ReadArguments,
+/** The dashboard projection for one run, with that run's status and progress. */
+export async function visibilityOverview(
+  { db, scope, origin }: ProjectRead,
+  args: Selection & { baseline_id?: string | null },
 ): Promise<Evidence> {
   try {
-    if (name === 'read_visibility_trends') return await readTrends(db, scope, args);
-    if (typeof args.baseline_id === 'string') await authorizeRunSet(db, scope, [args.baseline_id]);
+    if (args.baseline_id) await authorizeRunSet(db, scope, [args.baseline_id]);
     const projection = visibilitySchema.parse(
       await getVisibility(db, scope, {
-        auditId: textArg(args, 'audit_id'),
-        logicalEngine: textArg(args, 'engine'),
-        baselineId: textArg(args, 'baseline_id'),
+        auditId: args.audit_id ?? null,
+        logicalEngine: args.engine ?? null,
+        baselineId: args.baseline_id ?? null,
         selectionMode: args.audit_id ? 'run' : 'latest',
         fromAt: null,
         toAt: null,
         configurationKey: null,
-        cohort: textArg(args, 'cohort') ?? 'core',
+        cohort: args.cohort,
       }),
     );
+    const run = await new WorkspaceScope(scope.workspaceId)
+      .selectFrom(db, 'audits')
+      .select(['status', 'requested_count', 'completed_count', 'failed_count', 'completed_at'])
+      .where('project_id', '=', scope.projectId)
+      .where('id', '=', projection.audit_id)
+      .executeTakeFirstOrThrow();
     return {
       state: 'available',
       ...projection,
-      artifact_refs: [ref('audit', projection.audit_id)],
-      omissions: [],
+      run: {
+        status: run.status,
+        prompts_requested: run.requested_count,
+        answers_completed: run.completed_count,
+        answers_failed: run.failed_count,
+        completed_at: run.completed_at,
+      },
+      link: appLink(origin, `/runs/${projection.audit_id}`, scope.projectId),
+      artifact_refs: [reference('audit', projection.audit_id)],
     };
   } catch (error) {
-    if (error instanceof TrendQueryError) throw new McpInputError(error.message);
-    if (error instanceof AnalysisNotFoundError) {
-      if (args.audit_id || args.baseline_id)
-        throw new McpInputError('Selected measurement is unavailable');
-      return {
-        state: 'unavailable',
-        reason: 'no_completed_measurement',
-        artifact_refs: [],
-        omissions: [],
-      };
-    }
+    if (error instanceof AnalysisNotFoundError && !args.audit_id && !args.baseline_id)
+      return unavailable('no_completed_run');
     throw error;
   }
 }
 
-function validateFilters(selection: AnalyticsSelection) {
+export async function visibilityResults(
+  { db, scope }: ProjectRead,
+  args: Selection &
+    Page & { prompt_id?: string | null; domain?: string | null; url?: string | null },
+): Promise<Evidence> {
+  const page = await getVisibilityEvidence(db, runs(scope, args), {
+    promptId: args.prompt_id ?? null,
+    outcome: null,
+    competitor: null,
+    domain: args.domain ?? null,
+    url: args.url ?? null,
+    cursor: args.cursor ?? null,
+    asOf: null,
+    limit: args.limit ?? mcpPolicy.default_list_limit,
+  });
+  const items = page.items.map(
+    ({
+      analysis_id: _analysis,
+      artifact_id: _artifact,
+      prompt_snapshot_id: _snapshot,
+      ...item
+    }) => ({
+      ...item,
+      record_uri: `citeladder://visibility_result/${item.task_id}`,
+    }),
+  );
+  return {
+    state: 'available',
+    observed_at: page.as_of,
+    items,
+    pagination: pagination(items, page.next_cursor ?? null, page.total ?? 0),
+    artifact_refs: items.map((item) => reference('visibility_result', item.task_id)),
+  };
+}
+
+export async function visibilitySources(
+  { db, scope }: ProjectRead,
+  args: Selection & Page & { level: 'domain' | 'url'; domain?: string | null },
+): Promise<Evidence> {
+  const page = await getVisibilitySources(db, runs(scope, args), {
+    domain: args.domain ?? null,
+    sourceClass: null,
+    dimension: args.level,
+    asOf: null,
+    cursor: args.cursor ?? null,
+    limit: args.limit ?? mcpPolicy.default_list_limit,
+    baselineAuditIds: null,
+  });
+  return {
+    state: 'available',
+    level: args.level,
+    coverage: { responses: page.responses, prompts: page.prompts, citations: page.total_citations },
+    items: page.items,
+    pagination: pagination(page.items, page.next_cursor, page.total),
+    as_of: page.as_of,
+    ...(args.audit_id ? { artifact_refs: [reference('audit', args.audit_id)] } : {}),
+  };
+}
+
+export async function sourceUrl(
+  { db, scope }: ProjectRead,
+  args: Selection & { url: string },
+): Promise<Evidence> {
+  const detail = await getSourceUrlDetail(db, runs(scope, args), args.url);
+  if (!detail.retrievals) return { ...unavailable('url_not_cited_in_selection'), url: args.url };
+  return { state: 'available', ...detail };
+}
+
+function validateSelection(selection: AnalyticsSelection) {
   const { view } = selection;
+  if (view === 'trends' && (!selection.from_at || !selection.to_at || selection.audit_id))
+    throw new McpInputError('Trends requires an explicit window and no audit_id');
+  if (
+    view === 'site_health' &&
+    (selection.audit_id || selection.engine || selection.competitor || selection.cohort !== 'core')
+  )
+    throw new McpInputError('Site Health does not support visibility filters');
   if (
     (selection.from_at ||
       selection.to_at ||
@@ -114,16 +213,6 @@ function validateFilters(selection: AnalyticsSelection) {
     throw new McpInputError('snapshot_id applies only to Site Health');
   if (selection.competitor && view !== 'overview' && view !== 'trends')
     throw new McpInputError('Competitor selection applies only to Overview and Trends');
-}
-
-function validateRequiredScope(selection: AnalyticsSelection) {
-  if (selection.view === 'trends' && (!selection.from_at || !selection.to_at || selection.audit_id))
-    throw new McpInputError('Trends requires an explicit window and no audit_id');
-  if (
-    selection.view === 'site_health' &&
-    (selection.audit_id || selection.engine || selection.competitor || selection.cohort !== 'core')
-  )
-    throw new McpInputError('Site Health does not support visibility filters');
 }
 
 function validateCompetitor(selection: AnalyticsSelection, evidence: Evidence) {
@@ -143,32 +232,33 @@ function validateCompetitor(selection: AnalyticsSelection, evidence: Evidence) {
     throw new McpInputError('Competitor is absent from the selected evidence');
 }
 
+/** The interactive app's view: one selection resolved to concrete persisted evidence. */
 export async function renderAnalytics(
   db: Database,
   scope: ReadScope,
   selection: AnalyticsSelection,
   origin: string,
 ): Promise<Evidence> {
-  validateRequiredScope(selection);
-  validateFilters(selection);
+  validateSelection(selection);
+  const read = { db, scope, origin };
   const { view } = selection;
   const resolved = { ...selection };
   let evidence: Evidence;
   if (view === 'site_health') {
-    evidence = await readEvidence(db, scope, 'read_site_health', selection);
+    evidence = await siteSnapshot(read, selection);
     if (typeof evidence.snapshot_id === 'string') resolved.snapshot_id = evidence.snapshot_id;
   } else if (view === 'trends') {
-    evidence = await readAnalytics(db, scope, 'read_visibility_trends', {
+    evidence = await visibilityTrends(read, {
       ...selection,
+      from_at: selection.from_at ?? '',
+      to_at: selection.to_at ?? '',
       granularity: 'run',
     });
   } else {
-    const overview = await readAnalytics(db, scope, 'read_visibility_overview', selection);
+    const overview = await visibilityOverview(read, selection);
     if (typeof overview.audit_id === 'string') resolved.audit_id = overview.audit_id;
     evidence =
-      view === 'sources' && resolved.audit_id
-        ? await readEvidence(db, scope, 'read_visibility_sources', resolved)
-        : overview;
+      view === 'sources' && resolved.audit_id ? await visibilitySources(read, resolved) : overview;
   }
   validateCompetitor(selection, evidence);
   return {
@@ -176,7 +266,11 @@ export async function renderAnalytics(
     selection: resolved,
     evidence,
     links: {
-      application: `${origin}/${view === 'site_health' ? 'website' : 'visibility'}?${new URLSearchParams({ project: scope.projectId, ...(resolved.audit_id ? { run: resolved.audit_id } : {}) })}`,
+      application: appLink(
+        origin,
+        view === 'site_health' ? '/site' : '/visibility',
+        scope.projectId,
+      ),
       onboarding: `${origin}/onboarding`,
     },
   };

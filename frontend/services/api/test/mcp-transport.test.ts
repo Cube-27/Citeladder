@@ -6,7 +6,7 @@ import type { Database } from '../src/db/database.ts';
 import { registerMcpRoutes } from '../src/mcp/server.ts';
 import { authenticateMcp } from '../src/mcp/oauth.ts';
 import { dispatchTool } from '../src/mcp/tools.ts';
-import { McpInputError } from '../src/mcp/types.ts';
+import { ApiError } from '../src/errors.ts';
 import { appResource } from '../src/mcp/app-resource.ts';
 
 vi.mock('../src/mcp/app-resource.ts', async (importOriginal) => ({
@@ -24,6 +24,8 @@ vi.mock('../src/mcp/app-resource.ts', async (importOriginal) => ({
 }));
 
 vi.mock('../src/mcp/oauth.ts', () => ({ authenticateMcp: vi.fn() }));
+// Budgets are PostgreSQL counters, covered with the OAuth owner.
+vi.mock('../src/mcp/registration.ts', () => ({ admitToolCall: vi.fn() }));
 vi.mock('../src/mcp/oauth-routes.ts', () => ({
   registerOAuthRoutes: (app: Hono) => {
     app.get('/mcp/oauth/consent', (c) => c.text('consent'));
@@ -33,12 +35,14 @@ vi.mock('../src/mcp/oauth-routes.ts', () => ({
     );
   },
 }));
-vi.mock('../src/mcp/tools.ts', () => ({
-  tools: ['list_projects', 'render_visibility', 'render_site_health', 'open_analytics'].map(
-    (name) => ({ name, inputSchema: { type: 'object' } }),
-  ),
-  dispatchTool: vi.fn(),
-}));
+// The real catalogue and argument validation; only the database reads are stubbed.
+vi.mock('../src/mcp/tools.ts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../src/mcp/tools.ts')>();
+  return { ...actual, dispatchTool: vi.fn(actual.dispatchTool) };
+});
+const realDispatch = (
+  await vi.importActual<typeof import('../src/mcp/tools.ts')>('../src/mcp/tools.ts')
+).dispatchTool;
 const db = {} as Database;
 function app() {
   const config = loadConfig({
@@ -48,8 +52,6 @@ function app() {
     MCP_ENABLED: process.env.MCP_ENABLED,
     MCP_PUBLIC_BASE_URL: process.env.MCP_PUBLIC_BASE_URL,
     FRONTEND_URL: process.env.FRONTEND_URL,
-    MCP_UI_ENABLED: process.env.MCP_UI_ENABLED,
-    MCP_EXTENSIONS_ENABLED: process.env.MCP_EXTENSIONS_ENABLED,
   });
   const result = new Hono<AppEnv>();
   registerMcpRoutes(result, config, db);
@@ -114,16 +116,7 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 describe('hosted MCP transport', () => {
-  it('exposes only presentation metadata and static resources behind the UI toggle on both protocol lifecycles', async () => {
-    expect(
-      (
-        await rpc(
-          await app().request('https://protocol.example.test/mcp', request('resources/list')),
-        )
-      ).result.resources,
-    ).toEqual([]);
-    vi.stubEnv('MCP_UI_ENABLED', 'true');
-    vi.stubEnv('MCP_EXTENSIONS_ENABLED', 'true');
+  it('advertises the interactive app on its presentation tools on both protocol lifecycles', async () => {
     for (const modern of [false, true]) {
       const service = app();
       const listed = (
@@ -141,18 +134,23 @@ describe('hosted MCP transport', () => {
           'openai/ui': { entrypoints: [{ type: 'global' }, { type: 'thread' }] },
         },
       });
+      expect(
+        (
+          await rpc(
+            await service.request(
+              'https://protocol.example.test/mcp',
+              request('resources/list', {}, modern),
+            ),
+          )
+        ).result.resources,
+      ).toEqual([appResource]);
       const loaded = await rpc(
         await service.request(
           'https://protocol.example.test/mcp',
           request('resources/read', { uri: appResource.uri }, modern),
         ),
       );
-      expect(loaded.result.contents).toEqual([
-        expect.objectContaining({
-          uri: appResource.uri,
-          _meta: { ui: { csp: { connectDomains: [], resourceDomains: [] } } },
-        }),
-      ]);
+      expect(loaded.result.contents).toEqual([expect.objectContaining({ uri: appResource.uri })]);
     }
     expect(dispatchTool).not.toHaveBeenCalled();
     vi.mocked(authenticateMcp).mockResolvedValueOnce(null);
@@ -309,25 +307,41 @@ describe('hosted MCP transport', () => {
     ).toBe(404);
     expect((await service.request('/health')).status).toBe(200);
   });
-  it('renders domain tool failures as safe errors without exposing exceptions', async () => {
+  it('hides server failures but returns a caller mistake as a tool error the model can correct', async () => {
     vi.mocked(dispatchTool).mockRejectedValueOnce(new Error('postgres password secret'));
-    const response = await app().request(
+    const failed = await app().request(
       'https://protocol.example.test/mcp',
       request('tools/call', { name: 'list_projects' }),
     );
-    expect((await rpc(response)).result).toEqual({
+    expect((await rpc(failed)).result).toEqual({
       content: [{ type: 'text', text: 'Evidence is unavailable.' }],
       isError: true,
     });
-    vi.mocked(dispatchTool).mockRejectedValueOnce(new McpInputError('cursor is invalid'));
+    vi.mocked(dispatchTool).mockRejectedValueOnce(new ApiError(422, 'Unknown sort: volume'));
+    const owner = await app().request(
+      'https://protocol.example.test/mcp',
+      request('tools/call', { name: 'read_performance' }),
+    );
+    expect((await rpc(owner)).result).toEqual({
+      content: [{ type: 'text', text: 'Unknown sort: volume' }],
+      isError: true,
+    });
+    vi.mocked(dispatchTool).mockImplementationOnce(realDispatch);
     const invalid = await app().request(
       'https://protocol.example.test/mcp',
-      request('tools/call', { name: 'list_projects' }),
+      request('tools/call', { name: 'read_actions', arguments: { project_id: 'x', limit: 0 } }),
     );
-    expect(invalid.status).toBe(400);
-    expect((await rpc(invalid)).error).toMatchObject({
-      code: -32602,
-      message: 'cursor is invalid',
-    });
+    const problem = (await rpc(invalid)).result as {
+      content: { text: string }[];
+      isError: boolean;
+    };
+    expect(problem.isError).toBe(true);
+    expect(problem.content[0]!.text).toMatch(/project_id/);
+    expect(problem.content[0]!.text).toMatch(/limit/);
+    const unknown = await app().request(
+      'https://protocol.example.test/mcp',
+      request('tools/call', { name: 'delete_everything' }),
+    );
+    expect((await rpc(unknown)).error.code).toBe(-32602);
   });
 });

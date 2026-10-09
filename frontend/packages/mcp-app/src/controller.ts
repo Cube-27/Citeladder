@@ -340,7 +340,7 @@ export function createController(host: Host) {
       try {
         result = findingsSchema.parse(
           bounded(
-            await host.call('read_opportunities', {
+            await host.call('read_actions', {
               project_id: selected.project_id,
               limit: appPolicy.pageSize,
             }),

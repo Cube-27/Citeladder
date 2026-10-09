@@ -292,7 +292,7 @@ export function SiteHealthView({ state, controller }: Props) {
       {(findings?.state === 'available' ? findings.items : []).map((finding, index) => (
         <article key={text(finding.id, `finding-${index}`)}>
           <h3 className={textRole('itemTitle')}>
-            {text(finding.title, text(finding.kind, 'Existing finding'))}
+            {text(finding.target_label, text(finding.title, 'Existing finding'))}
           </h3>
           <p className={textRole('caption')}>{text(finding.record_uri)}</p>
         </article>

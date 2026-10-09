@@ -22,6 +22,10 @@ This is a read the user asked for, not a schedule.
    `read_visibility_sources` with it and the same engine and cohort. A sources
    read is one audit, never a period total. Read at most two pages and `fetch`
    at most three returned references unless asked.
+6. For what changed on the site, call `read_actions` (with `action_id` for one
+   Action's go-live date and measured outcome). For search traffic in the same
+   window, call `read_performance` with a comparison, or `read_query_evidence`
+   for queries by page.
 
 ## Compare honestly
 
@@ -38,7 +42,8 @@ This is a read the user asked for, not a schedule.
 ## Answer
 
 Lead with the measured change, then comparison limits, then hypotheses and a
-recommended next step. Describe data in plain words (dates, engine, cohort).
+decision for each Action reviewed: continue, revise, roll back or
+inconclusive. Describe data in plain words (dates, engine, cohort).
 Never show record IDs, UUIDs or `citeladder://` references to the user; links
 to CiteLadder app pages are fine.
 

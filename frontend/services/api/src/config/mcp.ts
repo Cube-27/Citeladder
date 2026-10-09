@@ -1,8 +1,6 @@
 /** MCP protocol bounds and environment specifications. */
 export const mcp = {
   settings: {
-    ui_enabled: { env: ['MCP_UI_ENABLED'], type: 'bool', default: false },
-    extensions_enabled: { env: ['MCP_EXTENSIONS_ENABLED'], type: 'bool', default: false },
     enabled: {
       env: ['MCP_ENABLED'],
       type: 'bool',
@@ -61,15 +59,12 @@ export const mcp = {
     consent_csp:
       "default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
     read_scope: 'citeladder:read',
-    scope_descriptions: {
-      'citeladder:read': 'Read CiteLadder project data',
-    },
-    server_version: '1.1.0',
+    server_version: '2.0.0',
     documentation_url: 'https://docs.citeladder.com/mcp/',
     max_search_results: 20,
     search_snippet_chars: 500,
     default_list_limit: 50,
-    default_roadmap_limit: 10,
+    overview_action_limit: 10,
     default_search_limit: 10,
     max_list_limit: 200,
     max_document_bytes: 256000,
@@ -86,7 +81,19 @@ export const mcp = {
     max_redirect_uri_length: 2048,
     max_client_name_length: 200,
     supported_grant_types: ['authorization_code', 'refresh_token'],
-    supported_response_types: ['code'],
     unused_client_prune_batch: 100,
+    // Native apps call back on a private-use scheme (RFC 8252 §7.1): reverse-domain,
+    // or one of these editor schemes. Web schemes stay HTTPS-only.
+    native_redirect_schemes: ['cursor', 'vscode', 'vscode-insiders', 'windsurf', 'zed'],
+    refused_redirect_schemes: ['javascript', 'data', 'file', 'blob', 'about', 'ftp', 'ws', 'wss'],
+    // A superseded refresh token replayed after this grace revokes its grant.
+    refresh_reuse_grace_seconds: 60,
+    grant_max_lifetime_seconds: 15552000,
+    last_used_resolution_seconds: 300,
+    tool_call_window_seconds: 60,
+    tool_call_grant_limit: 120,
+    tool_call_user_limit: 600,
+    // Consumed codes outlive every grant they minted, so a late replay still revokes.
+    protocol_retention_seconds: 15552000,
   },
 };
