@@ -5,7 +5,7 @@
  */
 import { asApiErrorCode } from '@citeladder/contracts/error-codes';
 import type { searchReadinessSchema } from '@citeladder/contracts/search-intelligence';
-import { sql, type RawBuilder, type SqlBool } from 'kysely';
+import { sql, type NotNull, type RawBuilder, type SqlBool } from 'kysely';
 import { z } from 'zod';
 
 import type { WorkspaceScope } from '../db/workspace-scope.ts';
@@ -283,10 +283,11 @@ async function gapActions(db: Database, scope: Scope) {
     .where('rule_id', '=', policy.opportunity.opportunities.SEARCH_GAP.RULE_ID)
     .where('superseded_at', 'is', null)
     .where('action_id', 'is not', null)
+    .$narrowType<{ action_id: NotNull }>()
     .execute();
   const byRow = new Map<string, string>();
   for (const finding of live)
-    for (const id of strings(finding.source_metric_ids)) byRow.set(id, finding.action_id!);
+    for (const id of strings(finding.source_metric_ids)) byRow.set(id, finding.action_id);
   return byRow;
 }
 

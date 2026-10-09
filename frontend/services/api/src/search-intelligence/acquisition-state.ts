@@ -746,7 +746,7 @@ export class AcquisitionState {
   private async announce(trx: Database, datasetId: string) {
     const trigger = {
       workspaceId: this.task.workspace_id,
-      projectId: this.task.project_id!,
+      projectId: this.projectId,
       triggerKind: 'search_intelligence_dataset',
       triggerId: datasetId,
       maxAttempts: loadWorkerSettings().taskMaxAttempts,

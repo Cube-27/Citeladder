@@ -10,6 +10,7 @@ import { createHash } from 'node:crypto';
 import { sql } from 'kysely';
 import { getDomain } from 'tldts';
 import { z } from 'zod';
+import type { KeywordGapEvidence } from '@citeladder/contracts/opportunities';
 
 import { policy } from '../config.ts';
 import type { DetectorHit } from '../analysis/opportunities/evidence.ts';
@@ -247,6 +248,13 @@ const ABSTAIN_REASONS = [
 ] as const;
 type AbstainReason = (typeof ABSTAIN_REASONS)[number];
 type PageTerms = { page: GapPage; tokens: ReadonlySet<string> };
+type SourcedRow = { row: GapRow; dataset: GapDataset };
+/** One search: every row that passed the gates for its term set, never none. */
+type Gap = { terms: string; rows: [SourcedRow, ...SourcedRow[]] };
+
+/** The row a merged gap is named after: the highest volume, then the first keyword. */
+const leadsBefore = (a: GapRow, b: GapRow) =>
+  ((a.search_volume ?? 0) - (b.search_volume ?? 0) || compareText(b.keyword, a.keyword)) > 0;
 
 const namedTerms = (competitor: Competitor) =>
   [competitor.name, competitor.domain.split('.')[0] ?? ''].map(normalizeQuery).filter(Boolean);
@@ -281,8 +289,8 @@ function resolvePage(keyword: string, pages: readonly PageTerms[]) {
   const covering = pages
     .filter(({ tokens }) => terms.every((term) => tokens.has(term)))
     .map(({ page }) => page);
-  if (covering.length === 1)
-    return { state: 'resolved' as const, page: covering[0]!, candidates: [] };
+  const [only, ...others] = covering;
+  if (only && !others.length) return { state: 'resolved' as const, page: only, candidates: [] };
   return {
     state: covering.length ? ('ambiguous' as const) : ('no_covering_page' as const),
     candidates: covering.slice(0, 5).map((page) => page.url),
@@ -305,42 +313,41 @@ export function searchGapDecisions(inputs: GapInputs): {
   const datasets = new Map(inputs.source.datasets.map((dataset) => [dataset.id, dataset]));
   const abstained = new Map<AbstainReason, number>(ABSTAIN_REASONS.map((reason) => [reason, 0]));
   const named = inputs.source.competitors.flatMap(namedTerms);
-  const gaps = new Map<string, { rows: GapRow[]; terms: string }>();
+  const gaps = new Map<string, Gap>();
   for (const row of inputs.rows) {
+    // Rows are read only from the source's datasets; each carries its own from here on.
+    const dataset = datasets.get(row.dataset_id);
     const normalized = normalizeQuery(row.keyword);
-    if (!normalized) continue;
+    if (!dataset || !normalized) continue;
     const reason = gate(row, normalized, inputs, named);
     if (reason) {
-      abstained.set(reason, abstained.get(reason)! + 1);
+      abstained.set(reason, (abstained.get(reason) ?? 0) + 1);
       continue;
     }
     // One gap per term set: "shoes running" and "running shoes" are one search.
     const terms = searchTerms(normalized).key;
-    const entry = gaps.get(terms) ?? { rows: [], terms };
-    entry.rows.push(row);
-    gaps.set(terms, entry);
+    const entry = gaps.get(terms);
+    if (entry) entry.rows.push({ row, dataset });
+    else gaps.set(terms, { terms, rows: [{ row, dataset }] });
   }
   const ranked = [...gaps.values()]
     .map((gap) => {
-      const lead = [...gap.rows].sort(
-        (a, b) =>
-          (b.search_volume ?? 0) - (a.search_volume ?? 0) || compareText(a.keyword, b.keyword),
-      )[0]!;
-      const competitors = [
-        ...new Set(gap.rows.map((row) => datasets.get(row.dataset_id)!.competitor.id)),
-      ];
+      const lead = gap.rows.reduce((best, item) =>
+        leadsBefore(item.row, best.row) ? item : best,
+      ).row;
+      const competitors = new Set(gap.rows.map(({ dataset }) => dataset.competitor.id)).size;
       return { gap, lead, competitors };
     })
     .sort(
       (a, b) =>
-        b.competitors.length - a.competitors.length ||
+        b.competitors - a.competitors ||
         (b.lead.search_volume ?? 0) - (a.lead.search_volume ?? 0) ||
         compareText(a.gap.terms, b.gap.terms),
     );
   const kept = ranked.slice(0, g.MAX_HITS_PER_REFRESH);
   const pages = inputs.pages.map((page) => ({ page, tokens: lexicalTokens(page.text) }));
   const hits = kept.map(({ gap, lead, competitors }) =>
-    gapHit(inputs, datasets, pages, gap, lead, competitors.length),
+    gapHit({ market: inputs.source.market, pages, gap, lead, competitors }),
   );
   const limitations: string[] = [];
   if (ranked.length > kept.length)
@@ -363,18 +370,24 @@ export function searchGapDecisions(inputs: GapInputs): {
   return { hits, limitations };
 }
 
-function gapHit(
-  inputs: GapInputs,
-  datasets: Map<string, GapDataset>,
-  pages: readonly PageTerms[],
-  { rows, terms }: { rows: GapRow[]; terms: string },
-  lead: GapRow,
-  competitorCount: number,
-): DetectorHit {
+function gapHit({
+  market,
+  pages,
+  gap: { rows, terms },
+  lead,
+  competitors,
+}: {
+  market: Market;
+  pages: readonly PageTerms[];
+  gap: Gap;
+  lead: GapRow;
+  /** How many distinct competitors rank for the search. */
+  competitors: number;
+}): DetectorHit {
   const normalized = normalizeQuery(lead.keyword);
   const resolution = resolvePage(lead.keyword, pages);
   const page = resolution.state === 'resolved' ? resolution.page : null;
-  const sources = rows.map((row) => datasets.get(row.dataset_id)!);
+  const sources = rows.map(({ dataset }) => dataset);
   return {
     rule_id: g.RULE_ID,
     target_key: `search-gap:${terms}`,
@@ -387,22 +400,19 @@ function gapHit(
       query_key: trafficQueryKey(lead.keyword),
       search_volume: lead.search_volume,
       intent: lead.intent || null,
-      market: inputs.source.market,
-      owned_origin: sources[0]!.target_origin,
-      competitors: rows.map((row) => {
-        const dataset = datasets.get(row.dataset_id)!;
-        return {
-          competitor_id: dataset.competitor.id,
-          name: dataset.competitor.name,
-          keyword: row.keyword,
-          rank_group: row.rank_group,
-          url: row.url || null,
-          dataset_id: dataset.id,
-          row_id: row.id,
-          published_at: dataset.published_at,
-          coverage: dataset.coverage,
-        };
-      }),
+      market,
+      owned_origin: rows[0].dataset.target_origin,
+      competitors: rows.map(({ row, dataset }) => ({
+        competitor_id: dataset.competitor.id,
+        name: dataset.competitor.name,
+        keyword: row.keyword,
+        rank_group: row.rank_group,
+        url: row.url || null,
+        dataset_id: dataset.id,
+        row_id: row.id,
+        published_at: dataset.published_at,
+        coverage: dataset.coverage,
+      })),
       competitor_names: [...new Set(sources.map((dataset) => dataset.competitor.name))].sort(
         compareText,
       ),
@@ -414,14 +424,14 @@ function gapHit(
       provider: 'dataforseo',
       statement:
         'DataForSEO estimates that competitors rank for this search and you do not. It is a ranking estimate, not measured traffic.',
-    },
+    } satisfies KeywordGapEvidence,
     source_analysis_ids: page ? [page.analysis_id] : [],
     source_issue_ids: [],
     source_metric_ids: [
-      ...new Set([...rows.map((row) => row.id), ...sources.map((dataset) => dataset.id)]),
+      ...new Set([...rows.map(({ row }) => row.id), ...sources.map((dataset) => dataset.id)]),
     ].sort(compareText),
     value_factor: valueFactor(lead.search_volume ?? 0),
-    gap_factor: gapFactor(competitorCount),
+    gap_factor: gapFactor(competitors),
   };
 }
 

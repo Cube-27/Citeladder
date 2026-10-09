@@ -1,4 +1,6 @@
 /** Native opportunity catalog: deterministic decisions over persisted evidence. */
+import type { ExpectedCheck } from '@citeladder/contracts/opportunities';
+
 export const opportunityDeclaration = { output_phase_outline: 'outline' };
 
 export const opportunities = {
@@ -33,7 +35,9 @@ export const opportunities = {
   // at most the same span, and never placed in the future beyond the skew.
   VERIFICATION_WINDOW_DAYS: 30,
   // A new page takes longer to rank than an edited one takes to recrawl.
-  CHECK_KIND_WINDOW_DAYS: { keyword_presence: 90 } as Record<string, number>,
+  CHECK_KIND_WINDOW_DAYS: { keyword_presence: 90 } satisfies Partial<
+    Record<ExpectedCheck['kind'], number>
+  >,
   DECLARATION_FUTURE_SKEW_SECONDS: 300,
   VISIBILITY_METRIC_PROMPT_SCORE: 'prompt_score',
   VISIBILITY_CHECK_MIN_DELTA: 1,

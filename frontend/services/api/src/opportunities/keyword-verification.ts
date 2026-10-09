@@ -6,6 +6,7 @@
  * appearing yet is `waiting`, never a failure, and no reading is unknown.
  */
 import { sql } from 'kysely';
+import type { KeywordPresenceCheck } from '@citeladder/contracts/opportunities';
 import { lexicalTokens } from '../analysis/lexical.ts';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
@@ -21,7 +22,7 @@ import {
 } from './verification-decisions.ts';
 import type { Declaration } from './verification-result.ts';
 
-type Check = Record<string, unknown>;
+type Check = KeywordPresenceCheck;
 type Reader = {
   db: Database;
   scope: WorkspaceScope;
@@ -37,7 +38,7 @@ export async function keywordTrafficOutcome(
   check: Check,
 ): Promise<CheckOutcome> {
   const d = r.declaration;
-  const key = scalarText(check.query_key);
+  const key = check.query_key;
   const snapshot = await r.scope
     .selectFrom(r.db, 'traffic_snapshots')
     .select(['id', sql<string>`window_start::date::text`.as('start'), windowDays.as('days')])
@@ -107,7 +108,7 @@ export async function keywordDatasetOutcome(
     dataset.language_code !== check.language_code
   )
     return null;
-  const keyword = scalarText(check.keyword);
+  const { keyword } = check;
   const { key, tokens } = searchTerms(keyword);
   // Narrow by the longest term in SQL; the term set decides in code.
   const probe = tokens.reduce(

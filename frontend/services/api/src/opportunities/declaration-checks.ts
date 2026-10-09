@@ -11,6 +11,10 @@ import type { Scope } from './sources.ts';
 import { internalLinkDeclarationChecks } from './internal-link-declaration.ts';
 import { promptScore } from './verification-decisions.ts';
 import { scopedDailyRate, windowDays } from './traffic-scope.ts';
+import {
+  keywordGapEvidenceSchema,
+  type KeywordPresenceCheck,
+} from '@citeladder/contracts/opportunities';
 
 const o = policy.opportunity.opportunities;
 const p = policy.opportunity.placement;
@@ -134,19 +138,12 @@ const KEYWORD_GAP_RULE = o.SEARCH_GAP.RULE_ID;
  * A keyword gap is measured by appearing for the search, not by clicks: a
  * query with no Search Console row has no baseline to compare a rate with.
  */
-function keywordCheck(member: OpportunityRow): ExpectedCheck | null {
-  const evidence = record(member.evidence);
-  const market = record(evidence.market);
-  const keyword = scalarText(evidence.keyword);
-  if (!keyword) return null;
-  return {
-    kind: 'keyword_presence',
-    keyword,
-    query_key: scalarText(evidence.query_key),
-    owned_origin: scalarText(evidence.owned_origin),
-    location_code: typeof market.location_code === 'number' ? market.location_code : null,
-    language_code: scalarText(market.language_code),
-  };
+function keywordCheck(member: OpportunityRow): KeywordPresenceCheck | null {
+  // Evidence that does not parse cannot name the search or site to check: no check.
+  const parsed = keywordGapEvidenceSchema.safeParse(member.evidence);
+  if (!parsed.success) return null;
+  const { keyword, query_key, owned_origin, market } = parsed.data;
+  return { kind: 'keyword_presence', keyword, query_key, owned_origin, ...market };
 }
 
 /**
