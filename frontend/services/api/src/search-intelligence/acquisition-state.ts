@@ -8,7 +8,7 @@ import type {
   SearchIntelligenceCalls,
   SearchIntelligenceDatasets,
 } from '../generated/db-schema.ts';
-import { si } from './requests.ts';
+import { pageEstimateMicrousd, si, type DatasetKind } from './requests.ts';
 import { INT4_MAX, normalizeResponse } from './normalization.ts';
 import type { ResearchResponse } from './live.ts';
 import type { ProviderError } from '../answer-engines/contracts.ts';
@@ -31,6 +31,30 @@ export type PreparedResearch =
       baseUrl: string;
     };
 const terminal = ['succeeded', 'failed', 'partial', 'cancelled', 'uncertain'];
+/** What one failed send means for the call and the run. */
+function failureStates(error: ProviderError, ordinal: number) {
+  const uncertain = ['connection', 'timeout'].includes(error.code),
+    rateLimited = error.code === 'rate_limit',
+    retry = rateLimited && ordinal <= si.rate_limit_retries;
+  let attempt = 'failed';
+  if (uncertain) attempt = 'uncertain';
+  else if (rateLimited) attempt = 'rate_limited';
+  let callStatus = 'failed';
+  if (retry) callStatus = 'intent';
+  else if (uncertain) callStatus = 'uncertain';
+  // Every remaining call would use the same refused credential.
+  return { uncertain, retry, refused: error.code === 'auth_failure', attempt, callStatus };
+}
+/** When a rate-limited call may be sent again: the provider's wait, bounded. */
+const retryAt = (error: ProviderError, at: Date) =>
+  new Date(
+    at.getTime() +
+      Math.min(
+        si.rate_limit_max_wait_seconds,
+        Math.max(0, error.retryAfterSeconds ?? si.rate_limit_default_wait_seconds),
+      ) *
+        1000,
+  );
 const money = (value: unknown) => Math.round(Number(value ?? 0) * 1e8);
 const amount = (value: number) => (value / 1e8).toFixed(8);
 
@@ -252,10 +276,11 @@ export class AcquisitionState {
         .orderBy('ordinal', 'desc')
         .executeTakeFirst();
       // The reviewed estimate is a ceiling: never send a call that could pass it.
+      // The page's own price, not the stored average: a short last page costs less.
+      const pageCost = pageEstimateMicrousd(kind as DatasetKind, Number(request.limit)) * 100;
       if (
         call.status === 'intent' &&
-        money(run.provider_reported_cost_usd) + money(call.estimated_cost_usd) >
-          money(run.estimated_cost_usd) + run.planned_calls
+        money(run.provider_reported_cost_usd) + pageCost > money(run.estimated_cost_usd)
       ) {
         await this.stopRun(trx, run, 'cost_ceiling_reached', at);
         return { action: 'stop' };
@@ -639,23 +664,15 @@ export class AcquisitionState {
         .forUpdate()
         .executeTakeFirst();
       if (!call) return { stop: true, wait: null };
-      const uncertain = ['connection', 'timeout'].includes(error.code),
-        retry = error.code === 'rate_limit' && prepared.ordinal <= si.rate_limit_retries,
-        // Every remaining call would use the same refused credential.
-        refused = error.code === 'auth_failure';
-      await this.outcome(
-        trx,
-        call,
-        prepared.ordinal,
-        call.dispatched_at!,
-        uncertain ? 'uncertain' : error.code === 'rate_limit' ? 'rate_limited' : 'failed',
+      const { uncertain, retry, refused, attempt, callStatus } = failureStates(
         error,
-        at,
+        prepared.ordinal,
       );
+      await this.outcome(trx, call, prepared.ordinal, call.dispatched_at!, attempt, error, at);
       await trx
         .updateTable('search_intelligence_calls')
         .set({
-          status: retry ? 'intent' : uncertain ? 'uncertain' : 'failed',
+          status: callStatus,
           dispatched_at: retry ? null : call.dispatched_at,
           completed_at: retry ? null : at,
           error_code: error.code,
@@ -685,19 +702,7 @@ export class AcquisitionState {
           .execute();
       if (uncertain) await this.closeCollecting(trx, at);
       else if (refused) await this.stopRun(trx, run, error.code, at);
-      return {
-        stop: uncertain || refused,
-        wait: retry
-          ? new Date(
-              at.getTime() +
-                Math.min(
-                  si.rate_limit_max_wait_seconds,
-                  Math.max(0, error.retryAfterSeconds ?? si.rate_limit_default_wait_seconds),
-                ) *
-                  1000,
-            )
-          : null,
-      };
+      return { stop: uncertain || refused, wait: retry ? retryAt(error, at) : null };
     });
   }
   async finish(at = new Date()) {
@@ -739,7 +744,7 @@ export class AcquisitionState {
     }
   }
   /** The paid receipt stays as provenance; its reported cost still counts. */
-  async reject(callId: string, at = new Date(), terminalTask = false) {
+  reject(callId: string, at = new Date(), terminalTask = false) {
     return this.db.transaction().execute(async (trx) => {
       const run = await this.run(trx).forUpdate().executeTakeFirst();
       if (
@@ -798,14 +803,14 @@ export class AcquisitionState {
     });
   }
   /** A local check failed before dispatch: nothing was sent, and no later call can be either. */
-  async refuse(
+  refuse(
     prepared: Extract<PreparedResearch, { action: 'dispatch' | 'publish' }>,
     error: ProviderError,
     at = new Date(),
   ) {
     return this.db.transaction().execute(async (trx) => {
       const run = await this.run(trx).forUpdate().executeTakeFirst();
-      if (!run || run.status !== 'running' || !(await this.owned(trx))) return;
+      if (run?.status !== 'running' || !(await this.owned(trx))) return;
       await trx
         .updateTable('search_intelligence_calls')
         .set({ status: 'failed', completed_at: at, error_code: error.code, error_detail: '' })

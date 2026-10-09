@@ -97,19 +97,9 @@ export async function sendLive(
     throw new ProviderError(signal.aborted ? 'timeout' : 'connection');
   }
   if (!response.ok) {
-    const header = response.headers.get('retry-after'),
-      seconds = header ? Number(header) : NaN;
-    const wait = Number.isFinite(seconds)
-      ? Math.max(0, seconds)
-      : header
-        ? Math.max(0, (Date.parse(header) - Date.now()) / 1000)
-        : NaN;
+    const wait = retryAfterSeconds(response.headers.get('retry-after'));
     await response.body?.cancel();
-    throw new ProviderError(
-      providerErrorCode(response.status),
-      false,
-      Number.isFinite(wait) ? wait : undefined,
-    );
+    throw new ProviderError(providerErrorCode(response.status), false, wait);
   }
   let body: Record<string, unknown>;
   try {
@@ -117,6 +107,20 @@ export async function sendLive(
   } catch {
     throw new ProviderError(signal.aborted ? 'timeout' : 'parse_error');
   }
+  return receipt(body);
+}
+
+/** A Retry-After header in seconds or as a date; undefined when absent or unreadable. */
+function retryAfterSeconds(header: string | null): number | undefined {
+  if (!header) return undefined;
+  const seconds = Number(header);
+  if (Number.isFinite(seconds)) return Math.max(0, seconds);
+  const until = Date.parse(header);
+  return Number.isFinite(until) ? Math.max(0, (until - Date.now()) / 1000) : undefined;
+}
+
+/** One successful task in one successful envelope, kept with its exact hash and cost. */
+function receipt(body: Record<string, unknown>): ResearchResponse {
   const tasks = body.tasks;
   if (
     body.status_code !== 20000 ||

@@ -16,9 +16,11 @@ import type {
   SearchIntelligenceRun,
 } from '@/lib/api/search-intelligence';
 import {
+  comparisonOrderConflict,
   defaultSelections,
   prepareReviewSelections,
   reviewInputsValid,
+  reviewOwnedTarget,
   selectionKey,
 } from './search-intelligence-review-selection';
 import {
@@ -94,9 +96,7 @@ export function SearchIntelligenceReviewDrawer({
   const [grouping, setGrouping] = useState<'as_is' | 'one_per_domain'>('as_is');
   const [rankingOrder, setRankingOrder] = useState<DatasetSelection['order']>('volume');
   const [acquisitionVolume, setAcquisitionVolume] = useState('');
-  const [ownedTarget, setOwnedTarget] = useState(
-    readiness.preferences.owned_target_id ?? readiness.owned_targets[0]?.identity ?? '',
-  );
+  const [ownedTarget, setOwnedTarget] = useState(reviewOwnedTarget(readiness)?.identity ?? '');
   const [reuse, setReuse] = useState(
     () => !['refresh', 'increase_depth'].includes(action) && readiness.preferences.reuse_recent,
   );
@@ -106,7 +106,13 @@ export function SearchIntelligenceReviewDrawer({
   const { selections } = datasets;
   const canReview =
     datasets.depthsValid &&
-    reviewInputsValid(selections, ownedTarget, location, seed, researchScope);
+    reviewInputsValid(selections, {
+      ownedTarget,
+      location,
+      seed,
+      researchScope,
+      order: rankingOrder,
+    });
   const failed = (cause: unknown, fallback: string) =>
     setError(cause instanceof Error ? cause.message : fallback);
   const submitReview = async () => {
@@ -163,8 +169,12 @@ export function SearchIntelligenceReviewDrawer({
           canReview={canReview}
           busy={busy}
           onBack={() => setReview(null)}
-          onReview={() => void submitReview()}
-          onConfirm={() => void (review && confirmReview(review.id))}
+          onReview={() => {
+            submitReview().catch(() => undefined);
+          }}
+          onConfirm={() => {
+            if (review) confirmReview(review.id).catch(() => undefined);
+          }}
         />
       }
     >
@@ -200,6 +210,12 @@ export function SearchIntelligenceReviewDrawer({
             onDepth={datasets.setDepth}
           />
           <HistoryScopeNotice scope={researchScope} selections={selections} />
+          {comparisonOrderConflict(selections, researchScope, rankingOrder) ? (
+            <Alert>
+              Keyword comparisons on an exact host can be ordered by volume, cost per click or
+              difficulty. Change the keyword order or the research scope in Advanced options.
+            </Alert>
+          ) : null}
           <AdvancedOptions
             targets={readiness.owned_targets}
             values={{

@@ -580,21 +580,24 @@ describe('Search Intelligence dataset rows and handoff', () => {
 });
 
 describe('Search Intelligence citation matches', () => {
-  it('reports partial coverage when the referring domains were partial', async () => {
-    const runId = await review(t, await connection(t));
-    const parent = await dataset(t, runId, { kind: 'referring_domains', coverage: 'partial' });
-    const auditId = await fixtures.audit(t);
-    await fixtures.execution(t, {
-      auditId,
-      analysis: { citations: [{ url: 'https://unrelated.example/' }] },
-    });
-    const derived = await call<Dataset>('/citation-matches', {
-      method: 'POST',
-      body: { backlink_dataset_id: parent, audit_ids: [auditId] },
-    });
-    // No match against a partial list is not evidence of no match.
-    expect([derived.body.unique_rows_saved, derived.body.coverage]).toEqual([0, 'partial']);
-  });
+  it.each(['partial', 'unknown'])(
+    'keeps %s referring-domain coverage on its matches',
+    async (coverage) => {
+      const runId = await review(t, await connection(t));
+      const parent = await dataset(t, runId, { kind: 'referring_domains', coverage });
+      const auditId = await fixtures.audit(t);
+      await fixtures.execution(t, {
+        auditId,
+        analysis: { citations: [{ url: 'https://unrelated.example/' }] },
+      });
+      const derived = await call<Dataset>('/citation-matches', {
+        method: 'POST',
+        body: { backlink_dataset_id: parent, audit_ids: [auditId] },
+      });
+      // No match against an incomplete or unknown list is not evidence of no match.
+      expect([derived.body.unique_rows_saved, derived.body.coverage]).toEqual([0, coverage]);
+    },
+  );
 
   it('derives one dataset per exact selection, even under concurrent requests', async () => {
     const runId = await review(t, await connection(t));

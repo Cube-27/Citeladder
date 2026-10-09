@@ -20,11 +20,22 @@ function depthFor(data: SearchIntelligenceReadiness, kind: string) {
   );
 }
 
-/** Competitors the review offers: the saved preference, else every saved competitor. */
+/**
+ * Every saved competitor, the remembered ones first. A remembered choice orders
+ * the list; it never hides a competitor the project still has.
+ */
 export function reviewCompetitors(data: SearchIntelligenceReadiness): string[] {
-  return data.preferences.competitor_ids.length
-    ? data.preferences.competitor_ids
-    : data.competitors.map(({ identity }) => identity);
+  const all = data.competitors.map(({ identity }) => identity);
+  const preferred = data.preferences.competitor_ids.filter((id) => all.includes(id));
+  return [...preferred, ...all.filter((id) => !preferred.includes(id))];
+}
+
+/** The website the review starts on: the remembered one, else the first. */
+export function reviewOwnedTarget(data: SearchIntelligenceReadiness) {
+  return (
+    data.owned_targets.find((target) => target.identity === data.preferences.owned_target_id) ??
+    data.owned_targets[0]
+  );
 }
 
 export function availableSelections(data: SearchIntelligenceReadiness): DatasetSelection[] {
@@ -42,7 +53,7 @@ export function availableSelections(data: SearchIntelligenceReadiness): DatasetS
 
 /** Whether a saved dataset already answers this selection, so a refresh re-reads it. */
 function saved(data: SearchIntelligenceReadiness, selection: DatasetSelection) {
-  const owned = data.owned_targets[0]?.origin;
+  const owned = reviewOwnedTarget(data)?.origin;
   const competitor = data.competitors.find((item) => item.identity === selection.competitor_id);
   return data.datasets.some((dataset) => {
     if (dataset.dataset_kind !== selection.kind) return false;
@@ -82,22 +93,41 @@ export function defaultSelections(
   );
 }
 
+/** Exact-host comparisons cannot be ordered by traffic or position; the API refuses them. */
+export function comparisonOrderConflict(
+  selections: DatasetSelection[],
+  researchScope: string,
+  order: DatasetSelection['order'],
+) {
+  return (
+    researchScope === 'exact_host' &&
+    (order === 'traffic' || order === 'position') &&
+    selections.some(({ kind }) => kind === 'missing_keywords' || kind === 'shared_keywords')
+  );
+}
+
 export function reviewInputsValid(
   selections: DatasetSelection[],
-  ownedTarget: string,
-  location: string,
-  seed: string,
-  researchScope: string,
+  form: {
+    ownedTarget: string;
+    location: string;
+    seed: string;
+    researchScope: string;
+    order: DatasetSelection['order'];
+  },
 ) {
   const marketNeeded = selections.some(({ kind }) => !BACKLINK_DATASET_KINDS.includes(kind));
+  const location = Number(form.location);
   return Boolean(
     selections.length &&
-    ownedTarget &&
-    (!marketNeeded || (Number.isInteger(Number(location)) && Number(location) > 0)) &&
+    form.ownedTarget &&
+    (!marketNeeded || (Number.isInteger(location) && location > 0)) &&
     !(
-      researchScope === 'exact_host' && selections.some(({ kind }) => kind === 'backlink_history')
+      form.researchScope === 'exact_host' &&
+      selections.some(({ kind }) => kind === 'backlink_history')
     ) &&
-    selections.every((item) => item.kind !== 'keyword_suggestions' || seed.trim()),
+    !comparisonOrderConflict(selections, form.researchScope, form.order) &&
+    selections.every((item) => item.kind !== 'keyword_suggestions' || form.seed.trim()),
   );
 }
 

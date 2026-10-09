@@ -162,6 +162,67 @@ describe('SearchIntelligenceReviewDrawer', () => {
     ]);
   });
 
+  it('offers every competitor, remembered ones first', async () => {
+    const competitor = (identity: string, label: string) => ({
+      identity,
+      label,
+      registrable_domain: `${identity}.test`,
+      hostname: `${identity}.test`,
+      origin: `https://${identity}.test`,
+      source_kind: 'competitor',
+    });
+    render(
+      <SearchIntelligenceReviewDrawer
+        open
+        action="analysis"
+        readiness={{
+          ...readiness,
+          competitors: [competitor('rival', 'Rival'), competitor('other', 'Other')],
+          preferences: { ...readiness.preferences, competitor_ids: ['other'] },
+        }}
+        onOpenChange={vi.fn()}
+        onReview={vi.fn()}
+        onConfirm={vi.fn()}
+        busy={false}
+      />,
+    );
+    // The remembered competitor leads; the other one is still one disclosure away.
+    expect(screen.getByRole('group', { name: 'Other' })).toBeInTheDocument();
+    expect(screen.getByText('Other competitors (1)')).toBeInTheDocument();
+  });
+
+  it('refuses exact-host comparisons ordered by traffic before asking for a price', async () => {
+    render(
+      <SearchIntelligenceReviewDrawer
+        open
+        action="analysis"
+        readiness={{
+          ...readiness,
+          competitors: [
+            {
+              identity: 'rival',
+              label: 'Rival',
+              registrable_domain: 'rival.test',
+              hostname: 'rival.test',
+              origin: 'https://rival.test',
+              source_kind: 'competitor',
+            },
+          ],
+          preferences: { ...readiness.preferences, research_scope: 'exact_host' },
+        }}
+        onOpenChange={vi.fn()}
+        onReview={vi.fn()}
+        onConfirm={vi.fn()}
+        busy={false}
+      />,
+    );
+    await userEvent.click(screen.getByText('Advanced options'));
+    await userEvent.click(screen.getByRole('combobox', { name: 'Keyword order' }));
+    await userEvent.click(screen.getByRole('option', { name: 'Most estimated traffic' }));
+    expect(screen.getByRole('button', { name: 'Review cost' })).toBeDisabled();
+    expect(screen.getByText(/Keyword comparisons on an exact host/)).toBeInTheDocument();
+  });
+
   it('passes suggestion acquisition controls to review', async () => {
     const review = vi.fn().mockResolvedValue(reviewedRun);
     render(

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Alert } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { InlineEmpty } from '@/components/ui/inline-empty';
+import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/toast';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
@@ -28,7 +29,12 @@ export function SearchIntelligenceCitationMatcher({
   const timeZone = useDisplayTimeZone();
   const { notify } = useToast();
   const [selectedAudits, setSelectedAudits] = useState<string[]>([]);
-  const referring = datasets.find((dataset) => dataset.dataset_kind === 'referring_domains');
+  // One referring-domain list per researched website; the reader picks which.
+  const lists = datasets.filter(
+    (dataset) => dataset.dataset_kind === 'referring_domains' && dataset.unique_rows_saved > 0,
+  );
+  const [listId, setListId] = useState('');
+  const referring = lists.find((dataset) => dataset.id === listId) ?? lists[0];
   const audits = useQuery({
     queryKey: queryKeys.runs.list({ project_id: activeProject?.id }),
     queryFn: ({ signal }) =>
@@ -50,7 +56,7 @@ export function SearchIntelligenceCitationMatcher({
       setSelectedAudits([]);
       notify(
         'Citation matches saved',
-        `${pluralCount(dataset.unique_rows_saved, 'cited domain')} also link to you. Open Citation matches in Backlinks.`,
+        `${pluralCount(dataset.unique_rows_saved, 'citation')} came from sites that link to you. Open Citation matches in Backlinks.`,
       );
       await onDerived();
     },
@@ -82,6 +88,14 @@ export function SearchIntelligenceCitationMatcher({
         you.
       </p>
       {derive.isError ? <Alert>{derive.error.message}</Alert> : null}
+      {lists.length > 1 ? (
+        <Select
+          ariaLabel="Website"
+          value={referring.id}
+          onValueChange={setListId}
+          options={lists.map((dataset) => ({ value: dataset.id, label: dataset.target_hostname }))}
+        />
+      ) : null}
       <div className="grid max-h-64 gap-2 overflow-y-auto">
         {answered.map((audit) => (
           <label

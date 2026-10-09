@@ -11,6 +11,8 @@ import { createSecretCipher } from '../src/integrations/fernet.ts';
 import { WorkspaceScope } from '../src/db/workspace-scope.ts';
 import { ProviderError } from '../src/answer-engines/contracts.ts';
 import { reconcileResearch } from '../src/search-intelligence/maintenance.ts';
+import { pageEstimateMicrousd } from '../src/search-intelligence/requests.ts';
+import { policy } from '../src/config.ts';
 import { testDatabase } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
 
@@ -260,6 +262,19 @@ describe('durable paid acquisition boundaries', () => {
       status: 'failed',
       error_code: 'cost_ceiling_reached',
     });
+  });
+  it('sends a short last page after a full first page charged its own price', async () => {
+    const t = await run(1001);
+    // A full page costs more than the dataset's average per page; that is not overspend.
+    const fullPage = (
+      pageEstimateMicrousd('ranking_keywords', policy.search_intelligence.page_size) / 1e6
+    ).toFixed(6);
+    await db
+      .updateTable('search_intelligence_runs')
+      .set({ provider_reported_cost_usd: fullPage, completed_calls: 1 })
+      .where('id', '=', t.runId)
+      .execute();
+    expect((await t.state.prepare(t.plans[1]!, 1)).action).toBe('dispatch');
   });
   it('stops the run on a refused credential, whether found locally or by the provider', async () => {
     const local = await run(),

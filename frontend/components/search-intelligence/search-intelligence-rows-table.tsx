@@ -18,7 +18,8 @@ function cellText(value: unknown): string | null {
   if (value === null || value === undefined || value === '') return null;
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';
   if (Array.isArray(value)) return value.length ? value.join(', ') : null;
-  return typeof value === 'object' ? null : String(value);
+  if (typeof value === 'number') return String(value);
+  return typeof value === 'string' ? value : null;
 }
 
 function displayValue(row: SearchIntelligenceRow, column: SearchColumn) {

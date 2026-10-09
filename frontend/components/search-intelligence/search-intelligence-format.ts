@@ -73,18 +73,19 @@ export function evidenceFields(
   });
 }
 
+/** A list of plain values joined; a list holding objects is not shown as text. */
+const listText = (value: unknown[]) =>
+  value.length && value.every((item) => typeof item !== 'object') ? value.join(', ') : null;
+
 function evidenceValue(value: unknown, timeZone: string): string | null {
-  if (value === null || value === undefined || value === '') return null;
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';
   if (typeof value === 'number') return searchNumber(value, 4);
-  if (Array.isArray(value))
-    return value.every((item) => typeof item !== 'object') && value.length
-      ? value.join(', ')
-      : null;
-  const text = String(value);
-  return DATE_TIME.test(text) && !Number.isNaN(Date.parse(text))
-    ? formatDisplayDate(text, timeZone)
-    : text;
+  if (Array.isArray(value)) return listText(value);
+  // Nested provider objects are summarised elsewhere, never printed as text.
+  if (typeof value !== 'string' || !value) return null;
+  return DATE_TIME.test(value) && !Number.isNaN(Date.parse(value))
+    ? formatDisplayDate(value, timeZone)
+    : value;
 }
 
 export function sentenceCase(key: string): string {

@@ -251,3 +251,7 @@ export function quoteDataset(kind: DatasetKind, rows: number) {
         micro(labs ? si.rates.labs_item : si.rates.backlinks_row) * rows;
   return { calls, rows, costMicrousd: cost };
 }
+/** One request's own estimate: a short final page costs less than a full one. */
+export function pageEstimateMicrousd(kind: DatasetKind, pageRows: number) {
+  return quoteDataset(kind, Math.max(1, Math.trunc(pageRows) || 1)).costMicrousd;
+}

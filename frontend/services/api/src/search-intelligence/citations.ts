@@ -58,6 +58,17 @@ function selectionHash(parentId: string, auditIds: string[], citationIds: string
   );
 }
 
+/**
+ * Matches are only as complete as the referring domains they were read against:
+ * an unknown list stays unknown, a cut one is partial, and only a complete list
+ * with no match is a definite empty.
+ */
+function matchCoverage(parent: { coverage: string; truncated: boolean }, matches: number) {
+  if (parent.coverage === 'unknown') return 'unknown';
+  if (parent.truncated || parent.coverage === 'partial') return 'partial';
+  return matches > 0 ? 'complete' : 'empty';
+}
+
 export function deriveCitationMatches(
   db: Database,
   scope: Scope,
@@ -152,13 +163,7 @@ export function deriveCitationMatches(
         location_code: null,
         language_code: '',
         status: 'published',
-        // Matches are only as complete as the referring domains they were read against.
-        coverage:
-          parent.truncated || !['complete', 'empty'].includes(parent.coverage)
-            ? 'partial'
-            : matches.length > 0
-              ? 'complete'
-              : 'empty',
+        coverage: matchCoverage(parent, matches.length),
         requested_rows: citations.length,
         raw_rows_received: citations.length,
         unique_rows_saved: matches.length,
