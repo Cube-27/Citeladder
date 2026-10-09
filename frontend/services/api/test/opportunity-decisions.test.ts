@@ -17,8 +17,6 @@ import {
   type CheckOutcome,
 } from '../src/opportunities/verification-decisions.ts';
 
-const e = policy.opportunity.earned_actions;
-const s = policy.opportunity.source_pages;
 const r = policy.opportunity.refresh;
 
 const entity = (kind: string, name: string, presence: string, matches = 1) => ({
@@ -36,31 +34,25 @@ function page(overrides: Partial<SourcePageEvidence> = {}): SourcePageEvidence {
     canonical_url: 'https://review.example/best-crm',
     registrable_domain: 'review.example',
     page_format: 'listicle',
-    page_format_method: 'rule',
-    inspection_state: s.INSPECTION_INSPECTED,
-    inspection_reason: null,
+    page_format_method: 'heading_evidence',
+    source_class: 'editorial_third_party',
     snapshot_id: 'snapshot-2',
-    extracted_chars: s.SOURCE_PAGE_MIN_COVERAGE_CHARS,
+    read_at: '2026-10-01T00:00:00Z',
+    extracted_chars: 4000,
     sufficient_coverage: true,
     title: 'Best CRM tools',
-    headings: ['Rival One', 'Rival Two'],
-    outbound_domains: [],
-    content_hash: 'content-2',
     entities: [
-      entity(s.ENTITY_KIND_BRAND, 'Acme', s.PRESENCE_NOT_DETECTED, 0),
-      entity(s.ENTITY_KIND_COMPETITOR, 'Rival One', s.PRESENCE_PRESENT),
-      entity(s.ENTITY_KIND_COMPETITOR, 'Rival Two', s.PRESENCE_PRESENT),
+      entity('brand', 'Acme', 'not_detected', 0),
+      entity('competitor', 'Rival One', 'present'),
+      entity('competitor', 'Rival Two', 'present'),
     ],
-    prior: null,
     roster_current: true,
-    source_class: null,
     recurrence_count: 3,
     answer_count: 3,
-    prompt_indices: [0, 1],
+    prompts: [{ prompt_id: 'prompt-1', text: 'best crm for startups' }],
     themes: ['crm'],
     analysis_ids: ['analysis-1'],
     answer_competitors: [],
-    requested: false,
     ...overrides,
   };
 }
@@ -68,41 +60,54 @@ function page(overrides: Partial<SourcePageEvidence> = {}): SourcePageEvidence {
 const detect = (pages: SourcePageEvidence[]) =>
   detectEarnedPageOpportunities({
     pages,
-    owned_domains: ['acme.test'],
     eligible_answers: 6,
     inspected_pages: pages.length,
     total_pages: pages.length,
   });
 
 describe('earned page opportunities', () => {
-  it('asks to acquire a listing and scores recurrence and competitor presence', () => {
+  it('asks to get listed where competitors are and the brand is not, measured on its prompts', () => {
     const [hit] = detect([page()]);
     expect(hit).toMatchObject({
-      rule_id: e.RULE_EARNED_PAGE_ACQUIRE,
-      target_key: `${e.EARNED_PAGE_TARGET_PREFIX}hash-a`,
+      rule_id: 'earned_page_acquire_listing',
+      target_key: 'earned-page:hash-a',
       source_analysis_ids: ['analysis-1'],
       value_factor: 1.5,
-      gap_factor: 1 + 2 * e.EARNED_PAGE_COMPETITOR_FACTOR_STEP,
+      gap_factor: 1.4,
+      evidence: {
+        content_handoff: {
+          affected_prompts: [{ prompt_id: 'prompt-1', text: 'best crm for startups' }],
+          observed_competitors: ['Rival One', 'Rival Two'],
+          ask: 'Be included on this page alongside Rival One, Rival Two, with an entry comparable to theirs that links to your site.',
+        },
+      },
     });
   });
 
-  it('defends a listing the brand lost since the prior inspection', () => {
-    const prior = {
-      snapshot_id: 'snapshot-1',
-      brand_present: true,
-      brand_match_count: 2,
-      present_competitors: ['Rival One'],
-      content_hash: 'content-1',
-    };
-    expect(detect([page({ prior })])[0]?.rule_id).toBe(e.RULE_EARNED_PAGE_DEFEND);
+  it('acts on directory profiles and alternatives pages too', () => {
+    expect(detect([page({ page_format: 'profile' })])).toHaveLength(1);
+    expect(detect([page({ page_format: 'alternative' })])).toHaveLength(1);
+    expect(detect([page({ page_format: 'article' })])).toEqual([]);
   });
 
-  it('researches an uninspected page only once it recurs or is requested', () => {
-    const uninspected = { inspection_state: s.INSPECTION_NOT_INSPECTED, snapshot_id: null };
-    expect(detect([page(uninspected)])).toEqual([]);
-    expect(detect([page({ ...uninspected, requested: true })])[0]?.rule_id).toBe(
-      e.RULE_EARNED_PAGE_RESEARCH,
-    );
+  it("never asks to be listed on a competitor's own page", () => {
+    expect(detect([page({ source_class: 'competitor_owned' })])).toEqual([]);
+    expect(detect([page({ source_class: 'other_third_party' })])).toHaveLength(1);
+  });
+
+  it('needs the brand confirmed absent, not merely unmatched or present', () => {
+    const brand = (presence: string) => ({
+      entities: [entity('brand', 'Acme', presence), entity('competitor', 'Rival One', 'present')],
+    });
+    expect(detect([page(brand('present'))])).toEqual([]);
+    expect(detect([page(brand('ambiguous'))])).toEqual([]);
+    expect(detect([page(brand('not_detected'))])).toHaveLength(1);
+  });
+
+  it('judges a page on its last successful reading under the current roster', () => {
+    expect(detect([page({ snapshot_id: null })])).toEqual([]);
+    expect(detect([page({ roster_current: false })])).toEqual([]);
+    expect(detect([page({ sufficient_coverage: false })])).toEqual([]);
   });
 });
 

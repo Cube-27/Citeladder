@@ -43,7 +43,10 @@ async function spend(
     .returning('id')
     .executeTakeFirst();
 }
-/** Charge one redirect token: `charged` to follow it, `duplicate` if already paid. */
+/**
+ * Charge one redirect token: `charged` to follow it, `duplicate` if already
+ * paid in this budget window. A token that failed is retried in a later window.
+ */
 export async function spendRedirect(
   db: Database,
   scope: SourceScope,
@@ -57,64 +60,72 @@ export async function spendRedirect(
     await acquireProjectLock(trx, scope.projectId);
     if (!(await remaining(trx, scope, now))) return 'exhausted';
     const digest = createHash('sha256').update(url).digest('hex');
-    const key = `redirect:${scope.projectId}:${digest}`;
+    const window = Math.floor(now.getTime() / (p.budget_window_hours * 3_600_000));
+    const key = `redirect:${scope.projectId}:${digest}:${window}`;
     return (await spend(trx, scope, 'redirect', key, null, now)) ? 'charged' : 'duplicate';
   });
 }
+const NOT_EARNABLE = policy.opportunity.earned_actions.EARNED_EXCLUDED_SOURCE_CLASSES;
+const v = policy.opportunity.source_pages;
+const hoursAgo = (now: Date, hours: number) => new Date(now.getTime() - hours * 3_600_000);
+
+/**
+ * Claim the next pages to read within the remaining budget. A page is read
+ * once and again only after it goes stale. Pages cited in answers come before
+ * organic search results nobody cited; within each, never read before stale,
+ * then retries. A failed read waits a budget window and a blocked one the
+ * stale period, so neither is re-fetched every run.
+ */
 export async function claimPages(
   db: Database,
   scope: SourceScope,
   now = new Date(),
-  pageIds?: string[],
   task?: QueueTask,
 ) {
-  if (pageIds && !pageIds.length) return [];
   return db.transaction().execute(async (trx) => {
     await fenceInspectionTask(trx, task);
     await requireScope(trx, scope);
     await acquireProjectLock(trx, scope.projectId);
     const budget = Math.min(p.batch_max, await remaining(trx, scope, now));
     if (!budget) return [];
-    const due = await trx
-      .selectFrom('placement_checks')
-      .select('source_page_id')
-      .where('workspace_id', '=', scope.workspaceId)
-      .where('project_id', '=', scope.projectId)
-      .where('due_at', '<=', now)
-      .where('state', 'in', ['pending', 'unmet', 'unavailable'])
-      .orderBy('due_at')
-      .limit(policy.opportunity.placement.PLACEMENT_DUE_PAGES_MAX)
-      .execute();
-    let query = trx
+    const retryAfter = (state: string, hours: number) =>
+      sql<boolean>`(inspection_state = ${state} and not exists (
+        select 1 from source_page_snapshots attempt
+        where attempt.id = source_pages.latest_snapshot_id
+          and attempt.fetched_at > ${hoursAgo(now, hours)}))`;
+    const query = trx
       .selectFrom('source_pages')
       .selectAll()
       .where('workspace_id', '=', scope.workspaceId)
       .where('project_id', '=', scope.projectId)
-      .where('inspection_state', '!=', 'blocked')
       .where((eb) =>
-        eb.or([
-          eb('inspection_state', '!=', 'queued'),
-          eb('claim_expires_at', 'is', null),
-          eb('claim_expires_at', '<', now),
-        ]),
+        eb.or([eb('source_class', 'is', null), eb('source_class', 'not in', NOT_EARNABLE)]),
       )
       .where((eb) =>
         eb.or([
-          eb('last_inspected_at', 'is', null),
-          eb('last_inspected_at', '<', new Date(now.getTime() - p.reuse_within_hours * 3_600_000)),
+          eb('inspection_state', 'in', [v.INSPECTION_NOT_INSPECTED, v.INSPECTION_STALE]),
+          eb.and([
+            eb('inspection_state', '=', v.INSPECTION_QUEUED),
+            eb('claim_expires_at', '<', now),
+          ]),
+          retryAfter(v.INSPECTION_FAILED, p.budget_window_hours),
+          retryAfter(v.INSPECTION_BLOCKED, p.stale_after_hours),
         ]),
       )
-      .orderBy(sql`case when inspection_state = 'not_inspected' then 0 when inspection_state = 'stale' then 1
-        when id = any(${due.map((d) => d.source_page_id)}::uuid[]) then 2 else 3 end`)
+      .orderBy(sql`last_cited_at is null`)
+      .orderBy(
+        sql`case inspection_state when ${v.INSPECTION_NOT_INSPECTED} then 0 when ${v.INSPECTION_STALE} then 1 else 2 end`,
+      )
       .orderBy('recurrence_count', 'desc')
       .orderBy(sql`last_cited_at desc nulls last`)
       .orderBy('id')
       .limit(budget);
-    if (pageIds) query = query.where('id', 'in', pageIds);
     const lease = new Date(now.getTime() + p.claim_lease_minutes * 60_000);
     const claims = [];
     for (const page of await query.execute()) {
-      const kind = ['inspected', 'stale'].includes(page.inspection_state) ? 'recheck' : 'page';
+      const kind = [v.INSPECTION_INSPECTED, v.INSPECTION_STALE].includes(page.inspection_state)
+        ? 'recheck'
+        : 'page';
       if (
         !(await spend(
           trx,
@@ -128,7 +139,7 @@ export async function claimPages(
         continue;
       await trx
         .updateTable('source_pages')
-        .set({ inspection_state: 'queued', claim_expires_at: lease, updated_at: now })
+        .set({ inspection_state: v.INSPECTION_QUEUED, claim_expires_at: lease, updated_at: now })
         .where('workspace_id', '=', scope.workspaceId)
         .where('project_id', '=', scope.projectId)
         .where('id', '=', page.id)

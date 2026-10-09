@@ -132,28 +132,6 @@ async function searchLeg(db: Database, row: Declaration, now: Date): Promise<Leg
   };
 }
 
-async function placementLeg(db: Database, row: Declaration): Promise<Leg> {
-  const check = await db
-    .selectFrom('placement_checks')
-    .select(['id', 'state', 'due_at', 'observed_at'])
-    .where('workspace_id', '=', row.workspace_id)
-    .where('project_id', '=', row.project_id)
-    .where('implementation_event_id', '=', row.id)
-    .executeTakeFirst();
-  if (!check) return empty(a.LEG_PLACEMENT_RECHECK);
-  let state = a.LEG_STATE_NOT_SCHEDULED;
-  if (check.due_at) state = a.LEG_STATE_WAITING;
-  else if (check.state !== policy.opportunity.placement.PLACEMENT_STATE_PENDING)
-    state = a.LEG_STATE_OBSERVED;
-  return {
-    leg: a.LEG_PLACEMENT_RECHECK,
-    state,
-    due_at: check.due_at,
-    last_evidence_at: check.observed_at,
-    source_id: check.id,
-  };
-}
-
 export async function measurementLegs(
   db: Database,
   row: Declaration,
@@ -170,7 +148,6 @@ export async function measurementLegs(
     if (leg === a.LEG_CRAWL) result.push(await crawlLeg(db, row, observations));
     else if (leg === a.LEG_VISIBILITY_RUN) result.push(await visibilityLeg(db, row, observations));
     else if (leg === a.LEG_SEARCH_CONSOLE_WINDOW) result.push(await searchLeg(db, row, now));
-    else if (leg === a.LEG_PLACEMENT_RECHECK) result.push(await placementLeg(db, row));
   }
   return result;
 }

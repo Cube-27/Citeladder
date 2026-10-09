@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vite-plus/test';
 
 import type { OpportunityDetail } from '@/lib/api/types';
@@ -27,7 +27,6 @@ function detailWith(handoff: Partial<OpportunityDetail['content_handoff']>): Opp
       target_url: 'https://publisher.example/best-crm',
       target_theme: 'crm',
       representative_citations: [],
-      affected_prompt_indices: [],
       affected_themes: [],
       observed_competitors: ['Globex'],
       coverage: {},
@@ -68,7 +67,6 @@ describe('the grounded brief behind an earned action', () => {
           page_format: 'listicle',
           page_entities: ENTITIES,
           extracted_chars: 4200,
-          sufficient_coverage: true,
         })}
       />,
     );
@@ -86,7 +84,6 @@ describe('the grounded brief behind an earned action', () => {
           rule_id: 'earned_page_acquire_listing',
           page_entities: ENTITIES,
           extracted_chars: 4200,
-          sufficient_coverage: true,
         })}
       />,
     );
@@ -108,38 +105,32 @@ describe('the grounded brief behind an earned action', () => {
       />,
     );
 
-    expect(screen.getByText('Found on this page')).toBeVisible();
-    expect(screen.getByText('Named in the answers, not on the page')).toBeVisible();
-    expect(screen.getByText(/did not affect this task/)).toBeVisible();
+    const onPage = screen.getByText('Found on this page').parentElement!;
+    const inAnswers = screen.getByText('Named in the answers, not on the page').parentElement!;
+    expect(within(onPage).getByText('Globex')).toBeVisible();
+    expect(within(onPage).queryByText('Initech')).toBeNull();
+    expect(within(inAnswers).getByText('Initech')).toBeVisible();
   });
 
-  it('names the specific discrepancy a correction has to fix', () => {
+  it('says what to ask the publisher for and which prompts will measure it', () => {
     render(
       <EarnedPageHandoff
         detail={detailWith({
-          rule_id: 'earned_page_correct_listing',
-          discrepancies: ['owned_domain_missing'],
+          rule_id: 'earned_page_acquire_listing',
           page_entities: ENTITIES,
+          ask: 'Be included on this page alongside Globex.',
+          affected_prompts: [
+            {
+              prompt_id: '33333333-3333-4333-8333-333333333333',
+              text: 'best crm for small teams',
+            },
+          ],
         })}
       />,
     );
 
-    expect(screen.getByText(/links out to rivals and to none of your domains/)).toBeVisible();
-  });
-
-  it('says what is unresolved when the action could not be qualified', () => {
-    render(
-      <EarnedPageHandoff
-        detail={detailWith({
-          rule_id: 'earned_page_research_source',
-          qualified: false,
-          unmet_qualification: ['insufficient_coverage', 'page_format_unresolved'],
-        })}
-      />,
-    );
-
-    expect(screen.getByText('Still unresolved')).toBeVisible();
-    expect(screen.getByText(/Too little of the page was readable/)).toBeVisible();
-    expect(screen.getByText(/What kind of page this is could not be established/)).toBeVisible();
+    expect(screen.getByText('Be included on this page alongside Globex.')).toBeVisible();
+    const prompts = screen.getByText('Prompts that cite this page').parentElement!;
+    expect(within(prompts).getByRole('listitem')).toHaveTextContent('best crm for small teams');
   });
 });

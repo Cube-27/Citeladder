@@ -154,14 +154,6 @@ function firstOccurrence(
   return first;
 }
 
-/**
- * Offset of `name` in already-normalized text, or null. A whole-word match is
- * also a whole-token compact match, so this is Python's `first_alias_offset`.
- */
-export function aliasOffset(normalizedText: string, name: string): number | null {
-  return firstOccurrence(normalizedText, [name])?.offset ?? null;
-}
-
 /** Whether `text` names the entity through any alias, under its matching policy. */
 export function namesEntity(
   text: string,

@@ -7,9 +7,13 @@
  * this URL), never presence on the page; `first_seen` is the first sighting
  * within the selection, never the page's age.
  */
+import type { visibilitySourceUrlSchema } from '@citeladder/contracts/visibility-evidence';
 import { sql } from 'kysely';
+import type { z } from 'zod';
 
+import { earnedTargetKey } from '../analysis/opportunities/earned-pages.ts';
 import type { Database } from '../db/database.ts';
+import { latestReadings, pageEntities, readAt, readingPresences } from '../source-pages/reading.ts';
 import { pydanticUtcOrNull, utcText } from '../db/timestamps.ts';
 import { brandIdentities, identityKey } from './brand-identities.ts';
 import { authorizedSelection, evidenceScope, observedAt, type RunSelection } from './selection.ts';
@@ -19,32 +23,7 @@ import { compareText } from '../text-order.ts';
 const SOURCE_URL_MAX_PROMPTS = 50;
 const SOURCE_URL_MAX_BRANDS = 12;
 
-export type SourceUrlDetail = {
-  url: string;
-  title: string;
-  retrievals: number;
-  citations: number;
-  responses: number;
-  citation_rate: number | null;
-  prompts: number;
-  first_seen: string | null;
-  last_seen: string | null;
-  engines: { logical_engine: string; transport_model: string | null; retrievals: number }[];
-  prompt_rows: {
-    prompt_text: string;
-    topic: string | null;
-    responses: number;
-    last_seen: string | null;
-    engines: string[];
-  }[];
-  brands: {
-    kind: 'brand' | 'competitor';
-    name: string;
-    responses: number;
-    logo_url: string | null;
-    website: string | null;
-  }[];
-};
+export type SourceUrlDetail = z.input<typeof visibilitySourceUrlSchema>;
 
 function scopeOf(db: Database, selection: RunSelection) {
   return evidenceScope(db, selection)
@@ -188,6 +167,71 @@ async function brands(
   });
 }
 
+/**
+ * What this project knows about the page itself: whether and when it was
+ * read, what kind of page it is and how that was established, who is named on
+ * it with the quoted line, and the open Action to get listed on it.
+ *
+ * Presence comes from the latest SUCCESSFUL reading only, so a later failed
+ * attempt never erases what was learned, and a page nobody read carries no
+ * verdicts at all. One bounded read by page identity; it never fetches.
+ */
+async function pageSection(
+  db: Database,
+  selection: RunSelection,
+  urlHash: string | null | undefined,
+): Promise<SourceUrlDetail['page']> {
+  if (!urlHash) return null;
+  const page = await db
+    .selectFrom('source_pages')
+    .select([
+      'id',
+      'url_hash',
+      'inspection_state',
+      'inspection_reason',
+      'page_format',
+      'page_format_method',
+      'source_class',
+    ])
+    .where('workspace_id', '=', selection.workspaceId)
+    .where('project_id', '=', selection.projectId)
+    .where('url_hash', '=', urlHash)
+    .executeTakeFirst();
+  if (!page) return null;
+  const scope = { workspaceId: selection.workspaceId, projectId: selection.projectId };
+  const reading = (await latestReadings(db, scope, [page.id])).get(page.id);
+  const presences = reading
+    ? ((await readingPresences(db, scope, [reading.id])).get(reading.id) ?? [])
+    : [];
+  const action = await db
+    .selectFrom('opportunities as opportunity')
+    .innerJoin('actions as action', (join) =>
+      join
+        .onRef('action.project_id', '=', 'opportunity.project_id')
+        .on(sql<boolean>`action.member_opportunity_ids @> jsonb_build_array(opportunity.id::text)`),
+    )
+    .select('action.id')
+    .where('opportunity.workspace_id', '=', selection.workspaceId)
+    .where('opportunity.project_id', '=', selection.projectId)
+    .where('opportunity.target_key', '=', earnedTargetKey(page.url_hash))
+    .where('opportunity.superseded_at', 'is', null)
+    .where('action.workspace_id', '=', selection.workspaceId)
+    .orderBy('opportunity.priority_score', 'desc')
+    .limit(1)
+    .executeTakeFirst();
+  return {
+    state: page.inspection_state,
+    reason: page.inspection_reason,
+    read_at: reading ? readAt(reading) : null,
+    extracted_chars: reading?.extracted_chars ?? null,
+    page_format: page.page_format,
+    page_format_method: page.page_format_method,
+    source_class: page.source_class,
+    entities: reading ? pageEntities(reading, presences) : [],
+    action_id: action?.id ?? null,
+  };
+}
+
 export async function getSourceUrlDetail(
   db: Database,
   requested: RunSelection,
@@ -214,8 +258,12 @@ export async function getSourceUrlDetail(
     .innerJoin(scope, 'scope.analysis_id', 'citation.analysis_id')
     .where('citation.workspace_id', '=', selection.workspaceId)
     .where('citation.url', '=', url);
-  const { citations } = await matching
-    .select(sql<string>`count(citation.id)`.as('citations'))
+  // The page identity these citations resolved to rides on the count.
+  const { citations, url_hash: urlHash } = await matching
+    .select([
+      sql<string>`count(citation.id)`.as('citations'),
+      sql<string | null>`max(citation.url_hash)`.as('url_hash'),
+    ])
     .executeTakeFirstOrThrow();
   // The title the engines reported, most recent non-empty first.
   const title = await matching
@@ -239,5 +287,6 @@ export async function getSourceUrlDetail(
     engines: await engines(db, cited),
     prompt_rows: await promptRows(db, cited),
     brands: await brands(db, selection, cited),
+    page: await pageSection(db, selection, urlHash),
   };
 }

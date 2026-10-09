@@ -25,15 +25,13 @@ import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project
 
 /**
  * Where a user starts the reading a leg is waiting for; nothing runs by
- * itself. A crawl can start from here; the placement recheck is due-dated by
- * its own check, so it has none.
+ * itself. A crawl can start from here.
  */
 const LEG_OWNER: Record<MeasurementLeg['leg'], { href: string; label: string } | null> = {
   next_visibility_run: { href: '/runs', label: 'Open Runs' },
   next_search_console_window: { href: '/performance', label: 'Open Performance' },
   // A crawl starts from here: Run crawl now.
   next_crawl: null,
-  placement_recheck: null,
 };
 
 /**
@@ -255,5 +253,4 @@ const NOT_SCHEDULED: Record<MeasurementLeg['leg'], string> = {
   next_visibility_run: 'No visibility run is scheduled. Run or schedule one to measure.',
   next_search_console_window: 'Waiting for the next complete window.',
   next_crawl: 'Crawls run when you start one.',
-  placement_recheck: 'No recheck of the publisher page is scheduled.',
 };

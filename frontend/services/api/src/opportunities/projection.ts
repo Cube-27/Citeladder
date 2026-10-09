@@ -221,7 +221,6 @@ function defaultHandoff(row: OpportunityRow): Record<string, unknown> {
     target_url: row.target_url,
     target_theme: row.target_theme,
     representative_citations: [],
-    affected_prompt_indices: [],
     affected_themes: row.target_theme ? [row.target_theme] : [],
     observed_competitors: list(record(row.evidence).competitor_names),
     coverage: {},

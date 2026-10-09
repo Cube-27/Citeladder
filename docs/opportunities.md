@@ -82,16 +82,13 @@ source mix. The [content handoff](../frontend/services/api/src/opportunities/pro
 projects target IDs, citations, limitations, coverage and a suggested content
 format for the Agent's context.
 
-Earned actions are keyed on one inspected page, not on a publisher domain.
-`earned_page_acquire_listing`, `earned_page_correct_listing`,
-`earned_page_defend_listing` and `earned_page_research_source` fire only on
-evidence that a page was read, behind a qualification gate that research is
-the explicit exception to. Their priority reads verified on-page competitor
-presence; answer-level co-occurrence is descriptive and never scores. The
-domain-keyed `earned_source_recurs_beside_gap` is retired and config-only.
-[Earned sources](earned-sources.md) is the authority for the
-inspection and the four rules; a declaration against them targets the
-publisher page and never an owned `SiteUrl`.
+The earned action is keyed on one read page, not on a publisher domain.
+`earned_page_acquire_listing` fires only when a successful reading shows a
+tracked competitor on the page and the brand absent. Its priority reads
+verified on-page competitor presence; answer-level co-occurrence is
+descriptive and never scores. [Earned sources](earned-sources.md) is the
+authority for the inspection and the rule; a declaration against it targets
+the publisher page and never an owned `SiteUrl`.
 
 The Agent's [Actions screens](../frontend/components/agent/actions-screen.tsx)
 render that contract; they never reclassify domains or fabricate task prose.
@@ -182,14 +179,13 @@ changed:
 | Search Console (page or query) | clicks per day on that page or query rise against the rate in the last daily window that ended before go-live (sync windows differ in length, so windows compare as rates) | each synced daily window that starts after the go-live day (that day is partly before the change) |
 | Keyword gap | the project appears for the search: Search Console impressions, or an owned ranking in a later Search Intelligence dataset whose provider check postdates go-live; still missing or not ranking yet reads `waiting`, never `unmet` | each synced window that starts after go-live, and each later published ranking, shared or missing-keyword dataset for the same website and market |
 | Prompt-targeted visibility | the prompt's composite score rises against its score in the snapshot's audit | the next audit that ran the prompt |
-| Earned page | the declared placement change | the placement recheck |
+| Earned page | each tracked prompt whose answers cited the page: its composite score rises against its score in the snapshot's audit | the next audit that ran the prompt |
 
 A finding nothing can isolate — a product, category or theme, or a visibility
 finding with no prompt — gets no check: the project-wide score moves for
 reasons the Action never touched, and site-wide clicks include every other
 page. The declaration still records the work, and the Action reads as
-implemented with nothing to measure. An earned declaration whose publisher page
-was never read is refused, because its placement could never be rechecked.
+implemented with nothing to measure.
 When the go-live time is earlier than evidence that already exists, the latest
 crawl, audit and Search Console window are queued for this declaration at once.
 Replay checks both the persisted project/Action identity and the original
@@ -209,17 +205,12 @@ replay must name the same selection. Later complete, compatible crawl evidence
 checks for a main-content link to the destination; the anchor was a suggestion,
 so rewording it still verifies. Navigation-only links do not satisfy the check, and missing or incompatible capture stays inconclusive.
 
-An earned declaration receives a PLACEMENT check, not the baseline-anchored
-visibility one. Its expected change is read from the rule — a listing acquired,
-a named discrepancy resolved, a placement restored, a source resolved — and a
-[placement check](../frontend/services/api/src/opportunities/placement-declaration.ts) row
-anchored on that implementation event freezes the source identity, the expected
-change, the baseline snapshot and the roster it was judged against. The
-opportunity's stable key travels alongside for navigation across recompute and
-is never the anchor: the same page and action can be attempted more than once,
-and a check has to know which attempt it verifies.
+An earned declaration is measured on prompts, not on the page: whether the
+listing went live shows on the cited URL's page from the next reading, and the
+outcome that matters is visibility on the prompts that cite it. Neither claims
+the listing caused a movement.
 
-Later crawl, audit, traffic, source-page-inspection or Search Intelligence
+Later crawl, audit, traffic or Search Intelligence
 keyword-dataset completion enqueues
 [TypeScript verification](../frontend/services/api/src/opportunities/verification.ts)
 through the [TypeScript enqueue owner](../frontend/services/api/src/opportunities/enqueue.ts)
@@ -243,33 +234,11 @@ reader is told, so repeated unchanged readings add nothing. Verification does
 not perform an external change or infer one from metrics. Repeated processing
 is idempotent, and new evidence never rewrites the declaration.
 
-## Placement observation
-
-An inspection batch compares every pending check against the reading it just
-committed, through the pure comparator in
-[placement-outcome.ts](../frontend/services/api/src/analysis/opportunities/placement-outcome.ts).
-The comparison is for the SPECIFIC declared change: a correction that named a
-missing outbound link is satisfied by the page linking to us, not by the brand
-appearing somewhere in the prose. A reading judged against a different entity
-roster is not comparable and is not compared — the same rule the deterioration
-detector applies. `unavailable` never decays into `unmet`: a page we could not
-read says nothing about whether the placement went live.
-
-An empty first reading is an observation, not a contradiction. The check is
-re-armed a bounded number of times before it stops asking, and a due check
-makes its page claimable through the same atomic admission and the same
-inspection budget unit as any other reading — never a path around the
-accounting.
-
 ## Comparability and presentation
 
 The [verification result](../frontend/services/api/src/opportunities/verification-result.ts)
 projects separate visibility, AI-referral and branded-demand legs, baseline and
 post-action source IDs, version identity, gap changes and overlapping actions.
-A placement observation travels in its own top-level section, never folded into
-those legs. "The listing is live" and "visibility moved" are two observations
-about two different things; they are free to disagree, and reporting them as
-one is the defect.
 Visibility comparison checks frozen audit context, prompt/cohort identity,
 engines, repetitions, locale and retrieval policy. Missing or incompatible
 evidence remains not-run, unavailable or non-comparable.
@@ -281,8 +250,8 @@ its verification window (`measured_until`), and what each
 for, read from persisted rows: the next scheduled visibility run, the next
 Search Console window — a synced window that starts after the
 declaration day, due a few days later, or a sync once that has passed — the
-next crawl (none is scheduled until someone runs one) and the earned-page
-placement recheck, each with the row it read. Nothing is triggered by a read.
+next crawl (none is scheduled until someone runs one), each with the row it
+read. Nothing is triggered by a read.
 
 **Mark implemented** in the Agent output pane declares the revision on screen;
 the Action detail declares work done outside CiteLadder. The dialog asks when
@@ -304,9 +273,7 @@ workspace/project follows the baseline cascade; nullable crawl/audit references
 survive source retention through SET NULL.
 
 [Configuration](../frontend/services/api/src/config/opportunity.ts) owns tunable
-ranking and verification policy;
-[placement configuration](../frontend/services/api/src/config/placement.ts) owns the
-expected-change vocabulary, the check states and the recheck schedule.
+ranking and verification policy.
 [Site Health](site-health.md), [Demand](integrations-traffic-analytics.md) and
 [Visibility](visibility-prompt.md) remain the source authorities.
 [Refresh PostgreSQL tests](../frontend/services/api/test/opportunity-refresh.test.ts)
@@ -318,9 +285,7 @@ exercise per-source folding, scoped traffic and prompt checks, the window,
 unavailable-state behavior, workspace isolation, the enqueue gate and the
 producer, worker and persisted-reader boundary;
 [Action PostgreSQL tests](../frontend/services/api/test/actions.test.ts) cover
-declaration admission, go-live bounds, unmeasurable findings, refused
-placements, concurrent replay, workspace isolation, frozen checks and the
-TypeScript declaration and inspection boundary. The
-[source-inspection tests](../frontend/services/api/test/source-inspection.test.ts)
-exercise placement settlement and recheck admission against seeded declarations. The pending integrations
+declaration admission, go-live bounds, unmeasurable findings, earned
+declarations measured on their prompts, concurrent replay, workspace
+isolation and frozen checks. The pending integrations
 follow-up may improve these read surfaces; it is not a second action store.

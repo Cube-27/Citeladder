@@ -153,7 +153,7 @@ export function BrandsCard({
 }>) {
   return (
     <SectionCard
-      title="Brands mentioned"
+      title="Named in the answers"
       caption="Named in the answers that cited this URL — not necessarily present on the page itself."
       loading={loading}
       errored={errored}

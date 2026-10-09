@@ -63,21 +63,7 @@ async function verificationSource(db: Database, task: QueueTask, project: string
         .where('status', '=', 'published')
         .executeTakeFirst()
     )?.time;
-  else if (kind === 'source_page_inspection') {
-    let query = scope
-      .selectFrom(db, 'placement_checks')
-      .select(utcText(sql`max(observed_at)`).as('time'))
-      .where('project_id', '=', project);
-    const since =
-      typeof payload.settled_since === 'string' ? parseDatetime(payload.settled_since) : null;
-    if (since)
-      query = query.where(
-        'updated_at',
-        '>=',
-        sql<Date>`${String(payload.settled_since)}::timestamptz`,
-      );
-    observed = (await query.executeTakeFirst())?.time;
-  } else throw new Error('Implementation verification trigger kind is invalid');
+  else throw new Error('Implementation verification trigger kind is invalid');
   if (!observed) throw new Error('Implementation verification source is not terminal');
   return { kind, id, observed_at: `${observed}Z` };
 }

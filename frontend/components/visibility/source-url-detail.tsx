@@ -11,12 +11,19 @@ import { splitPaneClasses } from '@/components/ui/workspace';
 import { SourceBreadcrumb } from '@/components/visibility/source-breadcrumb';
 import { SourcePrompts } from '@/components/visibility/source-prompts';
 import type { SourceFilters } from '@/components/visibility/source-rows';
+import { UsageCard } from '@/components/visibility/source-charts';
 import { BrandsCard, EnginesCard } from '@/components/visibility/source-url-cards';
+import { SourceUrlPageCard } from '@/components/visibility/source-url-page';
 import { count, hostOf, pathOf, ratio, sinceLabel } from '@/lib/visibility/sources';
-import { useSourceUrl, type SourceQueries } from '@/lib/visibility/use-source-analysis';
+import {
+  useSourceSeries,
+  useSourceUrl,
+  type SourceQueries,
+} from '@/lib/visibility/use-source-analysis';
 
 /**
- * One cited URL: what it is, how it performs, and the answers that used it.
+ * One cited URL: whether there is something to do about it, what is on it,
+ * how engines use it over time, and the answers that used it.
  *
  * Every figure here is scoped to the selection above it, including First seen —
  * which is the earliest sighting in the period being looked at, not the page's
@@ -42,6 +49,12 @@ export function SourceUrlDetail({
   onOpenInventory: () => void;
 }>) {
   const query = useSourceUrl(filters, queries, url);
+  const usage = useSourceSeries(filters, queries, {
+    dimension: 'url',
+    domain: null,
+    sourceType: null,
+    url,
+  });
   const data = query.data;
   const title = data?.title?.trim() || pathOf(url);
 
@@ -73,6 +86,18 @@ export function SourceUrlDetail({
           {data ? <Overview data={data} /> : null}
         </CardContent>
       </Card>
+
+      <SourceUrlPageCard url={url} page={data?.page} loading={query.isLoading} />
+
+      <UsageCard
+        dimension="url"
+        query={usage}
+        heading={{
+          title: 'Use over time',
+          description:
+            'How often answers used this page as a source, as a share of the answers in each period.',
+        }}
+      />
 
       <div className={splitPaneClasses('peers')}>
         <EnginesCard engines={data?.engines} loading={query.isLoading} errored={query.isError} />

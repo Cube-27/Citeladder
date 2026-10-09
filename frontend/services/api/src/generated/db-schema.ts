@@ -1665,7 +1665,6 @@ export interface OpportunityOrders {
 }
 
 export interface OpportunitySnapshots {
-  action_path_mix: Json | null;
   analyzer_version: string;
   audit_id: string | null;
   counts_by_severity: Json | null;
@@ -1674,7 +1673,6 @@ export interface OpportunitySnapshots {
   created_at: Timestamp;
   demand_snapshot_id: string | null;
   demand_source_revision: string | null;
-  domain_rollups: Json;
   formula_version: string;
   id: string;
   limitations: Json;
@@ -1762,31 +1760,6 @@ export interface PerformanceDimensionStats {
   snapshot_id: string;
   source_artifact_ids: Json | null;
   source_metric_row_ids: Json | null;
-  workspace_id: string;
-}
-
-export interface PlacementChecks {
-  attempts: number;
-  baseline_roster_version: string;
-  baseline_snapshot_id: string | null;
-  checker_version: string;
-  created_at: Timestamp;
-  declared_at: Timestamp;
-  due_at: Timestamp | null;
-  expected_change: string;
-  expected_detail: Json | null;
-  id: string;
-  implementation_event_id: string;
-  observation_snapshot_id: string | null;
-  observed_at: Timestamp | null;
-  opportunity_stable_key: string;
-  project_id: string;
-  rule_id: string;
-  source_page_id: string;
-  state: string;
-  state_reason: string | null;
-  updated_at: Timestamp;
-  url_hash: string;
   workspace_id: string;
 }
 
@@ -2838,7 +2811,6 @@ export interface SourcePages {
   first_seen_audit_id: string | null;
   id: string;
   inspection_reason: string | null;
-  inspection_requested_at: Timestamp | null;
   inspection_state: string;
   inspector_version: string | null;
   last_cited_at: Timestamp | null;
@@ -3142,7 +3114,6 @@ export interface DB {
   owned_domains: OwnedDomains;
   pending_activations: PendingActivations;
   performance_dimension_stats: PerformanceDimensionStats;
-  placement_checks: PlacementChecks;
   policy_acceptances: PolicyAcceptances;
   projects: Projects;
   prompt_candidates: PromptCandidates;

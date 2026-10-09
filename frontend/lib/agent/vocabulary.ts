@@ -69,7 +69,6 @@ const APPROACH_LABEL: Record<string, string> = {
   create_new: 'Create a new page',
   fix_technical: 'Fix a technical issue',
   earned_placement: 'Earn a placement',
-  research: 'Research the source',
   improve_links: 'Improve internal links',
 };
 
@@ -81,7 +80,6 @@ const MEASUREMENT_LEG_LABEL: Record<string, string> = {
   next_visibility_run: 'The next visibility run on the affected prompts',
   next_search_console_window: 'The next complete Search Console window',
   next_crawl: 'The next crawl of this page',
-  placement_recheck: 'The earned-page recheck',
 };
 
 export function measurementLegLabel(leg: string): string | null {
@@ -95,7 +93,6 @@ const CHECK_KIND_LABEL: Record<string, string> = {
   visibility_metric: 'Prompt score rises',
   traffic_metric: 'Search Console clicks rise',
   keyword_presence: 'You appear for the search',
-  placement: 'Change is live on the publisher page',
 };
 
 export function checkKindLabel(kind: string): string {
@@ -125,8 +122,6 @@ const CHECK_REASON: Record<string, string> = {
   no_traffic_snapshot: 'The Search Console window is no longer stored.',
   window_overlaps_declaration: 'That window includes the go-live day or earlier.',
   no_search_console_row: 'Search Console reported no row for this page or query.',
-  no_placement_check: 'The publisher page was never read, so it cannot be rechecked.',
-  recheck_scheduled: 'Not on the page yet. It will be read again.',
   not_ranking_yet: 'A later Search Intelligence analysis does not show you ranking yet.',
   still_missing: 'A later Search Intelligence analysis still lists this as a gap.',
   provider_serp_predates_change:

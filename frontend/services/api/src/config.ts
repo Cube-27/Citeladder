@@ -39,7 +39,6 @@ import {
 } from './config/opportunity.ts';
 import { earnedActions } from './config/earned-actions.ts';
 import { actions } from './config/actions.ts';
-import { placement } from './config/placement.ts';
 import { sourcePatterns } from './config/source-patterns.ts';
 import { sourcePages, sourcePageVocabulary, urlIdentity } from './config/source-pages.ts';
 import { jev, quality, qualityGatesReported, validateJevSettings } from './config/jev.ts';
@@ -134,7 +133,6 @@ export const policy = {
     opportunities: { ...opportunities },
     actions: { ...actions },
     earned_actions: earnedActions,
-    placement: { ...placement },
     source_patterns: { ...sourcePatterns },
     source_pages: { ...sourcePageVocabulary },
     tracking_query_params: siteHealth.tracking_params,

@@ -5,7 +5,6 @@ import { round } from '../demand/projection.ts';
 import { record } from '../db/json.ts';
 import { epochMicros, parseDatetime } from '../http/datetimes.ts';
 import { compareText } from '../text-order.ts';
-const p = policy.opportunity.placement;
 const o = policy.opportunity.opportunities;
 
 const windowDays: Partial<Record<ExpectedCheck['kind'], number>> = o.CHECK_KIND_WINDOW_DAYS;
@@ -23,7 +22,7 @@ export const MAX_WINDOW_DAYS = Math.max(
 
 /**
  * One expected check's reading from one source. `met` and `unmet` answer the
- * check; `waiting` was read but is not final (a placement due a recheck);
+ * check; `waiting` was read but is not final;
  * `unavailable` could not answer and says why.
  */
 export type CheckOutcome = {
@@ -169,19 +168,6 @@ export function compareMetric(
   return outcome(reading, matched ? 'met' : 'unmet');
 }
 
-export function evaluatePlacementCheck(
-  check: { state: string; state_reason: string | null; due_at: unknown } | undefined,
-  reading: Reading,
-): CheckOutcome | null {
-  if (!check) return outcome(reading, 'unavailable', 'no_placement_check');
-  if (check.state === p.PLACEMENT_STATE_PENDING) return null;
-  if (check.state === p.PLACEMENT_STATE_SATISFIED) return outcome(reading, 'met');
-  if (check.state === p.PLACEMENT_STATE_UNMET)
-    return check.due_at === null
-      ? outcome(reading, 'unmet')
-      : outcome(reading, 'waiting', 'recheck_scheduled');
-  return outcome(reading, 'unavailable', check.state_reason || check.state);
-}
 export function valueState(value: number | null): string {
   return value === null ? 'unavailable' : value === 0 ? 'observed_zero' : 'available';
 }

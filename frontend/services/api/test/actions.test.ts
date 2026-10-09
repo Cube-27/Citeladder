@@ -9,8 +9,7 @@ import {
   actionDeclarationSchema,
 } from '@citeladder/contracts/actions';
 import { searchConsoleState } from '../src/opportunities/measurement-legs.ts';
-import { settlePlacements } from '../src/source-pages/placement-settlement.ts';
-import { actionFixture, sourcePage, type ActionSeed } from './action-support.ts';
+import { actionFixture, type ActionSeed } from './action-support.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 
 const config = testConfig();
@@ -368,47 +367,12 @@ describe('Action routes', () => {
     expect((await detailBody(await request(s, actionPath(s)))).status).toBe('implemented');
   });
 
-  it('refuses an earned placement whose publisher page was never read', async () => {
+  it('declares an earned listing on the publisher page and measures the prompts that cited it', async () => {
     const s = await seed();
-    const earned = await actionFixture<{ action_id: string }>(
+    const earned = await actionFixture<{ action_id: string; prompt_id: string }>(
       'earned',
       s.workspace_id,
       s.project_id,
-    );
-    s.actions.earned = earned.action_id;
-    const action = await db
-      .selectFrom('actions')
-      .select('member_opportunity_ids')
-      .where('id', '=', earned.action_id)
-      .executeTakeFirstOrThrow();
-    await db
-      .updateTable('opportunities')
-      .set({
-        evidence: sql`jsonb_set(evidence, '{content_handoff,url_hash}', '"never-read"')`,
-      })
-      .where('id', 'in', action.member_opportunity_ids as string[])
-      .execute();
-    expect((await declare(s, 'unread', 'earned')).status).toBe(409);
-    expect(
-      await db
-        .selectFrom('opportunity_implementation_events')
-        .select('id')
-        .where('action_id', '=', earned.action_id)
-        .execute(),
-    ).toEqual([]);
-  });
-
-  it('opens an earned placement against the exact source baseline without claiming an owned target', async () => {
-    const s = await seed();
-    const earned = await actionFixture<{ action_id: string; page_id: string; snapshot_id: string }>(
-      'earned',
-      s.workspace_id,
-      s.project_id,
-    );
-    await sourcePage(
-      db,
-      { workspace_id: s.workspace_id, project_id: s.project_id },
-      'https://review.example/another-list',
     );
     s.actions.earned = earned.action_id;
     const result = await declare(s, 'earned', 'earned');
@@ -416,30 +380,18 @@ describe('Action routes', () => {
     const body = await declarationBody(result);
     expect(body.target_site_url_ids).toEqual([]);
     expect(body.target_external_url).toBe('https://review.example/best-tools');
-    expect(body.expected_checks[0]!.kind).toBe('placement');
-    const check = await db
-      .selectFrom('placement_checks')
-      .selectAll()
-      .where('implementation_event_id', '=', body.id)
-      .executeTakeFirstOrThrow();
-    expect(check).toMatchObject({
-      source_page_id: earned.page_id,
-      baseline_snapshot_id: earned.snapshot_id,
-      baseline_roster_version: 'roster-fixed',
-      state: 'pending',
-    });
-    expect(body.legs[0]).toMatchObject({
-      leg: 'placement_recheck',
-      state: 'waiting',
-      source_id: check.id,
-    });
+    expect(body.expected_checks).toEqual([
+      {
+        kind: 'visibility_metric',
+        metric: 'prompt_score',
+        direction: 'increase',
+        min_delta: 1,
+        tolerance: 0,
+        target_prompt_id: earned.prompt_id,
+      },
+    ]);
+    expect(body.legs).toMatchObject([{ leg: 'next_visibility_run' }]);
     expect((await declare(s, 'earned', 'earned')).status).toBe(200);
-    const count = await db
-      .selectFrom('placement_checks')
-      .select('id')
-      .where('implementation_event_id', '=', body.id)
-      .execute();
-    expect(count).toHaveLength(1);
     // The existing schema prevents a declaration claiming both target kinds.
     await expect(
       db
@@ -448,26 +400,6 @@ describe('Action routes', () => {
         .where('id', '=', body.id)
         .execute(),
     ).rejects.toMatchObject({ code: '23514' });
-    const observation = await actionFixture<{ snapshot_id: string; observed_at: string }>(
-      'observe',
-      s.workspace_id,
-      s.project_id,
-      earned.page_id,
-    );
-    await settlePlacements(
-      db,
-      { workspaceId: s.workspace_id, projectId: s.project_id },
-      new Date(observation.observed_at),
-    );
-    expect(
-      await db
-        .selectFrom('placement_checks')
-        .select(['state', 'observation_snapshot_id'])
-        .where('id', '=', check.id)
-        .executeTakeFirstOrThrow(),
-    ).toEqual({ state: 'satisfied', observation_snapshot_id: observation.snapshot_id });
-    const detail = await detailBody(await request(s, actionPath(s, 'earned')));
-    expect(detail.declaration?.legs[0]).toMatchObject({ state: 'observed', source_id: check.id });
   });
 
   it('uses the latest observation for status, retains history and projects observed legs without work', async () => {

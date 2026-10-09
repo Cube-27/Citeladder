@@ -286,7 +286,6 @@ export function snapshotRow(
     rule_version: '',
     formula_version: '',
     limitations: '[]',
-    domain_rollups: '[]',
     created_at: new Date(),
     ...values,
   };

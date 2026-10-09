@@ -65,16 +65,6 @@ export const opportunities = {
       severity: 'medium',
       title: 'Owned page not cited for target prompt',
     },
-    earned_source_recurs_beside_gap: {
-      action_path: 'earned',
-      enabled: false,
-      opportunity_type: 'visibility',
-      remediation:
-        'Inspect the cited pages, decide whether the brand belongs there, then prepare a human-led contribution, profile update, or editorial inclusion request. This observation does not establish domain-wide absence or guarantee a later citation.',
-      rule_id: 'earned_source_recurs_beside_gap',
-      severity: 'medium',
-      title: 'Earned source recurs beside visibility gaps',
-    },
     confirmed_prompt_decline: {
       action_path: 'owned',
       enabled: true,
@@ -330,49 +320,13 @@ export const opportunities = {
       enabled: true,
       opportunity_type: 'visibility',
       remediation:
-        'This page was read and your brand is not on it while a competitor is. Approach the publisher with the facts this brief carries and ask to be included, then declare the placement so it can be checked.',
+        'This page was read and your brand is not on it while a competitor is. Approach the publisher with the facts this brief carries and ask to be included. Once listed, the prompts that cite this page show whether your visibility moved.',
       rule_id: 'earned_page_acquire_listing',
       severity: 'high',
       title: 'Competitors listed on a cited page you are absent from',
     },
-    earned_page_correct_listing: {
-      action_path: 'earned',
-      enabled: true,
-      opportunity_type: 'visibility',
-      remediation:
-        'Your brand appears on this page, and the quoted passage disagrees with your reviewed facts. Send the publisher the correction and the evidence for it, then declare the change so the specific claim can be re-checked.',
-      rule_id: 'earned_page_correct_listing',
-      severity: 'medium',
-      title: 'Cited page describes your brand incorrectly',
-    },
-    earned_page_defend_listing: {
-      action_path: 'earned',
-      enabled: true,
-      opportunity_type: 'visibility',
-      remediation:
-        'An earlier inspection of this page found your brand in a position it no longer holds. Compare the two snapshots in the brief, then ask the publisher to restore or update the entry.',
-      rule_id: 'earned_page_defend_listing',
-      severity: 'low',
-      title: 'Your placement on a cited page has deteriorated',
-    },
-    earned_page_research_source: {
-      action_path: 'earned',
-      enabled: true,
-      opportunity_type: 'visibility',
-      remediation:
-        'Answer engines keep citing this page and CiteLadder could not establish what kind of page it is or whether you can be listed on it. Open it and decide; an unresolved source is the one kind that never resolves itself.',
-      rule_id: 'earned_page_research_source',
-      severity: 'low',
-      title: 'Recurring cited source needs a human look',
-    },
   },
-  EARNED_RULE_IDS: [
-    'earned_page_acquire_listing',
-    'earned_page_correct_listing',
-    'earned_page_defend_listing',
-    'earned_page_research_source',
-    'earned_source_recurs_beside_gap',
-  ],
+  EARNED_RULE_IDS: ['earned_page_acquire_listing'],
   DEMAND_SIGNAL_RULE_IDS: {
     high_impression_low_ctr: 'search_demand_content_gap',
     striking_distance: 'striking_distance_query',

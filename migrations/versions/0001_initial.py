@@ -2429,12 +2429,6 @@ def upgrade() -> None:
         ),
         sa.Column("source_mix", postgresql.JSONB(astext_type=Text()), nullable=True),
         sa.Column(
-            "action_path_mix", postgresql.JSONB(astext_type=Text()), nullable=True
-        ),
-        sa.Column(
-            "domain_rollups", postgresql.JSONB(astext_type=Text()), nullable=False
-        ),
-        sa.Column(
             "counts_by_type", postgresql.JSONB(astext_type=Text()), nullable=True
         ),
         sa.Column(
@@ -6177,7 +6171,6 @@ def upgrade() -> None:
         sa.Column("content_hash", sa.String(length=64), nullable=True),
         sa.Column("last_inspected_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("last_cited_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("inspection_requested_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("recurrence_count", sa.Integer(), nullable=False),
         sa.Column("first_seen_audit_id", sa.UUID(), nullable=True),
         sa.Column("last_seen_audit_id", sa.UUID(), nullable=True),
@@ -6401,73 +6394,6 @@ def upgrade() -> None:
         "source_page_inspection_spend",
         ["workspace_id"],
         unique=False,
-    )
-    op.create_table(
-        "placement_checks",
-        sa.Column("id", sa.UUID(), nullable=False),
-        sa.Column("workspace_id", sa.UUID(), nullable=False),
-        sa.Column("project_id", sa.UUID(), nullable=False),
-        sa.Column("implementation_event_id", sa.UUID(), nullable=False),
-        sa.Column("opportunity_stable_key", sa.Text(), nullable=False),
-        sa.Column("rule_id", sa.String(length=64), nullable=False),
-        sa.Column("source_page_id", sa.UUID(), nullable=False),
-        sa.Column("url_hash", sa.String(length=64), nullable=False),
-        sa.Column("expected_change", sa.String(length=32), nullable=False),
-        sa.Column(
-            "expected_detail", postgresql.JSONB(astext_type=sa.Text()), nullable=True
-        ),
-        sa.Column("baseline_snapshot_id", sa.UUID(), nullable=True),
-        sa.Column("baseline_roster_version", sa.String(length=64), nullable=False),
-        sa.Column("observation_snapshot_id", sa.UUID(), nullable=True),
-        sa.Column("state", sa.String(length=16), nullable=False),
-        sa.Column("state_reason", sa.String(length=48), nullable=True),
-        sa.Column("due_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("attempts", sa.Integer(), nullable=False),
-        sa.Column("declared_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("observed_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("checker_version", sa.String(length=32), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["baseline_snapshot_id"], ["source_page_snapshots.id"], ondelete="SET NULL"
-        ),
-        sa.ForeignKeyConstraint(
-            ["implementation_event_id"],
-            ["opportunity_implementation_events.id"],
-            ondelete="CASCADE",
-        ),
-        sa.ForeignKeyConstraint(
-            ["observation_snapshot_id"],
-            ["source_page_snapshots.id"],
-            ondelete="SET NULL",
-        ),
-        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(
-            ["source_page_id"], ["source_pages.id"], ondelete="CASCADE"
-        ),
-        sa.ForeignKeyConstraint(
-            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
-        ),
-        sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint(
-            "implementation_event_id", name="uq_placement_check_declaration"
-        ),
-    )
-    op.create_index(
-        "ix_placement_checks_due",
-        "placement_checks",
-        ["project_id", "state", "due_at"],
-        unique=False,
-    )
-    op.create_index(
-        "ix_placement_checks_project_state",
-        "placement_checks",
-        ["project_id", "state"],
-        unique=False,
-    )
-    _create_indexes(
-        "placement_checks",
-        ("workspace_id", "project_id", "implementation_event_id", "source_page_id"),
     )
     # --- Observed search surfaces (Google AI Overview) -------------------
     # Keyed on `task_id`, not `analysis_id`: a failed task never reaches
@@ -7918,7 +7844,6 @@ def downgrade() -> None:
         "site_page_link_metrics",
         "site_change_observations",
         "referral_classifications",
-        "placement_checks",
         "opportunity_verification_events",
         "commerce_product_categories",
         "commerce_observation_citations",

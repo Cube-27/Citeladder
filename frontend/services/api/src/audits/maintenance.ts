@@ -310,13 +310,13 @@ export class AuditMaintenance {
       .where((eb) =>
         eb.not(
           eb.exists(
+            // The unique idempotency key the inspection enqueue writes.
             eb
               .selectFrom('analytics_tasks as t')
               .select('t.id')
-              .whereRef('t.workspace_id', '=', 'a.workspace_id')
-              .whereRef('t.project_id', '=', 'a.project_id')
-              .where('t.task_kind', '=', 'source_page_inspection')
-              .where(sql<boolean>`t.payload->>'audit_id' = a.id::text`),
+              .where(
+                sql<boolean>`t.idempotency_key = 'analytics:source_page_inspection:' || a.project_id::text || ':' || a.id::text`,
+              ),
           ),
         ),
       )

@@ -12,26 +12,15 @@
  * "not present" is the defect the whole inspection feature was built to
  * remove, and it would re-enter here if one label covered both.
  */
+import type { z } from 'zod';
+
+import type { pageEntitySchema } from '@citeladder/contracts/source-pages';
+import type { visibilitySourceUrlSchema } from '@citeladder/contracts/visibility-evidence';
 import { formatCount } from '@/lib/format';
+import { sinceLabel } from '@/lib/visibility/sources';
 
-/**
- * The one sentence for "we could not read enough of this page to judge it".
- *
- * Shared because three surfaces state the same fact — a presence verdict, an
- * unmet qualification and a placement that could not be compared — and three
- * copies drift into three slightly different claims about one thing.
- */
-export const COVERAGE_TOO_THIN = 'Too little of the page was readable to judge it.';
-
-/** Page-level states: properties of the PAGE, never of an entity on it. */
-const PAGE_STATE_LABELS: Record<string, string> = {
-  not_inspected: 'Not inspected',
-  queued: 'Queued for inspection',
-  inspected: 'Inspected',
-  blocked: 'Publisher blocks automated access',
-  failed: 'Could not be read',
-  stale: 'Inspected a while ago',
-};
+/** The one sentence for "we could not read enough of this page to judge it". */
+const COVERAGE_TOO_THIN = 'Too little of the page was readable to judge it.';
 
 /**
  * What a verdict means for the brand or a competitor.
@@ -61,28 +50,8 @@ const MATCH_METHOD_LABELS: Record<string, string> = {
   normalized_alias: 'a normalized form of the name',
 };
 
-const PAGE_FORMAT_LABELS: Record<string, string> = {
-  comparison: 'Comparison',
-  listicle: 'Listicle',
-  review: 'Review',
-  directory: 'Directory',
-  discussion: 'Discussion',
-  reference: 'Reference',
-  article: 'Article',
-  video: 'Video',
-  unresolved: 'Format unresolved',
-};
-
-export function pageStateLabel(state: string): string | null {
-  return PAGE_STATE_LABELS[state] ?? null;
-}
-
 export function presenceLabel(state: string): string | null {
   return PRESENCE_LABELS[state] ?? null;
-}
-
-export function pageFormatLabel(format: string): string | null {
-  return PAGE_FORMAT_LABELS[format] ?? null;
 }
 
 /**
@@ -116,13 +85,87 @@ export function absenceBasis(
   return method ? `Searched ${read} for ${method}.` : `Searched ${read}; ${fallback}.`;
 }
 
+type PageSection = NonNullable<z.infer<typeof visibilitySourceUrlSchema>['page']>;
+
 /**
- * The sentence for how often a page turned up in answers.
+ * Where the business stands on one cited page, the first thing its detail
+ * view says.
  *
- * Distinct answers, not `recurrence_count` — that value schedules inspections
- * and is never a measurement.
+ * `gap` is the earned opportunity: the page was read, competitors are on it
+ * and the business is not. A page that belongs to the business or to a
+ * competitor can never list it, so it is named as such rather than judged.
+ * A page nobody read says so instead of reading as an absence.
  */
-export function citedByLabel(answers: number): string {
-  if (answers <= 0) return 'Not cited in analyzed answers';
-  return `Cited by ${answers} ${answers === 1 ? 'answer' : 'answers'}`;
+export type PageStanding =
+  | 'untracked'
+  | 'yours'
+  | 'competitor'
+  | 'blocked'
+  | 'unreadable'
+  | 'not_read'
+  | 'gap'
+  | 'listed'
+  | 'read';
+
+export function pageStanding(page: PageSection | null): PageStanding {
+  if (!page) return 'untracked';
+  if (page.source_class === 'brand_owned') return 'yours';
+  if (page.source_class === 'competitor_owned') return 'competitor';
+  if (!page.read_at) {
+    if (page.state === 'blocked') return 'blocked';
+    return page.state === 'failed' ? 'unreadable' : 'not_read';
+  }
+  const brand = brandVerdict(page.entities);
+  if (brand?.presence === 'present') return 'listed';
+  return onPageCompetitors(page.entities).length && brand?.presence === 'not_detected'
+    ? 'gap'
+    : 'read';
+}
+
+const STANDING_SENTENCES: Record<PageStanding, string> = {
+  untracked: 'This page has not been added to your source inventory yet.',
+  yours: 'This is one of your own pages.',
+  competitor: "This is a competitor's own page, so it cannot list you.",
+  blocked: 'The publisher blocks automated access, so this page has not been read.',
+  unreadable: 'The last attempt to read this page failed. It will be tried again.',
+  not_read: 'This page has not been read yet. It is read after a visibility run.',
+  gap: 'Competitors are listed on this page and you are not.',
+  listed: 'You are on this page.',
+  read: 'No tracked competitor is listed on this page.',
+};
+
+export function standingSentence(standing: PageStanding): string {
+  return STANDING_SENTENCES[standing];
+}
+
+export type PageEntity = z.infer<typeof pageEntitySchema>;
+
+/**
+ * The rivals found ON a page, read from the presence verdicts so each one
+ * carries the quoted line behind it.
+ */
+export function onPageCompetitors(entities: readonly PageEntity[] | undefined) {
+  return (entities ?? []).filter(
+    (entity) => entity.entity_kind !== 'brand' && entity.presence === 'present',
+  );
+}
+
+/** The brand's own verdict on a page, when one was taken. */
+export function brandVerdict(entities: readonly PageEntity[] | undefined): PageEntity | null {
+  return (entities ?? []).find((entity) => entity.entity_kind === 'brand') ?? null;
+}
+
+/**
+ * When a page was last read and how much of it was readable, or null when
+ * nothing was read: printing "0 characters" would imply a reading that never
+ * happened.
+ */
+export function readingSentence(
+  readAt: string | null | undefined,
+  extractedChars: number | null | undefined,
+): string | null {
+  if (!extractedChars) return null;
+  const read = sinceLabel(readAt);
+  const chars = `${formatCount(extractedChars)} characters were readable.`;
+  return read ? `Read ${read.toLowerCase()}; ${chars}` : chars;
 }

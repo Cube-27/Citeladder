@@ -10,7 +10,6 @@ import {
 import { AnalyticsWorker } from '../src/workers/analytics-worker.ts';
 import type { QueueTask } from '../src/queue/task-queue.ts';
 import type { Json } from '../src/generated/db-schema.ts';
-import { record } from '../src/db/json.ts';
 import { storedOutcomes } from '../src/opportunities/verification-decisions.ts';
 import { seedOpportunityScenario } from './opportunity-fixtures.ts';
 import { seedVerification, type VerificationSeed } from './verification-support.ts';
@@ -31,7 +30,6 @@ async function seed() {
       ['site_crawl', created.crawlId],
       ['audit', created.auditId],
       ['traffic_snapshot', created.trafficId],
-      ['source_page_inspection', created.auditId],
     ]) {
       await enqueueImplementationVerification(trx, {
         workspaceId: created.workspaceId,
@@ -89,7 +87,7 @@ it('folds each check from the source that can read it, within the window, idempo
     .select(['status', 'error_detail'])
     .where('workspace_id', '=', own.workspaceId)
     .execute();
-  expect(tasks).toHaveLength(4);
+  expect(tasks).toHaveLength(3);
   expect(
     tasks.every((t) => t.status === 'succeeded'),
     JSON.stringify(tasks),
@@ -109,7 +107,7 @@ it('folds each check from the source that can read it, within the window, idempo
   const named = (name: string) => rows.filter((r) => r.declaration === own.declarations[name]);
   const latest = (name: string) => named(name).at(-1);
   const checks = (name: string) => storedOutcomes(latest(name)?.result);
-  for (const name of ['site', 'traffic', 'visibility', 'placement'])
+  for (const name of ['site', 'traffic', 'visibility', 'earned'])
     expect(latest(name)?.kind, name).toBe('verified');
   // Site-wide clicks never stand in for the page's own Search Console row.
   expect(latest('traffic_other')?.kind).toBe('observed');
@@ -126,9 +124,6 @@ it('folds each check from the source that can read it, within the window, idempo
     'traffic_snapshot',
   ]);
   expect(named('expired')).toEqual([]);
-  const placement = record(latest('placement')!.result);
-  expect(record(placement.placement).state).toBe('satisfied');
-  expect(placement.legs).not.toHaveProperty('placement');
   const keys = rows.map((r) => r.key).sort();
   await Promise.all([
     verifyImplementationEvents(task(own), context),

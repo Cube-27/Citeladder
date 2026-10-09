@@ -1,241 +1,170 @@
 # Earned sources
 
-> **Status:** current authority for the inspection of externally cited pages,
-> the page-keyed earned actions derived from them, and the evidence a reader
-> is shown beside either.
+> **Status:** current authority for reading the third-party pages answer
+> engines cite, the one earned Action derived from them, and what a cited
+> URL's page shows.
 
-Answer engines cite pages CiteLadder does not own. This owner inspects those
-pages within a bounded budget, records who appears on each of them with the
-passage proving it, and turns a qualified gap into one named action on one
-page. [Visibility](visibility-prompt.md) owns the answers and their citations.
+Answer engines cite pages CiteLadder does not own. Being listed on the lists,
+directories, comparisons and reviews they lean on is one of the few levers a
+business has outside its own site. This owner reads those pages within a
+bounded budget, records who is named on each with the passage proving it, and
+turns "competitors are on this page and you are not" into one Action.
+[Visibility](visibility-prompt.md) owns the answers and their citations.
 [Opportunities](opportunities.md) owns ranking, declaration and verification.
-The [Agent](agents.md) owns the deliverable a brief produces.
-[Site Health](site-health.md) owns everything about pages we do own, and is
-not involved here.
+The [Agent](agents.md) owns the request a brief produces.
+[Site Health](site-health.md) owns pages we own and is not involved here.
 
 ## Pipeline and ownership
 
 ```text
 audit terminalizes
-  -> inventory of cited pages, redirect tokens marked unresolved
+  -> inventory of cited pages (batched), redirect tokens marked unresolved
   -> atomic admission inside the project's rolling budget
   -> polite third-party fetch, robots checked before every redirect destination
   -> bounded page facts, quoted passages, no raw HTML retained
-  -> per-project brand and competitor verdicts, roster frozen per verdict
-  -> batch completion enqueues the Opportunity refresh
-  -> page-keyed earned rules over the full eligible answer set
-  -> brief, declaration against the publisher page
-  -> pending placement checks compared against that batch's readings
-  -> placement reported beside, never inside, comparable visibility movement
+  -> brand and competitor verdicts with the project's mention rules
+  -> batch completion enqueues the Opportunity refresh and verification
+  -> earned rule over the latest successful reading of each page
+  -> Action with a brief; declaring it freezes prompt visibility checks
 ```
 
-Reads render persisted projections. Neither the Sources inventory nor a page
-detail fetches, enqueues or repairs. Inspection is either automatic selection
-or an explicit authorized command, never a side effect of looking.
+Reads render persisted projections. Neither the Sources inventory nor a URL's
+page fetches, enqueues or repairs; inspection happens only after an audit
+completes.
 
-The TypeScript `source-pages/inspector.ts` owns the `source_page_inspection`
-analytics kind. Its `PageAcquirer` supplies a per-request gate to the pinned
-Node website fetcher: each URL,
-including same-host and cross-host redirects, must pass its destination's
-robots rules before the transport downloads it. Pacing honors the larger of
-the source-inspection floor and the declared crawl delay. Unsupported delays
-block acquisition; unreachable robots (429, 5xx, network failure) remains a
-retryable failure, while an access-restricted robots.txt (401/403) blocks the
-page. Robots handling otherwise follows the
+`source-pages/inspector.ts` owns the `source_page_inspection` analytics kind.
+Its `PageAcquirer` gives the pinned Node website fetcher a per-request gate:
+every URL, including each redirect hop, must pass its destination's robots
+rules before it is downloaded. Pacing honours the larger of the
+source-inspection floor and the declared crawl delay. Unreachable robots (429,
+5xx, network failure) is a retryable failure; an access-restricted robots.txt
+(401/403) blocks the page. Robots handling otherwise follows the
 [Site Health table](site-health.md#acquisition-and-evidence-guarantees).
-The per-hop transport timeout starts only once the host slot is held. Durable
-suppression is rechecked after waiting. The former final-host check after
-download is removed.
 
-## Two distinctions that carry the whole feature
-
-**Publisher class is not page format.** `source_class` describes a domain and
-comes from `frontend/services/api/src/config/source-patterns.ts`. `page_format`
-describes ONE page. Sync derives a first verdict from the citation URL's own
-shape and stamps it `url_pattern`; a successful inspection may replace that
-with what the page says about itself, and an inspection that learns nothing
-leaves the URL-derived value standing. A single comparison page is actionable
-on its own terms either way; it never promotes its publisher to a known
-category.
-
-The page-kind catalog is SHARED with Site Health
-(`frontend/services/api/src/config/site-health/analysis.json` and
-`acquisition.json`, composed by `config/site-health.ts`).
-`listicle`, `how_to`, `comparison` and `alternative` are ordinary page kinds
-there, classified by the same slug and route catalogs whether the page is one
-we own or one an engine cited. A second classifier for the same four shapes is
-a second place they drift.
-
-**Page state is not an entity verdict.** `not_inspected`, `blocked` and
-`stale` are properties of the page and are never written as a presence row.
-[Source projections](../frontend/services/api/src/visibility/sources.ts) and
-[record retrieval](../frontend/services/api/src/mcp/retrieval.ts) render those
-persisted states separately, so no caller can report
-a page nobody read as a confirmed absence.
-
-A positive claim always resolves to a snapshot and a quoted window. A
-non-detection carries the extraction coverage and the matching method instead,
-because no passage can demonstrate an absence.
-
-## Inspection and budget
+## Which pages are read, and when
 
 Budget is enforced by atomic admission, not by counting finished work.
-Claiming a page (`not_inspected` -> `queued`) writes its spend row in the same
-transaction under the project lock, before any request leaves the process, so
-two workers cannot both read the same remaining allowance and a worker that
-fetches and then crashes has spent its unit. Following a redirect token is
-fetching its publisher, so the page it lands on is read from the body already
-in hand rather than claimed and fetched again.
+Claiming a page writes its spend row in the same transaction under the project
+lock, before any request leaves the process, so two workers cannot both spend
+the same allowance and a worker that crashes after fetching has spent its
+unit. A redirect token is charged once per budget window, so a token whose
+fetch failed is followed again in a later window; the page it lands on is read
+from the body already in hand.
 
-Selection is never-inspected first, then stale, then pages that owe a placement
-recheck, then the rest, with recurrence ranking within each set. A due recheck
-is an inspection like any other: it is claimed under the same project lock and
-pays the same budget unit, which is why it changes a page's PRIORITY rather
-than getting its own path around the accounting. A recent enough inspection is
-reused, so a page read inside the reuse window is not re-read for a due check
-either — the reading that check needs already exists. A changed content hash is
-only knowable after retrieval, so it decides whether analysis reruns, never
-whether retrieval happens.
+A page is read once, and again only when its reading goes stale: after the
+stale period, when the inspector version changes, or when the reading was
+judged against another roster (a competitor added, a mention rule changed).
+Pages that can never list the business are not read at all: its own pages and
+competitors' own pages. Among the rest, pages cited in answers come before
+organic search results nobody cited; within each, never-read before stale,
+then by recurrence. A failed read waits one budget window before a retry and a
+blocked page the stale period, so neither is fetched on every run.
 
-`recurrence_count` on `source_pages` is a project-wide scheduling value. It is
-never rendered as the citation count for a selected engine, cohort or period;
-that comes from the full captured evidence through the source projection.
+`recurrence_count` is a project-wide scheduling value, never a citation count
+for a selected engine, cohort or period; that comes from the captured evidence
+through the source projection.
 
 Audit completion is independent of inspection. A blocked publisher never turns
-a successfully measured answer into a failed audit. Because terminalization
-enqueues inspection INSTEAD of the Opportunity refresh, that refresh is owed on
-every terminal outcome. The TypeScript analytics worker scans failed tasks for
-idempotent compensation, including tasks its own bounded lease recovery terminalized.
-Placement settlement commits its verification enqueue in the same transaction.
+a measured answer into a failed audit. Terminalization enqueues inspection
+instead of the Opportunity refresh, so the refresh is owed on every terminal
+outcome; the analytics worker's terminal compensation enqueues it for failed
+tasks.
 
-`source-pages/differentiation.ts` writes comparison reports after inspection.
-The [report reader](../frontend/services/api/src/source-pages/differentiation-reads.ts)
-serves the [Agent tool adapter](../frontend/services/api/src/agent/tool-adapters.ts).
-Citation identity and source projections use the TypeScript evidence owners.
-Inspection shares the TypeScript Site Health acquisition, robots and HTML owners.
+## What a reading establishes
 
-## The four page-keyed actions
+**Page format is not publisher class.** `source_class` describes a domain and
+comes from `config/source-patterns.ts`. `page_format` describes one page. Sync
+derives a first verdict from the URL's shape (`url_pattern`); a reading may
+replace it with what the page says about itself, and a reading that learns
+nothing leaves it standing. A specific schema type (ItemList, FAQPage,
+VideoObject) is strongest. A list, comparison or review heading outranks
+generic Article, BlogPosting or NewsArticle markup, because most CMSs mark
+every post up as an article whatever its shape. The page-kind catalog is
+shared with Site Health (`config/site-health/analysis.json` and
+`acquisition.json`).
 
-The target is `earned-page:{url_hash}`. Four rule ids rather than one rule with
-an action field, because scoring consolidates on `(rule_id, target_key)` and
-acquiring a listing and correcting one have different done-states.
+**Presence uses the answer matcher.** A name counts on a page exactly when it
+would count in an answer: the same normalisation and the project's mention
+rules (context terms, exclusion phrases). A positive verdict always carries a
+quoted window from the raw text, found by the name as written or by its
+characters with short separators between them ("theasianschool" quotes "The
+Asian School"). Each entity has its own small passage allowance, so one name
+that fills the page never leaves the others unquoted. A name matched only in a
+spelling no raw window reproduces ("and" for "&") is `ambiguous`, not present.
+A non-detection carries the extracted length and the matching method instead,
+because no passage can show an absence; too little readable text is `partial`.
 
-| Rule | Severity | Fires when |
-|---|---|---|
-| `earned_page_acquire_listing` | high | The page was read with sufficient coverage, its format admits a new entrant, at least one competitor is present on it, and the brand is not detected. |
-| `earned_page_correct_listing` | medium | The brand is present and a specific checkable discrepancy is identified — named in prose while every rival has an entry, or a page that links every rival and not us. Presence alone never qualifies. |
-| `earned_page_defend_listing` | low | A usable prior snapshot exists and the placement deteriorated. Both brands present is a healthy watch state and produces nothing. |
-| `earned_page_research_source` | low | The source is relevant and recurrent, or was explicitly asked for, but classification, presence, coverage or an actionable route is unresolved. |
+**Page state is not an entity verdict.** `not_inspected`, `queued`, `blocked`,
+`failed` and `stale` describe the page and are never written as presence. A
+page is judged on its latest successful reading, so a later failed attempt
+never erases what was learned, and a page nobody read carries no verdicts.
 
-Qualification is hard and precedes ranking: coverage, a tracked prompt,
-recurrence, a current roster, resolved entity matching and a resolved page
-format. `earned_page_research_source` is the deliberate exception, because it
-exists for exactly what that gate rejects. It is `low` and not `info`: with an
-`info` weight of 0.5, a scale of 10 and a surfacing floor of 10.0, an info hit
-at base factors scores 5.0 and is dropped at write time — the silent-drop
-defect this rule set removes.
+## The earned Action
 
-Where evidence would satisfy both defence and acquisition, defence wins: it
-carries the prior snapshot that explains what changed. One page and one
-intended outcome produce one task.
+The target is `earned-page:{url_hash}` and the rule is
+`earned_page_acquire_listing` (high). It fires only when all of these hold:
 
-`page_competitor_presence_factor`, computed from verified on-page presence, is
-the only competitor input to priority. `ambiguous` and `partial` are not
-presence. Answer-level co-occurrence travels in the brief as descriptive
-evidence, labelled as such, and never scores.
+- the page has a successful reading with sufficient coverage, judged against
+  the current roster;
+- answers to tracked prompts cite it, and it recurs (at least two answers or
+  sightings);
+- it is not the business's or a competitor's own page;
+- its format takes another entry: listicle, comparison, alternative,
+  directory, profile or review;
+- at least one tracked competitor is present on it and the brand is
+  `not_detected`.
 
-## Brief, declaration and the retired rule
+Priority multiplies recurrence across the audit's answers by the number of
+competitors verified on the page. Competitors merely named in an answer that
+cited the page travel in the brief as descriptive context and never score.
 
-The brief reaches the Agent's context through the existing handoff on
-`evidence.content_handoff`, and its output type follows the page format rather
-than defaulting to an article. It carries the snapshot, the quoted passages,
-the extraction coverage and its own limitations; it cannot manufacture
-placement evidence.
+The brief reaches the Agent through `evidence.content_handoff`: the page and
+its format, the ask (an entry comparable to the listed competitors' that links
+to the business), each competitor with its quoted line, the brand's verdict
+and what was searched, the tracked prompts (ID and text) whose answers cited
+the page, coverage and limitations. The Actions approach tree routes it to the
+`earned_authority` skill; outreach is drafted, never sent.
 
-A declaration on an earned Action targets the publisher page directly. It
-never routes through `resolve_owned_page`, which would match a third-party URL
-against this project's crawled inventory and raise, and it carries no owned
-page targets: verifying an owned-page change against an external placement
-would report two things as one.
+## Declaring and measuring it
 
-## Confirming the placement
+A declaration on an earned Action targets the publisher page
+(`target_external_url`) and never an owned page. It freezes one
+`visibility_metric` check per tracked prompt in the brief (up to the brief's
+prompt cap), the same prompt-score check owned work uses, with its baseline
+from the snapshot's audit. Later audits verify it like any prompt check.
+Whether the listing went live is not a separate check: the next reading of the
+page shows it on the URL's page, and visibility on the prompts is the measured
+outcome. Neither claims the listing caused a movement.
 
-A declaration opens a `placement_checks` row anchored on the IMPLEMENTATION
-EVENT rather than on the opportunity. The same page and the same action can be
-attempted more than once, and a check has to know which attempt it verifies;
-the opportunity's stable key travels alongside for navigation across recompute
-and is never the anchor. The row never references an owned `SiteUrl`.
+## Reading it
 
-It freezes the project-scoped source identity, the expected change, the
-baseline snapshot and the roster that snapshot's verdicts were judged against.
-The expected change comes from the rule, so each done-state is verified on its
-own terms:
+The Sources URL table shows each page's format with its basis (a tooltip and
+hidden text). Opening a URL leads with where the business stands:
 
-| Rule | Expected change | Satisfied when |
-|---|---|---|
-| `earned_page_acquire_listing` | `brand_listed` | The brand is present on a later reading. |
-| `earned_page_correct_listing` | `discrepancy_resolved` | Every discrepancy the task NAMED is gone — an entry heading of our own, or an outbound link to a reviewed owned domain. Brand presence alone never satisfies it. |
-| `earned_page_defend_listing` | `placement_restored` | The brand is present again and mentioned no less than at the deteriorated baseline. |
-| `earned_page_research_source` | `source_resolved` | The page was read with sufficient coverage and yielded a verdict against the current roster. |
+| Standing | When |
+|---|---|
+| Competitors listed, you are not | Read, a competitor present, the brand not detected. Shows each competitor's line, the Action and an Agent handoff (or a request draft before an Action exists). |
+| You are on this page | The brand is present, with its line. |
+| No tracked competitor listed | Read, nothing to act on. |
+| Not read yet / blocked / last read failed | No successful reading; says why and shows no verdicts. |
+| A competitor's or your own page | Never judged as a place to be listed. |
 
-The comparison itself is pure
-(`frontend/services/api/src/analysis/opportunities/placement-outcome.ts`) and runs when an inspection
-batch commits, against the reading that batch just took. A reading judged
-against a different roster is not comparable and is not compared, which is the
-rule the TypeScript refresh's prior-reading lookup
-(`frontend/services/api/src/opportunities/earned-page-hits.ts`) already applies to deterioration. Insufficient
-coverage, a missing baseline, a missing brand verdict and an uncheckable
-discrepancy code are all `unavailable`, and `unavailable` never decays into
-`unmet`: a page we could not read says nothing about whether the placement went
-live.
-
-An empty first reading is an OBSERVATION, not a contradiction — a publisher
-does not act the day somebody emails them. The check re-arms a bounded number
-of times and only then reports a contradiction, at which point it stops asking
-and stops competing for the budget.
-
-Placement live and visibility moved are reported as two observations, in two
-places in the verification result. Folding placement into the comparable
-visibility, AI-referral and branded-demand legs is exactly the defect: they
-describe different things and are free to disagree.
-
-The domain-keyed `earned_source_recurs_beside_gap` is retired in one cutover
-and ships config-only, so its rows and their history stay readable. A human
-status carries forward only to an unambiguous successor — the same registrable
-domain resolving to exactly one qualified page with a matching action intent.
-Everywhere else the legacy decision is attached as context and the new task
-starts open, because a domain-level judgement does not distribute across
-pages.
+Below that: when the page was last read and how much was readable, its type
+and how that was established, its use over time as a share of answers, the
+engines that used it, the brands named in the answers that cited it (labelled
+as such) and the prompts.
 
 ## Boundaries
 
 No outreach platform, bulk mail, negotiation workflow, autonomous posting or
 fabricated reviews. No second crawler and no second aggregate score. No
 paywall or authenticated community bypass. External page text is untrusted
-data and never an instruction to an enrichment step. Third-party hosts get a
-stricter per-host delay than owned-site crawling, and a robots-disallowed page
-produces a visible blocked state rather than a silent skip.
-
-## Reading it
-
-Inspection has no surface of its own. What it establishes reaches a reader
-through two places that already exist: the page format it derives is the URL
-type in [Sources](../frontend/components/visibility/visibility-sources.tsx),
-and the entity-presence verdicts back the Opportunities verification payload.
-
-Page format is deliberately not hostage to the inspection budget. Every cited
-page gets a format from its URL at sync time, stamped `url_pattern`; an
-inspection that reads the page REPLACES that with what the page says about
-itself, and never the other way round. An inspection that read nothing — a
-blocked page, or one whose kind is not evident — leaves the address verdict
-alone, because it has learned nothing that contradicts it.
-
-What was never read stays distinguishable from what was read and found absent.
-A page carries presence verdicts only once a snapshot exists.
+data, never an instruction. Third-party hosts get a stricter per-host delay
+than owned-site crawling, and a robots-disallowed page shows as blocked rather
+than skipped silently.
 
 [Configuration](../frontend/services/api/src/config/source-pages.ts) owns the
-inspection limits, vocabularies and budget window;
-[earned actions](../frontend/services/api/src/config/earned-actions.ts) owns the rule
-ids, the qualification thresholds and the format-to-output-type mapping;
-[placement](../frontend/services/api/src/config/placement.ts) owns the expected-change
-vocabulary, the check states and the recheck schedule.
+inspection limits, vocabularies, versions and budget window;
+[earned actions](../frontend/services/api/src/config/earned-actions.ts) owns
+the rule, the includable formats and the qualification and priority
+thresholds.

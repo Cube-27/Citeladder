@@ -14,7 +14,6 @@ import { recordInspection } from '../src/source-pages/persistence.ts';
 import { projectRoster } from '../src/source-pages/reading.ts';
 import { syncPages } from '../src/source-pages/sync.ts';
 import { sourcePageInspector, compensateInspection } from '../src/source-pages/inspector.ts';
-import { settlePlacements } from '../src/source-pages/placement-settlement.ts';
 import { refreshDifferentiation } from '../src/source-pages/differentiation.ts';
 import { testDatabase } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
@@ -73,8 +72,8 @@ it('synchronizes canonical citation recurrence idempotently and serializes concu
   const own = await seed(
     Array.from({ length: 10 }, (_value, index) => `https://publisher.test/page-${index}`),
   );
-  await syncPages(db, own.scope, own.audit);
-  await syncPages(db, own.scope, own.audit);
+  await syncPages(db, own.scope, own.audit, projectRoster(own.configuration));
+  await syncPages(db, own.scope, own.audit, projectRoster(own.configuration));
   expect(
     (
       await db
@@ -107,7 +106,7 @@ it('synchronizes canonical citation recurrence idempotently and serializes concu
 });
 it('appends exact snapshot and quoted-presence provenance only under the owning task and page leases', async () => {
   const own = await seed();
-  await syncPages(db, own.scope, own.audit);
+  await syncPages(db, own.scope, own.audit, projectRoster(own.configuration));
   const claim = (await claimPages(db, own.scope))[0]!;
   const page = extractSourcePage(
     Buffer.from(`<h1>Acme review</h1><p>${'Acme describes its tools. '.repeat(40)}</p>`),
@@ -378,259 +377,9 @@ it('fails closed before DNS or transport when the policy store cannot answer', a
   expect(send).not.toHaveBeenCalled();
 });
 
-it('settles only a due post-declaration reading and commits its handoff in the same transaction', async () => {
+it('recovers an expired page lease, ignores old spend and retries a redirect in a later window', async () => {
   const own = await seed();
-  await syncPages(db, own.scope, own.audit);
-  const claim = (await claimPages(db, own.scope))[0]!;
-  const baselinePage = extractSourcePage(
-    Buffer.from(`<p>${'Other tools are available. '.repeat(60)}</p>`),
-  );
-  const fetch = { outcome: 'inspected' as const, requestedUrl: claim.url };
-  const baseline = await recordInspection(
-    db,
-    own.task,
-    own.scope,
-    claim.id,
-    claim.lease,
-    fetch,
-    own.audit,
-    projectRoster(own.configuration),
-    baselinePage,
-    assessPage(baselinePage, own.configuration),
-  );
-  const declared = new Date();
-  const snapshotId = randomUUID();
-  const action = randomUUID();
-  const event = randomUUID();
-  const checkId = randomUUID();
-  await db
-    .insertInto('opportunity_snapshots')
-    .values({
-      id: snapshotId,
-      workspace_id: own.workspaceId,
-      project_id: own.projectId,
-      run_id: randomUUID(),
-      analyzer_version: 'test',
-      rule_version: 'test',
-      formula_version: 'test',
-      total_count: 0,
-      domain_rollups: '[]',
-      limitations: '[]',
-      created_at: declared,
-    })
-    .execute();
-  await db
-    .insertInto('actions')
-    .values({
-      id: action,
-      workspace_id: own.workspaceId,
-      project_id: own.projectId,
-      group_key: randomUUID(),
-      status: 'open',
-      origin: 'opportunity',
-      target_kind: 'earned_page',
-      target_label: 'Review',
-      approach: '',
-      skill_id: '',
-      diagnosis: '{}',
-      families: '[]',
-      member_opportunity_ids: '[]',
-      opportunity_snapshot_id: snapshotId,
-      created_at: declared,
-      updated_at: declared,
-    })
-    .execute();
-  await db
-    .insertInto('opportunity_implementation_events')
-    .values({
-      id: event,
-      workspace_id: own.workspaceId,
-      project_id: own.projectId,
-      action_id: action,
-      actor_user_id: own.userId,
-      opportunity_snapshot_id: snapshotId,
-      idempotency_key: event,
-      request_fingerprint: 'test',
-      member_opportunity_ids: '[]',
-      target_site_url_ids: '[]',
-      expected_checks: '[]',
-      created_at: declared,
-      declared_implemented_at: declared,
-    })
-    .execute();
-  await db
-    .insertInto('placement_checks')
-    .values({
-      id: checkId,
-      workspace_id: own.workspaceId,
-      project_id: own.projectId,
-      implementation_event_id: event,
-      source_page_id: claim.id,
-      url_hash: canonicalIdentity(claim.url).hash,
-      opportunity_stable_key: 'test',
-      rule_id: 'test',
-      expected_change: policy.opportunity.placement.PLACEMENT_CHANGE_BRAND_LISTED,
-      expected_detail: JSON.stringify({ brand_name: 'Acme' }),
-      baseline_snapshot_id: baseline,
-      baseline_roster_version: projectRoster(own.configuration),
-      state: 'pending',
-      attempts: 0,
-      declared_at: declared,
-      due_at: declared,
-      checker_version: policy.opportunity.placement.PLACEMENT_CHECKER_VERSION,
-      created_at: declared,
-      updated_at: declared,
-    })
-    .execute();
-  expect(await settlePlacements(db, own.scope)).toBe(0);
-  const page = extractSourcePage(
-    Buffer.from(`<h1>Acme</h1><p>${'Acme tools are available. '.repeat(60)}</p>`),
-  );
-  const observation = await recordInspection(
-    db,
-    own.task,
-    own.scope,
-    claim.id,
-    null,
-    fetch,
-    own.audit,
-    projectRoster(own.configuration),
-    page,
-    assessPage(page, own.configuration),
-  );
-  await expect(
-    settlePlacements(db, own.scope, new Date(), own.task, async () => {
-      throw new Error('queue unavailable');
-    }),
-  ).rejects.toThrow('queue unavailable');
-  expect(
-    (
-      await db
-        .selectFrom('placement_checks')
-        .select('state')
-        .where('id', '=', checkId)
-        .executeTakeFirstOrThrow()
-    ).state,
-  ).toBe('pending');
-  const handoff = vi.fn(async (trx: typeof db) => {
-    await enqueueTask(trx, {
-      ...own.scope,
-      kind: 'opportunity_verification',
-      keyParts: [checkId],
-      maxAttempts: 2,
-      payload: {},
-    });
-  });
-  expect(await settlePlacements(db, own.scope, new Date(), own.task, handoff)).toBe(1);
-  const settled = await db
-    .selectFrom('placement_checks')
-    .selectAll()
-    .where('id', '=', checkId)
-    .executeTakeFirstOrThrow();
-  expect(settled).toMatchObject({
-    state: 'satisfied',
-    observation_snapshot_id: observation,
-    attempts: 1,
-    due_at: null,
-  });
-  expect(await settlePlacements(db, own.scope, new Date(), own.task, handoff)).toBe(0);
-  expect(handoff).toHaveBeenCalledTimes(1);
-  const absent = extractSourcePage(
-    Buffer.from(`<p>${'Other tools are available. '.repeat(60)}</p>`),
-  );
-  await recordInspection(
-    db,
-    own.task,
-    own.scope,
-    claim.id,
-    null,
-    fetch,
-    own.audit,
-    projectRoster(own.configuration),
-    absent,
-    assessPage(absent, own.configuration),
-  );
-  await db
-    .updateTable('placement_checks')
-    .set({
-      state: 'unmet',
-      observation_snapshot_id: null,
-      due_at: new Date(),
-      attempts: policy.opportunity.placement.PLACEMENT_RECHECK_MAX_ATTEMPTS - 1,
-    })
-    .where('id', '=', checkId)
-    .execute();
-  await settlePlacements(db, own.scope);
-  expect(
-    await db
-      .selectFrom('placement_checks')
-      .select(['state', 'state_reason', 'due_at'])
-      .where('id', '=', checkId)
-      .executeTakeFirstOrThrow(),
-  ).toEqual({
-    state: 'unmet',
-    state_reason: policy.opportunity.placement.PLACEMENT_REASON_EXHAUSTED,
-    due_at: null,
-  });
-  const thin = extractSourcePage(Buffer.from('<p>Other tools</p>'));
-  await recordInspection(
-    db,
-    own.task,
-    own.scope,
-    claim.id,
-    null,
-    fetch,
-    own.audit,
-    projectRoster(own.configuration),
-    thin,
-    assessPage(thin, own.configuration),
-  );
-  await db
-    .updateTable('placement_checks')
-    .set({ state: 'pending', observation_snapshot_id: null, due_at: new Date(), attempts: 0 })
-    .where('id', '=', checkId)
-    .execute();
-  const recheckTime = new Date();
-  await settlePlacements(db, own.scope, recheckTime);
-  const retry = await db
-    .selectFrom('placement_checks')
-    .selectAll()
-    .where('id', '=', checkId)
-    .executeTakeFirstOrThrow();
-  expect(retry).toMatchObject({
-    state: 'unavailable',
-    state_reason: policy.opportunity.placement.PLACEMENT_REASON_COVERAGE,
-  });
-  expect(retry.due_at?.getTime()).toBe(
-    recheckTime.getTime() + policy.opportunity.placement.PLACEMENT_RECHECK_INTERVAL_HOURS * 3600000,
-  );
-  await db
-    .updateTable('placement_checks')
-    .set({
-      state: 'pending',
-      observation_snapshot_id: null,
-      due_at: new Date(),
-      baseline_roster_version: 'changed-roster',
-    })
-    .where('id', '=', checkId)
-    .execute();
-  await settlePlacements(db, own.scope);
-  expect(
-    await db
-      .selectFrom('placement_checks')
-      .select(['state', 'state_reason', 'due_at'])
-      .where('id', '=', checkId)
-      .executeTakeFirstOrThrow(),
-  ).toEqual({
-    state: 'unavailable',
-    state_reason: policy.opportunity.placement.PLACEMENT_REASON_ROSTER_CHANGED,
-    due_at: null,
-  });
-});
-
-it('recovers an expired page lease and ignores old spend while charging redirects idempotently', async () => {
-  const own = await seed();
-  await syncPages(db, own.scope, own.audit);
+  await syncPages(db, own.scope, own.audit, projectRoster(own.configuration));
   const page = await db
     .selectFrom('source_pages')
     .select('id')
@@ -652,24 +401,30 @@ it('recovers an expired page lease and ignores old spend while charging redirect
       spend_kind: 'page',
       units: policy.source_pages.budget_per_window,
       idempotency_key: randomUUID(),
-      created_at: new Date(now.getTime() - (policy.source_pages.budget_window_hours + 1) * 3600000),
+      created_at: new Date(now.getTime() - 25 * 3600000),
     })
     .execute();
-  expect(await claimPages(db, own.scope, now, [page.id])).toHaveLength(1);
+  expect(await claimPages(db, own.scope, now)).toHaveLength(1);
+  expect(await claimPages(db, own.scope, now)).toEqual([]);
   const token = 'https://redirect.test/long-token';
   expect(await spendRedirect(db, own.scope, token, now)).toBe('charged');
   expect(await spendRedirect(db, own.scope, token, now)).toBe('duplicate');
-  expect(await claimPages(db, own.scope, now, [page.id])).toEqual([]);
+  // A token that failed is followed again once the budget window turns over.
+  const tomorrow = new Date(now.getTime() + 24 * 3600000);
+  expect(await spendRedirect(db, own.scope, token, tomorrow)).toBe('charged');
 });
 
-it('admits never-inspected pages before stale ones and reuses a recent reading', async () => {
+it('reads cited pages before organic results, never-read before stale, and skips pages that cannot list you', async () => {
   const urls = [
     'https://publisher.test/stale',
     'https://publisher.test/new',
     'https://publisher.test/fresh',
+    'https://rival.test/compare',
+    'https://publisher.test/organic',
+    'https://publisher.test/failed',
   ];
   const own = await seed(urls);
-  await syncPages(db, own.scope, own.audit);
+  await syncPages(db, own.scope, own.audit, projectRoster(own.configuration));
   const ids = new Map(
     (
       await db
@@ -682,15 +437,35 @@ it('admits never-inspected pages before stale ones and reuses a recent reading',
   const state = (url: string, values: Record<string, unknown>) =>
     db.updateTable('source_pages').set(values).where('id', '=', ids.get(url)!).execute();
   const now = new Date();
-  await state(urls[0]!, {
-    inspection_state: 'stale',
-    recurrence_count: 99,
-    last_inspected_at: null,
-  });
+  await state(urls[0]!, { inspection_state: 'stale', recurrence_count: 99 });
   await state(urls[1]!, { inspection_state: 'not_inspected', recurrence_count: 1 });
   await state(urls[2]!, { inspection_state: 'inspected', last_inspected_at: now });
-  const claims = await claimPages(db, own.scope, now, [...ids.values()]);
-  expect(claims.map((claim) => claim.url)).toEqual([urls[1], urls[0]]);
+  await state(urls[3]!, { source_class: 'competitor_owned' });
+  // Seen only in organic search results, never in an answer.
+  await state(urls[4]!, { last_cited_at: null, recurrence_count: 50 });
+  const failed = await db
+    .insertInto('source_page_snapshots')
+    .values({
+      id: randomUUID(),
+      workspace_id: own.workspaceId,
+      project_id: own.projectId,
+      source_page_id: ids.get(urls[5]!)!,
+      audit_id: own.audit,
+      requested_url: urls[5]!,
+      final_url: urls[5]!,
+      body_bytes: 0,
+      outcome: 'failed',
+      extracted_chars: 0,
+      extractor_version: 'test',
+      inspector_version: 'test',
+      fetched_at: now,
+      created_at: now,
+    })
+    .returning('id')
+    .executeTakeFirstOrThrow();
+  await state(urls[5]!, { inspection_state: 'failed', latest_snapshot_id: failed.id });
+  const claims = await claimPages(db, own.scope, now);
+  expect(claims.map((claim) => claim.url)).toEqual([urls[1], urls[0], urls[4]]);
 });
 
 it('selects candidate-audit evidence and keeps missing owned relevance explicitly unknown', async () => {
@@ -699,7 +474,7 @@ it('selects candidate-audit evidence and keeps missing owned relevance explicitl
     'https://publisher.test/two',
     'https://publisher.test/three',
   ]);
-  await syncPages(db, own.scope, own.audit);
+  await syncPages(db, own.scope, own.audit, projectRoster(own.configuration));
   const auditTask = await db
     .selectFrom('audit_tasks')
     .select('id')
@@ -809,7 +584,7 @@ it('selects candidate-audit evidence and keeps missing owned relevance explicitl
 
 it('replaces URL format evidence with page evidence and preserves stronger publisher declarations', async () => {
   const own = await seed(['https://publisher.test/best-tools']);
-  await syncPages(db, own.scope, own.audit);
+  await syncPages(db, own.scope, own.audit, projectRoster(own.configuration));
   const claim = (await claimPages(db, own.scope))[0]!;
   const persist = async (html: string, lease: Date | null) => {
     const page = extractSourcePage(Buffer.from(html));
@@ -827,7 +602,7 @@ it('replaces URL format evidence with page evidence and preserves stronger publi
     );
   };
   await persist(
-    '<script type="application/ld+json">{"@type":"Article"}</script><h1>Best tools</h1>',
+    '<script type="application/ld+json">{"@type":"Article"}</script><h1>Spring notes</h1>',
     claim.lease,
   );
   await persist('<h1>Best tools reviewed</h1>', null);

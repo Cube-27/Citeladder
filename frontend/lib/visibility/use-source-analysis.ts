@@ -100,13 +100,17 @@ export function useSourceAnalysis(
 export function useSourceSeries(
   filters: SourceFilters,
   queries: SourceQueries,
-  scope: Pick<SourceScope, 'dimension' | 'domain' | 'sourceType'>,
+  scope: Pick<SourceScope, 'dimension' | 'domain' | 'sourceType'> & {
+    /** One page's own line, on its detail view. */
+    url?: string | null;
+  },
 ) {
   const params = {
     ...selectionParams(filters, queries),
     dimension: scope.dimension,
     granularity: filters.granularity === 'run' ? 'day' : filters.granularity,
     domain: set(scope.domain),
+    url: set(scope.url),
     source_type: set(scope.sourceType),
   };
   return useQuery({

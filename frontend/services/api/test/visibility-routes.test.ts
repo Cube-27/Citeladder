@@ -11,6 +11,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from '../src/app.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
+import { actionRow, opportunityRow } from './opportunity-fixtures.ts';
 
 const config = testConfig();
 const db = testDatabase(config);
@@ -486,6 +487,141 @@ describe('GET /projects/{project_id}/visibility/sources/*', () => {
         responses: 1,
         logo_url: null,
         website: 'wise.example',
+      },
+    ]);
+  });
+
+  it('shows what the last successful reading found on the page and the Action to get listed', async () => {
+    const hash = `hash-${randomUUID()}`;
+    const scope = { workspace_id: tenant.workspaceId, project_id: tenant.projectId };
+    await db
+      .updateTable('citations')
+      .set({ url_hash: hash })
+      .where('workspace_id', '=', tenant.workspaceId)
+      .where('url', '=', url)
+      .execute();
+    const pageId = randomUUID();
+    await db
+      .insertInto('source_pages')
+      .values({
+        ...scope,
+        id: pageId,
+        url_hash: hash,
+        canonical_url: url,
+        registrable_domain: 'example.com',
+        source_class: 'editorial_third_party',
+        inspection_state: 'failed',
+        inspection_reason: 'transport_error',
+        page_format: 'listicle',
+        page_format_method: 'heading_evidence',
+        recurrence_count: 3,
+        created_at: new Date(),
+        updated_at: new Date(),
+      })
+      .execute();
+    const reading = (outcome: string, at: string) => ({
+      ...scope,
+      id: randomUUID(),
+      source_page_id: pageId,
+      requested_url: url,
+      final_url: url,
+      body_bytes: 0,
+      outcome,
+      extracted_chars: outcome === 'inspected' ? 4200 : 0,
+      evidence_passages: JSON.stringify([{ text: 'Globex leads the list.' }]),
+      fetched_at: new Date(at),
+      created_at: new Date(at),
+    });
+    const read = reading('inspected', '2026-02-02T00:00:00Z');
+    // A later attempt that failed must not erase what the earlier one learned.
+    await db
+      .insertInto('source_page_snapshots')
+      .values([read, reading('failed', '2026-02-03T00:00:00Z')])
+      .execute();
+    const presence = (kind: string, name: string, state: string, refs: number[]) => ({
+      ...scope,
+      id: randomUUID(),
+      source_page_id: pageId,
+      snapshot_id: read.id,
+      entity_kind: kind,
+      entity_name: name,
+      presence: state,
+      match_method: state === 'present' ? 'exact_alias' : 'none',
+      match_count: refs.length,
+      passage_refs: JSON.stringify(refs),
+      roster_version: 'roster',
+      detector_version: 'test',
+      created_at: new Date(),
+    });
+    await db
+      .insertInto('source_page_entity_presences')
+      .values([
+        presence('brand', 'Acme Corp', 'not_detected', []),
+        presence('competitor', 'Globex', 'present', [0]),
+      ])
+      .execute();
+    const opportunity = opportunityRow(scope, {
+      rule_id: 'earned_page_acquire_listing',
+      opportunity_type: 'visibility',
+      severity: 'high',
+      target_key: `earned-page:${hash}`,
+    });
+    await db.insertInto('opportunities').values(opportunity).execute();
+    const action = actionRow(scope, {
+      group_key: `earned:${hash}`,
+      target_kind: 'earned_page',
+      target_label: url,
+      member_opportunity_ids: JSON.stringify([opportunity.id]),
+    });
+    await db.insertInto('actions').values(action).execute();
+
+    const { body } = await get(
+      tenant,
+      `/api/v1/projects/${tenant.projectId}/visibility/sources/url`,
+      { query: { url, audit_id: selected } },
+    );
+
+    expect(body.page).toEqual({
+      state: 'failed',
+      reason: 'transport_error',
+      read_at: '2026-02-02T00:00:00Z',
+      extracted_chars: 4200,
+      page_format: 'listicle',
+      page_format_method: 'heading_evidence',
+      source_class: 'editorial_third_party',
+      entities: [
+        {
+          entity_kind: 'brand',
+          entity_name: 'Acme Corp',
+          presence: 'not_detected',
+          match_method: 'none',
+          match_count: 0,
+          passages: [],
+        },
+        {
+          entity_kind: 'competitor',
+          entity_name: 'Globex',
+          presence: 'present',
+          match_method: 'exact_alias',
+          match_count: 1,
+          passages: ['Globex leads the list.'],
+        },
+      ],
+      action_id: action.id,
+    });
+  });
+
+  it("draws one page's own line for its detail view", async () => {
+    const { body } = await get(
+      tenant,
+      `/api/v1/projects/${tenant.projectId}/visibility/sources/series`,
+      { query: { audit_ids: selected, dimension: 'url', url } },
+    );
+    expect(body.series).toEqual([
+      {
+        key: url,
+        citations: 2,
+        points: [{ at: '2026-02-01T00:00:00Z', responses: 1, share: 0.5 }],
       },
     ]);
   });

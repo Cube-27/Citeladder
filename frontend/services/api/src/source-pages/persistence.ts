@@ -137,7 +137,11 @@ export async function recordInspection(
         latest_snapshot_id: id,
         updated_at: now,
         ...(fetch.outcome === 'inspected'
-          ? { last_inspected_at: now, content_hash: extracted?.content_hash ?? null }
+          ? {
+              last_inspected_at: now,
+              content_hash: extracted?.content_hash ?? null,
+              inspector_version: policy.source_pages.inspector_version,
+            }
           : {}),
         ...(replaceFormat
           ? {
