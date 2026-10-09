@@ -55,11 +55,7 @@ export const actions = {
     brand_absent_high_value_prompt: 'ai_visibility',
     owned_page_not_cited: 'ai_visibility',
     confirmed_prompt_decline: 'ai_visibility',
-    earned_source_recurs_beside_gap: 'sources',
     earned_page_acquire_listing: 'sources',
-    earned_page_correct_listing: 'sources',
-    earned_page_defend_listing: 'sources',
-    earned_page_research_source: 'sources',
     missing_structured_data: 'site_health',
     schema_properties_incomplete: 'site_health',
     schema_visible_content_conflict: 'site_health',
@@ -90,19 +86,8 @@ export const actions = {
   ACTION_PRIORITY_ROUNDING_DECIMALS: 1,
   APPROACH_TREE: [
     {
-      approach: 'research',
-      rule_ids: ['earned_page_research_source'],
-      skill_id: 'ai_visibility',
-      donts: ['Do not pitch the publisher before the page has been reviewed.'],
-      target_kinds: [],
-    },
-    {
       approach: 'earned_placement',
-      rule_ids: [
-        'earned_page_acquire_listing',
-        'earned_page_correct_listing',
-        'earned_page_defend_listing',
-      ],
+      rule_ids: ['earned_page_acquire_listing'],
       skill_id: 'earned_authority',
       donts: [
         'Do not change an owned page to fix a third-party listing.',
@@ -184,10 +169,10 @@ export const actions = {
   LEG_VISIBILITY_RUN: 'next_visibility_run',
   LEG_SEARCH_CONSOLE_WINDOW: 'next_search_console_window',
   LEG_CRAWL: 'next_crawl',
-  LEG_PLACEMENT_RECHECK: 'placement_recheck',
   FAMILY_MEASUREMENT_LEG: {
     ai_visibility: 'next_visibility_run',
-    sources: 'placement_recheck',
+    // An earned listing is measured on the prompts that cite the page.
+    sources: 'next_visibility_run',
     search_console: 'next_search_console_window',
     // A later paid analysis may also read it, but the scheduled reading is Search Console.
     search_intelligence: 'next_search_console_window',
@@ -202,7 +187,6 @@ export const actions = {
     visibility_metric: 'next_visibility_run',
     traffic_metric: 'next_search_console_window',
     keyword_presence: 'next_search_console_window',
-    placement: 'placement_recheck',
   },
   LEG_STATE_WAITING: 'waiting',
   LEG_STATE_NOT_SCHEDULED: 'not_scheduled',

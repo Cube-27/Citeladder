@@ -18,7 +18,6 @@ import {
   compareMetric,
   expectedRuleOutcome,
   evaluation,
-  evaluatePlacementCheck,
   outcome,
   promptScore,
   type CheckOutcome,
@@ -48,7 +47,6 @@ export const SOURCE_CHECK_KINDS: Record<string, readonly ExpectedCheck['kind'][]
   audit: ['visibility_metric'],
   traffic_snapshot: ['traffic_metric', 'keyword_presence'],
   search_intelligence_dataset: ['keyword_presence'],
-  source_page_inspection: ['placement'],
 };
 
 const checksOf = (d: Declaration) =>
@@ -201,15 +199,6 @@ async function trafficCheck(ctx: Context, snapshotId: string, check: Check) {
   return compareMetric(check, check.baseline_value, rate, ctx.reading, 'no_search_console_row');
 }
 
-async function placementCheck(ctx: Context) {
-  const check = await ctx.scope
-    .selectFrom(ctx.db, 'placement_checks')
-    .select(['state', 'state_reason', 'due_at'])
-    .where('implementation_event_id', '=', ctx.declaration.id)
-    .executeTakeFirst();
-  return evaluatePlacementCheck(check, ctx.reading);
-}
-
 /** This source's outcomes for the declaration's checks it can read. */
 export async function evidenceFor(
   db: Database,
@@ -250,6 +239,5 @@ function readCheck(ctx: Context, source: Source, check: Check) {
   }
   if (source.kind === 'site_crawl') return siteCheck(ctx, source.id, check);
   if (source.kind === 'audit') return visibilityCheck(ctx, source.id, check);
-  if (source.kind === 'traffic_snapshot') return trafficCheck(ctx, source.id, check);
-  return placementCheck(ctx);
+  return trafficCheck(ctx, source.id, check);
 }

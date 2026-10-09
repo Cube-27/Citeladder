@@ -10,7 +10,6 @@ import type {
   OpportunitySnapshots,
 } from '../generated/db-schema.ts';
 import { record } from '../db/json.ts';
-import { isoformat, parseDatetime } from '../http/datetimes.ts';
 import {
   gapChanges,
   leg,
@@ -176,35 +175,6 @@ async function demandLeg(ctx: Context, baseline: Selectable<OpportunitySnapshots
   result.post_source_ids.push(...b.ids);
   return result;
 }
-async function placementSection(ctx: Context) {
-  const check = await ctx.scope
-    .selectFrom(ctx.db, 'placement_checks')
-    .selectAll()
-    .select([
-      utcText(sql.ref('observed_at')).as('observed_text'),
-      utcText(sql.ref('due_at')).as('due_text'),
-    ])
-    .where('implementation_event_id', '=', ctx.declaration.id)
-    .executeTakeFirst();
-  if (!check) return null;
-  const iso = (text: string | null) =>
-    text === null ? null : isoformat({ ...parseDatetime(text)!, offsetSeconds: 0 });
-  return {
-    state: check.state,
-    expected_change: check.expected_change,
-    rule_id: check.rule_id,
-    url_hash: check.url_hash,
-    target_url: ctx.declaration.target_external_url,
-    reason: check.state_reason,
-    baseline_snapshot_id: check.baseline_snapshot_id,
-    observation_snapshot_id: check.observation_snapshot_id,
-    observed_at: iso(check.observed_text),
-    attempts: check.attempts,
-    max_attempts: policy.opportunity.placement.PLACEMENT_RECHECK_MAX_ATTEMPTS,
-    due_at: iso(check.due_text),
-    checker_version: check.checker_version,
-  };
-}
 export async function buildVerificationResult(
   db: Database,
   declaration: Declaration,
@@ -220,7 +190,6 @@ export async function buildVerificationResult(
     return {
       state: 'unavailable',
       legs: {},
-      placement: await placementSection(ctx),
       limitations: ['Frozen Opportunity snapshot is unavailable.'],
     };
   const latest = await ctx.scope
@@ -253,7 +222,6 @@ export async function buildVerificationResult(
       ai_referral_traffic: await referralLeg(ctx),
       branded_search_demand: await demandLeg(ctx, baseline),
     },
-    placement: await placementSection(ctx),
     gap_changes: gapChanges(
       strings(record(baseline.source_mix).gap_keys),
       strings(record(latest?.source_mix).gap_keys),

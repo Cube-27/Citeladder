@@ -649,34 +649,40 @@ export async function readEvidence(
       limit: limit(args),
       baselineAuditIds: null,
     });
-    const items = await Promise.all(
-      page.items.map(async (item) => {
-        const source =
-          dimension === 'url' && 'url_hash' in item && item.url_hash
-            ? await workspace(scope)
-                .selectFrom(db, 'source_pages')
-                .select(['latest_snapshot_id', 'inspection_reason'])
-                .where('project_id', '=', scope.projectId)
-                .where('url_hash', '=', String(item.url_hash))
-                .executeTakeFirst()
-            : null;
-        return {
-          ...item,
-          observation:
-            dimension === 'url'
-              ? 'citation_occurrence_and_answer_cooccurrence'
-              : 'citation_occurrence',
-          inspected_page_presence_is_separate: true,
-          inspection_evidence: source?.latest_snapshot_id
-            ? reference('earned_source_snapshot', source.latest_snapshot_id)
-            : {
-                record_uri: null,
-                retrievable: false,
-                reason: source?.inspection_reason || 'source_page_not_inspected',
-              },
-        };
-      }),
-    );
+    const hashes =
+      dimension === 'url'
+        ? page.items.flatMap((item) =>
+            'url_hash' in item && item.url_hash ? [String(item.url_hash)] : [],
+          )
+        : [];
+    const inspected = hashes.length
+      ? await workspace(scope)
+          .selectFrom(db, 'source_pages')
+          .select(['url_hash', 'latest_snapshot_id', 'inspection_reason'])
+          .where('project_id', '=', scope.projectId)
+          .where('url_hash', 'in', hashes)
+          .execute()
+      : [];
+    const byHash = new Map(inspected.map((row) => [row.url_hash, row]));
+    const items = page.items.map((item) => {
+      const source =
+        'url_hash' in item && item.url_hash ? byHash.get(String(item.url_hash)) : undefined;
+      return {
+        ...item,
+        observation:
+          dimension === 'url'
+            ? 'citation_occurrence_and_answer_cooccurrence'
+            : 'citation_occurrence',
+        inspected_page_presence_is_separate: true,
+        inspection_evidence: source?.latest_snapshot_id
+          ? reference('earned_source_snapshot', source.latest_snapshot_id)
+          : {
+              record_uri: null,
+              retrievable: false,
+              reason: source?.inspection_reason || 'source_page_not_inspected',
+            },
+      };
+    });
     return {
       state: 'available',
       project_id: scope.projectId,

@@ -25,7 +25,10 @@ import {
   detectOwnedPageNotCited,
 } from '../analysis/opportunities/detectors.ts';
 import type { DetectorHit } from '../analysis/opportunities/evidence.ts';
-import { buildSourceProjection } from '../analysis/opportunities/source-mix.ts';
+import {
+  buildSourceProjection,
+  emptySourceProjection,
+} from '../analysis/opportunities/source-mix.ts';
 import type { Database } from '../db/database.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { notFound } from '../errors.ts';
@@ -36,14 +39,13 @@ import { earnedPageHits } from './earned-page-hits.ts';
 import {
   availableFamilies,
   buildSnapshot,
-  emptyProjection,
   newOpportunity,
   projectSnapshot,
   sameIdentity,
   scoreHits,
   snapshotIsCurrent,
   type SourceIdentity,
-  stampSourceProjections,
+  stampSourceMix,
   type NewOpportunity,
   type Scored,
 } from './refresh-compute.ts';
@@ -67,14 +69,13 @@ import {
 } from './sources.ts';
 import { firstOf } from '../lists.ts';
 
-type Projections = [Record<string, unknown>, Record<string, unknown>, Record<string, unknown>[]];
 type Collected = {
   /** Evidence a load cap left out, carried onto the snapshot. */
   limitations: string[];
   audit: AuditSource | null;
   demand: DemandSource | null;
   hits: DetectorHit[];
-  projections: Projections;
+  sourceMix: Record<string, unknown>;
 };
 type Sources = {
   audit: AuditSource | null;
@@ -93,7 +94,7 @@ async function auditHits(
 ): Promise<{
   audit: AuditSource | null;
   hits: DetectorHit[];
-  projections: Projections;
+  sourceMix: Record<string, unknown>;
   limitations: string[];
 }> {
   const [visibility, metricId, limitations] = await loadVisibilityEvidence(
@@ -102,7 +103,7 @@ async function auditHits(
     audit,
   );
   if (metricId === null)
-    return { audit: null, hits: [], projections: emptyProjection(), limitations: [] };
+    return { audit: null, hits: [], sourceMix: emptySourceProjection(), limitations: [] };
   let hits = [
     ...detectBrandAbsentHighValuePrompt(visibility),
     ...detectOwnedPageNotCited(visibility),
@@ -114,23 +115,14 @@ async function auditHits(
       ),
     ),
   ];
-  const projections = buildSourceProjection(
-    visibility.analyses,
-    visibility.prompt_snapshots,
-    gaps,
-  ) as unknown as Projections;
-  stampSourceProjections(
-    audit.id,
-    visibility.prompt_snapshots,
-    gaps,
-    projections.slice(0, 2) as Record<string, unknown>[],
-  );
+  const sourceMix: Record<string, unknown> = buildSourceProjection(visibility.analyses, gaps);
+  stampSourceMix(audit.id, visibility.prompt_snapshots, gaps, sourceMix);
   // Page-keyed, over the FULL eligible answer set rather than the gap prompts.
   hits.push(...(await earnedPageHits(db, scope, audit, visibility)));
   hits = hits.map((hit) => ({ ...hit, source_metric_ids: [metricId] }));
   hits.push(...(await commerceHits(db, scope, audit.id)));
   hits.push(...(await confirmedDeclineHits(db, scope.workspaceId, audit.id)));
-  return { audit, hits, projections, limitations };
+  return { audit, hits, sourceMix, limitations };
 }
 
 /**
@@ -184,13 +176,13 @@ async function collectHits(db: Database, scope: Scope, sources: Sources): Promis
     audit: sources.audit,
     demand: sources.demand,
     hits: await demandHits(db, scope, sources.demand),
-    projections: emptyProjection(),
+    sourceMix: emptySourceProjection(),
   };
   if (sources.audit !== null) {
     const found = await auditHits(db, scope, sources.audit);
     collected.audit = found.audit;
     collected.hits.push(...found.hits);
-    collected.projections = found.projections;
+    collected.sourceMix = found.sourceMix;
     collected.limitations.push(...found.limitations);
   }
   if (sources.crawl !== null) {
@@ -287,7 +279,7 @@ async function writeRefresh(
       { auditId: collected.audit?.id ?? null, crawl, demand: collected.demand },
       rows,
       scored,
-      collected.projections,
+      collected.sourceMix,
     ),
   };
   await trx
@@ -302,8 +294,6 @@ async function writeRefresh(
       }),
       limitations: JSON.stringify([...snapshot.limitations, ...collected.limitations]),
       source_mix: JSON.stringify(snapshot.source_mix),
-      action_path_mix: JSON.stringify(snapshot.action_path_mix),
-      domain_rollups: JSON.stringify(snapshot.domain_rollups),
       counts_by_type: JSON.stringify(snapshot.counts_by_type),
       counts_by_severity: JSON.stringify(snapshot.counts_by_severity),
       source_analysis_ids: idsJson(snapshot.source_analysis_ids),

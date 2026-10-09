@@ -1,11 +1,10 @@
 /**
  * The page evidence the earned-page detector reads, assembled from what the
- * source-page inspector already committed (`earned_page_hits.py`).
+ * source-page inspector already committed.
  *
- * The answer set is every analyzed answer in the audit, not only the gap
- * prompts: that filter is what made correction and defence unreachable.
- * Presence verdicts are compared against the roster in force now; a verdict
- * judged under another roster is not current and is never compared.
+ * Each page is judged on its latest successful reading, so a later failed or
+ * in-flight read never discards what was already learned. Presence verdicts
+ * count only when judged against the roster in force now.
  */
 import { sql } from 'kysely';
 
@@ -21,18 +20,16 @@ import type { Database } from '../db/database.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { passageTexts, projectRoster } from '../source-pages/reading.ts';
 import { record } from '../db/json.ts';
+import { pydanticUtc, utcText } from '../db/timestamps.ts';
 import { compareText, scalarText } from '../text-order.ts';
 
 const e = policy.opportunity.earned_actions;
 const s = policy.opportunity.source_pages;
-/** Latest plus the one before it: deterioration compares against the last usable one. */
-const SNAPSHOTS_PER_PAGE = 2;
-
 type Snapshot = {
   id: string;
   source_page_id: string;
+  fetched_text: string;
   extracted_chars: number;
-  content_hash: string | null;
   page_facts: unknown;
   evidence_passages: unknown;
 };
@@ -65,28 +62,23 @@ async function citedByHash(db: Database, workspaceId: string, auditId: string) {
   return grouped;
 }
 
-/** The two most recent successful readings of each page, newest first. */
+/** The most recent successful reading of each page. */
 async function readings(db: Database, workspaceId: string, projectId: string, pageIds: string[]) {
-  const grouped = new Map<string, Snapshot[]>();
-  if (!pageIds.length) return grouped;
+  const latest = new Map<string, Snapshot>();
+  if (!pageIds.length) return latest;
   const rows = await sql<Snapshot>`
-    select id, source_page_id, extracted_chars, content_hash, page_facts, evidence_passages
-    from (
-      select *, row_number() over (
-        partition by source_page_id order by fetched_at desc, id desc
-      ) as rank
-      from source_page_snapshots
-      where workspace_id = ${workspaceId}
-        and project_id = ${projectId}
-        and source_page_id in (${sql.join(pageIds)})
-        and outcome = ${policy.opportunity.refresh.source_page_outcome_inspected}
-    ) ranked
-    where rank <= ${SNAPSHOTS_PER_PAGE}
+    select distinct on (source_page_id)
+      id, source_page_id, ${utcText(sql.ref('fetched_at'))} as fetched_text,
+      extracted_chars, page_facts, evidence_passages
+    from source_page_snapshots
+    where workspace_id = ${workspaceId}
+      and project_id = ${projectId}
+      and source_page_id in (${sql.join(pageIds)})
+      and outcome = ${policy.opportunity.refresh.source_page_outcome_inspected}
     order by source_page_id asc, fetched_at desc, id desc
   `.execute(db);
-  for (const row of rows.rows)
-    grouped.set(row.source_page_id, [...(grouped.get(row.source_page_id) ?? []), row]);
-  return grouped;
+  for (const row of rows.rows) latest.set(row.source_page_id, row);
+  return latest;
 }
 
 async function presences(
@@ -130,43 +122,20 @@ const entities = (snapshot: Snapshot, rows: Presence[]) =>
     passages: passageTexts(snapshot.evidence_passages, row.passage_refs),
   }));
 
-/** The last usable reading, or null when it was judged under another roster. */
-function prior(
-  snapshot: Snapshot | undefined,
-  rows: Presence[],
-  roster: string,
-): SourcePageEvidence['prior'] {
-  if (snapshot === undefined || !rows.length) return null;
-  if (rows.some((row) => row.roster_version !== roster)) return null;
-  const found = entities(snapshot, rows);
-  const brand = found.find((item) => item.entity_kind === s.ENTITY_KIND_BRAND);
-  return {
-    snapshot_id: snapshot.id,
-    brand_present: brand?.presence === s.PRESENCE_PRESENT,
-    brand_match_count: brand ? brand.match_count : 0,
-    present_competitors: found
-      .filter(
-        (item) => item.entity_kind !== s.ENTITY_KIND_BRAND && item.presence === s.PRESENCE_PRESENT,
-      )
-      .map((item) => item.entity_name),
-    content_hash: snapshot.content_hash,
-  };
-}
-
 /** The audit's answers, indexed once for every page that cites them. */
 function answerIndex(visibility: VisibilityEvidence) {
   const byId = new Map(visibility.analyses.map((row) => [row.analysis_id, row]));
-  const themes = new Map(
-    visibility.prompt_snapshots
-      .filter((row) => row.theme)
-      .map((row) => [row.prompt_index, row.theme]),
-  );
+  const snapshots = new Map(visibility.prompt_snapshots.map((row) => [row.prompt_index, row]));
   return (analysisIds: Set<string>) => {
     const selected = [...analysisIds].flatMap((id) => byId.get(id) ?? []) as AnalysisEvidence[];
     const indices = [...new Set(selected.map((row) => row.prompt_index))].sort((a, b) => a - b);
+    const prompts = indices.flatMap((index) => snapshots.get(index) ?? []);
     return {
-      prompt_indices: indices,
-      themes: [...new Set(indices.flatMap((index) => themes.get(index) ?? []))].sort(compareText),
+      // A deleted prompt keeps its frozen text but has nothing left to measure.
+      prompts: prompts.flatMap((row) =>
+        row.prompt_id ? [{ prompt_id: row.prompt_id, text: row.text }] : [],
+      ),
+      themes: [...new Set(prompts.flatMap((row) => row.theme || []))].sort(compareText),
       analysis_ids: selected.map((row) => row.analysis_id).sort(compareText),
       // Descriptive only: every name in an answer attaches to every page it cited.
       answer_competitors: [...new Set(selected.flatMap((row) => row.competitor_names))].sort(
@@ -183,28 +152,22 @@ type Page = {
   registrable_domain: string;
   page_format: string;
   page_format_method: string | null;
-  inspection_state: string;
-  inspection_reason: string | null;
   source_class: string | null;
   recurrence_count: number;
-  inspection_requested_at: Date | null;
 };
 
 function pageEvidence(
   page: Page,
   context: {
-    snapshots: Snapshot[];
+    snapshot: Snapshot | undefined;
     presences: Map<string, Presence[]>;
     answers: ReturnType<typeof answerIndex>;
     analysisIds: Set<string>;
     roster: string;
   },
 ): SourcePageEvidence {
-  const [latest, previous] = context.snapshots;
+  const latest = context.snapshot;
   const rows = latest ? (context.presences.get(latest.id) ?? []) : [];
-  const facts = record(latest?.page_facts);
-  const listed = (key: string) =>
-    Array.isArray(facts[key]) ? (facts[key] as unknown[]).map(String) : [];
   const extracted = latest?.extracted_chars ?? 0;
   return {
     url_hash: page.url_hash,
@@ -212,29 +175,17 @@ function pageEvidence(
     registrable_domain: page.registrable_domain,
     page_format: page.page_format,
     page_format_method: page.page_format_method,
-    inspection_state: page.inspection_state,
-    inspection_reason: page.inspection_reason,
-    snapshot_id: latest?.id ?? null,
-    extracted_chars: extracted,
-    sufficient_coverage:
-      page.inspection_state === s.INSPECTION_INSPECTED &&
-      extracted >= s.SOURCE_PAGE_MIN_COVERAGE_CHARS,
-    title: scalarText(facts.title),
-    headings: listed('headings'),
-    outbound_domains: listed('outbound_domains'),
-    content_hash: latest?.content_hash ?? null,
-    entities: latest ? entities(latest, rows) : [],
-    prior: prior(
-      previous,
-      previous ? (context.presences.get(previous.id) ?? []) : [],
-      context.roster,
-    ),
-    roster_current: rows.length > 0 && rows.every((row) => row.roster_version === context.roster),
     source_class: page.source_class,
+    snapshot_id: latest?.id ?? null,
+    read_at: latest ? pydanticUtc(latest.fetched_text) : null,
+    extracted_chars: extracted,
+    sufficient_coverage: extracted >= s.SOURCE_PAGE_MIN_COVERAGE_CHARS,
+    title: scalarText(record(latest?.page_facts).title),
+    entities: latest ? entities(latest, rows) : [],
+    roster_current: rows.length > 0 && rows.every((row) => row.roster_version === context.roster),
     recurrence_count: page.recurrence_count,
     answer_count: context.analysisIds.size,
     ...context.answers(context.analysisIds),
-    requested: page.inspection_requested_at !== null,
   };
 }
 
@@ -258,11 +209,8 @@ export async function earnedPageHits(
       'registrable_domain',
       'page_format',
       'page_format_method',
-      'inspection_state',
-      'inspection_reason',
       'source_class',
       'recurrence_count',
-      'inspection_requested_at',
     ])
     .where('project_id', '=', scope.projectId)
     .where('url_hash', 'in', hashes)
@@ -281,7 +229,7 @@ export async function earnedPageHits(
     db,
     scope.workspaceId,
     scope.projectId,
-    [...snapshots.values()].flat().map((row) => row.id),
+    [...snapshots.values()].map((row) => row.id),
   );
   const coverage = await workspace
     .selectFrom(db, 'source_pages')
@@ -298,14 +246,13 @@ export async function earnedPageHits(
   return detectEarnedPageOpportunities({
     pages: pages.map((page) =>
       pageEvidence(page, {
-        snapshots: snapshots.get(page.id) ?? [],
+        snapshot: snapshots.get(page.id),
         presences: verdicts,
         answers,
         analysisIds: cited.get(page.url_hash) ?? new Set(),
         roster,
       }),
     ),
-    owned_domains: visibility.owned_domains,
     eligible_answers: visibility.analyses.length,
     inspected_pages: Number(coverage.inspected),
     total_pages: Number(coverage.total),

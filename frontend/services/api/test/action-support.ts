@@ -324,6 +324,7 @@ export async function actionFixture<T>(phase: string, ...args: string[]): Promis
       const url = 'https://review.example/best-tools';
       const page = await sourcePage(trx, scope, url, true);
       const snapshot = await observation(trx, scope, page.id, false);
+      const promptId = randomUUID();
       const actionId = await standaloneAction(
         trx,
         opportunityRow(scope, {
@@ -339,14 +340,13 @@ export async function actionFixture<T>(phase: string, ...args: string[]): Promis
               url_hash: page.hash,
               snapshot_id: snapshot.snapshot_id,
               page_entities: [{ entity_kind: 'brand', entity_name: 'Acme' }],
-              discrepancies: [],
-              deterioration: [],
+              affected_prompts: [{ prompt_id: promptId, text: 'best analytics tools' }],
             },
           }),
         }),
         'earned_page',
       );
-      return { action_id: actionId, page_id: page.id, snapshot_id: snapshot.snapshot_id } as T;
+      return { action_id: actionId, prompt_id: promptId } as T;
     });
   } finally {
     await db.destroy();

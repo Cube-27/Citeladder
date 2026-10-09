@@ -23,9 +23,8 @@ import { assessPage } from './assessment.ts';
 import { extractSourcePage } from './extract.ts';
 import { recordInspection, type FetchOutcome } from './persistence.ts';
 import { projectRoster } from './reading.ts';
-import { syncPages, resolveCitation } from './sync.ts';
+import { syncCitedPages, syncPages, resolveCitation } from './sync.ts';
 import { refreshDifferentiation } from './differentiation.ts';
-import { settlePlacements } from './placement-settlement.ts';
 import { fenceInspectionTask } from './task-fence.ts';
 
 const p = policy.source_pages;
@@ -115,7 +114,7 @@ export function sourcePageInspector(fetcher?: WebsiteFetcher): Executor {
       contentTypes: p.allowed_content_types,
     };
     await checkCancelled('source-page synchronization');
-    const tokens = await syncPages(db, scope, audit.id, new Date(), task);
+    const tokens = await syncPages(db, scope, audit.id, roster, new Date(), task);
     const prefetched = new Map<string, FetchedPage>();
     for (const token of tokens) {
       await checkCancelled('redirect admission');
@@ -131,11 +130,13 @@ export function sourcePageInspector(fetcher?: WebsiteFetcher): Executor {
       const identity = citationIdentity(result.url);
       if (!identity) continue;
       await checkCancelled('citation resolution');
-      await resolveCitation(db, scope, token, result.url, task);
+      await resolveCitation(db, scope, audit.id, token, result.url, task);
       prefetched.set(identity.hash, result);
     }
-    await checkCancelled('resolved source synchronization');
-    await syncPages(db, scope, audit.id, new Date(), task);
+    if (prefetched.size) {
+      await checkCancelled('resolved source synchronization');
+      await syncCitedPages(db, scope, audit.id, new Date(), task);
+    }
     const inspected: string[] = [];
     const persist = async (
       id: string,
@@ -182,7 +183,7 @@ export function sourcePageInspector(fetcher?: WebsiteFetcher): Executor {
       if (page) await persist(page.id, page.canonical_url, null, result);
     }
     await checkCancelled('source-page admission');
-    const claims = await claimPages(db, scope, new Date(), undefined, task);
+    const claims = await claimPages(db, scope, new Date(), task);
     let next = 0;
     const workers = await Promise.allSettled(
       Array.from({ length: Math.min(p.fetch_concurrency, claims.length) }, async () => {
@@ -205,16 +206,5 @@ export function sourcePageInspector(fetcher?: WebsiteFetcher): Executor {
     await refreshDifferentiation(db, scope, audit.id, inspected, task);
     await checkCancelled('Opportunity handoff');
     await handoff(db, scope, audit.id, task.max_attempts, task);
-    const now = new Date();
-    await settlePlacements(db, scope, now, task, async (trx) => {
-      await enqueueImplementationVerification(trx, {
-        ...scope,
-        triggerKind: 'source_page_inspection',
-        triggerId: audit.id,
-        revision: task.id,
-        payload: { settled_since: now.toISOString() },
-        maxAttempts: task.max_attempts,
-      });
-    });
   };
 }

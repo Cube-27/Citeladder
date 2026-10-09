@@ -2,56 +2,40 @@
  * Which roster judged a persisted source-page reading, and the passages it
  * quoted.
  *
- * Native inspection stamps `roster_version` on every presence. The earned-page
- * detector compares readings taken on the current roster. Preserve the historical
- * Python serialization so existing readings remain comparable.
+ * Inspection stamps `roster_version` on every presence: the names, aliases and
+ * mention rules it matched with, and the detector version. A reading counts
+ * only against the roster in force now.
  */
 import { createHash } from 'node:crypto';
 
 import { policy } from '../config.ts';
 import { compareIdentityText } from '../analysis/comparison.ts';
+import { storedEntityMatching } from '../analysis/entity-matching.ts';
 import { record } from '../db/json.ts';
 
-const strings = (value: unknown): string[] =>
+const sorted = (value: unknown): string[] =>
   Array.isArray(value) ? value.map(String).sort(compareIdentityText) : [];
 
-function compareLists(left: string[], right: string[]): number {
-  for (let index = 0; index < Math.min(left.length, right.length); index += 1) {
-    const order = compareIdentityText(left[index]!, right[index]!);
-    if (order) return order;
-  }
-  return left.length - right.length;
-}
-
-/** Python's default `json.dumps` (ASCII-escaped, `', '`/`': '`) for strings, lists and sorted objects. */
-function pythonJson(value: unknown): string {
-  if (typeof value === 'string') {
-    return JSON.stringify(value).replaceAll(
-      /[^\x20-\x7e]/g,
-      (unit) => `\\u${unit.charCodeAt(0).toString(16).padStart(4, '0')}`,
-    );
-  }
-  if (Array.isArray(value)) return `[${value.map(pythonJson).join(', ')}]`;
-  const entries = Object.entries(record(value)).sort(([a], [b]) => compareIdentityText(a, b));
-  return `{${entries.map(([key, item]) => `${pythonJson(key)}: ${pythonJson(item)}`).join(', ')}}`;
-}
-
-/** A stable fingerprint of the brand and competitor names an audit measured. */
+/** A stable fingerprint of the brand, competitors and mention rules an audit measured. */
 export function projectRoster(configuration: unknown): string {
   const config = record(configuration);
   const competitors = (Array.isArray(config.competitors) ? config.competitors : [])
     .map((item) => {
       const competitor = record(item);
-      return [String(competitor.name || ''), ...strings(competitor.aliases)];
+      return [String(competitor.name || ''), ...sorted(competitor.aliases)];
     })
-    .sort(compareLists);
+    .sort((a, b) => compareIdentityText(JSON.stringify(a), JSON.stringify(b)));
+  const matching = storedEntityMatching(config);
   const identity = {
     brand: String(config.brand_name || ''),
-    brand_aliases: strings(config.brand_aliases),
+    brand_aliases: sorted(config.brand_aliases),
     competitors,
+    matching: Object.keys(matching)
+      .sort(compareIdentityText)
+      .map((key) => [key, matching[key]]),
     detector: policy.opportunity.source_pages.SOURCE_PAGE_PRESENCE_VERSION,
   };
-  const digest = createHash('sha256').update(pythonJson(identity)).digest('hex');
+  const digest = createHash('sha256').update(JSON.stringify(identity)).digest('hex');
   return `roster-${digest.slice(0, 32)}`;
 }
 

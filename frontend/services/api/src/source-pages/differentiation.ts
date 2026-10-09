@@ -209,13 +209,22 @@ export async function refreshDifferentiation(
       .orderBy('candidate.id')
       .execute();
     if (!candidates.length) return;
-    const snapshots = await trx
+    // Only successful readings can be compared; failed attempts never load.
+    const readings = await trx
       .selectFrom('source_page_snapshots as snapshot')
       .innerJoin('audits as audit', 'audit.id', 'snapshot.audit_id')
-      .selectAll('snapshot')
-      .select('audit.created_at as audit_time')
+      .select([
+        'snapshot.id',
+        'snapshot.source_page_id',
+        'snapshot.audit_id',
+        'snapshot.outcome',
+        'snapshot.page_facts',
+        'snapshot.extracted_chars',
+        'audit.created_at as audit_time',
+      ])
       .where('snapshot.workspace_id', '=', scope.workspaceId)
       .where('snapshot.project_id', '=', scope.projectId)
+      .where('snapshot.outcome', '=', 'inspected')
       .where('audit.workspace_id', '=', scope.workspaceId)
       .where('audit.project_id', '=', scope.projectId)
       .where('snapshot.source_page_id', 'in', [
@@ -224,6 +233,7 @@ export async function refreshDifferentiation(
       .orderBy('snapshot.fetched_at', 'desc')
       .orderBy('snapshot.id', 'desc')
       .execute();
+    const snapshots = groupBy(readings, (row) => row.source_page_id);
     const ownedRows = await trx
       .selectFrom('site_page_analyses as analysis')
       .innerJoin('site_fetch_artifacts as artifact', 'artifact.id', 'analysis.artifact_id')
@@ -265,9 +275,7 @@ export async function refreshDifferentiation(
       const compared: ComparisonPage[] = [];
       const snapshotIds: string[] = [];
       for (const candidate of rows) {
-        const available = snapshots.filter(
-          (row) => row.source_page_id === candidate.source_page_id,
-        );
+        const available = snapshots.get(candidate.source_page_id) ?? [];
         const snapshot =
           available.find((row) => row.audit_id === candidate.audit_id) ??
           available

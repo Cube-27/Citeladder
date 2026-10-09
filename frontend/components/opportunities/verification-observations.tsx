@@ -3,19 +3,14 @@
 import { ProjectLink } from '@/components/layout/scoped-link';
 
 import { eyebrowClasses } from '@/components/ui/eyebrow';
-import { textRole } from '@/components/ui/typography';
 import { movementLegLabel, movementStateLabel } from '@/lib/agent/vocabulary';
-import { placementReport, type VerificationResult } from '@/lib/opportunities/verification';
+
+type VerificationResult = Record<string, unknown>;
 
 /**
- * What else has been observed since a declaration — the placement and the
- * before/after movement — reported as separate observations, never as one
- * verdict. The per-check states sit above this, in the declaration.
- *
- * Placement sits above the comparable legs and outside them on purpose. "The
- * listing is live" and "the score moved" are two observations about two
- * different things; they are free to disagree, and folding one into the other
- * is how a verification result comes to claim more than it knows.
+ * What else has been observed since a declaration — the before/after movement
+ * and the gap changes — reported as observations, never as one verdict. The
+ * per-check states sit above this, in the declaration.
  */
 export function VerificationObservations({
   implementation,
@@ -27,11 +22,8 @@ export function VerificationObservations({
 }>) {
   const result = implementation?.verification_events?.at(-1)?.result;
   if (!result) return null;
-  // The container stays neutral: a contradicted check elsewhere must not tint
-  // a placement that is live, which is what these separate observations say.
   return (
     <div className="type-caption grid gap-2">
-      <Placement result={result} />
       <ComparableMovement result={result} />
       <GapChanges result={result} />
       {showAuditLink ? (
@@ -39,25 +31,6 @@ export function VerificationObservations({
           Run a comparable audit
         </ProjectLink>
       ) : null}
-    </div>
-  );
-}
-
-/**
- * Whether the change actually appeared on the publisher's page.
- *
- * A page nobody has re-read since the declaration says so plainly. It is never
- * reported as a placement that failed — that distinction is the same one the
- * whole inspection feature exists to hold.
- */
-function Placement({ result }: Readonly<{ result: VerificationResult | undefined }>) {
-  const report = placementReport(result);
-  if (!report) return null;
-  return (
-    <div className="grid gap-0.5">
-      <p className={eyebrowClasses}>Placement</p>
-      <p className={textRole('itemTitle')}>{report.headline}</p>
-      {report.detail ? <p>{report.detail}</p> : null}
     </div>
   );
 }

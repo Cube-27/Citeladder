@@ -8,52 +8,29 @@ export const competitorsOf = (page: SourcePageEvidence) =>
   page.entities.filter(
     (e) => e.entity_kind === s.ENTITY_KIND_COMPETITOR && e.presence === s.PRESENCE_PRESENT,
   );
-function limitations(
-  rule: string,
-  page: SourcePageEvidence,
-  evidence: EarnedPageEvidence,
-): string[] {
+function limitations(evidence: EarnedPageEvidence): string[] {
   const result = [
-    "Inclusion is a publisher's decision. A placement going live and visibility moving are separate observations and may disagree.",
-    "Competitors named in the answers that cited this page are listed separately from competitors found ON the page. Only the latter affected this task's priority.",
+    "Inclusion is the publisher's decision. Visibility on the prompts that cite this page is measured after you declare the work; it can move for other reasons too.",
+    'No passage can demonstrate an absence. The brand was not found in the readable text of this page; the extracted length says how much was read.',
   ];
-  const brand = brandOf(page);
-  if (brand && brand.presence !== s.PRESENCE_PRESENT)
-    result.push(
-      'No passage can demonstrate an absence. This reports how much of the page was readable and how names were matched, not proof that the brand is missing.',
-    );
-  if (rule === p.RULE_EARNED_PAGE_RESEARCH)
-    result.push(
-      'This is a request to look, not a recommended action. What is unresolved is listed above.',
-    );
-  if (!page.roster_current)
-    result.push(
-      'The brand or competitor roster changed after this page was read, so these verdicts describe an earlier roster.',
-    );
   if (evidence.total_pages && evidence.inspected_pages < evidence.total_pages)
     result.push(
-      `${evidence.inspected_pages} of ${evidence.total_pages} cited pages in this project have been inspected; the rest are inventory, not findings.`,
+      `${evidence.inspected_pages} of ${evidence.total_pages} cited pages in this project have been read; the rest are inventory, not findings.`,
     );
   return result;
 }
-export function earnedPageBrief(
-  rule: string,
-  page: SourcePageEvidence,
-  evidence: EarnedPageEvidence,
-  qualified: boolean,
-  unmet: string[],
-  extra: Record<string, unknown>,
-) {
-  const onPage = competitorsOf(page).map((e) => e.entity_name);
-  const truncated =
-    page.prompt_indices.length > p.EARNED_PAGE_MAX_PROMPTS ||
-    page.themes.length > p.EARNED_PAGE_MAX_PROMPTS ||
-    page.answer_competitors.length > p.EARNED_PAGE_MAX_COMPETITORS ||
-    onPage.length > p.EARNED_PAGE_MAX_COMPETITORS ||
-    page.entities.some((e) => e.passages.length > p.EARNED_PAGE_MAX_PASSAGES);
+
+/**
+ * What the Agent needs to draft the request: the page, who is on it in its
+ * own words, the prompts it answers, and what to ask for. Prompt IDs travel
+ * so a declaration can freeze checks on exactly those prompts.
+ */
+export function earnedPageBrief(page: SourcePageEvidence, evidence: EarnedPageEvidence) {
+  const listed = competitorsOf(page);
+  const names = listed.slice(0, p.EARNED_PAGE_MAX_COMPETITORS).map((e) => e.entity_name);
   return {
     pathway: p.ACTION_PATH_EARNED,
-    rule_id: rule,
+    rule_id: p.RULE_EARNED_PAGE_ACQUIRE,
     target_url: page.canonical_url,
     url_hash: page.url_hash,
     canonical_domain: page.registrable_domain,
@@ -62,17 +39,10 @@ export function earnedPageBrief(
     page_format_method: page.page_format_method,
     page_title: page.title,
     target_theme: page.themes[0] ?? null,
-    suggested_skill_id:
-      (p.EARNED_PAGE_SKILL_BY_FORMAT as Record<string, string>)[page.page_format] ??
-      p.EARNED_PAGE_DEFAULT_SKILL,
-    suggested_role:
-      (p.EARNED_PAGE_ROLE_BY_FORMAT as Record<string, string>)[page.page_format] ??
-      p.EARNED_PAGE_DEFAULT_ROLE,
+    ask: `Be included on this page alongside ${names.join(', ')}, with an entry comparable to theirs that links to your site.`,
     snapshot_id: page.snapshot_id,
-    inspection_state: page.inspection_state,
-    inspection_reason: page.inspection_reason,
+    read_at: page.read_at,
     extracted_chars: page.extracted_chars,
-    sufficient_coverage: page.sufficient_coverage,
     page_entities: page.entities.map((e) => ({
       entity_kind: e.entity_kind,
       entity_name: e.entity_name,
@@ -81,25 +51,25 @@ export function earnedPageBrief(
       match_count: e.match_count,
       passages: e.passages.slice(0, p.EARNED_PAGE_MAX_PASSAGES),
     })),
-    observed_competitors: onPage.slice(0, p.EARNED_PAGE_MAX_COMPETITORS),
+    observed_competitors: names,
     answer_competitors: page.answer_competitors.slice(0, p.EARNED_PAGE_MAX_COMPETITORS),
-    affected_prompt_indices: page.prompt_indices.slice(0, p.EARNED_PAGE_MAX_PROMPTS),
+    affected_prompts: page.prompts.slice(0, p.EARNED_PAGE_MAX_PROMPTS),
     affected_themes: page.themes.slice(0, p.EARNED_PAGE_MAX_PROMPTS),
     observed_citation_frequency: {
       answers_citing_page: page.answer_count,
       eligible_answers: evidence.eligible_answers,
     },
     coverage: { inspected_pages: evidence.inspected_pages, total_pages: evidence.total_pages },
-    representative_citations: [{ url: page.canonical_url, title: page.title }],
-    truncated,
-    qualified,
-    unmet_qualification: unmet,
+    truncated:
+      page.prompts.length > p.EARNED_PAGE_MAX_PROMPTS ||
+      page.answer_competitors.length > p.EARNED_PAGE_MAX_COMPETITORS ||
+      listed.length > p.EARNED_PAGE_MAX_COMPETITORS ||
+      page.entities.some((e) => e.passages.length > p.EARNED_PAGE_MAX_PASSAGES),
     source_analysis_ids: [...page.analysis_ids],
-    limitations: limitations(rule, page, evidence),
+    limitations: limitations(evidence),
     inspector_version: s.SOURCE_PAGE_INSPECTOR_VERSION,
     presence_version: s.SOURCE_PAGE_PRESENCE_VERSION,
     page_format_version: s.SOURCE_PAGE_FORMAT_VERSION,
     handoff_template_version: policy.opportunity.source_patterns.CONTENT_HANDOFF_TEMPLATE_VERSION,
-    ...extra,
   };
 }

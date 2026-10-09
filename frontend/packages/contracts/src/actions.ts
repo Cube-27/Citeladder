@@ -63,16 +63,11 @@ const actionDiagnosisSchema = responseObject({
 
 // What one loop leg of a declared Action is waiting for (plan §9).
 export const measurementLegSchema = responseObject({
-  leg: z.enum([
-    'next_visibility_run',
-    'next_search_console_window',
-    'next_crawl',
-    'placement_recheck',
-  ]),
+  leg: z.enum(['next_visibility_run', 'next_search_console_window', 'next_crawl']),
   state: z.enum(['waiting', 'not_scheduled', 'sync_needed', 'observed']),
   due_at: z.string().nullable(),
   last_evidence_at: z.string().nullable(),
-  // The crawl, audit, traffic snapshot, placement check or schedule behind it.
+  // The crawl, audit, traffic snapshot or schedule behind it.
   source_id: uuid().nullable(),
 });
 
@@ -89,10 +84,10 @@ export const declarationCheckSchema = responseObject({
   reason: z.string().nullable(),
   observed_at: z.string().nullable(),
   // The exact source of that reading: a crawl, audit, traffic snapshot or
-  // placement inspection.
+  // Search Intelligence dataset.
   source_kind: z.string().nullable(),
   source_id: z.string().nullable(),
-  // What the check names: a rule, a prompt, a page or query, a link or a placement.
+  // What the check names: a rule, a prompt, a page or query, or a link.
   subject: z.string().nullable(),
 });
 
@@ -105,7 +100,7 @@ export const actionDeclarationSchema = responseObject({
   opportunity_snapshot_id: uuid(),
   target_site_url_ids: z.array(uuid()),
   // Populated instead of the owned ids for an earned Action: the publisher
-  // page the placement was declared on. Never both.
+  // page the listing was requested on. Never both.
   target_external_url: z.string().nullable(),
   declared_implemented_at: z.string(),
   expected_checks: z.array(expectedCheckSchema),

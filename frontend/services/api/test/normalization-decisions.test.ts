@@ -4,12 +4,7 @@ import { policy } from '../src/config.ts';
 import { aiReferralSources } from '../src/analytics/ai-referrals.ts';
 import { metricSeriesPoints } from '../src/analytics/metric-series.ts';
 import { domainMatches, isGroundingRedirect, normalizeDomain } from '../src/analysis/domains.ts';
-import { listedInHeadings } from '../src/analysis/opportunities/page-predicates.ts';
 import { classifySourceDomain } from '../src/analysis/opportunities/source-patterns.ts';
-import {
-  evaluatePlacement,
-  type PlacementReading,
-} from '../src/analysis/opportunities/placement-outcome.ts';
 import { epochMicros, parseDatetime } from '../src/http/datetimes.ts';
 import { RequestValidationError, validateParams } from '../src/http/params.ts';
 
@@ -67,44 +62,6 @@ describe('recorded evidence normalization', () => {
     expect(isGroundingRedirect('grounding-api-redirect/xyz')).toBe(true);
     expect(isGroundingRedirect('evil-grounding-api-redirect.example')).toBe(false);
     expect(isGroundingRedirect('https://pub.example/a?ref=grounding-api-redirect')).toBe(false);
-  });
-
-  it('lists a name only within one heading', () => {
-    expect(listedInHeadings('Best & Less', ['Top picks', 'Best and Less'])).toBe(true);
-    expect(listedInHeadings('Acme', ['Ac', 'me'])).toBe(false);
-  });
-
-  it('keeps changed-roster and missing-verdict placement observations unavailable', () => {
-    const p = policy.opportunity.placement;
-    const baseline: PlacementReading = {
-      snapshot_id: 'before',
-      roster_version: 'roster-1',
-      extracted_chars: policy.opportunity.source_pages.SOURCE_PAGE_MIN_COVERAGE_CHARS,
-      brand_presence: 'present',
-      brand_present: true,
-      brand_match_count: 1,
-      outbound_domains: [],
-      headings: [],
-    };
-    const expectation = {
-      expected_change: p.PLACEMENT_CHANGE_BRAND_LISTED,
-      brand_name: 'Brand',
-      owned_domains: [],
-      discrepancies: [],
-    };
-    expect(
-      evaluatePlacement(expectation, baseline, {
-        ...baseline,
-        snapshot_id: 'after',
-        roster_version: 'roster-2',
-      }),
-    ).toEqual({ state: p.PLACEMENT_STATE_UNAVAILABLE, reason: p.PLACEMENT_REASON_ROSTER_CHANGED });
-    expect(evaluatePlacement(expectation, baseline, { ...baseline, brand_presence: null })).toEqual(
-      { state: p.PLACEMENT_STATE_UNAVAILABLE, reason: p.PLACEMENT_REASON_NO_VERDICT },
-    );
-    expect(
-      evaluatePlacement(expectation, baseline, { ...baseline, brand_present: false }).state,
-    ).toBe(p.PLACEMENT_STATE_UNMET);
   });
 });
 

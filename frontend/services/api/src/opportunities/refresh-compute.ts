@@ -152,7 +152,7 @@ export function buildSnapshot(
   sources: SnapshotSources,
   rows: Pick<NewOpportunity, 'opportunity_type' | 'severity'>[],
   scored: Scored[],
-  projections: [Json, Json, Json[]],
+  sourceMix: Json,
 ) {
   const countsByType: Record<string, number> = Object.fromEntries(
     [...o.OPPORTUNITY_TYPES].sort(compareText).map((name) => [name, 0]),
@@ -174,9 +174,7 @@ export function buildSnapshot(
     demand_source_revision: sources.demand?.source_hash ?? null,
     coverage: Object.keys(coverage).length ? coverage : null,
     limitations,
-    source_mix: projections[0],
-    action_path_mix: projections[1],
-    domain_rollups: projections[2],
+    source_mix: sourceMix,
     counts_by_type: countsByType,
     counts_by_severity: countsBySeverity,
     total_count: rows.length,
@@ -191,25 +189,17 @@ export function buildSnapshot(
 
 type GapSnapshot = { prompt_index: number; snapshot_id: string | null; text: string };
 
-/** Stamp the audit and its gap prompts on the source and action-path mixes. */
-export function stampSourceProjections(
+/** Stamp the audit and its gap prompts on the source mix. */
+export function stampSourceMix(
   auditId: string,
   snapshots: GapSnapshot[],
   gapIndices: number[],
-  projections: Json[],
+  sourceMix: Json,
 ): void {
   const selected = snapshots.filter((row) => gapIndices.includes(row.prompt_index));
-  for (const projection of projections) {
-    projection.audit_id = auditId;
-    projection.prompt_snapshot_ids = selected.map((row) => row.snapshot_id || null);
-    projection.gap_keys = selected.map((row) => promptTextHash(row.text)).sort(compareText);
-  }
-}
-
-/** The canonical "nothing to project" source mix, before any gap. */
-export function emptyProjection(): [Json, Json, Json[]] {
-  const empty = emptySourceProjection();
-  return [empty, { ...empty }, []];
+  sourceMix.audit_id = auditId;
+  sourceMix.prompt_snapshot_ids = selected.map((row) => row.snapshot_id || null);
+  sourceMix.gap_keys = selected.map((row) => promptTextHash(row.text)).sort(compareText);
 }
 
 type CurrentSnapshot = {
@@ -280,8 +270,6 @@ type StoredSnapshot = CurrentSnapshot & {
   coverage: unknown;
   limitations: unknown;
   source_mix: unknown;
-  action_path_mix: unknown;
-  domain_rollups: unknown;
   counts_by_type: unknown;
   counts_by_severity: unknown;
   total_count: number;
@@ -306,10 +294,6 @@ export function projectSnapshot(snapshot: StoredSnapshot) {
     coverage: record(snapshot.coverage),
     limitations: Array.isArray(snapshot.limitations) ? [...snapshot.limitations] : [],
     source_mix: sourceMix.parse(truthyRecord(snapshot.source_mix) ?? emptySourceProjection()),
-    action_path_mix: sourceMix.parse(
-      truthyRecord(snapshot.action_path_mix) ?? emptySourceProjection(),
-    ),
-    domain_rollups: Array.isArray(snapshot.domain_rollups) ? [...snapshot.domain_rollups] : [],
     counts_by_type: numberRecord(snapshot.counts_by_type),
     counts_by_severity: numberRecord(snapshot.counts_by_severity),
     total_count: snapshot.total_count,

@@ -192,14 +192,35 @@ it('extracts visible evidence and keeps schema, headings and table structure sep
   expect(page.facts.table_headers).toEqual([['Cost']]);
   expect(extractSourcePage(Buffer.from('<p>Visible without a title</p>')).facts.title).toBe('');
 });
-it('distinguishes literal presence, normalization ambiguity, and sufficient untruncated absence', () => {
-  const partial = extractSourcePage(Buffer.from('<p>A &amp; B uses a tool</p>'));
-  expect(assessPage(partial, { brand_name: 'A and B' }).presences[0]?.presence).toBe('ambiguous');
+it('matches names the way answers do, quoting spaced and joined spellings, and keeps absence distinct', () => {
+  const spaced = extractSourcePage(Buffer.from('<p>Admissions open at The Asian School.</p>'));
+  expect(assessPage(spaced, { brand_name: 'theasianschool' }).presences[0]).toMatchObject({
+    presence: 'present',
+    match_method: 'normalized_alias',
+    match_count: 1,
+  });
   const compact = extractSourcePage(Buffer.from('<p>We love BestandLess shoes</p>'));
   expect(assessPage(compact, { brand_name: 'Best & Less' }).presences[0]).toMatchObject({
-    presence: 'ambiguous',
+    presence: 'present',
     first_offset: 8,
   });
+  // Named, but only as "and" for "&": no raw window reproduces it, so it is not quoted.
+  const spelled = extractSourcePage(Buffer.from('<p>A &amp; B uses a tool</p>'));
+  expect(assessPage(spelled, { brand_name: 'A and B' }).presences[0]?.presence).toBe('ambiguous');
+  // A mention rule that excludes a phrase applies on the page as it does in answers.
+  const excluded = extractSourcePage(
+    Buffer.from(`<p>Shop at Target stores. ${'Other words '.repeat(100)}</p>`),
+  );
+  const rules = (exclusion: string[]) => ({
+    brand_name: 'Target',
+    entity_matching: {
+      entities: { target: { mode: 'always', context_terms: [], exclusion_phrases: exclusion } },
+    },
+  });
+  expect(assessPage(excluded, rules(['target stores'])).presences[0]?.presence).toBe(
+    'not_detected',
+  );
+  expect(assessPage(excluded, rules([])).presences[0]?.presence).toBe('present');
   const split = extractSourcePage(Buffer.from(`<p>bond sand ${'Other words '.repeat(100)}</p>`));
   expect(assessPage(split, { brand_name: 'Bonds' }).presences[0]?.presence).toBe('not_detected');
   const full = extractSourcePage(Buffer.from(`<p>${'Other words '.repeat(100)}</p>`));
@@ -220,8 +241,7 @@ it('derives page formats from a page address and keeps redirect tokens unresolve
     canonicalIdentity('https://EXAMPLE.test:443/%7euser?utm_source=x&b=2&a=1#section').url,
   ).toBe('https://example.test/~user?a=1&b=2');
 });
-it('serializes canonical URLs exactly as the Python url_hash writers do', () => {
-  // Expected values are Python `url_policy.canonicalize` outputs.
+it('serializes canonical URLs so one page has one identity', () => {
   const vectors = {
     'https://Ex.com/a%2fb?q=a+b&x=%7e|^&utm_source=z#f': 'https://ex.com/a%2Fb?q=a+b&x=~%7C%5E',
     'https://ex.com/%e2%82%ac?x=€': 'https://ex.com/%E2%82%AC?x=%E2%82%AC',
@@ -279,16 +299,27 @@ it('compares page-level feature sets with explicit inspected denominators and un
     'insufficient_evidence',
   );
 });
-it('uses publisher schema before headings and ignores nested entity types and hostile blocks', () => {
-  const body = `<title>Best tools</title><script type="application/ld+json">${'['.repeat(20000)}${']'.repeat(20000)}</script>
-    <script type="application/ld+json">{"@type":"https://schema.org/NewsArticle","publisher":{"@type":"Organization"}}</script><h1>Best tools</h1><p>Acme leads.</p>`;
-  const result = assessPage(extractSourcePage(Buffer.from(body)), { brand_name: 'Acme' });
-  expect(result).toMatchObject({ format: 'article', method: 'structured_data' });
+it('reads a list heading over generic Article markup and ignores nested entity types and hostile blocks', () => {
+  const article = (heading: string) =>
+    `<title>${heading}</title><script type="application/ld+json">${'['.repeat(20000)}${']'.repeat(20000)}</script>
+    <script type="application/ld+json">{"@type":"https://schema.org/NewsArticle","publisher":{"@type":"Organization"}}</script><h1>${heading}</h1><p>Acme leads.</p>`;
+  const format = (body: string) => {
+    const { format: kind, method } = assessPage(extractSourcePage(Buffer.from(body)), {});
+    return { kind, method };
+  };
+  expect(format(article('Best tools'))).toEqual({ kind: 'listicle', method: 'heading_evidence' });
+  expect(format(article('Our spring update'))).toEqual({
+    kind: 'article',
+    method: 'structured_data',
+  });
   expect(
-    assessPage(extractSourcePage(Buffer.from('<h1>Versatile topical notes</h1>')), {}).format,
-  ).toBe('unresolved');
+    format(
+      '<script type="application/ld+json">{"@type":"VideoObject"}</script><h1>Best tools</h1>',
+    ),
+  ).toEqual({ kind: 'video', method: 'structured_data' });
+  expect(format('<h1>Versatile topical notes</h1>').kind).toBe('unresolved');
 });
-it('bounds quotations and abstains when a literal verdict has no retained quote', () => {
+it('quotes every named entity even when one of them fills the page', () => {
   const page = extractSourcePage(
     Buffer.from(`<h1>Acme tools</h1><p>${'Acme leads. Rival follows. '.repeat(100)}</p>`),
   );
@@ -296,13 +327,13 @@ it('bounds quotations and abstains when a literal verdict has no retained quote'
     brand_name: 'Acme',
     competitors: [{ name: 'Rival' }, { name: 'AI' }],
   });
-  expect(result.passages).toHaveLength(policy.source_pages.max_passages);
+  expect(result.passages).toHaveLength(4);
   expect(
     result.passages.every((passage) => passage.text.length <= policy.source_pages.passage_chars),
   ).toBe(true);
   expect(result.presences.map((presence) => presence.presence)).toEqual([
     'present',
-    'ambiguous',
+    'present',
     'not_detected',
   ]);
   expect(

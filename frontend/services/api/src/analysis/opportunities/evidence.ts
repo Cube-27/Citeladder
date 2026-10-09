@@ -77,36 +77,25 @@ export type SourcePageEvidence = {
   registrable_domain: string;
   page_format: string;
   page_format_method: string | null;
-  inspection_state: string;
-  inspection_reason: string | null;
+  source_class: string | null;
+  /** The latest successful reading; a later failed read does not discard it. */
   snapshot_id: string | null;
+  read_at: string | null;
   extracted_chars: number;
   sufficient_coverage: boolean;
   title: string;
-  headings: string[];
-  outbound_domains: string[];
-  content_hash: string | null;
   entities: PageEntityEvidence[];
-  prior: {
-    snapshot_id: string;
-    brand_present: boolean;
-    brand_match_count: number;
-    present_competitors: string[];
-    content_hash: string | null;
-  } | null;
   roster_current: boolean;
-  source_class: string | null;
   recurrence_count: number;
   answer_count: number;
-  prompt_indices: number[];
+  /** Tracked prompts whose answers in this audit cited the page. */
+  prompts: { prompt_id: string; text: string }[];
   themes: string[];
   analysis_ids: string[];
   answer_competitors: string[];
-  requested: boolean;
 };
 export type EarnedPageEvidence = {
   pages: SourcePageEvidence[];
-  owned_domains: string[];
   eligible_answers: number;
   inspected_pages: number;
   total_pages: number;

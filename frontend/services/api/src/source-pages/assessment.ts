@@ -1,11 +1,16 @@
 /** Exact quoted matches and explicit abstention when an extraction cannot establish absence. */
 import { policy } from '../config.ts';
-import { scalarText } from '../text-order.ts';
-import { record, strings } from '../db/json.ts';
 import { routePageKind } from '../site-health/routes.ts';
 import type { ExtractedPage } from './extract.ts';
 import { publicUrl } from '../projects/safe-fetch.ts';
-import { aliasOffset, normalizeAlias, normalizeText } from '../analysis/aliases.ts';
+import {
+  DENSE_SCRIPT,
+  entityOffset,
+  normalizeAlias,
+  normalizeText,
+  type EntityPolicy,
+} from '../analysis/aliases.ts';
+import { scoringConfig } from '../analysis/scoring.ts';
 
 const p = policy.source_pages;
 type Passage = { text: string; char_start: number; char_end: number; entity_ref: string };
@@ -38,24 +43,51 @@ export function urlFormat(value: string): { format: string; method: string } {
     ? { format: 'article', method: 'url_pattern' }
     : { format: 'unresolved', method: 'none' };
 }
+/** Schema types that name the generic article shape and nothing more specific. */
+const GENERIC_SCHEMA = new Set(['article', 'blogposting', 'newsarticle']);
+
+/**
+ * The page's own account of its shape. A specific schema type wins; a list or
+ * comparison heading beats generic Article markup, because most CMSs mark
+ * every post up as an Article whatever its shape.
+ */
 function pageFormat(page: ExtractedPage) {
   if (!page.facts.parsed) return { format: 'unresolved', method: 'none' };
   const types = new Set(
     page.facts.structured_types.map((s) => s.replace(/\/$/u, '').split('/').at(-1)!.toLowerCase()),
   );
   for (const [token, format] of p.schema_formats)
-    if (types.has(token!)) return { format: format!, method: 'structured_data' };
+    if (types.has(token!) && !GENERIC_SCHEMA.has(token!))
+      return { format: format!, method: 'structured_data' };
   const title = [page.facts.title, ...page.facts.headings].join(' ');
   for (const [pattern, format] of p.heading_formats)
     if (new RegExp(pattern!, 'iu').test(title))
       return { format: format!, method: 'heading_evidence' };
+  for (const [token, format] of p.schema_formats)
+    if (types.has(token!)) return { format: format!, method: 'structured_data' };
   return { format: 'unresolved', method: 'none' };
 }
-/** Quote each literal match until the page's passage cap; returns the new passage indexes. */
+const escape = (value: string) => value.replaceAll(/[.*+?^${}()|[\]\\]/gu, String.raw`\$&`);
+const WORD = String.raw`[\p{L}\p{N}_]`;
+/** Word boundaries apply only to scripts written with spaces. */
+const bounded = (body: string, alias: string) =>
+  DENSE_SCRIPT.test(alias)
+    ? new RegExp(body, 'giu')
+    : new RegExp(`(?<!${WORD})${body}(?!${WORD})`, 'giu');
+/**
+ * Raw-text spellings of an alias, so a positive verdict can quote the page:
+ * the alias as written, then its characters in order with short separator
+ * runs between them, so "theasianschool" finds "The Asian School".
+ */
+function spellings(alias: string): RegExp[] {
+  const compact = [...normalizeAlias(alias).replaceAll(' ', '')];
+  const joined = compact.map(escape).join(String.raw`[^\p{L}\p{N}]{0,3}`);
+  return [bounded(escape(alias), alias), ...(compact.length ? [bounded(joined, alias)] : [])];
+}
+/** Up to the per-entity quote allowance, so one entity never starves the others. */
 function quote(text: string, matches: RegExpExecArray[], ref: string, passages: Passage[]) {
   const refs: number[] = [];
-  for (const match of matches) {
-    if (passages.length >= p.max_passages) break;
+  for (const match of matches.slice(0, p.passages_per_entity)) {
     const half = Math.max(0, Math.floor((p.passage_chars - match[0].length) / 2));
     const start = Math.max(0, match.index - half);
     const end = Math.min(text.length, match.index + match[0].length + half);
@@ -69,65 +101,89 @@ function quote(text: string, matches: RegExpExecArray[], ref: string, passages: 
   }
   return refs;
 }
-function entity(
-  page: ExtractedPage,
-  kind: string,
-  name: string,
-  aliases: string[],
-  passages: Passage[],
-): Presence {
+type Entity = { kind: string; name: string; aliases: string[]; matching?: EntityPolicy };
+/**
+ * Whether the page names the entity, decided by the same matcher and mention
+ * rules that judge answers, so a name counts on a page exactly when it would
+ * count in an answer. Every positive verdict carries a quoted passage.
+ */
+function entity(page: ExtractedPage, item: Entity, passages: Passage[]): Presence {
   const text = [page.facts.title, page.facts.meta_description, page.text].filter(Boolean).join(' ');
-  const candidates = [...new Set([name, ...aliases].map((s) => s.trim()))].filter(
-    (s) => s.length >= p.min_alias_chars,
+  const aliases = [...new Set([item.name, ...item.aliases].map((a) => a.trim()))].filter(
+    (a) => a.length >= p.min_alias_chars,
   );
-  for (const alias of candidates) {
-    const escaped = alias.replaceAll(/[.*+?^${}()|[\]\\]/gu, String.raw`\$&`);
-    const word = String.raw`[\p{L}\p{N}_]`;
-    const matches = [...text.matchAll(new RegExp(`(?<!${word})${escaped}(?!${word})`, 'giu'))];
-    const [first] = matches;
-    if (!first) continue;
-    const refs = quote(text, matches, `${kind}:${normalizeAlias(name)}`, passages);
+  const offset = entityOffset(normalizeText(text), aliases, item.matching);
+  if (offset === null) {
+    const sufficient =
+      page.facts.parsed &&
+      !page.facts.text_truncated &&
+      page.extracted_chars >= p.min_coverage_chars;
     return {
-      entity_kind: kind,
-      entity_name: name,
-      presence: refs.length ? 'present' : 'ambiguous',
-      match_method: alias === name ? 'exact_alias' : 'normalized_alias',
-      match_count: matches.length,
-      first_offset: first.index,
-      passage_refs: refs,
+      entity_kind: item.kind,
+      entity_name: item.name,
+      presence: sufficient ? 'not_detected' : 'partial',
+      match_method: 'none',
+      match_count: 0,
+      first_offset: null,
+      passage_refs: [],
     };
   }
-  // Spelling variants ("Best&Less", "BestandLess") offset into normalized text,
-  // which cannot be quoted, so a hit is ambiguous rather than present.
-  const haystack = normalizeText(text);
-  const offsets = candidates.flatMap((alias) => aliasOffset(haystack, alias) ?? []);
-  const offset = offsets.length ? Math.min(...offsets) : undefined;
-  const sufficient =
-    page.facts.parsed && !page.facts.text_truncated && page.extracted_chars >= p.min_coverage_chars;
-  let presence = sufficient ? 'not_detected' : 'partial';
-  if (offset !== undefined) presence = 'ambiguous';
+  for (const pattern of aliases.flatMap(spellings)) {
+    const matches = [...text.matchAll(pattern)];
+    const [first] = matches;
+    if (!first) continue;
+    const found = first[0].toLowerCase();
+    return {
+      entity_kind: item.kind,
+      entity_name: item.name,
+      presence: 'present',
+      match_method: aliases.some((alias) => alias.toLowerCase() === found)
+        ? 'exact_alias'
+        : 'normalized_alias',
+      match_count: matches.length,
+      first_offset: first.index,
+      passage_refs: quote(text, matches, `${item.kind}:${normalizeAlias(item.name)}`, passages),
+    };
+  }
+  // Named, but in a spelling no raw window reproduces ("and" for "&"): nothing to quote.
   return {
-    entity_kind: kind,
-    entity_name: name,
-    presence,
-    match_method: offset !== undefined ? 'normalized_alias' : 'none',
-    match_count: offset !== undefined ? 1 : 0,
-    first_offset: offset ?? null,
+    entity_kind: item.kind,
+    entity_name: item.name,
+    presence: 'ambiguous',
+    match_method: 'normalized_alias',
+    match_count: 1,
+    first_offset: offset,
     passage_refs: [],
   };
 }
 export function assessPage(page: ExtractedPage, configuration: unknown) {
-  const config = record(configuration);
+  const config = scoringConfig(configuration);
   const passages: Passage[] = [];
-  const brand = scalarText(config.brand_name).trim();
+  const brand = config.brandName.trim();
   const presences: Presence[] = brand
-    ? [entity(page, 'brand', brand, strings(config.brand_aliases), passages)]
+    ? [
+        entity(
+          page,
+          {
+            kind: 'brand',
+            name: brand,
+            aliases: config.brandAliases,
+            matching: config.brandMatching,
+          },
+          passages,
+        ),
+      ]
     : [];
-  for (const raw of Array.isArray(config.competitors) ? config.competitors : []) {
-    const competitor = record(raw);
-    const name = scalarText(competitor.name).trim();
+  for (const competitor of config.competitors) {
+    const name = competitor.name.trim();
     if (name)
-      presences.push(entity(page, 'competitor', name, strings(competitor.aliases), passages));
+      presences.push(
+        entity(
+          page,
+          { kind: 'competitor', name, aliases: competitor.aliases, matching: competitor.matching },
+          passages,
+        ),
+      );
   }
   return { ...pageFormat(page), presences, passages };
 }

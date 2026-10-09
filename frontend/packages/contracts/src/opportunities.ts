@@ -71,10 +71,12 @@ const earnedHandoffFields = {
   page_format_method: z.string().nullable().optional(),
   page_title: z.string().optional(),
   snapshot_id: z.string().nullable().optional(),
-  inspection_state: z.string().optional(),
-  inspection_reason: z.string().nullable().optional(),
+  read_at: z.string().nullable().optional(),
   extracted_chars: z.number().int().optional(),
-  sufficient_coverage: z.boolean().optional(),
+  // What to ask the publisher for, in one sentence.
+  ask: z.string().optional(),
+  // The tracked prompts whose answers cited the page; a declaration measures these.
+  affected_prompts: z.array(z.object({ prompt_id: z.string(), text: z.string() })).optional(),
   page_entities: z.array(handoffPageEntitySchema).optional(),
   answer_competitors: z.array(z.string()).optional(),
   observed_citation_frequency: z
@@ -83,14 +85,6 @@ const earnedHandoffFields = {
       eligible_answers: z.number().int(),
     })
     .optional(),
-  qualified: z.boolean().optional(),
-  unmet_qualification: z.array(z.string()).optional(),
-  // Rule-specific evidence: the named discrepancies a correction must fix,
-  // and how a defended placement got worse.
-  discrepancies: z.array(z.string()).optional(),
-  deterioration: z.array(z.string()).optional(),
-  prior_snapshot_id: z.string().nullable().optional(),
-  requested: z.boolean().optional(),
   inspector_version: z.string().optional(),
   presence_version: z.string().optional(),
   page_format_version: z.string().optional(),
@@ -300,30 +294,6 @@ const visibilityExpectedCheckSchema = responseObject({
   baseline_value: z.number().optional(),
 });
 /**
- * What a declaration against somebody else's page will be measured by.
- *
- * Deliberately NOT a metric check. A listing going live and the project's
- * visibility score moving are two observations about two different things;
- * measuring an external placement by the score is what let any healthy project
- * verify an earned action it had not taken.
- */
-const placementExpectedCheckSchema = responseObject({
-  kind: z.literal('placement'),
-  rule_id: z.string(),
-  expected_change: z.enum([
-    'brand_listed',
-    'discrepancy_resolved',
-    'placement_restored',
-    'source_resolved',
-  ]),
-  url_hash: z.string(),
-  target_url: z.string().nullable(),
-  brand_name: z.string(),
-  discrepancies: z.array(z.string()),
-  deterioration: z.array(z.string()),
-  baseline_snapshot_id: z.string().nullable(),
-});
-/**
  * What a `search_keyword_gap` finding stores as evidence: written by the gap
  * detector, read by the declaration check and the evidence view.
  */
@@ -389,7 +359,6 @@ export const expectedCheckSchema = z.discriminatedUnion('kind', [
   siteRuleExpectedCheckSchema,
   metricExpectedCheckSchema,
   visibilityExpectedCheckSchema,
-  placementExpectedCheckSchema,
 ]);
 export type ExpectedCheck = z.infer<typeof expectedCheckSchema>;
 export type KeywordPresenceCheck = z.infer<typeof keywordPresenceExpectedCheckSchema>;

@@ -3,7 +3,6 @@ import { sql } from 'kysely';
 import type { Database } from '../src/db/database.ts';
 import { policy } from '../src/config.ts';
 import { seedOpportunityScenario, actionRow, snapshotRow } from './opportunity-fixtures.ts';
-import { sourcePage } from './action-support.ts';
 
 export type VerificationSeed = {
   workspaceId: string;
@@ -107,7 +106,6 @@ export async function seedVerification(db: Database): Promise<VerificationSeed> 
         created_at: new Date(),
       })
       .execute();
-    const page = await sourcePage(trx, scope, 'https://publisher.test/list');
     const pageClicks = (url: string) => ({
       kind: 'traffic_metric',
       metric: 'clicks',
@@ -162,7 +160,17 @@ export async function seedVerification(db: Database): Promise<VerificationSeed> 
           direction: 'increase',
         },
       ],
-      placement: [{ kind: 'placement' }],
+      // An earned listing is measured on the prompts that cited the page.
+      earned: [
+        {
+          kind: 'visibility_metric',
+          metric: 'prompt_score',
+          target_prompt_id: scn.prompt0_id,
+          baseline_value: 40,
+          min_delta: 1,
+          direction: 'increase',
+        },
+      ],
     };
     const declarations: Record<string, string> = {};
     for (const [name, expected] of Object.entries(checks)) {
@@ -187,7 +195,7 @@ export async function seedVerification(db: Database): Promise<VerificationSeed> 
           target_site_url_ids: JSON.stringify(
             ['site', 'mixed', 'expired'].includes(name) ? [issue.site_url_id] : [],
           ),
-          target_external_url: name === 'placement' ? 'https://publisher.test/list' : null,
+          target_external_url: name === 'earned' ? 'https://publisher.test/list' : null,
           expected_checks: JSON.stringify(expected),
           member_opportunity_ids: '[]',
           idempotency_key: name,
@@ -196,31 +204,6 @@ export async function seedVerification(db: Database): Promise<VerificationSeed> 
         })
         .execute();
       declarations[name] = id;
-      if (name === 'placement') {
-        const checkId = randomUUID();
-        await trx
-          .insertInto('placement_checks')
-          .values({
-            ...scope,
-            id: checkId,
-            source_page_id: page.id,
-            implementation_event_id: id,
-            opportunity_stable_key: 'earned:key',
-            rule_id: 'earned_page_acquire_listing',
-            url_hash: page.hash,
-            expected_change: 'brand_listed',
-            declared_at: declared,
-            state: 'satisfied',
-            attempts: 1,
-            baseline_roster_version: '',
-            checker_version: policy.opportunity.placement.PLACEMENT_CHECKER_VERSION,
-            observed_at: moment,
-            updated_at: moment,
-            created_at: new Date(),
-          })
-          .execute();
-        declarations.placement_check = checkId;
-      }
     }
     return {
       workspaceId: scn.workspace_id,

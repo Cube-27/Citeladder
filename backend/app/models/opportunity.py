@@ -365,8 +365,6 @@ class OpportunitySnapshot(Base):
     coverage: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     limitations: Mapped[list] = mapped_column(JSONB, default=list)
     source_mix: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    action_path_mix: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    domain_rollups: Mapped[list] = mapped_column(JSONB, default=list)
     counts_by_type: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     counts_by_severity: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     total_count: Mapped[int] = mapped_column(Integer, default=0)

@@ -12,7 +12,6 @@ import { record } from '../db/json.ts';
 import { acquireProjectLock } from '../prompts/locks.ts';
 import { actionMembers, recordStatus, requireAction, type ActionRow } from './actions.ts';
 import { declarationChecks } from './declaration-checks.ts';
-import { openPlacementCheck } from './placement-declaration.ts';
 import { enqueueImplementationVerification } from './enqueue.ts';
 import { DASHBOARD_AUDIT_STATUSES } from './sources.ts';
 import type { OpportunityRow } from './projection.ts';
@@ -265,7 +264,7 @@ export function declareAction(
     if (!snapshot) throw declarationConflict('No current opportunity snapshot');
     const project = await trx
       .selectFrom('projects')
-      .select(['brand_name', 'website_url'])
+      .select('website_url')
       .where('workspace_id', '=', workspaceId)
       .where('id', '=', action.project_id)
       .executeTakeFirstOrThrow();
@@ -276,7 +275,6 @@ export function declareAction(
       members,
       {
         auditId: snapshot.audit_id,
-        brandName: project.brand_name,
         declaredDay: declaredAt.slice(0, 10),
       },
       input.recommendation_ids ?? [],
@@ -317,11 +315,6 @@ export function declareAction(
       return { row: stored, created: false };
     }
     await recordStatus(trx, action, a.ACTION_STATUS_IMPLEMENTED, userId);
-    const placement = checks.find(
-      ({ check }) => check.kind === policy.opportunity.placement.PLACEMENT_CHECK_KIND,
-    );
-    if (placement && !(await openPlacementCheck(trx, row, placement, project.website_url)))
-      throw declarationConflict('The publisher page has not been read, so it cannot be rechecked');
     await verifyExistingEvidence(trx, row, declaredAt);
     return { row, created: true };
   });
