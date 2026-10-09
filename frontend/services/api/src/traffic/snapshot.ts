@@ -19,6 +19,7 @@ import { windowDays } from './performance.ts';
 import { record } from '../db/json.ts';
 import { TrafficProjectionBuilder, type Projection } from './projection.ts';
 import { compareText } from '../text-order.ts';
+import { isNonEmpty, lastOf, type NonEmpty } from '../lists.ts';
 import {
   selectedPartition,
   partitionQuality,
@@ -37,6 +38,16 @@ type Target = {
   verifies: boolean;
   builder: TrafficProjectionBuilder;
 };
+
+/** The earliest start and latest end across the targets. */
+function targetSpan(targets: NonEmpty<Target>): { start: string; end: string } {
+  let { start, end } = targets[0];
+  for (const target of targets) {
+    if (compareText(target.start, start) < 0) start = target.start;
+    if (compareText(target.end, end) > 0) end = target.end;
+  }
+  return { start, end };
+}
 
 /**
  * The Demand handoff revision: an order-independent digest (XOR of BLAKE2b-128
@@ -202,7 +213,7 @@ async function replaceStats(
 async function scan(
   db: Database,
   task: QueueTask,
-  targets: Target[],
+  targets: NonEmpty<Target>,
   demand: DemandRevision,
   checkCancelled: (boundary: string) => Promise<void>,
 ) {
@@ -216,11 +227,7 @@ async function scan(
     'id',
   ] as const;
   const cursor = sql`(${sql.join(columns.map((c) => sql.ref(c)))})`;
-  const start = targets.map((t) => t.start).sort(compareText)[0]!;
-  const end = targets
-    .map((t) => t.end)
-    .sort(compareText)
-    .at(-1)!;
+  const { start, end } = targetSpan(targets);
   let after: MetricRow | null = null;
   for (;;) {
     await checkCancelled('metric-row batch');
@@ -243,8 +250,8 @@ async function scan(
     const inputs = rows.map((r) => ({ ...r, date: r.day, metrics: record(r.metrics) }));
     for (const target of targets) target.builder.addBatch(inputs, true);
     for (const row of inputs) demand.add(row);
-    if (rows.length < p.TRAFFIC_METRIC_ROW_BATCH_SIZE) break;
-    after = inputs.at(-1)!;
+    if (inputs.length < p.TRAFFIC_METRIC_ROW_BATCH_SIZE || !isNonEmpty(inputs)) break;
+    after = lastOf(inputs);
   }
 }
 
@@ -347,7 +354,7 @@ function executor(displayOnly: boolean): Executor {
       projectOrigin: origin?.root_url,
       allowedHosts,
     });
-    if (!targets.length) return;
+    if (!isNonEmpty(targets)) return;
     const demand = new DemandRevision(...demandWindow);
     await scan(db, task, targets, demand, checkCancelled);
     const extent = await scope
@@ -367,15 +374,7 @@ function executor(displayOnly: boolean): Executor {
       await subjectXactLock(trx, `traffic_snapshot:${projectId}`);
       const verifying: string[] = [];
       const allQuality: Record<string, Awaited<ReturnType<typeof partitionQuality>>> = {};
-      const qualityScope = {
-        workspaceId: task.workspace_id,
-        projectId,
-        start: targets.map((t) => t.start).sort(compareText)[0]!,
-        end: targets
-          .map((t) => t.end)
-          .sort(compareText)
-          .at(-1)!,
-      };
+      const qualityScope = { workspaceId: task.workspace_id, projectId, ...targetSpan(targets) };
       // Reads and writes share the snapshot transaction, so they run in order.
       for (const dataset of p.TRAFFIC_PROJECTED_DATASETS)
         allQuality[dataset] = await partitionQuality(trx, qualityScope, dataset); // NOSONAR

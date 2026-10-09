@@ -6,6 +6,7 @@ import { Ga4Accum, GscAccum, provenance, sourceFields, type MetricRow } from './
 import { canonicalPage, hash, normalizeQuery } from './normalization.ts';
 import { compareText } from '../text-order.ts';
 import { landingPage } from '../integrations/host-scope.ts';
+import type { NonEmpty } from '../lists.ts';
 
 const p = policy.traffic;
 type Measures = Record<string, number | null>;
@@ -160,7 +161,7 @@ export class TrafficProjectionBuilder {
       : null;
   }
 
-  private dimension(row: MetricRow, values: string[]) {
+  private dimension(row: MetricRow, values: NonEmpty<string>) {
     const mapping: Record<string, string> = p.PERFORMANCE_DATASET_DIMENSIONS;
     const dimension = mapping[row.dataset];
     if (!dimension) return;
@@ -181,7 +182,7 @@ export class TrafficProjectionBuilder {
     if (count === undefined) return;
     const parts = row.dimension_key.split(p.dimension_key_separator);
     if (parts.length < count) return;
-    const values = [
+    const values: NonEmpty<string> = [
       parts.slice(0, parts.length - count + 1).join(p.dimension_key_separator),
       ...parts.slice(parts.length - count + 1),
     ];
@@ -190,37 +191,36 @@ export class TrafficProjectionBuilder {
     if (row.dataset === p.DATASET_GSC_DAY_DAILY) {
       this.totalsGsc.add(row);
       bucket.gsc.add(row);
-    } else if (row.dataset === p.DATASET_GSC_PAGE_DAILY) this.page(values[0]!)?.gsc.add(row);
+    } else if (row.dataset === p.DATASET_GSC_PAGE_DAILY) this.page(values[0])?.gsc.add(row);
     else if (row.dataset === p.DATASET_GSC_QUERY_DAILY) {
-      const query = normalizeQuery(values[0]!);
+      const query = normalizeQuery(values[0]);
       if (query) getOrAdd(this.queries, query, () => new GscAccum()).add(row);
     } else this.foldGa4(row, values, bucket.ga4);
   }
 
-  private foldGa4(row: MetricRow, values: string[], bucket: Ga4Accum) {
-    const ai = (source: string, medium: string) =>
+  private foldGa4(row: MetricRow, values: NonEmpty<string>, bucket: Ga4Accum) {
+    const ai = (source: string | undefined, medium: string | undefined) =>
       classifyReferralSignals({ utm_source: source, utm_medium: medium }) !== null;
     if (row.dataset === p.DATASET_GA4_LANDING_DAILY) {
       const hosts =
         this.window.allowedHosts ??
         new Set(this.window.projectOrigin ? [new URL(this.window.projectOrigin).hostname] : []);
-      const host = values[3]!;
+      const [path, source, medium, host] = values;
+      if (medium === undefined || host === undefined)
+        throw new Error('Expected medium and host dimensions on a GA4 landing row');
       if (!hosts.has(host.toLowerCase())) {
         this.excludedHostRows++;
         return;
       }
-      const canonical = landingPage(values[0]!, host, hosts);
-      if (
-        p.TRAFFIC_GA4_ORGANIC_MEDIUMS.includes(values[2]!.trim().toLowerCase()) ||
-        ai(values[1]!, values[2]!)
-      )
+      const canonical = landingPage(path, host, hosts);
+      if (p.TRAFFIC_GA4_ORGANIC_MEDIUMS.includes(medium.trim().toLowerCase()) || ai(source, medium))
         if (canonical) this.page(canonical)?.ga4.add(row);
       return;
     }
     const included =
       row.dataset === p.DATASET_GA4_CHANNEL_DAILY
-        ? p.TRAFFIC_GA4_ORGANIC_CHANNEL_GROUPS.includes(values[0]!.trim())
-        : row.dataset === p.DATASET_GA4_SOURCE_MEDIUM_DAILY && ai(values[0]!, values[1]!);
+        ? p.TRAFFIC_GA4_ORGANIC_CHANNEL_GROUPS.includes(values[0].trim())
+        : row.dataset === p.DATASET_GA4_SOURCE_MEDIUM_DAILY && ai(values[0], values[1]);
     if (included) {
       this.totalsGa4.add(row);
       bucket.add(row);
