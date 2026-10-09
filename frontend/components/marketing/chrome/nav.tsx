@@ -69,7 +69,9 @@ function useScrolled() {
     sentinel.style.cssText = `position:absolute;top:${SCROLLED_THRESHOLD_PX}px;left:0;width:1px;height:1px;pointer-events:none;`;
     document.body.prepend(sentinel);
 
-    const observer = new IntersectionObserver(([entry]) => setScrolled(!entry.isIntersecting));
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry) setScrolled(!entry.isIntersecting);
+    });
     observer.observe(sentinel);
     return () => {
       observer.disconnect();

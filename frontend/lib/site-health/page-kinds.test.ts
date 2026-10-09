@@ -195,7 +195,7 @@ describe('readPageKindEvidence — alternatives, conflicts, other_reason', () =>
       { pageKind: 'article', tier: 'route', signals: ['path_pattern'] },
     ]);
     expect(view?.conflicts).toHaveLength(1);
-    expect(view?.conflicts[0].conflictingPageKind).toBe('article');
+    expect(view?.conflicts[0]?.conflictingPageKind).toBe('article');
   });
 
   it('skips malformed entries instead of sinking the whole panel', () => {

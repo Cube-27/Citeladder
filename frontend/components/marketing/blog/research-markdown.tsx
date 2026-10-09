@@ -5,7 +5,8 @@ import remarkGfm from 'remark-gfm';
 import { headingId } from './post-blocks';
 
 export function researchHeadings(markdown: string) {
-  return Array.from(markdown.matchAll(/^## (.+)$/gm), ([, text]) => ({
+  // The one group always takes part in a match.
+  return Array.from(markdown.matchAll(/^## (.+)$/gm), ([, text = '']) => ({
     text,
     slug: headingId(text),
   }));

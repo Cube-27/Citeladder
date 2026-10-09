@@ -47,7 +47,7 @@ describe('AcceptInvitationScreen', () => {
     // The destination is named explicitly and carries NO token: the shared
     // navigation owner is what strips it, and this is the screen that proves
     // the one-time credential never reaches the next URL or the history entry.
-    const [, destination] = selectWorkspace.mock.calls[0];
+    const [, destination] = selectWorkspace.mock.calls[0]!;
     expect(destination).toBe('/projects');
     expect(destination).not.toContain(TOKEN);
   });

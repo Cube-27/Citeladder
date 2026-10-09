@@ -232,7 +232,7 @@ describe('ToastProvider', () => {
     await user.click(screen.getByRole('button', { name: 'Notify twice' }));
     expect(screen.getAllByRole('button', { name: 'Dismiss notification' })).toHaveLength(2);
 
-    await user.click(screen.getAllByRole('button', { name: 'Dismiss notification' })[0]);
+    await user.click(screen.getAllByRole('button', { name: 'Dismiss notification' })[0]!);
     await waitFor(() =>
       expect(screen.getAllByRole('button', { name: 'Dismiss notification' })).toHaveLength(1),
     );

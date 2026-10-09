@@ -56,9 +56,8 @@ const CHART_W = 520;
 const CHART_H = 160;
 const chartX = (index: number) => (index * CHART_W) / (RUN_DATES.length - 1);
 const chartY = (value: number) => CHART_H - (value / 100) * CHART_H;
-/** The point for the latest run: each series holds one point per run date. */
-const LATEST_RUN = RUN_DATES.length - 1;
-const latest = (brand: (typeof BRANDS)[number]) => brand.points[LATEST_RUN];
+/** The point for the latest run: each series holds one point per run date, seven in all. */
+const latest = (brand: (typeof BRANDS)[number]) => brand.points[6];
 
 const KPIS = [
   ['Visibility', '64%', '+26 pp'],
@@ -169,7 +168,10 @@ export function VisibilityView() {
                 <tr key={brand.name} data-own={'own' in brand || undefined}>
                   <td>
                     <span className="pv-domain">
-                      <Favicon letter={brand.name[0]} tone={'own' in brand ? 'owned' : 'neutral'} />
+                      <Favicon
+                        letter={brand.name.charAt(0)}
+                        tone={'own' in brand ? 'owned' : 'neutral'}
+                      />
                       {brand.name}
                       {'own' in brand && <span className="pv-you">You</span>}
                     </span>

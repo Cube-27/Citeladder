@@ -85,10 +85,10 @@ describe('detectorStates', () => {
         query_trends: { state: 42 },
       },
     });
-    expect(states.striking_distance.limitations).toEqual([]);
-    expect(states.cannibalization.limitations).toEqual(['one', 'three']);
+    expect(states.striking_distance?.limitations).toEqual([]);
+    expect(states.cannibalization?.limitations).toEqual(['one', 'three']);
     // A non-string state is dropped so the caller's default applies.
-    expect(states.query_trends.state).toBeUndefined();
+    expect(states.query_trends!.state).toBeUndefined();
   });
 
   it('ignores a summary whose detectors field is not an object map', () => {

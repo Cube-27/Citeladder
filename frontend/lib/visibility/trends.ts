@@ -12,7 +12,7 @@ import type { TrendPoint } from '@/components/ui/trend-chart';
 import type { LogicalEngine, VisibilityTrendPoint } from '@/lib/api/types';
 import { ENGINE_ORDER } from '@/lib/providers/catalog';
 import { formatDisplayDate, formatDisplayShortDate } from '@/lib/format';
-import { TREND_COMPARISON_SERIES, TREND_COMPARISON_STROKES } from '@/lib/visibility/chart-tokens';
+import { comparisonSeries, TREND_COMPARISON_SERIES } from '@/lib/visibility/chart-tokens';
 
 /** Trend granularity — mirrors the backend `granularity=run|week|month`. */
 export type TrendGranularity = 'run' | 'day' | 'week' | 'month';
@@ -85,11 +85,12 @@ export function toChartPoints(
   points: readonly VisibilityTrendPoint[],
   metric: TrendMetric,
   timeZone = 'UTC',
-): TrendPoint[] {
+  valueOf: (point: VisibilityTrendPoint) => number | null = (point) => metricValue(point, metric),
+): (TrendPoint & { completedAt: string })[] {
   let prevVersions: string | null = null;
   let previousIdentity: string | null | undefined = undefined;
   return points.map((point) => {
-    const value = metricValue(point, metric);
+    const value = valueOf(point);
     const versionKey = [...point.analyzer_versions, ...point.scoring_rule_versions].join('|');
     const changed = prevVersions !== null && versionKey !== prevVersions;
     const identityChanged =
@@ -101,6 +102,7 @@ export function toChartPoints(
       // Preserve unavailable metrics as null — the chart renders a GAP and an
       // "unavailable" label rather than coercing to a misleading zero.
       label: formatPointLabel(point.completed_at, timeZone),
+      completedAt: point.completed_at,
       value,
       timestamp: new Date(point.completed_at).getTime(),
       breakBefore: changed || identityChanged || !point.comparison_key,
@@ -173,14 +175,11 @@ export function toNamedChartPoints(
   metric: TrendMetric,
   name: string,
   timeZone = 'UTC',
-): TrendPoint[] {
-  return toChartPoints(points, metric, timeZone).map((point, index) => ({
-    ...point,
-    value: (() => {
-      const row = points[index].rankings.find((entry) => entry.name === name);
-      return row ? rankingMetricValue(row, metric) : null;
-    })(),
-  }));
+) {
+  return toChartPoints(points, metric, timeZone, (point) => {
+    const row = point.rankings.find((entry) => entry.name === name);
+    return row ? rankingMetricValue(row, metric) : null;
+  });
 }
 
 /**
@@ -209,8 +208,7 @@ export function toCompetitorSeries(
     .map((row) => row.name);
   return names.map((name, index) => ({
     label: name,
-    strokeClass: TREND_COMPARISON_STROKES[index % TREND_COMPARISON_STROKES.length],
-    series: TREND_COMPARISON_SERIES[index % TREND_COMPARISON_SERIES.length],
+    ...comparisonSeries(index),
     values: points.map((point) => {
       const row = point.rankings.find((entry) => entry.name === name);
       return row ? rankingMetricValue(row, metric) : null;

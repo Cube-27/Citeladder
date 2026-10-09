@@ -19,13 +19,17 @@ import { PROVIDER_META } from '@/components/settings/grant-model';
 
 import { ownPropertiesFirst, useRefreshAfterMapping } from './data-sources';
 
+const onlyItem = <T,>(items: readonly T[]) => (items.length === 1 ? items[0] : undefined);
+
 /** The one property worth offering as a single click, if any. */
 function suggestedProperty(provider: IntegrationProvider, properties: IntegrationProperty[]) {
   const matching = properties.filter((property) => property.matches_project === true);
-  if (matching.length === 1) return matching[0]!;
-  // GA4 exposes no site to match, so a single property is the only safe suggestion.
-  if (provider === 'ga4' && properties.length === 1) return properties[0]!;
-  return null;
+  return (
+    onlyItem(matching) ??
+    // GA4 exposes no site to match, so a single property is the only safe suggestion.
+    (provider === 'ga4' ? onlyItem(properties) : undefined) ??
+    null
+  );
 }
 
 /**

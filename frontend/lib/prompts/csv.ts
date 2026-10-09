@@ -206,11 +206,12 @@ function parseRow(cells: string[], map: ColumnMap, line: number): ParsedPromptRo
  */
 export function parsePromptCsv(raw: string): ParsedCsv {
   const matrix = tokenizeCsv(raw);
-  if (matrix.length === 0) {
+  const [firstRow] = matrix;
+  if (!firstRow) {
     return { rows: [], hasHeader: false, errors: ['The file is empty.'] };
   }
 
-  const columns = detectColumns(matrix[0]);
+  const columns = detectColumns(firstRow);
   const hasHeader = columns !== null;
   const dataRows = hasHeader ? matrix.slice(1) : matrix;
   const rows = dataRows.map((cells, index) =>

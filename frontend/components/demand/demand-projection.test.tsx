@@ -338,7 +338,7 @@ describe('DemandProjection', () => {
 
     // Click the first Inspect Evidence button
     const inspectButtons = screen.getAllByRole('button', { name: /Inspect Evidence/i });
-    fireEvent.click(inspectButtons[0]);
+    fireEvent.click(inspectButtons[0]!);
 
     // Drawer should display title, observed performance, and audit trail
     expect(await screen.findByText('Demand Signal Evidence')).toBeInTheDocument();

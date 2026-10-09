@@ -160,7 +160,7 @@ function DisconnectGrant({ grant }: Readonly<{ grant: GrantModel }>) {
   const refresh = useRefreshAfterMapping();
   const [open, setOpen] = useState(false);
   const title = FAMILY_META[grant.family].title;
-  const connection = grant.connections[0]!;
+  const [connection] = grant.connections;
   const disconnect = useMutation({
     mutationFn: () =>
       integrationsApi.delete(connection.id, { workspaceId: connection.workspace_id }),

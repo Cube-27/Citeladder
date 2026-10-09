@@ -9,7 +9,11 @@ export type SearchColumn = {
   detail?: boolean;
   precision?: number;
 };
-export const SEARCH_COLUMNS_BY_KIND: Record<string, SearchColumn[]> = {
+/** Columns per row kind; the footprint's columns are the fallback for an unknown kind. */
+export const SEARCH_COLUMNS_BY_KIND: {
+  footprint: SearchColumn[];
+  [kind: string]: SearchColumn[];
+} = {
   footprint: [
     { field: 'keyword', label: 'Keyword' },
     { field: 'search_volume', label: 'Volume', numeric: true },

@@ -34,18 +34,17 @@ const FAMILY_ORDER: GrantFamily[] = ['google', 'microsoft'];
  * grant-level, so they are read off any connection in the group (deduped).
  */
 function groupIntoGrants(connections: IntegrationConnection[]): GrantModel[] {
-  const byGrant = new Map<string, IntegrationConnection[]>();
+  const byGrant = new Map<string, GrantModel['connections']>();
   for (const connection of connections) {
-    const group = byGrant.get(connection.grant_id) ?? [];
-    group.push(connection);
-    byGrant.set(connection.grant_id, group);
+    const group = byGrant.get(connection.grant_id);
+    if (group) group.push(connection);
+    else byGrant.set(connection.grant_id, [connection]);
   }
   const grants: GrantModel[] = [];
   for (const [grantId, grouped] of byGrant) {
-    const sorted = [...grouped].sort(
-      (a, b) => PROVIDER_ORDER[a.provider] - PROVIDER_ORDER[b.provider],
-    );
-    const first = sorted[0];
+    // Sorted in place: the group is this function's own, and sorting keeps it non-empty.
+    const sorted = grouped.sort((a, b) => PROVIDER_ORDER[a.provider] - PROVIDER_ORDER[b.provider]);
+    const [first] = sorted;
     grants.push({
       grantId,
       family: GRANT_FAMILY[first.provider],

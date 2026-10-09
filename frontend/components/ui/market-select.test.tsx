@@ -59,7 +59,7 @@ describe('MarketSelect', () => {
     expect(options).toHaveLength(1);
     expect(options[0]).toHaveTextContent('Germany');
 
-    await user.click(options[0]);
+    await user.click(options[0]!);
     expect(onChange).toHaveBeenCalledWith('DE');
   });
 

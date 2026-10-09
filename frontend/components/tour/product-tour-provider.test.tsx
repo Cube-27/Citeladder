@@ -126,7 +126,7 @@ describe('ProductTourProvider', () => {
     renderTour();
     await waitFor(() => expect(state.driverCalls).toHaveLength(1));
 
-    expect(state.driverCalls[0].config).toMatchObject({
+    expect(state.driverCalls[0]!.config).toMatchObject({
       allowKeyboardControl: true,
       animate: false,
     });
@@ -215,7 +215,7 @@ describe('ProductTourProvider', () => {
 
     unmount();
 
-    expect(state.driverCalls[0].instance.destroy).toHaveBeenCalledOnce();
+    expect(state.driverCalls[0]!.instance.destroy).toHaveBeenCalledOnce();
     vi.unstubAllGlobals();
   });
 
@@ -249,7 +249,7 @@ describe('ProductTourProvider', () => {
     await waitFor(() => expect(state.driverCalls).toHaveLength(1));
 
     await act(async () => {
-      await (state.driverCalls[0].config.onNextClick as () => void)();
+      await (state.driverCalls[0]!.config.onNextClick as () => void)();
     });
     expect(state.updates).toContainEqual({ status: 'in_progress', step_id: 'dashboard-report' });
 
@@ -265,7 +265,7 @@ describe('ProductTourProvider', () => {
     );
     await waitFor(() => expect(state.driverCalls).toHaveLength(2));
     await act(async () => {
-      await (state.driverCalls[1].config.onNextClick as () => void)();
+      await (state.driverCalls[1]!.config.onNextClick as () => void)();
     });
     expect(state.updates).toContainEqual({ status: 'completed', step_id: null });
     vi.unstubAllGlobals();
@@ -306,10 +306,10 @@ describe('ProductTourProvider', () => {
     await waitFor(() => expect(state.driverCalls).toHaveLength(1));
 
     await act(async () => {
-      await (state.driverCalls[0].config.onNextClick as () => void)();
+      await (state.driverCalls[0]!.config.onNextClick as () => void)();
     });
     await act(async () => {
-      await (state.driverCalls[0].config.onDestroyStarted as () => void)();
+      await (state.driverCalls[0]!.config.onDestroyStarted as () => void)();
     });
 
     expect(state.updates).toContainEqual({ status: 'skipped', step_id: undefined });

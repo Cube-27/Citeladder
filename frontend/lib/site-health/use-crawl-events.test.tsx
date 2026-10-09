@@ -61,7 +61,7 @@ describe('useCrawlEvents', () => {
     });
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
-    const [, init] = fetchMock.mock.calls[0];
+    const [, init] = fetchMock.mock.calls[0]!;
     expect(init.credentials).toBe('include');
     // Carried from the resolved selection, so a reconnect resends the
     // workspace the stream STARTED under rather than whatever is selected now.
@@ -172,7 +172,7 @@ describe('useCrawlEvents', () => {
     await vi.advanceTimersByTimeAsync(SITE_HEALTH_STREAM_RECONNECT_BASE_MS + 50);
     await vi.waitFor(() => expect(fetchMock.mock.calls.length).toBeGreaterThan(1));
 
-    const [, retryInit] = fetchMock.mock.calls[1];
+    const [, retryInit] = fetchMock.mock.calls[1]!;
     expect(retryInit.headers['Last-Event-ID']).toBe('evt-7');
 
     vi.unstubAllGlobals();

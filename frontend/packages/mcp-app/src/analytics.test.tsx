@@ -232,7 +232,7 @@ describe('CiteLadder MCP App', () => {
     render(<Analytics controller={controller} />);
     await user.click(screen.getByText('Snapshot evidence and processing versions'));
     expect(screen.getByText(siteEvidence.versions.coverage_formula)).toBeVisible();
-    expect(screen.getByText(siteEvidence.source_artifact_ids[0])).toBeVisible();
+    expect(screen.getByText(siteEvidence.source_artifact_ids[0]!)).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Read existing prioritized findings' }));
     expect(screen.getByRole('status').textContent).toMatch(/No persisted prioritized findings/);
     call.mockResolvedValueOnce({ state: 'available', items: [] });

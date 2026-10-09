@@ -1,4 +1,6 @@
 /** Public pricing copy. Amounts, limits and availability come from the catalog. */
+import { ownValue } from '@/lib/utils';
+
 export type PlanKey = 'tier_1' | 'tier_2' | 'tier_3' | 'enterprise';
 
 export type PlanPresentation = {
@@ -46,7 +48,8 @@ const CAPABILITY_LABELS: Readonly<Record<string, string>> = {
 };
 
 export function capabilityLabel(key: string): string {
-  if (Object.hasOwn(CAPABILITY_LABELS, key)) return CAPABILITY_LABELS[key];
+  const known = ownValue(CAPABILITY_LABELS, key);
+  if (known !== undefined) return known;
   const words = key.replaceAll('_', ' ').replaceAll('.', ' ');
   return words.charAt(0).toUpperCase() + words.slice(1);
 }

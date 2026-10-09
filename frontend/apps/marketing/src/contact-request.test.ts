@@ -37,6 +37,13 @@ function handleContactRequest(
 }
 
 describe('contact intake', () => {
+  it('accepts a JSON media type in any letter case', async () => {
+    const send = vi.fn().mockResolvedValue(true);
+    const upper = request(valid);
+    upper.headers.set('Content-Type', 'Application/JSON; charset=utf-8');
+    expect((await handleContactRequest(upper, send)).status).toBe(200);
+  });
+
   it('limits a trusted client across changed enquiries before reaching the mail provider', async () => {
     const send = vi.fn().mockResolvedValue(true);
     const limits = allowedLimits();

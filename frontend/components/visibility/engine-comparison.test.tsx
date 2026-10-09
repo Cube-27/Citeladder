@@ -36,7 +36,7 @@ describe('model outcome comparison', () => {
       />,
     );
     const rows = screen.getAllByRole('row').slice(1);
-    expect(within(rows[0]).getByText('ChatGPT API')).toBeVisible();
+    expect(within(rows[0]!).getByText('ChatGPT API')).toBeVisible();
     rerender(
       <EngineComparison
         visibility={visibility([engine(), engine({ logical_engine: 'chatgpt' })])}

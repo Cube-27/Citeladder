@@ -384,7 +384,7 @@ describe('BillingScreen', () => {
     renderWithProviders(<BillingScreen />);
 
     await userEvent.click(
-      (await screen.findAllByRole('button', { name: /Cancel at period end/ }))[0],
+      (await screen.findAllByRole('button', { name: /Cancel at period end/ }))[0]!,
     );
     expect(deleted).toBe(0);
 

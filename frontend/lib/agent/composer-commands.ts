@@ -24,8 +24,14 @@ const TOKEN = /(^|\s)([/@])([^\s/@]{0,40})$/;
 export function tokenAt(text: string, caret: number): CommandToken | null {
   const match = TOKEN.exec(text.slice(0, caret));
   if (!match) return null;
-  const start = match.index + match[1]!.length;
-  return { trigger: match[2] as CommandTrigger, query: match[3]!, start, end: caret };
+  // Every group takes part in a match; the lead and query may be empty.
+  const [, lead = '', trigger, query = ''] = match;
+  return {
+    trigger: trigger === '@' ? '@' : '/',
+    query,
+    start: match.index + lead.length,
+    end: caret,
+  };
 }
 
 /** The message with the token replaced, and where the caret lands. */

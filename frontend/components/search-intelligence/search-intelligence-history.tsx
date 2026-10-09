@@ -43,17 +43,19 @@ export function SearchIntelligenceHistory({
     }))
     .filter(({ date }) => validHistoryDate(date))
     .sort((left, right) => left.date.localeCompare(right.date));
-  if (observations.length < 2)
+  const [first] = observations;
+  const last = observations.at(-1);
+  if (!first || !last || observations.length < 2)
     return (
       <InlineEmpty>History needs at least two saved observations to show a trend.</InlineEmpty>
     );
-  const data = fillMonths(observations);
+  const data = fillMonths(observations, first.date, last.date);
   return (
     <section className="grid gap-4 md:grid-cols-2" aria-label="Saved backlink history">
       <p className={textRole('caption', 'md:col-span-2')}>
-        Monthly domain-level history for {dataset.target_domain}, {observations[0].date} to{' '}
-        {observations.at(-1)?.date}. Coverage includes the provider’s historical link population and
-        may differ from the live summary. Missing observations are gaps.
+        Monthly domain-level history for {dataset.target_domain}, {first.date} to {last.date}.
+        Coverage includes the provider’s historical link population and may differ from the live
+        summary. Missing observations are gaps.
       </p>
       <div className="grid min-w-0 content-start gap-2">
         <h3 className={textRole('itemTitle', 'flex min-h-6 items-center gap-2')}>
@@ -144,12 +146,15 @@ function validHistoryDate(date: string): boolean {
   return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === date;
 }
 
+/** One row per month from the first date's month to the last's; missing months are gaps. */
 function fillMonths(
   rows: { date: string; backlinks: number | null; new: number | null; lost: number | null }[],
+  firstDate: string,
+  lastDate: string,
 ) {
   const byMonth = new Map(rows.map((row) => [row.date.slice(0, 7), row]));
-  const start = new Date(`${rows[0].date.slice(0, 7)}-01T00:00:00Z`);
-  const end = rows.at(-1)!.date.slice(0, 7);
+  const start = new Date(`${firstDate.slice(0, 7)}-01T00:00:00Z`);
+  const end = lastDate.slice(0, 7);
   const result = [];
   while (start.toISOString().slice(0, 7) <= end) {
     const month = start.toISOString().slice(0, 7);

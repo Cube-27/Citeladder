@@ -88,9 +88,9 @@ describe('useRunEvents', () => {
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     await vi.advanceTimersByTimeAsync(RUN_STREAM_RECONNECT_BASE_MS + 50);
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
-    expect(fetchMock.mock.calls[1][1].headers['Last-Event-ID']).toBe('evt-7');
+    expect(fetchMock.mock.calls[1]![1].headers['Last-Event-ID']).toBe('evt-7');
 
-    const signal = fetchMock.mock.calls[0][1].signal as AbortSignal;
+    const signal = fetchMock.mock.calls[0]![1].signal as AbortSignal;
     unmount();
     expect(signal.aborted).toBe(true);
   });

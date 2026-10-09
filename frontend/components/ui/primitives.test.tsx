@@ -383,7 +383,9 @@ describe('TrendChart (cross-run Visibility trend)', () => {
       name: 'Clicks trend: Trend from Jun (250) to Jul (500)',
     });
     let dots = chart.querySelectorAll(':scope > circle');
-    expect(Number(dots[0].getAttribute('cy'))).toBeGreaterThan(Number(dots[1].getAttribute('cy')));
+    expect(Number(dots[0]?.getAttribute('cy'))).toBeGreaterThan(
+      Number(dots[1]?.getAttribute('cy')),
+    );
     unmount();
 
     render(<TrendChart label="Clicks trend" data={data} />);
@@ -391,6 +393,6 @@ describe('TrendChart (cross-run Visibility trend)', () => {
       name: 'Clicks trend: Trend from Jun (250) to Jul (500)',
     });
     dots = chart.querySelectorAll(':scope > circle');
-    expect(dots[0].getAttribute('cy')).toBe(dots[1].getAttribute('cy'));
+    expect(dots[0]!.getAttribute('cy')).toBe(dots[1]!.getAttribute('cy'));
   });
 });

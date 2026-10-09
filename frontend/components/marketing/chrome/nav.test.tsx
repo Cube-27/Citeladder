@@ -11,7 +11,7 @@ describe('marketing navigation', () => {
     vi.stubEnv('PUBLIC_APP_ORIGIN', 'https://app.citeladder.com');
     vi.stubEnv('NEXT_PUBLIC_SELF_SERVE_SIGNUP', 'true');
     render(<MarketingNav />);
-    expect(screen.getAllByText('Log in')[0].closest('a')).toHaveAttribute(
+    expect(screen.getAllByText('Log in')[0]!.closest('a')).toHaveAttribute(
       'href',
       'https://app.citeladder.com/login',
     );
