@@ -182,13 +182,13 @@ export function classificationCounts(rows: QueryInput[]) {
   for (const row of rows) counts[row.classification] = (counts[row.classification] ?? 0) + 1;
   return counts;
 }
-export function grouped<T>(rows: T[], key: (row: T) => string): Map<string, T[]> {
-  const groups = new Map<string, T[]>();
+export function grouped<T>(rows: T[], key: (row: T) => string): Map<string, [T, ...T[]]> {
+  const groups = new Map<string, [T, ...T[]]>();
   for (const row of rows) {
     const k = key(row);
-    const group = groups.get(k) ?? [];
-    group.push(row);
-    groups.set(k, group);
+    const group = groups.get(k);
+    if (group) group.push(row);
+    else groups.set(k, [row]);
   }
   return groups;
 }
@@ -238,12 +238,12 @@ export function detectStrikingDistance(rows: QueryInput[]): Evaluation {
   // Order by the group identity fields.
   const ordered = [...groups.values()].sort(
     ([a], [b]) =>
-      compareText(a!.classification, b!.classification) ||
-      compareText(a!.normalized_query, b!.normalized_query) ||
-      compareText(a!.resolved_page_url, b!.resolved_page_url),
+      compareText(a.classification, b.classification) ||
+      compareText(a.normalized_query, b.normalized_query) ||
+      compareText(a.resolved_page_url, b.resolved_page_url),
   );
   for (const group of ordered) {
-    const row = group[0]!;
+    const row = group[0];
     const a = aggregate(group);
     const branded = row.classification === 'branded';
     if (

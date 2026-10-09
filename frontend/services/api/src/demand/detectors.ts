@@ -12,6 +12,7 @@ import {
   type QueryInput,
 } from './projection.ts';
 import { compareText } from '../text-order.ts';
+import { onlyOf } from '../lists.ts';
 
 const p = policy.demand;
 const resolved = (row: QueryInput) => ['exact', 'resolved'].includes(row.resolution_outcome);
@@ -22,7 +23,7 @@ export function detectCannibalization(rows: QueryInput[]): Evaluation {
   const groups = grouped(rows, (r) => r.normalized_query);
   for (const query of [...groups.keys()].sort(compareText)) {
     const group = groups.get(query)!;
-    if (group[0]!.classification !== 'non_branded') continue;
+    if (group[0].classification !== 'non_branded') continue;
     if (!group.every(resolved)) {
       abstained++;
       continue;
@@ -40,12 +41,13 @@ export function detectCannibalization(rows: QueryInput[]): Evaluation {
           r.impressions / total >= p.DEMAND_CANNIBALIZATION_MIN_PAGE_SHARE,
       )
       .sort((a, b) => compareText(a.url, b.url));
-    if (qualified.length < 2) continue;
+    const [first] = qualified;
+    if (qualified.length < 2 || !first) continue;
     candidates.push(
       queryCandidate(
         p.DEMAND_SIGNAL_CANNIBALIZATION,
         query,
-        qualified[0]!.url,
+        first.url,
         { impressions: total, qualifying_page_count: qualified.length },
         {
           source_metric_row_ids: unique(qualified.flatMap((r) => r.source_metric_row_ids)),
@@ -141,7 +143,7 @@ export function detectCtrGap(rows: QueryInput[]): Evaluation {
     ...grouped(eligible, (r) =>
       JSON.stringify([r.property_ref, r.normalized_query, r.resolved_page_url]),
     ),
-  ].map(([, items]) => ({ row: items[0]!, a: aggregate(items) }));
+  ].map(([, items]) => ({ row: items[0], a: aggregate(items) }));
   const cohorts = grouped(
     aggregates.filter((r) => r.a.position !== null),
     (r) => JSON.stringify([r.row.property_ref, Math.floor(r.a.position!)]),
@@ -149,11 +151,11 @@ export function detectCtrGap(rows: QueryInput[]): Evaluation {
   const candidates: Candidate[] = [];
   let usable = 0;
   const sorted = [...cohorts.values()].sort((a, b) =>
-    a[0]!.row.property_ref < b[0]!.row.property_ref
+    a[0].row.property_ref < b[0].row.property_ref
       ? -1
-      : a[0]!.row.property_ref > b[0]!.row.property_ref
+      : a[0].row.property_ref > b[0].row.property_ref
         ? 1
-        : Math.floor(a[0]!.a.position!) - Math.floor(b[0]!.a.position!),
+        : Math.floor(a[0].a.position!) - Math.floor(b[0].a.position!),
   );
   for (const cohort of sorted) {
     const total = cohort.reduce((n, r) => n + r.a.impressions, 0);
@@ -285,7 +287,7 @@ export function detectTrends(rows: QueryInput[], windowEnd: string): Evaluation 
       queryCandidate(
         type,
         query,
-        pages.length === 1 ? pages[0]! : '',
+        onlyOf(pages) ?? '',
         { impressions: prior + recent, prior_impressions: prior, recent_impressions: recent },
         a,
         {
