@@ -13,14 +13,14 @@ export function resolveSkillsDirectory(configured: string): string {
 export function fenceTracker() {
   let fence: string | null = null;
   return (line: string) => {
-    const marker = /^ {0,3}(`{3,}|~{3,})(.*)$/u.exec(line);
+    const [, run, info] = /^ {0,3}(`{3,}|~{3,})(.*)$/u.exec(line) ?? [];
     if (
-      marker &&
-      (!fence ||
-        (marker[1]![0] === fence[0] && marker[1]!.length >= fence.length && !marker[2]!.trim()))
+      run !== undefined &&
+      info !== undefined &&
+      (!fence || (run[0] === fence[0] && run.length >= fence.length && !info.trim()))
     )
-      fence = fence ? null : marker[1]!;
-    return { marker: Boolean(marker), fenced: fence !== null };
+      fence = fence ? null : run;
+    return { marker: run !== undefined, fenced: fence !== null };
   };
 }
 
@@ -42,15 +42,17 @@ export function parseContentFormats(body: string) {
   const formats = new Map<string, ContentFormat>();
   for (const section of sections) {
     // `[long-form]` marks formats whose drafts start from an approved outline.
-    const heading = /^## ([a-z_]+) — (.+?)( \[long-form\])?\n/u.exec(section);
-    if (!heading || formats.has(heading[1]!)) throw new TypeError('Invalid content format');
-    const text = section.slice(heading[0].length).trim();
+    const [heading, id, label, longForm] =
+      /^## ([a-z_]+) — (.+?)( \[long-form\])?\n/u.exec(section) ?? [];
+    if (heading === undefined || id === undefined || label === undefined || formats.has(id))
+      throw new TypeError('Invalid content format');
+    const text = section.slice(heading.length).trim();
     if (!text) throw new TypeError('Empty content format');
-    formats.set(heading[1]!, {
-      id: heading[1]!,
-      label: heading[2]!.trim(),
+    formats.set(id, {
+      id,
+      label: label.trim(),
       body: text,
-      longForm: Boolean(heading[3]),
+      longForm: Boolean(longForm),
     });
   }
   return { formatPreamble: preamble.slice(preamble.indexOf('\n') + 1).trim(), formats };

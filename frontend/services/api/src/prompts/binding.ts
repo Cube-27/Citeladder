@@ -81,7 +81,7 @@ function stem(token: string): string {
   if (
     token.length > 4 &&
     token.endsWith('es') &&
-    ('sxz'.includes(token.at(-3)!) || ['ch', 'sh'].includes(token.slice(-4, -2)))
+    ('sxz'.includes(token.slice(-3, -2)) || ['ch', 'sh'].includes(token.slice(-4, -2)))
   )
     return token.slice(0, -2);
   if (token.length > 3 && token.endsWith('s') && !token.endsWith('ss')) return token.slice(0, -1);

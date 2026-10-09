@@ -41,8 +41,8 @@ function gitDirectory(from: string): string {
     const marker = join(directory, '.git');
     if (existsSync(marker)) {
       if (statSync(marker).isDirectory()) return marker;
-      const pointer = /^gitdir:\s*(.+)$/mu.exec(readFileSync(marker, 'utf8'));
-      if (pointer) return resolve(directory, pointer[1]!.trim());
+      const [, pointer] = /^gitdir:\s*(.+)$/mu.exec(readFileSync(marker, 'utf8')) ?? [];
+      if (pointer !== undefined) return resolve(directory, pointer.trim());
     }
     if (dirname(directory) === directory) throw new Error('Run the eval inside the repository');
   }

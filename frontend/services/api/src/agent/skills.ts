@@ -46,18 +46,19 @@ async function markdownFiles(root: string): Promise<string[]> {
   return files.flat().sort(compareText);
 }
 function parseSkill(path: string, body: string): CatalogSkill {
-  const match = /^---\n([\s\S]*?)\n---\n([\s\S]+)$/u.exec(body);
-  if (!match) throw new TypeError(`Missing skill frontmatter: ${path}`);
+  const [, frontmatter, content] = /^---\n([\s\S]*?)\n---\n([\s\S]+)$/u.exec(body) ?? [];
+  if (frontmatter === undefined || content === undefined)
+    throw new TypeError(`Missing skill frontmatter: ${path}`);
   const values: Record<string, string> = {};
-  for (const line of match[1]!.split('\n')) {
-    const field = /^([a-z_]+): (.+)$/u.exec(line);
-    if (!field || Object.hasOwn(values, field[1]!))
+  for (const line of frontmatter.split('\n')) {
+    const [, key, value] = /^([a-z_]+): (.+)$/u.exec(line) ?? [];
+    if (key === undefined || value === undefined || Object.hasOwn(values, key))
       throw new TypeError(`Invalid skill metadata: ${path}`);
-    values[field[1]!] = field[2]!;
+    values[key] = value;
   }
   const parsed = metadata.parse(values);
   if (path !== `skills/${parsed.id}/SKILL.md`) throw new TypeError('Skill directory must match id');
-  const methodology = match[2]!.trim();
+  const methodology = content.trim();
   if (!methodology || methodology.length > p.body_max_chars)
     throw new TypeError('Invalid skill body');
   return {
