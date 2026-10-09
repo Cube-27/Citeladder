@@ -7,7 +7,7 @@ import { Alert } from '@/components/ui/alert';
 import { Card } from '@/components/ui/card';
 import { InlineEmpty } from '@/components/ui/inline-empty';
 import { Pager } from '@/components/ui/pager';
-import { ReadError } from '@/components/ui/read-error';
+import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MissingValue } from '@/components/ui/unavailable-value';
 import {
@@ -24,7 +24,7 @@ import { performanceApi, type PerformanceDimension } from '@/lib/api/performance
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import { queryKeys } from '@/lib/api/query-keys';
 import { retainPreviousDataForScope } from '@/lib/api/query-client';
-import { pageRange, useCursorTable } from '@/lib/table/use-cursor-table';
+import { cursorControls, pageRange, useCursorTable } from '@/lib/table/use-cursor-table';
 import {
   METRIC_CARDS,
   DIMENSION_SORT_KEY,
@@ -173,10 +173,8 @@ export function DimensionTable({
   if (query.isError) {
     return (
       <ReadError
-        error={query.error}
+        {...readErrorProps(query)}
         fallback={`Could not load ${tab.noun}. Check your connection and try again.`}
-        onRetry={() => void query.refetch()}
-        pending={query.isFetching}
       />
     );
   }
@@ -322,10 +320,7 @@ export function DimensionTable({
         frame="table"
         range={{ from, to, total, noun: tab.noun }}
         pageSize={{ value: table.pageSize, onChange: table.setPageSize }}
-        canPrev={table.canPrev}
-        canNext={Boolean(nextCursor)}
-        onPrev={table.pop}
-        onNext={() => table.push(nextCursor)}
+        {...cursorControls(table, nextCursor)}
         busy={query.isFetching}
       />
     </Card>

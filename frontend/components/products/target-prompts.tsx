@@ -5,9 +5,10 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { MessageSquare } from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
-import { ReadError } from '@/components/ui/read-error';
+import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Button } from '@/components/ui/button';
+import { Disclosure } from '@/components/ui/disclosure';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -69,23 +70,22 @@ export function TargetPrompts({
   const failed = [generate.isError, manual.isError, decide.isError].some(Boolean);
   return (
     <Card>
-      <CardHeader>
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div className="grid gap-1">
-            <CardTitle>Prompts that measure it</CardTitle>
-            <CardDescription>
-              Generated prompts stay disabled until you approve them.
-            </CardDescription>
-          </div>
-          <div className="flex gap-2">
+      <CardHeader
+        actions={
+          <>
             <Button variant="secondary" disabled={busy} onClick={() => generate.mutate()}>
               {generate.isPending ? 'Generating…' : 'Generate 5'}
             </Button>
             <Button disabled={!approvedIds.length || busy} onClick={() => setLaunchOpen(true)}>
               Review and launch
             </Button>
-          </div>
-        </div>
+          </>
+        }
+      >
+        <CardTitle>Prompts that measure it</CardTitle>
+        <CardDescription>Generated prompts stay disabled until you approve them.</CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-3">
         {failed ? (
           <Alert tone="danger">The buyer-prompt update failed. Please try again.</Alert>
         ) : null}
@@ -97,8 +97,6 @@ export function TargetPrompts({
           promptSelectionLabel={`${approvedIds.length} approved prompts for ${targetLabel}`}
           auditScope="commerce"
         />
-      </CardHeader>
-      <CardContent className="grid gap-3">
         <PromptRows
           query={query}
           rows={rows}
@@ -107,24 +105,19 @@ export function TargetPrompts({
         />
         {/* Manual entry is the fallback for an unconfigured model, so it is
             folded away rather than given equal billing beside Generate. */}
-        <details className="type-body">
-          <summary className="type-control text-accent-text cursor-pointer">
-            Add a prompt manually
-          </summary>
-          <div className="grid gap-2 pt-2">
-            <Textarea
-              aria-label="Manual buyer prompt"
-              value={text}
-              onChange={(event) => setText(event.target.value)}
-              placeholder="best instant read thermometer for grilling under $50"
-            />
-            <div>
-              <Button size="sm" disabled={!text.trim() || busy} onClick={() => manual.mutate()}>
-                Add prompt
-              </Button>
-            </div>
+        <Disclosure title="Add a prompt manually">
+          <Textarea
+            aria-label="Manual buyer prompt"
+            value={text}
+            onChange={(event) => setText(event.target.value)}
+            placeholder="best instant read thermometer for grilling under $50"
+          />
+          <div>
+            <Button size="sm" disabled={!text.trim() || busy} onClick={() => manual.mutate()}>
+              Add prompt
+            </Button>
           </div>
-        </details>
+        </Disclosure>
       </CardContent>
     </Card>
   );
@@ -142,14 +135,7 @@ function PromptRows({
   onToggle: (id: string, approved: boolean) => void;
 }>) {
   if (query.isError)
-    return (
-      <ReadError
-        error={query.error}
-        fallback="Buyer prompts could not be loaded."
-        onRetry={() => void query.refetch()}
-        pending={query.isFetching}
-      />
-    );
+    return <ReadError {...readErrorProps(query)} fallback="Buyer prompts could not be loaded." />;
   if (query.isPending) return <Skeleton className="h-24 w-full" />;
   if (!rows.length) {
     // Left-hung and compactly padded, matching the shared empty-state shape.

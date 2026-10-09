@@ -12,21 +12,11 @@ import { textRole } from '@/components/ui/typography';
 import { commerceApi } from '@/lib/api/commerce';
 import { queryKeys } from '@/lib/api/query-keys';
 import { siteHealthApi, siteHealthQueries } from '@/lib/api/site-health';
-import {
-  PLACEHOLDER,
-  crawlBadgeValue,
-  crawlPollInterval,
-  statusLabel,
-} from '@/lib/site-health/status';
+import { crawlBadgeValue, crawlPollInterval, statusLabel } from '@/lib/site-health/status';
 
 import type { SiteCrawl } from '@/lib/api/types';
 
 import type { CommerceQueries } from './commerce-queries';
-
-/** The shared placeholder is the missing state, not a value. */
-function measured(value: string): string | null {
-  return value === PLACEHOLDER ? null : value;
-}
 
 /**
  * Pages analyzed over the crawl's own inventory.
@@ -39,8 +29,8 @@ function measured(value: string): string | null {
 /** The dashboard's crawl, exactly as the query returns it (nullable). */
 type SiteHealthCrawl = SiteCrawl | null;
 
-function analyzedLabel(crawl: SiteHealthCrawl): string {
-  if (!crawl) return PLACEHOLDER;
+function analyzedLabel(crawl: SiteHealthCrawl): string | null {
+  if (!crawl) return null;
   const known = crawl.total_url_count ?? crawl.visible_url_count;
   return `${crawl.analyzed_count}/${Math.max(known, crawl.analyzed_count)}`;
 }
@@ -67,14 +57,14 @@ function CatalogStats({
     {
       key: 'products',
       label: 'Products',
-      value: measured(counts ? `${counts.products.length}` : PLACEHOLDER),
+      value: counts ? `${counts.products.length}` : null,
     },
     {
       key: 'categories',
       label: 'Categories',
-      value: measured(counts ? `${counts.categories.length}` : PLACEHOLDER),
+      value: counts ? `${counts.categories.length}` : null,
     },
-    { key: 'analyzed', label: 'Pages analyzed', value: measured(analyzedLabel(crawl)) },
+    { key: 'analyzed', label: 'Pages analyzed', value: analyzedLabel(crawl) },
     {
       key: 'site-health',
       label: 'Site Health',

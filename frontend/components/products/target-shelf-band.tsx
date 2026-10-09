@@ -1,6 +1,6 @@
 'use client';
 
-import { ReadError } from '@/components/ui/read-error';
+import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { Card, CardContent, CardTitle } from '@/components/ui/card';
 import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { Stack } from '@/components/ui/layout';
@@ -30,12 +30,7 @@ export function TargetShelfBand({ query }: Readonly<{ query: CommerceQueries['sh
   // which is exactly the unknown/zero collapse the repo forbids.
   if (query.isError)
     return (
-      <ReadError
-        error={query.error}
-        fallback="AI Shelf metrics could not be loaded."
-        onRetry={() => void query.refetch()}
-        pending={query.isFetching}
-      />
+      <ReadError {...readErrorProps(query)} fallback="AI Shelf metrics could not be loaded." />
     );
   const latest = query.data?.snapshots[0];
   const metrics: Array<[string, string | null]> = [

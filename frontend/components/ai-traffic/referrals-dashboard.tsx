@@ -16,13 +16,12 @@ import {
   countDomainMax,
   countYLabels,
   formatInt,
-  formatPercent,
   toCountChartPoints,
   toPercentChartPoints,
   totalSourceSessions,
 } from '@/lib/ai-traffic/series';
 import { bucketCountLabel } from '@/lib/ai-traffic/options';
-import { formatWindowDate } from '@/lib/format';
+import { formatPercent, formatWindowDate } from '@/lib/format';
 import { useState } from 'react';
 import { Tabs, TabPanel } from '@/components/ui/tabs';
 import { ReferralComparison, ReferralLandingPages, ReferralQuality } from './referral-details';
@@ -82,14 +81,9 @@ function TrendCard({
   const lastLabel = points.at(-1)?.label ?? '';
   return (
     <Card>
-      <CardHeader>
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div className="grid gap-1">
-            <CardTitle>{title}</CardTitle>
-            <CardDescription>{description}</CardDescription>
-          </div>
-          <span className="type-caption">{badge}</span>
-        </div>
+      <CardHeader actions={<span className="type-caption">{badge}</span>}>
+        <CardTitle>{title}</CardTitle>
+        <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex gap-3">

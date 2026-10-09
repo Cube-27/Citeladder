@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Drawer } from '@/components/ui/drawer';
 import { FilterRow } from '@/components/ui/filter-row';
 import { Pager } from '@/components/ui/pager';
-import { ReadError } from '@/components/ui/read-error';
+import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { SearchField } from '@/components/ui/search-field';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TextLink } from '@/components/ui/text-link';
@@ -24,7 +24,7 @@ import {
 } from '@/lib/api/search-intelligence';
 import { searchIntelligenceKeys } from '@/lib/api/query-keys/search-intelligence';
 import { useProjectContext } from '@/lib/project/project-context';
-import { pageRange, useCursorTable } from '@/lib/table/use-cursor-table';
+import { cursorControls, pageRange, useCursorTable } from '@/lib/table/use-cursor-table';
 import { formatEvidenceValue, formatSearchNumber } from './search-intelligence-format';
 import { searchScopeLabel } from '@/lib/config/search-intelligence';
 import { Input } from '@/components/ui/input';
@@ -107,13 +107,7 @@ export function SearchIntelligenceDatasetView({
   ].includes(dataset.dataset_kind);
   if (query.isPending && !page) return <Skeleton className="h-80 w-full" />;
   if (!page)
-    return (
-      <ReadError
-        error={query.error}
-        fallback="Dataset rows could not be loaded."
-        onRetry={() => void query.refetch()}
-      />
-    );
+    return <ReadError {...readErrorProps(query)} fallback="Dataset rows could not be loaded." />;
   if (!dataset.unique_rows_saved && !page.rows.length)
     return <EmptyDataset dataset={dataset} title={title} />;
   const rows = page.rows;
@@ -157,10 +151,8 @@ export function SearchIntelligenceDatasetView({
           </FilterRow>
           {query.isError ? (
             <ReadError
-              error={query.error}
+              {...readErrorProps(query)}
               fallback="Saved rows could not be updated."
-              onRetry={() => void query.refetch()}
-              pending={query.isFetching}
               className="px-[var(--table-cell-padding-x)] py-2"
             />
           ) : null}
@@ -197,10 +189,7 @@ export function SearchIntelligenceDatasetView({
             frame="table"
             range={{ ...range, total: filteredSavedCount(page.dataset), noun: 'evidence rows' }}
             pageSize={{ value: table.pageSize, onChange: table.setPageSize }}
-            canPrev={table.canPrev}
-            canNext={Boolean(page.next_cursor)}
-            onPrev={table.pop}
-            onNext={() => table.push(page.next_cursor)}
+            {...cursorControls(table, page.next_cursor)}
             busy={query.isFetching}
           />
         </CardContent>
@@ -263,10 +252,11 @@ function EvidenceDrawer({
       ) : null}
       {selected?.row_kind === 'citation_match' &&
       typeof selected.auxiliary.audit_id === 'string' ? (
-        <TextLink asChild className="w-fit">
-          <ProjectLink href={`/visibility?tab=sources&audit=${selected.auxiliary.audit_id}`}>
-            View in Sources
-          </ProjectLink>
+        <TextLink
+          href={`/visibility?tab=sources&audit=${selected.auxiliary.audit_id}`}
+          className="w-fit"
+        >
+          View in Sources
         </TextLink>
       ) : null}
       {selected ? (

@@ -105,14 +105,10 @@ export function RunDetailScreen() {
       <RunDetailView
         audit={audit}
         auditLoading={auditQuery.isLoading}
-        auditError={auditQuery.isError ? auditQuery.error : null}
-        auditRetrying={auditQuery.isFetching}
-        onRetryAudit={() => void auditQuery.refetch()}
+        auditRead={auditQuery}
         executions={executionsQuery.data}
         executionsLoading={executionsQuery.isLoading}
-        executionsError={executionsQuery.isError ? executionsQuery.error : null}
-        executionsRetrying={executionsQuery.isFetching}
-        onRetryExecutions={() => void executionsQuery.refetch()}
+        executionsRead={executionsQuery}
         exportError={runExport.exportError}
         cancelNotice={
           cancelMutation.isError

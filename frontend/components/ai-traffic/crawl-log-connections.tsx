@@ -9,7 +9,7 @@ import type { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { Alert } from '@/components/ui/alert';
-import { ReadError } from '@/components/ui/read-error';
+import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { DisplayTime } from '@/components/ui/display-time';
 import {
@@ -76,11 +76,7 @@ function Connections({
         />
       ) : null}
       {sources.isError ? (
-        <ReadError
-          error={sources.error}
-          fallback="Could not read crawl log sources"
-          onRetry={() => sources.refetch()}
-        />
+        <ReadError {...readErrorProps(sources)} fallback="Could not read crawl log sources" />
       ) : null}
       {sources.data && !sources.data.ingestion_enabled ? (
         <Alert tone="info">Ingestion is not enabled for this environment.</Alert>
@@ -122,11 +118,7 @@ function SetupAvailability({ model }: Readonly<{ model: ReturnType<typeof useCra
   const { sources, mutation } = model;
   if (sources.isError)
     return (
-      <ReadError
-        error={sources.error}
-        fallback="Could not read crawl log availability"
-        onRetry={() => sources.refetch()}
-      />
+      <ReadError {...readErrorProps(sources)} fallback="Could not read crawl log availability" />
     );
   if (!sources.data) return <output>Checking crawl log availability…</output>;
   if (sources.data.ingestion_enabled) return <CrawlLogSetup model={model} />;

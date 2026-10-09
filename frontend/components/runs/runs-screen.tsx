@@ -17,7 +17,7 @@ import { FilterChip } from '@/components/ui/filter-chip';
 import { FilterRow } from '@/components/ui/filter-row';
 import { Stack } from '@/components/ui/layout';
 import { ProjectRequiredState } from '@/components/layout/project-required-state';
-import { ReadError } from '@/components/ui/read-error';
+import { ReadError, readErrorProps, type RetryableRead } from '@/components/ui/read-error';
 import { queryKeys } from '@/lib/api/query-keys';
 import { runsApi } from '@/lib/api/runs';
 import type { Audit } from '@/lib/api/types';
@@ -124,9 +124,7 @@ export function RunsScreen() {
       <Stack gap="section">
         <RunsContent
           projectId={projectId}
-          error={runsQuery.isError ? runsQuery.error : null}
-          retrying={runsQuery.isFetching}
-          onRetry={() => void runsQuery.refetch()}
+          read={runsQuery}
           audits={audits}
           filteredAudits={filteredAudits}
           statusFilter={statusFilter}
@@ -153,9 +151,7 @@ export function RunsScreen() {
 
 function RunsContent({
   projectId,
-  error,
-  retrying,
-  onRetry,
+  read,
   audits,
   filteredAudits,
   statusFilter,
@@ -163,9 +159,8 @@ function RunsContent({
   onLaunch,
 }: Readonly<{
   projectId: string | null;
-  error: unknown;
-  retrying: boolean;
-  onRetry: () => void;
+  /** The runs read: its failure, and the retry of exactly that read. */
+  read: RetryableRead;
   audits: Audit[];
   filteredAudits: Audit[];
   statusFilter: StatusFilter;
@@ -173,13 +168,11 @@ function RunsContent({
   onLaunch: () => void;
 }>) {
   if (!projectId) return <ProjectRequiredState />;
-  if (error) {
+  if (read.error) {
     return (
       <ReadError
-        error={error}
+        {...readErrorProps(read)}
         fallback="Could not load runs. Check your connection and try again."
-        onRetry={onRetry}
-        pending={retrying}
       />
     );
   }

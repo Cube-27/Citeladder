@@ -10,7 +10,7 @@ import type {
 } from '@citeladder/contracts/ai-traffic';
 import { aiTrafficApi } from '@/lib/api/ai-traffic';
 import { queryKeys } from '@/lib/api/query-keys';
-import { useCursorTable } from '@/lib/table/use-cursor-table';
+import { cursorControls, useCursorTable } from '@/lib/table/use-cursor-table';
 import { coverageLabel, words } from '@/lib/ai-traffic/vocabulary';
 import { CalendarX } from 'lucide-react';
 import { TabPanel } from '@/components/ui/tabs';
@@ -18,7 +18,7 @@ import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Stack } from '@/components/ui/layout';
 import { DisplayTime } from '@/components/ui/display-time';
-import { ReadError } from '@/components/ui/read-error';
+import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import {
   Table,
   TableHeader,
@@ -245,11 +245,7 @@ function CoverageTable({
         title="Coverage by source and reporting day"
       />
       {query.isError ? (
-        <ReadError
-          error={query.error}
-          fallback="Could not read coverage"
-          onRetry={() => query.refetch()}
-        />
+        <ReadError {...readErrorProps(query)} fallback="Could not read coverage" />
       ) : null}
       {data && !data.items.length && !pager.canPrev ? (
         <EmptyState
@@ -300,10 +296,7 @@ function CoverageTable({
           <Pager
             hideWhenSinglePage
             page={pager.page}
-            canPrev={pager.canPrev}
-            canNext={!!data.next_cursor}
-            onPrev={pager.pop}
-            onNext={() => pager.push(data.next_cursor)}
+            {...cursorControls(pager, data.next_cursor)}
           />
         </>
       ) : null}

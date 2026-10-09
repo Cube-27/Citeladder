@@ -5,6 +5,7 @@ import { Line, LineChart, Tooltip, XAxis, YAxis } from 'recharts';
 import {
   CHART_MARGIN,
   ChartContainer,
+  ChartTooltipPanel,
   LegendSwatch,
   axisProps,
   type ChartConfig,
@@ -215,8 +216,8 @@ function ChartTooltip({
   const selectedDate = dateSource?.selected[index]?.date ?? null;
   const comparisonDate = dateSource?.comparison?.[index]?.date ?? null;
   return (
-    <div className="type-caption bg-elevated border-border shadow-overlay grid gap-1 rounded-[var(--radius-card)] border px-3 py-2">
-      <p className="text-secondary">
+    <ChartTooltipPanel className="type-caption grid gap-1">
+      <p className="type-badge">
         Day <span className="tabular-nums">{index + 1}</span>
         {selectedDate ? ` · ${selectedDate}` : ''}
       </p>
@@ -224,19 +225,19 @@ function ChartTooltip({
         {series.map((entry) => (
           <li key={entry.key} className="flex items-center gap-2">
             <LegendSwatch color={entry.color} shape="line" />
-            <span className="text-muted">{entry.label}</span>
+            <span>{entry.label}</span>
             <span className="tabular-nums">
               {formatMetric(entry.key, entry.selected[index]?.value ?? null)}
             </span>
             {entry.comparison ? (
-              <span className="text-muted tabular-nums">
+              <span className="tabular-nums">
                 vs {formatMetric(entry.key, entry.comparison[index]?.value ?? null)}
               </span>
             ) : null}
           </li>
         ))}
       </ul>
-      {comparisonDate ? <p className="text-muted">Comparison day · {comparisonDate}</p> : null}
-    </div>
+      {comparisonDate ? <p>Comparison day · {comparisonDate}</p> : null}
+    </ChartTooltipPanel>
   );
 }

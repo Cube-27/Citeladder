@@ -3,7 +3,7 @@ import type { UseQueryResult } from '@tanstack/react-query';
 import { AiReferralsEmptyState } from '@/components/ai-traffic/empty-state';
 import { Alert } from '@/components/ui/alert';
 import { ProjectRequiredState } from '@/components/layout/project-required-state';
-import { ReadError } from '@/components/ui/read-error';
+import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { rangeLabel, type AiReferralsRange } from '@/lib/ai-traffic/options';
 import { isAiReferralsEmpty } from '@/lib/ai-traffic/series';
 import type { AiReferrals } from '@/lib/api/ai-traffic';
@@ -57,10 +57,8 @@ function AiReferralsDataRegion({
   if (query.isError) {
     return (
       <ReadError
-        error={query.error}
+        {...readErrorProps(query)}
         fallback="AI referrals could not be loaded. Check your connection and try again."
-        onRetry={() => void query.refetch()}
-        pending={query.isFetching}
       />
     );
   }

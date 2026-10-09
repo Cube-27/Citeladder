@@ -2,13 +2,13 @@
 
 import { useMemo, useState } from 'react';
 
+import { FilterChoice } from '@/components/ui/filter-row';
 import { BusyBar } from '@/components/ui/busy-bar';
 import { Card, CardContent } from '@/components/ui/card';
 import { ReadError } from '@/components/ui/read-error';
 import { Stack } from '@/components/ui/layout';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { splitPaneClasses } from '@/components/ui/workspace';
-import { AnalysisChoice } from '@/components/visibility/analysis-choice';
 import { SourceDomainDetail } from '@/components/visibility/source-domain-detail';
 import { SourceTableToolbar } from '@/components/visibility/source-toolbar';
 import { TypesCard, UsageCard } from '@/components/visibility/source-charts';
@@ -342,7 +342,7 @@ function DomainFilter({
   // there is no way back to "All domains".
   if (options.length < 2 && !value) return null;
   return (
-    <AnalysisChoice
+    <FilterChoice
       label="Filter by domain"
       value={value ?? 'all'}
       options={[
@@ -371,7 +371,7 @@ function TypeFilter({
   if (options.length < 2 && !value) return null;
   const urls = dimension === 'url';
   return (
-    <AnalysisChoice
+    <FilterChoice
       label={urls ? 'Filter by URL type' : 'Filter by domain type'}
       value={value ?? 'all'}
       options={[

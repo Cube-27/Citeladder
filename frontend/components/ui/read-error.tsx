@@ -4,6 +4,25 @@ import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { humanizeApiError } from '@/lib/api/errors';
 
+/** The read a `ReadError` reports on and retries: a TanStack query, or its shape. */
+export type RetryableRead = Readonly<{
+  error: unknown;
+  refetch: () => unknown;
+  isFetching: boolean;
+}>;
+
+/**
+ * `ReadError`'s read props from one query: its error, a retry of exactly that
+ * read, and the pending state while the retry is in flight.
+ */
+export function readErrorProps(read: RetryableRead) {
+  return {
+    error: read.error,
+    onRetry: () => void read.refetch(),
+    pending: read.isFetching,
+  };
+}
+
 /**
  * Scoped recovery for a failed persisted read.
  *

@@ -1,4 +1,5 @@
 import { Pressable } from '@/components/ui/pressable';
+import { TextLink } from '@/components/ui/text-link';
 import {
   SortableTableHead,
   Table,
@@ -72,14 +73,16 @@ export function SearchIntelligenceRowsTable({
                 title={String(row[column.field] ?? '')}
               >
                 {column === columns[0] ? (
-                  <Pressable
-                    type="button"
-                    className="focus-ring text-accent-text block max-w-full truncate text-left"
-                    aria-label={`View evidence for ${row.keyword || row.domain || row.url}`}
-                    onClick={() => onSelect(row)}
-                  >
-                    {displayValue(row, column)}
-                  </Pressable>
+                  <TextLink asChild text="inherit">
+                    <Pressable
+                      type="button"
+                      className="block max-w-full truncate text-left"
+                      aria-label={`View evidence for ${row.keyword || row.domain || row.url}`}
+                      onClick={() => onSelect(row)}
+                    >
+                      {displayValue(row, column)}
+                    </Pressable>
+                  </TextLink>
                 ) : (
                   displayValue(row, column)
                 )}

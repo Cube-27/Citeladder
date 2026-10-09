@@ -16,6 +16,7 @@ const project = makeProject({
 });
 vi.mock('@/lib/project/project-context', () => ({
   useProjectContext: () => ({ activeProject: project, isLoading: false }),
+  useOptionalProjectContext: () => ({ activeProjectId: project.id }),
   useWorkspaceCapability: () => true,
   useActiveWorkspaceId: () => project.workspace_id,
 }));

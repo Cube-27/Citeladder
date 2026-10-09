@@ -205,8 +205,8 @@ function AttachedAction({
     <section aria-label="Working on" className={panelClasses({ pad: 'compact' }, 'grid gap-1')}>
       <span className={textRole('label')}>Working on</span>
       <div className="flex flex-wrap items-center gap-2">
-        <TextLink asChild text="itemTitle">
-          <ProjectLink href={`/agent/actions/${action.id}`}>{action.target_label}</ProjectLink>
+        <TextLink href={`/agent/actions/${action.id}`} text="itemTitle">
+          {action.target_label}
         </TextLink>
         <ActionStatusBadge status={action.status} />
       </div>
@@ -250,8 +250,8 @@ function TopActionRow({ action }: Readonly<{ action: Action }>) {
   return (
     <li className={panelClasses({ pad: 'compact' }, 'flex flex-wrap items-center gap-3')}>
       <div className="grid min-w-0 flex-1 gap-0.5">
-        <TextLink asChild text="itemTitle" className="truncate">
-          <ProjectLink href={`/agent/actions/${action.id}`}>{action.target_label}</ProjectLink>
+        <TextLink href={`/agent/actions/${action.id}`} text="itemTitle" className="truncate">
+          {action.target_label}
         </TextLink>
         <span className={textRole('caption')}>
           {[approachLabel(action.approach), `${action.families.length} evidence systems`]

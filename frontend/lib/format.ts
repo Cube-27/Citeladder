@@ -40,6 +40,12 @@ export function availabilityLabel(state: DataAvailabilityState): string {
   return availabilityLabels[state];
 }
 
+/** A persisted fraction (0.125) as a percentage ("12.5%"); null is not measured. */
+export function formatPercent(fraction: number | null, decimals = 0): string {
+  if (fraction === null) return availabilityLabel('not_measured');
+  return `${(fraction * 100).toFixed(decimals)}%`;
+}
+
 /**
  * The mark a missing MEASUREMENT renders as, everywhere it is shown.
  *

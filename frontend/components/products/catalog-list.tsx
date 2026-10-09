@@ -11,7 +11,7 @@ import { panelClasses } from '@/components/ui/panel';
 import { SearchField } from '@/components/ui/search-field';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Pressable } from '@/components/ui/pressable';
-import { ReadError } from '@/components/ui/read-error';
+import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import type { CommerceTarget } from '@citeladder/contracts/commerce-suite';
 import { targetKey } from '@/lib/products/use-commerce-target';
 import { cn } from '@/lib/utils';
@@ -315,10 +315,8 @@ export function CatalogList({
   if (query.isError)
     return (
       <ReadError
-        error={query.error}
+        {...readErrorProps(query)}
         fallback="The catalog could not be loaded."
-        onRetry={() => void query.refetch()}
-        pending={query.isFetching}
         className="p-[var(--card-padding)]"
       />
     );

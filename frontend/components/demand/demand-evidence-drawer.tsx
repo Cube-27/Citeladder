@@ -21,7 +21,7 @@ import {
   signalTargetKind,
 } from '@/lib/demand/signals';
 import { DisplayTime } from '@/components/ui/display-time';
-import { formatCount } from '@/lib/format';
+import { formatCount, formatPercent } from '@/lib/format';
 import { textRole } from '@/components/ui/typography';
 import { panelClasses } from '@/components/ui/panel';
 import { ledgerClasses } from '@/components/ui/workspace';
@@ -123,7 +123,7 @@ function DemandEvidenceContent({
                 label: 'CTR',
                 value:
                   typeof details.metrics.ctr === 'number'
-                    ? `${(details.metrics.ctr * 100).toFixed(1)}%`
+                    ? formatPercent(details.metrics.ctr, 1)
                     : null,
               },
               {
@@ -181,14 +181,14 @@ function DemandEvidenceContent({
               <div className="flex justify-between">
                 <span className="text-muted">Cohort Median CTR:</span>
                 <span className={textRole('emphasis', 'text-secondary tabular-nums')}>
-                  {(details.cohortMedianCtr * 100).toFixed(1)}%
+                  {formatPercent(details.cohortMedianCtr, 1)}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted">Observed Actual CTR:</span>
                 {numericMetric(signal, 'ctr') !== null ? (
                   <span className={textRole('emphasis', 'text-secondary tabular-nums')}>
-                    {(numericMetric(signal, 'ctr')! * 100).toFixed(1)}%
+                    {formatPercent(numericMetric(signal, 'ctr'), 1)}
                   </span>
                 ) : (
                   <UnavailableValue state="not_measured" />

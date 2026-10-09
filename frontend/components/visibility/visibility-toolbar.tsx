@@ -4,7 +4,7 @@ import { CalendarRange, CircleHelp, Download } from 'lucide-react';
 
 import { LaunchAuditButton } from '@/components/runs/launch-audit-button';
 import { Button } from '@/components/ui/button';
-import { FilterTrigger } from '@/components/ui/filter-row';
+import { FilterChoice, FilterTrigger } from '@/components/ui/filter-row';
 import {
   Dropdown,
   DropdownContent,
@@ -26,7 +26,6 @@ import {
   type VisibilityTab,
 } from '@/lib/visibility/dashboard';
 import { ANSWER_OUTCOMES } from '@/lib/config/visibility';
-import { AnalysisChoice } from '@/components/visibility/analysis-choice';
 import {
   GRANULARITY_OPTIONS,
   RANGE_OPTIONS,
@@ -99,7 +98,7 @@ export function VisibilityToolbar(props: ToolbarProps) {
           rather than in a second row under them. It applies wherever answers
           are rendered, which is Query fanouts. */}
       {evidence && props.onChangeOutcome ? (
-        <AnalysisChoice
+        <FilterChoice
           label="Answer outcome"
           value={props.outcome ?? 'all'}
           options={ANSWER_OUTCOMES}
@@ -117,7 +116,7 @@ const COHORT_OPTIONS = (['core', 'comparison'] as const).map((value) => ({
 
 function CohortFilter({ cohort, onChangeCohort }: ToolbarProps) {
   return (
-    <AnalysisChoice
+    <FilterChoice
       label="Filter by prompt type"
       menuLabel="Prompt type"
       value={cohort}
@@ -245,7 +244,7 @@ function EngineFilterControl({ engine, onChangeEngine }: ToolbarProps) {
 
 function RangeFilter({ range, onChangeRange }: ToolbarProps) {
   return (
-    <AnalysisChoice
+    <FilterChoice
       label="Select date range"
       menuLabel="Period"
       value={range}
@@ -259,7 +258,7 @@ function RangeFilter({ range, onChangeRange }: ToolbarProps) {
 
 function GranularityFilter({ granularity, onChangeGranularity }: ToolbarProps) {
   return (
-    <AnalysisChoice
+    <FilterChoice
       label="Select granularity"
       menuLabel="Group history by"
       value={granularity}

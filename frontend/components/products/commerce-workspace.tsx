@@ -77,9 +77,8 @@ export function CommerceWorkspace({ projectId }: Readonly<{ projectId: string }>
   const discovery = useCompetitorDiscovery(projectId);
   const [checked, setChecked] = useState<string[]>([]);
   // The stored width is the reader's (`useResizablePane`, per browser); the
-  // width mid-drag is only this render's until the separator settles.
+  // width mid-drag stays inside the split pane until the separator settles.
   const pane = useResizablePane();
-  const [dragWidth, setDragWidth] = useState<number | null>(null);
   const header = useCatalogHeader({
     workspaceId: workspaceId ?? '',
     projectId,
@@ -121,12 +120,8 @@ export function CommerceWorkspace({ projectId }: Readonly<{ projectId: string }>
           defaultWidth={DEFAULT_PANE_WIDTH}
           minWidth={MIN_PANE_WIDTH}
           maxWidth={MAX_PANE_WIDTH}
-          width={dragWidth ?? pane.width}
-          onWidthChange={setDragWidth}
-          onWidthCommit={(next) => {
-            setDragWidth(null);
-            pane.commit(next);
-          }}
+          width={pane.width}
+          onWidthCommit={pane.commit}
           stickyList
           list={
             <Card className="min-w-0">

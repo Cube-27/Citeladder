@@ -10,7 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { InlineEmpty } from '@/components/ui/inline-empty';
 import { Input } from '@/components/ui/input';
 import { MutationNotice } from '@/components/ui/mutation-notice';
-import { ReadError } from '@/components/ui/read-error';
+import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { Select } from '@/components/ui/select';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { queryKeys } from '@/lib/api/query-keys';
@@ -120,10 +120,8 @@ function WorkspaceSchedules({
       <CardContent className="grid gap-3">
         {schedulesQuery.isError ? (
           <ReadError
-            error={schedulesQuery.error}
+            {...readErrorProps(schedulesQuery)}
             fallback="Could not load scheduled audits."
-            onRetry={() => void schedulesQuery.refetch()}
-            pending={schedulesQuery.isFetching}
           />
         ) : null}
         {schedulesQuery.data?.length ? (

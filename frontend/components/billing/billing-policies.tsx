@@ -10,11 +10,12 @@ import { EditorialSectionHeader } from '@/components/ui/workspace';
 
 /**
  * A website page in a new tab. The origin may be unset in development (a
- * relative path), so the anchor is ours and only the link recipe is shared.
+ * relative path), so the anchor is ours; the external recipe adds the glyph and
+ * the new-tab note.
  */
 function PolicyLink({ path, children }: Readonly<{ path: `/${string}`; children: string }>) {
   return (
-    <TextLink asChild text="inherit">
+    <TextLink asChild variant="external" text="inherit">
       <a href={websiteHref(path)} target="_blank" rel="noreferrer">
         {children}
       </a>
@@ -61,7 +62,7 @@ export function BillingSupport({
           <a href={`mailto:${email}`}>{email}</a>
         </TextLink>
         {contact?.phone ? `, call ${contact.phone}` : ''} or use the{' '}
-        <TextLink asChild text="inherit">
+        <TextLink asChild variant="external" text="inherit">
           <a href={url} target="_blank" rel="noreferrer">
             contact form
           </a>

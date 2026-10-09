@@ -644,21 +644,35 @@ export function nestedCardViolations(source, label, ownsProductUi) {
  */
 const CARD_HEADER_LAYOUT = /(?:^|\s)(?:[\w-]+:)*(?:flex-row|justify-between|items-center)(?=\s|$)/;
 
+/** A row a direct child lays out inside the header, beside or instead of `actions`. */
+const CARD_HEADER_CHILD_ROW = /(?:^|\s)(?:[\w-]+:)*(?:flex-row|justify-between)(?=\s|$)/;
+
+function classNameMatches(opening, pattern) {
+  const className = opening.attributes.find(
+    (attribute) => attribute.type === 'JSXAttribute' && nameText(attribute.name) === 'className',
+  );
+  if (!className?.value) return false;
+  return stringFragments(className.value).some(({ text }) => pattern.test(text));
+}
+
 export function cardHeaderLayoutViolations(source, label, ownsProductUi) {
   if (!ownsProductUi || !label.endsWith('.tsx') || label.startsWith('components/ui/')) return [];
   const program = parseSource(source, label);
   const lineOf = lineIndex(source);
   const violations = [];
-  walk(program, (node) => {
-    if (node.type !== 'JSXOpeningElement' || nameText(node.name) !== 'CardHeader') return;
-    const className = node.attributes.find(
-      (attribute) => attribute.type === 'JSXAttribute' && nameText(attribute.name) === 'className',
+  const report = (node) =>
+    violations.push(
+      `${label}:${lineOf(node.start)}: CardHeader lays out its own row; pass the trailing controls as actions={…}`,
     );
-    if (!className?.value) return;
-    if (stringFragments(className.value).some(({ text }) => CARD_HEADER_LAYOUT.test(text))) {
-      violations.push(
-        `${label}:${lineOf(node.start)}: CardHeader lays out its own row; pass the trailing controls as actions={…}`,
-      );
+  walk(program, (node) => {
+    if (node.type !== 'JSXElement' || nameText(node.openingElement.name) !== 'CardHeader') return;
+    if (classNameMatches(node.openingElement, CARD_HEADER_LAYOUT)) report(node.openingElement);
+    for (const child of node.children) {
+      if (
+        child.type === 'JSXElement' &&
+        classNameMatches(child.openingElement, CARD_HEADER_CHILD_ROW)
+      )
+        report(child.openingElement);
     }
   });
   return violations;

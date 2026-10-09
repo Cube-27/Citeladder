@@ -24,7 +24,7 @@ import { InlineEmpty } from '@/components/ui/inline-empty';
 import { Stack } from '@/components/ui/layout';
 import { MutationNotice } from '@/components/ui/mutation-notice';
 import { panelClasses } from '@/components/ui/panel';
-import { ReadError } from '@/components/ui/read-error';
+import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import { EditorialSectionHeader, ledgerClasses, splitPaneClasses } from '@/components/ui/workspace';
@@ -55,12 +55,7 @@ export function ActionDetailScreen() {
   if (query.isError)
     return (
       <PageShell>
-        <ReadError
-          error={query.error}
-          fallback="This Action could not be loaded."
-          onRetry={() => void query.refetch()}
-          pending={query.isFetching}
-        />
+        <ReadError {...readErrorProps(query)} fallback="This Action could not be loaded." />
       </PageShell>
     );
   if (!activeWorkspaceId)
@@ -342,12 +337,7 @@ function LinkedChats({
     <Stack as="section" aria-labelledby="action-chats">
       <EditorialSectionHeader title="Chats" headingId="action-chats" />
       {chats.isError ? (
-        <ReadError
-          error={chats.error}
-          fallback="Linked chats could not be loaded."
-          onRetry={() => void chats.refetch()}
-          pending={chats.isFetching}
-        />
+        <ReadError {...readErrorProps(chats)} fallback="Linked chats could not be loaded." />
       ) : null}
       {chats.isSuccess && rows.length === 0 ? (
         <InlineEmpty>No chats have worked on this Action yet.</InlineEmpty>
@@ -356,8 +346,12 @@ function LinkedChats({
         <ul className="grid gap-2">
           {rows.map((chat) => (
             <li key={chat.id} className={panelClasses({ pad: 'compact' }, 'grid gap-0.5')}>
-              <TextLink asChild text="itemTitle" className="justify-self-start">
-                <ProjectLink href={`/agent/chats/${chat.id}`}>{chat.title}</ProjectLink>
+              <TextLink
+                href={`/agent/chats/${chat.id}`}
+                text="itemTitle"
+                className="justify-self-start"
+              >
+                {chat.title}
               </TextLink>
               {chat.output_kind && chat.output_phase ? (
                 <span className={textRole('caption')}>

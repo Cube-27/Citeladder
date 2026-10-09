@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Line, LineChart, XAxis, YAxis, Tooltip } from 'recharts';
 import { axisProps, ChartContainer, LegendSwatch } from '@/components/ui/chart';
 import { InlineEmpty } from '@/components/ui/inline-empty';
-import { ReadError } from '@/components/ui/read-error';
+import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { textRole } from '@/components/ui/typography';
 import {
   searchIntelligenceApi,
@@ -30,13 +30,7 @@ export function SearchIntelligenceHistory({
     enabled: Boolean(activeProject),
   });
   if (query.isError)
-    return (
-      <ReadError
-        error={query.error}
-        fallback="Saved history could not be loaded."
-        onRetry={() => void query.refetch()}
-      />
-    );
+    return <ReadError {...readErrorProps(query)} fallback="Saved history could not be loaded." />;
   const rows = query.data?.rows ?? [];
   const observations = rows
     .map((row) => ({

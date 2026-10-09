@@ -5,8 +5,6 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
-import { sortIndicator } from './sort-indicator';
-
 /**
  * Dense analytics table — the shared semantic ledger treatment:
  *  - the wrapper is the table's shell: the elevated panel fill at the card
@@ -192,9 +190,6 @@ export function TableRecordMetricCell({
   );
 }
 
-/** The one glyph set for sortable columns: up, down, and the neutral pair. */
-const SORT_ICONS = { ascending: ArrowUp, descending: ArrowDown, inactive: ArrowUpDown } as const;
-
 /** The header aligns with its column's values, as `TableHead` does. */
 const SORT_ALIGN = {
   start: { column: 'items-start', row: 'justify-start text-left' },
@@ -235,7 +230,14 @@ export function SortableTableHead({
   hint?: string;
   className?: string;
 }>) {
-  const { ariaSort, icon: Icon } = sortIndicator(active, descending, SORT_ICONS);
+  // An inactive column has no order: no `aria-sort` and the neutral glyph, so
+  // the announcement and the arrow can never drift apart.
+  let ariaSort: 'ascending' | 'descending' | undefined;
+  let Icon = ArrowUpDown;
+  if (active) {
+    ariaSort = descending ? 'descending' : 'ascending';
+    Icon = descending ? ArrowDown : ArrowUp;
+  }
   let align: (typeof SORT_ALIGN)[keyof typeof SORT_ALIGN] = SORT_ALIGN.start;
   if (numeric === 'end') align = SORT_ALIGN.end;
   else if (numeric) align = SORT_ALIGN.center;

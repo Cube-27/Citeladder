@@ -1,14 +1,11 @@
 'use client';
 
-import { HelpCircle } from 'lucide-react';
-
 import { Card, CardContent } from '@/components/ui/card';
 import { LegendSwatch } from '@/components/ui/chart';
+import { InfoHint } from '@/components/ui/info-hint';
 import { Stack } from '@/components/ui/layout';
 import { MetricValue } from '@/components/ui/metric-value';
 import { StatGrid, StatItem } from '@/components/ui/stat-grid';
-import { Tooltip } from '@/components/ui/tooltip';
-import { textRole } from '@/components/ui/typography';
 import { MetricGroup, MetricItem } from '@/components/ui/workspace';
 import type { PerformanceWindow } from '@/lib/api/performance';
 import { availabilityLabel, formatCount } from '@/lib/format';
@@ -86,26 +83,25 @@ function MetricCardComparison({
 /**
  * The label row's end: the series key (shown only while the metric is plotted
  * — a key on an unplotted metric would point at a line that is not there) and
- * the metric's definition. Raised above the cell's stretched toggle so the
- * definition stays reachable by hover.
+ * the metric's definition. `StatItem` raises it above the cell's stretched
+ * toggle, so the definition stays reachable.
  */
 function MetricMarker({
   metricKey,
+  label,
   color,
   plotted,
-}: Readonly<{ metricKey: PerformanceMetricKey; color: string; plotted: boolean }>) {
+}: Readonly<{
+  metricKey: PerformanceMetricKey;
+  label: string;
+  color: string;
+  plotted: boolean;
+}>) {
   return (
-    <span className="relative z-10 flex shrink-0 items-center gap-2">
+    <>
       <LegendSwatch color={color} shape="line" className={plotted ? undefined : 'invisible'} />
-      <Tooltip content={METRIC_HELP[metricKey]}>
-        <span
-          className="type-caption hover:text-foreground inline-flex size-4 shrink-0 items-center justify-center rounded-full transition-colors"
-          aria-label={METRIC_HELP[metricKey]}
-        >
-          <HelpCircle className="size-3.5" aria-hidden />
-        </span>
-      </Tooltip>
-    </span>
+      <InfoHint label={label}>{METRIC_HELP[metricKey]}</InfoHint>
+    </>
   );
 }
 
@@ -118,6 +114,8 @@ export function MetricCards({
   onToggle,
   colors,
   loading = false,
+  className,
+  'data-testid': testId,
 }: Readonly<{
   selected: PerformanceWindow;
   comparison: PerformanceWindow | null;
@@ -128,9 +126,18 @@ export function MetricCards({
   colors: Record<PerformanceMetricKey, string>;
   /** A read is in flight. The cards spin rather than claiming a value is absent. */
   loading?: boolean;
+  className?: string;
+  'data-testid'?: string;
 }>) {
   return (
-    <StatGrid surface="band" columns={4} size="figure" label="Search Console metrics">
+    <StatGrid
+      surface="band"
+      columns={4}
+      size="figure"
+      label="Search Console metrics"
+      className={className}
+      data-testid={testId}
+    >
       {METRIC_CARDS.map((card) => {
         const value = measured(card.key, selected.totals[card.key]);
         const plotted = active.has(card.key);
@@ -140,18 +147,10 @@ export function MetricCards({
             label={card.label}
             // The period labels earn their place only when TWO values stack:
             // with one number the range is already stated in the toolbar.
-            value={
-              comparison ? (
-                <span className="grid gap-1">
-                  <span className={textRole('caption')}>{selectedLabel}</span>
-                  <MetricValue value={value} label={NOT_MEASURED} loading={loading} />
-                </span>
-              ) : (
-                value
-              )
-            }
+            caption={comparison ? selectedLabel : undefined}
+            value={value}
             missingLabel={NOT_MEASURED}
-            loading={comparison ? false : loading}
+            loading={loading}
             detail={
               comparison ? (
                 <MetricCardComparison
@@ -164,7 +163,12 @@ export function MetricCards({
               ) : undefined
             }
             marker={
-              <MetricMarker metricKey={card.key} color={colors[card.key]} plotted={plotted} />
+              <MetricMarker
+                metricKey={card.key}
+                label={card.label}
+                color={colors[card.key]}
+                plotted={plotted}
+              />
             }
             onSelect={() => onToggle(card.key)}
             actionLabel={`Plot ${card.label.toLowerCase()}`}

@@ -1,5 +1,3 @@
-import { ProjectLink } from '@/components/layout/scoped-link';
-
 import { OpportunityKvRow } from '@/components/opportunities/opportunity-kv-row';
 import { TextLink } from '@/components/ui/text-link';
 import { Label } from '@/components/ui/typography';
@@ -21,8 +19,8 @@ function SourceLink({
   return (
     <div className="flex items-start justify-between gap-3 py-1">
       <span className="type-caption shrink-0">{label}</span>
-      <TextLink asChild text="itemTitle">
-        <ProjectLink href={href}>{linkText}</ProjectLink>
+      <TextLink href={href} text="itemTitle">
+        {linkText}
       </TextLink>
     </div>
   );

@@ -8,7 +8,7 @@ import { Alert } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayTimestamp } from '@/lib/format';
-import { ReadError } from '@/components/ui/read-error';
+import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { queryKeys } from '@/lib/api/query-keys';
 import { runsApi } from '@/lib/api/runs';
 import {
@@ -47,11 +47,7 @@ export function SearchIntelligenceCitationMatcher({
   if (!referring) return null;
   if (audits.isError)
     return (
-      <ReadError
-        error={audits.error}
-        fallback="Visibility audits could not be loaded."
-        onRetry={() => void audits.refetch()}
-      />
+      <ReadError {...readErrorProps(audits)} fallback="Visibility audits could not be loaded." />
     );
   const toggle = (auditId: string) =>
     setSelectedAudits((current) =>

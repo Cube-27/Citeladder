@@ -1,6 +1,5 @@
 'use client';
 
-import { ProjectLink } from '@/components/layout/scoped-link';
 import { Badge } from '@/components/ui/badge';
 import {
   Table,
@@ -75,8 +74,8 @@ export function RunsTable({ audits }: Readonly<{ audits: Audit[] }>) {
                 {formatDateTime(audit.created_at, timeZone)}
               </TableCell>
               <TableCell>
-                <TextLink asChild text="itemTitle">
-                  <ProjectLink href={`/runs/${audit.id}`}>View</ProjectLink>
+                <TextLink href={`/runs/${audit.id}`} text="itemTitle">
+                  View
                 </TextLink>
               </TableCell>
             </TableRow>

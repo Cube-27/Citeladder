@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vite-plus/test';
 
-import { countDomainMax, formatPercent, isAiReferralsEmpty, toCountChartPoints } from './series';
+import { formatPercent } from '@/lib/format';
+
+import { countDomainMax, isAiReferralsEmpty, toCountChartPoints } from './series';
 
 describe('AI referral display helpers', () => {
   it('preserves unavailable points and formats persisted fractions', () => {

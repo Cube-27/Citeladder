@@ -29,10 +29,10 @@ import { cn } from '@/lib/utils';
  *   - Below `lg` the panes stack and the separator is not rendered.
  *
  * The width is uncontrolled by default. A route that remembers it controls it:
- * `width` plus `onWidthChange` (update the drag width) and `onWidthCommit`
- * (store the settled width) — Commerce stores it per browser.
+ * `width` plus `onWidthCommit` (store the settled width) — Commerce stores it
+ * per browser. Mid-drag the pane follows its own width, so only the pane
+ * re-renders per pointer move and the route sees the settled width alone.
  */
-const KEY_STEP_LARGE = 48;
 
 export function ResizableSplitPane({
   list,
@@ -44,7 +44,6 @@ export function ResizableSplitPane({
   maxWidth,
   minDetailWidth = 0,
   width: controlledWidth,
-  onWidthChange,
   onWidthCommit,
   stickyList = false,
   className,
@@ -64,8 +63,6 @@ export function ResizableSplitPane({
   minDetailWidth?: number;
   /** Controlled width in px. */
   width?: number;
-  /** Every intermediate width while dragging or keying. */
-  onWidthChange?: (width: number) => void;
   /** The width a drag or key press settled on — the one worth storing. */
   onWidthCommit?: (width: number) => void;
   /** Keep the list in view while the detail scrolls. */
@@ -76,32 +73,29 @@ export function ResizableSplitPane({
   const helpId = useId();
   const [ownWidth, setOwnWidth] = useState(defaultWidth);
   const [effectiveMax, setEffectiveMax] = useState(maxWidth);
-  const width = controlledWidth ?? ownWidth;
-
   const bounds = () => {
     const available = containerRef.current?.getBoundingClientRect().width ?? 0;
     const responsiveMax = available ? available - minDetailWidth : maxWidth;
     return { min: minWidth, max: Math.max(minWidth, Math.min(maxWidth, responsiveMax)) };
   };
 
+  // A controlled width is the stored decision; the container may still be too
+  // narrow for it, so it is shown clamped to the current maximum.
+  const settledWidth = Math.min(effectiveMax, controlledWidth ?? ownWidth);
   const resize = usePaneResizeInteraction({
-    width,
+    width: settledWidth,
     bounds,
-    onResize: (next) => {
-      setOwnWidth(next);
-      onWidthChange?.(next);
-    },
+    onResize: setOwnWidth,
     onCommit: (next) => onWidthCommit?.(next),
     defaultWidth,
-    homeWidth: minWidth,
-    endKey: true,
-    shiftStep: KEY_STEP_LARGE,
     onBoundsChange: ({ max }) => setEffectiveMax(max),
   });
+  // Mid-drag the pane follows its own width; the owner hears the settled one.
+  const width = resize.dragging ? ownWidth : settledWidth;
 
   // Re-clamp when the container narrows, so the detail keeps its minimum. A
   // resize that moves neither the clamped width nor the maximum is a no-op, so
-  // the observer never echoes the current width back through `onWidthChange`.
+  // the observer never echoes the current width back through `onResize`.
   const refreshOnResize = useEffectEvent(() => {
     const { min, max } = bounds();
     const clamped = Math.min(max, Math.max(min, width));

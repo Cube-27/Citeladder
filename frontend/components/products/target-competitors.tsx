@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Users } from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
-import { ReadError } from '@/components/ui/read-error';
+import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -62,12 +62,8 @@ export function TargetCompetitors({
   const rows = query.data ? forTarget(query.data, target) : [];
   return (
     <Card>
-      <CardHeader>
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div className="grid gap-1">
-            <CardTitle>Competitors on this shelf</CardTitle>
-            <CardDescription>Candidates do not enter measurement until approved.</CardDescription>
-          </div>
+      <CardHeader
+        actions={
           <Button
             variant="secondary"
             disabled={!workspaceId || discovery.discover.isPending || running}
@@ -75,7 +71,12 @@ export function TargetCompetitors({
           >
             {running ? 'Finding…' : 'Find competitors'}
           </Button>
-        </div>
+        }
+      >
+        <CardTitle>Competitors on this shelf</CardTitle>
+        <CardDescription>Candidates do not enter measurement until approved.</CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-3">
         {tasks.map((task) => (
           <Alert key={task.id} tone={task.status === 'failed' ? 'danger' : 'info'}>
             {discoveryMessage(task.status, task.target.kind, task.error_code)}
@@ -84,8 +85,6 @@ export function TargetCompetitors({
         {decide.isError ? (
           <Alert tone="danger">The competitor decision failed. Please try again.</Alert>
         ) : null}
-      </CardHeader>
-      <CardContent>
         <CompetitorRows
           query={query}
           rows={rows}
@@ -112,14 +111,7 @@ function CompetitorRows({
   onDecide: (id: string, decision: 'approved' | 'rejected') => void;
 }>) {
   if (query.isError)
-    return (
-      <ReadError
-        error={query.error}
-        fallback="Competitors could not be loaded."
-        onRetry={() => void query.refetch()}
-        pending={query.isFetching}
-      />
-    );
+    return <ReadError {...readErrorProps(query)} fallback="Competitors could not be loaded." />;
   if (query.isPending) return <Skeleton className="h-24 w-full" />;
   if (!rows.length) {
     return (

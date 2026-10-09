@@ -7,7 +7,6 @@ import { RefreshCw, Settings2, Unplug } from 'lucide-react';
 import { PageLoading } from '@/components/layout/page-loading';
 import { PageShell } from '@/components/layout/page-shell';
 import { DisplayTime } from '@/components/ui/display-time';
-import { ProjectLink } from '@/components/layout/scoped-link';
 import { SearchIntelligenceCitationMatcher } from '@/components/search-intelligence/search-intelligence-citation-matcher';
 import { SearchIntelligenceCollection } from './search-intelligence-collection';
 import { SearchIntelligenceReviewDrawer } from '@/components/search-intelligence/search-intelligence-review-drawer';
@@ -18,7 +17,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Drawer } from '@/components/ui/drawer';
 import { InlineEmpty } from '@/components/ui/inline-empty';
 import { panelClasses } from '@/components/ui/panel';
-import { ReadError } from '@/components/ui/read-error';
+import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatGrid } from '@/components/ui/stat-grid';
 import { TextLink } from '@/components/ui/text-link';
@@ -165,9 +164,8 @@ export function SearchIntelligencePage() {
     return (
       <PageShell>
         <ReadError
-          error={readiness.error}
+          {...readErrorProps(readiness)}
           fallback="Search Intelligence could not be loaded."
-          onRetry={() => void readiness.refetch()}
         />
       </PageShell>
     );
@@ -181,11 +179,7 @@ export function SearchIntelligencePage() {
             icon={Unplug}
             heading="Connect DataForSEO"
             description="Search Intelligence needs an enabled workspace DataForSEO credential before it can prepare a priced acquisition."
-            action={
-              <TextLink asChild>
-                <ProjectLink href="/settings?tab=providers">Open provider settings</ProjectLink>
-              </TextLink>
-            }
+            action={<TextLink href="/settings?tab=providers">Open provider settings</TextLink>}
           />
         </PageShell>
       </TabsRoot>
@@ -299,7 +293,7 @@ export function SearchIntelligencePage() {
             onOpenChange={setCostOpen}
             runs={runsQuery.data}
             pending={runsQuery.isPending}
-            error={runsQuery.isError ? runsQuery.error : null}
+            error={runsQuery.error}
             onRetry={() => void runsQuery.refetch()}
           />
           <SearchIntelligenceReviewDrawer

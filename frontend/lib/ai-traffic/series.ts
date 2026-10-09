@@ -1,7 +1,7 @@
 /** Display-only helpers for the persisted AI-referral projection. */
 import type { TrendPoint } from '@/components/ui/trend-chart';
 import type { AiReferrals, AiSource } from '@/lib/api/ai-traffic';
-import { availabilityLabel, formatShortDate } from '@/lib/format';
+import { formatShortDate } from '@/lib/format';
 
 export { formatCount as formatInt } from '@/lib/format';
 
@@ -30,11 +30,6 @@ export function countDomainMax(values: readonly number[]): number {
 
 export function countYLabels(domainMax: number): string[] {
   return [1, 0.75, 0.5, 0.25, 0].map((fraction) => `${Math.round(domainMax * fraction)}`);
-}
-
-export function formatPercent(fraction: number | null, decimals = 0): string {
-  if (fraction === null) return availabilityLabel('not_measured');
-  return `${(fraction * 100).toFixed(decimals)}%`;
 }
 
 const AI_SOURCE_LABELS: Record<AiSource, string> = {

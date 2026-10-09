@@ -1,7 +1,7 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Stack } from '@/components/ui/layout';
-import { ReadError } from '@/components/ui/read-error';
+import { ReadError, readErrorProps, type RetryableRead } from '@/components/ui/read-error';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { ExecutionsTable } from '@/components/runs/executions-table';
@@ -14,14 +14,11 @@ import type { Audit, Execution } from '@/lib/api/types';
 type RunDetailViewProps = {
   audit: Audit | undefined;
   auditLoading: boolean;
-  auditError: unknown;
-  auditRetrying: boolean;
-  onRetryAudit: () => void;
+  /** The audit read: its failure, and the retry of exactly that read. */
+  auditRead: RetryableRead;
   executions: Execution[] | undefined;
   executionsLoading: boolean;
-  executionsError: unknown;
-  executionsRetrying: boolean;
-  onRetryExecutions: () => void;
+  executionsRead: RetryableRead;
   exportError: string | null;
   cancelNotice: MutationNotice | null;
   rerunNotice: MutationNotice | null;
@@ -33,22 +30,18 @@ type RunDetailViewProps = {
 function AuditSection({
   audit,
   auditLoading,
-  auditError,
-  auditRetrying,
-  onRetryAudit,
+  auditRead,
   exportError,
   cancelNotice,
   rerunNotice,
   onCancel,
   onRerunFailures,
 }: RunDetailViewProps) {
-  if (auditError && !audit) {
+  if (auditRead.error && !audit) {
     return (
       <ReadError
-        error={auditError}
+        {...readErrorProps(auditRead)}
         fallback="Something went wrong. Please try again."
-        onRetry={onRetryAudit}
-        pending={auditRetrying}
       />
     );
   }
@@ -70,28 +63,14 @@ function AuditSection({
 function ExecutionsSection({
   executions,
   executionsLoading,
-  executionsError,
-  executionsRetrying,
-  onRetryExecutions,
+  executionsRead,
   onSelectEvidence,
 }: Pick<
   RunDetailViewProps,
-  | 'executions'
-  | 'executionsLoading'
-  | 'executionsError'
-  | 'executionsRetrying'
-  | 'onRetryExecutions'
-  | 'onSelectEvidence'
+  'executions' | 'executionsLoading' | 'executionsRead' | 'onSelectEvidence'
 >) {
-  if (executionsError && !executions) {
-    return (
-      <ReadError
-        error={executionsError}
-        fallback="Could not load executions."
-        onRetry={onRetryExecutions}
-        pending={executionsRetrying}
-      />
-    );
+  if (executionsRead.error && !executions) {
+    return <ReadError {...readErrorProps(executionsRead)} fallback="Could not load executions." />;
   }
   if (executionsLoading || !executions) {
     return (

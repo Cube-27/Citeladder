@@ -14,7 +14,7 @@ import { ProjectRequiredState } from '@/components/layout/project-required-state
 import { PageLoading } from '@/components/layout/page-loading';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { PageShell } from '@/components/layout/page-shell';
-import { ReadError } from '@/components/ui/read-error';
+import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { DemandActBand } from '@/components/demand/demand-act-band';
 import { DemandDetectorBar } from '@/components/demand/demand-detector-bar';
 import { DemandEvidenceDrawer } from '@/components/demand/demand-evidence-drawer';
@@ -305,7 +305,7 @@ export function DemandProjection() {
     return (
       <SearchDemandView
         snapshot={snapshot}
-        refreshError={latest.isError ? latest.error : null}
+        refreshError={latest.error}
         onRetry={() => void latest.refetch()}
         retrying={latest.isFetching}
       />
@@ -353,10 +353,8 @@ function demandFallback({
   if (latest.isError)
     return (
       <ReadError
-        error={latest.error}
+        {...readErrorProps(latest)}
         fallback="Search demand could not be loaded. Check your connection and try again."
-        onRetry={() => void latest.refetch()}
-        pending={latest.isFetching}
       />
     );
   if (latest.data === undefined) return null;

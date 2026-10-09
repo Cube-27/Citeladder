@@ -3,7 +3,7 @@ import { aiTrafficApi } from '@/lib/api/ai-traffic';
 import { queryKeys } from '@/lib/api/query-keys';
 import { projectDestination } from '@/lib/navigation/project-destination';
 import { Alert } from '@/components/ui/alert';
-import { ReadError } from '@/components/ui/read-error';
+import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { TextLink } from '@/components/ui/text-link';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { TrafficUrlButton } from './url-panel';
@@ -27,11 +27,7 @@ export function InsightStrip({
       </CardHeader>
       <CardContent className="grid gap-3">
         {query.isError ? (
-          <ReadError
-            error={query.error}
-            fallback="Could not read insights"
-            onRetry={() => query.refetch()}
-          />
+          <ReadError {...readErrorProps(query)} fallback="Could not read insights" />
         ) : null}
         {query.isLoading ? (
           <p className="type-body text-secondary">Loading persisted insights…</p>

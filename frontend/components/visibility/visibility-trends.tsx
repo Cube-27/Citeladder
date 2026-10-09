@@ -2,6 +2,7 @@
 
 import type { UseQueryResult } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
+import { FilterChoice } from '@/components/ui/filter-row';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
@@ -18,7 +19,6 @@ import { TrendChart } from '@/components/ui/trend-chart';
 import { textRole } from '@/components/ui/typography';
 import { MetricGroup, MetricItem, splitPaneClasses } from '@/components/ui/workspace';
 import { PageLoading } from '@/components/layout/page-loading';
-import { AnalysisChoice } from '@/components/visibility/analysis-choice';
 import { RankingRowsTable } from '@/components/visibility/ranking-rows';
 import { EngineComparison } from '@/components/visibility/engine-comparison';
 import { SurfaceRatesPanel } from '@/components/visibility/surface-rates';
@@ -339,7 +339,7 @@ function MeasurementHistory({
     <Card>
       <CardHeader
         actions={
-          <AnalysisChoice
+          <FilterChoice
             label="Plotted metric"
             value={metric}
             options={VISIBILITY_METRICS}

@@ -214,10 +214,8 @@ function MessageBubble({
             <ul aria-label="Mentioned Actions" className="flex flex-wrap gap-2">
               {message.mentions.map((mention) => (
                 <li key={mention.id}>
-                  <TextLink asChild text="caption">
-                    <ProjectLink href={`/agent/actions/${mention.id}`}>
-                      @{mention.label}
-                    </ProjectLink>
+                  <TextLink href={`/agent/actions/${mention.id}`} text="caption">
+                    @{mention.label}
                   </TextLink>
                 </li>
               ))}

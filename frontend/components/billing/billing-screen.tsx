@@ -86,7 +86,7 @@ function useCancellation(workspaceId: string | null): BillingCancellation {
     open,
     setOpen,
     pending: mutation.isPending,
-    error: mutation.isError ? mutation.error : null,
+    error: mutation.error,
     confirm: () => mutation.mutate(),
   };
 }
@@ -105,7 +105,7 @@ function usePlanChangeControls(workspaceId: string | null, checkout: Checkout): 
         .catch(() => undefined),
     downgrade: (key) => downgrade.mutate(key),
     pending: downgrade.isPending || checkout.preparing,
-    downgradeError: downgrade.isError ? downgrade.error : null,
+    downgradeError: downgrade.error,
   };
 }
 

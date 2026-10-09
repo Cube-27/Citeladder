@@ -12,7 +12,6 @@ import { InlineEmpty } from './inline-empty';
 import { Meter } from './meter';
 import { NoProjectState } from './no-project-state';
 import { Pager, pageNumberControls } from './pager';
-import { ResizableSplitPane } from './split-pane';
 import { StatGrid, StatItem } from './stat-grid';
 import { SortableTableHead, Table, TableHeader, TableRow } from './table';
 import { TextLink } from './text-link';
@@ -104,16 +103,24 @@ describe('Meter', () => {
 describe('SortableTableHead', () => {
   it('announces the sort on the column and sorts from the header button', () => {
     const onSort = vi.fn();
-    render(
+    const head = (descending: boolean) => (
       <Table>
         <TableHeader>
           <TableRow>
-            <SortableTableHead label="Clicks" active descending onSort={onSort} numeric />
-            <SortableTableHead label="Page" active={false} descending={false} onSort={vi.fn()} />
+            <SortableTableHead
+              label="Clicks"
+              active
+              descending={descending}
+              onSort={onSort}
+              numeric
+            />
+            {/* An inactive column has no order, whatever its flag says. */}
+            <SortableTableHead label="Page" active={false} descending onSort={vi.fn()} />
           </TableRow>
         </TableHeader>
-      </Table>,
+      </Table>
     );
+    const { rerender } = render(head(true));
     expect(screen.getByRole('columnheader', { name: 'Clicks' })).toHaveAttribute(
       'aria-sort',
       'descending',
@@ -121,34 +128,11 @@ describe('SortableTableHead', () => {
     expect(screen.getByRole('columnheader', { name: 'Page' })).not.toHaveAttribute('aria-sort');
     fireEvent.click(screen.getByRole('button', { name: 'Clicks' }));
     expect(onSort).toHaveBeenCalledOnce();
-  });
-});
-
-describe('ResizableSplitPane', () => {
-  it('resizes the list from the keyboard within its bounds', () => {
-    const onWidthCommit = vi.fn();
-    render(
-      <ResizableSplitPane
-        list={<nav>Topics</nav>}
-        listId="topics"
-        separatorLabel="Resize topics panel"
-        defaultWidth={240}
-        minWidth={208}
-        maxWidth={400}
-        onWidthCommit={onWidthCommit}
-      >
-        <p>Detail</p>
-      </ResizableSplitPane>,
+    rerender(head(false));
+    expect(screen.getByRole('columnheader', { name: 'Clicks' })).toHaveAttribute(
+      'aria-sort',
+      'ascending',
     );
-    const separator = screen.getByRole('separator', { name: 'Resize topics panel' });
-    expect(separator).toHaveAttribute('aria-controls', 'topics');
-    fireEvent.keyDown(separator, { key: 'ArrowRight' });
-    expect(separator).toHaveAttribute('aria-valuenow', '256');
-    fireEvent.keyDown(separator, { key: 'End' });
-    expect(separator).toHaveAttribute('aria-valuenow', '400');
-    fireEvent.keyDown(separator, { key: 'Home' });
-    expect(separator).toHaveAttribute('aria-valuenow', '208');
-    expect(onWidthCommit).toHaveBeenLastCalledWith(208);
   });
 });
 

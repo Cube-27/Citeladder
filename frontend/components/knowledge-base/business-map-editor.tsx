@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
 import { panelClasses } from '@/components/ui/panel';
 import { Select } from '@/components/ui/select';
-import { ReadError } from '@/components/ui/read-error';
+import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { Skeleton } from '@/components/ui/skeleton';
 import { textRole } from '@/components/ui/typography';
 import { humanizeApiError } from '@/lib/api/errors';
@@ -70,12 +70,7 @@ export function BusinessMapEditor({
   if (query.isPending) return <Skeleton className="h-64 w-full" />;
   if (query.isError)
     return (
-      <ReadError
-        error={query.error}
-        fallback="The business map could not be loaded."
-        onRetry={() => void query.refetch()}
-        pending={query.isFetching}
-      />
+      <ReadError {...readErrorProps(query)} fallback="The business map could not be loaded." />
     );
   return (
     <BusinessMapForm

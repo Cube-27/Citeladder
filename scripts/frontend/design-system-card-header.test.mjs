@@ -21,3 +21,16 @@ test('actions, spacing tweaks and other elements pass', () => {
   assert.equal(check('<CardHeader className="pb-0" />'), 0);
   assert.equal(check('<div className="flex-row justify-between" />'), 0);
 });
+
+test('a direct child that lays out the header row is the same retired shape', () => {
+  assert.equal(
+    check(
+      '<CardHeader><div className="flex flex-wrap items-start justify-between"><CardTitle /><Button /></div></CardHeader>',
+    ),
+    1,
+  );
+  assert.equal(
+    check('<CardHeader><div className="grid gap-1"><CardTitle /></div><Alert /></CardHeader>'),
+    0,
+  );
+});
