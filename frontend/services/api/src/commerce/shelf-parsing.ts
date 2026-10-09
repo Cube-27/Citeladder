@@ -3,6 +3,7 @@ import { auditPolicy } from '../audits/config.ts';
 import { searchPolicy } from '../search-surfaces/dataforseo.ts';
 import { canonicalPage } from '../traffic/normalization.ts';
 import { localizedPrice } from './projection-facts.ts';
+import { onlyOf } from '../lists.ts';
 
 export const shelfPolicy = auditPolicy.commerce_shelf;
 export const boundedText = (text: string, limit: number) => [...text].slice(0, limit).join('');
@@ -12,12 +13,14 @@ function recommendationSpans(answer: string): RecommendationSpan[] {
   for (const line of answer.split(/\r\n|[\n\r\v\f\u0085\u2028\u2029]/u)) {
     const cleaned = line.trim();
     if (!cleaned) continue;
-    const ordered = /^(\d{1,2})[.)]\s+(\S.*)$/u.exec(cleaned);
-    const bullet = /^[-*•]\s+(\S.*)$/u.exec(cleaned);
-    if (ordered)
-      spans.push({ text: ordered[2]!.trim(), rank: Number(ordered[1]), orderObservable: true });
-    else if (bullet) spans.push({ text: bullet[1]!.trim(), rank: null, orderObservable: false });
-    else if (spans.length) spans.at(-1)!.text += ` ${cleaned}`;
+    const [, rank, ordered] = /^(\d{1,2})[.)]\s+(\S.*)$/u.exec(cleaned) ?? [];
+    const [, bullet] = /^[-*•]\s+(\S.*)$/u.exec(cleaned) ?? [];
+    const last = spans.at(-1);
+    if (ordered !== undefined)
+      spans.push({ text: ordered.trim(), rank: Number(rank), orderObservable: true });
+    else if (bullet !== undefined)
+      spans.push({ text: bullet.trim(), rank: null, orderObservable: false });
+    else if (last) last.text += ` ${cleaned}`;
   }
   if (spans.length) return spans.slice(0, shelfPolicy.span_limit);
   const prose = answer
@@ -161,9 +164,10 @@ export function observedPrice(
   span: string,
   locale: string,
 ): { price: number | null; currency: string } {
-  const match = /([$£€₹]|AUD|USD|CAD|NZD|GBP|EUR|INR)\s*(\d[\d,.]*)/iu.exec(span);
-  if (!match) return { price: null, currency: '' };
-  const marker = match[1]!.toUpperCase();
+  const [, symbol, amount] =
+    /([$£€₹]|AUD|USD|CAD|NZD|GBP|EUR|INR)\s*(\d[\d,.]*)/iu.exec(span) ?? [];
+  if (symbol === undefined || amount === undefined) return { price: null, currency: '' };
+  const marker = symbol.toUpperCase();
   const currencies = new Set(
     locale
       .toUpperCase()
@@ -176,11 +180,9 @@ export function observedPrice(
   );
   const currency =
     marker === '$'
-      ? currencies.size === 1
-        ? [...currencies][0]!
-        : ''
+      ? (onlyOf([...currencies]) ?? '')
       : ({ '£': 'GBP', '€': 'EUR', '₹': 'INR' }[marker] ?? marker);
-  return { price: localizedPrice(match[2]!), currency };
+  return { price: localizedPrice(amount), currency };
 }
 export function observedMerchant(span: string, resolved?: string) {
   const url = resolved?.trim() || /https?:\/\/[^\s)\]}>,]+/iu.exec(span)?.[0] || '';

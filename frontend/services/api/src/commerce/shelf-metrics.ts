@@ -15,13 +15,15 @@ export function shelfMetrics(taskIds: string[], observations: Observation[]) {
   const owned = recognized.filter((row) => row.classification === 'owned');
   const ownedTasks = new Set(owned.map((row) => row.task_id));
   const rankedOwned = owned.filter((row) => row.order_observable && row.rank !== null);
+  // The first-ranked observation of each execution that ranked any.
   const ranked = taskIds
-    .map((id) =>
-      observations
-        .filter((row) => row.task_id === id && row.order_observable && row.rank !== null)
-        .sort((a, b) => a.rank! - b.rank!),
+    .map(
+      (id) =>
+        observations
+          .filter((row) => row.task_id === id && row.order_observable && row.rank !== null)
+          .sort((a, b) => a.rank! - b.rank!)[0],
     )
-    .filter((rows) => rows.length);
+    .filter((row) => row !== undefined);
   return {
     product_visibility: taskIds.length
       ? taskIds.filter((id) => ownedTasks.has(id)).length / taskIds.length
@@ -31,7 +33,7 @@ export function shelfMetrics(taskIds: string[], observations: Observation[]) {
       ? rankedOwned.reduce((sum, row) => sum + row.rank!, 0) / rankedOwned.length
       : null,
     first_position_win_rate: ranked.length
-      ? ranked.filter((rows) => rows[0]!.rank === 1 && rows[0]!.classification === 'owned').length /
+      ? ranked.filter((row) => row.rank === 1 && row.classification === 'owned').length /
         ranked.length
       : null,
     successful_execution_count: taskIds.length,

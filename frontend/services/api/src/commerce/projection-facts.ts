@@ -2,6 +2,7 @@ import { getDomain } from 'tldts';
 import { z } from 'zod';
 import { policy } from '../config.ts';
 import { jsonObject } from '../db/json.ts';
+import { onlyOf } from '../lists.ts';
 
 const texts = z.array(z.string()).default([]);
 const link = z.looseObject({
@@ -78,9 +79,9 @@ export function pageIdentity(facts: CatalogFacts, base: string): string {
 
 export function productAlias(value: string): string {
   const url = new URL(value);
-  const match = /^\/collections\/[^/]+(\/products\/[^/]+)\/?$/u.exec(url.pathname);
-  if (!match) return '';
-  url.pathname = match[1]!;
+  const [, path] = /^\/collections\/[^/]+(\/products\/[^/]+)\/?$/u.exec(url.pathname) ?? [];
+  if (path === undefined) return '';
+  url.pathname = path;
   url.search = '';
   return url.href;
 }
@@ -97,9 +98,13 @@ export function localizedPrice(raw: string): number | null {
   const lastComma = raw.lastIndexOf(',');
   const separator = lastDot > lastComma ? '.' : ',';
   const parts = raw.split(separator);
-  const fraction = parts.at(-1)!;
-  if (parts.length === 2 && /^\d{1,2}$/u.test(fraction)) {
-    const integer = parts[0]!;
+  const [integer, fraction] = parts;
+  if (
+    parts.length === 2 &&
+    integer !== undefined &&
+    fraction !== undefined &&
+    /^\d{1,2}$/u.test(fraction)
+  ) {
     const groups = integer.split(separator === '.' ? ',' : '.');
     if (groups.length > 1 && !validGroups(groups)) return null;
     return finitePrice(`${groups.join('')}.${fraction}`);
@@ -108,7 +113,10 @@ export function localizedPrice(raw: string): number | null {
   return /^\d+$/u.test(raw) ? finitePrice(raw) : null;
 }
 function validGroups(groups: string[]): boolean {
-  return /^\d{1,3}$/u.test(groups[0]!) && groups.slice(1).every((group) => /^\d{3}$/u.test(group));
+  const [head, ...rest] = groups;
+  return (
+    head !== undefined && /^\d{1,3}$/u.test(head) && rest.every((group) => /^\d{3}$/u.test(group))
+  );
 }
 const markerSource = policy.commerce.price_markers
   .map(([marker]) => marker!.replaceAll(/[.*+?^${}()|[\]\\]/gu, String.raw`\$&`))
@@ -137,8 +145,9 @@ function visiblePrice(facts: CatalogFacts) {
       .filter(Boolean)
       .map((amount) => ({ marker, amount }));
   });
-  if (amounts.length !== 1) return { price: null, currency: '' };
-  const { marker, amount } = amounts[0]!;
+  const only = onlyOf(amounts);
+  if (!only) return { price: null, currency: '' };
+  const { marker, amount } = only;
   return {
     price: localizedPrice(amount),
     currency:
