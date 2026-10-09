@@ -2,11 +2,13 @@
 
 ## Responsibility
 
-CiteLadder's hosted MCP server is a read interface over persisted product
-owners. It owns OAuth authorization records and bounded tool delivery, not
-business data, generation or external mutation. Public client setup is served
-at `https://docs.citeladder.com/mcp/`; engineering ownership is here. The protocol
-endpoint remains on the configured apex origin, not the documentation hostname.
+CiteLadder's hosted MCP server lets a customer's AI assistant (Claude, ChatGPT,
+Cursor and others) read their CiteLadder data. It is a read interface over the
+product owners: it owns OAuth authorization records, the read catalogue and its
+delivery, not business data, generation or external mutation. The catalogue is
+also the in-app [Agent](agents.md)'s, so both read the same evidence the same way.
+Public setup lives at `https://docs.citeladder.com/mcp/`; the protocol endpoint is
+`https://citeladder.com/mcp` on the configured apex origin.
 
 ## Connection and consent
 
@@ -26,258 +28,183 @@ The MCP issuer, resource, discovery and token endpoints remain on the configured
 protocol origin. Browser consent and login use `FRONTEND_URL`, including when
 the browser moves to the app hostname. A stale consent submission on the old
 host receives an explicit restart response; no cross-host POST redirect is
-permitted.
+permitted. The consent page labels the client name as an unverified
+self-declaration and names the redirect host the flow enforces.
 
-## Client registration
+## Client registration and authorization
 
 Dynamic registration stays open and unauthenticated, as RFC 7591 intends: MCP
-clients register before any CiteLadder login exists. A remote HTTPS callback on
-any host is legitimate; there is deliberately no redirect-host allowlist. The
-protections are bounds and binding instead:
+clients register before any CiteLadder login exists. There is deliberately no
+redirect-host allowlist; the protections are bounds and binding:
 
 - The [registration guard](../frontend/services/api/src/mcp/registration.ts)
-  charges per-client burst and window budgets and a global ceiling in the shared
-  PostgreSQL usage counters before the body is read, keyed by the trusted-proxy
-  client identity. Refusals are 429 with `Retry-After`; a client already over
-  its own budget does not spend the global one. CORS preflight is not metered.
+  charges per-client burst and window budgets and a global ceiling through the
+  shared [usage limiter](../frontend/services/api/src/abuse/usage.ts) before the
+  body is read, keyed by the trusted-proxy client identity. Refusals are 429
+  with `Retry-After`; a client over its own budget does not spend the global one.
   Limits are owned by [abuse configuration](../frontend/services/api/src/config/abuse.ts).
-- The body is capped at a registration size. The provider accepts only the
-  `authorization_code`/`refresh_token` grants and the `code` response type,
-  at most ten concrete-host HTTPS or loopback-HTTP redirects without
-  credentials, fragments or wildcards, and a bounded client name.
-- Registrations older than the configured unused-client TTL that never held a
-  grant and have no live authorization request or code are pruned in bounded
-  batches by later registrations. Identical re-registrations are not merged:
-  confidential clients must not share a minted secret, and the budgets bound
-  duplicates.
-- Authorization requires S256 PKCE and an exact match against a registered
-  redirect. The token exchange rechecks that redirect and the verifier, and a
-  code is single-use.
-- `/authorize` rejects queries over 8 KiB and states over 1,024 UTF-8 bytes
-  before writes. Atomic usage windows admit 10/client, 40/trusted source and
-  120/global per minute; the client row lock caps live unconsumed requests at
-  five. Limits belong to the native MCP configuration. The periodic runner
-  cleanup removes at most 100 expired unconsumed requests, codes and expired
-  usage windows per table per pass, preserving grants and consumed audit data.
+- Redirects are HTTPS on a concrete host, loopback HTTP, or a native app's
+  private-use scheme (RFC 8252 §7.1): a reverse-domain scheme or a listed editor
+  scheme such as `cursor` or `vscode`. Credentials, fragments, wildcards and
+  script/data/file schemes are refused. At most ten redirects and a bounded
+  client name.
+- Registration narrows rather than refuses what it does not support: grant types
+  reduce to `authorization_code`/`refresh_token`, the scope to `citeladder:read`,
+  and `code` must be among the response types. An omitted auth method is
+  `client_secret_basic` (RFC 7591 §2); a confidential client may present its
+  secret in the body or the header.
+- Unused registrations past the unused-client TTL are pruned in bounded batches
+  by later registrations. Identical re-registrations are not merged.
+- `/authorize` requires S256 PKCE and a registered redirect. A loopback redirect
+  matches on any port (RFC 8252 §7.3) and the requested URI is the one bound;
+  the token exchange rechecks it and the verifier. Unknown extra scopes (such as
+  `offline_access`) are dropped. Queries over 8 KiB and states over 1,024 bytes
+  are refused before writes; usage windows admit 10/client, 40/trusted source and
+  120/global per minute, and the client row lock caps live requests at five.
+- Once the redirect is proven, every later `/authorize` error returns to the
+  client's redirect with `error`, `state` and `iss` (RFC 6749 §4.1.2.1, RFC 9207),
+  so the client is never stranded. Successful consent also carries `iss`.
 
-The consent page labels the client name as an unverified self-declaration and
-names the redirect host the flow actually enforces.
+Client ID Metadata Documents are not supported or advertised. Support needs
+SSRF-bounded, cached document fetches, URL-shaped client IDs and consent display
+of the document host; DCR remains the compatibility path.
 
-Client ID Metadata Documents are not supported or advertised yet. Support needs SSRF-bounded, cached
-document fetches at authorization time, URL-shaped client IDs in the OAuth
-tables, and consent display of the document host. Advertising the flag before
-that exists would steer CIMD-capable clients into a client ID this server
-cannot resolve. It is a separate change; DCR remains the compatibility path.
-
-## Configuration and persistence
-
-[Configuration](../frontend/services/api/src/config/mcp.ts) owns enablement and bounds.
-An enabled server requires a safe public origin; disabled MCP must not break
-the rest of application startup. Protocol routes remain behind request-body and
-transport-security guards. A demo allowlist is an additional admission condition,
-not the tenant boundary.
+## Grants and tokens
 
 [MCP models](../backend/app/models/mcp.py) persist clients, transactions, codes
-and grants. Bearer/refresh/code values are hashed rather than stored raw;
-confidential client secrets use encrypted custody. Expiration, rotation and
-revocation prevent reusing a grant as permanent access.
+and grants. Bearer, refresh, code and transaction values are stored as HMACs
+keyed by the session secret (rotating it ends every connection); client secrets
+use encrypted custody.
+
+- Access tokens last an hour and are bound to the `/mcp` resource and the read
+  scope (RFC 8707). A 401 carries `WWW-Authenticate` with the protected-resource
+  metadata (RFC 9728).
+- Refresh rotates both tokens and keeps the superseded refresh token's hash. A
+  concurrent refresh inside the 60-second grace window is refused without
+  consequence; that token presented later means it leaked, so the grant is
+  revoked and an `mcp.token_reuse` security event recorded. A replayed
+  authorization code revokes the grant it minted (RFC 6749 §4.1.2).
+- Refresh slides 30 days but never past 180 days from consent; a connection
+  then consents again.
+- Each grant records when it was last used, at five-minute resolution.
+- The periodic cleanup removes expired unconsumed requests and codes at once,
+  and consumed ones and ended grants after 90 days, in bounded batches. The
+  usage-window table is pruned by its own owner's lane.
 
 ## Authorization on each read
 
-A grant binds to a CiteLadder user account and explicitly selected workspaces.
-The consent form starts with no workspace selected. Authorization codes carry
-the selection into the grant; token rotation preserves it. Empty legacy grants
-cannot be exchanged for access and require a new consent flow.
-[Data projections](../frontend/services/api/src/mcp/data.ts) resolve that account's
-current workspace memberships and permitted read roles on every product read,
-intersected with the live grant's selected workspaces. Revocation and removal of
-a workspace authorization are checked in the database even for an already loaded
-request token; joining another workspace never expands a connection.
-System workspaces remain excluded even if a stray membership exists.
-Project/object IDs never authorize themselves. Revoking membership changes
-what an existing grant may read without copying business data into MCP.
+A grant binds to one account and the workspaces selected at consent. Codes carry
+the selection into the grant; rotation preserves it; an empty grant cannot be
+exchanged. On every tool call, [data](../frontend/services/api/src/mcp/data.ts)
+resolves the account's current memberships and read roles, intersected with the
+live grant's workspaces, and checks the workspace's trial or plan; revocation and
+membership removal take effect on the next call. One tool call checks this once,
+however many reads it composes; nothing is cached across calls. Joining another
+workspace never widens a connection, system workspaces stay excluded, and
+project or record IDs never authorize themselves. A pinned caller (the Agent) is
+told a sibling project was "not found", the same as a missing one.
 
-The catalog exposes bounded project and prompt enumeration, business context,
-citation-compatible search/fetch documents, query-page evidence, Site Health
-pages/link projections, visibility results/sources, Search Intelligence
-datasets and shared growth-evidence reads. The [catalogue](../frontend/services/api/src/mcp/tools.ts)
-delegates to the existing TypeScript domain read services and scoped persisted
-projections. The in-app [Agent](agents.md) uses its native TypeScript runtime
-and owner adapters; the Python Agent read bridges have been retired.
-Its internal skills and Agent-only reads are not exposed here. Search is bounded persisted retrieval; it is not
-a web search or provider request. Missing projections remain unavailable and
-cannot be repaired by reading them. Search Intelligence summaries retain their
-dataset grain: referring-domain and destination-page aggregates are not exposed
-as individual backlink edges.
+Settings → MCP connections lists a user's connections, and workspace
+Owner/Admin can view and remove only their workspace's authorization. Revocation
+is also available through the OAuth endpoint.
 
-`read_ai_crawlability` reads the latest authorized project's persisted Site
-Health robots projection, including per-bot matched groups, root permissions,
-sample policies and snapshot provenance. Its optional `crawl_id` pins an exact
-authorized crawl, including historical/unavailable observations; a foreign or
-missing explicit crawl is refused instead of falling back to latest. Crawl
-status/time remain separate from robots observation status/time.
-`get_project_business_context` includes this projection in its selectable
-`crawlability` section. A missing
-crawl or missing robots observation returns an explicit unavailable result;
-neither read starts a crawl. Snapshot references identify provenance but are
-not raw-body fetch resolvers. The browser's separately paged robots history
-read owns retained text comparisons.
+## The catalogue
 
-`read_crawl_logs` reads persisted summary, crawler and coverage projections with
-the selected window and verification filter. `list_bot_requests` pages sanitized
-retained requests with bot/status/folder/resource filters. Business context accepts
-`crawl_logs`. These adapters share the [AI Traffic](ai-traffic.md) readers and
-workspace authorization. Missing or incomplete evidence remains unavailable;
-neither tool starts collection or refresh. `read_ai_referrals` adds per-source
-key events/commerce in the property currency, landing pages, quality flags and
-the property-wide channel comparison to its session/share measures.
-`read_ai_traffic_pages` pages the independently aggregated path-level signal
-join with filters, verification and sorting; `read_ai_traffic_url` canonicalizes
-through `canonicalPage`, rejects off-origin URLs and reads the persisted detail
-timeline. `read_ai_traffic_insights` returns the persisted preset-window snapshot
-or an awaiting-refresh notice. These tools cannot repair missing data or enqueue
-work. Requests, GA4 sessions and tracked citations
-remain separate units.
+The [catalogue](../frontend/services/api/src/mcp/tools.ts) is one list of read
+tools, each declaring its input schema and the owner read it delegates to.
+Project tools authorize the project on every call and must report a `state`
+(`available`, `unavailable` with a `reason`, or the owner's `observed_zero`);
+missing evidence is never zero and is never repaired by reading it. No read
+crawls, calls a provider, enqueues work or writes.
 
-Every retrievable evidence reference uses an allowlisted `citeladder://` record
-type. `fetch` reauthorizes the owning workspace and returns the normalized
-`id`/`title`/`text`/`url`/`metadata` document while preserving the structured
-record for established callers. Raw provider transports, credentials, arbitrary
-URLs, tables, SQL and filesystem paths are not resolvers.
+| Area | Tools |
+| --- | --- |
+| Start | `list_projects`, `get_project_business_context` (profile, competitors, active prompts, latest visibility, top Actions, Site Health, connected data; sections run in parallel), `search` and `fetch` |
+| AI visibility | `read_visibility_overview` (mention rate, citation rate, rankings and the run's status), `read_visibility_trends`, `read_visibility_results` (answers), `read_visibility_sources`, `read_source_url` (one cited page: prompts, engines, brands listed, your presence), `read_prompt_portfolio` |
+| Work | `read_actions` (active Actions in priority order, or one Action with findings, remediation, go-live and measured outcome), `read_content_differentiation`, `read_ai_shelf` (Commerce) |
+| Site | `read_site_health`, `read_site_pages`, `read_site_links`, `read_ai_crawlability` |
+| Traffic | `read_performance` (totals with comparison, or a `dimension` breakdown), `read_query_evidence`, `read_demand`, `read_ai_referrals`, `read_crawl_logs` (summary, crawlers, coverage or individual requests), `read_ai_traffic_pages`, `read_ai_traffic_url`, `read_ai_traffic_insights`, `read_integration_status` |
+| Research | `read_search_intelligence`, `read_search_dataset` (aggregate rows are not individual links) |
+| App | `render_visibility`, `render_site_health`, `open_analytics` |
 
-## Client experience and limits
+Each tool is a thin adapter over its owner (Visibility, Actions, Site Health,
+AI Traffic, Commerce, Search Intelligence, brand memory), so a correction in the
+owner reaches the app, the Agent and MCP together. Enumerated arguments are enums
+(the engine set comes from the visibility configuration); paged tools take
+`cursor` and `limit`, and a cursor continues only the selection that produced it.
+Published input schemas omit `$schema`, UUID patterns and null branches, which
+halved `tools/list` to about 25 KB.
 
-### Plugin analytics and public workflows
+Results carry IDs because the model needs them for its next call. The server
+instructions tell clients never to show IDs or `citeladder://` references to
+the user and to name the page, prompt, competitor or Action instead. Links point
+to the app screen that shows the record ([links](../frontend/services/api/src/mcp/links.ts),
+mirrored by the browser's evidence links).
 
-[The source plugin](../plugins/citeladder/) packages AI Visibility Review,
-AI Search Change Review and Technical SEO Triage. Its workflows use only public
-read tools and host reasoning, with no internal Agent run or saved deliverable.
-The repository marketplace is `.agents/plugins/marketplace.json`; portable
-clients use the package's `mcp.json`. Registered ChatGPT app mappings require a
-real connection ID and are not fabricated in source. Installation, deployed-host
-acceptance and public-directory approval remain separate from repository checks.
+`fetch` resolves an allowlisted `citeladder://` record (project, action,
+opportunity, prompt, audit, visibility result, site snapshot/crawl/page/issue/link,
+demand, query and traffic snapshots, search run/dataset/row) after reauthorizing
+its workspace. A document is `id`/`title`/`text`/`url`/`metadata`, with the record
+once as JSON text; a large one returns bounded parts with continuation IDs.
 
-`read_visibility_overview` adapts the existing dashboard owner, including
-counts, rates, model provenance and domain-owned comparison status. An explicit
-`baseline_id` must be a ready run in the same authorized project. Latest resolves
-to a concrete `audit_id`; explicit unavailable measurements never fall back.
-`read_visibility_trends` adapts the existing trend owner with an explicit,
-timezone-aware window, engine/cohort, granularity and optional frozen
-model/retrieval filters. It retains source audit/snapshot IDs, comparison keys,
-versions and nullable rates. It does not manufacture period movement or fill gaps.
-Sources remains audit-scoped; optional domain filtering and result domain/URL
-filters support source-to-answer drill-down without a provider call.
+## Errors and limits
 
-`MCP_UI_ENABLED` defaults off. When enabled, `render_visibility`,
-`render_site_health` and `open_analytics` attach
-`ui://citeladder/analytics/v1`; data/search/fetch tools carry no widget metadata.
-Render tools accept strict identifiers/selections, never arbitrary datasets or
-model-computed totals. Overview and Sources pin a concrete audit. Trends requires
-an explicit window and has no audit selector; clicking Sources selects one run.
-Site Health pins `snapshot_id` and `crawl_id` and reports persisted coverage
-states separately from scores. `read_site_health` accepts that snapshot ID;
-foreign or missing explicit snapshots are refused. Current Opportunities are
-labelled separately from the selected snapshot's evidence.
+Tool arguments are strict. A caller's mistake (an invalid argument, naming the
+field; a stale cursor; an inverted window; an unknown sort, status or record; a
+selection from another project) returns as a tool error (`isError`) with the
+owner's message, so the model can correct the call. Any other failure returns
+"Evidence is unavailable." and is logged without detail. An unknown tool or a
+malformed request is a JSON-RPC error.
 
-Build from `frontend` with `pnpm --filter @citeladder/mcp-app build`; source-run
-development reads the resulting `packages/mcp-app/dist/analytics.html`. The API image
-build generates and packages static HTML from the isolated workspace entry and
-shared design primitives. Resource requests are authenticated, contain no
-user/project data, and never invoke a product reader. Scripts/styles are bundled
-inline; CSP declares no network/resource/frame origins. Data arrives exclusively
-through the MCP Apps bridge. No cookies or bearer tokens enter UI state.
-Selections clear prior results and invalidate pending responses; access errors
-clear cached evidence. Unknown, unavailable, partial and observed-zero states
-remain distinct in accessible tables and charts.
+Tool calls are budgeted at 120 a minute per connection and 600 per account; a
+refusal is a tool error naming the retry time.
 
-`MCP_EXTENSIONS_ENABLED` also defaults off and, with UI enabled, advertises the
-same app as global and thread entries through `open_analytics`, which accepts
-empty arguments. Hosts without extensions still use cards or text. Standard
-model-context updates contain the current selection, evidence references and
-limitations; model tool results
-update the view through the same validated selection contract. Host deep links
-use `/analytics?project_id=<uuid>&view=<view>&audit_id=<uuid>` in
-`openai/deepLink`; they contain identifiers, never credentials or evidence
-bodies, and every resulting tool read reauthorizes access.
+The TypeScript transport supports the `2025-11-25` initialize lifecycle and the
+`2026-07-28` per-request lifecycle (`server/discover`, protocol and method
+headers, reserved request metadata). Protocol routes keep request-body, host
+and origin guards; the credential-free OAuth and metadata endpoints also answer
+browser-hosted clients with CORS. With MCP disabled every protocol path is absent
+and the rest of the application starts normally.
 
-#### Client compatibility and release acceptance
+## Interactive app
 
-| Client | Repository path | External acceptance |
-| --- | --- | --- |
-| ChatGPT Work web | OAuth DCR/PKCE, MCP Apps card, optional global/thread entry | Actual connection, ingress/resource binding and installed workflow not verified |
-| ChatGPT desktop | Same protocol and UI, repository marketplace package | Installed package/new-chat OAuth and UI journey not verified |
-| Headless Codex | Portable MCP connection, structured/text reads and public skills | Actual client linking not verified; no UI is required |
+The [MCP app](../frontend/packages/mcp-app) is always offered. `render_visibility`,
+`render_site_health` and `open_analytics` attach `ui://citeladder/analytics/v1`,
+and `open_analytics` also declares ChatGPT's `openai/ui` sidebar (`global`) and
+conversation-panel (`thread`) entries; hosts without MCP Apps ignore the
+metadata and use the read tools. Render tools accept strict selections, never
+datasets or model-computed totals; Overview and Sources pin a concrete run and
+Site Health a snapshot. The resource is static HTML bundled at image build,
+with no project data, cookies or network origins; data arrives only through the
+MCP Apps bridge. Build it with `pnpm --filter @citeladder/mcp-app build`.
 
-CIMD assessment: retain DCR for this release. URL-shaped client resolution,
-SSRF-bounded cached metadata retrieval, document-bound redirects and consent
-identity are not implemented by the current OAuth owner. Advertising CIMD now
-would direct clients into an unsupported flow; it remains unadvertised. A future
-CIMD slice must preserve existing DCR grants and independently validate those
-boundaries. The plugin adds no authentication migration.
+## Plugin and client acceptance
 
-The package includes five positive and three negative review cases and draft
-release notes. They are prepared from supported behavior, not a recorded demo
-or evidence of portal acceptance:
+[The plugin](../plugins/citeladder/) packages AI Visibility Review, AI Search
+Change Review and Technical SEO Triage over public read tools. Each mirrors its
+in-app methodology (`ai_visibility`, `measure`, `technical_health`), and the
+Agent owner-adapter test fails if a plugin skill names a tool the catalogue does
+not have. The repository marketplace is `.agents/plugins/marketplace.json`;
+portable clients use the package's `mcp.json`.
 
-1. Connect, consent to selected workspaces and select an authorized project.
-2. Review Overview rates, counts, measurement identity and evidence freshness.
-3. Select a trend window; discuss change only using compatible canonical
-   comparisons and keep missing points as gaps.
-4. Drill down from a concrete audit to domains, URLs and retained cited answers.
-5. Read a pinned Site Health snapshot, coverage, its pages and current findings.
+This repository proves the wire contract, not acceptance in a particular client
+build or the deployed origin. Before public directory submission the release
+owner verifies publisher identity, support/privacy/terms URLs, a reviewer
+account, a recorded walkthrough and portal scans; the plugin's review cases
+(five positive, three negative: publish, acquire, mutate) describe the expected
+behaviour.
 
-The three negative tool-selection cases cover publication, acquisition and
-prompt/Action mutation requests; none has a write tool. Additional safety cases
-verify foreign project/audit/snapshot access is denied and absent or incompatible
-evidence produces an honest unavailable/limited result. Also exercise the no-account/no-project onboarding
-handoff, reconnect, token rotation/revocation and removed membership.
+## Coverage
 
-Before public submission, publisher verification, eligible commercial plans,
-support ownership, privacy/retention disclosures, verified support/privacy/terms
-URLs, reviewer account, accessible recorded walkthrough, supported countries,
-domain verification and portal scans still need release-owner acceptance.
-Reviewer credentials belong only in secure portal fields, never the package.
-No deployment, public sample mode, events, acquisition or publication is implied.
-
-Clients discover authorized projects, inspect the available-dataset inventory,
-then page through or fetch specific evidence. The browser account menu links to
-public setup instructions. Settings has an MCP connections tab: users revoke
-their connections, and workspace Owner/Admin can view and remove only their
-workspace's authorization without seeing the grant's other workspace IDs. OAuth
-return paths are restricted to the internal consent transaction and cannot
-become arbitrary redirects. Grant revocation is available through the OAuth
-revocation endpoint and supporting clients; membership removal blocks affected
-reads immediately.
-
-Tool arguments are strict: unknown arguments, out-of-range limits and
-malformed UUIDs are rejected as invalid params (JSON-RPC `-32602`) rather than
-ignored or clamped. Defaulted arguments are optional in the published schema.
-Caller-caused read errors, such as a stale cursor or an inverted window, return
-their message; other read failures return only "Evidence is unavailable."
-A client may refresh only with a grant type it registered.
-
-The TypeScript transport has no Python MCP SDK dependency. Component acceptance covers the legacy
-`2025-11-25` initialize lifecycle and the `2026-07-28` per-request lifecycle
-(`server/discover`, protocol/method headers and reserved request metadata).
-This proves the repository wire contract, not acceptance in every client build
-or the deployed origin.
-
-A tool response does not authorize publishing, prompt activation, a crawl,
-model generation or any other mutation. Streamable HTTP delivery has no
-authority to rerun a product acquisition when a client retries.
-[Workspace access](workspace-access.md) remains the shared role/identity owner.
-
-[Protocol tests](../frontend/services/api/test/mcp-transport.test.ts),
-[OAuth and registration tests](../frontend/services/api/test/mcp-oauth.test.ts),
-[evidence tests](../frontend/services/api/test/mcp-evidence.test.ts) and
-[retrieval tests](../frontend/services/api/test/mcp-retrieval.test.ts)
-cover registration limits, redirect and PKCE binding, consent denial, rotation/revocation, both supported protocol lifecycles,
-bounded enumeration, retrieval documents, disabled
-server behavior, request limits and tenant isolation. These tests do not
-establish that a particular public client or deployed origin has passed
-external acceptance.
-
-The public tool reference is generated from the live TypeScript catalogue with
-`pnpm --filter @citeladder/api mcp:reference`; the repository check detects drift.
-Native [Agent owner-adapter tests](../frontend/services/api/test/agent-owner-adapters.test.ts)
-cover project pinning and membership isolation for the shared MCP reads.
+[Transport](../frontend/services/api/test/mcp-transport.test.ts) runs the real
+catalogue: lifecycles, app metadata, argument and owner errors as tool errors,
+unknown tools, guards and disabled MCP.
+[OAuth](../frontend/services/api/test/mcp-oauth.test.ts) covers registration
+bounds and native schemes, loopback ports, error redirects, CSRF, PKCE, code and
+refresh replay, rotation, revocation, membership changes, the call budget and
+cleanup. [Evidence](../frontend/services/api/test/mcp-evidence.test.ts) covers
+pinned snapshots and runs, foreign selections, active Actions, prompt paging,
+unavailable states and record fetches; [retrieval](../frontend/services/api/test/mcp-retrieval.test.ts)
+covers links and document parts. The public tool reference is generated from the
+catalogue with `pnpm --filter @citeladder/api mcp:reference`; the repository
+check detects drift.

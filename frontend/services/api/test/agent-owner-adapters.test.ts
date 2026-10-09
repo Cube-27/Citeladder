@@ -1,3 +1,4 @@
+import { readdir, readFile } from 'node:fs/promises';
 import { afterAll, describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import * as sharedTools from '../src/mcp/tools.ts';
@@ -75,6 +76,25 @@ describe('Agent bindings to the evidence and Action owners', () => {
     expect([...named].filter((name) => !offered.has(name))).toEqual([]);
     const chatOnly = ['list_projects', 'render_visibility', 'render_site_health', 'open_analytics'];
     expect(chatOnly.filter((name) => offered.has(name))).toEqual([]);
+    // The public plugin's twins call the same catalogue.
+    const plugin = new URL('../../../../plugins/citeladder/skills/', import.meta.url);
+    const pluginNamed = new Set(
+      (
+        await Promise.all(
+          (await readdir(plugin)).map((skill) =>
+            readFile(new URL(`${skill}/SKILL.md`, plugin), 'utf8'),
+          ),
+        )
+      ).flatMap((body) =>
+        [...body.matchAll(/`((?:read|list|get|render|open)_[a-z_]+|search|fetch)`/gu)].map(
+          (match) => match[1]!,
+        ),
+      ),
+    );
+    expect(pluginNamed.size).toBeGreaterThan(0);
+    expect(
+      [...pluginNamed].filter((name) => !Object.hasOwn(sharedTools.definitions, name)),
+    ).toEqual([]);
   });
   it('pins shared MCP reads and fetches to one project and rechecks the member', async () => {
     const scope = await fixtures.scope(),

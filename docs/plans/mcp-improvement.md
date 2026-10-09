@@ -1,6 +1,6 @@
 # MCP improvement plan
 
-**Status:** decisions answered 2026-10-09; implementing in two PRs.
+**Status:** PR 1 (server) implemented on `feature/mcp-review`; PR 2 (connect experience) in progress.
 
 Feature 13 of the [feature review tracker](feature-review-tracker.md): the hosted
 MCP server (transport, catalogue, OAuth and registration, consent, connections),
@@ -161,11 +161,50 @@ Overview is reachable only through an unvalidated free-text `engine`.
 Two PRs, merged in order, each rebased on `main` (not stacked):
 
 - **PR 1, server** (phases 1–4): reads, errors, cost, OAuth, schema, catalogue,
-  new reads, flag removal, Agent and plugin skill parity, the connections
-  contract (`workspaces`, `user`, `created_at`, `last_used_at`).
+  new reads, flag removal, Agent and plugin skill parity, and `last_used_at` on
+  the connections contract.
 - **PR 2, connect experience** (phase 5): the MCP app without IDs, the connect
   strip and client menu, Settings, consent and the MCP-led trial, the account menu,
   the marketing announcement strip and MCP page, and the public docs.
+
+## As implemented (PR 1)
+
+Where the build differs from the rows below, this is what shipped and why:
+
+- **Actions, not opportunities.** `read_opportunities` became `read_actions`
+  over the Actions owner (list and one Action with its outcome). The Agent's
+  `list_actions`, `get_action` and `list_content_differentiation` joined the shared
+  catalogue (`read_actions`, `read_content_differentiation`), so there are no
+  Agent-only reads. Search finds active Actions.
+- **Sources.** The earned-source pointer and its second query were removed rather
+  than repointed; the Visibility owner already enriches source rows, and the new
+  `read_source_url` delegates to the earned URL page.
+- **Overview.** `read_visibility_overview` carries the run's status and progress;
+  `read_visibility_audit` and its raw summary are gone.
+- **Citations.** The per-answer citation query (2.2) went with citation record
+  IDs: answers carry their citations, and a citation is reached through its
+  answer.
+- **Refresh grace (decision 5).** Tokens are stored as hashes, so a concurrent
+  refresh cannot be answered with the successor. Inside the 60-second grace the
+  duplicate is refused without consequence; after it, the replay revokes. A
+  replayed code also revokes, via the new `authorization_code_id`.
+- **Budget (decision 7).** 120 calls a minute per connection and 600 per account
+  rather than per workspace: one grant spans several workspaces, and per-account
+  is one counter per call.
+- **Fetch text.** `structuredContent` and the JSON text both stay (clients that
+  ignore structured content still need the data); the saving came from removing
+  the triple copy inside `fetch` and from compact schemas (`tools/list` 52.6 KB →
+  25.3 KB).
+- **Not done:** 1.8 became moot (non-retrievable references were removed
+  altogether); the robots read stays in `mcp/evidence-site.ts`, imported by the
+  Agent, rather than moving into Site Health; the range vocabularies remain the
+  owners' (performance and analytics windows differ), each enumerated in its
+  schema.
+
+Production schema (additive, nullable): `mcp_oauth_grants` gains
+`previous_refresh_token_hash varchar(64)`, `refresh_rotated_at timestamptz`,
+`authorization_code_id uuid` and `last_used_at timestamptz`, with indexes on the
+first and third.
 
 ## Phase 1: correctness and owner alignment
 

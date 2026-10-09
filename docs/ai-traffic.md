@@ -220,8 +220,8 @@ partitions for the whole window; concentration additionally requires the full
 input population. Partial coverage displays a notice. Copy describes co-occurrence
 only, and Overview links to persisted pattern-filtered Pages and URL detail.
 
-`read_crawl_logs` supplies summary, crawler and coverage views;
-`list_bot_requests` supplies retained activity. Business context accepts the
+`read_crawl_logs` supplies summary, crawler, coverage and individual request
+(`requests`) views. Business context accepts the
 `crawl_logs` section. MCP and the in-app Agent call the same authorized readers.
 
 [`crawl-logs.json`](../frontend/services/api/src/config/crawl-logs.json) owns

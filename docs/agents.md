@@ -187,9 +187,11 @@ server-side: the model cannot supply `project_id`, and `fetch` refuses a record
 from another project. `list_projects` and the MCP App views (`render_visibility`,
 `render_site_health`, `open_analytics`) are not Agent tools. Each call runs as
 the chat member through MCP's membership predicate, and workspace access
-(trial and plan) is rechecked before every model step. The Agent-only `list_actions`, `get_action`
-and `list_content_differentiation` reads are not exposed through MCP. No tool
-writes.
+(trial and plan) is rechecked before every model step. The Agent and MCP read
+the same catalogue, including `read_actions` and `read_content_differentiation`;
+there are no Agent-only reads. A caller's mistake (a bad cursor, window or
+filter) is refused with the owner's reason so the model can correct the call.
+No tool writes.
 
 Each [tool attempt](../backend/app/models/agent.py) records tool, arguments,
 status, returned record references, omissions, output hash and latency.

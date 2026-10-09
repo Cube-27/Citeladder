@@ -59,7 +59,7 @@ export const mcp = {
     consent_csp:
       "default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
     read_scope: 'citeladder:read',
-    server_version: '1.1.0',
+    server_version: '2.0.0',
     documentation_url: 'https://docs.citeladder.com/mcp/',
     max_search_results: 20,
     search_snippet_chars: 500,

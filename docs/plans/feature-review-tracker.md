@@ -83,7 +83,7 @@ Status values: `queued`, `inventory`, `audit`, `plan`, `implementing`, `docs`, `
 | 10 | Commerce: catalog, competitors, AI Shelf | `commerce`; `components/products` | [commerce-intelligence.md](../commerce-intelligence.md) | implementing | [commerce-improvement](commerce-improvement.md) |
 | 11 | Billing, entitlements and usage | `billing`, `entitlements`; `components/billing` | [billing-entitlements.md](../billing-entitlements.md), [billing-provider-readiness.md](../billing-provider-readiness.md) | queued | — |
 | 12 | Authentication, workspaces, projects and roles | `auth`, `workspaces`, `projects`; `components/auth`, `settings`, `projects` | [workspace-access.md](../workspace-access.md) | queued | — |
-| 13 | MCP hosted tools and OAuth | `mcp` | [mcp.md](../mcp.md) | plan | [mcp-improvement](mcp-improvement.md) |
+| 13 | MCP hosted tools and OAuth | `mcp` | [mcp.md](../mcp.md) | implementing | [mcp-improvement](mcp-improvement.md) |
 | 14 | Execution platform: queues, runner, tick, recovery, residual Python schema tooling (`backend/`, about 60k lines) | `queue`, `workers/runner.ts`, `db`, `infra/gcp`, `backend` | [backend-architecture.md](../backend-architecture.md), [operations](../operations/GCP_RUNBOOK.md) | queued | — |
 | 15 | Product app shell, navigation, tour and design system | `apps/app`, `components/layout`, `ui`, `tour`, `intelligence` (Dashboard top insights) | [frontend-architecture.md](../frontend-architecture.md), [design.md](../design.md) | queued | — |
 | 16 | Public site and documentation site | `apps/marketing`, `apps/docs` | [design.md](../design.md) | queued | — |
