@@ -7,7 +7,7 @@ import { useComposerCommands } from '@/components/agent/use-composer-commands';
 import { agentWriteFailure } from '@/lib/agent/errors';
 import { newIdempotencyKey, useRequestKey } from '@/lib/agent/idempotency';
 import { isLiveTurnConnected, useLiveTurnConnected } from '@/lib/agent/live-turns';
-import { isRunActive } from '@/lib/agent/run-state';
+import { isRunActive, runPollMs } from '@/lib/agent/run-state';
 import {
   agentMutations,
   agentQueries,
@@ -16,7 +16,6 @@ import {
   type AgentMessage,
 } from '@/lib/api/agent';
 import { queryKeys } from '@/lib/api/query-keys';
-import { AGENT_RUN_POLL_MS } from '@/lib/config/agent';
 
 /**
  * The persisted chat. Reads never run the agent. While a turn is active its
@@ -30,7 +29,7 @@ export function useChatDetail(workspaceId: string, chatId: string) {
     enabled: Boolean(workspaceId && chatId),
     refetchInterval: (state) => {
       const run = state.state.data?.latest_run;
-      return isRunActive(run) && !isLiveTurnConnected(run?.id) ? AGENT_RUN_POLL_MS : false;
+      return run && isRunActive(run) && !isLiveTurnConnected(run.id) ? runPollMs(run) : false;
     },
   });
   const closed = useLiveTurnConnected(query.data?.latest_run?.id) === false;

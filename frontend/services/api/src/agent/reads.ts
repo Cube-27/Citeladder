@@ -22,9 +22,15 @@ import { getChat } from './messages.ts';
 import { manifestSchema } from './context.ts';
 
 const iso = (date: Date | null) => date?.toISOString() ?? null;
-function summary(chat: Chat, output: { kind: string; phase: string } | null, label: string | null) {
+function summary(
+  chat: Chat,
+  output: { kind: string; phase: string } | null,
+  label: string | null,
+  running: boolean,
+) {
   return agentChatSummarySchema.parse({
     ...chat,
+    running,
     target_label: label,
     output_kind: output?.kind ?? null,
     output_phase: output?.phase ?? null,
@@ -181,7 +187,12 @@ export async function readChat(db: Database, scope: Scope, chatId: string) {
         .executeTakeFirst()
     : undefined;
   return agentChatDetailSchema.parse({
-    chat: summary(chat, current.output, action?.target_label ?? null),
+    chat: summary(
+      chat,
+      current.output,
+      action?.target_label ?? null,
+      run ? active.includes(run.status) : false,
+    ),
     pinned_skill_id: chat.pinned_skill_id,
     context: {
       refs: jsonObject(chat.context_refs, 'agent_chats.context_refs'),
@@ -283,6 +294,18 @@ export async function listChats(
     )
     .selectAll('chat')
     .select(['output.kind as output_kind', 'output.phase as output_phase', 'action.target_label'])
+    .select((eb) =>
+      eb
+        .exists(
+          eb
+            .selectFrom('agent_runs as run')
+            .select('run.id')
+            .whereRef('run.workspace_id', '=', 'chat.workspace_id')
+            .whereRef('run.chat_id', '=', 'chat.id')
+            .where('run.status', 'in', active),
+        )
+        .as('running'),
+    )
     .select(
       sql<string>`to_char(chat.last_activity_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')`.as(
         'cursor_at',
@@ -335,6 +358,7 @@ export async function listChats(
         row,
         row.output_kind ? { kind: row.output_kind, phase: row.output_phase! } : null,
         row.target_label,
+        Boolean(row.running),
       ),
     ),
     next_cursor:

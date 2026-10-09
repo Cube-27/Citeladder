@@ -338,7 +338,7 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
       status: 'succeeded',
     });
   });
-  it('claims once under contention, never revives expiry, and fences previous attempts after recovery', async () => {
+  it('claims once under contention and ends an expired turn as interrupted, never claiming it again', async () => {
     const scope = await fixtures.scope();
     const queued = await fixtures
       .store()
@@ -362,46 +362,45 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
     });
     const calls = new ModelCalls(db, zeroFunding);
     expect(
-      await queue.recover([scope.workspaceId], 1, (trx, run) => calls.reconcile(trx, run)),
+      await queue.recover([scope.workspaceId], 1, agentPolicy.unclaimed_grace_seconds, (trx, run) =>
+        calls.reconcile(trx, run),
+      ),
     ).toBe(1);
-    const next = await queue.claim(lease.owner, [scope.workspaceId]);
-    const current = await queue.start(next!, lease.owner);
-    expect(current.attempt).toBe(2);
-    await expect(db.transaction().execute((trx) => lockRun(trx, lease))).rejects.toMatchObject({
-      code: 'lease',
+    // The stopped turn answers its request and is never replayed.
+    expect(await fixtures.run(queued.id)).toMatchObject({
+      status: 'failed',
+      error_code: 'interrupted',
     });
-    await fixtures.runtime(scope, scripted([reply()])).execute(current);
-    expect((await fixtures.run(queued.id)).status).toBe('succeeded');
+    expect((await readChat(db, scope, queued.chat_id)).messages.at(-1)?.content).toBe(
+      recoveryReply('interrupted'),
+    );
+    expect(await queue.claim(lease.owner, [scope.workspaceId])).toBeNull();
   });
-  it('exhausts repeatedly recovered claims that never reached start', async () => {
+  it('ends a run no stream claimed once its grace has passed', async () => {
     const scope = await fixtures.scope();
     const queued = await fixtures
       .store()
       .enqueue(scope, { key: randomUUID(), message: 'Question' });
-    await db
-      .updateTable('agent_runs')
-      .set({ max_attempts: 2 })
-      .where('id', '=', queued.id)
-      .execute();
     const queue = new AgentQueue(db, 30);
     const calls = new ModelCalls(db, zeroFunding);
-    for (let attempt = 0; attempt < 2; attempt++) {
-      expect(await queue.claim('crashed', [scope.workspaceId])).not.toBeNull();
-      await db
-        .updateTable('agent_runs')
-        .set({ lease_expires_at: new Date(0) })
-        .where('id', '=', queued.id)
-        .execute();
-      expect(
-        await queue.recover([scope.workspaceId], 1, (trx, run) => calls.reconcile(trx, run)),
-      ).toBe(1);
-    }
+    const recover = () =>
+      queue.recover([scope.workspaceId], 1, agentPolicy.unclaimed_grace_seconds, (trx, run) =>
+        calls.reconcile(trx, run),
+      );
+    // The browser that admitted it may still be opening its stream.
+    expect(await recover()).toBe(0);
+    await db
+      .updateTable('agent_runs')
+      .set({
+        available_at: new Date(Date.now() - (agentPolicy.unclaimed_grace_seconds + 1) * 1000),
+      })
+      .where('id', '=', queued.id)
+      .execute();
+    expect(await recover()).toBe(1);
     expect(await fixtures.run(queued.id)).toMatchObject({
       status: 'failed',
-      attempt_count: 2,
-      error_code: 'max_attempts_exceeded',
+      error_code: 'interrupted',
     });
-    expect(await queue.claim('next', [scope.workspaceId])).toBeNull();
   });
   it('contains start failure without dispatching the runtime', async () => {
     const scope = await fixtures.scope();
@@ -411,7 +410,7 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
     const start = vi.spyOn(queue, 'start').mockRejectedValueOnce(new AgentError('lease'));
     const execute = vi.spyOn(runtime, 'execute');
     try {
-      expect(await runAgentOnce(queue, runtime, 'lost', [scope.workspaceId], () => 0)).toBe(true);
+      expect(await runAgentOnce(queue, runtime, 'lost', [scope.workspaceId])).toBe(true);
       expect(execute).not.toHaveBeenCalled();
     } finally {
       start.mockRestore();
@@ -496,7 +495,7 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
     ]);
     expect((await fixtures.run(run.id)).status).toBe('cancelled');
   });
-  it('reconciles lost dispatch as unknown before retry and bounds the final expired attempt', async () => {
+  it('reconciles a lost dispatch as unknown when recovery ends an expired turn', async () => {
     const scope = await fixtures.scope();
     const { run, lease, queue } = await fixtures.claimed(scope);
     const settle = vi.fn(async () => ({ credits: 0, status: 'zero_debit' }));
@@ -506,7 +505,15 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
       user: 'test',
       schema: {},
     });
-    await queue.retry(lease, 0, (trx, row) => models.reconcile(trx, row));
+    await db
+      .updateTable('agent_runs')
+      .set({ lease_expires_at: new Date(0) })
+      .where('id', '=', run.id)
+      .execute();
+    await queue.recover([scope.workspaceId], 1, agentPolicy.unclaimed_grace_seconds, (trx, row) =>
+      models.reconcile(trx, row),
+    );
+    // A late answer after recovery settles nothing twice.
     await models.receipt(scope.workspaceId, attempt.id, result(reply()));
     expect(settle).toHaveBeenCalledTimes(1);
     expect(
@@ -516,33 +523,39 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
         .where('id', '=', attempt.id)
         .executeTakeFirst(),
     ).toMatchObject({ outcome: 'recovered_unknown' });
-    const next = await queue.claim('another', [scope.workspaceId]);
-    await queue.start(next!, 'another');
-    await db
-      .updateTable('agent_runs')
-      .set({ attempt_count: agentPolicy.run_max_attempts, lease_expires_at: new Date(0) })
-      .where('id', '=', run.id)
-      .execute();
-    await queue.recover([scope.workspaceId], 1, (trx, row) => models.reconcile(trx, row));
-    expect((await fixtures.run(run.id)).status).toBe('failed');
+    expect(await fixtures.run(run.id)).toMatchObject({
+      status: 'failed',
+      error_code: 'interrupted',
+    });
     expect(await queue.claim('again', [scope.workspaceId])).toBeNull();
-    // An exhausted turn still answers its request.
-    expect((await readChat(db, scope, run.chat_id)).messages.at(-1)?.content).toBe(
-      recoveryReply('max_attempts_exceeded'),
-    );
   });
-  it('answers a request whose retries are exhausted by the provider', async () => {
+  it('ends a turn once on a provider failure, with its reply and no replay', async () => {
     const scope = await fixtures.scope();
-    const { run, lease, queue } = await fixtures.claimed(scope);
-    await db.updateTable('agent_runs').set({ max_attempts: 1 }).where('id', '=', run.id).execute();
-    await queue.retry(lease, 0, () => Promise.resolve());
-    expect(await fixtures.run(run.id)).toMatchObject({ status: 'failed' });
+    const run = await fixtures
+      .store()
+      .enqueue(scope, { key: randomUUID(), message: 'Read and explain' });
+    const queue = new AgentQueue(db, 30);
+    let calls = 0;
+    const model = {
+      ...scripted([]),
+      complete: async () => {
+        calls++;
+        throw new Error('Provider unavailable');
+      },
+    };
+    await runAgentOnce(queue, fixtures.runtime(scope, model), 'provider', [scope.workspaceId]);
+    expect(calls).toBe(1);
+    expect(await fixtures.run(run.id)).toMatchObject({
+      status: 'failed',
+      error_code: 'provider_error',
+    });
     expect(
       (await readChat(db, scope, run.chat_id)).messages.map(({ role, content }) => [role, content]),
     ).toEqual([
       ['user', expect.any(String)],
       ['agent', recoveryReply('provider_error')],
     ]);
+    expect(await queue.claim('again', [scope.workspaceId])).toBeNull();
   });
   it('stops before dispatch for changed catalogs and removed members, with no model call', async () => {
     const scope = await fixtures.scope();
@@ -900,58 +913,6 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
     ).toEqual([run.chat_id]);
     expect((await listChats(db, scope, { query: '%' })).items).toEqual([]);
   });
-  it('retains retry activity and the step high-water mark while restarting from step one', async () => {
-    const scope = await fixtures.scope();
-    const run = await fixtures
-      .store()
-      .enqueue(scope, { key: randomUUID(), message: 'Read and explain' });
-    const queue = new AgentQueue(db, 30);
-    const model = {
-      ...scripted(
-        [
-          { action: 'call_tool', skill_id: 'plan', tool: 'read_evidence', arguments_json: '{}' },
-          { action: 'call_tool', tool: 'read_evidence', arguments_json: '{}' },
-        ],
-        async (_request, ordinal) => {
-          if (ordinal === 3) throw new Error('Transient failure');
-        },
-      ),
-      retryableError: () => true,
-    };
-    await runAgentOnce(
-      queue,
-      fixtures.runtime(scope, model),
-      'retry-activity',
-      [scope.workspaceId],
-      () => 0,
-    );
-    expect(await fixtures.run(run.id)).toMatchObject({ status: 'retry_wait', steps_used: 3 });
-    const next = scripted([reply()], async () => {
-      const saved = await fixtures.run(run.id);
-      expect(saved.steps_used).toBe(3);
-      const activity = await progress(db, saved);
-      expect(
-        activity
-          .filter((step) => step.run_attempt === 1)
-          .some((step) => ['working', 'processing'].includes(step.status)),
-      ).toBe(false);
-      expect(activity.at(-1)).toMatchObject({ run_attempt: 2, ordinal: 1, status: 'working' });
-    });
-    await runAgentOnce(
-      queue,
-      fixtures.runtime(scope, next),
-      'retry-activity',
-      [scope.workspaceId],
-      () => 0,
-    );
-    const detail = await readChat(db, scope, run.chat_id);
-    expect(detail.latest_run).toMatchObject({
-      status: 'succeeded',
-      steps_used: 3,
-      attempt_count: 2,
-    });
-    expect(detail.latest_run?.progress.map((step) => step.run_attempt)).toEqual([1, 1, 1, 2]);
-  });
   it('uses admitted size policy and refuses a revision its frozen budget cannot hold before model dispatch', async () => {
     const scope = await fixtures.scope();
     const first = await fixtures.claimed(scope, { skillId: 'plan' });
@@ -1009,14 +970,12 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
       .enqueue(scope, { key: randomUUID(), message: 'Answer this' });
     const queue = new AgentQueue(db, 30);
     const runtime = fixtures.runtime(scope, scripted([reply()]));
-    expect(await runAgentOnce(queue, runtime, 'bounded-worker', [], () => 0)).toBe(false);
-    expect(await runAgentOnce(queue, runtime, 'bounded-worker', [scope.workspaceId], () => 0)).toBe(
-      true,
-    );
+    expect(await runAgentOnce(queue, runtime, 'bounded-worker', [])).toBe(false);
+    expect(await runAgentOnce(queue, runtime, 'bounded-worker', [scope.workspaceId])).toBe(true);
     expect((await fixtures.run(queued.id)).status).toBe('succeeded');
   });
   it.each(['model', 'tool'] as const)(
-    'scopes concurrent interactive turns and retries an interrupted %s call',
+    'scopes concurrent interactive turns and ends an interrupted %s call as interrupted',
     async (boundary) => {
       const scope = await fixtures.scope();
       const store = fixtures.store();
@@ -1050,48 +1009,37 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
       const queue = new AgentQueue(db, 30);
       await Promise.all(
         ['first', 'second'].map((owner) =>
-          runAgentOnce(queue, runtime, owner, [scope.workspaceId], () => 60, {
+          runAgentOnce(queue, runtime, owner, [scope.workspaceId], {
             runId: requested.id,
             signal: controller.signal,
           }),
         ),
       );
       expect(interrupt).toHaveBeenCalledTimes(1);
+      // The browser left mid-call: the turn ends once, with its reply.
       expect(await fixtures.run(requested.id)).toMatchObject({
-        status: 'retry_wait',
+        status: 'failed',
+        error_code: 'interrupted',
         attempt_count: 1,
         lease_owner: null,
       });
+      expect((await readChat(db, scope, requested.chat_id)).messages.at(-1)?.content).toBe(
+        recoveryReply('interrupted'),
+      );
       expect(await fixtures.run(sibling.id)).toMatchObject({ status: 'queued', attempt_count: 0 });
     },
   );
-  it('retries classified transient failures, stops malformed steps and recovers abandoned cancellations', async () => {
+  it('stops malformed steps and recovers abandoned cancellations', async () => {
     const scope = await fixtures.scope();
     const queued = await fixtures
       .store()
       .enqueue(scope, { key: randomUUID(), message: 'Question' });
     const queue = new AgentQueue(db, 30);
-    const model = {
-      ...scripted([]),
-      retryableError: () => true,
-      complete: async () => {
-        throw new Error('Transient fixture');
-      },
-    };
-    await runAgentOnce(
-      queue,
-      fixtures.runtime(scope, model),
-      'retry-worker',
-      [scope.workspaceId],
-      () => 0,
-    );
-    expect(await fixtures.run(queued.id)).toMatchObject({ status: 'retry_wait', attempt_count: 1 });
     await runAgentOnce(
       queue,
       fixtures.runtime(scope, scripted(['invalid', 'invalid'])),
-      'retry-worker',
+      'malformed-worker',
       [scope.workspaceId],
-      () => 0,
     );
     expect(await fixtures.run(queued.id)).toMatchObject({
       status: 'failed',
@@ -1160,7 +1108,9 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
       .set({ lease_expires_at: new Date(0) })
       .where('id', '=', run.id)
       .execute();
-    await queue.recover([scope.workspaceId], 1, (trx, row) => models.reconcile(trx, row));
+    await queue.recover([scope.workspaceId], 1, agentPolicy.unclaimed_grace_seconds, (trx, row) =>
+      models.reconcile(trx, row),
+    );
     await models.receipt(scope.workspaceId, attempt.id, result(reply()));
     expect(settlement).toHaveBeenCalledTimes(1);
     expect(
@@ -1246,8 +1196,10 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
       .where('id', '=', run.id)
       .execute();
     const restored = new ModelCalls(db, zeroFunding);
-    await queue.recover([scope.workspaceId], 1, (trx, row) => restored.reconcile(trx, row));
-    expect((await fixtures.run(run.id)).status).toBe('retry_wait');
+    await queue.recover([scope.workspaceId], 1, agentPolicy.unclaimed_grace_seconds, (trx, row) =>
+      restored.reconcile(trx, row),
+    );
+    expect((await fixtures.run(run.id)).status).toBe('failed');
     expect(
       await db
         .selectFrom('agent_model_attempts')

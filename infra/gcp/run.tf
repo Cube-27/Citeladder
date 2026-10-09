@@ -31,7 +31,8 @@ resource "google_cloud_run_v2_service" "api" {
 
   template {
     service_account                  = google_service_account.runtime.email
-    timeout                          = "300s"
+    # An Agent turn lives inside its streamed request (turn_timeout_seconds 840).
+    timeout                          = "900s"
     max_instance_request_concurrency = 40
 
     scaling {

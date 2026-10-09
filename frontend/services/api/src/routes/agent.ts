@@ -21,7 +21,6 @@ import { readBody } from '../http/body.ts';
 import { agentBindings } from '../agent/bindings.ts';
 import { runAgentOnce } from '../agent/worker.ts';
 import type { TurnEvents } from '../agent/stream.ts';
-import { interactiveExecution } from '../config/execution.ts';
 import { agentPolicy, AgentError, type Scope } from '../agent/contracts.ts';
 import { authorize } from '../agent/access.ts';
 import { readChat, listChats, listRevisions, runView, revisionView } from '../agent/reads.ts';
@@ -99,9 +98,12 @@ function conflictCode(code: string) {
 function turnStream(
   execute: (events: TurnEvents) => Promise<unknown>,
   finished: () => Promise<z.infer<typeof agentRunSchema>>,
+  onCancel: () => void,
 ) {
   const encoder = new TextEncoder();
   return new ReadableStream<Uint8Array>({
+    // The reader went away: the browser closed, so the turn stops.
+    cancel: onCancel,
     start(controller) {
       let open = true;
       const write = (chunk: string) => {
@@ -160,27 +162,23 @@ export const agentRoutes = [
           .where('id', '=', path.run_id)
           .executeTakeFirst();
       if (!(await read())) throw notFound('Agent run');
-      const { queue, runtime, settings } = await agentBindings(db);
-      // The turn runs to its own deadline whether or not the browser stays:
-      // a closed stream drops only the display, and recovery owns the rest.
+      const { queue, runtime } = await agentBindings(db);
+      // The turn lives as long as this request: in-app navigation keeps the
+      // browser's stream open, and closing the browser ends the turn as
+      // interrupted. Its own time limit ends it as turn_timeout.
+      const gone = new AbortController();
+      const signal = AbortSignal.any([
+        c.req.raw.signal,
+        gone.signal,
+        AbortSignal.timeout(agentPolicy.turn_timeout_seconds * 1000),
+      ]);
       const execute = (events?: TurnEvents) =>
         mapped(() =>
-          runAgentOnce(
-            queue,
-            runtime,
-            `interactive-agent:${randomUUID()}`,
-            [value.workspaceId],
-            (attempt) =>
-              Math.min(
-                settings.retryMaxSeconds,
-                settings.retryBaseSeconds * 2 ** Math.max(0, attempt - 1),
-              ),
-            {
-              runId: path.run_id,
-              signal: AbortSignal.timeout(interactiveExecution.timeoutSeconds * 1000),
-              events,
-            },
-          ),
+          runAgentOnce(queue, runtime, `interactive-agent:${randomUUID()}`, [value.workspaceId], {
+            runId: path.run_id,
+            signal,
+            events,
+          }),
         );
       const finished = async () => {
         const run = await read();
@@ -191,13 +189,16 @@ export const agentRoutes = [
         await execute();
         return c.json(await finished());
       }
-      return new Response(turnStream(execute, finished), {
-        headers: {
-          'content-type': 'text/event-stream',
-          'cache-control': 'no-cache',
-          'x-accel-buffering': 'no',
+      return new Response(
+        turnStream(execute, finished, () => gone.abort()),
+        {
+          headers: {
+            'content-type': 'text/event-stream',
+            'cache-control': 'no-cache',
+            'x-accel-buffering': 'no',
+          },
         },
-      });
+      );
     },
   }),
   defineGetRoute({

@@ -57,6 +57,7 @@ const DETAIL = {
     output_phase: null,
     last_activity_at: NOW,
     created_at: NOW,
+    running: false,
   },
   pinned_skill_id: null,
   context: {},

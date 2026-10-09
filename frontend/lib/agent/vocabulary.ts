@@ -205,6 +205,9 @@ const RUN_ERROR_COPY: Record<string, string> = {
   funding_unavailable: 'There are not enough AI credits to finish this request.',
   capability_unavailable: 'Your plan does not include the agent.',
   provider_error: 'The model provider returned an error. Try again.',
+  interrupted: 'The page closed before the agent finished. Nothing was saved; send it again.',
+  turn_timeout:
+    'This turn ran past its time limit. Nothing was saved; narrow the request and try again.',
   tool_failed: 'A data read failed. Try again.',
   protocol_violation: 'The agent returned a response it could not use. Try again.',
   incompatible_budget:

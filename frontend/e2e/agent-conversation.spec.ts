@@ -30,6 +30,7 @@ function chatDetail(): AgentChatDetail {
       output_phase: null,
       last_activity_at: NOW,
       created_at: NOW,
+      running: false,
     },
     pinned_skill_id: 'growth_plan',
     context: {

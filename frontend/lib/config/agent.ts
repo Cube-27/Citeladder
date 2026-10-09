@@ -5,7 +5,14 @@
  */
 export const AGENT_CHAT_PAGE_SIZE = 30;
 export const AGENT_ACTIONS_PAGE_SIZE = 50;
-export const AGENT_RUN_POLL_MS = 2_000;
+/** A turn without this tab's stream is polled quickly at first, then less often. */
+export const AGENT_RUN_POLL_STEPS: readonly { untilMs: number; everyMs: number }[] = [
+  { untilMs: 30_000, everyMs: 2_000 },
+  { untilMs: 120_000, everyMs: 5_000 },
+];
+export const AGENT_RUN_POLL_MAX_MS = 10_000;
+/** The chat list refreshes at this cadence while any listed chat has a turn running. */
+export const AGENT_CHAT_LIST_POLL_MS = 5_000;
 /** Distance from the end that still counts as following the conversation. */
 export const AGENT_FOLLOW_LATEST_GAP_PX = 96;
 /** New chat shows this many top Actions under "Work on this". */

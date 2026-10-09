@@ -6,6 +6,7 @@ import { createApp } from '../src/app.ts';
 import { createAgentBindings } from '../src/agent/bindings.ts';
 import * as bindingsOwner from '../src/agent/bindings.ts';
 import { ModelCalls } from '../src/agent/model-calls.ts';
+import { recoveryReply } from '../src/agent/messages.ts';
 import { AgentWorker } from '../src/workers/agent-worker.ts';
 import { AgentFixtures, scripted, deliverable, zeroFunding } from './agent-support.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
@@ -51,7 +52,7 @@ describe('served Agent cutover on PostgreSQL', () => {
       scope,
       bindings,
       headers,
-      worker: new AgentWorker(db, bindings, 'cutover-test-worker', scope.workspaceId),
+      worker: new AgentWorker(db, bindings, scope.workspaceId),
     };
   }
   it('streams one interactive turn as step, text and done events, saving the same reply', async () => {
@@ -89,6 +90,47 @@ describe('served Agent cutover on PostgreSQL', () => {
       { method: 'POST', headers: { ...headers, Accept: 'text/event-stream' } },
     );
     expect((await again.text()).match(/"type":"(\w+)"/gu)).toEqual(['"type":"done"']);
+  });
+  it('ends the turn as interrupted when the browser closes its stream', async () => {
+    const { scope, bindings, headers } = await setup();
+    let started!: () => void;
+    const calling = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    bindings.runtime.deps.modelFor = () => ({
+      ...scripted([]),
+      // The model answers only when the turn is stopped.
+      complete: (_request, signal) =>
+        new Promise((_resolve, reject) => {
+          started();
+          signal?.addEventListener('abort', () => reject(signal.reason));
+        }),
+    });
+    const accepted = agentTurnAcceptedSchema.parse(
+      await (
+        await app.request(`/api/v1/projects/${scope.projectId}/agent/chats`, {
+          method: 'POST',
+          headers: { ...headers, 'Idempotency-Key': randomUUID() },
+          body: JSON.stringify({ message: 'Explain our visibility' }),
+        })
+      ).json(),
+    );
+    const response = await app.request(
+      `/api/v1/agent/chats/${accepted.chat_id}/runs/${accepted.run.id}/run`,
+      { method: 'POST', headers: { ...headers, Accept: 'text/event-stream' } },
+    );
+    await calling;
+    await response.body?.cancel();
+    await vi.waitFor(async () =>
+      expect(await fixtures.run(accepted.run.id)).toMatchObject({
+        status: 'failed',
+        error_code: 'interrupted',
+      }),
+    );
+    const detail = agentChatDetailSchema.parse(
+      await (await app.request(`/api/v1/agent/chats/${accepted.chat_id}`, { headers })).json(),
+    );
+    expect(detail.messages.at(-1)?.content).toBe(recoveryReply('interrupted'));
   });
   it('projects only public skill metadata on the raw HTTP wire', async () => {
     const { headers } = await setup();
@@ -137,7 +179,12 @@ describe('served Agent cutover on PostgreSQL', () => {
     const before = await app.request(chat, { headers });
     expect(before.status).toBe(200);
     expect(agentChatDetailSchema.parse(await before.json()).latest_run?.status).toBe('queued');
-    expect(await worker.runUntilIdle()).toBe(1);
+    // The runner never executes a turn; the browser's run request does.
+    expect(await worker.runUntilIdle()).toBe(0);
+    expect(
+      (await app.request(`${chat}/runs/${accepted.run.id}/run`, { method: 'POST', headers }))
+        .status,
+    ).toBe(200);
     const detail = agentChatDetailSchema.parse(await (await app.request(chat, { headers })).json());
     expect(detail.latest_run?.status).toBe('succeeded');
     expect(detail.output?.latest_revision?.phase).toBe('outline');
@@ -203,7 +250,7 @@ describe('served Agent cutover on PostgreSQL', () => {
       error: { code: 'agent_idempotency_conflict', details: { reason: 'legacy_runtime' } },
     });
   });
-  it('recovers an expired claim before draining, fences cancellation and refuses foreign chat reads', async () => {
+  it('ends an expired claim as interrupted, fences cancellation and refuses foreign chat reads', async () => {
     const { scope, bindings, headers, worker } = await setup();
     const run = await bindings.store.enqueue(scope, {
       message: 'Write a plan',
@@ -219,7 +266,10 @@ describe('served Agent cutover on PostgreSQL', () => {
       .where('id', '=', run.id)
       .execute();
     expect(await worker.runUntilIdle()).toBe(1);
-    expect((await fixtures.run(run.id)).status).toBe('succeeded');
+    expect(await fixtures.run(run.id)).toMatchObject({
+      status: 'failed',
+      error_code: 'interrupted',
+    });
     const next = await bindings.store.enqueue(scope, {
       message: 'Continue',
       key: randomUUID(),

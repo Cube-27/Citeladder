@@ -88,7 +88,6 @@ export const executionTables = new Set([
   'analytics_tasks',
   'brand_discovery_tasks',
   'integration_sync_runs',
-  'agent_runs',
   'audit_tasks',
   'site_crawl_tasks',
   'pending_activations',

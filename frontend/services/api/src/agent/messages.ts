@@ -81,6 +81,10 @@ const RECOVERY: Record<string, string> = {
   provider_error:
     'The AI model did not respond after several attempts. Nothing was saved; try again in a moment.',
   cancelled: 'Stopped. Nothing from this turn was saved.',
+  interrupted:
+    'The page closed before I finished, so this turn stopped. Nothing was saved; send it again.',
+  turn_timeout:
+    'This turn ran past its time limit, so it stopped. Nothing was saved. Narrow the request and try again.',
   trial_expired: 'This workspace’s trial has ended, so the agent cannot run. Nothing was saved.',
   access_unresolved:
     'Workspace access could not be confirmed, so the agent stopped. Nothing was saved; contact support if this continues.',
@@ -91,8 +95,6 @@ const RECOVERY: Record<string, string> = {
 };
 const GENERIC_RECOVERY =
   'I couldn’t complete this request. Nothing was saved; your messages and existing work are still here. Try again in this chat.';
-// A lost lease and a provider failure look the same to the reader.
-RECOVERY.max_attempts_exceeded = RECOVERY.provider_error!;
 export function recoveryReply(code: string) {
   return RECOVERY[code] ?? GENERIC_RECOVERY;
 }
