@@ -141,6 +141,21 @@ async function readCompletion(
 }
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
 
+/** The start of a rejection's body, read without buffering an oversized one. */
+async function errorExcerpt(response: Response, limit = 8192) {
+  const reader = response.clone().body?.getReader();
+  if (!reader) return '';
+  const decoder = new TextDecoder();
+  let text = '';
+  while (text.length < limit) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    text += decoder.decode(value, { stream: true });
+  }
+  await reader.cancel();
+  return text.slice(0, limit);
+}
+
 /** The prompt-only form of a schema, for destinations without strict structured outputs. */
 function withSchema(user: string, schema: unknown) {
   return `${user}\n\nReturn only JSON matching this schema:\n${JSON.stringify(schema)}`;
@@ -250,7 +265,7 @@ export function createModelGateway(
     let response = await send(legacy, strict);
     // A destination may reject the newer cap name or strict schemas: ask again without each.
     for (let fallback = 0; fallback < 2 && [400, 422].includes(response.status); fallback++) {
-      if (!legacy && (await response.clone().text()).includes('max_completion_tokens'))
+      if (!legacy && (await errorExcerpt(response)).includes('max_completion_tokens'))
         legacy = true;
       else if (strict) strict = false;
       else break;
