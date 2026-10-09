@@ -87,12 +87,19 @@ export function BrandProfilePanel({
   competitors = [],
   competitorSuggestions,
   onSaved,
+  header = (actions) => <div className="flex justify-end">{actions}</div>,
 }: Readonly<{
   projectId: string;
   profile: BrandProfile;
   competitors?: readonly TrackedCompetitor[];
   competitorSuggestions?: ReactNode;
   onSaved?: () => void;
+  /**
+   * Places the save action, normally in the section header beside its title.
+   * The action keeps its box on the Business map tab (which saves on its own),
+   * so switching tabs never moves the layout.
+   */
+  header?: (actions: ReactNode) => ReactNode;
 }>) {
   const queryClient = useQueryClient();
   const workspaceId = useActiveWorkspaceId();
@@ -137,16 +144,17 @@ export function BrandProfilePanel({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className={activeTab === 'map' ? 'hidden' : 'flex justify-end'}>
+      {header(
         <Button
           variant="primary"
+          className={activeTab === 'map' ? 'invisible' : undefined}
           onClick={() => saveMutation.mutate()}
           disabled={!workspaceId || saveMutation.isPending}
         >
           <Save className="size-4" aria-hidden />
           {saveMutation.isPending ? 'Saving…' : 'Save brand knowledge'}
-        </Button>
-      </div>
+        </Button>,
+      )}
 
       {saveMutation.error ? (
         <Alert tone="danger">{humanizeApiError(saveMutation.error).message}</Alert>

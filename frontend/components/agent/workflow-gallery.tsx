@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { panelClasses } from '@/components/ui/panel';
 import { Pressable } from '@/components/ui/pressable';
 import { textRole } from '@/components/ui/typography';
+import { cn } from '@/lib/utils';
 import { missingInputs, workflowMessage, type WorkflowValues } from '@/lib/agent/workflows';
 import type { AgentWorkflow } from '@/lib/api/agent';
 
@@ -26,7 +27,6 @@ export function WorkflowGallery({
   const [chosenGroup, setChosenGroup] = useState<string | null>(null);
   const group = chosenGroup ?? catalog.workflow_groups[0]?.id;
   if (catalog.workflows.length === 0) return null;
-  const shown = catalog.workflows.filter((workflow) => workflow.group === group);
   return (
     <section aria-labelledby="agent-workflows" className="grid gap-3">
       <h3 id="agent-workflows" className={textRole('label')}>
@@ -44,20 +44,40 @@ export function WorkflowGallery({
           </FilterChip>
         ))}
       </fieldset>
-      <ul className="grid gap-2 sm:grid-cols-2">
-        {shown.map((workflow) => (
-          <li key={workflow.id} className="flex">
-            <Pressable
-              disabled={disabled}
-              onClick={() => onPick(workflow)}
-              className={panelClasses({ pad: 'compact' }, 'hover:bg-hover grid gap-1')}
+      {/* Every group's cards share one grid cell, so the gallery is always as
+          tall as its largest group: choosing a group never moves the page
+          (which centres this column). Only the chosen group is live. */}
+      <div className="grid">
+        {catalog.workflow_groups.map((option) => {
+          const live = option.id === group;
+          return (
+            <ul
+              key={option.id}
+              inert={!live}
+              aria-hidden={!live || undefined}
+              className={cn(
+                'col-start-1 row-start-1 grid content-start gap-2 sm:grid-cols-2',
+                !live && 'invisible',
+              )}
             >
-              <span className={textRole('itemTitle')}>{workflow.label}</span>
-              <span className={textRole('caption')}>{workflow.description}</span>
-            </Pressable>
-          </li>
-        ))}
-      </ul>
+              {catalog.workflows
+                .filter((workflow) => workflow.group === option.id)
+                .map((workflow) => (
+                  <li key={workflow.id} className="flex">
+                    <Pressable
+                      disabled={disabled}
+                      onClick={() => onPick(workflow)}
+                      className={panelClasses({ pad: 'compact' }, 'hover:bg-hover grid gap-1')}
+                    >
+                      <span className={textRole('itemTitle')}>{workflow.label}</span>
+                      <span className={textRole('caption')}>{workflow.description}</span>
+                    </Pressable>
+                  </li>
+                ))}
+            </ul>
+          );
+        })}
+      </div>
     </section>
   );
 }

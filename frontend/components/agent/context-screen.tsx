@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 
 import { BrandProfilePanel } from '@/components/knowledge-base/brand-profile-panel';
 import { PageShell } from '@/components/layout/page-shell';
@@ -181,11 +181,7 @@ function CompanyFacts({
   });
   return (
     <Stack as="section" aria-labelledby="company-facts">
-      <EditorialSectionHeader
-        title="Company facts"
-        headingId="company-facts"
-        description="The canonical facts and competitors used across CiteLadder, including by the agent."
-      />
+      {profile.data ? null : <CompanyFactsHeader />}
       {profile.isError ? (
         <ReadError {...readErrorProps(profile)} fallback="Company facts could not be loaded." />
       ) : null}
@@ -204,8 +200,20 @@ function CompanyFacts({
               queryKey: queryKeys.projects.commandCenter(project.id),
             })
           }
+          header={(actions) => <CompanyFactsHeader actions={actions} />}
         />
       ) : null}
     </Stack>
+  );
+}
+
+function CompanyFactsHeader({ actions }: Readonly<{ actions?: ReactNode }>) {
+  return (
+    <EditorialSectionHeader
+      title="Company facts"
+      headingId="company-facts"
+      description="The canonical facts and competitors used across CiteLadder, including by the agent."
+      actions={actions}
+    />
   );
 }
