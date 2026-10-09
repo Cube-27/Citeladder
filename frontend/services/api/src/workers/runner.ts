@@ -256,12 +256,10 @@ export async function runnerOwners(db: Database, config: ServiceConfig) {
         run: (canAdmit) => cleanupMcpProtocol(db, new Date(), canAdmit),
       },
       { name: 'queue-recovery', run: (canAdmit) => recoverQueues(db, canAdmit) },
+      { name: 'audit-maintenance', run: (canAdmit) => maintenance.runOnce(new Date(), canAdmit) },
       {
-        name: 'audit-maintenance',
-        run: async (canAdmit) => {
-          await maintenance.runOnce(new Date(), canAdmit);
-          if (canAdmit()) await reconcileResearch(db, new Date(), canAdmit);
-        },
+        name: 'research-recovery',
+        run: (canAdmit) => reconcileResearch(db, new Date(), canAdmit),
       },
       { name: 'audit-scheduler', run: (canAdmit) => scheduler.runOnce(scheduler.now(), canAdmit) },
       { name: 'integration-dispatcher', run: (canAdmit) => dispatcher.runOnce(canAdmit) },

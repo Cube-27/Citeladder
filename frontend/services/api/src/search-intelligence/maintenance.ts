@@ -35,7 +35,7 @@ export async function reconcileResearch(db: Database, at = new Date(), canAdmit 
         .execute();
       for (const call of receipts) {
         const plan = plans[call.sequence];
-        if (plan && (await state.publish(plan, call.id, plans.slice(call.sequence + 1), at, true)))
+        if (plan && (await state.settle(plan, call.id, plans.slice(call.sequence + 1), at, true)))
           break;
       }
       await db.transaction().execute(async (trx) => {

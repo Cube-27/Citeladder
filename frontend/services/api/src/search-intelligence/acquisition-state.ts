@@ -9,9 +9,10 @@ import type {
   SearchIntelligenceDatasets,
 } from '../generated/db-schema.ts';
 import { si } from './requests.ts';
-import { normalizeResponse } from './normalization.ts';
+import { INT4_MAX, normalizeResponse } from './normalization.ts';
 import type { ResearchResponse } from './live.ts';
-import { ProviderError } from '../answer-engines/contracts.ts';
+import type { ProviderError } from '../answer-engines/contracts.ts';
+import { isDataError } from '../db/errors.ts';
 
 type Run = Selectable<SearchIntelligenceRuns>;
 type Call = Selectable<SearchIntelligenceCalls>;
@@ -250,6 +251,15 @@ export class AcquisitionState {
         .where('phase', '=', 'dispatch')
         .orderBy('ordinal', 'desc')
         .executeTakeFirst();
+      // The reviewed estimate is a ceiling: never send a call that could pass it.
+      if (
+        call.status === 'intent' &&
+        money(run.provider_reported_cost_usd) + money(call.estimated_cost_usd) >
+          money(run.estimated_cost_usd) + run.planned_calls
+      ) {
+        await this.stopRun(trx, run, 'cost_ceiling_reached', at);
+        return { action: 'stop' };
+      }
       if (call.status === 'dispatched' && call.sanitized_response === null) {
         if (latest)
           await this.outcome(
@@ -577,7 +587,7 @@ export class AcquisitionState {
         .set({
           raw_rows_received: received,
           unique_rows_saved: count.count,
-          provider_total: total,
+          provider_total: total !== null && total > INT4_MAX ? null : total,
           summary: JSON.stringify({
             ...record(dataset.summary),
             ...normalized.summary,
@@ -630,7 +640,9 @@ export class AcquisitionState {
         .executeTakeFirst();
       if (!call) return { stop: true, wait: null };
       const uncertain = ['connection', 'timeout'].includes(error.code),
-        retry = error.code === 'rate_limit' && prepared.ordinal <= si.rate_limit_retries;
+        retry = error.code === 'rate_limit' && prepared.ordinal <= si.rate_limit_retries,
+        // Every remaining call would use the same refused credential.
+        refused = error.code === 'auth_failure';
       await this.outcome(
         trx,
         call,
@@ -672,8 +684,9 @@ export class AcquisitionState {
           .where('workspace_id', '=', run.workspace_id)
           .execute();
       if (uncertain) await this.closeCollecting(trx, at);
+      else if (refused) await this.stopRun(trx, run, error.code, at);
       return {
-        stop: uncertain,
+        stop: uncertain || refused,
         wait: retry
           ? new Date(
               at.getTime() +
@@ -709,6 +722,114 @@ export class AcquisitionState {
         .where('workspace_id', '=', run.workspace_id)
         .execute();
     });
+  }
+  /** Publish a saved receipt; one the schema refuses fails its dataset instead of blocking the run. */
+  async settle(
+    plan: ResearchPlan,
+    callId: string,
+    later: ResearchPlan[],
+    at = new Date(),
+    terminalTask = false,
+  ) {
+    try {
+      return await this.publish(plan, callId, later, at, terminalTask);
+    } catch (cause) {
+      if (!isDataError(cause)) throw cause;
+      return this.reject(callId, at, terminalTask);
+    }
+  }
+  /** The paid receipt stays as provenance; its reported cost still counts. */
+  async reject(callId: string, at = new Date(), terminalTask = false) {
+    return this.db.transaction().execute(async (trx) => {
+      const run = await this.run(trx).forUpdate().executeTakeFirst();
+      if (
+        !run ||
+        !['running', 'queued'].includes(run.status) ||
+        !(terminalTask ? await this.terminalTask(trx) : await this.owned(trx))
+      )
+        return true;
+      const call = await this.calls(trx)
+        .where('id', '=', callId)
+        .where('status', '=', 'dispatched')
+        .forUpdate()
+        .executeTakeFirst();
+      if (!call) return true;
+      await trx
+        .updateTable('search_intelligence_calls')
+        .set({
+          status: 'failed',
+          completed_at: at,
+          error_code: 'normalization_failed',
+          error_detail: 'The provider response could not be saved',
+        })
+        .where('id', '=', call.id)
+        .where('workspace_id', '=', run.workspace_id)
+        .execute();
+      await trx
+        .updateTable('search_intelligence_datasets')
+        .set({ status: 'failed', coverage: 'unknown', collection_ended_at: at })
+        .where('id', '=', call.dataset_id)
+        .where('workspace_id', '=', run.workspace_id)
+        .execute();
+      const missingCost = call.provider_reported_cost_usd === null;
+      await trx
+        .updateTable('search_intelligence_runs')
+        .set({
+          provider_reported_cost_usd: missingCost
+            ? run.provider_reported_cost_usd
+            : amount(
+                money(run.provider_reported_cost_usd) + money(call.provider_reported_cost_usd),
+              ),
+          ...(missingCost
+            ? {
+                status: 'uncertain',
+                uncertain_calls: run.uncertain_calls + 1,
+                error_code: 'provider_cost_unavailable',
+                completed_at: at,
+              }
+            : {}),
+          updated_at: at,
+        })
+        .where('id', '=', run.id)
+        .where('workspace_id', '=', run.workspace_id)
+        .execute();
+      if (missingCost) await this.closeCollecting(trx, at);
+      return missingCost;
+    });
+  }
+  /** A local check failed before dispatch: nothing was sent, and no later call can be either. */
+  async refuse(
+    prepared: Extract<PreparedResearch, { action: 'dispatch' | 'publish' }>,
+    error: ProviderError,
+    at = new Date(),
+  ) {
+    return this.db.transaction().execute(async (trx) => {
+      const run = await this.run(trx).forUpdate().executeTakeFirst();
+      if (!run || run.status !== 'running' || !(await this.owned(trx))) return;
+      await trx
+        .updateTable('search_intelligence_calls')
+        .set({ status: 'failed', completed_at: at, error_code: error.code, error_detail: '' })
+        .where('id', '=', prepared.call.id)
+        .where('workspace_id', '=', run.workspace_id)
+        .where('status', '=', 'intent')
+        .execute();
+      await this.stopRun(trx, run, error.code, at);
+    });
+  }
+  /** End a running run early; completed datasets remain. */
+  private async stopRun(trx: Database, run: Run, code: string, at: Date) {
+    await trx
+      .updateTable('search_intelligence_runs')
+      .set({
+        status: run.completed_calls ? 'partial' : 'failed',
+        error_code: code,
+        completed_at: at,
+        updated_at: at,
+      })
+      .where('id', '=', run.id)
+      .where('workspace_id', '=', run.workspace_id)
+      .execute();
+    await this.closeCollecting(trx, at);
   }
   /** A terminal run cannot leave a dataset waiting for another paid dispatch. */
   closeCollecting(db: Database, at: Date) {

@@ -96,18 +96,6 @@ export const reviewBody = z.object({
 });
 export type ReviewInput = z.output<typeof reviewBody>;
 
-export const contentHandoffBody = z.object({
-  dataset_id: z.uuid(),
-  row_ids: z.array(z.uuid()).min(1).max(100),
-});
-
-export const contentHandoffResponse = z.object({
-  project_id: z.uuid(),
-  dataset_id: z.uuid(),
-  row_ids: z.array(z.uuid()),
-  evidence: z.array(z.record(z.string(), z.unknown())),
-});
-
 export const citationMatchBody = z.object({
   backlink_dataset_id: z.uuid(),
   audit_ids: z.array(z.uuid()).min(1).max(50),

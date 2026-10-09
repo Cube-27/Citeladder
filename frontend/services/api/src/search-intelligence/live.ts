@@ -22,21 +22,24 @@ const numericCost = (value: unknown) =>
   Number(value) >= 0
     ? String(value)
     : null;
-/** One paid Live POST; classification and bounded retries belong to persisted dispatch evidence. */
-export async function executeLive(
-  input: {
-    encryptedSecret: string;
-    encryptionKey: string;
-    endpoint: string;
-    payload: Record<string, unknown>;
-    baseUrl: string;
-  },
-  options: {
-    send?: typeof fetch;
-    env?: Record<string, string | undefined>;
-    signal?: AbortSignal;
-  } = {},
-): Promise<ResearchResponse> {
+type LiveInput = {
+  encryptedSecret: string;
+  encryptionKey: string;
+  endpoint: string;
+  baseUrl: string;
+};
+type LiveOptions = {
+  send?: typeof fetch;
+  env?: Record<string, string | undefined>;
+  signal?: AbortSignal;
+};
+export type LiveTarget = { url: string; authorization: string };
+
+/** Every local check a call needs, before its dispatch commits: nothing here is sent. */
+export function resolveLive(
+  input: LiveInput,
+  env?: Record<string, string | undefined>,
+): LiveTarget {
   if (
     ![...Object.values(si.endpoints), ...Object.values(si.broad_endpoints)].includes(input.endpoint)
   )
@@ -49,20 +52,44 @@ export async function executeLive(
   } catch {
     throw new ProviderError('auth_failure');
   }
-  const base = approvedEndpoint('dataforseo', input.baseUrl, providerSettings(options.env));
+  let base: string;
+  try {
+    base = approvedEndpoint('dataforseo', input.baseUrl, providerSettings(env));
+  } catch {
+    throw new ProviderError('client_error');
+  }
+  return {
+    url: `${base}${input.endpoint}`,
+    authorization: `Basic ${Buffer.from(`${pair.login}:${pair.password}`).toString('base64')}`,
+  };
+}
+
+/** One paid Live POST; classification and bounded retries belong to persisted dispatch evidence. */
+export async function executeLive(
+  input: LiveInput & { payload: Record<string, unknown> },
+  options: LiveOptions = {},
+): Promise<ResearchResponse> {
+  return sendLive(resolveLive(input, options.env), input.payload, options);
+}
+
+export async function sendLive(
+  target: LiveTarget,
+  payload: Record<string, unknown>,
+  options: LiveOptions = {},
+): Promise<ResearchResponse> {
   const signal = AbortSignal.any([
     AbortSignal.timeout(si.provider_timeout_seconds * 1000),
     ...(options.signal ? [options.signal] : []),
   ]);
   let response: Response;
   try {
-    response = await (options.send ?? fetch)(`${base}${input.endpoint}`, {
+    response = await (options.send ?? fetch)(target.url, {
       method: 'POST',
       headers: {
-        authorization: `Basic ${Buffer.from(`${pair.login}:${pair.password}`).toString('base64')}`,
+        authorization: target.authorization,
         'content-type': 'application/json',
       },
-      body: JSON.stringify([input.payload]),
+      body: JSON.stringify([payload]),
       redirect: 'error',
       signal,
     });

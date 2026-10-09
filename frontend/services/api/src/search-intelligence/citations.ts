@@ -152,7 +152,13 @@ export function deriveCitationMatches(
         location_code: null,
         language_code: '',
         status: 'published',
-        coverage: matches.length > 0 ? 'complete' : 'empty',
+        // Matches are only as complete as the referring domains they were read against.
+        coverage:
+          parent.truncated || !['complete', 'empty'].includes(parent.coverage)
+            ? 'partial'
+            : matches.length > 0
+              ? 'complete'
+              : 'empty',
         requested_rows: citations.length,
         raw_rows_received: citations.length,
         unique_rows_saved: matches.length,

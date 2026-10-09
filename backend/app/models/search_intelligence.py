@@ -23,7 +23,6 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.config.search_intelligence import PARSER_VERSION, PRICE_VERSION
 from app.core.database import Base
 from app.models.constants import CASCADE_ALL_DELETE_ORPHAN
 
@@ -95,7 +94,7 @@ class SearchIntelligenceRun(Base):
     frozen_scope: Mapped[dict] = mapped_column(JSONB)
     call_plan: Mapped[list] = mapped_column(JSONB)
     reused_datasets: Mapped[list] = mapped_column(JSONB, default=list)
-    pricing_version: Mapped[str] = mapped_column(String(64), default=PRICE_VERSION)
+    pricing_version: Mapped[str] = mapped_column(String(64))
     estimated_cost_usd: Mapped[Decimal] = mapped_column(Numeric(20, 8))
     provider_reported_cost_usd: Mapped[Decimal | None] = mapped_column(
         Numeric(20, 8), nullable=True
@@ -191,7 +190,7 @@ class SearchIntelligenceDataset(Base):
     truncated: Mapped[bool] = mapped_column(Boolean, default=False)
     summary: Mapped[dict] = mapped_column(JSONB, default=dict)
     provider_filters: Mapped[dict] = mapped_column(JSONB)
-    parser_version: Mapped[str] = mapped_column(String(32), default=PARSER_VERSION)
+    parser_version: Mapped[str] = mapped_column(String(32))
     collection_started_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

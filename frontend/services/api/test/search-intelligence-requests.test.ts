@@ -7,6 +7,7 @@ import {
   type RequestOptions,
 } from '../src/search-intelligence/requests.ts';
 import { reviewBody } from '../src/routes/search-intelligence-contracts.ts';
+import { policy } from '../src/config.ts';
 
 const target = {
   identity: 'primary',
@@ -102,16 +103,23 @@ describe('reviewed Search Intelligence requests', () => {
       'and',
       ['domain_from', 'not_like', '%.example.com'],
     ]);
+    // Each page is one billed task; each row is billed once, whatever the page split.
+    const rate = (key: keyof typeof policy.search_intelligence.rates) =>
+      Number(policy.search_intelligence.rates[key]) * 1e6;
+    const quote = (calls: number, rows: number, task: number, row: number) =>
+      Math.round(calls * task + rows * row);
     expect(quoteDataset('ranking_keywords', 1001)).toEqual({
       calls: 2,
       rows: 1001,
-      costMicrousd: 144120,
+      costMicrousd: quote(2, 1001, rate('labs_task'), rate('labs_item')),
     });
-    expect(quoteDataset('backlink_history', 13).costMicrousd).toBe(24468);
+    expect(quoteDataset('backlink_history', 13).costMicrousd).toBe(
+      quote(1, 13, rate('backlinks_request'), rate('backlinks_row')),
+    );
     expect(quoteDataset('referring_domains', 1001)).toEqual({
       calls: 2,
       rows: 1001,
-      costMicrousd: 84036,
+      costMicrousd: quote(2, 1001, rate('backlinks_request'), rate('backlinks_row')),
     });
   });
   it('rejects selections with no supported acquisition semantics', () => {

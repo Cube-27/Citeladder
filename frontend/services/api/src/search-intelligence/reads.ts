@@ -94,10 +94,12 @@ export async function readiness(
       .orderBy('competitors.id')
       .execute(),
     eligibleConnections(db, scope.workspace),
+    // An unconfirmed cost review is a draft, never the acquisition the screen follows.
     scope.workspace
       .selectFrom(db, 'search_intelligence_runs')
       .selectAll()
       .where('project_id', '=', scope.projectId)
+      .where('confirmed_at', 'is not', null)
       .orderBy('created_at', 'desc')
       .orderBy('id', 'desc')
       .limit(1)
@@ -137,6 +139,7 @@ export async function listRuns(db: Database, scope: Scope, offset: number, limit
     .selectFrom(db, 'search_intelligence_runs')
     .selectAll()
     .where('project_id', '=', scope.projectId)
+    .where('confirmed_at', 'is not', null)
     .orderBy('created_at', 'desc')
     .orderBy('id', 'desc')
     .offset(offset)

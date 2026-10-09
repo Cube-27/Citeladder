@@ -11,6 +11,8 @@ import type { z } from 'zod';
 
 import { createApp } from '../src/app.ts';
 import { policy } from '../src/config.ts';
+import { WorkspaceScope } from '../src/db/workspace-scope.ts';
+import { contentHandoff } from '../src/search-intelligence/reads.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
 
@@ -77,7 +79,7 @@ async function connection(tenant: Tenant, options: { active?: boolean; tested?: 
   return id;
 }
 
-/** A run as the Python review creator writes it. */
+/** A run as the review creator writes it. */
 async function review(
   tenant: Tenant,
   connectionId: string,
@@ -88,6 +90,7 @@ async function review(
     pricingVersion?: string;
     revision?: string;
     createdAt?: Date;
+    confirmedAt?: Date;
   } = {},
 ) {
   const id = randomUUID();
@@ -117,6 +120,7 @@ async function review(
       error_code: '',
       error_detail: '',
       expires_at: options.expiresAt ?? new Date(Date.now() + 600_000),
+      confirmed_at: options.confirmedAt ?? null,
       created_at: options.createdAt ?? now(),
       updated_at: now(),
     })
@@ -127,7 +131,7 @@ async function review(
 async function dataset(
   tenant: Tenant,
   runId: string,
-  options: { kind?: string; status?: string; scope?: string } = {},
+  options: { kind?: string; status?: string; scope?: string; coverage?: string } = {},
 ) {
   const id = randomUUID();
   await db
@@ -145,7 +149,7 @@ async function dataset(
       comparison_origin: '',
       language_code: 'en',
       status: options.status ?? 'published',
-      coverage: 'complete',
+      coverage: options.coverage ?? 'complete',
       requested_rows: 10,
       raw_rows_received: 10,
       unique_rows_saved: 10,
@@ -242,7 +246,6 @@ describe('Search Intelligence authorization', () => {
       ['GET', '/runs'],
       ['GET', `/runs/${runId}`],
       ['GET', `/datasets/${datasetId}/rows`],
-      ['POST', '/content-handoff', { dataset_id: datasetId, row_ids: [randomUUID()] }],
       ['POST', '/citation-matches', { backlink_dataset_id: datasetId, audit_ids: [randomUUID()] }],
     ];
     const outsider = await tenant();
@@ -306,8 +309,14 @@ describe('Search Intelligence readiness and preferences', () => {
       .set({ serp_location_code: 2036, serp_language_code: 'en' })
       .where('id', '=', t.projectId)
       .execute();
-    const older = await review(t, connectionId, { createdAt: new Date(Date.now() - 60_000) });
-    const latest = await review(t, connectionId);
+    const older = await review(t, connectionId, { createdAt: new Date(Date.now() - 120_000) });
+    const latest = await review(t, connectionId, {
+      status: 'running',
+      confirmedAt: now(),
+      createdAt: new Date(Date.now() - 60_000),
+    });
+    // A newer unconfirmed cost review does not replace the acquisition being followed.
+    await review(t, connectionId);
     const published = await dataset(t, older, { scope: 'domain_subdomains' });
     const legacy = await dataset(t, older);
     await dataset(t, older, { status: 'collecting' });
@@ -373,7 +382,7 @@ describe('Search Intelligence readiness and preferences', () => {
 });
 
 describe('Search Intelligence run confirmation and cancellation', () => {
-  it('queues a reviewed run once with its Python acquisition task', async () => {
+  it('queues a reviewed run once with its acquisition task', async () => {
     const connectionId = await connection(t);
     const runId = await review(t, connectionId);
     const confirmed = await call<Run>(`/runs/${runId}/confirm`, { method: 'POST' });
@@ -457,17 +466,24 @@ describe('Search Intelligence run confirmation and cancellation', () => {
     expect(task?.status).toBe('cancelled');
     expect(task?.completed_at).not.toBeNull();
 
-    const finished = await review(t, connectionId, { status: 'succeeded' });
-    const unchanged = await call<Run>(`/runs/${finished}/cancel`, { method: 'POST' });
-    expect([unchanged.body.status, unchanged.body.cancelled_at]).toEqual(['succeeded', null]);
+    // An uncertain run may have spent money; cancelling keeps that state.
+    for (const status of ['succeeded', 'uncertain']) {
+      const finished = await review(t, connectionId, { status });
+      const unchanged = await call<Run>(`/runs/${finished}/cancel`, { method: 'POST' });
+      expect([unchanged.body.status, unchanged.body.cancelled_at]).toEqual([status, null]);
+    }
     const missing = await call<ErrorBody>(`/runs/${randomUUID()}/cancel`, { method: 'POST' });
     expect(missing.status).toBe(404);
   });
 
-  it('lists runs newest first, pages them and hides other projects’ runs', async () => {
+  it('lists confirmed runs newest first, pages them and hides other projects’ runs', async () => {
     const connectionId = await connection(t);
-    const first = await review(t, connectionId, { createdAt: new Date(Date.now() - 60_000) });
-    const second = await review(t, connectionId);
+    const first = await review(t, connectionId, {
+      createdAt: new Date(Date.now() - 60_000),
+      confirmedAt: now(),
+    });
+    const second = await review(t, connectionId, { confirmedAt: now() });
+    await review(t, connectionId); // an unconfirmed draft
     const page = await call<Run[]>('/runs?limit=1&offset=1');
     expect(page.body.map((row) => row.id)).toEqual([first]);
     const detail = await call<Run>(`/runs/${second}`);
@@ -550,28 +566,36 @@ describe('Search Intelligence dataset rows and handoff', () => {
   });
 
   it('hands off exactly the selected rows of a published dataset', async () => {
-    const handoff = await call<{
-      row_ids: string[];
-      evidence: { id: string; dataset: { id: string } }[];
-    }>('/content-handoff', {
-      method: 'POST',
-      body: { dataset_id: datasetId, row_ids: [ids[1], ids[0]!.toUpperCase()] },
-    });
-    expect(handoff.status).toBe(200);
-    expect(handoff.body.row_ids).toEqual([ids[1], ids[0]]);
-    expect(handoff.body.evidence.map((row) => [row.id, row.dataset.id])).toEqual([
+    const scope = { workspace: new WorkspaceScope(t.workspaceId), projectId: t.projectId };
+    const handoff = await contentHandoff(db, scope, datasetId, [ids[1]!, ids[0]!.toUpperCase()]);
+    expect(handoff.row_ids).toEqual([ids[1], ids[0]]);
+    expect(handoff.evidence.map((row) => [row.id, row.dataset.id])).toEqual([
       [ids[1], datasetId],
       [ids[0], datasetId],
     ]);
-    const missing = await call<ErrorBody>('/content-handoff', {
-      method: 'POST',
-      body: { dataset_id: datasetId, row_ids: [ids[0], randomUUID()] },
-    });
-    expect([missing.status, missing.body.error.code]).toEqual([422, 'evidence_not_found']);
+    await expect(
+      contentHandoff(db, scope, datasetId, [ids[0]!, randomUUID()]),
+    ).rejects.toMatchObject({ status: 422 });
   });
 });
 
 describe('Search Intelligence citation matches', () => {
+  it('reports partial coverage when the referring domains were partial', async () => {
+    const runId = await review(t, await connection(t));
+    const parent = await dataset(t, runId, { kind: 'referring_domains', coverage: 'partial' });
+    const auditId = await fixtures.audit(t);
+    await fixtures.execution(t, {
+      auditId,
+      analysis: { citations: [{ url: 'https://unrelated.example/' }] },
+    });
+    const derived = await call<Dataset>('/citation-matches', {
+      method: 'POST',
+      body: { backlink_dataset_id: parent, audit_ids: [auditId] },
+    });
+    // No match against a partial list is not evidence of no match.
+    expect([derived.body.unique_rows_saved, derived.body.coverage]).toEqual([0, 'partial']);
+  });
+
   it('derives one dataset per exact selection, even under concurrent requests', async () => {
     const runId = await review(t, await connection(t));
     const parent = await dataset(t, runId, {
