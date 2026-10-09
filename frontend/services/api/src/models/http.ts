@@ -37,6 +37,26 @@ export class ModelError extends Error {
   }
 }
 
+/** One provider call's answer, the same whichever API produced it. */
+type ModelResult = {
+  content: string;
+  provider_adapter: string;
+  endpoint_host: string;
+  requested_model: string;
+  returned_model: string;
+  finish_status: string;
+  usage: Record<string, number | null>;
+  latency_ms: number;
+};
+/** A schema, when given, is enforced as a structured output where the destination allows it. */
+export type Complete = (
+  system: string,
+  user: string,
+  signal?: AbortSignal,
+  onText?: (content: string) => void,
+  schema?: Record<string, unknown>,
+) => Promise<ModelResult>;
+
 export type Transport = {
   fetch: typeof fetch;
   sleep: (milliseconds: number, signal?: AbortSignal) => Promise<void>;

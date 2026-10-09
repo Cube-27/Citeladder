@@ -61,7 +61,7 @@ export function agentModels(
     return {
       model: gateway.model,
       endpointHost: gateway.baseUrlHost,
-      adapter: customer ? 'openai_compatible_byok' : 'openai_compatible',
+      adapter: customer ? 'openai_compatible_byok' : gateway.adapter,
       retryableError: retryableModelError,
       complete: (request, signal, onText) =>
         gateway.completeStructured(

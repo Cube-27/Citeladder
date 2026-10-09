@@ -37,6 +37,7 @@
     "db:types:check": "kysely-codegen --dialect postgres --url \"env(TYPES_DATABASE_URL)\" --exclude-pattern alembic_version --out-file src/generated/db-schema.ts --verify"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "0.128.0",
     "@citeladder/contracts": "workspace:*",
     "@fontsource/noto-sans": "^5.3.0",
     "@hono/node-server": "^2.1.3",
