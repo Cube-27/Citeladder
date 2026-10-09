@@ -31,6 +31,20 @@ host receives an explicit restart response; no cross-host POST redirect is
 permitted. The consent page labels the client name as an unverified
 self-declaration and names the redirect host the flow enforces.
 
+The [consent page](../frontend/services/api/src/mcp/consent-page.ts) carries the
+design system's light palette inline (the CSP loads no stylesheet or font). It
+names the signed-in account and lists every workspace the account could share
+with what approving it needs. A single shareable workspace is pre-selected and
+required. A workspace without the current Terms acceptance is shareable once the
+person accepts the Terms on the page; that acceptance is recorded with the
+`mcp_consent` context in the same transaction as the code. A workspace whose
+trial or subscription is inactive is shown, not selectable, with a billing link.
+A workspace without a project links to onboarding, whose `return_to` brings the
+person back to consent, so a visitor can register, verify, set up a project and
+approve in one pass. A refused selection re-renders the form with the reason
+and leaves the transaction unconsumed; an expired transaction or changed session
+explains how to continue.
+
 ## Client registration and authorization
 
 Dynamic registration stays open and unauthenticated, as RFC 7591 intends: MCP
@@ -104,9 +118,18 @@ workspace never widens a connection, system workspaces stay excluded, and
 project or record IDs never authorize themselves. A pinned caller (the Agent) is
 told a sibling project was "not found", the same as a missing one.
 
-Settings → MCP connections lists a user's connections, and workspace
-Owner/Admin can view and remove only their workspace's authorization. Revocation
-is also available through the OAuth endpoint.
+Settings → MCP connections leads with the shared
+[connect strip](../frontend/components/mcp/connect-strip.tsx): the endpoint with a
+copy control and Connect, which opens Claude's prefilled add-connector page and
+offers ChatGPT, Gemini, Cursor (install link) and Grok, copying the URL where the
+client needs a paste. Client links are owned by
+[`mcp-clients.ts`](../frontend/lib/config/mcp-clients.ts); the public MCP page
+uses the same strip. The tab lists a user's connections by client name (labelled
+unverified), workspace names, connected date and last use; workspace Owner/Admin
+also see the connecting account and can remove only their workspace's
+authorization. Revoking asks for confirmation. The account menu's Connect AI
+assistants opens this tab. Revocation is also available through the OAuth
+endpoint.
 
 ## The catalogue
 

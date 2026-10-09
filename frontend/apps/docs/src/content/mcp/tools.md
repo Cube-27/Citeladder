@@ -9,17 +9,21 @@ Start with project discovery, inspect available evidence, then ask for the concr
 
 ## Choose a reading path
 
-| Your question                            | Start with                                              |
-| ---------------------------------------- | ------------------------------------------------------- |
-| Which project can I analyze?             | `list_projects`                                         |
-| What is known about this business?       | `get_project_business_context`                          |
-| Where is a specific saved record?        | `search`, then `fetch`                                  |
-| What did an AI audit observe?            | `read_visibility_audit`, then `read_visibility_results` |
-| Which sources were used?                 | `read_visibility_sources`                               |
-| What did the website crawl find?         | `read_site_health`, then `read_site_pages`              |
-| Which connected reports exist?           | `read_integration_status`                               |
-| What does a performance window show?     | `read_performance`, then `read_performance_table`       |
-| Which research dataset should I inspect? | `read_search_intelligence`, then `read_search_dataset`  |
+| Your question                                   | Start with                                                     |
+| ----------------------------------------------- | -------------------------------------------------------------- |
+| Which project can I analyze?                    | `list_projects`                                                |
+| What is known about this business?              | `get_project_business_context`                                 |
+| Where is a specific saved record?               | `search`, then `fetch`                                         |
+| What did an AI audit observe?                   | `read_visibility_overview`, then `read_visibility_results`     |
+| Which sources were used?                        | `read_visibility_sources`                                      |
+| Who cites one specific URL?                     | `read_source_url`                                              |
+| What should I work on next?                     | `read_actions`                                                 |
+| How do cited competitor pages differ from mine? | `read_content_differentiation`                                 |
+| Which products do AI answers recommend?         | `read_ai_shelf`                                                |
+| What did the website crawl find?                | `read_site_health`, then `read_site_pages`                     |
+| Which connected reports exist?                  | `read_integration_status`                                      |
+| What does a performance window show?            | `read_performance`, then `read_performance` with a `dimension` |
+| Which research dataset should I inspect?        | `read_search_intelligence`, then `read_search_dataset`         |
 
 ## Read records and windows precisely
 
