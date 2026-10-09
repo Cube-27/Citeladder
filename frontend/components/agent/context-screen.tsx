@@ -200,7 +200,7 @@ function CompanyFacts({
               queryKey: queryKeys.projects.commandCenter(project.id),
             })
           }
-          header={(actions) => <CompanyFactsHeader actions={actions} />}
+          header={CompanyFactsHeader}
         />
       ) : null}
     </Stack>

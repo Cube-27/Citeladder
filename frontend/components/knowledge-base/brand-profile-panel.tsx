@@ -2,7 +2,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Save } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { useState, type ComponentType, type ReactNode } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { BrandLogo } from '@/components/ui/brand-logo';
@@ -87,7 +87,7 @@ export function BrandProfilePanel({
   competitors = [],
   competitorSuggestions,
   onSaved,
-  header = (actions) => <div className="flex justify-end">{actions}</div>,
+  header: Header = SaveRow,
 }: Readonly<{
   projectId: string;
   profile: BrandProfile;
@@ -99,7 +99,7 @@ export function BrandProfilePanel({
    * The action keeps its box on the Business map tab (which saves on its own),
    * so switching tabs never moves the layout.
    */
-  header?: (actions: ReactNode) => ReactNode;
+  header?: ComponentType<{ actions: ReactNode }>;
 }>) {
   const queryClient = useQueryClient();
   const workspaceId = useActiveWorkspaceId();
@@ -144,17 +144,19 @@ export function BrandProfilePanel({
 
   return (
     <div className="flex flex-col gap-4">
-      {header(
-        <Button
-          variant="primary"
-          className={activeTab === 'map' ? 'invisible' : undefined}
-          onClick={() => saveMutation.mutate()}
-          disabled={!workspaceId || saveMutation.isPending}
-        >
-          <Save className="size-4" aria-hidden />
-          {saveMutation.isPending ? 'Saving…' : 'Save brand knowledge'}
-        </Button>,
-      )}
+      <Header
+        actions={
+          <Button
+            variant="primary"
+            className={activeTab === 'map' ? 'invisible' : undefined}
+            onClick={() => saveMutation.mutate()}
+            disabled={!workspaceId || saveMutation.isPending}
+          >
+            <Save className="size-4" aria-hidden />
+            {saveMutation.isPending ? 'Saving…' : 'Save brand knowledge'}
+          </Button>
+        }
+      />
 
       {saveMutation.error ? (
         <Alert tone="danger">{humanizeApiError(saveMutation.error).message}</Alert>
@@ -399,4 +401,8 @@ function BusinessMapTab({
 }: Readonly<{ projectId: string; workspaceId: string | null | undefined }>) {
   if (!workspaceId) return <Alert tone="info">Workspace is not available.</Alert>;
   return <BusinessMapEditor projectId={projectId} workspaceId={workspaceId} />;
+}
+
+function SaveRow({ actions }: Readonly<{ actions: ReactNode }>) {
+  return <div className="flex justify-end">{actions}</div>;
 }

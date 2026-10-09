@@ -18,16 +18,16 @@ const listeners = new Set<() => void>();
 /**
  * Run a palette swap with transitions paused. Fields, selects and selected rows
  * transition their colours, so a live swap would fade every one of them
- * between palettes at once. The new colours are resolved before transitions
- * return, so nothing animates.
+ * between palettes at once. Transitions return only after a frame has painted
+ * the new colours, so nothing animates.
  */
 function withoutTransitions(change: () => void) {
   const pause = document.createElement('style');
   pause.textContent = '*,*::before,*::after{transition:none!important}';
   document.head.append(pause);
   change();
-  void window.getComputedStyle(document.body).color;
-  window.setTimeout(() => pause.remove(), 1);
+  // The first frame paints the new palette with transitions still off.
+  window.requestAnimationFrame(() => window.requestAnimationFrame(() => pause.remove()));
 }
 
 function applyTheme(theme: Theme) {
