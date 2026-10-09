@@ -92,7 +92,7 @@ export function ToolForm({
   return (
     <div className="cp-tool">
       <form onSubmit={submit} className="cp-tool-pane">
-        <h2 className="website-small-heading cp-tool-head">Your input</h2>
+        <h2 className="website-feature-heading cp-tool-head">Your input</h2>
         {children}
         <div className="cp-tool-actions">
           <Button type="submit">{action}</Button>
@@ -116,7 +116,7 @@ export function ToolForm({
       </form>
       <section aria-label="Tool output" className="cp-tool-pane cp-tool-result">
         <div className="cp-tool-head">
-          <h2 className="website-small-heading">Your result</h2>
+          <h2 className="website-feature-heading">Your result</h2>
           <output className="website-label">{status}</output>
         </div>
         {preview}

@@ -9,7 +9,7 @@ export const chipBaseClasses =
   'focus-ring type-badge inline-flex h-[var(--badge-height-md)] items-center gap-2 rounded-full px-3 transition-[background-color,color,border-color] duration-[var(--motion-fast)] ease-[var(--ease-standard)]';
 
 export const chipRestingClasses =
-  'control-raised bg-panel text-ink-chip enabled:hover:bg-hover enabled:hover:text-foreground enabled:active:bg-active';
+  'control-raised bg-panel text-secondary enabled:hover:bg-hover enabled:hover:text-foreground enabled:active:bg-active';
 
 const chipSelectedClasses =
   'control-raised bg-selected text-foreground enabled:hover:bg-selected enabled:active:bg-active';

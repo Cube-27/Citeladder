@@ -50,7 +50,7 @@ export function MobileNavigation({
               <ChevronDown
                 aria-hidden
                 className={cn(
-                  'text-muted size-4 transition-transform duration-200',
+                  'text-muted size-4 transition-transform duration-[var(--motion-normal)]',
                   openAcc === key && 'rotate-180',
                 )}
               />

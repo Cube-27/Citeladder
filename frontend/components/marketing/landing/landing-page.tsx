@@ -316,7 +316,7 @@ function DeepDive({
     <div className={cn('mk-dive', reverse && 'mk-dive-reverse')}>
       <div className="mk-dive-copy">
         <h3 className="website-page-title mk-dive-title">{title}</h3>
-        <p className="website-body-lg text-muted">{body}</p>
+        <p className="website-body text-muted">{body}</p>
         <ul className="mk-checks">
           {points.map((point) => (
             <li key={point}>

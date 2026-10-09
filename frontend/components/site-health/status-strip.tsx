@@ -173,7 +173,7 @@ function DashboardNotice({ crawl }: Readonly<{ crawl: SiteCrawl }>) {
       narration={notice?.message ?? 'Latest crawl results'}
       counts={[
         { label: 'Pages discovered', value: crawl.visible_url_count },
-        { label: 'Pages analyzed', value: analyzed, className: 'text-run-completed' },
+        { label: 'Pages analyzed', value: analyzed, className: 'text-success-text' },
       ]}
     />
   );
@@ -225,7 +225,7 @@ function ProgressRow({
               <span
                 aria-hidden
                 data-testid="activity-pulse"
-                className="activity-dot bg-run-running size-1.5 shrink-0"
+                className="activity-dot bg-info size-1.5 shrink-0"
               />
             ) : null}
             {/* The live region is the TEXT, not the row: announcing the whole

@@ -129,7 +129,7 @@ export function EnterpriseEvidence() {
           <h2 className="website-page-title mk-dive-title">
             Every number traces to a stored answer.
           </h2>
-          <p className="website-body-lg text-muted">
+          <p className="website-body text-muted">
             Security, analytics and growth teams read the same evidence: the prompt, the engine, the
             answer and the sources it cited.
           </p>
@@ -162,7 +162,7 @@ export function EnterpriseGovernance() {
         <div className="cm-groups">
           {GOVERNANCE.map((group) => (
             <div key={group.title} className="cm-group">
-              <h3 className="website-small-heading text-foreground">{group.title}</h3>
+              <h3 className="website-feature-heading text-foreground">{group.title}</h3>
               <ul className="cm-list">
                 {group.points.map((point) => (
                   <li key={point}>{point}</li>
@@ -188,7 +188,7 @@ export function EnterpriseDataFlow() {
         {DATA_FLOW.map((step, index) => (
           <li key={step.title}>
             <span className="cm-flow-step">{index + 1}</span>
-            <h3 className="website-small-heading text-foreground">{step.title}</h3>
+            <h3 className="website-feature-heading text-foreground">{step.title}</h3>
             <p className="website-label text-muted">{step.detail}</p>
           </li>
         ))}

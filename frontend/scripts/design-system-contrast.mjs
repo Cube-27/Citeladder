@@ -1,45 +1,155 @@
 import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
-const TOKEN_CSS = 'apps/app/src/globals.css';
-const MINIMUM_NORMAL_TEXT_CONTRAST = 4.5;
-const LIGHT_SURFACE_TOKENS = [
-  '--color-background',
-  '--color-background-alt',
-  '--color-panel',
-  '--color-panel-tonal',
-  '--color-well',
-  '--color-active',
-  '--color-sidebar',
-];
-const NEUTRAL_TEXT_TOKENS = ['--color-foreground', '--color-secondary', '--color-muted'];
+import { composite, contrastRatio, isHex, lightness, separation } from './design-system-color.mjs';
 
-const isHex = (value) => /^#[0-9a-f]{6}$/i.test(value ?? '');
+const TOKEN_CSS = 'apps/app/src/globals.css';
+const LIGHT = ':root:not([data-public-surface])';
+const PUBLIC = '[data-public-surface]';
+const DARK = ":root[data-theme='dark']";
+// The base theme is a fallback, not the effective public/product palette.
+const ALL_SCOPES = [LIGHT, PUBLIC, DARK];
+const PRODUCT_SCOPES = [LIGHT, DARK];
+
+const color = (role) => `--color-${role}`;
+const STATUSES = ['success', 'warning', 'danger', 'info'];
+const OUTCOME_MARKS = [...STATUSES, 'neutral'].map(color);
+const TAGS = [
+  'blue',
+  'purple',
+  'green',
+  'moss',
+  'red',
+  'orange',
+  'amber',
+  'teal',
+  'yellow',
+  'neutral',
+];
+const CHARTS = Array.from({ length: 8 }, (_, index) => color(`chart-${index + 1}`));
+
+/**
+ * The contrast matrix. Each row pairs every ink with every surface at a
+ * minimum ratio in the listed scopes. A translucent surface is composited on
+ * the scope's panel, and a translucent ink on the surface beneath it.
+ */
+const CONTRAST_PAIRS = [
+  {
+    inks: ['foreground', 'secondary', 'muted', 'ink-soft', 'ink-icon'].map(color),
+    surfaces: ['panel', 'background', 'background-alt', 'well'].map(color),
+    minimum: 4.5,
+    scopes: ALL_SCOPES,
+  },
+  {
+    inks: ['foreground', 'secondary', 'muted'].map(color),
+    surfaces: ['panel-tonal', 'active'].map(color),
+    minimum: 4.5,
+    scopes: ALL_SCOPES,
+  },
+  ...STATUSES.map((status) => ({
+    inks: [color(`${status}-text`)],
+    surfaces: [color(`${status}-bg`), color('panel')],
+    minimum: 4.5,
+    scopes: ALL_SCOPES,
+  })),
+  ...[
+    ['accent-fg', 'accent'],
+    ['danger-fg', 'danger-solid'],
+    ['on-inverse', 'surface-inverse'],
+    ['selection-fg', 'selection'],
+  ].map(([ink, surface]) => ({
+    inks: [color(ink)],
+    surfaces: [color(surface)],
+    minimum: 4.5,
+    scopes: ALL_SCOPES,
+  })),
+  ...TAGS.map((tag) => ({
+    inks: [`--tag-${tag}-text`],
+    surfaces: [`--tag-${tag}-bg`],
+    minimum: 4.5,
+    scopes: ALL_SCOPES,
+  })),
+  { inks: CHARTS, surfaces: [color('panel')], minimum: 3, scopes: PRODUCT_SCOPES },
+  { inks: [color('border-bold')], surfaces: [color('panel')], minimum: 3, scopes: ALL_SCOPES },
+];
+
+/**
+ * Marks that must stay distinguishable without full colour vision: by
+ * lightness alone, or by hue under both red–green deficiencies.
+ */
+const MIN_LIGHTNESS_STEP = 15;
+const MIN_SIMULATED_DISTANCE = 10;
+const SEPARATED_SETS = [
+  {
+    name: 'outcome marks',
+    pairs: OUTCOME_MARKS.flatMap((first, index) =>
+      OUTCOME_MARKS.slice(index + 1).map((second) => [first, second]),
+    ),
+    scopes: ALL_SCOPES,
+  },
+  {
+    name: 'adjacent chart series',
+    pairs: CHARTS.slice(1).map((second, index) => [CHARTS[index], second]),
+    scopes: PRODUCT_SCOPES,
+  },
+];
+const STATE_LADDER = ['panel', 'hover', 'selected', 'active'].map(color);
 
 function escapeRegExp(value) {
   return value.replace(/[.*+?^$(){}|[\]\\]/g, String.raw`\$&`);
 }
 
-/** Resolve inherited tokens and repeated scoped overrides before checking contrast. */
-export function resolvePalette(source, selector) {
+/** Top-level rules as `{ selectors, body }`; nested blocks are skipped whole. */
+function topLevelRules(clean) {
+  const rules = [];
+  let cursor = 0;
+  while (cursor < clean.length) {
+    const open = clean.indexOf('{', cursor);
+    if (open === -1) break;
+    let depth = 1;
+    let close = open + 1;
+    while (close < clean.length && depth > 0) {
+      if (clean[close] === '{') depth += 1;
+      if (clean[close] === '}') depth -= 1;
+      close += 1;
+    }
+    // A preceding at-statement (`@import …;`) is not part of the selector.
+    const prelude = clean.slice(cursor, open).split(';').at(-1).trim();
+    rules.push({
+      selectors: prelude.split(',').map((part) => part.replace(/\s+/g, ' ').trim()),
+      body: clean.slice(open + 1, close - 1),
+    });
+    cursor = close;
+  }
+  return rules;
+}
+
+/** The raw declared value of every token a scope sees, before alias resolution. */
+export function paletteDeclarations(source, selector) {
   const clean = source.replace(/\/\*[\s\S]*?\*\//g, '');
-  const declarations = (scope) => {
-    const blocks = clean.matchAll(new RegExp(escapeRegExp(scope) + '\\s*\\{([^{}]*)\\}', 'g'));
-    return [...blocks].flatMap(([, body]) =>
-      [...body.matchAll(/(--[\w-]+)\s*:\s*([^;{}]+);/g)].map(([, token, value]) => [
-        token,
-        value.trim(),
-      ]),
-    );
-  };
-  const values = new Map([
+  const rules = topLevelRules(clean);
+  // A scope's declarations come from every top-level rule whose selector list
+  // names it exactly, so `[data-public-surface], [data-flow-surface] {…}`
+  // still rebinds the public palette.
+  const declarations = (scope) =>
+    rules
+      .filter(({ selectors }) => selectors.includes(scope))
+      .flatMap(({ body }) =>
+        [...body.replace(/\{[^{}]*\}/g, '').matchAll(/(--[\w-]+)\s*:([^;{}]+);/g)].map(
+          ([, token, value]) => [token, value.trim()],
+        ),
+      );
+  return new Map([
     ...declarations('@theme'),
     ...declarations(':root'),
-    ...(selector === ":root[data-theme='dark']"
-      ? declarations(':root:not([data-public-surface])')
-      : []),
-    ...declarations(selector),
+    ...(selector === DARK ? declarations(LIGHT) : []),
+    ...(selector === ':root' ? [] : declarations(selector)),
   ]);
+}
+
+/** Resolve inherited tokens and repeated scoped overrides before checking contrast. */
+export function resolvePalette(source, selector) {
+  const values = paletteDeclarations(source, selector);
   const resolve = (token, seen = new Set()) => {
     if (seen.has(token)) return undefined;
     seen.add(token);
@@ -71,35 +181,67 @@ export function resolvePalette(source, selector) {
   return new Map([...values.keys()].map((token) => [token, resolve(token)]));
 }
 
-function relativeLuminance(hex) {
-  const channels = hex
-    .slice(1)
-    .match(/../g)
-    .map((channel) => Number.parseInt(channel, 16) / 255)
-    .map((channel) => (channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4));
-  return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+/** An opaque hex for a token, composited onto `backdrop` when translucent. */
+function opaque(palette, token, backdrop) {
+  return composite(palette.get(token), backdrop);
 }
 
-function contrastRatio(first, second) {
-  const firstLuminance = relativeLuminance(first);
-  const secondLuminance = relativeLuminance(second);
-  const lighter = Math.max(firstLuminance, secondLuminance);
-  const darker = Math.min(firstLuminance, secondLuminance);
-  return (lighter + 0.05) / (darker + 0.05);
+/** The violation for one ink on one surface, or null when it reads. */
+function inkViolation(palette, { scope, cssLabel, minimum }, inkToken, surfaceToken, surface) {
+  const ink = opaque(palette, inkToken, surface);
+  if (!isHex(ink) || !isHex(surface)) {
+    return `${cssLabel}: ${scope} cannot resolve ${inkToken} on ${surfaceToken}`;
+  }
+  const ratio = contrastRatio(ink, surface);
+  if (ratio < minimum) {
+    return `${cssLabel}: ${scope} ${inkToken} on ${surfaceToken} is ${ratio.toFixed(2)}:1; needs ${minimum}:1`;
+  }
+  return null;
 }
 
-function neutralTextViolations(source, scope, cssLabel) {
-  const palette = resolvePalette(source, scope);
+function contrastViolations(palette, scope, cssLabel) {
+  const panel = palette.get(color('panel'));
   const violations = [];
-  for (const textToken of NEUTRAL_TEXT_TOKENS) {
-    for (const surfaceToken of LIGHT_SURFACE_TOKENS) {
-      const ink = palette.get(textToken);
-      const surface = palette.get(surfaceToken);
-      if (!isHex(ink) || !isHex(surface)) {
-        violations.push(`${cssLabel}: ${scope} cannot resolve ${textToken} on ${surfaceToken}`);
-      } else if (contrastRatio(ink, surface) < MINIMUM_NORMAL_TEXT_CONTRAST) {
+  for (const { inks, surfaces, minimum, scopes } of CONTRAST_PAIRS) {
+    if (!scopes.includes(scope)) continue;
+    for (const surfaceToken of surfaces) {
+      const surface = opaque(palette, surfaceToken, panel);
+      for (const inkToken of inks) {
+        const violation = inkViolation(
+          palette,
+          { scope, cssLabel, minimum },
+          inkToken,
+          surfaceToken,
+          surface,
+        );
+        if (violation) violations.push(violation);
+      }
+    }
+  }
+  return violations;
+}
+
+function separationViolations(palette, scope, cssLabel) {
+  const panel = palette.get(color('panel'));
+  const violations = [];
+  for (const { name, pairs, scopes } of SEPARATED_SETS) {
+    if (!scopes.includes(scope)) continue;
+    for (const [firstToken, secondToken] of pairs) {
+      const first = opaque(palette, firstToken, panel);
+      const second = opaque(palette, secondToken, panel);
+      if (!isHex(first) || !isHex(second)) {
+        violations.push(`${cssLabel}: ${scope} cannot resolve ${firstToken} / ${secondToken}`);
+        continue;
+      }
+      const gap = separation(first, second);
+      const separable =
+        gap.lightness >= MIN_LIGHTNESS_STEP ||
+        (gap.deuteranopia >= MIN_SIMULATED_DISTANCE && gap.protanopia >= MIN_SIMULATED_DISTANCE);
+      if (!separable) {
         violations.push(
-          `${cssLabel}: ${scope} ${textToken} on ${surfaceToken} needs 4.5:1 contrast`,
+          `${cssLabel}: ${scope} ${name} ${firstToken} / ${secondToken} are too close ` +
+            `(ΔL* ${gap.lightness.toFixed(1)}, deuteranopia ΔE ${gap.deuteranopia.toFixed(1)}, ` +
+            `protanopia ΔE ${gap.protanopia.toFixed(1)})`,
         );
       }
     }
@@ -107,16 +249,47 @@ function neutralTextViolations(source, scope, cssLabel) {
   return violations;
 }
 
-function darkChartViolations(source, cssLabel) {
-  const darkPalette = resolvePalette(source, ":root[data-theme='dark']");
-  const surface = darkPalette.get('--color-panel');
+/** Hover, selected and pressed tints step steadily away from their surface. */
+function stateLadderViolations(palette, scope, cssLabel) {
+  const panel = palette.get(color('panel'));
+  const steps = STATE_LADDER.map((token) => opaque(palette, token, panel));
+  if (!steps.every(isHex)) return [`${cssLabel}: ${scope} cannot resolve the state tint ladder`];
+  const levels = steps.map((step) => lightness(step));
+  const darkening = levels[0] > 50;
   const violations = [];
-  for (let index = 1; index <= 8; index += 1) {
-    const chartToken = `--color-chart-${index}`;
-    const mark = darkPalette.get(chartToken);
-    if (!isHex(mark) || !isHex(surface) || contrastRatio(mark, surface) < 3) {
-      violations.push(`${cssLabel}: dark ${chartToken} needs 3:1 contrast on the product panel`);
+  for (let index = 1; index < levels.length; index += 1) {
+    const ordered = darkening
+      ? levels[index] < levels[index - 1]
+      : levels[index] > levels[index - 1];
+    if (!ordered) {
+      violations.push(
+        `${cssLabel}: ${scope} ${STATE_LADDER[index]} must be ${darkening ? 'darker' : 'lighter'} than ${STATE_LADDER[index - 1]}`,
+      );
     }
+  }
+  return violations;
+}
+
+/**
+ * The whole matrix for a token stylesheet's text.
+ * @public — also imported by the scripts/frontend fixture tests.
+ */
+export function paletteViolations(source, cssLabel = TOKEN_CSS) {
+  const violations = [];
+  if (
+    !new RegExp(escapeRegExp(DARK) + String.raw`\s*\{`).test(
+      source.replace(/\/\*[\s\S]*?\*\//g, ''),
+    )
+  ) {
+    violations.push(`${cssLabel}: dark theme token mapping is missing`);
+  }
+  for (const scope of ALL_SCOPES) {
+    const palette = resolvePalette(source, scope);
+    violations.push(
+      ...contrastViolations(palette, scope, cssLabel),
+      ...separationViolations(palette, scope, cssLabel),
+      ...stateLadderViolations(palette, scope, cssLabel),
+    );
   }
   return violations;
 }
@@ -124,20 +297,5 @@ function darkChartViolations(source, cssLabel) {
 export function textContrastViolations(root) {
   const cssPath = join(root, ...TOKEN_CSS.split('/'));
   const cssLabel = relative(root, cssPath).replaceAll('\\', '/');
-  const source = readFileSync(cssPath, 'utf8');
-  const violations = [];
-  if (!/:root\[data-theme='dark'\]\s*\{/.test(source.replace(/\/\*[\s\S]*?\*\//g, ''))) {
-    violations.push(`${cssLabel}: dark theme token mapping is missing`);
-  }
-
-  // The base theme is a fallback, not the effective public/product palette.
-  for (const scope of [
-    ':root:not([data-public-surface])',
-    '[data-public-surface]',
-    ":root[data-theme='dark']",
-  ]) {
-    violations.push(...neutralTextViolations(source, scope, cssLabel));
-  }
-  violations.push(...darkChartViolations(source, cssLabel));
-  return violations;
+  return paletteViolations(readFileSync(cssPath, 'utf8'), cssLabel);
 }

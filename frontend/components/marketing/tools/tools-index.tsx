@@ -55,7 +55,7 @@ function ToolDirectory({ tools }: Readonly<{ tools: readonly FreeTool[] }>) {
     <div className="cp-tool-groups">
       {toolGroups(tools).map(([category, items]) => (
         <div key={category} className="cp-tool-group">
-          <h3 className="website-small-heading">{category}</h3>
+          <h3 className="website-feature-heading">{category}</h3>
           <ul className="cp-tool-list">
             {items.map((tool) => (
               <li key={tool.slug}>
@@ -147,7 +147,7 @@ export function ToolNotes({ slug }: Readonly<{ slug: FreeTool['slug'] }>) {
         <div className="mk-split">
           <SectionHeader headingId="tool-limits-title" title="What this tool can tell you" />
           <div className="grid content-start gap-5">
-            <p className="website-body-lg max-w-[60ch]">{tool.limitation}</p>
+            <p className="website-body max-w-[60ch]">{tool.limitation}</p>
             <p className="website-body text-muted max-w-[60ch]">
               Need evidence across your website? Site Health inspects captured page evidence before
               you choose a correction.

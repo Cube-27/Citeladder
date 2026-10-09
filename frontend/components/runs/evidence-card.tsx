@@ -36,7 +36,7 @@ function Outcome({
       className={panelClasses({ tone: 'well', pad: 'compact' }, 'flex min-w-0 items-start gap-2')}
     >
       <Icon
-        className={cn('mt-0.5 size-4 shrink-0', passed ? 'text-score-high' : 'text-muted')}
+        className={cn('mt-0.5 size-4 shrink-0', passed ? 'text-success' : 'text-muted')}
         aria-hidden
       />
       <div className="min-w-0">
@@ -228,7 +228,7 @@ function EvidenceAnswerBody({
 
 /** Present, absent and not-applicable are three tones, not a boolean. */
 function outcomeToneClass(positive: boolean | null | undefined): string {
-  if (positive === true) return 'text-score-high';
+  if (positive === true) return 'text-success-text';
   return positive === false ? 'text-muted' : 'text-foreground';
 }
 

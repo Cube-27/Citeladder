@@ -20,11 +20,11 @@ import { PageLoading } from '@/components/layout/page-loading';
 export function ShellFallback({ children }: Readonly<{ children?: ReactNode }>) {
   return (
     <div
-      className="bg-shell flex min-h-dvh"
+      className="bg-background flex min-h-dvh"
       aria-busy={children === undefined ? 'true' : undefined}
     >
       {/* Match the settled shell's rail fill before session identity resolves. */}
-      <div className="bg-sidebar hidden w-[var(--sidebar-width)] shrink-0 min-[981px]:block" />
+      <div className="bg-background hidden w-[var(--sidebar-width)] shrink-0 min-[981px]:block" />
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="h-[var(--compact-topbar-height)] shrink-0 min-[981px]:hidden" />
         <div className="app-pane app-pane-workspace flex min-w-0 flex-1 flex-col">

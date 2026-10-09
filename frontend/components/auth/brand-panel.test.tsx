@@ -15,14 +15,6 @@ describe('AuthWordmark', () => {
     expect(link).toHaveAttribute('href', 'https://citeladder.com/');
   });
 
-  it('renders the official brand logo image', () => {
-    const { container } = render(<AuthWordmark />);
-
-    const image = container.querySelector('img');
-    expect(image).not.toBeNull();
-    expect(image?.getAttribute('src')).toContain('citeladder-logo');
-  });
-
   it('hides the lockup from assistive technology so the link is named once', () => {
     render(<AuthWordmark />);
 

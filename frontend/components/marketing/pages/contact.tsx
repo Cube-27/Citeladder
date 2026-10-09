@@ -208,11 +208,11 @@ export function ContactPage() {
               </p>
             </header>
             <div className="grid gap-5">
-              <h2 className="website-small-heading text-foreground">What happens next</h2>
+              <h2 className="website-feature-heading text-foreground">What happens next</h2>
               <ol className="cm-steps">
                 {NEXT_STEPS.map((step) => (
                   <li key={step.title}>
-                    <h3 className="website-small-heading text-foreground">{step.title}</h3>
+                    <h3 className="website-feature-heading text-foreground">{step.title}</h3>
                     <p className="website-body text-muted">{step.body}</p>
                   </li>
                 ))}
@@ -229,7 +229,7 @@ export function ContactPage() {
               <div className="grid gap-6 pt-6">
                 {CONTACT_PAGE.sections.map((section) => (
                   <section key={section.id} id={section.id} className="grid gap-3">
-                    <h2 className="website-small-heading text-foreground">{section.title}</h2>
+                    <h2 className="website-feature-heading text-foreground">{section.title}</h2>
                     {section.paragraphs?.map((paragraph) => (
                       <p key={paragraph} className="website-body text-muted">
                         <Linkify text={paragraph} />

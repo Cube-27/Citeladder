@@ -243,7 +243,7 @@ cd frontend
 pnpm exec vp test run "<test-path>" # targeted Vitest via Vite+; network mocked with MSW
 pnpm lint             # Oxlint via Vite+ (`vp lint`; React/TypeScript/a11y rules)
 pnpm check            # vp check: format + lint; warnings and unused-disable directives fail
-pnpm check:policy     # architecture + design-token guards
+pnpm check:policy     # architecture, design-token, CSS/TSX/SVG and contrast guards
 pnpm check:dead-code  # Knip module-graph/dependency gate
 pnpm exec tsc --noEmit # type check (Vite+ type-aware lint stays off; see vp-shared-config.ts)
 pnpm build            # Astro marketing SSR build
@@ -352,8 +352,17 @@ scope can include earlier dependency edits, so it must not be used as the
 default validator for a small follow-up on that branch.
 
 The pre-commit hook (`vp staged`, configured in the root `vite.config.ts`) runs
-`vp check --fix` on staged JS/TS/CSS/JSON files and Ruff lint/format fixes on
-staged backend Python files.
+`vp check --fix` on staged JS/TS/CSS/JSON files, the design-system policy
+(`frontend/scripts/check-design-system.mjs`) when frontend CSS, TS/TSX, Astro or
+SVG files are staged, and Ruff lint/format fixes on staged backend Python files.
+
+The design-system policy ratchets its stylesheet, TSX geometry and SVG colour
+rules against `frontend/scripts/design-system-baseline.json`: a file's count per
+rule may fall but never rise, and a new file starts at zero. When a count falls,
+lower the baseline with `node scripts/check-design-system.mjs --write-baseline`
+from `frontend/`; never raise it to make a change pass. The generated value
+tables in `docs/design.md` are refreshed with
+`node scripts/audit-design-tokens.mjs --write` (quality fix mode runs it).
 
 ```powershell
 .\scripts\check.ps1            # affected owners, affected builds, with fixes

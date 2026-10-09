@@ -136,7 +136,7 @@ function ProgressStatus({ audit, polling }: Readonly<{ audit: Audit; polling: bo
           className="type-caption inline-flex items-center gap-2 tabular-nums"
           aria-live="polite"
         >
-          <span className="activity-dot bg-run-running inline-block size-1.5" aria-hidden />
+          <span className="activity-dot bg-info inline-block size-1.5" aria-hidden />
           Updating…
         </span>
       ) : null}
@@ -171,14 +171,14 @@ function ProgressBar({
 
 function ProgressMetrics({ audit }: Readonly<{ audit: Audit }>) {
   const timeZone = useDisplayTimeZone();
-  const failedColor = audit.failed_count > 0 ? 'text-run-failed' : 'text-muted';
+  const failedColor = audit.failed_count > 0 ? 'text-danger-text' : 'text-muted';
 
   return (
     <MetricGroup>
       <MetricItem label="Requested" value={audit.requested_count} />
       <MetricItem
         label="Completed"
-        value={<span className="text-run-completed">{audit.completed_count}</span>}
+        value={<span className="text-success-text">{audit.completed_count}</span>}
       />
       <MetricItem
         label="Failed"

@@ -75,7 +75,7 @@ export function RobotsGenerator({ bots }: Readonly<{ bots: ToolBot[] }>) {
         }}
       >
         <fieldset className="flex flex-col gap-3">
-          <legend className="website-small-heading mb-3">Block selected crawlers</legend>
+          <legend className="website-feature-heading mb-3">Block selected crawlers</legend>
           <p className="website-body text-muted">
             Unchecked crawlers follow the general path rules below. Search and training permissions
             are separate choices.
@@ -107,7 +107,7 @@ export function RobotsGenerator({ bots }: Readonly<{ bots: ToolBot[] }>) {
       </ToolForm>
       {testReport && testedSignature === signature && (
         <section className="cp-tool-extra" aria-labelledby="robots-generated-test">
-          <h2 id="robots-generated-test" className="website-small-heading">
+          <h2 id="robots-generated-test" className="website-feature-heading">
             Test of generated rules
           </h2>
           <pre>{testReport}</pre>

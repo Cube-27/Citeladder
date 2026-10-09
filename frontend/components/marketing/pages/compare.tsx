@@ -84,7 +84,7 @@ export function CompareIndex() {
             <ol className="ed-steps">
               {COMPARISON_CHECKLIST.map((item) => (
                 <li key={item.heading}>
-                  <h3 className="website-small-heading">{item.heading}</h3>
+                  <h3 className="website-feature-heading">{item.heading}</h3>
                   <p className="website-body text-muted">{item.body}</p>
                 </li>
               ))}

@@ -182,7 +182,7 @@ function ExtraRow({
   return (
     <li className="cm-extra">
       <div className="cm-extra-copy">
-        <h3 className="website-small-heading text-foreground">{entry.name}</h3>
+        <h3 className="website-feature-heading text-foreground">{entry.name}</h3>
         <p className="website-body text-muted">{entry.description}</p>
       </div>
       <div className="cm-extra-price">

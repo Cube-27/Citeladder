@@ -22,7 +22,19 @@ import { parseSync, visitorKeys } from 'oxc-parser';
  * a snippet inside a fragment so a caller can hand over a JSX excerpt without
  * knowing which parser sits underneath.
  */
+// The policy runs every check over one file before moving to the next, so
+// remembering the last parse saves re-parsing that file once per check. One
+// entry keeps memory flat across a whole-tree run.
+let lastParse = { source: null, label: null, program: null };
+
 export function parseSource(source, label) {
+  if (lastParse.source === source && lastParse.label === label) return lastParse.program;
+  const program = parseProgram(source, label);
+  lastParse = { source, label, program };
+  return program;
+}
+
+function parseProgram(source, label) {
   const { program, errors } = parseSync(label, source);
   if (!errors.length) return program;
   if (errors.some((error) => /Adjacent JSX elements/.test(error.message))) {
@@ -119,4 +131,17 @@ export function unwrap(node) {
     current = current.expression;
   }
   return current;
+}
+
+/** Every string and template fragment in a module, with its source offset. */
+export function stringFragments(program) {
+  const fragments = [];
+  walk(program, (node) => {
+    const text =
+      node.type === 'TemplateElement'
+        ? (node.value.cooked ?? node.value.raw ?? '')
+        : stringValue(node);
+    if (text) fragments.push({ text, start: node.start });
+  });
+  return fragments;
 }

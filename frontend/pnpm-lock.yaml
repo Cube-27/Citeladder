@@ -331,6 +331,12 @@ importers:
       oxc-parser:
         specifier: ^0.152.0
         version: 0.152.0
+      postcss:
+        specifier: '>=8.5.10'
+        version: 8.5.28
+      postcss-value-parser:
+        specifier: ^4.2.0
+        version: 4.2.0
       tailwindcss:
         specifier: ^4.3.3
         version: 4.3.3
@@ -4807,6 +4813,9 @@ packages:
 
   postal-mime@2.7.6:
     resolution: {integrity: sha512-UUlyE2KlxmvwMGq060onF/VWU3zD6dVW31FwokQ5v26jWd35fbs2MoTFzh+jXnPwAyV2MULMKXcBInGOl5TO6Q==}
+
+  postcss-value-parser@4.2.0:
+    resolution: {integrity: sha512-1NNCs6uurfkVbeXG4S8JFT9t19m45ICnif8zWLd5oPSZ50QnwMfK+H3jv408d4jw/7Bttv5axS5IiHoLaVNHeQ==}
 
   postcss@8.5.28:
     resolution: {integrity: sha512-RRuzqDtt5Y9h3quz5hWhK+TPnsmVs6WwSU6LkJMeY4HstUEDuYTG8UJSdawMRzmzAtV+KEoG8N3Qg2qLy5vM/A==}
@@ -9455,6 +9464,8 @@ snapshots:
   pngjs@7.0.0: {}
 
   postal-mime@2.7.6: {}
+
+  postcss-value-parser@4.2.0: {}
 
   postcss@8.5.28:
     dependencies:

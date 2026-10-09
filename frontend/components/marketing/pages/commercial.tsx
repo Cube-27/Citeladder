@@ -61,7 +61,7 @@ export function CommercialEntryPage({
                 {page.definitions.map((definition) => (
                   <div key={definition.heading} className="ed-subsection">
                     <h3 className="website-feature-heading">{definition.heading}</h3>
-                    <p className="website-body-lg mt-2">{definition.body}</p>
+                    <p className="website-body mt-2">{definition.body}</p>
                   </div>
                 ))}
                 <WorkedExample />
@@ -69,12 +69,12 @@ export function CommercialEntryPage({
 
               <section id="method" className="ed-prose-section">
                 <h2 className="website-section-heading">{page.workflow.heading}</h2>
-                <p className="website-body-lg">{page.workflow.lead}</p>
+                <p className="website-body">{page.workflow.lead}</p>
                 <ol className="ed-steps">
                   {page.workflow.steps.map((step) => (
                     <li key={step.heading}>
                       <h3 className="website-feature-heading">{step.heading}</h3>
-                      <p className="website-body-lg">{step.body}</p>
+                      <p className="website-body">{step.body}</p>
                     </li>
                   ))}
                 </ol>
@@ -82,11 +82,11 @@ export function CommercialEntryPage({
 
               <section id="context" className="ed-prose-section">
                 <h2 className="website-section-heading">{page.contextHeading}</h2>
-                <p className="website-body-lg">{page.context}</p>
+                <p className="website-body">{page.context}</p>
                 <ul className="ed-links" aria-label="Related pages">
                   {page.related.map((link) => (
                     <li key={link.href}>
-                      <a className="website-body-lg" href={link.href}>
+                      <a className="website-body" href={link.href}>
                         {link.label}
                         <ArrowRight className="size-4" aria-hidden />
                       </a>
@@ -123,7 +123,7 @@ function WorkedExample() {
       <div className="ed-example-body">
         <div>
           <table className="ed-table website-body">
-            <caption className="website-small-heading pb-3 text-left">
+            <caption className="website-feature-heading pb-3 text-left">
               100 completed answers
             </caption>
             <thead>

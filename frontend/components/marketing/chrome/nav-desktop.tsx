@@ -14,7 +14,7 @@ import { NavItemLink, NavigationPath } from './nav-items';
 
 const NAV_LINK =
   'nav-link website-nav relative inline-flex items-center gap-1 whitespace-nowrap ' +
-  'rounded-[var(--radius-marketing-control)] px-3 py-2';
+  'rounded-[var(--radius-control)] px-3 py-2';
 
 type DropLayout = Record<NavDropKey, { width: number }>;
 

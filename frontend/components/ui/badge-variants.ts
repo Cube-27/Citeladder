@@ -31,18 +31,12 @@ export const statusBadge = {
 } as const satisfies Record<string, BadgeTone>;
 
 export const sentimentBadge = {
-  positive: {
-    label: 'bg-sentiment-positive-bg text-sentiment-positive-text',
-    dot: 'bg-sentiment-positive',
-  },
+  positive: statusBadge.success,
   neutral: {
-    label: 'bg-sentiment-neutral-bg text-sentiment-neutral-text',
-    dot: 'bg-sentiment-neutral',
+    label: 'bg-neutral-bg text-secondary',
+    dot: 'bg-neutral',
   },
-  negative: {
-    label: 'bg-sentiment-negative-bg text-sentiment-negative-text',
-    dot: 'bg-sentiment-negative',
-  },
+  negative: statusBadge.danger,
 } as const satisfies Record<string, BadgeTone>;
 
 export const classificationBadge = {
@@ -52,18 +46,18 @@ export const classificationBadge = {
 } as const satisfies Record<string, BadgeTone>;
 
 export const runStatusBadge = {
-  draft: { label: 'text-muted', dot: 'bg-run-draft' },
-  queued: { label: 'text-muted', dot: 'bg-run-queued' },
-  running: { label: 'text-secondary', dot: 'bg-run-running' },
-  paused: { label: 'text-muted', dot: 'bg-run-queued' },
-  analyzing: { label: 'text-secondary', dot: 'bg-run-analyzing' },
-  completed: { label: 'text-secondary', dot: 'bg-run-completed' },
-  partial: { label: 'text-secondary', dot: 'bg-run-partial' },
-  failed: { label: 'text-danger-text', dot: 'bg-run-failed' },
-  cancelled: { label: 'text-muted', dot: 'bg-run-cancelled' },
+  draft: { label: 'text-muted', dot: 'bg-neutral' },
+  queued: { label: 'text-muted', dot: 'bg-neutral' },
+  running: { label: 'text-secondary', dot: 'bg-info' },
+  paused: { label: 'text-muted', dot: 'bg-neutral' },
+  analyzing: { label: 'text-secondary', dot: 'bg-info' },
+  completed: { label: 'text-secondary', dot: 'bg-success' },
+  partial: { label: 'text-secondary', dot: 'bg-warning' },
+  failed: { label: 'text-danger-text', dot: 'bg-danger' },
+  cancelled: { label: 'text-muted', dot: 'bg-neutral' },
 } as const satisfies Record<string, BadgeTone>;
 
-export const neutralBadge = { label: 'bg-neutral-bg text-muted', dot: 'bg-border-strong' } as const;
+export const neutralBadge = { label: 'bg-neutral-bg text-muted', dot: 'bg-neutral' } as const;
 
 export type StatusValue = keyof typeof statusBadge;
 export type SentimentValue = keyof typeof sentimentBadge;

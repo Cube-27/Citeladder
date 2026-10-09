@@ -27,7 +27,7 @@ export const buttonVariants = cva(
         sm: 'h-[var(--control-height-sm)] px-3',
         md: 'h-[var(--control-height-md)] px-3',
         lg: 'h-[var(--control-height-lg)] px-4',
-        marketing: 'min-h-12 px-5 text-base',
+        marketing: 'min-h-[var(--control-height-xl)] px-5',
         icon: 'size-[var(--control-height-md)] px-0',
         iconRound: 'size-[var(--control-height-md)] rounded-full px-0',
       },
