@@ -35,9 +35,9 @@ const SOURCE_MEDIUM = referrals.datasets.source_medium_daily;
 type RefreshWindow = { start: string; end: string; granularity: string; presetDays: number | null };
 
 /**
- * The sync window at every granularity (no preset marker), then the preset
- * family at day granularity. The family comes last so a window that is both
- * keeps the preset marker a preset read matches on.
+ * The sync window, then the preset family, each at every granularity. The
+ * family comes last so a window that is both keeps the preset marker a preset
+ * read matches on.
  */
 function refreshWindows(
   windowStart: string,
@@ -48,14 +48,14 @@ function refreshWindows(
     .sort(compareText)
     .map((granularity) => ({ start: windowStart, end: windowEnd, granularity, presetDays: null }));
   if (anchor === null) return windows;
-  for (const days of analytics.snapshot_window_days) {
-    windows.push({
-      start: addDays(anchor, -(days - 1)),
-      end: anchor,
-      granularity: analytics.default_granularity,
-      presetDays: days,
-    });
-  }
+  for (const days of analytics.snapshot_window_days)
+    for (const granularity of [...analytics.snapshot_granularities].sort(compareText))
+      windows.push({
+        start: addDays(anchor, -(days - 1)),
+        end: anchor,
+        granularity,
+        presetDays: days,
+      });
   return windows;
 }
 

@@ -5,7 +5,8 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-p
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 import { makeProject } from '@/test/fixtures/project';
-import { AiTrafficScreen, CrawlSignalPanel } from './ai-traffic-screen';
+import { AiTrafficScreen } from './ai-traffic-screen';
+import { CrawlSignalPanel } from './overview-signals';
 import { InsightStrip } from './insight-strip';
 import { CrawlLogConnections } from './crawl-log-connections';
 import { TrafficCrawlers, TrafficActivity } from './traffic-views';
@@ -246,7 +247,7 @@ describe('AI Traffic state and navigation', () => {
     renderWithProviders(
       <InsightStrip projectId={project.id} workspaceId={project.workspace_id} range="90d" />,
     );
-    const link = await screen.findByRole('link', { name: 'Inspect pages' });
+    const link = await screen.findByRole('link', { name: /Inspect pages/ });
     const destination = new URL(link.getAttribute('href')!, window.location.origin);
     expect(Object.fromEntries(destination.searchParams)).toEqual({
       project: project.id,
@@ -256,18 +257,22 @@ describe('AI Traffic state and navigation', () => {
       pattern: 'key_event_concentration',
     });
   });
-  it('keeps missing, awaiting, incomplete and measured zero distinct', () => {
+  it('keeps unavailable, missing, awaiting, incomplete and measured zero distinct', () => {
     const view = renderWithProviders(
-      <CrawlSignalPanel data={{ ...crawl, connection: 'not_connected' }} />,
+      <CrawlSignalPanel available={false} data={{ ...crawl, connection: 'not_connected' }} />,
     );
+    expect(screen.getByText(/not available for this workspace yet/)).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Connect crawl logs' })).not.toBeInTheDocument();
+    view.rerender(<CrawlSignalPanel available data={{ ...crawl, connection: 'not_connected' }} />);
     expect(screen.getByRole('button', { name: 'Connect crawl logs' })).toBeEnabled();
-    view.rerender(<CrawlSignalPanel data={{ ...crawl, connection: 'awaiting_data' }} />);
+    view.rerender(<CrawlSignalPanel available data={{ ...crawl, connection: 'awaiting_data' }} />);
     expect(screen.getByText(/Awaiting the first accepted batch/)).toBeVisible();
-    view.rerender(<CrawlSignalPanel data={crawl} />);
+    view.rerender(<CrawlSignalPanel available data={crawl} />);
     expect(screen.getByText(/No matching requests were observed/)).toBeVisible();
     expect(screen.queryByText('0')).not.toBeInTheDocument();
     view.rerender(
       <CrawlSignalPanel
+        available
         data={{ ...crawl, coverage: 'complete', requests: 0, pages: 0, active_bots: 0 }}
       />,
     );
@@ -306,7 +311,7 @@ describe('AI Traffic state and navigation', () => {
         }),
       ),
       http.get(root + '/crawl-logs/sources', () =>
-        HttpResponse.json({ ingestion_enabled: false, items: [] }),
+        HttpResponse.json({ ingestion_enabled: true, items: [] }),
       ),
       http.get(root + '/ai-traffic/coverage', () =>
         HttpResponse.json({ sources: [], items: [], next_cursor: null }),
@@ -424,11 +429,11 @@ describe('AI Traffic state and navigation', () => {
         window.location.origin,
       ).searchParams.get('project'),
     ).toBe(project.id);
-    expect(within(panel).getByText(/0 requests · zero/)).toBeVisible();
-    expect(within(panel).getByText(/Unavailable AI referral sessions · flagged/)).toBeVisible();
-    expect(within(panel).getByText(/Unavailable tracked citations · not connected/)).toBeVisible();
+    expect(within(panel).getByText(/0 requests · Measured zero/)).toBeVisible();
+    expect(within(panel).getByText(/Unavailable AI referral sessions · Flagged/)).toBeVisible();
+    expect(within(panel).getByText(/Unavailable tracked citations · Not connected/)).toBeVisible();
     expect(
-      within(panel).getByText(/Unavailable open Site Health findings · unavailable/),
+      within(panel).getByText(/open Site Health findings · Unavailable · Coverage is incomplete/),
     ).toBeVisible();
     mswServer.use(
       http.get(
@@ -438,7 +443,52 @@ describe('AI Traffic state and navigation', () => {
     );
     await view.queryClient.refetchQueries({ predicate: (q) => q.queryKey.includes('url') });
     await waitFor(() =>
-      expect(within(panel).queryByText(/0 requests · zero/)).not.toBeInTheDocument(),
+      expect(within(panel).queryByText(/0 requests · Measured zero/)).not.toBeInTheDocument(),
+    );
+  });
+  it('leads with Referrals and drops crawl-only views when crawl logs are unavailable', async () => {
+    const dashboards: URLSearchParams[] = [];
+    mswServer.use(
+      http.get(root + '/crawl-logs/sources', () =>
+        HttpResponse.json({ ingestion_enabled: false, items: [] }),
+      ),
+      http.get(root + '/ai-traffic/referrals', ({ request }) => {
+        dashboards.push(new URL(request.url).searchParams);
+        return HttpResponse.json(referrals);
+      }),
+      http.get(root + '/ai-traffic/overview', () =>
+        HttpResponse.json({
+          crawl: { ...crawl, connection: 'not_connected' },
+          referrals,
+          citations: { unit: 'tracked_citations', count: 4, label: 'Tracked answers' },
+        }),
+      ),
+      http.get(root + '/ai-traffic/insights', () =>
+        HttpResponse.json({
+          snapshot_id: null,
+          window_start: '2026-10-01',
+          window_end: '2026-10-04',
+          formula_version: '1',
+          patterns: [],
+          coverage: { crawl: 'unknown', ga4_complete: false, notice: null },
+        }),
+      ),
+    );
+    // A shared link to a crawl-only view still lands somewhere useful, keeping its range.
+    window.history.replaceState(null, '', '/ai-traffic?tab=activity&range=90d');
+    renderWithProviders(<AiTrafficScreen />);
+    expect(await screen.findByText(/covers last 90 days/)).toBeVisible();
+    expect(screen.getByRole('tab', { name: 'Referrals' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.queryByRole('tab', { name: 'Activity' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'Crawlers' })).not.toBeInTheDocument();
+    await waitFor(() => expect(dashboards.at(-1)?.get('range')).toBe('90d'));
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('tab', { name: 'Overview' }));
+    expect(await screen.findByText(/not available for this workspace yet/)).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Connect crawl logs' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Verification' })).not.toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Reporting range' })).toHaveTextContent(
+      'Last 90 days',
     );
   });
 });

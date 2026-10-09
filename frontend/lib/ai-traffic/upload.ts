@@ -120,6 +120,15 @@ async function* fileLines(file: File, format: string, max: number) {
     await reader.cancel();
   }
 }
+/** A line without the identifying fields is skipped, as the server rejects it alone. */
+function mappedLine(line: string, format: string, mapping: LogMapping) {
+  try {
+    return parseLogLine(line, format, mapping);
+  } catch (error) {
+    if (error instanceof UnsupportedLogFormat) return null;
+    throw error;
+  }
+}
 async function headerSample(
   iterator: AsyncIterator<string>,
   format: string,
@@ -132,25 +141,21 @@ async function headerSample(
     if (next.done) break;
     sample.push(next.value);
   }
-  const parsed = sample.map((line) => parseLogLine(line, format, mapping));
-  if (!parsed.some(Boolean)) throw new UnsupportedLogFormat(['timestamp', 'path', 'user_agent']);
+  if (!sample.some((line) => mappedLine(line, format, mapping)))
+    throw new UnsupportedLogFormat(['timestamp', 'path', 'user_agent']);
   return sample;
 }
 type Scan = {
   first: string | null;
   last: string | null;
-  dates: Map<string, { first: string; last: string }>;
+  dates: Set<string>;
 };
 function trackScan(scan: Scan, timestamp: string) {
   const at = new Date(timestamp).toISOString(),
     day = at.slice(0, 10);
   if (!scan.first || at < scan.first) scan.first = at;
   if (!scan.last || at > scan.last) scan.last = at;
-  const old = scan.dates.get(day);
-  scan.dates.set(day, {
-    first: old && old.first < at ? old.first : at,
-    last: old && old.last > at ? old.last : at,
-  });
+  scan.dates.add(day);
   return at;
 }
 export async function uploadCrawlFile(input: {
@@ -180,9 +185,12 @@ export async function uploadCrawlFile(input: {
       ack = upload.last_ack_seq,
       batch: string[] = [],
       batchBytes = 0;
-    const scan: Scan = { first: null, last: null, dates: new Map() };
+    const scan: Scan = { first: null, last: null, dates: new Set<string>() };
     // Lines older than the admission window are neither sent nor counted in the scan span.
-    const oldest = new Date(Date.now() - catalog.max_backdate_days * 86400000).toISOString();
+    // The floor is fixed when the upload is created, so a resumed scan batches identically.
+    const oldest = new Date(
+      Date.parse(upload.created_at) - catalog.max_backdate_days * 86400000,
+    ).toISOString();
     const envelopeBytes = () => new TextEncoder().encode(JSON.stringify({ seq, lines: [] })).length;
     let envelope = envelopeBytes();
     const flush = async () => {
@@ -200,7 +208,7 @@ export async function uploadCrawlFile(input: {
     async function consume(line: string) {
       if (options.signal?.aborted) throw new DOMException('Upload cancelled', 'AbortError');
       scanned++;
-      const row = parseLogLine(line, format, mapping);
+      const row = mappedLine(line, format, mapping);
       if (!row || new Date(row.timestamp).toISOString() < oldest) return;
       const at = trackScan(scan, row.timestamp);
       if (!catalog.bots.some((bot) => matchesCrawlerUserAgent(bot, row.user_agent))) return;
@@ -234,10 +242,7 @@ export async function uploadCrawlFile(input: {
         scanned_lines: scanned,
         first_line_at: scan.first,
         last_line_at: scan.last,
-        scanned_dates: [...scan.dates.keys()].map((date) => ({
-          date,
-          complete: scan.first! <= date + 'T00:00:00.000Z' && scan.last! >= date + 'T23:59:59.000Z',
-        })),
+        scanned_dates: [...scan.dates],
       },
       options,
     );

@@ -62,6 +62,8 @@ Zero is measured only under complete or declared-complete coverage. Otherwise,
 absence means no matching requests were observed in the available logs. Review
 source diagnostics, sampling and receipt gaps before drawing conclusions.
 Reporting days use the captured GA4 property timezone, or UTC before capture.
+The last 30 days, 90 days and 12 months end on the current reporting day, which
+counts its requests but cannot make a window incomplete.
 Older rollups retain their recorded timezone; a mismatch marks the crawl and
 referral measures non-comparable. Quality flags disclose thresholding, other-row
 loss, sampling or a failed or truncated replacement report. A failed
@@ -74,7 +76,8 @@ Failed verification is separately available. Unverifiable reasons distinguish
 missing IPs, absent published ranges and missing or stale range snapshots. A
 malformed IP is unverifiable rather than a failed range check. A
 historical import may be verified against a **later snapshot** rather than one
-contemporaneous with the request; Activity discloses that basis.
+contemporaneous with the request; Activity discloses that basis. An IP outside a
+later snapshot's ranges is unverifiable, not failed, because published ranges change.
 
 ## Before connecting
 
@@ -102,19 +105,19 @@ Revocation stops collection and retains history.
    batches, processing time and partial coverage.
 
 The template fetches the visitor's response first, captures its real status,
-then uses `ctx.waitUntil` to send only catalog-matched events. Ingestion failure
+and buffers only catalog-matched events. Ingestion failure
 does not change or delay the visitor response. It takes IP and Ray ID from
 Cloudflare headers and forwards a queryless path. CiteLadder uses the IP
 transiently for verification and does not retain it.
 
-This is per-request, best-effort forwarding. It provides neither batching nor
-durable delivery. Cloudflare cancels unfinished `waitUntil` work after about 30
-seconds. **Every routed request counts against your Workers quota**, even when
-no event is sent. Use Logpush or a durable shipper for reliable delivery.
-Each matched event uses one ingest request. The current source quota is 120
-batch attempts per hour, including retries and upload batches. Above that rate,
-use batched Logpush or a durable shipper; the Worker template does not buffer
-events or retry rejected requests. Quota sizing remains an enablement decision.
+Each Worker instance buffers matched events and sends them as one batch, using
+`ctx.waitUntil`, once the oldest has waited 60 seconds or 300 are pending. A
+buffer is lost if Cloudflare retires the instance before it sends, and the
+template does not retry a rejected batch, so this is best-effort delivery.
+Cloudflare cancels unfinished `waitUntil` work after about 30 seconds. **Every
+routed request counts against your Workers quota**, even when no event is sent.
+Use Logpush or a durable shipper for reliable delivery. The current source quota
+is 600 batch attempts per hour. Quota sizing remains an enablement decision.
 See [Worker context](https://developers.cloudflare.com/workers/runtime-apis/context/),
 [Workers limits and fail-open behavior](https://developers.cloudflare.com/workers/platform/limits/)
 and [Cloudflare request headers](https://developers.cloudflare.com/fundamentals/reference/http-headers/).
@@ -181,10 +184,11 @@ Without a provider request ID, identical mapped lines from one source collapse;
 distinct requests with identical fields cannot be distinguished.
 
 Batch at least 60 seconds apart and keep within the bounds above. Current
-configuration permits 120 batch attempts per source per hour and one million
+configuration permits 600 batch attempts per source per hour and one million
 accepted lines per project per day. A 202 response acknowledges durable receipt and
 queues processing; 401 rejects the token, 409 means a disabled, revoked or
-conflicting state, 415 rejects an unsupported encoding or media type, 422 rejects unsupported fields, and 429
+conflicting state, 415 rejects an unsupported encoding or media type, 422 rejects a batch in which
+no line has the identifying fields, and 429
 includes `Retry-After`. Keep a durable retry queue and honor that delay. Do not
 log request bodies, IPs or tokens in your shipper. Current backdating admission
 is 80 days and future clock skew is bounded to one hour.
@@ -196,11 +200,16 @@ gzipped. Your browser streams and decompresses the file, checks a header sample
 and sends only recognized lines. The server reapplies scope, verification,
 privacy, quotas and deduplication; local filtering is not an authorization boundary.
 
-Progress shows scanned and recognized counts and the acknowledged batch. Save the
-upload ID and select the original file to resume. Scan counts, timestamp span and
-full-day declarations are client-reported. A zero-match file can complete its
-scan without sending unmatched lines. A partial-day scan remains partial.
-Unsupported formats report missing fields and never become zero requests.
+The file is read in the format chosen when its upload source was created.
+Progress shows scanned and recognized counts. If an upload stops, **Resume
+upload** continues it with the same file from the last acknowledged batch. Scan
+counts and the timestamp span are client-reported; CiteLadder derives full days
+from them, and a day another source already covers is left out of the file's
+declaration. A zero-match file can complete its scan without sending unmatched
+lines. A partial-day scan remains partial. A line without the identifying fields
+is skipped; a file with none of them reports the missing fields and never becomes
+zero requests. Results appear once processing finishes, usually within a few
+minutes.
 Uploads idle for 24 hours are abandoned; accepted rows remain available.
 
 ## Retention and availability

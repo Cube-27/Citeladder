@@ -9,22 +9,26 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { TrendChart, type TrendPoint } from '@/components/ui/trend-chart';
-import { UnavailableValue } from '@/components/ui/unavailable-value';
 import type { AiReferrals } from '@/lib/api/ai-traffic';
 import {
   aiSourceLabel,
   countDomainMax,
   countYLabels,
-  formatInt,
   toCountChartPoints,
   toPercentChartPoints,
   totalSourceSessions,
 } from '@/lib/ai-traffic/series';
 import { bucketCountLabel } from '@/lib/ai-traffic/options';
-import { formatPercent, formatWindowDate } from '@/lib/format';
+import { formatCount, formatPercent, formatWindowDate } from '@/lib/format';
 import { useState } from 'react';
 import { Tabs, TabPanel } from '@/components/ui/tabs';
-import { ReferralComparison, ReferralLandingPages, ReferralQuality } from './referral-details';
+import {
+  formatRevenue,
+  Measure,
+  ReferralComparison,
+  ReferralLandingPages,
+  ReferralQuality,
+} from './referral-details';
 
 export function AiReferralsDashboard({
   data,
@@ -151,7 +155,7 @@ function SourceTotals({ data }: Readonly<{ data: AiReferrals }>) {
       <CardHeader>
         <CardTitle>AI referral sources</CardTitle>
         <CardDescription>
-          {formatInt(total)} identified sessions for {formatWindowDate(data.window_start)} –{' '}
+          {formatCount(total)} identified sessions for {formatWindowDate(data.window_start)} –{' '}
           {formatWindowDate(data.window_end)}. Shares use all GA4 source-report sessions as the
           denominator.
         </CardDescription>
@@ -188,40 +192,38 @@ function SourceTotalsTable({ data }: Readonly<{ data: AiReferrals }>) {
         </TableRow>
       </TableHeader>
       <TableBody>
-        {data.sources.map((source) => (
-          <TableRow key={source.ai_source}>
-            <TableCell>{aiSourceLabel(source.ai_source)}</TableCell>
-            <TableCell numeric>
-              <span className="tabular-nums">{formatInt(source.sessions)}</span>
-            </TableCell>
-            <TableCell numeric>
-              {source.share === null ? (
-                <UnavailableValue state="not_measured" />
-              ) : (
-                <span className="tabular-nums">{formatPercent(source.share, 1)}</span>
-              )}
-            </TableCell>
-            <TableCell numeric>
-              {formatPercent(
-                data.source_measures.find((r) => r.ai_source === source.ai_source)
-                  ?.engagement_rate ?? null,
-                1,
-              )}
-            </TableCell>
-            <TableCell numeric>
-              {data.source_measures.find((r) => r.ai_source === source.ai_source)?.key_events ??
-                'Unavailable'}
-            </TableCell>
-            <TableCell numeric>
-              {data.source_measures.find((r) => r.ai_source === source.ai_source)?.transactions ??
-                'Unavailable'}
-            </TableCell>
-            <TableCell numeric>
-              {data.source_measures.find((r) => r.ai_source === source.ai_source)
-                ?.purchase_revenue ?? 'Unavailable'}
-            </TableCell>
-          </TableRow>
-        ))}
+        {data.sources.map((source) => {
+          const measures = data.source_measures.find((r) => r.ai_source === source.ai_source);
+          return (
+            <TableRow key={source.ai_source}>
+              <TableCell>{aiSourceLabel(source.ai_source)}</TableCell>
+              <TableCell numeric>
+                <span className="tabular-nums">{formatCount(source.sessions)}</span>
+              </TableCell>
+              <TableCell numeric>
+                <Measure value={source.share} format={(v) => formatPercent(v, 1)} />
+              </TableCell>
+              <TableCell numeric>
+                <Measure
+                  value={measures?.engagement_rate ?? null}
+                  format={(v) => formatPercent(v, 1)}
+                />
+              </TableCell>
+              <TableCell numeric>
+                <Measure value={measures?.key_events ?? null} format={formatCount} />
+              </TableCell>
+              <TableCell numeric>
+                <Measure value={measures?.transactions ?? null} format={formatCount} />
+              </TableCell>
+              <TableCell numeric>
+                <Measure
+                  value={measures?.purchase_revenue ?? null}
+                  format={(v) => formatRevenue(v, data.currency_code)}
+                />
+              </TableCell>
+            </TableRow>
+          );
+        })}
       </TableBody>
     </Table>
   );

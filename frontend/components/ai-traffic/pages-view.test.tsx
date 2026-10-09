@@ -73,7 +73,7 @@ it('keeps inventory, zero, partial values and distinct unavailable reasons reada
   const missing = within(row).getByRole('button', { name: 'Unavailable requests' });
   expect(missing).toHaveTextContent('–');
   act(() => missing.focus());
-  expect(await screen.findByRole('tooltip')).toHaveTextContent('requests: not connected');
+  expect(await screen.findByRole('tooltip')).toHaveTextContent('requests: Not connected');
   await user.keyboard('{Escape}');
   expect(within(row).getByRole('button', { name: /4xx and 5xx unavailable/ })).toHaveTextContent(
     '–',

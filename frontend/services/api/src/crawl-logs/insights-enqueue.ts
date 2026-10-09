@@ -5,9 +5,12 @@ import type { CrawlScope } from './state.ts';
 import { enqueueTask } from '../referrals/enqueue.ts';
 import { aiTraffic } from '../config/ai-traffic.ts';
 import { crawlLogs } from '../config/crawl-logs.ts';
+import { ga4Mapped } from './pages.ts';
 
-/** Called inside terminal/source transactions; leased work gets a queued successor. */
+/** Called inside terminal/source transactions; leased work gets a queued successor.
+ * Every pattern needs referral evidence, so projects without GA4 enqueue nothing. */
 export async function enqueueTrafficInsights(db: Database, scope: CrawlScope, now = new Date()) {
+  if (!(await ga4Mapped(db, scope))) return;
   await sql`select pg_advisory_xact_lock(hashtextextended(${scope.workspaceId + ':' + scope.projectId + ':ai-traffic-insights'},0))`.execute(
     db,
   );

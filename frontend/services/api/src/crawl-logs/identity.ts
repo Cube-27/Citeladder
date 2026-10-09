@@ -76,12 +76,16 @@ export function verifyBot(
       const [network, prefix] = ipaddr.parseCIDR(cidr);
       return address.kind() === network.kind() && address.match(network, prefix);
     });
-    if (!matches) return result('failed_verification', 'ip_outside_ranges');
     const basis =
       Math.abs(snapshot.fetched_at.getTime() - at.getTime()) <=
       crawlLogs.ip_range_contemporaneous_hours * 3600000
         ? 'contemporaneous'
         : 'later_snapshot';
+    // Ranges change over time: only a contemporaneous snapshot can fail a request.
+    if (!matches)
+      return basis === 'contemporaneous'
+        ? result('failed_verification', 'ip_outside_ranges')
+        : result('unverifiable', 'later_snapshot_mismatch');
     return result('verified', null, basis);
   } catch {
     return result('unverifiable', 'invalid_ip');

@@ -19,7 +19,7 @@ import {
 } from '../http/keyset-cursor.ts';
 import { isoDateText, utcTextOf, pydanticUtc } from '../db/timestamps.ts';
 import { sourceList } from './source-reads.ts';
-import type { CrawlScope } from './state.ts';
+import { reportingDay, type CrawlScope } from './state.ts';
 
 export type CrawlReadOptions = {
   range?: string | null;
@@ -33,6 +33,8 @@ export type CrawlReadOptions = {
   status?: number | null;
   folder?: string | null;
   resource_class?: string | null;
+  /** Resolved once per read from the project's crawl state; never caller input. */
+  reporting_timezone?: string;
 };
 export function verificationFilter(value?: string | null) {
   if (!value) return crawlLogs.default_verification_filter;
@@ -41,8 +43,37 @@ export function verificationFilter(value?: string | null) {
     throw new ApiError(422, 'Invalid verification filter');
   return [...new Set(items)];
 }
+/** Every crawl read dates its window in the project's reporting timezone. */
+export async function withReportingTimezone<T extends CrawlReadOptions>(
+  db: Database,
+  scope: CrawlScope,
+  options: T,
+): Promise<T & { reporting_timezone: string }> {
+  if (options.reporting_timezone)
+    return { ...options, reporting_timezone: options.reporting_timezone };
+  const state = await db
+    .selectFrom('crawl_log_states')
+    .select('reporting_timezone')
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('project_id', '=', scope.projectId)
+    .executeTakeFirst();
+  return {
+    ...options,
+    reporting_timezone: state?.reporting_timezone ?? crawlLogs.default_reporting_timezone,
+  };
+}
+/** The reporting day in progress; it never makes a window incomplete. */
+export function currentReportingDay(options: CrawlReadOptions, now = new Date()) {
+  return reportingDay(now, options.reporting_timezone ?? crawlLogs.default_reporting_timezone);
+}
+export function presetDays(options: CrawlReadOptions) {
+  const ranges: Record<string, number> = policy.analytics.preset_range_days;
+  const days = ranges[options.range ?? crawlLogs.default_range];
+  if (!days) throw new ApiError(422, 'Invalid crawl range');
+  return days;
+}
 /** The reporting window every crawl read and the overview route share. */
-export function crawlWindow(options: CrawlReadOptions) {
+export function crawlWindow(options: CrawlReadOptions, now = new Date()) {
   if (Boolean(options.start_date) !== Boolean(options.end_date))
     throw new ApiError(422, 'Both dates are required');
   if (options.start_date && options.end_date) {
@@ -56,10 +87,8 @@ export function crawlWindow(options: CrawlReadOptions) {
       throw new ApiError(422, 'Invalid crawl window');
     return { start: options.start_date, end: options.end_date };
   }
-  const ranges: Record<string, number> = policy.analytics.preset_range_days;
-  const days = ranges[options.range ?? crawlLogs.default_range];
-  if (!days) throw new ApiError(422, 'Invalid crawl range');
-  const end = new Date().toISOString().slice(0, 10);
+  const days = presetDays(options);
+  const end = currentReportingDay(options, now);
   return {
     start: new Date(Date.parse(end) - (days - 1) * 86400000).toISOString().slice(0, 10),
     end,
@@ -104,7 +133,8 @@ export function pageLimit(options: CrawlReadOptions) {
     throw new ApiError(422, 'Invalid page size');
   return limit;
 }
-export async function crawlerPage(db: Database, scope: CrawlScope, options: CrawlReadOptions = {}) {
+export async function crawlerPage(db: Database, scope: CrawlScope, input: CrawlReadOptions = {}) {
+  const options = await withReportingTimezone(db, scope, input);
   const binding = cursorParts(scope, 'crawlers', options),
     limit = pageLimit(options);
   if (binding.keys.length && binding.keys.length !== 1)
@@ -210,11 +240,8 @@ async function crawlerBreakdowns(
     reasons: bucket(reasons, (s) => s.reason),
   };
 }
-export async function activityPage(
-  db: Database,
-  scope: CrawlScope,
-  options: CrawlReadOptions = {},
-) {
+export async function activityPage(db: Database, scope: CrawlScope, input: CrawlReadOptions = {}) {
+  const options = await withReportingTimezone(db, scope, input);
   const binding = cursorParts(scope, 'activity', options),
     limit = pageLimit(options);
   let query = db
@@ -251,10 +278,11 @@ export async function activityPage(
   if (options.folder) query = query.where('folder', '=', options.folder);
   if (options.resource_class) query = query.where('resource_class', '=', options.resource_class);
   if (options.range || options.start_date || options.end_date) {
-    const w = crawlWindow(options);
+    const w = crawlWindow(options),
+      tz = options.reporting_timezone;
     query = query
-      .where('occurred_at', '>=', new Date(w.start + 'T00:00:00Z'))
-      .where('occurred_at', '<', new Date(Date.parse(w.end) + 86400000));
+      .where('occurred_at', '>=', sql<Date>`${w.start}::date::timestamp at time zone ${tz}`)
+      .where('occurred_at', '<', sql<Date>`(${w.end}::date + 1)::timestamp at time zone ${tz}`);
   }
   if (binding.keys.length) {
     if (
@@ -284,11 +312,8 @@ export async function activityPage(
         : null,
   });
 }
-export async function coveragePage(
-  db: Database,
-  scope: CrawlScope,
-  options: CrawlReadOptions = {},
-) {
+export async function coveragePage(db: Database, scope: CrawlScope, input: CrawlReadOptions = {}) {
+  const options = await withReportingTimezone(db, scope, input);
   const w = crawlWindow(options),
     limit = pageLimit(options),
     binding = cursorParts(scope, 'coverage', options);
@@ -343,11 +368,8 @@ export async function coveragePage(
         : null,
   });
 }
-export async function crawlSummary(
-  db: Database,
-  scope: CrawlScope,
-  options: CrawlReadOptions = {},
-) {
+export async function crawlSummary(db: Database, scope: CrawlScope, input: CrawlReadOptions = {}) {
+  const options = await withReportingTimezone(db, scope, input);
   const w = crawlWindow(options),
     filtered = rollups(db, scope, options);
   const [total, failed, coverage, series, { items: sources }] = await Promise.all([
@@ -386,7 +408,7 @@ export async function crawlSummary(
       .execute(),
     sourceList(db, scope),
   ]);
-  const quality = coverageQuality(coverage, w);
+  const quality = coverageQuality(coverage, w, currentReportingDay(options));
   const adequate = quality === 'complete' || quality === 'declared_complete';
   let connection = 'not_connected';
   if (sources.some((s) => s.status === 'active'))
@@ -428,12 +450,18 @@ function purposeSeries(series: { date: string; bot_id: string; requests: number 
   return [...purposes.values()];
 }
 
+/** Judged over closed days: the day in progress counts requests but cannot be complete. */
 function coverageQuality(
-  rows: { coverage: string; day: string; host: string }[],
+  all: { coverage: string; day: string; host: string }[],
   w: { start: string; end: string },
+  today: string,
 ) {
-  const expected = (Date.parse(w.end) - Date.parse(w.start)) / 86400000 + 1;
-  const hosts = new Set(rows.map((row) => row.host));
+  const end =
+    w.end < today ? w.end : new Date(Date.parse(today) - 86400000).toISOString().slice(0, 10);
+  const rows = all.filter((row) => row.day <= end);
+  const expected = (Date.parse(end) - Date.parse(w.start)) / 86400000 + 1;
+  if (expected < 1) return all.some((row) => row.coverage !== 'unknown') ? 'partial' : 'unknown';
+  const hosts = new Set(all.map((row) => row.host));
   const keys = (row: (typeof rows)[number]) => row.day + ':' + row.host;
   const complete = new Set(rows.filter((row) => row.coverage === 'complete').map(keys));
   if (hosts.size > 0 && complete.size === expected * hosts.size) return 'complete';
@@ -443,11 +471,12 @@ function coverageQuality(
       .map(keys),
   );
   if (hosts.size > 0 && covered.size === expected * hosts.size) return 'declared_complete';
-  return rows.some((row) => row.coverage !== 'unknown') ? 'partial' : 'unknown';
+  return all.some((row) => row.coverage !== 'unknown') ? 'partial' : 'unknown';
 }
 
 /** Persisted projection references for bounded MCP evidence provenance. */
-export function crawlReadArtifacts(db: Database, scope: CrawlScope, options: CrawlReadOptions) {
+export async function crawlReadArtifacts(db: Database, scope: CrawlScope, input: CrawlReadOptions) {
+  const options = await withReportingTimezone(db, scope, input);
   return rollups(db, scope, options)
     .select(['id', 'formula_version', 'source_batch_ids'])
     .orderBy('id')

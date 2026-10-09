@@ -2,7 +2,12 @@
 import { sql, type RawBuilder } from 'kysely';
 import type { Database } from '../db/database.ts';
 import type { CrawlScope } from './state.ts';
-import { crawlWindow, verificationFilter, type CrawlReadOptions } from './reads.ts';
+import {
+  crawlWindow,
+  verificationFilter,
+  withReportingTimezone,
+  type CrawlReadOptions,
+} from './reads.ts';
 import { crawlers } from '../config/crawlers.ts';
 import { crawlLogs } from '../config/crawl-logs.ts';
 import { ApiError } from '../errors.ts';
@@ -61,7 +66,8 @@ function pageCursor(sortValue: RawBuilder<unknown>, ascending: boolean, after: s
   if (ascending) return sql`(${sortValue},url_hash)>(${after[0]},${after[1]})`;
   return sql`(${sortValue},url_hash)<(${Number(after[0])},${after[1]})`;
 }
-export async function pageDataset(db: Database, scope: CrawlScope, options: PageOptions = {}) {
+export async function pageDataset(db: Database, scope: CrawlScope, input: PageOptions = {}) {
+  const options = await withReportingTimezone(db, scope, input);
   const w = crawlWindow(options),
     verification = verificationFilter(options.verification);
   const crawl = await db

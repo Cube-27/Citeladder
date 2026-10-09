@@ -11,7 +11,8 @@ import type {
 import { aiTrafficApi } from '@/lib/api/ai-traffic';
 import { queryKeys } from '@/lib/api/query-keys';
 import { cursorControls, useCursorTable } from '@/lib/table/use-cursor-table';
-import { coverageLabel, words } from '@/lib/ai-traffic/vocabulary';
+import { coverageLabel, reasonLabel, words } from '@/lib/ai-traffic/vocabulary';
+import { MISSING_MARK } from '@/lib/format';
 import { CalendarX } from 'lucide-react';
 import { TabPanel } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -40,17 +41,18 @@ import { TrafficNoResults } from './empty-state';
 import { Pager } from '@/components/ui/pager';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
 import type { TrafficFilters } from '@/lib/api/ai-traffic';
-export { CrawlSignalPanel } from './overview-signals';
 export function TrafficOverview({
   data,
   projectId,
   workspaceId,
   range,
+  crawlAvailable,
 }: Readonly<{
   data: z.infer<typeof aiTrafficOverviewSchema>;
   projectId: string;
   workspaceId: string;
   range: string;
+  crawlAvailable: boolean;
 }>) {
   const [connectOpen, setConnectOpen] = useState(false);
   const crawlConnected = data.crawl.connection !== 'not_connected';
@@ -59,16 +61,22 @@ export function TrafficOverview({
       <Stack gap="workspace">
         <InsightStrip projectId={projectId} workspaceId={workspaceId} range={range} />
         <div className="grid gap-[var(--workspace-gap)] lg:grid-cols-3">
-          <CrawlSignalPanel data={data.crawl} onConnect={() => setConnectOpen(true)} />
+          <CrawlSignalPanel
+            data={data.crawl}
+            available={crawlAvailable}
+            onConnect={() => setConnectOpen(true)}
+          />
           <ReferralSignal data={data.referrals} />
           <CitationSignal data={data.citations} projectId={projectId} />
         </div>
         {data.crawl.series.length ? <RequestsByPurpose series={data.crawl.series} /> : null}
-        <CrawlLogConnections
-          open={connectOpen}
-          onOpenChange={setConnectOpen}
-          headerWhenEmpty={false}
-        />
+        {crawlAvailable ? (
+          <CrawlLogConnections
+            open={connectOpen}
+            onOpenChange={setConnectOpen}
+            headerWhenEmpty={false}
+          />
+        ) : null}
         {crawlConnected ? (
           <CoverageTable projectId={projectId} workspaceId={workspaceId} range={range} />
         ) : null}
@@ -104,8 +112,13 @@ export function TrafficCrawlers({
                 <TableCell>{words(b.purpose)}</TableCell>
                 <TableCell numeric>{b.requests}</TableCell>
                 <TableCell numeric>
-                  <Button variant="ghost" size="sm" onClick={() => setBotId(b.bot_id)}>
-                    {b.pages ?? 'Unavailable'} paths
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setBotId(b.bot_id)}
+                    aria-label={`View paths requested by ${b.label}`}
+                  >
+                    {b.pages ?? MISSING_MARK} paths
                   </Button>
                 </TableCell>
                 <TableCell>
@@ -116,7 +129,7 @@ export function TrafficCrawlers({
                     lines={[
                       entries(b.status_codes),
                       entries(b.verification),
-                      'Reasons within raw retention: ' + entries(b.verification_reasons),
+                      reasonEntries(b.verification_reasons),
                     ]}
                   />
                 </TableCell>
@@ -185,8 +198,7 @@ export function TrafficActivity({
                   <CellLines
                     lines={[
                       words(r.verification) +
-                        ' · ' +
-                        words(r.verification_reason ?? r.verification_basis ?? 'unknown'),
+                        (r.verification_reason ? ' · ' + reasonLabel(r.verification_reason) : ''),
                       r.verification_basis === 'later_snapshot'
                         ? 'Verified using a later IP-range snapshot.'
                         : '',
@@ -220,6 +232,13 @@ function CellLines({ lines }: Readonly<{ lines: string[] }>) {
       ))}
     </div>
   );
+}
+/** Reasons survive raw retention because rollups keep them. */
+function reasonEntries(values: Record<string, number>) {
+  return Object.entries(values)
+    .filter(([key]) => key !== 'verified')
+    .map(([key, value]) => reasonLabel(key) + ': ' + value)
+    .join(' · ');
 }
 function entries(values: Record<string, number>) {
   return Object.entries(values)
@@ -277,13 +296,13 @@ function CoverageTable({
                   <TableCell>
                     <CellLines
                       lines={[
-                        data.sources.find((s) => s.id === r.source_id)?.host ?? r.source_id,
-                        r.source_id,
+                        data.sources.find((s) => s.id === r.source_id)?.host ?? 'Removed source',
+                        words(data.sources.find((s) => s.id === r.source_id)?.setup ?? ''),
                       ]}
                     />
                   </TableCell>
                   <TableCell>
-                    <CellLines lines={[coverageLabel(r.coverage), words(r.reason)]} />
+                    <CellLines lines={[coverageLabel(r.coverage), reasonLabel(r.reason)]} />
                   </TableCell>
                   <TableCell numeric>
                     {r.batch_count} / {r.heartbeat_count}

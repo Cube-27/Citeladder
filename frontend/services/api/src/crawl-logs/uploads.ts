@@ -20,9 +20,7 @@ export const uploadCompleteSchema = z.strictObject({
   scanned_lines: z.int().nonnegative(),
   first_line_at: z.iso.datetime({ offset: true }).nullable(),
   last_line_at: z.iso.datetime({ offset: true }).nullable(),
-  scanned_dates: z
-    .array(z.strictObject({ date: z.iso.date(), complete: z.boolean() }))
-    .max(crawlLogs.max_backdate_days + 1),
+  scanned_dates: z.array(z.iso.date()).max(crawlLogs.max_backdate_days + 1),
 });
 export async function sourceForUpload(db: Database, scope: CrawlScope, id: string) {
   const source = await db
@@ -98,7 +96,7 @@ export async function completeUpload(
   const first = scanFirst && (scanFirst < floor ? floor : scanFirst),
     last = scanLast && (scanLast > ceiling ? ceiling : scanLast);
   if (first && last && first > last) throw new ApiError(422, 'Scan span outside admission window');
-  if (new Set(input.scanned_dates.map((d) => d.date)).size !== input.scanned_dates.length)
+  if (new Set(input.scanned_dates).size !== input.scanned_dates.length)
     throw new ApiError(422, 'Duplicate scanned day');
   return await db.transaction().execute(async (trx) => {
     await lockAuthorizedWorkspace(trx, scope.workspaceId, actorId, 'manage_credentials');
@@ -147,7 +145,7 @@ export async function completeUpload(
     return completed;
   });
 }
-/** Check scan bounds against server reporting midnights; client booleans are not authority. */
+/** Declared days follow server reporting midnights; the client reports only its scan span. */
 async function scannedDays(
   db: Database,
   input: {
@@ -180,7 +178,8 @@ async function scannedDays(
       )) as overlapping
     from generate_series((${first}::timestamptz at time zone ${tz})::date,
       (${last}::timestamptz at time zone ${tz})::date, interval '1 day') day`.execute(db);
-  if (result.rows.some((row) => row.overlapping))
-    throw new ApiError(409, 'Scanned day overlaps another source');
-  return result.rows.map(({ date, complete }) => ({ date, complete }));
+  // Another source already owns an overlapping day; this upload declares only the rest.
+  return result.rows
+    .filter((row) => !row.overlapping)
+    .map(({ date, complete }) => ({ date, complete }));
 }

@@ -2,8 +2,7 @@
 import type { TrendPoint } from '@/components/ui/trend-chart';
 import type { AiReferrals, AiSource } from '@/lib/api/ai-traffic';
 import { formatShortDate } from '@/lib/format';
-
-export { formatCount as formatInt } from '@/lib/format';
+import { words } from './vocabulary';
 
 type SeriesPoint = { date: string; value: number | null };
 
@@ -42,8 +41,10 @@ const AI_SOURCE_LABELS: Record<AiSource, string> = {
   other: 'Other',
 };
 
-export function aiSourceLabel(source: AiSource): string {
-  return AI_SOURCE_LABELS[source] ?? source;
+const isAiSource = (source: string): source is AiSource => Object.hasOwn(AI_SOURCE_LABELS, source);
+
+export function aiSourceLabel(source: string): string {
+  return isAiSource(source) ? AI_SOURCE_LABELS[source] : words(source);
 }
 
 export function totalSourceSessions(sources: AiReferrals['sources']): number {

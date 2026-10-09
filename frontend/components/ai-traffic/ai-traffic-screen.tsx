@@ -1,6 +1,8 @@
 'use client';
 import { TRAFFIC_TABS } from '@/lib/config/crawl-logs';
-import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
+import { useUrlState, type UrlCodec } from '@/lib/navigation/url-state';
+import { useProjectContext } from '@/lib/project/project-context';
+import { crawlLogsAvailable, useCrawlSources } from '@/lib/ai-traffic/use-crawl-connections';
 import { useTrafficData, type TrafficDataTab } from '@/lib/ai-traffic/use-traffic-data';
 import { PageShell } from '@/components/layout/page-shell';
 import { PageLoading } from '@/components/layout/page-loading';
@@ -15,28 +17,68 @@ import { TrafficOverview, TrafficCrawlers, TrafficActivity } from './traffic-vie
 import { Pager } from '@/components/ui/pager';
 import { cursorControls } from '@/lib/table/use-cursor-table';
 import { TrafficPages } from './pages-view';
-export { CrawlSignalPanel } from './traffic-views';
-const tabCodec = stringUrlCodec(
-  TRAFFIC_TABS.map((t) => t.value),
-  'overview',
-);
+
+type TrafficTab = (typeof TRAFFIC_TABS)[number]['value'];
+/** Absent or unknown means "not chosen", so the default can follow crawl availability. */
+const tabCodec: UrlCodec<TrafficTab | null> = {
+  parse: (raw) => TRAFFIC_TABS.find((t) => t.value === raw)?.value ?? null,
+  serialize: (value) => value,
+};
+const CRAWL_ONLY_TABS: readonly TrafficTab[] = ['crawlers', 'activity'];
+/**
+ * Without crawl log collection the screen leads with Referrals and drops the
+ * crawl-only views instead of offering a setup the workspace cannot complete.
+ */
+function resolveTab(requested: TrafficTab | null, crawlAvailable: boolean | null) {
+  if (crawlAvailable === false)
+    return requested && !CRAWL_ONLY_TABS.includes(requested) ? requested : 'referrals';
+  return requested ?? (crawlAvailable === null ? null : 'overview');
+}
 export function AiTrafficScreen() {
-  const [tab, setTab] = useUrlState('tab', tabCodec);
-  const tabs = <TabsBar variant="band" ariaLabel="AI Traffic views" items={TRAFFIC_TABS} />;
+  const { activeProject } = useProjectContext();
+  const sources = useCrawlSources(activeProject?.id ?? '', activeProject?.workspace_id ?? '');
+  const [requested, setTab] = useUrlState('tab', tabCodec);
+  // Unknown while the sources read is pending; a failed read keeps every view.
+  let crawlAvailable: boolean | null = null;
+  if (sources.data) crawlAvailable = crawlLogsAvailable(sources.data);
+  else if (sources.isError || !activeProject) crawlAvailable = true;
+  const tab = resolveTab(requested, crawlAvailable);
+  const tabs = (
+    <TabsBar
+      variant="band"
+      ariaLabel="AI Traffic views"
+      items={
+        crawlAvailable === false
+          ? TRAFFIC_TABS.filter((t) => !CRAWL_ONLY_TABS.includes(t.value))
+          : TRAFFIC_TABS
+      }
+    />
+  );
+  // The default view waits for crawl availability; the tab band needs a selected tab.
+  if (tab === null)
+    return (
+      <PageShell>
+        <PageLoading label="Loading AI Traffic…" />
+      </PageShell>
+    );
   return (
     <TabsRoot value={tab} onValueChange={setTab}>
       {tab === 'referrals' ? (
         <AiReferralsScreen tabs={tabs} />
       ) : (
-        <TrafficDataView tab={tab} tabs={tabs} />
+        <TrafficDataView tab={tab} tabs={tabs} crawlAvailable={crawlAvailable !== false} />
       )}
     </TabsRoot>
   );
 }
-function TrafficDataView({ tab, tabs }: Readonly<{ tab: TrafficDataTab; tabs: React.ReactNode }>) {
+function TrafficDataView({
+  tab,
+  tabs,
+  crawlAvailable,
+}: Readonly<{ tab: TrafficDataTab; tabs: React.ReactNode; crawlAvailable: boolean }>) {
   const model = useTrafficData(tab);
   const { projectId, workspaceId, summary, crawlers, activity, catalog, pager, next } = model;
-  const controls = <TrafficControls model={model} />;
+  const controls = <TrafficControls model={model} crawlAvailable={crawlAvailable} />;
   // First load keeps the identity, tab and control bands; only the work waits.
   if (model.isLoading || model.current.isLoading)
     return (
@@ -54,6 +96,7 @@ function TrafficDataView({ tab, tabs }: Readonly<{ tab: TrafficDataTab; tabs: Re
             projectId={projectId}
             workspaceId={workspaceId}
             range={model.selection.range}
+            crawlAvailable={crawlAvailable}
           />
         ) : null}
         {tab === 'crawlers' && crawlers.data ? (

@@ -62,6 +62,8 @@ const schema = z.strictObject({
   task_max_attempts: positive,
   max_export_rows: positive,
   worker_timeout_ms: positive,
+  worker_flush_seconds: positive,
+  worker_batch_lines: positive,
 });
 export function loadCrawlLogs(value: unknown) {
   const result = schema.safeParse(value);
@@ -73,6 +75,8 @@ export function loadCrawlLogs(value: unknown) {
   if (
     config.default_page_size > config.max_page_size ||
     config.max_line_bytes > config.max_batch_bytes ||
+    config.worker_batch_lines > config.max_lines_per_batch ||
+    config.worker_batch_lines * config.max_line_bytes > config.max_batch_bytes ||
     config.ip_range_contemporaneous_hours > config.ip_range_max_age_hours
   )
     throw new ConfigError('Inconsistent crawl log bounds');

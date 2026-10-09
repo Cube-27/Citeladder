@@ -55,10 +55,6 @@ export function rangeToParams(range: AiReferralsRange): AiReferralsRangeParams {
   return range === 'latest' ? {} : { range };
 }
 
-// The granularity options + adjective form are OWNED by `@/lib/format`
-// (shared with the traffic surface, invariant 2) — re-exported here.
-export { GRANULARITY_OPTIONS } from '@/lib/format';
-
 /** Snapshot bucket granularity — mirrors the backend contract vocabulary. */
 export type AiReferralsGranularity = z.infer<typeof snapshotGranularitySchema>;
 

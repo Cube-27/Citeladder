@@ -224,16 +224,19 @@ describe('referral chain', () => {
       ],
       sources: [{ ai_source: 'chatgpt', sessions: 5, share: 0.625 }],
     });
-    // The sync window at three granularities plus the 30/90/365-day family.
+    // The 30/90/365-day family exists at every granularity a preset read can ask for.
     const presets = await db
       .selectFrom('ai_referrals_snapshots')
-      .select('preset_window_days')
+      .select(['preset_window_days', 'granularity'])
       .where('project_id', '=', projectId)
       .where('preset_window_days', 'is not', null)
       .orderBy('preset_window_days')
+      .orderBy('granularity')
       .execute();
-    expect(presets.map((row) => row.preset_window_days)).toEqual(
-      policy.analytics.snapshot_window_days,
+    expect(presets.map((row) => `${row.preset_window_days}:${row.granularity}`)).toEqual(
+      policy.analytics.snapshot_window_days.flatMap((days) =>
+        ['day', 'month', 'week'].map((granularity) => `${days}:${granularity}`),
+      ),
     );
   });
 

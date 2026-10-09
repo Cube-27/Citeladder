@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { SiteFixtures, type SiteSeed } from './site-health-fixtures.ts';
-import { testDatabase } from './support.ts';
+import { testConfig, testDatabase, sessionToken } from './support.ts';
+import { createApp } from '../src/app.ts';
 import { seedImport } from './referral-fixtures.ts';
 import { task, requests } from './traffic-fixtures.ts';
 import { createSource } from '../src/crawl-logs/sources.ts';
@@ -168,6 +169,35 @@ describe('A3 persisted Pages join', () => {
     });
     await refreshInsightWindow(db, scope(), filters);
     expect((await pagesRead(db, scope(), options)).items).toEqual([]);
+  });
+  it('counts only citations of owned pages on Overview', async () => {
+    const owned = await db
+      .selectFrom('citations')
+      .selectAll()
+      .where('workspace_id', '=', seed.workspaceId)
+      .where('url_hash', '=', guide)
+      .executeTakeFirstOrThrow();
+    await db
+      .insertInto('citations')
+      .values({
+        ...owned,
+        id: randomUUID(),
+        ordinal: owned.ordinal + 100,
+        is_owned: false,
+        url: 'https://competitor.test/guide',
+        domain: 'competitor.test',
+      })
+      .execute();
+    const config = testConfig(),
+      app = createApp(config, db);
+    const cookie =
+      config.session.cookieName + '=' + (await sessionToken({ sub: seed.userId, ver: 0 }));
+    const response = await app.request(
+      `/api/v1/projects/${seed.projectId}/ai-traffic/overview?range=30d`,
+      { headers: { cookie } },
+    );
+    expect(response.status).toBe(200);
+    expect(((await response.json()) as { citations: { count: number } }).citations.count).toBe(3);
   });
   it('selects the highest detail aggregates deterministically when capped, including ties', async () => {
     const originalCap = aiTraffic.max_timeline_items;
@@ -532,10 +562,17 @@ describe('A3 persisted insight gates', () => {
       .selectFrom('ai_traffic_insights')
       .select(['patterns', 'provenance'])
       .where('project_id', '=', seed.projectId)
-      .where('window_end', '=', new Date(now.toISOString().slice(0, 10)))
+      .where('window_end', '=', new Date(day))
+      .where('window_start', '<', new Date(day))
       .execute();
+    // Every preset ends on the latest day GA4 has reported, not on a day still in progress.
     expect(saved).toHaveLength(3);
     expect(saved[0]!.provenance).toHaveProperty('crawl_rollup_ids');
+    expect(await insightsRead(db, scope(), { range: '30d' })).toMatchObject({
+      window_end: day,
+      window_start: new Date(Date.parse(day) - 29 * 86400000).toISOString().slice(0, 10),
+    });
+    expect((await insightsRead(db, scope(), { range: '30d' })).snapshot_id).not.toBeNull();
     await db
       .updateTable('analytics_tasks')
       .set({ status: 'running' })
@@ -551,6 +588,23 @@ describe('A3 persisted insight gates', () => {
         .where('status', '=', 'queued')
         .execute(),
     ).toHaveLength(1);
+  });
+  it('derives nothing for a project without GA4', async () => {
+    const other = await fixtures.crawl();
+    const otherScope = { workspaceId: other.workspaceId, projectId: other.projectId };
+    await db.transaction().execute((trx) => enqueueTrafficInsights(trx, otherScope));
+    expect(
+      await db
+        .selectFrom('analytics_tasks')
+        .select('id')
+        .where('project_id', '=', other.projectId)
+        .where('task_kind', '=', 'ai_traffic_insights_refresh')
+        .execute(),
+    ).toHaveLength(0);
+    expect(await insightsRead(db, otherScope, { range: '30d' })).toMatchObject({
+      snapshot_id: null,
+      patterns: [],
+    });
   });
   it('publishes the four patterns from PostgreSQL projections and suppresses absence when quality or coverage is lost', async () => {
     const bot = await db

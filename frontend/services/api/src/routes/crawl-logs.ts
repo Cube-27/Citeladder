@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import type { Selectable } from 'kysely';
+import type { CrawlLogUploads } from '../generated/db-schema.ts';
 import {
   crawlSourceListSchema,
   crawlTokenSchema,
@@ -56,6 +58,8 @@ const uploadPath = {
 const base = { family: 'crawl-logs', authorize: 'project' } as const;
 const writes = { ...base, capability: 'manage_credentials' } as const;
 const scope = (workspaceId: string, projectId: string) => ({ workspaceId, projectId });
+const uploadView = (row: Selectable<CrawlLogUploads>) =>
+  crawlUploadSchema.parse({ ...row, created_at: row.created_at.toISOString() });
 export const crawlLogRoutes = [
   defineGetRoute({
     ...base,
@@ -167,7 +171,7 @@ export const crawlLogRoutes = [
         path.source_id,
         await readBody(c, uploadCreateSchema),
         c.get('user').id,
-      ).then((row) => crawlUploadSchema.parse(row)),
+      ).then(uploadView),
   }),
   defineGetRoute({
     ...base,
@@ -185,7 +189,7 @@ export const crawlLogRoutes = [
         .where('id', '=', path.upload_id)
         .executeTakeFirst();
       if (!upload) throw notFound('Upload');
-      return crawlUploadSchema.parse(upload);
+      return uploadView(upload);
     },
   }),
   definePostRoute({
@@ -204,7 +208,6 @@ export const crawlLogRoutes = [
           lockAuthorizedWorkspace(trx, target.workspaceId, c.get('user').id, 'manage_credentials'),
         );
       const source = await sourceForUpload(db, target, path.source_id);
-      await batchQuota(db, source);
       let value: unknown;
       try {
         value = JSON.parse(
@@ -216,8 +219,11 @@ export const crawlLogRoutes = [
       }
       const input = uploadBatchSchema.safeParse(value);
       if (!input.success) throw new ApiError(422, 'Invalid upload batch');
+      const key = path.upload_id + ':' + input.data.seq;
+      // A retried, already-accepted sequence spends no attempt quota.
+      await batchQuota(db, source, new Date(), key);
       return ingest(db, source, Buffer.from(input.data.lines.join('\n')), {
-        key: path.upload_id + ':' + input.data.seq,
+        key,
         uploadId: path.upload_id,
         seq: input.data.seq,
         actorId: c.get('user').id,
@@ -239,6 +245,6 @@ export const crawlLogRoutes = [
         path.upload_id,
         await readBody(c, uploadCompleteSchema),
         c.get('user').id,
-      ).then((row) => crawlUploadSchema.parse(row)),
+      ).then(uploadView),
   }),
 ];

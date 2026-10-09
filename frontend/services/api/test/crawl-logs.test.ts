@@ -18,6 +18,7 @@ import {
 } from '../src/crawl-logs/maintenance.ts';
 import { crawlers } from '../src/config/crawlers.ts';
 import { crawlSummary, activityPage, crawlerPage } from '../src/crawl-logs/reads.ts';
+import { pagesRead } from '../src/crawl-logs/pages.ts';
 import { dispatchTool } from '../src/mcp/tools.ts';
 import { verifyBot } from '../src/crawl-logs/identity.ts';
 import { sourceList } from '../src/crawl-logs/source-reads.ts';
@@ -320,7 +321,7 @@ describe('bounded formats', () => {
   });
 });
 describe('sanitized durable admission', () => {
-  it('requires distinct heartbeat keys and resets all counters on a mid-batch unsupported format', async () => {
+  it('requires distinct heartbeat keys and rejects a malformed line without losing the batch', async () => {
     const { source } = await setup();
     await expect(ingest(db, source, Buffer.alloc(0), {})).rejects.toThrow(/idempotency key/);
     const first = await ingest(db, source, Buffer.alloc(0), { key: 'heartbeat-1', now });
@@ -329,8 +330,17 @@ describe('sanitized durable admission', () => {
     expect(second.id).not.toBe(first.id);
     expect(second.received_at).toEqual(later);
     expect((await ingest(db, source, Buffer.alloc(0), { key: 'heartbeat-2' })).id).toBe(second.id);
+    const mixed = await ingest(db, source, body(event(), { path: '/missing-fields' }), {
+      key: 'mixed',
+    });
+    expect(mixed).toMatchObject({
+      status: 'accepted',
+      lines_received: 2,
+      lines_matched: 1,
+      lines_rejected: 1,
+    });
     await expect(
-      ingest(db, source, body(event(), { path: '/missing-fields' }), { key: 'unsupported' }),
+      ingest(db, source, body({ path: '/a' }, { path: '/b' }), { key: 'unsupported' }),
     ).rejects.toThrow(/crawler identification/);
     const rejected = await db
       .selectFrom('crawl_log_batches')
@@ -339,6 +349,7 @@ describe('sanitized durable admission', () => {
       .where('idempotency_key', '=', 'unsupported')
       .executeTakeFirstOrThrow();
     expect(rejected).toMatchObject({
+      status: 'unsupported_format',
       lines_received: 2,
       lines_parsed: 0,
       lines_rejected: 2,
@@ -347,7 +358,7 @@ describe('sanitized durable admission', () => {
     });
     expect(
       await db.selectFrom('bot_requests').select('id').where('source_id', '=', source.id).execute(),
-    ).toHaveLength(0);
+    ).toHaveLength(1);
   });
   it('admits a multi-statement batch atomically and coalesces affected reporting days', async () => {
     const { tenant, source } = await setup();
@@ -556,6 +567,28 @@ describe('sanitized durable admission', () => {
       const receiptId = async (response: Response) =>
         ((await response.json()) as { id: string }).id;
       expect(await receiptId(replay)).toBe(await receiptId(accepted));
+      // An upload retry of an accepted sequence is the same replay.
+      const u = await setup('upload');
+      const upload = await createUpload(
+        db,
+        scope(u.tenant),
+        u.source.id,
+        { filename: 'retry.ndjson', size_bytes: 10 },
+        u.tenant.userId,
+      );
+      const cookie =
+        config.session.cookieName + '=' + (await sessionToken({ sub: u.tenant.userId, ver: 0 }));
+      const batch = () =>
+        app.request(
+          `/api/v1/projects/${u.tenant.projectId}/crawl-logs/sources/${u.source.id}/uploads/${upload.id}/batches`,
+          {
+            method: 'POST',
+            headers: { cookie, 'content-type': 'application/json' },
+            body: JSON.stringify({ seq: 0, lines: [JSON.stringify(event())] }),
+          },
+        );
+      expect((await batch()).status).toBe(200);
+      expect((await batch()).status).toBe(200);
     } finally {
       crawlLogs.batches_per_source_per_hour = old;
     }
@@ -648,6 +681,13 @@ describe('verification vocabulary', () => {
     expect(
       verifyBot(bot, '2001:db8::1', snapshot, new Date(now.getTime() - 48 * 3600000), now),
     ).toMatchObject({ verification: 'verified', verification_basis: 'later_snapshot' });
+    // Ranges published later cannot prove an older request came from elsewhere.
+    expect(
+      verifyBot(bot, '203.0.113.1', snapshot, new Date(now.getTime() - 48 * 3600000), now),
+    ).toMatchObject({
+      verification: 'unverifiable',
+      verification_reason: 'later_snapshot_mismatch',
+    });
     expect(
       verifyBot(
         bot,
@@ -660,7 +700,7 @@ describe('verification vocabulary', () => {
   });
 });
 describe('uploads, coverage and serialized recomputation', () => {
-  it('derives complete days from server reporting midnights and ignores client completeness flags', async () => {
+  it('derives complete days from server reporting midnights', async () => {
     const { tenant, source } = await setup('upload');
     await db
       .updateTable('crawl_log_states')
@@ -687,11 +727,7 @@ describe('uploads, coverage and serialized recomputation', () => {
         scanned_lines: 3,
         first_line_at: firstDay + 'T12:00:00Z',
         last_line_at: lastDay + 'T12:00:00Z',
-        scanned_dates: [
-          { date: firstDay, complete: true },
-          { date: middleDay, complete: false },
-          { date: lastDay, complete: true },
-        ],
+        scanned_dates: [firstDay, middleDay, lastDay],
       },
       tenant.userId,
     );
@@ -748,7 +784,7 @@ describe('uploads, coverage and serialized recomputation', () => {
         scanned_lines: 2,
         first_line_at: day + 'T00:00:00Z',
         last_line_at: day + 'T23:59:59Z',
-        scanned_dates: [{ date: day, complete: true }],
+        scanned_dates: [day],
       },
       tenant.userId,
     );
@@ -784,6 +820,37 @@ describe('uploads, coverage and serialized recomputation', () => {
         .where('workspace_id', '=', tenant.workspaceId)
         .execute(),
     ).toHaveLength(0);
+    // A second file spanning that day completes and declares only the days no other source owns.
+    const backfill = await createSource(db, scope(tenant), tenant.userId, {
+      setup: 'upload',
+      origin: source.origin,
+      format: 'ndjson',
+    });
+    const second = await createUpload(
+      db,
+      scope(tenant),
+      backfill.id,
+      { filename: 'backfill.log', size_bytes: 100 },
+      tenant.userId,
+    );
+    const before = new Date(Date.parse(day) - 86400000).toISOString().slice(0, 10);
+    const completed = await completeUpload(
+      db,
+      scope(tenant),
+      backfill.id,
+      second.id,
+      {
+        scanned_lines: 2,
+        first_line_at: before + 'T00:00:00Z',
+        last_line_at: day + 'T23:59:59Z',
+        scanned_dates: [before, day],
+      },
+      tenant.userId,
+    );
+    expect(completed).toMatchObject({
+      status: 'completed',
+      scanned_dates: [{ date: before, complete: true }],
+    });
   });
   it('resumes/replays batches, re-filters client evidence and records a zero-match client scan', async () => {
     const { tenant, source } = await setup('upload');
@@ -810,7 +877,7 @@ describe('uploads, coverage and serialized recomputation', () => {
         scanned_lines: 100,
         first_line_at: day + 'T00:00:00Z',
         last_line_at: day + 'T23:59:59Z',
-        scanned_dates: [{ date: day, complete: true }],
+        scanned_dates: [day],
       },
       tenant.userId,
     );
@@ -997,6 +1064,55 @@ describe('persisted analytics and coverage decisions', () => {
       requests: null,
       pages: null,
       active_bots: null,
+    });
+  });
+  it('dates preset windows in the reporting timezone and judges completeness over closed days', async () => {
+    const { tenant, source } = await setup();
+    const timeZone = 'Pacific/Kiritimati';
+    await db
+      .updateTable('crawl_log_states')
+      .set({ reporting_timezone: timeZone })
+      .where('workspace_id', '=', tenant.workspaceId)
+      .where('project_id', '=', tenant.projectId)
+      .execute();
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone }).format(new Date());
+    const day = (offset: number) =>
+      new Date(Date.parse(today) - offset * 86400000).toISOString().slice(0, 10);
+    // Every closed day is complete; the day in progress can only be partial.
+    await db
+      .insertInto('crawl_log_coverage_daily')
+      .values(
+        Array.from({ length: 30 }, (_, offset) => ({
+          id: randomUUID(),
+          workspace_id: tenant.workspaceId,
+          project_id: tenant.projectId,
+          source_id: source.id,
+          reporting_date: day(offset),
+          reporting_timezone: timeZone,
+          coverage: offset === 0 ? 'partial' : 'complete',
+          reason: 'test',
+          batch_count: 1,
+          heartbeat_count: 1,
+          max_gap_minutes: 5,
+        })),
+      )
+      .execute();
+    expect(await crawlSummary(db, scope(tenant), { range: '30d' })).toMatchObject({
+      coverage: 'complete',
+      requests: 0,
+    });
+    expect(await pagesRead(db, scope(tenant), { range: '30d' })).toMatchObject({
+      window_start: day(29),
+      window_end: today,
+    });
+    await db
+      .deleteFrom('crawl_log_coverage_daily')
+      .where('workspace_id', '=', tenant.workspaceId)
+      .where('reporting_date', '=', sql<Date>`${day(1)}::date`)
+      .execute();
+    expect(await crawlSummary(db, scope(tenant), { range: '30d' })).toMatchObject({
+      coverage: 'partial',
+      requests: null,
     });
   });
   it('applies verification to all denominators and binds activity cursors to scope and filters', async () => {

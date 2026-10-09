@@ -11,16 +11,26 @@ observations, projections, tasks and `analytics/ai-referrals.ts`. The existing
 establish that a crawler is allowed by robots policy.
 
 The screen has Overview, Crawlers, Referrals, Pages and Activity tabs. Overview shows
-recognized automated **requests**, GA4 **sessions**, and citations **observed
-in CiteLadder's tracked answers** as separate signals. Referrals preserves its
-existing range and granularity controls. Activity is a sanitized, paged view
-within raw retention. Referrals has Overview, Sources and Landing pages sub-tabs,
+recognized automated **requests**, GA4 **sessions**, and citations of the
+business's own pages **observed in CiteLadder's tracked answers** as separate
+signals. Activity is a sanitized, paged view within raw retention. One `range`
+URL parameter carries the selected preset across tabs; Referrals adds its
+"latest synced window" and keeps granularity in the URL. Contract tokens (page
+leg states, coverage, reasons, bots, AI sources, GA4 quality flags) reach the
+reader only as labels from `lib/ai-traffic/vocabulary.ts`; record IDs are never
+shown.
+
+Crawl collection is **available** when ingestion is enabled for the workspace or
+the project already has a source. When it is not, the screen opens on Referrals,
+the Crawlers and Activity tabs, connect buttons and the verification control are
+absent, and the Overview crawl card says collection is not available yet. A link
+to a crawl-only tab lands on Referrals. Referrals has Overview, Sources and Landing pages sub-tabs,
 including property-wide session/engagement/key-event comparisons and purchase
 revenue in the captured property currency. Key events use the customer's GA4
 definition; no key-events/session rate is calculated.
 
 Crawl setup checks ingestion availability inside the dialog before showing
-collection controls. Disabled ingestion explains why source creation and uploads
+collection controls. Revoking a source asks for confirmation naming its host. Disabled ingestion explains why source creation and uploads
 are unavailable. Empty Crawlers and Activity views also expose crawl connections.
 File backfill keeps its upload-source workflow: create a source first, then select
 the file in the same dialog. Overview omits an empty Observed patterns card when
@@ -51,7 +61,9 @@ uses the [crawler catalog](../frontend/services/api/src/config/crawlers.json)
 and its shared UA matcher, enforces host scope and cross-source day overlap,
 verifies against persisted IP-range snapshots, then sanitizes identities.
 Unmatched, malformed, overlapping and out-of-scope lines are counted, never
-stored as requests. Unmatched lines are not a measure of human traffic.
+stored as requests. A line without the identifying fields (timestamp, path, user
+agent) is rejected on its own; the batch is `unsupported_format` only when no
+line carries them. Unmatched lines are not a measure of human traffic.
 
 Only path-level identities join: strip query and fragment, canonicalize with
 the shared page owner and hash the canonical URL. Public UUID path segments
@@ -71,7 +83,8 @@ across sources on a project/host; without them the hash of mapped original
 fields plus source ID collapses identical repeated lines, including distinct
 requests that lack distinguishing fields. Receipt replay returns the original
 result and spends no accepted-line quota. A retried, already-accepted
-`Idempotency-Key` skips the attempt quota; other retries still count.
+`Idempotency-Key`, or upload `upload_id:seq`, skips the attempt quota; other
+retries still count.
 Empty webhook heartbeats require an explicit unique `Idempotency-Key`; missing
 keys return 422. Replaying a key returns its original receipt and timestamp.
 
@@ -100,18 +113,25 @@ caller-supplied project can redirect it. The apex ingress forwards bytes and
 headers through protected origin transport; the product app host refuses this
 machine endpoint. Browser APIs stay same-origin `/api/v1`.
 
-Browser uploads stream NDJSON, JSON arrays or Combined, including gzip, validate
-a bounded header sample, and locally pre-filter with the catalog. The server
+Browser uploads stream NDJSON, JSON arrays or Combined, including gzip, in the
+format the upload source was created with, validate a bounded header sample
+(failing only when no sampled line maps), skip lines without identifying fields,
+and locally pre-filter with the catalog. The server
 reapplies every admission rule. Upload batches use `upload_id:seq` idempotency
-and resume from `last_ack_seq` with the original file name and size. A completed
+and resume from `last_ack_seq` with the original file name and size; **Resume
+upload** offers this after a failure. The admission floor is fixed by the
+upload's creation time, so a resumed scan forms the same batches. After
+completion the screen polls the source until it has been processed. A completed
 zero-match scan still saves client-reported scan dates. Unfinished uploads are
 abandoned after the configured interval; accepted rows remain partial evidence.
-The client skips lines older than `max_backdate_days` and refuses a file with
-none inside that window; the server clamps the reported scan span to the
+The client skips lines older than `max_backdate_days` before the upload's
+creation and refuses a file with none inside that window; the server clamps the reported scan span to the
 admission window and rejects only a span entirely outside it.
-The server derives scanned dates and complete-day flags from the reported first
-and last timestamps using the persisted reporting timezone, ignoring client
-complete-day booleans. They do not become provider-confirmed coverage.
+The client reports only its scan span and scanned days. The server derives
+scanned dates and complete-day flags from the first and last timestamps using
+the persisted reporting timezone, and leaves out any day another source on the
+host already covers, so completion never fails on an overlap. Declared days do
+not become provider-confirmed coverage.
 
 ## Coverage, verification and reporting
 
@@ -122,11 +142,16 @@ Coverage is per source/reporting day:
 - `declared_complete`: a completed upload declares a complete day within its
   client-reported scan. This claim is labelled as such.
 - `partial`: sampled/filtered collection, delivery gaps, partial scans or
-  best-effort Worker delivery. Worker-template coverage never exceeds partial.
+  best-effort Worker delivery. Worker-template coverage never exceeds partial:
+  the template buffers matched events per isolate and sends a batch once the
+  oldest has waited `worker_flush_seconds` or `worker_batch_lines` are pending,
+  and an evicted isolate loses its buffer.
 - `unknown`: no usable evidence for that day. Probes and unsupported batches
   cannot establish coverage.
 
-Only complete or declared-complete coverage supports measured zero. Missing
+A window's coverage is judged over closed reporting days: the day in progress
+counts requests but cannot make a window incomplete. Only complete or
+declared-complete coverage supports measured zero. Missing
 requests under incomplete coverage are unavailable, accompanied by the absence
 statement. Positive observed counts remain useful under partial coverage;
 zero page counts/error shares remain unavailable there. Pages count exact,
@@ -134,7 +159,9 @@ joinable path identities. Requests are not sessions or citations.
 
 Verification is `verified`, `unverifiable` or `failed_verification`. Reasons
 distinguish no published ranges, missing/invalid IP, missing/stale snapshot and IP
-outside published ranges. Verified rows retain the snapshot ID and
+outside published ranges. Only a contemporaneous snapshot can fail a request; an
+IP outside a later snapshot's ranges is `unverifiable`
+(`later_snapshot_mismatch`), because published ranges change. Verified rows retain the snapshot ID and
 `contemporaneous` or `later_snapshot` basis. Historical imports verified using
 a later snapshot disclose that limitation. Default metrics include verified and
 unverifiable observations; failed verification is separately counted.
@@ -143,8 +170,12 @@ and remain available after raw expiry. Folder breakdowns are bounded to the top 
 page-size count; Activity exports contain retained observations only.
 
 Reporting days use the captured GA4 property timezone, with UTC before capture.
+Every read resolves the project's reporting timezone first: preset windows end
+on the current reporting day there, and Activity bounds raw requests by local
+midnights.
 Every rollup records its timezone and formula version. Refresh recomputes from
-current committed requests under the project lock. Dates older than
+current committed requests under the project lock, loading only the receipts
+received on, or carrying lines from, the refreshed days. Dates older than
 `retention_days - rollup_freeze_margin_days` are frozen; raw retention deletes
 only observations, preserving receipts and projections. Rollups keep bounded
 source batch IDs and the canonical queryless URL for joinable identities.
@@ -167,13 +198,20 @@ these reads. The URL tool canonicalizes with the existing page owner and rejects
 off-origin input. Reads never enqueue or rebuild insights.
 
 `ai_traffic_insights_refresh` writes one snapshot per preset window through the
-existing analytics queue. Terminal crawl-log/referral refreshes, Visibility audit
-completion, Site Health terminalization and source/mapping changes enqueue it in
-their owning transaction. Queued work is coalesced and debounced; leased/running
+existing analytics queue. Every pattern needs referral evidence, so only projects
+with an active GA4 mapping derive insights; without one the read says to connect
+Google Analytics. Each preset window ends on the last closed reporting day,
+capped at the latest complete GA4 day, and replaces the older snapshot of the
+same length. A preset read serves the newest snapshot of that length with its
+dates; pattern-filtered Pages read over that snapshot's window. Terminal
+crawl-log/referral refreshes, Visibility audit completion, Site Health
+terminalization and source/mapping changes enqueue a refresh in their owning
+transaction, and crawl-log maintenance enqueues one a day for each GA4-mapped
+project not yet refreshed that UTC day. Queued work is coalesced and debounced; leased/running
 work gets a queued successor. Repeated queued triggers preserve the earliest
-refresh deadline. Pattern-filtered Pages reads return a retryable unavailable
-response while that window's insight snapshot is pending, rather than an empty
-observed population. Snapshots retain formula version, configured
+refresh deadline. Pattern-filtered Pages reads of a GA4-mapped project return a retryable
+unavailable response while no snapshot exists, rather than an empty observed
+population. Snapshots retain formula version, configured
 thresholds and exact rollup, audit, artifact and crawl IDs. Four bounded patterns
 cover verified crawls without identifiable referrals, referrals without recent
 recognized AI crawls, exact-code verified errors on valuable pages, and key-event

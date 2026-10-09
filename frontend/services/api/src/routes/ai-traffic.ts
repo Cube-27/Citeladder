@@ -20,6 +20,7 @@ import {
   crawlerPage,
   activityPage,
   coveragePage,
+  withReportingTimezone,
   type CrawlReadOptions,
 } from '../crawl-logs/reads.ts';
 import { tableCsv } from '../http/table-export.ts';
@@ -63,7 +64,8 @@ export const aiTrafficRoutes = [
       const workspace = c.get('workspace');
       await requireProject(db, workspace, path.project_id);
       const scope = { workspaceId: workspace.workspaceId, projectId: path.project_id };
-      const crawl = await crawlSummary(db, scope, query);
+      const options = await withReportingTimezone(db, scope, query);
+      const crawl = await crawlSummary(db, scope, options);
       const referrals = await getAiReferrals(db, {
         ...scope,
         rangeToken: query.range,
@@ -84,7 +86,7 @@ export const aiTrafficRoutes = [
         .orderBy('audit_scope')
         .orderBy('created_at', 'desc')
         .orderBy('id', 'desc');
-      const w = crawlWindow(query);
+      const w = crawlWindow(options);
       audits = audits
         .where('created_at', '>=', new Date(w.start + 'T00:00:00Z'))
         .where('created_at', '<', new Date(Date.parse(w.end) + 86400000));
@@ -95,6 +97,7 @@ export const aiTrafficRoutes = [
             .select(sql<number>`count(*)::integer`.as('count'))
             .where('workspace_id', '=', scope.workspaceId)
             .where('audit_id', 'in', ids)
+            .where('is_owned', '=', true)
             .executeTakeFirstOrThrow()
         : null;
       return {
