@@ -1,11 +1,11 @@
 ---
 title: 'Meet the Agent'
-description: 'Work through a question or Action and turn your project’s saved evidence into a reviewable deliverable.'
+description: 'Work through a question or Action and turn your project''s saved evidence into a reviewable deliverable.'
 group: 'Improve with Agent'
 order: 200
 ---
 
-The Agent is CiteLadder’s in-app assistant. It can investigate saved project evidence, apply a skill and help you refine a plan, diagnosis, page edit or content draft.
+The Agent is CiteLadder's in-app assistant. It can investigate saved project evidence, apply a skill and help you refine a plan, diagnosis, page edit or content draft.
 
 Switch from **Dashboard** to **Agent** to open its workspace. You will find **New chat**, **Actions**, **Skills**, **Context** and your saved chat history.
 
@@ -18,13 +18,13 @@ There are four useful entry points:
 - **Ask agent:** carry selected references from a supported evidence screen into a new conversation.
 - **Agent panel:** on a Dashboard screen, open the Agent from the top bar to chat beside what you are viewing. On Search Intelligence, the rows you are viewing are attached for you; on a Site Health issue, the panel starts with a question about that issue. Choose **Open in Agent** to continue the same chat in the full workspace.
 
-Before sending, inspect the composer’s reference chips. Remove anything that should not be part of the task. The Agent resolves those references against the saved data you can access.
+Before sending, inspect the composer's reference chips. Remove anything that should not be part of the task. The Agent resolves those references against the saved data you can access.
 
 ## Ask a focused question
 
 A useful request names the target, the evidence and the deliverable.
 
-> Review this page’s confirmed Site Health findings and the attached demand signal. Prepare a short edit plan. For each recommendation, show the supporting evidence, say what is still unknown, and explain how we could check the result.
+> Review this page's confirmed Site Health findings and the attached demand signal. Prepare a short edit plan. For each recommendation, show the supporting evidence, say what is still unknown, and explain how we could check the result.
 
 For a visibility investigation:
 

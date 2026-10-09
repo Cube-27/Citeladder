@@ -7,7 +7,7 @@ export const FREE_TOOLS = [
       'Find which crawlers your robots.txt allows, with the exact rule behind each result.',
     input: 'Paste robots.txt',
     limitation:
-      'Checks supplied rules only. Firewall access, actual indexing and AI citations cannot be established by this test.',
+      'Checks supplied rules only. This test cannot establish firewall access, actual indexing or AI citations.',
   },
   {
     slug: 'robots-txt-generator',
@@ -55,6 +55,6 @@ export const FREE_TOOLS = [
       'Preview your title, description and image, then copy the corresponding social tags.',
     input: 'Enter share details',
     limitation:
-      'An approximate preview. Platforms may crop images, shorten text or use cached content differently. Image URLs are not fetched or verified.',
+      'The preview is approximate. Platforms may crop images, shorten text or use cached content differently. Image URLs are not fetched or verified.',
   },
 ] as const;

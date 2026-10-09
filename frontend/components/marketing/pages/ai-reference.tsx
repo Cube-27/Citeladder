@@ -142,7 +142,7 @@ export function EntityMapPage() {
   return (
     <ReferencePage
       title="Entity Map"
-      description="A linked reference to CiteLadder, the company behind it, its people, product capabilities, and related concepts. These definitions reflect CiteLadder’s own published information; each entry links to its source."
+      description="A linked reference to CiteLadder, the company behind it, its people, product capabilities, and related concepts. These definitions reflect CiteLadder's own published information; each entry links to its source."
       sections={REFERENCE_ENTITIES.map((entity) => ({ id: entity.id, title: entity.name }))}
     >
       {REFERENCE_ENTITIES.map((entity) => (

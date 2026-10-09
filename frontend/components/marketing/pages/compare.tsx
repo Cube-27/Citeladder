@@ -41,7 +41,7 @@ export function CompareIndex() {
     <>
       <PageHero
         title="Compare AI visibility software around your workflow."
-        lead="Start with the questions your team needs to answer and the evidence it needs to inspect. Each comparison summarizes a product’s public positioning and links to its official source."
+        lead="Start with the questions your team needs to answer and the evidence it needs to inspect. Each comparison summarizes a product's public positioning and links to its official source."
       >
         <p className="website-label text-muted mt-6 max-w-[68ch]">
           Published by CiteLadder. These are vendor-authored comparisons, not independent rankings.

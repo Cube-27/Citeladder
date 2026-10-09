@@ -254,8 +254,8 @@ function Loop() {
         <div className="lp-head">
           <h2 className="website-section-heading">From an AI answer to the fix that moves it.</h2>
           <p className="website-lead text-muted">
-            Measure the questions that matter, trace each result to its sources, and turn what you
-            find into reviewable work. Then measure again.
+            Measure the questions your buyers ask, trace each result to its sources, and turn what
+            you find into reviewable work. Then measure again.
           </p>
         </div>
         <div className="lp-bento">

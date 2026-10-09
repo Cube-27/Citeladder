@@ -35,13 +35,13 @@ Use the descriptions in the current catalog to choose the exact skill. Availabil
 
 An attached Action can recommend a skill based on its diagnosis. Review the recommendation alongside the evidence and the work you intend to do.
 
-If you choose a skill or a workflow explicitly, that choice takes precedence for the turn. Without an explicit choice, the Agent can use the Action’s recommendation, the previous chat skill or select a skill for the request.
+If you choose a skill or a workflow explicitly, that choice takes precedence for the turn. Without an explicit choice, the Agent can use the Action's recommendation, the previous chat skill or select a skill for the request.
 
 ## Keep one output kind per chat
 
 A chat owns one kind of deliverable. You can refine it over multiple turns, including after making your own edits.
 
-If you need to move from a technical-fix deliverable to a different output kind, start a new chat. This keeps the output history understandable and avoids replacing one team’s work with an unrelated format.
+If you need to move from a technical-fix deliverable to a different output kind, start a new chat. This keeps the output history understandable and avoids replacing one team's work with an unrelated format.
 
 ## Review before using
 

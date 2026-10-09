@@ -106,7 +106,7 @@ export function PricingTrial({
         <div className="cm-access-copy">
           <SectionHeader
             title="Start with a seven-day trial."
-            lead="See how ChatGPT answers your buyers’ questions before you commit. Paid checkout is not open; contact us to continue after the trial."
+            lead="See how ChatGPT answers your buyers' questions before you commit. Paid checkout is not open; contact us to continue after the trial."
             size="h3"
           />
           <p className="website-body text-muted">{TRIAL_EXCLUSIONS}</p>

@@ -9,7 +9,7 @@ Commerce is available when your project has the required capability evidence. It
 
 ## Review the catalog
 
-Check the selected target’s identity and website page. Review competitor candidates before approving them. A discovered candidate does not enter measurement until it is approved.
+Check the selected target's identity and website page. Review competitor candidates before approving them. A discovered candidate does not enter measurement until it is approved.
 
 Product and category targets represent different buying contexts, so keep the target explicit throughout your analysis.
 
@@ -38,4 +38,4 @@ If a result is unresolved, retain that uncertainty. It is better to report a lim
 
 ## Decide what to improve
 
-Compare the buyer’s question with the target page and its confirmed facts. Use an appropriate Action or Agent conversation to prepare a reviewable change. Publishing and later measurement remain separate decisions.
+Compare the buyer's question with the target page and its confirmed facts. Use an appropriate Action or Agent conversation to prepare a reviewable change. Publishing and later measurement remain separate decisions.

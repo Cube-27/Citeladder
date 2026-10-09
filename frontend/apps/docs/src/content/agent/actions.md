@@ -11,9 +11,9 @@ This gives your team one place to understand the diagnosis, start Agent work and
 
 ## Choose what to work on
 
-Open **Agent → Actions**. Use status and target filters to narrow the list, then inspect an Action’s detail.
+Open **Agent → Actions**. Use status and target filters to narrow the list, then inspect an Action's detail.
 
-Read the diagnosis, contributing evidence, recommended approach and what to avoid. The priority comes from CiteLadder’s deterministic rules. An Agent explanation does not replace that ranking or create new measured facts.
+Read the diagnosis, contributing evidence, recommended approach and what to avoid. The priority comes from CiteLadder's deterministic rules. An Agent explanation does not replace that ranking or create new measured facts.
 
 Choose **Work on this** when the Action is suitable for your team. Linked chats remain visible on the Action.
 
@@ -30,7 +30,7 @@ Choose **Work on this** when the Action is suitable for your team. Linked chats 
 
 A generated draft does not mean the work has shipped. Dismissal is not implementation. A later conflicting observation can move previously verified work back into measuring.
 
-You can dismiss or reopen eligible Actions. Declared work follows its measurement lifecycle rather than being freely overwritten with another status.
+You can dismiss or reopen eligible Actions. Declared work follows its measurement lifecycle; you cannot set it to another status at will.
 
 ## Declare implementation
 
@@ -38,7 +38,7 @@ First make the change in your website, publishing workflow or external process. 
 
 When work came from the Agent, confirm the output revision that matches what you shipped. An outline is not an implemented draft. Work done outside CiteLadder can be declared without an Agent output.
 
-CiteLadder uses the Action’s current findings to determine the expected checks, and the dialog shows what each finding will be measured by before you declare. Some findings, such as a product or theme with no specific prompt, have no reading that isolates your change; they are recorded but not measured automatically. An Action without a current finding cannot be declared merely to create a measurement plan.
+CiteLadder uses the Action's current findings to determine the expected checks, and the dialog shows what each finding will be measured by before you declare. Some findings, such as a product or theme with no specific prompt, have no reading that isolates your change; they are recorded but not measured automatically. An Action without a current finding cannot be declared merely to create a measurement plan.
 
 ## Read the measurement result
 
@@ -50,6 +50,6 @@ An earned-source Action checks the relevant placement or discrepancy on the publ
 
 ## Report progress honestly
 
-Use “implemented” for the work your team shipped and “verified” for the checks supported by later evidence. Neither status proves that the change caused every movement in traffic or AI visibility.
+Use "implemented" for the work your team shipped and "verified" for the checks supported by later evidence. Neither status proves that the change caused every movement in traffic or AI visibility.
 
 For the actual draft history, see [Outputs and revisions](/agent/outputs/).

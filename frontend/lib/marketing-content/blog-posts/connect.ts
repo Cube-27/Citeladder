@@ -4,7 +4,7 @@ import { BLOG_SOURCES } from '../blog-sources';
 
 export const POST_CONNECT: BlogPost = {
   slug: 'connecting-owned-evidence-ai-search',
-  title: 'Connecting the Dots: Building an Owned Evidence System for AI Search',
+  title: 'Building an owned evidence system for AI search',
   seoTitle: 'How to Build an AI Search Visibility Data Stack for AEO',
   seoDescription:
     'Build an evidence-led AEO data stack across your website, Search Console, GA4, crawler access, and controlled AI visibility observations.',
@@ -107,13 +107,13 @@ export const POST_CONNECT: BlogPost = {
           text: 'content audit guide',
           href: '/blog/auditing-content-for-llms-ai-search',
         },
-        ' to find page-level gaps, the ',
+        ' to find page-level gaps and the ',
         {
           type: 'link',
           text: 'four-part measurement taxonomy',
           href: '/blog/verify-improve-ai-search-visibility',
         },
-        ' to keep those evidence streams distinct once they are reported, or explore ',
+        ' to keep those evidence streams distinct once they are reported. Explore ',
         { type: 'link', text: 'Demand Intelligence', href: '/platform/demand-intelligence' },
         ' for first-party query and page evidence, or ',
         { type: 'link', text: 'Search Intelligence', href: '/platform/search-intelligence' },

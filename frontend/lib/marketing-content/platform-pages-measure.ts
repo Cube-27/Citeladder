@@ -56,7 +56,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
       },
       {
         q: 'Does combining signals prove what caused a result?',
-        a: 'No. CiteLadder keeps citations, visits and site changes as separate observations so your team can investigate them honestly.',
+        a: 'No. CiteLadder keeps citations, visits and site changes as separate observations so your team can check each one on its own.',
       },
     ],
     closing: 'See what AI says about your brand.',
@@ -87,7 +87,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
     note: TRIAL_NOTE,
     highlights: [
       {
-        title: 'Prompts that mirror buying',
+        title: 'Prompts built around buying',
         body: 'Build a portfolio around needs, use cases and comparisons, with branded and unbranded questions kept apart.',
       },
       {
@@ -95,14 +95,14 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
         body: 'Visibility share and average position for you and the brands you choose to track.',
       },
       {
-        title: 'Answers, not just scores',
+        title: 'The answer behind every score',
         body: 'Every trend point opens the recorded answer, its engine and the sources it cited.',
       },
     ],
     features: [
       {
-        title: 'Start from the questions buyers actually ask.',
-        body: 'Write prompts or review suggestions grouped by topic and buying stage. Nothing is tracked until you approve it, so the portfolio reflects the market you serve.',
+        title: 'Start from the questions your buyers ask.',
+        body: 'Write prompts or review suggestions grouped by topic and buying stage. Nothing is tracked until you approve it, so the portfolio holds only the questions you chose.',
         points: [
           'Suggestions reviewed before they run',
           'Branded and discovery questions kept distinct',
@@ -149,7 +149,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
     description:
       'See which domains and pages AI answers cite, compare owned and third-party sources, and read each citation in its original answer.',
     heading: 'Know which pages AI answers cite.',
-    lead: 'See every domain and URL referenced in your tracked answers — yours, competitors’ and the publishers in between — and read each citation in the answer that used it.',
+    lead: 'See every domain and URL your tracked answers reference, whether it belongs to you, a competitor or a publisher, and read each citation in the answer that used it.',
     cta: 'demo',
     visual: 'sources',
     visualTitle: 'Sources',
@@ -233,7 +233,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
       },
       {
         title: 'Outcomes as reported',
-        body: 'Engaged sessions, key events and purchase revenue in your property’s own currency.',
+        body: "Engaged sessions, key events and purchase revenue in your property's own currency.",
       },
     ],
     features: [
@@ -305,8 +305,8 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
     ],
     faqs: [
       {
-        q: 'Does this cover every shopping surface?',
-        a: 'No. It reports product and category answers under CiteLadder’s supported audits, not every shopping carousel in every assistant.',
+        q: 'Does this cover every place AI shows products?',
+        a: "No. It reports product and category answers under CiteLadder's supported audits, not every shopping carousel in every assistant.",
       },
       {
         q: 'Do I need a Shopify connection?',

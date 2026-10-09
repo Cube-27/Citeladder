@@ -165,7 +165,7 @@ function WorkedExample() {
         </dl>
       </div>
       <figcaption className="website-label text-muted">
-        Illustrative example. A teaching aid, not a benchmark or CiteLadder’s scoring formula.
+        Illustrative example. A teaching aid, not a benchmark or CiteLadder&apos;s scoring formula.
       </figcaption>
     </figure>
   );

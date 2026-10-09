@@ -9,7 +9,7 @@ Use AI Visibility to investigate brand presence across a defined set of prompts 
 
 ## Run a useful audit
 
-Choose the prompts, logical engines and repetitions in the audit launcher. Review the estimate before confirming. More repetitions provide more observations under that run’s conditions; they do not turn a sample into a guarantee about every user’s experience.
+Choose the prompts, logical engines and repetitions in the audit launcher. Review the estimate before confirming. More repetitions give more observations under that run's conditions; they do not turn a sample into a guarantee about every user's experience.
 
 An audit keeps the prompts, tracked roster and measurement configuration it used. Check **Runs** for completion, cancellation and unsuccessful attempts.
 

@@ -9,7 +9,7 @@ export const POST_AUDIT: BlogPost = {
   seoDescription:
     'Check crawl access, indexing controls, public content, factual clarity and internal links. A practical website audit for teams investigating AI search visibility.',
   excerpt:
-    'Check the page a visitor or crawler can actually access before changing the copy. Work through technical and content evidence in a clear order.',
+    'Check the page a visitor or crawler can access before changing the copy. Work through technical and content evidence in a clear order.',
   image: '/blog/editorial/article-audit.png',
   cardImage: '/blog/editorial/article-audit.svg',
   date: '2026-09-03',
@@ -69,12 +69,12 @@ export const POST_AUDIT: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'Do not open private account, payment or administrative pages to crawlers merely to improve an audit score.',
+      text: 'Do not open private account, payment or administrative pages to crawlers just to improve an audit score.',
     },
     { type: 'heading', text: 'Separate indexing controls from crawl access' },
     {
       type: 'paragraph',
-      text: 'Inspect the page’s robots meta tag and relevant response headers. A public page can be crawlable while carrying a noindex directive.',
+      text: "Inspect the page's robots meta tag and relevant response headers. A public page can be crawlable while carrying a noindex directive.",
     },
     {
       type: 'richParagraph',
@@ -82,7 +82,7 @@ export const POST_AUDIT: BlogPost = {
         'For Google to discover a noindex rule on a page, it must be able to crawl that page. Blocking it in robots.txt can prevent that inspection. ',
         {
           type: 'link',
-          text: 'Google’s noindex documentation',
+          text: "Google's noindex documentation",
           href: BLOG_SOURCES.googleNoindex.url,
         },
         '.',
@@ -108,11 +108,11 @@ export const POST_AUDIT: BlogPost = {
     { type: 'heading', text: 'Review canonical and duplicate-page signals' },
     {
       type: 'paragraph',
-      text: 'Check that the canonical URL points to the intended public page and is consistent with the site’s redirects and internal links. Inspect similar pages for repeated content that could be consolidated.',
+      text: "Check that the canonical URL points to the intended public page and is consistent with the site's redirects and internal links. Inspect similar pages for repeated content that could be consolidated.",
     },
     {
       type: 'paragraph',
-      text: 'A canonical tag is not a tool for making a weak page stronger. First decide which page genuinely serves the reader’s task, then keep the technical signals consistent with that decision.',
+      text: "A canonical tag does not make a weak page stronger. First decide which page serves the reader's task, then keep the technical signals consistent with that decision.",
     },
     { type: 'heading', text: 'Ask whether the page answers the buyer' },
     {
@@ -121,11 +121,11 @@ export const POST_AUDIT: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'Can you identify what is offered, who it is for, important limitations and the next step? Are crucial details buried in graphics without equivalent text? Do product and help pages contradict one another?',
+      text: 'Can you identify what is offered, who it is for, important limitations and the next step? Are key details buried in graphics without equivalent text? Do product and help pages contradict one another?',
     },
     {
       type: 'paragraph',
-      text: 'For a service business, location and scope may be essential. For a product, compatibility, prerequisites and supported workflows may matter more. Use the audience’s decision to choose the checks.',
+      text: "For a service business, location and scope may be essential. For a product, compatibility, prerequisites and supported workflows may matter more. Use the audience's decision to choose the checks.",
     },
     { type: 'heading', text: 'Verify claims and structured data' },
     {
@@ -138,7 +138,7 @@ export const POST_AUDIT: BlogPost = {
         'Structured data should represent visible, accurate content and use an appropriate supported type. It is not a guarantee of a rich result or an AI citation. Do not add invented reviews, ratings or prices. ',
         {
           type: 'link',
-          text: 'Google’s structured-data introduction',
+          text: "Google's structured-data introduction",
           href: BLOG_SOURCES.googleStructuredData.url,
         },
         '.',
@@ -168,7 +168,7 @@ export const POST_AUDIT: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'Fix confirmed access failures and factual errors before spending time on speculative “AI optimization” tactics. Group repeated template problems so one change can improve several pages.',
+      text: 'Fix confirmed access failures and factual errors before spending time on speculative "AI optimization" tactics. Group repeated template problems so one change can improve several pages.',
     },
     { type: 'heading', text: 'Verify the change' },
     {

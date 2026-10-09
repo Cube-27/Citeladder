@@ -18,7 +18,7 @@ publication_status: 'editorial_review'
 
 You can start manually. What matters is that another person could repeat your check and understand what the result means.
 
-Asking “Do you know my company?” is not enough. It tests recognition after you supplied the name. It does not tell you whether a buyer would discover that company while researching a problem.
+Asking "Do you know my company?" is not enough. It tests recognition after you supplied the name. It does not tell you whether a buyer would discover that company while researching a problem.
 
 ## A quick AI visibility check you can do today
 
@@ -30,11 +30,11 @@ This is a manageable diagnostic sample, not a statistically representative estim
 
 Write down the official company name, product names, genuine aliases, owned domains and the competitors relevant to this business area.
 
-Ambiguous names need human review. An answer mentioning “Square” as a shape should not count as visibility for the payments company. A reseller's page should not count as an owned-domain citation unless you deliberately include it in your ownership definition.
+Ambiguous names need human review. An answer mentioning "Square" as a shape should not count as visibility for the payments company. A reseller's page should not count as an owned-domain citation unless you deliberately include it in your ownership definition.
 
 ### Step 2: choose questions that resemble buyer decisions
 
-Use a mix of intents rather than ten variations of “best tools.”
+Use a mix of intents rather than ten variations of "best tools."
 
 | Intent     | Example for a fictional inventory-software company           | What it checks                                            |
 | ---------- | ------------------------------------------------------------ | --------------------------------------------------------- |
@@ -89,7 +89,7 @@ Also report scheduled checks, successful checks, missing answers and technical f
 
 ## One dataset can produce several different scores
 
-Here is a deliberately constructed example, not CiteLadder customer data:
+Here is a constructed example, not CiteLadder customer data:
 
 - 12 checks were scheduled.
 - 2 failed technically.
@@ -128,13 +128,13 @@ All numbers in this example are illustrative. The example shows why a report sho
 
 Google's current dedicated generative AI report documents impressions for AI Overviews and AI Mode, with page, country, date and device breakdowns. Property-level and page-level totals may differ because they aggregate appearances differently.[\[2\]](#source-2)
 
-Use it for the Google surfaces it actually covers. It is not a report of every mention in ChatGPT or Gemini Apps. Its documented impressions should not be silently relabelled as visits or conversions.
+Use it for the Google surfaces it covers. It is not a report of every mention in ChatGPT or Gemini Apps. Do not relabel its documented impressions as visits or conversions.
 
 ### Bing Webmaster Tools
 
 Microsoft's AI Performance reporting covers supported Microsoft and partner experiences. Its June 2026 preview added intent, topic, citation-share and time-comparison views.[\[3\]](#source-3)
 
-Microsoft defines citation share against citations for the same grounding query and explicitly says it is not traffic share. Compare it with your own panel only after checking that the scope and denominator align.
+Microsoft defines citation share against citations for the same grounding query and says it is not traffic share. Compare it with your own panel only after checking that the scope and denominator align.
 
 ### Your analytics platform
 
@@ -162,13 +162,13 @@ Choose a cadence that fits the decision. A weekly review can be practical for an
 
 Retain a fixed core question set. Add new questions as a separate cohort, rather than merging them into an old trend without explanation.
 
-For each content update, record a hypothesis such as: “This page will answer the integration constraint that was missing from the current sources.” Then review whether the observed answer and source pattern changed. A change is evidence to investigate, not automatic proof that the edit caused it.
+For each content update, record a hypothesis such as: "This page will answer the integration constraint that was missing from the current sources." Then review whether the observed answer and source pattern changed. A change is evidence to investigate, not automatic proof that the edit caused it.
 
 ## Common mistakes when checking AI visibility
 
 ### Counting brand-led prompts as independent discovery
 
-“What makes Brand X the best?” pushes the answer toward Brand X. It may test persuasion or accuracy, but it is a poor baseline for unprompted category visibility.
+"What makes Brand X the best?" pushes the answer toward Brand X. It may test persuasion or accuracy, but it is a poor baseline for unprompted category visibility.
 
 ### Treating every link as the same kind of citation
 
@@ -190,7 +190,7 @@ Manual checks are useful for validating your definitions and inspecting answer q
 
 Before choosing one, ask whether it preserves raw answers, identifies the engine and run conditions, exposes source URLs, separates mentions from citations, and lets you export the underlying observations. See our [AI visibility platform comparison](/best-ai-visibility-platforms) for a buying framework.
 
-CiteLadder's workflow is built around retained answers, prompt/run context and inspectable source references.[\[4\]](#source-4) Use those records to investigate a result, not just to report a score.
+CiteLadder's workflow centres on retained answers, prompt/run context and inspectable source references.[\[4\]](#source-4) Use those records to investigate a result, not just to report a score.
 
 [Explore AI citation tracking](/ai-citation-tracking) and then [learn how to improve AI visibility](/blog/how-to-improve-ai-visibility) based on what your baseline reveals.
 

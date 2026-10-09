@@ -22,7 +22,7 @@ const PRICING_FAQS = [
   },
   {
     q: 'Do you mark up model usage?',
-    a: 'Not when you use your own API keys. Provider usage then bills directly to your provider accounts with no CiteLadder markup, and run speed depends on your providers’ rate limits. Other funding options depend on your account setup.',
+    a: "Not when you use your own API keys. Your providers then bill usage directly to your accounts with no CiteLadder markup, and run speed depends on your providers' rate limits. Other funding options depend on your account setup.",
   },
   {
     q: 'How are my provider keys protected?',
@@ -34,7 +34,7 @@ const PRICING_FAQS = [
   },
   {
     q: 'What if a published plan does not fit?',
-    a: 'Talk to us about Enterprise. Volume, coverage, retention and support are set by agreement.',
+    a: 'Talk to us about Enterprise. The agreement sets volume, coverage, retention and support.',
   },
 ] as const;
 

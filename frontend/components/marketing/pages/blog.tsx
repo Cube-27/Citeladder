@@ -36,7 +36,7 @@ function postHeadings(post: BlogPost) {
 
 function BlogCta({
   title,
-  body = 'Build a measurement practice your team can inspect, explain and improve.',
+  body = 'Measure AI visibility with evidence your team can inspect.',
   secondary,
 }: Readonly<{ title: string; body?: string; secondary: { href: string; label: string } }>) {
   return (
@@ -317,8 +317,9 @@ function Sources({ post }: Readonly<{ post: BlogPost }>) {
           <li key={source.id}>
             <a href={source.url} target="_blank" rel="noreferrer">
               {source.title}
-            </a>{' '}
-            — {source.publisher}
+            </a>
+            {', '}
+            {source.publisher}
             {source.publishedDate ? ` (${formatBlogDate(source.publishedDate)})` : null}
           </li>
         ))}

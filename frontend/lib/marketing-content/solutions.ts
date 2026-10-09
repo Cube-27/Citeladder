@@ -40,7 +40,7 @@ export const SOLUTION_SEGMENTS: readonly SolutionSegment[] = [
     label: 'In-house teams',
     title: 'In-house teams: one starting point for marketing, content and web.',
     lead: 'Review the questions where your brand appears, the sources behind those answers and the website findings worth investigating. Decide together what to improve.',
-    body: 'Observed visibility stays separate from referral traffic and commercial outcomes, so internal reporting stays clear.',
+    body: 'Observed visibility stays separate from referral traffic and commercial outcomes, so internal reports do not mix them.',
     guide: { label: 'Explore Demand Intelligence', href: '/platform/demand-intelligence' },
     cta: 'Discuss a team workflow',
     scene: 'health',

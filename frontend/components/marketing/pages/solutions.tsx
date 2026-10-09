@@ -115,7 +115,7 @@ export function SolutionsCta() {
       <div className="flex flex-col items-center gap-8 text-center" data-cta-placement="closing">
         <SectionHeader
           title="See the workflow that matches how you are measured."
-          lead="One set of evidence, read five ways. We will walk through the one your team reports in."
+          lead="Each team reads the same evidence differently. We will walk through the view your team reports on."
           align="center"
         />
         <div className="flex flex-wrap justify-center gap-3">

@@ -19,7 +19,7 @@ export const PLAN_PRESENTATION: Readonly<Record<PlanKey, PlanPresentation>> = {
 export const BYOK_SWITCH_LABEL = 'Use your own API keys';
 export const BYOK_DISCLOSURE =
   'Provider usage is billed directly to your accounts with no CiteLadder markup. ' +
-  'Run speed depends on your providers’ rate limits.';
+  "Run speed depends on your providers' rate limits.";
 
 const CAPABILITY_LABELS: Readonly<Record<string, string>> = {
   project_slots: 'Projects',

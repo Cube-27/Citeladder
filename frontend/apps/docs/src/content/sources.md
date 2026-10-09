@@ -5,7 +5,7 @@ group: 'Measure and understand'
 order: 120
 ---
 
-Sources helps you move from “our visibility changed” to the pages used in the measured answers. It has **Domains** and **URLs** views with search, sorting and export.
+Sources helps you move from "our visibility changed" to the pages used in the measured answers. It has **Domains** and **URLs** views with search, sorting and export.
 
 ## Start broad, then inspect a page
 
@@ -18,13 +18,13 @@ A frequently used domain can be worth investigating. Frequency alone does not te
 
 ## Retrieval and citation are different
 
-A page can be retrieved without being cited. CiteLadder’s citation rate uses the responses in which that source was retrieved as its denominator.
+A page can be retrieved without being cited. CiteLadder's citation rate uses the responses in which that source was retrieved as its denominator.
 
-Do not divide a source’s citations by all responses in the selection and label the result as the same citation rate.
+Do not divide a source's citations by all responses in the selection and label the result as the same citation rate.
 
 ## Read brand lists carefully
 
-A brand listed beside a cited URL co-occurred in answers that cited the URL. That does not prove the publisher’s page mentions the brand, recommends it or supplied the claim.
+A brand listed beside a cited URL co-occurred in answers that cited the URL. That does not prove the publisher's page mentions the brand, recommends it or supplied the claim.
 
 For example, an answer can cite a general industry report and independently mention a software vendor. Inspecting the report is a separate step.
 

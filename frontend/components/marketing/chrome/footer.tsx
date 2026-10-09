@@ -87,7 +87,7 @@ export async function MarketingFooter() {
               <LogoMark />
             </a>
             <p className="website-body text-muted max-w-[30ch]">
-              AI search intelligence. From observed answers to informed action.
+              See what AI answers say about your brand, and what to fix next.
             </p>
           </div>
 

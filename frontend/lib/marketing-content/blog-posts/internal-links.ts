@@ -4,12 +4,12 @@ import { BLOG_SOURCES } from '../blog-sources';
 
 export const POST_INTERNAL_LINKS: BlogPost = {
   slug: 'jev-internal-linking-citeladder',
-  title: 'Internal Linking with Jev: How CiteLadder Finds Contextual Link Opportunities',
+  title: 'Internal linking with Jev: how CiteLadder finds contextual link opportunities',
   seoTitle: 'Internal Link Suggestions: How CiteLadder Uses Jev to Find Contextual Links',
   seoDescription:
-    'How CiteLadder combines deterministic page retrieval with TypeSafe’s Jev to suggest contextual internal links, with anchor text taken from the destination page itself.',
+    "How CiteLadder combines deterministic page retrieval with TypeSafe's Jev to suggest contextual internal links, with anchor text taken from the destination page itself.",
   excerpt:
-    'Internal linking is a decision problem before it is a writing problem: which related page would genuinely help this reader next?',
+    'Internal linking is a decision problem before it is a writing problem: which related page would help this reader next?',
   image: '/blog/editorial/article-internal-links.png',
   cardImage: '/blog/editorial/article-internal-links.svg',
   date: '2026-09-28',
@@ -23,7 +23,7 @@ export const POST_INTERNAL_LINKS: BlogPost = {
   body: [
     {
       type: 'paragraph',
-      text: 'Internal-link recommendations look simple until a site has hundreds of product, category, service and editorial pages. A useful system has to tell a genuinely helpful link from two pages that merely share vocabulary. That is why CiteLadder treats internal linking as retrieval followed by a bounded judgment, rather than asking a generative model to invent links across the site.',
+      text: 'Internal-link recommendations look simple until a site has hundreds of product, category, service and editorial pages. A useful system has to tell a helpful link from two pages that only share vocabulary. That is why CiteLadder treats internal linking as retrieval followed by a bounded judgment, rather than asking a generative model to invent links across the site.',
     },
     { type: 'heading', text: 'Why internal linking is a decision problem' },
     {
@@ -80,7 +80,7 @@ export const POST_INTERNAL_LINKS: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'This stage is deterministic: cheap, repeatable and explainable. It stops Jev from spending judgments on pairs the application can reject on its own.',
+      text: 'This stage is deterministic, so it is cheap, repeatable and explainable. It stops Jev from spending judgments on pairs the application can reject on its own.',
     },
     { type: 'heading', text: 'Step 2: let Jev judge each page pair' },
     {
@@ -97,7 +97,7 @@ export const POST_INTERNAL_LINKS: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'The rubric is deliberately narrow: would a reader of the source genuinely benefit from the destination, and does the link fit a hub-and-spoke structure, with supporting pages linking up to their hub and hubs linking down, rather than a forced association?',
+      text: 'The rubric is deliberately narrow: would a reader of the source benefit from the destination, and does the link fit a hub-and-spoke structure, with supporting pages linking up to their hub and hubs linking down, rather than a forced association?',
     },
     { type: 'heading', text: 'Step 3: keep anchor text grounded in the destination' },
     {
@@ -106,12 +106,12 @@ export const POST_INTERNAL_LINKS: BlogPost = {
     },
     {
       type: 'paragraph',
-      text: 'That boundary matters. The model picks from controlled options; the application owns the text and can show where each option came from. An anchor cannot drift from the page a reader will actually reach.',
+      text: 'That boundary matters. The model picks from controlled options; the application owns the text and can show where each option came from. An anchor cannot drift from the page a reader will reach.',
     },
     { type: 'heading', text: 'Step 4: review the suggestion, not a black-box score' },
     {
       type: 'paragraph',
-      text: 'The Internal links tab in Website keeps the source, destination and suggested anchor together, with copyable HTML. Suggestions can be filtered, reviewed and exported as CSV, and appear as they are checked rather than only at the end. You remain the editor: CiteLadder finds opportunities; it does not publish links into your CMS.',
+      text: 'The Internal links tab in Website keeps the source, destination and suggested anchor together, with copyable HTML. Suggestions can be filtered, reviewed and exported as CSV, and appear as they are checked rather than only at the end. You remain the editor. CiteLadder finds opportunities but does not publish links into your CMS.',
     },
     {
       type: 'paragraph',
@@ -120,7 +120,7 @@ export const POST_INTERNAL_LINKS: BlogPost = {
     { type: 'heading', text: 'Step 5: verify the change on a later crawl' },
     {
       type: 'paragraph',
-      text: 'Suggestions join the source page’s Action. When you mark the links you added as implemented, a later crawl checks whether a main-content link to each destination is actually present, even if you reworded the anchor. That check needs no model call.',
+      text: "Suggestions join the source page's Action. When you mark the links you added as implemented, a later crawl checks whether a main-content link to each destination is present, even if you reworded the anchor. That check needs no model call.",
     },
     {
       type: 'diagram',

@@ -89,7 +89,7 @@ export function ToolsIndex() {
     <>
       <PageHero
         title="Free tools for crawler rules and page markup."
-        lead="Test robots.txt rules, inspect indexing directives and build cleaner markup. Six focused tools that process your input in your browser."
+        lead="Test robots.txt rules, inspect indexing directives and build cleaner markup. All six tools run in your browser on the input you supply."
       >
         <div className="mt-9 flex flex-wrap gap-3">
           <ButtonLink href="/tools/ai-crawler-checker">
@@ -106,7 +106,10 @@ export function ToolsIndex() {
       </Section>
       <Section aria-labelledby="tools-limits-title">
         <div className="mk-split">
-          <SectionHeader headingId="tools-limits-title" title="Small checks. Clear limits." />
+          <SectionHeader
+            headingId="tools-limits-title"
+            title="What these tools can and cannot check."
+          />
           <ul className="cp-facts">
             {TOOL_FACTS.map((fact) => (
               <li key={fact.title}>
@@ -122,7 +125,7 @@ export function ToolsIndex() {
           <SectionHeader
             align="center"
             title="Need evidence across your whole website?"
-            lead="Site Health inspects captured page evidence across your site, so you can choose a correction with the full picture."
+            lead="Site Health inspects captured page evidence across your site before you choose a fix."
           />
           <ButtonLink href="/platform/site-health">
             Explore Site Health <ArrowRight aria-hidden />
@@ -150,7 +153,7 @@ export function ToolNotes({ slug }: Readonly<{ slug: FreeTool['slug'] }>) {
             <p className="website-body max-w-[60ch]">{tool.limitation}</p>
             <p className="website-body text-muted max-w-[60ch]">
               Need evidence across your website? Site Health inspects captured page evidence before
-              you choose a correction.
+              you choose a fix.
             </p>
             <a className="mk-text-link focus-ring rounded-xs" href="/platform/site-health">
               Explore Site Health

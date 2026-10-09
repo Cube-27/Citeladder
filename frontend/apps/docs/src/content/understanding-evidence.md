@@ -23,9 +23,9 @@ A failed AI answer is not an answer that omitted your brand. A missing traffic r
 
 ## Follow the denominator
 
-Ask what each rate is divided by. A brand appearance rate, a citation rate and a product’s share of shelf describe different populations.
+Ask what each rate is divided by. A brand appearance rate, a citation rate and a product's share of shelf describe different populations.
 
-Read the scope shown with the metric. Changing a table page does not change the full dataset’s totals. Do not reconstruct a headline value by adding visible rows together.
+Read the scope shown with the metric. Changing a table page does not change the full dataset's totals. Do not reconstruct a headline value by adding visible rows together.
 
 ## Compare like with like
 
@@ -35,7 +35,7 @@ If CiteLadder marks a comparison as unavailable or non-comparable, report that l
 
 ## Separate observations from explanations
 
-“An answer cited this URL” is an observation. “That URL caused the brand to appear” is a causal claim that the observation does not establish.
+"An answer cited this URL" is an observation. "That URL caused the brand to appear" is a causal claim that the observation does not establish.
 
 The same applies after a website edit. Later evidence may show the expected change, or a metric may move, without proving that the edit caused every downstream result.
 
@@ -48,5 +48,3 @@ For each finding, capture:
 - **What supports it:** the answer, page or saved record.
 - **What is missing:** coverage, incompatible scope or unresolved evidence.
 - **What comes next:** a review, an Action or a later measurement.
-
-This gives your team something it can verify and act on.
