@@ -6,6 +6,7 @@ import { engineSnapshots } from '../visibility/runs.ts';
 import { authorizedAudit } from './reads.ts';
 import { round } from '../analysis/round.ts';
 import { compareText } from '../text-order.ts';
+import { onlyOf } from '../lists.ts';
 
 const columns = [
   'audit_id',
@@ -41,8 +42,8 @@ const bool = (value: unknown) =>
 const array = (value: unknown) => (Array.isArray(value) ? value : []);
 const joined = (value: unknown) =>
   !value || (Array.isArray(value) && !value.length) ? '' : JSON.stringify(value);
-const pct = (value: unknown) => (typeof value === 'number' ? `${round(value * 100, 0)}%` : '—');
-const usd = (value: unknown) => (typeof value === 'number' ? `$${value.toFixed(4)}` : '—');
+const pct = (value: unknown) => (typeof value === 'number' ? `${round(value * 100, 0)}%` : 'â€”');
+const usd = (value: unknown) => (typeof value === 'number' ? `$${value.toFixed(4)}` : 'â€”');
 const md = (value: unknown) =>
   String(value ?? '')
     .replaceAll('|', '\\|')
@@ -121,13 +122,13 @@ export async function exportAudit(
   const classes = Object.entries(record(summary.prompt_class_counts)).filter(([, count]) => count);
   const panel = !classes.length
     ? 'Prompt classification unavailable until executions complete.'
-    : classes.length === 1 && classes[0]![0] === 'non_branded'
+    : onlyOf(classes)?.[0] === 'non_branded'
       ? 'All prompts are unaided/non-branded.'
       : `Mixed panel: ${classes
           .toSorted(([left], [right]) => compareText(left, right))
           .map(([key, count]) => `${key}=${count}`)
           .join(', ')}.`;
-  const lines = [`# AI Search Visibility Audit — ${brand}`, '', '## Methodology', ''];
+  const lines = [`# AI Search Visibility Audit â€” ${brand}`, '', '## Methodology', ''];
   if (provenance.length)
     lines.push(
       `- **Model provenance:** ${provenance.map((item) => `\`${item.logical_engine}\` via \`${item.transport_provider}\` model \`${item.transport_model}\` (${item.retrieval_enabled === null ? 'retrieval unrecorded' : item.retrieval_enabled ? 'retrieval on' : 'retrieval off'})`).join('; ')}.`,
@@ -136,10 +137,10 @@ export async function exportAudit(
     `- **Engines measured:** ${
       array(config.engines)
         .map((engine) => `\`${md(engine)}\``)
-        .join(', ') || '—'
+        .join(', ') || 'â€”'
     }`,
     '- **Statelessness:** every prompt is a fresh, independent request. No account history or chat context influences any answer.',
-    `- **Benchmark mode:** \`${mode}\` — ${{ consumer_like: 'exact visible prompt; no system instruction', controlled_localized: 'visible prompt plus disclosed market/language context', forced_grounded: 'disclosed market/language context plus forced current-web citations' }[mode] ?? mode}.`,
+    `- **Benchmark mode:** \`${mode}\` â€” ${{ consumer_like: 'exact visible prompt; no system instruction', controlled_localized: 'visible prompt plus disclosed market/language context', forced_grounded: 'disclosed market/language context plus forced current-web citations' }[mode] ?? mode}.`,
   );
   if (mode && mode !== 'consumer_like')
     lines.push(
@@ -161,7 +162,7 @@ export async function exportAudit(
   for (const [label, key] of [
     ['Brand mention rate', 'brand_mention_rate'],
     ['Owned-domain citation rate', 'owned_citation_rate'],
-    ['Mention → owned-citation conversion', 'mention_to_owned_citation_conversion'],
+    ['Mention â†’ owned-citation conversion', 'mention_to_owned_citation_conversion'],
     ['Search-use rate', 'search_use_rate'],
     ['Brand injected into search fanout', 'brand_fanout_injection_rate'],
     ['Unintended-domain citation rate', 'unintended_domain_citation_rate'],

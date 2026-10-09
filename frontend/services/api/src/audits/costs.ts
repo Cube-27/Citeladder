@@ -125,15 +125,15 @@ export function projectCost(usage: unknown, pricing: RateCard) {
     if (!Number.isSafeInteger(result)) throw new Error('execution_cost_overflow');
     return result;
   };
-  const lineCosts = [
-    token(uncached, pricing.uncached_input_microusd_per_million),
-    token(cached, pricing.cached_input_microusd_per_million),
-    token(output, pricing.output_microusd_per_million),
-    token(reasoning, pricing.reasoning_microusd_per_million),
+  const uncachedCost = token(uncached, pricing.uncached_input_microusd_per_million);
+  const cachedCost = token(cached, pricing.cached_input_microusd_per_million);
+  const outputCost = token(output, pricing.output_microusd_per_million);
+  const reasoningCost = token(reasoning, pricing.reasoning_microusd_per_million);
+  const searchCost =
     searches !== null && pricing.search_fee_microusd !== null
       ? searches * pricing.search_fee_microusd
-      : null,
-  ];
+      : null;
+  const lineCosts = [uncachedCost, cachedCost, outputCost, reasoningCost, searchCost];
   const counts = [uncached, cached, output, reasoning, searches];
   const applicable = lineCosts.filter((_value, index) => counts[index] !== null);
   const projected =
@@ -155,11 +155,11 @@ export function projectCost(usage: unknown, pricing: RateCard) {
     reasoning_tokens: reasoning,
     total_tokens: total,
     search_requests: searches,
-    uncached_input_cost_microusd: lineCosts[0]!,
-    cached_input_cost_microusd: lineCosts[1]!,
-    output_cost_microusd: lineCosts[2]!,
-    reasoning_cost_microusd: lineCosts[3]!,
-    search_cost_microusd: lineCosts[4]!,
+    uncached_input_cost_microusd: uncachedCost,
+    cached_input_cost_microusd: cachedCost,
+    output_cost_microusd: outputCost,
+    reasoning_cost_microusd: reasoningCost,
+    search_cost_microusd: searchCost,
     provider_reported_cost_microusd: reported,
     projected_total_cost_microusd: projected,
   };
