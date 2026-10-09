@@ -16,6 +16,7 @@ import {
 } from './search-intelligence-competitors';
 import { SearchMetrics, SearchSummaryEvidence } from './search-intelligence-overview';
 import { SearchIntelligenceHistory } from './search-intelligence-history';
+import { SearchValue } from './search-intelligence-value';
 
 const VIEWS = {
   keywords: [
@@ -231,17 +232,17 @@ function BacklinkMetrics({
     <>
       <SearchMetrics
         metrics={[
-          ['Backlinks', summary?.summary.backlinks],
-          ['Referring domains', summary?.summary.referring_domains],
-          ['Referring root domains', summary?.summary.referring_main_domains],
-          ['Domain rank', summary?.summary.rank],
+          ['Backlinks', summary, 'backlinks'],
+          ['Referring domains', summary, 'referring_domains'],
+          ['Referring root domains', summary, 'referring_main_domains'],
+          ['Domain rank', summary, 'rank'],
         ]}
       />
       {summary ? (
         <p className={textRole('caption')}>
-          Referring pages: {String(summary.summary.referring_pages ?? 'Not measured')} · Broken
-          backlinks: {String(summary.summary.broken_backlinks ?? 'Not measured')} · Target spam:{' '}
-          {String(summary.summary.target_spam_score ?? 'Not measured')}
+          Referring pages: <SearchValue value={summary.summary.referring_pages} /> · Broken
+          backlinks: <SearchValue value={summary.summary.broken_backlinks} /> · Target spam:{' '}
+          <SearchValue value={summary.summary.target_spam_score} />
         </p>
       ) : null}
       {history ? <SearchIntelligenceHistory dataset={history} /> : null}
@@ -265,7 +266,6 @@ function CollectionResult({
 }>) {
   return (
     <div className="grid min-w-0 gap-4">
-      {' '}
       {comparison && dataset ? (
         <p className={textRole('itemTitle')}>
           {label(dataset)} compared with {dataset.target_hostname}
@@ -282,7 +282,7 @@ function CollectionResult({
         <EmptyState
           icon={Database}
           heading={`No saved ${title.toLowerCase()}`}
-          description="Choose this data in Analysis settings, then review the cost before fetching."
+          description="Choose it in a new analysis, then review the cost before anything is fetched."
         />
       )}
     </div>

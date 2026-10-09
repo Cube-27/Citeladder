@@ -15,7 +15,9 @@ import type {
   SearchIntelligenceDataset,
   SearchIntelligenceReadiness,
 } from '@/lib/api/search-intelligence';
-import { datasetCount, formatSearchNumber } from './search-intelligence-format';
+import { SEARCH_DATASET_LABELS } from '@/lib/config/search-intelligence';
+import { datasetCount } from './search-intelligence-format';
+import { SearchValue } from './search-intelligence-value';
 
 // A reviewed canonical host may be www while saved competitor identities use apex domains.
 export function matchesCompetitor(origin: string, domain: string): boolean {
@@ -75,10 +77,16 @@ export function SearchIntelligenceCompetitors({
                     </span>
                   </TableCell>
                   <TableCell numeric>
-                    {formatSearchNumber(footprint?.summary.organic_keywords)}
+                    <SearchValue
+                      value={footprint?.summary.organic_keywords}
+                      fetched={Boolean(footprint)}
+                    />
                   </TableCell>
                   <TableCell numeric>
-                    {formatSearchNumber(footprint?.summary.estimated_monthly_traffic)}
+                    <SearchValue
+                      value={footprint?.summary.estimated_monthly_traffic}
+                      fetched={Boolean(footprint)}
+                    />
                   </TableCell>
                   {['missing_keywords', 'shared_keywords'].map((kind) => {
                     const dataset = comparison(kind);
@@ -88,14 +96,14 @@ export function SearchIntelligenceCompetitors({
                           <TextLink asChild text="inherit">
                             <Pressable
                               className="w-auto text-center"
-                              aria-label={`${kind.replaceAll('_', ' ')} for ${competitor.label}`}
+                              aria-label={`${competitor.label}: ${SEARCH_DATASET_LABELS[kind]}`}
                               onClick={() => onOpen(dataset)}
                             >
                               {datasetCount(dataset)}
                             </Pressable>
                           </TextLink>
                         ) : (
-                          'Not fetched'
+                          <SearchValue value={null} fetched={false} />
                         )}
                       </TableCell>
                     );

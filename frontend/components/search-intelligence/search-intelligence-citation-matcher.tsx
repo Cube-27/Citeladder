@@ -6,8 +6,11 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Alert } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
+import { InlineEmpty } from '@/components/ui/inline-empty';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/components/ui/toast';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
-import { formatDisplayTimestamp } from '@/lib/format';
+import { formatDisplayTimestamp, pluralCount } from '@/lib/format';
 import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { queryKeys } from '@/lib/api/query-keys';
 import { runsApi } from '@/lib/api/runs';
@@ -20,9 +23,10 @@ import { useProjectContext } from '@/lib/project/project-context';
 export function SearchIntelligenceCitationMatcher({
   datasets,
   onDerived,
-}: Readonly<{ datasets: SearchIntelligenceDataset[]; onDerived: () => Promise<void> }>) {
+}: Readonly<{ datasets: SearchIntelligenceDataset[]; onDerived: () => Promise<unknown> }>) {
   const { activeProject } = useProjectContext();
   const timeZone = useDisplayTimeZone();
+  const { notify } = useToast();
   const [selectedAudits, setSelectedAudits] = useState<string[]>([]);
   const referring = datasets.find((dataset) => dataset.dataset_kind === 'referring_domains');
   const audits = useQuery({
@@ -42,12 +46,28 @@ export function SearchIntelligenceCitationMatcher({
         selectedAudits,
         { workspaceId: activeProject!.workspace_id },
       ),
-    onSuccess: onDerived,
+    onSuccess: async (dataset) => {
+      setSelectedAudits([]);
+      notify(
+        'Citation matches saved',
+        `${pluralCount(dataset.unique_rows_saved, 'cited domain')} also link to you. Open Citation matches in Backlinks.`,
+      );
+      await onDerived();
+    },
   });
   if (!referring) return null;
   if (audits.isError)
     return (
       <ReadError {...readErrorProps(audits)} fallback="Visibility audits could not be loaded." />
+    );
+  if (audits.isPending) return <Skeleton className="h-32 w-full" />;
+  // Only an audit with answers can have cited sources.
+  const answered = audits.data.filter((audit) => audit.completed_count > 0);
+  if (!answered.length)
+    return (
+      <InlineEmpty>
+        No Visibility audit has answers yet. Run one in Visibility, then match its citations here.
+      </InlineEmpty>
     );
   const toggle = (auditId: string) =>
     setSelectedAudits((current) =>
@@ -58,11 +78,12 @@ export function SearchIntelligenceCitationMatcher({
     // nest one object inside another.
     <div className="grid gap-3">
       <p className="type-body">
-        Select the exact persisted audits to intersect with this referring-domain snapshot.
+        Choose the Visibility audits whose cited sources to compare with the domains that link to
+        you.
       </p>
       {derive.isError ? <Alert>{derive.error.message}</Alert> : null}
-      <div className="grid max-h-44 gap-2 overflow-y-auto">
-        {audits.data?.slice(0, 20).map((audit) => (
+      <div className="grid max-h-64 gap-2 overflow-y-auto">
+        {answered.map((audit) => (
           <label
             key={audit.id}
             className="type-body border-border-subtle flex items-center justify-between gap-3 border-b py-2"
@@ -72,7 +93,7 @@ export function SearchIntelligenceCitationMatcher({
               onCheckedChange={() => toggle(audit.id)}
               label={formatDisplayTimestamp(audit.created_at, timeZone)}
             />
-            <span className="text-muted">{audit.status}</span>
+            <span className="text-muted">{pluralCount(audit.completed_count, 'answer')}</span>
           </label>
         ))}
       </div>
@@ -82,7 +103,7 @@ export function SearchIntelligenceCitationMatcher({
           disabled={!selectedAudits.length || derive.isPending}
           onClick={() => derive.mutate()}
         >
-          Create citation match dataset
+          Match citations
         </Button>
       </div>
     </div>

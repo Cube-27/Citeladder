@@ -1,146 +1,70 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { estimateUsd } from './search-intelligence-format';
-import {
-  SEARCH_DEFAULT_DEPTHS,
-  SEARCH_MAX_DEPTH,
-  SEARCH_MARKET_OPTIONS,
-  searchMarketLabel,
-  searchScopeLabel,
-} from '@/lib/config/search-intelligence';
+import { useState } from 'react';
+import { SEARCH_MAX_DEPTH } from '@/lib/config/search-intelligence';
 
 import { Alert } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Drawer } from '@/components/ui/drawer';
+import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
-import { panelClasses } from '@/components/ui/panel';
 import { Select } from '@/components/ui/select';
-import { textRole } from '@/components/ui/typography';
-import { formatCount } from '@/lib/format';
 import type {
   DatasetSelection,
   ReviewPayload,
   SearchIntelligenceReadiness,
   SearchIntelligenceRun,
 } from '@/lib/api/search-intelligence';
-import { prepareReviewSelections } from './search-intelligence-review-selection';
+import {
+  defaultSelections,
+  prepareReviewSelections,
+  reviewInputsValid,
+  selectionKey,
+} from './search-intelligence-review-selection';
+import {
+  AdvancedOptions,
+  DatasetChoices,
+  HistoryScopeNotice,
+  ReviewFooter,
+  ReviewSummary,
+  marketOptions,
+  type ResearchScope,
+} from './search-intelligence-review-parts';
 
-const LABELS: Record<string, string> = {
-  footprint: 'Keyword footprint',
-  ranking_keywords: 'Ranked keywords',
-  keyword_suggestions: 'Keyword suggestions',
-  backlink_summary: 'Backlink summary',
-  referring_domains: 'Referring domains',
-  destination_pages: 'Destination pages',
-  missing_keywords: 'Competitor missing keywords',
-  shared_keywords: 'Competitor shared keywords',
-  organic_pages: 'Organic top pages',
-  backlinks: 'Individual backlinks',
-  backlink_history: 'Backlink history (domain-level, past year)',
-};
-
-function availableSelections(data: SearchIntelligenceReadiness): DatasetSelection[] {
-  const own = [
-    'footprint',
-    'ranking_keywords',
-    'keyword_suggestions',
-    'backlink_summary',
-    'referring_domains',
-    'destination_pages',
-    'organic_pages',
-    'backlinks',
-    'backlink_history',
-  ].map((kind) => ({
-    kind,
-    depth:
-      data.preferences.depths[kind] ??
-      SEARCH_DEFAULT_DEPTHS[kind as keyof typeof SEARCH_DEFAULT_DEPTHS],
-  }));
-  const competitorIds = data.preferences.competitor_ids.length
-    ? data.preferences.competitor_ids
-    : data.competitors.map(({ identity }) => identity);
-  return [
-    ...own,
-    ...competitorIds.flatMap((competitor_id) =>
-      [
-        'footprint',
-        'missing_keywords',
-        'shared_keywords',
-        'backlink_summary',
-        'backlinks',
-        'referring_domains',
-        'destination_pages',
-        'organic_pages',
-        'backlink_history',
-      ].map((kind) => ({
-        kind,
-        competitor_id,
-        depth:
-          data.preferences.depths[kind] ??
-          SEARCH_DEFAULT_DEPTHS[kind as keyof typeof SEARCH_DEFAULT_DEPTHS],
-      })),
-    ),
-  ];
-}
-
-function defaultSelections(data: SearchIntelligenceReadiness, action: string): DatasetSelection[] {
-  const available = availableSelections(data);
-  return action === 'seed'
-    ? available.filter(
-        ({ kind, competitor_id }) => kind === 'keyword_suggestions' && !competitor_id,
-      )
-    : available.filter(
-        ({ kind, competitor_id }) =>
-          kind !== 'keyword_suggestions' &&
-          (!competitor_id || ['footprint', 'missing_keywords', 'shared_keywords'].includes(kind)),
-      );
-}
-
-function reviewInputsValid(
-  selections: DatasetSelection[],
-  ownedTarget: string,
-  location: string,
-  seed: string,
-  researchScope: string,
-) {
-  return Boolean(
-    selections.length &&
-    ownedTarget &&
-    (selections.every(({ kind }) =>
-      [
-        'backlink_summary',
-        'referring_domains',
-        'destination_pages',
-        'backlinks',
-        'backlink_history',
-      ].includes(kind),
-    ) ||
-      (Number.isInteger(Number(location)) && Number(location) > 0)) &&
-    !(
-      researchScope === 'exact_host' && selections.some(({ kind }) => kind === 'backlink_history')
-    ) &&
-    selections.every((item) => item.kind !== 'keyword_suggestions' || seed.trim()),
+/** Typed depths keep a draft per dataset, so a field can be cleared while typing. */
+function useDatasetSelections(readiness: SearchIntelligenceReadiness, action: string) {
+  const [selections, setSelections] = useState<DatasetSelection[]>(() =>
+    defaultSelections(readiness, action),
   );
-}
-
-function HistoryScopeNotice({
-  scope,
-  selections,
-}: Readonly<{ scope: string; selections: DatasetSelection[] }>) {
-  if (scope !== 'exact_host' || !selections.some(({ kind }) => kind === 'backlink_history'))
-    return null;
-  return (
-    <Alert>
-      Deselect history or choose Domain + subdomains. History cannot be filtered to an exact host.
-    </Alert>
-  );
-}
-
-function indirectLinkPolicy(scope: unknown) {
-  return scope === 'domain_subdomains' ? 'included' : 'excluded';
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const isSelected = (candidate: DatasetSelection) =>
+    selections.some((item) => selectionKey(item) === selectionKey(candidate));
+  const toggle = (candidate: DatasetSelection) =>
+    setSelections((current) =>
+      isSelected(candidate)
+        ? current.filter((item) => selectionKey(item) !== selectionKey(candidate))
+        : [...current, candidate],
+    );
+  const setDepth = (candidate: DatasetSelection, text: string) => {
+    setDrafts((current) => ({ ...current, [selectionKey(candidate)]: text }));
+    const depth = Number(text);
+    if (!Number.isInteger(depth) || depth < 1 || depth > SEARCH_MAX_DEPTH) return;
+    setSelections((current) =>
+      current.map((item) =>
+        selectionKey(item) === selectionKey(candidate) ? { ...item, depth } : item,
+      ),
+    );
+  };
+  const depthOf = (option: DatasetSelection) => {
+    const current = selections.find((item) => selectionKey(item) === selectionKey(option));
+    return drafts[selectionKey(option)] ?? String(current?.depth ?? option.depth);
+  };
+  // A depth the reader is still typing has not reached its selection yet.
+  const depthsValid = selections.every((item) => {
+    const draft = drafts[selectionKey(item)];
+    return draft === undefined || String(item.depth) === draft;
+  });
+  return { selections, isSelected, toggle, setDepth, depthOf, depthsValid };
 }
 
 export function SearchIntelligenceReviewDrawer({
@@ -160,13 +84,11 @@ export function SearchIntelligenceReviewDrawer({
   onConfirm: (runId: string) => Promise<void>;
   busy: boolean;
 }>) {
-  const [selections, setSelections] = useState<DatasetSelection[]>(() =>
-    defaultSelections(readiness, action),
-  );
+  const datasets = useDatasetSelections(readiness, action);
   const [location, setLocation] = useState(String(readiness.preferences.location_code ?? ''));
   const [language, setLanguage] = useState(readiness.preferences.language_code || 'en');
   const [seed, setSeed] = useState('');
-  const [researchScope, setResearchScope] = useState<'exact_host' | 'domain_subdomains'>(
+  const [researchScope, setResearchScope] = useState<ResearchScope>(
     () => readiness.preferences.research_scope ?? 'domain_subdomains',
   );
   const [grouping, setGrouping] = useState<'as_is' | 'one_per_domain'>('as_is');
@@ -181,33 +103,12 @@ export function SearchIntelligenceReviewDrawer({
   const [saveDefaults, setSaveDefaults] = useState(false);
   const [review, setReview] = useState<SearchIntelligenceRun | null>(null);
   const [error, setError] = useState('');
-  const grouped = useMemo(() => {
-    const groups = new Map<string, DatasetSelection[]>();
-    for (const selection of availableSelections(readiness)) {
-      const key = selection.competitor_id ?? 'owned';
-      groups.set(key, [...(groups.get(key) ?? []), selection]);
-    }
-    return groups;
-  }, [readiness]);
-  const selectedKey = (candidate: DatasetSelection) =>
-    `${candidate.kind}:${candidate.competitor_id ?? ''}`;
-  const isSelected = (candidate: DatasetSelection) =>
-    selections.some((item) => selectedKey(item) === selectedKey(candidate));
-  const toggle = (candidate: DatasetSelection) =>
-    setSelections((current) =>
-      isSelected(candidate)
-        ? current.filter((item) => selectedKey(item) !== selectedKey(candidate))
-        : [...current, candidate],
-    );
-  const updateDepth = (candidate: DatasetSelection, depth: number) => {
-    if (!Number.isInteger(depth) || depth < 1 || depth > SEARCH_MAX_DEPTH) return;
-    setSelections((current) =>
-      current.map((item) =>
-        selectedKey(item) === selectedKey(candidate) ? { ...item, depth } : item,
-      ),
-    );
-  };
-  const canReview = reviewInputsValid(selections, ownedTarget, location, seed, researchScope);
+  const { selections } = datasets;
+  const canReview =
+    datasets.depthsValid &&
+    reviewInputsValid(selections, ownedTarget, location, seed, researchScope);
+  const failed = (cause: unknown, fallback: string) =>
+    setError(cause instanceof Error ? cause.message : fallback);
   const submitReview = async () => {
     setError('');
     try {
@@ -229,19 +130,20 @@ export function SearchIntelligenceReviewDrawer({
           previous_run_id: action === 'analysis' ? null : (readiness.latest_run?.id ?? null),
         }),
       );
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Acquisition could not be reviewed.');
+    } catch (cause) {
+      failed(cause, 'The cost could not be reviewed.');
     }
   };
-  const confirmReview = async () => {
-    if (!review) return;
+  const confirmReview = async (runId: string) => {
     setError('');
     try {
-      await onConfirm(review.id);
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Acquisition could not be confirmed.');
+      await onConfirm(runId);
+    } catch (cause) {
+      failed(cause, 'The analysis could not be started.');
     }
   };
+  const wantsSeed =
+    action === 'seed' || selections.some(({ kind }) => kind === 'keyword_suggestions');
   return (
     <Drawer
       open={open}
@@ -252,240 +154,74 @@ export function SearchIntelligenceReviewDrawer({
         }
         onOpenChange(nextOpen);
       }}
-      title="Review DataForSEO acquisition"
-      description="No provider request is made until you confirm this frozen call plan."
+      title={action === 'seed' ? 'Research a keyword' : 'Review analysis cost'}
+      description="Nothing is fetched or charged until you confirm the estimate."
       footer={
-        review ? (
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setReview(null)}>
-              Back
-            </Button>
-            <Button disabled={busy} onClick={() => void confirmReview()}>
-              Confirm ${estimateUsd(review.estimated_cost_usd)} acquisition
-            </Button>
-          </div>
-        ) : (
-          <div className="flex justify-end">
-            <Button disabled={busy || !canReview} onClick={() => void submitReview()}>
-              Review cost
-            </Button>
-          </div>
-        )
+        <ReviewFooter
+          review={review}
+          selected={selections.length}
+          canReview={canReview}
+          busy={busy}
+          onBack={() => setReview(null)}
+          onReview={() => void submitReview()}
+          onConfirm={() => void (review && confirmReview(review.id))}
+        />
       }
     >
       {error ? <Alert>{error}</Alert> : null}
       {review ? (
-        <Stack gap="workspace">
-          <Stack as="section" gap="compact">
-            <h3 className={textRole('sectionTitle')}>Frozen scope</h3>
-            <p>
-              {searchScopeLabel(String(review.frozen_scope.research_scope))}. Indirect links are{' '}
-              {indirectLinkPolicy(review.frozen_scope.research_scope)} from live backlink datasets.
-              History is the provider’s monthly domain coverage, including its own link population.
-            </p>
-            <dl className="type-body grid grid-cols-2 gap-[var(--compact-gap)]">
-              <div>
-                <dt className="type-label">Provider calls</dt>
-                <dd className="type-figure">{review.planned_calls}</dd>
-              </div>
-              <div>
-                <dt className="type-label">Maximum rows</dt>
-                <dd className="type-figure">{formatCount(review.planned_rows)}</dd>
-              </div>
-              <div>
-                <dt className="type-label">Estimated total</dt>
-                <dd className="type-figure">${estimateUsd(review.estimated_cost_usd)}</dd>
-              </div>
-              <div>
-                <dt className="type-label">Pricing version</dt>
-                <dd>{review.pricing_version}</dd>
-              </div>
-            </dl>
-          </Stack>
-          <Stack as="section" gap="compact">
-            <h3 className={textRole('sectionTitle')}>Charged call plan</h3>
-            <ul className="type-body grid gap-2">
-              {review.call_plan.map((call, index) => (
-                <li
-                  className="border-border-subtle rounded-[var(--radius-control)] border p-2"
-                  key={`${String(call.dataset_key)}:${String(call.page)}`}
-                >
-                  <span>
-                    {index + 1}. {String(call.dataset_kind).replaceAll('_', ' ')}
-                  </span>
-                  <span className="text-muted float-right">
-                    ${estimateUsd(String(call.estimated_cost_usd))}
-                  </span>
-                  <details>
-                    <summary>Targets, bounds and request details</summary>
-                    <pre className="overflow-x-auto break-all whitespace-pre-wrap">
-                      {JSON.stringify(
-                        {
-                          target: call.target,
-                          comparison: call.comparison,
-                          endpoint: call.endpoint,
-                          request: call.request,
-                        },
-                        null,
-                        2,
-                      )}
-                    </pre>
-                  </details>
-                </li>
-              ))}
-            </ul>
-          </Stack>
-          {review.reused_datasets.length ? (
-            <p className="type-body">
-              {review.reused_datasets.length} fresh dataset(s) will be reused without provider
-              calls.
-            </p>
-          ) : null}
-        </Stack>
+        <ReviewSummary review={review} />
       ) : (
         <Stack gap="workspace">
-          <Select
-            ariaLabel="Research scope"
-            value={researchScope}
-            onValueChange={(value) => setResearchScope(value as typeof researchScope)}
-            options={[
-              { value: 'domain_subdomains', label: 'Domain + subdomains' },
-              { value: 'exact_host', label: 'Exact host' },
-            ]}
-          />
-          <Select
-            ariaLabel="Backlink grouping"
-            value={grouping}
-            onValueChange={(value) => setGrouping(value as typeof grouping)}
-            options={[
-              { value: 'as_is', label: 'All provider backlink rows' },
-              { value: 'one_per_domain', label: 'One backlink per domain' },
-            ]}
-          />
-          <Select
-            ariaLabel="Ranking acquisition order"
-            value={rankingOrder}
-            onValueChange={(value) => setRankingOrder(value as DatasetSelection['order'])}
-            options={['volume', 'traffic', 'position', 'difficulty', 'cpc'].map((value) => ({
-              value,
-              label: `Acquire by ${value}`,
-            }))}
-          />
-          <HistoryScopeNotice scope={researchScope} selections={selections} />
-          <Input
-            aria-label="Minimum acquisition search volume"
-            type="number"
-            min={0}
-            step={1}
-            value={acquisitionVolume}
-            placeholder="Minimum acquisition search volume"
-            onChange={(event) => {
-              const value = event.target.value;
-              if (value === '' || (Number.isInteger(Number(value)) && Number(value) >= 0))
-                setAcquisitionVolume(value);
-            }}
-          />
-          <label htmlFor="search-owned-target" className="type-label grid gap-2">
-            <span>Owned target</span>
-            <Select
-              id="search-owned-target"
-              ariaLabel="Owned target"
-              value={ownedTarget}
-              onValueChange={setOwnedTarget}
-              options={readiness.owned_targets.map((target) => ({
-                value: target.identity,
-                label: target.label,
-              }))}
-            />
-          </label>
-          <div className="grid grid-cols-2 gap-3">
-            <label htmlFor="search-location-code" className="type-label grid gap-2">
-              <span>Market</span>
+          <Field label="Market">
+            {(field) => (
               <Select
-                id="search-location-code"
+                {...field}
                 ariaLabel="Market"
                 value={location}
                 onValueChange={setLocation}
                 placeholder="Select market"
-                options={
-                  location && !SEARCH_MARKET_OPTIONS.some((item) => item.value === location)
-                    ? [
-                        ...SEARCH_MARKET_OPTIONS,
-                        { value: location, label: searchMarketLabel(Number(location)) },
-                      ]
-                    : SEARCH_MARKET_OPTIONS
-                }
+                options={marketOptions(location)}
               />
-            </label>
-            <label htmlFor="search-language" className="type-label grid gap-2">
-              <span>Language</span>
-              <Input
-                id="search-language"
-                value={language}
-                onChange={(event) => setLanguage(event.target.value)}
-              />
-            </label>
-          </div>
-          <label htmlFor="search-keyword-seed" className="type-label grid gap-2">
-            <span>Keyword suggestion seed</span>
-            <Input
-              id="search-keyword-seed"
-              value={seed}
-              onChange={(event) => setSeed(event.target.value)}
-              placeholder="Required when keyword suggestions are selected"
-            />
-          </label>
-          {[...grouped.entries()].map(([owner, options]) => (
-            <fieldset key={owner} className={panelClasses({ tone: 'panel', pad: 'compact' })}>
-              <legend className={textRole('label', 'px-1')}>
-                {owner === 'owned'
-                  ? 'Owned site'
-                  : (readiness.competitors.find((item) => item.identity === owner)?.label ??
-                    'Competitor')}
-              </legend>
-              <div className="grid gap-3">
-                {options.map((option) => {
-                  const checked = isSelected(option);
-                  const current = selections.find(
-                    (item) => selectedKey(item) === selectedKey(option),
-                  );
-                  return (
-                    <div
-                      key={selectedKey(option)}
-                      className="grid grid-cols-[1fr_6rem] items-center gap-3"
-                    >
-                      <Checkbox
-                        checked={checked}
-                        onCheckedChange={() => toggle(option)}
-                        label={LABELS[option.kind]}
-                      />
-                      <Input
-                        aria-label={`${LABELS[option.kind]} depth`}
-                        disabled={
-                          !checked ||
-                          ['footprint', 'backlink_summary', 'backlink_history'].includes(
-                            option.kind,
-                          )
-                        }
-                        inputMode="numeric"
-                        value={String(current?.depth ?? option.depth)}
-                        onChange={(event) => updateDepth(option, Number(event.target.value))}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            </fieldset>
-          ))}
-          <Checkbox
-            checked={reuse}
-            onCheckedChange={(checked) => setReuse(checked === true)}
-            label="Reuse fresh matching snapshots when available"
+            )}
+          </Field>
+          {wantsSeed ? (
+            <Field label="Keyword suggestion seed" hint="The keyword to find related searches for.">
+              {(field) => (
+                <Input {...field} value={seed} onChange={(event) => setSeed(event.target.value)} />
+              )}
+            </Field>
+          ) : null}
+          <DatasetChoices
+            readiness={readiness}
+            isSelected={datasets.isSelected}
+            onToggle={datasets.toggle}
+            depthOf={datasets.depthOf}
+            onDepth={datasets.setDepth}
           />
-          <Checkbox
-            checked={saveDefaults}
-            onCheckedChange={(checked) => setSaveDefaults(checked === true)}
-            label="Save scope and depth as project defaults"
+          <HistoryScopeNotice scope={researchScope} selections={selections} />
+          <AdvancedOptions
+            targets={readiness.owned_targets}
+            values={{
+              researchScope,
+              ownedTarget,
+              language,
+              rankingOrder,
+              acquisitionVolume,
+              grouping,
+              reuse,
+              saveDefaults,
+            }}
+            set={{
+              researchScope: setResearchScope,
+              ownedTarget: setOwnedTarget,
+              language: setLanguage,
+              rankingOrder: setRankingOrder,
+              acquisitionVolume: setAcquisitionVolume,
+              grouping: setGrouping,
+              reuse: setReuse,
+              saveDefaults: setSaveDefaults,
+            }}
           />
         </Stack>
       )}

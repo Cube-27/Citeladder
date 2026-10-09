@@ -11,14 +11,20 @@ import {
 } from '@/components/ui/table';
 import type { SearchIntelligenceRow } from '@/lib/api/search-intelligence';
 import { SEARCH_COLUMNS_BY_KIND, type SearchColumn } from '@/lib/config/search-intelligence';
-import { formatSearchNumber } from './search-intelligence-format';
+import { MissingValue } from '@/components/ui/unavailable-value';
+import { SearchValue } from './search-intelligence-value';
+
+function cellText(value: unknown): string | null {
+  if (value === null || value === undefined || value === '') return null;
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+  if (Array.isArray(value)) return value.length ? value.join(', ') : null;
+  return typeof value === 'object' ? null : String(value);
+}
 
 function displayValue(row: SearchIntelligenceRow, column: SearchColumn) {
   const result = row[column.field];
-  if (column.numeric) return formatSearchNumber(result, column.precision ?? 0);
-  if (result === null || result === undefined || result === '')
-    return <span className="value-placeholder">Not measured</span>;
-  return typeof result === 'object' ? JSON.stringify(result) : String(result);
+  if (column.numeric) return <SearchValue value={result} digits={column.precision ?? 0} />;
+  return cellText(result) ?? <MissingValue />;
 }
 
 export function SearchIntelligenceRowsTable({
@@ -70,7 +76,7 @@ export function SearchIntelligenceRowsTable({
                 key={column.field}
                 numeric={column.numeric}
                 className="truncate"
-                title={String(row[column.field] ?? '')}
+                title={column.numeric ? undefined : (cellText(row[column.field]) ?? undefined)}
               >
                 {column === columns[0] ? (
                   <TextLink asChild text="inherit">
