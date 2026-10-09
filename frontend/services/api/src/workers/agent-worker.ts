@@ -1,24 +1,15 @@
-import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { createAgentBindings } from '../agent/bindings.ts';
-import { runAgentOnce } from '../agent/worker.ts';
 
 export class AgentWorker {
-  readonly owner: string;
   readonly db: Database;
   readonly dependencies: Awaited<ReturnType<typeof createAgentBindings>>;
   readonly workspaceId?: string;
-  constructor(
-    db: Database,
-    dependencies: AgentWorker['dependencies'],
-    owner = `agent-worker-${randomUUID().slice(0, 12)}`,
-    workspaceId?: string,
-  ) {
+  constructor(db: Database, dependencies: AgentWorker['dependencies'], workspaceId?: string) {
     this.db = db;
     this.dependencies = dependencies;
-    this.owner = owner;
     this.workspaceId = workspaceId;
   }
   private async workspaces() {
@@ -31,7 +22,11 @@ export class AgentWorker {
         eb.or([
           eb.and([
             eb('status', 'in', policy.task_queue.claimable),
-            eb('available_at', '<=', sql<Date>`clock_timestamp()`),
+            eb(
+              'available_at',
+              '<=',
+              sql<Date>`clock_timestamp() - ${policy.agent.unclaimed_grace_seconds} * interval '1 second'`,
+            ),
           ]),
           eb.and([
             eb('status', 'in', ['leased', 'running']),
@@ -64,25 +59,26 @@ export class AgentWorker {
       .execute();
     return rows.map((row) => row.workspace_id);
   }
+  /**
+   * Turns execute only inside the browser's request; this lane never runs one.
+   * It ends turns whose process stopped or that no stream claimed, and settles
+   * cancelled turns' outstanding model attempts.
+   */
   async runOnce() {
     const workspaces = await this.workspaces(),
-      { queue, runtime, models, settings } = this.dependencies;
-    await queue.recover(workspaces, policy.agent.recovery_batch_size, (db, run) =>
-      models.reconcile(db, run),
+      { queue, models, settings } = this.dependencies;
+    const recovered = await queue.recover(
+      workspaces,
+      policy.agent.recovery_batch_size,
+      policy.agent.unclaimed_grace_seconds,
+      (db, run) => models.reconcile(db, run),
     );
     await models.recoverCancelled(
       workspaces,
       policy.agent.recovery_batch_size,
       settings.leaseMarginSeconds,
     );
-    return Number(
-      await runAgentOnce(queue, runtime, this.owner, workspaces, (attempt) =>
-        Math.min(
-          settings.retryMaxSeconds,
-          settings.retryBaseSeconds * 2 ** Math.max(0, attempt - 1),
-        ),
-      ),
-    );
+    return recovered;
   }
   async runUntilIdle(maxBatches = policy.task_queue.max_drain_batches) {
     let total = 0;

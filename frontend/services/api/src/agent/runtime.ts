@@ -212,9 +212,10 @@ export class AgentRuntime {
     try {
       await this.turn(lease, latest, signal, events);
     } catch (error) {
+      // A stopped turn is ended by its caller; a lost lease by recovery.
       if (signal?.aborted) return;
       if (error instanceof AgentError && error.code === 'lease') return;
-      if (error instanceof AgentError && error.retryable) throw error;
+      // Provider failures were already retried within the call; the turn ends with its reply.
       await this.fail(lease, failureCode(error), latest.summary);
     }
   }
@@ -617,7 +618,8 @@ export class AgentRuntime {
       await terminalize(trx, lease, 'succeeded');
     });
   }
-  private async fail(lease: Lease, code: string, summary?: PromptSummary) {
+  /** Ends the turn with its code-specific reply, settling any open model attempt. */
+  async fail(lease: Lease, code: string, summary?: PromptSummary) {
     try {
       await this.db.transaction().execute(async (trx) => {
         const run = await lockRun(trx, lease);

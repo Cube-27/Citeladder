@@ -2,7 +2,7 @@
 import type { Database } from '../db/database.ts';
 import { createSecretCipher } from '../integrations/fernet.ts';
 import { createModelGateway, type GatewaySettings } from '../models/gateway.ts';
-import { defaultTransport, ModelError, transientStatus } from '../models/http.ts';
+import { defaultTransport, ModelError } from '../models/http.ts';
 import { appModelUrl } from './inputs.ts';
 import { providerPolicy } from './config.ts';
 import { ProbeError, sendProbe, type ProbeTransport } from './probe-transport.ts';
@@ -101,10 +101,4 @@ export function createAppModelGateway(
     { api: 'openai_compatible' },
   );
   return gateway;
-}
-export function retryableModelError(error: unknown) {
-  return (
-    error instanceof ModelError &&
-    (error.code === 'connection' || (error.code === 'http' && transientStatus(error.status ?? 0)))
-  );
 }

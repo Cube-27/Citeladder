@@ -8,8 +8,6 @@ export function agentSettings(env: Record<string, string | undefined> = process.
     skillsDirectory: resolveSkillsDirectory(String(setting('skills_directory'))),
     executionTimeoutSeconds: Number(setting('execution_timeout_seconds')),
     leaseMarginSeconds: Number(setting('lease_margin_seconds')),
-    retryBaseSeconds: Number(setting('retry_base_delay_seconds')),
-    retryMaxSeconds: Number(setting('retry_max_delay_seconds')),
     devEmail: String(resolveSettingSpec(policy.settings.dev_login_email, env)).trim().toLowerCase(),
     devPasswordConfigured: Boolean(resolveSettingSpec(policy.settings.dev_login_password, env)),
     activeLimit: Number(resolveSettingSpec(policy.abuse.active_agent_runs_per_workspace, env)),

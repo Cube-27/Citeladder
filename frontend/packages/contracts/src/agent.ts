@@ -141,6 +141,8 @@ export const agentChatSummarySchema = responseObject({
   output_phase: agentOutputPhaseSchema.nullable(),
   last_activity_at: z.string(),
   created_at: z.string(),
+  /** A turn is queued or running in this chat. */
+  running: z.boolean(),
 });
 
 export const agentChatsPageSchema = responseObject({

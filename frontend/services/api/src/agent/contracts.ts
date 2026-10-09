@@ -14,11 +14,9 @@ export type Scope = { workspaceId: string; projectId: string; userId: string };
 export type Lease = { runId: string; workspaceId: string; owner: string; attempt: number };
 export class AgentError extends Error {
   readonly code: string;
-  readonly retryable: boolean;
-  constructor(code: string, retryable = false) {
+  constructor(code: string) {
     super(code);
     this.code = code;
-    this.retryable = retryable;
   }
 }
 export class AgentProtocolError extends AgentError {

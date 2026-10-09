@@ -82,7 +82,6 @@ export function scripted(
     model: 'test-model',
     adapter: 'test',
     endpointHost: 'model.example.test',
-    retryableError: () => false,
     complete: async (request, _signal, onText) => {
       await onCall?.(request, count + 1);
       const outcome = result(steps[count++] ?? reply());

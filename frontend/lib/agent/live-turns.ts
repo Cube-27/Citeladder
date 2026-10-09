@@ -1,16 +1,17 @@
 'use client';
 
 /**
- * Live display of turns this tab started. Admission opens one streamed request
- * per accepted run; its events show the agent's steps and the reply and
- * document as they are written. The stream is display only: the persisted chat
- * read stays the record, and a dropped stream falls back to polling it.
+ * Turns this tab started. Admission opens one streamed request per accepted
+ * run, and the turn runs inside that request: it lives in this module, so
+ * moving around the app keeps it running, while closing the tab ends the turn
+ * as interrupted. Its events show the agent's steps and the reply and document
+ * as they are written; the persisted chat read stays the record.
  */
 import { useSyncExternalStore } from 'react';
 import type { z } from 'zod';
 
 import { agentTurnEventSchema } from '@citeladder/contracts/agent';
-import { API_BASE_URL, INTERACTIVE_EXECUTION_REQUEST_TIMEOUT_MS } from '@/lib/config/operational';
+import { API_BASE_URL } from '@/lib/config/operational';
 import { readSseResponse, streamHeaders } from '@/lib/sse/use-event-stream';
 
 type TurnEvent = z.infer<typeof agentTurnEventSchema>;
@@ -23,7 +24,7 @@ export type LiveTurn = {
   connected: boolean;
   /** The newest step event. */
   step: Step | null;
-  /** The newest respond step's text; cleared when a later step starts. */
+  /** The newest written text, kept until a newer text or the saved reply replaces it. */
   text: Text | null;
 };
 
@@ -41,13 +42,9 @@ function update(runId: string, change: (turn: LiveTurn) => LiveTurn) {
 
 function apply(turn: LiveTurn, event: TurnEvent): LiveTurn {
   switch (event.type) {
+    // Text stays through later steps, so a reply never blanks while the agent continues.
     case 'step':
-      return {
-        ...turn,
-        step: event,
-        // Text belongs to the step that wrote it; a new step supersedes it.
-        text: turn.text && turn.text.ordinal < event.ordinal ? null : turn.text,
-      };
+      return { ...turn, step: event };
     case 'text':
       return { ...turn, text: event };
     // The stream closes after either; the persisted run read then shows how
@@ -79,7 +76,7 @@ async function read(response: Response, onEvent: (event: TurnEvent) => void) {
   );
 }
 
-/** Opens the run's interactive stream; execution never depends on it staying open. */
+/** Opens the run's stream; the server's turn limit bounds it, so it has no timeout of its own. */
 export function startLiveTurn(chatId: string, runId: string, workspaceId: string | null) {
   if (turns.has(runId)) return;
   turns.set(runId, { startedAt: Date.now(), connected: true, step: null, text: null });
@@ -90,7 +87,6 @@ export function startLiveTurn(chatId: string, runId: string, workspaceId: string
     credentials: 'include',
     cache: 'no-store',
     headers: streamHeaders(workspaceId, null),
-    signal: AbortSignal.timeout(INTERACTIVE_EXECUTION_REQUEST_TIMEOUT_MS),
   })
     .then((response) => read(response, (event) => update(runId, (turn) => apply(turn, event))))
     .catch(() => undefined)

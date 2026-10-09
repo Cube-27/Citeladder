@@ -1,10 +1,17 @@
 import type { AgentRun } from '@/lib/api/agent';
+import { AGENT_RUN_POLL_MAX_MS, AGENT_RUN_POLL_STEPS } from '@/lib/config/agent';
 
 const ACTIVE_STATUSES = new Set<AgentRun['status']>(['queued', 'leased', 'running', 'retry_wait']);
 
 /** A turn the server may still be working on; the UI polls until it ends. */
 export function isRunActive(run: AgentRun | null | undefined): boolean {
   return run ? ACTIVE_STATUSES.has(run.status) : false;
+}
+
+/** How often to read an active run that this tab is not streaming, by its age. */
+export function runPollMs(run: AgentRun, now = Date.now()): number {
+  const age = now - Date.parse(run.created_at);
+  return AGENT_RUN_POLL_STEPS.find((step) => age < step.untilMs)?.everyMs ?? AGENT_RUN_POLL_MAX_MS;
 }
 
 export type RunOutcome =

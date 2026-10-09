@@ -6,7 +6,6 @@ import {
   AppRouteUnavailable,
   createAppModelGateway,
   resolveAppRoute,
-  retryableModelError,
 } from '../providers/app-models.ts';
 import { sendProbe, type ProbeTransport } from '../providers/probe-transport.ts';
 import { AgentError, type Run } from './contracts.ts';
@@ -62,7 +61,6 @@ export function agentModels(
       model: gateway.model,
       endpointHost: gateway.baseUrlHost,
       adapter: customer ? 'openai_compatible_byok' : gateway.adapter,
-      retryableError: retryableModelError,
       complete: (request, signal, onText) =>
         gateway.completeStructured(
           request.system,

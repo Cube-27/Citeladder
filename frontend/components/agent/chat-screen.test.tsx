@@ -381,6 +381,8 @@ describe('ChatScreen', () => {
             controller.enqueue(
               frame({ type: 'text', ordinal: 1, reply: 'Partly written', title: null, body: null }),
             );
+            // A later step never blanks what was already written.
+            controller.enqueue(frame({ type: 'step', ordinal: 2, tool: null, status: 'working' }));
             await held;
             phase = 'done';
             controller.enqueue(frame({ type: 'done', run: finished.latest_run }));

@@ -164,9 +164,11 @@ shows them.
 
 ### Terminal turns
 
-Every terminal turn answers its request. A failure, exhaustion of retries
-(`provider_error`), exhausted lease recovery (`max_attempts_exceeded`),
-cancellation (`cancelled`) and every budget limit append one code-specific
+Every terminal turn answers its request. A provider failure that its in-call
+retry did not recover (`provider_error`), a turn stopped because the browser
+closed or its process stopped (`interrupted`), a turn past its time limit
+(`turn_timeout`), cancellation (`cancelled`) and every budget limit append one
+code-specific
 recovery reply from [`messages.ts`](../frontend/services/api/src/agent/messages.ts)
 saying what happened, that nothing was saved, and what to do next. The one
 exception is a member who lost access (`access_revoked`), whose turn ends
@@ -296,12 +298,25 @@ After accepting a new chat, message or outline approval, the browser
 ([`live-turns.ts`](../frontend/lib/agent/live-turns.ts)) opens
 `POST …/runs/{run_id}/run` with `Accept: text/event-stream`. The route answers
 `step`, `text`, `done` (with the run view) and `error` events and a keep-alive
-comment under proxy idle limits; without that header it answers JSON. The turn
-runs in the API to its own 240-second deadline whether or not the browser stays,
-and interrupted turns keep the durable retry path. A repeated request finds the
-run already claimed and never re-executes it. Chat polling pauses while the
-stream is open and the chat is read again the moment it closes; another tab, a
-reload or a dropped stream falls back to polling.
+comment under proxy idle limits; without that header it answers JSON.
+
+A turn executes only inside that request, exactly once:
+
+- The stream lives in a module, so moving around the app keeps the turn
+  running, and several chats can run at once; the chat list marks each chat
+  with a running turn.
+- Closing the tab or reloading closes the stream and ends the turn as
+  `interrupted`; the turn's own limit (`turn_timeout_seconds` in the runtime
+  configuration, below the API's request timeout) ends it as `turn_timeout`.
+- A provider failure is retried once within the call
+  (`provider_max_attempts`); if that also fails the turn ends as
+  `provider_error`. Nothing requeues a turn, so a turn never replays from its
+  first step.
+- A repeated request finds the run already claimed and never re-executes it.
+
+Streamed text stays on screen through later steps until the saved reply
+replaces it. Chat polling pauses while the stream is open, the chat is read
+again the moment it closes, and another tab or a reload polls with a backoff.
 
 The full chat and the Dashboard panel share one thread and composer
 ([`chat-thread.tsx`](../frontend/components/agent/chat-thread.tsx)):
@@ -348,14 +363,19 @@ the Agent gains no write tool.
 
 ## Worker and funding
 
-The [worker](../frontend/services/api/src/workers/agent-worker.ts) claims runs from the
-shared PostgreSQL queue with a lease and a heartbeat. Before each model step it
+The browser's run request claims its run from the shared PostgreSQL queue with a
+lease and a heartbeat. Creating a chat does not start the runner job. The
+runner's [agent lane](../frontend/services/api/src/workers/agent-worker.ts) never
+executes a turn: it ends as `interrupted` a turn whose lease expired or that no
+stream claimed within `unclaimed_grace_seconds`, and settles cancelled turns'
+outstanding model attempts. Before each model step the turn
 rechecks lease ownership, cancellation, the member's run permission, the
 capability and the exact customer route/key revision or admitted platform model,
 then [commits the dispatch](../frontend/services/api/src/agent/model-calls.ts)
 before any network I/O; no transaction is held across provider or tool I/O.
 Settlement survives cancellation and lease loss while replies and revisions
-stay fenced, and recovery runs accounting in the same transaction as retry.
+stay fenced, and recovery runs accounting in the same transaction as its
+terminal write.
 
 Every model step is funded independently. Platform funding reserves a finite
 AI-credit hold per call and settles it against returned usage; a lost result
@@ -382,7 +402,8 @@ scripted models and real PostgreSQL, never live providers:
 - `agent-stream.test.ts` and `models.test.ts`: partial-JSON decoding from every
   prefix; streamed and buffered gateway calls settle the same result.
 - `agent-cutover.test.ts`: HTTP admission, the SSE route (events, saved reply,
-  no re-execution), catalog projection, legacy replay, draining and cancellation.
+  no re-execution, a closed stream ending the turn as interrupted), catalog
+  projection, legacy replay, recovery and cancellation.
 - `agent-funding.test.ts`: holds, settlement, unknown usage, BYOK and
   development funding.
 

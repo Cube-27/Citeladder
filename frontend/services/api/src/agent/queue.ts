@@ -148,32 +148,16 @@ export class AgentQueue {
       .executeTakeFirst();
     return result.numUpdatedRows > 0n;
   }
-  retry(lease: Lease, delaySeconds: number, reconcile: (db: Database, run: Run) => Promise<void>) {
-    return this.db.transaction().execute(async (trx) => {
-      const run = await lockRun(trx, lease);
-      await reconcile(trx, run);
-      const exhausted = run.attempt_count >= run.max_attempts;
-      await trx
-        .updateTable('agent_runs')
-        .set({
-          status: exhausted ? statuses.failed : statuses.retry_wait,
-          error_code: 'provider_error',
-          updated_at: sql<Date>`clock_timestamp()`,
-          lease_owner: null,
-          lease_expires_at: null,
-          available_at: sql<Date>`clock_timestamp() + ${delaySeconds} * interval '1 second'`,
-          completed_at: exhausted ? sql<Date>`clock_timestamp()` : null,
-        })
-        .where('id', '=', run.id)
-        .where('workspace_id', '=', run.workspace_id)
-        .execute();
-      if (exhausted) await appendRecoveryReply(trx, run, 'provider_error');
-    });
-  }
-  /** Caller supplies accounting; recovery cannot abandon an open credit hold. */
+  /**
+   * Turns run only inside the browser's stream, so nothing here replays one.
+   * A turn whose process stopped heartbeating, or that no stream ever claimed,
+   * ends as interrupted with its reply. Caller supplies accounting; recovery
+   * cannot abandon an open credit hold.
+   */
   recover(
     workspaceIds: readonly string[],
     limit: number,
+    unclaimedGraceSeconds: number,
     reconcile: (db: Database, run: Run) => Promise<void>,
   ) {
     if (!workspaceIds.length) return Promise.resolve(0);
@@ -182,9 +166,23 @@ export class AgentQueue {
         .selectFrom('agent_runs')
         .selectAll()
         .where('workspace_id', 'in', workspaceIds)
-        .where('status', 'in', [statuses.leased, statuses.running])
-        .where('lease_expires_at', '<=', sql<Date>`clock_timestamp()`)
-        .orderBy('lease_expires_at')
+        .where((eb) =>
+          eb.or([
+            eb.and([
+              eb('status', 'in', [statuses.leased, statuses.running]),
+              eb('lease_expires_at', '<=', sql<Date>`clock_timestamp()`),
+            ]),
+            eb.and([
+              eb('status', 'in', claimable),
+              eb(
+                'available_at',
+                '<=',
+                sql<Date>`clock_timestamp() - ${unclaimedGraceSeconds} * interval '1 second'`,
+              ),
+            ]),
+          ]),
+        )
+        .orderBy('updated_at')
         .orderBy('id')
         .limit(limit)
         .forUpdate()
@@ -193,24 +191,20 @@ export class AgentQueue {
       for (const run of rows) {
         // Ledger settlement and terminal writes share one ordered transaction.
         await reconcile(trx, run); // NOSONAR
-        const attempts = run.attempt_count + (run.status === statuses.leased ? 1 : 0);
-        const exhausted = attempts >= run.max_attempts;
         await trx // NOSONAR
           .updateTable('agent_runs')
           .set({
-            attempt_count: attempts,
-            status: exhausted ? statuses.failed : statuses.retry_wait,
-            error_code: exhausted ? 'max_attempts_exceeded' : run.error_code,
+            status: statuses.failed,
+            error_code: 'interrupted',
             updated_at: sql<Date>`clock_timestamp()`,
             lease_owner: null,
             lease_expires_at: null,
-            available_at: sql<Date>`clock_timestamp()`,
-            completed_at: exhausted ? sql<Date>`clock_timestamp()` : null,
+            completed_at: sql<Date>`clock_timestamp()`,
           })
           .where('id', '=', run.id)
           .where('workspace_id', '=', run.workspace_id)
           .execute();
-        if (exhausted) await appendRecoveryReply(trx, run, 'max_attempts_exceeded'); // NOSONAR
+        await appendRecoveryReply(trx, run, 'interrupted'); // NOSONAR
       }
       return rows.length;
     });

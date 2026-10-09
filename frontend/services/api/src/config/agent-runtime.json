@@ -5,7 +5,7 @@
   "max_steps": 8,
   "max_tool_calls": 6,
   "max_protocol_errors": 2,
-  "provider_max_attempts": 1,
+  "provider_max_attempts": 2,
   "chat_turn_limit": 60,
   "tool_result_max_chars": 12000,
   "context_package_max_chars": 24000,
@@ -30,5 +30,7 @@
   "recovery_batch_size": 100,
   "heartbeat_seconds": 20.0,
   "stream_heartbeat_seconds": 15.0,
-  "run_max_attempts": 3
+  "run_max_attempts": 1,
+  "turn_timeout_seconds": 840,
+  "unclaimed_grace_seconds": 120
 }

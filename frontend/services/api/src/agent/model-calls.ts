@@ -13,7 +13,6 @@ export type AgentModel = {
   adapter: string;
   endpointHost: string;
   model: string;
-  retryableError: (error: unknown) => boolean;
   /** `onText` receives the growing response when the destination can stream it. */
   complete: (
     request: ModelRequest,
@@ -219,9 +218,9 @@ export class ModelCalls {
       const deadline = AbortSignal.timeout(remaining);
       const signal = executionSignal ? AbortSignal.any([deadline, executionSignal]) : deadline;
       result = await abortable(() => model.complete(request, signal, onText), signal);
-    } catch (error) {
+    } catch {
       await this.receipt(lease.workspaceId, attempt.id, null);
-      throw new AgentError('provider_error', model.retryableError(error));
+      throw new AgentError('provider_error');
     }
     await this.receipt(lease.workspaceId, attempt.id, result);
     // A returned result never revives a cancelled/reclaimed run.

@@ -8,11 +8,12 @@ import { Button } from '@/components/ui/button';
 import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
 import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { SearchField } from '@/components/ui/search-field';
+import { Spinner } from '@/components/ui/spinner';
 import { textRole } from '@/components/ui/typography';
 import { OUTPUT_PHASE_LABEL } from '@/lib/agent/vocabulary';
 import { actionsQueries } from '@/lib/api/actions';
 import { agentQueries, type AgentChatSummary } from '@/lib/api/agent';
-import { AGENT_CHAT_SEARCH_DEBOUNCE_MS } from '@/lib/config/agent';
+import { AGENT_CHAT_LIST_POLL_MS, AGENT_CHAT_SEARCH_DEBOUNCE_MS } from '@/lib/config/agent';
 import { ICONS } from '@/lib/icons';
 import { scopedNavigationDestination } from '@/lib/navigation/project-destination';
 import { useRouteIntent } from '@/lib/navigation/use-route-intent';
@@ -106,7 +107,14 @@ function ChatHistory({
 }>) {
   const [search, setSearch] = useState('');
   const needle = useDebounced(search.trim());
-  const chats = useInfiniteQuery(agentQueries.chats(workspaceId, projectId, { q: needle }));
+  const chats = useInfiniteQuery({
+    ...agentQueries.chats(workspaceId, projectId, { q: needle }),
+    // Several chats can run at once; their markers clear as each turn ends.
+    refetchInterval: (query) =>
+      query.state.data?.pages.some((page) => page.items.some((chat) => chat.running))
+        ? AGENT_CHAT_LIST_POLL_MS
+        : false,
+  });
   const rows = chats.data?.pages.flatMap((page) => page.items) ?? [];
 
   return (
@@ -205,6 +213,13 @@ function ChatMeta({ chat }: Readonly<{ chat: AgentChatSummary }>) {
     chat.output_kind && chat.output_phase
       ? `${kindLabel(chat.output_kind)} · ${OUTPUT_PHASE_LABEL[chat.output_phase]}`
       : null;
+  if (chat.running)
+    return (
+      <span className={textRole('caption', 'flex items-center gap-2')}>
+        <Spinner className="text-muted" />
+        Working…
+      </span>
+    );
   if (!chat.target_label && !marker) return null;
   return (
     <span className={textRole('caption', 'truncate')}>
