@@ -564,6 +564,11 @@ it('lets workspace admins remove only their authorization while users cannot rev
   await fixtures.member(tenant.workspaceId, admin, 'admin');
   const adminCookie = `${config.session.cookieName}=${await sessionToken({ sub: admin, ver: 0 })}`;
   const product = createApp(config, db);
+  const used = await db
+    .selectFrom('mcp_oauth_grants')
+    .select('last_used_at')
+    .where('id', '=', principal.grantId)
+    .executeTakeFirstOrThrow();
   const own = await product.request('/api/v1/mcp/connections', { headers: { cookie } });
   expect(await own.json()).toEqual([
     expect.objectContaining({
@@ -572,7 +577,7 @@ it('lets workspace admins remove only their authorization while users cannot rev
         { id: other, name: 'Beta' },
       ],
       user_email: null,
-      last_used_at: null,
+      last_used_at: used.last_used_at!.toISOString(),
     }),
   ]);
   const list = await product.request(`/api/v1/workspaces/${tenant.workspaceId}/mcp/connections`, {
