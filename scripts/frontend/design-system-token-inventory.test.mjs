@@ -99,6 +99,15 @@ test('generated regions are refreshed, and stale or missing ones reported', () =
   assert.equal(refreshGeneratedBlocks(text, blocks).stale.length, 0);
 });
 
+test('a refreshed region keeps a CRLF document in CRLF', () => {
+  const blocks = new Map([['radii', '| Token |\n| --- |']]);
+  const document =
+    'intro\r\n<!-- generated:radii:start -->\r\nold\r\n<!-- generated:radii:end -->\r\n';
+  const { text } = refreshGeneratedBlocks(document, blocks);
+  assert.equal(text.replaceAll('\r\n', '').includes('\n'), false);
+  assert.equal(refreshGeneratedBlocks(text, blocks).stale.length, 0);
+});
+
 test('the radius table lists the ladder from CSS in size order', () => {
   const radii = generatedBlocks(
     '@theme { --radius-*: initial; --radius-full: 9999px; --radius-xs: 4px; } :root { --radius-card: 0.75rem; }',
