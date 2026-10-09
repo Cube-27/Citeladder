@@ -22,7 +22,7 @@ const GH_EXECUTABLE =
 const repository = 'Cube-27/cube27-fonts';
 // Pinned so every deploy ships the same bytes; bump it to adopt a font change.
 const revision = '629a9fa4802a0467e5c53f045f8d44c2bdfb3582';
-const licensedFonts = ['Satoshi-Variable.woff2', 'Sentient-Variable.woff2'];
+const licensedFonts = ['Switzer-Variable.woff2', 'Sentient-Variable.woff2'];
 
 const frontendRoot = resolve(import.meta.dirname, '..');
 const target = resolve(process.argv[2] ?? join(frontendRoot, 'public', 'fonts'));

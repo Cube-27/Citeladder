@@ -138,8 +138,8 @@ test.describe('marketing routes', () => {
         await page.evaluate(() =>
           Promise.allSettled(
             [
-              '400 14px "Satoshi Variable"',
-              '500 14px "Satoshi Variable"',
+              '400 14px "Switzer Variable"',
+              '500 14px "Switzer Variable"',
               '500 32px "Sentient Variable"',
             ].map((font) => document.fonts.load(font)),
           ),

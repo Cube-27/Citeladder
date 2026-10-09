@@ -9,7 +9,7 @@
    baseline here exactly as in the product; 12 is the one rung below it. */
 :where([data-public-surface], [data-flow-surface]) {
   /* The public and focused-flow type world (docs/design.md §Typography):
-     Satoshi carries body, UI and data, Sentient the display headings, as in
+     Switzer carries body, UI and data, Sentient the display headings, as in
      the product. The scale is the product's (globals.css @theme), unchanged;
      being "roomier" is a job for measure and rhythm, not for resizing rungs. */
   --tracking-tight: -0.02em;
@@ -98,7 +98,7 @@
 
    Display rungs set in Sentient at 500, and tracking closes gently as size
    grows (a serif wants less than a grotesk). The feature heading and body
-   rungs set in Satoshi at 400/500. */
+   rungs set in Switzer at 400/500. */
 .website-hero-display,
 .website-page-title,
 .website-section-heading {
