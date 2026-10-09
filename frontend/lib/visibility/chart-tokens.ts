@@ -1,9 +1,10 @@
 import { dataFillClass } from '@/components/ui/data-tone';
 
 const SERIES = [1, 2, 3, 4, 5, 6, 7, 8] as const;
+type ChartSeries = (typeof SERIES)[number];
 
 /** Literal classes stay visible to Tailwind's source scanner. */
-const STROKE: Record<(typeof SERIES)[number], string> = {
+const STROKE: Record<ChartSeries, string> = {
   1: 'stroke-chart-1',
   2: 'stroke-chart-2',
   3: 'stroke-chart-3',
@@ -14,16 +15,23 @@ const STROKE: Record<(typeof SERIES)[number], string> = {
   8: 'stroke-chart-8',
 };
 
-/** Per series: its line stroke, its swatch fill (the `DataTone` series fill) and its colour. */
-export const CHART_TOKENS: readonly {
-  strokeClass: string;
-  swatchClass: string;
-  color: string;
-}[] = SERIES.map((series) => ({
-  strokeClass: STROKE[series],
-  swatchClass: dataFillClass({ series }),
-  color: `var(--color-chart-${series})`,
-}));
+/** The entry for position `index`, wrapping around a list that is never empty. */
+function cycled<T>(items: readonly [T, ...T[]], index: number): T {
+  return items[index % items.length] ?? items[0];
+}
+
+/**
+ * The tokens for the `index`th series, wrapping after eight: its line stroke,
+ * its swatch fill (the `DataTone` series fill) and its colour.
+ */
+export function chartToken(index: number) {
+  const series = cycled(SERIES, index);
+  return {
+    strokeClass: STROKE[series],
+    swatchClass: dataFillClass({ series }),
+    color: `var(--color-chart-${series})`,
+  };
+}
 
 /**
  * Trend comparisons intentionally start at series 2 (series 1 is the tracked
@@ -31,6 +39,8 @@ export const CHART_TOKENS: readonly {
  */
 export const TREND_COMPARISON_SERIES = [2, 3, 4, 5, 6, 7] as const;
 
-export const TREND_COMPARISON_STROKES = TREND_COMPARISON_SERIES.map(
-  (series) => CHART_TOKENS[series - 1].strokeClass,
-);
+/** The comparison series and stroke for the `index`th competitor line. */
+export function comparisonSeries(index: number) {
+  const series = cycled(TREND_COMPARISON_SERIES, index);
+  return { series, strokeClass: STROKE[series] };
+}

@@ -12,7 +12,7 @@ import type { TrendPoint } from '@/components/ui/trend-chart';
 import type { LogicalEngine, VisibilityTrendPoint } from '@/lib/api/types';
 import { ENGINE_ORDER } from '@/lib/providers/catalog';
 import { formatDisplayDate, formatDisplayShortDate } from '@/lib/format';
-import { TREND_COMPARISON_SERIES, TREND_COMPARISON_STROKES } from '@/lib/visibility/chart-tokens';
+import { comparisonSeries, TREND_COMPARISON_SERIES } from '@/lib/visibility/chart-tokens';
 
 /** Trend granularity — mirrors the backend `granularity=run|week|month`. */
 export type TrendGranularity = 'run' | 'day' | 'week' | 'month';
@@ -174,13 +174,10 @@ export function toNamedChartPoints(
   name: string,
   timeZone = 'UTC',
 ): TrendPoint[] {
-  return toChartPoints(points, metric, timeZone).map((point, index) => ({
-    ...point,
-    value: (() => {
-      const row = points[index].rankings.find((entry) => entry.name === name);
-      return row ? rankingMetricValue(row, metric) : null;
-    })(),
-  }));
+  return toChartPoints(points, metric, timeZone).map((point, index) => {
+    const row = points[index]?.rankings.find((entry) => entry.name === name);
+    return { ...point, value: row ? rankingMetricValue(row, metric) : null };
+  });
 }
 
 /**
@@ -209,8 +206,7 @@ export function toCompetitorSeries(
     .map((row) => row.name);
   return names.map((name, index) => ({
     label: name,
-    strokeClass: TREND_COMPARISON_STROKES[index % TREND_COMPARISON_STROKES.length],
-    series: TREND_COMPARISON_SERIES[index % TREND_COMPARISON_SERIES.length],
+    ...comparisonSeries(index),
     values: points.map((point) => {
       const row = point.rankings.find((entry) => entry.name === name);
       return row ? rankingMetricValue(row, metric) : null;

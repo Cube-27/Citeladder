@@ -22,7 +22,7 @@ export type TourStep = {
 };
 
 /** Versioned, route-aware catalog. Targets are stable `data-tour` hooks, never CSS layout classes. */
-export const PRODUCT_TOUR_STEPS: readonly TourStep[] = [
+export const PRODUCT_TOUR_STEPS: readonly [TourStep, ...TourStep[]] = [
   {
     id: 'dashboard-overview',
     path: '/projects',

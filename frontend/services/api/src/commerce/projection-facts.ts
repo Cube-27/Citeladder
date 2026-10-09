@@ -146,6 +146,22 @@ function visiblePrice(facts: CatalogFacts) {
   };
 }
 
+/** The product fields a page projects, each with its own provenance. */
+export const PRODUCT_FIELDS = [
+  'canonical_url',
+  'name',
+  'description',
+  'brand',
+  'price',
+  'currency',
+  'sku',
+  'gtin',
+  'mpn',
+  'variants',
+  'attributes',
+] as const;
+type ProductField = (typeof PRODUCT_FIELDS)[number];
+
 export function productFacts(facts: CatalogFacts, url: string) {
   const p = facts.structured_data.product;
   const structuredPrice = finitePrice(p.price[0]);
@@ -172,7 +188,7 @@ export function productFacts(facts: CatalogFacts, url: string) {
     mpn: p.mpn[0] || '',
     variants: p.variants,
     attributes: p.availability.length ? { availability: p.availability } : {},
-  };
+  } satisfies Record<ProductField, unknown>;
   return {
     values,
     evidencePaths,

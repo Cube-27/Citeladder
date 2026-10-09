@@ -113,9 +113,9 @@ describe('chart projection', () => {
     ]);
     // Positional, because a comparison window covers different dates.
     expect(points.map((point) => point.index)).toEqual([1, 2]);
-    expect(points[0].date).toBe('2026-07-22');
+    expect(points[0]?.date).toBe('2026-07-22');
     // A null bucket stays null: the line breaks rather than dropping to zero.
-    expect(points[1].value).toBeNull();
+    expect(points[1]!.value).toBeNull();
   });
 
   it('scales the axis to a nice ceiling at or above the series max', () => {

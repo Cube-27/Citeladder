@@ -1,36 +1,6 @@
 {
   "format_version": 1,
   "files": {
-    "components/integrations/data-source-setup.tsx": {
-      "index-non-null": 1
-    },
-    "components/integrations/property-choice.tsx": {
-      "index-non-null": 2
-    },
-    "components/knowledge-base/brand-profile-panel.tsx": {
-      "keys-cast": 1
-    },
-    "components/search-intelligence/search-intelligence-history.tsx": {
-      "index-non-null": 1
-    },
-    "components/settings/integration-card-view.tsx": {
-      "index-non-null": 1
-    },
-    "lib/agent/composer-commands.ts": {
-      "index-non-null": 2
-    },
-    "lib/agent/sections.ts": {
-      "index-non-null": 1
-    },
-    "lib/ai-traffic/vocabulary.ts": {
-      "keys-cast": 1
-    },
-    "packages/contracts/src/crawl-log-format.ts": {
-      "index-non-null": 4
-    },
-    "packages/contracts/src/prompt-proposal.ts": {
-      "index-non-null": 1
-    },
     "services/api/scripts/eval-prompt-generation.ts": {
       "index-non-null": 1
     },
@@ -91,9 +61,6 @@
     "services/api/src/commerce/projection-facts.ts": {
       "index-non-null": 5
     },
-    "services/api/src/commerce/projection.ts": {
-      "keys-cast": 1
-    },
     "services/api/src/commerce/shelf-metrics.ts": {
       "index-non-null": 2
     },
@@ -144,9 +111,6 @@
     },
     "services/api/src/openapi/ownership.ts": {
       "index-non-null": 1
-    },
-    "services/api/src/opportunities/action-sync.ts": {
-      "keys-cast": 1
     },
     "services/api/src/opportunities/internal-link-hits.ts": {
       "index-non-null": 1
@@ -299,9 +263,6 @@
     },
     "services/api/src/visibility/trend-folding.ts": {
       "index-non-null": 2
-    },
-    "services/api/src/workspaces/service.ts": {
-      "keys-cast": 1
     }
   }
 }

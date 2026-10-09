@@ -106,7 +106,7 @@ describe('Consumer engine selection', () => {
         { workspaceId: WORKSPACE_ID },
       ),
     );
-    expect(vi.mocked(launch).mock.calls[0][0].engines).toHaveLength(6);
+    expect(vi.mocked(launch).mock.calls[0]![0].engines).toHaveLength(6);
   });
 });
 
@@ -383,7 +383,7 @@ describe('LaunchDialog prompt batching', () => {
         { workspaceId: WORKSPACE_ID },
       ),
     );
-    expect(launch.mock.calls[0][0]).not.toHaveProperty('prompt_set_id');
+    expect(launch.mock.calls[0]![0]).not.toHaveProperty('prompt_set_id');
   });
 
   it('runs the whole set by default, and offers no batching below one batch', async () => {

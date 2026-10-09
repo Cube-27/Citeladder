@@ -89,14 +89,15 @@ function lineSegmentsOf(points: readonly PlottedPoint[]): { x: number; y: number
 
 /** What the chart says to a reader who cannot see it. */
 function chartDescription(data: readonly TrendPoint[], label?: string): string {
+  const [first] = data;
   const last = data.at(-1);
   let summary = 'No trend data';
-  if (data.length === 1) {
-    summary = `Single point ${data[0].label} (${valueText(data[0].value)})`;
-  } else if (data.length > 1) {
+  if (first && last && data.length === 1) {
+    summary = `Single point ${first.label} (${valueText(first.value)})`;
+  } else if (first && last) {
     summary =
-      `Trend from ${data[0].label} (${valueText(data[0].value)}) ` +
-      `to ${last?.label} (${valueText(last?.value ?? null)})`;
+      `Trend from ${first.label} (${valueText(first.value)}) ` +
+      `to ${last.label} (${valueText(last.value)})`;
   }
   const gapNote = data.some((entry) => entry.value === null)
     ? ' Some points are unavailable and shown as gaps.'
@@ -156,18 +157,18 @@ function yAxisTicks(
 }
 
 /** First, middle and last, anchored so the outer two stay inside the plot. */
-function xAxisTicks(data: readonly TrendPoint[], points: readonly { x: number }[]) {
-  if (!data.length) return [];
+function xAxisTicks(points: readonly PlottedEntry[]) {
+  if (!points.length) return [];
   const indexes =
-    data.length > 2
-      ? [0, Math.floor((data.length - 1) / 2), data.length - 1]
-      : [0, data.length - 1];
-  const unique = [...new Set(indexes)];
-  return unique.map((index, order) => ({
-    at: points[index].x,
-    text: data[index].axisLabel ?? data[index].label,
+    points.length > 2
+      ? [0, Math.floor((points.length - 1) / 2), points.length - 1]
+      : [0, points.length - 1];
+  const ticked = [...new Set(indexes)].flatMap((index) => points[index] ?? []);
+  return ticked.map((point, order) => ({
+    at: point.x,
+    text: point.entry.axisLabel ?? point.entry.label,
     // A lone tick sits over its point; a set is pulled inward at both ends.
-    anchor: xTickAnchor(order, unique.length),
+    anchor: xTickAnchor(order, ticked.length),
   }));
 }
 
@@ -177,25 +178,19 @@ function xTickAnchor(order: number, total: number): 'start' | 'middle' | 'end' {
   return order === total - 1 ? 'end' : 'middle';
 }
 
+/** A primary-series point in plot coordinates, with the entry it draws. */
+type PlottedEntry = PlottedPoint & { entry: TrendPoint; key: string };
+
 /**
- * A stable React key per point, because labels are NOT identities.
+ * Project each point into plot coordinates; a null value stays a gap.
  *
+ * Each point also gets a stable React key, because labels are NOT identities.
  * A series can hold several points that format to the same label (two runs on
  * the same day both render "1 Aug"), which made React collapse them onto one
  * key. EVERY point carries its occurrence suffix, including the first:
  * suffixing only repeats left the bare label in play, so a series holding both
  * "1 Aug" and a literal "1 Aug#1" collided on the second "1 Aug".
  */
-function uniquePointKeys(data: readonly TrendPoint[]): string[] {
-  const seenCount = new Map<string, number>();
-  return data.map((entry) => {
-    const seen = seenCount.get(entry.label) ?? 0;
-    seenCount.set(entry.label, seen + 1);
-    return `${entry.label}#${seen}`;
-  });
-}
-
-/** Project each point into plot coordinates; a null value stays a gap. */
 function plotPoints(
   data: readonly TrendPoint[],
   box: Readonly<{
@@ -205,17 +200,24 @@ function plotPoints(
     innerHeight: number;
     domainMax: number;
   }>,
-): PlottedPoint[] {
+): PlottedEntry[] {
   const { padding, gutterLeft, innerWidth, innerHeight, domainMax } = box;
-  const positions = xPositions(data, gutterLeft, innerWidth);
-  return data.map((entry, index) => ({
-    x: positions[index],
-    breakBefore: entry.breakBefore,
-    y:
-      entry.value === null
-        ? null
-        : padding + innerHeight * (1 - clampTo(entry.value, domainMax) / domainMax),
-  }));
+  const xOf = xScale(data, gutterLeft, innerWidth);
+  const seenCount = new Map<string, number>();
+  return data.map((entry, index) => {
+    const seen = seenCount.get(entry.label) ?? 0;
+    seenCount.set(entry.label, seen + 1);
+    return {
+      entry,
+      key: `${entry.label}#${seen}`,
+      x: xOf(entry, index),
+      breakBefore: entry.breakBefore,
+      y:
+        entry.value === null
+          ? null
+          : padding + innerHeight * (1 - clampTo(entry.value, domainMax) / domainMax),
+    };
+  });
 }
 
 const clampTo = (value: number, domainMax: number) => Math.max(0, Math.min(domainMax, value));
@@ -226,17 +228,23 @@ const clampTo = (value: number, domainMax: number) => Math.max(0, Math.min(domai
  * Falling back to even spacing would draw a run three months late as though it
  * followed the previous one immediately.
  */
-function xPositions(data: readonly TrendPoint[], gutterLeft: number, innerWidth: number): number[] {
-  const stamps = data.map((entry) => entry.timestamp);
-  const timed = stamps.every((value) => value !== undefined && Number.isFinite(value));
-  const first = timed ? Math.min(...(stamps as number[])) : 0;
-  const span = timed ? Math.max(...(stamps as number[])) - first : 0;
+function xScale(
+  data: readonly TrendPoint[],
+  gutterLeft: number,
+  innerWidth: number,
+): (entry: TrendPoint, index: number) => number {
+  const stamps = data.flatMap((entry) =>
+    entry.timestamp !== undefined && Number.isFinite(entry.timestamp) ? [entry.timestamp] : [],
+  );
+  const timed = stamps.length === data.length;
+  const first = timed ? Math.min(...stamps) : 0;
+  const span = timed ? Math.max(...stamps) - first : 0;
   if (timed && span > 0) {
-    return data.map((entry) => gutterLeft + ((entry.timestamp! - first) / span) * innerWidth);
+    return (entry) => gutterLeft + (((entry.timestamp ?? first) - first) / span) * innerWidth;
   }
-  if (data.length < 2) return data.map(() => gutterLeft + innerWidth / 2);
+  if (data.length < 2) return () => gutterLeft + innerWidth / 2;
   const stepX = innerWidth / (data.length - 1);
-  return data.map((_entry, index) => gutterLeft + index * stepX);
+  return (_entry, index) => gutterLeft + index * stepX;
 }
 
 export function TrendChart({
@@ -273,7 +281,6 @@ export function TrendChart({
     yAxisLabel,
   });
   const effectiveDomainMax = domainMax > 0 ? domainMax : 100;
-  const pointKeys = uniquePointKeys(data);
   const points = plotPoints(data, {
     padding,
     gutterLeft,
@@ -283,26 +290,29 @@ export function TrendChart({
   });
 
   const yTicks = axes ? yAxisTicks(padding, innerHeight, effectiveDomainMax, formatTick) : [];
-  const xTicks = axes ? xAxisTicks(data, points) : [];
+  const xTicks = axes ? xAxisTicks(points) : [];
 
   const lineSegments = lineSegmentsOf(points);
   // Comparison lines reuse the primary series' x positions, so the two are read
   // against one scale rather than two charts drawn side by side. A value the
   // series never measured stays a gap here exactly as it does above.
-  const comparisonSegments = series.map((entry) =>
-    lineSegmentsOf(
-      points.map((point, index) => ({
-        x: point.x,
-        breakBefore: point.breakBefore,
-        y:
-          entry.values[index] === null || entry.values[index] === undefined
-            ? null
-            : padding +
-              innerHeight *
-                (1 - clampTo(entry.values[index], effectiveDomainMax) / effectiveDomainMax),
-      })),
+  const comparisons = series.map((entry) => ({
+    entry,
+    segments: lineSegmentsOf(
+      points.map((point, index) => {
+        const value = entry.values[index];
+        return {
+          x: point.x,
+          breakBefore: point.breakBefore,
+          y:
+            value === null || value === undefined
+              ? null
+              : padding +
+                innerHeight * (1 - clampTo(value, effectiveDomainMax) / effectiveDomainMax),
+        };
+      }),
     ),
-  );
+  }));
   // Comparison lines carry no marks, so without naming them here a screen
   // reader is told about one series on a chart that draws several.
   const described = series.length
@@ -342,20 +352,20 @@ export function TrendChart({
           height={height}
         />
       ) : null}
-      {comparisonSegments.map((segments, seriesIndex) =>
+      {comparisons.map(({ entry, segments }) =>
         segments.map((segment, index) => (
           <path
-            key={`series-${series[seriesIndex].label}-${index}`}
+            key={`series-${entry.label}-${index}`}
             d={toLinePath(segment)}
             fill="none"
             strokeWidth={1.5}
             vectorEffect="non-scaling-stroke"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className={cn(series[seriesIndex].strokeClass, 'opacity-70')}
+            className={cn(entry.strokeClass, 'opacity-70')}
             aria-hidden
           >
-            <title>{series[seriesIndex].label}</title>
+            <title>{entry.label}</title>
           </path>
         )),
       )}
@@ -371,9 +381,9 @@ export function TrendChart({
           className="stroke-chart-1"
         />
       ))}
-      {points.map((point, index) =>
-        data[index].versionChange ? (
-          <g key={`marker-${pointKeys[index]}`} data-version-marker="">
+      {points.map((point) =>
+        point.entry.versionChange ? (
+          <g key={`marker-${point.key}`} data-version-marker="">
             <line
               x1={point.x}
               y1={padding}
@@ -385,19 +395,14 @@ export function TrendChart({
               aria-hidden
             />
             <circle cx={point.x} cy={padding} r={3} className="fill-warning">
-              <title>{`Version change at ${data[index].label}: ${data[index].versionChange?.note}`}</title>
+              <title>{`Version change at ${point.entry.label}: ${point.entry.versionChange.note}`}</title>
             </circle>
           </g>
         ) : null,
       )}
-      {points.map((point, index) =>
+      {points.map((point) =>
         point.y === null ? null : (
-          <TrendPointMark
-            key={`point-${pointKeys[index]}`}
-            x={point.x}
-            y={point.y}
-            point={data[index]}
-          />
+          <TrendPointMark key={`point-${point.key}`} x={point.x} y={point.y} point={point.entry} />
         ),
       )}
     </svg>

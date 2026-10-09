@@ -36,8 +36,8 @@ describe('parsePromptCsv', () => {
 
   it('accepts topic and prompt alone, in any order, with internal defaults', () => {
     const parsed = parsePromptCsv('prompt,topic\nBest shoes?,Running shoes');
-    expect(parsed.rows[0].errors).toEqual([]);
-    expect(parsed.rows[0].input).toEqual({
+    expect(parsed.rows[0]!.errors).toEqual([]);
+    expect(parsed.rows[0]!.input).toEqual({
       text: 'Best shoes?',
       topic: 'Running shoes',
       theme: '',
@@ -51,15 +51,15 @@ describe('parsePromptCsv', () => {
     const parsed = parsePromptCsv(
       `question,category,intent,cohort,theme\nBest shoes?,,frobnicate,weird,${'t'.repeat(300)}`,
     );
-    expect(parsed.rows[0].errors).toEqual([]);
-    expect(parsed.rows[0].input).toMatchObject({ topic: '', intent: '', cohort: 'core' });
-    expect(parsed.rows[0].input.theme).toHaveLength(255);
+    expect(parsed.rows[0]!.errors).toEqual([]);
+    expect(parsed.rows[0]!.input).toMatchObject({ topic: '', intent: '', cohort: 'core' });
+    expect(parsed.rows[0]!.input.theme).toHaveLength(255);
   });
 
   it('treats a file without a recognized header as a list of prompts', () => {
     const parsed = parsePromptCsv('Best shoes?,Running shoes');
     expect(parsed.hasHeader).toBe(false);
-    expect(parsed.rows[0].input).toMatchObject({ text: 'Best shoes?', topic: '' });
+    expect(parsed.rows[0]!.input).toMatchObject({ text: 'Best shoes?', topic: '' });
   });
 
   it('flags rows the server would refuse and drops them', () => {

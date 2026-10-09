@@ -63,12 +63,12 @@ describe('integrationsApi.list', () => {
     mswServer.use(http.get('/api/v1/integrations', () => HttpResponse.json([connection])));
     const items = await integrationsApi.list();
     expect(items).toHaveLength(1);
-    expect(items[0].provider).toBe('gsc');
-    expect(items[0].grant_status).toBe('connected');
-    expect(items[0].granted_scopes).toEqual([
+    expect(items[0]?.provider).toBe('gsc');
+    expect(items[0]?.grant_status).toBe('connected');
+    expect(items[0]?.granted_scopes).toEqual([
       'https://www.googleapis.com/auth/webmasters.readonly',
     ]);
-    expect(items[0].last_synced_at).toBe('2026-07-22T00:00:00Z');
+    expect(items[0]?.last_synced_at).toBe('2026-07-22T00:00:00Z');
   });
 
   it('rejects a leaked access_token (invariant 6)', async () => {

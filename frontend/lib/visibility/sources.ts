@@ -8,7 +8,7 @@
  */
 import type { z } from 'zod';
 import { formatCount } from '@/lib/format';
-import { CHART_TOKENS } from '@/lib/visibility/chart-tokens';
+import { chartToken } from '@/lib/visibility/chart-tokens';
 
 import type {
   visibilitySourceSeriesSchema,
@@ -25,11 +25,10 @@ export type SourcesData = z.infer<typeof visibilitySourcesSchema>;
 export type SourceItem = SourcesData['items'][number];
 export type SeriesData = z.infer<typeof visibilitySourceSeriesSchema>;
 
-const chartToken = (index: number) => CHART_TOKENS[index % CHART_TOKENS.length];
-
 /** A source's own type token — one per row, so it can also be a filter value. */
 export function itemType(item: SourceItem): string | null {
-  return item.categories.length === 1 ? item.categories[0] : null;
+  const [only, ...others] = item.categories;
+  return only !== undefined && !others.length ? only : null;
 }
 
 /**

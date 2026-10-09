@@ -24,7 +24,7 @@ An observed result [\\[1\\]](#source-1) is not a guarantee.
 `;
   render(<ResearchMarkdown markdown={markdown} />);
   const heading = screen.getByRole('heading', { name: 'Evidence comparison' });
-  expect(heading.id).toBe(researchHeadings(markdown)[0].slug);
+  expect(heading.id).toBe(researchHeadings(markdown)[0]?.slug);
   const citation = screen.getByRole('link', { name: '[1]' });
   const source = document.querySelector(citation.getAttribute('href')!);
   expect(source).toHaveTextContent('historical evidence');

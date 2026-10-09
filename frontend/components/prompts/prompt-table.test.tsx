@@ -54,12 +54,12 @@ describe('PromptTable pagination', () => {
   });
 
   it('names each row by its topic rather than its internal theme', () => {
-    renderTable([makePrompt(1, { topic_id: TOPICS[0].id }), makePrompt(2, { topic_id: null })]);
+    renderTable([makePrompt(1, { topic_id: TOPICS[0]!.id }), makePrompt(2, { topic_id: null })]);
 
     const [, filed, unassigned] = screen.getAllByRole('row');
-    expect(within(filed).getByText('Running shoes')).toBeInTheDocument();
-    expect(within(filed).queryByText('Comfort')).not.toBeInTheDocument();
-    expect(within(unassigned).queryByText('Running shoes')).not.toBeInTheDocument();
+    expect(within(filed!).getByText('Running shoes')).toBeInTheDocument();
+    expect(within(filed!).queryByText('Comfort')).not.toBeInTheDocument();
+    expect(within(unassigned!).queryByText('Running shoes')).not.toBeInTheDocument();
   });
 
   it('pages through rows with the page indicator and ghost buttons', async () => {

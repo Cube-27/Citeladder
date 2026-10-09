@@ -273,15 +273,20 @@ function MeasurementHistory({
     focused === null || focusedIsBrand
       ? toChartPoints(points, metric, timeZone)
       : toNamedChartPoints(points, metric, focused, timeZone);
-  const chartPoints = base.map((point, index) => ({
-    ...point,
-    // The plotted values are already whole percent, so `formatRate` — which
-    // scales a 0–1 rate — turned 38% into "3800%" in every hover label.
-    label: `${formatPointDate(points[index].completed_at, timeZone)} · ${formatWholePercent(point.value)}`,
-    // The full date is the hover; the axis tick gets the short form the
-    // series was built with, so the ticks stay readable at three across.
-    axisLabel: point.label,
-  }));
+  // `base` holds one chart point per projection point, in the same order.
+  const chartPoints = base.flatMap((point, index) => {
+    const source = points[index];
+    if (!source) return [];
+    return {
+      ...point,
+      // The plotted values are already whole percent, so `formatRate` — which
+      // scales a 0–1 rate — turned 38% into "3800%" in every hover label.
+      label: `${formatPointDate(source.completed_at, timeZone)} · ${formatWholePercent(point.value)}`,
+      // The full date is the hover; the axis tick gets the short form the
+      // series was built with, so the ticks stay readable at three across.
+      axisLabel: point.label,
+    };
+  });
   // One selected brand means one line: the comparison roster is what the reader
   // asked to step out of.
   const competitors = focused === null ? toCompetitorSeries(points, metric) : [];

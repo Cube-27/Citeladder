@@ -46,7 +46,8 @@ const CAPABILITY_LABELS: Readonly<Record<string, string>> = {
 };
 
 export function capabilityLabel(key: string): string {
-  if (Object.hasOwn(CAPABILITY_LABELS, key)) return CAPABILITY_LABELS[key];
+  const known = Object.hasOwn(CAPABILITY_LABELS, key) ? CAPABILITY_LABELS[key] : undefined;
+  if (known !== undefined) return known;
   const words = key.replaceAll('_', ' ').replaceAll('.', ' ');
   return words.charAt(0).toUpperCase() + words.slice(1);
 }

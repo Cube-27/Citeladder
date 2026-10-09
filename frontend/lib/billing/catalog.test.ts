@@ -128,10 +128,10 @@ describe('comparisonRows', () => {
     );
 
     expect(rows.map((row) => row.key)).toEqual(['project_slots', 'audit_web_search']);
-    expect(rows[0].values.tier_2?.value).toBe(5);
+    expect(rows[0]?.values.tier_2?.value).toBe(5);
     // A plan that does not publish a key has no value for it — the caller
     // renders that as "not included", never as zero.
-    expect(rows[1].values.tier_1).toBeUndefined();
+    expect(rows[1]!.values.tier_1).toBeUndefined();
   });
 });
 
@@ -218,7 +218,7 @@ describe('providerMarketingState', () => {
         ],
       }),
     );
-    expect(state.comingSoon).toBe(true);
+    expect(state?.comingSoon).toBe(true);
   });
 });
 

@@ -129,6 +129,7 @@ function HeroTour() {
               const index = TOUR.findIndex((entry) => entry.id === active);
               const next =
                 TOUR[(index + (event.key === 'ArrowRight' ? 1 : TOUR.length - 1)) % TOUR.length];
+              if (!next) return;
               setActive(next.id);
               document.getElementById(`tour-tab-${next.id}`)?.focus();
             }}

@@ -21,7 +21,8 @@ export type GrantModel = {
   family: GrantFamily;
   status: IntegrationConnection['grant_status'];
   scopes: string[];
-  connections: IntegrationConnection[];
+  /** A grant exists only through its connections, so there is always one. */
+  connections: [IntegrationConnection, ...IntegrationConnection[]];
 };
 
 export const GRANT_FAMILY: Record<IntegrationProvider, GrantFamily> = {

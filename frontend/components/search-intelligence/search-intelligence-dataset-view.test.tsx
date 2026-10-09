@@ -99,7 +99,7 @@ it('filters on the server and exports every saved matching page', async () => {
   await screen.findByText('needle first');
   await userEvent.click(screen.getByRole('button', { name: 'Export saved CSV' }));
   await waitFor(() => expect(download).toHaveBeenCalledOnce());
-  const exported = download.mock.calls[0][2];
+  const exported = download.mock.calls[0]![2];
   expect(exported).toHaveLength(2);
   expect(exported[0]).toContain('needle first');
   expect(exported[1]).toContain('=needle second');
@@ -172,8 +172,8 @@ it.each([
     });
     await userEvent.click(await screen.findByRole('button', { name: 'Export saved CSV' }));
     await waitFor(() => expect(download).toHaveBeenCalledOnce());
-    const [, headers, rows] = download.mock.calls[0];
-    const exported = Object.fromEntries(headers.map((header, index) => [header, rows[0][index]]));
+    const [, headers, rows] = download.mock.calls[0]!;
+    const exported = Object.fromEntries(headers.map((header, index) => [header, rows[0]![index]]));
     for (const [key, value] of Object.entries(values))
       expect(exported[key]).toBe(String(value ?? ''));
   },
@@ -280,7 +280,7 @@ it('uses shared pagination and resets its cursor when sorting or changing rows p
   });
 
   expect(await screen.findByText('First keyword')).toBeInTheDocument();
-  expect(requests[0].get('limit')).toBe('10');
+  expect(requests[0]?.get('limit')).toBe('10');
   await userEvent.click(screen.getByRole('button', { name: 'Next page' }));
   expect(await screen.findByText('Later keyword')).toBeInTheDocument();
   expect(screen.queryByText('First keyword')).not.toBeInTheDocument();

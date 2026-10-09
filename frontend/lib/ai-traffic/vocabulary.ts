@@ -18,14 +18,15 @@ const COVERAGE = {
   unknown: 'Coverage unknown',
 } as const;
 
-const COLLECTION_POINT = {
+/** The collection points a reader can pick, in menu order. */
+export const COLLECTION_POINTS = ['cdn_edge', 'origin', 'application', 'uploaded_file'] as const;
+
+const COLLECTION_POINT: Record<(typeof COLLECTION_POINTS)[number], string> = {
   cdn_edge: 'CDN edge',
   origin: 'Origin server',
   application: 'Application',
   uploaded_file: 'Uploaded file',
-} as const;
-
-export const COLLECTION_POINTS = Object.keys(COLLECTION_POINT) as (keyof typeof COLLECTION_POINT)[];
+};
 
 export function words(token: string): string {
   const spaced = token.replaceAll('_', ' ');

@@ -4,7 +4,8 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 import type { CommerceTarget } from '@citeladder/contracts/commerce-suite';
 
-const KINDS = new Set(['category', 'product']);
+const isTargetKind = (kind: string | undefined): kind is CommerceTarget['kind'] =>
+  kind === 'category' || kind === 'product';
 
 /** `category:<uuid>` — the one spelling of a target, shared by URL and payload. */
 export function targetKey(target: CommerceTarget): string {
@@ -13,8 +14,8 @@ export function targetKey(target: CommerceTarget): string {
 
 export function parseTargetKey(value: string | null | undefined): CommerceTarget | undefined {
   const [kind, id] = (value ?? '').split(':');
-  if (!KINDS.has(kind) || !id) return undefined;
-  return { kind: kind as CommerceTarget['kind'], id };
+  if (!isTargetKind(kind) || !id) return undefined;
+  return { kind, id };
 }
 
 /**

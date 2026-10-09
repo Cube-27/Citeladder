@@ -12,8 +12,9 @@ const FENCE = /^\s{0,3}(`{3,}|~{3,})/;
 
 function headingText(line: string): string | null {
   const match = HEADING.exec(line);
-  if (!match) return null;
-  let title = match[1]!.trimEnd();
+  const heading = match?.[1];
+  if (heading === undefined) return null;
+  let title = heading.trimEnd();
   let end = title.length;
   while (end > 0 && title[end - 1] === '#') end--;
   title = title.slice(0, end).trimEnd();

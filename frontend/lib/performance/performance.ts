@@ -381,15 +381,21 @@ export function computeTickIndices(columnCount: number, maxTicks = 6): number[] 
  */
 export type SearchConsoleDimension = Exclude<PerformanceDimension, 'bing_query' | 'bing_page'>;
 
-export const DIMENSION_TABS: readonly {
-  value: SearchConsoleDimension;
+type DimensionTab<Value extends PerformanceDimension> = {
+  value: Value;
   /** Uppercase tab label, in Search Console's order. */
   label: string;
   /** The first column's header, e.g. "Top queries". */
   header: string;
   /** Row noun for the pagination footer. */
   noun: string;
-}[] = [
+};
+type DimensionTabs<Value extends PerformanceDimension> = readonly [
+  DimensionTab<Value>,
+  ...DimensionTab<Value>[],
+];
+
+export const DIMENSION_TABS: DimensionTabs<SearchConsoleDimension> = [
   { value: 'query', label: 'QUERIES', header: 'Top queries', noun: 'queries' },
   { value: 'page', label: 'PAGES', header: 'Top pages', noun: 'pages' },
   { value: 'country', label: 'COUNTRIES', header: 'Top countries', noun: 'countries' },
@@ -411,12 +417,9 @@ export const DIMENSION_TABS: readonly {
  * two more tabs a reader could mistake for Search Console breakdowns. The
  * headline cards and the chart above never include them.
  */
-export const BING_DIMENSION_TABS: readonly {
-  value: Extract<PerformanceDimension, 'bing_query' | 'bing_page'>;
-  label: string;
-  header: string;
-  noun: string;
-}[] = [
+export const BING_DIMENSION_TABS: DimensionTabs<
+  Extract<PerformanceDimension, 'bing_query' | 'bing_page'>
+> = [
   { value: 'bing_query', label: 'QUERIES', header: 'Top queries', noun: 'queries' },
   { value: 'bing_page', label: 'PAGES', header: 'Top pages', noun: 'pages' },
 ] as const;

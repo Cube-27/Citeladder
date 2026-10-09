@@ -555,7 +555,7 @@ describe('IssuesCatalog', () => {
 
     // The rail's pager renders before the catalog's, so index 0 is the rail.
     const innerPrev = screen.getAllByRole('button', { name: 'Previous page' })[0]!;
-    const [innerNext] = screen.getAllByRole('button', { name: 'Next page' });
+    const innerNext = screen.getAllByRole('button', { name: 'Next page' })[0]!;
     expect(innerPrev).toBeDisabled();
     expect(innerNext).not.toBeDisabled();
 

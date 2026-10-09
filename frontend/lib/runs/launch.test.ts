@@ -131,12 +131,12 @@ describe('prompt batching', () => {
 
   it('labels batches the way the list reads, one-indexed and inclusive', () => {
     const batches = promptBatches(prompts);
-    expect(batchLabel(0, batches[0])).toBe('Prompts 1-10');
-    expect(batchLabel(2, batches[2])).toBe('Prompts 21-23');
+    expect(batchLabel(0, batches[0]!)).toBe('Prompts 1-10');
+    expect(batchLabel(2, batches[2]!)).toBe('Prompts 21-23');
   });
 
   it('launches a batch as an explicit prompt id list', () => {
-    const batch = promptBatches(prompts)[1];
+    const batch = promptBatches(prompts)[1]!;
     const payload = buildLaunchPayload(selection({ promptIds: batch.map((prompt) => prompt.id) }));
     expect(payload.prompt_ids).toEqual(batch.map((prompt) => prompt.id));
     expect(payload.prompt_set_id).toBeUndefined();

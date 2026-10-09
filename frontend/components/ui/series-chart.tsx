@@ -82,8 +82,10 @@ function description(
         const values = one.points
           .map((point) => point.value)
           .filter((v): v is number => v !== null);
-        if (!values.length) return `${one.label}: not measured`;
-        return `${one.label}: from ${format(values[0])} to ${format(values[values.length - 1])}`;
+        const first = values[0];
+        const last = values.at(-1);
+        if (first === undefined || last === undefined) return `${one.label}: not measured`;
+        return `${one.label}: from ${format(first)} to ${format(last)}`;
       })
       .join('. ')
   );

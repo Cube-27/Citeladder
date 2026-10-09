@@ -44,9 +44,10 @@ function sitemapUrls(source: string) {
     const locs = Array.from(entry.children).filter(
       (node) => node.localName === 'loc' && node.namespaceURI === root.namespaceURI,
     );
-    if (locs.length !== 1 || !locs[0].textContent?.trim())
+    const [loc, ...extra] = locs;
+    const value = loc?.textContent?.trim();
+    if (!value || extra.length)
       throw new Error('Each entry must have exactly one nonempty loc element.');
-    const value = locs[0].textContent.trim();
     webUrl(value);
     return value; // Preserve exact declared URLs, including meaningful slash/query differences.
   });

@@ -184,18 +184,21 @@ function Trends({
         label="Observed visibility history"
         domainMax={1}
         formatTick={rate}
-        data={points.map((point, index) => ({
-          label: point.completed_at,
-          value: value(point),
-          breakBefore:
-            index > 0 &&
-            (!point.comparison_key ||
-              point.comparison_key !== points[index - 1].comparison_key ||
-              JSON.stringify(point.analyzer_versions) !==
-                JSON.stringify(points[index - 1].analyzer_versions) ||
-              JSON.stringify(point.scoring_rule_versions) !==
-                JSON.stringify(points[index - 1].scoring_rule_versions)),
-        }))}
+        data={points.map((point, index) => {
+          const previous = points[index - 1];
+          return {
+            label: point.completed_at,
+            value: value(point),
+            breakBefore:
+              previous !== undefined &&
+              (!point.comparison_key ||
+                point.comparison_key !== previous.comparison_key ||
+                JSON.stringify(point.analyzer_versions) !==
+                  JSON.stringify(previous.analyzer_versions) ||
+                JSON.stringify(point.scoring_rule_versions) !==
+                  JSON.stringify(previous.scoring_rule_versions)),
+          };
+        })}
       />
       <Table>
         <TableHeader>

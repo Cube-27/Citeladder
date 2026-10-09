@@ -25,9 +25,10 @@ describe('measurement history', () => {
       [point(0.201), point(0.204, 'panel-a', '2026-07-04T00:00:00Z')],
       'brand_mention_rate',
     );
-    expect(points[1].value! - points[0].value!).toBeCloseTo(0.3);
-    expect(points[1].timestamp! - points[0].timestamp!).toBe(3 * 24 * 60 * 60 * 1000);
-    expect(points[1].breakBefore).toBe(false);
+    const [first, second] = points;
+    expect(second!.value! - first!.value!).toBeCloseTo(0.3);
+    expect(second!.timestamp! - first!.timestamp!).toBe(3 * 24 * 60 * 60 * 1000);
+    expect(second!.breakBefore).toBe(false);
   });
 
   it('preserves unavailable observations separately from measured zero', () => {
@@ -45,7 +46,7 @@ describe('measurement history', () => {
 
   it('breaks at scoring changes even when the panel is unchanged', () => {
     const changed = { ...point(0.6), scoring_rule_versions: ['v2'] };
-    expect(toChartPoints([point(0.5), changed], 'sov')[1].breakBefore).toBe(true);
+    expect(toChartPoints([point(0.5), changed], 'sov')[1]?.breakBefore).toBe(true);
   });
 
   it('returns no fabricated points for empty history', () => {

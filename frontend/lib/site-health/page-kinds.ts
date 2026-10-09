@@ -110,7 +110,7 @@ export function pageTraitLabel(trait: string): string {
   // `toString` and `__proto__`, so a bare lookup on an untrusted token returns
   // a function or the prototype rather than a label — and React throws when
   // asked to render one as a child.
-  return Object.hasOwn(PAGE_TRAIT_LABELS, trait) ? PAGE_TRAIT_LABELS[trait] : trait;
+  return (Object.hasOwn(PAGE_TRAIT_LABELS, trait) ? PAGE_TRAIT_LABELS[trait] : undefined) ?? trait;
 }
 
 export function pageKindConfidenceLabel(confidence: string, tier: string): string {
