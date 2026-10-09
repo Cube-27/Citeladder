@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, type HTMLAttributes, type ReactNode } from 'react';
+import { createContext, useContext, useMemo, type HTMLAttributes, type ReactNode } from 'react';
 
 import { listRowClasses } from '@/components/ui/list-row';
 import { MetricValue } from '@/components/ui/metric-value';
@@ -218,8 +218,9 @@ export function StatGrid({
   }
 >) {
   const band = surface === 'band';
+  const context = useMemo(() => ({ size, surface }), [size, surface]);
   const grid = (
-    <StatGridContext.Provider value={{ size, surface }}>
+    <StatGridContext.Provider value={context}>
       <dl
         {...(band ? {} : props)}
         aria-label={label}

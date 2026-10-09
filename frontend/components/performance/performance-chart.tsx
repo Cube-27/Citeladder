@@ -146,11 +146,7 @@ export function PerformanceChart({
           ))}
           <Tooltip
             cursor={{ className: 'stroke-border' }}
-            content={({ active, label }) =>
-              active && typeof label === 'number' ? (
-                <ChartTooltip series={series} index={label} dateSource={axisEntry} />
-              ) : null
-            }
+            content={<HoverTooltip series={series} dateSource={axisEntry} />}
           />
           {series.flatMap((entry) => [
             <Line
@@ -200,6 +196,23 @@ export function PerformanceChart({
  * when a comparison is active, the comparison bucket's own date and value —
  * so a dashed point is never ambiguous about which day it represents.
  */
+/** Recharts injects `active` and the hovered `label` (the bucket index). */
+function HoverTooltip({
+  active,
+  label,
+  series,
+  dateSource,
+}: Readonly<{
+  active?: boolean;
+  label?: unknown;
+  series: readonly ChartSeries[];
+  dateSource: ChartSeries | null;
+}>) {
+  return active && typeof label === 'number' ? (
+    <ChartTooltip series={series} index={label} dateSource={dateSource} />
+  ) : null;
+}
+
 function ChartTooltip({
   series,
   index,
