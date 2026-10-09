@@ -62,10 +62,14 @@ function saved(data: SearchIntelligenceReadiness, selection: DatasetSelection) {
   return data.datasets.some((dataset) => {
     if (dataset.dataset_kind !== selection.kind) return false;
     if (!competitor) return dataset.target_origin === owned && !dataset.comparison_origin;
-    const origin = COMPARISON_DATASET_KINDS.includes(selection.kind)
-      ? dataset.comparison_origin
-      : dataset.target_origin;
-    return matchesCompetitor(origin, competitor.registrable_domain);
+    // A comparison belongs to one of your websites as well as the competitor;
+    // one saved for another of your websites does not answer this review.
+    if (COMPARISON_DATASET_KINDS.includes(selection.kind))
+      return (
+        dataset.target_origin === owned &&
+        matchesCompetitor(dataset.comparison_origin, competitor.registrable_domain)
+      );
+    return matchesCompetitor(dataset.target_origin, competitor.registrable_domain);
   });
 }
 

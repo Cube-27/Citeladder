@@ -1,5 +1,5 @@
 import { words } from '@/lib/ai-traffic/vocabulary';
-import { formatDisplayDate } from '@/lib/format';
+import { formatDisplayDate, formatWindowDate } from '@/lib/format';
 
 /** A provider figure, or null when the provider did not report one. */
 export function searchNumber(value: unknown, maximumFractionDigits = 0): string | null {
@@ -67,6 +67,7 @@ const HIDDEN_FIELDS = new Set([
   'action_id',
 ]);
 const DATE_TIME = /^\d{4}-\d{2}-\d{2}([ T]\d{2}:\d{2}(:\d{2})?)?/u;
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/u;
 
 export type EvidenceField = { key: string; label: string; value: string | null };
 
@@ -94,7 +95,8 @@ function evidenceValue(value: unknown, timeZone: string): string | null {
   if (Array.isArray(value)) return listText(value);
   // Nested provider objects are summarised elsewhere, never printed as text.
   if (typeof value !== 'string' || !value) return null;
-  return DATE_TIME.test(value) && !Number.isNaN(Date.parse(value))
-    ? formatDisplayDate(value, timeZone)
-    : value;
+  if (!DATE_TIME.test(value) || Number.isNaN(Date.parse(value))) return value;
+  // A calendar date is a day, not an instant: zoning it would show the day
+  // before west of UTC.
+  return DATE_ONLY.test(value) ? formatWindowDate(value) : formatDisplayDate(value, timeZone);
 }

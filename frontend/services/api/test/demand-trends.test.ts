@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { policy } from '../src/config.ts';
 import { detectTrends } from '../src/demand/detectors.ts';
 import { aggregate, detectSearchSignals, type QueryInput } from '../src/demand/projection.ts';
+import type { QueryClassification } from '../src/demand/classification.ts';
 import { addDays } from '../src/referrals/projection.ts';
 
 const p = policy.demand;
@@ -132,7 +133,10 @@ describe('search signal detection', () => {
     impressions,
     clicks: 0,
   });
-  const classes: Record<string, string> = { 'acme pricing': 'branded', acme: 'ambiguous' };
+  const classes: Record<string, QueryClassification> = {
+    'acme pricing': 'branded',
+    acme: 'ambiguous',
+  };
   const queryClass = (query: string) => ({
     classification: classes[query] ?? 'non_branded',
     classifier_version: 'v1',

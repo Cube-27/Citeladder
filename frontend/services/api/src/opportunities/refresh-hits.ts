@@ -45,9 +45,13 @@ export function changeRule(row: {
     evidence.metadata_consistency !== 'inconsistent'
   )
     return null;
-  return evidence.content_change_classification === 'unchanged'
-    ? 'site_change_cosmetic_refresh'
-    : 'site_change_metadata_inconsistency';
+  // A date moved without the text is a cosmetic refresh; a small edit without
+  // the date is an inconsistency. A substantial rewrite is history, not an
+  // action, whatever its date did.
+  if (evidence.content_change_classification === 'unchanged') return 'site_change_cosmetic_refresh';
+  if (evidence.content_change_classification === 'minor_change')
+    return 'site_change_metadata_inconsistency';
+  return null;
 }
 
 type ChangeCrawl = {

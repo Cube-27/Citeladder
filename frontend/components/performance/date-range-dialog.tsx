@@ -206,7 +206,7 @@ export function DateRangeDialog({
     >
       <Tabs
         value={tab}
-        onValueChange={(value) => setTab(value as 'filter' | 'compare')}
+        onValueChange={setTab}
         items={[
           { value: 'filter', label: 'Filter' },
           { value: 'compare', label: 'Compare' },

@@ -40,18 +40,41 @@ function textLinkClasses({
   return text === 'inherit' ? recipe : textRole(text, recipe);
 }
 
+/**
+ * Where the link goes. Each variant takes only the props it reads: a project
+ * scope means nothing to an external URL, and under `asChild` the child link
+ * owns its destination, so an `href` there would be silently dropped.
+ */
+type TextLinkTarget =
+  | {
+      variant?: 'internal' | 'back';
+      /** An app route. */
+      href?: string | null;
+      /** The project the route belongs to, when not the active one. */
+      projectId?: string | null;
+      asChild?: false;
+    }
+  | {
+      variant: 'external';
+      /** An http(s) URL. */
+      href?: string | null;
+      projectId?: never;
+      asChild?: false;
+    }
+  | {
+      variant?: TextLinkVariant;
+      href?: never;
+      projectId?: never;
+      /** Apply the recipe (and glyphs) to the single child link instead. */
+      asChild: true;
+    };
+
 type TextLinkProps = Readonly<
-  Omit<ComponentPropsWithRef<'a'>, 'href'> & {
-    variant?: TextLinkVariant;
-    text?: TextLinkText;
-    /** The destination; an app route for `internal`/`back`, a URL for `external`. */
-    href?: string | null;
-    /** `internal`/`back`: the project the route belongs to, when not the active one. */
-    projectId?: string | null;
-    /** Apply the recipe (and glyphs) to the single child link instead. */
-    asChild?: boolean;
-    children: ReactNode;
-  }
+  Omit<ComponentPropsWithRef<'a'>, 'href'> &
+    TextLinkTarget & {
+      text?: TextLinkText;
+      children: ReactNode;
+    }
 >;
 
 /**

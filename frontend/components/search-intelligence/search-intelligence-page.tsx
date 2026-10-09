@@ -274,6 +274,7 @@ export function SearchIntelligencePage() {
                   <CollectionAction
                     tab={value}
                     datasets={datasets}
+                    targetOrigin={targetOrigin}
                     onSeed={() => openReview('seed')}
                     onMatch={() => {
                       setCitationOrigin(targetOrigin);
@@ -364,11 +365,14 @@ function PageActions({
 function CollectionAction({
   tab,
   datasets,
+  targetOrigin,
   onSeed,
   onMatch,
 }: Readonly<{
   tab: string;
   datasets: SearchIntelligenceDataset[];
+  /** The website the tab is showing. */
+  targetOrigin: string | undefined;
   onSeed: () => void;
   onMatch: () => void;
 }>) {
@@ -378,7 +382,12 @@ function CollectionAction({
         Research a keyword
       </Button>
     );
-  if (tab === 'backlinks' && referringLists(datasets).length)
+  // Only the website on screen: matching another website's list would save
+  // matches for a site the reader is not looking at.
+  if (
+    tab === 'backlinks' &&
+    referringLists(datasets).some((dataset) => dataset.target_origin === targetOrigin)
+  )
     return (
       <Button variant="secondary" size="sm" onClick={onMatch}>
         Match with Visibility citations

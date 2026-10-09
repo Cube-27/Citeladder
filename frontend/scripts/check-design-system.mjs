@@ -30,6 +30,7 @@ import { brandTokenViolations, svgColorScan } from './design-system-asset-checks
 import { resolvePalette } from './design-system-contrast.mjs';
 import { cssPolicyScan } from './design-system-css-checks.mjs';
 import { ratchetVerdict, readBaseline, writeBaseline } from './design-system-ratchet.mjs';
+import { typeDisciplineFindings } from './type-discipline-checks.mjs';
 
 const root = resolve(import.meta.dirname, '..');
 const tokenOwner = join(root, 'apps', 'app', 'src', 'globals.css');
@@ -43,10 +44,19 @@ const ignored = new Set([
   'playwright-report',
 ]);
 const baselinePath = join(root, 'scripts', 'design-system-baseline.json');
+const typeBaselinePath = join(root, 'scripts', 'type-discipline-baseline.json');
 const violations = [];
 const advisories = [];
 // Ratcheted findings: counted per file and rule against the baseline.
 const findings = [];
+// Type-discipline findings, ratcheted against their own baseline. They read
+// the same parsed module, so they ride this walk rather than a second one.
+const typeFindings = [];
+const typeSource = (label) =>
+  /^(?:apps|components|lib|packages|services)\//.test(label) &&
+  /\.tsx?$/.test(label) &&
+  !/\.(?:test|spec)\.tsx?$|\.d\.ts$/.test(label) &&
+  !/\/(?:test|e2e|generated)\//.test(label);
 // Script sources, for the app's Tailwind @source coverage.
 const scriptSources = [];
 
@@ -130,6 +140,7 @@ for (const path of files(root)) {
   advisories.push(...radiusRoleAdvisories(source, label, ownsProductUi));
   if (/^(?:apps|components|lib)\//.test(label))
     findings.push(...tsxGeometryFindings(source, label));
+  if (typeSource(label)) typeFindings.push(...typeDisciplineFindings(source, label));
 }
 
 const lightPalette = resolvePalette(
@@ -137,23 +148,25 @@ const lightPalette = resolvePalette(
   ':root:not([data-public-surface])',
 );
 findings.push(...cssPolicyScan(root), ...svgColorScan(root, lightPalette));
-if (process.argv.includes('--write-baseline')) {
-  writeBaseline(baselinePath, findings);
-  console.log(`Wrote ${relative(root, baselinePath)} (${findings.length} findings).`);
-}
-const ratchet = ratchetVerdict(
-  findings,
-  existsSync(baselinePath) ? readBaseline(baselinePath) : { files: {} },
-);
-if (ratchet.lowered.length) {
-  advisories.push(
-    ...ratchet.lowered,
-    'Debt fell: run node scripts/check-design-system.mjs --write-baseline to lower the baseline.',
-  );
+for (const [path, ratcheted] of [
+  [baselinePath, findings],
+  [typeBaselinePath, typeFindings],
+]) {
+  if (process.argv.includes('--write-baseline')) {
+    writeBaseline(path, ratcheted);
+    console.log(`Wrote ${relative(root, path)} (${ratcheted.length} findings).`);
+  }
+  const ratchet = ratchetVerdict(ratcheted, existsSync(path) ? readBaseline(path) : { files: {} });
+  violations.push(...ratchet.violations);
+  if (ratchet.lowered.length) {
+    advisories.push(
+      ...ratchet.lowered,
+      'Debt fell: run node scripts/check-design-system.mjs --write-baseline to lower the baseline.',
+    );
+  }
 }
 
 violations.push(
-  ...ratchet.violations,
   ...brandTokenViolations(lightPalette),
   ...tokenAuditViolations(root),
   ...websiteContractViolations(root),

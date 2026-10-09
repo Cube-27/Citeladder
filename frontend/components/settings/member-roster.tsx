@@ -110,7 +110,7 @@ function MemberRow({
         ) : (
           <Select
             value={member.role as AssignableWorkspaceRole}
-            onValueChange={(next) => onChangeRole(member.id, next as AssignableWorkspaceRole)}
+            onValueChange={(next) => onChangeRole(member.id, next)}
             options={ROLE_OPTIONS}
             ariaLabel={`Role for ${member.email}`}
             disabled={busy}

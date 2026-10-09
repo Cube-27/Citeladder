@@ -6,14 +6,14 @@
  * and nothing here is persisted.
  */
 
+import type { z } from 'zod';
+import type { agentTurnEventSchema } from '@citeladder/contracts/agent';
+
 export type PartialResponse = { action?: string; reply?: string; title?: string; body?: string };
-export type TurnText = {
-  ordinal: number;
-  reply: string;
-  title: string | null;
-  body: string | null;
-};
-type TurnStep = { ordinal: number; tool: string | null; status: string };
+// The wire contract owns these shapes; the emitters add the `type` tag.
+type TurnEvent = z.input<typeof agentTurnEventSchema>;
+export type TurnText = Omit<Extract<TurnEvent, { type: 'text' }>, 'type'>;
+type TurnStep = Omit<Extract<TurnEvent, { type: 'step' }>, 'type'>;
 /** Optional listeners for one execution; the worker passes none. */
 export type TurnEvents = {
   step?: (event: TurnStep) => void;

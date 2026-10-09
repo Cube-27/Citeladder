@@ -56,6 +56,9 @@ const CHART_W = 520;
 const CHART_H = 160;
 const chartX = (index: number) => (index * CHART_W) / (RUN_DATES.length - 1);
 const chartY = (value: number) => CHART_H - (value / 100) * CHART_H;
+/** The point for the latest run: each series holds one point per run date. */
+const LATEST_RUN = RUN_DATES.length - 1;
+const latest = (brand: (typeof BRANDS)[number]) => brand.points[LATEST_RUN];
 
 const KPIS = [
   ['Visibility', '64%', '+26 pp'],
@@ -122,8 +125,8 @@ export function VisibilityView() {
                     className="pv-chart-end"
                     x1={CHART_W}
                     x2={CHART_W}
-                    y1={chartY(brand.points.at(-1)!)}
-                    y2={chartY(brand.points.at(-1)!)}
+                    y1={chartY(latest(brand))}
+                    y2={chartY(latest(brand))}
                   />
                 </g>
               ))}
@@ -171,7 +174,7 @@ export function VisibilityView() {
                       {'own' in brand && <span className="pv-you">You</span>}
                     </span>
                   </td>
-                  <td>{brand.points.at(-1)}%</td>
+                  <td>{latest(brand)}%</td>
                   <td>#{brand.position}</td>
                   <td>{brand.share}%</td>
                   <td>{brand.citations}%</td>

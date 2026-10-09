@@ -4,6 +4,7 @@ import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, expect, it } from 'vite-plus/test';
 
 import type {
+  SearchIntelligenceDataset,
   SearchIntelligenceReadiness,
   SearchIntelligenceRun,
 } from '@/lib/api/search-intelligence';
@@ -85,43 +86,77 @@ it('offers the first analysis from the empty overview', async () => {
   expect(await screen.findByRole('dialog', { name: 'Review analysis cost' })).toBeInTheDocument();
 });
 
+/** A published dataset for one of the project's websites. */
+function dataset(
+  hostname: string,
+  overrides: Partial<SearchIntelligenceDataset>,
+): SearchIntelligenceDataset {
+  return {
+    id: '11111111-1111-4111-8111-111111111111',
+    run_id: run.id,
+    dataset_kind: 'footprint',
+    target_domain: hostname.replace(/^www\./u, ''),
+    target_hostname: hostname,
+    target_origin: `https://${hostname}`,
+    research_scope: 'domain_subdomains',
+    acquisition: {},
+    comparison_origin: '',
+    location_code: 2840,
+    language_code: 'en',
+    status: 'published',
+    coverage: 'complete',
+    requested_rows: 1,
+    raw_rows_received: 1,
+    unique_rows_saved: 0,
+    provider_total: null,
+    truncated: false,
+    summary: {},
+    collection_started_at: null,
+    collection_ended_at: '2026-10-08T10:00:00Z',
+    published_at: '2026-10-08T10:00:00Z',
+    ...overrides,
+  };
+}
+
 it('says when saved results can no longer be refreshed', async () => {
-  const saved = {
+  renderPage({
     ...readiness,
     connected: false,
     connection_id: null,
-    datasets: [
-      {
-        id: '11111111-1111-4111-8111-111111111111',
-        run_id: run.id,
-        dataset_kind: 'footprint',
-        target_domain: 'example.com',
-        target_hostname: 'www.example.com',
-        target_origin: 'https://www.example.com',
-        research_scope: 'domain_subdomains' as const,
-        acquisition: {},
-        comparison_origin: '',
-        location_code: 2840,
-        language_code: 'en',
-        status: 'published',
-        coverage: 'complete',
-        requested_rows: 1,
-        raw_rows_received: 1,
-        unique_rows_saved: 0,
-        provider_total: null,
-        truncated: false,
-        summary: { organic_keywords: 12 },
-        collection_started_at: null,
-        collection_ended_at: '2026-10-08T10:00:00Z',
-        published_at: '2026-10-08T10:00:00Z',
-      },
-    ],
-  };
-  renderPage(saved);
+    datasets: [dataset('www.example.com', { summary: { organic_keywords: 12 } })],
+  });
   expect(
     await screen.findByText(/saved results can be read but not refreshed/),
   ).toBeInTheDocument();
   expect(screen.getByRole('link', { name: 'Open provider settings' })).toBeInTheDocument();
+});
+
+it('offers citation matching only for the website whose list is on screen', async () => {
+  // Reads behind the tab's views are not under test; an empty error keeps them quiet.
+  mswServer.use(http.get(`${root}/*`, () => HttpResponse.json({}, { status: 404 })));
+  renderPage({
+    ...readiness,
+    datasets: [
+      dataset('www.example.com', { dataset_kind: 'backlink_summary', unique_rows_saved: 1 }),
+      dataset('blog.example.com', {
+        id: '22222222-2222-4222-8222-222222222222',
+        dataset_kind: 'referring_domains',
+        unique_rows_saved: 40,
+      }),
+    ],
+  });
+  await userEvent.click(await screen.findByRole('tab', { name: 'Backlinks' }));
+  expect(await screen.findByRole('combobox', { name: 'Saved target' })).toHaveTextContent(
+    'www.example.com',
+  );
+  expect(
+    screen.queryByRole('button', { name: 'Match with Visibility citations' }),
+  ).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole('combobox', { name: 'Saved target' }));
+  await userEvent.click(screen.getByRole('option', { name: 'blog.example.com' }));
+  expect(
+    await screen.findByRole('button', { name: 'Match with Visibility citations' }),
+  ).toBeInTheDocument();
 });
 
 it('cancels an analysis in progress', async () => {

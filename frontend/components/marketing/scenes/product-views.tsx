@@ -7,7 +7,12 @@
  * hold no state, so server-rendered pages can show them without an island.
  */
 
-export { AppShellFrame, ProductShot, type ShellFilters } from './product-view-parts';
+export {
+  AppShellFrame,
+  ProductShot,
+  type AppShellChrome,
+  type ShellFilters,
+} from './product-view-parts';
 export {
   AnswerView,
   CitedUrlView,

@@ -39,10 +39,10 @@ export function SearchIntelligenceCitationMatcher({
   // The reader picks which website's list to match, starting from the one on screen.
   const lists = referringLists(datasets);
   const [listId, setListId] = useState('');
+  // Never another site's list unless the reader picks it by name.
   const referring =
     lists.find((dataset) => dataset.id === listId) ??
-    lists.find((dataset) => dataset.target_origin === targetOrigin) ??
-    lists[0];
+    lists.find((dataset) => dataset.target_origin === targetOrigin);
   const audits = useQuery({
     queryKey: queryKeys.runs.list({ project_id: activeProject?.id }),
     queryFn: ({ signal }) =>

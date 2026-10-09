@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ComponentProps, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Check } from 'lucide-react';
 
 import { appHref } from '@/lib/config/app-link';
@@ -19,6 +19,7 @@ import {
   SiteHealthView,
   SourcesView,
   VisibilityView,
+  type AppShellChrome,
   type ShellFilters,
 } from '../scenes/product-views';
 
@@ -101,7 +102,7 @@ const TOUR = [
 ] as const satisfies readonly {
   id: string;
   label: string;
-  shell: Omit<ComponentProps<typeof AppShellFrame>, 'children'>;
+  shell: AppShellChrome;
   View: () => ReactNode;
 }[];
 

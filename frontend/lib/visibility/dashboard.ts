@@ -162,9 +162,11 @@ export function formatRate(rate: number | null): string {
  *
  * `formatRate` takes a 0–1 rate and scales it. The trend series is built in
  * whole percent, so passing its points through `formatRate` multiplied them a
- * second time and labelled a 38% point "3800%".
+ * second time and labelled a 38% point "3800%". Named apart from
+ * `formatPercent` in `lib/format`, which takes a 0–1 fraction: the two shared a
+ * name and signature, so an auto-import of the wrong one type-checked.
  */
-export function formatPercent(value: number | null): string {
+export function formatWholePercent(value: number | null): string {
   if (value === null || Number.isNaN(value)) return PLACEHOLDER;
   return `${Math.round(value)}%`;
 }

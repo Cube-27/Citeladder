@@ -9,7 +9,7 @@ export function isRunActive(run: AgentRun | null | undefined): boolean {
 
 export type RunOutcome =
   | { kind: 'none' }
-  | { kind: 'running'; queued: boolean }
+  | { kind: 'running'; run: AgentRun; queued: boolean }
   | { kind: 'succeeded' }
   | { kind: 'cancelled' }
   | { kind: 'stopped_at_limit'; detail: string }
@@ -18,7 +18,7 @@ export type RunOutcome =
 /** The one state the conversation shows for the latest run. */
 export function runOutcome(run: AgentRun | null | undefined): RunOutcome {
   if (!run) return { kind: 'none' };
-  if (isRunActive(run)) return { kind: 'running', queued: run.status === 'queued' };
+  if (isRunActive(run)) return { kind: 'running', run, queued: run.status === 'queued' };
   if (run.status === 'succeeded') return { kind: 'succeeded' };
   if (run.status === 'cancelled') return { kind: 'cancelled' };
   if (run.error_code === 'stopped_at_limit')

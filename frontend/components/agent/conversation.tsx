@@ -51,7 +51,7 @@ export function Conversation({
 }>) {
   const skills = useSkillCatalog();
   const outcome = runOutcome(detail.latest_run);
-  const live = useLiveTurn(outcome.kind === 'running' ? detail.latest_run?.id : null);
+  const live = useLiveTurn(outcome.kind === 'running' ? outcome.run.id : null);
   const output = detail.output;
   const outputMessageId = output?.message_id ?? legacyOutputMessage(detail);
   return (
@@ -383,7 +383,7 @@ function RunState({
   const answered = detail.messages.at(-1)?.role === 'agent';
   switch (outcome.kind) {
     case 'running':
-      return <RunningState run={detail.latest_run!} queued={outcome.queued} live={live} />;
+      return <RunningState run={outcome.run} queued={outcome.queued} live={live} />;
     // Every ended turn now answers with its own reply; older ones may not have.
     case 'stopped_at_limit':
       return answered ? null : <Alert tone="warning">{runErrorCopy('stopped_at_limit')}</Alert>;

@@ -24,7 +24,11 @@ import {
   startOAuth,
   stateReturnPath,
 } from '../integrations/oauth.ts';
-import { projectSiteDomains, propertyMatchesSite } from '../integrations/host-scope.ts';
+import {
+  projectSiteDomains,
+  propertyMatchesSite,
+  siteDomainsOf,
+} from '../integrations/host-scope.ts';
 import {
   enqueueHistoryBackfill,
   enqueueSyncRun,
@@ -375,12 +379,13 @@ export const integrationRoutes = [
         limit: resolveSettingSpec(policy.abuse.property_discovery_limit) as number,
         windowSeconds: resolveSettingSpec(policy.abuse.property_discovery_window_seconds) as number,
       });
-      // Resolve the project before provider I/O; an unknown project is a 404.
-      const sites = body?.project_id
-        ? await projectSiteDomains(db, workspaceId, body.project_id).catch(() => {
-            throw notFound('Project');
-          })
-        : null;
+      // Resolve the project before provider I/O; an unknown project is a 404,
+      // and any other failure keeps its own error.
+      let sites: Set<string> | null = null;
+      if (body?.project_id) {
+        sites = await projectSiteDomains(db, workspaceId, body.project_id);
+        if (!sites) throw notFound('Project');
+      }
       let properties;
       try {
         const token = await freshAccessToken(db, row.grant_id, workspaceId);
@@ -561,7 +566,7 @@ export const integrationRoutes = [
           });
         const project = await trx
           .selectFrom('projects')
-          .select('id')
+          .select(['id', 'website_url'])
           .where('id', '=', input.project_id)
           .where('workspace_id', '=', workspaceId)
           .executeTakeFirst();
@@ -573,9 +578,7 @@ export const integrationRoutes = [
             throw new ApiError(422, 'The property does not belong to the selected project', {
               code: 'mapping_property_not_owned',
             });
-        } else if (
-          !propertyMatchesSite(ref, await projectSiteDomains(trx, workspaceId, project.id))
-        ) {
+        } else if (!propertyMatchesSite(ref, await siteDomainsOf(trx, project))) {
           throw new ApiError(422, 'The property does not belong to the selected project', {
             code: 'mapping_property_not_owned',
           });

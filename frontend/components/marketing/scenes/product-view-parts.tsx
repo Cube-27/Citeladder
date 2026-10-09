@@ -158,6 +158,33 @@ function ShellSidebar({
 /** One filter bar: groups of chips, separated by a hairline as in the app. */
 export type ShellFilters = readonly (readonly string[])[];
 
+type DashboardLabel = (typeof DASHBOARD_NAV)[number]['items'][number][0];
+type AgentLabel = (typeof AGENT_NAV)[number][0] | (typeof AGENT_CHATS)[number];
+
+/**
+ * What the shell shows around a view. `active` names a sidebar row of the
+ * mode's own navigation, so a typo fails to compile instead of highlighting
+ * nothing; the agent sheet has no page actions, tabs or filters.
+ */
+export type AppShellChrome = { title: string } & (
+  | {
+      mode?: 'dashboard';
+      active?: DashboardLabel;
+      action?: string;
+      tabs?: readonly string[];
+      activeTab?: string;
+      filters?: ShellFilters;
+    }
+  | {
+      mode: 'agent';
+      active?: AgentLabel;
+      action?: never;
+      tabs?: never;
+      activeTab?: never;
+      filters?: never;
+    }
+);
+
 /**
  * The product's own chrome: the app sidebar on the neutral ground, and the
  * page on a floating white sheet with its title, actions, tabs and filters.
@@ -171,16 +198,7 @@ export function AppShellFrame({
   activeTab,
   filters,
   children,
-}: Readonly<{
-  mode?: 'dashboard' | 'agent';
-  active?: string;
-  title: string;
-  action?: string;
-  tabs?: readonly string[];
-  activeTab?: string;
-  filters?: ShellFilters;
-  children: ReactNode;
-}>) {
+}: Readonly<AppShellChrome & { children: ReactNode }>) {
   return (
     <div className="product-frame pv-shell app-type-scale">
       <ShellSidebar mode={mode} active={active} />
