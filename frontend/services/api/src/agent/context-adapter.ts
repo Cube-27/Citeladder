@@ -12,6 +12,7 @@ import { contentHandoff as searchHandoff } from '../search-intelligence/reads.ts
 import { comparableUrl, selectContentFragments } from '../site-health/reads/content-fragments.ts';
 import { issueDetail } from '../site-health/reads/issues.ts';
 import { crawlability } from '../mcp/evidence-site.ts';
+import { McpInputError } from '../mcp/types.ts';
 import { revisionRefs } from './outputs.ts';
 import type { ContextReader } from './context.ts';
 import { AgentError } from './contracts.ts';
@@ -269,7 +270,10 @@ export const readAgentContext: ContextReader = async (db, scope, raw, request) =
       ),
     };
   } catch (error) {
-    if (error instanceof ApiError && [404, 422].includes(error.status))
+    if (
+      (error instanceof ApiError && [404, 422].includes(error.status)) ||
+      error instanceof McpInputError
+    )
       throw new AgentError('agent_context_unavailable');
     throw error;
   }

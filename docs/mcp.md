@@ -88,7 +88,7 @@ use encrypted custody.
   then consents again.
 - Each grant records when it was last used, at five-minute resolution.
 - The periodic cleanup removes expired unconsumed requests and codes at once,
-  and consumed ones and ended grants after 90 days, in bounded batches. The
+  and consumed ones and ended grants after 180 days (a consumed code outlives the grant it minted), in bounded batches. The
   usage-window table is pruned by its own owner's lane.
 
 ## Authorization on each read

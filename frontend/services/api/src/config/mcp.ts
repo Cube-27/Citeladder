@@ -93,6 +93,7 @@ export const mcp = {
     tool_call_window_seconds: 60,
     tool_call_grant_limit: 120,
     tool_call_user_limit: 600,
-    protocol_retention_seconds: 7776000,
+    // Consumed codes outlive every grant they minted, so a late replay still revokes.
+    protocol_retention_seconds: 15552000,
   },
 };

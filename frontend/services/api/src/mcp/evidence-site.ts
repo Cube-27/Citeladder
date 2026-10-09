@@ -43,7 +43,15 @@ export async function siteSnapshot(
       classification: row.classification_state,
     },
     top_issues: row.top_issues,
-    versions: { analyzer: row.analyzer_version, scoring: row.scoring_version },
+    versions: {
+      analyzer: row.analyzer_version,
+      scoring: row.scoring_version,
+      profile: row.profile_version,
+      presentation: row.presentation_version,
+      schema_contract: row.schema_contract_version,
+      coverage_formula: row.coverage_formula_version,
+      classification_formula: row.classification_formula_version,
+    },
     link: appLink(origin, '/site', scope.projectId),
     artifact_refs: [reference('site_snapshot', row.id), reference('site_crawl', row.crawl_id)],
   };
@@ -117,6 +125,7 @@ export async function siteLinks(
     top_inbound: row.top_inbound ?? [],
     top_outbound: row.top_outbound ?? [],
     anchor_diagnostics: row.anchor_diagnostics ?? [],
+    versions: { extractor: row.extractor_version, formula: row.formula_version },
   }));
   return {
     state: 'available',

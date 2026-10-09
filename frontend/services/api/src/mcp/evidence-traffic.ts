@@ -47,6 +47,10 @@ export async function performanceRead(
     granularity: args.granularity ?? null,
   });
   const snapshotId = dashboard.selected.snapshot_id;
+  const versions = {
+    formula: dashboard.formula_version,
+    normalization: dashboard.normalization_version,
+  };
   if (!snapshotId) return unavailable('performance_range_not_projected');
   const refs = [
     reference('traffic_snapshot', snapshotId),
@@ -68,6 +72,7 @@ export async function performanceRead(
       state: 'available',
       range: dashboard.range,
       selected: dashboard.selected,
+      versions,
       ...page,
       artifact_refs: refs,
     };
@@ -82,6 +87,7 @@ export async function performanceRead(
     coverage: dashboard.coverage,
     dimension_counts: dashboard.dimension_counts,
     unavailable_dimensions: dashboard.unavailable_dimensions,
+    versions,
     artifact_refs: refs,
   };
 }
@@ -161,6 +167,8 @@ export async function referrals({ db, scope }: ProjectRead, args: Window): Promi
     analytics_quality: result.analytics_quality,
     channel_comparison: result.channel_comparison,
     unattributed_landing: result.unattributed_landing,
+    snapshot_id: projection.snapshotId,
+    versions: { analyzer: result.analyzer_version, formula: result.formula_version },
   };
 }
 

@@ -27,6 +27,7 @@ const MCP_PROTOCOL_PATHS = [
 ] as const;
 const PUBLIC_OAUTH_PATHS: ReadonlySet<string> = new Set([
   '/mcp/register',
+  '/authorize',
   '/token',
   '/revoke',
   '/.well-known/oauth-authorization-server',
