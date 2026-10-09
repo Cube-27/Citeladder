@@ -6,10 +6,12 @@
  * appearing yet is `waiting`, never a failure, and no reading is unknown.
  */
 import { sql } from 'kysely';
+import { lexicalTokens } from '../analysis/lexical.ts';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import type { WorkspaceScope } from '../db/workspace-scope.ts';
-import { scalarText } from '../text-order.ts';
+import { normalizeQuery } from '../demand/classification.ts';
+import { compareText, scalarText } from '../text-order.ts';
 import { scopedDailyRate, windowDays } from './traffic-scope.ts';
 import {
   outcome,
@@ -67,6 +69,16 @@ function providerInstant(value: unknown): number | null {
   return Number.isFinite(time) ? time : null;
 }
 
+/**
+ * A search's identity regardless of case, punctuation and word order: how keyword
+ * gaps merge rows, so a later row for the same search is found the same way.
+ */
+export function searchTerms(keyword: string) {
+  const normalized = normalizeQuery(keyword);
+  const tokens = [...lexicalTokens(normalized)].sort(compareText);
+  return { key: tokens.join(' ') || normalized, tokens };
+}
+
 /** Where each dataset kind records the project's own rank for a search. */
 export const OWNED_RANK: Record<string, 'rank_group' | 'owned_rank_group'> = {
   ranking_keywords: 'rank_group',
@@ -95,13 +107,26 @@ export async function keywordDatasetOutcome(
     dataset.language_code !== check.language_code
   )
     return null;
-  const rows = await r.scope
-    .selectFrom(r.db, 'search_intelligence_rows')
-    .select(['id', 'rank_group', 'owned_rank_group', 'auxiliary'])
-    .where('project_id', '=', d.project_id)
-    .where('dataset_id', '=', dataset.id)
-    .where('keyword', '=', scalarText(check.keyword))
-    .execute();
+  const keyword = scalarText(check.keyword);
+  const { key, tokens } = searchTerms(keyword);
+  // Narrow by the longest term in SQL; the term set decides in code.
+  const probe = tokens.reduce(
+    (longest, term) => (term.length > longest.length ? term : longest),
+    '',
+  );
+  const rows = (
+    await r.scope
+      .selectFrom(r.db, 'search_intelligence_rows')
+      .select(['id', 'keyword', 'rank_group', 'owned_rank_group', 'auxiliary'])
+      .where('project_id', '=', d.project_id)
+      .where('dataset_id', '=', dataset.id)
+      .where((eb) =>
+        probe
+          ? eb(sql<number>`strpos(lower(keyword), ${probe})`, '>', 0)
+          : eb('keyword', '=', keyword),
+      )
+      .execute()
+  ).filter((row) => searchTerms(row.keyword).key === key);
   const goLive = Date.parse(d.declared_implemented_at);
   const fresh = (row: { auxiliary: unknown }) => {
     const checkedAt = providerInstant(record(row.auxiliary).serp_updated_at);

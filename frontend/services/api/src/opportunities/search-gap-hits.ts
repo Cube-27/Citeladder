@@ -24,7 +24,7 @@ import { competitorTarget, ownedTargets, searchMarket } from '../search-intellig
 import { normalizeQuery as trafficQueryKey } from '../traffic/normalization.ts';
 import { canonicalJson } from '../search-intelligence/requests.ts';
 import { compareText } from '../text-order.ts';
-import { OWNED_RANK } from './keyword-verification.ts';
+import { OWNED_RANK, searchTerms } from './keyword-verification.ts';
 import type { CrawlSource, DemandSource, Scope } from './sources.ts';
 
 const g = policy.opportunity.opportunities.SEARCH_GAP;
@@ -60,16 +60,44 @@ function hostDomain(origin: string): string | null {
   }
 }
 
+/**
+ * What branded-query classification reads beyond the project row: the brand's
+ * names and the newest override. Overrides are append-only, so the highest
+ * ordinal moves whenever one is added.
+ */
+async function brandRevision(db: Database, scope: Scope) {
+  const [names, override] = await Promise.all([
+    db
+      .selectFrom('brands as b')
+      .leftJoin('brand_aliases as a', 'a.brand_id', 'b.id')
+      .select(['b.name', 'a.alias'])
+      .where('b.project_id', '=', scope.projectId)
+      .execute(),
+    new WorkspaceScope(scope.workspaceId)
+      .selectFrom(db, 'branded_query_overrides')
+      .select(sql<string | null>`max(ordinal)::text`.as('latest'))
+      .where('project_id', '=', scope.projectId)
+      .executeTakeFirst(),
+  ]);
+  return {
+    names: [...new Set(names.flatMap((row) => [row.name, row.alias ?? '']))]
+      .filter(Boolean)
+      .sort(compareText),
+    latest_override: override?.latest ?? null,
+  };
+}
+
 async function projectContext(db: Database, scope: Scope) {
   const workspace = new WorkspaceScope(scope.workspaceId);
   const project = await workspace
     .selectFrom(db, 'projects')
-    .select(['name', 'website_url', 'language_code', 'serp_language_code', 'serp_location_code'])
+    .select(['name', 'brand_name', 'website_url', 'language_code', 'serp_language_code'])
+    .select('serp_location_code')
     .select('search_intelligence_preferences')
     .where('id', '=', scope.projectId)
     .executeTakeFirst();
   if (!project) return null;
-  const [domains, competitors] = await Promise.all([
+  const [domains, competitors, brand] = await Promise.all([
     db
       .selectFrom('owned_domains')
       .select(['id', 'domain'])
@@ -82,9 +110,15 @@ async function projectContext(db: Database, scope: Scope) {
       .orderBy('created_at')
       .orderBy('id')
       .execute(),
+    brandRevision(db, scope),
   ]);
   const saved = preferencesBody.parse(project.search_intelligence_preferences);
   return {
+    brand: {
+      ...brand,
+      project_name: project.brand_name,
+      domains: domains.map((row) => row.domain).sort(compareText),
+    },
     owned: ownedTargets(project, domains).map((target) => target.origin),
     // The market readiness shows.
     market: searchMarket(project, saved),
@@ -115,7 +149,6 @@ export async function searchGapSource(
     .where('project_id', '=', scope.projectId)
     .where('status', '=', 'published')
     .where('dataset_kind', 'in', ['missing_keywords', ...Object.keys(OWNED_RANK)])
-    .where('coverage', 'in', USABLE_COVERAGE)
     .where('target_origin', 'in', context.owned)
     .where('location_code', '=', context.market.location_code)
     .where('language_code', '=', context.market.language_code)
@@ -136,6 +169,9 @@ export async function searchGapSource(
     const key = `${dataset.dataset_kind}:${dataset.target_origin}:${domain}`;
     if (!latest.has(key)) latest.set(key, { dataset, competitor });
   }
+  // The newest reading decides; an unusable one does not revive an older one.
+  for (const [key, { dataset }] of latest)
+    if (!USABLE_COVERAGE.includes(dataset.coverage)) latest.delete(key);
   const datasets = [...latest.values()].flatMap(({ dataset, competitor }) =>
     dataset.dataset_kind === 'missing_keywords' && competitor
       ? [
@@ -163,6 +199,7 @@ export async function searchGapSource(
           ranked,
           context.market,
           context.competitors,
+          context.brand,
         ]),
       )
       .digest('hex'),
@@ -278,7 +315,7 @@ export function searchGapDecisions(inputs: GapInputs): {
       continue;
     }
     // One gap per term set: "shoes running" and "running shoes" are one search.
-    const terms = [...lexicalTokens(normalized)].sort(compareText).join(' ') || normalized;
+    const terms = searchTerms(normalized).key;
     const entry = gaps.get(terms) ?? { rows: [], terms };
     entry.rows.push(row);
     gaps.set(terms, entry);

@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { afterAll, describe, expect, it } from 'vitest';
 
+import { plannedPageKey } from '../src/analysis/opportunities/actions.ts';
 import { loadWorkerSettings, policy } from '../src/config.ts';
 import { WorkspaceScope } from '../src/db/workspace-scope.ts';
 import { attachOrCreateAction } from '../src/opportunities/actions.ts';
@@ -33,6 +34,7 @@ afterAll(async () => {
     'search_intelligence_datasets',
     'search_intelligence_runs',
     'provider_connections',
+    'branded_query_overrides',
   ] as const)
     await db.deleteFrom(table).where('workspace_id', 'in', workspaces).execute();
   await fixtures.cleanup();
@@ -251,11 +253,11 @@ describe('keyword gaps become Actions', () => {
         owned_origin: OWNED,
       }),
     ]);
-    const read = async (published: Date, checked: Date) => {
+    const read = async (published: Date, checked: Date, keyword = 'running shoes') => {
       const ranking = await dataset(
         p,
         'ranking_keywords',
-        [{ keyword: 'running shoes', rank: 7, checked }],
+        [{ keyword, rank: 7, checked }],
         published,
       );
       const task = {
@@ -285,7 +287,56 @@ describe('keyword gaps become Actions', () => {
       state: 'unavailable',
       reason: 'provider_serp_predates_change',
     });
-    const fresh = await read(new Date(Date.now() - day), new Date(Date.now() - day));
+    // The later dataset spells the same search differently; it still answers the check.
+    const fresh = await read(
+      new Date(Date.now() - day),
+      new Date(Date.now() - day),
+      'Shoes, Running',
+    );
     expect([fresh.kind, fresh.check?.state]).toEqual(['verified', 'met']);
+  });
+
+  it('re-gates on brand overrides and retires gaps a newer reading cannot back', async () => {
+    const p = await project();
+    await dataset(
+      p,
+      'missing_keywords',
+      [{ keyword: 'running shoes' }, { keyword: 'trail boots' }],
+      new Date(Date.now() - 5 * day),
+    );
+    const first = await recomputeOpportunities(db, scopeOf(p));
+    // An override changes what the brand gate decides, so the source is no longer current.
+    await db
+      .insertInto('branded_query_overrides')
+      .values({
+        id: randomUUID(),
+        workspace_id: p.workspaceId,
+        project_id: p.projectId,
+        actor_user_id: p.userId,
+        normalized_query: 'trail boots',
+        classification: 'branded',
+        classifier_version: policy.demand.BRANDED_QUERY_CLASSIFIER_VERSION,
+        created_at: new Date(),
+      })
+      .execute();
+    const regated = await recomputeOpportunities(db, scopeOf(p), { skipIfCurrent: true });
+    expect(regated.id).not.toBe(first.id);
+    expect((await gapFindings(p)).map((finding) => finding.target_theme)).toEqual([
+      'running shoes',
+    ]);
+    // A newer reading of unknown coverage replaces the older one rather than reviving it,
+    // and a snapshot built on gaps is superseded once no gap dataset backs it.
+    const newer = await dataset(p, 'missing_keywords', [{ keyword: 'running shoes' }]);
+    await db
+      .updateTable('search_intelligence_datasets')
+      .set({ coverage: 'unknown' })
+      .where('id', '=', newer.id)
+      .execute();
+    await recomputeOpportunities(db, scopeOf(p));
+    expect(await gapFindings(p)).toEqual([]);
+  });
+
+  it('plans a page for a keyword in any script', () => {
+    expect(plannedPageKey('जूते खरीदें')).toBe('planned:जूते-खरीदें');
   });
 });

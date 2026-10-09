@@ -21,11 +21,13 @@ export type ActionMember = {
 export const pageGroupKey = (url: string) => `page:${normalizedUrlForCompare(url)}`;
 /** One planned page per topic, whether the Agent or evidence names it first; null without one. */
 export function plannedPageKey(topic: string): string | null {
+  // Letters in any script, so a keyword in Hindi or Japanese still names a page.
   const slug = topic
+    .normalize('NFKC')
     .toLowerCase()
-    .replaceAll(/[^a-z0-9]+/gu, '-')
+    .replaceAll(/[^\p{L}\p{M}\p{N}]+/gu, '-')
     .replace(/^-|-$/gu, '');
-  return slug ? `planned:${slug.slice(0, p.PLANNED_PAGE_TOPIC_MAX_CHARS)}` : null;
+  return slug ? `planned:${[...slug].slice(0, p.PLANNED_PAGE_TOPIC_MAX_CHARS).join('')}` : null;
 }
 function target(
   key: string,

@@ -5,7 +5,7 @@
  * A missing source is not an error. With a prior snapshot and no resolvable
  * audit, crawl or demand snapshot, the prior snapshot is returned unchanged,
  * so an in-flight crawl never empties the live set; zero hits WITH a source
- * still supersedes. A refresh whose source identity the latest snapshot
+ * still supersedes, and so does a snapshot whose keyword gaps have aged out. A refresh whose source identity the latest snapshot
  * already describes loads no evidence. Evidence loads outside the project
  * lock; under it the identity is resolved again, and a refresh whose sources
  * moved meanwhile writes nothing and fails for a retry over the newer state.
@@ -370,11 +370,15 @@ export async function recomputeOpportunities(
     // supersede what that source says; the retry reads the newer state.
     if (!sameIdentity(latest.identity, sources.identity))
       throw new Error('Opportunity sources changed during the refresh; retry');
+    // Gap datasets age out by design, so a snapshot that read them is superseded
+    // when they do; an in-flight crawl alone never empties the live set.
+    const readGaps = Boolean(record(record(current?.coverage).source_identity).search_gap_revision);
     const empty =
       collected.audit === null &&
       sources.crawl === null &&
       sources.demand === null &&
-      sources.gaps === null;
+      sources.gaps === null &&
+      !readGaps;
     if (current !== null && empty) return projectSnapshot(current);
     if (options.skipIfCurrent && snapshotIsCurrent(current, sources.identity))
       return projectSnapshot(current!);
