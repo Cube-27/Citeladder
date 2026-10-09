@@ -2,7 +2,6 @@ import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
 import { visitorKeys } from 'oxc-parser';
-import { tokenInventory } from './audit-design-tokens.mjs';
 export { textContrastViolations } from './design-system-contrast.mjs';
 
 import { lineIndex, nameText, parseSource, stringValue, unwrap, walk } from './source-ast.mjs';
@@ -100,46 +99,6 @@ export function radiusRoleAdvisories(source, label, ownsProductUi) {
   });
 }
 
-/** The parsed contract assigns each live token one intentional role. */
-export function tokenContractViolations(source, document) {
-  const classes = new Set([
-    'surface',
-    'state-tint',
-    'ink',
-    'border',
-    'semantic-status',
-    'brand',
-    'data-viz',
-  ]);
-  const entries = document
-    .split('\n')
-    .filter((line) => /^\| `--color-/.test(line))
-    .map((line) =>
-      line
-        .split('|')
-        .slice(1, -1)
-        .map((cell) => cell.trim().replaceAll('`', '')),
-    );
-  const live = new Set(tokenInventory(source).map(({ token }) => token));
-  const violations = [];
-  for (const token of live) {
-    const rows = entries.filter(([name]) => name === token);
-    if (
-      rows.length !== 1 ||
-      rows[0].length !== 6 ||
-      !classes.has(rows[0][1]) ||
-      rows[0].slice(2).some((cell) => !cell)
-    ) {
-      violations.push(`docs/design.md: ${token} needs one complete token-contract row`);
-    }
-  }
-  for (const [token] of entries) {
-    if (!live.has(token))
-      violations.push(`docs/design.md: retired token ${token} remains in the contract`);
-  }
-  return violations;
-}
-
 /** Control owners consume the size ladder; glyph dimensions remain intrinsic. */
 export function densityRoleViolations(source, label, ownsProductUi) {
   if (!ownsProductUi || !label.startsWith('components/ui/')) return [];
@@ -167,7 +126,6 @@ const REQUIRED_WEBSITE_ROLES = [
   '.website-page-title',
   '.website-section-heading',
   '.website-feature-heading',
-  '.website-small-heading',
   '.flow-title',
   '.flow-group-title',
   '.flow-help',
@@ -199,7 +157,7 @@ const WEBSITE_TYPE_LADDER = [
 ];
 
 /** Geometry roles belong to one ladder in globals.css; no surface re-scales them. */
-const SHARED_GEOMETRY_ROLES = ['--radius-control', '--radius-card', '--radius-overlay'];
+const SHARED_GEOMETRY_ROLES = ['--radius-control', '--radius-card', '--radius-lg'];
 
 /**
  * Roles that must take their color from a token rather than a literal.
@@ -213,7 +171,6 @@ const TOKEN_COLORED_ROLES = [
   '.website-page-title',
   '.website-section-heading',
   '.website-feature-heading',
-  '.website-small-heading',
   '.website-nav',
   '.website-data-display',
   '.flow-title',
@@ -769,9 +726,10 @@ const TEXT_ROLE_BACKGROUND_MESSAGE =
 /** Surfaces must never be painted with a text-ink token. */
 
 /**
- * Radius is a ladder, not a vocabulary. `--radius-control` / `--radius-card` /
- * `--radius-overlay` are the three roles, with `rounded-xs` as the micro rung
- * for chart bars, skeletons and inline code, and `rounded-full` for pills.
+ * Radius is a ladder, not a vocabulary: 4 / 8 / 12 / 16 / full. `--radius-control`
+ * / `--radius-card` / `--radius-lg` are the three roles, with `rounded-xs` as
+ * the micro rung for chart bars, skeletons and inline code, and `rounded-full`
+ * for pills.
  *
  * This applies to every surface, not just product UI: the app, login and
  * marketing each used to carry their own idea of a rounded corner, so the same
@@ -790,12 +748,122 @@ export function rawRadiusViolations(source, label) {
       );
     if (raw.length) {
       violations.push(
-        `${label}:${entry.line}: ${raw.join(', ')} — radius must use a role token (--radius-control|card|overlay), rounded-xs, or rounded-full`,
+        `${label}:${entry.line}: ${raw.join(', ')} — radius must use a role token (--radius-control|card|lg), rounded-xs, or rounded-full`,
       );
     }
   }
   return violations;
 }
+
+const ARBITRARY_RADIUS =
+  /^(?:[\w-]+:)*!?rounded(?:-(?:t|b|l|r|s|e|tl|tr|bl|br|ss|se|es|ee))?-\[([^\]]+)\]$/;
+const ARBITRARY_SIZE = /^(?:[\w-]+:)*!?-?(?:w|h|min-w|min-h|max-w|max-h|size)-\[([^\]]+)\]$/;
+const ARBITRARY_STROKE = /^(?:[\w-]+:)*!?stroke-\[([^\]]+)\]$/;
+const LITERAL_LENGTH = /(?<![\w-])\d*\.?\d+(?:px|rem)(?![\w-])/;
+const STYLE_LENGTH_KEYS =
+  /^(?:width|height|(?:min|max)(?:Width|Height)|top|right|bottom|left|inset\w*|margin\w*|padding\w*|gap|rowGap|columnGap|fontSize|lineHeight|borderRadius|border\w*Radius|borderWidth|outlineWidth|outlineOffset)$/;
+const STYLE_COLOUR = /#[\da-f]{3,8}\b|\b(?:rgba?|hsla?|oklch|lab)\(/i;
+
+/** Every class-like token in a module's string and template text. */
+function classTokens(program, lineOf) {
+  const tokens = [];
+  walk(program, (node) => {
+    const text =
+      node.type === 'TemplateElement'
+        ? (node.value.cooked ?? node.value.raw ?? '')
+        : stringValue(node);
+    if (!text) return;
+    const line = lineOf(node.start);
+    for (const token of text.split(/\s+/)) if (token) tokens.push({ token, line });
+  });
+  return tokens;
+}
+
+function styleObjectFindings(node, label, lineOf) {
+  const value =
+    node.value?.type === 'JSXExpressionContainer' ? unwrap(node.value.expression) : null;
+  if (value?.type !== 'ObjectExpression') return [];
+  return value.properties.flatMap((property) => {
+    if (property.type !== 'Property') return [];
+    const key = nameText(property.key) || stringValue(property.key) || '';
+    const literal = unwrap(property.value);
+    const text = stringValue(literal);
+    const raw =
+      (key === 'boxShadow' && !(text !== null && /^(?:none|var\(--[\w-]+\))$/.test(text))) ||
+      (text !== null && (STYLE_COLOUR.test(text) || LITERAL_LENGTH.test(text))) ||
+      (literal?.type === 'Literal' &&
+        typeof literal.value === 'number' &&
+        literal.value !== 0 &&
+        STYLE_LENGTH_KEYS.test(key));
+    if (!raw) return [];
+    return [
+      {
+        rule: 'tsx-style',
+        file: label,
+        line: lineOf(property.start),
+        message: `style ${key} is a literal; use a token or a class role`,
+      },
+    ];
+  });
+}
+
+/**
+ * Geometry and inline-style escapes the className rules never saw.
+ *
+ * jsxClassData only follows className props, so `cva()` recipes and exported
+ * class constants slipped through. This reads every string and template
+ * fragment in the module instead: the arbitrary-value shapes it looks for
+ * (`rounded-[6px]`, `w-[240px]`, `stroke-[1.5]`) do not occur in prose.
+ * Findings are ratcheted by check-design-system.mjs.
+ */
+export function tsxGeometryFindings(source, label) {
+  if (label.includes('.test.') || !/\.(?:tsx|ts)$/.test(label)) return [];
+  const program = parseSource(source, label);
+  const lineOf = lineIndex(source);
+  const findings = [];
+  const push = (rule, line, message) => findings.push({ rule, file: label, line, message });
+  for (const { token, line } of classTokens(program, lineOf)) {
+    const radius = ARBITRARY_RADIUS.exec(token);
+    // `inherit` lets an overlay follow its frame's role, so it is not a literal.
+    if (radius && !/^(?:var\(--radius-[\w-]+\)|inherit|0)$/.test(radius[1])) {
+      push(
+        'tsx-radius',
+        line,
+        `${token} — radius must use a role token, rounded-xs or rounded-full`,
+      );
+    }
+    const size = ARBITRARY_SIZE.exec(token);
+    if (size && LITERAL_LENGTH.test(size[1]) && !label.startsWith('components/ui/')) {
+      push(
+        'tsx-size',
+        line,
+        `${token} — literal dimensions belong to a components/ui owner or a layout token`,
+      );
+    }
+    if (ARBITRARY_STROKE.test(token)) {
+      push('tsx-stroke', line, `${token} — icon stroke weight belongs to the shared .lucide rule`);
+    }
+  }
+  const lucide = new Set();
+  walk(program, (node) => {
+    if (node.type === 'ImportDeclaration' && node.source?.value === 'lucide-react') {
+      for (const specifier of node.specifiers ?? []) lucide.add(specifier.local?.name);
+    }
+  });
+  walk(program, (node) => {
+    if (node.type !== 'JSXOpeningElement') return;
+    for (const attribute of node.attributes) {
+      if (attribute.type !== 'JSXAttribute') continue;
+      const name = nameText(attribute.name);
+      if (name === 'style') findings.push(...styleObjectFindings(attribute, label, lineOf));
+      if (name === 'strokeWidth' && lucide.has(nameText(node.name))) {
+        push('tsx-stroke', lineOf(attribute.start), `${nameText(node.name)} strokeWidth override`);
+      }
+    }
+  });
+  return findings;
+}
+
 export function textRoleBackgroundViolations(source, label) {
   if (!/\.(?:tsx|ts|mjs|js)$/.test(label)) return [];
   const program = parseSource(source, label);
@@ -856,13 +924,12 @@ export function productContractViolations(root) {
     '--control-height-lg',
     '--radius-control',
     '--radius-card',
-    '--radius-overlay',
+    '--radius-lg',
     '--color-background',
     '--color-background-alt',
     '--color-panel-tonal',
     '--color-well',
     '--color-active',
-    '--color-sidebar',
     '--color-accent',
     '--color-selection',
     '--color-selection-fg',

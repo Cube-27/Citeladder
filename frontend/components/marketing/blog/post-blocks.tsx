@@ -248,7 +248,7 @@ function PostDiagram({ block }: Readonly<{ block: Extract<BlogBlock, { type: 'di
           under the section's h2 -- a skipped level whenever a diagram is
           declared without one, which the type permits. */}
       {block.title ? (
-        <h3 className="website-small-heading cp-figure-title">{block.title}</h3>
+        <h3 className="website-feature-heading cp-figure-title">{block.title}</h3>
       ) : (
         <h3 className="sr-only">System model</h3>
       )}
@@ -286,7 +286,7 @@ function PostCallout({
             `subheading` (h3), so h4 skipped a level whenever no subheading
             stood between it and the section it belongs to. h3 is correct under
             a heading and level-flat under a subheading; neither is a skip. */}
-        {title && <h3 className="website-small-heading">{title}</h3>}
+        {title && <h3 className="website-feature-heading">{title}</h3>}
         <p>{text}</p>
       </div>
     </aside>

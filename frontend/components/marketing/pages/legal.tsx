@@ -66,12 +66,12 @@ export function LegalDocumentView({ document }: Readonly<{ document: LegalDocume
                   {/* Policy text names sibling policies by path; Linkify keeps
                       those references navigable. */}
                   {section.paragraphs?.map((paragraph, index) => (
-                    <p key={`${section.id}-p-${index}`} className="website-body-lg">
+                    <p key={`${section.id}-p-${index}`} className="website-body">
                       <Linkify text={paragraph} />
                     </p>
                   ))}
                   {section.bullets && section.bullets.length > 0 ? (
-                    <ul className="ed-bullets website-body-lg">
+                    <ul className="ed-bullets website-body">
                       {section.bullets.map((item, index) => (
                         <li key={`${section.id}-b-${index}`}>
                           <Linkify text={item} />

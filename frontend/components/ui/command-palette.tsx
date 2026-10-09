@@ -301,7 +301,7 @@ export function CommandPalette() {
               event.preventDefault();
               restoreFocus();
             }}
-            className="bg-elevated shadow-overlay z-modal focus-ring fixed top-24 left-1/2 flex max-h-3/5 w-full max-w-xl -translate-x-1/2 flex-col overflow-hidden overscroll-contain rounded-[var(--radius-overlay)] border border-transparent"
+            className="bg-elevated shadow-overlay z-modal focus-ring fixed top-24 left-1/2 flex max-h-3/5 w-full max-w-xl -translate-x-1/2 flex-col overflow-hidden overscroll-contain rounded-[var(--radius-card)] border border-transparent"
           >
             <DialogPrimitive.Title className="sr-only">Command palette</DialogPrimitive.Title>
             <div className="focus-frame border-border-subtle flex items-center gap-3 border-b px-4">

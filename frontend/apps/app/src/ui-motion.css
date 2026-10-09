@@ -28,13 +28,13 @@
 }
 
 .dialog-overlay[data-state='open'] {
-  animation: modal-overlay-in var(--motion-slow) var(--ease-enter) both;
+  animation: modal-overlay-in var(--motion-slow) var(--ease-standard) both;
 }
 .dialog-overlay[data-state='closed'] {
   animation: modal-overlay-in var(--motion-normal) var(--ease-exit) reverse both;
 }
 .dialog-panel[data-state='open'] {
-  animation: modal-panel-in var(--motion-slow) var(--ease-enter) both;
+  animation: modal-panel-in var(--motion-slow) var(--ease-standard) both;
 }
 .dialog-panel[data-state='closed'] {
   animation: modal-panel-in var(--motion-normal) var(--ease-exit) reverse both;

@@ -67,7 +67,7 @@ function SignalCell({ present, label }: Readonly<{ present: boolean; label: stri
       <span
         className={cn(
           'type-body inline-flex items-center gap-2',
-          present ? 'text-score-high' : 'text-muted',
+          present ? 'text-success' : 'text-muted',
         )}
       >
         <Icon className="size-3.5 shrink-0" aria-hidden />

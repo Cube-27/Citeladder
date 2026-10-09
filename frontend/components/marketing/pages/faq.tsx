@@ -81,7 +81,7 @@ export function FaqGroups() {
                       <span className="text-balance">{item.q}</span>
                       <ChevronDown aria-hidden className="size-4" />
                     </summary>
-                    <p className="website-body-lg text-muted">
+                    <p className="website-body text-muted">
                       <Linkify text={item.a} />
                       {item.links?.map((link) => (
                         <span key={link.href}>

@@ -43,7 +43,7 @@ export function FlowShell({
   return (
     <div
       data-flow-surface
-      className="bg-shell text-foreground relative grid h-dvh min-h-dvh grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden antialiased"
+      className="bg-background text-foreground relative grid h-dvh min-h-dvh grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden antialiased"
     >
       <FlowBar steps={steps} currentStep={currentStep} exitHref={exitHref} trailing={trailing} />
       <main

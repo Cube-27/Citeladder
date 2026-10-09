@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { extname, join, relative, resolve } from 'node:path';
 
 import {
@@ -17,12 +17,17 @@ import {
   focusRoleViolations,
   shadowRoleViolations,
   radiusRoleAdvisories,
-  tokenContractViolations,
   densityRoleViolations,
   styleAssertionViolations,
   textRoleBackgroundViolations,
   websiteContractViolations,
+  tsxGeometryFindings,
 } from './design-system-source-checks.mjs';
+import { tokenAuditViolations } from './audit-design-tokens.mjs';
+import { brandTokenViolations, svgColorScan } from './design-system-asset-checks.mjs';
+import { resolvePalette } from './design-system-contrast.mjs';
+import { cssPolicyScan } from './design-system-css-checks.mjs';
+import { ratchetVerdict, readBaseline, writeBaseline } from './design-system-ratchet.mjs';
 
 const root = resolve(import.meta.dirname, '..');
 const tokenOwner = join(root, 'apps', 'app', 'src', 'globals.css');
@@ -35,8 +40,11 @@ const ignored = new Set([
   'test-results',
   'playwright-report',
 ]);
+const baselinePath = join(root, 'scripts', 'design-system-baseline.json');
 const violations = [];
 const advisories = [];
+// Ratcheted findings: counted per file and rule against the baseline.
+const findings = [];
 
 function files(directory) {
   return readdirSync(directory).flatMap((name) => {
@@ -114,13 +122,34 @@ for (const path of files(root)) {
     ...productControlViolations(source, label, ownsProductUi),
   );
   advisories.push(...radiusRoleAdvisories(source, label, ownsProductUi));
+  if (/^(?:apps|components|lib)\//.test(label))
+    findings.push(...tsxGeometryFindings(source, label));
+}
+
+const lightPalette = resolvePalette(
+  readFileSync(tokenOwner, 'utf8'),
+  ':root:not([data-public-surface])',
+);
+findings.push(...cssPolicyScan(root), ...svgColorScan(root, lightPalette));
+if (process.argv.includes('--write-baseline')) {
+  writeBaseline(baselinePath, findings);
+  console.log(`Wrote ${relative(root, baselinePath)} (${findings.length} findings).`);
+}
+const ratchet = ratchetVerdict(
+  findings,
+  existsSync(baselinePath) ? readBaseline(baselinePath) : { files: {} },
+);
+if (ratchet.lowered.length) {
+  advisories.push(
+    ...ratchet.lowered,
+    'Debt fell: run node scripts/check-design-system.mjs --write-baseline to lower the baseline.',
+  );
 }
 
 violations.push(
-  ...tokenContractViolations(
-    readFileSync(tokenOwner, 'utf8'),
-    readFileSync(join(root, '..', 'docs', 'design.md'), 'utf8'),
-  ),
+  ...ratchet.violations,
+  ...brandTokenViolations(lightPalette),
+  ...tokenAuditViolations(root),
   ...websiteContractViolations(root),
   ...textContrastViolations(root),
   ...productContractViolations(root),

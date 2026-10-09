@@ -1,0 +1,95 @@
+{
+  "format_version": 1,
+  "files": {
+    "components/ai-traffic/pages-view.tsx": {
+      "tsx-size": 1
+    },
+    "components/layout/app-shell.tsx": {
+      "tsx-size": 1
+    },
+    "components/marketing/chrome/cookie-banner.tsx": {
+      "tsx-size": 1
+    },
+    "components/marketing/chrome/nav-desktop.tsx": {
+      "tsx-style": 2
+    },
+    "components/marketing/pages/legal.tsx": {
+      "tsx-size": 1
+    },
+    "components/performance/dimension-table.tsx": {
+      "tsx-size": 9
+    },
+    "components/performance/metric-cards.tsx": {
+      "tsx-stroke": 1
+    },
+    "components/performance/performance-chart.tsx": {
+      "tsx-size": 2
+    },
+    "components/runs/surface-evidence.tsx": {
+      "tsx-size": 1
+    },
+    "components/search-intelligence/search-intelligence-competitors.tsx": {
+      "tsx-size": 1
+    },
+    "components/search-intelligence/search-intelligence-rows-table.tsx": {
+      "tsx-size": 2
+    },
+    "components/settings/integration-connection-row.tsx": {
+      "tsx-size": 1
+    },
+    "components/site-health/internal-links-panel.tsx": {
+      "tsx-size": 1
+    },
+    "components/site-health/inventory-section.tsx": {
+      "tsx-size": 1
+    },
+    "components/site-health/issues-catalog.tsx": {
+      "tsx-size": 1
+    },
+    "components/site-health/issues-loading.tsx": {
+      "tsx-size": 1
+    },
+    "components/site-health/pages-table.tsx": {
+      "tsx-size": 2
+    },
+    "components/site-health/site-facts-panel.tsx": {
+      "tsx-size": 1
+    },
+    "components/visibility/source-charts.tsx": {
+      "tsx-size": 2
+    },
+    "components/visibility/source-prompts.tsx": {
+      "tsx-size": 1
+    },
+    "components/visibility/visibility-sources.tsx": {
+      "tsx-size": 1
+    },
+    "public/blog/editorial/article-audit.svg": {
+      "svg-color": 46
+    },
+    "public/blog/editorial/article-citations.svg": {
+      "svg-color": 26
+    },
+    "public/blog/editorial/article-connect.svg": {
+      "svg-color": 59
+    },
+    "public/blog/editorial/article-internal-links.svg": {
+      "svg-color": 18
+    },
+    "public/blog/editorial/article-playbook.svg": {
+      "svg-color": 37
+    },
+    "public/blog/editorial/article-prompts.svg": {
+      "svg-color": 22
+    },
+    "public/blog/editorial/article-track.svg": {
+      "svg-color": 57
+    },
+    "public/blog/editorial/article-verify.svg": {
+      "svg-color": 53
+    },
+    "public/blog/editorial/hero-ai-visibility.svg": {
+      "svg-color": 36
+    }
+  }
+}

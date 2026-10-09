@@ -194,7 +194,7 @@ function RunsContent({
         {anyActive ? (
           <span className="type-caption inline-flex items-center gap-2 tabular-nums">
             <span
-              className="bg-run-running inline-block size-1.5 animate-pulse rounded-full"
+              className="bg-info inline-block size-1.5 animate-pulse rounded-full"
               aria-hidden
             />
             polling every 3s while a run is active

@@ -101,7 +101,7 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
           <ol className="ed-steps" aria-labelledby="compare-checklist-title">
             {COMPARISON_CHECKLIST.map((item) => (
               <li key={item.heading}>
-                <h3 className="website-small-heading">{item.heading}</h3>
+                <h3 className="website-feature-heading">{item.heading}</h3>
                 <p className="website-body text-muted">{item.body}</p>
               </li>
             ))}
@@ -113,8 +113,8 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
         <div className="mk-split">
           <SectionHeader headingId="compare-method-title" title={competitor.conclusionHeading} />
           <div className="grid max-w-[68ch] gap-4">
-            <p className="website-body-lg">{competitor.conclusion}</p>
-            <p className="website-body-lg text-muted">
+            <p className="website-body">{competitor.conclusion}</p>
+            <p className="website-body text-muted">
               In a CiteLadder demo, inspect a recorded answer, follow its cited sources and review
               the relevant website findings. Confirm the current collection options, plan limits and
               provider setup for your project.

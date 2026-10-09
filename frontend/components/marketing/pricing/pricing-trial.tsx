@@ -69,7 +69,7 @@ export function PricingTrial({
     return (
       <div className="cm-trial-row">
         <div className="cm-trial-row-copy">
-          <h3 className="website-small-heading text-foreground">Try it first</h3>
+          <h3 className="website-feature-heading text-foreground">Try it first</h3>
           <p className="website-body text-muted">
             A seven-day trial on ChatGPT answers. {TRIAL_EXCLUSIONS}
           </p>

@@ -19,6 +19,10 @@ const config = {
     // Restrict to JS/TS/CSS/JSON: oxfmt/oxlint no-op on other types, and this
     // keeps commits of .md/.ps1 files from paying for a pointless check.
     '*.{js,jsx,mjs,ts,tsx,mts,cts,css,json}': 'vp check --fix',
+    // The design-system policy is a whole-tree ratchet (per-file counts against
+    // frontend/scripts/design-system-baseline.json), so it ignores the staged
+    // file list it is handed and judges the tree once per commit.
+    'frontend/**/*.{css,ts,tsx,astro,svg}': 'node frontend/scripts/check-design-system.mjs',
     // Ruff finds backend/pyproject.toml from each file path; --no-sync keeps
     // the hook from resolving dependencies on every commit.
     'backend/**/*.py': [

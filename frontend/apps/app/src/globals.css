@@ -16,36 +16,29 @@
     var(--font-text), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-display: var(--font-heading), sans-serif;
 
-  /* The app shares the public palette (owner decision, 2026-10-07): a quiet
-     green-tinted neutral ground with white paper, near-black ink and hairlines,
-     so the site, auth, onboarding and the product read as one system. */
+  /* One palette for every surface (owner decision, 2026-10-07): a quiet
+     green-tinted neutral ground with white paper, near-black green ink and
+     hairlines, so the site, auth, onboarding and the product read as one
+     system. Every neutral below keeps that tint: green carries slightly more
+     than red and blue in each rung. */
   --color-background: #f4f5f4;
   --color-background-alt: #f6f7f6;
   --color-panel: #ffffff;
   --color-panel-tonal: #f8f9f8;
   --color-elevated: #ffffff;
   --color-well: #eff1f0;
-  --color-hover: color-mix(in srgb, var(--color-panel), var(--color-foreground) 4%);
-  --color-selected: color-mix(in srgb, var(--color-panel), var(--color-foreground) 8%);
-  --color-active: color-mix(in srgb, var(--color-panel), var(--color-foreground) 12%);
-  --color-disabled: color-mix(in srgb, var(--color-panel), var(--color-foreground) 3%);
+  /* Interaction tints mix a green-tinted ink into the surface that receives
+     them, so hover, selected and pressed stay in the neutral family instead
+     of resolving to pure grey. */
+  --color-state-ink: #1c3d2c;
+  --color-hover: color-mix(in srgb, var(--color-panel), var(--color-state-ink) 4%);
+  --color-selected: color-mix(in srgb, var(--color-panel), var(--color-state-ink) 8%);
+  --color-active: color-mix(in srgb, var(--color-panel), var(--color-state-ink) 12%);
+  --color-disabled: color-mix(in srgb, var(--color-panel), var(--color-state-ink) 3%);
   /* Recessed selection track; state tints follow their enclosing surface. */
   --color-track: #eceeed;
   --color-input: #ffffff;
-  /* Floating-sheet shell: the sidebar shares the shell ground and the work
-     floats above both on one white sheet, so there is no rail step below the
-     ground any more. The token must be a literal (the policy requires
-     six-digit hex here); the dark rebind holds the same relationship. */
-  --color-sidebar: #f4f5f4;
   --color-surface-inverse: #0b0f0d;
-
-  /* Shell/workspace ground and its stronger neutral inset. Cards and tables
-     retain the white panel fill; interaction alone uses the accent ramp. */
-  --color-shell: #f4f5f4;
-  --color-shell-alt: #eceeed;
-
-  /* The public soft band, for alternating sections and tool wells. */
-  --color-canvas-soft: #f6f7f6;
 
   /* The separation ladder. Four rungs that must each be visibly different
      from the one above it, because they carry the whole hierarchy: the app
@@ -60,10 +53,7 @@
        strong  — a deliberate emphasis: a selected edge, a section the reader
                  is being pointed at.
        bold    — field boundaries and anything that must survive on a tinted
-                 fill.
-
-     `border` used to sit a hair under `subtle`, so the two rungs collapsed and
-     every object edge dissolved into its own contents. It now steps clear. */
+                 fill. */
   --color-border: #e1e4e2;
   --color-border-subtle: #eceeed;
   --color-border-strong: #cfd4d1;
@@ -71,18 +61,15 @@
 
   /* Reading inks plus the graduated chrome ladder. Faint is decorative only. */
   --color-ink-faint: #8e9690;
-  --color-ink-subtle: #5c645f;
   --color-ink-soft: #525a55;
-  --color-ink-chip: #3b423e;
   --color-ink-icon: #2d332f;
   --color-foreground: #0b0f0d;
   --color-secondary: #3b423e;
   --color-muted: #5c645f;
   --color-on-inverse: #ffffff;
 
-  /* Forest uses the deep shade for white-on-colour controls and text. The
-     brighter brand green appears in the mark, focus, selection markers, and chart series. */
-  --color-brand-forest: #16a34a;
+  /* Forest is the one action and brand colour: filled controls, links, focus,
+     selection markers and the bars of the mark. It never means success. */
   --color-accent: #14532d;
   --color-accent-hover: #166534;
   --color-accent-active: #0b3d20;
@@ -94,22 +81,26 @@
   --color-selection: #bbf7d0;
   --color-selection-fg: #0b0f0d;
 
-
-  /* Answer-engine brand marks (functional identity, marketing engine chips). */
-  --color-brand-openai: #10a37f;
-  --color-brand-gemini: #4285f4;
-  --color-brand-claude: #d97757;
-
+  /* Google's mark (sign-in button, engine logo); identity, never state. */
   --color-brand-google-blue: #4285f4;
   --color-brand-google-green: #34a853;
   --color-brand-google-yellow: #fbbc05;
   --color-brand-google-red: #ea4335;
 
-  /* Status — app-only evidence families. */
-  --color-success: #166534;
-  --color-success-bg: #edf7ed;
-  --color-success-text: #166534;
-  --color-warning: #8a4600;
+  /* The outcome scale. Five families carry every state in the product: run
+     status, score bands, sentiment, alerts and badges all resolve here. Each
+     family is a mark (dots, rings, icons), a text ink that passes 4.5:1 on its
+     background and on paper, and a quiet background.
+
+     The marks are separated by lightness, not hue alone, so red–green colour
+     vision still tells them apart: bad is dark, good is mid teal, mixed is
+     light amber, and neutral is the palest. Teal keeps success clear of the
+     forest action colour. Colour is never the only cue — every mark ships
+     with a label or an icon. */
+  --color-success: #0d9488;
+  --color-success-bg: #ecf8f5;
+  --color-success-text: #0f766e;
+  --color-warning: #e0900f;
   --color-warning-bg: #fff5db;
   --color-warning-text: #8a4600;
   --color-danger: #b42332;
@@ -119,80 +110,37 @@
   --color-danger-bg: #fff0f1;
   --color-danger-border: #f2c6cb;
   --color-danger-text: #b42332;
-  --color-info: #24476b;
-  --color-info-bg: #eef5fa;
-  --color-info-border: #c8d9e8;
-  --color-info-text: #24476b;
-  --color-neutral-bg: #eff1f0;
+  --color-info: #2f6fdb;
+  --color-info-bg: #eef4fd;
+  --color-info-border: #c5d7f5;
+  --color-info-text: #1d4fae;
+  --color-neutral: #aab2ad;
+  --color-neutral-bg: var(--color-well);
 
-  /* Marketing icon tiles — the pastel colour carriers for public-section
-     iconography (docs/design.md §Colour). Decorative only: they never carry
-     state, so they stay out of the status families. */
-  /* The four product hues of the reference system, drawn from its mark's
-     quadrants: each carries a soft tile fill and the deep rung that inks
-     icons and titles sitting on that fill. */
-  --color-tile-blue: #e0f2fe;
-  --color-tile-blue-ink: #0284c7;
-  --color-tile-indigo: #ede9fe;
-  --color-tile-indigo-ink: #4f46e5;
-  --color-tile-purple: #ffede8;
-  --color-tile-purple-ink: #ea580c;
-  --color-tile-green: #dcfce7;
-  --color-tile-green-ink: #16a34a;
-  --color-sentiment-positive: #9acd32;
-  --color-sentiment-positive-bg: #f4f8ec;
-  --color-sentiment-positive-text: #3f6212;
-  --color-sentiment-neutral: #6b6b72;
-  --color-sentiment-neutral-bg: #f4f4f1;
-  --color-sentiment-neutral-text: #3a3a40;
-  --color-sentiment-negative: #ff6e56;
-  --color-sentiment-negative-bg: #fff3f0;
-  --color-sentiment-negative-text: #9a3412;
-
-  /* Citation classifications retain their distinct persisted meanings. */
-  --color-citation-owned: #c15f3c;
-  --color-citation-competitor: #00a9c5;
-  --color-citation-third-party: #6b6b72;
-
-  --color-run-draft: #6b6b72;
-  --color-run-queued: #6b6b72;
-  --color-run-running: #00a9c5;
-  --color-run-analyzing: #c15f3c;
-  --color-run-completed: #9acd32;
-  --color-run-partial: #f59e0b;
-  --color-run-failed: #ff6e56;
-  --color-run-cancelled: #6b6b72;
-
-  /* Score bands — low/mid escalate coral→amber; good/high use cyan→lime. */
-  --color-score-low-text: #9a3412;
-  --color-score-low-ring: #ff6e56;
-  --color-score-mid-text: #b45309;
-  --color-score-mid-ring: #f59e0b;
-  --color-score-good-text: #155e75;
-  --color-score-good-ring: #00a9c5;
-  --color-score-high: #9acd32;
-  --color-score-high-text: #3f6212;
-  --color-score-high-ring: #9acd32;
-
-  /* Charts keep categorical identities, with forest as the first product series. */
+  /* The categorical chart ladder: series identity only, never a state or an
+     action. Each step holds 3:1 on paper, and each neighbour stays apart
+     under red–green colour-vision loss, so series are assigned in order. */
   --color-chart-1: #16a34a;
-  --color-chart-2: #00a9c5;
-  --color-chart-3: #f59e0b;
-  --color-chart-4: #ff6e56;
-  --color-chart-5: #9acd32;
-  --color-chart-6: #8b5cf6;
-  --color-chart-7: #14532d;
-  --color-chart-8: #64748b;
-  --color-gsc-clicks: #1a73e8;
-  --color-gsc-impressions: #673ab7;
-  --color-gsc-ctr: #00897b;
-  --color-gsc-position: #e65100;
+  --color-chart-2: #2563eb;
+  --color-chart-3: #d97706;
+  --color-chart-4: #db2777;
+  --color-chart-5: #0891b2;
+  --color-chart-6: #7c3aed;
+  --color-chart-7: #ea580c;
+  --color-chart-8: #6b746f;
+
+  /* Citation classes are series, so they take chart identities and mean the
+     same thing in both themes: you, the competitor, everyone else. */
+  --color-citation-owned: var(--color-chart-1);
+  --color-citation-competitor: var(--color-chart-2);
+  --color-citation-third-party: var(--color-chart-8);
   --color-overlay-scrim: rgb(11 15 13 / 32%);
 
   /* Tailwind's default radius scale is cleared so the ladder cannot be
-     side-stepped by reaching for a size name. What remains is the 4px micro
-     rung (chart bars, skeletons, inline code), the pill, and the three
-     semantic roles declared in :root below. */
+     side-stepped by reaching for a size name. The whole ladder, on every
+     surface, is 4 / 8 / 12 / 16 / full: the micro rung here (chart bars,
+     skeletons, inline code, badges), the pill, and the three semantic roles
+     declared in :root below. */
   --radius-*: initial;
   --radius-xs: 4px;
   --radius-full: 9999px;
@@ -213,8 +161,6 @@
   --text-xs--line-height: 1rem;
   --text-sm: 0.875rem;
   --text-sm--line-height: 1.25rem;
-  --text-support: 0.8125rem;
-  --text-support--line-height: 1.125rem;
   --text-base: 1rem;
   --text-base--line-height: 1.5rem;
   --text-lg: 1.125rem;
@@ -227,21 +173,30 @@
   --text-3xl--line-height: 2.25rem;
   --text-4xl: 2rem;
   --text-4xl--line-height: 2.5rem;
-  --text-heading-sm: 1.125rem; /* 18px — compact headings */
+  /* The label rung (13px): the middle of the dense 12 / 13 / 14 trio, shared
+     by product labels and controls and by public labels and eyebrows. */
+  --text-label: 0.8125rem;
+  --text-label--line-height: 1.125rem;
   /* Field text: 14px on public surfaces, 16px in the product (below). */
   --text-field: 0.875rem;
   --text-field--line-height: 1.25rem;
-
-  --leading-tight: 1.25;
 
   /* Restrained enterprise motion: quick controls, slightly longer spatial
      transitions, one shared easing curve. */
   --motion-fast: 110ms;
   --motion-normal: 150ms;
   --motion-slow: 240ms;
+  /* Public-surface roles: header menus unfolding, a section revealing on
+     arrival, and the slow ambient drift of a marquee. */
+  --motion-menu: 280ms;
+  --motion-reveal: 720ms;
+  --motion-drift: 48s;
   --ease-standard: cubic-bezier(0.33, 1, 0.68, 1);
-  --ease-enter: cubic-bezier(0.33, 1, 0.68, 1);
   --ease-exit: cubic-bezier(0.2, 0, 1, 0.9);
+  /* A long, soft settle for public menus and reveals. */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  /* Constant speed, for ambient drift and scroll-linked progress only. */
+  --ease-linear: linear;
   --default-transition-duration: var(--motion-fast);
   --default-transition-timing-function: var(--ease-standard);
   --z-index-sticky: 20;
@@ -315,8 +270,8 @@
   --control-height-sm: 28px;
   --control-height-md: 32px;
   --control-height-lg: 36px;
-  --marketing-cta-height: 36px;
-  --marketing-hero-cta-height: 44px;
+  /* The touch and hero rung of the control ladder (32 / 36 / 44). */
+  --control-height-xl: 44px;
   /* The public material (docs/design.md §Colour): every raised object is a
      hairline ring plus a close contact shadow, and larger objects add one long
      soft ambient layer. Nothing glows and nothing carries an inset bevel; the
@@ -334,7 +289,7 @@
   --elevation-card:
     0 0 0 1px rgb(11 15 13 / 7%), 0 1px 2px rgb(11 15 13 / 4%),
     0 4px 12px -6px rgb(11 15 13 / 6%);
-  /* The workspace sheet and focused task sheets: the public frame shadow. */
+  /* The workspace sheet, focused task sheets and public product frames. */
   --elevation-flow:
     0 0 0 1px rgb(11 15 13 / 6%), 0 1px 2px rgb(11 15 13 / 4%),
     0 8px 24px -6px rgb(11 15 13 / 8%), 0 32px 64px -24px rgb(11 15 13 / 12%);
@@ -343,7 +298,6 @@
     0 8px 24px -12px rgb(11 15 13 / 8%);
   --elevation-track: inset 0 0 0 1px var(--color-border-subtle);
   --elevation-field: 0 1px 2px rgb(11 15 13 / 4%);
-  --shadow-marketing-cta: var(--elevation-primary);
   --field-end-target: var(--control-height-sm);
   --menu-item-height: 32px;
   --badge-height-sm: 20px;
@@ -364,39 +318,39 @@
   --table-header-height: var(--control-height-md);
   --table-cell-padding-x: 12px;
   --table-cell-padding-y: 0px;
-  /* Authenticated-app geometry roles. Components consume the role, never a route-local radius. */
+  /* Geometry roles, shared by every surface. Components consume the role,
+     never a route-local radius: control 8 (buttons, fields, rows, chips),
+     card 12 (cards, menus, dialogs, popovers), large 16 (the workspace and
+     flow sheets, public product frames, bento tiles and link cards). */
   --radius-control: 8px;
   --radius-card: 12px;
-  --radius-overlay: 12px;
-  --radius-workspace: 14px;
+  --radius-lg: 16px;
   /* The workspace sheet's inset from the viewport and the sidebar. */
   --workspace-inset: 8px;
   /* Shell chrome above a route's content, for screens that fill the viewport
      (the Agent thread): on desktop the identity band, its rule and the sheet's
      inset above and below. Rebound below for the compact layouts. */
   --route-chrome-height: calc(var(--page-band-identity) + 1px + 2 * var(--workspace-inset));
-  /* Public objects use the roomier bento radius. */
-  --radius-marketing-card: 16px;
-  --radius-marketing-well: 16px;
-  --radius-marketing-preview: 16px;
-  --radius-marketing-control: 8px;
   /* Public-surface rhythm. Marketing consumes these directly; the phone values
      are the base and the media queries below step them up. */
+  /* The public dot lattice: one recipe on the 4px grid for every stage that
+     carries it (hero, flow stage, product frames). Used as a background. */
+  --lattice: radial-gradient(var(--color-border-strong) 1px, transparent 1px) 0 0 / 16px 16px;
   --site-gutter: 20px;
   --section-y: 72px;
   --marketing-nav-offset: calc(4rem + env(safe-area-inset-top, 0px));
-  --skeleton-base: #eff1f0;
-  --skeleton-highlight: #ffffff;
+  --skeleton-base: var(--color-well);
+  --skeleton-highlight: var(--color-panel);
   --value-placeholder: var(--color-muted);
 }
 
 /* State tints are derived from the surface receiving the interaction. */
 :where(.bg-background, .bg-panel, .bg-panel-tonal, .bg-background-alt, .bg-well,
-  .bg-input, .bg-elevated, .bg-sidebar, .bg-track) {
-  --color-hover: color-mix(in srgb, var(--state-surface), var(--color-foreground) 4%);
-  --color-selected: color-mix(in srgb, var(--state-surface), var(--color-foreground) 8%);
-  --color-active: color-mix(in srgb, var(--state-surface), var(--color-foreground) 12%);
-  --color-disabled: color-mix(in srgb, var(--state-surface), var(--color-foreground) 3%);
+  .bg-input, .bg-elevated, .bg-track) {
+  --color-hover: color-mix(in srgb, var(--state-surface), var(--color-state-ink) 4%);
+  --color-selected: color-mix(in srgb, var(--state-surface), var(--color-state-ink) 8%);
+  --color-active: color-mix(in srgb, var(--state-surface), var(--color-state-ink) 12%);
+  --color-disabled: color-mix(in srgb, var(--state-surface), var(--color-state-ink) 3%);
 }
 .bg-background { --state-surface: var(--color-background); }
 .bg-panel { --state-surface: var(--color-panel); }
@@ -405,7 +359,6 @@
 .bg-well { --state-surface: var(--color-well); }
 .bg-input { --state-surface: var(--color-input); }
 .bg-elevated { --state-surface: var(--color-elevated); }
-.bg-sidebar { --state-surface: var(--color-sidebar); }
 .bg-track { --state-surface: var(--color-track); }
 
 @media (min-width: 981px) and (max-width: 1200px) {
@@ -437,7 +390,7 @@
 
 /* Firefox + modern browsers supporting scrollbar-color */
 *:hover {
-  scrollbar-color: rgb(148 163 184 / 35%) transparent;
+  scrollbar-color: rgb(142 150 144 / 35%) transparent;
 }
 
 /* Chromium / Safari fallback */
@@ -458,12 +411,12 @@
 }
 
 *:hover::-webkit-scrollbar-thumb {
-  background-color: rgb(148 163 184 / 35%);
+  background-color: rgb(142 150 144 / 35%);
 }
 
 /* Slightly stronger feedback when the thumb itself is hovered */
 *::-webkit-scrollbar-thumb:hover {
-  background-color: rgb(100 116 139 / 50%);
+  background-color: rgb(92 100 95 / 50%);
 }
 
 /* Wide content scrolls in its owning region; document overflow stays observable. */
@@ -474,7 +427,7 @@ html {
      and locking body scroll for a modal doesn't shift layout sideways.
      No-op where the OS uses overlay scrollbars. */
   scrollbar-gutter: stable;
-  scrollbar-color: rgb(100 116 139 / 35%) transparent;
+  scrollbar-color: rgb(92 100 95 / 35%) transparent;
   scrollbar-width: thin;
 }
 
@@ -573,7 +526,7 @@ body {
     line-height: 1rem;
     font-weight: 400;
     letter-spacing: 0;
-    color: var(--color-ink-subtle);
+    color: var(--color-muted);
   }
   /* Text face, not display: the serif heading face has proportional digits,
      so stacked metrics would not align. */
@@ -935,7 +888,7 @@ a.focus-ring:active .type-caption {
 /* The rail shares the shell ground; the floating sheet beside it is the
    separation, so the rail draws no edge of its own. */
 .shell-rail {
-  background-color: var(--color-sidebar);
+  background-color: var(--color-background);
 }
 
 [data-marketing-nav][data-scrolled='true'] {
@@ -960,34 +913,31 @@ a.focus-ring:active .type-caption {
 /* Public CTAs keep the shared control semantics with a compact, raised face. */
 [data-public-surface] .marketing-cta-button {
   height: auto;
-  min-height: var(--marketing-cta-height);
+  min-height: var(--control-height-lg);
   padding-inline: 1rem;
-  border-radius: var(--radius-marketing-control);
-  font-size: 0.875rem;
-  line-height: 1.25rem;
+  border-radius: var(--radius-control);
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
   font-weight: 500;
   letter-spacing: -0.005em;
   transition-property: transform, background-color, color, border-color, box-shadow;
 }
 
 [data-public-surface] .marketing-cta-button[data-button-size='marketing'] {
-  min-height: var(--marketing-hero-cta-height);
-  padding-inline: 1.125rem;
-  font-size: 0.9375rem;
+  min-height: var(--control-height-xl);
+  padding-inline: 1.25rem;
 }
 
 [data-public-surface] .marketing-cta-button[data-button-variant='primary']:not([aria-disabled='true']) {
-  background-image: linear-gradient(rgb(255 255 255 / 10%), transparent);
-  box-shadow:
-    0 0 0 1px var(--color-accent-active), inset 0 1px 0 rgb(255 255 255 / 16%),
-    0 1px 2px rgb(11 15 13 / 16%), 0 2px 6px -2px rgb(20 83 45 / 35%);
+  background-image: linear-gradient(var(--surface-sheen), transparent);
+  box-shadow: var(--elevation-primary);
 }
 
 [data-public-surface] .marketing-cta-button[data-button-variant='secondary']:not([aria-disabled='true']) {
   background-color: var(--color-panel);
   color: var(--color-foreground);
   border-color: transparent;
-  box-shadow: var(--public-raised-shadow);
+  box-shadow: var(--elevation-card);
 }
 
 [data-public-surface] .marketing-cta-button[data-button-variant='secondary']:not([aria-disabled='true']):hover {
@@ -997,8 +947,7 @@ a.focus-ring:active .type-caption {
 /* Auth and onboarding take the website's material: the task sheet floats on
    the public frame shadow. Primary actions already share the product face. */
 :root:not([data-theme='dark']) [data-flow-surface] .app-pane {
-  border-radius: 16px;
-  box-shadow: var(--public-frame-shadow);
+  box-shadow: var(--elevation-flow);
 }
 
 [data-public-surface] .marketing-cta-button:not([aria-disabled='true']):active {
@@ -1093,47 +1042,14 @@ input:-webkit-autofill:focus {
   transition: background-color 9999s ease-out;
 }
 
-/* The public surface prints on white, not the app's tinted paper canvas. Its
-   editorial ink is a dark navy family: a very dark navy foreground stepping
-   through navy variants, so type prints in clearly blue ink rather than
-   neutral grey; the hairlines and the warm ground step up a rung for the
-   same reason. Brand primary accent and action tokens inherit directly
-   from @theme so the primary color stays consistent across website, onboarding,
-   auth/login, and app. The two dark bands run darker still, so a
-   band reads as depth rather than as a mid-tone. Selection, focus, and the
-   evidence marks inside embedded product previews follow the accent, so
-   previews keep reading as the product. */
-/* Auth and onboarding share the public palette in light mode, so signing up
-   never changes visual world. Dark mode keeps the app's own rebinds. */
+/* The public surface prints on white rather than the app's tinted ground;
+   every other token is the product's own, so the site, auth, onboarding and
+   the app share one ink, one edge ladder and one material. Auth and
+   onboarding take the white ground in light mode too, so signing up never
+   changes visual world. Dark mode keeps the app's own rebinds. */
 [data-public-surface],
 :root:not([data-theme='dark']) [data-flow-surface] {
   --color-background: #ffffff;
-  --color-foreground: #0b0f0d;
-  --color-secondary: #3b423e;
-  --color-muted: #5c645f;
-  --color-background-alt: #f6f7f6;
-  --color-canvas-soft: #f6f7f6;
-  --color-border: #e3e6e4;
-  --color-border-subtle: #eceeed;
-  --color-border-strong: #d0d5d2;
-  /* Public material: product frames float on a pale stage with layered,
-     offset ambient depth; nothing on the public surface glows. */
-  --public-frame-shadow:
-    0 0 0 1px rgb(11 15 13 / 6%), 0 1px 2px rgb(11 15 13 / 4%),
-    0 8px 24px -6px rgb(11 15 13 / 8%), 0 32px 64px -24px rgb(11 15 13 / 12%);
-  --public-raised-shadow:
-    0 0 0 1px rgb(11 15 13 / 6%), 0 1px 2px rgb(11 15 13 / 5%), 0 4px 12px -4px rgb(11 15 13 / 8%);
-  --public-menu-shadow:
-    0 0 0 1px rgb(11 15 13 / 7%), 0 4px 8px -2px rgb(11 15 13 / 6%),
-    0 16px 40px -8px rgb(11 15 13 / 14%);
-}
-
-/* Product light inherits the white-paper palette from @theme. Public
-   surfaces override editorial roles; dark maps its own palette. */
-:root:not([data-public-surface]) {
-  --color-neutral-bg: var(--color-well);
-  --skeleton-base: var(--color-well);
-  --skeleton-highlight: var(--color-panel);
 }
 
 /* Light is the default. Dark is a per-device reader preference applied to the
@@ -1180,24 +1096,18 @@ input:-webkit-autofill:focus {
      their deltas against it. */
   --color-background: #0b0d0c;
   --color-background-alt: #181b19;
-  --color-canvas-soft: #111412;
   --color-panel: #131614;
   --color-panel-tonal: #171a18;
   --color-elevated: #1b1f1d;
   --color-well: #0e100f;
   --color-input: #0f1210;
-  --color-sidebar: #0b0d0c;
-  --color-shell: #0b0d0c;
-  --color-shell-alt: #121513;
   /* Text ink sits below full white so long reading on the dark ground does
      not glare; the ladder keeps its foreground > secondary > muted steps. */
   --color-foreground: #e1e5e2;
   --color-secondary: #bfc5c1;
   --color-muted: #959c98;
   --color-ink-faint: #6d746f;
-  --color-ink-subtle: #959c98;
   --color-ink-soft: #a6ada9;
-  --color-ink-chip: #cbd1cd;
   --color-ink-icon: #dce1de;
   --color-track: #0f1210;
   --color-border-subtle: #212522;
@@ -1213,68 +1123,37 @@ input:-webkit-autofill:focus {
   --color-accent-soft: rgb(118 223 156 / 12%);
   --color-accent-border: rgb(118 223 156 / 45%);
   --color-selection: rgb(118 223 156 / 35%);
-  --color-selection-fg: #faf9f5;
+  --color-selection-fg: #f1f4f2;
+  --color-state-ink: #e1e5e2;
   --color-surface-inverse: #e1e5e2;
   --color-on-inverse: #0b0d0c;
-  --color-success: #80dfa2;
-  --color-success-bg: rgb(128 223 162 / 13%);
-  --color-success-text: #a4edbd;
+  --color-success: #2ec4b0;
+  --color-success-bg: rgb(46 196 176 / 13%);
+  --color-success-text: #7fe0d0;
   --color-warning: #f2c879;
   --color-warning-bg: rgb(242 200 121 / 13%);
   --color-warning-text: #f7d99e;
-  --color-danger: #f3979e;
+  --color-danger: #ef6b73;
   --color-danger-solid: #d95767;
   --color-danger-solid-hover: #eb7481;
   --color-danger-bg: rgb(243 151 158 / 13%);
   --color-danger-border: rgb(243 151 158 / 38%);
   --color-danger-text: #f6abb1;
   --color-danger-fg: #350b10;
-  --color-info: #8ad4e1;
-  --color-info-bg: rgb(138 212 225 / 13%);
-  --color-info-border: rgb(138 212 225 / 38%);
-  --color-info-text: #a5e2eb;
-  --color-neutral-bg: #222222;
-  --color-sentiment-positive: var(--color-chart-5);
-  --color-sentiment-positive-bg: var(--color-success-bg);
-  --color-sentiment-positive-text: var(--color-success-text);
-  --color-sentiment-neutral: var(--color-chart-8);
-  --color-sentiment-neutral-bg: var(--color-neutral-bg);
-  --color-sentiment-neutral-text: var(--color-secondary);
-  --color-sentiment-negative: var(--color-chart-4);
-  --color-sentiment-negative-bg: var(--color-danger-bg);
-  --color-sentiment-negative-text: var(--color-danger-text);
-  --color-citation-owned: var(--color-chart-4);
-  --color-citation-competitor: var(--color-chart-2);
-  --color-citation-third-party: var(--color-chart-8);
-  --color-run-draft: var(--color-chart-8);
-  --color-run-queued: var(--color-chart-8);
-  --color-run-running: var(--color-chart-2);
-  --color-run-analyzing: var(--color-chart-3);
-  --color-run-completed: var(--color-chart-5);
-  --color-run-partial: var(--color-chart-3);
-  --color-run-failed: var(--color-chart-4);
-  --color-run-cancelled: var(--color-chart-8);
-  --color-score-low-ring: var(--color-chart-4);
-  --color-score-low-text: var(--color-danger-text);
-  --color-score-mid-ring: var(--color-chart-3);
-  --color-score-mid-text: var(--color-warning-text);
-  --color-score-good-ring: var(--color-chart-2);
-  --color-score-good-text: var(--color-info-text);
-  --color-score-high: var(--color-chart-5);
-  --color-score-high-ring: var(--color-chart-5);
-  --color-score-high-text: var(--color-success-text);
-  --color-chart-1: #76df9c;
-  --color-chart-2: #75cee1;
-  --color-chart-3: #efc676;
-  --color-chart-4: #f49a8b;
-  --color-chart-5: #b8db73;
-  --color-chart-6: #bca4f6;
-  --color-chart-7: #9ce5ba;
-  --color-chart-8: #a3a39d;
-  --color-gsc-clicks: #8ab4f8;
-  --color-gsc-impressions: #c58af9;
-  --color-gsc-ctr: #4db6ac;
-  --color-gsc-position: #ff8a65;
+  --color-info: #7aa7f5;
+  --color-info-bg: rgb(122 167 245 / 13%);
+  --color-info-border: rgb(122 167 245 / 38%);
+  --color-info-text: #a9c6f8;
+  --color-neutral: #5f6762;
+  --color-neutral-bg: #212523;
+  --color-chart-1: #4ade80;
+  --color-chart-2: #60a5fa;
+  --color-chart-3: #fbbf24;
+  --color-chart-4: #f472b6;
+  --color-chart-5: #22d3ee;
+  --color-chart-6: #a78bfa;
+  --color-chart-7: #fb923c;
+  --color-chart-8: #9aa29d;
   --color-overlay-scrim: rgb(0 0 0 / 72%);
   --skeleton-base: #1a1e1b;
   --skeleton-highlight: #232825;
@@ -1291,10 +1170,6 @@ input:-webkit-autofill:focus {
   --elevation-sheet: 0 0 0 1px rgb(255 255 255 / 6%), 0 1px 2px rgb(0 0 0 / 30%);
   --elevation-track: inset 0 0 0 1px var(--color-border-subtle);
   --elevation-field: none;
-}
-
-:root[data-theme='dark'] .brand-wordmark {
-  filter: brightness(0) invert(1);
 }
 
 /* Detached surfaces resolve their elevation in the current theme. */
@@ -1334,13 +1209,13 @@ input:-webkit-autofill:focus {
 
 .loading-delayed {
   opacity: 0;
-  animation: citeladder-loading-appear var(--motion-fast) var(--ease-enter) 300ms forwards;
+  animation: citeladder-loading-appear var(--motion-fast) var(--ease-standard) 300ms forwards;
 }
 
 /* The focused auth/onboarding task column stays paper against shell ground. */
 .app-pane {
   background: var(--color-panel);
-  border-radius: var(--radius-workspace);
+  border-radius: var(--radius-lg);
   box-shadow: var(--elevation-flow);
 }
 
@@ -1350,7 +1225,7 @@ input:-webkit-autofill:focus {
    grows with its content and fills the viewport when the content is short. */
 .app-pane-workspace {
   background: var(--color-panel);
-  border-radius: var(--radius-workspace);
+  border-radius: var(--radius-lg);
   box-shadow: var(--elevation-sheet);
   margin: var(--workspace-inset) var(--workspace-inset) var(--workspace-inset) 0;
   min-height: calc(100dvh - 2 * var(--workspace-inset));
@@ -1447,8 +1322,8 @@ samp {
 
 .menu-panel {
   transition:
-    opacity var(--motion-normal) var(--ease-enter),
-    transform var(--motion-normal) var(--ease-enter);
+    opacity var(--motion-normal) var(--ease-standard),
+    transform var(--motion-normal) var(--ease-standard);
 }
 
 .menu-panel[data-state="closed"] {
@@ -1529,7 +1404,7 @@ samp {
 }
 
 .drawer-panel[data-state="open"] {
-  animation: drawer-panel-in var(--motion-slow) var(--ease-enter) both;
+  animation: drawer-panel-in var(--motion-slow) var(--ease-standard) both;
 }
 
 .drawer-panel[data-state="closed"] {
@@ -1662,7 +1537,7 @@ samp {
 .activity-check svg path {
   stroke-dasharray: 24;
   stroke-dashoffset: 24;
-  animation: activity-check-draw var(--motion-normal) var(--ease-enter) var(--motion-fast) both;
+  animation: activity-check-draw var(--motion-normal) var(--ease-standard) var(--motion-fast) both;
 }
 
 @keyframes activity-check-draw {
@@ -1736,17 +1611,17 @@ samp {
 
 .marketing-nav-panel {
   transform-origin: top center;
-  animation: marketing-nav-panel-in 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: marketing-nav-panel-in var(--motion-menu) var(--ease-out-expo) both;
 }
 
 .marketing-nav-panel > * {
-  animation: marketing-nav-content-in 280ms cubic-bezier(0.16, 1, 0.3, 1) 70ms both;
+  animation: marketing-nav-content-in var(--motion-menu) var(--ease-out-expo) calc(var(--motion-fast) / 2) both;
 }
 
 .marketing-nav-panel-out {
   transform-origin: top center;
   pointer-events: none;
-  animation: marketing-nav-panel-out 170ms var(--ease-exit) both;
+  animation: marketing-nav-panel-out var(--motion-normal) var(--ease-exit) both;
 }
 
 /* Moving between open menus hands over sideways: both panels travel in the
@@ -1776,12 +1651,12 @@ samp {
 }
 
 .marketing-nav-panel-slide {
-  animation: marketing-nav-panel-slide-in 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: marketing-nav-panel-slide-in var(--motion-menu) var(--ease-out-expo) both;
 }
 
 .marketing-nav-panel-slide-out {
   pointer-events: none;
-  animation: marketing-nav-panel-slide-out 170ms var(--ease-exit) both;
+  animation: marketing-nav-panel-slide-out var(--motion-normal) var(--ease-exit) both;
 }
 
 

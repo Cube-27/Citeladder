@@ -1,8 +1,13 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { tokenInventory } from '../../frontend/scripts/audit-design-tokens.mjs';
-import { tokenContractViolations } from '../../frontend/scripts/design-system-source-checks.mjs';
+import {
+  duplicateTokenFindings,
+  generatedBlocks,
+  refreshGeneratedBlocks,
+  tokenInventory,
+  zeroConsumerTokens,
+} from '../../frontend/scripts/audit-design-tokens.mjs';
 
 test('token inventory resolves scoped aliases and neutral state derivation in both themes', () => {
   const rows = tokenInventory(`
@@ -22,18 +27,79 @@ test('token inventory resolves scoped aliases and neutral state derivation in bo
   assert.equal(secondary.dark, '#ffffff');
 });
 
-test('token contract rejects missing or ambiguous roles and retirement residue', () => {
-  const source = '@theme { --color-panel: #ffffff; }';
-  const row = '| `--color-panel` | surface | Resting panel | On ground | white | white |';
-  assert.deepEqual(tokenContractViolations(source, row), []);
-  assert.equal(tokenContractViolations(source, '').length, 1);
-  assert.equal(tokenContractViolations(source, row + '\n' + row).length, 1);
-  assert.equal(tokenContractViolations(source, row.replace('surface', 'ambiguous')).length, 1);
-  assert.equal(tokenContractViolations(source, '| `--color-panel` | surface |').length, 1);
-  assert.equal(tokenContractViolations(source, row.replace('Resting panel', '')).length, 1);
-  assert.equal(
-    tokenContractViolations(source, row + '\n' + row.replace('--color-panel', '--color-retired'))
-      .length,
-    1,
+test('two tokens with one value fail unless aliased or declared the same', () => {
+  const source = (extra) => `@theme { --color-panel: #ffffff; --color-input: #ffffff; ${extra} }`;
+  // Dark inherits the light values, so the pair collides in both themes.
+  const duplicate = duplicateTokenFindings(source(''), []);
+  assert.equal(duplicate.length, 2);
+  assert.match(duplicate[0], /light --color-input and --color-panel/);
+  assert.match(duplicate[1], /dark --color-input and --color-panel/);
+  assert.deepEqual(
+    duplicateTokenFindings(
+      '@theme { --color-panel: #ffffff; --color-input: var(--color-panel); }',
+      [],
+    ),
+    [],
   );
+  const both = [{ theme: 'both', tokens: ['--color-panel', '--color-input'], reason: 'x' }];
+  assert.deepEqual(duplicateTokenFindings(source(''), both), []);
+  // A light allowance does not excuse the dark theme.
+  const light = [{ ...both[0], theme: 'light' }];
+  assert.deepEqual(
+    duplicateTokenFindings(source(''), light).map((finding) => finding.split(' ')[1]),
+    ['dark'],
+  );
+});
+
+test('a chart series may never wear a status or action value, allowlisted or not', () => {
+  const source = '@theme { --color-chart-1: #0d9488; --color-success: #0d9488; }';
+  const sameAs = [{ theme: 'both', tokens: ['--color-chart-1', '--color-success'], reason: 'x' }];
+  const findings = duplicateTokenFindings(source, sameAs);
+  assert.equal(findings.length, 2);
+  assert.ok(findings.every((finding) => finding.includes('chart series never wear')));
+});
+
+test('a token is consumed by var(), by a utility class or by its size companion', () => {
+  const source = `@theme {
+    --color-accent: #000000; --color-caret: #000000; --color-unused: #000000;
+    --text-label: 0.8125rem; --text-label--line-height: 1.125rem;
+    --radius-card: 12px; --ease-standard: linear; --font-sans: x;
+  }`;
+  const files = [
+    { path: 'a.css', text: '.a { color: var(--color-accent); }' },
+    {
+      path: 'components/b.tsx',
+      text: 'const b = cva("caret-caret/50 hover:text-label", {}); const c = <i className="rounded-card" />;',
+    },
+    { path: 'c.css', text: '.c { transition-timing-function: var(--ease-standard); }' },
+    // A declaration is not a consumer.
+    { path: 'd.css', text: ':root { --color-unused: #ffffff; }' },
+  ];
+  assert.deepEqual(zeroConsumerTokens(source, files), ['--color-unused']);
+});
+
+test('generated regions are refreshed, and stale or missing ones reported', () => {
+  const blocks = new Map([
+    ['radii', '| Token | Value |'],
+    ['type', '| Role |'],
+  ]);
+  const document =
+    'intro\n<!-- generated:radii:start -->\nold\n<!-- generated:radii:end -->\noutro\n';
+  const { text, stale, missing } = refreshGeneratedBlocks(document, blocks);
+  assert.deepEqual(stale, ['radii']);
+  assert.deepEqual(missing, ['type']);
+  assert.equal(refreshGeneratedBlocks(text, blocks).stale.length, 0);
+});
+
+test('the radius table lists the ladder from CSS in size order', () => {
+  const radii = generatedBlocks(
+    '@theme { --radius-*: initial; --radius-full: 9999px; --radius-xs: 4px; } :root { --radius-card: 0.75rem; }',
+    '',
+  ).get('radii');
+  const rows = radii
+    .split('\n')
+    .slice(2)
+    .map((row) => row.split('|')[1].trim());
+  assert.deepEqual(rows, ['`--radius-xs`', '`--radius-card`', '`--radius-full`']);
+  assert.match(radii, /`--radius-card` \| `12px`/);
 });

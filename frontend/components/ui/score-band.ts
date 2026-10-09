@@ -12,34 +12,34 @@ export function scoreBand(score: number): ScoreBand {
 }
 
 /**
- * Ring/arc stroke per band. Points at the dedicated `--score-*-ring` tokens
- * rather than the solids: rings sit on a surface, not behind text, so the two
- * are free to diverge (and do, in dark).
+ * Ring/arc stroke per band, on the outcome scale: low is bad, mid is mixed,
+ * and the two passing bands share the good family, `good` at a lighter step
+ * so the ring still separates them by lightness.
  */
 export const scoreBandStroke: Record<ScoreBand, string> = {
-  low: 'stroke-score-low-ring',
-  mid: 'stroke-score-mid-ring',
-  good: 'stroke-score-good-ring',
-  high: 'stroke-score-high-ring',
+  low: 'stroke-danger',
+  mid: 'stroke-warning',
+  good: 'stroke-success/55',
+  high: 'stroke-success',
 };
 
 /**
- * Band as text. Uses the `--score-*-text` tokens, which are the AA-gated
- * variants — the solids are not guaranteed readable as type.
+ * Band as text. Uses the outcome `*-text` inks, which are the AA-gated
+ * variants — the marks are not guaranteed readable as type.
  */
 export const scoreBandText: Record<ScoreBand, string> = {
-  low: 'text-score-low-text',
-  mid: 'text-score-mid-text',
-  good: 'text-score-good-text',
-  high: 'text-score-high-text',
+  low: 'text-danger-text',
+  mid: 'text-warning-text',
+  good: 'text-success-text',
+  high: 'text-success-text',
 };
 
 /** Horizontal meter fill per band, using the same visualization tokens as rings. */
 export const scoreBandFill: Record<ScoreBand, string> = {
-  low: 'bg-score-low-ring',
-  mid: 'bg-score-mid-ring',
-  good: 'bg-score-good-ring',
-  high: 'bg-score-high-ring',
+  low: 'bg-danger',
+  mid: 'bg-warning',
+  good: 'bg-success/55',
+  high: 'bg-success',
 };
 
 /**

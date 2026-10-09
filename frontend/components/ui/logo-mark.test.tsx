@@ -1,64 +1,36 @@
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vite-plus/test';
 
 import { BRAND_LOGO_SIZES, LogoMark } from './logo-mark';
 
 describe('LogoMark', () => {
-  it('renders canonical brand size by default with official citeladder-logo image asset', () => {
-    const { container } = render(<LogoMark />);
+  it('sizes the lockup from the variant ladder and keeps the asset aspect ratio', () => {
+    const { container } = render(<LogoMark variant="compact" />);
 
-    const img = container.querySelector('img');
-    expect(img).not.toBeNull();
-    expect(img?.getAttribute('src')).toContain('citeladder-logo');
-    expect(img?.getAttribute('height')).toBe(String(BRAND_LOGO_SIZES.brand));
-    expect(img?.getAttribute('width')).toBe('119');
+    const svg = container.querySelector('svg');
+    expect(svg?.getAttribute('height')).toBe(String(BRAND_LOGO_SIZES.compact));
+    expect(svg?.getAttribute('width')).toBe('106');
   });
 
-  it('supports semantic variants from central sizing ladder', () => {
-    const { container: sidebarContainer } = render(<LogoMark variant="sidebar" />);
-    const sidebarImg = sidebarContainer.querySelector('img');
-    expect(sidebarImg?.getAttribute('height')).toBe(String(BRAND_LOGO_SIZES.sidebar));
-
-    const { container: compactContainer } = render(<LogoMark variant="compact" />);
-    const compactImg = compactContainer.querySelector('img');
-    expect(compactImg?.getAttribute('height')).toBe(String(BRAND_LOGO_SIZES.compact));
-  });
-
-  it('allows explicit size override when required', () => {
+  it('lets an explicit size override the variant', () => {
     const { container } = render(<LogoMark size={40} />);
 
-    const img = container.querySelector('img');
-    expect(img?.getAttribute('height')).toBe('40');
+    expect(container.querySelector('svg')?.getAttribute('height')).toBe('40');
   });
 
-  it('renders mark-only vector SVG when wordmark is false', () => {
+  it('draws the square mark alone when the wordmark is off', () => {
     const { container } = render(<LogoMark variant="mini" wordmark={false} />);
 
-    expect(container.querySelector('img')).toBeNull();
     const svg = container.querySelector('svg');
-    expect(svg).toBeInTheDocument();
-    expect(svg?.getAttribute('height')).toBe(String(BRAND_LOGO_SIZES.mini));
+    expect(svg?.getAttribute('viewBox')).toBe('0 0 98 100');
+    expect(svg?.getAttribute('width')).toBe(String(BRAND_LOGO_SIZES.mini));
   });
 
-  it('sets aria-hidden on decorative container when alt is empty', () => {
-    const { container } = render(<LogoMark />);
+  it('is hidden from assistive technology unless it is named', () => {
+    const { rerender } = render(<LogoMark />);
+    expect(screen.queryByRole('img')).toBeNull();
 
-    const wrapper = container.querySelector('span');
-    expect(wrapper).toHaveAttribute('aria-hidden', 'true');
-  });
-
-  it('allows specifying an accessible alt name when needed', () => {
-    const { container } = render(<LogoMark alt="CiteLadder" />);
-
-    const img = container.querySelector('img');
-    expect(img).toHaveAttribute('alt', 'CiteLadder');
-    const wrapper = container.querySelector('span');
-    expect(wrapper).not.toHaveAttribute('aria-hidden');
-  });
-
-  it('names a mark-only logo when accessible alt text is supplied', () => {
-    const { getByRole } = render(<LogoMark wordmark={false} alt="CiteLadder" />);
-
-    expect(getByRole('img', { name: 'CiteLadder' })).toBeInTheDocument();
+    rerender(<LogoMark alt="CiteLadder" />);
+    expect(screen.getByRole('img', { name: 'CiteLadder' })).toBeInTheDocument();
   });
 });

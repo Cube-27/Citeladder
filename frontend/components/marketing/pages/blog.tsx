@@ -154,7 +154,7 @@ function EmptyBlog() {
     <Section aria-label="No posts yet">
       <div className="cp-empty">
         <h2 className="website-section-heading">{BLOG_EMPTY_STATE.heading}</h2>
-        <p className="website-body-lg text-muted max-w-[48ch]">{BLOG_EMPTY_STATE.body}</p>
+        <p className="website-body text-muted max-w-[48ch]">{BLOG_EMPTY_STATE.body}</p>
       </div>
     </Section>
   );

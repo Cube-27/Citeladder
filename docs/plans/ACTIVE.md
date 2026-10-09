@@ -14,6 +14,10 @@ Remaining work is consolidated in the backlog; historical plans are not active a
   with the recommended decisions; its live calibration round is outstanding.
   Feature 4 Opportunities is done ([Opportunities plan](opportunities-improvement.md));
   traffic impact measurement is queued as its own PR in the backlog.
+- [Design system consistency](design-system-consistency.md): cross-surface
+  token, brand, geometry, type, primitive and route-consistency rebuild with
+  ratcheted enforcement (owner-assigned 2026-10-09). Phases 1–3 and 6 are in
+  the first PR; Phases 4–5 follow in the second.
 
 ## Queued
 

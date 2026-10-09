@@ -7,8 +7,8 @@ import { cn } from '@/lib/utils';
 import { NavIcon, hasNavIcon } from './nav-icons';
 
 const ROW =
-  'nav-row group flex items-start gap-3 rounded-[var(--radius-marketing-control)] px-3 py-2.5 ' +
-  'transition-colors duration-150 hover:bg-background-alt focus-visible:bg-background-alt';
+  'nav-row group flex items-start gap-3 rounded-[var(--radius-control)] px-3 py-2.5 ' +
+  'transition-colors duration-[var(--motion-normal)] hover:bg-background-alt focus-visible:bg-background-alt';
 
 export const NavigationPath = createContext('');
 

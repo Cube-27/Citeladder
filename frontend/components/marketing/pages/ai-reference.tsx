@@ -102,7 +102,7 @@ export function AiInstructionsPage() {
             {section.title}
           </h2>
           {section.paragraphs?.map((paragraph) => (
-            <p key={paragraph} className="website-body-lg">
+            <p key={paragraph} className="website-body">
               {paragraph}
             </p>
           ))}
@@ -125,7 +125,7 @@ export function AiInstructionsPage() {
             </dl>
           )}
           {section.bullets && (
-            <ul className="ed-bullets website-body-lg">
+            <ul className="ed-bullets website-body">
               {section.bullets.map((bullet) => (
                 <li key={bullet}>{bullet}</li>
               ))}
@@ -158,7 +158,7 @@ export function EntityMapPage() {
             </h2>
             <span className="ed-kind website-label text-muted">{entity.kind}</span>
           </div>
-          <p className="website-body-lg">{entity.description}</p>
+          <p className="website-body">{entity.description}</p>
           <dl className="ed-facts website-body">
             {entity.relations.map((relation) => (
               <div key={`${relation.label}-${relation.target.href}`}>

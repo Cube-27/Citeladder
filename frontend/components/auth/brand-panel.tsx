@@ -11,11 +11,9 @@ import { websiteHref } from '@/lib/config/app-link';
 export function AuthWordmark({
   size,
   variant,
-  priority = true,
 }: Readonly<{
   size?: number;
   variant?: BrandLogoVariant;
-  priority?: boolean;
 }>) {
   return (
     // The public home lives on the website origin; "/" on the app origin is
@@ -25,7 +23,7 @@ export function AuthWordmark({
       aria-label="CiteLadder home"
       className="group inline-flex items-center no-underline transition-opacity hover:opacity-90"
     >
-      <LogoMark size={size} variant={variant} priority={priority} />
+      <LogoMark size={size} variant={variant} />
     </a>
   );
 }

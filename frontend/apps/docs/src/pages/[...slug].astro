@@ -23,7 +23,7 @@ if (article.slug === 'mcp/tools') headings.push({ depth: 2, slug: 'registered-to
       <h1 class="website-page-title docs-title">{article.title}</h1>
       <p class="website-lead text-muted">{article.description}</p>
     </header>
-    <div class="docs-prose website-body-lg"><Content /></div>
+    <div class="docs-prose website-body"><Content /></div>
     {article.slug === 'mcp/tools' && <ToolReference />}
   </article>
   <nav class="docs-pagination" aria-label="Adjacent articles">

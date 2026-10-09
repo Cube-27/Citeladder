@@ -57,10 +57,10 @@ import {
 // Authentic Search Console colors: Blue for Clicks, Purple for Impressions,
 // Teal for CTR, Orange for Position. Shared by cards and chart lines.
 const METRIC_COLORS: Record<PerformanceMetricKey, string> = {
-  clicks: 'var(--color-gsc-clicks)',
-  impressions: 'var(--color-gsc-impressions)',
-  ctr: 'var(--color-gsc-ctr)',
-  position: 'var(--color-gsc-position)',
+  clicks: 'var(--color-chart-2)',
+  impressions: 'var(--color-chart-6)',
+  ctr: 'var(--color-chart-5)',
+  position: 'var(--color-chart-7)',
 };
 
 /** The drawn lines: one per selected metric, each with its comparison peer. */

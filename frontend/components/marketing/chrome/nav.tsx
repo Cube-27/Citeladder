@@ -324,7 +324,7 @@ export function MarketingNav() {
       // cached blur for 300ms, at exactly the moment the reader started
       // moving. At 95% the "content passes underneath" reading survives.
       className={cn(
-        'safe-top fixed inset-x-0 top-0 z-50 w-full max-w-full transition-[background-color,box-shadow] duration-300',
+        'safe-top fixed inset-x-0 top-0 z-50 w-full max-w-full transition-[background-color,box-shadow] duration-[var(--motion-menu)]',
         mobileOpen ? 'bg-panel' : 'bg-transparent',
       )}
     >
@@ -403,7 +403,7 @@ function HomeLogoLink({ onNavigate }: Readonly<{ onNavigate: () => void }>) {
         window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
       }}
     >
-      <LogoMark priority />
+      <LogoMark />
     </a>
   );
 }
@@ -414,7 +414,7 @@ function ProductActions() {
     <>
       <a
         href={appHref('/login')}
-        className="nav-link website-nav rounded-[var(--radius-marketing-control)] px-3 py-2"
+        className="nav-link website-nav rounded-[var(--radius-control)] px-3 py-2"
       >
         Log in
       </a>
@@ -446,7 +446,7 @@ function NavActions({
       </div>
       <button
         type="button"
-        className="text-foreground hover:bg-background-alt grid size-10 place-items-center rounded-[var(--radius-marketing-control)] lg:hidden"
+        className="text-foreground hover:bg-background-alt grid size-10 place-items-center rounded-[var(--radius-control)] lg:hidden"
         aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
         aria-expanded={mobileOpen}
         aria-controls="mobile-menu"

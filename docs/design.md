@@ -12,10 +12,10 @@ One system covers every surface (owner decision, 2026-10-07): the public site, d
 
 CiteLadder (`citeladder.com`) is an evidence-led enterprise system. The app puts a quiet green-tinted neutral ground behind the chrome and floats the work on one white sheet, using near-black green-tinted ink, forest actions, semantic evidence washes, useful density, and deliberate negative space. Prioritise current state → movement → next action → evidence, not equal-weight KPI cards. Voice is direct, confident, specific, and evidence-led: one idea per sentence.
 
-- **Logo:** `frontend/components/ui/logo-mark.tsx` owns every surface's lockup: `frontend/public/citeladder-logo.svg` for the wordmark and the matching inline glyph for mark-only mode. `BRAND_LOGO_SIZES` owns standard heights; explicit `size` supports exceptional layouts. The mark inherits `currentColor`; non-empty `alt` supplies either rendering's accessible name. `frontend/public/citeladder-favicon.ico` owns browser/installable-app icons with the same black silhouette across frames.
+- **Logo:** `frontend/components/ui/logo-mark.tsx` owns every surface's lockup and draws it inline from `logo-glyphs.ts` in exactly two tokens: ink (`currentColor`, the speech bubble and "Ladder") and the forest accent (the bars and "Cite"). Both forms therefore follow the theme without a filter, and the mark-only glyph always matches the lockup. `frontend/public/citeladder-logo.svg` is the same drawing in the light values (ink `#0b0f0d`, forest `#14532d`) for structured data and the docs build; the policy check maps each of its fills to its token. `BRAND_LOGO_SIZES` owns standard heights; explicit `size` supports exceptional layouts; non-empty `alt` supplies the accessible name. `frontend/public/citeladder-favicon.ico` owns browser/installable-app icons with the same ink silhouette.
 - **Typography:** self-hosted Satoshi (sans) on every surface for body, UI, data and product headings; self-hosted Sentient (serif) for public and focused-flow display headings only (`--font-editorial`, scoped by `website-type.css`; coded product previews reset to Satoshi). Both are capped at weight 500 by their `@font-face` ranges, with `font-synthesis-weight: none` so a bold request never renders a faux bold; 14px working baseline. Each semantic role owns size, leading, weight, tracking, and ink together. In the product, hierarchy comes from size and weight together through the closed `.type-*` roles (see Product app ladder); shared fields and dropdowns use the 14px `--text-field` role on every surface.
 - **Icons:** Lucide only; import concepts from `frontend/lib/icons.ts` where available. Call sites set size only: `size-3`/`size-3.5` for dense tables, toolbars, and chips; `size-4` for chrome; `size-5` for empty states and marketing wells; larger only for decorative marks. The global stroke ladder derives approximately 1.3px stems from size. Keep `currentColor`; do not override stroke weight locally.
-- **Surface identity:** Light is the default. The app header carries a one-click circular light/dark toggle beside the account menu (`frontend/lib/theme/theme.ts` owns the per-device preference; the semantic tokens rebind under `[data-theme='dark']`). There is no automatic system-theme following. Marketing is light-only and never applies the preference. Forest is the sole action accent on public and product surfaces. The logo and provider marks retain their fixed brand colours. The app's sidebar shares the neutral shell ground, and the work floats beside it on one white workspace sheet. Auth and onboarding share the public website's light world (white stage, public palette, frame-shadowed task sheet); in dark mode they keep the app's dark rebinds. Dark mode keeps the same tonal order in near-black neutrals with the same slight green tint, and its material leads with light hairline rings. Controls retain white fills and distinct edges in light mode. Marketing and docs remain light-only.
+- **Surface identity:** Light is the default. The app header carries a one-click circular light/dark toggle beside the account menu (`frontend/lib/theme/theme.ts` owns the per-device preference; the semantic tokens rebind under `[data-theme='dark']`). There is no automatic system-theme following. Marketing is light-only and never applies the preference. Forest is the sole action accent on public and product surfaces, and the logo is drawn in the same ink and forest. Provider marks retain their own brand colours. The app's sidebar shares the neutral shell ground, and the work floats beside it on one white workspace sheet. Auth and onboarding share the public website's light world (white stage, public palette, frame-shadowed task sheet); in dark mode they keep the app's dark rebinds. Dark mode keeps the same tonal order in near-black neutrals with the same slight green tint, and its material leads with light hairline rings. Controls retain white fills and distinct edges in light mode. Marketing and docs remain light-only.
 
 ## Source of truth and implementation rules
 
@@ -31,29 +31,30 @@ CiteLadder (`citeladder.com`) is an evidence-led enterprise system. The app puts
 
 Do not add raw hex colours, `@theme`, shared control recipes, or unregistered animations outside `globals.css`. Homepage-only neutral and preview values belong to the scoped `.cl-landing` tokens there; shared chrome and other marketing pages keep the semantic palette. Do not redefine shared geometry per surface. Reuse primitives before creating another. Public/auth type roles may have their own scale; embedded product previews reset to the app ladder.
 
-`pnpm check:policy` guards raw colours, stray `@theme`, legacy identifiers, ownership boundaries, `font-*` weights, raw text sizes, leading, tracking and faces outside `components/ui/`, the retired `subtle` ink, off-grid spacing, alpha-faded borders, size-named radii (`rounded-sm|md|lg|xl`), and per-surface geometry redeclarations. Tailwind's default radius scale is cleared in `@theme`. The capability/ownership map remains in [frontend-architecture.md](frontend-architecture.md), under Component capability.
+`pnpm check:policy` guards raw colours, stray `@theme`, legacy identifiers, ownership boundaries, `font-*` weights, raw text sizes, leading, tracking and faces outside `components/ui/`, the retired `subtle` ink, off-grid spacing, alpha-faded borders, size-named radii (`rounded-sm|md|lg|xl`), and per-surface geometry redeclarations. It also parses every stylesheet and Astro `<style>` block (literal radius, type, off-grid spacing, raw durations and easings, bespoke outlines and shadow recipes), reads TSX for arbitrary radii, literal dimensions outside `components/ui/`, inline-style literals and icon stroke overrides, checks every SVG paint against `currentColor` or its brand token, fails on duplicate token values, unconsumed tokens and stale generated tables, and checks the contrast and colour-vision matrix. Debt that predates a rule is ratcheted in `frontend/scripts/design-system-baseline.json`: counts only fall. Tailwind's default radius scale is cleared in `@theme`. The capability/ownership map remains in [frontend-architecture.md](frontend-architecture.md), under Component capability.
 
 ## Colour
 
-Consume semantic roles, never page-local values.
+Consume semantic roles, never page-local values. Every neutral keeps the same slight green tint, including interaction tints. Two things that mean the same thing share a token; two things that mean different things never share a value (`audit-design-tokens.mjs --check` fails on an undeclared duplicate).
 
-| Role | Tokens and values | Use |
+| Role | Tokens | Use |
 | --- | --- | --- |
-| Ground and rail | `background`, `shell`, `sidebar` `#F4F5F4` | One neutral ground behind the rail and around the workspace sheet in light mode |
-| Structure | `background-alt` `#F6F7F6`; `panel-tonal` `#F8F9F8`; `well` `#EFF1F0` | Tonal bands and panels, and recessed wells |
-| Paper | `panel`, `input`, `elevated` `#FFFFFF` | The workspace sheet, inputs, semantic objects, overlays |
-| Ink | `foreground` `#0B0F0D`; `secondary` `#3B423E`; `muted` `#5C645F`; `ink-*` chrome ladder below | Titles and values; sentences; fallback metadata. Shared labels, captions, category chips and navigation use the graduated chrome ladder. The legacy `text-subtle` utility stays retired. |
-| Boundaries | `border-subtle` `#ECEEED`; `border` `#E1E4E2`; `border-strong` `#CFD4D1`; `border-bold` `#858D88` | `border-subtle` divides rows or peers *inside* one surface; `border` bounds controls, inset white panels and overlays, rings a bare table and divides a table header from its rows; `border-strong` is deliberate emphasis; `border-bold` bounds small choice controls. Cards use a hairline shadow ring. |
-| Neutral states | `hover`, `selected`, `active`, `disabled` | Surface mixed with primary ink at 4%, 8%, 12%, and 3%; the selected state is distinct from hover. `track` is the recessed segmented-control surface. |
-| Interaction | Emerald: forest `#14532D`; hover `#166534`; pressed `#0B3D20`; brand `#16A34A`; soft `#F0FDF4`; line `#86EFAC`. | Primary actions, links, tab underlines, checked indicators and focus; navigation and filter selection use neutral tints |
-| Evidence | `success`, `warning`, `danger`, `info`; `chart-1..8`, `chart-grid` | Status families carry labelled status; data-viz roles carry measurements |
+| Ground | `background` | One neutral ground behind the rail and around the workspace sheet; white on public and light flow surfaces |
+| Structure | `background-alt`; `panel-tonal`; `well`; `track` | Tonal bands and panels, recessed wells, the segmented-control track |
+| Paper | `panel`, `input`, `elevated`, `surface-inverse` | The workspace sheet, inputs, semantic objects, overlays, tooltips |
+| Ink | `foreground`; `secondary`; `muted`; chrome ladder `ink-soft`, `ink-icon`, `ink-faint` | Titles and values; sentences; metadata. `ink-faint` is decorative only and never carries text |
+| Boundaries | `border-subtle`; `border`; `border-strong`; `border-bold` | A rule inside one surface; the edge of a control, inset panel or overlay; deliberate emphasis; small choice controls and edges on tinted fills |
+| Neutral states | `hover`, `selected`, `active`, `disabled` | The receiving surface mixed with `state-ink` (a green-tinted ink) at 4%, 8%, 12% and 3%, so they stay in the neutral family |
+| Action | `accent`, `accent-hover`, `accent-active`, `accent-fg`, `accent-text`, `accent-soft`, `accent-subtle`, `accent-border`, `selection` | Forest: primary actions, links, tab underlines, checked indicators, focus, the bars of the logo. Never success, never a chart series |
+| Outcome scale | `success`, `warning`, `danger`, `info`, `neutral`, each with `-text` and `-bg` | Every state in the product (see below) |
+| Series | `chart-1..8`; `citation-*` aliases | Categorical identity in charts and legends only |
+| Identity | `brand-google-*` | Google's own mark (sign-in, engine logo); never state |
 
-Hierarchy combines the ground and paper fills with restrained depth. Cards, secondary controls and selected navigation use a one-pixel shadow ring and a close contact shadow; cards add one soft ambient layer. Primary and destructive buttons add a faint top sheen and a ring in their own pressed shade. The workspace sheet uses a quiet frame shadow; focused auth/onboarding sheets use the deeper public frame shadow. In dark mode the ring is 6–8% white, because a drop shadow carries no edge on near-black. Detached menus and dialogs retain their own elevation roles.
+**Outcome scale.** One scale carries run status, score bands, sentiment, alerts and badges; there are no per-feature status palettes. `danger` is bad, `warning` is mixed or partial, `success` is good, `info` is active or in progress, `neutral` is not started, queued or cancelled. Each family is a mark (dots, rings, icons, bars), a `-text` ink that passes 4.5:1 on its `-bg` and on paper, and a quiet `-bg`. The marks separate by lightness as well as hue (bad is dark red, good is mid teal, mixed is light amber, neutral is the palest), so every pair stays apart under deuteranopia and protanopia: ΔL* of at least 15, or ΔE2000 of at least 10 under simulation, checked by `pnpm check:policy`. Success is teal so it never reads as the forest action. Score bands map low → danger, mid → warning, good → success at a lighter step, high → success. Colour is never the only cue: every mark ships with a label or an icon.
 
-The chrome ink ladder separates decoration from reading text. `ink-faint` is only
-for decorative icons paired with a readable label; it must not carry small text.
-All other rungs meet 4.5:1 on their intended neutral surfaces. Names describe the
-role, not a fixed lightness order across themes.
+**Series.** `chart-1..8` is purely categorical and never equals an action or outcome value. Each step holds 3:1 on paper in both themes, and each neighbour stays separable under red–green colour-vision loss, so series are assigned in order. Citation classes are series with fixed meanings in both themes: owned `chart-1`, competitor `chart-2`, third party `chart-8`.
+
+Hierarchy combines the ground and paper fills with restrained depth. Cards, secondary controls and selected navigation use a one-pixel shadow ring and a close contact shadow; cards add one soft ambient layer. Primary and destructive buttons add a faint top sheen and a ring in their own pressed shade. The workspace sheet uses the quiet sheet shadow; focused auth/onboarding sheets and public product frames use the frame shadow (`--elevation-flow`). In dark mode the ring is 6–8% white, because a drop shadow carries no edge on near-black. Detached menus and dialogs retain their own elevation roles.
 
 Category tags use ten independent `--tag-{tone}-{bg,border,text}` triples in
 `globals.css`: blue, purple, green, moss, red, orange, amber, teal, yellow and
@@ -66,192 +67,182 @@ blue and company offerings use purple; colors label categories, never status.
 keyboard/touch support and `aria-expanded`; long labels wrap. Semantic `Badge`
 status dots and their meanings remain separate.
 
-**Borders.** Controls, inset panels, overlays and status objects retain semantic edges. Default cards use an inset hairline without changing their box geometry; table wrappers remain fill-separated. Selected sidebar destinations and segments use a raised neutral face. Tinted inset boxes use their fill as the boundary; status cards retain a hairline to carry meaning. Sections are separated by space. The desktop rail has a subtle dividing edge. Lines use semantic tokens; transparent layers belong only to the centralized elevation recipes.
+**Borders.** Controls, inset panels, overlays and status objects retain semantic edges. Default cards use an inset hairline without changing their box geometry; table wrappers remain fill-separated. Selected sidebar destinations and segments use a raised neutral face. Tinted inset boxes use their fill as the boundary; status cards retain a hairline to carry meaning. Sections are separated by space. Lines use semantic tokens; transparent layers belong only to the centralized elevation recipes.
 
-Reading text must meet 4.5:1 contrast. Use primary ink on selected surfaces when secondary ink would lose contrast. Accent denotes action, never success or positive metric deltas. Success, warning, danger and info denote their corresponding statuses; danger also denotes destructive intent. Metrics use data-viz or neutral signed/directional treatments. Decorative icons and category labels use neutral ink. Dark mode keeps colour concentrated in actions and meaningful evidence. Never communicate meaning through colour alone.
+Reading text must meet 4.5:1 contrast. Use primary ink on selected surfaces when secondary ink would lose contrast. Accent denotes action, never success or positive metric deltas. Metrics use data-viz or neutral signed/directional treatments. Decorative icons and category labels use neutral ink. Dark mode keeps colour concentrated in actions and meaningful evidence. Never communicate meaning through colour alone.
 
-The public website, login and onboarding follow the B2B SaaS category standard at Attio/Linear craft (owner decision, 2026-10-07). `[data-public-surface]` (and `[data-flow-surface]` in light mode) rebinds a white ground, near-black green-tinted ink, a soft neutral band (`background-alt`) and quiet hairlines, and defines three public shadows: `--public-frame-shadow` for product frames and focused sheets, `--public-raised-shadow` for small raised objects (secondary buttons, icon tiles, link cards) and `--public-menu-shadow` for navigation panels. There is no grain, no saturated gradient wash and no dark band. The only texture is a faint dot lattice behind product stages, the closing band and the auth stage, masked so it never sits behind text. Evidence colour lives only inside product views.
+The public website, login and onboarding follow the B2B SaaS category standard at Attio/Linear craft (owner decision, 2026-10-07). `[data-public-surface]` (and `[data-flow-surface]` in light mode) rebinds only the ground, to white; ink, edges, bands and material are the product's own. There is no grain, no saturated gradient wash and no dark band. The only texture is the shared dot lattice (`--lattice`, 16px) behind product stages, the closing band and the auth stage, masked so it never sits behind text. Evidence colour lives only inside product views.
 
-Public geometry: `--radius-marketing-control` (8px) for public buttons and controls; product frames 14px; stages, bento tiles and link cards 16–20px; auth/onboarding sheets 16px. The public container measure (`max-w-7xl` plus `--site-gutter`) is shared by navigation, hero, sections and footer. These roles do not change the authenticated application's 12px `--radius-card` contract.
+Geometry is one ladder on every surface: 4 / 8 / 12 / 16 / full (see Data and geometry). The public container measure (`max-w-7xl` plus `--site-gutter`) is shared by navigation, hero, sections and footer.
 
 ## Token contract
 
 The surface ladder is ground → resting panel → recessed well, with `elevated`
 reserved for detached floating surfaces. State tints follow the surface they
-modify: mix primary ink into that surface at 4% for hover, 8% for selection,
+modify: mix `state-ink` into that surface at 4% for hover, 8% for selection,
 12% for pressed feedback, and 3% for disabled fill. The source surface classes
 own this derivation in `globals.css`. Selected and pressed labels use primary
 ink; dark chrome uses neutral tints rather than an accent wash.
 
-Every application-owned color token has exactly one class and purpose below.
-Light/dark values are the effective product defaults; state values show the
-panel context and rederive on input, well, track, rail and overlay surfaces.
-Public canvases and feature bands retain their separately scoped counterparts.
-`node frontend/scripts/audit-design-tokens.mjs` inventories values and current
-consumers without becoming another value authority.
+The table below is generated from `globals.css` by
+`node frontend/scripts/audit-design-tokens.mjs --write` and checked by
+`pnpm check:policy`; never edit it by hand. Light/dark values are the effective
+product defaults; state values show the panel context. Roles and purposes are
+the Colour section above. Every token must have a consumer.
 
-| Token | Class | Purpose | Position | Light | Dark |
-| --- | --- | --- | --- | --- | --- |
-| `--color-accent` | brand | Sole product action accent | Action layer | `#14532d` | `#76df9c` |
-| `--color-accent-active` | state-tint | Pressed solid action fill | Action layer | `#0b3d20` | `#b2f4c6` |
-| `--color-accent-border` | border | Boundary of a tinted action | Action layer | `#86efac` | `rgb(118 223 156 / 45%)` |
-| `--color-accent-fg` | ink | Label on solid accent | On accent fill | `#ffffff` | `#0d2618` |
-| `--color-accent-hover` | state-tint | Hovered solid action fill | Action layer | `#166534` | `#94ebb0` |
-| `--color-accent-soft` | state-tint | Quiet action or recommendation wash | Action on panel | `#f0fdf4` | `rgb(118 223 156 / 12%)` |
-| `--color-accent-subtle` | state-tint | Stronger action-selection wash | Action on panel | `#dcfce7` | `rgb(118 223 156 / 18%)` |
-| `--color-accent-text` | ink | Readable action/link text | On neutral surfaces | `#14532d` | `#86e5a6` |
-| `--color-active` | state-tint | Pressed neutral surface | Surface + 12% primary ink | `#e2e2e2` | `#2c2f2d` |
-| `--color-background` | surface | Page ground | Ground | `#f4f5f4` | `#0b0d0c` |
-| `--color-background-alt` | surface | Public alternating canvas or neutral inset | Ground/inset | `#f6f7f6` | `#181b19` |
-| `--color-border` | border | Control, inset and overlay boundary | Between surfaces | `#e1e4e2` | `#2b302d` |
-| `--color-border-bold` | border | Small choice-control boundary | Inside panel | `#858d88` | `#737b76` |
-| `--color-border-strong` | border | Emphasized or hovered boundary | Between surfaces | `#cfd4d1` | `#3d433f` |
-| `--color-border-subtle` | border | Divider within one surface | Inside surface | `#eceeed` | `#212522` |
-| `--color-brand-claude` | brand | brand claude identity | Fixed mark or separate public decoration | `#d97757` | `#d97757` |
-| `--color-brand-forest` | brand | brand forest identity | Fixed mark or separate public decoration | `#16a34a` | `#16a34a` |
-| `--color-brand-gemini` | brand | brand gemini identity | Fixed mark or separate public decoration | `#4285f4` | `#4285f4` |
-| `--color-brand-google-blue` | brand | brand google blue identity | Fixed mark or separate public decoration | `#4285f4` | `#4285f4` |
-| `--color-brand-google-green` | brand | brand google green identity | Fixed mark or separate public decoration | `#34a853` | `#34a853` |
-| `--color-brand-google-red` | brand | brand google red identity | Fixed mark or separate public decoration | `#ea4335` | `#ea4335` |
-| `--color-brand-google-yellow` | brand | brand google yellow identity | Fixed mark or separate public decoration | `#fbbc05` | `#fbbc05` |
-| `--color-brand-openai` | brand | brand openai identity | Fixed mark or separate public decoration | `#10a37f` | `#10a37f` |
-| `--color-canvas-soft` | surface | Public alternating soft canvas | Public ground | `#f6f7f6` | `#111412` |
-| `--color-chart-1` | data-viz | Categorical chart series 1 | Observed data layer | `#16a34a` | `#76df9c` |
-| `--color-chart-2` | data-viz | Categorical chart series 2 | Observed data layer | `#00a9c5` | `#75cee1` |
-| `--color-chart-3` | data-viz | Categorical chart series 3 | Observed data layer | `#f59e0b` | `#efc676` |
-| `--color-chart-4` | data-viz | Categorical chart series 4 | Observed data layer | `#ff6e56` | `#f49a8b` |
-| `--color-chart-5` | data-viz | Categorical chart series 5 | Observed data layer | `#9acd32` | `#b8db73` |
-| `--color-chart-6` | data-viz | Categorical chart series 6 | Observed data layer | `#8b5cf6` | `#bca4f6` |
-| `--color-chart-7` | data-viz | Categorical chart series 7 | Observed data layer | `#14532d` | `#9ce5ba` |
-| `--color-chart-8` | data-viz | Categorical chart series 8 | Observed data layer | `#64748b` | `#a3a39d` |
-| `--color-citation-competitor` | data-viz | citation competitor evidence encoding | Observed data layer | `#00a9c5` | `#75cee1` |
-| `--color-citation-owned` | data-viz | citation owned evidence encoding | Observed data layer | `#c15f3c` | `#f49a8b` |
-| `--color-citation-third-party` | data-viz | citation third party evidence encoding | Observed data layer | `#6b6b72` | `#a3a39d` |
-| `--color-danger` | semantic-status | danger status mark | Labelled status layer | `#b42332` | `#f3979e` |
-| `--color-danger-bg` | semantic-status | danger bg | Labelled status layer | `#fff0f1` | `rgb(243 151 158 / 13%)` |
-| `--color-danger-border` | semantic-status | danger border | Labelled status layer | `#f2c6cb` | `rgb(243 151 158 / 38%)` |
-| `--color-danger-fg` | semantic-status | danger fg | Labelled status layer | `#ffffff` | `#350b10` |
-| `--color-danger-solid` | semantic-status | danger solid | Labelled status layer | `#b42332` | `#d95767` |
-| `--color-danger-solid-hover` | semantic-status | danger solid hover | Labelled status layer | `#8f1d29` | `#eb7481` |
-| `--color-danger-text` | semantic-status | danger text | Labelled status layer | `#b42332` | `#f6abb1` |
-| `--color-disabled` | state-tint | Disabled neutral control fill | Surface + 3% primary ink | `#f8f8f8` | `#191c1a` |
-| `--color-elevated` | surface | Detached floating overlay | Above ground/panel | `#ffffff` | `#1b1f1d` |
-| `--color-foreground` | ink | Primary reading text | On neutral surfaces | `#0b0f0d` | `#e1e5e2` |
-| `--color-gsc-clicks` | data-viz | gsc clicks evidence encoding | Observed data layer | `#1a73e8` | `#8ab4f8` |
-| `--color-gsc-ctr` | data-viz | gsc ctr evidence encoding | Observed data layer | `#00897b` | `#4db6ac` |
-| `--color-gsc-impressions` | data-viz | gsc impressions evidence encoding | Observed data layer | `#673ab7` | `#c58af9` |
-| `--color-gsc-position` | data-viz | gsc position evidence encoding | Observed data layer | `#e65100` | `#ff8a65` |
-| `--color-hover` | state-tint | Hovered neutral surface | Surface + 4% primary ink | `#f5f5f5` | `#1b1e1c` |
-| `--color-info` | semantic-status | info status mark | Labelled status layer | `#24476b` | `#8ad4e1` |
-| `--color-info-bg` | semantic-status | info bg | Labelled status layer | `#eef5fa` | `rgb(138 212 225 / 13%)` |
-| `--color-info-border` | semantic-status | info border | Labelled status layer | `#c8d9e8` | `rgb(138 212 225 / 38%)` |
-| `--color-info-text` | semantic-status | info text | Labelled status layer | `#24476b` | `#a5e2eb` |
-| `--color-ink-chip` | ink | Neutral filter labels | On neutral control surfaces | `#3b423e` | `#cbd1cd` |
-| `--color-ink-faint` | ink | Decorative inactive navigation icons only | Beside readable navigation labels | `#8e9690` | `#6d746f` |
-| `--color-ink-icon` | ink | Active navigation icons | On selected neutral surfaces | `#2d332f` | `#dce1de` |
-| `--color-ink-soft` | ink | 13px labels and inactive destinations | On neutral reading surfaces | `#525a55` | `#a6ada9` |
-| `--color-ink-subtle` | ink | 12px captions and navigation group labels | On neutral reading surfaces | `#5c645f` | `#959c98` |
-| `--color-input` | surface | Field interior | Inside panel boundary | `#ffffff` | `#0f1210` |
-| `--color-muted` | ink | Helpers, metadata and disabled labels | On reading surfaces | `#5c645f` | `#959c98` |
-| `--color-neutral-bg` | surface | Neutral badge or progress track | Inside panel | `#eff1f0` | `#222222` |
-| `--color-on-inverse` | ink | Label on inverse surface | On surface-inverse | `#ffffff` | `#0b0d0c` |
-| `--color-overlay-scrim` | surface | Modal backdrop | Between ground and modal | `rgb(11 15 13 / 32%)` | `rgb(0 0 0 / 72%)` |
-| `--color-panel` | surface | Resting content or chrome | On ground | `#ffffff` | `#131614` |
-| `--color-panel-tonal` | surface | Tonal resting panel or control band | On ground/panel | `#f8f9f8` | `#171a18` |
-| `--color-run-analyzing` | semantic-status | Persisted run analyzing mark | Labelled status layer | `#c15f3c` | `#efc676` |
-| `--color-run-cancelled` | semantic-status | Persisted run cancelled mark | Labelled status layer | `#6b6b72` | `#a3a39d` |
-| `--color-run-completed` | semantic-status | Persisted run completed mark | Labelled status layer | `#9acd32` | `#b8db73` |
-| `--color-run-draft` | semantic-status | Persisted run draft mark | Labelled status layer | `#6b6b72` | `#a3a39d` |
-| `--color-run-failed` | semantic-status | Persisted run failed mark | Labelled status layer | `#ff6e56` | `#f49a8b` |
-| `--color-run-partial` | semantic-status | Persisted run partial mark | Labelled status layer | `#f59e0b` | `#efc676` |
-| `--color-run-queued` | semantic-status | Persisted run queued mark | Labelled status layer | `#6b6b72` | `#a3a39d` |
-| `--color-run-running` | semantic-status | Persisted run running mark | Labelled status layer | `#00a9c5` | `#75cee1` |
-| `--color-score-good-ring` | data-viz | score good ring evidence encoding | Observed data layer | `#00a9c5` | `#75cee1` |
-| `--color-score-good-text` | data-viz | score good text evidence encoding | Observed data layer | `#155e75` | `#a5e2eb` |
-| `--color-score-high` | data-viz | score high evidence encoding | Observed data layer | `#9acd32` | `#b8db73` |
-| `--color-score-high-ring` | data-viz | score high ring evidence encoding | Observed data layer | `#9acd32` | `#b8db73` |
-| `--color-score-high-text` | data-viz | score high text evidence encoding | Observed data layer | `#3f6212` | `#a4edbd` |
-| `--color-score-low-ring` | data-viz | score low ring evidence encoding | Observed data layer | `#ff6e56` | `#f49a8b` |
-| `--color-score-low-text` | data-viz | score low text evidence encoding | Observed data layer | `#9a3412` | `#f6abb1` |
-| `--color-score-mid-ring` | data-viz | score mid ring evidence encoding | Observed data layer | `#f59e0b` | `#efc676` |
-| `--color-score-mid-text` | data-viz | score mid text evidence encoding | Observed data layer | `#b45309` | `#f7d99e` |
-| `--color-secondary` | ink | Secondary reading text | On neutral surfaces | `#3b423e` | `#bfc5c1` |
-| `--color-selected` | state-tint | Selected neutral surface | Surface + 8% primary ink | `#ebecec` | `#232724` |
-| `--color-selection` | state-tint | Native text selection highlight | On reading surface | `#bbf7d0` | `rgb(118 223 156 / 35%)` |
-| `--color-selection-fg` | ink | Text within native selection | On selection highlight | `#0b0f0d` | `#faf9f5` |
-| `--color-sentiment-negative` | data-viz | sentiment negative evidence encoding | Observed data layer | `#ff6e56` | `#f49a8b` |
-| `--color-sentiment-negative-bg` | data-viz | sentiment negative bg evidence encoding | Observed data layer | `#fff3f0` | `rgb(243 151 158 / 13%)` |
-| `--color-sentiment-negative-text` | data-viz | sentiment negative text evidence encoding | Observed data layer | `#9a3412` | `#f6abb1` |
-| `--color-sentiment-neutral` | data-viz | sentiment neutral evidence encoding | Observed data layer | `#6b6b72` | `#a3a39d` |
-| `--color-sentiment-neutral-bg` | data-viz | sentiment neutral bg evidence encoding | Observed data layer | `#f4f4f1` | `#222222` |
-| `--color-sentiment-neutral-text` | data-viz | sentiment neutral text evidence encoding | Observed data layer | `#3a3a40` | `#bfc5c1` |
-| `--color-sentiment-positive` | data-viz | sentiment positive evidence encoding | Observed data layer | `#9acd32` | `#b8db73` |
-| `--color-sentiment-positive-bg` | data-viz | sentiment positive bg evidence encoding | Observed data layer | `#f4f8ec` | `rgb(128 223 162 / 13%)` |
-| `--color-sentiment-positive-text` | data-viz | sentiment positive text evidence encoding | Observed data layer | `#3f6212` | `#a4edbd` |
-| `--color-shell` | surface | Workspace/focused-flow ground | Ground | `#f4f5f4` | `#0b0d0c` |
-| `--color-shell-alt` | surface | Stronger shell inset | Inside ground | `#eceeed` | `#121513` |
-| `--color-sidebar` | surface | Navigation rail | Below ground | `#f4f5f4` | `#0b0d0c` |
-| `--color-success` | semantic-status | success status mark | Labelled status layer | `#166534` | `#80dfa2` |
-| `--color-success-bg` | semantic-status | success bg | Labelled status layer | `#edf7ed` | `rgb(128 223 162 / 13%)` |
-| `--color-success-text` | semantic-status | success text | Labelled status layer | `#166534` | `#a4edbd` |
-| `--color-surface-inverse` | surface | Inverse floating tooltip surface | Floating overlay | `#0b0f0d` | `#e1e5e2` |
-| `--color-tile-blue` | brand | tile blue identity | Fixed mark or separate public decoration | `#e0f2fe` | `#e0f2fe` |
-| `--color-tile-blue-ink` | brand | tile blue ink identity | Fixed mark or separate public decoration | `#0284c7` | `#0284c7` |
-| `--color-tile-green` | brand | tile green identity | Fixed mark or separate public decoration | `#dcfce7` | `#dcfce7` |
-| `--color-tile-green-ink` | brand | tile green ink identity | Fixed mark or separate public decoration | `#16a34a` | `#16a34a` |
-| `--color-tile-indigo` | brand | tile indigo identity | Fixed mark or separate public decoration | `#ede9fe` | `#ede9fe` |
-| `--color-tile-indigo-ink` | brand | tile indigo ink identity | Fixed mark or separate public decoration | `#4f46e5` | `#4f46e5` |
-| `--color-tile-purple` | brand | tile purple identity | Fixed mark or separate public decoration | `#ffede8` | `#ffede8` |
-| `--color-tile-purple-ink` | brand | tile purple ink identity | Fixed mark or separate public decoration | `#ea580c` | `#ea580c` |
-| `--color-track` | surface | Recessed segmented-control track | Inside control | `#eceeed` | `#0f1210` |
-| `--color-warning` | semantic-status | warning status mark | Labelled status layer | `#8a4600` | `#f2c879` |
-| `--color-warning-bg` | semantic-status | warning bg | Labelled status layer | `#fff5db` | `rgb(242 200 121 / 13%)` |
-| `--color-warning-text` | semantic-status | warning text | Labelled status layer | `#8a4600` | `#f7d99e` |
-| `--color-well` | surface | Recessed evidence or inset | Inside panel | `#eff1f0` | `#0e100f` |
+<!-- generated:tokens:start -->
+| Token | Light | Dark |
+| --- | --- | --- |
+| `--color-accent` | `#14532d` | `#76df9c` |
+| `--color-accent-active` | `#0b3d20` | `#b2f4c6` |
+| `--color-accent-border` | `#86efac` | `rgb(118 223 156 / 45%)` |
+| `--color-accent-fg` | `#ffffff` | `#0d2618` |
+| `--color-accent-hover` | `#166534` | `#94ebb0` |
+| `--color-accent-soft` | `#f0fdf4` | `rgb(118 223 156 / 12%)` |
+| `--color-accent-subtle` | `#dcfce7` | `rgb(118 223 156 / 18%)` |
+| `--color-accent-text` | `#14532d` | `#86e5a6` |
+| `--color-active` | `#e4e8e6` | `#2c2f2d` |
+| `--color-background` | `#f4f5f4` | `#0b0d0c` |
+| `--color-background-alt` | `#f6f7f6` | `#181b19` |
+| `--color-border` | `#e1e4e2` | `#2b302d` |
+| `--color-border-bold` | `#858d88` | `#737b76` |
+| `--color-border-strong` | `#cfd4d1` | `#3d433f` |
+| `--color-border-subtle` | `#eceeed` | `#212522` |
+| `--color-brand-google-blue` | `#4285f4` | `#4285f4` |
+| `--color-brand-google-green` | `#34a853` | `#34a853` |
+| `--color-brand-google-red` | `#ea4335` | `#ea4335` |
+| `--color-brand-google-yellow` | `#fbbc05` | `#fbbc05` |
+| `--color-chart-1` | `#16a34a` | `#4ade80` |
+| `--color-chart-2` | `#2563eb` | `#60a5fa` |
+| `--color-chart-3` | `#d97706` | `#fbbf24` |
+| `--color-chart-4` | `#db2777` | `#f472b6` |
+| `--color-chart-5` | `#0891b2` | `#22d3ee` |
+| `--color-chart-6` | `#7c3aed` | `#a78bfa` |
+| `--color-chart-7` | `#ea580c` | `#fb923c` |
+| `--color-chart-8` | `#6b746f` | `#9aa29d` |
+| `--color-citation-competitor` | `#2563eb` | `#60a5fa` |
+| `--color-citation-owned` | `#16a34a` | `#4ade80` |
+| `--color-citation-third-party` | `#6b746f` | `#9aa29d` |
+| `--color-danger` | `#b42332` | `#ef6b73` |
+| `--color-danger-bg` | `#fff0f1` | `rgb(243 151 158 / 13%)` |
+| `--color-danger-border` | `#f2c6cb` | `rgb(243 151 158 / 38%)` |
+| `--color-danger-fg` | `#ffffff` | `#350b10` |
+| `--color-danger-solid` | `#b42332` | `#d95767` |
+| `--color-danger-solid-hover` | `#8f1d29` | `#eb7481` |
+| `--color-danger-text` | `#b42332` | `#f6abb1` |
+| `--color-disabled` | `#f8f9f9` | `#191c1a` |
+| `--color-elevated` | `#ffffff` | `#1b1f1d` |
+| `--color-foreground` | `#0b0f0d` | `#e1e5e2` |
+| `--color-hover` | `#f6f7f7` | `#1b1e1c` |
+| `--color-info` | `#2f6fdb` | `#7aa7f5` |
+| `--color-info-bg` | `#eef4fd` | `rgb(122 167 245 / 13%)` |
+| `--color-info-border` | `#c5d7f5` | `rgb(122 167 245 / 38%)` |
+| `--color-info-text` | `#1d4fae` | `#a9c6f8` |
+| `--color-ink-faint` | `#8e9690` | `#6d746f` |
+| `--color-ink-icon` | `#2d332f` | `#dce1de` |
+| `--color-ink-soft` | `#525a55` | `#a6ada9` |
+| `--color-input` | `#ffffff` | `#0f1210` |
+| `--color-muted` | `#5c645f` | `#959c98` |
+| `--color-neutral` | `#aab2ad` | `#5f6762` |
+| `--color-neutral-bg` | `#eff1f0` | `#212523` |
+| `--color-on-inverse` | `#ffffff` | `#0b0d0c` |
+| `--color-overlay-scrim` | `rgb(11 15 13 / 32%)` | `rgb(0 0 0 / 72%)` |
+| `--color-panel` | `#ffffff` | `#131614` |
+| `--color-panel-tonal` | `#f8f9f8` | `#171a18` |
+| `--color-secondary` | `#3b423e` | `#bfc5c1` |
+| `--color-selected` | `#edefee` | `#232724` |
+| `--color-selection` | `#bbf7d0` | `rgb(118 223 156 / 35%)` |
+| `--color-selection-fg` | `#0b0f0d` | `#f1f4f2` |
+| `--color-state-ink` | `#1c3d2c` | `#e1e5e2` |
+| `--color-success` | `#0d9488` | `#2ec4b0` |
+| `--color-success-bg` | `#ecf8f5` | `rgb(46 196 176 / 13%)` |
+| `--color-success-text` | `#0f766e` | `#7fe0d0` |
+| `--color-surface-inverse` | `#0b0f0d` | `#e1e5e2` |
+| `--color-track` | `#eceeed` | `#0f1210` |
+| `--color-warning` | `#e0900f` | `#f2c879` |
+| `--color-warning-bg` | `#fff5db` | `rgb(242 200 121 / 13%)` |
+| `--color-warning-text` | `#8a4600` | `#f7d99e` |
+| `--color-well` | `#eff1f0` | `#0e100f` |
+<!-- generated:tokens:end -->
 
 ## Typography
 
-Public display headings (hero, page title, section heading) use weight 500 with tracking that tightens as size grows (about −0.024em to −0.032em) in Sentient; feature and small headings use 500 at about −0.011em. Product-app headings keep normal tracking.
+Public display headings (hero, page title, section heading) use weight 500 with tracking that tightens as size grows (about −0.024em to −0.032em) in Sentient; the feature heading uses 500 at about −0.011em. Product-app headings keep normal tracking.
 
 Use Satoshi for text, figures and product page titles, and Sentient for public and focused-flow headings only, never for dense UI or data; metrics, dates, ranks, and percentages explicitly use tabular numerals, not monospace. Numbers retain their data roles rather than display roles. Weights are 400 (sentences) and 500 (labels, controls, badges, titles, figures); there is no heavier rung, so titles separate from labels by size. Product titles and figures tighten their tracking as size grows (page title −0.016em, figure −0.02em, section title −0.011em). Do not assemble page-local size/weight/ink hierarchies.
 
+Above 14px, adjacent rungs on a surface differ by at least 2px; 1px steps do not read as different levels. Below body, 12 / 13 / 14 is the one dense trio (caption, label, control or nav), told apart by weight and ink as well as size, on every surface. No stylesheet sets a literal `font-size` or `line-height` outside the role definitions; everything else uses `var(--text-*)`.
+
+The sizes below are generated from the role definitions in `globals.css` and `website-type.css`.
+
+<!-- generated:type:start -->
+| Role | Surface | Size / line height | ≥768px |
+| --- | --- | --- | --- |
+| `.type-badge` | product | `12px / 16px` | — |
+| `.type-body` | product | `14px / 20px` | — |
+| `.type-caption` | product | `12px / 16px` | — |
+| `.type-control` | product | `13px / 18px` | — |
+| `.type-delta` | product | `12px / 16px` | — |
+| `.type-figure` | product | `24px / 32px` | — |
+| `.type-figure-sm` | product | `16px / 24px` | — |
+| `.type-item-title` | product | `14px / 20px` | — |
+| `.type-label` | product | `13px / 18px` | — |
+| `.type-page-title` | product | `20px / 28px` | — |
+| `.type-section-title` | product | `16px / 24px` | — |
+| `.flow-group-title` | public | `18px / 26px` | — |
+| `.flow-help` | public | `14px / 20px` | — |
+| `.flow-meta` | public | `13px / 18px` | — |
+| `.flow-title` | public | `30px / 36px` | — |
+| `.website-article-title` | public | `clamp(20px, 5.6vw, 32px) / inherit` | — |
+| `.website-body` | public | `16px / 26px` | — |
+| `.website-data-display` | public | `30px / 36px` | `36px / 42px` |
+| `.website-eyebrow` | public | `13px / 18px` | — |
+| `.website-feature-heading` | public | `18px / 26px` | — |
+| `.website-hero-display` | public | `clamp(28px, 8.6vw, 32px) / 1.04` | `clamp(32px, 4.2vw + 9.6px, 64px) / inherit` |
+| `.website-label` | public | `13px / 18px` | — |
+| `.website-lead` | public | `18px / 28px` | `20px / 30px` |
+| `.website-nav` | public | `14px / 20px` | — |
+| `.website-page-title` | public | `clamp(22px, 6.4vw, 32px) / 1.15` | `48px / 52px` |
+| `.website-section-heading` | public | `30px / 36px` | `42px / 46px` |
+<!-- generated:type:end -->
+
 ### Website and focused-flow ladder
 
-Roles own all typography properties. The general ladder is mobile-first: base below 700px, with 700px and 981px step-ups where defined. Ordinary paragraphs stay at or above 14px, except the compact homepage editorial ladder below 540px, where short supporting paragraphs step down by 2px. Prose measure is 45–75 characters, except the documentation article column, which can reach 85ch to sit closer to its side navigation; long paragraphs never use accent ink. Body tracking is zero; large text uses calm leading.
+Roles own all typography properties. The ladder is mobile-first with one step at 768px. Ordinary paragraphs stay at or above 14px. Prose measure is 45–75 characters, except the documentation article column, which can reach 85ch to sit closer to its side navigation; long paragraphs never use accent ink. Body tracking is zero or slightly negative; large text uses calm leading.
 
-| Role | Size / line height | Weight | Tracking | Ink |
-| --- | --- | --- | --- | --- |
-| Flow group title | 16/24px | 500 | -0.2px | `ink-strong` |
-| Flow help | 14/20px | 400 | 0 | `muted` |
-| Flow metadata | 12/16px | 500 | 0 | `muted`, tabular |
-| Lead | 18/28px → 20/30px at 768px | 400 | −0.011em | `muted` on public pages |
-| Large body | 16/26px | 400 | −0.006em | `secondary` |
-| Body baseline | 15/24px | 400 | 0 | `secondary` |
-| Navigation/actions | 14/20px | 500 | 0 | `ink` or inverse |
-| Label/caption | 13/18px | 500 | 0 | `muted` |
+| Role | Class | Job |
+| --- | --- | --- |
+| Hero display | `website-hero-display` | The homepage headline; tracks the viewport on phones |
+| Page title | `website-page-title` (`website-article-title` on articles) | One H1 per page |
+| Section heading | `website-section-heading` | A section's H2 |
+| Feature heading | `website-feature-heading` | Card, tile, feature-row and FAQ headings |
+| Lead | `website-lead` | The sentence under a page or section heading |
+| Body | `website-body` | Paragraphs |
+| Navigation/actions | `website-nav` | Header links and inline actions |
+| Label | `website-label`, `website-eyebrow` | Names a value, a list group or a breadcrumb |
+| Data display | `website-data-display` | Pricing figures only; tabular |
+| Flow rungs | `flow-title`, `flow-group-title`, `flow-help`, `flow-meta` | The focused flow: page-title scale, feature heading, small body (14) and label (13) |
 
-Display rungs track the viewport on phones so headlines stay short: the hero and page titles hold two lines from 360px, and long article titles (`website-article-title`) three. The hero tops out at 64px on desktop.
-
-`website-data-display` is pricing-only: Satoshi 500, tabular, 30/36px → 40/46px at 768px. Never apply it to prose or headings.
+Display rungs track the viewport on phones so headlines stay short: the hero and page titles hold two lines from 360px, and long article titles three. The hero tops out at 64px on desktop. Embedded product previews (`.app-type-scale`) reset to the product ladder below.
 
 ### Product app ladder
 
 The roles are `.type-*` classes in `globals.css` (components layer, so a status utility such as `text-danger-text` can still set the ink). Reach them through `textRole(role, layoutClasses?)` from `components/ui/typography.tsx` or the class itself; name the text's job rather than overriding its typography. Call sites outside `components/ui/` never set a size, leading, tracking, face or weight.
 
-| Role | Class | Job | Size / line height | Weight | Ink |
-| --- | --- | --- | --- | --- | --- |
-| `pageTitle` | `type-page-title` | The route H1, one per page | 20/28, display, −0.016em | 500 | `foreground` |
-| `figure` | `type-figure` | A metric value | 24/32, display, tabular | 500 | `foreground` |
-| `sectionTitle` | `type-section-title` | Section, card, drawer and dialog headings | 16/24 | 500 | `foreground` |
-| `figureSm` | `type-figure-sm` | A value in a dense row or cell | 16/24, tabular | 500 | `foreground` |
-| `itemTitle` | `type-item-title` | Row, list-item and insight titles | 14/20 | 500 | `foreground` |
-| `body` | `type-body` | Sentences, descriptions, table cells | 14/20 | 400 | `secondary` |
-| `control` | `type-control` | Buttons, navigation, tabs, links | 13/18 | 500 | by state |
-| `label` | `type-label` | Names a value: metric, field and column labels | 13/18 | 500 | `ink-soft` |
-| `caption` | `type-caption` | Timestamps, counts, help, footnotes | 12/16 | 400 | `ink-subtle` |
-| `badge` | `type-badge` | Badges, chips, counts, key hints | 12/16 | 500 | the tone |
-| `delta` | `type-delta` | Change indicator | 12/16, tabular | 500 | the caller's tone |
-| `emphasis` | `type-emphasis` | A value inside text that owns its size | inherited | 500 | `foreground` |
+| Role | Class | Job | Ink |
+| --- | --- | --- | --- |
+| `pageTitle` | `type-page-title` | The route H1, one per page; display face, −0.016em | `foreground` |
+| `figure` | `type-figure` | A metric value; tabular | `foreground` |
+| `sectionTitle` | `type-section-title` | Section, card, drawer and dialog headings | `foreground` |
+| `figureSm` | `type-figure-sm` | A value in a dense row or cell; tabular | `foreground` |
+| `itemTitle` | `type-item-title` | Row, list-item and insight titles | `foreground` |
+| `body` | `type-body` | Sentences, descriptions, table cells | `secondary` |
+| `control` | `type-control` | Buttons, navigation, tabs, links | by state |
+| `label` | `type-label` | Names a value: metric, field and column labels | `ink-soft` |
+| `caption` | `type-caption` | Timestamps, counts, help, footnotes | `muted` |
+| `badge` | `type-badge` | Badges, chips, counts, key hints | the tone |
+| `delta` | `type-delta` | Change indicator; tabular | the caller's tone |
+| `emphasis` | `type-emphasis` | A value inside text that owns its size | `foreground` |
 
 The ladder is strictly ordered: a section title never out-sizes the page title and a caption never out-sizes the value it describes. A missing figure is the muted dash at the figure's own role (`MetricValue`), so absence sits where the value would. Rendered Markdown uses `.prose-content`, built from the same rungs (reading text 16/24, compact 14/20). Availability labels in running text use `UnavailableValue`.
 
@@ -263,9 +254,26 @@ The ladder is strictly ordered: a section title never out-sizes the page title a
 | Compact topbar | — | 56px |
 | Content gutter | 32px | 24px / 16px |
 | Navigation row / tabs | 32px | 32px |
-| Control (small / default / large) | 28 / 32 / 36px | 28 / 32 / 36px |
-| Marketing CTA (default / homepage) | 34 / 44px minimum | Text width at 540px and below |
 | Table row (standard / dense) | 36 / 32px | Same roles or labelled record layout |
+
+Controls share one height ladder on every surface (generated below): the product's dense `sm` rung, then 32 / 36 / 44. Public buttons, marketing CTAs, flow buttons and the docs CTA use 36 with 14px text; 44 is the homepage hero CTA and the phone touch rung of the flow action bar. At 540px and below public CTAs take their text width.
+
+<!-- generated:controls:start -->
+| Token | Value |
+| --- | --- |
+| `--nav-item-height` | `32px` |
+| `--control-height-sm` | `28px` |
+| `--control-height-md` | `32px` |
+| `--control-height-lg` | `36px` |
+| `--control-height-xl` | `44px` |
+| `--menu-item-height` | `32px` |
+| `--badge-height-sm` | `20px` |
+| `--badge-height-md` | `24px` |
+| `--tab-height` | `32px` |
+| `--table-row-height` | `36px` |
+| `--table-row-height-dense` | `32px` |
+| `--table-header-height` | `32px` |
+<!-- generated:controls:end -->
 
 Metric columns retain centred tabular figures with `numeric`; ordinary numeric columns can use `numeric="end"` for trailing alignment. Headers and cells use the same shared alignment option. Text columns stay left-aligned.
 
@@ -275,17 +283,29 @@ Website Overview, Pages, and page details use `components/site-health/audit-metr
 
 Analytical content caps at 1392px; form-first workflow content caps at 1040px while retaining full-width page bands. Two-column pages pick a role from `splitPaneClasses` in `components/ui/workspace.tsx`, never a ratio: `list-detail` (`--pane-list-detail`, a selectable list beside the selection's evidence) or `main-aside` (`--pane-main-aside`, the primary surface beside supporting context). Both stack below `lg`. A route's loading, read-error and first-use empty states render inside `PageShell`, so the identity band never disappears. Spacing is the 4px grid — 4, 8, 12, 16, 20, 24, 32, 40, 48, 64 — plus 2px for hairline insets only; six-, ten- and fourteen-pixel steps are not used. Each rhythm role names one step: label to value 4, icon to text 8, title to content 12, card to card 16, card padding 16, page gutter 32, section to section 24.
 
-| Geometry role | Value | Use |
-| --- | --- | --- |
-| `--radius-control` | 8px | Controls and fields |
-| `--radius-card` | 12px | Cards and semantic objects |
-| `--radius-overlay` | 12px | Menus, tooltips, dialogs, drawers |
-| `rounded-xs` | 4px | Chart bars, skeletons, inline code |
-| `rounded-full` | Full | Pills, badges, dots, counts, filter toggles |
+The radius ladder is 4 / 8 / 12 / 16 / full on every surface, generated below. Tailwind's default radius scale is cleared, and no stylesheet sets a literal `border-radius`.
+
+<!-- generated:radii:start -->
+| Token | Value |
+| --- | --- |
+| `--radius-xs` | `4px` |
+| `--radius-control` | `8px` |
+| `--radius-card` | `12px` |
+| `--radius-lg` | `16px` |
+| `--radius-full` | `9999px` |
+<!-- generated:radii:end -->
+
+| Role | Use |
+| --- | --- |
+| `--radius-xs` (`rounded-xs`) | Chart bars, skeletons, inline code, badges |
+| `--radius-control` | Buttons, fields, rows, chips, tabs, menu items |
+| `--radius-card` | Cards, semantic objects, menus, tooltips, dialogs, drawers, popovers |
+| `--radius-lg` | The app workspace sheet and focused flow sheets, public product frames and stages, bento tiles, link cards, plan cards |
+| `--radius-full` (`rounded-full`) | Pills, dots, counts, avatars, filter toggles |
 
 Vertical rhythm belongs to the container: `Stack` from `components/ui/layout.tsx` or container `gap`, not child `mt-*`. Its rungs are `section` 24px, `workspace` 16px, `compact` 12px, and `tight` 4px. A 2px optical nudge, sized glyph, or negative-margin overlap remains allowed.
 
-Marketing subpages and the homepage use `--section-y`: 56px base, 80px from 768px, 96px from 1280px. Adjacent homepage sections of the same tone share one rhythm rather than stacking both paddings. Auth/onboarding use `[data-flow-surface]` geometry from `website-type.css`: 56px bar, centred task measure, 16px mobile gutter, shared control radius, and shared compact controls on every viewport. The flow shell owns its scrolling main region and action bar.
+Marketing subpages and the homepage use `--section-y`: 72px base, 104px from 768px, 128px from 1280px. Adjacent homepage sections of the same tone share one rhythm rather than stacking both paddings. Public stylesheets keep the same 4px grid as the product (checked by `pnpm check:policy`). Auth/onboarding use `[data-flow-surface]` geometry from `website-type.css`: a 64px bar (56px on phones and short laptops), centred task measure, 16px mobile gutter, shared control radius and the shared control ladder. The flow shell owns its scrolling main region and action bar.
 
 ### Availability vocabulary
 
@@ -312,7 +332,7 @@ State a shared reason once, on the column header or the section, not in every ce
 
 Use sections, ledgers, tables, and split workspaces. Cards support architecture; they do not replace it. Recommendations show impact, deterministic priority factors, scope, status, and persisted evidence; never invent confidence, effort, ownership, or causality.
 
-The app uses a floating sheet (owner decision, 2026-10-07). The desktop sidebar shares the shell ground and draws no edge; `.app-pane-workspace` is one white sheet inset `--workspace-inset` (8px) from the viewport and the rail, with the 14px workspace radius on all four corners and the quiet sheet shadow. The rail starts one inset down so its rows line up with the sheet's bands. Current destinations lift to paper; the Dashboard/Agent selector shares the recessed segment recipe. Cards use the `panel` fill and shared elevation; bare tables carry the `table-frame` hairline ring, which drops inside a card or dialog. Below 981px the workspace runs edge-to-edge without radius, inset or shadow, under a paper topbar with a hairline. Document scrolling and content overflow stay unchanged; the sheet clips its corners without becoming a scroll container. Auth and onboarding use one rounded, elevated paper task column with unboxed internal groups, including at mobile widths where gutters remain.
+The app uses a floating sheet (owner decision, 2026-10-07). The desktop sidebar shares the shell ground and draws no edge; `.app-pane-workspace` is one white sheet inset `--workspace-inset` (8px) from the viewport and the rail, with the 16px `--radius-lg` on all four corners and the quiet sheet shadow. The rail starts one inset down so its rows line up with the sheet's bands. Current destinations lift to paper; the Dashboard/Agent selector shares the recessed segment recipe. Cards use the `panel` fill and shared elevation; bare tables carry the `table-frame` hairline ring, which drops inside a card or dialog. Below 981px the workspace runs edge-to-edge without radius, inset or shadow, under a paper topbar with a hairline. Document scrolling and content overflow stay unchanged; the sheet clips its corners without becoming a scroll container. Auth and onboarding use one rounded, elevated paper task column with unboxed internal groups, including at mobile widths where gutters remain.
 
 Overview sections, Website metric cards/page tables, Actions lists, and Prompts tables consume their existing shared owners; only semantic cards acquire the card elevation. The desktop account trigger sits on the route's first row; below 981px the 56px compact topbar adds the menu trigger, route title and focus-managed off-canvas drawer. Retain every critical mobile action; tables become labelled records, and filters/evidence use full-height sheets.
 
@@ -390,7 +410,9 @@ Cookie consent is a compact bottom-right floating panel with equal-width Reject 
 
 Auth/onboarding use the website type ladder and shared focus treatment. Their flow/sticky action bars use white paper and a single separating edge against the neutral ground; the task column is an elevated `.app-pane` with 16px corners, with unboxed internal groups separated by space/titles. Onboarding adds three-step progress. Review directly confirms category, buyer type, market scope, owned domains, and competitors; the project is created only after confirmation of visible structured ICP facts, and onboarding generates no prompts. No new colour family, decorative glow, nested card, or competitor mutation. Controls may use the shared neutral sheen. Forest marks the primary action, current step, and selected answer without changing font weight.
 
-Product previews may change only layout, typography, colour, border, radius, or elevation; strings, scripted content, factual claims, and workflows remain unchanged without approval.
+Product previews render on the product's own ladder: 14px body and the `.type-*` sizes for captions and badges, 8px controls and rows, 12px cards and panels, the product control heights. They may change only layout, typography, colour, border, radius, or elevation; strings, scripted content, factual claims, and workflows remain unchanged without approval.
+
+Shared public objects use one card recipe: link cards, plan cards, the review card and docs pagination take `--radius-lg` and the raised `--elevation-card` edge. Callouts use one treatment across docs and marketing.
 
 ### Documentation
 
@@ -411,7 +433,7 @@ motion or alternate design system is introduced.
 
 ### Controls
 
-Shared buttons use the 8px control radius and the `control` type role. Small controls use `--control-height-sm` (28px), defaults use `--control-height-md` (32px), and large page actions use `--control-height-lg` (36px), on every viewport. Page control bands rebind the default role to small so buttons and all select-family triggers align. Marketing's separately owned `marketing` Button size remains 48px minimum; marketing primitives retain their own public geometry.
+Shared buttons use the 8px control radius and the `control` type role. Small controls use `--control-height-sm` (28px), defaults use `--control-height-md` (32px), and large page actions use `--control-height-lg` (36px), on every viewport. Page control bands rebind the default role to small so buttons and all select-family triggers align. Public surfaces use the same ladder at 14px text: public `md`/`lg` buttons and marketing CTAs are 36px, the homepage hero CTA (`marketing` size) is `--control-height-xl` (44px).
 
 Controls need direct labels, immediate pressed feedback and central keyboard focus. Focus paints the existing border rather than adding an outside perimeter. `.focus-input` changes its border to accent; text entry inside `.focus-frame` changes only the frame's border. Auxiliary buttons show their own focus edge without highlighting the surrounding field. Other controls use a 1px accent outline inset by 1px, aligned with their edge; filled primary/destructive actions use their high-contrast label ink. All treatments key on `:focus-visible`. The Agent composer's textarea owns focus, not its outer form. Disabled controls have no outline. Higher contrast uses a dotted edge; forced colours use system Highlight. Invalid controls retain a danger border during hover and focus, paired by the form owner with `aria-invalid` and descriptive recovery text. Placeholder-only labels are forbidden. Glow and bespoke component focus recipes are retired.
 
@@ -435,15 +457,15 @@ Confirmed first-use analytical states omit filters, charts, and table reservatio
 
 ### Documentation
 
-Docs uses a white reading surface, a 240px navigation column, a 216px contents rail and a 46rem article column. Desktop gutters are 20–40px; the contents rail collapses below 1200px, the tabs wrap below 900px and navigation collapses below 768px. Section tabs and navigation groups use Lucide icons. The current page is the only accent: an accent-soft row with a forest rail in navigation, a forest edge in the contents rail, and the article's group label above its title. Tables and code sit in framed panels; notes are forest-railed callouts; previous/next links are raised cards.
+Docs uses a white reading surface, a 240px navigation column, a 216px contents rail and a 46rem article column. Desktop gutters follow `--site-gutter`; the contents rail collapses below 1200px, the tabs wrap below 900px and navigation collapses below 768px. Section tabs and navigation groups use Lucide icons. The current page is the only accent: an accent-soft row with a forest rail in navigation, a forest edge in the contents rail, and the article's group label above its title. Tables and code sit in framed panels; notes are forest-railed callouts; previous/next links are raised cards.
 
 The contents panels include H2/H3 entries, omit leading step-number prefixes from link labels, and retain authored headings and anchor IDs. Active-heading tracking is progressive enhancement: ordinary anchors remain usable without JavaScript. Existing quotes, code and table headers use semantic tinted surfaces. Search, generated tool references, keyboard access, CSP and print support remain intact.
 
 ### Navigation and overlays
 
 - **Navigation:** current sidebar locations use a raised `panel` face with primary label/icon ink; hover uses `hover`, pressed feedback uses `active`. Preserve contrast and avoid translation. Page controls sit on a tonal band; identity and tab navigation bands stay on paper. Selected tabs use the theme's accent underline.
-- **Menus:** shared panel/item recipes, `shadow-overlay`, 12px overlay radius, short system-curve entrance. Filters/page-kind selectors use shared custom Radix menus, not browser-native `<select>` popups. Single-select filters use radio items. Feature components never import Radix directly.
-- **Sheets/dialogs:** `components/ui/drawer.tsx` owns right-side modal sheets; use `shadow-modal` and the shared overlay radius. Scrim dims/locks the page; outside click, Escape, and close dismiss. Restore trigger focus, including controlled dialogs. Owners provide padding/footer separation; consumers do not recreate chrome. Tooltips use `shadow-overlay` and the same 12px radius. Features own no shadow recipes.
+- **Menus:** shared panel/item recipes, `shadow-overlay`, 12px card radius, short system-curve entrance. Filters/page-kind selectors use shared custom Radix menus, not browser-native `<select>` popups. Single-select filters use radio items. Feature components never import Radix directly.
+- **Sheets/dialogs:** `components/ui/drawer.tsx` owns right-side modal sheets; use `shadow-modal` and the shared card radius. Scrim dims/locks the page; outside click, Escape, and close dismiss. Restore trigger focus, including controlled dialogs. Owners provide padding/footer separation; consumers do not recreate chrome. Tooltips use `shadow-overlay` and the same 12px radius. Features own no shadow recipes.
 - **Selection:** underline tabs navigate views or mutually exclusive tables with keyboard navigation and preserved selected-tab focus. Segmented controls use the recessed `track` for compact single-select changes; selected items use a raised neutral `panel` face and primary ink; unselected items use secondary ink and the distinct hover tint. Segment labels use the `badge` role (12/16, 500) so a page's filter row stays one row. Tabs and segments stay on a single row and scroll when labels exceed the available width; keyboard focus reveals the focused option. Filled tabs share spare width without shrinking below their labels; shared UI filter pills handle independent/multi-select filters.
 - **Analytical loading:** interval changes retain prior analytical content while the new persisted projection loads. Mark the region busy with compact feedback; no replacement skeleton or labels describing data not yet received.
 
@@ -463,15 +485,15 @@ The contents panels include H2/H3 entries, omit leading step-number prefixes fro
 
 Focus uses the central recipe for every interactive family. Invalid states apply where the existing component API supports validation; this refresh does not add props or validation policy to choice/navigation/status owners.
 
-Only `shadow-none`, `shadow-overlay` and `shadow-modal` utilities are available to product consumers. Shared material classes own resting elevation: `surface-card`, `control-raised`, `selection-track`, `selection-raised` and `shell-link`; feature call sites do not author shadows. Their `--elevation-*` recipes live in `globals.css`, including dark-mode overrides. Detached menus/popovers/tooltips/palette use overlay, dialogs/drawers/floating toast use modal. Radius families are control 8px, card/well 12px, overlay 12px, xs 4px for intrinsic sub-elements and full for true pills/dots/avatars. Public stages, tiles, link cards and focused flow sheets use 16–20px corners.
+Only `shadow-none`, `shadow-overlay` and `shadow-modal` utilities are available to product consumers. Shared material classes own resting elevation: `surface-card`, `control-raised`, `selection-track`, `selection-raised` and `shell-link`; feature call sites do not author shadows. Their `--elevation-*` recipes live in `globals.css`, including dark-mode overrides. Detached menus/popovers/tooltips/palette use overlay, dialogs/drawers/floating toast use modal. Radius families are the one ladder: xs 4px for intrinsic sub-elements, control 8px, card 12px (cards, wells, overlays), lg 16px (sheets, stages, tiles, link cards) and full for true pills, dots and avatars.
 
 ## Motion and accessibility
 
-Product and shared-control motion consumes the centralized roles: `--motion-fast` 110ms for hover/micro-feedback, `--motion-normal` 150ms for menus/tooltips, `--motion-slow` 240ms for dialogs/drawers/toasts. Implicit Tailwind transitions inherit the fast duration and standard easing. Standard and enter easing are cubic-bezier(0.33, 1, 0.68, 1), exit is (0.2, 0, 1, 0.9). Repeating activity/shimmer cycles derive from these roles. Keyboard command interfaces and route/tab content update immediately; press feedback begins on pointer-down. Separately owned marketing choreography and onboarding research's 220ms/60ms reveal/stagger remain scoped. Functional delays (tooltip delay, toast dwell, first-load reveal delay) remain independent from motion duration. Browser autofill's paint-suppression timing is a technical exception.
+Every duration and easing is a token in `globals.css`; no stylesheet or class writes a raw one. Product and shared-control motion consumes `--motion-fast` 110ms for hover/micro-feedback, `--motion-normal` 150ms for menus/tooltips and short exits, `--motion-slow` 240ms for dialogs/drawers/toasts and short reveals. Public surfaces add `--motion-menu` 280ms (header menus unfolding), `--motion-reveal` 720ms (sections and heroes arriving) and `--motion-drift` 48s (ambient marquees). Implicit Tailwind transitions inherit the fast duration and standard easing. Easings are `--ease-standard` cubic-bezier(0.33, 1, 0.68, 1), `--ease-exit` (0.2, 0, 1, 0.9) and `--ease-out-expo` (0.16, 1, 0.3, 1) for the long public settle. Repeating activity/shimmer cycles and staggers derive from these roles. Keyboard command interfaces and route/tab content update immediately; press feedback begins on pointer-down. Functional delays (tooltip delay, toast dwell, first-load reveal delay) remain independent from motion duration. Browser autofill's paint-suppression timing is a technical exception.
 
-Public-site motion is quiet and never gates content. Header menus open after a 110ms hover intent (immediately when switching between open menus or on click/focus), unfold over 300ms with their rows settling 70ms later, and fold away over 170ms while already inert. Page heroes rise in reading order with an 80ms stagger; the title only sharpens and settles, so it is never invisible at first paint. Section openers, product stages and cards rise on scroll through native scroll-driven animation only where supported. Stage dot lattices drift slowly, tour tabs cross-fade their view, and call-to-action arrows lean toward their destination on hover.
+Public-site motion is quiet and never gates content. Header menus open after a 110ms hover intent (immediately when switching between open menus or on click/focus), unfold over the menu role with their rows settling a beat later, and fold away over the normal role while already inert. Page heroes rise in reading order with a short stagger; the title only sharpens and settles, so it is never invisible at first paint. Section openers, product stages and cards rise on scroll through native scroll-driven animation only where supported. Stage dot lattices drift slowly, tour tabs cross-fade their view, and call-to-action arrows lean toward their destination on hover.
 
-Sanctioned explanatory motion: rotating answer-engine wordmarks; product-window walkthrough; native CSS scroll fade/rise reveals that never hide server-rendered content after hydration; master-detail continuity/domain-owned measured expansion; onboarding research results resolving below factual activity with a 220ms fade/rise and 60ms stagger.
+Sanctioned explanatory motion: rotating answer-engine wordmarks; product-window walkthrough; native CSS scroll fade/rise reveals that never hide server-rendered content after hydration; master-detail continuity/domain-owned measured expansion; onboarding research results resolving below factual activity with a slow-role fade/rise and a short stagger.
 
 Answer-engine rotors pause outside the viewport and in hidden tabs. Static product
 preview bars render complete on the server without a hydration-time collapse or replay.
