@@ -68,17 +68,6 @@ export function outputSchema(bounds: OutputBounds = agentPolicy) {
     body: z.string().trim().min(1).max(bounds.output_body_max_chars),
   });
 }
-// Wire fields are nullable for structured providers; decisions narrow to a union.
-const wireStep = z
-  .object({
-    action: z.enum(['use_skill', 'call_tool', 'respond']),
-    skill_id: z.string().nullish(),
-    tool: z.string().nullish(),
-    arguments: z.record(z.string(), z.json()).nullish(),
-    reply: z.string().nullish(),
-    output: outputPayloadSchema.nullish(),
-  })
-  .strict();
 export type OutputPayload = z.infer<typeof outputPayloadSchema>;
 export type Step =
   | { action: 'use_skill'; skillId: string }
@@ -89,10 +78,75 @@ export type Step =
       reply: string;
       output: OutputPayload | null;
     };
+/**
+ * What one step may return. The provider is held to exactly this shape and the
+ * reply is parsed against it, so the model is never told one thing and judged
+ * by another. An omitted list allows any value (checked against the catalog);
+ * an empty list allows only null.
+ */
+export type StepSpec = {
+  actions: readonly [Step['action'], ...Step['action'][]];
+  skillIds?: readonly string[];
+  /** `false` forbids an output; `formatIds` lists the formats it may name. */
+  output?: false | { formatIds?: readonly string[] };
+};
+const ANY_STEP: StepSpec = { actions: ['use_skill', 'call_tool', 'respond'] };
+
+/** Strict providers need every field present (nullable); parsing accepts an omitted null. */
+function field<T extends z.ZodType>(type: T, strict: boolean) {
+  return strict ? type.nullable() : type.nullish();
+}
+/** The provider sees the allowed values; parsing reads any string so a miss gets a precise hint. */
+function choice(values: readonly string[] | undefined, strict: boolean) {
+  if (!strict || values === undefined) return field(z.string(), strict);
+  const [first, ...rest] = values;
+  return first === undefined ? z.null() : field(z.enum([first, ...rest]), strict);
+}
+function stepSchema(spec: StepSpec, strict: boolean) {
+  // Parsing still reads a forbidden output so the runtime can repair it with a precise hint.
+  const output =
+    spec.output === false && strict
+      ? z.null()
+      : field(
+          z
+            .object({
+              title: z.string(),
+              body: z.string(),
+              phase: z.enum(['outline', 'draft', 'final']),
+              target_kind: field(z.enum(['page', 'planned_page']), strict),
+              target: field(z.string(), strict),
+              format_id: choice(spec.output ? spec.output.formatIds : undefined, strict),
+            })
+            .strict(),
+          strict,
+        );
+  return z
+    .object({
+      // Parsing reads every action so a refused one is recorded as a refused read, not a malformed step.
+      action: z.enum(strict ? spec.actions : ANY_STEP.actions),
+      skill_id: choice(spec.skillIds, strict),
+      tool: field(z.string(), strict),
+      // Tool arguments differ per tool; a strict schema cannot hold an open object.
+      arguments_json: field(z.string(), strict),
+      reply: field(z.string(), strict),
+      output,
+    })
+    .strict();
+}
+/** The schema a structured-output provider enforces: every field required, every object closed. */
+export function stepJsonSchema(spec: StepSpec): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(z.toJSONSchema(stepSchema(spec, true))).filter(([key]) => key !== '$schema'),
+  );
+}
+const toolArguments = z.record(z.string(), z.json());
+
+// Repair hints contain only server-owned instructions and catalog IDs, never provider values.
 export function parseStep(
   content: string,
   skills?: ReadonlyMap<string, Skill>,
   bounds: OutputBounds = agentPolicy,
+  spec: StepSpec = ANY_STEP,
 ): Step {
   let decoded: unknown;
   try {
@@ -102,32 +156,65 @@ export function parseStep(
       'Return one JSON object without surrounding prose or Markdown fences.',
     );
   }
-  const parsed = wireSchema(bounds).safeParse(decoded);
-  // Repair hints contain only server-owned instructions, never provider values.
+  const parsed = stepSchema(spec, false).safeParse(decoded);
   if (!parsed.success)
     throw new AgentProtocolError(
-      'Match the supplied schema exactly. Use only action, skill_id, tool, arguments, reply and output. Put deliverable fields inside output.',
+      'Match the supplied schema exactly: action, skill_id, tool, arguments_json, reply and output. Put deliverable fields inside output.',
     );
   const value = parsed.data;
-  if (value.skill_id && skills && !skills.has(value.skill_id))
+  const allowed = spec.skillIds ?? (skills ? [...skills.keys()] : undefined);
+  if (value.skill_id && allowed && !allowed.includes(value.skill_id))
     throw new AgentProtocolError(
-      'Use an exact skill_id from the supplied catalog, or null for no new selection. Do not use a label or output kind as skill_id.',
+      spec.skillIds?.length
+        ? `Set skill_id to null or one of: ${spec.skillIds.join(', ')}. Do not use a label or output kind as skill_id.`
+        : 'Set skill_id to null on this step.',
     );
   const skill = value.skill_id ? { skillId: value.skill_id } : {};
   if (value.action === 'use_skill' && value.skill_id)
     return { action: value.action, skillId: value.skill_id };
-  if (value.action === 'call_tool' && value.tool)
-    return { action: value.action, ...skill, tool: value.tool, arguments: value.arguments ?? {} };
+  if (value.action === 'call_tool' && value.tool?.trim())
+    return {
+      action: value.action,
+      ...skill,
+      tool: value.tool,
+      arguments: decodeArguments(value.arguments_json),
+    };
   if (value.action === 'respond' && value.reply?.trim())
     return {
       action: value.action,
       ...skill,
       reply: value.reply,
-      output: value.output ?? null,
+      output: value.output ? boundedOutput(value.output, bounds, spec) : null,
     };
   throw new AgentProtocolError(
-    'For use_skill, provide skill_id. For call_tool, provide a nonblank tool name and arguments. For respond, provide a nonblank reply.',
+    'For use_skill, provide skill_id. For call_tool, provide a nonblank tool name and arguments_json. For respond, provide a nonblank reply.',
   );
+}
+function decodeArguments(text: string | null | undefined): Record<string, Json> {
+  if (!text?.trim()) return {};
+  let value: unknown;
+  try {
+    value = JSON.parse(text);
+  } catch {
+    throw new AgentProtocolError('Set arguments_json to a JSON object encoded as a string.');
+  }
+  const parsed = toolArguments.safeParse(value);
+  if (!parsed.success)
+    throw new AgentProtocolError('Set arguments_json to a JSON object encoded as a string.');
+  return parsed.data;
+}
+function boundedOutput(output: unknown, bounds: OutputBounds, spec: StepSpec): OutputPayload {
+  const parsed = outputSchema(bounds).safeParse(output);
+  if (!parsed.success)
+    throw new AgentProtocolError(
+      `Give output a nonblank title of at most ${bounds.output_title_max_chars} characters and a nonblank body of at most ${bounds.output_body_max_chars} characters.`,
+    );
+  const formats = spec.output ? spec.output.formatIds : undefined;
+  const format = parsed.data.format_id;
+  if (!format || formats === undefined || formats.includes(format)) return parsed.data;
+  // A deliverable without content formats has nothing to name; the value is dropped.
+  if (formats.length === 0) return { ...parsed.data, format_id: null };
+  throw new AgentProtocolError(`Set output.format_id to null or one of: ${formats.join(', ')}.`);
 }
 export type Skill = {
   id: string;
@@ -145,22 +232,3 @@ export type SkillCatalog = {
   formats?: ReadonlyMap<string, ContentFormat>;
   workflows?: WorkflowCatalog;
 };
-function wireSchema(bounds: OutputBounds) {
-  return wireStep.extend({ output: outputSchema(bounds).nullish() });
-}
-export function stepJsonSchemaFor(
-  bounds: OutputBounds,
-  actions?: Step['action'][],
-  replyOnly = false,
-  skillIds?: readonly string[],
-  outputAllowed = true,
-) {
-  const schema = wireSchema(bounds).extend({
-    ...(actions ? { action: z.enum(actions) } : {}),
-    ...(skillIds ? { skill_id: z.enum(skillIds).nullish() } : {}),
-    // A deliverable is written only after its methodology is supplied.
-    ...(outputAllowed ? {} : { output: z.null().optional() }),
-    ...(replyOnly ? { skill_id: z.null().optional(), output: z.null().optional() } : {}),
-  });
-  return z.toJSONSchema(schema);
-}

@@ -1,6 +1,6 @@
 {
   "runtime_version": "agent-runtime-ts-5",
-  "protocol_version": "agent-protocol-2",
+  "protocol_version": "agent-protocol-3",
   "context_manifest_version": "agent-context-1",
   "max_steps": 8,
   "max_tool_calls": 6,

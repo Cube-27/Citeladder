@@ -141,6 +141,29 @@ describe('configured model gateway', () => {
     expect(refused.fetch).toHaveBeenCalledTimes(1);
   });
 
+  it('holds structured calls to a strict schema and remembers a destination that refuses one', async () => {
+    const schema = { type: 'object', properties: {}, required: [], additionalProperties: false };
+    const io = transport([
+      new Response('unsupported response_format', { status: 400 }),
+      reply(),
+      reply(),
+    ]);
+    const gateway = createModelGateway(settings, io);
+    await gateway.completeStructured('system', 'question', schema);
+    await gateway.completeStructured('system', 'next', schema);
+    const bodies = io.fetch.mock.calls.map((call) => JSON.parse(String(call[1]!.body)));
+    expect(bodies[0].response_format).toEqual({
+      type: 'json_schema',
+      json_schema: { name: 'response', strict: true, schema },
+    });
+    expect(bodies[0].messages[1].content).toBe('question');
+    // The refusing destination is asked with the schema in the prompt, now and later.
+    expect(bodies.slice(1).map((body) => body.response_format)).toEqual([undefined, undefined]);
+    expect(bodies[2].messages[1].content).toBe(
+      `next\n\nReturn only JSON matching this schema:\n${JSON.stringify(schema)}`,
+    );
+  });
+
   it('retries rate limits with Retry-After and transient server errors', async () => {
     const io = transport([
       new Response(null, { status: 429, headers: { 'retry-after': '7' } }),

@@ -513,6 +513,8 @@ describe('IssuesCatalog', () => {
       issue_group_reference: { crawl_id: CRAWL, group_id: issue().group_id, site_url_id: URL_A },
     });
     expect(handoff.prompt).toContain('https://acme.com/');
+    // The technical methodology is chosen up front, not left to the model.
+    expect(handoff.skillId).toBe('technical_health');
   });
 
   it('pages occurrences with a cursor-aware Next/Previous control', async () => {

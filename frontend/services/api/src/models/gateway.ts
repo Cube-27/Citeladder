@@ -141,6 +141,26 @@ async function readCompletion(
 }
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
 
+/** The start of a rejection's body, read without buffering an oversized one. */
+async function errorExcerpt(response: Response, limit = 8192) {
+  const reader = response.clone().body?.getReader();
+  if (!reader) return '';
+  const decoder = new TextDecoder();
+  let text = '';
+  while (text.length < limit) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    text += decoder.decode(value, { stream: true });
+  }
+  await reader.cancel();
+  return text.slice(0, limit);
+}
+
+/** The prompt-only form of a schema, for destinations without strict structured outputs. */
+function withSchema(user: string, schema: unknown) {
+  return `${user}\n\nReturn only JSON matching this schema:\n${JSON.stringify(schema)}`;
+}
+
 /** Model text without a leading ``` / ```json fence or a trailing ``` fence. */
 function unfenced(content: string) {
   let text = content.trim();
@@ -193,7 +213,9 @@ export function createModelGateway(
   if (endpoint.username || endpoint.password || endpoint.search || endpoint.hash || !secure) {
     throw new ModelError('not_configured');
   }
+  // Learned per destination: an older output-cap name, and no strict structured outputs.
   let legacyCap = false;
+  let promptSchema = false;
   const retry = { ...settings, retryStatus: transientStatus, retryConnection: true };
   const base = stripTrailing(endpoint.href, '/');
   const url = base.endsWith('/chat/completions') ? base : endpointUrl(base, '/chat/completions');
@@ -202,6 +224,7 @@ export function createModelGateway(
     user: string,
     signal?: AbortSignal,
     onText?: (content: string) => void,
+    schema?: Record<string, unknown>,
   ) {
     // A listener asks for a stream; the caller gives one only to transports that pass it through.
     const stream = Boolean(onText);
@@ -211,7 +234,7 @@ export function createModelGateway(
       AbortSignal.timeout(settings.timeoutSeconds * 1000),
       ...(signal ? [signal] : []),
     ]);
-    const send = (legacy: boolean) =>
+    const send = (legacy: boolean, strict: boolean) =>
       postModel(
         url,
         settings.apiKey,
@@ -219,23 +242,38 @@ export function createModelGateway(
           model: settings.model,
           messages: [
             { role: 'system', content: system },
-            { role: 'user', content: user },
+            { role: 'user', content: schema && !strict ? withSchema(user, schema) : user },
           ],
           [legacy ? 'max_tokens' : 'max_completion_tokens']: settings.maxOutputTokens,
+          ...(schema && strict
+            ? {
+                response_format: {
+                  type: 'json_schema',
+                  json_schema: { name: 'response', strict: true, schema },
+                },
+              }
+            : {}),
           ...(stream ? { stream: true, stream_options: { include_usage: true } } : {}),
         },
         retry,
         transport,
         deadline,
       );
-    let response = await send(legacyCap);
-    if (
-      !legacyCap &&
-      [400, 422].includes(response.status) &&
-      (await response.clone().text()).includes('max_completion_tokens')
-    ) {
-      response = await send(true);
-      if (response.ok) legacyCap = true;
+    const wantsStrict = Boolean(schema) && !promptSchema;
+    let legacy = legacyCap;
+    let strict = wantsStrict;
+    let response = await send(legacy, strict);
+    // A destination may reject the newer cap name or strict schemas: ask again without each.
+    for (let fallback = 0; fallback < 2 && [400, 422].includes(response.status); fallback++) {
+      if (!legacy && (await errorExcerpt(response)).includes('max_completion_tokens'))
+        legacy = true;
+      else if (strict) strict = false;
+      else break;
+      response = await send(legacy, strict);
+    }
+    if (response.ok) {
+      legacyCap = legacy;
+      if (wantsStrict && !strict) promptSchema = true;
     }
     if (!response.ok)
       logger.warning('default agent call failed', {
@@ -269,20 +307,11 @@ export function createModelGateway(
       signal?: AbortSignal,
       onText?: (content: string) => void,
     ) {
-      const result = await complete(
-        system,
-        `${user}\n\nReturn only JSON matching this schema:\n${JSON.stringify(schema)}`,
-        signal,
-        onText,
-      );
+      const result = await complete(system, user, signal, onText, schema);
       return { ...result, content: unfenced(result.content) };
     },
     async structured<T>(system: string, user: string, schema: z.ZodType<T>, signal?: AbortSignal) {
-      const result = await complete(
-        system,
-        `${user}\n\nReturn only JSON matching this schema:\n${JSON.stringify(z.toJSONSchema(schema))}`,
-        signal,
-      );
+      const result = await complete(system, withSchema(user, z.toJSONSchema(schema)), signal);
       try {
         return { value: schema.parse(JSON.parse(unfenced(result.content))), result };
       } catch {

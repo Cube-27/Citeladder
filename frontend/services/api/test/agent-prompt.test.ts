@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { admittedBudget } from '../src/agent/contracts.ts';
+import { admittedBudget, parseStep, stepJsonSchema } from '../src/agent/contracts.ts';
 import { assemblePrompt } from '../src/agent/prompt.ts';
 import { suppliedManifest } from '../src/agent/context.ts';
 import { boundToolData } from '../src/agent/tools.ts';
@@ -160,5 +160,64 @@ describe('structurally bounded Agent prompts', () => {
     });
     expect(bounded.supplied).toBe(true);
     expect(bounded.text.length).toBeLessThanOrEqual(500);
+  });
+});
+
+describe('the step schema a provider enforces', () => {
+  // Strict structured outputs reject an open object or an optional field anywhere.
+  function openings(node: unknown, path = '$'): string[] {
+    if (!node || typeof node !== 'object') return [];
+    const own =
+      'properties' in node && node.properties && typeof node.properties === 'object'
+        ? [
+            ...('additionalProperties' in node && node.additionalProperties === false
+              ? []
+              : [`${path} is open`]),
+            ...Object.keys(node.properties).flatMap((key) =>
+              'required' in node && Array.isArray(node.required) && node.required.includes(key)
+                ? []
+                : [`${path}.${key} is optional`],
+            ),
+          ]
+        : [];
+    return [
+      ...own,
+      ...Object.entries(node).flatMap(([key, child]) => openings(child, `${path}.${key}`)),
+    ];
+  }
+  it('closes every object, requires every field and names only allowed values', () => {
+    const spec = {
+      actions: ['call_tool', 'respond'] as const,
+      skillIds: ['technical_health'],
+      output: { formatIds: [] },
+    } satisfies Parameters<typeof stepJsonSchema>[0];
+    const schema = stepJsonSchema(spec);
+    expect(openings(schema)).toEqual([]);
+    expect(JSON.stringify(schema)).not.toContain('$schema');
+    // The same spec reads a model's reply: a format the skill cannot have is dropped.
+    const step = parseStep(
+      JSON.stringify({
+        action: 'respond',
+        reply: 'Fixes below.',
+        output: {
+          title: 'Fixes',
+          body: 'Use HTTPS assets.',
+          phase: 'final',
+          format_id: 'markdown',
+        },
+      }),
+      undefined,
+      undefined,
+      spec,
+    );
+    expect(step).toMatchObject({ action: 'respond', output: { format_id: null } });
+    expect(() =>
+      parseStep(
+        JSON.stringify({ action: 'use_skill', skill_id: 'content_create' }),
+        undefined,
+        undefined,
+        { ...spec, actions: ['use_skill', 'respond'] },
+      ),
+    ).toThrow('protocol_violation');
   });
 });
