@@ -2,27 +2,22 @@
    product ladder. Both surfaces share the product palette and geometry
    (globals.css); this scope changes type scale only.
 
-   The public ladder (docs/design.md §Typography), each rung at least 2px from
-   the next above 14px: label 13 · nav 14 · body 16 · feature heading 18 ·
-   lead 18→20 · data display 30→36 · section heading 30→42 · page title
-   22–32→48 · hero 28–32→64. 12 / 13 / 14 is the one dense trio below body,
-   told apart by weight and ink as well as size, exactly as in the product. */
+   The public ladder (docs/design.md §Typography), phone → ≥768px, every
+   size a rung of the one globals.css scale: eyebrow/meta 12 · body, nav and
+   label 14 · feature heading 16→18 · lead 16→18 · section heading 24→32 ·
+   data display 28→32 · page title 24–28→40 · hero 28–32→60. 14 is the
+   baseline here exactly as in the product; 12 is the one rung below it. */
 :where([data-public-surface], [data-flow-surface]) {
   /* The public and focused-flow type world (docs/design.md §Typography):
-     Geist carries body, UI, data and display type, as in the product. */
-  /* The scale is the product's (globals.css @theme) except for the three
-     rungs below: roomier leading at 18px and larger display rungs. Being
-     "roomier" is otherwise a job for measure and rhythm, not for renaming
-     sizes, so every other rung is inherited unchanged. */
-  --text-lg--line-height: 1.75rem;
-  --text-3xl: 1.875rem;
-  --text-4xl: 2.25rem;
-  --tracking-tight: -0.03em;
+     Satoshi carries body, UI and data, Sentient the display headings, as in
+     the product. The scale is the product's (globals.css @theme), unchanged;
+     being "roomier" is a job for measure and rhythm, not for resizing rungs. */
+  --tracking-tight: -0.02em;
   --tracking-wide: 0.02em;
   --tracking-wider: 0.06em;
   --leading-relaxed: 1.5;
-  font-size: 1rem;
-  line-height: 1.5;
+  font-size: 0.875rem;
+  line-height: 1.375rem;
 }
 
 /* Authentication and onboarding are one focused, touch-friendly flow. These
@@ -48,20 +43,20 @@
 
 .flow-title {
   font-family: var(--font-display);
-  font-size: 1.875rem;
+  font-size: 1.75rem;
   line-height: 2.25rem;
   font-weight: 500;
-  letter-spacing: -0.024em;
+  letter-spacing: -0.015em;
   color: var(--color-foreground);
 }
 
 .flow-group-title {
   margin: 0;
   font-family: var(--font-sans);
-  font-size: 1.125rem;
-  line-height: 1.625rem;
+  font-size: 1rem;
+  line-height: 1.5rem;
   font-weight: 500;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.005em;
   color: var(--color-foreground);
 }
 
@@ -77,8 +72,8 @@
 
 .flow-meta {
   font-family: var(--font-sans);
-  font-size: 0.8125rem;
-  line-height: 1.125rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
   font-weight: 500;
   letter-spacing: 0;
   color: var(--color-muted);
@@ -89,19 +84,19 @@
   :where(h1, h2, h3, h4, h5, h6):not(.app-type-scale *) {
   font-family: var(--font-display);
   font-weight: 500;
-  letter-spacing: -0.015em;
+  letter-spacing: -0.01em;
 }
 
 /* Named website/auth roles. Size, leading, weight, tracking, and default colour
    travel as one contract. The low-specificity colour defaults let explicit
    semantic utilities override them for warnings and evidence states.
 
-   Display rungs render at 500 and tracking closes as size grows. Body rungs
-   render at 400/500. */
+   Display rungs set in Sentient at 500, and tracking closes gently as size
+   grows (a serif wants less than a grotesk). The feature heading and body
+   rungs set in Satoshi at 400/500. */
 .website-hero-display,
 .website-page-title,
-.website-section-heading,
-.website-feature-heading {
+.website-section-heading {
   font-family: var(--font-display);
   font-optical-sizing: auto;
   font-weight: 500;
@@ -120,30 +115,33 @@
    them to four and five. */
 .website-hero-display {
   font-size: clamp(1.75rem, 8.6vw, 2rem);
-  line-height: 1.04;
-  letter-spacing: -0.032em;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
 }
 
 .website-page-title {
-  font-size: clamp(1.375rem, 6.4vw, 2rem);
-  line-height: 1.15;
-  letter-spacing: -0.028em;
+  font-size: clamp(1.5rem, 6.4vw, 1.75rem);
+  line-height: 1.2;
+  letter-spacing: -0.015em;
 }
 
 .website-article-title {
-  font-size: clamp(1.25rem, 5.6vw, 2rem);
+  font-size: clamp(1.25rem, 5.6vw, 1.5rem);
 }
 
 .website-section-heading {
-  font-size: 1.875rem;
-  line-height: 2.25rem;
-  letter-spacing: -0.024em;
+  font-size: 1.5rem;
+  line-height: 2rem;
+  letter-spacing: -0.012em;
 }
 
 .website-feature-heading {
-  font-size: 1.125rem;
-  line-height: 1.625rem;
-  letter-spacing: -0.011em;
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.5rem;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  text-wrap: balance;
 }
 
 .website-lead,
@@ -156,7 +154,7 @@
 
 .website-data-display {
   font-family: var(--font-sans);
-  font-size: 1.875rem;
+  font-size: 1.75rem;
   line-height: 2.25rem;
   font-weight: 500;
   letter-spacing: -0.02em;
@@ -186,18 +184,18 @@
    hold one size across breakpoints, because body copy that grows with the
    viewport just makes the measure fight the column. */
 .website-lead {
-  font-size: 1.125rem;
-  line-height: 1.75rem;
+  font-size: 1rem;
+  line-height: 1.5rem;
   font-weight: 400;
-  letter-spacing: -0.011em;
+  letter-spacing: -0.005em;
   text-wrap: pretty;
 }
 
 .website-body {
-  font-size: 1rem;
-  line-height: 1.625rem;
+  font-size: 0.875rem;
+  line-height: 1.375rem;
   font-weight: 400;
-  letter-spacing: -0.006em;
+  letter-spacing: 0;
   text-wrap: pretty;
 }
 
@@ -210,16 +208,18 @@
 
 .website-label,
 .website-eyebrow {
-  font-size: 0.8125rem;
-  line-height: 1.125rem;
   font-weight: 500;
 }
 
 .website-label {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
   letter-spacing: 0;
 }
 
 .website-eyebrow {
+  font-size: 0.75rem;
+  line-height: 1rem;
   letter-spacing: 0;
   text-transform: none;
 }
@@ -315,8 +315,8 @@
 }
 
 .auth-recovery-links {
-  font-size: var(--text-label);
-  line-height: var(--text-label--line-height);
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
   font-weight: 500;
   color: var(--color-secondary);
 }
@@ -924,11 +924,6 @@
   [data-flow-surface] {
     --flow-gutter: 2rem;
   }
-
-  .flow-title {
-    font-size: 1.875rem;
-    line-height: 2.25rem;
-  }
 }
 
 @media (max-width: 639px) {
@@ -1031,8 +1026,8 @@
   }
 
   .flow-title {
-    font-size: 1.75rem;
-    line-height: 2.125rem;
+    font-size: 1.5rem;
+    line-height: 2rem;
   }
 }
 
@@ -1070,25 +1065,17 @@
   }
 }
 
-/* A coded product preview is product UI, not oversized marketing copy: it
-   resets exactly the rungs the public scope above (and its 768px step)
-   changes, back to the product scale. */
+/* A coded product preview is product UI, not marketing copy: it resets the
+   public roles it embeds back to the product ladder. */
 .app-type-scale {
-  --text-lg--line-height: 1.625rem;
-  --text-2xl: 1.5rem;
-  --text-2xl--line-height: 2rem;
-  --text-3xl: 1.75rem;
-  --text-3xl--line-height: 2.25rem;
-  --text-4xl: 2rem;
-  --text-4xl--line-height: 2.5rem;
   --leading-relaxed: 1.625;
   font-size: var(--text-sm);
   line-height: var(--text-sm--line-height);
 }
 
 .app-type-scale :where(.website-feature-heading) {
-  font-size: var(--text-xl);
-  line-height: var(--text-xl--line-height);
+  font-size: var(--text-base);
+  line-height: var(--text-base--line-height);
 }
 
 .app-type-scale :where(.website-body) {
@@ -1102,36 +1089,37 @@
    set too large for a phone, and patching two of five rungs is exactly how the
    641–767px band ended up with a hierarchy nothing else on the page shared. */
 @media (min-width: 768px) {
-  :where([data-public-surface], [data-flow-surface]) {
-    --text-2xl: 1.75rem;
-    --text-2xl--line-height: 2.125rem;
-    --text-3xl: 2.25rem;
-    --text-3xl--line-height: 2.5rem;
-    --text-4xl: 2.75rem;
-    --text-4xl--line-height: 3rem;
-  }
-
   .website-hero-display {
-    font-size: clamp(2rem, 4.2vw + 0.6rem, 4rem);
+    font-size: clamp(2rem, 4.2vw + 0.6rem, 3.75rem);
   }
 
   .website-page-title {
-    font-size: 3rem;
-    line-height: 3.25rem;
+    font-size: 2.5rem;
+    line-height: 3rem;
+  }
+
+  .website-article-title {
+    font-size: 2rem;
+    line-height: 2.5rem;
   }
 
   .website-section-heading {
-    font-size: 2.625rem;
-    line-height: 2.875rem;
+    font-size: 2rem;
+    line-height: 2.5rem;
+  }
+
+  .website-feature-heading {
+    font-size: 1.125rem;
+    line-height: 1.75rem;
   }
 
   .website-lead {
-    font-size: 1.25rem;
-    line-height: 1.875rem;
+    font-size: 1.125rem;
+    line-height: 1.75rem;
   }
 
   .website-data-display {
-    font-size: 2.25rem;
-    line-height: 2.625rem;
+    font-size: 2rem;
+    line-height: 2.5rem;
   }
 }

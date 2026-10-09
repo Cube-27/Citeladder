@@ -13,9 +13,8 @@ const twMerge = extendTailwindMerge({
         {
           text: [
             // Ladder rungs beyond the default t-shirt sizes — without these,
-            // `text-label` + `text-success-text` would collapse to the colour
+            // `text-field` + `text-danger-text` would collapse to the colour
             // and the text would lose its size.
-            'label',
             'field',
           ],
         },

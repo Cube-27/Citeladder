@@ -114,7 +114,7 @@ export function ToolsIndex() {
             {TOOL_FACTS.map((fact) => (
               <li key={fact.title}>
                 <h3 className="website-feature-heading">{fact.title}</h3>
-                <p className="website-body text-muted">{fact.body}</p>
+                <p className="website-body">{fact.body}</p>
               </li>
             ))}
           </ul>
@@ -151,7 +151,7 @@ export function ToolNotes({ slug }: Readonly<{ slug: FreeTool['slug'] }>) {
           <SectionHeader headingId="tool-limits-title" title="What this tool can tell you" />
           <div className="grid content-start gap-5">
             <p className="website-body max-w-[60ch]">{tool.limitation}</p>
-            <p className="website-body text-muted max-w-[60ch]">
+            <p className="website-body max-w-[60ch]">
               Need evidence across your website? Site Health inspects captured page evidence before
               you choose a fix.
             </p>

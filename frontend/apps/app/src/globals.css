@@ -14,7 +14,7 @@
 @theme {
   --font-sans:
     var(--font-text), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-display: var(--font-text), sans-serif;
+  --font-display: var(--font-heading), Georgia, serif;
 
   /* One palette for every surface (owner decision, 2026-10-07): a quiet
      green-tinted neutral ground with white paper, near-black green ink and
@@ -38,7 +38,7 @@
   /* Recessed selection track; state tints follow their enclosing surface. */
   --color-track: #eceeed;
   --color-input: #ffffff;
-  --color-surface-inverse: var(--color-foreground);
+  --color-surface-inverse: var(--color-brand-ink);
 
   /* The separation ladder. Four rungs that must each be visibly different
      from the one above it, because they carry the whole hierarchy: the app
@@ -59,14 +59,19 @@
   --color-border-strong: #cfd4d1;
   --color-border-bold: #858d88;
 
-  /* Reading inks plus the graduated chrome ladder. Faint is decorative only. */
+  /* Three reading inks and nothing else (owner decision, 2026-10-09):
+     foreground is a softened ~80% black for titles, values and anything that
+     must lead; secondary is a very dark grey for sentences and labels; muted
+     is the light grey for captions and metadata, the lightest step that still
+     holds 4.5:1 on every surface. Faint is decorative only and never text. */
   --color-ink-faint: #8e9690;
-  --color-ink-soft: #525a55;
-  --color-ink-icon: #2d332f;
-  --color-foreground: #0b0f0d;
-  --color-secondary: #3b423e;
-  --color-muted: #5c645f;
+  --color-foreground: #2f3431;
+  --color-secondary: #4e5551;
+  --color-muted: #616964;
   --color-on-inverse: #ffffff;
+  /* The logo's ink and the inverse surface keep full strength: softening the
+     reading inks is a type decision, not a brand or material one. */
+  --color-brand-ink: #0b0f0d;
 
   /* Forest is the one action and brand colour: filled controls, links, focus,
      selection markers and the bars of the mark. It never means success. */
@@ -157,6 +162,12 @@
     0 0 0 1px rgb(11 15 13 / 7%), 0 1px 2px rgb(11 15 13 / 4%),
     0 12px 32px -8px rgb(11 15 13 / 12%), 0 40px 80px -24px rgb(11 15 13 / 20%);
 
+  /* One type scale for every surface (owner decision, 2026-10-09), on the
+     4px rhythm the large design systems share (Atlassian, Primer, Carbon):
+     14 is the baseline everywhere, 12 the one smaller rung, and every rung
+     above it at least 2px from the next. No surface rebinds these; a public
+     role picks a rung instead. Display sizes past 32px (page title 40, hero
+     60) exist only as public display roles in website-type.css. */
   --text-xs: 0.75rem;
   --text-xs--line-height: 1rem;
   --text-sm: 0.875rem;
@@ -164,7 +175,7 @@
   --text-base: 1rem;
   --text-base--line-height: 1.5rem;
   --text-lg: 1.125rem;
-  --text-lg--line-height: 1.625rem;
+  --text-lg--line-height: 1.75rem;
   --text-xl: 1.25rem;
   --text-xl--line-height: 1.75rem;
   --text-2xl: 1.5rem;
@@ -173,10 +184,6 @@
   --text-3xl--line-height: 2.25rem;
   --text-4xl: 2rem;
   --text-4xl--line-height: 2.5rem;
-  /* The label rung (13px): the middle of the dense 12 / 13 / 14 trio, shared
-     by product labels and controls and by public labels and eyebrows. */
-  --text-label: 0.8125rem;
-  --text-label--line-height: 1.125rem;
   /* Field text: 14px on public surfaces, 16px in the product (below). */
   --text-field: 0.875rem;
   --text-field--line-height: 1.25rem;
@@ -489,7 +496,7 @@ body {
     font-size: 1.25rem;
     line-height: 1.75rem;
     font-weight: 500;
-    letter-spacing: -0.016em;
+    letter-spacing: -0.01em;
     color: var(--color-foreground);
   }
   .type-section-title {
@@ -520,8 +527,8 @@ body {
   .type-control,
   .type-control-file::file-selector-button {
     font-family: var(--font-sans);
-    font-size: 0.8125rem;
-    line-height: 1.125rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
     font-weight: 500;
     letter-spacing: 0;
   }
@@ -530,11 +537,11 @@ body {
   .type-label,
   .type-label-before::before {
     font-family: var(--font-sans);
-    font-size: 0.8125rem;
-    line-height: 1.125rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
     font-weight: 500;
     letter-spacing: 0;
-    color: var(--color-ink-soft);
+    color: var(--color-secondary);
   }
   .type-caption {
     font-family: var(--font-sans);
@@ -668,8 +675,8 @@ body {
   .prose-content th {
     padding: 0.75rem 1rem;
     text-align: left;
-    font-size: 0.8125rem;
-    line-height: 1.125rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
     font-weight: 500;
     color: var(--color-muted);
     border-bottom: 1px solid var(--color-border);
@@ -736,7 +743,7 @@ body {
      rendered size: a flat 2 paints a 1px stem at 12px and a 2px stem at
      24px, which is why large icons currently read heavier than small ones.
      These rungs compensate so every glyph lands near a 1.3px stem, in step
-     with Geist at body sizes. Compensation is partial on purpose: an
+     with Satoshi at body sizes. Compensation is partial on purpose: an
      identical absolute stem at 12px closes up the counters and muddies the
      glyph.
 
@@ -1118,14 +1125,14 @@ input:-webkit-autofill:focus {
   --color-elevated: #1b1f1d;
   --color-well: #0e100f;
   --color-input: #0f1210;
-  /* Text ink sits below full white so long reading on the dark ground does
-     not glare; the ladder keeps its foreground > secondary > muted steps. */
-  --color-foreground: #e1e5e2;
-  --color-secondary: #bfc5c1;
-  --color-muted: #959c98;
+  /* The same three inks in white: a softened ~80% white so long reading on
+     the dark ground does not glare, a light grey for sentences and labels,
+     and a dim grey for captions and metadata. */
+  --color-foreground: #d3d8d5;
+  --color-secondary: #a9b0ac;
+  --color-muted: #939a96;
   --color-ink-faint: #6d746f;
-  --color-ink-soft: #a6ada9;
-  --color-ink-icon: #dce1de;
+  --color-brand-ink: #e1e5e2;
   --color-track: #0f1210;
   --color-border-subtle: #212522;
   --color-border: #2b302d;

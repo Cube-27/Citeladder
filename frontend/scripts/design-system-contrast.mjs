@@ -35,7 +35,7 @@ const CHARTS = Array.from({ length: 8 }, (_, index) => color(`chart-${index + 1}
  */
 const CONTRAST_PAIRS = [
   {
-    inks: ['foreground', 'secondary', 'muted', 'ink-soft', 'ink-icon'].map(color),
+    inks: ['foreground', 'secondary', 'muted', 'brand-ink'].map(color),
     surfaces: ['panel', 'background', 'background-alt', 'well'].map(color),
     minimum: 4.5,
     scopes: ALL_SCOPES,

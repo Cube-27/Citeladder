@@ -75,7 +75,7 @@ function FeaturedPost({ post }: Readonly<{ post: BlogPost }>) {
               {post.title}
             </a>
           </h2>
-          <p className="website-lead text-muted max-w-[56ch]">{post.excerpt}</p>
+          <p className="website-lead max-w-[56ch]">{post.excerpt}</p>
           <PostMeta post={toBlogPostSummary(post)} />
           <a href={href} className="mk-text-link focus-ring rounded-xs">
             Read article
@@ -154,7 +154,7 @@ function EmptyBlog() {
     <Section aria-label="No posts yet">
       <div className="cp-empty">
         <h2 className="website-section-heading">{BLOG_EMPTY_STATE.heading}</h2>
-        <p className="website-body text-muted max-w-[48ch]">{BLOG_EMPTY_STATE.body}</p>
+        <p className="website-body max-w-[48ch]">{BLOG_EMPTY_STATE.body}</p>
       </div>
     </Section>
   );
@@ -236,7 +236,7 @@ function PostHeader({ post }: Readonly<{ post: BlogPost }>) {
         </ol>
       </nav>
       <h1 className="website-page-title website-article-title">{post.title}</h1>
-      <p className="website-lead text-muted max-w-[62ch]">{post.excerpt}</p>
+      <p className="website-lead max-w-[62ch]">{post.excerpt}</p>
       {post.tags.length > 0 && (
         <ul className="flex flex-wrap gap-2" aria-label="Topics">
           {post.tags.map((tag) => (

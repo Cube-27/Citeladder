@@ -70,9 +70,7 @@ export function PricingTrial({
       <div className="cm-trial-row">
         <div className="cm-trial-row-copy">
           <h3 className="website-feature-heading text-foreground">Try it first</h3>
-          <p className="website-body text-muted">
-            A seven-day trial on ChatGPT answers. {TRIAL_EXCLUSIONS}
-          </p>
+          <p className="website-body">A seven-day trial on ChatGPT answers. {TRIAL_EXCLUSIONS}</p>
         </div>
         <TrialLimits />
         <TrialButton appOrigin={appOrigin} primary={false} />
@@ -109,7 +107,7 @@ export function PricingTrial({
             lead="See how ChatGPT answers your buyers' questions before you commit. Paid checkout is not open; contact us to continue after the trial."
             size="h3"
           />
-          <p className="website-body text-muted">{TRIAL_EXCLUSIONS}</p>
+          <p className="website-body">{TRIAL_EXCLUSIONS}</p>
           <TrialButton appOrigin={appOrigin} primary />
         </div>
         <TrialLimits />

@@ -5,7 +5,7 @@ import { svgColorFindings } from '../../frontend/scripts/design-system-asset-che
 
 const logo = 'public/citeladder-logo.svg';
 const palette = new Map([
-  ['--color-foreground', '#0b0f0d'],
+  ['--color-brand-ink', '#0b0f0d'],
   ['--color-accent', '#14532d'],
 ]);
 

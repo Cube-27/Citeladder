@@ -13,7 +13,7 @@ One system covers every surface (owner decision, 2026-10-07): the public site, d
 CiteLadder (`citeladder.com`) is an evidence-led enterprise system. The app puts a quiet green-tinted neutral ground behind the chrome and floats the work on one white sheet, using near-black green-tinted ink, forest actions, semantic evidence washes, useful density, and deliberate negative space. Prioritise current state → movement → next action → evidence, not equal-weight KPI cards. Voice is direct, confident, specific, and evidence-led: one idea per sentence.
 
 - **Logo:** `frontend/components/ui/logo-mark.tsx` owns every surface's lockup and draws it inline from `logo-glyphs.ts` in exactly two tokens: ink (`currentColor`, the speech bubble and "Ladder") and the forest accent (the bars and "Cite"). Both forms therefore follow the theme without a filter, and the mark-only glyph always matches the lockup. `frontend/public/citeladder-logo.svg` is the same drawing in the light values (ink `#0b0f0d`, forest `#14532d`) for structured data and the docs build; the policy check maps each of its fills to its token. `BRAND_LOGO_SIZES` owns standard heights; explicit `size` supports exceptional layouts; non-empty `alt` supplies the accessible name. `frontend/public/citeladder-favicon.ico` owns browser/installable-app icons with the same ink silhouette.
-- **Typography:** self-hosted Geist (sans) on every surface for body, UI, data, product headings and public display headings (`--font-text`). It is capped at weight 500 by its `@font-face` range, with `font-synthesis-weight: none` so a bold request never renders a faux bold; 14px working baseline. Each semantic role owns size, leading, weight, tracking, and ink together. In the product, hierarchy comes from size and weight together through the closed `.type-*` roles (see Product app ladder); shared fields and dropdowns use the 14px `--text-field` role on every surface.
+- **Typography:** self-hosted Satoshi (`--font-text`) on every surface for body, UI, data and small headings, and self-hosted Sentient (`--font-heading`, a serif) for display headings: the product page title, public hero, page and section headings, the flow title and Markdown `h2` (owner decision, 2026-10-09). Both are capped at weight 500 by their `@font-face` ranges, with `font-synthesis-weight: none` so a bold request never renders a faux bold; 14px working baseline. Each semantic role owns size, leading, weight, tracking, and ink together. In the product, hierarchy comes from size and weight together through the closed `.type-*` roles (see Product app ladder); shared fields and dropdowns use the 14px `--text-field` role on every surface.
 - **Icons:** Lucide only; import concepts from `frontend/lib/icons.ts` where available. Call sites set size only: `size-3`/`size-3.5` for dense tables, toolbars, and chips; `size-4` for chrome; `size-5` for empty states and marketing wells; larger only for decorative marks. The global stroke ladder derives approximately 1.3px stems from size. Keep `currentColor`; do not override stroke weight locally.
 - **Surface identity:** Light is the default. The app header carries a one-click circular light/dark toggle beside the account menu (`frontend/lib/theme/theme.ts` owns the per-device preference; the semantic tokens rebind under `[data-theme='dark']`). There is no automatic system-theme following. Marketing is light-only and never applies the preference. Forest is the sole action accent on public and product surfaces, and the logo is drawn in the same ink and forest. Provider marks retain their own brand colours. The app's sidebar shares the neutral shell ground, and the work floats beside it on one white workspace sheet. Auth and onboarding share the public website's light world (white stage, public palette, frame-shadowed task sheet); in dark mode they keep the app's dark rebinds. Dark mode keeps the same tonal order in near-black neutrals with the same slight green tint, and its material leads with light hairline rings. Controls retain white fills and distinct edges in light mode. Marketing and docs remain light-only.
 
@@ -22,7 +22,7 @@ CiteLadder (`citeladder.com`) is an evidence-led enterprise system. The app puts
 | Owner | Responsibility |
 | --- | --- |
 | `frontend/apps/app/src/globals.css` | Global tokens, shared geometry, interaction rules, animations, and the single `@theme` definition |
-| `frontend/apps/app/index.html` and `frontend/components/marketing/chrome/PublicFonts.astro` | Self-hosted Geist loading (`--font-text`) and its metric-matched fallback in each runtime |
+| `frontend/apps/app/index.html` and `frontend/components/marketing/chrome/PublicFonts.astro` | Self-hosted Satoshi (`--font-text`) and Sentient (`--font-heading`) loading and their metric-matched fallbacks in each runtime |
 | `frontend/scripts/pull-licensed-fonts.mjs` | The licensed font list; copies the binaries from the private `Cube-27/cube27-fonts` repo, which the public repo must never contain |
 | `frontend/apps/app/src/website-type.css` | Imported public/auth/onboarding type roles and focused-flow geometry; same font and semantic palette |
 | `frontend/components/ui/` | Shared controls, typography, layout, panels, and overlays |
@@ -42,7 +42,7 @@ Consume semantic roles, never page-local values. Every neutral keeps the same sl
 | Ground | `background` | One neutral ground behind the rail and around the workspace sheet; white on public and light flow surfaces |
 | Structure | `background-alt`; `panel-tonal`; `well`; `track` | Tonal bands and panels, recessed wells, the segmented-control track |
 | Paper | `panel`, `input`, `elevated`, `surface-inverse` | The workspace sheet, inputs, semantic objects, overlays, tooltips |
-| Ink | `foreground`; `secondary`; `muted`; chrome ladder `ink-soft`, `ink-icon`, `ink-faint` | Titles and values; sentences; metadata. `ink-faint` is decorative only and never carries text |
+| Ink | `foreground`; `secondary`; `muted`; `ink-faint`; `brand-ink` | Exactly three text inks (owner decision, 2026-10-09): a softened ~80% black for titles and values, a very dark grey for sentences and labels, a light grey for captions and metadata, mirrored in white for dark mode. `ink-faint` is decorative only and never carries text; `brand-ink` is the logo and inverse surface, kept at full strength |
 | Boundaries | `border-subtle`; `border`; `border-strong`; `border-bold` | A rule inside one surface; the edge of a control, inset panel or overlay; deliberate emphasis; small choice controls and edges on tinted fills |
 | Neutral states | `hover`, `selected`, `active`, `disabled` | The receiving surface mixed with `state-ink` (a green-tinted ink) at 4%, 8%, 12% and 3%, so they stay in the neutral family |
 | Action | `accent`, `accent-hover`, `accent-active`, `accent-fg`, `accent-text`, `accent-soft`, `accent-subtle`, `accent-border`, `selection` | Forest: primary actions, links, tab underlines, checked indicators, focus, the bars of the logo. Never success, never a chart series |
@@ -101,7 +101,7 @@ the Colour section above. Every token must have a consumer.
 | `--color-accent-soft` | `#f0fdf4` | `rgb(118 223 156 / 12%)` |
 | `--color-accent-subtle` | `#dcfce7` | `rgb(118 223 156 / 18%)` |
 | `--color-accent-text` | `#14532d` | `#86e5a6` |
-| `--color-active` | `#e4e8e6` | `#2c2f2d` |
+| `--color-active` | `#e4e8e6` | `#2a2d2b` |
 | `--color-background` | `#f4f5f4` | `#0b0d0c` |
 | `--color-background-alt` | `#f6f7f6` | `#181b19` |
 | `--color-border` | `#e1e4e2` | `#2b302d` |
@@ -112,6 +112,7 @@ the Colour section above. Every token must have a consumer.
 | `--color-brand-google-green` | `#34a853` | `#34a853` |
 | `--color-brand-google-red` | `#ea4335` | `#ea4335` |
 | `--color-brand-google-yellow` | `#fbbc05` | `#fbbc05` |
+| `--color-brand-ink` | `#0b0f0d` | `#e1e5e2` |
 | `--color-chart-1` | `#16a34a` | `#4ade80` |
 | `--color-chart-2` | `#2563eb` | `#60a5fa` |
 | `--color-chart-3` | `#d97706` | `#fbbf24` |
@@ -132,28 +133,26 @@ the Colour section above. Every token must have a consumer.
 | `--color-danger-text` | `#b42332` | `#f6abb1` |
 | `--color-disabled` | `#f8f9f9` | `#191c1a` |
 | `--color-elevated` | `#ffffff` | `#1b1f1d` |
-| `--color-foreground` | `#0b0f0d` | `#e1e5e2` |
+| `--color-foreground` | `#2f3431` | `#d3d8d5` |
 | `--color-hover` | `#f6f7f7` | `#1b1e1c` |
 | `--color-info` | `#2f6fdb` | `#7aa7f5` |
 | `--color-info-bg` | `#eef4fd` | `rgb(122 167 245 / 13%)` |
 | `--color-info-border` | `#c5d7f5` | `rgb(122 167 245 / 38%)` |
 | `--color-info-text` | `#1d4fae` | `#a9c6f8` |
 | `--color-ink-faint` | `#8e9690` | `#6d746f` |
-| `--color-ink-icon` | `#2d332f` | `#dce1de` |
-| `--color-ink-soft` | `#525a55` | `#a6ada9` |
 | `--color-input` | `#ffffff` | `#0f1210` |
-| `--color-muted` | `#5c645f` | `#959c98` |
+| `--color-muted` | `#616964` | `#939a96` |
 | `--color-neutral` | `#aab2ad` | `#5f6762` |
 | `--color-neutral-bg` | `#eff1f0` | `#212523` |
 | `--color-on-inverse` | `#ffffff` | `#0b0d0c` |
 | `--color-overlay-scrim` | `rgb(11 15 13 / 32%)` | `rgb(0 0 0 / 72%)` |
 | `--color-panel` | `#ffffff` | `#131614` |
 | `--color-panel-tonal` | `#f8f9f8` | `#171a18` |
-| `--color-secondary` | `#3b423e` | `#bfc5c1` |
-| `--color-selected` | `#edefee` | `#232724` |
+| `--color-secondary` | `#4e5551` | `#a9b0ac` |
+| `--color-selected` | `#edefee` | `#222623` |
 | `--color-selection` | `#bbf7d0` | `rgb(118 223 156 / 35%)` |
-| `--color-selection-fg` | `#0b0f0d` | `#f1f4f2` |
-| `--color-state-ink` | `#1c3d2c` | `#e1e5e2` |
+| `--color-selection-fg` | `#2f3431` | `#f1f4f2` |
+| `--color-state-ink` | `#1c3d2c` | `#d3d8d5` |
 | `--color-success` | `#0d9488` | `#2ec4b0` |
 | `--color-success-bg` | `#ecf8f5` | `rgb(46 196 176 / 13%)` |
 | `--color-success-text` | `#0f766e` | `#7fe0d0` |
@@ -167,11 +166,11 @@ the Colour section above. Every token must have a consumer.
 
 ## Typography
 
-Public display headings (hero, page title, section heading) use weight 500 with tracking that tightens as size grows (about −0.024em to −0.032em); the feature heading uses 500 at about −0.011em. Product-app headings keep normal tracking.
+Public display headings (hero, page title, section heading) set in Sentient at weight 500 with tracking that tightens gently as size grows (about −0.012em to −0.02em; a serif wants less than a grotesk); the feature heading sets in Satoshi 500 at about −0.005em. Product-app headings keep normal tracking.
 
-Use Geist for text, figures and headings on every surface; metrics, dates, ranks, and percentages explicitly use tabular numerals, not monospace. Numbers retain their data roles rather than display roles. Weights are 400 (sentences) and 500 (labels, controls, badges, titles, figures); there is no heavier rung, so titles separate from labels by size. Product titles and figures tighten their tracking as size grows (page title −0.016em, figure −0.02em, section title −0.011em). Do not assemble page-local size/weight/ink hierarchies.
+Use Satoshi for text, figures, labels and small headings on every surface, and Sentient only for display headings; metrics, dates, ranks, and percentages explicitly use tabular numerals, not monospace. Numbers retain their data roles rather than display roles. Weights are 400 (sentences) and 500 (labels, controls, badges, titles, figures); there is no heavier rung, so titles separate from labels by size. Product titles and figures tighten their tracking as size grows (page title −0.01em, figure −0.02em, section title −0.011em). Do not assemble page-local size/weight/ink hierarchies.
 
-Above 14px, adjacent rungs on a surface differ by at least 2px; 1px steps do not read as different levels. Below body, 12 / 13 / 14 is the one dense trio (caption, label, control or nav), told apart by weight and ink as well as size, on every surface. No stylesheet sets a literal `font-size` or `line-height` outside the role definitions; everything else uses `var(--text-*)`.
+There is one scale for every surface in `globals.css` (12 · 14 · 16 · 18 · 20 · 24 · 28 · 32, plus the public display roles at 40 and 60), and no surface rebinds it. 14px is the baseline on every surface: body, controls, navigation and labels. 12px is the one rung below it (captions, badges, deltas, eyebrows, flow meta) and is used sparingly; 10px is reserved and currently unused. There is no 13px rung. Above 14px, adjacent rungs differ by at least 2px. The rungs follow the 4px rhythm that Atlassian, Primer and Carbon share. No stylesheet sets a literal `font-size` or `line-height` outside the role definitions; everything else uses `var(--text-*)`.
 
 The sizes below are generated from the role definitions in `globals.css` and `website-type.css`.
 
@@ -181,29 +180,29 @@ The sizes below are generated from the role definitions in `globals.css` and `we
 | `.type-badge` | product | `12px / 16px` | — |
 | `.type-body` | product | `14px / 20px` | — |
 | `.type-caption` | product | `12px / 16px` | — |
-| `.type-control` | product | `13px / 18px` | — |
+| `.type-control` | product | `14px / 20px` | — |
 | `.type-delta` | product | `12px / 16px` | — |
 | `.type-figure` | product | `24px / 32px` | — |
 | `.type-figure-sm` | product | `16px / 24px` | — |
 | `.type-item-title` | product | `14px / 20px` | — |
-| `.type-label` | product | `13px / 18px` | — |
+| `.type-label` | product | `14px / 20px` | — |
 | `.type-page-title` | product | `20px / 28px` | — |
 | `.type-section-title` | product | `16px / 24px` | — |
-| `.flow-group-title` | public | `18px / 26px` | — |
+| `.flow-group-title` | public | `16px / 24px` | — |
 | `.flow-help` | public | `14px / 20px` | — |
-| `.flow-meta` | public | `13px / 18px` | — |
-| `.flow-title` | public | `30px / 36px` | — |
-| `.website-article-title` | public | `clamp(20px, 5.6vw, 32px) / inherit` | — |
-| `.website-body` | public | `16px / 26px` | — |
-| `.website-data-display` | public | `30px / 36px` | `36px / 42px` |
-| `.website-eyebrow` | public | `13px / 18px` | — |
-| `.website-feature-heading` | public | `18px / 26px` | — |
-| `.website-hero-display` | public | `clamp(28px, 8.6vw, 32px) / 1.04` | `clamp(32px, 4.2vw + 9.6px, 64px) / inherit` |
-| `.website-label` | public | `13px / 18px` | — |
-| `.website-lead` | public | `18px / 28px` | `20px / 30px` |
+| `.flow-meta` | public | `12px / 16px` | — |
+| `.flow-title` | public | `28px / 36px` | — |
+| `.website-article-title` | public | `clamp(20px, 5.6vw, 24px) / inherit` | `32px / 40px` |
+| `.website-body` | public | `14px / 22px` | — |
+| `.website-data-display` | public | `28px / 36px` | `32px / 40px` |
+| `.website-eyebrow` | public | `12px / 16px` | — |
+| `.website-feature-heading` | public | `16px / 24px` | `18px / 28px` |
+| `.website-hero-display` | public | `clamp(28px, 8.6vw, 32px) / 1.1` | `clamp(32px, 4.2vw + 9.6px, 60px) / inherit` |
+| `.website-label` | public | `14px / 20px` | — |
+| `.website-lead` | public | `16px / 24px` | `18px / 28px` |
 | `.website-nav` | public | `14px / 20px` | — |
-| `.website-page-title` | public | `clamp(22px, 6.4vw, 32px) / 1.15` | `48px / 52px` |
-| `.website-section-heading` | public | `30px / 36px` | `42px / 46px` |
+| `.website-page-title` | public | `clamp(24px, 6.4vw, 28px) / 1.2` | `40px / 48px` |
+| `.website-section-heading` | public | `24px / 32px` | `32px / 40px` |
 <!-- generated:type:end -->
 
 ### Website and focused-flow ladder
@@ -221,9 +220,9 @@ Roles own all typography properties. The ladder is mobile-first with one step at
 | Navigation/actions | `website-nav` | Header links and inline actions |
 | Label | `website-label`, `website-eyebrow` | Names a value, a list group or a breadcrumb |
 | Data display | `website-data-display` | Pricing figures only; tabular |
-| Flow rungs | `flow-title`, `flow-group-title`, `flow-help`, `flow-meta` | The focused flow: page-title scale, feature heading, small body (14) and label (13) |
+| Flow rungs | `flow-title`, `flow-group-title`, `flow-help`, `flow-meta` | The focused flow: title (24→28), group title (16), help (14) and meta (12) |
 
-Display rungs track the viewport on phones so headlines stay short: the hero and page titles hold two lines from 360px, and long article titles three. The hero tops out at 64px on desktop. Embedded product previews (`.app-type-scale`) reset to the product ladder below.
+Display rungs track the viewport on phones so headlines stay short: the hero and page titles hold two lines from 360px, and long article titles three. The hero tops out at 60px on desktop and the page title at 40px; leads are 16px on phones and 18px from 768px, and body copy stays at 14px. Embedded product previews (`.app-type-scale`) reset to the product ladder below.
 
 ### Product app ladder
 
@@ -231,14 +230,14 @@ The roles are `.type-*` classes in `globals.css` (components layer, so a status 
 
 | Role | Class | Job | Ink |
 | --- | --- | --- | --- |
-| `pageTitle` | `type-page-title` | The route H1, one per page; display face, −0.016em | `foreground` |
+| `pageTitle` | `type-page-title` | The route H1, one per page; display face, −0.01em | `foreground` |
 | `figure` | `type-figure` | A metric value; tabular | `foreground` |
 | `sectionTitle` | `type-section-title` | Section, card, drawer and dialog headings | `foreground` |
 | `figureSm` | `type-figure-sm` | A value in a dense row or cell; tabular | `foreground` |
 | `itemTitle` | `type-item-title` | Row, list-item and insight titles | `foreground` |
 | `body` | `type-body` | Sentences, descriptions, table cells | `secondary` |
 | `control` | `type-control` | Buttons, navigation, tabs, links | by state |
-| `label` | `type-label` | Names a value: metric, field and column labels | `ink-soft` |
+| `label` | `type-label` | Names a value: metric, field and column labels | `secondary` |
 | `caption` | `type-caption` | Timestamps, counts, help, footnotes | `muted` |
 | `badge` | `type-badge` | Badges, chips, counts, key hints | the tone |
 | `delta` | `type-delta` | Change indicator; tabular | the caller's tone |
@@ -435,7 +434,7 @@ Shared public objects use one card recipe: link cards, plan cards, the review ca
 ### Documentation
 
 The docs subdomain is a Read surface using the existing public light palette,
-Geist, semantic tokens and shared controls. Its desktop shell has
+Satoshi and Sentient, semantic tokens and shared controls. Its desktop shell has
 grouped guide navigation, a measured reading column and an on-page contents
 rail. Mobile uses inline navigation and contents disclosures. Guides, Agent,
 MCP and Changelog are the top-level entry points; Updates is the final sidebar

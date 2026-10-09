@@ -81,10 +81,8 @@ export function SolutionSegments() {
                 >
                   {segment.title}
                 </h2>
-                <p className="website-body text-muted max-w-[60ch]">{segment.lead}</p>
-                {segment.body && (
-                  <p className="website-body text-muted max-w-[60ch]">{segment.body}</p>
-                )}
+                <p className="website-body max-w-[60ch]">{segment.lead}</p>
+                {segment.body && <p className="website-body max-w-[60ch]">{segment.body}</p>}
                 <div className="ed-segment-links">
                   {segment.guide && (
                     <a className="mk-text-link" href={segment.guide.href}>

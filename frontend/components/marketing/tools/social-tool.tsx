@@ -41,14 +41,14 @@ export function SocialPreview() {
           }}
         />
       ) : (
-        <div className="bg-background-alt text-muted website-body flex aspect-[1.91/1] items-center justify-center p-6 text-center">
+        <div className="bg-background-alt website-body flex aspect-[1.91/1] items-center justify-center p-6 text-center">
           Select a local image to preview its crop
         </div>
       )}
       <div className="flex flex-col gap-2 p-5">
         <p className="website-label text-muted truncate">{url || 'https://example.com'}</p>
         <h3 className="website-feature-heading break-words">{title || 'Your page title'}</h3>
-        <p className="website-body text-muted break-words">
+        <p className="website-body break-words">
           {description || 'Your page description appears here.'}
         </p>
       </div>

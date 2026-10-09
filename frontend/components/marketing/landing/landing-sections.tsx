@@ -24,7 +24,7 @@ export function Integrations() {
       <div className="lp-wrap lp-integrations">
         <div className="lp-head">
           <h2 className="website-section-heading">Works with the data you already have.</h2>
-          <p className="website-lead text-muted">
+          <p className="website-lead">
             Start with AI answers alone. Connect search, analytics and research sources when the
             question needs them.
           </p>
@@ -107,7 +107,7 @@ export function Trust() {
             <li key={title}>
               <Icon aria-hidden className="text-accent-text size-5" />
               <h3 className="website-feature-heading">{title}</h3>
-              <p className="website-body text-muted">{body}</p>
+              <p className="website-body">{body}</p>
             </li>
           ))}
         </ul>

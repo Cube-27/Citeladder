@@ -173,14 +173,14 @@
 
 .cm-trial-limits dt {
   color: var(--color-muted);
-  font-size: var(--text-label);
-  line-height: var(--text-label--line-height);
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
 }
 
 .cm-trial-limits dd {
   color: var(--color-foreground);
-  font-size: var(--text-base);
-  line-height: var(--text-base--line-height);
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
@@ -301,7 +301,7 @@
 
 .cm-table thead th:first-child {
   color: var(--color-muted);
-  font-size: var(--text-label);
+  font-size: var(--text-sm);
   font-weight: 500;
 }
 
@@ -377,8 +377,8 @@
   padding-block: 0.75rem;
   border-bottom: 1px solid var(--color-border);
   color: var(--color-secondary);
-  font-size: var(--text-base);
-  line-height: var(--text-base--line-height);
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
 }
 
 .cm-flow {
@@ -416,8 +416,8 @@
 .cm-flow-step {
   margin-bottom: 0.5rem;
   color: var(--color-muted);
-  font-size: var(--text-label);
-  line-height: var(--text-label--line-height);
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
   font-variant-numeric: tabular-nums;
 }
 
@@ -453,8 +453,8 @@
 
 .cm-spec-unit {
   color: var(--color-muted);
-  font-size: var(--text-label);
-  line-height: var(--text-label--line-height);
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
 }
 
 /* ── Contact ──────────────────────────────────────────────────────────── */
@@ -511,8 +511,8 @@
   grid-row: span 2;
   padding-top: 0.25rem;
   color: var(--color-muted);
-  font-size: var(--text-label);
-  line-height: var(--text-label--line-height);
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
   font-variant-numeric: tabular-nums;
 }
 

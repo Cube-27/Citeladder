@@ -28,7 +28,7 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
           { label: `CiteLadder vs ${competitor.name}` },
         ]}
       >
-        <p className="website-body text-muted mt-5 max-w-[60ch]">{competitor.context}</p>
+        <p className="website-body mt-5 max-w-[60ch]">{competitor.context}</p>
       </PageHero>
 
       <Section rhythm="tight" className="pt-0" aria-labelledby="compare-table-title">
@@ -102,7 +102,7 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
             {COMPARISON_CHECKLIST.map((item) => (
               <li key={item.heading}>
                 <h3 className="website-feature-heading">{item.heading}</h3>
-                <p className="website-body text-muted">{item.body}</p>
+                <p className="website-body">{item.body}</p>
               </li>
             ))}
           </ol>
@@ -114,7 +114,7 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
           <SectionHeader headingId="compare-method-title" title={competitor.conclusionHeading} />
           <div className="grid max-w-[68ch] gap-4">
             <p className="website-body">{competitor.conclusion}</p>
-            <p className="website-body text-muted">
+            <p className="website-body">
               In a CiteLadder demo, inspect a recorded answer, follow its cited sources and review
               the relevant website findings. Confirm the current collection options, plan limits and
               provider setup for your project.
@@ -125,9 +125,9 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
 
       <Section rhythm="tight" divided aria-label="Comparison sources and disclosure">
         <div className="grid max-w-[68ch] gap-3">
-          <p className="website-body text-muted">{COMPARISON_DISCLOSURE}</p>
+          <p className="website-body">{COMPARISON_DISCLOSURE}</p>
           {competitor.sources.map((item) => (
-            <p className="website-body text-muted" key={item.url}>
+            <p className="website-body" key={item.url}>
               <a className="ed-link" href={item.url} target="_blank" rel="noreferrer">
                 {item.label}
               </a>
@@ -138,7 +138,7 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
               .
             </p>
           ))}
-          <p className="website-body text-muted flex flex-wrap gap-x-5 gap-y-1">
+          <p className="website-body flex flex-wrap gap-x-5 gap-y-1">
             <a className="ed-link" href="/pricing">
               CiteLadder pricing
             </a>

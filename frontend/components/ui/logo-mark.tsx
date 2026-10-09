@@ -47,7 +47,7 @@ export function LogoMark({
 
   return (
     <span
-      className={cn('text-foreground inline-flex shrink-0 items-center select-none', className)}
+      className={cn('text-brand-ink inline-flex shrink-0 items-center select-none', className)}
       aria-hidden={alt ? undefined : 'true'}
       aria-label={alt || undefined}
       role={alt ? 'img' : undefined}

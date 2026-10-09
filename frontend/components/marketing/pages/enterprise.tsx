@@ -129,7 +129,7 @@ export function EnterpriseEvidence() {
           <h2 className="website-page-title mk-dive-title">
             Every number traces to a stored answer.
           </h2>
-          <p className="website-body text-muted">
+          <p className="website-body">
             Security, analytics and growth teams read the same evidence: the prompt, the engine, the
             answer and the sources it cited.
           </p>
@@ -209,7 +209,7 @@ export function EnterpriseFit() {
         {FIT.map((item) => (
           <li key={item.title}>
             <h3 className="website-feature-heading">{item.title}</h3>
-            <p className="website-body text-muted">{item.body}</p>
+            <p className="website-body">{item.body}</p>
           </li>
         ))}
       </ul>
@@ -233,7 +233,7 @@ export function EnterpriseLimits() {
                 <span className="cm-spec-title">{item.title}</span>
                 <span className="cm-spec-unit">{item.unit}</span>
               </dt>
-              <dd className="website-body text-muted">{item.desc}</dd>
+              <dd className="website-body">{item.desc}</dd>
             </div>
           ))}
         </dl>

@@ -102,7 +102,7 @@ function PlanAction({
       </ButtonLink>
     );
   }
-  return <p className="website-body text-muted">Checkout unavailable</p>;
+  return <p className="website-body">Checkout unavailable</p>;
 }
 
 function PlanCard({
@@ -131,7 +131,7 @@ function PlanCard({
     <article className={cn('cm-plan', highlighted && 'cm-plan-highlighted')}>
       <div className="cm-plan-head">
         <h3 className="website-feature-heading text-foreground">{plan.name}</h3>
-        <p className="website-body text-muted">{presentation?.blurb ?? plan.description}</p>
+        <p className="website-body">{presentation?.blurb ?? plan.description}</p>
       </div>
       <div className="cm-plan-price">
         <p className="website-data-display text-foreground">
@@ -183,7 +183,7 @@ function ExtraRow({
     <li className="cm-extra">
       <div className="cm-extra-copy">
         <h3 className="website-feature-heading text-foreground">{entry.name}</h3>
-        <p className="website-body text-muted">{entry.description}</p>
+        <p className="website-body">{entry.description}</p>
       </div>
       <div className="cm-extra-price">
         <p className="website-body text-foreground">

@@ -55,16 +55,14 @@ export function CompareIndex() {
           Comparisons
         </h2>
         {COMPETITORS.length === 0 ? (
-          <p className="website-body text-muted">
-            Comparison notes publish as each vendor review completes.
-          </p>
+          <p className="website-body">Comparison notes publish as each vendor review completes.</p>
         ) : (
           <ul className="ed-ledger">
             {COMPETITORS.map((competitor) => (
               <li key={competitor.slug}>
                 <a href={`/compare/${competitor.slug}`}>
                   <span className="website-feature-heading">CiteLadder vs {competitor.name}</span>
-                  <span className="website-body text-muted">{competitor.tagline}</span>
+                  <span className="website-body">{competitor.tagline}</span>
                   <ArrowRight aria-hidden className="size-4" />
                 </a>
               </li>
@@ -85,11 +83,11 @@ export function CompareIndex() {
               {COMPARISON_CHECKLIST.map((item) => (
                 <li key={item.heading}>
                   <h3 className="website-feature-heading">{item.heading}</h3>
-                  <p className="website-body text-muted">{item.body}</p>
+                  <p className="website-body">{item.body}</p>
                 </li>
               ))}
             </ol>
-            <p className="website-body text-muted">
+            <p className="website-body">
               Read{' '}
               <a href="/blog/verify-improve-ai-search-visibility" className="ed-link">
                 how to measure AI visibility
