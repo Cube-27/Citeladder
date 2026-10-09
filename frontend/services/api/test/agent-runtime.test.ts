@@ -287,43 +287,30 @@ describe('inactive Agent runtime foundation on PostgreSQL', () => {
       'Recovered answer',
     );
   });
-  it('repairs invalid content formats and reports the effective outline and format', async () => {
+  /** One turn of `skillId` under a catalog with a single long-form page format. */
+  async function runWithPageFormat(skillId: string, formatIds: string[]) {
     const scope = await fixtures.scope();
-    const { run, lease } = await fixtures.claimed(scope, { skillId: 'content' });
+    const { run, lease } = await fixtures.claimed(scope, { skillId });
     const formats = new Map([
       ['page', { id: 'page', label: 'Website page', body: 'Write a page.', longForm: true }],
     ]);
+    const steps = formatIds.map((format_id) => ({
+      ...deliverable(),
+      output: { ...deliverable().output, format_id },
+    }));
     await fixtures
-      .runtime(
-        scope,
-        scripted([
-          { ...deliverable(), output: { ...deliverable().output, format_id: 'unknown' } },
-          { ...deliverable(), output: { ...deliverable().output, format_id: 'page' } },
-        ]),
-        { catalog: { ...catalog, formats } },
-      )
+      .runtime(scope, scripted(steps), { catalog: { ...catalog, formats } })
       .execute(lease);
-    const detail = await readChat(db, scope, run.chat_id);
+    return readChat(db, scope, run.chat_id);
+  }
+  it('repairs invalid content formats and reports the effective outline and format', async () => {
+    const detail = await runWithPageFormat('content', ['unknown', 'page']);
     expect(detail.output).toMatchObject({ phase: 'outline', format_id: 'page' });
     expect(detail.messages.at(-1)?.content).toContain('Saved outline in Website page format');
     expect(detail.messages.filter((message) => message.role === 'agent')).toHaveLength(1);
   });
   it('saves a deliverable whose skill has no formats even when the model names one', async () => {
-    const scope = await fixtures.scope();
-    const { run, lease } = await fixtures.claimed(scope, { skillId: 'plan' });
-    const formats = new Map([
-      ['page', { id: 'page', label: 'Website page', body: 'Write a page.', longForm: true }],
-    ]);
-    await fixtures
-      .runtime(
-        scope,
-        scripted([
-          { ...deliverable(), output: { ...deliverable().output, format_id: 'markdown' } },
-        ]),
-        { catalog: { ...catalog, formats } },
-      )
-      .execute(lease);
-    const detail = await readChat(db, scope, run.chat_id);
+    const detail = await runWithPageFormat('plan', ['markdown']);
     expect(detail.latest_run).toMatchObject({ status: 'succeeded' });
     expect(detail.output).toMatchObject({ format_id: null });
     expect(detail.output?.latest_revision?.body).toBe('Requested document');
