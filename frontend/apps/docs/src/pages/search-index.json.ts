@@ -1,5 +1,5 @@
 import { articles } from '../lib/content';
-import toolReference from '@/apps/marketing/src/data/mcp-tools.json';
+import toolReference from '@/apps/docs/src/data/mcp-tools.json';
 
 export function GET() {
   return Response.json(

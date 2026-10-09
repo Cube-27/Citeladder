@@ -3,7 +3,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { mcpPolicy } from '../src/mcp/config.ts';
 import { tools } from '../src/mcp/tools.ts';
 
-const path = new URL('../../../apps/marketing/src/data/mcp-tools.json', import.meta.url);
+const path = new URL('../../../apps/docs/src/data/mcp-tools.json', import.meta.url);
 const contents = `${JSON.stringify(
   {
     server_version: mcpPolicy.server_version,
