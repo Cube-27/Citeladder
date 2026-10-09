@@ -103,7 +103,8 @@ export const detectOwnedPageNotCited = (e: VisibilityEvidence) =>
 export function detectSiteIssueOpportunities(e: SiteEvidence): DetectorHit[] {
   const urls = new Map(e.urls.map((u) => [u.site_url_id, u.normalized_url]));
   const mapping: Record<string, string> = p.SITE_ISSUE_TO_OPPORTUNITY_RULE_ID;
-  const hits: DetectorHit[] = [];
+  // Each hit cites one issue; ties sort by that issue's id.
+  const hits: { issueId: string; hit: DetectorHit }[] = [];
   for (const issue of e.issues) {
     const rule = mapping[issue.rule_id];
     const url = urls.get(issue.site_url_id);
@@ -115,33 +116,38 @@ export function detectSiteIssueOpportunities(e: SiteEvidence): DetectorHit[] {
     )
       continue;
     hits.push({
-      rule_id: rule,
-      target_key: `url:${url}`,
-      target_prompt_id: null,
-      target_url: url,
-      target_theme: null,
-      evidence: {
-        issue_rule_id: issue.rule_id,
-        issue_severity: issue.severity,
-        category: issue.category,
-        issue_evidence: issue.evidence ?? {},
-        crawl_id: e.crawl_id,
-        site_url_id: issue.site_url_id,
-        url,
-        coverage: e.coverage,
-        limitations: [...e.limitations],
+      issueId: issue.issue_id,
+      hit: {
+        rule_id: rule,
+        target_key: `url:${url}`,
+        target_prompt_id: null,
+        target_url: url,
+        target_theme: null,
+        evidence: {
+          issue_rule_id: issue.rule_id,
+          issue_severity: issue.severity,
+          category: issue.category,
+          issue_evidence: issue.evidence ?? {},
+          crawl_id: e.crawl_id,
+          site_url_id: issue.site_url_id,
+          url,
+          coverage: e.coverage,
+          limitations: [...e.limitations],
+        },
+        source_analysis_ids: [],
+        source_issue_ids: [issue.issue_id],
+        source_metric_ids: [],
+        value_factor: p.SITE_VALUE_FACTOR,
+        gap_factor: p.SITE_GAP_FACTOR,
       },
-      source_analysis_ids: [],
-      source_issue_ids: [issue.issue_id],
-      source_metric_ids: [],
-      value_factor: p.SITE_VALUE_FACTOR,
-      gap_factor: p.SITE_GAP_FACTOR,
     });
   }
-  return hits.sort(
-    (a, b) =>
-      compareText(a.rule_id, b.rule_id) ||
-      compareText(a.target_key, b.target_key) ||
-      compareText(a.source_issue_ids[0]!, b.source_issue_ids[0]!),
-  );
+  return hits
+    .toSorted(
+      (a, b) =>
+        compareText(a.hit.rule_id, b.hit.rule_id) ||
+        compareText(a.hit.target_key, b.hit.target_key) ||
+        compareText(a.issueId, b.issueId),
+    )
+    .map(({ hit }) => hit);
 }

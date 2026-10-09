@@ -21,6 +21,7 @@ import { acquireProjectLock } from '../prompts/locks.ts';
 import { cleanList, type ProjectCreate, type ProjectUpdate } from './inputs.ts';
 import { brandLogoUrl, competitorLogoUrl } from './logos.ts';
 import type { ProjectScope } from './brand-profile.ts';
+import { firstOf } from '../lists.ts';
 
 export type ProjectView = z.input<typeof projectSchema>;
 const stringArray = projectSchema.shape.owned_domains;
@@ -148,7 +149,7 @@ async function views(
 
 export async function readProject(db: Database, scope: ProjectScope): Promise<ProjectView> {
   const result = await views(db, scope.workspaceId, [await projectRow(db, scope)]);
-  return result[0]!;
+  return firstOf(result, 'the view built for the loaded project');
 }
 export async function listProjects(db: Database, workspaceId: string): Promise<ProjectView[]> {
   const rows = await db

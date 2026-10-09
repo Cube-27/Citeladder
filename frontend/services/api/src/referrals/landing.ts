@@ -16,6 +16,7 @@ import { aiTraffic } from '../config/ai-traffic.ts';
 import { pathIdentity } from '../crawl-logs/identity.ts';
 import { policy } from '../config.ts';
 import { compareText } from '../text-order.ts';
+import { isNonEmpty, lastOf, type NonEmpty } from '../lists.ts';
 
 const datasets = [
   'ga4_landing_daily',
@@ -48,8 +49,8 @@ export async function referralEvidence(db: Database, scope: PartitionScope) {
   for (;;) {
     const batch = await (after ? query().where('id', '>', after) : query()).execute();
     rows.push(...batch);
-    if (batch.length < policy.traffic.TRAFFIC_METRIC_ROW_BATCH_SIZE) break;
-    after = batch.at(-1)!.id;
+    if (batch.length < policy.traffic.TRAFFIC_METRIC_ROW_BATCH_SIZE || !isNonEmpty(batch)) break;
+    after = lastOf(batch).id;
   }
   const qualities = await Promise.all(
     datasets.map(async (dataset) => [dataset, await partitionQuality(db, scope, dataset)] as const),
@@ -63,8 +64,8 @@ export async function referralEvidence(db: Database, scope: PartitionScope) {
 type Evidence = Awaited<ReturnType<typeof referralEvidence>>;
 const count = (m: Record<string, unknown>, key: string) =>
   typeof m[key] === 'number' && Number.isFinite(m[key]) ? (m[key] as number) : 0;
-const signals = (parts: string[]) =>
-  classifyReferralSignals({ utm_source: parts[0]!, utm_medium: parts[1]! });
+const signals = (parts: readonly string[]) =>
+  classifyReferralSignals({ utm_source: parts[0], utm_medium: parts[1] });
 type Counts = { sessions: number; engaged_sessions: number; key_events: number };
 const empty = (): Counts => ({ sessions: 0, engaged_sessions: 0, key_events: 0 });
 function add(target: Counts, m: Record<string, unknown>) {
@@ -72,7 +73,7 @@ function add(target: Counts, m: Record<string, unknown>) {
   target.engaged_sessions += count(m, 'engagedSessions');
   target.key_events += count(m, 'keyEvents');
 }
-function dimensionParts(row: Evidence['rows'][number]) {
+function dimensionParts(row: Evidence['rows'][number]): NonEmpty<string> {
   const split = row.dimension_key.split(policy.integrations.dimension_separator);
   const arity = arities[row.dataset]!;
   return [
@@ -104,9 +105,11 @@ function landingExtras(rows: Evidence['rows'], evidence: Evidence) {
     const match = signals(parts.slice(1, 3));
     if (!match) continue;
     const quality = evidence.quality[row.dataset]!.find((q) => q.day === row.day)!;
-    const page = landingPage(parts[0]!, parts.at(-2)!, evidence.hosts);
+    const host = parts.at(-2);
+    if (host === undefined) throw new Error('Expected a host dimension on a landing row');
+    const page = landingPage(parts[0], host, evidence.hosts);
     if (!page) {
-      if (evidence.hosts.has(parts.at(-2)!.toLowerCase())) unattributed += count(m, 'sessions');
+      if (evidence.hosts.has(host.toLowerCase())) unattributed += count(m, 'sessions');
       continue;
     }
     const tz = quality.reporting_timezone ?? 'unknown',

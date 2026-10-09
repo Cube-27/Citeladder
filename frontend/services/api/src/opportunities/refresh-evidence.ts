@@ -18,6 +18,7 @@ import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { record } from '../db/json.ts';
 import { siteCoverage, type CoverageCrawl } from './refresh-compute.ts';
 import { compareText } from '../text-order.ts';
+import { isNonEmpty, lastOf } from '../lists.ts';
 
 const o = policy.opportunity.opportunities;
 const r = policy.opportunity.refresh;
@@ -243,7 +244,10 @@ export async function loadVisibilityEvidence(
     .execute();
   // A prompt cut at the cap would keep only some engines' answers and read as
   // absent where a dropped engine mentioned the brand, so it is dropped whole.
-  const cut = loaded.length > o.RECOMPUTE_MAX_ANALYSES ? loaded.at(-1)!.prompt_index : null;
+  const cut =
+    loaded.length > o.RECOMPUTE_MAX_ANALYSES && isNonEmpty(loaded)
+      ? lastOf(loaded).prompt_index
+      : null;
   const analyses = cut === null ? loaded : loaded.filter((row) => row.prompt_index < cut);
   const limitations =
     cut === null

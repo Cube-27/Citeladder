@@ -5,6 +5,7 @@ import { policy } from '../config.ts';
 import { canonicalPage } from '../traffic/normalization.ts';
 import { record } from '../db/json.ts';
 import { compareText, scalarText, stripTrailing } from '../text-order.ts';
+import { onlyOf } from '../lists.ts';
 
 const p = policy.demand;
 type PageCandidate = {
@@ -93,11 +94,8 @@ function resolveFromArtifacts(
       compareText(a.normalized_url, b.normalized_url) ||
       compareText(a.site_url_id, b.site_url_id),
   );
-  return resolution(
-    proven.length === 1 ? 'resolved' : 'ambiguous',
-    proven.length === 1 ? proven[0]!.site_url_id : null,
-    enriched,
-  );
+  const only = onlyOf(proven);
+  return resolution(only ? 'resolved' : 'ambiguous', only?.site_url_id ?? null, enriched);
 }
 
 export async function resolveOwnedPages(

@@ -12,6 +12,7 @@
 import { ApiError } from '../errors.ts';
 import { parseRequestDate, parseDatetime, type ParsedDatetime } from './datetimes.ts';
 import { parseUuid } from './uuid.ts';
+import { isNonEmpty, lastOf } from '../lists.ts';
 
 type Scalar =
   | { kind: 'uuid' }
@@ -153,7 +154,7 @@ function readParam(
 ): unknown {
   const key = spec.alias ?? name;
   const received = all(key);
-  if (received.length === 0) {
+  if (!isNonEmpty(received)) {
     if (spec.required) errors.push({ loc: [key], message: 'Required', type: 'missing' });
     return spec.default ?? null;
   }
@@ -166,7 +167,7 @@ function readParam(
     });
     return values;
   }
-  const outcome = validateScalar(spec.scalar, received.at(-1)!);
+  const outcome = validateScalar(spec.scalar, lastOf(received));
   if (outcome.ok) return outcome.value;
   errors.push({ loc: [key], message: outcome.message, type: outcome.type });
   return null;

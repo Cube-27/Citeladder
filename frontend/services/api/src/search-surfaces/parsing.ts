@@ -7,6 +7,7 @@ import { providerPolicy } from '../providers/config.ts';
 import { classifySourceOrigin } from '../analysis/opportunities/source-patterns.ts';
 import { citationIdentity } from '../source-pages/identity.ts';
 import { providerCharge, searchPolicy, type SearchEngine } from './dataforseo.ts';
+import { onlyOf } from '../lists.ts';
 
 const list = (value: unknown): unknown[] => (Array.isArray(value) ? value : []);
 const objects = (value: unknown) =>
@@ -117,13 +118,13 @@ export function parseOverview(
   if (envelopeStatus !== null && envelopeStatus !== c.status_ok)
     return emptyOverview(s.outcome_provider_error, envelope, envelopeStatus);
   const matched = objects(envelope.tasks).filter((t) => scalarText(t.id) === expectedId);
-  if (matched.length !== 1)
+  const task = onlyOf(matched);
+  if (!task)
     return emptyOverview(s.outcome_parser_error, {
       parse_error: 'task identity is missing or ambiguous',
       payload: envelope,
     });
-  const task = matched[0]!,
-    status = integer(task.status_code);
+  const status = integer(task.status_code);
   if (pending(status)) return 'still_pending';
   if (status === null) return emptyOverview(s.outcome_parser_error, task);
   if (status !== c.status_ok) return emptyOverview(s.outcome_provider_error, task, status);
@@ -268,8 +269,8 @@ export function parseScraper(
   if (envelope.status_code !== searchPolicy.constants.status_ok)
     throw new ProviderError('parse_error');
   const matched = objects(envelope.tasks).filter((t) => t.id === expectedId);
-  if (matched.length !== 1) throw new ProviderError('parse_error');
-  const task = matched[0]!;
+  const task = onlyOf(matched);
+  if (!task) throw new ProviderError('parse_error');
   if (pending(task.status_code)) return 'still_pending';
   const pages = objects(task.result),
     page = pages[0];

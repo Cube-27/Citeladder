@@ -34,6 +34,7 @@ import { promptTextHash } from './normalization.ts';
 import { readPromptSet, scopedPromptSet } from './prompt-sets.ts';
 import { resolveTopicsByName } from './topics.ts';
 import { promptView, type PromptRow, type PromptSetView, type PromptView } from './views.ts';
+import { isNonEmpty } from '../lists.ts';
 
 const P = policy.prompts;
 const INTENTS = new Set(P.intents);
@@ -285,9 +286,9 @@ export async function bulkSetStatus(
       const failed = failures(rows, (row) =>
         bindingFailure(row.text, vocabulary, [row.name, row.description].filter(Boolean).join(' ')),
       );
-      if (failed.length > 0) {
+      if (isNonEmpty(failed)) {
         throw bindingError(
-          failed[0]!.failure,
+          failed[0].failure,
           `${failed.length} prompt(s) fail topical binding and cannot be activated`,
           {
             prompts: failed.map(({ item, code, message }) => ({
@@ -335,9 +336,9 @@ export async function importPrompts(
       rows.filter((row) => row.text),
       (row) => bindingFailure(row.text, vocabulary),
     );
-    if (failed.length > 0) {
+    if (isNonEmpty(failed)) {
       throw bindingError(
-        failed[0]!.failure,
+        failed[0].failure,
         `${failed.length} imported prompt row(s) fail topical binding; no rows were imported`,
         {
           rows: failed.map(({ item, code, message }) => ({ row: item.index, code, message })),

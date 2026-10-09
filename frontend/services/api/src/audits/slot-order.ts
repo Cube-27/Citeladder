@@ -20,7 +20,7 @@ export function shuffleAuditSlots<T>(items: T[], seedText: string): T[] {
     i++;
     j++;
     if (i >= state.length) {
-      state[0] = state[623]!;
+      state.copyWithin(0, 623, 624);
       i = 1;
     }
     if (j >= key.length) j = 0;
@@ -30,7 +30,7 @@ export function shuffleAuditSlots<T>(items: T[], seedText: string): T[] {
       ((state[i]! ^ Math.imul(state[i - 1]! ^ (state[i - 1]! >>> 30), 1566083941)) - i) >>> 0;
     i++;
     if (i >= state.length) {
-      state[0] = state[623]!;
+      state.copyWithin(0, 623, 624);
       i = 1;
     }
   }

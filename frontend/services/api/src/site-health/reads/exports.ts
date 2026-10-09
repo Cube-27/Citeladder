@@ -6,6 +6,7 @@
 import { policy } from '../../config.ts';
 import type { Database } from '../../db/database.ts';
 import { tableCsv, tableMarkdown } from '../../http/table-export.ts';
+import { onlyOf } from '../../lists.ts';
 import { compareText } from '../../text-order.ts';
 import { siteReadSettings } from '../runtime.ts';
 import { loadCrawl } from './crawl.ts';
@@ -22,6 +23,10 @@ const MEASUREMENT = [
   'aeo_measurement_reason',
   'last_audited',
 ];
+/** The exportable table views, in the order the export route lists them. */
+const VIEW_NAMES = ['inventory', 'pages', 'issues'] as const;
+export type TableView = (typeof VIEW_NAMES)[number];
+export const TABLE_VIEWS: TableView[] = [...VIEW_NAMES];
 const VIEWS = {
   inventory: {
     title: 'Site Health — URL Inventory',
@@ -72,10 +77,8 @@ const VIEWS = {
       'created_at',
     ],
   },
-} as const;
+} as const satisfies Record<TableView, { title: string; columns: readonly string[] }>;
 
-export type TableView = keyof typeof VIEWS;
-export const TABLE_VIEWS = Object.keys(VIEWS) as TableView[];
 const EXPORT_PAGE = policy.site_health.reads.export_page_size;
 
 /** Rows of one table view, at most `max_export_items`, and whether more were left out. */
@@ -190,15 +193,15 @@ function treeLines(
   seen: Set<string>,
 ): string[] {
   const group = children.get(nodeId) ?? [];
-  const kinds = new Set(group.map((node) => node.page_kind));
+  const kind = onlyOf(new Set(group.map((node) => node.page_kind)));
   // A large homogeneous set of leaf pages reads as one count, not a URL list.
   const collapse =
     nodeId !== null &&
     group.length >= policy.site_health.architecture.page_kind_collapse_min &&
-    kinds.size === 1 &&
-    !kinds.has('') &&
+    kind !== undefined &&
+    kind !== '' &&
     !group.some((node) => children.get(node.site_url_id)?.length);
-  if (collapse) return [`${prefix}\`-- [${group.length} ${group[0]!.page_kind}]`];
+  if (collapse) return [`${prefix}\`-- [${group.length} ${kind}]`];
   const lines: string[] = [];
   group.forEach((node, index) => {
     const last = index === group.length - 1;

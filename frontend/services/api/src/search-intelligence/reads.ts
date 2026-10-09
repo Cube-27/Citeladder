@@ -23,6 +23,7 @@ import { policy } from '../config.ts';
 import { preferencesBody } from '../routes/search-intelligence-contracts.ts';
 import { competitorTarget, ownedTargets, searchMarket } from './targets.ts';
 import { datasetView, rowView, runView } from './views.ts';
+import { isNonEmpty, lastOf, onlyOf } from '../lists.ts';
 
 const si = policy.search_intelligence;
 const ROW_SORT_FIELDS = new Set<string>(si.row_sort_fields);
@@ -116,7 +117,7 @@ export async function readiness(
   ]);
   const saved = preferencesBody.parse(project.search_intelligence_preferences);
   // One eligible connection is usable; none or several need the user to fix it.
-  const connection = connections.length === 1 ? connections[0]! : null;
+  const connection = onlyOf(connections) ?? null;
   return {
     connected: connection !== null,
     connection_id: connection?.id ?? null,
@@ -205,7 +206,8 @@ function cursorRowId(cursor: string, cursorScope: string, filters: Record<string
     if (error instanceof InvalidCursorError) throw invalidCursor();
     throw error;
   }
-  const rowId = values.length === 1 ? parseUuid(values[0]!) : null;
+  const only = onlyOf(values);
+  const rowId = only === undefined ? null : parseUuid(only);
   if (rowId === null) throw invalidCursor();
   return rowId;
 }
@@ -268,8 +270,8 @@ export async function datasetPage(
     dataset: { ...datasetView(dataset), filtered_saved_count: Number(counted.count) },
     rows: page.map((row) => ({ ...rowView(row), action_id: actions.get(row.id) ?? null })),
     next_cursor:
-      rows.length > request.limit
-        ? encodeKeysetCursor(cursorScope, filters, [page.at(-1)!.id])
+      rows.length > request.limit && isNonEmpty(page)
+        ? encodeKeysetCursor(cursorScope, filters, [lastOf(page).id])
         : null,
   };
 }

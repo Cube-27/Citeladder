@@ -10,6 +10,7 @@ import type { QueueTask } from '../queue/task-queue.ts';
 import { fenceInspectionTask } from './task-fence.ts';
 import { compareText, scalarText } from '../text-order.ts';
 import { lexicalTokens } from '../analysis/lexical.ts';
+import { groupBy } from '../lists.ts';
 
 const p = policy.content_differentiation;
 const strings = (value: unknown): string[] =>
@@ -20,7 +21,9 @@ export type ComparisonPage = {
   tables: string[][];
   domains: string[];
 };
-function features(page: ComparisonPage) {
+/** The compared structural features, in the (alphabetical) order results list them. */
+const FEATURES = ['heading_topics', 'outbound_sources', 'table_structures'] as const;
+function features(page: ComparisonPage): Record<(typeof FEATURES)[number], Set<string>> {
   return {
     heading_topics: new Set(
       page.headings
@@ -97,7 +100,7 @@ function classify(
   const own = features(owned);
   const denominator = compared.length;
   const threshold = Math.max(1, Math.ceil(denominator * p.most_pages_ratio));
-  for (const feature of (Object.keys(own) as (keyof typeof own)[]).sort(compareText)) {
+  for (const feature of FEATURES) {
     const counts = new Map<string, number>();
     for (const page of compared)
       for (const value of features(page)[feature]) counts.set(value, (counts.get(value) ?? 0) + 1);
@@ -238,9 +241,9 @@ export async function refreshDifferentiation(
       .orderBy('url.id')
       .limit(p.max_owned_page_candidates)
       .execute();
-    const groups = Map.groupBy(candidates, (row) => row.audit_task_id);
+    const groups = groupBy(candidates, (row) => row.audit_task_id);
     for (const [taskId, rows] of groups) {
-      const first = rows[0]!;
+      const [first] = rows;
       const terms = lexicalTokens(first.query_text);
       const selected = ownedRows
         .map((row) => {

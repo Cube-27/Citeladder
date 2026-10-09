@@ -6,6 +6,7 @@
  */
 import { policy, resolveSettingSpec } from '../../config.ts';
 import { compareText } from '../../text-order.ts';
+import { onlyOf } from '../../lists.ts';
 import {
   ancestors,
   attribute,
@@ -450,7 +451,7 @@ function extractDocument(
     meta_description: metaContent(root, 'description'),
     robots: robotsMeta(root),
     canonical_declarations: declarations,
-    canonical_url: declarations.length === 1 ? declarations[0]! : '',
+    canonical_url: onlyOf(declarations) ?? '',
     open_graph: metaPropertyMap(root, 'og:'),
     twitter: metaPropertyMap(root, 'twitter:'),
     headings,

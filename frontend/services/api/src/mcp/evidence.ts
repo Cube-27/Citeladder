@@ -31,6 +31,7 @@ import { readiness, datasetPage } from '../search-intelligence/reads.ts';
 import { opportunityStatusClause, validateStatus } from '../opportunities/action-status.ts';
 import { authorizeProject, decodeCursor, encodeCursor, pagination } from './data.ts';
 import { McpInputError, type Evidence, type EvidencePrincipal, type ReadScope } from './types.ts';
+import { isNonEmpty, lastOf } from '../lists.ts';
 
 const reference = (kind: string, id: string, retrievable = true) => ({
   kind,
@@ -197,7 +198,7 @@ async function ranked(db: Database, scope: ReadScope, args: ReadArguments): Prom
       .limit(count + 1)
       .execute(),
     selected = rows.slice(0, count);
-  if (!selected.length) return unavailable('no_opportunities');
+  if (!isNonEmpty(selected)) return unavailable('no_opportunities');
   const items = selected.map((r, index) => ({
     id: r.id,
     record_uri: `citeladder://opportunity/${r.id}`,
@@ -214,7 +215,7 @@ async function ranked(db: Database, scope: ReadScope, args: ReadArguments): Prom
     ordering: 'priority_score_desc_then_id',
     items,
     artifact_refs: selected.map((r) => reference('opportunity', r.id)),
-    pagination: pagination(items, rows.length > count ? selected.at(-1)!.id : null),
+    pagination: pagination(items, rows.length > count ? lastOf(selected).id : null),
     omissions: rows.length > count ? [{ reason: 'roadmap_item_limit', count: null }] : [],
   };
 }

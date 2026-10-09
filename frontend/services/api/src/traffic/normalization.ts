@@ -31,14 +31,16 @@ export function canonicalPage(input: string, origin?: string | null): string | n
     // Site Health still stores the compared url_hash. Retain its raw path
     // (including dot segments) and Unicode-folded hostname in this identity only.
     const raw = /^[a-z][a-z0-9+.-]*:\/\/([^/?#]*)([^?#]*)/iu.exec(value);
-    if (!raw || raw[1]!.includes('@')) return null;
-    const rawHost = raw[1]!.replace(/:\d+$/u, '');
+    if (!raw) return null;
+    const [, rawAuthority, rawPath] = raw;
+    if (rawAuthority === undefined || rawAuthority.includes('@')) return null;
+    const rawHost = rawAuthority.replace(/:\d+$/u, '');
     const host = domainToASCII(normalizeQuery(stripTrailing(rawHost, '.')));
     if (!host) return null;
     const defaultPort = scheme === 'https' ? 443 : 80;
     const port = parsed.port ? Number(parsed.port) : defaultPort;
     if (!policy.traffic.url_ports.includes(port)) return null;
-    const path = (raw[2] || '/').replace(/%([0-9a-f]{2})/giu, (_match, hex: string) => {
+    const path = (rawPath || '/').replace(/%([0-9a-f]{2})/giu, (_match, hex: string) => {
       const char = String.fromCharCode(Number.parseInt(hex, 16));
       return /[a-z0-9\-._~]/iu.test(char) ? char : `%${hex.toUpperCase()}`;
     });

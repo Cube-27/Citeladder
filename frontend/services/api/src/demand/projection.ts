@@ -2,6 +2,7 @@
 import { policy } from '../config.ts';
 import { hash } from '../traffic/normalization.ts';
 import { compareText } from '../text-order.ts';
+import { groupBy } from '../lists.ts';
 import type { Classification } from './classification.ts';
 
 const p = policy.demand;
@@ -182,16 +183,6 @@ export function classificationCounts(rows: QueryInput[]) {
   for (const row of rows) counts[row.classification] = (counts[row.classification] ?? 0) + 1;
   return counts;
 }
-export function grouped<T>(rows: T[], key: (row: T) => string): Map<string, T[]> {
-  const groups = new Map<string, T[]>();
-  for (const row of rows) {
-    const k = key(row);
-    const group = groups.get(k) ?? [];
-    group.push(row);
-    groups.set(k, group);
-  }
-  return groups;
-}
 export function queryCandidate(
   type: string,
   query: string,
@@ -231,19 +222,19 @@ export function detectStrikingDistance(rows: QueryInput[]): Evaluation {
     if (!usable) abstained++;
     return usable;
   });
-  const groups = grouped(eligible, (r) =>
+  const groups = groupBy(eligible, (r) =>
     JSON.stringify([r.classification, r.normalized_query, r.resolved_page_url]),
   );
   const candidates: Candidate[] = [];
   // Order by the group identity fields.
   const ordered = [...groups.values()].sort(
     ([a], [b]) =>
-      compareText(a!.classification, b!.classification) ||
-      compareText(a!.normalized_query, b!.normalized_query) ||
-      compareText(a!.resolved_page_url, b!.resolved_page_url),
+      compareText(a.classification, b.classification) ||
+      compareText(a.normalized_query, b.normalized_query) ||
+      compareText(a.resolved_page_url, b.resolved_page_url),
   );
   for (const group of ordered) {
-    const row = group[0]!;
+    const row = group[0];
     const a = aggregate(group);
     const branded = row.classification === 'branded';
     if (

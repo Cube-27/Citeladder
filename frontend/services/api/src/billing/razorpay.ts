@@ -280,7 +280,8 @@ export class RazorpayProvider implements BillingProvider {
       );
     });
     if (matches.length > 1) throw new ProviderError(true, 'provider_reference_ambiguous');
-    return matches.length ? reference.parse(matches[0]!.id) : null;
+    const [match] = matches;
+    return match ? reference.parse(match.id) : null;
   }
   evidence(id: string, base: boolean): Promise<Evidence> {
     reference.parse(id);
@@ -332,8 +333,8 @@ export class RazorpayProvider implements BillingProvider {
         typeof row.payment_id === 'string',
     );
     if (matches.length > 1) throw new ProviderError(true, 'provider_invoice_ambiguous');
-    if (matches.length) {
-      const invoice = matches[0]!;
+    const [invoice] = matches;
+    if (invoice) {
       const capture = payment(
         await this.request('GET', `/payments/${reference.parse(invoice.payment_id)}`),
       );

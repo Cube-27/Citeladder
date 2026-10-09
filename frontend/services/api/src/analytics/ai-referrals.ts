@@ -14,6 +14,7 @@ import type { Database } from '../db/database.ts';
 import { isoDateText } from '../db/timestamps.ts';
 import { metricSeriesPoints } from './metric-series.ts';
 import { record } from '../db/json.ts';
+import { firstOf } from '../lists.ts';
 
 const analytics = policy.analytics;
 const PRESET_DAYS: Readonly<Record<string, number>> = analytics.preset_range_days;
@@ -69,7 +70,7 @@ const sessionCount = z
   .pipe(z.coerce.number<string | number>().int().nonnegative().max(Number.MAX_SAFE_INTEGER));
 
 function laxShare(value: unknown): number | null {
-  return metricSeriesPoints([{ value }])[0]!.value;
+  return firstOf(metricSeriesPoints([{ value }]), 'the series point built for one value').value;
 }
 
 /** `ai_referral_sources`: the stored per-source rows as served; a malformed value is a 500. */

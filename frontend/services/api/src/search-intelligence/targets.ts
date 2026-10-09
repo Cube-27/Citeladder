@@ -11,6 +11,7 @@ import { getDomain } from 'tldts';
 import type { z } from 'zod';
 
 import { stripTrailing } from '../text-order.ts';
+import { onlyOf } from '../lists.ts';
 
 export type CanonicalTarget = z.output<typeof searchTargetSchema>;
 
@@ -77,7 +78,6 @@ export function competitorTarget(
   domains: readonly string[],
 ): CanonicalTarget | null {
   const saved = domains.filter((domain) => domain.trim());
-  return saved.length === 1
-    ? targetOf(competitor.id, competitor.name, saved[0]!, 'competitor')
-    : null;
+  const only = onlyOf(saved);
+  return only === undefined ? null : targetOf(competitor.id, competitor.name, only, 'competitor');
 }

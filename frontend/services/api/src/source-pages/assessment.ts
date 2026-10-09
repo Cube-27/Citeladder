@@ -84,7 +84,8 @@ function entity(
     const escaped = alias.replaceAll(/[.*+?^${}()|[\]\\]/gu, String.raw`\$&`);
     const word = String.raw`[\p{L}\p{N}_]`;
     const matches = [...text.matchAll(new RegExp(`(?<!${word})${escaped}(?!${word})`, 'giu'))];
-    if (!matches.length) continue;
+    const [first] = matches;
+    if (!first) continue;
     const refs = quote(text, matches, `${kind}:${normalizeAlias(name)}`, passages);
     return {
       entity_kind: kind,
@@ -92,7 +93,7 @@ function entity(
       presence: refs.length ? 'present' : 'ambiguous',
       match_method: alias === name ? 'exact_alias' : 'normalized_alias',
       match_count: matches.length,
-      first_offset: matches[0]!.index,
+      first_offset: first.index,
       passage_refs: refs,
     };
   }

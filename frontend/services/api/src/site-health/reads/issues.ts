@@ -24,6 +24,7 @@ import {
 } from '../../http/keyset-cursor.ts';
 import { containsPattern } from '../../db/like.ts';
 import { parseUuid } from '../../http/uuid.ts';
+import { firstOf } from '../../lists.ts';
 import { compareText } from '../../text-order.ts';
 import { loadCrawl, type Crawl } from './crawl.ts';
 import { requireAdmitted } from './pages.ts';
@@ -156,7 +157,7 @@ async function issueSummary(db: Database, crawl: Crawl, filters: IssueFilters) {
     reads.rule_dimensions.map((name) => [name, 0]),
   );
   for (const row of dimensions.rows) dimensionCounts[row.dimension] = row.count;
-  const total = totals.rows[0]!;
+  const total = firstOf(totals.rows, 'the issue totals');
   return {
     issue_count: byClass.defect ?? 0,
     defect_issue_type_count: byClass.defect ?? 0,
@@ -316,6 +317,7 @@ export async function issueDetail(
   if (representative === undefined) throw notFound('Issue');
   const page = occurrences.rows.slice(0, paging.limit);
   const last = page.at(-1);
+  const total = firstOf(totals.rows, 'the issue group totals');
   return siteIssueDetailSchema.parse({
     group_id: groupId,
     crawl_id: crawl.id,
@@ -329,8 +331,8 @@ export async function issueDetail(
     remediation: representative.remediation,
     remediation_route: remediationRoute(representative.rule_id),
     occurrences: page.map((row) => issueOccurrence(row, row)),
-    occurrence_count: totals.rows[0]!.occurrences,
-    affected_url_count: totals.rows[0]!.affected,
+    occurrence_count: total.occurrences,
+    affected_url_count: total.affected,
     analyzer_version: representative.analyzer_version,
     rule_version: representative.rule_version,
     created_at: representative.created_at.toISOString(),

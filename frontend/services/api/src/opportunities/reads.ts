@@ -137,11 +137,12 @@ export async function listOpportunities(
   let nextCursor: string | null = null;
   if (rows.length > limit) {
     rows = rows.slice(0, limit);
-    const last = rows.at(-1)!;
-    nextCursor = encodeKeysetCursor(LIST_SCOPE, fingerprint, [
-      String(last.priority_score),
-      last.id,
-    ]);
+    const last = rows.at(-1);
+    if (last)
+      nextCursor = encodeKeysetCursor(LIST_SCOPE, fingerprint, [
+        String(last.priority_score),
+        last.id,
+      ]);
   }
   const order = await new WorkspaceScope(scope.workspaceId)
     .selectFrom(db, 'opportunity_orders')

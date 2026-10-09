@@ -10,6 +10,7 @@ import type { Database } from '../db/database.ts';
 import { record, strings } from '../db/json.ts';
 import { admitPrompts } from '../entitlements/occupancy.ts';
 import { ApiError } from '../errors.ts';
+import { firstOf } from '../lists.ts';
 import { createModelGateway, type ModelGateway } from '../models/gateway.ts';
 import { ModelError } from '../models/http.ts';
 import { bindingTokens } from '../prompts/binding.ts';
@@ -299,7 +300,7 @@ export async function manualBuyerPrompt(
   const rows = await persist(db, scope, [
     { target: input.target, texts: [input.text], evidence: null },
   ]);
-  return rows[0]!;
+  return firstOf(rows, 'the persisted manual buyer prompt');
 }
 
 export async function generateBuyerPrompts(

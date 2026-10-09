@@ -69,9 +69,9 @@ async function sourceMaterial(db: Database, scope: DemandScope) {
   const rows = await sourceRows(db, scope);
   const material = rows.flatMap((row) => {
     const parts = row.dimension_key.split(policy.traffic.dimension_key_separator);
-    if (parts.length < 3) return [];
-    const query = parts.slice(0, -2).join(policy.traffic.dimension_key_separator),
-      page = parts.at(-2)!;
+    const page = parts.at(-2);
+    if (parts.length < 3 || page === undefined) return [];
+    const query = parts.slice(0, -2).join(policy.traffic.dimension_key_separator);
     const normalized = normalizeQuery(query);
     const metrics = record(row.metrics);
     const nonnegative = (key: string) => {

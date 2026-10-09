@@ -24,6 +24,7 @@ import {
 } from './requests.ts';
 import type { Scope } from './reads.ts';
 import { runView } from './views.ts';
+import { onlyOf } from '../lists.ts';
 
 const error = (code: string, message: string) =>
   new ApiError(422, message, { code: asApiErrorCode(code) });
@@ -174,13 +175,13 @@ export async function createReview(
       .where('api_key_encrypted', '!=', '');
     if (payload.connection_id) connections = connections.where('id', '=', payload.connection_id);
     const eligible = await connections.orderBy('created_at').execute();
-    if (eligible.length !== 1)
+    const connection = onlyOf(eligible);
+    if (!connection)
       throw error(
         eligible.length ? 'dataforseo_connection_ambiguous' : 'dataforseo_connection_required',
         'Select one eligible DataForSEO connection',
       );
-    const connection = eligible[0]!,
-      at = options.now ?? new Date();
+    const at = options.now ?? new Date();
     const location = payload.location_code || current.project.serp_location_code || null;
     const language =
       payload.language_code.trim().toLowerCase() ||

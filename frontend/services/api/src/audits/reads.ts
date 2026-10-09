@@ -7,6 +7,7 @@ import { utcText, utcTextOf, pydanticUtc, pydanticUtcOrNull } from '../db/timest
 import { notFound } from '../errors.ts';
 import { modelProvenanceFor, executionFrozenProvenance } from '../analysis/provenance.ts';
 import { engineSnapshots } from '../visibility/runs.ts';
+import { firstOf } from '../lists.ts';
 
 function auditQuery(db: Database, workspaceId: string) {
   return db
@@ -43,7 +44,10 @@ async function auditResponses(db: Database, audits: Awaited<ReturnType<typeof au
   );
 }
 export async function readAudit(db: Database, workspaceId: string, auditId: string) {
-  return (await auditResponses(db, [await authorizedAudit(db, workspaceId, auditId)]))[0]!;
+  return firstOf(
+    await auditResponses(db, [await authorizedAudit(db, workspaceId, auditId)]),
+    'the response built for the loaded audit',
+  );
 }
 export async function listAudits(
   db: Database,

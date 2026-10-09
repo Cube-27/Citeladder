@@ -43,16 +43,14 @@ export function gatewaySettings(
   };
 }
 
+const completionChoice = z.object({
+  message: z.object({ content: z.string().trim().min(1) }),
+  finish_reason: z.string().nullish(),
+});
 const completion = z.object({
   model: z.string().optional(),
-  choices: z
-    .array(
-      z.object({
-        message: z.object({ content: z.string().trim().min(1) }),
-        finish_reason: z.string().nullish(),
-      }),
-    )
-    .min(1),
+  // At least one choice: the first is the answer.
+  choices: z.tuple([completionChoice], completionChoice),
   usage: z.record(z.string(), z.unknown()).optional(),
 });
 const streamChunk = z.object({
@@ -250,12 +248,12 @@ export function createModelGateway(
     const latency = Math.round(performance.now() - started);
     logger.info('default agent call ok', { latency_ms: latency, model: settings.model });
     return {
-      content: body.choices[0]!.message.content,
+      content: body.choices[0].message.content,
       provider_adapter: 'openai_compatible',
       endpoint_host: endpoint.hostname,
       requested_model: settings.model,
       returned_model: body.model || settings.model,
-      finish_status: body.choices[0]!.finish_reason ?? 'unknown',
+      finish_status: body.choices[0].finish_reason ?? 'unknown',
       usage,
       latency_ms: latency,
     };

@@ -1,5 +1,6 @@
 /** Page-kind schema expectations: the page's primary entity, its properties and visible match. */
 import { stripTrailing } from '../../text-order.ts';
+import { firstOf, onlyOf } from '../../lists.ts';
 import { passFail } from './delivery-checks.ts';
 import { resolveCanonical, type CheckResult } from './indexing.ts';
 import { analysisPolicy } from './policy.ts';
@@ -153,15 +154,16 @@ function resolveSelection(
       };
     selected = corroborated;
   }
-  if (selected.size === 1)
-    return { outcome: 'satisfied', blocks: [candidates[[...selected][0]!]!], evidence };
+  const index = onlyOf(selected);
+  const chosen = index === undefined ? undefined : candidates[index];
+  if (chosen) return { outcome: 'satisfied', blocks: [chosen], evidence };
   if (selected.size > 1 || candidates.length > 1)
     return {
       outcome: 'unknown',
       blocks: [],
       evidence: { ...evidence, reason: 'ambiguous_primary_schema_entity' },
     };
-  const only = candidates[0]!;
+  const only = firstOf(candidates, 'the one expected-type schema candidate');
   if (documentUrl(only.url))
     return {
       outcome: 'missing',

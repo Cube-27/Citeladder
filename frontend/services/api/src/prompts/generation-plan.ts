@@ -8,6 +8,7 @@ import { policy } from '../config.ts';
 import { record, strings } from '../db/json.ts';
 import type { GenerationContext, OfferingMap } from './generation-context.ts';
 import { generationSetting, type GenerationInput } from './generation-input.ts';
+import { isNonEmpty, type NonEmpty } from '../lists.ts';
 
 const G = policy.prompts.generation;
 export const dimensions = ['attributes', 'situations', 'audiences'] as const;
@@ -165,15 +166,15 @@ function planners(context: PlanContext, suggestions: OfferingMap[]): Planner[] {
 }
 
 /** The least-used facet combination, confirmed values before suggested ones. */
-function nextCombo(plan: Planner): Facet[] {
+function nextCombo(plan: Planner, combos: NonEmpty<Facet[]>): Facet[] {
   const used = (facet: Facet) => plan.usage.get(`${facet.dimension}:${facet.value}`) ?? 0;
   const score = (combo: Facet[]) => combo.reduce((sum, facet) => sum + used(facet), 0);
-  return [...plan.combos].sort(
-    (a, b) =>
-      score(a) - score(b) ||
-      Number(a.some((facet) => facet.suggested)) - Number(b.some((facet) => facet.suggested)) ||
-      a.length - b.length,
-  )[0]!;
+  const compare = (a: Facet[], b: Facet[]) =>
+    score(a) - score(b) ||
+    Number(a.some((facet) => facet.suggested)) - Number(b.some((facet) => facet.suggested)) ||
+    a.length - b.length;
+  // The first of the least: the head of a stable sort.
+  return combos.reduce((best, combo) => (compare(combo, best) < 0 ? combo : best));
 }
 
 /**
@@ -189,24 +190,30 @@ export function planSlots(
 ): Slot[] {
   const plans = planners(context, suggestions);
   const markets = plannedMarkets(context),
-    share = locationShare(context);
+    share = locationShare(context),
+    stages = G.stages;
+  if (!isNonEmpty(stages)) throw new Error('Expected at least one configured buyer stage');
   return Array.from(
     { length: input.count * generationSetting('overgenerate_factor') },
     (_, index) => {
       const plan = plans[index % plans.length]!;
       plan.cells += 1;
       const used = (key: string) => plan.usage.get(key) ?? 0;
-      const least = (key: string, options: readonly string[]) =>
-        [...options].sort((a, b) => used(`${key}:${a}`) - used(`${key}:${b}`))[0]!;
-      const stage = least('stage', G.stages);
+      const least = (key: string, options: NonEmpty<string>) =>
+        options.reduce((best, option) =>
+          used(`${key}:${option}`) < used(`${key}:${best}`) ? option : best,
+        );
+      const stage = least('stage', stages);
       const combo =
         plan.cells > G.stages.length &&
-        plan.combos.length &&
+        isNonEmpty(plan.combos) &&
         plan.faceted + 1 <= G.facet_cell_share * plan.cells
-          ? nextCombo(plan)
+          ? nextCombo(plan, plan.combos)
           : [];
       const market =
-        markets.length && plan.located + 1 <= share * plan.cells ? least('market', markets) : '';
+        isNonEmpty(markets) && plan.located + 1 <= share * plan.cells
+          ? least('market', markets)
+          : '';
       if (combo.length) plan.faceted += 1;
       if (market) plan.located += 1;
       for (const key of [

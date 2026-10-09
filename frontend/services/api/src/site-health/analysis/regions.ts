@@ -17,6 +17,7 @@ import {
   type HtmlNode,
   type HtmlText,
 } from '../../web-evidence/html.ts';
+import { onlyOf } from '../../lists.ts';
 import { regionPolicy as r, limits, squash } from './policy.ts';
 import { comparableUrl } from './indexing.ts';
 
@@ -176,7 +177,8 @@ function primaryRegion(root: HtmlNode): PrimaryRegion {
     });
     if (eligible.length >= r.max_primary_candidates) break;
   }
-  if (eligible.length === 1) return eligible[0]!;
+  const only = onlyOf(eligible);
+  if (only) return only;
   let best: { node: HtmlElement; source: string; rank: number[] } | undefined;
   for (const candidate of eligible) {
     const rank = candidateRank(candidate.node, candidate.source);

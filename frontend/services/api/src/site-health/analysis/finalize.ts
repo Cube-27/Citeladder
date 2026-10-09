@@ -1,6 +1,7 @@
 /** Cross-page checks use only the persisted acquisition evidence supplied by the caller. */
 import { policy } from '../../config.ts';
 import { scalarText } from '../../text-order.ts';
+import { onlyOf } from '../../lists.ts';
 import { membership, type RuleEvaluation } from './rules.ts';
 
 const limits = policy.site_health.page_analysis.facts.limits;
@@ -95,9 +96,10 @@ export function canonicalIntegrity(input: {
   const result = (outcome: string, reason: string) =>
     finalizeEvaluation('technical.canonical_integrity', outcome, { ...evidence, reason });
   if (!unique.length) return result('not_applicable', 'no_canonical');
-  if (unique.length !== 1) return result('missing', 'conflicting_declarations');
+  const only = onlyOf(unique);
+  if (only === undefined) return result('missing', 'conflicting_declarations');
   try {
-    const declared = new URL(unique[0]!, input.finalUrl);
+    const declared = new URL(only, input.finalUrl);
     const final = new URL(input.finalUrl);
     if (![declared, final].every((url) => ['http:', 'https:'].includes(url.protocol)))
       return result('missing', 'invalid_canonical');

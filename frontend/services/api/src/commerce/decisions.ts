@@ -1,5 +1,6 @@
 import type { Database } from '../db/database.ts';
 import { buyerPrompts, candidates, commerceMissing, type CommerceScope } from './reads.ts';
+import { firstOf } from '../lists.ts';
 
 export function decideCandidate(
   db: Database,
@@ -24,7 +25,7 @@ export function decideCandidate(
       .where('workspace_id', '=', scope.workspaceId)
       .where('project_id', '=', scope.projectId)
       .execute();
-    return (await candidates(trx, scope, id))[0]!;
+    return firstOf(await candidates(trx, scope, id), 'the decided competitor candidate');
   });
 }
 
@@ -69,6 +70,6 @@ export function decideBuyerPrompt(
       .where('workspace_id', '=', scope.workspaceId)
       .where('project_id', '=', scope.projectId)
       .execute();
-    return (await buyerPrompts(trx, scope, id))[0]!;
+    return firstOf(await buyerPrompts(trx, scope, id), 'the decided buyer prompt');
   });
 }

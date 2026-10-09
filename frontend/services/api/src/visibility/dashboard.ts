@@ -19,6 +19,7 @@ import type { Database } from '../db/database.ts';
 import { pydanticUtc, pydanticUtcOf, utcText, utcTextOf } from '../db/timestamps.ts';
 import { epochMicros, fromEpochMicros, toUtc, type ParsedDatetime } from '../http/datetimes.ts';
 import { compareText } from '../text-order.ts';
+import { groupBy, isNonEmpty, lastOf, type NonEmpty } from '../lists.ts';
 import {
   applyRankingComparison,
   compareSelection,
@@ -275,21 +276,27 @@ function configurationGroup(source: TrendSource): string {
 function rangeGroups(
   runs: readonly MeasuredRun[],
   query: DashboardQuery,
-): { groups: Map<string, TrendSource[]>; key: string; sources: TrendSource[] } {
-  const groups = new Map<string, TrendSource[]>();
-  for (const run of runs) {
-    const source = trendSource(run, query.logicalEngine, query.cohort);
-    if (source === null) continue;
-    const group = configurationGroup(source);
-    groups.set(group, [...(groups.get(group) ?? []), source]);
-  }
+): {
+  groups: Map<string, NonEmpty<TrendSource>>;
+  key: string;
+  sources: NonEmpty<TrendSource>;
+} {
+  const groups = groupBy(
+    runs
+      .map((run) => trendSource(run, query.logicalEngine, query.cohort))
+      .filter((source) => source !== null),
+    configurationGroup,
+  );
   if (groups.size === 0) throw new AnalysisNotFoundError('No measurements in the selected period');
   // The configuration measured most recently, unless the reader chose one.
   let key = query.configurationKey;
   if (key === null) {
+    let latest: TrendSource | null = null;
     for (const [group, sources] of groups) {
-      if (key === null || sources.at(-1)!.completedAt > groups.get(key)!.at(-1)!.completedAt) {
+      const last = lastOf(sources);
+      if (latest === null || last.completedAt > latest.completedAt) {
         key = group;
+        latest = last;
       }
     }
   }
@@ -324,7 +331,7 @@ function rangeEngines(
         .filter((run) => selected.has(run.auditId))
         .map((run) => trendSource(run, engine, query.cohort))
         .filter((source) => source !== null);
-      if (engineSources.length === 0) {
+      if (!isNonEmpty(engineSources)) {
         return {
           logical_engine: engine,
           total_completed: 0,
@@ -335,7 +342,7 @@ function rangeEngines(
           counts: unavailableCounts(),
         };
       }
-      const point = foldBucket(engineSources.at(-1)!.completedAt, engineSources);
+      const point = foldBucket(lastOf(engineSources).completedAt, engineSources);
       return {
         logical_engine: engine,
         total_completed: point.counts!.responses,
@@ -365,12 +372,12 @@ function unavailableCounts(): MeasurementCounts {
 async function comparePeriod(
   db: Database,
   scope: RunScope,
-  sources: readonly TrendSource[],
+  sources: NonEmpty<TrendSource>,
   point: TrendPoint,
   query: DashboardQuery,
   window: { fromAt: ParsedDatetime; toAt: ParsedDatetime },
 ): Promise<VisibilityComparison> {
-  const reference = sources[0]!;
+  const reference = sources[0];
   if (!reference.comparisonKey) return emptyComparison();
   const from = epochMicros(window.fromAt);
   const baselineStart = fromEpochMicros(from - (epochMicros(window.toAt) - from));
@@ -387,8 +394,8 @@ async function comparePeriod(
         source.analyzerVersion === reference.analyzerVersion &&
         source.scoringRuleVersion === reference.scoringRuleVersion,
     ) as TrendSource[];
-  if (before.length === 0) return emptyComparison();
-  const previous = foldBucket(before.at(-1)!.completedAt, before);
+  if (!isNonEmpty(before)) return emptyComparison();
+  const previous = foldBucket(lastOf(before).completedAt, before);
   const result = emptyComparison({
     status: 'comparable',
     baseline_at: pydanticUtcOf(baselineStart),
@@ -436,9 +443,10 @@ async function rangeVisibility(
   }
   const runs = await loadMeasuredRuns(db, scope, { fromAt, toAt });
   const { groups, key, sources } = rangeGroups(runs, query);
-  const last = runs.find((run) => run.auditId === sources.at(-1)!.auditId)!;
+  const latest = lastOf(sources);
+  const last = runs.find((run) => run.auditId === latest.auditId)!;
   const { response } = await runView(db, scope, last, { ...query, auditId: last.auditId });
-  const point = foldBucket(sources.at(-1)!.completedAt, sources);
+  const point = foldBucket(latest.completedAt, sources);
   const counts = point.counts!;
   const rankings = point.rankings.map(asRankingRow);
   applyMarks(rankings, await rankingMarks(db, scope.projectId));

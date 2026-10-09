@@ -49,11 +49,13 @@ export async function runSetComparisonStatus(
     rows.filter((row) => wanted.includes(row.id)).map((row) => row.completed_at);
   const current = dates(input.currentIds);
   const baseline = dates(input.baselineIds);
+  const latestBaseline = baseline.toSorted().at(-1);
+  const earliestCurrent = current.toSorted()[0];
   if (
-    current.length === 0 ||
-    baseline.length === 0 ||
+    latestBaseline == null ||
+    earliestCurrent == null ||
     [...current, ...baseline].includes(null) ||
-    baseline.toSorted().at(-1)! >= current.toSorted()[0]!
+    latestBaseline >= earliestCurrent
   ) {
     return 'invalid_baseline';
   }

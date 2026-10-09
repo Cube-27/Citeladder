@@ -51,7 +51,8 @@ export async function contentHandoff(db: Database, scope: Scope, ref: ContentRef
     .where('outcome', 'in', ['missing', 'partial'])
     .orderBy('rule_id')
     .execute();
-  if (!evaluations.length) throw notFound('Content-addressable gap');
+  const [first] = evaluations;
+  if (!first) throw notFound('Content-addressable gap');
   const rules = new Map(policy.site_health.rule_catalog.map((rule) => [rule.rule_id, rule]));
   return {
     ...ref,
@@ -60,7 +61,7 @@ export async function contentHandoff(db: Database, scope: Scope, ref: ContentRef
     checkpoint_ids: evaluations.map((row) => row.rule_id),
     normalized_url: analysis.normalized_url,
     suggested_skill_id: 'content_page',
-    finding_class: evaluations[0]!.finding_class,
+    finding_class: first.finding_class,
     observed_evidence: evaluations.map((row) => record(row.evidence)),
     source_evaluation_ids: evaluations.map((row) => row.id),
     source_artifact_ids: strings(analysis.source_artifact_ids),

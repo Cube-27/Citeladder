@@ -7,6 +7,7 @@ import { advisoryXactLock } from '../db/advisory-lock.ts';
 import { accountState, drawOrder } from './state.ts';
 import { digest } from '../billing/contracts.ts';
 import { getLogger } from '../logging.ts';
+import { isNonEmpty } from '../lists.ts';
 
 export class LedgerError extends Error {}
 export type Subject =
@@ -196,7 +197,7 @@ async function reservation(db: Database, workspaceId: string, accountId: string,
     .forUpdate()
     .execute();
   const holds = rows.filter((row) => row.entry_kind === 'reservation');
-  if (!holds.length) throw new LedgerError('reservation_not_found');
+  if (!isNonEmpty(holds)) throw new LedgerError('reservation_not_found');
   const released = new Map<string, number>();
   for (const row of rows)
     if (row.entry_kind === 'release')
@@ -249,16 +250,16 @@ export async function debitUsage(
   if (!Number.isSafeInteger(units) || units <= 0 || !Number.isSafeInteger(attempt) || attempt <= 0)
     throw new LedgerError('debit_units_invalid');
   const { rows, holds, released } = await reservation(db, workspaceId, accountId, reservationId);
-  if (holds[0]!.subject_id !== subjectId) throw new LedgerError('reservation_subject_mismatch');
+  if (holds[0].subject_id !== subjectId) throw new LedgerError('reservation_subject_mismatch');
   const fingerprint =
-    holds[0]!.subject_kind === 'audit'
+    holds[0].subject_kind === 'audit'
       ? auditFingerprint({ reservation_id: reservationId, subject_id: subjectId, attempt, units })
       : digest({ reservationId, subjectId, attempt, dispatchKey, units });
   const prior = rows.find(
     (row) =>
       row.entry_kind === 'debit' &&
       (row.idempotency_key === `${key}:debit:${row.grant_id}` ||
-        (holds[0]!.subject_kind === 'audit'
+        (holds[0].subject_kind === 'audit'
           ? row.attempt === attempt
           : row.dispatch_key === dispatchKey)),
   );

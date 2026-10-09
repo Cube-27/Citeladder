@@ -2,6 +2,7 @@
 import { policy } from '../config.ts';
 import { record } from '../db/json.ts';
 import { compareText, stripTrailing } from '../text-order.ts';
+import { onlyOf } from '../lists.ts';
 import { assessArchetype } from './archetypes.ts';
 import { canonicalUrl } from './url-identity.ts';
 
@@ -186,7 +187,10 @@ function hierarchy(pages: ArchitecturePage[]) {
   const urls = new Map<string, string[]>();
   for (const page of pages) urls.set(page.url, [...(urls.get(page.url) ?? []), page.id]);
   const nodes = new Map(
-    [...urls].flatMap(([url, ids]) => (ids.length === 1 ? [[url, ids[0]!] as const] : [])),
+    [...urls].flatMap(([url, ids]) => {
+      const id = onlyOf(ids);
+      return id === undefined ? [] : [[url, id] as const];
+    }),
   );
   const kinds = new Map(pages.map((page) => [page.id, page.kind]));
   return breakCycles(pages.map((page) => hierarchyRow(page, nodes, kinds)));

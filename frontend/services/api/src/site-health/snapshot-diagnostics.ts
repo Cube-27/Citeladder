@@ -4,6 +4,7 @@ import { record } from '../db/json.ts';
 import type { MeasurementProjection } from './score-summary.ts';
 import type { Crawl } from './task-fence.ts';
 import { compareText } from '../text-order.ts';
+import { firstOf } from '../lists.ts';
 
 const reads = policy.site_health.reads;
 const catalog = new Map(policy.site_health.rule_catalog.map((row) => [row.rule_id, row]));
@@ -108,7 +109,8 @@ export function readinessDiagnostic(
       evidence_truncated: failurePages > evidencePages.length,
       checks: checkpointIds.map((id) => {
         const group = relevant.filter((row) => row.rule_id === id);
-        const scope = group[0]!.scope;
+        const first = firstOf(group, `an evaluation of checkpoint ${id}`);
+        const scope = first.scope;
         const failures = group.filter(failing);
         const rule = catalog.get(id)!;
         const failureCount = failingEntities(scope, failures);
@@ -119,7 +121,7 @@ export function readinessDiagnostic(
           remediation: rule.remediation,
           ...counts(group),
           failing_entity_count: failureCount,
-          aeo_pillar: group[0]!.readiness_dimension,
+          aeo_pillar: first.readiness_dimension,
           content_addressable: rule.content_addressable,
           remediation_route: rule.remediation_route,
         };

@@ -19,6 +19,7 @@ import type { Database } from '../db/database.ts';
 import { jsonObject, numberRecord, record, strings } from '../db/json.ts';
 import { pydanticUtc, storedInstant, utcText, utcTextOf } from '../db/timestamps.ts';
 import { compareText } from '../text-order.ts';
+import { groupBy } from '../lists.ts';
 import {
   cellPrompt,
   compareCells,
@@ -238,20 +239,6 @@ function outcome(engine: string, model: string, responses: Response[], tasks: Ta
   };
 }
 
-function groupBy<T>(
-  rows: readonly T[],
-  key: (row: T) => string | number,
-): Map<string | number, T[]> {
-  const groups = new Map<string | number, T[]>();
-  for (const row of rows) {
-    const id = key(row);
-    const group = groups.get(id);
-    if (group) group.push(row);
-    else groups.set(id, [row]);
-  }
-  return groups;
-}
-
 /** The explicitly named earlier baseline, when its frozen context matches. */
 async function baselineRun(
   db: Database,
@@ -397,8 +384,8 @@ async function enrichOutcomes(
     );
     item.outcomes = [...cellsByRoute.values()]
       .map((values) => ({
-        engine: values[0]!.logical_engine,
-        model: values[0]!.transport_model,
+        engine: values[0].logical_engine,
+        model: values[0].transport_model,
         values,
       }))
       .sort(
@@ -510,8 +497,8 @@ function poolPrompt(rows: readonly PromptRow[]): PromptRow {
           }
         }
         return {
-          logical_engine: entries[0]!.logical_engine,
-          transport_model: entries[0]!.transport_model,
+          logical_engine: entries[0].logical_engine,
+          transport_model: entries[0].transport_model,
           counts: pooled,
           visibility_rate: ratio(pooled.brand_responses, pooled.responses),
           owned_citation_rate: ratio(pooled.owned_citation_responses, pooled.responses),

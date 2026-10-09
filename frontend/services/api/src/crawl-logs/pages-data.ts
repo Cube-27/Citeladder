@@ -52,14 +52,16 @@ export type JoinedPage = {
 };
 function pageCursor(sortValue: RawBuilder<unknown>, ascending: boolean, after: string[]) {
   if (!after.length) return sql`true`;
+  const [sortAfter, hashAfter] = after;
   if (
     after.length !== 2 ||
-    !/^[a-f0-9]{64}$/u.test(after[1]!) ||
-    (!ascending && !Number.isFinite(Number(after[0])))
+    hashAfter === undefined ||
+    !/^[a-f0-9]{64}$/u.test(hashAfter) ||
+    (!ascending && !Number.isFinite(Number(sortAfter)))
   )
     throw new ApiError(422, 'Invalid Pages cursor');
-  if (ascending) return sql`(${sortValue},url_hash)>(${after[0]},${after[1]})`;
-  return sql`(${sortValue},url_hash)<(${Number(after[0])},${after[1]})`;
+  if (ascending) return sql`(${sortValue},url_hash)>(${sortAfter},${hashAfter})`;
+  return sql`(${sortValue},url_hash)<(${Number(sortAfter)},${hashAfter})`;
 }
 export async function pageDataset(db: Database, scope: CrawlScope, options: PageOptions = {}) {
   const w = crawlWindow(options),
