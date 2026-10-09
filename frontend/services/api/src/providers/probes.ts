@@ -16,6 +16,7 @@ import {
   type ProbeRequest,
   type ProbeTransport,
 } from './probe-transport.ts';
+import { isNonEmpty, lastOf } from '../lists.ts';
 
 const object = z.record(z.string(), z.unknown());
 function probeSecret(encrypted: string, key: string) {
@@ -211,7 +212,8 @@ export async function probeConnection(
     });
     results.push(result);
   }
-  return results.find((result) => result.status === 'failed') ?? results.at(-1)!;
+  if (!isNonEmpty(results)) throw new Error('Expected at least one probe result');
+  return results.find((result) => result.status === 'failed') ?? lastOf(results);
 }
 function probeRequest(
   baseUrl: string,

@@ -5,6 +5,7 @@ import type { ProviderCapacityBuckets } from '../generated/db-schema.ts';
 import { policy } from '../config.ts';
 import { auditPolicy, type AuditRuntime } from '../audits/config.ts';
 import { getLogger } from '../logging.ts';
+import { firstOf } from '../lists.ts';
 
 const logger = getLogger('providers.capacity');
 type Bucket = Selectable<ProviderCapacityBuckets>;
@@ -254,7 +255,7 @@ export async function acquireCapacity(
       await trx
         .updateTable('provider_capacity_buckets')
         .set({ tokens: sql`tokens - 1` })
-        .where('id', '=', rows[0]!.bucket.id)
+        .where('id', '=', firstOf(rows, 'the locked transport bucket').bucket.id)
         .execute();
     return { acquired: true, leaseIds };
   });

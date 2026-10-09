@@ -5,6 +5,7 @@ import { request as httpRequest } from 'node:http';
 import { isIP } from 'node:net';
 import { FetchError, validateAddress } from '../projects/safe-fetch.ts';
 import { providerPolicy } from './config.ts';
+import { isNonEmpty } from '../lists.ts';
 
 export class ProbeError extends Error {
   readonly code: string;
@@ -49,7 +50,7 @@ export const sendProbe: ProbeTransport = async (input) => {
       .then(resolve, () => reject(new ProbeError('dns_resolution_failed')))
       .finally(() => signal.removeEventListener('abort', aborted));
   });
-  if (!addresses.length) throw new ProbeError('dns_resolution_failed');
+  if (!isNonEmpty(addresses)) throw new ProbeError('dns_resolution_failed');
   if (input.customerDestination) {
     if (!providerPolicy.app.allowed_ports.includes(Number(url.port || 443)))
       throw new ProbeError('invalid_url');
@@ -60,7 +61,7 @@ export const sendProbe: ProbeTransport = async (input) => {
       throw error;
     }
   }
-  const target = addresses[0]!;
+  const target = addresses[0];
   const body = input.body === undefined ? undefined : Buffer.from(JSON.stringify(input.body));
   if (body && body.length > providerPolicy.app.max_request_bytes)
     throw new ProbeError('request_too_large');
