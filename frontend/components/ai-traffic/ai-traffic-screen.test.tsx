@@ -323,6 +323,179 @@ describe('AI Traffic state and navigation', () => {
       declared_filtered: false,
     });
   });
+  it('creates a Google Cloud source, shows its labelled commands and verifies the subscription', async () => {
+    const id = '99999999-9999-4999-8999-999999999999';
+    let created: unknown = null;
+    let verified = false;
+    const pullSource = () => ({
+      id,
+      kind: 'pull',
+      setup: 'gcp_pubsub_pull',
+      preset: 'gcp_log_entry',
+      buffer_interval_seconds: null,
+      format: 'ndjson',
+      collection_point: 'cdn_edge',
+      sampling: { kind: 'none' },
+      origin: 'https://acme.com',
+      host: 'acme.com',
+      status: 'active',
+      state: verified ? 'active' : 'awaiting_verification',
+      stall_reason: null,
+      stalled_at: null,
+      token_prefix: null,
+      connection: 'awaiting_data',
+      last_accepted_batch: null,
+      last_processed_at: null,
+      rejected_lines: 0,
+      overlapping_lines: 0,
+      unsupported_uploads: 0,
+      unsupported_batches: 0,
+      pull: {
+        subscription: 'projects/acme-prod/subscriptions/crawlers-sub',
+        verification_nonce: 'abcdefghijklmnopqrstuvwxyz',
+        verified_at: verified ? '2026-10-10T00:00:00.000Z' : null,
+        verification_checked_at: null,
+        verification_failure: null,
+        filter_catalog_version: '2',
+        filter_confirmed_at: null,
+        filter_current: true,
+        declared_sample_rate: 1,
+        last_pull_at: null,
+        last_drained_at: null,
+      },
+    });
+    mswServer.use(
+      http.get(root + '/crawl-logs/sources', () =>
+        HttpResponse.json(sourceBody('available', created ? [pullSource()] : [])),
+      ),
+      http.post(root + '/crawl-logs/sources', async ({ request }) => {
+        created = await request.json();
+        return HttpResponse.json({ id, token: null });
+      }),
+      http.post(root + '/crawl-logs/sources/' + id + '/verify', () => {
+        verified = true;
+        return HttpResponse.json({ id, verified: true, failure: null });
+      }),
+    );
+    const user = userEvent.setup();
+    renderWithProviders(<CrawlLogConnections />);
+    await user.click(screen.getByRole('button', { name: 'Connect crawl logs' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Connect crawl logs' });
+    await user.click(within(dialog).getByRole('radio', { name: /Google Cloud/ }));
+    await user.type(
+      within(dialog).getByLabelText('Pub/Sub subscription'),
+      'projects/acme-prod/subscriptions/crawlers-sub',
+    );
+    await user.click(within(dialog).getByRole('button', { name: 'Create source' }));
+    expect(
+      await within(dialog).findByText(/--labels=citeladder-source=abcdefghijklmnopqrstuvwxyz/),
+    ).toBeVisible();
+    expect(
+      within(dialog).getByText(
+        /add-iam-policy-binding crawlers-sub --project=acme-prod --member=serviceAccount:citeladder-log-reader@example\.iam\.gserviceaccount\.com --role=roles\/pubsub\.subscriber/,
+      ),
+    ).toBeVisible();
+    expect(created).toEqual({
+      setup: 'gcp_pubsub_pull',
+      origin: 'https://acme.com',
+      subscription: 'projects/acme-prod/subscriptions/crawlers-sub',
+      declared_sample_rate: 1,
+    });
+    await user.click(within(dialog).getByRole('button', { name: 'Verify subscription' }));
+    expect(await within(dialog).findByText(/^Verified\./)).toBeVisible();
+    expect(await screen.findByText(/Google Cloud · Awaiting data · Active/)).toBeVisible();
+  });
+  it('disables the Google Cloud option where no reader service account is configured', async () => {
+    mswServer.use(
+      http.get(root + '/crawl-logs/sources', () =>
+        HttpResponse.json({
+          ...sourceBody('available'),
+          gcp_pull: {
+            availability: 'pull_unavailable',
+            reader_email: null,
+            log_filter: 'resource.type="http_load_balancer"',
+            catalog_version: '2',
+          },
+        }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderWithProviders(<CrawlLogConnections />);
+    await user.click(screen.getByRole('button', { name: 'Connect crawl logs' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Connect crawl logs' });
+    const option = await within(dialog).findByRole('radio', { name: /Google Cloud/ });
+    expect(option).toBeDisabled();
+    expect(within(dialog).getByText('Not available in this environment.')).toBeVisible();
+  });
+  it('asks for the new sink filter after a catalog change and records the confirmation', async () => {
+    const id = '99999999-9999-4999-8999-999999999999';
+    let confirmed = false;
+    mswServer.use(
+      http.get(root + '/crawl-logs/sources', () =>
+        HttpResponse.json(
+          sourceBody('available', [
+            {
+              id,
+              kind: 'pull',
+              setup: 'gcp_pubsub_pull',
+              preset: 'gcp_log_entry',
+              buffer_interval_seconds: null,
+              format: 'ndjson',
+              collection_point: 'cdn_edge',
+              sampling: { kind: 'none' },
+              origin: 'https://acme.com',
+              host: 'acme.com',
+              status: 'active',
+              state: 'stalled',
+              stall_reason: 'verification_failed',
+              stalled_at: '2026-10-10T00:00:00.000Z',
+              token_prefix: null,
+              connection: 'connected',
+              last_accepted_batch: null,
+              last_processed_at: null,
+              rejected_lines: 0,
+              overlapping_lines: 0,
+              unsupported_uploads: 0,
+              unsupported_batches: 0,
+              pull: {
+                subscription: 'projects/acme-prod/subscriptions/crawlers-sub',
+                verification_nonce: 'abcdefghijklmnopqrstuvwxyz',
+                verified_at: '2026-10-01T00:00:00.000Z',
+                verification_checked_at: '2026-10-10T00:00:00.000Z',
+                verification_failure: 'permission_denied',
+                filter_catalog_version: '1',
+                filter_confirmed_at: null,
+                filter_current: confirmed,
+                declared_sample_rate: 1,
+                last_pull_at: null,
+                last_drained_at: '2026-10-09T00:00:00.000Z',
+              },
+            },
+          ]),
+        ),
+      ),
+      http.post(root + '/crawl-logs/sources/' + id + '/filter-confirmation', () => {
+        confirmed = true;
+        return HttpResponse.json({ id });
+      }),
+    );
+    const user = userEvent.setup();
+    renderWithProviders(<CrawlLogConnections />);
+    expect(
+      await screen.findByText(
+        /The subscription failed its check\. Fix it, then verify again\. CiteLadder’s reader lacks subscriber and viewer roles/,
+      ),
+    ).toBeVisible();
+    const prompt = screen.getByRole('region', { name: 'Sink filter update for acme.com' });
+    expect(within(prompt).getByText('resource.type="http_load_balancer"')).toBeVisible();
+    await user.click(within(prompt).getByRole('button', { name: 'I’ve updated it' }));
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('region', { name: 'Sink filter update for acme.com' }),
+      ).not.toBeInTheDocument(),
+    );
+    expect(confirmed).toBe(true);
+  });
   it('preserves the issued token until the source dialog is closed', async () => {
     let creates = 0;
     mswServer.use(

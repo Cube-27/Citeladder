@@ -25,6 +25,14 @@ export const CRAWL_LOG_SETUPS = [
     guide: docsUrl('/ai-traffic/#amazon-cloudfront-firehose'),
   },
   {
+    value: 'gcp_pubsub_pull',
+    collectionPoint: 'cdn_edge',
+    label: 'Google Cloud',
+    description:
+      'Load balancer and Cloud Run request logs through Pub/Sub, pulled by CiteLadder. Unsampled, drained days can reach complete coverage.',
+    guide: docsUrl('/ai-traffic/#google-cloud-pubsub'),
+  },
+  {
     value: 'custom',
     collectionPoint: 'application',
     label: 'Custom webhook',
@@ -59,6 +67,15 @@ export const CLOUDFRONT_LOG_FIELDS = [
   'x-host-header',
   'cs(User-Agent)',
 ] as const;
+/** Names the generated Google Cloud setup commands create in the customer's project. */
+export const GCP_PULL_SETUP = {
+  topic: 'citeladder-ai-crawlers',
+  sink: 'citeladder-ai-crawlers',
+  ackDeadlineSeconds: 120,
+  retention: '7d',
+  sourceLabel: 'citeladder-source',
+  subscriptionPlaceholder: 'projects/my-project/subscriptions/citeladder-ai-crawlers-sub',
+} as const;
 /** Machine senders post to the API host; locally that is the API container itself. */
 // An origin carries no path, so a configured trailing slash never doubles into `//v1`.
 export const CRAWL_INGEST_ORIGIN =

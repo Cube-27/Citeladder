@@ -25,6 +25,7 @@ import { Alert } from '@/components/ui/alert';
 import { CopyButton } from '@/components/ui/copy-button';
 import { TextLink } from '@/components/ui/text-link';
 import { Checkbox } from '@/components/ui/checkbox';
+import { GcpFields, GcpSourceSetup, GcpSteps } from './gcp-pull-setup';
 const SETUP_STEPS: Partial<Record<(typeof CRAWL_LOG_SETUPS)[number]['value'], string>> = {
   cloudflare_worker:
     'Deploy the downloadable template yourself. Store the token as a Worker secret, use a fail-open route, and expect partial coverage. Every routed request uses your Workers quota.',
@@ -40,6 +41,12 @@ export function CrawlLogSetup({
   const chosen = CRAWL_LOG_SETUPS.find((s) => s.value === setup)!;
   const steps = SETUP_STEPS[chosen.value];
   const firehose = setup === 'aws_firehose';
+  const gcp = setup === 'gcp_pubsub_pull';
+  // Without a reader service account (local development) the pull connector cannot run.
+  const pullUnavailable = model.sources.data?.gcp_pull.availability !== 'available';
+  let fields = <DeclaredFields model={model} />;
+  if (firehose) fields = <FirehoseFields model={model} />;
+  if (gcp) fields = <GcpFields model={model} />;
   return (
     <Stack gap="section">
       <RadioGroup
@@ -55,19 +62,26 @@ export function CrawlLogSetup({
             next.value === 'cloudflare_worker' ? 'Best-effort recognized automated requests' : '',
           );
         }}
-        options={CRAWL_LOG_SETUPS.map((s) => ({
-          value: s.value,
-          label: (
-            <span className="grid gap-0.5 py-2">
-              <span className="type-control text-foreground">{s.label}</span>
-              <span className="type-caption">{s.description}</span>
-            </span>
-          ),
-        }))}
+        options={CRAWL_LOG_SETUPS.map((s) => {
+          const unavailable = s.value === 'gcp_pubsub_pull' && pullUnavailable;
+          return {
+            value: s.value,
+            disabled: unavailable,
+            label: (
+              <span className="grid gap-0.5 py-2">
+                <span className="type-control text-foreground">{s.label}</span>
+                <span className="type-caption">
+                  {unavailable ? 'Not available in this environment.' : s.description}
+                </span>
+              </span>
+            ),
+          };
+        })}
       />
       <div className={panelClasses({ tone: 'well', pad: 'compact' }, 'grid gap-2')}>
         {steps ? <p className="type-body text-secondary">{steps}</p> : null}
         {firehose ? <FirehoseSteps interval={model.bufferInterval} /> : null}
+        {gcp ? <GcpSteps /> : null}
         <TextLink variant="external" href={chosen.guide} className="w-fit">
           Setup guide: {chosen.label}
         </TextLink>
@@ -78,7 +92,7 @@ export function CrawlLogSetup({
             <Input {...field} value={origin} onChange={(e) => setOrigin(e.target.value)} />
           )}
         </Field>
-        {firehose ? <FirehoseFields model={model} /> : <DeclaredFields model={model} />}
+        {fields}
       </div>
       {mutation.isError ? <Alert tone="danger">{mutation.error.message}</Alert> : null}
       {setup === 'upload' ? <UploadForm model={model} /> : null}
@@ -204,12 +218,24 @@ function FirehoseSteps({ interval }: Readonly<{ interval: string }>) {
   );
 }
 export function CrawlLogCredential({
-  issued,
-}: Readonly<{
-  issued: ReturnType<typeof useCrawlConnections>['issued'];
-}>) {
+  model,
+}: Readonly<{ model: ReturnType<typeof useCrawlConnections> }>) {
+  const { issued, sources } = model;
   const route = issued?.setup === 'aws_firehose' ? 'firehose' : 'ingest';
   const endpoint = `${CRAWL_INGEST_ORIGIN}/v1/crawl-logs/${route}/${issued?.id ?? ''}`;
+  const pullSource =
+    issued?.setup === 'gcp_pubsub_pull'
+      ? sources.data?.items.find((source) => source.id === issued.id)
+      : undefined;
+  if (pullSource && sources.data)
+    return (
+      <GcpSourceSetup
+        source={pullSource}
+        gcp={sources.data.gcp_pull}
+        projectId={model.projectId}
+        workspaceId={model.workspaceId}
+      />
+    );
   return issued ? (
     <Alert tone="info">
       <div className="grid gap-3">
