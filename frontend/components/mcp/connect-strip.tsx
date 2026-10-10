@@ -102,6 +102,9 @@ export function ConnectStrip({ className }: Readonly<{ className?: string }>) {
                 rel="noopener noreferrer"
                 data-marketing-cta=""
                 onClick={() => select(primary)}
+                // The wrapper anchors the menu, but this link is what takes focus.
+                aria-haspopup="menu"
+                aria-expanded={menu.open}
                 onPointerEnter={menu.enter}
                 onPointerLeave={menu.leave}
                 // A press follows the link; only hover and ArrowDown or Space open the menu.

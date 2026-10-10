@@ -39,7 +39,7 @@ If evidence is stale or unavailable, refresh or acquire it through the appropria
 
 You need:
 
-- A CiteLadder workspace with an active trial or subscription, and at least one project.
+- A CiteLadder workspace with an active trial or subscription. The assistant reads project evidence, so set up a project first; the approval page links to setup if you have none.
 - A client that supports remote Streamable HTTP MCP with browser OAuth. [Setup](/mcp/connect/) covers Claude, ChatGPT, Gemini, Grok, Cursor, Claude Code and Codex.
 
 Assistants decide which plans and regions can add custom connectors, so availability can differ between accounts.

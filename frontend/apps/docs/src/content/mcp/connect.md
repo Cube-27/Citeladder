@@ -104,7 +104,7 @@ The approval page explains any workspace you cannot select. A workspace whose tr
 
 ## How long a connection lasts
 
-The client refreshes its sign-in automatically. A connection that is used at least once every 30 days stays signed in for up to 180 days from approval; after that, the client asks you to sign in and approve again. You can end it sooner by [revoking it](/mcp/access/#revoke-access).
+The client renews its sign-in as you use it. A connection left unused for 30 days, or 180 days after approval however often it is used, asks you to sign in and approve again. You can end it sooner by [revoking it](/mcp/access/#revoke-access).
 
 ## Check the connection
 

@@ -29,11 +29,11 @@ Start with project discovery, inspect available evidence, then ask for the concr
 
 In clients that support MCP Apps, such as Claude and ChatGPT, three tools open an interactive CiteLadder view inside the conversation:
 
-| Tool                 | Shows                                          |
-| -------------------- | ---------------------------------------------- |
-| `render_visibility`  | A visibility overview or sources for one audit |
-| `render_site_health` | The Site Health results of one crawl           |
-| `open_analytics`     | The analytics view, in a sidebar or panel      |
+| Tool                 | Shows                                                                  |
+| -------------------- | ---------------------------------------------------------------------- |
+| `render_visibility`  | An overview or sources for one audit, or trends over a window you name |
+| `render_site_health` | The Site Health results of one crawl                                   |
+| `open_analytics`     | The analytics view, in a sidebar or panel                              |
 
 Clients without MCP Apps ignore the view and use the read tools instead.
 

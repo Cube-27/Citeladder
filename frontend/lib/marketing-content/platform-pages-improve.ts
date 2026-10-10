@@ -352,7 +352,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
       },
       {
         q: 'What do I need to connect?',
-        a: 'A CiteLadder workspace with an active trial or subscription and at least one project. If you are new, the sign-in step lets you create an account and set up a project first.',
+        a: 'A CiteLadder workspace with an active trial or subscription, and a project for the assistant to read. If you are new, the sign-in step lets you create an account and set up a project first.',
       },
       {
         q: 'Can an assistant change my website or my data through MCP?',
