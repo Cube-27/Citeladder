@@ -102,7 +102,7 @@
     "vite": "catalog:",
     "vite-plus": "catalog:",
     "vitest": "catalog:",
-    "wrangler": "4.148.0"
+    "wrangler": "4.149.0"
   },
   "engines": {
     "node": ">=26"
