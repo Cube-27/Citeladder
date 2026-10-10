@@ -78,6 +78,45 @@ describe('AI Traffic state and navigation', () => {
     expect(await screen.findByText(/Collection is paused by CiteLadder/)).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Connect crawl logs' })).not.toBeInTheDocument();
   });
+  it('shows why a live source is stalled on its row', async () => {
+    mswServer.use(
+      http.get(root + '/crawl-logs/sources', () =>
+        HttpResponse.json({
+          availability: 'available',
+          items: [
+            {
+              id: '99999999-9999-4999-8999-999999999999',
+              kind: 'webhook',
+              setup: 'custom',
+              preset: 'custom_ndjson',
+              format: 'ndjson',
+              collection_point: 'application',
+              sampling: { kind: 'none' },
+              origin: 'https://example.test',
+              host: 'example.test',
+              status: 'active',
+              state: 'stalled',
+              stall_reason: 'oversize',
+              stalled_at: '2026-10-10T00:00:00.000Z',
+              token_prefix: 'clw_abcdefgh',
+              connection: 'connected',
+              last_accepted_batch: '2026-10-09T00:00:00.000Z',
+              last_processed_at: null,
+              rejected_lines: 0,
+              overlapping_lines: 0,
+              unsupported_uploads: 0,
+              unsupported_batches: 0,
+            },
+          ],
+        }),
+      ),
+    );
+    renderWithProviders(<CrawlLogConnections />);
+    expect(await screen.findByText(/Custom · Connected · Stalled/)).toBeVisible();
+    expect(
+      screen.getByText('A batch over 5 MiB was dropped. Lower the stream buffer size.'),
+    ).toBeVisible();
+  });
   it('keeps setup unavailable on a failed availability read and recovers on retry', async () => {
     mswServer.use(
       http.get(root + '/crawl-logs/sources', () => new HttpResponse(null, { status: 500 })),
@@ -119,6 +158,9 @@ describe('AI Traffic state and navigation', () => {
                   origin: 'https://example.test',
                   host: 'example.test',
                   status: 'active',
+                  state: 'active',
+                  stall_reason: null,
+                  stalled_at: null,
                   token_prefix: null,
                   connection: 'awaiting_data',
                   last_accepted_batch: null,

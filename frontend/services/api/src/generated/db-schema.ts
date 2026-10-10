@@ -1150,6 +1150,7 @@ export interface ContentDifferentiationReports {
 }
 
 export interface CrawlLogBatches {
+  bytes_received: number;
   catalog_version: string;
   first_line_at: Timestamp | null;
   format: string;
@@ -1206,6 +1207,8 @@ export interface CrawlLogSources {
   revoked_at: Timestamp | null;
   sampling: Json;
   setup: string;
+  stall_reason: string | null;
+  stalled_at: Timestamp | null;
   status: string;
   token_hash: string | null;
   token_prefix: string | null;

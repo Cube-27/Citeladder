@@ -1143,6 +1143,64 @@ describe('persisted analytics and coverage decisions', () => {
 });
 
 describe('bounded maintenance', () => {
+  it('stalls a quiet live source after the window and clears it on an accepted receipt', async () => {
+    const { tenant, source, token } = await setup();
+    const later = new Date(Date.now() + (crawlLogs.stalled_after_hours + 1) * 3600000);
+    await crawlLogTick(db, new Date());
+    expect((await sourceList(db, scope(tenant))).items[0]).toMatchObject({
+      state: 'active',
+      stall_reason: null,
+    });
+    await crawlLogTick(db, later);
+    expect((await sourceList(db, scope(tenant))).items[0]).toMatchObject({
+      state: 'stalled',
+      stall_reason: 'no_receipts',
+      stalled_at: later.toISOString(),
+    });
+    expect((await send(source.id, token, body(event()))).status).toBe(202);
+    expect((await sourceList(db, scope(tenant))).items[0]).toMatchObject({
+      state: 'active',
+      stall_reason: null,
+      stalled_at: null,
+    });
+  });
+  it('stalls a source refused for a lapsed plan', async () => {
+    const { tenant, source, token } = await setup();
+    await revokeCrawlLogs(tenant.workspaceId);
+    expect((await send(source.id, token, body(event()))).status).toBe(409);
+    expect((await sourceList(db, scope(tenant))).items[0]).toMatchObject({
+      state: 'stalled',
+      stall_reason: 'not_in_plan',
+    });
+  });
+  it('refuses a project over its daily received bytes until the next reporting day', async () => {
+    const { tenant, source, token } = await setup();
+    const old = crawlLogs.received_bytes_per_project_per_day;
+    const payload = body(event());
+    crawlLogs.received_bytes_per_project_per_day = payload.length;
+    try {
+      expect((await send(source.id, token, payload)).status).toBe(202);
+      const refused = await send(source.id, token, payload);
+      expect(refused.status).toBe(429);
+      const midnight = Date.parse(new Date().toISOString().slice(0, 10) + 'T00:00:00Z') + 86400000;
+      const retryAfter = Number(refused.headers.get('retry-after'));
+      expect(Math.abs(retryAfter - (midnight - Date.now()) / 1000)).toBeLessThan(5);
+      expect((await send(source.id, token, payload)).status).toBe(429);
+      const receipts = await db
+        .selectFrom('crawl_log_batches')
+        .select(['status', 'bytes_received', 'lines_received'])
+        .where('workspace_id', '=', tenant.workspaceId)
+        .where('source_id', '=', source.id)
+        .orderBy('received_at')
+        .execute();
+      expect(receipts).toEqual([
+        { status: 'accepted', bytes_received: payload.length, lines_received: 1 },
+        { status: 'bytes_ceiling', bytes_received: 0, lines_received: 0 },
+      ]);
+    } finally {
+      crawlLogs.received_bytes_per_project_per_day = old;
+    }
+  });
   it('continues scheduling retention and upload cleanup with ingestion disabled', async () => {
     const { tenant } = await setup();
     crawlLogs.ingestion_enabled = false;

@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/table';
 import { CrawlLogSetup, CrawlLogSetupSubmit, CrawlLogCredential } from './crawl-log-setup';
 import { CrawlLogAvailabilityNotice } from './crawl-log-availability';
-import { collectionPointLabel, words } from '@/lib/ai-traffic/vocabulary';
+import { collectionPointLabel, stallReasonLabel, words } from '@/lib/ai-traffic/vocabulary';
 export function CrawlLogConnections({
   open,
   onOpenChange,
@@ -173,8 +173,11 @@ function SourceDiagnostics({
               <div className="grid gap-0.5">
                 <span>{s.host}</span>
                 <span className="type-caption">
-                  {words(s.setup)} · {words(s.connection)} · {words(s.status)}
+                  {words(s.setup)} · {words(s.connection)} · {words(s.state)}
                 </span>
+                {s.stall_reason ? (
+                  <span className="type-caption">{stallReasonLabel(s.stall_reason)}</span>
+                ) : null}
               </div>
             </TableCell>
             <TableCell>

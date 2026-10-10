@@ -11,6 +11,7 @@ import type { Executor } from '../workers/executor.ts';
 import { sql } from 'kysely';
 import { enqueueRollup, lockCrawlState, type CrawlScope } from './state.ts';
 import { enqueueTrafficInsights } from './insights-enqueue.ts';
+import { stallQuietSources } from './stall.ts';
 
 export function botIpRangeRefresh(fetcher: WebsiteFetcher = fetchWebsite): Executor {
   return async (task, { checkCancelled }) => {
@@ -185,7 +186,12 @@ export async function crawlLogTick(
     .select('workspace_id')
     .distinct()
     .execute();
-  for (const workspace of workspaces)
+  for (const workspace of workspaces) {
+    // A paused collection is not the sender's silence.
+    if (crawlLogs.ingestion_enabled) {
+      if (!canAdmit()) return;
+      await stallQuietSources(db, workspace.workspace_id, now);
+    }
     for (const kind of ['bot_request_retention_sweep', 'crawl_log_upload_abandon_sweep']) {
       if (!canAdmit()) return;
       await enqueueTask(db, {
@@ -197,4 +203,5 @@ export async function crawlLogTick(
         maxAttempts: crawlLogs.task_max_attempts,
       });
     }
+  }
 }

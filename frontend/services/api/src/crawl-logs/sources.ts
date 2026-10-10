@@ -8,6 +8,7 @@ import { recordSecurityEvent } from '../auth/security-events.ts';
 import { lockAuthorizedWorkspace } from '../workspaces/service.ts';
 import { lockCrawlState, enqueueRollup, type CrawlScope } from './state.ts';
 import { enqueueTrafficInsights } from './insights-enqueue.ts';
+import { markStalled } from './stall.ts';
 import { hasGrantedFlag } from '../entitlements/occupancy.ts';
 import { policy } from '../config.ts';
 import { asApiErrorCode } from '@citeladder/contracts/error-codes';
@@ -40,7 +41,9 @@ export async function crawlLogAvailability(
   return granted ? 'available' : 'not_in_plan';
 }
 export async function requireCrawlLogs(db: Database, workspaceId: string) {
-  const availability = await crawlLogAvailability(db, workspaceId);
+  refuseUnavailable(await crawlLogAvailability(db, workspaceId));
+}
+function refuseUnavailable(availability: CrawlLogAvailability) {
   if (availability === 'disabled')
     throw new ApiError(409, 'Crawl log collection is paused by CiteLadder', {
       code: asApiErrorCode(codes.crawl_logs_disabled),
@@ -214,6 +217,9 @@ export async function authorizeToken(db: Database, id: string, authorization: st
   if (!source || !supplied || !timingSafeEqual(actual, expected))
     throw new ApiError(401, 'Invalid crawl log token');
   if (source.status !== 'active') throw new ApiError(409, 'Crawl log source revoked');
-  await requireCrawlLogs(db, source.workspace_id);
+  // A lapsed plan refuses the sender; the source row says why.
+  const availability = await crawlLogAvailability(db, source.workspace_id);
+  if (availability === 'not_in_plan') await markStalled(db, source, 'not_in_plan');
+  refuseUnavailable(availability);
   return source;
 }

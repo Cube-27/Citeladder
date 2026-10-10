@@ -9,6 +9,10 @@ function connection(status: string, accepted: Date | null | undefined, completed
   if (status === 'revoked') return 'not_connected';
   return accepted || completed ? 'connected' : 'awaiting_data';
 }
+function sourceState(status: string, stallReason: string | null) {
+  if (status === 'revoked') return 'revoked';
+  return stallReason ? 'stalled' : 'active';
+}
 /** Three scoped reads, independent of source count; never refreshes or verifies. */
 export async function sourceList(
   db: Database,
@@ -63,6 +67,9 @@ export async function sourceList(
       origin: s.origin,
       host: s.host,
       status: s.status,
+      state: sourceState(s.status, s.stall_reason),
+      stall_reason: s.status === 'revoked' ? null : s.stall_reason,
+      stalled_at: s.status === 'revoked' ? null : (s.stalled_at?.toISOString() ?? null),
       token_prefix: s.token_prefix,
       connection: connection(s.status, batch?.last, upload?.completed ?? 0),
       last_accepted_batch: batch?.last?.toISOString() ?? null,
