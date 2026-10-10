@@ -12,27 +12,9 @@ import { callerMessage } from './types.ts';
 import { getLogger } from '../logging.ts';
 import { parseUuid } from '../http/uuid.ts';
 import { appResource, appToolMetadata, readAppResource } from './app-resource.ts';
+import { MCP_API_HOST_PATHS, MCP_CONSENT_PATH, PUBLIC_OAUTH_PATHS } from './paths.ts';
 const logger = getLogger('mcp');
 
-const MCP_PROTOCOL_PATHS = [
-  '/mcp',
-  '/mcp/',
-  '/mcp/register',
-  '/mcp/oauth/consent',
-  '/authorize',
-  '/token',
-  '/revoke',
-  '/.well-known/oauth-authorization-server',
-  '/.well-known/oauth-protected-resource/mcp',
-] as const;
-const PUBLIC_OAUTH_PATHS: ReadonlySet<string> = new Set([
-  '/mcp/register',
-  '/authorize',
-  '/token',
-  '/revoke',
-  '/.well-known/oauth-authorization-server',
-  '/.well-known/oauth-protected-resource/mcp',
-]);
 const VERSIONS = ['2026-07-28', '2025-11-25'];
 const INSTRUCTIONS = [
   "Read-only CiteLadder data about a business's visibility in AI answers and search.",
@@ -81,21 +63,12 @@ function decodedHeader(value: string | undefined): string | undefined {
 
 export function registerMcpRoutes(app: Hono<AppEnv>, config: ServiceConfig, db: Database): void {
   const settings = loadMcpConfig(config);
-  for (const path of MCP_PROTOCOL_PATHS)
+  for (const path of [...MCP_API_HOST_PATHS, MCP_CONSENT_PATH])
     app.use(path, async (c, next) => {
       if (!settings.enabled) return c.notFound();
-      const consent = c.req.path === '/mcp/oauth/consent';
-      const allowed = consent ? settings.browserOrigin : settings.origin;
+      const allowed = c.req.path === MCP_CONSENT_PATH ? settings.browserOrigin : settings.origin;
       const host = c.get('publicHost') ?? c.req.header('host') ?? new URL(c.req.url).host;
       const hostOrigin = origin(`${new URL(allowed).protocol}//${host}`);
-      if (
-        consent &&
-        c.req.method === 'POST' &&
-        hostOrigin === settings.origin &&
-        settings.origin !== settings.browserOrigin
-      )
-        return c.text('Consent moved. Restart the MCP authorization request.', 409);
-      // Credential-free OAuth endpoints serve browser-hosted clients from any origin.
       const supplied = PUBLIC_OAUTH_PATHS.has(c.req.path) ? undefined : c.req.header('origin');
       if (hostOrigin !== allowed || (supplied && origin(supplied) !== allowed))
         return c.text('Invalid MCP request origin.', 403);

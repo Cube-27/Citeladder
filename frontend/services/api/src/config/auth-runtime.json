@@ -63,6 +63,11 @@
       "type": "str",
       "default": ""
     },
+    "public_website_url": {
+      "env": ["PUBLIC_WEBSITE_URL"],
+      "type": "str",
+      "default": ""
+    },
     "trusted_proxy_cidrs": {
       "env": ["TRUSTED_PROXY_CIDRS"],
       "type": "str",

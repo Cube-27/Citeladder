@@ -50,7 +50,7 @@ function app() {
     DATABASE_URL: 'postgresql://test:test@127.0.0.1/test',
     JWT_SECRET_KEY: 'test-secret',
     MCP_ENABLED: process.env.MCP_ENABLED,
-    MCP_PUBLIC_BASE_URL: process.env.MCP_PUBLIC_BASE_URL,
+    PUBLIC_API_URL: process.env.PUBLIC_API_URL,
     FRONTEND_URL: process.env.FRONTEND_URL,
   });
   const result = new Hono<AppEnv>();
@@ -101,7 +101,7 @@ function request(
 }
 beforeEach(() => {
   vi.stubEnv('MCP_ENABLED', 'true');
-  vi.stubEnv('MCP_PUBLIC_BASE_URL', 'https://protocol.example.test');
+  vi.stubEnv('PUBLIC_API_URL', 'https://protocol.example.test');
   vi.stubEnv('FRONTEND_URL', 'https://app.example.test');
   vi.mocked(authenticateMcp).mockResolvedValue({
     userId: 'user',
@@ -275,7 +275,7 @@ describe('hosted MCP transport', () => {
     expect(
       (await service.request('https://protocol.example.test/mcp/oauth/consent', { method: 'POST' }))
         .status,
-    ).toBe(409);
+    ).toBe(403);
   });
   it('rejects declared and streamed oversized bodies before bearer or tool handling', async () => {
     const service = app();
@@ -293,7 +293,7 @@ describe('hosted MCP transport', () => {
   });
   it('keeps disabled MCP absent and unrelated startup healthy even with an unsafe origin', async () => {
     vi.stubEnv('MCP_ENABLED', 'false');
-    vi.stubEnv('MCP_PUBLIC_BASE_URL', 'not-an-origin');
+    vi.stubEnv('PUBLIC_API_URL', 'not-an-origin');
     const service = app();
     expect(
       (await service.request('https://protocol.example.test/mcp', request('tools/list'))).status,

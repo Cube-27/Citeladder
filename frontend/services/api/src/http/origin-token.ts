@@ -1,9 +1,10 @@
 import { timingSafeEqual } from 'node:crypto';
 import ipaddr from 'ipaddr.js';
 import type { MiddlewareHandler } from 'hono';
-import { configEnvironment, policy, resolveSettingSpec, type ServiceConfig } from '../config.ts';
+import { policy, type ServiceConfig } from '../config.ts';
 import type { AppEnv } from '../context.ts';
 import { ApiError, notFound } from '../errors.ts';
+import { isMcpApiHostPath } from '../mcp/paths.ts';
 
 function hostOf(origin: string): string {
   try {
@@ -13,22 +14,24 @@ function hostOf(origin: string): string {
   }
 }
 
-/** The apex (MCP), app and API hosts the Workers may name as a request's public host. */
+/** The apex, app and API hosts the Workers may name as a request's public host. */
 function publicHosts(config: ServiceConfig): Set<string> {
-  const mcpBase = String(
-    resolveSettingSpec(policy.mcp.settings.public_base_url, configEnvironment(config)),
-  ).trim();
   return new Set(
-    [config.auth.frontendUrl, mcpBase || config.auth.frontendUrl, config.auth.publicApiUrl]
+    [config.auth.frontendUrl, config.auth.publicWebsiteUrl, config.auth.publicApiUrl]
       .map(hostOf)
       .filter(Boolean),
   );
 }
 
-/** Machine routes live under `policy.api.machine_prefix`; only the API host serves them, and only them. */
+/** Machine routes live under `policy.api.machine_prefix`. */
 export function isMachinePath(path: string): boolean {
   const prefix = policy.api.machine_prefix;
   return path === prefix || path.startsWith(prefix + '/');
+}
+
+/** Only the API host serves machine routes and the MCP protocol, and only those. */
+function isApiHostPath(path: string): boolean {
+  return isMachinePath(path) || isMcpApiHostPath(path);
 }
 
 /**
@@ -55,7 +58,7 @@ export function originToken(config: ServiceConfig): MiddlewareHandler<AppEnv> {
         throw new ApiError(403, 'Forbidden');
       const publicHost = c.req.header('X-CiteLadder-Public-Host')?.trim().toLowerCase() ?? '';
       if (!hosts.has(publicHost)) throw new ApiError(403, 'Forbidden');
-      if ((publicHost === apiHost) !== isMachinePath(c.req.path)) throw notFound('Route');
+      if ((publicHost === apiHost) !== isApiHostPath(c.req.path)) throw notFound('Route');
       c.set('publicHost', publicHost);
       const clientIp = c.req.header('X-CiteLadder-Client-IP')?.trim() ?? '';
       if (ipaddr.isValid(clientIp)) c.set('clientIp', ipaddr.process(clientIp).toString());

@@ -1,5 +1,6 @@
 import { html } from 'hono/html';
 import type { HtmlEscapedString } from 'hono/utils/html';
+import { mcpPolicy } from './config.ts';
 import type { ConsentWorkspace } from './oauth.ts';
 
 type Html = HtmlEscapedString | Promise<HtmlEscapedString>;
@@ -80,8 +81,6 @@ export type ConsentView = Readonly<{
   termsRevision: string;
   /** The app origin, for project setup and billing links. */
   appOrigin: string;
-  /** The public site, for the Terms and Privacy Policy. */
-  websiteOrigin: string;
 }>;
 
 function workspaceChoice(view: ConsentView, workspace: ConsentWorkspace, preselect: boolean) {
@@ -192,11 +191,11 @@ export function consentPage(view: ConsentView) {
                 />
                 <span
                   >I agree to the
-                  <a href="${view.websiteOrigin}/terms" target="_blank" rel="noreferrer"
+                  <a href="${mcpPolicy.terms_url}" target="_blank" rel="noreferrer"
                     >Terms of Service</a
                   >
                   for the workspaces I share. The
-                  <a href="${view.websiteOrigin}/privacy" target="_blank" rel="noreferrer"
+                  <a href="${mcpPolicy.privacy_url}" target="_blank" rel="noreferrer"
                     >Privacy Policy</a
                   >
                   explains how we process data.</span

@@ -365,7 +365,6 @@ export function registerOAuthRoutes(
         error,
         termsRevision: policy.mcp.terms_revision,
         appOrigin: mcp.browserOrigin,
-        websiteOrigin: mcp.origin,
       }),
       error ? 400 : 200,
     );

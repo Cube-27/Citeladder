@@ -6,11 +6,6 @@ export const mcp = {
       type: 'bool',
       default: false,
     },
-    public_base_url: {
-      env: ['MCP_PUBLIC_BASE_URL'],
-      type: 'str',
-      default: '',
-    },
     allowed_account_email: {
       env: ['MCP_ALLOWED_ACCOUNT_EMAIL'],
       type: 'str',
@@ -61,6 +56,9 @@ export const mcp = {
     read_scope: 'citeladder:read',
     server_version: '2.0.0',
     documentation_url: 'https://docs.citeladder.com/mcp/',
+    // The consent page links the website's legal pages; MCP itself lives on the API host.
+    terms_url: 'https://citeladder.com/terms',
+    privacy_url: 'https://citeladder.com/privacy',
     max_search_results: 20,
     search_snippet_chars: 500,
     default_list_limit: 50,
