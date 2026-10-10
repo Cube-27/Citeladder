@@ -5,9 +5,17 @@ group: 'Connect with MCP'
 order: 300
 ---
 
-MCP lets a compatible AI client read CiteLadder records that your account is authorized to access. Use it to investigate a project, review results or prepare a report in your preferred assistant.
+The [Model Context Protocol](https://modelcontextprotocol.io) (MCP) is an open standard that lets AI assistants use tools from other products. CiteLadder's hosted MCP server lets a compatible assistant read the CiteLadder records your account is authorized to access, so you can investigate a project, review results or prepare a report in the assistant you already use.
 
-The hosted endpoint is **https://citeladder.com/mcp**. The docs subdomain hosts these guides; it is not the protocol server.
+The hosted endpoint is **https://citeladder.com/mcp**. One address works for every client. The docs subdomain hosts these guides; it is not the protocol server.
+
+## Connect in three steps
+
+1. **Connect.** Use the **Connect** button in CiteLadder, or add the endpoint as a custom connector in your assistant.
+2. **Sign in and approve.** Sign in to CiteLadder and choose the workspaces the connection may read. There is no API key to copy.
+3. **Ask a question.** For example: "List my CiteLadder projects, then summarize the latest AI visibility results for one of them."
+
+[Connection setup](/mcp/connect/) has the steps for each client.
 
 ## What you can read
 
@@ -29,7 +37,12 @@ If evidence is stale or unavailable, refresh or acquire it through the appropria
 
 ## Before you connect
 
-You need a CiteLadder account with access to the relevant workspace and a client that supports remote Streamable HTTP MCP with browser OAuth. Setup covers Claude, ChatGPT, Gemini, Cursor, Grok, Claude Code and Codex, and the CiteLadder app's **Settings → MCP connections** has a Connect button for each.
+You need:
+
+- A CiteLadder workspace with an active trial or subscription. The assistant reads project evidence, so set up a project first; the approval page links to setup if you have none.
+- A client that supports remote Streamable HTTP MCP with browser OAuth. [Setup](/mcp/connect/) covers Claude, ChatGPT, Gemini, Grok, Cursor, Claude Code and Codex.
+
+Assistants decide which plans and regions can add custom connectors, so availability can differ between accounts.
 
 Your client receives the records you ask it to read. Check your team's policy and the client's handling of that data before using sensitive information.
 

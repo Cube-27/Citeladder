@@ -122,10 +122,10 @@ project or record IDs never authorize themselves. A pinned caller (the Agent) is
 told a sibling project was "not found", the same as a missing one.
 
 Settings → MCP connections leads with the shared
-[connect strip](../frontend/components/mcp/connect-strip.tsx): Connect, which
-opens Claude's prefilled add-connector page, then the endpoint with a copy
-control. Connect's chevron menu offers ChatGPT, Gemini and Grok, copying the URL
-for the person to paste there. Client links are owned by
+[connect strip](../frontend/components/mcp/connect-strip.tsx): one Connect
+button, which opens Claude's prefilled add-connector page, then the endpoint
+with a copy control. Hovering Connect (or ArrowDown/Space from it) offers
+ChatGPT, Gemini and Grok, copying the URL for the person to paste there. Client links are owned by
 [`mcp-clients.ts`](../frontend/lib/config/mcp-clients.ts); the public MCP page
 uses the same strip. The tab lists a user's connections by client name (labelled
 unverified), workspace names, connected date and last use; workspace Owner/Admin

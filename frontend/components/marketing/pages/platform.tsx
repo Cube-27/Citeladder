@@ -118,17 +118,21 @@ export function PlatformActions({
   cta,
   size = 'marketing',
 }: Readonly<{ cta: PlatformCta; size?: 'lg' | 'marketing' }>) {
-  // Connecting an assistant is the MCP page's whole action, and it starts the trial.
-  if (cta === 'mcp') return <ConnectStrip className="w-full max-w-2xl text-left" />;
+  const mcp = cta === 'mcp';
   const trial = cta === 'trial' && selfServeSignupOpen();
   return (
     <div className="flex flex-wrap justify-center gap-3">
+      {mcp && (
+        <ButtonLink href={docsHref('/mcp/')} size={size}>
+          Read the MCP docs
+        </ButtonLink>
+      )}
       {trial && (
         <ButtonLink href={appHref('/register')} size={size}>
           Start free trial
         </ButtonLink>
       )}
-      <DemoButtonLink variant={trial ? 'soft' : 'primary'} size={size}>
+      <DemoButtonLink variant={trial || mcp ? 'soft' : 'primary'} size={size}>
         {cta === 'setup' ? 'Discuss setup' : 'Book a demo'}
       </DemoButtonLink>
       {(cta === 'demo' || cta === 'setup') && (
@@ -214,7 +218,12 @@ export function PlatformPageContent({ page }: Readonly<{ page: PlatformPage }>) 
         }
       >
         <div className="mt-9 grid justify-items-center gap-4" data-cta-placement="hero">
-          <PlatformActions cta={page.cta} />
+          {/* Connecting an assistant is the MCP hero's whole action; its closing band keeps the guide and a demo. */}
+          {page.cta === 'mcp' ? (
+            <ConnectStrip className="text-left" />
+          ) : (
+            <PlatformActions cta={page.cta} />
+          )}
           {page.note && <p className="website-label text-muted">{page.note}</p>}
         </div>
       </PageHero>

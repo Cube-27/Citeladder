@@ -1,7 +1,9 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vite-plus/test';
 
-import { PlatformActions } from './platform';
+import { PLATFORM_PAGES } from '@/lib/marketing-content/platform-pages';
+
+import { PlatformActions, PlatformPageContent } from './platform';
 
 afterEach(() => vi.unstubAllEnvs());
 
@@ -20,11 +22,23 @@ it.each([
   }
 });
 
-it('leads the MCP page with the connect strip instead of the guide and demo', () => {
-  render(<PlatformActions cta="mcp" />);
-  expect(screen.getByRole('link', { name: 'Connect to Claude' })).toHaveAttribute(
+it('leads the MCP page with the connect strip and closes it with the guide and a demo', () => {
+  const page = PLATFORM_PAGES.find((candidate) => candidate.path === '/platform/mcp');
+  if (!page) throw new Error('MCP page missing');
+  render(<PlatformPageContent page={page} />);
+  const hero = document.querySelector('[data-cta-placement="hero"]') as HTMLElement;
+  const closing = document.querySelector('[data-cta-placement="closing"]') as HTMLElement;
+  expect(within(hero).getByRole('link', { name: 'Connect to Claude' })).toHaveAttribute(
     'href',
     'https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=CiteLadder&connectorUrl=https%3A%2F%2Fciteladder.com%2Fmcp',
   );
-  expect(screen.queryByRole('link', { name: 'Book a demo' })).not.toBeInTheDocument();
+  expect(within(hero).queryByRole('link', { name: 'Book a demo' })).not.toBeInTheDocument();
+  expect(within(closing).getByRole('link', { name: 'Read the MCP docs' })).toHaveAttribute(
+    'href',
+    'https://docs.citeladder.com/mcp/',
+  );
+  expect(within(closing).getByRole('link', { name: 'Book a demo' })).toBeInTheDocument();
+  expect(
+    within(closing).queryByRole('link', { name: 'Connect to Claude' }),
+  ).not.toBeInTheDocument();
 });

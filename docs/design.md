@@ -222,7 +222,7 @@ Roles own all typography properties. The ladder is mobile-first with one step at
 | Data display | `website-data-display` | Pricing figures only; tabular |
 | Flow rungs | `flow-title`, `flow-group-title`, `flow-help`, `flow-meta` | The focused flow: title (24→28), group title (16), help (14) and meta (12) |
 
-Display rungs track the viewport on phones so headlines stay short: the hero and page titles hold two lines from 360px, and long article titles three. The hero tops out at 60px on desktop and the page title at 40px; leads are 16px on phones and 18px from 768px, and body copy stays at 14px. Embedded product previews (`.app-type-scale`) reset to the product ladder below.
+Display rungs track the viewport on phones so headlines stay short: the hero and page titles hold two lines from 360px, and long article titles three. The hero tops out at 60px on desktop and the page title at 40px (44px on marketing pages, `marketing.css`; docs and articles keep their rungs); leads are 16px on phones and 18px from 768px, and body copy stays at 14px. Embedded product previews (`.app-type-scale`) reset to the product ladder below.
 
 ### Product app ladder
 

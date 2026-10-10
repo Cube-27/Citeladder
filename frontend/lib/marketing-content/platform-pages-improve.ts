@@ -297,48 +297,78 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
   },
   {
     path: '/platform/mcp',
-    title: 'AI Visibility MCP Server & Assistant Access | CiteLadder',
+    title: 'AI Visibility MCP Server for Claude, ChatGPT & More | CiteLadder',
     description:
-      'Read your CiteLadder visibility, site and search evidence from compatible AI assistants through read-only MCP tools.',
+      'Connect Claude, ChatGPT, Gemini, Grok, Cursor and other MCP clients to your CiteLadder visibility, site and search evidence through a read-only connection.',
     heading: 'Your CiteLadder evidence, in your AI assistant.',
-    lead: 'Connect a compatible MCP client to read visibility, site findings, demand and opportunities for the projects you are authorized to see, without passing screenshots around.',
+    lead: 'Ask Claude, ChatGPT and other assistants about your AI visibility, cited sources, Site Health and search performance. They answer from your saved CiteLadder records, for the workspaces you approve.',
     cta: 'mcp',
     visual: 'mcp',
     visualTitle: 'MCP client',
     highlights: [
       {
-        title: 'Read-only by design',
-        body: 'Tools read saved evidence. They never crawl, buy data, activate prompts or publish.',
+        title: '1. Connect',
+        body: 'Use Connect, or add https://citeladder.com/mcp as a custom connector in your assistant.',
       },
       {
-        title: 'Your permissions',
-        body: 'Access follows your workspace membership and stops when it does.',
+        title: '2. Sign in and approve',
+        body: 'Sign in to CiteLadder and choose which workspaces the assistant may read. No API key to copy.',
       },
       {
-        title: 'Saved, dated records',
-        body: 'Every read returns persisted evidence with its observation time and coverage.',
+        title: '3. Ask a question',
+        body: 'Try “Which competitors appear most in our latest AI visibility results?”',
       },
     ],
     features: [
       {
         title: 'Ask questions grounded in recorded evidence.',
-        body: 'Use the documented tool catalogue to read visibility trends and results, Site Health, demand, opportunities and more. Available tools follow the current contract and your access.',
+        body: 'Read visibility results and trends, cited sources, Actions, Site Health, performance, AI referrals, demand and saved Search Intelligence datasets. Every answer comes from a dated record, not a guess.',
         points: [
-          'OAuth sign-in from compatible clients',
-          'Project-scoped, authorized reads',
-          'No refresh or purchase on read',
+          'Read-only: no crawls, purchases, prompt changes or publishing',
+          'Unavailable data is reported as unavailable, never as zero',
+          'Links back to the screen in CiteLadder that shows the record',
         ],
         visual: 'mcp-tools',
+      },
+      {
+        title: 'Turn evidence into the work your team already does.',
+        body: 'Use the assistant your team already works in to prepare briefs, reports and fix lists from the same evidence as the app.',
+        points: [
+          'Weekly AI visibility brief across engines and competitors',
+          'Site fix brief from the latest Site Health crawl',
+          'Cited-source review before outreach or content work',
+        ],
+        visual: 'visibility',
       },
     ],
     faqs: [
       {
-        q: 'Can an assistant change my website through MCP?',
-        a: 'No. The CiteLadder MCP connection is read-only.',
+        q: 'What is the CiteLadder MCP server?',
+        a: 'A hosted Model Context Protocol server at https://citeladder.com/mcp. It lets a compatible AI assistant read your CiteLadder project evidence so you can ask questions about it in plain language.',
+      },
+      {
+        q: 'Which assistants does it work with?',
+        a: 'Claude, ChatGPT, Gemini, Grok, Cursor, Claude Code and Codex, plus any client that supports remote MCP servers with browser sign-in. Some assistants limit custom connectors by plan or region.',
+      },
+      {
+        q: 'What do I need to connect?',
+        a: 'A CiteLadder workspace with an active trial or subscription, and a project for the assistant to read. If you are new, the sign-in step lets you create an account and set up a project first.',
+      },
+      {
+        q: 'Can an assistant change my website or my data through MCP?',
+        a: 'No. The connection is read-only. It cannot crawl, buy data, activate prompts, publish or change anything in CiteLadder or on your site.',
       },
       {
         q: 'Does reading a tool refresh the data?',
-        a: 'No. It returns saved evidence. Check the observation time when you interpret it.',
+        a: 'No. It returns saved evidence with its observation date. Refresh data in CiteLadder, then ask again.',
+      },
+      {
+        q: 'What can the assistant see?',
+        a: 'Only the workspaces you approve, and only while you remain a member. Data an assistant has already read is held under that assistant’s own terms.',
+      },
+      {
+        q: 'How do I disconnect?',
+        a: 'Open Settings → MCP connections in CiteLadder and remove the connection. Workspace Owners and Admins can also remove any connection to their workspace.',
       },
     ],
     closing: 'Give your assistant the context behind the chart.',
