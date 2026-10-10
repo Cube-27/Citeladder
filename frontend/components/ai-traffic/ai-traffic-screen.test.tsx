@@ -47,6 +47,17 @@ const referrals = {
   analyzer_version: '1',
   formula_version: '1',
 };
+/** A source-list response: the GCP connector configured and sources without pull details. */
+const sourceBody = (availability: string, items: Record<string, unknown>[] = []) => ({
+  availability,
+  gcp_pull: {
+    availability: 'available',
+    reader_email: 'citeladder-log-reader@example.iam.gserviceaccount.com',
+    log_filter: 'resource.type="http_load_balancer"',
+    catalog_version: '2',
+  },
+  items: items.map((item) => ({ pull: null, ...item })),
+});
 beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
   mswServer.resetHandlers();
@@ -56,9 +67,7 @@ afterAll(() => mswServer.close());
 describe('AI Traffic state and navigation', () => {
   it('explains a plan without crawl logs with a billing link and no setup', async () => {
     mswServer.use(
-      http.get(root + '/crawl-logs/sources', () =>
-        HttpResponse.json({ availability: 'not_in_plan', items: [] }),
-      ),
+      http.get(root + '/crawl-logs/sources', () => HttpResponse.json(sourceBody('not_in_plan'))),
     );
     renderWithProviders(<CrawlLogConnections />);
     expect(await screen.findByText(/AI crawler logs are included in paid plans/)).toBeVisible();
@@ -70,9 +79,7 @@ describe('AI Traffic state and navigation', () => {
   });
   it('says collection is paused when CiteLadder switched it off', async () => {
     mswServer.use(
-      http.get(root + '/crawl-logs/sources', () =>
-        HttpResponse.json({ availability: 'disabled', items: [] }),
-      ),
+      http.get(root + '/crawl-logs/sources', () => HttpResponse.json(sourceBody('disabled'))),
     );
     renderWithProviders(<CrawlLogConnections />);
     expect(await screen.findByText(/Collection is paused by CiteLadder/)).toBeVisible();
@@ -81,9 +88,8 @@ describe('AI Traffic state and navigation', () => {
   it('shows why a live source is stalled on its row', async () => {
     mswServer.use(
       http.get(root + '/crawl-logs/sources', () =>
-        HttpResponse.json({
-          availability: 'available',
-          items: [
+        HttpResponse.json(
+          sourceBody('available', [
             {
               id: '99999999-9999-4999-8999-999999999999',
               kind: 'webhook',
@@ -108,8 +114,8 @@ describe('AI Traffic state and navigation', () => {
               unsupported_uploads: 0,
               unsupported_batches: 0,
             },
-          ],
-        }),
+          ]),
+        ),
       ),
     );
     renderWithProviders(<CrawlLogConnections />);
@@ -122,9 +128,8 @@ describe('AI Traffic state and navigation', () => {
     const id = '99999999-9999-4999-8999-999999999999';
     mswServer.use(
       http.get(root + '/crawl-logs/sources', () =>
-        HttpResponse.json({
-          availability: 'available',
-          items: [
+        HttpResponse.json(
+          sourceBody('available', [
             {
               id,
               kind: 'webhook',
@@ -149,8 +154,8 @@ describe('AI Traffic state and navigation', () => {
               unsupported_uploads: 0,
               unsupported_batches: 0,
             },
-          ],
-        }),
+          ]),
+        ),
       ),
       http.post(root + '/crawl-logs/sources/' + id + '/rotate', () =>
         HttpResponse.json({ id, token: 'clw_rotated' }),
@@ -176,9 +181,7 @@ describe('AI Traffic state and navigation', () => {
     const retry = await within(dialog).findByRole('button', { name: /retry/i }, { timeout: 5000 });
     expect(within(dialog).queryByRole('radiogroup')).not.toBeInTheDocument();
     mswServer.use(
-      http.get(root + '/crawl-logs/sources', () =>
-        HttpResponse.json({ availability: 'available', items: [] }),
-      ),
+      http.get(root + '/crawl-logs/sources', () => HttpResponse.json(sourceBody('available'))),
     );
     await user.click(retry);
     expect(
@@ -190,37 +193,39 @@ describe('AI Traffic state and navigation', () => {
     const id = '99999999-9999-4999-8999-999999999999';
     mswServer.use(
       http.get(root + '/crawl-logs/sources', () =>
-        HttpResponse.json({
-          availability: 'available',
-          items: created
-            ? [
-                {
-                  id,
-                  kind: 'upload',
-                  setup: 'upload',
-                  preset: 'custom_ndjson',
-                  buffer_interval_seconds: null,
-                  format: 'ndjson',
-                  collection_point: 'uploaded_file',
-                  sampling: { kind: 'none' },
-                  origin: 'https://example.test',
-                  host: 'example.test',
-                  status: 'active',
-                  state: 'active',
-                  stall_reason: null,
-                  stalled_at: null,
-                  token_prefix: null,
-                  connection: 'awaiting_data',
-                  last_accepted_batch: null,
-                  last_processed_at: null,
-                  rejected_lines: 0,
-                  overlapping_lines: 0,
-                  unsupported_uploads: 0,
-                  unsupported_batches: 0,
-                },
-              ]
-            : [],
-        }),
+        HttpResponse.json(
+          sourceBody(
+            'available',
+            created
+              ? [
+                  {
+                    id,
+                    kind: 'upload',
+                    setup: 'upload',
+                    preset: 'custom_ndjson',
+                    buffer_interval_seconds: null,
+                    format: 'ndjson',
+                    collection_point: 'uploaded_file',
+                    sampling: { kind: 'none' },
+                    origin: 'https://example.test',
+                    host: 'example.test',
+                    status: 'active',
+                    state: 'active',
+                    stall_reason: null,
+                    stalled_at: null,
+                    token_prefix: null,
+                    connection: 'awaiting_data',
+                    last_accepted_batch: null,
+                    last_processed_at: null,
+                    rejected_lines: 0,
+                    overlapping_lines: 0,
+                    unsupported_uploads: 0,
+                    unsupported_batches: 0,
+                  },
+                ]
+              : [],
+          ),
+        ),
       ),
       http.post(root + '/crawl-logs/sources', async ({ request }) => {
         expect(await request.json()).toMatchObject({
@@ -246,9 +251,7 @@ describe('AI Traffic state and navigation', () => {
   });
   it.each(['crawlers', 'activity'] as const)('offers crawl setup from empty %s', async (tab) => {
     mswServer.use(
-      http.get(root + '/crawl-logs/sources', () =>
-        HttpResponse.json({ availability: 'available', items: [] }),
-      ),
+      http.get(root + '/crawl-logs/sources', () => HttpResponse.json(sourceBody('available'))),
     );
     const user = userEvent.setup();
     const data = { items: [], next_cursor: null };
@@ -293,9 +296,7 @@ describe('AI Traffic state and navigation', () => {
     const id = '99999999-9999-4999-8999-999999999999';
     let created: unknown = null;
     mswServer.use(
-      http.get(root + '/crawl-logs/sources', () =>
-        HttpResponse.json({ availability: 'available', items: [] }),
-      ),
+      http.get(root + '/crawl-logs/sources', () => HttpResponse.json(sourceBody('available'))),
       http.post(root + '/crawl-logs/sources', async ({ request }) => {
         created = await request.json();
         return HttpResponse.json({ id, token: 'clw_test_token' });
@@ -325,9 +326,7 @@ describe('AI Traffic state and navigation', () => {
   it('preserves the issued token until the source dialog is closed', async () => {
     let creates = 0;
     mswServer.use(
-      http.get(root + '/crawl-logs/sources', () =>
-        HttpResponse.json({ availability: 'available', items: [] }),
-      ),
+      http.get(root + '/crawl-logs/sources', () => HttpResponse.json(sourceBody('available'))),
       http.post(root + '/crawl-logs/sources', () => {
         creates += 1;
         return HttpResponse.json({
@@ -441,9 +440,7 @@ describe('AI Traffic state and navigation', () => {
           citations: { unit: 'tracked_citations', count: null, label: 'Tracked answers' },
         }),
       ),
-      http.get(root + '/crawl-logs/sources', () =>
-        HttpResponse.json({ availability: 'available', items: [] }),
-      ),
+      http.get(root + '/crawl-logs/sources', () => HttpResponse.json(sourceBody('available'))),
       http.get(root + '/ai-traffic/coverage', () =>
         HttpResponse.json({ sources: [], items: [], next_cursor: null }),
       ),
@@ -580,9 +577,7 @@ describe('AI Traffic state and navigation', () => {
   it('leads with Referrals and drops crawl-only views when crawl logs are unavailable', async () => {
     const dashboards: URLSearchParams[] = [];
     mswServer.use(
-      http.get(root + '/crawl-logs/sources', () =>
-        HttpResponse.json({ availability: 'not_in_plan', items: [] }),
-      ),
+      http.get(root + '/crawl-logs/sources', () => HttpResponse.json(sourceBody('not_in_plan'))),
       http.get(root + '/ai-traffic/referrals', ({ request }) => {
         dashboards.push(new URL(request.url).searchParams);
         return HttpResponse.json(referrals);

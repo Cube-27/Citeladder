@@ -63,7 +63,34 @@
       "timestamp_fallback": { "date": "date", "time": "time" },
       "missing_tokens": ["-"],
       "user_agent_decode": "url"
+    },
+    "gcp_log_entry": {
+      "collection_point": "cdn_edge",
+      "sampling": { "kind": "none" },
+      "timestamp": "timestamp",
+      "host": "host",
+      "path": "path",
+      "method": "method",
+      "status": "status",
+      "user_agent": "user_agent",
+      "client_ip": "client_ip",
+      "request_id": "request_id",
+      "timestamp_unit": "iso"
     }
+  },
+  "gcp_pull": {
+    "pull_interval_seconds": 300,
+    "pull_max_iterations": 10,
+    "pull_max_messages": 1000,
+    "max_pull_gap_minutes": 30,
+    "pull_settle_minutes": 15,
+    "verification_interval_hours": 24,
+    "min_ack_deadline_seconds": 60,
+    "request_timeout_seconds": 10,
+    "pull_wait_seconds": 20,
+    "token_lifetime_seconds": 900,
+    "token_refresh_margin_seconds": 60,
+    "source_label": "citeladder-source"
   },
   "max_batch_bytes": 5242880,
   "max_lines_per_batch": 5000,

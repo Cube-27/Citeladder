@@ -84,6 +84,11 @@
       "type": "literal",
       "values": ["disable", "require"],
       "default": "disable"
+    },
+    "crawl_log_reader_email": {
+      "env": ["CRAWL_LOG_READER_EMAIL"],
+      "type": "str",
+      "default": ""
     }
   },
   "development_env_names": ["", "dev", "development", "local", "test", "testing"]

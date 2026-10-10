@@ -44,7 +44,7 @@ export async function clearStall(
 }
 
 /**
- * A workspace's live webhook sources older than `stalled_after_hours` with no
+ * A workspace's live webhook and verified pull sources older than `stalled_after_hours` with no
  * accepted receipt inside that window become `no_receipts`. Bounded per call.
  */
 export async function stallQuietSources(db: Database, workspaceId: string, now = new Date()) {
@@ -60,7 +60,13 @@ export async function stallQuietSources(db: Database, workspaceId: string, now =
         .selectFrom('crawl_log_sources as s')
         .select('s.id')
         .where('s.workspace_id', '=', workspaceId)
-        .where('s.kind', '=', 'webhook')
+        // A pull source is quiet only once it was verified; before that it never pulls.
+        .where((eb) =>
+          eb.or([
+            eb('s.kind', '=', 'webhook'),
+            eb.and([eb('s.kind', '=', 'pull'), eb('s.verified_at', 'is not', null)]),
+          ]),
+        )
         .where('s.status', '=', 'active')
         .where('s.stall_reason', 'is', null)
         .where('s.created_at', '<', since)

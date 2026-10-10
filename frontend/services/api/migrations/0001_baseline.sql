@@ -1207,7 +1207,9 @@ CREATE TABLE public.crawl_log_batches (
     first_line_at timestamp with time zone,
     last_line_at timestamp with time zone,
     heartbeat boolean NOT NULL,
-    bytes_received integer NOT NULL
+    bytes_received integer NOT NULL,
+    drained boolean NOT NULL,
+    CONSTRAINT ck_crawl_log_batches_drained CHECK (((NOT drained) OR heartbeat))
 );
 
 CREATE TABLE public.crawl_log_coverage_daily (
@@ -1248,6 +1250,18 @@ CREATE TABLE public.crawl_log_sources (
     stalled_at timestamp with time zone,
     buffer_interval_seconds integer,
     declared_filtered boolean NOT NULL,
+    subscription character varying(255),
+    verification_nonce character varying(26),
+    verified_at timestamp with time zone,
+    verification_checked_at timestamp with time zone,
+    verification_failure character varying(32),
+    filter_catalog_version character varying(16),
+    filter_confirmed_at timestamp with time zone,
+    declared_sample_rate numeric(4,3),
+    last_pull_at timestamp with time zone,
+    last_drained_at timestamp with time zone,
+    CONSTRAINT ck_crawl_log_sources_pull CHECK ((((kind)::text = 'pull'::text) = (subscription IS NOT NULL)) AND (((kind)::text = 'pull'::text) = (verification_nonce IS NOT NULL)) AND (((kind)::text = 'pull'::text) = (filter_catalog_version IS NOT NULL)) AND (((kind)::text = 'pull'::text) = (declared_sample_rate IS NOT NULL)) AND ((declared_sample_rate IS NULL) OR ((declared_sample_rate > (0)::numeric) AND (declared_sample_rate <= (1)::numeric)))),
+    CONSTRAINT ck_crawl_log_sources_verification_failure CHECK ((((COALESCE(stall_reason, ''::character varying))::text = 'verification_failed'::text) = (verification_failure IS NOT NULL))),
     CONSTRAINT ck_crawl_log_sources_buffer_interval CHECK ((((setup)::text = 'aws_firehose'::text) = (buffer_interval_seconds IS NOT NULL)) AND ((buffer_interval_seconds IS NULL) OR ((buffer_interval_seconds >= 60) AND (buffer_interval_seconds <= 900)))),
     CONSTRAINT ck_crawl_log_sources_stall CHECK (((stall_reason IS NULL) = (stalled_at IS NULL)))
 );
@@ -4983,7 +4997,7 @@ CREATE UNIQUE INDEX uq_consumable_ledger_subject_dispatch_allocation_debit ON pu
 
 CREATE UNIQUE INDEX uq_consumable_ledger_task_attempt ON public.consumable_ledger USING btree (task_id, attempt, grant_id) WHERE ((entry_kind)::text = 'debit'::text);
 
-CREATE UNIQUE INDEX uq_crawl_log_live_host ON public.crawl_log_sources USING btree (workspace_id, project_id, host) WHERE (((status)::text = 'active'::text) AND ((kind)::text = 'webhook'::text));
+CREATE UNIQUE INDEX uq_crawl_log_live_host ON public.crawl_log_sources USING btree (workspace_id, project_id, host) WHERE (((status)::text = 'active'::text) AND ((kind)::text = ANY ((ARRAY['webhook'::character varying, 'pull'::character varying])::text[])));
 
 CREATE UNIQUE INDEX uq_opportunities_live_target ON public.opportunities USING btree (project_id, rule_id, target_key) WHERE (superseded_at IS NULL);
 

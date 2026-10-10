@@ -204,12 +204,53 @@ const crawlSamplingSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('sampled'), rate: z.number().gt(0).max(1) }),
   z.object({ kind: z.literal('filtered'), description: z.string() }),
 ]);
-/** Why a live source stopped delivering: silence, a lapsed plan, or batches over the size bound. */
-export const crawlStallReasonSchema = z.enum(['no_receipts', 'not_in_plan', 'oversize']);
+/**
+ * Why a live source stopped delivering: silence, a lapsed plan, batches over
+ * the size bound, or a pull subscription that failed its ownership check.
+ */
+export const crawlStallReasonSchema = z.enum([
+  'no_receipts',
+  'not_in_plan',
+  'oversize',
+  'verification_failed',
+]);
+/** Which subscription check failed; set exactly when the stall is `verification_failed`. */
+export const crawlVerificationFailureSchema = z.enum([
+  'label_mismatch',
+  'push_subscription',
+  'ack_deadline',
+  'permission_denied',
+  'not_found',
+  'unavailable',
+]);
+/** A Google Cloud Pub/Sub pull source: the subscription CiteLadder drains. */
+const crawlPullSourceSchema = z.object({
+  subscription: z.string(),
+  /** The `citeladder-source` label value the subscription must carry. */
+  verification_nonce: z.string(),
+  verified_at: z.string().nullable(),
+  verification_checked_at: z.string().nullable(),
+  verification_failure: crawlVerificationFailureSchema.nullable(),
+  /** Crawler catalog version of the sink filter the customer last installed. */
+  filter_catalog_version: z.string(),
+  filter_confirmed_at: z.string().nullable(),
+  /** False when the catalog changed and the sink filter needs the new version. */
+  filter_current: z.boolean(),
+  declared_sample_rate: z.number(),
+  last_pull_at: z.string().nullable(),
+  last_drained_at: z.string().nullable(),
+});
 export const crawlSourceSchema = z.object({
   id: z.uuid(),
-  kind: z.enum(['webhook', 'upload']),
-  setup: z.enum(['cloudflare_worker', 'cloudflare_logpush', 'aws_firehose', 'custom', 'upload']),
+  kind: z.enum(['webhook', 'pull', 'upload']),
+  setup: z.enum([
+    'cloudflare_worker',
+    'cloudflare_logpush',
+    'aws_firehose',
+    'gcp_pubsub_pull',
+    'custom',
+    'upload',
+  ]),
   preset: z.string(),
   /** Declared Firehose buffer interval; null for other setups. */
   buffer_interval_seconds: z.number().nullable(),
@@ -219,10 +260,15 @@ export const crawlSourceSchema = z.object({
   origin: z.string(),
   host: z.string(),
   status: z.enum(['active', 'revoked']),
-  /** `stalled`: live but not delivering; `stall_reason` says why. */
-  state: z.enum(['active', 'stalled', 'revoked']),
+  /**
+   * `stalled`: live but not delivering; `stall_reason` says why.
+   * `awaiting_verification`: a pull source whose subscription was never verified.
+   */
+  state: z.enum(['active', 'awaiting_verification', 'stalled', 'revoked']),
   stall_reason: crawlStallReasonSchema.nullable(),
   stalled_at: z.string().nullable(),
+  /** Pull-source details; null for webhooks and uploads. */
+  pull: crawlPullSourceSchema.nullable(),
   token_prefix: z.string().nullable(),
   connection: crawlConnectionSchema,
   last_accepted_batch: z.string().nullable(),
@@ -234,9 +280,27 @@ export const crawlSourceSchema = z.object({
 });
 /** Collection availability: the plan grant and CiteLadder's global kill switch. */
 export const crawlLogAvailabilitySchema = z.enum(['available', 'not_in_plan', 'disabled']);
+/**
+ * The Google Cloud pull connector in this environment: `pull_unavailable` when
+ * no reader service account is configured (local development).
+ */
+const crawlGcpPullSchema = z.object({
+  availability: z.enum(['available', 'pull_unavailable']),
+  reader_email: z.string().nullable(),
+  /** The Cloud Logging sink filter generated from the current crawler catalog. */
+  log_filter: z.string(),
+  catalog_version: z.string(),
+});
 export const crawlSourceListSchema = z.object({
   availability: crawlLogAvailabilitySchema,
+  gcp_pull: crawlGcpPullSchema,
   items: z.array(crawlSourceSchema),
+});
+/** The outcome of a synchronous subscription check. */
+export const crawlVerificationSchema = z.object({
+  id: z.uuid(),
+  verified: z.boolean(),
+  failure: crawlVerificationFailureSchema.nullable(),
 });
 /** Amazon Data Firehose's HTTP endpoint response contract. */
 export const firehoseResponseSchema = z.object({

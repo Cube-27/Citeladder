@@ -160,6 +160,7 @@ export async function diagnosticReceipt(
       last_line_at: null,
       heartbeat: false,
       bytes_received: 0,
+      drained: false,
     })
     .onConflict((c) => c.constraint('uq_crawl_log_batch_key').doNothing())
     .execute();
@@ -184,6 +185,8 @@ export async function ingest(
     rejectedRecords?: number;
     /** Decompressed bytes the sender delivered, when more than this batch's lines. */
     receivedBytes?: number;
+    /** A pull found its subscription empty; only a heartbeat can be a drain. */
+    drained?: boolean;
   },
 ) {
   if (!options.accessChecked) await requireCrawlLogs(db, source.workspace_id);
@@ -263,6 +266,12 @@ export async function ingest(
       counts,
     );
     const id = randomUUID();
+    const heartbeat =
+      !options.uploadId &&
+      !unsupported &&
+      !validation &&
+      lines.length === 0 &&
+      rejectedRecords === 0;
     await trx
       .insertInto('crawl_log_batches')
       .values({
@@ -282,16 +291,17 @@ export async function ingest(
         ...counts,
         first_line_at: first,
         last_line_at: last,
-        heartbeat:
-          !options.uploadId &&
-          !unsupported &&
-          !validation &&
-          lines.length === 0 &&
-          rejectedRecords === 0,
+        heartbeat,
         bytes_received: options.receivedBytes ?? bytes,
+        drained: heartbeat && options.drained === true,
       })
       .execute();
-    if (receiptStatus === 'accepted' && current.stall_reason !== null)
+    // Only a passing subscription check lifts a verification stall.
+    if (
+      receiptStatus === 'accepted' &&
+      current.stall_reason !== null &&
+      current.stall_reason !== 'verification_failed'
+    )
       await clearStall(trx, current);
     await insertRequests(trx, scope, id, admitted, counts, now);
     const receipt = await trx

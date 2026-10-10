@@ -1174,6 +1174,7 @@ export interface ContentDifferentiationReports {
 export interface CrawlLogBatches {
   bytes_received: number;
   catalog_version: string;
+  drained: boolean;
   first_line_at: Timestamp | null;
   format: string;
   heartbeat: boolean;
@@ -1220,11 +1221,16 @@ export interface CrawlLogSources {
   created_at: Timestamp;
   created_by_member_id: string;
   declared_filtered: boolean;
+  declared_sample_rate: Numeric | null;
+  filter_catalog_version: string | null;
+  filter_confirmed_at: Timestamp | null;
   format: string;
   host: string;
   id: string;
   kind: string;
+  last_drained_at: Timestamp | null;
   last_processed_at: Timestamp | null;
+  last_pull_at: Timestamp | null;
   origin: string;
   preset: string;
   project_id: string;
@@ -1234,8 +1240,13 @@ export interface CrawlLogSources {
   stall_reason: string | null;
   stalled_at: Timestamp | null;
   status: string;
+  subscription: string | null;
   token_hash: string | null;
   token_prefix: string | null;
+  verification_checked_at: Timestamp | null;
+  verification_failure: string | null;
+  verification_nonce: string | null;
+  verified_at: Timestamp | null;
   workspace_id: string;
 }
 
