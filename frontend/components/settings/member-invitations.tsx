@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CopyButton } from '@/components/ui/copy-button';
 import { Dialog } from '@/components/ui/dialog';
+import { DisplayTime } from '@/components/ui/display-time';
 import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
 import { Select } from '@/components/ui/select';
@@ -23,7 +24,9 @@ import { textRole } from '@/components/ui/typography';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
 import type { AssignableWorkspaceRole, WorkspaceInvitation } from '@/lib/api/workspaces';
 
-import { ROLE_OPTIONS, ROLE_SUMMARY } from './member-roles';
+import { ROLE_OPTIONS, ROLE_SUMMARY, roleLabel } from './member-roles';
+
+const INVITE_FORM_ID = 'invite-member-form';
 
 /** Where an invitee accepts. The token is a URL parameter, never stored. */
 function acceptanceLink(token: string): string {
@@ -44,6 +47,7 @@ export function InviteDialog({
   issuedToken,
   delivery,
   pending,
+  error,
   onInvite,
 }: Readonly<{
   open: boolean;
@@ -51,15 +55,21 @@ export function InviteDialog({
   issuedToken: string | null;
   delivery?: 'accepted' | 'failed';
   pending: boolean;
-  onInvite: (email: string, role: AssignableWorkspaceRole) => void;
+  /** Why the last invitation was refused, shown where it was asked for. */
+  error: string | null;
+  /** Resolves once the invitation is issued; the address stays until then. */
+  onInvite: (email: string, role: AssignableWorkspaceRole) => Promise<unknown>;
 }>) {
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<AssignableWorkspaceRole>('member');
-  const submit = () => {
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     const address = email.trim();
-    if (!address) return;
-    onInvite(address, role);
-    setEmail('');
+    if (!address || pending) return;
+    onInvite(address, role).then(
+      () => setEmail(''),
+      () => undefined,
+    );
   };
 
   return (
@@ -73,13 +83,18 @@ export function InviteDialog({
           <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button type="button" disabled={pending || !email.trim()} onClick={submit}>
+          <Button type="submit" form={INVITE_FORM_ID} disabled={!email.trim()} pending={pending}>
             Send invitation
           </Button>
         </>
       }
     >
-      <Stack gap="workspace">
+      <form
+        id={INVITE_FORM_ID}
+        noValidate
+        onSubmit={submit}
+        className="grid gap-[var(--workspace-gap)]"
+      >
         <Stack gap="tight">
           <label htmlFor="invite-email" className={textRole('label')}>
             Email
@@ -106,6 +121,7 @@ export function InviteDialog({
           />
           <p className={textRole('caption')}>{ROLE_SUMMARY[role]}</p>
         </Stack>
+        {error ? <Alert tone="danger">{error}</Alert> : null}
         {issuedToken ? (
           <Alert tone="info">
             <div className="grid gap-2">
@@ -127,7 +143,7 @@ export function InviteDialog({
             </div>
           </Alert>
         ) : null}
-      </Stack>
+      </form>
     </Dialog>
   );
 }
@@ -144,7 +160,7 @@ export function PendingInvitations({
   isLoading: boolean;
   busy: boolean;
   onResend: (invitationId: string) => void;
-  onRevoke: (invitationId: string) => void;
+  onRevoke: (invitation: WorkspaceInvitation) => void;
 }>) {
   if (isLoading) return <Skeleton className="h-16 w-full" />;
   if (invitations.length === 0) return null;
@@ -156,6 +172,7 @@ export function PendingInvitations({
           <TableRow>
             <TableHead>Invitee</TableHead>
             <TableHead>Workspace role</TableHead>
+            <TableHead>Link expires</TableHead>
             <TableHead className="text-right">Access</TableHead>
           </TableRow>
         </TableHeader>
@@ -166,7 +183,10 @@ export function PendingInvitations({
                 <span className="min-w-0 truncate">{invitation.email}</span>
               </TableCell>
               <TableCell>
-                <Badge variant="neutral">{invitation.role}</Badge>
+                <Badge variant="neutral">{roleLabel(invitation.role)}</Badge>
+              </TableCell>
+              <TableCell className="type-caption tabular-nums">
+                <DisplayTime value={invitation.expires_at} />
               </TableCell>
               <TableCell>
                 <div className="flex items-center justify-end gap-2">
@@ -184,7 +204,7 @@ export function PendingInvitations({
                     variant="ghost"
                     size="sm"
                     disabled={busy}
-                    onClick={() => onRevoke(invitation.id)}
+                    onClick={() => onRevoke(invitation)}
                   >
                     Revoke
                   </Button>

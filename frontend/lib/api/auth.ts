@@ -7,6 +7,7 @@ import {
   authResponseSchema,
   authSecuritySchema,
   oauthStartResponseSchema,
+  policyRevisionSchema,
   registrationResponseSchema,
 } from '@citeladder/contracts/auth';
 import { strictValidate } from '@citeladder/contracts/validation';
@@ -18,6 +19,9 @@ import type {
 } from './types';
 
 export const authApi = {
+  /** The Terms revision a person accepts when they create their workspace. */
+  policies: async () =>
+    strictValidate(policyRevisionSchema, await apiClient.get('/auth/policies'), 'auth.policies'),
   security: async () =>
     strictValidate(authSecuritySchema, await apiClient.get('/auth/security'), 'auth.security'),
   linkGoogle: async (password: string) =>

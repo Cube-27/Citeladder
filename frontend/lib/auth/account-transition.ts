@@ -1,5 +1,7 @@
 import type { QueryClient } from '@tanstack/react-query';
 
+import { authApi } from '@/lib/api/auth';
+import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import { clearActiveProjectSelection } from '@/lib/project/active-project-storage';
 
 /**
@@ -20,4 +22,11 @@ export async function clearAccountScopedClientState(queryClient: QueryClient) {
     queryClient.clear();
     clearActiveProjectSelection();
   }
+}
+
+/** Sign out from a screen outside the account menu: revoke, clear, then reload at sign-in. */
+export async function signOut(queryClient: QueryClient) {
+  await authApi.logout();
+  await clearAccountScopedClientState(queryClient);
+  hardNavigate('/login');
 }

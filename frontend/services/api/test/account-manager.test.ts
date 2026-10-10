@@ -17,7 +17,6 @@ let owner: string,
   foreign: string,
   session: OperatorSession;
 let createdId: string | undefined;
-let createdWorkspace: string | undefined;
 const email = (id: string) => `${id}@example.test`;
 beforeAll(async () => {
   owner = await fixtures.user();
@@ -36,8 +35,6 @@ beforeAll(async () => {
 });
 afterAll(async () => {
   await db.deleteFrom('security_events').where('workspace_id', '=', workspace).execute();
-  if (createdWorkspace)
-    await db.deleteFrom('workspaces').where('id', '=', createdWorkspace).execute();
   await fixtures.cleanup();
   if (createdId) await db.deleteFrom('users').where('id', '=', createdId).execute();
   await db.destroy();
@@ -62,7 +59,7 @@ it('authenticates against an explicit workspace without provisioning access', as
   ).toEqual([]);
 });
 
-it('creates an invited identity without signup grants, stores a hashed token and joins through the native invitation owner', async () => {
+it('creates an invited identity that owns no workspace, stores a hashed token and joins through the native invitation owner', async () => {
   const invitedEmail = `invited-${admin}@example.test`;
   const result = await manageAccount(db, session, {
     kind: 'invite',
@@ -78,27 +75,14 @@ it('creates an invited identity without signup grants, stores a hashed token and
     .executeTakeFirstOrThrow();
   createdId = created.id;
   expect(await verifyPassword('password123', created.hashed_password)).toBe(true);
-  const personal = await db
-    .selectFrom('workspace_members')
-    .select(['workspace_id', 'role'])
-    .where('user_id', '=', created.id)
-    .executeTakeFirstOrThrow();
-  createdWorkspace = personal.workspace_id;
-  expect(personal.role).toBe('owner');
-  expect(personal.workspace_id).not.toBe(workspace);
-  const account = await db
-    .selectFrom('billing_accounts')
-    .selectAll()
-    .where('workspace_id', '=', personal.workspace_id)
-    .executeTakeFirstOrThrow();
+  // An invited person owns nothing until they create their own workspace.
   expect(
     await db
-      .selectFrom('account_grants')
-      .select('id')
-      .where('billing_account_id', '=', account.id)
+      .selectFrom('workspace_members')
+      .select('workspace_id')
+      .where('user_id', '=', created.id)
       .execute(),
   ).toEqual([]);
-  expect(account.registration_cohort_at).toEqual(created.created_at);
   const persisted = await db
     .selectFrom('workspace_invitations')
     .selectAll()

@@ -164,6 +164,7 @@ export function ProjectProvider({ children }: Readonly<{ children: ReactNode }>)
       requestedProjectId !== null && activeProject === null && !requestedProjectMissing,
     requestedProjectMissing,
     failed,
+    noWorkspace: workspacesQuery.isSuccess && workspacesQuery.data.length === 0,
     workspaceId: activeWorkspaceId,
     activeProjectId,
     hasResolvedProject: activeProject !== null,

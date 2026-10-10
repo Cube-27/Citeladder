@@ -84,9 +84,10 @@ describe('workspace authorization and root allocation', () => {
     const user = await fixtures.user();
     actors.push(user);
     const cookie = await userCookie(user);
+    const terms = { terms_revision: policy.auth.terms_revision, accept_terms: true };
     const results = await Promise.all([
-      request('', 'POST', { name: 'First' }, cookie),
-      request('', 'POST', { name: 'Second' }, cookie),
+      request('', 'POST', { name: 'First', ...terms }, cookie),
+      request('', 'POST', { name: 'Second', ...terms }, cookie),
     ]);
     expect(results.map((response) => response.status).sort()).toEqual([201, 403]);
     const space = (

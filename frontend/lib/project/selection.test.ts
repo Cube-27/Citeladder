@@ -136,6 +136,7 @@ describe('resolveStatus', () => {
     requestedProjectPending: false,
     requestedProjectMissing: false,
     failed: false,
+    noWorkspace: false,
     workspaceId: WORKSPACE_A,
     activeProjectId: PROJECT_1,
     hasResolvedProject: true,
@@ -184,6 +185,14 @@ describe('resolveStatus', () => {
     expect(resolveStatus({ ...base, hasResolvedProject: false, activeProjectId: PROJECT_1 })).toBe(
       'resolving',
     );
+  });
+
+  it('sends someone who belongs to no workspace to set one up, unless a read failed', () => {
+    const none = { ...base, noWorkspace: true, workspaceId: null, hasResolvedProject: false };
+    expect(resolveStatus({ ...none, activeProjectId: null, listSettled: false })).toBe(
+      'no_workspace',
+    );
+    expect(resolveStatus({ ...none, failed: true })).toBe('error');
   });
 
   it('is empty only once a settled list says so', () => {

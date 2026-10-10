@@ -1,6 +1,6 @@
 'use client';
 
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Suspense, useEffect, useState, type ReactNode } from 'react';
 
@@ -16,6 +16,7 @@ import { workspaceDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
 
 import { OnboardingScreen } from './onboarding-screen';
+import { WorkspaceSetup } from './workspace-setup';
 
 export function OnboardingPageClient() {
   return (
@@ -35,7 +36,8 @@ export function OnboardingPageClient() {
  */
 function ProjectSetupGate() {
   const queryClient = useQueryClient();
-  const { status, activeWorkspaceId, retry: retryContext } = useProjectContext();
+  const { status, activeWorkspaceId, workspaces, retry: retryContext } = useProjectContext();
+  const [searchParams] = useSearchParams();
   const { entitlement, isLoading: entitlementLoading } = useEntitlement();
 
   const retry = () => {
@@ -62,6 +64,7 @@ function ProjectSetupGate() {
       </ProjectSetupBlocked>
     );
   }
+  if (setsUpOwnWorkspace(status, workspaces, searchParams.get('setup'))) return <WorkspaceSetup />;
   if (status === 'unavailable') {
     // Reached by linking here with a `?project=` that is missing, unauthorized,
     // or contradicts the workspace. Creating a project is not the answer to a
@@ -94,6 +97,19 @@ function ProjectSetupGate() {
     );
   }
   return <OnboardingScreen />;
+}
+
+/**
+ * Someone who owns no workspace sets one up first: always when they belong to
+ * none, and on request when they only have workspaces they were invited to.
+ */
+function setsUpOwnWorkspace(
+  status: string,
+  workspaces: readonly { role: string }[],
+  setup: string | null,
+): boolean {
+  if (status === 'no_workspace') return true;
+  return setup === 'workspace' && !workspaces.some((workspace) => workspace.role === 'owner');
 }
 
 function ProjectSetupLoading({

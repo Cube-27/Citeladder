@@ -71,7 +71,7 @@ export function RegisterScreen({
   return (
     <AuthFormShell
       title="Create your account"
-      description="Your trial starts when you register. Verify your email to use it. No card required."
+      description="Verify your email, then set up your workspace to start your trial. No card required."
       error={mutation.isError ? authErrorMessage(mutation.error) : undefined}
       onSubmit={handleSubmit(submit)}
       pending={isSubmitting || mutation.isPending}

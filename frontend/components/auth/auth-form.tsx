@@ -111,12 +111,12 @@ export function AuthPasswordField({
 }
 
 /**
- * The Terms decision, made where the visitor signs in.
+ * The Terms decision, made at signup and when a person creates their workspace.
  *
  * Unticked by default and required. The Privacy Policy is linked as notice,
  * not bundled into the agreement: processing does not rest on this consent.
  */
-function TermsConsent({
+export function TermsConsent({
   ref,
   agreed,
   missing,

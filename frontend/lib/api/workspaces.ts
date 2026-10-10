@@ -42,6 +42,31 @@ const memberListSchema = z.array(workspaceMemberSchema);
 const invitationListSchema = z.array(workspaceInvitationSchema);
 
 export const workspacesApi = {
+  /**
+   * Create the caller's own workspace, accepting the Terms revision they were
+   * shown. A person owns at most one; this is where a self-serve trial starts.
+   * Not workspace-scoped: the workspace does not exist yet.
+   */
+  create: async (input: { name: string; termsRevision: string }) =>
+    strictValidate(
+      workspaceSchema,
+      await apiClient.post<Workspace>(
+        '/workspaces',
+        { name: input.name, terms_revision: input.termsRevision, accept_terms: true },
+        { workspaceId: null },
+      ),
+      'workspaces.create',
+    ),
+  /** Leave a workspace you do not own; your access ends at once. */
+  leave: (workspaceId: string, options?: ApiRequestOptions) =>
+    apiClient.post<void>(
+      `/workspaces/${workspaceId}/members/leave`,
+      {},
+      {
+        ...options,
+        workspaceId,
+      },
+    ),
   access: async (workspaceId: string, options?: ApiRequestOptions) =>
     strictValidate(
       workspaceAccessSchema,

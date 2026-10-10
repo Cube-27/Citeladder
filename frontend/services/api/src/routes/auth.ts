@@ -1,6 +1,7 @@
 import {
   authResponseSchema,
   authSecuritySchema,
+  policyRevisionSchema,
   registrationResponseSchema,
   oauthStartResponseSchema,
   oauthProvidersResponseSchema,
@@ -144,6 +145,19 @@ export const authRoutes = [
         options,
       );
       return { authorize_url: started.authorize_url, state: started.state };
+    },
+  }),
+  defineGetRoute({
+    ...base,
+    authorize: 'session',
+    // The revision a person accepts when they create their workspace.
+    path: '/api/v1/auth/policies',
+    response: policyRevisionSchema,
+    async handle() {
+      return {
+        terms_revision: policy.auth.terms_revision,
+        privacy_notice_revision: policy.auth.privacy_revision,
+      };
     },
   }),
   defineGetRoute({

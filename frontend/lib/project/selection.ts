@@ -20,7 +20,9 @@ export type SelectionStatus =
   /** The requested project is missing, unauthorized, or contradicts the URL. */
   | 'unavailable'
   /** A read failed. Recoverable — the reader can retry. */
-  | 'error';
+  | 'error'
+  /** The person belongs to no workspace yet; onboarding creates their own. */
+  | 'no_workspace';
 
 export type WorkspaceInputs = {
   /** The workspace of an explicitly requested, already-authorized project. */
@@ -114,6 +116,8 @@ export type StatusInputs = {
   requestedProjectMissing: boolean;
   /** A read failed in a way the reader can retry. */
   failed: boolean;
+  /** The membership list answered, and it is empty. */
+  noWorkspace: boolean;
   workspaceId: string | null;
   activeProjectId: string | null;
   hasResolvedProject: boolean;
@@ -133,6 +137,7 @@ export function resolveStatus({
   requestedProjectPending,
   requestedProjectMissing,
   failed,
+  noWorkspace,
   workspaceId,
   activeProjectId,
   hasResolvedProject,
@@ -140,6 +145,7 @@ export function resolveStatus({
 }: StatusInputs): SelectionStatus {
   if (contradictoryRequest || requestedProjectMissing) return 'unavailable';
   if (failed) return 'error';
+  if (noWorkspace) return 'no_workspace';
   if (requestedProjectPending) return 'resolving';
   // A resolved project is usable on its own. Holding the shell for a list
   // refetch that only reconciles what is already known is what made a brand

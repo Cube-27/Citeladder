@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 
 import { ShellFallback } from '@/components/layout/shell-fallback';
 import { Alert } from '@/components/ui/alert';
@@ -8,13 +9,17 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { policiesApi } from '@/lib/api/policies';
 import { queryKeys } from '@/lib/api/query-keys';
 import { humanizeApiError } from '@/lib/api/errors';
+import { signOut } from '@/lib/auth/account-transition';
 import { hasSignInTermsConsent } from '@/lib/auth/terms-consent';
+import { WORKSPACE_CHOOSER_PATH, isWorkspaceFreeRoute } from '@/lib/project/bootstrap';
 import { useProjectContext } from '@/lib/project/project-context';
 import { websiteHref } from '@/lib/config/app-link';
 
 export function PolicyAcceptanceGate({ children }: Readonly<{ children: ReactNode }>) {
   const { activeWorkspaceId } = useProjectContext();
-  if (!activeWorkspaceId) return children;
+  const location = useLocation();
+  if (!activeWorkspaceId || isWorkspaceFreeRoute(location.pathname, location.search))
+    return children;
   return (
     <WorkspacePolicy key={activeWorkspaceId} workspaceId={activeWorkspaceId}>
       {children}
@@ -25,11 +30,11 @@ export function PolicyAcceptanceGate({ children }: Readonly<{ children: ReactNod
 /**
  * Record the Terms decision for the resolved workspace.
  *
- * The decision is normally made on the sign-in screen; this records it for
- * the workspace once the server names the current revision. The review
- * screen below is only the fallback for a session that reached the app
- * without that decision — a session restored in a new tab, or a Terms
- * revision published since sign-in.
+ * Someone accepts the Terms when they sign up and create their workspace, and
+ * a decision made on the signup form in this tab is recorded here for a
+ * workspace they joined. The review screen below appears only when this
+ * workspace has no acceptance of the current revision: a new revision, or a
+ * workspace joined without that decision.
  *
  * While the status is unknown the gate draws the shell's own loading frame,
  * never the review screen: an already-accepted reader refreshing the page
@@ -113,7 +118,26 @@ function WorkspacePolicy({
         {accept.isError ? (
           <Alert tone="danger">{humanizeApiError(accept.error).message}</Alert>
         ) : null}
+        <PolicyExits />
       </main>
     </ShellFallback>
+  );
+}
+
+/** The ways out of the review screen: another workspace, or signing out. */
+function PolicyExits() {
+  const cache = useQueryClient();
+  const { workspaces } = useProjectContext();
+  return (
+    <div className="flex flex-wrap gap-2">
+      {workspaces.length > 1 ? (
+        <Button asChild variant="secondary" className="w-fit">
+          <Link to={WORKSPACE_CHOOSER_PATH}>Switch workspace</Link>
+        </Button>
+      ) : null}
+      <Button variant="ghost" className="w-fit" onClick={() => void signOut(cache)}>
+        Sign out
+      </Button>
+    </div>
   );
 }

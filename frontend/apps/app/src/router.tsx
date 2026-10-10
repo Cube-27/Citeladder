@@ -188,6 +188,11 @@ export const appRoutes: RouteObject[] = [
     hydrateFallbackElement: <ShellFallback />,
     ErrorBoundary: RouteError,
     children: [
+      productRoute('/workspaces', () =>
+        import('@/components/auth/workspace-chooser').then(({ WorkspaceChooser }) => ({
+          default: WorkspaceChooser,
+        })),
+      ),
       productRoute('/onboarding', () =>
         import('@/components/onboarding/onboarding-page-client').then(
           ({ OnboardingPageClient }) => ({

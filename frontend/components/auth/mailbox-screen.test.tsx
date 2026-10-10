@@ -34,3 +34,14 @@ it('captures the token in memory and waits for an explicit password confirmation
   );
   expect(await screen.findByText('Confirmed. Sign in to continue.')).toBeInTheDocument();
 });
+
+it('explains an incomplete link instead of asking for a password it cannot use', () => {
+  window.history.replaceState(null, '', '/reset-password');
+  renderWithProviders(<MailboxScreen />, { initialEntries: ['/reset-password'] });
+  expect(screen.getByText(/This link is incomplete/u)).toBeVisible();
+  expect(screen.queryByLabelText(/New password/u)).toBeNull();
+  expect(screen.getByRole('link', { name: 'Request one' })).toHaveAttribute(
+    'href',
+    '/forgot-password',
+  );
+});

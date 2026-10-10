@@ -2,7 +2,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
-import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { BrowserRouter } from 'react-router-dom';
 
 import { createAppQueryClient } from '@/lib/api/query-client';
 import type { SessionUser } from '@/lib/api/types';
@@ -47,8 +47,7 @@ const nextProject = {
 const setActiveProjectId = vi.fn();
 vi.mock('@/lib/project/project-context', () => ({
   useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-  // The Members tab gates itself on the caller's effective capability, so the
-  // mock has to answer that question too — an Owner here.
+  // Controls gate themselves on the caller's effective capability — an Owner here.
   useWorkspaceCapability: (capability: string) =>
     capability !== 'delete_projects' || entitlementState.roleMayDelete,
   useProjectContext: () => ({
@@ -88,13 +87,7 @@ vi.mock('@/components/settings/integration-settings', () => ({
   IntegrationSettings: () => <div data-testid="integration-settings-panel">integrations</div>,
 }));
 
-import { SettingsRouteContent } from './settings-route-content';
 import { SettingsScreen } from './settings-screen';
-
-function BillingLocation() {
-  const location = useLocation();
-  return <p data-testid="billing-location">{location.pathname + location.search}</p>;
-}
 
 function renderScreen() {
   return render(
@@ -132,52 +125,11 @@ describe('SettingsScreen', () => {
     expect(screen.getByRole('tab', { name: 'Account' })).toHaveAttribute('aria-selected', 'true');
   });
 
-  it('renders the available settings tabs with Account selected by default', () => {
+  it('says who you are in the selected workspace without internal identifiers', () => {
     renderScreen();
-    const tablist = screen.getByRole('tablist', { name: /settings sections/i });
-    const tabs = within(tablist).getAllByRole('tab');
-    // Members is administrative and the mocked caller is an Owner, so it is
-    // offered here; a role without `manage_members` never sees the tab.
-    expect(tabs.map((tab) => tab.textContent)).toEqual([
-      'Account',
-      'Members',
-      'Providers',
-      'Integrations',
-      'MCP connections',
-    ]);
-    expect(within(tablist).getByRole('tab', { name: 'Account' })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    );
-  });
-
-  it('renders the session email, account role, and initials avatar', () => {
-    renderScreen();
-
-    // Email and role now appear once, in the identity row — the duplicate
-    // detail rows that restated both were removed.
-    expect(screen.getAllByText('test.user@example.test').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('user').length).toBeGreaterThanOrEqual(1);
-    // Initials avatar from the email local part.
-    expect(screen.getByText('TE')).toBeInTheDocument();
-  });
-
-  it('labels the created timestamp as "Account created", not "Member since"', () => {
-    renderScreen();
-    expect(screen.getByText('Account created')).toBeInTheDocument();
-    expect(screen.queryByText(/member since/i)).not.toBeInTheDocument();
-  });
-
-  it('shows the user id and last-updated timestamp when present', () => {
-    renderScreen();
-    expect(screen.getByText('User ID')).toBeInTheDocument();
-    expect(screen.getByText(user.id)).toBeInTheDocument();
-    expect(screen.getByText('Last updated')).toBeInTheDocument();
-  });
-
-  it('does not expose a theme control in the light-only product', () => {
-    renderScreen();
-    expect(screen.queryByRole('button', { name: /toggle color theme/i })).not.toBeInTheDocument();
+    expect(screen.getByText('Owner of Test Workspace')).toBeVisible();
+    expect(screen.queryByText(user.id)).toBeNull();
+    expect(screen.queryByText('User ID')).toBeNull();
   });
 
   it('shows the provider settings panel on the Provider Settings tab', async () => {
@@ -200,19 +152,6 @@ describe('SettingsScreen', () => {
     renderScreen();
     expect(screen.getByRole('tab', { name: 'Providers' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByTestId('provider-settings-panel')).toBeVisible();
-  });
-
-  it('sends a former ?tab=billing link to the billing section, keeping the workspace', () => {
-    window.history.replaceState(null, '', '/settings?tab=billing&workspace=w1');
-    render(
-      <BrowserRouter>
-        <Routes>
-          <Route path="/settings" element={<SettingsRouteContent />} />
-          <Route path="/billing" element={<BillingLocation />} />
-        </Routes>
-      </BrowserRouter>,
-    );
-    expect(screen.getByTestId('billing-location')).toHaveTextContent('/billing?workspace=w1');
   });
 
   it('opens the Integrations tab from a ?tab=integrations deep link (the C2 OAuth-callback landing)', () => {
@@ -259,7 +198,7 @@ describe('SettingsScreen', () => {
     const account = screen.getByRole('tab', { name: 'Account' });
     account.focus();
     await ue.keyboard('{ArrowRight}');
-    expect(screen.getByRole('tab', { name: 'Members' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Workspace' })).toHaveAttribute('aria-selected', 'true');
     await ue.keyboard('{End}');
     expect(screen.getByRole('tab', { name: 'MCP connections' })).toHaveAttribute(
       'aria-selected',

@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { sql } from 'kysely';
 import { afterAll, expect, it } from 'vitest';
 import { testDatabase } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
@@ -11,11 +12,24 @@ import type { AuditTask } from '../src/queue/audit-queue.ts';
 const db = testDatabase();
 const fixtures = new VisibilityFixtures(db);
 const accounts: string[] = [];
+
+/** The trial starts at workspace creation; move this one's window eight days back. */
+function ageTrial(accountId: string) {
+  return db
+    .updateTable('account_grants')
+    .set({
+      valid_from: sql`valid_from - interval '8 days'`,
+      valid_until: sql`valid_until - interval '8 days'`,
+    })
+    .where('billing_account_id', '=', accountId)
+    .where('source_kind', '=', 'trial')
+    .execute();
+}
 it('distinguishes revoked authority from natural trial expiry', async () => {
   const t = await fixtures.tenant({ access: false });
   const user = await db
     .updateTable('users')
-    .set({ registration_origin: 'public', created_at: new Date(Date.now() - 8 * 86400000) })
+    .set({ registration_origin: 'public' })
     .where('id', '=', t.userId)
     .returningAll()
     .executeTakeFirstOrThrow();
@@ -26,6 +40,7 @@ it('distinguishes revoked authority from natural trial expiry', async () => {
     .where('workspace_id', '=', t.workspaceId)
     .executeTakeFirstOrThrow();
   accounts.push(account.id);
+  await ageTrial(account.id);
   const grant = await db
     .selectFrom('account_grants')
     .selectAll()
@@ -41,7 +56,7 @@ it('distinguishes revoked authority from natural trial expiry', async () => {
       reason: 'Revoke fixture access before expiry',
       actorKind: 'operator',
       actorId: t.userId,
-      at: new Date(user.created_at.getTime() + 86400000),
+      at: new Date(grant.valid_from.getTime() + 86400000),
     }),
   );
   expect((await workspaceAccess(db, t.workspaceId)).status).toBe('access_unresolved');
@@ -151,7 +166,7 @@ it('only explicit restoration reopens an expired workspace, preserving its data'
   const t = await fixtures.tenant({ access: false });
   const user = await db
     .updateTable('users')
-    .set({ registration_origin: 'public', created_at: new Date(Date.now() - 8 * 86400000) })
+    .set({ registration_origin: 'public' })
     .where('id', '=', t.userId)
     .returningAll()
     .executeTakeFirstOrThrow();
@@ -162,6 +177,7 @@ it('only explicit restoration reopens an expired workspace, preserving its data'
     .where('workspace_id', '=', t.workspaceId)
     .executeTakeFirstOrThrow();
   accounts.push(account.id);
+  await ageTrial(account.id);
   const grant = async (key: string) =>
     db.transaction().execute((trx) =>
       issueBundle(trx, {

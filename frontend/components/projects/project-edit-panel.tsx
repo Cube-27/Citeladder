@@ -101,6 +101,7 @@ export function ProjectEditPanel({
     staleTime: Number.POSITIVE_INFINITY,
   });
 
+  const [name, setName] = useState(project.name);
   const [brandName, setBrandName] = useState(project.brand_name);
   const [websiteUrl, setWebsiteUrl] = useState(project.website_url);
   const [country, setCountry] = useState(project.country_code);
@@ -132,6 +133,8 @@ export function ProjectEditPanel({
       projectsApi.updateProject(
         project.id,
         {
+          // An emptied name keeps the current one rather than failing the save.
+          name: name.trim() || project.name,
           brand_name: brandName.trim(),
           website_url: websiteUrl.trim(),
           country_code: country.trim().toUpperCase(),
@@ -190,6 +193,11 @@ export function ProjectEditPanel({
         {save.isError ? <Alert tone="danger">{humanizeApiError(save.error).message}</Alert> : null}
 
         <div className="grid gap-4">
+          <Field label="Project name" hint="How this project appears in your project list.">
+            {(props) => (
+              <Input {...props} value={name} onChange={(event) => setName(event.target.value)} />
+            )}
+          </Field>
           <Field label="Brand name">
             {(props) => (
               <Input

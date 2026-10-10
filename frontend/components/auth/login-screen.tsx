@@ -30,7 +30,7 @@ export function LoginScreen({
   const returnTo = safeAuthReturnPath(searchParams.get('return_to'));
   const description =
     searchParams.get('registered') === '1'
-      ? 'Check your email to verify your account. Your trial starts at registration.'
+      ? 'Check your email to verify your account. Your trial starts when you set up your workspace.'
       : 'Welcome back! Please sign in to continue.';
   // The Google callback is a full-page navigation, so it reports failure as a
   // coded query parameter rather than a response body.
@@ -64,6 +64,9 @@ export function LoginScreen({
       footerLabel="Sign up"
       footerLinkVariant="emphasis"
       showOAuth
+      // The Terms are accepted at signup and when a workspace is created, not
+      // on every sign-in.
+      requireTerms={false}
       showFooter={!demoMode && signupOpen}
     >
       <AuthEmailField error={errors.email?.message} inputProps={register('email')} />

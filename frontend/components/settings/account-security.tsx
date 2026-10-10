@@ -12,15 +12,25 @@ import { AuthPasswordField } from '@/components/auth/auth-form';
 import { Stack } from '@/components/ui/layout';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
 
+const METHOD_LABELS: Record<string, string> = { password: 'Email and password', google: 'Google' };
+
 function SecurityIdentity({
   data,
 }: Readonly<{ data: Awaited<ReturnType<typeof authApi.security>> | undefined }>) {
   if (!data) return null;
+  const methods = data.methods.map((method) => METHOD_LABELS[method] ?? method);
   return (
-    <p className="type-body">
-      Sign-in methods: {data.methods.join(', ')}. Email:{' '}
-      {data.email_verified ? 'Verified' : 'Legacy or operator access; no verification recorded'}.
-    </p>
+    <dl className="type-body grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
+      <dt className="text-secondary">Sign in with</dt>
+      <dd>{methods.length ? methods.join(' or ') : 'No sign-in method yet'}</dd>
+      <dt className="text-secondary">Email</dt>
+      <dd>{data.email_verified ? 'Verified' : 'Not verified'}</dd>
+      {data.methods.includes('password') && !data.methods.includes('google') ? (
+        <dd className="type-caption col-span-2">
+          To connect Google, enter your current password below, then choose Connect Google.
+        </dd>
+      ) : null}
+    </dl>
   );
 }
 

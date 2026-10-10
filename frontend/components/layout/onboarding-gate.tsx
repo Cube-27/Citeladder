@@ -14,6 +14,7 @@ import {
   isWorkspaceOnlyRoute,
   resolveAllowance,
   resolveGate,
+  WORKSPACE_SETUP_PATH,
   type NoticeKind,
 } from '@/lib/project/bootstrap';
 import { useProjectContext } from '@/lib/project/project-context';
@@ -109,8 +110,12 @@ export function OnboardingGate({ children }: Readonly<{ children: ReactNode }>) 
 function useOnboardingRedirect(redirecting: boolean, workspaceId: string | null) {
   const router = useNavigate();
   useEffect(() => {
-    if (!redirecting || !workspaceId) return;
-    router(workspaceDestination('/onboarding', null, workspaceId), { replace: true });
+    if (!redirecting) return;
+    // Someone with no workspace yet sets up their own before any project.
+    router(
+      workspaceId ? workspaceDestination('/onboarding', null, workspaceId) : WORKSPACE_SETUP_PATH,
+      { replace: true },
+    );
   }, [redirecting, workspaceId, router]);
 }
 

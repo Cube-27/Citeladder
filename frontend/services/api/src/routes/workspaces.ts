@@ -11,7 +11,7 @@ import { workspaceAccess } from '../entitlements/access.ts';
 import { deliverInvitation } from '../workspaces/invitation-mail.ts';
 import { defineGetRoute, definePostRoute, definePatchRoute, defineDeleteRoute } from './define.ts';
 import { readBody } from '../http/body.ts';
-import { acceptPolicy, policyStatus } from '../workspaces/policies.ts';
+import { acceptPolicy, policyStatus, recordPolicyAcceptance } from '../workspaces/policies.ts';
 import {
   createWorkspace,
   listMembers,
@@ -40,7 +40,6 @@ const base = {
 const admin = { ...base, capability: 'manage_members' } as const;
 const memberPath = { workspace_id: uuid, member_id: uuid };
 const invitationPath = { workspace_id: uuid, invitation_id: uuid };
-const workspaceCreate = z.object({ name: z.string().trim().min(1).max(255) });
 const accept = z.object({ token: z.string().min(16).max(256) });
 const roleUpdate = z.object({ role: assignableRoleSchema });
 const transfer = z.object({ member_id: z.uuid() });
@@ -49,6 +48,7 @@ const policyDecision = z.object({
   terms_revision: z.string().min(1).max(64),
   accept_terms: z.literal(true),
 });
+const workspaceCreate = policyDecision.extend({ name: z.string().trim().min(1).max(255) });
 
 export const workspaceRoutes = [
   defineGetRoute({
@@ -87,7 +87,19 @@ export const workspaceRoutes = [
     status: 201,
     body: workspaceCreate,
     async handle({ c, db }) {
-      return createWorkspace(db, c.get('user').id, (await readBody(c, workspaceCreate)).name);
+      const { name, terms_revision } = await readBody(c, workspaceCreate);
+      const userId = c.get('user').id;
+      // Creating a workspace is the signup's Terms decision for it.
+      return db.transaction().execute(async (trx) => {
+        const workspace = await createWorkspace(trx, userId, name);
+        await recordPolicyAcceptance(trx, {
+          workspaceId: workspace.id,
+          actorId: userId,
+          revision: terms_revision,
+          context: 'authenticated_onboarding',
+        });
+        return workspace;
+      });
     },
   }),
   definePostRoute({

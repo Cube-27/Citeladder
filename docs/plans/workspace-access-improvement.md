@@ -1,7 +1,7 @@
 # Workspace access improvement plan
 
-**Status:** decisions answered 2026-10-10; implementing as two sequential PRs
-(PR 1: phases 1, 2 and 4; PR 2: phases 3 and 5).
+**Status:** done 2026-10-10 in two sequential PRs (#347: phases 1, 2 and 4;
+PR 2: phases 3 and 5).
 
 Feature 12 of the [feature review tracker](feature-review-tracker.md):
 authentication, sessions, workspaces, membership, roles and the project

@@ -10,9 +10,11 @@ export const authSecuritySchema = z.object({
   methods: z.array(z.string()),
 });
 
-export const policyStatusSchema = z.object({
+export const policyRevisionSchema = z.object({
   terms_revision: z.string(),
   privacy_notice_revision: z.string(),
+});
+export const policyStatusSchema = policyRevisionSchema.extend({
   accepted_at: z.string().nullable(),
 });
 

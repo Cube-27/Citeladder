@@ -1,7 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { jwtVerify } from 'jose';
-import { sql } from 'kysely';
 import { createApp } from '../src/app.ts';
 import { policy } from '../src/config.ts';
 import { hashPassword } from '../src/auth/password.ts';
@@ -57,13 +56,20 @@ beforeAll(async () => {
   const login = await call('/auth/login', { email, password });
   expect(login.status).toBe(200);
   cookie = `${config.session.cookieName}=${(login.headers.get('set-cookie') ?? '').split(`${config.session.cookieName}=`)[1]?.split(';')[0]}`;
-  workspaceId = (
-    await db
-      .selectFrom('workspace_members')
-      .select('workspace_id')
-      .where('user_id', '=', userId)
-      .executeTakeFirstOrThrow()
-  ).workspace_id;
+  // Signing up and signing in create nothing; onboarding creates the owned workspace.
+  expect(
+    await db.selectFrom('workspace_members').select('id').where('user_id', '=', userId).execute(),
+  ).toEqual([]);
+  const shown = (await (await call('/auth/policies', undefined, cookie)).json()) as {
+    terms_revision: string;
+  };
+  const created = await call(
+    '/workspaces',
+    { name: 'Acme', terms_revision: shown.terms_revision, accept_terms: true },
+    cookie,
+  );
+  expect(created.status).toBe(201);
+  workspaceId = ((await created.json()) as { id: string }).id;
 });
 
 afterAll(async () => {
@@ -92,60 +98,7 @@ afterAll(async () => {
 });
 
 describe('password auth routes', () => {
-  it('lets operator password updates finish while login repair waits for the workspace, and rolls repair back', async () => {
-    const user = await fixtures.user();
-    const space = await fixtures.ownedWorkspace(user, { access: false });
-    await db
-      .updateTable('users')
-      .set({ hashed_password: await hashPassword(password) })
-      .where('id', '=', user)
-      .execute();
-    const operator = await db.startTransaction().execute();
-    await operator
-      .selectFrom('workspaces')
-      .select('id')
-      .where('id', '=', space)
-      .forUpdate()
-      .execute();
-    const login = call('/auth/login', { email: `${user}@example.test`, password });
-    try {
-      let waiting = false;
-      for (let attempt = 0; attempt < 40 && !waiting; attempt++) {
-        const blocked =
-          await sql`SELECT pid FROM pg_stat_activity WHERE wait_event_type = 'Lock' AND query LIKE 'insert into "billing_accounts"%'`.execute(
-            db,
-          );
-        waiting = blocked.rows.length > 0;
-        if (!waiting)
-          await new Promise((resolve) => {
-            setTimeout(resolve, 25);
-          });
-      }
-      expect(waiting).toBe(true);
-      await operator
-        .updateTable('users')
-        .set({ session_version: 1 })
-        .where('id', '=', user)
-        .execute();
-      await operator.commit().execute();
-      expect((await login).status).toBe(401);
-      expect(
-        await db
-          .selectFrom('billing_accounts')
-          .select('id')
-          .where('workspace_id', '=', space)
-          .execute(),
-      ).toHaveLength(0);
-      expect(
-        await db.selectFrom('security_events').select('id').where('actor_id', '=', user).execute(),
-      ).toHaveLength(0);
-    } finally {
-      if (!operator.isCommitted) await operator.rollback().execute();
-      await login;
-    }
-  });
-
-  it('serializes registration races without duplicating ownership or grants', async () => {
+  it('serializes registration races into one identity that owns nothing yet', async () => {
     const address = `${prefix}-raced@example.test`;
     const responses = await Promise.all([
       call('/auth/register', { email: address, password }),
@@ -158,19 +111,37 @@ describe('password auth routes', () => {
       .where('email', '=', address)
       .executeTakeFirstOrThrow();
     createdUsers.push(user.id);
-    const owned = await db
-      .selectFrom('workspace_members')
-      .select('workspace_id')
-      .where('user_id', '=', user.id)
-      .where('role', '=', 'owner')
-      .execute();
-    expect(owned).toHaveLength(1);
-    const account = await db
-      .selectFrom('billing_accounts')
-      .select('entitlement_lifecycle_version')
-      .where('workspace_id', '=', owned[0]!.workspace_id)
-      .executeTakeFirstOrThrow();
-    expect(account.entitlement_lifecycle_version).toBe(1);
+    expect(
+      await db
+        .selectFrom('workspace_members')
+        .select('workspace_id')
+        .where('user_id', '=', user.id)
+        .execute(),
+    ).toEqual([]);
+  });
+
+  it('creates the owned workspace once, with the Terms decision and a trial from that moment', async () => {
+    const decision = { terms_revision: policy.auth.terms_revision, accept_terms: true };
+    expect((await call('/workspaces', { name: 'Second' }, cookie)).status).toBe(422);
+    const again = await call('/workspaces', { name: 'Second', ...decision }, cookie);
+    expect(again.status).toBe(403);
+    expect(((await again.json()) as { error: { code: string } }).error.code).toBe(
+      'workspace_limit_exceeded',
+    );
+    const accepted = await call(`/workspaces/${workspaceId}/policies`, undefined, cookie);
+    expect(((await accepted.json()) as { accepted_at: string | null }).accepted_at).not.toBeNull();
+
+    const other = await fixtures.user();
+    const otherCookie = `${config.session.cookieName}=${await sessionToken({ sub: other, ver: 0 })}`;
+    const stale = await call(
+      '/workspaces',
+      { name: 'Stale', terms_revision: 'an-older-revision', accept_terms: true },
+      otherCookie,
+    );
+    expect(stale.status).toBe(409);
+    expect(
+      await db.selectFrom('workspace_members').select('id').where('user_id', '=', other).execute(),
+    ).toEqual([]);
   });
 
   it('keeps duplicate registration generic, session-free and trial provisioning idempotent', async () => {
@@ -189,8 +160,7 @@ describe('password auth routes', () => {
       .execute();
     expect(
       grants.every(
-        (row) =>
-          row.valid_until?.getTime() === account.registration_cohort_at.getTime() + 7 * 86400000,
+        (row) => row.valid_until?.getTime() === account.created_at.getTime() + 7 * 86400000,
       ),
     ).toBe(true);
     expect(grants.find((row) => row.key === 'successful_answers')?.value).toBe(20);

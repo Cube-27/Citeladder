@@ -50,7 +50,7 @@
   "cookie_name": "citeladder_auth_oauth",
   "cookie_path": "/api/v1/auth/oauth",
   "callback_path": "/api/v1/auth/oauth/{provider}/callback",
-  "landing_path": "/projects",
+  "landing_path": "/workspaces",
   "error_path": "/login",
   "timeout_seconds": 15.0,
   "response_max_bytes": 65536

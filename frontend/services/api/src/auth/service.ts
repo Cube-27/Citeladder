@@ -4,13 +4,12 @@ import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
 import { ApiError } from '../errors.ts';
 import { getLogger } from '../logging.ts';
-import { provisionAccount, type User } from '../workspaces/service.ts';
+import type { User } from '../workspaces/service.ts';
 import { hashPassword, verifyAccountPassword } from './password.ts';
 import { recordSecurityEvent } from './security-events.ts';
 import { requiresEmailVerification } from './eligibility.ts';
 import { subjectXactLock } from '../db/advisory-lock.ts';
-import { enforceSubjectRequest } from '../abuse/usage.ts';
-import { policy, type ServiceConfig } from '../config.ts';
+import type { ServiceConfig } from '../config.ts';
 
 const logger = getLogger('app.auth');
 class CredentialsChanged extends Error {}
@@ -38,23 +37,14 @@ export async function registerUser(db: Database, email: string, password: string
   // Duplicate addresses pay the same hashing cost and receive the same response.
   const encoded = await hashPassword(password);
   const registeredId = await db.transaction().execute(async (trx) => {
+    // Signing up creates no workspace: onboarding creates the owned one and its trial.
     const user = await createIdentity(trx, email, encoded);
-    if (user) {
-      // Only a new identity spends the shared daily trial budget; exhaustion
-      // rolls the identity back and is logged by the limiter.
-      await enforceSubjectRequest(trx, 'client', 'global-trial', {
-        operation: 'auth.trial.global',
-        limit: policy.auth.mailbox.trial_daily_limit,
-        windowSeconds: policy.auth.mailbox.daily_window_seconds,
-      });
-      const pending = await trx
+    if (user)
+      await trx
         .updateTable('users')
         .set({ registration_origin: 'public' })
         .where('id', '=', user.id)
-        .returningAll()
-        .executeTakeFirstOrThrow();
-      await provisionAccount(trx, pending);
-    }
+        .execute();
     return user?.id;
   });
   if (registeredId) logger.info('auth.registered', { user_id: registeredId });
@@ -104,9 +94,6 @@ export async function authenticateUser(
   let authenticated;
   try {
     authenticated = await db.transaction().execute(async (trx) => {
-      // Provisioning takes workspace/account locks before the user row, matching
-      // the retained operator's workspace -> membership -> password update order.
-      const workspaceId = await provisionAccount(trx, user);
       // The password may have been reset while its expensive verification ran.
       const current = await trx
         .selectFrom('users')
@@ -122,17 +109,14 @@ export async function authenticateUser(
       )
         throw new CredentialsChanged();
       await recordSecurityEvent(trx, 'auth.login', current.id);
-      return { user: current, workspaceId };
+      return current;
     });
   } catch (error) {
     if (error instanceof CredentialsChanged) return null;
     throw error;
   }
-  const { user: current, workspaceId } = authenticated;
-  if (workspaceId)
-    logger.info('auth.workspace_autocreated', { user_id: current.id, workspace_id: workspaceId });
-  logger.info('auth.login_success', { user_id: current.id });
-  return current;
+  logger.info('auth.login_success', { user_id: authenticated.id });
+  return authenticated;
 }
 
 export async function logoutUser(db: Database, userId: string): Promise<void> {

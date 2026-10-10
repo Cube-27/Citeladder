@@ -36,7 +36,8 @@ export function ProjectsScreen() {
   const requestedProjectId = searchParams?.get('project') ?? null;
   const [editing, setEditing] = useState<Project | null>(null);
   const navigate = useNavigate();
-  const { activeWorkspaceId, canAddProject } = useProjectCreation();
+  // Write access edits and adds projects; a Viewer is offered neither.
+  const { activeWorkspaceId, canAddProject, mayCreate } = useProjectCreation();
 
   // The source mark carries the committed UUID. Close it after this route has
   // committed with that same authorized project, never for a fallback project.
@@ -65,15 +66,21 @@ export function ProjectsScreen() {
         <EmptyState
           icon={FolderOpen}
           heading="No projects yet"
-          description="Add a brand to start tracking how AI answers describe it."
+          description={
+            mayCreate
+              ? 'Add a brand to start tracking how AI answers describe it.'
+              : 'Ask the workspace owner or an admin to add a project.'
+          }
           action={
-            <Button
-              disabled={!canAddProject}
-              onClick={() => navigate(newProjectDestination(activeWorkspaceId))}
-            >
-              <Plus className="size-4" aria-hidden />
-              Add project
-            </Button>
+            mayCreate ? (
+              <Button
+                disabled={!canAddProject}
+                onClick={() => navigate(newProjectDestination(activeWorkspaceId))}
+              >
+                <Plus className="size-4" aria-hidden />
+                Add project
+              </Button>
+            ) : undefined
           }
         />
       </PageShell>
@@ -84,7 +91,7 @@ export function ProjectsScreen() {
   // the edit panel is an overlay, so there is no rhythm here to own.
   return (
     <>
-      <DashboardScreen onEditProject={(project) => setEditing(project)} />
+      <DashboardScreen onEditProject={mayCreate ? (project) => setEditing(project) : undefined} />
 
       {editing ? (
         <ProjectEditPanel

@@ -7,15 +7,15 @@ import { useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { Avatar } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { IntegrationSettings } from '@/components/settings/integration-settings';
-import { MemberSettings } from '@/components/settings/member-settings';
+import { WorkspacePanel } from '@/components/settings/workspace-panel';
 import { McpConnections } from '@/components/settings/mcp-connections';
 import { ProviderSettings } from '@/components/settings/provider-settings';
 import { TimeZoneSetting } from '@/components/settings/time-zone-setting';
+import { roleLabel } from '@/components/settings/member-roles';
 import AccountSecurity from '@/components/settings/account-security';
 import { TabPanel, TabsBar, TabsRoot } from '@/components/ui/tabs';
 import { PageShell } from '@/components/layout/page-shell';
@@ -52,7 +52,7 @@ function DetailRow({
 
 const SETTINGS_TABS = [
   { id: 'account', label: 'Account' },
-  { id: 'members', label: 'Members' },
+  { id: 'workspace', label: 'Workspace' },
   { id: 'providers', label: 'Providers' },
   { id: 'integrations', label: 'Integrations' },
   { id: 'connections', label: 'MCP connections' },
@@ -60,14 +60,9 @@ const SETTINGS_TABS = [
 
 type SettingsTab = (typeof SETTINGS_TABS)[number]['id'];
 
-/**
- * Members is administrative, so a role without `manage_members` is not shown
- * a tab whose only content would be an explanation of why it is empty. The
- * panel keeps its own guard: hiding the tab is the courtesy, the server is
- * the boundary, and a deep link still lands somewhere honest.
- */
-function visibleTabs(mayManageMembers: boolean) {
-  return SETTINGS_TABS.filter((tab) => tab.id !== 'members' || mayManageMembers);
+/** Someone who belongs to no workspace yet has only their account to manage. */
+function visibleTabs(hasWorkspace: boolean) {
+  return SETTINGS_TABS.filter((tab) => tab.id === 'account' || hasWorkspace);
 }
 
 const SETTINGS_TAB_CODEC = stringUrlCodec(
@@ -193,15 +188,15 @@ function ProjectDeletionControls() {
 }
 
 /**
- * SettingsScreen — tabbed settings (Account / Members / Providers / Integrations),
+ * SettingsScreen — tabbed settings (Account / Workspace / Providers / Integrations),
  * following the WAI-ARIA tabs idiom used by the Visibility
  * workspace (roving tabindex, Arrow/Home/End navigation, `aria-selected`,
  * labelled panels).
  *
- * - **Account**: session details from `GET /auth/me` via `useSessionUser`,
- *   display timezone and account security controls. `role` is the ACCOUNT-level role (free-form,
- *   defaults to `"user"`) and `created_at` is when the account was created —
- *   neither is a workspace membership role.
+ * - **Account**: your email and your role in the selected workspace, display
+ *   timezone and account security controls. No internal identifiers.
+ * - **Workspace**: the selected workspace, your role, leaving it, and its
+ *   members for those who manage them.
  * - **Provider Settings**: the BYOK provider configuration (formerly the
  *   settings-owned Providers tab), rendered by `ProviderSettings`.
  * - **Integrations**: first-party data connections (GSC/GA4 on one shared
@@ -222,10 +217,10 @@ export function SettingsScreen() {
   // Deep-linkable initial tab (`/settings?tab=providers` from the onboarding
   // card); invalid/absent values fall back to Account.
   const [requestedTab, setActiveTab] = useUrlState('tab', SETTINGS_TAB_CODEC);
-  const mayManageMembers = useWorkspaceCapability('manage_members');
-  const tabs = visibleTabs(mayManageMembers);
-  // `?tab=members` is deep-linkable, so a non-administrator can arrive asking
-  // for a tab that is not offered. Fall back to Account rather than selecting
+  const { activeWorkspace } = useProjectContext();
+  const tabs = visibleTabs(activeWorkspace !== null);
+  // `?tab=` is deep-linkable, so someone can arrive asking for a tab that is
+  // not offered. Fall back to Account rather than selecting
   // a tab that no longer exists, which would leave no panel visible at all.
   const activeTab = tabs.some((tab) => tab.id === requestedTab) ? requestedTab : 'account';
 
@@ -252,16 +247,16 @@ export function SettingsScreen() {
                   <Avatar name={user.email} size="md" />
                   <div className="grid min-w-0 flex-1 gap-0.5">
                     <div className={textRole('itemTitle', 'truncate')}>{user.email}</div>
-                    <div className="type-body capitalize">{user.role}</div>
+                    {activeWorkspace ? (
+                      <div className="type-body">
+                        {activeWorkspace.role === 'owner'
+                          ? `Owner of ${activeWorkspace.name}`
+                          : `${roleLabel(activeWorkspace.role)} in ${activeWorkspace.name}`}
+                      </div>
+                    ) : null}
                   </div>
-                  <Badge variant="status" value={user.is_active ? 'success' : 'danger'}>
-                    {user.is_active ? 'Active' : 'Inactive'}
-                  </Badge>
                 </div>
 
-                {/* Only what the header above does NOT already state. Email, role
-                  and status were each rendered twice — once in the identity row
-                  and again as a detail row. */}
                 <dl className={ledgerClasses('open', 'border-border-subtle border-t')}>
                   {createdLabel ? (
                     <DetailRow label="Account created" numeric>
@@ -271,11 +266,6 @@ export function SettingsScreen() {
                   {updatedLabel ? (
                     <DetailRow label="Last updated" numeric>
                       {updatedLabel}
-                    </DetailRow>
-                  ) : null}
-                  {user.id ? (
-                    <DetailRow label="User ID" numeric>
-                      {user.id}
                     </DetailRow>
                   ) : null}
                 </dl>
@@ -290,8 +280,8 @@ export function SettingsScreen() {
           </Stack>
         </TabPanel>
 
-        <TabPanel value="members" forceMount className="focus-ring data-[state=inactive]:hidden">
-          <MemberSettings />
+        <TabPanel value="workspace" forceMount className="focus-ring data-[state=inactive]:hidden">
+          <WorkspacePanel />
         </TabPanel>
 
         <TabPanel value="providers" forceMount className="focus-ring data-[state=inactive]:hidden">

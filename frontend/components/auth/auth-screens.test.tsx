@@ -62,30 +62,42 @@ describe('account entry', () => {
     expect(screen.queryByRole('link', { name: 'Sign up' })).not.toBeInTheDocument();
   });
 
-  it('takes the Terms decision on the sign-in form before any way in', async () => {
-    window.sessionStorage.clear();
+  it('signs in without asking for the Terms again', async () => {
     const login = vi.spyOn(authApi, 'login').mockReturnValue(new Promise(() => {}));
-    const oauthStart = vi.spyOn(authApi, 'oauthStart');
     const user = userEvent.setup();
     renderWithProviders(<LoginScreen demoMode={false} signupOpen searchParams={noParams} />);
 
+    expect(screen.queryByRole('checkbox')).toBeNull();
     await user.type(screen.getByLabelText(/^Email address/), 'reader@example.com');
     await user.type(screen.getByLabelText(/^Password/), 'correct horse');
     await user.click(screen.getByRole('button', { name: 'Continue' }));
-    await user.click(screen.getByRole('button', { name: /Continue with Google/ }));
-
-    expect(await screen.findByRole('alert')).toHaveTextContent('Agree to the Terms of Service');
-    expect(login).not.toHaveBeenCalled();
-    expect(oauthStart).not.toHaveBeenCalled();
-    expect(hasSignInTermsConsent()).toBe(false);
-
-    await user.click(screen.getByRole('checkbox', { name: 'I agree to the Terms of Service' }));
-    await user.click(screen.getByRole('button', { name: 'Continue' }));
 
     await waitFor(() => expect(login).toHaveBeenCalledWith('reader@example.com', 'correct horse'));
-    expect(hasSignInTermsConsent()).toBe(true);
     login.mockRestore();
-    oauthStart.mockRestore();
+  });
+
+  it('takes the Terms decision before an account is created', async () => {
+    window.sessionStorage.clear();
+    const registerAccount = vi.spyOn(authApi, 'register').mockReturnValue(new Promise(() => {}));
+    const user = userEvent.setup();
+    renderWithProviders(
+      <RegisterScreen demoMode={false} signupOpen replace={vi.fn()} searchParams={noParams} />,
+    );
+
+    await user.type(screen.getByLabelText(/^Email address/), 'reader@example.com');
+    await user.type(screen.getByLabelText(/^Password/), 'correct horse battery');
+    await user.type(screen.getByLabelText(/^Confirm password/), 'correct horse battery');
+    await user.click(screen.getByRole('button', { name: 'Create account' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Agree to the Terms of Service');
+    expect(registerAccount).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('checkbox', { name: 'I agree to the Terms of Service' }));
+    await user.click(screen.getByRole('button', { name: 'Create account' }));
+
+    await waitFor(() => expect(registerAccount).toHaveBeenCalled());
+    expect(hasSignInTermsConsent()).toBe(true);
+    registerAccount.mockRestore();
   });
 
   it('shows no registration form on a direct visit to the sign-up page', () => {

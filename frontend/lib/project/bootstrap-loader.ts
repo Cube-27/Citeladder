@@ -148,7 +148,12 @@ async function resolveScope(client: QueryClient, url: URL): Promise<Scope | null
     selectedWorkspaceId: readStoredActiveWorkspaceId(),
     workspaces,
   });
-  if (!workspaceId) return null;
+  if (!workspaceId) {
+    // Someone who belongs to no workspace yet creates their own first.
+    if (workspaces.length === 0 && !isWorkspaceOnlyRoute(url.pathname))
+      throw redirect('/onboarding');
+    return null;
+  }
 
   return { workspaceId, workspaces, resolvedProject, requestedProjectId };
 }
@@ -227,6 +232,7 @@ function resolveSelection(scope: Scope, listed: Project[]) {
     requestedProjectPending: false,
     requestedProjectMissing: requestedProjectId !== null && resolvedProject === null,
     failed: false,
+    noWorkspace: false,
     workspaceId,
     activeProjectId,
     hasResolvedProject: pickActiveProject(resolvedProject, projects, activeProjectId) !== null,
