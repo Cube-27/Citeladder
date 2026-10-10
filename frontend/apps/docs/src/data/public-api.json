@@ -3257,7 +3257,7 @@
                           },
                           "kind": {
                             "type": "string",
-                            "enum": ["webhook", "upload"]
+                            "enum": ["webhook", "pull", "upload"]
                           },
                           "setup": {
                             "type": "string",
@@ -3265,6 +3265,7 @@
                               "cloudflare_worker",
                               "cloudflare_logpush",
                               "aws_firehose",
+                              "gcp_pubsub_pull",
                               "custom",
                               "upload"
                             ]
@@ -3338,13 +3339,18 @@
                           },
                           "state": {
                             "type": "string",
-                            "enum": ["active", "stalled", "revoked"]
+                            "enum": ["active", "awaiting_verification", "stalled", "revoked"]
                           },
                           "stall_reason": {
                             "anyOf": [
                               {
                                 "type": "string",
-                                "enum": ["no_receipts", "not_in_plan", "oversize"]
+                                "enum": [
+                                  "no_receipts",
+                                  "not_in_plan",
+                                  "oversize",
+                                  "verification_failed"
+                                ]
                               },
                               {
                                 "type": "null"
@@ -3353,6 +3359,80 @@
                           },
                           "stalled_at": {
                             "type": ["string", "null"]
+                          },
+                          "pull": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "subscription": {
+                                    "type": "string"
+                                  },
+                                  "verification_nonce": {
+                                    "type": "string"
+                                  },
+                                  "verified_at": {
+                                    "type": ["string", "null"]
+                                  },
+                                  "verification_checked_at": {
+                                    "type": ["string", "null"]
+                                  },
+                                  "verification_failure": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "enum": [
+                                          "label_mismatch",
+                                          "push_subscription",
+                                          "ack_deadline",
+                                          "permission_denied",
+                                          "not_found",
+                                          "unavailable"
+                                        ]
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "filter_catalog_version": {
+                                    "type": "string"
+                                  },
+                                  "filter_confirmed_at": {
+                                    "type": ["string", "null"]
+                                  },
+                                  "filter_current": {
+                                    "type": "boolean"
+                                  },
+                                  "declared_sample_rate": {
+                                    "type": "number"
+                                  },
+                                  "last_pull_at": {
+                                    "type": ["string", "null"]
+                                  },
+                                  "last_drained_at": {
+                                    "type": ["string", "null"]
+                                  }
+                                },
+                                "required": [
+                                  "subscription",
+                                  "verification_nonce",
+                                  "verified_at",
+                                  "verification_checked_at",
+                                  "verification_failure",
+                                  "filter_catalog_version",
+                                  "filter_confirmed_at",
+                                  "filter_current",
+                                  "declared_sample_rate",
+                                  "last_pull_at",
+                                  "last_drained_at"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           },
                           "token_prefix": {
                             "type": ["string", "null"]
@@ -3395,6 +3475,7 @@
                           "state",
                           "stall_reason",
                           "stalled_at",
+                          "pull",
                           "token_prefix",
                           "connection",
                           "last_accepted_batch",
@@ -12914,6 +12995,10 @@
                             "items": {
                               "type": "string"
                             }
+                          },
+                          "grounded": {
+                            "default": false,
+                            "type": "boolean"
                           }
                         },
                         "required": [
@@ -12929,7 +13014,8 @@
                           "created_at",
                           "expires_at",
                           "quality_status",
-                          "quality_flags"
+                          "quality_flags",
+                          "grounded"
                         ],
                         "additionalProperties": false
                       }
@@ -13663,6 +13749,10 @@
                         "items": {
                           "type": "string"
                         }
+                      },
+                      "grounded": {
+                        "default": false,
+                        "type": "boolean"
                       }
                     },
                     "required": [
@@ -13678,7 +13768,8 @@
                       "created_at",
                       "expires_at",
                       "quality_status",
-                      "quality_flags"
+                      "quality_flags",
+                      "grounded"
                     ],
                     "additionalProperties": false
                   }
