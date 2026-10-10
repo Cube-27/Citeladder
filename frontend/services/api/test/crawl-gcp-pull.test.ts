@@ -2,7 +2,9 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { testConfig, testDatabase } from './support.ts';
 import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
 import { crawlLogs } from '../src/config/crawl-logs.ts';
-import { createSource, createSourceSchema } from '../src/crawl-logs/sources.ts';
+import { confirmSinkFilter, createSource, createSourceSchema } from '../src/crawl-logs/sources.ts';
+import { ingest } from '../src/crawl-logs/ingest.ts';
+import { verifyPullSource } from '../src/crawl-logs/gcp-verify.ts';
 import { sourceList } from '../src/crawl-logs/source-reads.ts';
 import { gcpLogFilter } from '../src/crawl-logs/gcp-filter.ts';
 import { GcpError, pubSubReader } from '../src/crawl-logs/gcp-client.ts';
@@ -25,6 +27,7 @@ function fakeGoogle(
     status: options.status ?? 200,
     clock: Date.parse('2026-10-10T00:00:00Z'),
     log: [] as string[],
+    labels: options.labels ?? {},
   };
   const reply = (status: number, body: unknown) =>
     new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
@@ -61,7 +64,7 @@ function fakeGoogle(
     }
     return reply(200, {
       name: SUBSCRIPTION,
-      labels: options.labels ?? {},
+      labels: state.labels,
       pushConfig: options.push ? { pushEndpoint: 'https://example.test/push' } : {},
       ackDeadlineSeconds: options.ackDeadline ?? 120,
     });
@@ -243,5 +246,92 @@ describe('Google REST client', () => {
       transport: async () => new Response('{}', { status: 403 }),
     });
     await expect(reader.pull(SUBSCRIPTION, 10)).rejects.toMatchObject({ failure: 'unavailable' });
+  });
+});
+
+/** The persisted source row as a pull source sees it. */
+const row = (id: string) =>
+  db.selectFrom('crawl_log_sources').selectAll().where('id', '=', id).executeTakeFirstOrThrow();
+/** A Google whose subscription carries this source's own nonce label. */
+async function labelled(id: string, options: Parameters<typeof fakeGoogle>[0] = {}) {
+  const source = await row(id);
+  return fakeGoogle({ labels: { 'citeladder-source': source.verification_nonce! }, ...options });
+}
+
+describe('subscription verification', () => {
+  it.each([
+    [{ labels: { 'citeladder-source': 'someone-elses-nonce' } }, 'label_mismatch'],
+    [{ push: true }, 'push_subscription'],
+    [{ ackDeadline: 30 }, 'ack_deadline'],
+    [{ status: 403 }, 'permission_denied'],
+    [{ status: 404 }, 'not_found'],
+  ] as const)('stalls on %j with %s', async (options, failure) => {
+    const { tenant, id } = await pullSource();
+    const google = await labelled(id, options);
+    expect(await verifyPullSource(db, await row(id), google.reader)).toEqual({
+      verified: false,
+      failure,
+    });
+    expect((await sourceList(db, scope(tenant))).items[0]).toMatchObject({
+      state: 'stalled',
+      stall_reason: 'verification_failed',
+      pull: { verified_at: null, verification_failure: failure },
+    });
+  });
+  it('activates on a passing check and lifts a verification stall only through a check', async () => {
+    const { tenant, id } = await pullSource();
+    const google = await labelled(id, { ackDeadline: 30 });
+    await verifyPullSource(db, await row(id), google.reader);
+    const stalledAt = (await row(id)).stalled_at;
+    // A heartbeat receipt cannot lift it: only the subscription owner fixing it can.
+    await ingest(db, await row(id), Buffer.alloc(0), { key: 'pull-heartbeat' });
+    expect((await row(id)).stall_reason).toBe('verification_failed');
+    const again = await verifyPullSource(db, await row(id), google.reader);
+    expect(again.failure).toBe('ack_deadline');
+    expect((await row(id)).stalled_at).toEqual(stalledAt);
+    const fixed = await labelled(id);
+    expect(await verifyPullSource(db, await row(id), fixed.reader)).toEqual({
+      verified: true,
+      failure: null,
+    });
+    expect((await sourceList(db, scope(tenant))).items[0]).toMatchObject({
+      state: 'active',
+      stall_reason: null,
+      pull: { verification_failure: null },
+    });
+    expect((await row(id)).verified_at).not.toBeNull();
+  });
+  it('changes nothing when Google is unavailable', async () => {
+    const { tenant, id } = await pullSource();
+    const google = await labelled(id, { status: 503 });
+    expect(await verifyPullSource(db, await row(id), google.reader)).toEqual({
+      verified: false,
+      failure: 'unavailable',
+    });
+    expect((await sourceList(db, scope(tenant))).items[0]).toMatchObject({
+      state: 'awaiting_verification',
+      stall_reason: null,
+      pull: { verification_checked_at: null },
+    });
+  });
+  it('records a confirmed sink filter for the current catalog in the owning workspace only', async () => {
+    const { tenant, id } = await pullSource();
+    const other = await fixtures.tenant();
+    await db
+      .updateTable('crawl_log_sources')
+      .set({ filter_catalog_version: '1' })
+      .where('id', '=', id)
+      .execute();
+    expect((await sourceList(db, scope(tenant))).items[0]!.pull!.filter_current).toBe(false);
+    // Another workspace naming this source's UUID finds nothing to confirm.
+    await expect(confirmSinkFilter(db, scope(other), other.userId, id)).rejects.toMatchObject({
+      status: 404,
+    });
+    expect((await row(id)).filter_catalog_version).toBe('1');
+    await confirmSinkFilter(db, scope(tenant), tenant.userId, id);
+    expect((await sourceList(db, scope(tenant))).items[0]!.pull).toMatchObject({
+      filter_catalog_version: '2',
+      filter_current: true,
+    });
   });
 });

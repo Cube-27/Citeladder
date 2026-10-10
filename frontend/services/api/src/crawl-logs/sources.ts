@@ -308,6 +308,46 @@ export async function mutateSource(
     return { id, token: secret };
   });
 }
+/** A live pull source in the project, for a command that acts on it. */
+export async function pullSourceFor(db: Database, scope: CrawlScope, id: string) {
+  const source = await db
+    .selectFrom('crawl_log_sources')
+    .selectAll()
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('project_id', '=', scope.projectId)
+    .where('id', '=', id)
+    .executeTakeFirst();
+  if (!source) throw notFound('Crawl log source');
+  if (source.kind !== 'pull' || source.status !== 'active')
+    throw new ApiError(409, 'Only a live Google Cloud source has a subscription to check');
+  return source;
+}
+/**
+ * The customer installed the sink filter for the current crawler catalog. Days
+ * from the next one on can reach complete coverage again.
+ */
+export async function confirmSinkFilter(
+  db: Database,
+  scope: CrawlScope,
+  actorId: string,
+  id: string,
+) {
+  return await db.transaction().execute(async (trx) => {
+    await lockAuthorizedWorkspace(trx, scope.workspaceId, actorId, 'manage_credentials');
+    await lockCrawlState(trx, scope);
+    await pullSourceFor(trx, scope, id);
+    const now = new Date();
+    await trx
+      .updateTable('crawl_log_sources')
+      .set({ filter_catalog_version: crawlers.catalog_version, filter_confirmed_at: now })
+      .where('workspace_id', '=', scope.workspaceId)
+      .where('project_id', '=', scope.projectId)
+      .where('id', '=', id)
+      .execute();
+    await enqueueRollup(trx, scope, now);
+    return { id };
+  });
+}
 export async function authorizeToken(db: Database, id: string, authorization: string | undefined) {
   const supplied = authorization?.startsWith('Bearer ') ? authorization.slice(7) : '';
   const source = await db

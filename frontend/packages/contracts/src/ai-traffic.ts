@@ -309,6 +309,7 @@ export const firehoseResponseSchema = z.object({
   errorMessage: z.string().optional(),
 });
 export const crawlTokenSchema = z.object({ id: z.uuid(), token: z.string().nullable() });
+export const crawlSourceIdSchema = z.object({ id: z.uuid() });
 export const crawlReceiptSchema = z.object({
   id: z.uuid(),
   lines_received: z.number(),
