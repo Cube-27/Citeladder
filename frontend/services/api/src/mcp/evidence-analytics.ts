@@ -11,6 +11,7 @@ import { getVisibilitySources } from '../visibility/sources.ts';
 import { getSourceUrlDetail } from '../visibility/source-url.ts';
 import { getVisibilityTrends } from '../visibility/trends.ts';
 import { getPerception, getPerceptionQuotes } from '../visibility/perception.ts';
+import { factCheckingEnabled } from '../projects/brand-facts.ts';
 import { getAccuracy, getAccuracyClaims } from '../visibility/accuracy.ts';
 import { getAds } from '../visibility/ads.ts';
 import { policy } from '../config.ts';
@@ -146,6 +147,7 @@ export async function factChecksRead(
 ): Promise<Evidence> {
   try {
     if (args.view === 'claims') {
+      if (!(await factCheckingEnabled(db, scope.workspaceId))) return unavailable('not_enabled');
       const page = await getAccuracyClaims(db, runs(scope, args), {
         topic: args.topic ?? null,
         verdict: args.verdict ?? null,

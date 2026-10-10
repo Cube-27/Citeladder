@@ -137,7 +137,9 @@ async function evaluate(fixture: Answer) {
   const matched = fixture.expected.map((expected) => ({
     expected: expected.verdict,
     actual:
-      actual.find((claim) => claim.quote.includes(expected.quote_contains))?.verdict ?? 'missed',
+      actual.find(
+        (claim) => claim.topic === expected.topic && claim.quote.includes(expected.quote_contains),
+      )?.verdict ?? 'missed',
   }));
   const expectedQuotes = fixture.expected.map((expected) => expected.quote_contains);
   const contradicted = actual.filter((claim) => claim.verdict === 'contradicted');
@@ -145,7 +147,9 @@ async function evaluate(fixture: Answer) {
     (claim) =>
       !fixture.expected.some(
         (expected) =>
-          expected.verdict === 'contradicted' && claim.quote.includes(expected.quote_contains),
+          expected.verdict === 'contradicted' &&
+          expected.topic === claim.topic &&
+          claim.quote.includes(expected.quote_contains),
       ),
   );
   return {

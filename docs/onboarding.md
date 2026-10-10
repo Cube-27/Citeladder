@@ -111,7 +111,7 @@ specifications, company), each with an optional source page. The
 [brand facts owner](../frontend/services/api/src/projects/brand-facts.ts) creates
 them as drafts; only confirmed facts are checked. Every change appends a
 `brand_fact_revisions` row and an edit must name the revision it read, so a
-stale edit is a conflict. Retiring keeps the history. Facts are typed by people,
+stale edit is a conflict. Retiring is final and keeps the history for earlier runs. Facts are typed by people,
 not suggested from research. [Fact-checking](visibility-prompt.md#fact-checking-pilot)
 freezes the confirmed revisions when an audit starts.
 

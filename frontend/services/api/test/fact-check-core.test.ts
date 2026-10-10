@@ -142,6 +142,29 @@ describe('verdict validation', () => {
     maxFacts: 20,
   });
 
+  it('shares the fact cap across the claims topics instead of filling it with the first topic', () => {
+    const shared = verifyPackage({
+      version: 'v',
+      brand: 'Acme',
+      language: 'en',
+      facts: [
+        { revisionId: 'p1', topic: 'pricing', statement: 'Pro costs $59.' },
+        { revisionId: 'p2', topic: 'pricing', statement: 'Team costs $99.' },
+        { revisionId: 'p3', topic: 'pricing', statement: 'Annual saves 20%.' },
+        { revisionId: 'i1', topic: 'integrations', statement: 'Works with Slack.' },
+      ],
+      claims: [
+        { claimId: 'a', topic: 'pricing', claim: 'x', quote: 'x' },
+        { claimId: 'b', topic: 'integrations', claim: 'y', quote: 'y' },
+      ],
+      maxFacts: 2,
+    });
+    expect(shared.pkg.facts.map((fact) => fact.statement)).toEqual([
+      'Pro costs $59.',
+      'Works with Slack.',
+    ]);
+  });
+
   it('sends only facts on the claims topics, under local ids', () => {
     expect(built.pkg.facts).toEqual([
       { fact_id: 'f1', topic: 'pricing', statement: 'Pro costs $59 per month.' },
@@ -228,6 +251,7 @@ describe('accuracy metrics', () => {
           extraction: { kind: 'pending' },
         }),
       ],
+      true,
       facts,
     );
     expect(summary.state).toBe('value');
@@ -253,16 +277,23 @@ describe('accuracy metrics', () => {
   });
 
   it('reads no claims, pending and unavailable as states without an accuracy, never zero', () => {
-    const none = accuracySummary([answer({})], facts);
+    const none = accuracySummary([answer({})], true, facts);
     expect([none.state, none.score.accuracy]).toEqual(['no_claims', null]);
-    const pending = accuracySummary([answer({ claims: [row(0, { kind: 'pending' })] })], facts);
+    const pending = accuracySummary(
+      [answer({ claims: [row(0, { kind: 'pending' })] })],
+      true,
+      facts,
+    );
     expect([pending.state, pending.score.accuracy]).toEqual(['pending', null]);
     const failed = accuracySummary(
       [answer({ extraction: { kind: 'unavailable', reason: 'model_error' } })],
+      true,
       facts,
     );
     expect([failed.state, failed.reason]).toEqual(['unavailable', 'model_error']);
-    expect(accuracySummary([], facts).state).toBe('no_facts');
+    // A checked run whose answers never named the brand has no claims, not no facts.
+    expect(accuracySummary([], true, facts).state).toBe('no_claims');
+    expect(accuracySummary([], false, facts).state).toBe('no_facts');
   });
 
   it('marks a trend point not comparable when the fact set or versions change', () => {
@@ -282,6 +313,7 @@ describe('accuracy metrics', () => {
           identity: 'set-b',
         }),
       ],
+      true,
       facts,
     );
     expect(summary.trend.map((point) => point.comparable)).toEqual([true, true, false]);

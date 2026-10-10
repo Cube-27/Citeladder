@@ -140,9 +140,10 @@ export function score(answers: readonly FactAnswer[]): AccuracyScore {
 /** The read state: a value once any claim has a verdict. */
 function readState(
   answers: readonly FactAnswer[],
+  factChecked: boolean,
   { coverage }: AccuracyScore,
 ): Pick<AccuracyResponse, 'state' | 'reason'> {
-  if (!answers.length) return { state: 'no_facts', reason: null };
+  if (!factChecked) return { state: 'no_facts', reason: null };
   const verdicts =
     coverage.supported + coverage.contradicted + coverage.inconclusive + coverage.not_covered;
   if (verdicts > 0) return { state: 'value', reason: null };
@@ -236,13 +237,19 @@ function trend(answers: readonly FactAnswer[]) {
   );
 }
 
+/**
+ * The selection's summary. `factChecked` says whether any selected run froze
+ * a fact check, so a checked run whose answers never named the brand reads as
+ * no claims rather than no facts.
+ */
 export function accuracySummary(
   answers: readonly FactAnswer[],
+  factChecked: boolean,
   limits: { max_contradicted_claims: number; max_cited_alongside: number },
 ): Omit<AccuracyResponse, 'source_audit_ids'> {
   const total = score(answers);
   return {
-    ...readState(answers, total),
+    ...readState(answers, factChecked, total),
     score: total,
     topics: breakdown(answers, (_answer, claim) => claim.topic),
     engines: breakdown(answers, (answer) => answer.logicalEngine),

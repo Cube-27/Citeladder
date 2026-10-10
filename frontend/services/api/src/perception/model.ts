@@ -28,19 +28,18 @@ export const perceptionOutputSchema = z.object({
 });
 export type PerceptionOutput = z.infer<typeof perceptionOutputSchema>;
 
-// A fact-checked audit's output adds the brand's factual claims. Topic and
-// count stay lenient for the same reason as aspects.
+// A fact-checked audit's output adds the brand's factual claims. A missing
+// list is unusable output, never zero claims; topic and count stay lenient for
+// the same reason as aspects.
 export const claimsOutputSchema = perceptionOutputSchema.extend({
-  claims: z
-    .array(
-      z.object({
-        topic: z.string(),
-        claim: z.string(),
-        quote: z.string(),
-        confidence: z.number().min(0).max(1),
-      }),
-    )
-    .default([]),
+  claims: z.array(
+    z.object({
+      topic: z.string(),
+      claim: z.string(),
+      quote: z.string(),
+      confidence: z.number().min(0).max(1),
+    }),
+  ),
 });
 type ClaimsOutput = z.infer<typeof claimsOutputSchema>;
 export type ExtractedClaim = ClaimsOutput['claims'][number];

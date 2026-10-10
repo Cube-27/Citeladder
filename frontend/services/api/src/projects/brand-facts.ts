@@ -175,6 +175,8 @@ export async function updateBrandFact(
       .where('id', '=', factId)
       .executeTakeFirst();
     if (!current) throw notFound('Fact');
+    if (current.status === 'retired')
+      throw new ApiError(409, 'A retired fact is kept for earlier runs and cannot change');
     if (current.revision !== input.expected_revision)
       throw new ApiError(409, 'This fact changed since it was loaded; reload and try again');
     const next = {

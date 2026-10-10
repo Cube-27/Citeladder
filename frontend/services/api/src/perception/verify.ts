@@ -27,6 +27,27 @@ export type VerifyPackage = {
 };
 
 /**
+ * Up to `max` facts on `topics`, taken one per topic in turn (frozen order
+ * within a topic), so a topic with many facts never crowds another out.
+ */
+function sharedByTopic(facts: readonly VerifyFact[], topics: ReadonlySet<FactTopic>, max: number) {
+  const queues = new Map<FactTopic, VerifyFact[]>();
+  for (const fact of facts) {
+    if (!topics.has(fact.topic)) continue;
+    const queue = queues.get(fact.topic);
+    if (queue) queue.push(fact);
+    else queues.set(fact.topic, [fact]);
+  }
+  const picked: VerifyFact[] = [];
+  for (let round = 0; picked.length < max; round++) {
+    const next = [...queues.values()].flatMap((queue) => queue[round] ?? []);
+    if (!next.length) break;
+    picked.push(...next.slice(0, max - picked.length));
+  }
+  return picked;
+}
+
+/**
  * The package for one answer's claims: the frozen facts on the claims' topics,
  * in frozen order, capped. Local ids map back to fact revisions and claims.
  */
@@ -38,8 +59,11 @@ export function verifyPackage(input: {
   claims: readonly VerifyClaim[];
   maxFacts: number;
 }) {
-  const topics = new Set(input.claims.map((claim) => claim.topic));
-  const facts = input.facts.filter((fact) => topics.has(fact.topic)).slice(0, input.maxFacts);
+  const facts = sharedByTopic(
+    input.facts,
+    new Set(input.claims.map((claim) => claim.topic)),
+    input.maxFacts,
+  );
   const factIds = new Map(facts.map((fact, index) => [`f${index + 1}`, fact.revisionId]));
   const claimIds = new Map(input.claims.map((claim, index) => [`c${index + 1}`, claim.claimId]));
   const pkg: VerifyPackage = {

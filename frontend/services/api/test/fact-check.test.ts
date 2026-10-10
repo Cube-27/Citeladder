@@ -221,6 +221,16 @@ describe('brand facts', () => {
       statement: 'Pro costs $69 per month.',
     });
     expect(stale.status).toBe(409);
+    const retired = await call(tenant, 'PATCH', `/brand-facts/${id}`, {
+      expected_revision: 2,
+      status: 'retired',
+    });
+    expect(retired.body).toMatchObject({ status: 'retired', revision: 3 });
+    const revived = await call(tenant, 'PATCH', `/brand-facts/${id}`, {
+      expected_revision: 3,
+      status: 'confirmed',
+    });
+    expect(revived.status).toBe(409);
     const revisions = await db
       .selectFrom('brand_fact_revisions')
       .select(['revision', 'status', 'statement', 'created_by_user_id'])
@@ -237,6 +247,12 @@ describe('brand facts', () => {
       {
         revision: 2,
         status: 'confirmed',
+        statement: 'Pro costs $59 per month.',
+        created_by_user_id: tenant.userId,
+      },
+      {
+        revision: 3,
+        status: 'retired',
         statement: 'Pro costs $59 per month.',
         created_by_user_id: tenant.userId,
       },

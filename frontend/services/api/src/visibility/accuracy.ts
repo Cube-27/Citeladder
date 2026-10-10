@@ -118,8 +118,20 @@ async function claimsOf(
         .execute(),
     ),
   ]);
+  // Only the verification at the audit's frozen template version counts.
+  const versionOf = new Map(
+    perceptions.map((row) => [
+      row.id,
+      byAnalysis.get(row.analysis_id)!.frozen.factCheck.verify_template_version,
+    ]),
+  );
+  const verificationOf = new Map(
+    verifications
+      .filter((row) => versionOf.get(row.perception_id) === row.verify_template_version)
+      .map((row) => [row.perception_id, row]),
+  );
   const verdictRows = await chunked(
-    verifications.map((row) => row.id),
+    [...verificationOf.values()].map((row) => row.id),
     (ids) =>
       db
         .selectFrom('claim_verdicts')
@@ -139,9 +151,7 @@ async function claimsOf(
     ]),
   );
   const revisionIds = [...new Set([...verdicts.values()].flatMap((row) => row.revisionIds))];
-  const verificationOf = new Map(
-    verifications.map((row) => [`${row.perception_id}:${row.verify_template_version}`, row]),
-  );
+
   const revisions = new Map(
     (
       await chunked(revisionIds, (ids) =>
@@ -166,7 +176,7 @@ async function claimsOf(
   const claimsByPerception = groupBy(claimRows, (row) => row.perception_id);
   const result = new Map<string, { extraction: Extraction; claims: ClaimRow[] }>();
   for (const perception of perceptions) {
-    const { factCheck, topics } = byAnalysis.get(perception.analysis_id)!.frozen;
+    const { topics } = byAnalysis.get(perception.analysis_id)!.frozen;
     const reason = unavailableReason(perception);
     if (reason) {
       result.set(perception.analysis_id, {
@@ -175,9 +185,7 @@ async function claimsOf(
       });
       continue;
     }
-    const verification = verificationOf.get(
-      `${perception.id}:${factCheck.verify_template_version}`,
-    );
+    const verification = verificationOf.get(perception.id);
     const claims = (claimsByPerception.get(perception.id) ?? []).flatMap((row): ClaimRow[] => {
       const topic = factTopicSchema.safeParse(row.topic);
       if (!topic.success) return [];
@@ -228,20 +236,22 @@ async function selectionAnswers(
       .execute()
   ).flatMap((row) => {
     const frozen = frozenOf(row.configuration);
-    return frozen && brandNamedSchema.parse(row.entity_assessments) ? [{ ...row, frozen }] : [];
+    return frozen ? [{ ...row, frozen }] : [];
   });
-  const ids = rows.map((row) => row.id);
+  const factChecked = rows.length > 0;
+  const named = rows.filter((row) => brandNamedSchema.parse(row.entity_assessments));
+  const ids = named.map((row) => row.id);
   const [extracted, citations] = await Promise.all([
     claimsOf(
       db,
       scoped.workspaceId,
-      rows.map((row) => ({ analysisId: row.id, frozen: row.frozen })),
+      named.map((row) => ({ analysisId: row.id, frozen: row.frozen })),
     ),
     options.citations
       ? citationsByAnalysis(db, scoped.workspaceId, ids)
       : new Map<string, { domain: string; url: string }[]>(),
   ]);
-  const answers = rows.map((row): FactAnswer => {
+  const answers = named.map((row): FactAnswer => {
     const found = extracted.get(row.id);
     return {
       auditId: row.audit_id,
@@ -255,7 +265,11 @@ async function selectionAnswers(
       citations: citations.get(row.id) ?? [],
     };
   });
-  return { answers, auditIds: [...new Set(rows.map((row) => row.audit_id))].sort(compareText) };
+  return {
+    answers,
+    factChecked,
+    auditIds: [...new Set(rows.map((row) => row.audit_id))].sort(compareText),
+  };
 }
 
 function notEnabled(): AccuracyResponse {
@@ -277,8 +291,10 @@ export async function getAccuracy(
   selection: RunSelection,
 ): Promise<AccuracyResponse> {
   if (!(await factCheckingEnabled(db, selection.workspaceId))) return notEnabled();
-  const { answers, auditIds } = await selectionAnswers(db, selection, { citations: true });
-  return { ...accuracySummary(answers, settings), source_audit_ids: auditIds };
+  const { answers, factChecked, auditIds } = await selectionAnswers(db, selection, {
+    citations: true,
+  });
+  return { ...accuracySummary(answers, factChecked, settings), source_audit_ids: auditIds };
 }
 
 /** The decoded cursor position; a malformed one is refused, never read as the start. */
