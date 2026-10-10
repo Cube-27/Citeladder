@@ -313,6 +313,8 @@ export function launchCatalog(options: {
       { key: 'manual_runs_per_day', value: p.runs },
       { key: 'exports', value: 1 },
       { key: 'crawl_logs', value: 1 },
+      { key: 'api_access', value: 1 },
+      { key: 'api_keys', value: 10 },
       { key: 'support_tier', value: level('support_tier', p.support) },
       ...(p.credits ? [{ key: 'ai_credits', value: p.credits }] : []),
       ...(p.upper

@@ -62,12 +62,15 @@ export class WorkspaceContext {
 
   /** 403 unless the caller's role permits `capability`. */
   require(capability: WorkspaceCapability): void {
-    if (!this.allows(capability)) {
-      throw new ApiError(403, policy.workspaces.denial_messages[capability], {
-        code: FORBIDDEN_CODE,
-      });
-    }
+    if (!this.allows(capability)) throw capabilityDenied(capability);
   }
+}
+
+/** The 403 a caller without `capability` receives. */
+export function capabilityDenied(capability: WorkspaceCapability, message?: string): ApiError {
+  return new ApiError(403, message ?? policy.workspaces.denial_messages[capability], {
+    code: FORBIDDEN_CODE,
+  });
 }
 
 /** The caller's membership, or 404; system workspaces never authorize. */

@@ -17,7 +17,9 @@ import {
   updateBrandProfile,
 } from '../projects/brand-profile.ts';
 import { businessMapUpdate, readBusinessMap, updateBusinessMap } from '../projects/business-map.ts';
-import { acceptSuggestion, listSuggestions } from '../projects/competitor-suggestions.ts';
+import { actorOf } from '../auth/actor.ts';
+import { acceptSuggestion } from '../commands/competitors.ts';
+import { listSuggestions } from '../projects/competitor-suggestions.ts';
 import { logoResponse } from '../projects/logos.ts';
 import { defineGetRoute, definePostRoute, definePutRoute } from './define.ts';
 import { fileResponse } from './opportunity-contracts.ts';
@@ -69,6 +71,7 @@ export const brandIdentityRoutes = [
   }),
   defineGetRoute({
     family,
+    exposure: 'both',
     path: `${root}/business-map`,
     params: { path: projectPath, query: {} },
     response: businessMapSchema,
@@ -91,6 +94,7 @@ export const brandIdentityRoutes = [
   }),
   defineGetRoute({
     family,
+    exposure: 'both',
     path: `${root}/competitor-suggestions`,
     params: { path: projectPath, query: {} },
     response: z.array(observedCompetitorSchema),
@@ -100,14 +104,14 @@ export const brandIdentityRoutes = [
   }),
   definePostRoute({
     family,
+    exposure: 'both',
+    scope: 'competitors:write',
     path: `${root}/competitor-suggestions/{candidate_id}/accept`,
     capability: 'write',
     params: { path: { ...projectPath, candidate_id: uuid }, query: {} },
     response: competitorSchema,
-    async handle({ c, db }, { path }) {
-      const scope = await scopeOf(db, c, path.project_id);
-      return acceptSuggestion(db, scope, path.candidate_id);
-    },
+    handle: ({ c, db }, { path }) =>
+      acceptSuggestion(db, actorOf(c), path.project_id, path.candidate_id),
   }),
   defineGetRoute({
     family,

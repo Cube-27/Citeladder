@@ -7,6 +7,7 @@ import { createIdentity } from '../auth/service.ts';
 import { WorkspaceContext } from '../auth/workspace.ts';
 import { lockIdentityAdministration, requirePlatformAdmin } from '../auth/operators.ts';
 import { recordSecurityEvent } from '../auth/security-events.ts';
+import { revokeCreatorKeys } from '../api-keys/revocation.ts';
 import { baselineGrantKey, fullAccessSpecs } from '../entitlements/bootstrap.ts';
 import { issueBundle, revokeBundle } from '../entitlements/grants.ts';
 import { resolveAccountEntitlement } from '../entitlements/resolve.ts';
@@ -409,7 +410,8 @@ async function deleteUnusedAccount(db: Database, session: PlatformSession, email
   for (const member of memberships) {
     if (member.role === 'owner')
       await db.deleteFrom('workspaces').where('id', '=', member.workspace_id).execute();
-    else
+    else {
+      await revokeCreatorKeys(db, member.workspace_id, user.id, session.actorId);
       await recordSecurityEvent(
         db,
         'membership.remove',
@@ -417,6 +419,7 @@ async function deleteUnusedAccount(db: Database, session: PlatformSession, email
         member.workspace_id,
         user.id,
       );
+    }
   }
   await db.deleteFrom('users').where('id', '=', user.id).execute();
   await recordSecurityEvent(db, 'account.delete', session.actorId, null, user.id);

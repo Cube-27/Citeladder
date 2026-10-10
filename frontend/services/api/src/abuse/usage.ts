@@ -15,6 +15,7 @@ import { policy, resolveSettingSpec } from '../config.ts';
 import { getLogger } from '../logging.ts';
 
 type SubjectKind =
+  | 'api_key'
   | 'workspace'
   | 'client'
   | 'email'

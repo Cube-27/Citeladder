@@ -18,6 +18,7 @@ locals {
     JWT_SECRET_KEY                   = "citeladder-jwt-secret"
     ENCRYPTION_KEY                   = "citeladder-encryption-key"
     REFERRAL_HASH_SALT               = "citeladder-referral-salt"
+    API_KEY_PEPPER                   = "citeladder-api-key-pepper"
     DEV_LOGIN_PASSWORD               = "citeladder-demo-password"
     INTEGRATION_GOOGLE_CLIENT_ID     = "citeladder-google-oauth-client-id"
     INTEGRATION_GOOGLE_CLIENT_SECRET = "citeladder-google-oauth-client-secret"

@@ -7,11 +7,11 @@ import {
   executionSchema,
 } from '@citeladder/contracts/audits';
 import { auditEventSchema } from '@citeladder/contracts/audit-events';
-import { configEnvironment } from '../config.ts';
+import { configEnvironment, policy } from '../config.ts';
 import { readBody } from '../http/body.ts';
-import { createAudit } from '../audits/creation.ts';
-import { executeInteractiveAudit } from '../audits/interactive.ts';
-import { auditCreateInput, auditInput } from '../audits/inputs.ts';
+import { actorOf } from '../auth/actor.ts';
+import { cancelAudit, createQueuedAudit, runAudit } from '../commands/audits.ts';
+import { auditCreateInput } from '../audits/inputs.ts';
 import { auditRuntime } from '../audits/config.ts';
 import { estimateAudit, estimateInput } from '../audits/estimate.ts';
 import {
@@ -23,13 +23,13 @@ import {
 } from '../audits/reads.ts';
 import { auditPerformance } from '../audits/performance.ts';
 import { createRepairAudit, repairInput } from '../audits/repair.ts';
-import { cancelAudit } from '../audits/maintenance.ts';
 import { exportAudit } from '../audits/exports.ts';
 import { resumeCursor, eventStreamResponse } from '../audits/events.ts';
 import { defineGetRoute, definePostRoute } from './define.ts';
 
 const family = 'audits',
-  root = '/api/v1/audits';
+  root = '/api/v1/audits',
+  publicRoot = `${policy.api.machine_prefix}/projects/{project_id}/audits`;
 const item = { audit_id: { scalar: { kind: 'uuid' }, required: true } } as const;
 const empty = { path: {}, query: {} } as const;
 const params = { path: item, query: {} } as const;
@@ -60,12 +60,7 @@ export const auditRoutes = [
     params,
     capability: 'run',
     response: auditSchema,
-    async handle({ c, db, config }, { path }) {
-      const workspaceId = c.get('workspace').workspaceId;
-      await readAudit(db, workspaceId, path.audit_id);
-      await executeInteractiveAudit(db, config, workspaceId, path.audit_id);
-      return readAudit(db, workspaceId, path.audit_id);
-    },
+    handle: ({ c, db, config }, { path }) => runAudit(db, config, actorOf(c), path.audit_id),
   }),
   definePostRoute({
     family,
@@ -75,17 +70,8 @@ export const auditRoutes = [
     capability: 'run',
     body: auditCreateInput,
     response: auditSchema,
-    async handle({ c, db, config }) {
-      const workspace = c.get('workspace').workspaceId;
-      const id = await createAudit(
-        db,
-        workspace,
-        auditInput.parse(await readBody(c, auditCreateInput)),
-        {},
-        auditRuntime(configEnvironment(config)),
-      );
-      return readAudit(db, workspace, id);
-    },
+    handle: async ({ c, db, config }) =>
+      createQueuedAudit(db, config, actorOf(c), await readBody(c, auditCreateInput)),
   }),
   definePostRoute({
     family,
@@ -125,6 +111,8 @@ export const auditRoutes = [
   }),
   defineGetRoute({
     family,
+    exposure: 'both',
+    publicPath: `${publicRoot}/{audit_id}`,
     path: `${root}/{audit_id}`,
     params,
     response: auditSchema,
@@ -143,15 +131,14 @@ export const auditRoutes = [
   }),
   definePostRoute({
     family,
+    exposure: 'both',
+    scope: 'audits:run',
+    publicPath: `${publicRoot}/{audit_id}/cancel`,
     path: `${root}/{audit_id}/cancel`,
     params,
     capability: 'write',
     response: auditSchema,
-    async handle({ c, db }, { path }) {
-      const workspace = c.get('workspace').workspaceId;
-      await cancelAudit(db, workspace, path.audit_id);
-      return readAudit(db, workspace, path.audit_id);
-    },
+    handle: ({ c, db }, { path }) => cancelAudit(db, actorOf(c), path.audit_id),
   }),
   definePostRoute({
     family,

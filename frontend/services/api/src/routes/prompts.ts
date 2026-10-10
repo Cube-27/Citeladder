@@ -8,13 +8,12 @@ import {
 } from '@citeladder/contracts/project';
 import { z } from 'zod';
 
-import { enforceWorkspaceRequest } from '../abuse/usage.ts';
+import { actorOf } from '../auth/actor.ts';
+import * as commands from '../commands/prompts.ts';
 import { generationInput } from '../prompts/generation-input.ts';
-import { generatePrompts } from '../prompts/generation.ts';
-import { policy, resolveSettingSpec } from '../config.ts';
-import { ApiError } from '../errors.ts';
+import { policy } from '../config.ts';
 import { readBody } from '../http/body.ts';
-import { candidateReview, listCandidates, reviewCandidates } from '../prompts/candidates.ts';
+import { candidateReview, listCandidates } from '../prompts/candidates.ts';
 import {
   createPromptSet,
   deletePromptSet,
@@ -25,25 +24,13 @@ import {
   updatePromptSet,
 } from '../prompts/prompt-sets.ts';
 import {
-  bulkSetStatus,
-  createPrompt,
-  deletePrompt,
-  importPrompts,
   listPrompts,
   promptBulkStatus,
   promptImport,
   promptInput,
   promptUpdate,
-  updatePrompt,
 } from '../prompts/prompts.ts';
-import {
-  createTopic,
-  deleteTopic,
-  listTopics,
-  topicCreate,
-  topicUpdate,
-  updateTopic,
-} from '../prompts/topics.ts';
+import { listTopics, topicCreate, topicUpdate } from '../prompts/topics.ts';
 import { defineDeleteRoute, defineGetRoute, definePatchRoute, definePostRoute } from './define.ts';
 
 const family = 'prompts';
@@ -52,23 +39,20 @@ const uuid = { scalar: { kind: 'uuid' }, required: true } as const;
 const setPath = { prompt_set_id: uuid } as const;
 const setRoot = `${api}/prompt-sets/{prompt_set_id}`;
 const noQuery = {} as const;
+/** Public API paths nest the library under its project. */
+const publicProject = `${policy.api.machine_prefix}/projects/{project_id}`;
+const publicSet = `${publicProject}/prompt-sets/{prompt_set_id}`;
+const publicWrite = { exposure: 'both', scope: 'prompts:write' } as const;
 /** A retried request with the same key replays the staged run without provider I/O. */
 const generationHeaders = z.object({
   'Idempotency-Key': z.string().max(policy.prompts.generation.idempotency_key_max_chars).nullish(),
 });
 
-/** CSV import's own budget under the `bulk_import` request window. */
-function bulkImportLimit() {
-  return {
-    operation: 'bulk_import',
-    limit: resolveSettingSpec(policy.abuse.bulk_import_limit) as number,
-    windowSeconds: resolveSettingSpec(policy.abuse.bulk_import_window_seconds) as number,
-  };
-}
-
 export const promptRoutes = [
   definePostRoute({
     family: 'prompt-generation',
+    ...publicWrite,
+    publicPath: `${publicSet}/generate`,
     path: `${setRoot}/generate`,
     capability: 'run',
     status: 201,
@@ -77,16 +61,12 @@ export const promptRoutes = [
     headers: generationHeaders,
     response: promptGenerateResponseSchema,
     async handle({ c, db }, { path }) {
-      const key = c.req.header('Idempotency-Key')?.trim() ?? '';
-      if (key.length > policy.prompts.generation.idempotency_key_max_chars)
-        throw new ApiError(422, 'Idempotency-Key is too long', { code: 'generation_invalid' });
-      return generatePrompts(
+      return commands.startGeneration(
         db,
-        c.get('workspace').workspaceId,
+        actorOf(c),
         path.prompt_set_id,
         await readBody(c, generationInput),
-        undefined,
-        key || null,
+        { idempotencyKey: c.req.header('Idempotency-Key') ?? null },
       );
     },
   }),
@@ -113,6 +93,8 @@ export const promptRoutes = [
   }),
   defineGetRoute({
     family,
+    exposure: 'both',
+    publicPath: publicSet,
     path: setRoot,
     params: { path: setPath, query: noQuery },
     response: promptSetSchema,
@@ -157,7 +139,7 @@ export const promptRoutes = [
     response: promptSchema,
     async handle({ c, db }, { path }) {
       const input = await readBody(c, promptInput);
-      return createPrompt(db, c.get('workspace').workspaceId, path.prompt_set_id, input);
+      return commands.createPrompt(db, actorOf(c), path.prompt_set_id, input);
     },
   }),
   definePostRoute({
@@ -169,11 +151,13 @@ export const promptRoutes = [
     response: promptSetSchema,
     async handle({ c, db }, { path }) {
       const input = await readBody(c, promptBulkStatus);
-      return bulkSetStatus(db, c.get('workspace').workspaceId, path.prompt_set_id, input);
+      return commands.setPromptStatuses(db, actorOf(c), path.prompt_set_id, input);
     },
   }),
   definePostRoute({
     family,
+    ...publicWrite,
+    publicPath: `${publicSet}/import`,
     path: `${setRoot}/import`,
     capability: 'write',
     status: 201,
@@ -181,17 +165,19 @@ export const promptRoutes = [
     body: promptImport,
     response: promptSetSchema,
     async handle({ c, db }, { path }) {
-      const workspaceId = c.get('workspace').workspaceId;
-      await enforceWorkspaceRequest(db, workspaceId, bulkImportLimit());
-      if (Buffer.byteLength(await c.req.text(), 'utf8') > policy.prompts.import_max_bytes) {
-        throw new ApiError(413, 'Import body too large');
-      }
-      const input = await readBody(c, promptImport);
-      return importPrompts(db, workspaceId, path.prompt_set_id, input);
+      return commands.importPrompts(
+        db,
+        actorOf(c),
+        path.prompt_set_id,
+        await readBody(c, promptImport),
+        { bodyBytes: Buffer.byteLength(await c.req.text(), 'utf8') },
+      );
     },
   }),
   defineGetRoute({
     family,
+    exposure: 'both',
+    publicPath: `${publicSet}/candidates`,
     path: `${setRoot}/candidates`,
     params: { path: setPath, query: noQuery },
     response: z.array(promptCandidateSchema),
@@ -200,6 +186,8 @@ export const promptRoutes = [
   }),
   definePostRoute({
     family,
+    ...publicWrite,
+    publicPath: `${publicSet}/candidates/review`,
     path: `${setRoot}/candidates/review`,
     capability: 'write',
     params: { path: setPath, query: noQuery },
@@ -207,11 +195,13 @@ export const promptRoutes = [
     response: promptCandidateReviewResponseSchema,
     async handle({ c, db }, { path }) {
       const input = await readBody(c, candidateReview);
-      return reviewCandidates(db, c.get('workspace').workspaceId, path.prompt_set_id, input);
+      return commands.reviewCandidates(db, actorOf(c), path.prompt_set_id, input);
     },
   }),
   definePatchRoute({
     family,
+    ...publicWrite,
+    publicPath: `${publicProject}/prompts/{prompt_id}`,
     path: `${api}/prompts/{prompt_id}`,
     capability: 'write',
     params: { path: { prompt_id: uuid }, query: noQuery },
@@ -219,19 +209,21 @@ export const promptRoutes = [
     response: promptSchema,
     async handle({ c, db }, { path }) {
       const input = await readBody(c, promptUpdate);
-      return updatePrompt(db, c.get('workspace').workspaceId, path.prompt_id, input);
+      return commands.updatePrompt(db, actorOf(c), path.prompt_id, input);
     },
   }),
   defineDeleteRoute({
     family,
+    ...publicWrite,
+    publicPath: `${publicProject}/prompts/{prompt_id}`,
     path: `${api}/prompts/{prompt_id}`,
     capability: 'write',
     params: { path: { prompt_id: uuid }, query: noQuery },
-    handle: ({ c, db }, { path }) =>
-      deletePrompt(db, c.get('workspace').workspaceId, path.prompt_id),
+    handle: ({ c, db }, { path }) => commands.deletePrompt(db, actorOf(c), path.prompt_id),
   }),
   defineGetRoute({
     family,
+    exposure: 'both',
     path: `${api}/projects/{project_id}/topics`,
     params: { path: { project_id: uuid }, query: noQuery },
     response: z.array(topicSchema),
@@ -240,6 +232,7 @@ export const promptRoutes = [
   }),
   definePostRoute({
     family,
+    ...publicWrite,
     path: `${api}/projects/{project_id}/topics`,
     capability: 'write',
     status: 201,
@@ -248,11 +241,13 @@ export const promptRoutes = [
     response: topicSchema,
     async handle({ c, db }, { path }) {
       const input = await readBody(c, topicCreate);
-      return createTopic(db, c.get('workspace').workspaceId, path.project_id, input);
+      return commands.createTopic(db, actorOf(c), path.project_id, input);
     },
   }),
   definePatchRoute({
     family,
+    ...publicWrite,
+    publicPath: `${publicProject}/topics/{topic_id}`,
     path: `${api}/topics/{topic_id}`,
     capability: 'write',
     params: { path: { topic_id: uuid }, query: noQuery },
@@ -260,14 +255,16 @@ export const promptRoutes = [
     response: topicSchema,
     async handle({ c, db }, { path }) {
       const input = await readBody(c, topicUpdate);
-      return updateTopic(db, c.get('workspace').workspaceId, path.topic_id, input);
+      return commands.updateTopic(db, actorOf(c), path.topic_id, input);
     },
   }),
   defineDeleteRoute({
     family,
+    ...publicWrite,
+    publicPath: `${publicProject}/topics/{topic_id}`,
     path: `${api}/topics/{topic_id}`,
     capability: 'write',
     params: { path: { topic_id: uuid }, query: noQuery },
-    handle: ({ c, db }, { path }) => deleteTopic(db, c.get('workspace').workspaceId, path.topic_id),
+    handle: ({ c, db }, { path }) => commands.deleteTopic(db, actorOf(c), path.topic_id),
   }),
 ];

@@ -29,6 +29,7 @@ import { siteWorkerSettings } from '../site-health/runtime.ts';
 import { getLogger } from '../logging.ts';
 import { cleanupMcpProtocol } from '../mcp/maintenance.ts';
 import { pruneUsageWindows } from '../abuse/usage.ts';
+import { purgeApiIdempotency } from '../public-api/idempotency.ts';
 import { purgeExpiredTrialProjects } from '../projects/trial-purge.ts';
 import { DRAIN_LOCK } from '../config/execution.ts';
 import { maintainLease } from '../queue/heartbeat.ts';
@@ -294,6 +295,10 @@ export async function runnerOwners(db: Database, config: ServiceConfig) {
       {
         name: 'mcp-protocol-cleanup',
         run: (canAdmit) => cleanupMcpProtocol(db, new Date(), canAdmit),
+      },
+      {
+        name: 'api-idempotency-cleanup',
+        run: (canAdmit) => purgeApiIdempotency(db, new Date(), canAdmit),
       },
       {
         name: 'usage-window-cleanup',

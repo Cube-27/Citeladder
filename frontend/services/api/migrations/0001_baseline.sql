@@ -406,6 +406,35 @@ CREATE TABLE public.answer_perceptions (
     CONSTRAINT ck_answer_perception_outcome CHECK (((outcome)::text = ANY ((ARRAY['classified'::character varying, 'no_mentions'::character varying, 'unavailable'::character varying, 'invalid_output'::character varying, 'model_error'::character varying])::text[])))
 );
 
+CREATE TABLE public.api_idempotency (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    api_key_id uuid NOT NULL,
+    idempotency_key character varying(255) NOT NULL,
+    request_hash character varying(64) NOT NULL,
+    status_code integer,
+    response_body jsonb,
+    created_at timestamp with time zone NOT NULL
+);
+
+CREATE TABLE public.api_keys (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    name character varying(80) NOT NULL,
+    prefix character varying(16) NOT NULL,
+    secret_hmac bytea NOT NULL,
+    scopes text[] NOT NULL,
+    project_ids uuid[],
+    created_by_user_id uuid NOT NULL,
+    created_at timestamp with time zone NOT NULL,
+    expires_at timestamp with time zone,
+    last_used_at timestamp with time zone,
+    rejection_logged_at timestamp with time zone,
+    revoked_at timestamp with time zone,
+    revoke_reason character varying(32),
+    CONSTRAINT ck_api_keys_revocation CHECK (((revoked_at IS NULL) = (revoke_reason IS NULL)))
+);
+
 CREATE TABLE public.audit_engine_snapshots (
     id uuid NOT NULL,
     audit_id uuid NOT NULL,
@@ -3148,6 +3177,21 @@ ALTER TABLE ONLY public.answer_ad_observations
 ALTER TABLE ONLY public.answer_perceptions
     ADD CONSTRAINT answer_perceptions_pkey PRIMARY KEY (id);
 
+ALTER TABLE ONLY public.api_idempotency
+    ADD CONSTRAINT api_idempotency_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.api_idempotency
+    ADD CONSTRAINT uq_api_idempotency_key UNIQUE (api_key_id, idempotency_key);
+
+ALTER TABLE ONLY public.api_keys
+    ADD CONSTRAINT api_keys_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.api_keys
+    ADD CONSTRAINT uq_api_keys_prefix UNIQUE (prefix);
+
+ALTER TABLE ONLY public.api_keys
+    ADD CONSTRAINT uq_api_keys_ws_id UNIQUE (workspace_id, id);
+
 ALTER TABLE ONLY public.entity_sentiments
     ADD CONSTRAINT entity_sentiments_pkey PRIMARY KEY (id);
 
@@ -4170,6 +4214,10 @@ CREATE INDEX ix_answer_ad_observations_workspace_project ON public.answer_ad_obs
 CREATE INDEX ix_answer_perceptions_audit_id ON public.answer_perceptions USING btree (audit_id);
 
 CREATE INDEX ix_answer_perceptions_workspace_id_created_at ON public.answer_perceptions USING btree (workspace_id, created_at);
+
+CREATE INDEX ix_api_idempotency_created_at ON public.api_idempotency USING btree (created_at);
+
+CREATE INDEX ix_api_keys_created_by_user_id ON public.api_keys USING btree (created_by_user_id);
 
 CREATE INDEX ix_entity_sentiments_workspace_id ON public.entity_sentiments USING btree (workspace_id);
 
@@ -5225,6 +5273,15 @@ ALTER TABLE ONLY public.answer_perceptions
 
 ALTER TABLE ONLY public.answer_perceptions
     ADD CONSTRAINT answer_perceptions_workspace_id_project_id_fkey FOREIGN KEY (workspace_id, project_id) REFERENCES public.projects(workspace_id, id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.api_idempotency
+    ADD CONSTRAINT api_idempotency_workspace_id_api_key_id_fkey FOREIGN KEY (workspace_id, api_key_id) REFERENCES public.api_keys(workspace_id, id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.api_keys
+    ADD CONSTRAINT api_keys_created_by_user_id_fkey FOREIGN KEY (created_by_user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.api_keys
+    ADD CONSTRAINT api_keys_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.entity_sentiments
     ADD CONSTRAINT entity_sentiments_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;

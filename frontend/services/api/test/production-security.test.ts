@@ -6,6 +6,7 @@ describe('production startup admission', () => {
   it.each([
     ['ENCRYPTION_KEY', 'changeme', 'ENCRYPTION_KEY'],
     ['REFERRAL_HASH_SALT', 'a'.repeat(64), 'REFERRAL_HASH_SALT'],
+    ['API_KEY_PEPPER', 'replace-with-a-32-byte-minimum-api-key-pepper', 'API_KEY_PEPPER'],
     ['ENCRYPTION_KEY', productionEnv.JWT_SECRET_KEY, 'independent'],
     ['DATABASE_URL', 'not-a-url', 'database password'],
     ['DATABASE_URL', 'postgresql://fixture:short@database.test/app', 'database password'],

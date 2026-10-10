@@ -16,6 +16,7 @@
     "intent_max_chars": 64,
     "topic_name_max_chars": 255,
     "import_max_rows": 500,
+    "create_batch_max": 50,
     "import_max_bytes": 1048576,
     "intents": ["comparison", "discovery", "local", "purchase", "service"],
     "branded_cohorts": ["brand_diagnostic", "comparison"],

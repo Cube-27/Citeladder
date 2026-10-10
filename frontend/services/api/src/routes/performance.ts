@@ -84,6 +84,7 @@ export const performanceRoutes = [
   }),
   defineGetRoute({
     family,
+    exposure: 'both',
     path: root,
     params: {
       path: projectPath,
@@ -115,6 +116,7 @@ export const performanceRoutes = [
   }),
   defineGetRoute({
     family,
+    exposure: 'both',
     path: `${root}/table`,
     params: {
       path: projectPath,

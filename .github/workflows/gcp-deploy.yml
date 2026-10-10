@@ -248,6 +248,7 @@ jobs:
           add_generated citeladder-jwt-secret
           add_generated citeladder-encryption-key
           add_generated citeladder-referral-salt
+          add_generated citeladder-api-key-pepper
           # 10.28.0.10 is the database VM's fixed private address (locals.tf).
           db_password="$(gcloud secrets versions access latest --secret citeladder-db-password --project "$PROJECT_ID")"
           db_password_uri="$(jq -rn --arg value "$db_password" '$value | @uri')"

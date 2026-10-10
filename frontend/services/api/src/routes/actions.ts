@@ -1,12 +1,10 @@
 /** Workspace-authorized Action reads, workflow decisions and declarations. */
 import { z } from 'zod';
+import { actorOf } from '../auth/actor.ts';
+import { declareAction, setActionStatus } from '../commands/actions.ts';
 import { policy } from '../config.ts';
-import { ApiError } from '../errors.ts';
 import { readBody } from '../http/body.ts';
-import { parseUuid } from '../http/uuid.ts';
-import { getAction, listActions, updateActionStatus } from '../opportunities/actions.ts';
-import { declareAction } from '../opportunities/declarations.ts';
-import { declarationView as projectDeclaration } from '../opportunities/declaration-view.ts';
+import { getAction, listActions } from '../opportunities/actions.ts';
 import { defineGetRoute, definePatchRoute, definePostRoute } from './define.ts';
 import {
   actionDeclarationSchema,
@@ -20,9 +18,12 @@ const family = 'actions';
 const a = policy.opportunity.actions;
 const o = policy.opportunity.opportunities;
 const actionPath = { action_id: { scalar: { kind: 'uuid' }, required: true } } as const;
+const publicAction = `${policy.api.machine_prefix}/projects/{project_id}/actions/{action_id}`;
+const publicWrite = { exposure: 'both', scope: 'actions:write' } as const;
 export const actionRoutes = [
   defineGetRoute({
     family,
+    exposure: 'both',
     path: '/api/v1/projects/{project_id}/actions',
     params: {
       path: { project_id: { scalar: { kind: 'uuid' }, required: true } },
@@ -47,6 +48,8 @@ export const actionRoutes = [
   }),
   defineGetRoute({
     family,
+    exposure: 'both',
+    publicPath: publicAction,
     path: '/api/v1/actions/{action_id}',
     params: { path: actionPath, query: {} },
     response: actionDetailSchema,
@@ -56,6 +59,8 @@ export const actionRoutes = [
   }),
   definePatchRoute({
     family,
+    ...publicWrite,
+    publicPath: publicAction,
     path: '/api/v1/actions/{action_id}',
     capability: 'write',
     params: { path: actionPath, query: {} },
@@ -63,17 +68,13 @@ export const actionRoutes = [
     response: actionItemSchema,
     async handle({ c, db }, { path }) {
       const body = await readBody(c, statusPatch);
-      return updateActionStatus(
-        db,
-        c.get('workspace').workspaceId,
-        path.action_id,
-        body.status,
-        c.get('user').id,
-      );
+      return setActionStatus(db, actorOf(c), path.action_id, body.status);
     },
   }),
   definePostRoute({
     family,
+    ...publicWrite,
+    publicPath: `${publicAction}/declaration`,
     path: '/api/v1/actions/{action_id}/declaration',
     capability: 'write',
     params: { path: actionPath, query: {} },
@@ -90,22 +91,14 @@ export const actionRoutes = [
         .optional(),
     }),
     async handle({ c, db }, { path }) {
-      const header = c.req.header('Idempotency-Key') ?? '';
-      if (!header.trim() || header.length > o.IMPLEMENTATION_IDEMPOTENCY_KEY_MAX_LEN)
-        throw new ApiError(422, 'A bounded Idempotency-Key is required');
-      const body = await readBody(c, declarationCreate);
       const result = await declareAction(
         db,
-        c.get('workspace').workspaceId,
+        actorOf(c),
         path.action_id,
-        c.get('user').id,
-        header.trim(),
-        {
-          ...body,
-          output_revision_id: body.output_revision_id ? parseUuid(body.output_revision_id)! : null,
-        },
+        await readBody(c, declarationCreate),
+        { idempotencyKey: c.req.header('Idempotency-Key') ?? null },
       );
-      return c.json(await projectDeclaration(db, result.row), result.created ? 201 : 200);
+      return c.json(result.declaration, result.created ? 201 : 200);
     },
   }),
 ];
