@@ -13,7 +13,7 @@ const description =
   title="AI visibility and citation tracking FAQ | CiteLadder"
   description={description}
   canonical="/faq"
-  jsonLd={[faqPageJsonLd(FAQ_GROUPS)]}
+  jsonLd={[faqPageJsonLd(FAQ_GROUPS.flatMap((group) => group.items))]}
 >
   <main id="main">
     <PageHero

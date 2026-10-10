@@ -5,6 +5,7 @@ import {
   ChevronsUpDown,
   CircleHelp,
   Download,
+  Info,
   Rocket,
   Search,
   SquarePen,
@@ -42,6 +43,44 @@ export function PanelHead({ title, meta }: Readonly<{ title: string; meta?: Reac
       <span className="pv-panel-title">{title}</span>
       {meta && <span className="pv-meta">{meta}</span>}
     </div>
+  );
+}
+
+/** A row of stat tiles: label with an info mark, value, and an optional note beside it. */
+export function StatTiles({
+  items,
+}: Readonly<{ items: readonly (readonly [label: string, value: string, note?: string])[] }>) {
+  return (
+    <div className="pv-stats">
+      {items.map(([label, value, note]) => (
+        <div key={label} className="pv-stat">
+          <span className="pv-stat-label">
+            {label}
+            <Info className="size-3" aria-hidden />
+          </span>
+          <span className="pv-stat-value">
+            <strong>{value}</strong>
+            {note && <span className="pv-meta">{note}</span>}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** An inline bar sized against the column's largest value, then the value's label. */
+export function BarCell({
+  value,
+  max,
+  tone,
+  wide,
+  children,
+}: Readonly<{ value: number; max: number; tone: string; wide?: boolean; children: ReactNode }>) {
+  return (
+    <span className={cn('pv-bar-cell', wide && 'pv-bar-wide')}>
+      <i data-tone={tone} style={{ width: `${(value / max) * 100}%` }} />
+      {children}
+    </span>
   );
 }
 
