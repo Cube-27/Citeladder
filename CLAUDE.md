@@ -1,11 +1,12 @@
-# AGENTS.md — CiteLadder
+# CLAUDE.md — CiteLadder
 
 > Mandatory bootstrap for coding agents. Read this file, then the smallest
 > applicable owner document from [the documentation index](docs/README.md).
 
 ## Authority and routing
 
-This file owns agent workflow and test admission. [Invariants](docs/invariants.md)
+This file owns agent workflow; test design follows the
+`principle-test-behavior-not-implementation` skill. [Invariants](docs/invariants.md)
 own review-blocking constraints; read the sections affected by the change.
 The index routes feature behavior, architecture, design, setup and operations
 without requiring a repository-wide documentation read.
@@ -94,32 +95,11 @@ logs; send native test output to one reusable log in the worktree's Git director
 rather than a new file per run. Report exit status and inspect failure tails first.
 [Development](docs/DEVELOPMENT.md#repository-validation-harness) owns command details.
 
-## What earns a test
-
-A test earns its place by failing when behavior regresses and passing when code
-is merely rewritten. Test a decision: a branch, boundary, transformation or
-module contract. Prefer one real path over separate assertions for every field.
-
-Do not test:
-
-- literal source/config/workflow/documentation text, substring order or formatting;
-  assert parsed semantics instead, or use `scripts/quality.mjs` for repository policy;
-- field presence or types already guaranteed by the type checker;
-- a constant against its copy, or a mapping against a restatement of itself;
-- framework behavior rather than CiteLadder's use of it.
-
-For UI, test user-visible behavior and accessibility, not incidental copy,
-utility classes, component nesting or full-markup snapshots. Do not multiply
-assertions for details already covered by a meaningful path.
-
-Remove tests only for retired behavior, demonstrated retained coverage or an
-assertion with no remaining contract; record the rationale. A failing test is
-not itself redundant. Never weaken gates, add exclusions, skip/xfail tests,
-raise thresholds or delete meaningful safety coverage to make validation green.
-
 ## Repository safety
 
 - Frontend package operations use pnpm only; never create a root lockfile.
+- Never weaken gates, add exclusions, skip/xfail tests, raise thresholds or delete
+  meaningful safety coverage to make validation green.
 - Tests disable dotenv and use deterministic configuration; inherited live
   provider credentials must never reach a test run.
 - Pre-launch schema changes stay in `frontend/services/api/migrations/0001_baseline.sql`

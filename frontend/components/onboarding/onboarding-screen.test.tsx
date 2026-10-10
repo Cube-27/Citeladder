@@ -205,7 +205,8 @@ describe('OnboardingScreen', () => {
         HttpResponse.json(discovery('queued', 'opening_website')),
       ),
       http.get(`/api/v1/brand-discoveries/${DISCOVERY_ID}`, () => {
-        if (failRead) return HttpResponse.json({ detail: 'Unavailable' }, { status: 400 });
+        if (failRead)
+          return HttpResponse.json({ error: { message: 'Unavailable' } }, { status: 400 });
         failRead = true;
         return HttpResponse.json(discovery('queued', 'opening_website'));
       }),

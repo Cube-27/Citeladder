@@ -38,7 +38,7 @@ test('Site Health retries only its failed initial read inside the authenticated 
         })
       : route.fulfill({
           status: 503,
-          json: { detail: 'Dashboard temporarily unavailable' },
+          json: { error: { message: 'Dashboard temporarily unavailable' } },
         });
   });
   await page.route(`**/api/v1/projects/${PROJECT}/monitored-urls`, (route) =>
@@ -53,7 +53,10 @@ test('Site Health retries only its failed initial read inside the authenticated 
   );
   await page.route('**/api/v1/site-crawls', (route) => {
     crawlCreates += 1;
-    return route.fulfill({ status: 500, json: { detail: 'Unexpected crawl mutation' } });
+    return route.fulfill({
+      status: 500,
+      json: { error: { message: 'Unexpected crawl mutation' } },
+    });
   });
 
   await page.goto(fixtureProjectPath('/site'));

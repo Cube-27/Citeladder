@@ -43,7 +43,7 @@ function recommendationSpans(answer: string): RecommendationSpan[] {
   }));
 }
 
-/** Shelf matching retains Python casefold and punctuation rules, independently of brand aliases. */
+/** Shelf matching applies its own casefold and punctuation rules, independently of brand aliases. */
 function normalize(value: string) {
   return value
     .replaceAll(

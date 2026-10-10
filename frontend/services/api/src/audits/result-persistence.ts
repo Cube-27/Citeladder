@@ -25,7 +25,7 @@ export type DeriveExecution = (
   artifactId: string,
 ) => Promise<void>;
 
-/** Release from durable, scoped ledger proof even if a legacy task's funding snapshot is damaged. */
+/** Release from durable, scoped ledger proof even if a task's funding snapshot is damaged. */
 export async function releaseTerminalTaskCredits(db: Database, task: AuditTask, at: Date) {
   await settleTrialAnswer(db, task, false, at);
   const holds = await db

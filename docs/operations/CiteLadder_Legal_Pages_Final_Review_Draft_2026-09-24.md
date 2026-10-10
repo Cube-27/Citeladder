@@ -6,9 +6,8 @@
 **Proposed contracting entity:** Cube27 IT Private Limited\
 **Status:** Drafts for business approval and final legal review. Not yet approved for publication.
 
-Code-path and transport references below capture the 24 September review.
-The subsequent TypeScript migration retired the Python Agent, Commerce discovery
-and curl-cffi transport. Current runtime owners are documented in
+Code-path references below capture the 24 September review. Current runtime
+owners are documented in
 [Agent](../agents.md), [Commerce](../commerce-intelligence.md) and
 [Site Health](../site-health.md); this dated evidence does not redefine their
 implementation or the outstanding legal decisions.
@@ -41,7 +40,7 @@ The owner asked for a minimum set of CiteLadder policy pages to go live now, usi
 | `/contact` | Part D §10 | Registration number, telephone and named grievance contact. Each renders automatically once its `LEGAL_ENTITY` field in `legal.ts` is filled. The 48-hour and 30-day targets are also left out (D4). |
 | `/cookies`, `/ai-policy` | Existing pages | Now reference the local Privacy Policy and Terms and name Cube27 IT Private Limited. The cookie inventory is unchanged. |
 | `/dpa` | Part D §3 | Built from the draft, with the owner's go-ahead on 24 September 2026. It includes the D8 positions: **30 days' notice** of a new subprocessor, a **15-day** objection window, and breach notice "without undue delay". Retention periods refer to the Privacy Policy, since D5 is still open. It adds a clause that the customer is solely responsible for the lawfulness of its instructions and data, and for use of the outputs. |
-| `/subprocessors` | Code and production-config audit (24 September 2026) | Only services the product actually calls: Google Cloud (India, Mumbai region), Cloudflare, OpenAI (platform AI assistance), Keenable and Tavily (research). Customer-connected providers are listed separately: BYOK AI engines, DataForSEO, GSC, GA4, Bing, Google sign-in and MCP/API clients. Razorpay and Google Analytics are listed as independent providers. Keenable and Tavily are listed as processing in the **United States** (owner confirmation, 24 September 2026: both run on US cloud infrastructure). Tavily stays listed because commerce competitor discovery calls it first whenever `TAVILY_API_KEY` is set, and that key is a repository secret the deploy syncs to the VM. Remove the row only once two things have happened. First, the key is removed from GitHub and Secret Manager, or the Tavily path is removed from `backend/app/domain/commerce/competitors.py`. Second, a successful redeploy has recreated the backend containers, because a running container keeps the key it started with. Logfire (not enabled), and Apple and GitHub sign-in (not configured) are left out. |
+| `/subprocessors` | Code and production-config audit (24 September 2026) | Only services the product actually calls: Google Cloud (India, Mumbai region), Cloudflare, OpenAI (platform AI assistance), Keenable and Tavily (research). Customer-connected providers are listed separately: BYOK AI engines, DataForSEO, GSC, GA4, Bing, Google sign-in and MCP/API clients. Razorpay and Google Analytics are listed as independent providers. Keenable and Tavily are listed as processing in the **United States** (owner confirmation, 24 September 2026: both run on US cloud infrastructure). Tavily stays listed because commerce competitor discovery calls it first whenever `TAVILY_API_KEY` is set, and that key is a repository secret the deploy syncs to the VM. Remove the row only once two things have happened. First, the key is removed from GitHub and Secret Manager, or the Tavily path is removed from `backend/app/domain/commerce/competitors.py`. Second, a successful redeploy has recreated the backend containers, because a running container keeps the key it started with. Monitoring providers (none enabled), and Apple and GitHub sign-in (not configured) are left out. |
 
 **Misuse and liability (owner request, 24 September 2026):**
 - A new Terms section, "Your responsibility for use of the Service", states that:
@@ -64,18 +63,12 @@ The pages show "Last updated 24 September 2026", which is the revision date. The
 3. **Effective date:** approve a legal effective date for the documents.
 4. **Terms acceptance record (C2):** checkout now shows recurring or one-time payment consent and links the Terms, Refund Policy and Cancellation Policy. It does **not** yet store the accepted Terms revision, user, workspace, time and order. That needs a backend change.
 5. **Cookie preferences control (C7):** there is no persistent "Cookie preferences" footer control. To change a choice, visitors clear site data, and the Cookie Policy says so.
-6. **Crawler (C3), held by owner decision on 24 September 2026.** An audit found that the draft `/crawler` copy is untrue on three points:
-   - **Identity:** every Site Health request uses `curl_cffi` browser impersonation (`curl_cffi_impersonation_profile = "chrome"`, `backend/app/core/config/site_health_runtime.py`). The transport drops any caller User-Agent (`curl_transport.py`, `_request_headers`). Sites therefore see Chrome, never `CiteLadderSiteHealthBot`. That name is only matched against robots.txt rules, and it is currently misconfigured as `(+https://citeladder)`.
-   - **Unreachable robots.txt:** a network failure fetching robots.txt is treated as allow-all (`robots_cache.py`, `RobotsCache._fetch` returns no status). A 5xx response is correctly treated as a temporary full disallow.
-   - **Crawl-delay:** a declared Crawl-delay is silently capped at `max_crawl_delay_seconds` (30 seconds) rather than honoured, or the host paused.
+6. **Crawler (C3), held by owner decision on 24 September 2026.** The draft `/crawler` copy needs to match three behaviours of the Site Health crawler. Current code:
+   - **Identity:** the declared User-Agent is `CiteLadderSiteHealthBot/1.0 (+https://citeladder.com/crawler)` (`web_fetch.user_agent` in `frontend/services/api/src/config/site-health/acquisition.json`).
+   - **Unreachable robots.txt:** a robots.txt that cannot be retrieved (network failure, 429 or 5xx) pauses fetches for the host rather than allowing all (`frontend/services/api/src/web-evidence/acquisition.ts`, `frontend/services/api/src/site-health/page-fetch.ts`). A 401/403 robots.txt is recorded as access-blocked and is not bypassed.
+   - **Crawl-delay:** a host whose declared Crawl-delay exceeds `max_crawl_delay_seconds` (`frontend/services/api/src/config/site-health/settings.json`) is paused rather than crawled at a capped delay.
 
-   **Agreed future fix (the recommended option), before `/crawler` is published:**
-   - send `CiteLadderSiteHealthBot/1.0 (+https://citeladder.com/crawler)` as the real User-Agent;
-   - pause crawling when robots.txt cannot be fetched;
-   - skip a host whose Crawl-delay exceeds the supported maximum;
-   - verify against RFC 9309, then publish the draft Part D §8 copy.
-
-   Expect more blocks from bot-protected hosts, such as Akamai, once the browser profile is gone. The Terms and Privacy Policy do not describe the crawler's identity, so nothing published today contradicts the current behaviour.
+   **Remaining before `/crawler` is published:** verify these behaviours against RFC 9309, then publish the draft Part D §8 copy. The Terms and Privacy Policy do not describe the crawler's identity, so nothing published today contradicts the current behaviour.
 7. **Google Limited Use (C4):** verify the controls, then add the statement to `/privacy`.
 8. **Agent model before deploy:** the platform Agent model (`DEFAULT_AGENT_BASE_URL` / `DEFAULT_AGENT_MODEL`, environment `gcp-demo`) must be confirmed; the separate content model was retired on 25 September 2026, when it was `mimo-v2.5:free` through TokenHarbor. The owner will replace it before deploying. Free aggregator models may log prompts or train on them, which would breach the published no-training promise. `/subprocessors` lists OpenAI as the platform AI provider, so the replacement should be OpenAI. If it is another provider, add that provider's row to `SUBPROCESSORS` in `frontend/lib/marketing-content/legal-dpa.ts` first. Customers can already set their own Agent model in Providers settings.
 9. **Subprocessor operations:** the DPA now commits to 30 days' notice of a new subprocessor, through the page and an email to workspace owners. Keep this list in step with production configuration. Also confirm whether Cloudflare Zaraz injects Google Tag Manager or Analytics before consent. It is configured in the Cloudflare dashboard and cannot be seen in the repository. The Cookie Policy says Analytics loads only after acceptance.
@@ -237,7 +230,7 @@ Before publishing `/subprocessors`, replace the template rows with the approved 
 | OpenAI, Anthropic and Google AI | Check each route separately: platform-managed assistance versus customer BYOK, relevant account terms and retention settings |
 | DataForSEO | Search intelligence and search-surface datasets; confirm the request data sent and contractual role |
 | Keenable and Tavily | Include only if production research/discovery calls are enabled and relevant data is received |
-| Pydantic Logfire or another monitoring provider | Include only if enabled; verify redaction, identifiers, payload capture and region |
+| Any monitoring provider | Include only if enabled; verify redaction, identifiers, payload capture and region |
 | Razorpay | Payment processing; verify the relevant legal entity and independent/processor role for each purpose |
 | Google Analytics | Include only if the production analytics tag is enabled; keep separate from customers' connected analytics properties |
 | Google Search Console, Google Analytics APIs and Bing | Customer-directed data connections; confirm actual permissions and role rather than automatically listing as subprocessors |
@@ -1174,7 +1167,7 @@ This remediation changes no payment, checkout, tax, invoice or refund-processing
 ## E9. Dependency and asset license inventory
 
 The [dependency inventory](dependency-licenses.json) records production dependency
-metadata resolved from frozen pnpm/uv locks on 26 September 2026. It is not a
+metadata resolved from the frozen pnpm lock on 26 September 2026. It is not a
 deployed SBOM or a legal clearance; “Needs review” and platform-specific entries
 remain unresolved. Preserve required upstream notices in delivered artifacts and
 compare the actual release digest/dependency tree before approving release.

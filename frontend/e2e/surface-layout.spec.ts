@@ -248,7 +248,7 @@ test('invalid field edges survive keyboard focus in both themes', async ({ page 
 test('password and Agent text entry paint one focus boundary', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.route('**/api/v1/auth/me', (route) =>
-    route.fulfill({ status: 401, json: { detail: 'Not authenticated' } }),
+    route.fulfill({ status: 401, json: { error: { message: 'Not authenticated' } } }),
   );
   await page.goto('/login');
   const password = page.getByLabel(/^Password/);

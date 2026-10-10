@@ -55,7 +55,7 @@ function handlers(
         url.searchParams.get('crawl_a_id') !== CRAWL_A ||
         url.searchParams.get('crawl_b_id') !== CRAWL_B
       ) {
-        return HttpResponse.json({ detail: 'exact pair required' }, { status: 422 });
+        return HttpResponse.json({ error: { message: 'exact pair required' } }, { status: 422 });
       }
       return HttpResponse.json({
         ...response(state, complete),

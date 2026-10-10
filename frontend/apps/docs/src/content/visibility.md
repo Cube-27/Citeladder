@@ -9,9 +9,15 @@ Use AI Visibility to investigate brand presence across a defined set of prompts 
 
 ## Run a useful audit
 
-Choose the prompts, engines and repetitions in the audit launcher. CiteLadder measures answers from ChatGPT, Claude, Gemini and Google AI Overviews. Review the estimate before confirming. More repetitions give more observations under that run's conditions; they do not turn a sample into a guarantee about every user's experience.
+Choose the prompts, engines and repetitions in the audit launcher. CiteLadder measures answers from ChatGPT, Claude, Gemini and Google AI Overviews, collected from the consumer apps and from provider APIs; a collected answer can differ from what a signed-in user sees. Review the estimate before confirming. More repetitions give more observations under that run's conditions; they do not turn a sample into a guarantee about every user's experience.
 
 An audit keeps the prompts, tracked roster and measurement configuration it used. Check **Runs** for completion, cancellation and unsuccessful attempts.
+
+## Schedule audits
+
+To measure on a regular cadence, open **Runs** and use **Scheduled audits**. Choose a prompt set, the measurement scope, the engines and a cadence: one time, every few minutes (at least five), hourly, daily or weekly. The first scheduled run starts right away, and later runs follow your browser's time zone.
+
+A schedule pauses itself when it cannot start runs, for example when your plan or trial has ended, an engine connection is missing or the included budget is used up. The row shows why it paused; fix the cause and choose **Resume**.
 
 ## Read Trends
 

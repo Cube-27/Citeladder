@@ -1,7 +1,7 @@
 # CiteLadder review checklist
 
 This is the review procedure for humans and agents. It points at the rule owners
-rather than restating them: [AGENTS.md](AGENTS.md#non-negotiable-guardrails)
+rather than restating them: [CLAUDE.md](CLAUDE.md#non-negotiable-guardrails)
 summarizes the guardrails, [invariants](docs/invariants.md) own the binding
 constraints and [design](docs/design.md) owns visual and interaction rules.
 
@@ -17,7 +17,7 @@ constraints and [design](docs/design.md) owns visual and interaction rules.
 
 ## What to check
 
-- **Guardrails and invariants.** Walk the AGENTS.md guardrails and the invariant
+- **Guardrails and invariants.** Walk the CLAUDE.md guardrails and the invariant
   sections the diff can affect: workspace authorization, read-only reads,
   immutable evidence and provenance, configuration ownership, distinct
   unknown/zero states, same-origin browser APIs and explicit user intent.
@@ -41,8 +41,8 @@ constraints and [design](docs/design.md) owns visual and interaction rules.
 
 ## Validation and tests
 
-Judge evidence against [AGENTS.md validation](AGENTS.md#validation) and
-[test admission](AGENTS.md#what-earns-a-test). Review the evidence already
+Judge evidence against [CLAUDE.md validation](CLAUDE.md#validation) and
+the `principle-test-behavior-not-implementation` skill. Review the evidence already
 produced rather than launching another completion gate. Confirm it covers the
 final executable diff and credible regressions, and that removed tests carry a
 rationale. Keep local checks, CI results and external/provider acceptance
@@ -53,4 +53,4 @@ separate; one does not prove another.
 Report actionable findings with file/line evidence, impact and the smallest
 appropriate repair, most severe first. Distinguish defects from optional polish
 and disclose checks not run. Implementation reports follow
-[AGENTS.md completion](AGENTS.md#completion-and-review).
+[CLAUDE.md completion](CLAUDE.md#completion-and-review).

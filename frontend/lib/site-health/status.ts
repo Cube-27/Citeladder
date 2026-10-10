@@ -301,7 +301,7 @@ export function inventoryModeForPhase(
 
 /**
  * Failure reasons arrive WITHOUT terminal punctuation (the worker's humanized
- * sentences and legacy `error_message` rows alike); renderers join reason +
+ * sentences and rows that carry only `error_message` alike); renderers join reason +
  * guidance as consecutive sentences, so normalize the join once here.
  */
 export function endSentence(text: string): string {

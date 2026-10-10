@@ -6,7 +6,7 @@ Historical records are evidence, not task authority.
 
 ## Using the index
 
-Start with [AGENTS.md](../AGENTS.md) for workflow and test admission. Select the
+Start with [CLAUDE.md](../CLAUDE.md) for agent workflow. Select the
 feature owner below and only the shared contracts affected by the task.
 [Invariants](invariants.md) define constraints; owner documents explain the
 behavior and implementation boundaries. Code/document disagreement is a finding
@@ -31,7 +31,7 @@ to resolve within the authorized scope, not permission to weaken a constraint.
 
 ## Shared contracts
 
-- [Agent workflow](../AGENTS.md): bootstrap, proportional validation and test admission.
+- [Agent workflow](../CLAUDE.md): bootstrap and proportional validation.
 - [Contributing](../CONTRIBUTING.md): branch, PR and release participation.
 - [Product](../PRODUCT.md): users, purpose, positioning and non-goals.
 - [Architecture](architecture.md): cross-system ownership and evidence flow.
@@ -42,8 +42,6 @@ to resolve within the authorized scope, not permission to weaken a constraint.
 - [API errors](api-error-contract.md): cross-stack error contract.
 - [Development](DEVELOPMENT.md): setup, isolation and validation commands.
 - [Review](../Review.md): compact review procedure.
-- [Audit prompts](prompts/README.md): reusable read-only audit prompts for
-  periodic runs with fast models.
 
 ## Work and decisions
 

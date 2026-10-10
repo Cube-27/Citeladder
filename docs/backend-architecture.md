@@ -1,7 +1,7 @@
 # Backend architecture
 
 The application API, health/readiness, executing workers and schema tooling are
-TypeScript-owned; the repository contains no Python. The one-shot migration job
+TypeScript-owned. The one-shot migration job
 runs the migrate CLI (the SQL schema baseline) and native identity/grant/catalog
 bootstrap from the API image before admitting API rollout.
 PostgreSQL owns durable
@@ -190,4 +190,3 @@ migration policy. Setup and validation commands live in
 
 Native structured JSON logging lives in `frontend/services/api/src/logging.ts`;
 API errors carry the request ID into server logs and the safe response envelope.
-The retired Logfire integration and its environment settings are no longer shipped.

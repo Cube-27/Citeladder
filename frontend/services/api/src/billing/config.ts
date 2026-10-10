@@ -15,7 +15,7 @@ export function catalogBootstrapSettings(env: Record<string, string | undefined>
   };
 }
 
-/** Resolve native/shared policy; tests pass a deterministic environment. */
+/** Resolve shared policy; tests pass a deterministic environment. */
 export function billingSettings(env: Record<string, string | undefined> = process.env) {
   const specs = policy.billing.settings;
   const get = <K extends keyof typeof specs>(key: K) => resolveSettingSpec(specs[key], env);

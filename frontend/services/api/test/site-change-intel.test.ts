@@ -160,8 +160,8 @@ describe('content comparison', () => {
     ).toBe('consistent');
   });
   it('an extractor change is insufficient evidence even when the excerpt is equal', () => {
-    const legacy = content(same, '2026-01-01', { coverage: 'unknown', extractor_version: 'v1' });
-    expect(result(legacy, content(same, '2026-02-01'))).toMatchObject({
+    const previous = content(same, '2026-01-01', { coverage: 'unknown', extractor_version: 'v1' });
+    expect(result(previous, content(same, '2026-02-01'))).toMatchObject({
       content_change_classification: 'insufficient_evidence',
       comparison_coverage: 'unknown',
       coverage_reason: 'extractor_incompatible',

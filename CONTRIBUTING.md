@@ -1,6 +1,6 @@
 # Contributing to CiteLadder
 
-[AGENTS.md](AGENTS.md) owns the implementation workflow, test admission and
+[CLAUDE.md](CLAUDE.md) owns the implementation workflow and
 validation policy for contributors and coding agents.
 [The documentation index](docs/README.md) routes to the smallest applicable
 feature owner and [invariants](docs/invariants.md). Read the affected contracts,
@@ -61,7 +61,7 @@ shared, staging or production database.
 Use conventional, scoped commit messages. Include a concise change summary,
 removals or intentional coexistence, and a `## Testing` section with exact
 commands, exit results, checks not run and unresolved limitations.
-[AGENTS.md](AGENTS.md#validation) defines when validation is required;
+[CLAUDE.md](CLAUDE.md#validation) defines when validation is required;
 [Review.md](Review.md) defines the review procedure. A file edit alone does not
 justify a new test, and a passing happy path does not excuse an invariant violation.
 Live sites, provider APIs and connected analytics remain explicitly authorized

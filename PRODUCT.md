@@ -40,7 +40,7 @@ The public website, login and onboarding share one light-theme visual language t
 
 ## Evidence on Hand
 
-Canonical product and system truth lives in `AGENTS.md`, `docs/architecture.md`, `docs/invariants.md`, and the active subsystem documentation routed from them. Shipped behavior is described by current code and tests. No customer testimonials, public benchmarks, or outcome claims are available for invention. The public website may show labelled illustrative product views built from synthetic records and sanitized screenshots of the real application.
+Canonical product and system truth lives in `CLAUDE.md`, `docs/architecture.md`, `docs/invariants.md`, and the active subsystem documentation routed from them. Shipped behavior is described by current code and tests. No customer testimonials, public benchmarks, or outcome claims are available for invention. The public website may show labelled illustrative product views built from synthetic records and sanitized screenshots of the real application.
 
 ## Product Principles
 

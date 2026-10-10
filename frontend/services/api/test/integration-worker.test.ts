@@ -696,7 +696,7 @@ describe('integration worker paging and resume', () => {
     ).toEqual([]);
   });
 
-  it('resumes the next uncommitted page of a Python-format run', async () => {
+  it('resumes the next uncommitted page of a run whose snapshot records only startRow', async () => {
     const { workspaceId, connectionId, runId } = await seedRun();
     for (const offset of [0, 2]) {
       await db
@@ -711,7 +711,7 @@ describe('integration worker paging and resume', () => {
           query_snapshot: JSON.stringify({ startRow: offset }),
           row_count: 2,
           payload: JSON.stringify({ rows: [] }),
-          payload_hash: `legacy-${offset}`,
+          payload_hash: `offset-${offset}`,
           fetched_at: new Date(),
           created_at: new Date(),
         })

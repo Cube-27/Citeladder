@@ -116,7 +116,7 @@ test('project lookup failure retries in place and only confirmed empty projects 
   let failed = true;
   await page.route('**/api/v1/projects', (route) =>
     failed
-      ? route.fulfill({ status: 403, json: { detail: 'Project lookup unavailable' } })
+      ? route.fulfill({ status: 403, json: { error: { message: 'Project lookup unavailable' } } })
       : route.fulfill({ json: [] }),
   );
   await page.goto('/projects');

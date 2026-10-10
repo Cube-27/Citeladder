@@ -13,9 +13,9 @@ import { scalarText } from '../text-order.ts';
 export type BrandIdentity = { logo_url: string | null; website: string | null };
 
 /**
- * `identity_key`: whitespace-collapsed and lowercased. Python case-folds; the
- * two differ only for letters such as `ß` and final sigma, and both sides of
- * every lookup here are keyed by this one function.
+ * `identity_key`: whitespace-collapsed and lowercased. Lowercasing rather than
+ * full case folding differs only for letters such as `ß` and final sigma, and
+ * both sides of every lookup here are keyed by this one function.
  */
 export function identityKey(name: unknown): string {
   return scalarText(name).trim().replace(/\s+/gu, ' ').toLowerCase();

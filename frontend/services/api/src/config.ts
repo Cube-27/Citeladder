@@ -1,4 +1,4 @@
-/** Native service policy and validated environment overrides. */
+/** Service policy and validated environment overrides. */
 import ipaddr from 'ipaddr.js';
 import { ConfigError } from './config/config-error.ts';
 import { executionSettings } from './config/execution.ts';
@@ -363,7 +363,7 @@ function isDevelopmentEnv(appEnv: string): boolean {
   return policy.development_env_names.includes(appEnv.trim().toLowerCase());
 }
 
-/** Native deployment secret-strength admission. */
+/** Deployment secret-strength admission. */
 export function secretIsWeak(value: string): boolean {
   const rules = policy.secret_policy;
   return (
@@ -569,7 +569,7 @@ export type WorkerSettings = {
   accessCheckTtlSeconds: number;
 };
 
-/** Resolve one native policy setting with its environment override. */
+/** Resolve one policy setting with its environment override. */
 export function resolveSettingSpec(
   spec: SettingSpec,
   env: Record<string, string | undefined> = process.env,

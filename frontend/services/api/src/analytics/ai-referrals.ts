@@ -1,7 +1,7 @@
 /**
  * AI Referrals: the persisted referral projection for one project.
  *
- * Shared native reader for API and Agent tools. It serves a persisted snapshot or the
+ * Shared reader for API and Agent tools. It serves a persisted snapshot or the
  * empty payload, never a recomputation, and reports the window it actually
  * resolved rather than the one requested.
  */

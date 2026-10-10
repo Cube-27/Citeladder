@@ -5,15 +5,13 @@ Remaining work is consolidated in the backlog; historical plans are not active a
 
 ## Active
 
+- [Competitive feature tracker](competitive-feature-tracker.md): closing the
+  feature gaps against Peec AI, Searchable and Profound. F1 (documentation truth
+  pass) is done; F2–F9 are queued pending their owner decisions.
 - [Feature review tracker](feature-review-tracker.md): owner-assigned
-  feature-by-feature audit and rebuild (2026-10-07). Features 1 Site Health and
-  2 Onboarding are done ([Site Health plan](site-health-improvement.md),
-  [Onboarding plan](onboarding-improvement.md)). Feature 3 is implementing
-  ([Visibility plan](visibility-prompt-improvement.md)); its prompt-generation
-  follow-up, [Prompt generation v3](prompt-generation-v3.md), is implemented
-  with the recommended decisions; its live calibration round is outstanding.
-  Feature 4 Opportunities is done ([Opportunities plan](opportunities-improvement.md));
-  traffic impact measurement is queued as its own PR in the backlog.
+  feature-by-feature audit and rebuild (2026-10-07). Features 1–10 and 12–16 are
+  done and their plans are archived under [docs/archive](../archive/); feature 11
+  (Billing, entitlements and usage) is queued.
 
 ## Queued
 

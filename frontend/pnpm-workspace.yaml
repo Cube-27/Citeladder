@@ -36,11 +36,9 @@ trustPolicyIgnoreAfter: 525600
 # pnpm 10+ reads overrides here, not from package.json.
 overrides:
   postcss: '>=8.5.10'
-  # Migrated from the `pnpm.overrides` field in package.json, which pnpm 11 no
-  # longer reads (it was being silently ignored). Keeps the React type packages
-  # on a single version across the tree. The `$` form resolves to whatever
-  # package.json declares, so the override cannot silently hold the tree behind
-  # the declared version the way the previous hardcoded 19.2.x pins did.
+  # Keeps the React type packages on a single version across the tree. The `$`
+  # form resolves to whatever package.json declares, so the override cannot hold
+  # the tree behind the declared version.
   '@types/react': '$@types/react'
   '@types/react-dom': '$@types/react-dom'
   # Force Astro's transitive sharp off the vulnerable libvips line

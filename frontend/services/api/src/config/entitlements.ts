@@ -1,4 +1,4 @@
-/** Native capability vocabulary, validated before any grant can be interpreted. */
+/** Capability vocabulary, validated before any grant can be interpreted. */
 import vocabulary from './entitlements.json' with { type: 'json' };
 import { ConfigError } from './config-error.ts';
 

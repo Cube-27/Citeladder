@@ -1,4 +1,4 @@
-/** Native commercial execution policy and persisted vocabulary. */
+/** Commercial execution policy and persisted vocabulary. */
 import { providers } from './providers.ts';
 import runtime from './billing.json' with { type: 'json' };
 import { compareText } from '../text-order.ts';

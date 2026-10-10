@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { policy } from '../config.ts';
 import { record } from '../db/json.ts';
 
-/** Code-point order preserves frozen measurement hashes, including historical Python identities. */
+/** Code-point order keeps frozen measurement hashes stable. */
 export function compareIdentityText(left: string, right: string): number {
   const a = Array.from(left, (char) => char.codePointAt(0)!);
   const b = Array.from(right, (char) => char.codePointAt(0)!);

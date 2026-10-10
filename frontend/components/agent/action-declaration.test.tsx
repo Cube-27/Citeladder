@@ -38,7 +38,7 @@ describe('Mark implemented', () => {
     mswServer.use(
       http.post(`/api/v1/actions/${ACTION}/declaration`, async ({ request }) => {
         posted.push((await request.json()) as { declared_implemented_at: string });
-        return HttpResponse.json({ detail: 'stop here' }, { status: 409 });
+        return HttpResponse.json({ error: { message: 'stop here' } }, { status: 409 });
       }),
     );
     const user = userEvent.setup();

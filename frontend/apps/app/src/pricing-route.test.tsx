@@ -67,7 +67,7 @@ describe('app pricing continuation', () => {
           workspace: request.headers.get('X-Workspace-Id'),
           key: request.headers.get('Idempotency-Key'),
         });
-        return HttpResponse.json({ detail: 'unavailable' }, { status: 503 });
+        return HttpResponse.json({ error: { message: 'unavailable' } }, { status: 503 });
       }),
     );
     globalThis.sessionStorage.setItem(
@@ -100,7 +100,7 @@ describe('app pricing continuation', () => {
       http.get('/api/v1/billing/catalog', () => HttpResponse.json(catalog)),
       http.get('/api/v1/auth/me', () => HttpResponse.json({ user: signedInUser })),
       http.post('/api/v1/billing/addons', () =>
-        HttpResponse.json({ detail: 'checkout_unavailable' }, { status: 409 }),
+        HttpResponse.json({ error: { message: 'checkout_unavailable' } }, { status: 409 }),
       ),
     );
     globalThis.sessionStorage.setItem(
@@ -198,7 +198,10 @@ describe('app pricing continuation', () => {
       http.get('/api/v1/billing/activations/11111111-1111-4111-8111-111111111111', () => {
         activationReads += 1;
         if (activationReads === 1) {
-          return HttpResponse.json({ detail: 'temporarily unavailable' }, { status: 503 });
+          return HttpResponse.json(
+            { error: { message: 'temporarily unavailable' } },
+            { status: 503 },
+          );
         }
         return HttpResponse.json({
           activation_id: '11111111-1111-4111-8111-111111111111',
@@ -214,7 +217,7 @@ describe('app pricing continuation', () => {
       }),
       http.get('/api/v1/billing/activations/11111111-1111-4111-8111-111111111111/checkout', () => {
         opened += 1;
-        return HttpResponse.json({ detail: 'unavailable' }, { status: 503 });
+        return HttpResponse.json({ error: { message: 'unavailable' } }, { status: 503 });
       }),
     );
     globalThis.sessionStorage.setItem(

@@ -1,10 +1,9 @@
 /**
- * Structured JSON logging with the Python request-id convention.
+ * Structured JSON logging keyed by request id.
  *
- * Records carry the same keys the backend's structlog pipeline writes
- * (`event`, `logger`, `level`, `correlation_id`, `timestamp`) so one log query
- * covers both stacks. The correlation id travels in AsyncLocalStorage, the
- * Node counterpart of the backend's correlation contextvar.
+ * Records carry `event`, `logger`, `level`, `correlation_id` and `timestamp`
+ * so one log query covers every record. The correlation id travels in
+ * AsyncLocalStorage.
  */
 import { AsyncLocalStorage } from 'node:async_hooks';
 

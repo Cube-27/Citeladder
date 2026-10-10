@@ -1,4 +1,4 @@
-/** Native Site Health policy. */
+/** Site Health policy. */
 import { createHash } from 'node:crypto';
 import { compareText } from '../text-order.ts';
 import architecture from './site-health/architecture.json' with { type: 'json' };

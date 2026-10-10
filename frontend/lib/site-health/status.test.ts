@@ -367,7 +367,7 @@ describe('dashboardRunNotice', () => {
 describe('crawlFailureCopy (B1)', () => {
   it('prefers the API-projected failure summary message + code-aware guidance', () => {
     const copy = crawlFailureCopy({
-      error_message: 'legacy row message',
+      error_message: 'row message only',
       failure_summary: {
         code: 'http_5xx',
         message: 'The site returned HTTP 500 after 3 attempts',

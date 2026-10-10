@@ -40,7 +40,7 @@ describe('toIssueParams', () => {
 });
 
 describe('issueFilterParams (the URL patch)', () => {
-  it('writes every set filter and clears the legacy rule alias', () => {
+  it('writes every set filter', () => {
     expect(
       issueFilterParams({
         query: '  schema  ',
@@ -58,7 +58,6 @@ describe('issueFilterParams (the URL patch)', () => {
       category: 'metadata',
       dimension: 'aeo',
       rule: 'meta.title',
-      rule_id: null,
       site_url_id: 'u1',
       finding_class: 'advisory',
       page_kind: 'product',

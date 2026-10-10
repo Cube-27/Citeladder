@@ -191,7 +191,7 @@ for (const width of [1280, 390]) {
           body: route.request().postDataJSON(),
         });
         if (sends.length === 1)
-          return route.fulfill({ status: 503, json: { detail: 'Temporary failure' } });
+          return route.fulfill({ status: 503, json: { error: { message: 'Temporary failure' } } });
         current.latest_run!.status = 'succeeded';
         return route.fulfill({ status: 202, json: { chat_id: CHAT, run: current.latest_run } });
       });

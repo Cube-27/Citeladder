@@ -143,7 +143,6 @@ async function requiredQuerySnapshot(db: Database, scope: DemandScope) {
 function invalidCursor(): never {
   throw new ApiError(422, 'The query evidence cursor is invalid', {
     code: 'query_evidence_cursor_invalid',
-    detail: 'query_evidence_cursor_invalid',
   });
 }
 

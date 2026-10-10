@@ -7,7 +7,7 @@ import type { Database } from '../src/db/database.ts';
 import { billingAccount } from './prompt-fixtures.ts';
 import { Fixtures, testConfig } from './support.ts';
 
-// Input emitted by the native launch author, not a parity/golden response.
+// Deterministic launch catalog input.
 export function billingConfig() {
   return testConfig({
     BILLING_CHECKOUT_ENABLED: 'true',

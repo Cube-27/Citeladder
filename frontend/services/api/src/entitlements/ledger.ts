@@ -16,7 +16,7 @@ export type Subject =
 type Entry = Selectable<ConsumableLedger>;
 const logger = getLogger('api.entitlements');
 
-/** Python's persisted audit ledger hashes compact JSON with sorted ASCII keys. */
+/** The persisted audit ledger hashes compact JSON with sorted ASCII keys. */
 function auditFingerprint(value: Record<string, string | number>) {
   return digest(
     Object.fromEntries(Object.entries(value).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))),

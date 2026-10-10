@@ -23,7 +23,7 @@ import { redact } from '../src/billing/admin.ts';
 import storedCatalog from './billing-catalog.fixture.json' with { type: 'json' };
 import { catalogDigest } from '../src/billing/catalog-authoring.ts';
 
-it('preserves the Python catalog checksum for supplementary Unicode', () => {
+it('checksums supplementary Unicode as ASCII escapes', () => {
   const payload = structuredClone(storedCatalog);
   payload.plans[0]!.description = 'Unicode 😀';
   // hashlib.sha256(json.dumps(validated_payload, sort_keys=True,

@@ -222,7 +222,7 @@ export async function stubAuthedShell(
     route.fulfill({
       status: 404,
       contentType: 'application/json',
-      body: JSON.stringify({ detail: 'e2e fixture: endpoint not stubbed' }),
+      body: JSON.stringify({ error: { message: 'e2e fixture: endpoint not stubbed' } }),
     }),
   );
   await page.route('**/api/v1/auth/me', (route) => route.fulfill({ json: { user: FIXTURE_USER } }));

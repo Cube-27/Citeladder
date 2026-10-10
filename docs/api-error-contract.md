@@ -2,7 +2,7 @@
 
 > The canonical, end-to-end contract for **how a CiteLadder API call fails**: the wire
 > envelope every 4xx and 5xx response carries, how the backend produces it, and how the
-> frontend consumes it. Companion docs: [`AGENTS.md`](../AGENTS.md),
+> frontend consumes it. Companion docs: [`CLAUDE.md`](../CLAUDE.md),
 > [`invariants.md`](invariants.md), [`backend-architecture.md`](backend-architecture.md)
 > (§6 subsystem ownership), [`frontend-architecture.md`](frontend-architecture.md) (§6
 > drift policy).
@@ -12,7 +12,7 @@ frontend, `frontend/lib/api/client.ts` parses it and
 `frontend/lib/api/errors.ts` owns `ApiError` and its display-safe projection.
 The API emits only the `ApiErrorCode` union from
 `@citeladder/contracts/error-codes`, whose hand-owned source is the machine-code
-authority. Native `config/errors.ts` owns status defaults and retry classification;
+authority. `config/errors.ts` owns status defaults and retry classification;
 message wording and JSON key order are not contracts.
 
 ## 1. The wire envelope
@@ -21,7 +21,6 @@ Every 4xx or 5xx response — from a router raise, a validation failure, a routi
 
 ```jsonc
 {
-  "detail": "Crawl not found",          // legacy field, retained verbatim
   "error": {
     "code": "not_found",                // stable snake_case machine code
     "message": "Crawl not found",       // human sentence, safe to display
@@ -32,11 +31,8 @@ Every 4xx or 5xx response — from a router raise, a validation failure, a routi
 }
 ```
 
-**`error` is additive; `detail` is never removed.** The change is deliberately
-non-breaking: the `detail` **value and type** are unchanged, so every pre-existing
-client and test that reads the legacy `detail` field keeps working — including the
-coded-dict dialect (`{"code", "message", …}`) that the
-selection/opportunity/crawl endpoints already returned. New code reads `error`.
+The body has the single key `error`; there is no top-level `detail`. Clients read
+`error.code` and `error.message`.
 
 ### Field rules
 
@@ -50,7 +46,7 @@ selection/opportunity/crawl endpoints already returned. New code reads `error`.
 
 ## 2. Backend production
 
-The native `errors.ts` handlers translate `ApiError`, framework HTTP failures,
+The `errors.ts` handlers translate `ApiError`, framework HTTP failures,
 unknown paths and uncaught exceptions into the same envelope. Method guards
 produce coded 405 responses. Request validation projects safe issue paths,
 messages and codes without echoing the input payload.
@@ -64,8 +60,7 @@ throw new ApiError(409, 'The selection changed since you loaded it.', {
 });
 ```
 
-An explicit `detail` may retain a legacy coded-dict shape; the canonical
-`error` block still contains a machine code and human message. Unhandled errors
+Unhandled errors
 log internal diagnostics with a request ID and return a fixed 500 message.
 Never return stack traces, SQL, credentials or raw provider bodies.
 
@@ -74,16 +69,11 @@ Never return stack traces, SQL, credentials or raw provider bodies.
 `lib/api/client.ts` converts any non-2xx into an `ApiError` carrying
 `status`, `code`, `retryable`, `requestId`, and the raw `body`.
 
-`readErrorBody` extracts a display-safe message in strict priority order, so the same
-UI code handles every error shape the API emits:
+`readErrorBody` extracts a display-safe message from the canonical envelope
+(`error.message` / `error.code` / `error.retryable` / `error.request_id`) and otherwise
+falls back to the response status text.
 
-1. canonical `error.message` / `error.code` / `error.retryable` / `error.request_id`;
-2. string `detail`, which defaults to `error.message` unless the route supplies an explicit value;
-3. object `detail.message` / `detail.code`;
-4. a validation array — first item humanized as `field.path: message`;
-5. the response status text.
-
-**A raw JSON blob is never surfaced as a message** at any step.
+**A raw JSON blob is never surfaced as a message** in any case.
 
 ### Transport guarantees
 
@@ -108,18 +98,18 @@ the shared mutation-failure surface:
 Full rationale in [`frontend-architecture.md`](frontend-architecture.md) §6. In short:
 response objects use `responseObject` (zod `.strip()`), so an **additive** backend field
 can never break a screen, while a **declared** field that goes missing still fails loud.
-The native API and browser import the same response schemas from
+The API and browser import the same response schemas from
 `@citeladder/contracts`; route handlers are typed against those schemas.
-`pnpm check:contract` validates the native route-family declarations and
+`pnpm check:contract` validates the route-family declarations and
 API/protocol ingress.
 
 ## 5. Adding a new error code
 
 1. Add the machine code to `frontend/packages/contracts/src/error-codes.ts`.
-2. Throw `ApiError`, or `notFound(resource)` for repeated 404s, from the owning native route.
+2. Throw `ApiError`, or `notFound(resource)` for repeated 404s, from the owning route.
 3. If the frontend must branch on it, handle the `code` in the calling module — do not
    match on `message` text.
-4. Cover it in the relevant native API test under `frontend/services/api/test/`.
+4. Cover it in the relevant API test under `frontend/services/api/test/`.
 Workspace creation additionally uses `workspace_limit_exceeded` with a safe
 `limit` detail when the account has reached the configured tenant-root cap.
 Site Health admission and page reruns return 403 `entitlement_unresolved`

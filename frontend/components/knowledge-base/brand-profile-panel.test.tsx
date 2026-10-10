@@ -134,7 +134,7 @@ describe('BrandProfilePanel', () => {
     mswServer.use(
       http.put(`/api/v1/projects/${projectId}/brand-profile`, async ({ request }) => {
         requestBody = await request.json();
-        return HttpResponse.json({ detail: 'category is required' }, { status: 422 });
+        return HttpResponse.json({ error: { message: 'category is required' } }, { status: 422 });
       }),
     );
     renderWithProviders(

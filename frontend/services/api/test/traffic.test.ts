@@ -492,7 +492,7 @@ describe('traffic projections and Performance', () => {
     expect(projection.metrics.totals.clicks).toBeNull();
   });
 
-  it('rejects non-finite and boolean provider numbers instead of Python coercion/failure', () => {
+  it('rejects non-finite and boolean provider numbers instead of coercing them', () => {
     const row = {
       id: 'row',
       source_artifact_id: 'artifact',

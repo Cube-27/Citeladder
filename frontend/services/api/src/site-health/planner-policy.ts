@@ -22,7 +22,6 @@ export function crawlError(
   throw new ApiError(status, message, {
     code: asApiErrorCode(code),
     details,
-    detail: { code, message, ...details },
   });
 }
 const optionalList = z.array(z.string()).nullable().optional();

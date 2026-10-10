@@ -1,4 +1,4 @@
-/** Native opportunity catalog: deterministic decisions over persisted evidence. */
+/** Opportunity catalog: deterministic decisions over persisted evidence. */
 import type { ExpectedCheck } from '@citeladder/contracts/opportunities';
 
 export const opportunityDeclaration = { output_phase_outline: 'outline' };

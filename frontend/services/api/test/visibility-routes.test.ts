@@ -9,6 +9,7 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createApp } from '../src/app.ts';
+import { record } from '../src/db/json.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
 import { actionRow, opportunityRow } from './opportunity-fixtures.ts';
@@ -113,7 +114,7 @@ describe('GET /executions/{execution_id}', () => {
 
     const foreign = await get(outsider, `/api/v1/executions/${taskId}`);
     expect(foreign.status).toBe(404);
-    expect(foreign.body.detail).toBe('Execution not found');
+    expect(record(foreign.body.error).message).toBe('Execution not found');
     expect((await get(null, `/api/v1/executions/${taskId}`)).status).toBe(401);
   });
 
@@ -343,7 +344,7 @@ describe('GET /projects/{project_id}/visibility/surface-rates', () => {
       { query: { engine: 'google_ai_overview' } },
     );
     expect(foreignProject.status).toBe(404);
-    expect(foreignProject.body.detail).toBe('Project not found');
+    expect(record(foreignProject.body.error).message).toBe('Project not found');
   });
 });
 
@@ -640,7 +641,7 @@ describe('GET /projects/{project_id}/visibility/sources/*', () => {
         { query },
       );
       expect(series.status).toBe(404);
-      expect(series.body.detail).toBe('Audit not found');
+      expect(record(series.body.error).message).toBe('Audit not found');
       const detail = await get(
         tenant,
         `/api/v1/projects/${tenant.projectId}/visibility/sources/url`,
@@ -654,11 +655,11 @@ describe('GET /projects/{project_id}/visibility/sources/*', () => {
     const path = `/api/v1/projects/${tenant.projectId}/visibility/sources/series`;
     const naive = await get(tenant, path, { query: { from: '2026-02-01T00:00:00' } });
     expect(naive.status).toBe(422);
-    expect(naive.body.detail).toBe("'from' must be a timezone-aware timestamp");
+    expect(record(naive.body.error).message).toBe("'from' must be a timezone-aware timestamp");
     const reversed = await get(tenant, path, {
       query: { from: '2026-03-01T00:00:00Z', to: '2026-02-01T00:00:00+05:30' },
     });
-    expect(reversed.body.detail).toBe("'from' must not be after 'to'");
+    expect(record(reversed.body.error).message).toBe("'from' must not be after 'to'");
     // A numeric timestamp beyond the years a datetime holds is malformed input.
     const outOfRange = await get(tenant, path, { query: { from: '99999999999999999' } });
     expect(outOfRange.status).toBe(422);
@@ -690,6 +691,6 @@ describe('the active workspace', () => {
     expect((await get(tenant, path, { query, workspace: tenant.workspaceId })).status).toBe(200);
     const malformed = await get(tenant, path, { query, workspace: 'not-a-workspace' });
     expect(malformed.status).toBe(400);
-    expect(malformed.body.detail).toBe('Invalid X-Workspace-Id');
+    expect(record(malformed.body.error).message).toBe('Invalid X-Workspace-Id');
   });
 });

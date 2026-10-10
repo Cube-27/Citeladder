@@ -2,7 +2,7 @@
  * The editable business map: per-offering facts that ground prompt generation.
  *
  * Stored in `brand_profiles.business_context.business_map`. Entries carry
- * provenance: native generation adds model suggestions (`suggested`) to
+ * provenance: generation adds model suggestions (`suggested`) to
  * offerings whose map is empty, under the project advisory lock; only a
  * person confirms them, here, under the same lock.
  */

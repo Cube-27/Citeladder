@@ -7,6 +7,14 @@ order: 400
 
 These notes describe implemented changes in the codebase. Dates are the recorded commit dates; availability in your workspace depends on deployment, access and configuration.
 
+## October 10, 2026: Scheduled audits documented
+
+The AI Visibility guide now explains how to schedule audits from **Runs**: repeat a prompt set one time, every few minutes, hourly, daily or weekly, see why a schedule paused and resume it. It also clarifies that answers are collected from the consumer apps and from provider APIs.
+
+**For your team:** schedule the audits you rely on so your baseline keeps measuring without a manual launch.
+
+[Schedule audits](/visibility/#schedule-audits)
+
 ## October 10, 2026: Connect an assistant in one click
 
 A single **Connect** button in CiteLadder adds the MCP connection to your assistant, and the approval page where you choose workspaces is redesigned. More clients can connect, including Cursor and browser-based assistants. MCP reads now match what the app shows for Actions, earned sources and audit results, and the in-app Agent reads evidence through the same catalogue.

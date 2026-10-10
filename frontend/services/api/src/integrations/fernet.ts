@@ -18,7 +18,7 @@ export function createSecretCipher(secret: string) {
       header[0] = 0x80;
       header.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 1000)), 1);
       const iv = randomBytes(16);
-      // Fernet requires CBC + PKCS7 with encrypt-then-HMAC; preserve Python token compatibility.
+      // Fernet requires CBC + PKCS7 with encrypt-then-HMAC, the standard Fernet token format.
       const cipher = createCipheriv('aes-128-cbc', encryption, iv); // NOSONAR: authenticated Fernet wire format.
       const body = Buffer.concat([header, iv, cipher.update(value, 'utf8'), cipher.final()]);
       const mac = createHmac('sha256', signing).update(body).digest();

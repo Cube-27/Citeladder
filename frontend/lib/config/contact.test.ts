@@ -2,7 +2,7 @@
 import { expect, it } from 'vite-plus/test';
 import { contactSalesHref } from './contact';
 
-it('moves legacy Cube27 sales intake to CiteLadder while preserving other catalog destinations', () => {
+it('moves the Cube27 sales intake to CiteLadder while preserving other catalog destinations', () => {
   expect(contactSalesHref('https://www.cube27.com/contact/')).toBe('/contact');
   expect(
     contactSalesHref('https://cube27.com/contact?source=pricing', 'https://citeladder.com/contact'),

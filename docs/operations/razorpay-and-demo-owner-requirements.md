@@ -11,8 +11,7 @@ Runtime commercial authority is the single published
 switches live in native `frontend/services/api/src/config/billing.json`. The billing domain, connector code,
 `frontend/services/api/src/cli/billing-admin.ts`, and
 `frontend/services/api/src/cli/provision-razorpay-plans.ts` own their respective operations.
-Earlier V6/V8 plans and legacy config catalog builders are historical or
-provisioning compatibility context and do not override the published catalog or
+Earlier V6/V8 plans are historical context and do not override the published catalog or
 API contracts. Follow the tested command and incident procedures in
 [`billing-operator-guide.md`](billing-operator-guide.md).
 
@@ -261,9 +260,7 @@ persisted revision without provider I/O; verification fetches provider plans and
 compares item name, gross amount, currency, cadence and interval. Create plans
 explicitly in the Dashboard/API. Import their private references in a reviewed
 immutable regional catalog payload, verify, then publish with the audited CLI.
-Empty verification sets and mismatched terms fail closed. The legacy environment
-catalog and provider-reference map are not persisted runtime authority.
-
+Empty verification sets and mismatched terms fail closed.
 Razorpay plans cannot be edited or deleted after creation. If a value changes or
 a plan was created outside this process, create or duplicate a new plan, record
 the new plan ID, install it in the matching environment, and run verification

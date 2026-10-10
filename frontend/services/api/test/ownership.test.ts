@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { openApiDocument } from '../src/openapi/document.ts';
 import { routeOwnershipFailures, type OwnershipInputs } from '../src/openapi/ownership.ts';
 
-function native(overrides: Partial<OwnershipInputs> = {}): OwnershipInputs {
+function ownershipInputs(overrides: Partial<OwnershipInputs> = {}): OwnershipInputs {
   return {
     apiPrefix: '/api/v1',
     manifest: { executions: 'typescript' },
@@ -19,29 +19,29 @@ function native(overrides: Partial<OwnershipInputs> = {}): OwnershipInputs {
     ...overrides,
   };
 }
-describe('native route-ownership gate', () => {
+describe('route-ownership gate', () => {
   it('accepts declared families', () => {
-    expect(routeOwnershipFailures(native())).toEqual([]);
+    expect(routeOwnershipFailures(ownershipInputs())).toEqual([]);
   });
   it('rejects a served family missing from the manifest', () => {
-    expect(routeOwnershipFailures(native({ manifest: {} }))).toContainEqual(
+    expect(routeOwnershipFailures(ownershipInputs({ manifest: {} }))).toContainEqual(
       expect.stringContaining('assigns to no stack'),
     );
   });
   it('rejects a manifest family without a route', () => {
     expect(
       routeOwnershipFailures(
-        native({ manifest: { executions: 'typescript', billing: 'typescript' } }),
+        ownershipInputs({ manifest: { executions: 'typescript', billing: 'typescript' } }),
       ),
     ).toContainEqual(expect.stringContaining('has no declared route'));
   });
-  it('refuses a retired route owner', () => {
-    expect(routeOwnershipFailures(native({ manifest: { executions: 'python' } }))).toContainEqual(
-      expect.stringContaining('must be TypeScript-owned'),
-    );
+  it('refuses an unknown route owner', () => {
+    expect(
+      routeOwnershipFailures(ownershipInputs({ manifest: { executions: 'other' } })),
+    ).toContainEqual(expect.stringContaining('must be TypeScript-owned'));
   });
   it('refuses ambiguous family tags', () => {
-    const input = native();
+    const input = ownershipInputs();
     input.typescript.paths['/api/v1/executions/{item_id}']!.get!.tags = ['executions', 'billing'];
     expect(routeOwnershipFailures(input)).toContainEqual(
       expect.stringContaining('exactly one family tag'),

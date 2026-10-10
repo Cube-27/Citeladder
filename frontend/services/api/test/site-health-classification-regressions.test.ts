@@ -230,7 +230,7 @@ describe('page-purpose regression boundaries', () => {
       '/shop',
     );
     expect(unnamed.rules.get('aeo.listing_item_facts')!.outcome).toBe('missing');
-    const legacy = analyzePage(
+    const withoutItems = analyzePage(
       {
         ...facts,
         entity: {
@@ -244,7 +244,7 @@ describe('page-purpose regression boundaries', () => {
       { sitemapMember: false, siteFacts: null, auditTime: null },
     );
     expect(
-      legacy.evaluations.find((row) => row.rule_id === 'aeo.listing_item_facts')!.outcome,
+      withoutItems.evaluations.find((row) => row.rule_id === 'aeo.listing_item_facts')!.outcome,
     ).toBe('unknown');
   });
 

@@ -1,7 +1,7 @@
 /**
  * One execution's persisted analysis and citation evidence.
  *
- * Shared native API/MCP reader. Keyed on the execution (`AuditTask`) id clients
+ * Shared API/MCP reader. Keyed on the execution (`AuditTask`) id clients
  * receive from the executions list; provenance comes from the frozen task
  * and audit snapshots, never from live configuration.
  */

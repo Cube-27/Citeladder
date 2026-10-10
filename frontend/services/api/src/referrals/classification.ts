@@ -1,7 +1,7 @@
 /**
  * Deterministic AI-referral classification (no model may guess a source).
  *
- * Native connected-data config owns the rule tables.
+ * Connected-data config owns the rule tables.
  * Tiers run in a fixed order (referrer host, then UTM, then user agent) and
  * the first rule to fire within a tier wins.
  */

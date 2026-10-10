@@ -164,7 +164,7 @@ describe('Action routes', () => {
       .executeTakeFirstOrThrow();
     expect(body.target_site_url_ids).toEqual([page.id]);
     expect(body.legs[0]!.state).toBe('not_scheduled');
-    // A legacy writer's serialization hash is not the request's meaning.
+    // A stored serialization hash is not the request's meaning.
     await db
       .updateTable('opportunity_implementation_events')
       .set({ request_fingerprint: 'a'.repeat(64) })

@@ -140,7 +140,7 @@ explicit-target, reasoned, dry-run-reviewed administrative operations.
 
 [TypeScript grant writes](../frontend/services/api/src/entitlements/grants.ts)
 and the [ledger](../frontend/services/api/src/entitlements/ledger.ts) own the
-migrated billing boundary. [Agent funding](../frontend/services/api/src/agent/funding.ts)
+billing boundary. [Agent funding](../frontend/services/api/src/agent/funding.ts)
 and [AI credit rates](../frontend/services/api/src/billing/ai-credits.ts) use that
 ledger for runtime accounting. Reservation, release, debit and refund retain typed parent
 identity, allocation order, fingerprints and dispatch provenance. An Agent run
@@ -157,12 +157,13 @@ platform credits and never silently falls back.
 [Site Health fetch budget](../frontend/services/api/src/site-health/fetch-budget.ts)
 reserves a crawl's page budget at creation and settles analyzed pages on every
 terminal path; accounts without a page-fetch grant are not metered there.
-Audit reservations, debits and releases now use the TypeScript ledger owner.
-Its audit fingerprints reproduce the pre-retirement Python format so audit
-entries persisted before the TypeScript ledger can be replayed idempotently. Audit entries from the earlier TypeScript
-format are incompatible and fail closed on replay; they require fresh disposable
-pre-launch data rather than rewriting immutable history. No reset is implicit.
-Runtime metering, grants, resolution and admission use their TypeScript owners.
+Audit reservations, debits and releases use the ledger owner. Audit
+fingerprints hash compact JSON with sorted ASCII keys
+([ledger](../frontend/services/api/src/entitlements/ledger.ts)), so a replay with
+the same key and facts is idempotent. Entries persisted in an earlier format are
+incompatible and fail closed on replay; they require fresh disposable pre-launch
+data rather than rewriting immutable history. No reset is implicit.
+Runtime metering, grants, resolution and admission use their owners.
 Each subject has one ledger-writing stack. Operator
 catalog publication, grant correction and read-only plan verification are native.
 Catalog commands serialize publication and persist creation/publication request

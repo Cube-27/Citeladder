@@ -345,8 +345,10 @@ routes without reactivating disabled routes or acquiring provider data.
 
 The scrapers submit the literal tracked prompt using normal-priority Standard
 tasks and collect Advanced results. ChatGPT requests web search; Gemini receives
-no ChatGPT-only settings. The initial scraper context allowlist is US/English;
-unsupported contexts and over-long prompts fail before submission. API engine IDs and Google AI Overview presence semantics remain separate.
+no ChatGPT-only settings. Every DataForSEO surface uses the project's frozen
+search context (US, English, desktop by default), validated against the location,
+language and device lists in `dataforseo.json`; unsupported contexts and over-long
+prompts fail before submission. API engine IDs and Google AI Overview presence semantics remain separate.
 Scraper model reports are supplementary provenance, distinct from the frozen product.
 
 Paid provider tasks retain their committed submission/account identity across

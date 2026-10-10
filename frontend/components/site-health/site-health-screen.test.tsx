@@ -93,7 +93,7 @@ describe('SiteHealthScreen — loading failures', () => {
               quota: { used: 3, limit: 50 },
               root_errors: [],
             })
-          : HttpResponse.json({ detail: 'Dashboard unavailable' }, { status: 404 });
+          : HttpResponse.json({ error: { message: 'Dashboard unavailable' } }, { status: 404 });
       }),
     );
 
@@ -123,7 +123,7 @@ describe('SiteHealthScreen — loading failures', () => {
               quota: { used: 3, limit: 50 },
               root_errors: [],
             })
-          : HttpResponse.json({ detail: 'Dashboard refresh failed' }, { status: 404 }),
+          : HttpResponse.json({ error: { message: 'Dashboard refresh failed' } }, { status: 404 }),
       ),
     );
 
@@ -144,7 +144,10 @@ describe('SiteHealthScreen — loading failures', () => {
       http.get('/api/v1/entitlements', () =>
         entitlementAvailable
           ? HttpResponse.json(entitlement)
-          : HttpResponse.json({ detail: 'Entitlement refresh failed' }, { status: 404 }),
+          : HttpResponse.json(
+              { error: { message: 'Entitlement refresh failed' } },
+              { status: 404 },
+            ),
       ),
     );
 
@@ -165,7 +168,7 @@ describe('SiteHealthScreen — loading failures', () => {
     mockRoutes();
     mswServer.use(
       http.get('/api/v1/entitlements', () =>
-        HttpResponse.json({ detail: 'Access unavailable' }, { status: 403 }),
+        HttpResponse.json({ error: { message: 'Access unavailable' } }, { status: 403 }),
       ),
     );
 

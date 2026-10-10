@@ -1,4 +1,4 @@
-/** Native Site Health page-analysis policy consumed by the analyzer. */
+/** Site Health page-analysis policy consumed by the analyzer. */
 import { policy } from '../../config.ts';
 
 export const analysisPolicy = policy.site_health.page_analysis;

@@ -1,7 +1,7 @@
 /**
  * Workspace membership and the role/capability matrix.
  *
- * Native workspace config owns the matrix and refusal wording; a role
+ * Workspace config owns the matrix and refusal wording; a role
  * missing from it confers nothing (fail closed).
  * A non-member cannot tell an existing workspace from a missing one: both 404.
  */

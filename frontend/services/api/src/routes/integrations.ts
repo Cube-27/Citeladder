@@ -185,7 +185,6 @@ export const integrationRoutes = [
             throw new ApiError(409, 'A sync window is already active for this connection', {
               code: 'sync_active_window_conflict',
               details,
-              detail: details,
             });
           }
           throw error;

@@ -87,8 +87,8 @@ describe('a database the baseline must not touch', () => {
 
   it('fails the migrate job with the reset instruction', async () => {
     const { client, url } = await freshDatabase();
-    // Any schema the ledger did not record, such as a pre-retirement Alembic database.
-    await client.query('CREATE TABLE public.alembic_version (version_num varchar(32) PRIMARY KEY)');
+    // Any schema the ledger did not record, such as a database from before the ledger existed.
+    await client.query('CREATE TABLE public.unrecorded_table (id integer PRIMARY KEY)');
     await client.end();
     const run = promisify(execFile)(
       process.execPath,

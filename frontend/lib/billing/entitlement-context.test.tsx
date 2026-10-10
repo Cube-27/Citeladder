@@ -87,7 +87,7 @@ describe('EntitlementProvider', () => {
     expect(screen.getByTestId('project-slots')).toHaveTextContent('1');
     mswServer.use(
       http.get(`/api/v1/workspaces/${WORKSPACE}/entitlements`, () =>
-        HttpResponse.json({ detail: 'Unavailable' }, { status: 403 }),
+        HttpResponse.json({ error: { message: 'Unavailable' } }, { status: 403 }),
       ),
     );
     await act(async () => {

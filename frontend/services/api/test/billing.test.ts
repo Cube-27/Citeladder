@@ -326,12 +326,12 @@ describe('billing money and access owner', () => {
         .executeTakeFirstOrThrow(),
     ).toEqual(version);
   });
-  it('uses frozen renewal terms, preserves legacy bundle identity, and rejects overlap and stale regressions', async () => {
+  it('uses frozen renewal terms, preserves an existing bundle identity, and rejects overlap and stale regressions', async () => {
     const t = await activated();
     if (t.evidence.kind !== 'base') throw new Error('fixture');
     await db
       .updateTable('account_grants')
-      .set({ idempotency_key: 'legacy-period-key', bundle_id: 'legacy-period-key' })
+      .set({ idempotency_key: 'earlier-period-key', bundle_id: 'earlier-period-key' })
       .where('billing_account_id', '=', t.accountId)
       .execute();
     await db
@@ -354,7 +354,7 @@ describe('billing money and access owner', () => {
             .execute()
         ).map((row) => row.bundle_id),
       ),
-    ).toEqual(new Set(['legacy-period-key']));
+    ).toEqual(new Set(['earlier-period-key']));
     await fixtures.catalog((payload) => {
       payload.plans[0]!.grants.find((row) => row.key === 'project_slots')!.value += 3;
     });

@@ -6,8 +6,7 @@ rules belong in [invariants](invariants.md). Git and PRs retain superseded histo
 
 ## TypeScript application, SQL schema baseline
 
-The application uses TypeScript with Hono, Kysely and Zod; the repository
-contains no Python. The schema is one SQL file,
+The application uses TypeScript with Hono, Kysely and Zod. The schema is one SQL file,
 `frontend/services/api/migrations/0001_baseline.sql`, the only schema author
 under [invariant 17](invariants.md#17-the-migration-baseline-remains-singular).
 The TypeScript migrate CLI (`src/cli/migrate.ts`, `pnpm migrate`) applies it
@@ -15,15 +14,13 @@ once under an advisory lock in one transaction and records its SHA-256 in
 `schema_migrations`; it runs from the API image, so the deploy builds one
 application image. Kysely types are generated from a baseline-migrated database.
 
-There is no adoption shim: a database stamped only by Alembic, a non-empty
-database without the ledger, or a ledger checksum that differs from the file
-fails the migrate job with an instruction to redeploy with `reset_database`.
+There is no adoption shim: a non-empty database without the ledger, or a
+ledger checksum that differs from the file, fails the migrate job with an instruction to redeploy with `reset_database`.
 Until there are live customers every schema change is folded into the baseline
 and reaches production only through that reset option, whose confirmation check
 stays.
 
-Source: owner decision of 10 October 2026 (feature 14, execution platform),
-superseding the 4 October 2026 choice to retain Python schema tooling.
+Source: owner decision of 10 October 2026 (feature 14, execution platform).
 
 ## One commercial account per workspace
 
@@ -77,10 +74,7 @@ implementation declaration.
 
 This removes two overlapping generation stacks, keeps MCP and the app from
 drifting into different reads, and gives repeated findings on one target one
-place to converge. The retired `content_creation` and `growth_agent` keys were
-then renamed to one `agent` capability, route and rate key without read-time
-aliases; pre-launch, the demo database is reset instead (26 September 2026).
-
+place to converge.
 Source: owner-settled Agent workspace plan,
 25 September 2026. [Agent](agents.md) and [Opportunities](opportunities.md)
 own shipped behavior.

@@ -92,7 +92,7 @@ function expectedLink(
     : { expected: false, implementation_event_id: null };
 }
 
-// ISO 8601 as Python's datetime.fromisoformat reads it; a value without an offset is UTC.
+// ISO 8601 with a `T` or space separator; a value without an offset is UTC.
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}/;
 const ISO_TIME = /^[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d{1,6})?)?/;
 const ISO_OFFSET = /^(?:Z|[+-]\d{2}:?\d{2})$/;

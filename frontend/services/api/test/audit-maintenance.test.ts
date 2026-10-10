@@ -266,7 +266,7 @@ describe('audit recovery against PostgreSQL', () => {
       consumed: 0,
     });
   });
-  it('repairs a legacy artifact without repeating evidence, then queues source inspection once after terminal commit', async () => {
+  it('repairs an artifact committed ahead of its queue transition without repeating evidence, then queues source inspection once after terminal commit', async () => {
     const t = await seed(),
       task = t.tasks[0]!;
     const at = new Date();

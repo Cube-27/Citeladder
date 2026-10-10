@@ -53,7 +53,7 @@ export function Conversation({
   const outcome = runOutcome(detail.latest_run);
   const live = useLiveTurn(outcome.kind === 'running' ? outcome.run.id : null);
   const output = detail.output;
-  const outputMessageId = output?.message_id ?? legacyOutputMessage(detail);
+  const outputMessageId = output?.message_id ?? revisionReplyMessage(detail);
   return (
     <div className="grid gap-4">
       <ContextUsed context={detail.context} />
@@ -94,8 +94,8 @@ export function Conversation({
   );
 }
 
-/** Historical revisions without a generating reply use their persisted time. */
-function legacyOutputMessage(detail: AgentChatDetail) {
+/** A revision without a recorded generating reply matches by its persisted time. */
+function revisionReplyMessage(detail: AgentChatDetail) {
   const revision = detail.output?.latest_revision;
   if (!revision) return undefined;
   return [...detail.messages]

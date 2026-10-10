@@ -1,7 +1,7 @@
 /**
  * Per-answer evidence for a selection: mentions, citations and query fanout.
  *
- * Shared native API/MCP reader of persisted rows: stored search events are
+ * Shared API/MCP reader of persisted rows: stored search events are
  * normalized, never invented, and an answer's fanout state distinguishes
  * query text, a count alone, no search, and an engine that exposes nothing.
  * Pages are keyset cursors bound to the selection, its filters and `as_of`.

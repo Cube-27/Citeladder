@@ -25,7 +25,7 @@ See [Prompts and topics](/prompts/) before expanding the portfolio.
 
 ## 3. Collect the baseline you need
 
-For AI search, start an audit with the prompts, engines and repetitions you intend to measure. Review its estimate and confirm the run. Check **Runs** for completion and failures.
+For AI search, start an audit with the prompts, engines and repetitions you intend to measure. Review its estimate and confirm the run. Check **Runs** for completion and failures, and [schedule the audit](/visibility/#schedule-audits) there to repeat it.
 
 For website evidence, open **Site Health** and choose **Run new crawl**. Creating a project does not automatically start its first crawl.
 

@@ -8,7 +8,7 @@ test('mailbox confirmation requires explicit password submission and preserves i
   const returnTo = '/invitations/accept?token=invitation-token-1234';
   const requests: unknown[] = [];
   await page.route('**/api/v1/**', (route) =>
-    route.fulfill({ status: 401, json: { detail: 'Sign in' } }),
+    route.fulfill({ status: 401, json: { error: { message: 'Sign in' } } }),
   );
   await page.route('**/api/v1/auth/verify-email', (route) => {
     requests.push(route.request().postDataJSON());

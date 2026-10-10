@@ -287,7 +287,7 @@ async function setup(page: Page, bodies: RouteBodies = {}) {
   await page.route(/\/api\/v1\/projects\/[^/]+\/visibility(\?.*)?$/, (route) =>
     route.fulfill(
       bodies.visibilityStatus
-        ? { status: bodies.visibilityStatus, json: { detail: 'boom' } }
+        ? { status: bodies.visibilityStatus, json: { error: { message: 'boom' } } }
         : {
             json: bodies.visibility ?? {
               ...visibility(67),
@@ -299,7 +299,7 @@ async function setup(page: Page, bodies: RouteBodies = {}) {
   await page.route(/\/api\/v1\/projects\/[^/]+\/visibility\/trends(\?.*)?$/, (route) =>
     route.fulfill(
       bodies.trendsStatus
-        ? { status: bodies.trendsStatus, json: { detail: 'boom' } }
+        ? { status: bodies.trendsStatus, json: { error: { message: 'boom' } } }
         : {
             json: bodies.trends ?? [
               trendPoint(AUDIT_EARLIER, '2026-07-08T00:00:00Z', 54),
@@ -312,7 +312,7 @@ async function setup(page: Page, bodies: RouteBodies = {}) {
     evidenceUrls.push(new URL(route.request().url()));
     return route.fulfill(
       bodies.evidenceStatus
-        ? { status: bodies.evidenceStatus, json: { detail: 'boom' } }
+        ? { status: bodies.evidenceStatus, json: { error: { message: 'boom' } } }
         : {
             json: bodies.evidence ?? {
               items: [evidenceItem()],

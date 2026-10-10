@@ -1,4 +1,4 @@
-/** Discovery queue leases; native recovery serializes against heartbeat and publication. */
+/** Discovery queue leases; recovery serializes against heartbeat and publication. */
 import { randomUUID } from 'node:crypto';
 
 import { sql, type Selectable } from 'kysely';
