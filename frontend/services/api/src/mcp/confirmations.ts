@@ -15,7 +15,7 @@ import { writeActor } from './data.ts';
 import { tokenHash } from './oauth.ts';
 import { McpInputError, type McpPrincipal } from './types.ts';
 
-export const confirmedKinds = z.enum([
+const confirmedKinds = z.enum([
   'add_prompts',
   'archive_prompts',
   'launch_audit',
