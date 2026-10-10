@@ -18,7 +18,7 @@ A list of real technical defects, ordered by the business journeys they affect, 
 
 1. `read_site_health` for the latest snapshot: score, crawl date, pages analysed, crawl limits and coverage. Keep its `crawl_id` for the next reads.
 2. `read_site_pages` with that `crawl_id` for page facts, page types, issue counts and applicability. Filter by `page_kind` or `status` to narrow. Open a returned analysis with `fetch` when you need the exact evidence for a finding.
-3. As needed: `read_ai_crawlability` for robots rules per AI bot; `read_crawl_logs` for observed bot requests (view `requests` for individual ones); `read_actions` for existing prioritized findings (label current Actions separately from snapshot evidence, and link one to this snapshot only when its data supports it); `read_integration_status` for connected sources.
+3. As needed: `read_ai_crawlability` for robots rules per AI bot; `read_crawl_logs` for observed bot requests (view `requests` for individual ones; a stalled source in view `coverage` means coverage is not complete, so say why from its `stall_reason`); `read_actions` for existing prioritized findings (label current Actions separately from snapshot evidence, and link one to this snapshot only when its data supports it); `read_integration_status` for connected sources.
 
 A score alone can direct attention but cannot support a specific fix. If no snapshot exists, say a crawl must be run in CiteLadder first.
 

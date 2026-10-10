@@ -7,6 +7,14 @@ order: 400
 
 These notes describe implemented changes in the codebase. Dates are the recorded commit dates; availability in your workspace depends on deployment, access and configuration.
 
+## October 10, 2026: AI crawler logs on paid plans, now with Amazon CloudFront
+
+AI crawler logs are available on every paid plan. Connect **Amazon CloudFront** through an Amazon Data Firehose stream, alongside Cloudflare, custom webhooks and file uploads, with an optional filter Lambda that sends crawler requests only. Log endpoints moved to `https://api.citeladder.com`. A source that stops delivering now shows as **Stalled** with the reason.
+
+**For your team:** connect the CDN you already run and watch the source row; a stalled source means that day's coverage is not complete.
+
+[Connect Amazon CloudFront](/ai-traffic/#amazon-cloudfront-firehose)
+
 ## October 10, 2026: Answer perception
 
 AI Visibility has a **Perception** view. Answers that name you or a competitor are read for sentiment: net sentiment from −100 to +100 with its coverage, the themes answers praise or criticise with quotes taken word for word from the answer, the sources cited alongside criticism and how often answers recommend you. Each answer in a run also shows how it portrayed every business it named. Classification uses no credits.

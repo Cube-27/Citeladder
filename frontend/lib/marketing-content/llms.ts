@@ -39,7 +39,7 @@ export function llmsTxt({ origin, pages }: { origin: string; pages: readonly Llm
     '',
     '- Not a claim that a content change caused rankings, traffic, or revenue.',
     '- The public trial is limited AI visibility access for seven days, not access to the whole platform. Agent access is not included.',
-    "- AI crawler analytics need the site's own logs, sent from a Cloudflare Worker, Cloudflare Logpush, a webhook or a file upload; CiteLadder does not observe crawlers on its own. Commerce requires eligible projects. Optional external research requires scope-and-cost review and separate confirmation.",
+    "- AI crawler analytics need the site's own logs, sent from a Cloudflare Worker, Cloudflare Logpush, an Amazon CloudFront log stream, a webhook or a file upload; CiteLadder does not observe crawlers on its own. Commerce requires eligible projects. Optional external research requires scope-and-cost review and separate confirmation.",
     '- Not an open-source or self-hosted product.',
     '',
     '## When to use CiteLadder',

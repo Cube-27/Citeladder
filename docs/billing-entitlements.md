@@ -45,6 +45,10 @@ admit prompt slots in [`src/entitlements/`](../frontend/services/api/src/entitle
 under the [account capacity lock](../frontend/services/api/src/entitlements/occupancy.ts)
 (a personalized BLAKE2b of `OCCUPANCY_LOCK_NAMESPACE` and the account id).
 Commerce, project and prompt writers serialize on that same TypeScript boundary.
+Registry `entitlements-v5` adds the public flag `crawl_logs` ("AI crawler
+logs"), granted by every launch plan bundle and absent from the public trial.
+[Crawl-log](ai-traffic.md) admission checks it without the capacity lock and
+refuses with 409 `crawl_logs_not_in_plan`; reads stay available.
 
 Public registration persists its origin on the identity and billing account and
 issues `public-trial-v1` once, starting at the original registration cohort and

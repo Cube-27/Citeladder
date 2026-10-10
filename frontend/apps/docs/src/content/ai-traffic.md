@@ -8,8 +8,8 @@ order: 145
 AI Traffic separates crawler **requests**, GA4 referral **sessions** and citations
 **observed in CiteLadder's tracked answers**. A crawler request does not prove a
 session or a citation. Unmatched log lines are discarded and do not measure human
-traffic. Collection is currently disabled by environment configuration; these
-guides describe the supported setup once ingestion is authorized and enabled.
+traffic. AI crawler logs are included in paid plans; see
+[Availability and retention](#availability-and-retention).
 
 ## Read the screen
 
@@ -86,9 +86,11 @@ Integrations. Choose a method, site origin, collection point and actual sampling
 The host must belong to the project. Only one active live source covers a host;
 file uploads are backfill and cannot overlap days from another source of that host.
 
-Copy the endpoint and `clw_` token when issued. Store the token as a secret;
-it is shown once. Send it in the `Authorization: Bearer <token>` header, never in
-an event body or a public URL. Rotation immediately invalidates the old token.
+Copy the endpoint and `clw_` token when issued. Endpoints are on
+`https://api.citeladder.com`, the host for machine senders. Store the token as a
+secret; it is shown once. Send it in the `Authorization: Bearer <token>` header
+(Amazon Data Firehose sends it as its access key), never in an event body or a
+public URL. Rotation immediately invalidates the old token.
 Revocation stops collection and retains history.
 
 ## Cloudflare Worker
@@ -117,7 +119,7 @@ template does not retry a rejected batch, so this is best-effort delivery.
 Cloudflare cancels unfinished `waitUntil` work after about 30 seconds. **Every
 routed request counts against your Workers quota**, even when no event is sent.
 Use Logpush or a durable shipper for reliable delivery. The current source quota
-is 600 batch attempts per hour. Quota sizing remains an enablement decision.
+is 600 batch attempts per hour.
 See [Worker context](https://developers.cloudflare.com/workers/runtime-apis/context/),
 [Workers limits and fail-open behavior](https://developers.cloudflare.com/workers/platform/limits/)
 and [Cloudflare request headers](https://developers.cloudflare.com/fundamentals/reference/http-headers/).
@@ -150,6 +152,59 @@ Field names, RFC3339 output and the HTTP probe/header protocol follow
 [Cloudflare's HTTP requests fields](https://developers.cloudflare.com/logs/logpush/logpush-job/datasets/zone/http_requests/)
 and [HTTP destination guide](https://developers.cloudflare.com/logs/logpush/logpush-job/enable-destinations/http/).
 Keep source IP enabled only when you want verification; CiteLadder does not persist IPs.
+
+## Amazon CloudFront (Firehose)
+
+CloudFront standard logging (v2) sends JSON logs to an Amazon Data Firehose
+stream, which batches, compresses and retries them and delivers to CiteLadder's
+HTTP endpoint. In the connect dialog choose **Amazon CloudFront**, enter the
+stream's buffer interval, and create the source; the dialog shows the endpoint
+(`https://api.citeladder.com/v1/crawl-logs/firehose/<source id>`) and token.
+
+1. In **us-east-1** (CloudFront log delivery to Firehose requires it), create a
+   Firehose stream: source **Direct PUT**, destination **HTTP endpoint**.
+   - Endpoint URL: the issued endpoint. Access key: the `clw_` token.
+   - Content encoding **GZIP**.
+   - Buffer size **1–3 MiB**. The request envelope adds about a third for
+     base64, and a request over 5 MiB, compressed or decompressed, is refused
+     with 413, which Firehose drops without backing it up.
+   - Buffer interval **60–300 seconds**; enter the same value in CiteLadder.
+   - Retry duration **3600 seconds**, and S3 backup for **failed data only**.
+2. On the distribution, open **Logging → Add → Amazon Data Firehose**, choose
+   the stream and output format **JSON**, and select these fields:
+   `timestamp(ms)`, `c-ip`, `sc-status`, `cs-method`, `cs-uri-stem`,
+   `x-edge-request-id`, `x-host-header` and `cs(User-Agent)`.
+3. Test with a real page visit. The Firehose console's **Test with demo data**
+   sends records that are not CloudFront logs; they show as an unsupported-format
+   batch. CloudFront can take about four hours after logging is enabled to
+   deliver reliably.
+
+CiteLadder reads the viewer's `x-host-header`, not `cs(Host)` (the distribution
+domain), so the host must belong to the project. A `-` value counts as absent;
+without `timestamp(ms)` the `date` and `time` fields are read as UTC. CloudFront
+percent-encodes the user agent and CiteLadder decodes it before matching; this
+was verified against a fixture built from CloudFront's field list. The query
+string is never read. Requests are matched against the crawler catalog; other
+lines are discarded and do not count against the accepted-line quota.
+
+Only a 200 response counts as delivered. 400 means the request or its records
+are not CloudFront JSON, 401 a wrong or revoked token, 409 a revoked source,
+paused collection or a plan without AI crawler logs, 413 an oversized request
+and 429 a quota. Firehose retries everything except 413 until its retry duration
+ends, then backs the batch up to S3. A retried request keeps its request ID, so
+it is accepted once. A complete reporting day needs an unfiltered stream with no
+gap between deliveries longer than the buffer interval plus five minutes.
+
+### Filter Lambda (optional)
+
+Unfiltered streams send every request, which counts toward the daily volume
+limit below. To send crawler requests only, download the
+[filter Lambda](/templates/citeladder-firehose-filter.mjs), deploy it on the
+Node.js runtime and add it as the stream's data transformation. It keeps log
+lines whose user agent matches the crawler catalog it was generated from (the
+file names the catalog version) and drops the rest. Tick **The stream runs the
+CiteLadder filter Lambda** when you create the source: quiet periods then send
+nothing, so coverage stays partial.
 
 ## Custom webhook
 
@@ -186,8 +241,8 @@ distinct requests with identical fields cannot be distinguished.
 Batch at least 60 seconds apart and keep within the bounds above. Current
 configuration permits 600 batch attempts per source per hour and one million
 accepted lines per project per day. A 202 response acknowledges durable receipt and
-queues processing; 401 rejects the token, 409 means a disabled, revoked or
-conflicting state, 415 rejects an unsupported encoding or media type, 422 rejects a batch in which
+queues processing; 401 rejects the token, 409 means paused collection, a plan
+without AI crawler logs, a revoked source or a conflicting state, 415 rejects an unsupported encoding or media type, 422 rejects a batch in which
 no line has the identifying fields, and 429
 includes `Retry-After`. Keep a durable retry queue and honor that delay. Do not
 log request bodies, IPs or tokens in your shipper. Current backdating admission
@@ -212,12 +267,35 @@ zero requests. Results appear once processing finishes, usually within a few
 minutes.
 Uploads idle for 24 hours are abandoned; accepted rows remain available.
 
-## Retention and availability
+## Source states
 
-Current development defaults retain raw sanitized requests for 90 days. Older
-derived status and coverage projections remain, with their versions and source
-receipt provenance. Folder breakdowns are bounded; verification reason breakdowns
-and Activity exports cover retained raw evidence. These implementation defaults
-do not constitute approved plan entitlements or contractual retention promises.
-Production enablement depends on plans and quotas, retention acceptance and the
-privacy and DPA wording. No setup here enables collection automatically.
+Each source row shows **Active**, **Stalled** or **Revoked**. A stalled source is
+live but not delivering, and its coverage is not complete; the row says why:
+
+- **No accepted batches for a day:** no batch was accepted for 24 hours. Check
+  that the sender is still running.
+- **Plan without AI crawler logs:** batches are refused because the workspace's
+  plan no longer includes them.
+- **Oversized batch:** a Firehose request over 5 MiB was dropped. Lower the
+  stream's buffer size.
+
+The next accepted batch clears the stall.
+
+## Availability and retention
+
+AI crawler logs are included in every paid plan. The public trial shows AI
+Traffic's Referrals view with a link to choose a plan, without connect options.
+If a plan stops including them, existing reports stay readable and new batches
+are refused with 409. CiteLadder can pause collection for every workspace; the
+screen then says so and batches are refused until it resumes.
+
+A project accepts up to 2 GiB of decompressed log data per reporting day. Beyond
+that, batches return 429 with `Retry-After` set to the start of the next
+reporting day, and the source keeps a receipt of the refusal.
+
+CiteLadder uses the client IP address only while processing a record, to verify
+that a crawler is genuine, and does not store it. Detailed request records are
+deleted after 90 days; daily summaries, coverage and receipts are kept as project
+data under the retention terms of the [Privacy Policy](https://citeladder.com/privacy).
+Folder breakdowns are bounded; verification reason breakdowns and Activity
+exports cover retained detailed records.
