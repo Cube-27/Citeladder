@@ -7,12 +7,14 @@
  * counted as a rejected line rather than failing the batch.
  */
 import { z } from 'zod';
+import { base64Text } from './base64-text.ts';
 
 const SUPPORTED_RESOURCES: ReadonlySet<string> = new Set([
   'http_load_balancer',
   'cloud_run_revision',
 ]);
-const BASE64 = /^[A-Za-z0-9+/]*={0,2}$/u;
+/** A Cloud Logging entry is at most 256 KB; anything larger is not one. */
+const MAX_ENTRY_BYTES = 262_144;
 const logEntrySchema = z.object({
   timestamp: z.string().min(1),
   insertId: z.string().optional(),
@@ -27,11 +29,10 @@ const logEntrySchema = z.object({
 });
 
 function decoded(data: string): unknown {
-  if (data.length % 4 !== 0 || !BASE64.test(data)) return null;
+  const text = base64Text(data, MAX_ENTRY_BYTES);
+  if (text === null) return null;
   try {
-    return JSON.parse(
-      new TextDecoder('utf-8', { fatal: true }).decode(Buffer.from(data, 'base64')),
-    );
+    return JSON.parse(text);
   } catch {
     return null;
   }

@@ -55,8 +55,8 @@ export function GcpFields({ model }: Readonly<{ model: ReturnType<typeof useCraw
         )}
       </Field>
       <Field
-        label="Load balancer logging sample rate (0–1)"
-        hint="Below 1, coverage stays partial."
+        label="Load balancer logging sample rate"
+        hint="Between 0.001 and 1, as set on the backend service. Below 1, coverage stays partial."
       >
         {(field) => (
           <Input

@@ -9,6 +9,7 @@
 import { z } from 'zod';
 import { policy, resolveSettingSpec } from '../config.ts';
 import { crawlLogs } from '../config/crawl-logs.ts';
+import { ApiError } from '../errors.ts';
 
 /** The reader service account; empty means the connector is unavailable here. */
 export function crawlLogReaderEmail(env: Record<string, string | undefined> = process.env) {
@@ -51,7 +52,7 @@ export type GcpSubscription = z.infer<typeof subscriptionSchema>;
 export type PulledMessage = { ackId: string; messageId: string; data: string };
 export type PubSubReader = {
   subscription(name: string): Promise<GcpSubscription>;
-  /** Up to `max` messages; an empty array when none arrived within the wait. */
+  /** Up to `max` messages; an empty array only when Pub/Sub answered with none. */
   pull(name: string, max: number): Promise<PulledMessage[]>;
   acknowledge(name: string, ackIds: readonly string[]): Promise<void>;
 };
@@ -60,8 +61,9 @@ const METADATA_TOKEN =
   'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token';
 const PUBSUB_SCOPE = 'https://www.googleapis.com/auth/pubsub';
 
+/** 401 rejects CiteLadder's own token, so only 403 means the customer withheld access. */
 function failureFor(status: number): GcpFailure {
-  if (status === 401 || status === 403) return 'permission_denied';
+  if (status === 403) return 'permission_denied';
   if (status === 404) return 'not_found';
   if (status === 400) return 'invalid';
   return 'unavailable';
@@ -72,7 +74,13 @@ function resourcePath(name: string) {
   if (!project || !subscription) throw new GcpError('invalid');
   return `projects/${encodeURIComponent(project)}/subscriptions/${encodeURIComponent(subscription)}`;
 }
-const isTimeout = (error: unknown) => error instanceof Error && error.name === 'TimeoutError';
+async function json(response: Response) {
+  try {
+    return (await response.json()) as unknown;
+  } catch {
+    throw new GcpError('unavailable');
+  }
+}
 
 export function pubSubReader(options: {
   readerEmail: string;
@@ -84,6 +92,10 @@ export function pubSubReader(options: {
   const settings = crawlLogs.gcp_pull;
   let cached: { token: string; refreshAt: number } | null = null;
 
+  /**
+   * Every transport failure, a timeout included, is `unavailable`: only a
+   * completed empty pull may count as a drain.
+   */
   async function call(url: string, init: RequestInit, timeoutSeconds: number) {
     try {
       return await send(url, {
@@ -91,18 +103,11 @@ export function pubSubReader(options: {
         redirect: 'error',
         signal: AbortSignal.timeout(timeoutSeconds * 1000),
       });
-    } catch (error) {
-      if (isTimeout(error)) throw error;
-      throw new GcpError('unavailable');
-    }
-  }
-  async function json(response: Response) {
-    try {
-      return (await response.json()) as unknown;
     } catch {
       throw new GcpError('unavailable');
     }
   }
+  const bounded = settings.request_timeout_seconds;
   /** A reader token, minted from the runtime identity and reused until near expiry. */
   async function token() {
     if (cached && now() < cached.refreshAt) return cached.token;
@@ -110,7 +115,7 @@ export function pubSubReader(options: {
       const runtime = await call(
         METADATA_TOKEN,
         { headers: { 'Metadata-Flavor': 'Google' } },
-        settings.request_timeout_seconds,
+        bounded,
       );
       if (!runtime.ok) throw new GcpError('unavailable');
       const { access_token } = metadataToken.parse(await json(runtime));
@@ -124,7 +129,7 @@ export function pubSubReader(options: {
             lifetime: `${settings.token_lifetime_seconds}s`,
           }),
         },
-        settings.request_timeout_seconds,
+        bounded,
       );
       if (!minted.ok) throw new GcpError('unavailable');
       const reader = readerToken.parse(await json(minted));
@@ -138,11 +143,13 @@ export function pubSubReader(options: {
       throw new GcpError('unavailable');
     }
   }
-  async function pubsub(
+  /** The parsed response body. */
+  async function pubsub<T>(
+    schema: z.ZodType<T>,
     name: string,
     action: '' | ':pull' | ':acknowledge',
     body: unknown,
-    timeoutSeconds = settings.request_timeout_seconds,
+    timeoutSeconds = bounded,
   ) {
     const response = await call(
       `https://pubsub.googleapis.com/v1/${resourcePath(name)}${action}`,
@@ -160,48 +167,38 @@ export function pubSubReader(options: {
       await response.body?.cancel();
       throw new GcpError(failureFor(response.status));
     }
-    return json(response);
-  }
-  const parsed = <T>(schema: z.ZodType<T>, value: unknown) => {
-    const result = schema.safeParse(value);
+    const result = schema.safeParse(await json(response));
     if (!result.success) throw new GcpError('unavailable');
     return result.data;
-  };
+  }
   return {
-    async subscription(name) {
-      try {
-        return parsed(subscriptionSchema, await pubsub(name, '', undefined));
-      } catch (error) {
-        if (isTimeout(error)) throw new GcpError('unavailable');
-        throw error;
-      }
-    },
+    subscription: (name) => pubsub(subscriptionSchema, name, '', undefined),
     async pull(name, max) {
-      try {
-        const body = parsed(
-          pullSchema,
-          await pubsub(name, ':pull', { maxMessages: max }, settings.pull_wait_seconds),
-        );
-        return body.receivedMessages.map((received) => ({
-          ackId: received.ackId,
-          messageId: received.message.messageId,
-          data: received.message.data,
-        }));
-      } catch (error) {
-        // A pull waits for messages; running out the wait means none were available.
-        if (isTimeout(error)) return [];
-        throw error;
-      }
+      // Pub/Sub may hold a pull open while it waits for messages, hence the longer bound.
+      const body = await pubsub(
+        pullSchema,
+        name,
+        ':pull',
+        { maxMessages: max },
+        settings.pull_wait_seconds,
+      );
+      return body.receivedMessages.map((received) => ({
+        ackId: received.ackId,
+        messageId: received.message.messageId,
+        data: received.message.data,
+      }));
     },
     async acknowledge(name, ackIds) {
-      try {
-        await pubsub(name, ':acknowledge', { ackIds });
-      } catch (error) {
-        if (isTimeout(error)) throw new GcpError('unavailable');
-        throw error;
-      }
+      await pubsub(z.unknown(), name, ':acknowledge', { ackIds });
     },
   };
+}
+/** The process's reader, or 409 where no reader service account is configured. */
+export function requirePubSubReader(): PubSubReader {
+  const reader = defaultPubSubReader();
+  if (!reader)
+    throw new ApiError(409, 'The Google Cloud connector is not available in this environment');
+  return reader;
 }
 
 let shared: { email: string; reader: PubSubReader } | null = null;

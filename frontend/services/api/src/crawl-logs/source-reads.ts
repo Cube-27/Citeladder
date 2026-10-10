@@ -11,6 +11,8 @@ import { crawlLogReaderEmail } from './gcp-client.ts';
 import { gcpLogFilter } from './gcp-filter.ts';
 
 type Source = Selectable<CrawlLogSources>;
+/** The crawler catalog is static per process, so its sink filter is built once. */
+const LOG_FILTER = gcpLogFilter();
 function connection(status: string, accepted: Date | null | undefined, completed: number) {
   if (status === 'revoked') return 'not_connected';
   return accepted || completed ? 'connected' : 'awaiting_data';
@@ -121,7 +123,7 @@ export async function sourceList(
     gcp_pull: {
       availability: readerEmail ? 'available' : 'pull_unavailable',
       reader_email: readerEmail || null,
-      log_filter: gcpLogFilter(),
+      log_filter: LOG_FILTER,
       catalog_version: crawlers.catalog_version,
     },
     items,

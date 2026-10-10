@@ -13,8 +13,8 @@ const RE2_META = /[\\^$.|?*+()[\]{}]/gu;
 function literal(pattern: string) {
   return pattern
     .replaceAll(RE2_META, (meta) => '\\' + meta)
-    .replaceAll('\\', '\\\\')
-    .replaceAll('"', '\\"');
+    .replaceAll('\\', String.raw`\\`)
+    .replaceAll('"', String.raw`\"`);
 }
 
 export function gcpLogFilter(catalog: Catalog = crawlers) {

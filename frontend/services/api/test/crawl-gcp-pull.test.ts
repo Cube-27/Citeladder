@@ -80,7 +80,7 @@ function fakeGoogle(
     });
   };
   const reader = pubSubReader({ readerEmail: READER, transport, now: () => state.clock });
-  return { state, reader };
+  return { state, reader, transport };
 }
 
 const config = testConfig(),
@@ -233,7 +233,10 @@ describe('Google REST client', () => {
     google.state.clock += 20_000;
     await google.reader.subscription(SUBSCRIPTION);
     expect(google.state.tokensMinted).toBe(2);
-    expect(google.state.log.filter((line) => line.includes('pubsub.googleapis.com'))).toEqual([
+    const pubsubCalls = google.state.log.filter(
+      (line) => new URL(line.split(' ')[1]!).host === 'pubsub.googleapis.com',
+    );
+    expect(pubsubCalls).toEqual([
       'GET https://pubsub.googleapis.com/v1/projects/acme-prod/subscriptions/citeladder-ai-crawlers-sub',
       'GET https://pubsub.googleapis.com/v1/projects/acme-prod/subscriptions/citeladder-ai-crawlers-sub',
       'GET https://pubsub.googleapis.com/v1/projects/acme-prod/subscriptions/citeladder-ai-crawlers-sub',
@@ -241,6 +244,8 @@ describe('Google REST client', () => {
   });
   it.each([
     [403, 'permission_denied'],
+    // A rejected reader token is CiteLadder's failure, not the customer's.
+    [401, 'unavailable'],
     [404, 'not_found'],
     [400, 'invalid'],
     [503, 'unavailable'],
@@ -249,6 +254,18 @@ describe('Google REST client', () => {
     const error = await google.reader.subscription(SUBSCRIPTION).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(GcpError);
     expect(error).toMatchObject({ failure, message: 'gcp_' + failure });
+  });
+  it('reports a pull that runs out of time as unavailable, never as an empty drain', async () => {
+    const google = fakeGoogle();
+    const reader = pubSubReader({
+      readerEmail: READER,
+      transport: async (input, init) => {
+        if (String(input).endsWith(':pull'))
+          throw new DOMException('The operation timed out.', 'TimeoutError');
+        return google.transport(input, init);
+      },
+    });
+    await expect(reader.pull(SUBSCRIPTION, 10)).rejects.toMatchObject({ failure: 'unavailable' });
   });
   it('reports a failed token mint as unavailable, never as the customer denying access', async () => {
     const reader = pubSubReader({
@@ -383,15 +400,19 @@ async function runPull(
   now = new Date(Date.now() + 3600_000 * Math.random()),
 ) {
   await enqueueDuePulls(db, tenant.workspaceId, now, () => true);
-  const task = await db
-    .selectFrom('analytics_tasks')
-    .selectAll()
-    .where('workspace_id', '=', tenant.workspaceId)
-    .where('task_kind', '=', 'crawl_log_pull')
-    .orderBy('created_at', 'desc')
-    .executeTakeFirstOrThrow();
+  const [task] = await pullTasks(tenant.workspaceId);
+  if (!task) throw new Error('No pull was queued');
   await executor(task, { db, maxAttempts: 3, checkCancelled: async () => {} });
 }
+/** The workspace's queued pulls, newest first. */
+const pullTasks = (workspaceId: string) =>
+  db
+    .selectFrom('analytics_tasks')
+    .selectAll()
+    .where('workspace_id', '=', workspaceId)
+    .where('task_kind', '=', 'crawl_log_pull')
+    .orderBy('created_at', 'desc')
+    .execute();
 const pullReceipts = (id: string) =>
   db
     .selectFrom('crawl_log_batches')
@@ -399,6 +420,15 @@ const pullReceipts = (id: string) =>
     .where('source_id', '=', id)
     .orderBy('received_at')
     .execute();
+/** A receipt for pulled lines, as `pullReceipts` reads it. */
+const batch = (received: number, matched: number, rejected = 0, duplicate = 0) => ({
+  lines_received: received,
+  lines_matched: matched,
+  lines_rejected: rejected,
+  lines_duplicate: duplicate,
+  drained: false,
+});
+const DRAIN = { ...batch(0, 0), drained: true };
 
 describe('pull task', () => {
   it('admits mapped requests, acknowledges after the commit and records the drain', async () => {
@@ -416,16 +446,7 @@ describe('pull task', () => {
     await runPull(tenant, executor);
     expect(committedAtAck).toEqual([1]);
     expect(google.state.acked.sort()).toEqual(google.state.messages.map((m) => m.messageId).sort());
-    expect(await pullReceipts(id)).toEqual([
-      {
-        lines_received: 4,
-        lines_matched: 2,
-        lines_rejected: 2,
-        lines_duplicate: 0,
-        drained: false,
-      },
-      { lines_received: 0, lines_matched: 0, lines_rejected: 0, lines_duplicate: 0, drained: true },
-    ]);
+    expect(await pullReceipts(id)).toEqual([batch(4, 2, 2), DRAIN]);
     const paths = await db
       .selectFrom('bot_requests')
       .select('display_path')
@@ -451,23 +472,7 @@ describe('pull task', () => {
     google.state.status = 200;
     await runPull(tenant, executor);
     expect(google.state.acked).toHaveLength(3);
-    expect(await pullReceipts(id)).toEqual([
-      {
-        lines_received: 2,
-        lines_matched: 2,
-        lines_rejected: 0,
-        lines_duplicate: 0,
-        drained: false,
-      },
-      {
-        lines_received: 3,
-        lines_matched: 1,
-        lines_rejected: 0,
-        lines_duplicate: 2,
-        drained: false,
-      },
-      { lines_received: 0, lines_matched: 0, lines_rejected: 0, lines_duplicate: 0, drained: true },
-    ]);
+    expect(await pullReceipts(id)).toEqual([batch(2, 2), batch(3, 1, 0, 2), DRAIN]);
   });
   it('stalls on a refused pull and stops pulling until a check passes', async () => {
     const { tenant, id, google, executor } = await verifiedSource();
@@ -482,14 +487,7 @@ describe('pull task', () => {
     const pulls = google.state.pulls;
     // Within the day, the tick holds the stalled source back.
     await enqueueDuePulls(db, tenant.workspaceId, new Date(Date.now() + 600_000), () => true);
-    expect(
-      await db
-        .selectFrom('analytics_tasks')
-        .select('id')
-        .where('workspace_id', '=', tenant.workspaceId)
-        .where('task_kind', '=', 'crawl_log_pull')
-        .execute(),
-    ).toHaveLength(1);
+    expect(await pullTasks(tenant.workspaceId)).toHaveLength(1);
     expect(google.state.pulls).toBe(pulls);
     expect(await pullReceipts(id)).toEqual([]);
   });
@@ -500,15 +498,8 @@ describe('pull task', () => {
     for (const workspace of [unverified.tenant, tenant])
       for (const now of [at, new Date(at.getTime() + 60_000)])
         await enqueueDuePulls(db, workspace.workspaceId, now, () => true);
-    const queued = (workspaceId: string) =>
-      db
-        .selectFrom('analytics_tasks')
-        .select('payload')
-        .where('workspace_id', '=', workspaceId)
-        .where('task_kind', '=', 'crawl_log_pull')
-        .execute();
-    expect(await queued(unverified.tenant.workspaceId)).toEqual([]);
-    expect((await queued(tenant.workspaceId)).length).toBe(1);
+    expect(await pullTasks(unverified.tenant.workspaceId)).toEqual([]);
+    expect(await pullTasks(tenant.workspaceId)).toHaveLength(1);
   });
   it('leases a pull for its own longer TTL', async () => {
     const tenant = await fixtures.tenant();

@@ -28,7 +28,7 @@ import {
   pullSourceFor,
   confirmSinkFilter,
 } from '../crawl-logs/sources.ts';
-import { defaultPubSubReader } from '../crawl-logs/gcp-client.ts';
+import { requirePubSubReader } from '../crawl-logs/gcp-client.ts';
 import { verifyPullSource } from '../crawl-logs/gcp-verify.ts';
 import { ingest, boundedBody, batchQuota } from '../crawl-logs/ingest.ts';
 import { firehoseDelivery } from '../crawl-logs/firehose.ts';
@@ -134,9 +134,7 @@ export const crawlLogRoutes = [
           lockAuthorizedWorkspace(trx, target.workspaceId, actorId, 'manage_credentials'),
         );
       const source = await pullSourceFor(db, target, path.source_id);
-      const reader = defaultPubSubReader();
-      if (!reader)
-        throw new ApiError(409, 'The Google Cloud connector is not available in this environment');
+      const reader = requirePubSubReader();
       const outcome = await verifyPullSource(db, source, reader, { actorId });
       return { id: source.id, ...outcome };
     },

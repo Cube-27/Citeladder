@@ -13,7 +13,7 @@ import { hasGrantedFlag } from '../entitlements/occupancy.ts';
 import { policy } from '../config.ts';
 import { asApiErrorCode } from '@citeladder/contracts/error-codes';
 import { crawlers } from '../config/crawlers.ts';
-import { crawlLogReaderEmail } from './gcp-client.ts';
+import { requirePubSubReader } from './gcp-client.ts';
 import { crawlLogAvailabilitySchema } from '@citeladder/contracts/ai-traffic';
 
 const samplingSchema = z.discriminatedUnion('kind', [
@@ -78,24 +78,22 @@ const FIREHOSE_FILTERED = {
   kind: 'filtered',
   description: 'CiteLadder filter Lambda: recognized crawler requests only',
 } as const;
-const SETUP_PRESETS = {
-  cloudflare_worker: 'cloudflare_worker_template',
-  cloudflare_logpush: 'cloudflare_logpush_http_requests',
-  aws_firehose: 'cloudfront_v2_json',
-  gcp_pubsub_pull: 'gcp_log_entry',
-  custom: 'custom_ndjson',
-  upload: 'custom_ndjson',
-} as const;
-const SOURCE_KINDS = {
-  cloudflare_worker: 'webhook',
-  cloudflare_logpush: 'webhook',
-  aws_firehose: 'webhook',
-  gcp_pubsub_pull: 'pull',
-  custom: 'webhook',
-  upload: 'upload',
-} as const;
+/** Each setup's mapping preset and source kind. */
+const SETUPS = {
+  cloudflare_worker: { preset: 'cloudflare_worker_template', kind: 'webhook' },
+  cloudflare_logpush: { preset: 'cloudflare_logpush_http_requests', kind: 'webhook' },
+  aws_firehose: { preset: 'cloudfront_v2_json', kind: 'webhook' },
+  gcp_pubsub_pull: { preset: 'gcp_log_entry', kind: 'pull' },
+  custom: { preset: 'custom_ndjson', kind: 'webhook' },
+  upload: { preset: 'custom_ndjson', kind: 'upload' },
+} as const satisfies Record<
+  z.output<typeof createSourceSchema>['setup'],
+  { preset: string; kind: string }
+>;
+type SourceKind = (typeof SETUPS)[keyof typeof SETUPS]['kind'];
+const LIVE: readonly SourceKind[] = ['webhook', 'pull'];
 /** Sources that collect continuously; one per host may be live. */
-export const LIVE_KINDS: readonly string[] = ['webhook', 'pull'];
+export const isLiveKind = (kind: string) => LIVE.some((live) => live === kind);
 const token = () => 'clw_' + randomBytes(32).toString('base64url');
 const NONCE_ALPHABET = 'abcdefghijklmnopqrstuvwxyz234567';
 /** 26 lowercase base32 characters: a valid GCP label value. 256 % 32 = 0, so unbiased. */
@@ -175,12 +173,10 @@ export async function createSource(
   )
     throw new ApiError(422, 'Use a site origin without a path or credentials');
   const host = origin.hostname.toLowerCase();
-  const preset = SETUP_PRESETS[input.setup];
+  const { preset, kind } = SETUPS[input.setup];
   const defaults = crawlLogs.presets[preset]!;
   const sampling = sourceSampling(input, defaults);
-  const kind = SOURCE_KINDS[input.setup];
-  if (kind === 'pull' && !crawlLogReaderEmail())
-    throw new ApiError(409, 'The Google Cloud connector is not available in this environment');
+  if (kind === 'pull') requirePubSubReader();
   return await db.transaction().execute(async (trx) => {
     await lockAuthorizedWorkspace(trx, scope.workspaceId, actorId, 'manage_credentials');
     await requireCrawlLogs(trx, scope.workspaceId);
@@ -213,8 +209,8 @@ export async function createSource(
     if (existing.filter((s) => s.status === 'active').length >= crawlLogs.max_sources_per_project)
       throw new ApiError(429, 'Source limit reached');
     if (
-      kind !== 'upload' &&
-      existing.some((s) => s.host === host && LIVE_KINDS.includes(s.kind) && s.status === 'active')
+      isLiveKind(kind) &&
+      existing.some((s) => s.host === host && isLiveKind(s.kind) && s.status === 'active')
     )
       throw new ApiError(409, 'An active live source already covers this host');
     const member = await trx
@@ -308,19 +304,31 @@ export async function mutateSource(
     return { id, token: secret };
   });
 }
-/** A live pull source in the project, for a command that acts on it. */
-export async function pullSourceFor(db: Database, scope: CrawlScope, id: string) {
-  const source = await db
+/** The project's live pull source with this id, or undefined. */
+export function findLivePullSource(db: Database, scope: CrawlScope, id: string) {
+  return db
     .selectFrom('crawl_log_sources')
     .selectAll()
     .where('workspace_id', '=', scope.workspaceId)
     .where('project_id', '=', scope.projectId)
     .where('id', '=', id)
+    .where('kind', '=', 'pull')
+    .where('status', '=', 'active')
     .executeTakeFirst();
-  if (!source) throw notFound('Crawl log source');
-  if (source.kind !== 'pull' || source.status !== 'active')
-    throw new ApiError(409, 'Only a live Google Cloud source has a subscription to check');
-  return source;
+}
+/** A live pull source in the project, for a command that acts on it. */
+export async function pullSourceFor(db: Database, scope: CrawlScope, id: string) {
+  const source = await findLivePullSource(db, scope, id);
+  if (source) return source;
+  const exists = await db
+    .selectFrom('crawl_log_sources')
+    .select('id')
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('project_id', '=', scope.projectId)
+    .where('id', '=', id)
+    .executeTakeFirst();
+  if (!exists) throw notFound('Crawl log source');
+  throw new ApiError(409, 'Only a live Google Cloud source has a subscription to check');
 }
 /**
  * The customer installed the sink filter for the current crawler catalog. Days

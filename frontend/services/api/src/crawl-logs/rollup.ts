@@ -12,8 +12,8 @@ import { record, strings } from '../db/json.ts';
 import { lockCrawlState, type CrawlScope } from './state.ts';
 import type { Executor } from '../workers/executor.ts';
 import { enqueueTrafficInsights } from './insights-enqueue.ts';
-import { drainGapMinutes, pullCoverage } from './pull-coverage.ts';
-import { LIVE_KINDS } from './sources.ts';
+import { gapMinutes, pullCoverage } from './pull-coverage.ts';
+import { isLiveKind } from './sources.ts';
 
 /** Full recomputation under the project row lock prevents stale publication. */
 export async function refreshCrawlLogs(
@@ -227,22 +227,14 @@ function coverageRows(
     const scans = declarations.filter((d) => d.date === day.day);
     if (source.kind === 'upload' && !evidence && !scans.length && !receipts.length) return [];
     if (
-      LIVE_KINDS.includes(source.kind) &&
+      isLiveKind(source.kind) &&
       (source.created_at >= day.end || (source.revoked_at && source.revoked_at <= day.start))
     )
       return [];
-    const times = [
-      day.start.getTime(),
-      ...receipts.map((b) => b.received_at.getTime()).sort((a, b) => a - b),
-      day.end.getTime(),
-    ];
-    const pull = source.kind === 'pull';
-    const gap = pull
-      ? drainGapMinutes(batches, day)
-      : Math.max(...times.slice(1).map((t, i) => (t - times[i]!) / 60000));
-    const decision = pull
-      ? pullCoverage(source, batches, day)
-      : coverageDecision(source, day, now, receipts.length, gap, evidence, scans);
+    const { decision, gap } =
+      source.kind === 'pull'
+        ? pullCoverage(source, batches, day)
+        : liveCoverage(source, day, now, receipts, evidence, scans);
     return [
       {
         id: randomUUID(),
@@ -258,6 +250,24 @@ function coverageRows(
       },
     ];
   });
+}
+/** A webhook or upload day: the decision and the longest wait between receipts. */
+function liveCoverage(
+  source: Source,
+  day: ReportingDay,
+  now: Date,
+  receipts: Batch[],
+  evidence: boolean,
+  scans: { status: string; complete: unknown }[],
+) {
+  const gap = gapMinutes(
+    receipts.map((b) => b.received_at),
+    day,
+  );
+  return {
+    decision: coverageDecision(source, day, now, receipts.length, gap, evidence, scans),
+    gap,
+  };
 }
 function coverageDecision(
   source: Source,

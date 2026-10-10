@@ -7,9 +7,11 @@ import { crawlLogs } from '../config/crawl-logs.ts';
 
 /**
  * Why a live source stopped delivering. An accepted receipt clears any reason
- * in the transaction that stores it.
+ * in the transaction that stores it, except one only a passing check lifts.
  */
 export type StallReason = z.infer<typeof crawlStallReasonSchema>;
+/** Reasons a receipt cannot disprove: a failed subscription check holds until a check passes. */
+export const CHECK_HELD_STALLS: readonly StallReason[] = ['verification_failed'];
 
 /** Record a refusal the sender cannot see in a receipt; the first reason and time stay. */
 export async function markStalled(
@@ -40,6 +42,7 @@ export async function clearStall(
     .where('project_id', '=', source.project_id)
     .where('id', '=', source.id)
     .where('stall_reason', 'is not', null)
+    .where('stall_reason', 'not in', CHECK_HELD_STALLS)
     .execute();
 }
 

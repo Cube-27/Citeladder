@@ -296,12 +296,7 @@ export async function ingest(
         drained: heartbeat && options.drained === true,
       })
       .execute();
-    // Only a passing subscription check lifts a verification stall.
-    if (
-      receiptStatus === 'accepted' &&
-      current.stall_reason !== null &&
-      current.stall_reason !== 'verification_failed'
-    )
+    if (receiptStatus === 'accepted' && current.stall_reason !== null)
       await clearStall(trx, current);
     await insertRequests(trx, scope, id, admitted, counts, now);
     const receipt = await trx

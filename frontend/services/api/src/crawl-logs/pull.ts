@@ -24,24 +24,13 @@ import {
 import { gcpLogLine } from './gcp-entry.ts';
 import { recordVerification, verifyPullSource } from './gcp-verify.ts';
 import { ingest } from './ingest.ts';
-import { crawlLogAvailability } from './sources.ts';
-import { markStalled } from './stall.ts';
+import { crawlLogAvailability, findLivePullSource } from './sources.ts';
+import { CHECK_HELD_STALLS, markStalled } from './stall.ts';
 import { enqueueTask } from '../referrals/enqueue.ts';
 
 type Source = Selectable<CrawlLogSources>;
 const settings = crawlLogs.gcp_pull;
 
-async function livePullSource(db: Database, workspaceId: string, projectId: string, id: string) {
-  return db
-    .selectFrom('crawl_log_sources')
-    .selectAll()
-    .where('workspace_id', '=', workspaceId)
-    .where('project_id', '=', projectId)
-    .where('id', '=', id)
-    .where('kind', '=', 'pull')
-    .where('status', '=', 'active')
-    .executeTakeFirst();
-}
 async function touch(db: Database, source: Source, column: 'last_pull_at' | 'last_drained_at') {
   await db
     .updateTable('crawl_log_sources')
@@ -70,7 +59,8 @@ async function admitted(admit: Promise<unknown>) {
 /** One pulled batch admitted and acknowledged; false when the drain must stop here. */
 async function admitBatch(
   db: Database,
-  source: Source & { subscription: string },
+  source: Source,
+  subscription: string,
   reader: PubSubReader,
   messages: readonly [PulledMessage, ...PulledMessage[]],
 ) {
@@ -87,7 +77,7 @@ async function admitBatch(
   if (!(await admitted(admit))) return false;
   try {
     await reader.acknowledge(
-      source.subscription,
+      subscription,
       messages.map((m) => m.ackId),
     );
   } catch (error) {
@@ -111,7 +101,7 @@ export async function enqueueDuePulls(
   const interval = settings.pull_interval_seconds * 1000;
   const recent = new Date(now.getTime() - interval);
   const daily = new Date(now.getTime() - settings.verification_interval_hours * 3600000);
-  const held = ['verification_failed', 'not_in_plan'];
+  const held = [...CHECK_HELD_STALLS, 'not_in_plan'];
   const due = await db
     .selectFrom('crawl_log_sources')
     .select(['id', 'project_id'])
@@ -133,7 +123,9 @@ export async function enqueueDuePulls(
     .execute();
   for (const source of due) {
     if (!canAdmit()) return false;
+    // One source at a time keeps each enqueue inside the tick's admission budget.
     await enqueueTask(db, {
+      // NOSONAR
       workspaceId,
       projectId: source.project_id,
       kind: 'crawl_log_pull',
@@ -149,45 +141,69 @@ export function crawlLogPull(readerFor: () => PubSubReader | null = defaultPubSu
     const sourceId = record(task.payload).source_id;
     const reader = readerFor();
     if (!reader || !task.project_id || typeof sourceId !== 'string') return;
-    let source = await livePullSource(db, task.workspace_id, task.project_id, sourceId);
+    const scope = { workspaceId: task.workspace_id, projectId: task.project_id };
+    let source = await findLivePullSource(db, scope, sourceId);
     if (!source?.verified_at) return;
     // Committed before any Google call: the tick schedules the next attempt from this time.
-    await touch(db, source, 'last_pull_at');
-    const availability = await crawlLogAvailability(db, task.workspace_id);
+    const [, availability] = await Promise.all([
+      touch(db, source, 'last_pull_at'),
+      crawlLogAvailability(db, task.workspace_id),
+    ]);
     if (availability === 'not_in_plan') await markStalled(db, source, 'not_in_plan');
     if (availability !== 'available') return;
     if (verificationDue(source, new Date())) {
       await checkCancelled('crawl-log-verify');
       await verifyPullSource(db, source, reader);
-      source = await livePullSource(db, task.workspace_id, task.project_id, sourceId);
+      source = await findLivePullSource(db, scope, sourceId);
     }
-    if (!source?.subscription || source.stall_reason === 'verification_failed') return;
-    const live = { ...source, subscription: source.subscription };
-    for (let iteration = 0; iteration < settings.pull_max_iterations; iteration += 1) {
-      await checkCancelled('crawl-log-pull');
-      let messages: PulledMessage[];
-      try {
-        messages = await reader.pull(live.subscription, settings.pull_max_messages);
-      } catch (error) {
-        if (
-          error instanceof GcpError &&
-          (error.failure === 'permission_denied' || error.failure === 'not_found')
-        ) {
-          await recordVerification(db, live, error.failure);
-          return;
-        }
-        throw error;
-      }
-      const [head, ...rest] = messages;
-      if (!head) {
-        const drain = ingest(db, live, Buffer.alloc(0), {
-          key: `pull:${live.id}:drained:${task.id}:${task.attempt_count}`,
-          drained: true,
-        });
-        if (await admitted(drain)) await touch(db, live, 'last_drained_at');
-        return;
-      }
-      if (!(await admitBatch(db, live, reader, [head, ...rest]))) return;
-    }
+    const subscription = source?.subscription;
+    if (!source || !subscription || CHECK_HELD_STALLS.some((r) => r === source?.stall_reason))
+      return;
+    await drain({
+      db,
+      reader,
+      source,
+      subscription,
+      drainKey: `pull:${source.id}:drained:${task.id}:${task.attempt_count}`,
+      checkCancelled,
+    });
   };
+}
+/** Messages from one pull, or null when the refusal stalled the source. */
+async function pullOnce(db: Database, reader: PubSubReader, source: Source, subscription: string) {
+  try {
+    return await reader.pull(subscription, settings.pull_max_messages);
+  } catch (error) {
+    if (
+      error instanceof GcpError &&
+      (error.failure === 'permission_denied' || error.failure === 'not_found')
+    ) {
+      await recordVerification(db, source, error.failure);
+      return null;
+    }
+    throw error;
+  }
+}
+/** Pull, admit and acknowledge until the subscription is empty or the iteration bound. */
+async function drain(input: {
+  db: Database;
+  reader: PubSubReader;
+  source: Source;
+  subscription: string;
+  drainKey: string;
+  checkCancelled: (boundary: string) => Promise<void>;
+}) {
+  const { db, reader, source, subscription } = input;
+  for (let iteration = 0; iteration < settings.pull_max_iterations; iteration += 1) {
+    await input.checkCancelled('crawl-log-pull');
+    const messages = await pullOnce(db, reader, source, subscription);
+    if (!messages) return;
+    const [head, ...rest] = messages;
+    if (!head) {
+      const empty = ingest(db, source, Buffer.alloc(0), { key: input.drainKey, drained: true });
+      if (await admitted(empty)) await touch(db, source, 'last_drained_at');
+      return;
+    }
+    if (!(await admitBatch(db, source, subscription, reader, [head, ...rest]))) return;
+  }
 }

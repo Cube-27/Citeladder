@@ -18,12 +18,12 @@ import { getLogger } from '../logging.ts';
 import { authorizeToken } from './sources.ts';
 import { batchQuota, boundedBody, decodedBody, diagnosticReceipt, ingest } from './ingest.ts';
 import { markStalled } from './stall.ts';
+import { base64Text } from './base64-text.ts';
 
 const logger = getLogger('api.crawl_logs.firehose');
 /** Firehose's own bounds: 10,000 records, each at most 1,000 KiB decoded. */
 const MAX_RECORDS = 10_000;
 const MAX_RECORD_BYTES = 1_024_000;
-const BASE64 = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/u;
 const envelopeSchema = z.object({
   requestId: z.string().min(1).max(200),
   timestamp: z.number(),
@@ -58,15 +58,8 @@ function reply(status: number, requestId: string, errorMessage?: string): Respon
 
 /** One record's newline-separated log lines, or null when it cannot be decoded. */
 function recordLines(data: string): string[] | null {
-  if (!BASE64.test(data) || (data.length / 4) * 3 > MAX_RECORD_BYTES + 2) return null;
-  const bytes = Buffer.from(data, 'base64');
-  if (bytes.length > MAX_RECORD_BYTES) return null;
-  try {
-    const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
-    return text.split(/\r?\n/u).filter((line) => line.trim());
-  } catch {
-    return null;
-  }
+  const text = base64Text(data, MAX_RECORD_BYTES);
+  return text === null ? null : text.split(/\r?\n/u).filter((line) => line.trim());
 }
 
 /** Parse and decode the envelope; a bad record is isolated and counted, never fatal. */
