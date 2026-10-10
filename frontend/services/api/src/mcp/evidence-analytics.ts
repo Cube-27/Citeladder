@@ -11,6 +11,8 @@ import { getVisibilitySources } from '../visibility/sources.ts';
 import { getSourceUrlDetail } from '../visibility/source-url.ts';
 import { getVisibilityTrends } from '../visibility/trends.ts';
 import { getPerception, getPerceptionQuotes } from '../visibility/perception.ts';
+import { getAds } from '../visibility/ads.ts';
+import { policy } from '../config.ts';
 import {
   AnalysisNotFoundError,
   authorizeRunSet,
@@ -118,6 +120,37 @@ export async function perceptionRead(
       perception_state: summary.state,
       state: 'available',
       view: 'summary',
+      artifact_refs: summary.source_audit_ids.map((id) => reference('audit', id)),
+    };
+  } catch (error) {
+    if (error instanceof AnalysisNotFoundError && !args.audit_id)
+      return unavailable('no_completed_run');
+    throw error;
+  }
+}
+
+/**
+ * Ads in ChatGPT Search answers for the latest or a chosen run: the same
+ * summary as the Ads tab, creatives paged by cursor. Ads are paid placements,
+ * reported apart from citations and never as a cause of visibility.
+ */
+export async function adsRead(
+  { db, scope }: ProjectRead,
+  args: Selection & Page,
+): Promise<Evidence> {
+  try {
+    const summary = await getAds(db, runs(scope, args), {
+      cursor: args.cursor ?? null,
+      limit: Math.min(
+        args.limit ?? policy.visibility.ads_creatives_default_limit,
+        policy.visibility.ads_creatives_max_limit,
+      ),
+    });
+    return {
+      ...summary,
+      ads_state: summary.state,
+      state: 'available',
+      pagination: pagination(summary.creatives.items, summary.creatives.next_cursor),
       artifact_refs: summary.source_audit_ids.map((id) => reference('audit', id)),
     };
   } catch (error) {

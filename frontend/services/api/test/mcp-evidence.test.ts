@@ -681,3 +681,52 @@ it('serves answer perception with the same numbers as the Perception read, and i
     expect.objectContaining({ text: 'Acme is pricey', run_id: auditId, execution_id: taskId }),
   ]);
 });
+
+it('serves ads in ChatGPT answers with the same numbers as the Ads read', async () => {
+  const auditId = await fixtures.audit(tenant);
+  const { taskId, analysisId } = await fixtures.execution(tenant, {
+    auditId,
+    engine: 'chatgpt_search',
+    analysis: {},
+  });
+  const { artifact_id } = await db
+    .updateTable('response_analyses')
+    .set({ ads_parser_version: 'chatgpt-ads-1' })
+    .where('id', '=', analysisId!)
+    .returning('artifact_id')
+    .executeTakeFirstOrThrow();
+  await db
+    .insertInto('answer_ad_observations')
+    .values({
+      id: randomUUID(),
+      workspace_id: tenant.workspaceId,
+      project_id: tenant.projectId,
+      audit_id: auditId,
+      task_id: taskId,
+      artifact_id,
+      parser_version: 'chatgpt-ads-1',
+      rank_absolute: 1,
+      advertiser_name: 'Rival',
+      advertiser_domain: 'rival.example',
+      landing_url_raw: 'https://rival.example/a?gclid=1',
+      landing_url_canonical: 'https://rival.example/a',
+      title: 'Rival A',
+      snippet: '',
+      ownership: 'competitor',
+      created_at: new Date(),
+    })
+    .execute();
+  await fixtures.execution(tenant, { auditId, engine: 'claude', analysis: {} });
+  expect(await read('read_ai_ads', { audit_id: auditId })).toMatchObject({
+    state: 'available',
+    ads_state: 'value',
+    presence: { answers: 1, answers_with_ads: 1, rate: 1 },
+    engines: [
+      { engine: 'chatgpt_search', applicability: 'applicable' },
+      { engine: 'claude', applicability: 'not_applicable', presence: null },
+    ],
+    advertisers: [{ name: 'Rival', domain: 'rival.example', appearances: 1, share: 1 }],
+    creatives: { items: [{ title: 'Rival A', landing_url: 'https://rival.example/a' }] },
+    artifact_refs: [expect.objectContaining({ id: expect.stringContaining(auditId) })],
+  });
+});

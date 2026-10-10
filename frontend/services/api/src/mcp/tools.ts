@@ -24,6 +24,7 @@ import {
   shelfRead,
 } from './evidence.ts';
 import {
+  adsRead,
   perceptionRead,
   renderAnalytics,
   sourceUrl,
@@ -198,6 +199,19 @@ export const definitions = {
       ...page,
     }),
     read: perceptionRead,
+  }),
+  read_ai_ads: projectTool({
+    title: 'Read ads in AI answers',
+    description:
+      'Paid ads shown in ChatGPT Search answers for the latest or a chosen run: ad presence rate ("N of M ChatGPT answers"), advertisers with share and first/last seen, the ad share and best rank of the brand itself, text creatives (paged) and prompts that surface ads with competitor ads beside organic brand mentions. Only ChatGPT Search shows ads; other engines are not_applicable, never zero. Ads are paid placements: report them separately, never as citations, sources or a cause of visibility.',
+    schema: z.strictObject({
+      ...project,
+      audit_id: optional(uuid),
+      engine,
+      cohort,
+      ...page,
+    }),
+    read: adsRead,
   }),
   read_visibility_results: projectTool({
     title: 'Read AI answers',
