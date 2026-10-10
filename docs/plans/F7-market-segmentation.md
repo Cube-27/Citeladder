@@ -94,16 +94,22 @@ across the launched audits.
 ### 2. Capability matrix and allowed locations (D7.2)
 
 - The reviewed locations file `src/config/dataforseo-locations.json`:
-  `countries: {CC: {location_code, google_ai_overview?: [lang],
-  chatgpt_search?: [lang], gemini_consumer?: [lang]}}`, validated at load
+  `languages: {surface: [lang]}` (DataForSEO lists languages per surface,
+  not per country, so they are stored once) and `countries: {CC:
+  {location_code, surfaces: [surface]}}`, about 190 lines, validated at load
   against the contracts market list (`search-surfaces/locations.ts`). An
   absent country or surface is unsupported. `searchPayload` and Search
   Intelligence validate against it; `dataforseo.json` loses
   `location_codes`, `supported_location_codes` and `language_codes`, and the
   project `serp_*` columns are derived from it.
-- The PR seeds the file with the 13 verified locations and the 7 languages
-  accepted before F7, for all three surfaces. The other 19 picker countries
-  become supported when the owner runs the CLI.
+- The owner ran the CLI before merge (2026-10-10): all 32 picker countries
+  on all three surfaces; languages ar da de en es fi fr hi it ja ko nl pl pt
+  ru sv tr, except no `pt` on `gemini_consumer` (the earlier seed wrongly
+  claimed it). Hebrew, Norwegian and Chinese are listed nowhere.
+- A market language searches in its primary subtag (`pt-BR` is `pt`,
+  `en-GB` is `en`); a language the surface does not list is refused with 422
+  `market_unsupported`, never sent and never swapped for English. A market
+  with no language searches in English.
 - `providers.json` `routes.<engine>.market_support`: `dataforseo_location`
   (chatgpt_search, gemini_consumer, google_ai_overview),
   `web_search_user_location` (chatgpt, claude), `none` (gemini). The unused
@@ -246,11 +252,9 @@ change).
 
 ## Owner-run steps
 
-1. Before merge: from `frontend/services/api`, run
-   `pnpm dataforseo:locations` with `DATAFORSEO_API_LOGIN` and
-   `DATAFORSEO_API_PASSWORD` set (`--dry-run` to print first). Review the
-   regenerated `src/config/dataforseo-locations.json` and commit it to the PR
-   (the endpoints are free list calls).
+1. Done before merge (2026-10-10): the owner ran `pnpm dataforseo:locations`
+   (free list endpoints) and the regenerated file is committed. Rerun it and
+   review the diff whenever DataForSEO's lists may have changed.
 2. Optionally run one two-market audit on a test project with BYOK
    credentials and check that each engine's request carries the market.
 

@@ -13,7 +13,12 @@ import { strings } from '../db/json.ts';
 import { admittedFactCheck, admittedPerceptionVersions } from '../perception/admission.ts';
 import { marketLabel } from '@citeladder/contracts/markets';
 import type { Market } from '../projects/markets.ts';
-import { isSearchSurface, searchContext, surfaceSupports } from '../search-surfaces/locations.ts';
+import {
+  isSearchSurface,
+  searchContext,
+  searchLanguageOf,
+  surfaceSupports,
+} from '../search-surfaces/locations.ts';
 import {
   searchPayload,
   searchPolicy,
@@ -32,21 +37,22 @@ const invalid = (message: string) => new ApiError(400, message);
 export function marketEngines(
   requested: readonly Engine[],
   market: Market,
-  context: { serp_location_code: number; serp_language_code: string },
+  context: { serp_location_code: number },
 ) {
   const engines: Engine[] = [],
     notApplicable: Engine[] = [];
+  // A market without a language searches in the default; one with a language
+  // searches in its primary subtag (pt-BR is pt) or is refused, never swapped.
+  const language = market.language_code.trim()
+    ? searchLanguageOf(market.language_code)
+    : searchPolicy.constants.default_language_code;
   for (const engine of requested) {
     const support = providerPolicy.routes[engine].market_support;
     if (support === 'none' && market.id !== null) notApplicable.push(engine);
     else if (
       support === 'dataforseo_location' &&
       isSearchSurface(engine) &&
-      !surfaceSupports(
-        engine,
-        context.serp_location_code,
-        context.serp_language_code || searchPolicy.constants.default_language_code,
-      )
+      !surfaceSupports(engine, context.serp_location_code, language)
     )
       throw new ApiError(422, `${engine} cannot measure ${marketLabel(market)}`, {
         code: 'market_unsupported',

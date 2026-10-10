@@ -24,7 +24,7 @@ const lists = (locations: unknown[], languages: string[]) =>
   );
 
 describe('the DataForSEO locations file', () => {
-  it('keeps market countries each surface lists, with the market languages it offers', () => {
+  it('keeps market countries per surface and each surface’s market languages', () => {
     const file = buildLocationsFile(
       {
         google_ai_overview: lists(
@@ -34,20 +34,21 @@ describe('the DataForSEO locations file', () => {
             { location_code: 1023191, country_iso_code: 'US', location_type: 'City' },
             country(2004, 'AF'),
           ],
-          ['es', 'ja', 'en', 'zh-TW'],
+          ['es', 'ja', 'en', 'zh-TW', 'he'],
         ),
         chatgpt_search: lists([country(2724, 'ES')], ['es', 'en']),
-        gemini_consumer: lists([], ['en']),
+        gemini_consumer: lists([country(2724, 'ES')], ['xx']),
       },
       '2026-10-10',
     );
+    expect(file.languages).toEqual({
+      google_ai_overview: ['en', 'es', 'ja'],
+      chatgpt_search: ['en', 'es'],
+      gemini_consumer: [],
+    });
     expect(file.countries).toEqual({
-      ES: {
-        location_code: 2724,
-        google_ai_overview: ['en', 'es', 'ja'],
-        chatgpt_search: ['en', 'es'],
-      },
-      JP: { location_code: 2392, google_ai_overview: ['en', 'es', 'ja'] },
+      ES: { location_code: 2724, surfaces: ['google_ai_overview', 'chatgpt_search'] },
+      JP: { location_code: 2392, surfaces: ['google_ai_overview'] },
     });
     expect(file.generated_at).toBe('2026-10-10');
   });
@@ -69,21 +70,50 @@ describe('the DataForSEO locations file', () => {
     expect(() => surfaceLists({ status_code: 40100, tasks: [] }, envelope([]))).toThrow();
   });
 
-  it('writes short language lists on one line', () => {
+  it('writes a list on one line only when it fits the print width', () => {
     const text = serializeLocationsFile({
       source: 'test',
       generated_at: '2026-10-10',
-      countries: { ES: { location_code: 2724, chatgpt_search: ['en', 'es'] } },
+      languages: {
+        google_ai_overview: [
+          'ar',
+          'da',
+          'de',
+          'en',
+          'es',
+          'fi',
+          'fr',
+          'hi',
+          'it',
+          'ja',
+          'ko',
+          'nl',
+          'pl',
+        ],
+        chatgpt_search: ['en'],
+        gemini_consumer: [],
+      },
+      countries: { ES: { location_code: 2724, surfaces: ['chatgpt_search'] } },
     });
     expect(text).toBe(
       [
         '{',
         '  "source": "test",',
         '  "generated_at": "2026-10-10",',
+        '  "languages": {',
+        '    "google_ai_overview": [',
+        ...['ar', 'da', 'de', 'en', 'es', 'fi', 'fr', 'hi', 'it', 'ja', 'ko', 'nl'].map(
+          (code) => `      "${code}",`,
+        ),
+        '      "pl"',
+        '    ],',
+        '    "chatgpt_search": ["en"],',
+        '    "gemini_consumer": []',
+        '  },',
         '  "countries": {',
         '    "ES": {',
         '      "location_code": 2724,',
-        '      "chatgpt_search": ["en", "es"]',
+        '      "surfaces": ["chatgpt_search"]',
         '    }',
         '  }',
         '}',
@@ -94,21 +124,29 @@ describe('the DataForSEO locations file', () => {
 });
 
 describe('search contexts from the reviewed file', () => {
-  it('maps a supported market to its location and search language', () => {
+  it('maps a market language to its primary subtag', () => {
     expect(searchContext('de', 'de')).toEqual({
       serp_location_code: 2276,
       serp_language_code: 'de',
     });
-    expect(searchContext('US', 'en-GB')).toEqual({
-      serp_location_code: 2840,
+    expect(searchContext('BR', 'pt-BR')).toEqual({
+      serp_location_code: 2076,
+      serp_language_code: 'pt',
+    });
+    expect(searchContext('GB', 'en-GB')).toEqual({
+      serp_location_code: 2826,
       serp_language_code: 'en',
     });
-    expect(surfaceSupports('chatgpt_search', 2276, 'de')).toBe(true);
   });
 
-  it('leaves a market no surface supports unmeasurable', () => {
-    expect(searchContext('JP', 'ja')).toEqual({ serp_location_code: 0, serp_language_code: '' });
-    expect(surfaceSupports('google_ai_overview', 0, 'en')).toBe(false);
-    expect(surfaceSupports('google_ai_overview', 2840, 'ja')).toBe(false);
+  it('leaves a language no surface lists unmeasurable', () => {
+    expect(searchContext('JP', 'zh')).toEqual({ serp_location_code: 2392, serp_language_code: '' });
+    expect(surfaceSupports('chatgpt_search', 2392, 'zh')).toBe(false);
+  });
+
+  it('supports a language per surface, not per country', () => {
+    expect(surfaceSupports('chatgpt_search', 2076, 'pt')).toBe(true);
+    expect(surfaceSupports('gemini_consumer', 2076, 'pt')).toBe(false);
+    expect(surfaceSupports('gemini_consumer', 0, 'en')).toBe(false);
   });
 });

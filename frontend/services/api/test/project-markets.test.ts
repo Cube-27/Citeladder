@@ -51,7 +51,10 @@ async function withMarketSlots(tenant: Tenant, value: number) {
 }
 
 /** A verified connection for each engine, so admission can route it. */
-async function connect(tenant: Tenant, engines: ('gemini' | 'chatgpt_search')[]) {
+async function connect(
+  tenant: Tenant,
+  engines: ('gemini' | 'chatgpt_search' | 'gemini_consumer')[],
+) {
   for (const engine of engines) {
     const connection = await createConnection(
       db,
@@ -294,32 +297,42 @@ describe('admission per market', () => {
     expect(new Set(audits.map((audit) => audit.scheduled_for?.toISOString())).size).toBe(1);
   });
 
-  it('refuses a search surface that cannot measure a market before creating any audit', async () => {
+  it('refuses a market language a search surface does not list, before creating any audit', async () => {
     const tenant = await auditTenant(db, fixtures);
-    await connect(tenant, ['chatgpt_search']);
-    await withMarketSlots(tenant, 1);
-    const added = await request(tenant, '/markets', 'POST', {
-      country_code: 'JP',
-      language_code: 'ja',
-    });
-    const japan = added.body[1].id;
-    await expect(
+    await connect(tenant, ['chatgpt_search', 'gemini_consumer']);
+    await withMarketSlots(tenant, 2);
+    const japanChinese = (
+      await request(tenant, '/markets', 'POST', { country_code: 'JP', language_code: 'zh' })
+    ).body[1].id;
+    const brazil = (
+      await request(tenant, '/markets', 'POST', { country_code: 'BR', language_code: 'pt-BR' })
+    ).body[2].id;
+    const launch = (
+      engines: ('chatgpt' | 'chatgpt_search' | 'gemini_consumer')[],
+      market: string,
+    ) =>
       createAudits(
         db,
         tenant.workspaceId,
         auditInput.parse({
           project_id: tenant.projectId,
           prompt_set_id: tenant.setId,
-          engines: ['chatgpt', 'chatgpt_search'],
-          market_ids: [null, japan],
+          engines,
+          market_ids: [null, market],
         }),
         {},
         runtime,
-      ),
-    ).rejects.toMatchObject({
+      );
+    await expect(launch(['chatgpt', 'chatgpt_search'], japanChinese)).rejects.toMatchObject({
       status: 422,
       code: 'market_unsupported',
-      details: { engine: 'chatgpt_search', country_code: 'JP', language_code: 'ja' },
+      details: { engine: 'chatgpt_search', country_code: 'JP', language_code: 'zh' },
+    });
+    // Gemini's consumer surface lists no Portuguese.
+    await expect(launch(['gemini_consumer'], brazil)).rejects.toMatchObject({
+      status: 422,
+      code: 'market_unsupported',
+      details: { engine: 'gemini_consumer', country_code: 'BR', language_code: 'pt-BR' },
     });
     const created = await db
       .selectFrom('audits')
@@ -327,6 +340,34 @@ describe('admission per market', () => {
       .where('project_id', '=', tenant.projectId)
       .execute();
     expect(created).toEqual([]);
+  });
+
+  it('measures a regional language variant in its primary language', async () => {
+    const tenant = await auditTenant(db, fixtures);
+    await connect(tenant, ['chatgpt_search']);
+    await withMarketSlots(tenant, 1);
+    const brazil = (
+      await request(tenant, '/markets', 'POST', { country_code: 'BR', language_code: 'pt-BR' })
+    ).body[1].id;
+    const [audit] = await createAudits(
+      db,
+      tenant.workspaceId,
+      auditInput.parse({
+        project_id: tenant.projectId,
+        prompt_set_id: tenant.setId,
+        engines: ['chatgpt_search'],
+        market_ids: [brazil],
+      }),
+      {},
+      runtime,
+    );
+    const task = await db
+      .selectFrom('audit_tasks')
+      .select('request_snapshot')
+      .where('audit_id', '=', audit)
+      .executeTakeFirstOrThrow();
+    const snapshot = record(task.request_snapshot);
+    expect([snapshot.location_code, snapshot.language_code]).toEqual([2076, 'pt']);
   });
 
   it('estimates each engine over the markets it can measure', async () => {

@@ -413,7 +413,10 @@ active-audit and manual-run limits. Each audit freezes its market: the model
 APIs get its country through web search `user_location` and the localized
 instruction, and the DataForSEO surfaces get its location and language. The
 reviewed [locations file](../frontend/services/api/src/config/dataforseo-locations.json)
-says which countries and languages each surface supports; it is regenerated
+says which countries each surface supports and which market languages it
+offers (a regional variant such as `pt-BR` searches in its primary subtag;
+a language the surface does not list refuses the market, never falls back to
+another language; a market without a language searches in English); it is regenerated
 only by the operator CLI `pnpm dataforseo:locations` and a reviewed pull
 request, never at request time. Each engine's `market_support` in
 `providers.json` decides admission: an unsupported search surface refuses the
