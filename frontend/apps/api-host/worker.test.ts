@@ -23,6 +23,28 @@ function captureUpstream() {
   return sent;
 }
 
+/** Sends each call with a bearer and a cookie; every one must reach the origin. */
+async function forwardAll(authorization: string, calls: readonly (readonly [string, string])[]) {
+  const sent = captureUpstream();
+  for (const [method, path] of calls) {
+    const response = await routeApiHostRequest(
+      new Request('https://api.citeladder.com' + path, {
+        method,
+        headers: { authorization, cookie: 'session=private' },
+      }),
+      env,
+    );
+    expect(response.status).toBe(202);
+  }
+  expect(sent.every((request) => request.headers.get('cookie') === null)).toBe(true);
+  expect(sent.every((request) => request.headers.get('authorization') === authorization)).toBe(
+    true,
+  );
+  return sent;
+}
+
+const forwarded = (request: Request) => `${request.method} ${new URL(request.url).pathname}`;
+
 describe('API host route ownership', () => {
   it('serves only the configured host', async () => {
     const sent = captureUpstream();
@@ -63,36 +85,23 @@ describe('API host route ownership', () => {
     },
   );
   it('forwards public API calls with their bearer key and method, without cookies', async () => {
-    const sent = captureUpstream();
-    for (const [method, path] of [
+    const sent = await forwardAll('Bearer cl_live_test', [
       ['GET', '/v1/projects?limit=10'],
       ['GET', '/v1/openapi.json'],
       ['POST', `/v1/projects/${SOURCE}/audits`],
       ['PATCH', `/v1/projects/${SOURCE}/prompts/${SOURCE}`],
       ['DELETE', `/v1/projects/${SOURCE}/topics/${SOURCE}`],
-    ] as const) {
-      const response = await routeApiHostRequest(
-        new Request('https://api.citeladder.com' + path, {
-          method,
-          headers: { authorization: 'Bearer cl_live_test', cookie: 'session=private' },
-        }),
-        env,
-      );
-      expect(response.status).toBe(202);
-    }
-    expect(sent.map((request) => `${request.method} ${new URL(request.url).pathname}`)).toEqual([
+    ]);
+    expect(sent.map(forwarded)).toEqual([
       'GET /v1/projects',
       'GET /v1/openapi.json',
       `POST /v1/projects/${SOURCE}/audits`,
       `PATCH /v1/projects/${SOURCE}/prompts/${SOURCE}`,
       `DELETE /v1/projects/${SOURCE}/topics/${SOURCE}`,
     ]);
-    expect(sent.every((request) => request.headers.get('cookie') === null)).toBe(true);
-    expect(sent[0]!.headers.get('authorization')).toBe('Bearer cl_live_test');
   });
   it('forwards MCP and its OAuth endpoints with every method the protocol uses', async () => {
-    const sent = captureUpstream();
-    for (const [method, path] of [
+    const sent = await forwardAll('Bearer mcp_access', [
       ['POST', '/mcp'],
       ['GET', '/mcp'],
       ['POST', '/mcp/register'],
@@ -102,17 +111,8 @@ describe('API host route ownership', () => {
       ['POST', '/revoke'],
       ['GET', '/.well-known/oauth-authorization-server'],
       ['GET', '/.well-known/oauth-protected-resource/mcp'],
-    ] as const) {
-      const response = await routeApiHostRequest(
-        new Request('https://api.citeladder.com' + path, {
-          method,
-          headers: { authorization: 'Bearer mcp_access', cookie: 'session=private' },
-        }),
-        env,
-      );
-      expect(response.status).toBe(202);
-    }
-    expect(sent.map((request) => `${request.method} ${new URL(request.url).pathname}`)).toEqual([
+    ]);
+    expect(sent.map(forwarded)).toEqual([
       'POST /mcp',
       'GET /mcp',
       'POST /mcp/register',
@@ -124,9 +124,7 @@ describe('API host route ownership', () => {
       'GET /.well-known/oauth-protected-resource/mcp',
     ]);
     expect(new URL(sent[4]!.url).search).toBe('?client_id=c&response_type=code');
-    expect(sent[0]!.headers.get('authorization')).toBe('Bearer mcp_access');
     expect(sent[0]!.headers.get('x-citeladder-public-host')).toBe('api.citeladder.com');
-    expect(sent.every((request) => request.headers.get('cookie') === null)).toBe(true);
   });
   it('answers everything else with a JSON 404 and never reaches the origin', async () => {
     const sent = captureUpstream();

@@ -1,3 +1,4 @@
+import { MCP_API_HOST_PATHS } from '@citeladder/contracts/route-ownership';
 import { proxyWorkerRequest } from '../../lib/server/worker-origin-proxy';
 
 /**
@@ -24,20 +25,10 @@ const CRAWL_LOG_ROUTES: readonly { method: string; path: RegExp }[] = [
   { method: 'POST', path: new RegExp(`^/v1/crawl-logs/firehose/${UUID}$`, 'u') },
 ];
 const PUBLIC_API_METHODS = new Set(['GET', 'POST', 'PATCH', 'DELETE']);
-// Every method: the API answers 405 or a CORS preflight itself.
-const MCP_PATHS = new Set([
-  '/mcp',
-  '/mcp/',
-  '/mcp/register',
-  '/authorize',
-  '/token',
-  '/revoke',
-  '/.well-known/oauth-authorization-server',
-  '/.well-known/oauth-protected-resource/mcp',
-]);
 
 function allowed(method: string, path: string): boolean {
-  if (MCP_PATHS.has(path)) return true;
+  // Every method on MCP paths: the API answers 405 or a CORS preflight itself.
+  if (MCP_API_HOST_PATHS.has(path)) return true;
   if (path === '/v1/crawl-logs' || path.startsWith('/v1/crawl-logs/'))
     return CRAWL_LOG_ROUTES.some((route) => route.method === method && route.path.test(path));
   return path.startsWith('/v1/') && PUBLIC_API_METHODS.has(method);

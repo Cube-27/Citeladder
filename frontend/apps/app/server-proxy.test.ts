@@ -23,6 +23,14 @@ describe('dev server proxy', () => {
     }
   });
 
+  it('keeps the app Host on MCP consent, which the API admits only on the app origin', () => {
+    const table = createServerProxy('http://api-service.test');
+    const option = (url: string) =>
+      Object.entries(table).find(([key]) => new RegExp(key).test(url))?.[1].changeOrigin;
+    expect(option('/mcp/oauth/consent?transaction=abc')).toBe(false);
+    expect(option('/api/v1/auth/me')).toBe(true);
+  });
+
   it('leaves application routes, look-alike paths and the MCP protocol to the SPA', () => {
     for (const path of [
       '/projects',

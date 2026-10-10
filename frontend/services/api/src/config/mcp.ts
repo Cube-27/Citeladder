@@ -56,7 +56,8 @@ export const mcp = {
     read_scope: 'citeladder:read',
     server_version: '2.0.0',
     documentation_url: 'https://docs.citeladder.com/mcp/',
-    // The consent page links the website's legal pages; MCP itself lives on the API host.
+    // Fixed production pages, like documentation_url: consent links them from every
+    // environment, including local ones without a website origin.
     terms_url: 'https://citeladder.com/terms',
     privacy_url: 'https://citeladder.com/privacy',
     max_search_results: 20,

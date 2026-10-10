@@ -12,7 +12,11 @@ import { callerMessage } from './types.ts';
 import { getLogger } from '../logging.ts';
 import { parseUuid } from '../http/uuid.ts';
 import { appResource, appToolMetadata, readAppResource } from './app-resource.ts';
-import { MCP_API_HOST_PATHS, MCP_CONSENT_PATH, PUBLIC_OAUTH_PATHS } from './paths.ts';
+import {
+  MCP_API_HOST_PATHS,
+  MCP_CONSENT_PATH,
+  MCP_PUBLIC_OAUTH_PATHS,
+} from '@citeladder/contracts/route-ownership';
 const logger = getLogger('mcp');
 
 const VERSIONS = ['2026-07-28', '2025-11-25'];
@@ -69,7 +73,7 @@ export function registerMcpRoutes(app: Hono<AppEnv>, config: ServiceConfig, db: 
       const allowed = c.req.path === MCP_CONSENT_PATH ? settings.browserOrigin : settings.origin;
       const host = c.get('publicHost') ?? c.req.header('host') ?? new URL(c.req.url).host;
       const hostOrigin = origin(`${new URL(allowed).protocol}//${host}`);
-      const supplied = PUBLIC_OAUTH_PATHS.has(c.req.path) ? undefined : c.req.header('origin');
+      const supplied = MCP_PUBLIC_OAUTH_PATHS.has(c.req.path) ? undefined : c.req.header('origin');
       if (hostOrigin !== allowed || (supplied && origin(supplied) !== allowed))
         return c.text('Invalid MCP request origin.', 403);
       c.header('Cache-Control', 'no-store');

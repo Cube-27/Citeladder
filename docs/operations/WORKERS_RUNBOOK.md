@@ -348,7 +348,7 @@ Cloudflare Worker secrets. Do not paste secret values into a PR, issue or chat.
    `/api/v1/integrations/oauth/ga4/callback` on that host when enabled. Register
    Bing's app callback only if enabled. Check payment return origins if enabled;
    keep signed billing webhooks on `https://citeladder.com` and MCP identity on
-   the apex. Record provider-console acceptance; no provider is enabled just
+   `https://api.citeladder.com`. Record provider-console acceptance; no provider is enabled just
    for a release.
 5. **Release approval:** after CI is green, record immutable Worker/backend
    artifacts, DNS and config baseline, secret version references, callback

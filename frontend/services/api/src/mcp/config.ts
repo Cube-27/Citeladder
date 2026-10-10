@@ -61,7 +61,7 @@ export function loadMcpConfig(
     )
       throw new ConfigError('FRONTEND_URL must be an HTTP(S) origin for MCP consent');
     browserOrigin = browser.origin;
-    if (config.appEnv.toLowerCase() === 'production' && parsed.protocol !== 'https:')
+    if (config.appEnv.trim().toLowerCase() === 'production' && parsed.protocol !== 'https:')
       throw new ConfigError('PUBLIC_API_URL must use HTTPS in production');
     if (
       config.demo.enabled &&

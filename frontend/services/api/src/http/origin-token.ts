@@ -4,7 +4,7 @@ import type { MiddlewareHandler } from 'hono';
 import { policy, type ServiceConfig } from '../config.ts';
 import type { AppEnv } from '../context.ts';
 import { ApiError, notFound } from '../errors.ts';
-import { isMcpApiHostPath } from '../mcp/paths.ts';
+import { MCP_API_HOST_PATHS } from '@citeladder/contracts/route-ownership';
 
 function hostOf(origin: string): string {
   try {
@@ -31,7 +31,7 @@ export function isMachinePath(path: string): boolean {
 
 /** Only the API host serves machine routes and the MCP protocol, and only those. */
 function isApiHostPath(path: string): boolean {
-  return isMachinePath(path) || isMcpApiHostPath(path);
+  return isMachinePath(path) || MCP_API_HOST_PATHS.has(path);
 }
 
 /**

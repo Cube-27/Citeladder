@@ -1,4 +1,4 @@
-import { TYPESCRIPT_INGRESS_PATHS } from '@citeladder/contracts/route-ownership';
+import { MCP_CONSENT_PATH, TYPESCRIPT_INGRESS_PATHS } from '@citeladder/contracts/route-ownership';
 import type { ProxyOptions } from 'vite';
 import { resolveApiServiceOrigin } from '../../lib/config/api-service-origin.ts';
 
@@ -17,6 +17,10 @@ export function createServerProxy(
 ): Record<string, ProxyOptions> {
   const target = resolveApiServiceOrigin(apiServiceOrigin);
   return Object.fromEntries(
-    TYPESCRIPT_INGRESS_PATHS.map((path) => [proxyKey(path), { target, changeOrigin: true }]),
+    TYPESCRIPT_INGRESS_PATHS.map((path) => [
+      proxyKey(path),
+      // Consent checks it is served on the app origin, so it keeps the browser's Host.
+      { target, changeOrigin: path !== MCP_CONSENT_PATH },
+    ]),
   );
 }
