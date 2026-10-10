@@ -47,7 +47,7 @@ function newSecret(): { prefix: string; secret: string } {
   return { prefix, secret: prefix + body };
 }
 
-export function secretDigest(pepper: string, secret: string): Buffer {
+function secretDigest(pepper: string, secret: string): Buffer {
   return createHmac('sha256', pepper).update(secret, 'utf8').digest();
 }
 

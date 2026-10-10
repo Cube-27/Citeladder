@@ -29,14 +29,14 @@ curl https://api.citeladder.com/v1/projects \
 
 ## Scopes
 
-| Scope               | Lets the key                                                        |
-| ------------------- | ------------------------------------------------------------------- |
-| `read`              | Read projects, prompts, audits, visibility and every other report   |
-| `prompts:write`     | Create, edit and import prompts and topics; run prompt generation   |
-| `competitors:write` | Add, edit and remove competitors; accept competitor suggestions     |
-| `audits:run`        | Launch and cancel audits                                            |
-| `schedules:write`   | Create, change, pause and delete audit schedules                    |
-| `actions:write`     | Change an action's status and record an implementation              |
+| Scope               | Lets the key                                                      |
+| ------------------- | ----------------------------------------------------------------- |
+| `read`              | Read projects, prompts, audits, visibility and every other report |
+| `prompts:write`     | Create, edit and import prompts and topics; run prompt generation |
+| `competitors:write` | Add, edit and remove competitors; accept competitor suggestions   |
+| `audits:run`        | Launch and cancel audits                                          |
+| `schedules:write`   | Create, change, pause and delete audit schedules                  |
+| `actions:write`     | Change an action's status and record an implementation            |
 
 A key acts for the person who created it. If that person's role changes, the key changes with it: a key created by an Admin who becomes a Viewer can only read. If the person leaves the workspace, their keys are revoked.
 
@@ -82,7 +82,14 @@ Each key can make 600 requests a minute and each workspace 1,200. Over the limit
 Every error has the same shape:
 
 ```json
-{ "error": { "code": "invalid_api_key", "message": "A valid API key is required", "request_id": "…", "retryable": false } }
+{
+  "error": {
+    "code": "invalid_api_key",
+    "message": "A valid API key is required",
+    "request_id": "…",
+    "retryable": false
+  }
+}
 ```
 
 Branch on `code`. Common codes: `invalid_api_key` (401: missing, revoked or expired key), `api_access_not_in_plan` (403), `workspace_role_forbidden` (403: the key's scope or its creator's role does not allow the operation), `not_found` (404), `validation_error` (422), `idempotency_conflict` and `estimate_exceeds_limit` (409) and `rate_limited` (429). Quote `request_id` when you contact support.

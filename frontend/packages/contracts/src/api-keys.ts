@@ -4,7 +4,7 @@ import { z } from 'zod';
  * What a public API key may do. The creator's current workspace role still
  * bounds every call: a key never grants more than its creator holds now.
  */
-export const API_KEY_SCOPES = [
+const API_KEY_SCOPES = [
   'read',
   'prompts:write',
   'competitors:write',
@@ -15,7 +15,7 @@ export const API_KEY_SCOPES = [
 export const apiKeyScopeSchema = z.enum(API_KEY_SCOPES);
 export type ApiKeyScope = z.infer<typeof apiKeyScopeSchema>;
 
-export const apiKeyStateSchema = z.enum(['active', 'expired', 'revoked']);
+const apiKeyStateSchema = z.enum(['active', 'expired', 'revoked']);
 
 export const apiKeySchema = z.object({
   id: z.uuid(),
