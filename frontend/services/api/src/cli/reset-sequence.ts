@@ -11,8 +11,8 @@ type Execute = (
 
 const PROTECTED_DATABASES = new Set(['postgres', 'template0', 'template1']);
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
-export const DESTRUCTIVE_RESET_VARIABLE = 'RESET_CONFIRM_DESTRUCTIVE';
-export const DESTRUCTIVE_RESET_TOKEN = 'drop-and-recreate';
+const DESTRUCTIVE_RESET_VARIABLE = 'RESET_CONFIRM_DESTRUCTIVE';
+const DESTRUCTIVE_RESET_TOKEN = 'drop-and-recreate';
 
 /** A reset refusal whose message names no credential and is safe to print. */
 export class ResetRefusal extends Error {}

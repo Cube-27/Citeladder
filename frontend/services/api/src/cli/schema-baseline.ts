@@ -10,7 +10,7 @@ import { readFileSync } from 'node:fs';
 
 import type pg from 'pg';
 
-export const BASELINE_VERSION = '0001_baseline';
+const BASELINE_VERSION = '0001_baseline';
 const BASELINE_FILE = new URL(`../../migrations/${BASELINE_VERSION}.sql`, import.meta.url);
 const LOCK_KEY = createHash('sha256')
   .update('citeladder:schema-baseline')
@@ -26,7 +26,7 @@ export function readBaseline(): string {
 }
 
 /** Line endings are not schema: a CRLF checkout records the same checksum. */
-export function baselineChecksum(sqlText: string): string {
+function baselineChecksum(sqlText: string): string {
   return createHash('sha256').update(sqlText.replaceAll('\r\n', '\n')).digest('hex');
 }
 

@@ -14,8 +14,10 @@ function migrationClient(databaseUrl: string) {
       databaseUrl,
       database: databaseSettings(process.env),
     }),
-    // DDL for an empty database: no request-path statement or query bound applies.
+    // DDL for an empty database: no request-path statement or query bound applies,
+    // and a concurrent migrate waits on the advisory lock instead of failing.
     statement_timeout: 0,
+    lock_timeout: 0,
     query_timeout: undefined,
   });
 }
