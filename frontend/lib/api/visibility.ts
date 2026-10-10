@@ -30,6 +30,7 @@ import {
   visibilitySchema,
 } from '@citeladder/contracts/visibility';
 import { surfaceRatesSchema } from '@citeladder/contracts/audits';
+import { perceptionResponseSchema } from '@citeladder/contracts/visibility-perception';
 import { visibilityTrendListSchema } from '@citeladder/contracts/visibility-trends';
 import { definedQuery, withQuery } from './shared';
 import type {
@@ -108,6 +109,18 @@ export const INITIAL_VISIBILITY_PARAMS: ProjectVisibilityParams = {
 };
 
 export const visibilityApi = {
+  /** Answer perception for the selected runs: net sentiment with its coverage, themes and quotes. */
+  getPerception: async (
+    projectId: string,
+    params: { audit_id?: string; audit_ids?: string[]; engine?: string; cohort?: string },
+    options?: ApiRequestOptions,
+  ) => {
+    const result = await apiClient.get(
+      withQuery(`/projects/${projectId}/visibility/perception`, definedQuery(params)),
+      options,
+    );
+    return strictValidate(perceptionResponseSchema, result, 'visibility.getPerception');
+  },
   getFanoutSummary: async (
     projectId: string,
     params: {

@@ -41,7 +41,10 @@ export type SourceScope = {
  * chances for a chart to describe a different selection from the table under
  * it — and nothing on the screen would say so.
  */
-function selectionParams(filters: SourceFilters, queries: SourceQueries) {
+export function selectionParams(
+  filters: Pick<SourceFilters, 'engine' | 'cohort'>,
+  queries: SourceQueries,
+) {
   return {
     audit_id: queries.selectedRunIds ? undefined : set(queries.activeRunId),
     audit_ids: queries.selectedRunIds,

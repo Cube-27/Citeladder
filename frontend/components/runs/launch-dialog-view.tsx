@@ -332,6 +332,10 @@ export function LaunchDialogView({
             </span>
           </div>
         ) : null}
+        <p className="type-caption text-muted">
+          Answers that mention you or a competitor are also classified for sentiment. No credits are
+          used.
+        </p>
       </div>
     </Dialog>
   );

@@ -6,8 +6,7 @@ import { FIXTURE_PROJECT, fixtureProjectPath, stubAuthedShell } from './helpers/
  *
  * All backend calls are stubbed at the network layer so the spec runs without a
  * live backend (mirrors `runs.spec.ts`). It asserts the tab IA — Trends,
- * Sources, Query fanouts (no Overview /
- * Sources / Topics / Sentiment) — the WAI-ARIA tablist (pointer + keyboard navigation, one panel at
+ * Sources, Perception, Query fanouts (no Overview / Topics) — the WAI-ARIA tablist (pointer + keyboard navigation, one panel at
  * a time, `?tab=` URL sync), shared-filter persistence across tabs, the evidence
  * populated / empty / error states, the three query-fanout states, and a
  * narrow-viewport (mobile) layout check.
@@ -250,6 +249,50 @@ function fanoutStatesResponse() {
   };
 }
 
+/** A run whose answers name the brand but are not classified yet. */
+function pendingPerception() {
+  const score = {
+    positive: 0,
+    neutral: 0,
+    negative: 0,
+    mixed: 0,
+    classified: 0,
+    positive_share: null,
+    negative_share: null,
+    net_sentiment: null,
+  };
+  const coverage = {
+    mentions: 2,
+    classified: 0,
+    pending: 2,
+    not_assessable: 0,
+    low_confidence: 0,
+    unavailable: [],
+  };
+  return {
+    state: 'pending',
+    reason: null,
+    source_audit_ids: [AUDIT_LATEST],
+    brand: { name: 'Acme', is_brand: true, score, coverage },
+    coverage,
+    entities: [],
+    engines: [],
+    topics: [],
+    prompts: [],
+    themes: [],
+    negative_quotes: [],
+    drivers: [],
+    recommended: {
+      mentioned: 2,
+      recommended: 0,
+      recommended_against: 0,
+      rate: 0,
+      limitation: 'English phrasing only.',
+    },
+    trend: [],
+  };
+}
+
 type RouteBodies = {
   visibility?: unknown;
   visibilityStatus?: number;
@@ -257,6 +300,7 @@ type RouteBodies = {
   trendsStatus?: number;
   evidence?: unknown;
   evidenceStatus?: number;
+  perception?: unknown;
 };
 
 /**
@@ -290,6 +334,9 @@ async function setup(page: Page, bodies: RouteBodies = {}) {
             },
           },
     ),
+  );
+  await page.route(/\/api\/v1\/projects\/[^/]+\/visibility\/perception(\?.*)?$/, (route) =>
+    route.fulfill({ json: bodies.perception ?? pendingPerception() }),
   );
   await page.route(/\/api\/v1\/projects\/[^/]+\/visibility\/trends(\?.*)?$/, (route) =>
     route.fulfill(
@@ -375,6 +422,12 @@ test('pointer navigation switches panels and syncs ?tab=', async ({ page, baseUR
   await expect(page.getByRole('radio', { name: 'URLs' })).toBeVisible();
   await expect(page.getByRole('tabpanel')).toHaveCount(1);
 
+  // Perception — how answers portray the brand, or why it cannot be shown yet.
+  await page.getByRole('tab', { name: 'Perception', exact: true }).click();
+  await expect(page).toHaveURL(/[?&]tab=perception/);
+  await expect(page.getByRole('heading', { name: 'Classifying answers…' })).toBeVisible();
+  await expect(page.getByRole('tabpanel')).toHaveCount(1);
+
   // Query fanouts — reuses the shared evidence cache.
   await page.getByRole('tab', { name: 'Query fanouts' }).click();
   await expect(page).toHaveURL(/[?&]tab=query-fanout/);
@@ -401,7 +454,7 @@ test('mobile viewport keeps the visibility tabs and one active panel usable', as
   await expect(selectedTab).toBeVisible();
 
   // Every retained tab is still present in the one row.
-  await expect(tablist.getByRole('tab')).toHaveCount(3);
+  await expect(tablist.getByRole('tab')).toHaveCount(4);
 
   // Inactive panels are NOT stacked — still exactly one panel in the DOM.
   await expect(page.getByRole('tabpanel')).toHaveCount(1);

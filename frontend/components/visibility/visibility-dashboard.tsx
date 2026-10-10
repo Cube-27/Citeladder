@@ -7,6 +7,7 @@ import { PageLoading } from '@/components/layout/page-loading';
 import { VisibilityEmptyState } from '@/components/visibility/empty-state';
 import { FanoutEvidence } from '@/components/visibility/fanout-evidence';
 import { VisibilitySources } from '@/components/visibility/visibility-sources';
+import { VisibilityPerception } from '@/components/visibility/visibility-perception';
 import { VisibilityActions, VisibilityToolbar } from '@/components/visibility/visibility-toolbar';
 import { VisibilityTrends } from '@/components/visibility/visibility-trends';
 import { TabPanel, TabsBar, TabsRoot } from '@/components/ui/tabs';
@@ -170,6 +171,7 @@ function DashboardPanel({
       />
     ),
     sources: <VisibilitySources filters={filters} queries={queries} />,
+    perception: <VisibilityPerception filters={filters} queries={queries} />,
     'query-fanout': (
       <FanoutEvidence
         query={queries.evidenceQuery}

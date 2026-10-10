@@ -15,6 +15,8 @@ import { classificationBadgeValue, classificationLabel } from '@/lib/runs/status
 import { cn } from '@/lib/utils';
 
 import { ContentMarkdown } from '@/lib/markdown/markdown';
+import type { Highlight } from '@/lib/markdown/highlight';
+import { EvidencePerception, perceptionHighlights } from '@/components/runs/evidence-perception';
 import { panelClasses } from '@/components/ui/panel';
 import { ledgerClasses } from '@/components/ui/workspace';
 
@@ -186,10 +188,12 @@ function EvidenceAnswer({
   answerText,
   isSearchSurface,
   outcome,
+  highlights,
 }: Readonly<{
   answerText?: string | null;
   isSearchSurface?: boolean;
   outcome?: string;
+  highlights: readonly Highlight[];
 }>) {
   const trimmed = answerText?.trim();
   // An observed surface with no text is two completely different things, and
@@ -202,7 +206,11 @@ function EvidenceAnswer({
     <section className="grid gap-2">
       <Label>{isSearchSurface ? 'AI Overview' : 'Engine response'}</Label>
       <div className={panelClasses({ tone: 'well', pad: 'compact' }, 'min-w-0 overflow-hidden')}>
-        <EvidenceAnswerBody text={trimmed} measuredAbsence={measuredAbsence} />
+        <EvidenceAnswerBody
+          text={trimmed}
+          measuredAbsence={measuredAbsence}
+          highlights={highlights}
+        />
       </div>
     </section>
   );
@@ -218,9 +226,16 @@ function EvidenceAnswer({
 function EvidenceAnswerBody({
   text,
   measuredAbsence,
-}: Readonly<{ text?: string; measuredAbsence: boolean }>) {
+  highlights,
+}: Readonly<{ text?: string; measuredAbsence: boolean; highlights: readonly Highlight[] }>) {
   if (text) {
-    return <ContentMarkdown markdown={normalizeEvidenceMarkdown(text)} density="compact" />;
+    return (
+      <ContentMarkdown
+        markdown={normalizeEvidenceMarkdown(text)}
+        density="compact"
+        highlights={highlights}
+      />
+    );
   }
   if (measuredAbsence) {
     return <span className="type-body">No AI Overview was shown for this search.</span>;
@@ -381,7 +396,13 @@ export function EvidenceCard({
         repetition={repetition}
       />
       <EvidenceMetrics evidence={evidence} />
-      <EvidenceAnswer answerText={answerText} isSearchSurface={isSearchSurface} outcome={outcome} />
+      <EvidenceAnswer
+        answerText={answerText}
+        isSearchSurface={isSearchSurface}
+        outcome={outcome}
+        highlights={perceptionHighlights(evidence.perception)}
+      />
+      <EvidencePerception perception={evidence.perception} />
       {/* Only an observed surface has one, and its absence is not a state to
           render: an LLM execution has no overview to report on. */}
       {evidence.search_surface ? <SurfaceEvidence evidence={evidence.search_surface} /> : null}

@@ -14,13 +14,20 @@ import remarkGfm from 'remark-gfm';
 
 import { cn } from '@/lib/utils';
 
+import { highlightPlugin, type Highlight } from './highlight';
 import { safeUrlTransform } from './safe-url';
 
 /** Render untrusted Markdown safely (GFM tables/lists, no raw HTML). */
 export function ContentMarkdown({
   markdown,
   density = 'default',
-}: Readonly<{ markdown: string; density?: 'default' | 'compact' }>) {
+  highlights = [],
+}: Readonly<{
+  markdown: string;
+  density?: 'default' | 'compact';
+  /** Exact phrases to mark where they appear whole inside one text run. */
+  highlights?: readonly Highlight[];
+}>) {
   const content = markdown ?? '';
   return (
     // Generated Markdown can contain unbreakable URLs, code, and wide tables.
@@ -34,6 +41,7 @@ export function ContentMarkdown({
     >
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
+        rehypePlugins={highlights.length ? [highlightPlugin(highlights)] : []}
         urlTransform={safeUrlTransform}
         components={{
           // Generated headings begin below the route-owned page title. The raw

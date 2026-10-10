@@ -81,6 +81,7 @@ const evidence = {
   citation_count: 1,
   search_used: true,
   search_query_count: 1,
+  perception: [],
   avg_position: null,
   score: { visibility: 1 },
   citations: [
