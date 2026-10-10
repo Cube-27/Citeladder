@@ -13,8 +13,8 @@ import reference from '../config/dataforseo-locations.json' with { type: 'json' 
 
 export const SEARCH_SURFACES = ['google_ai_overview', 'chatgpt_search', 'gemini_consumer'] as const;
 export type SearchSurface = (typeof SEARCH_SURFACES)[number];
-export const isSearchSurface = (value: string): value is SearchSurface =>
-  SEARCH_SURFACES.some((surface) => surface === value);
+const surfaces: readonly string[] = SEARCH_SURFACES;
+export const isSearchSurface = (value: string): value is SearchSurface => surfaces.includes(value);
 
 /** The DataForSEO language for a market language tag: its primary subtag. */
 export const searchLanguageOf = (language: string) => language.trim().split('-')[0]!.toLowerCase();

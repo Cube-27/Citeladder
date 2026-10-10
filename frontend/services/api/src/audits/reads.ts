@@ -26,14 +26,13 @@ export async function authorizedAudit(db: Database, workspaceId: string, auditId
   if (!audit) throw notFound('Audit');
   return audit;
 }
-/** The market a run froze at admission; its id stays on the row for filtering. */
+/** The market a run measured: its row's id and the country and language it froze. */
 function frozenMarket(audit: { market_id: string | null; configuration: unknown }) {
   const config = record(audit.configuration);
-  const market = record(config.market);
   return {
     id: audit.market_id,
-    country_code: String(market.country_code ?? config.country_code ?? ''),
-    language_code: String(market.language_code ?? config.language_code ?? ''),
+    country_code: typeof config.country_code === 'string' ? config.country_code : '',
+    language_code: typeof config.language_code === 'string' ? config.language_code : '',
   };
 }
 async function auditResponses(db: Database, audits: Awaited<ReturnType<typeof authorizedAudit>>[]) {

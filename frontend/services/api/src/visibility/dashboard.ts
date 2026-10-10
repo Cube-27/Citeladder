@@ -55,7 +55,6 @@ import {
 import {
   AnalysisNotFoundError,
   authorizedSelection,
-  marketOfRun,
   TrendQueryError,
   validateCohort,
   validateEngineAndRange,
@@ -89,9 +88,10 @@ export async function getVisibility(
   if (query.selectionMode === 'run' && query.auditId === null) {
     throw new TrendQueryError('A specific run selection requires audit_id');
   }
-  const scope = await runScope(db, requested, query.auditId);
-  if (query.selectionMode === 'range') return rangeVisibility(db, scope, query);
-  const run = await selectedRun(db, scope, query.auditId);
+  if (query.selectionMode === 'range') return rangeVisibility(db, requested, query);
+  const run = await selectedRun(db, requested, query.auditId);
+  // A named run is read in its own market: comparisons stay inside it.
+  const scope = { ...requested, marketId: run.marketId };
   const view = await runView(db, scope, run, query);
   const comparison = await compareSelection(
     db,
@@ -125,7 +125,6 @@ export async function getRunVisibility(
   cohort: string,
 ): Promise<VisibilityResponse & { rankings: RankingRow[] }> {
   validateCohort(cohort);
-  scope = await runScope(db, scope, auditId);
   const run = await selectedRun(db, scope, auditId);
   return (await runView(db, scope, run, { auditId, logicalEngine: null, cohort })).response;
 }
@@ -138,12 +137,6 @@ const brandRuns = (db: Database, scope: RunScope) =>
     .where('workspace_id', '=', scope.workspaceId)
     .where('project_id', '=', scope.projectId)
     .where('audit_scope', '=', visibility.brand_audit_scope);
-
-/** A named run is read in its own market; otherwise the scope's market. */
-async function runScope(db: Database, scope: RunScope, auditId: string | null): Promise<RunScope> {
-  if (auditId === null) return scope;
-  return { ...scope, marketId: await marketOfRun(db, scope, auditId) };
-}
 
 /** The latest dashboard-ready brand run: what "Latest" means on every visibility read. */
 async function latestDashboardRunId(db: Database, scope: RunScope): Promise<string> {
@@ -174,10 +167,16 @@ async function selectedRun(
   db: Database,
   scope: RunScope,
   auditId: string | null,
-): Promise<SelectedRun> {
+): Promise<SelectedRun & { marketId: string | null }> {
   const selectedId = auditId ?? (await latestDashboardRunId(db, scope));
   const audit = await brandRuns(db, scope)
-    .select(['id', 'status', 'configuration', utcText(sql.ref('completed_at')).as('completed_at')])
+    .select([
+      'id',
+      'status',
+      'configuration',
+      'market_id',
+      utcText(sql.ref('completed_at')).as('completed_at'),
+    ])
     .where('id', '=', selectedId)
     .executeTakeFirst();
   if (audit === undefined) throw new AnalysisNotFoundError('Audit not found');
@@ -207,6 +206,7 @@ async function selectedRun(
     snapshotCreatedAt: snapshot.created_at,
     configuration: audit.configuration,
     completedAt: audit.completed_at,
+    marketId: audit.market_id,
     provenance: modelProvenanceFor(routes.get(audit.id) ?? [], audit.configuration),
   };
 }

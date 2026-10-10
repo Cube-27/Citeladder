@@ -331,11 +331,6 @@ export async function prepareAudit(
     ),
     country_code: project.country_code,
     language_code: project.language_code,
-    market: {
-      id: market.id,
-      country_code: market.country_code,
-      language_code: market.language_code,
-    },
     not_applicable_engines: notApplicable,
     audit_scope: input.audit_scope,
     trigger,

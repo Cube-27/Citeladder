@@ -30,11 +30,12 @@ const login = String(resolveSettingSpec(spec.api_login)).trim();
 const password = String(resolveSettingSpec(spec.api_password));
 if (!login || !password)
   throw new Error('Set DATAFORSEO_API_LOGIN and DATAFORSEO_API_PASSWORD to fetch the lists');
-const base = String(resolveSettingSpec(providerPolicy.dataforseo.base_url)).replace(/\/+$/u, '');
-const authorization = `Basic ${Buffer.from(`${login}:${password}`).toString('base64')}`;
+const base = String(resolveSettingSpec(providerPolicy.dataforseo.base_url));
+const credentials = Buffer.from(`${login}:${password}`).toString('base64');
+const authorization = `Basic ${credentials}`;
 
 async function fetchList(path: string): Promise<unknown> {
-  const response = await fetch(`${base}${path}`, { headers: { authorization } });
+  const response = await fetch(new URL(path, base), { headers: { authorization } });
   if (!response.ok) throw new Error(`${path} answered HTTP ${response.status}`);
   return response.json();
 }

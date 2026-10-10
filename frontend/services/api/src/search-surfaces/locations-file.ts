@@ -6,6 +6,8 @@
 import { MARKET_COUNTRIES, MARKET_LANGUAGES } from '@citeladder/contracts/markets';
 import { z } from 'zod';
 
+import { compareText } from '../text-order.ts';
+
 import {
   locationsFileSchema,
   SEARCH_SURFACES,
@@ -46,7 +48,7 @@ export function surfaceLists(locations: unknown, languages: unknown): SurfaceLis
 
 const candidateLanguages = [
   ...new Set(MARKET_LANGUAGES.map(({ value }) => searchLanguageOf(value))),
-].sort();
+].sort(compareText);
 
 function countryCode(lists: SurfaceLists, country: string): number | null {
   const row = lists.locations.find(
@@ -67,7 +69,7 @@ export function buildLocationsFile(
 ): LocationsFile {
   const countries: LocationsFile['countries'] = {};
   for (const { value: country } of [...MARKET_COUNTRIES].sort((a, b) =>
-    a.value.localeCompare(b.value),
+    compareText(a.value, b.value),
   )) {
     const entry: LocationsFile['countries'][string] = { location_code: 0 };
     for (const surface of SEARCH_SURFACES) {
@@ -96,6 +98,6 @@ export function buildLocationsFile(
 export function serializeLocationsFile(file: LocationsFile): string {
   return `${JSON.stringify(file, null, 2).replace(
     /\[\n\s+("[^"\n]*"(?:,\n\s+"[^"\n]*")*)\n\s+\]/gu,
-    (_, items: string) => `[${items.split(/,\n\s+/u).join(', ')}]`,
+    (_, items: string) => `[${items.replaceAll(/,\n\s+/gu, ', ')}]`,
   )}\n`;
 }

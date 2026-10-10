@@ -27,6 +27,7 @@ import { compareText } from '../text-order.ts';
 import {
   authorizedSelection,
   evidenceScope,
+  readsMarket,
   selectedCohorts,
   TrendQueryError,
   type RunSelection,
@@ -148,7 +149,7 @@ export async function getVisibilityEvidence(
   if (selection.auditId) promptScope = promptScope.where('audit.id', '=', selection.auditId);
   if (selection.auditIds?.length)
     promptScope = promptScope.where('audit.id', 'in', selection.auditIds);
-  if (!selection.auditId && !selection.auditIds?.length)
+  if (readsMarket(selection))
     promptScope = promptScope.where('audit.market_id', 'is not distinct from', selection.marketId);
   if (selection.fromAt)
     promptScope = promptScope.where(

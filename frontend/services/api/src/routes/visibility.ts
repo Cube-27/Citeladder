@@ -114,6 +114,13 @@ type SelectionQuery = {
   to_at: RunSelection['toAt'];
 };
 
+/** A project's runs in the requested market (omitted: the default). */
+const marketScope = (workspaceId: string, projectId: string, marketId: string | null) => ({
+  workspaceId,
+  projectId,
+  marketId,
+});
+
 function runSelection(workspaceId: string, projectId: string, query: SelectionQuery): RunSelection {
   return {
     workspaceId,
@@ -278,24 +285,16 @@ export const visibilityRoutes = [
       await requireProject(db, workspace, path.project_id);
       return selectionErrors(
         () =>
-          getVisibility(
-            db,
-            {
-              workspaceId: workspace.workspaceId,
-              projectId: path.project_id,
-              marketId: query.market,
-            },
-            {
-              auditId: query.audit_id,
-              logicalEngine: query.engine,
-              baselineId: query.baseline_id,
-              selectionMode: query.selection_mode,
-              fromAt: query.from_at,
-              toAt: query.to_at,
-              configurationKey: query.configuration_key,
-              cohort: query.cohort,
-            },
-          ),
+          getVisibility(db, marketScope(workspace.workspaceId, path.project_id, query.market), {
+            auditId: query.audit_id,
+            logicalEngine: query.engine,
+            baselineId: query.baseline_id,
+            selectionMode: query.selection_mode,
+            fromAt: query.from_at,
+            toAt: query.to_at,
+            configurationKey: query.configuration_key,
+            cohort: query.cohort,
+          }),
         () => new ApiError(404, 'No visibility metrics available for the selected measurement'),
       );
     },
@@ -319,22 +318,14 @@ export const visibilityRoutes = [
       const workspace = c.get('workspace');
       await requireProject(db, workspace, path.project_id);
       return selectionErrors(() =>
-        getPromptMetrics(
-          db,
-          {
-            workspaceId: workspace.workspaceId,
-            projectId: path.project_id,
-            marketId: query.market,
-          },
-          {
-            auditId: query.audit_id,
-            auditIds: query.audit_ids,
-            baselineAuditIds: query.baseline_audit_ids,
-            logicalEngine: query.engine,
-            baselineId: query.baseline_id,
-            cohort: query.cohort,
-          },
-        ),
+        getPromptMetrics(db, marketScope(workspace.workspaceId, path.project_id, query.market), {
+          auditId: query.audit_id,
+          auditIds: query.audit_ids,
+          baselineAuditIds: query.baseline_audit_ids,
+          logicalEngine: query.engine,
+          baselineId: query.baseline_id,
+          cohort: query.cohort,
+        }),
       );
     },
   }),
@@ -362,23 +353,15 @@ export const visibilityRoutes = [
       const workspace = c.get('workspace');
       await requireProject(db, workspace, path.project_id);
       return selectionErrors(() =>
-        getVisibilityTrends(
-          db,
-          {
-            workspaceId: workspace.workspaceId,
-            projectId: path.project_id,
-            marketId: query.market,
-          },
-          {
-            logicalEngine: query.engine,
-            fromAt: query.from_at,
-            toAt: query.to_at,
-            granularity: query.granularity,
-            transportModel: query.transport_model,
-            retrievalEnabled: query.retrieval_enabled,
-            cohort: query.cohort,
-          },
-        ),
+        getVisibilityTrends(db, marketScope(workspace.workspaceId, path.project_id, query.market), {
+          logicalEngine: query.engine,
+          fromAt: query.from_at,
+          toAt: query.to_at,
+          granularity: query.granularity,
+          transportModel: query.transport_model,
+          retrievalEnabled: query.retrieval_enabled,
+          cohort: query.cohort,
+        }),
       );
     },
   }),

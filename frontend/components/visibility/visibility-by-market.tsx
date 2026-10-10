@@ -19,9 +19,7 @@ import {
 } from '@/components/ui/table';
 import { MissingValue, UnavailableValue } from '@/components/ui/unavailable-value';
 import { formatRate, measured } from '@/lib/visibility/dashboard';
-
-const sentiment = (value: number | null) =>
-  value === null ? null : `${value > 0 ? '+' : ''}${Math.round(value)}`;
+import { formatNet } from '@/lib/visibility/perception';
 
 /**
  * Each market's latest run side by side. Markets are measured apart and never
@@ -102,7 +100,7 @@ export function VisibilityByMarket({
                         />
                       </TableCell>
                       <TableCell numeric>
-                        {sentiment(row.net_sentiment) ?? (
+                        {formatNet(row.net_sentiment) ?? (
                           <MissingValue reason="No classified mentions" />
                         )}
                       </TableCell>

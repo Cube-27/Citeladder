@@ -68,8 +68,8 @@ export async function admitAudit(
   funded: boolean,
   trigger: string,
   runtime: AuditRuntime,
-  at: Date,
-  launchId: string | null = null,
+  /** When admission happens, and the launch the audit belongs to. */
+  { at, launchId }: { at: Date; launchId: string | null },
 ) {
   if (!funded && trigger !== 'manual') return null;
   const account = await db

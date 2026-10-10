@@ -79,22 +79,9 @@ export function selectedCohorts(cohort: string): readonly string[] {
   return cohort === visibility.core_cohort ? visibility.organic_cohorts : [cohort];
 }
 
-/** The market a project's run measured; an unknown run is not found. */
-export async function marketOfRun(
-  db: Database,
-  scope: { workspaceId: string; projectId: string },
-  auditId: string,
-): Promise<string | null> {
-  const run = await db
-    .selectFrom('audits')
-    .select('market_id')
-    .where('workspace_id', '=', scope.workspaceId)
-    .where('project_id', '=', scope.projectId)
-    .where('id', '=', auditId)
-    .executeTakeFirst();
-  if (run === undefined) throw new AnalysisNotFoundError('Audit not found');
-  return run.market_id;
-}
+/** Without named runs a selection reads its market; named runs bring their own. */
+export const readsMarket = (selection: Pick<RunSelection, 'auditId' | 'auditIds'>) =>
+  selection.auditId === null && !selection.auditIds?.length;
 
 /**
  * Every run in `auditIds` belongs to the project, is dashboard-ready and
@@ -174,7 +161,7 @@ export function evidenceScope(db: Database, selection: RunSelection) {
     .where('ra.cohort', 'in', cohorts);
   if (selection.auditId !== null) query = query.where('ra.audit_id', '=', selection.auditId);
   if (selection.auditIds?.length) query = query.where('ra.audit_id', 'in', selection.auditIds);
-  if (selection.auditId === null && !selection.auditIds?.length)
+  if (readsMarket(selection))
     query = query.where('audit.market_id', 'is not distinct from', selection.marketId);
   if (selection.logicalEngine !== null) {
     query = query.where('ra.logical_engine', '=', selection.logicalEngine);

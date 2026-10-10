@@ -1,6 +1,6 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { X } from 'lucide-react';
 import { useState } from 'react';
 
@@ -14,6 +14,7 @@ import { ledgerClasses } from '@/components/ui/workspace';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { projectsApi } from '@/lib/api/projects';
 import { queryKeys } from '@/lib/api/query-keys';
+import { useProjectMarkets } from '@/lib/project/use-project-markets';
 
 /**
  * Additional measurement markets. Each one is measured as its own run and
@@ -27,10 +28,7 @@ export function ProjectMarkets({
 }: Readonly<{ projectId: string; workspaceId: string }>) {
   const queryClient = useQueryClient();
   const key = queryKeys.projects.markets(projectId);
-  const markets = useQuery({
-    queryKey: key,
-    queryFn: ({ signal }) => projectsApi.listMarkets(projectId, { signal, workspaceId }),
-  });
+  const markets = useProjectMarkets(projectId, workspaceId);
   const [country, setCountry] = useState('');
   const [language, setLanguage] = useState('');
   const add = useMutation({
@@ -54,7 +52,7 @@ export function ProjectMarkets({
       void queryClient.invalidateQueries({ queryKey: queryKeys.runs.all });
     },
   });
-  const extra = (markets.data ?? []).filter((market) => !market.is_default);
+  const extra = markets.filter((market) => !market.is_default);
   const failed = add.error ?? remove.error;
   return (
     <section aria-label="Additional markets" className="grid gap-2">

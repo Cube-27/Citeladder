@@ -101,7 +101,7 @@ async function createMarketAudit(
       .where('project_id', '=', input.project_id)
       .where('schedule_id', '=', launch.scheduleId)
       .where('scheduled_for', '=', launch.scheduledFor)
-      .where('market_id', measured.market.id === null ? 'is' : '=', measured.market.id)
+      .where('market_id', 'is not distinct from', measured.market.id)
       .executeTakeFirst();
     if (prior) return prior.id;
   } else if (launch.scheduledFor)
@@ -142,8 +142,7 @@ async function createMarketAudit(
     input.credential_mode === 'funded',
     trigger,
     runtime,
-    at,
-    measured.launchId,
+    { at, launchId: measured.launchId },
   );
   const id = randomUUID();
   await trx

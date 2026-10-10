@@ -4,7 +4,7 @@ import { logicalEngineSchema } from '@citeladder/contracts/providers';
 import type { Database } from '../db/database.ts';
 import { ApiError } from '../errors.ts';
 import { auditPolicy, auditRuntime, type AuditRuntime } from './config.ts';
-import { providerPolicy, type Engine } from '../providers/config.ts';
+import { providerPolicy } from '../providers/config.ts';
 import { resolveMarkets } from '../projects/markets.ts';
 import { searchContext } from '../search-surfaces/locations.ts';
 import { marketEngines } from './freeze.ts';
@@ -73,21 +73,25 @@ export async function estimateAudit(
       marketEngines(requested, market, searchContext(market.country_code, market.language_code))
         .engines,
   );
-  const marketCount = (engine: Engine) => measured.filter((list) => list.includes(engine)).length;
+  const promptTokens = prompts.reduce((sum, prompt) => sum + estimateTokens(prompt.text), 0);
   const engines = requested
-    .filter((engine) => marketCount(engine) > 0)
-    .map((engine) => {
+    .map((engine) => ({
+      engine,
+      marketCount: measured.filter((list) => list.includes(engine)).length,
+    }))
+    .filter(({ marketCount }) => marketCount > 0)
+    .map(({ engine, marketCount }) => {
       const route = providerPolicy.routes[engine],
-        runs = marketCount(engine) * repetitions,
+        runs = marketCount * repetitions,
         executions = prompts.length * runs,
-        inputTokens = prompts.reduce((sum, prompt) => sum + estimateTokens(prompt.text), 0) * runs;
+        inputTokens = promptTokens * runs;
       const common = {
         logical_engine: engine,
         transport_provider: route.transport_provider,
         transport_model: route.transport_model,
         prompt_count: prompts.length,
         repetition_count: repetitions,
-        market_count: marketCount(engine),
+        market_count: marketCount,
         execution_count: executions,
         pricing_version: costPolicy.pricing_version,
       };

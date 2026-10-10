@@ -14,6 +14,7 @@ import {
   type ProjectMarket,
   type projectMarketCreateSchema,
 } from '@citeladder/contracts/markets';
+import { sql } from 'kysely';
 import type { z } from 'zod';
 
 import type { Database } from '../db/database.ts';
@@ -117,24 +118,20 @@ export function deleteMarket(db: Database, scope: ProjectScope, marketId: string
       .returning('id')
       .executeTakeFirst();
     if (!deleted) throw notFound('Market');
-    const schedules = await trx
-      .selectFrom('audit_schedules')
-      .select(['id', 'market_ids'])
+    const removed = JSON.stringify(marketId);
+    await trx
+      .updateTable('audit_schedules')
+      .set({
+        market_ids: sql<string>`coalesce(
+          (select jsonb_agg(kept) from jsonb_array_elements(market_ids) as kept
+            where kept <> ${removed}::jsonb),
+          '[null]'::jsonb)`,
+        updated_at: new Date(),
+      })
       .where('workspace_id', '=', scope.workspaceId)
       .where('project_id', '=', scope.projectId)
-      .forUpdate()
+      .where(sql<boolean>`market_ids @> jsonb_build_array(${marketId}::text)`)
       .execute();
-    for (const schedule of schedules) {
-      const ids = marketIds(schedule.market_ids);
-      if (!ids.includes(marketId)) continue;
-      const kept = ids.filter((id) => id !== marketId);
-      await trx
-        .updateTable('audit_schedules')
-        .set({ market_ids: JSON.stringify(kept.length ? kept : [null]), updated_at: new Date() })
-        .where('workspace_id', '=', scope.workspaceId)
-        .where('id', '=', schedule.id)
-        .execute();
-    }
   });
 }
 
