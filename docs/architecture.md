@@ -85,7 +85,7 @@ OpenAPI operation declares one family from the manifest in
 
 The schema is one SQL file, `frontend/services/api/migrations/0001_baseline.sql`,
 applied by the TypeScript migrate CLI (`src/cli/migrate.ts`) from the API
-image; the repository contains no Python. Product operators, login/seeding and
+image. Product operators, login/seeding and
 acquisition controls run under their native owners and use the same PostgreSQL
 authorization, provenance and lock contracts. TypeScript tests against real
 PostgreSQL cover native owners, schema constraints and the migrate CLI.

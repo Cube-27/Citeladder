@@ -1,4 +1,4 @@
-/** Native change comparison bounds and processing identity. */
+/** Change comparison bounds and processing identity. */
 const config = {
   analyzer_version: 'site-change-v2',
   max_pages: 5000,

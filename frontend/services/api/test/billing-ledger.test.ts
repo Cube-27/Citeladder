@@ -232,7 +232,7 @@ describe('shared consumable ledger', () => {
       ),
     ).rejects.toThrow('subject_not_found');
   });
-  it('replays reservations and settled attempts written by the Python audit owner', async () => {
+  it('replays reservations and settled attempts recorded by an earlier audit run', async () => {
     const t = await tenant(3);
     if (t.subject.kind !== 'audit') throw new Error('Expected audit subject');
     const key = randomUUID();

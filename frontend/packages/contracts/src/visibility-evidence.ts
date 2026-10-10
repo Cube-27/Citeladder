@@ -15,7 +15,7 @@ const uuid = () => z.uuid();
 // Three-state query-fanout availability for one execution (backend
 // `VisibilityFanoutState`): `queries_available` (≥1 stored event has non-blank
 // query text), `count_only` (search used / count positive but no query text —
-// e.g. a legacy count-only row), `no_search` (neither signal present).
+// e.g. a count-only row), `no_search` (neither signal present).
 const visibilityFanoutStateSchema = z.enum([
   'queries_available',
   'count_only',
@@ -49,7 +49,7 @@ const visibilityMentionEvidenceSchema = responseObject({
 // One execution's persisted mention/citation + query-fanout evidence (backend
 // `VisibilityExecutionEvidence`). `prompt_id` is nullable so a deleted source
 // prompt stays readable via its frozen `prompt_text`; `completed_at` is
-// nullable for an incomplete/legacy row.
+// nullable for an incomplete row.
 export const visibilityExecutionEvidenceSchema = responseObject({
   audit_id: uuid(),
   task_id: uuid(),

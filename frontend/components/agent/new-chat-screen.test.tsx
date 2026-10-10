@@ -287,7 +287,7 @@ describe('NewChatScreen', () => {
     mswServer.use(
       ...baseHandlers(),
       http.get(`/api/v1/actions/${action}`, () =>
-        HttpResponse.json({ detail: 'Action not found' }, { status: 404 }),
+        HttpResponse.json({ error: { message: 'Action not found' } }, { status: 404 }),
       ),
       http.post(`/api/v1/projects/${PROJECT}/agent/chats`, async ({ request }) => {
         bodies.push(await request.json());

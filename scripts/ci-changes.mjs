@@ -10,7 +10,7 @@ const GIT_EXECUTABLE =
   process.platform === 'win32' ? String.raw`C:\Program Files\Git\cmd\git.exe` : '/usr/bin/git';
 const E2E_RULES = JSON.parse(readFileSync(new URL('./e2e-paths.json', import.meta.url), 'utf8'));
 const DOC_FILES = new Set([
-  'AGENTS.md',
+  'CLAUDE.md',
   'CHANGELOG.md',
   'CONTRIBUTING.md',
   'LICENSE',

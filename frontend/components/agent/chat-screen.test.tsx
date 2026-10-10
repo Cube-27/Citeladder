@@ -445,7 +445,8 @@ describe('ChatScreen', () => {
       ),
       http.post(`/api/v1/agent/chats/${CHAT}/messages`, ({ request }) => {
         keys.push(request.headers.get('Idempotency-Key'));
-        if (keys.length === 1) return HttpResponse.json({ detail: 'Unavailable' }, { status: 503 });
+        if (keys.length === 1)
+          return HttpResponse.json({ error: { message: 'Unavailable' } }, { status: 503 });
         return HttpResponse.json(
           {
             chat_id: CHAT,
@@ -497,7 +498,7 @@ describe('ChatScreen', () => {
       ),
       http.post(`/api/v1/agent/chats/${CHAT}/messages`, () => {
         mocks.agentEnabled = false;
-        return HttpResponse.json({ detail: 'Unavailable' }, { status: 503 });
+        return HttpResponse.json({ error: { message: 'Unavailable' } }, { status: 503 });
       }),
     );
     const user = userEvent.setup();

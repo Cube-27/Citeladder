@@ -89,9 +89,8 @@ immutable evidence
 
 Persistence means **observed**, never automatically true. Site Health keeps
 immutable acquisition evidence and versioned analysis. Generated content never
-becomes a fact on its own. The former industry-pack and knowledge-kernel runtime
-was removed during simplification; page analysis now uses a small generic
-structural taxonomy with page-type-specific schema and content rules.
+becomes a fact on its own. Page analysis uses a small generic structural
+taxonomy with page-type-specific schema and content rules.
 
 <a id="first-complete-workflow"></a>
 ## The improvement loop
@@ -168,7 +167,7 @@ Commands, environment, entitlement, migration, and the clean-clone runbook:
 
 | Document | What it covers |
 |---|---|
-| [`AGENTS.md`](AGENTS.md) | Mandatory implementation rules and the task-specific document map |
+| [`CLAUDE.md`](CLAUDE.md) | Mandatory implementation rules and the task-specific document map |
 | [`docs/architecture.md`](docs/architecture.md) | Canonical target product architecture |
 | [`docs/invariants.md`](docs/invariants.md) | The review-blocking rules |
 | [`docs/README.md`](docs/README.md) | Runtime owners, active work, operations, and historical evidence |
@@ -207,7 +206,7 @@ packaged or executable input. Do not run broad suites merely to validate prose.
 <a id="contributing"></a>
 ## Contributing
 
-Read [`AGENTS.md`](AGENTS.md) and the owning architecture document before changing code.
+Read [`CLAUDE.md`](CLAUDE.md) and the owning architecture document before changing code.
 [`CONTRIBUTING.md`](CONTRIBUTING.md) covers workflow and ownership; [`Review.md`](Review.md) covers
 the review checklist and recurring anti-patterns.
 CiteLadder is a dirty, active, multi-workstream repository. Preserve unrelated user-owned changes

@@ -20,7 +20,7 @@ type Row = Selectable<SearchIntelligenceRows>;
 
 const researchScope = searchDatasetSchema.shape.research_scope;
 // Datasets published before scope was recorded were exact-host research.
-const LEGACY_RESEARCH_SCOPE = 'exact_host';
+const UNRECORDED_RESEARCH_SCOPE = 'exact_host';
 
 const iso = (value: Date | null): string | null => value?.toISOString() ?? null;
 
@@ -65,7 +65,7 @@ export function datasetView(dataset: Dataset): z.input<typeof searchDatasetSchem
     target_domain: dataset.target_domain,
     target_hostname: dataset.target_hostname,
     target_origin: dataset.target_origin,
-    research_scope: researchScope.parse(acquisition.research_scope ?? LEGACY_RESEARCH_SCOPE),
+    research_scope: researchScope.parse(acquisition.research_scope ?? UNRECORDED_RESEARCH_SCOPE),
     acquisition,
     comparison_origin: dataset.comparison_origin,
     location_code: dataset.location_code,

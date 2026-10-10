@@ -177,12 +177,15 @@ describe('brand identity workspace boundaries', () => {
     for (const [path, method, body] of routes) {
       expect((await call(path, { method, body, anonymous: true })).status).toBe(401);
       expect((await call(path, { method, body, user: outsider })).status).toBe(404);
-      const foreign = await call<{ detail: string }>(path, {
+      const foreign = await call<{ error: { message: string } }>(path, {
         method,
         body,
         workspace: otherWorkspace,
       });
-      expect(foreign).toMatchObject({ status: 404, body: { detail: 'Project not found' } });
+      expect(foreign).toMatchObject({
+        status: 404,
+        body: { error: { message: 'Project not found' } },
+      });
       if (method !== 'GET')
         expect((await call(path, { method, body, user: viewer })).status).toBe(403);
     }
@@ -193,7 +196,7 @@ describe('brand profile', () => {
   it('is missing until the project has one, and a brandless project cannot gain one', async () => {
     expect(await call('/brand-profile')).toMatchObject({
       status: 404,
-      body: { detail: 'Brand profile not found' },
+      body: { error: { message: 'Brand profile not found' } },
     });
     expect(
       (await call('/brand-profile', { method: 'PUT', body: { description: 'x' } })).status,
@@ -253,7 +256,7 @@ describe('brand profile', () => {
     });
     expect(edited.status).toBe(200);
     // Unsupplied facets and other context stay as they were; terms inferred
-    // from the replaced category go, and the legacy buyer key gives way.
+    // from the replaced category go, and the older `business_type` key gives way.
     expect(edited.body.business_context).toEqual({
       category: 'trail running shoes',
       buyer_type: 'both',
@@ -287,7 +290,7 @@ describe('brand profile', () => {
 
   it('reads provenance stored without the reviewer keys as unreviewed', async () => {
     await profile();
-    // The shape the Python onboarding writer produced before it carried the
+    // The older stored shape, written before provenance carried the
     // reviewer keys; stored rows keep it, so the reader must accept it.
     await db
       .updateTable('brand_profiles')
@@ -407,10 +410,10 @@ describe('business map', () => {
   it('rejects unknown or repeated offerings and dangling exclusions without writing', async () => {
     await profile();
     const put = (offerings: unknown[]) =>
-      call<{ detail: string }>('/business-map', { method: 'PUT', body: { offerings } });
+      call<{ error: { message: string } }>('/business-map', { method: 'PUT', body: { offerings } });
     expect(await put([{ offering: 'laptops' }])).toMatchObject({
       status: 422,
-      body: { detail: `"laptops" is not one of this brand's offerings` },
+      body: { error: { message: `"laptops" is not one of this brand's offerings` } },
     });
     expect((await put([{ offering: 'sandals' }, { offering: 'Sandals' }])).status).toBe(422);
     const dangling = await put([

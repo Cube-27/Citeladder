@@ -129,7 +129,7 @@ describe('shared PostgreSQL provider capacity', () => {
 describe('DataForSEO account identity compatibility', () => {
   const key = 'capacity-identity-test-key',
     cipher = createSecretCipher(key);
-  // Captured from the existing Python owner, including full Unicode casefold and strip semantics.
+  // Reference vectors, including full Unicode casefold and strip semantics.
   const vectors = [
     ['  USER@Example.COM  ', 'a11a484b636deed1b5d02ffbcc02cbeb009cd47da4a7c13864b688404970f9e6'],
     [

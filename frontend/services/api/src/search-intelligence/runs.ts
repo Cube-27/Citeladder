@@ -1,7 +1,7 @@
 /**
  * Run confirmation, cancellation and saved preferences.
  *
- * Native review creation freezes the call plan and quote, and the TypeScript
+ * Review creation freezes the call plan and quote, and the TypeScript
  * analytics worker executes it once queued. Confirmation is the
  * only step that commits the workspace to paid calls, so it re-checks the
  * review under the project lock and enqueues the acquisition in the same
@@ -81,7 +81,7 @@ async function assertConfirmable(trx: Database, scope: Scope, run: LockedRun, no
     );
 }
 
-/** Enqueue native acquisition; return the existing task when already enqueued. */
+/** Enqueue acquisition; return the existing task when already enqueued. */
 async function enqueueAcquisition(trx: Database, scope: Scope, runId: string): Promise<string> {
   const created = await enqueueTask(trx, {
     workspaceId: scope.workspace.workspaceId,

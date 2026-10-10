@@ -57,7 +57,7 @@ const generationHeaders = z.object({
   'Idempotency-Key': z.string().max(policy.prompts.generation.idempotency_key_max_chars).nullish(),
 });
 
-/** CSV import's own budget under the native `bulk_import` request window. */
+/** CSV import's own budget under the `bulk_import` request window. */
 function bulkImportLimit() {
   return {
     operation: 'bulk_import',

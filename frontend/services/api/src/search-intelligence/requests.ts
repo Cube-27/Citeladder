@@ -208,7 +208,7 @@ export function buildRequest(o: RequestOptions) {
   applyKeywordOrder(o, payload);
   return { endpoint, payload };
 }
-/** Python's compact sorted ensure_ascii serialization preserves historical scope identities. */
+/** Compact, key-sorted JSON (ASCII-escaped by default) keeps stored scope identities stable. */
 export function canonicalJson(value: unknown, ascii = true): string {
   if (Array.isArray(value)) return `[${value.map((item) => canonicalJson(item, ascii)).join(',')}]`;
   if (value !== null && typeof value === 'object')

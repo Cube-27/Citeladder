@@ -76,7 +76,9 @@ describe('workspace authorization and root allocation', () => {
     const missing = await request(`/${randomUUID()}/members`);
     expect(found.status).toBe(404);
     expect(await found.json()).toMatchObject({
-      detail: ((await missing.json()) as { detail: string }).detail,
+      error: {
+        message: ((await missing.json()) as { error: { message: string } }).error.message,
+      },
     });
     expect((await request(`/${workspace}/members`, 'GET', undefined, '')).status).toBe(401);
   });
@@ -171,7 +173,9 @@ describe('invitation lifecycle and contention', () => {
     );
     expect(mismatched.status).toBe(400);
     expect(await mismatched.json()).toMatchObject({
-      detail: ((await absent.json()) as { detail: string }).detail,
+      error: {
+        message: ((await absent.json()) as { error: { message: string } }).error.message,
+      },
     });
     const rotated = await request(
       `/${workspace}/invitations/${issued.invitation.id}/resend`,

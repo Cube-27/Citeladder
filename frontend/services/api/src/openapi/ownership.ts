@@ -1,4 +1,4 @@
-/** Every native API operation carries one declared route family, and every family is served. */
+/** Every API operation carries one declared route family, and every family is served. */
 import type { OpenApiDocument } from './document.ts';
 import { onlyOf } from '../lists.ts';
 

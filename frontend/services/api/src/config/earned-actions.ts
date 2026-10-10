@@ -1,4 +1,4 @@
-/** Native earned-actions catalog: deterministic decisions over persisted evidence. */
+/** Earned-actions catalog: deterministic decisions over persisted evidence. */
 export const earnedActions = {
   ACTION_PATH_OWNED: 'owned',
   ACTION_PATH_EARNED: 'earned',

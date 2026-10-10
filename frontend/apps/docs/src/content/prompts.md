@@ -27,7 +27,7 @@ A suggestion is not permission to activate or run it. Use the review and activat
 
 ## Keep a stable baseline
 
-A small, coherent portfolio is easier to interpret than a large collection of loosely related questions. Once you have a baseline, record deliberate changes to prompt wording, cohorts or engine selection.
+A small, coherent portfolio is easier to interpret than a large collection of loosely related questions. Once you have a baseline, record deliberate changes to prompt wording, cohorts or engine selection. A [scheduled audit](/visibility/#schedule-audits) measures the same prompt set on a regular cadence.
 
 Historical audits keep the prompt text and measurement context used at the time. Editing a prompt later does not rewrite an earlier answer.
 

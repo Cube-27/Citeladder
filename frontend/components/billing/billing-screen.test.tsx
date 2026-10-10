@@ -397,7 +397,7 @@ describe('BillingScreen', () => {
     entitlementValue = resolvedEntitlement();
     mswServer.use(
       http.get('/api/v1/billing/catalog', () =>
-        HttpResponse.json({ detail: 'catalog unavailable' }, { status: 400 }),
+        HttpResponse.json({ error: { message: 'catalog unavailable' } }, { status: 400 }),
       ),
       entitlementHandler(),
       usageHandler(),
@@ -465,7 +465,7 @@ describe('BillingScreen', () => {
 
     mswServer.use(
       http.get(`/api/v1/billing/invoices/${ACCOUNT}/pdf`, () =>
-        HttpResponse.json({ detail: 'unavailable' }, { status: 503 }),
+        HttpResponse.json({ error: { message: 'unavailable' } }, { status: 503 }),
       ),
     );
     await userEvent.click(screen.getByRole('button', { name: 'Download receipt' }));
@@ -492,7 +492,7 @@ describe('BillingScreen', () => {
       }),
       http.get(`/api/v1/billing/activations/${ACCOUNT}/checkout`, () => {
         checkoutOpened = true;
-        return HttpResponse.json({ detail: 'unexpected' }, { status: 500 });
+        return HttpResponse.json({ error: { message: 'unexpected' } }, { status: 500 });
       }),
     );
 

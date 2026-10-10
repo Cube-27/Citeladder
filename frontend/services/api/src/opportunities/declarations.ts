@@ -45,7 +45,7 @@ async function replay(
     .where('idempotency_key', '=', key)
     .executeTakeFirst();
   // These are the immutable original request fields, including the revision's
-  // non-nullifying FK. Compare their meaning, not a retired stack's JSON hash.
+  // non-nullifying FK. Compare their meaning, not a serialization hash.
   if (
     row &&
     (row.project_id !== action.project_id ||

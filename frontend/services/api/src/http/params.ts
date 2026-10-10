@@ -3,10 +3,10 @@
  *
  * Every parameter failure is
  * collected, path parameters first, and answered with the envelope the
- * native API publishes: `code: validation_error`,
+ * API publishes: `code: validation_error`,
  * `details.errors[{loc, message, type}]` and the first error as the message.
  * `loc` and `type` are the contract; messages are human-readable and not
- * byte-matched to Pydantic. Repeated keys take the last value (every value
+ * a stable text. Repeated keys take the last value (every value
  * for a list), and an empty value is validated, never treated as absent.
  */
 import { ApiError } from '../errors.ts';
@@ -89,7 +89,7 @@ function validateFloat(raw: string): Outcome {
     : failure('float_parsing', 'Expected a finite number');
 }
 
-// Pydantic's lax boolean spellings, which FastAPI query parameters accept.
+// Accepted boolean query spellings.
 const TRUE_WORDS = new Set(['1', 'on', 't', 'true', 'y', 'yes']);
 const FALSE_WORDS = new Set(['0', 'off', 'f', 'false', 'n', 'no']);
 

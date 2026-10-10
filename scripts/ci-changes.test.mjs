@@ -140,7 +140,7 @@ test('main skips full validation only for an owner-free push', () => {
 });
 
 test('root governance and product prose avoid implementation suites', () => {
-  assert.deepEqual(classifyPaths(['AGENTS.md', 'PRODUCT.md']), {
+  assert.deepEqual(classifyPaths(['CLAUDE.md', 'PRODUCT.md']), {
     frontend: false,
     contract: false,
     api: false,
@@ -225,7 +225,10 @@ test('previous CI evidence requires every owner to be successful or intentionall
   assert.equal(hasTrustworthyJobEvidence(complete.slice(0, -1), 'ci.yml'), false);
   assert.equal(
     hasTrustworthyJobEvidence(
-      [...complete, { name: 'Legacy aggregate gate', status: 'completed', conclusion: 'success' }],
+      [
+        ...complete,
+        { name: 'Unlisted aggregate gate', status: 'completed', conclusion: 'success' },
+      ],
       'ci.yml',
     ),
     false,

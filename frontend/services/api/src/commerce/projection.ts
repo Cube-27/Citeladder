@@ -182,7 +182,7 @@ async function projectProduct(
     };
   }
   // Values are selected from one typed product projection. JSON columns are
-  // serialized explicitly for pg; no ORM defaults or Python serialization.
+  // serialized explicitly for pg; no ORM defaults.
   const { variants, attributes, ...scalarValues } = values;
   const update: Updateable<CommerceProducts> = {
     ...scalarValues,

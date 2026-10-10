@@ -29,7 +29,6 @@ function probeApp(serviceConfig = config) {
 type ProbeBody = {
   id?: string;
   capabilities?: string[];
-  detail?: unknown;
   error: { code: string; message: string };
 };
 
@@ -90,13 +89,13 @@ describe('session verification', () => {
   it('refuses an inactive account', async () => {
     const inactive = await fixtures.user({ active: false });
     const { status, body } = await call('/me', await sessionToken({ sub: inactive, ver: 0 }));
-    expect([status, body.detail]).toEqual([401, 'Inactive user']);
+    expect([status, body.error.message]).toEqual([401, 'Inactive user']);
   });
 
   it('refuses every session once demo access has expired', async () => {
     const expired = probeApp(testConfig({ DEMO_MODE: 'true' }));
     const { status, body } = await call('/me', viewerToken, 'GET', expired);
-    expect([status, body.detail]).toEqual([401, 'Demo access has expired']);
+    expect([status, body.error.message]).toEqual([401, 'Demo access has expired']);
   });
 });
 
@@ -125,8 +124,8 @@ describe('workspace membership', () => {
     const foreignResult = await call(`/w/${foreign}`, viewerToken);
     const missingResult = await call(`/w/${randomUUID()}`, viewerToken);
     expect(foreignResult.status).toBe(404);
-    expect(foreignResult.body.detail).toBe('Workspace not found');
-    expect(missingResult.body.detail).toBe(foreignResult.body.detail);
+    expect(foreignResult.body.error.message).toBe('Workspace not found');
+    expect(missingResult.body.error.message).toBe(foreignResult.body.error.message);
   });
 
   it('never authorizes through a system workspace membership', async () => {

@@ -1,4 +1,4 @@
-/** Explicit fixture custody + native sync owner; never performs OAuth or provider I/O. */
+/** Explicit fixture custody + sync owner; never performs OAuth or provider I/O. */
 import { randomUUID } from 'node:crypto';
 import type { Database } from '../db/database.ts';
 import { createSecretCipher } from '../integrations/fernet.ts';

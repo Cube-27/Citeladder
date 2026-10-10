@@ -318,7 +318,7 @@ describe('Search Intelligence readiness and preferences', () => {
     // A newer unconfirmed cost review does not replace the acquisition being followed.
     await review(t, connectionId);
     const published = await dataset(t, older, { scope: 'domain_subdomains' });
-    const legacy = await dataset(t, older);
+    const unscoped = await dataset(t, older);
     await dataset(t, older, { status: 'collecting' });
 
     const { status, body } = await call<Readiness>('');
@@ -345,7 +345,7 @@ describe('Search Intelligence readiness and preferences', () => {
     expect(new Map(body.datasets.map((row) => [row.id, row.research_scope]))).toEqual(
       new Map([
         [published, 'domain_subdomains'],
-        [legacy, 'exact_host'],
+        [unscoped, 'exact_host'],
       ]),
     );
 

@@ -1,4 +1,4 @@
-/** Native packaged model input parsing and deployment directory resolution. */
+/** Packaged model input parsing and deployment directory resolution. */
 import { fileURLToPath } from 'node:url';
 
 export function resolveSkillsDirectory(configured: string): string {

@@ -1,4 +1,4 @@
-/** Fixture construction through the native identity, project, prompt and provider owners. */
+/** Fixture construction through the identity, project, prompt and provider owners. */
 import type { Database } from '../db/database.ts';
 import type { ServiceConfig } from '../config.ts';
 import { devSeed } from '../config/dev-seed.ts';

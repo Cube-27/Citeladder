@@ -1,7 +1,7 @@
 /**
  * Search Intelligence: readiness, run confirmation and cancellation, saved
  * preferences, published dataset rows and citation matches.
- * Authorized by the project in the path; native review creation resolves
+ * Authorized by the project in the path; review creation resolves
  * competitor websites before freezing the bounded acquisition plan.
  */
 import {

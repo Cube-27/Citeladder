@@ -3,7 +3,7 @@
  * import.
  *
  * Every insert path takes the project lock, then the set lock, then the
- * account capacity lock (`entitlements/occupancy.ts`), the order native
+ * account capacity lock (`entitlements/occupancy.ts`), the order
  * generation and Commerce use, and charges only rows that can actually insert
  * (a duplicate never consumes a prompt slot). The per-set hash uniqueness
  * stays the final race guard. Text entering active measurement passes topical

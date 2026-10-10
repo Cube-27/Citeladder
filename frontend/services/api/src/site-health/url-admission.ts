@@ -63,7 +63,7 @@ function bracketSet(glob: string, open: number) {
 }
 
 /**
- * Python `fnmatch` semantics: `*` spans `/`, `?` is one character, `[!…]`
+ * Shell-style glob semantics: `*` spans `/`, `?` is one character, `[!…]`
  * negates. A glob that still cannot compile (a reversed range) matches only
  * itself, literally, rather than failing the task.
  */

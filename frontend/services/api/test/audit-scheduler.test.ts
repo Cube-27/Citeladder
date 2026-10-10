@@ -155,7 +155,7 @@ describe('durable audit occurrence planning', () => {
     ).toEqual({ enabled: false, next_run_at: null, lease_owner: null, last_run_at: at });
     expect(await one.runOnce(at)).toBe(0);
   });
-  it('recovers a committed legacy occurrence and honors disable or expired-lease changes before planning', async () => {
+  it('recovers a committed occurrence and honors disable or expired-lease changes before planning', async () => {
     const t = await auditTenant(db, fixtures),
       at = new Date(),
       scope = { workspaceId: t.workspaceId, projectId: t.projectId };

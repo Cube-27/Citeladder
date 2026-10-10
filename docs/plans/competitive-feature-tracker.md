@@ -6,13 +6,10 @@ priority order, written so a coding agent can plan and ship each PR without
 fresh web research. External facts are captured in the
 [research appendix](#research-appendix) with their source URLs.
 
-Place this file at `docs/plans/competitive-feature-tracker.md` and add one line
-to `docs/plans/ACTIVE.md` under **Active**.
-
 ## How to use this document
 
-- Bootstrap with `AGENTS.md`, then the owner document named in each feature.
-  `AGENTS.md`, `docs/invariants.md` and the per-feature process in
+- Bootstrap with `CLAUDE.md`, then the owner document named in each feature.
+  `CLAUDE.md`, `docs/invariants.md` and the per-feature process in
   `docs/plans/feature-review-tracker.md` still govern. This tracker adds scope,
   not authority.
 - One feature row = one or two PRs, as listed. Docs corrections are one PR (F1).
@@ -20,7 +17,7 @@ to `docs/plans/ACTIVE.md` under **Active**.
   here (findings verified against current code, phases, acceptance criteria) and
   get the owner's answers to its **Owner decisions**. Decisions marked
   *(recommended)* may proceed on the recommendation if the owner says so.
-- Inventory the existing owner before adding files (AGENTS.md step 1). Paths
+- Inventory the existing owner before adding files (CLAUDE.md step 1). Paths
   below were verified on 2026-10-10; re-check them, the repo moves fast.
 - Schema changes fold into `frontend/services/api/migrations/0001_baseline.sql`
   (invariant 17, pre-launch policy). If live customers exist when a PR lands,
@@ -34,7 +31,7 @@ first. Size: S (≤2 days), M (≤1 week), L (>1 week).
 
 | ID | Feature | Value | Size | PRs | Depends on | Status | Plan file |
 |---|---|---|---|---|---|---|---|
-| F1 | Docs truth pass: consumer surfaces and schedules | — (do first) | S | 1 | — | queued | — |
+| F1 | Docs truth pass: consumer surfaces and schedules | — (do first) | S | 1 | — | done | — |
 | F2 | AI Traffic: enablement, `api.citeladder.com` host, AWS and GCP connectors | 1 | L | 2 | D2.2, D2.3 (open) | queued | `ai-traffic-connectors.md` |
 | F3 | Sentiment (answer perception) | 2 | L | 1 | D3.x | queued | `answer-perception.md` |
 | F4 | Public REST API, MCP move to `api.citeladder.com/mcp`, MCP write tools | 3 | L | 3 | F2-PR1 (host); D4.3, D4.6 | queued | `public-api-and-mcp-writes.md` |
@@ -82,7 +79,7 @@ Verified against the repository on 2026-10-10.
   credit draw; bound cost with platform caps in config and record usage on
   every call. DataForSEO calls follow the Search Intelligence cost-ceiling pattern
   (estimate, receipt, recorded spend, uncertain submissions never resubmitted).
-- **Tests earn their place** (AGENTS.md "What earns a test"): decision paths,
+- **Tests earn their place** (the `principle-test-behavior-not-implementation` skill): decision paths,
   real PostgreSQL for persistence and concurrency, workspace isolation and
   provenance for new tables.
 
@@ -140,7 +137,7 @@ Also check and correct: trial engine naming. Read `public_trial.engines` in
 - `grep -rn "through each provider's API"` in `frontend/` returns nothing.
 - llms.txt output lists six engines; public route list and sitemap checks pass.
 - Docs site builds; no broken internal links.
-- Validation: copy/doc tier only (AGENTS.md): `git diff --check`, reference
+- Validation: copy/doc tier only (CLAUDE.md): `git diff --check`, reference
   checks, the docs/marketing build if a component changed.
 
 ---
@@ -201,7 +198,7 @@ connector.
    diagnostic receipt. Protects the free-tier CPU budget from unfiltered
    CDN streams.
 5. **Provision `api.citeladder.com`** (D4.1, D4.5). Code and runbook only;
-   the owner performs the Cloudflare and DNS change (AGENTS.md: no deploys
+   the owner performs the Cloudflare and DNS change (CLAUDE.md: no deploys
    without explicit authorization).
    - Attach `api.citeladder.com` as a Custom Domain on the marketing Worker
      (one Worker, no new origin credential). The Worker forwards an explicit
@@ -321,8 +318,8 @@ Treat `"-"` as missing in every field.
   cost CPU, not accepted-line quota). The bytes/day ceiling (part A) bounds the
   worst case.
 - Ship an optional generated **Firehose transformation Lambda** template
-  (`frontend/apps/docs/public/templates/citeladder-firehose-filter.py`,
-  Python 3.12). It decodes each record, keeps records whose lowercased
+  (`frontend/apps/docs/public/templates/citeladder-firehose-filter.mjs`,
+  Node.js Lambda runtime). It decodes each record, keeps records whose lowercased
   `cs(User-Agent)` contains any catalog `ua_patterns` substring, returns
   `result: "Ok"` or `"Dropped"` per Firehose's transformation contract, and
   embeds `catalog_version`. Generate it from `crawlers.json` like the Worker
@@ -758,7 +755,7 @@ F4-PR3 MCP write tools.
   `routes.ts`).
 - Idempotency precedent: prompt generation stores `Idempotency-Key` in the run
   request; crawl-log receipts replay by key.
-- Invariant 10 and `AGENTS.md`: no prompt activation or external mutation
+- Invariant 10 and `CLAUDE.md`: no prompt activation or external mutation
   without an explicit user decision; the Agent stays read-only.
 
 ### F4-PR1 part A: one command layer
@@ -1412,3 +1409,4 @@ Source: https://us.fitgap.com/products/workos (WorkOS price table)
 |---|---|---|
 | 2026-10-10 | all | Tracker created from a competitor review of Peec AI, Searchable and Profound docs and a read of the repository. Owner direction: F1 is a docs correction (consumer capture and schedules exist); sentiment, crawl-log connectors and the public API/MCP writes are to be built; enterprise SSO/SCIM moves last (Feedonomics is not a customer); agency reporting ignored for now. |
 | 2026-10-10 | F2, F3, F4, F9 | Owner decisions: crawl logs on for every paid workspace, off for the public trial; `api.citeladder.com` hosts the public API, crawl-log ingest and MCP (`/mcp`); MCP writes approved; perception model calls are platform-funded through the default Agent gateway; SSO/SCIM via WorkOS, last. F4 split into three PRs (API, MCP move, MCP writes). |
+| 2026-10-10 | F1 | Done, narrowed by the owner: public copy must not name DataForSEO or add engines to the landing page or docs site, so the landing strip and trial copy are unchanged. The API-only claim is corrected (FAQ, Measure page, llms.txt and docs Visibility page now say answers come from consumer apps and provider APIs), the docs Visibility page gains a Schedule audits section linked from Prompts and Quickstart, and the changelog records it. Internal: DataForSEO surfaces follow the project search context (US/English/desktop default) validated against `dataforseo.json`, so visibility-prompt.md no longer claims a scraper-only US/English allowlist. |

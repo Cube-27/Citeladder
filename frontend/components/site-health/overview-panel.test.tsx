@@ -375,7 +375,10 @@ describe('OverviewPanel', () => {
     // mid-crawl and the cached error outlived the disabled query.
     mswServer.use(
       http.get(`/api/v1/projects/${PROJECT}/site-health/overview`, () =>
-        HttpResponse.json({ detail: 'Site Health Overview is not available' }, { status: 404 }),
+        HttpResponse.json(
+          { error: { message: 'Site Health Overview is not available' } },
+          { status: 404 },
+        ),
       ),
     );
 
@@ -392,7 +395,7 @@ describe('OverviewPanel', () => {
     // retried 5xx outlives the assertion's window rather than the condition.
     mswServer.use(
       http.get(`/api/v1/projects/${PROJECT}/site-health/overview`, () =>
-        HttpResponse.json({ detail: 'Forbidden' }, { status: 403 }),
+        HttpResponse.json({ error: { message: 'Forbidden' } }, { status: 403 }),
       ),
     );
 

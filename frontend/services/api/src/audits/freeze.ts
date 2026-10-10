@@ -231,7 +231,7 @@ export async function prepareAudit(
     prompt_intent: prompt.prompt_intent,
     cohort: prompt.cohort,
   }));
-  // Preserve the existing panel identity (Python sorted keys, UTF-8, default separators).
+  // Panel identity: sorted keys, UTF-8, default JSON separators.
   const panelJson = `[${promptRows
     .map(
       (row) =>
@@ -279,7 +279,7 @@ export async function prepareAudit(
     max_run_seconds: settings.max_run_seconds,
     request_timeout_seconds: settings.audit_timeout_seconds,
     anthropic_max_uses: providerSettings.anthropicMaxUses,
-    slot_order_version: 'python-mt19937-v1',
+    slot_order_version: 'mt19937-v1',
     panel_id: panelHash.slice(0, 16),
     panel_hash: panelHash,
     prompt_hashes: promptRows.map((row) => createHash('sha256').update(row.text).digest('hex')),
@@ -313,7 +313,7 @@ export async function prepareAudit(
     searchTimeoutSeconds: search.timeoutSeconds,
   };
 }
-/** Preserve the integer-seeded Python slot order, including unsigned 64-bit seeds. */
+/** Integer-seeded slot order, including unsigned 64-bit seeds. */
 export function auditSlots(
   prompts: number,
   engines: readonly Engine[],

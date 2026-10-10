@@ -180,7 +180,7 @@ export function entityOffset(
   return firstOccurrence(normalizedText, aliases, entity)?.codePoints ?? null;
 }
 
-/** Code-point offset in the normalized answer, matching persisted Python ranks. */
+/** Code-point offset in the normalized answer, as persisted ranks record it. */
 export function firstAliasOffset(
   alias: string,
   normalized: string,

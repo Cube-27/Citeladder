@@ -268,7 +268,7 @@ describe('ProjectProvider', () => {
     mswServer.use(
       http.get('/api/v1/projects', () => HttpResponse.json([project(PROJECT_1, 'Acme')])),
       http.get(`/api/v1/projects/${PROJECT_2}`, () =>
-        HttpResponse.json({ detail: 'Project not found' }, { status: 404 }),
+        HttpResponse.json({ error: { message: 'Project not found' } }, { status: 404 }),
       ),
     );
 

@@ -72,7 +72,7 @@ describe('IssuesScreen read recovery', () => {
         return available
           ? HttpResponse.json(dashboard)
           : HttpResponse.json(
-              { detail: 'Site Health is temporarily unavailable' },
+              { error: { message: 'Site Health is temporarily unavailable' } },
               { status: 404 },
             );
       }),
@@ -95,7 +95,7 @@ describe('IssuesScreen read recovery', () => {
       http.get(`/api/v1/projects/${PROJECT}/site-health`, () =>
         available
           ? HttpResponse.json(dashboard)
-          : HttpResponse.json({ detail: 'Refresh failed' }, { status: 404 }),
+          : HttpResponse.json({ error: { message: 'Refresh failed' } }, { status: 404 }),
       ),
     );
 

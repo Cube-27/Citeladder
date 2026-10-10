@@ -155,7 +155,7 @@ function pendingAnalyses(db: Database, crawl: Crawl) {
     .execute();
 }
 
-/** Rules a replayed pass already recorded per analysis: a repeat is dropped, as Python's conflict skip did. */
+/** Rules a replayed pass already recorded per analysis: a repeat is dropped on conflict. */
 async function recordedRules(db: Database, crawl: Crawl, analysisIds: string[]) {
   const rows = await db
     .selectFrom('site_rule_evaluations')

@@ -1,4 +1,4 @@
-/** Native Commerce admission, acquisition and buyer-prompt policy. */
+/** Commerce admission, acquisition and buyer-prompt policy. */
 export const commerce = {
   importer_version: 'commerce-catalog-importer-1',
   projector_version: 'commerce-projector-1',

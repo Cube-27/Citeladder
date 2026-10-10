@@ -130,7 +130,7 @@ const authoringSchema = z.strictObject({
     .default(null),
 });
 export type AuthoredCatalog = z.infer<typeof authoringSchema>;
-/** Preserve compact sorted ASCII catalog checksums produced by the retired author. */
+/** Checksum over compact, key-sorted, ASCII-escaped catalog JSON. */
 export function catalogDigest(payload: AuthoredCatalog) {
   const keys = new Set<string>();
   JSON.stringify(payload, (key, value: unknown) => {

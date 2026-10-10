@@ -97,8 +97,7 @@ The receipt and upload acknowledgement become visible only after commit.
 
 Sources, uploads, receipts, requests, rollups, coverage and state have
 workspace/project scope and composite parent FKs. IP-range snapshots are
-append-only platform reference data. Schema authority is the initial migration
-and backend models; Kysely types are generated from a disposable database.
+append-only platform reference data. Schema authority is the SQL baseline; Kysely types are generated from a disposable database.
 
 Owner/Admin can create, rotate or revoke through
 `/api/v1/projects/{project_id}/crawl-logs/sources`. Writes lock current workspace

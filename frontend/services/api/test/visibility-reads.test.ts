@@ -178,7 +178,11 @@ describe('workspace isolation', () => {
     const outsider = await fixtures.tenant();
     for (const suffix of ['', '/prompts', '/trends', '/fanout', '/sources', '/evidence']) {
       const { status, body } = await get(outsider, route(tenant, suffix));
-      expect([suffix, status, body.detail]).toEqual([suffix, 404, 'Project not found']);
+      expect([suffix, status, record(body.error).message]).toEqual([
+        suffix,
+        404,
+        'Project not found',
+      ]);
     }
   });
 });
@@ -275,7 +279,7 @@ describe('GET /visibility', () => {
   it('is a 404 with nothing measured, and a run selection needs its run', async () => {
     const empty = await fixtures.tenant();
     const missing = await get(empty, route(empty));
-    expect([missing.status, missing.body.detail]).toEqual([
+    expect([missing.status, record(missing.body.error).message]).toEqual([
       404,
       'No visibility metrics available for the selected measurement',
     ]);
@@ -360,7 +364,10 @@ describe('GET /visibility/trends', () => {
     // Neither run measured this engine, so neither emits a point.
     expect((await get(tenant, route(tenant, '/trends'), { engine: 'claude' })).body).toEqual([]);
     const invalid = await get(tenant, route(tenant, '/trends'), { granularity: 'hour' });
-    expect([invalid.status, invalid.body.detail]).toEqual([422, 'Unsupported granularity: hour']);
+    expect([invalid.status, record(invalid.body.error).message]).toEqual([
+      422,
+      'Unsupported granularity: hour',
+    ]);
   });
 
   it('caps points after bucketing, so every week survives a run-heavy period', async () => {
@@ -484,7 +491,10 @@ describe('GET /visibility/prompts', () => {
     ]);
 
     const foreignRun = await get(tenant, route(tenant, '/prompts'), { audit_id: randomUUID() });
-    expect([foreignRun.status, foreignRun.body.detail]).toEqual([404, 'Audit not found']);
+    expect([foreignRun.status, record(foreignRun.body.error).message]).toEqual([
+      404,
+      'Audit not found',
+    ]);
     // Only a brand run has prompt scores to read.
     const crawl = await fixtures.audit(tenant, { scope: 'site_health' });
     expect((await get(tenant, route(tenant, '/prompts'), { audit_id: crawl })).status).toBe(404);
@@ -695,7 +705,7 @@ describe('GET /visibility/fanout and /visibility/evidence', () => {
       limit: '2',
       cursor: first.body.next_cursor as string,
     });
-    expect([moved.status, moved.body.detail]).toEqual([
+    expect([moved.status, record(moved.body.error).message]).toEqual([
       422,
       'Invalid evidence cursor for this selection',
     ]);
@@ -867,7 +877,10 @@ describe('GET /visibility/sources', () => {
     expect(page!.last_cited_at).toEqual(expect.any(String));
 
     const naive = await get(tenant, route(tenant, '/sources'), { as_of: '2026-03-01T00:00:00' });
-    expect([naive.status, naive.body.detail]).toEqual([422, "'as_of' must be timezone-aware"]);
+    expect([naive.status, record(naive.body.error).message]).toEqual([
+      422,
+      "'as_of' must be timezone-aware",
+    ]);
   });
 
   it("moves each row's response rate against a complete, earlier baseline set", async () => {

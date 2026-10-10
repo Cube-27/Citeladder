@@ -1,4 +1,4 @@
-/** Native connected-data policy and persisted evidence vocabulary. */
+/** Connected-data policy and persisted evidence vocabulary. */
 import integrationRuntime from './integrations.json' with { type: 'json' };
 import trafficRuntime from './traffic.json' with { type: 'json' };
 import referralRuntime from './referrals.json' with { type: 'json' };

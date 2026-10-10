@@ -254,9 +254,8 @@ changes; the log names the cause and says to redeploy with `reset_database`.
 - **Database reset (pre-launch only):** rerun **GCP - Deploy** with
   `reset_database` checked and the exact project ID. It replaces the VM, which
   deletes every row with no backup, and then migrates. It refuses demo mode.
-  This is how a changed pre-launch baseline is applied. The first deploy after
-  Python's retirement needs it too: the existing database has tables but no
-  `schema_migrations` ledger, which the migrate job refuses.
+  This is how a changed pre-launch baseline is applied: a database that has
+  tables but no `schema_migrations` ledger is refused by the migrate job.
 - **PostgreSQL image update:** a deploy that changes `infra/gcp/postgres/Dockerfile`
   updates the VM's startup script in place. The new image runs after the next
   restart (`gcloud compute instances reset citeladder-db --zone us-central1-a`),

@@ -291,7 +291,7 @@ function isJsonContentType(contentType: string): boolean {
 type ErrorPayload = {
   /** Human message — never a raw JSON blob. */
   message: string;
-  /** Stable machine code from the error envelope / structured detail. */
+  /** Stable machine code from the error envelope. */
   code?: string;
   /** Server retryability classification (canonical envelope only). */
   retryable?: boolean;
@@ -302,14 +302,10 @@ type ErrorPayload = {
 };
 
 /**
- * Extract a human message (+ machine code) from an error response, in
- * priority order (A2):
+ * Extract a human message (+ machine code) from an error response:
  *   1. canonical envelope `error.message` / `error.code` / `error.retryable`
- *      / `error.request_id` (A1);
- *   2. string `detail` (classic FastAPI `HTTPException`);
- *   3. object `detail.message` / `detail.code` (legacy structured detail);
- *   4. FastAPI validation array — the first item's `loc` + `msg`, humanized;
- *   5. the response status text.
+ *      / `error.request_id`;
+ *   2. the response status text.
  * A raw JSON blob is NEVER surfaced as the message.
  */
 async function readErrorBody(response: Response): Promise<ErrorPayload> {
@@ -357,46 +353,15 @@ function envelopePayload(value: unknown): Omit<ErrorPayload, 'raw'> | null {
     : null;
 }
 
-function detailPayload(value: unknown): Omit<ErrorPayload, 'raw'> | null {
-  if (typeof value === 'string' && value.trim()) return { message: value };
-  const block = objectRecord(value);
-  const message = block && stringField(block.message);
-  if (message) return { message, code: stringField(block.code) };
-  const validationMessage = Array.isArray(value) ? humanizeValidationItem(value[0]) : undefined;
-  return validationMessage ? { message: validationMessage } : null;
-}
-
 function extractFromPayload(payload: unknown, fallback: string): Omit<ErrorPayload, 'raw'> {
   const record = objectRecord(payload);
   if (!record) return { message: fallback };
-  return envelopePayload(record.error) ?? detailPayload(record.detail) ?? { message: fallback };
+  return envelopePayload(record.error) ?? { message: fallback };
 }
 
 /** A non-empty trimmed string field, or undefined. */
 function stringField(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim() ? value : undefined;
-}
-
-/**
- * Humanize one FastAPI validation error item (`{ loc, msg, … }`) as
- * `field.path: message`. The leading `body` loc segment is dropped (it names
- * the transport slot, not a user field); `query`/`path` are kept.
- */
-function humanizeValidationItem(item: unknown): string | undefined {
-  if (!item || typeof item !== 'object' || Array.isArray(item)) return undefined;
-  const record = item as Record<string, unknown>;
-  const msg = stringField(record.msg);
-  if (!msg) return undefined;
-  const segments = Array.isArray(record.loc)
-    ? record.loc.filter((part): part is string | number =>
-        Boolean(
-          (typeof part === 'string' && part) || (typeof part === 'number' && Number.isFinite(part)),
-        ),
-      )
-    : [];
-  if (segments[0] === 'body') segments.shift();
-  const loc = segments.map(String).join('.');
-  return loc ? `${loc}: ${msg}` : msg;
 }
 
 function delay(ms: number, signal?: AbortSignal) {

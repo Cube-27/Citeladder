@@ -157,7 +157,7 @@ describe('bootstrapPrivateRoutes', () => {
     stub({ projects: [PROJECT_ROW] });
     mswServer.use(
       http.get(`/api/v1/workspaces/${WORKSPACE}/access`, () =>
-        HttpResponse.json({ detail: 'Access unavailable' }, { status: 403 }),
+        HttpResponse.json({ error: { message: 'Access unavailable' } }, { status: 403 }),
       ),
     );
     expect(await run('/settings')).toBeNull();
@@ -171,7 +171,7 @@ describe('bootstrapPrivateRoutes', () => {
       mswServer.use(
         http.get(`/api/v1/workspaces/${WORKSPACE}/access`, () => {
           requests += 1;
-          return HttpResponse.json({ detail: 'Access unavailable' }, { status: 403 });
+          return HttpResponse.json({ error: { message: 'Access unavailable' } }, { status: 403 });
         }),
       );
       expect(await run(pathname)).toBeNull();
@@ -236,7 +236,9 @@ describe('bootstrapPrivateRoutes', () => {
 
   it('sends an unauthenticated visitor to sign in', async () => {
     mswServer.use(
-      http.get('/api/v1/auth/me', () => HttpResponse.json({ detail: 'no' }, { status: 401 })),
+      http.get('/api/v1/auth/me', () =>
+        HttpResponse.json({ error: { message: 'no' } }, { status: 401 }),
+      ),
     );
     expect(await run('/projects')).toBe('/login');
   });
@@ -255,7 +257,9 @@ describe('bootstrapPrivateRoutes', () => {
     // read actually failed.
     mswServer.use(
       http.get('/api/v1/auth/me', () => HttpResponse.json({ user: USER })),
-      http.get('/api/v1/workspaces', () => HttpResponse.json({ detail: 'nope' }, { status: 500 })),
+      http.get('/api/v1/workspaces', () =>
+        HttpResponse.json({ error: { message: 'nope' } }, { status: 500 }),
+      ),
     );
     expect(await run('/projects')).toBeNull();
   });
@@ -268,7 +272,7 @@ describe('bootstrapPrivateRoutes', () => {
       http.get('/api/v1/workspaces', () => HttpResponse.json([WORKSPACE_ROW])),
       http.get('/api/v1/projects', () => HttpResponse.json([])),
       http.get(`/api/v1/workspaces/${WORKSPACE}/entitlements`, () =>
-        HttpResponse.json({ detail: 'nope' }, { status: 503 }),
+        HttpResponse.json({ error: { message: 'nope' } }, { status: 503 }),
       ),
     );
     expect(await run('/projects')).toBeNull();

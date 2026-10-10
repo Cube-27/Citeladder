@@ -9,7 +9,7 @@ const CRAWL = '6f1c1d0e-2b7a-4c3e-9a51-0d2f6b8e4a17';
 
 describe('issue group identity', () => {
   it('is the RFC 4122 v5 UUID that links shipped before the move', () => {
-    // Reference values from Python's uuid.uuid5 for the same namespace and names.
+    // Reference RFC 4122 v5 values for the same namespace and names.
     expect(issueGroupId(CRAWL, 'technical.title_present', 'defect')).toBe(
       '2b58e280-145a-51cf-9929-b069c0726c43',
     );

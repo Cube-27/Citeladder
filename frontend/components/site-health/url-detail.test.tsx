@@ -219,7 +219,7 @@ describe('UrlDetail', () => {
         return available
           ? HttpResponse.json(detail())
           : HttpResponse.json(
-              { detail: 'Page temporarily unavailable' },
+              { error: { message: 'Page temporarily unavailable' } },
               { status: 503, headers: { 'X-Request-ID': 'page-read-reference' } },
             );
       }),
@@ -241,7 +241,7 @@ describe('UrlDetail', () => {
   it('reports access failures without implying the page is missing or exposing retry', async () => {
     mswServer.use(
       http.get(`/api/v1/site-crawls/${CRAWL}/pages/${URL_ID}`, () =>
-        HttpResponse.json({ detail: 'Workspace access denied' }, { status: 403 }),
+        HttpResponse.json({ error: { message: 'Workspace access denied' } }, { status: 403 }),
       ),
     );
     renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
@@ -560,7 +560,7 @@ describe('UrlDetail', () => {
     mswServer.use(
       ...handlers(detail({ analysis_status: 'completed' })),
       http.post(`/api/v1/site-crawls/${CRAWL}/pages/${URL_ID}/rerun`, () =>
-        HttpResponse.json({ detail: 'rerun_not_allowed' }, { status: 409 }),
+        HttpResponse.json({ error: { message: 'rerun_not_allowed' } }, { status: 409 }),
       ),
     );
 

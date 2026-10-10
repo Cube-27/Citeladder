@@ -2,7 +2,7 @@
 
 Follow [GCP_RUNBOOK.md](GCP_RUNBOOK.md) for the executable owner procedure.
 This document is the hosting design and security contract. Accepted
-1 October 2026, implemented by TypeScript migration PRs 21–24.
+1 October 2026.
 
 ## Summary
 

@@ -138,14 +138,24 @@ describe('apiClient', () => {
 
   it('captures a numeric Retry-After hint on a rate-limited response', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ detail: 'Workspace usage limit exceeded' }), {
-        status: 429,
-        headers: {
-          'content-type': 'application/json',
-          'retry-after': '321.2',
-          'x-request-id': 'req-rate-limit',
+      new Response(
+        JSON.stringify({
+          error: {
+            code: 'rate_limited',
+            message: 'Workspace usage limit exceeded',
+            request_id: 'req-rate-limit',
+            retryable: true,
+          },
+        }),
+        {
+          status: 429,
+          headers: {
+            'content-type': 'application/json',
+            'retry-after': '321.2',
+            'x-request-id': 'req-rate-limit',
+          },
         },
-      }),
+      ),
     );
     vi.stubGlobal('fetch', fetchMock);
 
@@ -309,7 +319,6 @@ describe('readErrorBody extraction (A2)', () => {
     const fetchMock = vi.fn().mockResolvedValue(
       errorJson(
         {
-          detail: 'fallback human string',
           error: {
             code: 'precondition_failed',
             message: 'no completed sync window is available',
@@ -334,60 +343,6 @@ describe('readErrorBody extraction (A2)', () => {
     });
   });
 
-  it('extracts a plain string detail (classic FastAPI HTTPException)', async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue(errorJson({ detail: 'Not found' }, 404, 'Not Found'));
-    vi.stubGlobal('fetch', fetchMock);
-
-    const { apiClient } = await import('./client');
-    await expect(apiClient.get('/missing')).rejects.toMatchObject({
-      message: 'Not found',
-      status: 404,
-    });
-  });
-
-  it('extracts an object detail message + code, keeping the raw JSON body', async () => {
-    const payload = {
-      detail: { code: 'site_health_quota_exceeded', message: 'limit reached', limit: 50 },
-    };
-    const fetchMock = vi.fn().mockResolvedValue(errorJson(payload, 403, 'Forbidden'));
-    vi.stubGlobal('fetch', fetchMock);
-
-    const { apiClient, ApiError } = await import('./client');
-    const error = await apiClient.get('/quota').catch((caught: unknown) => caught);
-    expect(error).toBeInstanceOf(ApiError);
-    expect((error as InstanceType<typeof ApiError>).message).toBe('limit reached');
-    expect((error as InstanceType<typeof ApiError>).code).toBe('site_health_quota_exceeded');
-    // The raw body stays parseable for structured-detail consumers.
-    expect(JSON.parse((error as InstanceType<typeof ApiError>).body).detail.limit).toBe(50);
-  });
-
-  it('humanizes the first FastAPI validation item (loc + msg, body prefix dropped)', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      errorJson(
-        {
-          detail: [
-            {
-              loc: ['body', 'products', 0, 'sku'],
-              msg: 'field required',
-              type: 'missing',
-            },
-          ],
-        },
-        422,
-        'Unprocessable Entity',
-      ),
-    );
-    vi.stubGlobal('fetch', fetchMock);
-
-    const { apiClient } = await import('./client');
-    await expect(apiClient.post('/import', {})).rejects.toMatchObject({
-      message: 'products.0.sku: field required',
-      status: 422,
-    });
-  });
-
   it('never surfaces a raw JSON blob for an unrecognized payload shape', async () => {
     const fetchMock = vi
       .fn()
@@ -400,7 +355,7 @@ describe('readErrorBody extraction (A2)', () => {
 
   it('never surfaces a raw JSON blob when the JSON body is unparseable', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      new Response('{"detail": truncated', {
+      new Response('{"error": truncated', {
         status: 500,
         statusText: 'Internal Server Error',
         headers: { 'content-type': 'application/json' },

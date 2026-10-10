@@ -1,4 +1,4 @@
-/** Native HTTP error defaults and retry classification. */
+/** HTTP error defaults and retry classification. */
 import type { ApiErrorCode } from '@citeladder/contracts/error-codes';
 
 export const errors = {

@@ -91,7 +91,7 @@ describe('frozen Commerce audit evidence', () => {
       .deleteFrom('commerce_product_categories')
       .where('category_id', '=', t.categoryId)
       .execute();
-    // A corrupt legacy membership must not import another workspace's product into this snapshot.
+    // A corrupt membership must not import another workspace's product into this snapshot.
     await addMembership(db, t.scope, foreign.productId, t.categoryId, null);
     await expect(freezeCommerceContext(db, t.scope, [t.promptId])).rejects.toMatchObject({
       status: 400,

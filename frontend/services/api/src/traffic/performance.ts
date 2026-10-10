@@ -1,4 +1,4 @@
-/** Persisted Performance reads shared by the native API and Agent. */
+/** Persisted Performance reads shared by the API and Agent. */
 import {
   performanceDimensionSchema,
   performanceDashboardSchema,

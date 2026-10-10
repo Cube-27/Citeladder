@@ -132,7 +132,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
       },
       {
         q: 'Which engines can I use?',
-        a: 'ChatGPT, Gemini, Claude and Google AI Overviews, depending on your plan. The free trial is ChatGPT only. API answers can differ from what a consumer app shows.',
+        a: 'ChatGPT, Gemini, Claude and Google AI Overviews, depending on your plan. The free trial is ChatGPT only. Collected answers can differ from what a signed-in user sees.',
       },
     ],
     closing: 'Get your AI visibility baseline.',

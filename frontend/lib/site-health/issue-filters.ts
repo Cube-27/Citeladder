@@ -35,7 +35,7 @@ export type IssueFilters = {
   severity: string;
   category: string;
   dimension: string;
-  /** Internal key for the wire's `rule` param; inbound `rule_id` is accepted. */
+  /** Internal key for the wire's `rule` param. */
   rule_id: string;
   site_url_id: string;
   finding_class: FindingClass;
@@ -157,8 +157,6 @@ export function issueFilterParams(filters: IssueFilters): Record<string, string 
     category: textCodec.serialize(filters.category),
     dimension: textCodec.serialize(filters.dimension),
     rule: textCodec.serialize(filters.rule_id),
-    // The inbound alias is normalized away by the first write.
-    rule_id: null,
     site_url_id: textCodec.serialize(filters.site_url_id),
     finding_class: findingClassCodec.serialize(filters.finding_class),
     page_kind: textCodec.serialize(filters.page_kind),
@@ -176,7 +174,6 @@ export function useIssueFilters() {
   const [category] = useUrlState('category', textCodec);
   const [dimension] = useUrlState('dimension', textCodec);
   const [rule] = useUrlState('rule', textCodec);
-  const [legacyRule] = useUrlState('rule_id', textCodec);
   const [siteUrlId] = useUrlState('site_url_id', textCodec);
   const [findingClass] = useUrlState('finding_class', findingClassCodec);
   const [pageKind] = useUrlState('page_kind', textCodec);
@@ -190,12 +187,12 @@ export function useIssueFilters() {
       severity,
       category,
       dimension,
-      rule_id: rule || legacyRule,
+      rule_id: rule,
       site_url_id: siteUrlId,
       finding_class: findingClass,
       page_kind: pageKind,
     }),
-    [query, severity, category, dimension, rule, legacyRule, siteUrlId, findingClass, pageKind],
+    [query, severity, category, dimension, rule, siteUrlId, findingClass, pageKind],
   );
 
   /** Apply a filter change: back to page one, no selection, no occurrence stack. */

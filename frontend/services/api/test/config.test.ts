@@ -98,7 +98,7 @@ describe('loadConfig', () => {
     expect(config.session.cookieName).toBe(policy.settings.session_cookie_name.default);
   });
 
-  it('matches environment names case-insensitively, as pydantic-settings does', () => {
+  it('matches environment names case-insensitively.', () => {
     expect(loadConfig({ db_pool_size: '7' }).database.poolSize).toBe(7);
   });
 
@@ -108,7 +108,7 @@ describe('loadConfig', () => {
     expect(() => resolveSettingSpec(spec, { BOUNDED: '672' })).toThrow(ConfigError);
   });
 
-  it('enforces the Python field bounds and literal values', () => {
+  it('enforces field bounds and literal values', () => {
     expect(() => loadConfig({ DB_POOL_SIZE: '51' })).toThrow(ConfigError);
     expect(() => loadConfig({ DB_POOL_SIZE: 'twenty' })).toThrow(ConfigError);
     expect(() => loadConfig({ DB_SSL_MODE: 'prefer' })).toThrow(ConfigError);
@@ -153,10 +153,7 @@ describe('demoAccessExpired', () => {
     expect(demoAccessExpired(open, now)).toBe(false);
   });
 
-  it.each(['2026-02-30T00:00:00Z', 'Mar 5 2026 10:00 +0530'])(
-    'refuses %s at boot, as pydantic does',
-    (value) => {
-      expect(() => loadConfig({ DEMO_EXPIRES_AT: value })).toThrow(ConfigError);
-    },
-  );
+  it.each(['2026-02-30T00:00:00Z', 'Mar 5 2026 10:00 +0530'])('refuses %s at boot', (value) => {
+    expect(() => loadConfig({ DEMO_EXPIRES_AT: value })).toThrow(ConfigError);
+  });
 });

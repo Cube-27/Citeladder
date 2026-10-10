@@ -160,7 +160,7 @@ export function useOnboardingFlow(transactionKey: string) {
     // reader was creating in, and dropping it here would silently re-target
     // the retry at whichever workspace resolves by default.
     const reset = new URLSearchParams({ new: '1' });
-    // The URL is the first authority, but an orphaned legacy completion link
+    // The URL is the first authority, but an orphaned completion link
     // may carry no workspace at all — and the resolved one is still the
     // workspace this draft belonged to.
     const workspace = searchParams?.get('workspace') ?? activeWorkspaceId;

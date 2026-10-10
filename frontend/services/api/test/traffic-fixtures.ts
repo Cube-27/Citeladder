@@ -28,7 +28,6 @@ type ResponseBody = z.infer<typeof performanceDashboardSchema> &
   z.infer<typeof recomputeResponse> & {
     items: (z.infer<typeof performanceTablePageSchema>['items'][number] &
       z.infer<typeof queryPageResponse>['items'][number])[];
-    detail: string;
     error: { code: string; details: { errors: { loc: string[]; type: string }[] } };
   };
 

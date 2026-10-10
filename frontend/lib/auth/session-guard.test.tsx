@@ -64,7 +64,7 @@ describe('SessionGuard', () => {
     mswServer.use(
       http.get('/api/v1/auth/me', () => {
         requestCount += 1;
-        return HttpResponse.json({ detail: 'Unauthorized' }, { status: 401 });
+        return HttpResponse.json({ error: { message: 'Unauthorized' } }, { status: 401 });
       }),
     );
 
@@ -88,7 +88,7 @@ describe('SessionGuard', () => {
     // expiry — the guard must NOT clear the session or redirect to /login.
     mswServer.use(
       http.get('/api/v1/auth/me', () =>
-        HttpResponse.json({ detail: 'Forbidden' }, { status: 403 }),
+        HttpResponse.json({ error: { message: 'Forbidden' } }, { status: 403 }),
       ),
     );
 
@@ -161,7 +161,7 @@ describe('SessionGuard', () => {
     mswServer.use(
       http.get('/api/v1/auth/me', () => HttpResponse.json({ user: sessionUser })),
       http.get('/api/v1/audits', () =>
-        HttpResponse.json({ detail: 'Unauthorized' }, { status: 401 }),
+        HttpResponse.json({ error: { message: 'Unauthorized' } }, { status: 401 }),
       ),
     );
 

@@ -1,4 +1,4 @@
-/** Native actions catalog: deterministic decisions over persisted evidence. */
+/** Actions catalog: deterministic decisions over persisted evidence. */
 import { opportunities } from './opportunity.ts';
 
 export const actions = {

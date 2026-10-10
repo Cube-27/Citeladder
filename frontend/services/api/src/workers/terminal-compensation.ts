@@ -1,4 +1,4 @@
-/** Durable recovery of failed native work, including sweeper-terminalized tasks. */
+/** Durable recovery of failed work, including sweeper-terminalized tasks. */
 import { sql } from 'kysely';
 
 import { policy } from '../config.ts';

@@ -1,4 +1,4 @@
-/** Python round(float, digits): round the represented binary value, with ties to even. */
+/** Round the represented binary value to `digits` decimals, with ties to even. */
 export function round(value: number, digits: number) {
   if (!Number.isFinite(value) || !Number.isInteger(digits) || digits < 0 || digits > 15)
     throw new Error('Invalid metric rounding');

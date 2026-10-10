@@ -1,11 +1,11 @@
 /**
  * The brand profile: a project's reviewed brand knowledge.
  *
- * Native onboarding creates the profile and prompt generation records
+ * Onboarding creates the profile and prompt generation records
  * business-map suggestions in its `business_context`; people edit the four
  * knowledge fields and the identity facets (category, buyer type, market scope)
  * here. Every TypeScript writer takes the project advisory
- * lock before the profile row, shared with native generation.
+ * lock before the profile row, shared with generation.
  */
 import { randomUUID } from 'node:crypto';
 
@@ -112,22 +112,22 @@ function byField<T>(stored: Record<string, T>): Record<Field, T | null> {
 
 /**
  * Older contexts name the buyer facet `business_type`. Fold it into
- * `buyer_type` (a reviewed legacy value wins over an unreviewed current one) so
+ * `buyer_type` (a reviewed `business_type` value wins over an unreviewed current one) so
  * every reader and writer sees one key.
  */
 function withBuyerType(stored: Record<string, unknown>): Record<string, unknown> {
   if (!('business_type' in stored)) return stored;
-  const { business_type: legacy, ...business } = stored;
-  const { business_type: legacySource, ...sources } = jsonObject(
+  const { business_type: older, ...business } = stored;
+  const { business_type: olderSource, ...sources } = jsonObject(
     stored.field_sources ?? {},
     'business_context.field_sources',
   );
   if (
     !('buyer_type' in business) ||
-    (legacySource === 'reviewed' && sources.buyer_type !== 'reviewed')
+    (olderSource === 'reviewed' && sources.buyer_type !== 'reviewed')
   ) {
-    business.buyer_type = legacy;
-    if (legacySource !== undefined) sources.buyer_type = legacySource;
+    business.buyer_type = older;
+    if (olderSource !== undefined) sources.buyer_type = olderSource;
   }
   return { ...business, field_sources: sources };
 }

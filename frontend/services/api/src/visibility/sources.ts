@@ -1,7 +1,7 @@
 /**
  * The Sources table: cited domains, or cited pages, over a selection.
  *
- * Shared native API/MCP projection. Every rate's denominator is the
+ * Shared API/MCP projection. Every rate's denominator is the
  * selection bounded by `as_of`, so paging never picks up a run that finished
  * mid-read. Totals follow the same filters as the rows. Page rows carry what
  * this project knows about the page and the brands named in the answers that

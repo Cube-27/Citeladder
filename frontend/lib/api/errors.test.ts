@@ -15,7 +15,7 @@ describe('ApiError', () => {
     expect(error.requestId).toBe('req-1');
   });
 
-  it('leaves code / retryable undefined for legacy callers', () => {
+  it('leaves code / retryable undefined for callers that send no envelope', () => {
     const error = new ApiError('Nope', 404, '{}');
     expect(error.code).toBeUndefined();
     expect(error.retryable).toBeUndefined();
@@ -40,7 +40,7 @@ describe('humanizeApiError', () => {
   });
 
   it('never surfaces a raw JSON blob stored on the body', () => {
-    const error = new ApiError('Bad Request', 400, '{"detail":[{"msg":"x"}]}');
+    const error = new ApiError('Bad Request', 400, '{"unexpected":[{"msg":"x"}]}');
     const humanized = humanizeApiError(error);
     expect(humanized.message).toBe('Bad Request');
     expect(humanized.message).not.toContain('{');

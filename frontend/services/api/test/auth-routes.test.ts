@@ -312,7 +312,9 @@ describe('password auth routes', () => {
       createApp(limited, db),
     );
     expect(response.status).toBe(429);
-    expect(((await response.json()) as { detail: string }).detail).toBe('Too many requests');
+    expect(((await response.json()) as { error: { message: string } }).error.message).toBe(
+      'Too many requests',
+    );
     expect(Number(response.headers.get('retry-after'))).toBeGreaterThan(0);
     await clearClientBudget();
   });

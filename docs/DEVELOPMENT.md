@@ -1,7 +1,7 @@
 # Development guide — CiteLadder
 
 Setup, validation commands and local troubleshooting.
-[AGENTS.md](../AGENTS.md) owns workflow and test admission;
+[CLAUDE.md](../CLAUDE.md) owns agent workflow;
 [the index](README.md) routes feature owners, and [invariants](invariants.md)
 remain binding. The commands below are task-specific references, not a
 per-edit checklist. Preserve existing `.env` and `.env.local` files during setup.
@@ -186,8 +186,8 @@ The one-shot `migrate` service must have completed successfully. See
 
 ## Testing
 
-Select tests for the behavior at risk, following
-[AGENTS.md](../AGENTS.md#what-earns-a-test). Replace the quoted placeholder paths
+Select tests for the behavior at risk, following the
+`principle-test-behavior-not-implementation` skill. Replace the quoted placeholder paths
 in the examples with real affected files or test identifiers. Full selected
 owner suites belong to CI; ordinary documentation edits do not launch them.
 
@@ -278,7 +278,7 @@ new admission and lets claimed work finish before destroying the pool.
 | `CITELADDER_ORIGIN_TOKEN`          | Cloud Run API                           | Existing secret matching both Workers' `ORIGIN_TOKEN`; at least 32 characters                                          |
 | `CITELADDER_ORIGIN_TOKEN_PREVIOUS` | Cloud Run API                           | Optional previous token during rotation                                                                                |
 | `RUNNER_BUDGET_SECONDS`            | Runner/tick                             | 300; 1–3600 seconds, shared across phases and lanes                                                                    |
-| `RUNNER_DB_POOL_SIZE`              | Runner/tick and API with configured job | 4; 1–4 pooled connections, independent of legacy pool/overflow sizes; a draining execution also holds one lock session |
+| `RUNNER_DB_POOL_SIZE`              | Runner/tick and API with configured job | 4; 1–4 pooled connections, independent of the API's `DB_POOL_SIZE`/`DB_MAX_OVERFLOW`; a draining execution also holds one lock session |
 | `RUNNER_WAKE_TIMEOUT_MS`           | API                                     | 5000; 1–30000 milliseconds for metadata plus job-start requests                                                        |
 | `RUNNER_WAKE_MIN_INTERVAL_MS`      | API                                     | 5000; 1–60000 milliseconds between job-start attempts per instance                                                     |
 
@@ -303,13 +303,13 @@ so a burst of writes cannot open one pool per execution. Locally, leave
 
 ### Repository validation harness
 
-[AGENTS.md](../AGENTS.md#validation) owns when each tier runs. This section
+[CLAUDE.md](../CLAUDE.md#validation) owns when each tier runs. This section
 covers the commands.
 
 These commands are available tools, not a per-edit checklist. Small styling or
 layout edits use the staged format/lint hook and a focused visual inspection
 when needed. Run native tests for changed behavior; use the repository harness
-only for the higher-risk changes specified in AGENTS.md. Its cumulative branch
+only for the higher-risk changes specified in CLAUDE.md. Its cumulative branch
 scope can include earlier dependency edits, so it must not be used as the
 default validator for a small follow-up on that branch.
 

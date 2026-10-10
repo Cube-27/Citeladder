@@ -176,7 +176,6 @@ describe('request ids and the error envelope', () => {
     });
     expect(response.status).toBe(404);
     expect(await response.json()).toEqual({
-      detail: 'Not Found',
       error: { code: 'not_found', message: 'Not Found', request_id: 'trace-404', retryable: false },
     });
   });

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { createSecretCipher } from '../src/integrations/fernet.ts';
 
 describe('integration credential encryption', () => {
-  it('decrypts ciphertext produced by the Python Fernet implementation', () => {
+  it('decrypts a reference Fernet token', () => {
     const cipher = createSecretCipher('citeladder integration interop test key');
     expect(
       cipher.decrypt(

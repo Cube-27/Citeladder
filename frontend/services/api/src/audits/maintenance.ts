@@ -12,7 +12,7 @@ import { auditEvent, transitionAudit } from './state.ts';
 
 const batchSize = auditPolicy.constants.audit_lease_sweep_batch_size;
 type Parent = { workspaceId: string; auditId: string };
-/** A prior Python writer could commit evidence before its separate queue transition. */
+/** Evidence may be committed before its separate queue transition; repair the gap. */
 export async function repairOwnedCompletion(
   db: Database,
   claimed: AuditTask,

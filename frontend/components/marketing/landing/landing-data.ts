@@ -16,7 +16,7 @@ export const FAQS = [
   },
   {
     q: 'Which AI engines do you track?',
-    a: "ChatGPT, Gemini, Claude and Google AI Overviews, depending on your plan. The free trial covers ChatGPT answers. CiteLadder collects answers to your prompts through each provider's API, and these can differ from what a consumer app shows.",
+    a: 'ChatGPT, Gemini, Claude and Google AI Overviews, depending on your plan. The free trial covers ChatGPT answers. CiteLadder collects answers to your prompts from the consumer apps and from provider APIs, and a collected answer can differ from what a signed-in user sees.',
   },
   {
     q: 'What does the free trial include?',

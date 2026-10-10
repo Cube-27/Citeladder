@@ -128,7 +128,7 @@ export async function prompt(
   return id;
 }
 
-/** A generation run as Python generation records it. */
+/** A persisted generation run. */
 export async function generationRun(
   db: Database,
   scope: { workspaceId: string; projectId: string; setId: string },

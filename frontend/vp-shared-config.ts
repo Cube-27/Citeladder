@@ -1,7 +1,6 @@
 /**
- * Shared Vite+ lint and format configuration, ported from the former
- * `.oxlintrc.json` / `.oxfmtrc.json` (Vite+ reads its lint/fmt config from
- * `vite.config.ts` blocks and ignores those files).
+ * Shared Vite+ lint and format configuration (Vite+ reads its lint/fmt config
+ * from `vite.config.ts` blocks).
  *
  * Consumed by two configs that must not drift:
  * - `frontend/vite.config.ts` -- frontend-scoped `vp lint` / `vp fmt` / `vp test`

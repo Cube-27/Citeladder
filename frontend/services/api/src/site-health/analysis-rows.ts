@@ -164,7 +164,7 @@ export async function writeAttempts(
   await db.insertInto('site_fetch_attempts').values(rows).execute();
 }
 
-/** The observation supporting membership in the current or legacy sitemap manifest. */
+/** The observation supporting membership in the current or an older stored sitemap manifest. */
 async function sitemapObservation(db: Database, crawl: Crawl, siteUrlId: string) {
   const sitemap = record(record(crawl.site_facts).sitemap);
   const urls = Array.isArray(sitemap.urls)

@@ -1,4 +1,4 @@
-/** RFC 9562 name-based (version 5) UUIDs, shared with Python's `uuid.uuid5`. */
+/** RFC 9562 name-based (version 5) UUIDs. */
 import { createHash } from 'node:crypto';
 
 /** The v5 UUID of `name` in the `namespace` UUID. */

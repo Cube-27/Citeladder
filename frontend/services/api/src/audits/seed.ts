@@ -32,7 +32,7 @@ const seedInput = z
       value.input.engines.every((engine) => ['chatgpt', 'gemini', 'claude'].includes(engine)),
     'Development fixtures support only direct answer engines',
   );
-/** Native planner/worker with explicit fixture intelligence and an audit-scoped claim; no provider transport. */
+/** Planner/worker with explicit fixture intelligence and an audit-scoped claim; no provider transport. */
 export async function seedAudit(
   db: Database,
   raw: unknown,

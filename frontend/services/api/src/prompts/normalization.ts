@@ -1,7 +1,7 @@
 /**
  * Prompt-text identity: the per-set dedupe key.
  *
- * Native writers compute this persisted hash before insertion; schema fixtures
+ * Writers compute this persisted hash before insertion; schema fixtures
  * supply it explicitly.
  */
 import { policy } from '../config.ts';

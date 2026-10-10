@@ -2,8 +2,7 @@
  * The unified API error envelope (docs/api-error-contract.md).
  *
  * Every 4xx/5xx body is
- * `{detail, error: {code, message, request_id, retryable, details?}}`, with
- * `detail` retained for legacy clients. Native config owns status defaults
+ * `{error: {code, message, request_id, retryable, details?}}`. Config owns status defaults
  * and retry classification; contracts owns the machine-code vocabulary.
  */
 import { asApiErrorCode, type ApiErrorCode } from '@citeladder/contracts/error-codes';
@@ -21,7 +20,6 @@ const INTERNAL_ERROR_MESSAGE = 'An unexpected error occurred';
 const INTERNAL_ERROR_CODE = asApiErrorCode(policy.errors.internal_error_code);
 
 type Envelope = {
-  detail: unknown;
   error: {
     code: ApiErrorCode;
     message: string;
@@ -47,7 +45,6 @@ function errorEnvelope(input: {
   requestId: string;
   retryable: boolean;
   details?: Record<string, unknown> | null;
-  detail?: unknown;
 }): Envelope {
   const error: Envelope['error'] = {
     code: input.code,
@@ -56,7 +53,7 @@ function errorEnvelope(input: {
     retryable: input.retryable,
   };
   if (input.details != null) error.details = input.details;
-  return { detail: input.detail ?? input.message, error };
+  return { error };
 }
 
 /** The coded failure every route raises. */
@@ -64,7 +61,6 @@ export class ApiError extends Error {
   readonly status: ContentfulStatusCode;
   readonly code: ApiErrorCode;
   readonly details?: Record<string, unknown>;
-  readonly detail?: unknown;
   readonly retryable?: boolean;
   readonly headers?: Record<string, string>;
 
@@ -74,7 +70,6 @@ export class ApiError extends Error {
     options: {
       code?: ApiErrorCode;
       details?: Record<string, unknown>;
-      detail?: unknown;
       retryable?: boolean;
       headers?: Record<string, string>;
     } = {},
@@ -83,7 +78,6 @@ export class ApiError extends Error {
     this.status = status;
     this.code = options.code ?? defaultCode(status);
     this.details = options.details;
-    this.detail = options.detail;
     this.retryable = options.retryable;
     this.headers = options.headers;
   }
@@ -93,7 +87,7 @@ export class ApiError extends Error {
   }
 }
 
-/** The repeated 404, detail exactly "{resource} not found". */
+/** The repeated 404, message exactly "{resource} not found". */
 export function notFound(resource: string): ApiError {
   return new ApiError(404, `${resource} not found`);
 }
@@ -116,7 +110,6 @@ export const onError: ErrorHandler = (error, c) => {
         requestId,
         retryable: error.isRetryable(),
         details: error.details,
-        detail: error.detail,
       }),
       error.status,
       error.headers,

@@ -156,7 +156,7 @@ are shipped. Remaining investigation and policy-dependent work:
     multi-hour outages went unnoticed.
   - Destroy superseded Secret Manager versions.
   - Flatten the route-ownership manifest to a family list: its `stack` can only be
-    `typescript` since Python's retirement, but invariant 1 and the route-ownership
+    `typescript`, but invariant 1 and the route-ownership
     gate are written around it.
 
 Security alerts remain explicitly deferred, not an implicit release prerequisite.
@@ -168,7 +168,7 @@ Owners: [Google Cloud operations](../operations/GOOGLE_CLOUD.md),
 
 ### Search Intelligence remainder
 
-Deferred by the [Search Intelligence review](search-intelligence-improvement.md):
+Deferred by the [Search Intelligence review](../archive/search-intelligence-improvement.md):
 
 - Per-workspace acquisition limits (feature 11): an entitlement-owned depth and
   spend limit so enterprise workspaces can run exhaustive research. Today
@@ -185,7 +185,7 @@ Owner: [Connected data](../integrations-traffic-analytics.md#search-intelligence
 
 ### Public site remainder
 
-From the [public site review](public-site-improvement.md): every marketing page
+From the [public site review](../archive/public-site-improvement.md): every marketing page
 still ships about 94 KB (gzip) of React for the navigation island and cookie
 banner. Rebuilding both as Astro components with small scripts would leave
 content pages with no framework JavaScript. Also deferred: per-page stylesheets,
@@ -194,8 +194,8 @@ and one app-origin source for pricing CTAs once pricing is enabled. Owner:
 
 ### Design system remainder
 
-The [design system consistency plan](design-system-consistency.md) shipped in
-#318–#320. Its [known remainder](design-system-consistency.md#known-remainder)
+The [design system consistency plan](../archive/design-system-consistency.md) shipped in
+#318–#320. Its [known remainder](../archive/design-system-consistency.md#known-remainder)
 stays ratcheted by `pnpm check:policy`: hand-rolled `TrendChart` axes,
 section-level skeletons, drawer and table width roles, accent check marks in
 dropdowns, and the blog illustration palette. Each names the owner to change
@@ -203,7 +203,7 @@ first. Owner: [Design](../design.md).
 
 ### App shell review remainder
 
-Deferred by the feature 15 review (2026-10-10, [plan](app-shell-improvement.md#deferred-to-the-backlog)):
+Deferred by the feature 15 review (2026-10-10, [plan](../archive/app-shell-improvement.md#deferred-to-the-backlog)):
 a Dashboard "where you are missing" block (prompts or engines that name
 competitors but not you, linking to the Action); a first-wave bootstrap that
 starts the project list, entitlement and access reads from the URL or stored
@@ -225,7 +225,7 @@ Optional later assignments, not prerequisites for completed features:
 | Security event retention | Deferred by the feature 12 review (2026-10-10): `security_events` is never pruned. Owner to choose a retention period (or none) before a runner prune is added. |
 | Operator gate in production | Deferred by the feature 12 review: production keeps `DEV_LOGIN_PASSWORD` in the API environment, and the operator's workspace passes the development gates for crawl-log ingestion and crawl controls. Replace with an explicit entitlement when those features are next reviewed. |
 | Sessions | Deferred by the feature 12 review: fixed 24-hour sessions without sliding renewal; per-device sign-out needs session rows. |
-| Prompt generation | Next: the operator-run live calibration round of [Prompt generation v3](prompt-generation-v3.md#eval-and-calibration) (`pnpm prompts:eval --live`, six fixtures × count 20, before/after), threshold review with the owner, and a shadow comparison of `context_required` defaults against `always`. Later: advisory Site Health semantic-quality observations, competitor-candidate cleanup and a stable-core/experimental portfolio split. |
+| Prompt generation | Next: the operator-run live calibration round of [Prompt generation v3](../archive/prompt-generation-v3.md#eval-and-calibration) (`pnpm prompts:eval --live`, six fixtures × count 20, before/after), threshold review with the owner, and a shadow comparison of `context_required` defaults against `always`. Later: advisory Site Health semantic-quality observations, competitor-candidate cleanup and a stable-core/experimental portfolio split. |
 | Visibility review | Deferred by the feature 3 review (2026-10-08): settle the funded monthly reservation to recorded spend once every paid path (including search-surface submissions) records its attempt cost; a "recommended vs only mentioned" rate from persisted entity assessments, replacing the never-computed `sentiment` fields; inline topic rename; import results (added and skipped counts); a failed prompt-measurements read shown as unavailable rather than hidden. |
 | Onboarding review | Deferred by the onboarding review (2026-10-08): keep in-progress review edits across a reload (today only the discovery ID and step survive), show the evidence URLs behind the suggested category and competitors on the review step, and move focus to the stage heading on step change. |
 | Opportunities review | Deferred by the feature 4 review (2026-10-08): manual order applies within one keyset page, so a pinned row on page 2 never rises; a "why this rank" explanation from the persisted priority factors; status counts in the Actions filter; scoping the commerce catalog-field load to the audit; a top-level source id column for placement and traffic observations (today only inside `result`); trimming the per-observation comparison result (about 20 queries). |
@@ -286,8 +286,7 @@ Retain unresolved approvals under the
 
 ## Completed baseline
 
-TypeScript migration/Python retirement (#268), backend debt (#256), security
-hardening (#255), design contracts (#230) and design-system consistency
+Security hardening (#255), design contracts (#230) and design-system consistency
 (#318–#320) are complete implementation history, not new assignments. Their
 operational/legal exceptions are retained above.
 

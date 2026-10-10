@@ -1,6 +1,6 @@
 /**
  * Defensive readers for persisted page facts. Facts are replayed from JSON a
- * different extractor version (or the Python extractor) wrote, so a wrongly
+ * different extractor version wrote, so a wrongly
  * shaped field contributes nothing rather than failing the page.
  */
 import { record } from '../../db/json.ts';

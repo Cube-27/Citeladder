@@ -418,7 +418,6 @@ describe('crawl-control HTTP contracts', () => {
     expect(root.status).toBe(422);
     const body = record(await root.json());
     expect(body).toMatchObject({
-      detail: { code: 'invalid_root', message: record(body.error).message },
       error: { code: 'invalid_root', retryable: false },
     });
     const invalid = await request(tenant, '/site-crawls?project_id=not-a-uuid');
@@ -583,11 +582,6 @@ describe('crawl-control HTTP contracts', () => {
     expect(stale.status).toBe(409);
     const staleBody = record(await stale.json());
     expect(staleBody).toMatchObject({
-      detail: {
-        code: 'stale_selection_version',
-        message: record(staleBody.error).message,
-        current_selection_version: 2,
-      },
       error: {
         code: 'stale_selection_version',
         retryable: false,
