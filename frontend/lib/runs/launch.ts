@@ -34,7 +34,7 @@ export const PROMPT_BATCH_SIZE = 10;
 /**
  * A prompt set's audit-eligible prompts, in the order the backend runs them.
  *
- * Mirrors `_resolve_prompts` in `domain/audits/resolution.py`: active and
+ * Mirrors the API's audit prompt resolution: active and
  * enabled only, ordered by creation. The order matters — batch 2 has to mean
  * the same ten prompts here as it does there, or "Prompts 11-20" would run an
  * arbitrary slice.

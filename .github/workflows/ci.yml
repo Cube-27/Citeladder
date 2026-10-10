@@ -293,6 +293,6 @@ jobs:
           tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP" gitleaks
       - name: Secrets scan (reviewed allowlist in .gitleaks.toml)
         run: |
-          # Scan the checked-out tree, as detect-secrets did, not the Git object store.
+          # Scan the checked-out tree, not the Git object store.
           rm -rf .git
           "$RUNNER_TEMP/gitleaks" dir . --no-banner --redact --config .gitleaks.toml

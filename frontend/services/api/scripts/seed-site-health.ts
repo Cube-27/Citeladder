@@ -5,7 +5,7 @@ import { seedCrawl, seedSelection } from '../src/site-health/seed.ts';
 import { z } from 'zod';
 
 const config = loadConfig();
-const target = new URL(config.databaseUrl.replace('postgresql+asyncpg:', 'postgresql:'));
+const target = new URL(config.databaseUrl);
 if (
   config.appEnv !== 'development' ||
   !['localhost', '127.0.0.1', '[::1]'].includes(target.hostname)

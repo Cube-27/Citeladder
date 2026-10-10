@@ -1,6 +1,5 @@
 /**
- * Persisted Opportunity row projections and their deterministic presentation
- * (`app/domain/opportunities/projection.py` and `content_handoff.py`).
+ * Persisted Opportunity row projections and their deterministic presentation.
  *
  * Every value is read from the row a refresh froze; nothing is re-scored or
  * re-derived at read time.

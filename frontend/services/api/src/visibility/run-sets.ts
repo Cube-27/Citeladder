@@ -1,9 +1,7 @@
 /**
  * Whether a selected run set may be compared with a baseline run set.
  *
- * Moved from `source_comparison_status` in
- * `app/domain/analysis/source_comparison.py`; the prompt and source tables
- * ask the same question. Two sets compare only when every run is known, the
+ * The prompt and source tables ask the same question. Two sets compare only when every run is known, the
  * baseline finished entirely before the selection, every run is fully
  * covered and all share one frozen identity and versions.
  */

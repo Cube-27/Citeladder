@@ -2,10 +2,8 @@
  * Count-aware projections of one persisted aggregate: never a rescore.
  *
  * A `MetricSnapshot.metrics` object (or one engine's or cohort's slice of it)
- * is what every dashboard, trend and comparison reads. Moved from
- * `app/domain/analysis/measurement.py` and the ranking and share-of-voice
- * helpers of `visibility.py` and `trend_folding.py`, which built the same
- * ranking rows twice. A stored value of the wrong type fails loudly; an
+ * is what every dashboard, trend and comparison reads, and the one place
+ * ranking rows are built. A stored value of the wrong type fails loudly; an
  * absent one stays absent, never zero.
  */
 import type { measurementCountsSchema, rankingRowSchema } from '@citeladder/contracts/visibility';

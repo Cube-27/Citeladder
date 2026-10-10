@@ -537,9 +537,8 @@ records its SHA-256 in `schema_migrations`. A rerun on a current database is a
 no-op. The command fails, and the deploy stops before the API rolls forward, when:
 
 - the recorded checksum differs from the file (the baseline changed);
-- the database carries only an Alembic `alembic_version` stamp (created before
-  Python was retired);
-- the database has tables but no ledger.
+- the database has tables but no ledger (including one created before the
+  baseline existed).
 
 Each message says to redeploy with `reset_database`
 ([GCP runbook](operations/GCP_RUNBOOK.md)). Locally, `./scripts/reset-db.ps1`

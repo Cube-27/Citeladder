@@ -1,8 +1,7 @@
 /**
  * Frozen retrieval and route provenance, for one execution or one run.
  *
- * Ports `execution_frozen_provenance` and `model_provenance_for` from
- * `app/domain/audits/schemas.py`: the task's request snapshot wins, then its
+ * The task's request snapshot wins, then its
  * route snapshot, then the audit's frozen measurement policy. Live
  * configuration is never consulted.
  */

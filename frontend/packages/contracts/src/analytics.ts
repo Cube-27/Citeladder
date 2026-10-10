@@ -5,8 +5,8 @@ import { z } from 'zod';
 //
 // These two shapes belong to no single surface: AI Referrals and Performance
 // both read dated metric series, and AI Referrals still offers a day/week/
-// month bucket control. They mirror the backend's one owner
-// (`domain/analytics/schemas.py`), so neither surface forks a second
+// month bucket control. They mirror the API's one owner
+// (`services/api/src/analytics`), so neither surface forks a second
 // definition of what a bucket or a series point is (invariant 2).
 // ---------------------------------------------------------------------------
 

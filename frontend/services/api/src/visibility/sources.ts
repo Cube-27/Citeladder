@@ -14,7 +14,7 @@ import type { z } from 'zod';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
-import { pydanticUtcOf, pydanticUtcOrNull, utcText } from '../db/timestamps.ts';
+import { wireUtcOf, wireUtcOrNull, utcText } from '../db/timestamps.ts';
 import { fromEpochMicros, type ParsedDatetime } from '../http/datetimes.ts';
 import {
   decodeKeysetCursor,
@@ -60,7 +60,7 @@ function sourcePosition(query: SourceQuery, filters: Record<string, unknown>) {
     ? decodeKeysetCursor(query.cursor, 'visibility-sources', filters)
     : null;
   const asOf =
-    position?.[0] ?? pydanticUtcOf(query.asOf ?? fromEpochMicros(BigInt(Date.now()) * 1000n));
+    position?.[0] ?? wireUtcOf(query.asOf ?? fromEpochMicros(BigInt(Date.now()) * 1000n));
   if (!position) return { position, asOf };
   const direction = position[3];
   if (
@@ -72,7 +72,7 @@ function sourcePosition(query: SourceQuery, filters: Record<string, unknown>) {
     Number(position[1]) < 0
   )
     throw new InvalidCursorError('invalid sources cursor');
-  if (query.asOf && pydanticUtcOf(query.asOf) !== asOf)
+  if (query.asOf && wireUtcOf(query.asOf) !== asOf)
     throw new InvalidCursorError('invalid sources cursor');
   return { position, asOf };
 }
@@ -246,7 +246,7 @@ export async function getVisibilitySources(
       key: row.key,
       url_hash: pages ? row.url_hash : null,
       // "Last seen" is asked of a page, never of a publisher.
-      last_cited_at: pages ? pydanticUtcOrNull(row.last_cited_at) : null,
+      last_cited_at: pages ? wireUtcOrNull(row.last_cited_at) : null,
       responses: rowResponses,
       prompts: Number(row.prompts),
       annotations,

@@ -385,7 +385,7 @@ function SearchGroupRows({ group }: Readonly<{ group: SearchGroup }>) {
  * searches" and "Total occurrences" from it meant both figures changed as the
  * reader paged — they were page totals wearing selection labels. This asks the
  * projection that already aggregates the COMPLETE selection
- * (`domain/analysis/fanout_projection.py`), which it does with `limit=None`.
+ * (`services/api/src/analysis/fanout.ts`), which it does with `limit=None`.
  *
  * The normalized search is sent too, so the count of matching queries covers
  * the whole run set rather than whatever happens to be loaded: a query stored

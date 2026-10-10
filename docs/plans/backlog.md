@@ -155,6 +155,9 @@ are shipped. Remaining investigation and policy-dependent work:
   - Alerts on failed job executions and errors, wanted before customers: two
     multi-hour outages went unnoticed.
   - Destroy superseded Secret Manager versions.
+  - Flatten the route-ownership manifest to a family list: its `stack` can only be
+    `typescript` since Python's retirement, but invariant 1 and the route-ownership
+    gate are written around it.
 
 Security alerts remain explicitly deferred, not an implicit release prerequisite.
 Infrastructure redesigns and paid security tiers require demonstrated need. Recovery,

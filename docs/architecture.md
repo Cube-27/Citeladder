@@ -97,8 +97,7 @@ and retry classification.
 Application policy lives in native config, including security, roles,
 capabilities, provider catalogs and queue bounds. The migration job applies the
 SQL baseline once under an advisory lock (recording its SHA-256 in
-`schema_migrations`; a changed baseline or an Alembic-era database fails the
-job), then runs native identity/grant/catalog bootstrap; successful job
+`schema_migrations`; a changed baseline or unledgered tables fail the job), then runs native identity/grant/catalog bootstrap; successful job
 completion admits API/worker rollout. Auth, workspace, commercial and product writes are native.
 
 The SQL baseline is the only schema author, so the service holds Kysely types

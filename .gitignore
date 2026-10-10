@@ -4,8 +4,6 @@ artifacts/
 
 # Env / secrets
 .env
-# Logfire CLI credentials: contains a project write token.
-.logfire/
 *.env
 !.env.example
 
@@ -41,11 +39,6 @@ frontend/.*.mjs
 frontend/.*.png
 .runtime/
 
-# Coverage artifacts (measured on every run; CI uploads nothing today)
-.coverage
-.coverage.*
-coverage.xml
-htmlcov/
 
 # Playwright CLI saved browser state. These files hold live session cookies
 # and auth tokens. The skill's own examples write `auth.json` and

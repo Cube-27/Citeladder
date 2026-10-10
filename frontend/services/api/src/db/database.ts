@@ -19,15 +19,10 @@ export type DatabaseConfig = Pick<ServiceConfig, 'database' | 'databaseUrl' | 'a
   execution?: Pick<ServiceConfig['execution'], 'runnerJob' | 'poolSize'>;
 };
 
-/** Accept a driver-qualified URL (`postgresql+asyncpg://`) as plain libpq. */
-export function libpqUrl(databaseUrl: string): string {
-  return databaseUrl.replace(/^postgres(?:ql)?\+[a-z0-9_]+:\/\//iu, 'postgresql://');
-}
-
 export function poolOptions(config: DatabaseConfig): pg.PoolConfig {
   const db = config.database;
   return {
-    connectionString: libpqUrl(config.databaseUrl),
+    connectionString: config.databaseUrl,
     // pool_size + max_overflow concurrent connections.
     max: db.poolSize + db.maxOverflow,
     maxLifetimeSeconds: db.poolRecycleSeconds,

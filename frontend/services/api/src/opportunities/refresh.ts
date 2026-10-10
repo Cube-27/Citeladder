@@ -1,5 +1,5 @@
 /**
- * The Opportunity refresh (`recompute.py`): read persisted evidence, detect,
+ * The Opportunity refresh: read persisted evidence, detect,
  * score, and supersede the project's live set with one immutable snapshot.
  *
  * A missing source is not an error. With a prior snapshot and no resolvable

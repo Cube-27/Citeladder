@@ -1,7 +1,7 @@
 /**
  * Everything one cited URL's own page shows, from persisted rows only.
  *
- * Moved from `app/domain/analysis/source_url_detail.py`. Keyed by the URL the
+ * Keyed by the URL the
  * engines reported, so a citation whose page identity was never resolved
  * still has a page. `brands` is co-occurrence (named in answers that cited
  * this URL), never presence on the page; `first_seen` is the first sighting
@@ -14,7 +14,7 @@ import type { z } from 'zod';
 import { earnedTargetKey } from '../analysis/opportunities/earned-pages.ts';
 import type { Database } from '../db/database.ts';
 import { latestReadings, pageEntities, readAt, readingPresences } from '../source-pages/reading.ts';
-import { pydanticUtcOrNull, utcText } from '../db/timestamps.ts';
+import { wireUtcOrNull, utcText } from '../db/timestamps.ts';
 import { brandIdentities, identityKey } from './brand-identities.ts';
 import { authorizedSelection, evidenceScope, observedAt, type RunSelection } from './selection.ts';
 import { compareText } from '../text-order.ts';
@@ -98,7 +98,7 @@ async function promptRows(db: Database, cited: Cited): Promise<SourceUrlDetail['
     prompt_text: row.prompt_text || '',
     topic: row.theme || null,
     responses: Number(row.responses),
-    last_seen: pydanticUtcOrNull(row.last_seen),
+    last_seen: wireUtcOrNull(row.last_seen),
     engines: (row.engines ?? [])
       .filter((engine): engine is string => Boolean(engine))
       .sort(compareText),
@@ -282,8 +282,8 @@ export async function getSourceUrlDetail(
     // Per response the URL was RETRIEVED in, as the URL table's column is.
     citation_rate: retrievals ? Number(citations) / retrievals : null,
     prompts: Number(overview.prompts),
-    first_seen: pydanticUtcOrNull(overview.first_seen),
-    last_seen: pydanticUtcOrNull(overview.last_seen),
+    first_seen: wireUtcOrNull(overview.first_seen),
+    last_seen: wireUtcOrNull(overview.last_seen),
     engines: await engines(db, cited),
     prompt_rows: await promptRows(db, cited),
     brands: await brands(db, selection, cited),

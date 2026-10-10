@@ -1,7 +1,7 @@
 import { robotsFactsSchema } from '@citeladder/contracts/site-health';
 import { sql } from 'kysely';
 import type { Database } from '../../db/database.ts';
-import { pydanticUtc, utcTextOf } from '../../db/timestamps.ts';
+import { wireUtc, utcTextOf } from '../../db/timestamps.ts';
 import { WorkspaceScope } from '../../db/workspace-scope.ts';
 import {
   decodeKeysetCursor,
@@ -63,7 +63,7 @@ export async function robotsHistory(
     snapshots,
     next_cursor:
       rows.length > input.limit && last
-        ? encodeKeysetCursor('robots-history', filters, [pydanticUtc(last.observed_at), last.id])
+        ? encodeKeysetCursor('robots-history', filters, [wireUtc(last.observed_at), last.id])
         : null,
   };
 }

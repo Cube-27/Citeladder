@@ -295,7 +295,7 @@ describe('CSV evidence and catalog', () => {
 });
 
 describe('decisions and persisted reads', () => {
-  it('serializes decisions and makes TS catalog and approvals consumable by Python audit context', async () => {
+  it('serializes decisions and makes the catalog and approvals consumable by the audit context', async () => {
     const imported = await importCsv();
     const productId = imported.body.row_outcomes[0]!.product_id!;
     const ids = await commerceFixture<{ promptId: string; candidateId: string }>(

@@ -158,8 +158,8 @@ platform credits and never silently falls back.
 reserves a crawl's page budget at creation and settles analyzed pages on every
 terminal path; accounts without a page-fetch grant are not metered there.
 Audit reservations, debits and releases now use the TypeScript ledger owner.
-Its audit fingerprints reproduce the Python format so persisted Python audit
-entries can be replayed idempotently. Audit entries from the earlier TypeScript
+Its audit fingerprints reproduce the pre-retirement Python format so audit
+entries persisted before the TypeScript ledger can be replayed idempotently. Audit entries from the earlier TypeScript
 format are incompatible and fail closed on replay; they require fresh disposable
 pre-launch data rather than rewriting immutable history. No reset is implicit.
 Runtime metering, grants, resolution and admission use their TypeScript owners.

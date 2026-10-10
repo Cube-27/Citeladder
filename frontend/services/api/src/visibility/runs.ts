@@ -2,8 +2,7 @@
  * A project's measured runs: each dashboard-ready brand run with its
  * persisted `MetricSnapshot` and frozen routes.
  *
- * Moved from `_load_trend_rows` and `_trend_source` in
- * `app/domain/analysis/trends.py`. Every trend, range and baseline read walks
+ * Every trend, range and baseline read walks
  * this one list. A source's folding identity comes only from frozen audit
  * fields, never from live configuration.
  */

@@ -36,7 +36,7 @@ try {
     Get-Command node, gcloud, pwsh -ErrorAction Stop | Out-Null
     $instance = (Invoke-GcloudRead -Arguments @('compute', 'instances', 'describe', $DatabaseInstance, "--project=$ProjectId", "--zone=$Zone", '--format=json')) | ConvertFrom-Json
     $productionDatabase = Invoke-GcloudRead -Arguments @('secrets', 'versions', 'access', 'latest', "--secret=$DatabaseSecret", "--project=$ProjectId")
-    $databaseUri = [UriBuilder]($productionDatabase -replace '^postgresql\+asyncpg:', 'postgresql:')
+    $databaseUri = [UriBuilder]$productionDatabase
     if ($databaseUri.Host -ne $instance.networkInterfaces[0].networkIP) {
         throw 'The database secret does not target the selected production database instance.'
     }

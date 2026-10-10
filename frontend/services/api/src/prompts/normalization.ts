@@ -2,7 +2,7 @@
  * Prompt-text identity: the per-set dedupe key.
  *
  * Native writers compute this persisted hash before insertion; schema fixtures
- * supply it explicitly after retirement of the Python normalization callback.
+ * supply it explicitly.
  */
 import { policy } from '../config.ts';
 import { collapseIdentityWhitespace, hash } from '../traffic/normalization.ts';

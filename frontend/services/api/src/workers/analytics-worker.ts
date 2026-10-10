@@ -1,6 +1,6 @@
 /**
- * The TypeScript analytics worker: claims the kinds `core/config/analytics.py`
- * assigns to TypeScript and runs each through its executor.
+ * The analytics worker: claims the kinds the analytics catalog
+ * (`config/connected-data.ts`) owns and runs each through its executor.
  *
  * Owns the analytics queue lifecycle: the claim
  * commits before any work, a row already terminal at claim time is never

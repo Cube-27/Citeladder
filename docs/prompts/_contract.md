@@ -40,7 +40,7 @@ wrong finding.
 - **Marketing copy and "coming soon" labels are owner-controlled.** Never report
   wording, tone or claims in marketing copy.
 - Linters already enforce formatting, raw colours/text sizes (`pnpm check:policy`),
-  complexity ceilings, dead exports (knip/vulture) and import layering. Do not
+  complexity ceilings, dead exports (knip) and import layering. Do not
   report what those tools catch; report what they cannot.
 
 ## 3. Authority

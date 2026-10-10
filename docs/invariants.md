@@ -240,8 +240,8 @@ Before launch, schema changes are folded into the single SQL baseline
 `frontend/services/api/migrations/0001_baseline.sql`; do not add `0002+` without
 an explicit policy change. The migrate CLI (`pnpm migrate`) applies it to an
 empty database in one transaction and records its SHA-256 in `schema_migrations`;
-a rerun is a no-op. A changed baseline, an Alembic-era database or unledgered
-tables fail the migrate job, so a changed baseline reaches a populated database
+a rerun is a no-op. A changed baseline or unledgered tables fail the migrate
+job, so a changed baseline reaches a populated database
 only by replacing it (the deploy's confirmed `reset_database`), never by adapting
 it in place. Verify a change from an empty disposable database with `pnpm migrate`
 and `pnpm db:types:check`. Semantic versions follow invariant 5. The baseline is

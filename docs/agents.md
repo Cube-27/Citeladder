@@ -43,9 +43,8 @@ can be narrowed to one Action's chats and searches titles and message content
 within the project.
 
 Idempotency keys are workspace-scoped and bound to the requester and the full
-request; a changed request or requester conflicts, and pre-cutover Python keys
-return `agent_idempotency_conflict` with `legacy_runtime` details. An
-unavailable explicit context identifier returns 404; an incompatible target, 409.
+request; a changed request or requester conflicts with
+`agent_idempotency_conflict`. An unavailable explicit context identifier returns 404; an incompatible target, 409.
 
 Admission checks workspace role, the Agent capability and a funding route, then
 freezes on the run the runtime/protocol versions, the skill catalog and tool
@@ -405,7 +404,7 @@ scripted models and real PostgreSQL, never live providers:
   prefix; streamed and buffered gateway calls settle the same result.
 - `agent-cutover.test.ts`: HTTP admission, the SSE route (events, saved reply,
   no re-execution, a closed stream ending the turn as interrupted), catalog
-  projection, legacy replay, recovery and cancellation.
+  projection, recovery and cancellation.
 - `agent-funding.test.ts`: holds, settlement, unknown usage, BYOK and
   development funding.
 

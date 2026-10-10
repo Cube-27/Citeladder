@@ -17,7 +17,7 @@ import {
   decodeKeysetCursor,
   InvalidCursorError,
 } from '../http/keyset-cursor.ts';
-import { isoDateText, utcTextOf, pydanticUtc } from '../db/timestamps.ts';
+import { isoDateText, utcTextOf, wireUtc } from '../db/timestamps.ts';
 import { sourceList } from './source-reads.ts';
 import { reportingDay, type CrawlScope } from './state.ts';
 import { addDays } from '../referrals/projection.ts';
@@ -305,7 +305,7 @@ export async function activityPage(db: Database, scope: CrawlScope, input: Crawl
     .execute();
   const items = rows
     .slice(0, limit)
-    .map(({ occurred, ...row }) => ({ ...row, occurred_at: pydanticUtc(occurred) }));
+    .map(({ occurred, ...row }) => ({ ...row, occurred_at: wireUtc(occurred) }));
   const last = items.at(-1);
   return botActivityResponseSchema.parse({
     items,

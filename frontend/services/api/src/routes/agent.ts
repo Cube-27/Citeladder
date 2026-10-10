@@ -75,15 +75,6 @@ async function mapped<T>(action: () => Promise<T>) {
       throw new ApiError(403, 'Agent run permission is unavailable');
     if (error.code === 'agent_context_unavailable') throw notFound('Agent context');
     if (error.code === 'agent_workflow_unavailable') throw notFound('Agent workflow');
-    if (error.code === 'agent_legacy_replay')
-      throw new ApiError(
-        409,
-        'This key belongs to a pre-cutover Agent run. Read the existing chat; use a new key for new work.',
-        {
-          code: asApiErrorCode('agent_idempotency_conflict'),
-          details: { reason: 'legacy_runtime' },
-        },
-      );
     throw new ApiError(409, 'Agent request conflicts with the current state', {
       code: asApiErrorCode(conflictCode(error.code)),
     });

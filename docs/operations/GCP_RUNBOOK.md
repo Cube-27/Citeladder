@@ -243,8 +243,8 @@ Merge to `main`, wait for CI, and rerun **GCP - Deploy**. Each run builds
 digests (reused on retry), applies secrets, migrates before the API rolls
 forward, applies Terraform and smokes. The migrate job applies
 `frontend/services/api/migrations/0001_baseline.sql` to an empty database and is a
-no-op when the recorded checksum matches. A changed baseline, an Alembic-era
-database or unledgered tables fail the job, which stops the deploy before the API
+no-op when the recorded checksum matches. A changed baseline or
+unledgered tables fail the job, which stops the deploy before the API
 changes; the log names the cause and says to redeploy with `reset_database`.
 
 - **API rollback:** Cloud Run → `citeladder-api` → Revisions, then route
@@ -255,8 +255,8 @@ changes; the log names the cause and says to redeploy with `reset_database`.
   `reset_database` checked and the exact project ID. It replaces the VM, which
   deletes every row with no backup, and then migrates. It refuses demo mode.
   This is how a changed pre-launch baseline is applied. The first deploy after
-  Python's retirement needs it too: the existing database carries only an
-  Alembic stamp, which the migrate job refuses.
+  Python's retirement needs it too: the existing database has tables but no
+  `schema_migrations` ledger, which the migrate job refuses.
 - **PostgreSQL image update:** a deploy that changes `infra/gcp/postgres/Dockerfile`
   updates the VM's startup script in place. The new image runs after the next
   restart (`gcloud compute instances reset citeladder-db --zone us-central1-a`),

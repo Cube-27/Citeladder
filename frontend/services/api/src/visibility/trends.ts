@@ -1,8 +1,7 @@
 /**
  * The cross-run visibility trend: one point per run, or per UTC bucket.
  *
- * Moved from `get_visibility_trends` in `app/domain/analysis/trends.py`. A
- * projection of the project's persisted snapshots; a project with no matching
+ * A projection of the project's persisted snapshots; a project with no matching
  * history is an empty list, never an error. An explicit model or retrieval
  * slice filters sources before anything is folded.
  */

@@ -47,10 +47,6 @@ async function admission(client: pg.ClientBase, checksum: string): Promise<'curr
       `The schema baseline changed after this database was migrated (recorded ${ledger.rows[0]?.checksum.slice(0, 12) ?? 'none'}, file ${checksum.slice(0, 12)}). ${RESET}`,
     );
   }
-  if (await exists(client, 'public.alembic_version'))
-    throw new OperatorRefusal(
-      `This database was created by the retired Alembic migrations. ${RESET}`,
-    );
   const relations = await client.query(
     `select 1 from pg_class c join pg_namespace n on n.oid = c.relnamespace
      where n.nspname = 'public' and c.relkind in ('r', 'p', 'v', 'm', 'S', 'f') limit 1`,
