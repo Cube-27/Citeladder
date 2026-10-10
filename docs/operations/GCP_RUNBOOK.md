@@ -237,6 +237,18 @@ Billing → Reports grouped by SKU and remove anything unexpectedly non-zero.
   A `next_due` or `next_lease_expiry` well in the past means no execution has
   drained that queue since; run the tick and read its log.
 
+- **Crawl-log reader:** Terraform creates `citeladder-log-reader`, a service
+  account with no key and no role in this project, and grants the runtime
+  service account `roles/iam.serviceAccountTokenCreator` on it alone. Its email
+  (`terraform output crawl_log_reader_email`) reaches every Cloud Run workload
+  as `CRAWL_LOG_READER_EMAIL`; customers grant it subscriber and viewer on
+  their own Pub/Sub subscription. Empty hides the Google Cloud connector. The
+  bootstrap enables `pubsub.googleapis.com` and `iamcredentials.googleapis.com`.
+  `crawl_log_pull` rows on `analytics_tasks` drain those subscriptions on the
+  tick's cadence; a source stalled as `verification_failed` is a customer-side
+  label, subscription or IAM change, not an outage here. A failed token mint
+  shows as an `unavailable` pull that retries without stalling the source.
+
 ## 4. Updates and rollback
 
 Merge to `main`, wait for CI, and rerun **GCP - Deploy**. Each run builds
