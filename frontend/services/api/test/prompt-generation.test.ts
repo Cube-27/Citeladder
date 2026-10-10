@@ -10,7 +10,7 @@ import { reviewCandidates } from '../src/prompts/candidates.ts';
 import { generationInput } from '../src/prompts/generation-input.ts';
 import { promptTextHash } from '../src/prompts/normalization.ts';
 import { generatePrompts } from '../src/prompts/generation.ts';
-import { billingAccount, grant, promptSet, topic } from './prompt-fixtures.ts';
+import { billingAccount, echoDependencies, grant, promptSet, topic } from './prompt-fixtures.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
 
@@ -83,34 +83,6 @@ function dependencies(judgeProbability?: number) {
           },
         );
   return { gateway: () => gateway, judge: () => judge, io };
-}
-/**
- * A gateway that answers every planned slot of a batch with a distinct question,
- * or fails the calls `fail` names (1-based) with a non-retried provider error.
- */
-function echoDependencies(fail: number[] = [], onCall?: (call: number) => void) {
-  let calls = 0;
-  const fetch = vi.fn<typeof globalThis.fetch>(async (_url, init) => {
-    const call = ++calls;
-    onCall?.(call);
-    if (fail.includes(call)) return new Response('bad request', { status: 400 });
-    const body = JSON.parse(String(init?.body)) as { messages: { content: string }[] };
-    const user = JSON.parse(body.messages[1]!.content.split('\n\nReturn only JSON')[0]!) as {
-      slots: { slot_id: string }[];
-    };
-    const prompts = user.slots.map((slot) => ({
-      slot_id: slot.slot_id,
-      text: `Which running shoes suit runner ${slot.slot_id} best?`,
-      buyer_stage: 'consideration',
-      prompt_intent: 'recommend',
-    }));
-    return Response.json({ choices: [{ message: { content: JSON.stringify({ prompts }) } }] });
-  });
-  const gateway = createModelGateway(
-    { ...gatewaySettings({}), apiKey: 'test-only', model: 'test', baseUrl: 'https://model.test' },
-    { fetch, sleep: async () => {} },
-  );
-  return { gateway: () => gateway, judge: () => null, io: { fetch } };
 }
 const oneSlotBatches = () => {
   vi.stubEnv('GENERATION_MODEL_BATCH_SIZE', '1');
@@ -325,7 +297,7 @@ describe('prompt generation at the PostgreSQL boundary', () => {
       tenant.workspaceId,
       setId,
       generationInput.parse({ count: 3 }),
-      echoDependencies([3, 4, 5, 6, 7]),
+      echoDependencies({ fail: [3, 4, 5, 6, 7] }),
     );
     expect(result.candidates).toHaveLength(2);
     expect(result.shortfall_reason).toBe('model_error');
@@ -338,7 +310,7 @@ describe('prompt generation at the PostgreSQL boundary', () => {
       stop_reason: 'model_error',
       model_results: expect.arrayContaining([{ batch: 2, error_code: 'client_error' }]),
     });
-    await expect(generate(echoDependencies([1, 2, 3, 4, 5]))).rejects.toMatchObject({
+    await expect(generate(echoDependencies({ fail: [1, 2, 3, 4, 5] }))).rejects.toMatchObject({
       status: 502,
     });
   });
@@ -346,8 +318,10 @@ describe('prompt generation at the PostgreSQL boundary', () => {
     oneSlotBatches();
     const deadline = new AbortController();
     const deps = {
-      ...echoDependencies([], (call) => {
-        if (call === 1) deadline.abort();
+      ...echoDependencies({
+        onCall: (call) => {
+          if (call === 1) deadline.abort();
+        },
       }),
       deadline: () => deadline.signal,
     };

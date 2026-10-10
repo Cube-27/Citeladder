@@ -239,5 +239,5 @@ export function generationSystemPrompt(
 ): string {
   const base = template.replace('{example}', () => examples[businessModel] ?? fallbackExample);
   if (!Object.hasOwn(cohortRules, cohort)) throw new TypeError(`Unknown prompt cohort: ${cohort}`);
-  return `${base}\n${cohortRules[cohort]}${grounded ? `\n${groundingRule}` : ''}`;
+  return [base, cohortRules[cohort], ...(grounded ? [groundingRule] : [])].join('\n');
 }

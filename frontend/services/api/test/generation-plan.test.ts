@@ -113,6 +113,8 @@ describe('grounding', () => {
       text,
       topic_id: fixtureTopicId(topic),
       weight,
+      classifier_version: 'branded-query-1',
+      override_id: null,
     });
     const context = {
       ...fixtureContext(service),

@@ -9,7 +9,7 @@ These notes describe implemented changes in the codebase. Dates are the recorded
 
 ## October 10, 2026: Prompt generation grounded in your search data
 
-Generated prompts now borrow wording from how your buyers already search. When Search Console is connected or you have published keyword research, each suggestion is written with a few of your own non-branded searches for that topic as examples, and suggestions phrased this way carry an **Informed by your search data** tag. Nothing extra is fetched or charged, searches are never copied as prompts, and impressions or keyword volume are never shown as AI prompt volume. Without that data, generation is unchanged.
+Generated prompts now borrow wording from how your buyers already search. When Search Console is connected or you have published keyword research, suggestions for a topic with matching searches are written with a few of your own non-branded searches for that topic as examples, and suggestions phrased this way carry an **Informed by your search data** tag. Nothing extra is fetched or charged, searches are never copied as prompts, and impressions or keyword volume are never shown as AI prompt volume. Without that data, generation is unchanged.
 
 **For your team:** connect Search Console before generating, and expect suggestions that sound more like your real buyers.
 

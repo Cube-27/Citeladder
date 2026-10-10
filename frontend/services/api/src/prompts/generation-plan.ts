@@ -31,7 +31,10 @@ export type Slot = {
   /** Same-topic searches that steer phrasing; absent when the project has none. */
   grounding?: Grounding[];
 };
-type Grounding = Pick<ObservedQuery, 'id' | 'source' | 'text'>;
+type Grounding = Pick<
+  ObservedQuery,
+  'id' | 'source' | 'text' | 'classifier_version' | 'override_id'
+>;
 type Facet = { dimension: number; value: string; suggested: boolean };
 type PlanContext = Pick<GenerationContext, 'selected' | 'topics' | 'maps' | 'observed'> & {
   context: Pick<GenerationContext['context'], 'business_context'>;
@@ -207,7 +210,13 @@ function groundingFor(
       // A stable sort, so equal overlap keeps the loader's order.
       .toSorted((a, b) => b.shared - a.shared)
       .slice(0, G.observed.examples_per_slot)
-      .map(({ query }) => ({ id: query.id, source: query.source, text: query.text }))
+      .map(({ query: { id, source, text, classifier_version, override_id } }) => ({
+        id,
+        source,
+        text,
+        classifier_version,
+        override_id,
+      }))
   );
 }
 

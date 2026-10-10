@@ -26,14 +26,21 @@ export type ObservedQuery = {
   topic_id: string;
   /** Impressions for Search Console, search volume for keyword research: ordering only. */
   weight: number;
+  /** The branded-query classification that admitted it: classifier version and any override. */
+  classifier_version: string;
+  override_id: string | null;
 };
-type Sourced = Omit<ObservedQuery, 'topic_id'>;
+type Sourced = Omit<ObservedQuery, 'topic_id' | 'classifier_version' | 'override_id'>;
 
 /** The evidence ref a candidate carries for each search that grounded its slot. */
-export const observedRef = (query: Pick<ObservedQuery, 'id' | 'source'>) => ({
+export const observedRef = (
+  query: Pick<ObservedQuery, 'id' | 'source' | 'classifier_version' | 'override_id'>,
+) => ({
   kind: O.evidence_kind,
   source: query.source,
   id: query.id,
+  classifier_version: query.classifier_version,
+  override_id: query.override_id,
 });
 /** Whether evidence refs include an observed search: the one `grounded` rule. */
 export const isGrounded = (refs: unknown) =>
@@ -68,7 +75,8 @@ async function searchConsoleQueries(db: Database, scope: ObservedScope): Promise
     .orderBy('id', 'desc')
     .executeTakeFirst();
   if (!snapshot) return [];
-  const impressions = sql<number>`sum(impressions)::int`;
+  // A double, not int: a busy query's summed impressions can pass 2^31.
+  const impressions = sql<number>`sum(impressions)::float8`;
   const rows = await workspace
     .selectFrom(db, 'query_evidence_rows')
     .select([
@@ -132,9 +140,14 @@ async function keywordResearchQueries(db: Database, scope: ObservedScope): Promi
   }));
 }
 
+// ICU word boundaries also split scripts written without spaces (Japanese, Chinese, Thai).
+const WORDS = new Intl.Segmenter(undefined, { granularity: 'word' });
+
 /** At least `min_tokens` words, or a shorter question opening with a question word. */
 function queryShaped(text: string, language: string): boolean {
-  const tokens = text.split(' ').filter(Boolean);
+  const tokens = [...WORDS.segment(text)]
+    .filter((segment) => segment.isWordLike)
+    .map((segment) => segment.segment);
   const [first] = tokens;
   if (first === undefined || text.length > O.max_chars) return false;
   return tokens.length >= O.min_tokens || (O.question_words[language] ?? []).includes(first);
@@ -193,12 +206,20 @@ export async function loadObservedQueries(
   return shaped.toSorted(byWeight).flatMap((row) => {
     if (seen.has(row.text)) return [];
     seen.add(row.text);
-    if (classes.get(row.text)?.classification !== 'non_branded') return [];
+    const verdict = classes.get(row.text);
+    if (verdict?.classification !== 'non_branded') return [];
     const topicId = bindTopic(row.text, topics);
     if (!topicId) return [];
     const count = kept.get(topicId) ?? 0;
     if (count >= O.max_per_topic) return [];
     kept.set(topicId, count + 1);
-    return [{ ...row, topic_id: topicId }];
+    return [
+      {
+        ...row,
+        topic_id: topicId,
+        classifier_version: verdict.classifier_version,
+        override_id: verdict.override_id,
+      },
+    ];
   });
 }

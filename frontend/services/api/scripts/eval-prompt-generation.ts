@@ -42,7 +42,11 @@ const count = Number(values.count);
 // The same ceiling the API enforces, so an eval cannot outspend a request.
 if (!Number.isInteger(count) || count < 1 || count > generationSetting('max_count'))
   throw new Error(`--count must be an integer from 1 to ${generationSetting('max_count')}`);
-const modes = { off: [false], on: [true], both: [false, true] }[values.grounding ?? ''];
+const modes = new Map([
+  ['off', [false]],
+  ['on', [true]],
+  ['both', [false, true]],
+]).get(values.grounding ?? '');
 if (!modes) throw new Error('--grounding must be off, on or both');
 const gateway = createModelGateway();
 const log = join(gitDirectory(process.cwd()), 'prompt-generation-eval.log');

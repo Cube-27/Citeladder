@@ -1,12 +1,12 @@
 import { randomUUID } from 'node:crypto';
-import { afterAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
 
 import { policy } from '../src/config.ts';
-import { createModelGateway, gatewaySettings } from '../src/models/gateway.ts';
 import { generationInput, generationSetting } from '../src/prompts/generation-input.ts';
 import { generatePrompts } from '../src/prompts/generation.ts';
 import { loadObservedQueries } from '../src/prompts/observed-queries.ts';
-import { promptSet, topic } from './prompt-fixtures.ts';
+import { echoDependencies, promptSet, topic, type DraftRequest } from './prompt-fixtures.ts';
+import { searchIntelligenceRun } from './search-intelligence-fixtures.ts';
 import { testDatabase } from './support.ts';
 import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
 
@@ -21,6 +21,7 @@ afterAll(async () => {
   for (const table of [
     'prompt_candidates',
     'prompt_generation_runs',
+    'branded_query_overrides',
     'search_intelligence_rows',
     'search_intelligence_datasets',
     'search_intelligence_runs',
@@ -111,56 +112,8 @@ async function keywordResearch(
   keywords: { keyword: string; volume: number }[],
 ) {
   const at = new Date(),
-    connectionId = randomUUID(),
-    runId = randomUUID(),
-    datasetId = randomUUID();
-  await db
-    .insertInto('provider_connections')
-    .values({
-      id: connectionId,
-      workspace_id: p.workspaceId,
-      label: 'DataForSEO',
-      transport_provider: 'dataforseo',
-      api_key_encrypted: 'ciphertext',
-      base_url: '',
-      credential_revision: randomUUID(),
-      active: true,
-      last_test_status: 'ok',
-      created_at: at,
-      updated_at: at,
-    })
-    .execute();
-  await db
-    .insertInto('search_intelligence_runs')
-    .values({
-      id: runId,
-      workspace_id: p.workspaceId,
-      project_id: p.projectId,
-      actor_user_id: p.userId,
-      connection_id: connectionId,
-      connection_revision: randomUUID(),
-      account_identity: 'account',
-      status: 'succeeded',
-      action: 'analysis',
-      idempotency_key: runId,
-      frozen_scope: '{}',
-      call_plan: '[]',
-      reused_datasets: '[]',
-      pricing_version: policy.search_intelligence.price_version,
-      estimated_cost_usd: '0.1',
-      planned_calls: 1,
-      completed_calls: 1,
-      planned_rows: 10,
-      received_rows: 10,
-      uncertain_calls: 0,
-      error_code: '',
-      error_detail: '',
-      expires_at: at,
-      confirmed_at: at,
-      created_at: at,
-      updated_at: at,
-    })
-    .execute();
+    datasetId = randomUUID(),
+    runId = await searchIntelligenceRun(db, p);
   await db
     .insertInto('search_intelligence_datasets')
     .values({
@@ -256,12 +209,27 @@ async function groundedProject() {
   await keywordResearch(p, { kind: 'shared_keywords', language: 'de', status: 'published' }, [
     { keyword: 'running shoes damen laufen', volume: 9000 },
   ]);
-  return { p, flatFeetTop: flatFeetTop!, trail: trail! };
+  // A user override confirming a short question as non-branded.
+  const whichOverride = randomUUID();
+  await db
+    .insertInto('branded_query_overrides')
+    .values({
+      id: whichOverride,
+      workspace_id: p.workspaceId,
+      project_id: p.projectId,
+      normalized_query: 'which shoes',
+      classification: 'non_branded',
+      classifier_version: 'override-test',
+      actor_user_id: p.userId,
+      created_at: new Date(),
+    })
+    .execute();
+  return { p, flatFeetTop: flatFeetTop!, trail: trail!, whichOverride };
 }
 
 describe('observed queries at the PostgreSQL boundary', () => {
   it('keeps non-branded, topic-bound searches from the latest snapshot and published datasets', async () => {
-    const { p, flatFeetTop, trail } = await groundedProject();
+    const { p, flatFeetTop, trail, whichOverride } = await groundedProject();
     expect(await load(p)).toEqual([
       {
         id: flatFeetTop,
@@ -269,6 +237,8 @@ describe('observed queries at the PostgreSQL boundary', () => {
         text: 'best running shoes for flat feet',
         topic_id: p.topicId,
         weight: 50,
+        classifier_version: 'branded-query-1',
+        override_id: null,
       },
       {
         id: expect.any(String),
@@ -276,6 +246,9 @@ describe('observed queries at the PostgreSQL boundary', () => {
         text: 'which shoes',
         topic_id: p.topicId,
         weight: 15,
+        // The user's override admitted it; its identity travels with the search.
+        classifier_version: 'override-test',
+        override_id: whichOverride,
       },
       {
         id: trail,
@@ -283,13 +256,34 @@ describe('observed queries at the PostgreSQL boundary', () => {
         text: 'trail running shoes waterproof',
         topic_id: p.topicId,
         weight: 900,
+        classifier_version: 'branded-query-1',
+        override_id: null,
       },
     ]);
     // The same rows are invisible from another workspace.
     const other = await fixtures.tenant();
     tenants.push(other);
     expect((await load(p, other.workspaceId)).map((row) => row.text)).toEqual([]);
-    expect((await load(p)).length).toBe(3);
+    expect(await load(p)).toHaveLength(3);
+  });
+
+  it('counts words in a search written without spaces', async () => {
+    const p = await project();
+    const teaId = await topic(db, p.projectId, '緑茶');
+    await searchConsole(p, isoDay(1), [
+      { query: '緑茶のおすすめギフト', impressions: 40, daysAgo: 2 },
+      { query: '緑茶', impressions: 90, daysAgo: 2 },
+    ]);
+    const observed = await loadObservedQueries(db, {
+      workspaceId: p.workspaceId,
+      projectId: p.projectId,
+      languageCode: 'ja',
+      topics: [{ id: teaId, name: '緑茶', description: '' }],
+      competitors: [],
+    });
+    expect(observed.map((row) => [row.text, row.topic_id])).toEqual([
+      ['緑茶のおすすめギフト', teaId],
+    ]);
   });
 
   it('caps each topic at the configured number of searches, heaviest first', async () => {
@@ -308,33 +302,26 @@ describe('observed queries at the PostgreSQL boundary', () => {
   });
 });
 
-/** A gateway answering every slot, recording each request it received. */
+/** Echo dependencies that record each draft request the model received. */
 function recordingGateway() {
-  const requests: { system: string; slots: Record<string, unknown>[] }[] = [];
-  const fetch = vi.fn<typeof globalThis.fetch>(async (_url, init) => {
-    const body = JSON.parse(String(init?.body)) as { messages: { content: string }[] };
-    const user = JSON.parse(body.messages[1]!.content.split('\n\nReturn only JSON')[0]!) as {
-      slots: (Record<string, unknown> & { slot_id: string })[];
-    };
-    requests.push({ system: body.messages[0]!.content, slots: user.slots });
-    const prompts = user.slots.map((slot) => ({
-      slot_id: slot.slot_id,
-      text: `Which running shoes suit runner ${slot.slot_id} best?`,
-      buyer_stage: 'consideration',
-      prompt_intent: 'recommend',
-    }));
-    return Response.json({ choices: [{ message: { content: JSON.stringify({ prompts }) } }] });
-  });
-  const gateway = createModelGateway(
-    { ...gatewaySettings({}), apiKey: 'test-only', model: 'test', baseUrl: 'https://model.test' },
-    { fetch, sleep: async () => {} },
-  );
-  return { dependencies: { gateway: () => gateway, judge: () => null }, requests };
+  const requests: DraftRequest[] = [];
+  return {
+    dependencies: echoDependencies({ onRequest: (request) => requests.push(request) }),
+    requests,
+  };
 }
+
+/** A candidate's or run's observed-search ref, with the classification that admitted it. */
+const ref = (
+  source: string,
+  id: unknown,
+  classifier_version = 'branded-query-1',
+  override_id: unknown = null,
+) => ({ kind: 'observed_query', source, id, classifier_version, override_id });
 
 describe('grounded generation', () => {
   it('steers drafts with example searches and records refs, provenance and the tag flag', async () => {
-    const { p, flatFeetTop, trail } = await groundedProject();
+    const { p, flatFeetTop, trail, whichOverride } = await groundedProject();
     const { dependencies, requests } = recordingGateway();
     const response = await generatePrompts(
       db,
@@ -363,9 +350,9 @@ describe('grounded generation', () => {
       .executeTakeFirstOrThrow();
     expect(candidate.evidence_refs).toEqual([
       expect.objectContaining({ kind: 'business_map_cell', offering: 'Running shoes' }),
-      { kind: 'observed_query', source: 'gsc', id: flatFeetTop },
-      { kind: 'observed_query', source: 'search_intelligence', id: trail },
-      { kind: 'observed_query', source: 'gsc', id: expect.any(String) },
+      ref('gsc', flatFeetTop),
+      ref('search_intelligence', trail),
+      ref('gsc', expect.any(String), 'override-test', whichOverride),
     ]);
     const run = await db
       .selectFrom('prompt_generation_runs')
@@ -374,7 +361,17 @@ describe('grounded generation', () => {
       .executeTakeFirstOrThrow();
     expect(run.provenance).toMatchObject({
       generator_version: 'prompt-gen-v5',
-      grounding: { gsc: 2, search_intelligence: 1, slots_grounded: planned },
+      grounding: {
+        gsc: 2,
+        search_intelligence: 1,
+        slots_grounded: planned,
+        searches_read: 3,
+        searches: [
+          ref('gsc', flatFeetTop),
+          ref('search_intelligence', trail),
+          ref('gsc', expect.any(String), 'override-test', whichOverride),
+        ],
+      },
     });
   });
 
@@ -409,7 +406,13 @@ describe('grounded generation', () => {
       .where('workspace_id', '=', p.workspaceId)
       .executeTakeFirstOrThrow();
     expect(run.provenance).toMatchObject({
-      grounding: { gsc: 0, search_intelligence: 0, slots_grounded: 0 },
+      grounding: {
+        gsc: 0,
+        search_intelligence: 0,
+        slots_grounded: 0,
+        searches_read: 0,
+        searches: [],
+      },
     });
   });
 });

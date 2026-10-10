@@ -20,6 +20,8 @@ export function fixtureObserved(fixture: GenerationFixture): GenerationContext['
     text: query.text,
     topic_id: fixtureTopicId(fixture.offerings.indexOf(query.offering)),
     weight: query.weight,
+    classifier_version: 'branded-query-1',
+    override_id: null,
   }));
 }
 

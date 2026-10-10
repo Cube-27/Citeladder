@@ -26,6 +26,7 @@ import {
   type Slot,
 } from './generation-plan.ts';
 import { promptTextHash } from './normalization.ts';
+import { observedRef } from './observed-queries.ts';
 
 const G = policy.prompts.generation;
 export const words = (text: string) => text.toLowerCase().match(/[\p{L}\p{N}\p{M}]+/gu) ?? [];
@@ -489,13 +490,24 @@ async function draftBatches(
   return { drafts, drops, dropRecords, models, stop, reference: brief as unknown };
 }
 
-/** How much of the run's plan the project's own searches informed: counts only. */
+/**
+ * Which of the project's searches grounded the run's plan: counts by source
+ * and the exact searches attached to slots, with the classification that
+ * admitted each. `searches_read` is every search admission checked copies
+ * against. Never query text or volume.
+ */
 function groundingSummary(context: GenerationContext, slots: readonly Slot[]) {
+  const used = new Map(
+    slots.flatMap((slot) => slot.grounding ?? []).map((search) => [search.id, search]),
+  );
+  const searches = [...used.values()].map(observedRef);
   return {
-    gsc: context.observed.filter((query) => query.source === 'gsc').length,
-    search_intelligence: context.observed.filter((query) => query.source === 'search_intelligence')
+    gsc: searches.filter((search) => search.source === 'gsc').length,
+    search_intelligence: searches.filter((search) => search.source === 'search_intelligence')
       .length,
     slots_grounded: slots.filter((slot) => slot.grounding?.length).length,
+    searches_read: context.observed.length,
+    searches,
   };
 }
 

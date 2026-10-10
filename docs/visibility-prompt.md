@@ -170,9 +170,12 @@ provenance), and the Generate dialog and agent handoff show that breakdown.
 Run provenance also records each dropped row's slot, normalized text hash,
 batch/index and admission phase alongside the generator and buyer-query policy versions.
 Drafts are written in the project's `language_code`, using English when it is blank. Each candidate keeps its cell in
-`evidence_refs`, plus one `{kind: 'observed_query', source, id}` per grounding
-search of its slot, copied into `generation_evidence` on accept. Run provenance
-records `grounding` counts (`gsc`, `search_intelligence`, `slots_grounded`).
+`evidence_refs`, plus one `{kind: 'observed_query', source, id,
+classifier_version, override_id}` per grounding search of its slot (the
+branded-query classification that admitted it), copied into
+`generation_evidence` on accept. Run provenance records `grounding`: counts of
+the searches attached to slots by source, `slots_grounded`, `searches_read`
+(every search admission checked copies against) and those attached refs.
 Candidates, the review list and `read_prompt_portfolio` expose only
 `grounded`; the review list tags those "Informed by your search data". The
 calibration report splits review outcomes by grounded and ungrounded, and
