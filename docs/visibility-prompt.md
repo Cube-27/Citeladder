@@ -120,7 +120,21 @@ Draft batches receive a narrow brief (category, category terms, offerings,
 business model, buyer type, market scope, language and country, with their
 review provenance), the batch's cells and tracked texts for de-duplication
 only: no profile prose, knowledge-base sources, demand signals, competitors or
-earlier drafts. The model writes a natural question per cell, names a place
+earlier drafts. The one exception is grounding: the
+[observed-query loader](../frontend/services/api/src/prompts/observed-queries.ts)
+reads the project's persisted Search Console queries (latest query snapshot,
+`observed.gsc_window_days`, summed impressions at least
+`observed.gsc_min_impressions`) and the keywords of the latest published
+Search Intelligence dataset of each `observed.si_dataset_kinds` kind in the
+project language. It keeps non-branded (branded and ambiguous classifications
+drop), competitor-free, query-shaped searches bound to a topic by shared
+tokens, at most `observed.max_per_topic` per topic, Search Console impressions
+before keyword volume. Nothing is fetched, and impressions or volume only order
+searches; they are never AI prompt volume. Each planned slot gets up to
+`observed.examples_per_slot` same-topic searches, closest to its cell first,
+sent as `buyer_search_examples` text (no row identities) with a rule that they
+are examples to learn buyer wording from, not to copy. Without search data the
+plan, brief and request are unchanged. The model writes a natural question per cell, names a place
 only in a cell with a market, and labels buyer stage, prompt intent and
 `names_place`. Generated buyer scenarios are hypotheses, not observed demand or
 new business facts; cell provenance records that distinction. Map suggestions
@@ -132,7 +146,8 @@ with), cohort identity, normalized exact duplicates, the shared length bound,
 topical binding (service areas do not bind generated or proposed text), a place
 named in a cell without a market (`location_unplanned`, decided on the project's
 geography vocabulary with the model's `names_place` label recorded beside it),
-texts already tracked or pending, and exact copies of observed demand queries.
+texts already tracked or pending, and exact copies of any observed search the
+run read (demand-signal queries and every grounding search).
 Core queries cannot name the tracked brand, aliases or supplied competitors
 under the project's mention rules (below); diagnostics name the brand and
 comparisons also name an accepted competitor. The judge sees the planned cell,
@@ -155,7 +170,15 @@ provenance), and the Generate dialog and agent handoff show that breakdown.
 Run provenance also records each dropped row's slot, normalized text hash,
 batch/index and admission phase alongside the generator and buyer-query policy versions.
 Drafts are written in the project's `language_code`, using English when it is blank. Each candidate keeps its cell in
-`evidence_refs`, copied into `generation_evidence` on accept.
+`evidence_refs`, plus one `{kind: 'observed_query', source, id}` per grounding
+search of its slot, copied into `generation_evidence` on accept. Run provenance
+records `grounding` counts (`gsc`, `search_intelligence`, `slots_grounded`).
+Candidates, the review list and `read_prompt_portfolio` expose only
+`grounded`; the review list tags those "Informed by your search data". The
+calibration report splits review outcomes by grounded and ungrounded, and
+`pnpm prompts:eval --live --grounding off|on|both` reports `observed_likeness`
+(share of prompts phrased like a same-topic fixture search without copying it)
+beside the threshold metrics.
 
 The [quality judge](../frontend/services/api/src/prompts/generation-quality.ts) runs
 through the [JEV connector](../frontend/services/api/src/models/jev.ts) when

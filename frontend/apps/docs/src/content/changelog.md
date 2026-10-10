@@ -7,6 +7,14 @@ order: 400
 
 These notes describe implemented changes in the codebase. Dates are the recorded commit dates; availability in your workspace depends on deployment, access and configuration.
 
+## October 10, 2026: Prompt generation grounded in your search data
+
+Generated prompts now borrow wording from how your buyers already search. When Search Console is connected or you have published keyword research, each suggestion is written with a few of your own non-branded searches for that topic as examples, and suggestions phrased this way carry an **Informed by your search data** tag. Nothing extra is fetched or charged, searches are never copied as prompts, and impressions or keyword volume are never shown as AI prompt volume. Without that data, generation is unchanged.
+
+**For your team:** connect Search Console before generating, and expect suggestions that sound more like your real buyers.
+
+[Read about grounded generation](/prompts/#grounded-in-your-search-data)
+
 ## October 10, 2026: Ads in ChatGPT answers
 
 AI Visibility has an **Ads** view: how often ChatGPT Search answers showed paid ads, who advertised, your own ad share, the prompts that surface ads and each ad as text. Each ChatGPT Search answer in a run lists its ads apart from its citations. Ads never count as citations or change your visibility scores, and other surfaces read not applicable.
