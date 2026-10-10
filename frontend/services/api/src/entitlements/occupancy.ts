@@ -28,7 +28,7 @@ const UNRESOLVED = asApiErrorCode(codes.unresolved);
 const LIMIT_EXCEEDED = asApiErrorCode(codes.limit_exceeded);
 
 /** The workspace's billing account, locked for capacity checks, or a 403. */
-async function lockWorkspaceCapacity(db: Database, workspaceId: string): Promise<string> {
+export async function lockWorkspaceCapacity(db: Database, workspaceId: string): Promise<string> {
   const account = await db
     .selectFrom('billing_accounts')
     .select('id')

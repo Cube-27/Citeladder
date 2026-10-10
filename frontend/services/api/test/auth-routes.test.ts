@@ -298,6 +298,30 @@ describe('password auth routes', () => {
     expect(await attempt(password)).toBe(429);
   });
 
+  it('lets concurrent wrong guesses verify no more passwords than the email budget', async () => {
+    await clearClientBudget();
+    await db
+      .deleteFrom('usage_windows')
+      .where('operation', '=', 'auth.login.email_failure')
+      .execute();
+    const limited = createApp(
+      testConfig({ ABUSE_LOGIN_EMAIL_LIMIT: '2', ABUSE_LOGIN_CLIENT_LIMIT: '50' }),
+      db,
+    );
+    const statuses = await Promise.all(
+      Array.from({ length: 5 }, async () => {
+        const response = await call(
+          '/auth/login',
+          { email, password: 'incorrect' },
+          undefined,
+          limited,
+        );
+        return response.status;
+      }),
+    );
+    expect(statuses.sort()).toEqual([401, 401, 429, 429, 429]);
+  });
+
   it('commits the client budget before a refused login and shares it across application instances', async () => {
     await clearClientBudget();
     const limited = testConfig({ ABUSE_LOGIN_CLIENT_LIMIT: '1' });

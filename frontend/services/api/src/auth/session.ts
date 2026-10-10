@@ -7,7 +7,7 @@ import type { MiddlewareHandler } from 'hono';
 import { getCookie } from 'hono/cookie';
 import { errors as joseErrors, jwtVerify } from 'jose';
 
-import { demoAccessExpired, type ServiceConfig } from '../config.ts';
+import { demoAccessExpired, policy, type ServiceConfig } from '../config.ts';
 import type { AppEnv } from '../context.ts';
 import type { Database } from '../db/database.ts';
 import { ApiError } from '../errors.ts';
@@ -20,21 +20,26 @@ export type SessionUser = { id: string; sessionVersion: number };
 
 /**
  * Verify a session token, or return null. jose enforces `exp` and `nbf`; an
- * `iat` in the future is refused here.
+ * `iat` in the future is refused here. Both allow for clock skew between API
+ * instances.
  */
 async function decodeSessionToken(
   token: string,
   secretKey: string,
   now: Date = new Date(),
 ): Promise<SessionClaims | null> {
+  const tolerance = policy.auth.session.clock_tolerance_seconds;
   try {
     const { payload } = await jwtVerify(token, new TextEncoder().encode(secretKey), {
       algorithms: ['HS256'],
       currentDate: now,
+      clockTolerance: tolerance,
     });
-    if (typeof payload.iat === 'number' && payload.iat > Math.floor(now.getTime() / 1000)) {
+    if (
+      typeof payload.iat === 'number' &&
+      payload.iat > Math.floor(now.getTime() / 1000) + tolerance
+    )
       return null;
-    }
     return payload;
   } catch (error) {
     if (error instanceof joseErrors.JOSEError) return null;

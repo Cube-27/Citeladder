@@ -4,7 +4,7 @@ import { sql } from 'kysely';
 import { policy, type ServiceConfig } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { subjectXactLock } from '../db/advisory-lock.ts';
-import { enforceSubjectRequest } from '../abuse/usage.ts';
+import { enforceSubjectRequest, releaseSubjectBudget } from '../abuse/usage.ts';
 import { ApiError } from '../errors.ts';
 import { hashPassword, verifyAccountPassword } from './password.ts';
 import { recordSecurityEvent } from './security-events.ts';
@@ -140,6 +140,9 @@ async function deliverChallenge(
   });
 }
 
+/** The per-address failed sign-in counter that a password reset clears. */
+export const LOGIN_FAILURE_OPERATION = 'auth.login.email_failure';
+
 export async function consumeChallenge(
   db: Database,
   token: string,
@@ -221,8 +224,10 @@ export async function consumeChallenge(
       purpose === 'verification' ? 'auth.email_verified' : 'auth.password_reset',
       user.id,
     );
+    // A completed reset proves mailbox ownership, so earlier failures stop counting.
+    if (replacement)
+      await releaseSubjectBudget(trx, 'email', current.email, LOGIN_FAILURE_OPERATION);
   });
-  return user.email;
 }
 
 export async function changePassword(

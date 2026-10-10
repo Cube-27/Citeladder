@@ -89,6 +89,7 @@ export const policy = {
   auth: {
     mailbox: authRuntime.mailbox,
     password: authRuntime.password,
+    session: authRuntime.session,
     terms_revision: authRuntime.terms_revision,
     privacy_revision: authRuntime.privacy_revision,
     oauth: authOAuth,

@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
-import { afterAll, describe, expect, it } from 'vitest';
+import { sql } from 'kysely';
+import { afterAll, describe, expect, it, vi } from 'vitest';
 
 import { createApp } from '../src/app.ts';
 import { projectSchema } from '@citeladder/contracts/project';
@@ -10,7 +11,10 @@ import {
   readProject,
   updateProject,
   deleteProject,
+  removeProject,
 } from '../src/projects/service.ts';
+import { reserveUsage } from '../src/entitlements/ledger.ts';
+import { advisoryXactLock } from '../src/db/advisory-lock.ts';
 import { commandCenter } from '../src/projects/command-center.ts';
 import { purgeExpiredTrialProjects } from '../src/projects/trial-purge.ts';
 import { policy } from '../src/config.ts';
@@ -334,6 +338,46 @@ describe('project owner', () => {
       { entry_kind: 'release', subject_id: audit, audit_id: audit, task_id: taskId },
       { entry_kind: 'reservation', subject_id: audit, audit_id: audit, task_id: taskId },
     ]);
+  });
+  it('refuses a reservation that waited behind the deletion of its project', async () => {
+    const retained = new VisibilityFixtures(db);
+    const t = await retained.tenant();
+    const account = await billingAccount(db, t.workspaceId);
+    await grant(db, account, { key: 'audit_credits', value: 1 });
+    const audit = await retained.audit(t);
+    const { taskId } = await retained.execution(t, { auditId: audit });
+    const { reservation } = await db.transaction().execute(async (deletion) => {
+      const blocker = await sql<{ pid: number }>`select pg_backend_pid() as pid`.execute(deletion);
+      await advisoryXactLock(deletion, policy.entitlements.capacity_lock, account);
+      const pending = db
+        .transaction()
+        .execute((trx) =>
+          reserveUsage(trx, {
+            accountId: account,
+            capability: 'audit_credits',
+            subject: { kind: 'audit', id: taskId, workspaceId: t.workspaceId, auditId: audit },
+            units: 1,
+            key: randomUUID(),
+            at: new Date(),
+          }),
+        )
+        .catch((error: unknown) => error);
+      await vi.waitFor(
+        async () => {
+          const blocked = await sql<{ waiting: boolean }>`select exists (
+            select 1 from pg_stat_activity where ${blocker.rows[0]!.pid} = any(pg_blocking_pids(pid))
+          ) as waiting`.execute(db);
+          expect(blocked.rows[0]!.waiting).toBe(true);
+        },
+        { timeout: 2000, interval: 20 },
+      );
+      await removeProject(deletion, { workspaceId: t.workspaceId, projectId: t.projectId });
+      return { reservation: pending };
+    });
+    expect(await reservation).toMatchObject({ message: 'subject_not_found' });
+    expect(
+      await db.selectFrom('consumable_ledger').select('id').where('task_id', '=', taskId).execute(),
+    ).toEqual([]);
   });
   it('lets an admin delete a project but not a member', async () => {
     const t = await tenant();

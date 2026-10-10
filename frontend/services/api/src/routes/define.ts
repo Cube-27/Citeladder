@@ -197,12 +197,13 @@ export function defineRoute<
 }
 
 /**
- * A browser marks a request another site started as `Sec-Fetch-Site:
- * cross-site`; the product's own pages are same-origin, and server-to-server
- * callers (webhooks, CLIs) send no such header.
+ * A browser marks a request another origin started as `Sec-Fetch-Site:
+ * cross-site` or `same-site`; the product's own pages are same-origin, and
+ * server-to-server callers (webhooks, CLIs) send no such header.
  */
 const sameSiteWrite: MiddlewareHandler<AppEnv> = async (c, next) => {
-  if (c.req.header('sec-fetch-site') === 'cross-site')
+  const site = c.req.header('sec-fetch-site');
+  if (site === 'cross-site' || site === 'same-site')
     throw new ApiError(403, 'Cross-site requests are not accepted');
   await next();
 };

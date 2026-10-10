@@ -33,11 +33,12 @@ a pending public identity with authoritative Google proof clears its password
 and invalidates old sessions/challenges. Third-party Google addresses use mailbox
 recovery before access. Provider requests have host, redirect,
 deadline and response-size bounds. PostgreSQL abuse counters commit before
-password verification or provider I/O. A spent per-email failure budget refuses
-even the correct password until its window passes; a successful sign-in or a
-password reset clears it. The shared daily trial and mail budgets are spent only
+password verification or provider I/O. Every sign-in attempt spends a unit of
+its email's failure budget before the password is checked, so concurrent guesses
+cannot exceed it; a spent budget refuses even the correct password until its
+window passes, and a successful sign-in or a password reset clears it. The shared daily trial and mail budgets are spent only
 by identities and mail actually issued. A non-GET request a browser marks
-`Sec-Fetch-Site: cross-site` is refused, so another site cannot submit a sign-in
+`Sec-Fetch-Site: cross-site` or `same-site` is refused, so another site cannot submit a sign-in
 or any other write. Google is the only sign-in provider.
 
 [TypeScript authorization](../frontend/services/api/src/auth/workspace.ts) resolves
@@ -150,8 +151,10 @@ holds reserved units, because nothing could release that hold afterwards.
 A trial-only workspace (no plan, add-on, top-up or operator grant) loses access
 when its trial ends. The runner deletes its projects
 `BILLING_TRIAL_DATA_RETENTION_DAYS` (default 30) after that, a bounded batch of
-workspaces per pass (`BILLING_TRIAL_PURGE_WORKSPACE_BATCH`), rechecking each
-workspace through the persisted access read first.
+workspaces per pass (`BILLING_TRIAL_PURGE_WORKSPACE_BATCH`). Each deletion holds
+the project and account-capacity locks and rechecks access, so a grant issued or
+work reserved before it wins; a workspace still holding reserved units is skipped
+without taking a batch slot.
 
 ## Browser selection and reads
 

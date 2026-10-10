@@ -74,8 +74,9 @@ export async function reserveUsage(
   const { accountId, subject, units, capability, key, at } = request;
   if (!Number.isSafeInteger(units) || units <= 0)
     throw new LedgerError('reservation_units_invalid');
-  if (!(await verifySubject(db, subject))) throw new LedgerError('subject_not_found');
   await advisoryXactLock(db, policy.entitlements.capacity_lock, accountId);
+  // After the lock, so a project deleted under it is never reserved against.
+  if (!(await verifySubject(db, subject))) throw new LedgerError('subject_not_found');
   const state = await accountState(db, subject.workspaceId, accountId, at);
   const fingerprint =
     subject.kind === 'audit'

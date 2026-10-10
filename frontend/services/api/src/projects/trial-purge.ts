@@ -8,7 +8,8 @@
 import { policy, resolveSettingSpec } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { workspaceAccess } from '../entitlements/access.ts';
-import { projectHoldsReservations } from '../entitlements/ledger.ts';
+import { openReservedUnits, projectHoldsReservations } from '../entitlements/ledger.ts';
+import { lockWorkspaceCapacity } from '../entitlements/occupancy.ts';
 import { getLogger } from '../logging.ts';
 import { acquireProjectLock } from '../prompts/locks.ts';
 import { removeProject } from './service.ts';
@@ -25,7 +26,7 @@ export async function purgeExpiredTrialProjects(
 ): Promise<number> {
   if (!canAdmit()) return 0;
   const cutoff = new Date(now.getTime() - setting('trial_data_retention_days') * 86_400_000);
-  // Narrowing only: the persisted access read below is the authority.
+  // Narrowing only: the locked access read below is the authority.
   const workspaces = await db
     .selectFrom('billing_accounts as account')
     .select('account.workspace_id')
@@ -56,15 +57,24 @@ export async function purgeExpiredTrialProjects(
           .where('account_grants.valid_until', '<=', cutoff),
       ),
     )
+    // A workspace still holding reserved units waits, without starving the batch.
+    .where(({ exists, not, selectFrom }) =>
+      not(
+        exists(
+          selectFrom('consumable_ledger')
+            .select('consumable_ledger.reservation_id')
+            .whereRef('consumable_ledger.workspace_id', '=', 'account.workspace_id')
+            .groupBy('consumable_ledger.reservation_id')
+            .having(openReservedUnits, '>', 0),
+        ),
+      ),
+    )
     .orderBy('account.workspace_id')
     .limit(setting('trial_purge_workspace_batch'))
     .execute();
   let purged = 0;
   for (const { workspace_id: workspaceId } of workspaces) {
     if (!canAdmit()) break;
-    const access = await workspaceAccess(db, workspaceId, now);
-    if (access.status !== 'trial_expired' || !access.expires_at) continue;
-    if (Date.parse(access.expires_at) > cutoff.getTime()) continue;
     const projects = await db
       .selectFrom('projects')
       .select('id')
@@ -74,7 +84,12 @@ export async function purgeExpiredTrialProjects(
       const scope = { workspaceId, projectId };
       const removed = await db.transaction().execute(async (trx) => {
         await acquireProjectLock(trx, projectId);
-        // Work still holding reserved units is retried on a later pass.
+        // The capacity lock serializes with grant issuance and reservations, so
+        // an upgrade or new work committed before it is seen here.
+        await lockWorkspaceCapacity(trx, workspaceId);
+        const access = await workspaceAccess(trx, workspaceId, now);
+        if (access.status !== 'trial_expired' || !access.expires_at) return false;
+        if (Date.parse(access.expires_at) > cutoff.getTime()) return false;
         if (await projectHoldsReservations(trx, workspaceId, projectId)) return false;
         await removeProject(trx, scope);
         return true;

@@ -89,12 +89,14 @@
     "trial_data_retention_days": {
       "env": ["BILLING_TRIAL_DATA_RETENTION_DAYS"],
       "type": "int",
-      "default": 30
+      "default": 30,
+      "minimum": 1
     },
     "trial_purge_workspace_batch": {
       "env": ["BILLING_TRIAL_PURGE_WORKSPACE_BATCH"],
       "type": "int",
-      "default": 5
+      "default": 5,
+      "minimum": 1
     },
     "http_max_connections": {
       "env": ["BILLING_HTTP_MAX_CONNECTIONS"],

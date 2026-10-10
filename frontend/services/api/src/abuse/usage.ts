@@ -117,33 +117,6 @@ export async function enforceSubjectRequest(
   if (consumed === undefined) throw throttled(subjectKind, operation, expires, now);
 }
 
-/**
- * Refuse with 429 when the subject's current window is already spent, without
- * consuming it. Guards work that is only counted when it fails (a wrong
- * password), so the check must precede the work. Returns whether the window
- * has counted anything, so a caller clears it only when there is something to clear.
- */
-export async function requireSubjectBudget(
-  db: Database,
-  subjectKind: SubjectKind,
-  subjectValue: string,
-  { operation, limit, windowSeconds }: UsageLimit,
-  now: Date = new Date(),
-): Promise<boolean> {
-  const { started, expires } = windowOf(windowSeconds, now);
-  const spent = await db
-    .selectFrom('usage_windows')
-    .select('count')
-    .where('subject_kind', '=', subjectKind)
-    .where('subject_hash', '=', subjectHash(subjectValue))
-    .where('operation', '=', operation)
-    .where('window_started_at', '=', started)
-    .executeTakeFirst();
-  if (spent !== undefined && spent.count >= limit)
-    throw throttled(subjectKind, operation, expires, now);
-  return spent !== undefined;
-}
-
 /** Forget every window of one subject's operation (a proven owner resets their failures). */
 export async function releaseSubjectBudget(
   db: Database,
