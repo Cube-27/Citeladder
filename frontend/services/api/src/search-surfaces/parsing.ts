@@ -1,4 +1,5 @@
 import { getDomain } from 'tldts';
+import { z } from 'zod';
 import { record } from '../db/json.ts';
 import { scalarText } from '../text-order.ts';
 import { ProviderError, type Citation, type SearchEvent } from '../answer-engines/contracts.ts';
@@ -253,12 +254,105 @@ export function overviewAnswer(result: OverviewResult): ExecutionResult {
     },
   };
 }
+const AD_ITEM_TYPE = 'chat_gpt_ad';
+const isAd = (node: Record<string, unknown>) => node.type === AD_ITEM_TYPE;
+/** Organic sources only: a paid placement is never a citation, whatever it carries. */
 function scraperSources(node: Record<string, unknown>, depth = 0): Record<string, unknown>[] {
   if (depth > 128) throw new ProviderError('parse_error');
+  if (isAd(node)) return [];
   return [
     ...objects(node.sources),
     ...objects(node.items).flatMap((child) => scraperSources(child, depth + 1)),
   ];
+}
+function adNodes(node: Record<string, unknown>, depth = 0): Record<string, unknown>[] {
+  if (depth > 128) throw new ProviderError('parse_error');
+  return objects(node.items).flatMap((child) =>
+    isAd(child) ? [child] : adNodes(child, depth + 1),
+  );
+}
+const optionalText = z
+  .string()
+  .nullish()
+  .transform((value) => value?.trim() ?? '');
+const adItemSchema = z.object({
+  rank_absolute: z.number().int().nonnegative(),
+  rank_group: z.number().int().nullish(),
+  title: optionalText,
+  snippet: optionalText,
+  url: z.string().trim().min(1),
+  domain: optionalText,
+  image_url: optionalText,
+  advertiser: z
+    .object({ name: optionalText, url: optionalText })
+    .nullish()
+    .transform((value) => value ?? { name: '', url: '' }),
+});
+export type AdItem = {
+  rank_absolute: number;
+  rank_group: number | null;
+  advertiser_name: string;
+  /** Registrable domain of the advertiser URL, else the ad's own domain or landing URL. */
+  advertiser_domain: string;
+  landing_url_raw: string;
+  /** The landing URL without its query string or fragment. */
+  landing_url_canonical: string;
+  title: string;
+  snippet: string;
+  /** Stored as evidence only; the product never renders it. */
+  image_url: string | null;
+};
+function webUrl(value: string): URL | null {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' || url.protocol === 'http:' ? url : null;
+  } catch {
+    return null;
+  }
+}
+function adItem(node: Record<string, unknown>): AdItem | null {
+  const parsed = adItemSchema.safeParse(node);
+  if (!parsed.success) return null;
+  const item = parsed.data,
+    landing = webUrl(item.url);
+  if (!landing) return null;
+  const advertiserDomain =
+    [item.advertiser.url, item.domain, landing.hostname].map(domain).find(Boolean) ?? '';
+  if (!advertiserDomain) return null;
+  return {
+    rank_absolute: item.rank_absolute,
+    rank_group: item.rank_group ?? null,
+    advertiser_name: item.advertiser.name || advertiserDomain,
+    advertiser_domain: advertiserDomain,
+    landing_url_raw: item.url,
+    landing_url_canonical: `${landing.protocol}//${landing.host}${landing.pathname}`,
+    title: item.title,
+    snippet: item.snippet,
+    image_url: item.image_url || null,
+  };
+}
+/**
+ * The ads in a stored ChatGPT Search Task GET envelope, one per rank;
+ * malformed or repeated-rank items are skipped and counted. Null when the
+ * envelope has no single result page, so no ads observation can be claimed.
+ */
+export function parseAds(envelope: unknown): { ads: AdItem[]; skipped: number } | null {
+  const task = onlyOf(objects(record(envelope).tasks));
+  const page = task ? onlyOf(objects(task.result)) : undefined;
+  if (!page) return null;
+  const ads: AdItem[] = [],
+    ranks = new Set<number>();
+  let skipped = 0;
+  for (const node of adNodes(page)) {
+    const item = adItem(node);
+    if (!item || ranks.has(item.rank_absolute)) {
+      skipped += 1;
+      continue;
+    }
+    ranks.add(item.rank_absolute);
+    ads.push(item);
+  }
+  return { ads, skipped };
 }
 export function parseScraper(
   payload: unknown,
@@ -277,6 +371,7 @@ export function parseScraper(
   const answer = page
     ? text(page.markdown) ||
       objects(page.items)
+        .filter((item) => !isAd(item))
         .map((item) => text(item.markdown) || text(item.text))
         .filter(Boolean)
         .join('\n\n')
