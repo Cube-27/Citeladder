@@ -6,6 +6,7 @@ import {
   type OperatorSession,
 } from '../src/workspaces/account-manager.ts';
 import { hashInvitationToken, acceptInvitation } from '../src/workspaces/invitations.ts';
+import { billingAccount, grant } from './prompt-fixtures.ts';
 import { Fixtures, testDatabase } from './support.ts';
 
 const db = testDatabase(),
@@ -61,6 +62,12 @@ it('authenticates against an explicit workspace without provisioning access', as
 
 it('creates an invited identity that owns no workspace, stores a hashed token and joins through the native invitation owner', async () => {
   const invitedEmail = `invited-${admin}@example.test`;
+  const account = await billingAccount(db, workspace);
+  await grant(db, account, {
+    key: 'team_members',
+    value: 1,
+    sourceKind: 'override',
+  });
   const result = await manageAccount(db, session, {
     kind: 'invite',
     email: invitedEmail,
@@ -99,13 +106,14 @@ it('creates an invited identity that owns no workspace, stores a hashed token an
       .where('workspace_id', '=', workspace)
       .execute(),
   ).toEqual([{ workspace_id: workspace, role: 'viewer' }]);
+  // Accepting provisions nothing: the plan's one grant is all the account holds.
   expect(
     await db
-      .selectFrom('billing_accounts')
-      .select('id')
-      .where('workspace_id', '=', workspace)
+      .selectFrom('account_grants')
+      .select('key')
+      .where('billing_account_id', '=', account)
       .execute(),
-  ).toEqual([]);
+  ).toEqual([{ key: 'team_members' }]);
 });
 
 it.each(['deactivate', 'demote', 'remove', 'password', 'sessions'])(

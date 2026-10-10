@@ -98,9 +98,8 @@ function MemberFailure({
  * This component owns the server conversation; the roster, the invite form
  * and the pending list are presentation.
  */
-export function MemberSettings() {
+export function MemberSettings({ mayInvite }: Readonly<{ mayInvite: boolean }>) {
   const { activeWorkspaceId, activeWorkspace } = useProjectContext();
-  const mayManage = useWorkspaceCapability('manage_members');
   const mayTransfer = useWorkspaceCapability('transfer_ownership');
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
   const queryClient = useQueryClient();
@@ -108,7 +107,7 @@ export function MemberSettings() {
   const [delivery, setDelivery] = useState<'accepted' | 'failed' | undefined>();
 
   const workspaceId = activeWorkspaceId;
-  const enabled = mayManage && workspaceId !== null;
+  const enabled = workspaceId !== null;
 
   // A token belongs to ONE workspace. Switching workspace must not leave the
   // previous workspace's acceptance link on screen for the reader to copy.
@@ -244,10 +243,12 @@ export function MemberSettings() {
           />
         }
         actions={
-          <Button type="button" size="sm" onClick={() => setInviteOpen(true)}>
-            <UserPlus className="size-3.5" aria-hidden />
-            Invite
-          </Button>
+          mayInvite ? (
+            <Button type="button" size="sm" onClick={() => setInviteOpen(true)}>
+              <UserPlus className="size-3.5" aria-hidden />
+              Invite
+            </Button>
+          ) : undefined
         }
       />
 

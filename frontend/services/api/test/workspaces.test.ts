@@ -4,6 +4,7 @@ import { createApp } from '../src/app.ts';
 import { policy } from '../src/config.ts';
 import { hashInvitationToken } from '../src/workspaces/invitations.ts';
 import { sql } from 'kysely';
+import { billingAccount, grant } from './prompt-fixtures.ts';
 import { Fixtures, sessionToken, testConfig, testDatabase } from './support.ts';
 
 const config = testConfig();
@@ -302,6 +303,53 @@ describe('invitation lifecycle and contention', () => {
       ),
     );
     expect(duplicates.map((response) => response.status).sort()).toEqual([201, 409]);
+  });
+});
+
+describe('team members need a plan', () => {
+  it('refuses invitations in a workspace without the grant, and joining after it lapses', async () => {
+    const trialOwner = await fixtures.user();
+    const space = await fixtures.ownedWorkspace(trialOwner, { access: false });
+    const account = await billingAccount(db, space);
+    // Open, but without the team grant, as a trial is.
+    await grant(db, account, { key: 'workspace_access', value: 1, sourceKind: 'override' });
+    const cookie = await userCookie(trialOwner);
+    const guest = await fixtures.user();
+    const body = { email: `${guest}@example.test`, role: 'member' };
+
+    const refused = await request(`/${space}/invitations`, 'POST', body, cookie);
+    expect(refused.status).toBe(403);
+    expect(await refused.json()).toMatchObject({ error: { details: { key: 'team_members' } } });
+
+    const team = await grant(db, account, {
+      key: 'team_members',
+      value: 1,
+      sourceKind: 'plan',
+    });
+    const issued = await request(`/${space}/invitations`, 'POST', body, cookie);
+    expect(issued.status).toBe(201);
+    const { token, invitation } = (await issued.json()) as {
+      token: string;
+      invitation: { id: string };
+    };
+    await db
+      .updateTable('account_grants')
+      .set({ valid_until: new Date(Date.now() - 1000) })
+      .where('id', '=', team)
+      .execute();
+    const accept = await request('/invitations/accept', 'POST', { token }, await userCookie(guest));
+    expect(accept.status).toBe(403);
+    expect(
+      await db
+        .selectFrom('workspace_members')
+        .select('id')
+        .where('workspace_id', '=', space)
+        .execute(),
+    ).toHaveLength(1);
+    // Revoking a link never needs the plan.
+    expect(
+      (await request(`/${space}/invitations/${invitation.id}`, 'DELETE', undefined, cookie)).status,
+    ).toBe(204);
   });
 });
 

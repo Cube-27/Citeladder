@@ -14,6 +14,8 @@ import { humanizeApiError } from '@/lib/api/errors';
 import { restartAt } from '@/lib/auth/account-transition';
 import { workspacesApi } from '@/lib/api/workspaces';
 import { WORKSPACE_CHOOSER_PATH } from '@/lib/project/bootstrap';
+import { useEntitlement } from '@/lib/billing/entitlement-context';
+import { TEAM_MEMBERS_CAPABILITY } from '@/lib/config/billing';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
 
 import { MemberSettings } from './member-settings';
@@ -27,6 +29,7 @@ import { ROLE_SUMMARY, roleLabel } from './member-roles';
 export function WorkspacePanel() {
   const { activeWorkspace } = useProjectContext();
   const mayManage = useWorkspaceCapability('manage_members');
+  const mayInvite = useEntitlement().hasCapability(TEAM_MEMBERS_CAPABILITY);
   const queryClient = useQueryClient();
   const [confirmLeave, setConfirmLeave] = useState(false);
   const leave = useMutation({
@@ -68,8 +71,14 @@ export function WorkspacePanel() {
         ) : null}
       </Stack>
 
+      {mayManage && !mayInvite ? (
+        <Alert tone="info">
+          Inviting team members is part of a paid plan. During the trial, this workspace is yours
+          alone.
+        </Alert>
+      ) : null}
       {mayManage ? (
-        <MemberSettings />
+        <MemberSettings mayInvite={mayInvite} />
       ) : (
         <Alert tone="info">
           The owner and admins manage who belongs to this workspace and what each person may do.

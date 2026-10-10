@@ -115,7 +115,9 @@ bodies, provider credentials or prompts.
 [workspace owner](../frontend/services/api/src/workspaces/) for invitations,
 acceptance, role changes, removal and ownership transfer. Invitation tokens are
 hashed, expiring and single-use; acceptance requires the matching authenticated
-identity. Repeated acceptance is inert. Owner is not an assignable invitation
+identity. Admitting people needs the plan's `team_members` entitlement, which
+trials do not carry: issuing, resending and accepting an invitation are refused
+without it (revoking never is), so a trial workspace is its Owner alone. Repeated acceptance is inert. Owner is not an assignable invitation
 role. Transfer installs a replacement atomically, and removal, demotion or
 departure cannot leave a workspace ownerless. Only the Owner can transfer
 ownership, and only to a member who owns no workspace. Removal or departure also
