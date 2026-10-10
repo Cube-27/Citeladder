@@ -10,7 +10,7 @@
  */
 import { randomUUID } from 'node:crypto';
 
-import { sql, type Selectable, type Kysely } from 'kysely';
+import { sql, type RawBuilder, type Selectable, type Kysely } from 'kysely';
 
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
@@ -20,7 +20,7 @@ import type {
   QueueWorkspaceTurns,
 } from '../generated/db-schema.ts';
 import { compareText } from '../text-order.ts';
-import { earliestDue, leasedStatuses } from './next-due.ts';
+import { nextDueAt } from './next-due.ts';
 
 export type QueueTask = Selectable<AnalyticsTasks>;
 export type SiteTask = Selectable<SiteCrawlTasks>;
@@ -140,18 +140,13 @@ export class TaskQueue<T extends QueueTable = 'analytics_tasks'> {
   }
 
   /** When the earliest row of `kinds` becomes claimable or its lease expires; null when none is pending. */
-  async nextDue(kinds: readonly string[]): Promise<Date | null> {
-    if (kinds.length === 0) return null;
-    const row = await queueDatabase(this.#db)
-      .selectFrom(this.#table)
-      .select((eb) => [
-        eb.fn.min('available_at').filterWhere('status', 'in', claimable).as('due'),
-        eb.fn.min('lease_expires_at').filterWhere('status', 'in', leasedStatuses).as('expires'),
-      ])
-      .where('status', 'in', [...claimable, ...leasedStatuses])
-      .where('task_kind', 'in', kinds)
-      .executeTakeFirst();
-    return earliestDue(row);
+  nextDue(kinds: readonly string[], scope: RawBuilder<boolean> = sql`true`): Promise<Date | null> {
+    if (kinds.length === 0) return Promise.resolve(null);
+    return nextDueAt(this.#db, {
+      table: this.#table,
+      claimable,
+      scope: sql<boolean>`task_kind in (${sql.join(kinds)}) and ${scope}`,
+    });
   }
 
   /** Claim up to `limit` eligible rows of `kinds` for `owner`, committed. */

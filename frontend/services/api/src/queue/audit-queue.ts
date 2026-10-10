@@ -6,7 +6,7 @@ import { policy } from '../config.ts';
 import { auditPolicy } from '../audits/config.ts';
 import { auditEvent, transitionAudit } from '../audits/state.ts';
 import { compareText } from '../text-order.ts';
-import { earliestDue, leasedStatuses } from './next-due.ts';
+import { nextDueAt } from './next-due.ts';
 
 export type AuditTask = Selectable<AuditTasks>;
 const table = 'audit_tasks';
@@ -173,16 +173,8 @@ export class AuditQueue {
     });
   }
   /** Earliest claimable time or lease expiry, so an idle runner stays for a retry, provider poll or recovery due soon. */
-  async nextDue(): Promise<Date | null> {
-    const row = await this.db
-      .selectFrom(table)
-      .select((eb) => [
-        eb.fn.min('available_at').filterWhere('status', 'in', claimable).as('due'),
-        eb.fn.min('lease_expires_at').filterWhere('status', 'in', leasedStatuses).as('expires'),
-      ])
-      .where('status', 'in', [...claimable, ...leasedStatuses])
-      .executeTakeFirst();
-    return earliestDue(row);
+  nextDue(): Promise<Date | null> {
+    return nextDueAt(this.db, { table, claimable });
   }
   markRunning(claimed: AuditTask, owner: string, startTask = true) {
     const at = this.now();

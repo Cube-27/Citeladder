@@ -5,6 +5,7 @@
  * crawl backstops.
  */
 import { randomInt, randomUUID } from 'node:crypto';
+import { sql } from 'kysely';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { getLogger } from '../logging.ts';
@@ -22,7 +23,6 @@ import { siteWorkerSettings } from '../site-health/runtime.ts';
 import { lockSiteTask, type Crawl } from '../site-health/task-fence.ts';
 import { TaskCancelledError } from './executor.ts';
 import { recoverExpiredLeases } from '../site-health/lease-recovery.ts';
-import { earliestDue, leasedStatuses } from '../queue/next-due.ts';
 import {
   publishCancelledCrawls,
   reconcileAfterTask,
@@ -47,6 +47,8 @@ const acquisition: Record<string, (ctx: SiteTaskContext, task: SiteTask) => Prom
 const logger = getLogger('app.workers.site_health_worker');
 /** Uniform jitter in [0, seconds), millisecond resolution. */
 const jitter = (seconds: number) => randomInt(Math.max(1, Math.round(seconds * 1000))) / 1000;
+const failureDetail = (error: unknown) =>
+  error instanceof Error ? error.message.slice(0, 2000) : 'Site Health task failed';
 function conflict(error: unknown) {
   const code = error && typeof error === 'object' && 'code' in error ? error.code : null;
   return typeof code === 'string' && ['40001', '40P01', '55P03'].includes(code);
@@ -165,23 +167,12 @@ export class SiteHealthWorker {
     return claimed;
   }
   /** When the earliest task becomes available (deferred analysis, retry backoff) or its lease expires. */
-  async nextDue(): Promise<Date | null> {
-    const claimable = policy.task_queue.claimable;
-    const row = await this.db
-      .selectFrom('site_crawl_tasks')
-      .select((eb) => [
-        eb.fn.min('available_at').filterWhere('status', 'in', claimable).as('due'),
-        eb.fn.min('lease_expires_at').filterWhere('status', 'in', leasedStatuses).as('expires'),
-      ])
-      .where('status', 'in', [...claimable, ...leasedStatuses])
-      .where('task_kind', 'in', policy.site_health.ts_owned_task_kinds)
-      .$if(this.taskScope !== undefined, (q) =>
-        q
-          .where('workspace_id', '=', this.taskScope!.workspaceId)
-          .where('crawl_id', '=', this.taskScope!.crawlId),
-      )
-      .executeTakeFirst();
-    return earliestDue(row);
+  nextDue(): Promise<Date | null> {
+    const scope = this.taskScope;
+    return this.queue.nextDue(
+      policy.site_health.ts_owned_task_kinds,
+      scope ? sql`workspace_id = ${scope.workspaceId} and crawl_id = ${scope.crawlId}` : undefined,
+    );
   }
   async #recover() {
     // Another slot owns the in-flight pass; this slot keeps claiming instead of waiting.
@@ -302,10 +293,10 @@ export class SiteHealthWorker {
         logger.exception('site health task failed', error, { task_id: claimed.id });
         try {
           await this.fail(claimed, error);
-        } catch (failure) {
+        } catch (error_) {
           // A sibling may still hold the crawl lock fail() needs. Contention must
           // not disable the lane or let lease recovery charge an attempt.
-          if (!conflict(failure)) throw failure;
+          if (!conflict(error_)) throw error_;
           await this.#releaseContended(claimed, error);
         }
       }
@@ -350,20 +341,18 @@ export class SiteHealthWorker {
    */
   async #releaseContended(claimed: SiteTask, error: unknown) {
     const now = new Date();
-    const delay = this.settings.conflictBase + jitter(this.settings.conflictJitter);
     await this.db
       .updateTable('site_crawl_tasks')
       .set((eb) => ({
         status: 'retry_wait',
         conflict_count: eb('conflict_count', '+', 1),
         updated_at: now,
-        available_at: new Date(now.getTime() + delay * 1000),
+        available_at: new Date(now.getTime() + this.#conflictDelay() * 1000),
         lease_owner: null,
         lease_expires_at: null,
         heartbeat_at: null,
         error_code: 'db_conflict',
-        error_detail:
-          error instanceof Error ? error.message.slice(0, 2000) : 'Site Health task failed',
+        error_detail: failureDetail(error),
       }))
       .where('id', '=', claimed.id)
       .where('workspace_id', '=', claimed.workspace_id)
@@ -371,6 +360,9 @@ export class SiteHealthWorker {
       .where('status', '=', 'running')
       .where('conflict_count', '<', this.settings.conflictMax)
       .execute();
+  }
+  #conflictDelay() {
+    return this.settings.conflictBase + jitter(this.settings.conflictJitter);
   }
   async fail(claimed: SiteTask, error: unknown) {
     await this.db.transaction().execute(async (trx) => {
@@ -388,7 +380,7 @@ export class SiteHealthWorker {
       const attempt = task.attempt_count + Number(!contention);
       const retry = contention ? conflicts <= settings.conflictMax : attempt < task.max_attempts;
       const delay = contention
-        ? settings.conflictBase + jitter(settings.conflictJitter)
+        ? this.#conflictDelay()
         : Math.min(settings.retryMax, settings.retryBase * 2 ** Math.max(0, attempt - 1)) +
           jitter(settings.retryJitter);
       const now = new Date();
@@ -405,8 +397,7 @@ export class SiteHealthWorker {
           lease_expires_at: null,
           heartbeat_at: null,
           error_code: contention ? 'db_conflict' : 'task_failed',
-          error_detail:
-            error instanceof Error ? error.message.slice(0, 2000) : 'Site Health task failed',
+          error_detail: failureDetail(error),
         })
         .where('id', '=', task.id)
         .where('workspace_id', '=', task.workspace_id)

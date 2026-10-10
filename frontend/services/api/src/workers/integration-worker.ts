@@ -24,7 +24,7 @@ import {
 } from '../integrations/sync-state.ts';
 import { enqueuePostSyncProjections } from '../integrations/projections.ts';
 import { cachedWorkspaceAccess } from '../entitlements/access.ts';
-import { earliestDue, leasedStatuses } from '../queue/next-due.ts';
+import { nextDueAt } from '../queue/next-due.ts';
 
 const logger = getLogger('workers.integrations');
 const statuses = policy.task_queue.statuses;
@@ -196,22 +196,12 @@ export class IntegrationWorker {
   }
 
   /** Earliest claimable run or lease expiry, so an idle runner stays for a retry, history chunk or recovery due soon. */
-  async nextDue(): Promise<Date | null> {
-    const claimable = [statuses.queued, statuses.retry_wait];
-    const row = await this.#db
-      .selectFrom('integration_sync_runs')
-      .select((eb) => [
-        eb.fn
-          .min('available_at')
-          .filterWhere((f) =>
-            f.and([f('status', 'in', claimable), f('attempt_count', '<', f.ref('max_attempts'))]),
-          )
-          .as('due'),
-        eb.fn.min('lease_expires_at').filterWhere('status', 'in', leasedStatuses).as('expires'),
-      ])
-      .where('status', 'in', [...claimable, ...leasedStatuses])
-      .executeTakeFirst();
-    return earliestDue(row);
+  nextDue(): Promise<Date | null> {
+    return nextDueAt(this.#db, {
+      table: 'integration_sync_runs',
+      claimable: [statuses.queued, statuses.retry_wait],
+      ready: sql`attempt_count < max_attempts`,
+    });
   }
 
   async runUntilIdle(signal?: AbortSignal) {

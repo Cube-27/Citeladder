@@ -236,44 +236,39 @@ describe('bounded runner', () => {
     }
   });
 
-  it('still starts a successor for the owners that did not fail', async () => {
+  it('names the failed lanes so the others can still get a successor', async () => {
     const restore = setLogSink(() => {});
     try {
-      const lanes = [
-        {
-          name: 'bad',
-          run: async () => {
-            throw new Error('database unavailable');
+      const error = await drainLanes(
+        [
+          {
+            name: 'bad',
+            run: async () => {
+              throw new Error('database unavailable');
+            },
           },
-          nextDue: async () => new Date(),
-        },
-        {
-          name: 'good',
-          run: async () => 0,
-          nextDue: async () => new Date(Date.now() + 1000),
-        },
-      ];
-      const error = await drainLanes(lanes, options()).catch((caught: unknown) => caught);
+          { name: 'good', run: vi.fn().mockResolvedValueOnce(1).mockResolvedValue(0) },
+        ],
+        options(),
+      ).catch((caught: unknown) => caught);
       if (!(error instanceof LaneFailures)) throw new Error('expected lane failures');
-      const failed = error.lanes;
-      expect([...failed]).toEqual(['bad']);
-      const started: string[] = [];
-      const start = async () => {
-        started.push('successor');
-      };
-      const live = new AbortController().signal;
-      const remaining = lanes.filter((lane) => !failed.has(lane.name));
-      expect(
-        await startSuccessor({ lanes: remaining, budgetMs: 300_000, signal: live, start }),
-      ).toBe(true);
-      // Work due beyond a fresh budget waits for tick.
-      expect(await startSuccessor({ lanes: remaining, budgetMs: 500, signal: live, start })).toBe(
-        false,
-      );
-      expect(started).toEqual(['successor']);
+      expect([...error.lanes]).toEqual(['bad']);
+      expect(error.tasks).toBe(1);
     } finally {
       setLogSink(restore);
     }
+  });
+
+  it('starts a successor only for work due within a fresh budget', async () => {
+    const start = vi.fn(async () => undefined);
+    const live = new AbortController().signal;
+    const lanes = [
+      { name: 'good', run: async () => 0, nextDue: async () => new Date(Date.now() + 1000) },
+    ];
+    expect(await startSuccessor({ lanes, budgetMs: 300_000, signal: live, start })).toBe(true);
+    // Work due beyond a fresh budget waits for tick.
+    expect(await startSuccessor({ lanes, budgetMs: 500, signal: live, start })).toBe(false);
+    expect(start).toHaveBeenCalledTimes(1);
   });
 
   it('drains successors into earlier lanes before declaring idle', async () => {

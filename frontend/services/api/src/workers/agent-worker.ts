@@ -2,6 +2,7 @@ import { sql } from 'kysely';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { createAgentBindings } from '../agent/bindings.ts';
+import { leasedStatuses } from '../queue/next-due.ts';
 
 export class AgentWorker {
   readonly db: Database;
@@ -29,7 +30,7 @@ export class AgentWorker {
             ),
           ]),
           eb.and([
-            eb('status', 'in', ['leased', 'running']),
+            eb('status', 'in', leasedStatuses),
             eb('lease_expires_at', '<=', sql<Date>`clock_timestamp()`),
           ]),
           eb.and([
