@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { CopyButton } from '@/components/ui/copy-button';
 import { DateField } from '@/components/ui/date-field';
 import { Dialog } from '@/components/ui/dialog';
@@ -21,11 +22,11 @@ import type { ApiKey, ApiKeyCreated, ApiKeyScope } from '@citeladder/contracts/a
 import { apiKeysApi } from '@/lib/api/api-keys';
 import { humanizeApiError } from '@/lib/api/errors';
 import { queryKeys } from '@/lib/api/query-keys';
-import { CRAWL_INGEST_ORIGIN } from '@/lib/config/crawl-logs';
+import { API_HOST_ORIGIN } from '@/lib/config/public-origins';
 import { workspaceDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
 
-const API_BASE_URL = `${CRAWL_INGEST_ORIGIN}/v1`;
+const API_BASE_URL = `${API_HOST_ORIGIN}/v1`;
 
 /** What each scope lets a key do; `read` is always granted. */
 const SCOPES: readonly { value: ApiKeyScope; label: string }[] = [
@@ -316,33 +317,26 @@ export function ApiKeys() {
         workspaceId={workspaceId}
         onClose={() => setCreating(false)}
       />
-      <Dialog
-        open={pending !== null}
-        onOpenChange={(open) => {
-          if (!open) setPending(null);
-        }}
-        title={`Revoke ${pending?.name ?? 'this key'}?`}
-        footer={
-          <Button
-            variant="destructive"
-            pending={revoke.isPending}
-            onClick={() => {
-              if (pending) revoke.mutate(pending.id);
-            }}
-          >
-            Revoke
-          </Button>
+      <ConfirmDialog
+        pending={revoke.isPending}
+        onCancel={() => setPending(null)}
+        request={
+          pending && {
+            title: `Revoke ${pending.name}?`,
+            confirmLabel: 'Revoke',
+            destructive: true,
+            onConfirm: () => revoke.mutate(pending.id),
+            body: (
+              <Stack gap="compact">
+                <p>Requests with this key are refused at once. This cannot be undone.</p>
+                {revoke.isError ? (
+                  <Alert tone="danger">{humanizeApiError(revoke.error).message}</Alert>
+                ) : null}
+              </Stack>
+            ),
+          }
         }
-      >
-        <Stack gap="compact">
-          <p className={textRole('body')}>
-            Requests with this key are refused at once. This cannot be undone.
-          </p>
-          {revoke.isError ? (
-            <Alert tone="danger">{humanizeApiError(revoke.error).message}</Alert>
-          ) : null}
-        </Stack>
-      </Dialog>
+      />
     </Stack>
   );
 }

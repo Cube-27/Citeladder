@@ -1,7 +1,7 @@
 ---
-import { API_REFERENCE_HEADING, apiOperations } from '../lib/content';
+import { API_REFERENCE_HEADING, API_OPERATIONS } from '../lib/content';
 
-const operations = apiOperations();
+const operations = API_OPERATIONS;
 const groups = [...new Set(operations.map((operation) => operation.group))];
 ---
 <section class="docs-tool-reference docs-prose website-body" aria-labelledby={API_REFERENCE_HEADING.slug}>

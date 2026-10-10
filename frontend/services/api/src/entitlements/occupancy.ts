@@ -84,10 +84,9 @@ export async function admitApiKey(db: Database, workspaceId: string, now: Date):
     throw new ApiError(403, 'Billing entitlement is unavailable for this account', {
       code: UNRESOLVED,
     });
-  const { codes: apiCodes } = policy.public_api;
   if ((resolved.values.get(policy.entitlements.api_access) ?? 0) < 1)
     throw new ApiError(403, "API access is not included in this workspace's plan", {
-      code: asApiErrorCode(apiCodes.api_access_not_in_plan),
+      code: 'api_access_not_in_plan',
     });
   const allowance = resolved.values.get(policy.entitlements.api_keys) ?? 0;
   const row = await db
@@ -100,7 +99,7 @@ export async function admitApiKey(db: Database, workspaceId: string, now: Date):
   const current = Number(row.count);
   if (current + 1 > allowance)
     throw new ApiError(409, `This workspace already has ${current} of ${allowance} API keys`, {
-      code: asApiErrorCode(apiCodes.api_key_limit_reached),
+      code: 'api_key_limit_reached',
       details: { allowance, current },
     });
 }

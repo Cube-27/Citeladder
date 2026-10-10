@@ -3,7 +3,6 @@
  * first results in the request (`run`); the public API launches in one call
  * with an estimate guard and leaves execution to the runner.
  */
-import { asApiErrorCode } from '@citeladder/contracts/error-codes';
 import type { z } from 'zod';
 
 import { requireCapability, type Actor } from '../auth/actor.ts';
@@ -14,7 +13,7 @@ import { auditCreateInput, auditInput, auditLaunchInput } from '../audits/inputs
 import { executeInteractiveAudit } from '../audits/interactive.ts';
 import { cancelAudit as cancelOwnedAudit } from '../audits/maintenance.ts';
 import { readAudit } from '../audits/reads.ts';
-import { configEnvironment, policy, type ServiceConfig } from '../config.ts';
+import { configEnvironment, type ServiceConfig } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { ApiError } from '../errors.ts';
 
@@ -68,7 +67,7 @@ export async function launchAudit(
   );
   if (estimate.maximum_attempt_count > ceiling)
     throw new ApiError(409, 'The audit estimate exceeds max_estimated_credits', {
-      code: asApiErrorCode(policy.public_api.codes.estimate_exceeds_limit),
+      code: 'estimate_exceeds_limit',
       details: {
         estimated_credits: estimate.maximum_attempt_count,
         max_estimated_credits: ceiling,

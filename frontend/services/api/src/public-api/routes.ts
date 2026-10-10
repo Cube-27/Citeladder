@@ -35,7 +35,7 @@ import {
   definePostRoute,
   type ProductRoute,
 } from '../routes/define.ts';
-import { decodeCursor, encodeCursor, pageAfter, pageQuery, pageSchema } from './pagination.ts';
+import { cursorId, nextCursor, pageAfter, pageQuery, pageSchema } from './pagination.ts';
 import {
   generationRunSchema,
   listGenerationRuns,
@@ -49,6 +49,8 @@ const uuid = { scalar: { kind: 'uuid' }, required: true } as const;
 const optionalUuid = { scalar: { kind: 'uuid' } } as const;
 const projectPath = { project_id: uuid } as const;
 const base = { family: 'public-api', exposure: 'public' } as const;
+/** An estimate's body; the project comes from the path. */
+const projectEstimate = estimateInput.omit({ project_id: true });
 
 export const publicApiRoutes: readonly ProductRoute[] = [
   defineGetRoute({
@@ -61,7 +63,7 @@ export const publicApiRoutes: readonly ProductRoute[] = [
       const projects = (await listProjects(db, c.get('workspace').workspaceId)).filter(
         (item) => allowed === null || allowed.includes(item.id),
       );
-      return pageAfter(projects, query.cursor, query.limit);
+      return pageAfter(projects, query, { endpoint: 'projects', filters: {} });
     },
   }),
   defineGetRoute({
@@ -174,20 +176,20 @@ export const publicApiRoutes: readonly ProductRoute[] = [
     params: { path: projectPath, query: pageQuery },
     response: pageSchema(auditSchema),
     async handle({ c, db }, { path, query }) {
-      const after = decodeCursor(query.cursor)?.id;
+      const scope = { endpoint: 'audits', filters: { project_id: path.project_id } };
       // One extra row says whether another page exists.
       const rows = await listAudits(
         db,
         c.get('workspace').workspaceId,
         path.project_id,
         query.limit + 1,
-        after,
+        cursorId(query.cursor, scope) ?? undefined,
       );
       const items = rows.slice(0, query.limit);
       const last = items.at(-1);
       return {
         items,
-        next_cursor: rows.length > query.limit && last ? encodeCursor({ id: last.id }) : null,
+        next_cursor: rows.length > query.limit && last ? nextCursor(scope, last.id) : null,
       };
     },
   }),
@@ -197,16 +199,13 @@ export const publicApiRoutes: readonly ProductRoute[] = [
     scope: 'read',
     path: `${project}/audits/estimate`,
     params: { path: projectPath, query: {} },
-    body: estimateInput.omit({ project_id: true }),
+    body: projectEstimate,
     response: auditEstimateSchema,
     handle: async ({ c, db, config }, { path }) =>
       estimateAudit(
         db,
         c.get('workspace').workspaceId,
-        {
-          ...(await readBody(c, estimateInput.omit({ project_id: true }))),
-          project_id: path.project_id,
-        },
+        { ...(await readBody(c, projectEstimate)), project_id: path.project_id },
         auditRuntime(configEnvironment(config)),
       ),
   }),

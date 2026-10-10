@@ -15,7 +15,7 @@ import { z } from 'zod';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { ApiError, notFound } from '../errors.ts';
-import { competitorLogoUrl } from './logos.ts';
+import { competitorView, lockProject } from './competitors.ts';
 import type { ProjectScope } from './brand-profile.ts';
 
 type Suggestion = z.input<typeof observedCompetitorSchema>;
@@ -59,14 +59,7 @@ export function acceptSuggestion(
   candidateId: string,
 ): Promise<Competitor> {
   return db.transaction().execute(async (trx) => {
-    const project = await trx
-      .selectFrom('projects')
-      .select('id')
-      .where('id', '=', scope.projectId)
-      .where('workspace_id', '=', scope.workspaceId)
-      .forUpdate()
-      .executeTakeFirst();
-    if (project === undefined) throw notFound('Project');
+    await lockProject(trx, scope);
     const candidate = await trx
       .selectFrom('observed_entity_candidates')
       .select(['id', 'name', 'domain'])
@@ -116,12 +109,6 @@ export function acceptSuggestion(
       .set({ status: ACCEPTED })
       .where('id', '=', candidate.id)
       .execute();
-    return {
-      id: competitor.id,
-      name: competitor.name,
-      aliases: strings.parse(competitor.aliases),
-      domains: strings.parse(competitor.domains),
-      logo_url: competitor.logo_asset_id ? competitorLogoUrl(scope.projectId, competitor.id) : null,
-    };
+    return competitorView(scope.projectId, competitor);
   });
 }

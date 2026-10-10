@@ -183,7 +183,7 @@ export async function createPrompts(
       const rows = await trx
         .insertInto('prompts')
         .values(
-          planned.map(({ input, id, hash }) => ({
+          planned.map(({ input, id, hash }, index) => ({
             id,
             prompt_set_id: set.id,
             topic_id: input.topic_id ?? null,
@@ -195,7 +195,8 @@ export async function createPrompts(
             enabled: input.enabled,
             status: P.status_active,
             origin: P.origins.manual,
-            created_at: now,
+            // A millisecond apart, so creation-ordered lists keep the request's order.
+            created_at: new Date(now.getTime() + index),
             updated_at: now,
           })),
         )

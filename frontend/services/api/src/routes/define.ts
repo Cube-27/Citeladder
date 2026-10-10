@@ -195,7 +195,7 @@ export function defineRoute<
           headers: route.headers ? workspaceHeaders.extend(route.headers.shape) : workspaceHeaders,
           cookies: publicRoute ? z.object({}) : SESSION_COOKIE,
         };
-  const publicSide = exposure === 'browser' ? null : publicOperation(route, method, capability);
+  const publicSide = exposure === 'browser' ? null : publicOperation(route, shared, capability);
   const register = (app: Hono<AppEnv>, config: ServiceConfig, db: Database) => {
     const respond = async (c: Context<AppEnv>) => {
       const params = validateParams(route.params, {
@@ -255,21 +255,13 @@ function publicPathOf(route: { path: string; exposure?: string; publicPath?: str
 function publicOperation(
   route: Pick<
     RouteSpec<ParamSpecs, ParamSpecs, z.ZodType>,
-    | 'path'
-    | 'exposure'
-    | 'publicPath'
-    | 'authorize'
-    | 'scope'
-    | 'headers'
-    | 'params'
-    | 'body'
-    | 'response'
-    | 'status'
-    | 'alsoStatus'
+    'path' | 'exposure' | 'publicPath' | 'authorize' | 'scope' | 'headers' | 'params'
   >,
-  method: NonNullable<RouteContract['method']>,
+  /** The contract fields the browser and public contracts share. */
+  shared: Pick<RouteContract, 'method' | 'query' | 'body' | 'responses'>,
   capability: WorkspaceCapability | undefined,
 ) {
+  const { method } = shared;
   const path = publicPathOf(route);
   if (!path.startsWith(`${policy.api.machine_prefix}/`))
     throw new Error(`A public API route must sit below ${policy.api.machine_prefix}: ${path}`);
@@ -288,17 +280,16 @@ function publicOperation(
     ),
   );
   const contract: RouteContract = {
+    ...shared,
     family: 'public-api',
     exposure: 'public',
     ...(guard ? { scope: guard.scope } : {}),
-    method,
     path,
     pathParams: parameterObject(
       path.includes('{project_id}')
         ? { project_id: { scalar: { kind: 'uuid' }, required: true }, ...route.params.path }
         : route.params.path,
     ),
-    query: parameterObject(route.params.query),
     headers: z.object({
       ...routeHeaders,
       ...(idempotent
@@ -306,11 +297,6 @@ function publicOperation(
         : {}),
     }),
     cookies: z.object({}),
-    ...(route.body ? { body: route.body } : {}),
-    responses: {
-      [route.status ?? 200]: route.response,
-      ...(route.alsoStatus ? { [route.alsoStatus]: route.response } : {}),
-    },
   };
   const register = (
     app: Hono<AppEnv>,

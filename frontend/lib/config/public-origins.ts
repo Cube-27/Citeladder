@@ -56,3 +56,7 @@ export function publicOrigins(
     app: parsePublicOrigin(app, 'PUBLIC_APP_ORIGIN', production),
   };
 }
+
+/** The API host's origin for display (crawl-log endpoints, the REST API); locally the API container. */
+// An origin carries no path, so a configured trailing slash never doubles into `//v1`.
+export const API_HOST_ORIGIN = publicApiOrigin(undefined, false)?.origin ?? 'http://127.0.0.1:8100';

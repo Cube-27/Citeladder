@@ -52,20 +52,19 @@ const apiDocument = z.object({
 });
 
 /** Every public operation in document order, with its resource group and scope. */
-export function apiOperations() {
-  const { paths } = apiDocument.parse(JSON.parse(publicApiDocument));
-  return Object.entries(paths).flatMap(([path, item]) =>
-    Object.entries(item).map(([method, operation]) => ({
-      method: method.toUpperCase(),
-      path,
-      group: operation.tags?.[0] ?? 'projects',
-      scope: operation['x-citeladder-scope'] ?? null,
-      query: (operation.parameters ?? [])
-        .filter((parameter) => parameter.in === 'query')
-        .map((parameter) => parameter.name),
-    })),
-  );
-}
+export const API_OPERATIONS = Object.entries(
+  apiDocument.parse(JSON.parse(publicApiDocument)).paths,
+).flatMap(([path, item]) =>
+  Object.entries(item).map(([method, operation]) => ({
+    method: method.toUpperCase(),
+    path,
+    group: operation.tags?.[0] ?? 'projects',
+    scope: operation['x-citeladder-scope'] ?? null,
+    query: (operation.parameters ?? [])
+      .filter((parameter) => parameter.in === 'query')
+      .map((parameter) => parameter.name),
+  })),
+);
 
 export const articles = Object.entries(modules)
   .map(([file, entry]) => {
@@ -101,10 +100,7 @@ export function articleSearchBody(article: Article): string {
   if (article.toolReference) return body + JSON.stringify(toolCatalog.tools);
   if (article.apiReference)
     return (
-      body +
-      apiOperations()
-        .map((operation) => `${operation.method} ${operation.path}`)
-        .join('\n')
+      body + API_OPERATIONS.map((operation) => `${operation.method} ${operation.path}`).join('\n')
     );
   return body;
 }

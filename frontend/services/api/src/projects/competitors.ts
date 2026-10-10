@@ -32,7 +32,11 @@ export const competitorUpdate = z.strictObject({
   domains: competitorInput.shape.domains.unwrap().optional(),
 });
 
-function view(projectId: string, row: Selectable<Competitors>): Competitor {
+/** A tracked competitor on the wire. */
+export function competitorView(
+  projectId: string,
+  row: Pick<Selectable<Competitors>, 'id' | 'name' | 'aliases' | 'domains' | 'logo_asset_id'>,
+): Competitor {
   return {
     id: row.id,
     name: row.name,
@@ -42,7 +46,8 @@ function view(projectId: string, row: Selectable<Competitors>): Competitor {
   };
 }
 
-async function lockProject(db: Database, scope: ProjectScope): Promise<void> {
+/** The project row lock every competitor writer takes first, or 404. */
+export async function lockProject(db: Database, scope: ProjectScope): Promise<void> {
   const project = await db
     .selectFrom('projects')
     .select('id')
@@ -78,7 +83,9 @@ export async function listCompetitors(db: Database, scope: ProjectScope): Promis
     .where('workspace_id', '=', scope.workspaceId)
     .executeTakeFirst();
   if (project === undefined) throw notFound('Project');
-  return (await competitorsOf(db, scope.projectId)).map((row) => view(scope.projectId, row));
+  return (await competitorsOf(db, scope.projectId)).map((row) =>
+    competitorView(scope.projectId, row),
+  );
 }
 
 export function addCompetitor(
@@ -107,7 +114,7 @@ export function addCompetitor(
       })
       .returningAll()
       .executeTakeFirstOrThrow();
-    return view(scope.projectId, row);
+    return competitorView(scope.projectId, row);
   });
 }
 
@@ -142,7 +149,7 @@ export function updateCompetitor(
       .where('id', '=', current.id)
       .returningAll()
       .executeTakeFirstOrThrow();
-    return view(scope.projectId, row);
+    return competitorView(scope.projectId, row);
   });
 }
 

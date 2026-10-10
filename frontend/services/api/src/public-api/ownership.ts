@@ -9,88 +9,54 @@ import type { Database } from '../db/database.ts';
 import { notFound } from '../errors.ts';
 import { parseUuid } from '../http/uuid.ts';
 
-type Owner = {
-  resource: string;
-  project: (db: Database, workspaceId: string, id: string) => Promise<string | undefined>;
-};
+type ProjectOf = (db: Database, workspaceId: string, id: string) => Promise<string | undefined>;
 
-const OWNERS: Readonly<Record<string, Owner>> = {
-  prompt_set_id: {
-    resource: 'Prompt set',
-    project: async (db, workspaceId, id) =>
-      (
-        await db
-          .selectFrom('prompt_sets')
-          .innerJoin('projects', 'projects.id', 'prompt_sets.project_id')
-          .select('prompt_sets.project_id')
-          .where('prompt_sets.id', '=', id)
-          .where('projects.workspace_id', '=', workspaceId)
-          .executeTakeFirst()
-      )?.project_id,
-  },
-  prompt_id: {
-    resource: 'Prompt',
-    project: async (db, workspaceId, id) =>
-      (
-        await db
-          .selectFrom('prompts')
-          .innerJoin('prompt_sets', 'prompt_sets.id', 'prompts.prompt_set_id')
-          .innerJoin('projects', 'projects.id', 'prompt_sets.project_id')
-          .select('prompt_sets.project_id')
-          .where('prompts.id', '=', id)
-          .where('projects.workspace_id', '=', workspaceId)
-          .executeTakeFirst()
-      )?.project_id,
-  },
-  topic_id: {
-    resource: 'Topic',
-    project: async (db, workspaceId, id) =>
-      (
-        await db
-          .selectFrom('topics')
-          .innerJoin('projects', 'projects.id', 'topics.project_id')
-          .select('topics.project_id')
-          .where('topics.id', '=', id)
-          .where('projects.workspace_id', '=', workspaceId)
-          .executeTakeFirst()
-      )?.project_id,
-  },
-  audit_id: {
-    resource: 'Audit',
-    project: async (db, workspaceId, id) =>
-      (
-        await db
-          .selectFrom('audits')
-          .select('project_id')
-          .where('id', '=', id)
-          .where('workspace_id', '=', workspaceId)
-          .executeTakeFirst()
-      )?.project_id,
-  },
-  action_id: {
-    resource: 'Action',
-    project: async (db, workspaceId, id) =>
-      (
-        await db
-          .selectFrom('actions')
-          .select('project_id')
-          .where('id', '=', id)
-          .where('workspace_id', '=', workspaceId)
-          .executeTakeFirst()
-      )?.project_id,
-  },
-  crawl_id: {
-    resource: 'Crawl',
-    project: async (db, workspaceId, id) =>
-      (
-        await db
-          .selectFrom('site_crawls')
-          .select('project_id')
-          .where('id', '=', id)
-          .where('workspace_id', '=', workspaceId)
-          .executeTakeFirst()
-      )?.project_id,
-  },
+/** A table carrying `workspace_id` and `project_id` itself. */
+const scoped =
+  (table: 'audits' | 'actions' | 'site_crawls'): ProjectOf =>
+  async (db, workspaceId, id) =>
+    (
+      await db
+        .selectFrom(table)
+        .select('project_id')
+        .where('id', '=', id)
+        .where('workspace_id', '=', workspaceId)
+        .executeTakeFirst()
+    )?.project_id;
+
+/** A table carrying `project_id` only; the workspace comes from the project. */
+const viaProject =
+  (table: 'prompt_sets' | 'topics'): ProjectOf =>
+  async (db, workspaceId, id) =>
+    (
+      await db
+        .selectFrom(table)
+        .innerJoin('projects', 'projects.id', `${table}.project_id`)
+        .select('projects.id as project_id')
+        .where(`${table}.id`, '=', id)
+        .where('projects.workspace_id', '=', workspaceId)
+        .executeTakeFirst()
+    )?.project_id;
+
+const promptProject: ProjectOf = async (db, workspaceId, id) =>
+  (
+    await db
+      .selectFrom('prompts')
+      .innerJoin('prompt_sets', 'prompt_sets.id', 'prompts.prompt_set_id')
+      .innerJoin('projects', 'projects.id', 'prompt_sets.project_id')
+      .select('projects.id as project_id')
+      .where('prompts.id', '=', id)
+      .where('projects.workspace_id', '=', workspaceId)
+      .executeTakeFirst()
+  )?.project_id;
+
+const OWNERS: Readonly<Record<string, { resource: string; project: ProjectOf }>> = {
+  prompt_set_id: { resource: 'Prompt set', project: viaProject('prompt_sets') },
+  topic_id: { resource: 'Topic', project: viaProject('topics') },
+  prompt_id: { resource: 'Prompt', project: promptProject },
+  audit_id: { resource: 'Audit', project: scoped('audits') },
+  action_id: { resource: 'Action', project: scoped('actions') },
+  crawl_id: { resource: 'Crawl', project: scoped('site_crawls') },
 };
 
 /** 404 unless every owned path ID belongs to `projectId`. */

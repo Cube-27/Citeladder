@@ -10,7 +10,6 @@
  */
 import { createHash, randomUUID } from 'node:crypto';
 
-import { asApiErrorCode } from '@citeladder/contracts/error-codes';
 import type { Context } from 'hono';
 
 import { policy } from '../config.ts';
@@ -19,7 +18,7 @@ import type { Database } from '../db/database.ts';
 import { ApiError } from '../errors.ts';
 
 const P = policy.public_api;
-const CONFLICT = asApiErrorCode(P.codes.idempotency_conflict);
+const CONFLICT = 'idempotency_conflict';
 const REPLAYED_HEADER = 'idempotent-replayed';
 
 export async function withIdempotency(

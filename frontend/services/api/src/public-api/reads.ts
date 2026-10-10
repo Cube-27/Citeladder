@@ -74,8 +74,13 @@ export async function listPublicPrompts(
         (filters.topicId === null || prompt.topic_id === filters.topicId) &&
         (filters.status === null || prompt.status === filters.status),
     );
-  const paged = pageAfter(prompts, page.cursor, page.limit);
-  const metrics = await latestMetrics(db, scope);
+  const paged = pageAfter(prompts, page, {
+    endpoint: 'prompts',
+    filters: { project_id: scope.projectId, ...filters },
+  });
+  const metrics = paged.items.length
+    ? await latestMetrics(db, scope)
+    : new Map<string, PromptMetricItem>();
   return {
     next_cursor: paged.next_cursor,
     items: paged.items.map((prompt) => {

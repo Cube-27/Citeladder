@@ -16,7 +16,6 @@ import {
   type ApiKeyList,
   type ApiKeyScope,
 } from '@citeladder/contracts/api-keys';
-import { asApiErrorCode } from '@citeladder/contracts/error-codes';
 import { sql, type Selectable } from 'kysely';
 import type { z } from 'zod';
 
@@ -32,7 +31,6 @@ export type ApiKeyRow = Selectable<ApiKeys>;
 
 const P = policy.public_api;
 const BASE62 = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
-const INVALID = asApiErrorCode(P.codes.invalid_api_key);
 const PREFIX_LENGTH = P.key_prefix.length + P.prefix_random_chars;
 
 function base62(length: number): string {
@@ -192,7 +190,7 @@ export async function revokeApiKey(
 
 function invalidKey(message = 'A valid API key is required'): ApiError {
   return new ApiError(401, message, {
-    code: INVALID,
+    code: 'invalid_api_key',
     headers: { 'www-authenticate': 'Bearer' },
   });
 }
