@@ -6,7 +6,14 @@ import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import { applyQualityPolicy, probability } from './generation-quality.ts';
 
-type Row = { decision: Record<string, unknown>; disposition: string; category: string };
+const OBSERVED_REF = JSON.stringify([{ kind: policy.prompts.generation.observed.evidence_kind }]);
+type Row = {
+  decision: Record<string, unknown>;
+  disposition: string;
+  category: string;
+  /** The candidate's phrasing was informed by the project's own searches. */
+  grounded: boolean;
+};
 const rate = (numerator: number, denominator: number) =>
   denominator ? numerator / denominator : null;
 const tally = (values: string[]) =>
@@ -76,6 +83,23 @@ export function calibrationReport(rows: Row[]) {
         rejected_caught: rate(rejected.filter(fails).length, rejected.length),
       };
     }),
+    // Grounded versus ungrounded review outcomes; counts only, never query text.
+    by_grounding: Object.fromEntries(
+      (['grounded', 'ungrounded'] as const).map((key) => {
+        const members = current.filter((row) => row.grounded === (key === 'grounded'));
+        const yes = members.filter((row) => row.disposition === 'accepted').length,
+          no = members.filter((row) => row.disposition === 'rejected').length;
+        return [
+          key,
+          {
+            gate_rejected: members.filter((row) => row.disposition === 'gate_rejected').length,
+            accepted: yes,
+            rejected: no,
+            accept_rate: rate(yes, yes + no),
+          },
+        ];
+      }),
+    ),
     by_category: Object.fromEntries(
       [...Map.groupBy(reviewed, (row) => row.category || '(no category)')].map(
         ([category, members]) => [
@@ -122,6 +146,7 @@ export async function loadCalibration(db: Database, actor: string, since?: Date)
       'candidate.jev_decision',
       'candidate.disposition',
       sql<string>`profile.business_context->>'category'`.as('category'),
+      sql<boolean>`candidate.evidence_refs @> ${OBSERVED_REF}::jsonb`.as('grounded'),
     ])
     .where('candidate.jev_decision', 'is not', null)
     .where('candidate.disposition', 'in', ['accepted', ...policy.prompts.candidate.outcomes]);
@@ -132,6 +157,7 @@ export async function loadCalibration(db: Database, actor: string, since?: Date)
       decision: record(row.jev_decision),
       disposition: row.disposition,
       category: row.category ?? '',
+      grounded: row.grounded,
     })),
   );
 }

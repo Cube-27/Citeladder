@@ -8,6 +8,8 @@ import { policy } from '../config.ts';
 import { bindingTokens } from './binding.ts';
 import { hasPlaceholder, words, type Draft } from './generation-drafts.ts';
 import { namesPlace } from './generation-plan.ts';
+import { promptTextHash } from './normalization.ts';
+import type { ObservedQuery } from './observed-queries.ts';
 
 const NEAR_DUPLICATE_JACCARD = 0.6;
 const OPENING_WORDS = 3;
@@ -85,6 +87,33 @@ export function setMetrics(input: SetMetricsInput) {
       texts.length,
     ),
   };
+}
+
+/**
+ * Share of prompts phrased like an observed search of their own topic: token
+ * Jaccard at least `likeness_min_jaccard` with one, without being its exact
+ * copy. Operator evaluation only; no threshold fails on it.
+ */
+export function observedLikeness(
+  prompts: readonly { text: string; topic_id: string }[],
+  observed: readonly Pick<ObservedQuery, 'text' | 'topic_id'>[],
+): number {
+  const min = policy.prompts.generation.observed.likeness_min_jaccard;
+  const queries = observed.map((query) => ({
+    topic_id: query.topic_id,
+    tokens: bindingTokens(query.text),
+    hash: promptTextHash(query.text),
+  }));
+  const alike = prompts.filter((prompt) => {
+    const own = bindingTokens(prompt.text),
+      hash = promptTextHash(prompt.text);
+    const peers = queries.filter((query) => query.topic_id === prompt.topic_id);
+    return (
+      !peers.some((query) => query.hash === hash) &&
+      peers.some((query) => jaccard(own, query.tokens) >= min)
+    );
+  });
+  return share(alike.length, prompts.length);
 }
 
 /** Threshold names a generated set fails; empty when it is within all of them. */

@@ -4,8 +4,12 @@ import { policy } from '../src/config.ts';
 import type { GenerationContext } from '../src/prompts/generation-context.ts';
 import { admitDrafts, generateDrafts } from '../src/prompts/generation-drafts.ts';
 import { generationInput } from '../src/prompts/generation-input.ts';
-import { setMetrics, thresholdFailures } from '../src/prompts/generation-metrics.ts';
-import { geoTerms, namesPlace, planSlots } from '../src/prompts/generation-plan.ts';
+import {
+  observedLikeness,
+  setMetrics,
+  thresholdFailures,
+} from '../src/prompts/generation-metrics.ts';
+import { geoTerms, modelSlot, namesPlace, planSlots } from '../src/prompts/generation-plan.ts';
 import {
   fixtureContext,
   fixtureTopicId,
@@ -84,6 +88,72 @@ describe('universe planner', () => {
     // Core cells suggest the intents coherent with their stage.
     for (const slot of slots)
       expect(slot.target_prompt_intents).toEqual(G.stage_intents[slot.target_buyer_stage]);
+  });
+});
+
+describe('grounding', () => {
+  it.each(generationFixtures)(
+    '$name: observed searches only add grounding to an otherwise identical plan',
+    (item) => {
+      const input = generationInput.parse({ count: 20 });
+      const plain = planSlots(fixtureContext(item), input, []);
+      const grounded = planSlots(fixtureContext(item, [], { grounded: true }), input, []);
+      expect(plain.some((slot) => 'grounding' in slot)).toBe(false);
+      expect(plain.map(modelSlot)).toEqual(plain);
+      expect(grounded.some((slot) => slot.grounding?.length)).toBe(true);
+      expect(grounded.map(({ grounding: _grounding, ...slot }) => slot)).toEqual(plain);
+    },
+  );
+
+  it('gives a slot up to three same-topic searches, closest to its cell first', () => {
+    const service = fixture('local-service');
+    const search = (text: string, topic: number, weight: number) => ({
+      id: `id:${text}`,
+      source: 'gsc' as const,
+      text,
+      topic_id: fixtureTopicId(topic),
+      weight,
+    });
+    const context = {
+      ...fixtureContext(service),
+      observed: [
+        search('ac repair service near me same day', 0, 5400),
+        search('split ac not cooling repair cost', 0, 1900),
+        search('who repairs inverter ac gas leak', 0, 320),
+        search('ac repair delhi same day visit', 0, 50),
+        search('split ac installation charges with copper pipe', 1, 2900),
+      ],
+    };
+    const slots = planSlots(context, generationInput.parse({ count: 20 }), []);
+    const texts = (slot: (typeof slots)[number] | undefined) =>
+      slot?.grounding?.map((example) => example.text);
+    const repair = slots.filter((slot) => slot.buyer_need.offering === 'AC repair');
+    expect(texts(repair.find((slot) => !slot.buyer_need.market))).toEqual([
+      'ac repair service near me same day',
+      'split ac not cooling repair cost',
+      'who repairs inverter ac gas leak',
+    ]);
+    expect(texts(repair.find((slot) => slot.buyer_need.market === 'Delhi'))).toEqual([
+      'ac repair delhi same day visit',
+      'ac repair service near me same day',
+      'split ac not cooling repair cost',
+    ]);
+    expect(
+      new Set(
+        slots
+          .filter((slot) => slot.buyer_need.offering === 'AC installation')
+          .flatMap((slot) => texts(slot) ?? []),
+      ),
+    ).toEqual(new Set(['split ac installation charges with copper pipe']));
+    const sent = modelSlot(repair[0]!);
+    expect(sent).toMatchObject({
+      buyer_search_examples: [
+        'ac repair service near me same day',
+        'split ac not cooling repair cost',
+        'who repairs inverter ac gas leak',
+      ],
+    });
+    expect(sent).not.toHaveProperty('grounding');
   });
 });
 
@@ -189,6 +259,26 @@ describe('set metrics', () => {
     expect(thresholdFailures(metrics, { market_scope: 'national', requested: 20 })).toEqual(
       expect.arrayContaining(['near_duplicate_rate', 'shortfall']),
     );
+  });
+});
+
+describe('observed likeness', () => {
+  it('counts prompts phrased like a same-topic search, but not copies or other topics', () => {
+    const observed = [
+      { text: 'stretchable jeans for men slim fit', topic_id: 'jeans' },
+      { text: 'cotton chinos for office wear', topic_id: 'chinos' },
+    ];
+    expect(
+      observedLikeness(
+        [
+          { text: 'Which slim fit stretchable jeans suit men at work?', topic_id: 'jeans' },
+          { text: 'stretchable jeans for men slim fit', topic_id: 'jeans' },
+          { text: 'Which cotton chinos suit office wear?', topic_id: 'jeans' },
+          { text: 'Where can I buy durable work boots?', topic_id: 'jeans' },
+        ],
+        observed,
+      ),
+    ).toBe(0.25);
   });
 });
 

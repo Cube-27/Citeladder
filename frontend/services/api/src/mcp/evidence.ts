@@ -118,6 +118,8 @@ export function integrationStatus({ db, scope }: ProjectRead): Promise<Evidence>
   return readProjectReadiness(db, scope);
 }
 
+const OBSERVED_REF = JSON.stringify([{ kind: policy.prompts.generation.observed.evidence_kind }]);
+
 export async function promptPortfolio(
   { db, scope }: ProjectRead,
   args: Page & {
@@ -147,6 +149,12 @@ export async function promptPortfolio(
       'p.created_at',
     ])
     .select(utcText(sql.ref('p.created_at')).as('cursor_at'))
+    // Whether the project's own searches informed the wording; never the queries.
+    .select(
+      sql<boolean>`coalesce(p.generation_evidence->'evidence_refs' @> ${OBSERVED_REF}::jsonb, false)`.as(
+        'grounded',
+      ),
+    )
     .where('projects.id', '=', scope.projectId);
   if (args.prompt_set_id) query = query.where('s.id', '=', args.prompt_set_id);
   if (args.active_only)

@@ -20,6 +20,7 @@ import {
   dimensions,
   generationBrief,
   geoTerms,
+  modelSlot,
   namesPlace,
   planSlots,
   type Slot,
@@ -121,11 +122,14 @@ export function admitDrafts(
     ...prior.map((row) => row.hash),
   ]);
   const usedSlots = new Set(prior.map((row) => row.slot.slot_id));
-  const observed = new Set(
-    context.context.demand_signals.flatMap((row) =>
+  // Every observed search the run read, not only the top demand signals: a
+  // draft repeating one is a search, not a question written for an assistant.
+  const observed = new Set([
+    ...context.context.demand_signals.flatMap((row) =>
       typeof row.observed_query === 'string' ? [promptTextHash(row.observed_query)] : [],
     ),
-  );
+    ...context.observed.map((query) => promptTextHash(query.text)),
+  ]);
   const brands = brandTerms(context);
   // Agent rows are targeted on purpose; only quick-generate cells plan places.
   const quick = !context.revision;
@@ -402,6 +406,7 @@ async function draftBatches(
   const system = generationSystemPrompt(
     String(record(context.context.business_context).business_model),
     input.cohort,
+    slots.some((slot) => slot.grounding?.length),
   );
   const drafts: Draft[] = [],
     models: unknown[] = [],
@@ -431,7 +436,7 @@ async function draftBatches(
         system,
         JSON.stringify({
           reference_evidence: brief,
-          slots: batch,
+          slots: batch.map(modelSlot),
           existing_prompts: tracked,
         }),
         generated,
@@ -484,6 +489,16 @@ async function draftBatches(
   return { drafts, drops, dropRecords, models, stop, reference: brief as unknown };
 }
 
+/** How much of the run's plan the project's own searches informed: counts only. */
+function groundingSummary(context: GenerationContext, slots: readonly Slot[]) {
+  return {
+    gsc: context.observed.filter((query) => query.source === 'gsc').length,
+    search_intelligence: context.observed.filter((query) => query.source === 'search_intelligence')
+      .length,
+    slots_grounded: slots.filter((slot) => slot.grounding?.length).length,
+  };
+}
+
 export async function generateDrafts(
   context: GenerationContext,
   input: GenerationInput,
@@ -502,10 +517,15 @@ export async function generateDrafts(
       models: [] as unknown[],
       stop: null as Stop,
       reference: context.context as unknown,
+      grounding: groundingSummary(context, []),
     };
   }
   if (!gateway) throw new ModelError('not_configured');
   const maps = await suggestMaps(gateway, context, deadline);
   const slots = planSlots(context, input, maps);
-  return { ...(await draftBatches(context, input, gateway, slots, deadline)), maps };
+  return {
+    ...(await draftBatches(context, input, gateway, slots, deadline)),
+    maps,
+    grounding: groundingSummary(context, slots),
+  };
 }

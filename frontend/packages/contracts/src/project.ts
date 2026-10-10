@@ -121,6 +121,9 @@ export const promptCandidateSchema = responseObject({
   // review.
   quality_status: z.enum(['judged', 'off', 'unavailable', 'not_judged']).default('not_judged'),
   quality_flags: z.array(z.string()).default([]),
+  // Phrasing was guided by the project's own Search Console or keyword
+  // research queries. Never carries the queries, their identities or volume.
+  grounded: z.boolean().default(false),
 });
 
 // Why a drafted or proposed row failed admission, one code per dropped row.

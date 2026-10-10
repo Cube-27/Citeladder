@@ -255,13 +255,27 @@ it('pages prompts stably while context includes only active prompts and foreign 
   const first = await prompt(db, set, 'Acme first', { createdAt: at(0) });
   const second = await prompt(db, set, 'Acme second', { createdAt: at(1) });
   const retired = await prompt(db, set, 'Acme retired', { status: 'retired', createdAt: at(2) });
+  // Accepted from a grounded candidate: the portfolio says so without the query identity.
+  await db
+    .updateTable('prompts')
+    .set({
+      generation_evidence: JSON.stringify({
+        evidence_refs: [
+          { kind: 'business_map_cell', offering: 'Shoes' },
+          { kind: 'observed_query', source: 'gsc', id: randomUUID() },
+        ],
+      }),
+    })
+    .where('id', '=', second)
+    .execute();
   const page = await read('read_prompt_portfolio', { limit: 1 });
-  expect(page.items).toEqual([expect.objectContaining({ id: first })]);
+  expect(page.items).toEqual([expect.objectContaining({ id: first, grounded: false })]);
   const next = await read('read_prompt_portfolio', {
     limit: 1,
     cursor: (page.pagination as { next_cursor: string }).next_cursor,
   });
-  expect(next.items).toEqual([expect.objectContaining({ id: second })]);
+  expect(next.items).toEqual([expect.objectContaining({ id: second, grounded: true })]);
+  expect(JSON.stringify(next.items)).not.toContain('observed_query');
   const context = await read('get_project_business_context', { sections: ['prompts'] });
   expect((context.prompts as { items: { id: string }[] }).items.map((r) => r.id)).toEqual([
     first,
