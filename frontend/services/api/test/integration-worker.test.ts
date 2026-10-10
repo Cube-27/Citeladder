@@ -541,13 +541,20 @@ describe('integration worker paging and resume', () => {
           initial.lease_expires_at!.getTime(),
         ),
       );
-      expect(await recoverIntegrationLeases(db)).toBe(0);
-      await db
-        .updateTable('integration_sync_runs')
-        .set({ lease_expires_at: new Date(Date.now() - 1000) })
-        .where('id', '=', target.runId)
-        .execute();
-      expect(await recoverIntegrationLeases(db)).toBe(1);
+      // Scoped to this run: other suites' leases share the table.
+      const scope = { workspaceId: target.workspaceId, runId: target.runId };
+      expect(await recoverIntegrationLeases(db, undefined, scope)).toBe(0);
+      // The live heartbeat may renew (and lock) the lease between expiring it and
+      // recovering it; expire again until recovery wins, as it eventually must.
+      await vi.waitFor(async () => {
+        await db
+          .updateTable('integration_sync_runs')
+          .set({ lease_expires_at: new Date(Date.now() - 1000) })
+          .where('id', '=', target.runId)
+          .where('lease_owner', 'is not', null)
+          .execute();
+        expect(await recoverIntegrationLeases(db, undefined, scope)).toBe(1);
+      });
     } finally {
       release();
       await running;
