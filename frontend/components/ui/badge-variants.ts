@@ -15,7 +15,7 @@
  *
  * Families:
  *  - status:         success | warning | danger | info
- *  - sentiment:      positive | neutral | negative
+ *  - sentiment:      positive | neutral | negative | mixed
  *  - classification: owned | competitor | third-party  (citation classification)
  *  - run-status:     draft | queued | running | analyzing | completed | partial | failed | cancelled
  *  - neutral:        the default chip
@@ -37,6 +37,7 @@ export const sentimentBadge = {
     dot: 'bg-neutral',
   },
   negative: statusBadge.danger,
+  mixed: statusBadge.warning,
 } as const satisfies Record<string, BadgeTone>;
 
 export const classificationBadge = {

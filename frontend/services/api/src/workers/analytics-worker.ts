@@ -47,6 +47,7 @@ import { publishInternalLinks } from '../site-health/internal-link-publish.ts';
 import { acquireResearch } from '../search-intelligence/executor.ts';
 import { internalLinkJudge } from '../site-health/internal-link-judgments.ts';
 import { sourcePageInspector } from '../source-pages/inspector.ts';
+import { answerPerception } from '../perception/executor.ts';
 
 const logger = getLogger('workers.analytics');
 const { statuses, terminal } = policy.task_queue;
@@ -74,6 +75,7 @@ export const EXECUTORS: Readonly<Record<string, Executor>> = {
   opportunity_refresh: refreshOpportunities,
   opportunity_verification: verifyImplementationEvents,
   commerce_catalog_projection: projectCatalog,
+  answer_perception: answerPerception(),
 };
 
 /** A claimed kind with no executor: a deploy bug, failed without retries. */

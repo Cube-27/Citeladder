@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { benchmarkModeSchema } from './project.ts';
 import { logicalEngineSchema, transportProviderSchema } from './providers.ts';
+import { executionPerceptionSchema } from './visibility-perception.ts';
 
 const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(shape);
 const uuid = () => z.uuid();
@@ -349,7 +350,6 @@ export const surfaceRatesSchema = responseObject({
 // `GET /executions/{id}`). `id`/`task_id` are the EXECUTION (AuditTask) id — the
 // same id space as the executions list — so the evidence page keys off the row
 // id. `analysis_id` is the internal ResponseAnalysis id (traceability only).
-// `sentiment` / `avg_position` are present but null until the roadmap (B-2).
 export const executionEvidenceSchema = responseObject({
   id: uuid(),
   analysis_id: uuid(),
@@ -375,7 +375,6 @@ export const executionEvidenceSchema = responseObject({
   citation_count: z.number().int(),
   search_used: z.boolean(),
   search_query_count: z.number().int(),
-  sentiment: z.string().nullable(),
   avg_position: z.number().nullable(),
   score: z.record(z.string(), z.unknown()).nullable(),
   citations: z.array(citationSchema),
@@ -383,5 +382,7 @@ export const executionEvidenceSchema = responseObject({
   // Null for an LLM execution, and null for a search execution that
   // produced no observation — a gap in ours, not a measured absence.
   search_surface: searchSurfaceEvidenceSchema.nullable().default(null),
+  // Per named business: its answer perception label and verified quotes.
+  perception: z.array(executionPerceptionSchema),
   created_at: z.string(),
 });

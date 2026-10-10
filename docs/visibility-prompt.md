@@ -410,9 +410,55 @@ Frozen model/retrieval, prompt/cohort and scope identity determine comparison
 eligibility. Changed measurement conditions cannot become unqualified movement.
 Unknown, not-run, failed, partial and observed-zero states remain distinct.
 
+## Answer perception
+
+[Perception](../frontend/services/api/src/perception/) classifies how a brand-audit
+answer portrays each tracked business it names. It is always on and
+platform-funded through the default Agent gateway (`DEFAULT_AGENT_*`); it draws no
+customer credits. Policy, caps, the closed theme list and the templates live in
+[`config/perception.json`](../frontend/services/api/src/config/perception.json).
+
+- **Trigger.** At the end of the analysis transaction, an answer whose entity
+  assessments name the brand or a competitor enqueues one `answer_perception`
+  task on the analytics queue, keyed by the analysis and the frozen extractor
+  version, so a re-derived finalize never adds a second. No network I/O happens
+  in that transaction. Admission freezes the extractor, template and metrics
+  versions into a brand audit's configuration; an audit frozen without them is
+  never classified and never reads as pending.
+- **Executor.** Reads are committed before the model call and no transaction
+  spans it. Over the per-audit or per-workspace daily cap the outcome is
+  `unavailable / platform_cap`; without a configured gateway it is
+  `unavailable / model_not_configured`; a task that exhausts its attempts is
+  compensated as `unavailable / task_failed`. None of these fails the audit.
+  The model receives, per business (brand first, competitors by first mention,
+  bounded), every sentence naming it plus one either side; offsets are code
+  points, like the entity assessment. An unparseable output is retried once,
+  then recorded as `invalid_output`; a provider fault is `model_error`. The
+  outcome, usage and input hash land in `answer_perceptions` with one
+  `entity_sentiments` row per business sent, in the lease-fenced terminal
+  transaction, unique on `(analysis_id, extractor_version)`.
+- **Validation.** Deterministic: an unknown entity is dropped; a quote must be
+  found in that business's own passages after whitespace normalisation, else it
+  is dropped; a theme outside the list becomes `other`; a label below
+  `min_confidence` is stored but excluded from aggregates. Drops are counted
+  by reason.
+- **Metrics.** Net sentiment is (positive − negative) / classified × 100, with
+  `mixed` in the denominator only, always paired with "N of M mentions
+  classified". Pending, unavailable (by reason), not assessable and low
+  confidence are counted separately and never read as zero. Themes, negative
+  quotes and the domains cited alongside criticism (never called a cause) are
+  brand-only; the recommended rate comes from the deterministic first-mention
+  assessment (English phrasing only). Trend points carry their versions; a
+  version change marks the point not comparable.
+- **Reads.** `GET /visibility/perception` (summary for a run, a run set or the
+  latest run) and `/visibility/perception/quotes` (keyset-paged), the
+  `perception` field of execution evidence, and the `read_perception` tool.
+  Reads never classify. `pnpm perception:eval --live` is the operator-only
+  calibration over hand-labelled fixtures.
+
 ## Read and UI surface
 
-Visibility has Trends, Sources and Query Fanout; Trends is default. Trends
+Visibility has Trends, Sources, Perception and Query Fanout; Trends is default. Trends
 bucket runs first and then cap the number of points (`trend_max_points`), so a
 long window is not silently truncated to its latest runs. A range selection pools
 counts, average position and model provenance across its runs and omits citation

@@ -74,7 +74,6 @@ export function rawPoint(source: TrendSource): TrendPoint {
     owned_citation_rate: observedRate(metrics, 'owned_citation_rate'),
     sov: { mention: brandMentionSov(metrics) },
     rankings: rankingRows(metrics).map(trendRow),
-    sentiment: null,
     avg_position: metricNumber(metrics.avg_position),
     transport_model: source.transportModel,
     retrieval_enabled: source.retrievalEnabled,
@@ -286,7 +285,6 @@ export function foldBucket(start: string, bucket: readonly TrendSource[]): Trend
       citation_rate: entity.citationRate.value(),
       share_of_voice: totalMentions > 0 ? (mentionTotals[name] ?? 0) / totalMentions : null,
       mention_count: entity.mentions,
-      sentiment: null,
       avg_position: entity.position.value(),
     })),
   );
@@ -315,7 +313,6 @@ export function foldBucket(start: string, bucket: readonly TrendSource[]): Trend
     owned_citation_rate: ownedRate.value(),
     sov: { mention: mentionSov(mentionTotals, brandKeys) },
     rankings,
-    sentiment: null,
     avg_position: foldedPosition(bucket),
     transport_model: first.transportModel,
     retrieval_enabled: first.retrievalEnabled,

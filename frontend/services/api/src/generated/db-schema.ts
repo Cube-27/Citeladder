@@ -373,6 +373,27 @@ export interface AnalyticsTasks {
   workspace_id: string;
 }
 
+export interface AnswerPerceptions {
+  analysis_id: string;
+  artifact_id: string;
+  audit_id: string;
+  created_at: Timestamp;
+  drop_counts: Generated<Json>;
+  extractor_version: string;
+  id: string;
+  input_hash: string | null;
+  latency_ms: number | null;
+  model: string | null;
+  model_provider: string | null;
+  outcome: string;
+  outcome_reason: string | null;
+  project_id: string;
+  task_id: string;
+  template_version: string;
+  usage: Json | null;
+  workspace_id: string;
+}
+
 export interface AuditEngineSnapshots {
   audit_id: string;
   base_url: string;
@@ -1269,6 +1290,20 @@ export interface EnterpriseAgreementReferences {
   workspace_id: string;
 }
 
+export interface EntitySentiments {
+  aspects: Json;
+  confidence: number | null;
+  entity_id: string;
+  entity_kind: string;
+  entity_name: string;
+  id: string;
+  label: string;
+  low_confidence: boolean;
+  passage_spans: Json;
+  perception_id: string;
+  workspace_id: string;
+}
+
 export interface ExecutionCostProjections {
   attempt_count: number | null;
   audit_id: string;
@@ -2123,7 +2158,6 @@ export interface ResponseAnalyses {
   scoring_rule_version: string;
   search_query_count: number;
   search_used: boolean;
-  sentiment: string | null;
   task_id: string;
   transport_model: string;
   transport_provider: string;
@@ -3008,6 +3042,7 @@ export interface DB {
   aio_entity_links: AioEntityLinks;
   aio_observations: AioObservations;
   analytics_tasks: AnalyticsTasks;
+  answer_perceptions: AnswerPerceptions;
   audit_engine_snapshots: AuditEngineSnapshots;
   audit_events: AuditEvents;
   audit_prompt_snapshots: AuditPromptSnapshots;
@@ -3059,6 +3094,7 @@ export interface DB {
   demand_signals: DemandSignals;
   demand_snapshots: DemandSnapshots;
   enterprise_agreement_references: EnterpriseAgreementReferences;
+  entity_sentiments: EntitySentiments;
   execution_cost_projections: ExecutionCostProjections;
   grant_revocations: GrantRevocations;
   idempotency_records: IdempotencyRecords;

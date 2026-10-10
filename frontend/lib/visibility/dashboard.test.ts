@@ -32,7 +32,6 @@ function makeVisibility(overrides: Partial<Visibility> = {}): Visibility {
     model_provenance: [],
     rankings: [],
     per_engine: [],
-    sentiment: null,
     avg_position: null,
     created_at: '2026-07-15T00:00:00Z',
     ...overrides,
@@ -135,7 +134,6 @@ describe('visibility dashboard helpers', () => {
         citation_rate: null,
         share_of_voice: 0.2,
         mention_count: 1,
-        sentiment: null,
         avg_position: null,
       },
       {
@@ -145,7 +143,6 @@ describe('visibility dashboard helpers', () => {
         citation_rate: null,
         share_of_voice: 0.6,
         mention_count: 3,
-        sentiment: null,
         avg_position: null,
       },
     ]);

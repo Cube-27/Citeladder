@@ -316,7 +316,6 @@ export function aggregateRun(rows: AggregateExecution[], config: ScoringConfig) 
     prompt_class_counts: classes,
     per_prompt: promptMetrics(rows, config),
     ...tokenCost(rows, config),
-    sentiment: null,
     avg_position: meanPosition(
       scores.map((s) => (typeof s.brand_position === 'number' ? s.brand_position : null)),
     ),

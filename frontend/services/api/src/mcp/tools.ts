@@ -24,6 +24,7 @@ import {
   shelfRead,
 } from './evidence.ts';
 import {
+  perceptionRead,
   renderAnalytics,
   sourceUrl,
   visibilityOverview,
@@ -180,6 +181,23 @@ export const definitions = {
       retrieval_enabled: optional(z.boolean()),
     }),
     read: visibilityTrends,
+  }),
+  read_perception: projectTool({
+    title: 'Read answer perception',
+    description:
+      'How AI answers portray the brand and competitors in the latest or a chosen run: net sentiment (-100 to +100) with its coverage, themes, verified quotes, sources cited alongside criticism and the recommended rate. Always state the coverage; perception_state pending, unavailable or no_mentions means there is no value, never zero. Sources are cited alongside criticism, never its cause.',
+    schema: z.strictObject({
+      ...project,
+      audit_id: optional(uuid),
+      engine,
+      cohort,
+      view: z.enum(['summary', 'quotes']).default('summary'),
+      entity: optional(z.string().trim().min(1).max(255)),
+      theme: optional(z.enum(policy.perception.themes)),
+      polarity: optional(z.enum(['positive', 'negative'])),
+      ...page,
+    }),
+    read: perceptionRead,
   }),
   read_visibility_results: projectTool({
     title: 'Read AI answers',

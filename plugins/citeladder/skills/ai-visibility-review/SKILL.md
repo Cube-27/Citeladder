@@ -19,7 +19,12 @@ schedule monitoring, collect new data or save a deliverable.
 4. Call `read_visibility_results` for the same audit, filtered by `domain`,
    `url` or `prompt_id`, to read the actual answers. `fetch` only references a
    tool returned, at most three per review.
-5. Where supported, call `render_visibility` with the same selection. A missing
+5. For how answers portray the brand, call `read_perception` for the same
+   audit (`view: quotes` for verified quotes). Always state its coverage
+   ("N of M mentions classified"); a pending or unavailable read has no value,
+   never zero. Sources it lists were cited alongside criticism, never shown to
+   cause it.
+6. Where supported, call `render_visibility` with the same selection. A missing
    UI does not prevent a useful text answer.
 
 ## Diagnose

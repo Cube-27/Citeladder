@@ -27,18 +27,20 @@ const DASHBOARD_STATUSES: readonly AuditStatus[] = ['completed', 'partially_comp
  * The Visibility workspace tabs, in display order. `trends` is the default.
  *   - trends:       cross-run metrics + charts + ranking movement
  *   - sources:      the domains and URLs AI answers retrieved and cited
+ *   - perception:   how answers portray the brand and competitors (sentiment)
  *   - query-fanout: frozen prompts + generated search-query evidence
  *
  * Every tab reads the selected measurement, so the run / engine / prompt /
  * period controls apply throughout and there is no per-tab exception.
  */
-export type VisibilityTab = 'trends' | 'sources' | 'query-fanout';
+export type VisibilityTab = 'trends' | 'sources' | 'perception' | 'query-fanout';
 
 /** The ordered tab definitions (id + human label) rendered by the tablist. */
 export const VISIBILITY_TABS: readonly { id: VisibilityTab; label: string }[] = [
   // NOTE: `id` is the persisted `?tab=` URL value — only labels are restyled.
   { id: 'trends', label: 'Trends' },
   { id: 'sources', label: 'Sources' },
+  { id: 'perception', label: 'Perception' },
   { id: 'query-fanout', label: 'Query fanouts' },
 ] as const;
 
@@ -195,7 +197,7 @@ export function formatPositionExact(position: number | null): string {
   return position.toFixed(1);
 }
 
-/** The not-yet-computed placeholder for sentiment + avg-position (B-2). */
+/** The not-measured placeholder for an absent average position. */
 export const PLACEHOLDER = availabilityLabel('not_measured');
 
 /**

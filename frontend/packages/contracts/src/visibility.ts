@@ -35,7 +35,7 @@ export const visibilityEngineSchema = responseObject({
 // lets BrandLogo use its Logo.dev fallback when the cached `logo_url` is absent.
 // `mention_rate` is the Visibility% and `share_of_voice` the SOV%.
 // `avg_position` is the entity's mean rank among the brands named in an answer,
-// derived from mention offsets; `sentiment` stays null until tone is scored.
+// derived from mention offsets. Tone is the Perception read, never a ranking column.
 export const rankingRowSchema = responseObject({
   name: z.string(),
   is_brand: z.boolean(),
@@ -50,7 +50,6 @@ export const rankingRowSchema = responseObject({
   matched_visibility_rate: z.number().nullable().optional(),
   matched_visibility_delta: z.number().nullable().optional(),
   matched_response_count: z.number().int().nullable().optional(),
-  sentiment: z.string().nullable(),
   avg_position: z.number().nullable(),
 });
 
@@ -116,7 +115,6 @@ export const visibilitySchema = responseObject({
   model_provenance: z.array(modelProvenanceSchema).default([]),
   rankings: z.array(rankingRowSchema),
   per_engine: z.array(visibilityEngineSchema),
-  sentiment: z.string().nullable(),
   avg_position: z.number().nullable(),
   created_at: z.string(),
 });

@@ -146,7 +146,7 @@ crawls, calls a provider, enqueues work or writes.
 | Area | Tools |
 | --- | --- |
 | Start | `list_projects`, `get_project_business_context` (profile, competitors, active prompts, latest visibility, top Actions, Site Health, connected data; sections run in parallel), `search` and `fetch` |
-| AI visibility | `read_visibility_overview` (mention rate, citation rate, rankings and the run's status), `read_visibility_trends`, `read_visibility_results` (answers), `read_visibility_sources`, `read_source_url` (one cited page: prompts, engines, brands listed, your presence), `read_prompt_portfolio` |
+| AI visibility | `read_visibility_overview` (mention rate, citation rate, rankings and the run's status), `read_visibility_trends`, `read_visibility_results` (answers), `read_visibility_sources`, `read_source_url` (one cited page: prompts, engines, brands listed, your presence), `read_perception` (net sentiment with coverage, themes, verified quotes, sources cited alongside criticism, recommended rate; `view: quotes` pages the quotes), `read_prompt_portfolio` |
 | Work | `read_actions` (active Actions in priority order, or one Action with findings, remediation, go-live and measured outcome), `read_content_differentiation`, `read_ai_shelf` (Commerce) |
 | Site | `read_site_health`, `read_site_pages`, `read_site_links`, `read_ai_crawlability` |
 | Traffic | `read_performance` (totals with comparison, or a `dimension` breakdown), `read_query_evidence`, `read_demand`, `read_ai_referrals`, `read_crawl_logs` (summary, crawlers, coverage or individual requests), `read_ai_traffic_pages`, `read_ai_traffic_url`, `read_ai_traffic_insights`, `read_integration_status` |

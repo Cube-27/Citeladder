@@ -34,6 +34,19 @@ Trends reports four measures. Keep them separate:
 
 A citation is not a brand mention, and a mention is not an endorsement. Average position ranks you among your tracked brands, not within the whole answer. Measures a run cannot support remain unavailable rather than zero.
 
+## Read Perception
+
+**Perception** shows how answers portray your brand and your competitors. Every answer from a brand audit that names you or a competitor is read for sentiment, at no credit cost. Answers from audits run before this view existed are not classified.
+
+- **Net sentiment** runs from −100 to +100: positive mentions minus negative mentions, divided by every classified mention. Mixed mentions count in the denominator only.
+- **Coverage** always sits beside it as "N of M mentions classified". Mentions still being classified, mentions the classifier could not judge, low-confidence labels and mentions left unclassified (for example when the platform limit is reached) are counted separately and never treated as zero.
+- **Themes** group what answers praised or criticised (pricing, support, reliability and so on), each with a quote.
+- **Criticism in answers** lists the negative points about you, quoted exactly as the answer put them. Open a quote to see the full answer.
+- **Sources cited alongside criticism** lists domains cited in answers that criticised you. They appeared alongside the criticism; the view does not show that they caused it.
+- **Recommended** is the share of answers naming you that explicitly recommend you near your first mention. It reads English phrasing only.
+
+When nothing is classified yet the view says so: answers are still being classified, perception is unavailable (with the reason), or no answer in the selection named you. A change in how perception is classified starts a new comparison series, so points from before and after it are not compared directly.
+
 ## Inspect Sources
 
 Switch to **Sources** to see the domains and URLs used in the selected evidence. Open a domain to inspect its URLs and the prompts that reached it. Open an answer to check how a citation was used.

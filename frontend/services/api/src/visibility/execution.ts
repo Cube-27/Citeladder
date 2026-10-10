@@ -18,6 +18,7 @@ import type { Database } from '../db/database.ts';
 import { wireUtc, utcText } from '../db/timestamps.ts';
 import { AnalysisNotFoundError } from './selection.ts';
 import { executionSurfaceEvidence } from './surface.ts';
+import { executionPerception } from './perception.ts';
 
 export type ExecutionEvidenceResponse = z.input<typeof executionEvidenceSchema>;
 
@@ -83,6 +84,19 @@ export async function getExecutionEvidence(
     .where('workspace_id', '=', input.workspaceId)
     .executeTakeFirst();
   const score = scoreObject(analysis.score);
+  const [search_surface, perception] = await Promise.all([
+    executionSurfaceEvidence(db, {
+      workspaceId: input.workspaceId,
+      taskId: input.taskId,
+      analysis,
+    }),
+    executionPerception(db, {
+      workspaceId: input.workspaceId,
+      analysisId: analysis.id,
+      assessments: analysis.entity_assessments,
+      configuration: audit?.configuration ?? null,
+    }),
+  ]);
   return {
     id: analysis.task_id,
     analysis_id: analysis.id,
@@ -111,7 +125,6 @@ export async function getExecutionEvidence(
     citation_count: analysis.citation_count,
     search_used: analysis.search_used,
     search_query_count: analysis.search_query_count,
-    sentiment: analysis.sentiment,
     avg_position: analysis.avg_position,
     score,
     citations: citations.map((citation) => ({
@@ -121,11 +134,8 @@ export async function getExecutionEvidence(
     competitors_mentioned: competitorsMentioned(score),
     // Null for an LLM execution, and for a search that produced no
     // observation row: a gap in ours, not a measured absence.
-    search_surface: await executionSurfaceEvidence(db, {
-      workspaceId: input.workspaceId,
-      taskId: input.taskId,
-      analysis,
-    }),
+    search_surface,
+    perception,
     created_at: wireUtc(analysis.created_at_text!),
   };
 }

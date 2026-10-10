@@ -25,23 +25,40 @@ function aliasMatches(alias: string, answer: string): RegExpExecArray[] {
   return [...answer.matchAll(new RegExp(pattern, 'giu'))];
 }
 
-/** The first raw match that counts under the entity's matching policy. */
-function firstMatch(aliases: readonly string[], answer: string, matching?: EntityPolicy) {
-  return aliases
+/** Raw alias matches in answer order, and whether one counts under the matching policy. */
+function matchesOf(aliases: readonly string[], answer: string, matching?: EntityPolicy) {
+  const matches = aliases
     .flatMap((alias) => aliasMatches(alias, answer))
-    .sort((a, b) => a.index - b.index)
-    .find((match) => {
-      // Only a policy that reads the surroundings needs the answer tokenized.
-      if (countsAnywhere(matching)) return true;
-      const before = tokensOf(answer.slice(0, match.index));
-      const own = tokensOf(match[0]);
-      const after = tokensOf(answer.slice(match.index + match[0].length));
-      return occurrenceCounts(
-        [...before, ...own, ...after],
-        { start: before.length, end: before.length + own.length },
-        matching,
-      );
-    });
+    .sort((a, b) => a.index - b.index);
+  const counts = (match: RegExpExecArray) => {
+    // Only a policy that reads the surroundings needs the answer tokenized.
+    if (countsAnywhere(matching)) return true;
+    const before = tokensOf(answer.slice(0, match.index));
+    const own = tokensOf(match[0]);
+    const after = tokensOf(answer.slice(match.index + match[0].length));
+    return occurrenceCounts(
+      [...before, ...own, ...after],
+      { start: before.length, end: before.length + own.length },
+      matching,
+    );
+  };
+  return { matches, counts };
+}
+
+/** Every raw match that counts under the entity's matching policy, in answer order. */
+export function countedMatches(
+  aliases: readonly string[],
+  answer: string,
+  matching?: EntityPolicy,
+): RegExpExecArray[] {
+  const { matches, counts } = matchesOf(aliases, answer, matching);
+  return matches.filter(counts);
+}
+
+/** The first counted match; stops at it, since the assessment reads only the first mention. */
+function firstMatch(aliases: readonly string[], answer: string, matching?: EntityPolicy) {
+  const { matches, counts } = matchesOf(aliases, answer, matching);
+  return matches.find(counts);
 }
 function assessment(
   name: string,
@@ -104,16 +121,25 @@ function assessment(
     end = Math.min(points.length, endOffset + 60);
   return row(state, [{ start, end, text: points.slice(start, end).join('') }]);
 }
-export function assessEntities(answer: string, config: ScoringConfig) {
+/** The frozen brand and competitors an answer is assessed for, brand first. */
+export function trackedEntities(config: ScoringConfig) {
   return [
     {
+      id: `brand:${normalizeAlias(config.brandName)}`,
       name: config.brandName,
       aliases: config.brandAliases,
       kind: 'brand',
       matching: config.brandMatching,
     },
-    ...config.competitors.map((c) => ({ ...c, kind: 'competitor' })),
-  ]
-    .filter((entity) => entity.name)
-    .map((entity) => assessment(entity.name, entity.aliases, answer, entity.kind, entity.matching));
+    ...config.competitors.map((c) => ({
+      ...c,
+      id: `competitor:${normalizeAlias(c.name)}`,
+      kind: 'competitor',
+    })),
+  ].filter((entity) => entity.name);
+}
+export function assessEntities(answer: string, config: ScoringConfig) {
+  return trackedEntities(config).map((entity) =>
+    assessment(entity.name, entity.aliases, answer, entity.kind, entity.matching),
+  );
 }

@@ -1,8 +1,8 @@
 /**
  * `visibility`: every persisted visibility read for one measurement
  * selection: the dashboard, prompt scores, trends, query fanout, Sources
- * (table, series and one URL), per-answer evidence and the observed AI
- * Overview rates.
+ * (table, series and one URL), per-answer evidence, answer perception
+ * (summary and quotes) and the observed AI Overview rates.
  *
  * Reads of persisted projections; nothing is
  * fetched. An unknown or out-of-scope run is `Audit not found`, and a
@@ -17,6 +17,10 @@ import {
   visibilitySourcesSchema,
   visibilitySourceUrlSchema,
 } from '@citeladder/contracts/visibility-evidence';
+import {
+  perceptionQuotePageSchema,
+  perceptionResponseSchema,
+} from '@citeladder/contracts/visibility-perception';
 import { visibilityTrendListSchema } from '@citeladder/contracts/visibility-trends';
 import { z } from 'zod';
 
@@ -28,6 +32,7 @@ import { requireProject } from '../projects/access.ts';
 import { getVisibility } from '../visibility/dashboard.ts';
 import { getVisibilityEvidence } from '../visibility/evidence.ts';
 import { getVisibilityFanout } from '../visibility/fanout.ts';
+import { getPerception, getPerceptionQuotes } from '../visibility/perception.ts';
 import { getPromptMetrics } from '../visibility/prompts.ts';
 import {
   AnalysisNotFoundError,
@@ -104,7 +109,59 @@ function runSelection(workspaceId: string, projectId: string, query: SelectionQu
   };
 }
 
+const PERCEPTION_SELECTION = {
+  ...RUNS,
+  engine: { scalar: { kind: 'str' } },
+  cohort: COHORT,
+  ...WINDOW,
+} as const satisfies ParamSpecs;
+
 export const visibilityRoutes = [
+  defineGetRoute({
+    family: 'visibility',
+    path: '/api/v1/projects/{project_id}/visibility/perception',
+    params: { path: PROJECT_PATH, query: PERCEPTION_SELECTION },
+    response: perceptionResponseSchema,
+    async handle({ c, db }, { path, query }) {
+      const workspace = c.get('workspace');
+      await requireProject(db, workspace, path.project_id);
+      return selectionErrors(() =>
+        getPerception(db, runSelection(workspace.workspaceId, path.project_id, query)),
+      );
+    },
+  }),
+  defineGetRoute({
+    family: 'visibility',
+    path: '/api/v1/projects/{project_id}/visibility/perception/quotes',
+    params: {
+      path: PROJECT_PATH,
+      query: {
+        ...PERCEPTION_SELECTION,
+        entity: { scalar: { kind: 'str', maxLength: 255 } },
+        theme: { scalar: { kind: 'literal', values: policy.perception.themes } },
+        polarity: { scalar: { kind: 'literal', values: ['positive', 'negative'] } },
+        cursor: { scalar: { kind: 'str', maxLength: 2048 } },
+        limit: {
+          scalar: { kind: 'int', ge: 1, le: policy.perception.quotes_max_limit },
+          default: policy.perception.quotes_default_limit,
+        },
+      },
+    },
+    response: perceptionQuotePageSchema,
+    async handle({ c, db }, { path, query }) {
+      const workspace = c.get('workspace');
+      await requireProject(db, workspace, path.project_id);
+      return selectionErrors(() =>
+        getPerceptionQuotes(db, runSelection(workspace.workspaceId, path.project_id, query), {
+          entity: query.entity,
+          theme: query.theme,
+          polarity: query.polarity,
+          cursor: query.cursor,
+          limit: query.limit,
+        }),
+      );
+    },
+  }),
   defineGetRoute({
     family: 'visibility',
     path: '/api/v1/projects/{project_id}/visibility',

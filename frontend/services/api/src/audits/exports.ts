@@ -153,7 +153,7 @@ export async function exportAudit(
     `- **Panel fingerprint:** \`${md(config.panel_id ?? 'unavailable')}\`; prompt text hashes are frozen in the audit configuration.`,
     `- **Design:** ${audit.requested_count} executions (${audit.repetitions} repetition(s) per prompt x engine), execution order randomized (seed \`${audit.random_seed}\`).`,
     '- **Citations:** only explicit source citations returned by the API are counted. Publisher domains prefer resolved/direct URLs and use the citation title only as fallback; this is not a complete ledger of every page the model read.',
-    `- **Scoring:** deterministic alias/domain matching (\`${audit.analyzer_version || 'unversioned'}\`). No LLM is used for headline metrics; sentiment is not computed.`,
+    `- **Scoring:** deterministic alias/domain matching (\`${audit.analyzer_version || 'unversioned'}\`). No LLM is used for headline metrics. Answer perception (sentiment) is classified separately by a model over the passages that name each business, keeps only quotes found verbatim in the answer, and is reported with its coverage in the Perception view, not in these metrics.`,
     `- **Result:** ${summary.total_completed ?? 0} completed, ${audit.failed_count} failed.`,
     '',
     '## Headline Metrics',

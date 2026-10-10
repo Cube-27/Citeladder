@@ -28,12 +28,12 @@ const evidence: ExecutionEvidence = {
   citation_count: 0,
   search_used: false,
   search_query_count: 0,
-  sentiment: null,
   avg_position: null,
   score: null,
   citations: [],
   competitors_mentioned: [],
   search_surface: null,
+  perception: [],
   created_at: '2026-01-15T00:00:00Z',
 };
 
@@ -49,5 +49,54 @@ describe('Brand match evidence', () => {
       />,
     );
     expect(screen.getByText(label)).toBeInTheDocument();
+  });
+});
+
+describe('Answer perception evidence', () => {
+  it('labels each named business and marks its verified quotes in the answer', () => {
+    render(
+      <EvidenceCard
+        answerText="Acme support is slow. Rival is fine."
+        evidence={{
+          ...evidence,
+          perception: [
+            {
+              entity: 'Acme',
+              is_brand: true,
+              state: 'classified',
+              reason: null,
+              label: 'negative',
+              confidence: 0.9,
+              extractor_version: 'x1',
+              template_version: 't1',
+              aspects: [
+                {
+                  theme: 'support',
+                  polarity: 'negative',
+                  quote: 'support is slow',
+                  start: 5,
+                  end: 20,
+                },
+              ],
+            },
+            {
+              entity: 'Rival',
+              is_brand: false,
+              state: 'pending',
+              reason: null,
+              label: null,
+              confidence: null,
+              extractor_version: 'x1',
+              template_version: 't1',
+              aspects: [],
+            },
+          ],
+        }}
+      />,
+    );
+    expect(screen.getByText('Negative')).toBeVisible();
+    expect(screen.getByText('Classifying…')).toBeVisible();
+    expect(screen.getByText('Support (negative): “support is slow”')).toBeVisible();
+    expect(document.querySelector('mark')?.textContent).toBe('support is slow');
   });
 });

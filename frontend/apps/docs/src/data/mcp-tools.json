@@ -440,6 +440,86 @@
       "read_only": true
     },
     {
+      "name": "read_perception",
+      "title": "Read answer perception",
+      "description": "How AI answers portray the brand and competitors in the latest or a chosen run: net sentiment (-100 to +100) with its coverage, themes, verified quotes, sources cited alongside criticism and the recommended rate. Always state the coverage; perception_state pending, unavailable or no_mentions means there is no value, never zero. Sources are cited alongside criticism, never its cause.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "audit_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "engine": {
+            "type": "string",
+            "enum": [
+              "chatgpt",
+              "claude",
+              "gemini",
+              "google_ai_overview",
+              "chatgpt_search",
+              "gemini_consumer"
+            ]
+          },
+          "cohort": {
+            "default": "core",
+            "type": "string",
+            "enum": ["core", "comparison"]
+          },
+          "view": {
+            "default": "summary",
+            "type": "string",
+            "enum": ["summary", "quotes"]
+          },
+          "entity": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "theme": {
+            "type": "string",
+            "enum": [
+              "pricing",
+              "value",
+              "quality",
+              "features",
+              "ease_of_use",
+              "support",
+              "reliability",
+              "performance",
+              "security_privacy",
+              "integrations",
+              "reputation_trust",
+              "availability",
+              "shipping_delivery",
+              "returns_policy",
+              "sustainability",
+              "other"
+            ]
+          },
+          "polarity": {
+            "type": "string",
+            "enum": ["positive", "negative"]
+          },
+          "cursor": {
+            "type": ["string", "null"]
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200
+          }
+        },
+        "required": ["project_id"],
+        "additionalProperties": false
+      },
+      "read_only": true
+    },
+    {
       "name": "read_performance",
       "title": "Read search performance",
       "description": "Search Console and GA4 totals for a range with an optional comparison. Pass dimension for a breakdown by query, page, country, device or day.",

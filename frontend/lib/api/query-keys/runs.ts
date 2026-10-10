@@ -30,6 +30,8 @@ export const visibilityKeys = {
   // participates in the key so switching a control re-derives the view.
   trends: (projectId: string, filters: ListFilters = {}) =>
     ['visibility', 'trends', projectId, filters] as const,
+  perception: (projectId: string, filters: ListFilters = {}) =>
+    ['visibility', 'perception', projectId, filters] as const,
   evidence: (projectId: string, filters: ListFilters = {}) =>
     ['visibility', 'evidence', projectId, filters] as const,
   // The observed-surface rates. Its own namespace because it is scoped by
