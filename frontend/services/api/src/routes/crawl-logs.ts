@@ -20,7 +20,7 @@ import {
   createSourceSchema,
   mutateSource,
   authorizeToken,
-  ingestionEnabled,
+  requireCrawlLogs,
 } from '../crawl-logs/sources.ts';
 import { ingest, boundedBody, batchQuota } from '../crawl-logs/ingest.ts';
 import { lockAuthorizedWorkspace } from '../workspaces/service.ts';
@@ -200,7 +200,7 @@ export const crawlLogRoutes = [
     response: crawlReceiptSchema,
     async handle({ c, db }, { path }) {
       const target = scope(c.get('workspace').workspaceId, path.project_id);
-      await ingestionEnabled(db, target.workspaceId);
+      await requireCrawlLogs(db, target.workspaceId);
       // Recheck current credential authority before accepting client evidence.
       await db
         .transaction()

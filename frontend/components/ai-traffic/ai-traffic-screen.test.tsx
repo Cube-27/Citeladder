@@ -54,21 +54,29 @@ afterEach(() => {
 });
 afterAll(() => mswServer.close());
 describe('AI Traffic state and navigation', () => {
-  it('explains disabled ingestion inside the dialog without offering setup', async () => {
+  it('explains a plan without crawl logs with a billing link and no setup', async () => {
     mswServer.use(
       http.get(root + '/crawl-logs/sources', () =>
-        HttpResponse.json({ ingestion_enabled: false, items: [] }),
+        HttpResponse.json({ availability: 'not_in_plan', items: [] }),
       ),
     );
-    const user = userEvent.setup();
     renderWithProviders(<CrawlLogConnections />);
-    await user.click(screen.getByRole('button', { name: 'Connect crawl logs' }));
-    const dialog = screen.getByRole('dialog');
-    expect(
-      await within(dialog).findByText(/Source creation and file uploads are unavailable/),
-    ).toBeVisible();
-    expect(within(dialog).queryByRole('radiogroup')).not.toBeInTheDocument();
-    expect(within(dialog).queryByRole('button', { name: 'Create source' })).not.toBeInTheDocument();
+    expect(await screen.findByText(/AI crawler logs are included in paid plans/)).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Choose a plan' })).toHaveAttribute(
+      'href',
+      expect.stringContaining('/billing'),
+    );
+    expect(screen.queryByRole('button', { name: 'Connect crawl logs' })).not.toBeInTheDocument();
+  });
+  it('says collection is paused when CiteLadder switched it off', async () => {
+    mswServer.use(
+      http.get(root + '/crawl-logs/sources', () =>
+        HttpResponse.json({ availability: 'disabled', items: [] }),
+      ),
+    );
+    renderWithProviders(<CrawlLogConnections />);
+    expect(await screen.findByText(/Collection is paused by CiteLadder/)).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Connect crawl logs' })).not.toBeInTheDocument();
   });
   it('keeps setup unavailable on a failed availability read and recovers on retry', async () => {
     mswServer.use(
@@ -83,7 +91,7 @@ describe('AI Traffic state and navigation', () => {
     expect(within(dialog).queryByRole('radiogroup')).not.toBeInTheDocument();
     mswServer.use(
       http.get(root + '/crawl-logs/sources', () =>
-        HttpResponse.json({ ingestion_enabled: true, items: [] }),
+        HttpResponse.json({ availability: 'available', items: [] }),
       ),
     );
     await user.click(retry);
@@ -97,7 +105,7 @@ describe('AI Traffic state and navigation', () => {
     mswServer.use(
       http.get(root + '/crawl-logs/sources', () =>
         HttpResponse.json({
-          ingestion_enabled: true,
+          availability: 'available',
           items: created
             ? [
                 {
@@ -149,7 +157,7 @@ describe('AI Traffic state and navigation', () => {
   it.each(['crawlers', 'activity'] as const)('offers crawl setup from empty %s', async (tab) => {
     mswServer.use(
       http.get(root + '/crawl-logs/sources', () =>
-        HttpResponse.json({ ingestion_enabled: false, items: [] }),
+        HttpResponse.json({ availability: 'available', items: [] }),
       ),
     );
     const user = userEvent.setup();
@@ -161,9 +169,9 @@ describe('AI Traffic state and navigation', () => {
     );
     await user.click(screen.getByRole('button', { name: 'Connect crawl logs' }));
     expect(
-      await within(screen.getByRole('dialog')).findByText(
-        /Source creation and file uploads are unavailable/,
-      ),
+      await within(screen.getByRole('dialog')).findByRole('radiogroup', {
+        name: 'Collection method',
+      }),
     ).toBeVisible();
   });
   it.each([null, 'Coverage is incomplete.'])(
@@ -195,7 +203,7 @@ describe('AI Traffic state and navigation', () => {
     let creates = 0;
     mswServer.use(
       http.get(root + '/crawl-logs/sources', () =>
-        HttpResponse.json({ ingestion_enabled: true, items: [] }),
+        HttpResponse.json({ availability: 'available', items: [] }),
       ),
       http.post(root + '/crawl-logs/sources', () => {
         creates += 1;
@@ -311,7 +319,7 @@ describe('AI Traffic state and navigation', () => {
         }),
       ),
       http.get(root + '/crawl-logs/sources', () =>
-        HttpResponse.json({ ingestion_enabled: true, items: [] }),
+        HttpResponse.json({ availability: 'available', items: [] }),
       ),
       http.get(root + '/ai-traffic/coverage', () =>
         HttpResponse.json({ sources: [], items: [], next_cursor: null }),
@@ -450,7 +458,7 @@ describe('AI Traffic state and navigation', () => {
     const dashboards: URLSearchParams[] = [];
     mswServer.use(
       http.get(root + '/crawl-logs/sources', () =>
-        HttpResponse.json({ ingestion_enabled: false, items: [] }),
+        HttpResponse.json({ availability: 'not_in_plan', items: [] }),
       ),
       http.get(root + '/ai-traffic/referrals', ({ request }) => {
         dashboards.push(new URL(request.url).searchParams);
@@ -479,6 +487,7 @@ describe('AI Traffic state and navigation', () => {
     renderWithProviders(<AiTrafficScreen />);
     expect(await screen.findByText(/covers last 90 days/)).toBeVisible();
     expect(screen.getByRole('tab', { name: 'Referrals' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByText(/AI crawler logs are included in paid plans/)).toBeVisible();
     expect(screen.queryByRole('tab', { name: 'Activity' })).not.toBeInTheDocument();
     expect(screen.queryByRole('tab', { name: 'Crawlers' })).not.toBeInTheDocument();
     await waitFor(() => expect(dashboards.at(-1)?.get('range')).toBe('90d'));

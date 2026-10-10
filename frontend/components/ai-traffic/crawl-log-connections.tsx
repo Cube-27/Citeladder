@@ -22,6 +22,7 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { CrawlLogSetup, CrawlLogSetupSubmit, CrawlLogCredential } from './crawl-log-setup';
+import { CrawlLogAvailabilityNotice } from './crawl-log-availability';
 import { collectionPointLabel, words } from '@/lib/ai-traffic/vocabulary';
 export function CrawlLogConnections({
   open,
@@ -57,31 +58,38 @@ function Connections({
   const { sources, canManage, open, setOpen, setIssued, mutation } = model;
   const [revoking, setRevoking] = useState<z.infer<typeof crawlSourceSchema> | null>(null);
   const showHeader = headerWhenEmpty || Boolean(sources.data?.items.length);
-  const setupAvailable = !sources.isError && sources.data?.ingestion_enabled === true;
+  const setupAvailable = !sources.isError && sources.data?.availability === 'available';
+  // An unavailable workspace gets the explanation, not a setup it cannot complete.
+  const unavailable = sources.data !== undefined && sources.data.availability !== 'available';
   return (
     <section id="crawl-log-connections" className="grid gap-3" aria-label="Crawl log connections">
       {showHeader ? (
         <EditorialSectionHeader
           title="Crawl logs"
           actions={
-            <Button
-              size="sm"
-              onClick={() => {
-                setIssued(null);
-                setOpen(true);
-              }}
-              disabled={!canManage}
-            >
-              Connect crawl logs
-            </Button>
+            unavailable ? undefined : (
+              <Button
+                size="sm"
+                onClick={() => {
+                  setIssued(null);
+                  setOpen(true);
+                }}
+                disabled={!canManage}
+              >
+                Connect crawl logs
+              </Button>
+            )
           }
         />
       ) : null}
       {sources.isError ? (
         <ReadError {...readErrorProps(sources)} fallback="Could not read crawl log sources" />
       ) : null}
-      {sources.data && !sources.data.ingestion_enabled ? (
-        <Alert tone="info">Ingestion is not enabled for this environment.</Alert>
+      {sources.data ? (
+        <CrawlLogAvailabilityNotice
+          availability={sources.data.availability}
+          workspaceId={model.workspaceId}
+        />
       ) : null}
       {sources.data?.items.length ? (
         <SourceDiagnostics
@@ -124,14 +132,14 @@ function SetupAvailability({ model }: Readonly<{ model: ReturnType<typeof useCra
       <ReadError {...readErrorProps(sources)} fallback="Could not read crawl log availability" />
     );
   if (!sources.data) return <output>Checking crawl log availability…</output>;
-  if (sources.data.ingestion_enabled) return <CrawlLogSetup model={model} />;
+  if (sources.data.availability === 'available') return <CrawlLogSetup model={model} />;
   return (
     <>
       {mutation.isError ? <Alert tone="danger">{mutation.error.message}</Alert> : null}
-      <Alert tone="info">
-        Crawl log ingestion is not enabled for this environment. Source creation and file uploads
-        are unavailable until CiteLadder enables ingestion for this environment.
-      </Alert>
+      <CrawlLogAvailabilityNotice
+        availability={sources.data.availability}
+        workspaceId={model.workspaceId}
+      />
     </>
   );
 }

@@ -11,7 +11,6 @@ import type { Executor } from '../workers/executor.ts';
 import { sql } from 'kysely';
 import { enqueueRollup, lockCrawlState, type CrawlScope } from './state.ts';
 import { enqueueTrafficInsights } from './insights-enqueue.ts';
-import { ingestionAvailable } from './sources.ts';
 
 export function botIpRangeRefresh(fetcher: WebsiteFetcher = fetchWebsite): Executor {
   return async (task, { checkCancelled }) => {
@@ -165,7 +164,7 @@ export async function crawlLogTick(
     .select('id')
     .where('is_system', '=', true)
     .executeTakeFirst();
-  if (system && (await ingestionAvailable(db)))
+  if (system && crawlLogs.ingestion_enabled)
     for (const bot of crawlers.bots.filter((b) => b.verification.method === 'ip_ranges')) {
       if (!canAdmit()) return;
       await enqueueTask(db, {

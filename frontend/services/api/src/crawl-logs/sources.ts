@@ -8,7 +8,9 @@ import { recordSecurityEvent } from '../auth/security-events.ts';
 import { lockAuthorizedWorkspace } from '../workspaces/service.ts';
 import { lockCrawlState, enqueueRollup, type CrawlScope } from './state.ts';
 import { enqueueTrafficInsights } from './insights-enqueue.ts';
-import { hasDevelopmentWorkspace } from '../auth/development-access.ts';
+import { hasGrantedFlag } from '../entitlements/occupancy.ts';
+import { policy } from '../config.ts';
+import { asApiErrorCode } from '@citeladder/contracts/error-codes';
 
 const samplingSchema = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('none') }),
@@ -23,12 +25,30 @@ export const createSourceSchema = z.strictObject({
   sampling: samplingSchema.optional(),
 });
 const token = () => 'clw_' + randomBytes(32).toString('base64url');
-export async function ingestionAvailable(db: Database, workspaceId?: string) {
-  return crawlLogs.ingestion_enabled || (await hasDevelopmentWorkspace(db, workspaceId));
+export type CrawlLogAvailability = 'available' | 'not_in_plan' | 'disabled';
+const { codes } = policy.entitlements;
+/**
+ * The global kill switch first, then the workspace's `crawl_logs` grant.
+ * Unlocked: a grant change racing one batch admits or refuses that batch only.
+ */
+export async function crawlLogAvailability(
+  db: Database,
+  workspaceId: string,
+): Promise<CrawlLogAvailability> {
+  if (!crawlLogs.ingestion_enabled) return 'disabled';
+  const granted = await hasGrantedFlag(db, workspaceId, policy.entitlements.crawl_logs);
+  return granted ? 'available' : 'not_in_plan';
 }
-export async function ingestionEnabled(db: Database, workspaceId: string) {
-  if (!(await ingestionAvailable(db, workspaceId)))
-    throw new ApiError(409, 'Crawl log ingestion is not enabled');
+export async function requireCrawlLogs(db: Database, workspaceId: string) {
+  const availability = await crawlLogAvailability(db, workspaceId);
+  if (availability === 'disabled')
+    throw new ApiError(409, 'Crawl log collection is paused by CiteLadder', {
+      code: asApiErrorCode(codes.crawl_logs_disabled),
+    });
+  if (availability === 'not_in_plan')
+    throw new ApiError(409, "AI crawler logs are not included in this workspace's plan", {
+      code: asApiErrorCode(codes.crawl_logs_not_in_plan),
+    });
 }
 export async function createSource(
   db: Database,
@@ -59,7 +79,7 @@ export async function createSource(
   const defaults = crawlLogs.presets[preset]!;
   return await db.transaction().execute(async (trx) => {
     await lockAuthorizedWorkspace(trx, scope.workspaceId, actorId, 'manage_credentials');
-    await ingestionEnabled(trx, scope.workspaceId);
+    await requireCrawlLogs(trx, scope.workspaceId);
     const project = await trx
       .selectFrom('projects')
       .select('website_url')
@@ -194,6 +214,6 @@ export async function authorizeToken(db: Database, id: string, authorization: st
   if (!source || !supplied || !timingSafeEqual(actual, expected))
     throw new ApiError(401, 'Invalid crawl log token');
   if (source.status !== 'active') throw new ApiError(409, 'Crawl log source revoked');
-  await ingestionEnabled(db, source.workspace_id);
+  await requireCrawlLogs(db, source.workspace_id);
   return source;
 }

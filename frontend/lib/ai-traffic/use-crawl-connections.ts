@@ -37,9 +37,9 @@ function uploadProcessed(
   const at = data?.items.find((s) => s.id === awaiting.sourceId)?.last_processed_at;
   return !!at && at >= awaiting.since;
 }
-/** Crawl views stay for a project that already has sources, even if collection is switched off. */
+/** Crawl views stay for a project that already has sources, even if collection is unavailable. */
 export function crawlLogsAvailable(data: z.infer<typeof crawlSourceListSchema>) {
-  return data.ingestion_enabled || data.items.length > 0;
+  return data.availability === 'available' || data.items.length > 0;
 }
 export function useCrawlConnections({
   projectId,
@@ -148,6 +148,7 @@ export function useCrawlConnections({
 
   return {
     canManage,
+    workspaceId,
     sources,
     open,
     setOpen,

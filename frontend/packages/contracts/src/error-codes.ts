@@ -35,6 +35,8 @@ const API_ERROR_CODES = [
   'connection',
   'connection_changed',
   'crawl_already_active',
+  'crawl_logs_disabled',
+  'crawl_logs_not_in_plan',
   'dataforseo_connection_ambiguous',
   'dataforseo_connection_required',
   'demand_window_not_saved',

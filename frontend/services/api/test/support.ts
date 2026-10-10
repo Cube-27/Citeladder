@@ -69,10 +69,10 @@ export class Fixtures {
     const insert = async (trx: Database) => {
       const workspaceId = await this.insertWorkspace(trx, false);
       await this.insertMember(trx, workspaceId, ownerId, 'owner');
-      // An operator-provisioned workspace: open, and able to admit a team.
+      // An operator-provisioned workspace: open, able to admit a team and collect crawl logs.
       if (options.access !== false) {
         const account = await billingAccount(trx, workspaceId);
-        for (const key of ['workspace_access', 'team_members'])
+        for (const key of ['workspace_access', 'team_members', 'crawl_logs'])
           await grant(trx, account, { key, value: 1, sourceKind: 'override' });
       }
       return workspaceId;

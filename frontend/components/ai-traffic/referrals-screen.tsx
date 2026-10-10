@@ -29,7 +29,14 @@ const granularityCodec = stringUrlCodec<AiReferralsGranularity>(
   'week',
 );
 
-export function AiReferralsScreen({ tabs }: Readonly<{ tabs?: React.ReactNode }> = {}) {
+export function AiReferralsScreen({
+  tabs,
+  notice,
+}: Readonly<{
+  tabs?: React.ReactNode;
+  /** Shown above the referrals, e.g. why crawl logs are unavailable. */
+  notice?: React.ReactNode;
+}> = {}) {
   const { activeProject, isLoading: isProjectLoading } = useProjectContext();
   const projectId = activeProject?.id ?? null;
   // The range is the screen's shared `range` parameter, so a preset follows the reader across tabs.
@@ -60,6 +67,7 @@ export function AiReferralsScreen({ tabs }: Readonly<{ tabs?: React.ReactNode }>
   return (
     <AiReferralsContent
       tabs={tabs}
+      notice={notice}
       projectId={projectId}
       projectLoading={isProjectLoading}
       range={range}

@@ -174,7 +174,7 @@ export function CrawlLogSetupSubmit({
   const { canManage, sources, mutation, issued } = model;
   return (
     <Button
-      disabled={!canManage || !sources.data?.ingestion_enabled || issued !== null}
+      disabled={!canManage || sources.data?.availability !== 'available' || issued !== null}
       pending={mutation.isPending}
       onClick={() => mutation.mutate({ kind: 'create' })}
     >
@@ -240,7 +240,7 @@ function UploadForm({ model }: Readonly<{ model: ReturnType<typeof useCrawlConne
       <Button
         variant="secondary"
         className="w-fit"
-        disabled={!file || !sourceId || !sources.data?.ingestion_enabled}
+        disabled={!file || !sourceId || sources.data?.availability !== 'available'}
         pending={upload.isPending}
         onClick={() => upload.mutate(resume || undefined)}
       >

@@ -224,8 +224,10 @@ export const crawlSourceSchema = z.object({
   unsupported_uploads: z.number(),
   unsupported_batches: z.number(),
 });
+/** Collection availability: the plan grant and CiteLadder's global kill switch. */
+export const crawlLogAvailabilitySchema = z.enum(['available', 'not_in_plan', 'disabled']);
 export const crawlSourceListSchema = z.object({
-  ingestion_enabled: z.boolean(),
+  availability: crawlLogAvailabilitySchema,
   items: z.array(crawlSourceSchema),
 });
 export const crawlTokenSchema = z.object({ id: z.uuid(), token: z.string().nullable() });

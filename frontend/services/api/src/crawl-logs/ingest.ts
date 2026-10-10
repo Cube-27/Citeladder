@@ -12,7 +12,7 @@ import { strings } from '../db/json.ts';
 import { enforceSubjectRequest } from '../abuse/usage.ts';
 import { prepareBatch } from './prepare.ts';
 import { lockCrawlState, enqueueRollup, reportingDay, type CrawlScope } from './state.ts';
-import { ingestionEnabled } from './sources.ts';
+import { requireCrawlLogs } from './sources.ts';
 import { lockAuthorizedWorkspace } from '../workspaces/service.ts';
 
 export async function boundedBody(request: Request) {
@@ -93,7 +93,7 @@ export async function ingest(
     quotaChecked?: boolean;
   },
 ) {
-  await ingestionEnabled(db, source.workspace_id);
+  await requireCrawlLogs(db, source.workspace_id);
   const now = options.now ?? new Date();
   const key = options.key ?? createHash('sha256').update(body).digest('hex');
   if (!key.trim() || key.length > 255) throw new ApiError(422, 'Invalid idempotency key');
@@ -134,15 +134,7 @@ export async function ingest(
   const receipt = await db.transaction().execute(async (trx) => {
     if (options.actorId)
       await lockAuthorizedWorkspace(trx, scope.workspaceId, options.actorId, 'manage_credentials');
-    else if (!crawlLogs.ingestion_enabled)
-      // Ownership transfers take the workspace root lock before changing membership.
-      await trx
-        .selectFrom('workspaces')
-        .select('id')
-        .where('id', '=', scope.workspaceId)
-        .forShare()
-        .executeTakeFirst();
-    await ingestionEnabled(trx, scope.workspaceId);
+    await requireCrawlLogs(trx, scope.workspaceId);
     const state = await lockCrawlState(trx, scope);
     const current = await trx
       .selectFrom('crawl_log_sources')
