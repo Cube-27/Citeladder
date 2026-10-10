@@ -28,3 +28,13 @@ it('leads the MCP page with the connect strip instead of the guide and demo', ()
   );
   expect(screen.queryByRole('link', { name: 'Book a demo' })).not.toBeInTheDocument();
 });
+
+it('closes the MCP page with the setup guide and a demo instead of a second strip', () => {
+  render(<PlatformActions cta="mcp" closing />);
+  expect(screen.getByRole('link', { name: 'Read the MCP docs' })).toHaveAttribute(
+    'href',
+    'https://docs.citeladder.com/mcp/',
+  );
+  expect(screen.getByRole('link', { name: 'Book a demo' })).toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: 'Connect to Claude' })).not.toBeInTheDocument();
+});

@@ -32,6 +32,10 @@ Removing workspace membership independently blocks reads for the affected worksp
 | An exact date window is unavailable       | Choose a reported saved window and name it explicitly               |
 | A tool is absent                          | Use the server's actual catalog; do not invent another tool         |
 | The client cannot complete sign-in        | Check support for remote Streamable HTTP MCP with browser OAuth     |
+| A workspace cannot be selected            | Follow the reason shown: renew billing or accept the current Terms  |
+| A tool reports too many requests          | Wait for the retry time it names, then ask a narrower question      |
+| No CiteLadder tools appear after adding   | Restart the client and check the connector is enabled and signed in |
+| The client asks you to sign in again      | The connection expired or was revoked; approve it again             |
 
 ## Use a minimal diagnostic sequence
 

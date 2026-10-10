@@ -7,6 +7,19 @@ order: 330
 
 Start by selecting a project. These requests are examples you can adapt to the saved data available in your workspace.
 
+## Quick questions
+
+Short questions work well once a project is chosen:
+
+- "How did our AI visibility change over the last 30 days?"
+- "Which competitors appear most often in our latest audit?"
+- "Which sources do AI answers cite most for our prompts?"
+- "What are the top Actions for this project right now?"
+- "Which Site Health issues affect the most pages?"
+- "Which pages get the most visits from AI assistants?"
+
+The longer requests below set a stricter standard for evidence.
+
 ## Review an AI Visibility audit
 
 ```text
@@ -74,3 +87,9 @@ later observation would be needed to evaluate it.
 ```
 
 Treat the assistant's proposal as reviewable work, not a completed implementation.
+
+## Ideas by team
+
+- **SEO and AEO teams:** a weekly visibility brief, competitor movement across engines, and cited sources worth outreach.
+- **Content teams:** prompts where competitors are cited and you are not, and how cited competitor pages differ from yours.
+- **Developers:** a fix list from the latest Site Health crawl, read in the editor next to the code with Cursor, Claude Code or Codex.

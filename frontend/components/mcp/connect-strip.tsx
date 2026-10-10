@@ -15,7 +15,7 @@ const HOVER_CLOSE_DELAY_MS = 160;
 
 /**
  * Open the assistant in a new tab. A page that cannot take the URL from the
- * link gets it on the clipboard first, and the strip says where to paste it.
+ * link gets it on the clipboard first, and the strip announces where to paste it.
  */
 async function handOff(client: McpClientLink): Promise<string | null> {
   if (client.handoff === 'prefilled') return null;
@@ -26,6 +26,11 @@ async function handOff(client: McpClientLink): Promise<string | null> {
     return `In ${client.label}, add a custom connector with ${MCP_SERVER_URL}.`;
   }
 }
+
+/** A mouse over a menu item must not move focus there; keyboard focus still does. */
+const keepFocus = (event: PointerEvent) => {
+  if (event.pointerType === 'mouse') event.preventDefault();
+};
 
 function useHoverMenu() {
   const [open, setOpen] = useState(false);
@@ -63,13 +68,15 @@ function useHoverMenu() {
 }
 
 /**
- * The one way to connect an assistant to CiteLadder: Connect, which opens
- * Claude, then the MCP URL with a copy control. Hovering Connect or its chevron
- * offers the other assistants. Shared by Settings and the public site.
+ * The one way to connect an assistant to CiteLadder: one Connect button that
+ * opens Claude in a click, then the MCP URL with a copy control. Hovering the
+ * button (or ArrowDown from it) offers the other assistants. Shared by
+ * Settings and the public site.
  */
 export function ConnectStrip({ className }: Readonly<{ className?: string }>) {
   const [primary, ...others] = MCP_CLIENT_LINKS;
   const menu = useHoverMenu();
+  const link = useRef<HTMLAnchorElement>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const select = (client: McpClientLink) => {
     void handOff(client).then(setNotice);
@@ -79,57 +86,70 @@ export function ConnectStrip({ className }: Readonly<{ className?: string }>) {
     <section
       aria-label="Connect CiteLadder to an AI assistant"
       className={cn(
-        'bg-panel surface-card flex flex-wrap items-center gap-3 rounded-[var(--radius-card)] p-[var(--card-padding)]',
+        'bg-panel surface-card flex w-fit max-w-full flex-wrap items-center gap-3 rounded-[var(--radius-card)] p-[var(--card-padding)]',
         className,
       )}
     >
-      <div className="flex shrink-0 gap-px" onPointerEnter={menu.enter} onPointerLeave={menu.leave}>
-        <Button asChild>
-          <a
-            href={primary.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            data-marketing-cta=""
-            onClick={() => select(primary)}
-          >
-            Connect to {primary.label}
-          </a>
-        </Button>
-        <Dropdown open={menu.open} onOpenChange={menu.setOpen} modal={false}>
-          <DropdownTrigger asChild>
-            <Button size="icon" aria-label="Connect another assistant" className="group">
-              <ChevronDown
-                className="size-4 transition-transform group-data-[state=open]:rotate-180 motion-reduce:transition-none"
-                aria-hidden
-              />
+      <Dropdown open={menu.open} onOpenChange={menu.setOpen} modal={false}>
+        {/* The menu anchors on this wrapper, so the button keeps its face while it is open. */}
+        <DropdownTrigger asChild>
+          <span className="group inline-flex shrink-0">
+            <Button asChild>
+              <a
+                ref={link}
+                href={primary.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                data-marketing-cta=""
+                onClick={() => select(primary)}
+                onPointerEnter={menu.enter}
+                onPointerLeave={menu.leave}
+                // A press follows the link; only hover and ArrowDown or Space open the menu.
+                onPointerDown={(event) => event.preventDefault()}
+                onKeyDown={(event) => {
+                  if (event.key !== 'Enter') return;
+                  event.preventDefault();
+                  event.currentTarget.click();
+                }}
+              >
+                Connect to {primary.label}
+                <ChevronDown
+                  className="size-4 transition-transform group-data-[state=open]:rotate-180 motion-reduce:transition-none"
+                  aria-hidden
+                />
+              </a>
             </Button>
-          </DropdownTrigger>
-          <DropdownContent
-            align="end"
-            className="w-48"
-            onPointerEnter={menu.enter}
-            onPointerLeave={menu.leave}
-            onCloseAutoFocus={(event) => {
-              if (menu.hovered.current) event.preventDefault();
-            }}
-          >
-            {others.map((client) => (
-              <DropdownItem key={client.id} asChild onSelect={() => select(client)}>
-                <a
-                  href={client.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  data-marketing-cta=""
-                >
-                  <span className="flex-1">{client.label}</span>
-                  <ExternalLink className="size-4 shrink-0" aria-hidden />
-                </a>
-              </DropdownItem>
-            ))}
-          </DropdownContent>
-        </Dropdown>
-      </div>
-      <div className="flex min-w-0 flex-1 basis-64 items-center gap-2">
+          </span>
+        </DropdownTrigger>
+        <DropdownContent
+          align="start"
+          className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-0"
+          onPointerEnter={menu.enter}
+          onPointerLeave={menu.leave}
+          onCloseAutoFocus={(event) => {
+            // The wrapper cannot take focus, so a keyboard close returns it to the link.
+            event.preventDefault();
+            if (!menu.hovered.current) link.current?.focus();
+          }}
+        >
+          {others.map((client) => (
+            <DropdownItem
+              key={client.id}
+              asChild
+              // A pointer highlights with the hover fill alone; moving focus would ring the item.
+              onPointerMove={keepFocus}
+              onPointerLeave={keepFocus}
+              onSelect={() => select(client)}
+            >
+              <a href={client.href} target="_blank" rel="noopener noreferrer" data-marketing-cta="">
+                <span className="flex-1">{client.label}</span>
+                <ExternalLink className="size-4 shrink-0" aria-hidden />
+              </a>
+            </DropdownItem>
+          ))}
+        </DropdownContent>
+      </Dropdown>
+      <div className="flex min-w-0 items-center gap-2">
         <span className={textRole('label', 'shrink-0')}>MCP URL</span>
         <code
           className={textRole(
@@ -143,7 +163,8 @@ export function ConnectStrip({ className }: Readonly<{ className?: string }>) {
           Copy
         </CopyButton>
       </div>
-      <output className={textRole('caption', 'basis-full empty:hidden')}>{notice}</output>
+      {/* Read out, not shown: the assistant's own page is where the person pastes. */}
+      <output className="sr-only">{notice}</output>
     </section>
   );
 }

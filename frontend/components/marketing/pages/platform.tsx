@@ -117,18 +117,24 @@ const GUIDES: Readonly<Record<string, { title: string; desc: string }>> = {
 export function PlatformActions({
   cta,
   size = 'marketing',
-}: Readonly<{ cta: PlatformCta; size?: 'lg' | 'marketing' }>) {
-  // Connecting an assistant is the MCP page's whole action, and it starts the trial.
-  if (cta === 'mcp') return <ConnectStrip className="w-full max-w-2xl text-left" />;
+  closing = false,
+}: Readonly<{ cta: PlatformCta; size?: 'lg' | 'marketing'; closing?: boolean }>) {
+  // The MCP hero connects an assistant; its closing band offers the guide and a demo.
+  if (cta === 'mcp' && !closing) return <ConnectStrip className="text-left" />;
   const trial = cta === 'trial' && selfServeSignupOpen();
   return (
     <div className="flex flex-wrap justify-center gap-3">
+      {cta === 'mcp' && (
+        <ButtonLink href={docsHref('/mcp/')} size={size}>
+          Read the MCP docs
+        </ButtonLink>
+      )}
       {trial && (
         <ButtonLink href={appHref('/register')} size={size}>
           Start free trial
         </ButtonLink>
       )}
-      <DemoButtonLink variant={trial ? 'soft' : 'primary'} size={size}>
+      <DemoButtonLink variant={trial || cta === 'mcp' ? 'soft' : 'primary'} size={size}>
         {cta === 'setup' ? 'Discuss setup' : 'Book a demo'}
       </DemoButtonLink>
       {(cta === 'demo' || cta === 'setup') && (
@@ -280,7 +286,7 @@ export function PlatformPageContent({ page }: Readonly<{ page: PlatformPage }>) 
       <Section className="marketing-closing-band">
         <div className="flex flex-col items-center gap-8 text-center" data-cta-placement="closing">
           <SectionHeader title={page.closing} align="center" />
-          <PlatformActions cta={page.cta} />
+          <PlatformActions cta={page.cta} closing />
         </div>
       </Section>
     </>

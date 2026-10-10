@@ -13,7 +13,7 @@ https://citeladder.com/mcp
 
 The connection uses browser sign-in (OAuth) with the read scope `citeladder:read`. Do not paste a provider API key or a CiteLadder session cookie into the client.
 
-The quickest route is the **Connect** button in the CiteLadder app under **Settings → MCP connections**, or on the MCP product page. It opens the chosen client with CiteLadder's name and URL ready where the client supports it. The steps below cover the same setup by hand.
+The quickest route is the **Connect** button in the CiteLadder app under **Settings → MCP connections**, or on the MCP product page. Selecting it opens Claude with CiteLadder's name and URL filled in. Hover over it to choose ChatGPT, Gemini or Grok instead; CiteLadder copies the URL for you to paste there. The steps below cover the same setup by hand.
 
 Client menus change between versions and plans. If a label differs, look for the client's custom connector or remote MCP server setting; the URL and sign-in flow stay the same.
 
@@ -46,10 +46,7 @@ Google currently limits custom apps to some accounts and regions.
 
 ### Cursor
 
-1. Use the Connect button to open Cursor's install link, and approve the install in Cursor.
-2. Sign in to CiteLadder when Cursor prompts you.
-
-To configure it manually, add the server to `~/.cursor/mcp.json`:
+Add the server to `~/.cursor/mcp.json`, then sign in to CiteLadder when Cursor prompts you:
 
 ```json
 {
@@ -89,6 +86,10 @@ Then sign in:
 codex mcp login citeladder
 ```
 
+### Other clients
+
+Any client that supports remote MCP servers with browser sign-in can connect. Add a remote (Streamable HTTP) server with the URL above and choose OAuth if the client asks for an authentication method.
+
 ## Approve workspace access
 
 Every client finishes in the same browser consent step:
@@ -98,6 +99,12 @@ Every client finishes in the same browser consent step:
 3. Review the read-only access and select **Approve**.
 
 The connection reads only the workspaces you selected. Joining another workspace later does not add it; connect again to share it. Losing membership of a selected workspace removes access to it.
+
+The approval page explains any workspace you cannot select. A workspace whose trial or subscription has ended links to billing, and one without the current Terms acceptance can be approved once you accept the Terms on the page.
+
+## How long a connection lasts
+
+The client refreshes its sign-in automatically. A connection that is used at least once every 30 days stays signed in for up to 180 days from approval; after that, the client asks you to sign in and approve again. You can end it sooner by [revoking it](/mcp/access/#revoke-access).
 
 ## Check the connection
 

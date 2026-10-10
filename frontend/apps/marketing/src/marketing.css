@@ -426,6 +426,15 @@
 }
 
 @media (min-width: 48rem) {
+  /* Marketing page H1s sit one step above the shared 40px title on desktop
+     (owner decision, 2026-10-10); docs keep 40px, articles their own rung. */
+  .website-page-title:not(.website-article-title) {
+    --text-marketing-title: 2.75rem;
+    --text-marketing-title--line-height: 3.25rem;
+    font-size: var(--text-marketing-title);
+    line-height: var(--text-marketing-title--line-height);
+  }
+
   .mk-dive-title.website-page-title {
     font-size: var(--text-4xl);
     line-height: var(--text-4xl--line-height);
