@@ -19,10 +19,12 @@ export const perceptionLabelSchema = z.enum([
 export const perceptionPolaritySchema = z.enum(['positive', 'negative']);
 
 // Why a mention has no usable label. `platform_cap` and `model_not_configured`
-// are bounded platform outcomes; `task_failed` is a worker that gave up.
+// are bounded platform outcomes; `task_failed` is a worker that gave up;
+// `entity_limit` is a business beyond the per-answer classification cap.
 export const perceptionUnavailableReasonSchema = z.enum([
   'model_not_configured',
   'platform_cap',
+  'entity_limit',
   'invalid_output',
   'model_error',
   'task_failed',
@@ -31,7 +33,7 @@ export const perceptionUnavailableReasonSchema = z.enum([
 
 // `value`: at least one confident label. `pending`: mentions are waiting for
 // classification. `unavailable`: nothing classifiable (see `reason`).
-// `no_mentions`: no completed answer named a tracked business.
+// `no_mentions`: no completed answer in the selection named the brand.
 export const perceptionStateSchema = z.enum(['value', 'pending', 'unavailable', 'no_mentions']);
 
 // "N of M mentions classified": every mention lands in exactly one bucket.

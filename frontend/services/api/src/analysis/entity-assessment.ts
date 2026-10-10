@@ -25,12 +25,16 @@ function aliasMatches(alias: string, answer: string): RegExpExecArray[] {
   return [...answer.matchAll(new RegExp(pattern, 'giu'))];
 }
 
-/** The first raw match that counts under the entity's matching policy. */
-function firstMatch(aliases: readonly string[], answer: string, matching?: EntityPolicy) {
+/** Every raw match that counts under the entity's matching policy, in answer order. */
+export function countedMatches(
+  aliases: readonly string[],
+  answer: string,
+  matching?: EntityPolicy,
+): RegExpExecArray[] {
   return aliases
     .flatMap((alias) => aliasMatches(alias, answer))
     .sort((a, b) => a.index - b.index)
-    .find((match) => {
+    .filter((match) => {
       // Only a policy that reads the surroundings needs the answer tokenized.
       if (countsAnywhere(matching)) return true;
       const before = tokensOf(answer.slice(0, match.index));
@@ -67,7 +71,7 @@ function assessment(
     limitation: detail,
   });
   if (!answer.trim()) return row('unavailable', [], 'Answer text is unavailable.');
-  const match = firstMatch(aliases, answer, matching);
+  const match = countedMatches(aliases, answer, matching)[0];
   if (!match) return row('absent', []);
   const points = Array.from(answer),
     offset = Array.from(answer.slice(0, match.index)).length;
@@ -104,16 +108,25 @@ function assessment(
     end = Math.min(points.length, endOffset + 60);
   return row(state, [{ start, end, text: points.slice(start, end).join('') }]);
 }
-export function assessEntities(answer: string, config: ScoringConfig) {
+/** The frozen brand and competitors an answer is assessed for, brand first. */
+export function trackedEntities(config: ScoringConfig) {
   return [
     {
+      id: `brand:${normalizeAlias(config.brandName)}`,
       name: config.brandName,
       aliases: config.brandAliases,
       kind: 'brand',
       matching: config.brandMatching,
     },
-    ...config.competitors.map((c) => ({ ...c, kind: 'competitor' })),
-  ]
-    .filter((entity) => entity.name)
-    .map((entity) => assessment(entity.name, entity.aliases, answer, entity.kind, entity.matching));
+    ...config.competitors.map((c) => ({
+      ...c,
+      id: `competitor:${normalizeAlias(c.name)}`,
+      kind: 'competitor',
+    })),
+  ].filter((entity) => entity.name);
+}
+export function assessEntities(answer: string, config: ScoringConfig) {
+  return trackedEntities(config).map((entity) =>
+    assessment(entity.name, entity.aliases, answer, entity.kind, entity.matching),
+  );
 }
