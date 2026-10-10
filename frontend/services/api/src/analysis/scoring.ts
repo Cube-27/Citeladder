@@ -9,6 +9,8 @@ import { policy } from '../config.ts';
 type JsonObject = Record<string, unknown>;
 
 type CompetitorConfig = {
+  /** The project competitor row frozen at admission; null in audits frozen without it. */
+  id: string | null;
   name: string;
   domains: string[];
   aliases: string[];
@@ -51,6 +53,7 @@ function competitorConfigs(
     if (!isObject(item)) throw new TypeError('competitor entry is not an object');
     const name = scalarText(item.name);
     return {
+      id: typeof item.id === 'string' && item.id ? item.id : null,
       name,
       aliases: truthyStrings([item.name, ...listOf(item.aliases)]),
       domains: truthyStrings(listOf(item.domains)),
@@ -79,7 +82,8 @@ export function scoringConfig(configuration: unknown): ScoringConfig {
   };
 }
 
-function domainIn(domain: string, targets: readonly unknown[]): boolean {
+/** Whether `domain` is, or is a subdomain of, any target. */
+export function domainIn(domain: string, targets: readonly unknown[]): boolean {
   return targets.some((target) => domainMatches(domain, target));
 }
 

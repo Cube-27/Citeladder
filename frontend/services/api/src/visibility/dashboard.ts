@@ -53,9 +53,11 @@ import {
 } from './runs.ts';
 import {
   AnalysisNotFoundError,
+  authorizedSelection,
   TrendQueryError,
   validateCohort,
   validateEngineAndRange,
+  type RunSelection,
 } from './selection.ts';
 import { foldBucket, type TrendPoint } from './trend-folding.ts';
 
@@ -134,7 +136,7 @@ const brandRuns = (db: Database, scope: RunScope) =>
     .where('audit_scope', '=', visibility.brand_audit_scope);
 
 /** The latest dashboard-ready brand run: what "Latest" means on every visibility read. */
-export async function latestDashboardRunId(db: Database, scope: RunScope): Promise<string> {
+async function latestDashboardRunId(db: Database, scope: RunScope): Promise<string> {
   const latest = await brandRuns(db, scope)
     .select('id')
     .where('status', 'in', visibility.dashboard_audit_statuses)
@@ -144,6 +146,16 @@ export async function latestDashboardRunId(db: Database, scope: RunScope): Promi
     .executeTakeFirst();
   if (latest === undefined) throw new AnalysisNotFoundError('No completed audit for project');
   return latest.id;
+}
+
+/** The runs an evidence summary covers: the selection, or the latest dashboard-ready run. */
+export async function scopedSelection(
+  db: Database,
+  selection: RunSelection,
+): Promise<RunSelection> {
+  const scoped = await authorizedSelection(db, selection);
+  if (scoped.auditId || scoped.auditIds?.length || scoped.fromAt || scoped.toAt) return scoped;
+  return { ...scoped, auditId: await latestDashboardRunId(db, scoped) };
 }
 
 /** The named run, or the latest dashboard-ready one; its snapshot must exist. */

@@ -7,6 +7,16 @@ order: 400
 
 These notes describe implemented changes in the codebase. Dates are the recorded commit dates; availability in your workspace depends on deployment, access and configuration.
 
+## October 10, 2026: Ads in ChatGPT answers
+
+AI Visibility has an **Ads** view: how often ChatGPT Search answers showed paid ads, who advertised, your own ad share, the prompts that surface ads and each ad as text. Each ChatGPT Search answer in a run lists its ads apart from its citations. Ads never count as citations or change your visibility scores, and other surfaces read not applicable.
+
+Assistants connected with MCP, and the in-app Agent, can read the same numbers with `read_ai_ads`.
+
+**For your team:** see which competitors pay to appear in the answers your buyers read, and on which prompts.
+
+[Read Ads in ChatGPT answers](/visibility/#ads-in-chatgpt-answers)
+
 ## October 10, 2026: AI crawler logs on paid plans, now with Amazon CloudFront
 
 AI crawler logs are available on every paid plan. Connect **Amazon CloudFront** through an Amazon Data Firehose stream, alongside Cloudflare, custom webhooks and file uploads, with an optional filter Lambda that sends crawler requests only. Log endpoints moved to `https://api.citeladder.com`. A source that stops delivering now shows as **Stalled** with the reason.

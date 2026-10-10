@@ -193,7 +193,7 @@ export async function prepareAudit(
       .execute(),
     db
       .selectFrom('competitors')
-      .select(['name', 'aliases', 'domains'])
+      .select(['id', 'name', 'aliases', 'domains'])
       .where('project_id', '=', project.id)
       .orderBy('id')
       .execute(),

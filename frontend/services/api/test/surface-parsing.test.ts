@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { parseOverview, parseScraper, overviewAnswer } from '../src/search-surfaces/parsing.ts';
+import {
+  parseAds,
+  parseOverview,
+  parseScraper,
+  overviewAnswer,
+} from '../src/search-surfaces/parsing.ts';
+import adsEnvelope from './fixtures/chatgpt-ads/envelope.json' with { type: 'json' };
 const task = (status: number, items?: unknown) => ({
   status_code: 20000,
   tasks: [
@@ -123,5 +129,51 @@ describe('observed surface parsing', () => {
       provider_metadata: { fanout_availability: 'unavailable', query_text_available: false },
     });
     expect(() => parseScraper(payload(), 'foreign', 'chatgpt_search')).toThrow('parse_error');
+  });
+  it('reads ChatGPT ads as their own items and never into the answer text or citations', () => {
+    const parsed = parseScraper(adsEnvelope, 'ours', 'chatgpt_search');
+    if (typeof parsed === 'string') throw new Error('Expected terminal answer');
+    expect(parsed.answer_text).toBe('Acme and Rival both make good road shoes.');
+    expect(parsed.citations.map((c) => c.url)).toEqual([
+      'https://publisher.example/review',
+      'https://rival.example/shoes',
+    ]);
+    expect(parseAds(adsEnvelope)).toEqual({
+      ads: [
+        {
+          rank_absolute: 2,
+          rank_group: 1,
+          advertiser_name: 'Rival',
+          advertiser_domain: 'rival.example',
+          landing_url_raw: 'https://shop.rival.example/runner-3?gclid=abc&utm_campaign=ai#reviews',
+          landing_url_canonical: 'https://shop.rival.example/runner-3',
+          title: 'Rival Runner 3',
+          snippet: 'Free returns on every pair.',
+          image_url: 'https://cdn.ads.example/rival.png',
+        },
+        {
+          rank_absolute: 3,
+          rank_group: 2,
+          advertiser_name: 'acme.example',
+          advertiser_domain: 'acme.example',
+          landing_url_raw: 'https://acme.example/trail',
+          landing_url_canonical: 'https://acme.example/trail',
+          title: 'Acme Trail',
+          snippet: '',
+          image_url: null,
+        },
+      ],
+      skipped: 2,
+    });
+  });
+  it('tells an answer with no ads from an envelope that cannot be read for ads', () => {
+    const page = { markdown: 'Plain answer', items: [{ type: 'chat_gpt_text', markdown: 'x' }] };
+    const envelope = (result: unknown[]) => ({
+      status_code: 20000,
+      tasks: [{ id: 'ours', status_code: 20000, result }],
+    });
+    expect(parseAds(envelope([page]))).toEqual({ ads: [], skipped: 0 });
+    expect(parseAds(envelope([]))).toBeNull();
+    expect(parseAds({ status_code: 20000, tasks: [] })).toBeNull();
   });
 });

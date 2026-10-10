@@ -21,6 +21,7 @@ Find where a relevant buyer question fails to produce a useful, accurate mention
 3. `read_visibility_sources` with the same `audit_id` for cited domains (`level: domain`) or URLs (`level: url` with `domain`).
 4. As needed: `read_visibility_overview` for headline rates, `read_prompt_portfolio` for which prompts are tracked, `get_project_business_context` for offers and competitors.
 5. For how answers portray the brand, `read_perception` with the same `audit_id` (`view: quotes` for the verified quotes): always state its coverage ("N of M mentions classified"); a pending or unavailable read has no value, never zero. Sources it lists were cited alongside criticism, never shown to cause it.
+6. For ads in ChatGPT Search answers, `read_ai_ads` with the same `audit_id`: ads are paid placements; report them separately, never as citations, sources or a cause of visibility, and an engine without ads is not applicable, never zero.
 
 Engines and surfaces are whatever the data shows; do not assume a fixed set. Keep `core` and `comparison` cohorts separate. A summary-only read supports only a summary-level finding. Report answers as unavailable only after the read fails or says they are absent.
 

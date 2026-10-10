@@ -320,6 +320,11 @@
     "type": "bool",
     "default": false
   },
+  "ads_engine": "chatgpt_search",
+  "ads_versions": {
+    "parser_version": "chatgpt-ads-1",
+    "metrics_version": "ads-metrics-1"
+  },
   "commerce_versions": {
     "template_version": "commerce-buyer-prompts-1",
     "parser_version": "commerce-recommendation-parser-2",

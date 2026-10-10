@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 import { ContentMarkdown } from '@/lib/markdown/markdown';
 import type { Highlight } from '@/lib/markdown/highlight';
 import { EvidencePerception, perceptionHighlights } from '@/components/runs/evidence-perception';
+import { EvidenceAds } from '@/components/runs/evidence-ads';
 import { panelClasses } from '@/components/ui/panel';
 import { ledgerClasses } from '@/components/ui/workspace';
 
@@ -403,6 +404,7 @@ export function EvidenceCard({
         highlights={perceptionHighlights(evidence.perception)}
       />
       <EvidencePerception perception={evidence.perception} />
+      <EvidenceAds ads={evidence.ads} />
       {/* Only an observed surface has one, and its absence is not a state to
           render: an LLM execution has no overview to report on. */}
       {evidence.search_surface ? <SurfaceEvidence evidence={evidence.search_surface} /> : null}

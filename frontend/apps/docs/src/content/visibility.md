@@ -47,6 +47,20 @@ A citation is not a brand mention, and a mention is not an endorsement. Average 
 
 When nothing is classified yet the view says so: answers are still being classified, perception is unavailable (with the reason), or no answer in the selection named you. A change in how perception is classified starts a new comparison series, so points from before and after it are not compared directly.
 
+## Ads in ChatGPT answers
+
+**Ads** shows the paid ads that appeared in ChatGPT Search answers in the selected runs. Ads are reported on their own: they never count as citations or sources and never change mention rate, share of voice or scores.
+
+- **Ad presence** is the share of ChatGPT Search answers that showed at least one ad, written as "N of M ChatGPT Search answers".
+- **Your ad share** is your share of every ad appearance, with your best ad position. When none of your ads was seen it reads "Not advertising", not 0%.
+- **Advertisers** lists who advertised, whether each is you, a competitor or another business, how often and on how many prompts, and when they were first and last seen.
+- **Prompts that surface ads** lists the prompts whose answers showed ads, the top advertiser, and how often the answer still mentioned you when a competitor advertised. These are counts, not a cause.
+- **Ad creatives** lists each ad as text with the page it leads to. Tracking parameters are removed and ad images are not shown.
+
+Only ChatGPT Search shows ads. Other surfaces read **Not applicable**, never zero. ChatGPT Search answers collected before ads were read show ads as unavailable; ads appear from the next audit. Ads are those seen in ChatGPT sessions collected for your project's market: what your buyers see depends on their plan, account and country.
+
+Each ChatGPT Search answer in a run also lists its ads under the answer, separate from its citations.
+
 ## Inspect Sources
 
 Switch to **Sources** to see the domains and URLs used in the selected evidence. Open a domain to inspect its URLs and the prompts that reached it. Open an answer to check how a citation was used.

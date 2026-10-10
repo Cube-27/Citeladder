@@ -24,7 +24,11 @@ schedule monitoring, collect new data or save a deliverable.
    ("N of M mentions classified"); a pending or unavailable read has no value,
    never zero. Sources it lists were cited alongside criticism, never shown to
    cause it.
-6. Where supported, call `render_visibility` with the same selection. A missing
+6. For ads in ChatGPT Search answers, call `read_ai_ads` for the same audit.
+   Ads are paid placements: report them separately, never as citations,
+   sources or a cause of visibility; an engine without ads is not applicable,
+   never zero.
+7. Where supported, call `render_visibility` with the same selection. A missing
    UI does not prevent a useful text answer.
 
 ## Diagnose

@@ -358,6 +358,9 @@ paid task; unrecovered tasks fail without negative brand observations. Known
 submission charges remain recorded even when retrieval fails.
 
 Scraper citations use root and nested sources, canonicalized and deduplicated.
+Ad items (`chat_gpt_ad`) are skipped by the source walker and the answer-text
+fallback, so a paid placement is never a citation or answer text; see
+[Ads in AI answers](#ads-in-ai-answers).
 Retrieved-but-uncited search results and provider brand entities remain raw
 supplementary evidence; the current citation projections do not represent a
 separate retrieval dataset or query-to-source associations. Query Fanouts uses
@@ -456,9 +459,45 @@ customer credits. Policy, caps, the closed theme list and the templates live in
   Reads never classify. `pnpm perception:eval --live` is the operator-only
   calibration over hand-labelled fixtures.
 
+## Ads in AI answers
+
+Only `chatgpt_search` (`audits.json` `ads_engine`) shows ads. Ads are paid
+placements: they never enter citations, sources, mention rate, share of voice
+or scoring, and no other engine reads as zero ads.
+
+- **Parsing.** `parseAds` reads `chat_gpt_ad` items anywhere in the stored Task
+  GET result page, validates each, derives the advertiser's registrable domain
+  (advertiser URL, else the ad's domain, else the landing host) and a landing
+  URL without query string or fragment, and skips malformed or repeated-rank
+  items (logged as `ads.items_skipped`).
+- **Persistence.** In the analysis transaction, a `chatgpt_search` answer whose
+  envelope has one result page sets `response_analyses.ads_parser_version`
+  (`ads_versions.parser_version`) and writes one `answer_ad_observations` row
+  per ad, unique on `(artifact_id, parser_version, rank_absolute)`, with the
+  raw and canonical landing URLs and the image URL (stored, never served).
+  Ownership is owned, competitor (with the competitor id frozen at admission)
+  or other, by the advertiser domain against the frozen owned and competitor
+  domains. Ads apply from the first audit after this shipped; there is no
+  backfill.
+- **Applicability.** Per answer: `applicable` when the marker is set, so zero
+  ads is an observation; `unavailable` for a `chatgpt_search` answer without
+  it; `not_applicable` for every other engine.
+- **Metrics** (`ads_versions.metrics_version`). Presence rate is successful
+  applicable answers with at least one ad over successful applicable answers,
+  per run, prompt and topic. Advertisers carry appearances, prompts reached,
+  first and last seen and share of all ad appearances; the brand's own share
+  and best rank are null when it never advertised. Creatives deduplicate on
+  advertiser domain, title, snippet and canonical landing URL. Per prompt,
+  answers where a competitor advertised are split by whether the brand was
+  mentioned organically; these are counts, never a cause.
+- **Reads.** `GET /visibility/ads` (the latest run, a run or a run set; engine
+  and cohort filters; creatives keyset-paged up to 50), the `ads` field of
+  execution evidence and the `read_ai_ads` tool. Reads never parse. CSV
+  exports do not include ads.
+
 ## Read and UI surface
 
-Visibility has Trends, Sources, Perception and Query Fanout; Trends is default. Trends
+Visibility has Trends, Sources, Perception, Ads and Query Fanout; Trends is default. Trends
 bucket runs first and then cap the number of points (`trend_max_points`), so a
 long window is not silently truncated to its latest runs. A range selection pools
 counts, average position and model provenance across its runs and omits citation

@@ -2,7 +2,7 @@
  * `visibility`: every persisted visibility read for one measurement
  * selection: the dashboard, prompt scores, trends, query fanout, Sources
  * (table, series and one URL), per-answer evidence, answer perception
- * (summary and quotes) and the observed AI Overview rates.
+ * (summary and quotes), ads in AI answers and the observed AI Overview rates.
  *
  * Reads of persisted projections; nothing is
  * fetched. An unknown or out-of-scope run is `Audit not found`, and a
@@ -22,6 +22,7 @@ import {
   perceptionResponseSchema,
 } from '@citeladder/contracts/visibility-perception';
 import { visibilityTrendListSchema } from '@citeladder/contracts/visibility-trends';
+import { visibilityAdsResponseSchema } from '@citeladder/contracts/visibility-ads';
 import { z } from 'zod';
 
 import { policy } from '../config.ts';
@@ -29,6 +30,7 @@ import { ApiError, notFound } from '../errors.ts';
 import type { ParamSpecs } from '../http/params.ts';
 import { InvalidCursorError } from '../http/keyset-cursor.ts';
 import { requireProject } from '../projects/access.ts';
+import { getAds } from '../visibility/ads.ts';
 import { getVisibility } from '../visibility/dashboard.ts';
 import { getVisibilityEvidence } from '../visibility/evidence.ts';
 import { getVisibilityFanout } from '../visibility/fanout.ts';
@@ -117,6 +119,32 @@ const PERCEPTION_SELECTION = {
 } as const satisfies ParamSpecs;
 
 export const visibilityRoutes = [
+  defineGetRoute({
+    family: 'visibility',
+    path: '/api/v1/projects/{project_id}/visibility/ads',
+    params: {
+      path: PROJECT_PATH,
+      query: {
+        ...PERCEPTION_SELECTION,
+        cursor: { scalar: { kind: 'str', maxLength: 2048 } },
+        limit: {
+          scalar: { kind: 'int', ge: 1, le: policy.visibility.ads_creatives_max_limit },
+          default: policy.visibility.ads_creatives_default_limit,
+        },
+      },
+    },
+    response: visibilityAdsResponseSchema,
+    async handle({ c, db }, { path, query }) {
+      const workspace = c.get('workspace');
+      await requireProject(db, workspace, path.project_id);
+      return selectionErrors(() =>
+        getAds(db, runSelection(workspace.workspaceId, path.project_id, query), {
+          cursor: query.cursor,
+          limit: query.limit,
+        }),
+      );
+    },
+  }),
   defineGetRoute({
     family: 'visibility',
     path: '/api/v1/projects/{project_id}/visibility/perception',

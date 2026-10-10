@@ -181,6 +181,7 @@ export function McpToolsView() {
   const tools = [
     ['read_visibility_overview', 'Visibility, position and competitors'],
     ['read_visibility_sources', 'Cited domains and URLs'],
+    ['read_ai_ads', 'Ads in ChatGPT answers'],
     ['read_site_health', 'Crawl findings and coverage'],
     ['read_demand', 'Search Console demand signals'],
     ['read_actions', 'Ranked opportunities'],

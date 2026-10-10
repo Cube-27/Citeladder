@@ -9,6 +9,7 @@ import { classifySourceDomain, classifySourceOrigin } from './opportunities/sour
 import { citationIdentity } from '../source-pages/identity.ts';
 import { fanoutProjection } from './fanout.ts';
 import { enqueuePerception } from '../perception/admission.ts';
+import { answerAds, persistAds } from './ads.ts';
 
 /** Caller holds the scoped audit/task lock and commits alongside the immutable artifact. */
 export const analyzeExecution: DeriveExecution = async (db, task, audit, artifactId) => {
@@ -55,7 +56,12 @@ export const analyzeExecution: DeriveExecution = async (db, task, audit, artifac
   const at = new Date(),
     id = randomUUID(),
     versions = policy.audits.analysis,
-    assessments = assessEntities(artifact.answer_text, config);
+    assessments = assessEntities(artifact.answer_text, config),
+    ads = answerAds({
+      id: task.id,
+      logical_engine: task.logical_engine,
+      providerMetadata: artifact.provider_metadata,
+    });
   await db
     .insertInto('response_analyses')
     .values({
@@ -88,6 +94,8 @@ export const analyzeExecution: DeriveExecution = async (db, task, audit, artifac
         searchQueryCount: score.search_query_count,
         providerMetadata: task.provider_metadata,
       }),
+      // Set only when ads apply and the envelope was read: zero ads is then an observation.
+      ads_parser_version: ads ? policy.audits.ads_versions.parser_version : null,
       avg_position: score.brand_position,
       score: JSON.stringify(score),
       entity_assessments: JSON.stringify(assessments),
@@ -160,6 +168,17 @@ export const analyzeExecution: DeriveExecution = async (db, task, audit, artifac
         }),
       )
       .execute();
+  if (ads)
+    await persistAds(db, {
+      workspaceId: task.workspace_id,
+      projectId: audit.project_id,
+      auditId: audit.id,
+      taskId: task.id,
+      artifactId,
+      config,
+      ads,
+      at,
+    });
   await db
     .updateTable('audit_tasks')
     .set({ score: JSON.stringify(score) })
