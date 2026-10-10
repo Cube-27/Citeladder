@@ -310,3 +310,26 @@ describe('perception metrics', () => {
     expect(summary.state).toBe('value');
   });
 });
+
+describe('perception calibration fixtures', () => {
+  it('find every hand-labelled business in its answer, in every language', async () => {
+    const { default: fixtures } = await import('./fixtures/perception/answers.json', {
+      with: { type: 'json' },
+    });
+    const missing = fixtures.flatMap((fixture) => {
+      const named = entityPassages({
+        answer: fixture.answer,
+        languageCode: fixture.language,
+        config: scoringConfig({
+          brand_name: fixture.brand_name,
+          competitors: fixture.competitors.map((name) => ({ name, domains: [] })),
+        }),
+        policy: limits,
+      }).map((entity) => entity.name);
+      return Object.keys(fixture.labels)
+        .filter((name) => !named.includes(name))
+        .map((name) => `${fixture.name}:${name}`);
+    });
+    expect(missing).toEqual([]);
+  });
+});
