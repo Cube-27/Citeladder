@@ -123,7 +123,6 @@ export class Fixtures {
         workspace_id: workspaceId,
         user_id: userId,
         role,
-        product_tour_status: 'not_started',
         created_at: new Date(),
         updated_at: new Date(),
       })

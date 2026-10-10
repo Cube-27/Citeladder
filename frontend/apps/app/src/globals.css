@@ -184,7 +184,7 @@
   --text-3xl--line-height: 2.25rem;
   --text-4xl: 2rem;
   --text-4xl--line-height: 2.5rem;
-  /* Field text: 14px on public surfaces, 16px in the product (below). */
+  /* Field text: 14px on every surface. */
   --text-field: 0.875rem;
   --text-field--line-height: 1.25rem;
 
@@ -1589,12 +1589,6 @@ samp {
     animation-iteration-count: 1 !important;
     transition-duration: 1ms !important;
   }
-  /* SMIL <animateMotion> ignores the CSS rule above; hide the moving pipeline
-     dots directly (platform.tsx). The static conduit paths remain. */
-  .pipeline-stream circle {
-    display: none;
-  }
-
   .skeleton::after {
     display: none;
   }
@@ -1706,19 +1700,6 @@ samp {
 }
 .skip-link:focus-visible {
   transform: translateY(0);
-}
-
-/* A scroll region whose scrollbar is not part of the composition — a tab strip
-   that scrolls sideways on a phone, or the product preview's faux sidebar.
-   The region still scrolls by touch, wheel, and keyboard; only the visible
-   track is suppressed, so it never eats a row of pixels inside a bordered
-   panel or draws a grey bar across a preview's chrome. */
-.scrollbar-none {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-.scrollbar-none::-webkit-scrollbar {
-  display: none;
 }
 
 /* In-page anchors must clear the fixed chrome so linked sections land below it. */

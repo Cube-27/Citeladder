@@ -2,7 +2,7 @@
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { httpErrorStatus } from '@/lib/api/client';
 import { projectsApi } from '@/lib/api/projects';
@@ -221,7 +221,6 @@ export function ProjectProvider({ children }: Readonly<{ children: ReactNode }>)
   }, [activeWorkspaceId]);
 
   useProjectWarmup(activeProject, activeWorkspaceId);
-  useBrandLogoHydration(projects, activeWorkspaceId);
 
   const value = useMemo<ProjectContextValue>(
     () => ({
@@ -294,46 +293,4 @@ function useProjectWarmup(activeProject: Project | null, workspaceId: string | n
       cancelled = true;
     };
   }, [activeProject, workspaceId, queryClient]);
-}
-
-/**
- * Backfill missing brand logos.
- *
- * This provider is the single refresh owner. It covers a newly created project
- * as soon as that project enters the list, as well as projects created before
- * logos existed or whose earlier lookup failed transiently.
- *
- * Bounded and idempotent: one attempt per project per session, only for
- * projects with no `logo_url`, and the backend answers from its own database
- * cache — including a negative cache — so a domain with no findable icon is
- * not re-crawled on the next mount.
- */
-function useBrandLogoHydration(projects: readonly Project[], workspaceId: string | null) {
-  const queryClient = useQueryClient();
-  const hydrated = useRef(new Set<string>());
-  useEffect(() => {
-    if (!workspaceId) return;
-    const pending = projects.filter(
-      (project) => !project.brand.logo_url && !hydrated.current.has(project.id),
-    );
-    if (pending.length === 0) return;
-    for (const project of pending) hydrated.current.add(project.id);
-
-    let cancelled = false;
-    void Promise.allSettled(
-      pending.map((project) => projectsApi.refreshProjectLogos(project.id, { workspaceId })),
-    ).then((results) => {
-      // Only re-read the list if something actually attached, so a workspace
-      // where every domain lacks an icon settles instead of refetching forever.
-      const attached = results.some(
-        (result) => result.status === 'fulfilled' && result.value.brand.logo_url,
-      );
-      if (!cancelled && attached) {
-        void queryClient.invalidateQueries({ queryKey: queryKeys.projects.list(workspaceId) });
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [projects, workspaceId, queryClient]);
 }

@@ -43,7 +43,6 @@ import { sourcePatterns } from './config/source-patterns.ts';
 import { sourcePages, sourcePageVocabulary, urlIdentity } from './config/source-pages.ts';
 import { jev, quality, qualityGatesReported, validateJevSettings } from './config/jev.ts';
 import { appModels } from './config/app-models.ts';
-import { productTourVersion } from './config/product-tour.ts';
 import { contentDifferentiation } from './config/content-differentiation.ts';
 import { agentContext } from './config/agent-context.ts';
 import { projectReads } from './config/projects.ts';
@@ -149,7 +148,7 @@ export const policy = {
     },
   },
   models: { ...modelGateway, jev, quality },
-  workspaces: { ...workspaceRuntime, tour_version: productTourVersion },
+  workspaces: workspaceRuntime,
   providers: { ...providers, app: appModels },
   content_differentiation: {
     ...contentDifferentiation,

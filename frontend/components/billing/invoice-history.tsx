@@ -8,7 +8,6 @@ import { DisplayTime } from '@/components/ui/display-time';
 
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { InlineEmpty } from '@/components/ui/inline-empty';
 import { Stack } from '@/components/ui/layout';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -48,7 +47,7 @@ export function InvoiceHistory({
   return (
     <Stack as="section" gap="compact" aria-label="Billing documents">
       <Stack gap="tight">
-        <p className={eyebrowClasses}>Billing documents</p>
+        <p className={textRole('label')}>Billing documents</p>
         <EditorialSectionHeader title="Invoices, receipts and credit notes" />
       </Stack>
       {error ? <Alert tone="danger">Receipts could not be loaded.</Alert> : null}

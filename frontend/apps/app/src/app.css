@@ -25,7 +25,6 @@
 @source '../../../components/billing';
 @source '../../../components/demand';
 @source '../../../components/integrations';
-@source '../../../components/intelligence';
 @source '../../../components/knowledge-base';
 @source '../../../components/layout';
 @source '../../../components/mcp';
@@ -40,7 +39,6 @@
 @source '../../../components/settings';
 @source '../../../components/search-intelligence';
 @source '../../../components/site-health';
-@source '../../../components/tour';
 @source '../../../components/ui';
 @source '../../../components/visibility';
 @source '../../../lib';

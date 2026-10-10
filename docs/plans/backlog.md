@@ -192,6 +192,15 @@ section-level skeletons, drawer and table width roles, accent check marks in
 dropdowns, and the blog illustration palette. Each names the owner to change
 first. Owner: [Design](../design.md).
 
+### App shell review remainder
+
+Deferred by the feature 15 review (2026-10-10, [plan](app-shell-improvement.md#deferred-to-the-backlog)):
+a Dashboard "where you are missing" block (prompts or engines that name
+competitors but not you, linking to the Action); a first-wave bootstrap that
+starts the project list, entitlement and access reads from the URL or stored
+workspace; a slimmer project list for the switcher; and a command-center
+comparable-audit lookup by narrow columns with one `opportunity_orders` read.
+
 ## Deferred proposals
 
 Optional later assignments, not prerequisites for completed features:

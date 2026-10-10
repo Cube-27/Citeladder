@@ -12,7 +12,6 @@ import { PropertyPicker, useActiveMapping } from '@/components/settings/property
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { integrationsApi, type IntegrationConnection } from '@/lib/api/integrations';
 import { queryKeys } from '@/lib/api/query-keys';
 import { humanizeApiError } from '@/lib/api/errors';
@@ -148,7 +147,7 @@ function ConnectionMetadata({
     <div className="border-border-subtle flex flex-wrap items-center justify-between gap-2 border-t pt-3">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <div className="flex items-center gap-2">
-          <span className={eyebrowClasses}>Last synced</span>
+          <span className={textRole('label')}>Last synced</span>
           <span className="type-caption tabular-nums">
             <DisplayTime value={connection.last_synced_at} fallback="Never" />
           </span>

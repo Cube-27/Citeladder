@@ -237,11 +237,6 @@ export function acceptInvitation(db: Database, actorId: string, token: string) {
           workspace_id: workspace.id,
           user_id: actorId,
           role: assignableRoleSchema.parse(invitation.role),
-          product_tour_status: 'not_started',
-          product_tour_version: null,
-          product_tour_step_id: null,
-          product_tour_started_at: null,
-          product_tour_completed_at: null,
           created_at: now,
           updated_at: now,
         })

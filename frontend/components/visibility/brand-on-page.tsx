@@ -1,4 +1,3 @@
-import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { Passage } from '@/components/ui/passage';
 import { textRole } from '@/components/ui/typography';
 import { absenceBasis, presenceLabel, type PageEntity } from '@/lib/visibility/source-pages';
@@ -17,7 +16,7 @@ export function BrandOnPage({
   const basis = absenceBasis(brand.presence, brand.match_method, extractedChars);
   return (
     <div className="grid gap-2">
-      <p className={eyebrowClasses}>{heading}</p>
+      <p className={textRole('label')}>{heading}</p>
       <p className={textRole('itemTitle')}>
         {brand.entity_name}
         {verdict ? ` — ${verdict.toLowerCase()}` : ''}

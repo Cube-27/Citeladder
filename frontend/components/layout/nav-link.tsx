@@ -51,7 +51,12 @@ export function NavLink({
       />
       <span className="min-w-0 flex-1 truncate">{item.label}</span>
       {item.count === undefined ? null : (
-        <span className={textRole('caption', 'tabular-nums')}>{item.count}</span>
+        <>
+          <span aria-hidden className={textRole('caption', 'tabular-nums')}>
+            {item.count}
+          </span>
+          <span className="sr-only">, {item.count} open</span>
+        </>
       )}
     </Link>
   );

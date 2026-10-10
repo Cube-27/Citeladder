@@ -1,7 +1,6 @@
 'use client';
 
 import { Badge } from '@/components/ui/badge';
-import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { OnPageEntities } from '@/components/ui/on-page-entities';
 import { panelClasses } from '@/components/ui/panel';
 import { Limitations } from '@/components/ui/passage';
@@ -42,7 +41,7 @@ export function EarnedPageHandoff({ detail }: Readonly<{ detail: OpportunityDeta
         </div>
         {handoff.ask ? (
           <div className="grid gap-1">
-            <p className={eyebrowClasses}>What to ask for</p>
+            <p className={textRole('label')}>What to ask for</p>
             <p className={textRole('body')}>{handoff.ask}</p>
           </div>
         ) : null}
@@ -77,7 +76,7 @@ function Prompts({ prompts }: Readonly<{ prompts?: Handoff['affected_prompts'] }
   if (!prompts?.length) return null;
   return (
     <div className="grid gap-1">
-      <p className={eyebrowClasses}>Prompts that cite this page</p>
+      <p className={textRole('label')}>Prompts that cite this page</p>
       <ul className="grid gap-1">
         {prompts.map((prompt) => (
           <li key={prompt.prompt_id} className={textRole('body')}>
@@ -103,7 +102,7 @@ function NamedInAnswers({ names }: Readonly<{ names?: string[] }>) {
   if (!names?.length) return null;
   return (
     <div className="grid gap-2">
-      <p className={eyebrowClasses}>Named in the answers, not on the page</p>
+      <p className={textRole('label')}>Named in the answers, not on the page</p>
       <div className="flex flex-wrap gap-2">
         {names.map((name) => (
           <Badge key={name} variant="neutral">
@@ -125,7 +124,7 @@ function Coverage({ handoff }: Readonly<{ handoff: Handoff }>) {
   if (!sentence && !frequency) return null;
   return (
     <div className="grid gap-1">
-      <p className={eyebrowClasses}>Coverage</p>
+      <p className={textRole('label')}>Coverage</p>
       {sentence ? <p className={textRole('caption')}>{sentence}</p> : null}
       {frequency ? (
         <p className={textRole('caption')}>

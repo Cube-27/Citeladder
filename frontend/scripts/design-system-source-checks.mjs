@@ -142,7 +142,6 @@ const REQUIRED_WEBSITE_ROLES = [
   '.website-body',
   '.website-nav',
   '.website-label',
-  '.website-eyebrow',
   '.website-data-display',
 ];
 
@@ -186,7 +185,6 @@ const TOKEN_COLORED_ROLES = [
   '.website-lead',
   '.website-body',
   '.website-label',
-  '.website-eyebrow',
   '.flow-help',
   '.flow-meta',
 ];

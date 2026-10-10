@@ -1,6 +1,5 @@
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 
-import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
@@ -138,7 +137,7 @@ export function MetricItem({
 }>) {
   return (
     <div className={cn(metricItemClasses, className)}>
-      <dt className={cn(eyebrowClasses, 'flex min-w-0 items-center justify-between gap-2')}>
+      <dt className={textRole('label', 'flex min-w-0 items-center justify-between gap-2')}>
         <span className="truncate">{label}</span>
         {marker}
       </dt>

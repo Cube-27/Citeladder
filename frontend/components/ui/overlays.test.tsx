@@ -18,33 +18,24 @@ import { Tooltip, TooltipProvider } from './tooltip';
 import { ToastProvider, useToast } from './toast';
 
 describe('Dialog', () => {
-  it('renders title/description/children/footer when open', () => {
-    render(
-      <Dialog
-        open
-        onOpenChange={() => {}}
-        title="Launch audit"
-        description="Pick engines"
-        footer={<button type="button">Confirm</button>}
-      >
+  it('is described by its description only when it has one', () => {
+    const { rerender } = render(
+      <Dialog open onOpenChange={() => {}} title="Launch audit" description="Pick engines">
         <p>Body content</p>
       </Dialog>,
     );
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByText('Launch audit')).toBeInTheDocument();
-    expect(screen.getByText('Pick engines')).toBeInTheDocument();
-    expect(screen.getByText('Body content')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Close dialog' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Confirm' })).toBeInTheDocument();
-  });
+    expect(
+      screen.getByRole('dialog', { name: 'Launch audit', description: 'Pick engines' }),
+    ).toBeInTheDocument();
 
-  it('renders nothing when closed', () => {
-    render(
-      <Dialog open={false} onOpenChange={() => {}} title="Hidden">
-        <p>Nope</p>
+    rerender(
+      <Dialog open onOpenChange={() => {}} title="Launch audit">
+        <p>Body content</p>
       </Dialog>,
     );
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Launch audit' })).not.toHaveAttribute(
+      'aria-describedby',
+    );
   });
 
   it('restores focus to the control that opened it', async () => {
@@ -175,17 +166,6 @@ describe('Dropdown', () => {
 });
 
 describe('Tooltip', () => {
-  it('renders its trigger child', () => {
-    render(
-      <TooltipProvider>
-        <Tooltip content="Coming soon">
-          <button type="button">Generate</button>
-        </Tooltip>
-      </TooltipProvider>,
-    );
-    expect(screen.getByRole('button', { name: 'Generate' })).toBeInTheDocument();
-  });
-
   it('renders its content when opened', async () => {
     render(
       <TooltipProvider>

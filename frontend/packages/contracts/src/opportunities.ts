@@ -163,7 +163,15 @@ export const commandCenterSchema = responseObject({
     tracked: evidenceStateSchema,
   }),
   next_action: responseObject({
-    kind: z.enum(['opportunity', 'connect', 'crawl', 'configure_prompts', 'audit', 'monitor']),
+    kind: z.enum([
+      'opportunity',
+      'connect',
+      'crawl',
+      'configure_prompts',
+      'audit',
+      'audit_running',
+      'monitor',
+    ]),
     title: z.string(),
     href: z.string(),
     opportunity_id: uuid().nullable(),

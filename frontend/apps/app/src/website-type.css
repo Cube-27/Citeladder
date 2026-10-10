@@ -108,12 +108,6 @@
   text-wrap: balance;
 }
 
-/* Centred display headings compress around their own centre line instead of
-   the left edge. */
-.origin-centre {
-  text-align: center;
-}
-
 /* The display ladder is mobile-first and steps at 768px below. On a phone the
    display rungs track the viewport so a page title holds two lines (an article
    title, which runs twice as long, three) from 360px up; a fixed 32px wrapped
@@ -152,8 +146,7 @@
 .website-lead,
 .website-body,
 .website-nav,
-.website-label,
-.website-eyebrow {
+.website-label {
   font-family: var(--font-sans);
 }
 
@@ -181,7 +174,7 @@
   color: var(--color-secondary);
 }
 
-:where(.website-label, .website-eyebrow) {
+:where(.website-label) {
   color: var(--color-muted);
 }
 
@@ -211,22 +204,11 @@
   letter-spacing: 0;
 }
 
-.website-label,
-.website-eyebrow {
-  font-weight: 500;
-}
-
 .website-label {
   font-size: 0.875rem;
   line-height: 1.25rem;
+  font-weight: 500;
   letter-spacing: 0;
-}
-
-.website-eyebrow {
-  font-size: 0.75rem;
-  line-height: 1rem;
-  letter-spacing: 0;
-  text-transform: none;
 }
 
 :where([data-public-surface], [data-flow-surface]) [data-button-size='md']:not(.app-type-scale *),
@@ -511,11 +493,6 @@
   margin: 0;
 }
 
-.flow-groups {
-  display: grid;
-  gap: var(--flow-block);
-}
-
 .flow-group {
   min-width: 0;
 }
@@ -548,7 +525,6 @@
    drop the control smudge: an unselected option is a word you have not picked
    yet, not a button, and twelve outlined rectangles read as a form to fill in
    rather than a list to check. Selection alone carries a fill. */
-[data-flow-surface] .flow-choice-chip,
 [data-flow-surface] [data-radio-variant='chip'] button {
   border-radius: var(--radius-control);
   font-size: var(--text-sm);

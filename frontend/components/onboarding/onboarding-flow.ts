@@ -31,6 +31,7 @@ import {
   startOnboardingNavigationHandoff,
 } from '@/lib/onboarding/timing';
 import { useBrandDiscovery } from '@/lib/onboarding/use-brand-discovery';
+import { refreshBrandLogos } from '@/lib/project/brand-logos';
 import { useProjectContext } from '@/lib/project/project-context';
 
 import { hasConfirmedIcp } from './icp-confirmation';
@@ -261,6 +262,7 @@ export function useOnboardingFlow(transactionKey: string) {
     // Completion creates the project, with no prompts yet, in the request.
     onSuccess: async (result) => {
       if (!result.project_id) return;
+      if (activeWorkspaceId) refreshBrandLogos(queryClient, result.project_id, activeWorkspaceId);
       await openProject(result.project_id);
     },
     // A request the browser abandoned may still have committed. Re-read the

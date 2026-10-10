@@ -6,7 +6,6 @@ import { useId, useState } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { Input } from '@/components/ui/input';
 import { listRowClasses } from '@/components/ui/list-row';
 import { Select } from '@/components/ui/select';
@@ -100,7 +99,7 @@ export function TopicRail({
       <Card className="hidden min-w-0 p-2 lg:block">
         <nav aria-label="Topics" className="grid min-w-0 content-start gap-1">
           <div className="flex items-center justify-between px-1">
-            <h3 className={eyebrowClasses}>Topics</h3>
+            <h3 className={textRole('label')}>Topics</h3>
             <Button
               variant="ghost"
               size="icon"
@@ -208,7 +207,7 @@ function TopicSelect({
   const labelId = useId();
   return (
     <div className="grid gap-2 lg:hidden">
-      <span id={labelId} className={eyebrowClasses}>
+      <span id={labelId} className={textRole('label')}>
         Topics
       </span>
       <Select

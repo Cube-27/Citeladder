@@ -2961,11 +2961,6 @@ export interface WorkspaceInvitations {
 export interface WorkspaceMembers {
   created_at: Timestamp;
   id: string;
-  product_tour_completed_at: Timestamp | null;
-  product_tour_started_at: Timestamp | null;
-  product_tour_status: string;
-  product_tour_step_id: string | null;
-  product_tour_version: string | null;
   role: string;
   updated_at: Timestamp;
   user_id: string;

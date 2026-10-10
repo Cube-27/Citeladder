@@ -97,8 +97,7 @@ departure cannot leave a workspace ownerless. Owned-workspace limits count
 ownership rather than invited memberships, including ownership transfer.
 Workspace-root locks serialize membership and invitation changes; mutations
 recheck live authority after taking the lock. Creation and incoming ownership
-share the per-user creation advisory lock. Terms and product-tour reads never
-repair state.
+share the per-user creation advisory lock. Terms reads never repair state.
 
 Invitation issuance commits before bounded Resend delivery. Provider acceptance
 is distinct from inbox delivery; the one-time copy-link fallback remains usable
@@ -114,8 +113,7 @@ challenges and revokes sessions. Password change requires the current password;
 logout and explicit sign-out-all revoke every session. Account security reports
 actual methods and verification state inline in Settings → Account, with compact
 password, Google-linking and session controls. The blocked-access screen opens
-the same controls in a recovery dialog. Bookmarked `/account-security` URLs
-redirect to the Account settings section. Mail is request-bounded, not a durable queue:
+the same controls in a recovery dialog. Mail is request-bounded, not a durable queue:
 a crash after commit is recovered by requesting a new link after cooldown.
 Eligible and ineligible recipients share the configured `AUTH_MAIL_TIMEOUT_MS`
 response wait budget (default 5000 ms), so provider latency does not reveal

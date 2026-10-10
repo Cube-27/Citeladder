@@ -27,10 +27,6 @@ export function projectDestination(
   projectId: string,
 ): string {
   const params = new URLSearchParams(search?.toString() ?? '');
-  // Internal-link analyses and selections belong to one project.
-  if (pathname === '/site' && params.get(PROJECT_PARAM) !== projectId) {
-    for (const key of ['analysis', 'link', 'links_q', 'links_status']) params.delete(key);
-  }
   params.set(PROJECT_PARAM, projectId);
   params.delete(WORKSPACE_PARAM);
   return `${pathname}?${params.toString()}`;
@@ -141,6 +137,37 @@ function projectSwitchPathname(pathname: string): string {
   return owned ? owned[1] : pathname;
 }
 
+/**
+ * View parameters that mean the same thing in every project. Everything else
+ * in a query string (a run, prompt, issue, page, analysis, cursor or search)
+ * may name or page through the outgoing project's records, so a switch drops
+ * it rather than asking the next project for a record it does not have.
+ */
+const PROJECT_NEUTRAL_PARAMS = new Set([
+  'tab',
+  'view',
+  'range',
+  'granularity',
+  'compare',
+  'engine',
+  'status',
+  // Site Health catalog filters name catalog values, not records.
+  'severity',
+  'category',
+  'dimension',
+  'rule',
+  'finding_class',
+  'page_kind',
+]);
+
+function projectSwitchParams(search: URLSearchParams | null): URLSearchParams {
+  const kept = new URLSearchParams();
+  for (const [key, value] of search ?? []) {
+    if (PROJECT_NEUTRAL_PARAMS.has(key)) kept.append(key, value);
+  }
+  return kept;
+}
+
 export type SelectProjectOptions = {
   /** Navigate to another route instead of the current one. */
   destination?: string;
@@ -188,7 +215,11 @@ export function useSelectProject() {
       // detail they are reading to fix nothing.
       const switching = projectId !== activeProjectId;
       const landing = destination ?? (switching ? projectSwitchPathname(pathname) : pathname);
-      const target = projectDestination(landing, searchParams, projectId);
+      const target = projectDestination(
+        landing,
+        switching ? projectSwitchParams(searchParams) : searchParams,
+        projectId,
+      );
       const urlAlreadyNamesIt = searchParams?.get(PROJECT_PARAM) === projectId;
       const samePage = landing === pathname;
       if (urlAlreadyNamesIt && samePage && !replace) return;

@@ -27,7 +27,7 @@ const overview = {
   },
   next_action: {
     kind: 'monitor',
-    title: 'Monitor — no required action',
+    title: 'No open Action — watch the trend',
     href: '/visibility?tab=trends',
     opportunity_id: null,
   },
@@ -76,7 +76,7 @@ test('working surfaces preserve their actions without viewport overflow', async 
       await expect(page.locator('h1')).toHaveCount(1);
       await expect(page.locator('main')).toBeVisible();
       if (route === '/projects')
-        await expect(page.getByText('Monitor — no required action')).toBeVisible();
+        await expect(page.getByText('No open Action — watch the trend')).toBeVisible();
       if (route === '/onboarding') {
         await expect(page.getByLabel(/^Brand name/)).toBeVisible();
         const logo = await page.getByRole('link', { name: 'CiteLadder home' }).boundingBox();

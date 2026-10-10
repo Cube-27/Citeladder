@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 
-import { eyebrowClasses } from '@/components/ui/eyebrow';
+import { textRole } from '@/components/ui/typography';
 import { integrationsApi, type IntegrationBackfillProgress } from '@/lib/api/integrations';
 import { queryKeys } from '@/lib/api/query-keys';
 import { SYNC_RUN_POLL_MS } from '@/lib/integrations/sync-runs';
@@ -38,7 +38,7 @@ export function BackfillProgress({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className={eyebrowClasses}>History</span>
+      <span className={textRole('label')}>History</span>
       <span className="type-caption tabular-nums">{progressLabel(progress)}</span>
     </div>
   );

@@ -21,7 +21,6 @@ import { textRole } from '@/components/ui/typography';
 import { MetricValue } from '@/components/ui/metric-value';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { availabilityLabel } from '@/lib/format';
-import { eyebrowClasses } from '@/components/ui/eyebrow';
 import type { CommandCenter, Project } from '@/lib/api/types';
 import { DisplayTime } from '@/components/ui/display-time';
 import { cn } from '@/lib/utils';
@@ -114,7 +113,7 @@ export function CompanyFacts({ data }: Readonly<{ data: CommandCenter }>) {
         />
         <FactSummary label="Target audience" value={facts.target_audience} emptyState="not_set" />
         <div className={cn(hairlineBandItemClasses, 'grid content-start gap-2')}>
-          <p className={eyebrowClasses}>Offerings & competitors</p>
+          <p className={textRole('label')}>Offerings & competitors</p>
           {offerings.length ? (
             <TagGroup labels={offerings} tone="purple" />
           ) : (
@@ -163,7 +162,7 @@ function FactSummary({
 }>) {
   return (
     <div className={cn(hairlineBandItemClasses, 'grid gap-2')}>
-      <p className={eyebrowClasses}>{label}</p>
+      <p className={textRole('label')}>{label}</p>
       {value.trim() ? (
         <div className="min-w-0">
           <Tooltip content={value}>
@@ -222,13 +221,25 @@ export function SummarySections({ data }: Readonly<{ data: CommandCenter }>) {
   );
 }
 
+type NextActionKind = CommandCenter['next_action']['kind'];
+
+/** Steps that are not a recommendation to act read as what they are. */
+const NEXT_ACTION_STATUS: Partial<Record<NextActionKind, string>> = {
+  audit_running: 'In progress',
+  monitor: 'Up to date',
+};
+const NEXT_ACTION_LINK: Partial<Record<NextActionKind, string>> = {
+  audit_running: 'View progress',
+  monitor: 'View trends',
+};
+
 function NextAction({ data }: Readonly<{ data: CommandCenter }>) {
   return (
     <Card tone="recommendation" aria-labelledby="next-action" className="text-foreground">
       <CardHeader
         actions={
           <span className={textRole('label')}>
-            {data.next_action.kind === 'monitor' ? 'Optimal state' : 'Action recommended'}
+            {NEXT_ACTION_STATUS[data.next_action.kind] ?? 'Action recommended'}
           </span>
         }
       >
@@ -241,7 +252,7 @@ function NextAction({ data }: Readonly<{ data: CommandCenter }>) {
         </p>
         <Button asChild variant="primary" size="md">
           <ProjectLink href={data.next_action.href}>
-            {data.next_action.kind === 'monitor' ? 'View trends' : 'Continue'}
+            {NEXT_ACTION_LINK[data.next_action.kind] ?? 'Continue'}
             <ArrowRight className="size-4" aria-hidden />
           </ProjectLink>
         </Button>
@@ -263,7 +274,7 @@ function Track({ data }: Readonly<{ data: CommandCenter }>) {
         <CardTitle id="citation-share-track">Citation share</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-1">
-        <span className={eyebrowClasses}>AI Visibility Track</span>
+        <span className={textRole('label')}>AI Visibility Track</span>
         <MetricValue
           value={
             data.track.citation_share.value === null

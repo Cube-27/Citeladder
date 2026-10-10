@@ -85,7 +85,7 @@ Status values: `queued`, `inventory`, `audit`, `plan`, `implementing`, `docs`, `
 | 12 | Authentication, workspaces, projects and roles | `auth`, `workspaces`, `projects`; `components/auth`, `settings`, `projects` | [workspace-access.md](../workspace-access.md) | queued | — |
 | 13 | MCP hosted tools and OAuth | `mcp` | [mcp.md](../mcp.md) | implementing | [mcp-improvement](mcp-improvement.md) |
 | 14 | Execution platform: queues, runner, tick, recovery, residual Python schema tooling (`backend/`, `migrations/`, about 24k lines) | `queue`, `workers/runner.ts`, `db`, `infra/gcp`, `backend` | [backend-architecture.md](../backend-architecture.md), [operations](../operations/GCP_RUNBOOK.md) | implementing | [execution-platform-improvement](execution-platform-improvement.md) |
-| 15 | Product app shell, navigation, tour and design system | `apps/app`, `components/layout`, `ui`, `tour`, `intelligence` (Dashboard top insights) | [frontend-architecture.md](../frontend-architecture.md), [design.md](../design.md) | queued | — |
+| 15 | Product app shell, navigation, tour and design system | `apps/app`, `components/layout`, `ui`, `tour`, `intelligence` (Dashboard top insights) | [frontend-architecture.md](../frontend-architecture.md), [design.md](../design.md) | implementing | [app-shell-improvement](app-shell-improvement.md) |
 | 16 | Public site and documentation site | `apps/marketing`, `apps/docs` | [design.md](../design.md) | queued | — |
 
 The order follows the product loop (Analyze → Act → Improve → Track), then

@@ -52,8 +52,10 @@ implementation declaration starts the Act → Verify record; later observations
 remain separate from that declaration.
 
 Command Center composes these persisted owners into Facts, evidence-labelled
-loop states and one next action. Before an audit, measurement fields remain
-unavailable. Report reads return missing state rather than building a report.
+loop states and one next action. The next action puts measurement first:
+prompts, then the first audit (reported as running while one is in flight),
+then the top Action, then the site crawl and a search integration. Before an
+audit, measurement fields remain unavailable. Report reads return missing state rather than building a report.
 The Agent and MCP reuse these projections and own no second knowledge store.
 
 ## Shared execution and automation

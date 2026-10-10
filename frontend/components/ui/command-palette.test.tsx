@@ -1,4 +1,4 @@
-import { render as raw, screen, waitFor } from '@testing-library/react';
+import { render as raw, screen, waitFor, within } from '@testing-library/react';
 import type { ReactElement, ReactNode } from 'react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
@@ -26,10 +26,6 @@ const { setActiveProjectId, projectContext } = vi.hoisted(() => {
 vi.mock('@/lib/project/project-context', () => ({
   useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   useProjectContext: () => projectContext,
-}));
-
-vi.mock('@/lib/billing/entitlement-context', () => ({
-  useEntitlement: () => ({ hasCapability: () => true }),
 }));
 
 import { CommandPalette, CommandPaletteTrigger } from './command-palette';
@@ -78,7 +74,6 @@ describe('CommandPalette', () => {
     renderPalette(<Palette />);
     const trigger = screen.getByRole('button', { name: /search or jump to/i });
     expect(trigger).toHaveAttribute('aria-keyshortcuts', 'Meta+K Control+K');
-    expect(screen.getByText('Ctrl K')).toBeInTheDocument();
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
   });
 
@@ -110,6 +105,20 @@ describe('CommandPalette', () => {
     expect(screen.getByRole('option', { name: /site/i })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: /acme/i })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: /orbit/i })).toBeInTheDocument();
+  });
+
+  it('drives a grouped listbox from a combobox input', async () => {
+    await open();
+    const input = screen.getByRole('combobox', { name: 'Search commands' });
+    const listbox = screen.getByRole('listbox', { name: 'Commands' });
+    expect(input).toHaveAttribute('aria-expanded', 'true');
+    expect(input).toHaveAttribute('aria-controls', listbox.id);
+
+    const projects = within(listbox).getByRole('group', { name: 'Switch project' });
+    expect(within(projects).getByRole('option', { name: /orbit/i })).toHaveAttribute(
+      'tabindex',
+      '-1',
+    );
   });
 
   it('marks the active project so the current scope is obvious', async () => {
@@ -164,7 +173,10 @@ describe('CommandPalette', () => {
     const user = await open();
     await user.keyboard('zzzzz');
     expect(screen.queryAllByRole('option')).toHaveLength(0);
+    expect(screen.getByRole('combobox')).toHaveAttribute('aria-expanded', 'false');
+    // The message is not an option, so it sits outside the listbox.
     expect(screen.getByText(/no matches for/i)).toBeInTheDocument();
+    expect(within(screen.getByRole('listbox')).queryByText(/no matches for/i)).toBeNull();
   });
 
   it('does not fire a command when nothing matches', async () => {

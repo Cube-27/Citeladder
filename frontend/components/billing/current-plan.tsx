@@ -6,7 +6,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { DisplayTime } from '@/components/ui/display-time';
-import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { panelClasses } from '@/components/ui/panel';
 import { textRole } from '@/components/ui/typography';
 import type { BillingEntitlement, CatalogPlan } from '@/lib/api/billing';
@@ -101,7 +100,7 @@ export function CurrentPlan({
     <section className={panelClasses({}, 'grid gap-3')} aria-label="Current plan">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="grid min-w-0 gap-1">
-          <p className={eyebrowClasses}>Current plan</p>
+          <p className={textRole('label')}>Current plan</p>
           <div className="flex items-center gap-2">
             <p className={textRole('sectionTitle')}>
               {currentPlan?.name ?? subscription?.catalog_key ?? 'No active plan'}

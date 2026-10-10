@@ -5,7 +5,6 @@ import type { Shelf } from '@citeladder/contracts/commerce-suite';
 import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { Card, CardContent, CardTitle } from '@/components/ui/card';
 import { DisplayTime } from '@/components/ui/display-time';
-import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { Stack } from '@/components/ui/layout';
 import { Skeleton } from '@/components/ui/skeleton';
 import { textRole } from '@/components/ui/typography';
@@ -70,7 +69,7 @@ export function TargetShelfBand({ query }: Readonly<{ query: CommerceQueries['sh
             // The cell IS the stack: `dt`/`dd` have to stay direct children of
             // the `<dl>`'s own child, so an extra wrapper here is invalid.
             <Stack key={label} gap="tight" className={cn(metricItemClasses, 'content-start')}>
-              <dt className={eyebrowClasses}>{label}</dt>
+              <dt className={textRole('label')}>{label}</dt>
               <dd>
                 {value === null ? (
                   <UnavailableValue

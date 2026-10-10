@@ -195,7 +195,6 @@ The sizes below are generated from the role definitions in `globals.css` and `we
 | `.website-article-title` | public | `clamp(20px, 5.6vw, 24px) / inherit` | `32px / 40px` |
 | `.website-body` | public | `14px / 22px` | — |
 | `.website-data-display` | public | `28px / 36px` | `32px / 40px` |
-| `.website-eyebrow` | public | `12px / 16px` | — |
 | `.website-feature-heading` | public | `16px / 24px` | `18px / 28px` |
 | `.website-hero-display` | public | `clamp(28px, 8.6vw, 32px) / 1.1` | `clamp(32px, 4.2vw + 9.6px, 60px) / inherit` |
 | `.website-label` | public | `14px / 20px` | — |
@@ -218,7 +217,7 @@ Roles own all typography properties. The ladder is mobile-first with one step at
 | Lead | `website-lead` | The sentence under a page or section heading |
 | Body | `website-body` | Paragraphs |
 | Navigation/actions | `website-nav` | Header links and inline actions |
-| Label | `website-label`, `website-eyebrow` | Names a value, a list group or a breadcrumb |
+| Label | `website-label` | Names a value, a list group or a breadcrumb |
 | Data display | `website-data-display` | Pricing figures only; tabular |
 | Flow rungs | `flow-title`, `flow-group-title`, `flow-help`, `flow-meta` | The focused flow: title (24→28), group title (16), help (14) and meta (12) |
 
@@ -234,7 +233,7 @@ The roles are `.type-*` classes in `globals.css` (components layer, so a status 
 | `figure` | `type-figure` | A metric value; tabular | `foreground` |
 | `sectionTitle` | `type-section-title` | Section, card, drawer and dialog headings | `foreground` |
 | `figureSm` | `type-figure-sm` | A value in a dense row or cell; tabular | `foreground` |
-| `itemTitle` | `type-item-title` | Row, list-item and insight titles | `foreground` |
+| `itemTitle` | `type-item-title` | Row and list-item titles | `foreground` |
 | `body` | `type-body` | Sentences, descriptions, table cells | `secondary` |
 | `control` | `type-control` | Buttons, navigation, tabs, links | by state |
 | `label` | `type-label` | Names a value: metric, field and column labels | `secondary` |
@@ -339,12 +338,11 @@ Overview sections, Website metric cards/page tables, Actions lists, and Prompts 
 
 | Region | Owns | Excludes |
 | --- | --- | --- |
-| Desktop sidebar | Project switcher (first row), Search, the Dashboard/Agent mode switch, then either the Overview/Analyze/Track groups or the Agent navigation, Settings access, brand lockup and accent picker (foot) | Duplicate navigation trees/registries; the account trigger |
-| Topbar | Account trigger at every width; below 981px also Menu, compact route title and accent picker | Fixed bottom navigation |
-| Page header | One in-pane route H1 at `objectTitle`, existing description, route actions on the same row; entity heading is the sole H1 on detail routes | Metrics or duplicate route H1 |
+| Desktop sidebar | Project switcher (first row), Search, the Dashboard/Agent mode switch, then either the Overview/Analyze/Track groups or the Agent navigation, Settings access and brand lockup (foot) | Duplicate navigation trees/registries; the account trigger |
+| Topbar | Account trigger at every width; below 981px also Menu and compact route title | Fixed bottom navigation |
+| Page header | One in-pane route H1 at `pageTitle` (`type-page-title`), existing description, route actions on the same row; entity heading is the sole H1 on detail routes | Metrics or duplicate route H1 |
 | Metric row | Three to five headline values, each with its change when one is comparable | More than five, unsupported metrics, or run bookkeeping |
 | Analytical surface | The page's primary chart, table, or comparison | Competing equal-weight surfaces |
-| Insight list | Ranked shared insight objects | Feature-specific finding-card shapes |
 
 Keep date ranges and comparisons in their owning page, not the global shell. Align section tabs/actions on one row rather than adding an empty header row. Desktop and compact navigation reuse `nav-items.ts` destinations and capability resolution; hidden navigation never changes direct-route authorisation.
 
@@ -370,7 +368,7 @@ Every route assembles the same parts from `components/ui/` and `components/layou
 
 #### Screen-specific contracts
 
-**Overview.** Keep the page useful before any audit. Preserve reading order: compact project identity; warnings; Project State with Track context; Movement; one Next action; ranked actions and report proof; Top Insights; Company facts. Use the same DOM order at desktop and compact widths. Company facts are edited in Agent → Context, not in an Overview drawer. Do not restore a Product loop station strip. Track uses explicit availability labels; report actions require a persisted audit/report. Citation share uses separate shared heading/value roles, not an oversized combined sentence.
+**Overview.** Keep the page useful before any audit. Preserve reading order: compact project identity; warnings; Project State with Track context; Movement; one Next action; ranked actions and report proof; Company facts. Use the same DOM order at desktop and compact widths. Company facts are edited in Agent → Context, not in an Overview drawer. Do not restore a Product loop station strip. Track uses explicit availability labels; report actions require a persisted audit/report. Citation share uses separate shared heading/value roles, not an oversized combined sentence.
 
 **AI Visibility.** Exactly three tabs: Trends (default), Sources, Query fanouts; no parallel Overview or page-local project switcher.
 
@@ -395,21 +393,6 @@ Prompt results belong to the Prompts section, on the prompt row, because the pro
 **Commerce.** This conditional Analyze destination requires persisted capability evidence. Its catalog is the sole target selector. Group catalog-wide secondary actions behind one disclosure; show bulk actions only after selection; align one correction control with the selected target's heading.
 
 **Agent.** A full workspace in Agent mode, not a sheet over Dashboard pages. New chat offers a freeform composer, starter prompts, a skill picker and the top recommended Actions; an attached Action and typed evidence references show as removable chips, never as pasted evidence. A chat is one centred thread with the composer pinned to the bottom; its one output renders inline as a card in the thread: rendered Markdown, edit-as-new-revision, copy, Markdown export, sources, revision history with restore-as-new-revision, and outline approval for outline-first content. Queued, running, cancelled, failed and stopped-at-limit are distinct states with a Stop control while active. Actions list by deterministic priority with status and target filters; detail shows diagnosis, evidence-family convergence, member evidence in a drawer, recommended approach, what to avoid, measurement legs, linked chats, Dismiss/Reopen and Work on this. Agent chat headers name the sidebar section. Action details name the actual target, place its URL directly below, and separate Diagnosis/Implementation from supporting Evidence/Avoid/Measure with cards. Only observed sources count as supporting evidence; other statuses stay accessible in a counted disclosure. Skills show what each produces, never methodology. Evidence screens offer Ask agent, and Work on this where an Action exists.
-
-#### The insight object
-
-The product loop is acquire evidence → understand → detect gaps → create opportunities → improve → verify → recommend next. Its reusable unit is one shared insight component across Analyze, Track, and the Agent workspace.
-
-Required anatomy, in order:
-
-1. **Priority + source layer:** identify which system found it.
-2. **Claim:** one specific sentence, quantified when a count exists.
-3. **Evidence:** scope, selector, observation time; resolves to persisted evidence.
-4. **Why this matters:** a pack expectation, demand signal, or contradiction—not causality or invented benchmarks.
-5. **Potential impact:** deterministic priority formula, never model-authored.
-6. **Two actions:** inspect and act.
-
-The same insight retains its server ID/cache identity everywhere. No resolvable evidence means no rendering. Label coverage/unknowns honestly. Deterministic ranking is authoritative; the agent may group/explain, not reorder. Dense summaries may use `hideWhyThisMatters`; priority, claim, evidence, impact, and actions stay visible.
 
 ### Marketing and auth
 
@@ -458,7 +441,7 @@ Controls need direct labels, immediate pressed feedback and central keyboard foc
 
 `components/ui/chart.tsx` owns the chart frame: the responsive container, the axis defaults, the legend and the hover card. It is built on Recharts, which sizes to the container it is actually given — the hand-rolled predecessors scaled a fixed viewBox unevenly, squashing their own tick text and running a rotated axis title through the values beside it. Series colours come from the `--color-chart-1..8` ladder and are passed as token values, never literals.
 
-`series-chart.tsx` is on this frame. `trend-chart.tsx`, `chart-axes.tsx` and `performance-chart.tsx` are still the hand-rolled SVG layer and are migrating; they carry behaviour the frame has yet to prove it can hold (gap-not-zero with version markers, per-point evidence links, timestamp-proportional spacing). `donut-chart.tsx` stays hand-drawn on purpose: it is a fixed square with no axes, and it distinguishes the declared total from its slices' sum, which a generic pie does not.
+`series-chart.tsx` is on this frame. `trend-chart.tsx`, `chart-axes.tsx` and `components/performance/performance-chart.tsx` are still the hand-rolled SVG layer and are migrating; they carry behaviour the frame has yet to prove it can hold (gap-not-zero with version markers, per-point evidence links, timestamp-proportional spacing). `donut-chart.tsx` stays hand-drawn on purpose: it is a fixed square with no axes, and it distinguishes the declared total from its slices' sum, which a generic pie does not.
 
 Every chart is `aria-hidden` and carries a written description instead. A null point is a gap, never a zero, in the drawing and in the hover card alike.
 
@@ -515,7 +498,7 @@ Sanctioned explanatory motion: rotating answer-engine wordmarks; product-window 
 Answer-engine rotors pause outside the viewport and in hidden tabs. Static product
 preview bars render complete on the server without a hydration-time collapse or replay.
 
-All motion stops under `prefers-reduced-motion: reduce`: global CSS animations/transitions are neutralised and SMIL pipeline dots are hidden. WCAG 2.1 AA is the minimum. Preserve visible focus, non-colour-only meaning, usable keyboard/touch interactions, forced-colours, and print.
+All motion stops under `prefers-reduced-motion: reduce`: global CSS animations/transitions are neutralised. WCAG 2.1 AA is the minimum. Preserve visible focus, non-colour-only meaning, usable keyboard/touch interactions, forced-colours, and print.
 
 ## Review checklist
 

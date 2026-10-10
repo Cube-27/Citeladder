@@ -1,5 +1,5 @@
 /**
- * Workspace membership, invitation and product-tour endpoints (plan §2.4).
+ * Workspace membership and invitation endpoints.
  *
  * Everything here except `acceptInvitation` is administrative: the server
  * refuses any role without `manage_members`, and these helpers exist so the
@@ -21,7 +21,6 @@ import { z } from 'zod';
 
 import { apiClient, type ApiRequestOptions } from './client';
 import {
-  productTourSchema,
   workspaceInvitationIssuedSchema,
   workspaceInvitationSchema,
   workspaceMemberSchema,
@@ -29,7 +28,7 @@ import {
   workspaceAccessSchema,
 } from '@citeladder/contracts/auth';
 import { strictValidate } from '@citeladder/contracts/validation';
-import type { ProductTour, ProductTourStatus, Workspace } from './types';
+import type { Workspace } from './types';
 
 export type WorkspaceMember = z.infer<typeof workspaceMemberSchema>;
 export type WorkspaceInvitation = z.infer<typeof workspaceInvitationSchema>;
@@ -49,25 +48,6 @@ export const workspacesApi = {
       await apiClient.get(`/workspaces/${workspaceId}/access`, { ...options, workspaceId }),
       'workspaces.access',
     ),
-  getProductTour: async (workspaceId: string, options?: ApiRequestOptions) => {
-    const response = await apiClient.get<ProductTour>(`/workspaces/${workspaceId}/product-tour`, {
-      ...options,
-      workspaceId,
-    });
-    return strictValidate(productTourSchema, response, 'workspaces.getProductTour');
-  },
-  updateProductTour: async (
-    workspaceId: string,
-    payload: { version: string; status: ProductTourStatus; step_id?: string | null },
-    options?: ApiRequestOptions,
-  ) => {
-    const response = await apiClient.patch<ProductTour>(
-      `/workspaces/${workspaceId}/product-tour`,
-      payload,
-      { ...options, workspaceId },
-    );
-    return strictValidate(productTourSchema, response, 'workspaces.updateProductTour');
-  },
   listMembers: async (workspaceId: string, options?: ApiRequestOptions) => {
     const res = await apiClient.get<WorkspaceMember[]>(`/workspaces/${workspaceId}/members`, {
       ...options,

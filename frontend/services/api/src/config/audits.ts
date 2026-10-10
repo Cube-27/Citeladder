@@ -36,6 +36,14 @@ export const visibility = {
     audits.constants.audit_status_completed,
     audits.constants.audit_status_partially_completed,
   ],
+  /** Admitted and not yet settled: the Dashboard says the first audit is under way. */
+  in_flight_audit_statuses: [
+    audits.constants.audit_status_validating,
+    audits.constants.audit_status_queued,
+    audits.constants.audit_status_running,
+    audits.constants.audit_status_analyzing,
+    audits.constants.audit_status_reporting,
+  ],
   measurement_policy_key: audits.constants.measurement_policy_key,
   overview_present_outcome: dataforseo.surface.outcome_ai_overview_present,
   successful_outcomes: dataforseo.surface.successful_outcomes,

@@ -260,7 +260,6 @@ async function createAccounts(
           workspace_id: shared.workspaceId,
           user_id: user.id,
           role: shared.role,
-          product_tour_status: 'not_started',
           created_at: now,
           updated_at: now,
         })

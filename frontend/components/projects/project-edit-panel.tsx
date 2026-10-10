@@ -8,16 +8,17 @@ import { Alert } from '@/components/ui/alert';
 import { InlineEmpty } from '@/components/ui/inline-empty';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
-import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { MarketSelect } from '@/components/ui/market-select';
+import { textRole } from '@/components/ui/typography';
 import { projectsApi } from '@/lib/api/projects';
 import { brandDiscoveriesApi } from '@/lib/api/brand-discoveries';
 import { queryKeys } from '@/lib/api/query-keys';
 import { brandDiscoveryKeys } from '@/lib/api/query-keys/brand-discovery';
 import type { Project } from '@/lib/api/types';
 import { humanizeApiError } from '@/lib/api/errors';
+import { refreshBrandLogos } from '@/lib/project/brand-logos';
 import { COUNTRY_OPTIONS, LANGUAGE_OPTIONS } from '@/lib/setup/markets';
 
 import { MentionRuleFields, mentionRuleDraft, type MentionRuleDraft } from './mention-rule-fields';
@@ -155,6 +156,8 @@ export function ProjectEditPanel({
         { workspaceId: project.workspace_id },
       ),
     onSuccess: async () => {
+      // The website or a competitor's domains may have changed.
+      refreshBrandLogos(queryClient, project.id, project.workspace_id);
       await queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
       onOpenChange(false);
     },
@@ -250,7 +253,7 @@ export function ProjectEditPanel({
         </div>
 
         <div className="grid gap-4">
-          <p className={eyebrowClasses}>Domains</p>
+          <p className={textRole('label')}>Domains</p>
           <Field label="Owned" hint="Comma separated">
             {(props) => (
               <Input
@@ -274,7 +277,7 @@ export function ProjectEditPanel({
 
         <div className="grid gap-2">
           <div className="flex items-center gap-2">
-            <p className={eyebrowClasses}>Competitors</p>
+            <p className={textRole('label')}>Competitors</p>
             <span className="type-caption">
               {competitors.length} of {maximumCompetitors ?? '…'}
             </span>
