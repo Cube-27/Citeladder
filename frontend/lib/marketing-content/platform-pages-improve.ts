@@ -337,7 +337,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
     path: '/platform/integrations',
     title: 'Search, Analytics, Log & AI Integrations | CiteLadder',
     description:
-      'Connect Google Search Console, GA4, Bing Webmaster Tools, Cloudflare and Amazon CloudFront logs, model providers, DataForSEO and MCP clients to CiteLadder.',
+      'Connect Google Search Console, GA4, Bing Webmaster Tools, Cloudflare, Amazon CloudFront and Google Cloud logs, model providers, DataForSEO and MCP clients to CiteLadder.',
     heading: 'Connect your search, analytics and research data.',
     lead: 'Bring in first-party search, analytics and server-log data, configure model providers, and add research when it helps. Each connection does a specific job, and you can start without any of them.',
     cta: 'setup',
@@ -350,7 +350,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
       },
       {
         title: 'Server logs',
-        body: 'Cloudflare Worker, Cloudflare Logpush, Amazon CloudFront, a webhook or a file upload for AI crawler logs.',
+        body: 'Cloudflare Worker, Cloudflare Logpush, Amazon CloudFront, Google Cloud, a webhook or a file upload for AI crawler logs.',
       },
       {
         title: 'Models, research and assistants',
@@ -370,10 +370,11 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
       },
       {
         title: 'Send AI crawler logs your way.',
-        body: 'On paid plans, connect the edge you already run. Use a Cloudflare Worker or Logpush job, stream Amazon CloudFront logs, post batches to a webhook, or upload a file. CiteLadder shows log coverage per day, so gaps are visible.',
+        body: 'On paid plans, connect the edge you already run. Use a Cloudflare Worker or Logpush job, stream Amazon CloudFront logs, route Google Cloud load balancer and Cloud Run logs through Pub/Sub, post batches to a webhook, or upload a file. CiteLadder shows log coverage per day, so gaps are visible.',
         points: [
           'Cloudflare Worker and Cloudflare Logpush',
           'Amazon CloudFront log streams',
+          'Google Cloud load balancer and Cloud Run logs through Pub/Sub',
           'Webhook and file upload for any other server',
           'IP addresses used for verification only, never stored',
         ],
@@ -411,7 +412,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
       },
       {
         q: 'Which integrations are available?',
-        a: 'Google Search Console, GA4, Bing Webmaster Tools, AI crawler log sources (Cloudflare Worker, Cloudflare Logpush, Amazon CloudFront, webhook and upload), DataForSEO, model providers and MCP clients.',
+        a: 'Google Search Console, GA4, Bing Webmaster Tools, AI crawler log sources (Cloudflare Worker, Cloudflare Logpush, Amazon CloudFront, Google Cloud, webhook and upload), DataForSEO, model providers and MCP clients.',
       },
       {
         q: 'Is there a native Shopify sync?',
@@ -419,7 +420,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
       },
       {
         q: 'Which servers can send crawler logs?',
-        a: 'Cloudflare and Amazon CloudFront connect directly. Any other server or CDN can post logs to a webhook or upload a file.',
+        a: 'Cloudflare, Amazon CloudFront and Google Cloud load balancers and Cloud Run connect directly. Any other server or CDN can post logs to a webhook or upload a file.',
       },
       {
         q: 'Can I use my own model provider?',

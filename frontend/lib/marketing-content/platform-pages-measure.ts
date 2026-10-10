@@ -55,7 +55,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
         body: 'Read GA4 sessions from recognized AI assistants and, on paid plans, your own server logs for AI crawler requests. Site Health shows which of those crawlers your robots.txt allows. Together they show whether engines can reach a page, whether they fetch it, and whether people arrive.',
         points: [
           'AI referral sessions, landing pages and key events from GA4',
-          'Verified AI crawler requests from Cloudflare, CloudFront, a webhook or an upload',
+          'Verified AI crawler requests from Cloudflare, CloudFront, Google Cloud, a webhook or an upload',
           'robots.txt access by crawler purpose',
         ],
         visual: 'crawlers',

@@ -42,7 +42,7 @@ export const OUTCOME_PAGES: readonly PlatformPage[] = [
         title: 'See which AI crawlers fetch your pages.',
         body: 'On paid plans, send your server logs and CiteLadder identifies requests from known crawlers such as OAI-SearchBot, ChatGPT-User, ClaudeBot, PerplexityBot and Googlebot. Requests are checked against published IP ranges, so a spoofed user agent is reported as unverified rather than counted as the real bot.',
         points: [
-          'Cloudflare Worker, Cloudflare Logpush, Amazon CloudFront, webhook or file upload',
+          'Cloudflare, Amazon CloudFront, Google Cloud, webhook or file upload',
           'Requests by crawler, purpose and page',
           'Verified, unverifiable and failed checks counted apart',
           'Log coverage shown, so a gap is not read as no crawls',
@@ -67,7 +67,7 @@ export const OUTCOME_PAGES: readonly PlatformPage[] = [
       },
       {
         title: 'Add server logs',
-        body: 'On paid plans, connect Cloudflare or CloudFront, post logs to a webhook, or upload a file.',
+        body: 'On paid plans, connect Cloudflare, CloudFront or Google Cloud, post logs to a webhook, or upload a file.',
       },
       {
         title: 'Review traffic',
@@ -100,7 +100,7 @@ export const OUTCOME_PAGES: readonly PlatformPage[] = [
       },
       {
         q: 'How do AI crawler logs reach CiteLadder?',
-        a: 'From a Cloudflare Worker, Cloudflare Logpush, an Amazon CloudFront log stream, a webhook you call, or a file upload. CiteLadder does not observe crawlers on its own; it needs your site’s logs.',
+        a: 'From a Cloudflare Worker, Cloudflare Logpush, an Amazon CloudFront log stream, Google Cloud load balancer and Cloud Run logs through Pub/Sub, a webhook you call, or a file upload. CiteLadder does not observe crawlers on its own; it needs your site’s logs.',
       },
       {
         q: 'Are crawler logs in the free trial?',
