@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react';
 import { defineConfig, type ViteUserConfig, loadEnv } from 'vite-plus';
 
 import { createServerProxy } from './server-proxy.ts';
-import { publicOrigins } from '../../lib/config/public-origins.ts';
+import { publicApiOrigin, publicOrigins } from '../../lib/config/public-origins.ts';
 
 const appRoot = fileURLToPath(new URL('.', import.meta.url));
 const frontendRoot = fileURLToPath(new URL('../..', import.meta.url));
@@ -17,6 +17,10 @@ export default defineConfig(({ command, isPreview, mode }): ViteUserConfig => {
     publicOrigins(
       process.env.PUBLIC_WEBSITE_ORIGIN ?? environment.PUBLIC_WEBSITE_ORIGIN,
       process.env.PUBLIC_APP_ORIGIN ?? environment.PUBLIC_APP_ORIGIN,
+      process.env.LOCAL_COMPOSE_BUILD !== 'true',
+    );
+    publicApiOrigin(
+      process.env.PUBLIC_API_ORIGIN ?? environment.PUBLIC_API_ORIGIN,
       process.env.LOCAL_COMPOSE_BUILD !== 'true',
     );
   }
@@ -69,6 +73,7 @@ export default defineConfig(({ command, isPreview, mode }): ViteUserConfig => {
       'process.env.NEXT_PUBLIC_SELF_SERVE_SIGNUP': publicValue('NEXT_PUBLIC_SELF_SERVE_SIGNUP'),
       'process.env.PUBLIC_WEBSITE_ORIGIN': publicValue('PUBLIC_WEBSITE_ORIGIN'),
       'process.env.PUBLIC_APP_ORIGIN': publicValue('PUBLIC_APP_ORIGIN'),
+      'process.env.PUBLIC_API_ORIGIN': publicValue('PUBLIC_API_ORIGIN'),
       // Optional: empty means the production docs origin (lib/config/docs.ts).
       'process.env.PUBLIC_DOCS_ORIGIN': JSON.stringify(
         process.env.PUBLIC_DOCS_ORIGIN ?? environment.PUBLIC_DOCS_ORIGIN ?? '',

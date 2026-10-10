@@ -67,7 +67,7 @@ async function setup(
 const body = (...rows: Record<string, unknown>[]) =>
   Buffer.from(rows.map((r) => JSON.stringify(r)).join('\n'));
 const send = (id: string, token: string, payload: Buffer, key = randomUUID()) =>
-  app.request('/api/v1/crawl-logs/ingest/' + id, {
+  app.request('/v1/crawl-logs/ingest/' + id, {
     method: 'POST',
     headers: {
       authorization: 'Bearer ' + token,
@@ -514,7 +514,7 @@ describe('sanitized durable admission', () => {
       crawlLogs.batches_per_source_per_hour = old;
     }
     const b = await setup();
-    const bomb = await app.request('/api/v1/crawl-logs/ingest/' + b.source.id, {
+    const bomb = await app.request('/v1/crawl-logs/ingest/' + b.source.id, {
       method: 'POST',
       headers: { authorization: 'Bearer ' + b.token, 'content-encoding': 'gzip' },
       body: new Uint8Array(gzipSync(Buffer.alloc(crawlLogs.max_batch_bytes + 1))),

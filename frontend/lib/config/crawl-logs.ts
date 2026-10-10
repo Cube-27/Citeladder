@@ -31,7 +31,8 @@ export const CRAWL_LOG_SETUPS = [
     guide: docsUrl('/ai-traffic/#file-upload'),
   },
 ] as const;
-export const CRAWL_INGEST_ORIGIN = process.env.PUBLIC_WEBSITE_ORIGIN || 'http://localhost:4321';
+/** Machine senders post to the API host; locally that is the API container itself. */
+export const CRAWL_INGEST_ORIGIN = process.env.PUBLIC_API_ORIGIN || 'http://127.0.0.1:8100';
 export const TRAFFIC_TABS = [
   { value: 'overview', label: 'Overview', crawlOnly: false },
   { value: 'crawlers', label: 'Crawlers', crawlOnly: true },

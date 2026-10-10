@@ -34,7 +34,8 @@ import {
 } from '../crawl-logs/uploads.ts';
 
 const root = '/api/v1/projects/{project_id}/crawl-logs';
-const ingestPath = '/api/v1/crawl-logs/ingest/{source_id}';
+/** Machine routes: served only on the API host (`api.citeladder.com`). */
+const ingestPath = '/v1/crawl-logs/ingest/{source_id}';
 const uploadBatchPath = root + '/sources/{source_id}/uploads/{upload_id}/batches';
 const selfBounded = [ingestPath, uploadBatchPath].map((template) => template.split('/'));
 const matchesTemplate = (template: string[], segments: string[]) =>

@@ -3,7 +3,8 @@ import type { OpenApiDocument } from './document.ts';
 import { onlyOf } from '../lists.ts';
 
 export type OwnershipInputs = {
-  apiPrefix: string;
+  /** The browser API and API-host machine prefixes. */
+  prefixes: readonly string[];
   manifest: Readonly<Record<string, string>>;
   typescript: OpenApiDocument;
 };
@@ -12,7 +13,8 @@ export function routeOwnershipFailures(inputs: OwnershipInputs): string[] {
   const failures: string[] = [];
   const families = new Set<string>();
   for (const [path, item] of Object.entries(inputs.typescript.paths)) {
-    if (path !== inputs.apiPrefix && !path.startsWith(`${inputs.apiPrefix}/`)) continue;
+    if (!inputs.prefixes.some((prefix) => path === prefix || path.startsWith(`${prefix}/`)))
+      continue;
     for (const [method, operation] of Object.entries(item)) {
       const family = onlyOf(new Set(operation.tags ?? []));
       if (family === undefined) {

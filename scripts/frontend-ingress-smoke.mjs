@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
 
-const [marketing, app] = process.argv.slice(2);
+const [marketing, app, api] = process.argv.slice(2);
 assert.ok(
   marketing && app,
-  'Usage: node scripts/frontend-ingress-smoke.mjs <marketing-origin> <app-origin>',
+  'Usage: node scripts/frontend-ingress-smoke.mjs <marketing-origin> <app-origin> [api-origin]',
 );
+const MACHINE_PATH = '/v1/crawl-logs/ingest/11111111-1111-4111-8111-111111111111';
 
 async function get(origin, path, accept = '*/*') {
   return fetch(new URL(path, origin), {
@@ -55,8 +56,17 @@ const home = await get(marketing, '/');
 assert.equal(home.status, 200, 'Marketing homepage');
 assert.match(await home.text(), /<h1[\s>]/, 'Marketing renders its content on the server');
 await Promise.all(
-  ['/not-a-real-page', '/login', '/api/v1/brand-discovery-catalog'].map(apexRejects),
+  ['/not-a-real-page', '/login', '/api/v1/brand-discovery-catalog', MACHINE_PATH].map(apexRejects),
 );
+// Machine routes belong to the API host alone.
+assert.equal((await get(app, MACHINE_PATH)).status, 404, 'The app host refuses /v1 machine paths');
+if (api) {
+  for (const path of ['/', '/pricing', '/api/v1/brand-discovery-catalog']) {
+    const refused = await get(api, path);
+    assert.equal(refused.status, 404, `The API host does not serve ${path}`);
+    assert.deepEqual(await refused.json(), { error: { code: 'not_found' } });
+  }
+}
 await Promise.all(
   [
     '/login',
@@ -76,5 +86,5 @@ assert.equal(catalog.status, 200, 'The app Worker proxies the API');
 assert.match(catalog.headers.get('cache-control') ?? '', /no-store/);
 await catalog.json();
 console.log(
-  'Frontend smoke passed: marketing, app routes, CSS/JS, cache policy, API proxy and 404s.',
+  `Frontend smoke passed: marketing, app routes, CSS/JS, cache policy, API proxy and 404s${api ? ', API host allowlist' : ''}.`,
 );

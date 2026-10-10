@@ -89,11 +89,11 @@ async function dynamicRoute(
   env: WorkerEnv,
   path: string,
 ): Promise<Response | null> {
-  // Signed payment delivery and operational endpoints have an apex/internal
-  // owner. Reject them before the general API proxy can create a second host.
+  // Signed payment delivery, machine routes (API host) and operational
+  // endpoints have another owner. Reject them before a proxy can create a second host.
   if (
     /^\/api\/v1\/billing\/webhooks(?:\/|$)/.test(path) ||
-    /^\/api\/v1\/crawl-logs\/ingest(?:\/|$)/.test(path) ||
+    /^\/v1(?:\/|$)/.test(path) ||
     /^\/api\/v1\/(?:internal|health|ready)(?:\/|$)/.test(path)
   ) {
     return response('Not found.', 404);

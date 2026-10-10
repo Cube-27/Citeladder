@@ -156,9 +156,9 @@ export function CrawlLogCredential({
             <p>Copy this token now. It is shown once.</p>
             <CopyButton value={issued.token}>Copy token</CopyButton>
             <p className="type-caption break-all">
-              {CRAWL_INGEST_ORIGIN + '/api/v1/crawl-logs/ingest/' + issued.id}
+              {CRAWL_INGEST_ORIGIN + '/v1/crawl-logs/ingest/' + issued.id}
             </p>
-            <CopyButton value={CRAWL_INGEST_ORIGIN + '/api/v1/crawl-logs/ingest/' + issued.id}>
+            <CopyButton value={CRAWL_INGEST_ORIGIN + '/v1/crawl-logs/ingest/' + issued.id}>
               Copy endpoint
             </CopyButton>
           </>

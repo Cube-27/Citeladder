@@ -119,7 +119,8 @@ describe('product Worker routing', () => {
   it('rejects apex-owned and machine-facing endpoints on the app host', async () => {
     for (const path of [
       '/api/v1/billing/webhooks/razorpay',
-      '/api/v1/crawl-logs/ingest/11111111-1111-4111-8111-111111111111',
+      '/v1/crawl-logs/ingest/11111111-1111-4111-8111-111111111111',
+      '/v1/crawl-logs/firehose/11111111-1111-4111-8111-111111111111',
       '/api/v1/billing/%77ebhooks/razorpay',
       '/mcp/register',
       '/authorize',

@@ -1,7 +1,7 @@
 /**
  * API responses are never cached unless they opt into private caching.
  *
- * Every `/api/` response, errors included, carries `private, no-store`
+ * Every `/api/` and `/v1/` response, errors included, carries `private, no-store`
  * unless the route already chose `private, max-age=...`.
  */
 import type { MiddlewareHandler } from 'hono';
@@ -11,7 +11,7 @@ import type { AppEnv } from '../context.ts';
 export function apiNoStore(): MiddlewareHandler<AppEnv> {
   return async (c, next) => {
     await next();
-    if (!c.req.path.startsWith('/api/')) return;
+    if (!c.req.path.startsWith('/api/') && !c.req.path.startsWith('/v1/')) return;
     const cacheControl = c.res.headers.get('cache-control') ?? '';
     if (cacheControl.toLowerCase().startsWith('private, max-age=')) return;
     c.res.headers.set('cache-control', 'private, no-store, max-age=0');

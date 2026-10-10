@@ -55,9 +55,10 @@ jobs:
     needs: changes
     if: needs.changes.outputs.frontend == 'true'
     env:
-      # Production-mode quality builds use the two accepted public origins.
+      # Production-mode quality builds use the accepted public origins.
       PUBLIC_WEBSITE_ORIGIN: https://citeladder.com
       PUBLIC_APP_ORIGIN: https://app.citeladder.com
+      PUBLIC_API_ORIGIN: https://api.citeladder.com
     permissions:
       contents: read
     runs-on: ubuntu-latest
