@@ -1,6 +1,6 @@
 ---
 title: 'MCP tool reference'
-description: 'Choose the narrowest registered read tool that answers your question.'
+description: 'Choose the narrowest registered read tool that answers your question, and see which tools make changes.'
 group: 'Connect with MCP'
 order: 320
 ---
@@ -42,6 +42,10 @@ In clients that support MCP Apps, such as Claude and ChatGPT, three tools open a
 | `open_analytics`     | The CiteLadder project picker                                          |
 
 Clients without MCP Apps ignore the view and use the read tools instead.
+
+## Make changes
+
+A connection approved with **Allow changes** also lists change tools, marked **Changes** in the catalog below. `create_topic`, `rename_topic`, `update_prompt_text`, `add_competitor`, `update_action_status` and `cancel_audit` run when called. `prepare_add_prompts`, `prepare_archive_prompts`, `prepare_launch_audit`, `prepare_schedule` and `prepare_declare_implemented` return a preview and a confirmation token; nothing changes until the assistant calls `confirm_change` with that token after you agree.
 
 ## Read records and windows precisely
 

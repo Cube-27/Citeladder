@@ -24,7 +24,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
       },
       {
         title: 'Improve',
-        body: 'Ranked Actions per page, Agent-prepared briefs and edits, and read-only MCP access from the assistants your team already uses.',
+        body: 'Ranked Actions per page, Agent-prepared briefs and edits, and MCP access with confirmed changes from the assistants your team already uses.',
       },
     ],
     features: [
@@ -125,7 +125,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
       },
       {
         q: 'Can I use CiteLadder from Claude or ChatGPT?',
-        a: 'Yes. The CiteLadder MCP server gives compatible assistants read-only access to the workspaces you approve, so you can ask about your visibility, sources and site evidence in plain language.',
+        a: 'Yes. The CiteLadder MCP server gives compatible assistants access to the workspaces you approve, so you can ask about your visibility, sources and site evidence in plain language. Changes happen only if you allow them and confirm each one.',
       },
     ],
     closing: 'See what AI says about your brand.',

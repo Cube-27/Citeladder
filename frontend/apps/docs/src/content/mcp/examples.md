@@ -20,6 +20,18 @@ Short questions work well once a project is chosen:
 
 The longer requests below set a stricter standard for evidence.
 
+## Add prompts with your confirmation
+
+With **Allow changes** on the connection:
+
+```text
+Suggest three buyer questions about trail running shoes that our tracked
+prompts miss. Prepare to add them, show me the preview, and add them only
+after I say yes.
+```
+
+The assistant prepares the change and shows which prompts would be added, any it dropped and why, and your prompt slots afterwards. Reply yes and it confirms; the prompts are active at once.
+
 ## Review an AI Visibility audit
 
 ```text

@@ -66,7 +66,7 @@ export const AI_INSTRUCTIONS: readonly ReferenceSection[] = [
       'Content Intelligence uses Agent workflows to prepare briefs, proposed page edits and internal-link plans for review. Agent access is not included in the public trial.',
       'Demand Intelligence connects Google Search Console and Google Analytics 4 evidence to owned pages and search opportunities.',
       'The Agent helps explain evidence, plan work, and produce reviewable deliverables. It uses the same project evidence and read tools as the MCP server.',
-      'The MCP server lets authorized assistants read project evidence through scoped tools.',
+      'The MCP server lets authorized assistants read project evidence through scoped tools and, when the user allows changes, make changes the user confirms.',
     ],
     sources: [
       ...PUBLISHED_PLATFORM.map((item) => ({ label: item.title, href: item.href })),
@@ -225,7 +225,7 @@ export const REFERENCE_ENTITIES: readonly ReferenceEntity[] = [
       name: 'MCP server',
       id: 'mcp',
       description:
-        'Authorized, scoped read tools for assistants to inspect the same persisted project evidence used by CiteLadder.',
+        'Authorized, scoped tools for assistants to inspect the same persisted project evidence used by CiteLadder and, when the user allows it, make changes the user confirms.',
       guide: 'mcp',
     },
   ].map((capability): ReferenceEntity => ({

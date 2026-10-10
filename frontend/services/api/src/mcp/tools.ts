@@ -503,14 +503,23 @@ export const presentationTools: ReadonlySet<string> = new Set<ToolName>([
   'open_analytics',
 ]);
 
-/** JSON Schema without the noise models pay for: no $schema, UUID patterns or null branches. */
+/**
+ * JSON Schema without the noise models pay for: no $schema, patterns a format
+ * already names, safe-integer bounds or null branches.
+ */
+const FORMATS = new Set(['uuid', 'date', 'date-time']);
 function compact(node: unknown): unknown {
   if (Array.isArray(node)) return node.map(compact);
   if (node === null || typeof node !== 'object') return node;
   const source = node as Record<string, unknown>;
   const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(source)) {
-    if (key === '$schema' || (key === 'pattern' && source.format === 'uuid')) continue;
+    if (
+      key === '$schema' ||
+      (key === 'pattern' && FORMATS.has(String(source.format))) ||
+      (['minimum', 'maximum'].includes(key) && Math.abs(Number(value)) === Number.MAX_SAFE_INTEGER)
+    )
+      continue;
     out[key] = compact(value);
   }
   const options = out.anyOf;
