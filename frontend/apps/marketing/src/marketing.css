@@ -481,6 +481,83 @@
   border-top: 1px solid var(--color-border);
 }
 
+/* How it works: numbered steps joined by one hairline on wide screens. */
+.mk-steps {
+  position: relative;
+  display: grid;
+  gap: 2rem;
+}
+
+@media (min-width: 48rem) {
+  .mk-steps {
+    grid-auto-columns: minmax(0, 1fr);
+    grid-auto-flow: column;
+    gap: 2.5rem;
+  }
+
+  .mk-steps::before {
+    content: '';
+    position: absolute;
+    top: 1rem;
+    right: 0;
+    left: 0;
+    border-top: 1px dashed var(--color-border);
+  }
+}
+
+.mk-steps li {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: 0.5rem;
+}
+
+.mk-step-number {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  margin-bottom: 0.75rem;
+  place-items: center;
+  border-radius: var(--radius-full);
+  background: var(--color-panel);
+  border: 1px solid var(--color-accent-border);
+  color: var(--color-accent-text);
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Questions a capability answers, as quiet cards. */
+.mk-questions {
+  display: grid;
+  gap: 0.75rem;
+}
+
+@media (min-width: 48rem) {
+  .mk-questions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.mk-questions li {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius-lg);
+  background: var(--color-panel);
+  box-shadow: var(--elevation-card);
+  color: var(--color-foreground);
+  font-size: var(--text-base);
+  line-height: var(--text-base--line-height);
+}
+
+.mk-questions svg {
+  flex: none;
+  margin-top: 0.25rem;
+  color: var(--color-accent-text);
+}
+
 .mk-features {
   display: grid;
   gap: clamp(4rem, 9vw, 7rem);

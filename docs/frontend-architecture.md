@@ -86,7 +86,8 @@ navigation, footer, overview cards and sitemap. The Astro `/platform/[...slug]`
 route admits only those published destinations; substantive narratives live in
 `platform-pages.ts` and render on the server with the existing marketing primitives.
 Product pages have their own metadata and WebPage/breadcrumb relationships to
-the single CiteLadder software identity. Unknown or held capability paths return
+the single CiteLadder software identity, plus FAQPage markup built from the FAQ
+each page renders. Unknown or held capability paths return
 404. The `/mcp` protocol endpoint and blocked former app roots remain unchanged.
 
 Illustrative product excerpts are coded views in

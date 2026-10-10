@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ArrowRight, Check, ChevronDown } from 'lucide-react';
+import { ArrowRight, Check, ChevronDown, MessageCircleQuestion } from 'lucide-react';
 
 import { appHref } from '@/lib/config/app-link';
 import { docsHref } from '@/lib/config/docs';
@@ -21,16 +21,22 @@ import { Section, SectionHeader } from '../primitives/section';
 import {
   AcquisitionView,
   ActionsView,
+  AdsView,
   AgentView,
   AnswerView,
   CitedUrlView,
   CommerceView,
+  CrawlerView,
   DemandView,
+  EarnedSourceView,
+  EnginesView,
   IntegrationsView,
   McpToolsView,
   McpView,
   PageEvidenceView,
   PageReportView,
+  PerceptionView,
+  PillarsView,
   ProductShot,
   PromptsView,
   PropertyMappingView,
@@ -69,6 +75,12 @@ const VIEWS: Readonly<Record<PlatformVisual, () => ReactNode>> = {
   'shelf-setup': ShelfSetupView,
   'mcp-tools': McpToolsView,
   'property-mapping': PropertyMappingView,
+  perception: PerceptionView,
+  ads: AdsView,
+  engines: EnginesView,
+  crawlers: CrawlerView,
+  earned: EarnedSourceView,
+  pillars: PillarsView,
 };
 
 const VIEW_TITLES: Readonly<Record<PlatformVisual, string>> = {
@@ -95,6 +107,12 @@ const VIEW_TITLES: Readonly<Record<PlatformVisual, string>> = {
   'shelf-setup': 'AI Shelf · Setup',
   'mcp-tools': 'MCP · Tools',
   'property-mapping': 'Integrations · Property',
+  perception: 'AI Visibility · Perception',
+  ads: 'AI Visibility · Ads',
+  engines: 'AI Visibility · Engines',
+  crawlers: 'AI Traffic · Crawlers',
+  earned: 'Sources · Earned page',
+  pillars: 'Site Health · Overview',
 };
 
 /** Guides and solution anchors a product page may relate to. */
@@ -267,6 +285,36 @@ export function PlatformPageContent({ page }: Readonly<{ page: PlatformPage }>) 
         </Section>
       )}
 
+      <Section aria-label="How it works">
+        <SectionHeader title="How it works." />
+        <ol className="mk-steps">
+          {page.steps.map((step, index) => (
+            <li key={step.title}>
+              <span className="mk-step-number" aria-hidden>
+                {index + 1}
+              </span>
+              <h3 className="website-feature-heading">{step.title}</h3>
+              <p className="website-body">{step.body}</p>
+            </li>
+          ))}
+        </ol>
+      </Section>
+
+      <Section tone="soft" aria-label="Questions you can answer">
+        <SectionHeader
+          title="Questions you can answer."
+          lead="Asked the way your team asks them, answered from recorded evidence."
+        />
+        <ul className="mk-questions">
+          {page.questions.map((question) => (
+            <li key={question}>
+              <MessageCircleQuestion aria-hidden className="size-4" />
+              {question}
+            </li>
+          ))}
+        </ul>
+      </Section>
+
       {overview && (
         <Section id="capabilities">
           <SectionHeader
@@ -279,7 +327,7 @@ export function PlatformPageContent({ page }: Readonly<{ page: PlatformPage }>) 
 
       <Section tone={overview ? 'soft' : 'paper'}>
         <div className="mk-split">
-          <SectionHeader title="Questions, answered." />
+          <SectionHeader title="Frequently asked questions." />
           <FaqList faqs={page.faqs} />
         </div>
       </Section>

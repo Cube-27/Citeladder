@@ -34,6 +34,8 @@ export {
   SearchView,
   SiteHealthView,
 } from './views-diagnose';
+export { AdsView, EnginesView, PerceptionView } from './views-signals';
+export { CrawlerView, EarnedSourceView, PillarsView } from './views-evidence';
 export {
   ActionsView,
   AgentView,

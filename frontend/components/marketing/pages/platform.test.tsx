@@ -22,6 +22,46 @@ it.each([
   }
 });
 
+it('renders the steps, questions and FAQ a capability page declares', () => {
+  render(
+    <PlatformPageContent
+      page={{
+        path: '/platform/site-health',
+        title: 'Site Health | CiteLadder',
+        description: 'Crawl your site.',
+        heading: 'Find site issues.',
+        lead: 'Crawl and review.',
+        cta: 'demo',
+        visual: 'pillars',
+        visualTitle: 'Site Health · Overview',
+        highlights: [],
+        features: [],
+        steps: [
+          { title: 'Crawl', body: 'Sample the site.' },
+          { title: 'Recrawl', body: 'Verify the fix.' },
+        ],
+        questions: ['Did our fixes land?'],
+        faqs: [{ q: 'Does it score llms.txt?', a: 'No, it is a diagnostic.' }],
+        closing: 'Start here.',
+        related: [],
+      }}
+    />,
+  );
+  const steps = screen.getByRole('region', { name: 'How it works' });
+  expect(
+    within(steps)
+      .getAllByRole('heading', { level: 3 })
+      .map((h) => h.textContent),
+  ).toEqual(['Crawl', 'Recrawl']);
+  expect(
+    within(screen.getByRole('region', { name: 'Questions you can answer' })).getByText(
+      'Did our fixes land?',
+    ),
+  ).toBeInTheDocument();
+  expect(screen.getByText('Does it score llms.txt?')).toBeInTheDocument();
+  expect(screen.getByText('AEO Readiness')).toBeInTheDocument();
+});
+
 it('leads the MCP page with the connect strip and closes it with the guide and a demo', () => {
   const page = PLATFORM_PAGES.find((candidate) => candidate.path === '/platform/mcp');
   if (!page) throw new Error('MCP page missing');

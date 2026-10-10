@@ -53,7 +53,11 @@ test.describe('marketing routes', () => {
       expect(schemas.find((schema) => schema['@type'] === 'WebPage')?.about['@id']).toBe(
         product['@id'],
       );
-      expect(schemas.filter((schema) => schema['@type'] === 'FAQPage')).toHaveLength(0);
+      const faq = schemas.filter((schema) => schema['@type'] === 'FAQPage');
+      expect(faq).toHaveLength(1);
+      expect(faq[0].mainEntity.map((entry: { name: string }) => entry.name)).toEqual(
+        copy.faqs.map((entry) => entry.q),
+      );
       expect(sitemap).toContain(`<loc>${new URL(item.href, baseURL).href}</loc>`);
       for (const width of [1440, 390]) {
         await page.setViewportSize({ width, height: 900 });

@@ -1,194 +1,12 @@
 import { AGENT_NOTE, type PlatformPage } from './platform-page-types';
 
-/** Diagnosis, action and connection capabilities. */
+/** Action and connection capabilities: content, the Agent, MCP and integrations. */
 export const IMPROVE_PAGES: readonly PlatformPage[] = [
-  {
-    path: '/platform/site-health',
-    title: 'AEO Website Audit & Technical SEO Checks | CiteLadder',
-    description:
-      'Crawl your site for technical SEO, answer-readiness and AI crawler access issues, with page-level evidence for every finding.',
-    heading: 'Find the site issues that keep you out of answers.',
-    lead: 'Crawl your site and get page-level findings with the evidence attached. Checks cover indexing, structured data and which AI crawlers your robots.txt lets in.',
-    cta: 'demo',
-    visual: 'site-health',
-    visualTitle: 'Site Health',
-    highlights: [
-      {
-        title: 'Page-level evidence',
-        body: 'Each finding shows the page, what was captured and why it matters for that type of page.',
-      },
-      {
-        title: 'AI crawler access',
-        body: 'robots.txt permissions by crawler purpose: AI search, training and user-triggered fetches.',
-      },
-      {
-        title: 'Coverage beside every score',
-        body: 'Scores come with what was checked, so a partial crawl never reads as a full audit.',
-      },
-    ],
-    features: [
-      {
-        title: 'Technical and answer-readiness checks together.',
-        body: 'Review website fundamentals alongside the structure, evidence and machine readability that answer engines rely on. Unresolved checks stay visible instead of passing silently.',
-        points: [
-          'Grouped issues with affected pages',
-          'Page classification behind each check',
-          'Scores paired with crawl coverage',
-        ],
-        visual: 'page-evidence',
-      },
-      {
-        title: 'From a finding to a fix brief.',
-        body: 'Hand any issue to the Agent to prepare a bounded developer brief. Your team implements it, and a later crawl checks the result.',
-        points: [
-          'Ask the Agent from any issue group',
-          'Briefs cite the captured evidence',
-          'Re-crawl to verify the change',
-        ],
-        visual: 'agent',
-      },
-    ],
-    faqs: [
-      {
-        q: 'Does a higher score guarantee AI citations?',
-        a: 'No. It summarizes the checks that applied to your pages. Engines decide what to index and cite on their own.',
-      },
-      {
-        q: 'Is robots permission the same as crawler traffic?',
-        a: 'No. Site Health reads your policy. Allowing a crawler is not evidence that it visited.',
-      },
-    ],
-    closing: 'Give your developers a clear starting point.',
-    related: [
-      '/platform/content-intelligence',
-      '/platform/demand-intelligence',
-      '/platform/agents',
-      '/platform/ai-visibility',
-    ],
-  },
-  {
-    path: '/platform/demand-intelligence',
-    title: 'Search Demand & GSC Opportunity Analysis | CiteLadder',
-    description:
-      'Turn Search Console queries and landing pages into ranked opportunities: striking-distance queries, CTR gaps, competing pages and demand shifts.',
-    heading: 'Find the opportunities already in your search data.',
-    lead: 'Connect Search Console to see which queries reach which pages, and get the signals worth acting on instead of another unranked keyword list.',
-    cta: 'demo',
-    visual: 'demand',
-    visualTitle: 'Search Demand',
-    highlights: [
-      {
-        title: 'Striking distance',
-        body: 'Queries ranking just off page one, tied to the page that ranks for them.',
-      },
-      {
-        title: 'CTR gaps',
-        body: "Pages earning fewer clicks than your property's norm for their position.",
-      },
-      {
-        title: 'Demand shifts',
-        body: 'Coverage-checked changes between periods, with branded demand kept separate.',
-      },
-    ],
-    features: [
-      {
-        title: 'Queries in their landing-page context.',
-        body: 'See what each page appears for before you decide how to change it. Where the page can be read, its title, H1 and content are compared with the queries it wins.',
-        points: [
-          'Grouped by page or by query',
-          'Reporting window and source on every row',
-          'Unknown and ambiguous states kept visible',
-        ],
-        visual: 'query-page',
-      },
-      {
-        title: 'From a signal to a reviewable edit.',
-        body: 'Open the evidence behind any page Action and hand it to the Agent to draft a focused change. Later data shows what happened next.',
-        points: [
-          'Signals become page Actions',
-          'The handoff includes the evidence',
-          'Changes measured against the earlier window',
-        ],
-        visual: 'actions',
-      },
-    ],
-    faqs: [
-      {
-        q: 'Is this data from private AI conversations?',
-        a: 'No. Demand Intelligence uses your connected Search Console data. Suggested prompts are suggestions, not AI search volumes.',
-      },
-      {
-        q: 'How is this different from Search Intelligence?',
-        a: 'Demand uses your own first-party data. Search Intelligence adds external keyword, competitor and backlink research when you need it.',
-      },
-    ],
-    closing: 'Use the search data you already have to choose better work.',
-    related: [
-      '/platform/search-intelligence',
-      '/platform/site-health',
-      '/platform/content-intelligence',
-      '/platform/integrations',
-    ],
-  },
-  {
-    path: '/platform/search-intelligence',
-    title: 'Keyword, Competitor & Backlink Research | CiteLadder',
-    description:
-      'Research keywords, competing domains, top pages and backlinks with optional DataForSEO datasets, priced and confirmed before collection.',
-    heading: 'Keyword and backlink research beside your AI evidence.',
-    lead: 'Add external research when your own data cannot answer the question: ranked keywords, competitors, top pages and backlinks. Each collection shows its scope and price before you confirm it.',
-    cta: 'setup',
-    visual: 'search',
-    visualTitle: 'Search Intelligence',
-    highlights: [
-      {
-        title: 'Keywords and competitors',
-        body: 'Ranked keywords, shared keywords and top pages for your domain and the rivals you choose.',
-      },
-      {
-        title: 'Backlinks and overlap',
-        body: 'Referring domains and link detail, matched to cited sources where the data allows.',
-      },
-      {
-        title: 'No surprise spend',
-        body: 'Every new collection shows its scope and maximum cost, and runs only after you confirm.',
-      },
-    ],
-    features: [
-      {
-        title: 'Review the scope and cost first.',
-        body: 'New DataForSEO research uses a review-and-confirm step. Opening a saved dataset never buys a refresh, and missing results are never rewritten as zero.',
-        points: [
-          'Target, market and row limit up front',
-          'Maximum cost before you confirm',
-          'Saved datasets reopen for free',
-        ],
-        visual: 'acquisition',
-      },
-    ],
-    faqs: [
-      {
-        q: 'Is Search Intelligence in the free trial?',
-        a: 'No. It needs the right plan, a provider connection and a confirmation for each collection. Contact us to discuss your use case.',
-      },
-      {
-        q: 'Are search volumes the number of people asking AI?',
-        a: 'No. They are external search estimates with their own definitions, not a count of AI conversations.',
-      },
-    ],
-    closing: 'Research the questions your own data cannot answer.',
-    related: [
-      '/platform/demand-intelligence',
-      '/platform/citation-intelligence',
-      '/platform/content-intelligence',
-      '/platform/integrations',
-    ],
-  },
   {
     path: '/platform/content-intelligence',
     title: 'Evidence-Backed AI Content Optimization | CiteLadder',
     description:
-      'Prepare content briefs, page edits and internal-link plans from your CiteLadder evidence, and review every revision before it ships.',
+      'Prepare content briefs, page edits, comparison pages, internal-link plans and outreach briefs from your CiteLadder evidence, and review every revision before it ships.',
     heading: 'Content work that starts from the evidence.',
     lead: 'Turn a site finding, buyer question or citation pattern into a brief, a page edit or an internal-link plan. The Agent drafts it from your project evidence, and your team reviews it.',
     cta: 'demo',
@@ -198,28 +16,73 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
     highlights: [
       {
         title: 'Briefs and new pages',
-        body: 'Outline-first drafts for the audience and evidence you choose.',
+        body: 'Outline-first drafts for the audience and evidence you choose, including comparison pages and FAQs.',
       },
       {
         title: 'Edits to existing pages',
         body: 'Focused proposals for one target page, never a promise to fix the whole site.',
       },
       {
-        title: 'Internal links',
-        body: 'Link plans and earned-content briefs for human review.',
+        title: 'Links and earned media',
+        body: 'Internal-link plans and outreach briefs for the third-party pages that cite your competitors.',
       },
     ],
     features: [
       {
-        title: 'Revise until it is right.',
-        body: 'Every deliverable keeps its revisions. Edit sections yourself, ask for a change to one part, and compare any version with the latest.',
+        title: 'Start from a gap you can see.',
+        body: 'Every piece of content work starts from evidence already in your project: an Action, a Site Health issue, a Search Console signal, a cited page that leaves you out, or a prompt you lose. The Agent reads that evidence first, so the draft answers the gap instead of a generic brief.',
         points: [
+          'Pick up any Action or finding as the starting point',
+          'Business context and competitors carried into every draft',
+          'The context used is listed with each output',
+        ],
+        visual: 'actions',
+      },
+      {
+        title: 'Formats for where answers come from.',
+        body: 'AI answers draw on your site and on the places people discuss your category. Content workflows cover both: new pages and edits on your site, plus drafts for the channels engines cite.',
+        points: [
+          'Briefs, new pages, comparison pages and FAQ pages',
+          'Page edits and internal-link plans',
+          'LinkedIn and X posts, video scripts and forum answers',
+          'Outreach briefs for earned sources',
+        ],
+        visual: 'skills',
+      },
+      {
+        title: 'Revise until it is right.',
+        body: 'Every deliverable keeps its revisions. Long pieces start from an outline you approve. Edit sections yourself, ask for a change to one part, and compare any version with the latest.',
+        points: [
+          'Outline first for long-form content',
           'Section-level edits and follow-ups',
           'Full revision history',
-          'Sources linked from every claim',
         ],
         visual: 'revisions',
       },
+    ],
+    steps: [
+      {
+        title: 'Pick a starting point',
+        body: 'Choose an Action, finding or question, or start a new chat with a content skill.',
+      },
+      {
+        title: 'Approve the outline',
+        body: 'The Agent proposes the structure and evidence; you adjust it before drafting.',
+      },
+      {
+        title: 'Review the draft',
+        body: 'Edit sections, ask for changes and compare revisions.',
+      },
+      {
+        title: 'Ship and measure',
+        body: 'Publish through your own process, mark the work implemented, and watch later evidence.',
+      },
+    ],
+    questions: [
+      'What should our comparison page against a named competitor say?',
+      'Which page should we update to answer a prompt we keep losing?',
+      'Which internal links would help a page that answers engines skip?',
+      'What should we pitch to a publisher that lists our competitors?',
     ],
     faqs: [
       {
@@ -227,8 +90,20 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
         a: "No. Content workflows run in CiteLadder's Agent, connected to your project evidence and Actions.",
       },
       {
+        q: 'What can it produce?',
+        a: 'Content briefs, new pages, comparison pages, FAQ pages, edits to existing pages, internal-link plans, outreach briefs, social posts, video scripts and forum answers.',
+      },
+      {
         q: 'Does it publish automatically?',
         a: 'No. Drafting, saving, publishing and measuring are separate decisions your team makes.',
+      },
+      {
+        q: 'Will it invent facts about my company?',
+        a: 'The Agent works from your confirmed business context and saved evidence, and it is instructed not to invent company, product, customer, price or statistic facts. Your team reviews every draft before it is used.',
+      },
+      {
+        q: 'Is it in the free trial?',
+        a: 'No. Content workflows run in the Agent, which is not part of the free trial. Book a demo to try it with your own project.',
       },
     ],
     closing: 'Turn an observed gap into content your team can ship.',
@@ -254,11 +129,11 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
     highlights: [
       {
         title: 'Grounded answers',
-        body: 'Every claim links to the visibility, site or demand record it came from.',
+        body: 'It reads the visibility, site, demand and traffic records in your project before it answers.',
       },
       {
         title: 'Skills for the job',
-        body: 'Research, page edits, technical fixes, internal links, content and prompt portfolios.',
+        body: 'Diagnosis, content, technical fixes, internal links, earned media, growth plans and prompt portfolios.',
       },
       {
         title: 'You stay in control',
@@ -268,7 +143,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
     features: [
       {
         title: 'Hand off from any finding.',
-        body: 'Ask agent from Site Health, Demand or Search Intelligence and the evidence comes with it. Mention open Actions to bring their diagnoses into the conversation.',
+        body: 'Ask the Agent from Site Health, Demand or Search Intelligence and the evidence comes with it. Mention open Actions to bring their diagnoses into the conversation. Each step it reads is shown as it works.',
         points: [
           'Typed handoffs, no copy and paste',
           'One deliverable per conversation',
@@ -276,11 +151,70 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
         ],
         visual: 'skills',
       },
+      {
+        title: 'Skills that know the job.',
+        body: 'Each skill guides the Agent through a specific piece of work with the right evidence and output format, so you get a usable deliverable rather than a chat transcript.',
+        points: [
+          'AI visibility diagnosis and growth plans',
+          'Technical health and internal links',
+          'Content, comparison pages and programmatic page pilots',
+          'Search Console optimization, search opportunities and earned authority',
+          'Prompt discovery and measuring results',
+        ],
+        visual: 'actions',
+      },
+      {
+        title: 'Bounded by design.',
+        body: 'The Agent uses the same read tools as the CiteLadder MCP server, inside limits set for each run. It cannot crawl, buy data, change prompts, publish, browse the open web or contact anyone, and it never declares that a change worked without new evidence.',
+        points: [
+          'Reads only the project you are in',
+          'Step and size limits on every run',
+          'Outputs are reviewable drafts with revisions',
+        ],
+        visual: 'revisions',
+      },
+    ],
+    steps: [
+      {
+        title: 'Open the Agent',
+        body: 'Switch from Dashboard to Agent, or ask from any finding.',
+      },
+      {
+        title: 'Choose a skill',
+        body: 'Pick the job, or describe it and let the Agent suggest one.',
+      },
+      {
+        title: 'Watch it read',
+        body: 'The Agent reads the evidence it needs and explains what it found.',
+      },
+      {
+        title: 'Review the output',
+        body: 'Revise the deliverable, then take it into your own workflow.',
+      },
+    ],
+    questions: [
+      'Why does a competitor win comparisons we lose?',
+      'What should we fix first across our open Actions?',
+      'Which prompts are missing from our portfolio?',
+      'What is a realistic growth plan for next quarter?',
+      'Did the changes we shipped last month move anything?',
     ],
     faqs: [
       {
         q: 'Does the Agent fix every affected page automatically?',
         a: 'No. It prepares bounded, reviewable work for a specific target. Your team decides what to implement.',
+      },
+      {
+        q: 'What can the Agent see?',
+        a: 'The saved evidence in the project you are working in: visibility results, sources, Site Health, Search Console, GA4, AI traffic, saved research and Actions. It does not browse the open web.',
+      },
+      {
+        q: 'Which model does it use?',
+        a: 'CiteLadder runs the Agent on a hosted model by default. Teams that need their own provider can connect an OpenAI-compatible API.',
+      },
+      {
+        q: 'Can it take actions on my behalf?',
+        a: 'No. It has no write tools. It cannot publish, send messages, activate prompts, start crawls, buy data or change your site.',
       },
       {
         q: 'Is the Agent in the free trial?',
@@ -322,7 +256,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
     features: [
       {
         title: 'Ask questions grounded in recorded evidence.',
-        body: 'Read visibility results and trends, cited sources, Actions, Site Health, performance, AI referrals, demand and saved Search Intelligence datasets. Every answer comes from a dated record, not a guess.',
+        body: 'Read visibility results and trends, perception, ads, cited sources, Actions, Site Health, performance, AI referrals, AI crawler logs, the AI Shelf, demand and saved Search Intelligence datasets. Every answer comes from a dated record, not a guess.',
         points: [
           'Read-only: no crawls, purchases, prompt changes or publishing',
           'Unavailable data is reported as unavailable, never as zero',
@@ -340,6 +274,31 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
         ],
         visual: 'visibility',
       },
+    ],
+    steps: [
+      {
+        title: 'Add the connector',
+        body: 'Click Connect for your assistant, or paste https://citeladder.com/mcp as a custom connector.',
+      },
+      {
+        title: 'Sign in',
+        body: 'Sign in to CiteLadder in your browser. There is no API key to create or paste.',
+      },
+      {
+        title: 'Approve workspaces',
+        body: 'Choose which workspaces the assistant may read.',
+      },
+      {
+        title: 'Ask',
+        body: 'Ask in plain language. The assistant lists your projects and reads the records it needs.',
+      },
+    ],
+    questions: [
+      'Which competitors appear most in our latest AI visibility results?',
+      'Summarize what changed in our AI visibility this week.',
+      'Which Site Health issues affect our most-cited pages?',
+      'Which sources do AI answers cite for our top prompts?',
+      'How much traffic did AI assistants send us last month?',
     ],
     faqs: [
       {
@@ -376,11 +335,11 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
   },
   {
     path: '/platform/integrations',
-    title: 'Search, Analytics & AI Integrations | CiteLadder',
+    title: 'Search, Analytics, Log & AI Integrations | CiteLadder',
     description:
-      'Connect Google Search Console, GA4, Bing Webmaster Tools, model providers, DataForSEO and MCP clients to CiteLadder.',
+      'Connect Google Search Console, GA4, Bing Webmaster Tools, Cloudflare and Amazon CloudFront logs, model providers, DataForSEO and MCP clients to CiteLadder.',
     heading: 'Connect your search, analytics and research data.',
-    lead: 'Bring in first-party search and analytics data, configure model providers, and add research when it helps. Each connection does a specific job, and you can start without any of them.',
+    lead: 'Bring in first-party search, analytics and server-log data, configure model providers, and add research when it helps. Each connection does a specific job, and you can start without any of them.',
     cta: 'setup',
     visual: 'integrations',
     visualTitle: 'Integrations',
@@ -390,12 +349,12 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
         body: 'Google Search Console, GA4 and Bing Webmaster Tools, each with its own consent.',
       },
       {
-        title: 'Models and research',
-        body: 'Model provider accounts for audits and the Agent; DataForSEO for optional research.',
+        title: 'Server logs',
+        body: 'Cloudflare Worker, Cloudflare Logpush, Amazon CloudFront, a webhook or a file upload for AI crawler logs.',
       },
       {
-        title: 'Assistants',
-        body: 'Read-only MCP access from compatible clients.',
+        title: 'Models, research and assistants',
+        body: 'Model providers for the Agent, DataForSEO for optional research, and read-only MCP access.',
       },
     ],
     features: [
@@ -409,15 +368,62 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
         ],
         visual: 'property-mapping',
       },
+      {
+        title: 'Send AI crawler logs your way.',
+        body: 'On paid plans, connect the edge you already run. Use a Cloudflare Worker or Logpush job, stream Amazon CloudFront logs, post batches to a webhook, or upload a file. CiteLadder shows log coverage per day, so gaps are visible.',
+        points: [
+          'Cloudflare Worker and Cloudflare Logpush',
+          'Amazon CloudFront log streams',
+          'Webhook and file upload for any other server',
+          'IP addresses used for verification only, never stored',
+        ],
+        visual: 'crawlers',
+      },
+    ],
+    steps: [
+      {
+        title: 'Start with visibility',
+        body: 'AI visibility and Site Health work without any integration.',
+      },
+      {
+        title: 'Add first-party data',
+        body: 'Connect Search Console, GA4 or Bing when you want demand and referral evidence.',
+      },
+      {
+        title: 'Add logs and research',
+        body: 'Send crawler logs or connect DataForSEO when your questions need them.',
+      },
+      {
+        title: 'Connect assistants',
+        body: 'Give Claude, ChatGPT and other MCP clients read-only access.',
+      },
+    ],
+    questions: [
+      'Which Search Console property and GA4 stream feed this project?',
+      'How fresh is the data behind this report?',
+      'Are our server logs complete for the last month?',
+      'Which assistants can read our workspace?',
     ],
     faqs: [
       {
         q: 'Do I need to connect everything?',
-        a: 'No. Start with what your workflow needs and add the rest later.',
+        a: 'No. Start with what your workflow needs and add the rest later. AI visibility and Site Health need no integration.',
       },
       {
-        q: 'Is there a native Shopify sync or automatic log collection?',
-        a: 'No. Neither is offered as a generally available integration.',
+        q: 'Which integrations are available?',
+        a: 'Google Search Console, GA4, Bing Webmaster Tools, AI crawler log sources (Cloudflare Worker, Cloudflare Logpush, Amazon CloudFront, webhook and upload), DataForSEO, model providers and MCP clients.',
+      },
+      {
+        q: 'Is there a native Shopify sync?',
+        a: 'No. Commerce catalogs come from your site or a CSV import.',
+      },
+      {
+        q: 'Which servers can send crawler logs?',
+        a: 'Cloudflare and Amazon CloudFront connect directly. Any other server or CDN can post logs to a webhook or upload a file.',
+      },
+      {
+        q: 'Can I use my own model provider?',
+        a: 'Yes. The Agent can run on your own OpenAI-compatible API instead of the hosted model.',
       },
     ],
     closing: 'Pick a starting point for your project.',
