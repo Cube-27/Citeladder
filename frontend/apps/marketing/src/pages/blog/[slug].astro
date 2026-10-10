@@ -1,49 +1,48 @@
 ---
+import type { GetStaticPaths } from 'astro';
 import { BlogPostView } from '@/components/marketing/pages/blog';
 import { POSTS } from '@/lib/marketing-content/blog';
 import { breadcrumbJsonLd } from '@/lib/seo/json-ld';
 import MarketingLayout from '../../layouts/MarketingLayout.astro';
 import ResearchLayout from '../../layouts/ResearchLayout.astro';
-import { researchArticle } from '../../research-articles';
+import { RESEARCH_ARTICLES } from '../../research-articles';
 
-const path = `/blog/${Astro.params.slug}`;
-const article = researchArticle(path);
+export const getStaticPaths = (() => [
+  ...POSTS.map((post) => ({ params: { slug: post.slug }, props: { kind: 'post' as const, post } })),
+  ...RESEARCH_ARTICLES.filter((article) => article.frontmatter.slug.startsWith('/blog/')).map(
+    (article) => ({
+      params: { slug: article.frontmatter.slug.slice('/blog/'.length) },
+      props: { kind: 'guide' as const, article },
+    }),
+  ),
+]) satisfies GetStaticPaths;
 
-const post = POSTS.find((candidate) => candidate.slug === Astro.params.slug);
-if (!post && !article) Astro.response.status = 404;
-const breadcrumb = post
-  ? breadcrumbJsonLd([
-      { name: 'Home', path: '/' },
-      { name: 'Blog', path: '/blog' },
-      { name: post.title, path: `/blog/${post.slug}` },
-    ])
-  : null;
-const title = post
-  ? post.seoTitle.endsWith(' | CiteLadder') ? post.seoTitle : `${post.seoTitle} · CiteLadder`
-  : 'Post not found · CiteLadder';
-const description = post?.seoDescription ?? 'The requested CiteLadder resource does not exist.';
+const route = Astro.props;
+const breadcrumb =
+  route.kind === 'post'
+    ? breadcrumbJsonLd([
+        { name: 'Home', path: '/' },
+        { name: 'Blog', path: '/blog' },
+        { name: route.post.title, path: `/blog/${route.post.slug}` },
+      ])
+    : null;
 ---
 
-{article ? <ResearchLayout article={article} /> : <MarketingLayout
-  title={title}
-  description={description}
-  canonical={post ? `/blog/${post.slug}` : undefined}
-  keywords={post ? [...post.tags, 'AI visibility', 'AEO'] : []}
-  openGraphType={post ? 'article' : 'website'}
-  image={post?.image}
-  publishedTime={post?.date}
-  modifiedTime={post ? post.dateModified ?? post.date : undefined}
-  author={post?.author}
-  tags={post?.tags}
-  twitterCard={post?.image ? 'summary_large_image' : undefined}
-  robots={post ? undefined : 'noindex'}
+{route.kind === 'guide' ? <ResearchLayout article={route.article} /> : <MarketingLayout
+  title={route.post.seoTitle.endsWith(' | CiteLadder') ? route.post.seoTitle : `${route.post.seoTitle} · CiteLadder`}
+  description={route.post.seoDescription}
+  canonical={`/blog/${route.post.slug}`}
+  keywords={[...route.post.tags, 'AI visibility', 'AEO']}
+  openGraphType="article"
+  image={route.post.image}
+  publishedTime={route.post.date}
+  modifiedTime={route.post.dateModified ?? route.post.date}
+  author={route.post.author}
+  tags={route.post.tags}
+  twitterCard={route.post.image ? 'summary_large_image' : undefined}
   jsonLd={breadcrumb ? [breadcrumb] : []}
 >
-  {post ? (
-    <main id="main">
-      <BlogPostView post={post} />
-    </main>
-  ) : (
-    <main id="main"><h1>Post not found</h1></main>
-  )}
+  <main id="main">
+    <BlogPostView post={route.post} />
+  </main>
 </MarketingLayout>}

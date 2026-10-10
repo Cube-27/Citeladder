@@ -181,16 +181,24 @@ export function blogPostingJsonLd(post: BlogPost): JsonLdObject {
 }
 
 /**
- * The blog index as a `Blog`, with its posts as an `ItemList`.
+ * The blog index as a `Blog`, with its posts and then the research guides it
+ * also lists as one `ItemList`.
  *
  * `dateModified` is the load-bearing part: a listing page that never states
  * when its collection last changed gives an answer engine no way to tell a
  * current index from a stale one, and CiteLadder's own crawler reports exactly
  * that absence. It is the newest REVISION date across the posts, not the
  * newest publication date -- revising an older post changes what this page
- * indexes, and reading only `date` would leave the signal stale.
+ * indexes, and reading only `date` would leave the signal stale. Guides carry
+ * no publication date, so only posts set it.
  */
-export function blogIndexJsonLd(posts: readonly BlogPostSummary[]): JsonLdObject | null {
+export function blogIndexJsonLd({
+  posts,
+  guides,
+}: {
+  posts: readonly BlogPostSummary[];
+  guides: readonly { title: string; path: string }[];
+}): JsonLdObject | null {
   const url = absoluteUrl('/blog');
   if (!url) return null;
   const dates = posts.flatMap((post) => {
@@ -213,18 +221,14 @@ export function blogIndexJsonLd(posts: readonly BlogPostSummary[]): JsonLdObject
     publisher: { '@type': 'Organization', name: SITE_NAME, url: absoluteUrl('/') ?? url },
     mainEntity: {
       '@type': 'ItemList',
-      numberOfItems: posts.length,
-      itemListElement: posts.flatMap((post, index) => {
-        const postUrl = absoluteUrl(`/blog/${post.slug}`);
-        if (!postUrl) return [];
-        return [
-          {
-            '@type': 'ListItem',
-            position: index + 1,
-            url: postUrl,
-            name: post.title,
-          },
-        ];
+      numberOfItems: posts.length + guides.length,
+      itemListElement: [
+        ...posts.map((post) => ({ path: `/blog/${post.slug}`, title: post.title })),
+        ...guides,
+      ].flatMap((item, index) => {
+        const itemUrl = absoluteUrl(item.path);
+        if (!itemUrl) return [];
+        return [{ '@type': 'ListItem', position: index + 1, url: itemUrl, name: item.title }];
       }),
     },
   };

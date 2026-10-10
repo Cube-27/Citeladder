@@ -1,10 +1,15 @@
-import { LLMS_TXT } from '@/lib/marketing-content/llms';
+import { llmsTxt } from '@/lib/marketing-content/llms';
+import { absoluteUrl, siteOrigin } from '@/lib/seo/site';
+import { PUBLIC_ROUTES } from '../public-routes';
 
 export function GET() {
-  return new Response(LLMS_TXT, {
-    headers: {
-      'Cache-Control': 'public, max-age=3600',
-      'Content-Type': 'text/plain; charset=utf-8',
-    },
+  const body = llmsTxt({
+    origin: siteOrigin()?.origin ?? '',
+    pages: PUBLIC_ROUTES.map((route) => ({
+      title: route.title,
+      url: absoluteUrl(route.path) ?? route.path,
+      kind: route.kind,
+    })),
   });
+  return new Response(body, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
 }

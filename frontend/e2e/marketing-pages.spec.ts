@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type APIRequestContext } from '@playwright/test';
 import { SHARE_OF_VOICE_PAGE } from '@/lib/marketing-content/commercial-pages';
 import { PLATFORM_PAGES } from '@/lib/marketing-content/platform-pages';
 import { PUBLISHED_PLATFORM } from '@/lib/marketing-content/nav';
@@ -6,6 +6,20 @@ import { DEMO_HREF } from '@/lib/marketing-content/nav';
 import { POSTS } from '@/lib/marketing-content/blog';
 import { COMPETITORS } from '@/lib/marketing-content/compare';
 import { filterAndSortPosts, toBlogPostSummary } from '@/lib/marketing-content/blog-index';
+
+/**
+ * Internal links answer 200. E2E runs the marketing Worker with no reachable
+ * API, so /pricing takes its outage path: 503 and kept out of the index.
+ */
+async function expectLinkServed(request: APIRequestContext, href: string, label = href) {
+  const response = await request.get(href);
+  if (href !== '/pricing') {
+    expect(response.status(), label).toBe(200);
+    return;
+  }
+  expect(response.status(), label).toBe(503);
+  expect(await response.text(), label).toContain('<meta name="robots" content="noindex"');
+}
 
 test.describe('marketing routes', () => {
   test('published platform pages render linked evidence and metadata without JavaScript', async ({
@@ -292,7 +306,7 @@ test.describe('marketing routes', () => {
         (href) => href.startsWith('/') && !visited.has(href),
       )) {
         visited.add(href);
-        expect((await request.get(href)).status(), `${entry.path} → ${href}`).toBe(200);
+        await expectLinkServed(request, href, `${entry.path} → ${href}`);
       }
       const post = guides.find((post) => entry.path === `/blog/${post.slug}`);
       if (post) {
@@ -335,13 +349,17 @@ test.describe('marketing routes', () => {
   test('blog topic filters and sorting retain article navigation without a thumbnail', async ({
     page,
   }) => {
-    const waitForBlog = () =>
-      page.waitForFunction(() =>
+    // The explorer hydrates when it scrolls into view (`client:visible`).
+    const waitForBlog = async () => {
+      await page.getByRole('region', { name: 'Blog articles' }).scrollIntoViewIfNeeded();
+      await page.waitForFunction(() =>
         [...document.querySelectorAll('astro-island')].some(
           (island) =>
-            island.getAttribute('component-url')?.includes('/blog.') && !island.hasAttribute('ssr'),
+            island.getAttribute('component-url')?.includes('/blog-index-explorer.') &&
+            !island.hasAttribute('ssr'),
         ),
       );
+    };
     await page.goto('/blog');
     await waitForBlog();
     const archive = page.getByRole('region', { name: 'Blog articles' });
@@ -403,7 +421,7 @@ test.describe('marketing routes', () => {
       expect(initial.canonical).toBe(
         new URL(path, process.env.PUBLIC_WEBSITE_ORIGIN ?? baseURL).href,
       );
-      expect(initial.socialTitle).toBe(initial.title.replace(/ · CiteLadder$/, ''));
+      expect(initial.socialTitle).toBe(initial.title.replace(/ [·|] CiteLadder$/, ''));
       expect(initial.socialDescription).toBe(initial.description);
       for (const width of [1440, 390]) {
         await page.setViewportSize({ width, height: 900 });
@@ -425,7 +443,7 @@ test.describe('marketing routes', () => {
         for (const target of [copy.secondary.href, '/solutions', '/pricing']) {
           const link = page.locator(`main a[href="${target}"]`).first();
           await expect(link).toBeAttached();
-          expect((await request.get(target)).status()).toBe(200);
+          await expectLinkServed(request, target);
         }
         await page.evaluate(() => {
           if (document.activeElement instanceof HTMLElement) document.activeElement.blur();

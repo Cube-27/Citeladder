@@ -1,5 +1,5 @@
 ---
-import { articles } from '../lib/content';
+import { articleHeadings, articles } from '../lib/content';
 import DocsLayout from '../layouts/DocsLayout.astro';
 import ToolReference from '../components/ToolReference.astro';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
@@ -13,8 +13,7 @@ export function getStaticPaths() {
 
 const { article, previous, next } = Astro.props;
 const { Content } = article.entry;
-const headings = (await article.entry.getHeadings()).filter(({ depth }) => depth === 2 || depth === 3);
-if (article.slug === 'mcp/tools') headings.push({ depth: 2, slug: 'registered-tools', text: 'Registered tools' });
+const headings = await articleHeadings(article);
 ---
 <DocsLayout title={article.title} description={article.description} headings={headings.map((heading) => ({ ...heading, label: heading.text.replace(/^\d+[.)]\s+/, '') }))}>
   <article>
@@ -24,7 +23,7 @@ if (article.slug === 'mcp/tools') headings.push({ depth: 2, slug: 'registered-to
       <p class="website-lead">{article.description}</p>
     </header>
     <div class="docs-prose website-body"><Content /></div>
-    {article.slug === 'mcp/tools' && <ToolReference />}
+    {article.toolReference && <ToolReference />}
   </article>
   <nav class="docs-pagination" aria-label="Adjacent articles">
     {previous ? <a href={previous.href}><span class="website-label"><ArrowLeft className="size-3.5" aria-hidden />Previous</span><span class="docs-pagination-title">{previous.title}</span></a> : <span />}

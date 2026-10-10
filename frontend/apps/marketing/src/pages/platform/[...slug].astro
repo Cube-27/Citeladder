@@ -1,20 +1,25 @@
 ---
+import type { GetStaticPaths } from 'astro';
 import { PlatformPageContent } from '@/components/marketing/pages/platform';
 import { PLATFORM_PAGES } from '@/lib/marketing-content/platform-pages';
-import { PUBLISHED_PLATFORM, platformLabel } from '@/lib/marketing-content/nav';
+import { PUBLISHED_PLATFORM } from '@/lib/marketing-content/nav';
 import { breadcrumbJsonLd, platformWebPageJsonLd } from '@/lib/seo/json-ld';
 import MarketingLayout from '../../layouts/MarketingLayout.astro';
 
-const slug = Astro.params.slug?.replace(/\/$/, '');
-const path = slug ? `/platform/${slug}` : '/platform';
-const page = PUBLISHED_PLATFORM.some(item => item.href === path)
-  ? PLATFORM_PAGES.find(item => item.path === path) : undefined;
-if (!page) return new Response('Not found', { status: 404 });
-if (Astro.url.pathname.endsWith('/')) return Astro.redirect(path + Astro.url.search, 301);
+// Only published destinations are built; held capability pages have no file and 404.
+export const getStaticPaths = (() =>
+  PUBLISHED_PLATFORM.flatMap((item) => {
+    const page = PLATFORM_PAGES.find((candidate) => candidate.path === item.href);
+    if (!page) return [];
+    const slug = page.path === '/platform' ? undefined : page.path.slice('/platform/'.length);
+    return [{ params: { slug }, props: { page, label: item.title } }];
+  })) satisfies GetStaticPaths;
+
+const { page, label } = Astro.props;
 const breadcrumb = breadcrumbJsonLd([
   { name: 'Home', path: '/' },
   { name: 'Platform overview', path: '/platform' },
-  ...(path === '/platform' ? [] : [{ name: platformLabel(path)!, path }]),
+  ...(page.path === '/platform' ? [] : [{ name: label, path: page.path }]),
 ]);
 const webPage = platformWebPageJsonLd(page);
 ---

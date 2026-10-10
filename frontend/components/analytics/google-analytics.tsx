@@ -27,9 +27,14 @@ function clearAnalyticsCookies() {
   }
 }
 
+/** gtag commands are `arguments` objects; other tags may push plain arrays. */
+function isCommand(entry: unknown): entry is Record<number, unknown> & { length: number } {
+  return Array.isArray(entry) || Object.prototype.toString.call(entry) === '[object Arguments]';
+}
+
 function denyPendingAnalyticsDefaults(dataLayer: unknown[] | undefined) {
   for (const entry of dataLayer ?? []) {
-    if (!Array.isArray(entry) || entry[0] !== 'consent' || entry[1] !== 'default') continue;
+    if (!isCommand(entry) || entry[0] !== 'consent' || entry[1] !== 'default') continue;
     const fields = entry[2];
     if (
       !fields ||
@@ -40,6 +45,14 @@ function denyPendingAnalyticsDefaults(dataLayer: unknown[] | undefined) {
       continue;
     entry[2] = { ...fields, analytics_storage: 'denied' };
   }
+}
+
+/** Google's queue stub: gtag.js processes only `arguments` objects and ignores pushed arrays. */
+function gtagQueue(dataLayer: unknown[]): (...args: unknown[]) => void {
+  return function gtag() {
+    // oxlint-disable-next-line prefer-rest-params -- gtag.js requires the arguments object.
+    dataLayer.push(arguments);
+  };
 }
 
 function configureLoadedTag(script: HTMLScriptElement, measurementId: string) {
@@ -119,7 +132,7 @@ export function GoogleAnalytics({ measurementId }: Readonly<{ measurementId: str
       return;
     }
     withGtag.dataLayer = withGtag.dataLayer || [];
-    withGtag.gtag = (...args: unknown[]) => withGtag.dataLayer?.push(args);
+    withGtag.gtag = gtagQueue(withGtag.dataLayer);
     withGtag.gtag('consent', 'default', {
       analytics_storage: hasAnalyticsConsent() ? 'granted' : 'denied',
     });

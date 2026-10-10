@@ -11,31 +11,41 @@ const frontendRoot = fileURLToPath(new URL('../..', import.meta.url));
 
 const mode = process.env.NODE_ENV === 'production' ? 'production' : 'development';
 const environment = loadEnv(mode, frontendRoot, '');
+/** A build value from the process environment, then the local .env file. */
+const env = (name) => process.env[name] ?? environment[name];
 if (mode === 'production') {
   publicOrigins(
-    process.env.PUBLIC_WEBSITE_ORIGIN ?? environment.PUBLIC_WEBSITE_ORIGIN,
-    process.env.PUBLIC_APP_ORIGIN ?? environment.PUBLIC_APP_ORIGIN,
+    env('PUBLIC_WEBSITE_ORIGIN'),
+    env('PUBLIC_APP_ORIGIN'),
     process.env.LOCAL_COMPOSE_BUILD !== 'true',
   );
 }
-const apiRequestTimeout = JSON.stringify(
-  process.env.NEXT_PUBLIC_API_REQUEST_TIMEOUT_MS ??
-    environment.NEXT_PUBLIC_API_REQUEST_TIMEOUT_MS ??
-    '',
+/** Bake each public value into the bundle as `process.env.NAME`. */
+const publicDefines = Object.fromEntries(
+  [
+    'NEXT_PUBLIC_API_REQUEST_TIMEOUT_MS',
+    'NEXT_PUBLIC_GA_MEASUREMENT_ID',
+    'NEXT_PUBLIC_SELF_SERVE_SIGNUP',
+    'PUBLIC_WEBSITE_ORIGIN',
+    'PUBLIC_APP_ORIGIN',
+    'PUBLIC_DOCS_ORIGIN',
+    'PUBLIC_TURNSTILE_SITE_KEY',
+  ].map((name) => [`process.env.${name}`, JSON.stringify(env(name) ?? '')]),
 );
 
 export default defineConfig({
-  output: 'server',
+  // Pages are built once and served as free static assets. Only routes that
+  // read the request (pricing, contact, the 404 negotiation and the apex
+  // proxy in middleware) opt out with `prerender = false`.
+  output: 'static',
+  build: { format: 'file' },
+  trailingSlash: 'never',
   session: false,
   // External webhook and MCP POSTs reach exact routes; the backend verifies
   // signatures, OAuth transactions and CSRF at their owning endpoints.
   security: {
     checkOrigin: false,
-    csp: marketingContentSecurityPolicy(
-      Boolean(
-        process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ?? environment.NEXT_PUBLIC_GA_MEASUREMENT_ID,
-      ),
-    ),
+    csp: marketingContentSecurityPolicy(Boolean(env('NEXT_PUBLIC_GA_MEASUREMENT_ID'))),
   },
   adapter: cloudflare({ imageService: 'compile' }),
   integrations: [react()],
@@ -49,26 +59,7 @@ export default defineConfig({
       postcss: frontendRoot,
     },
     define: {
-      'process.env.NEXT_PUBLIC_API_REQUEST_TIMEOUT_MS': apiRequestTimeout,
-      'process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID': JSON.stringify(
-        process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ??
-          environment.NEXT_PUBLIC_GA_MEASUREMENT_ID ??
-          '',
-      ),
-      'process.env.NEXT_PUBLIC_SELF_SERVE_SIGNUP': JSON.stringify(
-        process.env.NEXT_PUBLIC_SELF_SERVE_SIGNUP ??
-          environment.NEXT_PUBLIC_SELF_SERVE_SIGNUP ??
-          '',
-      ),
-      'process.env.PUBLIC_WEBSITE_ORIGIN': JSON.stringify(
-        process.env.PUBLIC_WEBSITE_ORIGIN ?? environment.PUBLIC_WEBSITE_ORIGIN ?? '',
-      ),
-      'process.env.PUBLIC_APP_ORIGIN': JSON.stringify(
-        process.env.PUBLIC_APP_ORIGIN ?? environment.PUBLIC_APP_ORIGIN ?? '',
-      ),
-      'process.env.PUBLIC_DOCS_ORIGIN': JSON.stringify(
-        process.env.PUBLIC_DOCS_ORIGIN ?? environment.PUBLIC_DOCS_ORIGIN ?? '',
-      ),
+      ...publicDefines,
       'process.env.LOCAL_COMPOSE_BUILD': JSON.stringify(process.env.LOCAL_COMPOSE_BUILD ?? ''),
     },
     resolve: {

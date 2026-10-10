@@ -15,9 +15,9 @@ Suggestions are a starting point. Remove companies that do not compete for your 
 
 **You are ready to continue when:** the project describes your business and intended audience accurately.
 
-## 2. Review your prompts
+## 2. Choose your prompts
 
-Open **Prompts** after the initial portfolio finishes generating. Read the questions as if you were a potential customer. Keep a focused set that covers the decisions buyers make, and distinguish general discovery questions from questions that name your brand.
+A new project starts with no prompts. Open **Prompts** and generate questions, or add your own. Generated questions arrive as candidates: read them as if you were a potential customer and accept the ones worth measuring. Keep a focused set that covers the decisions buyers make, and distinguish general discovery questions from questions that name your brand.
 
 For a fictional scheduling product, a useful discovery question might be "Which scheduling tools work well for a small consultancy?" A question such as "How does Example Scheduler handle reminders?" answers a different, brand-specific question.
 
@@ -49,6 +49,6 @@ Review the result before using it. Once your team actually makes the change, fol
 
 ## If setup does not finish
 
-Keep the existing project and inspect its displayed status before creating another. Initial prompt generation can finish after the project is created. A provider failure or unavailable dataset needs its own recovery; repeatedly opening the page does not rerun it.
+Keep the existing project and inspect its displayed status before creating another. A provider failure or unavailable dataset needs its own recovery; repeatedly opening the page does not rerun it.
 
 For access and project selection, see [Workspaces and access](/workspaces/).

@@ -79,7 +79,7 @@ After choosing, narrow the question to a keyword, competitor or backlink investi
 ## Check a proposed next step
 
 ```text
-Read the current opportunities and verify the most relevant items
+Read the current Actions and verify the most relevant items
 against the underlying saved evidence.
 Separate owned-site work from external-source work.
 For each proposal, state what is measured, what is inferred and which

@@ -8,20 +8,28 @@ import { displayCountry, publicCatalog } from '../public-catalog';
 import { workerApexEnv } from '../worker-env';
 import MarketingLayout from '../layouts/MarketingLayout.astro';
 
+export const prerender = false;
+
 const env = workerApexEnv();
-const catalog = await publicCatalog(env, displayCountry(Astro.request.headers));
+const catalog = await publicCatalog(env, displayCountry(Astro.request.headers), {
+  cache: caches.default,
+  waitUntil: (work) => Astro.locals.cfContext.waitUntil(work),
+});
 const checkoutClosed = catalog !== null && selfServeCheckoutComingSoon(catalog);
 const description = checkoutClosed
   ? 'CiteLadder plans, trial limits and access options for AI visibility tracking. Paid self-serve checkout is not currently open.'
   : 'Explore CiteLadder plans, provider-key usage and early-access options. Review published limits and confirm availability before choosing a plan.';
 const initialByok = Astro.url.searchParams.get('byok') !== '0';
 Astro.response.headers.set('Cache-Control', 'no-store');
+// Without any catalog the page is a temporary outage, not content to index.
+if (!catalog) Astro.response.status = 503;
 ---
 
 <MarketingLayout
   title="AI visibility software pricing | CiteLadder"
   description={description}
   canonical="/pricing"
+  robots={catalog ? undefined : 'noindex'}
 >
   <main id="main" class="w-full max-w-full min-w-0 overflow-x-clip">
     <PageHero

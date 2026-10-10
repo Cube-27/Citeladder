@@ -9,6 +9,7 @@ secondary_keywords:
 search_intent: 'Practical measurement: check current presence and interpret the result'
 content_type: 'measurement guide'
 reviewed_at: '2026-10-06'
+image: '/blog/editorial/article-verify.png'
 publication_status: 'editorial_review'
 ---
 

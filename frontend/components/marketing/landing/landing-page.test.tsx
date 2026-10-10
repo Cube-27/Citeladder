@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
 import { LandingPage } from './landing-page';
+import { HeroTour } from './landing-tour';
 
 afterEach(() => vi.unstubAllEnvs());
 
@@ -13,14 +14,14 @@ describe('LandingPage', () => {
   ])('routes the hero action with self-serve signup %s', (enabled, label, href) => {
     vi.stubEnv('NEXT_PUBLIC_SELF_SERVE_SIGNUP', enabled);
     vi.stubEnv('PUBLIC_APP_ORIGIN', 'https://app.citeladder.com');
-    render(<LandingPage />);
+    render(<LandingPage tour={<HeroTour />} />);
 
     const hero = screen.getByRole('banner');
     expect(within(hero).getAllByRole('link', { name: label })[0]).toHaveAttribute('href', href);
   });
 
   it('labels API collection apart from consumer answer surfaces', () => {
-    render(<LandingPage />);
+    render(<LandingPage tour={<HeroTour />} />);
 
     const engines = screen.getByRole('region', { name: 'Monitored answer engines' });
     for (const name of ['OpenAI API', 'Gemini API', 'Claude API', 'Google AI Overviews']) {
@@ -30,7 +31,7 @@ describe('LandingPage', () => {
 
   it('switches the product tour with clicks and arrow keys', async () => {
     const user = userEvent.setup();
-    render(<LandingPage />);
+    render(<LandingPage tour={<HeroTour />} />);
 
     const tabs = screen.getByRole('tablist', { name: 'Product tour' });
     const visibility = within(tabs).getByRole('tab', { name: 'Visibility' });

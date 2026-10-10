@@ -1,15 +1,13 @@
-import { articles } from '../lib/content';
-import toolReference from '@/apps/docs/src/data/mcp-tools.json';
+import { articleSearchBody, articles } from '../lib/content';
 
 export function GET() {
   return Response.json(
-    articles.map(({ title, description, group, href, entry }) => ({
-      title,
-      description,
-      group,
-      href,
-      body:
-        entry.rawContent() + (href === '/mcp/tools/' ? JSON.stringify(toolReference.tools) : ''),
+    articles.map((article) => ({
+      title: article.title,
+      description: article.description,
+      group: article.group,
+      href: article.href,
+      body: articleSearchBody(article),
     })),
   );
 }

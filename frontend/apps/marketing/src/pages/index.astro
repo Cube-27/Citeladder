@@ -1,5 +1,6 @@
 ---
 import { LandingPage } from '@/components/marketing/landing/landing-page';
+import { HeroTour } from '@/components/marketing/landing/landing-tour';
 import MarketingLayout from '../layouts/MarketingLayout.astro';
 import './landing.css';
 
@@ -13,6 +14,9 @@ const description =
   canonical="/"
 >
   <main id="main">
-    <LandingPage client:load />
+    {/* Only the product tour hydrates; the rest of the page is static HTML. */}
+    <LandingPage>
+      <HeroTour slot="tour" client:load />
+    </LandingPage>
   </main>
 </MarketingLayout>

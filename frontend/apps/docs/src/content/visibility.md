@@ -9,7 +9,7 @@ Use AI Visibility to investigate brand presence across a defined set of prompts 
 
 ## Run a useful audit
 
-Choose the prompts, logical engines and repetitions in the audit launcher. Review the estimate before confirming. More repetitions give more observations under that run's conditions; they do not turn a sample into a guarantee about every user's experience.
+Choose the prompts, engines and repetitions in the audit launcher. CiteLadder measures answers from ChatGPT, Claude, Gemini and Google AI Overviews. Review the estimate before confirming. More repetitions give more observations under that run's conditions; they do not turn a sample into a guarantee about every user's experience.
 
 An audit keeps the prompts, tracked roster and measurement configuration it used. Check **Runs** for completion, cancellation and unsuccessful attempts.
 
@@ -17,16 +17,16 @@ An audit keeps the prompts, tracked roster and measurement configuration it used
 
 **Trends** is the default view. Select the run or period, engine and cohort appropriate to your question. When using a baseline, check whether the comparison is compatible.
 
-Keep these observations separate:
+Trends reports four measures. Keep them separate:
 
-| Observation    | What it tells you                                          |
-| -------------- | ---------------------------------------------------------- |
-| Brand mention  | The answer mentions a recognized brand                     |
-| Owned citation | The answer cites a URL belonging to an owned domain        |
-| Recommendation | The answer contains a recognized recommendation            |
-| Position       | A supported ordering places an entity at a particular rank |
+| Measure             | What it tells you                                                                                  |
+| ------------------- | -------------------------------------------------------------------------------------------------- |
+| Visibility          | The share of answers that name your brand (the mention rate)                                       |
+| Share of voice      | Your share of all mentions of the brands you track; repeated mentions in one answer count once     |
+| Owned citation rate | The share of answers that link to a page you own                                                   |
+| Average position    | Where your brand tends to appear among the brands you track, counted only in answers that name you |
 
-A citation is not automatically a brand recommendation. Unsupported assessments remain unavailable.
+A citation is not a brand mention, and a mention is not an endorsement. Average position ranks you among your tracked brands, not within the whole answer. Measures a run cannot support remain unavailable rather than zero.
 
 ## Inspect Sources
 

@@ -8,6 +8,17 @@ import { CookieBanner } from '../marketing/chrome/cookie-banner';
 import { GoogleAnalytics } from './google-analytics';
 import { ButtonLink, DemoButtonLink } from '../marketing/primitives/button';
 
+/**
+ * The page's gtag commands as plain lists. gtag.js ignores pushed arrays, so
+ * an array-shaped command is reported as such instead of matching.
+ */
+function gtagCommands(): unknown[] {
+  const dataLayer = (window as Window & { dataLayer?: unknown[] }).dataLayer ?? [];
+  return dataLayer.map((entry) =>
+    Array.isArray(entry) ? 'array instead of arguments' : Array.from(entry as ArrayLike<unknown>),
+  );
+}
+
 describe('GoogleAnalytics', () => {
   beforeEach(() => window.localStorage.clear());
   afterEach(() => {
@@ -114,13 +125,12 @@ describe('GoogleAnalytics', () => {
       'https://www.googletagmanager.com/gtag/js?id=G-TEST',
     );
     const script = documentQueries.getByTestId('external-script');
-    const dataLayer = (window as Window & { dataLayer?: unknown[] }).dataLayer;
-    expect(dataLayer).toEqual([
+    expect(gtagCommands()).toEqual([
       ['consent', 'default', { analytics_storage: 'granted' }],
       expect.arrayContaining(['js', expect.any(Date)]),
     ]);
     act(() => script.dispatchEvent(new Event('load')));
-    expect(dataLayer).toEqual([
+    expect(gtagCommands()).toEqual([
       ['consent', 'default', { analytics_storage: 'granted' }],
       expect.arrayContaining(['js', expect.any(Date)]),
       ['consent', 'update', { analytics_storage: 'granted' }],
@@ -185,7 +195,7 @@ describe('GoogleAnalytics', () => {
     await act(async () => writeConsent('rejected'));
     act(() => script.dispatchEvent(new Event('load')));
 
-    expect((window as Window & { dataLayer?: unknown[] }).dataLayer).toEqual([
+    expect(gtagCommands()).toEqual([
       ['consent', 'default', { analytics_storage: 'denied' }],
       expect.arrayContaining(['js', expect.any(Date)]),
       ['consent', 'update', { analytics_storage: 'denied' }],
@@ -196,7 +206,7 @@ describe('GoogleAnalytics', () => {
     writeConsent('accepted');
     render(<GoogleAnalytics measurementId="G-TEST" />);
     const dataLayer = (window as Window & { dataLayer?: unknown[] }).dataLayer ?? [];
-    const ownDefault = dataLayer[0] as unknown[];
+    const ownDefault = dataLayer[0] as Record<number, unknown>;
     ownDefault[2] = { analytics_storage: 'granted', ad_storage: 'denied' };
     const otherDefault = [
       'consent',
@@ -224,9 +234,8 @@ describe('GoogleAnalytics', () => {
     render(<GoogleAnalytics measurementId="G-TEST" />);
 
     expect(document.querySelectorAll('#citeladder-google-analytics')).toHaveLength(1);
-    const commands = (window as Window & { dataLayer?: unknown[] }).dataLayer ?? [];
-    expect(commands.filter((command) => Array.isArray(command) && command[0] === 'config')).toEqual(
-      [['config', 'G-TEST']],
-    );
+    expect(
+      gtagCommands().filter((command) => Array.isArray(command) && command[0] === 'config'),
+    ).toEqual([['config', 'G-TEST']]);
   });
 });

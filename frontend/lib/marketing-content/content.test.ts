@@ -17,13 +17,11 @@ import { CANCELLATION_POLICY, CONTACT_PAGE, REFUND_POLICY } from './legal-billin
 import { DATA_PROCESSING_AGREEMENT, SUBPROCESSORS } from './legal-dpa';
 import { PRIVACY_POLICY } from './legal-privacy';
 import { TERMS_OF_SERVICE } from './legal-terms';
-import { LLMS_TXT } from './llms';
 import { NAV_DROPS, NAV_LINKS, PUBLISHED_PLATFORM, type NavDropItem } from './nav';
 import { PLATFORM_PAGES } from './platform-pages';
 import { FOUNDER, PRODUCT_HEAD } from './people';
 import { PLAN_PRESENTATION, capabilityLabel } from './pricing';
 import { CITELADDER_LINKEDIN } from './social';
-import { CONTACT_EMAIL } from '@/lib/config/contact';
 import { SOLUTION_SEGMENTS } from './solutions';
 
 /**
@@ -430,25 +428,11 @@ describe('commercial positioning', () => {
   );
 });
 
-describe('entity and llms.txt', () => {
+describe('entity profiles', () => {
   it('exposes LinkedIn profiles', () => {
     expect(PRODUCT_HEAD.linkedin).toMatch(/^https:\/\/www\.linkedin\.com\//);
     expect(FOUNDER.linkedin).toMatch(/^https:\/\/www\.linkedin\.com\//);
     expect(CITELADDER_LINKEDIN).toMatch(/^https:\/\/www\.linkedin\.com\/company\//);
-  });
-
-  it('publishes a machine-readable product brief', () => {
-    expect(LLMS_TXT).toContain('# CiteLadder');
-    expect(LLMS_TXT).toContain('Abhineet Jain');
-    expect(LLMS_TXT).toContain('Arpan Jain');
-    expect(LLMS_TXT).toContain('https://citeladder.com/faq');
-    expect(LLMS_TXT.toLowerCase()).toContain('not an open-source');
-  });
-
-  it('tells agents when to use CiteLadder and where its MCP authorization metadata lives', () => {
-    expect(LLMS_TXT).toContain('https://citeladder.com/.well-known/oauth-protected-resource/mcp');
-    expect(LLMS_TXT).toContain('## When to use CiteLadder');
-    expect(LLMS_TXT).toContain(`Contact: ${CONTACT_EMAIL}`);
   });
 });
 

@@ -9,7 +9,7 @@ A Site Health crawl captures pages from your website and analyzes their technica
 
 ## Read the score with its coverage
 
-**Web** summarizes determinate applicable website checks. **AEO** summarizes determinate checks across answerability, structure, evidence, machine readability, provenance, freshness and crawlability.
+**Web** summarizes scored website checks. **AEO** summarizes scored checks across answerability, structure, evidence, machine readability, provenance, freshness and crawlability.
 
 A higher score does not promise rankings, indexing or citations. "No observed blocker" means the captured evidence did not reveal a blocker; it is not confirmation that an engine indexed the page.
 
@@ -26,11 +26,17 @@ For a finding you intend to fix:
 
 Page classification affects which checks apply. A product page and an editorial article do not have identical expectations. An unresolved page purpose remains unresolved.
 
+## Scored and advisory checks
+
+Only scored checks move the Web and AEO scores. They are the checks that affect whether search and AI engines can reach, read and trust a page, such as HTTPS, indexability, crawler access, valid structured data and visible attribution.
+
+Other checks are unscored: advisory checks such as meta descriptions, Open Graph tags or content recency, and defects such as broken internal links. A failing unscored check still raises an issue you can work on; fixing it does not change a score. A few diagnostic readings, such as response time, are reported without raising an issue.
+
 ## Understand how results roll up
 
-Page scores use determinate applicable checks. Checks marked unknown, error or partial do not receive passing credit. They remain visible in completion and coverage.
+Page scores use the scored checks that apply to the page. Checks marked unknown, error or partial do not receive passing credit. They remain visible in completion and coverage.
 
-Crawl scores average finalized page scores in the selected cohort. A page with many checks does not automatically outweigh one with fewer checks. Avoid rebuilding the score from a filtered issue table.
+Crawl scores average the finalized page scores of the pages CiteLadder monitors for the project. A page with many checks does not automatically outweigh one with fewer checks. Avoid rebuilding the score from a filtered issue table.
 
 ## Review crawler permissions
 

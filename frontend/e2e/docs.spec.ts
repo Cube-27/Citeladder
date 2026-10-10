@@ -1,9 +1,15 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
+
+// Search hydrates when the browser is idle; a click before then is not a search.
+async function openSearch(page: Page) {
+  await page.waitForFunction(() => !document.querySelector('astro-island[ssr]'));
+  await page.getByRole('button', { name: /Search docs/ }).click();
+}
 
 test('search recovers, supports keyboard dismissal and navigates to a guide', async ({ page }) => {
   await page.route('**/search-index.json', (route) => route.fulfill({ status: 503 }), { times: 2 });
   await page.goto('/');
-  await page.getByRole('button', { name: /Search docs/ }).click();
+  await openSearch(page);
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByRole('button', { name: 'Retry search' })).toBeVisible();
   const retry = page.waitForResponse('**/search-index.json');
@@ -23,7 +29,8 @@ test('search recovers, supports keyboard dismissal and navigates to a guide', as
   await dialog.getByRole('link').first().click();
   await expect(page).toHaveURL(/\/agent\/outputs\//);
   await page.goBack();
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Welcome to CiteLadder');
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 });
 
 test('guides and local anchors resolve, and missing pages return 404', async ({ page }) => {
@@ -73,25 +80,20 @@ test('mobile navigation and article contents remain usable', async ({ page }) =>
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
   await page.locator('.docs-mobile-nav > summary').click();
-  await page
-    .locator('.docs-mobile-nav')
-    .getByRole('link', { name: 'Actions and measurement', exact: true })
-    .click();
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Actions and measurement');
+  const guide = page.locator('.docs-mobile-nav a:not([aria-current])').first();
+  const title = await guide.innerText();
+  const guideUrl = await guide.evaluate((anchor) => (anchor as HTMLAnchorElement).href);
+  await guide.click();
+  await expect(page).toHaveURL(guideUrl);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(title);
   await page.locator('.docs-mobile-toc > summary').click();
-  await page
-    .locator('.docs-mobile-toc')
-    .getByRole('link', { name: 'Declare implementation' })
-    .click();
-  await expect(page).toHaveURL(/#declare-implementation$/);
+  const section = page.locator('.docs-mobile-toc a').last();
+  const sectionUrl = await section.evaluate((anchor) => (anchor as HTMLAnchorElement).href);
+  await section.click();
+  await expect(page).toHaveURL(sectionUrl);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   );
-  await page.goto('/agent/actions/');
-  await page.screenshot({ path: test.info().outputPath('docs-mobile.png') });
-  await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.goto('/');
-  await page.screenshot({ path: test.info().outputPath('docs-desktop.png') });
 });
 
 test('built docs enforce a script policy without breaking hydration', async ({ page }) => {
@@ -102,7 +104,7 @@ test('built docs enforce a script policy without breaking hydration', async ({ p
   });
   await page.goto('/');
   await expect(page.locator('meta[http-equiv="content-security-policy"]')).toHaveCount(1);
-  await page.getByRole('button', { name: /Search docs/ }).click();
+  await openSearch(page);
   // The search UI builds its input lazily after load; slow CI runners need longer.
   await expect(page.getByRole('dialog').getByRole('textbox', { name: 'Search terms' })).toBeFocused(
     { timeout: 15_000 },
@@ -122,14 +124,17 @@ test('contents omit step numbering without changing article anchors and follow t
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto('/quickstart/');
   const contents = page.getByRole('complementary', { name: 'On this page' });
-  const link = contents.getByRole('link', { name: 'Review your prompts', exact: true });
+  // The quickstart's sections are numbered steps; the second is below the fold.
+  const link = contents.getByRole('link').nth(1);
+  const hash = (await link.getAttribute('href')) ?? '';
+  const label = await link.innerText();
+  const heading = page.locator(`[id="${hash.slice(1)}"]`);
   await link.click();
-  await expect(page).toHaveURL(/#2-review-your-prompts$/);
-  await expect(page.getByRole('heading', { name: '2. Review your prompts' })).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`${hash}$`));
+  await expect(heading).toBeVisible();
+  expect(await heading.innerText()).toBe(`2. ${label}`);
   await expect(link).toHaveAttribute('aria-current', 'location');
-  const headingTop = await page
-    .getByRole('heading', { name: '2. Review your prompts' })
-    .evaluate((node) => node.getBoundingClientRect().top);
+  const headingTop = await heading.evaluate((node) => node.getBoundingClientRect().top);
   const headerBottom = await page
     .locator('.docs-header')
     .evaluate((node) => node.getBoundingClientRect().bottom);

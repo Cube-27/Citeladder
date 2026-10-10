@@ -13,7 +13,7 @@ Start with project discovery, inspect available evidence, then ask for the concr
 | ----------------------------------------------- | -------------------------------------------------------------- |
 | Which project can I analyze?                    | `list_projects`                                                |
 | What is known about this business?              | `get_project_business_context`                                 |
-| Where is a specific saved record?               | `search`, then `fetch`                                         |
+| Which project, Action or prompt mentions this?  | `search`, then `fetch`                                         |
 | What did an AI audit observe?                   | `read_visibility_overview`, then `read_visibility_results`     |
 | Which sources were used?                        | `read_visibility_sources`                                      |
 | Who cites one specific URL?                     | `read_source_url`                                              |
@@ -21,6 +21,10 @@ Start with project discovery, inspect available evidence, then ask for the concr
 | How do cited competitor pages differ from mine? | `read_content_differentiation`                                 |
 | Which products do AI answers recommend?         | `read_ai_shelf`                                                |
 | What did the website crawl find?                | `read_site_health`, then `read_site_pages`                     |
+| Can AI crawlers reach the site?                 | `read_ai_crawlability`                                         |
+| Which AI crawlers visited, per server logs?     | `read_crawl_logs`                                              |
+| Which pages get AI traffic?                     | `read_ai_traffic_pages`, then `read_ai_traffic_url`            |
+| How many visits came from AI assistants?        | `read_ai_referrals`                                            |
 | Which connected reports exist?                  | `read_integration_status`                                      |
 | What does a performance window show?            | `read_performance`, then `read_performance` with a `dimension` |
 | Which research dataset should I inspect?        | `read_search_intelligence`, then `read_search_dataset`         |
@@ -33,13 +37,13 @@ In clients that support MCP Apps, such as Claude and ChatGPT, three tools open a
 | -------------------- | ---------------------------------------------------------------------- |
 | `render_visibility`  | An overview or sources for one audit, or trends over a window you name |
 | `render_site_health` | The Site Health results of one crawl                                   |
-| `open_analytics`     | The analytics view, in a sidebar or panel                              |
+| `open_analytics`     | The CiteLadder project picker                                          |
 
 Clients without MCP Apps ignore the view and use the read tools instead.
 
 ## Read records and windows precisely
 
-The generic `search` tool returns supported `citeladder://` record references. Pass a returned reference to `fetch` to read that record. Arbitrary URLs, SQL and filesystem paths are not valid substitutes.
+The `search` tool finds projects, active Actions and prompts by text and returns `citeladder://` record references. Pass a returned reference to `fetch` to read that record. Arbitrary URLs, SQL and filesystem paths are not valid substitutes.
 
 Keep the exact audit, dataset or date-window identity in your analysis. A query table and a page table do not automatically establish query-page evidence.
 

@@ -1,6 +1,8 @@
 import { ArrowRight } from 'lucide-react';
 
-import { BlogIndexExplorer, PostMeta } from '@/components/marketing/blog/blog-index-explorer';
+import type { ReactNode } from 'react';
+
+import { PostMeta } from '@/components/marketing/blog/blog-index-explorer';
 import {
   BLOG_EMPTY_STATE,
   BLOG_START_PATHS,
@@ -160,9 +162,11 @@ function EmptyBlog() {
   );
 }
 
+/** Server-rendered; `explorer` is the hydrated filter and sort list (`BlogIndexExplorer`). */
 export function BlogIndex({
   researchGuides = [],
-}: Readonly<{ researchGuides?: readonly ResearchGuide[] }>) {
+  explorer,
+}: Readonly<{ researchGuides?: readonly ResearchGuide[]; explorer?: ReactNode }>) {
   const summaries = POSTS.map(toBlogPostSummary);
   const newest = filterAndSortPosts(summaries, null, 'latest')[0];
   const featured = POSTS.find((post) => post.slug === newest?.slug);
@@ -177,7 +181,7 @@ export function BlogIndex({
 
       {summaries.length ? (
         <Section rhythm="tight" aria-label="Blog articles">
-          <BlogIndexExplorer posts={summaries} />
+          {explorer}
         </Section>
       ) : (
         <EmptyBlog />

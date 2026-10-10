@@ -106,7 +106,7 @@ export function EnterpriseHero() {
     <PageHero
       centered
       title="AI visibility your security team can inspect."
-      lead="Measure how ChatGPT, Gemini and Claude describe your brand, with an evidence trail scoped to your workspace. Ready for procurement and security review."
+      lead="Measure how ChatGPT, Gemini, Claude and Google AI Overviews describe your brand, with an evidence trail scoped to your workspace. Ready for procurement and security review."
     >
       <div className="mt-9 flex flex-wrap justify-center gap-3">
         <DemoButtonLink size="marketing">

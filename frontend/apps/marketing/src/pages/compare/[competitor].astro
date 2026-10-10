@@ -1,34 +1,31 @@
 ---
+import type { GetStaticPaths } from 'astro';
 import { CompareDetailView } from '@/components/marketing/pages/compare-detail';
 import { COMPETITORS } from '@/lib/marketing-content/compare';
 import { breadcrumbJsonLd } from '@/lib/seo/json-ld';
 import MarketingLayout from '../../layouts/MarketingLayout.astro';
 
-const competitor = COMPETITORS.find((candidate) => candidate.slug === Astro.params.competitor);
-if (!competitor) Astro.response.status = 404;
-const title = competitor?.metaTitle ?? 'Comparison not found · CiteLadder';
-const description = competitor?.metaDescription ?? 'The requested CiteLadder comparison does not exist.';
-const breadcrumb = competitor
-  ? breadcrumbJsonLd([
-      { name: 'Home', path: '/' },
-      { name: 'Compare', path: '/compare' },
-      { name: `CiteLadder vs ${competitor.name}`, path: `/compare/${competitor.slug}` },
-    ])
-  : null;
+export const getStaticPaths = (() =>
+  COMPETITORS.map((competitor) => ({
+    params: { competitor: competitor.slug },
+    props: { competitor },
+  }))) satisfies GetStaticPaths;
+
+const { competitor } = Astro.props;
+const breadcrumb = breadcrumbJsonLd([
+  { name: 'Home', path: '/' },
+  { name: 'Compare', path: '/compare' },
+  { name: `CiteLadder vs ${competitor.name}`, path: `/compare/${competitor.slug}` },
+]);
 ---
 
 <MarketingLayout
-  title={title}
-  description={description}
-  canonical={competitor ? `/compare/${competitor.slug}` : undefined}
-  robots={competitor ? undefined : 'noindex'}
+  title={competitor.metaTitle}
+  description={competitor.metaDescription}
+  canonical={`/compare/${competitor.slug}`}
   jsonLd={breadcrumb ? [breadcrumb] : []}
 >
-  {competitor ? (
-    <main id="main">
-      <CompareDetailView competitor={competitor} />
-    </main>
-  ) : (
-    <main id="main"><h1>Comparison not found</h1></main>
-  )}
+  <main id="main">
+    <CompareDetailView competitor={competitor} />
+  </main>
 </MarketingLayout>

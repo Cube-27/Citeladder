@@ -1,6 +1,10 @@
 // @vitest-environment node
-import { describe, expect, it, vi } from 'vite-plus/test';
-import { handleContactRequest as handleRequest, type ContactRateLimits } from './contact-request';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+import {
+  handleContactRequest as handleRequest,
+  type ContactChallenge,
+  type ContactRateLimits,
+} from './contact-request';
 import { CONTACT_MAX_BODY_BYTES } from '@/lib/config/contact';
 
 const valid = {
@@ -8,7 +12,30 @@ const valid = {
   email: ' ADA@Example.COM ',
   company: ' Example ',
   message: ' Please show us CiteLadder. ',
+  turnstile_token: 'solved-token',
 };
+
+/** Siteverify answers for each token the tests send. */
+const siteverify: Record<string, object> = {
+  'solved-token': { success: true, action: 'contact', hostname: 'citeladder.com' },
+  'replayed-token': { success: false, 'error-codes': ['timeout-or-duplicate'] },
+  'other-action': { success: true, action: 'signup', hostname: 'citeladder.com' },
+  'other-host': { success: true, action: 'contact', hostname: 'attacker.example' },
+};
+const verified: URLSearchParams[] = [];
+beforeEach(() => {
+  verified.length = 0;
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (_url: string, init: RequestInit) => {
+      const form = new URLSearchParams(String(init.body));
+      verified.push(form);
+      return Response.json(siteverify[form.get('response') ?? ''] ?? { success: false });
+    }),
+  );
+});
+afterEach(() => vi.unstubAllGlobals());
+const challenge: ContactChallenge = { secret: 'turnstile-secret', hostnames: ['citeladder.com'] };
 function request(payload: unknown, origin = 'https://citeladder.com') {
   return new Request('https://citeladder.com/api/v1/contact', {
     method: 'POST',
@@ -32,8 +59,9 @@ function handleContactRequest(
   input: Request,
   send: (submission: unknown) => Promise<boolean>,
   limits: ContactRateLimits = allowedLimits(),
+  configured: ContactChallenge = challenge,
 ) {
-  return handleRequest(input, send, limits);
+  return handleRequest(input, send, limits, configured);
 }
 
 describe('contact intake', () => {
@@ -42,6 +70,58 @@ describe('contact intake', () => {
     const upper = request(valid);
     upper.headers.set('Content-Type', 'Application/JSON; charset=utf-8');
     expect((await handleContactRequest(upper, send)).status).toBe(200);
+  });
+
+  it('sends only enquiries whose Turnstile token was solved for this form on this site', async () => {
+    const send = vi.fn().mockResolvedValue(true);
+    expect((await handleContactRequest(request(valid), send)).status).toBe(200);
+    expect(Object.fromEntries(verified[0]!)).toEqual({
+      secret: 'turnstile-secret',
+      response: 'solved-token',
+      remoteip: '192.0.2.10',
+    });
+    for (const token of ['', 'replayed-token', 'other-action', 'other-host']) {
+      const response = await handleContactRequest(
+        request({ ...valid, turnstile_token: token }),
+        send,
+      );
+      expect(response.status, token).toBe(403);
+      expect(await response.json()).toEqual({ outcome: 'verification_failed' });
+    }
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps unverified requests from using up the shared burst allowance', async () => {
+    const send = vi.fn().mockResolvedValue(true);
+    let burstLeft = 1;
+    const limits = {
+      ip: { limit: async () => ({ success: true }) },
+      burst: { limit: async () => ({ success: burstLeft-- > 0 }) },
+    };
+    for (const token of ['replayed-token', 'other-host', '']) {
+      const rejected = await handleContactRequest(
+        request({ ...valid, turnstile_token: token }),
+        send,
+        limits,
+      );
+      expect(rejected.status, token).toBe(403);
+    }
+    expect((await handleContactRequest(request(valid), send, limits)).status).toBe(200);
+  });
+
+  it('fails closed when the Turnstile secret is not configured', async () => {
+    const send = vi.fn();
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const response = await handleContactRequest(request(valid), send, allowedLimits(), {
+        secret: undefined,
+        hostnames: ['citeladder.com'],
+      });
+      expect(response.status).toBe(503);
+    } finally {
+      log.mockRestore();
+    }
+    expect(send).not.toHaveBeenCalled();
   });
 
   it('limits a trusted client across changed enquiries before reaching the mail provider', async () => {

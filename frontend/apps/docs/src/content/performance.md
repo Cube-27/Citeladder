@@ -11,7 +11,7 @@ Performance brings imported provider evidence into your project. Connecting an a
 
 Open the app's integration controls, connect a supported provider and choose the matching website property. Check the selected project before confirming.
 
-Search Console supplies search performance evidence. Google Analytics supplies analytics evidence, including the report used for AI Referrals. Available integrations and connection permissions depend on your workspace.
+Search Console and Bing Webmaster Tools supply search performance evidence. Google Analytics supplies analytics evidence, including the report used for AI Referrals. Available integrations and connection permissions depend on your workspace.
 
 ## Wait for coverage
 

@@ -1,26 +1,8 @@
 import { absoluteUrl } from '@/lib/seo/site';
 
-const privateSegments = [
-  'onboarding',
-  'ai-traffic',
-  'content',
-  'demand',
-  'issues',
-  'opportunities',
-  'performance',
-  'products',
-  'projects',
-  'prompts',
-  'runs',
-  'settings',
-  'site',
-  'visibility',
-];
-// Match route boundaries so /site stays private without blocking /sitemap.xml.
-const privatePaths = [
-  '/api/',
-  ...privateSegments.flatMap((segment) => [`/${segment}$`, `/${segment}/`, `/${segment}?`]),
-];
+// Retired app paths are not disallowed: the apex answers them with 404, and a
+// crawler has to fetch a URL to see that it is gone.
+const privatePaths = ['/api/'];
 const aiCrawlers = [
   'GPTBot',
   'OAI-SearchBot',

@@ -10,6 +10,8 @@ type ResearchMetadata = {
   search_intent: string;
   content_type: string;
   reviewed_at: string;
+  /** Social card image; guides without one use the site image. */
+  image?: string;
 };
 
 export type ResearchArticle = { frontmatter: ResearchMetadata; markdown: string };

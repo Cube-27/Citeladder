@@ -48,13 +48,16 @@ export function NavItemLink({
         className={cn(ROW, 'justify-between')}
         href={item.href}
         target="_blank"
-        rel="noreferrer"
+        // External rows are CiteLadder's own docs: keep the referrer so docs
+        // traffic from the site stays attributable.
+        rel="noopener"
         onClick={onSelect}
       >
         <span className="flex items-start gap-3">
           <RowBody item={item} compact={compact} />
         </span>
         <ArrowUpRight className="text-muted mt-0.5 size-3.5 shrink-0" aria-hidden />
+        <span className="sr-only">(opens in a new tab)</span>
       </a>
     );
   }

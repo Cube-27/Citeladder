@@ -106,19 +106,30 @@ permit this sender. Missing configuration or failed delivery returns a generic
 `send_failed` response. No enquiry content or provider error is logged.
 Identical enquiries use a stable Resend idempotency key for its 24-hour retry
 window; a changed message creates a new send. Provider calls have a bounded
-timeout. Honeypot and same-origin validation add no interactive challenge.
-The committed marketing Worker rate-limit bindings allow 5 valid enquiries per
-client IP and 30 aggregate enquiries per minute at each Cloudflare location.
+timeout. The committed marketing Worker rate-limit bindings allow 2 valid
+enquiries per client IP and 10 enquiries per minute at each Cloudflare location.
 Only `CF-Connecting-IP` supplies the identity; absent identity or bindings and
 limiter failures block delivery. Throttling returns 429 and retains the form
 for a later retry. These edge limits mitigate bursts and are eventually
-consistent, not a strict global daily quota. No CAPTCHA is used.
+consistent, not a strict global daily quota.
+
+Every enquiry also carries a Cloudflare Turnstile token. The widget (site key
+`0x4AAAAAAFS7i6wNJ4sAbY-8`, baked in by the marketing delivery workflow) must
+list `citeladder.com` as a domain. Provision its secret as
+`TURNSTILE_SECRET_KEY` on **citeladder-marketing** with
+`pnpm exec wrangler secret put TURNSTILE_SECRET_KEY -c apps/marketing/wrangler.jsonc`
+and the interactive prompt; never in build vars, browser configuration, GitHub
+variables or any `PUBLIC_`-prefixed name. `TURNSTILE_HOSTNAMES` (a committed
+Worker variable) lists the hostnames a token may be solved on. The server
+rejects a missing, replayed, wrong-action or wrong-hostname token with 403
+`verification_failed`, and answers 503 while the secret is missing.
 
 After an authorized deployment, open `/contact` on desktop and mobile, submit
 a controlled message with a mailbox you own, verify it arrives at
 `contact@citeladder.com`, check the CiteLadder sender and Reply-To, and test
 Reply in Titan. Check required-field errors, retry behavior, the email fallback,
-and demo/contact CTAs. Confirm the browser assets and responses carry no
+that the Turnstile widget renders and a second send needs a fresh check, and
+demo/contact CTAs. Confirm the browser assets and responses carry no
 credential. Configure no Titan incoming-mail or DNS changes for this feature.
 
 ## Protected origin (Cloud Run)
