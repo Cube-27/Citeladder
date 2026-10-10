@@ -150,3 +150,18 @@ generation and each job's deadline remain.
 Source: owner decision of 28 September 2026.
 [Prompts and Visibility](visibility-prompt.md) and
 [Site Health](site-health.md#internal-links) own the shipped behavior.
+
+## Scoped API keys are explicit user decisions
+
+The public REST API at `https://api.citeladder.com/v1` is a paid-plan
+capability (`api_access`, ten live keys per workspace; not the public trial).
+Only an Owner or Admin creates a key. A key belongs to one workspace, may be
+restricted to chosen projects, and its scopes intersect its creator's current
+role on every request; removing the creator revokes the key. A write through a
+key holding the matching scope is therefore an explicit user decision under
+[invariant 10](invariants.md#10-automation-stays-bounded), and it runs through
+the same command layer as the browser. Creating or spending POSTs require an
+`Idempotency-Key`; an audit launch carries the caller's `max_estimated_credits`.
+
+Source: owner decisions D4.1–D4.3 of 10 October 2026 (competitive tracker F4).
+[Public API](public-api.md) owns the shipped behavior.

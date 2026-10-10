@@ -7,6 +7,14 @@ order: 400
 
 These notes describe implemented changes in the codebase. Dates are the recorded commit dates; availability in your workspace depends on deployment, access and configuration.
 
+## October 10, 2026: REST API and API keys
+
+Paid plans include a REST API at `https://api.citeladder.com/v1`. Owners and Admins create keys in **Settings → API keys**, choose what each key can do and which projects it reaches, and see each key's last use. Keys read projects, prompts, audits, visibility, Site Health, AI Traffic, Performance and Search Intelligence, and, with the matching scope, manage prompts, topics, competitors, audit schedules and actions or launch an audit with a credit ceiling. A key never does more than its creator's current role allows.
+
+**For your team:** feed CiteLadder results into your own dashboards and keep prompts and competitors in step with your other systems, without sharing a login.
+
+[Read the REST API guide](/api/)
+
 ## October 10, 2026: Prompt generation grounded in your search data
 
 Generated prompts now borrow wording from how your buyers already search. When Search Console is connected or you have published keyword research, suggestions for a topic with matching searches are written with a few of your own non-branded searches for that topic as examples, and suggestions phrased this way carry an **Informed by your search data** tag. Nothing extra is fetched or charged, searches are never copied as prompts, and impressions or keyword volume are never shown as AI prompt volume. Without that data, generation is unchanged.

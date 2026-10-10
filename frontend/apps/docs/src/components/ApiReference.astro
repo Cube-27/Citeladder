@@ -1,0 +1,20 @@
+---
+import { API_REFERENCE_HEADING, apiOperations } from '../lib/content';
+
+const operations = apiOperations();
+const groups = [...new Set(operations.map((operation) => operation.group))];
+---
+<section class="docs-tool-reference docs-prose website-body" aria-labelledby={API_REFERENCE_HEADING.slug}>
+  <h2 id={API_REFERENCE_HEADING.slug}>{API_REFERENCE_HEADING.text}</h2>
+  <p>Generated from the API's own route declarations; <a href="https://api.citeladder.com/v1/openapi.json">openapi.json</a> holds every request and response schema.</p>
+  {groups.map((group) => <details>
+    <summary><code>{group}</code></summary>
+    <ul>
+      {operations.filter((operation) => operation.group === group).map((operation) => <li>
+        <code>{operation.method} {operation.path}</code>
+        {operation.scope && <span class="website-label"> · scope {operation.scope}</span>}
+        {operation.query.length > 0 && <span class="website-label"> · query: {operation.query.join(', ')}</span>}
+      </li>)}
+    </ul>
+  </details>)}
+</section>

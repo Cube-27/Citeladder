@@ -21,6 +21,7 @@ positioning; [the index](README.md) routes to substantive feature documents.
 | Commerce                 | Catalog projections and target-specific shelf observations                                             | Reuses acquisition, Prompt and audit owners                                          |
 | Agent                    | Chats, frozen run context, tool/model attempts and versioned outputs                                   | Reviewable deliverable over shared persisted readers; never automatic business truth |
 | MCP                      | OAuth authorization records                                                                            | Read-only access to the same owners                                                  |
+| Public API               | API keys and replay-safe request records                                                               | Scoped REST access through the same commands and reads as the browser                |
 | Billing / Entitlements   | Commercial evidence, grants and ledger                                                                 | Admission, availability and settlement                                               |
 
 TypeScript owns billing checkout, subscription changes, webhook receipt,

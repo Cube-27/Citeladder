@@ -6,6 +6,7 @@
  * (`document.ts`), which the route-ownership gate reads. Each product route
  * declares its contract beside its handler (`routes/`).
  */
+import type { ApiKeyScope } from '@citeladder/contracts/api-keys';
 import type { RouteFamily } from '@citeladder/contracts/route-ownership';
 import type { z } from 'zod';
 
@@ -18,6 +19,8 @@ export type RouteContract<Family extends string = RouteFamily> = {
   family: Family;
   /** `public`: served on the public API host under `/v1`, for API keys. */
   exposure?: 'browser' | 'public';
+  /** The API key scope a public operation needs; absent for an anonymous one. */
+  scope?: ApiKeyScope;
   method: HttpMethod;
   /** The OpenAPI path template, `/api/v1` (or public `/v1`) prefix included. */
   path: string;

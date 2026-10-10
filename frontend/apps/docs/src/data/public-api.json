@@ -402,7 +402,8 @@
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
           }
-        ]
+        ],
+        "x-citeladder-scope": "read"
       }
     },
     "/v1/projects/{project_id}/site-crawls/{crawl_id}/pages": {
@@ -735,7 +736,8 @@
               "enum": ["status", "url", "inbound", "main_content_inbound", "depth"]
             }
           }
-        ]
+        ],
+        "x-citeladder-scope": "read"
       }
     },
     "/v1/projects/{project_id}/site-crawls/{crawl_id}/issues": {
@@ -1030,7 +1032,8 @@
               "enum": ["defect", "advisory"]
             }
           }
-        ]
+        ],
+        "x-citeladder-scope": "read"
       }
     },
     "/v1/projects/{project_id}/site-health": {
@@ -2142,7 +2145,8 @@
               ]
             }
           }
-        ]
+        ],
+        "x-citeladder-scope": "read"
       }
     },
     "/v1/projects/{project_id}/ai-traffic/pages": {
@@ -2565,7 +2569,8 @@
               ]
             }
           }
-        ]
+        ],
+        "x-citeladder-scope": "read"
       }
     },
     "/v1/projects/{project_id}/ai-traffic/overview": {
@@ -3179,7 +3184,8 @@
               ]
             }
           }
-        ]
+        ],
+        "x-citeladder-scope": "read"
       }
     },
     "/v1/projects/{project_id}/ai-traffic/coverage": {
@@ -3587,7 +3593,8 @@
               ]
             }
           }
-        ]
+        ],
+        "x-citeladder-scope": "read"
       }
     },
     "/v1/projects/{project_id}/visibility/ads": {
@@ -4148,7 +4155,8 @@
               "maximum": 50
             }
           }
-        ]
+        ],
+        "x-citeladder-scope": "read"
       }
     },
     "/v1/projects/{project_id}/visibility/perception": {
@@ -5346,7 +5354,8 @@
               ]
             }
           }
-        ]
+        ],
+        "x-citeladder-scope": "read"
       }
     },
     "/v1/projects/{project_id}/visibility": {
@@ -6424,7 +6433,8 @@
               "enum": ["core", "comparison"]
             }
           }
-        ]
+        ],
+        "x-citeladder-scope": "read"
       }
     },
     "/v1/projects/{project_id}/visibility/prompts": {
@@ -7405,7 +7415,8 @@
               "enum": ["core", "comparison"]
             }
           }
-        ]
+        ],
+        "x-citeladder-scope": "read"
       }
     },
     "/v1/projects/{project_id}/visibility/trends": {
@@ -7832,7 +7843,8 @@
               "enum": ["core", "comparison"]
             }
           }
-        ]
+        ],
+        "x-citeladder-scope": "read"
       }
     },
     "/v1/projects/{project_id}/visibility/fanout": {
@@ -8107,7 +8119,8 @@
               "maximum": 500
             }
           }
-        ]
+        ],
+        "x-citeladder-scope": "read"
       }
     },
     "/v1/projects/{project_id}/visibility/sources": {
@@ -8547,7 +8560,8 @@
               "maximum": 500
             }
           }
-        ]
+        ],
+        "x-citeladder-scope": "read"
       }
     },
     "/v1/projects/{project_id}/performance": {
@@ -9157,7 +9171,8 @@
               "type": ["string", "null"]
             }
           }
-        ]
+        ],
+        "x-citeladder-scope": "read"
       }
     },
     "/v1/projects/{project_id}/performance/table": {
@@ -9376,7 +9391,8 @@
               ]
             }
           }
-        ]
+        ],
+        "x-citeladder-scope": "read"
       }
     },
     "/v1/projects/{project_id}/actions": {
@@ -9560,7 +9576,8 @@
               "type": ["string", "null"]
             }
           }
-        ]
+        ],
+        "x-citeladder-scope": "read"
       }
     },
     "/v1/projects/{project_id}/actions/{action_id}": {
@@ -10472,7 +10489,8 @@
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
           }
-        ]
+        ],
+        "x-citeladder-scope": "read"
       },
       "patch": {
         "tags": ["actions"],
@@ -10622,7 +10640,8 @@
               }
             }
           }
-        }
+        },
+        "x-citeladder-scope": "actions:write"
       }
     },
     "/v1/projects/{project_id}/actions/{action_id}/declaration": {
@@ -11763,7 +11782,8 @@
               }
             }
           }
-        }
+        },
+        "x-citeladder-scope": "actions:write"
       }
     },
     "/v1/projects/{project_id}/search-intelligence/runs": {
@@ -11936,7 +11956,8 @@
               "maximum": 100
             }
           }
-        ]
+        ],
+        "x-citeladder-scope": "read"
       }
     },
     "/v1/projects/{project_id}/search-intelligence/datasets/{dataset_id}/rows": {
@@ -12381,7 +12402,8 @@
               "maxLength": 100
             }
           }
-        ]
+        ],
+        "x-citeladder-scope": "read"
       }
     },
     "/v1/projects/{project_id}/business-map": {
@@ -12587,7 +12609,8 @@
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
           }
-        ]
+        ],
+        "x-citeladder-scope": "read"
       }
     },
     "/v1/projects/{project_id}/competitor-suggestions": {
@@ -12690,7 +12713,8 @@
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
           }
-        ]
+        ],
+        "x-citeladder-scope": "read"
       }
     },
     "/v1/projects/{project_id}/competitor-suggestions/{candidate_id}/accept": {
@@ -12795,7 +12819,8 @@
               "maxLength": 255
             }
           }
-        ]
+        ],
+        "x-citeladder-scope": "competitors:write"
       }
     },
     "/v1/projects/{project_id}/prompt-sets/{prompt_set_id}/generate": {
@@ -13145,7 +13170,8 @@
               }
             }
           }
-        }
+        },
+        "x-citeladder-scope": "prompts:write"
       }
     },
     "/v1/projects/{project_id}/prompt-sets/{prompt_set_id}": {
@@ -13313,7 +13339,8 @@
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
           }
-        ]
+        ],
+        "x-citeladder-scope": "read"
       }
     },
     "/v1/projects/{project_id}/prompt-sets/{prompt_set_id}/import": {
@@ -13544,7 +13571,8 @@
               }
             }
           }
-        }
+        },
+        "x-citeladder-scope": "prompts:write"
       }
     },
     "/v1/projects/{project_id}/prompt-sets/{prompt_set_id}/candidates": {
@@ -13680,7 +13708,8 @@
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
           }
-        ]
+        ],
+        "x-citeladder-scope": "read"
       }
     },
     "/v1/projects/{project_id}/prompt-sets/{prompt_set_id}/candidates/review": {
@@ -13881,7 +13910,8 @@
               }
             }
           }
-        }
+        },
+        "x-citeladder-scope": "prompts:write"
       }
     },
     "/v1/projects/{project_id}/prompts/{prompt_id}": {
@@ -14096,7 +14126,8 @@
               }
             }
           }
-        }
+        },
+        "x-citeladder-scope": "prompts:write"
       },
       "delete": {
         "tags": ["prompts"],
@@ -14126,7 +14157,8 @@
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
           }
-        ]
+        ],
+        "x-citeladder-scope": "prompts:write"
       }
     },
     "/v1/projects/{project_id}/topics": {
@@ -14216,7 +14248,8 @@
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
           }
-        ]
+        ],
+        "x-citeladder-scope": "read"
       },
       "post": {
         "tags": ["topics"],
@@ -14346,7 +14379,8 @@
               }
             }
           }
-        }
+        },
+        "x-citeladder-scope": "prompts:write"
       }
     },
     "/v1/projects/{project_id}/topics/{topic_id}": {
@@ -14490,7 +14524,8 @@
               }
             }
           }
-        }
+        },
+        "x-citeladder-scope": "prompts:write"
       },
       "delete": {
         "tags": ["topics"],
@@ -14520,7 +14555,8 @@
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
           }
-        ]
+        ],
+        "x-citeladder-scope": "prompts:write"
       }
     },
     "/v1/projects/{project_id}/audit-schedules": {
@@ -14791,7 +14827,8 @@
               }
             }
           }
-        }
+        },
+        "x-citeladder-scope": "schedules:write"
       },
       "get": {
         "tags": ["audit-schedules"],
@@ -14951,7 +14988,8 @@
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
           }
-        ]
+        ],
+        "x-citeladder-scope": "read"
       }
     },
     "/v1/projects/{project_id}/audit-schedules/{schedule_id}": {
@@ -15120,7 +15158,8 @@
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
           }
-        ]
+        ],
+        "x-citeladder-scope": "read"
       },
       "patch": {
         "tags": ["audit-schedules"],
@@ -15382,7 +15421,8 @@
               }
             }
           }
-        }
+        },
+        "x-citeladder-scope": "schedules:write"
       },
       "delete": {
         "tags": ["audit-schedules"],
@@ -15412,7 +15452,8 @@
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
           }
-        ]
+        ],
+        "x-citeladder-scope": "schedules:write"
       }
     },
     "/v1/projects/{project_id}/audits/{audit_id}": {
@@ -15611,7 +15652,8 @@
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
           }
-        ]
+        ],
+        "x-citeladder-scope": "read"
       }
     },
     "/v1/projects/{project_id}/audits/{audit_id}/cancel": {
@@ -15820,7 +15862,8 @@
               "maxLength": 255
             }
           }
-        ]
+        ],
+        "x-citeladder-scope": "audits:run"
       }
     },
     "/v1/projects": {
@@ -16241,7 +16284,8 @@
               "maximum": 100
             }
           }
-        ]
+        ],
+        "x-citeladder-scope": "read"
       }
     },
     "/v1/projects/{project_id}/prompt-sets": {
@@ -16415,7 +16459,8 @@
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
           }
-        ]
+        ],
+        "x-citeladder-scope": "read"
       }
     },
     "/v1/projects/{project_id}/prompts": {
@@ -16664,7 +16709,8 @@
               ]
             }
           }
-        ]
+        ],
+        "x-citeladder-scope": "read"
       }
     },
     "/v1/projects/{project_id}/prompt-sets/{prompt_set_id}/prompts": {
@@ -16877,7 +16923,8 @@
               }
             }
           }
-        }
+        },
+        "x-citeladder-scope": "prompts:write"
       }
     },
     "/v1/projects/{project_id}/prompt-sets/{prompt_set_id}/generation-runs": {
@@ -16939,7 +16986,8 @@
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
           }
-        ]
+        ],
+        "x-citeladder-scope": "read"
       }
     },
     "/v1/projects/{project_id}/competitors": {
@@ -17027,7 +17075,8 @@
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
           }
-        ]
+        ],
+        "x-citeladder-scope": "read"
       },
       "post": {
         "tags": ["competitors"],
@@ -17155,7 +17204,8 @@
               }
             }
           }
-        }
+        },
+        "x-citeladder-scope": "competitors:write"
       }
     },
     "/v1/projects/{project_id}/competitors/{competitor_id}": {
@@ -17282,7 +17332,8 @@
               }
             }
           }
-        }
+        },
+        "x-citeladder-scope": "competitors:write"
       },
       "delete": {
         "tags": ["competitors"],
@@ -17312,7 +17363,8 @@
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
           }
-        ]
+        ],
+        "x-citeladder-scope": "competitors:write"
       }
     },
     "/v1/projects/{project_id}/audits": {
@@ -17545,7 +17597,8 @@
               "maximum": 100
             }
           }
-        ]
+        ],
+        "x-citeladder-scope": "read"
       },
       "post": {
         "tags": ["audits"],
@@ -17827,7 +17880,8 @@
               }
             }
           }
-        }
+        },
+        "x-citeladder-scope": "audits:run"
       }
     },
     "/v1/projects/{project_id}/audits/estimate": {
@@ -18128,7 +18182,8 @@
               }
             }
           }
-        }
+        },
+        "x-citeladder-scope": "read"
       }
     }
   }

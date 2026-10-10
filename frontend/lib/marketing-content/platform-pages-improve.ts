@@ -329,6 +329,10 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
         q: 'How do I disconnect?',
         a: 'Open Settings → MCP connections in CiteLadder and remove the connection. Workspace Owners and Admins can also remove any connection to their workspace.',
       },
+      {
+        q: 'Is there a REST API too?',
+        a: 'Yes: on paid plans the same data and scoped actions are available through a REST API at https://api.citeladder.com/v1, with keys from Settings → API keys.',
+      },
     ],
     closing: 'Give your assistant the context behind the chart.',
     related: ['/platform/integrations', '/platform/agents', '/platform'],

@@ -122,7 +122,11 @@ role. Transfer installs a replacement atomically, and removal, demotion or
 departure cannot leave a workspace ownerless. Only the Owner can transfer
 ownership, and only to a member who owns no workspace. Removal or departure also
 drops the workspace from that person's MCP grants, so a later re-invitation needs
-fresh MCP consent.
+fresh MCP consent, and revokes the API keys that person created in the workspace
+(`creator_removed`). An [API key](public-api.md) acts for its creator: its
+scopes intersect the creator's current role on every request, so a demotion
+narrows it at once, and only Owners and Admins (`manage_credentials`) create or
+revoke keys.
 Workspace-root locks serialize membership and invitation changes; mutations
 recheck live authority after taking the lock. Creation and incoming ownership
 share the per-user creation advisory lock. Terms reads never repair state.

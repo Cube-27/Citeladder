@@ -132,8 +132,10 @@ Then redeploy the backend and both Workers.
 
 Every deploy copies these into Secret Manager. Changed values create a new
 version; an emptied optional secret has its versions disabled and is dropped
-from Cloud Run. The database, JWT, encryption and referral secrets are
-generated once in Secret Manager. They never pass through GitHub or Terraform.
+from Cloud Run. The database, JWT, encryption, referral and API key pepper
+(`API_KEY_PEPPER`, `citeladder-api-key-pepper`) secrets are generated once in
+Secret Manager. They never pass through GitHub or Terraform. Rotating the API
+key pepper invalidates every public API key.
 
 ### 1.5 Provider redirect URIs
 

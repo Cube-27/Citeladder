@@ -17,11 +17,29 @@ function groupOf(path: string): string {
 }
 
 export function publicApiDocument(contracts: readonly RouteContract[]) {
-  const document: OpenApiDocument = openApiDocument(
-    contracts.filter((contract) => contract.exposure === 'public'),
+  const published = contracts.filter((contract) => contract.exposure === 'public');
+  const document: OpenApiDocument = openApiDocument(published);
+  const paths = Object.fromEntries(
+    Object.entries(document.paths).map(([path, item]) => [
+      path,
+      Object.fromEntries(
+        Object.entries(item).map(([method, operation]) => {
+          const scope = published.find(
+            (contract) => contract.path === path && contract.method === method,
+          )?.scope;
+          // `x-citeladder-scope`: the API key scope the operation needs.
+          return [
+            method,
+            {
+              ...operation,
+              tags: [groupOf(path)],
+              ...(scope ? { 'x-citeladder-scope': scope } : {}),
+            },
+          ];
+        }),
+      ),
+    ]),
   );
-  for (const [path, item] of Object.entries(document.paths))
-    for (const operation of Object.values(item)) operation.tags = [groupOf(path)];
   return {
     openapi: document.openapi,
     info: { title: P.document.title, version: P.document.version },
@@ -32,6 +50,6 @@ export function publicApiDocument(contracts: readonly RouteContract[]) {
         apiKey: { type: 'http', scheme: 'bearer', description: P.document.auth_description },
       },
     },
-    paths: document.paths,
+    paths,
   };
 }

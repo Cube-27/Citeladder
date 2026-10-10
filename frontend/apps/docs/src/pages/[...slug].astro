@@ -2,6 +2,7 @@
 import { articleHeadings, articles } from '../lib/content';
 import DocsLayout from '../layouts/DocsLayout.astro';
 import ToolReference from '../components/ToolReference.astro';
+import ApiReference from '../components/ApiReference.astro';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 
 export function getStaticPaths() {
@@ -24,6 +25,7 @@ const headings = await articleHeadings(article);
     </header>
     <div class="docs-prose website-body"><Content /></div>
     {article.toolReference && <ToolReference />}
+    {article.apiReference && <ApiReference />}
   </article>
   <nav class="docs-pagination" aria-label="Adjacent articles">
     {previous ? <a href={previous.href}><span class="website-label"><ArrowLeft className="size-3.5" aria-hidden />Previous</span><span class="docs-pagination-title">{previous.title}</span></a> : <span />}

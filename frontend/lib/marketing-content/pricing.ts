@@ -34,6 +34,8 @@ const CAPABILITY_LABELS: Readonly<Record<string, string>> = {
   authenticated_exports: 'Authenticated exports',
   agent: 'Agent',
   crawl_logs: 'AI crawler logs',
+  api_access: 'REST API access',
+  api_keys: 'API keys',
   ai_credits: 'AI credits',
   query_fanouts: 'Query fanouts',
   fanout: 'Query fanouts',

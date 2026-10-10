@@ -54,6 +54,8 @@ curl -fsS http://localhost:8100/health
       argument (`https://api.citeladder.com`) so it also checks that the API host refuses
       `/`, `/pricing` and `/api/v1/*`; see the
       [API host section](operations/WORKERS_RUNBOOK.md#api-host-apiciteladdercom).
+      With an API key from a paid workspace, `GET https://api.citeladder.com/v1/projects`
+      returns its projects and `GET /v1/openapi.json` returns the public document.
 - [ ] The API health endpoint responds at port 8100.
 - [ ] Smoke-test the appropriate authenticated and worker-backed flows with non-production data.
 - [ ] Stop the evidence stack when finished: `env -u POSTGRES_PASSWORD -u POSTGRES_USER

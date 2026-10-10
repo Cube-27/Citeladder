@@ -290,6 +290,7 @@ function publicOperation(
   const contract: RouteContract = {
     family: 'public-api',
     exposure: 'public',
+    ...(guard ? { scope: guard.scope } : {}),
     method,
     path,
     pathParams: parameterObject(
