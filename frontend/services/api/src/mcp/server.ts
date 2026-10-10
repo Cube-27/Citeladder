@@ -5,9 +5,10 @@ import type { AppEnv } from '../context.ts';
 import type { Database } from '../db/database.ts';
 import { loadMcpConfig, mcpPolicy } from './config.ts';
 import { authenticateMcp } from './oauth.ts';
-import { admitToolCall } from './registration.ts';
+import { admitToolCall, admitWriteCall } from './registration.ts';
 import { registerOAuthRoutes } from './oauth-routes.ts';
 import { dispatchTool, presentationTools, tools } from './tools.ts';
+import { dispatchWrite, isWriteTool, writeTools } from './write-tools.ts';
 import { callerMessage } from './types.ts';
 import { getLogger } from '../logging.ts';
 import { parseUuid } from '../http/uuid.ts';
@@ -21,7 +22,8 @@ const logger = getLogger('mcp');
 
 const VERSIONS = ['2026-07-28', '2025-11-25'];
 const INSTRUCTIONS = [
-  "Read-only CiteLadder data about a business's visibility in AI answers and search.",
+  "CiteLadder data about a business's visibility in AI answers and search.",
+  "Writes need the user's explicit confirmation: call a prepare tool, show the preview to the user, call confirm_change only after they agree.",
   'Start with list_projects, then get_project_business_context; use the focused reads for detail.',
   'Missing evidence is unavailable, never zero. Report change without claiming its cause.',
   'IDs and citeladder:// references are for your tool calls only: never show them to the user. Name the page, prompt, competitor or Action instead, and give app links as links.',
@@ -211,9 +213,8 @@ export function registerMcpRoutes(app: Hono<AppEnv>, config: ServiceConfig, db: 
           result = {};
           break;
         case 'tools/list':
-          result = {
-            tools: listedTools,
-          };
+          // A read-only grant neither lists nor can call a change.
+          result = { tools: principal.canWrite ? [...listedTools, ...writeTools] : listedTools };
           break;
         case 'tools/call': {
           if (
@@ -221,35 +222,45 @@ export function registerMcpRoutes(app: Hono<AppEnv>, config: ServiceConfig, db: 
             (params.arguments !== undefined && !object(params.arguments))
           )
             return c.json(rpcError(message.id, -32602, 'Invalid tool arguments'), 400);
-          if (!toolNames.has(params.name))
-            return c.json(rpcError(message.id, -32602, `Unknown tool: ${params.name}`), 400);
+          const name = params.name;
+          const write = isWriteTool(name) && principal.canWrite;
+          if (!toolNames.has(name) && !write)
+            return c.json(rpcError(message.id, -32602, `Unknown tool: ${name}`), 400);
           try {
             await admitToolCall(db, principal.grantId, principal.userId);
-            const value = await dispatchTool(
-              db,
-              principal,
-              params.name,
-              params.arguments ?? {},
-              settings.browserOrigin,
-            );
+            if (write) await admitWriteCall(db, principal.grantId);
+            const value =
+              isWriteTool(name) && write
+                ? await dispatchWrite({ db, config, principal }, name, params.arguments ?? {})
+                : await dispatchTool(
+                    db,
+                    principal,
+                    name,
+                    params.arguments ?? {},
+                    settings.browserOrigin,
+                  );
             result = {
               content: [{ type: 'text', text: JSON.stringify(value) }],
               structuredContent: value,
               isError: false,
-              ...(presentationTools.has(params.name)
-                ? { _meta: appToolMetadata(params.name) }
-                : {}),
+              ...(presentationTools.has(name) ? { _meta: appToolMetadata(name) } : {}),
             };
           } catch (error) {
             // A caller's mistake is a tool error the model can read and correct.
             const problem = callerMessage(error);
             if (problem === null)
-              logger.warning('MCP evidence read failed', {
-                tool: params.name,
+              logger.warning('MCP tool call failed', {
+                tool: name,
                 exceptionType: error instanceof Error ? error.name : 'unknown',
               });
             result = {
-              content: [{ type: 'text', text: problem ?? 'Evidence is unavailable.' }],
+              content: [
+                {
+                  type: 'text',
+                  text:
+                    problem ?? (write ? 'The change was not made.' : 'Evidence is unavailable.'),
+                },
+              ],
               isError: true,
             };
           }
