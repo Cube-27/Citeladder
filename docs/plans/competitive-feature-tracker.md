@@ -621,8 +621,11 @@ JSON output). Template in config with `template_version`. Output schema (zod):
 ```
 
 Instructions to the model (template): judge only how the answer describes the
-entity; a bare list of names is `not_assessable`; `mixed` when both polarities
-are explicit; quotes must be copied exactly.
+entity; being listed, named as an option or called popular is `neutral`
+without a specific claim; a mention that neither presents nor describes the
+entity is `not_assessable`; `mixed` when both polarities are explicit,
+including a recommendation with a stated drawback; quotes must be copied
+exactly.
 
 **Deterministic validation (code, not model):**
 
