@@ -88,10 +88,10 @@
     "prompt": "Taskline or Planbase?",
     "brand_name": "Taskline",
     "competitors": ["Planbase", "Orbit Boards"],
-    "answer": "Planbase is cheaper and simpler, while Taskline costs more but has far better support and reliability. Choose Taskline if uptime matters.",
+    "answer": "Planbase is cheaper and simpler to set up. Taskline costs more but has excellent support and reliability. Choose Taskline if uptime matters.",
     "labels": {
-      "Taskline": "positive",
-      "Planbase": "mixed"
+      "Taskline": "mixed",
+      "Planbase": "positive"
     }
   },
   {
@@ -206,10 +206,10 @@
     "prompt": "Stride Co or Peakfoot?",
     "brand_name": "Stride Co",
     "competitors": ["Peakfoot", "Runwell"],
-    "answer": "Peakfoot is cheaper and simpler, while Stride Co costs more but has far better support and reliability. Choose Stride Co if uptime matters.",
+    "answer": "Peakfoot is cheaper and simpler to set up. Stride Co costs more but has excellent support and reliability. Choose Stride Co if uptime matters.",
     "labels": {
-      "Stride Co": "positive",
-      "Peakfoot": "mixed"
+      "Stride Co": "mixed",
+      "Peakfoot": "positive"
     }
   },
   {
@@ -324,10 +324,10 @@
     "prompt": "Ledgerly or Bookwise?",
     "brand_name": "Ledgerly",
     "competitors": ["Bookwise", "Tallyhub"],
-    "answer": "Bookwise is cheaper and simpler, while Ledgerly costs more but has far better support and reliability. Choose Ledgerly if uptime matters.",
+    "answer": "Bookwise is cheaper and simpler to set up. Ledgerly costs more but has excellent support and reliability. Choose Ledgerly if uptime matters.",
     "labels": {
-      "Ledgerly": "positive",
-      "Bookwise": "mixed"
+      "Ledgerly": "mixed",
+      "Bookwise": "positive"
     }
   },
   {
@@ -442,10 +442,10 @@
     "prompt": "Freshbox or Kitchen Kit?",
     "brand_name": "Freshbox",
     "competitors": ["Kitchen Kit", "Platewise"],
-    "answer": "Kitchen Kit is cheaper and simpler, while Freshbox costs more but has far better support and reliability. Choose Freshbox if uptime matters.",
+    "answer": "Kitchen Kit is cheaper and simpler to set up. Freshbox costs more but has excellent support and reliability. Choose Freshbox if uptime matters.",
     "labels": {
-      "Freshbox": "positive",
-      "Kitchen Kit": "mixed"
+      "Freshbox": "mixed",
+      "Kitchen Kit": "positive"
     }
   },
   {
@@ -560,10 +560,10 @@
     "prompt": "Shieldhome or Coverly?",
     "brand_name": "Shieldhome",
     "competitors": ["Coverly", "Hearth Mutual"],
-    "answer": "Coverly is cheaper and simpler, while Shieldhome costs more but has far better support and reliability. Choose Shieldhome if uptime matters.",
+    "answer": "Coverly is cheaper and simpler to set up. Shieldhome costs more but has excellent support and reliability. Choose Shieldhome if uptime matters.",
     "labels": {
-      "Shieldhome": "positive",
-      "Coverly": "mixed"
+      "Shieldhome": "mixed",
+      "Coverly": "positive"
     }
   },
   {
@@ -678,10 +678,10 @@
     "prompt": "Pipewell or Dealdesk?",
     "brand_name": "Pipewell",
     "competitors": ["Dealdesk", "Contactly"],
-    "answer": "Dealdesk is cheaper and simpler, while Pipewell costs more but has far better support and reliability. Choose Pipewell if uptime matters.",
+    "answer": "Dealdesk is cheaper and simpler to set up. Pipewell costs more but has excellent support and reliability. Choose Pipewell if uptime matters.",
     "labels": {
-      "Pipewell": "positive",
-      "Dealdesk": "mixed"
+      "Pipewell": "mixed",
+      "Dealdesk": "positive"
     }
   },
   {
