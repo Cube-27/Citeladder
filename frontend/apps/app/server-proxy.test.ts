@@ -11,28 +11,29 @@ function upstream(url: string): string | undefined {
 }
 
 describe('dev server proxy', () => {
-  it('forwards every API and protocol path the product Worker proxies', () => {
+  it('forwards every API path and MCP consent, as the product Worker does', () => {
     for (const path of [
       '/api',
       '/api?x=1',
       '/api/v1/executions/abc/events?cursor=1',
       `${PROJECT}/ai-traffic/referrals?days=30`,
-      '/mcp',
-      '/mcp/sse',
-      '/token?grant=1',
-      '/.well-known/oauth-authorization-server',
+      '/mcp/oauth/consent?transaction=abc',
     ]) {
       expect(upstream(path)).toBe('http://api-service.test');
     }
   });
 
-  it('leaves application routes and look-alike paths to the SPA', () => {
+  it('leaves application routes, look-alike paths and the MCP protocol to the SPA', () => {
     for (const path of [
       '/projects',
       '/apix',
       '/tokens',
       '/mcpx',
-      '/.well-knownXoauth-authorization-server',
+      // MCP and its OAuth endpoints live on the API host, never the app origin.
+      '/mcp',
+      '/mcp/register',
+      '/token?grant=1',
+      '/.well-known/oauth-authorization-server',
     ]) {
       expect(upstream(path)).toBeUndefined();
     }

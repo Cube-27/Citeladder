@@ -15,16 +15,29 @@ export interface ApiHostEnv {
 const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
 /**
  * The API host's whole surface, forwarded unchanged to Cloud Run: the
- * crawl-log senders' two exact routes, and the public REST API (any other
- * `/v1/...` path, which the API authenticates by key). MCP extends this list.
+ * crawl-log senders' two exact routes, the public REST API (any other
+ * `/v1/...` path, which the API authenticates by key), and MCP with its OAuth
+ * endpoints. Browser consent stays on the app host.
  */
 const CRAWL_LOG_ROUTES: readonly { method: string; path: RegExp }[] = [
   { method: 'POST', path: new RegExp(`^/v1/crawl-logs/ingest/${UUID}$`, 'u') },
   { method: 'POST', path: new RegExp(`^/v1/crawl-logs/firehose/${UUID}$`, 'u') },
 ];
 const PUBLIC_API_METHODS = new Set(['GET', 'POST', 'PATCH', 'DELETE']);
+// Every method: the API answers 405 or a CORS preflight itself.
+const MCP_PATHS = new Set([
+  '/mcp',
+  '/mcp/',
+  '/mcp/register',
+  '/authorize',
+  '/token',
+  '/revoke',
+  '/.well-known/oauth-authorization-server',
+  '/.well-known/oauth-protected-resource/mcp',
+]);
 
 function allowed(method: string, path: string): boolean {
+  if (MCP_PATHS.has(path)) return true;
   if (path === '/v1/crawl-logs' || path.startsWith('/v1/crawl-logs/'))
     return CRAWL_LOG_ROUTES.some((route) => route.method === method && route.path.test(path));
   return path.startsWith('/v1/') && PUBLIC_API_METHODS.has(method);

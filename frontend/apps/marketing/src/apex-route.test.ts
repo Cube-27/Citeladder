@@ -12,27 +12,34 @@ const env: ApexEnv = {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('apex route ownership', () => {
-  it('keeps product and browser API paths absent while routing consent to the app', async () => {
+  it('keeps product and browser API paths absent', async () => {
     for (const path of ['/login', '/projects', '/app-assets/old.js', '/api/v1/auth/me']) {
       const response = await routeApexRequest(new Request(`https://citeladder.com${path}`), env);
       expect(response?.status).toBe(404);
       expect(response?.headers.get('cache-control')).toBe('no-store');
     }
-    const consent = await routeApexRequest(
-      new Request('https://citeladder.com/mcp/oauth/consent?transaction=abc'),
-      env,
-    );
-    expect(consent?.headers.get('location')).toBe(
-      'https://app.citeladder.com/mcp/oauth/consent?transaction=abc',
-    );
-    const submitted = await routeApexRequest(
-      new Request('https://citeladder.com/mcp/oauth/consent', { method: 'POST' }),
-      env,
-    );
-    expect(submitted?.status).toBe(409);
   });
 
-  it('passes webhook bytes and MCP responses through protected transport', async () => {
+  it('never proxies MCP, its OAuth endpoints or consent: the site 404s them', async () => {
+    const fetch = vi.fn();
+    vi.stubGlobal('fetch', fetch);
+    for (const [method, path] of [
+      ['POST', '/mcp'],
+      ['GET', '/mcp/oauth/consent?transaction=abc'],
+      ['POST', '/mcp/register'],
+      ['GET', '/authorize'],
+      ['POST', '/token'],
+      ['POST', '/revoke'],
+      ['GET', '/.well-known/oauth-authorization-server'],
+      ['GET', '/.well-known/oauth-protected-resource/mcp'],
+    ] as const)
+      expect(
+        await routeApexRequest(new Request('https://citeladder.com' + path, { method }), env),
+      ).toBeNull();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('passes webhook bytes through protected transport', async () => {
     const sent: Request[] = [];
     vi.stubGlobal(
       'fetch',
@@ -51,9 +58,6 @@ describe('apex route ownership', () => {
     expect(webhook?.status).toBe(204);
     expect(await sent[0]?.text()).toBe('signed-body');
     expect(sent[0]?.headers.get('x-citeladder-origin-token')).toBe(env.ORIGIN_TOKEN);
-    expect((await routeApexRequest(new Request('https://citeladder.com/mcp'), env))?.status).toBe(
-      204,
-    );
     expect(await routeApexRequest(new Request('https://citeladder.com/pricing'), env)).toBeNull();
     expect(
       await routeApexRequest(

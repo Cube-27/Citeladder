@@ -90,6 +90,44 @@ describe('API host route ownership', () => {
     expect(sent.every((request) => request.headers.get('cookie') === null)).toBe(true);
     expect(sent[0]!.headers.get('authorization')).toBe('Bearer cl_live_test');
   });
+  it('forwards MCP and its OAuth endpoints with every method the protocol uses', async () => {
+    const sent = captureUpstream();
+    for (const [method, path] of [
+      ['POST', '/mcp'],
+      ['GET', '/mcp'],
+      ['POST', '/mcp/register'],
+      ['OPTIONS', '/mcp/register'],
+      ['GET', '/authorize?client_id=c&response_type=code'],
+      ['POST', '/token'],
+      ['POST', '/revoke'],
+      ['GET', '/.well-known/oauth-authorization-server'],
+      ['GET', '/.well-known/oauth-protected-resource/mcp'],
+    ] as const) {
+      const response = await routeApiHostRequest(
+        new Request('https://api.citeladder.com' + path, {
+          method,
+          headers: { authorization: 'Bearer mcp_access', cookie: 'session=private' },
+        }),
+        env,
+      );
+      expect(response.status).toBe(202);
+    }
+    expect(sent.map((request) => `${request.method} ${new URL(request.url).pathname}`)).toEqual([
+      'POST /mcp',
+      'GET /mcp',
+      'POST /mcp/register',
+      'OPTIONS /mcp/register',
+      'GET /authorize',
+      'POST /token',
+      'POST /revoke',
+      'GET /.well-known/oauth-authorization-server',
+      'GET /.well-known/oauth-protected-resource/mcp',
+    ]);
+    expect(new URL(sent[4]!.url).search).toBe('?client_id=c&response_type=code');
+    expect(sent[0]!.headers.get('authorization')).toBe('Bearer mcp_access');
+    expect(sent[0]!.headers.get('x-citeladder-public-host')).toBe('api.citeladder.com');
+    expect(sent.every((request) => request.headers.get('cookie') === null)).toBe(true);
+  });
   it('answers everything else with a JSON 404 and never reaches the origin', async () => {
     const sent = captureUpstream();
     for (const [method, path] of [
@@ -101,7 +139,10 @@ describe('API host route ownership', () => {
       ['POST', '/v1/crawl-logs/ingest/not-a-uuid'],
       ['PUT', `/v1/projects/${SOURCE}/topics`],
       ['GET', '/v1'],
-      ['POST', '/mcp'],
+      ['GET', '/mcp/oauth/consent?transaction=abc'],
+      ['POST', '/mcp/oauth/consent'],
+      ['GET', '/mcp/sse'],
+      ['GET', '/.well-known/openid-configuration'],
     ] as const) {
       const response = await routeApiHostRequest(
         new Request('https://api.citeladder.com' + path, { method }),

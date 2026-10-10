@@ -42,17 +42,8 @@ export const ROUTE_OWNERSHIP = {
 export type RouteFamily = keyof typeof ROUTE_OWNERSHIP;
 
 /**
- * Same-origin API and protocol paths the development proxy forwards. `/x/*`
- * forwards everything below `/x/`; any other entry matches only itself.
+ * Same-origin paths the development proxy forwards, as the app Worker does:
+ * the browser API and MCP consent. MCP itself is served on the API host.
+ * `/x/*` forwards everything below `/x/`; any other entry matches only itself.
  */
-export const TYPESCRIPT_INGRESS_PATHS = [
-  '/api',
-  '/api/*',
-  '/mcp',
-  '/mcp/*',
-  '/authorize',
-  '/token',
-  '/revoke',
-  '/.well-known/oauth-authorization-server',
-  '/.well-known/oauth-protected-resource/mcp',
-] as const;
+export const TYPESCRIPT_INGRESS_PATHS = ['/api', '/api/*', '/mcp/oauth/consent'] as const;
