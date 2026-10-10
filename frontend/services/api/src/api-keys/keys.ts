@@ -219,7 +219,7 @@ async function recordRejection(
 }
 
 /** The live key a `Bearer` header names, or 401 `invalid_api_key`. */
-export async function authenticateApiKey(
+export async function liveApiKeyRow(
   db: Database,
   pepper: string,
   authorization: string | undefined,

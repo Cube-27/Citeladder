@@ -13,7 +13,7 @@ import { apiKeyScopeSchema, type ApiKeyScope } from '@citeladder/contracts/api-k
 import type { MiddlewareHandler } from 'hono';
 
 import { enforceSubjectRequest } from '../abuse/usage.ts';
-import { authenticateApiKey, touchApiKey } from '../api-keys/keys.ts';
+import { liveApiKeyRow, touchApiKey } from '../api-keys/keys.ts';
 import { requireCapability, type Actor } from '../auth/actor.ts';
 import {
   findWorkspaceMember,
@@ -43,11 +43,7 @@ export function apiKeyAuth(
   operation: { capability: WorkspaceCapability; scope: ApiKeyScope },
 ): MiddlewareHandler<AppEnv> {
   return async (c, next) => {
-    const key = await authenticateApiKey(
-      db,
-      config.auth.apiKeyPepper,
-      c.req.header('authorization'),
-    );
+    const key = await liveApiKeyRow(db, config.auth.apiKeyPepper, c.req.header('authorization'));
     await enforceSubjectRequest(db, 'api_key', key.id, limit('api_key'));
     await enforceSubjectRequest(db, 'workspace', key.workspace_id, limit('workspace'));
     const member = await findWorkspaceMember(db, key.created_by_user_id, key.workspace_id);
