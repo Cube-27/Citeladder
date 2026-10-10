@@ -2,6 +2,7 @@ import { screen, within } from '@testing-library/react';
 import { renderWithProviders as render } from '@/test/render';
 import { describe, expect, it } from 'vite-plus/test';
 import type { VisibilityAdsResponse } from '@citeladder/contracts/visibility-ads';
+import { mergedAdPages } from '@/lib/visibility/use-ads';
 import { AdsView } from './visibility-ads';
 
 const RUN = '11111111-1111-4111-8111-111111111111';
@@ -88,5 +89,30 @@ describe('Ads view', () => {
     render(<AdsView data={response({ state })} />);
     expect(screen.getByRole('heading', { name: heading })).toBeVisible();
     expect(screen.queryByLabelText('Ads in ChatGPT answers')).toBeNull();
+  });
+
+  it('keeps the first page summary and appends later creative pages, offering more only while a cursor remains', () => {
+    const first = response({
+      creatives: { ...response().creatives, total: 2, next_cursor: 'next' },
+    });
+    const second = response({
+      advertisers_seen: 99,
+      creatives: {
+        items: response().creatives.items.map((item) => ({ ...item, title: 'Rival Trail 2' })),
+        total: 2,
+        next_cursor: null,
+      },
+    });
+    const merged = mergedAdPages([first, second]);
+    expect(merged.advertisers_seen).toBe(1);
+    expect(merged.creatives.items.map((item) => item.title)).toEqual([
+      'Rival Runner 3',
+      'Rival Trail 2',
+    ]);
+    expect(merged.creatives.next_cursor).toBeNull();
+    const { rerender } = render(<AdsView data={first} onShowMore={() => undefined} />);
+    expect(screen.getByRole('button', { name: 'Show more creatives' })).toBeEnabled();
+    rerender(<AdsView data={merged} />);
+    expect(screen.queryByRole('button', { name: 'Show more creatives' })).toBeNull();
   });
 });

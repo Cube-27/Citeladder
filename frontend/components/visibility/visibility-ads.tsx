@@ -4,6 +4,7 @@ import type { VisibilityAdsResponse } from '@citeladder/contracts/visibility-ads
 import { Megaphone } from 'lucide-react';
 
 import { BusyBar } from '@/components/ui/busy-bar';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { InlineEmpty } from '@/components/ui/inline-empty';
@@ -31,7 +32,7 @@ import {
   presenceLine,
 } from '@/lib/visibility/ads';
 import { engineLabel } from '@/lib/visibility/dashboard';
-import { useAds } from '@/lib/visibility/use-ads';
+import { mergedAdPages, useAds } from '@/lib/visibility/use-ads';
 import { AdOwnershipChip } from '@/components/visibility/ad-ownership-chip';
 import type { SourceFilters } from '@/components/visibility/source-rows';
 import type { SourceQueries } from '@/lib/visibility/use-source-analysis';
@@ -45,6 +46,7 @@ export function VisibilityAds({
   queries,
 }: Readonly<{ filters: SourceFilters; queries: SourceQueries }>) {
   const { query, enabled } = useAds(filters, queries);
+  const [firstPage, ...laterPages] = query.data?.pages ?? [];
   if (query.error)
     return (
       <ReadError
@@ -54,12 +56,18 @@ export function VisibilityAds({
         pending={query.isFetching}
       />
     );
-  if (!enabled) return <AdsState state="no_answers" />;
-  if (!query.data) return <AdsLoading />;
+  // A range with no runs reads nothing; otherwise the selection is still resolving.
+  if (!enabled)
+    return queries.selectedRunIds?.length === 0 ? <AdsState state="no_runs" /> : <AdsLoading />;
+  if (!firstPage) return <AdsLoading />;
   return (
     <div className="relative">
-      <BusyBar active={query.isFetching} label="Updating ads" />
-      <AdsView data={query.data} />
+      <BusyBar active={query.isFetching && !query.isFetchingNextPage} label="Updating ads" />
+      <AdsView
+        data={mergedAdPages([firstPage, ...laterPages])}
+        onShowMore={query.hasNextPage ? () => void query.fetchNextPage() : undefined}
+        loadingMore={query.isFetchingNextPage}
+      />
     </div>
   );
 }
@@ -73,14 +81,18 @@ function AdsLoading() {
   );
 }
 
-export function AdsView({ data }: Readonly<{ data: VisibilityAdsResponse }>) {
+export function AdsView({
+  data,
+  onShowMore,
+  loadingMore = false,
+}: Readonly<{ data: VisibilityAdsResponse; onShowMore?: () => void; loadingMore?: boolean }>) {
   if (data.state !== 'value') return <AdsState state={data.state} engines={data.engines} />;
   return (
     <Stack gap="workspace">
       <Headline data={data} />
       <AdvertiserTable advertisers={data.advertisers} total={data.advertisers_seen} />
       <PromptTable prompts={data.prompts} />
-      <CreativeList creatives={data.creatives} />
+      <CreativeList creatives={data.creatives} onShowMore={onShowMore} loadingMore={loadingMore} />
     </Stack>
   );
 }
@@ -94,7 +106,7 @@ function AdsState({
   state,
   engines = [],
 }: Readonly<{
-  state: Exclude<VisibilityAdsResponse['state'], 'value'>;
+  state: Exclude<VisibilityAdsResponse['state'], 'value'> | 'no_runs';
   engines?: VisibilityAdsResponse['engines'];
 }>) {
   const copy = adsStateCopy(state);
@@ -271,7 +283,15 @@ function PromptTable({ prompts }: Readonly<{ prompts: VisibilityAdsResponse['pro
   );
 }
 
-function CreativeList({ creatives }: Readonly<{ creatives: VisibilityAdsResponse['creatives'] }>) {
+function CreativeList({
+  creatives,
+  onShowMore,
+  loadingMore,
+}: Readonly<{
+  creatives: VisibilityAdsResponse['creatives'];
+  onShowMore?: () => void;
+  loadingMore: boolean;
+}>) {
   return (
     <Card>
       <CardHeader>
@@ -282,7 +302,7 @@ function CreativeList({ creatives }: Readonly<{ creatives: VisibilityAdsResponse
             : 'The ads as text, with where they lead.'}
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="grid gap-3">
         {!creatives.items.length ? (
           <InlineEmpty>No ads in these answers.</InlineEmpty>
         ) : (
@@ -307,6 +327,17 @@ function CreativeList({ creatives }: Readonly<{ creatives: VisibilityAdsResponse
             ))}
           </ul>
         )}
+        {onShowMore ? (
+          <Button
+            variant="secondary"
+            size="sm"
+            className="justify-self-start"
+            disabled={loadingMore}
+            onClick={onShowMore}
+          >
+            Show more creatives
+          </Button>
+        ) : null}
       </CardContent>
     </Card>
   );
