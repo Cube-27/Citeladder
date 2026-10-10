@@ -39,8 +39,7 @@ async function main() {
 try {
   await main();
 } catch (error) {
-  // The shared operator redaction, plus the SQLSTATE a failed DDL statement carries.
-  const code = error instanceof Error && 'code' in error ? ` ${String(error.code)}` : '';
-  console.error(`${operatorDiagnostic(error)}${code}`);
+  // The shared operator redaction already names a failed statement's SQLSTATE.
+  console.error(operatorDiagnostic(error));
   process.exitCode = 1;
 }
