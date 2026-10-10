@@ -7,7 +7,7 @@ WORKDIR /app
 
 # Node 26 no longer bundles corepack, so pnpm is installed from npm.
 # Keep this version in lockstep with the packageManager field in frontend/package.json.
-RUN npm install --global --ignore-scripts pnpm@12.9.1
+RUN npm install --global --ignore-scripts pnpm@12.10.1
 COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./
 COPY frontend/patches ./patches
 COPY frontend/packages/contracts/package.json ./packages/contracts/
@@ -37,7 +37,7 @@ ENV PUBLIC_DOCS_ORIGIN=${PUBLIC_DOCS_ORIGIN}
 ENV LOCAL_COMPOSE_BUILD=true
 WORKDIR /app
 
-RUN npm install --global --ignore-scripts pnpm@12.9.1
+RUN npm install --global --ignore-scripts pnpm@12.10.1
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./
 COPY frontend/patches ./patches

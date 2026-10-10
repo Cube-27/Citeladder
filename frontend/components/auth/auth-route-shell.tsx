@@ -19,11 +19,14 @@ export function AuthRouteShell({ children }: Readonly<{ children: ReactNode }>) 
   );
 }
 
+// Read once at load; rendering stays pure.
+const COPYRIGHT_YEAR = new Date().getFullYear();
+
 function AuthLegalFooter() {
   return (
     <div className="website-label text-muted flex flex-wrap justify-center gap-x-1.5 text-center">
       <span>
-        © {new Date().getFullYear()} CiteLadder, a {PARENT_COMPANY.name} product
+        © {COPYRIGHT_YEAR} CiteLadder, a {PARENT_COMPANY.name} product
       </span>
       <span aria-hidden="true">·</span>
       <a

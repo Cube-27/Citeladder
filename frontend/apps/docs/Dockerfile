@@ -6,7 +6,7 @@ ENV PATH="${PNPM_HOME}:${PATH}"
 WORKDIR /app
 
 # Keep this version in lockstep with packageManager in frontend/package.json.
-RUN npm install --global --ignore-scripts pnpm@12.9.1
+RUN npm install --global --ignore-scripts pnpm@12.10.1
 COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./
 COPY frontend/patches ./patches
 COPY frontend/packages/contracts/package.json ./packages/contracts/
@@ -27,7 +27,7 @@ ENV PATH="${PNPM_HOME}:${PATH}"
 ENV PUBLIC_DOCS_ORIGIN=${PUBLIC_DOCS_ORIGIN}
 WORKDIR /app
 
-RUN npm install --global --ignore-scripts pnpm@12.9.1
+RUN npm install --global --ignore-scripts pnpm@12.10.1
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY frontend ./
 RUN pnpm build:docs
