@@ -5,12 +5,12 @@
  * only (it calls the provider and spends budget); never part of CI. Metrics and
  * the selected responses append to one log in the worktree's Git directory.
  */
-import { existsSync, readFileSync, statSync } from 'node:fs';
 import { appendFile } from 'node:fs/promises';
-import { dirname, join, resolve } from 'node:path';
+import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 
 import { policy } from '../src/config.ts';
+import { gitDirectory } from './git-directory.ts';
 import { createModelGateway } from '../src/models/gateway.ts';
 import { generateDrafts } from '../src/prompts/generation-drafts.ts';
 import { generationInput, generationSetting } from '../src/prompts/generation-input.ts';
@@ -34,19 +34,6 @@ if (!Number.isInteger(count) || count < 1 || count > generationSetting('max_coun
 const gateway = createModelGateway();
 const log = join(gitDirectory(process.cwd()), 'prompt-generation-eval.log');
 const run = new Date().toISOString();
-
-/** The worktree's Git directory: `.git` itself, or the one a linked worktree's `.git` file names. */
-function gitDirectory(from: string): string {
-  for (let directory = resolve(from); ; directory = dirname(directory)) {
-    const marker = join(directory, '.git');
-    if (existsSync(marker)) {
-      if (statSync(marker).isDirectory()) return marker;
-      const [, pointer] = /^gitdir:\s*(.+)$/mu.exec(readFileSync(marker, 'utf8')) ?? [];
-      if (pointer !== undefined) return resolve(directory, pointer.trim());
-    }
-    if (dirname(directory) === directory) throw new Error('Run the eval inside the repository');
-  }
-}
 
 /** One fixture through planning, the live model, admission and selection, scored. */
 async function evaluate(fixture: (typeof generationFixtures)[number]) {

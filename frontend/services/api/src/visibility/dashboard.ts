@@ -126,30 +126,34 @@ export async function getRunVisibility(
 
 type SelectedRun = Omit<MeasuredRun, 'completedAt'> & { completedAt: string | null };
 
+const brandRuns = (db: Database, scope: RunScope) =>
+  db
+    .selectFrom('audits')
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('project_id', '=', scope.projectId)
+    .where('audit_scope', '=', visibility.brand_audit_scope);
+
+/** The latest dashboard-ready brand run: what "Latest" means on every visibility read. */
+export async function latestDashboardRunId(db: Database, scope: RunScope): Promise<string> {
+  const latest = await brandRuns(db, scope)
+    .select('id')
+    .where('status', 'in', visibility.dashboard_audit_statuses)
+    .orderBy(sql`completed_at desc nulls last`)
+    .orderBy('created_at', 'desc')
+    .limit(1)
+    .executeTakeFirst();
+  if (latest === undefined) throw new AnalysisNotFoundError('No completed audit for project');
+  return latest.id;
+}
+
 /** The named run, or the latest dashboard-ready one; its snapshot must exist. */
 async function selectedRun(
   db: Database,
   scope: RunScope,
   auditId: string | null,
 ): Promise<SelectedRun> {
-  const brandRuns = db
-    .selectFrom('audits')
-    .where('workspace_id', '=', scope.workspaceId)
-    .where('project_id', '=', scope.projectId)
-    .where('audit_scope', '=', visibility.brand_audit_scope);
-  const selectedId =
-    auditId ??
-    (
-      await brandRuns
-        .select('id')
-        .where('status', 'in', visibility.dashboard_audit_statuses)
-        .orderBy(sql`completed_at desc nulls last`)
-        .orderBy('created_at', 'desc')
-        .limit(1)
-        .executeTakeFirst()
-    )?.id;
-  if (selectedId === undefined) throw new AnalysisNotFoundError('No completed audit for project');
-  const audit = await brandRuns
+  const selectedId = auditId ?? (await latestDashboardRunId(db, scope));
+  const audit = await brandRuns(db, scope)
     .select(['id', 'status', 'configuration', utcText(sql.ref('completed_at')).as('completed_at')])
     .where('id', '=', selectedId)
     .executeTakeFirst();

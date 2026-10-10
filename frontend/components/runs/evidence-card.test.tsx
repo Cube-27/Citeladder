@@ -67,6 +67,8 @@ describe('Answer perception evidence', () => {
               reason: null,
               label: 'negative',
               confidence: 0.9,
+              extractor_version: 'x1',
+              template_version: 't1',
               aspects: [
                 {
                   theme: 'support',
@@ -84,6 +86,8 @@ describe('Answer perception evidence', () => {
               reason: null,
               label: null,
               confidence: null,
+              extractor_version: 'x1',
+              template_version: 't1',
               aspects: [],
             },
           ],

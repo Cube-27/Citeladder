@@ -423,7 +423,8 @@ customer credits. Policy, caps, the closed theme list and the templates live in
   task on the analytics queue, keyed by the analysis and the frozen extractor
   version, so a re-derived finalize never adds a second. No network I/O happens
   in that transaction. Admission freezes the extractor, template and metrics
-  versions into the audit configuration.
+  versions into a brand audit's configuration; an audit frozen without them is
+  never classified and never reads as pending.
 - **Executor.** Reads are committed before the model call and no transaction
   spans it. Over the per-audit or per-workspace daily cap the outcome is
   `unavailable / platform_cap`; without a configured gateway it is

@@ -72,6 +72,7 @@ const perceptionBreakdownSchema = responseObject({
   key: z.string(),
   label: z.string(),
   score: perceptionScoreSchema,
+  coverage: perceptionCoverageSchema,
 });
 
 // A verified quote: an exact substring of the answer passage it came from.
@@ -87,6 +88,9 @@ const perceptionQuoteSchema = responseObject({
   run_id: uuid(),
   execution_id: uuid(),
   observed_at: z.string(),
+  // The versions that produced this quote (frozen at the run's admission).
+  extractor_version: z.string(),
+  template_version: z.string(),
 });
 
 const perceptionThemeSchema = responseObject({
@@ -151,10 +155,13 @@ export const perceptionQuotePageSchema = responseObject({
 export const executionPerceptionSchema = responseObject({
   entity: z.string(),
   is_brand: z.boolean(),
-  state: z.enum(['classified', 'low_confidence', 'pending', 'unavailable']),
+  state: z.enum(['classified', 'not_assessable', 'low_confidence', 'pending', 'unavailable']),
   reason: perceptionUnavailableReasonSchema.nullable(),
   label: perceptionLabelSchema.nullable(),
   confidence: z.number().nullable(),
+  // The versions this answer is classified under (frozen at the run's admission).
+  extractor_version: z.string(),
+  template_version: z.string(),
   aspects: z.array(
     responseObject({
       theme: z.string(),

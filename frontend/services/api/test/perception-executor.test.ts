@@ -166,13 +166,16 @@ const perceptions = (workspaceId: string) =>
     .execute();
 
 describe('perception enqueue', () => {
-  it('queues one classification per naming brand answer, never on re-derive or for no mention', async () => {
+  it('queues one classification per naming perceived answer, never on re-derive, no mention or an unperceived audit', async () => {
     const auditId = await fixtures.audit(tenant, { configuration });
     const naming = await analysed(tenant, auditId, ANSWER);
     await naming.derive();
     await analysed(tenant, auditId, 'Nobody tracked is named here.');
-    const commerce = await fixtures.audit(tenant, { configuration, scope: 'commerce' });
-    await analysed(tenant, commerce, ANSWER);
+    const unperceived = await fixtures.audit(tenant, {
+      configuration: { ...configuration, perception: null },
+      scope: 'commerce',
+    });
+    await analysed(tenant, unperceived, ANSWER);
     const rows = await queued(tenant.workspaceId);
     expect(rows.map((row) => [row.payload, row.idempotency_key, row.max_attempts])).toEqual([
       [

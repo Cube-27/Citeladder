@@ -293,6 +293,8 @@ describe('GET /visibility/perception', () => {
         reason: null,
         label: 'negative',
         confidence: 0.9,
+        extractor_version: VERSIONS.extractor_version,
+        template_version: VERSIONS.template_version,
         aspects: [aspect('negative', 'Acme support is slow')],
       },
       {
@@ -302,6 +304,8 @@ describe('GET /visibility/perception', () => {
         reason: null,
         label: 'positive',
         confidence: 0.9,
+        extractor_version: VERSIONS.extractor_version,
+        template_version: VERSIONS.template_version,
         aspects: [],
       },
     ]);

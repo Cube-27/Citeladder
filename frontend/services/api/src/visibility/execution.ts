@@ -79,11 +79,24 @@ export async function getExecutionEvidence(
     .executeTakeFirst();
   const audit = await db
     .selectFrom('audits')
-    .select(['configuration', 'audit_scope'])
+    .select('configuration')
     .where('id', '=', analysis.audit_id)
     .where('workspace_id', '=', input.workspaceId)
     .executeTakeFirst();
   const score = scoreObject(analysis.score);
+  const [search_surface, perception] = await Promise.all([
+    executionSurfaceEvidence(db, {
+      workspaceId: input.workspaceId,
+      taskId: input.taskId,
+      analysis,
+    }),
+    executionPerception(db, {
+      workspaceId: input.workspaceId,
+      analysisId: analysis.id,
+      assessments: analysis.entity_assessments,
+      configuration: audit?.configuration ?? null,
+    }),
+  ]);
   return {
     id: analysis.task_id,
     analysis_id: analysis.id,
@@ -121,17 +134,8 @@ export async function getExecutionEvidence(
     competitors_mentioned: competitorsMentioned(score),
     // Null for an LLM execution, and for a search that produced no
     // observation row: a gap in ours, not a measured absence.
-    search_surface: await executionSurfaceEvidence(db, {
-      workspaceId: input.workspaceId,
-      taskId: input.taskId,
-      analysis,
-    }),
-    perception: await executionPerception(db, {
-      workspaceId: input.workspaceId,
-      analysisId: analysis.id,
-      assessments: analysis.entity_assessments,
-      audit,
-    }),
+    search_surface,
+    perception,
     created_at: wireUtc(analysis.created_at_text!),
   };
 }

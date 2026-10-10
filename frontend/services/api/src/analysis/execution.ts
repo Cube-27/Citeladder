@@ -170,7 +170,6 @@ export const analyzeExecution: DeriveExecution = async (db, task, audit, artifac
   await enqueuePerception(db, {
     workspaceId: task.workspace_id,
     projectId: audit.project_id,
-    auditScope: audit.audit_scope,
     configuration: audit.configuration,
     analysisId: id,
     assessments,

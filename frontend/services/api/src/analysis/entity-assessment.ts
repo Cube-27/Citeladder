@@ -25,27 +25,40 @@ function aliasMatches(alias: string, answer: string): RegExpExecArray[] {
   return [...answer.matchAll(new RegExp(pattern, 'giu'))];
 }
 
+/** Raw alias matches in answer order, and whether one counts under the matching policy. */
+function matchesOf(aliases: readonly string[], answer: string, matching?: EntityPolicy) {
+  const matches = aliases
+    .flatMap((alias) => aliasMatches(alias, answer))
+    .sort((a, b) => a.index - b.index);
+  const counts = (match: RegExpExecArray) => {
+    // Only a policy that reads the surroundings needs the answer tokenized.
+    if (countsAnywhere(matching)) return true;
+    const before = tokensOf(answer.slice(0, match.index));
+    const own = tokensOf(match[0]);
+    const after = tokensOf(answer.slice(match.index + match[0].length));
+    return occurrenceCounts(
+      [...before, ...own, ...after],
+      { start: before.length, end: before.length + own.length },
+      matching,
+    );
+  };
+  return { matches, counts };
+}
+
 /** Every raw match that counts under the entity's matching policy, in answer order. */
 export function countedMatches(
   aliases: readonly string[],
   answer: string,
   matching?: EntityPolicy,
 ): RegExpExecArray[] {
-  return aliases
-    .flatMap((alias) => aliasMatches(alias, answer))
-    .sort((a, b) => a.index - b.index)
-    .filter((match) => {
-      // Only a policy that reads the surroundings needs the answer tokenized.
-      if (countsAnywhere(matching)) return true;
-      const before = tokensOf(answer.slice(0, match.index));
-      const own = tokensOf(match[0]);
-      const after = tokensOf(answer.slice(match.index + match[0].length));
-      return occurrenceCounts(
-        [...before, ...own, ...after],
-        { start: before.length, end: before.length + own.length },
-        matching,
-      );
-    });
+  const { matches, counts } = matchesOf(aliases, answer, matching);
+  return matches.filter(counts);
+}
+
+/** The first counted match; stops at it, since the assessment reads only the first mention. */
+function firstMatch(aliases: readonly string[], answer: string, matching?: EntityPolicy) {
+  const { matches, counts } = matchesOf(aliases, answer, matching);
+  return matches.find(counts);
 }
 function assessment(
   name: string,
@@ -71,7 +84,7 @@ function assessment(
     limitation: detail,
   });
   if (!answer.trim()) return row('unavailable', [], 'Answer text is unavailable.');
-  const match = countedMatches(aliases, answer, matching)[0];
+  const match = firstMatch(aliases, answer, matching);
   if (!match) return row('absent', []);
   const points = Array.from(answer),
     offset = Array.from(answer.slice(0, match.index)).length;

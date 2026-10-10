@@ -24,13 +24,6 @@ const schema = z.strictObject({
   task_max_attempts: positive,
   quotes_default_limit: positive,
   quotes_max_limit: positive,
-  labels: z.tuple([
-    z.literal('positive'),
-    z.literal('neutral'),
-    z.literal('negative'),
-    z.literal('mixed'),
-    z.literal('not_assessable'),
-  ]),
   themes: z.array(z.string().regex(/^[a-z_]+$/u)).min(2),
   eval_policy_version: version,
   eval_thresholds: z.strictObject({

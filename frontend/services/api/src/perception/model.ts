@@ -1,10 +1,11 @@
 /** The perception model request: rendered templates and the structured output it must return. */
 import { z } from 'zod';
+import { perceptionLabelSchema } from '@citeladder/contracts/visibility-perception';
 
 import type { PerceptionPolicy } from '../config/perception.ts';
 import type { PerceptionPackage } from './passages.ts';
 
-export const LABELS = ['positive', 'neutral', 'negative', 'mixed', 'not_assessable'] as const;
+export const LABELS = perceptionLabelSchema.options;
 export type Label = (typeof LABELS)[number];
 
 // Lenient on counts and themes: the deterministic validator truncates and

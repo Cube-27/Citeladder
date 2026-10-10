@@ -9,6 +9,7 @@ import { createHash } from 'node:crypto';
 import { countedMatches, trackedEntities } from '../analysis/entity-assessment.ts';
 import type { ScoringConfig } from '../analysis/scoring.ts';
 import type { PerceptionPolicy } from '../config/perception.ts';
+import { canonicalJson } from '../search-intelligence/requests.ts';
 
 /** A code-point span of the answer and its exact text. */
 export type Span = { start: number; end: number; text: string };
@@ -31,9 +32,14 @@ export type PerceptionPackage = {
 /** States of the deterministic assessment that mean the entity is not named. */
 const NOT_NAMED = new Set(['absent', 'unavailable']);
 
+/** Whether an entity assessment state means the entity is named in the answer. */
+export function isNamed(state: string): boolean {
+  return !NOT_NAMED.has(state);
+}
+
 /** True when any assessed entity is named in the answer (an empty list names none). */
 export function namesAnyEntity(assessments: readonly { state: string }[]): boolean {
-  return assessments.some((row) => !NOT_NAMED.has(row.state));
+  return assessments.some((row) => isNamed(row.state));
 }
 
 function segmenter(languageCode: string) {
@@ -75,16 +81,24 @@ function sentences(answer: string, languageCode: string): Range[] {
 
 /** Answer ranges (UTF-16) of the sentences holding an occurrence, widened by one either side and merged. */
 function windows(occurrences: readonly number[], ranges: readonly Range[]): Range[] {
-  const hit = new Set<number>();
+  // Occurrences arrive in answer order, so one forward walk finds each sentence.
+  const hit: number[] = [];
+  let sentence = 0;
   for (const offset of occurrences) {
-    const sentence = ranges.findIndex((range) => offset < range.end);
-    if (sentence === -1) continue;
-    for (const index of [sentence - 1, sentence, sentence + 1])
-      if (index >= 0 && index < ranges.length) hit.add(index);
+    while (sentence < ranges.length && offset >= (ranges[sentence]?.end ?? Infinity)) sentence++;
+    if (sentence === ranges.length) break;
+    const from = Math.max(0, sentence - 1, (hit.at(-1) ?? -1) + 1);
+    for (let index = from; index <= Math.min(ranges.length - 1, sentence + 1); index++)
+      hit.push(index);
   }
+  return mergeAdjacent(hit, ranges);
+}
+
+/** The ranges of ascending sentence indexes, adjacent indexes merged into one range. */
+function mergeAdjacent(indexes: readonly number[], ranges: readonly Range[]): Range[] {
   const merged: Range[] = [];
   let previous = -2;
-  for (const index of [...hit].sort((a, b) => a - b)) {
+  for (const index of indexes) {
     const range = ranges[index];
     if (!range) continue;
     const last = merged.at(-1);
@@ -136,17 +150,7 @@ export function entityPassages(input: {
   });
 }
 
-/** JSON with object keys sorted at every depth, so equal packages hash equally. */
-function canonicalJson(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
-  if (value !== null && typeof value === 'object')
-    return `{${Object.keys(value)
-      .sort()
-      .map((key) => `${JSON.stringify(key)}:${canonicalJson(Reflect.get(value, key))}`)
-      .join(',')}}`;
-  return JSON.stringify(value);
-}
-
+/** SHA-256 of the key-sorted package, so equal packages hash equally. */
 export function packageHash(pkg: PerceptionPackage): string {
-  return createHash('sha256').update(canonicalJson(pkg)).digest('hex');
+  return createHash('sha256').update(canonicalJson(pkg, false)).digest('hex');
 }

@@ -6,14 +6,14 @@
  * the provider and spends platform budget); never part of CI. Records append
  * to one log in the worktree's Git directory.
  */
-import { existsSync, readFileSync, statSync } from 'node:fs';
 import { appendFile } from 'node:fs/promises';
-import { dirname, join, resolve } from 'node:path';
+import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 import { z } from 'zod';
 
 import { scoringConfig } from '../src/analysis/scoring.ts';
 import { policy } from '../src/config.ts';
+import { gitDirectory } from './git-directory.ts';
 import { createModelGateway } from '../src/models/gateway.ts';
 import { LABELS, perceptionOutputSchema, perceptionPrompt } from '../src/perception/model.ts';
 import { entityPassages, type PerceptionPackage } from '../src/perception/passages.ts';
@@ -42,19 +42,6 @@ const settings = policy.perception;
 const gateway = createModelGateway();
 const log = join(gitDirectory(process.cwd()), 'perception-eval.log');
 const run = new Date().toISOString();
-
-/** The worktree's Git directory: `.git` itself, or the one a linked worktree's `.git` file names. */
-function gitDirectory(from: string): string {
-  for (let directory = resolve(from); ; directory = dirname(directory)) {
-    const marker = join(directory, '.git');
-    if (existsSync(marker)) {
-      if (statSync(marker).isDirectory()) return marker;
-      const [, pointer] = /^gitdir:\s*(.+)$/mu.exec(readFileSync(marker, 'utf8')) ?? [];
-      if (pointer !== undefined) return resolve(directory, pointer.trim());
-    }
-    if (dirname(directory) === directory) throw new Error('Run the eval inside the repository');
-  }
-}
 
 type Fixture = (typeof fixtures)[number];
 
@@ -98,18 +85,23 @@ async function evaluate(fixture: Fixture) {
   };
 }
 
-const records = [];
-for (const fixture of fixtures.filter((item) => !values.fixture || item.name === values.fixture))
-  records.push(await evaluate(fixture));
+const selected = fixtures.filter((item) => !values.fixture || item.name === values.fixture);
+if (!selected.length) throw new Error(`No calibration fixture is named ${values.fixture}`);
+const records = await Promise.all(selected.map(evaluate));
 await appendFile(log, records.map((record) => `${JSON.stringify(record)}\n`).join(''));
 
 const pairs = records.flatMap((record) => record.pairs);
+if (!pairs.length) throw new Error('No labelled business was found in the evaluated answers');
 const agreement = pairs.filter((pair) => pair.expected === pair.actual).length / pairs.length;
-const f1 = LABELS.map((label) => {
+// Macro F1 over the labels that occur, so an absent label cannot score zero.
+const occurring = LABELS.filter((label) =>
+  pairs.some((pair) => pair.expected === label || pair.actual === label),
+);
+const f1 = occurring.map((label) => {
   const tp = pairs.filter((p) => p.actual === label && p.expected === label).length;
   const fp = pairs.filter((p) => p.actual === label && p.expected !== label).length;
   const fn = pairs.filter((p) => p.actual !== label && p.expected === label).length;
-  return tp ? (2 * tp) / (2 * tp + fp + fn) : 0;
+  return (2 * tp) / (2 * tp + fp + fn);
 });
 const macroF1 = f1.reduce((sum, value) => sum + value, 0) / f1.length;
 const kept = records.reduce((sum, record) => sum + record.quotes, 0);
@@ -123,9 +115,10 @@ const failures = [
   quoteValidity < limits.min_quote_validity && 'quote_validity',
   tokens > limits.max_total_tokens_per_answer && 'tokens_per_answer',
 ].filter(Boolean);
+const verdict = failures.length ? 'failed ' + failures.join(', ') : 'within thresholds';
 process.stdout.write(
   `${records.length} answers, ${pairs.length} labels (${settings.eval_policy_version}): ` +
     `agreement ${agreement.toFixed(2)}, macro F1 ${macroF1.toFixed(2)}, ` +
     `quote validity ${quoteValidity.toFixed(2)}, tokens/answer ${Math.round(tokens)}; ` +
-    `${failures.length ? `failed ${failures.join(', ')}` : 'within thresholds'}\nLog: ${log}\n`,
+    `${verdict}\nLog: ${log}\n`,
 );

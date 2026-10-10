@@ -3,6 +3,7 @@
  * never recomputed; a missing value stays `null` so the component draws the
  * shared missing mark rather than a zero.
  */
+import { formatPercent, measured } from '@/lib/format';
 import type {
   PerceptionCoverage,
   PerceptionResponse,
@@ -17,8 +18,7 @@ export function formatNet(value: number | null): string | null {
 
 /** A 0–1 share as a whole percentage, or null. */
 export function formatShare(value: number | null): string | null {
-  if (value === null || Number.isNaN(value)) return null;
-  return `${Math.round(value * 100)}%`;
+  return measured(formatPercent(value));
 }
 
 const THEME_LABELS: Record<string, string> = {

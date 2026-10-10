@@ -68,6 +68,27 @@ export function locateQuote(quote: string, spans: readonly Span[]) {
   return null;
 }
 
+/** The aspects whose quotes are found in the entity's passages, themes mapped to the list. */
+function verifiedAspects(
+  aspects: PerceptionOutput['entities'][number]['aspects'],
+  spans: readonly Span[],
+  themes: ReadonlySet<string>,
+  drop: (reason: DropReason) => void,
+): VerifiedAspect[] {
+  return aspects.flatMap((aspect) => {
+    const found = locateQuote(aspect.quote, spans);
+    if (!found) {
+      drop('quote_not_found');
+      return [];
+    }
+    const theme = themes.has(aspect.theme) ? aspect.theme : 'other';
+    if (theme !== aspect.theme) drop('theme_other');
+    return [
+      { theme, polarity: aspect.polarity, quote: found.text, start: found.start, end: found.end },
+    ];
+  });
+}
+
 export function validateOutput(
   pkg: PerceptionPackage,
   output: PerceptionOutput,
@@ -91,23 +112,12 @@ export function validateOutput(
       continue;
     }
     drop('aspect_limit', row.aspects.length - policy.max_aspects_per_entity);
-    const aspects: VerifiedAspect[] = [];
-    for (const aspect of row.aspects.slice(0, policy.max_aspects_per_entity)) {
-      const found = locateQuote(aspect.quote, entity.spans);
-      if (!found) {
-        drop('quote_not_found');
-        continue;
-      }
-      const theme = themes.has(aspect.theme) ? aspect.theme : 'other';
-      if (theme !== aspect.theme) drop('theme_other');
-      aspects.push({
-        theme,
-        polarity: aspect.polarity,
-        quote: found.text,
-        start: found.start,
-        end: found.end,
-      });
-    }
+    const aspects = verifiedAspects(
+      row.aspects.slice(0, policy.max_aspects_per_entity),
+      entity.spans,
+      themes,
+      drop,
+    );
     results.set(row.entity_id, {
       entity_id: entity.entity_id,
       entity_name: entity.name,

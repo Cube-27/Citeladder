@@ -235,17 +235,14 @@ describe('perception metrics', () => {
   });
 
   it('reads each persisted outcome into a mention status', () => {
-    const entity = { label: 'positive', low_confidence: false };
+    const entity = { label: 'positive' as const, low_confidence: false };
     expect([
       mentionStatus(undefined, undefined),
-      mentionStatus({ outcome: 'classified', outcome_reason: null }, entity),
-      mentionStatus(
-        { outcome: 'classified', outcome_reason: null },
-        { ...entity, low_confidence: true },
-      ),
-      mentionStatus({ outcome: 'classified', outcome_reason: null }, undefined),
+      mentionStatus({ outcome: 'classified' }, entity),
+      mentionStatus({ outcome: 'classified' }, { ...entity, low_confidence: true }),
+      mentionStatus({ outcome: 'classified' }, undefined),
       mentionStatus({ outcome: 'unavailable', outcome_reason: 'platform_cap' }, undefined),
-      mentionStatus({ outcome: 'invalid_output', outcome_reason: null }, undefined),
+      mentionStatus({ outcome: 'invalid_output' }, undefined),
     ]).toEqual([
       { kind: 'pending' },
       { kind: 'classified', label: 'positive' },

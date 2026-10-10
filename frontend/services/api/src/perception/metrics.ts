@@ -11,7 +11,11 @@ import type {
   PerceptionScore,
 } from '@citeladder/contracts/visibility-perception';
 
+import { z } from 'zod';
+import { perceptionLabelSchema } from '@citeladder/contracts/visibility-perception';
+
 import { compareText } from '../text-order.ts';
+import { isNamed } from './passages.ts';
 import type { VerifiedAspect } from './validate.ts';
 
 type UnavailableReason = PerceptionCoverage['unavailable'][number]['reason'];
@@ -47,18 +51,19 @@ export type PerceptionAnswer = {
   citations: { domain: string; url: string }[];
 };
 
-type PersistedOutcome = { outcome: string; outcome_reason: string | null };
-type PersistedEntity = { label: string; low_confidence: boolean };
-
-const CLASSIFIED_LABELS = ['positive', 'neutral', 'negative', 'mixed'] as const;
-const PERSISTED_REASONS = ['model_not_configured', 'platform_cap', 'task_failed'] as const;
-
-function isClassifiedLabel(label: string): label is ClassifiedLabel {
-  return CLASSIFIED_LABELS.some((known) => known === label);
-}
-function isPersistedReason(reason: string): reason is (typeof PERSISTED_REASONS)[number] {
-  return PERSISTED_REASONS.some((known) => known === reason);
-}
+/** An `answer_perceptions` row's outcome, parsed at the read boundary. */
+export const persistedOutcomeSchema = z.discriminatedUnion('outcome', [
+  z.object({ outcome: z.literal('classified') }),
+  z.object({ outcome: z.literal('no_mentions') }),
+  z.object({ outcome: z.literal('invalid_output') }),
+  z.object({ outcome: z.literal('model_error') }),
+  z.object({
+    outcome: z.literal('unavailable'),
+    outcome_reason: z.enum(['model_not_configured', 'platform_cap', 'task_failed']),
+  }),
+]);
+type PersistedOutcome = z.infer<typeof persistedOutcomeSchema>;
+type PersistedEntity = { label: z.infer<typeof perceptionLabelSchema>; low_confidence: boolean };
 
 /** One mention's status from its answer's perception row and its entity row. */
 export function mentionStatus(
@@ -71,17 +76,17 @@ export function mentionStatus(
       if (!entity) return { kind: 'unavailable', reason: 'entity_limit' };
       if (entity.label === 'not_assessable') return { kind: 'not_assessable' };
       if (entity.low_confidence) return { kind: 'low_confidence' };
-      if (isClassifiedLabel(entity.label)) return { kind: 'classified', label: entity.label };
-      return { kind: 'not_assessable' };
+      return { kind: 'classified', label: entity.label };
     case 'invalid_output':
-      return { kind: 'unavailable', reason: 'invalid_output' };
     case 'model_error':
-      return { kind: 'unavailable', reason: 'model_error' };
+      return { kind: 'unavailable', reason: perception.outcome };
     case 'no_mentions':
       return { kind: 'not_assessable' };
+    case 'unavailable':
+      return { kind: 'unavailable', reason: perception.outcome_reason };
     default: {
-      const reason = perception.outcome_reason ?? '';
-      return { kind: 'unavailable', reason: isPersistedReason(reason) ? reason : 'task_failed' };
+      const _exhaustive: never = perception;
+      return _exhaustive;
     }
   }
 }
@@ -148,25 +153,47 @@ function breakdown(
       key: groupKey,
       label: group.label,
       score: score(group.mentions),
+      coverage: coverage(group.mentions),
     }))
     .sort((a, b) => b.score.classified - a.score.classified || compareText(a.key, b.key));
 }
 
-/** Brand aspects from confidently classified mentions, newest answer first. */
-function brandQuotes(answers: readonly PerceptionAnswer[]): PerceptionQuote[] {
-  return answers
-    .toSorted(
-      (a, b) =>
-        compareText(b.observedAt, a.observedAt) || compareText(a.executionId, b.executionId),
-    )
-    .flatMap((answer) =>
-      answer.mentions
-        .filter((mention) => mention.isBrand && mention.status.kind === 'classified')
-        .flatMap((mention) => mention.aspects.map((aspect) => quoteOf(answer, mention, aspect))),
-    );
+/** A quote with its aspect's ordinal in the mention, the last key of its total order. */
+export type PositionedQuote = PerceptionQuote & { ordinal: number };
+
+/** Newest answer first, then execution, entity and aspect: a total order (keys are unique). */
+export function quoteOrder(
+  a: Pick<PositionedQuote, 'observed_at' | 'execution_id' | 'entity' | 'ordinal'>,
+  b: Pick<PositionedQuote, 'observed_at' | 'execution_id' | 'entity' | 'ordinal'>,
+) {
+  return (
+    compareText(b.observed_at, a.observed_at) ||
+    compareText(a.execution_id, b.execution_id) ||
+    compareText(a.entity, b.entity) ||
+    a.ordinal - b.ordinal
+  );
 }
 
-export function quoteOf(
+/** The verified aspects of confidently classified mentions `keep` accepts, in quote order. */
+export function classifiedQuotes(
+  answers: readonly PerceptionAnswer[],
+  keep: (mention: Mention) => boolean,
+): PositionedQuote[] {
+  return answers
+    .flatMap((answer) =>
+      answer.mentions
+        .filter((mention) => mention.status.kind === 'classified' && keep(mention))
+        .flatMap((mention) =>
+          mention.aspects.map((aspect, ordinal) => ({
+            ...quoteOf(answer, mention, aspect),
+            ordinal,
+          })),
+        ),
+    )
+    .sort(quoteOrder);
+}
+
+function quoteOf(
   answer: PerceptionAnswer,
   mention: Mention,
   aspect: VerifiedAspect,
@@ -182,6 +209,8 @@ export function quoteOf(
     run_id: answer.auditId,
     execution_id: answer.executionId,
     observed_at: answer.observedAt,
+    extractor_version: answer.versions.extractor,
+    template_version: answer.versions.template,
   };
 }
 
@@ -236,9 +265,7 @@ const RECOMMENDATION_LIMITATION =
 function recommended(answers: readonly PerceptionAnswer[]) {
   const states = answers
     .map((answer) => answer.brandRecommendation)
-    .filter(
-      (state): state is string => state !== null && state !== 'absent' && state !== 'unavailable',
-    );
+    .filter((state): state is string => state !== null && isNamed(state));
   const count = (wanted: string) => states.filter((state) => state === wanted).length;
   return {
     mentioned: states.length,
@@ -313,7 +340,9 @@ export function perceptionSummary(
         compareText(a.name, b.name),
     );
   const brandCoverage = coverage(brandMentions);
-  const quotes = brandQuotes(answers);
+  const quotes = classifiedQuotes(answers, (mention) => mention.isBrand).map(
+    ({ ordinal: _ordinal, ...quote }) => quote,
+  );
   return {
     ...readState(brandCoverage),
     brand: entities.find((entity) => entity.is_brand) ?? null,

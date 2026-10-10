@@ -613,7 +613,10 @@ it('serves answer perception with the same numbers as the Perception read, and i
     reason: 'no_completed_run',
   });
   const auditId = await fixtures.audit(tenant, {
-    configuration: { brand_name: 'Acme', perception: { extractor_version: 'mcp-test' } },
+    configuration: {
+      brand_name: 'Acme',
+      perception: { extractor_version: 'mcp-test', template_version: 't', metrics_version: 'm' },
+    },
   });
   const { taskId, analysisId } = await fixtures.execution(tenant, { auditId, analysis: {} });
   await db

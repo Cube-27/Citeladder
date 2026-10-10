@@ -48,7 +48,7 @@ export function VisibilityPerception({
   filters,
   queries,
 }: Readonly<{ filters: SourceFilters; queries: SourceQueries }>) {
-  const query = usePerception(filters, queries);
+  const { query, enabled } = usePerception(filters, queries);
   if (query.error)
     return (
       <ReadError
@@ -58,6 +58,7 @@ export function VisibilityPerception({
         pending={query.isFetching}
       />
     );
+  if (!enabled) return <PerceptionState state="no_mentions" reason={null} />;
   if (!query.data) return <PerceptionLoading />;
   return (
     <div className="relative">
@@ -77,22 +78,8 @@ function PerceptionLoading() {
 }
 
 export function PerceptionView({ data }: Readonly<{ data: PerceptionResponse }>) {
-  if (data.state !== 'value') {
-    const copy = stateCopy(data.state, data.reason);
-    return (
-      <Card>
-        <CardContent className="grid gap-2">
-          <EmptyState
-            variant="compact"
-            icon={MessageSquareQuote}
-            heading={copy.heading}
-            description={copy.description}
-          />
-          {data.coverage.mentions ? <CoverageNote coverage={data.coverage} /> : null}
-        </CardContent>
-      </Card>
-    );
-  }
+  if (data.state !== 'value')
+    return <PerceptionState state={data.state} reason={data.reason} coverage={data.coverage} />;
   return (
     <Stack gap="workspace">
       <Headline data={data} />
@@ -101,6 +88,32 @@ export function PerceptionView({ data }: Readonly<{ data: PerceptionResponse }>)
       <NegativeQuotes quotes={data.negative_quotes} />
       <DriverTable drivers={data.drivers} />
     </Stack>
+  );
+}
+
+/** A read with no value to show: pending, unavailable with its reason, or no mentions. */
+function PerceptionState({
+  state,
+  reason,
+  coverage,
+}: Readonly<{
+  state: Exclude<PerceptionResponse['state'], 'value'>;
+  reason: PerceptionResponse['reason'];
+  coverage?: PerceptionCoverage;
+}>) {
+  const copy = stateCopy(state, reason);
+  return (
+    <Card>
+      <CardContent className="grid gap-2">
+        <EmptyState
+          variant="compact"
+          icon={MessageSquareQuote}
+          heading={copy.heading}
+          description={copy.description}
+        />
+        {coverage?.mentions ? <CoverageNote coverage={coverage} /> : null}
+      </CardContent>
+    </Card>
   );
 }
 

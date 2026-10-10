@@ -16,7 +16,6 @@
   "task_max_attempts": 3,
   "quotes_default_limit": 20,
   "quotes_max_limit": 100,
-  "labels": ["positive", "neutral", "negative", "mixed", "not_assessable"],
   "themes": [
     "pricing",
     "value",

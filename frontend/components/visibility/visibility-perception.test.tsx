@@ -44,6 +44,8 @@ const quote = {
   run_id: RUN,
   execution_id: EXECUTION,
   observed_at: '2026-10-01T00:00:00Z',
+  extractor_version: 'x1',
+  template_version: 't1',
 };
 
 function response(overrides: Partial<PerceptionResponse> = {}): PerceptionResponse {

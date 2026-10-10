@@ -24,20 +24,26 @@ export function perceptionHighlights(perception: readonly ExecutionPerception[])
   );
 }
 
+const STATE_WORDS: Record<Exclude<ExecutionPerception['state'], 'classified'>, string> = {
+  not_assessable: 'Not assessable',
+  low_confidence: 'Low confidence',
+  pending: 'Classifying…',
+  unavailable: 'Unavailable',
+};
+
 function PerceptionChip({ entity }: Readonly<{ entity: ExecutionPerception }>) {
-  if (entity.state === 'classified' && entity.label && entity.label !== 'not_assessable')
+  const label = entity.label;
+  if (entity.state === 'classified' && label && label !== 'not_assessable')
     return (
-      <Badge variant="sentiment" value={entity.label}>
-        {SENTIMENT_LABELS[entity.label]}
+      <Badge variant="sentiment" value={label}>
+        {SENTIMENT_LABELS[label]}
       </Badge>
     );
-  const words: Record<ExecutionPerception['state'], string> = {
-    classified: 'Not assessable',
-    low_confidence: 'Low confidence',
-    pending: 'Classifying…',
-    unavailable: 'Unavailable',
-  };
-  return <Badge>{words[entity.state]}</Badge>;
+  return (
+    <Badge>
+      {entity.state === 'classified' ? STATE_WORDS.not_assessable : STATE_WORDS[entity.state]}
+    </Badge>
+  );
 }
 
 /** How this answer portrayed each business it named, with the quotes behind it. */

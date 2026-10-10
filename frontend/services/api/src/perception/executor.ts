@@ -51,7 +51,7 @@ type Call = {
 
 type Subject = Awaited<ReturnType<typeof loadSubject>>;
 
-async function loadSubject(db: Database, task: QueueTask, projectId: string) {
+function loadSubject(db: Database, task: QueueTask, projectId: string) {
   const analysisId = parseUuid(payloadString(task, 'analysis_id'));
   if (analysisId === null) throw new Error('answer_perception payload missing analysis_id');
   return db
@@ -221,7 +221,8 @@ export function answerPerception(
     const projectId = await taskProject(db, task);
     const subject = await loadSubject(db, task, projectId);
     const versions = frozenPerceptionVersions(subject.configuration);
-    if (await alreadyPerceived(db, subject, versions.extractor_version)) return;
+    // An audit admitted without perception is never classified.
+    if (!versions || (await alreadyPerceived(db, subject, versions.extractor_version))) return;
     const settle = (outcome: Outcome, call: Call | null = null) => ({
       error: null,
       persist: persist(task, projectId, subject, versions, outcome, call),
@@ -256,6 +257,7 @@ export async function compensatePerception(db: Database, task: QueueTask) {
   const projectId = await taskProject(db, task);
   const subject = await loadSubject(db, task, projectId);
   const versions = frozenPerceptionVersions(subject.configuration);
+  if (!versions) return;
   await persist(
     task,
     projectId,
