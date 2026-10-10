@@ -1,11 +1,10 @@
 /**
  * PostgreSQL pool and Kysely instance.
  *
- * Mirrors `backend/app/core/database.py`: the same pool size, recycle age,
- * acquisition and command timeouts, and the same server-side statement, lock
- * and idle-in-transaction timeouts. Alembic stays the only schema author
- * (TypeScript migration D4); this service holds generated types, never
- * migrations.
+ * Pool size, recycle age, acquisition and command timeouts, and the
+ * server-side statement, lock and idle-in-transaction timeouts. The SQL
+ * baseline (`migrations/0001_baseline.sql`) is the only schema author; this
+ * module holds generated types, never DDL.
  */
 import { Kysely, PostgresDialect } from 'kysely';
 import pg from 'pg';
@@ -20,7 +19,7 @@ export type DatabaseConfig = Pick<ServiceConfig, 'database' | 'databaseUrl' | 'a
   execution?: Pick<ServiceConfig['execution'], 'runnerJob' | 'poolSize'>;
 };
 
-/** Accept the backend's SQLAlchemy URL (`postgresql+asyncpg://`) unchanged. */
+/** Accept a driver-qualified URL (`postgresql+asyncpg://`) as plain libpq. */
 export function libpqUrl(databaseUrl: string): string {
   return databaseUrl.replace(/^postgres(?:ql)?\+[a-z0-9_]+:\/\//iu, 'postgresql://');
 }
@@ -29,11 +28,11 @@ export function poolOptions(config: DatabaseConfig): pg.PoolConfig {
   const db = config.database;
   return {
     connectionString: libpqUrl(config.databaseUrl),
-    // SQLAlchemy allows pool_size + max_overflow concurrent connections.
+    // pool_size + max_overflow concurrent connections.
     max: db.poolSize + db.maxOverflow,
     maxLifetimeSeconds: db.poolRecycleSeconds,
     // node-postgres applies one bound to both waiting for a pooled client and
-    // opening a new one; SQLAlchemy splits it into pool and connect timeouts.
+    // opening a new one, so the larger of the pool and connect timeouts applies.
     connectionTimeoutMillis: Math.max(db.poolTimeoutSeconds, db.connectTimeoutSeconds) * 1000,
     query_timeout: db.commandTimeoutSeconds * 1000,
     statement_timeout: db.statementTimeoutMs,
@@ -42,7 +41,7 @@ export function poolOptions(config: DatabaseConfig): pg.PoolConfig {
     keepAlive: true,
     idle_in_transaction_session_timeout: db.idleTransactionTimeoutMs,
     application_name: config.appName,
-    // asyncpg's `ssl="require"` encrypts without verifying the certificate.
+    // `require` encrypts without verifying the certificate (libpq sslmode=require).
     ssl: db.sslMode === 'require' ? { rejectUnauthorized: false } : false,
   };
 }

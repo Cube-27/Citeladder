@@ -1,4 +1,4 @@
-/** Native account/catalog composition on an empty disposable Alembic database. */
+/** Native account/catalog composition on an empty disposable baseline database. */
 import { beforeEach, expect, it } from 'vitest';
 import { join } from 'node:path';
 import { disposableDatabase } from './disposable-database.ts';

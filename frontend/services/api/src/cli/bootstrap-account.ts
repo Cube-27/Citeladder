@@ -6,7 +6,7 @@ import { operatorMain } from './operator.ts';
 await operatorMain(async () => {
   if (process.argv.includes('--help')) {
     console.log(
-      'bootstrap:account. Configured identity/access and idempotent catalog, after Alembic upgrade/check.',
+      'bootstrap:account. Configured identity/access and idempotent catalog, after the schema baseline (migrate).',
     );
     return;
   }

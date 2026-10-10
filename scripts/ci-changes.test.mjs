@@ -10,18 +10,8 @@ import {
   selectDiff,
 } from './ci-changes.mjs';
 
-test('backend and frontend paths select only their owning suites', () => {
-  assert.deepEqual(classifyPaths(['backend/scripts/check_complexity.py']), {
-    backend: true,
-    frontend: false,
-    contract: false,
-    api: false,
-    e2e: false,
-    security: false,
-    compose: false,
-  });
+test('frontend paths select only their owning suites', () => {
   assert.deepEqual(classifyPaths(['frontend/components/card.tsx']), {
-    backend: false,
     frontend: true,
     contract: false,
     api: false,
@@ -85,29 +75,17 @@ test('native contracts select API and browser checks without schema checks', () 
     'frontend/packages/contracts/src/project.ts',
   ]) {
     const result = classifyPaths([path]);
-    assert.equal(result.backend, false, path);
     assert.equal(result.frontend, true, path);
     assert.equal(result.contract, true, path);
   }
-  assert.equal(classifyPaths(['scripts/quality.mjs']).backend, true);
+  assert.equal(classifyPaths(['scripts/quality.mjs']).api, true);
 });
 
-test('schema inputs retain schema and native API coverage', () => {
-  for (const path of [
-    'backend/app/models/audit.py',
-    'backend/app/models/constants.py',
-    'backend/app/core/migration_config.py',
-    'migrations/versions/0001_initial.py',
-    'backend/pyproject.toml',
-    'backend/uv.lock',
-  ]) {
-    const result = classifyPaths([path]);
-    assert.equal(result.backend, true, path);
-    assert.equal(result.api, true, path);
-  }
-  assert.equal(classifyPaths(['reset-db.py']).backend, true);
-  assert.equal(classifyPaths(['frontend/services/api/src/config/audits.ts']).backend, false);
-  assert.equal(classifyPaths(['frontend/services/api/src/config/audits.ts']).api, true);
+test('the SQL schema baseline selects the native API and the Compose smoke', () => {
+  const result = classifyPaths(['frontend/services/api/migrations/0001_baseline.sql']);
+  assert.equal(result.api, true);
+  assert.equal(result.compose, true);
+  assert.equal(result.contract, false);
 });
 
 test('the native API runs for its code and canonical schema inputs', () => {
@@ -115,20 +93,13 @@ test('the native API runs for its code and canonical schema inputs', () => {
     'frontend/services/api/src/app.ts',
     'frontend/services/api/assets/agent-skills/skills/gsc_optimize/SKILL.md',
     'frontend/pnpm-lock.yaml',
-    'migrations/versions/0001_initial.py',
-    'backend/app/core/migration_config.py',
-    'backend/app/models/integrations.py',
+    'frontend/services/api/migrations/0001_baseline.sql',
     'frontend/packages/contracts/src/route-ownership.ts',
     'frontend/services/api/src/routes/projects.ts',
   ]) {
     assert.equal(classifyPaths([path]).api, true, path);
   }
-  for (const path of [
-    'backend/tests/component/test_billing_schema.py',
-    'backend/scripts/check_complexity.py',
-    'backend/scripts/check_test_shape.py',
-    'frontend/components/card.tsx',
-  ]) {
+  for (const path of ['frontend/components/card.tsx', 'frontend/apps/app/src/main.tsx']) {
     assert.equal(classifyPaths([path]).api, false, path);
   }
   assert.equal(classifyPaths(['frontend/services/api/src/server.ts']).compose, true);
@@ -136,7 +107,6 @@ test('the native API runs for its code and canonical schema inputs', () => {
 
 test('documentation-only changes avoid implementation suites', () => {
   assert.deepEqual(classifyPaths(['docs/DEVELOPMENT.md', 'README.md']), {
-    backend: false,
     frontend: false,
     contract: false,
     api: false,
@@ -150,7 +120,6 @@ test('external-service and deploy-only configuration runs only the security owne
   assert.deepEqual(
     classifyPaths(['.sonarcloud.properties', '.github/workflows/gcp-deploy.yml', 'docs/x.md']),
     {
-      backend: false,
       frontend: false,
       contract: false,
       api: false,
@@ -160,19 +129,18 @@ test('external-service and deploy-only configuration runs only the security owne
     },
   );
   // The CI workflow itself still escalates: owners run under its definition.
-  assert.equal(classifyPaths(['.github/workflows/ci.yml']).backend, true);
+  assert.equal(classifyPaths(['.github/workflows/ci.yml']).api, true);
 });
 
 test('main skips full validation only for an owner-free push', () => {
   assert.equal(isOwnerFreeChange(['docs/README.md', '.sonarcloud.properties']), true);
-  assert.equal(isOwnerFreeChange(['docs/README.md', 'backend/app/models/audit.py']), false);
+  assert.equal(isOwnerFreeChange(['docs/README.md', 'frontend/components/card.tsx']), false);
   // An unknown range must never read as an owner-free change.
   assert.equal(isOwnerFreeChange([]), false);
 });
 
 test('root governance and product prose avoid implementation suites', () => {
   assert.deepEqual(classifyPaths(['AGENTS.md', 'PRODUCT.md']), {
-    backend: false,
     frontend: false,
     contract: false,
     api: false,
@@ -186,7 +154,6 @@ test('packaged Agent skills select their native API and image owners', () => {
   assert.deepEqual(
     classifyPaths(['frontend/services/api/assets/agent-skills/skills/gsc_optimize/SKILL.md']),
     {
-      backend: false,
       frontend: true,
       contract: false,
       api: true,
@@ -198,15 +165,11 @@ test('packaged Agent skills select their native API and image owners', () => {
 });
 
 test('Compose selects container-shaped changes only, on every push of a PR', () => {
-  // Application code does not smoke the stack: the backend, frontend and E2E
+  // Application code does not smoke the stack: the API, frontend and E2E
   // owners already cover it. `{ initial: true }` is asserted alongside the plain
   // call because a PR's first push used to escalate to Compose on any changed
   // application file -- re-adding that option must not bring the escalation back.
-  for (const path of [
-    'backend/app/models/audit.py',
-    'frontend/components/card.tsx',
-    'reset-db.py',
-  ]) {
+  for (const path of ['frontend/components/card.tsx', 'scripts/check.ps1']) {
     assert.equal(classifyPaths([path], { initial: true }).compose, false, path);
     assert.equal(classifyPaths([path]).compose, false, path);
   }
@@ -217,15 +180,12 @@ test('Compose selects container-shaped changes only, on every push of a PR', () 
   // installed into a container. Every one of these must hold on EVERY push --
   // `frontend/Dockerfile` used to select Compose on the first push only.
   for (const path of [
-    'Dockerfile',
     'frontend/Dockerfile',
+    'frontend/services/api/Dockerfile',
     'docker-compose.yml',
     '.dockerignore',
     '.env.example',
-    'migrations/versions/0001_initial.py',
-    'backend/alembic.ini',
-    'backend/pyproject.toml',
-    'backend/uv.lock',
+    'frontend/services/api/migrations/0001_baseline.sql',
     'frontend/package.json',
     'frontend/pnpm-lock.yaml',
     'frontend/apps/app/vite.config.ts',
@@ -233,7 +193,6 @@ test('Compose selects container-shaped changes only, on every push of a PR', () 
     'frontend/apps/docs/astro.config.mjs',
     'frontend/lib/server/worker-origin-proxy.ts',
     'scripts/frontend-ingress-smoke.mjs',
-    'scripts/bootstrap-environment.sh',
     '.github/workflows/compose-smoke.yml',
   ]) {
     assert.equal(classifyPaths([path]).compose, true, path);
@@ -244,12 +203,11 @@ test('previous CI evidence requires every owner to be successful or intentionall
   const complete = [
     { name: 'Classify affected owners', status: 'completed', conclusion: 'success' },
     ...[
-      'Schema / Alembic (quality, pytest)',
       'Frontend (quality, coverage, build)',
       'API contract and ingress',
       'API service (TypeScript)',
       'E2E (playwright)',
-      'Security (pip-audit, detect-secrets)',
+      'Security (secrets scan)',
     ].map((name) => ({ name, status: 'completed', conclusion: 'skipped' })),
   ];
   assert.equal(hasTrustworthyJobEvidence(complete, 'ci.yml'), true);

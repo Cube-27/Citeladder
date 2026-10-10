@@ -14,8 +14,8 @@ report, not code changes.
 1. `docs/prompts/_contract.md`.
 2. `docs/invariants.md` sections 1 and 2.
 3. `docs/backend-architecture.md` section "API and persistence rules".
-4. Skim the file list of `frontend/services/api/src/config/` and
-   `backend/app/core/config/` so you know what is already configurable.
+4. Skim the file list of `frontend/services/api/src/config/` so you know what
+   is already configurable.
 
 ## Scope
 
@@ -33,9 +33,7 @@ report, not code changes.
    `timeout`, `weight`, `score`, `retry`; model IDs (`gpt-`, `claude-`,
    `gemini`); `https://` hosts.
 2. **Restated application policy.** Two native config modules defining the
-   same policy, or a service restating its config owner. Python retains only
-   structural schema constants/defaults; it never supplies application policy
-   through an exporter.
+   same policy, or a service restating its config owner.
 3. **Second owner.** A new store, crawler, page-analysis path, opportunity
    list, prompt resource, content queue or memory store that parallels an
    existing owner (`SitePageAnalysis` is the only page-understanding owner).

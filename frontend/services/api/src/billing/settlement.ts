@@ -133,7 +133,6 @@ async function settleBase(
     .values({
       id: randomUUID(),
       billing_account_id: pending.billing_account_id,
-      billing_customer_id: null,
       provider: pending.provider,
       provider_mode: pending.provider_mode,
       external_subscription_id: ref,

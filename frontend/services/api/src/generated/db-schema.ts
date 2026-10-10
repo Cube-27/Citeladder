@@ -554,16 +554,6 @@ export interface BillingCatalogRevisions {
   revision: string;
 }
 
-export interface BillingCustomers {
-  billing_account_id: string;
-  created_at: Timestamp;
-  external_customer_id: string;
-  id: string;
-  provider: string;
-  provider_mode: Generated<string>;
-  updated_at: Timestamp;
-}
-
 export interface BillingInvoiceCounters {
   financial_year: string;
   next_value: number;
@@ -614,7 +604,6 @@ export interface BillingPayments {
 
 export interface BillingSubscriptions {
   billing_account_id: string;
-  billing_customer_id: string | null;
   cadence: string;
   cancel_at_period_end: boolean;
   catalog_key: string;
@@ -1266,19 +1255,6 @@ export interface DemandSnapshots {
   summary: Json;
   window_end: Timestamp;
   window_start: Timestamp;
-  workspace_id: string;
-}
-
-export interface DiscoveryModelConfigs {
-  active: boolean;
-  connection_id: string | null;
-  created_at: Timestamp;
-  id: string;
-  logical_engine: string;
-  parameters: Json | null;
-  transport_model: string;
-  transport_provider: string;
-  updated_at: Timestamp;
   workspace_id: string;
 }
 
@@ -3046,7 +3022,6 @@ export interface DB {
   auth_challenges: AuthChallenges;
   billing_accounts: BillingAccounts;
   billing_catalog_revisions: BillingCatalogRevisions;
-  billing_customers: BillingCustomers;
   billing_invoice_counters: BillingInvoiceCounters;
   billing_invoices: BillingInvoices;
   billing_payments: BillingPayments;
@@ -3088,7 +3063,6 @@ export interface DB {
   crawl_log_uploads: CrawlLogUploads;
   demand_signals: DemandSignals;
   demand_snapshots: DemandSnapshots;
-  discovery_model_configs: DiscoveryModelConfigs;
   enterprise_agreement_references: EnterpriseAgreementReferences;
   execution_cost_projections: ExecutionCostProjections;
   grant_revocations: GrantRevocations;

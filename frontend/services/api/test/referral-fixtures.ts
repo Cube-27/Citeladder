@@ -1,8 +1,7 @@
 /**
  * The integrations import graph the referral chain projects: grant ->
  * connection -> property mapping -> sync run -> import artifact -> metric
- * rows. Mirrors `backend/tests/component/analytics_helpers.py`, seeded
- * directly (no provider I/O). Rows go away with their workspace.
+ * rows, seeded directly (no provider I/O). Rows go away with their workspace.
  */
 import { randomUUID } from 'node:crypto';
 

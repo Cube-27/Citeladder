@@ -1,8 +1,7 @@
 /**
  * API responses are never cached unless they opt into private caching.
  *
- * Mirrors `ApiNoStoreMiddleware` in `backend/app/core/http_security.py`:
- * every `/api/` response, errors included, carries `private, no-store`
+ * Every `/api/` response, errors included, carries `private, no-store`
  * unless the route already chose `private, max-age=...`.
  */
 import type { MiddlewareHandler } from 'hono';

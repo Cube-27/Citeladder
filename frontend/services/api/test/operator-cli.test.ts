@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { mkdtemp, writeFile, mkdir, copyFile, rm } from 'node:fs/promises';
 import { expect, it, vi } from 'vitest';
 import { operatorMain } from '../src/cli/operator.ts';
-import { resetSequence } from '../src/cli/reset-sequence.ts';
+import { resetSequence, resetTarget } from '../src/cli/reset-sequence.ts';
 
 const execute = promisify(execFile);
 const root = fileURLToPath(new URL('../../../../', import.meta.url));
@@ -96,16 +96,11 @@ it('native local configuration preserves dotenv precedence and disable admission
   const directory = await mkdtemp(join(tmpdir(), 'provision-config-'));
   const cli = join(directory, 'frontend/services/api/src/cli');
   await mkdir(cli, { recursive: true });
-  await mkdir(join(directory, 'backend'));
   await copyFile(
     join(root, 'frontend/services/api/src/cli/local-environment.ts'),
     join(cli, 'local-environment.ts'),
   );
   await writeFile(join(directory, '.env'), 'DATABASE_URL=postgresql://root-fixture/one\n');
-  await writeFile(
-    join(directory, 'backend/.env'),
-    'DATABASE_URL=postgresql://backend-fixture/two\n',
-  );
   await writeFile(
     join(cli, 'probe.ts'),
     "import { localEnvironment } from './local-environment.ts'; console.log(localEnvironment().DATABASE_URL ?? 'missing');",
@@ -115,7 +110,7 @@ it('native local configuration preserves dotenv precedence and disable admission
       await execute(process.execPath, [join(cli, 'probe.ts')], { env: { ...systemEnv, ...env } })
     ).stdout.trim();
   try {
-    expect(await probe()).toBe('postgresql://backend-fixture/two');
+    expect(await probe()).toBe('postgresql://root-fixture/one');
     expect(await probe({ DATABASE_URL: 'postgresql://process-fixture/three' })).toBe(
       'postgresql://process-fixture/three',
     );
@@ -171,6 +166,7 @@ Write-Output 'environment-restored'
 
 it('reset passes one explicit target to both bounded stages and stops on a reset failure', async () => {
   const env = {
+    APP_ENV: 'development',
     DATABASE_URL: 'postgresql://127.0.0.1/disposable',
     DEV_LOGIN_PASSWORD: 'fixture-password',
   };
@@ -198,4 +194,47 @@ it('reset passes one explicit target to both bounded stages and stops on a reset
   await expect(
     resetSequence({ ...env, RESET_MIGRATION_TIMEOUT_SECONDS: '0' }, missing),
   ).rejects.toThrow('invalid_reset_timeout');
+  await expect(resetSequence({ ...env, APP_ENV: 'production' }, missing)).rejects.toThrow(
+    "APP_ENV is 'production'",
+  );
+  expect(missing).not.toHaveBeenCalled();
+});
+
+it('reset drops only a local development database unless the exact token confirms it', () => {
+  const remote = 'postgresql://user:fixture-secret@shared.example.com:5432/dev?password=hidden';
+  expect(
+    resetTarget({
+      APP_ENV: 'development',
+      DATABASE_URL: 'postgresql://user:pw@localhost:5432/dev',
+    }),
+  ).toMatchObject({ database: 'dev', adminUrl: 'postgresql://user:pw@localhost:5432/postgres' });
+  expect(() => resetTarget({ APP_ENV: 'development', DATABASE_URL: remote })).toThrow(
+    "target host is 'shared.example.com'",
+  );
+  expect(() => resetTarget({ DATABASE_URL: 'postgresql://user:pw@127.0.0.1/dev' })).toThrow(
+    "APP_ENV is '(unset)'",
+  );
+  const refusal = (() => {
+    try {
+      resetTarget({ APP_ENV: 'production', DATABASE_URL: remote });
+      return 'accepted';
+    } catch (error) {
+      return String(error);
+    }
+  })();
+  expect(refusal).toContain('RESET_CONFIRM_DESTRUCTIVE=drop-and-recreate');
+  expect(refusal).not.toMatch(/fixture-secret|hidden/u);
+  expect(
+    resetTarget({
+      APP_ENV: 'production',
+      DATABASE_URL: remote,
+      RESET_CONFIRM_DESTRUCTIVE: 'drop-and-recreate',
+    }).database,
+  ).toBe('dev');
+  for (const url of [
+    'sqlite:///tmp/citeladder.db',
+    'postgresql://user:pw@localhost:5432/postgres',
+    'postgresql://user:pw@localhost:5432/',
+  ])
+    expect(() => resetTarget({ APP_ENV: 'development', DATABASE_URL: url })).toThrow();
 });

@@ -250,18 +250,10 @@ describe('analyze acquisition', () => {
       const page = await fixtures.analyzable(seed, path);
       const body =
         kind === 'product'
-          ? readFileSync(
-              new URL(
-                '../../../../backend/tests/fixtures/site_health/multi_main_product.html',
-                import.meta.url,
-              ),
-            )
+          ? readFileSync(new URL('./fixtures/site-health/multi_main_product.html', import.meta.url))
           : kind === 'category'
             ? readFileSync(
-                new URL(
-                  '../../../../backend/tests/fixtures/site_health/category_faceted_canonical.html',
-                  import.meta.url,
-                ),
+                new URL('./fixtures/site-health/category_faceted_canonical.html', import.meta.url),
               )
             : RICH;
       await analyze(site({ [path]: { body } }), page.taskId);

@@ -36,24 +36,25 @@ services:
       retries: 10
       start_period: 10s
 
-  # Applies migrations once, then exits; API + workers wait on its success.
+  # Applies the SQL baseline and native bootstrap once, then exits; API +
+  # workers wait on its success. Same image as the API, as in production.
   migrate:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: frontend/services/api/Dockerfile
     restart: 'no'
     env_file:
       - ${CITELADDER_ENV_FILE:-.env}
-    environment: &backend_env
+    environment: &service_env
       APP_ENV: ${APP_ENV:-development}
       # OAuth redirects and invitation links target the local app Worker.
       FRONTEND_URL: http://127.0.0.1:3001
       # skipcq: SCT-A000 - password comes from environment, not hardcoded.
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@db:5432/${POSTGRES_DB:-citeladder}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@db:5432/${POSTGRES_DB:-citeladder}
     depends_on:
       db:
         condition: service_healthy
-    command: ['/bin/sh', '/app/bootstrap-environment.sh']
+    command: ['/bin/sh', '-c', 'node src/cli/migrate.ts && exec node src/cli/bootstrap-account.ts']
 
   # Each Worker runs under `wrangler dev` as production serves it:
   # marketing http://127.0.0.1:3000, app http://127.0.0.1:3001 (proxies /api
@@ -120,7 +121,7 @@ services:
     restart: unless-stopped
     env_file:
       - ${CITELADDER_ENV_FILE:-.env}
-    environment: *backend_env
+    environment: *service_env
     depends_on:
       db:
         condition: service_healthy
@@ -132,7 +133,7 @@ services:
       disable: true
 
   # The native API serves every application route family and issues sessions.
-  # The app Worker proxies /api/* here; Alembic owns its database schema.
+  # The app Worker proxies /api/* here; the migrate service owns its schema.
   api-service:
     build:
       context: .
@@ -140,7 +141,7 @@ services:
     restart: unless-stopped
     env_file:
       - ${CITELADDER_ENV_FILE:-.env}
-    environment: *backend_env
+    environment: *service_env
     depends_on:
       db:
         condition: service_healthy

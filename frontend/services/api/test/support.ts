@@ -13,7 +13,7 @@ export function testConfig(overrides: Record<string, string> = {}): ServiceConfi
   const databaseUrl = process.env.API_TEST_DATABASE_URL;
   if (!databaseUrl) {
     throw new Error(
-      'API_TEST_DATABASE_URL must name a disposable, Alembic-migrated PostgreSQL database; the suite writes and deletes fixture rows there.',
+      'API_TEST_DATABASE_URL must name a disposable PostgreSQL database migrated with `pnpm migrate`; the suite writes and deletes fixture rows there.',
     );
   }
   return loadConfig({

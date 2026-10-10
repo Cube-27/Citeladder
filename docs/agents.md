@@ -33,10 +33,10 @@ The runtime lives in [`frontend/services/api/src/agent`](../frontend/services/ap
 and the HTTP surface in the [Agent API](../frontend/services/api/src/routes/agent.ts).
 Its core takes explicit adapters for funding admission, context, the skill
 catalog, read tools, model destinations and Action attachment; none has a
-permissive default. Python retains only schema metadata.
+permissive default.
 
 Every chat is pinned to one project and is the saved unit of work. Sending a
-message appends it and queues exactly one [AgentRun](../backend/app/models/agent.py);
+message appends it and queues exactly one `agent_runs` row;
 messages are append-only and a chat has at most one active run. Reads return
 persisted state and never execute a turn. The chat list pages by keyset cursor,
 can be narrowed to one Action's chats and searches titles and message content
@@ -193,7 +193,7 @@ there are no Agent-only reads. A caller's mistake (a bad cursor, window or
 filter) is refused with the owner's reason so the model can correct the call.
 No tool writes.
 
-Each [tool attempt](../backend/app/models/agent.py) records tool, arguments,
+Each tool attempt (`agent_tool_attempts` in the [schema baseline](../frontend/services/api/migrations/0001_baseline.sql)) records tool, arguments,
 status, returned record references, omissions, output hash and latency.
 `unavailable` is distinct from a successful empty or zero read and from failure
 or refusal. Oversized results keep whole JSON fields in an incomplete envelope

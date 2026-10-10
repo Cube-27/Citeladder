@@ -23,13 +23,11 @@ contract disagree, this contract wins.
 Read these before judging anything. Reporting one of these as a defect is a
 wrong finding.
 
-- **Runtime is TypeScript.** Every HTTP route, worker and protocol endpoint is in
-  `frontend/services/api/src/` (Node, Hono, Kysely). Python under `backend/` has
-  **no web process and no executing worker**; it keeps SQLAlchemy models,
-  Alembic and schema maintenance/check tooling. Python models are not dead code
-  because no Python route imports them.
+- **Runtime is TypeScript.** Every HTTP route, worker, protocol endpoint and
+  CLI is in `frontend/services/api/src/` (Node, Hono, Kysely). The repository
+  contains no Python.
 - **Single migration baseline is intentional.** Schema changes live in
-  `migrations/versions/0001_initial.py`; there is deliberately no `0002+`.
+  `frontend/services/api/migrations/0001_baseline.sql`, applied by `src/cli/migrate.ts`; there is deliberately no `0002+`.
   Semantic versions all equal `1` on purpose (pre-launch reset policy).
 - **No Redis, no embeddings, no vector store** — by design.
 - **PostgreSQL is the queue.** Tasks are claimed with `FOR UPDATE SKIP LOCKED`.
@@ -61,7 +59,7 @@ you actually opened and quote at most 6 lines of the relevant code.
 Before you report, try to disprove it:
 
 1. Search for a guard elsewhere — caller, middleware, `define.ts`, a database
-   constraint or unique index in `0001_initial.py`, a zod schema, a config bound.
+   constraint or unique index in `0001_baseline.sql`, a zod schema, a config bound.
 2. Confirm the path is reachable from a real entry point (route, worker lane,
    CLI, UI event). Unreachable code is a dead-code note, not a bug.
 3. Check whether a test already pins the behaviour you think is wrong; if it

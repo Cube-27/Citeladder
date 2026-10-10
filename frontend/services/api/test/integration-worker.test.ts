@@ -941,10 +941,7 @@ describe('integration worker paging and resume', () => {
   it('continues after a committed provider page when a later request fails', async () => {
     const recordedPage = async (name: string): Promise<Record<string, unknown>> =>
       JSON.parse(
-        await readFile(
-          new URL(`../../../../backend/tests/fixtures/integrations/${name}`, import.meta.url),
-          'utf8',
-        ),
+        await readFile(new URL(`./fixtures/integrations/${name}`, import.meta.url), 'utf8'),
       ) as Record<string, unknown>;
     const pageOne = await recordedPage('gsc_search_analytics_page1.json');
     const pageTwo = await recordedPage('gsc_search_analytics_page2.json');

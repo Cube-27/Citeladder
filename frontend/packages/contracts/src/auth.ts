@@ -23,8 +23,8 @@ const uuid = () => z.uuid();
 // Auth / workspace
 // ---------------------------------------------------------------------------
 
-// Backend `SessionUser.role` is the ACCOUNT-level `User.role` (free-form
-// string, defaults to `"user"` — see backend/app/models/user.py). It is a
+// Backend `SessionUser.role` is the ACCOUNT-level `users.role` (free-form
+// string, defaults to `"user"`). It is a
 // different axis from the per-workspace MEMBERSHIP role (`owner`/`member`,
 // carried on `workspaceSchema.role` below) and must not be conflated with it
 // via a restrictive enum — doing so previously rejected every real register/

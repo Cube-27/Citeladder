@@ -90,10 +90,7 @@ describe('Bing property discovery', () => {
   });
   it('accepts the recorded GetUserSites Site response without a synthetic verification flag', async () => {
     const recorded = await readFile(
-      new URL(
-        '../../../../backend/tests/fixtures/integrations/bing_sites_response.json',
-        import.meta.url,
-      ),
+      new URL('./fixtures/integrations/bing_sites_response.json', import.meta.url),
       'utf8',
     );
     const client = new IntegrationClient(

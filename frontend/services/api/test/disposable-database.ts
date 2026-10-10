@@ -1,21 +1,16 @@
-/** Fresh Alembic schema for bootstrap/seed tests. Never reset a supplied database. */
+/** Fresh SQL-baseline schema for bootstrap/seed tests. Never reset a supplied database. */
 import { randomUUID } from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
-import { join } from 'node:path';
 import pg from 'pg';
 import { beforeAll, afterAll } from 'vitest';
 import { createDatabase } from '../src/db/database.ts';
 import { loadConfig } from '../src/config.ts';
+import { applyBaseline, baselineClient } from '../src/cli/schema-baseline.ts';
 
 export function disposableDatabase() {
   const root = fileURLToPath(new URL('../../../../', import.meta.url));
-  const python = join(
-    root,
-    'backend/.venv',
-    process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python',
-  );
   const name = `citeladder_bootstrap_test_${randomUUID().replaceAll('-', '')}`;
   const url = new URL(process.env.API_TEST_DATABASE_URL!);
   const admin = new URL(url);
@@ -48,12 +43,13 @@ export function disposableDatabase() {
     await connection.connect();
     await connection.query(`CREATE DATABASE "${name}"`);
     created = true;
-    for (const args of [['upgrade', 'head'], ['check']])
-      await execute(python, ['-m', 'alembic', ...args], {
-        cwd: join(root, 'backend'),
-        env: { ...env, DATABASE_URL: url.href.replace('postgresql:', 'postgresql+asyncpg:') },
-        timeout: 60000,
-      });
+    const schema = baselineClient(url.href, env);
+    await schema.connect();
+    try {
+      await applyBaseline(schema);
+    } finally {
+      await schema.end();
+    }
   }, 120000);
   afterAll(async () => {
     try {

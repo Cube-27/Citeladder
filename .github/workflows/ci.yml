@@ -23,7 +23,6 @@ jobs:
     # provisioning a full CI VM before owner jobs can be selected.
     runs-on: ubuntu-slim
     outputs:
-      backend: ${{ steps.classify.outputs.backend }}
       frontend: ${{ steps.classify.outputs.frontend }}
       contract: ${{ steps.classify.outputs.contract }}
       api: ${{ steps.classify.outputs.api }}
@@ -50,81 +49,6 @@ jobs:
           GITHUB_EVENT_ACTION: ${{ github.event.action }}
           GITHUB_TOKEN: ${{ github.token }}
         run: node scripts/ci-changes.mjs
-
-  backend:
-    name: Schema / Alembic (quality, pytest)
-    needs: changes
-    if: needs.changes.outputs.backend == 'true'
-    permissions:
-      contents: read
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    defaults:
-      run:
-        working-directory: backend
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: citeladder
-        ports: ['5432:5432']
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-    env:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/citeladder
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-      - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
-        with:
-          enable-cache: true
-          python-version: '3.12'
-      - name: Install dependencies (frozen lock)
-        # No `--no-build` here, unlike the Dockerfile: this sync installs the
-        # project itself as an editable, which is a local build by definition.
-        run: uv sync --frozen --extra dev
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 24
-      - name: Schema quality
-        env:
-          COMPLEXITY_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
-        run: node ../scripts/quality.mjs --mode check --scope backend
-      - name: Radon advisory report
-        run: |
-          .venv/bin/radon cc app -s -n C
-          .venv/bin/radon mi app -s -n B
-      - name: Pytest with measured coverage
-        run: |
-          log="$RUNNER_TEMP/backend-pytest.log"
-          # Keep progress and faulthandler stacks visible even if the runner
-          # cancels a timed-out job before the failure artifact can upload.
-          set +e
-          .venv/bin/python -u -m pytest -vv -x -o faulthandler_timeout=120 \
-            --cov --cov-report=xml 2>&1 | tee "$log"
-          status="${PIPESTATUS[0]}"
-          set -e
-          if test "$status" -ne 0; then
-            echo "Backend pytest failed (exit $status); full log: $log"
-            exit "$status"
-          fi
-          echo 'Backend pytest passed.'
-      - name: Publish failed backend test log
-        if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: backend-pytest-log
-          path: ${{ runner.temp }}/backend-pytest.log
-          if-no-files-found: warn
-          retention-days: 7
 
   frontend:
     name: Frontend (quality, coverage, build)
@@ -255,30 +179,14 @@ jobs:
           --health-retries 10
     env:
       CITELADDER_DISABLE_DOTENV: '1'
-      # Alembic authors the schema (migration D4); the service only reads it.
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/citeladder
+      # The SQL baseline authors the schema; the migrate CLI applies it once.
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/citeladder
       TYPES_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/citeladder
       API_TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/citeladder
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
-        with:
-          enable-cache: true
-          python-version: '3.12'
-      - name: Install schema tooling (frozen lock)
-        working-directory: backend
-        # Published wheels only and no project install, as in the backend
-        # image: only Alembic schema initialization needs Python.
-        run: uv sync --frozen --no-dev --no-install-project --no-build
-      - name: Apply the Alembic schema
-        working-directory: backend
-        run: .venv/bin/alembic upgrade head
-      - name: Verify schema drift
-        working-directory: backend
-        run: .venv/bin/alembic check
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
         with:
           package_json_file: frontend/package.json
@@ -290,6 +198,9 @@ jobs:
       - name: Install dependencies
         working-directory: frontend
         run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Apply the SQL schema baseline
+        working-directory: frontend/services/api
+        run: pnpm migrate
       - name: API service quality (types, schema authority, route ownership)
         working-directory: frontend
         run: node ../scripts/quality.mjs --mode check --scope api
@@ -359,7 +270,7 @@ jobs:
           retention-days: 7
 
   security:
-    name: Security (pip-audit, detect-secrets)
+    name: Security (secrets scan)
     needs: changes
     if: needs.changes.outputs.security == 'true'
     permissions:
@@ -370,16 +281,18 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
-        with:
-          python-version: '3.12'
-      - name: Dependency audit (SCA)
-        working-directory: backend
+      - name: Install gitleaks (pinned, checksum-verified)
+        env:
+          GITLEAKS_VERSION: 8.30.1
+          GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
         run: |
-          uv export --frozen --no-emit-project --format requirements.txt -o requirements-audit.txt
-          uvx --no-build pip-audit@2.10.1 --strict -r requirements-audit.txt
-      - name: Secrets scan (against committed baseline)
+          archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl --proto '=https' --tlsv1.2 -fsSLo "$RUNNER_TEMP/$archive" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/$archive"
+          echo "$GITLEAKS_SHA256  $RUNNER_TEMP/$archive" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP" gitleaks
+      - name: Secrets scan (reviewed allowlist in .gitleaks.toml)
         run: |
-          uvx --no-build detect-secrets@1.5.0 scan --baseline .secrets.baseline \
-            --exclude-files 'uv\.lock|pnpm-lock\.yaml|\.secrets\.baseline'
+          # Scan the checked-out tree, as detect-secrets did, not the Git object store.
+          rm -rf .git
+          "$RUNNER_TEMP/gitleaks" dir . --no-banner --redact --config .gitleaks.toml

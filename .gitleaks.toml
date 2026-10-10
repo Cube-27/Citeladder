@@ -1,0 +1,14 @@
+# Secrets scan for the CI security job: gitleaks' default rules plus reviewed
+# false positives. Allow a line only after confirming it holds no credential.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Reviewed non-secrets: operator idempotency keys, storage keys and labelled test fixtures"
+regexTarget = "line"
+regexes = [
+  '''--idempotency-key catalog-[a-z]+:''',
+  '''PENDING_PRICING_INTENT_KEY = 'citeladder\.''',
+  '''_KEY: '[a-z-]*fixture[a-z0-9-]*',''',
+  '''"AuthenticationCode": "ABC123DEF456"''',
+]

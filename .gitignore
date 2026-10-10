@@ -1,12 +1,3 @@
-# Python
-__pycache__/
-*.py[cod]
-*.egg-info/
-.venv/
-venv/
-.pytest_cache/
-.ruff_cache/
-.mypy_cache/
 artifacts/
 .artifacts/
 **/.terraform/
@@ -35,16 +26,12 @@ frontend/apps/docs/public/citeladder-logo.svg
 frontend/apps/docs/public/citeladder-favicon.ico
 /.playwright-cli/
 
-# The root package.json only delegates to frontend/ and backend/; it declares
+# The root package.json only delegates to frontend/; it declares
 # no dependencies. pnpm still materializes an empty project there on any root
 # `pnpm run`, and a second lockfile at the repository root would move the
 # workspace root that frontend tooling infers. frontend/pnpm-lock.yaml
 # (not anchored here) stays tracked.
 /pnpm-lock.yaml
-
-# Local measurement sweep output (committed artifacts live in
-# backend/docs/measurements/ instead)
-backend/var/measurements/
 
 # OS
 .DS_Store
@@ -53,7 +40,6 @@ backend/var/measurements/
 frontend/.*.mjs
 frontend/.*.png
 .runtime/
-backend/.runtime/
 
 # Coverage artifacts (measured on every run; CI uploads nothing today)
 .coverage

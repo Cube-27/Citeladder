@@ -25,7 +25,7 @@ not code changes. Do not run any deploy, cloud or network command.
 - `frontend/apps/*/wrangler.jsonc`, `frontend/apps/app/worker.ts`.
 - `.github/workflows/`, `scripts/ci-changes.mjs`, `scripts/check.ps1`.
 - Dependency manifests: `frontend/package.json`, workspace `package.json`
-  files, `pnpm-lock.yaml`, `backend/pyproject.toml`, `backend/uv.lock`.
+  files, `pnpm-lock.yaml`.
 
 ## Hunt list
 
@@ -49,7 +49,7 @@ not code changes. Do not run any deploy, cloud or network command.
 6. **Database exposure and recovery.** PostgreSQL reachable on a public
    interface, default credentials, missing TLS between Cloud Run and the VM,
    and — given no backups — any job or script that could destroy data without
-   an explicit guard (for example `reset-db.py`, `drop`/`truncate` scripts
+   an explicit guard (for example `src/cli/reset-schema.ts`, `drop`/`truncate` scripts
    reachable from CI or deploy).
 7. **Dependency risk.** Packages with install scripts that are not needed;
    duplicated major versions of heavy libraries; unmaintained or typo-squatted

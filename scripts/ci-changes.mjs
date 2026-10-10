@@ -38,17 +38,12 @@ function isOwnerFree(path) {
   return isDocumentation(path) || INERT_CONFIG_FILES.has(path);
 }
 
-function isBackend(path) {
-  return path.startsWith('backend/') || path.startsWith('migrations/') || path === 'reset-db.py';
-}
-
 function isFrontend(path) {
   return path.startsWith('frontend/');
 }
 
-// The TypeScript API service, the contracts package it imports, and the
-// schema inputs used by its PostgreSQL tests and generated Kysely types.
-// Application policy and route contracts are native and need no Python exporter.
+// The TypeScript API service (including its SQL schema baseline) and the
+// contracts package it imports.
 
 function isApiService(path) {
   return (
@@ -56,12 +51,7 @@ function isApiService(path) {
     path.startsWith('frontend/packages/') ||
     path === 'frontend/package.json' ||
     path === 'frontend/pnpm-lock.yaml' ||
-    path === 'frontend/pnpm-workspace.yaml' ||
-    path.startsWith('migrations/') ||
-    (path.startsWith('backend/app/core/') && path.endsWith('.py')) ||
-    path.startsWith('backend/app/models/') ||
-    path === 'backend/pyproject.toml' ||
-    path === 'backend/uv.lock'
+    path === 'frontend/pnpm-workspace.yaml'
   );
 }
 
@@ -120,12 +110,7 @@ export function selectE2EFiles(paths) {
 }
 
 function isNonBrowserTooling(path) {
-  return (
-    path.startsWith('.github/') ||
-    path.startsWith('scripts/') ||
-    path.startsWith('infra/') ||
-    /^reset-.+\.(py|ps1)$/u.test(path)
-  );
+  return path.startsWith('.github/') || path.startsWith('scripts/') || path.startsWith('infra/');
 }
 
 function isContract(path) {
@@ -139,9 +124,7 @@ function isContract(path) {
 
 function isSecuritySensitive(path) {
   return (
-    path === '.secrets.baseline' ||
-    path === 'backend/pyproject.toml' ||
-    path === 'backend/uv.lock' ||
+    path === '.gitleaks.toml' ||
     path === 'frontend/package.json' ||
     path === 'frontend/pnpm-lock.yaml' ||
     path.startsWith('.github/')
@@ -152,7 +135,7 @@ function isSecuritySensitive(path) {
 // serving stack. So the trigger is container-shaped changes only -- the images,
 // the stack definition, the schema, and anything that changes what gets
 // installed into a container. Ordinary application code is not on this list: it
-// is already covered by the backend, frontend and E2E owners, and across 60
+// is already covered by the API, frontend and E2E owners, and across 60
 // Compose runs it never caught a failure main CI missed (the one failure, a Next
 // prerender error, failed the frontend CI job on the same commit). Note that
 // pushes to `main` (unless owner-free) and merge-queue runs classify as `full`
@@ -161,20 +144,13 @@ function isComposeSensitive(path) {
   return (
     path === '.github/workflows/compose-smoke.yml' ||
     path === 'scripts/frontend-ingress-smoke.mjs' ||
-    path === 'scripts/bootstrap-environment.sh' ||
     path === '.dockerignore' ||
     path === '.env.example' ||
-    // Both images. `frontend/Dockerfile` matched nothing here and reached
+    // Every image. `frontend/Dockerfile` matched nothing here and reached
     // Compose only via the old "first push of a PR" escalation, so it silently
     // stopped selecting Compose on every later push of the same PR.
-    path === 'Dockerfile' ||
     path.endsWith('/Dockerfile') ||
     path.startsWith('docker-compose') ||
-    path.startsWith('migrations/') ||
-    // The migrate service runs `alembic upgrade head`, and `up` blocks on it.
-    path === 'backend/alembic.ini' ||
-    path === 'backend/pyproject.toml' ||
-    path === 'backend/uv.lock' ||
     path === 'frontend/package.json' ||
     path === 'frontend/pnpm-lock.yaml' ||
     path.startsWith('frontend/apps/app/') ||
@@ -190,7 +166,6 @@ function isComposeSensitive(path) {
 export function classifyPaths(paths, { full = false } = {}) {
   if (full) {
     return {
-      backend: true,
       frontend: true,
       contract: true,
       api: true,
@@ -201,17 +176,13 @@ export function classifyPaths(paths, { full = false } = {}) {
   }
 
   const normalized = [...new Set(paths.map((path) => path.replaceAll('\\', '/')))];
-  const unowned = normalized.filter(
-    (path) => !isOwnerFree(path) && !isBackend(path) && !isFrontend(path),
-  );
+  const unowned = normalized.filter((path) => !isOwnerFree(path) && !isFrontend(path));
   const shared = unowned.length > 0;
   const e2eFiles = selectE2EFiles(normalized);
   const contract = shared || normalized.some(isContract);
-  const backend = shared || normalized.some(isBackend);
   const frontend = shared || contract || normalized.some(isFrontend);
 
   return {
-    backend,
     frontend,
     contract,
     api: shared || normalized.some(isApiService),
@@ -280,12 +251,11 @@ export function hasTrustworthyJobEvidence(jobs, workflowFile) {
       ? ['Classify affected owners', 'Clean-clone Compose smoke']
       : [
           'Classify affected owners',
-          'Schema / Alembic (quality, pytest)',
           'Frontend (quality, coverage, build)',
           'API contract and ingress',
           'API service (TypeScript)',
           'E2E (playwright)',
-          'Security (pip-audit, detect-secrets)',
+          'Security (secrets scan)',
         ];
   const jobsByName = new Map(jobs.map((job) => [job.name, job]));
   const classifier = jobsByName.get('Classify affected owners');

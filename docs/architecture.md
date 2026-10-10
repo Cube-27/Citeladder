@@ -81,29 +81,28 @@ Every route family, task kind and table has one writing owner. Every native
 OpenAPI operation declares one family from the manifest in
 `frontend/packages/contracts/src/route-ownership.ts`.
 
-Python retains SQLAlchemy models, Alembic and schema maintenance/check tooling.
-The root Dockerfile packages this schema runtime with the existing native
-bootstrap CLI; API and worker images remain Python-free. Product operators,
-login/seeding and acquisition controls run under their native owners and use
-the same PostgreSQL authorization, provenance and lock contracts. Native owners
-are covered by TypeScript and PostgreSQL tests; Python tests cover schema
-constraints and migration decisions.
+The schema is one SQL file, `frontend/services/api/migrations/0001_baseline.sql`,
+applied by the TypeScript migrate CLI (`src/cli/migrate.ts`) from the API
+image; the repository contains no Python. Product operators, login/seeding and
+acquisition controls run under their native owners and use the same PostgreSQL
+authorization, provenance and lock contracts. TypeScript tests against real
+PostgreSQL cover native owners, schema constraints and the migrate CLI.
 
 `@citeladder/contracts` (`frontend/packages/contracts`) holds the zod response
 contracts the browser app validates with (TypeScript routes publish the same
 schemas, and each handler's return type is checked against its schema), the route-ownership manifest, and the
 hand-owned API error-code vocabulary. Native config owns HTTP status defaults
-and retry classification; neither is generated from Python.
+and retry classification.
 
 Application policy lives in native config, including security, roles,
-capabilities, provider catalogs and queue bounds. Python metadata uses small
-dependency-free schema constants and fixed defaults. There is no shared Python
-policy export. The existing migration job sequences Alembic upgrade/check,
-then native identity/grant/catalog bootstrap; successful job completion admits
-API/worker rollout. Auth, workspace, commercial and product writes are native.
+capabilities, provider catalogs and queue bounds. The migration job applies the
+SQL baseline once under an advisory lock (recording its SHA-256 in
+`schema_migrations`; a changed baseline or an Alembic-era database fails the
+job), then runs native identity/grant/catalog bootstrap; successful job
+completion admits API/worker rollout. Auth, workspace, commercial and product writes are native.
 
-Alembic stays the only schema author, so the service holds Kysely types
-generated from the migrated schema.
+The SQL baseline is the only schema author, so the service holds Kysely types
+generated from a baseline-migrated database.
 
 ## Delivery topology
 

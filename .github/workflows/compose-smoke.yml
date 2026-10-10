@@ -52,11 +52,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # No host toolchain and no host dependency install. The images install
-      # their own dependencies frozen -- `uv sync --frozen` (Dockerfile) and
-      # `pnpm install --frozen-lockfile` (frontend/Dockerfile) -- so a stale
-      # lockfile fails the build below. The backend and frontend CI jobs
-      # additionally install frozen on the host, and both lockfiles classify as
-      # security- AND compose-sensitive, so they always select those jobs.
+      # their own dependencies with `pnpm install --frozen-lockfile`, so a stale
+      # lockfile fails the build below. The API and frontend CI jobs additionally
+      # install frozen on the host, and the lockfile classifies as security- AND
+      # compose-sensitive, so it always selects those jobs.
 
       - name: Create disposable Compose environment
         run: |
@@ -103,9 +102,10 @@ jobs:
           # `up` blocks until the one-shot migration dependency succeeds before
           # starting the API process and workers.
           "${compose[@]}" up --detach
-          # Runtime image budgets catch full-toolchain base-image drift and
-          # accidental inclusion of the frontend workspace dependency graph.
-          for service in migrate api-service; do
+          # The runtime image budget catches full-toolchain base-image drift and
+          # accidental inclusion of the frontend workspace dependency graph. The
+          # migrate service runs this same image.
+          for service in api-service; do
             image="$(docker inspect --format '{{.Image}}' "$("${compose[@]}" ps --all -q "$service")")"
             bytes="$(docker image inspect --format '{{.Size}}' "$image")"
             test "$bytes" -le 734003200 || {
@@ -113,12 +113,11 @@ jobs:
               exit 1
             }
           done
-          "${compose[@]}" run --rm --no-deps migrate python -c 'import sys; assert sys.version_info[:2] == (3, 12)'
-          "${compose[@]}" run --rm --no-deps migrate node /app/native/src/cli/bootstrap-catalog.ts --help
-          "${compose[@]}" run --rm --no-deps migrate node /app/native/src/cli/bootstrap-account.ts --help
-          "${compose[@]}" run --rm --no-deps migrate node /app/native/src/cli/billing-admin.ts --help
-          # Repeated composed startup must retain the same immutable catalog.
-          "${compose[@]}" run --rm --no-deps migrate /bin/sh /app/bootstrap-environment.sh
+          "${compose[@]}" run --rm --no-deps migrate node src/cli/bootstrap-catalog.ts --help
+          "${compose[@]}" run --rm --no-deps migrate node src/cli/bootstrap-account.ts --help
+          "${compose[@]}" run --rm --no-deps migrate node src/cli/billing-admin.ts --help
+          # A repeated migrate job is a no-op schema step and retains the same immutable catalog.
+          "${compose[@]}" run --rm --no-deps migrate
           "${compose[@]}" exec -T api-service node --input-type=module -e "await import('@citeladder/contracts')"
           for _ in $(seq 1 45); do
             if curl --fail --silent --show-error http://127.0.0.1:8100/health | grep -qx '{"status":"ok"}'; then

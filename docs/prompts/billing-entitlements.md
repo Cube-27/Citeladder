@@ -60,7 +60,6 @@ in this area as at least P1. Your output is a findings report, not code changes.
 ## Not a finding
 
 - Checkout or card trial being disabled — intended until activation.
-- Retained Python SQLAlchemy models and Alembic schema maintenance.
 
 ## Subagent split
 

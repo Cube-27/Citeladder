@@ -2,8 +2,7 @@
   "scope": "Resolved production dependencies from frozen local locks (frontend: Windows installation, including local optional packages); not a deployed artifact attestation or legal approval",
   "reviewed_on": "2026-10-05",
   "sources": {
-    "frontend": "pnpm install --frozen-lockfile --ignore-scripts; pnpm licenses list --prod --json",
-    "backend": "uv export --frozen --no-dev --no-emit-project --no-hashes --no-header; license metadata from the frozen uv environment"
+    "frontend": "pnpm install --frozen-lockfile --ignore-scripts; pnpm licenses list --prod --json"
   },
   "frontend": [
     {
@@ -1910,43 +1909,6 @@
       "package": "zwitch",
       "versions": ["2.0.4"],
       "license": "MIT"
-    }
-  ],
-  "backend": [
-    {
-      "package": "alembic",
-      "version": "1.20.0",
-      "license": "MIT"
-    },
-    {
-      "package": "asyncpg",
-      "version": "0.31.0",
-      "license": "Apache-2.0"
-    },
-    {
-      "package": "greenlet",
-      "version": "3.5.6",
-      "license": "MIT AND PSF-2.0"
-    },
-    {
-      "package": "mako",
-      "version": "1.4.3",
-      "license": "MIT"
-    },
-    {
-      "package": "markupsafe",
-      "version": "3.0.3",
-      "license": "BSD-3-Clause"
-    },
-    {
-      "package": "sqlalchemy",
-      "version": "2.1.1",
-      "license": "MIT"
-    },
-    {
-      "package": "typing-extensions",
-      "version": "4.16.0",
-      "license": "PSF-2.0"
     }
   ]
 }

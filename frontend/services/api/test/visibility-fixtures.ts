@@ -1,8 +1,7 @@
 /**
  * Persisted measurement rows for the visibility read tests.
  *
- * Every NOT NULL column gets an explicit value: the Python models' defaults
- * live in the ORM, not in the migrated schema this suite writes to. Rows are
+ * Every NOT NULL column without a schema default gets an explicit value. Rows are
  * removed per workspace in `cleanup`, children before parents.
  */
 import { randomUUID } from 'node:crypto';

@@ -2,15 +2,12 @@ import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { parseEnv } from 'node:util';
 
-/** Host tools share root -> backend -> process precedence; never print this object. */
+/** Host tools share root .env -> process precedence; never print this object. */
 export function localEnvironment(env: NodeJS.ProcessEnv = process.env) {
-  const files = ['../../../../../.env', '../../../../../backend/.env'];
   const values: Record<string, string | undefined> = {};
   if (!['1', 'true', 'yes', 'on'].includes(env.CITELADDER_DISABLE_DOTENV?.toLowerCase() ?? '')) {
-    for (const relative of files) {
-      const path = fileURLToPath(new URL(relative, import.meta.url));
-      if (existsSync(path)) Object.assign(values, parseEnv(readFileSync(path, 'utf8')));
-    }
+    const path = fileURLToPath(new URL('../../../../../.env', import.meta.url));
+    if (existsSync(path)) Object.assign(values, parseEnv(readFileSync(path, 'utf8')));
   }
   Object.assign(values, env);
   if (

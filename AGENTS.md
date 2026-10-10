@@ -111,8 +111,6 @@ Do not test:
 For UI, test user-visible behavior and accessibility, not incidental copy,
 utility classes, component nesting or full-markup snapshots. Do not multiply
 assertions for details already covered by a meaningful path.
-`backend/scripts/check_test_shape.py` is a bounded raw-file-assertion guard,
-not a substitute for review.
 
 Remove tests only for retired behavior, demonstrated retained coverage or an
 assertion with no remaining contract; record the rationale. A failing test is
@@ -124,8 +122,8 @@ raise thresholds or delete meaningful safety coverage to make validation green.
 - Frontend package operations use pnpm only; never create a root lockfile.
 - Tests disable dotenv and use deterministic configuration; inherited live
   provider credentials must never reach a test run.
-- Pre-launch schema changes stay in `migrations/versions/0001_initial.py` and
-  are verified only on disposable data. Never reset shared, staging or production
+- Pre-launch schema changes stay in `frontend/services/api/migrations/0001_baseline.sql`
+  and are verified only on disposable data. Never reset shared, staging or production
   data under that policy.
 - Never reset, deploy, call live providers, activate payments or mutate external
   systems unless the task explicitly authorizes the operation.

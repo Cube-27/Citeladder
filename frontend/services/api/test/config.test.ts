@@ -133,7 +133,7 @@ describe('loadConfig', () => {
     );
   });
 
-  it('accepts the backend SQLAlchemy database URL', () => {
+  it('accepts a driver-qualified database URL as plain libpq', () => {
     expect(libpqUrl('postgresql+asyncpg://u:p@db:5432/app')).toBe('postgresql://u:p@db:5432/app');
   });
 });

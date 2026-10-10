@@ -111,8 +111,7 @@ can never break a screen, while a **declared** field that goes missing still fai
 The native API and browser import the same response schemas from
 `@citeladder/contracts`; route handlers are typed against those schemas.
 `pnpm check:contract` validates the native route-family declarations and
-API/protocol ingress. The former Python component comparison and OpenAPI
-artifact were retired after their final mapped product route moved.
+API/protocol ingress.
 
 ## 5. Adding a new error code
 

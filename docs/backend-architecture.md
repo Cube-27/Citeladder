@@ -1,8 +1,9 @@
 # Backend architecture
 
-The application API, health/readiness and executing workers are TypeScript-owned.
-Python has no HTTP process. The one-shot migration job runs Alembic upgrade/check, native identity/grant/catalog
-bootstrap before admitting API rollout.
+The application API, health/readiness, executing workers and schema tooling are
+TypeScript-owned; the repository contains no Python. The one-shot migration job
+runs the migrate CLI (the SQL schema baseline) and native identity/grant/catalog
+bootstrap from the API image before admitting API rollout.
 PostgreSQL owns durable
 state and queues. Domain behavior is documented in the feature owners listed in
 [the documentation index](README.md); this file owns shared backend mechanics.
@@ -20,14 +21,12 @@ checked against the shared route-ownership manifest.
 Audit admission, providers and answer-engine transports, immutable execution
 persistence, scoring, funded settlement, scheduling and maintenance are native
 TypeScript owners. Search Intelligence review and acquisition use the same
-native provider custody and PostgreSQL capacity boundary. Python retains schema
-models and dependency-free structural vocabulary. Site Health acquisition,
+native provider custody and PostgreSQL capacity boundary. Site Health acquisition,
 check catalogs, allowance projections and worker settings are native.
 Native audit config owns lifecycle, scoring, read limits and runtime settings;
 native provider/DataForSEO config owns endpoints, capacity, request policy and
-pricing, frozen route identities and the public provider catalog. Python keeps
-only constants consumed by schema declarations, including fixed defaults and
-provenance versions. No Python connector executes an answer engine.
+pricing, frozen route identities and the public provider catalog. The SQL
+baseline carries only structural column defaults and constraints.
 Commerce competitor discovery uses the native
 analytics worker and Site Health acquisition, parsing and classification owners.
 Analytics lease recovery and evidence/outcome settlement belong to that worker.
@@ -39,8 +38,7 @@ integrations charge at claim and recovery does not charge a second time.
 | Layer           | Responsibility                                                         |
 | --------------- | ---------------------------------------------------------------------- |
 | Native routes/  | HTTP translation, request validation and coded errors                  |
-| Python core/    | Schema metadata base, structural constants and migration configuration |
-| models/         | SQLAlchemy persistence and relational integrity                        |
+| SQL baseline    | Tables, constraints and relational integrity (`migrations/`)          |
 | Native services/ | Business policy, authorized mutations and persisted projections       |
 | Native acquisition/ | External acquisition and provider transports                       |
 | Native analysis/ | Bounded deterministic derivation                                      |
@@ -52,17 +50,15 @@ own scoring or entitlement decisions; workers coordinate domain operations
 rather than restating them. Business logic does not move into generic utilities
 for convenience.
 
-Python 3.12, SQLAlchemy, Alembic and asyncpg own schema maintenance; Node 26, Hono and Kysely own the native service and workers.
-Compose names the native API `api-service` on port 8100. The Python image runs
-one-shot migrations/bootstrap. Seed/login tools run natively from the local checkout. Commercial operators
-are native and packaged into that same job image. Bounded
+Node 26, Hono and Kysely own the native service, workers and schema tooling.
+Compose names the native API `api-service` on port 8100; its `migrate` service
+runs the same image's one-shot migration/bootstrap. Seed/login tools run natively
+from the local checkout. Commercial operators are packaged into that image. Bounded
 provider provisioning, acquisition control, agreement references and interactive
 account administration run in the native API package/image. Browser calls stay same-origin
 `/api/v1`. Native startup enforces the shared production secret, database, proxy,
-demo and redirect-origin admission policy. Python migration configuration reads
-only schema connection inputs using the standard library and SQLAlchemy URLs;
-non-development migrations require TLS. Importing metadata never creates a pool
-or validates application secrets.
+demo and redirect-origin admission policy. The migrate CLI reads only the
+database connection settings, so it needs no application secrets.
 Fernet-encrypted provider/OAuth secrets and least-privilege worker environments
 keep credential custody separate from product projections.
 
@@ -166,28 +162,20 @@ Reads project existing state without provider I/O, acquisition or repair.
 Raw evidence and provider attempts are append-only; derived rows retain direct
 source IDs and relevant versions. Native policy lives under
 `frontend/services/api/src/config/` and the owning service config modules.
-Python consumers are SQLAlchemy metadata, Alembic and schema maintenance/checks.
-`app/core/config/` contains only the constants required by schema declarations;
-there is no Python application policy exporter or generated policy artifact.
-Opportunity/Action catalogs and source-page inspection policy are
-native; Python retains schema defaults and shared provenance versions.
+Opportunity/Action catalogs and source-page inspection policy are native.
 Commerce acquisition/admission policy and buyer-prompt templates, plus scheduler
 runtime settings and the pinned timezone catalog, are native. Commerce persisted
-versions and scheduler policy belong to native config; Python retains only
-scheduler column defaults.
+versions and scheduler policy belong to native config.
 Auth HTTP settings, approved policy revisions, workspace denial responses and
-brand validation bounds are native. Native workspace config owns the role matrix; Python retains persisted identity
-defaults. The native Agent catalog parses packaged
-Markdown; Python no longer parses those model inputs. Opportunity reads preserve
+brand validation bounds are native. Native workspace config owns the role matrix.
+The native Agent catalog parses packaged Markdown. Opportunity reads preserve
 frozen format identifiers, including identifiers retired from the current
 catalog. Queue execution bounds are native; schema status vocabulary remains shared.
 Billing checkout, reconciliation, webhook policy and provider-display composition
 are native. Native configuration owns seller/tax settings, catalog authoring and read-only
-Razorpay credentials. Python retains structural schema vocabulary; the application
-baseline/grant bridge, crypto, bootstrap and seed/login implementations are retired.
-Native entitlement resolution, operator grants and account-capacity locks are
-the sole business authority. Native config owns the capability registry. Python
-retains schema declarations and their constraint tests.
+Razorpay credentials. Native entitlement resolution, operator grants and
+account-capacity locks are the sole business authority. Native config owns the
+capability registry; native PostgreSQL tests cover the schema's constraints.
 Do not introduce Redis without measured need.
 
 Backend schemas own the wire contract. Coordinate frontend schemas and API
@@ -202,5 +190,4 @@ migration policy. Setup and validation commands live in
 
 Native structured JSON logging lives in `frontend/services/api/src/logging.ts`;
 API errors carry the request ID into server logs and the safe response envelope.
-Python schema commands use standard logging. The retired Python HTTP/worker
-Logfire integration and its environment settings are no longer shipped.
+The retired Logfire integration and its environment settings are no longer shipped.

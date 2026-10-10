@@ -1,15 +1,7 @@
 #!/usr/bin/env node
 
 import { createHash } from 'node:crypto';
-import {
-  closeSync,
-  existsSync,
-  mkdirSync,
-  openSync,
-  readdirSync,
-  readFileSync,
-  writeFileSync,
-} from 'node:fs';
+import { closeSync, mkdirSync, openSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync, spawnSync } from 'node:child_process';
@@ -17,7 +9,6 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { classifyPaths } from './ci-changes.mjs';
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const backendRoot = join(repositoryRoot, 'backend');
 const frontendRoot = join(repositoryRoot, 'frontend');
 const args = process.argv.slice(2).filter((argument) => argument !== '--');
 
@@ -34,7 +25,7 @@ if (!['fix', 'check'].includes(mode)) throw new Error(`Unknown quality mode: ${m
 const requestedScopes = option('--scope', 'all')
   .split(',')
   .map((scope) => scope.trim().toLowerCase());
-const validScopes = new Set(['all', 'changed', 'backend', 'frontend', 'contract', 'api']);
+const validScopes = new Set(['all', 'changed', 'frontend', 'contract', 'api']);
 for (const scope of requestedScopes) {
   if (!validScopes.has(scope)) throw new Error(`Unknown quality scope: ${scope}`);
 }
@@ -66,11 +57,11 @@ function workingDiffPaths() {
 function changedScopes() {
   const paths = workingDiffPaths();
   const owners = classifyPaths(paths);
-  return new Set(['backend', 'frontend', 'contract', 'api'].filter((owner) => owners[owner]));
+  return new Set(['frontend', 'contract', 'api'].filter((owner) => owners[owner]));
 }
 
 const scopes = requestedScopes.includes('all')
-  ? new Set(['backend', 'frontend', 'contract', 'api'])
+  ? new Set(['frontend', 'contract', 'api'])
   : requestedScopes.includes('changed')
     ? changedScopes()
     : new Set(requestedScopes);
@@ -159,28 +150,6 @@ if (
   process.exit(0);
 }
 
-function executable(candidates, missingMessage) {
-  const path = candidates.find(existsSync);
-  if (!path) throw new Error(missingMessage);
-  return path;
-}
-
-const backendPython = () =>
-  executable(
-    [
-      join(backendRoot, '.venv', 'Scripts', 'python.exe'),
-      join(backendRoot, '.venv', 'bin', 'python'),
-    ],
-    "Backend virtual environment missing. Run 'uv sync --frozen --extra dev' in backend/.",
-  );
-
-function backendTool(name) {
-  return executable(
-    [join(backendRoot, '.venv', 'Scripts', `${name}.exe`), join(backendRoot, '.venv', 'bin', name)],
-    `Backend tool '${name}' missing. Run 'uv sync --frozen --extra dev' in backend/.`,
-  );
-}
-
 const logDirectory = join(gitDirectory, 'quality-logs');
 mkdirSync(logDirectory, { recursive: true });
 const failedSteps = [];
@@ -235,43 +204,6 @@ function policyDiffArgs() {
   return base && !/^0+$/.test(base) ? ['--', '--check-policy-diff', base] : [];
 }
 
-function backendChecks() {
-  const rootScripts = ['--config', 'pyproject.toml', '../reset-db.py'];
-  if (mode === 'check') {
-    step('Ruff lint', backendTool('ruff'), ['check', '.', ...rootScripts], backendRoot);
-    step(
-      'Ruff format',
-      backendTool('ruff'),
-      ['format', '--check', '.', ...rootScripts],
-      backendRoot,
-    );
-  } else {
-    step(
-      'Ruff lint fixes',
-      backendTool('ruff'),
-      ['check', '.', '--fix', ...rootScripts],
-      backendRoot,
-    );
-    step('Ruff format fixes', backendTool('ruff'), ['format', '.', ...rootScripts], backendRoot);
-  }
-  step('Mypy', backendTool('mypy'), [], backendRoot);
-  step(
-    'Complexity policy',
-    backendPython(),
-    ['-m', 'scripts.check_complexity', ...policyDiffArgs().slice(1)],
-    backendRoot,
-  );
-  step('Test shape policy', backendPython(), ['-m', 'scripts.check_test_shape'], backendRoot);
-  step('Architecture policy', backendTool('lint-imports'), [], backendRoot);
-  step(
-    'Dead-code policy',
-    backendTool('vulture'),
-    ['app', 'scripts', '--min-confidence', '80'],
-    backendRoot,
-  );
-  step('Dependency hygiene', backendTool('deptry'), ['.'], backendRoot);
-}
-
 function frontendChecks() {
   const artifacts = selectedBuilds();
   if (artifacts.has('marketing')) pnpm('Astro marketing build', ['build'], QUALITY_BUILD_ENV);
@@ -314,10 +246,15 @@ function frontendChecks() {
   pnpm('Frontend dead-code and dependency policy', ['check:dead-code']);
 }
 
-// Alembic is the only schema author (TypeScript migration D4): a TS service
-// holds generated types and queries, never migration files or DDL.
-const SCHEMA_AUTHORING =
-  /\b(?:Migrator|FileMigrationProvider)\b|\.schema\s*\.\s*(?:create|alter|drop)(?:Table|Index|Type|View|Schema)\b/u;
+// The SQL baseline is the only schema author (docs/invariants.md 17): every
+// other service file holds generated types and queries, never migration files
+// or DDL. The migrate CLI applies the baseline; it does not author schema.
+const SCHEMA_BASELINE = '/api/migrations/0001_baseline.sql';
+const SCHEMA_AUTHORING = [
+  /\b(?:Migrator|FileMigrationProvider)\b/u,
+  /\.schema\s*\.\s*(?:create|alter|drop)(?:Table|Index|Type|View|Schema)\b/u,
+  /[`'"]\s*(?:create|alter|drop)\s+(?:unique\s+)?(?:table|index|type|view|schema|sequence)\b/iu,
+];
 
 function schemaAuthorityViolations(root) {
   return readdirSync(root, { recursive: true, withFileTypes: true })
@@ -325,8 +262,13 @@ function schemaAuthorityViolations(root) {
     .map((entry) => join(entry.parentPath, entry.name))
     .filter((path) => {
       const relative = path.slice(root.length).replaceAll(sep, '/');
+      if (relative === SCHEMA_BASELINE) return false;
       if (/\/migrations?\//u.test(relative) || relative.endsWith('.sql')) return true;
-      return /\.[cm]?[jt]s$/u.test(path) && SCHEMA_AUTHORING.test(readFileSync(path, 'utf8'));
+      // Tests build disposable databases and constraint fixtures; only shipped source is policed.
+      if (relative.includes('/test/')) return false;
+      if (!/\.[cm]?[jt]s$/u.test(path)) return false;
+      const source = readFileSync(path, 'utf8');
+      return SCHEMA_AUTHORING.some((pattern) => pattern.test(source));
     });
 }
 
@@ -338,13 +280,12 @@ function apiServiceChecks() {
   if (violations.length) {
     failedSteps.push('API service schema authority');
     process.stderr.write(
-      `Schema changes belong in Alembic migrations, not a TS service:\n${violations.join('\n')}\n`,
+      `Schema changes belong in ${SCHEMA_BASELINE.slice(1)}, not elsewhere in a TS service:\n${violations.join('\n')}\n`,
     );
   }
   pnpm('API route ownership', ['--filter', '@citeladder/api', 'check:routes']);
 }
 
-if (scopes.has('backend')) backendChecks();
 if (scopes.has('frontend')) frontendChecks();
 if (scopes.has('contract') && !scopes.has('api')) pnpm('API contract policy', ['check:contract']);
 if (scopes.has('api')) apiServiceChecks();
