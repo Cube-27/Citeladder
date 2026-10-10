@@ -144,7 +144,8 @@ export const workspaceRoutes = [
     },
   }),
   definePostRoute({
-    ...admin,
+    ...base,
+    capability: 'transfer_ownership',
     path: `${pathRoot}/ownership`,
     response: z.array(workspaceMemberSchema),
     body: transfer,

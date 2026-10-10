@@ -111,7 +111,7 @@ describe('workspace authorization and root allocation', () => {
 
   it('does not list or authorize the reserved system workspace even with a stray membership', async () => {
     const system = await fixtures.systemWorkspace();
-    await fixtures.member(system, owner, 'owner');
+    await fixtures.member(system, owner, 'admin');
     expect((await request(`/${system}/policies`)).status).toBe(404);
     expect(
       ((await request('').then((response) => response.json())) as { id: string }[]).some(
@@ -308,16 +308,21 @@ describe('membership continuity and transactional receipts', () => {
   it('rolls back a role change when its security receipt cannot be appended', async () => {
     const user = await fixtures.user();
     actors.push(user);
-    const space = await fixtures.ownedWorkspace(owner);
+    const spaceOwner = await fixtures.user();
+    actors.push(spaceOwner);
+    const space = await fixtures.ownedWorkspace(spaceOwner);
     await fixtures.member(space, user, 'member');
     const constraint = `pr14_receipt_${randomUUID().replaceAll('-', '')}`;
     await sql`ALTER TABLE security_events ADD CONSTRAINT ${sql.id(constraint)} CHECK (workspace_id <> ${sql.lit(space)}::uuid OR event <> 'membership.role')`.execute(
       db,
     );
     try {
-      const response = await request(`/${space}/members/${await memberId(user, space)}`, 'PATCH', {
-        role: 'viewer',
-      });
+      const response = await request(
+        `/${space}/members/${await memberId(user, space)}`,
+        'PATCH',
+        { role: 'viewer' },
+        await userCookie(spaceOwner),
+      );
       expect(response.status).toBe(500);
       expect(
         (
@@ -372,6 +377,26 @@ describe('membership continuity and transactional receipts', () => {
         .execute(),
     ).toHaveLength(0);
   });
+  it('lets only the owner transfer ownership, not an admin naming themselves', async () => {
+    const admin = await fixtures.user();
+    actors.push(admin);
+    await fixtures.member(workspace, admin, 'admin');
+    const seized = await request(
+      `/${workspace}/ownership`,
+      'POST',
+      { member_id: await memberId(admin) },
+      await userCookie(admin),
+    );
+    expect(seized.status).toBe(403);
+    const owners = await db
+      .selectFrom('workspace_members')
+      .select('user_id')
+      .where('workspace_id', '=', workspace)
+      .where('role', '=', 'owner')
+      .execute();
+    expect(owners).toEqual([{ user_id: owner }]);
+  });
+
   it('refuses owner removal, demotion and departure; unchanged role emits no receipt', async () => {
     const id = await memberId(owner);
     expect((await request(`/${workspace}/members/${id}`, 'DELETE')).status).toBe(409);

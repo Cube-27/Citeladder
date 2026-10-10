@@ -175,6 +175,7 @@ export function defineRoute<
     app.on(
       [method.toUpperCase()],
       [pattern],
+      ...(method === 'get' ? [] : [sameSiteWrite]),
       ...(publicRoute ? [] : [sessionUser(config, db)]),
       ...authorize,
       async (c) => {
@@ -195,6 +196,17 @@ export function defineRoute<
   };
   return { contract, params: route.params, register };
 }
+
+/**
+ * A browser marks a request another site started as `Sec-Fetch-Site:
+ * cross-site`; the product's own pages are same-origin, and server-to-server
+ * callers (webhooks, CLIs) send no such header.
+ */
+const sameSiteWrite: MiddlewareHandler<AppEnv> = async (c, next) => {
+  if (c.req.header('sec-fetch-site') === 'cross-site')
+    throw new ApiError(403, 'Cross-site requests are not accepted');
+  await next();
+};
 
 export function defineGetRoute<
   const Path extends ParamSpecs,

@@ -2981,7 +2981,8 @@ CREATE TABLE public.workspace_members (
     user_id uuid NOT NULL,
     role character varying(20) NOT NULL,
     created_at timestamp with time zone NOT NULL,
-    updated_at timestamp with time zone NOT NULL
+    updated_at timestamp with time zone NOT NULL,
+    CONSTRAINT ck_workspace_member_role CHECK (((role)::text = ANY ((ARRAY['owner'::character varying, 'admin'::character varying, 'member'::character varying, 'viewer'::character varying])::text[])))
 );
 
 CREATE TABLE public.workspace_site_health_runtime (
@@ -4854,11 +4855,11 @@ CREATE UNIQUE INDEX ix_users_email ON public.users USING btree (email);
 
 CREATE INDEX ix_workspace_invitation_workspace ON public.workspace_invitations USING btree (workspace_id, created_at);
 
-CREATE INDEX ix_workspace_invitations_workspace_id ON public.workspace_invitations USING btree (workspace_id);
-
 CREATE INDEX ix_workspace_members_user_id ON public.workspace_members USING btree (user_id);
 
-CREATE INDEX ix_workspace_members_workspace_id ON public.workspace_members USING btree (workspace_id);
+CREATE UNIQUE INDEX uq_workspace_member_owner ON public.workspace_members USING btree (workspace_id) WHERE ((role)::text = 'owner'::text);
+
+CREATE UNIQUE INDEX uq_workspace_member_owned_user ON public.workspace_members USING btree (user_id) WHERE ((role)::text = 'owner'::text);
 
 CREATE UNIQUE INDEX uq_billing_catalog_revision_published ON public.billing_catalog_revisions USING btree (publication_state) WHERE ((publication_state)::text = 'published'::text);
 

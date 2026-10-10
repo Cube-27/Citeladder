@@ -38,7 +38,11 @@ import {
   withoutTrailingSlashes,
 } from '../auth/oauth.ts';
 import { trustedClientIdentity } from '../auth/client-identity.ts';
-import { enforceSubjectRequest } from '../abuse/usage.ts';
+import {
+  enforceSubjectRequest,
+  releaseSubjectBudget,
+  requireSubjectBudget,
+} from '../abuse/usage.ts';
 import type { Context } from 'hono';
 import type { Database } from '../db/database.ts';
 import { passwordSchema, verifyAccountPassword } from '../auth/password.ts';
@@ -88,6 +92,14 @@ async function meter(db: Database, c: Context, config: ServiceConfig, register =
     limit,
     windowSeconds,
   });
+}
+
+function loginFailureBudget(config: ServiceConfig) {
+  return {
+    operation: 'auth.login.email_failure',
+    limit: config.auth.limits.login_email_limit,
+    windowSeconds: config.auth.limits.login_window_seconds,
+  };
 }
 
 function signInRedirect(c: Context, config: ServiceConfig, error?: string): Response {
@@ -191,12 +203,15 @@ export const authRoutes = [
       async handle({ c, db, config }) {
         const payload = await readBody(c, challengeSchema);
         await mailboxMeter(db, c, config, payload.token);
-        await consumeChallenge(
+        const email = await consumeChallenge(
           db,
           payload.token,
           payload.password,
           operation === 'verify-email' ? 'verification' : 'password_reset',
         );
+        // A completed reset proves mailbox ownership, so earlier failures stop counting.
+        if (operation === 'reset-password')
+          await releaseSubjectBudget(db, 'email', email, loginFailureBudget(config).operation);
         clearSessionCookie(c, config);
         return { message: 'Your account is ready. Sign in to continue.' };
       },
@@ -248,11 +263,6 @@ export const authRoutes = [
       const payload = await readBody(c, credentialsSchema);
       await meter(db, c, config, true);
       await mailboxMeter(db, c, config, payload.email);
-      await enforceSubjectRequest(db, 'client', 'global-trial', {
-        operation: 'auth.trial.global',
-        limit: policy.auth.mailbox.trial_daily_limit,
-        windowSeconds: policy.auth.mailbox.daily_window_seconds,
-      });
       await registerUser(db, payload.email, payload.password);
       await requestChallenge(db, config, payload.email, 'verification', payload.return_to);
       return acknowledgment;
@@ -267,15 +277,16 @@ export const authRoutes = [
       if (demoAccessExpired(config)) throw new ApiError(401, 'Demo access has expired');
       const payload = await readBody(c, credentialsSchema);
       await meter(db, c, config);
+      const failures = loginFailureBudget(config);
+      // An exhausted address refuses even a correct password until its window
+      // passes or a password reset proves mailbox ownership.
+      await requireSubjectBudget(db, 'email', payload.email, failures);
       const user = await authenticateUser(db, payload.email, payload.password);
       if (!user) {
-        await enforceSubjectRequest(db, 'email', payload.email, {
-          operation: 'auth.login.email_failure',
-          limit: config.auth.limits.login_email_limit,
-          windowSeconds: config.auth.limits.login_window_seconds,
-        });
+        await enforceSubjectRequest(db, 'email', payload.email, failures);
         throw new ApiError(401, 'Invalid credentials');
       }
+      await releaseSubjectBudget(db, 'email', payload.email, failures.operation);
       clearOAuthCookies(c, config);
       setSessionCookie(c, config, await issueSession(config, user));
       return { user: sessionView(user) };

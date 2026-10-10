@@ -147,10 +147,10 @@ describe('workspace membership', () => {
     expect(body.error.code).toBe('validation_error');
   });
 
-  it('confers nothing for a role outside the matrix', async () => {
+  it('cannot store a role outside the matrix', async () => {
     const odd = await fixtures.ownedWorkspace(await fixtures.user());
-    await fixtures.member(odd, userId, 'superuser');
-    const { body } = await call(`/w/${odd}`, viewerToken);
-    expect(body.capabilities).toEqual([]);
+    await expect(fixtures.member(odd, userId, 'superuser')).rejects.toThrow(
+      /ck_workspace_member_role/u,
+    );
   });
 });

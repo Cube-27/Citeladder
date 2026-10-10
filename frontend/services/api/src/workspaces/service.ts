@@ -43,6 +43,9 @@ export function workspaceView(
   };
 }
 
+/** A person owns at most one workspace; any other access is a membership. */
+const OWNED_WORKSPACE_LIMIT = 1;
+
 function ownedWorkspaces(db: Database, userId: string) {
   return db
     .selectFrom('workspaces')
@@ -109,10 +112,10 @@ export async function provisionAccount(
 export function createWorkspace(db: Database, userId: string, name: string) {
   return db.transaction().execute(async (trx) => {
     await subjectXactLock(trx, `workspace.create:${userId}`);
-    if ((await ownedWorkspaces(trx, userId)).length >= policy.workspaces.max_owned)
-      throw new ApiError(403, `Owned workspace limit of ${policy.workspaces.max_owned} reached`, {
+    if ((await ownedWorkspaces(trx, userId)).length >= OWNED_WORKSPACE_LIMIT)
+      throw new ApiError(403, 'You already own a workspace', {
         code: 'workspace_limit_exceeded',
-        details: { limit: policy.workspaces.max_owned },
+        details: { limit: OWNED_WORKSPACE_LIMIT },
       });
     const user = await trx
       .selectFrom('users')
@@ -186,7 +189,8 @@ export function mutateMember(
     .execute((trx) => mutateMemberInTransaction(trx, workspaceId, actorId, target));
 }
 
-/** Lock a customer (non-system) workspace row; callers authorize the actor themselves. */
+/** Lock a customer (non-system) workspace row; operator CLIs authorize the actor
+ * themselves and print the reviewed slug. */
 export async function lockWorkspace(trx: Database, workspaceId: string) {
   const workspace = await trx
     .selectFrom('workspaces')
@@ -270,7 +274,7 @@ export function transferOwnership(
   memberId: string,
 ) {
   return db.transaction().execute(async (trx) => {
-    await lockAuthorizedWorkspace(trx, workspaceId, actorId, 'manage_members');
+    await lockAuthorizedWorkspace(trx, workspaceId, actorId, 'transfer_ownership');
     const members = await trx
       .selectFrom('workspace_members')
       .selectAll()
@@ -281,13 +285,13 @@ export function transferOwnership(
     const incoming = members.find((row) => row.id === memberId);
     if (!incoming)
       throw new ApiError(404, 'member_not_found', { code: 'workspace_member_not_found' });
-    if (!previous) throw new Error('workspace_has_no_owner');
-    if (incoming.id === previous.id) ownerRequired('already_owner');
+    if (!previous) ownerRequired('The workspace has no owner');
+    if (incoming.id === previous.id) ownerRequired('This member already owns the workspace');
     await subjectXactLock(trx, `workspace.create:${incoming.user_id}`);
-    if ((await ownedWorkspaces(trx, incoming.user_id)).length >= policy.workspaces.max_owned)
-      throw new ApiError(403, 'The replacement owner already owns a workspace', {
+    if ((await ownedWorkspaces(trx, incoming.user_id)).length >= OWNED_WORKSPACE_LIMIT)
+      throw new ApiError(403, 'The new owner already owns a workspace', {
         code: 'workspace_limit_exceeded',
-        details: { limit: policy.workspaces.max_owned },
+        details: { limit: OWNED_WORKSPACE_LIMIT },
       });
     await trx
       .updateTable('workspace_members')

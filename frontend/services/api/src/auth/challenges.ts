@@ -40,11 +40,6 @@ export async function requestChallenge(
       limit: cfg.recipient_daily_limit,
       windowSeconds: cfg.daily_window_seconds,
     });
-    await enforceSubjectRequest(db, 'client', 'global-mail', {
-      operation: 'auth.mail.global',
-      limit: cfg.global_daily_limit,
-      windowSeconds: cfg.daily_window_seconds,
-    });
   } catch (error) {
     if (error instanceof ApiError && error.status === 429) return;
     throw error;
@@ -68,6 +63,18 @@ export async function requestChallenge(
     const now = new Date();
     if (current && now.getTime() - current.created_at.getTime() < cfg.cooldown_seconds * 1000)
       return null;
+    // The shared daily mail budget is spent only by mail that will be sent, so
+    // requests for unknown or ineligible addresses cannot exhaust it.
+    try {
+      await enforceSubjectRequest(trx, 'client', 'global-mail', {
+        operation: 'auth.mail.global',
+        limit: cfg.global_daily_limit,
+        windowSeconds: cfg.daily_window_seconds,
+      });
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 429) return null;
+      throw error;
+    }
     const token = randomBytes(32).toString('base64url');
     const row = {
       id: randomUUID(),
@@ -208,6 +215,7 @@ export async function consumeChallenge(
       user.id,
     );
   });
+  return user.email;
 }
 
 export async function changePassword(

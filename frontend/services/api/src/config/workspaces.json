@@ -9,12 +9,30 @@
     "run": "Workspace member access is required",
     "manage_billing": "Workspace owner or admin access is required",
     "manage_members": "Workspace owner or admin access is required",
-    "manage_credentials": "Workspace owner or admin access is required"
+    "manage_credentials": "Workspace owner or admin access is required",
+    "delete_projects": "Workspace owner or admin access is required",
+    "transfer_ownership": "Only the workspace owner can transfer ownership"
   },
-  "max_owned": 1,
   "roles": {
-    "owner": ["manage_billing", "manage_credentials", "manage_members", "read", "run", "write"],
-    "admin": ["manage_billing", "manage_credentials", "manage_members", "read", "run", "write"],
+    "owner": [
+      "delete_projects",
+      "manage_billing",
+      "manage_credentials",
+      "manage_members",
+      "read",
+      "run",
+      "transfer_ownership",
+      "write"
+    ],
+    "admin": [
+      "delete_projects",
+      "manage_billing",
+      "manage_credentials",
+      "manage_members",
+      "read",
+      "run",
+      "write"
+    ],
     "member": ["read", "run", "write"],
     "viewer": ["read"]
   }

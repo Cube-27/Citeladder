@@ -264,16 +264,38 @@ describe('password auth routes', () => {
     ).toEqual([]);
   });
 
-  it('does not block valid credentials after an attacker exhausts the email failure budget', async () => {
+  it('refuses a sign-in another site submits from the browser', async () => {
     await clearClientBudget();
-    const limited = createApp(testConfig({ ABUSE_LOGIN_EMAIL_LIMIT: '1' }), db);
-    expect(
-      (await call('/auth/login', { email, password: 'incorrect' }, undefined, limited)).status,
-    ).toBe(401);
-    expect(
-      (await call('/auth/login', { email, password: 'incorrect' }, undefined, limited)).status,
-    ).toBe(429);
-    expect((await call('/auth/login', { email, password }, undefined, limited)).status).toBe(200);
+    const forged = await app.request('/api/v1/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain', 'Sec-Fetch-Site': 'cross-site' },
+      body: JSON.stringify({ email, password }),
+    });
+    expect(forged.status).toBe(403);
+    expect(forged.headers.get('set-cookie')).toBeNull();
+    const own = await app.request('/api/v1/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Sec-Fetch-Site': 'same-origin' },
+      body: JSON.stringify({ email, password }),
+    });
+    expect(own.status).toBe(200);
+  });
+
+  it('refuses even the correct password once the email failure budget is spent', async () => {
+    await clearClientBudget();
+    await db
+      .deleteFrom('usage_windows')
+      .where('operation', '=', 'auth.login.email_failure')
+      .execute();
+    const limited = createApp(testConfig({ ABUSE_LOGIN_EMAIL_LIMIT: '2' }), db);
+    const attempt = (secret: string) =>
+      call('/auth/login', { email, password: secret }, undefined, limited).then((r) => r.status);
+    // A success forgets earlier failures, so one wrong guess does not carry over.
+    expect(await attempt('incorrect')).toBe(401);
+    expect(await attempt(password)).toBe(200);
+    expect(await attempt('incorrect')).toBe(401);
+    expect(await attempt('incorrect')).toBe(401);
+    expect(await attempt(password)).toBe(429);
   });
 
   it('commits the client budget before a refused login and shares it across application instances', async () => {
