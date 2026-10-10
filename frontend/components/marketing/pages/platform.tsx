@@ -117,14 +117,12 @@ const GUIDES: Readonly<Record<string, { title: string; desc: string }>> = {
 export function PlatformActions({
   cta,
   size = 'marketing',
-  closing = false,
-}: Readonly<{ cta: PlatformCta; size?: 'lg' | 'marketing'; closing?: boolean }>) {
-  // The MCP hero connects an assistant; its closing band offers the guide and a demo.
-  if (cta === 'mcp' && !closing) return <ConnectStrip className="text-left" />;
+}: Readonly<{ cta: PlatformCta; size?: 'lg' | 'marketing' }>) {
+  const mcp = cta === 'mcp';
   const trial = cta === 'trial' && selfServeSignupOpen();
   return (
     <div className="flex flex-wrap justify-center gap-3">
-      {cta === 'mcp' && (
+      {mcp && (
         <ButtonLink href={docsHref('/mcp/')} size={size}>
           Read the MCP docs
         </ButtonLink>
@@ -134,7 +132,7 @@ export function PlatformActions({
           Start free trial
         </ButtonLink>
       )}
-      <DemoButtonLink variant={trial || cta === 'mcp' ? 'soft' : 'primary'} size={size}>
+      <DemoButtonLink variant={trial || mcp ? 'soft' : 'primary'} size={size}>
         {cta === 'setup' ? 'Discuss setup' : 'Book a demo'}
       </DemoButtonLink>
       {(cta === 'demo' || cta === 'setup') && (
@@ -220,7 +218,12 @@ export function PlatformPageContent({ page }: Readonly<{ page: PlatformPage }>) 
         }
       >
         <div className="mt-9 grid justify-items-center gap-4" data-cta-placement="hero">
-          <PlatformActions cta={page.cta} />
+          {/* Connecting an assistant is the MCP hero's whole action; its closing band keeps the guide and a demo. */}
+          {page.cta === 'mcp' ? (
+            <ConnectStrip className="text-left" />
+          ) : (
+            <PlatformActions cta={page.cta} />
+          )}
           {page.note && <p className="website-label text-muted">{page.note}</p>}
         </div>
       </PageHero>
@@ -286,7 +289,7 @@ export function PlatformPageContent({ page }: Readonly<{ page: PlatformPage }>) 
       <Section className="marketing-closing-band">
         <div className="flex flex-col items-center gap-8 text-center" data-cta-placement="closing">
           <SectionHeader title={page.closing} align="center" />
-          <PlatformActions cta={page.cta} closing />
+          <PlatformActions cta={page.cta} />
         </div>
       </Section>
     </>

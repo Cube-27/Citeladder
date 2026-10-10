@@ -27,9 +27,11 @@ async function handOff(client: McpClientLink): Promise<string | null> {
   }
 }
 
+const isMouse = (event: PointerEvent) => event.pointerType === 'mouse';
+
 /** A mouse over a menu item must not move focus there; keyboard focus still does. */
 const keepFocus = (event: PointerEvent) => {
-  if (event.pointerType === 'mouse') event.preventDefault();
+  if (isMouse(event)) event.preventDefault();
 };
 
 function useHoverMenu() {
@@ -41,12 +43,10 @@ function useHoverMenu() {
     closeTimer.current = null;
   };
   useEffect(() => cancelClose, []);
-  const isMouse = (event: PointerEvent) => event.pointerType === 'mouse';
   return {
     open,
-    /** Opened by hover, so closing must not pull focus back to the trigger. */
+    /** Set while a hover opened the menu; a hover close leaves focus where it is. */
     hovered,
-    /** The menu's own open and close (keyboard, click, Escape) restore focus as usual. */
     setOpen: (next: boolean) => {
       cancelClose();
       hovered.current = false;
