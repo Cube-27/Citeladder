@@ -14,8 +14,8 @@ import type {
 import { compareText } from '../text-order.ts';
 import type { VerifiedAspect } from './validate.ts';
 
-export type UnavailableReason = PerceptionCoverage['unavailable'][number]['reason'];
-export type ClassifiedLabel = 'positive' | 'neutral' | 'negative' | 'mixed';
+type UnavailableReason = PerceptionCoverage['unavailable'][number]['reason'];
+type ClassifiedLabel = 'positive' | 'neutral' | 'negative' | 'mixed';
 
 export type MentionStatus =
   | { kind: 'classified'; label: ClassifiedLabel }
@@ -230,7 +230,7 @@ function drivers(answers: readonly PerceptionAnswer[], limit: number) {
     .slice(0, limit);
 }
 
-export const RECOMMENDATION_LIMITATION =
+const RECOMMENDATION_LIMITATION =
   "Explicit recommendation language near the brand's first mention, read in English phrasing only.";
 
 function recommended(answers: readonly PerceptionAnswer[]) {

@@ -16,12 +16,12 @@ export const perceptionLabelSchema = z.enum([
   'mixed',
   'not_assessable',
 ]);
-export const perceptionPolaritySchema = z.enum(['positive', 'negative']);
+const perceptionPolaritySchema = z.enum(['positive', 'negative']);
 
 // Why a mention has no usable label. `platform_cap` and `model_not_configured`
 // are bounded platform outcomes; `task_failed` is a worker that gave up;
 // `entity_limit` is a business beyond the per-answer classification cap.
-export const perceptionUnavailableReasonSchema = z.enum([
+const perceptionUnavailableReasonSchema = z.enum([
   'model_not_configured',
   'platform_cap',
   'entity_limit',
@@ -34,10 +34,10 @@ export const perceptionUnavailableReasonSchema = z.enum([
 // `value`: at least one confident label. `pending`: mentions are waiting for
 // classification. `unavailable`: nothing classifiable (see `reason`).
 // `no_mentions`: no completed answer in the selection named the brand.
-export const perceptionStateSchema = z.enum(['value', 'pending', 'unavailable', 'no_mentions']);
+const perceptionStateSchema = z.enum(['value', 'pending', 'unavailable', 'no_mentions']);
 
 // "N of M mentions classified": every mention lands in exactly one bucket.
-export const perceptionCoverageSchema = responseObject({
+const perceptionCoverageSchema = responseObject({
   mentions: z.number().int(),
   classified: z.number().int(),
   pending: z.number().int(),
@@ -50,7 +50,7 @@ export const perceptionCoverageSchema = responseObject({
 
 // Label counts over classified mentions. Shares and net sentiment are null
 // when nothing was classified; `mixed` counts only in the denominator.
-export const perceptionScoreSchema = responseObject({
+const perceptionScoreSchema = responseObject({
   positive: z.number().int(),
   neutral: z.number().int(),
   negative: z.number().int(),
@@ -61,21 +61,21 @@ export const perceptionScoreSchema = responseObject({
   net_sentiment: z.number().nullable(),
 });
 
-export const perceptionEntitySchema = responseObject({
+const perceptionEntitySchema = responseObject({
   name: z.string(),
   is_brand: z.boolean(),
   score: perceptionScoreSchema,
   coverage: perceptionCoverageSchema,
 });
 
-export const perceptionBreakdownSchema = responseObject({
+const perceptionBreakdownSchema = responseObject({
   key: z.string(),
   label: z.string(),
   score: perceptionScoreSchema,
 });
 
 // A verified quote: an exact substring of the answer passage it came from.
-export const perceptionQuoteSchema = responseObject({
+const perceptionQuoteSchema = responseObject({
   text: z.string(),
   theme: z.string(),
   polarity: perceptionPolaritySchema,
@@ -89,7 +89,7 @@ export const perceptionQuoteSchema = responseObject({
   observed_at: z.string(),
 });
 
-export const perceptionThemeSchema = responseObject({
+const perceptionThemeSchema = responseObject({
   theme: z.string(),
   positive: z.number().int(),
   negative: z.number().int(),
@@ -98,14 +98,14 @@ export const perceptionThemeSchema = responseObject({
 
 // Sources cited in answers where the brand drew a negative aspect. These are
 // cited alongside the criticism, never shown to have caused it.
-export const perceptionDriverSchema = responseObject({
+const perceptionDriverSchema = responseObject({
   domain: z.string(),
   answers: z.number().int(),
   example_url: z.string().nullable(),
 });
 
 // Deterministic first-mention recommendation reading (English phrasing only).
-export const perceptionRecommendedSchema = responseObject({
+const perceptionRecommendedSchema = responseObject({
   mentioned: z.number().int(),
   recommended: z.number().int(),
   recommended_against: z.number().int(),
@@ -113,7 +113,7 @@ export const perceptionRecommendedSchema = responseObject({
   limitation: z.string(),
 });
 
-export const perceptionTrendPointSchema = responseObject({
+const perceptionTrendPointSchema = responseObject({
   audit_id: uuid(),
   completed_at: z.string(),
   score: perceptionScoreSchema,

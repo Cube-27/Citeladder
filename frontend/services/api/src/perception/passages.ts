@@ -137,7 +137,7 @@ export function entityPassages(input: {
 }
 
 /** JSON with object keys sorted at every depth, so equal packages hash equally. */
-export function canonicalJson(value: unknown): string {
+function canonicalJson(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
   if (value !== null && typeof value === 'object')
     return `{${Object.keys(value)

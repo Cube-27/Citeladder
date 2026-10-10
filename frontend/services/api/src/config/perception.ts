@@ -43,7 +43,7 @@ const schema = z.strictObject({
   user_template: z.string().trim().min(1),
 });
 
-export function loadPerception(input: unknown) {
+function loadPerception(input: unknown) {
   const result = schema.safeParse(input);
   if (!result.success)
     throw new ConfigError('Invalid perception configuration: ' + result.error.message);
