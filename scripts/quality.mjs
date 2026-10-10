@@ -250,8 +250,11 @@ function frontendChecks() {
 // other service file holds generated types and queries, never migration files
 // or DDL. The migrate CLI applies the baseline; it does not author schema.
 const SCHEMA_BASELINE = '/api/migrations/0001_baseline.sql';
-const SCHEMA_AUTHORING =
-  /\b(?:Migrator|FileMigrationProvider)\b|\.schema\s*\.\s*(?:create|alter|drop)(?:Table|Index|Type|View|Schema)\b|[`'"]\s*(?:create|alter|drop)\s+(?:table|index|unique\s+index|type|view|schema|sequence)\b/iu;
+const SCHEMA_AUTHORING = [
+  /\b(?:Migrator|FileMigrationProvider)\b/u,
+  /\.schema\s*\.\s*(?:create|alter|drop)(?:Table|Index|Type|View|Schema)\b/u,
+  /[`'"]\s*(?:create|alter|drop)\s+(?:unique\s+)?(?:table|index|type|view|schema|sequence)\b/iu,
+];
 
 function schemaAuthorityViolations(root) {
   return readdirSync(root, { recursive: true, withFileTypes: true })
@@ -263,7 +266,9 @@ function schemaAuthorityViolations(root) {
       if (/\/migrations?\//u.test(relative) || relative.endsWith('.sql')) return true;
       // Tests build disposable databases and constraint fixtures; only shipped source is policed.
       if (relative.includes('/test/')) return false;
-      return /\.[cm]?[jt]s$/u.test(path) && SCHEMA_AUTHORING.test(readFileSync(path, 'utf8'));
+      if (!/\.[cm]?[jt]s$/u.test(path)) return false;
+      const source = readFileSync(path, 'utf8');
+      return SCHEMA_AUTHORING.some((pattern) => pattern.test(source));
     });
 }
 

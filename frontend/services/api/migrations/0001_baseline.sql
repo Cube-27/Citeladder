@@ -5960,7 +5960,7 @@ ALTER TABLE ONLY public.search_intelligence_datasets
     ADD CONSTRAINT search_intelligence_datasets_parent_dataset_id_fkey FOREIGN KEY (parent_dataset_id) REFERENCES public.search_intelligence_datasets(id) ON DELETE RESTRICT;
 
 ALTER TABLE ONLY public.search_intelligence_rows
-    ADD CONSTRAINT search_intelligence_rows_call_id_fkey FOREIGN KEY (call_id) REFERENCES public.search_intelligence_calls(id) ON DELETE RESTRICT;
+    ADD CONSTRAINT search_intelligence_rows_call_id_fkey FOREIGN KEY (call_id) REFERENCES public.search_intelligence_calls(id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.search_intelligence_runs
     ADD CONSTRAINT search_intelligence_runs_actor_user_id_fkey FOREIGN KEY (actor_user_id) REFERENCES public.users(id) ON DELETE RESTRICT;

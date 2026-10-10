@@ -1,22 +1,22 @@
 import { setTimeout as sleep } from 'node:timers/promises';
 import { parseArgs } from 'node:util';
 
+import type pg from 'pg';
+
 import { OperatorRefusal, operatorDiagnostic } from './operator.ts';
 import { applyBaseline, baselineClient } from './schema-baseline.ts';
 
 /** A fresh or replaced database VM may still be starting; retry the connection until the deadline. */
-async function connect(databaseUrl: string, waitSeconds: number) {
-  const deadline = Date.now() + waitSeconds * 1000;
-  for (;;) {
-    const client = baselineClient(databaseUrl);
-    try {
-      await client.connect();
-      return client;
-    } catch (error) {
-      await client.end().catch(() => undefined);
-      if (Date.now() >= deadline) throw error;
-      await sleep(5000);
-    }
+async function connect(databaseUrl: string, deadline: number): Promise<pg.Client> {
+  const client = baselineClient(databaseUrl);
+  try {
+    await client.connect();
+    return client;
+  } catch (error) {
+    await client.end().catch(() => undefined);
+    if (Date.now() >= deadline) throw error;
+    await sleep(5000);
+    return connect(databaseUrl, deadline);
   }
 }
 
@@ -28,7 +28,7 @@ async function main() {
     throw new OperatorRefusal('--wait-seconds must be a non-negative number.');
   const databaseUrl = process.env.DATABASE_URL?.trim();
   if (!databaseUrl) throw new OperatorRefusal('DATABASE_URL is required.');
-  const client = await connect(databaseUrl, waitSeconds);
+  const client = await connect(databaseUrl, Date.now() + waitSeconds * 1000);
   try {
     console.log(`Schema baseline ${await applyBaseline(client)}.`);
   } finally {
