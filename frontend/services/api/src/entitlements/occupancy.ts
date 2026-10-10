@@ -71,19 +71,46 @@ export async function admitProject(db: Database, workspaceId: string): Promise<v
     });
 }
 
-export async function requireProjectDeletion(db: Database, workspaceId: string): Promise<void> {
+/**
+ * Refuse unless the workspace's plan grants `key`, a flag that trials lack.
+ * Takes the account capacity lock, so grant issuance serializes with the action.
+ */
+async function requireGrantedFlag(
+  db: Database,
+  workspaceId: string,
+  key: string,
+  refusal: string,
+): Promise<void> {
   const accountId = await lockWorkspaceCapacity(db, workspaceId);
   const resolved = await resolveAccountEntitlement(db, { accountId, workspaceId }, new Date());
   if (resolved.status !== 'resolved')
     throw new ApiError(403, 'Billing entitlement is unavailable for this account', {
       code: UNRESOLVED,
     });
-  const key = policy.entitlements.project_deletion;
   if ((resolved.values.get(key) ?? 0) < 1)
-    throw new ApiError(403, 'Project deletion is not granted for this workspace', {
+    throw new ApiError(403, refusal, {
       code: asApiErrorCode(codes.capability_not_granted),
       details: { key },
     });
+}
+
+export function requireProjectDeletion(db: Database, workspaceId: string): Promise<void> {
+  return requireGrantedFlag(
+    db,
+    workspaceId,
+    policy.entitlements.project_deletion,
+    'Project deletion is not granted for this workspace',
+  );
+}
+
+/** Inviting people, or joining by invitation, needs a plan: a trial is the Owner alone. */
+export function requireTeamMembers(db: Database, workspaceId: string): Promise<void> {
+  return requireGrantedFlag(
+    db,
+    workspaceId,
+    policy.entitlements.team_members,
+    'Inviting team members needs a paid plan',
+  );
 }
 
 async function promptCount(db: Database, accountId: string): Promise<number> {

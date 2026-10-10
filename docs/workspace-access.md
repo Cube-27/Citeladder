@@ -19,7 +19,18 @@ access policy without invented verification timestamps. Every identity names its
 origin (`public` or `operator`); any other origin requires verification. Google sign-in is gated
 by `OAUTH_GOOGLE_ENABLED`; new Google identities also require `PUBLIC_SIGNUP_ENABLED`.
 Email/password login and Google sign-in establish the HttpOnly session;
-session-version checks invalidate stale sessions. The frontend crosses the
+session-version checks invalidate stale sessions. Neither signing up nor signing
+in creates a workspace. Onboarding creates the person's own workspace
+(`POST /workspaces`) before its first project; that request carries the Terms
+revision shown (`GET /auth/policies`), records the acceptance, spends the shared
+daily trial budget for a public identity, and starts the trial. A person has one
+trial: a workspace created after handing ownership away inherits the window of
+their first. After sign-in the
+[workspace chooser](../frontend/components/auth/workspace-chooser.tsx) at
+`/workspaces` goes straight into the only workspace a person owns, sends someone
+with none to set one up, and otherwise lists their own workspace (or "Set up your
+own workspace" when they own none) beside every workspace they were invited to,
+with each one's access. The frontend crosses the
 identity boundary with full-document navigation so a prefetched anonymous
 layout cannot be reused.
 
@@ -66,13 +77,16 @@ authorized to publish the global billing catalog or administer other workspaces.
 
 ## Membership and ownership continuity
 
-Authenticated onboarding reads `/workspaces/{id}/policies` and records an
-explicit Terms acceptance before opening that workspace in the app. This covers
-password, Google-created and operator-created identities. The decision is taken
-on the sign-in form (an unticked, required checkbox for both email and Google
-sign-in) and recorded for the resolved workspace against the server-published
-revision; a session that reaches the app without that decision in the same tab
-gets the explicit review screen instead. PostgreSQL stores
+Every workspace a person opens needs their acceptance of the current Terms
+revision (`/workspaces/{id}/policies`). This covers password, Google-created and
+operator-created identities. The decision is taken at signup (an unticked,
+required checkbox) and when the person creates their workspace, which records it
+with the creation; signing in asks nothing. A signup decision made in the same tab
+is recorded for a workspace the person then joins. Otherwise, for a workspace
+joined without that decision or after a new revision, the explicit review screen
+appears, with sign-out and, when there is another workspace, a switch to the
+chooser. The chooser and workspace setup never wait on the selected workspace's
+Terms or access. PostgreSQL stores
 actor, workspace, immutable revision, context and timestamp; repeated acceptance
 of one revision is idempotent. Updating the approved Terms revision requires
 renewed acceptance and never overwrites an earlier row. Privacy is a notice;
@@ -101,7 +115,9 @@ bodies, provider credentials or prompts.
 [workspace owner](../frontend/services/api/src/workspaces/) for invitations,
 acceptance, role changes, removal and ownership transfer. Invitation tokens are
 hashed, expiring and single-use; acceptance requires the matching authenticated
-identity. Repeated acceptance is inert. Owner is not an assignable invitation
+identity. Admitting people needs the plan's `team_members` entitlement, which
+trials do not carry: issuing, resending and accepting an invitation are refused
+without it (revoking never is), so a trial workspace is its Owner alone. Repeated acceptance is inert. Owner is not an assignable invitation
 role. Transfer installs a replacement atomically, and removal, demotion or
 departure cannot leave a workspace ownerless. Only the Owner can transfer
 ownership, and only to a member who owns no workspace. Removal or departure also
@@ -122,9 +138,14 @@ single consumption and bounded request/send budgets. Links carry tokens in the
 fragment; GET never consumes them. Verification requires the signup password.
 Reset replaces the password, may verify a pending mailbox, invalidates outstanding
 challenges and revokes sessions. Password change requires the current password;
-signing out revokes every session (there is one sign-out, and it is everywhere). Account security reports
-actual methods and verification state inline in Settings → Account, with compact
-password, Google-linking and session controls. The blocked-access screen opens
+signing out revokes every session (there is one sign-out, and it is everywhere). Settings → Account
+shows the email and the person's role in the selected workspace, never internal
+identifiers, and reports sign-in methods and verification state in plain words,
+with compact password, Google-linking and session controls. Settings → Workspace
+shows the selected workspace, the person's role and what it allows, Leave
+workspace for anyone but the Owner, and, for Owner/Admin, the members:
+role changes, removal, invitation revocation and (Owner only) ownership transfer
+each confirm in a dialog that names the person and the effect. The blocked-access screen opens
 the same controls in a recovery dialog. Mail is request-bounded, not a durable queue:
 a crash after commit is recovered by requesting a new link after cooldown.
 Eligible and ineligible recipients share the configured `AUTH_MAIL_TIMEOUT_MS`
@@ -189,8 +210,11 @@ action can become available. Additional-project entry points stay disabled
 while allowance is unresolved or no project slots remain, including after a
 trial account creates its first project.
 
-Login enters Overview; the application gate decides whether onboarding is
-appropriate. An empty workspace retains access to billing/members/settings.
+Login enters the workspace chooser; the application gate then decides whether
+onboarding is appropriate. A person with no workspace is sent to set one up from
+any project route, and may still reach Settings → Account and an invitation
+link. An empty workspace retains access to billing/members/settings. Viewers are
+offered no project editing, creation or deletion controls.
 Failed reads are retryable errors, not empty lists or exhausted allowances.
 The app `/pricing` continuation is also workspace-only: it resolves the
 selected workspace without requiring a project, and only Owner/Admin billing
@@ -278,8 +302,9 @@ The native account manager locks the workspace root before actor/target membersh
 rows and user password updates. It rechecks active membership, the authenticated
 password hash and session version after confirmation and between choices; prompts
 hold no database locks. Invitation issuance and assignable role changes use the
-same owners as the workspace API. Creating an invited identity preserves its
-personal workspace and billing account bootstrap without issuing signup grants.
+same owners as the workspace API. Creating an invited identity, or an
+identity that joins an existing workspace, creates no workspace for it: the
+person owns none until they create their own.
 Identity provisioning and the invitation commit atomically. Password resets increment
 the session version; resetting the operator's own password requires a new login.
 Bounded identity operators share a transaction advisory lock before taking row

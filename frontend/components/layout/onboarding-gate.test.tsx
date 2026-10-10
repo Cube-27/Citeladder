@@ -134,6 +134,27 @@ describe('OnboardingGate', () => {
     expect(screen.queryByText('workspace')).toBeNull();
   });
 
+  it('sends someone who belongs to no workspace to set up their own', async () => {
+    contextValue = {
+      ...contextValue,
+      status: 'no_workspace',
+      activeWorkspaceId: null,
+      activeWorkspace: null,
+      activeProjectId: null,
+    };
+    entitlement = { isLoading: false, entitlement: null };
+    render(
+      <OnboardingGate>
+        <p>workspace</p>
+      </OnboardingGate>,
+    );
+
+    expect(screen.queryByText('workspace')).toBeNull();
+    await waitFor(() =>
+      expect(replace).toHaveBeenCalledWith('/onboarding?setup=workspace', { replace: true }),
+    );
+  });
+
   it('does not redirect while the context is still resolving', () => {
     // An unsettled read is indistinguishable from "no projects" on length
     // alone. Redirecting here bounced existing users to onboarding for a frame.

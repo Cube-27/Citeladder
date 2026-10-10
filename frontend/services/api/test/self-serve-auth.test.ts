@@ -3,7 +3,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { testConfig, testDatabase } from './support.ts';
 import { registerUser, authenticateUser, issueSession } from '../src/auth/service.ts';
 import { requestChallenge, consumeChallenge } from '../src/auth/challenges.ts';
-import { provisionAccount } from '../src/workspaces/service.ts';
+import { createWorkspace, provisionAccount } from '../src/workspaces/service.ts';
 import { workspaceAccess } from '../src/entitlements/access.ts';
 import { startSignIn, completeSignIn } from '../src/auth/oauth.ts';
 import { createApp } from '../src/app.ts';
@@ -35,12 +35,14 @@ async function pending() {
     .where('email', '=', email)
     .executeTakeFirstOrThrow();
   users.push(user.id);
+  // Signing up creates nothing; onboarding creates the owned workspace and its trial.
+  expect(
+    await db.selectFrom('workspace_members').select('id').where('user_id', '=', user.id).execute(),
+  ).toEqual([]);
   const workspace = await db
-    .selectFrom('workspace_members')
-    .select('workspace_id')
-    .where('user_id', '=', user.id)
-    .executeTakeFirstOrThrow();
-  return { user, email, workspaceId: workspace.workspace_id };
+    .transaction()
+    .execute((trx) => createWorkspace(trx, user.id, 'Fixture workspace'));
+  return { user, email, workspaceId: workspace.id };
 }
 function mailedToken(email: string) {
   const message = messages.findLast((row) => row.to[0] === email)!;
@@ -158,16 +160,17 @@ describe('verified self-serve lifecycle', () => {
     ).rejects.toMatchObject({ code: 'auth_challenge_invalid' });
   });
 
-  it('keeps the original trial deadline through repair and denies data exactly at expiry', async () => {
+  it('starts the trial at workspace creation, keeps its deadline through repair and denies data exactly at expiry', async () => {
     const { user, workspaceId } = await pending();
     const grant = await db
       .selectFrom('account_grants')
       .innerJoin('billing_accounts', 'billing_accounts.id', 'account_grants.billing_account_id')
       .selectAll('account_grants')
+      .select('billing_accounts.created_at as account_created_at')
       .where('billing_accounts.workspace_id', '=', workspaceId)
       .where('key', '=', 'workspace_access')
       .executeTakeFirstOrThrow();
-    expect(grant.valid_until!.getTime() - user.created_at.getTime()).toBe(7 * 86400000);
+    expect(grant.valid_until!.getTime() - grant.account_created_at.getTime()).toBe(7 * 86400000);
     await db.transaction().execute((trx) => provisionAccount(trx, user));
     const grants = await db
       .selectFrom('account_grants')
@@ -183,6 +186,45 @@ describe('verified self-serve lifecycle', () => {
     expect((await workspaceAccess(db, workspaceId, grant.valid_until!)).status).toBe(
       'trial_expired',
     );
+  });
+
+  it('gives a person one trial: a workspace created after handing ownership away inherits its window', async () => {
+    const { user, workspaceId } = await pending();
+    const trialEnd = async (workspace: string) =>
+      (
+        await db
+          .selectFrom('account_grants')
+          .innerJoin('billing_accounts', 'billing_accounts.id', 'account_grants.billing_account_id')
+          .select('account_grants.valid_until')
+          .where('billing_accounts.workspace_id', '=', workspace)
+          .where('account_grants.key', '=', 'workspace_access')
+          .executeTakeFirstOrThrow()
+      ).valid_until;
+    const first = await trialEnd(workspaceId);
+    const successor = await pending();
+    await db.transaction().execute(async (trx) => {
+      await trx
+        .updateTable('workspace_members')
+        .set({ role: 'admin' })
+        .where('user_id', '=', user.id)
+        .execute();
+      await trx.deleteFrom('workspaces').where('id', '=', successor.workspaceId).execute();
+      await trx
+        .insertInto('workspace_members')
+        .values({
+          id: randomUUID(),
+          workspace_id: workspaceId,
+          user_id: successor.user.id,
+          role: 'owner',
+          created_at: new Date(),
+          updated_at: new Date(),
+        })
+        .execute();
+    });
+    const second = await db
+      .transaction()
+      .execute((trx) => createWorkspace(trx, user.id, 'Another workspace'));
+    expect(await trialEnd(second.id)).toEqual(first);
   });
 
   it('does not overwrite duplicate signup credentials or issue a second trial', async () => {

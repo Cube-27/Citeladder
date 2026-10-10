@@ -7,6 +7,7 @@ import {
   resolveWorkspaceMember,
   type WorkspaceCapability,
 } from '../auth/workspace.ts';
+import { enforceSubjectRequest } from '../abuse/usage.ts';
 import { recordSecurityEvent } from '../auth/security-events.ts';
 import { policy } from '../config.ts';
 import { subjectXactLock } from '../db/advisory-lock.ts';
@@ -88,7 +89,7 @@ async function insertWorkspace(
   return workspace;
 }
 
-/** Login repair is a write; /me and workspace GETs never call this. */
+/** Operator and development provisioning: the identity's owned workspace and its access. */
 export async function provisionAccount(
   db: Database,
   user: User,
@@ -110,23 +111,32 @@ export async function provisionAccount(
   return createdId;
 }
 
-export function createWorkspace(db: Database, userId: string, name: string) {
-  return db.transaction().execute(async (trx) => {
-    await subjectXactLock(trx, `workspace.create:${userId}`);
-    if ((await ownedWorkspaces(trx, userId)).length >= OWNED_WORKSPACE_LIMIT)
-      throw new ApiError(403, 'You already own a workspace', {
-        code: 'workspace_limit_exceeded',
-        details: { limit: OWNED_WORKSPACE_LIMIT },
-      });
-    const user = await trx
-      .selectFrom('users')
-      .selectAll()
-      .where('id', '=', userId)
-      .executeTakeFirstOrThrow();
-    const workspace = await insertWorkspace(trx, userId, name);
-    await ensureWorkspaceBilling(trx, workspace.id, user);
-    return workspaceView(workspace, 'owner');
-  });
+/**
+ * Create the caller's owned workspace with its billing account and access, in
+ * the caller's transaction. This is where a self-serve trial starts, so a
+ * public identity spends the shared daily trial budget here.
+ */
+export async function createWorkspace(trx: Database, userId: string, name: string) {
+  await subjectXactLock(trx, `workspace.create:${userId}`);
+  if ((await ownedWorkspaces(trx, userId)).length >= OWNED_WORKSPACE_LIMIT)
+    throw new ApiError(403, 'You already own a workspace', {
+      code: 'workspace_limit_exceeded',
+      details: { limit: OWNED_WORKSPACE_LIMIT },
+    });
+  const user = await trx
+    .selectFrom('users')
+    .selectAll()
+    .where('id', '=', userId)
+    .executeTakeFirstOrThrow();
+  if (user.registration_origin === 'public')
+    await enforceSubjectRequest(trx, 'client', 'global-trial', {
+      operation: 'auth.trial.global',
+      limit: policy.auth.mailbox.trial_daily_limit,
+      windowSeconds: policy.auth.mailbox.daily_window_seconds,
+    });
+  const workspace = await insertWorkspace(trx, userId, name);
+  await ensureWorkspaceBilling(trx, workspace.id, user);
+  return workspaceView(workspace, 'owner');
 }
 
 /** Root lock orders membership/invitation writes and rechecks live authority. */

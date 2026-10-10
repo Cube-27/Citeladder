@@ -14,6 +14,8 @@ export const PUBLIC_CATALOG_FRESH_SECONDS = 600;
 export const PUBLIC_CATALOG_STALE_SECONDS = 7 * 24 * 60 * 60;
 export const AGENT_CAPABILITY = 'agent';
 export const PROJECT_DELETION_CAPABILITY = 'project_deletion';
+/** Inviting people into a workspace; a trial is the Owner alone. */
+export const TEAM_MEMBERS_CAPABILITY = 'team_members';
 
 /** Set on return from auth when a captured pricing intent should be resumed. */
 export const PRICING_RESUME_QUERY_PARAM = 'resumeActivation';

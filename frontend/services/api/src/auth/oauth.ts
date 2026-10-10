@@ -7,13 +7,12 @@ import { subjectXactLock } from '../db/advisory-lock.ts';
 import type { Database } from '../db/database.ts';
 import { ApiError } from '../errors.ts';
 import { getLogger } from '../logging.ts';
-import { provisionAccount, type User } from '../workspaces/service.ts';
+import type { User } from '../workspaces/service.ts';
 import { issueSession } from './service.ts';
 import { recordSecurityEvent } from './security-events.ts';
 import { requiresEmailVerification } from './eligibility.ts';
 import { requestChallenge } from './challenges.ts';
 import type { LinkProof } from './continuation.ts';
-import { enforceSubjectRequest } from '../abuse/usage.ts';
 
 const cfg = policy.auth.oauth;
 const logger = getLogger('app.auth');
@@ -259,8 +258,6 @@ async function accountForEmail(
     if (!identity.email_verified) throw new SignInError('oauth_signin_email_unverified');
     if (!requiresEmailVerification(existing)) throw new SignInError('oauth_signin_link_required');
     if (!authoritative) throw new SignInError('oauth_signin_email_unverified');
-    // Preserve the workspace/account -> user lock order used by operator repair.
-    await provisionAccount(db, existing);
     const claimed = await db
       .updateTable('users')
       .set({
@@ -287,11 +284,6 @@ async function accountForEmail(
   }
   if (config.demo.enabled || !config.auth.publicSignup)
     throw new SignInError('oauth_signin_disabled');
-  await enforceSubjectRequest(db, 'client', 'global-trial', {
-    operation: 'auth.trial.global',
-    limit: policy.auth.mailbox.trial_daily_limit,
-    windowSeconds: policy.auth.mailbox.daily_window_seconds,
-  });
   const now = new Date();
   const inserted = await db
     .insertInto('users')
@@ -387,7 +379,6 @@ async function resolveAccount(
     .where('subject', '=', identity.sub)
     .where('user_id', '=', user.id)
     .execute();
-  await provisionAccount(db, user);
   const current = await db
     .selectFrom('users')
     .selectAll()

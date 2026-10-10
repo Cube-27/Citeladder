@@ -6,6 +6,7 @@ import {
   type OperatorSession,
 } from '../src/workspaces/account-manager.ts';
 import { hashInvitationToken, acceptInvitation } from '../src/workspaces/invitations.ts';
+import { billingAccount, grant } from './prompt-fixtures.ts';
 import { Fixtures, testDatabase } from './support.ts';
 
 const db = testDatabase(),
@@ -17,7 +18,6 @@ let owner: string,
   foreign: string,
   session: OperatorSession;
 let createdId: string | undefined;
-let createdWorkspace: string | undefined;
 const email = (id: string) => `${id}@example.test`;
 beforeAll(async () => {
   owner = await fixtures.user();
@@ -36,8 +36,6 @@ beforeAll(async () => {
 });
 afterAll(async () => {
   await db.deleteFrom('security_events').where('workspace_id', '=', workspace).execute();
-  if (createdWorkspace)
-    await db.deleteFrom('workspaces').where('id', '=', createdWorkspace).execute();
   await fixtures.cleanup();
   if (createdId) await db.deleteFrom('users').where('id', '=', createdId).execute();
   await db.destroy();
@@ -62,8 +60,14 @@ it('authenticates against an explicit workspace without provisioning access', as
   ).toEqual([]);
 });
 
-it('creates an invited identity without signup grants, stores a hashed token and joins through the native invitation owner', async () => {
+it('creates an invited identity that owns no workspace, stores a hashed token and joins through the native invitation owner', async () => {
   const invitedEmail = `invited-${admin}@example.test`;
+  const account = await billingAccount(db, workspace);
+  await grant(db, account, {
+    key: 'team_members',
+    value: 1,
+    sourceKind: 'override',
+  });
   const result = await manageAccount(db, session, {
     kind: 'invite',
     email: invitedEmail,
@@ -78,27 +82,14 @@ it('creates an invited identity without signup grants, stores a hashed token and
     .executeTakeFirstOrThrow();
   createdId = created.id;
   expect(await verifyPassword('password123', created.hashed_password)).toBe(true);
-  const personal = await db
-    .selectFrom('workspace_members')
-    .select(['workspace_id', 'role'])
-    .where('user_id', '=', created.id)
-    .executeTakeFirstOrThrow();
-  createdWorkspace = personal.workspace_id;
-  expect(personal.role).toBe('owner');
-  expect(personal.workspace_id).not.toBe(workspace);
-  const account = await db
-    .selectFrom('billing_accounts')
-    .selectAll()
-    .where('workspace_id', '=', personal.workspace_id)
-    .executeTakeFirstOrThrow();
+  // An invited person owns nothing until they create their own workspace.
   expect(
     await db
-      .selectFrom('account_grants')
-      .select('id')
-      .where('billing_account_id', '=', account.id)
+      .selectFrom('workspace_members')
+      .select('workspace_id')
+      .where('user_id', '=', created.id)
       .execute(),
   ).toEqual([]);
-  expect(account.registration_cohort_at).toEqual(created.created_at);
   const persisted = await db
     .selectFrom('workspace_invitations')
     .selectAll()
@@ -115,13 +106,14 @@ it('creates an invited identity without signup grants, stores a hashed token and
       .where('workspace_id', '=', workspace)
       .execute(),
   ).toEqual([{ workspace_id: workspace, role: 'viewer' }]);
+  // Accepting provisions nothing: the plan's one grant is all the account holds.
   expect(
     await db
-      .selectFrom('billing_accounts')
-      .select('id')
-      .where('workspace_id', '=', workspace)
+      .selectFrom('account_grants')
+      .select('key')
+      .where('billing_account_id', '=', account)
       .execute(),
-  ).toEqual([]);
+  ).toEqual([{ key: 'team_members' }]);
 });
 
 it.each(['deactivate', 'demote', 'remove', 'password', 'sessions'])(

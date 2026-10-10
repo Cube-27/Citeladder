@@ -5,6 +5,14 @@ import { ApiError } from '../errors.ts';
 import { recordSecurityEvent } from '../auth/security-events.ts';
 import { lockAuthorizedWorkspace } from './service.ts';
 
+/** The Terms and Privacy revisions currently published. */
+export function currentPolicyRevision() {
+  return {
+    terms_revision: policy.auth.terms_revision,
+    privacy_notice_revision: policy.auth.privacy_revision,
+  };
+}
+
 export async function policyStatus(db: Database, workspaceId: string, actorId: string) {
   const row = await db
     .selectFrom('policy_acceptances')
@@ -13,11 +21,7 @@ export async function policyStatus(db: Database, workspaceId: string, actorId: s
     .where('actor_id', '=', actorId)
     .where('terms_revision', '=', policy.auth.terms_revision)
     .executeTakeFirst();
-  return {
-    terms_revision: policy.auth.terms_revision,
-    privacy_notice_revision: policy.auth.privacy_revision,
-    accepted_at: row?.accepted_at.toISOString() ?? null,
-  };
+  return { ...currentPolicyRevision(), accepted_at: row?.accepted_at.toISOString() ?? null };
 }
 
 export function acceptPolicy(db: Database, workspaceId: string, actorId: string, revision: string) {

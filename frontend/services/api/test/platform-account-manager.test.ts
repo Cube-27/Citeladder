@@ -54,7 +54,7 @@ async function create(action: Extract<PlatformAction, { kind: 'create' }>, input
   if (input.apply)
     for (const user of result.created) {
       createdUsers.push(user.user_id);
-      createdWorkspaces.push(user.personal_workspace_id);
+      if (user.personal_workspace_id) createdWorkspaces.push(user.personal_workspace_id);
     }
   return result;
 }
@@ -110,6 +110,8 @@ it('joins a batch as workspace Admins atomically and grants the shared account o
     role: 'admin',
     access: { allowance: 40, until: null },
   });
+  // Joining a shared workspace leaves each person free to create their own.
+  expect(result.created.map((user) => user.personal_workspace_id)).toEqual([null, null]);
   const resolved = await resolveAccountEntitlement(
     db,
     { workspaceId: workspace, accountId },
@@ -170,7 +172,7 @@ it('joins a batch as workspace Admins atomically and grants the shared account o
       session,
       {
         kind: 'password',
-        workspaceId: result.created[1]!.personal_workspace_id,
+        workspaceId: await fixtures.ownedWorkspace(await fixtures.user()),
         email: target.email,
         password,
       },

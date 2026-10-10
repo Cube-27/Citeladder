@@ -25,7 +25,13 @@ import type { SelectionStatus } from '@/lib/project/selection';
  * project creation answered a question nobody asked and made an empty
  * workspace unmanageable.
  */
+/** The sign-in workspace chooser. */
+export const WORKSPACE_CHOOSER_PATH = '/workspaces';
+/** Onboarding's step that creates the person's own workspace. */
+export const WORKSPACE_SETUP_PATH = '/onboarding?setup=workspace';
+
 const WORKSPACE_ONLY_PREFIXES = [
+  WORKSPACE_CHOOSER_PATH,
   '/onboarding',
   '/settings',
   '/billing',
@@ -38,6 +44,23 @@ export function isWorkspaceOnlyRoute(pathname: string | null): boolean {
   return WORKSPACE_ONLY_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
+}
+
+/** Whether the person owns one of these workspaces (a person owns at most one). */
+export function ownsWorkspace(workspaces: readonly { role: string }[]): boolean {
+  return workspaces.some((workspace) => workspace.role === 'owner');
+}
+
+/**
+ * Routes that act on the person rather than on the selected workspace: the
+ * chooser, and setting up their own workspace. Neither waits for the selected
+ * workspace's access or Terms, which may be exactly what the person is
+ * leaving.
+ */
+export function isWorkspaceFreeRoute(pathname: string, search: string): boolean {
+  const path = pathname.replace(/\/+$/u, '').toLowerCase();
+  if (path === WORKSPACE_CHOOSER_PATH) return true;
+  return path === '/onboarding' && new URLSearchParams(search).get('setup') === 'workspace';
 }
 
 /**
@@ -75,6 +98,7 @@ export function resolveGate(
   if (status === 'error') return 'failed';
   if (status === 'unavailable') return 'missing-project';
   if (!projectRequired) return 'ready';
+  if (status === 'no_workspace') return 'redirecting';
   if (status === 'resolving') return 'loading';
   if (status !== 'empty') return 'ready';
   if (mayCreate && allowance === 'spare') return 'redirecting';

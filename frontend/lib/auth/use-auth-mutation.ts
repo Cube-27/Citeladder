@@ -8,6 +8,7 @@ import { clearAccountScopedClientState } from '@/lib/auth/account-transition';
 import { hasPendingIntent } from '@/lib/billing/pending-pricing-intent';
 import { PRICING_RESUME_QUERY_PARAM, PRICING_RETURN_PATH } from '@/lib/config/billing';
 import { hardNavigate } from '@/lib/navigation/hard-navigate';
+import { WORKSPACE_CHOOSER_PATH } from '@/lib/project/bootstrap';
 
 /**
  * Login mutation wiring (F4): on success, prime the `me` cache with the
@@ -47,14 +48,9 @@ export function useAuthMutation<TValues>(
         return;
       }
 
-      // Straight to the app. Deciding between `/projects` and `/onboarding`
-      // here used to mean fetching the project list before navigating —
-      // unscoped, because no workspace is resolved yet, and therefore
-      // answering for whichever workspace the backend picked by default. The
-      // shell's own gate now makes that decision from the resolved workspace,
-      // so login neither pays that round trip nor risks routing on another
-      // workspace's answer.
-      hardNavigate('/projects');
+      // The workspace chooser: it goes straight on when there is one
+      // destination, and sends someone with no workspace to set one up.
+      hardNavigate(WORKSPACE_CHOOSER_PATH);
     },
   });
 

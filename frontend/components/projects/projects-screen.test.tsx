@@ -7,11 +7,11 @@ import { ProjectsScreen } from './projects-screen';
 
 const { selection, capacity } = vi.hoisted(() => ({
   selection: vi.fn(),
-  capacity: { remaining: null as number | null },
+  capacity: { remaining: null as number | null, write: true },
 }));
 const WORKSPACE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 vi.mock('@/lib/project/project-context', () => ({
-  useWorkspaceCapability: () => true,
+  useWorkspaceCapability: (capability: string) => capability !== 'write' || capacity.write,
   useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   useProjectContext: selection,
 }));
@@ -29,7 +29,12 @@ vi.mock('@/lib/billing/entitlement-context', async (importOriginal) => ({
 }));
 
 vi.mock('./dashboard-screen', () => ({
-  DashboardScreen: () => <div>Project dashboard</div>,
+  DashboardScreen: ({ onEditProject }: { onEditProject?: (project: unknown) => void }) => (
+    <div>
+      Project dashboard
+      {onEditProject ? <button type="button">Edit project</button> : null}
+    </div>
+  ),
 }));
 
 describe('ProjectsScreen', () => {
@@ -41,6 +46,7 @@ describe('ProjectsScreen', () => {
       isLoading: false,
     });
     capacity.remaining = null;
+    capacity.write = true;
   });
 
   it.each([null, 0, 1])(
@@ -73,13 +79,29 @@ describe('ProjectsScreen', () => {
     },
   );
 
-  it('renders the workspace dashboard when a project is available', () => {
-    render(
+  it('offers a Viewer neither project editing nor project creation', () => {
+    capacity.write = false;
+    capacity.remaining = 1;
+    const view = render(
       <MemoryRouter initialEntries={['/projects']}>
         <ProjectsScreen />
       </MemoryRouter>,
     );
+    expect(screen.getByText('Project dashboard')).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Edit project' })).toBeNull();
 
-    expect(screen.getByText('Project dashboard')).toBeInTheDocument();
+    selection.mockReturnValue({
+      projects: [],
+      projectsSettled: true,
+      activeWorkspaceId: WORKSPACE,
+      isLoading: false,
+    });
+    view.rerender(
+      <MemoryRouter initialEntries={['/projects']}>
+        <ProjectsScreen />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText('No projects yet')).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Add project' })).toBeNull();
   });
 });

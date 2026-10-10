@@ -4,6 +4,7 @@ import { Fixtures, testConfig, testDatabase } from './support.ts';
 import { provisionDevelopmentLogin } from '../src/auth/bootstrap.ts';
 import { authenticateUser, registerUser } from '../src/auth/service.ts';
 import { hashPassword } from '../src/auth/password.ts';
+import { createWorkspace } from '../src/workspaces/service.ts';
 
 const config = testConfig(),
   db = testDatabase(config),
@@ -106,17 +107,15 @@ it('refuses existing ordinary/inactive identities; public signup only receives t
     .where('email', '=', email)
     .executeTakeFirstOrThrow();
   const ws = await db
-    .selectFrom('workspace_members')
-    .select('workspace_id')
-    .where('user_id', '=', registered.id)
-    .executeTakeFirstOrThrow();
-  created.push({ user_id: registered.id, workspace_id: ws.workspace_id });
+    .transaction()
+    .execute((trx) => createWorkspace(trx, registered.id, 'Registered'));
+  created.push({ user_id: registered.id, workspace_id: ws.id });
   expect(
     await db
       .selectFrom('account_grants')
       .innerJoin('billing_accounts', 'billing_accounts.id', 'account_grants.billing_account_id')
       .select('account_grants.source_ref')
-      .where('billing_accounts.workspace_id', '=', ws.workspace_id)
+      .where('billing_accounts.workspace_id', '=', ws.id)
       .execute(),
   ).toEqual(expect.arrayContaining([{ source_ref: 'system:public-signup' }]));
   expect(
@@ -124,7 +123,7 @@ it('refuses existing ordinary/inactive identities; public signup only receives t
       .selectFrom('account_grants')
       .innerJoin('billing_accounts', 'billing_accounts.id', 'account_grants.billing_account_id')
       .select('account_grants.id')
-      .where('billing_accounts.workspace_id', '=', ws.workspace_id)
+      .where('billing_accounts.workspace_id', '=', ws.id)
       .where('account_grants.source_ref', '!=', 'system:public-signup')
       .execute(),
   ).toEqual([]);

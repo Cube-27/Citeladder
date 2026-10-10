@@ -56,14 +56,14 @@ describe('useAuthMutation', () => {
   // only have read it UNSCOPED — no workspace is resolved at this point — so
   // the answer came from whichever workspace the backend defaulted to. The
   // shell's gate makes that decision from the resolved workspace instead.
-  it('primes the me cache and routes into the app', async () => {
+  it('primes the me cache and routes to the workspace chooser', async () => {
     const { result, queryClient } = setup();
 
     act(() => {
       void result.current.submit({});
     });
 
-    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/projects'));
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/workspaces'));
     expect(queryClient.getQueryData(queryKeys.auth.me())).toMatchObject({ id: sessionUser.id });
   });
 
@@ -102,7 +102,7 @@ describe('useAuthMutation', () => {
       void result.current.submit({});
     });
 
-    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/projects'));
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/workspaces'));
     await oldRequest;
     expect(wasAborted).toBe(true);
     expect(queryClient.getQueryData(['old-account', 'private'])).toBeUndefined();
@@ -168,7 +168,7 @@ describe('useAuthMutation', () => {
       void result.current.submit({});
     });
 
-    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/projects'));
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/workspaces'));
     globalThis.sessionStorage.clear();
   });
 });

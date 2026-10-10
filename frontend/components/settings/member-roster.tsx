@@ -19,12 +19,15 @@ import {
 import { Tooltip } from '@/components/ui/tooltip';
 import type { AssignableWorkspaceRole, WorkspaceMember } from '@/lib/api/workspaces';
 
-import { ROLE_OPTIONS } from './member-roles';
+import { ROLE_OPTIONS, roleLabel } from './member-roles';
 
 /**
  * The workspace roster. The Owner row is inert: the single designated Owner
  * changes only through a transfer, which swaps both roles in one server
- * transaction, so no control here can leave the workspace ownerless.
+ * transaction, so no control here can leave the workspace ownerless. Every
+ * control reports an intent; the caller confirms it before anything changes.
+ * Transfer is offered only to the Owner (`onTransfer` absent otherwise), and
+ * your own row offers nothing: leaving is a workspace action, not a removal.
  */
 export function MemberRoster({
   members,
@@ -41,9 +44,9 @@ export function MemberRoster({
   isError: boolean;
   busy: boolean;
   onRetry: () => void;
-  onChangeRole: (memberId: string, role: AssignableWorkspaceRole) => void;
-  onTransfer: (memberId: string) => void;
-  onRemove: (memberId: string) => void;
+  onChangeRole: (member: WorkspaceMember, role: AssignableWorkspaceRole) => void;
+  onTransfer?: (member: WorkspaceMember) => void;
+  onRemove: (member: WorkspaceMember) => void;
 }>) {
   if (isLoading) return <Skeleton className="h-24 w-full" />;
   if (isError) {
@@ -90,11 +93,11 @@ function MemberRow({
 }: Readonly<{
   member: WorkspaceMember;
   busy: boolean;
-  onChangeRole: (memberId: string, role: AssignableWorkspaceRole) => void;
-  onTransfer: (memberId: string) => void;
-  onRemove: (memberId: string) => void;
+  onChangeRole: (member: WorkspaceMember, role: AssignableWorkspaceRole) => void;
+  onTransfer?: (member: WorkspaceMember) => void;
+  onRemove: (member: WorkspaceMember) => void;
 }>) {
-  const isOwner = member.role === 'owner';
+  const inert = member.role === 'owner' || member.is_self;
   return (
     <TableRow>
       <TableCell>
@@ -105,12 +108,12 @@ function MemberRow({
         </div>
       </TableCell>
       <TableCell>
-        {isOwner ? (
-          <Badge variant="neutral">Owner</Badge>
+        {inert ? (
+          <Badge variant="neutral">{roleLabel(member.role)}</Badge>
         ) : (
           <Select
             value={member.role as AssignableWorkspaceRole}
-            onValueChange={(next) => onChangeRole(member.id, next)}
+            onValueChange={(next) => onChangeRole(member, next)}
             options={ROLE_OPTIONS}
             ariaLabel={`Role for ${member.email}`}
             disabled={busy}
@@ -119,27 +122,19 @@ function MemberRow({
       </TableCell>
       <TableCell>
         <div className="flex items-center justify-end gap-2">
-          {isOwner ? null : (
+          {inert ? null : (
             <>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                disabled={busy}
-                onClick={() => {
-                  // Ownership only moves back by another transfer, so the
-                  // confirmation names the member it is about.
-                  if (
-                    window.confirm(
-                      `Make ${member.email} the owner of this workspace? You become an admin.`,
-                    )
-                  ) {
-                    onTransfer(member.id);
-                  }
-                }}
-              >
-                Make owner
-              </Button>
+              {onTransfer ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  disabled={busy}
+                  onClick={() => onTransfer(member)}
+                >
+                  Make owner
+                </Button>
+              ) : null}
               <Tooltip content={`Remove ${member.email}`}>
                 <Button
                   type="button"
@@ -147,15 +142,7 @@ function MemberRow({
                   size="icon"
                   aria-label={`Remove ${member.email} from this workspace`}
                   disabled={busy}
-                  onClick={() => {
-                    if (
-                      window.confirm(
-                        `Remove ${member.email} from this workspace? They lose access immediately.`,
-                      )
-                    ) {
-                      onRemove(member.id);
-                    }
-                  }}
+                  onClick={() => onRemove(member)}
                 >
                   <Trash2 className="size-4" aria-hidden />
                 </Button>

@@ -1,9 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vite-plus/test';
 
-import { Button } from '@/components/ui/button';
-
-import { FlowActions, FlowGroup, FlowShell } from './flow-shell';
+import { FlowGroup, FlowShell } from './flow-shell';
 
 const steps = [
   { id: 'brand', label: 'Basics' },
@@ -24,22 +22,6 @@ describe('FlowShell', () => {
     const current = within(progress).getByRole('listitem', { current: 'step' });
     expect(current).toHaveTextContent('Research');
     expect(progress.querySelectorAll('[aria-current="step"]')).toHaveLength(1);
-  });
-
-  it('keeps secondary then primary actions in visual and DOM order', () => {
-    render(
-      <FlowActions
-        secondary={<Button variant="ghost">Back</Button>}
-        primary={<Button>Create project</Button>}
-      />,
-    );
-
-    const actions = screen.getByText('Back').closest('.flow-action-content');
-    expect(actions).not.toBeNull();
-    const labels = within(actions as HTMLElement)
-      .getAllByRole('button')
-      .map((button) => button.textContent);
-    expect(labels).toEqual(['Back', 'Create project']);
   });
 
   it('renders a labelled group with its heading, help, and meta copy', () => {

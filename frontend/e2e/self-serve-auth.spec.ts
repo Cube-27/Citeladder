@@ -67,28 +67,3 @@ test('the Account section of Settings carries the inline security controls', asy
   await page.getByRole('button', { name: 'Sign out all sessions' }).click();
   await expect(page.getByRole('dialog', { name: 'Sign out all sessions?' })).toBeVisible();
 });
-
-for (const width of [1280, 390]) {
-  test(`Terms validation keeps the sign-in card and submit button in place at ${width}px`, async ({
-    page,
-  }) => {
-    await page.setViewportSize({ width, height: 1000 });
-    await page.route('**/api/v1/**', (route) =>
-      route.fulfill({ status: 401, json: { detail: 'Sign in' } }),
-    );
-    await page.goto('/login');
-    await page.getByRole('heading', { name: 'Sign in' }).waitFor();
-    await page.evaluate(() => document.fonts.ready);
-    const card = page.locator('.flow-content');
-    const submit = page.getByRole('button', { name: 'Continue', exact: true });
-    const before = { card: await card.boundingBox(), submit: await submit.boundingBox() };
-    await page.getByRole('button', { name: 'Continue with Google' }).click();
-    await expect(page.getByRole('alert')).toBeVisible();
-    expect(await card.boundingBox()).toEqual(before.card);
-    expect(await submit.boundingBox()).toEqual(before.submit);
-    await page.getByRole('checkbox').check();
-    await expect(page.getByRole('alert')).toHaveCount(0);
-    expect(await card.boundingBox()).toEqual(before.card);
-    expect(await submit.boundingBox()).toEqual(before.submit);
-  });
-}

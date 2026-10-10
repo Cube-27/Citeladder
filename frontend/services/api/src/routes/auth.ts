@@ -1,6 +1,7 @@
 import {
   authResponseSchema,
   authSecuritySchema,
+  policyRevisionSchema,
   registrationResponseSchema,
   oauthStartResponseSchema,
   oauthProvidersResponseSchema,
@@ -46,6 +47,7 @@ import {
   changePassword,
   LOGIN_FAILURE_OPERATION,
 } from '../auth/challenges.ts';
+import { currentPolicyRevision } from '../workspaces/policies.ts';
 
 const credentialsSchema = z.object({
   return_to: z.string().max(1024).optional(),
@@ -144,6 +146,16 @@ export const authRoutes = [
         options,
       );
       return { authorize_url: started.authorize_url, state: started.state };
+    },
+  }),
+  defineGetRoute({
+    ...base,
+    authorize: 'session',
+    // The revision a person accepts when they create their workspace.
+    path: '/api/v1/auth/policies',
+    response: policyRevisionSchema,
+    async handle() {
+      return currentPolicyRevision();
     },
   }),
   defineGetRoute({

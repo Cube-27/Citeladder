@@ -136,7 +136,7 @@ async function deliverChallenge(
       purpose === 'verification'
         ? 'Verify your CiteLadder email'
         : 'Reset your CiteLadder password',
-    text: `${purpose === 'verification' ? 'Confirm your email using your signup password. Your trial starts at registration.' : 'Choose a new password to secure your account.'}\n${url.toString()}\nIf you did not request this, you can ignore this message.`,
+    text: `${purpose === 'verification' ? 'Confirm your email using your signup password. Your trial starts when you set up your workspace.' : 'Choose a new password to secure your account.'}\n${url.toString()}\nIf you did not request this, you can ignore this message.`,
   });
 }
 

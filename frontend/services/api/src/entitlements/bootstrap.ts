@@ -92,7 +92,21 @@ export async function ensureWorkspaceBilling(
       .where('source_ref', '=', 'system:public-signup')
       .executeTakeFirst();
     if (existing) return;
+    // The trial starts when the person creates their workspace. One person has
+    // one trial: a later workspace inherits the exact window of their first.
+    const earlier = await db
+      .selectFrom('account_grants')
+      .innerJoin('billing_accounts', 'billing_accounts.id', 'account_grants.billing_account_id')
+      .select(['account_grants.valid_from', 'account_grants.valid_until'])
+      .where('billing_accounts.owner_user_id', '=', user.id)
+      .where('account_grants.source_kind', '=', 'trial')
+      .where('account_grants.source_ref', '=', 'system:public-signup')
+      .orderBy('account_grants.valid_from')
+      .limit(1)
+      .executeTakeFirst();
+    const from = earlier?.valid_from ?? locked.created_at;
     const days = resolveSettingSpec(policy.billing.settings.trial_days) as number;
+    const until = earlier?.valid_until ?? new Date(from.getTime() + days * 86400000);
     await issueBundle(db, {
       workspaceId,
       accountId: account.id,
@@ -101,8 +115,8 @@ export async function ensureWorkspaceBilling(
       sourceRef: 'system:public-signup',
       revision: trial.revision,
       specs: Object.entries(trial.grants).map(([key, value]) => ({ key, value })),
-      from: locked.registration_cohort_at,
-      until: new Date(locked.registration_cohort_at.getTime() + days * 86400000),
+      from,
+      until,
       primary: true,
       profile: trial.profile,
       priority: 0,

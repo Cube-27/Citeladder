@@ -19,6 +19,7 @@ export function ProjectControls({
   // and the backend refuses it either way.
   const { activeWorkspaceId, mayCreate, canAddProject, remainingProjectSlots } =
     useProjectCreation();
+  if (!onEditProject && !mayCreate) return null;
   return (
     <Dropdown>
       <DropdownTrigger asChild>

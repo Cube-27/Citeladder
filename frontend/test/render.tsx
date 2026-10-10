@@ -50,11 +50,13 @@ export function testProjectSelection(
     // publishes them. Consumers gate controls on these names, so a harness
     // that omitted them would hide exactly what most screens render.
     capabilities: [
+      'delete_projects',
       'manage_billing',
       'manage_credentials',
       'manage_members',
       'read',
       'run',
+      'transfer_ownership',
       'write',
     ],
     created_at: '2026-01-01T00:00:00Z',

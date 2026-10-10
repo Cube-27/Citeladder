@@ -246,10 +246,12 @@ async function createAccounts(
   for (const email of emails) {
     const user = await createIdentity(db, email, encoded);
     if (!user) throw new Error('user_already_exists');
-    // An owned workspace always gets the operator baseline; extra access is a separate bundle.
-    await provisionAccount(db, user, { provisionAccess: !action.workspaceId });
-    const personal = await bootstrapWorkspace(db, user.id);
+    // A person joining a shared workspace owns none until they create their own.
+    // An owned workspace gets the operator baseline; extra access is a separate bundle.
+    if (!shared) await provisionAccount(db, user);
+    const personal = shared ? undefined : await bootstrapWorkspace(db, user.id);
     const target = shared ?? personal;
+    if (!target) throw new Error('account_workspace_unresolved');
     if (shared) {
       // Operator-created identities join immediately. Existing identities still use invitations.
       const now = new Date();
@@ -272,9 +274,9 @@ async function createAccounts(
         user.id,
       );
     }
-    await recordSecurityEvent(db, 'account.create', session.actorId, personal.workspaceId, user.id);
+    await recordSecurityEvent(db, 'account.create', session.actorId, target.workspaceId, user.id);
     const access =
-      !shared && action.access
+      personal && action.access
         ? await grantAccess(db, session, personal, action.access, {
             ...request,
             key: `${request.key}:${user.id}`,
@@ -285,7 +287,7 @@ async function createAccounts(
       user_id: user.id,
       workspace_id: target.workspaceId,
       role: action.role,
-      personal_workspace_id: personal.workspaceId,
+      personal_workspace_id: personal?.workspaceId ?? null,
       access,
     });
   }
@@ -604,7 +606,6 @@ export async function manageAccount(db: Database, session: OperatorSession, acti
         if (!encoded) throw new Error('New identity requires a terminal password');
         const user = await createIdentity(trx, email!, encoded);
         if (!user) throw new Error('user_already_exists');
-        await provisionAccount(trx, user, { provisionAccess: false });
       }
       return invitation;
     }

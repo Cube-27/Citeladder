@@ -1,15 +1,19 @@
 import { ASSIGNABLE_WORKSPACE_ROLES } from '@/lib/api/workspaces';
+import { titleCaseStatus } from '@/lib/utils';
+
+/** A membership role as people read it: `admin` → `Admin`. */
+export const roleLabel = titleCaseStatus;
 
 /** The roles a control may offer. `owner` is never among them. */
 export const ROLE_OPTIONS = ASSIGNABLE_WORKSPACE_ROLES.map((role) => ({
   value: role,
-  label: role.charAt(0).toUpperCase() + role.slice(1),
+  label: roleLabel(role),
 }));
 
 /** One plain sentence per role, matching the backend's one policy. */
 export const ROLE_SUMMARY: Record<string, string> = {
-  owner: 'Full access, including billing and members. One per workspace.',
-  admin: 'The same access as the owner, including billing and members.',
-  member: 'Everything except billing and member management.',
+  owner: 'Full access, including billing, members and handing ownership to someone else.',
+  admin: 'Everything the owner can do except hand over ownership.',
+  member: 'Works in projects. No billing, members, integrations or project deletion.',
   viewer: 'Read-only.',
 };

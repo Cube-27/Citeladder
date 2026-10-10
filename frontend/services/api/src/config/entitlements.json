@@ -160,6 +160,14 @@
       "issuable": true,
       "public": false,
       "rolling_window_seconds": null
+    },
+    "team_members": {
+      "type": "flag",
+      "levels": 0,
+      "ordered_values": [],
+      "issuable": true,
+      "public": false,
+      "rolling_window_seconds": null
     }
   },
   "grant_source_kinds": ["addon", "override", "plan", "topup", "trial"],
@@ -169,6 +177,7 @@
   "prompt_slots": "prompt_slots",
   "project_slots": "project_slots",
   "project_deletion": "project_deletion",
+  "team_members": "team_members",
   "capacity_lock": {
     "namespace": 1128353857,
     "person": "citeladder-cap"

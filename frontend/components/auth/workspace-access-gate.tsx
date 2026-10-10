@@ -6,13 +6,12 @@ import { workspacesApi } from '@/lib/api/workspaces';
 import { ApiError } from '@/lib/api/errors';
 import { queryKeys } from '@/lib/api/query-keys';
 import { workspaceAccessSchema as accessSchema } from '@citeladder/contracts/auth';
-import { authApi } from '@/lib/api/auth';
 import { useProjectContext } from '@/lib/project/project-context';
+import { isWorkspaceFreeRoute } from '@/lib/project/bootstrap';
 import { contactSalesHref } from '@/lib/config/contact';
 import { websiteHref } from '@/lib/config/app-link';
 import { getBootstrapReadTimeoutMs } from '@/lib/config/operational';
-import { hardNavigate } from '@/lib/navigation/hard-navigate';
-import { clearAccountScopedClientState } from '@/lib/auth/account-transition';
+import { signOut } from '@/lib/auth/account-transition';
 import { Button } from '@/components/ui/button';
 import { Alert } from '@/components/ui/alert';
 import { ShellFallback } from '@/components/layout/shell-fallback';
@@ -71,6 +70,7 @@ export function WorkspaceAccessGate({ children }: Readonly<{ children: ReactNode
   const {
     activeWorkspaceId,
     workspaces,
+    status,
     isLoading: workspaceLoading,
     retry: retryWorkspaces,
   } = useProjectContext();
@@ -79,7 +79,12 @@ export function WorkspaceAccessGate({ children }: Readonly<{ children: ReactNode
   const [, tick] = useState(0);
   const [securityOpen, setSecurityOpen] = useState(false);
   useAccessLoss(activeWorkspaceId);
-  const recovery = location.pathname.replace(/\/+$/u, '').toLowerCase() === '/invitations/accept';
+  // Accepting an invitation, choosing a workspace and setting up your own never
+  // wait on the selected workspace's access; someone with no workspace has none.
+  const recovery =
+    location.pathname.replace(/\/+$/u, '').toLowerCase() === '/invitations/accept' ||
+    isWorkspaceFreeRoute(location.pathname, location.search) ||
+    status === 'no_workspace';
   const access = useQuery({
     queryKey: queryKeys.workspaces.access(activeWorkspaceId ?? ''),
     enabled: Boolean(activeWorkspaceId) && !recovery,
@@ -153,15 +158,7 @@ export function WorkspaceAccessGate({ children }: Readonly<{ children: ReactNode
         <Dialog open={securityOpen} onOpenChange={setSecurityOpen} title="Account security">
           <AccountSecurity showHeading={false} />
         </Dialog>
-        <Button
-          className="w-fit"
-          variant="secondary"
-          onClick={async () => {
-            await authApi.logout();
-            await clearAccountScopedClientState(client);
-            hardNavigate('/login');
-          }}
-        >
+        <Button className="w-fit" variant="secondary" onClick={() => void signOut(client)}>
           Sign out
         </Button>
       </main>
