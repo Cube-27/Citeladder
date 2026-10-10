@@ -18,6 +18,7 @@ import type { Database } from '../db/database.ts';
 import { wireUtc, utcText } from '../db/timestamps.ts';
 import { AnalysisNotFoundError } from './selection.ts';
 import { executionSurfaceEvidence } from './surface.ts';
+import { executionPerception } from './perception.ts';
 
 export type ExecutionEvidenceResponse = z.input<typeof executionEvidenceSchema>;
 
@@ -78,7 +79,7 @@ export async function getExecutionEvidence(
     .executeTakeFirst();
   const audit = await db
     .selectFrom('audits')
-    .select('configuration')
+    .select(['configuration', 'audit_scope'])
     .where('id', '=', analysis.audit_id)
     .where('workspace_id', '=', input.workspaceId)
     .executeTakeFirst();
@@ -124,6 +125,12 @@ export async function getExecutionEvidence(
       workspaceId: input.workspaceId,
       taskId: input.taskId,
       analysis,
+    }),
+    perception: await executionPerception(db, {
+      workspaceId: input.workspaceId,
+      analysisId: analysis.id,
+      assessments: analysis.entity_assessments,
+      audit,
     }),
     created_at: wireUtc(analysis.created_at_text!),
   };

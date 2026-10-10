@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { benchmarkModeSchema } from './project.ts';
 import { logicalEngineSchema, transportProviderSchema } from './providers.ts';
+import { executionPerceptionSchema } from './visibility-perception.ts';
 
 const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(shape);
 const uuid = () => z.uuid();
@@ -381,5 +382,7 @@ export const executionEvidenceSchema = responseObject({
   // Null for an LLM execution, and null for a search execution that
   // produced no observation — a gap in ours, not a measured absence.
   search_surface: searchSurfaceEvidenceSchema.nullable().default(null),
+  // Per named business: its answer perception label and verified quotes.
+  perception: z.array(executionPerceptionSchema),
   created_at: z.string(),
 });
