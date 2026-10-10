@@ -1,6 +1,7 @@
 /** Project reads over the prompt, Action, demand, commerce and research owners. */
 import { sql } from 'kysely';
 import { policy } from '../config.ts';
+import { groundedSql } from '../prompts/observed-queries.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { strings } from '../db/json.ts';
 import { isoDateText, utcText } from '../db/timestamps.ts';
@@ -147,6 +148,8 @@ export async function promptPortfolio(
       'p.created_at',
     ])
     .select(utcText(sql.ref('p.created_at')).as('cursor_at'))
+    // Whether the project's own searches informed the wording; never the queries.
+    .select(groundedSql(sql`p.generation_evidence->'evidence_refs'`).as('grounded'))
     .where('projects.id', '=', scope.projectId);
   if (args.prompt_set_id) query = query.where('s.id', '=', args.prompt_set_id);
   if (args.active_only)

@@ -28,6 +28,7 @@ const context = {
     business_context: { category: 'Maxi dresses' },
     demand_signals: [{ observed_query: 'best dresses online' }],
   },
+  observed: [],
   vocabulary: { tokens: new Set(['dress', 'dresses']), phrases: new Set<string>() },
 } as unknown as GenerationContext;
 
@@ -56,6 +57,41 @@ it('admits category language but rejects tracked identities, placeholders and co
   );
   expect(result.admitted.map((row) => row.text)).toEqual([texts[0]]);
   expect(result.drops).toEqual({ branded_core: 3, observed_copy: 1, placeholder: 1 });
+});
+
+it('drops an exact copy of any observed search the run read, not only demand signals', () => {
+  const grounded = {
+    ...context,
+    observed: [
+      {
+        id: 'row',
+        source: 'gsc' as const,
+        text: 'which maxi dresses suit a beach wedding',
+        topic_id: 'topic',
+        weight: 40,
+      },
+    ],
+  } as GenerationContext;
+  const input = generationInput.parse({ count: 2 }),
+    slots = planSlots(grounded, input, []);
+  const texts = [
+    'Which maxi dresses suit a beach wedding?',
+    'Which maxi dresses suit a garden party?',
+  ];
+  const result = admitDrafts(
+    texts.map((text, index) => ({
+      text,
+      slot_id: slots[index]!.slot_id,
+      buyer_stage: 'decision',
+      prompt_intent: 'recommend',
+    })),
+    slots,
+    grounded,
+    input,
+    [],
+  );
+  expect(result.admitted.map((row) => row.text)).toEqual([texts[1]]);
+  expect(result.drops).toEqual({ observed_copy: 1 });
 });
 
 it('requires the brand in diagnostics and a competitor comparison in the comparison cohort', () => {

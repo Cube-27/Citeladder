@@ -33,6 +33,8 @@ Actionable signals can connect to an Action through the **Act on this** area. Op
 
 Use **Ask agent** when you want an explanation first. Attached references carry the relevant evidence into the chat; inspect or remove them before sending.
 
+Your non-branded Search Console queries also guide how [generated prompts](/prompts/#grounded-in-your-search-data) are phrased.
+
 ## When no signal is available
 
 Check connected-data coverage and the detector's stated limitations. Missing query-page evidence, ambiguous targets or insufficient compatible history can prevent a reliable signal. "No available signal" does not establish that there is no opportunity.

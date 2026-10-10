@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { record, strings } from '../db/json.ts';
-import { projectEntityMatching } from '../analysis/entity-matching.ts';
+import { entityKey, projectEntityMatching } from '../analysis/entity-matching.ts';
 import { currentDemandSnapshot } from '../opportunities/sources.ts';
 import { loadVocabulary } from './binding.ts';
 import {
@@ -16,6 +16,7 @@ import {
   type GenerationInput,
 } from './generation-input.ts';
 import { acquireProjectLock } from './locks.ts';
+import { loadObservedQueries } from './observed-queries.ts';
 import { scopedPromptSet } from './prompt-sets.ts';
 
 export type OfferingMap = z.infer<typeof offeringMapSchema>;
@@ -248,6 +249,18 @@ export function generationContext(
       : null;
     if (input.agent_revision_id && !revision)
       throw generationInvalid('Portfolio revision is unavailable in this project');
+    // Persisted search data only: grounding never fetches, and an empty result
+    // leaves generation exactly as it is without it.
+    const observed = await loadObservedQueries(trx, {
+      workspaceId,
+      projectId: project.id,
+      languageCode: project.language_code,
+      topics,
+      competitors: context.competitors.map((row) => ({
+        aliases: [row.name, ...row.aliases],
+        rule: matching[entityKey(row.name)],
+      })),
+    });
     return {
       set,
       project,
@@ -261,6 +274,7 @@ export function generationContext(
       candidates,
       snapshot,
       demand,
+      observed,
       revision,
       vocabulary: await loadVocabulary(
         trx,

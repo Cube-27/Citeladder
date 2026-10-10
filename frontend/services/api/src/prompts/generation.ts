@@ -37,6 +37,7 @@ import { distribution } from './generation-metrics.ts';
 import { dimensions, geoTerms } from './generation-plan.ts';
 import { gatedOut, judgeDrafts, selectDrafts } from './generation-quality.ts';
 import { acquireProjectLock, acquirePromptSetLock } from './locks.ts';
+import { observedRef } from './observed-queries.ts';
 import { scopedPromptSet } from './prompt-sets.ts';
 import { listTopics } from './topics.ts';
 import { compareText } from '../text-order.ts';
@@ -78,7 +79,10 @@ function candidateRow(draft: Draft, { workspaceId, setId, runId, cohort, now }: 
     prompt_intent: draft.prompt_intent,
     cohort,
     slot_id: draft.slot.slot_id,
-    evidence_refs: JSON.stringify([draft.slot.evidence_ref]),
+    evidence_refs: JSON.stringify([
+      draft.slot.evidence_ref,
+      ...(draft.slot.grounding ?? []).map(observedRef),
+    ]),
     validation: JSON.stringify({
       admission: 'passed',
       topical_binding: policy.prompts.binding.accepted,
@@ -237,6 +241,7 @@ function stage(
       demand_snapshot_id: context.snapshot?.id ?? null,
       demand_signal_ids: context.demand.map((row) => row.id),
       demand_signal_coverage: context.snapshot?.coverage ?? {},
+      grounding: output.grounding,
       ...(revision
         ? {
             agent_output_id: revision.output_id,

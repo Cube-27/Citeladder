@@ -39,6 +39,8 @@ A published competitor keyword dataset can open Actions for searches where a sav
 
 The Action targets the one page that already covers the search, or a planned page when no single page does. After you declare it implemented, it is measured by whether your site appears for that search, in Search Console or in a later dataset, for up to 90 days. Rankings from the provider are estimates.
 
+Published keyword datasets in your project language also guide how [generated prompts](/prompts/#grounded-in-your-search-data) are phrased.
+
 ## Read acquisition outcomes
 
 An empty result may still incur a provider charge. Partial and uncertain outcomes need inspection; do not assume retrying is free or that missing normalized rows mean no provider work happened.

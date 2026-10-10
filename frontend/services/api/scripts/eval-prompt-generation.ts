@@ -14,15 +14,26 @@ import { gitDirectory } from './git-directory.ts';
 import { createModelGateway } from '../src/models/gateway.ts';
 import { generateDrafts } from '../src/prompts/generation-drafts.ts';
 import { generationInput, generationSetting } from '../src/prompts/generation-input.ts';
-import { setMetrics, thresholdFailures } from '../src/prompts/generation-metrics.ts';
+import {
+  observedLikeness,
+  setMetrics,
+  thresholdFailures,
+} from '../src/prompts/generation-metrics.ts';
 import { selectDrafts } from '../src/prompts/generation-quality.ts';
-import { fixtureContext, generationFixtures } from '../test/fixtures/prompt-generation/context.ts';
+import {
+  fixtureContext,
+  fixtureObserved,
+  generationFixtures,
+} from '../test/fixtures/prompt-generation/context.ts';
 
 const { values } = parseArgs({
   options: {
     live: { type: 'boolean', default: false },
     count: { type: 'string', default: '20' },
     fixture: { type: 'string' },
+    // Grounded runs give draft batches the fixture's observed searches; `both`
+    // reports each fixture ungrounded and grounded side by side.
+    grounding: { type: 'string', default: 'both' },
   },
 });
 if (!values.live)
@@ -31,15 +42,21 @@ const count = Number(values.count);
 // The same ceiling the API enforces, so an eval cannot outspend a request.
 if (!Number.isInteger(count) || count < 1 || count > generationSetting('max_count'))
   throw new Error(`--count must be an integer from 1 to ${generationSetting('max_count')}`);
+const modes = new Map([
+  ['off', [false]],
+  ['on', [true]],
+  ['both', [false, true]],
+]).get(values.grounding ?? '');
+if (!modes) throw new Error('--grounding must be off, on or both');
 const gateway = createModelGateway();
 const log = join(gitDirectory(process.cwd()), 'prompt-generation-eval.log');
 const run = new Date().toISOString();
 
 /** One fixture through planning, the live model, admission and selection, scored. */
-async function evaluate(fixture: (typeof generationFixtures)[number]) {
+async function evaluate(fixture: (typeof generationFixtures)[number], grounded: boolean) {
   const started = performance.now();
   const output = await generateDrafts(
-    fixtureContext(fixture),
+    fixtureContext(fixture, [], { grounded }),
     generationInput.parse({ count }),
     gateway,
     AbortSignal.timeout(generationSetting('generation_deadline_seconds') * 1000),
@@ -62,6 +79,14 @@ async function evaluate(fixture: (typeof generationFixtures)[number]) {
   return {
     run,
     fixture: fixture.name,
+    grounded,
+    slots_grounded: output.grounding.slots_grounded,
+    // Measured against the fixture's searches in both modes, so the grounded
+    // run's change is visible beside the ungrounded baseline.
+    observed_likeness: observedLikeness(
+      selected.map((draft) => ({ text: draft.text, topic_id: draft.slot.topic_id })),
+      fixtureObserved(fixture),
+    ),
     generator_version: policy.prompts.generation.version,
     elapsed_ms: Math.round(performance.now() - started),
     stop: output.stop,
@@ -86,14 +111,14 @@ async function evaluate(fixture: (typeof generationFixtures)[number]) {
 const records = await Promise.all(
   generationFixtures
     .filter((item) => !values.fixture || item.name === values.fixture)
-    .map(evaluate),
+    .flatMap((item) => modes.map((grounded) => evaluate(item, grounded))),
 );
 await appendFile(log, records.map((record) => `${JSON.stringify(record)}\n`).join(''));
-for (const { fixture, metrics, failures } of records) {
+for (const { fixture, grounded, metrics, failures, observed_likeness } of records) {
   const verdict = failures.length ? 'failed ' + failures.join(', ') : 'within thresholds';
   const located = metrics.located_share.toFixed(2);
   process.stdout.write(
-    `${fixture}: ${metrics.count}/${count} selected, located ${located}, ${verdict}\n`,
+    `${fixture} (${grounded ? 'grounded' : 'ungrounded'}): ${metrics.count}/${count} selected, located ${located}, observed-like ${observed_likeness.toFixed(2)}, ${verdict}\n`,
   );
 }
 process.stdout.write(`Log: ${log}\n`);

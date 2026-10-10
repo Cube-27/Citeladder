@@ -12,6 +12,7 @@ import { storedOutcomes } from '../src/opportunities/verification-decisions.ts';
 import { verifyImplementationEvents } from '../src/opportunities/verification.ts';
 import type { QueueTask } from '../src/queue/task-queue.ts';
 import { datasetPage } from '../src/search-intelligence/reads.ts';
+import { searchIntelligenceRun } from './search-intelligence-fixtures.ts';
 import { testDatabase } from './support.ts';
 import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
 
@@ -50,56 +51,7 @@ async function project() {
     .where('id', '=', tenant.projectId)
     .execute();
   await fixtures.competitor(tenant.projectId, { name: 'Rival', domains: ['rival.test'] });
-  const connectionId = randomUUID(),
-    runId = randomUUID(),
-    at = new Date();
-  await db
-    .insertInto('provider_connections')
-    .values({
-      id: connectionId,
-      workspace_id: tenant.workspaceId,
-      label: 'DataForSEO',
-      transport_provider: 'dataforseo',
-      api_key_encrypted: 'ciphertext',
-      base_url: '',
-      credential_revision: randomUUID(),
-      active: true,
-      last_test_status: 'ok',
-      created_at: at,
-      updated_at: at,
-    })
-    .execute();
-  await db
-    .insertInto('search_intelligence_runs')
-    .values({
-      id: runId,
-      workspace_id: tenant.workspaceId,
-      project_id: tenant.projectId,
-      actor_user_id: tenant.userId,
-      connection_id: connectionId,
-      connection_revision: randomUUID(),
-      account_identity: 'account',
-      status: 'succeeded',
-      action: 'analysis',
-      idempotency_key: runId,
-      frozen_scope: '{}',
-      call_plan: '[]',
-      reused_datasets: '[]',
-      pricing_version: policy.search_intelligence.price_version,
-      estimated_cost_usd: '0.1',
-      planned_calls: 1,
-      completed_calls: 1,
-      planned_rows: 10,
-      received_rows: 10,
-      uncertain_calls: 0,
-      error_code: '',
-      error_detail: '',
-      expires_at: at,
-      confirmed_at: at,
-      created_at: at,
-      updated_at: at,
-    })
-    .execute();
+  const runId = await searchIntelligenceRun(db, tenant);
   return { ...tenant, runId };
 }
 

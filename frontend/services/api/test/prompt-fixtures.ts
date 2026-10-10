@@ -1,7 +1,9 @@
 /** Prompt-library, billing and candidate rows for the prompts suites. */
 import { randomUUID } from 'node:crypto';
+import { vi } from 'vitest';
 
 import type { Database } from '../src/db/database.ts';
+import { createModelGateway, gatewaySettings } from '../src/models/gateway.ts';
 import { promptTextHash } from '../src/prompts/normalization.ts';
 
 const now = () => new Date();
@@ -190,4 +192,49 @@ export async function candidate(
     })
     .execute();
   return id;
+}
+
+/** One draft request as the model received it: the system prompt and the batch's slots. */
+export type DraftRequest = {
+  system: string;
+  slots: (Record<string, unknown> & { slot_id: string })[];
+};
+
+/**
+ * Generation dependencies whose gateway answers every planned slot of a batch
+ * with a distinct question, or fails the calls `fail` names (1-based) with a
+ * non-retried provider error. `onRequest` sees each answered request.
+ */
+export function echoDependencies({
+  fail = [],
+  onCall,
+  onRequest,
+}: {
+  fail?: number[];
+  onCall?: (call: number) => void;
+  onRequest?: (request: DraftRequest) => void;
+} = {}) {
+  let calls = 0;
+  const fetch = vi.fn<typeof globalThis.fetch>(async (_url, init) => {
+    const call = ++calls;
+    onCall?.(call);
+    if (fail.includes(call)) return new Response('bad request', { status: 400 });
+    const body = JSON.parse(String(init?.body)) as { messages: { content: string }[] };
+    const user = JSON.parse(body.messages[1]!.content.split('\n\nReturn only JSON')[0]!) as {
+      slots: DraftRequest['slots'];
+    };
+    onRequest?.({ system: body.messages[0]!.content, slots: user.slots });
+    const prompts = user.slots.map((slot) => ({
+      slot_id: slot.slot_id,
+      text: `Which running shoes suit runner ${slot.slot_id} best?`,
+      buyer_stage: 'consideration',
+      prompt_intent: 'recommend',
+    }));
+    return Response.json({ choices: [{ message: { content: JSON.stringify({ prompts }) } }] });
+  });
+  const gateway = createModelGateway(
+    { ...gatewaySettings({}), apiKey: 'test-only', model: 'test', baseUrl: 'https://model.test' },
+    { fetch, sleep: async () => {} },
+  );
+  return { gateway: () => gateway, judge: () => null, io: { fetch } };
 }

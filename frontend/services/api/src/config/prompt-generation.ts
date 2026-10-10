@@ -1,6 +1,6 @@
 /** Buyer-query generation policy and templates; no model output is raw truth. */
 export const promptGeneration = {
-  version: 'prompt-gen-v4',
+  version: 'prompt-gen-v5',
   policy_version: 'buyer-query-policy-2',
   cell_max_facets: 2,
   map_calls: 1,
@@ -56,6 +56,30 @@ export const promptGeneration = {
     opening_concentration_max: 0.4,
     mean_words: [8, 25] as [number, number],
     shortfall_max: 0.1,
+  },
+  /**
+   * Grounding in the project's own search data: persisted Search Console
+   * queries and published Search Intelligence keywords steer draft phrasing.
+   * Nothing is fetched for it, and impressions or search volume are only an
+   * ordering weight, never AI prompt volume.
+   */
+  observed: {
+    gsc_window_days: 90,
+    gsc_min_impressions: 10,
+    si_dataset_kinds: ['ranking_keywords', 'missing_keywords', 'shared_keywords'],
+    /** Rows read per source before filtering, highest weight first. */
+    source_row_limit: 2000,
+    min_tokens: 3,
+    max_chars: 120,
+    max_per_topic: 50,
+    examples_per_slot: 3,
+    /** Token Jaccard at which an eval prompt counts as phrased like an observed query. */
+    likeness_min_jaccard: 0.25,
+    /** A shorter query still counts when it opens with one of its language's question words. */
+    question_words: {
+      en: ['how', 'what', 'which', 'who', 'where', 'when', 'why', 'can', 'should', 'is', 'are'],
+    } as Record<string, string[]>,
+    evidence_kind: 'observed_query',
   },
   /** Context fields that never bind generated or proposed text to the project. */
   generated_binding_excluded_fields: ['service_areas'],
@@ -204,11 +228,16 @@ const cohortRules = {
     'Every query must name the tracked brand and at least one supplied competitor. Use the compare prompt_intent.',
 };
 
+/** Appended only when some slot of the run carries the project's own searches. */
+const groundingRule =
+  'How real buyers search in this area: a slot may carry buyer_search_examples, searches people already typed into a search engine for that topic. They are examples only. Do not copy them, and do not treat them as claims about this business or as required topics. Use them to learn the words and concerns real buyers use, then write a short question a buyer would ask an AI assistant that is answered by naming a business.';
+
 export function generationSystemPrompt(
   businessModel: string,
   cohort: keyof typeof cohortRules,
+  grounded = false,
 ): string {
   const base = template.replace('{example}', () => examples[businessModel] ?? fallbackExample);
   if (!Object.hasOwn(cohortRules, cohort)) throw new TypeError(`Unknown prompt cohort: ${cohort}`);
-  return `${base}\n${cohortRules[cohort]}`;
+  return [base, cohortRules[cohort], ...(grounded ? [groundingRule] : [])].join('\n');
 }

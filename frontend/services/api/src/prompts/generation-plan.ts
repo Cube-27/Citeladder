@@ -9,6 +9,8 @@ import { record, strings } from '../db/json.ts';
 import type { GenerationContext, OfferingMap } from './generation-context.ts';
 import { generationSetting, type GenerationInput } from './generation-input.ts';
 import { isNonEmpty, type NonEmpty } from '../lists.ts';
+import { bindingTokens, sharedTokens } from './binding.ts';
+import type { ObservedQuery } from './observed-queries.ts';
 
 const G = policy.prompts.generation;
 export const dimensions = ['attributes', 'situations', 'audiences'] as const;
@@ -26,9 +28,15 @@ export type Slot = {
   /** Intents that suit the target stage: planning guidance, not an admission rule. */
   target_prompt_intents?: string[];
   evidence_ref: Record<string, unknown>;
+  /** Same-topic searches that steer phrasing; absent when the project has none. */
+  grounding?: Grounding[];
 };
+type Grounding = Pick<
+  ObservedQuery,
+  'id' | 'source' | 'text' | 'classifier_version' | 'override_id'
+>;
 type Facet = { dimension: number; value: string; suggested: boolean };
-type PlanContext = Pick<GenerationContext, 'selected' | 'topics' | 'maps'> & {
+type PlanContext = Pick<GenerationContext, 'selected' | 'topics' | 'maps' | 'observed'> & {
   context: Pick<GenerationContext['context'], 'business_context'>;
 };
 
@@ -178,6 +186,41 @@ function nextCombo(plan: Planner, combos: NonEmpty<Facet[]>): Facet[] {
 }
 
 /**
+ * Up to `examples_per_slot` of the topic's observed searches, those sharing
+ * the most tokens with the cell's offering and facets first. Ties keep the
+ * loader's ranking (Search Console impressions, then keyword volume, then
+ * text): weights of different sources are never compared directly.
+ */
+type TokenizedSearch = { query: ObservedQuery; tokens: Set<string> };
+/** Each topic's observed searches in loader order, tokenized once per plan. */
+const searchesByTopic = (observed: readonly ObservedQuery[]) =>
+  Map.groupBy(
+    observed.map((query) => ({ query, tokens: bindingTokens(query.text) })),
+    (search) => search.query.topic_id,
+  );
+
+function groundingFor(
+  searches: readonly TokenizedSearch[],
+  need: Record<string, string>,
+): Grounding[] {
+  const cell = bindingTokens(Object.values(need).join(' '));
+  return (
+    searches
+      .map(({ query, tokens }) => ({ query, shared: sharedTokens(tokens, cell) }))
+      // A stable sort, so equal overlap keeps the loader's order.
+      .toSorted((a, b) => b.shared - a.shared)
+      .slice(0, G.observed.examples_per_slot)
+      .map(({ query: { id, source, text, classifier_version, override_id } }) => ({
+        id,
+        source,
+        text,
+        classifier_version,
+        override_id,
+      }))
+  );
+}
+
+/**
  * Plan `count × overgenerate_factor` cells round-robin over the selected
  * offerings. Each offering covers every stage with a bare cell before any
  * facet; afterwards facets attach to at most `facet_cell_share` of its cells
@@ -189,6 +232,7 @@ export function planSlots(
   suggestions: OfferingMap[],
 ): Slot[] {
   const plans = planners(context, suggestions);
+  const searches = searchesByTopic(context.observed);
   const markets = plannedMarkets(context),
     share = locationShare(context),
     stages = G.stages;
@@ -225,6 +269,7 @@ export function planSlots(
       const need: Record<string, string> = { offering: plan.map?.offering ?? plan.topic.name };
       for (const facet of combo) need[facets[facet.dimension]!] = facet.value;
       if (market) need.market = market;
+      const grounding = groundingFor(searches.get(plan.topic.id) ?? [], need);
       return {
         slot_id: `q${index + 1}`,
         topic_id: plan.topic.id,
@@ -242,15 +287,27 @@ export function planSlots(
           review_state: combo.some((facet) => facet.suggested) ? 'suggested' : 'confirmed',
           evidence_type: 'hypothesis',
         },
+        ...(grounding.length ? { grounding } : {}),
       };
     },
   );
 }
 
 /**
+ * A slot as a draft batch receives it: grounding becomes example wording,
+ * without row identities, and a slot without grounding is sent unchanged.
+ */
+export function modelSlot({ grounding, ...slot }: Slot) {
+  return grounding?.length
+    ? { ...slot, buyer_search_examples: grounding.map((example) => example.text) }
+    : slot;
+}
+
+/**
  * What a quick-generate draft batch knows about the business: category,
  * offerings, closed facets and register. No prose, sources, demand signals or
  * competitors, so the wording follows the planned cell rather than the profile.
+ * The only observed data a batch sees is a grounded slot's example searches.
  */
 export function generationBrief(context: GenerationContext) {
   const values = business(context);

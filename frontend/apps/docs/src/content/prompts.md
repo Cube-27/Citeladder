@@ -23,6 +23,10 @@ The comparison prompt names a brand. Keep that framing separate from discovery q
 
 Generated prompts use your project context. If the context is wrong, fix it before growing the portfolio. Check for irrelevant markets, unsupported product claims and repetitive questions.
 
+### Grounded in your search data
+
+When Search Console is connected or you have published keyword research, generation looks at how your buyers already search for each topic and uses those searches as wording examples. It never copies a search as a prompt, ignores searches that name your brand or a competitor, and needs no extra step: without that data, generation works exactly as before. Suggestions phrased this way are tagged **Informed by your search data**. Search impressions and keyword volume only decide which searches are used as examples; they are never presented as how often people ask AI assistants a prompt.
+
 A suggestion is not permission to activate or run it. Use the review and activation controls in the app, then select the portfolio you want to measure.
 
 ## Keep a stable baseline

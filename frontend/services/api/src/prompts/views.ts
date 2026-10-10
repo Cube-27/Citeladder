@@ -16,6 +16,7 @@ import { z } from 'zod';
 import { policy } from '../config.ts';
 import { jsonObject, strings } from '../db/json.ts';
 import type { PromptCandidates, Prompts, PromptSets, Topics } from '../generated/db-schema.ts';
+import { isGrounded } from './observed-queries.ts';
 
 export type PromptRow = Selectable<Prompts>;
 export type PromptSetRow = Selectable<PromptSets>;
@@ -106,5 +107,6 @@ export function candidateView(row: CandidateRow, runGate: string | null): Candid
     expires_at: row.expires_at.toISOString(),
     quality_status: qualityStatus(decision, runGate),
     quality_flags: strings(decision?.flags),
+    grounded: isGrounded(row.evidence_refs),
   };
 }

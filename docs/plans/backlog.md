@@ -60,8 +60,10 @@ Owners: [Workspace access](../workspace-access.md), [MCP](../mcp.md),
 - Make Mentions & Citations actionable: mentioned-and-cited, mentioned-only,
   cited-only and neither; engine coverage, competitor evidence and existing
   Opportunity/Content handoffs.
-- Generate explicitly from selected search queries, retaining QueryEvidenceRow
-  identity and observation provenance through generation, validation and editing.
+- AI interest estimates per topic (F6b): DataForSEO AI Keyword Data volume per
+  topic seed keyword, shown on topics only as an estimate. Backlogged by the
+  owner (2026-10-10): a keyword-level paid estimate cannot attach to prompts,
+  and the focus is prompt quality.
 - Improve evidence-backed Opportunity sorting/labels without another blended score;
   expose existing three-leg verification, gap changes, overlapping actions and
   the causality notice.
@@ -92,8 +94,9 @@ Owners: [Workspace access](../workspace-access.md), [MCP](../mcp.md),
   authenticated dashboard or substitute ordinary search traffic; keep first-party
   AI observations separate from search traffic and CiteLadder experiments.
 
-Subsequent prompt grounding in relevance-ranked persisted GSC evidence remains deferred.
-Never auto-replace the tracked portfolio, equate GSC impressions with AI prompt volume,
+Quick generation is grounded in persisted Search Console queries and published
+Search Intelligence keywords (F6); observed queries steer phrasing and are never
+adoptable candidates. Never auto-replace the tracked portfolio, equate GSC impressions with AI prompt volume,
 overwrite the user's Content skill choice or auto-publish.
 
 Owners: [Connected data](../integrations-traffic-analytics.md),

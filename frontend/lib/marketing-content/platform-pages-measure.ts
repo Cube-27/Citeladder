@@ -102,7 +102,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
     features: [
       {
         title: 'Start from the questions your buyers ask.',
-        body: 'Write prompts or review suggestions grouped by topic and buying stage. Nothing is tracked until you approve it, so the portfolio holds only the questions you chose.',
+        body: 'Write prompts or review suggestions grouped by topic and buying stage. Nothing is tracked until you approve it, so the portfolio holds only the questions you chose. When Search Console or keyword research is connected, generation uses how your buyers already search to phrase suggestions.',
         points: [
           'Suggestions reviewed before they run',
           'Branded and discovery questions kept distinct',

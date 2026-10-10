@@ -272,6 +272,13 @@ Branded query classification uses canonical brand/alias/domain vocabulary;
 the newest append-only override for an exact normalized query wins.
 Detector availability and limitations persist with the snapshot.
 
+Prompt generation reads the latest query snapshot's non-branded queries, and
+the latest published Search Intelligence keyword datasets in the project
+language, to phrase grounding examples for draft batches
+([Prompts and Visibility](visibility-prompt.md#context-topics-and-generation)).
+It reads persisted rows only, never fetches, and never presents impressions or
+search volume as AI prompt volume.
+
 Query-page relevance is an evidence field on an eligible property-relative CTR
 gap, not a second Opportunity. It reports normalized usable-query-term coverage
 for the resolved page's title, H1 and primary content, preserves meaningful short

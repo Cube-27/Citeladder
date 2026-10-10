@@ -9,10 +9,30 @@ export { fixtures as generationFixtures };
 export const fixtureTopicId = (index: number) =>
   `00000000-0000-4000-8000-${String(index).padStart(12, '0')}`;
 
-/** One topic per offering; binding vocabulary from the offering words. */
+/**
+ * A fixture's synthetic observed searches, bound to their offering's topic, as
+ * the loader would return them for a project with Search Console data.
+ */
+export function fixtureObserved(fixture: GenerationFixture): GenerationContext['observed'] {
+  return fixture.observed_queries.map((query, index) => ({
+    id: `00000000-0000-4000-9000-${String(index).padStart(12, '0')}`,
+    source: 'gsc' as const,
+    text: query.text,
+    topic_id: fixtureTopicId(fixture.offerings.indexOf(query.offering)),
+    weight: query.weight,
+    classifier_version: 'branded-query-1',
+    override_id: null,
+  }));
+}
+
+/**
+ * One topic per offering; binding vocabulary from the offering words. A
+ * grounded context carries the fixture's observed searches; otherwise none.
+ */
 export function fixtureContext(
   fixture: GenerationFixture,
   maps: GenerationContext['maps'] = [],
+  { grounded = false }: { grounded?: boolean } = {},
 ): GenerationContext {
   const topics = fixture.offerings.map((name, index) => ({
     id: fixtureTopicId(index),
@@ -28,6 +48,7 @@ export function fixtureContext(
     offerings: fixture.offerings,
     prompts: [],
     candidates: [],
+    observed: grounded ? fixtureObserved(fixture) : [],
     revision: null,
     vocabulary: {
       tokens: new Set(fixture.offerings.flatMap((name) => name.toLowerCase().split(' '))),

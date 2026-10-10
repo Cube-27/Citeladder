@@ -7,7 +7,9 @@ import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { InfoHint } from '@/components/ui/info-hint';
 import { panelClasses } from '@/components/ui/panel';
+import { Tag } from '@/components/ui/tag';
 import { textRole } from '@/components/ui/typography';
 import type { PromptCandidate, Topic } from '@/lib/api/types';
 import { qualityFlagLabel, qualityStatusLabel } from '@/lib/prompts/candidate-quality';
@@ -122,6 +124,15 @@ export function CandidateReview({
               <div className="grid min-w-0 gap-0.5 py-2">
                 <span className="type-body text-foreground">{candidate.text}</span>
                 {topicName ? <span className="type-caption">{topicName}</span> : null}
+                {candidate.grounded ? (
+                  <span className="flex items-center gap-1">
+                    <Tag>Informed by your search data</Tag>
+                    <InfoHint label="About search data">
+                      Phrasing was guided by queries from your connected Search Console or keyword
+                      research. The prompt itself was written for AI assistants.
+                    </InfoHint>
+                  </span>
+                ) : null}
                 <span
                   id={`${descriptionId}-${candidate.id}`}
                   className="type-caption text-secondary"
