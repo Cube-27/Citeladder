@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { reserveTrialAnswer } from './trial-answers.ts';
 import { requireWorkspaceAccess } from '../entitlements/access.ts';
 import { policy } from '../config.ts';
-import type { Database } from '../db/database.ts';
+import { inTransaction, type Database } from '../db/database.ts';
 import { subjectXactLock } from '../db/advisory-lock.ts';
 import { reserveUsage, releaseUsage } from '../entitlements/ledger.ts';
 import { ApiError, notFound } from '../errors.ts';
@@ -37,9 +37,9 @@ export function createAudit(
   runtime: AuditRuntime = auditRuntime(),
   at = new Date(),
 ) {
-  return db
-    .transaction()
-    .execute((trx) => createAuditInTransaction(trx, workspaceId, request, launch, runtime, at));
+  return inTransaction(db, (trx) =>
+    createAuditInTransaction(trx, workspaceId, request, launch, runtime, at),
+  );
 }
 
 /** The scheduler holds its scoped occurrence row; planner and cadence advancement share that transaction. */

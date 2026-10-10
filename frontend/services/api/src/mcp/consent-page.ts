@@ -81,7 +81,34 @@ export type ConsentView = Readonly<{
   termsRevision: string;
   /** The app origin, for project setup and billing links. */
   appOrigin: string;
+  /** The client asked for `citeladder:write`; Allow changes is offered only then. */
+  offerChanges: boolean;
 }>;
+
+/** What a write grant can do; every change is shown and confirmed first. */
+const CHANGES = [
+  'Add and edit topics and prompts',
+  'Add competitors',
+  'Launch and cancel audits',
+  'Create audit schedules',
+  'Update Action status and declare Actions implemented',
+];
+
+function allowChanges() {
+  return html`<fieldset class="stack">
+    <legend><h2>Allow changes</h2></legend>
+    <label class="terms">
+      <input type="checkbox" name="allow_changes" value="yes" />
+      <span class="stack"
+        ><span class="name">Let it make changes in workspaces where you are a Member or above</span>
+        <span class="meta">${CHANGES.join(' · ')}.</span>
+        <span class="meta"
+          >Your assistant must show you each change and you confirm it before it happens.</span
+        ></span
+      >
+    </label>
+  </fieldset>`;
+}
 
 function workspaceChoice(view: ConsentView, workspace: ConsentWorkspace, preselect: boolean) {
   const consentPath = `/mcp/oauth/consent?transaction=${encodeURIComponent(view.transaction)}`;
@@ -165,7 +192,7 @@ export function consentPage(view: ConsentView) {
         ${
           view.workspaces.length
             ? html`<fieldset>
-                <legend><h2>Workspaces it can read</h2></legend>
+                <legend><h2>Workspaces it can use</h2></legend>
                 ${view.workspaces.map((workspace) =>
                   workspaceChoice(
                     view,
@@ -179,6 +206,11 @@ export function consentPage(view: ConsentView) {
                 <a href="${view.appOrigin}/onboarding?${setup}">Set up your first project</a>, then
                 you will come back here to approve.
               </p>`
+        }
+        ${
+          view.offerChanges && shareable.some((workspace) => workspace.canChange)
+            ? allowChanges()
+            : ''
         }
         ${
           needsTerms
@@ -204,9 +236,10 @@ export function consentPage(view: ConsentView) {
             : ''
         }
         <p class="meta">
-          Read-only. It reads only the workspaces you select; joining another workspace later does
-          not add it, and leaving one removes it. You can revoke it any time in Settings → MCP
-          connections. Approving sends you back to <code>${view.redirectUri}</code>.
+          Without Allow changes it can only read. It uses only the workspaces you select; joining
+          another workspace later does not add it, and leaving one removes it. You can revoke it any
+          time in Settings → MCP connections. Approving sends you back to
+          <code>${view.redirectUri}</code>.
         </p>
         <div class="actions">
           ${

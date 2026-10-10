@@ -7,7 +7,7 @@ import type { Database } from '../db/database.ts';
 import { strings } from '../db/json.ts';
 import { compareText } from '../text-order.ts';
 import { recordPolicyAcceptance } from '../workspaces/policies.ts';
-import { rolesWith } from '../auth/workspace.ts';
+import { roleAllows, rolesWith } from '../auth/workspace.ts';
 import { accountAllowed, loadMcpConfig, mcpPolicy, type McpConfig } from './config.ts';
 import type { McpPrincipal } from './types.ts';
 
@@ -75,7 +75,13 @@ export async function authenticateMcp(
       .set({ last_used_at: new Date() })
       .where('id', '=', row.id)
       .execute();
-  return { userId: row.user_id, grantId: row.id, workspaceIds, tokenHash: digest };
+  return {
+    userId: row.user_id,
+    grantId: row.id,
+    workspaceIds,
+    tokenHash: digest,
+    canWrite: strings(row.scopes).includes(mcpPolicy.write_scope),
+  };
 }
 /** A refresh window slides, but never past the grant's absolute lifetime. */
 function refreshDeadline(mcp: McpConfig, grantedAt: Date) {
@@ -109,6 +115,8 @@ export type ConsentWorkspace = Readonly<{
   id: string;
   name: string;
   hasProject: boolean;
+  /** The live role allows changes; a write grant acts only where it still does. */
+  canChange: boolean;
   state: 'ready' | 'terms' | 'inactive' | 'unresolved';
 }>;
 
@@ -120,6 +128,7 @@ export async function consentWorkspaces(db: Database, userId: string): Promise<C
     .select(({ exists, selectFrom }) => [
       'w.id',
       'w.name',
+      'm.role',
       exists(
         selectFrom('policy_acceptances as p')
           .select('p.id')
@@ -142,6 +151,7 @@ export async function consentWorkspaces(db: Database, userId: string): Promise<C
     id: row.id,
     name: row.name,
     hasProject: Boolean(row.has_project),
+    canChange: roleAllows(row.role, 'write'),
     state: consentState(access[index]!.status, Boolean(row.accepted)),
   }));
 }
@@ -181,6 +191,8 @@ export function completeConsent(
     selected: string[];
     /** The Terms revision the page showed when its box was ticked; null when unticked. */
     acceptedTermsRevision: string | null;
+    /** Allow changes was ticked; it grants write only where the request offered it. */
+    allowChanges: boolean;
   } | null,
 ): Promise<string> {
   return db.transaction().execute(async (trx) => {
@@ -212,7 +224,8 @@ export function completeConsent(
         throw new OAuthError('access_denied', 'This account is not enabled for MCP access');
       const unique = [...new Set(decision.selected)].sort(compareText);
       if (!unique.length) throw new ConsentSelectionError('Select at least one workspace.');
-      const states = new Map((await consentWorkspaces(trx, userId)).map((w) => [w.id, w.state]));
+      const shareable = await consentWorkspaces(trx, userId);
+      const states = new Map(shareable.map((w) => [w.id, w.state]));
       if (unique.some((id) => !['ready', 'terms'].includes(states.get(id) ?? '')))
         throw new ConsentSelectionError('Select only workspaces that can be shared right now.');
       const needTerms = unique.filter((id) => states.get(id) === 'terms');
@@ -232,6 +245,13 @@ export function completeConsent(
           revision: policy.mcp.terms_revision,
           context: 'mcp_consent',
         });
+      const changes =
+        decision.allowChanges &&
+        shareable.some((w) => w.canChange && unique.includes(w.id)) &&
+        strings(request.scopes).includes(mcpPolicy.write_scope);
+      const scopes = strings(request.scopes).filter(
+        (scope) => changes || scope !== mcpPolicy.write_scope,
+      );
       const code = mintToken();
       await trx
         .insertInto('mcp_authorization_codes')
@@ -241,7 +261,7 @@ export function completeConsent(
           code_hash: tokenHash(config, code),
           client_id: request.client_id,
           user_id: userId,
-          scopes: JSON.stringify(request.scopes),
+          scopes: JSON.stringify(scopes),
           code_challenge: request.code_challenge,
           redirect_uri: request.redirect_uri,
           redirect_uri_provided_explicitly: request.redirect_uri_provided_explicitly,
@@ -406,6 +426,8 @@ export async function exchangeToken(
       scopes = requested.length ? requested : granted;
       if (scopes.some((scope) => !granted.includes(scope)))
         throw new OAuthError('invalid_scope', 'Refresh cannot expand the original grant');
+      if (!scopes.includes(mcpPolicy.read_scope))
+        throw new OAuthError('invalid_scope', 'Every token keeps the read scope');
       await trx
         .updateTable('mcp_oauth_grants')
         .set({

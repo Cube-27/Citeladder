@@ -3,6 +3,7 @@ import type { Database } from '../db/database.ts';
 import { recordSecurityEvent } from '../auth/security-events.ts';
 import { record, strings } from '../db/json.ts';
 import { scalarText } from '../text-order.ts';
+import { mcpPolicy } from './config.ts';
 
 /**
  * A connection names the workspaces it may read, never their IDs alone. The
@@ -21,6 +22,7 @@ export async function listConnections(
       'g.id',
       'g.user_id',
       'g.workspace_ids',
+      'g.scopes',
       'g.created_at',
       'g.last_used_at',
       'c.client_metadata',
@@ -52,6 +54,9 @@ export async function listConnections(
         return name === undefined ? [] : [{ id, name }];
       }),
       user_email: scope.workspaceId ? row.email : null,
+      access: strings(row.scopes).includes(mcpPolicy.write_scope)
+        ? ('read_and_change' as const)
+        : ('read' as const),
       created_at: row.created_at.toISOString(),
       last_used_at: row.last_used_at?.toISOString() ?? null,
       requires_consent: strings(row.workspace_ids).length === 0,

@@ -1,5 +1,5 @@
 import { sql } from 'kysely';
-import type { Database } from '../db/database.ts';
+import { inTransaction, type Database } from '../db/database.ts';
 import { ApiError, notFound } from '../errors.ts';
 import { policy } from '../config.ts';
 import { getLogger } from '../logging.ts';
@@ -82,7 +82,7 @@ export async function cancelAudit(
   auditId: string,
   at = new Date(),
 ) {
-  return db.transaction().execute(async (trx) => {
+  return inTransaction(db, async (trx) => {
     const audit = await trx
       .selectFrom('audits')
       .selectAll()

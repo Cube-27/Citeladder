@@ -1,10 +1,15 @@
 import type { Database } from '../db/database.ts';
 import { mcpPolicy } from './config.ts';
 
-type Table = 'mcp_authorization_requests' | 'mcp_authorization_codes' | 'mcp_oauth_grants';
+type Table =
+  | 'mcp_authorization_requests'
+  | 'mcp_authorization_codes'
+  | 'mcp_confirmations'
+  | 'mcp_oauth_grants';
 
 /**
- * Bound protocol storage. Expired unconsumed requests and codes go at once;
+ * Bound protocol storage. Expired unconsumed requests, codes and change
+ * confirmations go at once;
  * consumed ones and ended grants are kept for the retention period as audit
  * evidence, then go too.
  */
@@ -14,6 +19,7 @@ export async function cleanupMcpProtocol(db: Database, now = new Date(), canAdmi
   for (const table of [
     'mcp_authorization_requests',
     'mcp_authorization_codes',
+    'mcp_confirmations',
     'mcp_oauth_grants',
   ] as const)
     deleted += await cleanup(db, table, now, retained, canAdmit);

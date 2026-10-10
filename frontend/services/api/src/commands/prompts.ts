@@ -9,12 +9,15 @@ import { requireCapability, type Actor } from '../auth/actor.ts';
 import { policy, resolveSettingSpec } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { ApiError } from '../errors.ts';
+import { operatorTransaction } from '../db/operator-transaction.ts';
+import { promptOccupancy } from '../entitlements/occupancy.ts';
 import { isNonEmpty } from '../lists.ts';
 import * as candidates from '../prompts/candidates.ts';
 import type { GenerationInput } from '../prompts/generation-input.ts';
 import { generatePrompts } from '../prompts/generation.ts';
 import * as prompts from '../prompts/prompts.ts';
 import * as topics from '../prompts/topics.ts';
+import { execute, type CommandOptions } from './dry-run.ts';
 
 const SCOPE = 'prompts:write';
 
@@ -31,6 +34,30 @@ export function createPrompts(
   authorize(actor);
   if (!isNonEmpty(inputs)) throw new ApiError(422, 'At least one prompt is required');
   return prompts.createPrompts(db, actor.workspaceId, promptSetId, inputs);
+}
+
+/**
+ * What `createPrompts` would do with these inputs, writing nothing: the inputs
+ * it would insert, each dropped one with why, and prompt slots in use after.
+ */
+export async function previewPrompts(
+  db: Database,
+  actor: Actor,
+  promptSetId: string,
+  inputs: z.infer<typeof prompts.promptInput>[],
+) {
+  authorize(actor);
+  const { admitted, dropped } = await prompts.screenPrompts(
+    db,
+    actor.workspaceId,
+    promptSetId,
+    inputs,
+  );
+  if (!isNonEmpty(admitted)) return { admitted, dropped, occupancy: null };
+  return operatorTransaction(db, false, async (trx) => {
+    await prompts.createPrompts(trx, actor.workspaceId, promptSetId, admitted);
+    return { admitted, dropped, occupancy: await promptOccupancy(trx, actor.workspaceId) };
+  });
 }
 
 export function createPrompt(
@@ -63,9 +90,12 @@ export function setPromptStatuses(
   actor: Actor,
   promptSetId: string,
   input: z.infer<typeof prompts.promptBulkStatus>,
+  options: CommandOptions = {},
 ) {
   authorize(actor);
-  return prompts.bulkSetStatus(db, actor.workspaceId, promptSetId, input);
+  return execute(db, options, (trx) =>
+    prompts.bulkSetStatus(trx, actor.workspaceId, promptSetId, input),
+  );
 }
 
 /**

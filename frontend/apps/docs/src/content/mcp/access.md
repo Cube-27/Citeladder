@@ -9,7 +9,15 @@ The MCP grant is bound to your CiteLadder account and to the workspaces you sele
 
 ## Understand what is shared
 
-The connection requests read access through `citeladder:read`. Tools return authorized product evidence, not your provider credentials.
+Every connection reads through `citeladder:read`. Tools return authorized product evidence, not your provider credentials.
+
+## Changes and confirmation
+
+A connection can change data only if you ticked **Allow changes** when you approved it, which adds `citeladder:write`. The box is unticked by default, and a connection approved without it never lists or runs change tools. To add changes later, revoke the connection and connect again.
+
+Each change uses your current role in the project's workspace: a Viewer cannot change anything, and a demotion takes effect at once. Settings shows each connection as **Read** or **Read and change**.
+
+Larger changes need your confirmation in the conversation. The assistant first prepares the change and shows you a preview; CiteLadder runs it only when the assistant confirms that same preview after you agree. A confirmation works once, for ten minutes, and only for the connection that prepared it. If something changed in between, such as your prompt allowance filling up, the change is refused with the reason. A connection can make 30 calls to change tools a minute, within its 120 tool calls.
 
 Once an external client reads a record, it receives that data. Review its provider, retention and workspace policies. Disconnecting later cannot recall information already delivered to the client.
 

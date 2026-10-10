@@ -16,6 +16,7 @@ import { readAudit } from '../audits/reads.ts';
 import { configEnvironment, type ServiceConfig } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { ApiError } from '../errors.ts';
+import { execute, type CommandOptions } from './dry-run.ts';
 
 const SCOPE = 'audits:run';
 
@@ -55,32 +56,35 @@ export async function launchAudit(
   actor: Actor,
   projectId: string,
   input: z.output<typeof auditLaunchInput>,
+  options: CommandOptions = {},
 ) {
   requireCapability(actor, 'run', SCOPE);
   const { max_estimated_credits: ceiling, ...request } = input;
   const runtime = auditRuntime(configEnvironment(config));
-  const estimate = await estimateAudit(
-    db,
-    actor.workspaceId,
-    { ...request, project_id: projectId },
-    runtime,
-  );
-  if (estimate.maximum_attempt_count > ceiling)
-    throw new ApiError(409, 'The audit estimate exceeds max_estimated_credits', {
-      code: 'estimate_exceeds_limit',
-      details: {
-        estimated_credits: estimate.maximum_attempt_count,
-        max_estimated_credits: ceiling,
-      },
-    });
-  const id = await createAudit(
-    db,
-    actor.workspaceId,
-    auditInput.parse({ ...request, project_id: projectId }),
-    {},
-    runtime,
-  );
-  return readAudit(db, actor.workspaceId, id);
+  return execute(db, options, async (trx) => {
+    const estimate = await estimateAudit(
+      trx,
+      actor.workspaceId,
+      { ...request, project_id: projectId },
+      runtime,
+    );
+    if (estimate.maximum_attempt_count > ceiling)
+      throw new ApiError(409, 'The audit estimate exceeds max_estimated_credits', {
+        code: 'estimate_exceeds_limit',
+        details: {
+          estimated_credits: estimate.maximum_attempt_count,
+          max_estimated_credits: ceiling,
+        },
+      });
+    const id = await createAudit(
+      trx,
+      actor.workspaceId,
+      auditInput.parse({ ...request, project_id: projectId }),
+      {},
+      runtime,
+    );
+    return { audit: await readAudit(trx, actor.workspaceId, id), estimate };
+  });
 }
 
 export async function cancelAudit(db: Database, actor: Actor, auditId: string) {

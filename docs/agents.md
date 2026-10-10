@@ -190,7 +190,8 @@ the chat member through MCP's membership predicate, and workspace access
 the same catalogue, including `read_actions`, `read_content_differentiation`, `read_perception` and `read_ai_ads`;
 there are no Agent-only reads. A caller's mistake (a bad cursor, window or
 filter) is refused with the owner's reason so the model can correct the call.
-No tool writes.
+No tool writes: the MCP write catalogue and `confirm_change` are not Agent
+tools, and the Agent stays read-only.
 
 Each tool attempt (`agent_tool_attempts` in the [schema baseline](../frontend/services/api/migrations/0001_baseline.sql)) records tool, arguments,
 status, returned record references, omissions, output hash and latency.

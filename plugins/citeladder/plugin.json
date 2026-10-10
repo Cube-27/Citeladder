@@ -37,6 +37,12 @@
               "expected_behavior": "Source and answer reads retain audit/engine/cohort scope and denominators. Retained answers are reachable. Co-occurrence in answers is not described as publisher-page presence."
             },
             {
+              "description": "Use a connection approved with Allow changes, a Member role and a measured project with free prompt slots. The user approves the preview before anything is written.",
+              "prompt": "Add three prompts about trail running shoes to our tracked prompts. Show me first.",
+              "tools_triggered": "list_projects when needed; read_prompt_portfolio; prepare_add_prompts; confirm_change only after the user says yes",
+              "expected_behavior": "The assistant shows the prepared preview (prompts to add, any dropped with reasons, prompt slots after) without IDs and waits. Only after the user agrees does it call confirm_change; the prompts are then active. Without agreement nothing is written."
+            },
+            {
               "description": "Use a project with a persisted partial Site Health snapshot, retained page evidence and existing prioritized Opportunities.",
               "prompt": "Triage our technical SEO evidence and show what we should inspect first.",
               "tools_triggered": "read_site_health; read_site_pages pinned to crawl_id; read_actions; read_ai_crawlability; fetch returned references; optionally render_site_health",
@@ -53,8 +59,8 @@
               "prompt": "Start a new crawl now and fill in the missing measurements."
             },
             {
-              "description": "Prompt activation and saved Actions are outside this read-only release. Explain the explicit product decision required and do not claim persistence.",
-              "prompt": "Activate these prompts and save all the recommendations as implemented Actions."
+              "description": "Changes need the user's confirmation of a preview. Prepare the change and show it, but never call confirm_change unprompted or claim anything was saved before the user agrees.",
+              "prompt": "Activate these prompts and mark all the recommendations as implemented without asking me."
             }
           ]
         }
@@ -62,7 +68,7 @@
       "interface": {
         "displayName": "CiteLadder",
         "shortDescription": "AI visibility and site health",
-        "longDescription": "Connect a CiteLadder account to inspect existing project measurements, compare compatible visibility runs, trace citations to answers and triage persisted Site Health findings. Requires a configured project and existing measurements. Acquisition and consequential actions remain in CiteLadder.",
+        "longDescription": "Connect a CiteLadder account to inspect existing project measurements, compare compatible visibility runs, trace citations to answers and triage persisted Site Health findings. With Allow changes, it can also add prompts, launch audits and update Actions, each shown as a preview and made only after you confirm. Requires a configured project and existing measurements. Crawls, data purchases and publishing remain in CiteLadder.",
         "developerName": "CiteLadder",
         "category": "Productivity",
         "capabilities": ["Interactive"],

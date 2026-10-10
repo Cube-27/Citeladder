@@ -37,7 +37,7 @@ first. Size: S (≤2 days), M (≤1 week), L (>1 week).
 | F1 | Docs truth pass: consumer surfaces and schedules | — (do first) | S | 1 | — | done | — |
 | F2 | AI Traffic: enablement, `api.citeladder.com` host, AWS and GCP connectors | 1 | L | 2 | — | in review: F2a merged, F2b in review | [F2a](F2a-ai-traffic-api-host-and-aws.md), [F2b](F2b-ai-traffic-gcp-pull.md) |
 | F3 | Sentiment (answer perception) | 2 | L | 1 | — | done | [F3](F3-answer-perception.md) |
-| F4 | Public REST API, MCP move to `api.citeladder.com/mcp`, MCP write tools | 3 | L | 3 | F2a (host) | in progress: F4a merged (#358), F4b in review, F4c next | [F4a](F4a-public-api-and-keys.md), [F4b](F4b-mcp-move-to-api-host.md), [F4c](F4c-mcp-write-tools.md) |
+| F4 | Public REST API, MCP move to `api.citeladder.com/mcp`, MCP write tools | 3 | L | 3 | F2a (host) | done: F4a (#358), F4b (#359), F4c | [F4a](F4a-public-api-and-keys.md), [F4b](F4b-mcp-move-to-api-host.md), [F4c](F4c-mcp-write-tools.md) |
 | F5 | Ads in AI answers | 4 | S–M | 1 | — | done | [F5](F5-ai-answer-ads.md) |
 | F6 | Prompt grounding in the project's own search data | 5 | M | 1 | — | done | [F6](F6-prompt-grounding.md) |
 | F7 | Market (location/language) segmentation | 6 | M–L | 1 | D7.x | queued | `market-segmentation.md` |
@@ -62,7 +62,8 @@ Verified against the repository on 2026-10-10.
   judgement stores confidence, model and template version, and never replaces a
   deterministic metric.
 - **Explicit user decisions** (invariant 10) for prompt activation, external
-  mutation, publishing, billing changes. F4 changes this wording; record it.
+  mutation, publishing, billing changes. F4 recorded the scoped API key and
+  confirmed MCP write amendments.
 - **Unknown, unavailable, not applicable, observed zero** stay distinct in
   every metric, read, export, MCP tool and API response.
 - **Config, not code** for tunables: `frontend/services/api/src/config/*.json`.

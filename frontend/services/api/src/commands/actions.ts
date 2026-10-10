@@ -10,6 +10,7 @@ import { updateActionStatus } from '../opportunities/actions.ts';
 import { declarationView } from '../opportunities/declaration-view.ts';
 import { declareAction as declareOwnedAction } from '../opportunities/declarations.ts';
 import type { declarationCreate } from '../routes/action-contracts.ts';
+import { execute, type CommandOptions } from './dry-run.ts';
 
 const SCOPE = 'actions:write';
 const KEY_MAX = policy.opportunity.opportunities.IMPLEMENTATION_IDEMPOTENCY_KEY_MAX_LEN;
@@ -25,15 +26,17 @@ export async function declareAction(
   actor: Actor,
   actionId: string,
   input: z.output<typeof declarationCreate>,
-  { idempotencyKey }: { idempotencyKey: string | null },
+  { idempotencyKey, ...options }: { idempotencyKey: string | null } & CommandOptions,
 ) {
   requireCapability(actor, 'write', SCOPE);
   const key = idempotencyKey?.trim() ?? '';
   if (!key || (idempotencyKey ?? '').length > KEY_MAX)
     throw new ApiError(422, 'A bounded Idempotency-Key is required');
-  const result = await declareOwnedAction(db, actor.workspaceId, actionId, actor.userId, key, {
-    ...input,
-    output_revision_id: input.output_revision_id ? parseUuid(input.output_revision_id) : null,
+  return execute(db, options, async (trx) => {
+    const result = await declareOwnedAction(trx, actor.workspaceId, actionId, actor.userId, key, {
+      ...input,
+      output_revision_id: input.output_revision_id ? parseUuid(input.output_revision_id) : null,
+    });
+    return { declaration: await declarationView(trx, result.row), created: result.created };
   });
-  return { declaration: await declarationView(db, result.row), created: result.created };
 }
