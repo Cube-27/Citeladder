@@ -30,6 +30,7 @@ const claude: McpConnection = {
     { id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', name: 'Beta' },
   ],
   user_email: null,
+  access: 'read',
   created_at: '2026-10-01T12:00:00Z',
   last_used_at: null,
   requires_consent: false,
@@ -64,7 +65,7 @@ it('describes a connection by name and revokes it only after confirmation', asyn
   renderTab();
   const row = (await screen.findByText('Reads Acme, Beta.')).closest('li');
   expect(row).toHaveTextContent('Claude · name not verified');
-  expect(row).toHaveTextContent('Connected Oct 1, 2026 · Not used yet');
+  expect(row).toHaveTextContent('Read · Connected Oct 1, 2026 · Not used yet');
   expect(row?.textContent).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-/);
 
   await user.click(within(row!).getByRole('button', { name: 'Revoke' }));
@@ -87,6 +88,7 @@ it("shows an Owner/Admin who connected and removes only this workspace's access"
             ...claude,
             workspaces: [{ id: WORKSPACE, name: 'Acme' }],
             user_email: 'ana@example.test',
+            access: 'read_and_change',
             last_used_at: '2026-10-08T09:30:00Z',
           },
         ]
@@ -97,7 +99,7 @@ it("shows an Owner/Admin who connected and removes only this workspace's access"
     name: 'Connections that can read this workspace',
   });
   const section = heading.closest('section')!;
-  expect(section).toHaveTextContent('Connected by ana@example.test');
+  expect(section).toHaveTextContent('Read and change · Connected by ana@example.test');
   expect(section).toHaveTextContent('Last used');
   expect(section).not.toHaveTextContent('Not used yet');
 

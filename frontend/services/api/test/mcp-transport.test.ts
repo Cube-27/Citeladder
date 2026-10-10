@@ -108,6 +108,7 @@ beforeEach(() => {
     grantId: 'grant',
     workspaceIds: ['workspace'],
     tokenHash: 'hash',
+    canWrite: false,
   });
   vi.mocked(dispatchTool).mockResolvedValue({ projects: [{ id: 'project' }] });
 });

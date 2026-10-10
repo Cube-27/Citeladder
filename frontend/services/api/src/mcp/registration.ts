@@ -5,7 +5,7 @@ import { enforceSubjectRequest } from '../abuse/usage.ts';
 import { policy, resolveSettingSpec } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { createSecretCipher } from '../integrations/fernet.ts';
-import { mcpPolicy, type McpConfig } from './config.ts';
+import { grantableScopes, mcpPolicy, type McpConfig } from './config.ts';
 import { mintToken, OAuthError } from './oauth.ts';
 
 const LOOPBACK = ['localhost', '127.0.0.1', '[::1]'];
@@ -60,7 +60,7 @@ function validateRegistration(input: unknown) {
       parsed.data.grant_types.includes(grant),
     ),
     response_types: ['code'],
-    scope: mcpPolicy.read_scope,
+    scope: grantableScopes(parsed.data.scope).join(' '),
   };
 }
 

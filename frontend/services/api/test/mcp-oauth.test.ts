@@ -99,8 +99,10 @@ function authorizationQuery(clientId: string) {
   });
   return query;
 }
-async function pending(clientId: string) {
-  const response = await app.request(`${protocol}/authorize?${authorizationQuery(clientId)}`);
+async function pending(clientId: string, scope?: string) {
+  const query = authorizationQuery(clientId);
+  if (scope !== undefined) query.set('scope', scope);
+  const response = await app.request(`${protocol}/authorize?${query}`);
   expect(response.status).toBe(302);
   const location = new URL(response.headers.get('location')!);
   expect(location.origin).toBe(browser);
@@ -448,6 +450,8 @@ it('consumes denial without minting a grant and safely binds untrusted registrat
     scope: mcpPolicy.read_scope,
     token_endpoint_auth_method: 'client_secret_basic',
   });
+  // A client naming no scope may be offered changes; the person still decides.
+  expect((await client()).scope).toBe('citeladder:read citeladder:write');
 });
 
 it('matches loopback redirects on any port and returns later errors to the client', async () => {
@@ -718,8 +722,10 @@ function consentDocument(source: string) {
   walk(parse(source));
   return {
     workspaces: inputs.filter(
-      (input) => input.type === 'checkbox' && input.name !== 'accept_terms',
+      (input) =>
+        input.type === 'checkbox' && !['accept_terms', 'allow_changes'].includes(input.name ?? ''),
     ),
+    changes: inputs.find((input) => input.name === 'allow_changes'),
     terms: inputs.find((input) => input.name === 'accept_terms'),
     termsRevision: inputs.find((input) => input.name === 'terms_revision')?.value,
     text: text.replace(/\s+/gu, ' '),
@@ -901,4 +907,79 @@ it('publishes discovery from the API host only and refuses a token for another r
   );
   expect(refused.searchParams.get('error')).toBe('invalid_target');
   expect(refused.searchParams.get('iss')).toBe('https://protocol.example.test');
+});
+
+/** Approve a fresh authorization, then exchange its code for the granted scope. */
+async function grantedScope(options: { scope?: string; extra?: Record<string, string> }) {
+  const c = await client();
+  const transaction = await pending(c.client_id, options.scope);
+  const view = await consentView(transaction);
+  const approved = await approve(transaction, [tenant.workspaceId], options.extra);
+  const code = new URL(approved.headers.get('location')!).searchParams.get('code')!;
+  const response = await token(c.client_id, {
+    grant_type: 'authorization_code',
+    code,
+    code_verifier: verifier,
+    redirect_uri: callback,
+  });
+  const value = (await response.json()) as { scope: string; refresh_token: string };
+  return { client: c, view, value };
+}
+
+it('grants write only when the client asks and the person ticks Allow changes', async () => {
+  const unticked = await grantedScope({});
+  expect(unticked.view.changes).toMatchObject({ type: 'checkbox', value: 'yes' });
+  expect(unticked.view.changes).not.toHaveProperty('checked');
+  expect(unticked.view.text).toContain(
+    'Your assistant must show you each change and you confirm it before it happens.',
+  );
+  expect(unticked.value.scope).toBe('citeladder:read');
+
+  const ticked = await grantedScope({ extra: { allow_changes: 'yes' } });
+  expect(ticked.value.scope).toBe('citeladder:read citeladder:write');
+
+  // A client that asked only to read is never offered, nor given, changes.
+  const readOnly = await grantedScope({
+    scope: 'citeladder:read offline_access',
+    extra: { allow_changes: 'yes' },
+  });
+  expect(readOnly.view.changes).toBeUndefined();
+  expect(readOnly.value.scope).toBe('citeladder:read');
+});
+
+it('offers no changes to a viewer and grants none when the form claims them', async () => {
+  await db
+    .updateTable('workspace_members')
+    .set({ role: 'viewer' })
+    .where('user_id', '=', tenant.userId)
+    .where('workspace_id', '=', tenant.workspaceId)
+    .execute();
+  const viewer = await grantedScope({ extra: { allow_changes: 'yes' } });
+  expect(viewer.view.changes).toBeUndefined();
+  expect(viewer.value.scope).toBe('citeladder:read');
+});
+
+it('lets a refresh drop write but never add it back or drop read', async () => {
+  const { client: c, value } = await grantedScope({ extra: { allow_changes: 'yes' } });
+  const readOnly = await token(c.client_id, {
+    grant_type: 'refresh_token',
+    refresh_token: value.refresh_token,
+    scope: 'citeladder:read',
+  });
+  const narrowed = (await readOnly.json()) as { scope: string; refresh_token: string };
+  expect(narrowed.scope).toBe('citeladder:read');
+  const expand = await token(c.client_id, {
+    grant_type: 'refresh_token',
+    refresh_token: narrowed.refresh_token,
+    scope: 'citeladder:read citeladder:write',
+  });
+  expect(await expand.json()).toMatchObject({ error: 'invalid_scope' });
+
+  const second = await grantedScope({ extra: { allow_changes: 'yes' } });
+  const writeOnly = await token(second.client.client_id, {
+    grant_type: 'refresh_token',
+    refresh_token: second.value.refresh_token,
+    scope: 'citeladder:write',
+  });
+  expect(await writeOnly.json()).toMatchObject({ error: 'invalid_scope' });
 });
