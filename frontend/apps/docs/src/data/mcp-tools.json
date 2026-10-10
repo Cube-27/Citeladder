@@ -482,6 +482,10 @@
             "type": "string",
             "format": "uuid"
           },
+          "market_id": {
+            "type": "string",
+            "format": "uuid"
+          },
           "audit_id": {
             "type": "string",
             "format": "uuid"
