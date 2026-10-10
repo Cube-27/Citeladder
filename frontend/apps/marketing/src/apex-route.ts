@@ -8,13 +8,6 @@ export interface ApexEnv {
   LOCAL_WORKER_ORIGIN?: string;
 }
 
-const PROTOCOL_PATHS = new Set([
-  '/authorize',
-  '/token',
-  '/revoke',
-  '/.well-known/oauth-authorization-server',
-  '/.well-known/oauth-protected-resource/mcp',
-]);
 const FORMER_PRODUCT_PATHS = new Set([
   'login',
   'register',
@@ -65,26 +58,13 @@ export async function routeApexRequest(request: Request, env: ApexEnv): Promise<
     originToken: env.ORIGIN_TOKEN,
     allowDevelopmentHttp: localHttp,
   };
-  if (path === '/mcp/oauth/consent') {
-    if (request.method === 'GET') {
-      const target = new URL('/mcp/oauth/consent', env.PUBLIC_APP_ORIGIN);
-      target.search = url.search;
-      return new Response(null, {
-        status: 302,
-        headers: { Location: target.toString(), 'Cache-Control': 'no-store' },
-      });
-    }
-    return noStore(409, 'Restart authorization on the app.');
-  }
   if (path === '/api/v1/billing/webhooks/razorpay' && request.method === 'POST') {
     return proxyWorkerRequest(request, config);
   }
   // Public contact intake is handled by Astro in this Worker, never the product API.
   if (path === '/api/v1/contact') return null;
-  if (path === '/mcp' || path.startsWith('/mcp/') || PROTOCOL_PATHS.has(path)) {
-    return proxyWorkerRequest(request, config);
-  }
-  // Machine routes (`/v1/...`) are served on the API host only.
+  // Machine routes (`/v1/...`) and MCP are served on the API host only; MCP
+  // paths fall through to the site's own 404 page.
   if (
     path === '/api' ||
     path.startsWith('/api/') ||

@@ -1,8 +1,12 @@
 import { CONTACT_EMAIL } from '@/lib/config/contact';
 import { docsHref } from '@/lib/config/docs';
+import { MCP_SERVER_URL } from '@/lib/config/mcp-clients';
 import { PARENT_COMPANY } from './legal';
 import { FOUNDER, PRODUCT_HEAD } from './people';
 import { CITELADDER_LINKEDIN } from './social';
+
+/** MCP and its OAuth metadata are served on the API host, not the website. */
+const MCP_ORIGIN = new URL(MCP_SERVER_URL).origin;
 
 export type LlmsPage = { title: string; url: string; kind: 'page' | 'policy' };
 
@@ -12,7 +16,7 @@ export type LlmsPage = { title: string; url: string; kind: 'page' | 'policy' };
  * ranking language. `pages` is the site's public route list, so every page in
  * the sitemap is listed here too.
  */
-export function llmsTxt({ origin, pages }: { origin: string; pages: readonly LlmsPage[] }) {
+export function llmsTxt({ pages }: { pages: readonly LlmsPage[] }) {
   const link = (page: LlmsPage) => `- [${page.title}](${page.url})`;
   return [
     '# CiteLadder',
@@ -57,10 +61,10 @@ export function llmsTxt({ origin, pages }: { origin: string; pages: readonly Llm
     '',
     '## How agents connect (MCP)',
     '',
-    `- Endpoint: ${origin}/mcp (remote Streamable HTTP MCP).`,
+    `- Endpoint: ${MCP_SERVER_URL} (remote Streamable HTTP MCP).`,
     '- Authorization: browser OAuth authorization code flow with PKCE (S256) and dynamic client registration. The only scope is `citeladder:read`; never ask the user for a session cookie or API key.',
-    `- Protected-resource metadata (RFC 9728): ${origin}/.well-known/oauth-protected-resource/mcp`,
-    `- Authorization-server metadata (RFC 8414): ${origin}/.well-known/oauth-authorization-server`,
+    `- Protected-resource metadata (RFC 9728): ${MCP_ORIGIN}/.well-known/oauth-protected-resource/mcp`,
+    `- Authorization-server metadata (RFC 8414): ${MCP_ORIGIN}/.well-known/oauth-authorization-server`,
     '- Access is read-only and follows the workspaces the signed-in account can see. Start by listing projects, pick one explicitly, then list its saved datasets before reading results.',
     `- Setup and tool reference: ${docsHref('/mcp/connect/')} and ${docsHref('/mcp/tools/')}`,
     '',

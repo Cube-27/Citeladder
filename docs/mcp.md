@@ -8,7 +8,9 @@ product owners: it owns OAuth authorization records, the read catalogue and its
 delivery, not business data, generation or external mutation. The catalogue is
 also the in-app [Agent](agents.md)'s, so both read the same evidence the same way.
 Public setup lives at `https://docs.citeladder.com/mcp/`; the protocol endpoint is
-`https://citeladder.com/mcp` on the configured apex origin.
+`https://api.citeladder.com/mcp`. The issuer, resource, discovery documents,
+registration, authorize, token and revoke all live on that API host origin
+(`PUBLIC_API_URL`, required when MCP is enabled); only consent is on the app.
 
 ## Connection and consent
 

@@ -111,9 +111,10 @@ pnpm build:vite             # Vite authenticated SPA build
 pnpm preview:vite           # production bundle preview on port 3001
 ```
 
-Vite proxies `/api/*`, `/mcp`, `/mcp/*`, the OAuth protocol endpoints, and
-their well-known metadata paths. Browser `/register` stays in the SPA; dynamic
-MCP registration is `/mcp/register`.
+Vite proxies `/api/*` and MCP consent (`/mcp/oauth/consent`). MCP and its
+OAuth endpoints are served on the API host, which locally is the API itself
+(`PUBLIC_API_URL=http://127.0.0.1:8100`), so a local MCP client connects to
+`http://127.0.0.1:8100/mcp`.
 
 ## Browser automation for coding agents
 
@@ -160,8 +161,9 @@ curl -fsS http://127.0.0.1:8100/health
 Each Worker runs exactly as production serves it, on its own loopback port:
 marketing at `http://127.0.0.1:3000`, the app at `http://127.0.0.1:3001` and
 the documentation at `http://127.0.0.1:4322`. The app Worker proxies relative
-`/api/*` requests to the API container, and the marketing Worker proxies the
-apex MCP and protocol paths. Compose sets `FRONTEND_URL` to the app port.
+`/api/*` requests and MCP consent to the API container; MCP itself is served
+by the API container directly on its port. Compose sets `FRONTEND_URL` to the
+app port.
 Compose builds bake those origins, so marketing, app and docs links stay
 local; other builds link production. Local Compose enables disposable
 Worker-to-API HTTP transport with the `LOCAL_WORKER_ORIGIN` binding, and only
@@ -252,7 +254,7 @@ Site Health, analytics, discovery and integration lanes recover their own
 expired leases and run their backstops on every runner pass, including a pass
 over an empty queue. Tick also runs native queue recovery, so recovery survives
 an owner that is not currently draining. `docker compose up api-service` runs
-the service on `127.0.0.1:8100`. `pnpm dev` proxies the API and protocol paths
+the service on `127.0.0.1:8100`. `pnpm dev` proxies the API and consent paths
 in `TYPESCRIPT_INGRESS_PATHS` to `API_SERVICE_ORIGIN` (default
 `http://localhost:8100`), so run the service beside the app when working on
 those screens.

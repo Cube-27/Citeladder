@@ -36,7 +36,7 @@ let app: Hono<AppEnv>;
 beforeEach(async () => {
   config = testConfig({
     MCP_ENABLED: 'true',
-    MCP_PUBLIC_BASE_URL: protocol,
+    PUBLIC_API_URL: protocol,
     FRONTEND_URL: browser,
     ENCRYPTION_KEY: 'mcp-test-encryption-not-a-real-secret',
     MCP_ALLOWED_ACCOUNT_EMAIL: '',
@@ -870,4 +870,35 @@ it('explains an expired approval link instead of a bare error', async () => {
   expect(view.status).toBe(403);
   expect(view.text).toContain('This approval link has expired');
   expect(view.text).toContain('connect CiteLadder again');
+});
+
+it('publishes discovery from the API host only and refuses a token for another resource', async () => {
+  const server = await (
+    await app.request(`${protocol}/.well-known/oauth-authorization-server`)
+  ).json();
+  expect(server).toMatchObject({
+    issuer: 'https://protocol.example.test',
+    authorization_endpoint: 'https://protocol.example.test/authorize',
+    token_endpoint: 'https://protocol.example.test/token',
+    registration_endpoint: 'https://protocol.example.test/mcp/register',
+    revocation_endpoint: 'https://protocol.example.test/revoke',
+  });
+  const resource = await (
+    await app.request(`${protocol}/.well-known/oauth-protected-resource/mcp`)
+  ).json();
+  expect(resource).toMatchObject({
+    resource: 'https://protocol.example.test/mcp',
+    authorization_servers: ['https://protocol.example.test'],
+  });
+  // The app host never answers for the protocol, and consent never runs on the API host.
+  expect((await app.request(`${browser}/.well-known/oauth-authorization-server`)).status).toBe(403);
+  expect((await app.request(`${protocol}/mcp/oauth/consent?transaction=x`)).status).toBe(403);
+  const c = await client();
+  const query = authorizationQuery(c.client_id);
+  query.set('resource', `${browser}/mcp`);
+  const refused = new URL(
+    (await app.request(`${protocol}/authorize?${query}`)).headers.get('location')!,
+  );
+  expect(refused.searchParams.get('error')).toBe('invalid_target');
+  expect(refused.searchParams.get('iss')).toBe('https://protocol.example.test');
 });

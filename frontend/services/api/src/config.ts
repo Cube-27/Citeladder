@@ -341,8 +341,10 @@ export type ServiceConfig = {
     mailKey: string;
     mailTimeoutMs: number;
     frontendUrl: string;
-    /** The machine host (`api.citeladder.com`); only it serves `/v1/...` routes. Empty locally. */
+    /** The machine host (`api.citeladder.com`); only it serves `/v1/...` and MCP protocol routes. */
     publicApiUrl: string;
+    /** The marketing apex (`citeladder.com`): its Worker forwards signed webhooks and catalog reads. */
+    publicWebsiteUrl: string;
     /** HMAC key for public API key secrets; only the digest is stored. */
     apiKeyPepper: string;
     trustedProxies: TrustedProxies;
@@ -536,6 +538,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
       mailTimeoutMs: setting('auth_mail_timeout_ms') as number,
       frontendUrl: setting('frontend_url') as string,
       publicApiUrl: setting('public_api_url') as string,
+      publicWebsiteUrl: setting('public_website_url') as string,
       apiKeyPepper: setting('api_key_pepper') as string,
       trustedProxies: parseTrustedProxies(setting('trusted_proxy_cidrs') as string),
       oauthSettings: {

@@ -11,13 +11,13 @@ const base = {
 afterEach(() => vi.unstubAllEnvs());
 it('binds MCP enablement and origin to explicit startup inputs instead of inherited settings', () => {
   vi.stubEnv('MCP_ENABLED', 'true');
-  vi.stubEnv('MCP_PUBLIC_BASE_URL', 'https://inherited.example.test');
+  vi.stubEnv('PUBLIC_API_URL', 'https://inherited.example.test');
   const disabled = loadConfig(base);
   expect(loadMcpConfig(disabled).enabled).toBe(false);
   const enabled = loadConfig({
     ...base,
     MCP_ENABLED: 'true',
-    MCP_PUBLIC_BASE_URL: 'https://protocol.example.test:443',
+    PUBLIC_API_URL: 'https://protocol.example.test:443',
     FRONTEND_URL: 'https://app.example.test:443',
   });
   vi.stubEnv('MCP_ENABLED', 'false');
@@ -31,7 +31,7 @@ it('refuses unsafe enabled origins and enforces production and demo admission', 
   const production = {
     ...productionEnv,
     MCP_ENABLED: 'true',
-    MCP_PUBLIC_BASE_URL: 'https://protocol.example.test',
+    PUBLIC_API_URL: 'https://protocol.example.test',
     FRONTEND_URL: 'https://app.example.test',
   };
   expect(loadMcpConfig(loadConfig(production)).enabled).toBe(true);
@@ -41,6 +41,13 @@ it('refuses unsafe enabled origins and enforces production and demo admission', 
   expect(() =>
     loadMcpConfig(loadConfig({ ...production, ENCRYPTION_KEY: production.JWT_SECRET_KEY })),
   ).toThrow('independent');
+  // No fallback to the app origin: enabled MCP without the API host fails at startup.
+  expect(() => loadMcpConfig(loadConfig({ ...production, PUBLIC_API_URL: '' }))).toThrow(
+    'PUBLIC_API_URL must be configured for MCP',
+  );
+  expect(() =>
+    loadMcpConfig(loadConfig({ ...production, PUBLIC_API_URL: 'http://protocol.example.test' })),
+  ).toThrow('PUBLIC_API_URL must use HTTPS in production');
   for (const origin of [
     'https://user@example.test',
     'https://example.test/path',
@@ -48,12 +55,12 @@ it('refuses unsafe enabled origins and enforces production and demo admission', 
     'https://example.test?secret',
   ])
     expect(() =>
-      loadMcpConfig(loadConfig({ ...base, MCP_ENABLED: 'true', MCP_PUBLIC_BASE_URL: origin })),
+      loadMcpConfig(loadConfig({ ...base, MCP_ENABLED: 'true', PUBLIC_API_URL: origin })),
     ).toThrow();
   const demo = loadConfig({
     ...base,
     MCP_ENABLED: 'true',
-    MCP_PUBLIC_BASE_URL: 'https://protocol.example.test',
+    PUBLIC_API_URL: 'https://protocol.example.test',
     DEMO_MODE: 'true',
     DEMO_EXPIRES_AT: '2099-01-01T00:00:00Z',
     DEV_LOGIN_EMAIL: 'demo@example.test',

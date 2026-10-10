@@ -70,7 +70,7 @@ it('leads the MCP page with the connect strip and closes it with the guide and a
   const closing = document.querySelector('[data-cta-placement="closing"]') as HTMLElement;
   expect(within(hero).getByRole('link', { name: 'Connect to Claude' })).toHaveAttribute(
     'href',
-    'https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=CiteLadder&connectorUrl=https%3A%2F%2Fciteladder.com%2Fmcp',
+    'https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=CiteLadder&connectorUrl=https%3A%2F%2Fapi.citeladder.com%2Fmcp',
   );
   expect(within(hero).queryByRole('link', { name: 'Book a demo' })).not.toBeInTheDocument();
   expect(within(closing).getByRole('link', { name: 'Read the MCP docs' })).toHaveAttribute(

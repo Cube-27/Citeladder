@@ -20,8 +20,9 @@ export function loadMcpConfig(
     '',
   );
   const enabled = value('enabled') as boolean;
-  const configured = String(value('public_base_url')).trim();
-  let origin = (configured || browserOrigin).replace(/\/$/u, '');
+  // The protocol origin is the API host; issuer, resource and discovery all derive from it.
+  const configured = config.auth.publicApiUrl.trim();
+  let origin = configured.replace(/\/$/u, '');
   const allowedEmail = String(value('allowed_account_email')).trim().toLowerCase();
   const encryptionKey = String(resolveSettingSpec(policy.settings.encryption_key, env));
   if (enabled) {
@@ -32,11 +33,12 @@ export function loadMcpConfig(
       throw new ConfigError(
         'ENCRYPTION_KEY must meet the production strength policy and be independent of JWT_SECRET_KEY',
       );
+    if (!configured) throw new ConfigError('PUBLIC_API_URL must be configured for MCP');
     let parsed: URL;
     try {
       parsed = new URL(origin);
     } catch {
-      throw new ConfigError('MCP_PUBLIC_BASE_URL must be an HTTP(S) origin');
+      throw new ConfigError('PUBLIC_API_URL must be an HTTP(S) origin');
     }
     if (
       !['http:', 'https:'].includes(parsed.protocol) ||
@@ -46,7 +48,7 @@ export function loadMcpConfig(
       parsed.hash ||
       parsed.pathname !== '/'
     )
-      throw new ConfigError('MCP_PUBLIC_BASE_URL must be an HTTP(S) origin');
+      throw new ConfigError('PUBLIC_API_URL must be an HTTP(S) origin');
     origin = parsed.origin;
     const browser = new URL(browserOrigin);
     if (
@@ -59,11 +61,8 @@ export function loadMcpConfig(
     )
       throw new ConfigError('FRONTEND_URL must be an HTTP(S) origin for MCP consent');
     browserOrigin = browser.origin;
-    if (
-      config.appEnv.toLowerCase() === 'production' &&
-      (!configured || parsed.protocol !== 'https:')
-    )
-      throw new ConfigError('MCP_PUBLIC_BASE_URL must be configured with HTTPS in production');
+    if (config.appEnv.trim().toLowerCase() === 'production' && parsed.protocol !== 'https:')
+      throw new ConfigError('PUBLIC_API_URL must use HTTPS in production');
     if (
       config.demo.enabled &&
       allowedEmail !==

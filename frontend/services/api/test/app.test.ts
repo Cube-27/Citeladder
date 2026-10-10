@@ -16,15 +16,17 @@ const db = testDatabase(config);
 afterAll(() => db.destroy());
 
 describe('health and readiness', () => {
-  it('serves /v1 machine routes on the API host only, and nothing else there', async () => {
+  it('serves /v1 machine routes and the MCP protocol on the API host only, and nothing else there', async () => {
     const token = 'current-origin-token-0123456789abcdef';
     const protectedApp = createApp(
       testConfig({
         K_SERVICE: 'api',
         CITELADDER_ORIGIN_TOKEN: token,
         FRONTEND_URL: 'https://app.example.test',
-        MCP_PUBLIC_BASE_URL: 'https://example.test',
+        PUBLIC_WEBSITE_URL: 'https://example.test',
         PUBLIC_API_URL: 'https://api.example.test',
+        MCP_ENABLED: 'true',
+        ENCRYPTION_KEY: 'mcp-test-encryption-not-a-real-secret',
       }),
       db,
     );
@@ -40,9 +42,17 @@ describe('health and readiness', () => {
     expect(await status('POST', ingest, 'api.example.test')).toBe(401);
     for (const publicHost of ['app.example.test', 'example.test'])
       expect(await status('POST', ingest, publicHost)).toBe(404);
-    for (const path of ['/health', '/api/v1/auth/me', '/mcp'])
+    for (const path of ['/health', '/api/v1/auth/me', '/mcp/oauth/consent'])
       expect(await status('GET', path, 'api.example.test')).toBe(404);
     expect(await status('GET', '/health', 'app.example.test')).toBe(200);
+    // MCP moved to the API host outright: the apex and app hosts no longer route it.
+    expect(await status('GET', '/.well-known/oauth-authorization-server', 'api.example.test')).toBe(
+      200,
+    );
+    expect(await status('POST', '/mcp', 'api.example.test')).toBe(401);
+    for (const publicHost of ['app.example.test', 'example.test'])
+      for (const path of ['/mcp', '/.well-known/oauth-authorization-server', '/token'])
+        expect(await status('GET', path, publicHost)).toBe(404);
   });
   it('protects the raw origin, including probes and MCP, and accepts rotated tokens', async () => {
     const current = 'current-origin-token-0123456789abcdef';
@@ -53,7 +63,7 @@ describe('health and readiness', () => {
         CITELADDER_ORIGIN_TOKEN: current,
         CITELADDER_ORIGIN_TOKEN_PREVIOUS: previous,
         FRONTEND_URL: 'https://app.example.test',
-        MCP_PUBLIC_BASE_URL: 'https://example.test',
+        PUBLIC_WEBSITE_URL: 'https://example.test',
       }),
       db,
     );

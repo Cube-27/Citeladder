@@ -116,14 +116,16 @@ describe('product Worker routing', () => {
     expect(result.status).toBe(200);
   });
 
-  it('rejects apex-owned and machine-facing endpoints on the app host', async () => {
+  it('rejects apex-owned, MCP and machine-facing endpoints on the app host', async () => {
     for (const path of [
       '/api/v1/billing/webhooks/razorpay',
       '/v1/crawl-logs/ingest/11111111-1111-4111-8111-111111111111',
       '/v1/crawl-logs/firehose/11111111-1111-4111-8111-111111111111',
       '/api/v1/billing/%77ebhooks/razorpay',
+      '/mcp',
       '/mcp/register',
       '/authorize',
+      '/token',
       '/.well-known/oauth-authorization-server',
     ]) {
       const result = await handleAppRequest(request(path, 'GET'), env);

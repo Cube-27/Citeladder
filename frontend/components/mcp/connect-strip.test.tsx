@@ -9,7 +9,7 @@ it('connects Claude with the CiteLadder URL already filled in', () => {
   const connect = screen.getByRole('link', { name: 'Connect to Claude' });
   expect(connect).toHaveAttribute(
     'href',
-    'https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=CiteLadder&connectorUrl=https%3A%2F%2Fciteladder.com%2Fmcp',
+    'https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=CiteLadder&connectorUrl=https%3A%2F%2Fapi.citeladder.com%2Fmcp',
   );
   expect(connect).toHaveAttribute('target', '_blank');
 });
@@ -24,7 +24,7 @@ it('offers the other assistants from the keyboard and copies the URL to paste th
   expect(items.map((item) => item.textContent)).toEqual(['ChatGPT', 'Gemini', 'Grok']);
 
   await user.click(screen.getByRole('menuitem', { name: 'ChatGPT' }));
-  expect(await navigator.clipboard.readText()).toBe('https://citeladder.com/mcp');
+  expect(await navigator.clipboard.readText()).toBe('https://api.citeladder.com/mcp');
   expect(screen.getByRole('status')).toHaveTextContent(
     'URL copied. In ChatGPT, add a custom connector and paste it.',
   );
@@ -63,7 +63,7 @@ it('follows the Claude link from the keyboard instead of opening the menu', asyn
   connect.focus();
   await user.keyboard('{Enter}');
   expect(followed).toBe(
-    'https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=CiteLadder&connectorUrl=https%3A%2F%2Fciteladder.com%2Fmcp',
+    'https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=CiteLadder&connectorUrl=https%3A%2F%2Fapi.citeladder.com%2Fmcp',
   );
   expect(screen.queryByRole('menu')).not.toBeInTheDocument();
 });

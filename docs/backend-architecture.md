@@ -142,8 +142,9 @@ The Cloud Run API (`K_SERVICE`, or configured runner job outside a job
 execution) requires the existing
 `CITELADDER_ORIGIN_TOKEN` on every request, including health/readiness and MCP;
 the previous token may be accepted during rotation. Missing tokens fail startup.
-An admitted request must also name an allowlisted public host (the app or apex
-host), which MCP origin checks use. Its `X-CiteLadder-Client-IP` becomes the
+An admitted request must also name an allowlisted public host (the app, apex
+or API host), which MCP origin checks use. Only the API host serves `/v1/...`
+and the MCP protocol paths, and it serves nothing else. Its `X-CiteLadder-Client-IP` becomes the
 client identity for rate limits. Cloud Run uses a TCP startup probe;
 authenticated HTTP probes must send the origin and public-host headers. Runtime commands and environment settings are owned by
 [Development](DEVELOPMENT.md#scale-to-zero-runtime).

@@ -1,10 +1,9 @@
 import { llmsTxt } from '@/lib/marketing-content/llms';
-import { absoluteUrl, siteOrigin } from '@/lib/seo/site';
+import { absoluteUrl } from '@/lib/seo/site';
 import { PUBLIC_ROUTES } from '../public-routes';
 
 export function GET() {
   const body = llmsTxt({
-    origin: siteOrigin()?.origin ?? '',
     pages: PUBLIC_ROUTES.map((route) => ({
       title: route.title,
       url: absoluteUrl(route.path) ?? route.path,
