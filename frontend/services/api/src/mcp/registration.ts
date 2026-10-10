@@ -120,6 +120,19 @@ export function admitToolCall(db: Database, grantId: string, userId: string) {
   ]);
 }
 
+/** A change also spends a narrower per-grant budget than reads, in the same window. */
+export function admitWriteCall(db: Database, grantId: string) {
+  return admitBudgets(db, [
+    [
+      'mcp_grant',
+      grantId,
+      'mcp.write_call.grant',
+      mcpPolicy.write_call_grant_limit,
+      mcpPolicy.tool_call_window_seconds,
+    ],
+  ]);
+}
+
 async function admitBudgets(
   db: Database,
   budgets: readonly (readonly [

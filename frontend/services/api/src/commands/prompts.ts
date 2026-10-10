@@ -37,8 +37,8 @@ export function createPrompts(
 }
 
 /**
- * What `createPrompts` would do with these inputs, writing nothing: the rows
- * it would insert, each dropped row with why, and prompt slots in use after.
+ * What `createPrompts` would do with these inputs, writing nothing: the inputs
+ * it would insert, each dropped one with why, and prompt slots in use after.
  */
 export async function previewPrompts(
   db: Database,
@@ -54,11 +54,10 @@ export async function previewPrompts(
     inputs,
   );
   if (!isNonEmpty(admitted)) return { admitted, dropped, occupancy: null };
-  return operatorTransaction(db, false, async (trx) => ({
-    admitted: await prompts.createPrompts(trx, actor.workspaceId, promptSetId, admitted),
-    dropped,
-    occupancy: await promptOccupancy(trx, actor.workspaceId),
-  }));
+  return operatorTransaction(db, false, async (trx) => {
+    await prompts.createPrompts(trx, actor.workspaceId, promptSetId, admitted);
+    return { admitted, dropped, occupancy: await promptOccupancy(trx, actor.workspaceId) };
+  });
 }
 
 export function createPrompt(

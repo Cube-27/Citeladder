@@ -523,7 +523,7 @@ function compact(node: unknown): unknown {
   }
   return out;
 }
-function inputSchema(schema: z.ZodType) {
+export function inputSchema(schema: z.ZodType) {
   return compact(z.toJSONSchema(schema, { io: 'input' }));
 }
 const annotations = {
@@ -545,7 +545,7 @@ function isToolName(name: string): name is ToolName {
   return Object.hasOwn(definitions, name);
 }
 /** Names each invalid field so the model can correct its call. */
-function argumentProblem(error: z.ZodError) {
+export function argumentProblem(error: z.ZodError) {
   return `Invalid arguments: ${error.issues
     .map((issue) => `${issue.path.join('.') || 'arguments'}: ${issue.message}`)
     .join('; ')}`;
