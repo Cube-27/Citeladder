@@ -123,16 +123,16 @@ export async function enqueueDuePulls(
     .execute();
   for (const source of due) {
     if (!canAdmit()) return false;
-    // One source at a time keeps each enqueue inside the tick's admission budget.
-    await enqueueTask(db, {
-      // NOSONAR
+    const task = {
       workspaceId,
       projectId: source.project_id,
       kind: 'crawl_log_pull',
       payload: { source_id: source.id },
       keyParts: [source.id, Math.floor(now.getTime() / interval)],
       maxAttempts: crawlLogs.task_max_attempts,
-    });
+    };
+    // One source at a time keeps each enqueue inside the tick's admission budget.
+    await enqueueTask(db, task); // NOSONAR
   }
   return true;
 }
