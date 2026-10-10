@@ -6,6 +6,7 @@ import { policy } from '../config.ts';
 import { auditPolicy } from '../audits/config.ts';
 import { auditEvent, transitionAudit } from '../audits/state.ts';
 import { compareText } from '../text-order.ts';
+import { nextDueAt } from './next-due.ts';
 
 export type AuditTask = Selectable<AuditTasks>;
 const table = 'audit_tasks';
@@ -171,14 +172,9 @@ export class AuditQueue {
       return locked.map((task) => byId.get(task.id)!);
     });
   }
-  /** Earliest claimable time, so an idle runner stays for a retry or provider poll due soon. */
-  async nextDue(): Promise<Date | null> {
-    const row = await this.db
-      .selectFrom(table)
-      .select((eb) => eb.fn.min('available_at').as('due'))
-      .where('status', 'in', claimable)
-      .executeTakeFirst();
-    return row?.due ? new Date(row.due) : null;
+  /** Earliest claimable time or lease expiry, so an idle runner stays for a retry, provider poll or recovery due soon. */
+  nextDue(): Promise<Date | null> {
+    return nextDueAt(this.db, { table, claimable });
   }
   markRunning(claimed: AuditTask, owner: string, startTask = true) {
     const at = this.now();

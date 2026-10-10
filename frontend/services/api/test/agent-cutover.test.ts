@@ -8,7 +8,7 @@ import * as bindingsOwner from '../src/agent/bindings.ts';
 import { ModelCalls } from '../src/agent/model-calls.ts';
 import { recoveryReply } from '../src/agent/messages.ts';
 import { AgentWorker } from '../src/workers/agent-worker.ts';
-import { AgentFixtures, scripted, deliverable, zeroFunding } from './agent-support.ts';
+import { AgentFixtures, agentPolicy, scripted, deliverable, zeroFunding } from './agent-support.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 import {
   agentTurnAcceptedSchema,
@@ -174,6 +174,15 @@ describe('served Agent cutover on PostgreSQL', () => {
     expect(agentChatDetailSchema.parse(await before.json()).latest_run?.status).toBe('queued');
     // The runner never executes a turn; the browser's run request does.
     expect(await worker.runUntilIdle()).toBe(0);
+    // It is due for the lane only once no stream has claimed it within the grace.
+    const { available_at } = await db
+      .selectFrom('agent_runs')
+      .select('available_at')
+      .where('id', '=', accepted.run.id)
+      .executeTakeFirstOrThrow();
+    expect((await worker.nextDue())?.getTime()).toBe(
+      new Date(available_at).getTime() + agentPolicy.unclaimed_grace_seconds * 1000,
+    );
     expect(
       (await app.request(`${chat}/runs/${accepted.run.id}/run`, { method: 'POST', headers }))
         .status,

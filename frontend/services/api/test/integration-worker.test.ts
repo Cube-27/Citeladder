@@ -8,7 +8,7 @@ import { IntegrationError } from '../src/integrations/client.ts';
 import { integrationPolicy, integrationSettings } from '../src/integrations/config.ts';
 import { IntegrationWorker } from '../src/workers/integration-worker.ts';
 import { selectedPartition } from '../src/integrations/partitions.ts';
-import { recoverIntegrationLeases, recoverQueues } from '../src/queue/recovery.ts';
+import { recoverIntegrationLeases } from '../src/queue/recovery.ts';
 import { referralEventFields } from '../src/referrals/events.ts';
 import { seedProject } from './referral-fixtures.ts';
 import { Fixtures, testDatabase } from './support.ts';
@@ -119,46 +119,56 @@ async function seedRun(provider: 'gsc' | 'ga4' | 'bing' = 'gsc') {
 }
 
 describe('integration worker paging and resume', () => {
-  it('releases an interrupted interactive sync for retry without claiming another run', async () => {
-    const selected = await seedRun();
-    const other = await seedRun();
-    try {
-      const controller = new AbortController();
-      const client: Pick<IntegrationClient, 'page'> = {
-        page: async () => {
-          controller.abort();
-          throw new Error('Interrupted transport');
-        },
-      };
-      const worker = new IntegrationWorker(db, client, settings, async () => 'recorded-token', {
-        workspaceId: selected.workspaceId,
-        runId: selected.runId,
-      });
-      await worker.runOnce(controller.signal);
-      expect(await worker.runOnce(controller.signal)).toBe(false);
-      const rows = await db
-        .selectFrom('integration_sync_runs')
-        .selectAll()
-        .where('id', 'in', [selected.runId, other.runId])
-        .execute();
-      // A deadline stop is not a provider failure: the run is released for the
-      // next claim, and an attempt that committed nothing still counts.
-      expect(rows.find((row) => row.id === selected.runId)).toMatchObject({
-        status: 'queued',
-        attempt_count: 1,
-        lease_owner: null,
-      });
-      expect(rows.find((row) => row.id === other.runId)).toMatchObject({
-        status: 'queued',
-        attempt_count: 0,
-      });
-    } finally {
-      await db
-        .deleteFrom('workspaces')
-        .where('id', 'in', [selected.workspaceId, other.workspaceId])
-        .execute();
-    }
-  });
+  it.each([
+    // Stopped before it had one provider request timeout: admitted late, refunded.
+    { timeout: settings.sync_request_timeout_seconds, attempts: 0 },
+    // Had the full timeout and committed nothing: the attempt counts.
+    { timeout: 0.000001, attempts: 1 },
+  ])(
+    'releases an interrupted sync for retry without claiming another run (timeout $timeout s)',
+    async ({ timeout, attempts }) => {
+      const selected = await seedRun();
+      const other = await seedRun();
+      try {
+        const controller = new AbortController();
+        const client: Pick<IntegrationClient, 'page'> = {
+          page: async () => {
+            controller.abort();
+            throw new Error('Interrupted transport');
+          },
+        };
+        const worker = new IntegrationWorker(
+          db,
+          client,
+          { ...settings, sync_request_timeout_seconds: timeout },
+          async () => 'recorded-token',
+          { workspaceId: selected.workspaceId, runId: selected.runId },
+        );
+        await worker.runOnce(controller.signal);
+        expect(await worker.runOnce(controller.signal)).toBe(false);
+        const rows = await db
+          .selectFrom('integration_sync_runs')
+          .selectAll()
+          .where('id', 'in', [selected.runId, other.runId])
+          .execute();
+        // A deadline stop is not a provider failure: the run is released for the next claim.
+        expect(rows.find((row) => row.id === selected.runId)).toMatchObject({
+          status: 'queued',
+          attempt_count: attempts,
+          lease_owner: null,
+        });
+        expect(rows.find((row) => row.id === other.runId)).toMatchObject({
+          status: 'queued',
+          attempt_count: 0,
+        });
+      } finally {
+        await db
+          .deleteFrom('workspaces')
+          .where('id', 'in', [selected.workspaceId, other.workspaceId])
+          .execute();
+      }
+    },
+  );
   it('refunds a deadline stop that committed a page, so long imports are not written off', async () => {
     const { runId, workspaceId } = await seedRun();
     try {
@@ -458,38 +468,6 @@ describe('integration worker paging and resume', () => {
       expect(result.status).toBe('succeeded');
     } finally {
       vi.useRealTimers();
-    }
-  });
-  it('reports partial sweep failure after recovering the independent queue', async () => {
-    const run = await seedRun();
-    await db
-      .updateTable('integration_sync_runs')
-      .set({
-        status: 'running',
-        attempt_count: 1,
-        lease_owner: 'dead-worker',
-        lease_expires_at: new Date(Date.now() - 1000),
-      })
-      .where('id', '=', run.runId)
-      .execute();
-    const transaction = vi.spyOn(db, 'transaction').mockImplementationOnce(() => {
-      throw new Error('discovery queue unavailable');
-    });
-    try {
-      await expect(recoverQueues(db)).rejects.toThrow('Queue recovery failed');
-      const recovered = await db
-        .selectFrom('integration_sync_runs')
-        .select(['status', 'attempt_count'])
-        .where('id', '=', run.runId)
-        .executeTakeFirstOrThrow();
-      expect(recovered).toEqual({ status: 'retry_wait', attempt_count: 1 });
-    } finally {
-      transaction.mockRestore();
-      await db
-        .updateTable('integration_sync_runs')
-        .set({ status: 'succeeded' })
-        .where('id', '=', run.runId)
-        .execute();
     }
   });
   it('claims by priority and availability while concurrent workers never share a run', async () => {

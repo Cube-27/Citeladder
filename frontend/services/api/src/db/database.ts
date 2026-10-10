@@ -12,6 +12,7 @@ import pg from 'pg';
 
 import type { ServiceConfig } from '../config.ts';
 import type { DB } from '../generated/db-schema.ts';
+import { getLogger } from '../logging.ts';
 import { observeConnection } from './committed-work.ts';
 
 export type Database = Kysely<DB>;
@@ -37,6 +38,8 @@ export function poolOptions(config: DatabaseConfig): pg.PoolConfig {
     query_timeout: db.commandTimeoutSeconds * 1000,
     statement_timeout: db.statementTimeoutMs,
     lock_timeout: db.lockTimeoutMs,
+    // Detect a dead peer (database VM restart) instead of waiting on a silent socket.
+    keepAlive: true,
     idle_in_transaction_session_timeout: db.idleTransactionTimeoutMs,
     application_name: config.appName,
     // asyncpg's `ssl="require"` encrypts without verifying the certificate.
@@ -48,14 +51,18 @@ export function createDatabase(
   config: DatabaseConfig,
   options: { execution?: boolean } = {},
 ): Database {
+  const pool = new pg.Pool({
+    ...poolOptions(config),
+    ...(options.execution || config.execution?.runnerJob
+      ? { max: config.execution?.poolSize }
+      : {}),
+  });
+  // An idle client that loses its connection (a database restart) is dropped
+  // by the pool; without a listener its 'error' event would crash the process.
+  pool.on('error', (error) => getLogger('db').exception('database_idle_client_lost', error));
   return new Kysely<DB>({
     dialect: new PostgresDialect({
-      pool: new pg.Pool({
-        ...poolOptions(config),
-        ...(options.execution || config.execution?.runnerJob
-          ? { max: config.execution?.poolSize }
-          : {}),
-      }),
+      pool,
       onCreateConnection: (connection) => {
         observeConnection(connection);
         return Promise.resolve();

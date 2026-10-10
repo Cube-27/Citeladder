@@ -2,6 +2,7 @@ import { sql } from 'kysely';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { createAgentBindings } from '../agent/bindings.ts';
+import { leasedStatuses } from '../queue/next-due.ts';
 
 export class AgentWorker {
   readonly db: Database;
@@ -29,7 +30,7 @@ export class AgentWorker {
             ),
           ]),
           eb.and([
-            eb('status', 'in', ['leased', 'running']),
+            eb('status', 'in', leasedStatuses),
             eb('lease_expires_at', '<=', sql<Date>`clock_timestamp()`),
           ]),
           eb.and([
@@ -58,6 +59,21 @@ export class AgentWorker {
       .limit(policy.agent.recovery_batch_size)
       .execute();
     return rows.map((row) => row.workspace_id);
+  }
+  /**
+   * When the earliest unclaimed turn passes its grace and this lane can end it,
+   * so the chat is not blocked until the next tick. A streaming turn's lease is
+   * live for its whole request, so it does not keep the runner alive.
+   */
+  async nextDue(): Promise<Date | null> {
+    const row = await this.db
+      .selectFrom('agent_runs')
+      .select((eb) => eb.fn.min('available_at').as('due'))
+      .where('status', 'in', policy.task_queue.claimable)
+      .$if(this.workspaceId !== undefined, (q) => q.where('workspace_id', '=', this.workspaceId!))
+      .executeTakeFirst();
+    if (!row?.due) return null;
+    return new Date(new Date(row.due).getTime() + policy.agent.unclaimed_grace_seconds * 1000);
   }
   /**
    * Turns execute only inside the browser's request; this lane never runs one.

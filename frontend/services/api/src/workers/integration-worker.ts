@@ -24,6 +24,7 @@ import {
 } from '../integrations/sync-state.ts';
 import { enqueuePostSyncProjections } from '../integrations/projections.ts';
 import { cachedWorkspaceAccess } from '../entitlements/access.ts';
+import { nextDueAt } from '../queue/next-due.ts';
 
 const logger = getLogger('workers.integrations');
 const statuses = policy.task_queue.statuses;
@@ -82,6 +83,8 @@ export class IntegrationWorker {
   readonly #access: (workspaceId: string) => Promise<unknown>;
   /** Pages this attempt committed; a deadline stop with progress is not charged. */
   #committedPages = 0;
+  /** When this claim's first provider request started; null until one has. */
+  #firstRequestAt: number | null = null;
 
   constructor(
     db: Database,
@@ -123,6 +126,7 @@ export class IntegrationWorker {
       (error) => logger.exception('integration_heartbeat_failed', error, { sync_run_id: run.id }),
     );
     this.#committedPages = 0;
+    this.#firstRequestAt = null;
     try {
       await this.#execute(run, leaseSignal(heartbeat.signal, signal));
       if (!heartbeat.signal.aborted) await this.#finish(run, null);
@@ -192,15 +196,13 @@ export class IntegrationWorker {
     });
   }
 
-  /** Earliest claimable run, so an idle runner stays for a retry or history chunk due soon. */
-  async nextDue(): Promise<Date | null> {
-    const row = await this.#db
-      .selectFrom('integration_sync_runs')
-      .select((eb) => eb.fn.min('available_at').as('due'))
-      .where('status', 'in', [statuses.queued, statuses.retry_wait])
-      .whereRef('attempt_count', '<', 'max_attempts')
-      .executeTakeFirst();
-    return row?.due ? new Date(row.due) : null;
+  /** Earliest claimable run or lease expiry, so an idle runner stays for a retry, history chunk or recovery due soon. */
+  nextDue(): Promise<Date | null> {
+    return nextDueAt(this.#db, {
+      table: 'integration_sync_runs',
+      claimable: [statuses.queued, statuses.retry_wait],
+      ready: sql`attempt_count < max_attempts`,
+    });
   }
 
   async runUntilIdle(signal?: AbortSignal) {
@@ -386,8 +388,9 @@ export class IntegrationWorker {
     template: Dataset,
     offset: number,
   ) {
-    const fetch = (token: string) =>
-      this.#client.page(
+    const fetch = (token: string) => {
+      this.#firstRequestAt ??= performance.now();
+      return this.#client.page(
         provider,
         token,
         run.property_ref,
@@ -396,6 +399,7 @@ export class IntegrationWorker {
         valueDate(run.window_end),
         offset,
       );
+    };
     const token = await this.#tokenResolver(this.#db, grantId, run.workspace_id);
     try {
       return await fetch(token);
@@ -638,12 +642,17 @@ export class IntegrationWorker {
 
   /**
    * The caller's deadline stopped the run, not the provider. Committed pages
-   * resume on the next claim, so an attempt that made progress is refunded;
-   * one that committed nothing still counts, which bounds a run that cannot
-   * finish a single page inside the budget.
+   * resume on the next claim, so an attempt that made progress is refunded, as
+   * is one stopped before its first provider request had a full request
+   * timeout (admitted late in a drain, or slowed by setup). One that had that time and committed nothing still
+   * counts, which bounds a run that cannot finish a single page.
    */
   async #release(trx: Database, run: Run, now: Date): Promise<void> {
-    const refund = this.#committedPages > 0 ? 1 : 0;
+    const started = this.#firstRequestAt;
+    const admittedLate =
+      started === null ||
+      performance.now() - started < this.#settings.sync_request_timeout_seconds * 1000;
+    const refund = this.#committedPages > 0 || admittedLate ? 1 : 0;
     const exhausted = run.attempt_count - refund >= run.max_attempts;
     if (exhausted) {
       await this.#fail(

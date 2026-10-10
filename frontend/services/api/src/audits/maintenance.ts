@@ -5,6 +5,7 @@ import { policy } from '../config.ts';
 import { getLogger } from '../logging.ts';
 import { searchPolicy } from '../search-surfaces/dataforseo.ts';
 import { ownedAuditTask, type AuditTask } from '../queue/audit-queue.ts';
+import { leasedStatuses } from '../queue/next-due.ts';
 import { releaseTerminalTaskCredits } from './result-persistence.ts';
 import { auditPolicy } from './config.ts';
 import { auditEvent, transitionAudit } from './state.ts';
@@ -135,18 +136,17 @@ export class AuditMaintenance {
     this.db = db;
     this.finalize = finalize;
   }
-  async runOnce(at = new Date(), canAdmit = () => true) {
-    if (!canAdmit()) return 0;
+  async #reclaim(at: Date, canAdmit: () => boolean) {
+    const parents = new Map<string, Parent>();
     const expired = await this.db
       .selectFrom('audit_tasks')
       .select(['id', 'workspace_id', 'audit_id', 'project_id'])
-      .where('status', 'in', ['leased', 'running'])
+      .where('status', 'in', leasedStatuses)
       .where('lease_expires_at', '<=', sql<Date>`clock_timestamp()`)
       .orderBy('lease_expires_at')
       .orderBy('id')
       .limit(batchSize)
       .execute();
-    const parents = new Map<string, Parent>();
     let reclaimed = 0;
     for (const candidate of expired) {
       if (!canAdmit()) break;
@@ -168,7 +168,7 @@ export class AuditMaintenance {
           .where('workspace_id', '=', candidate.workspace_id)
           .where('id', '=', candidate.id)
           .where('audit_id', '=', audit.id)
-          .where('status', 'in', ['leased', 'running'])
+          .where('status', 'in', leasedStatuses)
           .where('lease_expires_at', '<=', sql<Date>`clock_timestamp()`)
           .forUpdate()
           .skipLocked()
@@ -223,6 +223,22 @@ export class AuditMaintenance {
           auditId: candidate.audit_id,
         });
     }
+    return { reclaimed, parents };
+  }
+  /**
+   * Reclaim expired task leases and finalize the audits that ended. The audit
+   * lane runs this on every pass, so a lease lost with a killed request or
+   * execution recovers at expiry rather than at the next tick.
+   */
+  async recoverLeases(at = new Date(), canAdmit = () => true) {
+    if (!canAdmit()) return 0;
+    const { reclaimed, parents } = await this.#reclaim(at, canAdmit);
+    await this.finalizeParents(parents.values(), canAdmit);
+    return reclaimed;
+  }
+  async runOnce(at = new Date(), canAdmit = () => true) {
+    if (!canAdmit()) return 0;
+    const { reclaimed, parents } = await this.#reclaim(at, canAdmit);
     // Reconcile funding left owing by older workers or cross-queue sweeper terminalization.
     const owing = await this.db
       .selectFrom('consumable_ledger as l')

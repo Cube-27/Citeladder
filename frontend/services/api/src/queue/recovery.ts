@@ -131,25 +131,3 @@ export async function recoverIntegrationLeases(
   logExhausted('integration_sync_runs', tasks);
   return tasks.length;
 }
-
-export async function recoverQueues(db: Database, canAdmit = () => true) {
-  const logger = getLogger('workers.queue-recovery');
-  let reclaimed = 0;
-  const failures: unknown[] = [];
-  for (const [queue, recover] of [
-    ['brand_discovery_tasks', recoverDiscoveryLeases],
-    ['integration_sync_runs', recoverIntegrationLeases],
-  ] as const) {
-    if (!canAdmit()) break;
-    try {
-      reclaimed += await recover(db);
-    } catch (error) {
-      // One broken queue must not stop the independent recovery of the other.
-      logger.exception('queue_recovery_failed', error, { queue });
-      failures.push(error);
-    }
-  }
-  if (reclaimed) logger.info('expired_queue_leases_recovered', { reclaimed });
-  if (failures.length) throw new AggregateError(failures, 'Queue recovery failed');
-  return reclaimed;
-}

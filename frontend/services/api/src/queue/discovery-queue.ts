@@ -6,6 +6,7 @@ import { sql, type Selectable } from 'kysely';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import type { BrandDiscoveryTasks } from '../generated/db-schema.ts';
+import { nextDueAt } from './next-due.ts';
 
 export type DiscoveryTask = Selectable<BrandDiscoveryTasks>;
 export type DiscoveryTarget = { workspaceId: string; discoveryId: string };
@@ -79,16 +80,14 @@ export class DiscoveryQueue {
       return task;
     });
   }
-  /** Earliest claimable time, so an idle runner stays for a retry due soon. */
-  async nextDue(): Promise<Date | null> {
-    const row = await this.db
-      .selectFrom(table)
-      .select((eb) => eb.fn.min('available_at').as('due'))
-      .where('status', 'in', claimable)
-      .whereRef('attempt_count', '<', 'max_attempts')
-      .where('task_kind', '=', policy.discovery.constants.task_kind_brand_discovery)
-      .executeTakeFirst();
-    return row?.due ? new Date(row.due) : null;
+  /** Earliest claimable time or lease expiry, so an idle runner stays for a retry or recovery due soon. */
+  nextDue(): Promise<Date | null> {
+    return nextDueAt(this.db, {
+      table,
+      claimable,
+      ready: sql`attempt_count < max_attempts`,
+      scope: sql`task_kind = ${policy.discovery.constants.task_kind_brand_discovery}`,
+    });
   }
   async heartbeat(task: DiscoveryTask, owner: string) {
     const now = this.now();

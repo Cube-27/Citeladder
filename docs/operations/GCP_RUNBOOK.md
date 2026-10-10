@@ -166,48 +166,20 @@ describe the current Google Cloud application/database hosting in the
 United States (`us-central1`). Cloudflare delivers the website, product and
 documentation through its global Worker network.
 
-## 2. Completed cutover and acceptance
+## 2. Deploy acceptance
 
-The clean rebuild and GCP/Product/Marketing/Documentation delivery workflows
-have succeeded on current main. The original first-deployment sequence below
-is retained as cutover history; it is not a pending task or reset instruction.
-Routine releases use section 4. Manual acceptance remains evidence-dependent.
+After a deploy:
 
-1. Merge the hosting PR to `main` and wait for CI.
-2. Actions → **GCP - Deploy** → Run workflow from `main` and approve
-   `gcp-demo`. Leave `reset_database` unchecked: the database starts empty
-   anyway.
-3. The first run is the clean rebuild. Terraform reuses the project, state,
-   identities and secret values, and permanently deletes the following:
-   - the Mumbai `citeladder-demo` VM and its disk (the old database);
-   - the static IP, the old VPC and firewalls;
-   - the `asia-south1` `citeladder-demo` Artifact Registry repository and all
-     its images;
-   - the backup bucket, the Storage data-access audit configuration and the
-     retired Origin CA secrets.
+```powershell
+curl.exe --fail https://app.citeladder.com/health
+curl.exe --fail https://app.citeladder.com/api/v1/auth/oauth/providers
+curl.exe --fail https://citeladder.com/.well-known/oauth-authorization-server
+```
 
-   It then creates the network, the database VM, the Cloud Run API and jobs,
-   the scheduler and the budget. It migrates an empty database and bootstraps
-   `DEMO_LOGIN_EMAIL`. Last, it smoke-tests the origin (authenticated `200`,
-   anonymous and foreign-host `403`) and runs one tick.
-4. Deploy both Workers: Actions → **Product Worker delivery**, then
-   **Marketing Worker delivery** (see the [Workers runbook](WORKERS_RUNBOOK.md)).
-   The static **Documentation Worker delivery** has no origin and needs a
-   deploy only when its content changes.
-5. Acceptance:
-
-   ```powershell
-   curl.exe --fail https://app.citeladder.com/health
-   curl.exe --fail https://app.citeladder.com/api/v1/auth/oauth/providers
-   curl.exe --fail https://citeladder.com/.well-known/oauth-authorization-server
-   ```
-
-   Sign in as `DEMO_LOGIN_EMAIL`, create a project, start a Site Health crawl
-   and confirm it progresses (a runner execution appears under Cloud Run →
-   Jobs → `citeladder-runner`). Connect Search Console end to end.
-6. Complete sections 1.6 and 1.7.
-7. Seven days later, check Billing → Reports grouped by SKU and remove
-   anything unexpectedly non-zero.
+Sign in as `DEMO_LOGIN_EMAIL`, create a project, start a Site Health crawl
+and confirm it progresses (a runner execution appears under Cloud Run →
+Jobs → `citeladder-runner`). A week after an infrastructure change, check
+Billing → Reports grouped by SKU and remove anything unexpectedly non-zero.
 
 ## 3. Daily operation
 
@@ -238,9 +210,32 @@ Routine releases use section 4. Manual acceptance remains evidence-dependent.
 - **Runner and tick:** a committed API write starts `citeladder-runner`. A
   burst starts several executions, and all but one exit after a short wait for
   the single drain lock. The scheduler starts `citeladder-tick` every
-  10 minutes; it recovers leases, runs due schedules and dispatch, then drains.
-  To process work immediately:
+  10 minutes; it runs maintenance, due schedules and dispatch, then drains.
+  Cloud Run takes one to three minutes to start an execution. To process work
+  immediately:
   `gcloud run jobs execute citeladder-tick --region us-central1 --wait`.
+  A failed lane or tick phase logs `runner_lane_failed` or `tick_phase_failed`
+  with its exception, and `runner_completed` names the failed lanes.
+- **Stuck work:** in the database shell, list pending and leased work per queue:
+
+  ```sql
+  select 'site_crawl_tasks' as queue, status, count(*), min(available_at) as next_due,
+         min(lease_expires_at) as next_lease_expiry
+  from site_crawl_tasks where status not in ('succeeded', 'failed', 'cancelled') group by status
+  union all
+  select 'audit_tasks', status, count(*), min(available_at), min(lease_expires_at)
+  from audit_tasks where status not in ('succeeded', 'failed', 'cancelled') group by status
+  union all
+  select 'analytics_tasks', status, count(*), min(available_at), min(lease_expires_at)
+  from analytics_tasks where status not in ('succeeded', 'failed', 'cancelled') group by status
+  union all
+  select 'integration_sync_runs', status, count(*), min(available_at), min(lease_expires_at)
+  from integration_sync_runs where status not in ('succeeded', 'failed', 'cancelled') group by status
+  order by 1, 2;
+  ```
+
+  A `next_due` or `next_lease_expiry` well in the past means no execution has
+  drained that queue since; run the tick and read its log.
 
 ## 4. Updates and rollback
 
@@ -279,8 +274,9 @@ stops the deploy before the API changes.
 The existing Terraform `google_billing_budget.monthly` remains alert-only.
 [`logging.tf`](../../infra/gcp/logging.tf) excludes only API Cloud Run request
 logs with HTTP 403; application logs and other request statuses remain.
-Applying the exclusion requires a separately authorized deployment. It removes
-that ingestion cost, not request fees or all Cloud Logging costs.
+Every deploy applies it. It removes that ingestion cost, not request fees or
+all Cloud Logging costs. The budget excludes credits, so a free trial or
+promotion cannot hide hosting spend.
 
 **Deferred owner action, console only:** if available, create a separate monthly
 Cloud Run spend-cap budget for this project at roughly ₹8,500 ($100), keeping

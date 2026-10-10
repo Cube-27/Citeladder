@@ -8,9 +8,12 @@ resource "google_billing_budget" "monthly" {
   billing_account = var.billing_account
   display_name    = "CiteLadder monthly hosting"
 
+  # Credits (free trial, promotions) would cancel the spend and keep the alarm
+  # silent; the target is what hosting costs once they run out.
   budget_filter {
-    projects        = ["projects/${data.google_project.current.number}"]
-    calendar_period = "MONTH"
+    projects               = ["projects/${data.google_project.current.number}"]
+    calendar_period        = "MONTH"
+    credit_types_treatment = "EXCLUDE_ALL_CREDITS"
   }
 
   amount {

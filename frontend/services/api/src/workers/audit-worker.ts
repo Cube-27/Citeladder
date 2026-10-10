@@ -103,7 +103,7 @@ export class AuditWorker {
   nextDue() {
     return this.#queue.nextDue();
   }
-  /** Lease recovery and stuck-audit repair belong to the periodic audit-maintenance lane. */
+  /** The runner lane reclaims expired leases first; stuck-audit repair stays in periodic maintenance. */
   async runOnce(signal?: AbortSignal) {
     if (signal?.aborted) return 0;
     const tasks = await this.#queue.claim(

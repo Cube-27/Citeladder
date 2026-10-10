@@ -3,6 +3,7 @@ import { policy } from '../config.ts';
 import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
 import { getLogger } from '../logging.ts';
+import { leasedStatuses } from '../queue/next-due.ts';
 
 const logger = getLogger('app.workers.site_health_worker');
 
@@ -18,7 +19,7 @@ export function recoverExpiredLeases(
       const expired = await trx
         .selectFrom('site_crawl_tasks')
         .select('id')
-        .where('status', 'in', ['leased', 'running'])
+        .where('status', 'in', leasedStatuses)
         .where('lease_expires_at', '<=', sql<Date>`clock_timestamp()`)
         .$if(!!scope, (q) =>
           q.where('workspace_id', '=', scope!.workspaceId).where('crawl_id', '=', scope!.crawlId),
