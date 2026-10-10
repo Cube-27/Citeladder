@@ -7,7 +7,7 @@ import { routeOwnershipFailures } from '../src/openapi/ownership.ts';
 import { ROUTE_CONTRACTS } from '../src/openapi/routes.ts';
 
 const failures = routeOwnershipFailures({
-  apiPrefix: policy.api.prefix,
+  prefixes: [policy.api.prefix, policy.api.machine_prefix],
   manifest: ROUTE_OWNERSHIP,
   typescript: openApiDocument(ROUTE_CONTRACTS),
 });

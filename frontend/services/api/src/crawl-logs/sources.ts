@@ -8,27 +8,81 @@ import { recordSecurityEvent } from '../auth/security-events.ts';
 import { lockAuthorizedWorkspace } from '../workspaces/service.ts';
 import { lockCrawlState, enqueueRollup, type CrawlScope } from './state.ts';
 import { enqueueTrafficInsights } from './insights-enqueue.ts';
-import { hasDevelopmentWorkspace } from '../auth/development-access.ts';
+import { markStalled } from './stall.ts';
+import { hasGrantedFlag } from '../entitlements/occupancy.ts';
+import { policy } from '../config.ts';
+import { asApiErrorCode } from '@citeladder/contracts/error-codes';
+import { crawlLogAvailabilitySchema } from '@citeladder/contracts/ai-traffic';
 
 const samplingSchema = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('none') }),
   z.strictObject({ kind: z.literal('sampled'), rate: z.number().gt(0).max(1) }),
   z.strictObject({ kind: z.literal('filtered'), description: z.string().trim().min(1).max(512) }),
 ]);
-export const createSourceSchema = z.strictObject({
-  setup: z.enum(['cloudflare_worker', 'cloudflare_logpush', 'custom', 'upload']),
-  origin: z.url().max(512),
-  format: z.enum(['ndjson', 'json_array', 'combined']).default('ndjson'),
-  collection_point: z.enum(['cdn_edge', 'origin', 'application', 'uploaded_file']).optional(),
-  sampling: samplingSchema.optional(),
-});
+export const createSourceSchema = z
+  .strictObject({
+    setup: z.enum(['cloudflare_worker', 'cloudflare_logpush', 'aws_firehose', 'custom', 'upload']),
+    origin: z.url().max(512),
+    format: z.enum(['ndjson', 'json_array', 'combined']).default('ndjson'),
+    collection_point: z.enum(['cdn_edge', 'origin', 'application', 'uploaded_file']).optional(),
+    sampling: samplingSchema.optional(),
+    /** Firehose buffer interval declared at setup; it widens the coverage gap bound. */
+    buffer_interval_seconds: z.int().min(60).max(900).optional(),
+    /** The stream runs CiteLadder's filter Lambda, so quiet periods send nothing. */
+    declared_filtered: z.boolean().optional(),
+  })
+  .refine(
+    (input) =>
+      input.setup === 'aws_firehose'
+        ? input.buffer_interval_seconds !== undefined &&
+          input.collection_point === undefined &&
+          input.sampling === undefined &&
+          input.format === 'ndjson'
+        : input.buffer_interval_seconds === undefined && input.declared_filtered === undefined,
+    {
+      message:
+        'An Amazon Firehose source declares its buffer interval and filter only; other setups declare neither',
+    },
+  );
+/** A Firehose stream through the filter Lambda keeps recognized crawlers only. */
+const FIREHOSE_FILTERED = {
+  kind: 'filtered',
+  description: 'CiteLadder filter Lambda: recognized crawler requests only',
+} as const;
+const SETUP_PRESETS = {
+  cloudflare_worker: 'cloudflare_worker_template',
+  cloudflare_logpush: 'cloudflare_logpush_http_requests',
+  aws_firehose: 'cloudfront_v2_json',
+  custom: 'custom_ndjson',
+  upload: 'custom_ndjson',
+} as const;
 const token = () => 'clw_' + randomBytes(32).toString('base64url');
-export async function ingestionAvailable(db: Database, workspaceId?: string) {
-  return crawlLogs.ingestion_enabled || (await hasDevelopmentWorkspace(db, workspaceId));
+export type CrawlLogAvailability = z.infer<typeof crawlLogAvailabilitySchema>;
+const { codes } = policy.entitlements;
+/**
+ * The global kill switch first, then the workspace's `crawl_logs` grant.
+ * Unlocked: a grant change racing one batch admits or refuses that batch only.
+ */
+export async function crawlLogAvailability(
+  db: Database,
+  workspaceId: string,
+): Promise<CrawlLogAvailability> {
+  if (!crawlLogs.ingestion_enabled) return 'disabled';
+  const granted = await hasGrantedFlag(db, workspaceId, policy.entitlements.crawl_logs);
+  return granted ? 'available' : 'not_in_plan';
 }
-export async function ingestionEnabled(db: Database, workspaceId: string) {
-  if (!(await ingestionAvailable(db, workspaceId)))
-    throw new ApiError(409, 'Crawl log ingestion is not enabled');
+export async function requireCrawlLogs(db: Database, workspaceId: string) {
+  refuseUnavailable(await crawlLogAvailability(db, workspaceId));
+}
+function refuseUnavailable(availability: CrawlLogAvailability) {
+  if (availability === 'disabled')
+    throw new ApiError(409, 'Crawl log collection is paused by CiteLadder', {
+      code: asApiErrorCode(codes.crawl_logs_disabled),
+    });
+  if (availability === 'not_in_plan')
+    throw new ApiError(409, "AI crawler logs are not included in this workspace's plan", {
+      code: asApiErrorCode(codes.crawl_logs_not_in_plan),
+    });
 }
 export async function createSource(
   db: Database,
@@ -53,13 +107,14 @@ export async function createSource(
   )
     throw new ApiError(422, 'Use a site origin without a path or credentials');
   const host = origin.hostname.toLowerCase();
-  let preset = 'custom_ndjson';
-  if (input.setup === 'cloudflare_worker') preset = 'cloudflare_worker_template';
-  if (input.setup === 'cloudflare_logpush') preset = 'cloudflare_logpush_http_requests';
+  const preset = SETUP_PRESETS[input.setup];
   const defaults = crawlLogs.presets[preset]!;
+  const sampling = input.declared_filtered
+    ? FIREHOSE_FILTERED
+    : (input.sampling ?? defaults.sampling);
   return await db.transaction().execute(async (trx) => {
     await lockAuthorizedWorkspace(trx, scope.workspaceId, actorId, 'manage_credentials');
-    await ingestionEnabled(trx, scope.workspaceId);
+    await requireCrawlLogs(trx, scope.workspaceId);
     const project = await trx
       .selectFrom('projects')
       .select('website_url')
@@ -115,7 +170,7 @@ export async function createSource(
           input.setup === 'upload'
             ? 'uploaded_file'
             : (input.collection_point ?? defaults.collection_point),
-        sampling: JSON.stringify(input.sampling ?? defaults.sampling),
+        sampling: JSON.stringify(sampling),
         origin: origin.origin,
         host,
         accepted_hosts: JSON.stringify([host]),
@@ -126,6 +181,8 @@ export async function createSource(
         created_at: new Date(),
         revoked_at: null,
         last_processed_at: null,
+        buffer_interval_seconds: input.buffer_interval_seconds ?? null,
+        declared_filtered: input.declared_filtered ?? false,
       })
       .execute();
     await recordSecurityEvent(trx, 'crawl_log.create', actorId, scope.workspaceId, id);
@@ -194,6 +251,9 @@ export async function authorizeToken(db: Database, id: string, authorization: st
   if (!source || !supplied || !timingSafeEqual(actual, expected))
     throw new ApiError(401, 'Invalid crawl log token');
   if (source.status !== 'active') throw new ApiError(409, 'Crawl log source revoked');
-  await ingestionEnabled(db, source.workspace_id);
+  // A lapsed plan refuses the sender; the source row says why.
+  const availability = await crawlLogAvailability(db, source.workspace_id);
+  if (availability === 'not_in_plan') await markStalled(db, source, 'not_in_plan');
+  refuseUnavailable(availability);
   return source;
 }

@@ -10,7 +10,7 @@ export const PRIVACY_POLICY: LegalDocument = {
   slug: 'privacy',
   title: 'Privacy Policy',
   description: 'What personal data CiteLadder processes, why, and the choices you have.',
-  lastUpdated: '2026-09-28',
+  lastUpdated: '2026-10-10',
   sections: legalSections(`
 ## who | Who we are
 ${PARENT_COMPANY.legalName} (“Cube27”, “we”, “us”) operates CiteLadder. Our principal business address is ${PARENT_COMPANY.address}. Contact us at ${PARENT_COMPANY.email}.
@@ -23,6 +23,7 @@ This Policy covers the CiteLadder website, hosted application, account administr
 - Website evidence — URLs, publicly accessible page content, technical metadata, extracted facts, links, crawl results and provenance, used for Site Health, reports and comparison.
 - AI and content — prompts, relevant project context, instructions, generated responses and drafts, citations and execution metadata, used for requested AI assistance and visibility measurement.
 - Connected sources — selected properties, encrypted credentials, search and analytics data, imported payloads and sync history, used for authorised integrations and analysis.
+- Server logs you send us — if you connect AI crawler logs, your CDN or server sends request records for your site. We use the client IP address only while processing a record, to verify that a crawler is genuine, and do not store it. We store the crawler identity, the time, the response status and the page path without its query string (URLs that look like secrets are redacted). Detailed request records are deleted after 90 days; daily summaries are kept as project data under this policy’s retention terms.
 - Usage and security — IP address, timestamps, device and browser information, requests, errors and operational events, used for security, abuse prevention and reliability.
 - Support — messages and any details you choose to provide, used to help you and handle complaints.
 - Cookies and browser storage — described in our Cookie Policy at /cookies.

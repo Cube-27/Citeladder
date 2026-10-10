@@ -197,6 +197,7 @@ const QUALITY_BUILD_ENV = {
   ...process.env,
   PUBLIC_WEBSITE_ORIGIN: process.env.PUBLIC_WEBSITE_ORIGIN || 'https://citeladder.com',
   PUBLIC_APP_ORIGIN: process.env.PUBLIC_APP_ORIGIN || 'https://app.citeladder.com',
+  PUBLIC_API_ORIGIN: process.env.PUBLIC_API_ORIGIN || 'https://api.citeladder.com',
 };
 
 function policyDiffArgs() {
@@ -276,6 +277,12 @@ function apiServiceChecks() {
   pnpm('API service TypeScript', ['--filter', '@citeladder/api', 'typecheck']);
   pnpm('MCP tool reference', ['--filter', '@citeladder/api', 'mcp:reference', '--check']);
   pnpm('Crawl log Worker template', ['--filter', '@citeladder/api', 'crawl:worker', '--check']);
+  pnpm('Firehose filter template', [
+    '--filter',
+    '@citeladder/api',
+    'crawl:firehose-filter',
+    '--check',
+  ]);
   process.stdout.write('API service schema authority…\n');
   const violations = schemaAuthorityViolations(join(frontendRoot, 'services'));
   if (violations.length) {

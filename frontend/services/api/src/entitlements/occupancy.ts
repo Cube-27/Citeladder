@@ -94,6 +94,30 @@ async function requireGrantedFlag(
     });
 }
 
+/**
+ * Whether the workspace's plan currently grants flag `key`. Takes no lock, so
+ * it suits reads and gates that need not serialize with grant issuance; a
+ * missing account or unresolvable grants fail closed.
+ */
+export async function hasGrantedFlag(
+  db: Database,
+  workspaceId: string,
+  key: string,
+): Promise<boolean> {
+  const account = await db
+    .selectFrom('billing_accounts')
+    .select('id')
+    .where('workspace_id', '=', workspaceId)
+    .executeTakeFirst();
+  if (account === undefined) return false;
+  const resolved = await resolveAccountEntitlement(
+    db,
+    { accountId: account.id, workspaceId },
+    new Date(),
+  );
+  return resolved.status === 'resolved' && (resolved.values.get(key) ?? 0) >= 1;
+}
+
 export function requireProjectDeletion(db: Database, workspaceId: string): Promise<void> {
   return requireGrantedFlag(
     db,

@@ -3,11 +3,15 @@ import { crawlSourceListSchema } from '@citeladder/contracts/ai-traffic';
 import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
 import type { CrawlScope } from './state.ts';
-import { ingestionAvailable } from './sources.ts';
+import { crawlLogAvailability } from './sources.ts';
 
 function connection(status: string, accepted: Date | null | undefined, completed: number) {
   if (status === 'revoked') return 'not_connected';
   return accepted || completed ? 'connected' : 'awaiting_data';
+}
+function sourceState(status: string, stallReason: string | null) {
+  if (status === 'revoked') return 'revoked';
+  return stallReason ? 'stalled' : 'active';
 }
 /** Three scoped reads, independent of source count; never refreshes or verifies. */
 export async function sourceList(
@@ -57,12 +61,16 @@ export async function sourceList(
       kind: s.kind,
       setup: s.setup,
       preset: s.preset,
+      buffer_interval_seconds: s.buffer_interval_seconds,
       format: s.format,
       collection_point: s.collection_point,
       sampling: s.sampling,
       origin: s.origin,
       host: s.host,
       status: s.status,
+      state: sourceState(s.status, s.stall_reason),
+      stall_reason: s.status === 'revoked' ? null : s.stall_reason,
+      stalled_at: s.status === 'revoked' ? null : (s.stalled_at?.toISOString() ?? null),
       token_prefix: s.token_prefix,
       connection: connection(s.status, batch?.last, upload?.completed ?? 0),
       last_accepted_batch: batch?.last?.toISOString() ?? null,
@@ -74,7 +82,7 @@ export async function sourceList(
     };
   });
   return crawlSourceListSchema.parse({
-    ingestion_enabled: await ingestionAvailable(db, scope.workspaceId),
+    availability: await crawlLogAvailability(db, scope.workspaceId),
     items,
   });
 }

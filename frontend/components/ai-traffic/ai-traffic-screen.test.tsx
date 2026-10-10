@@ -54,21 +54,115 @@ afterEach(() => {
 });
 afterAll(() => mswServer.close());
 describe('AI Traffic state and navigation', () => {
-  it('explains disabled ingestion inside the dialog without offering setup', async () => {
+  it('explains a plan without crawl logs with a billing link and no setup', async () => {
     mswServer.use(
       http.get(root + '/crawl-logs/sources', () =>
-        HttpResponse.json({ ingestion_enabled: false, items: [] }),
+        HttpResponse.json({ availability: 'not_in_plan', items: [] }),
+      ),
+    );
+    renderWithProviders(<CrawlLogConnections />);
+    expect(await screen.findByText(/AI crawler logs are included in paid plans/)).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Choose a plan' })).toHaveAttribute(
+      'href',
+      expect.stringContaining('/billing'),
+    );
+    expect(screen.queryByRole('button', { name: 'Connect crawl logs' })).not.toBeInTheDocument();
+  });
+  it('says collection is paused when CiteLadder switched it off', async () => {
+    mswServer.use(
+      http.get(root + '/crawl-logs/sources', () =>
+        HttpResponse.json({ availability: 'disabled', items: [] }),
+      ),
+    );
+    renderWithProviders(<CrawlLogConnections />);
+    expect(await screen.findByText(/Collection is paused by CiteLadder/)).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Connect crawl logs' })).not.toBeInTheDocument();
+  });
+  it('shows why a live source is stalled on its row', async () => {
+    mswServer.use(
+      http.get(root + '/crawl-logs/sources', () =>
+        HttpResponse.json({
+          availability: 'available',
+          items: [
+            {
+              id: '99999999-9999-4999-8999-999999999999',
+              kind: 'webhook',
+              setup: 'custom',
+              preset: 'custom_ndjson',
+              buffer_interval_seconds: null,
+              format: 'ndjson',
+              collection_point: 'application',
+              sampling: { kind: 'none' },
+              origin: 'https://example.test',
+              host: 'example.test',
+              status: 'active',
+              state: 'stalled',
+              stall_reason: 'oversize',
+              stalled_at: '2026-10-10T00:00:00.000Z',
+              token_prefix: 'clw_abcdefgh',
+              connection: 'connected',
+              last_accepted_batch: '2026-10-09T00:00:00.000Z',
+              last_processed_at: null,
+              rejected_lines: 0,
+              overlapping_lines: 0,
+              unsupported_uploads: 0,
+              unsupported_batches: 0,
+            },
+          ],
+        }),
+      ),
+    );
+    renderWithProviders(<CrawlLogConnections />);
+    expect(await screen.findByText(/Custom webhook · Connected · Stalled/)).toBeVisible();
+    expect(
+      screen.getByText('A batch over 5 MiB was dropped. Lower the stream buffer size.'),
+    ).toBeVisible();
+  });
+  it('shows the Firehose endpoint for a rotated Amazon CloudFront token', async () => {
+    const id = '99999999-9999-4999-8999-999999999999';
+    mswServer.use(
+      http.get(root + '/crawl-logs/sources', () =>
+        HttpResponse.json({
+          availability: 'available',
+          items: [
+            {
+              id,
+              kind: 'webhook',
+              setup: 'aws_firehose',
+              preset: 'cloudfront_v2_json',
+              buffer_interval_seconds: 60,
+              format: 'ndjson',
+              collection_point: 'cdn_edge',
+              sampling: { kind: 'none' },
+              origin: 'https://example.test',
+              host: 'example.test',
+              status: 'active',
+              state: 'active',
+              stall_reason: null,
+              stalled_at: null,
+              token_prefix: 'clw_abcdefgh',
+              connection: 'connected',
+              last_accepted_batch: null,
+              last_processed_at: null,
+              rejected_lines: 0,
+              overlapping_lines: 0,
+              unsupported_uploads: 0,
+              unsupported_batches: 0,
+            },
+          ],
+        }),
+      ),
+      http.post(root + '/crawl-logs/sources/' + id + '/rotate', () =>
+        HttpResponse.json({ id, token: 'clw_rotated' }),
       ),
     );
     const user = userEvent.setup();
     renderWithProviders(<CrawlLogConnections />);
-    await user.click(screen.getByRole('button', { name: 'Connect crawl logs' }));
-    const dialog = screen.getByRole('dialog');
+    await user.click(await screen.findByRole('button', { name: 'Rotate token' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Connect crawl logs' });
     expect(
-      await within(dialog).findByText(/Source creation and file uploads are unavailable/),
+      await within(dialog).findByText(new RegExp('/v1/crawl-logs/firehose/' + id)),
     ).toBeVisible();
-    expect(within(dialog).queryByRole('radiogroup')).not.toBeInTheDocument();
-    expect(within(dialog).queryByRole('button', { name: 'Create source' })).not.toBeInTheDocument();
   });
   it('keeps setup unavailable on a failed availability read and recovers on retry', async () => {
     mswServer.use(
@@ -83,7 +177,7 @@ describe('AI Traffic state and navigation', () => {
     expect(within(dialog).queryByRole('radiogroup')).not.toBeInTheDocument();
     mswServer.use(
       http.get(root + '/crawl-logs/sources', () =>
-        HttpResponse.json({ ingestion_enabled: true, items: [] }),
+        HttpResponse.json({ availability: 'available', items: [] }),
       ),
     );
     await user.click(retry);
@@ -97,7 +191,7 @@ describe('AI Traffic state and navigation', () => {
     mswServer.use(
       http.get(root + '/crawl-logs/sources', () =>
         HttpResponse.json({
-          ingestion_enabled: true,
+          availability: 'available',
           items: created
             ? [
                 {
@@ -105,12 +199,16 @@ describe('AI Traffic state and navigation', () => {
                   kind: 'upload',
                   setup: 'upload',
                   preset: 'custom_ndjson',
+                  buffer_interval_seconds: null,
                   format: 'ndjson',
                   collection_point: 'uploaded_file',
                   sampling: { kind: 'none' },
                   origin: 'https://example.test',
                   host: 'example.test',
                   status: 'active',
+                  state: 'active',
+                  stall_reason: null,
+                  stalled_at: null,
                   token_prefix: null,
                   connection: 'awaiting_data',
                   last_accepted_batch: null,
@@ -149,7 +247,7 @@ describe('AI Traffic state and navigation', () => {
   it.each(['crawlers', 'activity'] as const)('offers crawl setup from empty %s', async (tab) => {
     mswServer.use(
       http.get(root + '/crawl-logs/sources', () =>
-        HttpResponse.json({ ingestion_enabled: false, items: [] }),
+        HttpResponse.json({ availability: 'available', items: [] }),
       ),
     );
     const user = userEvent.setup();
@@ -161,9 +259,9 @@ describe('AI Traffic state and navigation', () => {
     );
     await user.click(screen.getByRole('button', { name: 'Connect crawl logs' }));
     expect(
-      await within(screen.getByRole('dialog')).findByText(
-        /Source creation and file uploads are unavailable/,
-      ),
+      await within(screen.getByRole('dialog')).findByRole('radiogroup', {
+        name: 'Collection method',
+      }),
     ).toBeVisible();
   });
   it.each([null, 'Coverage is incomplete.'])(
@@ -191,11 +289,44 @@ describe('AI Traffic state and navigation', () => {
       else expect(screen.queryByText('Observed patterns')).not.toBeInTheDocument();
     },
   );
+  it('creates an Amazon CloudFront source with its buffer interval and shows the Firehose endpoint', async () => {
+    const id = '99999999-9999-4999-8999-999999999999';
+    let created: unknown = null;
+    mswServer.use(
+      http.get(root + '/crawl-logs/sources', () =>
+        HttpResponse.json({ availability: 'available', items: [] }),
+      ),
+      http.post(root + '/crawl-logs/sources', async ({ request }) => {
+        created = await request.json();
+        return HttpResponse.json({ id, token: 'clw_test_token' });
+      }),
+    );
+    const user = userEvent.setup();
+    renderWithProviders(<CrawlLogConnections />);
+    await user.click(screen.getByRole('button', { name: 'Connect crawl logs' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Connect crawl logs' });
+    await user.click(within(dialog).getByRole('radio', { name: /Amazon CloudFront/ }));
+    expect(
+      within(dialog).getByText(/In us-east-1, create an Amazon Data Firehose stream/),
+    ).toBeVisible();
+    expect(within(dialog).queryByRole('combobox', { name: 'Sampling' })).not.toBeInTheDocument();
+    const interval = within(dialog).getByLabelText('Firehose buffer interval (seconds)');
+    await user.clear(interval);
+    await user.type(interval, '300');
+    await user.click(within(dialog).getByRole('button', { name: 'Create source' }));
+    expect(await within(dialog).findByText(/\/v1\/crawl-logs\/firehose\/9{8}-/)).toBeVisible();
+    expect(created).toEqual({
+      setup: 'aws_firehose',
+      origin: 'https://acme.com',
+      buffer_interval_seconds: 300,
+      declared_filtered: false,
+    });
+  });
   it('preserves the issued token until the source dialog is closed', async () => {
     let creates = 0;
     mswServer.use(
       http.get(root + '/crawl-logs/sources', () =>
-        HttpResponse.json({ ingestion_enabled: true, items: [] }),
+        HttpResponse.json({ availability: 'available', items: [] }),
       ),
       http.post(root + '/crawl-logs/sources', () => {
         creates += 1;
@@ -311,7 +442,7 @@ describe('AI Traffic state and navigation', () => {
         }),
       ),
       http.get(root + '/crawl-logs/sources', () =>
-        HttpResponse.json({ ingestion_enabled: true, items: [] }),
+        HttpResponse.json({ availability: 'available', items: [] }),
       ),
       http.get(root + '/ai-traffic/coverage', () =>
         HttpResponse.json({ sources: [], items: [], next_cursor: null }),
@@ -450,7 +581,7 @@ describe('AI Traffic state and navigation', () => {
     const dashboards: URLSearchParams[] = [];
     mswServer.use(
       http.get(root + '/crawl-logs/sources', () =>
-        HttpResponse.json({ ingestion_enabled: false, items: [] }),
+        HttpResponse.json({ availability: 'not_in_plan', items: [] }),
       ),
       http.get(root + '/ai-traffic/referrals', ({ request }) => {
         dashboards.push(new URL(request.url).searchParams);
@@ -479,6 +610,7 @@ describe('AI Traffic state and navigation', () => {
     renderWithProviders(<AiTrafficScreen />);
     expect(await screen.findByText(/covers last 90 days/)).toBeVisible();
     expect(screen.getByRole('tab', { name: 'Referrals' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByText(/AI crawler logs are included in paid plans/)).toBeVisible();
     expect(screen.queryByRole('tab', { name: 'Activity' })).not.toBeInTheDocument();
     expect(screen.queryByRole('tab', { name: 'Crawlers' })).not.toBeInTheDocument();
     await waitFor(() => expect(dashboards.at(-1)?.get('range')).toBe('90d'));

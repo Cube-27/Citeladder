@@ -49,6 +49,11 @@ curl -fsS http://localhost:8100/health
       catalog through the disposable Compose upstream. Production Worker Custom
       Domains and split-origin callbacks are verified separately through the
       [Workers runbook](operations/WORKERS_RUNBOOK.md).
+- [ ] Both hosts refuse machine paths: `/v1/*` is 404 on ports 3000 and 3001 (the smoke
+      checks it). After a production deploy, rerun the smoke with the API host as the third
+      argument (`https://api.citeladder.com`) so it also checks that the API host refuses
+      `/`, `/pricing` and `/api/v1/*`; see the
+      [API host section](operations/WORKERS_RUNBOOK.md#api-host-apiciteladdercom).
 - [ ] The API health endpoint responds at port 8100.
 - [ ] Smoke-test the appropriate authenticated and worker-backed flows with non-production data.
 - [ ] Stop the evidence stack when finished: `env -u POSTGRES_PASSWORD -u POSTGRES_USER

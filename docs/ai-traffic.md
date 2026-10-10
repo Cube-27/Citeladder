@@ -106,11 +106,40 @@ contains 32 random bytes, is returned once, and is stored only as a hash and
 prefix. Rotation invalidates the old token; revocation retains history and
 frees the host. Repeated revocation keeps the first `revoked_at` boundary. One active webhook per project/host is enforced by PostgreSQL.
 
-Public `POST /api/v1/crawl-logs/ingest/{source_id}` requires the source's Bearer
-token. The token identifies its existing authorized workspace/project; no
-caller-supplied project can redirect it. The apex ingress forwards bytes and
-headers through protected origin transport; the product app host refuses this
-machine endpoint. Browser APIs stay same-origin `/api/v1`.
+Machine ingest lives on the API host `api.citeladder.com` (API-OWNED; see the
+[Workers runbook](operations/WORKERS_RUNBOOK.md#api-host-apiciteladdercom)):
+`POST /v1/crawl-logs/ingest/{source_id}` with the source's Bearer token, and
+`POST /v1/crawl-logs/firehose/{source_id}` for Amazon Data Firehose. The token
+identifies its existing authorized workspace/project; no caller-supplied project
+can redirect it. The API host's own Worker (`apps/api-host`) forwards only these two routes to the
+protected origin, without cookies; the API serves `/v1` routes on that host
+alone, and the apex and app hosts refuse them. Browser APIs stay same-origin
+`/api/v1`.
+
+Setups: `cloudflare_worker`, `cloudflare_logpush`, `aws_firehose`, `custom`
+(webhooks) and `upload`. `aws_firehose` uses preset `cloudfront_v2_json`
+(`x-host-header` for scope, never the distribution's `cs(Host)`; `-` is absent;
+`date` + `time` UTC fallback; percent-decoded `cs(User-Agent)`) and declares
+`buffer_interval_seconds` (60–900) and `declared_filtered` (the generated filter
+Lambda, `crawl:firehose-filter`, which makes sampling `filtered`).
+[`firehose.ts`](../frontend/services/api/src/crawl-logs/firehose.ts) only
+translates: token from `X-Amz-Firehose-Access-Key`, request-ID match, base64
+records decoded with a bad record counted as a rejected line, and lines admitted
+through `ingest()` in chunks of `max_lines_per_batch` keyed
+`firehose:<requestId>:<n>`, so a retry replays without quota spend. It answers
+Firehose's JSON contract with 200/400/401/409/413/429/500 and never a redirect;
+a 413, which Firehose drops without backup, keeps an `oversize` receipt and stalls
+the source.
+
+Sources show `state` `active`, `stalled` or `revoked`. `stall_reason` is
+`no_receipts` (a live webhook source with no accepted receipt for
+`stalled_after_hours`, swept by the crawl-log tick while collection is on),
+`not_in_plan` (a webhook refused for a lapsed plan) or `oversize`. An accepted
+receipt clears it in the same transaction. Receipts record decompressed
+`bytes_received`; above `received_bytes_per_project_per_day` on the project's
+reporting day, admission answers 429 with `Retry-After` to the next day and
+keeps one `bytes_ceiling` diagnostic receipt per source and day. Diagnostic
+receipts never count as coverage.
 
 Browser uploads stream NDJSON, JSON arrays or Combined, including gzip, in the
 format the upload source was created with, validate a bounded header sample
@@ -137,7 +166,9 @@ not become provider-confirmed coverage.
 Coverage is per source/reporting day:
 
 - `complete`: unsampled live collection, active for the whole completed day,
-  with bounded receipt gaps, including heartbeats when no requests occur.
+  with bounded receipt gaps, including heartbeats when no requests occur. The
+  bound is `max(max_delivery_gap_minutes, ceil(buffer_interval_seconds / 60) + buffered_delivery_grace_minutes)`
+  per source, so a Firehose stream is judged against its buffer interval.
 - `declared_complete`: a completed upload declares a complete day within its
   client-reported scan. This claim is labelled as such.
 - `partial`: sampled/filtered collection, delivery gaps, partial scans or
@@ -233,13 +264,16 @@ IP-range snapshot refresh, retention and abandonment; PostgreSQL owns their
 dispatch and leases. IP fetches begin only after durable dispatch, use the shared
 safe fetcher, and publish success/failure through fenced task settlement.
 
-`ingestion_enabled` remains **false** for general availability. The configured
-development operator's owned workspace bypasses this rollout gate for source
-creation, uploads, webhook admission and IP-range refresh. Reads report that same
-effective availability. The exception requires a configured development password
-and an active admin identity matching `DEV_LOGIN_EMAIL`; joining another workspace
-does not enable it. Normal workspace authorization and bounded ingestion remain.
-Plans/quotas, retention acceptance and privacy/DPA wording remain general
-enablement decisions. This does not deploy customer infrastructure. The
+Collection needs the workspace plan's `crawl_logs` grant (every paid plan;
+not the public trial; see [billing entitlements](billing-entitlements.md)) and
+the global kill switch `ingestion_enabled` (on). Source creation, uploads and
+webhook admission refuse with 409 `crawl_logs_not_in_plan` or
+`crawl_logs_disabled`; reads keep working and report `availability`
+(`available`, `not_in_plan`, `disabled`), which the app turns into an upgrade
+or paused notice instead of setup. The check takes no capacity lock: a grant
+change racing one batch decides that batch only. Raw `bot_requests` are kept
+for `retention_days` (90); projections, coverage and receipts stay as project
+data under the privacy policy's retention terms. This does not deploy customer
+infrastructure. The
 [public setup guide](../frontend/apps/docs/src/content/ai-traffic.md) and
 generated Worker template describe customer-operated collection and its limits.

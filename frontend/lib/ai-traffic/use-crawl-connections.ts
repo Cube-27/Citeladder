@@ -2,7 +2,11 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { aiTrafficApi } from '@/lib/api/ai-traffic';
 import { queryKeys } from '@/lib/api/query-keys';
-import { CRAWL_LOG_SETUPS, UPLOAD_PROCESSING_POLL_MS } from '@/lib/config/crawl-logs';
+import {
+  CRAWL_LOG_SETUPS,
+  FIREHOSE_BUFFER_INTERVAL,
+  UPLOAD_PROCESSING_POLL_MS,
+} from '@/lib/config/crawl-logs';
 import { uploadCrawlFile } from './upload';
 import type { z } from 'zod';
 import type { crawlSourceListSchema } from '@citeladder/contracts/ai-traffic';
@@ -37,9 +41,15 @@ function uploadProcessed(
   const at = data?.items.find((s) => s.id === awaiting.sourceId)?.last_processed_at;
   return !!at && at >= awaiting.since;
 }
-/** Crawl views stay for a project that already has sources, even if collection is switched off. */
+/** Crawl views stay for a project that already has sources, even if collection is unavailable. */
 export function crawlLogsAvailable(data: z.infer<typeof crawlSourceListSchema>) {
-  return data.ingestion_enabled || data.items.length > 0;
+  return data.availability === 'available' || data.items.length > 0;
+}
+/** The sampling a custom sender declares, from the dialog's fields. */
+function declaredSampling(sampling: string, rate: string, filter: string) {
+  if (sampling === 'sampled') return { kind: 'sampled', rate: Number(rate) } as const;
+  if (sampling === 'filtered') return { kind: 'filtered', description: filter } as const;
+  return { kind: 'none' } as const;
 }
 export function useCrawlConnections({
   projectId,
@@ -78,7 +88,13 @@ export function useCrawlConnections({
     [rate, setRate] = useState('1'),
     [filter, setFilter] = useState('Best-effort recognized automated requests');
   const [point, setPoint] = useState('cdn_edge');
-  const [issued, setIssued] = useState<{ id: string; token: string | null } | null>(null);
+  const [bufferInterval, setBufferInterval] = useState(String(FIREHOSE_BUFFER_INTERVAL.default)),
+    [declaredFiltered, setDeclaredFiltered] = useState(false);
+  const [issued, setIssued] = useState<{
+    id: string;
+    token: string | null;
+    setup?: (typeof CRAWL_LOG_SETUPS)[number]['value'];
+  } | null>(null);
   const [sourceId, setSourceId] = useState(''),
     [resume, setResume] = useState(''),
     [file, setFile] = useState<File | null>(null);
@@ -90,28 +106,25 @@ export function useCrawlConnections({
   const refresh = () => client.invalidateQueries({ queryKey: queryKeys.aiTraffic.all });
   const mutation = useMutation({
     mutationFn: async (action: { kind: 'create' } | { kind: 'rotate' | 'revoke'; id: string }) => {
-      let sourceSampling:
-        | { kind: 'none' }
-        | { kind: 'sampled'; rate: number }
-        | { kind: 'filtered'; description: string } = { kind: 'none' };
-      if (sampling === 'sampled') sourceSampling = { kind: sampling, rate: Number(rate) };
-      if (sampling === 'filtered') sourceSampling = { kind: sampling, description: filter };
-      if (action.kind === 'create')
-        return aiTrafficApi.createSource(
-          projectId,
-          {
-            setup,
-            origin,
-            format,
-            collection_point: point,
-            sampling: sourceSampling,
-          },
-          options,
-        );
-      return aiTrafficApi.mutateSource(projectId, action.id, action.kind, options);
+      if (action.kind !== 'create')
+        return aiTrafficApi.mutateSource(projectId, action.id, action.kind, options);
+      // Firehose declares its buffer and filter; other setups declare format, point and sampling.
+      const declared =
+        setup === 'aws_firehose'
+          ? { buffer_interval_seconds: Number(bufferInterval), declared_filtered: declaredFiltered }
+          : {
+              format,
+              collection_point: point,
+              sampling: declaredSampling(sampling, rate, filter),
+            };
+      return aiTrafficApi.createSource(projectId, { setup, origin, ...declared }, options);
     },
     onSuccess: async (result, action) => {
-      setIssued(result);
+      const issuedSetup =
+        action.kind === 'create'
+          ? setup
+          : sources.data?.items.find((source) => source.id === action.id)?.setup;
+      setIssued({ ...result, setup: issuedSetup });
       if (action.kind === 'create' && setup === 'upload') setSourceId(result.id);
       if (action.kind === 'revoke' && sourceId === action.id) setSourceId('');
       await refresh();
@@ -148,6 +161,7 @@ export function useCrawlConnections({
 
   return {
     canManage,
+    workspaceId,
     sources,
     open,
     setOpen,
@@ -165,6 +179,10 @@ export function useCrawlConnections({
     setFilter,
     point,
     setPoint,
+    bufferInterval,
+    setBufferInterval,
+    declaredFiltered,
+    setDeclaredFiltered,
     issued,
     setIssued,
     sourceId,

@@ -22,7 +22,6 @@ import { pagesRead } from '../src/crawl-logs/pages.ts';
 import { dispatchTool } from '../src/mcp/tools.ts';
 import { verifyBot } from '../src/crawl-logs/identity.ts';
 import { sourceList } from '../src/crawl-logs/source-reads.ts';
-import { hasDevelopmentWorkspace } from '../src/auth/development-access.ts';
 import { entitlementView } from '../src/site-health/reads/runtime.ts';
 import { createCrawl } from '../src/site-health/planner.ts';
 import {
@@ -68,7 +67,7 @@ async function setup(
 const body = (...rows: Record<string, unknown>[]) =>
   Buffer.from(rows.map((r) => JSON.stringify(r)).join('\n'));
 const send = (id: string, token: string, payload: Buffer, key = randomUUID()) =>
-  app.request('/api/v1/crawl-logs/ingest/' + id, {
+  app.request('/v1/crawl-logs/ingest/' + id, {
     method: 'POST',
     headers: {
       authorization: 'Bearer ' + token,
@@ -77,6 +76,17 @@ const send = (id: string, token: string, payload: Buffer, key = randomUUID()) =>
     },
     body: new Uint8Array(payload),
   });
+/** The plan no longer grants AI crawler logs: a trial, or a lapsed paid plan. */
+const revokeCrawlLogs = (workspaceId: string) =>
+  db
+    .deleteFrom('account_grants')
+    .where('key', '=', 'crawl_logs')
+    .where(
+      'billing_account_id',
+      'in',
+      db.selectFrom('billing_accounts').select('id').where('workspace_id', '=', workspaceId),
+    )
+    .execute();
 beforeAll(() => {
   crawlLogs.ingestion_enabled = true;
 });
@@ -89,210 +99,113 @@ afterAll(async () => {
 });
 
 describe('bounded formats', () => {
-  it.each(['source', 'upload', 'complete', 'ingest', 'crawl'] as const)(
-    'rechecks development access after a concurrent ownership transfer during %s admission',
-    async (operation) => {
-      const { tenant, source, token } = await setup(operation === 'ingest' ? 'custom' : 'upload');
-      const incoming = await fixtures.user();
-      await fixtures.member(tenant.workspaceId, incoming, 'admin');
-      const email = `dev-${tenant.userId}@example.test`;
-      vi.stubEnv('DEV_LOGIN_EMAIL', email);
-      vi.stubEnv('DEV_LOGIN_PASSWORD', 'test-only-development-password');
-      vi.stubEnv('SITE_HEALTH_ADVANCED_CONTROLS_ENABLED', 'false');
-      crawlLogs.ingestion_enabled = false;
-      let admission: Promise<unknown> | undefined;
-      const transfer = await db.startTransaction().execute();
-      try {
-        await db
-          .updateTable('users')
-          .set({ email, role: 'admin' })
-          .where('id', '=', tenant.userId)
-          .execute();
-        const upload =
-          operation === 'complete'
-            ? await createUpload(
-                db,
-                scope(tenant),
-                source.id,
-                { filename: 'requests.ndjson', size_bytes: 0 },
-                tenant.userId,
-              )
-            : null;
-        await transfer
-          .selectFrom('workspaces')
-          .select('id')
-          .where('id', '=', tenant.workspaceId)
-          .forUpdate()
-          .execute();
-        const blocker = await sql<{ pid: number }>`select pg_backend_pid() as pid`.execute(
-          transfer,
-        );
-        switch (operation) {
-          case 'source':
-            admission = createSource(db, scope(tenant), tenant.userId, {
-              setup: 'upload',
-              origin: source.origin,
-              format: 'ndjson',
-            });
-            break;
-          case 'upload':
-            admission = createUpload(
-              db,
-              scope(tenant),
-              source.id,
-              { filename: 'requests.ndjson', size_bytes: 0 },
-              tenant.userId,
-            );
-            break;
-          case 'complete':
-            admission = completeUpload(
-              db,
-              scope(tenant),
-              source.id,
-              upload!.id,
-              { scanned_lines: 0, first_line_at: null, last_line_at: null, scanned_dates: [] },
-              tenant.userId,
-            );
-            break;
-          case 'ingest':
-            admission = Promise.resolve(send(source.id, token, body(event())));
-            break;
-          case 'crawl':
-            admission = db.transaction().execute((trx) =>
-              createCrawl(trx, tenant.workspaceId, {
-                project_id: tenant.projectId,
-                input_mode: 'exact_urls',
-                seed_urls: [source.origin + '/page'],
-              }),
-            );
-            break;
-        }
-        admission = admission.catch((error: unknown) => error);
-        await vi.waitFor(
-          async () => {
-            const blocked = await sql<{ waiting: boolean }>`select exists (
-            select 1 from pg_stat_activity where ${blocker.rows[0]!.pid} = any(pg_blocking_pids(pid))
-          ) as waiting`.execute(db);
-            expect(blocked.rows[0]!.waiting).toBe(true);
-          },
-          { timeout: 2000, interval: 20 },
-        );
-        await transfer
-          .updateTable('workspace_members')
-          .set({ role: 'admin' })
-          .where('workspace_id', '=', tenant.workspaceId)
-          .where('user_id', '=', tenant.userId)
-          .execute();
-        await transfer
-          .updateTable('workspace_members')
-          .set({ role: 'owner' })
-          .where('workspace_id', '=', tenant.workspaceId)
-          .where('user_id', '=', incoming)
-          .execute();
-        await transfer.commit().execute();
-        expect(await admission).toMatchObject({ status: operation === 'crawl' ? 422 : 409 });
-      } finally {
-        if (!transfer.isCommitted) await transfer.rollback().execute();
-        await admission;
-        crawlLogs.ingestion_enabled = true;
-        vi.unstubAllEnvs();
-      }
-    },
-  );
-  it('enables development workspace ingestion end to end while other workspaces stay disabled', async () => {
+  it('keeps the site-health development gate through a concurrent ownership transfer', async () => {
     const tenant = await fixtures.tenant();
-    const other = await fixtures.tenant();
+    const incoming = await fixtures.user();
+    await fixtures.member(tenant.workspaceId, incoming, 'admin');
     const email = `dev-${tenant.userId}@example.test`;
     vi.stubEnv('DEV_LOGIN_EMAIL', email);
     vi.stubEnv('DEV_LOGIN_PASSWORD', 'test-only-development-password');
-    crawlLogs.ingestion_enabled = false;
+    vi.stubEnv('SITE_HEALTH_ADVANCED_CONTROLS_ENABLED', 'false');
+    let admission: Promise<unknown> | undefined;
+    const transfer = await db.startTransaction().execute();
     try {
       await db
         .updateTable('users')
         .set({ email, role: 'admin' })
         .where('id', '=', tenant.userId)
         .execute();
-      expect((await sourceList(db, scope(tenant))).ingestion_enabled).toBe(true);
       expect((await entitlementView(db, tenant.workspaceId, now)).advanced_controls_enabled).toBe(
         true,
       );
-      expect((await sourceList(db, scope(other))).ingestion_enabled).toBe(false);
-      await fixtures.member(other.workspaceId, tenant.userId, 'admin');
-      expect(await hasDevelopmentWorkspace(db, other.workspaceId)).toBe(false);
-      await expect(
-        createSource(db, scope(other), other.userId, {
-          setup: 'custom',
-          origin: 'https://acme.example',
-          format: 'ndjson',
-        }),
-      ).rejects.toMatchObject({ status: 409 });
-      const webhook = await createSource(db, scope(tenant), tenant.userId, {
+      await transfer
+        .selectFrom('workspaces')
+        .select('id')
+        .where('id', '=', tenant.workspaceId)
+        .forUpdate()
+        .execute();
+      const blocker = await sql<{ pid: number }>`select pg_backend_pid() as pid`.execute(transfer);
+      admission = db
+        .transaction()
+        .execute((trx) =>
+          createCrawl(trx, tenant.workspaceId, {
+            project_id: tenant.projectId,
+            input_mode: 'exact_urls',
+            seed_urls: ['https://acme.example/page'],
+          }),
+        )
+        .catch((error: unknown) => error);
+      await vi.waitFor(
+        async () => {
+          const blocked = await sql<{ waiting: boolean }>`select exists (
+            select 1 from pg_stat_activity where ${blocker.rows[0]!.pid} = any(pg_blocking_pids(pid))
+          ) as waiting`.execute(db);
+          expect(blocked.rows[0]!.waiting).toBe(true);
+        },
+        { timeout: 2000, interval: 20 },
+      );
+      await transfer
+        .updateTable('workspace_members')
+        .set({ role: 'admin' })
+        .where('workspace_id', '=', tenant.workspaceId)
+        .where('user_id', '=', tenant.userId)
+        .execute();
+      await transfer
+        .updateTable('workspace_members')
+        .set({ role: 'owner' })
+        .where('workspace_id', '=', tenant.workspaceId)
+        .where('user_id', '=', incoming)
+        .execute();
+      await transfer.commit().execute();
+      expect(await admission).toMatchObject({ status: 422 });
+    } finally {
+      if (!transfer.isCommitted) await transfer.rollback().execute();
+      await admission;
+      vi.unstubAllEnvs();
+    }
+  });
+  it('admits crawl logs on the plan grant and refuses a workspace without it', async () => {
+    const paid = await fixtures.tenant();
+    const trial = await fixtures.tenant();
+    await revokeCrawlLogs(trial.workspaceId);
+    expect((await sourceList(db, scope(paid))).availability).toBe('available');
+    expect((await sourceList(db, scope(trial))).availability).toBe('not_in_plan');
+    await expect(
+      createSource(db, scope(trial), trial.userId, {
         setup: 'custom',
         origin: 'https://acme.example',
         format: 'ndjson',
-      });
-      expect((await send(webhook.id, webhook.token!, body(event()))).status).toBe(202);
-      const uploadSource = await createSource(db, scope(tenant), tenant.userId, {
-        setup: 'upload',
-        origin: 'https://acme.example',
-        format: 'ndjson',
-      });
-      const upload = await createUpload(
-        db,
-        scope(tenant),
-        uploadSource.id,
-        { filename: 'requests.ndjson', size_bytes: 0 },
-        tenant.userId,
-      );
-      const cookie =
-        config.session.cookieName + '=' + (await sessionToken({ sub: tenant.userId, ver: 0 }));
-      const response = await app.request(
-        `/api/v1/projects/${tenant.projectId}/crawl-logs/sources/${uploadSource.id}/uploads/${upload.id}/batches`,
-        {
-          method: 'POST',
-          headers: { cookie, 'content-type': 'application/json' },
-          body: JSON.stringify({ seq: 0, lines: [] }),
-        },
-      );
-      expect(response.status).toBe(200);
-      expect(
-        (
-          await completeUpload(
-            db,
-            scope(tenant),
-            uploadSource.id,
-            upload.id,
-            {
-              scanned_lines: 0,
-              first_line_at: null,
-              last_line_at: null,
-              scanned_dates: [],
-            },
-            tenant.userId,
-          )
-        ).status,
-      ).toBe('completed');
-      const systemId = await fixtures.systemWorkspace();
-      await crawlLogTick(db, now);
-      expect(
-        await db
-          .selectFrom('analytics_tasks')
-          .select('id')
-          .where('workspace_id', '=', systemId)
-          .where('task_kind', '=', 'bot_ip_range_refresh')
-          .execute(),
-      ).not.toHaveLength(0);
-      await db
-        .updateTable('users')
-        .set({ is_active: false })
-        .where('id', '=', tenant.userId)
-        .execute();
-      expect((await sourceList(db, scope(tenant))).ingestion_enabled).toBe(false);
-      expect((await send(webhook.id, webhook.token!, body(event()))).status).toBe(409);
+      }),
+    ).rejects.toMatchObject({ status: 409, code: 'crawl_logs_not_in_plan' });
+    const webhook = await createSource(db, scope(paid), paid.userId, {
+      setup: 'custom',
+      origin: 'https://acme.example',
+      format: 'ndjson',
+    });
+    expect((await send(webhook.id, webhook.token!, body(event()))).status).toBe(202);
+  });
+  it('keeps reads but refuses ingest once the plan loses crawl logs', async () => {
+    const { tenant, source, token } = await setup();
+    await revokeCrawlLogs(tenant.workspaceId);
+    const refused = await send(source.id, token, body(event()));
+    expect(refused.status).toBe(409);
+    expect(await refused.json()).toMatchObject({ error: { code: 'crawl_logs_not_in_plan' } });
+    const list = await sourceList(db, scope(tenant));
+    expect(list.availability).toBe('not_in_plan');
+    expect(list.items.map((item) => item.id)).toEqual([source.id]);
+  });
+  it('refuses every workspace with the kill switch off and resumes with it on', async () => {
+    const { tenant, source, token } = await setup();
+    crawlLogs.ingestion_enabled = false;
+    try {
+      expect((await sourceList(db, scope(tenant))).availability).toBe('disabled');
+      const refused = await send(source.id, token, body(event()));
+      expect(refused.status).toBe(409);
+      expect(await refused.json()).toMatchObject({ error: { code: 'crawl_logs_disabled' } });
     } finally {
       crawlLogs.ingestion_enabled = true;
-      vi.unstubAllEnvs();
     }
+    expect((await send(source.id, token, body(event()))).status).toBe(202);
   });
   it('parses NDJSON, array and Combined while refusing CLF and missing identification fields', () => {
     const mapping = crawlLogs.presets.custom_ndjson!;
@@ -318,6 +231,71 @@ describe('bounded formats', () => {
       decodedBody(gzipSync(Buffer.alloc(crawlLogs.max_batch_bytes + 1)), 'gzip'),
     ).toThrow(/too large/);
     expect(() => decodedBody(Buffer.from([255]), undefined)).toThrow(/UTF-8/);
+  });
+});
+/** One CloudFront standard logging (v2) JSON record, as Firehose delivers it. */
+const cloudfront = (changes: Record<string, unknown> = {}) => ({
+  'timestamp(ms)': String(now.getTime()),
+  date: now.toISOString().slice(0, 10),
+  time: now.toISOString().slice(11, 19),
+  'c-ip': '192.0.2.2',
+  'sc-status': '200',
+  'cs-method': 'GET',
+  'cs-uri-stem': '/products/guide',
+  'x-edge-request-id': 'edge-request-1',
+  'x-host-header': 'acme.example',
+  'cs(Host)': 'd111111abcdef8.cloudfront.net',
+  'cs(User-Agent)':
+    'Mozilla/5.0%20AppleWebKit/537.36%20(KHTML,%20like%20Gecko;%20compatible;%20GPTBot/1.2;%20+https://openai.com/gptbot)',
+  ...changes,
+});
+describe('CloudFront v2 preset', () => {
+  const preset = crawlLogs.presets.cloudfront_v2_json!;
+  it('reads string epoch milliseconds, the viewer host and the URL-decoded user agent', () => {
+    expect(parseLogLine(JSON.stringify(cloudfront()), 'ndjson', preset)).toEqual({
+      timestamp: now.toISOString(),
+      host: 'acme.example',
+      path: '/products/guide',
+      method: 'GET',
+      status: 200,
+      user_agent:
+        'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.2; +https://openai.com/gptbot)',
+      client_ip: '192.0.2.2',
+      request_id: 'edge-request-1',
+    });
+  });
+  it('treats "-" as absent and falls back to the UTC date and time', () => {
+    const line = JSON.stringify(
+      cloudfront({ 'timestamp(ms)': '-', 'c-ip': '-', 'x-edge-request-id': '-' }),
+    );
+    expect(parseLogLine(line, 'ndjson', preset)).toMatchObject({
+      timestamp: now.toISOString().slice(0, 19) + 'Z',
+      client_ip: null,
+      request_id: null,
+    });
+    expect(
+      parseLogLine(JSON.stringify(cloudfront({ 'sc-status': '-' })), 'ndjson', preset),
+    ).toBeNull();
+    expect(() =>
+      parseLogLine(JSON.stringify(cloudfront({ 'cs(User-Agent)': '-' })), 'ndjson', preset),
+    ).toThrow(UnsupportedLogFormat);
+  });
+  it('refuses a calendar-impossible fallback date instead of moving it to another day', () => {
+    const line = (date: string) =>
+      JSON.stringify(cloudfront({ 'timestamp(ms)': '-', date, time: '10:00:00' }));
+    expect(parseLogLine(line('2026-02-28'), 'ndjson', preset)?.timestamp).toBe(
+      '2026-02-28T10:00:00Z',
+    );
+    expect(() => parseLogLine(line('2026-02-31'), 'ndjson', preset)).toThrow(UnsupportedLogFormat);
+  });
+  it('keeps an undecodable user agent as sent', () => {
+    expect(
+      parseLogLine(
+        JSON.stringify(cloudfront({ 'cs(User-Agent)': 'GPTBot%E0%A4' })),
+        'ndjson',
+        preset,
+      )?.user_agent,
+    ).toBe('GPTBot%E0%A4');
   });
 });
 describe('sanitized durable admission', () => {
@@ -601,7 +579,7 @@ describe('sanitized durable admission', () => {
       crawlLogs.batches_per_source_per_hour = old;
     }
     const b = await setup();
-    const bomb = await app.request('/api/v1/crawl-logs/ingest/' + b.source.id, {
+    const bomb = await app.request('/v1/crawl-logs/ingest/' + b.source.id, {
       method: 'POST',
       headers: { authorization: 'Bearer ' + b.token, 'content-encoding': 'gzip' },
       body: new Uint8Array(gzipSync(Buffer.alloc(crawlLogs.max_batch_bytes + 1))),
@@ -1230,6 +1208,64 @@ describe('persisted analytics and coverage decisions', () => {
 });
 
 describe('bounded maintenance', () => {
+  it('stalls a quiet live source after the window and clears it on an accepted receipt', async () => {
+    const { tenant, source, token } = await setup();
+    const later = new Date(Date.now() + (crawlLogs.stalled_after_hours + 1) * 3600000);
+    await crawlLogTick(db, new Date());
+    expect((await sourceList(db, scope(tenant))).items[0]).toMatchObject({
+      state: 'active',
+      stall_reason: null,
+    });
+    await crawlLogTick(db, later);
+    expect((await sourceList(db, scope(tenant))).items[0]).toMatchObject({
+      state: 'stalled',
+      stall_reason: 'no_receipts',
+      stalled_at: later.toISOString(),
+    });
+    expect((await send(source.id, token, body(event()))).status).toBe(202);
+    expect((await sourceList(db, scope(tenant))).items[0]).toMatchObject({
+      state: 'active',
+      stall_reason: null,
+      stalled_at: null,
+    });
+  });
+  it('stalls a source refused for a lapsed plan', async () => {
+    const { tenant, source, token } = await setup();
+    await revokeCrawlLogs(tenant.workspaceId);
+    expect((await send(source.id, token, body(event()))).status).toBe(409);
+    expect((await sourceList(db, scope(tenant))).items[0]).toMatchObject({
+      state: 'stalled',
+      stall_reason: 'not_in_plan',
+    });
+  });
+  it('refuses a project over its daily received bytes until the next reporting day', async () => {
+    const { tenant, source, token } = await setup();
+    const old = crawlLogs.received_bytes_per_project_per_day;
+    const payload = body(event());
+    crawlLogs.received_bytes_per_project_per_day = payload.length;
+    try {
+      expect((await send(source.id, token, payload)).status).toBe(202);
+      const refused = await send(source.id, token, payload);
+      expect(refused.status).toBe(429);
+      const midnight = Date.parse(new Date().toISOString().slice(0, 10) + 'T00:00:00Z') + 86400000;
+      const retryAfter = Number(refused.headers.get('retry-after'));
+      expect(Math.abs(retryAfter - (midnight - Date.now()) / 1000)).toBeLessThan(5);
+      expect((await send(source.id, token, payload)).status).toBe(429);
+      const receipts = await db
+        .selectFrom('crawl_log_batches')
+        .select(['status', 'bytes_received', 'lines_received'])
+        .where('workspace_id', '=', tenant.workspaceId)
+        .where('source_id', '=', source.id)
+        .orderBy('received_at')
+        .execute();
+      expect(receipts).toEqual([
+        { status: 'accepted', bytes_received: payload.length, lines_received: 1 },
+        { status: 'bytes_ceiling', bytes_received: 0, lines_received: 0 },
+      ]);
+    } finally {
+      crawlLogs.received_bytes_per_project_per_day = old;
+    }
+  });
   it('continues scheduling retention and upload cleanup with ingestion disabled', async () => {
     const { tenant } = await setup();
     crawlLogs.ingestion_enabled = false;

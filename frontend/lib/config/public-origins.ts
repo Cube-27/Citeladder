@@ -35,6 +35,17 @@ function parsePublicOrigin(
   return parsed;
 }
 
+/**
+ * The API host machine senders post to (`https://api.citeladder.com`): crawl
+ * log endpoints shown in setup. Production app artifacts require it.
+ */
+export function publicApiOrigin(
+  value = process.env.PUBLIC_API_ORIGIN,
+  production = process.env.NODE_ENV === 'production' && process.env.LOCAL_COMPOSE_BUILD !== 'true',
+): URL | null {
+  return parsePublicOrigin(value, 'PUBLIC_API_ORIGIN', production);
+}
+
 export function publicOrigins(
   website = process.env.PUBLIC_WEBSITE_ORIGIN,
   app = process.env.PUBLIC_APP_ORIGIN,

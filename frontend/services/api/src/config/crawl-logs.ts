@@ -20,6 +20,11 @@ const preset = z.strictObject({
   client_ip: z.string().min(1),
   request_id: z.string().min(1),
   timestamp_unit: z.enum(['iso', 'seconds', 'milliseconds', 'nanoseconds']),
+  timestamp_fallback: z
+    .strictObject({ date: z.string().min(1), time: z.string().min(1) })
+    .optional(),
+  missing_tokens: z.array(z.string().min(1)).optional(),
+  user_agent_decode: z.literal('url').optional(),
 });
 const schema = z.strictObject({
   ingestion_enabled: z.boolean(),
@@ -37,6 +42,8 @@ const schema = z.strictObject({
   max_sources_per_project: positive,
   batches_per_source_per_hour: positive,
   accepted_lines_per_project_per_day: positive,
+  received_bytes_per_project_per_day: positive,
+  stalled_after_hours: positive,
   max_clock_skew_hours: positive,
   max_backdate_days: positive,
   secret_path_patterns: z.array(z.string().min(1)),
@@ -45,6 +52,7 @@ const schema = z.strictObject({
   rollup_freeze_margin_days: positive,
   refresh_delay_seconds: positive,
   max_delivery_gap_minutes: positive,
+  buffered_delivery_grace_minutes: positive,
   ip_range_refresh_hours: positive,
   ip_range_max_age_hours: positive,
   ip_range_contemporaneous_hours: positive,
@@ -75,6 +83,7 @@ export function loadCrawlLogs(value: unknown) {
   if (
     config.default_page_size > config.max_page_size ||
     config.max_line_bytes > config.max_batch_bytes ||
+    config.max_batch_bytes > config.received_bytes_per_project_per_day ||
     config.worker_batch_lines > config.max_lines_per_batch ||
     config.worker_batch_lines * config.max_line_bytes > config.max_batch_bytes ||
     config.ip_range_contemporaneous_hours > config.ip_range_max_age_hours

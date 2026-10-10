@@ -17,7 +17,8 @@ description: Triage an authorized CiteLadder project's persisted Site Health sco
 4. For AI search, call `read_ai_crawlability` with the same `crawl_id` for what
    robots.txt lets each AI crawler do, and `read_crawl_logs` for crawler visits
    actually observed when logs are connected. Permission is not a visit; no
-   logs is unknown, not zero.
+   logs is unknown, not zero. A stalled log source means coverage is not
+   complete; say why (its `stall_reason`).
 5. `fetch` at most three returned references to confirm the top findings. Do
    not fetch arbitrary URLs. Where supported, call `render_site_health` with the
    same snapshot.

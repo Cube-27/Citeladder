@@ -7,12 +7,14 @@ import {
   crawlReceiptSchema,
   crawlCatalogSchema,
   crawlUploadSchema,
+  firehoseResponseSchema,
 } from '@citeladder/contracts/ai-traffic';
 import { defineGetRoute, definePostRoute } from './define.ts';
 import { readBody } from '../http/body.ts';
 import { requireProject } from '../projects/access.ts';
 import { crawlers } from '../config/crawlers.ts';
 import { crawlLogs } from '../config/crawl-logs.ts';
+import { policy } from '../config.ts';
 import { ApiError, notFound } from '../errors.ts';
 import { sourceList } from '../crawl-logs/source-reads.ts';
 import {
@@ -20,9 +22,10 @@ import {
   createSourceSchema,
   mutateSource,
   authorizeToken,
-  ingestionEnabled,
+  requireCrawlLogs,
 } from '../crawl-logs/sources.ts';
 import { ingest, boundedBody, batchQuota } from '../crawl-logs/ingest.ts';
+import { firehoseDelivery } from '../crawl-logs/firehose.ts';
 import { lockAuthorizedWorkspace } from '../workspaces/service.ts';
 import {
   createUpload,
@@ -34,9 +37,13 @@ import {
 } from '../crawl-logs/uploads.ts';
 
 const root = '/api/v1/projects/{project_id}/crawl-logs';
-const ingestPath = '/api/v1/crawl-logs/ingest/{source_id}';
+/** Machine routes: served only on the API host (`api.citeladder.com`). */
+const ingestPath = policy.api.machine_prefix + '/crawl-logs/ingest/{source_id}';
+const firehosePath = policy.api.machine_prefix + '/crawl-logs/firehose/{source_id}';
 const uploadBatchPath = root + '/sources/{source_id}/uploads/{upload_id}/batches';
-const selfBounded = [ingestPath, uploadBatchPath].map((template) => template.split('/'));
+const selfBounded = [ingestPath, firehosePath, uploadBatchPath].map((template) =>
+  template.split('/'),
+);
 const matchesTemplate = (template: string[], segments: string[]) =>
   template.length === segments.length &&
   template.every((part, i) => (part.startsWith('{') ? segments[i] !== '' : part === segments[i]));
@@ -154,9 +161,35 @@ export const crawlLogRoutes = [
         encoding: c.req.header('content-encoding'),
         tokenHash: source.token_hash!,
         quotaChecked: true,
+        accessChecked: true,
       });
       return c.json(crawlReceiptSchema.parse(receipt), 202);
     },
+  }),
+  definePostRoute({
+    family: 'crawl-log-ingest',
+    authorize: 'public',
+    raw: true,
+    path: firehosePath,
+    params: { path: { source_id: sourcePath.source_id }, query: {} },
+    response: firehoseResponseSchema,
+    status: 200,
+    headers: z.object({
+      'x-amz-firehose-request-id': z.string().optional(),
+      'x-amz-firehose-access-key': z.string().optional(),
+      'content-encoding': z.string().optional(),
+    }),
+    handle: ({ c, db }, { path }) =>
+      firehoseDelivery(
+        db,
+        path.source_id,
+        {
+          requestId: c.req.header('x-amz-firehose-request-id'),
+          accessKey: c.req.header('x-amz-firehose-access-key'),
+          encoding: c.req.header('content-encoding'),
+        },
+        c.req.raw,
+      ),
   }),
   definePostRoute({
     ...writes,
@@ -200,7 +233,7 @@ export const crawlLogRoutes = [
     response: crawlReceiptSchema,
     async handle({ c, db }, { path }) {
       const target = scope(c.get('workspace').workspaceId, path.project_id);
-      await ingestionEnabled(db, target.workspaceId);
+      await requireCrawlLogs(db, target.workspaceId);
       // Recheck current credential authority before accepting client evidence.
       await db
         .transaction()

@@ -1,5 +1,6 @@
 {
   "prefix": "/api/v1",
+  "machine_prefix": "/v1",
   "readiness_timeout_seconds": 2.0,
   "service_port": 8100,
   "request_body_max_bytes": 2097152,

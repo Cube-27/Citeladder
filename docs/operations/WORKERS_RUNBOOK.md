@@ -65,8 +65,11 @@ not make a second progress document.
 | `APP_DOMAIN_NAME` | `app.citeladder.com` |
 | `FRONTEND_URL` (derived) | `https://app.citeladder.com` |
 | `MCP_PUBLIC_BASE_URL` (derived) | `https://citeladder.com` |
+| `PUBLIC_API_URL` (derived, API) | `https://api.citeladder.com` |
 | `PUBLIC_WEBSITE_ORIGIN` | `https://citeladder.com` |
 | `PUBLIC_APP_ORIGIN` | `https://app.citeladder.com` |
+| `PUBLIC_API_ORIGIN` (app build) | `https://api.citeladder.com` |
+| API host Worker `PUBLIC_API_HOST` (committed) | `api.citeladder.com` |
 | Workers `ORIGIN_UPSTREAM` (committed) | `https://citeladder-api-44437656491.us-central1.run.app` |
 
 `PUBLIC_*` values are baked into Worker artifacts. Changing either requires a
@@ -84,10 +87,53 @@ registration, authorization, token, revoke and `/mcp` are **APEX-OWNED**
 protocol endpoints; only `GET/POST /mcp/oauth/consent` is browser owned by
 the configured app origin. Enabled-provider signed
 `POST /api/v1/billing/webhooks/{provider}` is **APEX-OWNED** and preserves raw
-bodies and status codes. Health, ready, internal worker and database endpoints
+bodies and status codes. Machine routes under `/v1/...` (crawl-log ingest
+and the Firehose endpoint) are **API-OWNED** on `api.citeladder.com`; see
+[API host](#api-host-apiciteladdercom). Health, ready, internal worker and database endpoints
 are **INTERNAL ONLY**. No **TEMPORARY LEGACY** browser endpoint is approved by
 source inspection alone; each exception needs a verified caller, exact path and
 method, owner, focused test and removal condition in the release record.
+
+## API host (api.citeladder.com)
+
+`api.citeladder.com` is **API-OWNED**: machine senders (CDN log streams, and
+later the public API and MCP) call it; browsers never do. It is its own small
+Worker, **citeladder-api-host** (`frontend/apps/api-host/`), with no assets. The
+marketing Worker keeps serving its static files without a Worker invocation, so
+marketing traffic never spends the free plan's daily Worker requests; only machine
+deliveries to this host do. It uses the same origin token as the other Workers.
+
+- Allowlist (`apps/api-host/worker.ts`), forwarded unchanged with
+  `X-CiteLadder-Origin-Token` and `X-CiteLadder-Public-Host: api.citeladder.com`:
+  `POST /v1/crawl-logs/ingest/{uuid}` and `POST /v1/crawl-logs/firehose/{uuid}`.
+  Anything else is `404 {"error":{"code":"not_found"}}`. Cookies are neither
+  read nor forwarded.
+- Any other hostname (a `workers.dev` or preview URL) gets the same 404.
+- The API admits the host from `PUBLIC_API_URL` and serves it `/v1/...` only.
+  The apex and app hosts refuse `/v1/...` with 404.
+
+Owner steps (DNS and Cloudflare; code cannot do these):
+
+1. Deploy the API with `PUBLIC_API_URL=https://api.citeladder.com` (set by
+   `infra/gcp/locals.tf`) before the Worker, so the origin accepts the host.
+2. Set the Worker secret once:
+   `pnpm exec wrangler secret put ORIGIN_TOKEN -c apps/api-host/wrangler.jsonc`
+   from `frontend/`, with the same value as the other Workers. Then run
+   **API host Worker delivery** (`.github/workflows/workers-api-host-deploy.yml`,
+   which reuses the `workers-app-production` environment's Cloudflare
+   credentials) or `pnpm deploy:api-host`. Wrangler attaches the
+   `api.citeladder.com` Custom Domain from `apps/api-host/wrangler.jsonc`;
+   Cloudflare creates the DNS record and certificate. If a DNS record named
+   `api` already exists, remove it first.
+3. Build and deploy the app Worker with `PUBLIC_API_ORIGIN=https://api.citeladder.com`
+   so crawl-log setup shows the API host.
+4. Run the release smoke below.
+
+Release smoke: `node scripts/frontend-ingress-smoke.mjs https://citeladder.com
+https://app.citeladder.com https://api.citeladder.com`. It checks that the
+apex and app hosts refuse `/v1/*` and that the API host refuses `/`, `/pricing`
+and `/api/v1/*` with the JSON 404. Then confirm one real sender's batch is
+accepted (a receipt appears on the source row).
 
 ## Contact email on the marketing Worker
 
@@ -137,7 +183,9 @@ credential. Configure no Titan incoming-mail or DNS changes for this feature.
 The Workers call the Cloud Run API directly; there is no origin hostname,
 Origin CA certificate or reverse proxy. The API rejects every request,
 including `/health`, `/ready` and MCP, unless it carries the origin token and an
-allowlisted public host (`citeladder.com` or `app.citeladder.com`). The
+allowlisted public host (`citeladder.com`, `app.citeladder.com` or
+`api.citeladder.com`). The API host reaches only `/v1/...` routes and `/v1/...`
+routes answer only for the API host; every other combination is a 404. The
 Workers set `X-CiteLadder-Origin-Token`, `X-CiteLadder-Public-Host` and
 `X-CiteLadder-Client-IP` (from `CF-Connecting-IP`), and strip any
 client-supplied copies.
@@ -146,8 +194,8 @@ client-supplied copies.
    Store it in the protected `gcp-demo` GitHub environment secret
    `CITELADDER_ORIGIN_TOKEN`. The deploy versions it into Secret Manager as
    `citeladder-worker-origin-token`, and only the Cloud Run API receives it.
-   Store the same value as the `ORIGIN_TOKEN` Worker secret on `citeladder-app`
-   and `citeladder-marketing`. Never reuse JWT, provider or customer
+   Store the same value as the `ORIGIN_TOKEN` Worker secret on `citeladder-app`,
+   `citeladder-marketing` and `citeladder-api-host`. Never reuse JWT, provider or customer
    credentials for this purpose.
 2. `ORIGIN_UPSTREAM` is committed in each `wrangler.jsonc`. The project number
    makes it deterministic, and the deploy summary prints the same URL.
@@ -158,7 +206,7 @@ client-supplied copies.
 
 For rotation, set `CITELADDER_ORIGIN_TOKEN_PREVIOUS` to the currently active
 value and change `CITELADDER_ORIGIN_TOKEN` to a new value in the protected
-environment. Deploy the API so it accepts both, update both Workers to the new
+environment. Deploy the API so it accepts both, update every Worker to the new
 secret, and verify through each deployed path. Then clear the previous value
 and redeploy. Record version references and test results, never values.
 

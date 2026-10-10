@@ -1183,7 +1183,8 @@ CREATE TABLE public.crawl_log_batches (
     lines_overlapping integer NOT NULL,
     first_line_at timestamp with time zone,
     last_line_at timestamp with time zone,
-    heartbeat boolean NOT NULL
+    heartbeat boolean NOT NULL,
+    bytes_received integer NOT NULL
 );
 
 CREATE TABLE public.crawl_log_coverage_daily (
@@ -1219,7 +1220,13 @@ CREATE TABLE public.crawl_log_sources (
     created_by_member_id uuid NOT NULL,
     created_at timestamp with time zone NOT NULL,
     revoked_at timestamp with time zone,
-    last_processed_at timestamp with time zone
+    last_processed_at timestamp with time zone,
+    stall_reason character varying(32),
+    stalled_at timestamp with time zone,
+    buffer_interval_seconds integer,
+    declared_filtered boolean NOT NULL,
+    CONSTRAINT ck_crawl_log_sources_buffer_interval CHECK ((((setup)::text = 'aws_firehose'::text) = (buffer_interval_seconds IS NOT NULL)) AND ((buffer_interval_seconds IS NULL) OR ((buffer_interval_seconds >= 60) AND (buffer_interval_seconds <= 900)))),
+    CONSTRAINT ck_crawl_log_sources_stall CHECK (((stall_reason IS NULL) = (stalled_at IS NULL)))
 );
 
 CREATE TABLE public.crawl_log_states (
@@ -4345,6 +4352,8 @@ CREATE INDEX ix_content_differentiation_reports_audit_task_id ON public.content_
 CREATE INDEX ix_content_differentiation_reports_project_id ON public.content_differentiation_reports USING btree (project_id);
 
 CREATE INDEX ix_content_differentiation_reports_workspace_id ON public.content_differentiation_reports USING btree (workspace_id);
+
+CREATE INDEX ix_crawl_log_batches_received ON public.crawl_log_batches USING btree (workspace_id, project_id, received_at) INCLUDE (bytes_received);
 
 CREATE INDEX ix_crawl_log_batches_upload ON public.crawl_log_batches USING btree (workspace_id, project_id, upload_id);
 

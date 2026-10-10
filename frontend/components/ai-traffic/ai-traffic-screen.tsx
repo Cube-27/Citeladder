@@ -17,6 +17,7 @@ import { TrafficOverview, TrafficCrawlers, TrafficActivity } from './traffic-vie
 import { Pager } from '@/components/ui/pager';
 import { cursorControls } from '@/lib/table/use-cursor-table';
 import { TrafficPages } from './pages-view';
+import { CrawlLogAvailabilityNotice } from './crawl-log-availability';
 
 type TrafficTab = (typeof TRAFFIC_TABS)[number]['value'];
 /** Absent or unknown means "not chosen", so the default can follow crawl availability. */
@@ -59,7 +60,17 @@ export function AiTrafficScreen() {
   return (
     <TabsRoot value={tab} onValueChange={setTab}>
       {tab === 'referrals' ? (
-        <AiReferralsScreen tabs={tabs} />
+        <AiReferralsScreen
+          tabs={tabs}
+          notice={
+            crawlAvailable === false && sources.data && activeProject ? (
+              <CrawlLogAvailabilityNotice
+                availability={sources.data.availability}
+                workspaceId={activeProject.workspace_id}
+              />
+            ) : undefined
+          }
+        />
       ) : (
         <TrafficDataView tab={tab} tabs={tabs} crawlAvailable={crawlAvailable !== false} />
       )}

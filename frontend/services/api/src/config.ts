@@ -339,6 +339,8 @@ export type ServiceConfig = {
     mailKey: string;
     mailTimeoutMs: number;
     frontendUrl: string;
+    /** The machine host (`api.citeladder.com`); only it serves `/v1/...` routes. Empty locally. */
+    publicApiUrl: string;
     trustedProxies: TrustedProxies;
     oauthSettings: Record<string, string | number | boolean>;
     limits: Record<keyof typeof policy.abuse, number>;
@@ -528,6 +530,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
       mailKey: setting('resend_api_key') as string,
       mailTimeoutMs: setting('auth_mail_timeout_ms') as number,
       frontendUrl: setting('frontend_url') as string,
+      publicApiUrl: setting('public_api_url') as string,
       trustedProxies: parseTrustedProxies(setting('trusted_proxy_cidrs') as string),
       oauthSettings: {
         ...Object.fromEntries(

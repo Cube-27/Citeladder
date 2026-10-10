@@ -21,6 +21,7 @@
     }
   },
   "include": [
+    "apps/api-host/**/*.ts",
     "apps/app/**/*.ts",
     "apps/app/**/*.tsx",
     "apps/marketing/**/*.ts",

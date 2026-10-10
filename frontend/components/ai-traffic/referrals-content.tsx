@@ -20,6 +20,7 @@ export function AiReferralsContent({
   query,
   toolbar,
   tabs,
+  notice,
 }: Readonly<{
   projectId: string | null;
   projectLoading: boolean;
@@ -27,16 +28,25 @@ export function AiReferralsContent({
   query: UseQueryResult<AiReferrals, Error>;
   toolbar: React.ReactNode;
   tabs?: React.ReactNode;
+  notice?: React.ReactNode;
 }>) {
   // The control band stays drawn while the project resolves. Hiding it left the
   // work jumping a row's height the moment data arrived.
-  const region = (
+  const data = (
     <AiReferralsDataRegion
       projectId={projectId}
       projectLoading={projectLoading}
       range={range}
       query={query}
     />
+  );
+  const region = notice ? (
+    <div className="grid gap-4">
+      {notice}
+      {data}
+    </div>
+  ) : (
+    data
   );
   return (
     <PageShell tabs={tabs} controls={toolbar}>
@@ -50,7 +60,7 @@ function AiReferralsDataRegion({
   projectLoading,
   range,
   query,
-}: Omit<React.ComponentProps<typeof AiReferralsContent>, 'toolbar'>) {
+}: Omit<React.ComponentProps<typeof AiReferralsContent>, 'toolbar' | 'notice'>) {
   if (projectLoading || (Boolean(projectId) && query.isLoading))
     return <PageLoading label="Loading AI referrals…" />;
   if (!projectId) return <ProjectRequiredState />;

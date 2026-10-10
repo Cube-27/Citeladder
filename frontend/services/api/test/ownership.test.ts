@@ -5,7 +5,7 @@ import { routeOwnershipFailures, type OwnershipInputs } from '../src/openapi/own
 
 function ownershipInputs(overrides: Partial<OwnershipInputs> = {}): OwnershipInputs {
   return {
-    apiPrefix: '/api/v1',
+    prefixes: ['/api/v1', '/v1'],
     manifest: { executions: 'typescript' },
     typescript: openApiDocument([
       {
@@ -39,6 +39,21 @@ describe('route-ownership gate', () => {
     expect(
       routeOwnershipFailures(ownershipInputs({ manifest: { executions: 'other' } })),
     ).toContainEqual(expect.stringContaining('must be TypeScript-owned'));
+  });
+  it('counts a machine route under /v1 as serving its family', () => {
+    const machine = openApiDocument([
+      {
+        family: 'executions',
+        method: 'post',
+        path: '/v1/executions/{item_id}',
+        pathParams: z.object({ item_id: z.uuid() }),
+        responses: { 200: z.object({ name: z.string() }) },
+      },
+    ]);
+    expect(routeOwnershipFailures(ownershipInputs({ typescript: machine }))).toEqual([]);
+    expect(
+      routeOwnershipFailures(ownershipInputs({ typescript: machine, prefixes: ['/api/v1'] })),
+    ).toEqual(["'executions' has no declared route"]);
   });
   it('refuses ambiguous family tags', () => {
     const input = ownershipInputs();

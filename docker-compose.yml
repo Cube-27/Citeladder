@@ -105,6 +105,7 @@ services:
         NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE: ${NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE:-}
         PUBLIC_WEBSITE_ORIGIN: http://127.0.0.1:3000
         PUBLIC_APP_ORIGIN: http://127.0.0.1:3001
+        PUBLIC_API_ORIGIN: http://127.0.0.1:8100
         PUBLIC_DOCS_ORIGIN: http://127.0.0.1:4322
     restart: unless-stopped
     depends_on:

@@ -5,7 +5,7 @@ import type { Database } from '../db/database.ts';
 import { crawlLogs } from '../config/crawl-logs.ts';
 import { ApiError, notFound } from '../errors.ts';
 import { lockCrawlState, enqueueRollup, type CrawlScope } from './state.ts';
-import { ingestionEnabled } from './sources.ts';
+import { requireCrawlLogs } from './sources.ts';
 import { lockAuthorizedWorkspace } from '../workspaces/service.ts';
 
 export const uploadCreateSchema = z.strictObject({
@@ -44,7 +44,7 @@ export async function createUpload(
 ) {
   return await db.transaction().execute(async (trx) => {
     await lockAuthorizedWorkspace(trx, scope.workspaceId, actorId, 'manage_credentials');
-    await ingestionEnabled(trx, scope.workspaceId);
+    await requireCrawlLogs(trx, scope.workspaceId);
     await lockCrawlState(trx, scope);
     await sourceForUpload(trx, scope, sourceId);
     const now = new Date();
@@ -100,7 +100,7 @@ export async function completeUpload(
     throw new ApiError(422, 'Duplicate scanned day');
   return await db.transaction().execute(async (trx) => {
     await lockAuthorizedWorkspace(trx, scope.workspaceId, actorId, 'manage_credentials');
-    await ingestionEnabled(trx, scope.workspaceId);
+    await requireCrawlLogs(trx, scope.workspaceId);
     const state = await lockCrawlState(trx, scope);
     const source = await sourceForUpload(trx, scope, sourceId);
     const upload = await trx

@@ -11,7 +11,7 @@ import type { Executor } from '../workers/executor.ts';
 import { sql } from 'kysely';
 import { enqueueRollup, lockCrawlState, type CrawlScope } from './state.ts';
 import { enqueueTrafficInsights } from './insights-enqueue.ts';
-import { ingestionAvailable } from './sources.ts';
+import { stallQuietSources } from './stall.ts';
 
 export function botIpRangeRefresh(fetcher: WebsiteFetcher = fetchWebsite): Executor {
   return async (task, { checkCancelled }) => {
@@ -165,7 +165,7 @@ export async function crawlLogTick(
     .select('id')
     .where('is_system', '=', true)
     .executeTakeFirst();
-  if (system && (await ingestionAvailable(db)))
+  if (system && crawlLogs.ingestion_enabled)
     for (const bot of crawlers.bots.filter((b) => b.verification.method === 'ip_ranges')) {
       if (!canAdmit()) return;
       await enqueueTask(db, {
@@ -187,15 +187,30 @@ export async function crawlLogTick(
     .distinct()
     .execute();
   for (const workspace of workspaces)
-    for (const kind of ['bot_request_retention_sweep', 'crawl_log_upload_abandon_sweep']) {
-      if (!canAdmit()) return;
-      await enqueueTask(db, {
-        workspaceId: workspace.workspace_id,
-        projectId: null,
-        kind,
-        payload: {},
-        keyParts: [workspace.workspace_id, now.toISOString().slice(0, 10)],
-        maxAttempts: crawlLogs.task_max_attempts,
-      });
-    }
+    if (!(await maintainWorkspace(db, workspace.workspace_id, now, canAdmit))) return;
+}
+/** One workspace's daily crawl-log upkeep; false once the tick's budget is spent. */
+async function maintainWorkspace(
+  db: Database,
+  workspaceId: string,
+  now: Date,
+  canAdmit: () => boolean,
+) {
+  // A paused collection is not the sender's silence.
+  if (crawlLogs.ingestion_enabled) {
+    if (!canAdmit()) return false;
+    await stallQuietSources(db, workspaceId, now);
+  }
+  for (const kind of ['bot_request_retention_sweep', 'crawl_log_upload_abandon_sweep']) {
+    if (!canAdmit()) return false;
+    await enqueueTask(db, {
+      workspaceId,
+      projectId: null,
+      kind,
+      payload: {},
+      keyParts: [workspaceId, now.toISOString().slice(0, 10)],
+      maxAttempts: crawlLogs.task_max_attempts,
+    });
+  }
+  return true;
 }

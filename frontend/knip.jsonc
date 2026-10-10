@@ -17,6 +17,7 @@
         // including runtime.css.
         "apps/marketing/astro.config.mjs",
         "apps/marketing/src/middleware.ts",
+        "apps/api-host/worker.ts",
         "apps/marketing/src/pages/**/*.{astro,ts}",
         "apps/docs/astro.config.mjs",
         "apps/docs/src/pages/**/*.{astro,ts}",

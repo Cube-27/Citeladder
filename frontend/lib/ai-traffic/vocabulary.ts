@@ -41,6 +41,14 @@ export const connectionLabel = (token: string) => label(CONNECTION, token);
 export const coverageLabel = (token: string) => label(COVERAGE, token);
 export const collectionPointLabel = (token: string) => label(COLLECTION_POINT, token);
 
+/** Why a live source is stalled, phrased as what the reader can do about it. */
+const STALL_REASON = {
+  no_receipts: 'No accepted batches for a day. Check that the sender is still running.',
+  not_in_plan: 'Batches are refused because the plan no longer includes AI crawler logs.',
+  oversize: 'A batch over 5 MiB was dropped. Lower the stream buffer size.',
+} as const;
+export const stallReasonLabel = (token: string) => label(STALL_REASON, token);
+
 const LEG_STATE = {
   value: 'Measured',
   zero: 'Measured zero',

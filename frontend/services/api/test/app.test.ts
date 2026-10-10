@@ -16,6 +16,34 @@ const db = testDatabase(config);
 afterAll(() => db.destroy());
 
 describe('health and readiness', () => {
+  it('serves /v1 machine routes on the API host only, and nothing else there', async () => {
+    const token = 'current-origin-token-0123456789abcdef';
+    const protectedApp = createApp(
+      testConfig({
+        K_SERVICE: 'api',
+        CITELADDER_ORIGIN_TOKEN: token,
+        FRONTEND_URL: 'https://app.example.test',
+        MCP_PUBLIC_BASE_URL: 'https://example.test',
+        PUBLIC_API_URL: 'https://api.example.test',
+      }),
+      db,
+    );
+    const status = async (method: string, path: string, publicHost: string) =>
+      (
+        await protectedApp.request(path, {
+          method,
+          headers: { 'X-CiteLadder-Origin-Token': token, 'X-CiteLadder-Public-Host': publicHost },
+        })
+      ).status;
+    const ingest = '/v1/crawl-logs/ingest/11111111-1111-4111-8111-111111111111';
+    // Reaches the route: an unknown source without a token is unauthorized, not routed away.
+    expect(await status('POST', ingest, 'api.example.test')).toBe(401);
+    for (const publicHost of ['app.example.test', 'example.test'])
+      expect(await status('POST', ingest, publicHost)).toBe(404);
+    for (const path of ['/health', '/api/v1/auth/me', '/mcp'])
+      expect(await status('GET', path, 'api.example.test')).toBe(404);
+    expect(await status('GET', '/health', 'app.example.test')).toBe(200);
+  });
   it('protects the raw origin, including probes and MCP, and accepts rotated tokens', async () => {
     const current = 'current-origin-token-0123456789abcdef';
     const previous = 'previous-origin-token-0123456789abcdef';

@@ -156,6 +156,17 @@ type Batch = Pick<
   'source_id' | 'received_at' | 'first_line_at' | 'last_line_at' | 'heartbeat'
 >;
 type Upload = Selectable<CrawlLogUploads>;
+/**
+ * The longest silence a complete day tolerates. A Firehose stream emits on its
+ * buffer interval, so its bound is that interval plus a configured grace.
+ */
+function deliveryGapBound(source: Pick<Source, 'buffer_interval_seconds'>) {
+  const buffered =
+    source.buffer_interval_seconds === null
+      ? 0
+      : Math.ceil(source.buffer_interval_seconds / 60) + crawlLogs.buffered_delivery_grace_minutes;
+  return Math.max(crawlLogs.max_delivery_gap_minutes, buffered);
+}
 function completeWebhook(source: Source, day: ReportingDay, now: Date, count: number, gap: number) {
   return (
     source.kind === 'webhook' &&
@@ -165,7 +176,7 @@ function completeWebhook(source: Source, day: ReportingDay, now: Date, count: nu
     source.created_at <= day.start &&
     (!source.revoked_at || source.revoked_at >= day.end) &&
     day.end <= now &&
-    gap <= crawlLogs.max_delivery_gap_minutes
+    gap <= deliveryGapBound(source)
   );
 }
 function coverageRows(

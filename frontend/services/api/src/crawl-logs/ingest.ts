@@ -12,8 +12,10 @@ import { strings } from '../db/json.ts';
 import { enforceSubjectRequest } from '../abuse/usage.ts';
 import { prepareBatch } from './prepare.ts';
 import { lockCrawlState, enqueueRollup, reportingDay, type CrawlScope } from './state.ts';
-import { ingestionEnabled } from './sources.ts';
+import { requireCrawlLogs } from './sources.ts';
 import { lockAuthorizedWorkspace } from '../workspaces/service.ts';
+import { clearStall } from './stall.ts';
+import { withReportingTimezone } from './reads.ts';
 
 export async function boundedBody(request: Request) {
   const reader = request.body?.getReader();
@@ -65,6 +67,7 @@ export async function batchQuota(
       .executeTakeFirst())
   )
     return;
+  await receivedBytesCeiling(db, source, now);
   await enforceSubjectRequest(
     db,
     'crawl_source',
@@ -76,6 +79,90 @@ export async function batchQuota(
     },
     now,
   );
+}
+/**
+ * Refuse a project whose receipts already hold `received_bytes_per_project_per_day`
+ * decompressed bytes on its current reporting day, until the next day starts.
+ * One diagnostic receipt per source and day records the refusal.
+ */
+async function receivedBytesCeiling(db: Database, source: Selectable<CrawlLogSources>, now: Date) {
+  const { reporting_timezone: tz } = await withReportingTimezone(
+    db,
+    { workspaceId: source.workspace_id, projectId: source.project_id },
+    {},
+  );
+  const today = reportingDay(now, tz);
+  const day = sql<Date>`(${today}::date::timestamp at time zone ${tz})`;
+  const usage = await db
+    .selectFrom('crawl_log_batches')
+    .select([
+      sql<string>`coalesce(sum(bytes_received), 0)`.as('used'),
+      sql<number>`ceil(extract(epoch from (${day} + interval '1 day' - ${now}::timestamptz)))::integer`.as(
+        'retry_after',
+      ),
+    ])
+    .where('workspace_id', '=', source.workspace_id)
+    .where('project_id', '=', source.project_id)
+    .where('received_at', '>=', day)
+    .executeTakeFirstOrThrow();
+  if (Number(usage.used) < crawlLogs.received_bytes_per_project_per_day) return;
+  await diagnosticReceipt(db, source, 'bytes_ceiling', now, tz);
+  throw new ApiError(429, 'Daily received log volume reached for this project', {
+    headers: { 'Retry-After': String(Math.max(1, usage.retry_after)) },
+  });
+}
+/**
+ * A refusal the sender only sees as a status code, kept as a zero-line receipt.
+ * Keyed per source, kind and the project's reporting day, so retries add no rows.
+ */
+export async function diagnosticReceipt(
+  db: Database,
+  source: Selectable<CrawlLogSources>,
+  status: 'bytes_ceiling' | 'oversize',
+  now: Date,
+  timezone?: string,
+) {
+  const tz =
+    timezone ??
+    (
+      await withReportingTimezone(
+        db,
+        { workspaceId: source.workspace_id, projectId: source.project_id },
+        {},
+      )
+    ).reporting_timezone;
+  const day = reportingDay(now, tz);
+  await db
+    .insertInto('crawl_log_batches')
+    .values({
+      id: randomUUID(),
+      workspace_id: source.workspace_id,
+      project_id: source.project_id,
+      source_id: source.id,
+      upload_id: null,
+      seq: null,
+      idempotency_key: `diagnostic:${status}:${day}`,
+      received_at: now,
+      format: source.format,
+      status,
+      missing_fields: JSON.stringify([]),
+      parser_version: crawlLogs.parser_version,
+      catalog_version: crawlers.catalog_version,
+      lines_received: 0,
+      lines_parsed: 0,
+      lines_matched: 0,
+      lines_unmatched: 0,
+      lines_out_of_scope: 0,
+      lines_rejected: 0,
+      lines_duplicate: 0,
+      lines_overlapping: 0,
+      first_line_at: null,
+      last_line_at: null,
+      heartbeat: false,
+      bytes_received: 0,
+    })
+    .onConflict((c) => c.constraint('uq_crawl_log_batch_key').doNothing())
+    .execute();
 }
 /** One admission owner for webhooks and uploads. No provider or model I/O. */
 export async function ingest(
@@ -91,9 +178,15 @@ export async function ingest(
     tokenHash?: string;
     actorId?: string;
     quotaChecked?: boolean;
+    /** The caller already refused an unavailable workspace (`authorizeToken`). */
+    accessChecked?: boolean;
+    /** Records an adaptor could not decode into lines; counted as rejected lines. */
+    rejectedRecords?: number;
+    /** Decompressed bytes the sender delivered, when more than this batch's lines. */
+    receivedBytes?: number;
   },
 ) {
-  await ingestionEnabled(db, source.workspace_id);
+  if (!options.accessChecked) await requireCrawlLogs(db, source.workspace_id);
   const now = options.now ?? new Date();
   const key = options.key ?? createHash('sha256').update(body).digest('hex');
   if (!key.trim() || key.length > 255) throw new ApiError(422, 'Invalid idempotency key');
@@ -103,6 +196,7 @@ export async function ingest(
     lines,
     validation,
     format,
+    bytes,
     unsupported: formatError,
   } = decodeBatch(source, body, options.encoding, Boolean(options.uploadId));
   let unsupported = formatError;
@@ -127,6 +221,9 @@ export async function ingest(
   if (!preset) throw new ApiError(415, 'Unsupported preset');
   const preparedBatch = prepareBatch({ source, lines, preset, latest, now, format });
   const { counts, prepared, first, last } = preparedBatch;
+  const rejectedRecords = options.rejectedRecords ?? 0;
+  counts.lines_received += rejectedRecords;
+  counts.lines_rejected += rejectedRecords;
   unsupported ??= preparedBatch.unsupported;
   let receiptStatus = 'accepted';
   if (validation) receiptStatus = 'destination_validation';
@@ -134,15 +231,7 @@ export async function ingest(
   const receipt = await db.transaction().execute(async (trx) => {
     if (options.actorId)
       await lockAuthorizedWorkspace(trx, scope.workspaceId, options.actorId, 'manage_credentials');
-    else if (!crawlLogs.ingestion_enabled)
-      // Ownership transfers take the workspace root lock before changing membership.
-      await trx
-        .selectFrom('workspaces')
-        .select('id')
-        .where('id', '=', scope.workspaceId)
-        .forShare()
-        .executeTakeFirst();
-    await ingestionEnabled(trx, scope.workspaceId);
+    await requireCrawlLogs(trx, scope.workspaceId);
     const state = await lockCrawlState(trx, scope);
     const current = await trx
       .selectFrom('crawl_log_sources')
@@ -193,9 +282,17 @@ export async function ingest(
         ...counts,
         first_line_at: first,
         last_line_at: last,
-        heartbeat: !options.uploadId && !unsupported && !validation && lines.length === 0,
+        heartbeat:
+          !options.uploadId &&
+          !unsupported &&
+          !validation &&
+          lines.length === 0 &&
+          rejectedRecords === 0,
+        bytes_received: options.receivedBytes ?? bytes,
       })
       .execute();
+    if (receiptStatus === 'accepted' && current.stall_reason !== null)
+      await clearStall(trx, current);
     await insertRequests(trx, scope, id, admitted, counts, now);
     const receipt = await trx
       .updateTable('crawl_log_batches')
@@ -331,7 +428,7 @@ function decodeBatch(
     else throw error;
   }
 
-  return { lines, validation, unsupported, format };
+  return { lines, validation, unsupported, format, bytes: Buffer.byteLength(text) };
 }
 async function assertUpload(
   trx: Database,

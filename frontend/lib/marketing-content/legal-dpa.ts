@@ -59,7 +59,7 @@ export const DATA_PROCESSING_AGREEMENT: LegalDocument = {
           ],
           [
             'Data categories',
-            'Business contact details and identifiers; project configuration and prompts; page, search and analytics data; returned evidence and generated outputs; usage and support information.',
+            'Business contact details and identifiers; project configuration and prompts; page, search and analytics data; server request logs supplied by the Customer (crawler identity, timestamps, status, query-less paths; IP addresses processed transiently and not stored); returned evidence and generated outputs; usage and support information.',
           ],
           [
             'Sensitive data',
@@ -136,7 +136,7 @@ export const SUBPROCESSORS: LegalDocument = {
   slug: 'subprocessors',
   title: 'Subprocessors',
   description: 'The service providers that process data for CiteLadder, and why.',
-  lastUpdated: '2026-10-05',
+  lastUpdated: '2026-10-10',
   sections: [
     {
       id: 'subprocessors',

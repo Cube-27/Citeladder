@@ -22,7 +22,12 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { CrawlLogSetup, CrawlLogSetupSubmit, CrawlLogCredential } from './crawl-log-setup';
-import { collectionPointLabel, words } from '@/lib/ai-traffic/vocabulary';
+import { CrawlLogAvailabilityNotice } from './crawl-log-availability';
+import { collectionPointLabel, stallReasonLabel, words } from '@/lib/ai-traffic/vocabulary';
+import { CRAWL_LOG_SETUPS } from '@/lib/config/crawl-logs';
+
+const setupLabel = (setup: string) =>
+  CRAWL_LOG_SETUPS.find((option) => option.value === setup)?.label ?? words(setup);
 export function CrawlLogConnections({
   open,
   onOpenChange,
@@ -57,31 +62,36 @@ function Connections({
   const { sources, canManage, open, setOpen, setIssued, mutation } = model;
   const [revoking, setRevoking] = useState<z.infer<typeof crawlSourceSchema> | null>(null);
   const showHeader = headerWhenEmpty || Boolean(sources.data?.items.length);
-  const setupAvailable = !sources.isError && sources.data?.ingestion_enabled === true;
+  const { setupAvailable, unavailable } = setupState(sources);
   return (
     <section id="crawl-log-connections" className="grid gap-3" aria-label="Crawl log connections">
       {showHeader ? (
         <EditorialSectionHeader
           title="Crawl logs"
           actions={
-            <Button
-              size="sm"
-              onClick={() => {
-                setIssued(null);
-                setOpen(true);
-              }}
-              disabled={!canManage}
-            >
-              Connect crawl logs
-            </Button>
+            unavailable ? undefined : (
+              <Button
+                size="sm"
+                onClick={() => {
+                  setIssued(null);
+                  setOpen(true);
+                }}
+                disabled={!canManage}
+              >
+                Connect crawl logs
+              </Button>
+            )
           }
         />
       ) : null}
       {sources.isError ? (
         <ReadError {...readErrorProps(sources)} fallback="Could not read crawl log sources" />
       ) : null}
-      {sources.data && !sources.data.ingestion_enabled ? (
-        <Alert tone="info">Ingestion is not enabled for this environment.</Alert>
+      {sources.data ? (
+        <CrawlLogAvailabilityNotice
+          availability={sources.data.availability}
+          workspaceId={model.workspaceId}
+        />
       ) : null}
       {sources.data?.items.length ? (
         <SourceDiagnostics
@@ -117,6 +127,18 @@ function Connections({
     </section>
   );
 }
+/**
+ * Setup opens only on a read that says collection is available. An unavailable
+ * workspace gets the explanation, not a setup it cannot complete; a pending or
+ * failed read keeps the button, and the dialog explains the read.
+ */
+function setupState(sources: ReturnType<typeof useCrawlConnections>['sources']) {
+  const availability = sources.data?.availability;
+  return {
+    setupAvailable: !sources.isError && availability === 'available',
+    unavailable: availability !== undefined && availability !== 'available',
+  };
+}
 function SetupAvailability({ model }: Readonly<{ model: ReturnType<typeof useCrawlConnections> }>) {
   const { sources, mutation } = model;
   if (sources.isError)
@@ -124,14 +146,14 @@ function SetupAvailability({ model }: Readonly<{ model: ReturnType<typeof useCra
       <ReadError {...readErrorProps(sources)} fallback="Could not read crawl log availability" />
     );
   if (!sources.data) return <output>Checking crawl log availability…</output>;
-  if (sources.data.ingestion_enabled) return <CrawlLogSetup model={model} />;
+  if (sources.data.availability === 'available') return <CrawlLogSetup model={model} />;
   return (
     <>
       {mutation.isError ? <Alert tone="danger">{mutation.error.message}</Alert> : null}
-      <Alert tone="info">
-        Crawl log ingestion is not enabled for this environment. Source creation and file uploads
-        are unavailable until CiteLadder enables ingestion for this environment.
-      </Alert>
+      <CrawlLogAvailabilityNotice
+        availability={sources.data.availability}
+        workspaceId={model.workspaceId}
+      />
     </>
   );
 }
@@ -165,8 +187,11 @@ function SourceDiagnostics({
               <div className="grid gap-0.5">
                 <span>{s.host}</span>
                 <span className="type-caption">
-                  {words(s.setup)} · {words(s.connection)} · {words(s.status)}
+                  {setupLabel(s.setup)} · {words(s.connection)} · {words(s.state)}
                 </span>
+                {s.stall_reason ? (
+                  <span className="type-caption">{stallReasonLabel(s.stall_reason)}</span>
+                ) : null}
               </div>
             </TableCell>
             <TableCell>

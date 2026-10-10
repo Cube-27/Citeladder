@@ -204,17 +204,25 @@ const crawlSamplingSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('sampled'), rate: z.number().gt(0).max(1) }),
   z.object({ kind: z.literal('filtered'), description: z.string() }),
 ]);
+/** Why a live source stopped delivering: silence, a lapsed plan, or batches over the size bound. */
+export const crawlStallReasonSchema = z.enum(['no_receipts', 'not_in_plan', 'oversize']);
 export const crawlSourceSchema = z.object({
   id: z.uuid(),
   kind: z.enum(['webhook', 'upload']),
-  setup: z.enum(['cloudflare_worker', 'cloudflare_logpush', 'custom', 'upload']),
+  setup: z.enum(['cloudflare_worker', 'cloudflare_logpush', 'aws_firehose', 'custom', 'upload']),
   preset: z.string(),
+  /** Declared Firehose buffer interval; null for other setups. */
+  buffer_interval_seconds: z.number().nullable(),
   format: z.string(),
   collection_point: z.string(),
   sampling: crawlSamplingSchema,
   origin: z.string(),
   host: z.string(),
   status: z.enum(['active', 'revoked']),
+  /** `stalled`: live but not delivering; `stall_reason` says why. */
+  state: z.enum(['active', 'stalled', 'revoked']),
+  stall_reason: crawlStallReasonSchema.nullable(),
+  stalled_at: z.string().nullable(),
   token_prefix: z.string().nullable(),
   connection: crawlConnectionSchema,
   last_accepted_batch: z.string().nullable(),
@@ -224,9 +232,17 @@ export const crawlSourceSchema = z.object({
   unsupported_uploads: z.number(),
   unsupported_batches: z.number(),
 });
+/** Collection availability: the plan grant and CiteLadder's global kill switch. */
+export const crawlLogAvailabilitySchema = z.enum(['available', 'not_in_plan', 'disabled']);
 export const crawlSourceListSchema = z.object({
-  ingestion_enabled: z.boolean(),
+  availability: crawlLogAvailabilitySchema,
   items: z.array(crawlSourceSchema),
+});
+/** Amazon Data Firehose's HTTP endpoint response contract. */
+export const firehoseResponseSchema = z.object({
+  requestId: z.string(),
+  timestamp: z.number(),
+  errorMessage: z.string().optional(),
 });
 export const crawlTokenSchema = z.object({ id: z.uuid(), token: z.string().nullable() });
 export const crawlReceiptSchema = z.object({
@@ -277,6 +293,9 @@ export const crawlCatalogSchema = z.object({
       client_ip: z.string(),
       request_id: z.string(),
       timestamp_unit: z.enum(['iso', 'seconds', 'milliseconds', 'nanoseconds']),
+      timestamp_fallback: z.object({ date: z.string(), time: z.string() }).optional(),
+      missing_tokens: z.array(z.string()).optional(),
+      user_agent_decode: z.literal('url').optional(),
     }),
   ),
   max_batch_bytes: z.number(),

@@ -68,9 +68,10 @@ export function createApp(
       throw new ApiError(413, 'Request body too large');
     },
   });
-  app.use('/api/*', (c, next) =>
-    streamsOwnBody(c.req.method, c.req.path) ? next() : ordinaryBodyLimit(c, next),
-  );
+  for (const prefix of ['/api/*', `${policy.api.machine_prefix}/*`])
+    app.use(prefix, (c, next) =>
+      streamsOwnBody(c.req.method, c.req.path) ? next() : ordinaryBodyLimit(c, next),
+    );
   app.onError(onError);
   app.notFound(onNotFound);
   registerMcpRoutes(app, config, db);
