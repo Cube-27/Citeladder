@@ -2,7 +2,7 @@
 import { z } from 'zod';
 import { perceptionLabelSchema } from '@citeladder/contracts/visibility-perception';
 
-import type { PerceptionPolicy } from '../config/perception.ts';
+import type { FactCheckPolicy, PerceptionPolicy } from '../config/perception.ts';
 import type { PerceptionPackage } from './passages.ts';
 
 export const LABELS = perceptionLabelSchema.options;
@@ -28,13 +28,39 @@ export const perceptionOutputSchema = z.object({
 });
 export type PerceptionOutput = z.infer<typeof perceptionOutputSchema>;
 
-/** The system and user messages for one package. */
+// A fact-checked audit's output adds the brand's factual claims. A missing
+// list is unusable output, never zero claims; topic and count stay lenient for
+// the same reason as aspects.
+export const claimsOutputSchema = perceptionOutputSchema.extend({
+  claims: z.array(
+    z.object({
+      topic: z.string(),
+      claim: z.string(),
+      quote: z.string(),
+      confidence: z.number().min(0).max(1),
+    }),
+  ),
+});
+type ClaimsOutput = z.infer<typeof claimsOutputSchema>;
+export type ExtractedClaim = ClaimsOutput['claims'][number];
+
+/** The claims addendum a fact-checked audit appends to the perception templates. */
+type ClaimsRequest = Pick<
+  FactCheckPolicy,
+  'topics' | 'max_claims_per_answer' | 'claims_system_addendum' | 'claims_user_addendum'
+>;
+
+/**
+ * The system and user messages for one package; with `claims`, the configured
+ * templates followed by the claims addendum, whatever template is in force.
+ */
 export function perceptionPrompt(
   pkg: PerceptionPackage,
   policy: Pick<
     PerceptionPolicy,
     'system_template' | 'user_template' | 'themes' | 'max_aspects_per_entity'
   >,
+  claims: ClaimsRequest | null = null,
 ) {
   const entities = pkg.entities.map((entity) => ({
     entity_id: entity.entity_id,
@@ -54,5 +80,12 @@ export function perceptionPrompt(
     /\{(?:prompt|language|themes|max_aspects|entities)\}/gu,
     (slot) => slots[slot]!,
   );
-  return { system: policy.system_template, user };
+  if (!claims) return { system: policy.system_template, user };
+  const addendum = claims.claims_user_addendum.replaceAll(/\{(?:topics|max_claims)\}/gu, (slot) =>
+    slot === '{topics}' ? claims.topics.join(', ') : String(claims.max_claims_per_answer),
+  );
+  return {
+    system: `${policy.system_template}\n\n${claims.claims_system_addendum}`,
+    user: `${user}\n\n${addendum}`,
+  };
 }

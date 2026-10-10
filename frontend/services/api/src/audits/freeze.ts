@@ -10,7 +10,7 @@ import type { AuditInput } from './inputs.ts';
 import { freezeCommerceContext } from '../commerce/audit-context.ts';
 import { frozenEntityMatching, projectEntityMatching } from '../analysis/entity-matching.ts';
 import { strings } from '../db/json.ts';
-import { admittedPerceptionVersions } from '../perception/admission.ts';
+import { admittedFactCheck, admittedPerceptionVersions } from '../perception/admission.ts';
 import {
   searchPayload,
   searchPolicy,
@@ -170,7 +170,7 @@ export async function prepareAudit(
     .selectAll()
     .where('project_id', '=', project.id)
     .executeTakeFirst();
-  const [aliases, owned, unintended, competitors, profile] = await Promise.all([
+  const [aliases, owned, unintended, competitors, profile, factCheck] = await Promise.all([
     brand
       ? db
           .selectFrom('brand_aliases')
@@ -203,6 +203,7 @@ export async function prepareAudit(
       .where('workspace_id', '=', workspaceId)
       .where('project_id', '=', project.id)
       .executeTakeFirst(),
+    admittedFactCheck(db, { workspaceId, projectId: project.id, auditScope: input.audit_scope }),
   ]);
   const localized = auditPolicy.constants.localized_instruction
     .replace('{country_code}', project.country_code || 'unspecified')
@@ -282,7 +283,9 @@ export async function prepareAudit(
     anthropic_max_uses: providerSettings.anthropicMaxUses,
     slot_order_version: 'mt19937-v1',
     // Perception results carry the versions in force at admission (brand audits only).
-    perception: admittedPerceptionVersions(input.audit_scope),
+    perception: admittedPerceptionVersions(input.audit_scope, factCheck),
+    // Fact-checking pilot: the confirmed fact revisions this audit checks against.
+    fact_check: factCheck,
     panel_id: panelHash.slice(0, 16),
     panel_hash: panelHash,
     prompt_hashes: promptRows.map((row) => createHash('sha256').update(row.text).digest('hex')),

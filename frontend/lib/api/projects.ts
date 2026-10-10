@@ -6,6 +6,12 @@ import { z } from 'zod';
 
 import { apiClient, type ApiRequestOptions } from './client';
 import { workspaceSchema } from '@citeladder/contracts/auth';
+import {
+  brandFactListSchema,
+  brandFactSchema,
+  type FactStatus,
+  type FactTopic,
+} from '@citeladder/contracts/fact-checking';
 import { commandCenterSchema } from '@citeladder/contracts/opportunities';
 import {
   brandProfileSchema,
@@ -126,6 +132,39 @@ export const projectsApi = {
       options,
     );
     return strictValidate(brandProfileSchema, res, 'projects.updateBrandProfile');
+  },
+  /** The fact-checking pilot's brand facts; `enabled: false` outside the pilot. */
+  getBrandFacts: async (projectId: string, options?: ApiRequestOptions) => {
+    const res = await apiClient.get(`/projects/${projectId}/brand-facts`, options);
+    return strictValidate(brandFactListSchema, res, 'projects.getBrandFacts');
+  },
+  createBrandFact: async (
+    projectId: string,
+    input: { topic: FactTopic; statement: string; source_url: string | null },
+    options?: ApiRequestOptions,
+  ) => {
+    const res = await apiClient.post(`/projects/${projectId}/brand-facts`, input, options);
+    return strictValidate(brandFactSchema, res, 'projects.createBrandFact');
+  },
+  /** Edit the revision that was read; a stale revision is a 409. */
+  updateBrandFact: async (
+    projectId: string,
+    factId: string,
+    input: {
+      expected_revision: number;
+      topic?: FactTopic;
+      statement?: string;
+      source_url?: string | null;
+      status?: FactStatus;
+    },
+    options?: ApiRequestOptions,
+  ) => {
+    const res = await apiClient.patch(
+      `/projects/${projectId}/brand-facts/${factId}`,
+      input,
+      options,
+    );
+    return strictValidate(brandFactSchema, res, 'projects.updateBrandFact');
   },
   getBusinessMap: async (projectId: string, options?: ApiRequestOptions) => {
     const res = await apiClient.get<BusinessMap>(`/projects/${projectId}/business-map`, options);

@@ -18,6 +18,7 @@ import type { Database } from '../db/database.ts';
 import { wireUtc, utcText } from '../db/timestamps.ts';
 import { AnalysisNotFoundError } from './selection.ts';
 import { executionSurfaceEvidence } from './surface.ts';
+import { executionClaims } from './accuracy.ts';
 import { executionPerception } from './perception.ts';
 import { executionAds } from './ads.ts';
 
@@ -85,7 +86,7 @@ export async function getExecutionEvidence(
     .where('workspace_id', '=', input.workspaceId)
     .executeTakeFirst();
   const score = scoreObject(analysis.score);
-  const [search_surface, perception, ads] = await Promise.all([
+  const [search_surface, perception, claims, ads] = await Promise.all([
     executionSurfaceEvidence(db, {
       workspaceId: input.workspaceId,
       taskId: input.taskId,
@@ -95,6 +96,11 @@ export async function getExecutionEvidence(
       workspaceId: input.workspaceId,
       analysisId: analysis.id,
       assessments: analysis.entity_assessments,
+      configuration: audit?.configuration ?? null,
+    }),
+    executionClaims(db, {
+      workspaceId: input.workspaceId,
+      analysisId: analysis.id,
       configuration: audit?.configuration ?? null,
     }),
     executionAds(db, {
@@ -143,6 +149,7 @@ export async function getExecutionEvidence(
     // observation row: a gap in ours, not a measured absence.
     search_surface,
     perception,
+    claims,
     ads,
     created_at: wireUtc(analysis.created_at_text!),
   };

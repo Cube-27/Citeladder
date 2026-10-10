@@ -10,29 +10,50 @@
  * never fails because perception could not run.
  */
 import { randomUUID } from 'node:crypto';
-import { sql } from 'kysely';
 
 import { scoringConfig } from '../analysis/scoring.ts';
 import { policy } from '../config.ts';
-import type { PerceptionPolicy } from '../config/perception.ts';
+import type { FactCheckPolicy, PerceptionPolicy } from '../config/perception.ts';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
-import { createModelGateway, gatewaySettings, type ModelGateway } from '../models/gateway.ts';
-import { ModelError } from '../models/http.ts';
+import type { ModelGateway } from '../models/gateway.ts';
 import { parseUuid } from '../http/uuid.ts';
 import type { QueueTask } from '../queue/task-queue.ts';
 import { scalarText } from '../text-order.ts';
 import { payloadString, taskProject, type Executor } from '../workers/executor.ts';
-import { frozenPerceptionVersions } from './admission.ts';
-import { perceptionOutputSchema, perceptionPrompt } from './model.ts';
+import { enqueueTask } from '../referrals/enqueue.ts';
+import {
+  checkedTopics,
+  frozenFactCheck,
+  frozenPerceptionVersions,
+  type FrozenFactCheck,
+} from './admission.ts';
+import { claimsOutputSchema, perceptionOutputSchema, perceptionPrompt } from './model.ts';
+import {
+  callStructured,
+  configuredGateway,
+  outcomeColumns,
+  overCap,
+  type ModelCall,
+} from './model-call.ts';
 import { entityPassages, packageHash, type PerceptionPackage } from './passages.ts';
-import { validateOutput, type EntitySentiment } from './validate.ts';
+import {
+  validateClaims,
+  validateOutput,
+  type EntitySentiment,
+  type VerifiedClaim,
+} from './validate.ts';
 
 /** Outcomes that spent a model call; caps count only these. */
 const CALLED = ['classified', 'invalid_output', 'model_error'];
 
 type Outcome =
-  | { outcome: 'classified'; entities: EntitySentiment[]; drops: Record<string, number> }
+  | {
+      outcome: 'classified';
+      entities: EntitySentiment[];
+      claims: VerifiedClaim[];
+      drops: Record<string, number>;
+    }
   | { outcome: 'no_mentions' }
   | {
       outcome: 'unavailable';
@@ -40,14 +61,6 @@ type Outcome =
     }
   | { outcome: 'invalid_output' }
   | { outcome: 'model_error'; reason: string };
-
-type Call = {
-  provider: string;
-  model: string;
-  inputHash: string;
-  usage: Record<string, unknown> | null;
-  latencyMs: number | null;
-};
 
 type Subject = Awaited<ReturnType<typeof loadSubject>>;
 
@@ -86,31 +99,10 @@ async function alreadyPerceived(db: Database, subject: Subject, extractorVersion
   return row !== undefined;
 }
 
-async function overCap(
-  db: Database,
-  task: QueueTask,
-  subject: Subject,
-  settings: PerceptionPolicy,
-): Promise<boolean> {
-  const counted = db
-    .selectFrom('answer_perceptions')
-    .select((eb) => eb.fn.countAll<string>().as('count'))
-    .where('workspace_id', '=', task.workspace_id)
-    .where('outcome', 'in', CALLED);
-  const [audit, day] = await Promise.all([
-    counted.where('audit_id', '=', subject.audit_id).executeTakeFirstOrThrow(),
-    counted
-      .where(
-        'created_at',
-        '>=',
-        sql<Date>`date_trunc('day', now() at time zone 'utc') at time zone 'utc'`,
-      )
-      .executeTakeFirstOrThrow(),
-  ]);
-  return (
-    Number(audit.count) >= settings.max_classifications_per_audit ||
-    Number(day.count) >= settings.max_classifications_per_workspace_per_day
-  );
+/** Whether any confident claim has a frozen fact on its topic, so verification has work. */
+function needsVerification(claims: readonly VerifiedClaim[], factCheck: FrozenFactCheck) {
+  const topics = checkedTopics(factCheck);
+  return claims.some((claim) => !claim.low_confidence && topics.has(claim.topic));
 }
 
 function persist(
@@ -119,7 +111,8 @@ function persist(
   subject: Subject,
   versions: { extractor_version: string; template_version: string },
   outcome: Outcome,
-  call: Call | null,
+  call: ModelCall | null,
+  factCheck: FrozenFactCheck | null,
 ) {
   return async (db: Database) => {
     const id = randomUUID();
@@ -135,82 +128,92 @@ function persist(
         artifact_id: subject.artifact_id,
         extractor_version: versions.extractor_version,
         template_version: versions.template_version,
-        model_provider: call?.provider ?? null,
-        model: call?.model ?? null,
-        input_hash: call?.inputHash ?? null,
-        outcome: outcome.outcome,
-        outcome_reason: 'reason' in outcome ? outcome.reason : null,
-        drop_counts: JSON.stringify(outcome.outcome === 'classified' ? outcome.drops : {}),
-        usage: call?.usage ? JSON.stringify(call.usage) : null,
-        latency_ms: call?.latencyMs ?? null,
-        created_at: new Date(),
+        ...outcomeColumns(outcome, outcome.outcome === 'classified' ? outcome.drops : {}, call),
       })
       .onConflict((conflict) => conflict.columns(['analysis_id', 'extractor_version']).doNothing())
       .returning('id')
       .executeTakeFirst();
-    if (!inserted || outcome.outcome !== 'classified' || !outcome.entities.length) return;
+    if (!inserted || outcome.outcome !== 'classified') return;
+    if (outcome.entities.length)
+      await db
+        .insertInto('entity_sentiments')
+        .values(
+          outcome.entities.map((entity) => ({
+            id: randomUUID(),
+            workspace_id: task.workspace_id,
+            perception_id: id,
+            entity_id: entity.entity_id,
+            entity_name: entity.entity_name,
+            entity_kind: entity.entity_kind,
+            label: entity.label,
+            confidence: entity.confidence,
+            low_confidence: entity.low_confidence,
+            passage_spans: JSON.stringify(entity.passage_spans),
+            aspects: JSON.stringify(entity.aspects),
+          })),
+        )
+        .execute();
+    if (!outcome.claims.length) return;
     await db
-      .insertInto('entity_sentiments')
+      .insertInto('answer_claims')
       .values(
-        outcome.entities.map((entity) => ({
+        outcome.claims.map((claim) => ({
           id: randomUUID(),
           workspace_id: task.workspace_id,
           perception_id: id,
-          entity_id: entity.entity_id,
-          entity_name: entity.entity_name,
-          entity_kind: entity.entity_kind,
-          label: entity.label,
-          confidence: entity.confidence,
-          low_confidence: entity.low_confidence,
-          passage_spans: JSON.stringify(entity.passage_spans),
-          aspects: JSON.stringify(entity.aspects),
+          ordinal: claim.ordinal,
+          topic: claim.topic,
+          claim: claim.claim,
+          quote: claim.quote,
+          quote_start: claim.start,
+          quote_end: claim.end,
+          confidence: claim.confidence,
+          low_confidence: claim.low_confidence,
         })),
       )
       .execute();
+    // Same transaction, no network: verification follows only a committed claim set.
+    if (factCheck && needsVerification(outcome.claims, factCheck))
+      await enqueueTask(db, {
+        workspaceId: task.workspace_id,
+        projectId,
+        kind: policy.perception.fact_check.verification_task_kind,
+        payload: { perception_id: id },
+        keyParts: [id, factCheck.verify_template_version],
+        maxAttempts: policy.perception.fact_check.task_max_attempts,
+      });
   };
 }
 
-/** Up to `max_attempts` calls while the output fails to parse; a provider fault ends at once. */
-async function classify(gateway: ModelGateway, pkg: PerceptionPackage, settings: PerceptionPolicy) {
-  const { system, user } = perceptionPrompt(pkg, settings);
-  const call: Call = {
-    provider: gateway.adapter,
-    model: gateway.model,
-    inputHash: packageHash(pkg),
-    usage: null,
-    latencyMs: null,
+/** One classification; claims ride the same call only for a fact-checked audit. */
+function classify(
+  gateway: ModelGateway,
+  pkg: PerceptionPackage,
+  settings: PerceptionPolicy,
+  claimsRequest: FactCheckPolicy | null,
+) {
+  const { system, user } = perceptionPrompt(pkg, settings, claimsRequest);
+  const request = { system, user, inputHash: packageHash(pkg), maxAttempts: settings.max_attempts };
+  const classified = (
+    value: Parameters<typeof validateOutput>[1],
+    claims: ReturnType<typeof validateClaims>,
+  ): Outcome => {
+    const validated = validateOutput(pkg, value, settings);
+    return {
+      outcome: 'classified',
+      entities: validated.entities,
+      claims: claims.claims,
+      drops: { ...validated.drops, ...claims.drops },
+    };
   };
-  for (let attempt = 1; attempt <= settings.max_attempts; attempt++) {
-    try {
-      const { value, result } = await gateway.structured(system, user, perceptionOutputSchema);
-      call.model = result.returned_model;
-      call.usage = { ...result.usage, attempts: attempt };
-      call.latencyMs = result.latency_ms;
-      const validated = validateOutput(pkg, value, settings);
-      return { call, outcome: { outcome: 'classified', ...validated } satisfies Outcome };
-    } catch (error) {
-      if (!(error instanceof ModelError)) throw error;
-      call.usage = { attempts: attempt };
-      if (error.code !== 'parse')
-        return {
-          call,
-          outcome: {
-            outcome: 'model_error',
-            reason: error.status ? `http_${error.status}` : error.code,
-          } satisfies Outcome,
-        };
-    }
-  }
-  return { call, outcome: { outcome: 'invalid_output' } satisfies Outcome };
-}
-
-function configuredGateway(): ModelGateway | null {
-  try {
-    return createModelGateway(gatewaySettings());
-  } catch (error) {
-    if (error instanceof ModelError && error.code === 'not_configured') return null;
-    throw error;
-  }
+  // Without claims the plain schema is used, so plain perception is unchanged.
+  if (!claimsRequest)
+    return callStructured(gateway, { ...request, schema: perceptionOutputSchema }, (value) =>
+      classified(value, { claims: [], drops: {} }),
+    );
+  return callStructured(gateway, { ...request, schema: claimsOutputSchema }, (value) =>
+    classified(value, validateClaims(pkg, value.claims, claimsRequest)),
+  );
 }
 
 export function answerPerception(
@@ -223,12 +226,19 @@ export function answerPerception(
     const versions = frozenPerceptionVersions(subject.configuration);
     // An audit admitted without perception is never classified.
     if (!versions || (await alreadyPerceived(db, subject, versions.extractor_version))) return;
-    const settle = (outcome: Outcome, call: Call | null = null) => ({
+    const factCheck = frozenFactCheck(subject.configuration);
+    const settle = (outcome: Outcome, call: ModelCall | null = null) => ({
       error: null,
-      persist: persist(task, projectId, subject, versions, outcome, call),
+      persist: persist(task, projectId, subject, versions, outcome, call, factCheck),
     });
-    if (await overCap(db, task, subject, settings))
-      return settle({ outcome: 'unavailable', reason: 'platform_cap' });
+    const capped = await overCap(db, 'answer_perceptions', {
+      workspaceId: task.workspace_id,
+      auditId: subject.audit_id,
+      called: CALLED,
+      perAudit: settings.max_classifications_per_audit,
+      perDay: settings.max_classifications_per_workspace_per_day,
+    });
+    if (capped) return settle({ outcome: 'unavailable', reason: 'platform_cap' });
     const gateway = gatewayFactory();
     if (!gateway) return settle({ outcome: 'unavailable', reason: 'model_not_configured' });
     const config = scoringConfig(subject.configuration);
@@ -247,7 +257,12 @@ export function answerPerception(
     };
     if (!pkg.entities.length) return settle({ outcome: 'no_mentions' });
     await checkCancelled('perception_model_call');
-    const { call, outcome } = await classify(gateway, pkg, settings);
+    const { call, outcome } = await classify(
+      gateway,
+      pkg,
+      settings,
+      factCheck ? settings.fact_check : null,
+    );
     return settle(outcome, call);
   };
 }
@@ -264,6 +279,7 @@ export async function compensatePerception(db: Database, task: QueueTask) {
     subject,
     versions,
     { outcome: 'unavailable', reason: 'task_failed' },
+    null,
     null,
   )(db);
 }

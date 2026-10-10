@@ -1,5 +1,5 @@
 {
-  "registry_revision": "entitlements-v6",
+  "registry_revision": "entitlements-v7",
   "capabilities": {
     "workspace_access": {
       "type": "flag",
@@ -192,6 +192,14 @@
       "issuable": true,
       "public": true,
       "rolling_window_seconds": null
+    },
+    "fact_checking": {
+      "type": "flag",
+      "levels": 0,
+      "ordered_values": [],
+      "issuable": true,
+      "public": false,
+      "rolling_window_seconds": null
     }
   },
   "grant_source_kinds": ["addon", "override", "plan", "topup", "trial"],
@@ -205,6 +213,7 @@
   "crawl_logs": "crawl_logs",
   "api_access": "api_access",
   "api_keys": "api_keys",
+  "fact_checking": "fact_checking",
   "capacity_lock": {
     "namespace": 1128353857,
     "person": "citeladder-cap"
@@ -239,6 +248,7 @@
     "unresolved": "occupancy_unresolved",
     "capability_not_granted": "capability_not_granted",
     "crawl_logs_not_in_plan": "crawl_logs_not_in_plan",
-    "crawl_logs_disabled": "crawl_logs_disabled"
+    "crawl_logs_disabled": "crawl_logs_disabled",
+    "fact_checking_not_in_plan": "fact_checking_not_in_plan"
   }
 }

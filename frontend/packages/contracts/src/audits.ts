@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { benchmarkModeSchema } from './project.ts';
 import { logicalEngineSchema, transportProviderSchema } from './providers.ts';
 import { executionAdsSchema } from './visibility-ads.ts';
+import { executionClaimSchema } from './fact-checking.ts';
 import { executionPerceptionSchema } from './visibility-perception.ts';
 
 const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(shape);
@@ -385,6 +386,8 @@ export const executionEvidenceSchema = responseObject({
   search_surface: searchSurfaceEvidenceSchema.nullable().default(null),
   // Per named business: its answer perception label and verified quotes.
   perception: z.array(executionPerceptionSchema),
+  // The brand's factual claims and their verdicts; empty outside the fact-checking pilot.
+  claims: z.array(executionClaimSchema),
   // Paid placements shown with the answer; never part of its citations.
   ads: executionAdsSchema,
   created_at: z.string(),

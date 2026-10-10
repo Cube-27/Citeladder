@@ -47,6 +47,19 @@ A citation is not a brand mention, and a mention is not an endorsement. Average 
 
 When nothing is classified yet the view says so: answers are still being classified, perception is unavailable (with the reason), or no answer in the selection named you. A change in how perception is classified starts a new comparison series, so points from before and after it are not compared directly.
 
+## Check facts in answers (pilot)
+
+In workspaces in the fact-checking pilot, **Agent → Context** lists **Brand facts**: short statements such as a plan's price, an integration or the markets you serve. A new fact starts as a draft; only confirmed facts are used. Audits started after you confirm a fact check the factual claims answers make about you against the facts confirmed at that moment, at no credit cost. Editing a fact later never changes an earlier run.
+
+The **Accuracy** tab shows the result:
+
+- **Accuracy** is supported claims divided by claims that were supported or contradicted. **Coverage** sits beside it; claims still being checked, low-confidence claims and claims that could not be checked are counted separately and never treated as zero.
+- **Contradicted claims** quote what the answer said, next to the fact it contradicts. Open a claim to see the full answer.
+- **Not covered** means no confirmed fact is about that point, and **inconclusive** means a related fact neither confirms nor rules it out. Neither is an error in the answer.
+- **Sources cited alongside contradictions** lists domains cited in those answers. They appeared alongside the claim; the view does not show that they were its source.
+
+Opinions and praise are not checked here; they appear in Perception. A change to your confirmed facts or to how claims are checked starts a new comparison series.
+
 ## Ads in ChatGPT answers
 
 **Ads** shows the paid ads that appeared in ChatGPT Search answers in the selected runs. Ads are reported on their own: they never count as citations or sources and never change mention rate, share of voice or scores.

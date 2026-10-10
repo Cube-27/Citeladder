@@ -395,6 +395,20 @@ export interface AnswerAdObservations {
   workspace_id: string;
 }
 
+export interface AnswerClaims {
+  claim: string;
+  confidence: number;
+  id: string;
+  low_confidence: boolean;
+  ordinal: number;
+  perception_id: string;
+  quote: string;
+  quote_end: number;
+  quote_start: number;
+  topic: string;
+  workspace_id: string;
+}
+
 export interface AnswerPerceptions {
   analysis_id: string;
   artifact_id: string;
@@ -848,6 +862,32 @@ export interface BrandedQueryOverrides {
   workspace_id: string;
 }
 
+export interface BrandFactRevisions {
+  created_at: Timestamp;
+  created_by_user_id: string | null;
+  fact_id: string;
+  id: string;
+  revision: number;
+  source_url: string | null;
+  statement: string;
+  status: string;
+  topic: string;
+  workspace_id: string;
+}
+
+export interface BrandFacts {
+  created_at: Timestamp;
+  id: string;
+  project_id: string;
+  revision: number;
+  source_url: string | null;
+  statement: string;
+  status: string;
+  topic: string;
+  updated_at: Timestamp;
+  workspace_id: string;
+}
+
 export interface BrandLogoAssets {
   byte_size: number;
   content_type: string;
@@ -938,6 +978,18 @@ export interface Citations {
   url_hash: string | null;
   url_identity_method: string | null;
   url_identity_version: string | null;
+  workspace_id: string;
+}
+
+export interface ClaimVerdicts {
+  claim_id: string;
+  confidence: number | null;
+  fact_revision_ids: Json;
+  id: string;
+  low_confidence: boolean;
+  model_verdict: string | null;
+  verdict: string;
+  verification_id: string;
   workspace_id: string;
 }
 
@@ -1393,6 +1445,25 @@ export interface ExecutionCostProjections {
   total_tokens: number | null;
   uncached_input_cost_microusd: Int8 | null;
   uncached_input_tokens: number | null;
+}
+
+export interface FactVerifications {
+  audit_id: string;
+  created_at: Timestamp;
+  drop_counts: Generated<Json>;
+  id: string;
+  input_hash: string | null;
+  latency_ms: number | null;
+  model: string | null;
+  model_provider: string | null;
+  outcome: string;
+  outcome_reason: string | null;
+  perception_id: string;
+  project_id: string;
+  task_id: string;
+  usage: Json | null;
+  verify_template_version: string;
+  workspace_id: string;
 }
 
 export interface GrantRevocations {
@@ -3110,6 +3181,7 @@ export interface DB {
   aio_observations: AioObservations;
   analytics_tasks: AnalyticsTasks;
   answer_ad_observations: AnswerAdObservations;
+  answer_claims: AnswerClaims;
   answer_perceptions: AnswerPerceptions;
   api_idempotency: ApiIdempotency;
   api_keys: ApiKeys;
@@ -3133,6 +3205,8 @@ export interface DB {
   brand_aliases: BrandAliases;
   brand_discoveries: BrandDiscoveries;
   brand_discovery_tasks: BrandDiscoveryTasks;
+  brand_fact_revisions: BrandFactRevisions;
+  brand_facts: BrandFacts;
   brand_logo_assets: BrandLogoAssets;
   brand_mentions: BrandMentions;
   brand_profiles: BrandProfiles;
@@ -3140,6 +3214,7 @@ export interface DB {
   branded_query_overrides: BrandedQueryOverrides;
   brands: Brands;
   citations: Citations;
+  claim_verdicts: ClaimVerdicts;
   commerce_categories: CommerceCategories;
   commerce_competitor_attempts: CommerceCompetitorAttempts;
   commerce_competitor_candidates: CommerceCompetitorCandidates;
@@ -3166,6 +3241,7 @@ export interface DB {
   enterprise_agreement_references: EnterpriseAgreementReferences;
   entity_sentiments: EntitySentiments;
   execution_cost_projections: ExecutionCostProjections;
+  fact_verifications: FactVerifications;
   grant_revocations: GrantRevocations;
   idempotency_records: IdempotencyRecords;
   integration_connections: IntegrationConnections;

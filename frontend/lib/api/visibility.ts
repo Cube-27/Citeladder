@@ -31,6 +31,7 @@ import {
 } from '@citeladder/contracts/visibility';
 import { surfaceRatesSchema } from '@citeladder/contracts/audits';
 import { perceptionResponseSchema } from '@citeladder/contracts/visibility-perception';
+import { accuracyResponseSchema } from '@citeladder/contracts/fact-checking';
 import { visibilityAdsResponseSchema } from '@citeladder/contracts/visibility-ads';
 import { visibilityTrendListSchema } from '@citeladder/contracts/visibility-trends';
 import { definedQuery, withQuery } from './shared';
@@ -121,6 +122,18 @@ export const visibilityApi = {
       options,
     );
     return strictValidate(perceptionResponseSchema, result, 'visibility.getPerception');
+  },
+  /** Fact-check accuracy for the selected runs: verdicts on the brand's claims with their coverage. */
+  getAccuracy: async (
+    projectId: string,
+    params: { audit_id?: string; audit_ids?: string[]; engine?: string; cohort?: string },
+    options?: ApiRequestOptions,
+  ) => {
+    const result = await apiClient.get(
+      withQuery(`/projects/${projectId}/visibility/accuracy`, definedQuery(params)),
+      options,
+    );
+    return strictValidate(accuracyResponseSchema, result, 'visibility.getAccuracy');
   },
   /** Ads in ChatGPT Search answers for the selected runs: presence, advertisers and creatives. */
   getAds: async (

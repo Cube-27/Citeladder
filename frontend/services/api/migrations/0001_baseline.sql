@@ -406,6 +406,20 @@ CREATE TABLE public.answer_perceptions (
     CONSTRAINT ck_answer_perception_outcome CHECK (((outcome)::text = ANY ((ARRAY['classified'::character varying, 'no_mentions'::character varying, 'unavailable'::character varying, 'invalid_output'::character varying, 'model_error'::character varying])::text[])))
 );
 
+CREATE TABLE public.answer_claims (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    perception_id uuid NOT NULL,
+    ordinal integer NOT NULL,
+    topic character varying(32) NOT NULL,
+    claim text NOT NULL,
+    quote text NOT NULL,
+    quote_start integer NOT NULL,
+    quote_end integer NOT NULL,
+    confidence double precision NOT NULL,
+    low_confidence boolean NOT NULL
+);
+
 CREATE TABLE public.api_idempotency (
     id uuid NOT NULL,
     workspace_id uuid NOT NULL,
@@ -831,6 +845,34 @@ CREATE TABLE public.brand_discovery_tasks (
     created_at timestamp with time zone NOT NULL,
     updated_at timestamp with time zone NOT NULL,
     completed_at timestamp with time zone
+);
+
+CREATE TABLE public.brand_fact_revisions (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    fact_id uuid NOT NULL,
+    revision integer NOT NULL,
+    topic character varying(32) NOT NULL,
+    statement text NOT NULL,
+    source_url text,
+    status character varying(16) NOT NULL,
+    created_by_user_id uuid,
+    created_at timestamp with time zone NOT NULL,
+    CONSTRAINT ck_brand_fact_revision_status CHECK (((status)::text = ANY ((ARRAY['draft'::character varying, 'confirmed'::character varying, 'retired'::character varying])::text[])))
+);
+
+CREATE TABLE public.brand_facts (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    project_id uuid NOT NULL,
+    revision integer NOT NULL,
+    topic character varying(32) NOT NULL,
+    statement text NOT NULL,
+    source_url text,
+    status character varying(16) NOT NULL,
+    created_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL,
+    CONSTRAINT ck_brand_fact_status CHECK (((status)::text = ANY ((ARRAY['draft'::character varying, 'confirmed'::character varying, 'retired'::character varying])::text[])))
 );
 
 CREATE TABLE public.brand_logo_assets (
@@ -1386,6 +1428,39 @@ CREATE TABLE public.entity_sentiments (
     passage_spans jsonb NOT NULL,
     aspects jsonb NOT NULL,
     CONSTRAINT ck_entity_sentiment_label CHECK (((label)::text = ANY ((ARRAY['positive'::character varying, 'neutral'::character varying, 'negative'::character varying, 'mixed'::character varying, 'not_assessable'::character varying])::text[])))
+);
+
+CREATE TABLE public.fact_verifications (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    project_id uuid NOT NULL,
+    audit_id uuid NOT NULL,
+    task_id uuid NOT NULL,
+    perception_id uuid NOT NULL,
+    verify_template_version character varying(64) NOT NULL,
+    model_provider character varying(32),
+    model character varying(255),
+    input_hash character varying(64),
+    outcome character varying(32) NOT NULL,
+    outcome_reason character varying(64),
+    drop_counts jsonb DEFAULT '{}'::jsonb NOT NULL,
+    usage jsonb,
+    latency_ms integer,
+    created_at timestamp with time zone NOT NULL,
+    CONSTRAINT ck_fact_verification_outcome CHECK (((outcome)::text = ANY ((ARRAY['verified'::character varying, 'unavailable'::character varying, 'invalid_output'::character varying, 'model_error'::character varying])::text[])))
+);
+
+CREATE TABLE public.claim_verdicts (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    verification_id uuid NOT NULL,
+    claim_id uuid NOT NULL,
+    verdict character varying(16) NOT NULL,
+    model_verdict character varying(16),
+    fact_revision_ids jsonb NOT NULL,
+    confidence double precision,
+    low_confidence boolean NOT NULL,
+    CONSTRAINT ck_claim_verdict_verdict CHECK (((verdict)::text = ANY ((ARRAY['supported'::character varying, 'contradicted'::character varying, 'inconclusive'::character varying, 'not_covered'::character varying])::text[])))
 );
 
 CREATE TABLE public.execution_cost_projections (
@@ -3177,6 +3252,21 @@ ALTER TABLE ONLY public.answer_ad_observations
 ALTER TABLE ONLY public.answer_perceptions
     ADD CONSTRAINT answer_perceptions_pkey PRIMARY KEY (id);
 
+ALTER TABLE ONLY public.answer_claims
+    ADD CONSTRAINT answer_claims_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.brand_facts
+    ADD CONSTRAINT brand_facts_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.brand_fact_revisions
+    ADD CONSTRAINT brand_fact_revisions_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.claim_verdicts
+    ADD CONSTRAINT claim_verdicts_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.fact_verifications
+    ADD CONSTRAINT fact_verifications_pkey PRIMARY KEY (id);
+
 ALTER TABLE ONLY public.api_idempotency
     ADD CONSTRAINT api_idempotency_pkey PRIMARY KEY (id);
 
@@ -3708,6 +3798,27 @@ ALTER TABLE ONLY public.answer_perceptions
 ALTER TABLE ONLY public.entity_sentiments
     ADD CONSTRAINT uq_entity_sentiment_perception_entity UNIQUE (perception_id, entity_id);
 
+ALTER TABLE ONLY public.answer_claims
+    ADD CONSTRAINT uq_answer_claim_perception_ordinal UNIQUE (perception_id, ordinal);
+
+ALTER TABLE ONLY public.answer_claims
+    ADD CONSTRAINT uq_answer_claims_ws_id UNIQUE (workspace_id, id);
+
+ALTER TABLE ONLY public.brand_facts
+    ADD CONSTRAINT uq_brand_facts_ws_id UNIQUE (workspace_id, id);
+
+ALTER TABLE ONLY public.brand_fact_revisions
+    ADD CONSTRAINT uq_brand_fact_revision_fact_revision UNIQUE (fact_id, revision);
+
+ALTER TABLE ONLY public.claim_verdicts
+    ADD CONSTRAINT uq_claim_verdict_verification_claim UNIQUE (verification_id, claim_id);
+
+ALTER TABLE ONLY public.fact_verifications
+    ADD CONSTRAINT uq_fact_verification_perception_template UNIQUE (perception_id, verify_template_version);
+
+ALTER TABLE ONLY public.fact_verifications
+    ADD CONSTRAINT uq_fact_verifications_ws_id UNIQUE (workspace_id, id);
+
 ALTER TABLE ONLY public.audit_engine_snapshots
     ADD CONSTRAINT uq_audit_engine_snapshot_engine UNIQUE (audit_id, logical_engine);
 
@@ -4214,6 +4325,24 @@ CREATE INDEX ix_answer_ad_observations_workspace_project ON public.answer_ad_obs
 CREATE INDEX ix_answer_perceptions_audit_id ON public.answer_perceptions USING btree (audit_id);
 
 CREATE INDEX ix_answer_perceptions_workspace_id_created_at ON public.answer_perceptions USING btree (workspace_id, created_at);
+
+CREATE INDEX ix_answer_claims_workspace_id ON public.answer_claims USING btree (workspace_id);
+
+CREATE INDEX ix_brand_facts_workspace_id_project_id ON public.brand_facts USING btree (workspace_id, project_id);
+
+CREATE INDEX ix_brand_fact_revisions_created_by_user_id ON public.brand_fact_revisions USING btree (created_by_user_id);
+
+CREATE INDEX ix_brand_fact_revisions_workspace_id_fact_id ON public.brand_fact_revisions USING btree (workspace_id, fact_id);
+
+CREATE INDEX ix_claim_verdicts_workspace_id_claim_id ON public.claim_verdicts USING btree (workspace_id, claim_id);
+
+CREATE INDEX ix_claim_verdicts_workspace_id_verification_id ON public.claim_verdicts USING btree (workspace_id, verification_id);
+
+CREATE INDEX ix_fact_verifications_audit_id ON public.fact_verifications USING btree (audit_id);
+
+CREATE INDEX ix_fact_verifications_task_id ON public.fact_verifications USING btree (task_id);
+
+CREATE INDEX ix_fact_verifications_workspace_id_created_at ON public.fact_verifications USING btree (workspace_id, created_at);
 
 CREATE INDEX ix_api_idempotency_created_at ON public.api_idempotency USING btree (created_at);
 
@@ -5288,6 +5417,33 @@ ALTER TABLE ONLY public.entity_sentiments
 
 ALTER TABLE ONLY public.entity_sentiments
     ADD CONSTRAINT entity_sentiments_workspace_id_perception_id_fkey FOREIGN KEY (workspace_id, perception_id) REFERENCES public.answer_perceptions(workspace_id, id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.answer_claims
+    ADD CONSTRAINT answer_claims_workspace_id_perception_id_fkey FOREIGN KEY (workspace_id, perception_id) REFERENCES public.answer_perceptions(workspace_id, id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.brand_facts
+    ADD CONSTRAINT brand_facts_workspace_id_project_id_fkey FOREIGN KEY (workspace_id, project_id) REFERENCES public.projects(workspace_id, id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.brand_fact_revisions
+    ADD CONSTRAINT brand_fact_revisions_workspace_id_fact_id_fkey FOREIGN KEY (workspace_id, fact_id) REFERENCES public.brand_facts(workspace_id, id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.brand_fact_revisions
+    ADD CONSTRAINT brand_fact_revisions_created_by_user_id_fkey FOREIGN KEY (created_by_user_id) REFERENCES public.users(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.fact_verifications
+    ADD CONSTRAINT fact_verifications_workspace_id_perception_id_fkey FOREIGN KEY (workspace_id, perception_id) REFERENCES public.answer_perceptions(workspace_id, id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.fact_verifications
+    ADD CONSTRAINT fact_verifications_workspace_id_project_id_audit_id_fkey FOREIGN KEY (workspace_id, project_id, audit_id) REFERENCES public.audits(workspace_id, project_id, id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.fact_verifications
+    ADD CONSTRAINT fact_verifications_task_id_fkey FOREIGN KEY (task_id) REFERENCES public.audit_tasks(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.claim_verdicts
+    ADD CONSTRAINT claim_verdicts_workspace_id_verification_id_fkey FOREIGN KEY (workspace_id, verification_id) REFERENCES public.fact_verifications(workspace_id, id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.claim_verdicts
+    ADD CONSTRAINT claim_verdicts_workspace_id_claim_id_fkey FOREIGN KEY (workspace_id, claim_id) REFERENCES public.answer_claims(workspace_id, id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.audit_engine_snapshots
     ADD CONSTRAINT audit_engine_snapshots_audit_id_fkey FOREIGN KEY (audit_id) REFERENCES public.audits(id) ON DELETE CASCADE;

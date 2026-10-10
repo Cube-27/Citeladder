@@ -468,6 +468,73 @@
       "read_only": true
     },
     {
+      "name": "read_fact_checks",
+      "title": "Read fact checks",
+      "description": "Factual claims AI answers made about the brand in the latest or a chosen run, checked against the brand's confirmed facts: accuracy (supported of supported plus contradicted) with its coverage, contradicted claims with the fact they contradict, and sources cited alongside them. Always state the coverage and quote the fact. accuracy_state not_enabled, no_facts, no_claims, pending or unavailable means there is no value, never zero; inconclusive and not_covered are not errors in the answer. Sources are cited alongside a contradiction, never its cause.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "audit_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "engine": {
+            "type": "string",
+            "enum": [
+              "chatgpt",
+              "claude",
+              "gemini",
+              "google_ai_overview",
+              "chatgpt_search",
+              "gemini_consumer"
+            ]
+          },
+          "cohort": {
+            "default": "core",
+            "type": "string",
+            "enum": ["core", "comparison"]
+          },
+          "view": {
+            "default": "summary",
+            "type": "string",
+            "enum": ["summary", "claims"]
+          },
+          "topic": {
+            "type": "string",
+            "enum": [
+              "pricing",
+              "plans",
+              "integrations",
+              "availability",
+              "markets",
+              "policies",
+              "specs",
+              "company"
+            ]
+          },
+          "verdict": {
+            "type": "string",
+            "enum": ["supported", "contradicted", "inconclusive", "not_covered"]
+          },
+          "cursor": {
+            "type": ["string", "null"]
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200
+          }
+        },
+        "required": ["project_id"],
+        "additionalProperties": false
+      },
+      "read_only": true
+    },
+    {
       "name": "read_integration_status",
       "title": "Read connected data",
       "description": "Which data sources are connected and how far their import has got.",

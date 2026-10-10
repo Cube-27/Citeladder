@@ -34,6 +34,7 @@ const evidence: ExecutionEvidence = {
   competitors_mentioned: [],
   search_surface: null,
   perception: [],
+  claims: [],
   ads: { applicability: 'not_applicable', parser_version: null, items: [] },
   created_at: '2026-01-15T00:00:00Z',
 };

@@ -49,6 +49,8 @@ const API_ERROR_CODES = [
   'evidence_not_found',
   'estimate_exceeds_limit',
   'execution_credentials_unavailable',
+  'fact_checking_not_in_plan',
+  'fact_limit_reached',
   'forbidden',
   'funded_budget_exhausted',
   'funded_cost_unresolved',
