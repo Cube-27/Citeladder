@@ -10,7 +10,7 @@ import { record, strings } from '../db/json.ts';
 import { scalarText } from '../text-order.ts';
 import { ApiError, onError } from '../errors.ts';
 import { createSecretCipher } from '../integrations/fernet.ts';
-import { grantableScopes, loadMcpConfig, mcpPolicy, type McpConfig } from './config.ts';
+import { grantableScopes, holdsWrite, loadMcpConfig, mcpPolicy, type McpConfig } from './config.ts';
 import { consentMessage, consentPage } from './consent-page.ts';
 import {
   completeConsent,
@@ -365,7 +365,7 @@ export function registerOAuthRoutes(
         error,
         termsRevision: policy.mcp.terms_revision,
         appOrigin: mcp.browserOrigin,
-        offerChanges: strings(row.scopes).includes(mcpPolicy.write_scope),
+        offerChanges: holdsWrite(strings(row.scopes)),
       }),
       error ? 400 : 200,
     );

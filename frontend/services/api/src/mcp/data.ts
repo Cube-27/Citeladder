@@ -113,7 +113,7 @@ export async function writeActor(
   db: Database,
   principal: McpPrincipal,
   projectId: string,
-): Promise<{ project: Awaited<ReturnType<typeof authorizeProject>>; actor: Actor }> {
+): Promise<Actor> {
   if (!principal.canWrite)
     throw new McpInputError(
       'This connection can only read. Reconnect CiteLadder and tick Allow changes to make changes.',
@@ -129,14 +129,11 @@ export async function writeActor(
     .executeTakeFirst();
   if (!member) throw new McpInputError('Project was not found in this account');
   return {
-    project,
-    actor: {
-      kind: 'mcp',
-      workspaceId: project.workspace_id,
-      userId: principal.userId,
-      role: member.role,
-      scopes: 'all',
-    },
+    kind: 'mcp',
+    workspaceId: project.workspace_id,
+    userId: principal.userId,
+    role: member.role,
+    scopes: 'all',
   };
 }
 export const encodeCursor = (...parts: unknown[]) =>

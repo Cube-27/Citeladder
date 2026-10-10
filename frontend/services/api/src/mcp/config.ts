@@ -14,6 +14,9 @@ export const mcpPolicy = policy.mcp.constants;
  * included; unknown extras such as `offline_access` narrow away (RFC 6749
  * §3.3). A request naming no scope may receive every supported one.
  */
+/** Whether stored scopes include `citeladder:write`. */
+export const holdsWrite = (scopes: readonly string[]) => scopes.includes(mcpPolicy.write_scope);
+
 export function grantableScopes(requested: string | null | undefined): string[] {
   const named = (requested ?? '').split(/\s+/u).filter(Boolean);
   return mcpPolicy.scopes_supported.filter(

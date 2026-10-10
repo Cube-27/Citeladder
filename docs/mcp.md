@@ -210,9 +210,9 @@ A record named by ID must belong to that project.
 | Prepared | `prepare_add_prompts` (1–50; drops duplicates and binding failures with reasons; shows prompt slots after), `prepare_archive_prompts`, `prepare_launch_audit` (estimate shown; `max_estimated_credits` frozen into the payload), `prepare_schedule`, `prepare_declare_implemented` |
 | Confirm | `confirm_change` |
 
-A prepare tool runs its command in **dry-run mode**
-([`execute`](../frontend/services/api/src/commands/dry-run.ts)): every check,
-admission and write the command makes, rolled back. It then stores the exact
+A prepare tool runs its command as a **dry run** (`rehearse` in the write
+catalogue, over the operator rollback transaction): every check, admission and
+write the command makes, rolled back. It then stores the exact
 payload in `mcp_confirmations` behind a single-use 43-character base62 token
 (HMAC-stored, ten minutes, bound to the grant) and returns a preview without
 IDs plus the token. [`confirm_change`](../frontend/services/api/src/mcp/confirmations.ts)

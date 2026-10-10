@@ -9,24 +9,29 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { logicalEngineSchema } from '@citeladder/contracts/providers';
 import { promptCohortSchema } from '@citeladder/contracts/project';
-import type { Actor } from '../auth/actor.ts';
+import { requireCapability, type Actor } from '../auth/actor.ts';
 import { recordSecurityEvent, type McpWriteKind } from '../auth/security-events.ts';
 import { scheduleCreate } from '../audits/schedule-inputs.ts';
 import { declareAction, setActionStatus } from '../commands/actions.ts';
 import { cancelAudit, launchAudit } from '../commands/audits.ts';
 import { addCompetitor } from '../commands/competitors.ts';
+import { auditRuntime } from '../audits/config.ts';
+import { estimateAudit } from '../audits/estimate.ts';
 import {
+  createPrompts,
   createTopic,
-  previewPrompts,
   setPromptStatuses,
   updatePrompt,
   updateTopic,
 } from '../commands/prompts.ts';
 import { createSchedule } from '../commands/schedules.ts';
-import { policy, type ServiceConfig } from '../config.ts';
+import { configEnvironment, policy, type ServiceConfig } from '../config.ts';
 import type { Database } from '../db/database.ts';
+import { operatorTransaction } from '../db/operator-transaction.ts';
+import { promptOccupancy } from '../entitlements/occupancy.ts';
+import { isNonEmpty } from '../lists.ts';
 import { competitorCreate } from '../projects/competitors.ts';
-import { promptInput } from '../prompts/prompts.ts';
+import { promptInput, screenPrompts } from '../prompts/prompts.ts';
 import { topicCreate } from '../prompts/topics.ts';
 import { confirmChange, issueConfirmation } from './confirmations.ts';
 import { declarationKey, payloads, runConfirmed } from './confirmed-changes.ts';
@@ -57,6 +62,12 @@ const hints = (destructive: boolean, idempotent: boolean): Annotations => ({
 });
 const uuid = z.uuid();
 const project = { project_id: uuid };
+/**
+ * A prepare's dry run: the real command, with every check, admission and
+ * write it makes, rolled back. Owners join this transaction.
+ */
+const rehearse = <T>(db: Database, run: (trx: Database) => Promise<T>) =>
+  operatorTransaction(db, false, run);
 
 /**
  * A single-step change: authorized for the project, run, and recorded in one
@@ -72,7 +83,7 @@ function direct<S extends z.ZodObject<{ project_id: typeof uuid }>>(
     ...definition,
     run: ({ db, principal }, args) =>
       db.transaction().execute(async (trx) => {
-        const { actor } = await writeActor(trx, principal, args.project_id);
+        const actor = await writeActor(trx, principal, args.project_id);
         const outcome = await definition.run(trx, actor, args);
         await recordSecurityEvent(
           trx,
@@ -252,7 +263,7 @@ const writeDefinitions = {
     }),
     annotations: hints(false, false),
     run: async (context, args) => {
-      const { actor } = await writeActor(context.db, context.principal, args.project_id);
+      const actor = await writeActor(context.db, context.principal, args.project_id);
       const set = await promptSetOf(context.db, args.project_id, args.prompt_set_id);
       const inputs = args.prompts.map((item) =>
         promptInput.parse({
@@ -262,23 +273,27 @@ const writeDefinitions = {
           cohort: item.cohort ?? 'core',
         }),
       );
-      const preview = await previewPrompts(context.db, actor, set.id, inputs);
-      const dropped = preview.dropped.map(({ text, message }) => ({ text, reason: message }));
-      const slots = preview.occupancy;
-      if (!preview.admitted.length)
+      // Refuse a role that cannot add before showing what would be added.
+      requireCapability(actor, 'write');
+      const screened = await screenPrompts(context.db, actor.workspaceId, set.id, inputs);
+      const dropped = screened.dropped.map(({ text, message }) => ({ text, reason: message }));
+      const { admitted } = screened;
+      if (!isNonEmpty(admitted))
         return {
           state: 'nothing_to_change',
           preview: 'None of these prompts can be added.',
           dropped,
         };
+      const slots = await rehearse(context.db, async (trx) => {
+        await createPrompts(trx, actor, set.id, admitted);
+        return promptOccupancy(trx, actor.workspaceId);
+      });
       const lines = [
-        `Add ${preview.admitted.length} active prompt(s) to "${set.name}": ${quoted(preview.admitted.map((item) => item.text))}.`,
+        `Add ${admitted.length} active prompt(s) to "${set.name}": ${quoted(admitted.map((item) => item.text))}.`,
         dropped.length
           ? `Dropped: ${dropped.map((item) => `"${item.text}" (${item.reason})`).join('; ')}.`
           : '',
-        slots
-          ? `Prompt slots after: ${slots.used}${slots.allowance === null ? '' : ` of ${slots.allowance}`}.`
-          : '',
+        `Prompt slots after: ${slots.used}${slots.allowance === null ? '' : ` of ${slots.allowance}`}.`,
       ];
       return prepared(
         context,
@@ -286,7 +301,7 @@ const writeDefinitions = {
           actor,
           projectId: args.project_id,
           kind: 'add_prompts',
-          payload: payloads.add_prompts.parse({ prompt_set_id: set.id, prompts: preview.admitted }),
+          payload: payloads.add_prompts.parse({ prompt_set_id: set.id, prompts: admitted }),
           preview: lines.filter(Boolean).join(' '),
         },
         { dropped, prompt_slots: slots },
@@ -300,7 +315,7 @@ const writeDefinitions = {
     schema: z.strictObject({ ...project, prompt_ids: z.array(uuid).min(1).max(200) }),
     annotations: hints(true, true),
     run: async (context, args) => {
-      const { actor } = await writeActor(context.db, context.principal, args.project_id);
+      const actor = await writeActor(context.db, context.principal, args.project_id);
       const ids = [...new Set(args.prompt_ids)];
       const rows = await context.db
         .selectFrom('prompts')
@@ -322,14 +337,13 @@ const writeDefinitions = {
           prompt_ids: members.map((row) => row.id),
         }),
       );
-      for (const group of groups)
-        await setPromptStatuses(
-          context.db,
-          actor,
-          group.prompt_set_id,
-          { ...group, status: 'archived' },
-          { dryRun: true },
-        );
+      await rehearse(context.db, async (trx) => {
+        for (const group of groups)
+          await setPromptStatuses(trx, actor, group.prompt_set_id, {
+            ...group,
+            status: 'archived',
+          });
+      });
       const skipped = rows.length - active.length;
       return prepared(context, {
         actor,
@@ -358,7 +372,7 @@ const writeDefinitions = {
     }),
     annotations: hints(false, false),
     run: async (context, args) => {
-      const { actor } = await writeActor(context.db, context.principal, args.project_id);
+      const actor = await writeActor(context.db, context.principal, args.project_id);
       const promptIds = args.prompt_ids ?? [];
       const setId = promptIds.length
         ? null
@@ -369,28 +383,27 @@ const writeDefinitions = {
         engines: args.engines,
         repetitions: args.repetitions ?? null,
       };
-      const { estimate } = await launchAudit(
+      const estimate = await estimateAudit(
         context.db,
-        context.config,
-        actor,
-        args.project_id,
-        payloads.launch_audit.shape.request.parse({
-          ...request,
-          max_estimated_credits: args.max_estimated_credits ?? Number.MAX_SAFE_INTEGER,
-        }),
-        { dryRun: true },
+        actor.workspaceId,
+        { ...request, project_id: args.project_id },
+        auditRuntime(configEnvironment(context.config)),
       );
       const ceiling = args.max_estimated_credits ?? estimate.maximum_attempt_count;
+      const launch = payloads.launch_audit.shape.request.parse({
+        ...request,
+        max_estimated_credits: ceiling,
+      });
+      await rehearse(context.db, (trx) =>
+        launchAudit(trx, context.config, actor, args.project_id, launch),
+      );
       return prepared(
         context,
         {
           actor,
           projectId: args.project_id,
           kind: 'launch_audit',
-          payload: payloads.launch_audit.parse({
-            project_id: args.project_id,
-            request: { ...request, max_estimated_credits: ceiling },
-          }),
+          payload: { project_id: args.project_id, request: launch },
           preview: `Launch an audit of ${estimate.prompt_count} prompt(s) on ${args.engines.join(', ')}, ${estimate.repetition_count} repetition(s): ${estimate.execution_count} answers, using at most ${estimate.maximum_attempt_count} audit credits (refused if the estimate exceeds ${ceiling}).`,
         },
         { estimated_credits: estimate.maximum_attempt_count, max_estimated_credits: ceiling },
@@ -417,7 +430,7 @@ const writeDefinitions = {
     }),
     annotations: hints(false, false),
     run: async (context, args) => {
-      const { actor } = await writeActor(context.db, context.principal, args.project_id);
+      const actor = await writeActor(context.db, context.principal, args.project_id);
       const set = await promptSetOf(context.db, args.project_id, args.prompt_set_id);
       const schedule = scheduleCreate.parse({
         prompt_set_id: set.id,
@@ -428,7 +441,7 @@ const writeDefinitions = {
         interval_minutes: args.interval_minutes ?? null,
         next_run_at: args.next_run_at ?? null,
       });
-      await createSchedule(context.db, actor, args.project_id, schedule, { dryRun: true });
+      await rehearse(context.db, (trx) => createSchedule(trx, actor, args.project_id, schedule));
       return prepared(context, {
         actor,
         projectId: args.project_id,
@@ -449,16 +462,17 @@ const writeDefinitions = {
     }),
     annotations: hints(false, false),
     run: async (context, args) => {
-      const { actor } = await writeActor(context.db, context.principal, args.project_id);
+      const actor = await writeActor(context.db, context.principal, args.project_id);
       await requireInProject(context.db, 'action', args.action_id, args.project_id);
       const declaration = payloads.declare_implemented.shape.declaration.parse({
         declared_implemented_at: args.declared_implemented_at ?? new Date().toISOString(),
       });
       const id = randomUUID();
-      await declareAction(context.db, actor, args.action_id, declaration, {
-        idempotencyKey: declarationKey(id),
-        dryRun: true,
-      });
+      await rehearse(context.db, (trx) =>
+        declareAction(trx, actor, args.action_id, declaration, {
+          idempotencyKey: declarationKey(id),
+        }),
+      );
       const action = await context.db
         .selectFrom('actions')
         .select('target_label')

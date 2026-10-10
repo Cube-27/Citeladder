@@ -32,6 +32,7 @@ const toolNames = new Set(tools.map((tool) => tool.name));
 const listedTools = tools.map((tool) =>
   presentationTools.has(tool.name) ? { ...tool, _meta: appToolMetadata(tool.name) } : tool,
 );
+const listedWithChanges = [...listedTools, ...writeTools];
 const CAPABILITIES = { tools: {}, resources: {}, prompts: {} };
 function object(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -214,7 +215,7 @@ export function registerMcpRoutes(app: Hono<AppEnv>, config: ServiceConfig, db: 
           break;
         case 'tools/list':
           // A read-only grant neither lists nor can call a change.
-          result = { tools: principal.canWrite ? [...listedTools, ...writeTools] : listedTools };
+          result = { tools: principal.canWrite ? listedWithChanges : listedTools };
           break;
         case 'tools/call': {
           if (
@@ -223,15 +224,16 @@ export function registerMcpRoutes(app: Hono<AppEnv>, config: ServiceConfig, db: 
           )
             return c.json(rpcError(message.id, -32602, 'Invalid tool arguments'), 400);
           const name = params.name;
-          const write = isWriteTool(name) && principal.canWrite;
+          const writeName = principal.canWrite && isWriteTool(name) ? name : null;
+          const write = writeName !== null;
           if (!toolNames.has(name) && !write)
             return c.json(rpcError(message.id, -32602, `Unknown tool: ${name}`), 400);
           try {
             await admitToolCall(db, principal.grantId, principal.userId);
             if (write) await admitWriteCall(db, principal.grantId);
             const value =
-              isWriteTool(name) && write
-                ? await dispatchWrite({ db, config, principal }, name, params.arguments ?? {})
+              writeName !== null
+                ? await dispatchWrite({ db, config, principal }, writeName, params.arguments ?? {})
                 : await dispatchTool(
                     db,
                     principal,

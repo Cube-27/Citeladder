@@ -8,7 +8,7 @@ import { strings } from '../db/json.ts';
 import { compareText } from '../text-order.ts';
 import { recordPolicyAcceptance } from '../workspaces/policies.ts';
 import { roleAllows, rolesWith } from '../auth/workspace.ts';
-import { accountAllowed, loadMcpConfig, mcpPolicy, type McpConfig } from './config.ts';
+import { accountAllowed, holdsWrite, loadMcpConfig, mcpPolicy, type McpConfig } from './config.ts';
 import type { McpPrincipal } from './types.ts';
 
 export class OAuthError extends Error {
@@ -80,7 +80,7 @@ export async function authenticateMcp(
     grantId: row.id,
     workspaceIds,
     tokenHash: digest,
-    canWrite: strings(row.scopes).includes(mcpPolicy.write_scope),
+    canWrite: holdsWrite(strings(row.scopes)),
   };
 }
 /** A refresh window slides, but never past the grant's absolute lifetime. */
@@ -248,7 +248,7 @@ export function completeConsent(
       const changes =
         decision.allowChanges &&
         shareable.some((w) => w.canChange && unique.includes(w.id)) &&
-        strings(request.scopes).includes(mcpPolicy.write_scope);
+        holdsWrite(strings(request.scopes));
       const scopes = strings(request.scopes).filter(
         (scope) => changes || scope !== mcpPolicy.write_scope,
       );

@@ -59,7 +59,7 @@ const runs: Record<ConfirmedKind, Run> = {
   },
   launch_audit: async (trx, config, actor, change) => {
     const payload = payloads.launch_audit.parse(change.payload);
-    const { audit } = await launchAudit(trx, config, actor, payload.project_id, payload.request);
+    const audit = await launchAudit(trx, config, actor, payload.project_id, payload.request);
     return {
       summary: 'Audit launched. It is queued and starts running shortly.',
       audit: { id: audit.id, status: audit.status },
