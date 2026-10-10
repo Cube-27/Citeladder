@@ -150,7 +150,7 @@ async function prepared(
 
 const quoted = (texts: readonly string[]) => texts.map((text) => `"${text}"`).join(', ');
 
-export const writeDefinitions = {
+const writeDefinitions = {
   create_topic: direct('create_topic', {
     title: 'Create a topic',
     description: 'Add a topic to group prompts under. Runs at once.',

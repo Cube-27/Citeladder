@@ -142,6 +142,25 @@ it('previews a prompt add without writing, then activates it once on confirmatio
   ).toEqual([['mcp.write.add_prompts', tenant.projectId]]);
 });
 
+it('runs a token confirmed twice at once exactly one time', async () => {
+  const tenant = await auditTenant(db, fixtures);
+  const principal = await connection(tenant);
+  const prepared = await call(principal, 'prepare_add_prompts', {
+    project_id: tenant.projectId,
+    prompts: [{ text: 'Which running shoes last longest?' }],
+  });
+  const token = { confirmation_token: String(prepared.confirmation_token) };
+  const outcomes = await Promise.all([
+    failure(call(principal, 'confirm_change', token)),
+    failure(call(principal, 'confirm_change', token)),
+  ]);
+  expect(outcomes.sort()).toEqual(['This change was already confirmed.', 'succeeded']);
+  expect(await promptTexts(tenant.setId)).toEqual([
+    'Which running shoes suit road use? [active]',
+    'Which running shoes last longest? [active]',
+  ]);
+});
+
 it('archives prompts only on confirmation', async () => {
   const tenant = await auditTenant(db, fixtures);
   const principal = await connection(tenant);
