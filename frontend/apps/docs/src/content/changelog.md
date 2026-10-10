@@ -7,6 +7,14 @@ order: 400
 
 These notes describe implemented changes in the codebase. Dates are the recorded commit dates; availability in your workspace depends on deployment, access and configuration.
 
+## October 11, 2026: Confirmed changes through MCP
+
+When you connect an assistant, you can now tick **Allow changes**. The assistant can then add and edit topics and prompts, archive prompts, add competitors, launch and cancel audits, create audit schedules and update or declare Actions, in workspaces where you are a Member or above. Larger changes show you a preview first and happen only after you agree; added prompts are active at once. Existing connections stay read-only.
+
+**For your team:** to let an assistant keep your prompts and audits up to date, revoke its connection and connect again with **Allow changes** ticked.
+
+[What you can change](/mcp/#what-you-can-change)
+
 ## October 10, 2026: Markets
 
 Measure the same prompts from more than one country and language. Growth plans can add 3 markets to their projects and Scale plans 10, in the project edit panel. Each market runs as its own audit, launched or scheduled together, and Visibility reads one market at a time with a **By market** table comparing their latest runs. Engines that cannot measure a market are skipped there or refused before anything runs, never counted as failures.

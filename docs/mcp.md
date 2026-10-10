@@ -3,10 +3,14 @@
 ## Responsibility
 
 CiteLadder's hosted MCP server lets a customer's AI assistant (Claude, ChatGPT,
-Cursor and others) read their CiteLadder data. It is a read interface over the
-product owners: it owns OAuth authorization records, the read catalogue and its
-delivery, not business data, generation or external mutation. The catalogue is
-also the in-app [Agent](agents.md)'s, so both read the same evidence the same way.
+Cursor and others) read their CiteLadder data and, when the person allows it,
+make changes they confirm. It is an interface over the product owners: it owns
+OAuth authorization records, the read and write catalogues, change
+confirmations and their delivery, not business data, generation or external
+mutation. Every write runs through the same [command layer](../frontend/services/api/src/commands)
+as the browser and the public API. The read catalogue is also the in-app
+[Agent](agents.md)'s, so both read the same evidence the same way; the Agent
+never sees the write catalogue.
 Public setup lives at `https://docs.citeladder.com/mcp/`; the protocol endpoint is
 `https://api.citeladder.com/mcp`. The issuer, resource, discovery documents,
 registration, authorize, token and revoke all live on that API host origin
@@ -44,6 +48,11 @@ acceptance is recorded with the `mcp_consent` context in the same transaction as
 the code. A workspace whose trial or subscription has ended is shown, not
 selectable, with a billing link; one whose access cannot be resolved is shown as
 unconfirmed, without a billing fix.
+When the client requested `citeladder:write` (or named no scope) and the person
+is Member or above in a shareable workspace, the page offers **Allow changes**,
+unticked, listing what changes are possible and that each is shown and
+confirmed first. Ticking it adds `citeladder:write` to the code only for a
+selection including such a workspace; otherwise the grant is read-only.
 A workspace without a project links to onboarding, whose `return_to` brings the
 person back to consent, so a visitor can register, verify, set up a project and
 approve in one pass. A refused selection re-renders the form with the reason
@@ -68,7 +77,9 @@ redirect-host allowlist; the protections are bounds and binding:
   script/data/file schemes are refused. At most ten redirects and a bounded
   client name.
 - Registration narrows rather than refuses what it does not support: grant types
-  reduce to `authorization_code`/`refresh_token`, the scope to `citeladder:read`,
+  reduce to `authorization_code`/`refresh_token`, the scope to the supported
+  `citeladder:read` and `citeladder:write` it names (read always; both when it
+  names none),
   and `code` must be among the response types. An omitted auth method is
   `client_secret_basic` (RFC 7591 §2); a confidential client may present its
   secret in the body or the header.
@@ -77,7 +88,8 @@ redirect-host allowlist; the protections are bounds and binding:
 - `/authorize` requires S256 PKCE and a registered redirect. A loopback redirect
   matches on any port (RFC 8252 §7.3) and the requested URI is the one bound;
   the token exchange rechecks it and the verifier. Unknown extra scopes (such as
-  `offline_access`) are dropped. Queries over 8 KiB and states over 1,024 bytes
+  `offline_access`) are dropped; a request without `citeladder:read` is refused,
+  and a request only offers write, never grants it. Queries over 8 KiB and states over 1,024 bytes
   are refused before writes; usage windows admit 10/client, 40/trusted source and
   120/global per minute, and the client row lock caps live requests at five.
 - Once the redirect is proven, every later `/authorize` error returns to the
@@ -95,9 +107,12 @@ and grants. Bearer, refresh, code and transaction values are stored as HMACs
 keyed by the session secret (rotating it ends every connection); client secrets
 use encrypted custody.
 
-- Access tokens last an hour and are bound to the `/mcp` resource and the read
-  scope (RFC 8707). A 401 carries `WWW-Authenticate` with the protected-resource
-  metadata (RFC 9728).
+- Access tokens last an hour and are bound to the `/mcp` resource and the
+  granted scopes (RFC 8707); every token holds read. A 401 carries
+  `WWW-Authenticate` with the protected-resource metadata and both supported
+  scopes (RFC 9728).
+- A refresh may narrow the scopes (dropping write), never expand them or drop
+  read; a connection gains write only by consenting again.
 - Refresh rotates both tokens and keeps the superseded refresh token's hash. A
   concurrent refresh inside the 60-second grace window is refused without
   consequence; that token presented later means it leaked, so the grant is
@@ -106,7 +121,8 @@ use encrypted custody.
 - Refresh slides 30 days but never past 180 days from consent; a connection
   then consents again.
 - Each grant records when it was last used, at five-minute resolution.
-- The periodic cleanup removes expired unconsumed requests and codes at once,
+- The periodic cleanup removes expired unconsumed requests, codes and change
+  confirmations at once,
   and consumed ones and ended grants after 180 days (a consumed code outlives the grant it minted), in bounded batches. The
   usage-window table is pruned by its own owner's lane.
 
@@ -130,7 +146,8 @@ with a copy control. Hovering Connect (or ArrowDown/Space from it) offers
 ChatGPT, Gemini and Grok, copying the URL for the person to paste there. Client links are owned by
 [`mcp-clients.ts`](../frontend/lib/config/mcp-clients.ts); the public MCP page
 uses the same strip. The tab lists a user's connections by client name (labelled
-unverified), workspace names, connected date and last use; workspace Owner/Admin
+unverified), access (**Read** or **Read and change**), workspace names,
+connected date and last use; workspace Owner/Admin
 also see the connecting account and can remove only their workspace's
 authorization. Revoking asks for confirmation. The account menu's Connect AI
 assistants opens this tab. Revocation is also available through the OAuth
@@ -143,7 +160,8 @@ tools, each declaring its input schema and the owner read it delegates to.
 Project tools authorize the project on every call and must report a `state`
 (`available`, `unavailable` with a `reason`, or the owner's `observed_zero`);
 missing evidence is never zero and is never repaired by reading it. No read
-crawls, calls a provider, enqueues work or writes.
+crawls, calls a provider, enqueues work or writes; changes are a separate
+catalogue (below).
 
 | Area | Tools |
 | --- | --- |
@@ -160,7 +178,8 @@ AI Traffic, Commerce, Search Intelligence, brand memory), so a correction in the
 owner reaches the app, the Agent and MCP together. Enumerated arguments are enums
 (the engine set comes from the visibility configuration); paged tools take
 `cursor` and `limit`, and a cursor continues only the selection that produced it.
-Published input schemas omit `$schema`, UUID patterns and null branches, which
+Published input schemas omit `$schema`, patterns a `uuid`, `date` or
+`date-time` format already names, safe-integer bounds and null branches, which
 halved `tools/list` to about 25 KB.
 
 Results carry IDs because the model needs them for its next call. The server
@@ -175,6 +194,46 @@ demand, query and traffic snapshots, search run/dataset/row) after reauthorizing
 its workspace. A document is `id`/`title`/`text`/`url`/`metadata`, with the record
 once as JSON text; a large one returns bounded parts with continuation IDs.
 
+## Changes
+
+The [write catalogue](../frontend/services/api/src/mcp/write-tools.ts) is listed
+in `tools/list`, and callable, only for a grant holding `citeladder:write`;
+a read-only grant gets "Unknown tool". Every write tool takes `project_id`:
+[`writeActor`](../frontend/services/api/src/mcp/data.ts) authorizes the project
+through the live grant and membership, then loads the member's live role, which
+the command checks (a Viewer is refused; a demotion applies to the next call).
+A record named by ID must belong to that project.
+
+| Kind | Tools |
+| --- | --- |
+| Direct (one call, one transaction with its security event) | `create_topic`, `rename_topic`, `update_prompt_text`, `add_competitor`, `update_action_status`, `cancel_audit` |
+| Prepared | `prepare_add_prompts` (1–50; drops duplicates and binding failures with reasons; shows prompt slots after), `prepare_archive_prompts`, `prepare_launch_audit` (estimate shown; `max_estimated_credits` frozen into the payload), `prepare_schedule`, `prepare_declare_implemented` |
+| Confirm | `confirm_change` |
+
+A prepare tool runs its command in **dry-run mode**
+([`execute`](../frontend/services/api/src/commands/dry-run.ts)): every check,
+admission and write the command makes, rolled back. It then stores the exact
+payload in `mcp_confirmations` behind a single-use 43-character base62 token
+(HMAC-stored, ten minutes, bound to the grant) and returns a preview without
+IDs plus the token. [`confirm_change`](../frontend/services/api/src/mcp/confirmations.ts)
+locks the row, refuses a used, expired or other-connection token, reauthorizes
+through `writeActor`, re-runs the same command with the stored payload inside
+the same transaction, marks the token consumed and records the security event.
+Owners join that outer transaction, so a refused or failed change commits
+nothing and leaves the token usable until expiry; a changed world (occupancy
+now full, a larger estimate) returns the command's normal error. Prompts added
+this way are active immediately. Each executed change records an
+`mcp.write.<kind>` security event targeting the project.
+
+Write calls spend the normal tool budgets plus 30 a minute per grant. Tools
+carry their own annotations: reads `readOnlyHint: true`; writes
+`readOnlyHint: false`, `destructiveHint` on archive, cancel and
+`confirm_change`, `idempotentHint` on renames and status updates. The server
+instructions require a prepare tool, showing its preview, and `confirm_change`
+only after the user agrees. MCP elicitation is not offered: the transport is
+stateless HTTP and cannot hold a server-to-client request, so every client uses
+the token path.
+
 ## Errors and limits
 
 Tool arguments are strict. A caller's mistake (an invalid argument, naming the
@@ -182,7 +241,8 @@ field; a stale cursor; an inverted window; an unknown sort, status or record; a
 selection from another project) returns as a tool error (`isError`) with the
 owner's message, so the model can correct the call. Any other failure returns
 "Evidence is unavailable." and is logged without detail. An unknown tool or a
-malformed request is a JSON-RPC error.
+malformed request is a JSON-RPC error. A write that fails for any other reason
+returns "The change was not made."; its transaction rolled back.
 
 Tool calls are budgeted at 120 a minute per connection and 600 per account; a
 refusal is a tool error naming the retry time.

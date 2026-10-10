@@ -95,10 +95,10 @@ Any client that supports remote MCP servers with browser sign-in can connect. Ad
 Every client finishes in the same browser consent step:
 
 1. Sign in to CiteLadder. If you do not have an account, create one; a new account gets a trial workspace. Finish project setup and you return to the approval page.
-2. Select the workspaces this connection may read.
-3. Review the read-only access and select **Approve**.
+2. Select the workspaces this connection may use.
+3. Leave **Allow changes** unticked for read-only access, or tick it to let the assistant make changes you confirm. Then select **Approve**.
 
-The connection reads only the workspaces you selected. Joining another workspace later does not add it; connect again to share it. Losing membership of a selected workspace removes access to it.
+The connection uses only the workspaces you selected. Joining another workspace later does not add it; connect again to share it. Losing membership of a selected workspace removes access to it.
 
 The approval page explains any workspace you cannot select. A workspace whose trial or subscription has ended links to billing, and one without the current Terms acceptance can be approved once you accept the Terms on the page.
 

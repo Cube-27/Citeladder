@@ -149,7 +149,7 @@ export function McpConnections() {
       <Stack as="section" gap="compact">
         <EditorialSectionHeader
           title="Connect an AI assistant"
-          description="Read your CiteLadder data from Claude, ChatGPT, Gemini, Cursor or Grok. You choose which workspaces it can read when you approve the connection."
+          description="Read your CiteLadder data from Claude, ChatGPT, Gemini, Cursor or Grok and, if you allow it, make changes you confirm. You choose which workspaces it can use when you approve the connection."
         />
         <ConnectStrip />
       </Stack>

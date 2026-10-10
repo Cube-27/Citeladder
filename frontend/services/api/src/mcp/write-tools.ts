@@ -349,7 +349,11 @@ export const writeDefinitions = {
       prompt_set_id: uuid.nullish(),
       prompt_ids: z.array(uuid).max(500).nullish(),
       engines: z.array(logicalEngineSchema).min(1),
-      repetitions: z.int().min(1).nullish(),
+      repetitions: z
+        .int()
+        .min(policy.projects.min_repetitions)
+        .max(policy.projects.max_repetitions)
+        .nullish(),
       max_estimated_credits: z.int().min(1).nullish(),
     }),
     annotations: hints(false, false),
@@ -403,7 +407,11 @@ export const writeDefinitions = {
       cadence: scheduleCreate.shape.cadence,
       engines: z.array(logicalEngineSchema).min(1),
       timezone: z.string().max(64).nullish(),
-      repetitions: z.int().min(1).nullish(),
+      repetitions: z
+        .int()
+        .min(policy.projects.min_repetitions)
+        .max(policy.projects.max_repetitions)
+        .nullish(),
       interval_minutes: z.int().positive().nullish(),
       next_run_at: z.iso.datetime({ offset: true }).nullish(),
     }),

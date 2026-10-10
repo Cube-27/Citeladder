@@ -234,7 +234,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
     path: '/platform/mcp',
     title: 'AI Visibility MCP Server for Claude, ChatGPT & More | CiteLadder',
     description:
-      'Connect Claude, ChatGPT, Gemini, Grok, Cursor and other MCP clients to your CiteLadder visibility, site and search evidence through a read-only connection.',
+      'Connect Claude, ChatGPT, Gemini, Grok, Cursor and other MCP clients to your CiteLadder visibility, site and search evidence, with changes only after you confirm them.',
     heading: 'Your CiteLadder evidence, in your AI assistant.',
     lead: 'Ask Claude, ChatGPT and other assistants about your AI visibility, cited sources, Site Health and search performance. They answer from your saved CiteLadder records, for the workspaces you approve.',
     cta: 'mcp',
@@ -247,7 +247,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
       },
       {
         title: '2. Sign in and approve',
-        body: 'Sign in to CiteLadder and choose which workspaces the assistant may read. No API key to copy.',
+        body: 'Sign in to CiteLadder, choose which workspaces the assistant may use and whether it may make changes. No API key to copy.',
       },
       {
         title: '3. Ask a question',
@@ -259,7 +259,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
         title: 'Ask questions grounded in recorded evidence.',
         body: 'Read visibility results and trends, perception, ads, cited sources, Actions, Site Health, performance, AI referrals, AI crawler logs, the AI Shelf, demand and saved Search Intelligence datasets. Every answer comes from a dated record, not a guess.',
         points: [
-          'Read-only: no crawls, purchases, prompt changes or publishing',
+          'Changes only if you allow them, each confirmed by you; no crawls, purchases or publishing',
           'Unavailable data is reported as unavailable, never as zero',
           'Links back to the screen in CiteLadder that shows the record',
         ],
@@ -287,7 +287,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
       },
       {
         title: 'Approve workspaces',
-        body: 'Choose which workspaces the assistant may read.',
+        body: 'Choose which workspaces the assistant may use, and tick Allow changes only if you want it to make changes.',
       },
       {
         title: 'Ask',
@@ -316,7 +316,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
       },
       {
         q: 'Can an assistant change my website or my data through MCP?',
-        a: 'No. The connection is read-only. It cannot crawl, buy data, activate prompts, publish or change anything in CiteLadder or on your site.',
+        a: 'Only if you tick Allow changes when you connect it. Then it can add and edit prompts and topics, add competitors, launch and cancel audits, create schedules and update Actions, each change shown to you and confirmed by you first. It never crawls, buys data, publishes or changes your site.',
       },
       {
         q: 'Does reading a tool refresh the data?',
@@ -359,7 +359,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
       },
       {
         title: 'Models, research and assistants',
-        body: 'Model providers for the Agent, DataForSEO for optional research, and read-only MCP access.',
+        body: 'Model providers for the Agent, DataForSEO for optional research, and MCP access with confirmed changes.',
       },
     ],
     features: [
@@ -401,7 +401,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
       },
       {
         title: 'Connect assistants',
-        body: 'Give Claude, ChatGPT and other MCP clients read-only access.',
+        body: 'Give Claude, ChatGPT and other MCP clients read access, and confirmed changes if you allow them.',
       },
     ],
     questions: [

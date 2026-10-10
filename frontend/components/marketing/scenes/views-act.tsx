@@ -187,11 +187,12 @@ export function McpToolsView() {
     ['read_crawl_logs', 'AI crawler requests from your logs'],
     ['read_demand', 'Search Console demand signals'],
     ['read_actions', 'Ranked opportunities'],
+    ['prepare_add_prompts', 'Add prompts after you confirm'],
   ] as const;
   return (
     <div className="pv-view">
       <div className="pv-panel">
-        <PanelHead title="CiteLadder tools" meta="read-only" />
+        <PanelHead title="CiteLadder tools" meta="changes need your yes" />
         <ul className="pv-list">
           {tools.map(([tool, purpose]) => (
             <li key={tool}>
