@@ -169,13 +169,42 @@ function movements(
     .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
     .slice(0, 4);
 }
-function nextAction(
-  actions: View['actions'],
-  connected: boolean,
-  crawled: boolean,
-  tracked: boolean,
-  count: number,
-): View['next_action'] {
+/**
+ * The one step that most moves AI visibility next. Measurement comes first,
+ * because nothing else can be judged without it: prompts, then the first
+ * audit (or the one under way), then the top Action, then the site crawl and
+ * the search integrations that sharpen later Actions.
+ */
+function nextAction({
+  actions,
+  promptCount,
+  tracked,
+  inFlightAuditId,
+  crawled,
+  connected,
+}: Readonly<{
+  actions: View['actions'];
+  promptCount: number;
+  tracked: boolean;
+  inFlightAuditId: string | null;
+  crawled: boolean;
+  connected: boolean;
+}>): View['next_action'] {
+  const step = (kind: View['next_action']['kind'], title: string, href: string) => ({
+    kind,
+    title,
+    href,
+    opportunity_id: null,
+  });
+  if (promptCount === 0)
+    return step('configure_prompts', 'Choose the prompts to track', '/prompts');
+  if (!tracked && inFlightAuditId)
+    return step(
+      'audit_running',
+      'Your first visibility audit is running',
+      `/runs/${inFlightAuditId}`,
+    );
+  if (!tracked) return step('audit', 'Run the first visibility audit', '/runs');
   const action = actions[0];
   if (action)
     return {
@@ -184,15 +213,9 @@ function nextAction(
       href: action.action_id ? `/agent/actions/${action.action_id}` : '/agent/actions',
       opportunity_id: action.id,
     };
-  const steps: [boolean, View['next_action']['kind'], string, string][] = [
-    [!connected, 'connect', 'Connect GSC or GA4', '/settings?tab=integrations'],
-    [!crawled, 'crawl', 'Run the first site crawl', '/site'],
-    [count === 0, 'configure_prompts', 'Configure tracking prompts', '/prompts'],
-    [!tracked, 'audit', 'Run the first visibility audit', '/runs'],
-    [true, 'monitor', 'Monitor — no required action', '/visibility?tab=trends'],
-  ];
-  const [, kind, title, href] = steps.find(([needed]) => needed)!;
-  return { kind, title, href, opportunity_id: null };
+  if (!crawled) return step('crawl', 'Run the first site crawl', '/site');
+  if (!connected) return step('connect', 'Connect GSC or GA4', '/settings?tab=integrations');
+  return step('monitor', 'No open Action — watch the trend', '/visibility?tab=trends');
 }
 async function loopEvidence(db: Database, scope: ProjectScope) {
   const mapping = await db
@@ -339,39 +362,65 @@ export async function commandCenter(
   scope: ProjectScope,
   auditId: string | null,
 ): Promise<View> {
+  // The project read authorizes the scope before anything else is read.
   const project = await readProject(db, scope);
   const audits = await comparableAudits(db, scope, auditId);
-  const current = await visibility(db, scope, audits?.selected ?? null);
-  const previous = await visibility(db, scope, audits?.previous ?? null);
-  const opportunities = await listOpportunities(
-    db,
-    scope,
-    { type: null, severity: null, status: null, rule_id: null, min_priority: null },
-    { limit: 8, cursor: null },
-  );
-  const order = await db
-    .selectFrom('opportunity_orders')
-    .select('version')
-    .where('workspace_id', '=', scope.workspaceId)
-    .where('project_id', '=', scope.projectId)
-    .executeTakeFirst();
-  const profile = await db
-    .selectFrom('brand_profiles')
-    .selectAll()
-    .where('workspace_id', '=', scope.workspaceId)
-    .where('project_id', '=', scope.projectId)
-    .executeTakeFirst();
-  const { mapping, crawl, demand, implementation } = await loopEvidence(db, scope);
-  const counted = await db
-    .selectFrom('prompts')
-    .innerJoin('prompt_sets', 'prompt_sets.id', 'prompts.prompt_set_id')
-    .innerJoin('projects', 'projects.id', 'prompt_sets.project_id')
-    .select(sql<string>`count(*)`.as('count'))
-    .where('projects.workspace_id', '=', scope.workspaceId)
-    .where('projects.id', '=', scope.projectId)
-    .where('prompts.status', '=', 'active')
-    .where('prompts.enabled', '=', true)
-    .executeTakeFirstOrThrow();
+  // Independent reads of persisted state, issued together.
+  const [
+    current,
+    previous,
+    opportunities,
+    order,
+    profile,
+    { mapping, crawl, demand, implementation },
+    counted,
+    inFlight,
+  ] = await Promise.all([
+    visibility(db, scope, audits?.selected ?? null),
+    visibility(db, scope, audits?.previous ?? null),
+    listOpportunities(
+      db,
+      scope,
+      { type: null, severity: null, status: null, rule_id: null, min_priority: null },
+      { limit: 8, cursor: null },
+    ),
+    db
+      .selectFrom('opportunity_orders')
+      .select('version')
+      .where('workspace_id', '=', scope.workspaceId)
+      .where('project_id', '=', scope.projectId)
+      .executeTakeFirst(),
+    db
+      .selectFrom('brand_profiles')
+      .selectAll()
+      .where('workspace_id', '=', scope.workspaceId)
+      .where('project_id', '=', scope.projectId)
+      .executeTakeFirst(),
+    loopEvidence(db, scope),
+    db
+      .selectFrom('prompts')
+      .innerJoin('prompt_sets', 'prompt_sets.id', 'prompts.prompt_set_id')
+      .innerJoin('projects', 'projects.id', 'prompt_sets.project_id')
+      .select(sql<string>`count(*)`.as('count'))
+      .where('projects.workspace_id', '=', scope.workspaceId)
+      .where('projects.id', '=', scope.projectId)
+      .where('prompts.status', '=', 'active')
+      .where('prompts.enabled', '=', true)
+      .executeTakeFirstOrThrow(),
+    // Only the first audit's progress is a next action; a tracked project skips the read.
+    audits
+      ? undefined
+      : db
+          .selectFrom('audits')
+          .select('id')
+          .where('workspace_id', '=', scope.workspaceId)
+          .where('project_id', '=', scope.projectId)
+          .where('audit_scope', '=', policy.visibility.brand_audit_scope)
+          .where('status', 'in', policy.visibility.in_flight_audit_statuses)
+          .orderBy('created_at', 'desc')
+          .limit(1)
+          .executeTakeFirst(),
+  ]);
   const count = Number(counted.count);
   const times = [crawl?.completed_at, demand?.created_at].filter((at): at is Date => at != null);
   const analyzedAt = times.length ? new Date(Math.max(...times.map((at) => at.getTime()))) : null;
@@ -426,13 +475,14 @@ export async function commandCenter(
       ),
     },
     active_prompt_count: count,
-    next_action: nextAction(
-      opportunities.items,
-      Boolean(mapping),
-      Boolean(crawl),
-      Boolean(audits),
-      count,
-    ),
+    next_action: nextAction({
+      actions: opportunities.items,
+      promptCount: count,
+      tracked: Boolean(audits),
+      inFlightAuditId: inFlight?.id ?? null,
+      crawled: Boolean(crawl),
+      connected: Boolean(mapping),
+    }),
     track: {
       citation_share: {
         value: percent(currentBrand?.citation_rate),

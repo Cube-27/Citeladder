@@ -97,9 +97,7 @@ export function SearchableSelect({
         aria-controls={listId}
         aria-expanded={showList}
         aria-autocomplete="list"
-        aria-activedescendant={
-          showList && activeOption ? `${listId}-${activeOption.value}` : undefined
-        }
+        aria-activedescendant={showList && activeOption ? `${listId}-${activeIndex}` : undefined}
         aria-describedby={ariaDescribedBy}
         aria-invalid={ariaInvalid}
         aria-required={ariaRequired}
@@ -156,7 +154,9 @@ export function SearchableSelect({
           {filtered.map((option, index) => (
             <li
               key={option.value}
-              id={`${listId}-${option.value}`}
+              // By position, not value: a value may hold characters that are
+              // not valid in an id reference (spaces, for one).
+              id={`${listId}-${index}`}
               // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role, jsx-a11y/no-noninteractive-element-to-interactive-role -- ARIA listbox options keep focus on the editable input.
               role="option"
               aria-selected={option.value === value}

@@ -17,6 +17,7 @@ import { SidebarNav } from './sidebar-nav';
 import { ThemeSwitch } from './theme-switch';
 import { UserMenuTrigger } from './user-menu';
 import { resolveTitle } from './page-titles';
+import { useRouteAnnouncement } from './use-route-announcement';
 import { AgentPanelProvider } from '@/lib/agent/panel-context';
 import { projectDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
@@ -33,12 +34,26 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
   const [compactTitleOverride, setCompactTitleOverride] = useState<string>();
   const navigationTriggerRef = useRef<HTMLButtonElement>(null);
   const pendingDrawerLaunch = useRef<{ trigger: HTMLElement } | null>(null);
-  const pathname = useLocation().pathname ?? '/projects';
-  const { activeProjectId } = useProjectContext();
+  const location = useLocation();
+  const pathname = location.pathname ?? '/projects';
+  const { activeProject, activeProjectId } = useProjectContext();
   const overviewHref = activeProjectId
     ? projectDestination('/projects', null, activeProjectId)
     : '/projects';
   const compactTitle = compactTitleOverride ?? resolveTitle(pathname);
+  useRouteAnnouncement({
+    title: compactTitle,
+    projectName: activeProject?.name ?? null,
+  });
+
+  // Any navigation, including a project switch from inside the drawer, ends
+  // the compact drawer's job. Adjusted during render, not in an effect, so the
+  // drawer never paints open on the new location.
+  const [drawerLocation, setDrawerLocation] = useState(location.key);
+  if (drawerLocation !== location.key) {
+    setDrawerLocation(location.key);
+    setNavigationOpen(false);
+  }
 
   function openPaletteFromDrawer(trigger: HTMLElement) {
     pendingDrawerLaunch.current = { trigger: navigationTriggerRef.current ?? trigger };

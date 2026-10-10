@@ -7,38 +7,37 @@ export type NavItem = {
   label: string;
   href: string;
   icon: LucideIcon;
-  count?: number;
-  queryMatch?: { key: string; values: readonly string[]; defaultValue?: string };
-  requiredCapability?: string;
+  /** A live count shown beside the label. */
+  badge?: 'open-actions';
   /** Project is the default; workspace destinations never inherit a project. */
   scope?: 'project' | 'workspace';
 };
 
 export type NavGroup = {
-  title: 'Overview' | 'Analyze' | 'Track';
-  href: string;
-  icon: LucideIcon;
+  /** Null renders the group without a heading. */
+  title: 'Analyze' | 'Act' | 'Track' | null;
   items: readonly NavItem[];
 };
 
+export const AGENT_HOME = '/agent';
+
+const ACTIONS = {
+  label: 'Actions',
+  href: '/agent/actions',
+  icon: ICONS.opportunities,
+  badge: 'open-actions',
+} as const satisfies NavItem;
+
+/** Dashboard navigation in the order of the product loop. */
 export const NAV_GROUPS = [
   {
-    title: 'Overview',
-    href: '/projects',
-    icon: ICONS.overview,
+    title: null,
     items: [{ label: 'Overview', href: '/projects', icon: ICONS.overview }],
   },
   {
     title: 'Analyze',
-    href: '/site?tab=pages',
-    icon: ICONS.site,
     items: [
-      {
-        label: 'Website',
-        href: '/site?tab=pages',
-        icon: ICONS.site,
-        queryMatch: { key: 'tab', values: ['pages'], defaultValue: 'pages' },
-      },
+      { label: 'Website', href: '/site', icon: ICONS.site },
       { label: 'Search Demand', href: '/demand', icon: ICONS.demand },
       { label: 'Issues', href: '/issues', icon: ICONS.issues },
       { label: 'Search Intelligence', href: '/search-intelligence', icon: ICONS.analytics },
@@ -47,28 +46,33 @@ export const NAV_GROUPS = [
     ],
   },
   {
+    title: 'Act',
+    items: [ACTIONS],
+  },
+  {
     title: 'Track',
-    href: '/visibility?tab=trends',
-    icon: ICONS.visibility,
     items: [
       { label: 'Prompts', href: '/prompts', icon: ICONS.prompts },
-      {
-        label: 'AI Visibility',
-        href: '/visibility?tab=trends',
-        icon: ICONS.visibility,
-        queryMatch: { key: 'tab', values: ['trends'], defaultValue: 'trends' },
-      },
+      { label: 'AI Visibility', href: '/visibility', icon: ICONS.visibility },
       { label: 'Runs', href: '/runs', icon: ICONS.runs },
       { label: 'AI Traffic', href: '/ai-traffic', icon: ICONS.analytics },
     ],
   },
 ] as const satisfies readonly NavGroup[];
 
-export const AGENT_HOME = '/agent';
+/** Setup destinations shown below the Dashboard groups. */
+export const SETUP_NAV_ITEMS = [
+  {
+    label: 'Integrations',
+    href: '/settings?tab=integrations',
+    icon: ICONS.setup,
+    scope: 'workspace',
+  },
+] as const satisfies readonly NavItem[];
 
 /** Agent mode's fixed destinations, below New chat and above the chat list. */
 export const AGENT_NAV_ITEMS = [
-  { label: 'Actions', href: '/agent/actions', icon: ICONS.opportunities },
+  ACTIONS,
   { label: 'Skills', href: '/agent/skills', icon: ICONS.skills },
   { label: 'Context', href: '/agent/context', icon: ICONS.context },
 ] as const satisfies readonly NavItem[];
@@ -78,12 +82,7 @@ export function navigationMode(pathname: string): NavigationMode {
 }
 
 const SUPPORT_NAV_ITEMS = [
-  {
-    label: 'Integrations',
-    href: '/settings?tab=integrations',
-    icon: ICONS.setup,
-    scope: 'workspace',
-  },
+  ...SETUP_NAV_ITEMS,
   {
     label: 'Providers',
     href: '/settings?tab=providers',
@@ -94,41 +93,28 @@ const SUPPORT_NAV_ITEMS = [
   { label: 'Settings', href: '/settings', icon: ICONS.settings, scope: 'workspace' },
 ] as const satisfies readonly NavItem[];
 
-export type CapabilityResolver = (capability: string) => boolean;
-
-export function resolveNavigationItems(
-  items: readonly NavItem[],
-  hasCapability: CapabilityResolver,
-): readonly NavItem[] {
-  return items.filter((item) => !item.requiredCapability || hasCapability(item.requiredCapability));
+/** Every shell destination, grouped for the command palette. */
+export function resolveCommandGroups(): readonly { title: string; items: readonly NavItem[] }[] {
+  return [
+    // Actions is listed once, under Agent.
+    ...NAV_GROUPS.filter((group) => group.title !== 'Act').map((group) => ({
+      title: group.title ?? 'Overview',
+      items: group.items,
+    })),
+    {
+      title: 'Agent',
+      items: [{ label: 'New chat', href: AGENT_HOME, icon: ICONS.newChat }, ...AGENT_NAV_ITEMS],
+    },
+    { title: 'Settings', items: SUPPORT_NAV_ITEMS },
+  ];
 }
 
 /**
- * The visible sidebar, compact navigation, and command palette all resolve
- * destinations through this one capability gate.  The registry remains static
- * so active-state and route-prefetch helpers keep their stable route data.
+ * A destination is current when the path is it or below it. A destination that
+ * names query parameters (a settings tab) also needs each of them to match, so
+ * Integrations is not current on another settings tab. Screens own their own
+ * tabs: every tab of Website is still Website.
  */
-export function resolveNavigationGroups(hasCapability: CapabilityResolver): readonly NavGroup[] {
-  return NAV_GROUPS.map((group) => ({
-    ...group,
-    items: resolveNavigationItems(group.items, hasCapability),
-  }));
-}
-
-export function resolveCommandGroups(hasCapability: CapabilityResolver) {
-  return [
-    ...resolveNavigationGroups(hasCapability),
-    {
-      title: 'Agent',
-      items: [
-        { label: 'New chat', href: AGENT_HOME, icon: ICONS.newChat },
-        ...AGENT_NAV_ITEMS,
-      ] satisfies readonly NavItem[] as readonly NavItem[],
-    },
-    { title: 'Settings', items: SUPPORT_NAV_ITEMS },
-  ] as const;
-}
-
 export function isNavItemActive(
   pathname: string,
   searchParams: URLSearchParams,
@@ -137,7 +123,5 @@ export function isNavItemActive(
   const target = new URL(item.href, 'https://citeladder.local');
   const pathMatches = pathname === target.pathname || pathname.startsWith(`${target.pathname}/`);
   if (!pathMatches) return false;
-  if (!item.queryMatch) return true;
-  const current = searchParams.get(item.queryMatch.key) ?? item.queryMatch.defaultValue ?? '';
-  return item.queryMatch.values.includes(current);
+  return [...target.searchParams].every(([key, value]) => searchParams.get(key) === value);
 }

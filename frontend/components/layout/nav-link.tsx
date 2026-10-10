@@ -6,6 +6,7 @@ import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
 import type { NavItem } from './nav-items';
+import { OpenActionCount } from './open-action-count';
 
 /** One shell destination row, shared by Dashboard and Agent navigation. */
 export function NavLink({
@@ -50,9 +51,7 @@ export function NavLink({
         aria-hidden
       />
       <span className="min-w-0 flex-1 truncate">{item.label}</span>
-      {item.count === undefined ? null : (
-        <span className={textRole('caption', 'tabular-nums')}>{item.count}</span>
-      )}
+      {item.badge === 'open-actions' ? <OpenActionCount /> : null}
     </Link>
   );
 }

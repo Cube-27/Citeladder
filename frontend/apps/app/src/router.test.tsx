@@ -29,8 +29,9 @@ vi.mock('./private-routes', () => ({
       <Outlet />
     </section>
   ),
-  OnboardingRoute: () => null,
-  ProjectsRoute: () => <h1>Overview</h1>,
+}));
+vi.mock('@/components/projects/projects-screen', () => ({
+  ProjectsScreen: () => <h1>Overview</h1>,
 }));
 
 beforeEach(() => {
@@ -89,7 +90,7 @@ describe('application route recovery', () => {
     router.dispose();
   });
 
-  it('offers a document reload when a route chunk fails instead of exposing a stack trace', async () => {
+  it('offers a reload inside the shell when a route chunk fails instead of exposing a stack trace', async () => {
     vi.doMock('./product-routes-site-issues', () =>
       Promise.reject(new Error('private chunk URL failed')),
     );
@@ -98,8 +99,26 @@ describe('application route recovery', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Finish session' }));
     expect(await screen.findByRole('button', { name: 'Reload page' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Application shell' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Go to Overview' })).toHaveAttribute(
+      'href',
+      '/projects',
+    );
     expect(screen.queryByText(/private chunk URL failed/)).not.toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/issues');
+    router.dispose();
+  });
+
+  it('answers an unknown application address with a not-found screen inside the shell', async () => {
+    const { appRoutes } = await import('./router');
+    const router = createMemoryRouter(appRoutes, { initialEntries: ['/setting'] });
+    render(<RouterProvider router={router} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Finish session' }));
+    expect(
+      await screen.findByRole('heading', { name: 'There is no page at this address' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Application shell' })).toBeInTheDocument();
     router.dispose();
   });
 });

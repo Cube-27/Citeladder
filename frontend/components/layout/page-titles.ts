@@ -4,7 +4,8 @@
  * Exact patterns first; everything else is a longest-prefix match. Titles live
  * here (not on the pages themselves) so there is a single title surface for the
  * whole authed area — the sibling of `nav-items.ts`, and, like it, a data module
- * rather than a component so editing `page-header.tsx` can still Fast Refresh.
+ * rather than a component so editing `page-shell.tsx` can still Fast Refresh.
+ * The shell also names the document from it.
  *
  * Copy is sentence case and plain language: product nouns keep their
  * capitalisation, everything else reads like a sentence.
@@ -34,7 +35,6 @@ const PAGE_TITLES: ReadonlyArray<readonly [prefix: string, title: string]> = [
 /** Deeper-route overrides (checked before the prefix table). */
 const EXACT_OVERRIDES: ReadonlyArray<readonly [pattern: RegExp, title: string]> = [
   [/^\/site\/crawls\/[^/]+\/pages\/[^/]+$/, 'Page detail'],
-  [/^\/runs\/[^/]+\/executions\/[^/]+$/, 'Execution evidence'],
   [/^\/runs\/[^/]+$/, 'Run detail'],
 ];
 

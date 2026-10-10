@@ -186,7 +186,13 @@ export class VisibilityFixtures extends Fixtures {
   /** A dashboard-ready brand run with one engine snapshot per engine. */
   async audit(
     tenant: Tenant,
-    options: { completedAt?: Date; status?: string; configuration?: Json; scope?: string } = {},
+    options: {
+      /** Null for an audit that has not settled. */
+      completedAt?: Date | null;
+      status?: string;
+      configuration?: Json;
+      scope?: string;
+    } = {},
   ): Promise<string> {
     const id = randomUUID();
     await this.database
@@ -208,7 +214,7 @@ export class VisibilityFixtures extends Fixtures {
         failed_count: 0,
         error_message: '',
         configuration: JSON.stringify(options.configuration ?? {}),
-        completed_at: options.completedAt ?? now(),
+        completed_at: options.completedAt === undefined ? now() : options.completedAt,
         created_at: now(),
         updated_at: now(),
       })

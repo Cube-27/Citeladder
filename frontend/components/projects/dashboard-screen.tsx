@@ -2,7 +2,6 @@
 
 import { useQuery } from '@tanstack/react-query';
 
-import { TopInsights } from '@/components/intelligence/top-insights';
 import { PageLoading } from '@/components/layout/page-loading';
 import { PageShell } from '@/components/layout/page-shell';
 import { Alert } from '@/components/ui/alert';
@@ -100,7 +99,7 @@ function DashboardData({
       }
     >
       <Stack gap="section">
-        <Stack gap="section" data-tour="command-center">
+        <Stack gap="section">
           <DashboardHeader data={data} activeProject={activeProject} />
           {data.active_prompt_count === 0 ? <PromptSetupCard /> : null}
           {actions.downloadError ? (
@@ -111,11 +110,6 @@ function DashboardData({
               The shared action order changed. Review the refreshed order and try again.
             </Alert>
           ) : null}
-          {data.stale ? (
-            <Alert tone="warning">
-              New evidence is available. Refresh the measurement before acting.
-            </Alert>
-          ) : null}
           <SummarySections data={data} />
           <ActionsAndProof
             data={data}
@@ -124,7 +118,6 @@ function DashboardData({
             onMove={actions.move}
           />
         </Stack>
-        <TopInsights workspaceId={activeProject.workspace_id} projectId={activeProject.id} />
         <CompanyFacts data={data} />
       </Stack>
     </PageShell>

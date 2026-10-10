@@ -94,21 +94,3 @@ export const workspaceInvitationIssuedSchema = responseObject({
   invitation: workspaceInvitationSchema,
   token: z.string(),
 });
-
-// Cross-route onboarding tour state belongs to the caller's workspace
-// membership, never a project or user id.
-export const productTourStatusSchema = z.enum([
-  'not_started',
-  'in_progress',
-  'completed',
-  'skipped',
-]);
-
-export const productTourSchema = responseObject({
-  workspace_id: uuid(),
-  version: z.string(),
-  status: productTourStatusSchema,
-  step_id: z.string().nullable(),
-  started_at: z.string().nullable(),
-  completed_at: z.string().nullable(),
-});

@@ -1,6 +1,5 @@
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 
-import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 import { cardClasses, type CardTone } from './card-variants';
@@ -82,7 +81,7 @@ export function CardEyebrow({
   ...props
 }: Readonly<ComponentPropsWithoutRef<'span'>>) {
   return (
-    <span {...props} className={cn(eyebrowClasses, className)}>
+    <span {...props} className={textRole('label', className)}>
       {children}
     </span>
   );

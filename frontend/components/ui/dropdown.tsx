@@ -4,8 +4,8 @@ import * as DropdownPrimitive from '@radix-ui/react-dropdown-menu';
 import { Check } from 'lucide-react';
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 
-import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { menuItemVariants, menuPanelClasses } from '@/components/ui/menu-variants';
+import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
 /**
@@ -126,7 +126,7 @@ export function DropdownLabel({
   children,
 }: Readonly<{ className?: string; children: ReactNode }>) {
   return (
-    <DropdownPrimitive.Label className={cn(eyebrowClasses, 'px-2 py-1', className)}>
+    <DropdownPrimitive.Label className={textRole('label', cn('px-2 py-1', className))}>
       {children}
     </DropdownPrimitive.Label>
   );

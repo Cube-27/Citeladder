@@ -5,7 +5,6 @@ import {
   workspaceInvitationSchema,
   workspaceInvitationIssuedSchema,
   policyStatusSchema,
-  productTourSchema,
 } from '@citeladder/contracts/auth';
 import { z } from 'zod';
 import { workspaceAccess } from '../entitlements/access.ts';
@@ -13,7 +12,6 @@ import { deliverInvitation } from '../workspaces/invitation-mail.ts';
 import { defineGetRoute, definePostRoute, definePatchRoute, defineDeleteRoute } from './define.ts';
 import { readBody } from '../http/body.ts';
 import { acceptPolicy, policyStatus } from '../workspaces/policies.ts';
-import { productTour, updateProductTour, tourUpdate } from '../workspaces/product-tour.ts';
 import {
   createWorkspace,
   listMembers,
@@ -219,26 +217,6 @@ export const workspaceRoutes = [
         path.workspace_id,
         c.get('user').id,
         (await readBody(c, policyDecision)).terms_revision,
-      );
-    },
-  }),
-  defineGetRoute({
-    ...base,
-    path: `${pathRoot}/product-tour`,
-    response: productTourSchema,
-    handle: ({ c, db }, { path }) => productTour(db, path.workspace_id, c.get('user').id),
-  }),
-  definePatchRoute({
-    ...base,
-    path: `${pathRoot}/product-tour`,
-    response: productTourSchema,
-    body: tourUpdate,
-    async handle({ c, db }, { path }) {
-      return updateProductTour(
-        db,
-        path.workspace_id,
-        c.get('user').id,
-        await readBody(c, tourUpdate),
       );
     },
   }),

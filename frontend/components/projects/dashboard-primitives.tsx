@@ -11,7 +11,6 @@ import type { DataTone } from '@/components/ui/data-tone';
 import { Meter } from '@/components/ui/meter';
 import { TextLink } from '@/components/ui/text-link';
 import { MissingValue } from '@/components/ui/unavailable-value';
-import { eyebrowClasses } from '@/components/ui/eyebrow';
 import type { CommandCenter, Opportunity } from '@/lib/api/types';
 import { availabilityLabel } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -44,7 +43,7 @@ export function StateMetric({
 }>) {
   return (
     <div className={metricItemClasses}>
-      <dt className={eyebrowClasses}>{label}</dt>
+      <dt className={textRole('label')}>{label}</dt>
       <dd>
         <MetricValue
           value={value === null ? null : metricValue(value, suffix)}

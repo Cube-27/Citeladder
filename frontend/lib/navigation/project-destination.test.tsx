@@ -49,15 +49,6 @@ describe('projectDestination', () => {
     );
     expect(href).toBe(`/visibility?tab=sources&project=${PROJECT_1}`);
   });
-
-  it('drops internal-link selections that belong to the previous project', () => {
-    const href = projectDestination(
-      '/site',
-      new URLSearchParams({ tab: 'internal-links', analysis: 'a', link: 'l', links_q: 'x' }),
-      PROJECT_1,
-    );
-    expect(href).toBe(`/site?tab=internal-links&project=${PROJECT_1}`);
-  });
 });
 
 describe('workspaceDestination', () => {
@@ -188,6 +179,36 @@ describe('useSelectProject', () => {
     act(() => result.current(PROJECT_2));
 
     expect(navigate).toHaveBeenCalledWith(`/issues?dimension=technical&project=${PROJECT_2}`);
+  });
+
+  it("drops the outgoing project's record ids and keeps its view", () => {
+    activeProjectId = PROJECT_1;
+    pathname = '/visibility';
+    search = new URLSearchParams({
+      project: PROJECT_1,
+      tab: 'sources',
+      run: 'run-of-project-1',
+      prompt: 'prompt-of-project-1',
+    });
+    const { result } = renderHook(() => useSelectProject());
+
+    act(() => result.current(PROJECT_2));
+
+    expect(navigate).toHaveBeenCalledWith(`/visibility?tab=sources&project=${PROJECT_2}`);
+  });
+
+  it('keeps record ids when the active project is re-selected', () => {
+    activeProjectId = PROJECT_1;
+    pathname = '/issues';
+    search = new URLSearchParams({ issue: 'group-1' });
+    const { result } = renderHook(() => useSelectProject());
+
+    act(() => result.current(PROJECT_1));
+
+    expect(navigate).toHaveBeenCalledWith(`/issues?issue=group-1&project=${PROJECT_1}`, {
+      replace: true,
+      preventScrollReset: true,
+    });
   });
 
   it('keeps a crawl detail path when the ACTIVE project is re-selected', () => {

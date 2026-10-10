@@ -323,23 +323,33 @@ describe('project owner', () => {
       t.userId,
       projectCreate.parse({ name: 'Overview' }),
     );
+    const scope = { workspaceId: t.workspaceId, projectId: project.id };
+    // Measurement leads the ladder: without prompts there is nothing to measure.
+    expect((await commandCenter(db, scope, null)).next_action).toMatchObject({
+      kind: 'configure_prompts',
+      href: '/prompts',
+    });
     const set = await promptSet(db, project.id);
-    const active = await prompt(db, set, 'Which service?');
+    await prompt(db, set, 'Which service?');
     const disabled = await prompt(db, set, 'Which vendor?');
     await db.updateTable('prompts').set({ enabled: false }).where('id', '=', disabled).execute();
-    const view = await commandCenter(
-      db,
-      { workspaceId: t.workspaceId, projectId: project.id },
-      null,
-    );
+    const view = await commandCenter(db, scope, null);
     expect(view).toMatchObject({
       active_prompt_count: 1,
-      next_action: { kind: 'connect' },
+      next_action: { kind: 'audit', href: '/runs' },
       report_available: false,
       loop: { tracked: { state: 'not_run' } },
       state: { visibility: { value: null, delta: null } },
     });
-    expect(active).toBeTruthy();
+    // A first audit under way is reported as running, not as a step to take.
+    const running = await new VisibilityFixtures(db).audit(
+      { userId: t.userId, ...scope },
+      { status: 'running', completedAt: null },
+    );
+    expect((await commandCenter(db, scope, null)).next_action).toMatchObject({
+      kind: 'audit_running',
+      href: `/runs/${running}`,
+    });
     await expect(
       commandCenter(db, { workspaceId: t.workspaceId, projectId: project.id }, randomUUID()),
     ).rejects.toMatchObject({ status: 404 });

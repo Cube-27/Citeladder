@@ -106,14 +106,9 @@ beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
 beforeEach(() => {
   search = new URLSearchParams();
   window.localStorage.clear();
-  // The provider backfills logos for any project without one, which every
-  // fixture here is. Tests that assert on the backfill override this.
-  mswServer.use(
-    workspaceList(),
-    http.post('/api/v1/projects/:id/logos/refresh', ({ params }) =>
-      HttpResponse.json(project(String(params.id), 'Acme')),
-    ),
-  );
+  // No logo refresh handler: every fixture lacks a logo, and an unhandled
+  // request fails the test, so opening the app must not fetch logos.
+  mswServer.use(workspaceList());
 });
 afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
@@ -329,56 +324,5 @@ describe('ProjectProvider', () => {
     await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('error'), {
       timeout: 10_000,
     });
-  });
-
-  it('backfills logos for projects that have none, then re-reads the list once', async () => {
-    const refreshed: string[] = [];
-    let listCalls = 0;
-    mswServer.use(
-      http.get('/api/v1/projects', () => {
-        listCalls += 1;
-        const withLogo = {
-          ...project(PROJECT_1, 'Acme'),
-          brand: { aliases: [], logo_url: `/api/v1/projects/${PROJECT_1}/logo` },
-        };
-        // First read has no logo; once the refresh lands, the list carries one.
-        return HttpResponse.json([refreshed.length > 0 ? withLogo : project(PROJECT_1, 'Acme')]);
-      }),
-      http.post('/api/v1/projects/:id/logos/refresh', ({ params }) => {
-        refreshed.push(String(params.id));
-        return HttpResponse.json({
-          ...project(PROJECT_1, 'Acme'),
-          brand: { aliases: [], logo_url: `/api/v1/projects/${PROJECT_1}/logo` },
-        });
-      }),
-    );
-
-    renderProvider();
-
-    await waitFor(() => expect(refreshed).toEqual([PROJECT_1]));
-    // The list is re-read so every BrandLogo picks up the new URL together.
-    await waitFor(() => expect(listCalls).toBeGreaterThan(1));
-    // Idempotent: the now-hydrated project is not refreshed a second time.
-    expect(refreshed).toEqual([PROJECT_1]);
-  });
-
-  it('does not retry a logo refresh that found no icon', async () => {
-    const refreshed: string[] = [];
-    mswServer.use(
-      http.get('/api/v1/projects', () => HttpResponse.json([project(PROJECT_1, 'Acme')])),
-      http.post('/api/v1/projects/:id/logos/refresh', ({ params }) => {
-        refreshed.push(String(params.id));
-        // No icon found — logo_url stays null.
-        return HttpResponse.json(project(PROJECT_1, 'Acme'));
-      }),
-    );
-
-    const { queryClient } = renderProvider();
-
-    await waitFor(() => expect(refreshed).toEqual([PROJECT_1]));
-    // A refetch must not re-trigger the crawl: one attempt per project, period.
-    await queryClient.invalidateQueries({ queryKey: ['projects', 'list'] });
-    await waitFor(() => expect(screen.getByTestId('active')).toHaveTextContent('Acme'));
-    expect(refreshed).toEqual([PROJECT_1]);
   });
 });

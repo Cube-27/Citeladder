@@ -2980,11 +2980,6 @@ CREATE TABLE public.workspace_members (
     workspace_id uuid NOT NULL,
     user_id uuid NOT NULL,
     role character varying(20) NOT NULL,
-    product_tour_version character varying(32),
-    product_tour_status character varying(20) NOT NULL,
-    product_tour_step_id character varying(64),
-    product_tour_started_at timestamp with time zone,
-    product_tour_completed_at timestamp with time zone,
     created_at timestamp with time zone NOT NULL,
     updated_at timestamp with time zone NOT NULL
 );

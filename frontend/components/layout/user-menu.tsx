@@ -96,7 +96,7 @@ function UserMenuContent({ presenter }: Readonly<{ presenter: UserMenuPresenter 
         <span>{logout.isPending ? 'Signing out…' : 'Sign out'}</span>
       </DropdownItem>
       {logout.isError ? (
-        <p role="alert" className="type-caption text-danger px-2 py-2">
+        <p role="alert" className="type-caption text-danger-text px-2 py-2">
           Sign out failed. Your session is still active; please try again.
         </p>
       ) : null}

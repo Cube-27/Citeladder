@@ -110,13 +110,6 @@ vi.mock('@/lib/billing/entitlement-context', () => ({
   }),
   capabilityRemaining: () => 0,
 }));
-// This file mocks useQuery wholesale to return the command-center fixture, so
-// TopInsights would receive that shape instead of an opportunities page. It is
-// a separate unit with its own tests (components/intelligence); stub it out
-// rather than teaching this fixture two response shapes.
-vi.mock('@/components/intelligence/top-insights', () => ({
-  TopInsights: () => <div data-testid="top-insights" />,
-}));
 vi.mock('@tanstack/react-query', () => ({
   useQuery: () => queryResult,
   useQueryClient: () => ({ invalidateQueries: vi.fn() }),
@@ -201,7 +194,7 @@ describe('DashboardScreen', () => {
         <DashboardScreen />
       </TooltipProvider>,
     );
-    const topInsights = screen.getByTestId('top-insights');
+    const companyFacts = screen.getByRole('heading', { name: 'Company facts' });
     queryResult.data = { ...commandCenter, action_order_version: 1 };
 
     view.rerender(
@@ -210,7 +203,7 @@ describe('DashboardScreen', () => {
       </TooltipProvider>,
     );
 
-    expect(screen.getByTestId('top-insights')).toBe(topInsights);
+    expect(screen.getByRole('heading', { name: 'Company facts' })).toBe(companyFacts);
   });
   it('disables additional project creation when no slots remain', async () => {
     const user = userEvent.setup();

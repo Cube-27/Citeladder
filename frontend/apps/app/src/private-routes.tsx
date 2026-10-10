@@ -1,12 +1,10 @@
 import { Suspense, type ReactNode } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, ScrollRestoration } from 'react-router-dom';
 
 import { AppShell } from '@/components/layout/app-shell';
 import { OnboardingGate } from '@/components/layout/onboarding-gate';
 import { ShellFallback } from '@/components/layout/shell-fallback';
 import { UserMenuController } from '@/components/layout/user-menu';
-import { ProjectsScreen } from '@/components/projects/projects-screen';
-import { ProductTourProvider } from '@/components/tour/product-tour-provider';
 import { ToastProvider } from '@/components/ui/toast';
 import { SessionGuard } from '@/lib/auth/session-guard';
 import { PolicyAcceptanceGate } from '@/components/auth/policy-acceptance';
@@ -55,19 +53,16 @@ function sessionFallback(content: ReactNode) {
 /** Authenticated application chrome and its project-route recovery gate. */
 export function ApplicationRouteLayout() {
   return (
-    <ProductTourProvider>
-      <ToastProvider>
-        <AppShell>
-          <OnboardingGate>
-            <Outlet />
-          </OnboardingGate>
-        </AppShell>
-      </ToastProvider>
-    </ProductTourProvider>
+    <ToastProvider>
+      {/* The document scrolls, so a new screen starts at the top; returning to
+          a screen restores where it was. A tab or filter change keeps the
+          position because the key is the path alone. */}
+      <ScrollRestoration getKey={(location) => location.pathname} />
+      <AppShell>
+        <OnboardingGate>
+          <Outlet />
+        </OnboardingGate>
+      </AppShell>
+    </ToastProvider>
   );
-}
-
-/** `/projects` workspace project management screen. */
-export function ProjectsRoute() {
-  return <ProjectsScreen />;
 }

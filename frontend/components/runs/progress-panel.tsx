@@ -6,7 +6,6 @@ import { Badge } from '@/components/ui/badge';
 import { MeasurementContext } from '@/components/runs/measurement-context';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { Meter } from '@/components/ui/meter';
 import { MutationNotice } from '@/components/ui/mutation-notice';
 import { textRole } from '@/components/ui/typography';
@@ -182,7 +181,7 @@ function ProgressMetrics({ audit }: Readonly<{ audit: Audit }>) {
       />
       {/* A timestamp is not a figure: same grid cell, item-title value. */}
       <div className={metricItemClasses}>
-        <dt className={eyebrowClasses}>Created</dt>
+        <dt className={textRole('label')}>Created</dt>
         <dd className={textRole('itemTitle')}>{formatDateTime(audit.created_at, timeZone)}</dd>
       </div>
     </MetricGroup>

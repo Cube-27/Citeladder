@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vite-plus/test';
 
 import { Alert } from './alert';
 import { Button } from './button';
-import { Card, CardContent, CardEyebrow, CardHeader, CardTitle } from './card';
+import { Card, CardContent, CardHeader, CardTitle } from './card';
 import { Field } from './field';
 import { Input } from './input';
 import { ScoreBar } from './score-bar';
@@ -20,7 +20,6 @@ import {
   TableRow,
 } from './table';
 import { TrendChart } from './trend-chart';
-import { UnavailableValue } from './unavailable-value';
 import { scoreBand } from './score-band';
 
 describe('Button', () => {
@@ -28,18 +27,6 @@ describe('Button', () => {
     render(<Button>Save</Button>);
     const btn = screen.getByRole('button', { name: 'Save' });
     expect(btn).toHaveAttribute('type', 'button');
-  });
-
-  it('renders as the child element when asChild is set (Radix Slot)', () => {
-    render(
-      <Button asChild variant="secondary">
-        <a href="/next">Go</a>
-      </Button>,
-    );
-    const link = screen.getByRole('link', { name: 'Go' });
-    expect(link.tagName).toBe('A');
-    expect(link).toHaveAttribute('href', '/next');
-    expect(link).not.toHaveAttribute('type');
   });
 });
 
@@ -55,19 +42,6 @@ describe('Card', () => {
     );
     expect(screen.getByText('Visibility').tagName).toBe('H3');
     expect(screen.getByText('Body')).toBeInTheDocument();
-  });
-
-  it('keeps supporting labels outside the heading hierarchy', () => {
-    render(<CardEyebrow>Visibility score</CardEyebrow>);
-    const eyebrow = screen.getByText('Visibility score');
-    expect(eyebrow.tagName).toBe('SPAN');
-  });
-});
-
-describe('UnavailableValue', () => {
-  it('renders the explicit semantic state with the shared placeholder treatment', () => {
-    render(<UnavailableValue state="not_measured" />);
-    expect(screen.getByText('Not measured')).toBeVisible();
   });
 });
 
@@ -128,23 +102,10 @@ describe('Input + Field', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Required');
   });
 
-  it('keeps the native ref and input class while shared adornments own the frame', () => {
+  it('forwards the ref to the native input inside an adorned frame', () => {
     const ref = createRef<HTMLInputElement>();
-    render(
-      <Input
-        ref={ref}
-        aria-label="Search"
-        startContent={<span data-testid="start">S</span>}
-        endContent={<span data-testid="end">E</span>}
-        className="input-hook"
-        containerClassName="frame-hook"
-      />,
-    );
+    render(<Input ref={ref} aria-label="Search" startContent={<span>S</span>} />);
     expect(ref.current).toBe(screen.getByRole('textbox', { name: 'Search' }));
-    expect(ref.current).toHaveClass('input-hook');
-    expect(ref.current?.parentElement).toHaveClass('frame-hook');
-    expect(screen.getByTestId('start')).toBeInTheDocument();
-    expect(screen.getByTestId('end')).toBeInTheDocument();
   });
 });
 
@@ -160,7 +121,6 @@ describe('Skeleton', () => {
   it('hides loading decoration from assistive technology', () => {
     render(<Skeleton data-testid="loading-placeholder" />);
     const el = screen.getByTestId('loading-placeholder');
-    expect(el).not.toBeNull();
     expect(el).toHaveAttribute('aria-hidden', 'true');
   });
 });

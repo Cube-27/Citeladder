@@ -54,7 +54,7 @@ export function BulkActions({
         </span>
         <span className="type-caption">{hint}</span>
         {error ? (
-          <span role="alert" className="type-caption text-danger">
+          <span role="alert" className="type-caption text-danger-text">
             {humanizeApiError(error, 'Competitor discovery could not start.').message}
           </span>
         ) : null}

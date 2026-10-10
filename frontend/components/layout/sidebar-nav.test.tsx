@@ -7,9 +7,12 @@ const mocks = vi.hoisted(() => ({
   // `prefetchRoute` skips keys whose query already failed, so the stub client
   // needs the cache lookup that guard performs. Nothing has failed here.
   find: vi.fn((_filters: { queryKey: readonly unknown[] }) => undefined),
+  // The Actions list read behind the open count.
+  actionsList: { status_counts: { open: 3, in_progress: 2, completed: 9 } },
 }));
 
 vi.mock('@tanstack/react-query', () => ({
+  useQuery: () => ({ data: mocks.actionsList }),
   useQueryClient: () => ({
     prefetchQuery: mocks.prefetchQuery,
     getQueryCache: () => ({ find: mocks.find }),
@@ -28,10 +31,6 @@ vi.mock('@/lib/project/project-context', () => ({
   }),
 }));
 
-vi.mock('@/lib/billing/entitlement-context', () => ({
-  useEntitlement: () => ({ hasCapability: (key: string) => key === 'agent' }),
-}));
-
 let pathname = '/site';
 let searchParams = new URLSearchParams();
 
@@ -43,7 +42,6 @@ vi.mock('react-router-dom', () => ({
 }));
 
 import { SidebarNav } from './sidebar-nav';
-import { NAV_GROUPS, resolveCommandGroups, resolveNavigationGroups } from './nav-items';
 
 // The key the Performance screen's own landing selection reads, so a hover
 // warms exactly the entry the destination consumes.
@@ -57,59 +55,44 @@ const PERFORMANCE_LANDING_KEY = [
 describe('station navigation', () => {
   beforeEach(() => {
     pathname = '/site';
+    searchParams = new URLSearchParams();
     window.sessionStorage.clear();
     mocks.prefetchQuery.mockClear();
     mocks.find.mockClear();
   });
 
-  it('ships the Dashboard stations and their canonical destinations', () => {
+  it('scopes project destinations to the project and setup to the workspace', () => {
     render(<SidebarNav />);
-    expect(NAV_GROUPS.map((group) => group.title)).toEqual(['Overview', 'Analyze', 'Track']);
     expect(screen.getByRole('link', { name: 'Website' })).toHaveAttribute(
       'href',
-      '/site?tab=pages&project=11111111-1111-4111-8111-111111111111',
+      '/site?project=11111111-1111-4111-8111-111111111111',
     );
-    expect(screen.queryByRole('link', { name: 'Opportunities' })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Commerce Suite' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Integrations' })).toHaveAttribute(
       'href',
-      '/products?project=11111111-1111-4111-8111-111111111111',
-    );
-    expect(screen.getByRole('link', { name: 'Prompts' })).toHaveAttribute(
-      'href',
-      '/prompts?project=11111111-1111-4111-8111-111111111111',
+      '/settings?tab=integrations&workspace=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     );
   });
 
-  it('uses the same capability result for sidebar and command destinations', () => {
-    const canUse = (capability: string) => capability !== 'agent';
-    const sidebarLabels = resolveNavigationGroups(canUse)
-      .flatMap((group) => group.items)
-      .map((item) => item.label);
-    const commandLabels = resolveCommandGroups(canUse)
-      .flatMap((group) => group.items)
-      .map((item) => item.label);
-
-    expect(sidebarLabels).not.toContain('Content');
-    expect(commandLabels).not.toContain('Content');
-    expect(commandLabels).toEqual([
-      ...sidebarLabels,
-      'New chat',
-      'Actions',
-      'Skills',
-      'Context',
-      'Integrations',
-      'Providers',
-      'Billing',
-      'Settings',
-    ]);
-  });
-
-  it('uses query-aware active state for station destinations', () => {
-    pathname = '/site';
-    searchParams = new URLSearchParams('tab=pages');
+  it('shows open and in-progress Actions as the Actions count in Dashboard mode', () => {
     render(<SidebarNav />);
-    const activeLink = screen.getByRole('link', { name: 'Website' });
-    expect(activeLink).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Actions, 5 open' })).toHaveAttribute(
+      'href',
+      '/agent/actions?project=11111111-1111-4111-8111-111111111111',
+    );
+  });
+
+  it('keeps a screen current on every one of its tabs', () => {
+    pathname = '/site';
+    searchParams = new URLSearchParams('tab=internal-links');
+    const { unmount } = render(<SidebarNav />);
+    expect(screen.getByRole('link', { name: 'Website' })).toHaveAttribute('aria-current', 'page');
+    unmount();
+
+    // A destination that names a tab is current only on that tab.
+    pathname = '/settings';
+    searchParams = new URLSearchParams('tab=members');
+    render(<SidebarNav />);
+    expect(screen.getByRole('link', { name: 'Integrations' })).not.toHaveAttribute('aria-current');
   });
 
   it('calls the compact drawer close owner after choosing a destination', () => {
@@ -155,14 +138,6 @@ describe('station navigation', () => {
       'href',
       '/agent/skills?project=11111111-1111-4111-8111-111111111111',
     );
-  });
-
-  it('omits section heading for Overview but renders headings for other stations', () => {
-    render(<SidebarNav />);
-    expect(screen.queryByText('Overview', { selector: 'p' })).not.toBeInTheDocument();
-    expect(screen.getByText('Analyze', { selector: 'p' })).toBeInTheDocument();
-    expect(screen.getByText('Track', { selector: 'p' })).toBeInTheDocument();
-    expect(screen.queryByText('Connect', { selector: 'p' })).not.toBeInTheDocument();
   });
 
   // Intent warms the key, but no longer in the same tick: each prefetcher

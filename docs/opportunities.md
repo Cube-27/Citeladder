@@ -264,7 +264,7 @@ measured; it does not prove this Action caused any movement, and other changes
 can overlap.
 
 The Actions list keeps its `status` and `target` filters in shareable URL state
-and pages with a cursor. Overview and Top Insights link to the owning Action at
+and pages with a cursor. Overview's ranked actions link to the owning Action at
 `/agent/actions/{action_id}`, or to the Actions list when an Opportunity has no
 Action yet; an Opportunity's member evidence opens in a drawer on that detail.
 

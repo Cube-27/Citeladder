@@ -142,7 +142,6 @@ const REQUIRED_WEBSITE_ROLES = [
   '.website-body',
   '.website-nav',
   '.website-label',
-  '.website-eyebrow',
   '.website-data-display',
 ];
 
@@ -186,7 +185,6 @@ const TOKEN_COLORED_ROLES = [
   '.website-lead',
   '.website-body',
   '.website-label',
-  '.website-eyebrow',
   '.flow-help',
   '.flow-meta',
 ];
@@ -588,11 +586,7 @@ export function productUiSourceViolations(source, label, ownsProductUi) {
         `${label}:${entry.line}: product large spacing must use a semantic CSS variable`,
       );
     }
-    if (
-      /\bwebsite-(?:hero|page|section|feature|small|lead|body|nav|label|eyebrow)/.test(
-        entry.classes,
-      )
-    ) {
+    if (/\bwebsite-(?:hero|page|section|feature|small|lead|body|nav|label)/.test(entry.classes)) {
       violations.push(`${label}:${entry.line}: product UI must not consume website type roles`);
     }
     if (

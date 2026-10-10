@@ -1,17 +1,15 @@
 'use client';
 
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
 import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
-import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { SearchField } from '@/components/ui/search-field';
 import { Spinner } from '@/components/ui/spinner';
 import { textRole } from '@/components/ui/typography';
 import { OUTPUT_PHASE_LABEL } from '@/lib/agent/vocabulary';
-import { actionsQueries } from '@/lib/api/actions';
 import { agentQueries, type AgentChatSummary } from '@/lib/api/agent';
 import { AGENT_CHAT_LIST_POLL_MS, AGENT_CHAT_SEARCH_DEBOUNCE_MS } from '@/lib/config/agent';
 import { ICONS } from '@/lib/icons';
@@ -34,7 +32,6 @@ export function AgentNav({ onNavigate }: Readonly<{ onNavigate?: () => void }>) 
   const pathname = useLocation().pathname ?? '';
   const searchParams = useSearchParams()[0];
   const onIntent = useRouteIntent();
-  const openCount = useOpenActionCount(activeWorkspaceId, activeProjectId);
   const NewChatIcon = ICONS.newChat;
 
   return (
@@ -49,11 +46,7 @@ export function AgentNav({ onNavigate }: Readonly<{ onNavigate?: () => void }>) 
         {AGENT_NAV_ITEMS.map((item) => (
           <li key={item.href}>
             <NavLink
-              item={{
-                ...item,
-                href: scoped(item.href),
-                count: item.href === '/agent/actions' ? openCount : undefined,
-              }}
+              item={{ ...item, href: scoped(item.href) }}
               active={isNavItemActive(pathname, searchParams, item)}
               onIntent={onIntent}
               onNavigate={onNavigate}
@@ -72,15 +65,6 @@ export function AgentNav({ onNavigate }: Readonly<{ onNavigate?: () => void }>) 
       ) : null}
     </nav>
   );
-}
-
-function useOpenActionCount(workspaceId: string | null, projectId: string | null) {
-  const query = useQuery({
-    ...actionsQueries.list(workspaceId ?? '', projectId ?? ''),
-    enabled: Boolean(workspaceId && projectId),
-  });
-  const counts = query.data?.status_counts;
-  return counts ? (counts.open ?? 0) + (counts.in_progress ?? 0) : undefined;
 }
 
 function useDebounced(value: string): string {
@@ -119,7 +103,7 @@ function ChatHistory({
 
   return (
     <section aria-labelledby="agent-chat-history" className="flex min-h-0 flex-col gap-2">
-      <h2 id="agent-chat-history" className={cn(eyebrowClasses, 'text-secondary px-3 pt-2')}>
+      <h2 id="agent-chat-history" className={textRole('label', 'text-secondary px-3 pt-2')}>
         Chats
       </h2>
       <SearchField

@@ -1,8 +1,8 @@
 'use client';
 
 import { Badge } from '@/components/ui/badge';
-import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { Passage } from '@/components/ui/passage';
+import { textRole } from '@/components/ui/typography';
 
 /** The minimum an entity must carry to be shown as found on a page. */
 export type QuotedEntity = { entity_name: string; passages: readonly string[] };
@@ -32,7 +32,7 @@ export function OnPageEntities({
   if (!quoted.length) return null;
   return (
     <div className="grid gap-2">
-      <p className={eyebrowClasses}>{heading}</p>
+      <p className={textRole('label')}>{heading}</p>
       <div className="flex flex-wrap gap-2">
         {quoted.map((entity) => (
           <Badge key={entity.entity_name} variant="classification" value="competitor">

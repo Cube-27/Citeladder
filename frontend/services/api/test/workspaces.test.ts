@@ -437,7 +437,7 @@ describe('membership continuity and transactional receipts', () => {
   });
 });
 
-describe('Terms and product tour', () => {
+describe('Terms', () => {
   it('keeps revision acceptance idempotent, scoped and append-only, and rejects stale revisions', async () => {
     const old = 'older-approved-revision';
     await db
@@ -495,50 +495,5 @@ describe('Terms and product tour', () => {
         )) as { accepted_at: null }
       ).accepted_at,
     ).toBeNull();
-  });
-
-  it('lets viewers track their own tour, requires a step in progress, and clears it on completion', async () => {
-    const version = policy.workspaces.tour_version;
-    expect(
-      (
-        await request(
-          `/${workspace}/product-tour`,
-          'PATCH',
-          { version, status: 'in_progress' },
-          viewerCookie,
-        )
-      ).status,
-    ).toBe(422);
-    const running = await request(
-      `/${workspace}/product-tour`,
-      'PATCH',
-      { version, status: 'in_progress', step_id: 'overview' },
-      viewerCookie,
-    ).then((response) => response.json());
-    expect(running).toMatchObject({ status: 'in_progress', step_id: 'overview' });
-    const done = await request(
-      `/${workspace}/product-tour`,
-      'PATCH',
-      { version, status: 'completed', step_id: 'ignored' },
-      viewerCookie,
-    ).then((response) => response.json());
-    expect(done).toMatchObject({ status: 'completed', step_id: null });
-    expect(
-      (
-        (await request(`/${workspace}/product-tour`).then((response) => response.json())) as {
-          status: string;
-        }
-      ).status,
-    ).toBe('not_started');
-    expect(
-      (
-        await request(
-          `/${workspace}/product-tour`,
-          'PATCH',
-          { version: 'stale', status: 'skipped' },
-          viewerCookie,
-        )
-      ).status,
-    ).toBe(422);
   });
 });

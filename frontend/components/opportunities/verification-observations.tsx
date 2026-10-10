@@ -2,7 +2,7 @@
 
 import { ProjectLink } from '@/components/layout/scoped-link';
 
-import { eyebrowClasses } from '@/components/ui/eyebrow';
+import { textRole } from '@/components/ui/typography';
 import { movementLegLabel, movementStateLabel } from '@/lib/agent/vocabulary';
 
 type VerificationResult = Record<string, unknown>;
@@ -46,7 +46,7 @@ function ComparableMovement({ result }: Readonly<{ result: VerificationResult | 
   if (!entries.length) return null;
   return (
     <div className="grid gap-0.5">
-      <p className={eyebrowClasses}>Comparable movement</p>
+      <p className={textRole('label')}>Comparable movement</p>
       {entries.map(([label, leg]) => (
         <p key={label}>
           {label}: {movementStateLabel(legState(leg))}

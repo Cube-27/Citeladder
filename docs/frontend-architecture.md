@@ -157,23 +157,39 @@ marketing `/docs/mcp` page is removed; all owned links use the public docs origi
 One authenticated layout retains the session, query client, workspace/project
 context and entitlement providers across app and onboarding navigation.
 [Workspace access](workspace-access.md) owns selection precedence and identity
-transitions. Navigation, compact navigation and Command Palette share the
-route/capability owner; UI visibility never replaces backend authorization.
-The shell has two route-derived modes, Dashboard and Agent. The mode switch
-returns to the last route used in each mode for the project during the browser
-session; the Agent mode's navigation and its API modules load only in that mode.
+transitions. Navigation, compact navigation and Command Palette share one
+destination registry (`components/layout/nav-items.ts`); UI visibility never
+replaces backend authorization. The shell has two route-derived modes, Dashboard
+and Agent. Dashboard navigation follows the product loop: Overview, Analyze,
+Act (Actions with its open and in-progress count), Track, then Integrations. A
+destination is current on its path and every path below it, whatever tab the
+screen shows; a destination that names a query parameter (a settings tab) also
+needs it. The mode switch returns to the last route used in each mode for the
+project during the browser session; the Agent mode's navigation and its API
+modules load only in that mode.
+
+Navigation names the document `Screen · Project · CiteLadder` from
+`page-titles.ts`, moves focus to the main region when the path changes (not
+when a tab or filter changes), restores scroll per path and closes the compact
+drawer. A project switch keeps the view parameters that mean the same thing in
+every project (tab, range, engine, status and the Site Health catalog filters)
+and drops the rest, because they can name the outgoing project's records.
+Opening the app makes no external fetch: brand and competitor logos are looked
+up after onboarding creates a project and after a project edit.
 
 The Vite SPA preserves the authenticated shell while route content resolves.
 `shell-fallback` is the neutral pre-session structure only; after
 authentication, PageLoading and recoverable gate notices render in the shell's
 content pane. In-place refresh retains data with scoped progress rather than
-collapsing the surface. Intent prefetching reuses the destination's exact query
-key.
+collapsing the surface. Pointer or keyboard intent on a destination starts its
+route chunk and warms its primary read under the destination's exact query key.
 
 Route matching starts code downloads alongside session bootstrap. Pre-session
 loading uses the neutral shell; authenticated route loading uses PageLoading
-inside the persistent shell. Route failures offer a document reload, including
-recovery from replaced build chunks. Once a project is authorized, its screen reads start without waiting for
+inside the persistent shell. A screen that fails to render, including a replaced
+build chunk, shows Reload and Go to Overview inside the shell; an unknown app
+address shows a not-found screen there. Failures before the shell mounts offer a
+document reload. Once a project is authorized, its screen reads start without waiting for
 entitlement. Empty-workspace onboarding still waits for the allowance decision,
 and capability-specific controls retain their own entitlement gates.
 The session, membership, selected-project and entitlement reads use a shorter
@@ -230,10 +246,12 @@ interaction recipes live only in [`design.md`](design.md).
 | Stack | `frontend/components/ui/layout.tsx` |
 | Panel (`panelClasses`) and flush card content | `frontend/components/ui/panel.tsx`, `frontend/components/ui/card.tsx` |
 | Menu separator | `frontend/components/ui/dropdown.tsx` |
+| Pagination (`Pager`) | `frontend/components/ui/pager.tsx` |
+| Date field and calendar | `frontend/components/ui/date-field.tsx`, `frontend/components/ui/calendar.tsx` |
+| Avatar, Disclosure, Donut chart | `avatar.tsx`, `disclosure.tsx`, `donut-chart.tsx` |
 | Command palette, Market Select, CSV import | Existing shared and feature owners |
-| Cursor/table pagination, resizable workspaces | Existing feature owners |
-| Color controls, OTP, sliders, calendars/date pickers, avatars | No current product use |
-| Generic disclosure and donut | No production consumers |
+| Resizable workspaces | Existing feature owners |
+| Color controls, OTP, sliders | No current product use |
 
 Shared primitives own geometry, accessibility, interaction states, and motion.
 Domain wrappers own business logic, factual copy, data translation, and

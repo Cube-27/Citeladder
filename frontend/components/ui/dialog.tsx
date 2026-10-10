@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 import { Button } from './button';
 
 /**
- * Dialog (§8) — Radix modal. Scrim = --overlay-scrim, surface = bg-elevated,
+ * Dialog (§8) — Radix modal. Scrim = --color-overlay-scrim, surface = bg-elevated,
  * shadow-modal, and the shared overlay radius. Header, body, and footer use
  * the modal-padding rhythm and include a built-in close button. Focus opens on
  * the first tabbable element (the close button) unless `initialFocusRef` is set.
@@ -54,6 +54,9 @@ export function Dialog({
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="dialog-overlay bg-overlay-scrim z-overlay fixed inset-0" />
         <DialogPrimitive.Content
+          // Without a description, opt out of the one Radix otherwise wires up
+          // and warns about. With one, Radix's own id must stay in place.
+          {...(description ? {} : { 'aria-describedby': undefined })}
           onOpenAutoFocus={(event) => {
             if (!initialFocusRef?.current) return;
             event.preventDefault();

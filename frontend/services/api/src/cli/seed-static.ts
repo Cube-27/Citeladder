@@ -182,7 +182,6 @@ export async function seedStatic(db: Database, config: ServiceConfig, encryption
       workspace_id: agency.workspace_id,
       user_id: main.user_id,
       role: 'admin',
-      product_tour_status: 'not_started',
       created_at: now,
       updated_at: now,
     })

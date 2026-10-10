@@ -6,16 +6,15 @@ import { Switch } from './switch';
 
 describe('Switch', () => {
   it('exposes role, accessible name and checked state', () => {
-    render(<Switch checked={false} onCheckedChange={() => {}} label="Use your own API keys." />);
+    const label = 'Use your own API keys.';
+    const { rerender } = render(
+      <Switch checked={false} onCheckedChange={() => {}} label={label} />,
+    );
 
-    const toggle = screen.getByRole('switch', { name: 'Use your own API keys.' });
+    const toggle = screen.getByRole('switch', { name: label });
     expect(toggle).toHaveAttribute('aria-checked', 'false');
-  });
 
-  it('reflects the checked state', () => {
-    render(<Switch checked onCheckedChange={() => {}} label="Toggle" />);
-    const toggle = screen.getByRole('switch');
-
+    rerender(<Switch checked onCheckedChange={() => {}} label={label} />);
     expect(toggle).toHaveAttribute('aria-checked', 'true');
   });
 

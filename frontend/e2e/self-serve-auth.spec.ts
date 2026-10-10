@@ -50,19 +50,14 @@ test('expired direct navigation and refresh remain blocked with account recovery
   await expect(page.getByRole('dialog', { name: 'Sign out all sessions?' })).toBeVisible();
 });
 
-test('old account security URLs open the Account section with inline security controls', async ({
-  page,
-}) => {
+test('the Account section of Settings carries the inline security controls', async ({ page }) => {
   await stubAuthedShell(page, [
     [
       '**/api/v1/auth/security',
       { email: 'shell@example.com', email_verified: true, methods: ['google'] },
     ],
   ]);
-  await page.goto(`/account-security?workspace=${FIXTURE_WORKSPACE_ID}`);
-  await expect(page).toHaveURL(
-    new RegExp(`/settings\\?workspace=${FIXTURE_WORKSPACE_ID}&tab=account$`, 'u'),
-  );
+  await page.goto(`/settings?workspace=${FIXTURE_WORKSPACE_ID}&tab=account`);
   await expect(page.getByRole('tab', { name: 'Account', exact: true })).toHaveAttribute(
     'aria-selected',
     'true',

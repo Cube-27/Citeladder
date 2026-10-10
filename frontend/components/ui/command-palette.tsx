@@ -16,8 +16,7 @@ import {
 import { resolveCommandGroups } from '@/components/layout/nav-items';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { Button } from '@/components/ui/button';
-import { eyebrowClasses } from '@/components/ui/eyebrow';
-import { useEntitlement } from '@/lib/billing/entitlement-context';
+import { textRole } from '@/components/ui/typography';
 import { useProjectContext } from '@/lib/project/project-context';
 import {
   scopedNavigationDestination,
@@ -131,7 +130,6 @@ export function CommandPalette() {
   const listboxId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
-  const { hasCapability } = useEntitlement();
 
   // Where focus goes when the palette closes. Radix restores focus to its own
   // Trigger, but the ⌘K path has no trigger, so without this the caller loses
@@ -201,7 +199,7 @@ export function CommandPalette() {
   }, [open]);
 
   const commands = useMemo<Command[]>(() => {
-    const navigation = resolveCommandGroups(hasCapability).flatMap((group) =>
+    const navigation = resolveCommandGroups().flatMap((group) =>
       group.items.map((item) => ({
         id: `nav:${item.href}`,
         label: item.label,
@@ -233,7 +231,7 @@ export function CommandPalette() {
     }));
 
     return [...navigation, ...projectCommands];
-  }, [router, projects, activeProjectId, activeWorkspaceId, selectProject, hasCapability]);
+  }, [router, projects, activeProjectId, activeWorkspaceId, selectProject]);
 
   const results = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -312,8 +310,11 @@ export function CommandPalette() {
                 onChange={(event) => setQuery(event.target.value)}
                 onKeyDown={onInputKeyDown}
                 placeholder="Search or jump to…"
+                role="combobox"
                 aria-label="Search commands"
+                aria-expanded={results.length > 0}
                 aria-controls={listboxId}
+                aria-autocomplete="list"
                 aria-activedescendant={
                   results[activeIndex] ? `${listboxId}-${results[activeIndex].id}` : undefined
                 }
@@ -326,66 +327,84 @@ export function CommandPalette() {
 
             <div
               ref={listRef}
-              id={listboxId}
-              // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Command results are an active-descendant popup; native select/datalist cannot contain grouped action buttons.
-              role="listbox"
-              aria-label="Commands"
               className="content-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain p-1"
             >
+              {/* The empty state is a message, not an option, so it sits
+                  beside the listbox rather than inside it. */}
               {results.length === 0 ? (
                 <p className={cn(ROW, 'text-muted')}>No matches for “{query}”</p>
-              ) : (
-                toSections(results).map((section) => (
-                  <div key={section.group} className="mb-1 last:mb-0">
-                    <p className={cn(eyebrowClasses, 'px-2 pt-2 pb-1')}>{section.group}</p>
-                    {section.rows.map(({ command, index }) => {
-                      const isActive = index === activeIndex;
-                      const Icon = command.icon;
-                      return (
-                        <button
-                          key={command.id}
-                          id={`${listboxId}-${command.id}`}
-                          type="button"
-                          // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Focus stays on the palette input while these action options are active descendants.
-                          role="option"
-                          aria-selected={isActive}
-                          data-active={isActive}
-                          onMouseMove={() => setActive(index)}
-                          onClick={() => runCommand(command)}
-                          className={cn(
-                            ROW,
-                            'focus-ring transition-colors active:bg-active',
-                            isActive
-                              ? 'bg-selected text-foreground'
-                              : 'text-secondary hover:bg-hover hover:text-foreground',
-                          )}
-                        >
-                          {Icon ? (
-                            <Icon
-                              className={cn('size-4 shrink-0', !isActive && 'text-muted')}
-                              aria-hidden
-                            />
-                          ) : (
-                            <BrandLogo
-                              name={command.label}
-                              logoUrl={command.logoUrl}
-                              size="xs"
-                              className="bg-foreground text-background"
-                            />
-                          )}
-                          <span className="min-w-0 flex-1 truncate">{command.label}</span>
-                          {command.hint ? (
-                            <span className="type-caption shrink-0">{command.hint}</span>
-                          ) : null}
-                          {isActive ? (
-                            <CornerDownLeft className="text-muted size-4 shrink-0" aria-hidden />
-                          ) : null}
-                        </button>
-                      );
-                    })}
-                  </div>
-                ))
-              )}
+              ) : null}
+              <div
+                id={listboxId}
+                // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Command results are an active-descendant popup; native select/datalist cannot contain grouped action buttons.
+                role="listbox"
+                aria-label="Commands"
+              >
+                {toSections(results).map((section, sectionIndex) => {
+                  const headingId = `${listboxId}-group-${sectionIndex}`;
+                  return (
+                    <div
+                      key={section.group}
+                      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- A listbox may only own options and groups; fieldset is not a permitted child.
+                      role="group"
+                      aria-labelledby={headingId}
+                      className="mb-1 last:mb-0"
+                    >
+                      <p id={headingId} className={textRole('label', 'px-2 pt-2 pb-1')}>
+                        {section.group}
+                      </p>
+                      {section.rows.map(({ command, index }) => {
+                        const isActive = index === activeIndex;
+                        const Icon = command.icon;
+                        return (
+                          <button
+                            key={command.id}
+                            id={`${listboxId}-${command.id}`}
+                            type="button"
+                            // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Focus stays on the palette input while these action options are active descendants.
+                            role="option"
+                            // Options are reached through the input's active
+                            // descendant, never by Tab.
+                            tabIndex={-1}
+                            aria-selected={isActive}
+                            data-active={isActive}
+                            onMouseMove={() => setActive(index)}
+                            onClick={() => runCommand(command)}
+                            className={cn(
+                              ROW,
+                              'focus-ring transition-colors active:bg-active',
+                              isActive
+                                ? 'bg-selected text-foreground'
+                                : 'text-secondary hover:bg-hover hover:text-foreground',
+                            )}
+                          >
+                            {Icon ? (
+                              <Icon
+                                className={cn('size-4 shrink-0', !isActive && 'text-muted')}
+                                aria-hidden
+                              />
+                            ) : (
+                              <BrandLogo
+                                name={command.label}
+                                logoUrl={command.logoUrl}
+                                size="xs"
+                                className="bg-foreground text-background"
+                              />
+                            )}
+                            <span className="min-w-0 flex-1 truncate">{command.label}</span>
+                            {command.hint ? (
+                              <span className="type-caption shrink-0">{command.hint}</span>
+                            ) : null}
+                            {isActive ? (
+                              <CornerDownLeft className="text-muted size-4 shrink-0" aria-hidden />
+                            ) : null}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Keyboard legend — the palette is a keyboard surface first, so

@@ -12,11 +12,10 @@ import { policy } from '../config.ts';
 import { subjectXactLock } from '../db/advisory-lock.ts';
 import type { Database } from '../db/database.ts';
 import { ApiError, notFound } from '../errors.ts';
-import type { Users, WorkspaceMembers, Workspaces } from '../generated/db-schema.ts';
+import type { Users, Workspaces } from '../generated/db-schema.ts';
 import { ensureWorkspaceBilling } from '../entitlements/bootstrap.ts';
 
 export type User = Selectable<Users>;
-export type Member = Selectable<WorkspaceMembers>;
 type Role = keyof typeof policy.workspaces.roles;
 const isRole = (key: string): key is Role => Object.hasOwn(policy.workspaces.roles, key);
 // Native workspace policy names the roles used by the wire enum.
@@ -78,11 +77,6 @@ async function insertWorkspace(
       workspace_id: workspace.id,
       user_id: userId,
       role: 'owner',
-      product_tour_status: 'not_started',
-      product_tour_version: null,
-      product_tour_step_id: null,
-      product_tour_started_at: null,
-      product_tour_completed_at: null,
       created_at: now,
       updated_at: now,
     })
