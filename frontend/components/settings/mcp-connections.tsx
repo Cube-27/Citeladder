@@ -34,6 +34,7 @@ function ConnectionRow({
             : `Reads ${workspaces || 'no workspace you can still access'}.`}
         </p>
         <p className={textRole('caption')}>
+          {connection.access === 'read_and_change' ? 'Read and change · ' : 'Read · '}
           {adminView && connection.user_email ? `Connected by ${connection.user_email} · ` : null}
           Connected <DisplayTime value={connection.created_at} dateOnly /> ·{' '}
           {connection.last_used_at ? (

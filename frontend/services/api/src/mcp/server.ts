@@ -113,7 +113,7 @@ export function registerMcpRoutes(app: Hono<AppEnv>, config: ServiceConfig, db: 
         c.header(
           'WWW-Authenticate',
           // RFC 6750 §3: a presented but rejected token is invalid_token, prompting refresh.
-          `Bearer resource_metadata="${settings.origin}/.well-known/oauth-protected-resource/mcp", scope="${mcpPolicy.read_scope}"${c.req.header('authorization') ? ', error="invalid_token"' : ''}`,
+          `Bearer resource_metadata="${settings.origin}/.well-known/oauth-protected-resource/mcp", scope="${mcpPolicy.scopes_supported.join(' ')}"${c.req.header('authorization') ? ', error="invalid_token"' : ''}`,
         );
         return c.json(
           { error: 'invalid_token', error_description: 'A valid MCP access token is required.' },

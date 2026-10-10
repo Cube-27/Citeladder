@@ -10,7 +10,7 @@ import { record, strings } from '../db/json.ts';
 import { scalarText } from '../text-order.ts';
 import { ApiError, onError } from '../errors.ts';
 import { createSecretCipher } from '../integrations/fernet.ts';
-import { loadMcpConfig, mcpPolicy, type McpConfig } from './config.ts';
+import { grantableScopes, loadMcpConfig, mcpPolicy, type McpConfig } from './config.ts';
 import { consentMessage, consentPage } from './consent-page.ts';
 import {
   completeConsent,
@@ -177,7 +177,7 @@ export function registerOAuthRoutes(
       token_endpoint: `${mcp.origin}/token`,
       registration_endpoint: `${mcp.origin}/mcp/register`,
       revocation_endpoint: `${mcp.origin}/revoke`,
-      scopes_supported: [mcpPolicy.read_scope],
+      scopes_supported: mcpPolicy.scopes_supported,
       response_types_supported: ['code'],
       grant_types_supported: mcpPolicy.supported_grant_types,
       token_endpoint_auth_methods_supported: ['none', 'client_secret_post', 'client_secret_basic'],
@@ -189,7 +189,7 @@ export function registerOAuthRoutes(
     c.json({
       resource,
       authorization_servers: [mcp.origin],
-      scopes_supported: [mcpPolicy.read_scope],
+      scopes_supported: mcpPolicy.scopes_supported,
       bearer_methods_supported: ['header'],
       resource_name: 'CiteLadder',
       resource_documentation: mcpPolicy.documentation_url,
@@ -232,11 +232,11 @@ export function registerOAuthRoutes(
           !/^[A-Za-z0-9_-]{43}$/u.test(q.get('code_challenge') ?? '')
         )
           throw new OAuthError('invalid_request', 'S256 PKCE is required');
-        // Unknown extras such as offline_access are narrowed away (RFC 6749 §3.3).
-        const requested = (q.get('scope') ?? mcpPolicy.read_scope).split(/\s+/u).filter(Boolean);
+        // Write is only offered here; the person decides on the consent page.
+        const requested = (q.get('scope') ?? '').split(/\s+/u).filter(Boolean);
         if (requested.length && !requested.includes(mcpPolicy.read_scope))
           throw new OAuthError('invalid_scope', 'Unsupported scope');
-        const scopes = [mcpPolicy.read_scope];
+        const scopes = grantableScopes(q.get('scope'));
         if (q.has('resource') && q.get('resource')?.replace(/\/$/u, '') !== resource)
           throw new OAuthError('invalid_target', 'The requested resource is not this MCP server');
         const now = new Date();
@@ -334,7 +334,7 @@ export function registerOAuthRoutes(
     const row = await db
       .selectFrom('mcp_authorization_requests as r')
       .innerJoin('mcp_oauth_clients as cl', 'cl.client_id', 'r.client_id')
-      .select(['r.redirect_uri', 'cl.client_metadata'])
+      .select(['r.redirect_uri', 'r.scopes', 'cl.client_metadata'])
       .where('r.transaction_hash', '=', tokenHash(config, transaction))
       .where('r.consumed_at', 'is', null)
       .where('r.expires_at', '>', new Date())
@@ -365,6 +365,7 @@ export function registerOAuthRoutes(
         error,
         termsRevision: policy.mcp.terms_revision,
         appOrigin: mcp.browserOrigin,
+        offerChanges: strings(row.scopes).includes(mcpPolicy.write_scope),
       }),
       error ? 400 : 200,
     );
@@ -421,6 +422,7 @@ export function registerOAuthRoutes(
                 selected: form.getAll('workspace_id'),
                 acceptedTermsRevision:
                   form.get('accept_terms') === 'yes' ? (form.get('terms_revision') ?? '') : null,
+                allowChanges: form.get('allow_changes') === 'yes',
               },
         ),
         303,

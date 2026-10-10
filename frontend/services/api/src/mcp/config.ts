@@ -9,6 +9,17 @@ import {
 } from '../config.ts';
 
 export const mcpPolicy = policy.mcp.constants;
+/**
+ * The supported scopes a request names, in policy order, with read always
+ * included; unknown extras such as `offline_access` narrow away (RFC 6749
+ * §3.3). A request naming no scope may receive every supported one.
+ */
+export function grantableScopes(requested: string | null | undefined): string[] {
+  const named = (requested ?? '').split(/\s+/u).filter(Boolean);
+  return mcpPolicy.scopes_supported.filter(
+    (scope) => !named.length || scope === mcpPolicy.read_scope || named.includes(scope),
+  );
+}
 export function loadMcpConfig(
   config: ServiceConfig,
   env: Record<string, string | undefined> = configEnvironment(config),
