@@ -373,6 +373,28 @@ export interface AnalyticsTasks {
   workspace_id: string;
 }
 
+export interface AnswerAdObservations {
+  advertiser_domain: string;
+  advertiser_name: string;
+  artifact_id: string;
+  audit_id: string;
+  competitor_id: string | null;
+  created_at: Timestamp;
+  id: string;
+  image_url: string | null;
+  landing_url_canonical: string;
+  landing_url_raw: string;
+  ownership: string;
+  parser_version: string;
+  project_id: string;
+  rank_absolute: number;
+  rank_group: number | null;
+  snippet: string;
+  task_id: string;
+  title: string;
+  workspace_id: string;
+}
+
 export interface AnswerPerceptions {
   analysis_id: string;
   artifact_id: string;
@@ -2137,6 +2159,7 @@ export interface ReferralEvents {
 }
 
 export interface ResponseAnalyses {
+  ads_parser_version: string | null;
   analyzer_version: string;
   artifact_id: string;
   audit_id: string;
@@ -3047,6 +3070,7 @@ export interface DB {
   aio_entity_links: AioEntityLinks;
   aio_observations: AioObservations;
   analytics_tasks: AnalyticsTasks;
+  answer_ad_observations: AnswerAdObservations;
   answer_perceptions: AnswerPerceptions;
   audit_engine_snapshots: AuditEngineSnapshots;
   audit_events: AuditEvents;

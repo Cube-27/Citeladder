@@ -361,6 +361,29 @@ CREATE TABLE public.analytics_tasks (
     completed_at timestamp with time zone
 );
 
+CREATE TABLE public.answer_ad_observations (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    project_id uuid NOT NULL,
+    audit_id uuid NOT NULL,
+    task_id uuid NOT NULL,
+    artifact_id uuid NOT NULL,
+    parser_version character varying(32) NOT NULL,
+    rank_absolute integer NOT NULL,
+    rank_group integer,
+    advertiser_name character varying(255) NOT NULL,
+    advertiser_domain character varying(255) NOT NULL,
+    landing_url_raw text NOT NULL,
+    landing_url_canonical text NOT NULL,
+    title text NOT NULL,
+    snippet text NOT NULL,
+    image_url text,
+    ownership character varying(16) NOT NULL,
+    competitor_id uuid,
+    created_at timestamp with time zone NOT NULL,
+    CONSTRAINT ck_answer_ad_observation_ownership CHECK (((ownership)::text = ANY ((ARRAY['owned'::character varying, 'competitor'::character varying, 'other'::character varying])::text[])))
+);
+
 CREATE TABLE public.answer_perceptions (
     id uuid NOT NULL,
     workspace_id uuid NOT NULL,
@@ -2182,6 +2205,7 @@ CREATE TABLE public.response_analyses (
     fanout_event_count integer DEFAULT 0 NOT NULL,
     fanout_event_source character varying(16) DEFAULT 'none'::character varying NOT NULL,
     fanout_projection_version character varying(32) DEFAULT 'fanout-1'::character varying NOT NULL,
+    ads_parser_version character varying(32),
     avg_position double precision,
     score jsonb,
     entity_assessments jsonb NOT NULL,
@@ -3104,6 +3128,9 @@ ALTER TABLE ONLY public.aio_observations
 ALTER TABLE ONLY public.analytics_tasks
     ADD CONSTRAINT analytics_tasks_pkey PRIMARY KEY (id);
 
+ALTER TABLE ONLY public.answer_ad_observations
+    ADD CONSTRAINT answer_ad_observations_pkey PRIMARY KEY (id);
+
 ALTER TABLE ONLY public.answer_perceptions
     ADD CONSTRAINT answer_perceptions_pkey PRIMARY KEY (id);
 
@@ -3611,6 +3638,9 @@ ALTER TABLE ONLY public.aio_observations
 ALTER TABLE ONLY public.analytics_tasks
     ADD CONSTRAINT uq_analytics_task_idempotency_key UNIQUE (idempotency_key);
 
+ALTER TABLE ONLY public.answer_ad_observations
+    ADD CONSTRAINT uq_answer_ad_observation_artifact_rank UNIQUE (artifact_id, parser_version, rank_absolute);
+
 ALTER TABLE ONLY public.answer_perceptions
     ADD CONSTRAINT uq_answer_perception_analysis_extractor UNIQUE (analysis_id, extractor_version);
 
@@ -4116,6 +4146,12 @@ CREATE INDEX ix_analytics_tasks_project_id ON public.analytics_tasks USING btree
 CREATE INDEX ix_analytics_tasks_status ON public.analytics_tasks USING btree (status);
 
 CREATE INDEX ix_analytics_tasks_workspace_id ON public.analytics_tasks USING btree (workspace_id);
+
+CREATE INDEX ix_answer_ad_observations_audit_id ON public.answer_ad_observations USING btree (audit_id);
+
+CREATE INDEX ix_answer_ad_observations_task_id ON public.answer_ad_observations USING btree (task_id);
+
+CREATE INDEX ix_answer_ad_observations_workspace_project ON public.answer_ad_observations USING btree (workspace_id, project_id);
 
 CREATE INDEX ix_answer_perceptions_audit_id ON public.answer_perceptions USING btree (audit_id);
 
@@ -5151,6 +5187,15 @@ ALTER TABLE ONLY public.analytics_tasks
 
 ALTER TABLE ONLY public.analytics_tasks
     ADD CONSTRAINT analytics_tasks_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.answer_ad_observations
+    ADD CONSTRAINT answer_ad_observations_artifact_id_fkey FOREIGN KEY (artifact_id) REFERENCES public.raw_response_artifacts(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.answer_ad_observations
+    ADD CONSTRAINT answer_ad_observations_workspace_project_audit_task_fkey FOREIGN KEY (workspace_id, project_id, audit_id, task_id) REFERENCES public.audit_tasks(workspace_id, project_id, audit_id, id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.answer_ad_observations
+    ADD CONSTRAINT answer_ad_observations_workspace_project_audit_fkey FOREIGN KEY (workspace_id, project_id, audit_id) REFERENCES public.audits(workspace_id, project_id, id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.answer_perceptions
     ADD CONSTRAINT answer_perceptions_analysis_id_fkey FOREIGN KEY (analysis_id) REFERENCES public.response_analyses(id) ON DELETE CASCADE;
