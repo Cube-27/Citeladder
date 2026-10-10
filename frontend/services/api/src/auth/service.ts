@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { SignJWT } from 'jose';
 import { sql } from 'kysely';
-import type { ServiceConfig } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { ApiError } from '../errors.ts';
 import { getLogger } from '../logging.ts';
@@ -10,6 +9,8 @@ import { hashPassword, verifyAccountPassword } from './password.ts';
 import { recordSecurityEvent } from './security-events.ts';
 import { requiresEmailVerification } from './eligibility.ts';
 import { subjectXactLock } from '../db/advisory-lock.ts';
+import { enforceSubjectRequest } from '../abuse/usage.ts';
+import { policy, type ServiceConfig } from '../config.ts';
 
 const logger = getLogger('app.auth');
 class CredentialsChanged extends Error {}
@@ -28,6 +29,7 @@ export function sessionView(user: User) {
 export function issueSession(config: ServiceConfig, user: User): Promise<string> {
   return new SignJWT({ sub: user.id, ver: user.session_version })
     .setProtectedHeader({ alg: config.session.algorithm })
+    .setIssuedAt()
     .setExpirationTime(Math.floor(Date.now() / 1000) + config.session.expireSeconds)
     .sign(new TextEncoder().encode(config.session.secretKey));
 }
@@ -38,6 +40,13 @@ export async function registerUser(db: Database, email: string, password: string
   const registeredId = await db.transaction().execute(async (trx) => {
     const user = await createIdentity(trx, email, encoded);
     if (user) {
+      // Only a new identity spends the shared daily trial budget; exhaustion
+      // rolls the identity back and is logged by the limiter.
+      await enforceSubjectRequest(trx, 'client', 'global-trial', {
+        operation: 'auth.trial.global',
+        limit: policy.auth.mailbox.trial_daily_limit,
+        windowSeconds: policy.auth.mailbox.daily_window_seconds,
+      });
       const pending = await trx
         .updateTable('users')
         .set({ registration_origin: 'public' })

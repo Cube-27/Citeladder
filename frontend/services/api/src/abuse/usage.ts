@@ -1,7 +1,6 @@
 /**
- * Durable per-workspace usage windows (`usage_windows`), preserving the fixed
- * window and subject identity of the retired Python limiter. ASCII subject
- * folding keeps existing counters readable across the cutover.
+ * Durable fixed-window usage counters (`usage_windows`) keyed by a hashed,
+ * case-folded subject.
  *
  * A request consumes its budget in its own committed transaction before the
  * work it guards starts, so a failed import still spends its attempt.
@@ -14,6 +13,16 @@ import type { Database } from '../db/database.ts';
 import { ApiError } from '../errors.ts';
 import { policy, resolveSettingSpec } from '../config.ts';
 import { getLogger } from '../logging.ts';
+
+type SubjectKind =
+  | 'workspace'
+  | 'client'
+  | 'email'
+  | 'crawl_source'
+  | 'crawl_project'
+  | 'global'
+  | 'mcp_grant'
+  | 'user';
 
 export type UsageLimit = {
   operation: string;
@@ -47,18 +56,34 @@ export async function enforceWorkspaceRequest(
   );
 }
 
+/** Subjects are case-folded and hashed; no raw address or identifier is stored. */
+function subjectHash(subjectValue: string): string {
+  return createHash('sha256').update(subjectValue.trim().toLowerCase()).digest('hex');
+}
+
+function windowOf(windowSeconds: number, now: Date) {
+  const epoch = Math.floor(now.getTime() / 1000);
+  const startedEpoch = epoch - (epoch % windowSeconds);
+  return {
+    started: new Date(startedEpoch * 1000),
+    expires: new Date((startedEpoch + windowSeconds) * 1000),
+  };
+}
+
+function throttled(subjectKind: SubjectKind, operation: string, expires: Date, now: Date) {
+  getLogger('api.abuse').info('request.throttled', { operation, subject_kind: subjectKind });
+  const retryAfter = Math.max(1, Math.ceil((expires.getTime() - now.getTime()) / 1000));
+  return new ApiError(
+    429,
+    subjectKind === 'workspace' ? 'Workspace usage limit exceeded' : 'Too many requests',
+    { headers: { 'retry-after': String(retryAfter) } },
+  );
+}
+
 /** Autocommitted atomic counters, before hashing or provider I/O. */
 export async function enforceSubjectRequest(
   db: Database,
-  subjectKind:
-    | 'workspace'
-    | 'client'
-    | 'email'
-    | 'crawl_source'
-    | 'crawl_project'
-    | 'global'
-    | 'mcp_grant'
-    | 'user',
+  subjectKind: SubjectKind,
   subjectValue: string,
   { operation, limit, windowSeconds, amount = 1 }: UsageLimit,
   now: Date = new Date(),
@@ -66,25 +91,14 @@ export async function enforceSubjectRequest(
   if (![limit, windowSeconds, amount].every((value) => Number.isInteger(value) && value > 0)) {
     throw new Error('Usage limit, window and amount must be positive integers');
   }
-  const epoch = Math.floor(now.getTime() / 1000);
-  const startedEpoch = epoch - (epoch % windowSeconds);
-  const started = new Date(startedEpoch * 1000);
-  const expires = new Date((startedEpoch + windowSeconds) * 1000);
-  const retryAfter = Math.max(1, Math.ceil((expires.getTime() - now.getTime()) / 1000));
-  const exhausted = () =>
-    new ApiError(
-      429,
-      subjectKind === 'workspace' ? 'Workspace usage limit exceeded' : 'Too many requests',
-      { headers: { 'retry-after': String(retryAfter) } },
-    );
-  if (amount > limit) throw exhausted();
-  const subject = createHash('sha256').update(subjectValue.trim().toLowerCase()).digest('hex');
+  const { started, expires } = windowOf(windowSeconds, now);
+  if (amount > limit) throw throttled(subjectKind, operation, expires, now);
   const consumed = await db
     .insertInto('usage_windows')
     .values({
       id: randomUUID(),
       subject_kind: subjectKind,
-      subject_hash: subject,
+      subject_hash: subjectHash(subjectValue),
       operation,
       window_started_at: started,
       expires_at: expires,
@@ -100,9 +114,22 @@ export async function enforceSubjectRequest(
     )
     .returning('count')
     .executeTakeFirst();
-  if (consumed !== undefined) return;
-  getLogger('api.abuse').info('request.throttled', { operation, subject_kind: subjectKind });
-  throw exhausted();
+  if (consumed === undefined) throw throttled(subjectKind, operation, expires, now);
+}
+
+/** Forget every window of one subject's operation (a proven owner resets their failures). */
+export async function releaseSubjectBudget(
+  db: Database,
+  subjectKind: SubjectKind,
+  subjectValue: string,
+  operation: string,
+): Promise<void> {
+  await db
+    .deleteFrom('usage_windows')
+    .where('subject_kind', '=', subjectKind)
+    .where('subject_hash', '=', subjectHash(subjectValue))
+    .where('operation', '=', operation)
+    .execute();
 }
 
 /** Delete a bounded batch of expired windows; live windows are never touched. */

@@ -89,6 +89,7 @@ export const policy = {
   auth: {
     mailbox: authRuntime.mailbox,
     password: authRuntime.password,
+    session: authRuntime.session,
     terms_revision: authRuntime.terms_revision,
     privacy_revision: authRuntime.privacy_revision,
     oauth: authOAuth,
@@ -533,8 +534,6 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
             resolveSettingSpec(spec, env),
           ]),
         ),
-        integration_client_id: setting('integration_google_client_id'),
-        integration_client_secret: setting('integration_google_client_secret'),
       } as Record<string, string | number | boolean>,
       limits: Object.fromEntries(
         Object.entries(policy.abuse).map(([name, spec]) => [name, resolveSettingSpec(spec, env)]),

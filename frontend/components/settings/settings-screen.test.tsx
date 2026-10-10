@@ -9,7 +9,7 @@ import type { SessionUser } from '@/lib/api/types';
 import { makeProject } from '@/test/fixtures/project';
 
 const { entitlementState } = vi.hoisted(() => ({
-  entitlementState: { canDeleteProject: false },
+  entitlementState: { canDeleteProject: false, roleMayDelete: true },
 }));
 const { security, mailbox } = vi.hoisted(() => ({ security: vi.fn(), mailbox: vi.fn() }));
 vi.mock('@/lib/api/auth', () => ({ authApi: { security, mailbox } }));
@@ -49,7 +49,8 @@ vi.mock('@/lib/project/project-context', () => ({
   useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   // The Members tab gates itself on the caller's effective capability, so the
   // mock has to answer that question too — an Owner here.
-  useWorkspaceCapability: () => true,
+  useWorkspaceCapability: (capability: string) =>
+    capability !== 'delete_projects' || entitlementState.roleMayDelete,
   useProjectContext: () => ({
     projects: [activeProject],
     activeProject,
@@ -115,6 +116,7 @@ describe('SettingsScreen', () => {
     listProjects.mockResolvedValue([]);
     setActiveProjectId.mockClear();
     entitlementState.canDeleteProject = false;
+    entitlementState.roleMayDelete = true;
     window.history.replaceState(null, '', '/settings');
   });
 
@@ -271,6 +273,14 @@ describe('SettingsScreen', () => {
     expect(screen.queryByRole('tab', { name: 'Danger zone' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /delete project/i })).not.toBeInTheDocument();
     expect(deleteProject).not.toHaveBeenCalled();
+  });
+
+  it('hides project deletion from a role that may not delete, even on a plan that grants it', () => {
+    entitlementState.canDeleteProject = true;
+    entitlementState.roleMayDelete = false;
+    renderScreen();
+
+    expect(screen.queryByRole('button', { name: /delete project/i })).not.toBeInTheDocument();
   });
 
   it('lets an explicitly entitled development account delete its active project', async () => {

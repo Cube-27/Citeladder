@@ -51,7 +51,7 @@ export async function readBody<T extends z.ZodType>(c: Context, schema: T): Prom
   return value;
 }
 
-/** A body FastAPI declares `Model | None = None`: empty or `null` reads as null. */
+/** An optional JSON body: empty or `null` reads as null. */
 export async function readOptionalBody<T extends z.ZodType>(
   c: Context,
   schema: T,

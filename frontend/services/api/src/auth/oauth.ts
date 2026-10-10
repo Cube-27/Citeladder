@@ -31,21 +31,14 @@ export class SignInError extends Error {
   }
 }
 
-/** A coded provider error; `detail` keeps the exact `{code, provider}` shape clients read. */
-export function providerError(
-  status: 404 | 501 | 503,
-  code:
-    | 'oauth_provider_unknown'
-    | 'oauth_provider_not_configured'
-    | 'oauth_callback_not_implemented',
+/** A coded provider error naming the provider. */
+function providerError(
+  status: 404 | 503,
+  code: 'oauth_provider_unknown' | 'oauth_provider_not_configured',
   message: string,
   provider: string,
 ): ApiError {
-  return new ApiError(status, message, {
-    code,
-    details: { provider },
-    detail: { code, provider },
-  });
+  return new ApiError(status, message, { code, details: { provider } });
 }
 
 export function knownProvider(value: string): OAuthProvider {
@@ -56,13 +49,10 @@ export function knownProvider(value: string): OAuthProvider {
 
 function credentials(config: ServiceConfig, provider: OAuthProvider) {
   const settings = config.auth.oauthSettings;
-  let id = String(settings[`${provider}_client_id`] ?? '');
-  let secret = String(settings[`${provider}_client_secret`] ?? '');
-  if (provider === 'google' && !(id && secret)) {
-    id = String(settings.integration_client_id ?? '');
-    secret = String(settings.integration_client_secret ?? '');
-  }
-  return { id, secret };
+  return {
+    id: String(settings[`${provider}_client_id`] ?? ''),
+    secret: String(settings[`${provider}_client_secret`] ?? ''),
+  };
 }
 
 export function providerConfigured(config: ServiceConfig, provider: OAuthProvider): boolean {
@@ -84,7 +74,7 @@ function redirectUri(config: ServiceConfig, provider: OAuthProvider): string {
   );
 }
 
-export function requireProviderConfigured(config: ServiceConfig, provider: OAuthProvider): void {
+function requireProviderConfigured(config: ServiceConfig, provider: OAuthProvider): void {
   if (!providerConfigured(config, provider))
     throw providerError(
       503,
@@ -365,8 +355,8 @@ async function resolveAccount(
   identity: SignInIdentity,
   proof?: LinkProof,
 ) {
-  // Stable subject and normalized address serialize linking, locked in
-  // Python's sorted() order: "auth.email:" always precedes "oauth:".
+  // Stable subject and normalized address serialize linking; every path takes
+  // "auth.email:" before "oauth:" so the two locks never invert.
   await subjectXactLock(db, `auth.email:${identity.email}`);
   await subjectXactLock(db, `oauth:${provider}:${identity.sub}`);
   const linked = await db
@@ -423,7 +413,9 @@ export async function completeSignIn(
   const identity = await identify(config, provider, code);
   const resolved = await db.transaction().execute(async (trx) => {
     const account = await resolveAccount(trx, config, provider, identity, continuation?.proof);
-    await recordSecurityEvent(trx, 'auth.google_login', account.user.id);
+    // Only a sign-in that issues a session is a login; an unverified mailbox is sent recovery mail.
+    if (!requiresEmailVerification(account.user))
+      await recordSecurityEvent(trx, 'auth.google_login', account.user.id);
     return account;
   });
   const fields = { user_id: resolved.user.id, provider };

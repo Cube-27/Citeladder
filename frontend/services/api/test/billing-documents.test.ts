@@ -161,7 +161,7 @@ describe('persisted billing documents', () => {
   }
   it('lists and downloads only the active workspace account, including a credit note', async () => {
     const owner = await tenant();
-    const otherWorkspace = await fixtures.ownedWorkspace(owner.userId);
+    const otherWorkspace = await fixtures.joinedWorkspace(owner.userId);
     await billingAccount(db, otherWorkspace);
     const member = await fixtures.user();
     await fixtures.member(owner.workspaceId, member, 'member');

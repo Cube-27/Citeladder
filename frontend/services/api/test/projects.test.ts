@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
-import { afterAll, describe, expect, it } from 'vitest';
+import { sql } from 'kysely';
+import { afterAll, describe, expect, it, vi } from 'vitest';
 
 import { createApp } from '../src/app.ts';
 import { projectSchema } from '@citeladder/contracts/project';
@@ -10,8 +11,12 @@ import {
   readProject,
   updateProject,
   deleteProject,
+  removeProject,
 } from '../src/projects/service.ts';
+import { reserveUsage } from '../src/entitlements/ledger.ts';
+import { advisoryXactLock } from '../src/db/advisory-lock.ts';
 import { commandCenter } from '../src/projects/command-center.ts';
+import { purgeExpiredTrialProjects } from '../src/projects/trial-purge.ts';
 import { policy } from '../src/config.ts';
 import { billingAccount, grant, prompt, promptSet } from './prompt-fixtures.ts';
 import { Fixtures, sessionToken, testConfig, testDatabase } from './support.ts';
@@ -267,8 +272,7 @@ describe('project owner', () => {
     ]);
     expect((await app.request('/api/v1/projects')).status).toBe(401);
   });
-  it('keeps immutable audit evidence when deletion is requested', async () => {
-    // Retain this tenant and its ledger until the disposable test database is dropped.
+  it('deletes a project with audit history once its credits are settled, keeping the ledger and its source IDs', async () => {
     const retained = new VisibilityFixtures(db);
     const t = await retained.tenant();
     await db
@@ -281,16 +285,16 @@ describe('project owner', () => {
     const audit = await retained.audit(t);
     const { taskId } = await retained.execution(t, { auditId: audit });
     const grantId = await grant(db, account, { key: 'audit_credits', value: 1 });
-    const ledgerId = randomUUID();
-    await db
-      .insertInto('consumable_ledger')
-      .values({
-        id: ledgerId,
+    const reservationId = randomUUID();
+    const entry = (kind: 'reservation' | 'release') => {
+      const id = randomUUID();
+      return {
+        id,
         billing_account_id: account,
         grant_id: grantId,
         capability_key: 'audit_credits',
-        entry_kind: 'reservation',
-        reservation_id: randomUUID(),
+        entry_kind: kind,
+        reservation_id: reservationId,
         subject_kind: 'audit',
         subject_id: audit,
         workspace_id: t.workspaceId,
@@ -298,23 +302,159 @@ describe('project owner', () => {
         task_id: taskId,
         agent_run_id: null,
         site_crawl_id: null,
-        dispatch_key: '',
+        dispatch_key: kind,
         request_fingerprint: '',
         allocation_order: 0,
         refund_of_id: null,
         attempt: null,
         units: 1,
-        idempotency_key: ledgerId,
+        idempotency_key: id,
         created_at: new Date(),
-      })
-      .execute();
-    await expect(
-      deleteProject(db, { workspaceId: t.workspaceId, projectId: t.projectId }),
-    ).rejects.toMatchObject({ status: 409 });
+      };
+    };
+    await db.insertInto('consumable_ledger').values(entry('reservation')).execute();
+    const scope = { workspaceId: t.workspaceId, projectId: t.projectId };
+    await expect(deleteProject(db, scope)).rejects.toMatchObject({
+      status: 409,
+      code: 'project_work_running',
+    });
     expect(
       await db.selectFrom('audits').select('id').where('id', '=', audit).executeTakeFirst(),
     ).toEqual({ id: audit });
+
+    await db.insertInto('consumable_ledger').values(entry('release')).execute();
+    await deleteProject(db, scope);
+    expect(
+      await db.selectFrom('projects').select('id').where('id', '=', t.projectId).execute(),
+    ).toEqual([]);
+    const ledger = await db
+      .selectFrom('consumable_ledger')
+      .select(['entry_kind', 'subject_id', 'audit_id', 'task_id'])
+      .where('reservation_id', '=', reservationId)
+      .orderBy('entry_kind')
+      .execute();
+    // Billing keeps the exact source IDs of work that no longer exists.
+    expect(ledger).toEqual([
+      { entry_kind: 'release', subject_id: audit, audit_id: audit, task_id: taskId },
+      { entry_kind: 'reservation', subject_id: audit, audit_id: audit, task_id: taskId },
+    ]);
   });
+  it('refuses a reservation that waited behind the deletion of its project', async () => {
+    const retained = new VisibilityFixtures(db);
+    const t = await retained.tenant();
+    const account = await billingAccount(db, t.workspaceId);
+    await grant(db, account, { key: 'audit_credits', value: 1 });
+    const audit = await retained.audit(t);
+    const { taskId } = await retained.execution(t, { auditId: audit });
+    const { reservation } = await db.transaction().execute(async (deletion) => {
+      const blocker = await sql<{ pid: number }>`select pg_backend_pid() as pid`.execute(deletion);
+      await advisoryXactLock(deletion, policy.entitlements.capacity_lock, account);
+      const pending = db
+        .transaction()
+        .execute((trx) =>
+          reserveUsage(trx, {
+            accountId: account,
+            capability: 'audit_credits',
+            subject: { kind: 'audit', id: taskId, workspaceId: t.workspaceId, auditId: audit },
+            units: 1,
+            key: randomUUID(),
+            at: new Date(),
+          }),
+        )
+        .catch((error: unknown) => error);
+      await vi.waitFor(
+        async () => {
+          const blocked = await sql<{ waiting: boolean }>`select exists (
+            select 1 from pg_stat_activity where ${blocker.rows[0]!.pid} = any(pg_blocking_pids(pid))
+          ) as waiting`.execute(db);
+          expect(blocked.rows[0]!.waiting).toBe(true);
+        },
+        { timeout: 2000, interval: 20 },
+      );
+      await removeProject(deletion, { workspaceId: t.workspaceId, projectId: t.projectId });
+      return { reservation: pending };
+    });
+    expect(await reservation).toMatchObject({ message: 'subject_not_found' });
+    expect(
+      await db.selectFrom('consumable_ledger').select('id').where('task_id', '=', taskId).execute(),
+    ).toEqual([]);
+  });
+  it('lets an admin delete a project but not a member', async () => {
+    const t = await tenant();
+    await grant(db, t.accountId, { key: 'project_deletion', value: 1 });
+    const project = await createProject(
+      db,
+      t.workspaceId,
+      t.userId,
+      projectCreate.parse({ name: 'Disposable' }),
+    );
+    const app = createApp(testConfig(), db);
+    const remove = async (role: 'member' | 'admin') => {
+      const user = await fixtures.user();
+      await fixtures.member(t.workspaceId, user, role);
+      const token = await sessionToken({ sub: user, ver: 0 });
+      const response = await app.request(`/api/v1/projects/${project.id}`, {
+        method: 'DELETE',
+        headers: { cookie: `${testConfig().session.cookieName}=${token}` },
+      });
+      return response.status;
+    };
+    expect(await remove('member')).toBe(403);
+    expect(await remove('admin')).toBe(204);
+  });
+
+  it('purges trial-only projects 30 days after the trial ends, and nothing else', async () => {
+    const day = 86_400_000;
+    async function trialProject(endedDaysAgo: number, paid = false) {
+      const t = await tenant();
+      await db
+        .updateTable('billing_accounts')
+        .set({ registration_origin: 'public' })
+        .where('id', '=', t.accountId)
+        .execute();
+      // The fixture's operator access grant is not a trial; this account is trial-only.
+      await db.deleteFrom('account_grants').where('billing_account_id', '=', t.accountId).execute();
+      const end = new Date(Date.now() - endedDaysAgo * day);
+      await db
+        .insertInto('account_grants')
+        .values({
+          id: randomUUID(),
+          billing_account_id: t.accountId,
+          source_kind: 'trial',
+          source_ref: 'test',
+          bundle_role: 'primary',
+          bundle_id: `trial-${t.accountId}`,
+          profile_key: policy.entitlements.public_trial.profile,
+          key: 'workspace_access',
+          value: 1,
+          valid_from: new Date(end.getTime() - 7 * day),
+          valid_until: end,
+          catalog_revision: 'test',
+          idempotency_key: randomUUID(),
+          created_at: new Date(),
+        })
+        .execute();
+      if (paid) await grant(db, t.accountId, { key: 'project_slots', value: 1 });
+      const project = await createProject(
+        db,
+        t.workspaceId,
+        t.userId,
+        projectCreate.parse({ name: 'Trial' }),
+      );
+      return project.id;
+    }
+    const expired = await trialProject(31);
+    const recent = await trialProject(10);
+    const upgraded = await trialProject(31, true);
+    await purgeExpiredTrialProjects(db, new Date());
+    const left = await db
+      .selectFrom('projects')
+      .select('id')
+      .where('id', 'in', [expired, recent, upgraded])
+      .execute();
+    expect(left.map((row) => row.id).sort()).toEqual([recent, upgraded].sort());
+  });
+
   it('overview reads persisted state and counts only enabled active prompts', async () => {
     const t = await tenant();
     const project = await createProject(

@@ -30,19 +30,22 @@ import {
 import {
   knownProvider,
   providerConfigured,
-  providerError,
-  requireProviderConfigured,
   startSignIn,
   completeSignIn,
   SignInError,
   withoutTrailingSlashes,
 } from '../auth/oauth.ts';
 import { trustedClientIdentity } from '../auth/client-identity.ts';
-import { enforceSubjectRequest } from '../abuse/usage.ts';
+import { enforceSubjectRequest, releaseSubjectBudget } from '../abuse/usage.ts';
 import type { Context } from 'hono';
 import type { Database } from '../db/database.ts';
 import { passwordSchema, verifyAccountPassword } from '../auth/password.ts';
-import { requestChallenge, consumeChallenge, changePassword } from '../auth/challenges.ts';
+import {
+  requestChallenge,
+  consumeChallenge,
+  changePassword,
+  LOGIN_FAILURE_OPERATION,
+} from '../auth/challenges.ts';
 
 const credentialsSchema = z.object({
   return_to: z.string().max(1024).optional(),
@@ -88,6 +91,14 @@ async function meter(db: Database, c: Context, config: ServiceConfig, register =
     limit,
     windowSeconds,
   });
+}
+
+function loginFailureBudget(config: ServiceConfig) {
+  return {
+    operation: LOGIN_FAILURE_OPERATION,
+    limit: config.auth.limits.login_email_limit,
+    windowSeconds: config.auth.limits.login_window_seconds,
+  };
 }
 
 function signInRedirect(c: Context, config: ServiceConfig, error?: string): Response {
@@ -190,7 +201,7 @@ export const authRoutes = [
       body: challengeSchema,
       async handle({ c, db, config }) {
         const payload = await readBody(c, challengeSchema);
-        await mailboxMeter(db, c, config, payload.token);
+        await mailboxMeter(db, c, config);
         await consumeChallenge(
           db,
           payload.token,
@@ -226,18 +237,6 @@ export const authRoutes = [
   }),
   definePostRoute({
     ...base,
-    authorize: 'session',
-    path: '/api/v1/auth/logout-all',
-    response: registrationResponseSchema,
-    async handle({ c, db, config }) {
-      await logoutUser(db, c.get('user').id);
-      clearSessionCookie(c, config);
-      clearOAuthCookies(c, config);
-      return { message: 'All sessions signed out.' };
-    },
-  }),
-  definePostRoute({
-    ...base,
     path: '/api/v1/auth/register',
     response: registrationResponseSchema,
     status: 202,
@@ -248,11 +247,6 @@ export const authRoutes = [
       const payload = await readBody(c, credentialsSchema);
       await meter(db, c, config, true);
       await mailboxMeter(db, c, config, payload.email);
-      await enforceSubjectRequest(db, 'client', 'global-trial', {
-        operation: 'auth.trial.global',
-        limit: policy.auth.mailbox.trial_daily_limit,
-        windowSeconds: policy.auth.mailbox.daily_window_seconds,
-      });
       await registerUser(db, payload.email, payload.password);
       await requestChallenge(db, config, payload.email, 'verification', payload.return_to);
       return acknowledgment;
@@ -267,15 +261,14 @@ export const authRoutes = [
       if (demoAccessExpired(config)) throw new ApiError(401, 'Demo access has expired');
       const payload = await readBody(c, credentialsSchema);
       await meter(db, c, config);
+      // Every attempt spends a unit before hashing, so concurrent guesses cannot
+      // outrun the budget; success hands its unit and earlier failures back. An
+      // exhausted address refuses even a correct password until its window
+      // passes or a password reset proves mailbox ownership.
+      await enforceSubjectRequest(db, 'email', payload.email, loginFailureBudget(config));
       const user = await authenticateUser(db, payload.email, payload.password);
-      if (!user) {
-        await enforceSubjectRequest(db, 'email', payload.email, {
-          operation: 'auth.login.email_failure',
-          limit: config.auth.limits.login_email_limit,
-          windowSeconds: config.auth.limits.login_window_seconds,
-        });
-        throw new ApiError(401, 'Invalid credentials');
-      }
+      if (!user) throw new ApiError(401, 'Invalid credentials');
+      await releaseSubjectBudget(db, 'email', payload.email, LOGIN_FAILURE_OPERATION);
       clearOAuthCookies(c, config);
       setSessionCookie(c, config, await issueSession(config, user));
       return { user: sessionView(user) };
@@ -368,11 +361,7 @@ export const authRoutes = [
     async handle({ c, db, config }, { path, query }) {
       clearAuthOAuthCookie(c, config);
       const provider = knownProvider(path.provider);
-      if (
-        !providerConfigured(config, provider) ||
-        !oauth.implemented.includes(provider) ||
-        demoAccessExpired(config)
-      )
+      if (!providerConfigured(config, provider) || demoAccessExpired(config))
         return signInRedirect(c, config, 'oauth_signin_disabled');
       if (query.error) return signInRedirect(c, config, 'oauth_signin_failed');
       if (!query.code || !query.state)
@@ -403,23 +392,6 @@ export const authRoutes = [
         if (error instanceof SignInError) return signInRedirect(c, config, error.code);
         throw error;
       }
-    },
-  }),
-  definePostRoute({
-    ...base,
-    path: '/api/v1/auth/oauth/{provider}/callback',
-    params: { path: oauthPath, query: {} },
-    response: z.null(),
-    handle({ c, config }, { path }): Promise<never> {
-      clearAuthOAuthCookie(c, config);
-      const provider = knownProvider(path.provider);
-      requireProviderConfigured(config, provider);
-      throw providerError(
-        501,
-        'oauth_callback_not_implemented',
-        'OAuth callback is not implemented',
-        provider,
-      );
     },
   }),
 ];

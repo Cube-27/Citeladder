@@ -111,10 +111,11 @@
     "endpoint": "https://api.resend.com/emails"
   },
   "privacy_revision": "2026-09-28",
+  "session": { "clock_tolerance_seconds": 30 },
   "password": {
-    "memoryCost": 65536,
-    "timeCost": 3,
-    "parallelism": 4,
+    "memoryCost": 19456,
+    "timeCost": 2,
+    "parallelism": 1,
     "outputLen": 32
   },
   "secret_policy": {

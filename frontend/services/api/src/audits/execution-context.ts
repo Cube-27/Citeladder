@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { requireWorkspaceAccess } from '../entitlements/access.ts';
 import { sql } from 'kysely';
+import { openReservedUnits } from '../entitlements/ledger.ts';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import { resolveSettingSpec } from '../config.ts';
@@ -120,11 +121,7 @@ export async function loadExecutionContext(
         throw unavailable();
       const hold = await trx
         .selectFrom('consumable_ledger')
-        .select(
-          sql<string>`coalesce(sum(case when entry_kind = 'reservation' then units when entry_kind = 'release' then -units else 0 end),0)`.as(
-            'remaining',
-          ),
-        )
+        .select(sql<string>`coalesce(${openReservedUnits},0)`.as('remaining'))
         .select(sql<boolean>`bool_or(entry_kind = 'reservation')`.as('reserved'))
         .where('workspace_id', '=', task.workspace_id)
         .where('billing_account_id', '=', route.funding.funding_account_id)

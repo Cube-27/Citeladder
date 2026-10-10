@@ -130,8 +130,7 @@ function honoPath(path: string): string {
   return path.replaceAll(/\{([^}]+)\}/gu, ':$1');
 }
 
-// Starlette answers a matched path requested with another method 405, before
-// any dependency runs.
+// A matched path requested with another method is 405 before any authorization runs.
 function methodNotAllowed(method: string): never {
   throw new ApiError(405, 'Method Not Allowed', { headers: { allow: method } });
 }
@@ -175,6 +174,7 @@ export function defineRoute<
     app.on(
       [method.toUpperCase()],
       [pattern],
+      ...(method === 'get' ? [] : [sameSiteWrite]),
       ...(publicRoute ? [] : [sessionUser(config, db)]),
       ...authorize,
       async (c) => {
@@ -195,6 +195,18 @@ export function defineRoute<
   };
   return { contract, params: route.params, register };
 }
+
+/**
+ * A browser marks a request another origin started as `Sec-Fetch-Site:
+ * cross-site` or `same-site`; the product's own pages are same-origin, and
+ * server-to-server callers (webhooks, CLIs) send no such header.
+ */
+const sameSiteWrite: MiddlewareHandler<AppEnv> = async (c, next) => {
+  const site = c.req.header('sec-fetch-site');
+  if (site === 'cross-site' || site === 'same-site')
+    throw new ApiError(403, 'Cross-site requests are not accepted');
+  await next();
+};
 
 export function defineGetRoute<
   const Path extends ParamSpecs,

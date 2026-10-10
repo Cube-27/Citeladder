@@ -74,8 +74,9 @@ export async function reserveUsage(
   const { accountId, subject, units, capability, key, at } = request;
   if (!Number.isSafeInteger(units) || units <= 0)
     throw new LedgerError('reservation_units_invalid');
-  if (!(await verifySubject(db, subject))) throw new LedgerError('subject_not_found');
   await advisoryXactLock(db, policy.entitlements.capacity_lock, accountId);
+  // After the lock, so a project deleted under it is never reserved against.
+  if (!(await verifySubject(db, subject))) throw new LedgerError('subject_not_found');
   const state = await accountState(db, subject.workspaceId, accountId, at);
   const fingerprint =
     subject.kind === 'audit'
@@ -160,6 +161,53 @@ export async function reserveUsage(
     )
     .execute();
   return reservationId;
+}
+
+/** Units a reservation still holds: reserved minus released (debits release their units). */
+export const openReservedUnits = sql<number>`sum(case when entry_kind = 'reservation' then units when entry_kind = 'release' then -units else 0 end)`;
+
+/**
+ * Whether an audit, crawl or Agent run of the project still holds reserved
+ * units. Deleting the project then would leave a hold nothing can release, so
+ * the units would stay reserved for good.
+ */
+export async function projectHoldsReservations(
+  db: Database,
+  workspaceId: string,
+  projectId: string,
+): Promise<boolean> {
+  const subject = (
+    kind: 'audit' | 'agent' | 'site_crawl',
+    table: 'audits' | 'agent_runs' | 'site_crawls',
+  ) =>
+    db
+      .selectFrom('consumable_ledger')
+      .select('reservation_id')
+      .where('subject_kind', '=', kind)
+      .where(
+        'subject_id',
+        'in',
+        db.selectFrom(table).select('id').where('project_id', '=', projectId),
+      );
+  const open = await db
+    .selectFrom('consumable_ledger')
+    .select('reservation_id')
+    .where('workspace_id', '=', workspaceId)
+    .where('reservation_id', 'in', (eb) =>
+      eb
+        .selectFrom(
+          subject('audit', 'audits')
+            .union(subject('agent', 'agent_runs'))
+            .union(subject('site_crawl', 'site_crawls'))
+            .as('held'),
+        )
+        .select('held.reservation_id'),
+    )
+    .groupBy('reservation_id')
+    .having(openReservedUnits, '>', 0)
+    .limit(1)
+    .executeTakeFirst();
+  return open !== undefined;
 }
 
 export async function ledgerBalances(db: Database, accountId: string) {

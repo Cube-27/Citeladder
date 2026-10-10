@@ -4,7 +4,7 @@ import { sql } from 'kysely';
 import { policy, type ServiceConfig } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { subjectXactLock } from '../db/advisory-lock.ts';
-import { enforceSubjectRequest } from '../abuse/usage.ts';
+import { enforceSubjectRequest, releaseSubjectBudget } from '../abuse/usage.ts';
 import { ApiError } from '../errors.ts';
 import { hashPassword, verifyAccountPassword } from './password.ts';
 import { recordSecurityEvent } from './security-events.ts';
@@ -20,6 +20,17 @@ const invalid = () =>
     code: 'auth_challenge_invalid',
   });
 
+/** Whether a mail budget admits this request; an exhausted one sends nothing, silently. */
+async function withinBudget(spend: () => Promise<void>): Promise<boolean> {
+  try {
+    await spend();
+    return true;
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 429) return false;
+    throw error;
+  }
+}
+
 /** Uniform budgets run for absent and present addresses before lookup/provider work. */
 export async function requestChallenge(
   db: Database,
@@ -29,7 +40,7 @@ export async function requestChallenge(
   returnTo?: string,
 ) {
   const normalized = email.trim().toLowerCase();
-  try {
+  const admitted = await withinBudget(async () => {
     await enforceSubjectRequest(db, 'email', normalized, {
       operation: 'auth.mail.cooldown',
       limit: 1,
@@ -40,15 +51,8 @@ export async function requestChallenge(
       limit: cfg.recipient_daily_limit,
       windowSeconds: cfg.daily_window_seconds,
     });
-    await enforceSubjectRequest(db, 'client', 'global-mail', {
-      operation: 'auth.mail.global',
-      limit: cfg.global_daily_limit,
-      windowSeconds: cfg.daily_window_seconds,
-    });
-  } catch (error) {
-    if (error instanceof ApiError && error.status === 429) return;
-    throw error;
-  }
+  });
+  if (!admitted) return;
   const issued = await db.transaction().execute(async (trx) => {
     await subjectXactLock(trx, `auth.email:${normalized}`);
     const user = await trx
@@ -68,6 +72,16 @@ export async function requestChallenge(
     const now = new Date();
     if (current && now.getTime() - current.created_at.getTime() < cfg.cooldown_seconds * 1000)
       return null;
+    // The shared daily mail budget is spent only by mail that will be sent, so
+    // requests for unknown or ineligible addresses cannot exhaust it.
+    const sendable = await withinBudget(() =>
+      enforceSubjectRequest(trx, 'client', 'global-mail', {
+        operation: 'auth.mail.global',
+        limit: cfg.global_daily_limit,
+        windowSeconds: cfg.daily_window_seconds,
+      }),
+    );
+    if (!sendable) return null;
     const token = randomBytes(32).toString('base64url');
     const row = {
       id: randomUUID(),
@@ -125,6 +139,9 @@ async function deliverChallenge(
     text: `${purpose === 'verification' ? 'Confirm your email using your signup password. Your trial starts at registration.' : 'Choose a new password to secure your account.'}\n${url.toString()}\nIf you did not request this, you can ignore this message.`,
   });
 }
+
+/** The per-address failed sign-in counter that a password reset clears. */
+export const LOGIN_FAILURE_OPERATION = 'auth.login.email_failure';
 
 export async function consumeChallenge(
   db: Database,
@@ -207,6 +224,9 @@ export async function consumeChallenge(
       purpose === 'verification' ? 'auth.email_verified' : 'auth.password_reset',
       user.id,
     );
+    // A completed reset proves mailbox ownership, so earlier failures stop counting.
+    if (replacement)
+      await releaseSubjectBudget(trx, 'email', current.email, LOGIN_FAILURE_OPERATION);
   });
 }
 

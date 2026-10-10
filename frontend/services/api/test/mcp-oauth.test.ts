@@ -476,7 +476,7 @@ it('matches loopback redirects on any port and returns later errors to the clien
 
 it('rotates refresh tokens once and excludes membership changes, new tenants and stale loaded tokens', async () => {
   const { client: c, value, principal } = await grant();
-  const extra = await fixtures.ownedWorkspace(tenant.userId);
+  const extra = await fixtures.joinedWorkspace(tenant.userId);
   const extraProject = await fixtures.project(extra);
   await expect(authorizeProject(db, principal, extraProject)).rejects.toThrow('not found');
   const refresh = { grant_type: 'refresh_token', refresh_token: value.refresh_token };
@@ -549,7 +549,7 @@ it('keeps the grant on a blank refresh scope and refuses grant types the client 
 
 it('lets workspace admins remove only their authorization while users cannot revoke another account', async () => {
   const { principal, value } = await grant();
-  const other = await fixtures.ownedWorkspace(tenant.userId);
+  const other = await fixtures.joinedWorkspace(tenant.userId);
   await db
     .updateTable('mcp_oauth_grants')
     .set({ workspace_ids: JSON.stringify([tenant.workspaceId, other]) })
@@ -772,7 +772,7 @@ it('pre-selects the only shareable workspace and names the signed-in account', a
 
 /** A workspace whose public trial ended yesterday. */
 async function endedTrialWorkspace() {
-  const workspaceId = await fixtures.ownedWorkspace(tenant.userId, { access: false });
+  const workspaceId = await fixtures.joinedWorkspace(tenant.userId, { access: false });
   const trial = await accountGrant(db, await billingAccount(db, workspaceId), {
     key: 'workspace_access',
     value: 1,
@@ -788,9 +788,9 @@ async function endedTrialWorkspace() {
 }
 
 it('accepts the shown Terms on the consent page and tells ended access from unresolved access', async () => {
-  const fresh = await fixtures.ownedWorkspace(tenant.userId);
+  const fresh = await fixtures.joinedWorkspace(tenant.userId);
   const ended = await endedTrialWorkspace();
-  const unresolved = await fixtures.ownedWorkspace(tenant.userId, { access: false });
+  const unresolved = await fixtures.joinedWorkspace(tenant.userId, { access: false });
   await db.updateTable('workspaces').set({ name: 'Ended' }).where('id', '=', ended).execute();
   await db
     .updateTable('workspaces')
@@ -840,7 +840,7 @@ it('accepts the shown Terms on the consent page and tells ended access from unre
 });
 
 it('refuses Terms accepted from a page showing an older revision and records nothing', async () => {
-  const fresh = await fixtures.ownedWorkspace(tenant.userId);
+  const fresh = await fixtures.joinedWorkspace(tenant.userId);
   const transaction = await pending((await client()).client_id);
   const stale = await approve(transaction, [fresh], {
     accept_terms: 'yes',

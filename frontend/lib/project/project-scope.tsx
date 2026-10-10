@@ -111,7 +111,9 @@ type WorkspaceCapability =
   | 'run'
   | 'manage_billing'
   | 'manage_members'
-  | 'manage_credentials';
+  | 'manage_credentials'
+  | 'delete_projects'
+  | 'transfer_ownership';
 
 /** Whether the active workspace grants `capability`. Fails closed. */
 export function useWorkspaceCapability(capability: WorkspaceCapability): boolean {

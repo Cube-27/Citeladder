@@ -513,7 +513,7 @@ CREATE TABLE public.auth_challenges (
 
 CREATE TABLE public.billing_accounts (
     id uuid NOT NULL,
-    registration_origin character varying(24) DEFAULT 'legacy'::character varying NOT NULL,
+    registration_origin character varying(24) NOT NULL,
     workspace_id uuid NOT NULL,
     owner_user_id uuid,
     status character varying(24) NOT NULL,
@@ -524,7 +524,8 @@ CREATE TABLE public.billing_accounts (
     registration_cohort_at timestamp with time zone DEFAULT now() NOT NULL,
     created_at timestamp with time zone NOT NULL,
     updated_at timestamp with time zone NOT NULL,
-    CONSTRAINT ck_billing_account_entitlement_version_nonneg CHECK ((entitlement_lifecycle_version >= 0))
+    CONSTRAINT ck_billing_account_entitlement_version_nonneg CHECK ((entitlement_lifecycle_version >= 0)),
+    CONSTRAINT ck_billing_account_registration_origin CHECK (((registration_origin)::text = ANY ((ARRAY['public'::character varying, 'operator'::character varying])::text[])))
 );
 
 CREATE TABLE public.billing_catalog_revisions (
@@ -2941,14 +2942,15 @@ CREATE TABLE public.users (
     id uuid NOT NULL,
     email character varying(255) NOT NULL,
     hashed_password character varying(255),
-    registration_origin character varying(24) DEFAULT 'legacy'::character varying NOT NULL,
+    registration_origin character varying(24) NOT NULL,
     email_verified_at timestamp with time zone,
     email_verification_method character varying(24),
     role character varying(20) NOT NULL,
     is_active boolean NOT NULL,
     session_version integer NOT NULL,
     created_at timestamp with time zone NOT NULL,
-    updated_at timestamp with time zone NOT NULL
+    updated_at timestamp with time zone NOT NULL,
+    CONSTRAINT ck_user_registration_origin CHECK (((registration_origin)::text = ANY ((ARRAY['public'::character varying, 'operator'::character varying])::text[])))
 );
 
 CREATE TABLE public.web_acquisition_controls (
@@ -2981,7 +2983,8 @@ CREATE TABLE public.workspace_members (
     user_id uuid NOT NULL,
     role character varying(20) NOT NULL,
     created_at timestamp with time zone NOT NULL,
-    updated_at timestamp with time zone NOT NULL
+    updated_at timestamp with time zone NOT NULL,
+    CONSTRAINT ck_workspace_member_role CHECK (((role)::text = ANY ((ARRAY['owner'::character varying, 'admin'::character varying, 'member'::character varying, 'viewer'::character varying])::text[])))
 );
 
 CREATE TABLE public.workspace_site_health_runtime (
@@ -4266,6 +4269,8 @@ CREATE INDEX ix_consumable_ledger_grant_key_created ON public.consumable_ledger 
 
 CREATE INDEX ix_consumable_ledger_reservation_kind ON public.consumable_ledger USING btree (reservation_id, entry_kind);
 
+CREATE INDEX ix_consumable_ledger_subject ON public.consumable_ledger USING btree (subject_kind, subject_id);
+
 CREATE INDEX ix_content_differentiation_candidates_audit_id ON public.content_differentiation_candidates USING btree (audit_id);
 
 CREATE INDEX ix_content_differentiation_candidates_audit_task_id ON public.content_differentiation_candidates USING btree (audit_task_id);
@@ -4854,11 +4859,11 @@ CREATE UNIQUE INDEX ix_users_email ON public.users USING btree (email);
 
 CREATE INDEX ix_workspace_invitation_workspace ON public.workspace_invitations USING btree (workspace_id, created_at);
 
-CREATE INDEX ix_workspace_invitations_workspace_id ON public.workspace_invitations USING btree (workspace_id);
-
 CREATE INDEX ix_workspace_members_user_id ON public.workspace_members USING btree (user_id);
 
-CREATE INDEX ix_workspace_members_workspace_id ON public.workspace_members USING btree (workspace_id);
+CREATE UNIQUE INDEX uq_workspace_member_owner ON public.workspace_members USING btree (workspace_id) WHERE ((role)::text = 'owner'::text);
+
+CREATE UNIQUE INDEX uq_workspace_member_owned_user ON public.workspace_members USING btree (user_id) WHERE ((role)::text = 'owner'::text);
 
 CREATE UNIQUE INDEX uq_billing_catalog_revision_published ON public.billing_catalog_revisions USING btree (publication_state) WHERE ((publication_state)::text = 'published'::text);
 
@@ -4971,16 +4976,10 @@ ALTER TABLE ONLY public.agent_messages
     ADD CONSTRAINT agent_messages_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.agent_model_attempts
-    ADD CONSTRAINT agent_model_attempts_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE RESTRICT;
-
-ALTER TABLE ONLY public.agent_model_attempts
     ADD CONSTRAINT agent_model_attempts_provider_connection_id_fkey FOREIGN KEY (provider_connection_id) REFERENCES public.provider_connections(id) ON DELETE RESTRICT;
 
 ALTER TABLE ONLY public.agent_model_attempts
     ADD CONSTRAINT agent_model_attempts_provider_route_id_fkey FOREIGN KEY (provider_route_id) REFERENCES public.provider_app_routes(id) ON DELETE RESTRICT;
-
-ALTER TABLE ONLY public.agent_model_attempts
-    ADD CONSTRAINT agent_model_attempts_run_id_fkey FOREIGN KEY (run_id) REFERENCES public.agent_runs(id) ON DELETE RESTRICT;
 
 ALTER TABLE ONLY public.agent_model_attempts
     ADD CONSTRAINT agent_model_attempts_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE RESTRICT;
@@ -5310,7 +5309,7 @@ ALTER TABLE ONLY public.commerce_product_categories
     ADD CONSTRAINT commerce_product_categories_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.commerce_product_observations
-    ADD CONSTRAINT commerce_product_observations_csv_import_id_fkey FOREIGN KEY (csv_import_id) REFERENCES public.commerce_csv_imports(id) ON DELETE RESTRICT;
+    ADD CONSTRAINT commerce_product_observations_csv_import_id_fkey FOREIGN KEY (csv_import_id) REFERENCES public.commerce_csv_imports(id);
 
 ALTER TABLE ONLY public.commerce_product_observations
     ADD CONSTRAINT commerce_product_observations_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.commerce_products(id) ON DELETE CASCADE;
@@ -5319,10 +5318,10 @@ ALTER TABLE ONLY public.commerce_product_observations
     ADD CONSTRAINT commerce_product_observations_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.commerce_product_observations
-    ADD CONSTRAINT commerce_product_observations_source_analysis_id_fkey FOREIGN KEY (source_analysis_id) REFERENCES public.site_page_analyses(id) ON DELETE RESTRICT;
+    ADD CONSTRAINT commerce_product_observations_source_analysis_id_fkey FOREIGN KEY (source_analysis_id) REFERENCES public.site_page_analyses(id);
 
 ALTER TABLE ONLY public.commerce_product_observations
-    ADD CONSTRAINT commerce_product_observations_source_artifact_id_fkey FOREIGN KEY (source_artifact_id) REFERENCES public.site_fetch_artifacts(id) ON DELETE RESTRICT;
+    ADD CONSTRAINT commerce_product_observations_source_artifact_id_fkey FOREIGN KEY (source_artifact_id) REFERENCES public.site_fetch_artifacts(id);
 
 ALTER TABLE ONLY public.commerce_product_observations
     ADD CONSTRAINT commerce_product_observations_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
@@ -5388,9 +5387,6 @@ ALTER TABLE ONLY public.competitors
     ADD CONSTRAINT competitors_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.consumable_ledger
-    ADD CONSTRAINT consumable_ledger_audit_id_fkey FOREIGN KEY (audit_id) REFERENCES public.audits(id) ON DELETE RESTRICT;
-
-ALTER TABLE ONLY public.consumable_ledger
     ADD CONSTRAINT consumable_ledger_billing_account_id_fkey FOREIGN KEY (billing_account_id) REFERENCES public.billing_accounts(id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.consumable_ledger
@@ -5398,12 +5394,6 @@ ALTER TABLE ONLY public.consumable_ledger
 
 ALTER TABLE ONLY public.consumable_ledger
     ADD CONSTRAINT consumable_ledger_refund_of_id_fkey FOREIGN KEY (refund_of_id) REFERENCES public.consumable_ledger(id) ON DELETE RESTRICT;
-
-ALTER TABLE ONLY public.consumable_ledger
-    ADD CONSTRAINT consumable_ledger_site_crawl_id_fkey FOREIGN KEY (site_crawl_id) REFERENCES public.site_crawls(id) ON DELETE RESTRICT;
-
-ALTER TABLE ONLY public.consumable_ledger
-    ADD CONSTRAINT consumable_ledger_task_id_fkey FOREIGN KEY (task_id) REFERENCES public.audit_tasks(id) ON DELETE RESTRICT;
 
 ALTER TABLE ONLY public.consumable_ledger
     ADD CONSTRAINT consumable_ledger_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE RESTRICT;
@@ -5492,9 +5482,6 @@ ALTER TABLE ONLY public.brands
 ALTER TABLE ONLY public.competitors
     ADD CONSTRAINT fk_competitors_logo_asset_id_brand_logo_assets FOREIGN KEY (logo_asset_id) REFERENCES public.brand_logo_assets(id) ON DELETE SET NULL;
 
-ALTER TABLE ONLY public.consumable_ledger
-    ADD CONSTRAINT fk_consumable_ledger_agent_run_id FOREIGN KEY (agent_run_id) REFERENCES public.agent_runs(id) ON DELETE RESTRICT;
-
 ALTER TABLE ONLY public.content_differentiation_candidates
     ADD CONSTRAINT fk_content_diff_candidates_audit FOREIGN KEY (workspace_id, project_id, audit_id) REFERENCES public.audits(workspace_id, project_id, id) ON DELETE CASCADE;
 
@@ -5568,7 +5555,7 @@ ALTER TABLE ONLY public.search_intelligence_rows
     ADD CONSTRAINT fk_si_row_dataset_scope FOREIGN KEY (workspace_id, project_id, dataset_id) REFERENCES public.search_intelligence_datasets(workspace_id, project_id, id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.site_change_observations
-    ADD CONSTRAINT fk_site_change_observation_implementation_workspace FOREIGN KEY (workspace_id, implementation_event_id) REFERENCES public.opportunity_implementation_events(workspace_id, id) ON DELETE RESTRICT;
+    ADD CONSTRAINT fk_site_change_observation_implementation_workspace FOREIGN KEY (workspace_id, implementation_event_id) REFERENCES public.opportunity_implementation_events(workspace_id, id);
 
 ALTER TABLE ONLY public.site_change_observations
     ADD CONSTRAINT fk_site_change_observation_snapshot_workspace FOREIGN KEY (workspace_id, snapshot_id) REFERENCES public.site_change_snapshots(workspace_id, id) ON DELETE CASCADE;
@@ -5742,7 +5729,7 @@ ALTER TABLE ONLY public.opportunity_implementation_events
     ADD CONSTRAINT opportunity_implementation_events_actor_user_id_fkey FOREIGN KEY (actor_user_id) REFERENCES public.users(id) ON DELETE RESTRICT;
 
 ALTER TABLE ONLY public.opportunity_implementation_events
-    ADD CONSTRAINT opportunity_implementation_events_opportunity_snapshot_id_fkey FOREIGN KEY (opportunity_snapshot_id) REFERENCES public.opportunity_snapshots(id) ON DELETE RESTRICT;
+    ADD CONSTRAINT opportunity_implementation_events_opportunity_snapshot_id_fkey FOREIGN KEY (opportunity_snapshot_id) REFERENCES public.opportunity_snapshots(id);
 
 ALTER TABLE ONLY public.opportunity_implementation_events
     ADD CONSTRAINT opportunity_implementation_events_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
@@ -5952,7 +5939,7 @@ ALTER TABLE ONLY public.robots_snapshots
     ADD CONSTRAINT robots_snapshots_workspace_id_project_id_fkey FOREIGN KEY (workspace_id, project_id) REFERENCES public.projects(workspace_id, id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.search_intelligence_datasets
-    ADD CONSTRAINT search_intelligence_datasets_parent_dataset_id_fkey FOREIGN KEY (parent_dataset_id) REFERENCES public.search_intelligence_datasets(id) ON DELETE RESTRICT;
+    ADD CONSTRAINT search_intelligence_datasets_parent_dataset_id_fkey FOREIGN KEY (parent_dataset_id) REFERENCES public.search_intelligence_datasets(id);
 
 ALTER TABLE ONLY public.search_intelligence_rows
     ADD CONSTRAINT search_intelligence_rows_call_id_fkey FOREIGN KEY (call_id) REFERENCES public.search_intelligence_calls(id) ON DELETE CASCADE;
@@ -6126,7 +6113,7 @@ ALTER TABLE ONLY public.site_page_analyses
     ADD CONSTRAINT site_page_analyses_site_url_id_fkey FOREIGN KEY (site_url_id) REFERENCES public.site_urls(id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.site_page_analyses
-    ADD CONSTRAINT site_page_analyses_supersedes_analysis_id_fkey FOREIGN KEY (supersedes_analysis_id) REFERENCES public.site_page_analyses(id) ON DELETE RESTRICT;
+    ADD CONSTRAINT site_page_analyses_supersedes_analysis_id_fkey FOREIGN KEY (supersedes_analysis_id) REFERENCES public.site_page_analyses(id);
 
 ALTER TABLE ONLY public.site_page_analyses
     ADD CONSTRAINT site_page_analyses_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;

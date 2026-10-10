@@ -4,6 +4,7 @@ import { authApi } from '@/lib/api/auth';
 import { authFormPolicy, passwordHint } from '@/lib/config/auth';
 import { authErrorMessage } from '@/lib/auth/forms';
 import { hardNavigate } from '@/lib/navigation/hard-navigate';
+import { clearAccountScopedClientState } from '@/lib/auth/account-transition';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { Alert } from '@/components/ui/alert';
@@ -35,13 +36,13 @@ export default function AccountSecurity({
     queryFn: authApi.security,
   });
   const mutation = useMutation({
-    mutationFn: (operation: 'change-password' | 'logout-all') =>
-      authApi.mailbox(
-        operation,
-        operation === 'change-password' ? { current_password: current, password } : {},
-      ),
-    onSuccess: () => {
-      client.clear();
+    // Both end every session, this device's included (a sign-out is always everywhere).
+    mutationFn: async (operation: 'change-password' | 'sign-out') => {
+      if (operation === 'sign-out') return authApi.logout();
+      await authApi.mailbox(operation, { current_password: current, password });
+    },
+    onSuccess: async () => {
+      await clearAccountScopedClientState(client);
       hardNavigate('/login');
     },
   });
@@ -133,7 +134,7 @@ export default function AccountSecurity({
         onOpenChange={setConfirm}
         title="Sign out all sessions?"
         footer={
-          <Button disabled={mutation.isPending} onClick={() => mutation.mutate('logout-all')}>
+          <Button disabled={mutation.isPending} onClick={() => mutation.mutate('sign-out')}>
             Sign out everywhere
           </Button>
         }

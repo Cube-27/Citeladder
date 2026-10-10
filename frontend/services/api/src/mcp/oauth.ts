@@ -7,7 +7,7 @@ import type { Database } from '../db/database.ts';
 import { strings } from '../db/json.ts';
 import { compareText } from '../text-order.ts';
 import { recordPolicyAcceptance } from '../workspaces/policies.ts';
-import { READ_ROLES } from './data.ts';
+import { rolesWith } from '../auth/workspace.ts';
 import { accountAllowed, loadMcpConfig, mcpPolicy, type McpConfig } from './config.ts';
 import type { McpPrincipal } from './types.ts';
 
@@ -132,7 +132,7 @@ export async function consentWorkspaces(db: Database, userId: string): Promise<C
       ).as('has_project'),
     ])
     .where('m.user_id', '=', userId)
-    .where('m.role', 'in', READ_ROLES)
+    .where('m.role', 'in', rolesWith('read'))
     .where('w.is_system', '=', false)
     .orderBy('w.name')
     .orderBy('w.id')

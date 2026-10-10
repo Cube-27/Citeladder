@@ -43,7 +43,7 @@ async function enqueue(connection: Database, workspaceId = workspaces[0]!, id = 
 }
 beforeAll(async () => {
   const user = await fixtures.user();
-  workspaces = [await fixtures.ownedWorkspace(user), await fixtures.ownedWorkspace(user)];
+  workspaces = [await fixtures.ownedWorkspace(user), await fixtures.joinedWorkspace(user)];
 });
 beforeEach(async () => {
   await db.deleteFrom('analytics_tasks').where('workspace_id', 'in', workspaces).execute();

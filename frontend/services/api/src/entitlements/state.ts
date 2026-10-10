@@ -1,15 +1,30 @@
+import type { Selectable } from 'kysely';
 import type { Database } from '../db/database.ts';
+import type { BillingAccounts } from '../generated/db-schema.ts';
 import { policy } from '../config.ts';
 import { expiryMs, selectedGrants, foldEntitlement, type GrantRow } from './resolve.ts';
 
-/** One persisted projection reused by usage, reads and admission. Never provisions. */
-export async function accountState(db: Database, workspaceId: string, accountId: string, at: Date) {
-  const account = await db
-    .selectFrom('billing_accounts')
-    .selectAll()
-    .where('workspace_id', '=', workspaceId)
-    .where('id', '=', accountId)
-    .executeTakeFirstOrThrow();
+/**
+ * One persisted projection reused by usage, reads and admission. Never
+ * provisions. A caller that already read the account row passes it to save a
+ * round trip.
+ */
+export async function accountState(
+  db: Database,
+  workspaceId: string,
+  accountId: string,
+  at: Date,
+  known?: Selectable<BillingAccounts>,
+) {
+  const account =
+    known?.id === accountId && known.workspace_id === workspaceId
+      ? known
+      : await db
+          .selectFrom('billing_accounts')
+          .selectAll()
+          .where('workspace_id', '=', workspaceId)
+          .where('id', '=', accountId)
+          .executeTakeFirstOrThrow();
   const [grants, revocations, subscription] = await Promise.all([
     db
       .selectFrom('account_grants')

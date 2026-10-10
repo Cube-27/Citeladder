@@ -532,7 +532,7 @@ export interface BillingAccounts {
   id: string;
   owner_user_id: string | null;
   registration_cohort_at: Generated<Timestamp>;
-  registration_origin: Generated<string>;
+  registration_origin: string;
   status: string;
   updated_at: Timestamp;
   workspace_id: string;
@@ -2929,7 +2929,7 @@ export interface Users {
   hashed_password: string | null;
   id: string;
   is_active: boolean;
-  registration_origin: Generated<string>;
+  registration_origin: string;
   role: string;
   session_version: number;
   updated_at: Timestamp;

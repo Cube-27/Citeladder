@@ -29,6 +29,7 @@ import { siteWorkerSettings } from '../site-health/runtime.ts';
 import { getLogger } from '../logging.ts';
 import { cleanupMcpProtocol } from '../mcp/maintenance.ts';
 import { pruneUsageWindows } from '../abuse/usage.ts';
+import { purgeExpiredTrialProjects } from '../projects/trial-purge.ts';
 import { DRAIN_LOCK } from '../config/execution.ts';
 import { maintainLease } from '../queue/heartbeat.ts';
 
@@ -303,6 +304,10 @@ export async function runnerOwners(db: Database, config: ServiceConfig) {
             Number(resolveSettingSpec(policy.abuse.usage_window_cleanup_batch)),
             canAdmit,
           ),
+      },
+      {
+        name: 'trial-data-purge',
+        run: (canAdmit) => purgeExpiredTrialProjects(db, new Date(), canAdmit),
       },
       { name: 'audit-maintenance', run: (canAdmit) => maintenance.runOnce(new Date(), canAdmit) },
       {

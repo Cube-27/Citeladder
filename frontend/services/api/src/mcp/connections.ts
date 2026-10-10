@@ -79,6 +79,23 @@ async function workspaceNames(db: Database, ids: string[], memberId: string | nu
     );
   return new Map((await query.execute()).map((row) => [row.id, row.name]));
 }
+/** The grant's workspace list with one workspace removed. */
+const withoutWorkspace = (workspaceId: string) => sql<string>`workspace_ids - ${workspaceId}::text`;
+
+/**
+ * A person who leaves or is removed from a workspace takes it out of every MCP
+ * grant they hold, in the membership transaction, so a later re-invitation
+ * needs fresh consent before an MCP client can read it again.
+ */
+export async function dropWorkspaceFromGrants(trx: Database, userId: string, workspaceId: string) {
+  await trx
+    .updateTable('mcp_oauth_grants')
+    .set({ workspace_ids: withoutWorkspace(workspaceId), updated_at: new Date() })
+    .where('user_id', '=', userId)
+    .where(sql<boolean>`workspace_ids @> ${JSON.stringify([workspaceId])}::jsonb`)
+    .execute();
+}
+
 export function revokeConnection(
   db: Database,
   grantId: string,
@@ -96,12 +113,7 @@ export function revokeConnection(
     if (scope.workspaceId)
       await trx
         .updateTable('mcp_oauth_grants')
-        .set({
-          workspace_ids: JSON.stringify(
-            strings(row.workspace_ids).filter((id) => id !== scope.workspaceId),
-          ),
-          updated_at: new Date(),
-        })
+        .set({ workspace_ids: withoutWorkspace(scope.workspaceId), updated_at: new Date() })
         .where('id', '=', grantId)
         .execute();
     else

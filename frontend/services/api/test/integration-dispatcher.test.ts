@@ -17,7 +17,7 @@ describe('integration revocation', () => {
     const user = await fixtures.user();
     const ids = [randomUUID(), randomUUID()];
     for (const id of ids) {
-      const workspaceId = await fixtures.ownedWorkspace(user);
+      const workspaceId = await fixtures.joinedWorkspace(user);
       await db
         .insertInto('integration_oauth_grants')
         .values({

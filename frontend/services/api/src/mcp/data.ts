@@ -8,14 +8,10 @@ import { McpInputError, type Evidence, type EvidencePrincipal } from './types.ts
 import { mcpPolicy } from './config.ts';
 import { workspaceAccess } from '../entitlements/access.ts';
 import { requiresEmailVerification } from '../auth/eligibility.ts';
+import { rolesWith } from '../auth/workspace.ts';
 import { effectiveStatus } from '../opportunities/action-status.ts';
 import { appLink, recordPath } from './links.ts';
 import { containsPattern } from '../db/like.ts';
-
-/** Roles whose capabilities include reading workspace evidence. */
-export const READ_ROLES = Object.entries(policy.workspaces.roles)
-  .filter(([, caps]) => caps.includes('read'))
-  .map(([role]) => role);
 
 // A tool call that authorizes several reads checks grant and membership once.
 // Only a principal minted for one call shares its check; any other is live.
@@ -57,7 +53,7 @@ async function liveWorkspaceIds(db: Database, principal: EvidencePrincipal): Pro
       .select('m.workspace_id')
       .where('m.user_id', '=', principal.userId)
       .where('m.workspace_id', '=', principal.workspaceId)
-      .where('m.role', 'in', READ_ROLES)
+      .where('m.role', 'in', rolesWith('read'))
       .where('w.is_system', '=', false)
       .where('u.is_active', '=', true)
       .executeTakeFirst();
@@ -70,7 +66,7 @@ async function liveWorkspaceIds(db: Database, principal: EvidencePrincipal): Pro
     .innerJoin('users as account', 'account.id', 'member.user_id')
     .select('member.workspace_id')
     .where('member.user_id', '=', principal.userId)
-    .where('member.role', 'in', READ_ROLES)
+    .where('member.role', 'in', rolesWith('read'))
     .where('workspace.is_system', '=', false)
     .where('account.is_active', '=', true)
     .where('g.id', '=', principal.grantId)

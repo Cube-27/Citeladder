@@ -158,8 +158,9 @@ describe('integration connection routes', () => {
   it.each(['member', 'viewer', 'owner', 'admin'])(
     'gates %s discovery before provider I/O',
     async (role) => {
-      const userId = await fixtures.user();
-      await fixtures.member(workspaceId, userId, role);
+      // A workspace has one Owner: the owner case is the workspace's own.
+      const userId = role === 'owner' ? ownerId : await fixtures.user();
+      if (role !== 'owner') await fixtures.member(workspaceId, userId, role);
       const token = vi
         .spyOn(await import('../src/integrations/tokens.ts'), 'freshAccessToken')
         .mockResolvedValue('recorded-token');
@@ -228,7 +229,7 @@ describe('integration connection routes', () => {
   });
 
   it('disconnects a grant without deleting its imported evidence', async () => {
-    const workspace = await fixtures.ownedWorkspace(ownerId);
+    const workspace = await fixtures.joinedWorkspace(ownerId);
     const project = await seedProject(db, workspace);
     const grantId = await grant(workspace, 'google_oauth');
     const gsc = await connection(workspace, grantId, 'gsc');
@@ -370,7 +371,7 @@ describe('integration connection routes', () => {
   });
 
   it('fences a refresh when the last connection is disconnected during OAuth I/O', async () => {
-    const workspace = await fixtures.ownedWorkspace(ownerId);
+    const workspace = await fixtures.joinedWorkspace(ownerId);
     const grantId = await grant(workspace, 'google_oauth');
     const connectionId = await connection(workspace, grantId, 'gsc');
     let release!: () => void;

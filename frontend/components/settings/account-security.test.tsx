@@ -4,12 +4,13 @@ import { beforeEach, expect, it, vi } from 'vite-plus/test';
 import { renderWithProviders } from '@/test/render';
 import AccountSecurity from './account-security';
 
-const { mailbox, security, hardNavigate } = vi.hoisted(() => ({
+const { mailbox, logout, security, hardNavigate } = vi.hoisted(() => ({
   mailbox: vi.fn(),
+  logout: vi.fn(),
   security: vi.fn(),
   hardNavigate: vi.fn(),
 }));
-vi.mock('@/lib/api/auth', () => ({ authApi: { mailbox, security } }));
+vi.mock('@/lib/api/auth', () => ({ authApi: { mailbox, logout, security } }));
 vi.mock('@/lib/navigation/hard-navigate', () => ({ hardNavigate }));
 
 beforeEach(() => {
@@ -20,9 +21,10 @@ beforeEach(() => {
     methods: ['password', 'google'],
   });
   mailbox.mockResolvedValue({ message: 'Done.' });
+  logout.mockResolvedValue(undefined);
 });
 
-it.each(['change-password', 'logout-all'] as const)(
+it.each(['change-password', 'sign-out'] as const)(
   'sends credentials only for a password change when performing %s',
   async (operation) => {
     renderWithProviders(<AccountSecurity />);
@@ -32,21 +34,20 @@ it.each(['change-password', 'logout-all'] as const)(
       'current-password',
     );
     await user.type(screen.getByLabelText(/^New password/u, { selector: 'input' }), 'new-password');
-    if (operation === 'logout-all') {
+    if (operation === 'sign-out') {
       await user.click(screen.getByRole('button', { name: 'Sign out all sessions' }));
-      expect(mailbox).not.toHaveBeenCalled();
       await user.click(screen.getByRole('button', { name: 'Sign out everywhere' }));
+      await waitFor(() => expect(logout).toHaveBeenCalledTimes(1));
+      expect(mailbox).not.toHaveBeenCalled();
     } else {
       await user.click(screen.getByRole('button', { name: 'Change password and sign out' }));
+      await waitFor(() =>
+        expect(mailbox).toHaveBeenCalledWith('change-password', {
+          current_password: 'current-password',
+          password: 'new-password',
+        }),
+      );
     }
-    await waitFor(() =>
-      expect(mailbox).toHaveBeenCalledWith(
-        operation,
-        operation === 'change-password'
-          ? { current_password: 'current-password', password: 'new-password' }
-          : {},
-      ),
-    );
     await waitFor(() => expect(hardNavigate).toHaveBeenCalledWith('/login'));
   },
 );

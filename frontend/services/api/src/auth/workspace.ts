@@ -25,13 +25,26 @@ function roleCapabilities(role: string): readonly string[] {
   return (Object.hasOwn(ROLE_CAPABILITIES, role) && ROLE_CAPABILITIES[role]) || [];
 }
 
+/** Whether a stored role permits `capability`; a role outside the matrix permits nothing. */
+export function roleAllows(role: string, capability: WorkspaceCapability): boolean {
+  return roleCapabilities(role).includes(capability);
+}
+
+/** Every role permitting `capability`, for membership filters written in SQL. */
+export function rolesWith(capability: WorkspaceCapability): string[] {
+  return Object.keys(ROLE_CAPABILITIES).filter((role) => roleAllows(role, capability));
+}
+
 export class WorkspaceContext {
   readonly scope: WorkspaceScope;
   readonly role: string;
+  /** The project whose membership join resolved this context, when one did. */
+  readonly projectId: string | null;
 
-  constructor(workspaceId: string, role: string) {
+  constructor(workspaceId: string, role: string, projectId: string | null = null) {
     this.scope = new WorkspaceScope(workspaceId);
     this.role = role;
+    this.projectId = projectId;
   }
 
   get workspaceId(): string {
@@ -39,7 +52,7 @@ export class WorkspaceContext {
   }
 
   allows(capability: WorkspaceCapability): boolean {
-    return roleCapabilities(this.role).includes(capability);
+    return roleAllows(this.role, capability);
   }
 
   /** The caller's effective capability names for UI controls. */
@@ -99,9 +112,8 @@ export function workspaceMember(
 
 /**
  * Authorize through the project in the path (mount after `sessionUser`): the
- * caller must belong to the project's workspace. Mirrors
- * `require_project_member`; a missing project and a foreign one are the same
- * `Project not found`, and `X-Workspace-Id` is not read.
+ * caller must belong to the project's workspace. A missing project and a
+ * foreign one are the same `Project not found`, and `X-Workspace-Id` is not read.
  */
 export function projectMember(db: Database): MiddlewareHandler<AppEnv> {
   return async (c, next) => {
@@ -121,7 +133,7 @@ export function projectMember(db: Database): MiddlewareHandler<AppEnv> {
       .where('workspaces.is_system', '=', false)
       .executeTakeFirst();
     if (member === undefined) throw notFound('Project');
-    c.set('workspace', new WorkspaceContext(member.workspace_id, member.role));
+    c.set('workspace', new WorkspaceContext(member.workspace_id, member.role, projectId));
     await next();
   };
 }
@@ -144,8 +156,8 @@ async function defaultWorkspaceMember(db: Database, userId: string): Promise<Wor
 /**
  * Resolve the active workspace for a flat route (mount after `sessionUser`):
  * the `X-Workspace-Id` header when the client selects one, otherwise the
- * caller's earliest tenant membership. Mirrors `require_active_workspace`;
- * membership is verified either way, and a foreign workspace is a 404.
+ * caller's earliest tenant membership. Membership is verified either way, and a
+ * foreign workspace is a 404.
  */
 export function activeWorkspace(
   db: Database,
