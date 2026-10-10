@@ -31,7 +31,7 @@ export type Slot = {
   /** Same-topic searches that steer phrasing; absent when the project has none. */
   grounding?: Grounding[];
 };
-export type Grounding = Pick<ObservedQuery, 'id' | 'source' | 'text'>;
+type Grounding = Pick<ObservedQuery, 'id' | 'source' | 'text'>;
 type Facet = { dimension: number; value: string; suggested: boolean };
 type PlanContext = Pick<GenerationContext, 'selected' | 'topics' | 'maps' | 'observed'> & {
   context: Pick<GenerationContext['context'], 'business_context'>;

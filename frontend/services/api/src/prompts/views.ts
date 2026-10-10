@@ -80,7 +80,7 @@ export function topicView(row: TopicRow, activeCount: number): TopicView {
 
 const OBSERVED = policy.prompts.generation.observed.evidence_kind;
 /** Whether a candidate's evidence includes one of the project's observed searches. */
-export const isGrounded = (refs: unknown) =>
+const isGrounded = (refs: unknown) =>
   Array.isArray(refs) && refs.some((ref: unknown) => record(ref).kind === OBSERVED);
 
 /** `judged`, the run's reported gate (`off`/`unavailable`), or `not_judged`. */

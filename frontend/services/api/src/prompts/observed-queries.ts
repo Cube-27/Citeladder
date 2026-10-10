@@ -17,7 +17,7 @@ import { bindingTokens } from './binding.ts';
 
 const O = policy.prompts.generation.observed;
 
-export type ObservedSource = 'gsc' | 'search_intelligence';
+type ObservedSource = 'gsc' | 'search_intelligence';
 export type ObservedQuery = {
   /** The highest-impression Search Console row, or the Search Intelligence row. */
   id: string;
