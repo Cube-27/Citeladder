@@ -1,6 +1,7 @@
 import type { MarkdownInstance } from 'astro';
 import { z } from 'zod';
 import toolCatalog from '../data/mcp-tools.json';
+import { API_OPERATIONS, API_SCHEMAS } from './api-reference';
 
 const metadata = z.object({
   title: z.string().min(1),
@@ -10,6 +11,7 @@ const metadata = z.object({
     'Measure and understand',
     'Improve with Agent',
     'Connect with MCP',
+    'Use the REST API',
     'Updates',
   ]),
   order: z.number(),
@@ -26,6 +28,14 @@ export const TOOL_REFERENCE_HEADING = {
   slug: 'registered-tools',
   text: 'Registered tools',
 } as const;
+/** The article that renders the generated public API operations after its body. */
+const API_REFERENCE_SLUG = 'api/reference';
+export const API_REFERENCE_HEADING = {
+  depth: 2,
+  slug: 'operations',
+  text: 'Operations',
+} as const;
+export const API_SCHEMAS_HEADING = { depth: 2, slug: 'schemas', text: 'Schemas' } as const;
 
 export const articles = Object.entries(modules)
   .map(([file, entry]) => {
@@ -35,6 +45,7 @@ export const articles = Object.entries(modules)
       slug,
       href: slug === 'index' ? '/' : `/${slug}/`,
       toolReference: slug === TOOL_REFERENCE_SLUG,
+      apiReference: slug === API_REFERENCE_SLUG,
       entry,
     };
   })
@@ -49,11 +60,22 @@ export async function articleHeadings(article: Article) {
   const headings = (await article.entry.getHeadings()).filter(
     ({ depth }) => depth === 2 || depth === 3,
   );
-  return article.toolReference ? [...headings, TOOL_REFERENCE_HEADING] : headings;
+  if (article.toolReference) return [...headings, TOOL_REFERENCE_HEADING];
+  if (article.apiReference) return [...headings, API_REFERENCE_HEADING, API_SCHEMAS_HEADING];
+  return headings;
 }
 
-/** The text search matches for an article, including the appended tool catalogue. */
+/** The text search matches for an article, including an appended generated reference. */
 export function articleSearchBody(article: Article): string {
   const body = article.entry.rawContent();
-  return article.toolReference ? body + JSON.stringify(toolCatalog.tools) : body;
+  if (article.toolReference) return body + JSON.stringify(toolCatalog.tools);
+  if (article.apiReference)
+    return (
+      body +
+      [
+        ...API_OPERATIONS.map((operation) => `${operation.method} ${operation.path}`),
+        ...API_SCHEMAS.map((schema) => schema.name),
+      ].join('\n')
+    );
+  return body;
 }

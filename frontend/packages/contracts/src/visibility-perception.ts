@@ -37,7 +37,7 @@ const perceptionUnavailableReasonSchema = z.enum([
 const perceptionStateSchema = z.enum(['value', 'pending', 'unavailable', 'no_mentions']);
 
 // "N of M mentions classified": every mention lands in exactly one bucket.
-const perceptionCoverageSchema = responseObject({
+export const perceptionCoverageSchema = responseObject({
   mentions: z.number().int(),
   classified: z.number().int(),
   pending: z.number().int(),
@@ -50,7 +50,7 @@ const perceptionCoverageSchema = responseObject({
 
 // Label counts over classified mentions. Shares and net sentiment are null
 // when nothing was classified; `mixed` counts only in the denominator.
-const perceptionScoreSchema = responseObject({
+export const perceptionScoreSchema = responseObject({
   positive: z.number().int(),
   neutral: z.number().int(),
   negative: z.number().int(),
@@ -61,14 +61,14 @@ const perceptionScoreSchema = responseObject({
   net_sentiment: z.number().nullable(),
 });
 
-const perceptionEntitySchema = responseObject({
+export const perceptionEntitySchema = responseObject({
   name: z.string(),
   is_brand: z.boolean(),
   score: perceptionScoreSchema,
   coverage: perceptionCoverageSchema,
 });
 
-const perceptionBreakdownSchema = responseObject({
+export const perceptionBreakdownSchema = responseObject({
   key: z.string(),
   label: z.string(),
   score: perceptionScoreSchema,
@@ -76,7 +76,7 @@ const perceptionBreakdownSchema = responseObject({
 });
 
 // A verified quote: an exact substring of the answer passage it came from.
-const perceptionQuoteSchema = responseObject({
+export const perceptionQuoteSchema = responseObject({
   text: z.string(),
   theme: z.string(),
   polarity: perceptionPolaritySchema,

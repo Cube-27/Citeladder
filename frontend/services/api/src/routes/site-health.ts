@@ -54,6 +54,7 @@ import { defineGetRoute } from './define.ts';
 const family = 'site-health';
 const crawlRoot = '/api/v1/site-crawls/{crawl_id}';
 const projectRoot = '/api/v1/projects/{project_id}/site-health';
+const publicCrawlRoot = `${policy.api.machine_prefix}/projects/{project_id}/site-crawls/{crawl_id}`;
 const uuid = { scalar: { kind: 'uuid' }, required: true } as const;
 const optionalUuid = { scalar: { kind: 'uuid' } } as const;
 const text = { scalar: { kind: 'str' } } as const;
@@ -179,6 +180,8 @@ export const siteHealthRoutes = [
   }),
   defineGetRoute({
     family,
+    exposure: 'both',
+    publicPath: `${publicCrawlRoot}/pages`,
     path: `${crawlRoot}/pages`,
     params: {
       path: crawlPath,
@@ -221,6 +224,8 @@ export const siteHealthRoutes = [
   }),
   defineGetRoute({
     family,
+    exposure: 'both',
+    publicPath: `${publicCrawlRoot}/issues`,
     path: `${crawlRoot}/issues`,
     params: {
       path: crawlPath,
@@ -301,6 +306,7 @@ export const siteHealthRoutes = [
   exportRoute('md'),
   defineGetRoute({
     family,
+    exposure: 'both',
     path: projectRoot,
     params: { path: projectPath, query: { crawl_id: optionalUuid } },
     response: siteHealthDashboardSchema,

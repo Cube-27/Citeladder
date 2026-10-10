@@ -48,6 +48,7 @@ export const projectRoutes = [
   }),
   defineGetRoute({
     family,
+    exposure: 'both',
     path: `${root}/{project_id}`,
     authorize: 'project',
     params: { path: projectPath, query: {} },

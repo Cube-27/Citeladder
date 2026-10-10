@@ -28,6 +28,8 @@ export const ROUTE_OWNERSHIP = {
   'prompt-generation': 'typescript',
   prompts: 'typescript',
   providers: 'typescript',
+  'api-keys': 'typescript',
+  'public-api': 'typescript',
   'search-intelligence': 'typescript',
   'search-intelligence-reviews': 'typescript',
   'site-health': 'typescript',

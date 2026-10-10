@@ -62,6 +62,34 @@ describe('API host route ownership', () => {
       expect(sent[0]!.headers.get('cookie')).toBeNull();
     },
   );
+  it('forwards public API calls with their bearer key and method, without cookies', async () => {
+    const sent = captureUpstream();
+    for (const [method, path] of [
+      ['GET', '/v1/projects?limit=10'],
+      ['GET', '/v1/openapi.json'],
+      ['POST', `/v1/projects/${SOURCE}/audits`],
+      ['PATCH', `/v1/projects/${SOURCE}/prompts/${SOURCE}`],
+      ['DELETE', `/v1/projects/${SOURCE}/topics/${SOURCE}`],
+    ] as const) {
+      const response = await routeApiHostRequest(
+        new Request('https://api.citeladder.com' + path, {
+          method,
+          headers: { authorization: 'Bearer cl_live_test', cookie: 'session=private' },
+        }),
+        env,
+      );
+      expect(response.status).toBe(202);
+    }
+    expect(sent.map((request) => `${request.method} ${new URL(request.url).pathname}`)).toEqual([
+      'GET /v1/projects',
+      'GET /v1/openapi.json',
+      `POST /v1/projects/${SOURCE}/audits`,
+      `PATCH /v1/projects/${SOURCE}/prompts/${SOURCE}`,
+      `DELETE /v1/projects/${SOURCE}/topics/${SOURCE}`,
+    ]);
+    expect(sent.every((request) => request.headers.get('cookie') === null)).toBe(true);
+    expect(sent[0]!.headers.get('authorization')).toBe('Bearer cl_live_test');
+  });
   it('answers everything else with a JSON 404 and never reaches the origin', async () => {
     const sent = captureUpstream();
     for (const [method, path] of [
@@ -71,6 +99,8 @@ describe('API host route ownership', () => {
       ['POST', '/api/v1/crawl-logs/ingest/' + SOURCE],
       ['GET', '/v1/crawl-logs/ingest/' + SOURCE],
       ['POST', '/v1/crawl-logs/ingest/not-a-uuid'],
+      ['PUT', `/v1/projects/${SOURCE}/topics`],
+      ['GET', '/v1'],
       ['POST', '/mcp'],
     ] as const) {
       const response = await routeApiHostRequest(

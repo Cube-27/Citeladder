@@ -122,6 +122,7 @@ export const searchIntelligenceRoutes = [
   defineGetRoute({
     family,
     authorize,
+    exposure: 'both',
     path: `${root}/runs`,
     params: {
       path: projectPath,
@@ -148,6 +149,7 @@ export const searchIntelligenceRoutes = [
   defineGetRoute({
     family,
     authorize,
+    exposure: 'both',
     path: `${root}/datasets/{dataset_id}/rows`,
     params: {
       path: { project_id: uuid, dataset_id: uuid },

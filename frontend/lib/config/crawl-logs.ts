@@ -1,5 +1,4 @@
 import { docsHref as docsUrl } from './docs';
-import { publicApiOrigin } from './public-origins';
 export const CRAWL_LOG_SETUPS = [
   {
     value: 'cloudflare_worker',
@@ -77,9 +76,7 @@ export const GCP_PULL_SETUP = {
   subscriptionPlaceholder: 'projects/my-project/subscriptions/citeladder-ai-crawlers-sub',
 } as const;
 /** Machine senders post to the API host; locally that is the API container itself. */
-// An origin carries no path, so a configured trailing slash never doubles into `//v1`.
-export const CRAWL_INGEST_ORIGIN =
-  publicApiOrigin(undefined, false)?.origin ?? 'http://127.0.0.1:8100';
+export { API_HOST_ORIGIN as CRAWL_INGEST_ORIGIN } from './api-host';
 export const TRAFFIC_TABS = [
   { value: 'overview', label: 'Overview', crawlOnly: false },
   { value: 'crawlers', label: 'Crawlers', crawlOnly: true },

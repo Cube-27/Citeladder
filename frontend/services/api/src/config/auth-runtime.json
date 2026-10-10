@@ -84,6 +84,11 @@
       "type": "str",
       "default": "replace-with-32-byte-minimum-secret"
     },
+    "api_key_pepper": {
+      "env": ["API_KEY_PEPPER"],
+      "type": "str",
+      "default": "replace-with-a-32-byte-minimum-api-key-pepper"
+    },
     "referral_hash_salt": {
       "env": ["REFERRAL_HASH_SALT"],
       "type": "str",
@@ -130,7 +135,8 @@
       "change-me",
       "change-me-32-bytes-minimum-change-me",
       "replace-with-32-byte-minimum-secret",
-      "replace-with-64-byte-random-secret"
+      "replace-with-64-byte-random-secret",
+      "replace-with-a-32-byte-minimum-api-key-pepper"
     ],
     "weak_words": ["changeme", "citeladder", "password", "secret"],
     "login_password": {

@@ -35,6 +35,7 @@
     "prompts:eval": "node scripts/eval-prompt-generation.ts",
     "perception:eval": "node scripts/eval-perception.ts",
     "mcp:reference": "node scripts/export-mcp-tool-reference.ts",
+    "public-api:reference": "node scripts/export-public-api-reference.ts",
     "crawl:worker": "node scripts/export-crawl-worker.ts",
     "crawl:firehose-filter": "node scripts/export-firehose-filter.ts",
     "crawl:gcp-filter": "node scripts/export-gcp-log-filter.ts",

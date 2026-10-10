@@ -23,6 +23,8 @@ import { registerMcpRoutes } from './mcp/server.ts';
 import { observeCommittedWork } from './db/committed-work.ts';
 import { runnerStarter } from './workers/start-runner.ts';
 import { originToken } from './http/origin-token.ts';
+import { ROUTE_CONTRACTS } from './openapi/routes.ts';
+import { publicApiDocument } from './public-api/openapi.ts';
 
 const logger = getLogger('api');
 
@@ -85,6 +87,10 @@ export function createApp(
       ? c.json({ status: 'ready' })
       : c.json({ status: 'unavailable', database: 'down' }, 503),
   );
+
+  // The public API's own description; anonymous, like any OpenAPI document.
+  const publicDocument = publicApiDocument(ROUTE_CONTRACTS);
+  app.get(`${policy.api.machine_prefix}/openapi.json`, (c) => c.json(publicDocument));
 
   registerMethodGuards(app, PRODUCT_ROUTES);
   for (const route of PRODUCT_ROUTES) route.register(app, config, db);

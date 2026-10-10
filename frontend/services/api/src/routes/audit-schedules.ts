@@ -1,14 +1,9 @@
 import type { Context } from 'hono';
 import { auditScheduleSchema } from '@citeladder/contracts/audits';
+import { actorOf } from '../auth/actor.ts';
 import { scheduleCreate, scheduleUpdate } from '../audits/schedule-inputs.ts';
-import {
-  createSchedule,
-  deleteSchedule,
-  listSchedules,
-  readSchedule,
-  type ScheduleScope,
-  updateSchedule,
-} from '../audits/schedules.ts';
+import { listSchedules, readSchedule, type ScheduleScope } from '../audits/schedules.ts';
+import { createSchedule, deleteSchedule, updateSchedule } from '../commands/schedules.ts';
 import type { AppEnv } from '../context.ts';
 import { readBody } from '../http/body.ts';
 import { defineDeleteRoute, defineGetRoute, definePatchRoute, definePostRoute } from './define.ts';
@@ -17,7 +12,8 @@ const root = '/api/v1/projects/{project_id}/audit-schedules';
 const uuid = { scalar: { kind: 'uuid' }, required: true } as const;
 const projectPath = { project_id: uuid } as const;
 const itemPath = { ...projectPath, schedule_id: uuid } as const;
-const defaults = { family: 'audit-schedules', authorize: 'project' } as const;
+const defaults = { family: 'audit-schedules', authorize: 'project', exposure: 'both' } as const;
+const writes = { ...defaults, capability: 'write', scope: 'schedules:write' } as const;
 
 function scopeOf(c: Context<AppEnv>, projectId: string): ScheduleScope {
   return { workspaceId: c.get('workspace').workspaceId, projectId };
@@ -25,16 +21,14 @@ function scopeOf(c: Context<AppEnv>, projectId: string): ScheduleScope {
 
 export const auditScheduleRoutes = [
   definePostRoute({
-    ...defaults,
+    ...writes,
     path: root,
     params: { path: projectPath, query: {} },
-    capability: 'write',
     status: 201,
     body: scheduleCreate,
     response: auditScheduleSchema,
-    async handle({ c, db }, { path }) {
-      return createSchedule(db, scopeOf(c, path.project_id), await readBody(c, scheduleCreate));
-    },
+    handle: async ({ c, db }, { path }) =>
+      createSchedule(db, actorOf(c), path.project_id, await readBody(c, scheduleCreate)),
   }),
   defineGetRoute({
     ...defaults,
@@ -55,28 +49,26 @@ export const auditScheduleRoutes = [
     },
   }),
   definePatchRoute({
-    ...defaults,
+    ...writes,
     path: `${root}/{schedule_id}`,
     params: { path: itemPath, query: {} },
-    capability: 'write',
     body: scheduleUpdate,
     response: auditScheduleSchema,
-    async handle({ c, db }, { path }) {
-      return updateSchedule(
+    handle: async ({ c, db }, { path }) =>
+      updateSchedule(
         db,
-        scopeOf(c, path.project_id),
+        actorOf(c),
+        path.project_id,
         path.schedule_id,
         await readBody(c, scheduleUpdate),
-      );
-    },
+      ),
   }),
   defineDeleteRoute({
-    ...defaults,
+    ...writes,
     path: `${root}/{schedule_id}`,
     params: { path: itemPath, query: {} },
-    capability: 'write',
     async handle({ c, db }, { path }) {
-      await deleteSchedule(db, scopeOf(c, path.project_id), path.schedule_id);
+      await deleteSchedule(db, actorOf(c), path.project_id, path.schedule_id);
     },
   }),
 ];

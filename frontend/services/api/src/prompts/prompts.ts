@@ -34,7 +34,7 @@ import { promptTextHash } from './normalization.ts';
 import { readPromptSet, scopedPromptSet } from './prompt-sets.ts';
 import { resolveTopicsByName } from './topics.ts';
 import { promptView, type PromptRow, type PromptSetView, type PromptView } from './views.ts';
-import { isNonEmpty } from '../lists.ts';
+import { firstOf, isNonEmpty, type NonEmpty } from '../lists.ts';
 
 const P = policy.prompts;
 const INTENTS = new Set(P.intents);
@@ -53,6 +53,9 @@ export const promptInput = z.strictObject({
   cohort: promptCohortSchema.default('core'),
   enabled: z.boolean().default(true),
   topic_id: z.uuid().nullish(),
+});
+export const promptBatch = z.strictObject({
+  prompts: z.array(promptInput).min(1).max(P.create_batch_max),
 });
 export const promptUpdate = z.strictObject({
   text: text.nullish(),
@@ -140,43 +143,83 @@ export async function createPrompt(
   promptSetId: string,
   input: z.infer<typeof promptInput>,
 ): Promise<PromptView> {
+  return firstOf(await createPrompts(db, workspaceId, promptSetId, [input]), 'created prompt');
+}
+
+/**
+ * Create manual prompts in one transaction: every one binds and is new to the
+ * set (and to the batch), or nothing is created.
+ */
+export async function createPrompts(
+  db: Database,
+  workspaceId: string,
+  promptSetId: string,
+  inputs: NonEmpty<z.infer<typeof promptInput>>,
+): Promise<PromptView[]> {
   try {
     return await db.transaction().execute(async (trx) => {
       const set = await scopedPromptSet(trx, workspaceId, promptSetId);
       await acquireProjectLock(trx, set.project_id);
       await acquirePromptSetLock(trx, set.id);
       // Bound under the project lock, so the topic vocabulary cannot change before the insert.
-      await requireBinding(trx, set.project_id, input.text, input.topic_id ?? null);
-      const hash = promptTextHash(input.text);
+      const vocabulary = await loadVocabulary(trx, set.project_id);
+      const topicIds = [...new Set(inputs.flatMap((input) => input.topic_id ?? []))];
+      const topics = new Map(
+        await Promise.all(
+          topicIds.map(
+            async (topicId) => [topicId, await topicText(trx, set.project_id, topicId)] as const,
+          ),
+        ),
+      );
+      for (const input of inputs) {
+        const failure = bindingFailure(
+          input.text,
+          vocabulary,
+          input.topic_id ? (topics.get(input.topic_id) ?? '') : '',
+        );
+        if (failure !== null) throw bindingError(failure);
+      }
+      const planned = inputs.map((input) => ({
+        input,
+        id: randomUUID(),
+        hash: promptTextHash(input.text),
+      }));
+      const hashes = planned.map((item) => item.hash);
+      if (new Set(hashes).size !== hashes.length) throw new ApiError(409, DUPLICATE);
       const existing = await trx
         .selectFrom('prompts')
         .select('id')
         .where('prompt_set_id', '=', set.id)
-        .where('normalized_text_hash', '=', hash)
+        .where('normalized_text_hash', 'in', hashes)
         .executeTakeFirst();
       if (existing !== undefined) throw new ApiError(409, DUPLICATE);
-      await admitPrompts(trx, workspaceId, 1);
+      await admitPrompts(trx, workspaceId, inputs.length);
       const now = new Date();
-      const row = await trx
+      const rows = await trx
         .insertInto('prompts')
-        .values({
-          id: randomUUID(),
-          prompt_set_id: set.id,
-          topic_id: input.topic_id ?? null,
-          text: input.text,
-          normalized_text_hash: hash,
-          theme: input.theme.trim(),
-          intent: normalizeIntent(input.intent),
-          ...cohortColumns(input.cohort),
-          enabled: input.enabled,
-          status: P.status_active,
-          origin: P.origins.manual,
-          created_at: now,
-          updated_at: now,
-        })
+        .values(
+          planned.map(({ input, id, hash }, index) => ({
+            id,
+            prompt_set_id: set.id,
+            topic_id: input.topic_id ?? null,
+            text: input.text,
+            normalized_text_hash: hash,
+            theme: input.theme.trim(),
+            intent: normalizeIntent(input.intent),
+            ...cohortColumns(input.cohort),
+            enabled: input.enabled,
+            status: P.status_active,
+            origin: P.origins.manual,
+            // A millisecond apart, so creation-ordered lists keep the request's order.
+            created_at: new Date(now.getTime() + index),
+            updated_at: now,
+          })),
+        )
         .returningAll()
-        .executeTakeFirstOrThrow();
-      return promptView(row);
+        .execute();
+      // RETURNING order is unspecified; answer in request order.
+      const byId = new Map(rows.map((row) => [row.id, promptView(row)]));
+      return planned.flatMap(({ id }) => byId.get(id) ?? []);
     });
   } catch (error) {
     if (isUniqueViolation(error, UNIQUE_TEXT)) throw new ApiError(409, DUPLICATE);

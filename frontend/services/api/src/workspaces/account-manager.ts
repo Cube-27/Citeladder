@@ -7,6 +7,7 @@ import { createIdentity } from '../auth/service.ts';
 import { WorkspaceContext } from '../auth/workspace.ts';
 import { lockIdentityAdministration, requirePlatformAdmin } from '../auth/operators.ts';
 import { recordSecurityEvent } from '../auth/security-events.ts';
+import { revokeCreatorKeys } from '../api-keys/revocation.ts';
 import { baselineGrantKey, fullAccessSpecs } from '../entitlements/bootstrap.ts';
 import { issueBundle, revokeBundle } from '../entitlements/grants.ts';
 import { resolveAccountEntitlement } from '../entitlements/resolve.ts';
@@ -406,6 +407,12 @@ async function deleteUnusedAccount(db: Database, session: PlatformSession, email
   }
   // A new account's workspace, billing row and operator baseline (with its
   // derived runtime row) can be removed; any other grant or history blocks this.
+  await revokeCreatorKeys(
+    db,
+    memberships.filter((member) => member.role !== 'owner').map((member) => member.workspace_id),
+    user.id,
+    session.actorId,
+  );
   for (const member of memberships) {
     if (member.role === 'owner')
       await db.deleteFrom('workspaces').where('id', '=', member.workspace_id).execute();

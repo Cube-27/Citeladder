@@ -276,6 +276,7 @@ function schemaAuthorityViolations(root) {
 function apiServiceChecks() {
   pnpm('API service TypeScript', ['--filter', '@citeladder/api', 'typecheck']);
   pnpm('MCP tool reference', ['--filter', '@citeladder/api', 'mcp:reference', '--check']);
+  pnpm('Public API reference', ['--filter', '@citeladder/api', 'public-api:reference', '--check']);
   pnpm('Crawl log Worker template', ['--filter', '@citeladder/api', 'crawl:worker', '--check']);
   pnpm('Firehose filter template', [
     '--filter',

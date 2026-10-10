@@ -1,5 +1,5 @@
 {
-  "registry_revision": "entitlements-v5",
+  "registry_revision": "entitlements-v6",
   "capabilities": {
     "workspace_access": {
       "type": "flag",
@@ -176,6 +176,22 @@
       "issuable": true,
       "public": true,
       "rolling_window_seconds": null
+    },
+    "api_access": {
+      "type": "flag",
+      "levels": 0,
+      "ordered_values": [],
+      "issuable": true,
+      "public": true,
+      "rolling_window_seconds": null
+    },
+    "api_keys": {
+      "type": "counter.occupancy",
+      "levels": 0,
+      "ordered_values": [],
+      "issuable": true,
+      "public": true,
+      "rolling_window_seconds": null
     }
   },
   "grant_source_kinds": ["addon", "override", "plan", "topup", "trial"],
@@ -187,6 +203,8 @@
   "project_deletion": "project_deletion",
   "team_members": "team_members",
   "crawl_logs": "crawl_logs",
+  "api_access": "api_access",
+  "api_keys": "api_keys",
   "capacity_lock": {
     "namespace": 1128353857,
     "person": "citeladder-cap"

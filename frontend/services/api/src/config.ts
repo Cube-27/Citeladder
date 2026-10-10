@@ -22,6 +22,7 @@ import brandIdentity from './config/brand-identity.json' with { type: 'json' };
 import workspaceRuntime from './config/workspaces.json' with { type: 'json' };
 import authRuntime from './config/auth-runtime.json' with { type: 'json' };
 import queue from './config/queue.json' with { type: 'json' };
+import publicApi from './config/public-api.json' with { type: 'json' };
 import { billing } from './config/billing.ts';
 import { integrations, traffic, analytics, referrals, authOAuth } from './config/connected-data.ts';
 import integrationCredentials from './config/integration-credentials.json' with { type: 'json' };
@@ -151,6 +152,7 @@ export const policy = {
   },
   models: { ...modelGateway, jev, quality },
   workspaces: workspaceRuntime,
+  public_api: publicApi,
   providers: { ...providers, app: appModels },
   content_differentiation: {
     ...contentDifferentiation,
@@ -341,6 +343,8 @@ export type ServiceConfig = {
     frontendUrl: string;
     /** The machine host (`api.citeladder.com`); only it serves `/v1/...` routes. Empty locally. */
     publicApiUrl: string;
+    /** HMAC key for public API key secrets; only the digest is stored. */
+    apiKeyPepper: string;
     trustedProxies: TrustedProxies;
     oauthSettings: Record<string, string | number | boolean>;
     limits: Record<keyof typeof policy.abuse, number>;
@@ -411,6 +415,7 @@ function productionSecretProblems(
     JWT_SECRET_KEY: config.session.secretKey,
     ENCRYPTION_KEY: String(resolveSetting('encryption_key', env)),
     REFERRAL_HASH_SALT: String(resolveSetting('referral_hash_salt', env)),
+    API_KEY_PEPPER: config.auth.apiKeyPepper,
   };
   const values = Object.values(secrets);
   const issues = Object.entries(secrets)
@@ -531,6 +536,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
       mailTimeoutMs: setting('auth_mail_timeout_ms') as number,
       frontendUrl: setting('frontend_url') as string,
       publicApiUrl: setting('public_api_url') as string,
+      apiKeyPepper: setting('api_key_pepper') as string,
       trustedProxies: parseTrustedProxies(setting('trusted_proxy_cidrs') as string),
       oauthSettings: {
         ...Object.fromEntries(

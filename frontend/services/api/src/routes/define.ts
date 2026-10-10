@@ -8,6 +8,7 @@
  * session first (401), then the workspace or project (400/404), the
  * capability (403) and the parameters (422). Authorization precedes parameter validation.
  */
+import type { ApiKeyScope } from '@citeladder/contracts/api-keys';
 import type { Context, Hono, MiddlewareHandler } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { z } from 'zod';
@@ -27,6 +28,8 @@ import {
   type RequestParams,
 } from '../http/params.ts';
 import type { RouteContract } from '../openapi/routes.ts';
+import { apiKeyAuth } from '../public-api/auth.ts';
+import { withIdempotency } from '../public-api/idempotency.ts';
 
 type RouteContext = { c: Context<AppEnv>; db: Database; config: ServiceConfig };
 
@@ -67,10 +70,29 @@ type RouteSpec<Path extends ParamSpecs, Query extends ParamSpecs, Response exten
   recovery?: boolean;
   /** Resolve the workspace from the path's `project_id` instead of `X-Workspace-Id`. */
   authorize?: 'workspace' | 'project' | 'workspace-path' | 'session' | 'public';
+  /**
+   * Where the route is served: the browser API (default); the public API
+   * under `/v1` for API keys (`public`, declared with its `/v1` path); or
+   * both, the browser path below `/api/v1/projects/{project_id}` also served
+   * below `/v1`. A public call still needs `capability` from the key
+   * creator's live role.
+   */
+  exposure?: 'browser' | 'public' | 'both';
+  /**
+   * The public path of a `both` route whose browser path is not below
+   * `/api/v1/projects/{project_id}`: it nests the route under
+   * `/v1/projects/{project_id}`, and the key middleware proves each owned path
+   * ID belongs to that project (`public-api/ownership.ts`).
+   */
+  publicPath?: string;
+  /** The API key scope a public call needs; reads default to `read`. */
+  scope?: ApiKeyScope;
 } & RouteBody<Path, Query, Response>;
 
 export type ProductRoute = {
   contract: RouteContract;
+  /** The public API contract of a route served on both APIs. */
+  publicContract?: RouteContract;
   /** The declared parameters, as `validateParams` reads them. */
   params: { path: ParamSpecs; query: ParamSpecs };
   register: (app: Hono<AppEnv>, config: ServiceConfig, db: Database) => void;
@@ -149,24 +171,43 @@ export function defineRoute<
     route.authorize === undefined || route.authorize === 'workspace'
       ? ACTIVE_WORKSPACE_HEADERS
       : z.object({});
-  const contract: RouteContract = {
-    family: route.family,
+  const exposure = route.exposure ?? 'browser';
+  // Writes default to `run`; the capability gate precedes parameter validation.
+  const capability = route.capability ?? (method === 'get' ? undefined : 'run');
+  const responses = {
+    [status]: route.response,
+    ...(route.alsoStatus ? { [route.alsoStatus]: route.response } : {}),
+  };
+  const shared = {
     method,
-    path: route.path,
     pathParams: parameterObject(route.params.path),
     query: parameterObject(route.params.query),
-    headers: route.headers ? workspaceHeaders.extend(route.headers.shape) : workspaceHeaders,
-    cookies: publicRoute ? z.object({}) : SESSION_COOKIE,
     ...(route.body ? { body: route.body } : {}),
-    responses: {
-      [status]: route.response,
-      ...(route.alsoStatus ? { [route.alsoStatus]: route.response } : {}),
-    },
+    responses,
   };
+  const browser: RouteContract | null =
+    exposure === 'public'
+      ? null
+      : {
+          ...shared,
+          family: route.family,
+          path: route.path,
+          headers: route.headers ? workspaceHeaders.extend(route.headers.shape) : workspaceHeaders,
+          cookies: publicRoute ? z.object({}) : SESSION_COOKIE,
+        };
+  const publicSide = exposure === 'browser' ? null : publicOperation(route, shared, capability);
   const register = (app: Hono<AppEnv>, config: ServiceConfig, db: Database) => {
+    const respond = async (c: Context<AppEnv>) => {
+      const params = validateParams(route.params, {
+        path: c.req.param() as Record<string, string>,
+        search: new URL(c.req.url).search,
+      });
+      if (route.raw) return route.handle({ c, db, config }, params);
+      return c.json(await route.handle({ c, db, config }, params), status as ContentfulStatusCode);
+    };
+    if (publicSide) publicSide.register(app, config, db, respond);
+    if (browser === null) return;
     const pattern = honoPath(route.path);
-    // Writes default to `run`; the capability gate precedes parameter validation.
-    const capability = route.capability ?? (method === 'get' ? undefined : 'run');
     const authorize: MiddlewareHandler<AppEnv>[] = [];
     if (byProject) authorize.push(projectMember(db));
     else if (route.authorize === 'workspace-path') authorize.push(workspaceMember(db, capability));
@@ -181,19 +222,96 @@ export function defineRoute<
         if (scoped && !route.recovery)
           await requireWorkspaceAccess(db, c.get('workspace').workspaceId);
         if (byProject && capability !== undefined) c.get('workspace').require(capability);
-        const params = validateParams(route.params, {
-          path: c.req.param() as Record<string, string>,
-          search: new URL(c.req.url).search,
-        });
-        if (route.raw) return route.handle({ c, db, config }, params);
-        return c.json(
-          await route.handle({ c, db, config }, params),
-          status as ContentfulStatusCode,
-        );
+        return respond(c);
       },
     );
   };
-  return { contract, params: route.params, register };
+  const contract = browser ?? publicSide?.contract;
+  if (contract === undefined) throw new Error(`Route serves no API: ${route.path}`);
+  return {
+    contract,
+    ...(browser && publicSide ? { publicContract: publicSide.contract } : {}),
+    params: route.params,
+    register,
+  };
+}
+
+/** `both` serves the browser path below `/api/v1` at the same path below `/v1`. */
+function publicPathOf(route: { path: string; exposure?: string; publicPath?: string }): string {
+  if (route.exposure === 'public') return route.path;
+  if (route.publicPath !== undefined) {
+    const projectPrefix = `${policy.api.machine_prefix}/projects/{project_id}/`;
+    if (!route.publicPath.startsWith(projectPrefix))
+      throw new Error(`A public path must sit below ${projectPrefix}: ${route.publicPath}`);
+    return route.publicPath;
+  }
+  const browserPrefix = `${policy.api.prefix}/projects/{project_id}`;
+  if (!route.path.startsWith(browserPrefix))
+    throw new Error(`A route served on both APIs must sit below ${browserPrefix}: ${route.path}`);
+  return policy.api.machine_prefix + route.path.slice(policy.api.prefix.length);
+}
+
+/** The public API contract and registration of a `public` or `both` route. */
+function publicOperation(
+  route: Pick<
+    RouteSpec<ParamSpecs, ParamSpecs, z.ZodType>,
+    'path' | 'exposure' | 'publicPath' | 'authorize' | 'scope' | 'headers' | 'params'
+  >,
+  /** The contract fields the browser and public contracts share. */
+  shared: Pick<RouteContract, 'method' | 'query' | 'body' | 'responses'>,
+  capability: WorkspaceCapability | undefined,
+) {
+  const { method } = shared;
+  const path = publicPathOf(route);
+  if (!path.startsWith(`${policy.api.machine_prefix}/`))
+    throw new Error(`A public API route must sit below ${policy.api.machine_prefix}: ${path}`);
+  // `authorize: 'public'` on a public route means anonymous (the OpenAPI document).
+  const anonymous = route.authorize === 'public';
+  const scope = route.scope ?? (method === 'get' ? 'read' : undefined);
+  if (!anonymous && scope === undefined)
+    throw new Error(`A public write declares its API key scope: ${method} ${path}`);
+  const guard =
+    anonymous || scope === undefined ? null : { capability: capability ?? 'read', scope };
+  // Every public POST that is not a read creates or spends, so it is replay-safe.
+  const idempotent = guard !== null && method === 'post' && guard.scope !== 'read';
+  const routeHeaders = Object.fromEntries(
+    Object.entries(route.headers?.shape ?? {}).filter(
+      ([name]) => name.toLowerCase() !== 'idempotency-key',
+    ),
+  );
+  const contract: RouteContract = {
+    ...shared,
+    family: 'public-api',
+    exposure: 'public',
+    ...(guard ? { scope: guard.scope } : {}),
+    path,
+    pathParams: parameterObject(
+      path.includes('{project_id}')
+        ? { project_id: { scalar: { kind: 'uuid' }, required: true }, ...route.params.path }
+        : route.params.path,
+    ),
+    headers: z.object({
+      ...routeHeaders,
+      ...(idempotent
+        ? { 'Idempotency-Key': z.string().min(1).max(policy.public_api.idempotency.key_max_chars) }
+        : {}),
+    }),
+    cookies: z.object({}),
+  };
+  const register = (
+    app: Hono<AppEnv>,
+    config: ServiceConfig,
+    db: Database,
+    respond: (c: Context<AppEnv>) => Promise<Response>,
+  ) => {
+    app.on(
+      [method.toUpperCase()],
+      [honoPath(path)],
+      ...(guard ? [apiKeyAuth(db, config, guard)] : []),
+      (c) => (idempotent ? withIdempotency(db, c, () => respond(c)) : respond(c)),
+    );
+  };
+  return { contract, register };
 }
 
 /**
@@ -257,13 +375,22 @@ export function defineDeleteRoute<const Path extends ParamSpecs, const Query ext
       return context.c.body(null, 204);
     },
   });
-  return { ...product, contract: { ...product.contract, responses: { 204: null } } };
+  return {
+    ...product,
+    contract: { ...product.contract, responses: { 204: null } },
+    ...(product.publicContract
+      ? { publicContract: { ...product.publicContract, responses: { 204: null } } }
+      : {}),
+  };
 }
 
 /** Register once before handlers: a path may support several methods. */
 export function registerMethodGuards(app: Hono<AppEnv>, routes: readonly ProductRoute[]): void {
   const methods = new Map<string, Set<string>>();
-  for (const { contract } of routes) {
+  const contracts = routes.flatMap(({ contract, publicContract }) =>
+    publicContract ? [contract, publicContract] : [contract],
+  );
+  for (const contract of contracts) {
     const allowed = methods.get(contract.path) ?? new Set<string>();
     allowed.add(contract.method.toUpperCase());
     methods.set(contract.path, allowed);

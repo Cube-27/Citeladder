@@ -62,20 +62,23 @@ export class WorkspaceContext {
 
   /** 403 unless the caller's role permits `capability`. */
   require(capability: WorkspaceCapability): void {
-    if (!this.allows(capability)) {
-      throw new ApiError(403, policy.workspaces.denial_messages[capability], {
-        code: FORBIDDEN_CODE,
-      });
-    }
+    if (!this.allows(capability)) throw capabilityDenied(capability);
   }
 }
 
-/** The caller's membership, or 404; system workspaces never authorize. */
-export async function resolveWorkspaceMember(
+/** The 403 a caller without `capability` receives. */
+export function capabilityDenied(capability: WorkspaceCapability, message?: string): ApiError {
+  return new ApiError(403, message ?? policy.workspaces.denial_messages[capability], {
+    code: FORBIDDEN_CODE,
+  });
+}
+
+/** The user's membership, if any; system workspaces never authorize. */
+export async function findWorkspaceMember(
   db: Database,
   userId: string,
   workspaceId: string,
-): Promise<WorkspaceContext> {
+): Promise<WorkspaceContext | undefined> {
   const member = await db
     .selectFrom('workspace_members')
     .innerJoin('workspaces', 'workspaces.id', 'workspace_members.workspace_id')
@@ -84,8 +87,28 @@ export async function resolveWorkspaceMember(
     .where('workspace_members.user_id', '=', userId)
     .where('workspaces.is_system', '=', false)
     .executeTakeFirst();
+  return member && new WorkspaceContext(member.workspace_id, member.role);
+}
+
+/** The caller's membership, or 404. */
+export async function resolveWorkspaceMember(
+  db: Database,
+  userId: string,
+  workspaceId: string,
+): Promise<WorkspaceContext> {
+  const member = await findWorkspaceMember(db, userId, workspaceId);
   if (member === undefined) throw notFound('Workspace');
-  return new WorkspaceContext(member.workspace_id, member.role);
+  return member;
+}
+
+/** A UUID path parameter, or the published 422 for `name`. */
+export function pathUuid(raw: string | undefined, name: string): string {
+  const id = parseUuid(raw ?? '');
+  if (id === null)
+    throw new RequestValidationError([
+      { loc: [name], message: UUID_MESSAGE, type: 'uuid_parsing' },
+    ]);
+  return id;
 }
 
 /**
@@ -97,12 +120,7 @@ export function workspaceMember(
   capability?: WorkspaceCapability,
 ): MiddlewareHandler<AppEnv> {
   return async (c, next) => {
-    const workspaceId = parseUuid(c.req.param('workspace_id') ?? '');
-    if (workspaceId === null) {
-      throw new RequestValidationError([
-        { loc: ['workspace_id'], message: UUID_MESSAGE, type: 'uuid_parsing' },
-      ]);
-    }
+    const workspaceId = pathUuid(c.req.param('workspace_id'), 'workspace_id');
     const workspace = await resolveWorkspaceMember(db, c.get('user').id, workspaceId);
     if (capability !== undefined) workspace.require(capability);
     c.set('workspace', workspace);
@@ -117,12 +135,7 @@ export function workspaceMember(
  */
 export function projectMember(db: Database): MiddlewareHandler<AppEnv> {
   return async (c, next) => {
-    const projectId = parseUuid(c.req.param('project_id') ?? '');
-    if (projectId === null) {
-      throw new RequestValidationError([
-        { loc: ['project_id'], message: UUID_MESSAGE, type: 'uuid_parsing' },
-      ]);
-    }
+    const projectId = pathUuid(c.req.param('project_id'), 'project_id');
     const member = await db
       .selectFrom('projects')
       .innerJoin('workspaces', 'workspaces.id', 'projects.workspace_id')

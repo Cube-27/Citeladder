@@ -54,9 +54,18 @@ export async function listAudits(
   workspaceId: string,
   projectId?: string,
   limit = 50,
+  /** Keyset: only audits ordered after this audit (newest first). */
+  afterId?: string,
 ) {
-  let query = auditQuery(db, workspaceId).orderBy('created_at', 'desc').limit(limit);
+  let query = auditQuery(db, workspaceId)
+    .orderBy('created_at', 'desc')
+    .orderBy('id', 'desc')
+    .limit(limit);
   if (projectId) query = query.where('project_id', '=', projectId);
+  if (afterId)
+    query = query.where(
+      sql<boolean>`(audits.created_at, audits.id) < (SELECT anchor.created_at, anchor.id FROM audits AS anchor WHERE anchor.id = ${afterId} AND anchor.workspace_id = ${workspaceId} AND anchor.project_id = audits.project_id)`,
+    );
   return auditResponses(db, await query.execute());
 }
 export async function listExecutions(db: Database, workspaceId: string, auditId: string) {

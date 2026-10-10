@@ -114,3 +114,10 @@ Workspace creation additionally uses `workspace_limit_exceeded` with a safe
 `limit` detail when the account has reached the configured tenant-root cap.
 Site Health admission and page reruns return 403 `entitlement_unresolved`
 with `retryable: false` when persisted grants are corrupt or cannot be folded.
+The [public API](public-api.md) returns 401 `invalid_api_key` (with
+`WWW-Authenticate: Bearer`) for a missing, unknown, revoked or expired key;
+403 `api_access_not_in_plan` when the plan lacks API access; 409
+`api_key_limit_reached` (details `allowance`, `current`) at the key allowance;
+409 `idempotency_conflict` for a reused Idempotency-Key with another body or
+while its first request runs (retryable); and 409 `estimate_exceeds_limit`
+(details `estimated_credits`, `max_estimated_credits`) for a refused launch.

@@ -154,6 +154,12 @@ durable-memory promotion. Declaring an Opportunity implemented is also an
 explicit user action. Later verification is a bounded observation over
 persisted evidence and never a causal claim or an inferred workflow status.
 
+A write through a public API key is an explicit user decision when the key
+holds the matching scope and was created by an Owner or Admin: the person
+who created and scoped the key authorized that class of write. The key
+never exceeds its creator's current role, and the same command layer
+authorizes it as the browser ([Public API](public-api.md)).
+
 ## 11. Context is selected and inspectable
 
 Generative and agent tasks receive an authorized, task-specific bounded context

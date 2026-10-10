@@ -1,7 +1,7 @@
 ---
 import { articles, groups, type Group } from '../lib/content';
-import { Rocket, ChartNoAxesCombined, Bot, Plug, History, type LucideIcon } from 'lucide-react';
-const icons: Record<Group, LucideIcon> = { 'Start here': Rocket, 'Measure and understand': ChartNoAxesCombined, 'Improve with Agent': Bot, 'Connect with MCP': Plug, 'Updates': History };
+import { Rocket, ChartNoAxesCombined, Bot, Plug, Braces, History, type LucideIcon } from 'lucide-react';
+const icons: Record<Group, LucideIcon> = { 'Start here': Rocket, 'Measure and understand': ChartNoAxesCombined, 'Improve with Agent': Bot, 'Connect with MCP': Plug, 'Use the REST API': Braces, 'Updates': History };
 const path = Astro.url.pathname.replace(/\/$/, '') || '/';
 ---
 <nav aria-label="Documentation" class="docs-nav">

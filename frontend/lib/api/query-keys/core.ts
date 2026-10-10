@@ -70,6 +70,11 @@ export const policyKeys = {
   workspace: (workspaceId: string) => ['policies', workspaceId] as const,
 };
 
+export const apiKeyKeys = {
+  all: ['api-keys'] as const,
+  list: (workspaceId: string) => ['api-keys', workspaceId] as const,
+};
+
 export const mcpConnectionKeys = {
   all: ['mcp-connections'] as const,
   list: (workspaceId?: string) => ['mcp-connections', workspaceId ?? 'account'] as const,

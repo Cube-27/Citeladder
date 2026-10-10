@@ -96,8 +96,8 @@ method, owner, focused test and removal condition in the release record.
 
 ## API host (api.citeladder.com)
 
-`api.citeladder.com` is **API-OWNED**: machine senders (CDN log streams, and
-later the public API and MCP) call it; browsers never do. It is its own small
+`api.citeladder.com` is **API-OWNED**: machine senders (CDN log streams, the
+public REST API's key holders, and later MCP) call it; browsers never do. It is its own small
 Worker, **citeladder-api-host** (`frontend/apps/api-host/`), with no assets. The
 marketing Worker keeps serving its static files without a Worker invocation, so
 marketing traffic never spends the free plan's daily Worker requests; only machine
@@ -105,9 +105,11 @@ deliveries to this host do. It uses the same origin token as the other Workers.
 
 - Allowlist (`apps/api-host/worker.ts`), forwarded unchanged with
   `X-CiteLadder-Origin-Token` and `X-CiteLadder-Public-Host: api.citeladder.com`:
-  `POST /v1/crawl-logs/ingest/{uuid}` and `POST /v1/crawl-logs/firehose/{uuid}`.
-  Anything else is `404 {"error":{"code":"not_found"}}`. Cookies are neither
-  read nor forwarded.
+  `POST /v1/crawl-logs/ingest/{uuid}` and `POST /v1/crawl-logs/firehose/{uuid}`
+  (no other `/v1/crawl-logs/...` request), and `GET`, `POST`, `PATCH` or
+  `DELETE` on any other `/v1/...` path for the [public API](../public-api.md),
+  which authenticates by API key. Anything else is
+  `404 {"error":{"code":"not_found"}}`. Cookies are neither read nor forwarded.
 - Any other hostname (a `workers.dev` or preview URL) gets the same 404.
 - The API admits the host from `PUBLIC_API_URL` and serves it `/v1/...` only.
   The apex and app hosts refuse `/v1/...` with 404.
@@ -133,7 +135,9 @@ Release smoke: `node scripts/frontend-ingress-smoke.mjs https://citeladder.com
 https://app.citeladder.com https://api.citeladder.com`. It checks that the
 apex and app hosts refuse `/v1/*` and that the API host refuses `/`, `/pricing`
 and `/api/v1/*` with the JSON 404. Then confirm one real sender's batch is
-accepted (a receipt appears on the source row).
+accepted (a receipt appears on the source row), and that a key from Settings →
+API keys lists projects: `curl -H "Authorization: Bearer $KEY"
+https://api.citeladder.com/v1/projects`.
 
 ## Contact email on the marketing Worker
 

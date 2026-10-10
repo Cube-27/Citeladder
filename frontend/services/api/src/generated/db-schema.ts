@@ -416,6 +416,34 @@ export interface AnswerPerceptions {
   workspace_id: string;
 }
 
+export interface ApiIdempotency {
+  api_key_id: string;
+  created_at: Timestamp;
+  id: string;
+  idempotency_key: string;
+  request_hash: string;
+  response_body: Json | null;
+  status_code: number | null;
+  workspace_id: string;
+}
+
+export interface ApiKeys {
+  created_at: Timestamp;
+  created_by_user_id: string;
+  expires_at: Timestamp | null;
+  id: string;
+  last_used_at: Timestamp | null;
+  name: string;
+  prefix: string;
+  project_ids: string[] | null;
+  rejection_logged_at: Timestamp | null;
+  revoke_reason: string | null;
+  revoked_at: Timestamp | null;
+  scopes: string[];
+  secret_hmac: Buffer;
+  workspace_id: string;
+}
+
 export interface AuditEngineSnapshots {
   audit_id: string;
   base_url: string;
@@ -3083,6 +3111,8 @@ export interface DB {
   analytics_tasks: AnalyticsTasks;
   answer_ad_observations: AnswerAdObservations;
   answer_perceptions: AnswerPerceptions;
+  api_idempotency: ApiIdempotency;
+  api_keys: ApiKeys;
   audit_engine_snapshots: AuditEngineSnapshots;
   audit_events: AuditEvents;
   audit_prompt_snapshots: AuditPromptSnapshots;

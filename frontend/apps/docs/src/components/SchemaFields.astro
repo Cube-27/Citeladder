@@ -1,0 +1,7 @@
+---
+import type { Shape } from '../lib/api-reference';
+import TypeLabel from './TypeLabel.astro';
+
+const { fields } = Astro.props as { fields: Shape['fields'] };
+---
+{fields.length > 0 && <ul>{fields.map((field) => <li><code>{field.name}</code>{field.required ? '' : ' (optional)'}: <TypeLabel parts={field.type} /><Astro.self fields={field.fields} /></li>)}</ul>}

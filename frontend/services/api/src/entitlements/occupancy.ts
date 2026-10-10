@@ -72,6 +72,39 @@ export async function admitProject(db: Database, workspaceId: string): Promise<v
 }
 
 /**
+ * Admit one more live API key: the plan must grant `api_access` (403
+ * `api_access_not_in_plan`) and the workspace's unrevoked, unexpired keys must
+ * stay within `api_keys` (409 `api_key_limit_reached`). Runs under the
+ * capacity lock in the insert's transaction.
+ */
+export async function admitApiKey(db: Database, workspaceId: string, now: Date): Promise<void> {
+  const accountId = await lockWorkspaceCapacity(db, workspaceId);
+  const resolved = await resolveAccountEntitlement(db, { accountId, workspaceId }, now);
+  if (resolved.status !== 'resolved')
+    throw new ApiError(403, 'Billing entitlement is unavailable for this account', {
+      code: UNRESOLVED,
+    });
+  if ((resolved.values.get(policy.entitlements.api_access) ?? 0) < 1)
+    throw new ApiError(403, "API access is not included in this workspace's plan", {
+      code: 'api_access_not_in_plan',
+    });
+  const allowance = resolved.values.get(policy.entitlements.api_keys) ?? 0;
+  const row = await db
+    .selectFrom('api_keys')
+    .select(sql<string>`count(*)`.as('count'))
+    .where('workspace_id', '=', workspaceId)
+    .where('revoked_at', 'is', null)
+    .where((eb) => eb.or([eb('expires_at', 'is', null), eb('expires_at', '>', now)]))
+    .executeTakeFirstOrThrow();
+  const current = Number(row.count);
+  if (current + 1 > allowance)
+    throw new ApiError(409, `This workspace already has ${current} of ${allowance} API keys`, {
+      code: 'api_key_limit_reached',
+      details: { allowance, current },
+    });
+}
+
+/**
  * Refuse unless the workspace's plan grants `key`, a flag that trials lack.
  * Takes the account capacity lock, so grant issuance serializes with the action.
  */
@@ -104,18 +137,29 @@ export async function hasGrantedFlag(
   workspaceId: string,
   key: string,
 ): Promise<boolean> {
+  return ((await grantedValues(db, workspaceId))?.get(key) ?? 0) >= 1;
+}
+
+/**
+ * The workspace's currently granted capability values, unlocked; `null` when
+ * the account is missing or its grants cannot resolve.
+ */
+export async function grantedValues(
+  db: Database,
+  workspaceId: string,
+): Promise<ReadonlyMap<string, number> | null> {
   const account = await db
     .selectFrom('billing_accounts')
     .select('id')
     .where('workspace_id', '=', workspaceId)
     .executeTakeFirst();
-  if (account === undefined) return false;
+  if (account === undefined) return null;
   const resolved = await resolveAccountEntitlement(
     db,
     { accountId: account.id, workspaceId },
     new Date(),
   );
-  return resolved.status === 'resolved' && (resolved.values.get(key) ?? 0) >= 1;
+  return resolved.status === 'resolved' ? resolved.values : null;
 }
 
 export function requireProjectDeletion(db: Database, workspaceId: string): Promise<void> {

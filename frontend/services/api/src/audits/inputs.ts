@@ -25,4 +25,12 @@ export const auditCreateInput = auditFields
   .omit({ credential_mode: true })
   .refine(selectedPrompts, 'Select a prompt set or prompt IDs');
 export const auditInput = auditFields.refine(selectedPrompts, 'Select a prompt set or prompt IDs');
+/**
+ * A public API launch: the project comes from the path, and the caller caps the
+ * estimate's maximum attempt count (the most audit credits the run can reserve).
+ */
+export const auditLaunchInput = auditFields
+  .omit({ credential_mode: true, project_id: true })
+  .extend({ max_estimated_credits: z.int().min(1) })
+  .refine(selectedPrompts, 'Select a prompt set or prompt IDs');
 export type AuditInput = z.output<typeof auditInput>;

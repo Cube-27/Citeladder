@@ -31,6 +31,7 @@ const base = { family: 'ai-traffic', authorize: 'project', params: { path, query
 export const trafficPageRoutes = [
   defineGetRoute({
     ...base,
+    exposure: 'both',
     path: root + '/pages',
     response: aiTrafficPagesSchema,
     async handle({ c, db }, { path, query }) {

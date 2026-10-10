@@ -27,6 +27,7 @@ to resolve within the authorized scope, not permission to weaken a constraint.
 | Catalog, competitors, buyer prompts and AI Shelf | [Commerce](commerce-intelligence.md) |
 | Agent chats, context, internal skills and deliverables | [Agent](agents.md) |
 | Hosted read tools and OAuth grants | [MCP](mcp.md) |
+| API keys, the public REST API and the command layer | [Public API](public-api.md) |
 | Sessions, projects, memberships and roles | [Workspace access](workspace-access.md) |
 
 ## Shared contracts

@@ -121,6 +121,7 @@ const PERCEPTION_SELECTION = {
 export const visibilityRoutes = [
   defineGetRoute({
     family: 'visibility',
+    exposure: 'both',
     path: '/api/v1/projects/{project_id}/visibility/ads',
     params: {
       path: PROJECT_PATH,
@@ -147,6 +148,7 @@ export const visibilityRoutes = [
   }),
   defineGetRoute({
     family: 'visibility',
+    exposure: 'both',
     path: '/api/v1/projects/{project_id}/visibility/perception',
     params: { path: PROJECT_PATH, query: PERCEPTION_SELECTION },
     response: perceptionResponseSchema,
@@ -192,6 +194,7 @@ export const visibilityRoutes = [
   }),
   defineGetRoute({
     family: 'visibility',
+    exposure: 'both',
     path: '/api/v1/projects/{project_id}/visibility',
     params: {
       path: PROJECT_PATH,
@@ -234,6 +237,7 @@ export const visibilityRoutes = [
   }),
   defineGetRoute({
     family: 'visibility',
+    exposure: 'both',
     path: '/api/v1/projects/{project_id}/visibility/prompts',
     params: {
       path: PROJECT_PATH,
@@ -267,6 +271,7 @@ export const visibilityRoutes = [
   }),
   defineGetRoute({
     family: 'visibility',
+    exposure: 'both',
     path: '/api/v1/projects/{project_id}/visibility/trends',
     params: {
       path: PROJECT_PATH,
@@ -305,6 +310,7 @@ export const visibilityRoutes = [
   }),
   defineGetRoute({
     family: 'visibility',
+    exposure: 'both',
     path: '/api/v1/projects/{project_id}/visibility/fanout',
     params: {
       path: PROJECT_PATH,
@@ -337,6 +343,7 @@ export const visibilityRoutes = [
   }),
   defineGetRoute({
     family: 'visibility',
+    exposure: 'both',
     path: '/api/v1/projects/{project_id}/visibility/sources',
     params: {
       path: PROJECT_PATH,

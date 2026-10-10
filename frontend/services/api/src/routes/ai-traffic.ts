@@ -59,6 +59,7 @@ export const aiTrafficRoutes = [
   ...trafficPageRoutes,
   defineGetRoute({
     ...readBase,
+    exposure: 'both',
     path: root + '/overview',
     response: aiTrafficOverviewSchema,
     async handle({ c, db }, { path, query }) {
@@ -138,6 +139,7 @@ export const aiTrafficRoutes = [
   }),
   defineGetRoute({
     ...readBase,
+    exposure: 'both',
     path: root + '/coverage',
     response: crawlCoverageResponseSchema,
     async handle({ c, db }, { path, query }) {
