@@ -76,12 +76,14 @@ prompt set, topic, audit, action and crawl IDs in the path must belong to that
 project ([ownership](../frontend/services/api/src/public-api/ownership.ts)),
 so a key restricted to one project never reaches another project's rows.
 
-Every POST that creates or spends needs an `Idempotency-Key` (at most 255
+Every non-read POST (creates, spends and cancels) needs an `Idempotency-Key` (at most 255
 characters; [idempotency](../frontend/services/api/src/public-api/idempotency.ts)).
 The first request claims the key before it runs; a repeat with the same method,
 path and body replays the stored response with `Idempotent-Replayed: true`; a
 different body, or a repeat while the first is running, is 409
-`idempotency_conflict`. A failed attempt releases its claim. Records are kept
+`idempotency_conflict`. A refused attempt (a 4xx) releases its claim; a server
+failure keeps it, since its write may have committed, so a retry gets a
+retryable 409 rather than a second write. Records are kept
 24 hours and purged by the runner. Errors use the
 [error contract](api-error-contract.md). Lists that can grow page with
 `cursor` and `limit` (at most 100) and return `{items, next_cursor}`.
@@ -90,7 +92,7 @@ different body, or a repeat while the first is running, is 409
 
 Reads: projects, the business map, topics, prompt sets, prompts with their
 latest measurement (`measured` with mention and citation rates that may be
-`null`, or `not_measured`), generation runs and candidates, competitors and
+`null`, `not_measured`, or `unavailable` for brand diagnostics), generation runs and candidates, competitors and
 suggestions, audits (paged), an audit, an estimate, schedules, visibility
 overview, trends, prompts, sources, fanout, perception and ads, actions,
 Site Health's latest snapshot, crawl pages and issues, AI Traffic overview,

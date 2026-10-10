@@ -7,6 +7,7 @@ import { promptSchema } from '@citeladder/contracts/project';
 import { sql } from 'kysely';
 import { z } from 'zod';
 
+import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { listPromptSets } from '../prompts/prompt-sets.ts';
 import { getPromptMetrics, type PromptMetricItem } from '../visibility/prompts.ts';
@@ -26,7 +27,10 @@ const latestMeasurementSchema = z.discriminatedUnion('state', [
     citation_rate: z.number().nullable(),
   }),
   z.object({ state: z.literal('not_measured') }),
+  // A cohort with no per-prompt visibility reading (brand diagnostics).
+  z.object({ state: z.literal('unavailable') }),
 ]);
+const MEASURED_COHORTS: readonly string[] = policy.visibility.requestable_cohorts;
 export const publicPromptSchema = promptSchema.extend({
   latest_measurement: latestMeasurementSchema,
 });
@@ -53,7 +57,7 @@ async function latestMetrics(db: Database, scope: Scope): Promise<Map<string, Pr
     baselineId: null,
   };
   const cohorts = await Promise.all(
-    ['core', 'comparison'].map((cohort) => getPromptMetrics(db, scope, { ...query, cohort })),
+    MEASURED_COHORTS.map((cohort) => getPromptMetrics(db, scope, { ...query, cohort })),
   );
   const byPrompt = new Map<string, PromptMetricItem>();
   for (const item of cohorts.flat()) if (item.prompt_id) byPrompt.set(item.prompt_id, item);
@@ -88,14 +92,16 @@ export async function listPublicPrompts(
       const measured = metrics.get(prompt.id);
       return {
         ...prompt,
-        latest_measurement: measured
-          ? {
-              state: 'measured' as const,
-              audit_id: measured.audit_id,
-              mention_rate: measured.visibility_rate ?? null,
-              citation_rate: measured.owned_citation_rate ?? null,
-            }
-          : { state: 'not_measured' as const },
+        latest_measurement: !MEASURED_COHORTS.includes(prompt.cohort)
+          ? { state: 'unavailable' as const }
+          : measured
+            ? {
+                state: 'measured' as const,
+                audit_id: measured.audit_id,
+                mention_rate: measured.visibility_rate ?? null,
+                citation_rate: measured.owned_citation_rate ?? null,
+              }
+            : { state: 'not_measured' as const },
       };
     }),
   };

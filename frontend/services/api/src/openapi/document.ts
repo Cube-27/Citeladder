@@ -7,7 +7,10 @@ import { z } from 'zod';
 
 import type { RouteContract } from './routes.ts';
 
-type JsonSchema = { [key: string]: unknown };
+export type JsonSchema = { [key: string]: unknown };
+
+/** Emits a request (`input`) or response (`output`) schema for the document. */
+export type SchemaEmitter = (schema: z.ZodType, io: 'input' | 'output') => JsonSchema;
 
 type OpenApiParameter = {
   name: string;
@@ -57,7 +60,7 @@ function parameters(location: OpenApiParameter['in'], object?: z.ZodObject): Ope
   }));
 }
 
-function operation(route: RouteContract<string>): OpenApiOperation {
+function operation(route: RouteContract<string>, emit: SchemaEmitter): OpenApiOperation {
   const result: OpenApiOperation = { tags: [route.family], responses: {} };
   const declared = [
     ...parameters('path', route.pathParams),
@@ -69,7 +72,7 @@ function operation(route: RouteContract<string>): OpenApiOperation {
   if (route.body) {
     result.requestBody = {
       required: !route.body.safeParse(undefined).success,
-      content: { [JSON_MEDIA_TYPE]: { schema: jsonSchema(route.body, 'input') } },
+      content: { [JSON_MEDIA_TYPE]: { schema: emit(route.body, 'input') } },
     };
   }
   for (const [status, schema] of Object.entries(route.responses)) {
@@ -78,20 +81,24 @@ function operation(route: RouteContract<string>): OpenApiOperation {
         ? { description: 'Successful Response' }
         : {
             description: 'Successful Response',
-            content: { [JSON_MEDIA_TYPE]: { schema: jsonSchema(schema, 'output') } },
+            content: { [JSON_MEDIA_TYPE]: { schema: emit(schema, 'output') } },
           };
   }
   return result;
 }
 
-export function openApiDocument(routes: readonly RouteContract<string>[]): OpenApiDocument {
+/** Bodies and responses are inlined unless `emit` references shared components. */
+export function openApiDocument(
+  routes: readonly RouteContract<string>[],
+  emit: SchemaEmitter = jsonSchema,
+): OpenApiDocument {
   const paths: OpenApiDocument['paths'] = {};
   for (const route of routes) {
     const item = (paths[route.path] ??= {});
     if (item[route.method]) {
       throw new Error(`Duplicate route contract: ${route.method.toUpperCase()} ${route.path}`);
     }
-    item[route.method] = operation(route);
+    item[route.method] = operation(route, emit);
   }
   return { openapi: OPENAPI_VERSION, paths };
 }

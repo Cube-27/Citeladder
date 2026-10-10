@@ -54,7 +54,7 @@ Pass `limit` (up to 100) and the previous `next_cursor` as `cursor` to read the 
 
 ## Idempotency
 
-Every `POST` that creates something or spends credits needs an `Idempotency-Key` header, such as a UUID you generate per operation. If a network error leaves you unsure whether a request succeeded, send it again with the same key and body: you receive the original response, marked `Idempotent-Replayed: true`, and nothing happens twice. Reusing a key with a different body returns `409 idempotency_conflict`. Keys are remembered for 24 hours.
+Every `POST` that changes something needs an `Idempotency-Key` header, including creates, credit-spending runs and cancellations, such as a UUID you generate per operation. If a network error leaves you unsure whether a request succeeded, send it again with the same key and body: you receive the original response, marked `Idempotent-Replayed: true`, and nothing happens twice. Reusing a key with a different body returns `409 idempotency_conflict`. Keys are remembered for 24 hours.
 
 ## Launch an audit safely
 
@@ -96,6 +96,6 @@ Branch on `code`. Common codes: `invalid_api_key` (401: missing, revoked or expi
 
 ## Values that are not numbers
 
-Like the app, the API keeps unknown, unavailable, not measured and zero apart. A prompt's `latest_measurement` is either `{"state": "measured", …}`, whose rates are `null` when that run could not determine them, or `{"state": "not_measured"}`. Never treat a missing value as zero.
+Like the app, the API keeps unknown, unavailable, not measured and zero apart. A prompt's `latest_measurement` is `{"state": "measured", …}`, whose rates are `null` when that run could not determine them, `{"state": "not_measured"}`, or `{"state": "unavailable"}` for a brand-diagnostic prompt, which has no per-prompt visibility reading. Never treat a missing value as zero.
 
 The [reference](/api/reference/) lists every operation; [openapi.json](https://api.citeladder.com/v1/openapi.json) describes every field.

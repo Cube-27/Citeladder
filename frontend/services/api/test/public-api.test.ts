@@ -418,7 +418,7 @@ describe('public API requests', () => {
       body: {
         prompts: [
           { text: 'Which running shoes last longest?' },
-          { text: 'Which running shoes suit wide feet?' },
+          { text: 'Which running shoes suit wide feet?', cohort: 'brand_diagnostic' },
         ],
       },
       idempotencyKey: 'p-2',
@@ -440,8 +440,14 @@ describe('public API requests', () => {
         `/projects/${tenant.projectId}/prompts?limit=2&cursor=${listed.next_cursor}`,
       )
     ).json()) as { items: { text: string }[]; next_cursor: string | null };
+    // Brand diagnostics have no per-prompt visibility reading.
     expect(next).toMatchObject({
-      items: [{ text: 'Which running shoes suit wide feet?' }],
+      items: [
+        {
+          text: 'Which running shoes suit wide feet?',
+          latest_measurement: { state: 'unavailable' },
+        },
+      ],
       next_cursor: null,
     });
     // A cursor belongs to its endpoint and filters.
@@ -456,8 +462,25 @@ describe('public API requests', () => {
   it('publishes every public operation in the OpenAPI document without a key', async () => {
     const response = await app.request('/v1/openapi.json');
     expect(response.status).toBe(200);
-    const document = (await response.json()) as { paths: Record<string, Record<string, unknown>> };
+    const document = (await response.json()) as {
+      paths: Record<string, Record<string, unknown>>;
+      components: { schemas: Record<string, unknown> };
+    };
     expect(document.paths['/v1/projects/{project_id}/audits']).toHaveProperty('post');
     expect(Object.keys(document.paths).every((path) => path.startsWith('/v1/'))).toBe(true);
+    // Shared shapes are named once and every reference resolves to one.
+    expect(document.paths['/v1/projects/{project_id}/prompt-sets/{prompt_set_id}']).toMatchObject({
+      get: {
+        responses: {
+          200: {
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/PromptSet' } } },
+          },
+        },
+      },
+    });
+    const refs = [
+      ...JSON.stringify(document).matchAll(/"\$ref":"#\/components\/schemas\/([^"]+)"/g),
+    ];
+    expect(refs.filter(([, name]) => !(name! in document.components.schemas))).toEqual([]);
   });
 });

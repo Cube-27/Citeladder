@@ -73,7 +73,7 @@ const performanceSeriesSchema = responseObject({
   position: metricSeries,
 });
 
-const performanceWindowSchema = responseObject({
+export const performanceWindowSchema = responseObject({
   snapshot_id: uuid().nullable(),
   window_start: z.string(),
   window_end: z.string(),
@@ -160,7 +160,7 @@ export const performanceDashboardSchema = responseObject({
   normalization_version: z.string(),
 });
 
-const performanceMetricsSchema = responseObject({
+export const performanceMetricsSchema = responseObject({
   clicks: z.number().int().nullable(),
   impressions: z.number().int().nullable(),
   ctr: z.number().nullable(),

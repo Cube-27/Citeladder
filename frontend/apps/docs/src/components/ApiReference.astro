@@ -1,12 +1,15 @@
 ---
-import { API_REFERENCE_HEADING, API_OPERATIONS } from '../lib/content';
+import { API_REFERENCE_HEADING, API_SCHEMAS_HEADING } from '../lib/content';
+import { API_OPERATIONS, API_SCHEMAS, schemaAnchor } from '../lib/api-reference';
+import SchemaFields from './SchemaFields.astro';
+import TypeLabel from './TypeLabel.astro';
 
 const operations = API_OPERATIONS;
 const groups = [...new Set(operations.map((operation) => operation.group))];
 ---
 <section class="docs-tool-reference docs-prose website-body" aria-labelledby={API_REFERENCE_HEADING.slug}>
   <h2 id={API_REFERENCE_HEADING.slug}>{API_REFERENCE_HEADING.text}</h2>
-  <p>Generated from the API's own route declarations; <a href="https://api.citeladder.com/v1/openapi.json">openapi.json</a> holds every request and response schema.</p>
+  <p>Generated from the API's own route declarations; <a href="https://api.citeladder.com/v1/openapi.json">openapi.json</a> holds the same document. Linked types are listed under <a href={`#${API_SCHEMAS_HEADING.slug}`}>{API_SCHEMAS_HEADING.text}</a>.</p>
   {groups.map((group) => <details>
     <summary><code>{group}</code></summary>
     <ul>
@@ -14,7 +17,32 @@ const groups = [...new Set(operations.map((operation) => operation.group))];
         <code>{operation.method} {operation.path}</code>
         {operation.scope && <span class="website-label"> · scope {operation.scope}</span>}
         {operation.query.length > 0 && <span class="website-label"> · query: {operation.query.join(', ')}</span>}
+        <ul>
+          {operation.request && <li>Request body: <TypeLabel parts={operation.request.type} />
+            <SchemaFields fields={operation.request.fields} />
+          </li>}
+          <li>Response: {operation.response ? <TypeLabel parts={operation.response.type} /> : 'no body'}
+            {operation.response && <SchemaFields fields={operation.response.fields} />}
+          </li>
+        </ul>
       </li>)}
     </ul>
   </details>)}
 </section>
+<section class="docs-tool-reference docs-prose website-body" aria-labelledby={API_SCHEMAS_HEADING.slug}>
+  <h2 id={API_SCHEMAS_HEADING.slug}>{API_SCHEMAS_HEADING.text}</h2>
+  <p>Shapes shared between operations, each defined once under <code>components.schemas</code>.</p>
+  {API_SCHEMAS.map((schema) => <details id={schemaAnchor(schema.name)}>
+    <summary><code>{schema.name}</code></summary>
+    {schema.fields.length > 0 ? <SchemaFields fields={schema.fields} /> : <p><TypeLabel parts={schema.type} /></p>}
+  </details>)}
+</section>
+<script>
+  // A link to a schema opens its entry; a closed <details> would hide the target.
+  const reveal = () => {
+    const target = document.getElementById(decodeURIComponent(location.hash.slice(1)));
+    if (target instanceof HTMLDetailsElement) target.open = true;
+  };
+  window.addEventListener('hashchange', reveal);
+  reveal();
+</script>

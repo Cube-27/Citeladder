@@ -1,0 +1,6 @@
+---
+import { schemaAnchor, type TypePart } from '../lib/api-reference';
+
+const { parts } = Astro.props as { parts: TypePart[] };
+---
+<code>{parts.map((part) => part.schema ? <a href={`#${schemaAnchor(part.schema)}`}>{part.text}</a> : part.text)}</code>

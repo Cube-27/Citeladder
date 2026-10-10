@@ -1,8 +1,7 @@
 import type { MarkdownInstance } from 'astro';
 import { z } from 'zod';
 import toolCatalog from '../data/mcp-tools.json';
-// Raw text, not a JSON module: typing the whole generated document is needless work.
-import publicApiDocument from '../data/public-api.json?raw';
+import { API_OPERATIONS, API_SCHEMAS } from './api-reference';
 
 const metadata = z.object({
   title: z.string().min(1),
@@ -36,35 +35,7 @@ export const API_REFERENCE_HEADING = {
   slug: 'operations',
   text: 'Operations',
 } as const;
-
-const apiDocument = z.object({
-  paths: z.record(
-    z.string(),
-    z.record(
-      z.string(),
-      z.object({
-        tags: z.array(z.string()).optional(),
-        'x-citeladder-scope': z.string().optional(),
-        parameters: z.array(z.object({ name: z.string(), in: z.string() })).optional(),
-      }),
-    ),
-  ),
-});
-
-/** Every public operation in document order, with its resource group and scope. */
-export const API_OPERATIONS = Object.entries(
-  apiDocument.parse(JSON.parse(publicApiDocument)).paths,
-).flatMap(([path, item]) =>
-  Object.entries(item).map(([method, operation]) => ({
-    method: method.toUpperCase(),
-    path,
-    group: operation.tags?.[0] ?? 'projects',
-    scope: operation['x-citeladder-scope'] ?? null,
-    query: (operation.parameters ?? [])
-      .filter((parameter) => parameter.in === 'query')
-      .map((parameter) => parameter.name),
-  })),
-);
+export const API_SCHEMAS_HEADING = { depth: 2, slug: 'schemas', text: 'Schemas' } as const;
 
 export const articles = Object.entries(modules)
   .map(([file, entry]) => {
@@ -90,7 +61,7 @@ export async function articleHeadings(article: Article) {
     ({ depth }) => depth === 2 || depth === 3,
   );
   if (article.toolReference) return [...headings, TOOL_REFERENCE_HEADING];
-  if (article.apiReference) return [...headings, API_REFERENCE_HEADING];
+  if (article.apiReference) return [...headings, API_REFERENCE_HEADING, API_SCHEMAS_HEADING];
   return headings;
 }
 
@@ -100,7 +71,11 @@ export function articleSearchBody(article: Article): string {
   if (article.toolReference) return body + JSON.stringify(toolCatalog.tools);
   if (article.apiReference)
     return (
-      body + API_OPERATIONS.map((operation) => `${operation.method} ${operation.path}`).join('\n')
+      body +
+      [
+        ...API_OPERATIONS.map((operation) => `${operation.method} ${operation.path}`),
+        ...API_SCHEMAS.map((schema) => schema.name),
+      ].join('\n')
     );
   return body;
 }
