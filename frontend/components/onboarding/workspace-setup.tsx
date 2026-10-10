@@ -106,7 +106,16 @@ export function WorkspaceSetup() {
           )}
         </Field>
         <TermsConsent {...consent.field} />
-        {error ? <Alert tone="danger">{humanizeApiError(error).message}</Alert> : null}
+        {error ? (
+          <Alert tone="danger">
+            {humanizeApiError(error).message}
+            {terms.isError ? (
+              <Button variant="secondary" className="w-fit" onClick={() => void terms.refetch()}>
+                Retry
+              </Button>
+            ) : null}
+          </Alert>
+        ) : null}
       </form>
     </FlowShell>
   );

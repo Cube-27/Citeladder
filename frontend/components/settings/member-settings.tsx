@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { UserPlus } from 'lucide-react';
 
 import { ConfirmDialog, type ConfirmRequest } from '@/components/ui/confirm-dialog';
@@ -208,14 +208,22 @@ export function MemberSettings({ mayInvite }: Readonly<{ mayInvite: boolean }>) 
   const busy = invite.isPending || mutations.some((mutation) => mutation.isPending);
   const workspaceName = activeWorkspace?.name ?? 'this workspace';
   /** Ask first; close once the change has landed or failed. */
+  // A second click lands before `busy` re-renders, so the guard is synchronous.
+  const confirming = useRef(false);
   const confirmThen = (request: Confirmation, run: () => Promise<unknown>) =>
     setConfirm({
       ...request,
       // A failure is reported by the notice above the roster.
-      onConfirm: () =>
+      onConfirm: () => {
+        if (confirming.current) return;
+        confirming.current = true;
         void run()
           .catch(() => undefined)
-          .finally(() => setConfirm(null)),
+          .finally(() => {
+            confirming.current = false;
+            setConfirm(null);
+          });
+      },
     });
   // Ownership moves only at the Owner's hand; nobody else is offered it.
   const transferIntent = mayTransfer
