@@ -1,8 +1,7 @@
 /**
  * Prompt scores for one run, or pooled over a period, with their outcomes.
  *
- * Moved from `metrics.get_prompt_metrics`, `prompt_outcomes.py` and
- * `prompt_period.py` in `app/domain/analysis`. Scores are the persisted
+ * Scores are the persisted
  * `PromptMetricSnapshot` rows, strongest first; outcome counts come from the
  * persisted answers and tasks, never a rescore. A pooled period keeps counts
  * and rates and drops every single-run score.
@@ -17,7 +16,7 @@ import type { z } from 'zod';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { jsonObject, numberRecord, record, strings } from '../db/json.ts';
-import { pydanticUtc, storedInstant, utcText, utcTextOf } from '../db/timestamps.ts';
+import { wireUtc, storedInstant, utcText, utcTextOf } from '../db/timestamps.ts';
 import { compareText } from '../text-order.ts';
 import { groupBy } from '../lists.ts';
 import {
@@ -150,7 +149,7 @@ async function scoreRows(
       decline_confirmed: row.decline_confirmed,
       analyzer_version: row.analyzer_version,
       scoring_rule_version: row.scoring_rule_version,
-      created_at: pydanticUtc(row.created_at_text),
+      created_at: wireUtc(row.created_at_text),
       theme: '',
       intent: '',
       visibility_rate: null,

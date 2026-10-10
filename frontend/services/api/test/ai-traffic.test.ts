@@ -1,8 +1,7 @@
 /**
  * The persisted AI Referrals read over HTTP.
  *
- * Ported from `test_ai_referrals_api.py` and
- * `test_ai_referrals_validation.py`: a preset resolves the snapshot its
+ * A preset resolves the snapshot its
  * refresh MARKED, never one of merely the right length; an exact window reads
  * only that window; a bad query is a 422; another workspace sees a 404.
  */

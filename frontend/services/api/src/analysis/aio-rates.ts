@@ -1,9 +1,7 @@
 /**
  * Published rates for the observed Google AI Overview surface.
  *
- * Moved from `app/domain/analysis/aio_rates.py`, retired with its only
- * caller. Two rules run through
- * every rate: failed and pending observations are excluded from every
+ * Two rules run through every rate: failed and pending observations are excluded from every
  * denominator, and an empty denominator is UNAVAILABLE (`value: null`),
  * never 0%. A rate always travels with the denominator it divided by.
  */

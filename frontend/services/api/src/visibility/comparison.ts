@@ -2,8 +2,7 @@
  * A selected run against its baseline: the nearest compatible earlier run,
  * or the one the reader named.
  *
- * Moved from `comparison_projection.py` and `matched_comparison.py` in
- * `app/domain/analysis`. Runs compare exactly when their frozen measurement
+ * Runs compare exactly when their frozen measurement
  * identity and versions match and both are fully covered; otherwise they
  * compare only on the like-for-like prompt/model/repetition cells both runs
  * answered, and say so in `status`.
@@ -16,7 +15,7 @@ import { executionFrozenProvenance } from '../analysis/provenance.ts';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { record, strings } from '../db/json.ts';
-import { pydanticUtc } from '../db/timestamps.ts';
+import { wireUtc } from '../db/timestamps.ts';
 import {
   cohortMetrics,
   engineMetrics,
@@ -151,7 +150,7 @@ function exactComparison(
     status,
     baseline_audit_id: previous.auditId,
     baseline_audit_ids: [previous.auditId],
-    baseline_at: pydanticUtc(previous.completedAt),
+    baseline_at: wireUtc(previous.completedAt),
     baseline_counts: previousCounts,
     current_counts: currentCounts,
     rankings: rankingRows(before),
@@ -299,7 +298,7 @@ export function compareCells(
   return emptyComparison({
     status: 'matched_subset',
     baseline_audit_id: runs.previous.auditId,
-    baseline_at: pydanticUtc(runs.previous.completedAt),
+    baseline_at: wireUtc(runs.previous.completedAt),
     baseline_audit_ids: [runs.previous.auditId],
     current_counts: measurementCounts(current),
     baseline_counts: measurementCounts(previous),

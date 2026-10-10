@@ -2,9 +2,8 @@
  * Opportunity refresh and routes against real PostgreSQL. Native fixtures seed
  * evidence and the native enqueue owner admits execution.
  *
- * Ported from the Python recompute suites this refresh retired
- * (`test_opportunities_service*.py`, `test_actions.py`), plus the queue,
- * lock and cross-stack Action handoffs the move introduced.
+ * Covers detection and supersession, the queue, the project lock and the
+ * Action handoffs.
  */
 import { randomUUID } from 'node:crypto';
 

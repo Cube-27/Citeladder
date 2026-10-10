@@ -1,8 +1,6 @@
 /**
  * Persisted evidence one refresh's detectors read: Site Health defects,
- * confirmed prompt declines and one audit's visibility answers
- * (`recompute._load_site_evidence`, `_confirmed_decline_hits` and
- * `visibility_evidence.py`). Projections of existing rows only; nothing here
+ * confirmed prompt declines and one audit's visibility answers. Projections of existing rows only; nothing here
  * detects, scores or writes.
  */
 import { policy } from '../config.ts';

@@ -1,7 +1,7 @@
 /**
  * How often each leading source was used, bucketed over the selection.
  *
- * Moved from `app/domain/analysis/source_series.py`. The time axis is run
+ * The time axis is run
  * completion (`coalesce(completed_at, created_at)`), the denominator per
  * bucket is every response observed in it, and each leading source gets a
  * dense line: a bucket where it went uncited is a real zero.
@@ -9,7 +9,7 @@
 import { sql } from 'kysely';
 
 import type { Database } from '../db/database.ts';
-import { pydanticUtc, utcText } from '../db/timestamps.ts';
+import { wireUtc, utcText } from '../db/timestamps.ts';
 import { authorizedSelection, evidenceScope, observedAt, type RunSelection } from './selection.ts';
 import { compareText } from '../text-order.ts';
 
@@ -28,7 +28,7 @@ export type SourceSeriesResponse = {
   series: SourceSeries[];
 };
 
-/** One grouped `(source, bucket)` row; `bucket` is Pydantic's UTC rendering. */
+/** One grouped `(source, bucket)` row; `bucket` is the UTC wire rendering. */
 type SeriesRow = { key: string; bucket: string; responses: number; citations: number };
 
 /** Fold the grouped rows into one dense series per leading source. */
@@ -131,13 +131,13 @@ export async function getSourceSeries(
   return assembleSeries(
     rows.map((row) => ({
       key: row.key,
-      bucket: pydanticUtc(row.bucket!),
+      bucket: wireUtc(row.bucket!),
       responses: Number(row.responses),
       citations: Number(row.citations),
     })),
     {
       ...empty,
-      totals: new Map(totalRows.map((row) => [pydanticUtc(row.bucket!), Number(row.responses)])),
+      totals: new Map(totalRows.map((row) => [wireUtc(row.bucket!), Number(row.responses)])),
       limit: Math.max(1, Math.min(options.limit, SOURCE_SERIES_MAX_SERIES)),
     },
   );

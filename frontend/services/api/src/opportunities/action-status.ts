@@ -1,6 +1,5 @@
 /**
- * The Action status a reader sees, derived in SQL so filters and reads agree
- * (`app/domain/opportunities/action_status.py`).
+ * The Action status a reader sees, derived in SQL so filters and reads agree.
  *
  * A user stores `open` or `dismissed` and a declaration stores
  * `implemented`; the rest is derived: an open Action reads as in progress

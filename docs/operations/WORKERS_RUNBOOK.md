@@ -228,7 +228,7 @@ The protected **Marketing Worker delivery** workflow bakes production origins
 and uploads an immutable artifact. The marketing Worker secret `ORIGIN_TOKEN`
 matches the protected origin token. The public catalog read sends no visitor
 cookies upstream. Record artifact digest, public-config fingerprint, deployment
-ID and matching backend/secret revisions in the protected release record.
+ID and matching API/secret revisions in the protected release record.
 
 For local Worker verification, run `pnpm --dir frontend dev:marketing-worker`.
 Use only a disposable local token; never use the production token. Map
@@ -281,14 +281,14 @@ Cloudflare Worker secrets. Do not paste secret values into a PR, issue or chat.
 5. **Release approval:** after CI is green, record immutable Worker/backend
    artifacts, DNS and config baseline, secret version references, callback
    registrations, rollback target and failure thresholds. Approve the
-   protected backend/app/marketing dispatches separately.
+   protected GCP, app and marketing dispatches separately.
 
 ### Release order
 
 The following is the required order after protected release approval. This
 procedure itself does not authorize dispatch or DNS changes.
 
-1. Record operator, main SHA, exact backend/Worker artifacts, existing DNS and
+1. Record operator, main SHA, exact API/Worker artifacts, existing DNS and
    Custom Domain associations, secret version references, callbacks, rollback
    target and failure thresholds. Confirm the manual setup checklist and the
    protected approvals.

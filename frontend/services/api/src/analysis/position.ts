@@ -1,8 +1,7 @@
 /**
  * Where a brand sits among the brands one answer names.
  *
- * Ports `brand_position` and `competitor_position` from
- * `app/analysis/position.py`, which the scorer keeps. A rank is arithmetic
+ * A rank is arithmetic
  * over first-mention offsets; an entity the answer never named has no rank,
  * which is not last place.
  */

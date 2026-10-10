@@ -2,10 +2,9 @@
  * Timestamps across the SQL boundary at microsecond precision.
  *
  * node-postgres parses `timestamptz` into a JavaScript `Date`, which drops the
- * microseconds PostgreSQL stores and Pydantic serializes. Reads therefore
- * select a timestamp as UTC text and render it the way Pydantic renders an
- * aware UTC `datetime` (`2026-01-01T00:00:00Z`, `.ffffff` only when
- * non-zero); request timestamps travel back as ISO text cast in SQL.
+ * microseconds PostgreSQL stores. Reads therefore select a timestamp as UTC
+ * text and render the wire format (`2026-01-01T00:00:00Z`, `.ffffff` only
+ * when non-zero); request timestamps travel back as ISO text cast in SQL.
  */
 import { sql, type Expression, type RawBuilder } from 'kysely';
 
@@ -20,17 +19,17 @@ export function utcText(value: Expression<unknown>): RawBuilder<string | null> {
 export const utcTextOf = (value: Expression<unknown>): RawBuilder<string> =>
   utcText(value) as RawBuilder<string>;
 
-/** Pydantic's JSON for an aware UTC `datetime`, from `utcText` output. */
-export function pydanticUtc(text: string): string {
+/** The wire format for a UTC instant, from `utcText` output. */
+export function wireUtc(text: string): string {
   return `${text.endsWith('.000000') ? text.slice(0, -'.000000'.length) : text}Z`;
 }
 
-export function pydanticUtcOrNull(text: string | null): string | null {
-  return text === null ? null : pydanticUtc(text);
+export function wireUtcOrNull(text: string | null): string | null {
+  return text === null ? null : wireUtc(text);
 }
 
-/** Pydantic's JSON for an aware instant, rendered in UTC. */
-export function pydanticUtcOf(value: ParsedDatetime): string {
+/** The wire format for an aware instant, rendered in UTC. */
+export function wireUtcOf(value: ParsedDatetime): string {
   return isoformat(toUtc(value)).replace(/\+00:00$/u, 'Z');
 }
 

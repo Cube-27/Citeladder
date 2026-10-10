@@ -75,12 +75,12 @@ Never return stack traces, SQL, credentials or raw provider bodies.
 `status`, `code`, `retryable`, `requestId`, and the raw `body`.
 
 `readErrorBody` extracts a display-safe message in strict priority order, so the same
-UI code works against migrated and unmigrated endpoints alike:
+UI code handles every error shape the API emits:
 
 1. canonical `error.message` / `error.code` / `error.retryable` / `error.request_id`;
-2. string `detail` (classic FastAPI);
-3. object `detail.message` / `detail.code` (legacy coded dialect);
-4. FastAPI validation array — first item humanized as `field.path: message`;
+2. string `detail`, which the envelope repeats from `error.message`;
+3. object `detail.message` / `detail.code`;
+4. a validation array — first item humanized as `field.path: message`;
 5. the response status text.
 
 **A raw JSON blob is never surfaced as a message** at any step.

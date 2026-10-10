@@ -1,7 +1,6 @@
 import { fileURLToPath } from 'node:url';
 
 import { policy } from '../config.ts';
-import { libpqUrl } from '../db/database.ts';
 import { OperatorRefusal } from './operator.ts';
 
 type Execute = (
@@ -24,7 +23,7 @@ export function resetTarget(env: Record<string, string | undefined>) {
   if (!raw) throw new OperatorRefusal('explicit_reset_database_required');
   let url: URL;
   try {
-    url = new URL(libpqUrl(raw));
+    url = new URL(raw);
   } catch {
     throw new OperatorRefusal('DATABASE_URL is not a valid PostgreSQL URL.');
   }

@@ -14,7 +14,7 @@ import { compareIdentityText } from '../analysis/comparison.ts';
 import { storedEntityMatching } from '../analysis/entity-matching.ts';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
-import { pydanticUtc, utcText } from '../db/timestamps.ts';
+import { wireUtc, utcText } from '../db/timestamps.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
 
 const sorted = (value: unknown): string[] =>
@@ -134,4 +134,4 @@ export const pageEntities = (reading: Reading, rows: ReadingPresence[]) =>
   }));
 
 /** When a reading was taken, as the API renders a timestamp. */
-export const readAt = (reading: Reading) => pydanticUtc(reading.fetched_text);
+export const readAt = (reading: Reading) => wireUtc(reading.fetched_text);

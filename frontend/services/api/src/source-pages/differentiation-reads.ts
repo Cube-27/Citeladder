@@ -1,6 +1,6 @@
 /** Persisted comparisons are descriptive evidence; reads never inspect or recompute. */
 import type { Database } from '../db/database.ts';
-import { pydanticUtc, utcTextOf } from '../db/timestamps.ts';
+import { wireUtc, utcTextOf } from '../db/timestamps.ts';
 import { sql } from 'kysely';
 import type { Scope } from '../opportunities/sources.ts';
 import { requireProject } from '../opportunities/reads.ts';
@@ -17,5 +17,5 @@ export async function listDifferentiationReports(db: Database, scope: Scope, lim
     .orderBy('id', 'desc')
     .limit(limit)
     .execute();
-  return rows.map((row) => ({ report: row.report, created_at: pydanticUtc(row.created_text) }));
+  return rows.map((row) => ({ report: row.report, created_at: wireUtc(row.created_text) }));
 }

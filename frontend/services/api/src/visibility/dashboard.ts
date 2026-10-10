@@ -2,8 +2,7 @@
  * The selected-measurement visibility dashboard: one run, or one frozen
  * configuration pooled across a period.
  *
- * Moved from `visibility.py` and `range_projection.py` in
- * `app/domain/analysis`. Computed from the persisted `MetricSnapshot`; no
+ * Computed from the persisted `MetricSnapshot`; no
  * cross-run trend here (that is `/visibility/trends`). The latest run is the
  * default selection, and a range pools only runs of one configuration.
  */
@@ -16,7 +15,7 @@ import { frozenComparisonKey } from '../analysis/comparison.ts';
 import { modelProvenanceFor } from '../analysis/provenance.ts';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
-import { pydanticUtc, pydanticUtcOf, utcText, utcTextOf } from '../db/timestamps.ts';
+import { wireUtc, wireUtcOf, utcText, utcTextOf } from '../db/timestamps.ts';
 import { epochMicros, fromEpochMicros, toUtc, type ParsedDatetime } from '../http/datetimes.ts';
 import { compareText } from '../text-order.ts';
 import { groupBy, isNonEmpty, lastOf, type NonEmpty } from '../lists.ts';
@@ -261,7 +260,7 @@ async function runView(
       sentiment: typeof metrics.sentiment === 'string' ? metrics.sentiment : null,
       avg_position: metricNumber(metrics.avg_position),
       citation_totals: citationTotals(metrics),
-      created_at: pydanticUtc(run.snapshotCreatedAt),
+      created_at: wireUtc(run.snapshotCreatedAt),
     },
   };
 }
@@ -398,7 +397,7 @@ async function comparePeriod(
   const previous = foldBucket(lastOf(before).completedAt, before);
   const result = emptyComparison({
     status: 'comparable',
-    baseline_at: pydanticUtcOf(baselineStart),
+    baseline_at: wireUtcOf(baselineStart),
     baseline_counts: previous.counts,
     baseline_audit_ids: before.map((source) => source.auditId),
     current_counts: point.counts,
@@ -469,8 +468,8 @@ async function rangeVisibility(
       [...groups].map(([group, items]) => [group, items.length]),
     ),
     comparison_key: key,
-    from_at: fromAt && pydanticUtcOf(fromAt),
-    to_at: pydanticUtcOf(toAt),
+    from_at: fromAt && wireUtcOf(fromAt),
+    to_at: wireUtcOf(toAt),
     counts,
     total_completed: counts.responses,
     total_failed: counts.failed ?? 0,

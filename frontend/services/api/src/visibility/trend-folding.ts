@@ -1,7 +1,7 @@
 /**
  * Folding measured runs into visibility trend points. Pure: no I/O.
  *
- * Moved from `app/domain/analysis/trend_folding.py`. A raw point projects one
+ * A raw point projects one
  * run; a day/week/month bucket folds the runs of one folding identity (frozen
  * comparison key and versions), weighting every rate by the responses behind
  * it and never substituting zero for a rate a run did not record.
@@ -10,7 +10,7 @@ import type { visibilityTrendPointSchema } from '@citeladder/contracts/visibilit
 import type { z } from 'zod';
 
 import { buildModelProvenance } from '../analysis/provenance.ts';
-import { pydanticUtc } from '../db/timestamps.ts';
+import { wireUtc } from '../db/timestamps.ts';
 import { compareText } from '../text-order.ts';
 import {
   brandMentionSov,
@@ -61,7 +61,7 @@ export function rawPoint(source: TrendSource): TrendPoint {
   const visibilityRate = observedRate(metrics, 'brand_mention_rate');
   return {
     audit_id: source.auditId,
-    completed_at: pydanticUtc(source.completedAt),
+    completed_at: wireUtc(source.completedAt),
     logical_engine: source.logicalEngine,
     visibility_score: source.visibilityScore,
     visibility_rate: visibilityRate,
@@ -294,7 +294,7 @@ export function foldBucket(start: string, bucket: readonly TrendSource[]): Trend
   const responses = counts.reduce((total, row) => total + row.responses, 0);
   return {
     audit_id: null,
-    completed_at: pydanticUtc(start),
+    completed_at: wireUtc(start),
     logical_engine: first.logicalEngine,
     visibility_score: null,
     visibility_rate: brandRate.value(),

@@ -15,7 +15,7 @@ import { executionFrozenProvenance } from '../analysis/provenance.ts';
 import { fanoutState, selectEvents } from '../analysis/fanout.ts';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
-import { pydanticUtcOf, pydanticUtcOrNull, utcText, utcTextOf } from '../db/timestamps.ts';
+import { wireUtcOf, wireUtcOrNull, utcText, utcTextOf } from '../db/timestamps.ts';
 import { fromEpochMicros, type ParsedDatetime } from '../http/datetimes.ts';
 import {
   decodeKeysetCursor,
@@ -131,7 +131,7 @@ export async function getVisibilityEvidence(
   if (options.asOf !== null && options.asOf.offsetSeconds === null) {
     throw new TrendQueryError("'as_of' must be timezone-aware");
   }
-  const asOf = pydanticUtcOf(options.asOf ?? fromEpochMicros(BigInt(Date.now()) * 1000n));
+  const asOf = wireUtcOf(options.asOf ?? fromEpochMicros(BigInt(Date.now()) * 1000n));
   const base = evidenceScope(db, selection).where(
     'ra.created_at',
     '<=',
@@ -152,13 +152,13 @@ export async function getVisibilityEvidence(
     promptScope = promptScope.where(
       'audit.completed_at',
       '>=',
-      sql<Date>`${pydanticUtcOf(selection.fromAt)}::timestamptz`,
+      sql<Date>`${wireUtcOf(selection.fromAt)}::timestamptz`,
     );
   if (selection.toAt)
     promptScope = promptScope.where(
       'audit.completed_at',
       '<=',
-      sql<Date>`${pydanticUtcOf(selection.toAt)}::timestamptz`,
+      sql<Date>`${wireUtcOf(selection.toAt)}::timestamptz`,
     );
   const promptChoices = await promptScope
     .select([
@@ -175,8 +175,8 @@ export async function getVisibilityEvidence(
     audit_ids: [...(selection.auditIds ?? [])].sort(compareText),
     prompt: options.promptId,
     engine: selection.logicalEngine,
-    from: selection.fromAt && pydanticUtcOf(selection.fromAt),
-    to: selection.toAt && pydanticUtcOf(selection.toAt),
+    from: selection.fromAt && wireUtcOf(selection.fromAt),
+    to: selection.toAt && wireUtcOf(selection.toAt),
     cohort: selection.cohort,
     as_of: asOf,
     outcome: options.outcome,
@@ -253,7 +253,7 @@ export async function getVisibilityEvidence(
         prompt_index: row.prompt_index,
         prompt_text: row.prompt_text || '',
         repetition: row.repetition,
-        completed_at: pydanticUtcOrNull(row.completed_at),
+        completed_at: wireUtcOrNull(row.completed_at),
         logical_engine: row.logical_engine,
         transport_provider: row.transport_provider,
         transport_model: row.transport_model,

@@ -21,7 +21,7 @@ import { brandPosition, competitorPosition } from '../analysis/position.ts';
 import { classifyCitation, scoringConfig } from '../analysis/scoring.ts';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
-import { pydanticUtcOrNull, utcText } from '../db/timestamps.ts';
+import { wireUtcOrNull, utcText } from '../db/timestamps.ts';
 import { authorizeRunSet, isLogicalEngine, unknownEngine } from './selection.ts';
 import { compareText } from '../text-order.ts';
 
@@ -194,8 +194,8 @@ export async function executionSurfaceEvidence(
     location_code: observation.location_code,
     language_code: observation.language_code,
     device: observation.device,
-    observed_at: pydanticUtcOrNull(observation.observed_at),
-    retrieved_at: pydanticUtcOrNull(observation.retrieved_at),
+    observed_at: wireUtcOrNull(observation.observed_at),
+    retrieved_at: wireUtcOrNull(observation.retrieved_at),
     links,
     entities: await composedEntities(
       db,

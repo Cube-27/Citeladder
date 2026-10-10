@@ -1,7 +1,7 @@
 /**
  * Logo.dev fallback for brand avatars.
  *
- * Our own crawler (backend `web_evidence/favicon.py`) is the primary source and
+ * Our own crawler (the API's `projects/logo-refresh.ts`) is the primary source and
  * stays that way: it caches the real asset in our database and serves it
  * same-origin. But some sites simply will not serve *us* an icon — myntra.com
  * hangs on our bot user-agent, bestandless.com.au answers the WAF's 403 — and

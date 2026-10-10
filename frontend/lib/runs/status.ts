@@ -24,7 +24,7 @@ const TERMINAL_AUDIT_STATUSES: ReadonlySet<AuditStatus> = new Set<AuditStatus>([
 
 /**
  * Audit statuses at which a cooperative cancel is still meaningful. Mirrors the
- * backend `AUDIT_ACTIVE_STATUSES` (core/config/audits.py): `reporting` is
+ * API's `audit_active_statuses` (`services/api/src/config/audits.json`): `reporting` is
  * intentionally EXCLUDED — by then execution + analysis are done and the state
  * machine rejects REPORTING → CANCELLED, so the cancel button must be disabled.
  */

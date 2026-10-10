@@ -195,7 +195,7 @@ export async function seedMetricRow(
   return id;
 }
 
-/** A queued analytics task, as the Python post-sync hook enqueues one. */
+/** A queued analytics task, as the post-sync projection enqueues one. */
 export async function enqueue(
   db: Database,
   task: { workspaceId: string; projectId: string | null; kind: string; payload: object },

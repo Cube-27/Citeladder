@@ -66,6 +66,13 @@ it('reports actionable reviewed failures while withholding arbitrary error messa
       throw new Error('fixture-sensitive-value');
     });
     expect(stderr).toHaveBeenLastCalledWith('Error');
+    // A database failure names its SQLSTATE, never the server's message.
+    await operatorMain(async () => {
+      throw Object.assign(new Error('password authentication failed for user "fixture"'), {
+        code: '28P01',
+      });
+    });
+    expect(stderr).toHaveBeenLastCalledWith('Error 28P01');
     expect(process.exitCode).toBe(1);
   } finally {
     process.exitCode = originalExitCode;

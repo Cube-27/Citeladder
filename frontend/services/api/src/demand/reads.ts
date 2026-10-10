@@ -1,7 +1,7 @@
 import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
-import { isoDateText, pydanticUtc, utcText } from '../db/timestamps.ts';
+import { isoDateText, wireUtc, utcText } from '../db/timestamps.ts';
 import { policy } from '../config.ts';
 import { ApiError, notFound } from '../errors.ts';
 import { parseUuid } from '../http/uuid.ts';
@@ -96,7 +96,7 @@ export async function latestDemand(db: Database, workspaceId: string, projectId:
     comparison: snapshot.comparison === null ? null : record(snapshot.comparison),
     formula_version: snapshot.formula_version,
     analyzer_version: snapshot.analyzer_version,
-    created_at: pydanticUtc(snapshot.at!),
+    created_at: wireUtc(snapshot.at!),
     signals: signals.map((r) => ({
       id: r.id,
       snapshot_id: r.snapshot_id,
@@ -110,7 +110,7 @@ export async function latestDemand(db: Database, workspaceId: string, projectId:
       limitations: strings(r.limitations),
       priority_score: r.priority_score,
       priority_inputs: record(r.priority_inputs),
-      created_at: pydanticUtc(r.at!),
+      created_at: wireUtc(r.at!),
       action_id: byIdentity.get(`demand:${r.identity_hash}`) ?? null,
     })),
   };
@@ -137,7 +137,7 @@ async function requiredQuerySnapshot(db: Database, scope: DemandScope) {
     limitations: strings(row.limitations),
     analyzer_version: row.analyzer_version,
     resolver_version: row.resolver_version,
-    created_at: pydanticUtc(row.at!),
+    created_at: wireUtc(row.at!),
   };
 }
 function invalidCursor(): never {

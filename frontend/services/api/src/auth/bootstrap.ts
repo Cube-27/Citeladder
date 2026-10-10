@@ -11,7 +11,7 @@ import { hashPassword, passwordSchema, verifyPassword } from './password.ts';
 import { onlyOf } from '../lists.ts';
 
 export function requireLocalDevelopment(config: ServiceConfig) {
-  const target = new URL(config.databaseUrl.replace('postgresql+asyncpg:', 'postgresql:'));
+  const target = new URL(config.databaseUrl);
   if (
     !policy.development_env_names.includes(config.appEnv.trim().toLowerCase()) ||
     !['localhost', '127.0.0.1', '[::1]'].includes(target.hostname)

@@ -15,7 +15,7 @@ import {
 import type { z } from 'zod';
 
 import type { Database } from '../db/database.ts';
-import { pydanticUtc, utcText } from '../db/timestamps.ts';
+import { wireUtc, utcText } from '../db/timestamps.ts';
 import { AnalysisNotFoundError } from './selection.ts';
 import { executionSurfaceEvidence } from './surface.ts';
 
@@ -126,6 +126,6 @@ export async function getExecutionEvidence(
       taskId: input.taskId,
       analysis,
     }),
-    created_at: pydanticUtc(analysis.created_at_text!),
+    created_at: wireUtc(analysis.created_at_text!),
   };
 }

@@ -1,7 +1,6 @@
 /**
  * The cached logo and website behind each ranked brand and competitor.
  *
- * Moved from `_project_logo_context` in `app/domain/analysis/visibility.py`.
  * A ranking row is matched by its exact recorded name and whether it is the
  * brand: the aggregate stores display names, and a row whose name matches no
  * record carries no mark rather than a borrowed one.

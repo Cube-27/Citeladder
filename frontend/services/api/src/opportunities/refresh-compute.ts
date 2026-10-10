@@ -1,8 +1,7 @@
 /**
  * The deterministic half of an Opportunity refresh: scoring and
  * consolidation, the rows and the immutable snapshot one refresh persists,
- * and the snapshot's read projection (`recompute.py`, `snapshot_build.py`,
- * `snapshot_projection.py`, `site_coverage.py`).
+ * and the snapshot's read projection.
  *
  * Pure functions over loaded evidence.
  */

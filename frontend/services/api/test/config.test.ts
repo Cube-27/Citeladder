@@ -9,7 +9,7 @@ import {
   policy,
   resolveSettingSpec,
 } from '../src/config.ts';
-import { libpqUrl, poolOptions } from '../src/db/database.ts';
+import { poolOptions } from '../src/db/database.ts';
 import { razorpaySettings } from '../src/billing/config.ts';
 import { productionEnv } from './production-config.ts';
 
@@ -131,10 +131,6 @@ describe('loadConfig', () => {
     expect(options.max).toBe(
       policy.settings.db_pool_size.default + policy.settings.db_max_overflow.default,
     );
-  });
-
-  it('accepts a driver-qualified database URL as plain libpq', () => {
-    expect(libpqUrl('postgresql+asyncpg://u:p@db:5432/app')).toBe('postgresql://u:p@db:5432/app');
   });
 });
 

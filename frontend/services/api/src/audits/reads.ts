@@ -3,7 +3,7 @@ import { auditSchema, executionSchema, auditMetricsSchema } from '@citeladder/co
 import { auditEventSchema } from '@citeladder/contracts/audit-events';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
-import { utcText, utcTextOf, pydanticUtc, pydanticUtcOrNull } from '../db/timestamps.ts';
+import { utcText, utcTextOf, wireUtc, wireUtcOrNull } from '../db/timestamps.ts';
 import { notFound } from '../errors.ts';
 import { modelProvenanceFor, executionFrozenProvenance } from '../analysis/provenance.ts';
 import { engineSnapshots } from '../visibility/runs.ts';
@@ -36,10 +36,10 @@ async function auditResponses(db: Database, audits: Awaited<ReturnType<typeof au
       ...audit,
       engine_snapshots: routes.get(audit.id) ?? [],
       model_provenance: modelProvenanceFor(routes.get(audit.id) ?? [], audit.configuration),
-      created_at: pydanticUtc(audit.created_text),
-      updated_at: pydanticUtc(audit.updated_text),
-      started_at: pydanticUtcOrNull(audit.started_text),
-      completed_at: pydanticUtcOrNull(audit.completed_text),
+      created_at: wireUtc(audit.created_text),
+      updated_at: wireUtc(audit.updated_text),
+      started_at: wireUtcOrNull(audit.started_text),
+      completed_at: wireUtcOrNull(audit.completed_text),
     }),
   );
 }
@@ -75,8 +75,8 @@ export async function listExecutions(db: Database, workspaceId: string, auditId:
   return tasks.map((task) =>
     executionSchema.parse({
       ...task,
-      created_at: pydanticUtc(task.created_text),
-      completed_at: pydanticUtcOrNull(task.completed_text),
+      created_at: wireUtc(task.created_text),
+      completed_at: wireUtcOrNull(task.completed_text),
       retrieval_enabled: executionFrozenProvenance({
         requestSnapshot: task.request_snapshot,
         routeSnapshot: task.provider_route_snapshot,
@@ -96,7 +96,7 @@ export async function readAuditMetrics(db: Database, workspaceId: string, auditI
     .where('audit_id', '=', auditId)
     .executeTakeFirst();
   if (!metric) throw notFound('Audit metrics');
-  return auditMetricsSchema.parse({ ...metric, created_at: pydanticUtc(metric.created_text) });
+  return auditMetricsSchema.parse({ ...metric, created_at: wireUtc(metric.created_text) });
 }
 /** Validate a cursor within its authorized audit, then page using exact PostgreSQL timestamp/UUID order. */
 export async function auditEvents(
@@ -142,7 +142,7 @@ export async function auditEvents(
     auditEventSchema.parse({
       id: event.id,
       audit_id: auditId,
-      occurred_at: pydanticUtc(event.created_text),
+      occurred_at: wireUtc(event.created_text),
       event_type: event.event_type,
       payload: event.event_type === 'audit.running' ? null : record(event.payload),
     }),
