@@ -34,6 +34,7 @@ const evidence: ExecutionEvidence = {
   competitors_mentioned: [],
   search_surface: null,
   perception: [],
+  ads: { applicability: 'not_applicable', parser_version: null, items: [] },
   created_at: '2026-01-15T00:00:00Z',
 };
 
@@ -98,5 +99,60 @@ describe('Answer perception evidence', () => {
     expect(screen.getByText('Classifying…')).toBeVisible();
     expect(screen.getByText('Support (negative): “support is slow”')).toBeVisible();
     expect(document.querySelector('mark')?.textContent).toBe('support is slow');
+  });
+});
+
+describe('Ads evidence', () => {
+  it('lists a ChatGPT Search answer’s ads apart from its citations, by canonical landing page', () => {
+    render(
+      <EvidenceCard
+        evidence={{
+          ...evidence,
+          logical_engine: 'chatgpt_search',
+          ads: {
+            applicability: 'applicable',
+            parser_version: 'chatgpt-ads-1',
+            items: [
+              {
+                rank_absolute: 2,
+                advertiser_name: 'Rival',
+                advertiser_domain: 'rival.example',
+                ownership: 'competitor',
+                title: 'Rival Runner 3',
+                snippet: 'Free returns on every pair.',
+                landing_url: 'https://shop.rival.example/runner-3',
+              },
+            ],
+          },
+        }}
+      />,
+    );
+    expect(screen.getByText('Ads in this answer')).toBeInTheDocument();
+    expect(screen.getByText('Rival Runner 3')).toBeInTheDocument();
+    expect(
+      screen.getByText('Sponsored by Rival · shop.rival.example/runner-3'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Competitor')).toBeInTheDocument();
+  });
+
+  it('says when an answer showed no ads, and when it was not read for ads', () => {
+    const { rerender } = render(
+      <EvidenceCard
+        evidence={{
+          ...evidence,
+          ads: { applicability: 'applicable', parser_version: 'chatgpt-ads-1', items: [] },
+        }}
+      />,
+    );
+    expect(screen.getByText('No ads were shown with this answer.')).toBeInTheDocument();
+    rerender(
+      <EvidenceCard
+        evidence={{
+          ...evidence,
+          ads: { applicability: 'unavailable', parser_version: null, items: [] },
+        }}
+      />,
+    );
+    expect(screen.getByText('Ads were not read for this answer.')).toBeInTheDocument();
   });
 });

@@ -31,6 +31,7 @@ import {
 } from '@citeladder/contracts/visibility';
 import { surfaceRatesSchema } from '@citeladder/contracts/audits';
 import { perceptionResponseSchema } from '@citeladder/contracts/visibility-perception';
+import { visibilityAdsResponseSchema } from '@citeladder/contracts/visibility-ads';
 import { visibilityTrendListSchema } from '@citeladder/contracts/visibility-trends';
 import { definedQuery, withQuery } from './shared';
 import type {
@@ -120,6 +121,24 @@ export const visibilityApi = {
       options,
     );
     return strictValidate(perceptionResponseSchema, result, 'visibility.getPerception');
+  },
+  /** Ads in ChatGPT Search answers for the selected runs: presence, advertisers and creatives. */
+  getAds: async (
+    projectId: string,
+    params: {
+      audit_id?: string;
+      audit_ids?: string[];
+      engine?: string;
+      cohort?: string;
+      limit?: number;
+    },
+    options?: ApiRequestOptions,
+  ) => {
+    const result = await apiClient.get(
+      withQuery(`/projects/${projectId}/visibility/ads`, definedQuery(params)),
+      options,
+    );
+    return strictValidate(visibilityAdsResponseSchema, result, 'visibility.getAds');
   },
   getFanoutSummary: async (
     projectId: string,

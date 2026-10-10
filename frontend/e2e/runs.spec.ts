@@ -82,6 +82,7 @@ const evidence = {
   search_used: true,
   search_query_count: 1,
   perception: [],
+  ads: { applicability: 'not_applicable', parser_version: null, items: [] },
   avg_position: null,
   score: { visibility: 1 },
   citations: [

@@ -113,3 +113,5 @@ export const ACTIVE_RUN_POLL_MS = 3_000;
 export const SYNC_RUN_POLL_MS = 3_000;
 /** How often the Perception tab rechecks while answers are still being classified. */
 export const PERCEPTION_PENDING_POLL_MS = 15_000;
+/** Creatives the Ads tab lists: the read's page ceiling. */
+export const ADS_CREATIVES_LIMIT = 50;

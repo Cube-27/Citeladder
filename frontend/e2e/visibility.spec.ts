@@ -293,6 +293,26 @@ function pendingPerception() {
   };
 }
 
+/** An Ads read whose selection holds no ChatGPT Search answers. */
+function noChatGptAds() {
+  const presence = { answers: 0, answers_with_ads: 0, rate: null };
+  return {
+    state: 'no_answers',
+    source_audit_ids: [AUDIT_LATEST],
+    parser_versions: [],
+    metrics_version: 'ads-metrics-1',
+    presence,
+    engines: [{ engine: 'gemini', applicability: 'not_applicable', answers: 6, presence: null }],
+    brand: { appearances: 0, share: null, best_rank: null },
+    advertisers_seen: 0,
+    advertisers: [],
+    creatives: { items: [], total: 0, next_cursor: null },
+    prompts: [],
+    topics: [],
+    runs: [],
+  };
+}
+
 type RouteBodies = {
   visibility?: unknown;
   visibilityStatus?: number;
@@ -337,6 +357,9 @@ async function setup(page: Page, bodies: RouteBodies = {}) {
   );
   await page.route(/\/api\/v1\/projects\/[^/]+\/visibility\/perception(\?.*)?$/, (route) =>
     route.fulfill({ json: bodies.perception ?? pendingPerception() }),
+  );
+  await page.route(/\/api\/v1\/projects\/[^/]+\/visibility\/ads(\?.*)?$/, (route) =>
+    route.fulfill({ json: noChatGptAds() }),
   );
   await page.route(/\/api\/v1\/projects\/[^/]+\/visibility\/trends(\?.*)?$/, (route) =>
     route.fulfill(
@@ -428,6 +451,13 @@ test('pointer navigation switches panels and syncs ?tab=', async ({ page, baseUR
   await expect(page.getByRole('heading', { name: 'Classifying answers…' })).toBeVisible();
   await expect(page.getByRole('tabpanel')).toHaveCount(1);
 
+  // Ads — paid placements in ChatGPT Search answers; other engines are not applicable.
+  await page.getByRole('tab', { name: 'Ads', exact: true }).click();
+  await expect(page).toHaveURL(/[?&]tab=ads/);
+  await expect(page.getByRole('heading', { name: 'No ChatGPT Search answers' })).toBeVisible();
+  await expect(page.getByText('Gemini API: Not applicable')).toBeVisible();
+  await expect(page.getByRole('tabpanel')).toHaveCount(1);
+
   // Query fanouts — reuses the shared evidence cache.
   await page.getByRole('tab', { name: 'Query fanouts' }).click();
   await expect(page).toHaveURL(/[?&]tab=query-fanout/);
@@ -454,7 +484,7 @@ test('mobile viewport keeps the visibility tabs and one active panel usable', as
   await expect(selectedTab).toBeVisible();
 
   // Every retained tab is still present in the one row.
-  await expect(tablist.getByRole('tab')).toHaveCount(4);
+  await expect(tablist.getByRole('tab')).toHaveCount(5);
 
   // Inactive panels are NOT stacked — still exactly one panel in the DOM.
   await expect(page.getByRole('tabpanel')).toHaveCount(1);
