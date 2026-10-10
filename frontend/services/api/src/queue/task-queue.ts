@@ -20,6 +20,7 @@ import type {
   QueueWorkspaceTurns,
 } from '../generated/db-schema.ts';
 import { compareText } from '../text-order.ts';
+import { earliestDue, leasedStatuses } from './next-due.ts';
 
 export type QueueTask = Selectable<AnalyticsTasks>;
 export type SiteTask = Selectable<SiteCrawlTasks>;
@@ -138,16 +139,19 @@ export class TaskQueue<T extends QueueTable = 'analytics_tasks'> {
     this.#table = table;
   }
 
-  /** When the earliest claimable row of `kinds` becomes due; null when none is pending. */
+  /** When the earliest row of `kinds` becomes claimable or its lease expires; null when none is pending. */
   async nextDue(kinds: readonly string[]): Promise<Date | null> {
     if (kinds.length === 0) return null;
     const row = await queueDatabase(this.#db)
       .selectFrom(this.#table)
-      .select((eb) => eb.fn.min('available_at').as('due'))
-      .where('status', 'in', claimable)
+      .select((eb) => [
+        eb.fn.min('available_at').filterWhere('status', 'in', claimable).as('due'),
+        eb.fn.min('lease_expires_at').filterWhere('status', 'in', leasedStatuses).as('expires'),
+      ])
+      .where('status', 'in', [...claimable, ...leasedStatuses])
       .where('task_kind', 'in', kinds)
       .executeTakeFirst();
-    return row?.due ? new Date(row.due) : null;
+    return earliestDue(row);
   }
 
   /** Claim up to `limit` eligible rows of `kinds` for `owner`, committed. */

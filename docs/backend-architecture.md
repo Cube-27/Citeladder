@@ -1,8 +1,7 @@
 # Backend architecture
 
 The application API, health/readiness and executing workers are TypeScript-owned.
-Python has no HTTP process. The native queue sweeper backs
-up discovery and integration lease recovery. The one-shot migration job runs Alembic upgrade/check, native identity/grant/catalog
+Python has no HTTP process. The one-shot migration job runs Alembic upgrade/check, native identity/grant/catalog
 bootstrap before admitting API rollout.
 PostgreSQL owns durable
 state and queues. Domain behavior is documented in the feature owners listed in
@@ -10,8 +9,8 @@ state and queues. Domain behavior is documented in the feature owners listed in
 
 Projects, onboarding research/completion, logo refresh and command-center reads
 are TypeScript-owned under frontend/services/api/src/projects/. Discovery runs
-in its TypeScript worker; the native queue sweeper backs up lease-expiry and retry
-reconciliation. Interactive onboarding invokes that same worker through an
+in its TypeScript worker, whose runner lane recovers expired leases and retries.
+Interactive onboarding invokes that same worker through an
 awaited, bounded API mutation scoped to one authorized discovery; background
 execution remains its recovery path. Executive PDFs use the TypeScript command-center
 projection and shared PDF renderer; receipt list/download reads are also
@@ -31,9 +30,8 @@ only constants consumed by schema declarations, including fixed defaults and
 provenance versions. No Python connector executes an answer engine.
 Commerce competitor discovery uses the native
 analytics worker and Site Health acquisition, parsing and classification owners.
-Analytics lease recovery and evidence/outcome settlement belong to that worker;
-the independent native sweeper recovers brand-discovery and integration leases
-when their workers are down. Discovery charges attempts on completion/recovery;
+Analytics lease recovery and evidence/outcome settlement belong to that worker.
+Discovery charges attempts on completion/recovery;
 integrations charge at claim and recovery does not charge a second time.
 
 ## Layers and extension
@@ -81,15 +79,25 @@ their own schemas and evidence contracts before persistence.
 ## Task queue contract
 
 The bounded `runner.ts` process composes all six native task lanes and billing
-recovery with one PostgreSQL pool (at most four connections). It admits one task
-per lane per pass and revisits earlier lanes for successors. Its time budget
-stops new admission; claimed work finishes before the pool closes. A randomized
-starting lane avoids systematically delaying the same owner across executions.
-Lane failures leave the job failed after independent owners have had a chance.
+recovery with one PostgreSQL pool (at most four connections) plus one session
+holding the drain lock. Each pass gives every lane one admission (Site Health
+keeps a pool-bounded batch in flight; billing and Agent recovery take a bounded
+batch) and revisits earlier lanes for successors. Its time budget stops new
+admission; claimed work finishes before the pool closes, except integration
+syncs, which yield at the deadline and resume from their committed pages. A
+randomized starting lane avoids systematically delaying the same owner across
+executions. A failed lane is skipped for the rest of the drain while independent
+owners continue; the job still fails, and the error is logged with the lane.
 
-`tick.ts` first runs queue recovery, audit maintenance/Search Intelligence
-reconciliation, due audit schedules and integration dispatch/revocation once,
-then uses the remaining budget for that same drain.
+Every lane reclaims its own expired leases on each pass, including idle ones,
+and reports when its next task is due: the earliest claimable row or lease
+expiry (Agent: when an unclaimed turn passes its grace). Billing has no probe;
+its retries wait for tick.
+
+`tick.ts` first runs MCP and usage-window cleanup, audit maintenance, Search
+Intelligence reconciliation, due audit schedules, integration dispatch/revocation
+and crawl-log maintenance once, logging each phase's duration, then uses the
+remaining budget for that same drain.
 Periodic owners recheck admission before each occurrence, revocation or recovery
 unit. The scheduler claims one occurrence at a time under a runner budget, so
 stopping never strands a preclaimed batch; admitted units finish settlement.
@@ -117,7 +125,10 @@ start jobs; background worker writes never start jobs. Instead, an execution
 that idles keeps its drain while a lane's earliest pending task (Site Health
 deferrals and retry backoff) becomes due within its budget, polling for new work
 meanwhile. After releasing the drain lock, an execution whose pending work is due
-within a fresh budget starts one successor; work due later waits for tick. Request-bound
+within a fresh budget starts one successor, even when a lane failed (the failed
+lanes are left out of that probe); work due later waits for tick. Cloud Run
+takes one to three minutes to start an execution (measured October 2026), so a
+successor is not an immediate pickup. Request-bound
 discovery suppresses wake-up because it has no successors. Other interactive
 workers keep observation active so successors committed after a
 background drain exits still wake the runner. Duplicate starts are

@@ -15,7 +15,6 @@ import { auditRuntime } from '../audits/config.ts';
 import { auditProjections } from '../audits/projections.ts';
 import { AuditMaintenance } from '../audits/maintenance.ts';
 import { recoverBilling } from '../billing/recovery.ts';
-import { recoverQueues } from '../queue/recovery.ts';
 import { reconcileResearch } from '../search-intelligence/maintenance.ts';
 import { AnalyticsWorker } from './analytics-worker.ts';
 import { DiscoveryWorker } from './discovery-worker.ts';
@@ -60,12 +59,32 @@ export async function nextDueDelay(
     try {
       const due = await lane.nextDue(); // NOSONAR -- One probe at a time keeps the shared pool free.
       if (due && (earliest === null || due.getTime() < earliest)) earliest = due.getTime();
-    } catch {
+    } catch (error) {
       // The probe only extends a drain; tick still recovers anything it misses.
-      getLogger('workers.runner').warning('runner_next_due_failed', { lane: lane.name });
+      getLogger('workers.runner').exception('runner_next_due_failed', error, { lane: lane.name });
     }
   }
   return earliest === null ? null : Math.max(0, earliest - wallClock());
+}
+
+/**
+ * Lanes that failed during a drain. The execution still fails, but its caller
+ * can start a successor for the owners that did not, instead of leaving every
+ * lane's deferred work for the next tick.
+ */
+export class LaneFailures extends AggregateError {
+  readonly lanes: ReadonlySet<string>;
+  readonly tasks: number;
+  constructor(options: {
+    lanes: ReadonlySet<string>;
+    errors: unknown[];
+    tasks: number;
+    message: string;
+  }) {
+    super(options.errors, options.message);
+    this.lanes = options.lanes;
+    this.tasks = options.tasks;
+  }
 }
 
 /** Round-robin passes also catch successors enqueued into an earlier lane.
@@ -95,7 +114,13 @@ export async function drainLanes(lanes: readonly RunnerLane[], options: DrainOpt
     if (ms === null) break;
     await pause(ms, options.signal); // NOSONAR -- Idle until deferred work is due.
   }
-  if (failures.length) throw new AggregateError(failures, 'Runner lanes failed');
+  if (failures.length)
+    throw new LaneFailures({
+      lanes: failed,
+      errors: failures,
+      tasks,
+      message: 'Runner lanes failed',
+    });
   return tasks;
 }
 
@@ -118,7 +143,7 @@ async function drainPass(
       // Attempt other owners, but leave an infrastructure failure visible to the job.
       failed.add(lane.name);
       failures.push(error);
-      getLogger('workers.runner').warning('runner_lane_failed', { lane: lane.name });
+      getLogger('workers.runner').exception('runner_lane_failed', error, { lane: lane.name });
     }
   }
   return progress;
@@ -152,6 +177,11 @@ export function exclusiveDrain(
   const now = options.now ?? (() => performance.now());
   return async (drain) => {
     const lock = new pg.Client(poolOptions(config));
+    // A lost session releases the lock; leases still arbitrate claims, so log
+    // instead of letting an unhandled 'error' event crash claimed work.
+    lock.on('error', (error) =>
+      getLogger('workers.runner').exception('runner_drain_lock_lost', error),
+    );
     await lock.connect();
     try {
       const until = Math.min(now() + waitMs, options.deadline);
@@ -234,8 +264,13 @@ export async function runnerOwners(db: Database, config: ServiceConfig) {
         run: (canAdmit) => untilAdmissionEnds(canAdmit, (signal) => integration.runOnce(signal)),
         nextDue: () => integration.nextDue(),
       },
-      { name: 'agent', run: () => agent.runOnce() },
-      { name: 'audits', run: () => audit.runOnce(), nextDue: () => audit.nextDue() },
+      { name: 'agent', run: () => agent.runOnce(), nextDue: () => agent.nextDue() },
+      {
+        name: 'audits',
+        run: async (canAdmit) =>
+          (await maintenance.recoverLeases(new Date(), canAdmit)) + (await audit.runOnce()),
+        nextDue: () => audit.nextDue(),
+      },
       {
         name: 'site-health',
         run: (canAdmit) =>
@@ -266,7 +301,6 @@ export async function runnerOwners(db: Database, config: ServiceConfig) {
             canAdmit,
           ),
       },
-      { name: 'queue-recovery', run: (canAdmit) => recoverQueues(db, canAdmit) },
       { name: 'audit-maintenance', run: (canAdmit) => maintenance.runOnce(new Date(), canAdmit) },
       {
         name: 'research-recovery',
@@ -286,23 +320,35 @@ export async function tickAndDrain(
   exclusive: Exclusive = (drain) => drain(),
 ) {
   const failures: unknown[] = [];
+  const logger = getLogger('workers.runner');
   const now = options.now ?? (() => performance.now());
   const canAdmit = () => !options.signal.aborted && now() < options.deadline;
   for (const phase of owners.periodic) {
     if (options.signal.aborted || now() >= options.deadline) break;
+    const started = performance.now();
     try {
       await phase.run(canAdmit); // NOSONAR -- Periodic phases share one admission budget and pool.
+      logger.info('tick_phase_completed', {
+        phase: phase.name,
+        duration_ms: Math.round(performance.now() - started),
+      });
     } catch (error) {
       failures.push(error);
-      getLogger('workers.runner').warning('tick_phase_failed', { phase: phase.name });
+      logger.exception('tick_phase_failed', error, { phase: phase.name });
     }
   }
   let tasks = 0;
+  let failedLanes: ReadonlySet<string> = new Set();
   try {
     tasks = await exclusive(() => drainLanes(owners.lanes, options));
   } catch (error) {
+    if (error instanceof LaneFailures) {
+      failedLanes = error.lanes;
+      tasks = error.tasks;
+    }
     failures.push(error);
   }
-  if (failures.length) throw new AggregateError(failures, 'Tick failed');
+  if (failures.length)
+    throw new LaneFailures({ lanes: failedLanes, errors: failures, tasks, message: 'Tick failed' });
   return tasks;
 }

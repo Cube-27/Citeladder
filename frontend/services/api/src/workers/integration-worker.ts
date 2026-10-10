@@ -24,6 +24,7 @@ import {
 } from '../integrations/sync-state.ts';
 import { enqueuePostSyncProjections } from '../integrations/projections.ts';
 import { cachedWorkspaceAccess } from '../entitlements/access.ts';
+import { earliestDue, leasedStatuses } from '../queue/next-due.ts';
 
 const logger = getLogger('workers.integrations');
 const statuses = policy.task_queue.statuses;
@@ -82,6 +83,7 @@ export class IntegrationWorker {
   readonly #access: (workspaceId: string) => Promise<unknown>;
   /** Pages this attempt committed; a deadline stop with progress is not charged. */
   #committedPages = 0;
+  #claimedAt = 0;
 
   constructor(
     db: Database,
@@ -123,6 +125,7 @@ export class IntegrationWorker {
       (error) => logger.exception('integration_heartbeat_failed', error, { sync_run_id: run.id }),
     );
     this.#committedPages = 0;
+    this.#claimedAt = performance.now();
     try {
       await this.#execute(run, leaseSignal(heartbeat.signal, signal));
       if (!heartbeat.signal.aborted) await this.#finish(run, null);
@@ -192,15 +195,23 @@ export class IntegrationWorker {
     });
   }
 
-  /** Earliest claimable run, so an idle runner stays for a retry or history chunk due soon. */
+  /** Earliest claimable run or lease expiry, so an idle runner stays for a retry, history chunk or recovery due soon. */
   async nextDue(): Promise<Date | null> {
+    const claimable = [statuses.queued, statuses.retry_wait];
     const row = await this.#db
       .selectFrom('integration_sync_runs')
-      .select((eb) => eb.fn.min('available_at').as('due'))
-      .where('status', 'in', [statuses.queued, statuses.retry_wait])
-      .whereRef('attempt_count', '<', 'max_attempts')
+      .select((eb) => [
+        eb.fn
+          .min('available_at')
+          .filterWhere((f) =>
+            f.and([f('status', 'in', claimable), f('attempt_count', '<', f.ref('max_attempts'))]),
+          )
+          .as('due'),
+        eb.fn.min('lease_expires_at').filterWhere('status', 'in', leasedStatuses).as('expires'),
+      ])
+      .where('status', 'in', [...claimable, ...leasedStatuses])
       .executeTakeFirst();
-    return row?.due ? new Date(row.due) : null;
+    return earliestDue(row);
   }
 
   async runUntilIdle(signal?: AbortSignal) {
@@ -638,12 +649,15 @@ export class IntegrationWorker {
 
   /**
    * The caller's deadline stopped the run, not the provider. Committed pages
-   * resume on the next claim, so an attempt that made progress is refunded;
-   * one that committed nothing still counts, which bounds a run that cannot
-   * finish a single page inside the budget.
+   * resume on the next claim, so an attempt that made progress is refunded, as
+   * is one stopped before it had a full provider request timeout (admitted
+   * late in a drain). One that had that time and committed nothing still
+   * counts, which bounds a run that cannot finish a single page.
    */
   async #release(trx: Database, run: Run, now: Date): Promise<void> {
-    const refund = this.#committedPages > 0 ? 1 : 0;
+    const admittedLate =
+      performance.now() - this.#claimedAt < this.#settings.sync_request_timeout_seconds * 1000;
+    const refund = this.#committedPages > 0 || admittedLate ? 1 : 0;
     const exhausted = run.attempt_count - refund >= run.max_attempts;
     if (exhausted) {
       await this.#fail(

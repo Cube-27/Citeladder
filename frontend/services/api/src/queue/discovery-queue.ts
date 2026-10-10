@@ -6,6 +6,7 @@ import { sql, type Selectable } from 'kysely';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import type { BrandDiscoveryTasks } from '../generated/db-schema.ts';
+import { earliestDue, leasedStatuses } from './next-due.ts';
 
 export type DiscoveryTask = Selectable<BrandDiscoveryTasks>;
 export type DiscoveryTarget = { workspaceId: string; discoveryId: string };
@@ -79,16 +80,23 @@ export class DiscoveryQueue {
       return task;
     });
   }
-  /** Earliest claimable time, so an idle runner stays for a retry due soon. */
+  /** Earliest claimable time or lease expiry, so an idle runner stays for a retry or recovery due soon. */
   async nextDue(): Promise<Date | null> {
     const row = await this.db
       .selectFrom(table)
-      .select((eb) => eb.fn.min('available_at').as('due'))
-      .where('status', 'in', claimable)
-      .whereRef('attempt_count', '<', 'max_attempts')
+      .select((eb) => [
+        eb.fn
+          .min('available_at')
+          .filterWhere((f) =>
+            f.and([f('status', 'in', claimable), f('attempt_count', '<', f.ref('max_attempts'))]),
+          )
+          .as('due'),
+        eb.fn.min('lease_expires_at').filterWhere('status', 'in', leasedStatuses).as('expires'),
+      ])
+      .where('status', 'in', [...claimable, ...leasedStatuses])
       .where('task_kind', '=', policy.discovery.constants.task_kind_brand_discovery)
       .executeTakeFirst();
-    return row?.due ? new Date(row.due) : null;
+    return earliestDue(row);
   }
   async heartbeat(task: DiscoveryTask, owner: string) {
     const now = this.now();

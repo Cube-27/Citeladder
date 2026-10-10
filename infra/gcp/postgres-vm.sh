@@ -89,6 +89,7 @@ run_args=(
   -c password_encryption=scram-sha-256
   -c max_connections=40 -c shared_buffers=128MB -c effective_cache_size=384MB
   -c work_mem=4MB -c maintenance_work_mem=64MB
+  -c tcp_keepalives_idle=60 -c tcp_keepalives_interval=10 -c tcp_keepalives_count=6
 )
 # Recreate the container whenever its image, arguments or access rules change;
 # the data directory persists. An unchanged specification only starts it.

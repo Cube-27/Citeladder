@@ -22,6 +22,7 @@ import { siteWorkerSettings } from '../site-health/runtime.ts';
 import { lockSiteTask, type Crawl } from '../site-health/task-fence.ts';
 import { TaskCancelledError } from './executor.ts';
 import { recoverExpiredLeases } from '../site-health/lease-recovery.ts';
+import { earliestDue, leasedStatuses } from '../queue/next-due.ts';
 import {
   publishCancelledCrawls,
   reconcileAfterTask,
@@ -163,12 +164,16 @@ export class SiteHealthWorker {
     if (failures.length) throw failures[0];
     return claimed;
   }
-  /** When the earliest claimable task becomes available (deferred analysis, retry backoff). */
+  /** When the earliest task becomes available (deferred analysis, retry backoff) or its lease expires. */
   async nextDue(): Promise<Date | null> {
+    const claimable = policy.task_queue.claimable;
     const row = await this.db
       .selectFrom('site_crawl_tasks')
-      .select((eb) => eb.fn.min('available_at').as('due'))
-      .where('status', 'in', policy.task_queue.claimable)
+      .select((eb) => [
+        eb.fn.min('available_at').filterWhere('status', 'in', claimable).as('due'),
+        eb.fn.min('lease_expires_at').filterWhere('status', 'in', leasedStatuses).as('expires'),
+      ])
+      .where('status', 'in', [...claimable, ...leasedStatuses])
       .where('task_kind', 'in', policy.site_health.ts_owned_task_kinds)
       .$if(this.taskScope !== undefined, (q) =>
         q
@@ -176,7 +181,7 @@ export class SiteHealthWorker {
           .where('crawl_id', '=', this.taskScope!.crawlId),
       )
       .executeTakeFirst();
-    return row?.due ? new Date(row.due) : null;
+    return earliestDue(row);
   }
   async #recover() {
     // Another slot owns the in-flight pass; this slot keeps claiming instead of waiting.
@@ -295,7 +300,14 @@ export class SiteHealthWorker {
     } catch (error) {
       if (!heartbeat.signal.aborted && !(error instanceof TaskCancelledError)) {
         logger.exception('site health task failed', error, { task_id: claimed.id });
-        await this.fail(claimed, error);
+        try {
+          await this.fail(claimed, error);
+        } catch (failure) {
+          // A sibling may still hold the crawl lock fail() needs. Contention must
+          // not disable the lane or let lease recovery charge an attempt.
+          if (!conflict(failure)) throw failure;
+          await this.#releaseContended(claimed, error);
+        }
       }
     } finally {
       await heartbeat.stop();
@@ -330,6 +342,35 @@ export class SiteHealthWorker {
         .where('workspace_id', '=', task.workspace_id)
         .execute();
     });
+  }
+  /**
+   * Release this worker's lease for a contention retry without the crawl lock:
+   * only the task row is written, so it cannot contend again. Past the
+   * conflict bound the lease is left for recovery to settle at expiry.
+   */
+  async #releaseContended(claimed: SiteTask, error: unknown) {
+    const now = new Date();
+    const delay = this.settings.conflictBase + jitter(this.settings.conflictJitter);
+    await this.db
+      .updateTable('site_crawl_tasks')
+      .set((eb) => ({
+        status: 'retry_wait',
+        conflict_count: eb('conflict_count', '+', 1),
+        updated_at: now,
+        available_at: new Date(now.getTime() + delay * 1000),
+        lease_owner: null,
+        lease_expires_at: null,
+        heartbeat_at: null,
+        error_code: 'db_conflict',
+        error_detail:
+          error instanceof Error ? error.message.slice(0, 2000) : 'Site Health task failed',
+      }))
+      .where('id', '=', claimed.id)
+      .where('workspace_id', '=', claimed.workspace_id)
+      .where('lease_owner', '=', this.owner)
+      .where('status', '=', 'running')
+      .where('conflict_count', '<', this.settings.conflictMax)
+      .execute();
   }
   async fail(claimed: SiteTask, error: unknown) {
     await this.db.transaction().execute(async (trx) => {

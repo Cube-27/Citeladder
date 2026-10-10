@@ -135,8 +135,7 @@ export class AuditMaintenance {
     this.db = db;
     this.finalize = finalize;
   }
-  async runOnce(at = new Date(), canAdmit = () => true) {
-    if (!canAdmit()) return 0;
+  async #reclaim(at: Date, canAdmit: () => boolean, parents: Map<string, Parent>) {
     const expired = await this.db
       .selectFrom('audit_tasks')
       .select(['id', 'workspace_id', 'audit_id', 'project_id'])
@@ -146,7 +145,6 @@ export class AuditMaintenance {
       .orderBy('id')
       .limit(batchSize)
       .execute();
-    const parents = new Map<string, Parent>();
     let reclaimed = 0;
     for (const candidate of expired) {
       if (!canAdmit()) break;
@@ -223,6 +221,24 @@ export class AuditMaintenance {
           auditId: candidate.audit_id,
         });
     }
+    return reclaimed;
+  }
+  /**
+   * Reclaim expired task leases and finalize the audits that ended. The audit
+   * lane runs this on every pass, so a lease lost with a killed request or
+   * execution recovers at expiry rather than at the next tick.
+   */
+  async recoverLeases(at = new Date(), canAdmit = () => true) {
+    if (!canAdmit()) return 0;
+    const parents = new Map<string, Parent>();
+    const reclaimed = await this.#reclaim(at, canAdmit, parents);
+    await this.finalizeParents(parents.values(), canAdmit);
+    return reclaimed;
+  }
+  async runOnce(at = new Date(), canAdmit = () => true) {
+    if (!canAdmit()) return 0;
+    const parents = new Map<string, Parent>();
+    const reclaimed = await this.#reclaim(at, canAdmit, parents);
     // Reconcile funding left owing by older workers or cross-queue sweeper terminalization.
     const owing = await this.db
       .selectFrom('consumable_ledger as l')

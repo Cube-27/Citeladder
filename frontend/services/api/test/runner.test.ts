@@ -3,9 +3,11 @@ import {
   drainLanes,
   exclusiveDrain,
   idlePause,
+  LaneFailures,
   tickAndDrain,
   runnerOwners,
 } from '../src/workers/runner.ts';
+import { startSuccessor } from '../src/workers/execution-process.ts';
 import { SiteHealthWorker } from '../src/workers/site-health-worker.ts';
 import { SiteFixtures } from './site-health-fixtures.ts';
 import { siteWorkerSettings } from '../src/site-health/runtime.ts';
@@ -159,7 +161,7 @@ describe('bounded runner', () => {
     expect(idlePause(9000, 8000, 5000)).toBeNull();
   });
 
-  it('reports only claimable Site Health work as next due', async () => {
+  it('reports the earlier of deferred Site Health work and a lease that will expire', async () => {
     const db = createDatabase(testConfig({}), { execution: true });
     const fixtures = new SiteFixtures(db);
     try {
@@ -169,7 +171,7 @@ describe('bounded runner', () => {
       });
       expect(await worker.nextDue()).toBeNull();
       const later = new Date(Date.now() + 30_000);
-      const earlier = new Date(Date.now() + 5000);
+      const expiry = new Date(Date.now() + 5000);
       const [deferred, running] = [await fixtures.task(seed), await fixtures.task(seed)];
       await db
         .updateTable('site_crawl_tasks')
@@ -178,13 +180,99 @@ describe('bounded runner', () => {
         .execute();
       await db
         .updateTable('site_crawl_tasks')
-        .set({ status: 'running', available_at: earlier })
+        .set({ status: 'running', lease_owner: 'dead-worker', lease_expires_at: expiry })
+        .where('id', '=', running)
+        .execute();
+      // A killed holder's lease is recovered at expiry, so the runner must stay for it.
+      expect((await worker.nextDue())?.getTime()).toBe(expiry.getTime());
+      await db
+        .updateTable('site_crawl_tasks')
+        .set({ status: 'succeeded', lease_owner: null, lease_expires_at: null })
         .where('id', '=', running)
         .execute();
       expect((await worker.nextDue())?.getTime()).toBe(later.getTime());
     } finally {
       await fixtures.cleanup();
       await db.destroy();
+    }
+  });
+
+  it('releases a contended Site Health task without failing the lane or charging an attempt', async () => {
+    const db = createDatabase(testConfig({}), { execution: true });
+    const fixtures = new SiteFixtures(db);
+    const restore = setLogSink(() => {});
+    try {
+      const seed = await fixtures.crawl('running');
+      const id = await fixtures.task(seed);
+      const lockTimeout = () => Object.assign(new Error('lock timeout'), { code: '55P03' });
+      const worker = new SiteHealthWorker(db, {
+        taskScope: { workspaceId: seed.workspaceId, crawlId: seed.crawlId },
+        executors: {
+          link_metrics: async () => {
+            throw lockTimeout();
+          },
+        },
+      });
+      // A sibling still holds the crawl lock when the failure is settled.
+      vi.spyOn(worker, 'fail').mockRejectedValueOnce(lockTimeout());
+      expect(await worker.runOnce(1)).toBe(1);
+      expect(
+        await db
+          .selectFrom('site_crawl_tasks')
+          .select(['status', 'attempt_count', 'conflict_count', 'lease_owner', 'error_code'])
+          .where('id', '=', id)
+          .executeTakeFirstOrThrow(),
+      ).toEqual({
+        status: 'retry_wait',
+        attempt_count: 0,
+        conflict_count: 1,
+        lease_owner: null,
+        error_code: 'db_conflict',
+      });
+    } finally {
+      setLogSink(restore);
+      await fixtures.cleanup();
+      await db.destroy();
+    }
+  });
+
+  it('still starts a successor for the owners that did not fail', async () => {
+    const restore = setLogSink(() => {});
+    try {
+      const lanes = [
+        {
+          name: 'bad',
+          run: async () => {
+            throw new Error('database unavailable');
+          },
+          nextDue: async () => new Date(),
+        },
+        {
+          name: 'good',
+          run: async () => 0,
+          nextDue: async () => new Date(Date.now() + 1000),
+        },
+      ];
+      const error = await drainLanes(lanes, options()).catch((caught: unknown) => caught);
+      if (!(error instanceof LaneFailures)) throw new Error('expected lane failures');
+      const failed = error.lanes;
+      expect([...failed]).toEqual(['bad']);
+      const started: string[] = [];
+      const start = async () => {
+        started.push('successor');
+      };
+      const live = new AbortController().signal;
+      const remaining = lanes.filter((lane) => !failed.has(lane.name));
+      expect(
+        await startSuccessor({ lanes: remaining, budgetMs: 300_000, signal: live, start }),
+      ).toBe(true);
+      // Work due beyond a fresh budget waits for tick.
+      expect(await startSuccessor({ lanes: remaining, budgetMs: 500, signal: live, start })).toBe(
+        false,
+      );
+      expect(started).toEqual(['successor']);
+    } finally {
+      setLogSink(restore);
     }
   });
 
