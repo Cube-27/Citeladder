@@ -4,7 +4,7 @@
  * Every build links the production endpoint: assistants connect from their own
  * clouds, so a local or preview origin would never be reachable from them.
  */
-export const MCP_SERVER_URL = 'https://citeladder.com/mcp';
+export const MCP_SERVER_URL = 'https://api.citeladder.com/mcp';
 
 const CONNECTOR_NAME = 'CiteLadder';
 

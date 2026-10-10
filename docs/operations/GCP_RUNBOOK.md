@@ -29,7 +29,7 @@ Terraform lives in [`infra/gcp`](../../infra/gcp/README.md). Never place a
 long-lived Google service-account key in GitHub.
 
 ```text
-Browser ─► Cloudflare Workers (marketing citeladder.com, app app.citeladder.com, docs)
+Browser ─► Cloudflare Workers (marketing citeladder.com, app app.citeladder.com, docs, api api.citeladder.com)
               │ /api/* and MCP, with X-CiteLadder-Origin-Token
               ▼
          Cloud Run us-central1: citeladder-api (min 0, max 2)
@@ -175,7 +175,7 @@ After a deploy:
 ```powershell
 curl.exe --fail https://app.citeladder.com/health
 curl.exe --fail https://app.citeladder.com/api/v1/auth/oauth/providers
-curl.exe --fail https://citeladder.com/.well-known/oauth-authorization-server
+curl.exe --fail https://api.citeladder.com/.well-known/oauth-authorization-server
 ```
 
 Sign in as `DEMO_LOGIN_EMAIL`, create a project, start a Site Health crawl

@@ -26,7 +26,7 @@ search engines and AI crawlers read, without a Worker invocation per visit.
 Only routes that read the request opt out with `prerender = false`: `/pricing`,
 the contact intake, `/health` and the 404 page, which answers
 `Accept: text/markdown` with a Markdown body. The middleware runs only for
-those, proxies only exact apex protocol/webhook paths and keeps the retired
+those, proxies only the exact apex webhook path and keeps the retired
 research redirects; a generated `_redirects` file sends each page's trailing-slash
 variant to it with a 301. `/pricing`
 reads the public catalog through protected origin transport without visitor

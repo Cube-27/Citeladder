@@ -70,7 +70,7 @@ locals {
       DB_MAX_OVERFLOW             = "0"
       FRONTEND_URL                = "https://${var.app_domain_name}"
       MCP_ENABLED                 = "true"
-      MCP_PUBLIC_BASE_URL         = "https://${var.domain_name}"
+      PUBLIC_WEBSITE_URL          = "https://${var.domain_name}"
       PUBLIC_API_URL              = "https://api.${var.domain_name}"
       CRAWL_LOG_READER_EMAIL      = google_service_account.log_reader.email
       MCP_ALLOWED_ACCOUNT_EMAIL   = var.demo_mode ? var.dev_login_email : ""

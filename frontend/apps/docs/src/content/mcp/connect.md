@@ -8,7 +8,7 @@ order: 310
 Every client connects to the same hosted server:
 
 ```text
-https://citeladder.com/mcp
+https://api.citeladder.com/mcp
 ```
 
 The connection uses browser sign-in (OAuth) with the read scope `citeladder:read`. Do not paste a provider API key or a CiteLadder session cookie into the client.
@@ -51,7 +51,7 @@ Add the server to `~/.cursor/mcp.json`, then sign in to CiteLadder when Cursor p
 ```json
 {
   "mcpServers": {
-    "citeladder": { "url": "https://citeladder.com/mcp" }
+    "citeladder": { "url": "https://api.citeladder.com/mcp" }
   }
 }
 ```
@@ -68,7 +68,7 @@ On Business and Enterprise plans, an admin may need to enable connectors first.
 Add the server, then run `/mcp` inside Claude Code to sign in:
 
 ```bash
-claude mcp add --transport http citeladder https://citeladder.com/mcp
+claude mcp add --transport http citeladder https://api.citeladder.com/mcp
 ```
 
 ### Codex
@@ -77,7 +77,7 @@ Add the server to `~/.codex/config.toml`:
 
 ```toml
 [mcp_servers.citeladder]
-url = "https://citeladder.com/mcp"
+url = "https://api.citeladder.com/mcp"
 ```
 
 Then sign in:

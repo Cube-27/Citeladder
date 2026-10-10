@@ -52,8 +52,11 @@ curl -fsS http://localhost:8100/health
 - [ ] Both hosts refuse machine paths: `/v1/*` is 404 on ports 3000 and 3001 (the smoke
       checks it). After a production deploy, rerun the smoke with the API host as the third
       argument (`https://api.citeladder.com`) so it also checks that the API host refuses
-      `/`, `/pricing` and `/api/v1/*`; see the
+      `/`, `/pricing`, `/api/v1/*` and MCP consent, and that its MCP discovery
+      (`/.well-known/oauth-authorization-server`) names the API host as issuer; see the
       [API host section](operations/WORKERS_RUNBOOK.md#api-host-apiciteladdercom).
+- [ ] MCP lives only on the API host: the apex 404s `/mcp` and its OAuth metadata (the smoke
+      checks it).
       With an API key from a paid workspace, `GET https://api.citeladder.com/v1/projects`
       returns its projects and `GET /v1/openapi.json` returns the public document.
 - [ ] The API health endpoint responds at port 8100.

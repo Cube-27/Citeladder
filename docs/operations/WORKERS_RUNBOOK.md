@@ -35,7 +35,7 @@ Deploy and verify the docs Worker before releasing app/marketing links to it.
 Check the Custom Domain and TLS, a deep guide URL, search, the changelog,
 `/sitemap.xml`, `/robots.txt`, and an unknown URL's 404 response. The old
 apex `/docs/mcp` page is intentionally removed without a redirect. MCP
-protocol/OAuth endpoints remain on the existing protocol origin.
+protocol/OAuth endpoints are on the API host.
 
 Worker/DNS provisioning and live acceptance remain explicit release operations;
 adding this configuration does not claim that the subdomain has been deployed.
@@ -64,8 +64,8 @@ not make a second progress document.
 | `DOMAIN_NAME` | `citeladder.com` |
 | `APP_DOMAIN_NAME` | `app.citeladder.com` |
 | `FRONTEND_URL` (derived) | `https://app.citeladder.com` |
-| `MCP_PUBLIC_BASE_URL` (derived) | `https://citeladder.com` |
-| `PUBLIC_API_URL` (derived, API) | `https://api.citeladder.com` |
+| `PUBLIC_WEBSITE_URL` (derived, API) | `https://citeladder.com` |
+| `PUBLIC_API_URL` (derived, API; MCP origin) | `https://api.citeladder.com` |
 | `PUBLIC_WEBSITE_ORIGIN` | `https://citeladder.com` |
 | `PUBLIC_APP_ORIGIN` | `https://app.citeladder.com` |
 | `PUBLIC_API_ORIGIN` (app build) | `https://api.citeladder.com` |
@@ -76,16 +76,17 @@ not make a second progress document.
 new Worker build and deployment, including on a repeated source SHA. The GCP
 workflow publishes only the backend. `FRONTEND_URL` is the browser origin for
 OAuth, invitations and application returns. The MCP protocol origin is the
-apex. Never point browser config at the Cloud Run URL or expose the origin
+API host (`PUBLIC_API_URL`); `PUBLIC_WEBSITE_URL` admits the apex Worker. Never point browser config at the Cloud Run URL or expose the origin
 credential to a client bundle.
 
 Current browser APIs, sign-in (`GET /api/v1/auth/oauth/google/callback`) and
 integration callbacks (`GET /api/v1/integrations/oauth/{gsc,ga4,bing}/callback`)
 are **APP-OWNED**. Authenticated
 product API methods remain on the app same-origin `/api/v1`. MCP discovery,
-registration, authorization, token, revoke and `/mcp` are **APEX-OWNED**
-protocol endpoints; only `GET/POST /mcp/oauth/consent` is browser owned by
-the configured app origin. Enabled-provider signed
+registration, authorization, token, revoke and `/mcp` are **API-OWNED**
+protocol endpoints on `api.citeladder.com`; only `GET/POST /mcp/oauth/consent`
+is browser owned by the configured app origin. The apex serves none of them
+(its normal 404). Enabled-provider signed
 `POST /api/v1/billing/webhooks/{provider}` is **APEX-OWNED** and preserves raw
 bodies and status codes. Machine routes under `/v1/...` (crawl-log ingest
 and the Firehose endpoint) are **API-OWNED** on `api.citeladder.com`; see
@@ -97,7 +98,7 @@ method, owner, focused test and removal condition in the release record.
 ## API host (api.citeladder.com)
 
 `api.citeladder.com` is **API-OWNED**: machine senders (CDN log streams, the
-public REST API's key holders, and later MCP) call it; browsers never do. It is its own small
+public REST API's key holders and MCP clients) call it; browsers never do. It is its own small
 Worker, **citeladder-api-host** (`frontend/apps/api-host/`), with no assets. The
 marketing Worker keeps serving its static files without a Worker invocation, so
 marketing traffic never spends the free plan's daily Worker requests; only machine
@@ -108,11 +109,15 @@ deliveries to this host do. It uses the same origin token as the other Workers.
   `POST /v1/crawl-logs/ingest/{uuid}` and `POST /v1/crawl-logs/firehose/{uuid}`
   (no other `/v1/crawl-logs/...` request), and `GET`, `POST`, `PATCH` or
   `DELETE` on any other `/v1/...` path for the [public API](../public-api.md),
-  which authenticates by API key. Anything else is
+  which authenticates by API key. MCP: every method on `/mcp`,
+  `/mcp/register`, `/authorize`, `/token`, `/revoke`,
+  `/.well-known/oauth-authorization-server` and
+  `/.well-known/oauth-protected-resource/mcp` (consent stays on the app host).
+  Anything else is
   `404 {"error":{"code":"not_found"}}`. Cookies are neither read nor forwarded.
 - Any other hostname (a `workers.dev` or preview URL) gets the same 404.
-- The API admits the host from `PUBLIC_API_URL` and serves it `/v1/...` only.
-  The apex and app hosts refuse `/v1/...` with 404.
+- The API admits the host from `PUBLIC_API_URL` and serves it `/v1/...` and
+  the MCP paths only. The apex and app hosts refuse both with 404.
 
 Owner steps (DNS and Cloudflare; code cannot do these):
 
@@ -130,11 +135,15 @@ Owner steps (DNS and Cloudflare; code cannot do these):
 3. Build and deploy the app Worker with `PUBLIC_API_ORIGIN=https://api.citeladder.com`
    so crawl-log setup shows the API host.
 4. Run the release smoke below.
+5. MCP moved here from the apex with no alias: re-verify the ChatGPT app's
+   domain for `api.citeladder.com`, and reconnect personal assistant and editor
+   clients to `https://api.citeladder.com/mcp`.
 
 Release smoke: `node scripts/frontend-ingress-smoke.mjs https://citeladder.com
 https://app.citeladder.com https://api.citeladder.com`. It checks that the
-apex and app hosts refuse `/v1/*` and that the API host refuses `/`, `/pricing`
-and `/api/v1/*` with the JSON 404. Then confirm one real sender's batch is
+apex and app hosts refuse `/v1/*`, that the apex 404s `/mcp` and MCP metadata,
+that the API host refuses `/`, `/pricing`, `/api/v1/*` and consent with the JSON
+404, and that its MCP metadata names the API host as issuer. Then confirm one real sender's batch is
 accepted (a receipt appears on the source row), and that a key from Settings →
 API keys lists projects: `curl -H "Authorization: Bearer $KEY"
 https://api.citeladder.com/v1/projects`.
@@ -297,10 +306,10 @@ For local Worker verification, run `pnpm --dir frontend dev:marketing-worker`.
 Use only a disposable local token; never use the production token. Map
 `citeladder.com:8788` to `127.0.0.1` in a local HTTP client. Without an isolated
 protected upstream, pricing explicitly reports catalog unavailability and
-protocol proxy paths return 502. Check initial HTML for home, pricing,
+the webhook proxy returns 502. Check initial HTML for home, pricing,
 commercial, docs, article and legal pages, plus canonical and sitemap URLs.
-Check real 404s for old product/API/asset paths, GET consent redirect, safe
-legacy consent POST, exact webhook proxy and MCP discovery. Local Compose uses
+Check real 404s for old product/API/asset paths, `/mcp`, MCP consent and MCP
+discovery, and the exact webhook proxy. Local Compose uses
 a fixed disposable HTTP exception only through its `api-service:8100`
 service; production config cannot select it.
 
@@ -367,7 +376,7 @@ procedure itself does not authorize dispatch or DNS changes.
    email records. Deploy **Marketing Worker delivery**
    (`gh workflow run workers-marketing-deploy.yml --ref main`), approve
    `workers-marketing-production` and verify initial HTML, direct app links,
-   public pricing, genuine 404s, sitemap, canonicals and apex MCP/webhook
+   public pricing, genuine 404s, sitemap, canonicals and apex webhook
    ownership.
 5. Run the [release acceptance checks](../release-checklist.md)
    on the deployed topology. Record unavailable external checks as unexecuted.
@@ -378,9 +387,4 @@ repeat affected checks. Do not rebuild the retired frontend, restore a database
 to undo frontend deployment, bypass protected ingress or add a broad product
 redirect bridge.
 
-The apex `GET /mcp/oauth/consent` redirect and safe `POST` rejection remain for
-transactions started on the previous origin. The release operator owns their
-removal review by 1 October 2026. Remove them only after the first release is
-accepted, prior transactions have expired or been restarted, and a real MCP
-client confirms the app consent path. The stable apex MCP protocol endpoints
-and signed webhook URL remain long-lived contracts.
+The signed webhook URL on the apex remains a long-lived contract.

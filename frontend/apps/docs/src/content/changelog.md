@@ -7,6 +7,14 @@ order: 400
 
 These notes describe implemented changes in the codebase. Dates are the recorded commit dates; availability in your workspace depends on deployment, access and configuration.
 
+## October 10, 2026: MCP moved to api.citeladder.com
+
+The hosted MCP server is now at `https://api.citeladder.com/mcp`, beside the REST API. The old `https://citeladder.com/mcp` address no longer answers.
+
+**For your team:** remove the old CiteLadder connector from your assistant and connect again with the new address, or use **Connect** in CiteLadder.
+
+[Connection setup](/mcp/connect/)
+
 ## October 10, 2026: REST API and API keys
 
 Paid plans include a REST API at `https://api.citeladder.com/v1`. Owners and Admins create keys in **Settings → API keys**, choose what each key can do and which projects it reaches, and see each key's last use. Keys read projects, prompts, audits, visibility, Site Health, AI Traffic, Performance and Search Intelligence, and, with the matching scope, manage prompts, topics, competitors, audit schedules and actions or launch an audit with a credit ceiling. A key never does more than its creator's current role allows.

@@ -1,7 +1,7 @@
 # CiteLadder plugin
 
 The source package contains public read-only review skills and the existing
-`https://citeladder.com/mcp` connection. It requires a connected CiteLadder
+`https://api.citeladder.com/mcp` connection. It requires a connected CiteLadder
 account, explicit workspace consent and existing project measurements. There
 is no sample mode. The repository marketplace is
 `.agents/plugins/marketplace.json`; restart ChatGPT desktop to discover it.

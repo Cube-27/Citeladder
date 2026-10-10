@@ -1,3 +1,4 @@
+import { MCP_SERVER_URL } from '@/lib/config/mcp-clients';
 import { AGENT_NOTE, type PlatformPage } from './platform-page-types';
 
 /** Action and connection capabilities: content, the Agent, MCP and integrations. */
@@ -242,7 +243,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
     highlights: [
       {
         title: '1. Connect',
-        body: 'Use Connect, or add https://citeladder.com/mcp as a custom connector in your assistant.',
+        body: `Use Connect, or add ${MCP_SERVER_URL} as a custom connector in your assistant.`,
       },
       {
         title: '2. Sign in and approve',
@@ -278,7 +279,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
     steps: [
       {
         title: 'Add the connector',
-        body: 'Click Connect for your assistant, or paste https://citeladder.com/mcp as a custom connector.',
+        body: `Click Connect for your assistant, or paste ${MCP_SERVER_URL} as a custom connector.`,
       },
       {
         title: 'Sign in',
@@ -303,7 +304,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
     faqs: [
       {
         q: 'What is the CiteLadder MCP server?',
-        a: 'A hosted Model Context Protocol server at https://citeladder.com/mcp. It lets a compatible AI assistant read your CiteLadder project evidence so you can ask questions about it in plain language.',
+        a: `A hosted Model Context Protocol server at ${MCP_SERVER_URL}. It lets a compatible AI assistant read your CiteLadder project evidence so you can ask questions about it in plain language.`,
       },
       {
         q: 'Which assistants does it work with?',
