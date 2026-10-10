@@ -3,8 +3,10 @@
  * says survives: a quote must be found in that entity's own passages, an
  * unknown entity is dropped, and every drop is counted by reason.
  */
-import type { PerceptionPolicy } from '../config/perception.ts';
-import type { Label, PerceptionOutput } from './model.ts';
+import { factTopicSchema, type FactTopic } from '@citeladder/contracts/fact-checking';
+
+import type { FactCheckPolicy, PerceptionPolicy } from '../config/perception.ts';
+import type { ExtractedClaim, Label, PerceptionOutput } from './model.ts';
 import type { PerceptionPackage, Span } from './passages.ts';
 
 export type VerifiedAspect = {
@@ -34,7 +36,12 @@ export type DropReason =
   | 'missing_entity'
   | 'quote_not_found'
   | 'aspect_limit'
-  | 'theme_other';
+  | 'theme_other'
+  | 'claim_no_brand'
+  | 'claim_quote_not_found'
+  | 'claim_off_topic'
+  | 'claim_duplicate'
+  | 'claim_limit';
 
 /** `text` with whitespace runs collapsed to one space, and each kept char's source index. */
 function collapsed(text: string) {
@@ -146,4 +153,77 @@ export function validateOutput(
     };
   });
   return { entities, drops };
+}
+
+/** A brand claim whose quote was found in the brand's own passages. */
+export type VerifiedClaim = {
+  ordinal: number;
+  topic: FactTopic;
+  claim: string;
+  /** The answer's own text at `start`..`end` (code points). */
+  quote: string;
+  start: number;
+  end: number;
+  confidence: number;
+  low_confidence: boolean;
+};
+
+/**
+ * The brand's claims that survive: quoted from the brand's passages (never a
+ * competitor's), on an allowed topic, one per quote, at most the cap.
+ */
+export function validateClaims(
+  pkg: PerceptionPackage,
+  claims: readonly ExtractedClaim[],
+  policy: Pick<
+    FactCheckPolicy,
+    'topics' | 'max_claims_per_answer' | 'min_confidence' | 'statement_max_chars'
+  >,
+): { claims: VerifiedClaim[]; drops: Partial<Record<DropReason, number>> } {
+  const drops: Partial<Record<DropReason, number>> = {};
+  const drop = (reason: DropReason, count = 1) => {
+    if (count > 0) drops[reason] = (drops[reason] ?? 0) + count;
+  };
+  const brand = pkg.entities.find((entity) => entity.kind === 'brand');
+  if (!brand) {
+    drop('claim_no_brand', claims.length);
+    return { claims: [], drops };
+  }
+  const topics = new Set<string>(policy.topics);
+  const seen = new Set<string>();
+  const verified: VerifiedClaim[] = [];
+  for (const row of claims) {
+    const topic = factTopicSchema.safeParse(row.topic);
+    if (!topic.success || !topics.has(topic.data)) {
+      drop('claim_off_topic');
+      continue;
+    }
+    const found = locateQuote(row.quote, brand.spans);
+    if (!found) {
+      drop('claim_quote_not_found');
+      continue;
+    }
+    const key = `${found.start}:${found.end}:${topic.data}`;
+    if (seen.has(key)) {
+      drop('claim_duplicate');
+      continue;
+    }
+    if (verified.length >= policy.max_claims_per_answer) {
+      drop('claim_limit');
+      continue;
+    }
+    seen.add(key);
+    const claim = row.claim.trim() || found.text;
+    verified.push({
+      ordinal: verified.length,
+      topic: topic.data,
+      claim: Array.from(claim).slice(0, policy.statement_max_chars).join(''),
+      quote: found.text,
+      start: found.start,
+      end: found.end,
+      confidence: row.confidence,
+      low_confidence: row.confidence < policy.min_confidence,
+    });
+  }
+  return { claims: verified, drops };
 }

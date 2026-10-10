@@ -3,6 +3,7 @@ import {
   businessMapSchema,
   competitorSchema,
 } from '@citeladder/contracts/project';
+import { brandFactListSchema, brandFactSchema } from '@citeladder/contracts/fact-checking';
 import { observedCompetitorSchema } from '@citeladder/contracts/visibility';
 import type { Context } from 'hono';
 import { z } from 'zod';
@@ -16,12 +17,19 @@ import {
   readBrandProfile,
   updateBrandProfile,
 } from '../projects/brand-profile.ts';
+import {
+  brandFactCreate,
+  brandFactUpdate,
+  createBrandFact,
+  listBrandFacts,
+  updateBrandFact,
+} from '../projects/brand-facts.ts';
 import { businessMapUpdate, readBusinessMap, updateBusinessMap } from '../projects/business-map.ts';
 import { actorOf } from '../auth/actor.ts';
 import { acceptSuggestion } from '../commands/competitors.ts';
 import { listSuggestions } from '../projects/competitor-suggestions.ts';
 import { logoResponse } from '../projects/logos.ts';
-import { defineGetRoute, definePostRoute, definePutRoute } from './define.ts';
+import { defineGetRoute, definePatchRoute, definePostRoute, definePutRoute } from './define.ts';
 import { fileResponse } from './opportunity-contracts.ts';
 
 const family = 'brand-identity';
@@ -67,6 +75,40 @@ export const brandIdentityRoutes = [
       const scope = await scopeOf(db, c, path.project_id);
       const update = await readBody(c, brandProfileUpdate);
       return updateBrandProfile(db, scope, c.get('user').id, update);
+    },
+  }),
+  defineGetRoute({
+    family,
+    path: `${root}/brand-facts`,
+    params: { path: projectPath, query: {} },
+    response: brandFactListSchema,
+    async handle({ c, db }, { path }) {
+      return listBrandFacts(db, await scopeOf(db, c, path.project_id));
+    },
+  }),
+  definePostRoute({
+    family,
+    path: `${root}/brand-facts`,
+    capability: 'write',
+    params: { path: projectPath, query: {} },
+    body: brandFactCreate,
+    response: brandFactSchema,
+    async handle({ c, db }, { path }) {
+      const scope = await scopeOf(db, c, path.project_id);
+      return createBrandFact(db, scope, c.get('user').id, await readBody(c, brandFactCreate));
+    },
+  }),
+  definePatchRoute({
+    family,
+    path: `${root}/brand-facts/{fact_id}`,
+    capability: 'write',
+    params: { path: { ...projectPath, fact_id: uuid }, query: {} },
+    body: brandFactUpdate,
+    response: brandFactSchema,
+    async handle({ c, db }, { path }) {
+      const scope = await scopeOf(db, c, path.project_id);
+      const update = await readBody(c, brandFactUpdate);
+      return updateBrandFact(db, scope, c.get('user').id, path.fact_id, update);
     },
   }),
   defineGetRoute({

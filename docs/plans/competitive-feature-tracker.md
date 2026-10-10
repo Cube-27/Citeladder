@@ -41,7 +41,7 @@ first. Size: S (≤2 days), M (≤1 week), L (>1 week).
 | F5 | Ads in AI answers | 4 | S–M | 1 | — | done | [F5](F5-ai-answer-ads.md) |
 | F6 | Prompt grounding in the project's own search data | 5 | M | 1 | — | done | [F6](F6-prompt-grounding.md) |
 | F7 | Market (location/language) segmentation | 6 | M–L | 1 | D7.x | queued | `market-segmentation.md` |
-| F8 | Fact-checking against brand facts | 7 (gated) | M | 1 | F3, D8.1 | proposal | `fact-checking.md` |
+| F8 | Fact-checking against brand facts | 7 (gated) | M | 1 | F3, D8.1 | in review | [F8](F8-fact-checking.md) |
 | F9 | Enterprise SSO and SCIM (WorkOS) | 8 (last) | L | 1–2 | domain verification | proposal | `enterprise-identity.md` |
 
 Out of scope by owner direction: agency reporting, white-label, Looker/Tableau
@@ -1212,7 +1212,9 @@ scope), `src/config/providers.json`, `src/config/dataforseo.json`.
 
 ### F8 owner decision
 
-- **D8.1** Build after F3 ships and its calibration is acceptable.
+- **D8.1** Build after F3 ships and its calibration is acceptable. Settled
+  2026-10-10 with D8.2–D8.9 in the [F8 plan](F8-fact-checking.md): build now
+  behind the pilot gate; both live evals run before the pilot is granted.
 
 ---
 
@@ -1424,3 +1426,4 @@ Source: https://us.fitgap.com/products/workos (WorkOS price table)
 | 2026-10-10 | F2, F5, F6 | F5 (#354) and F6 (#355) merged. F2b in review: `gcp_pubsub_pull` sources (kind `pull`) read by the keyless `citeladder-log-reader` service account the runtime impersonates, a per-source label nonce verified before activation and daily, generated RE2-escaped sink filter with an update prompt and confirmation, `crawl_log_pull` (300 s lease, ack after commit, drained receipts), and the D2.5 pull coverage rule from receipts with no coverage-history table. Owner applies Terraform (reader service account, `CRAWL_LOG_READER_EMAIL`) and re-runs the bootstrap for the Pub/Sub API. |
 | 2026-10-10 | F4 | F4a in review: `auth/actor.ts` and `commands/` for the exposed writes (browser routes call them), API keys (`api_keys`, HMAC under `API_KEY_PEPPER`, scopes ∩ the creator's live role, creator removal revokes, `api_access` + 10 keys on paid plans as `entitlements-v6`), the `/v1` public API on `api.citeladder.com` (route `exposure` with project-nested public paths and path-ID ownership, per-key/workspace limits, required Idempotency-Key with replay/409, paged lists, one-call audit launch with `max_estimated_credits`), `GET /v1/openapi.json` with the docs reference drift check, Settings → API keys, invariant 10 amendment and the docs site API pages. |
 | 2026-10-10 | F4 | F4a merged (#358). F4b in review: hard cut of MCP to `api.citeladder.com/mcp`. The MCP issuer, resource and discovery derive from `PUBLIC_API_URL` (required when MCP is enabled; `MCP_PUBLIC_BASE_URL` retired), the API host Worker forwards `/mcp` and the OAuth paths, the API serves them on that host only, and the apex no longer proxies MCP or redirects consent. `PUBLIC_WEBSITE_URL` now admits the apex Worker (webhooks, catalog). Consent stays on the app; its legal links are fixed policy URLs. Owner steps: ChatGPT app domain re-verification for the API host and reconnecting personal clients. |
+| 2026-10-10 | F8 | Owner approved D8.1–D8.9 as recommended. In review: brand facts with append-only revisions (Agent → Context), the non-public `fact_checking` grant (`entitlements-v7`), the confirmed fact set frozen at brand-audit admission, brand claims extracted in the perception call through a versioned addendum, the `fact_verification` analytics task with deterministic verdict checks (stricter contradiction floor), `GET /visibility/accuracy` and `/accuracy/claims`, execution-evidence claims, the Accuracy tab, `read_fact_checks` with skill lines and the operator-only `pnpm facts:eval --live`. The `fact_contradiction` Action rule and draft-fact suggestions are backlogged. No live provider calls from this change. |

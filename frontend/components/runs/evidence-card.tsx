@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 
 import { ContentMarkdown } from '@/lib/markdown/markdown';
 import type { Highlight } from '@/lib/markdown/highlight';
+import { claimHighlights, EvidenceClaims } from '@/components/runs/evidence-claims';
 import { EvidencePerception, perceptionHighlights } from '@/components/runs/evidence-perception';
 import { EvidenceAds } from '@/components/runs/evidence-ads';
 import { panelClasses } from '@/components/ui/panel';
@@ -401,9 +402,13 @@ export function EvidenceCard({
         answerText={answerText}
         isSearchSurface={isSearchSurface}
         outcome={outcome}
-        highlights={perceptionHighlights(evidence.perception)}
+        highlights={[
+          ...perceptionHighlights(evidence.perception),
+          ...claimHighlights(evidence.claims),
+        ]}
       />
       <EvidencePerception perception={evidence.perception} />
+      <EvidenceClaims claims={evidence.claims} />
       <EvidenceAds ads={evidence.ads} />
       {/* Only an observed surface has one, and its absence is not a state to
           render: an LLM execution has no overview to report on. */}

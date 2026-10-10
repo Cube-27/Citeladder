@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
 
+import { BrandFactsPanel } from '@/components/knowledge-base/brand-facts-panel';
 import { BrandProfilePanel } from '@/components/knowledge-base/brand-profile-panel';
 import { PageShell } from '@/components/layout/page-shell';
 import { ProjectRequiredState } from '@/components/layout/project-required-state';
@@ -23,6 +24,7 @@ import { queryKeys } from '@/lib/api/query-keys';
 import { visibilityApi } from '@/lib/api/visibility';
 import type { Project } from '@/lib/api/types';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
+import { useBrandFacts } from '@/lib/project/use-brand-facts';
 
 /**
  * What the agent knows about the business before it reads any evidence: the
@@ -46,6 +48,7 @@ export function ContextScreen() {
           projectId={activeProject.id}
         />
         <CompanyFacts workspaceId={activeWorkspaceId} project={activeProject} />
+        <BrandFacts workspaceId={activeWorkspaceId} projectId={activeProject.id} />
       </Stack>
     </PageShell>
   );
@@ -161,6 +164,32 @@ function InstructionsEditor({
         ) : null}
       </div>
     </form>
+  );
+}
+
+/** Brand facts answers are checked against; shown only inside the fact-checking pilot. */
+function BrandFacts({
+  workspaceId,
+  projectId,
+}: Readonly<{ workspaceId: string; projectId: string }>) {
+  const query = useBrandFacts(projectId, workspaceId);
+  const mayEdit = useWorkspaceCapability('write');
+  // Outside the pilot (or before the gate is known) there is nothing to show.
+  if (!query.data?.enabled) return null;
+  return (
+    <Stack as="section" aria-labelledby="brand-facts">
+      <EditorialSectionHeader
+        title="Brand facts"
+        headingId="brand-facts"
+        description="Statements of record that AI answers about you are checked against. Runs check the facts confirmed when they start."
+      />
+      <BrandFactsPanel
+        workspaceId={workspaceId}
+        projectId={projectId}
+        list={query.data}
+        mayEdit={mayEdit}
+      />
+    </Stack>
   );
 }
 

@@ -75,6 +75,7 @@
     "commerce_catalog_projection": "commerce_catalog_projection",
     "commerce_competitor_discovery": "commerce_competitor_discovery",
     "demand_snapshot_refresh": "demand_snapshot_refresh",
+    "fact_verification": "fact_verification",
     "internal_link_judgment": "internal_link_judgment",
     "internal_link_publish": "internal_link_publish",
     "opportunity_verification": "opportunity_verification",

@@ -32,6 +32,8 @@ export const visibilityKeys = {
     ['visibility', 'trends', projectId, filters] as const,
   perception: (projectId: string, filters: ListFilters = {}) =>
     ['visibility', 'perception', projectId, filters] as const,
+  accuracy: (projectId: string, filters: ListFilters = {}) =>
+    ['visibility', 'accuracy', projectId, filters] as const,
   ads: (projectId: string, filters: ListFilters = {}) =>
     ['visibility', 'ads', projectId, filters] as const,
   evidence: (projectId: string, filters: ListFilters = {}) =>

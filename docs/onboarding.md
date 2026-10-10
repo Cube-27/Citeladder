@@ -102,6 +102,19 @@ keeps each competitor's aliases across renames. Overview shows a read-only
 summary. Prompt generation and Site Health archetypes read the stored category
 and facets, so a correction there changes what later generation asks.
 
+## Brand facts
+
+In a workspace in the fact-checking pilot (the `fact_checking` grant), Agent →
+Context also lists **brand facts**: short statements of record on a closed set
+of topics (pricing, plans, integrations, availability, markets, policies,
+specifications, company), each with an optional source page. The
+[brand facts owner](../frontend/services/api/src/projects/brand-facts.ts) creates
+them as drafts; only confirmed facts are checked. Every change appends a
+`brand_fact_revisions` row and an edit must name the revision it read, so a
+stale edit is a conflict. Retiring keeps the history. Facts are typed by people,
+not suggested from research. [Fact-checking](visibility-prompt.md#fact-checking-pilot)
+freezes the confirmed revisions when an audit starts.
+
 ## Dependencies and limits
 
 - [Native discovery configuration](../frontend/services/api/src/config/discovery.ts)

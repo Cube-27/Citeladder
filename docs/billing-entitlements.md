@@ -54,6 +54,11 @@ counter `api_keys` (live API keys), both granted by every launch plan bundle
 (`api_keys` = 10) and absent from the public trial. Key creation admits under
 the capacity lock; [public API](public-api.md) requests check the flag without
 it and refuse with 403 `api_access_not_in_plan`.
+Registry `entitlements-v7` adds the non-public flag `fact_checking`, in no plan
+bundle and absent from the public trial. Operators grant it per pilot workspace
+with `billing:admin grant`; [fact-checking](visibility-prompt.md#fact-checking-pilot)
+and brand-fact writes check it without the capacity lock (409
+`fact_checking_not_in_plan`), and its reads report `not_enabled`.
 
 Public registration persists its origin on the identity and billing account and
 issues `public-trial-v1` once, starting at the original registration cohort and

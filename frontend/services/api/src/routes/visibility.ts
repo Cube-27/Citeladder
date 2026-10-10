@@ -2,13 +2,19 @@
  * `visibility`: every persisted visibility read for one measurement
  * selection: the dashboard, prompt scores, trends, query fanout, Sources
  * (table, series and one URL), per-answer evidence, answer perception
- * (summary and quotes), ads in AI answers and the observed AI Overview rates.
+ * (summary and quotes), fact-check accuracy (summary and claims), ads in AI
+ * answers and the observed AI Overview rates.
  *
  * Reads of persisted projections; nothing is
  * fetched. An unknown or out-of-scope run is `Audit not found`, and a
  * malformed selection is a 422 carrying the reader's message.
  */
 import { surfaceRatesSchema } from '@citeladder/contracts/audits';
+import {
+  accuracyClaimPageSchema,
+  accuracyResponseSchema,
+  claimVerdictSchema,
+} from '@citeladder/contracts/fact-checking';
 import { promptMetricItemSchema, visibilitySchema } from '@citeladder/contracts/visibility';
 import {
   visibilityEvidenceResponseSchema,
@@ -30,6 +36,7 @@ import { ApiError, notFound } from '../errors.ts';
 import type { ParamSpecs } from '../http/params.ts';
 import { InvalidCursorError } from '../http/keyset-cursor.ts';
 import { requireProject } from '../projects/access.ts';
+import { getAccuracy, getAccuracyClaims } from '../visibility/accuracy.ts';
 import { getAds } from '../visibility/ads.ts';
 import { getVisibility } from '../visibility/dashboard.ts';
 import { getVisibilityEvidence } from '../visibility/evidence.ts';
@@ -186,6 +193,49 @@ export const visibilityRoutes = [
           entity: query.entity,
           theme: query.theme,
           polarity: query.polarity,
+          cursor: query.cursor,
+          limit: query.limit,
+        }),
+      );
+    },
+  }),
+  defineGetRoute({
+    family: 'visibility',
+    path: '/api/v1/projects/{project_id}/visibility/accuracy',
+    params: { path: PROJECT_PATH, query: PERCEPTION_SELECTION },
+    response: accuracyResponseSchema,
+    async handle({ c, db }, { path, query }) {
+      const workspace = c.get('workspace');
+      await requireProject(db, workspace, path.project_id);
+      return selectionErrors(() =>
+        getAccuracy(db, runSelection(workspace.workspaceId, path.project_id, query)),
+      );
+    },
+  }),
+  defineGetRoute({
+    family: 'visibility',
+    path: '/api/v1/projects/{project_id}/visibility/accuracy/claims',
+    params: {
+      path: PROJECT_PATH,
+      query: {
+        ...PERCEPTION_SELECTION,
+        topic: { scalar: { kind: 'literal', values: policy.perception.fact_check.topics } },
+        verdict: { scalar: { kind: 'literal', values: claimVerdictSchema.options } },
+        cursor: { scalar: { kind: 'str', maxLength: 2048 } },
+        limit: {
+          scalar: { kind: 'int', ge: 1, le: policy.perception.fact_check.claims_max_limit },
+          default: policy.perception.fact_check.claims_default_limit,
+        },
+      },
+    },
+    response: accuracyClaimPageSchema,
+    async handle({ c, db }, { path, query }) {
+      const workspace = c.get('workspace');
+      await requireProject(db, workspace, path.project_id);
+      return selectionErrors(() =>
+        getAccuracyClaims(db, runSelection(workspace.workspaceId, path.project_id, query), {
+          topic: query.topic,
+          verdict: query.verdict,
           cursor: query.cursor,
           limit: query.limit,
         }),

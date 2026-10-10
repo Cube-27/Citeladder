@@ -26,6 +26,7 @@ import {
 import {
   adsRead,
   perceptionRead,
+  factChecksRead,
   renderAnalytics,
   sourceUrl,
   visibilityOverview,
@@ -199,6 +200,22 @@ export const definitions = {
       ...page,
     }),
     read: perceptionRead,
+  }),
+  read_fact_checks: projectTool({
+    title: 'Read fact checks',
+    description:
+      "Factual claims AI answers made about the brand in the latest or a chosen run, checked against the brand's confirmed facts: accuracy (supported of supported plus contradicted) with its coverage, contradicted claims with the fact they contradict, and sources cited alongside them. Always state the coverage and quote the fact. accuracy_state not_enabled, no_facts, no_claims, pending or unavailable means there is no value, never zero; inconclusive and not_covered are not errors in the answer. Sources are cited alongside a contradiction, never its cause.",
+    schema: z.strictObject({
+      ...project,
+      audit_id: optional(uuid),
+      engine,
+      cohort,
+      view: z.enum(['summary', 'claims']).default('summary'),
+      topic: optional(z.enum(policy.perception.fact_check.topics)),
+      verdict: optional(z.enum(['supported', 'contradicted', 'inconclusive', 'not_covered'])),
+      ...page,
+    }),
+    read: factChecksRead,
   }),
   read_ai_ads: projectTool({
     title: 'Read ads in AI answers',

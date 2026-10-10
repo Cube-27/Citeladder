@@ -28,7 +28,13 @@ schedule monitoring, collect new data or save a deliverable.
    Ads are paid placements: report them separately, never as citations,
    sources or a cause of visibility; an engine without ads is not applicable,
    never zero.
-7. Where supported, call `render_visibility` with the same selection. A missing
+7. For whether answers state the brand's facts correctly, call
+   `read_fact_checks` for the same audit (`view: claims` to page the claims).
+   If it is `not_enabled`, skip it without comment. Always state its coverage
+   and quote the confirmed fact beside each contradicted claim. Inconclusive
+   and not covered are gaps in the facts, not errors in the answer; sources it
+   lists were cited alongside a contradiction, never shown to cause it.
+8. Where supported, call `render_visibility` with the same selection. A missing
    UI does not prevent a useful text answer.
 
 ## Diagnose

@@ -1,4 +1,9 @@
-/** Answer perception policy: versions, caps, the closed theme list and the model templates. */
+/**
+ * Answer perception policy: versions, caps, the closed theme list and the
+ * model templates, plus the gated fact-checking block (claim addendum,
+ * verification template, topics and platform caps).
+ */
+import { factTopicSchema } from '@citeladder/contracts/fact-checking';
 import { z } from 'zod';
 import value from './perception.json' with { type: 'json' };
 import { ConfigError } from './config-error.ts';
@@ -6,6 +11,41 @@ import { ConfigError } from './config-error.ts';
 const positive = z.int().positive();
 const version = z.string().trim().min(1).max(64);
 const share = z.number().min(0).max(1);
+const factCheck = z.strictObject({
+  verification_task_kind: z.literal('fact_verification'),
+  claims_version: version,
+  verify_template_version: version,
+  metrics_version: version,
+  topics: z.array(factTopicSchema).min(1),
+  statement_max_chars: positive,
+  source_url_max_chars: positive,
+  max_facts_per_project: positive,
+  max_frozen_facts: positive,
+  max_claims_per_answer: positive,
+  max_facts_per_verification: positive,
+  max_verifications_per_audit: positive,
+  max_verifications_per_workspace_per_day: positive,
+  min_confidence: share,
+  min_contradiction_confidence: share,
+  max_attempts: positive,
+  task_max_attempts: positive,
+  max_contradicted_claims: positive,
+  max_cited_alongside: positive,
+  claims_default_limit: positive,
+  claims_max_limit: positive,
+  eval_policy_version: version,
+  eval_thresholds: z.strictObject({
+    max_false_contradiction_rate: share,
+    min_verdict_agreement: share,
+    min_quote_validity: share,
+    max_total_tokens_per_answer: positive,
+  }),
+  claims_system_addendum: z.string().trim().min(1),
+  claims_user_addendum: z.string().trim().min(1),
+  verify_system_template: z.string().trim().min(1),
+  verify_user_template: z.string().trim().min(1),
+});
+
 const schema = z.strictObject({
   task_kind: z.literal('answer_perception'),
   extractor_version: version,
@@ -34,6 +74,7 @@ const schema = z.strictObject({
   }),
   system_template: z.string().trim().min(1),
   user_template: z.string().trim().min(1),
+  fact_check: factCheck,
 });
 
 function loadPerception(input: unknown) {
@@ -48,8 +89,22 @@ function loadPerception(input: unknown) {
   for (const slot of ['{prompt}', '{language}', '{themes}', '{max_aspects}', '{entities}'])
     if (!config.user_template.includes(slot))
       throw new ConfigError(`Perception user template is missing ${slot}`);
+  const facts = config.fact_check;
+  if (new Set(facts.topics).size !== facts.topics.length)
+    throw new ConfigError('Fact-check topics must be unique');
+  if (facts.claims_default_limit > facts.claims_max_limit)
+    throw new ConfigError('Fact-check claim default limit exceeds its maximum');
+  if (facts.min_contradiction_confidence < facts.min_confidence)
+    throw new ConfigError('Fact-check contradiction confidence must not be below the floor');
+  for (const slot of ['{topics}', '{max_claims}'])
+    if (!facts.claims_user_addendum.includes(slot))
+      throw new ConfigError(`Fact-check claims addendum is missing ${slot}`);
+  for (const slot of ['{brand}', '{language}', '{facts}', '{claims}'])
+    if (!facts.verify_user_template.includes(slot))
+      throw new ConfigError(`Fact-check verification template is missing ${slot}`);
   return config;
 }
 
 export const perception = loadPerception(value);
 export type PerceptionPolicy = typeof perception;
+export type FactCheckPolicy = PerceptionPolicy['fact_check'];

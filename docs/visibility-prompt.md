@@ -485,6 +485,47 @@ customer credits. Policy, caps, the closed theme list and the templates live in
   Reads never classify. `pnpm perception:eval --live` is the operator-only
   calibration over hand-labelled fixtures.
 
+### Fact-checking (pilot)
+
+Fact-checking compares the factual claims answers make about the brand with
+the brand facts the project confirmed ([onboarding](onboarding.md#brand-facts)).
+It is gated by the non-public `fact_checking` entitlement, which an operator
+grants per workspace (`billing:admin grant --key fact_checking --value 1`), and
+platform-funded like perception. The policy, topics, caps and templates are the
+`fact_check` block of
+[`config/perception.json`](../frontend/services/api/src/config/perception.json).
+
+- **Admission.** A brand audit in a granted workspace with at least one
+  confirmed fact freezes `fact_check`: the claim and verification versions, the
+  newest revision of each confirmed fact (topic-ordered, capped) and a hash of
+  that set. Its perception template version becomes
+  `<template_version>+<claims_version>`. Editing a fact later never changes that
+  audit's verdicts. Other audits are perceived exactly as before.
+- **Extraction.** The perception call of a fact-checked audit appends the
+  claims addendum to the configured templates (no extra call). The brand's
+  claims must quote the brand's own passages, sit on an allowed topic and stay
+  within the per-answer cap; drops are counted. Claims land in
+  `answer_claims` in the perception's terminal transaction.
+- **Verification.** When a confident claim has a frozen fact on its topic, the
+  same transaction queues one `fact_verification` analytics task. Its executor
+  sends those claims and the frozen facts on their topics (capped, local ids)
+  in one call. Code keeps only facts that were sent; a supported or
+  contradicted verdict without one becomes inconclusive; a contradiction below
+  `min_contradiction_confidence` is stored as inconclusive with low confidence.
+  Caps, a missing gateway and failures end as persisted outcomes
+  (`fact_verifications`, `claim_verdicts`), as for perception.
+- **Metrics.** Accuracy is supported ÷ (supported + contradicted), always with
+  coverage. A claim on a topic without a frozen fact is not covered without a
+  call; low confidence, pending and unavailable claims are counted apart, never
+  as zero. Contradicted claims carry the fact they contradict; domains cited in
+  their answers are "cited alongside". Trend points change comparability with
+  the templates, metrics version or fact set.
+- **Reads.** `GET /visibility/accuracy` and `/visibility/accuracy/claims`, the
+  `claims` field of execution evidence and `read_fact_checks` read
+  `not_enabled` outside the pilot. `pnpm facts:eval --live` is the operator-only
+  calibration; the pilot's false-contradiction rate is reviewed with the owner
+  before general release.
+
 ## Ads in AI answers
 
 Only `chatgpt_search` (`audits.json` `ads_engine`) shows ads. Ads are paid

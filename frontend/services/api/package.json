@@ -34,6 +34,7 @@
     "jev:calibrate": "node scripts/jev-calibration.ts",
     "prompts:eval": "node scripts/eval-prompt-generation.ts",
     "perception:eval": "node scripts/eval-perception.ts",
+    "facts:eval": "node scripts/eval-fact-check.ts",
     "mcp:reference": "node scripts/export-mcp-tool-reference.ts",
     "public-api:reference": "node scripts/export-public-api-reference.ts",
     "crawl:worker": "node scripts/export-crawl-worker.ts",

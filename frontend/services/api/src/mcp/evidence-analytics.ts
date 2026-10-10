@@ -11,6 +11,7 @@ import { getVisibilitySources } from '../visibility/sources.ts';
 import { getSourceUrlDetail } from '../visibility/source-url.ts';
 import { getVisibilityTrends } from '../visibility/trends.ts';
 import { getPerception, getPerceptionQuotes } from '../visibility/perception.ts';
+import { getAccuracy, getAccuracyClaims } from '../visibility/accuracy.ts';
 import { getAds } from '../visibility/ads.ts';
 import { policy } from '../config.ts';
 import {
@@ -118,6 +119,53 @@ export async function perceptionRead(
     return {
       ...summary,
       perception_state: summary.state,
+      state: 'available',
+      view: 'summary',
+      artifact_refs: summary.source_audit_ids.map((id) => reference('audit', id)),
+    };
+  } catch (error) {
+    if (error instanceof AnalysisNotFoundError && !args.audit_id)
+      return unavailable('no_completed_run');
+    throw error;
+  }
+}
+
+/**
+ * Fact-check accuracy for the latest or a chosen run: the summary (accuracy
+ * always with its coverage) or a page of claims with their verdicts and the
+ * confirmed facts behind them. Outside the pilot the read is `not_enabled`.
+ */
+export async function factChecksRead(
+  { db, scope }: ProjectRead,
+  args: Selection &
+    Page & {
+      view: 'summary' | 'claims';
+      topic?: string | null;
+      verdict?: string | null;
+    },
+): Promise<Evidence> {
+  try {
+    if (args.view === 'claims') {
+      const page = await getAccuracyClaims(db, runs(scope, args), {
+        topic: args.topic ?? null,
+        verdict: args.verdict ?? null,
+        cursor: args.cursor ?? null,
+        limit: args.limit ?? mcpPolicy.default_list_limit,
+      });
+      return {
+        state: 'available',
+        view: 'claims',
+        items: page.items,
+        pagination: pagination(page.items, page.next_cursor),
+        artifact_refs: [...new Set(page.items.map((claim) => claim.run_id))].map((id) =>
+          reference('audit', id),
+        ),
+      };
+    }
+    const summary = await getAccuracy(db, runs(scope, args));
+    return {
+      ...summary,
+      accuracy_state: summary.state,
       state: 'available',
       view: 'summary',
       artifact_refs: summary.source_audit_ids.map((id) => reference('audit', id)),

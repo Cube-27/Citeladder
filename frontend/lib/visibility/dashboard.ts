@@ -28,13 +28,21 @@ const DASHBOARD_STATUSES: readonly AuditStatus[] = ['completed', 'partially_comp
  *   - trends:       cross-run metrics + charts + ranking movement
  *   - sources:      the domains and URLs AI answers retrieved and cited
  *   - perception:   how answers portray the brand and competitors (sentiment)
+ *   - accuracy:     the brand's factual claims checked against its confirmed
+ *                   facts (fact-checking pilot workspaces only)
  *   - ads:          paid ads shown in ChatGPT Search answers, apart from sources
  *   - query-fanout: frozen prompts + generated search-query evidence
  *
  * Every tab reads the selected measurement, so the run / engine / prompt /
  * period controls apply throughout and there is no per-tab exception.
  */
-export type VisibilityTab = 'trends' | 'sources' | 'perception' | 'ads' | 'query-fanout';
+export type VisibilityTab =
+  | 'trends'
+  | 'sources'
+  | 'perception'
+  | 'accuracy'
+  | 'ads'
+  | 'query-fanout';
 
 /** The ordered tab definitions (id + human label) rendered by the tablist. */
 export const VISIBILITY_TABS: readonly { id: VisibilityTab; label: string }[] = [
@@ -42,9 +50,15 @@ export const VISIBILITY_TABS: readonly { id: VisibilityTab; label: string }[] = 
   { id: 'trends', label: 'Trends' },
   { id: 'sources', label: 'Sources' },
   { id: 'perception', label: 'Perception' },
+  { id: 'accuracy', label: 'Accuracy' },
   { id: 'ads', label: 'Ads' },
   { id: 'query-fanout', label: 'Query fanouts' },
 ] as const;
+
+/** The tabs a workspace sees: Accuracy only inside the fact-checking pilot. */
+export function visibleTabs(factChecking: boolean) {
+  return VISIBILITY_TABS.filter((tab) => factChecking || tab.id !== 'accuracy');
+}
 
 /** The tabs backed by the shared execution-evidence query + cache key. */
 export function isEvidenceTab(tab: VisibilityTab): boolean {

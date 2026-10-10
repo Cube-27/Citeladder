@@ -38,6 +38,7 @@ export const projectKeys = {
   commandCenter: (projectId: string) => ['projects', 'command-center', projectId] as const,
   brandProfile: (projectId: string) => ['projects', 'brand-profile', projectId] as const,
   businessMap: (projectId: string) => ['projects', 'business-map', projectId] as const,
+  brandFacts: (projectId: string) => ['projects', 'brand-facts', projectId] as const,
 };
 
 export const promptKeys = {

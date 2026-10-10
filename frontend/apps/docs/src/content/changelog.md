@@ -7,6 +7,14 @@ order: 400
 
 These notes describe implemented changes in the codebase. Dates are the recorded commit dates; availability in your workspace depends on deployment, access and configuration.
 
+## October 10, 2026: Fact-checking pilot
+
+Workspaces in the fact-checking pilot can confirm brand facts (pricing, plans, integrations, markets, policies and more) in **Agent → Context**. Audits then check the factual claims answers make about you against those facts, and the new **Accuracy** tab in Visibility shows how many claims were supported or contradicted, each contradiction quoted next to your fact. Assistants connected with MCP, and the in-app Agent, read the same results with `read_fact_checks`.
+
+**For your team:** catch answers that quote an old price or a missing integration, and fix the pages behind them.
+
+[Read about checking facts](/visibility/#check-facts-in-answers-pilot)
+
 ## October 10, 2026: MCP moved to api.citeladder.com
 
 The hosted MCP server is now at `https://api.citeladder.com/mcp`, beside the REST API. The old `https://citeladder.com/mcp` address no longer answers.
