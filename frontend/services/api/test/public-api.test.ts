@@ -365,12 +365,13 @@ describe('public API requests', () => {
       idempotencyKey: 'launch-2',
     });
     expect(launched.status).toBe(201);
-    const audit = (await launched.json()) as { id: string; status: string };
-    expect(audit.status).toBe('queued');
+    // One launch, one audit per market: the default market alone here.
+    const [audit, ...others] = (await launched.json()) as { id: string; status: string }[];
+    expect([audit?.status, others]).toEqual(['queued', []]);
     const listed = (await (await api(secret, `/projects/${tenant.projectId}/audits`)).json()) as {
       items: { id: string }[];
     };
-    expect(listed.items.map((item) => item.id)).toEqual([audit.id]);
+    expect(listed.items.map((item) => item.id)).toEqual([audit?.id]);
   });
 
   it('adds, renames and removes one tracked competitor at a time', async () => {

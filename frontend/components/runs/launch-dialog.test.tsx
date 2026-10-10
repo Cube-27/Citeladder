@@ -2,6 +2,7 @@ import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
+import { projectsApi } from '@/lib/api/projects';
 import { promptsApi } from '@/lib/api/prompts';
 import { providersApi } from '@/lib/api/providers';
 import { queryKeys } from '@/lib/api/query-keys';
@@ -15,6 +16,23 @@ const PROJECT_ID = '11111111-1111-4111-8111-111111111111';
 const WORKSPACE_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const PROMPT_SET_ID = '22222222-2222-4222-8222-222222222222';
 const PROMPT_IDS = ['33333333-3333-4333-8333-333333333333', '44444444-4444-4444-8444-444444444444'];
+
+const DEFAULT_MARKET = {
+  id: null,
+  label: 'United States · English',
+  country_code: 'US',
+  language_code: 'en',
+  is_default: true,
+  created_at: null,
+};
+const GERMANY = {
+  id: '55555555-5555-4555-8555-555555555555',
+  label: 'Germany · German',
+  country_code: 'DE',
+  language_code: 'de',
+  is_default: false,
+  created_at: '2026-10-10T00:00:00Z',
+};
 
 vi.mock('@/lib/project/project-context', () => ({
   useActiveWorkspaceId: () => WORKSPACE_ID,
@@ -43,7 +61,8 @@ function stubApis(estimate: unknown = undefined) {
     },
   ] as never);
   vi.spyOn(runsApi, 'estimateAudit').mockResolvedValue(estimate as never);
-  return vi.spyOn(runsApi, 'launchAudit').mockResolvedValue({ id: 'audit' } as never);
+  vi.spyOn(projectsApi, 'listMarkets').mockResolvedValue([DEFAULT_MARKET]);
+  return vi.spyOn(runsApi, 'launchAudit').mockResolvedValue([{ id: 'audit' }] as never);
 }
 
 /** Pick one engine, which is what makes the selection launchable. */
@@ -107,6 +126,48 @@ describe('Consumer engine selection', () => {
       ),
     );
     expect(vi.mocked(launch).mock.calls[0]![0].engines).toHaveLength(6);
+  });
+});
+
+describe('Market selection', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('launches the default market alone unless more are picked', async () => {
+    const launch = stubApis(ESTIMATE);
+    renderWithProviders(
+      <LaunchDialog
+        open
+        onOpenChange={() => undefined}
+        projectId={PROJECT_ID}
+        fixedPromptIds={PROMPT_IDS}
+      />,
+    );
+    await selectEngineAndLaunch();
+    await waitFor(() => expect(launch).toHaveBeenCalled());
+    expect(vi.mocked(launch).mock.calls[0]![0].market_ids).toEqual([null]);
+    expect(screen.queryByRole('group', { name: /Markets/ })).not.toBeInTheDocument();
+  });
+
+  it('launches one run per picked market and refuses an empty market set', async () => {
+    const launch = stubApis(ESTIMATE);
+    vi.mocked(projectsApi.listMarkets).mockResolvedValue([DEFAULT_MARKET, GERMANY]);
+    renderWithProviders(
+      <LaunchDialog
+        open
+        onOpenChange={() => undefined}
+        projectId={PROJECT_ID}
+        fixedPromptIds={PROMPT_IDS}
+      />,
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'ChatGPT API' }));
+    const fallback = await screen.findByRole('button', { name: 'United States · English' });
+    fireEvent.click(fallback);
+    expect(screen.getByRole('button', { name: 'Launch audit' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Germany · German' }));
+    fireEvent.click(fallback);
+    fireEvent.click(screen.getByRole('button', { name: 'Launch audit' }));
+    await waitFor(() => expect(launch).toHaveBeenCalled());
+    expect(vi.mocked(launch).mock.calls[0]![0].market_ids).toEqual([GERMANY.id, null]);
   });
 });
 
@@ -275,6 +336,7 @@ describe('LaunchDialog fixed prompt selection', () => {
           project_id: PROJECT_ID,
           prompt_ids: PROMPT_IDS,
           engines: ['chatgpt'],
+          market_ids: [null],
           repetitions: expect.any(Number),
           audit_scope: 'commerce',
         },

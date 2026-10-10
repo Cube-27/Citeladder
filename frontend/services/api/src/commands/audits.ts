@@ -1,18 +1,19 @@
 /**
- * Audit commands. The browser creates a queued audit and may then drive its
- * first results in the request (`run`); the public API launches in one call
- * with an estimate guard and leaves execution to the runner.
+ * Audit commands. A launch creates one queued audit per selected market. The
+ * browser may then drive each audit's first results in the request (`run`);
+ * the public API launches in one call with an estimate guard and leaves
+ * execution to the runner.
  */
 import type { z } from 'zod';
 
 import { requireCapability, type Actor } from '../auth/actor.ts';
 import { auditRuntime } from '../audits/config.ts';
-import { createAudit } from '../audits/creation.ts';
+import { createAudits } from '../audits/creation.ts';
 import { estimateAudit } from '../audits/estimate.ts';
 import { auditCreateInput, auditInput, auditLaunchInput } from '../audits/inputs.ts';
 import { executeInteractiveAudit } from '../audits/interactive.ts';
 import { cancelAudit as cancelOwnedAudit } from '../audits/maintenance.ts';
-import { readAudit } from '../audits/reads.ts';
+import { readAudit, readAudits } from '../audits/reads.ts';
 import { configEnvironment, type ServiceConfig } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { ApiError } from '../errors.ts';
@@ -26,14 +27,14 @@ export async function createQueuedAudit(
   input: z.output<typeof auditCreateInput>,
 ) {
   requireCapability(actor, 'run', SCOPE);
-  const id = await createAudit(
+  const ids = await createAudits(
     db,
     actor.workspaceId,
     auditInput.parse(input),
     {},
     auditRuntime(configEnvironment(config)),
   );
-  return readAudit(db, actor.workspaceId, id);
+  return readAudits(db, actor.workspaceId, ids);
 }
 
 /** Drive a queued audit's first phases inside the request. */
@@ -73,14 +74,14 @@ export async function launchAudit(
         max_estimated_credits: ceiling,
       },
     });
-  const id = await createAudit(
+  const ids = await createAudits(
     db,
     actor.workspaceId,
     auditInput.parse({ ...request, project_id: projectId }),
     {},
     runtime,
   );
-  return readAudit(db, actor.workspaceId, id);
+  return readAudits(db, actor.workspaceId, ids);
 }
 
 export async function cancelAudit(db: Database, actor: Actor, auditId: string) {

@@ -11,6 +11,14 @@ import { freezeCommerceContext } from '../commerce/audit-context.ts';
 import { frozenEntityMatching, projectEntityMatching } from '../analysis/entity-matching.ts';
 import { strings } from '../db/json.ts';
 import { admittedFactCheck, admittedPerceptionVersions } from '../perception/admission.ts';
+import { marketLabel } from '@citeladder/contracts/markets';
+import type { Market } from '../projects/markets.ts';
+import {
+  isSearchSurface,
+  searchContext,
+  searchLanguageOf,
+  surfaceSupports,
+} from '../search-surfaces/locations.ts';
 import {
   searchPayload,
   searchPolicy,
@@ -19,6 +27,50 @@ import {
 } from '../search-surfaces/dataforseo.ts';
 
 const invalid = (message: string) => new ApiError(400, message);
+
+/**
+ * The requested engines that run in this market. An engine with no location
+ * control (the Gemini API) cannot measure an additional market and is not
+ * applicable there, never failed; a search surface without DataForSEO support
+ * for the market's location and language refuses the run before any spend.
+ */
+export function marketEngines(
+  requested: readonly Engine[],
+  market: Market,
+  context: { serp_location_code: number },
+) {
+  const engines: Engine[] = [],
+    notApplicable: Engine[] = [];
+  // A market without a language searches in the default; one with a language
+  // searches in its primary subtag (pt-BR is pt) or is refused, never swapped.
+  const language = market.language_code.trim()
+    ? searchLanguageOf(market.language_code)
+    : searchPolicy.constants.default_language_code;
+  for (const engine of requested) {
+    const support = providerPolicy.routes[engine].market_support;
+    if (support === 'none' && market.id !== null) notApplicable.push(engine);
+    else if (
+      support === 'dataforseo_location' &&
+      isSearchSurface(engine) &&
+      !surfaceSupports(engine, context.serp_location_code, language)
+    )
+      throw new ApiError(422, `${engine} cannot measure ${marketLabel(market)}`, {
+        code: 'market_unsupported',
+        details: {
+          engine,
+          country_code: market.country_code,
+          language_code: market.language_code,
+        },
+      });
+    else engines.push(engine);
+  }
+  if (!engines.length)
+    throw new ApiError(422, `No selected engine can measure ${marketLabel(market)}`, {
+      code: 'market_unsupported',
+      details: { country_code: market.country_code, language_code: market.language_code },
+    });
+  return { engines, notApplicable };
+}
 export type FrozenRoute = {
   logical_engine: Engine;
   transport_provider: string;
@@ -35,17 +87,31 @@ export async function prepareAudit(
   trigger: string,
   search = searchSettings(),
   at = new Date(),
+  /** The market to measure from; the project's default when omitted. */
+  selected: Market | null = null,
 ) {
   trigger = trigger.trim().toLowerCase();
   if (!auditPolicy.constants.audit_triggers.includes(trigger))
     throw invalid(`Unsupported trigger: ${trigger}`);
-  const project = await db
+  const stored = await db
     .selectFrom('projects')
     .selectAll()
     .where('id', '=', input.project_id)
     .where('workspace_id', '=', workspaceId)
     .executeTakeFirst();
-  if (!project) throw notFound('Project');
+  if (!stored) throw notFound('Project');
+  const market = selected ?? {
+    id: null,
+    country_code: stored.country_code,
+    language_code: stored.language_code,
+  };
+  // The run measures from its market: every frozen country, language and search context below.
+  const project = {
+    ...stored,
+    country_code: market.country_code,
+    language_code: market.language_code,
+    ...searchContext(market.country_code, market.language_code),
+  };
   const mode = input.benchmark_mode ?? project.benchmark_mode;
   if (!auditPolicy.benchmark_modes.includes(mode))
     throw invalid(`Unsupported benchmark mode: ${mode}`);
@@ -69,9 +135,10 @@ export async function prepareAudit(
   if (!prompts.length) throw invalid('No enabled prompts to audit');
   if (prompts.some((prompt) => Array.from(prompt.text).length > settings.max_prompt_chars))
     throw invalid('Selected prompts exceed the configured length limit');
-  const engines = [...new Set(input.engines)];
-  if (engines.some((engine) => !auditPolicy.selectable_engines.includes(engine)))
+  const requested = [...new Set(input.engines)];
+  if (requested.some((engine) => !auditPolicy.selectable_engines.includes(engine)))
     throw invalid('An engine is unavailable');
+  const { engines, notApplicable } = marketEngines(requested, market, project);
   if (input.credential_mode === 'funded' || trigger === 'trial') {
     if (settings.audit_prompt_count === null)
       throw new ApiError(422, 'Audit prompt-count policy is unconfigured', {
@@ -270,6 +337,7 @@ export async function prepareAudit(
     ),
     country_code: project.country_code,
     language_code: project.language_code,
+    not_applicable_engines: notApplicable,
     audit_scope: input.audit_scope,
     trigger,
     benchmark_mode: mode,

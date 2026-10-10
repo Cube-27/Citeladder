@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { auditStatusSchema, modelProvenanceSchema } from './audits.ts';
+import { projectMarketSchema } from './markets.ts';
 import { buyerTypeSchema, marketScopeSchema, promptCohortSchema } from './project.ts';
 
 const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(shape);
@@ -268,3 +269,24 @@ export const brandDiscoveryCompleteSchema = responseObject({
   project_id: uuid().nullable(),
   warnings: z.array(z.string()),
 });
+
+// Visibility → By market: each market's latest dashboard-ready run, measured
+// apart. `no_run` is a market never measured, never a zero.
+export const visibilityMarketRowSchema = responseObject({
+  market: projectMarketSchema,
+  state: z.enum(['measured', 'no_run']),
+  audit_id: uuid().nullable(),
+  measured_at: z.string().nullable(),
+  mention_rate: z.number().nullable(),
+  share_of_voice: z.number().nullable(),
+  net_sentiment: z.number().nullable(),
+  // Movement in points against that market's previous comparable run.
+  comparison_status: z.string().nullable(),
+  mention_rate_delta: z.number().nullable(),
+  share_of_voice_delta: z.number().nullable(),
+});
+export const visibilityMarketsSchema = responseObject({
+  cohort: promptCohortSchema,
+  markets: z.array(visibilityMarketRowSchema),
+});
+export type VisibilityMarkets = z.infer<typeof visibilityMarketsSchema>;

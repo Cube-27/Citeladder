@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { surfaceSupports, type SearchSurface } from './locations.ts';
 import { policy, resolveSettingSpec, ConfigError } from '../config.ts';
 import { providerErrorCode } from '../models/http.ts';
 import { approvedEndpoint } from '../providers/connections.ts';
@@ -8,7 +9,7 @@ import { round } from '../analysis/round.ts';
 import { boundedJson } from '../providers/response.ts';
 
 export const searchPolicy = policy.dataforseo;
-export type SearchEngine = 'google_ai_overview' | 'chatgpt_search' | 'gemini_consumer';
+export type SearchEngine = SearchSurface;
 export type SearchRequest = {
   query: string;
   location_code: number;
@@ -84,8 +85,7 @@ export function searchPayload(engine: SearchEngine, input: SearchRequest) {
     engine === 'google_ai_overview' ? c.keyword_max_chars : searchPolicy.scraper.keyword_max_chars;
   if (Array.from(keyword).length > limit) throw new ProviderError('keyword_too_long');
   if (
-    !c.supported_location_codes.includes(input.location_code) ||
-    !c.language_codes.includes(input.language_code) ||
+    !surfaceSupports(engine, input.location_code, input.language_code) ||
     !c.supported_devices.includes(input.device)
   )
     throw new ProviderError('invalid_search_context');

@@ -4,7 +4,7 @@ import { VisibilityFixtures } from './visibility-fixtures.ts';
 import { auditTenant, auditTestKey } from './audit-fixtures.ts';
 import { auditRuntime } from '../src/audits/config.ts';
 import { auditInput } from '../src/audits/inputs.ts';
-import { createAudit } from '../src/audits/creation.ts';
+import { createAudits } from '../src/audits/creation.ts';
 import { AuditQueue } from '../src/queue/audit-queue.ts';
 import { createConnection } from '../src/providers/connections.ts';
 import { createConnectionInput } from '../src/providers/inputs.ts';
@@ -53,7 +53,7 @@ async function seed() {
     runtime.providers,
     async () => ({ status: 200, body: { status_code: 20000, tasks: [] } }),
   );
-  const auditId = await createAudit(
+  const [auditId] = await createAudits(
     db,
     t.workspaceId,
     auditInput.parse({

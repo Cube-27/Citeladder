@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vite-plus/test';
 
-import { COUNTRY_OPTIONS, LANGUAGE_OPTIONS } from '@/lib/setup/markets';
+import { MARKET_COUNTRIES, MARKET_LANGUAGES } from '@citeladder/contracts/markets';
 
 import { MarketSelect } from './market-select';
 
@@ -17,7 +17,7 @@ function renderSelect(overrides?: Partial<Parameters<typeof MarketSelect>[0]>) {
     return (
       <MarketSelect
         ariaLabel="Country"
-        options={COUNTRY_OPTIONS}
+        options={MARKET_COUNTRIES}
         placeholder="Search countries…"
         onBlur={onBlur}
         {...overrides}
@@ -44,7 +44,7 @@ describe('MarketSelect', () => {
     await user.click(input);
     const listbox = screen.getByRole('listbox', { name: /^country$/i });
     expect(listbox).toBeInTheDocument();
-    expect(screen.getAllByRole('option')).toHaveLength(COUNTRY_OPTIONS.length);
+    expect(screen.getAllByRole('option')).toHaveLength(MARKET_COUNTRIES.length);
   });
 
   it('filters options while typing and commits the clicked option', async () => {
@@ -126,7 +126,7 @@ describe('MarketSelect', () => {
 
   it('matches on the option code as well as the label', async () => {
     const user = userEvent.setup();
-    renderSelect({ value: 'en', options: LANGUAGE_OPTIONS, ariaLabel: 'Language' });
+    renderSelect({ value: 'en', options: MARKET_LANGUAGES, ariaLabel: 'Language' });
 
     const input = screen.getByRole('combobox', { name: /^language$/i });
     await user.click(input);

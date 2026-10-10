@@ -111,8 +111,6 @@ export const policy = {
     prompt_set_name: promptLibrary.prompt_set_name,
     min_repetitions: audits.min_repetitions,
     max_repetitions: audits.max_repetitions,
-    location_codes: dataforseo.constants.location_codes,
-    language_codes: dataforseo.constants.language_codes,
   },
   errors,
   agent: { ...agentRuntime },

@@ -27,6 +27,7 @@ import { strictValidate } from '@citeladder/contracts/validation';
 import {
   observedCompetitorSchema,
   promptMetricItemSchema,
+  visibilityMarketsSchema,
   visibilitySchema,
 } from '@citeladder/contracts/visibility';
 import { surfaceRatesSchema } from '@citeladder/contracts/audits';
@@ -49,6 +50,8 @@ const observedCompetitorListSchema = z.array(observedCompetitorSchema);
 
 /** Filters for the cross-run trend request (all optional; same-origin only). */
 type VisibilityTrendParams = {
+  /** A non-default market's id; omitted reads the project default. */
+  market?: string;
   cohort?: 'core' | 'comparison';
   /** Logical engine slice (`chatgpt` | `gemini` | `claude`); omit for all. */
   engine?: string;
@@ -91,6 +94,8 @@ type VisibilityEvidenceParams = {
 /** The selection one Visibility request resolves to. */
 export type ProjectVisibilityParams = {
   audit_id?: string;
+  /** A non-default market's id; omitted reads the project default. */
+  market?: string;
   cohort?: 'core' | 'comparison';
   engine?: string;
   baseline_id?: string;
@@ -254,6 +259,18 @@ export const visibilityApi = {
       options,
     );
     return strictValidate(visibilitySourceUrlSchema, result, 'visibility.getSourceUrl');
+  },
+  /** Each market's latest run side by side (Visibility → By market). */
+  getMarketVisibility: async (
+    projectId: string,
+    params: { cohort?: string },
+    options?: ApiRequestOptions,
+  ) => {
+    const result = await apiClient.get(
+      withQuery(`/projects/${projectId}/visibility/markets`, definedQuery(params)),
+      options,
+    );
+    return strictValidate(visibilityMarketsSchema, result, 'visibility.getMarketVisibility');
   },
   getProjectVisibility: async (
     projectId: string,

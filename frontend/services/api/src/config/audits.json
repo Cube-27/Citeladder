@@ -307,6 +307,7 @@
   "benchmark_modes": ["consumer_like", "controlled_localized", "forced_grounded"],
   "min_repetitions": 1,
   "max_repetitions": 10,
+  "max_markets_per_launch": 11,
   "route_policies": {
     "chatgpt": {},
     "claude": {},

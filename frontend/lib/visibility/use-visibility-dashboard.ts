@@ -8,6 +8,8 @@ import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { resolveProjectRequestScope, type ProjectRequestScope } from '@/lib/project/request-scope';
 import { runsQueries } from '@/lib/api/runs';
+import { useMarketVisibility } from '@/lib/visibility/use-market-visibility';
+import { useSurfaceRates } from '@/lib/visibility/use-surface-rates';
 import { visibilityApi, visibilityQueries } from '@/lib/api/visibility';
 import {
   findActiveRun,
@@ -16,7 +18,6 @@ import {
   toRunOptions,
   type VisibilityTab,
 } from '@/lib/visibility/dashboard';
-import { isSearchSurfaceEngine } from '@/lib/providers/catalog';
 import { shouldPollAudit } from '@/lib/runs/status';
 import { ACTIVE_RUN_POLL_MS, EVIDENCE_LIMIT } from '@/lib/config/operational';
 import {
@@ -97,6 +98,11 @@ export function useVisibilityFilters() {
     clearKeys: pageKeys,
   });
   const [baselineId, setBaselineId] = useUrlState('baseline', optionalStringUrlCodec);
+  // A non-default market's id; absent is the project default. Runs, baselines
+  // and pooled configurations belong to one market, so a switch drops them.
+  const [market, setMarket] = useUrlState('market', optionalStringUrlCodec, {
+    clearKeys: [...pageKeys, 'run', 'baseline', 'configuration'],
+  });
   const [outcome, setOutcome] = useUrlState('outcome', optionalStringUrlCodec, {
     clearKeys: pageKeys,
   });
@@ -128,6 +134,8 @@ export function useVisibilityFilters() {
     setCohort,
     baselineId,
     setBaselineId,
+    market,
+    setMarket,
     outcome,
     setOutcome,
     competitor,
@@ -207,7 +215,15 @@ export function useVisibilityQueries(
 ) {
   const workspaceId = useActiveWorkspaceId();
   const requestScope = resolveProjectRequestScope(workspaceId, projectId);
-  const { queryClient, auditsQuery, runOptions, activeRun } = useVisibilityRuns(requestScope);
+  const { queryClient, auditsQuery, runOptions, hasRuns, activeRun } = useVisibilityRuns(
+    requestScope,
+    filters.market,
+  );
+  const { markets, marketRowsQuery } = useMarketVisibility(
+    requestScope,
+    filters.cohort,
+    filters.activeTab === 'trends',
+  );
 
   const engine = filters.engine === 'all' ? undefined : filters.engine;
   const from = useMemo(
@@ -228,6 +244,7 @@ export function useVisibilityQueries(
   });
   const { activeRunId, selectedRunIds } = resolvedSelection(visibilityQuery.data);
   const trendParams = {
+    market: filters.market ?? undefined,
     engine,
     from,
     to: filters.toAt ?? undefined,
@@ -299,7 +316,9 @@ export function useVisibilityQueries(
     runOptions,
     activeRun,
     activeRunId,
-    hasRuns: runOptions.length > 0,
+    hasRuns,
+    markets,
+    marketRowsQuery,
     projectId,
     workspaceId,
     selectedRunIds,
@@ -326,62 +345,7 @@ export function useVisibilityQueries(
   };
 }
 
-/**
- * The observed-surface rates, scoped to the same resolved run selection the
- * rest of the tab reads.
- *
- * Its own hook rather than more lines inside `useVisibilityQueries`: it is the
- * only read here that is gated on WHICH surface is selected, and folding that
- * condition into the shared body put a filter-specific branch in front of
- * every other query.
- *
- * Requested only when the filter names an observed surface. The five rates are
- * properties of that surface, and asking an answer engine for a trigger rate
- * is a category error rather than a query with an empty result.
- */
-function useSurfaceRates({
-  requestScope,
-  projectId,
-  engine,
-  cohort,
-  onTrendsTab,
-  activeRunId,
-  selectedRunIds,
-}: {
-  requestScope: ProjectRequestScope;
-  projectId: string | null;
-  engine: string | undefined;
-  cohort: string;
-  onTrendsTab: boolean;
-  activeRunId: string | null;
-  selectedRunIds: string[] | undefined;
-}) {
-  const surfaceEngine = engine && isSearchSurfaceEngine(engine) ? engine : null;
-  const params = {
-    engine: surfaceEngine ?? '',
-    audit_id: selectedRunIds ? undefined : (activeRunId ?? undefined),
-    audit_ids: selectedRunIds,
-    cohort,
-  };
-  const surfaceRatesQuery = useQuery({
-    queryKey: queryKeys.visibility.surfaceRates(projectId ?? '', params),
-    queryFn: ({ signal }: { signal: AbortSignal }) =>
-      visibilityApi.getSurfaceRates(requestScope.projectId, params, {
-        signal,
-        workspaceId: requestScope.workspaceId,
-      }),
-    enabled:
-      requestScope.enabled &&
-      onTrendsTab &&
-      surfaceEngine !== null &&
-      Boolean(activeRunId) &&
-      selectedRunIds?.length !== 0,
-    placeholderData: (data, query) => retainPreviousDataForScope(projectId!, data, query),
-  });
-  return { surfaceEngine, surfaceRatesQuery };
-}
-
-function useVisibilityRuns(requestScope: ProjectRequestScope) {
+function useVisibilityRuns(requestScope: ProjectRequestScope, market: string | null) {
   const { workspaceId, projectId } = requestScope;
   const timeZone = useDisplayTimeZone();
   const queryClient = useQueryClient();
@@ -391,10 +355,20 @@ function useVisibilityRuns(requestScope: ProjectRequestScope) {
     refetchInterval: (query) =>
       query.state.data?.some((audit) => shouldPollAudit(audit.status)) ? ACTIVE_RUN_POLL_MS : false,
   });
+  // The run picker offers the selected market's runs only; markets never pool.
   const runOptions = useMemo(
+    () =>
+      toRunOptions(
+        (auditsQuery.data ?? []).filter((audit) => audit.market.id === market),
+        timeZone,
+      ),
+    [auditsQuery.data, market, timeZone],
+  );
+  const allRuns = useMemo(
     () => toRunOptions(auditsQuery.data ?? [], timeZone),
     [auditsQuery.data, timeZone],
   );
+  const hasRuns = allRuns.length > 0;
   const activeRun = useMemo(() => findActiveRun(auditsQuery.data ?? []), [auditsQuery.data]);
   // Both halves matter. Keying on the latest run alone missed a project's FIRST
   // run — it stayed one id from queued to completed, so nothing invalidated and
@@ -404,7 +378,7 @@ function useVisibilityRuns(requestScope: ProjectRequestScope) {
   // The ACTIVE run's id, not merely whether one exists: one run finishing as
   // the next begins keeps 'active' true, and a signal that cannot see the
   // swap leaves the finished run's results uninvalidated.
-  const runSignal = `${runOptions[0]?.id ?? ''}:${activeRun?.id ?? 'idle'}`;
+  const runSignal = `${allRuns[0]?.id ?? ''}:${activeRun?.id ?? 'idle'}`;
   const previousSignal = useRef<string | undefined>(undefined);
   const auditsLoaded = auditsQuery.isSuccess;
   useEffect(() => {
@@ -419,7 +393,7 @@ function useVisibilityRuns(requestScope: ProjectRequestScope) {
     }
   }, [auditsLoaded, runSignal, queryClient]);
 
-  return { queryClient, auditsQuery, runOptions, activeRun };
+  return { queryClient, auditsQuery, runOptions, hasRuns, activeRun };
 }
 
 /**
@@ -442,6 +416,7 @@ function selectionParams(
 ) {
   return {
     audit_id: filters.selectedRunId ?? undefined,
+    market: filters.market ?? undefined,
     cohort: filters.cohort,
     engine,
     baseline_id: filters.baselineId ?? undefined,

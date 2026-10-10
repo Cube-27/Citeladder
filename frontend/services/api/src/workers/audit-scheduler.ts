@@ -3,7 +3,8 @@ import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
 import { strings } from '../db/json.ts';
 import { policy, resolveSettingSpec } from '../config.ts';
-import { createAuditInTransaction } from '../audits/creation.ts';
+import { createAuditsInTransaction } from '../audits/creation.ts';
+import { marketIds } from '../projects/markets.ts';
 import { auditInput } from '../audits/inputs.ts';
 import type { AuditRuntime } from '../audits/config.ts';
 import { nextRunAfter } from '../audits/schedule-cadence.ts';
@@ -104,13 +105,14 @@ export class AuditScheduler {
       }
       await sql`savepoint schedule_planning`.execute(trx);
       try {
-        await createAuditInTransaction(
+        await createAuditsInTransaction(
           trx,
           schedule.workspace_id,
           auditInput.parse({
             project_id: schedule.project_id,
             prompt_set_id: schedule.prompt_set_id,
             engines: strings(schedule.engines),
+            market_ids: marketIds(schedule.market_ids),
             repetitions: schedule.repetitions,
             benchmark_mode: schedule.benchmark_mode,
             audit_scope: schedule.audit_scope,

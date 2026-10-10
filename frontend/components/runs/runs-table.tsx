@@ -12,8 +12,13 @@ import {
 import { Pager, pageNumberControls, useTablePage } from '@/components/ui/pager';
 import { TextLink } from '@/components/ui/text-link';
 import type { Audit } from '@/lib/api/types';
+import { marketLabel } from '@citeladder/contracts/markets';
 import { auditBadgeValue, auditStatusLabel, formatDateTime } from '@/lib/runs/status';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
+
+/** A launch's per-market runs arrive together; later rows point back to the first. */
+const sameLaunch = (audit: Audit, previous: Audit | undefined) =>
+  audit.launch_id !== null && previous?.launch_id === audit.launch_id;
 
 /** Rows per page on the runs table (client-side; the list arrives whole). */
 const PAGE_SIZE = 10;
@@ -30,6 +35,8 @@ export function RunsTable({ audits }: Readonly<{ audits: Audit[] }>) {
   const timeZone = useDisplayTimeZone();
   const { page, setPage, pageCount, from, to } = useTablePage(audits.length, PAGE_SIZE);
   const pagedAudits = audits.slice(from - 1, to);
+  // Markets only earn a column once a project measures more than its default.
+  const showMarket = audits.some((audit) => audit.market.id !== null);
 
   return (
     <div>
@@ -38,6 +45,7 @@ export function RunsTable({ audits }: Readonly<{ audits: Audit[] }>) {
           <TableRow>
             <TableHead>Status</TableHead>
             <TableHead>Scope</TableHead>
+            {showMarket ? <TableHead>Market</TableHead> : null}
             <TableHead numeric>Requested</TableHead>
             <TableHead numeric>Completed</TableHead>
             <TableHead numeric>Failed</TableHead>
@@ -46,7 +54,7 @@ export function RunsTable({ audits }: Readonly<{ audits: Audit[] }>) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {pagedAudits.map((audit) => (
+          {pagedAudits.map((audit, index) => (
             <TableRow key={audit.id}>
               <TableCell>
                 <Badge variant="run-status" value={auditBadgeValue(audit.status)}>
@@ -61,6 +69,7 @@ export function RunsTable({ audits }: Readonly<{ audits: Audit[] }>) {
                   {audit.audit_scope === 'commerce' ? 'Commerce' : 'Brand'}
                 </Badge>
               </TableCell>
+              {showMarket ? <TableCell>{marketLabel(audit.market)}</TableCell> : null}
               <TableCell numeric className="tabular-nums">
                 {audit.requested_count}
               </TableCell>
@@ -71,7 +80,9 @@ export function RunsTable({ audits }: Readonly<{ audits: Audit[] }>) {
                 {audit.failed_count}
               </TableCell>
               <TableCell className="text-secondary">
-                {formatDateTime(audit.created_at, timeZone)}
+                {sameLaunch(audit, pagedAudits[index - 1])
+                  ? 'Same launch'
+                  : formatDateTime(audit.created_at, timeZone)}
               </TableCell>
               <TableCell>
                 <TextLink href={`/runs/${audit.id}`} text="itemTitle">

@@ -10,6 +10,7 @@ import { VisibilitySources } from '@/components/visibility/visibility-sources';
 import { VisibilityPerception } from '@/components/visibility/visibility-perception';
 import { VisibilityAccuracy } from '@/components/visibility/visibility-accuracy';
 import { VisibilityAds } from '@/components/visibility/visibility-ads';
+import { VisibilityByMarket } from '@/components/visibility/visibility-by-market';
 import { VisibilityActions, VisibilityToolbar } from '@/components/visibility/visibility-toolbar';
 import { VisibilityTrends } from '@/components/visibility/visibility-trends';
 import { TabPanel, TabsBar, TabsRoot } from '@/components/ui/tabs';
@@ -138,6 +139,9 @@ function VisibilityWorkspace({
             onChangeSelectionMode={filters.setSelectionMode}
             outcome={filters.outcome}
             onChangeOutcome={filters.setOutcome}
+            markets={queries.markets}
+            market={filters.market}
+            onChangeMarket={filters.setMarket}
           />
         }
       >
@@ -165,16 +169,24 @@ function DashboardPanel({
 }>) {
   const panels: Partial<Record<VisibilityTab, ReactNode>> = {
     trends: (
-      <VisibilityTrends
-        query={queries.trendQuery}
-        visibilityQuery={queries.visibilityQuery}
-        engineFilter={filters.engine}
-        surfaceRatesQuery={queries.surfaceRatesQuery}
-        surfaceEngine={queries.surfaceEngine}
-        hasRuns={queries.hasRuns}
-        isFiltered={filters.isTrendFiltered}
-        onEvidence={filters.openEvidence}
-      />
+      <Stack gap="workspace">
+        <VisibilityByMarket
+          query={queries.marketRowsQuery}
+          markets={queries.markets}
+          market={filters.market}
+          onSelectMarket={filters.setMarket}
+        />
+        <VisibilityTrends
+          query={queries.trendQuery}
+          visibilityQuery={queries.visibilityQuery}
+          engineFilter={filters.engine}
+          surfaceRatesQuery={queries.surfaceRatesQuery}
+          surfaceEngine={queries.surfaceEngine}
+          hasRuns={queries.hasRuns}
+          isFiltered={filters.isTrendFiltered}
+          onEvidence={filters.openEvidence}
+        />
+      </Stack>
     ),
     sources: <VisibilitySources filters={filters} queries={queries} />,
     perception: <VisibilityPerception filters={filters} queries={queries} />,

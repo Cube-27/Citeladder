@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { benchmarkModeSchema } from './project.ts';
 import { logicalEngineSchema, transportProviderSchema } from './providers.ts';
+import { auditMarketSchema } from './markets.ts';
 import { executionAdsSchema } from './visibility-ads.ts';
 import { executionClaimSchema } from './fact-checking.ts';
 import { executionPerceptionSchema } from './visibility-perception.ts';
@@ -64,6 +65,11 @@ export const auditSchema = responseObject({
   failed_count: z.number().int(),
   error_message: z.string(),
   engine_snapshots: z.array(auditEngineSnapshotSchema),
+  /** The market this run measured from; one launch shares a `launch_id`. */
+  market: auditMarketSchema,
+  launch_id: uuid().nullable(),
+  /** Requested engines that cannot measure this market, so never ran. */
+  not_applicable_engines: z.array(logicalEngineSchema),
   created_at: z.string(),
   updated_at: z.string(),
   started_at: z.string().nullable(),
@@ -88,6 +94,8 @@ export const auditScheduleSchema = responseObject({
   interval_minutes: z.number().int().nullable(),
   timezone: z.string(),
   engines: z.array(logicalEngineSchema),
+  /** Each occurrence launches one audit per market; `null` is the project default. */
+  market_ids: z.array(uuid().nullable()),
   repetitions: z.number().int().nullable(),
   benchmark_mode: benchmarkModeSchema.nullable(),
   enabled: z.boolean(),
@@ -107,6 +115,8 @@ const auditEngineEstimateSchema = responseObject({
   retrieval_enabled: z.boolean().nullable(),
   prompt_count: z.number().int(),
   repetition_count: z.number().int(),
+  /** The selected markets this engine can measure. */
+  market_count: z.number().int(),
   execution_count: z.number().int(),
   maximum_attempt_count: z.number().int(),
   estimated_input_tokens: z.number().int().nullable(),
@@ -124,6 +134,7 @@ export const auditEstimateSchema = responseObject({
   prompt_count: z.number().int(),
   engine_count: z.number().int(),
   repetition_count: z.number().int(),
+  market_count: z.number().int(),
   execution_count: z.number().int(),
   maximum_attempt_count: z.number().int(),
   maximum_wall_clock_seconds: z.number().int(),

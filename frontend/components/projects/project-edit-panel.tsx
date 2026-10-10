@@ -11,6 +11,7 @@ import { Dialog } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { MarketSelect } from '@/components/ui/market-select';
+import { ProjectMarkets } from './project-markets';
 import { textRole } from '@/components/ui/typography';
 import { projectsApi } from '@/lib/api/projects';
 import { brandDiscoveriesApi } from '@/lib/api/brand-discoveries';
@@ -19,7 +20,7 @@ import { brandDiscoveryKeys } from '@/lib/api/query-keys/brand-discovery';
 import type { Project } from '@/lib/api/types';
 import { humanizeApiError } from '@/lib/api/errors';
 import { refreshBrandLogos } from '@/lib/project/brand-logos';
-import { COUNTRY_OPTIONS, LANGUAGE_OPTIONS } from '@/lib/setup/markets';
+import { MARKET_COUNTRIES, MARKET_LANGUAGES } from '@citeladder/contracts/markets';
 
 import { MentionRuleFields, mentionRuleDraft, type MentionRuleDraft } from './mention-rule-fields';
 
@@ -242,7 +243,7 @@ export function ProjectEditPanel({
                   ariaLabel="Country"
                   value={country}
                   onChange={setCountry}
-                  options={COUNTRY_OPTIONS}
+                  options={MARKET_COUNTRIES}
                 />
               )}
             </Field>
@@ -253,11 +254,14 @@ export function ProjectEditPanel({
                   ariaLabel="Language"
                   value={language}
                   onChange={setLanguage}
-                  options={LANGUAGE_OPTIONS}
+                  options={MARKET_LANGUAGES}
                 />
               )}
             </Field>
           </div>
+          {open ? (
+            <ProjectMarkets projectId={project.id} workspaceId={project.workspace_id} />
+          ) : null}
         </div>
 
         <div className="grid gap-4">

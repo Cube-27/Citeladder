@@ -55,6 +55,8 @@ const page = { cursor: optional(z.string()), limit };
 const project = { project_id: uuid };
 const engine = optional(z.enum(policy.visibility.logical_engines));
 const cohort = z.enum(['core', 'comparison']).default('core');
+/** A market id from the project context's markets; omitted is the default market. */
+const market_id = optional(uuid);
 const analyticsRange = optional(z.enum(Object.keys(policy.analytics.preset_range_days)));
 const dates = { start_date: optional(z.iso.date()), end_date: optional(z.iso.date()) };
 const crawlPage = {
@@ -158,9 +160,10 @@ export const definitions = {
   read_visibility_overview: projectTool({
     title: 'Read AI visibility',
     description:
-      'Mention rate, citation rate, rankings against competitors and run status for the latest or a chosen run. Pass baseline_id to compare two runs.',
+      'Mention rate, citation rate, rankings against competitors and run status for the latest or a chosen run. Pass baseline_id to compare two runs. Each market is measured separately: pass market_id for a non-default market, and never pool markets.',
     schema: z.strictObject({
       ...project,
+      market_id,
       audit_id: optional(uuid),
       baseline_id: optional(uuid),
       engine,
@@ -174,6 +177,7 @@ export const definitions = {
       'Visibility over time for an explicit window. Points with different comparison keys are not comparable; gaps are missing runs, not zero.',
     schema: z.strictObject({
       ...project,
+      market_id,
       from_at: z.iso.datetime({ offset: true }),
       to_at: z.iso.datetime({ offset: true }),
       engine,
@@ -190,6 +194,7 @@ export const definitions = {
       'How AI answers portray the brand and competitors in the latest or a chosen run: net sentiment (-100 to +100) with its coverage, themes, verified quotes, sources cited alongside criticism and the recommended rate. Always state the coverage; perception_state pending, unavailable or no_mentions means there is no value, never zero. Sources are cited alongside criticism, never its cause.',
     schema: z.strictObject({
       ...project,
+      market_id,
       audit_id: optional(uuid),
       engine,
       cohort,
@@ -207,6 +212,7 @@ export const definitions = {
       "Factual claims AI answers made about the brand in the latest or a chosen run, checked against the brand's confirmed facts: accuracy (supported of supported plus contradicted) with its coverage, contradicted claims with the fact they contradict, and sources cited alongside them. Always state the coverage and quote the fact. accuracy_state not_enabled, no_facts, no_claims, pending or unavailable means there is no value, never zero; inconclusive and not_covered are not errors in the answer. Sources are cited alongside a contradiction, never its cause.",
     schema: z.strictObject({
       ...project,
+      market_id,
       audit_id: optional(uuid),
       engine,
       cohort,
@@ -223,6 +229,7 @@ export const definitions = {
       'Paid ads shown in ChatGPT Search answers for the latest or a chosen run: ad presence rate ("N of M ChatGPT answers"), advertisers with share and first/last seen, the ad share and best rank of the brand itself, text creatives (paged) and prompts that surface ads with competitor ads beside organic brand mentions. Only ChatGPT Search shows ads; other engines are not_applicable, never zero. Ads are paid placements: report them separately, never as citations, sources or a cause of visibility.',
     schema: z.strictObject({
       ...project,
+      market_id,
       audit_id: optional(uuid),
       engine,
       cohort,
@@ -267,6 +274,7 @@ export const definitions = {
       'One cited URL: the prompts and engines that cite it, the brands it lists and whether your brand is on it. Omit audit_id for every run.',
     schema: z.strictObject({
       ...project,
+      market_id,
       url: z.string().trim().min(1).max(8192),
       audit_id: optional(uuid),
       engine,

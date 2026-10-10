@@ -1106,6 +1106,49 @@
               "additionalProperties": false
             }
           },
+          "market": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "country_code": {
+                "type": "string"
+              },
+              "language_code": {
+                "type": "string"
+              }
+            },
+            "required": ["id", "country_code", "language_code"],
+            "additionalProperties": false
+          },
+          "launch_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "not_applicable_engines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LogicalEngine"
+            }
+          },
           "created_at": {
             "type": "string"
           },
@@ -1135,6 +1178,9 @@
           "failed_count",
           "error_message",
           "engine_snapshots",
+          "market",
+          "launch_id",
+          "not_applicable_engines",
           "created_at",
           "updated_at",
           "started_at",
@@ -1159,6 +1205,11 @@
             "maximum": 9007199254740991
           },
           "repetition_count": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "market_count": {
             "type": "integer",
             "minimum": -9007199254740991,
             "maximum": 9007199254740991
@@ -1217,6 +1268,11 @@
                   "maximum": 9007199254740991
                 },
                 "repetition_count": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "market_count": {
                   "type": "integer",
                   "minimum": -9007199254740991,
                   "maximum": 9007199254740991
@@ -1318,6 +1374,7 @@
                 "retrieval_enabled",
                 "prompt_count",
                 "repetition_count",
+                "market_count",
                 "execution_count",
                 "maximum_attempt_count",
                 "estimated_input_tokens",
@@ -1338,6 +1395,7 @@
           "prompt_count",
           "engine_count",
           "repetition_count",
+          "market_count",
           "execution_count",
           "maximum_attempt_count",
           "maximum_wall_clock_seconds",
@@ -1396,6 +1454,21 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/LogicalEngine"
+            }
+          },
+          "market_ids": {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             }
           },
           "repetitions": {
@@ -1457,6 +1530,7 @@
           "interval_minutes",
           "timezone",
           "engines",
+          "market_ids",
           "repetitions",
           "benchmark_mode",
           "enabled",
@@ -6656,6 +6730,118 @@
         ],
         "additionalProperties": false
       },
+      "VisibilityMarketRow": {
+        "type": "object",
+        "properties": {
+          "market": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "label": {
+                "type": "string"
+              },
+              "country_code": {
+                "type": "string"
+              },
+              "language_code": {
+                "type": "string"
+              },
+              "is_default": {
+                "type": "boolean"
+              },
+              "created_at": {
+                "type": ["string", "null"]
+              }
+            },
+            "required": [
+              "id",
+              "label",
+              "country_code",
+              "language_code",
+              "is_default",
+              "created_at"
+            ],
+            "additionalProperties": false
+          },
+          "state": {
+            "type": "string",
+            "enum": ["measured", "no_run"]
+          },
+          "audit_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "measured_at": {
+            "type": ["string", "null"]
+          },
+          "mention_rate": {
+            "type": ["number", "null"]
+          },
+          "share_of_voice": {
+            "type": ["number", "null"]
+          },
+          "net_sentiment": {
+            "type": ["number", "null"]
+          },
+          "comparison_status": {
+            "type": ["string", "null"]
+          },
+          "mention_rate_delta": {
+            "type": ["number", "null"]
+          },
+          "share_of_voice_delta": {
+            "type": ["number", "null"]
+          }
+        },
+        "required": [
+          "market",
+          "state",
+          "audit_id",
+          "measured_at",
+          "mention_rate",
+          "share_of_voice",
+          "net_sentiment",
+          "comparison_status",
+          "mention_rate_delta",
+          "share_of_voice_delta"
+        ],
+        "additionalProperties": false
+      },
+      "VisibilityMarkets": {
+        "type": "object",
+        "properties": {
+          "cohort": {
+            "$ref": "#/components/schemas/PromptCohort"
+          },
+          "markets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VisibilityMarketRow"
+            }
+          }
+        },
+        "required": ["cohort", "markets"],
+        "additionalProperties": false
+      },
       "VisibilitySources": {
         "type": "object",
         "properties": {
@@ -7034,6 +7220,77 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Project"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "x-citeladder-scope": "read"
+      }
+    },
+    "/v1/projects/{project_id}/markets": {
+      "get": {
+        "tags": ["markets"],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "label": {
+                        "type": "string"
+                      },
+                      "country_code": {
+                        "type": "string"
+                      },
+                      "language_code": {
+                        "type": "string"
+                      },
+                      "is_default": {
+                        "type": "boolean"
+                      },
+                      "created_at": {
+                        "type": ["string", "null"]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "label",
+                      "country_code",
+                      "language_code",
+                      "is_default",
+                      "created_at"
+                    ],
+                    "additionalProperties": false
+                  }
                 }
               }
             }
@@ -7981,6 +8238,23 @@
             }
           },
           {
+            "name": "market",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
             "name": "engine",
             "in": "query",
             "required": false,
@@ -8127,6 +8401,23 @@
             }
           },
           {
+            "name": "market",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
             "name": "engine",
             "in": "query",
             "required": false,
@@ -8210,6 +8501,23 @@
           },
           {
             "name": "audit_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "name": "market",
             "in": "query",
             "required": false,
             "schema": {
@@ -8383,6 +8691,23 @@
             }
           },
           {
+            "name": "market",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
             "name": "baseline_audit_ids",
             "in": "query",
             "required": false,
@@ -8465,6 +8790,23 @@
               "type": "string",
               "format": "uuid",
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "market",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             }
           },
           {
@@ -8612,6 +8954,23 @@
             }
           },
           {
+            "name": "market",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
             "name": "engine",
             "in": "query",
             "required": false,
@@ -8748,6 +9107,23 @@
                     "format": "uuid",
                     "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                   }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "name": "market",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                 },
                 {
                   "type": "null"
@@ -8911,6 +9287,46 @@
               "type": "integer",
               "minimum": 1,
               "maximum": 500
+            }
+          }
+        ],
+        "x-citeladder-scope": "read"
+      }
+    },
+    "/v1/projects/{project_id}/visibility/markets": {
+      "get": {
+        "tags": ["visibility"],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VisibilityMarkets"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "cohort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": "core",
+              "type": "string",
+              "enum": ["core", "comparison"]
             }
           }
         ],
@@ -10737,6 +11153,24 @@
                       "$ref": "#/components/schemas/LogicalEngine"
                     }
                   },
+                  "market_ids": {
+                    "default": [null],
+                    "minItems": 1,
+                    "maxItems": 11,
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
                   "repetitions": {
                     "default": null,
                     "anyOf": [
@@ -10934,6 +11368,23 @@
                     "type": "array",
                     "items": {
                       "$ref": "#/components/schemas/LogicalEngine"
+                    }
+                  },
+                  "market_ids": {
+                    "minItems": 1,
+                    "maxItems": 11,
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     }
                   },
                   "repetitions": {
@@ -11949,7 +12400,10 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Audit"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Audit"
+                  }
                 }
               }
             }
@@ -12033,6 +12487,24 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "market_ids": {
+                    "default": [null],
+                    "minItems": 1,
+                    "maxItems": 11,
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
                   },
                   "audit_scope": {
                     "default": "brand",
@@ -12129,6 +12601,24 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "market_ids": {
+                    "default": [null],
+                    "minItems": 1,
+                    "maxItems": 11,
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
                   }
                 },
                 "required": ["engines"]

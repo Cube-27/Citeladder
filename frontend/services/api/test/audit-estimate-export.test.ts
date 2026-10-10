@@ -4,7 +4,7 @@ import { VisibilityFixtures } from './visibility-fixtures.ts';
 import { auditTenant } from './audit-fixtures.ts';
 import { auditRuntime } from '../src/audits/config.ts';
 import { auditInput } from '../src/audits/inputs.ts';
-import { createAudit } from '../src/audits/creation.ts';
+import { createAudits } from '../src/audits/creation.ts';
 import { estimateAudit, estimateInput } from '../src/audits/estimate.ts';
 import { exportAudit } from '../src/audits/exports.ts';
 
@@ -73,7 +73,7 @@ describe('provider-free audit estimates and persisted exports', () => {
   it('exports persisted scores and frozen unknown retrieval while neutralizing spreadsheet formulas', async () => {
     const t = await auditTenant(db, fixtures),
       foreign = await auditTenant(db, fixtures);
-    const auditId = await createAudit(
+    const [auditId] = await createAudits(
       db,
       t.workspaceId,
       auditInput.parse({

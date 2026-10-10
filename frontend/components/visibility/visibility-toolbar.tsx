@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dropdown';
 import { Tooltip } from '@/components/ui/tooltip';
 import type { LogicalEngine } from '@/lib/api/types';
+import type { ProjectMarket } from '@citeladder/contracts/markets';
 import { ICONS } from '@/lib/icons';
 import { isSearchSurfaceEngine } from '@/lib/providers/catalog';
 import {
@@ -70,6 +71,10 @@ type ToolbarProps = Readonly<{
   onChangeCohort: (cohort: 'core' | 'comparison') => void;
   outcome?: string | null;
   onChangeOutcome?: (outcome: string | null) => void;
+  markets?: readonly ProjectMarket[];
+  /** A non-default market's id; `null` is the project default. */
+  market?: string | null;
+  onChangeMarket?: (market: string | null) => void;
 }>;
 
 /**
@@ -87,6 +92,7 @@ export function VisibilityToolbar(props: ToolbarProps) {
   const evidence = isEvidenceTab(props.activeTab);
   return (
     <div className="contents" data-testid="visibility-toolbar">
+      <MarketFilter {...props} />
       <MeasurementFilter {...props} />
       <RangeFilter {...props} />
       {props.activeTab === 'trends' ? <GranularityFilter {...props} /> : null}
@@ -106,6 +112,27 @@ export function VisibilityToolbar(props: ToolbarProps) {
         />
       ) : null}
     </div>
+  );
+}
+
+const DEFAULT_MARKET = 'default';
+
+/** Which market the page reads; offered only once a project measures more than one. */
+function MarketFilter({ markets = [], market = null, onChangeMarket }: ToolbarProps) {
+  if (markets.length < 2 || !onChangeMarket) return null;
+  return (
+    <FilterChoice
+      label="Select market"
+      menuLabel="Market"
+      value={market ?? DEFAULT_MARKET}
+      defaultValue={DEFAULT_MARKET}
+      options={markets.map((option) => ({
+        value: option.id ?? DEFAULT_MARKET,
+        label: option.label,
+      }))}
+      onChange={(value) => onChangeMarket(value === DEFAULT_MARKET ? null : value)}
+      icon={ICONS.market}
+    />
   );
 }
 

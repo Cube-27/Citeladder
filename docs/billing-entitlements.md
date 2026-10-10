@@ -59,6 +59,11 @@ bundle and absent from the public trial. Operators grant it per pilot workspace
 with `billing:admin grant`; [fact-checking](visibility-prompt.md#fact-checking-pilot)
 and brand-fact writes check it without the capacity lock (409
 `fact_checking_not_in_plan`), and its reads report `not_enabled`.
+Registry `entitlements-v8` adds the occupancy counter `market_slots`: a
+workspace's additional measurement markets (a project's default market is
+free). Growth grants 3 and Scale 10; Starter and the public trial have none, so
+adding a market there is refused with 403 `occupancy_limit_exceeded`. Market
+creation admits under the capacity lock.
 
 Public registration persists its origin on the identity and billing account and
 issues `public-trial-v1` once, starting at the original registration cohort and
