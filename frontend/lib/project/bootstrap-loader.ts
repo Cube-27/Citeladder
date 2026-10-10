@@ -36,7 +36,12 @@ import {
   readStoredActiveProjectId,
   readStoredActiveWorkspaceId,
 } from '@/lib/project/active-project-storage';
-import { isWorkspaceOnlyRoute, resolveAllowance, resolveGate } from '@/lib/project/bootstrap';
+import {
+  isWorkspaceFreeRoute,
+  isWorkspaceOnlyRoute,
+  resolveAllowance,
+  resolveGate,
+} from '@/lib/project/bootstrap';
 import {
   pickActiveProject,
   resolveProjectId,
@@ -241,14 +246,17 @@ function resolveSelection(scope: Scope, listed: Project[]) {
   return { activeProjectId, status };
 }
 
+/** A public pricing selection arriving on `/pricing` is captured, then the URL cleaned. */
+async function capturePricingSelection(url: URL) {
+  if (url.pathname !== '/pricing') return;
+  const { capturePublicPricingSelection } = await import('@/lib/billing/public-pricing-selection');
+  if (capturePublicPricingSelection(url)) throw redirect('/pricing');
+}
+
 export async function bootstrapPrivateRoutes({ request }: { request: Request }) {
   const client = getAppQueryClient();
   const url = new URL(request.url);
-  if (url.pathname === '/pricing') {
-    const { capturePublicPricingSelection } =
-      await import('@/lib/billing/public-pricing-selection');
-    if (capturePublicPricingSelection(url)) throw redirect('/pricing');
-  }
+  await capturePricingSelection(url);
 
   // `me` and the membership list need only the session cookie — the tree's own
   // providers already issue them in parallel, and the loader pays for every
@@ -261,6 +269,8 @@ export async function bootstrapPrivateRoutes({ request }: { request: Request }) 
   ]);
   if (!sessionResolved || !scope) return null;
 
+  // The chooser and workspace setup read nothing of the selected workspace.
+  if (isWorkspaceFreeRoute(url.pathname, url.search)) return null;
   const { workspaceId, workspaces, requestedProjectId } = scope;
   const [listed, entitlement] = await readWorkspaceState(client, workspaceId, url.pathname);
   if (!listed) return null;

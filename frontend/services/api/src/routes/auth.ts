@@ -47,6 +47,7 @@ import {
   changePassword,
   LOGIN_FAILURE_OPERATION,
 } from '../auth/challenges.ts';
+import { currentPolicyRevision } from '../workspaces/policies.ts';
 
 const credentialsSchema = z.object({
   return_to: z.string().max(1024).optional(),
@@ -154,10 +155,7 @@ export const authRoutes = [
     path: '/api/v1/auth/policies',
     response: policyRevisionSchema,
     async handle() {
-      return {
-        terms_revision: policy.auth.terms_revision,
-        privacy_notice_revision: policy.auth.privacy_revision,
-      };
+      return currentPolicyRevision();
     },
   }),
   defineGetRoute({

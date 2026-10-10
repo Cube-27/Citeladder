@@ -4,7 +4,7 @@ import { authApi } from '@/lib/api/auth';
 import { authFormPolicy, passwordHint } from '@/lib/config/auth';
 import { authErrorMessage } from '@/lib/auth/forms';
 import { hardNavigate } from '@/lib/navigation/hard-navigate';
-import { clearAccountScopedClientState } from '@/lib/auth/account-transition';
+import { restartAt } from '@/lib/auth/account-transition';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { Alert } from '@/components/ui/alert';
@@ -51,10 +51,7 @@ export default function AccountSecurity({
       if (operation === 'sign-out') return authApi.logout();
       await authApi.mailbox(operation, { current_password: current, password });
     },
-    onSuccess: async () => {
-      await clearAccountScopedClientState(client);
-      hardNavigate('/login');
-    },
+    onSuccess: () => restartAt(client, '/login'),
   });
   const setup = useMutation({
     mutationFn: () => authApi.mailbox('forgot-password', { email: security.data!.email }),

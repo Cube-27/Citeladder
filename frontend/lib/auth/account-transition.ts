@@ -24,9 +24,14 @@ export async function clearAccountScopedClientState(queryClient: QueryClient) {
   }
 }
 
-/** Sign out from a screen outside the account menu: revoke, clear, then reload at sign-in. */
+/** Cross an identity or membership boundary: clear account state, then reload at `path`. */
+export async function restartAt(queryClient: QueryClient, path: string) {
+  await clearAccountScopedClientState(queryClient);
+  hardNavigate(path);
+}
+
+/** Sign out from a screen outside the account menu: revoke, then restart at sign-in. */
 export async function signOut(queryClient: QueryClient) {
   await authApi.logout();
-  await clearAccountScopedClientState(queryClient);
-  hardNavigate('/login');
+  await restartAt(queryClient, '/login');
 }

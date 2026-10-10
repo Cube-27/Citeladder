@@ -1,19 +1,20 @@
+import { useRef, useState } from 'react';
+
 /**
- * The Terms decision a visitor made on the sign-in screen, carried into the app.
+ * The Terms decision a visitor made on the signup form, carried into the app.
  *
- * Sign-in happens before any workspace is resolved, while acceptance is
- * recorded per workspace against the revision the server publishes. The
- * sign-in form therefore captures the explicit, unticked-by-default decision
- * and the policy gate records it for the resolved workspace, instead of
- * stopping the reader on a second consent screen after they already agreed.
+ * Signup happens before the person joins any workspace, while acceptance is
+ * recorded per workspace against the revision the server publishes. The policy
+ * gate records this decision for a workspace they then join, instead of
+ * stopping them on a second consent screen after they already agreed.
  *
- * Tab-scoped (`sessionStorage`) so it survives the full-page Google sign-in
- * round trip but not a new tab or browser session: a session that reaches the
- * app without this decision still gets the explicit review screen.
+ * Tab-scoped (`sessionStorage`) so it survives the full-page Google round trip
+ * but not a new tab or browser session: a session that reaches a workspace
+ * without this decision gets the explicit review screen.
  */
 const TERMS_CONSENT_STORAGE_KEY = 'citeladder.terms-consent';
 
-export function recordSignInTermsConsent() {
+export function recordSignupTermsConsent() {
   if (typeof window === 'undefined') return;
   try {
     window.sessionStorage.setItem(TERMS_CONSENT_STORAGE_KEY, new Date().toISOString());
@@ -22,11 +23,32 @@ export function recordSignInTermsConsent() {
   }
 }
 
-export function hasSignInTermsConsent(): boolean {
+export function hasSignupTermsConsent(): boolean {
   if (typeof window === 'undefined') return false;
   try {
     return Boolean(window.sessionStorage.getItem(TERMS_CONSENT_STORAGE_KEY));
   } catch {
     return false;
   }
+}
+
+/**
+ * An unticked, required Terms checkbox. `confirm()` answers whether it is
+ * ticked and, when it is not, flags it and moves focus to it.
+ */
+export function useTermsConsent() {
+  const [agreed, setAgreed] = useState(false);
+  const [missing, setMissing] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const onChange = (value: boolean) => {
+    setAgreed(value);
+    if (value) setMissing(false);
+  };
+  const confirm = () => {
+    if (agreed) return true;
+    setMissing(true);
+    ref.current?.querySelector<HTMLElement>('button[role="checkbox"]')?.focus();
+    return false;
+  };
+  return { field: { ref, agreed, missing, onChange }, confirm };
 }

@@ -25,17 +25,6 @@ import { InviteDialog, PendingInvitations } from './member-invitations';
 import { MemberRoster } from './member-roster';
 import { ROLE_SUMMARY, roleLabel } from './member-roles';
 
-/**
- * Workspace members and invitations (plan §2.4).
- *
- * Administrative throughout: the workspace panel mounts it only for the
- * `manage_members` capability, and every action it offers is refused by the
- * server for any role that lacks it. Hiding a control is a convenience,
- * never the boundary.
- *
- * This component owns the server conversation; the roster, the invite form
- * and the pending list are presentation.
- */
 type Confirmation = Omit<ConfirmRequest, 'onConfirm'>;
 
 /** What each member change asks before it happens, naming the person and the effect. */
@@ -98,6 +87,17 @@ function MemberFailure({
   );
 }
 
+/**
+ * Workspace members and invitations (plan §2.4).
+ *
+ * Administrative throughout: the workspace panel mounts it only for the
+ * `manage_members` capability, and every action it offers is refused by the
+ * server for any role that lacks it. Hiding a control is a convenience,
+ * never the boundary.
+ *
+ * This component owns the server conversation; the roster, the invite form
+ * and the pending list are presentation.
+ */
 export function MemberSettings() {
   const { activeWorkspaceId, activeWorkspace } = useProjectContext();
   const mayManage = useWorkspaceCapability('manage_members');

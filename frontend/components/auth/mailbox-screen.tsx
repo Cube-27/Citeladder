@@ -126,15 +126,18 @@ export default function MailboxScreen() {
   );
 }
 
-function mailboxDescription(operation: string, incomplete: boolean): string {
+const MAILBOX_DESCRIPTIONS: Record<MailboxOperation, string> = {
+  'verify-email':
+    'Enter the password you chose at signup to confirm. Your trial starts when you set up your workspace.',
+  'resend-verification':
+    'Enter the email you signed up with and we’ll send a new verification link.',
+  'reset-password': 'Use your email to secure your account. Password resets sign out all sessions.',
+  'forgot-password':
+    'Use your email to secure your account. Password resets sign out all sessions.',
+};
+
+function mailboxDescription(operation: MailboxOperation, incomplete: boolean): string {
   if (incomplete)
     return 'This link is incomplete. Open the whole link from your email, or request a new one.';
-  switch (operation) {
-    case 'verify-email':
-      return 'Enter the password you chose at signup to confirm. Your trial starts when you set up your workspace.';
-    case 'resend-verification':
-      return 'Enter the email you signed up with and we’ll send a new verification link.';
-    default:
-      return 'Use your email to secure your account. Password resets sign out all sessions.';
-  }
+  return MAILBOX_DESCRIPTIONS[operation];
 }

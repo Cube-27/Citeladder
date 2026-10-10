@@ -12,6 +12,7 @@ import { queryKeys } from '@/lib/api/query-keys';
 import { capabilityRemaining, useEntitlement } from '@/lib/billing/entitlement-context';
 import { PROJECT_SLOTS_CAPABILITY } from '@/lib/config/billing';
 import { WORKSPACE_LOADING_STALL_MS } from '@/lib/config/operational';
+import { ownsWorkspace } from '@/lib/project/bootstrap';
 import { workspaceDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
 
@@ -109,7 +110,7 @@ function setsUpOwnWorkspace(
   setup: string | null,
 ): boolean {
   if (status === 'no_workspace') return true;
-  return setup === 'workspace' && !workspaces.some((workspace) => workspace.role === 'owner');
+  return setup === 'workspace' && !ownsWorkspace(workspaces);
 }
 
 function ProjectSetupLoading({

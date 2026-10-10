@@ -11,9 +11,8 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Stack } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
 import { humanizeApiError } from '@/lib/api/errors';
-import { clearAccountScopedClientState } from '@/lib/auth/account-transition';
+import { restartAt } from '@/lib/auth/account-transition';
 import { workspacesApi } from '@/lib/api/workspaces';
-import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import { WORKSPACE_CHOOSER_PATH } from '@/lib/project/bootstrap';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
 
@@ -32,11 +31,8 @@ export function WorkspacePanel() {
   const [confirmLeave, setConfirmLeave] = useState(false);
   const leave = useMutation({
     mutationFn: (workspaceId: string) => workspacesApi.leave(workspaceId),
-    onSuccess: async () => {
-      await clearAccountScopedClientState(queryClient);
-      // The chooser decides where someone goes next, including setting up their own.
-      hardNavigate(WORKSPACE_CHOOSER_PATH);
-    },
+    // The chooser decides where someone goes next, including setting up their own.
+    onSuccess: () => restartAt(queryClient, WORKSPACE_CHOOSER_PATH),
   });
   if (!activeWorkspace) return null;
   const isOwner = activeWorkspace.role === 'owner';
@@ -48,7 +44,7 @@ export function WorkspacePanel() {
           <h2 id="workspace-panel-title" className={textRole('sectionTitle')}>
             {activeWorkspace.name}
           </h2>
-          <Badge variant="neutral">{isOwner ? 'Owner' : roleLabel(activeWorkspace.role)}</Badge>
+          <Badge variant="neutral">{roleLabel(activeWorkspace.role)}</Badge>
         </div>
         <p className={textRole('body')}>{ROLE_SUMMARY[activeWorkspace.role]}</p>
         {isOwner ? (

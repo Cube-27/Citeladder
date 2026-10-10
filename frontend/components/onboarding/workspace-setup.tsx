@@ -1,13 +1,12 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useRef, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { TermsConsent } from '@/components/auth/auth-form';
 import { FlowActions, FlowShell } from '@/components/auth/flow-shell';
-import { ThemeSwitch } from '@/components/layout/theme-switch';
-import { UserMenuTrigger } from '@/components/layout/user-menu';
+import { FlowAccountControls } from '@/components/layout/flow-account-controls';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
@@ -17,6 +16,7 @@ import { humanizeApiError } from '@/lib/api/errors';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { Workspace } from '@/lib/api/types';
 import { workspacesApi } from '@/lib/api/workspaces';
+import { useTermsConsent } from '@/lib/auth/terms-consent';
 import { workspaceDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
 
@@ -32,12 +32,12 @@ export function WorkspaceSetup() {
   const { setActiveWorkspaceId } = useProjectContext();
   const [name, setName] = useState('');
   const [nameMissing, setNameMissing] = useState(false);
-  const [agreed, setAgreed] = useState(false);
-  const [consentMissing, setConsentMissing] = useState(false);
-  const consentRef = useRef<HTMLDivElement>(null);
+  const consent = useTermsConsent();
   const terms = useQuery({
     queryKey: queryKeys.auth.policies(),
     queryFn: () => authApi.policies(),
+    // The published revision changes only with a deployment.
+    staleTime: Number.POSITIVE_INFINITY,
   });
   const create = useMutation({
     mutationFn: (termsRevision: string) =>
@@ -56,8 +56,7 @@ export function WorkspaceSetup() {
     event.preventDefault();
     const missingName = name.trim() === '';
     setNameMissing(missingName);
-    setConsentMissing(!agreed);
-    if (!agreed) consentRef.current?.querySelector<HTMLElement>('button[role="checkbox"]')?.focus();
+    const agreed = consent.confirm();
     if (missingName || !agreed || !terms.data) return;
     create.mutate(terms.data.terms_revision);
   };
@@ -66,12 +65,7 @@ export function WorkspaceSetup() {
   return (
     <FlowShell
       mainLabel="Workspace setup"
-      trailing={
-        <div className="flex items-center gap-1">
-          <ThemeSwitch />
-          <UserMenuTrigger presenter="compact" />
-        </div>
-      }
+      trailing={<FlowAccountControls />}
       actions={
         <FlowActions
           primary={
@@ -111,15 +105,7 @@ export function WorkspaceSetup() {
             />
           )}
         </Field>
-        <TermsConsent
-          ref={consentRef}
-          agreed={agreed}
-          missing={consentMissing}
-          onChange={(value) => {
-            setAgreed(value);
-            if (value) setConsentMissing(false);
-          }}
-        />
+        <TermsConsent {...consent.field} />
         {error ? <Alert tone="danger">{humanizeApiError(error).message}</Alert> : null}
       </form>
     </FlowShell>

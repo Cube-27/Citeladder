@@ -6,8 +6,7 @@ import { useEffect, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { FlowShell } from '@/components/auth/flow-shell';
-import { ThemeSwitch } from '@/components/layout/theme-switch';
-import { UserMenuTrigger } from '@/components/layout/user-menu';
+import { FlowAccountControls } from '@/components/layout/flow-account-controls';
 import { PageLoading } from '@/components/layout/page-loading';
 import { roleLabel } from '@/components/settings/member-roles';
 import { Badge } from '@/components/ui/badge';
@@ -19,7 +18,7 @@ import { queryKeys } from '@/lib/api/query-keys';
 import type { Workspace } from '@/lib/api/types';
 import { workspacesApi } from '@/lib/api/workspaces';
 import { workspaceDestination } from '@/lib/navigation/project-destination';
-import { WORKSPACE_SETUP_PATH } from '@/lib/project/bootstrap';
+import { ownsWorkspace, WORKSPACE_SETUP_PATH } from '@/lib/project/bootstrap';
 import { useProjectContext } from '@/lib/project/project-context';
 import { cn } from '@/lib/utils';
 
@@ -31,9 +30,8 @@ import { cn } from '@/lib/utils';
 export function WorkspaceChooser() {
   const { workspaces, status, setActiveWorkspaceId } = useProjectContext();
   const navigate = useNavigate();
-  const ownsWorkspace = workspaces.some((workspace) => workspace.role === 'owner');
-  const listed = workspaces.length > 0 || status === 'no_workspace';
-  const only = ownsWorkspace && workspaces.length === 1 ? workspaces[0] : undefined;
+  const ownsOne = ownsWorkspace(workspaces);
+  const only = ownsOne && workspaces.length === 1 ? workspaces[0] : undefined;
 
   useEffect(() => {
     if (status === 'no_workspace') navigate(WORKSPACE_SETUP_PATH, { replace: true });
@@ -49,8 +47,7 @@ export function WorkspaceChooser() {
         <p className="flow-help">Your workspaces could not be loaded. Reload to try again.</p>
       </ChooserFrame>
     );
-  if (!listed || only || status === 'no_workspace')
-    return <PageLoading label="Loading your workspaces…" />;
+  if (workspaces.length === 0 || only) return <PageLoading label="Loading your workspaces…" />;
 
   const enter = (workspace: Workspace) => {
     setActiveWorkspaceId(workspace.id);
@@ -80,7 +77,7 @@ export function WorkspaceChooser() {
           </li>
         ))}
       </ul>
-      {ownsWorkspace ? null : (
+      {ownsOne ? null : (
         <Button asChild variant="secondary" className="w-fit">
           <Link to={WORKSPACE_SETUP_PATH}>
             <Plus className="size-4" aria-hidden />
@@ -94,16 +91,7 @@ export function WorkspaceChooser() {
 
 function ChooserFrame({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <FlowShell
-      mainLabel="Choose a workspace"
-      align="center"
-      trailing={
-        <div className="flex items-center gap-1">
-          <ThemeSwitch />
-          <UserMenuTrigger presenter="compact" />
-        </div>
-      }
-    >
+    <FlowShell mainLabel="Choose a workspace" align="center" trailing={<FlowAccountControls />}>
       <div className="grid gap-5">
         <div className="flow-header">
           <h1 className="flow-title">Choose a workspace</h1>

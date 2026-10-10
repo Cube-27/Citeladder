@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vite-plus/test';
 
 import { authApi } from '@/lib/api/auth';
-import { hasSignInTermsConsent } from '@/lib/auth/terms-consent';
+import { hasSignupTermsConsent } from '@/lib/auth/terms-consent';
 import { renderWithProviders } from '@/test/render';
 
 import { LoginScreen } from './login-screen';
@@ -96,7 +96,7 @@ describe('account entry', () => {
     await user.click(screen.getByRole('button', { name: 'Create account' }));
 
     await waitFor(() => expect(registerAccount).toHaveBeenCalled());
-    expect(hasSignInTermsConsent()).toBe(true);
+    expect(hasSignupTermsConsent()).toBe(true);
     registerAccount.mockRestore();
   });
 

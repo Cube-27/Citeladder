@@ -25,8 +25,13 @@ import type { SelectionStatus } from '@/lib/project/selection';
  * project creation answered a question nobody asked and made an empty
  * workspace unmanageable.
  */
+/** The sign-in workspace chooser. */
+export const WORKSPACE_CHOOSER_PATH = '/workspaces';
+/** Onboarding's step that creates the person's own workspace. */
+export const WORKSPACE_SETUP_PATH = '/onboarding?setup=workspace';
+
 const WORKSPACE_ONLY_PREFIXES = [
-  '/workspaces',
+  WORKSPACE_CHOOSER_PATH,
   '/onboarding',
   '/settings',
   '/billing',
@@ -41,10 +46,10 @@ export function isWorkspaceOnlyRoute(pathname: string | null): boolean {
   );
 }
 
-/** The sign-in workspace chooser. */
-export const WORKSPACE_CHOOSER_PATH = '/workspaces';
-/** Onboarding's step that creates the person's own workspace. */
-export const WORKSPACE_SETUP_PATH = '/onboarding?setup=workspace';
+/** Whether the person owns one of these workspaces (a person owns at most one). */
+export function ownsWorkspace(workspaces: readonly { role: string }[]): boolean {
+  return workspaces.some((workspace) => workspace.role === 'owner');
+}
 
 /**
  * Routes that act on the person rather than on the selected workspace: the

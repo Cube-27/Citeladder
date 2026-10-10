@@ -3,8 +3,7 @@
 import { Link, useLocation } from 'react-router-dom';
 
 import { FlowActions, FlowShell, type FlowStep } from '@/components/auth/flow-shell';
-import { ThemeSwitch } from '@/components/layout/theme-switch';
-import { UserMenuTrigger } from '@/components/layout/user-menu';
+import { FlowAccountControls } from '@/components/layout/flow-account-controls';
 import { Button } from '@/components/ui/button';
 import { projectDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
@@ -62,12 +61,7 @@ function OnboardingTransaction({ transactionKey }: Readonly<{ transactionKey: st
       // the product entirely; the account menu beside this is the way out when
       // there is no project to go back to.
       exitHref={flow.isAdditional ? projectsHref : undefined}
-      trailing={
-        <div className="flex items-center gap-1">
-          <ThemeSwitch />
-          <UserMenuTrigger presenter="compact" />
-        </div>
-      }
+      trailing={<FlowAccountControls />}
       align={flow.isCompleting ? 'center' : 'start'}
       measure={measure}
       actions={

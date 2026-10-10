@@ -10,7 +10,7 @@ import { policiesApi } from '@/lib/api/policies';
 import { queryKeys } from '@/lib/api/query-keys';
 import { humanizeApiError } from '@/lib/api/errors';
 import { signOut } from '@/lib/auth/account-transition';
-import { hasSignInTermsConsent } from '@/lib/auth/terms-consent';
+import { hasSignupTermsConsent } from '@/lib/auth/terms-consent';
 import { WORKSPACE_CHOOSER_PATH, isWorkspaceFreeRoute } from '@/lib/project/bootstrap';
 import { useProjectContext } from '@/lib/project/project-context';
 import { websiteHref } from '@/lib/config/app-link';
@@ -66,7 +66,7 @@ function WorkspacePolicy({
   const pendingRevision = query.data && !query.data.accepted_at ? query.data.terms_revision : null;
   const recordedFromSignIn = useRef<string | null>(null);
   useEffect(() => {
-    if (!pendingRevision || !hasSignInTermsConsent()) return;
+    if (!pendingRevision || !hasSignupTermsConsent()) return;
     if (recordedFromSignIn.current === pendingRevision) return;
     // Once per revision: a refused record falls back to the explicit screen
     // rather than retrying in a loop.
@@ -76,7 +76,7 @@ function WorkspacePolicy({
 
   if (query.data?.accepted_at) return children;
   const recordingSignInConsent =
-    pendingRevision !== null && hasSignInTermsConsent() && !accept.isError;
+    pendingRevision !== null && hasSignupTermsConsent() && !accept.isError;
   if (query.isPending || recordingSignInConsent) return <ShellFallback />;
   return (
     <ShellFallback>

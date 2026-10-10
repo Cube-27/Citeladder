@@ -5,7 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, expect, it, vi } from 'vite-plus/test';
 
 import { policiesApi } from '@/lib/api/policies';
-import { recordSignInTermsConsent } from '@/lib/auth/terms-consent';
+import { recordSignupTermsConsent } from '@/lib/auth/terms-consent';
 
 import { PolicyAcceptanceGate } from './policy-acceptance';
 
@@ -46,7 +46,7 @@ it('requires an explicit Terms decision before onboarding without turning privac
 });
 
 it('records the decision made at sign-in without a second consent screen', async () => {
-  recordSignInTermsConsent();
+  recordSignupTermsConsent();
   renderGate();
   expect(await screen.findByText('Workspace content')).toBeInTheDocument();
   expect(policiesApi.accept).toHaveBeenCalledWith('workspace-a', 'published-1');
@@ -54,7 +54,7 @@ it('records the decision made at sign-in without a second consent screen', async
 });
 
 it('falls back to the explicit screen when recording the sign-in decision is refused', async () => {
-  recordSignInTermsConsent();
+  recordSignupTermsConsent();
   vi.mocked(policiesApi.accept).mockRejectedValueOnce(new Error('revision changed'));
   renderGate();
   expect(await screen.findByRole('button', { name: 'Accept and continue' })).toBeInTheDocument();

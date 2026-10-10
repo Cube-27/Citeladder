@@ -445,11 +445,11 @@ describe('Google sign-in', () => {
     }
   });
 
-  it('creates and reuses a passwordless account atomically with its workspace, free grants and login receipt', async () => {
+  it('creates and reuses a passwordless account with its login receipt, landing on the workspace chooser', async () => {
     const { data, nonceCookie } = await start();
     const success = await callback(data.state, nonceCookie);
     expect(success.status).toBe(302);
-    expect(success.headers.get('location')).toBe('https://app.example.test/projects');
+    expect(success.headers.get('location')).toBe('https://app.example.test/workspaces');
     const user = await db
       .selectFrom('users')
       .selectAll()
@@ -457,6 +457,14 @@ describe('Google sign-in', () => {
       .executeTakeFirstOrThrow();
     createdUsers.push(user.id);
     expect(user.hashed_password).toBeNull();
+    // Google sign-in creates the identity only; onboarding creates the workspace.
+    expect(
+      await db
+        .selectFrom('workspace_members')
+        .select('id')
+        .where('user_id', '=', user.id)
+        .execute(),
+    ).toEqual([]);
     const again = await start();
     expect((await callback(again.data.state, again.nonceCookie)).status).toBe(302);
     expect(
@@ -505,7 +513,7 @@ describe('Google sign-in', () => {
       .map((value) => value.split(';')[0])
       .join('; ');
     expect((await callback(linkData.state, linkCookies)).headers.get('location')).toBe(
-      'https://app.example.test/projects',
+      'https://app.example.test/workspaces',
     );
     identityEmail = `${prefix}-changed@example.test`;
     const changed = await start();

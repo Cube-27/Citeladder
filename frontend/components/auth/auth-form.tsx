@@ -2,7 +2,7 @@
 
 import { Eye, EyeOff } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { type ComponentProps, type ReactNode, type Ref, useId, useRef, useState } from 'react';
+import { type ComponentProps, type ReactNode, type Ref, useId, useState } from 'react';
 
 import { Alert as MktAlert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,7 @@ import { Pressable } from '@/components/ui/pressable';
 import { authApi } from '@/lib/api/auth';
 import { safeAuthReturnPath } from '@/lib/auth/auth-return-path';
 import { ApiError } from '@/lib/api/errors';
-import { recordSignInTermsConsent } from '@/lib/auth/terms-consent';
+import { recordSignupTermsConsent, useTermsConsent } from '@/lib/auth/terms-consent';
 import { websiteHref } from '@/lib/config/app-link';
 import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import { cn } from '@/lib/utils';
@@ -214,21 +214,15 @@ export function AuthFormShell({
 }>) {
   const [oauthNotice, setOauthNotice] = useState<string | null>(null);
   const [oauthPending, setOauthPending] = useState(false);
-  const [agreed, setAgreed] = useState(false);
-  const [consentMissing, setConsentMissing] = useState(false);
-  const consentRef = useRef<HTMLDivElement>(null);
+  const consent = useTermsConsent();
   // Both ways in lead into the app, so both carry the same Terms decision.
   const requiresConsent = requireTerms && (showForm || showOAuth);
 
   /** Hold any way in until the Terms box is ticked; remember the decision once it is. */
   function consentGiven(): boolean {
     if (!requiresConsent) return true;
-    if (!agreed) {
-      setConsentMissing(true);
-      consentRef.current?.querySelector<HTMLElement>('button[role="checkbox"]')?.focus();
-      return false;
-    }
-    recordSignInTermsConsent();
+    if (!consent.confirm()) return false;
+    recordSignupTermsConsent();
     return true;
   }
 
@@ -304,17 +298,7 @@ export function AuthFormShell({
           <form noValidate onSubmit={handleSubmit} className="auth-email-form grid gap-4">
             {children}
 
-            {requiresConsent && (
-              <TermsConsent
-                ref={consentRef}
-                agreed={agreed}
-                missing={consentMissing}
-                onChange={(value) => {
-                  setAgreed(value);
-                  if (value) setConsentMissing(false);
-                }}
-              />
-            )}
+            {requiresConsent && <TermsConsent {...consent.field} />}
 
             <Button
               type="submit"
