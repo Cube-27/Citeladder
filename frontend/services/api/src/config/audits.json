@@ -320,6 +320,7 @@
     "type": "bool",
     "default": false
   },
+  "ads_engine": "chatgpt_search",
   "ads_versions": {
     "parser_version": "chatgpt-ads-1",
     "metrics_version": "ads-metrics-1"
