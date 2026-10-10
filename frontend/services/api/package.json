@@ -36,6 +36,7 @@
     "perception:eval": "node scripts/eval-perception.ts",
     "mcp:reference": "node scripts/export-mcp-tool-reference.ts",
     "crawl:worker": "node scripts/export-crawl-worker.ts",
+    "crawl:firehose-filter": "node scripts/export-firehose-filter.ts",
     "db:types": "kysely-codegen --dialect postgres --url \"env(TYPES_DATABASE_URL)\" --exclude-pattern schema_migrations --out-file src/generated/db-schema.ts",
     "db:types:check": "kysely-codegen --dialect postgres --url \"env(TYPES_DATABASE_URL)\" --exclude-pattern schema_migrations --out-file src/generated/db-schema.ts --verify"
   },

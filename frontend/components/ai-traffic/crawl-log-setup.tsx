@@ -12,6 +12,7 @@ import {
   CRAWL_LOG_SETUPS,
   CRAWL_INGEST_ORIGIN,
   FIREHOSE_BUFFER_INTERVAL,
+  FIREHOSE_FILTER_TEMPLATE,
 } from '@/lib/config/crawl-logs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -185,6 +186,14 @@ function FirehoseSteps({ interval }: Readonly<{ interval: string }>) {
       <li>
         On the CloudFront distribution, add standard logging to Amazon Data Firehose, choose the
         stream and output format JSON, with these fields: {CLOUDFRONT_LOG_FIELDS.join(', ')}.
+      </li>
+      <li>
+        Optional: to send crawler requests only, add the{' '}
+        <TextLink variant="external" href={FIREHOSE_FILTER_TEMPLATE}>
+          CiteLadder filter Lambda
+        </TextLink>{' '}
+        as the stream&apos;s data transformation and tick the box below. Coverage then stays
+        partial.
       </li>
       <li>
         CloudFront can take about four hours to start delivering reliably. The Firehose

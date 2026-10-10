@@ -41,6 +41,8 @@ export const CRAWL_LOG_SETUPS = [
 ] as const;
 /** The Firehose buffer interval suggested at setup, and the range the API accepts. */
 export const FIREHOSE_BUFFER_INTERVAL = { default: 60, min: 60, max: 900 } as const;
+/** The generated Firehose transformation Lambda, served by the docs site. */
+export const FIREHOSE_FILTER_TEMPLATE = docsUrl('/templates/citeladder-firehose-filter.mjs');
 /** CloudFront standard logging (v2) fields the Firehose stream must deliver, in setup order. */
 export const CLOUDFRONT_LOG_FIELDS = [
   'timestamp(ms)',
