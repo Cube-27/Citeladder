@@ -130,7 +130,6 @@ export const visibilityApi = {
       audit_ids?: string[];
       engine?: string;
       cohort?: string;
-      limit?: number;
     },
     options?: ApiRequestOptions,
   ) => {

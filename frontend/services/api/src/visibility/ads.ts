@@ -19,75 +19,60 @@ import {
   encodeKeysetCursor,
   InvalidCursorError,
 } from '../http/keyset-cursor.ts';
-import { chunked, groupBy } from '../lists.ts';
+import { groupBy } from '../lists.ts';
 import { compareText } from '../text-order.ts';
-import {
-  adApplicability,
-  adsSummary,
-  creativeOrder,
-  type AdAnswer,
-  type AdObservation,
-} from './ad-metrics.ts';
+import { adsSummary, creativeOrder, type AdAnswer } from './ad-metrics.ts';
 import { scopedSelection } from './dashboard.ts';
 import { evidenceScope, observedAt, type RunSelection } from './selection.ts';
 
 const CREATIVES_CURSOR_SCOPE = 'visibility.ads.creatives';
 const adsEngine = policy.audits.ads_engine;
 
-const OBSERVATION_COLUMNS = [
-  'artifact_id',
-  'parser_version',
-  'rank_absolute',
-  'advertiser_name',
-  'advertiser_domain',
-  'ownership',
-  'title',
-  'snippet',
-  'landing_url_canonical',
+const AD_COLUMNS = [
+  'ad.rank_absolute',
+  'ad.advertiser_name',
+  'ad.advertiser_domain',
+  'ad.ownership',
+  'ad.title',
+  'ad.snippet',
 ] as const;
 
-type ObservationRow = AdObservation & { artifact_id: string; parser_version: string };
-
-/** A persisted observation with its ownership parsed at the read boundary. */
-function observation(
-  row: Omit<ObservationRow, 'ownership'> & { ownership: string },
-): ObservationRow {
+/** A persisted ad with its ownership parsed at the read boundary. */
+function observation<Row extends { ownership: string }>(row: Row) {
   return { ...row, ownership: adOwnershipSchema.parse(row.ownership) };
 }
 
 async function selectionAnswers(db: Database, selection: RunSelection) {
   const scoped = await scopedSelection(db, selection);
-  const rows = await evidenceScope(db, scoped)
-    .where('audit.audit_scope', '=', policy.visibility.brand_audit_scope)
-    .select([
-      'ra.audit_id',
-      'ra.artifact_id',
-      'ra.logical_engine',
-      'ra.ads_parser_version',
-      'ra.brand_mentioned',
-      'snapshot.text as prompt',
-      'snapshot.theme as topic',
-      utcTextOf(observedAt).as('observed_at'),
-    ])
-    .execute();
-  const parsed = rows.filter((row) => row.ads_parser_version !== null);
-  const observations = groupBy(
-    (
-      await chunked(
-        parsed.map((row) => row.artifact_id),
-        (ids) =>
-          db
-            .selectFrom('answer_ad_observations')
-            .select(OBSERVATION_COLUMNS)
-            .where('workspace_id', '=', scoped.workspaceId)
-            .where('project_id', '=', scoped.projectId)
-            .where('artifact_id', 'in', ids)
-            .orderBy('rank_absolute')
-            .execute(),
+  const scope = () =>
+    evidenceScope(db, scoped).where('audit.audit_scope', '=', policy.visibility.brand_audit_scope);
+  // Each answer's ads at its own parser version, joined in SQL.
+  const [rows, ads] = await Promise.all([
+    scope()
+      .select([
+        'ra.audit_id',
+        'ra.artifact_id',
+        'ra.logical_engine',
+        'ra.ads_parser_version',
+        'ra.brand_mentioned',
+        'snapshot.text as prompt',
+        'snapshot.theme as topic',
+        utcTextOf(observedAt).as('observed_at'),
+      ])
+      .execute(),
+    scope()
+      .innerJoin('answer_ad_observations as ad', (join) =>
+        join
+          .onRef('ad.artifact_id', '=', 'ra.artifact_id')
+          .onRef('ad.parser_version', '=', 'ra.ads_parser_version'),
       )
-    ).map(observation),
-    (row) => row.artifact_id,
-  );
+      .where('ad.workspace_id', '=', scoped.workspaceId)
+      .where('ad.project_id', '=', scoped.projectId)
+      .select(['ra.artifact_id', ...AD_COLUMNS, 'ad.landing_url_canonical'])
+      .orderBy('ad.rank_absolute')
+      .execute(),
+  ]);
+  const byArtifact = groupBy(ads.map(observation), (row) => row.artifact_id);
   const answers = rows.map((row): AdAnswer => ({
     auditId: row.audit_id,
     observedAt: wireUtc(row.observed_at),
@@ -96,9 +81,7 @@ async function selectionAnswers(db: Database, selection: RunSelection) {
     topic: row.topic || 'Untagged',
     adsParserVersion: row.ads_parser_version,
     brandMentioned: row.brand_mentioned,
-    ads: (observations.get(row.artifact_id) ?? []).filter(
-      (ad) => ad.parser_version === row.ads_parser_version,
-    ),
+    ads: byArtifact.get(row.artifact_id) ?? [],
   }));
   return { answers, auditIds: [...new Set(rows.map((row) => row.audit_id))].sort(compareText) };
 }
@@ -162,31 +145,21 @@ export async function executionAds(
     adsParserVersion: string | null;
   },
 ): Promise<ExecutionAds> {
-  const applicability = adApplicability(
-    { engine: input.logicalEngine, adsParserVersion: input.adsParserVersion },
-    adsEngine,
-  );
-  if (applicability !== 'applicable' || input.adsParserVersion === null)
-    return { applicability, parser_version: null, items: [] };
+  if (input.logicalEngine !== adsEngine)
+    return { applicability: 'not_applicable', parser_version: null, items: [] };
+  if (!input.adsParserVersion)
+    return { applicability: 'unavailable', parser_version: null, items: [] };
   const rows = await db
-    .selectFrom('answer_ad_observations')
-    .select(OBSERVATION_COLUMNS)
-    .where('workspace_id', '=', input.workspaceId)
-    .where('artifact_id', '=', input.artifactId)
-    .where('parser_version', '=', input.adsParserVersion)
-    .orderBy('rank_absolute')
+    .selectFrom('answer_ad_observations as ad')
+    .select([...AD_COLUMNS, 'ad.landing_url_canonical as landing_url'])
+    .where('ad.workspace_id', '=', input.workspaceId)
+    .where('ad.artifact_id', '=', input.artifactId)
+    .where('ad.parser_version', '=', input.adsParserVersion)
+    .orderBy('ad.rank_absolute')
     .execute();
   return {
-    applicability,
+    applicability: 'applicable',
     parser_version: input.adsParserVersion,
-    items: rows.map(observation).map((ad) => ({
-      rank_absolute: ad.rank_absolute,
-      advertiser_name: ad.advertiser_name,
-      advertiser_domain: ad.advertiser_domain,
-      ownership: ad.ownership,
-      title: ad.title,
-      snippet: ad.snippet,
-      landing_url: ad.landing_url_canonical,
-    })),
+    items: rows.map(observation),
   };
 }

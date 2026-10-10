@@ -5,9 +5,12 @@ import { useQuery } from '@tanstack/react-query';
 import { retainPreviousDataForScope } from '@/lib/api/query-client';
 import { queryKeys } from '@/lib/api/query-keys';
 import { visibilityApi } from '@/lib/api/visibility';
-import { ADS_CREATIVES_LIMIT } from '@/lib/config/operational';
 import type { SourceFilters } from '@/components/visibility/source-rows';
-import { selectionParams, type SourceQueries } from '@/lib/visibility/use-source-analysis';
+import {
+  selectionEnabled,
+  selectionParams,
+  type SourceQueries,
+} from '@/lib/visibility/use-source-analysis';
 
 /**
  * The Ads tab's read: the same run / engine / prompt-type selection as
@@ -15,9 +18,9 @@ import { selectionParams, type SourceQueries } from '@/lib/visibility/use-source
  * previous selection.
  */
 export function useAds(filters: Pick<SourceFilters, 'engine' | 'cohort'>, queries: SourceQueries) {
-  const params = { ...selectionParams(filters, queries), limit: ADS_CREATIVES_LIMIT };
+  const params = selectionParams(filters, queries);
   const projectId = queries.projectId ?? '';
-  const enabled = Boolean(projectId && queries.activeRunId && queries.selectedRunIds?.length !== 0);
+  const enabled = selectionEnabled(queries);
   const query = useQuery({
     queryKey: queryKeys.visibility.ads(projectId, params),
     queryFn: ({ signal }) =>

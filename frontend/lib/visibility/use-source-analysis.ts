@@ -53,6 +53,11 @@ export function selectionParams(
   };
 }
 
+/** Whether a selection reads anything: a range with no runs reads nothing. */
+export function selectionEnabled(queries: SourceQueries): boolean {
+  return Boolean(queries.projectId && queries.activeRunId && queries.selectedRunIds?.length !== 0);
+}
+
 /**
  * The paged, filterable source table.
  *

@@ -7,7 +7,11 @@ import { queryKeys } from '@/lib/api/query-keys';
 import { visibilityApi } from '@/lib/api/visibility';
 import { PERCEPTION_PENDING_POLL_MS } from '@/lib/config/operational';
 import type { SourceFilters } from '@/components/visibility/source-rows';
-import { selectionParams, type SourceQueries } from '@/lib/visibility/use-source-analysis';
+import {
+  selectionEnabled,
+  selectionParams,
+  type SourceQueries,
+} from '@/lib/visibility/use-source-analysis';
 
 /**
  * The Perception tab's read: the same run / engine / prompt-type selection as
@@ -19,9 +23,7 @@ export function usePerception(
   queries: SourceQueries,
 ) {
   const params = selectionParams(filters, queries);
-  const enabled = Boolean(
-    queries.projectId && queries.activeRunId && queries.selectedRunIds?.length !== 0,
-  );
+  const enabled = selectionEnabled(queries);
   const query = useQuery({
     queryKey: queryKeys.visibility.perception(queries.projectId ?? '', params),
     queryFn: ({ signal }) =>

@@ -1,9 +1,8 @@
 'use client';
 
-import type { AdOwnership, VisibilityAdsResponse } from '@citeladder/contracts/visibility-ads';
+import type { VisibilityAdsResponse } from '@citeladder/contracts/visibility-ads';
 import { Megaphone } from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge';
 import { BusyBar } from '@/components/ui/busy-bar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -23,16 +22,17 @@ import { textRole } from '@/components/ui/typography';
 import { MissingValue } from '@/components/ui/unavailable-value';
 import { Stack } from '@/components/ui/layout';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
-import { formatDisplayShortDate, formatPercent, measured } from '@/lib/format';
+import { formatDisplayShortDate, formatPercent, measured, pluralCount } from '@/lib/format';
 import {
+  AD_APPLICABILITY,
   ADS_COVERAGE_NOTE,
   adsStateCopy,
   landingLabel,
-  ownershipChip,
   presenceLine,
 } from '@/lib/visibility/ads';
 import { engineLabel } from '@/lib/visibility/dashboard';
 import { useAds } from '@/lib/visibility/use-ads';
+import { AdOwnershipChip } from '@/components/visibility/ad-ownership-chip';
 import type { SourceFilters } from '@/components/visibility/source-rows';
 import type { SourceQueries } from '@/lib/visibility/use-source-analysis';
 
@@ -113,19 +113,13 @@ function AdsState({
   );
 }
 
-const APPLICABILITY_WORDS = {
-  applicable: 'Ads read',
-  unavailable: 'Ads unavailable',
-  not_applicable: 'Not applicable',
-} as const;
-
 function EngineApplicability({ engines }: Readonly<{ engines: VisibilityAdsResponse['engines'] }>) {
   if (!engines.length) return null;
   return (
     <ul className={textRole('caption', 'text-muted flex flex-wrap gap-x-4 gap-y-1')}>
       {engines.map((engine) => (
         <li key={engine.engine}>
-          {engineLabel(engine.engine)}: {APPLICABILITY_WORDS[engine.applicability]}
+          {engineLabel(engine.engine)}: {AD_APPLICABILITY[engine.applicability]}
         </li>
       ))}
     </ul>
@@ -173,15 +167,6 @@ function Headline({ data }: Readonly<{ data: VisibilityAdsResponse }>) {
   );
 }
 
-function OwnershipChip({ ownership }: Readonly<{ ownership: AdOwnership }>) {
-  const chip = ownershipChip(ownership);
-  return (
-    <Badge variant="classification" value={chip.badge}>
-      {chip.label}
-    </Badge>
-  );
-}
-
 function AdvertiserTable({
   advertisers,
   total,
@@ -218,7 +203,7 @@ function AdvertiserTable({
                     <span className="flex flex-wrap items-center gap-2">
                       {advertiser.name}
                       <span className={textRole('caption', 'text-muted')}>{advertiser.domain}</span>
-                      <OwnershipChip ownership={advertiser.ownership} />
+                      <AdOwnershipChip ownership={advertiser.ownership} />
                     </span>
                   </TableCell>
                   <TableCell numeric>{advertiser.appearances}</TableCell>
@@ -309,14 +294,14 @@ function CreativeList({ creatives }: Readonly<{ creatives: VisibilityAdsResponse
               >
                 <span className="flex flex-wrap items-center gap-2">
                   <span className={textRole('emphasis')}>{creative.title || 'Untitled ad'}</span>
-                  <OwnershipChip ownership={creative.ownership} />
+                  <AdOwnershipChip ownership={creative.ownership} />
                 </span>
                 {creative.snippet ? (
                   <span className={textRole('body', 'text-secondary')}>{creative.snippet}</span>
                 ) : null}
                 <span className={textRole('caption', 'text-muted')}>
                   {creative.advertiser_name} · {landingLabel(creative.landing_url)} ·{' '}
-                  {creative.appearances} {creative.appearances === 1 ? 'appearance' : 'appearances'}
+                  {pluralCount(creative.appearances, 'appearance')}
                 </span>
               </li>
             ))}

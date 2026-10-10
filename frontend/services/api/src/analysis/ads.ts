@@ -9,8 +9,7 @@ import { record } from '../db/json.ts';
 import { policy } from '../config.ts';
 import { getLogger } from '../logging.ts';
 import { parseAds, type AdItem } from '../search-surfaces/parsing.ts';
-import { domainMatches } from './domains.ts';
-import type { ScoringConfig } from './scoring.ts';
+import { domainIn, type ScoringConfig } from './scoring.ts';
 
 const logger = getLogger('citeladder.analysis.ads');
 
@@ -33,11 +32,9 @@ export function answerAds(task: {
 
 /** Owned beats competitor; a competitor carries its frozen id. */
 function adOwnership(advertiserDomain: string, config: ScoringConfig): AdOwnership {
-  if (config.ownedDomains.some((owned) => domainMatches(advertiserDomain, owned)))
+  if (domainIn(advertiserDomain, config.ownedDomains))
     return { ownership: 'owned', competitor_id: null };
-  const competitor = config.competitors.find((item) =>
-    item.domains.some((target) => domainMatches(advertiserDomain, target)),
-  );
+  const competitor = config.competitors.find((item) => domainIn(advertiserDomain, item.domains));
   return competitor
     ? { ownership: 'competitor', competitor_id: competitor.id }
     : { ownership: 'other', competitor_id: null };

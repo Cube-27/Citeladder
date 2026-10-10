@@ -42,12 +42,35 @@ export type AdsSummary = Omit<VisibilityAdsResponse, 'source_audit_ids' | 'creat
   creatives: AdCreative[];
 };
 
-export function adApplicability(
+function adApplicability(
   answer: Pick<AdAnswer, 'engine' | 'adsParserVersion'>,
   adsEngine: string,
 ): AdApplicability {
   if (answer.engine !== adsEngine) return 'not_applicable';
   return answer.adsParserVersion ? 'applicable' : 'unavailable';
+}
+
+/** Applicable if any answer is, else unavailable if any is, else not applicable. */
+function foldedApplicability(answers: readonly AdAnswer[], adsEngine: string): AdApplicability {
+  const states = new Set(answers.map((answer) => adApplicability(answer, adsEngine)));
+  if (states.has('applicable')) return 'applicable';
+  return states.has('unavailable') ? 'unavailable' : 'not_applicable';
+}
+
+function adsState(
+  answers: readonly AdAnswer[],
+  options: { adsEngine: string; engineFilter: string | null },
+): AdsSummary['state'] {
+  if (options.engineFilter !== null && options.engineFilter !== options.adsEngine)
+    return 'not_applicable';
+  switch (foldedApplicability(answers, options.adsEngine)) {
+    case 'applicable':
+      return 'value';
+    case 'unavailable':
+      return 'unavailable';
+    case 'not_applicable':
+      return 'no_answers';
+  }
 }
 
 function presence(answers: readonly AdAnswer[]): AdPresence {
@@ -67,8 +90,12 @@ function sightings(answers: readonly AdAnswer[]): Sighting[] {
 
 /** Appearance counts and the first/last sighting of one group; identity from the latest. */
 function rollup(group: NonEmpty<Sighting>) {
-  const first = group.reduce((a, b) => (compareText(b.observedAt, a.observedAt) < 0 ? b : a));
-  const latest = group.reduce((a, b) => (compareText(b.observedAt, a.observedAt) >= 0 ? b : a));
+  let first = group[0],
+    latest = group[0];
+  for (const row of group) {
+    if (compareText(row.observedAt, first.observedAt) < 0) first = row;
+    if (compareText(row.observedAt, latest.observedAt) >= 0) latest = row;
+  }
   return {
     latest,
     appearances: group.length,
@@ -170,16 +197,17 @@ function prompts(applicable: readonly AdAnswer[]) {
 function engines(answers: readonly AdAnswer[], adsEngine: string) {
   return [...groupBy(answers, (answer) => answer.engine)]
     .map(([engine, group]) => {
-      const applicable = group.filter(
-        (answer) => adApplicability(answer, adsEngine) === 'applicable',
-      );
-      const applicability: AdApplicability =
-        engine !== adsEngine ? 'not_applicable' : applicable.length ? 'applicable' : 'unavailable';
+      const applicability = foldedApplicability(group, adsEngine);
       return {
         engine,
         applicability,
         answers: group.length,
-        presence: applicability === 'applicable' ? presence(applicable) : null,
+        presence:
+          applicability === 'applicable'
+            ? presence(
+                group.filter((answer) => adApplicability(answer, adsEngine) === 'applicable'),
+              )
+            : null,
       };
     })
     .sort((a, b) => compareText(a.engine, b.engine));
@@ -200,16 +228,8 @@ export function adsSummary(
   const seen = sightings(applicable);
   const everyAdvertiser = advertisers(seen);
   const owned = seen.filter((row) => row.ownership === 'owned');
-  const state =
-    options.engineFilter !== null && options.engineFilter !== options.adsEngine
-      ? 'not_applicable'
-      : applicable.length
-        ? 'value'
-        : answers.some((answer) => answer.engine === options.adsEngine)
-          ? 'unavailable'
-          : 'no_answers';
   return {
-    state,
+    state: adsState(answers, options),
     parser_versions: [
       ...new Set(applicable.flatMap((answer) => answer.adsParserVersion ?? [])),
     ].sort(compareText),

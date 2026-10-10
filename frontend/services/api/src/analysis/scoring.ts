@@ -82,7 +82,8 @@ export function scoringConfig(configuration: unknown): ScoringConfig {
   };
 }
 
-function domainIn(domain: string, targets: readonly unknown[]): boolean {
+/** Whether `domain` is, or is a subdomain of, any target. */
+export function domainIn(domain: string, targets: readonly unknown[]): boolean {
   return targets.some((target) => domainMatches(domain, target));
 }
 

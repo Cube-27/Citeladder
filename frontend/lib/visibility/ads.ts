@@ -4,25 +4,30 @@
  * shared missing mark rather than a zero.
  */
 import type {
+  AdApplicability,
   AdOwnership,
   AdPresence,
   VisibilityAdsResponse,
 } from '@citeladder/contracts/visibility-ads';
 
 import type { ClassificationValue } from '@/components/ui/badge-variants';
+import { availabilityLabel } from '@/lib/format';
+import { parseAbsoluteHttpUrl } from '@/lib/safe-http-url';
 
 export const ADS_COVERAGE_NOTE =
   "Ads seen in ChatGPT sessions collected for this project's market. What your buyers see depends on their plan, account and country.";
 
-const OWNERSHIP: Record<AdOwnership, { label: string; badge: ClassificationValue }> = {
+export const AD_OWNERSHIP: Record<AdOwnership, { label: string; badge: ClassificationValue }> = {
   owned: { label: 'You', badge: 'owned' },
   competitor: { label: 'Competitor', badge: 'competitor' },
   other: { label: 'Other', badge: 'third-party' },
 };
 
-export function ownershipChip(ownership: AdOwnership) {
-  return OWNERSHIP[ownership];
-}
+export const AD_APPLICABILITY: Record<AdApplicability, string> = {
+  applicable: 'Ads read',
+  unavailable: 'Ads unavailable',
+  not_applicable: availabilityLabel('not_applicable'),
+};
 
 /** "N of M ChatGPT Search answers showed an ad". */
 export function presenceLine(presence: AdPresence): string {
@@ -31,12 +36,8 @@ export function presenceLine(presence: AdPresence): string {
 
 /** The landing page as host and path; the query string never reaches the read. */
 export function landingLabel(url: string): string {
-  try {
-    const parsed = new URL(url);
-    return `${parsed.host}${parsed.pathname === '/' ? '' : parsed.pathname}`;
-  } catch {
-    return url;
-  }
+  const parsed = parseAbsoluteHttpUrl(url);
+  return parsed ? `${parsed.host}${parsed.pathname === '/' ? '' : parsed.pathname}` : url;
 }
 
 /** The heading and sentence for a read that has no ads to show. */
@@ -47,13 +48,13 @@ export function adsStateCopy(state: Exclude<VisibilityAdsResponse['state'], 'val
   switch (state) {
     case 'not_applicable':
       return {
-        heading: 'Not applicable',
+        heading: AD_APPLICABILITY.not_applicable,
         description:
           'Only ChatGPT Search shows ads. Choose ChatGPT Search or all surfaces to see them.',
       };
     case 'unavailable':
       return {
-        heading: 'Ads unavailable',
+        heading: AD_APPLICABILITY.unavailable,
         description:
           'These ChatGPT Search answers were collected before ads were read. Ads appear from the next audit.',
       };
