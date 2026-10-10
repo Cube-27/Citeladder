@@ -205,7 +205,7 @@ const crawlSamplingSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('filtered'), description: z.string() }),
 ]);
 /** Why a live source stopped delivering: silence, a lapsed plan, or batches over the size bound. */
-export const crawlStallReasonSchema = z.enum(['no_receipts', 'not_in_plan', 'oversize']);
+const crawlStallReasonSchema = z.enum(['no_receipts', 'not_in_plan', 'oversize']);
 export const crawlSourceSchema = z.object({
   id: z.uuid(),
   kind: z.enum(['webhook', 'upload']),

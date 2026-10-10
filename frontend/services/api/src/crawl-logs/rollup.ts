@@ -160,7 +160,7 @@ type Upload = Selectable<CrawlLogUploads>;
  * The longest silence a complete day tolerates. A Firehose stream emits on its
  * buffer interval, so its bound is that interval plus five minutes.
  */
-export function deliveryGapBound(source: Pick<Source, 'buffer_interval_seconds'>) {
+function deliveryGapBound(source: Pick<Source, 'buffer_interval_seconds'>) {
   const buffered =
     source.buffer_interval_seconds === null
       ? 0

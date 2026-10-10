@@ -62,9 +62,7 @@ function Connections({
   const { sources, canManage, open, setOpen, setIssued, mutation } = model;
   const [revoking, setRevoking] = useState<z.infer<typeof crawlSourceSchema> | null>(null);
   const showHeader = headerWhenEmpty || Boolean(sources.data?.items.length);
-  const setupAvailable = !sources.isError && sources.data?.availability === 'available';
-  // An unavailable workspace gets the explanation, not a setup it cannot complete.
-  const unavailable = sources.data !== undefined && sources.data.availability !== 'available';
+  const { setupAvailable, unavailable } = setupState(sources);
   return (
     <section id="crawl-log-connections" className="grid gap-3" aria-label="Crawl log connections">
       {showHeader ? (
@@ -128,6 +126,18 @@ function Connections({
       </Dialog>
     </section>
   );
+}
+/**
+ * Setup opens only on a read that says collection is available. An unavailable
+ * workspace gets the explanation, not a setup it cannot complete; a pending or
+ * failed read keeps the button, and the dialog explains the read.
+ */
+function setupState(sources: ReturnType<typeof useCrawlConnections>['sources']) {
+  const availability = sources.data?.availability;
+  return {
+    setupAvailable: !sources.isError && availability === 'available',
+    unavailable: availability !== undefined && availability !== 'available',
+  };
 }
 function SetupAvailability({ model }: Readonly<{ model: ReturnType<typeof useCrawlConnections> }>) {
   const { sources, mutation } = model;

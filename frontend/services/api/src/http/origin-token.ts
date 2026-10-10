@@ -26,7 +26,7 @@ function publicHosts(config: ServiceConfig): Set<string> {
 }
 
 /** Machine routes are declared under `/v1/...`; only the API host serves them, and only them. */
-export function isMachinePath(path: string): boolean {
+function isMachinePath(path: string): boolean {
   return path === '/v1' || path.startsWith('/v1/');
 }
 
