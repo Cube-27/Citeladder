@@ -14,7 +14,7 @@ import { sql } from 'kysely';
 import { z } from 'zod';
 
 import { policy } from '../config.ts';
-import type { Database } from '../db/database.ts';
+import { inTransaction, type Database } from '../db/database.ts';
 import { isUniqueViolation } from '../db/errors.ts';
 import { ApiError, notFound } from '../errors.ts';
 import type { DB } from '../generated/db-schema.ts';
@@ -148,7 +148,7 @@ export async function createTopic(
   input: z.infer<typeof topicCreate>,
 ): Promise<TopicView> {
   return writing(() =>
-    db.transaction().execute(async (trx) => {
+    inTransaction(db, async (trx) => {
       await requireProject(trx, workspaceId, projectId);
       await acquireProjectLock(trx, projectId);
       const parentId = input.parent_id ?? null;
@@ -180,7 +180,7 @@ export async function updateTopic(
   input: z.infer<typeof topicUpdate>,
 ): Promise<TopicView> {
   return writing(() =>
-    db.transaction().execute(async (trx) => {
+    inTransaction(db, async (trx) => {
       const topic = await scopedTopic(trx, workspaceId, topicId);
       // Every topic edit changes binding vocabulary or hierarchy: serialize it
       // with the prompt writers that read them.

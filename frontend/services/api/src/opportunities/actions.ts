@@ -9,7 +9,7 @@ import {
 import { sql, type Selectable } from 'kysely';
 
 import { policy } from '../config.ts';
-import type { Database } from '../db/database.ts';
+import { inTransaction, type Database } from '../db/database.ts';
 import type { Actions } from '../generated/db-schema.ts';
 import { ApiError, notFound } from '../errors.ts';
 import {
@@ -331,7 +331,7 @@ export async function updateActionStatus(
   status: string,
   userId: string,
 ) {
-  await db.transaction().execute(async (trx) => {
+  await inTransaction(db, async (trx) => {
     const action = await requireAction(trx, workspaceId, actionId, true);
     if (!a.ACTION_USER_STATUSES.includes(action.status))
       throw new ApiError(422, 'A declared Action cannot be changed');

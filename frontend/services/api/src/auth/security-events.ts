@@ -34,7 +34,22 @@ type SecurityEvent =
   | 'mcp.consent'
   | 'mcp.revoke'
   | 'mcp.token_reuse'
-  | 'mcp.workspace_revoke';
+  | 'mcp.workspace_revoke'
+  | `mcp.write.${McpWriteKind}`;
+
+/** Each change an MCP grant can make; its event targets the project. */
+export type McpWriteKind =
+  | 'create_topic'
+  | 'rename_topic'
+  | 'update_prompt_text'
+  | 'add_competitor'
+  | 'update_action_status'
+  | 'cancel_audit'
+  | 'add_prompts'
+  | 'archive_prompts'
+  | 'launch_audit'
+  | 'schedule'
+  | 'declare_implemented';
 
 /** Append in the mutation transaction; no arbitrary payload or secrets. */
 export async function recordSecurityEvent(
