@@ -506,17 +506,21 @@ platform-funded like perception. The policy, topics, caps and templates are the
   claims must quote the brand's own passages, sit on an allowed topic and stay
   within the per-answer cap; drops are counted. Claims land in
   `answer_claims` in the perception's terminal transaction.
-- **Verification.** When a confident claim has a frozen fact on its topic, the
-  same transaction queues one `fact_verification` analytics task. Its executor
-  sends those claims and the frozen facts on their topics (capped, local ids)
+- **Verification.** A claim is checked against facts on its own topic and on
+  its neighbouring topics (`related_topics`, frozen with the fact set: plans with
+  pricing and specs, availability with markets, and so on), so a claim filed
+  under an adjacent topic still meets the fact that decides it. When a
+  confident claim has a frozen fact in that scope, the same transaction queues
+  one `fact_verification` analytics task. Its executor sends those claims and
+  the scoped facts (own topics first, shared round-robin, capped, local ids)
   in one call. Code keeps only facts that were sent; a supported or
   contradicted verdict without one becomes inconclusive; a contradiction below
   `min_contradiction_confidence` is stored as inconclusive with low confidence.
   Caps, a missing gateway and failures end as persisted outcomes
   (`fact_verifications`, `claim_verdicts`), as for perception.
 - **Metrics.** Accuracy is supported ÷ (supported + contradicted), always with
-  coverage. A claim on a topic without a frozen fact is not covered without a
-  call; low confidence, pending and unavailable claims are counted apart, never
+  coverage. A claim with no frozen fact in its topic scope is not covered
+  without a call; low confidence, pending and unavailable claims are counted apart, never
   as zero. Contradicted claims carry the fact they contradict; domains cited in
   their answers are "cited alongside". Trend points change comparability with
   the templates, metrics version or fact set.

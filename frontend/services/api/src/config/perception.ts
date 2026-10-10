@@ -17,6 +17,9 @@ const factCheck = z.strictObject({
   verify_template_version: version,
   metrics_version: version,
   topics: z.array(factTopicSchema).min(1),
+  // Neighbouring topics whose facts a claim is also checked against, so a
+  // claim filed under an adjacent topic still meets the fact that decides it.
+  related_topics: z.record(z.string(), z.array(factTopicSchema)),
   statement_max_chars: positive,
   source_url_max_chars: positive,
   max_facts_per_project: positive,
@@ -92,6 +95,13 @@ function loadPerception(input: unknown) {
   const facts = config.fact_check;
   if (new Set(facts.topics).size !== facts.topics.length)
     throw new ConfigError('Fact-check topics must be unique');
+  for (const [topic, related] of Object.entries(facts.related_topics))
+    if (
+      !factTopicSchema.safeParse(topic).success ||
+      related.some((other) => other === topic) ||
+      related.some((other) => !facts.topics.includes(other))
+    )
+      throw new ConfigError(`Fact-check related topics for ${topic} are invalid`);
   if (facts.claims_default_limit > facts.claims_max_limit)
     throw new ConfigError('Fact-check claim default limit exceeds its maximum');
   if (facts.min_contradiction_confidence < facts.min_confidence)

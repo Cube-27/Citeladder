@@ -16,8 +16,19 @@ import { perceptionPrompt } from '../src/perception/model.ts';
 import type { PerceptionPackage } from '../src/perception/passages.ts';
 import { validateClaims } from '../src/perception/validate.ts';
 import { validateVerdicts, verifyPackage } from '../src/perception/verify.ts';
+import { checkedTopics, factScope, type FrozenFactCheck } from '../src/perception/admission.ts';
 
 const facts = policy.perception.fact_check;
+/** A frozen fact check with one fact per listed topic and the configured neighbours. */
+const frozenWith = (...topics: FrozenFactCheck['facts'][number]['topic'][]): FrozenFactCheck => ({
+  claims_version: 'c',
+  verify_template_version: 'v',
+  metrics_version: 'm',
+  fact_set_hash: 'h',
+  facts: topics.map((topic, index) => ({ revision_id: `rev-${index}`, topic })),
+  related_topics: facts.related_topics,
+});
+const ownTopicOnly = (topic: FrozenFactCheck['facts'][number]['topic']) => [topic];
 const BRAND = 'Acme Pro costs $49 per month. Acme integrates with Slack.';
 const RIVAL = 'Rival costs $20 per month.';
 const pkg: PerceptionPackage = {
@@ -139,6 +150,7 @@ describe('verdict validation', () => {
       { claimId: 'claim-c', topic: 'pricing', claim: 'Pro has a trial', quote: 'q3' },
       { claimId: 'claim-d', topic: 'pricing', claim: 'Pro is monthly', quote: 'q4' },
     ],
+    scope: ownTopicOnly,
     maxFacts: 20,
   });
 
@@ -157,11 +169,44 @@ describe('verdict validation', () => {
         { claimId: 'a', topic: 'pricing', claim: 'x', quote: 'x' },
         { claimId: 'b', topic: 'integrations', claim: 'y', quote: 'y' },
       ],
+      scope: ownTopicOnly,
       maxFacts: 2,
     });
     expect(shared.pkg.facts.map((fact) => fact.statement)).toEqual([
       'Pro costs $59.',
       'Works with Slack.',
+    ]);
+  });
+
+  it('checks a claim filed under an adjacent topic against the fact that decides it', () => {
+    const factCheck = frozenWith('specs', 'markets');
+    // A plan's contents filed under plans, and a country filed under availability.
+    const built = verifyPackage({
+      version: 'v',
+      brand: 'Acme',
+      language: 'en',
+      facts: [
+        { revisionId: 'rev-0', topic: 'specs', statement: 'The Team plan includes 50 projects.' },
+        { revisionId: 'rev-1', topic: 'markets', statement: 'Sold in the US and Canada only.' },
+        { revisionId: 'rev-2', topic: 'company', statement: 'Founded in 2016.' },
+      ],
+      claims: [
+        { claimId: 'a', topic: 'plans', claim: 'Unlimited projects', quote: 'q1' },
+        { claimId: 'b', topic: 'availability', claim: 'Available in Germany', quote: 'q2' },
+      ],
+      scope: (topic) => factScope(factCheck, topic),
+      maxFacts: 20,
+    });
+    expect(built.pkg.facts.map((fact) => fact.statement)).toEqual([
+      'The Team plan includes 50 projects.',
+      'Sold in the US and Canada only.',
+    ]);
+    expect([...checkedTopics(factCheck)].sort()).toEqual([
+      'availability',
+      'integrations',
+      'markets',
+      'plans',
+      'specs',
     ]);
   });
 

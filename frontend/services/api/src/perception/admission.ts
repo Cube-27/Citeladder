@@ -12,7 +12,7 @@
  */
 import { createHash } from 'node:crypto';
 
-import { factTopicSchema } from '@citeladder/contracts/fact-checking';
+import { factTopicSchema, type FactTopic } from '@citeladder/contracts/fact-checking';
 import type { Transaction } from 'kysely';
 import { z } from 'zod';
 
@@ -39,8 +39,25 @@ const factCheckSchema = z.object({
   // SHA-256 of the sorted revision ids: equal fact sets compare equal.
   fact_set_hash: z.string().min(1),
   facts: z.array(z.object({ revision_id: z.uuid(), topic: factTopicSchema })).min(1),
+  // The related-topic map in force at admission; later config never rewrites a read.
+  related_topics: z.record(z.string(), z.array(factTopicSchema)),
 });
 export type FrozenFactCheck = z.infer<typeof factCheckSchema>;
+
+/** The topics a claim on `topic` is checked against: its own, then its frozen neighbours. */
+export function factScope(factCheck: FrozenFactCheck, topic: FactTopic): FactTopic[] {
+  return [topic, ...(factCheck.related_topics[topic] ?? [])];
+}
+
+/** The claim topics with at least one frozen fact in scope; any other claim is not covered. */
+export function checkedTopics(factCheck: FrozenFactCheck): ReadonlySet<FactTopic> {
+  const withFacts = new Set(factCheck.facts.map((fact) => fact.topic));
+  return new Set(
+    factTopicSchema.options.filter((topic) =>
+      factScope(factCheck, topic).some((scoped) => withFacts.has(scoped)),
+    ),
+  );
+}
 
 /** What a new audit freezes: the versions in force now, for a brand audit only. */
 export function admittedPerceptionVersions(
@@ -102,6 +119,7 @@ export async function admittedFactCheck(
     metrics_version: settings.metrics_version,
     fact_set_hash: createHash('sha256').update(ids.join(',')).digest('hex'),
     facts,
+    related_topics: settings.related_topics,
   };
 }
 

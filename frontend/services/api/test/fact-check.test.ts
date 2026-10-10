@@ -404,6 +404,44 @@ describe('claim extraction and verification', () => {
     );
   });
 
+  it('verifies a claim the extractor filed under a neighbouring topic instead of calling it not covered', async () => {
+    await enroll(tenant);
+    await confirmedFact(tenant, 'specs', 'The Pro plan includes 50 projects.');
+    const auditId = await fixtures.audit(tenant, {
+      configuration: await pilotConfiguration(tenant),
+    });
+    await analysed(tenant, auditId, 'Acme Pro includes unlimited projects. Rival support is slow.');
+    const extraction = JSON.stringify({
+      entities: [{ entity_id: 'brand:acme', label: 'neutral', confidence: 0.9, aspects: [] }],
+      claims: [
+        {
+          topic: 'plans',
+          claim: 'Acme Pro includes unlimited projects.',
+          quote: 'Acme Pro includes unlimited projects',
+          confidence: 0.9,
+        },
+      ],
+    });
+    await drain(tenant, 'answer_perception', answerPerception(fakeGateway([extraction]).factory));
+    const verify = fakeGateway([
+      JSON.stringify({
+        verdicts: [{ claim_id: 'c1', verdict: 'contradicted', fact_ids: ['f1'], confidence: 0.9 }],
+      }),
+    ]);
+    await drain(tenant, 'fact_verification', factVerification(verify.factory));
+    const request = JSON.parse(String(verify.fetch.mock.calls[0]?.[1]?.body)) as {
+      messages: { content: string }[];
+    };
+    expect(request.messages[1]?.content).toContain('The Pro plan includes 50 projects.');
+    const summary = await call(tenant, 'GET', `/visibility/accuracy?audit_id=${auditId}`);
+    expect(summary.body).toMatchObject({
+      score: { coverage: { claims: 1, contradicted: 1, not_covered: 0 } },
+      contradicted: [
+        { topic: 'plans', facts: [{ statement: 'The Pro plan includes 50 projects.' }] },
+      ],
+    });
+  });
+
   it('extracts no claims for an audit admitted outside the pilot', async () => {
     const configuration = await pilotConfiguration(tenant);
     expect(configuration.fact_check).toBeNull();

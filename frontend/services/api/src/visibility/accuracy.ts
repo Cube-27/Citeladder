@@ -25,6 +25,7 @@ import {
 } from '../http/keyset-cursor.ts';
 import { chunked, groupBy } from '../lists.ts';
 import {
+  checkedTopics,
   frozenFactCheck,
   frozenPerceptionVersions,
   type FrozenFactCheck,
@@ -62,7 +63,7 @@ const revisionIdsSchema = z.array(z.string()).catch([]);
 type Frozen = {
   versions: PerceptionVersions;
   factCheck: FrozenFactCheck;
-  /** Topics with a frozen fact; a claim on any other topic is not covered. */
+  /** Claim topics with a frozen fact in scope; a claim on any other topic is not covered. */
   topics: ReadonlySet<string>;
 };
 type Subject = { analysisId: string; frozen: Frozen };
@@ -71,7 +72,7 @@ function frozenOf(configuration: unknown): Frozen | null {
   const versions = frozenPerceptionVersions(configuration);
   const factCheck = frozenFactCheck(configuration);
   if (!versions || !factCheck) return null;
-  return { versions, factCheck, topics: new Set(factCheck.facts.map((fact) => fact.topic)) };
+  return { versions, factCheck, topics: checkedTopics(factCheck) };
 }
 
 function identityOf({ versions, factCheck }: Frozen) {

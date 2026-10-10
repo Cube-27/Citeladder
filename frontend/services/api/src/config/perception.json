@@ -45,8 +45,8 @@
   "user_template": "Question asked: {prompt}\nAnswer language: {language}\nAllowed themes: {themes}\nAt most {max_aspects} aspects per business.\n\nBusinesses and their passages (JSON):\n{entities}\n\nReturn one entry per business, using its entity_id exactly.",
   "fact_check": {
     "verification_task_kind": "fact_verification",
-    "claims_version": "perception-claims-v1",
-    "verify_template_version": "fact-verify-v1",
+    "claims_version": "perception-claims-v2",
+    "verify_template_version": "fact-verify-v2",
     "metrics_version": "fact-metrics-v1",
     "topics": [
       "pricing",
@@ -58,6 +58,16 @@
       "specs",
       "company"
     ],
+    "related_topics": {
+      "pricing": ["plans"],
+      "plans": ["pricing", "specs"],
+      "specs": ["plans", "integrations"],
+      "integrations": ["specs"],
+      "availability": ["markets"],
+      "markets": ["availability"],
+      "policies": [],
+      "company": []
+    },
     "statement_max_chars": 300,
     "source_url_max_chars": 2048,
     "max_facts_per_project": 150,
@@ -74,14 +84,14 @@
     "max_cited_alongside": 10,
     "claims_default_limit": 20,
     "claims_max_limit": 100,
-    "eval_policy_version": "fact-eval-v1",
+    "eval_policy_version": "fact-eval-v2",
     "eval_thresholds": {
       "max_false_contradiction_rate": 0.05,
       "min_verdict_agreement": 0.8,
       "min_quote_validity": 0.95,
       "max_total_tokens_per_answer": 3000
     },
-    "claims_system_addendum": "Also list the factual claims the answer makes about the brand only (the business with kind \"brand\"). A claim is one checkable assertion of fact, such as a price, a plan, an integration, where it is available, which markets it serves, a policy, a specification or a company detail. Split a sentence that asserts several facts into separate claims. Leave out opinions, praise, criticism and recommendations; those are aspects. For each claim give its topic from the allowed list, the claim restated as one short sentence, a quote copied character for character from the brand's passages that makes the claim, and a confidence from 0 to 1 that it is a factual claim about the brand. Return an empty claims list rather than invent one.",
+    "claims_system_addendum": "Also list the factual claims the answer makes about the brand only (the business with kind \"brand\"). A claim is one checkable assertion of fact. Split a sentence that asserts several facts into separate claims, but keep one assertion whole: never split a single assertion across topics. Leave out opinions, praise, criticism and recommendations; those are aspects. Choose the topic by what the claim asserts: pricing = what it costs (prices, fees, discounts, the cost of a trial); plans = which plans or tiers exist, their names and how they are billed, not what they include; specs = what the product or a plan includes or can do (features, limits, capacities, supported platforms and apps), so \"the Team plan includes unlimited projects\" and \"it has an iOS app\" are specs; integrations = other products or services it connects to or works with; availability = whether it can be bought or used now (launched, in beta, on a waitlist, in stock, discontinued), not where; markets = where it is sold or which customers it serves (countries, regions, languages), so \"it is available in Germany\" is markets; policies = refunds, returns, warranty, cancellation, shipping and privacy terms; company = founding, ownership, headquarters, size, funding and leadership. For each claim give its topic from the allowed list, the claim restated as one short sentence, a quote copied character for character from the brand's passages that makes the claim, and a confidence from 0 to 1 that it is a factual claim about the brand. Return an empty claims list rather than invent one.",
     "claims_user_addendum": "Allowed claim topics: {topics}\nAt most {max_claims} claims about the brand.",
     "verify_system_template": "You check claims an AI assistant's answer made about a business against facts the business confirmed. For each claim give a verdict. supported: a listed fact states the same thing. contradicted: a listed fact states something incompatible with the claim, such as a different price, a missing integration or a market it does not serve. inconclusive: a listed fact is related but neither confirms nor rules out the claim. not_covered: no listed fact is about what the claim asserts. Judge what each claim's quote, the answer's exact words, asserts; when the restated claim says more than its quote, judge only the quote. Judge only against the listed facts, never against your own knowledge. For supported and contradicted, list the ids of the facts you relied on. Give a confidence from 0 to 1.",
     "verify_user_template": "Business: {brand}\nAnswer language: {language}\n\nConfirmed facts (JSON):\n{facts}\n\nClaims to check (JSON):\n{claims}\n\nReturn one entry per claim, using its claim_id exactly."

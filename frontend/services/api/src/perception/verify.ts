@@ -27,17 +27,13 @@ export type VerifyPackage = {
 };
 
 /**
- * Up to `max` facts on `topics`, taken one per topic in turn (frozen order
- * within a topic), so a topic with many facts never crowds another out.
+ * Up to `max` facts on `topics` (in priority order), taken one per topic in
+ * turn (frozen order within a topic), so a topic with many facts never crowds
+ * another out and the claims' own topics lead each round.
  */
-function sharedByTopic(facts: readonly VerifyFact[], topics: ReadonlySet<FactTopic>, max: number) {
-  const queues = new Map<FactTopic, VerifyFact[]>();
-  for (const fact of facts) {
-    if (!topics.has(fact.topic)) continue;
-    const queue = queues.get(fact.topic);
-    if (queue) queue.push(fact);
-    else queues.set(fact.topic, [fact]);
-  }
+function sharedByTopic(facts: readonly VerifyFact[], topics: readonly FactTopic[], max: number) {
+  const queues = new Map<FactTopic, VerifyFact[]>(topics.map((topic) => [topic, []]));
+  for (const fact of facts) queues.get(fact.topic)?.push(fact);
   const picked: VerifyFact[] = [];
   for (let round = 0; picked.length < max; round++) {
     const next = [...queues.values()].flatMap((queue) => queue[round] ?? []);
@@ -48,8 +44,9 @@ function sharedByTopic(facts: readonly VerifyFact[], topics: ReadonlySet<FactTop
 }
 
 /**
- * The package for one answer's claims: the frozen facts on the claims' topics,
- * in frozen order, capped. Local ids map back to fact revisions and claims.
+ * The package for one answer's claims: the frozen facts on the claims' topics
+ * and their neighbours (`scope`), capped. Local ids map back to fact revisions
+ * and claims.
  */
 export function verifyPackage(input: {
   version: string;
@@ -57,13 +54,13 @@ export function verifyPackage(input: {
   language: string;
   facts: readonly VerifyFact[];
   claims: readonly VerifyClaim[];
+  /** A claim topic's checked topics, its own first. */
+  scope: (topic: FactTopic) => readonly FactTopic[];
   maxFacts: number;
 }) {
-  const facts = sharedByTopic(
-    input.facts,
-    new Set(input.claims.map((claim) => claim.topic)),
-    input.maxFacts,
-  );
+  const own = input.claims.map((claim) => claim.topic);
+  const neighbours = own.flatMap((topic) => input.scope(topic));
+  const facts = sharedByTopic(input.facts, [...new Set([...own, ...neighbours])], input.maxFacts);
   const factIds = new Map(facts.map((fact, index) => [`f${index + 1}`, fact.revisionId]));
   const claimIds = new Map(input.claims.map((claim, index) => [`c${index + 1}`, claim.claimId]));
   const pkg: VerifyPackage = {

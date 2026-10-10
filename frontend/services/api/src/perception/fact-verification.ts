@@ -22,7 +22,7 @@ import type { ModelGateway } from '../models/gateway.ts';
 import type { QueueTask } from '../queue/task-queue.ts';
 import { scalarText } from '../text-order.ts';
 import { payloadString, taskProject, type Executor } from '../workers/executor.ts';
-import { frozenFactCheck, type FrozenFactCheck } from './admission.ts';
+import { checkedTopics, factScope, frozenFactCheck, type FrozenFactCheck } from './admission.ts';
 import {
   callStructured,
   configuredGateway,
@@ -77,7 +77,7 @@ async function eligibleClaims(
   subject: Subject,
   factCheck: FrozenFactCheck,
 ): Promise<VerifyClaim[]> {
-  const topics = new Set<string>(factCheck.facts.map((fact) => fact.topic));
+  const topics = checkedTopics(factCheck);
   const rows = await db
     .selectFrom('answer_claims')
     .select(['id', 'topic', 'claim', 'quote', 'low_confidence'])
@@ -227,6 +227,7 @@ export function factVerification(
       language: scalarText(configuration.language_code),
       facts,
       claims,
+      scope: (topic) => factScope(factCheck, topic),
       maxFacts: settings.max_facts_per_verification,
     });
     await checkCancelled('fact_verification_model_call');

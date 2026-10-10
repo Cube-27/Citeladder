@@ -22,7 +22,12 @@ import type { QueueTask } from '../queue/task-queue.ts';
 import { scalarText } from '../text-order.ts';
 import { payloadString, taskProject, type Executor } from '../workers/executor.ts';
 import { enqueueTask } from '../referrals/enqueue.ts';
-import { frozenFactCheck, frozenPerceptionVersions, type FrozenFactCheck } from './admission.ts';
+import {
+  checkedTopics,
+  frozenFactCheck,
+  frozenPerceptionVersions,
+  type FrozenFactCheck,
+} from './admission.ts';
 import { claimsOutputSchema, perceptionOutputSchema, perceptionPrompt } from './model.ts';
 import {
   callStructured,
@@ -96,7 +101,7 @@ async function alreadyPerceived(db: Database, subject: Subject, extractorVersion
 
 /** Whether any confident claim has a frozen fact on its topic, so verification has work. */
 function needsVerification(claims: readonly VerifiedClaim[], factCheck: FrozenFactCheck) {
-  const topics = new Set(factCheck.facts.map((fact) => fact.topic));
+  const topics = checkedTopics(factCheck);
   return claims.some((claim) => !claim.low_confidence && topics.has(claim.topic));
 }
 

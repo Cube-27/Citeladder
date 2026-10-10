@@ -2,11 +2,13 @@
  * Live fact-check calibration: each hand-labelled answer through the
  * perception call with the claims addendum, the claim validator, the
  * verification call and the verdict validator, the way a pilot audit runs
- * them. Scored for false-contradiction rate (the pilot gate), verdict
- * agreement, quote validity and tokens per answer against the configured
- * thresholds. Operator-run only (it calls the provider and spends platform
- * budget); never part of CI. Records append to one log in the worktree's Git
- * directory.
+ * them (same parse retry, same frozen topic scope). Scored for
+ * false-contradiction rate (the pilot gate), verdict agreement, quote validity
+ * and tokens per answer against the configured thresholds; topic agreement is
+ * reported beside them. A reply that stays unusable after the retry fails its
+ * fixture (its expected claims count as failed) instead of aborting the run.
+ * Operator-run only (it calls the provider and spends platform budget); never
+ * part of CI. Records append to one log in the worktree's Git directory.
  */
 import { appendFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -18,11 +20,14 @@ import { z } from 'zod';
 import { scoringConfig } from '../src/analysis/scoring.ts';
 import { policy } from '../src/config.ts';
 import { createModelGateway } from '../src/models/gateway.ts';
+import { checkedTopics, factScope, type FrozenFactCheck } from '../src/perception/admission.ts';
+import { callStructured } from '../src/perception/model-call.ts';
 import { claimsOutputSchema, perceptionPrompt } from '../src/perception/model.ts';
 import { entityPassages, type PerceptionPackage } from '../src/perception/passages.ts';
 import { validateClaims, validateOutput } from '../src/perception/validate.ts';
 import {
   validateVerdicts,
+  verifyHash,
   verifyOutputSchema,
   verifyPackage,
   verifyPrompt,
@@ -69,10 +74,29 @@ const run = new Date().toISOString();
 const brands = new Map(fixtures.brands.map((brand) => [brand.brand_name, brand]));
 
 type Answer = (typeof fixtures.answers)[number];
+type Brand = (typeof fixtures.brands)[number];
+type Actual = { quote: string; topic: string; verdict: string };
 
-async function evaluate(fixture: Answer) {
-  const brand = brands.get(fixture.brand_name);
-  if (!brand) throw new Error(`Fixture ${fixture.name} names an unknown brand`);
+const tokensOf = (call: { usage: Record<string, unknown> | null }) =>
+  Number(call.usage?.total_tokens ?? 0);
+
+/** The brand's facts frozen the way admission freezes them, so scope and coverage match a pilot audit. */
+function frozen(brand: Brand): FrozenFactCheck {
+  return {
+    claims_version: facts.claims_version,
+    verify_template_version: facts.verify_template_version,
+    metrics_version: facts.metrics_version,
+    fact_set_hash: 'calibration',
+    facts: brand.facts.map((fact, index) => ({
+      revision_id: `fixture-${index}`,
+      topic: fact.topic,
+    })),
+    related_topics: facts.related_topics,
+  };
+}
+
+/** Extraction then verification; the failed step instead when a reply stays unusable. */
+async function pipeline(fixture: Answer, brand: Brand) {
   const pkg: PerceptionPackage = {
     extractor_version: settings.extractor_version,
     template_version: `${settings.template_version}+${facts.claims_version}`,
@@ -88,20 +112,32 @@ async function evaluate(fixture: Answer) {
       policy: settings,
     }),
   };
-  const extraction = perceptionPrompt(pkg, settings, facts);
-  const extracted = await gateway.structured(
-    extraction.system,
-    extraction.user,
-    claimsOutputSchema,
+  const extraction = await callStructured(
+    gateway,
+    {
+      ...perceptionPrompt(pkg, settings, facts),
+      schema: claimsOutputSchema,
+      inputHash: '',
+      maxAttempts: settings.max_attempts,
+    },
+    (value) => {
+      validateOutput(pkg, value, settings);
+      return { outcome: 'classified' as const, ...validateClaims(pkg, value.claims, facts) };
+    },
   );
-  validateOutput(pkg, extracted.value, settings);
-  const claims = validateClaims(pkg, extracted.value.claims, facts);
-  const topics = new Set(brand.facts.map((fact) => fact.topic));
+  if (extraction.outcome.outcome !== 'classified')
+    return {
+      failed: `extraction_${extraction.outcome.outcome}`,
+      tokens: tokensOf(extraction.call),
+    };
+  const claims = extraction.outcome;
+  const factCheck = frozen(brand);
+  const topics = checkedTopics(factCheck);
   const eligible = claims.claims.filter(
     (claim) => !claim.low_confidence && topics.has(claim.topic),
   );
-  let verifyTokens = 0;
-  const verdicts = new Map<number, string>();
+  const verdicts = new Map<string, string>();
+  let tokens = tokensOf(extraction.call);
   if (eligible.length) {
     const built = verifyPackage({
       version: facts.verify_template_version,
@@ -114,59 +150,96 @@ async function evaluate(fixture: Answer) {
         claim: claim.claim,
         quote: claim.quote,
       })),
+      scope: (topic) => factScope(factCheck, topic),
       maxFacts: facts.max_facts_per_verification,
     });
-    const prompt = verifyPrompt(built.pkg, facts);
-    const checked = await gateway.structured(prompt.system, prompt.user, verifyOutputSchema);
-    verifyTokens = Number(checked.result.usage.total_tokens ?? 0);
-    for (const verdict of validateVerdicts(checked.value, built, facts).verdicts)
-      verdicts.set(
-        Number(verdict.claimId),
-        verdict.lowConfidence ? 'low_confidence' : verdict.verdict,
-      );
+    const verification = await callStructured(
+      gateway,
+      {
+        ...verifyPrompt(built.pkg, facts),
+        schema: verifyOutputSchema,
+        inputHash: verifyHash(built.pkg),
+        maxAttempts: facts.max_attempts,
+      },
+      (value) => ({ outcome: 'verified' as const, ...validateVerdicts(value, built, facts) }),
+    );
+    tokens += tokensOf(verification.call);
+    if (verification.outcome.outcome !== 'verified')
+      return { failed: `verification_${verification.outcome.outcome}`, tokens };
+    for (const verdict of verification.outcome.verdicts)
+      verdicts.set(verdict.claimId, verdict.lowConfidence ? 'low_confidence' : verdict.verdict);
   }
-  const actual = claims.claims.map((claim) => ({
+  const actual: Actual[] = claims.claims.map((claim) => ({
     quote: claim.quote,
     topic: claim.topic,
     verdict: claim.low_confidence
       ? 'low_confidence'
-      : topics.has(claim.topic)
-        ? (verdicts.get(claim.ordinal) ?? 'not_covered')
-        : 'not_covered',
+      : (verdicts.get(String(claim.ordinal)) ?? 'not_covered'),
   }));
-  const matched = fixture.expected.map((expected) => ({
-    expected: expected.verdict,
-    actual:
-      actual.find(
-        (claim) => claim.topic === expected.topic && claim.quote.includes(expected.quote_contains),
-      )?.verdict ?? 'missed',
-  }));
+  return {
+    actual,
+    kept: claims.claims.length,
+    invented: claims.drops.claim_quote_not_found ?? 0,
+    tokens,
+  };
+}
+
+async function evaluate(fixture: Answer) {
+  const brand = brands.get(fixture.brand_name);
+  if (!brand) throw new Error(`Fixture ${fixture.name} names an unknown brand`);
+  const result = await pipeline(fixture, brand);
+  const base = {
+    run,
+    fixture: fixture.name,
+    claims_version: facts.claims_version,
+    verify_template_version: facts.verify_template_version,
+    total_tokens: result.tokens,
+  };
+  if ('failed' in result)
+    return {
+      ...base,
+      failed: result.failed,
+      matched: fixture.expected.map((expected) => ({
+        expected: expected.verdict,
+        actual: 'failed',
+        topic_match: false,
+      })),
+      unexpected: [],
+      contradicted: 0,
+      false_contradictions: 0,
+      kept: 0,
+      invented: 0,
+    };
+  const { actual } = result;
+  // Quote first: the verdict is scored on the claim that quotes the expected words.
+  const matched = fixture.expected.map((expected) => {
+    const claim = actual.find((row) => row.quote.includes(expected.quote_contains));
+    return {
+      expected: expected.verdict,
+      actual: claim?.verdict ?? 'missed',
+      topic_match: claim?.topic === expected.topic,
+    };
+  });
   const expectedQuotes = fixture.expected.map((expected) => expected.quote_contains);
   const contradicted = actual.filter((claim) => claim.verdict === 'contradicted');
   const falseContradictions = contradicted.filter(
     (claim) =>
       !fixture.expected.some(
         (expected) =>
-          expected.verdict === 'contradicted' &&
-          expected.topic === claim.topic &&
-          claim.quote.includes(expected.quote_contains),
+          expected.verdict === 'contradicted' && claim.quote.includes(expected.quote_contains),
       ),
   );
   return {
-    run,
-    fixture: fixture.name,
-    claims_version: facts.claims_version,
-    verify_template_version: facts.verify_template_version,
+    ...base,
+    failed: null,
     matched,
     unexpected: actual.filter(
       (claim) => !expectedQuotes.some((quote) => claim.quote.includes(quote)),
     ),
     contradicted: contradicted.length,
     false_contradictions: falseContradictions.length,
-    kept: claims.claims.length,
-    invented: claims.drops.claim_quote_not_found ?? 0,
-    total_tokens: Number(extracted.result.usage.total_tokens ?? 0) + verifyTokens,
-    model: extracted.result.returned_model,
+    kept: result.kept,
+    invented: result.invented,
   };
 }
 
@@ -178,9 +251,10 @@ await appendFile(log, records.map((record) => `${JSON.stringify(record)}\n`).joi
 const sum = (pick: (record: (typeof records)[number]) => number) =>
   records.reduce((total, record) => total + pick(record), 0);
 const pairs = records.flatMap((record) => record.matched);
-const agreement = pairs.length
-  ? pairs.filter((pair) => pair.expected === pair.actual).length / pairs.length
-  : 1;
+const share = (count: number) => (pairs.length ? count / pairs.length : 1);
+const agreement = share(pairs.filter((pair) => pair.expected === pair.actual).length);
+const topicAgreement = share(pairs.filter((pair) => pair.topic_match).length);
+const failedFixtures = records.filter((record) => record.failed !== null).length;
 const contradicted = sum((record) => record.contradicted);
 const falseRate = contradicted ? sum((record) => record.false_contradictions) / contradicted : 0;
 const kept = sum((record) => record.kept);
@@ -196,8 +270,9 @@ const failures = [
 ].filter(Boolean);
 const verdict = failures.length ? 'failed ' + failures.join(', ') : 'within thresholds';
 process.stdout.write(
-  `${records.length} answers, ${pairs.length} expected claims (${facts.eval_policy_version}): ` +
-    `false contradictions ${falseRate.toFixed(2)} of ${contradicted}, ` +
-    `verdict agreement ${agreement.toFixed(2)}, quote validity ${quoteValidity.toFixed(2)}, ` +
-    `tokens/answer ${Math.round(tokens)}; ${verdict}\nLog: ${log}\n`,
+  `${records.length} answers (${failedFixtures} failed replies), ${pairs.length} expected claims ` +
+    `(${facts.eval_policy_version}): false contradictions ${falseRate.toFixed(2)} of ${contradicted}, ` +
+    `verdict agreement ${agreement.toFixed(2)}, topic agreement ${topicAgreement.toFixed(2)}, ` +
+    `quote validity ${quoteValidity.toFixed(2)}, tokens/answer ${Math.round(tokens)}; ${verdict}\n` +
+    `Log: ${log}\n`,
 );
