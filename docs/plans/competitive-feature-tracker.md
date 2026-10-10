@@ -23,6 +23,9 @@ fresh web research. External facts are captured in the
   (invariant 17, pre-launch policy). If live customers exist when a PR lands,
   stop and ask the owner for the first post-baseline migration policy.
 - Update this file's status table and log when a PR merges.
+- **Per-PR plans (2026-10-10) supersede the feature sections below where they
+  differ.** F2–F6 each have plan files (one per PR) linked from the status
+  table, verified against the code with every owner decision settled.
 
 ## Status
 
@@ -32,11 +35,11 @@ first. Size: S (≤2 days), M (≤1 week), L (>1 week).
 | ID | Feature | Value | Size | PRs | Depends on | Status | Plan file |
 |---|---|---|---|---|---|---|---|
 | F1 | Docs truth pass: consumer surfaces and schedules | — (do first) | S | 1 | — | done | — |
-| F2 | AI Traffic: enablement, `api.citeladder.com` host, AWS and GCP connectors | 1 | L | 2 | D2.2, D2.3 (open) | queued | `ai-traffic-connectors.md` |
-| F3 | Sentiment (answer perception) | 2 | L | 1 | D3.x | queued | `answer-perception.md` |
-| F4 | Public REST API, MCP move to `api.citeladder.com/mcp`, MCP write tools | 3 | L | 3 | F2-PR1 (host); D4.3, D4.6 | queued | `public-api-and-mcp-writes.md` |
-| F5 | Ads in AI answers | 4 | S–M | 1 | — | queued | `ai-answer-ads.md` |
-| F6 | Prompt grounding in observed questions | 5 (ongoing) | M | 1–2 | D6.x | queued | `prompt-grounding.md` |
+| F2 | AI Traffic: enablement, `api.citeladder.com` host, AWS and GCP connectors | 1 | L | 2 | — | planned | [F2a](F2a-ai-traffic-api-host-and-aws.md), [F2b](F2b-ai-traffic-gcp-pull.md) |
+| F3 | Sentiment (answer perception) | 2 | L | 1 | — | planned | [F3](F3-answer-perception.md) |
+| F4 | Public REST API, MCP move to `api.citeladder.com/mcp`, MCP write tools | 3 | L | 3 | F2a (host) | planned | [F4a](F4a-public-api-and-keys.md), [F4b](F4b-mcp-move-to-api-host.md), [F4c](F4c-mcp-write-tools.md) |
+| F5 | Ads in AI answers | 4 | S–M | 1 | — | planned | [F5](F5-ai-answer-ads.md) |
+| F6 | Prompt grounding in the project's own search data | 5 | M | 1 | — | planned | [F6](F6-prompt-grounding.md) |
 | F7 | Market (location/language) segmentation | 6 | M–L | 1 | D7.x | queued | `market-segmentation.md` |
 | F8 | Fact-checking against brand facts | 7 (gated) | M | 1 | F3, D8.1 | proposal | `fact-checking.md` |
 | F9 | Enterprise SSO and SCIM (WorkOS) | 8 (last) | L | 1–2 | domain verification | proposal | `enterprise-identity.md` |
@@ -1257,22 +1260,22 @@ owner, Part B).
 | ID | Question | Recommendation | Answer |
 |---|---|---|---|
 | D2.1 | Plans and source limits for crawl logs | — | All paid workspaces; not the public trial; 20 sources/project (2026-10-10) |
-| D2.2 | Raw request retention | — | |
-| D2.3 | Privacy/DPA wording | — | |
-| D2.4 | Filtered Firehose streams stay partial | yes | |
-| D2.5 | Pull-source complete-coverage rule | as written in F2 | |
+| D2.2 | Raw request retention | — | 90 days raw; legal text follows the general retention policy (2026-10-10) |
+| D2.3 | Privacy/DPA wording | — | Wording in F2a plan (2026-10-10) |
+| D2.4 | Filtered Firehose streams stay partial | yes | yes |
+| D2.5 | Pull-source complete-coverage rule | as written in F2 | as written (F2b plan) |
 | D3.1 | Perception funding | `ai_credits` | Platform-funded via the default Agent gateway (2026-10-10) |
-| D3.2 | Perception default on when funded | yes | |
+| D3.2 | Perception default on when funded | yes | Always on, no toggle (2026-10-10) |
 | D3.3 | Perception model | configured gateway model | Default Agent gateway model (2026-10-10) |
 | D4.1 | Public API host | `api.citeladder.com` | `api.citeladder.com`; MCP to `api.citeladder.com/mcp` (2026-10-10) |
 | D4.2 | Invariant 10 amendment | approve | MCP writes approved (2026-10-10) |
-| D4.3 | Plans with `api_access` | — | |
-| D4.4 | MCP prompt adds activate after confirmation | yes | |
-| D4.5 | Crawl-log ingest on the API host, apex alias kept | yes | |
-| D4.6 | MCP origin transition | dual-serve 90 days | |
-| D6.1 | Adopt observed questions as candidates | yes | |
-| D6.2 | LLM Mentions spend per topic action | yes, within ceiling | |
-| D6.3 | v3 live calibration before F6 | yes | |
+| D4.3 | Plans with `api_access` | — | All paid plans, 10 keys, 600/min per key, 1,200/min per workspace (2026-10-10) |
+| D4.4 | MCP prompt adds activate after confirmation | yes | yes (2026-10-10) |
+| D4.5 | Crawl-log ingest on the API host, apex alias kept | yes | API host; apex path deleted, no alias (2026-10-10) |
+| D4.6 | MCP origin transition | dual-serve 90 days | Hard cut, no dual-serve (2026-10-10) |
+| D6.1 | Adopt observed questions as candidates | yes | No; existing GSC/Search Intelligence data only steers phrasing (2026-10-10) |
+| D6.2 | LLM Mentions spend per topic action | yes, within ceiling | No new spend or step (2026-10-10) |
+| D6.3 | v3 live calibration before F6 | yes | Not a blocker; compare in the PR if credentials exist |
 | D7.1 | Markets per plan | — | |
 | D7.2 | Allowed DataForSEO locations | — | |
 | D8.1 | Build fact-checking after F3 | after F3 calibration | |
@@ -1410,3 +1413,4 @@ Source: https://us.fitgap.com/products/workos (WorkOS price table)
 | 2026-10-10 | all | Tracker created from a competitor review of Peec AI, Searchable and Profound docs and a read of the repository. Owner direction: F1 is a docs correction (consumer capture and schedules exist); sentiment, crawl-log connectors and the public API/MCP writes are to be built; enterprise SSO/SCIM moves last (Feedonomics is not a customer); agency reporting ignored for now. |
 | 2026-10-10 | F2, F3, F4, F9 | Owner decisions: crawl logs on for every paid workspace, off for the public trial; `api.citeladder.com` hosts the public API, crawl-log ingest and MCP (`/mcp`); MCP writes approved; perception model calls are platform-funded through the default Agent gateway; SSO/SCIM via WorkOS, last. F4 split into three PRs (API, MCP move, MCP writes). |
 | 2026-10-10 | F1 | Done, narrowed by the owner: public copy must not name DataForSEO or add engines to the landing page or docs site, so the landing strip and trial copy are unchanged. The API-only claim is corrected (FAQ, Measure page, llms.txt and docs Visibility page now say answers come from consumer apps and provider APIs), the docs Visibility page gains a Schedule audits section linked from Prompts and Quickstart, and the changelog records it. Internal: DataForSEO surfaces follow the project search context (US/English/desktop default) validated against `dataforseo.json`, so visibility-prompt.md no longer claims a scraper-only US/English allowlist. |
+| 2026-10-10 | F2–F6 | Per-PR plans written (F2a, F2b, F3, F4a, F4b, F4c, F5, F6) after code verification. Owner decisions: hard cut for the crawl-log ingest path and MCP origin (no aliases or dual-serve); 90-day raw crawl retention under the general retention policy; perception always on, docs-only announcement; `api_access` on all paid plans with 10 keys; MCP prompt adds active after confirmation; F6 reuses existing Search Console and Search Intelligence data with no new step or spend, F6b backlogged. Everything is greenfield: no backfills or legacy handling. |
