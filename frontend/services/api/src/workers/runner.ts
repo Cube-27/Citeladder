@@ -267,8 +267,11 @@ export async function runnerOwners(db: Database, config: ServiceConfig) {
       { name: 'agent', run: () => agent.runOnce(), nextDue: () => agent.nextDue() },
       {
         name: 'audits',
-        run: async (canAdmit) =>
-          (await maintenance.recoverLeases(new Date(), canAdmit)) + (await audit.runOnce()),
+        run: async (canAdmit) => {
+          const reclaimed = await maintenance.recoverLeases(new Date(), canAdmit);
+          // Recovery may spend the rest of the budget; claim nothing after admission closes.
+          return reclaimed + (canAdmit() ? await audit.runOnce() : 0);
+        },
         nextDue: () => audit.nextDue(),
       },
       {
