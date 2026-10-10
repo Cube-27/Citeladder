@@ -23,7 +23,7 @@ type PullSource = Pick<
 >;
 
 /** The first ownership or delivery rule the subscription breaks, or null. */
-export function subscriptionFailure(
+function subscriptionFailure(
   subscription: GcpSubscription,
   nonce: string,
 ): VerificationFailure | null {
