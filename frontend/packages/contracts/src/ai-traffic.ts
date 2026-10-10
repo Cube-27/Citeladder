@@ -209,8 +209,10 @@ export const crawlStallReasonSchema = z.enum(['no_receipts', 'not_in_plan', 'ove
 export const crawlSourceSchema = z.object({
   id: z.uuid(),
   kind: z.enum(['webhook', 'upload']),
-  setup: z.enum(['cloudflare_worker', 'cloudflare_logpush', 'custom', 'upload']),
+  setup: z.enum(['cloudflare_worker', 'cloudflare_logpush', 'aws_firehose', 'custom', 'upload']),
   preset: z.string(),
+  /** Declared Firehose buffer interval; null for other setups. */
+  buffer_interval_seconds: z.number().nullable(),
   format: z.string(),
   collection_point: z.string(),
   sampling: crawlSamplingSchema,
@@ -235,6 +237,12 @@ export const crawlLogAvailabilitySchema = z.enum(['available', 'not_in_plan', 'd
 export const crawlSourceListSchema = z.object({
   availability: crawlLogAvailabilitySchema,
   items: z.array(crawlSourceSchema),
+});
+/** Amazon Data Firehose's HTTP endpoint response contract. */
+export const firehoseResponseSchema = z.object({
+  requestId: z.string(),
+  timestamp: z.number(),
+  errorMessage: z.string().optional(),
 });
 export const crawlTokenSchema = z.object({ id: z.uuid(), token: z.string().nullable() });
 export const crawlReceiptSchema = z.object({

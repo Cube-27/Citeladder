@@ -89,6 +89,7 @@ describe('AI Traffic state and navigation', () => {
               kind: 'webhook',
               setup: 'custom',
               preset: 'custom_ndjson',
+              buffer_interval_seconds: null,
               format: 'ndjson',
               collection_point: 'application',
               sampling: { kind: 'none' },
@@ -112,7 +113,7 @@ describe('AI Traffic state and navigation', () => {
       ),
     );
     renderWithProviders(<CrawlLogConnections />);
-    expect(await screen.findByText(/Custom · Connected · Stalled/)).toBeVisible();
+    expect(await screen.findByText(/Custom webhook · Connected · Stalled/)).toBeVisible();
     expect(
       screen.getByText('A batch over 5 MiB was dropped. Lower the stream buffer size.'),
     ).toBeVisible();
@@ -152,6 +153,7 @@ describe('AI Traffic state and navigation', () => {
                   kind: 'upload',
                   setup: 'upload',
                   preset: 'custom_ndjson',
+                  buffer_interval_seconds: null,
                   format: 'ndjson',
                   collection_point: 'uploaded_file',
                   sampling: { kind: 'none' },
@@ -241,6 +243,39 @@ describe('AI Traffic state and navigation', () => {
       else expect(screen.queryByText('Observed patterns')).not.toBeInTheDocument();
     },
   );
+  it('creates an Amazon CloudFront source with its buffer interval and shows the Firehose endpoint', async () => {
+    const id = '99999999-9999-4999-8999-999999999999';
+    let created: unknown = null;
+    mswServer.use(
+      http.get(root + '/crawl-logs/sources', () =>
+        HttpResponse.json({ availability: 'available', items: [] }),
+      ),
+      http.post(root + '/crawl-logs/sources', async ({ request }) => {
+        created = await request.json();
+        return HttpResponse.json({ id, token: 'clw_test_token' });
+      }),
+    );
+    const user = userEvent.setup();
+    renderWithProviders(<CrawlLogConnections />);
+    await user.click(screen.getByRole('button', { name: 'Connect crawl logs' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Connect crawl logs' });
+    await user.click(within(dialog).getByRole('radio', { name: /Amazon CloudFront/ }));
+    expect(
+      within(dialog).getByText(/In us-east-1, create an Amazon Data Firehose stream/),
+    ).toBeVisible();
+    expect(within(dialog).queryByRole('combobox', { name: 'Sampling' })).not.toBeInTheDocument();
+    const interval = within(dialog).getByLabelText('Firehose buffer interval (seconds)');
+    await user.clear(interval);
+    await user.type(interval, '300');
+    await user.click(within(dialog).getByRole('button', { name: 'Create source' }));
+    expect(await within(dialog).findByText(/\/v1\/crawl-logs\/firehose\/9{8}-/)).toBeVisible();
+    expect(created).toEqual({
+      setup: 'aws_firehose',
+      origin: 'https://acme.com',
+      buffer_interval_seconds: 300,
+      declared_filtered: false,
+    });
+  });
   it('preserves the issued token until the source dialog is closed', async () => {
     let creates = 0;
     mswServer.use(

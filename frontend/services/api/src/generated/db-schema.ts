@@ -1193,9 +1193,11 @@ export interface CrawlLogCoverageDaily {
 
 export interface CrawlLogSources {
   accepted_hosts: Json;
+  buffer_interval_seconds: number | null;
   collection_point: string;
   created_at: Timestamp;
   created_by_member_id: string;
+  declared_filtered: boolean;
   format: string;
   host: string;
   id: string;

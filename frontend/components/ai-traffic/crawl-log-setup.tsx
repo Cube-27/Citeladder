@@ -7,7 +7,12 @@ import {
   logFormatLabel,
 } from '@/lib/ai-traffic/vocabulary';
 import type { useCrawlConnections } from '@/lib/ai-traffic/use-crawl-connections';
-import { CRAWL_LOG_SETUPS, CRAWL_INGEST_ORIGIN } from '@/lib/config/crawl-logs';
+import {
+  CLOUDFRONT_LOG_FIELDS,
+  CRAWL_LOG_SETUPS,
+  CRAWL_INGEST_ORIGIN,
+  FIREHOSE_BUFFER_INTERVAL,
+} from '@/lib/config/crawl-logs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -18,6 +23,7 @@ import { RadioGroup } from '@/components/ui/radio-group';
 import { Alert } from '@/components/ui/alert';
 import { CopyButton } from '@/components/ui/copy-button';
 import { TextLink } from '@/components/ui/text-link';
+import { Checkbox } from '@/components/ui/checkbox';
 const SETUP_STEPS: Partial<Record<(typeof CRAWL_LOG_SETUPS)[number]['value'], string>> = {
   cloudflare_worker:
     'Deploy the downloadable template yourself. Store the token as a Worker secret, use a fail-open route, and expect partial coverage. Every routed request uses your Workers quota.',
@@ -29,25 +35,10 @@ const SETUP_STEPS: Partial<Record<(typeof CRAWL_LOG_SETUPS)[number]['value'], st
 export function CrawlLogSetup({
   model,
 }: Readonly<{ model: ReturnType<typeof useCrawlConnections> }>) {
-  const {
-    setup,
-    setSetup,
-    origin,
-    setOrigin,
-    format,
-    setFormat,
-    sampling,
-    setSampling,
-    rate,
-    setRate,
-    filter,
-    setFilter,
-    point,
-    setPoint,
-    mutation,
-  } = model;
+  const { setup, setSetup, origin, setOrigin, setSampling, setFilter, setPoint, mutation } = model;
   const chosen = CRAWL_LOG_SETUPS.find((s) => s.value === setup)!;
   const steps = SETUP_STEPS[chosen.value];
+  const firehose = setup === 'aws_firehose';
   return (
     <Stack gap="section">
       <RadioGroup
@@ -75,6 +66,7 @@ export function CrawlLogSetup({
       />
       <div className={panelClasses({ tone: 'well', pad: 'compact' }, 'grid gap-2')}>
         {steps ? <p className="type-body text-secondary">{steps}</p> : null}
+        {firehose ? <FirehoseSteps interval={model.bufferInterval} /> : null}
         <TextLink variant="external" href={chosen.guide} className="w-fit">
           Setup guide: {chosen.label}
         </TextLink>
@@ -85,62 +77,121 @@ export function CrawlLogSetup({
             <Input {...field} value={origin} onChange={(e) => setOrigin(e.target.value)} />
           )}
         </Field>
-        <Field label="Log format">
-          {({ id }) => (
-            <Select
-              id={id}
-              ariaLabel="Log format"
-              value={format}
-              onValueChange={setFormat}
-              options={LOG_FORMATS.map((value) => ({ value, label: logFormatLabel(value) }))}
-            />
-          )}
-        </Field>
-        <Field label="Collection point">
-          {({ id }) => (
-            <Select
-              id={id}
-              ariaLabel="Collection point"
-              value={point}
-              onValueChange={setPoint}
-              options={COLLECTION_POINTS.map((value) => ({
-                value,
-                label: collectionPointLabel(value),
-              }))}
-            />
-          )}
-        </Field>
-        <Field label="Sampling">
-          {({ id }) => (
-            <Select
-              id={id}
-              ariaLabel="Sampling"
-              value={sampling}
-              onValueChange={setSampling}
-              options={[
-                { value: 'none', label: 'Unsampled' },
-                { value: 'sampled', label: 'Sampled' },
-                { value: 'filtered', label: 'Filtered' },
-              ]}
-            />
-          )}
-        </Field>
-        {sampling === 'sampled' ? (
-          <Field label="Sampling rate (0–1)">
-            {(field) => <Input {...field} value={rate} onChange={(e) => setRate(e.target.value)} />}
-          </Field>
-        ) : null}
-        {sampling === 'filtered' ? (
-          <Field label="Filtering limitations" className="sm:col-span-2">
-            {(field) => (
-              <Input {...field} value={filter} onChange={(e) => setFilter(e.target.value)} />
-            )}
-          </Field>
-        ) : null}
+        {firehose ? <FirehoseFields model={model} /> : <DeclaredFields model={model} />}
       </div>
       {mutation.isError ? <Alert tone="danger">{mutation.error.message}</Alert> : null}
       {setup === 'upload' ? <UploadForm model={model} /> : null}
     </Stack>
+  );
+}
+/** Format, collection point and sampling a custom sender declares; Firehose fixes all three. */
+function DeclaredFields({ model }: Readonly<{ model: ReturnType<typeof useCrawlConnections> }>) {
+  const { format, setFormat, point, setPoint, sampling, setSampling, rate, setRate } = model;
+  const { filter, setFilter } = model;
+  return (
+    <>
+      <Field label="Log format">
+        {({ id }) => (
+          <Select
+            id={id}
+            ariaLabel="Log format"
+            value={format}
+            onValueChange={setFormat}
+            options={LOG_FORMATS.map((value) => ({ value, label: logFormatLabel(value) }))}
+          />
+        )}
+      </Field>
+      <Field label="Collection point">
+        {({ id }) => (
+          <Select
+            id={id}
+            ariaLabel="Collection point"
+            value={point}
+            onValueChange={setPoint}
+            options={COLLECTION_POINTS.map((value) => ({
+              value,
+              label: collectionPointLabel(value),
+            }))}
+          />
+        )}
+      </Field>
+      <Field label="Sampling">
+        {({ id }) => (
+          <Select
+            id={id}
+            ariaLabel="Sampling"
+            value={sampling}
+            onValueChange={setSampling}
+            options={[
+              { value: 'none', label: 'Unsampled' },
+              { value: 'sampled', label: 'Sampled' },
+              { value: 'filtered', label: 'Filtered' },
+            ]}
+          />
+        )}
+      </Field>
+      {sampling === 'sampled' ? (
+        <Field label="Sampling rate (0–1)">
+          {(field) => <Input {...field} value={rate} onChange={(e) => setRate(e.target.value)} />}
+        </Field>
+      ) : null}
+      {sampling === 'filtered' ? (
+        <Field label="Filtering limitations" className="sm:col-span-2">
+          {(field) => (
+            <Input {...field} value={filter} onChange={(e) => setFilter(e.target.value)} />
+          )}
+        </Field>
+      ) : null}
+    </>
+  );
+}
+/** The stream's declared buffer interval and whether it runs the filter Lambda. */
+function FirehoseFields({ model }: Readonly<{ model: ReturnType<typeof useCrawlConnections> }>) {
+  const { bufferInterval, setBufferInterval, declaredFiltered, setDeclaredFiltered } = model;
+  return (
+    <>
+      <Field
+        label="Firehose buffer interval (seconds)"
+        hint={`Use the value set on the stream; ${FIREHOSE_BUFFER_INTERVAL.min}–300 is recommended.`}
+      >
+        {(field) => (
+          <Input
+            {...field}
+            inputMode="numeric"
+            value={bufferInterval}
+            onChange={(e) => setBufferInterval(e.target.value)}
+          />
+        )}
+      </Field>
+      <Checkbox
+        className="sm:col-span-2"
+        checked={declaredFiltered}
+        onCheckedChange={(checked) => setDeclaredFiltered(checked === true)}
+        label="The stream runs the CiteLadder filter Lambda (coverage stays partial)"
+      />
+    </>
+  );
+}
+/** Generated AWS console steps; the endpoint and token appear once the source exists. */
+function FirehoseSteps({ interval }: Readonly<{ interval: string }>) {
+  return (
+    <ol className="type-body text-secondary grid list-decimal gap-1 pl-5">
+      <li>
+        In us-east-1, create an Amazon Data Firehose stream: source Direct PUT, destination HTTP
+        endpoint. Use the endpoint URL and the token (as the access key) shown after you create the
+        source. Content encoding GZIP, buffer size 1–3 MiB, buffer interval {interval || '60'}{' '}
+        seconds, retry duration 3600 seconds, S3 backup for failed data only.
+      </li>
+      <li>
+        On the CloudFront distribution, add standard logging to Amazon Data Firehose, choose the
+        stream and output format JSON, with these fields: {CLOUDFRONT_LOG_FIELDS.join(', ')}.
+      </li>
+      <li>
+        CloudFront can take about four hours to start delivering reliably. The Firehose
+        console&apos;s test data is not CloudFront logs and shows as an unsupported-format batch;
+        test with a real page visit instead.
+      </li>
+    </ol>
   );
 }
 export function CrawlLogCredential({
@@ -148,6 +199,8 @@ export function CrawlLogCredential({
 }: Readonly<{
   issued: ReturnType<typeof useCrawlConnections>['issued'];
 }>) {
+  const route = issued?.setup === 'aws_firehose' ? 'firehose' : 'ingest';
+  const endpoint = `${CRAWL_INGEST_ORIGIN}/v1/crawl-logs/${route}/${issued?.id ?? ''}`;
   return issued ? (
     <Alert tone="info">
       <div className="grid gap-3">
@@ -155,12 +208,8 @@ export function CrawlLogCredential({
           <>
             <p>Copy this token now. It is shown once.</p>
             <CopyButton value={issued.token}>Copy token</CopyButton>
-            <p className="type-caption break-all">
-              {CRAWL_INGEST_ORIGIN + '/v1/crawl-logs/ingest/' + issued.id}
-            </p>
-            <CopyButton value={CRAWL_INGEST_ORIGIN + '/v1/crawl-logs/ingest/' + issued.id}>
-              Copy endpoint
-            </CopyButton>
+            <p className="type-caption break-all">{endpoint}</p>
+            <CopyButton value={endpoint}>Copy endpoint</CopyButton>
           </>
         ) : null}
       </div>

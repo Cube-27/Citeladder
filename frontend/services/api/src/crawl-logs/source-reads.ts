@@ -61,6 +61,7 @@ export async function sourceList(
       kind: s.kind,
       setup: s.setup,
       preset: s.preset,
+      buffer_interval_seconds: s.buffer_interval_seconds,
       format: s.format,
       collection_point: s.collection_point,
       sampling: s.sampling,

@@ -1223,6 +1223,9 @@ CREATE TABLE public.crawl_log_sources (
     last_processed_at timestamp with time zone,
     stall_reason character varying(32),
     stalled_at timestamp with time zone,
+    buffer_interval_seconds integer,
+    declared_filtered boolean NOT NULL,
+    CONSTRAINT ck_crawl_log_sources_buffer_interval CHECK ((((setup)::text = 'aws_firehose'::text) = (buffer_interval_seconds IS NOT NULL)) AND ((buffer_interval_seconds IS NULL) OR ((buffer_interval_seconds >= 60) AND (buffer_interval_seconds <= 900)))),
     CONSTRAINT ck_crawl_log_sources_stall CHECK (((stall_reason IS NULL) = (stalled_at IS NULL)))
 );
 

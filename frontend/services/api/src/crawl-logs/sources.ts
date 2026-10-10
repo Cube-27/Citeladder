@@ -18,13 +18,43 @@ const samplingSchema = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('sampled'), rate: z.number().gt(0).max(1) }),
   z.strictObject({ kind: z.literal('filtered'), description: z.string().trim().min(1).max(512) }),
 ]);
-export const createSourceSchema = z.strictObject({
-  setup: z.enum(['cloudflare_worker', 'cloudflare_logpush', 'custom', 'upload']),
-  origin: z.url().max(512),
-  format: z.enum(['ndjson', 'json_array', 'combined']).default('ndjson'),
-  collection_point: z.enum(['cdn_edge', 'origin', 'application', 'uploaded_file']).optional(),
-  sampling: samplingSchema.optional(),
-});
+export const createSourceSchema = z
+  .strictObject({
+    setup: z.enum(['cloudflare_worker', 'cloudflare_logpush', 'aws_firehose', 'custom', 'upload']),
+    origin: z.url().max(512),
+    format: z.enum(['ndjson', 'json_array', 'combined']).default('ndjson'),
+    collection_point: z.enum(['cdn_edge', 'origin', 'application', 'uploaded_file']).optional(),
+    sampling: samplingSchema.optional(),
+    /** Firehose buffer interval declared at setup; it widens the coverage gap bound. */
+    buffer_interval_seconds: z.int().min(60).max(900).optional(),
+    /** The stream runs CiteLadder's filter Lambda, so quiet periods send nothing. */
+    declared_filtered: z.boolean().optional(),
+  })
+  .refine(
+    (input) =>
+      input.setup === 'aws_firehose'
+        ? input.buffer_interval_seconds !== undefined &&
+          input.collection_point === undefined &&
+          input.sampling === undefined &&
+          input.format === 'ndjson'
+        : input.buffer_interval_seconds === undefined && input.declared_filtered === undefined,
+    {
+      message:
+        'An Amazon Firehose source declares its buffer interval and filter only; other setups declare neither',
+    },
+  );
+/** A Firehose stream through the filter Lambda keeps recognized crawlers only. */
+const FIREHOSE_FILTERED = {
+  kind: 'filtered',
+  description: 'CiteLadder filter Lambda: recognized crawler requests only',
+} as const;
+const SETUP_PRESETS = {
+  cloudflare_worker: 'cloudflare_worker_template',
+  cloudflare_logpush: 'cloudflare_logpush_http_requests',
+  aws_firehose: 'cloudfront_v2_json',
+  custom: 'custom_ndjson',
+  upload: 'custom_ndjson',
+} as const;
 const token = () => 'clw_' + randomBytes(32).toString('base64url');
 export type CrawlLogAvailability = 'available' | 'not_in_plan' | 'disabled';
 const { codes } = policy.entitlements;
@@ -76,10 +106,11 @@ export async function createSource(
   )
     throw new ApiError(422, 'Use a site origin without a path or credentials');
   const host = origin.hostname.toLowerCase();
-  let preset = 'custom_ndjson';
-  if (input.setup === 'cloudflare_worker') preset = 'cloudflare_worker_template';
-  if (input.setup === 'cloudflare_logpush') preset = 'cloudflare_logpush_http_requests';
+  const preset = SETUP_PRESETS[input.setup];
   const defaults = crawlLogs.presets[preset]!;
+  const sampling = input.declared_filtered
+    ? FIREHOSE_FILTERED
+    : (input.sampling ?? defaults.sampling);
   return await db.transaction().execute(async (trx) => {
     await lockAuthorizedWorkspace(trx, scope.workspaceId, actorId, 'manage_credentials');
     await requireCrawlLogs(trx, scope.workspaceId);
@@ -138,7 +169,7 @@ export async function createSource(
           input.setup === 'upload'
             ? 'uploaded_file'
             : (input.collection_point ?? defaults.collection_point),
-        sampling: JSON.stringify(input.sampling ?? defaults.sampling),
+        sampling: JSON.stringify(sampling),
         origin: origin.origin,
         host,
         accepted_hosts: JSON.stringify([host]),
@@ -149,6 +180,8 @@ export async function createSource(
         created_at: new Date(),
         revoked_at: null,
         last_processed_at: null,
+        buffer_interval_seconds: input.buffer_interval_seconds ?? null,
+        declared_filtered: input.declared_filtered ?? false,
       })
       .execute();
     await recordSecurityEvent(trx, 'crawl_log.create', actorId, scope.workspaceId, id);

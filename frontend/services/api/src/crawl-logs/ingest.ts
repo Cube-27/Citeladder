@@ -168,6 +168,8 @@ export async function ingest(
     tokenHash?: string;
     actorId?: string;
     quotaChecked?: boolean;
+    /** Records an adaptor could not decode into lines; counted as rejected lines. */
+    rejectedRecords?: number;
   },
 ) {
   await requireCrawlLogs(db, source.workspace_id);
@@ -205,6 +207,9 @@ export async function ingest(
   if (!preset) throw new ApiError(415, 'Unsupported preset');
   const preparedBatch = prepareBatch({ source, lines, preset, latest, now, format });
   const { counts, prepared, first, last } = preparedBatch;
+  const rejectedRecords = options.rejectedRecords ?? 0;
+  counts.lines_received += rejectedRecords;
+  counts.lines_rejected += rejectedRecords;
   unsupported ??= preparedBatch.unsupported;
   let receiptStatus = 'accepted';
   if (validation) receiptStatus = 'destination_validation';
@@ -263,7 +268,12 @@ export async function ingest(
         ...counts,
         first_line_at: first,
         last_line_at: last,
-        heartbeat: !options.uploadId && !unsupported && !validation && lines.length === 0,
+        heartbeat:
+          !options.uploadId &&
+          !unsupported &&
+          !validation &&
+          lines.length === 0 &&
+          rejectedRecords === 0,
         bytes_received: bytes,
       })
       .execute();

@@ -24,6 +24,10 @@ import {
 import { CrawlLogSetup, CrawlLogSetupSubmit, CrawlLogCredential } from './crawl-log-setup';
 import { CrawlLogAvailabilityNotice } from './crawl-log-availability';
 import { collectionPointLabel, stallReasonLabel, words } from '@/lib/ai-traffic/vocabulary';
+import { CRAWL_LOG_SETUPS } from '@/lib/config/crawl-logs';
+
+const setupLabel = (setup: string) =>
+  CRAWL_LOG_SETUPS.find((option) => option.value === setup)?.label ?? words(setup);
 export function CrawlLogConnections({
   open,
   onOpenChange,
@@ -173,7 +177,7 @@ function SourceDiagnostics({
               <div className="grid gap-0.5">
                 <span>{s.host}</span>
                 <span className="type-caption">
-                  {words(s.setup)} · {words(s.connection)} · {words(s.state)}
+                  {setupLabel(s.setup)} · {words(s.connection)} · {words(s.state)}
                 </span>
                 {s.stall_reason ? (
                   <span className="type-caption">{stallReasonLabel(s.stall_reason)}</span>

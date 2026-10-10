@@ -16,6 +16,14 @@ export const CRAWL_LOG_SETUPS = [
     guide: docsUrl('/ai-traffic/#cloudflare-logpush'),
   },
   {
+    value: 'aws_firehose',
+    collectionPoint: 'cdn_edge',
+    label: 'Amazon CloudFront',
+    description:
+      'Standard logs through Amazon Data Firehose. Unfiltered, gap-free days can reach complete coverage.',
+    guide: docsUrl('/ai-traffic/#amazon-cloudfront-firehose'),
+  },
+  {
     value: 'custom',
     collectionPoint: 'application',
     label: 'Custom webhook',
@@ -30,6 +38,19 @@ export const CRAWL_LOG_SETUPS = [
       'Local pre-filtering and resumable backfill. Full-day scans are labelled client-reported.',
     guide: docsUrl('/ai-traffic/#file-upload'),
   },
+] as const;
+/** The Firehose buffer interval suggested at setup, and the range the API accepts. */
+export const FIREHOSE_BUFFER_INTERVAL = { default: 60, min: 60, max: 900 } as const;
+/** CloudFront standard logging (v2) fields the Firehose stream must deliver, in setup order. */
+export const CLOUDFRONT_LOG_FIELDS = [
+  'timestamp(ms)',
+  'c-ip',
+  'sc-status',
+  'cs-method',
+  'cs-uri-stem',
+  'x-edge-request-id',
+  'x-host-header',
+  'cs(User-Agent)',
 ] as const;
 /** Machine senders post to the API host; locally that is the API container itself. */
 export const CRAWL_INGEST_ORIGIN = process.env.PUBLIC_API_ORIGIN || 'http://127.0.0.1:8100';

@@ -2,7 +2,11 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { aiTrafficApi } from '@/lib/api/ai-traffic';
 import { queryKeys } from '@/lib/api/query-keys';
-import { CRAWL_LOG_SETUPS, UPLOAD_PROCESSING_POLL_MS } from '@/lib/config/crawl-logs';
+import {
+  CRAWL_LOG_SETUPS,
+  FIREHOSE_BUFFER_INTERVAL,
+  UPLOAD_PROCESSING_POLL_MS,
+} from '@/lib/config/crawl-logs';
 import { uploadCrawlFile } from './upload';
 import type { z } from 'zod';
 import type { crawlSourceListSchema } from '@citeladder/contracts/ai-traffic';
@@ -78,7 +82,13 @@ export function useCrawlConnections({
     [rate, setRate] = useState('1'),
     [filter, setFilter] = useState('Best-effort recognized automated requests');
   const [point, setPoint] = useState('cdn_edge');
-  const [issued, setIssued] = useState<{ id: string; token: string | null } | null>(null);
+  const [bufferInterval, setBufferInterval] = useState(String(FIREHOSE_BUFFER_INTERVAL.default)),
+    [declaredFiltered, setDeclaredFiltered] = useState(false);
+  const [issued, setIssued] = useState<{
+    id: string;
+    token: string | null;
+    setup?: (typeof CRAWL_LOG_SETUPS)[number]['value'];
+  } | null>(null);
   const [sourceId, setSourceId] = useState(''),
     [resume, setResume] = useState(''),
     [file, setFile] = useState<File | null>(null);
@@ -96,6 +106,17 @@ export function useCrawlConnections({
         | { kind: 'filtered'; description: string } = { kind: 'none' };
       if (sampling === 'sampled') sourceSampling = { kind: sampling, rate: Number(rate) };
       if (sampling === 'filtered') sourceSampling = { kind: sampling, description: filter };
+      if (action.kind === 'create' && setup === 'aws_firehose')
+        return aiTrafficApi.createSource(
+          projectId,
+          {
+            setup,
+            origin,
+            buffer_interval_seconds: Number(bufferInterval),
+            declared_filtered: declaredFiltered,
+          },
+          options,
+        );
       if (action.kind === 'create')
         return aiTrafficApi.createSource(
           projectId,
@@ -111,7 +132,7 @@ export function useCrawlConnections({
       return aiTrafficApi.mutateSource(projectId, action.id, action.kind, options);
     },
     onSuccess: async (result, action) => {
-      setIssued(result);
+      setIssued(action.kind === 'create' ? { ...result, setup } : result);
       if (action.kind === 'create' && setup === 'upload') setSourceId(result.id);
       if (action.kind === 'revoke' && sourceId === action.id) setSourceId('');
       await refresh();
@@ -166,6 +187,10 @@ export function useCrawlConnections({
     setFilter,
     point,
     setPoint,
+    bufferInterval,
+    setBufferInterval,
+    declaredFiltered,
+    setDeclaredFiltered,
     issued,
     setIssued,
     sourceId,
