@@ -62,8 +62,13 @@ export function operatorDiagnostic(error: unknown): string {
   if (error instanceof Error && error.message === 'An active platform administrator is required')
     return 'active_admin_required';
   // A PostgreSQL SQLSTATE (28P01: password rejected) names the cause without any input.
-  if (error instanceof Error && 'code' in error && typeof error.code === 'string')
-    if (/^[0-9A-Z]{5}$/u.test(error.code)) return `${error.constructor.name} ${error.code}`;
+  if (
+    error instanceof Error &&
+    'code' in error &&
+    typeof error.code === 'string' &&
+    /^[0-9A-Z]{5}$/u.test(error.code)
+  )
+    return `${error.constructor.name} ${error.code}`;
   return error instanceof Error ? error.constructor.name : 'Error';
 }
 

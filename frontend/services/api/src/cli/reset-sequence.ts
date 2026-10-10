@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { policy } from '../config.ts';
 import { OperatorRefusal } from './operator.ts';
 
-type Execute = (
+export type Execute = (
   command: string,
   args: string[],
   options: { env: Record<string, string | undefined>; timeout: number; cwd: string },

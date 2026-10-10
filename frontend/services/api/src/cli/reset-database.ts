@@ -2,16 +2,12 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { localEnvironment } from './local-environment.ts';
 import { OperatorRefusal, operatorMain } from './operator.ts';
-import { resetSequence } from './reset-sequence.ts';
+import { resetSequence, type Execute } from './reset-sequence.ts';
 
 const run = promisify(execFile);
 
 /** Each step prints its own reviewed diagnostic; execFile would otherwise swallow it. */
-async function execute(
-  command: string,
-  args: string[],
-  options: { env: Record<string, string | undefined>; timeout: number; cwd: string },
-) {
+const execute: Execute = async (command, args, options) => {
   try {
     return await run(command, args, options);
   } catch (error) {
@@ -19,7 +15,7 @@ async function execute(
       process.stderr.write(String(error.stderr));
     throw new OperatorRefusal('reset_step_failed');
   }
-}
+};
 
 await operatorMain(async () => {
   await resetSequence(localEnvironment(), execute);
