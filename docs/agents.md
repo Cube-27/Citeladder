@@ -187,7 +187,7 @@ from another project. `list_projects` and the MCP App views (`render_visibility`
 `render_site_health`, `open_analytics`) are not Agent tools. Each call runs as
 the chat member through MCP's membership predicate, and workspace access
 (trial and plan) is rechecked before every model step. The Agent and MCP read
-the same catalogue, including `read_actions`, `read_content_differentiation` and `read_perception`;
+the same catalogue, including `read_actions`, `read_content_differentiation`, `read_perception` and `read_ai_ads`;
 there are no Agent-only reads. A caller's mistake (a bad cursor, window or
 filter) is refused with the owner's reason so the model can correct the call.
 No tool writes.
