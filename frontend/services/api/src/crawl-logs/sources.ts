@@ -91,9 +91,9 @@ const SETUPS = {
   { preset: string; kind: string }
 >;
 type SourceKind = (typeof SETUPS)[keyof typeof SETUPS]['kind'];
-const LIVE: readonly SourceKind[] = ['webhook', 'pull'];
+const LIVE: readonly string[] = ['webhook', 'pull'] satisfies readonly SourceKind[];
 /** Sources that collect continuously; one per host may be live. */
-export const isLiveKind = (kind: string) => LIVE.some((live) => live === kind);
+export const isLiveKind = (kind: string) => LIVE.includes(kind);
 const token = () => 'clw_' + randomBytes(32).toString('base64url');
 const NONCE_ALPHABET = 'abcdefghijklmnopqrstuvwxyz234567';
 /** 26 lowercase base32 characters: a valid GCP label value. 256 % 32 = 0, so unbiased. */

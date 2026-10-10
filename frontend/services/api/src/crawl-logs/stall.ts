@@ -11,7 +11,9 @@ import { crawlLogs } from '../config/crawl-logs.ts';
  */
 export type StallReason = z.infer<typeof crawlStallReasonSchema>;
 /** Reasons a receipt cannot disprove: a failed subscription check holds until a check passes. */
-export const CHECK_HELD_STALLS: readonly StallReason[] = ['verification_failed'];
+export const CHECK_HELD_STALLS: readonly string[] = [
+  'verification_failed',
+] satisfies readonly StallReason[];
 
 /** Record a refusal the sender cannot see in a receipt; the first reason and time stay. */
 export async function markStalled(

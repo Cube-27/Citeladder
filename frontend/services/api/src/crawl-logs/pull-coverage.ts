@@ -30,7 +30,13 @@ function decision(source: Selectable<CrawlLogSources>, receipts: readonly Receip
   );
   if (!today.length) return { coverage: 'unknown', reason: 'no_data', gap } as const;
   const settledAfter = day.end.getTime() + settings.pull_settle_minutes * 60000;
-  if (source.created_at > day.start || (source.revoked_at && source.revoked_at < day.end))
+  // A source first verified after midnight was not collecting the whole day.
+  if (
+    source.created_at > day.start ||
+    !source.verified_at ||
+    source.verified_at > day.start ||
+    (source.revoked_at && source.revoked_at < day.end)
+  )
     return { coverage: 'partial', reason: 'pull_not_live_all_day', gap } as const;
   if (Number(source.declared_sample_rate) !== 1)
     return { coverage: 'partial', reason: 'pull_sampled', gap } as const;

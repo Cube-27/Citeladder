@@ -32,8 +32,8 @@ function fakeGoogle(
     clock: Date.parse('2026-10-10T00:00:00Z'),
     log: [] as string[],
     labels: options.labels ?? {},
-    /** When set, `status` applies to this call only (`:pull` or `:acknowledge`). */
-    failing: '' as '' | ':pull' | ':acknowledge',
+    /** When set, `status` applies to this call only (subscription `get`, `:pull` or `:acknowledge`). */
+    failing: '' as '' | 'get' | ':pull' | ':acknowledge',
     /** Runs when an acknowledgement arrives, before it is applied. */
     onAck: async () => {},
   };
@@ -54,7 +54,8 @@ function fakeGoogle(
       });
     }
     if (!authorization?.startsWith('Bearer reader-token-')) return reply(401, {});
-    if (state.status !== 200 && (!state.failing || url.endsWith(state.failing)))
+    const call = /:(pull|acknowledge)$/u.exec(url)?.[0] ?? 'get';
+    if (state.status !== 200 && (!state.failing || call === state.failing))
       return reply(state.status, { error: { message: 'secret detail' } });
     if (url.endsWith(':pull')) {
       state.pulls += 1;
@@ -491,6 +492,36 @@ describe('pull task', () => {
     expect(google.state.pulls).toBe(pulls);
     expect(await pullReceipts(id)).toEqual([]);
   });
+  it('does not pull when the due ownership check cannot reach Google', async () => {
+    const { tenant, id, google, executor } = await verifiedSource();
+    await db
+      .updateTable('crawl_log_sources')
+      .set({ verification_checked_at: new Date(Date.now() - 2 * 86400000) })
+      .where('id', '=', id)
+      .execute();
+    google.state.messages.push(message(lbEntry('/held')));
+    google.state.failing = 'get';
+    google.state.status = 503;
+    await runPull(tenant, executor);
+    expect(google.state.pulls).toBe(0);
+    expect(await pullReceipts(id)).toEqual([]);
+    expect((await row(id)).stall_reason).toBeNull();
+  });
+  it('retries a held source daily even before its first pull', async () => {
+    const { tenant, id } = await verifiedSource();
+    await db
+      .updateTable('crawl_log_sources')
+      .set({
+        stall_reason: 'verification_failed',
+        stalled_at: new Date(),
+        verification_failure: 'label_mismatch',
+        last_pull_at: null,
+      })
+      .where('id', '=', id)
+      .execute();
+    await enqueueDuePulls(db, tenant.workspaceId, new Date(), () => true);
+    expect(await pullTasks(tenant.workspaceId)).toHaveLength(1);
+  });
   it('schedules verified sources only, once per interval', async () => {
     const unverified = await pullSource();
     const { tenant } = await verifiedSource();
@@ -546,12 +577,21 @@ describe('pull coverage', () => {
   const start = new Date(day + 'T00:00:00Z');
   /** Drains every `gap` minutes across the day, then one `settle` minutes after it closed. */
   async function coverageFor(
-    options: { gap?: number; settle?: number | null; rate?: number; catalog?: string } = {},
+    options: {
+      gap?: number;
+      settle?: number | null;
+      rate?: number;
+      catalog?: string;
+      verifiedLateMinutes?: number;
+    } = {},
   ) {
     const { tenant, id } = await pullSource(undefined, options.rate);
     await db
       .updateTable('crawl_log_sources')
-      .set({ created_at: new Date(start.getTime() - 3600_000), verified_at: start })
+      .set({
+        created_at: new Date(start.getTime() - 3600_000),
+        verified_at: new Date(start.getTime() + (options.verifiedLateMinutes ?? 0) * 60000),
+      })
       .where('id', '=', id)
       .execute();
     const seed = await ingest(db, await row(id), Buffer.alloc(0), {
@@ -593,6 +633,8 @@ describe('pull coverage', () => {
     [{ settle: null }, 'partial', 'pull_awaiting_settle'],
     [{ rate: 0.5 }, 'partial', 'pull_sampled'],
     [{ catalog: '1' }, 'partial', 'sink_filter_outdated'],
+    // Verified ten minutes after midnight: the drain gap alone would not notice.
+    [{ verifiedLateMinutes: 10 }, 'partial', 'pull_not_live_all_day'],
   ] as const)('judges drains %j as %s (%s)', async (options, coverage, reason) => {
     expect(await coverageFor(options)).toEqual({ coverage, reason });
   });

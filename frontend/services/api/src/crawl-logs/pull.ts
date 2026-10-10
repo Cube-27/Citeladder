@@ -115,7 +115,10 @@ export async function enqueueDuePulls(
           eb.or([eb('stall_reason', 'is', null), eb('stall_reason', 'not in', held)]),
           eb.or([eb('last_pull_at', 'is', null), eb('last_pull_at', '<', recent)]),
         ]),
-        eb.and([eb('stall_reason', 'in', held), eb('last_pull_at', '<', daily)]),
+        eb.and([
+          eb('stall_reason', 'in', held),
+          eb.or([eb('last_pull_at', 'is', null), eb('last_pull_at', '<', daily)]),
+        ]),
       ]),
     )
     .orderBy('id')
@@ -153,12 +156,13 @@ export function crawlLogPull(readerFor: () => PubSubReader | null = defaultPubSu
     if (availability !== 'available') return;
     if (verificationDue(source, new Date())) {
       await checkCancelled('crawl-log-verify');
-      await verifyPullSource(db, source, reader);
+      // An ownership check that could not run is not a pass: pull again once one does.
+      const { failure } = await verifyPullSource(db, source, reader);
+      if (failure === 'unavailable') return;
       source = await findLivePullSource(db, scope, sourceId);
     }
     const subscription = source?.subscription;
-    if (!source || !subscription || CHECK_HELD_STALLS.some((r) => r === source?.stall_reason))
-      return;
+    if (!source || !subscription || CHECK_HELD_STALLS.includes(source.stall_reason ?? '')) return;
     await drain({
       db,
       reader,
