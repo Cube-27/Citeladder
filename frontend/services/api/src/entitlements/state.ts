@@ -7,7 +7,7 @@ import { expiryMs, selectedGrants, foldEntitlement, type GrantRow } from './reso
 /**
  * One persisted projection reused by usage, reads and admission. Never
  * provisions. A caller that already read the account row passes it to save a
- * round trip; the remaining reads run together.
+ * round trip.
  */
 export async function accountState(
   db: Database,
@@ -16,15 +16,16 @@ export async function accountState(
   at: Date,
   known?: Selectable<BillingAccounts>,
 ) {
-  const [account, grants, revocations, subscription] = await Promise.all([
+  const account =
     known?.id === accountId && known.workspace_id === workspaceId
       ? known
-      : db
+      : await db
           .selectFrom('billing_accounts')
           .selectAll()
           .where('workspace_id', '=', workspaceId)
           .where('id', '=', accountId)
-          .executeTakeFirstOrThrow(),
+          .executeTakeFirstOrThrow();
+  const [grants, revocations, subscription] = await Promise.all([
     db
       .selectFrom('account_grants')
       .selectAll()

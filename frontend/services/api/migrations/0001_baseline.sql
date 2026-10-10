@@ -117,8 +117,8 @@ CREATE TABLE public.agent_messages (
 CREATE TABLE public.agent_model_attempts (
     id uuid NOT NULL,
     workspace_id uuid NOT NULL,
-    project_id uuid,
-    run_id uuid,
+    project_id uuid NOT NULL,
+    run_id uuid NOT NULL,
     dispatch_id uuid NOT NULL,
     run_attempt integer NOT NULL,
     ordinal integer NOT NULL,
@@ -524,7 +524,8 @@ CREATE TABLE public.billing_accounts (
     registration_cohort_at timestamp with time zone DEFAULT now() NOT NULL,
     created_at timestamp with time zone NOT NULL,
     updated_at timestamp with time zone NOT NULL,
-    CONSTRAINT ck_billing_account_entitlement_version_nonneg CHECK ((entitlement_lifecycle_version >= 0))
+    CONSTRAINT ck_billing_account_entitlement_version_nonneg CHECK ((entitlement_lifecycle_version >= 0)),
+    CONSTRAINT ck_billing_account_registration_origin CHECK (((registration_origin)::text = ANY ((ARRAY['public'::character varying, 'operator'::character varying])::text[])))
 );
 
 CREATE TABLE public.billing_catalog_revisions (
@@ -1106,7 +1107,7 @@ CREATE TABLE public.consumable_ledger (
     CONSTRAINT ck_consumable_ledger_attempt_shape CHECK (((((entry_kind)::text = ANY ((ARRAY['debit'::character varying, 'refund'::character varying])::text[])) AND (attempt IS NOT NULL) AND (attempt > 0)) OR (((entry_kind)::text <> ALL ((ARRAY['debit'::character varying, 'refund'::character varying])::text[])) AND (attempt IS NULL)))),
     CONSTRAINT ck_consumable_ledger_entry_kind CHECK (((entry_kind)::text = ANY ((ARRAY['reservation'::character varying, 'debit'::character varying, 'release'::character varying, 'refund'::character varying])::text[]))),
     CONSTRAINT ck_consumable_ledger_refund_shape CHECK ((((entry_kind)::text = 'refund'::text) = (refund_of_id IS NOT NULL))),
-    CONSTRAINT ck_consumable_ledger_typed_subject CHECK (((((subject_kind)::text = 'audit'::text) AND (agent_run_id IS NULL) AND (site_crawl_id IS NULL)) OR (((subject_kind)::text = 'agent'::text) AND (audit_id IS NULL) AND (task_id IS NULL) AND (site_crawl_id IS NULL)) OR (((subject_kind)::text = 'site_crawl'::text) AND (audit_id IS NULL) AND (task_id IS NULL) AND (agent_run_id IS NULL)))),
+    CONSTRAINT ck_consumable_ledger_typed_subject CHECK (((((subject_kind)::text = 'audit'::text) AND (audit_id IS NOT NULL) AND (task_id IS NOT NULL) AND (agent_run_id IS NULL) AND (site_crawl_id IS NULL)) OR (((subject_kind)::text = 'agent'::text) AND (audit_id IS NULL) AND (task_id IS NULL) AND (agent_run_id IS NOT NULL) AND (site_crawl_id IS NULL)) OR (((subject_kind)::text = 'site_crawl'::text) AND (audit_id IS NULL) AND (task_id IS NULL) AND (agent_run_id IS NULL) AND (site_crawl_id IS NOT NULL)))),
     CONSTRAINT ck_consumable_ledger_units_positive CHECK ((units > 0))
 );
 
@@ -2948,7 +2949,8 @@ CREATE TABLE public.users (
     is_active boolean NOT NULL,
     session_version integer NOT NULL,
     created_at timestamp with time zone NOT NULL,
-    updated_at timestamp with time zone NOT NULL
+    updated_at timestamp with time zone NOT NULL,
+    CONSTRAINT ck_user_registration_origin CHECK (((registration_origin)::text = ANY ((ARRAY['public'::character varying, 'operator'::character varying])::text[])))
 );
 
 CREATE TABLE public.web_acquisition_controls (
@@ -4267,6 +4269,8 @@ CREATE INDEX ix_consumable_ledger_grant_key_created ON public.consumable_ledger 
 
 CREATE INDEX ix_consumable_ledger_reservation_kind ON public.consumable_ledger USING btree (reservation_id, entry_kind);
 
+CREATE INDEX ix_consumable_ledger_subject ON public.consumable_ledger USING btree (subject_kind, subject_id);
+
 CREATE INDEX ix_content_differentiation_candidates_audit_id ON public.content_differentiation_candidates USING btree (audit_id);
 
 CREATE INDEX ix_content_differentiation_candidates_audit_task_id ON public.content_differentiation_candidates USING btree (audit_task_id);
@@ -4972,16 +4976,10 @@ ALTER TABLE ONLY public.agent_messages
     ADD CONSTRAINT agent_messages_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.agent_model_attempts
-    ADD CONSTRAINT agent_model_attempts_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE SET NULL;
-
-ALTER TABLE ONLY public.agent_model_attempts
     ADD CONSTRAINT agent_model_attempts_provider_connection_id_fkey FOREIGN KEY (provider_connection_id) REFERENCES public.provider_connections(id) ON DELETE RESTRICT;
 
 ALTER TABLE ONLY public.agent_model_attempts
     ADD CONSTRAINT agent_model_attempts_provider_route_id_fkey FOREIGN KEY (provider_route_id) REFERENCES public.provider_app_routes(id) ON DELETE RESTRICT;
-
-ALTER TABLE ONLY public.agent_model_attempts
-    ADD CONSTRAINT agent_model_attempts_run_id_fkey FOREIGN KEY (run_id) REFERENCES public.agent_runs(id) ON DELETE SET NULL;
 
 ALTER TABLE ONLY public.agent_model_attempts
     ADD CONSTRAINT agent_model_attempts_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE RESTRICT;
@@ -5389,9 +5387,6 @@ ALTER TABLE ONLY public.competitors
     ADD CONSTRAINT competitors_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.consumable_ledger
-    ADD CONSTRAINT consumable_ledger_audit_id_fkey FOREIGN KEY (audit_id) REFERENCES public.audits(id) ON DELETE SET NULL;
-
-ALTER TABLE ONLY public.consumable_ledger
     ADD CONSTRAINT consumable_ledger_billing_account_id_fkey FOREIGN KEY (billing_account_id) REFERENCES public.billing_accounts(id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.consumable_ledger
@@ -5399,12 +5394,6 @@ ALTER TABLE ONLY public.consumable_ledger
 
 ALTER TABLE ONLY public.consumable_ledger
     ADD CONSTRAINT consumable_ledger_refund_of_id_fkey FOREIGN KEY (refund_of_id) REFERENCES public.consumable_ledger(id) ON DELETE RESTRICT;
-
-ALTER TABLE ONLY public.consumable_ledger
-    ADD CONSTRAINT consumable_ledger_site_crawl_id_fkey FOREIGN KEY (site_crawl_id) REFERENCES public.site_crawls(id) ON DELETE SET NULL;
-
-ALTER TABLE ONLY public.consumable_ledger
-    ADD CONSTRAINT consumable_ledger_task_id_fkey FOREIGN KEY (task_id) REFERENCES public.audit_tasks(id) ON DELETE SET NULL;
 
 ALTER TABLE ONLY public.consumable_ledger
     ADD CONSTRAINT consumable_ledger_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE RESTRICT;
@@ -5492,9 +5481,6 @@ ALTER TABLE ONLY public.brands
 
 ALTER TABLE ONLY public.competitors
     ADD CONSTRAINT fk_competitors_logo_asset_id_brand_logo_assets FOREIGN KEY (logo_asset_id) REFERENCES public.brand_logo_assets(id) ON DELETE SET NULL;
-
-ALTER TABLE ONLY public.consumable_ledger
-    ADD CONSTRAINT fk_consumable_ledger_agent_run_id FOREIGN KEY (agent_run_id) REFERENCES public.agent_runs(id) ON DELETE SET NULL;
 
 ALTER TABLE ONLY public.content_differentiation_candidates
     ADD CONSTRAINT fk_content_diff_candidates_audit FOREIGN KEY (workspace_id, project_id, audit_id) REFERENCES public.audits(workspace_id, project_id, id) ON DELETE CASCADE;

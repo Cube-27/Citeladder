@@ -91,6 +91,11 @@
       "type": "int",
       "default": 30
     },
+    "trial_purge_workspace_batch": {
+      "env": ["BILLING_TRIAL_PURGE_WORKSPACE_BATCH"],
+      "type": "int",
+      "default": 5
+    },
     "http_max_connections": {
       "env": ["BILLING_HTTP_MAX_CONNECTIONS"],
       "type": "int",

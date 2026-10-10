@@ -57,7 +57,7 @@ owns the authorization matrix:
 | Member | Yes          | Yes               | No                                              | No                 |
 | Viewer | Yes          | No                | No                                              | No                 |
 
-The schema accepts only these four roles, at most one Owner per workspace and at
+Registration origin is `public` or `operator` in the schema. The schema accepts only these four roles, at most one Owner per workspace and at
 most one owned workspace per person; Admin, Member and Viewer memberships are
 unlimited. A role outside the matrix confers nothing. Role authorization and entitlement availability are
 separate checks; both must permit an action. Workspace Admin is not an operator
@@ -141,15 +141,17 @@ when access ends. Missing access authority is distinct from an expired trial.
 
 Deleting a project needs both the `delete_projects` role capability (Owner or
 Admin) and the plan's `project_deletion` entitlement, which trials do not carry.
-It removes the project and everything it owns. Billing and usage records stay,
-with their links to the deleted audits, crawls and Agent runs cleared. Deletion
+It removes the project and everything it owns. Billing and usage records stay
+and keep the exact IDs of the deleted audits, crawls and Agent runs; those
+provenance columns carry no foreign key, so deletion never rewrites them. Deletion
 is refused (`project_work_running`) while an audit, crawl or Agent run still
 holds reserved units, because nothing could release that hold afterwards.
 
 A trial-only workspace (no plan, add-on, top-up or operator grant) loses access
 when its trial ends. The runner deletes its projects
-`BILLING_TRIAL_DATA_RETENTION_DAYS` (default 30) after that, a bounded batch per
-pass, rechecking access through the persisted access read first.
+`BILLING_TRIAL_DATA_RETENTION_DAYS` (default 30) after that, a bounded batch of
+workspaces per pass (`BILLING_TRIAL_PURGE_WORKSPACE_BATCH`), rechecking each
+workspace through the persisted access read first.
 
 ## Browser selection and reads
 

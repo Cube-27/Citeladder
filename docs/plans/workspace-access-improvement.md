@@ -155,7 +155,7 @@ belongs with those features); sliding session renewal; per-device sign-out
 
 | # | Change | Where |
 |---|---|---|
-| 4.1 | Billing and usage references to audits, crawls, audit tasks and Agent runs/attempts become `ON DELETE SET NULL`; the ledger keeps workspace, account, amount, kind and subject. References inside a project move from `RESTRICT` to `NO ACTION` so one cascade can delete them | `0001_baseline.sql` |
+| 4.1 | Billing and usage provenance columns (ledger audit, task, Agent run and crawl IDs; model-attempt project and run IDs) drop their foreign keys and keep exact IDs after deletion; a subject index serves the open-hold check. References inside a project move from `RESTRICT` to `NO ACTION` so one cascade can delete them | `0001_baseline.sql` |
 | 4.2 | Delete requires the `delete_projects` capability (Owner/Admin) and the existing `project_deletion` entitlement, which trials lack; refused while metered work holds reserved units | `projects/service.ts`, `routes/projects.ts`, `entitlements/ledger.ts` |
 | 4.3 | Runner sweep purges projects of workspaces whose only grants are trial grants that ended more than 30 days ago, a bounded batch per pass | `workers/runner.ts`, `projects/trial-purge.ts` |
 

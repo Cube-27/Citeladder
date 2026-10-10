@@ -63,24 +63,15 @@ afterAll(async () => {
 });
 
 describe('verified self-serve lifecycle', () => {
-  it('fails closed on unknown registration provenance without repairing it into legacy access', async () => {
+  it('cannot store an identity whose registration provenance is unknown', async () => {
     const { user } = await pending();
-    const unknown = await db
-      .updateTable('users')
-      .set({ registration_origin: 'unknown', email_verified_at: new Date() })
-      .where('id', '=', user.id)
-      .returningAll()
-      .executeTakeFirstOrThrow();
-    const app = createApp(config, db);
-    expect(
-      (
-        await app.request('/api/v1/auth/me', {
-          headers: {
-            Cookie: `${config.session.cookieName}=${await issueSession(config, unknown)}`,
-          },
-        })
-      ).status,
-    ).toBe(401);
+    await expect(
+      db
+        .updateTable('users')
+        .set({ registration_origin: 'unknown', email_verified_at: new Date() })
+        .where('id', '=', user.id)
+        .execute(),
+    ).rejects.toThrow(/ck_user_registration_origin/u);
   });
   it('denies expired REST and evidence access while preserving account recovery', async () => {
     const { user, workspaceId } = await pending();

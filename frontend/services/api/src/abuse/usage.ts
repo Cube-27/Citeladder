@@ -56,6 +56,30 @@ export async function enforceWorkspaceRequest(
   );
 }
 
+/** Subjects are case-folded and hashed; no raw address or identifier is stored. */
+function subjectHash(subjectValue: string): string {
+  return createHash('sha256').update(subjectValue.trim().toLowerCase()).digest('hex');
+}
+
+function windowOf(windowSeconds: number, now: Date) {
+  const epoch = Math.floor(now.getTime() / 1000);
+  const startedEpoch = epoch - (epoch % windowSeconds);
+  return {
+    started: new Date(startedEpoch * 1000),
+    expires: new Date((startedEpoch + windowSeconds) * 1000),
+  };
+}
+
+function throttled(subjectKind: SubjectKind, operation: string, expires: Date, now: Date) {
+  getLogger('api.abuse').info('request.throttled', { operation, subject_kind: subjectKind });
+  const retryAfter = Math.max(1, Math.ceil((expires.getTime() - now.getTime()) / 1000));
+  return new ApiError(
+    429,
+    subjectKind === 'workspace' ? 'Workspace usage limit exceeded' : 'Too many requests',
+    { headers: { 'retry-after': String(retryAfter) } },
+  );
+}
+
 /** Autocommitted atomic counters, before hashing or provider I/O. */
 export async function enforceSubjectRequest(
   db: Database,
@@ -67,25 +91,14 @@ export async function enforceSubjectRequest(
   if (![limit, windowSeconds, amount].every((value) => Number.isInteger(value) && value > 0)) {
     throw new Error('Usage limit, window and amount must be positive integers');
   }
-  const {
-    subject_hash: subject,
-    started,
-    expires,
-  } = windowOf(subjectKind, subjectValue, windowSeconds, now);
-  const retryAfter = Math.max(1, Math.ceil((expires.getTime() - now.getTime()) / 1000));
-  const exhausted = () =>
-    new ApiError(
-      429,
-      subjectKind === 'workspace' ? 'Workspace usage limit exceeded' : 'Too many requests',
-      { headers: { 'retry-after': String(retryAfter) } },
-    );
-  if (amount > limit) throw exhausted();
+  const { started, expires } = windowOf(windowSeconds, now);
+  if (amount > limit) throw throttled(subjectKind, operation, expires, now);
   const consumed = await db
     .insertInto('usage_windows')
     .values({
       id: randomUUID(),
       subject_kind: subjectKind,
-      subject_hash: subject,
+      subject_hash: subjectHash(subjectValue),
       operation,
       window_started_at: started,
       expires_at: expires,
@@ -101,31 +114,14 @@ export async function enforceSubjectRequest(
     )
     .returning('count')
     .executeTakeFirst();
-  if (consumed !== undefined) return;
-  getLogger('api.abuse').info('request.throttled', { operation, subject_kind: subjectKind });
-  throw exhausted();
-}
-
-function windowOf(
-  subjectKind: SubjectKind,
-  subjectValue: string,
-  windowSeconds: number,
-  now: Date,
-) {
-  const epoch = Math.floor(now.getTime() / 1000);
-  const startedEpoch = epoch - (epoch % windowSeconds);
-  return {
-    subject_kind: subjectKind,
-    subject_hash: createHash('sha256').update(subjectValue.trim().toLowerCase()).digest('hex'),
-    started: new Date(startedEpoch * 1000),
-    expires: new Date((startedEpoch + windowSeconds) * 1000),
-  };
+  if (consumed === undefined) throw throttled(subjectKind, operation, expires, now);
 }
 
 /**
  * Refuse with 429 when the subject's current window is already spent, without
  * consuming it. Guards work that is only counted when it fails (a wrong
- * password), so the check must precede the work.
+ * password), so the check must precede the work. Returns whether the window
+ * has counted anything, so a caller clears it only when there is something to clear.
  */
 export async function requireSubjectBudget(
   db: Database,
@@ -133,20 +129,19 @@ export async function requireSubjectBudget(
   subjectValue: string,
   { operation, limit, windowSeconds }: UsageLimit,
   now: Date = new Date(),
-): Promise<void> {
-  const window = windowOf(subjectKind, subjectValue, windowSeconds, now);
+): Promise<boolean> {
+  const { started, expires } = windowOf(windowSeconds, now);
   const spent = await db
     .selectFrom('usage_windows')
     .select('count')
-    .where('subject_kind', '=', window.subject_kind)
-    .where('subject_hash', '=', window.subject_hash)
+    .where('subject_kind', '=', subjectKind)
+    .where('subject_hash', '=', subjectHash(subjectValue))
     .where('operation', '=', operation)
-    .where('window_started_at', '=', window.started)
+    .where('window_started_at', '=', started)
     .executeTakeFirst();
-  if (spent === undefined || spent.count < limit) return;
-  getLogger('api.abuse').info('request.throttled', { operation, subject_kind: subjectKind });
-  const retryAfter = Math.max(1, Math.ceil((window.expires.getTime() - now.getTime()) / 1000));
-  throw new ApiError(429, 'Too many requests', { headers: { 'retry-after': String(retryAfter) } });
+  if (spent !== undefined && spent.count >= limit)
+    throw throttled(subjectKind, operation, expires, now);
+  return spent !== undefined;
 }
 
 /** Forget every window of one subject's operation (a proven owner resets their failures). */
@@ -159,7 +154,7 @@ export async function releaseSubjectBudget(
   await db
     .deleteFrom('usage_windows')
     .where('subject_kind', '=', subjectKind)
-    .where('subject_hash', '=', windowOf(subjectKind, subjectValue, 1, new Date()).subject_hash)
+    .where('subject_hash', '=', subjectHash(subjectValue))
     .where('operation', '=', operation)
     .execute();
 }

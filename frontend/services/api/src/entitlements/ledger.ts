@@ -162,50 +162,48 @@ export async function reserveUsage(
   return reservationId;
 }
 
+/** Units a reservation still holds: reserved minus released (debits release their units). */
+export const openReservedUnits = sql<number>`sum(case when entry_kind = 'reservation' then units when entry_kind = 'release' then -units else 0 end)`;
+
 /**
  * Whether an audit, crawl or Agent run of the project still holds reserved
- * units. Deleting the project then would unlink a hold nothing can release,
- * so the units would stay reserved for good.
+ * units. Deleting the project then would leave a hold nothing can release, so
+ * the units would stay reserved for good.
  */
 export async function projectHoldsReservations(
   db: Database,
   workspaceId: string,
   projectId: string,
 ): Promise<boolean> {
-  const holds = db
-    .selectFrom('consumable_ledger')
-    .select('reservation_id')
-    .where('workspace_id', '=', workspaceId)
-    .where('entry_kind', '=', 'reservation')
-    .where((eb) =>
-      eb.or([
-        eb(
-          'audit_id',
-          'in',
-          eb.selectFrom('audits').select('id').where('project_id', '=', projectId),
-        ),
-        eb(
-          'agent_run_id',
-          'in',
-          eb.selectFrom('agent_runs').select('id').where('project_id', '=', projectId),
-        ),
-        eb(
-          'site_crawl_id',
-          'in',
-          eb.selectFrom('site_crawls').select('id').where('project_id', '=', projectId),
-        ),
-      ]),
-    );
+  const subject = (
+    kind: 'audit' | 'agent' | 'site_crawl',
+    table: 'audits' | 'agent_runs' | 'site_crawls',
+  ) =>
+    db
+      .selectFrom('consumable_ledger')
+      .select('reservation_id')
+      .where('subject_kind', '=', kind)
+      .where(
+        'subject_id',
+        'in',
+        db.selectFrom(table).select('id').where('project_id', '=', projectId),
+      );
   const open = await db
     .selectFrom('consumable_ledger')
     .select('reservation_id')
-    .where('reservation_id', 'in', holds)
-    .groupBy('reservation_id')
-    .having(
-      sql<number>`sum(case entry_kind when 'reservation' then units when 'release' then -units else 0 end)`,
-      '>',
-      0,
+    .where('workspace_id', '=', workspaceId)
+    .where('reservation_id', 'in', (eb) =>
+      eb
+        .selectFrom(
+          subject('audit', 'audits')
+            .union(subject('agent', 'agent_runs'))
+            .union(subject('site_crawl', 'site_crawls'))
+            .as('held'),
+        )
+        .select('held.reservation_id'),
     )
+    .groupBy('reservation_id')
+    .having(openReservedUnits, '>', 0)
     .limit(1)
     .executeTakeFirst();
   return open !== undefined;

@@ -437,8 +437,8 @@ export async function updateProject(db: Database, scope: ProjectScope, input: Pr
   return readProject(db, scope);
 }
 /**
- * Delete the project and everything it owns. Billing and usage records stay,
- * unlinked from the deleted audits, crawls and Agent runs. Refused while
+ * Delete the project and everything it owns. Billing and usage records stay
+ * and keep the IDs of the deleted audits, crawls and Agent runs. Refused while
  * metered work still holds reserved units.
  */
 export async function deleteProject(db: Database, scope: ProjectScope) {
@@ -446,16 +446,19 @@ export async function deleteProject(db: Database, scope: ProjectScope) {
     await acquireProjectLock(trx, scope.projectId);
     await projectRow(trx, scope);
     await requireProjectDeletion(trx, scope.workspaceId);
+    if (await projectHoldsReservations(trx, scope.workspaceId, scope.projectId))
+      throw new ApiError(409, 'Wait for running audits, crawls and Agent replies to finish', {
+        code: 'project_work_running',
+      });
     await removeProject(trx, scope);
   });
 }
 
-/** The deletion itself, for a caller holding the project lock and its authority. */
+/**
+ * The deletion itself, for a caller holding the project lock and its authority
+ * that has checked no metered work still holds reserved units.
+ */
 export async function removeProject(trx: Database, scope: ProjectScope) {
-  if (await projectHoldsReservations(trx, scope.workspaceId, scope.projectId))
-    throw new ApiError(409, 'Wait for running audits, crawls and Agent replies to finish', {
-      code: 'project_work_running',
-    });
   await trx
     .deleteFrom('projects')
     .where('workspace_id', '=', scope.workspaceId)

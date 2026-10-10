@@ -266,13 +266,13 @@ export const authRoutes = [
       const failures = loginFailureBudget(config);
       // An exhausted address refuses even a correct password until its window
       // passes or a password reset proves mailbox ownership.
-      await requireSubjectBudget(db, 'email', payload.email, failures);
+      const failedBefore = await requireSubjectBudget(db, 'email', payload.email, failures);
       const user = await authenticateUser(db, payload.email, payload.password);
       if (!user) {
         await enforceSubjectRequest(db, 'email', payload.email, failures);
         throw new ApiError(401, 'Invalid credentials');
       }
-      await releaseSubjectBudget(db, 'email', payload.email, failures.operation);
+      if (failedBefore) await releaseSubjectBudget(db, 'email', payload.email, failures.operation);
       clearOAuthCookies(c, config);
       setSessionCookie(c, config, await issueSession(config, user));
       return { user: sessionView(user) };

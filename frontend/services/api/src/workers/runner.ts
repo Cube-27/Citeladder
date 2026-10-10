@@ -307,7 +307,7 @@ export async function runnerOwners(db: Database, config: ServiceConfig) {
       },
       {
         name: 'trial-data-purge',
-        run: (canAdmit) => purgeExpiredTrialProjects(db, new Date(), 5, canAdmit),
+        run: (canAdmit) => purgeExpiredTrialProjects(db, new Date(), canAdmit),
       },
       { name: 'audit-maintenance', run: (canAdmit) => maintenance.runOnce(new Date(), canAdmit) },
       {

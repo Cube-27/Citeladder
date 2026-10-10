@@ -20,6 +20,17 @@ const invalid = () =>
     code: 'auth_challenge_invalid',
   });
 
+/** Whether a mail budget admits this request; an exhausted one sends nothing, silently. */
+async function withinBudget(spend: () => Promise<void>): Promise<boolean> {
+  try {
+    await spend();
+    return true;
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 429) return false;
+    throw error;
+  }
+}
+
 /** Uniform budgets run for absent and present addresses before lookup/provider work. */
 export async function requestChallenge(
   db: Database,
@@ -29,7 +40,7 @@ export async function requestChallenge(
   returnTo?: string,
 ) {
   const normalized = email.trim().toLowerCase();
-  try {
+  const admitted = await withinBudget(async () => {
     await enforceSubjectRequest(db, 'email', normalized, {
       operation: 'auth.mail.cooldown',
       limit: 1,
@@ -40,10 +51,8 @@ export async function requestChallenge(
       limit: cfg.recipient_daily_limit,
       windowSeconds: cfg.daily_window_seconds,
     });
-  } catch (error) {
-    if (error instanceof ApiError && error.status === 429) return;
-    throw error;
-  }
+  });
+  if (!admitted) return;
   const issued = await db.transaction().execute(async (trx) => {
     await subjectXactLock(trx, `auth.email:${normalized}`);
     const user = await trx
@@ -65,16 +74,14 @@ export async function requestChallenge(
       return null;
     // The shared daily mail budget is spent only by mail that will be sent, so
     // requests for unknown or ineligible addresses cannot exhaust it.
-    try {
-      await enforceSubjectRequest(trx, 'client', 'global-mail', {
+    const sendable = await withinBudget(() =>
+      enforceSubjectRequest(trx, 'client', 'global-mail', {
         operation: 'auth.mail.global',
         limit: cfg.global_daily_limit,
         windowSeconds: cfg.daily_window_seconds,
-      });
-    } catch (error) {
-      if (error instanceof ApiError && error.status === 429) return null;
-      throw error;
-    }
+      }),
+    );
+    if (!sendable) return null;
     const token = randomBytes(32).toString('base64url');
     const row = {
       id: randomUUID(),

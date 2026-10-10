@@ -268,7 +268,7 @@ describe('project owner', () => {
     ]);
     expect((await app.request('/api/v1/projects')).status).toBe(401);
   });
-  it('deletes a project with audit history once its credits are settled, keeping the ledger', async () => {
+  it('deletes a project with audit history once its credits are settled, keeping the ledger and its source IDs', async () => {
     const retained = new VisibilityFixtures(db);
     const t = await retained.tenant();
     await db
@@ -329,9 +329,10 @@ describe('project owner', () => {
       .where('reservation_id', '=', reservationId)
       .orderBy('entry_kind')
       .execute();
+    // Billing keeps the exact source IDs of work that no longer exists.
     expect(ledger).toEqual([
-      { entry_kind: 'release', subject_id: audit, audit_id: null, task_id: null },
-      { entry_kind: 'reservation', subject_id: audit, audit_id: null, task_id: null },
+      { entry_kind: 'release', subject_id: audit, audit_id: audit, task_id: taskId },
+      { entry_kind: 'reservation', subject_id: audit, audit_id: audit, task_id: taskId },
     ]);
   });
   it('lets an admin delete a project but not a member', async () => {
@@ -401,7 +402,7 @@ describe('project owner', () => {
     const expired = await trialProject(31);
     const recent = await trialProject(10);
     const upgraded = await trialProject(31, true);
-    await purgeExpiredTrialProjects(db, new Date(), 1000);
+    await purgeExpiredTrialProjects(db, new Date());
     const left = await db
       .selectFrom('projects')
       .select('id')

@@ -147,7 +147,7 @@ export interface AgentModelAttempts {
   output_hash: string;
   output_tokens: Int8 | null;
   pricing_revision: string;
-  project_id: string | null;
+  project_id: string;
   provider_adapter: string;
   provider_connection_id: string | null;
   provider_route_id: string | null;
@@ -159,7 +159,7 @@ export interface AgentModelAttempts {
   returned_model: string;
   route_revision: string | null;
   run_attempt: number;
-  run_id: string | null;
+  run_id: string;
   settled_at: Timestamp | null;
   settlement_status: string;
   total_tokens: Int8 | null;
