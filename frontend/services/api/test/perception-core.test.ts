@@ -80,6 +80,17 @@ describe('perception passages', () => {
     expect(brand!.spans).toEqual([{ start: 0, end: 10, text: 'Acme xxxxx' }]);
   });
 
+  it('keeps a late mention inside a window cut to the budget', () => {
+    const answer = `${'x'.repeat(40)} Acme is great.`;
+    const [brand] = entityPassages({
+      answer,
+      languageCode: 'en',
+      config,
+      policy: { max_entities: 8, max_passage_chars_per_entity: 12 },
+    });
+    expect(brand!.spans).toEqual([{ start: 35, end: 47, text: 'xxxxx Acme i' }]);
+  });
+
   it('hashes equal packages equally whatever their key order', () => {
     const pkg = pkgFor('Acme is great.');
     const reordered = {

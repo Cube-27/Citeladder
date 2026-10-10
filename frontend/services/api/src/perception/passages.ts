@@ -109,6 +109,13 @@ function mergeAdjacent(indexes: readonly number[], ranges: readonly Range[]): Ra
   return merged;
 }
 
+/** At most `budget` code points of a window, kept around its mention so the naming survives a cut. */
+function clip(start: number, end: number, mention: number, budget: number) {
+  if (end - start <= budget) return { start, end };
+  const from = Math.min(Math.max(start, mention - Math.floor(budget / 2)), end - budget);
+  return { start: from, end: from + budget };
+}
+
 /** Passages for each named entity: brand first, then competitors by first mention. */
 export function entityPassages(input: {
   answer: string;
@@ -135,8 +142,13 @@ export function entityPassages(input: {
     const spans: Span[] = [];
     for (const window of windows(occurrences, ranges)) {
       if (budget <= 0) break;
-      const start = points(window.start);
-      const end = Math.min(points(window.end), start + budget);
+      const mention = occurrences.find((offset) => offset >= window.start) ?? window.start;
+      const { start, end } = clip(
+        points(window.start),
+        points(window.end),
+        points(mention),
+        budget,
+      );
       const text = chars.slice(start, end).join('');
       spans.push({ start, end, text });
       budget -= end - start;
