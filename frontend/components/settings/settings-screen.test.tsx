@@ -200,10 +200,7 @@ describe('SettingsScreen', () => {
     await ue.keyboard('{ArrowRight}');
     expect(screen.getByRole('tab', { name: 'Workspace' })).toHaveAttribute('aria-selected', 'true');
     await ue.keyboard('{End}');
-    expect(screen.getByRole('tab', { name: 'MCP connections' })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    );
+    expect(screen.getByRole('tab', { name: 'API keys' })).toHaveAttribute('aria-selected', 'true');
   });
 
   it('does not expose project deletion while self-serve billing is unavailable', () => {

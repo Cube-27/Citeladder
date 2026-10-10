@@ -13,6 +13,7 @@ import { Dialog } from '@/components/ui/dialog';
 import { IntegrationSettings } from '@/components/settings/integration-settings';
 import { WorkspacePanel } from '@/components/settings/workspace-panel';
 import { McpConnections } from '@/components/settings/mcp-connections';
+import { ApiKeys } from '@/components/settings/api-keys';
 import { ProviderSettings } from '@/components/settings/provider-settings';
 import { TimeZoneSetting } from '@/components/settings/time-zone-setting';
 import { roleLabel } from '@/components/settings/member-roles';
@@ -56,13 +57,20 @@ const SETTINGS_TABS = [
   { id: 'providers', label: 'Providers' },
   { id: 'integrations', label: 'Integrations' },
   { id: 'connections', label: 'MCP connections' },
+  { id: 'api-keys', label: 'API keys' },
 ] as const;
 
 type SettingsTab = (typeof SETTINGS_TABS)[number]['id'];
 
-/** Someone who belongs to no workspace yet has only their account to manage. */
-function visibleTabs(hasWorkspace: boolean) {
-  return SETTINGS_TABS.filter((tab) => tab.id === 'account' || hasWorkspace);
+/**
+ * Someone who belongs to no workspace yet has only their account to manage;
+ * API keys are for the Owners and Admins who manage credentials.
+ */
+function visibleTabs(hasWorkspace: boolean, managesCredentials: boolean) {
+  return SETTINGS_TABS.filter(
+    (tab) =>
+      tab.id === 'account' || (hasWorkspace && (tab.id !== 'api-keys' || managesCredentials)),
+  );
 }
 
 const SETTINGS_TAB_CODEC = stringUrlCodec(
@@ -218,7 +226,8 @@ export function SettingsScreen() {
   // card); invalid/absent values fall back to Account.
   const [requestedTab, setActiveTab] = useUrlState('tab', SETTINGS_TAB_CODEC);
   const { activeWorkspace } = useProjectContext();
-  const tabs = visibleTabs(activeWorkspace !== null);
+  const managesCredentials = useWorkspaceCapability('manage_credentials');
+  const tabs = visibleTabs(activeWorkspace !== null, managesCredentials);
   // `?tab=` is deep-linkable, so someone can arrive asking for a tab that is
   // not offered. Fall back to Account rather than selecting
   // a tab that no longer exists, which would leave no panel visible at all.
@@ -298,6 +307,9 @@ export function SettingsScreen() {
         </TabPanel>
         <TabPanel value="connections" className="focus-ring">
           <McpConnections />
+        </TabPanel>
+        <TabPanel value="api-keys" className="focus-ring">
+          <ApiKeys />
         </TabPanel>
       </PageShell>
     </TabsRoot>
