@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vite-plus/test';
 
+import { TooltipProvider } from '@/components/ui/tooltip';
 import type { PromptCandidate } from '@/lib/api/types';
 
 import { CandidateReview } from './candidate-review';
@@ -20,6 +21,7 @@ const candidate = (id: string, text: string): PromptCandidate => ({
   expires_at: '',
   quality_status: 'off',
   quality_flags: [],
+  grounded: false,
 });
 
 const trailShoes = candidate('a', 'best trail shoes for wet weather');
@@ -94,5 +96,25 @@ describe('CandidateReview', () => {
     expect(screen.getByText('best trail shoes for wet weather')).toBeInTheDocument();
     expect(screen.getByText('May read unnaturally')).toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: /best trail shoes/i })).toBeEnabled();
+  });
+
+  it('tags only suggestions whose phrasing your search data informed', () => {
+    render(
+      <TooltipProvider>
+        <CandidateReview
+          candidates={[{ ...trailShoes, grounded: true }, flatFeet]}
+          topics={[]}
+          onAccept={vi.fn()}
+          onReject={vi.fn()}
+        />
+      </TooltipProvider>,
+    );
+
+    const rows = screen.getAllByRole('listitem');
+    expect(rows.map((row) => row.textContent?.includes('Informed by your search data'))).toEqual([
+      true,
+      false,
+    ]);
+    expect(screen.getAllByRole('button', { name: 'About search data' })).toHaveLength(1);
   });
 });
