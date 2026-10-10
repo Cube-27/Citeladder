@@ -3,13 +3,13 @@ import { describe, expect, it } from 'vitest';
 import { createSecretCipher } from '../src/integrations/fernet.ts';
 
 describe('integration credential encryption', () => {
-  it('decrypts a reference Fernet token', () => {
+  it('decrypts a stored Fernet token', () => {
     const cipher = createSecretCipher('citeladder integration interop test key');
     expect(
       cipher.decrypt(
-        'gAAAAABqvIuCc6Cm_dGOY1keE_Af45ootZLg7LLg7IsSG3Oiw4ry0iCp3M6MiCtwMoJZxbvslVKf6iQ3OIz8GpHrf0A5A35L7AoTUE3hiRQbtnlSfXEjMy2CZ-Shj30m9AmHWKpOSr5U=',
+        'gAAAAABqyiQGOpYb4v9En9C8276d1M-QNTRF17wNL_fVWRgnTzM2IR6N_DI4nLEL-CSzXyTxAQk_i9usNgSBaQcxBEOB86vyCUPrw1hx1toohfu0xB-eUaHvFZe9l2ou491qFsmlDx7m',
       ),
-    ).toBe('python integration refresh token');
+    ).toBe('stored integration refresh token');
   });
 
   it('rejects a modified token before decrypting it', () => {
