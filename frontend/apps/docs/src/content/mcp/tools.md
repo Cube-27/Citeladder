@@ -16,6 +16,7 @@ Start with project discovery, inspect available evidence, then ask for the concr
 | Which project, Action or prompt mentions this?  | `search`, then `fetch`                                         |
 | What did an AI audit observe?                   | `read_visibility_overview`, then `read_visibility_results`     |
 | Which sources were used?                        | `read_visibility_sources`                                      |
+| How do answers portray us and competitors?     | `read_perception`                                              |
 | Who cites one specific URL?                     | `read_source_url`                                              |
 | What should I work on next?                     | `read_actions`                                                 |
 | How do cited competitor pages differ from mine? | `read_content_differentiation`                                 |

@@ -48,3 +48,7 @@ For each finding, capture:
 - **What supports it:** the answer, page or saved record.
 - **What is missing:** coverage, incompatible scope or unresolved evidence.
 - **What comes next:** a review, an Action or a later measurement.
+
+## Perception quotes
+
+A perception quote is copied from the answer itself. CiteLadder keeps a quote only when it is found word for word in the passage about that business, so a paraphrase or an invented quote never appears. The label for each business (positive, neutral, negative or mixed) is a model's reading of those passages; check the quotes before acting on it.

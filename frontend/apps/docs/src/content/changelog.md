@@ -7,6 +7,16 @@ order: 400
 
 These notes describe implemented changes in the codebase. Dates are the recorded commit dates; availability in your workspace depends on deployment, access and configuration.
 
+## October 10, 2026: Answer perception
+
+AI Visibility has a **Perception** view. Answers that name you or a competitor are read for sentiment: net sentiment from −100 to +100 with its coverage, the themes answers praise or criticise with quotes taken word for word from the answer, the sources cited alongside criticism and how often answers recommend you. Each answer in a run also shows how it portrayed every business it named. Classification uses no credits.
+
+Assistants connected with MCP, and the in-app Agent, can read the same numbers with `read_perception`.
+
+**For your team:** check what answers say about you, not only whether they mention you, and read the quotes before acting on a label.
+
+[Read Perception](/visibility/#read-perception)
+
 ## October 10, 2026: Scheduled audits documented
 
 The AI Visibility guide now explains how to schedule audits from **Runs**: repeat a prompt set one time, every few minutes, hourly, daily or weekly, see why a schedule paused and resume it. It also clarifies that answers are collected from the consumer apps and from provider APIs.
