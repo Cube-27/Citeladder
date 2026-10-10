@@ -3,7 +3,7 @@
    (globals.css); this scope changes type scale only.
 
    The public ladder (docs/design.md §Typography), phone → ≥768px, every
-   size a rung of the one globals.css scale: eyebrow/meta 12 · body, nav and
+   size a rung of the one globals.css scale: meta 12 · body, nav and
    label 14 · feature heading 16→18 · lead 16→18 · section heading 24→32 ·
    data display 28→32 · page title 24–28→40 · hero 28–32→60. 14 is the
    baseline here exactly as in the product; 12 is the one rung below it. */

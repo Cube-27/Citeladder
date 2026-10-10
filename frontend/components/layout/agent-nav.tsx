@@ -19,8 +19,7 @@ import { useProjectContext } from '@/lib/project/project-context';
 import { cn } from '@/lib/utils';
 
 import { NavLink } from './nav-link';
-import { ACTIONS_HREF, AGENT_HOME, AGENT_NAV_ITEMS, isNavItemActive } from './nav-items';
-import { useOpenActionCount } from './use-open-action-count';
+import { AGENT_HOME, AGENT_NAV_ITEMS, isNavItemActive } from './nav-items';
 
 /**
  * Agent mode: New chat, Actions (with the open count), Skills, Context, then
@@ -33,7 +32,6 @@ export function AgentNav({ onNavigate }: Readonly<{ onNavigate?: () => void }>) 
   const pathname = useLocation().pathname ?? '';
   const searchParams = useSearchParams()[0];
   const onIntent = useRouteIntent();
-  const openCount = useOpenActionCount();
   const NewChatIcon = ICONS.newChat;
 
   return (
@@ -48,11 +46,7 @@ export function AgentNav({ onNavigate }: Readonly<{ onNavigate?: () => void }>) 
         {AGENT_NAV_ITEMS.map((item) => (
           <li key={item.href}>
             <NavLink
-              item={{
-                ...item,
-                href: scoped(item.href),
-                count: item.href === ACTIONS_HREF ? openCount : undefined,
-              }}
+              item={{ ...item, href: scoped(item.href) }}
               active={isNavItemActive(pathname, searchParams, item)}
               onIntent={onIntent}
               onNavigate={onNavigate}

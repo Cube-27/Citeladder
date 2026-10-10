@@ -407,16 +407,19 @@ export async function commandCenter(
       .where('prompts.status', '=', 'active')
       .where('prompts.enabled', '=', true)
       .executeTakeFirstOrThrow(),
-    db
-      .selectFrom('audits')
-      .select('id')
-      .where('workspace_id', '=', scope.workspaceId)
-      .where('project_id', '=', scope.projectId)
-      .where('audit_scope', '=', policy.visibility.brand_audit_scope)
-      .where('status', 'in', policy.visibility.in_flight_audit_statuses)
-      .orderBy('created_at', 'desc')
-      .limit(1)
-      .executeTakeFirst(),
+    // Only the first audit's progress is a next action; a tracked project skips the read.
+    audits
+      ? undefined
+      : db
+          .selectFrom('audits')
+          .select('id')
+          .where('workspace_id', '=', scope.workspaceId)
+          .where('project_id', '=', scope.projectId)
+          .where('audit_scope', '=', policy.visibility.brand_audit_scope)
+          .where('status', 'in', policy.visibility.in_flight_audit_statuses)
+          .orderBy('created_at', 'desc')
+          .limit(1)
+          .executeTakeFirst(),
   ]);
   const count = Number(counted.count);
   const times = [crawl?.completed_at, demand?.created_at].filter((at): at is Date => at != null);

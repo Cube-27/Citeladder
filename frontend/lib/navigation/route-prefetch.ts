@@ -2,6 +2,7 @@ import type { QueryClient } from '@tanstack/react-query';
 
 import { warmQuery } from '@/lib/api/query-client';
 import { queryKeys } from '@/lib/api/query-keys';
+import { preloadRouteChunk } from '@/lib/navigation/route-chunks';
 
 type ProjectScope = { projectId: string; workspaceId: string };
 type RoutePrefetcher = (client: QueryClient, scope: ProjectScope) => Promise<void>;
@@ -145,9 +146,11 @@ async function prefetchIssues(client: QueryClient, scope: ProjectScope) {
   );
 }
 
+/** Warm a destination's route code and, with a project, its primary read. */
 export function prefetchRoute(client: QueryClient, href: string, project: ProjectScope | null) {
-  if (!project) return;
   const pathname = new URL(href, 'https://citeladder.local').pathname;
+  preloadRouteChunk(pathname);
+  if (!project) return;
   // Intent is best-effort: a chunk that fails to load must not surface here,
   // and the navigation that follows will report the failure properly.
   void ROUTE_PREFETCHERS[pathname]?.(client, project).catch(() => {});

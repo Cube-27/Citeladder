@@ -7,7 +7,8 @@ export type NavItem = {
   label: string;
   href: string;
   icon: LucideIcon;
-  count?: number;
+  /** A live count shown beside the label. */
+  badge?: 'open-actions';
   /** Project is the default; workspace destinations never inherit a project. */
   scope?: 'project' | 'workspace';
 };
@@ -19,7 +20,13 @@ export type NavGroup = {
 };
 
 export const AGENT_HOME = '/agent';
-export const ACTIONS_HREF = '/agent/actions';
+
+const ACTIONS = {
+  label: 'Actions',
+  href: '/agent/actions',
+  icon: ICONS.opportunities,
+  badge: 'open-actions',
+} as const satisfies NavItem;
 
 /** Dashboard navigation in the order of the product loop. */
 export const NAV_GROUPS = [
@@ -40,7 +47,7 @@ export const NAV_GROUPS = [
   },
   {
     title: 'Act',
-    items: [{ label: 'Actions', href: ACTIONS_HREF, icon: ICONS.opportunities }],
+    items: [ACTIONS],
   },
   {
     title: 'Track',
@@ -65,7 +72,7 @@ export const SETUP_NAV_ITEMS = [
 
 /** Agent mode's fixed destinations, below New chat and above the chat list. */
 export const AGENT_NAV_ITEMS = [
-  { label: 'Actions', href: ACTIONS_HREF, icon: ICONS.opportunities },
+  ACTIONS,
   { label: 'Skills', href: '/agent/skills', icon: ICONS.skills },
   { label: 'Context', href: '/agent/context', icon: ICONS.context },
 ] as const satisfies readonly NavItem[];
@@ -87,22 +94,19 @@ const SUPPORT_NAV_ITEMS = [
 ] as const satisfies readonly NavItem[];
 
 /** Every shell destination, grouped for the command palette. */
-export function resolveCommandGroups() {
+export function resolveCommandGroups(): readonly { title: string; items: readonly NavItem[] }[] {
   return [
     // Actions is listed once, under Agent.
     ...NAV_GROUPS.filter((group) => group.title !== 'Act').map((group) => ({
       title: group.title ?? 'Overview',
-      items: group.items satisfies readonly NavItem[] as readonly NavItem[],
+      items: group.items,
     })),
     {
       title: 'Agent',
-      items: [
-        { label: 'New chat', href: AGENT_HOME, icon: ICONS.newChat },
-        ...AGENT_NAV_ITEMS,
-      ] satisfies readonly NavItem[] as readonly NavItem[],
+      items: [{ label: 'New chat', href: AGENT_HOME, icon: ICONS.newChat }, ...AGENT_NAV_ITEMS],
     },
     { title: 'Settings', items: SUPPORT_NAV_ITEMS },
-  ] as const;
+  ];
 }
 
 /**

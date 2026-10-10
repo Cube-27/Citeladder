@@ -437,7 +437,7 @@ describe('membership continuity and transactional receipts', () => {
   });
 });
 
-describe('Terms and product tour', () => {
+describe('Terms', () => {
   it('keeps revision acceptance idempotent, scoped and append-only, and rejects stale revisions', async () => {
     const old = 'older-approved-revision';
     await db

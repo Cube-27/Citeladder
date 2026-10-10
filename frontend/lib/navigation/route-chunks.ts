@@ -9,9 +9,8 @@ export function registerRouteChunk(path: string, load: () => Promise<unknown>): 
   loaders.set(path, load);
 }
 
-/** Start the chunk for an app href; failures surface when the route mounts. */
-export function preloadRouteChunk(href: string): void {
-  const { pathname } = new URL(href, 'https://citeladder.local');
+/** Start the chunk for a pathname; failures surface when the route mounts. */
+export function preloadRouteChunk(pathname: string): void {
   void loaders
     .get(pathname)?.()
     .catch(() => undefined);

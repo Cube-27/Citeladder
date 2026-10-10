@@ -221,16 +221,20 @@ export function SummarySections({ data }: Readonly<{ data: CommandCenter }>) {
   );
 }
 
-type NextActionKind = CommandCenter['next_action']['kind'];
+const RECOMMENDED = { status: 'Action recommended', link: 'Continue' };
 
-/** Steps that are not a recommendation to act read as what they are. */
-const NEXT_ACTION_STATUS: Partial<Record<NextActionKind, string>> = {
-  audit_running: 'In progress',
-  monitor: 'Up to date',
-};
-const NEXT_ACTION_LINK: Partial<Record<NextActionKind, string>> = {
-  audit_running: 'View progress',
-  monitor: 'View trends',
+/** Every step the server can name; steps that are not a call to act say what they are. */
+const NEXT_ACTION_COPY: Record<
+  CommandCenter['next_action']['kind'],
+  { status: string; link: string }
+> = {
+  opportunity: RECOMMENDED,
+  connect: RECOMMENDED,
+  crawl: RECOMMENDED,
+  configure_prompts: RECOMMENDED,
+  audit: RECOMMENDED,
+  audit_running: { status: 'In progress', link: 'View progress' },
+  monitor: { status: 'Up to date', link: 'View trends' },
 };
 
 function NextAction({ data }: Readonly<{ data: CommandCenter }>) {
@@ -239,7 +243,7 @@ function NextAction({ data }: Readonly<{ data: CommandCenter }>) {
       <CardHeader
         actions={
           <span className={textRole('label')}>
-            {NEXT_ACTION_STATUS[data.next_action.kind] ?? 'Action recommended'}
+            {NEXT_ACTION_COPY[data.next_action.kind].status}
           </span>
         }
       >
@@ -252,7 +256,7 @@ function NextAction({ data }: Readonly<{ data: CommandCenter }>) {
         </p>
         <Button asChild variant="primary" size="md">
           <ProjectLink href={data.next_action.href}>
-            {NEXT_ACTION_LINK[data.next_action.kind] ?? 'Continue'}
+            {NEXT_ACTION_COPY[data.next_action.kind].link}
             <ArrowRight className="size-4" aria-hidden />
           </ProjectLink>
         </Button>

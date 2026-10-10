@@ -29,7 +29,7 @@ export function ProviderSettings() {
   const connections = connectionsQuery.data ?? [];
 
   return (
-    <Stack gap="workspace" data-tour="provider-settings">
+    <Stack gap="workspace">
       <Card>
         <CardHeader>
           <CardTitle>Measurement providers</CardTitle>

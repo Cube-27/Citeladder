@@ -11,14 +11,12 @@ import { useProjectContext } from '@/lib/project/project-context';
 import { ModeSwitch } from './mode-switch';
 import { NavLink } from './nav-link';
 import {
-  ACTIONS_HREF,
   isNavItemActive,
   NAV_GROUPS,
   navigationMode,
   SETUP_NAV_ITEMS,
   type NavItem,
 } from './nav-items';
-import { useOpenActionCount } from './use-open-action-count';
 
 // Agent mode reads chats and Actions; its API modules stay out of the chunk
 // the shell needs before it can paint.
@@ -77,7 +75,6 @@ export function SidebarNav({
 }
 
 function DashboardNav({ onNavigate }: Readonly<{ onNavigate?: () => void }>) {
-  const openActions = useOpenActionCount();
   return (
     <nav aria-label="Primary" className="flex flex-col gap-[var(--sidebar-group-gap)]">
       {NAV_GROUPS.map((group) => (
@@ -85,12 +82,7 @@ function DashboardNav({ onNavigate }: Readonly<{ onNavigate?: () => void }>) {
           {group.title ? (
             <p className="type-caption text-muted px-3 pt-4 pb-2">{group.title}</p>
           ) : null}
-          <StationLinks
-            items={group.items.map((item) =>
-              item.href === ACTIONS_HREF ? { ...item, count: openActions } : item,
-            )}
-            onNavigate={onNavigate}
-          />
+          <StationLinks items={group.items} onNavigate={onNavigate} />
         </div>
       ))}
       <div className="pt-4">

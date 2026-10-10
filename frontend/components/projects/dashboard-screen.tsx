@@ -99,7 +99,7 @@ function DashboardData({
       }
     >
       <Stack gap="section">
-        <Stack gap="section" data-tour="command-center">
+        <Stack gap="section">
           <DashboardHeader data={data} activeProject={activeProject} />
           {data.active_prompt_count === 0 ? <PromptSetupCard /> : null}
           {actions.downloadError ? (
