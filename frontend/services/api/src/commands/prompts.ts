@@ -69,15 +69,15 @@ export function setPromptStatuses(
 }
 
 /**
- * Import spends the workspace's `bulk_import` window first, so a refused or
- * oversized import still uses its attempt.
+ * Import spends the workspace's `bulk_import` window first, then checks the raw
+ * byte size, and only then parses the body: a refused, oversized or invalid
+ * import still uses its attempt.
  */
 export async function importPrompts(
   db: Database,
   actor: Actor,
   promptSetId: string,
-  input: z.infer<typeof prompts.promptImport>,
-  { bodyBytes }: { bodyBytes: number },
+  body: { bytes: number; read: () => Promise<z.infer<typeof prompts.promptImport>> },
 ) {
   authorize(actor);
   await enforceWorkspaceRequest(db, actor.workspaceId, {
@@ -85,8 +85,9 @@ export async function importPrompts(
     limit: resolveSettingSpec(policy.abuse.bulk_import_limit) as number,
     windowSeconds: resolveSettingSpec(policy.abuse.bulk_import_window_seconds) as number,
   });
-  if (bodyBytes > policy.prompts.import_max_bytes) throw new ApiError(413, 'Import body too large');
-  return prompts.importPrompts(db, actor.workspaceId, promptSetId, input);
+  if (body.bytes > policy.prompts.import_max_bytes)
+    throw new ApiError(413, 'Import body too large');
+  return prompts.importPrompts(db, actor.workspaceId, promptSetId, await body.read());
 }
 
 export function createTopic(

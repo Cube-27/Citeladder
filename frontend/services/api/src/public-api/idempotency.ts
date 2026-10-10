@@ -4,8 +4,10 @@
  * body receives the stored response, and the same key with another body (or
  * while the first is still running) is 409 `idempotency_conflict`.
  *
- * The claim commits before the work runs; a failed attempt releases it, so a
- * retry runs again. Only successful responses are stored, for
+ * The claim commits before the work runs. A refused attempt (a coded 4xx)
+ * releases it, so a corrected retry runs again; a server failure keeps it, since
+ * its write may have committed, so a retry gets a retryable 409 instead of a
+ * second write. Only successful responses are stored, for
  * `idempotency.retention_hours` (purged by the runner).
  */
 import { createHash, randomUUID } from 'node:crypto';
@@ -59,11 +61,13 @@ export async function withIdempotency(
   try {
     response = await run();
   } catch (error) {
-    await release();
+    // A coded 4xx is a refusal before any write; anything else may follow a
+    // commit, so the claim stays and a retry cannot repeat the write.
+    if (error instanceof ApiError && error.status < 500) await release();
     throw error;
   }
   if (response.status < 200 || response.status >= 300) {
-    await release();
+    if (response.status < 500) await release();
     return response;
   }
   const text = await response.clone().text();

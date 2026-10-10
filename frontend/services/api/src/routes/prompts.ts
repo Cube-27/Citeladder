@@ -165,13 +165,10 @@ export const promptRoutes = [
     body: promptImport,
     response: promptSetSchema,
     async handle({ c, db }, { path }) {
-      return commands.importPrompts(
-        db,
-        actorOf(c),
-        path.prompt_set_id,
-        await readBody(c, promptImport),
-        { bodyBytes: Buffer.byteLength(await c.req.text(), 'utf8') },
-      );
+      return commands.importPrompts(db, actorOf(c), path.prompt_set_id, {
+        bytes: Buffer.byteLength(await c.req.text(), 'utf8'),
+        read: () => readBody(c, promptImport),
+      });
     },
   }),
   defineGetRoute({
