@@ -317,9 +317,18 @@ export function MarketingNav() {
       (element) => chrome && !element.contains(chrome) && !element.hasAttribute('inert'),
     );
     for (const element of hidden) element.setAttribute('inert', '');
+    // The sheet is `lg:hidden`: widening the window past it closes the menu,
+    // or the page would stay inert behind a sheet nobody can see.
+    const desktop =
+      typeof window.matchMedia === 'function' ? window.matchMedia('(min-width: 64rem)') : null;
+    const onDesktop = (event: MediaQueryListEvent) => {
+      if (event.matches) closeMenu();
+    };
+    desktop?.addEventListener('change', onDesktop);
     document.addEventListener('keydown', onKeyDown);
     document.addEventListener('pointerdown', onPointerDown);
     return () => {
+      desktop?.removeEventListener('change', onDesktop);
       for (const element of hidden) element.removeAttribute('inert');
       document.removeEventListener('keydown', onKeyDown);
       document.removeEventListener('pointerdown', onPointerDown);

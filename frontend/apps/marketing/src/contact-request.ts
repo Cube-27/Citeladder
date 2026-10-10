@@ -90,11 +90,9 @@ export async function handleContactRequest(
       console.error('Contact verification is not configured.');
       return result(503, 'send_failed');
     }
-    if (
-      !(await limits.ip.limit({ key: ip })).success ||
-      !(await limits.burst.limit({ key: '/api/v1/contact' })).success
-    )
-      return result(429, 'rate_limited');
+    if (!(await limits.ip.limit({ key: ip })).success) return result(429, 'rate_limited');
+    // Verify before the shared burst limit, so unverified requests spend only
+    // their own address's allowance and cannot crowd out real enquiries.
     const verified = await verifyTurnstile({
       secret: challenge.secret,
       token,
@@ -103,6 +101,8 @@ export async function handleContactRequest(
       hostnames: challenge.hostnames,
     });
     if (!verified) return result(403, 'verification_failed');
+    if (!(await limits.burst.limit({ key: '/api/v1/contact' })).success)
+      return result(429, 'rate_limited');
     return (await send(submission)) ? result(200, 'success') : result(503, 'send_failed');
   } catch {
     console.error('Contact email delivery failed.');

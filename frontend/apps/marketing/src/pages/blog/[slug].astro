@@ -8,40 +8,41 @@ import ResearchLayout from '../../layouts/ResearchLayout.astro';
 import { RESEARCH_ARTICLES } from '../../research-articles';
 
 export const getStaticPaths = (() => [
-  ...POSTS.map((post) => ({ params: { slug: post.slug }, props: { post, article: undefined } })),
+  ...POSTS.map((post) => ({ params: { slug: post.slug }, props: { kind: 'post' as const, post } })),
   ...RESEARCH_ARTICLES.filter((article) => article.frontmatter.slug.startsWith('/blog/')).map(
     (article) => ({
       params: { slug: article.frontmatter.slug.slice('/blog/'.length) },
-      props: { post: undefined, article },
+      props: { kind: 'guide' as const, article },
     }),
   ),
 ]) satisfies GetStaticPaths;
 
-const { post, article } = Astro.props;
-const breadcrumb = post
-  ? breadcrumbJsonLd([
-      { name: 'Home', path: '/' },
-      { name: 'Blog', path: '/blog' },
-      { name: post.title, path: `/blog/${post.slug}` },
-    ])
-  : null;
+const route = Astro.props;
+const breadcrumb =
+  route.kind === 'post'
+    ? breadcrumbJsonLd([
+        { name: 'Home', path: '/' },
+        { name: 'Blog', path: '/blog' },
+        { name: route.post.title, path: `/blog/${route.post.slug}` },
+      ])
+    : null;
 ---
 
-{article ? <ResearchLayout article={article} /> : post && <MarketingLayout
-  title={post.seoTitle.endsWith(' | CiteLadder') ? post.seoTitle : `${post.seoTitle} · CiteLadder`}
-  description={post.seoDescription}
-  canonical={`/blog/${post.slug}`}
-  keywords={[...post.tags, 'AI visibility', 'AEO']}
+{route.kind === 'guide' ? <ResearchLayout article={route.article} /> : <MarketingLayout
+  title={route.post.seoTitle.endsWith(' | CiteLadder') ? route.post.seoTitle : `${route.post.seoTitle} · CiteLadder`}
+  description={route.post.seoDescription}
+  canonical={`/blog/${route.post.slug}`}
+  keywords={[...route.post.tags, 'AI visibility', 'AEO']}
   openGraphType="article"
-  image={post.image}
-  publishedTime={post.date}
-  modifiedTime={post.dateModified ?? post.date}
-  author={post.author}
-  tags={post.tags}
-  twitterCard={post.image ? 'summary_large_image' : undefined}
+  image={route.post.image}
+  publishedTime={route.post.date}
+  modifiedTime={route.post.dateModified ?? route.post.date}
+  author={route.post.author}
+  tags={route.post.tags}
+  twitterCard={route.post.image ? 'summary_large_image' : undefined}
   jsonLd={breadcrumb ? [breadcrumb] : []}
 >
   <main id="main">
-    <BlogPostView post={post} />
+    <BlogPostView post={route.post} />
   </main>
 </MarketingLayout>}

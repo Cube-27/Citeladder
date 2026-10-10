@@ -171,7 +171,7 @@ template matches today's catalogue; docs search loads its index lazily.
 
 ## Shipped
 
-- Findings 1, 2, 3, 4, 6 (slash variants by asset delivery; missing slugs reach
+- Findings 1, 2, 3, 4, 6 (slash variants answer 301 from a generated `_redirects`; missing slugs reach
   the real 404 page), 7, 10, 11, 12, 13, 16, 17 (ItemList only; see below), 18,
   19 (`IconButtonLink`, docs nav and `mcp/tools` duplication), 20, 21, 22, 23,
   24 and 25.

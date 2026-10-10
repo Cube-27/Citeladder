@@ -1,4 +1,5 @@
 import type { AstroUserConfig } from 'astro';
+import { TURNSTILE_ORIGIN } from './turnstile';
 
 // Browser requests use same-origin APIs. Logo.dev supplies app brand images;
 // the existing Razorpay adapter loads its SDK and isolated checkout frame.
@@ -67,7 +68,6 @@ function astroContentSecurityPolicy(
       "base-uri 'none'",
       "font-src 'self'",
       "img-src 'self' data:",
-      "frame-src 'none'",
       "form-action 'self'",
       ...directives,
     ],
@@ -79,9 +79,12 @@ export function marketingContentSecurityPolicy(
   analyticsEnabled: boolean,
 ): AstroContentSecurityPolicy {
   return astroContentSecurityPolicy(
-    analyticsEnabled ? ['https://www.googletagmanager.com/gtag/js'] : [],
+    // The contact form's Turnstile widget loads from this origin and renders
+    // its challenge in a frame from it; no other page requests either.
+    [TURNSTILE_ORIGIN, ...(analyticsEnabled ? ['https://www.googletagmanager.com/gtag/js'] : [])],
     [
       "frame-ancestors 'none'",
+      `frame-src ${TURNSTILE_ORIGIN}`,
       analyticsEnabled
         ? "connect-src 'self' https://cloudflareinsights.com/cdn-cgi/rum https://www.google-analytics.com https://region1.google-analytics.com"
         : "connect-src 'self' https://cloudflareinsights.com/cdn-cgi/rum",
@@ -93,5 +96,5 @@ export function marketingContentSecurityPolicy(
 // frame-ancestors; X-Frame-Options in the docs _headers file denies framing.
 export const DOCS_CONTENT_SECURITY_POLICY = astroContentSecurityPolicy(
   [],
-  ["connect-src 'self' https://cloudflareinsights.com/cdn-cgi/rum"],
+  ["frame-src 'none'", "connect-src 'self' https://cloudflareinsights.com/cdn-cgi/rum"],
 );

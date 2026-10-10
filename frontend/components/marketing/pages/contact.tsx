@@ -17,7 +17,17 @@ import { Linkify } from '../primitives/linkify';
 import { Section } from '../primitives/section';
 import { useTurnstile } from './contact-turnstile';
 
-type FormState = 'idle' | 'sending' | 'success' | 'error' | 'rate-limited' | 'unverified';
+/** What each failed send tells the visitor; every one ends with the email fallback. */
+const FAILURE_COPY = {
+  error: "We couldn't send your message. Please try again, or email us at ",
+  'rate-limited':
+    'Too many enquiries right now. Please wait a minute and try again, or email us at ',
+  unverified:
+    "We couldn't confirm this browser. Complete the check above and try again, or email us at ",
+} as const;
+type Failure = keyof typeof FAILURE_COPY;
+type FormState = 'idle' | 'sending' | 'success' | Failure;
+const isFailure = (state: FormState): state is Failure => state in FAILURE_COPY;
 type FormErrors = Partial<Record<'name' | 'email' | 'company' | 'message', string>>;
 
 function ContactForm() {
@@ -28,17 +38,12 @@ function ContactForm() {
   const [state, setState] = useState<FormState>('idle');
   const [errors, setErrors] = useState<FormErrors>({});
   const { container: turnstileContainer, token, reset } = useTurnstile(CONTACT_TURNSTILE_ACTION);
+  const failure = isFailure(state) ? FAILURE_COPY[state] : null;
   useEffect(() => {
-    if (
-      state === 'success' ||
-      state === 'error' ||
-      state === 'rate-limited' ||
-      state === 'unverified'
-    )
-      status.current?.focus();
+    if (state === 'success' || failure) status.current?.focus();
     if (state === 'idle' && sent.current)
       form.current?.querySelector<HTMLElement>('[name="name"]')?.focus();
-  }, [state]);
+  }, [state, failure]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -172,13 +177,9 @@ function ContactForm() {
         />
       </div>
       <div ref={turnstileContainer} />
-      {(state === 'error' || state === 'rate-limited' || state === 'unverified') && (
+      {failure && (
         <div ref={status} tabIndex={-1} role="alert" className="website-body text-danger-text">
-          {state === 'rate-limited'
-            ? 'Too many enquiries right now. Please wait a minute and try again, or email us at '
-            : state === 'unverified'
-              ? "We couldn't confirm this browser. Complete the check above and try again, or email us at "
-              : "We couldn't send your message. Please try again, or email us at "}
+          {failure}
           <a href={`mailto:${CONTACT_EMAIL}`} className="underline">
             {CONTACT_EMAIL}
           </a>

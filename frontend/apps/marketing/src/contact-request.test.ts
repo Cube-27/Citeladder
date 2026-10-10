@@ -91,6 +91,24 @@ describe('contact intake', () => {
     expect(send).toHaveBeenCalledTimes(1);
   });
 
+  it('keeps unverified requests from using up the shared burst allowance', async () => {
+    const send = vi.fn().mockResolvedValue(true);
+    let burstLeft = 1;
+    const limits = {
+      ip: { limit: async () => ({ success: true }) },
+      burst: { limit: async () => ({ success: burstLeft-- > 0 }) },
+    };
+    for (const token of ['replayed-token', 'other-host', '']) {
+      const rejected = await handleContactRequest(
+        request({ ...valid, turnstile_token: token }),
+        send,
+        limits,
+      );
+      expect(rejected.status, token).toBe(403);
+    }
+    expect((await handleContactRequest(request(valid), send, limits)).status).toBe(200);
+  });
+
   it('fails closed when the Turnstile secret is not configured', async () => {
     const send = vi.fn();
     const log = vi.spyOn(console, 'error').mockImplementation(() => {});

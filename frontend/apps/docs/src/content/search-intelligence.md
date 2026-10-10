@@ -35,9 +35,9 @@ To investigate selected rows with the Agent, use the supported handoff and revie
 
 ## Keyword gaps become Actions
 
-A published competitor keyword dataset can open Actions for searches where a saved competitor ranks in the top 10 and you do not rank. CiteLadder reads only datasets published in the last 90 days, needs an estimated search volume of at least 50, skips navigational searches and searches that name a competitor, and keeps at most 25 gaps per refresh. A search Search Console already shows for your site belongs to [Search Demand](/demand/) instead.
+A published competitor keyword dataset can open Actions for searches where a saved competitor ranks in the top 10 and the provider found no ranking for your site. CiteLadder reads only datasets published in the last 90 days, needs an estimated search volume of at least 50, skips navigational searches and searches that name a competitor, and keeps at most 25 gaps per refresh. A search Search Console already shows for your site belongs to [Search Demand](/demand/) instead.
 
-The Action targets the page that already covers the search, or a planned page when none does. After you declare it implemented, it is measured by whether your site appears for that search, in Search Console or in a later dataset, for up to 90 days. Rankings from the provider are estimates.
+The Action targets the one page that already covers the search, or a planned page when no single page does. After you declare it implemented, it is measured by whether your site appears for that search, in Search Console or in a later dataset, for up to 90 days. Rankings from the provider are estimates.
 
 ## Read acquisition outcomes
 

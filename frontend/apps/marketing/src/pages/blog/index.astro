@@ -9,8 +9,9 @@ import { RESEARCH_ARTICLES } from '../../research-articles';
 
 const description =
   'Learn how to measure AI visibility, investigate citations and audit website readiness. Practical guides with clear definitions, examples and limitations.';
+const summaries = POSTS.map(toBlogPostSummary);
 const jsonLd = blogIndexJsonLd({
-  posts: POSTS.map(toBlogPostSummary),
+  posts: summaries,
   guides: RESEARCH_ARTICLES.map(({ frontmatter }) => ({ title: frontmatter.title, path: frontmatter.slug })),
 });
 ---
@@ -25,7 +26,7 @@ const jsonLd = blogIndexJsonLd({
   <main id="main">
     {/* Only the filter and sort list hydrates, with post summaries rather than full posts. */}
     <BlogIndex researchGuides={RESEARCH_ARTICLES.map(({ frontmatter }) => ({ title: frontmatter.title, href: frontmatter.slug, description: frontmatter.meta_description }))}>
-      <BlogIndexExplorer slot="explorer" posts={POSTS.map(toBlogPostSummary)} client:visible />
+      <BlogIndexExplorer slot="explorer" posts={summaries} client:visible />
     </BlogIndex>
   </main>
 </MarketingLayout>

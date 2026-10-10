@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { TURNSTILE_VERIFY_TIMEOUT_MS, TURNSTILE_VERIFY_URL } from '@/lib/config/contact';
+import { TURNSTILE_VERIFY_TIMEOUT_MS, TURNSTILE_VERIFY_URL } from '@/lib/config/turnstile';
 
 const siteverifySchema = z.object({
   success: z.boolean(),

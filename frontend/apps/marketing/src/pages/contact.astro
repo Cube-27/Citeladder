@@ -1,10 +1,6 @@
 ---
 import { ContactPage } from '@/components/marketing/pages/contact';
 import MarketingLayout from '../layouts/MarketingLayout.astro';
-
-// Only this page loads the Turnstile widget and its challenge frame.
-Astro.csp.insertScriptResource('https://challenges.cloudflare.com');
-Astro.csp.insertDirective('frame-src https://challenges.cloudflare.com');
 ---
 
 <MarketingLayout

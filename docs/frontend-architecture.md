@@ -27,7 +27,8 @@ Only routes that read the request opt out with `prerender = false`: `/pricing`,
 the contact intake, `/health` and the 404 page, which answers
 `Accept: text/markdown` with a Markdown body. The middleware runs only for
 those, proxies only exact apex protocol/webhook paths and keeps the retired
-research redirects; asset delivery normalizes trailing slashes. `/pricing`
+research redirects; a generated `_redirects` file sends each page's trailing-slash
+variant to it with a 301. `/pricing`
 reads the public catalog through protected origin transport without visitor
 credentials. It serves a per-country copy from the edge cache for ten minutes
 and the last good copy for up to seven days while the API is unreachable; with
@@ -45,8 +46,8 @@ HTML and plain text through Resend to
 enquiries in the application database. The Resend key and
 `TURNSTILE_SECRET_KEY` are runtime Worker secrets, and the intake fails closed
 without either; the build check rejects output containing a Turnstile secret.
-The public Turnstile site key is baked in at build. Only `/contact` allows the
-Turnstile script and challenge frame in its policy. Demo CTAs use `/contact`;
+The public Turnstile site key is baked in at build. The marketing policy allows
+the Turnstile origin for scripts and frames; only `/contact` loads it. Demo CTAs use `/contact`;
 legacy Cube27 contact URLs from published billing catalogs resolve to this
 intake without altering persisted catalogs. Cube27 product and legal identity
 remain in the public chrome and policies. Successful submission analytics
@@ -125,7 +126,7 @@ The guide and product page self-canonicalize separately. The existing measuremen
 destination retains the distinct share-of-appearances worked example. The older
 `/blog/tracking-brand-visibility-ai-search` and `/check-ai-visibility` redirect
 permanently to the measurement destination; `/blog/track-optimize-ai-citations`
-redirects to citation tracking. Asset delivery redirects slash variants to the
+redirects to citation tracking. Slash variants redirect permanently to the
 canonical path. `public-routes.ts` is the one list of indexable pages: the
 sitemap and `llms.txt` both read it, so a page listed in one is listed in the
 other.

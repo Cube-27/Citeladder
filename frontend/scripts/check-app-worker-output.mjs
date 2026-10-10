@@ -1,4 +1,5 @@
 import { readdir, readFile, writeFile } from 'node:fs/promises';
+import { headersRule, SECURITY_HEADERS } from '../lib/config/security-headers.ts';
 
 const root = new URL('../apps/app/dist/', import.meta.url);
 const files = await readdir(root, { recursive: true });
@@ -23,15 +24,9 @@ await writeFile(
 );
 await writeFile(
   new URL('_headers', root),
-  `/*
-  X-Content-Type-Options: nosniff
-  Referrer-Policy: strict-origin-when-cross-origin
-  X-Frame-Options: DENY
-  X-Robots-Tag: noindex, nofollow
-  Strict-Transport-Security: max-age=31536000; includeSubDomains
-
-/app-assets/*
-  Cache-Control: public, max-age=31536000, immutable
-`,
+  [
+    headersRule('/*', { ...SECURITY_HEADERS, 'X-Robots-Tag': 'noindex, nofollow' }),
+    headersRule('/app-assets/*', { 'Cache-Control': 'public, max-age=31536000, immutable' }),
+  ].join('\n'),
 );
 console.log(`Product Worker static output checked: ${files.length} files.`);

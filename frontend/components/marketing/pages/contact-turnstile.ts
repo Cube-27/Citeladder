@@ -1,5 +1,5 @@
 import { useCallback, useRef } from 'react';
-import { TURNSTILE_SCRIPT_URL } from '@/lib/config/contact';
+import { TURNSTILE_SCRIPT_URL } from '@/lib/config/turnstile';
 
 /** Baked in at build; empty in tests and builds without a widget. */
 const TURNSTILE_SITE_KEY = process.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';

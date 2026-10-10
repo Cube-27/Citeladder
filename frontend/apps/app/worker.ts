@@ -1,18 +1,14 @@
 import { proxyWorkerRequest } from '../../lib/server/worker-origin-proxy';
 import { APP_CONTENT_SECURITY_POLICY } from '../../lib/config/content-security-policy';
+import { SECURITY_HEADERS as SHARED_SECURITY_HEADERS } from '../../lib/config/security-headers';
 import type { WorkerEnv as GeneratedEnv } from './worker-configuration';
 
 // Local Compose runs this Worker under `wrangler dev` over HTTP against the
 // API container; production never sets the binding.
 type WorkerEnv = GeneratedEnv & { LOCAL_WORKER_ORIGIN?: string };
 
-const SECURITY_HEADERS = {
-  'X-Content-Type-Options': 'nosniff',
-  'Referrer-Policy': 'strict-origin-when-cross-origin',
-  'X-Frame-Options': 'DENY',
-  'X-Robots-Tag': 'noindex, nofollow',
-  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
-};
+// The product is never indexed.
+const SECURITY_HEADERS = { ...SHARED_SECURITY_HEADERS, 'X-Robots-Tag': 'noindex, nofollow' };
 // Vite's build.assetsDir; unhashed public/ files (for example the theme
 // bootstrap) share the naming shape and must stay revalidated.
 const FINGERPRINTED_DIRECTORY = '/app-assets/';

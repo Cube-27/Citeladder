@@ -181,18 +181,16 @@ export function blogPostingJsonLd(post: BlogPost): JsonLdObject {
 }
 
 /**
- * The blog index as a `Blog`, with its posts as an `ItemList`.
+ * The blog index as a `Blog`, with its posts and then the research guides it
+ * also lists as one `ItemList`.
  *
  * `dateModified` is the load-bearing part: a listing page that never states
  * when its collection last changed gives an answer engine no way to tell a
  * current index from a stale one, and CiteLadder's own crawler reports exactly
  * that absence. It is the newest REVISION date across the posts, not the
  * newest publication date -- revising an older post changes what this page
- * indexes, and reading only `date` would leave the signal stale.
- */
-/**
- * The blog listing: dated posts and the research guides it also lists. Guides
- * carry no publication date, so only posts set the listing's freshness.
+ * indexes, and reading only `date` would leave the signal stale. Guides carry
+ * no publication date, so only posts set it.
  */
 export function blogIndexJsonLd({
   posts,

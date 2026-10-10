@@ -11,7 +11,10 @@ import MarketingLayout from '../layouts/MarketingLayout.astro';
 export const prerender = false;
 
 const env = workerApexEnv();
-const catalog = await publicCatalog(env, displayCountry(Astro.request.headers), caches.default);
+const catalog = await publicCatalog(env, displayCountry(Astro.request.headers), {
+  cache: caches.default,
+  waitUntil: (work) => Astro.locals.cfContext.waitUntil(work),
+});
 const checkoutClosed = catalog !== null && selfServeCheckoutComingSoon(catalog);
 const description = checkoutClosed
   ? 'CiteLadder plans, trial limits and access options for AI visibility tracking. Paid self-serve checkout is not currently open.'
