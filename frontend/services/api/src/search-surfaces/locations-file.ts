@@ -59,45 +59,61 @@ function countryCode(lists: SurfaceLists, country: string): number | null {
 }
 
 /**
- * Every market country at least one surface supports: its location code and,
- * per surface, the market languages that surface lists. A country whose
- * surfaces disagree on its location code is refused for review.
+ * Every market country at least one surface supports, with its location code
+ * and those surfaces, and each surface's market languages. A surface offering
+ * none of them supports no country. A country whose surfaces disagree on its
+ * location code is refused for review.
  */
 export function buildLocationsFile(
   lists: Record<SearchSurface, SurfaceLists>,
   generatedAt: string,
 ): LocationsFile {
+  const languages = {
+    google_ai_overview: offeredLanguages(lists.google_ai_overview),
+    chatgpt_search: offeredLanguages(lists.chatgpt_search),
+    gemini_consumer: offeredLanguages(lists.gemini_consumer),
+  };
   const countries: LocationsFile['countries'] = {};
   for (const { value: country } of [...MARKET_COUNTRIES].sort((a, b) =>
     compareText(a.value, b.value),
   )) {
-    const entry: LocationsFile['countries'][string] = { location_code: 0 };
+    const entry: LocationsFile['countries'][string] = { location_code: 0, surfaces: [] };
     for (const surface of SEARCH_SURFACES) {
       const code = countryCode(lists[surface], country);
-      if (code === null) continue;
+      if (code === null || !languages[surface].length) continue;
       if (entry.location_code && entry.location_code !== code)
         throw new Error(`Surfaces disagree on the location code for ${country}`);
-      const offered = new Set(
-        lists[surface].languages.map((row) => row.language_code.toLowerCase()),
-      );
-      const languages = candidateLanguages.filter((language) => offered.has(language));
-      if (!languages.length) continue;
       entry.location_code = code;
-      entry[surface] = languages;
+      entry.surfaces.push(surface);
     }
     if (entry.location_code) countries[country] = entry;
   }
   return locationsFileSchema.parse({
     source: 'DataForSEO locations and languages lists, fetched by `pnpm dataforseo:locations`.',
     generated_at: generatedAt,
+    languages,
     countries,
   });
 }
 
-/** Two-space JSON with short string lists on one line, as the formatter keeps them. */
+/** The market languages a surface's language list offers. */
+function offeredLanguages(lists: SurfaceLists): string[] {
+  const offered = new Set(lists.languages.map((row) => row.language_code.toLowerCase()));
+  return candidateLanguages.filter((language) => offered.has(language));
+}
+
+const PRINT_WIDTH = 100;
+
+/**
+ * Two-space JSON with each string list on one line when it fits the
+ * formatter's print width, as the formatter writes it.
+ */
 export function serializeLocationsFile(file: LocationsFile): string {
   return `${JSON.stringify(file, null, 2).replace(
-    /\[\n\s+("[^"\n]*"(?:,\n\s+"[^"\n]*")*)\n\s+\]/gu,
-    (_, items: string) => `[${items.replaceAll(/,\n\s+/gu, ', ')}]`,
+    /^( *)("[^"\n]*": )?\[\n((?: *"[^"\n]*",?\n)+) *\]/gmu,
+    (block: string, indent: string, key: string | undefined, items: string) => {
+      const line = `${indent}${key ?? ''}[${items.trim().replaceAll(/,\n */gu, ', ')}]`;
+      return line.length <= PRINT_WIDTH ? line : block;
+    },
   )}\n`;
 }
