@@ -53,9 +53,11 @@ import {
 } from './runs.ts';
 import {
   AnalysisNotFoundError,
+  authorizedSelection,
   TrendQueryError,
   validateCohort,
   validateEngineAndRange,
+  type RunSelection,
 } from './selection.ts';
 import { foldBucket, type TrendPoint } from './trend-folding.ts';
 
@@ -144,6 +146,16 @@ export async function latestDashboardRunId(db: Database, scope: RunScope): Promi
     .executeTakeFirst();
   if (latest === undefined) throw new AnalysisNotFoundError('No completed audit for project');
   return latest.id;
+}
+
+/** The runs an evidence summary covers: the selection, or the latest dashboard-ready run. */
+export async function scopedSelection(
+  db: Database,
+  selection: RunSelection,
+): Promise<RunSelection> {
+  const scoped = await authorizedSelection(db, selection);
+  if (scoped.auditId || scoped.auditIds?.length || scoped.fromAt || scoped.toAt) return scoped;
+  return { ...scoped, auditId: await latestDashboardRunId(db, scoped) };
 }
 
 /** The named run, or the latest dashboard-ready one; its snapshot must exist. */

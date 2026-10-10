@@ -22,7 +22,7 @@ import {
   encodeKeysetCursor,
   InvalidCursorError,
 } from '../http/keyset-cursor.ts';
-import { groupBy } from '../lists.ts';
+import { chunked, groupBy } from '../lists.ts';
 import { frozenPerceptionVersions } from '../perception/admission.ts';
 import {
   classifiedQuotes,
@@ -35,20 +35,11 @@ import {
 } from '../perception/metrics.ts';
 import { isNamed } from '../perception/passages.ts';
 import { compareText } from '../text-order.ts';
-import { latestDashboardRunId } from './dashboard.ts';
-import { authorizedSelection, evidenceScope, observedAt, type RunSelection } from './selection.ts';
+import { scopedSelection } from './dashboard.ts';
+import { evidenceScope, observedAt, type RunSelection } from './selection.ts';
 
 const visibility = policy.visibility;
 const QUOTES_CURSOR_SCOPE = 'visibility.perception.quotes';
-// Bind parameters per statement stay far below PostgreSQL's 65,535 limit.
-const ID_CHUNK = 5000;
-
-/** `read` over `ids` in bounded chunks, run concurrently and concatenated. */
-async function chunked<T>(ids: readonly string[], read: (chunk: string[]) => Promise<T[]>) {
-  const chunks: string[][] = [];
-  for (let at = 0; at < ids.length; at += ID_CHUNK) chunks.push(ids.slice(at, at + ID_CHUNK));
-  return (await Promise.all(chunks.map(read))).flat();
-}
 
 const assessmentsSchema = z
   .array(
@@ -153,13 +144,6 @@ function mentionsOf(assessments: readonly Assessment[], perceived: Perceived | u
       };
       return { mention, entity };
     });
-}
-
-/** The runs a perception read covers: the selection, or the latest dashboard-ready run. */
-async function scopedSelection(db: Database, selection: RunSelection): Promise<RunSelection> {
-  const scoped = await authorizedSelection(db, selection);
-  if (scoped.auditId || scoped.auditIds?.length || scoped.fromAt || scoped.toAt) return scoped;
-  return { ...scoped, auditId: await latestDashboardRunId(db, scoped) };
 }
 
 /** The selection's perceived answers; citations only when the caller reads drivers. */
