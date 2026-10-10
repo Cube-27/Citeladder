@@ -103,7 +103,8 @@ function allowChanges() {
         ><span class="name">Let it make changes in workspaces where you are a Member or above</span>
         <span class="meta">${CHANGES.join(' · ')}.</span>
         <span class="meta"
-          >Your assistant must show you each change and you confirm it before it happens.</span
+          >Your assistant must ask you before each change. Larger changes, such as adding prompts or
+          launching an audit, show you a preview and happen only after you confirm it.</span
         ></span
       >
     </label>

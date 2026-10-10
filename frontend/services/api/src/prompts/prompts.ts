@@ -183,15 +183,17 @@ async function screen<T extends { text: string; topic_id?: string | null }>(
         .where('normalized_text_hash', 'in', hashes)
         .execute()
     : [];
+  // Texts already in the set, then each input that passes: only those can repeat.
   const taken = new Set(existing.map((row) => row.normalized_text_hash));
-  return inputs.map((input, index) => {
+  return inputs.map((input) => {
     const hash = promptTextHash(input.text);
     const failure = bindingFailure(
       input.text,
       vocabulary,
       input.topic_id ? (topics.get(input.topic_id) ?? '') : '',
     );
-    const duplicate = taken.has(hash) || hashes.indexOf(hash) < index;
+    const duplicate = failure === null && taken.has(hash);
+    if (failure === null) taken.add(hash);
     return {
       input,
       hash,

@@ -5,7 +5,7 @@ group: 'Connect with MCP'
 order: 300
 ---
 
-The [Model Context Protocol](https://modelcontextprotocol.io) (MCP) is an open standard that lets AI assistants use tools from other products. CiteLadder's hosted MCP server lets a compatible assistant read the CiteLadder records your account is authorized to access, so you can investigate a project, review results or prepare a report in the assistant you already use. If you allow it, the assistant can also make changes, each shown to you and confirmed by you first.
+The [Model Context Protocol](https://modelcontextprotocol.io) (MCP) is an open standard that lets AI assistants use tools from other products. CiteLadder's hosted MCP server lets a compatible assistant read the CiteLadder records your account is authorized to access, so you can investigate a project, review results or prepare a report in the assistant you already use. If you allow it, the assistant can also make changes: it asks you before each one, and larger changes run only after you confirm a preview CiteLadder has checked.
 
 The hosted endpoint is **https://api.citeladder.com/mcp**. One address works for every client. The docs subdomain hosts these guides; it is not the protocol server.
 

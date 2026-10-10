@@ -259,7 +259,7 @@ const writeDefinitions = {
           }),
         )
         .min(1)
-        .max(50),
+        .max(policy.prompts.create_batch_max),
     }),
     annotations: hints(false, false),
     run: async (context, args) => {

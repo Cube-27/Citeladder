@@ -236,7 +236,13 @@ export function registerOAuthRoutes(
         const requested = (q.get('scope') ?? '').split(/\s+/u).filter(Boolean);
         if (requested.length && !requested.includes(mcpPolicy.read_scope))
           throw new OAuthError('invalid_scope', 'Unsupported scope');
-        const scopes = grantableScopes(q.get('scope'));
+        // Never more than the client registered for.
+        const registered = grantableScopes(
+          scalarText(record(client.client_metadata).scope) || null,
+        );
+        const scopes = grantableScopes(q.get('scope')).filter((scope) =>
+          registered.includes(scope),
+        );
         if (q.has('resource') && q.get('resource')?.replace(/\/$/u, '') !== resource)
           throw new OAuthError('invalid_target', 'The requested resource is not this MCP server');
         const now = new Date();

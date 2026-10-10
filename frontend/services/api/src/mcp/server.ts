@@ -23,7 +23,7 @@ const logger = getLogger('mcp');
 const VERSIONS = ['2026-07-28', '2025-11-25'];
 const INSTRUCTIONS = [
   "CiteLadder data about a business's visibility in AI answers and search.",
-  "Writes need the user's explicit confirmation: call a prepare tool, show the preview to the user, call confirm_change only after they agree.",
+  "Changes need the user's explicit agreement: say what you will change and wait for their yes before any change tool. For a prepare tool, show its preview and call confirm_change only after they agree to it.",
   'Start with list_projects, then get_project_business_context; use the focused reads for detail.',
   'Missing evidence is unavailable, never zero. Report change without claiming its cause.',
   'IDs and citeladder:// references are for your tool calls only: never show them to the user. Name the page, prompt, competitor or Action instead, and give app links as links.',

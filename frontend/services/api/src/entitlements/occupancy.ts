@@ -235,10 +235,14 @@ export async function promptOccupancy(
 ): Promise<{ used: number; allowance: number | null }> {
   const accountId = await lockWorkspaceCapacity(db, workspaceId);
   const entitlement = await resolveAccountEntitlement(db, { accountId, workspaceId }, new Date());
+  // Unresolved is unavailable, not ungated: refuse as admission does.
+  if (entitlement.status !== 'resolved')
+    throw new ApiError(403, 'Billing entitlement is unavailable for this account', {
+      code: UNRESOLVED,
+    });
   return {
     used: await promptCount(db, accountId),
-    allowance:
-      entitlement.status === 'resolved' ? (entitlement.values.get(PROMPT_SLOTS) ?? null) : null,
+    allowance: entitlement.values.get(PROMPT_SLOTS) ?? null,
   };
 }
 

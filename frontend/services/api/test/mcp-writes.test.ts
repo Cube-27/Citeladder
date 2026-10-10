@@ -6,6 +6,7 @@ import { admitWriteCall } from '../src/mcp/registration.ts';
 import type { McpPrincipal } from '../src/mcp/types.ts';
 import { dispatchWrite } from '../src/mcp/write-tools.ts';
 import { auditTenant } from './audit-fixtures.ts';
+import { topic } from './prompt-fixtures.ts';
 import { testConfig, testDatabase } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
 
@@ -161,6 +162,24 @@ it('runs a token confirmed twice at once exactly one time', async () => {
   ]);
 });
 
+it('keeps a passing prompt whose identical earlier copy failed binding', async () => {
+  const tenant = await auditTenant(db, fixtures);
+  const principal = await connection(tenant);
+  const topicId = await topic(db, tenant.projectId, 'Trail boots', 'Boots for muddy trails');
+  const prepared = await call(principal, 'prepare_add_prompts', {
+    project_id: tenant.projectId,
+    prompts: [
+      { text: 'Which trail boots grip mud best?' },
+      { text: 'Which trail boots grip mud best?', topic_id: topicId },
+    ],
+  });
+  expect(prepared).toMatchObject({
+    state: 'needs_confirmation',
+    dropped: [{ text: 'Which trail boots grip mud best?' }],
+  });
+  expect(String(prepared.preview)).toContain('Add 1 active prompt(s)');
+});
+
 it('archives prompts only on confirmation', async () => {
   const tenant = await auditTenant(db, fixtures);
   const principal = await connection(tenant);
@@ -214,6 +233,21 @@ it('refuses a confirmation after expiry, revocation, demotion or from another co
     'Workspace member access is required',
   );
   await setRole(tenant, 'owner');
+
+  const narrowed = await prepare();
+  await db
+    .updateTable('mcp_oauth_grants')
+    .set({ scopes: JSON.stringify(['citeladder:read']) })
+    .where('id', '=', principal.grantId)
+    .execute();
+  expect(await failure(call(principal, 'confirm_change', { confirmation_token: narrowed }))).toBe(
+    'This connection can only read. Reconnect CiteLadder and tick Allow changes to make changes.',
+  );
+  await db
+    .updateTable('mcp_oauth_grants')
+    .set({ scopes: JSON.stringify(['citeladder:read', 'citeladder:write']) })
+    .where('id', '=', principal.grantId)
+    .execute();
 
   const revoked = await prepare();
   await db

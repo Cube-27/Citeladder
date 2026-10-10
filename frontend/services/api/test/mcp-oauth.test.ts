@@ -931,7 +931,7 @@ it('grants write only when the client asks and the person ticks Allow changes', 
   expect(unticked.view.changes).toMatchObject({ type: 'checkbox', value: 'yes' });
   expect(unticked.view.changes).not.toHaveProperty('checked');
   expect(unticked.view.text).toContain(
-    'Your assistant must show you each change and you confirm it before it happens.',
+    'Your assistant must ask you before each change. Larger changes, such as adding prompts or launching an audit, show you a preview and happen only after you confirm it.',
   );
   expect(unticked.value.scope).toBe('citeladder:read');
 
@@ -945,6 +945,25 @@ it('grants write only when the client asks and the person ticks Allow changes', 
   });
   expect(readOnly.view.changes).toBeUndefined();
   expect(readOnly.value.scope).toBe('citeladder:read');
+});
+
+it('never offers changes beyond the scope the client registered', async () => {
+  const registered = await registerClient(db, loadMcpConfig(config), {
+    redirect_uris: [callback],
+    token_endpoint_auth_method: 'none',
+    scope: 'citeladder:read',
+  });
+  clients.push(registered.client_id);
+  const transaction = await pending(registered.client_id, 'citeladder:read citeladder:write');
+  expect((await consentView(transaction)).changes).toBeUndefined();
+  const approved = await approve(transaction, [tenant.workspaceId], { allow_changes: 'yes' });
+  const response = await token(registered.client_id, {
+    grant_type: 'authorization_code',
+    code: new URL(approved.headers.get('location')!).searchParams.get('code')!,
+    code_verifier: verifier,
+    redirect_uri: callback,
+  });
+  expect(((await response.json()) as { scope: string }).scope).toBe('citeladder:read');
 });
 
 it('offers no changes to a viewer and grants none when the form claims them', async () => {

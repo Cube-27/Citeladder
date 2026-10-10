@@ -5,6 +5,7 @@ import type { AppEnv } from '../src/context.ts';
 import type { Database } from '../src/db/database.ts';
 import { registerMcpRoutes } from '../src/mcp/server.ts';
 import { authenticateMcp } from '../src/mcp/oauth.ts';
+import { admitToolCall, admitWriteCall } from '../src/mcp/registration.ts';
 import { dispatchTool } from '../src/mcp/tools.ts';
 import { ApiError } from '../src/errors.ts';
 import { appResource } from '../src/mcp/app-resource.ts';
@@ -200,6 +201,29 @@ describe('hosted MCP transport', () => {
     });
     expect(hints.create_topic).toMatchObject({ readOnlyHint: false, destructiveHint: false });
     expect(hints.cancel_audit).toMatchObject({ readOnlyHint: false, destructiveHint: true });
+  });
+  it('refuses a change over its budget as a tool error with the retry time', async () => {
+    vi.mocked(authenticateMcp).mockResolvedValue({
+      userId: 'user',
+      grantId: 'grant',
+      workspaceIds: ['workspace'],
+      tokenHash: 'hash',
+      canWrite: true,
+    });
+    vi.mocked(admitWriteCall).mockRejectedValueOnce(
+      new ApiError(429, 'Too many changes', { headers: { 'retry-after': '17' } }),
+    );
+    const refused = await rpc(
+      await app().request(
+        'https://protocol.example.test/mcp',
+        request('tools/call', { name: 'confirm_change', arguments: { confirmation_token: 'x' } }),
+      ),
+    );
+    expect(refused.result).toMatchObject({
+      isError: true,
+      content: [{ type: 'text', text: 'Too many changes; retry in 17 seconds' }],
+    });
+    expect(admitToolCall).toHaveBeenCalledWith(db, 'grant', 'user');
   });
   it('serves legacy initialize and independently accepts modern per-request discovery and tools', async () => {
     const service = app();

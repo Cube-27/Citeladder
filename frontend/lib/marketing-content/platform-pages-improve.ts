@@ -259,7 +259,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
         title: 'Ask questions grounded in recorded evidence.',
         body: 'Read visibility results and trends, perception, ads, cited sources, Actions, Site Health, performance, AI referrals, AI crawler logs, the AI Shelf, demand and saved Search Intelligence datasets. Every answer comes from a dated record, not a guess.',
         points: [
-          'Changes only if you allow them, each confirmed by you; no crawls, purchases or publishing',
+          'Changes only if you allow them and agree to each; no crawls, purchases or publishing',
           'Unavailable data is reported as unavailable, never as zero',
           'Links back to the screen in CiteLadder that shows the record',
         ],
@@ -316,7 +316,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
       },
       {
         q: 'Can an assistant change my website or my data through MCP?',
-        a: 'Only if you tick Allow changes when you connect it. Then it can add and edit prompts and topics, add competitors, launch and cancel audits, create schedules and update Actions, each change shown to you and confirmed by you first. It never crawls, buys data, publishes or changes your site.',
+        a: 'Only if you tick Allow changes when you connect it. Then it can add and edit prompts and topics, add competitors, launch and cancel audits, create schedules and update Actions. Your assistant asks before each change, and larger ones, such as adding prompts or launching an audit, run only after you confirm a preview. It never crawls, buys data, publishes or changes your site.',
       },
       {
         q: 'Does reading a tool refresh the data?',

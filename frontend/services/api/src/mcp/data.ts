@@ -4,6 +4,7 @@ import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { parseUuid } from '../http/uuid.ts';
 import { utcText } from '../db/timestamps.ts';
+import { strings } from '../db/json.ts';
 import type { Actor } from '../auth/actor.ts';
 import {
   McpInputError,
@@ -11,7 +12,7 @@ import {
   type EvidencePrincipal,
   type McpPrincipal,
 } from './types.ts';
-import { mcpPolicy } from './config.ts';
+import { holdsWrite, mcpPolicy } from './config.ts';
 import { workspaceAccess } from '../entitlements/access.ts';
 import { requiresEmailVerification } from '../auth/eligibility.ts';
 import { rolesWith } from '../auth/workspace.ts';
@@ -119,7 +120,21 @@ export async function writeActor(
       'This connection can only read. Reconnect CiteLadder and tick Allow changes to make changes.',
     );
   const project = await authorizeProject(db, principal, projectId);
-  // Shared until commit: a demotion waits for, or precedes, the change.
+  // Shared until commit: a revocation, scope change or demotion waits for, or
+  // precedes, the change.
+  const grant = await db
+    .selectFrom('mcp_oauth_grants')
+    .select('scopes')
+    .where('id', '=', principal.grantId)
+    .where('access_token_hash', '=', principal.tokenHash)
+    .where('revoked_at', 'is', null)
+    .forShare()
+    .executeTakeFirst();
+  if (!grant) throw new McpInputError('Project was not found in this account');
+  if (!holdsWrite(strings(grant.scopes)))
+    throw new McpInputError(
+      'This connection can only read. Reconnect CiteLadder and tick Allow changes to make changes.',
+    );
   const member = await db
     .selectFrom('workspace_members')
     .select('role')

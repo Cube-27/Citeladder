@@ -89,7 +89,8 @@ redirect-host allowlist; the protections are bounds and binding:
   matches on any port (RFC 8252 §7.3) and the requested URI is the one bound;
   the token exchange rechecks it and the verifier. Unknown extra scopes (such as
   `offline_access`) are dropped; a request without `citeladder:read` is refused,
-  and a request only offers write, never grants it. Queries over 8 KiB and states over 1,024 bytes
+  scopes never exceed what the client registered, and a request only offers
+  write, never grants it. Queries over 8 KiB and states over 1,024 bytes
   are refused before writes; usage windows admit 10/client, 40/trusted source and
   120/global per minute, and the client row lock caps live requests at five.
 - Once the redirect is proven, every later `/authorize` error returns to the
@@ -200,7 +201,9 @@ The [write catalogue](../frontend/services/api/src/mcp/write-tools.ts) is listed
 in `tools/list`, and callable, only for a grant holding `citeladder:write`;
 a read-only grant gets "Unknown tool". Every write tool takes `project_id`:
 [`writeActor`](../frontend/services/api/src/mcp/data.ts) authorizes the project
-through the live grant and membership, then loads the member's live role, which
+through the live grant and membership, holds the grant row (still unrevoked and
+holding write) and the membership row shared until commit, and loads the
+member's live role, which
 the command checks (a Viewer is refused; a demotion applies to the next call).
 A record named by ID must belong to that project.
 
@@ -229,8 +232,8 @@ Write calls spend the normal tool budgets plus 30 a minute per grant. Tools
 carry their own annotations: reads `readOnlyHint: true`; writes
 `readOnlyHint: false`, `destructiveHint` on archive, cancel and
 `confirm_change`, `idempotentHint` on renames and status updates. The server
-instructions require a prepare tool, showing its preview, and `confirm_change`
-only after the user agrees. MCP elicitation is not offered: the transport is
+instructions require the user's yes before any change tool, and for a prepare
+tool its preview shown and `confirm_change` only after the user agrees to it. MCP elicitation is not offered: the transport is
 stateless HTTP and cannot hold a server-to-client request, so every client uses
 the token path.
 
