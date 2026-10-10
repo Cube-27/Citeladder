@@ -199,8 +199,7 @@ export function sortRankings<Row extends { share_of_voice?: number | null; name:
 }
 
 /**
- * Brand and competitor rows from one aggregate. Sentiment stays null: tone is
- * the one measure a run does not produce.
+ * Brand and competitor rows from one aggregate.
  */
 export function rankingRows(metrics: Metrics): RankingRow[] {
   const counts = storedMentionCounts(metrics);
@@ -225,7 +224,6 @@ export function rankingRows(metrics: Metrics): RankingRow[] {
     matched_visibility_rate: null,
     matched_visibility_delta: null,
     matched_response_count: null,
-    sentiment: null,
     avg_position: metricNumber(positions[name]),
   });
   return sortRankings([

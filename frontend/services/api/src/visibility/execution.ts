@@ -111,7 +111,6 @@ export async function getExecutionEvidence(
     citation_count: analysis.citation_count,
     search_used: analysis.search_used,
     search_query_count: analysis.search_query_count,
-    sentiment: analysis.sentiment,
     avg_position: analysis.avg_position,
     score,
     citations: citations.map((citation) => ({

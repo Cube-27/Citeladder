@@ -28,7 +28,6 @@ const evidence: ExecutionEvidence = {
   citation_count: 0,
   search_used: false,
   search_query_count: 0,
-  sentiment: null,
   avg_position: null,
   score: null,
   citations: [],

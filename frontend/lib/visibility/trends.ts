@@ -5,8 +5,8 @@
  * `VisibilityTrendPoint[]` projection into the chart series, headline stats,
  * version-boundary markers, and start/latest ranking tables. The trend endpoint
  * is the single source of truth; nothing here recomputes a metric — it only
- * projects persisted values for display (invariant 7). Sentiment / average
- * position stay the not-yet-computed placeholder (decision B-2 / invariant 9).
+ * projects persisted values for display (invariant 7). Average position stays
+ * the not-measured placeholder when no ranked answer exists (invariant 9).
  */
 import type { TrendPoint } from '@/components/ui/trend-chart';
 import type { LogicalEngine, VisibilityTrendPoint } from '@/lib/api/types';

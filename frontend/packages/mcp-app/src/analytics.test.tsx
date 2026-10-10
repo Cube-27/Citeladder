@@ -46,12 +46,10 @@ const overviewEvidence = {
       citation_rate: null,
       share_of_voice: null,
       mention_count: 1,
-      sentiment: null,
       avg_position: null,
     },
   ],
   per_engine: [],
-  sentiment: null,
   avg_position: null,
   created_at: '2026-10-03T12:00:00Z',
 };

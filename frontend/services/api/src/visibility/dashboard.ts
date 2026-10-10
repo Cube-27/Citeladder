@@ -257,7 +257,6 @@ async function runView(
       model_provenance: run.provenance,
       rankings,
       per_engine: engine === null ? engineRows(metrics) : [engineRow(engine, metrics)],
-      sentiment: typeof metrics.sentiment === 'string' ? metrics.sentiment : null,
       avg_position: metricNumber(metrics.avg_position),
       citation_totals: citationTotals(metrics),
       created_at: wireUtc(run.snapshotCreatedAt),

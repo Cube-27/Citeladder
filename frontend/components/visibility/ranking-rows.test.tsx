@@ -13,7 +13,6 @@ function row(overrides: Partial<RankingRow> = {}): RankingRow {
     citation_rate: 0.25,
     share_of_voice: 0.4,
     mention_count: 5,
-    sentiment: null,
     avg_position: null,
     ...overrides,
   };

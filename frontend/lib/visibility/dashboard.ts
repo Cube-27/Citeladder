@@ -195,7 +195,7 @@ export function formatPositionExact(position: number | null): string {
   return position.toFixed(1);
 }
 
-/** The not-yet-computed placeholder for sentiment + avg-position (B-2). */
+/** The not-measured placeholder for an absent average position. */
 export const PLACEHOLDER = availabilityLabel('not_measured');
 
 /**

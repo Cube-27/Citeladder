@@ -361,6 +361,28 @@ CREATE TABLE public.analytics_tasks (
     completed_at timestamp with time zone
 );
 
+CREATE TABLE public.answer_perceptions (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    project_id uuid NOT NULL,
+    audit_id uuid NOT NULL,
+    task_id uuid NOT NULL,
+    analysis_id uuid NOT NULL,
+    artifact_id uuid NOT NULL,
+    extractor_version character varying(64) NOT NULL,
+    template_version character varying(64) NOT NULL,
+    model_provider character varying(32),
+    model character varying(255),
+    input_hash character varying(64),
+    outcome character varying(32) NOT NULL,
+    outcome_reason character varying(64),
+    drop_counts jsonb DEFAULT '{}'::jsonb NOT NULL,
+    usage jsonb,
+    latency_ms integer,
+    created_at timestamp with time zone NOT NULL,
+    CONSTRAINT ck_answer_perception_outcome CHECK (((outcome)::text = ANY ((ARRAY['classified'::character varying, 'no_mentions'::character varying, 'unavailable'::character varying, 'invalid_output'::character varying, 'model_error'::character varying])::text[])))
+);
+
 CREATE TABLE public.audit_engine_snapshots (
     id uuid NOT NULL,
     audit_id uuid NOT NULL,
@@ -1278,6 +1300,21 @@ CREATE TABLE public.enterprise_agreement_references (
     recorded_at timestamp with time zone NOT NULL
 );
 
+CREATE TABLE public.entity_sentiments (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    perception_id uuid NOT NULL,
+    entity_id character varying(512) NOT NULL,
+    entity_name character varying(255) NOT NULL,
+    entity_kind character varying(16) NOT NULL,
+    label character varying(16) NOT NULL,
+    confidence double precision,
+    low_confidence boolean NOT NULL,
+    passage_spans jsonb NOT NULL,
+    aspects jsonb NOT NULL,
+    CONSTRAINT ck_entity_sentiment_label CHECK (((label)::text = ANY ((ARRAY['positive'::character varying, 'neutral'::character varying, 'negative'::character varying, 'mixed'::character varying, 'not_assessable'::character varying])::text[])))
+);
+
 CREATE TABLE public.execution_cost_projections (
     id uuid NOT NULL,
     audit_id uuid NOT NULL,
@@ -2138,7 +2175,6 @@ CREATE TABLE public.response_analyses (
     fanout_event_count integer DEFAULT 0 NOT NULL,
     fanout_event_source character varying(16) DEFAULT 'none'::character varying NOT NULL,
     fanout_projection_version character varying(32) DEFAULT 'fanout-1'::character varying NOT NULL,
-    sentiment character varying(16),
     avg_position double precision,
     score jsonb,
     entity_assessments jsonb NOT NULL,
@@ -3061,6 +3097,12 @@ ALTER TABLE ONLY public.aio_observations
 ALTER TABLE ONLY public.analytics_tasks
     ADD CONSTRAINT analytics_tasks_pkey PRIMARY KEY (id);
 
+ALTER TABLE ONLY public.answer_perceptions
+    ADD CONSTRAINT answer_perceptions_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.entity_sentiments
+    ADD CONSTRAINT entity_sentiments_pkey PRIMARY KEY (id);
+
 ALTER TABLE ONLY public.audit_engine_snapshots
     ADD CONSTRAINT audit_engine_snapshots_pkey PRIMARY KEY (id);
 
@@ -3562,6 +3604,15 @@ ALTER TABLE ONLY public.aio_observations
 ALTER TABLE ONLY public.analytics_tasks
     ADD CONSTRAINT uq_analytics_task_idempotency_key UNIQUE (idempotency_key);
 
+ALTER TABLE ONLY public.answer_perceptions
+    ADD CONSTRAINT uq_answer_perception_analysis_extractor UNIQUE (analysis_id, extractor_version);
+
+ALTER TABLE ONLY public.answer_perceptions
+    ADD CONSTRAINT uq_answer_perceptions_ws_id UNIQUE (workspace_id, id);
+
+ALTER TABLE ONLY public.entity_sentiments
+    ADD CONSTRAINT uq_entity_sentiment_perception_entity UNIQUE (perception_id, entity_id);
+
 ALTER TABLE ONLY public.audit_engine_snapshots
     ADD CONSTRAINT uq_audit_engine_snapshot_engine UNIQUE (audit_id, logical_engine);
 
@@ -4058,6 +4109,12 @@ CREATE INDEX ix_analytics_tasks_project_id ON public.analytics_tasks USING btree
 CREATE INDEX ix_analytics_tasks_status ON public.analytics_tasks USING btree (status);
 
 CREATE INDEX ix_analytics_tasks_workspace_id ON public.analytics_tasks USING btree (workspace_id);
+
+CREATE INDEX ix_answer_perceptions_audit_id ON public.answer_perceptions USING btree (audit_id);
+
+CREATE INDEX ix_answer_perceptions_workspace_id_created_at ON public.answer_perceptions USING btree (workspace_id, created_at);
+
+CREATE INDEX ix_entity_sentiments_workspace_id ON public.entity_sentiments USING btree (workspace_id);
 
 CREATE INDEX ix_audit_engine_snapshots_audit_id ON public.audit_engine_snapshots USING btree (audit_id);
 
@@ -5085,6 +5142,27 @@ ALTER TABLE ONLY public.analytics_tasks
 
 ALTER TABLE ONLY public.analytics_tasks
     ADD CONSTRAINT analytics_tasks_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.answer_perceptions
+    ADD CONSTRAINT answer_perceptions_analysis_id_fkey FOREIGN KEY (analysis_id) REFERENCES public.response_analyses(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.answer_perceptions
+    ADD CONSTRAINT answer_perceptions_artifact_id_fkey FOREIGN KEY (artifact_id) REFERENCES public.raw_response_artifacts(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.answer_perceptions
+    ADD CONSTRAINT answer_perceptions_task_id_fkey FOREIGN KEY (task_id) REFERENCES public.audit_tasks(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.answer_perceptions
+    ADD CONSTRAINT answer_perceptions_workspace_id_project_id_audit_id_fkey FOREIGN KEY (workspace_id, project_id, audit_id) REFERENCES public.audits(workspace_id, project_id, id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.answer_perceptions
+    ADD CONSTRAINT answer_perceptions_workspace_id_project_id_fkey FOREIGN KEY (workspace_id, project_id) REFERENCES public.projects(workspace_id, id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.entity_sentiments
+    ADD CONSTRAINT entity_sentiments_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.entity_sentiments
+    ADD CONSTRAINT entity_sentiments_workspace_id_perception_id_fkey FOREIGN KEY (workspace_id, perception_id) REFERENCES public.answer_perceptions(workspace_id, id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.audit_engine_snapshots
     ADD CONSTRAINT audit_engine_snapshots_audit_id_fkey FOREIGN KEY (audit_id) REFERENCES public.audits(id) ON DELETE CASCADE;

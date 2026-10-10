@@ -25,7 +25,7 @@ const visibilityTrendRankingRowSchema = rankingRowSchema;
 // snapshots (`audit_id` is null) and carries the full provenance list. Version
 // metadata lists every distinct analyzer/scoring version the point folds, with
 // `spans_version_boundary` set when a bucket mixes versions. `avg_position`
-// folds by completions; `sentiment` stays null until tone is scored.
+// folds by completions.
 export const visibilityTrendPointSchema = responseObject({
   audit_id: uuid().nullable(),
   completed_at: z.string(),
@@ -41,7 +41,6 @@ export const visibilityTrendPointSchema = responseObject({
   owned_citation_rate: z.number().nullable(),
   sov: visibilityTrendSovSchema,
   rankings: z.array(visibilityTrendRankingRowSchema),
-  sentiment: z.string().nullable(),
   avg_position: z.number().nullable(),
   // Measurement identity partition (invariant 7): a point folds only inside
   // one (transport_model, retrieval_enabled) identity, so

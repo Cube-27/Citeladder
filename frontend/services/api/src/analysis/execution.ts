@@ -86,7 +86,6 @@ export const analyzeExecution: DeriveExecution = async (db, task, audit, artifac
         searchQueryCount: score.search_query_count,
         providerMetadata: task.provider_metadata,
       }),
-      sentiment: null,
       avg_position: score.brand_position,
       score: JSON.stringify(score),
       entity_assessments: JSON.stringify(assessEntities(artifact.answer_text, config)),
