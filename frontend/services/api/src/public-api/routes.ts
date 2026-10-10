@@ -234,6 +234,14 @@ export const publicApiRoutes: readonly ProductRoute[] = [
     body: auditLaunchInput,
     response: auditSchema,
     handle: async ({ c, db, config }, { path }) =>
-      launchAudit(db, config, actorOf(c), path.project_id, await readBody(c, auditLaunchInput)),
+      (
+        await launchAudit(
+          db,
+          config,
+          actorOf(c),
+          path.project_id,
+          await readBody(c, auditLaunchInput),
+        )
+      ).audit,
   }),
 ];

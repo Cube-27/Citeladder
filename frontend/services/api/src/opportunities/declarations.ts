@@ -2,7 +2,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
 import { loadWorkerSettings, policy } from '../config.ts';
-import type { Database } from '../db/database.ts';
+import { inTransaction, type Database } from '../db/database.ts';
 import { resolveOwnedPages } from '../demand/page-equivalence.ts';
 import { ApiError } from '../errors.ts';
 import { asApiErrorCode } from '@citeladder/contracts/error-codes';
@@ -238,7 +238,7 @@ export function declareAction(
       ]),
     )
     .digest('hex');
-  return db.transaction().execute(async (trx) => {
+  return inTransaction(db, async (trx) => {
     // Refresh takes the project lock before updating Action rows. A declaration
     // needs the same order so members, snapshot and workflow form one revision.
     const authorized = await requireAction(trx, workspaceId, actionId);

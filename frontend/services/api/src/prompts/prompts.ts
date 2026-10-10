@@ -17,7 +17,7 @@ import type { Kysely } from 'kysely';
 import { z } from 'zod';
 
 import { policy } from '../config.ts';
-import type { Database } from '../db/database.ts';
+import { inTransaction, type Database } from '../db/database.ts';
 import { isUniqueViolation } from '../db/errors.ts';
 import { ApiError, notFound } from '../errors.ts';
 import type { DB } from '../generated/db-schema.ts';
@@ -150,6 +150,86 @@ export async function createPrompt(
  * Create manual prompts in one transaction: every one binds and is new to the
  * set (and to the batch), or nothing is created.
  */
+type Screened<T> = {
+  input: T;
+  hash: string;
+  problem: { kind: 'binding'; failure: BindingFailure } | { kind: 'duplicate' } | null;
+};
+
+/**
+ * Each input with what stops it inserting: a topical binding failure, or text
+ * equivalent to an earlier input or to a prompt already in the set.
+ */
+async function screen<T extends { text: string; topic_id?: string | null }>(
+  db: Kysely<DB>,
+  set: { id: string; project_id: string },
+  inputs: readonly T[],
+): Promise<Screened<T>[]> {
+  const vocabulary = await loadVocabulary(db, set.project_id);
+  const topicIds = [...new Set(inputs.flatMap((input) => input.topic_id ?? []))];
+  const topics = new Map(
+    await Promise.all(
+      topicIds.map(
+        async (topicId) => [topicId, await topicText(db, set.project_id, topicId)] as const,
+      ),
+    ),
+  );
+  const hashes = inputs.map((input) => promptTextHash(input.text));
+  const existing = isNonEmpty(hashes)
+    ? await db
+        .selectFrom('prompts')
+        .select('normalized_text_hash')
+        .where('prompt_set_id', '=', set.id)
+        .where('normalized_text_hash', 'in', hashes)
+        .execute()
+    : [];
+  const taken = new Set(existing.map((row) => row.normalized_text_hash));
+  return inputs.map((input, index) => {
+    const hash = promptTextHash(input.text);
+    const failure = bindingFailure(
+      input.text,
+      vocabulary,
+      input.topic_id ? (topics.get(input.topic_id) ?? '') : '',
+    );
+    const duplicate = taken.has(hash) || hashes.indexOf(hash) < index;
+    return {
+      input,
+      hash,
+      problem:
+        failure !== null ? { kind: 'binding', failure } : duplicate ? { kind: 'duplicate' } : null,
+    };
+  });
+}
+
+/**
+ * The inputs `createPrompts` would accept, and each dropped one with why. A
+ * read: the insert screens again under its locks.
+ */
+export async function screenPrompts(
+  db: Database,
+  workspaceId: string,
+  promptSetId: string,
+  inputs: readonly z.infer<typeof promptInput>[],
+) {
+  const set = await scopedPromptSet(db, workspaceId, promptSetId);
+  const screened = await screen(db, set, inputs);
+  return {
+    admitted: screened.flatMap((item) => (item.problem === null ? [item.input] : [])),
+    dropped: screened.flatMap(({ input, problem }) =>
+      problem === null
+        ? []
+        : [
+            {
+              text: input.text,
+              ...(problem.kind === 'binding'
+                ? BINDING_FAILURES[problem.failure]
+                : { code: 'duplicate', message: DUPLICATE }),
+            },
+          ],
+    ),
+  };
+}
+
 export async function createPrompts(
   db: Database,
   workspaceId: string,
@@ -157,42 +237,16 @@ export async function createPrompts(
   inputs: NonEmpty<z.infer<typeof promptInput>>,
 ): Promise<PromptView[]> {
   try {
-    return await db.transaction().execute(async (trx) => {
+    return await inTransaction(db, async (trx) => {
       const set = await scopedPromptSet(trx, workspaceId, promptSetId);
       await acquireProjectLock(trx, set.project_id);
       await acquirePromptSetLock(trx, set.id);
-      // Bound under the project lock, so the topic vocabulary cannot change before the insert.
-      const vocabulary = await loadVocabulary(trx, set.project_id);
-      const topicIds = [...new Set(inputs.flatMap((input) => input.topic_id ?? []))];
-      const topics = new Map(
-        await Promise.all(
-          topicIds.map(
-            async (topicId) => [topicId, await topicText(trx, set.project_id, topicId)] as const,
-          ),
-        ),
-      );
-      for (const input of inputs) {
-        const failure = bindingFailure(
-          input.text,
-          vocabulary,
-          input.topic_id ? (topics.get(input.topic_id) ?? '') : '',
-        );
-        if (failure !== null) throw bindingError(failure);
-      }
-      const planned = inputs.map((input) => ({
-        input,
-        id: randomUUID(),
-        hash: promptTextHash(input.text),
-      }));
-      const hashes = planned.map((item) => item.hash);
-      if (new Set(hashes).size !== hashes.length) throw new ApiError(409, DUPLICATE);
-      const existing = await trx
-        .selectFrom('prompts')
-        .select('id')
-        .where('prompt_set_id', '=', set.id)
-        .where('normalized_text_hash', 'in', hashes)
-        .executeTakeFirst();
-      if (existing !== undefined) throw new ApiError(409, DUPLICATE);
+      // Screened under the project lock, so the topic vocabulary cannot change before the insert.
+      const screened = await screen(trx, set, inputs);
+      for (const { problem } of screened)
+        if (problem?.kind === 'binding') throw bindingError(problem.failure);
+      if (screened.some((item) => item.problem !== null)) throw new ApiError(409, DUPLICATE);
+      const planned = screened.map(({ input, hash }) => ({ input, id: randomUUID(), hash }));
       await admitPrompts(trx, workspaceId, inputs.length);
       const now = new Date();
       const rows = await trx
@@ -234,9 +288,7 @@ export async function updatePrompt(
   input: z.infer<typeof promptUpdate>,
 ): Promise<PromptView> {
   try {
-    return await db
-      .transaction()
-      .execute((trx) => applyPromptUpdate(trx, workspaceId, promptId, input));
+    return await inTransaction(db, (trx) => applyPromptUpdate(trx, workspaceId, promptId, input));
   } catch (error) {
     if (isUniqueViolation(error, UNIQUE_TEXT)) throw new ApiError(409, DUPLICATE);
     throw error;
@@ -313,7 +365,7 @@ export async function bulkSetStatus(
   input: z.infer<typeof promptBulkStatus>,
 ): Promise<PromptSetView> {
   const ids = [...new Set(input.prompt_ids)];
-  await db.transaction().execute(async (trx) => {
+  await inTransaction(db, async (trx) => {
     const set = await scopedPromptSet(trx, workspaceId, promptSetId);
     await acquireProjectLock(trx, set.project_id);
     await acquirePromptSetLock(trx, set.id);

@@ -194,6 +194,23 @@ async function promptCount(db: Database, accountId: string): Promise<number> {
 }
 
 /**
+ * Prompt slots in use and the `prompt_slots` allowance, null when ungated.
+ * Takes the capacity lock, so it reads after a same-transaction insert.
+ */
+export async function promptOccupancy(
+  db: Database,
+  workspaceId: string,
+): Promise<{ used: number; allowance: number | null }> {
+  const accountId = await lockWorkspaceCapacity(db, workspaceId);
+  const entitlement = await resolveAccountEntitlement(db, { accountId, workspaceId }, new Date());
+  return {
+    used: await promptCount(db, accountId),
+    allowance:
+      entitlement.status === 'resolved' ? (entitlement.values.get(PROMPT_SLOTS) ?? null) : null,
+  };
+}
+
+/**
  * Admit `requested` new prompts for the workspace, or throw a 403. Takes the
  * capacity lock; the caller inserts in the same transaction.
  */

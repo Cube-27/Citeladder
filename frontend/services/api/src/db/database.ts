@@ -15,6 +15,14 @@ import { getLogger } from '../logging.ts';
 import { observeConnection } from './committed-work.ts';
 
 export type Database = Kysely<DB>;
+
+/**
+ * Run `work` in the caller's transaction when `db` is one, else in a new
+ * transaction, so a confirmed MCP change commits with its confirmation.
+ */
+export function inTransaction<T>(db: Database, work: (trx: Database) => Promise<T>): Promise<T> {
+  return db.isTransaction ? work(db) : db.transaction().execute(work);
+}
 export type DatabaseConfig = Pick<ServiceConfig, 'database' | 'databaseUrl' | 'appName'> & {
   execution?: Pick<ServiceConfig['execution'], 'runnerJob' | 'poolSize'>;
 };

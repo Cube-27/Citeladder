@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { Selectable } from 'kysely';
 import { auditScheduleSchema } from '@citeladder/contracts/audits';
 import type { z } from 'zod';
-import type { Database } from '../db/database.ts';
+import { inTransaction, type Database } from '../db/database.ts';
 import type { AuditSchedules } from '../generated/db-schema.ts';
 import { ApiError, notFound } from '../errors.ts';
 import {
@@ -45,7 +45,7 @@ async function requirePromptSet(db: Database, scope: ScheduleScope, id: string) 
 }
 
 export function createSchedule(db: Database, scope: ScheduleScope, input: ScheduleCreate) {
-  return db.transaction().execute(async (trx) => {
+  return inTransaction(db, async (trx) => {
     await requirePromptSet(trx, scope, input.prompt_set_id);
     const now = new Date();
     const row = await trx

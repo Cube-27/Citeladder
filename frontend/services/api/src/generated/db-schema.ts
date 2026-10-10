@@ -1610,6 +1610,21 @@ export interface McpAuthorizationRequests {
   transaction_hash: string;
 }
 
+export interface McpConfirmations {
+  consumed_at: Timestamp | null;
+  created_at: Timestamp;
+  expires_at: Timestamp;
+  grant_id: string;
+  id: string;
+  kind: string;
+  payload: Json;
+  payload_hash: string;
+  project_id: string;
+  token_hmac: string;
+  user_id: string;
+  workspace_id: string;
+}
+
 export interface McpOauthClients {
   client_id: string;
   client_metadata: Json;
@@ -3180,6 +3195,7 @@ export interface DB {
   introductory_operator_codes: IntroductoryOperatorCodes;
   mcp_authorization_codes: McpAuthorizationCodes;
   mcp_authorization_requests: McpAuthorizationRequests;
+  mcp_confirmations: McpConfirmations;
   mcp_oauth_clients: McpOauthClients;
   mcp_oauth_grants: McpOauthGrants;
   metric_snapshots: MetricSnapshots;

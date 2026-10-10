@@ -5,6 +5,7 @@ import { requireCapability, type Actor } from '../auth/actor.ts';
 import type { scheduleCreate, scheduleUpdate } from '../audits/schedule-inputs.ts';
 import * as schedules from '../audits/schedules.ts';
 import type { Database } from '../db/database.ts';
+import { execute, type CommandOptions } from './dry-run.ts';
 
 const SCOPE = 'schedules:write';
 
@@ -18,8 +19,10 @@ export function createSchedule(
   actor: Actor,
   projectId: string,
   input: z.output<typeof scheduleCreate>,
+  options: CommandOptions = {},
 ) {
-  return schedules.createSchedule(db, scopeOf(actor, projectId), input);
+  const scope = scopeOf(actor, projectId);
+  return execute(db, options, (trx) => schedules.createSchedule(trx, scope, input));
 }
 
 export function updateSchedule(
