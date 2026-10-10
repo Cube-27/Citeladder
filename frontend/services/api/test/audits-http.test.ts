@@ -83,7 +83,7 @@ describe('audit HTTP family cutover', () => {
       credential_mode: 'funded',
     });
     expect(created.status).toBe(201);
-    const run = (await created.json()) as { id: string };
+    const [run] = (await created.json()) as [{ id: string }];
     const funding = await db
       .selectFrom('audits')
       .select('funding_account_id')
