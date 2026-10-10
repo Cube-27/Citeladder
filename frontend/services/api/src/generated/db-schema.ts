@@ -507,6 +507,8 @@ export interface Audits {
   funded_reserved_cost_microusd: Int8 | null;
   funding_account_id: string | null;
   id: string;
+  launch_id: string | null;
+  market_id: string | null;
   parent_audit_id: string | null;
   project_id: string;
   random_seed: string;
@@ -539,6 +541,7 @@ export interface AuditSchedules {
   last_run_at: Timestamp | null;
   lease_expires_at: Timestamp | null;
   lease_owner: string | null;
+  market_ids: Generated<Json>;
   next_run_at: Timestamp | null;
   project_id: string;
   prompt_set_id: string;
@@ -1925,6 +1928,16 @@ export interface PolicyAcceptances {
   workspace_id: string;
 }
 
+export interface ProjectMarkets {
+  country_code: string;
+  created_at: Timestamp;
+  id: string;
+  label: string;
+  language_code: string;
+  project_id: string;
+  workspace_id: string;
+}
+
 export interface Projects {
   benchmark_mode: string;
   brand_name: string;
@@ -3270,6 +3283,7 @@ export interface DB {
   pending_activations: PendingActivations;
   performance_dimension_stats: PerformanceDimensionStats;
   policy_acceptances: PolicyAcceptances;
+  project_markets: ProjectMarkets;
   projects: Projects;
   prompt_candidates: PromptCandidates;
   prompt_generation_runs: PromptGenerationRuns;

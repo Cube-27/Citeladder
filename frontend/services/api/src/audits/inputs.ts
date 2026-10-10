@@ -2,6 +2,13 @@ import { z } from 'zod';
 import { logicalEngineSchema } from '@citeladder/contracts/providers';
 import { benchmarkModeSchema } from '@citeladder/contracts/project';
 import { auditPolicy } from './config.ts';
+/** A launch's markets: distinct ids, `null` for the project default. */
+export const marketIdList = z
+  .array(z.uuid().nullable())
+  .min(1)
+  .max(auditPolicy.max_markets_per_launch)
+  .refine((ids) => new Set(ids).size === ids.length, 'Markets must be distinct');
+export const marketIdsInput = marketIdList.default([null]);
 const auditFields = z.object({
   project_id: z.uuid(),
   prompt_set_id: z.uuid().nullish(),
@@ -14,6 +21,8 @@ const auditFields = z.object({
     .max(auditPolicy.max_repetitions)
     .nullish(),
   benchmark_mode: benchmarkModeSchema.nullish(),
+  /** One audit per market; `null` is the project's default market. */
+  market_ids: marketIdsInput,
   audit_scope: z.enum(['brand', 'commerce']).default('brand'),
   credential_mode: z.enum(['byok', 'funded']).default('byok'),
   random_seed: z.string().nullish(),

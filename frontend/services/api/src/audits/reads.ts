@@ -2,7 +2,7 @@ import { sql } from 'kysely';
 import { auditSchema, executionSchema, auditMetricsSchema } from '@citeladder/contracts/audits';
 import { auditEventSchema } from '@citeladder/contracts/audit-events';
 import type { Database } from '../db/database.ts';
-import { record } from '../db/json.ts';
+import { record, strings } from '../db/json.ts';
 import { utcText, utcTextOf, wireUtc, wireUtcOrNull } from '../db/timestamps.ts';
 import { notFound } from '../errors.ts';
 import { modelProvenanceFor, executionFrozenProvenance } from '../analysis/provenance.ts';
@@ -26,6 +26,16 @@ export async function authorizedAudit(db: Database, workspaceId: string, auditId
   if (!audit) throw notFound('Audit');
   return audit;
 }
+/** The market a run froze at admission; its id stays on the row for filtering. */
+function frozenMarket(audit: { market_id: string | null; configuration: unknown }) {
+  const config = record(audit.configuration);
+  const market = record(config.market);
+  return {
+    id: audit.market_id,
+    country_code: String(market.country_code ?? config.country_code ?? ''),
+    language_code: String(market.language_code ?? config.language_code ?? ''),
+  };
+}
 async function auditResponses(db: Database, audits: Awaited<ReturnType<typeof authorizedAudit>>[]) {
   const routes = await engineSnapshots(
     db,
@@ -35,6 +45,8 @@ async function auditResponses(db: Database, audits: Awaited<ReturnType<typeof au
     auditSchema.parse({
       ...audit,
       engine_snapshots: routes.get(audit.id) ?? [],
+      market: frozenMarket(audit),
+      not_applicable_engines: strings(record(audit.configuration).not_applicable_engines),
       model_provenance: modelProvenanceFor(routes.get(audit.id) ?? [], audit.configuration),
       created_at: wireUtc(audit.created_text),
       updated_at: wireUtc(audit.updated_text),
@@ -48,6 +60,16 @@ export async function readAudit(db: Database, workspaceId: string, auditId: stri
     await auditResponses(db, [await authorizedAudit(db, workspaceId, auditId)]),
     'the response built for the loaded audit',
   );
+}
+/** The named audits in the given order: one launch's per-market runs. */
+export async function readAudits(db: Database, workspaceId: string, auditIds: readonly string[]) {
+  const rows = await auditQuery(db, workspaceId)
+    .where('id', 'in', [...auditIds])
+    .execute();
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  const ordered = auditIds.map((id) => byId.get(id)).filter((row) => row !== undefined);
+  if (ordered.length !== auditIds.length) throw notFound('Audit');
+  return auditResponses(db, ordered);
 }
 export async function listAudits(
   db: Database,

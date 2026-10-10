@@ -6,7 +6,7 @@ import { VisibilityFixtures } from './visibility-fixtures.ts';
 import { auditTenant } from './audit-fixtures.ts';
 import { auditRuntime } from '../src/audits/config.ts';
 import { auditInput } from '../src/audits/inputs.ts';
-import { createAudit } from '../src/audits/creation.ts';
+import { createAudits } from '../src/audits/creation.ts';
 import {
   auditEvents,
   listAudits,
@@ -29,7 +29,7 @@ afterAll(async () => {
 });
 async function seed() {
   const t = await auditTenant(db, fixtures);
-  const auditId = await createAudit(
+  const [auditId] = await createAudits(
     db,
     t.workspaceId,
     auditInput.parse({ project_id: t.projectId, prompt_set_id: t.setId, engines: ['chatgpt'] }),

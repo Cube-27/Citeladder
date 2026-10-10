@@ -4,7 +4,11 @@ import { logicalEngineSchema } from '@citeladder/contracts/providers';
 import type { Database } from '../db/database.ts';
 import { ApiError } from '../errors.ts';
 import { auditPolicy, auditRuntime, type AuditRuntime } from './config.ts';
-import { providerPolicy } from '../providers/config.ts';
+import { providerPolicy, type Engine } from '../providers/config.ts';
+import { resolveMarkets } from '../projects/markets.ts';
+import { searchContext } from '../search-surfaces/locations.ts';
+import { marketEngines } from './freeze.ts';
+import { marketIdsInput } from './inputs.ts';
 import { costPolicy, estimateTokens, knownTotal, previewCost } from './costs.ts';
 
 export const estimateInput = z.object({
@@ -18,8 +22,13 @@ export const estimateInput = z.object({
     .min(auditPolicy.min_repetitions)
     .max(auditPolicy.max_repetitions)
     .nullish(),
+  market_ids: marketIdsInput,
 });
-/** Provider-free preview reads accepted prompt source and versioned rates; no credential or health lookup. */
+/**
+ * Provider-free preview reads accepted prompt source and versioned rates; no
+ * credential or health lookup. A launch runs one audit per market, so each
+ * engine's executions scale with the selected markets it can measure.
+ */
 export async function estimateAudit(
   db: Database,
   workspaceId: string,
@@ -53,53 +62,68 @@ export async function estimateAudit(
     throw invalid('One or more prompts are unavailable');
   const settings = runtime.audits,
     repetitions = input.repetitions ?? settings.audit_repetitions;
-  const inputTokens =
-    prompts.reduce((sum, prompt) => sum + estimateTokens(prompt.text), 0) * repetitions;
-  const engines = [...new Set(input.engines)].map((engine) => {
-    const route = providerPolicy.routes[engine],
-      executions = prompts.length * repetitions;
-    const common = {
-      logical_engine: engine,
-      transport_provider: route.transport_provider,
-      transport_model: route.transport_model,
-      prompt_count: prompts.length,
-      repetition_count: repetitions,
-      execution_count: executions,
-      pricing_version: costPolicy.pricing_version,
-    };
-    if (route.transport_provider === 'dataforseo')
+  const markets = await resolveMarkets(
+    db,
+    { workspaceId, projectId: project.id },
+    input.market_ids,
+  );
+  const requested = [...new Set(input.engines)];
+  const measured = markets.map(
+    (market) =>
+      marketEngines(requested, market, searchContext(market.country_code, market.language_code))
+        .engines,
+  );
+  const marketCount = (engine: Engine) => measured.filter((list) => list.includes(engine)).length;
+  const engines = requested
+    .filter((engine) => marketCount(engine) > 0)
+    .map((engine) => {
+      const route = providerPolicy.routes[engine],
+        runs = marketCount(engine) * repetitions,
+        executions = prompts.length * runs,
+        inputTokens = prompts.reduce((sum, prompt) => sum + estimateTokens(prompt.text), 0) * runs;
+      const common = {
+        logical_engine: engine,
+        transport_provider: route.transport_provider,
+        transport_model: route.transport_model,
+        prompt_count: prompts.length,
+        repetition_count: repetitions,
+        market_count: marketCount(engine),
+        execution_count: executions,
+        pricing_version: costPolicy.pricing_version,
+      };
+      if (route.transport_provider === 'dataforseo')
+        return {
+          ...common,
+          retrieval_enabled: null,
+          maximum_attempt_count: executions,
+          estimated_input_tokens: null,
+          estimated_output_tokens: null,
+          estimated_search_calls: null,
+          estimated_token_cost_microusd: null,
+          estimated_search_cost_microusd: null,
+          estimated_total_cost_microusd: null,
+          cost_status: 'unknown' as const,
+        };
+      const calls: Record<string, number> = costPolicy.estimate_search_calls;
+      if (calls[engine] === undefined)
+        throw invalid(`Search-call estimate is unavailable for engine: ${engine}`);
+      const outputTokens = executions * settings.audit_max_output_tokens;
       return {
         ...common,
-        retrieval_enabled: null,
-        maximum_attempt_count: executions,
-        estimated_input_tokens: null,
-        estimated_output_tokens: null,
-        estimated_search_calls: null,
-        estimated_token_cost_microusd: null,
-        estimated_search_cost_microusd: null,
-        estimated_total_cost_microusd: null,
-        cost_status: 'unknown' as const,
+        retrieval_enabled: true,
+        maximum_attempt_count: executions * settings.max_attempts,
+        estimated_input_tokens: inputTokens,
+        estimated_output_tokens: outputTokens,
+        ...previewCost(
+          {
+            logical_engine: engine,
+            transport_provider: route.transport_provider,
+            transport_model: route.transport_model,
+          },
+          { inputTokens, outputTokens, executions, retrieval: true },
+        ),
       };
-    const calls: Record<string, number> = costPolicy.estimate_search_calls;
-    if (calls[engine] === undefined)
-      throw invalid(`Search-call estimate is unavailable for engine: ${engine}`);
-    const outputTokens = executions * settings.audit_max_output_tokens;
-    return {
-      ...common,
-      retrieval_enabled: true,
-      maximum_attempt_count: executions * settings.max_attempts,
-      estimated_input_tokens: inputTokens,
-      estimated_output_tokens: outputTokens,
-      ...previewCost(
-        {
-          logical_engine: engine,
-          transport_provider: route.transport_provider,
-          transport_model: route.transport_model,
-        },
-        { inputTokens, outputTokens, executions, retrieval: true },
-      ),
-    };
-  });
+    });
   const attempts = engines.reduce((sum, engine) => sum + engine.maximum_attempt_count, 0);
   const statuses = new Set(engines.map((engine) => engine.cost_status));
   return auditEstimateSchema.parse({
@@ -107,6 +131,7 @@ export async function estimateAudit(
     prompt_count: prompts.length,
     engine_count: engines.length,
     repetition_count: repetitions,
+    market_count: markets.length,
     execution_count: engines.reduce((sum, engine) => sum + engine.execution_count, 0),
     maximum_attempt_count: attempts,
     maximum_wall_clock_seconds: Math.ceil(

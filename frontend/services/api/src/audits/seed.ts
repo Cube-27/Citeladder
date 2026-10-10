@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { Database } from '../db/database.ts';
 import { auditInput } from './inputs.ts';
-import { createAudit } from './creation.ts';
+import { createAudits } from './creation.ts';
 import { auditRuntime } from './config.ts';
 import { auditProjections } from './projections.ts';
 import { AuditWorker } from '../workers/audit-worker.ts';
@@ -42,7 +42,7 @@ export async function seedAudit(
   const request = seedInput.parse(raw),
     runtime = auditRuntime(env);
   runtime.audits.min_request_interval_seconds = 0;
-  const auditId = await createAudit(
+  const [auditId] = await createAudits(
     db,
     request.workspace_id,
     request.input,

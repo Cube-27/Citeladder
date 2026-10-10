@@ -3,6 +3,7 @@ import { auditScheduleCadenceSchema } from '@citeladder/contracts/audits';
 import { benchmarkModeSchema } from '@citeladder/contracts/project';
 import { logicalEngineSchema } from '@citeladder/contracts/providers';
 import { policy, resolveSettingSpec } from '../config.ts';
+import { marketIdList } from './inputs.ts';
 
 const timezones = new Map(
   policy.audit_schedules.timezones.map((name) => [name.toLowerCase(), name]),
@@ -48,6 +49,7 @@ const fields = {
   interval_minutes: z.int().positive().max(2_147_483_647).nullable(),
   timezone,
   engines,
+  market_ids: marketIdList,
   repetitions: z
     .int()
     .min(policy.projects.min_repetitions)
@@ -79,6 +81,7 @@ export const scheduleCreate = z
     audit_scope: fields.audit_scope.default('brand'),
     interval_minutes: fields.interval_minutes.default(null),
     timezone: fields.timezone.default(policy.audit_schedules.default_timezone),
+    market_ids: fields.market_ids.default([null]),
     repetitions: fields.repetitions.default(null),
     benchmark_mode: fields.benchmark_mode.default(null),
     enabled: fields.enabled.default(true),

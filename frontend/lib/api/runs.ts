@@ -43,6 +43,8 @@ export type LaunchAuditInput = {
   prompt_set_id?: string;
   prompt_ids?: string[];
   engines: LogicalEngine[];
+  /** One run per market; `null` is the project default (the default selection). */
+  market_ids?: (string | null)[];
   repetitions?: number;
   benchmark_mode?: string;
   audit_scope?: 'brand' | 'commerce';
@@ -64,6 +66,7 @@ export type CreateAuditScheduleInput = {
   interval_minutes?: number;
   timezone?: string;
   engines: LogicalEngine[];
+  market_ids?: (string | null)[];
   repetitions?: number;
   benchmark_mode?: string;
   enabled?: boolean;
@@ -75,11 +78,12 @@ export const runsApi = {
     const res = await apiClient.post('/audits/estimate', input, options);
     return strictValidate(auditEstimateSchema, res, 'runs.estimateAudit');
   },
+  /** One launch: a queued run per selected market, each driven to its first results. */
   launchAudit: async (input: LaunchAuditInput, options?: ApiRequestOptions) => {
-    const res = await apiClient.post<Audit>('/audits', input, options);
-    const audit = strictValidate(auditSchema, res, 'runs.launchAudit');
-    startInteractiveWork(`/audits/${audit.id}/run`, options);
-    return audit;
+    const res = await apiClient.post<Audit[]>('/audits', input, options);
+    const audits = strictValidate(auditListSchema, res, 'runs.launchAudit');
+    for (const audit of audits) startInteractiveWork(`/audits/${audit.id}/run`, options);
+    return audits;
   },
   listAudits: async (params?: { project_id?: string }, options?: ApiRequestOptions) => {
     const path = withQuery('/audits', definedQuery(params));

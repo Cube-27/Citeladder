@@ -315,6 +315,7 @@ export function launchCatalog(options: {
       { key: 'crawl_logs', value: 1 },
       { key: 'api_access', value: 1 },
       { key: 'api_keys', value: 10 },
+      ...(p.markets ? [{ key: 'market_slots', value: p.markets }] : []),
       { key: 'support_tier', value: level('support_tier', p.support) },
       ...(p.credits ? [{ key: 'ai_credits', value: p.credits }] : []),
       ...(p.upper

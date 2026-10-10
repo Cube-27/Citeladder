@@ -19,6 +19,7 @@ import {
 import { auditEvent, transitionAudit } from './state.ts';
 import { auditPolicy, auditRuntime, type AuditRuntime } from './config.ts';
 import { auditInput, type AuditInput } from './inputs.ts';
+import { resolveMarkets, type Market } from '../projects/markets.ts';
 
 export type AuditLaunch = {
   trigger?: string;
@@ -26,10 +27,13 @@ export type AuditLaunch = {
   scheduledFor?: Date;
   devTestLogin?: boolean;
 };
-export type AuditScope = { workspaceId: string; projectId: string };
+type AuditScope = { workspaceId: string; projectId: string };
 
-/** A shell that commits only the complete frozen plan, queue and funding proof. */
-export function createAudit(
+/**
+ * One launch: an audit per selected market, committed together with one
+ * shared `launch_id`, or none at all. Returns the audit ids in market order.
+ */
+export function createAudits(
   db: Database,
   workspaceId: string,
   request: AuditInput,
@@ -39,19 +43,43 @@ export function createAudit(
 ) {
   return db
     .transaction()
-    .execute((trx) => createAuditInTransaction(trx, workspaceId, request, launch, runtime, at));
+    .execute((trx) => createAuditsInTransaction(trx, workspaceId, request, launch, runtime, at));
 }
 
 /** The scheduler holds its scoped occurrence row; planner and cadence advancement share that transaction. */
-export async function createAuditInTransaction(
+export async function createAuditsInTransaction(
   trx: Database,
   workspaceId: string,
   request: AuditInput,
   launch: AuditLaunch,
   runtime: AuditRuntime,
   at: Date,
-) {
+): Promise<[string, ...string[]]> {
   const input = auditInput.parse(request);
+  const [first, ...rest] = await resolveMarkets(
+    trx,
+    { workspaceId, projectId: input.project_id },
+    input.market_ids,
+  );
+  if (!first) throw new ApiError(400, 'Select at least one market');
+  const launchId = randomUUID();
+  const create = (market: Market) =>
+    createMarketAudit(trx, workspaceId, input, { market, launchId }, launch, runtime, at);
+  const ids: [string, ...string[]] = [await create(first)];
+  for (const market of rest) ids.push(await create(market));
+  return ids;
+}
+
+/** A shell that commits only the complete frozen plan, queue and funding proof. */
+async function createMarketAudit(
+  trx: Database,
+  workspaceId: string,
+  input: AuditInput,
+  measured: { market: Market; launchId: string },
+  launch: AuditLaunch,
+  runtime: AuditRuntime,
+  at: Date,
+) {
   const access = await requireWorkspaceAccess(trx, workspaceId);
   const trigger = (launch.trigger ?? 'manual').trim().toLowerCase();
   await subjectXactLock(trx, `audit-enqueue:${workspaceId}`);
@@ -73,6 +101,7 @@ export async function createAuditInTransaction(
       .where('project_id', '=', input.project_id)
       .where('schedule_id', '=', launch.scheduleId)
       .where('scheduled_for', '=', launch.scheduledFor)
+      .where('market_id', measured.market.id === null ? 'is' : '=', measured.market.id)
       .executeTakeFirst();
     if (prior) return prior.id;
   } else if (launch.scheduledFor)
@@ -86,6 +115,7 @@ export async function createAuditInTransaction(
     trigger,
     runtime.search,
     at,
+    measured.market,
   );
   const slots = auditSlots(
     plan.prompts.length,
@@ -104,7 +134,7 @@ export async function createAuditInTransaction(
       403,
       'The requested engine or repetition count is outside the trial allowance',
     );
-  await reserveAuditCapacity(trx, workspaceId, slots.length, runtime, at);
+  await reserveAuditCapacity(trx, workspaceId, slots.length, measured.launchId, runtime, at);
   const funded = await admitAudit(
     trx,
     workspaceId,
@@ -113,6 +143,7 @@ export async function createAuditInTransaction(
     trigger,
     runtime,
     at,
+    measured.launchId,
   );
   const id = randomUUID();
   await trx
@@ -146,6 +177,8 @@ export async function createAuditInTransaction(
       summary: null,
       parent_audit_id: null,
       repair_key: null,
+      market_id: measured.market.id,
+      launch_id: measured.launchId,
     })
     .execute();
   const snapshots = await persistSnapshots(trx, id, plan, at);

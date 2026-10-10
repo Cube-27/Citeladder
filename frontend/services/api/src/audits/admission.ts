@@ -32,15 +32,18 @@ export async function reserveAuditCapacity(
   db: Database,
   workspaceId: string,
   slots: number,
+  launchId: string | null,
   runtime: AuditRuntime,
   at: Date,
 ) {
-  const active = await db
+  // A launch's per-market audits count as one active run, and never against themselves.
+  let launches = db
     .selectFrom('audits')
-    .select(db.fn.countAll<string>().as('count'))
+    .select(sql<string>`count(distinct coalesce(launch_id, id))`.as('count'))
     .where('workspace_id', '=', workspaceId)
-    .where('status', 'in', auditPolicy.constants.audit_active_statuses)
-    .executeTakeFirstOrThrow();
+    .where('status', 'in', auditPolicy.constants.audit_active_statuses);
+  if (launchId) launches = launches.where('launch_id', 'is distinct from', launchId);
+  const active = await launches.executeTakeFirstOrThrow();
   if (Number(active.count) >= runtime.activeLimit)
     throw new ApiError(429, 'Workspace active audit limit exceeded', {
       headers: { 'retry-after': String(runtime.retrySeconds) },
@@ -66,6 +69,7 @@ export async function admitAudit(
   trigger: string,
   runtime: AuditRuntime,
   at: Date,
+  launchId: string | null = null,
 ) {
   if (!funded && trigger !== 'manual') return null;
   const account = await db
@@ -83,17 +87,19 @@ export async function admitAudit(
   if (state.error) throw unresolved(workspaceId, account.id);
   if (trigger === 'manual' && state.values.has('manual_runs_per_day')) {
     const seconds = policy.entitlements.capabilities.manual_runs_per_day.rolling_window_seconds;
-    const recent = await db
+    // One launch is one manual run, whatever its market count.
+    let launches = db
       .selectFrom('audits as a')
       .innerJoin('billing_accounts as b', 'b.workspace_id', 'a.workspace_id')
       .select((eb) => [
-        eb.fn.countAll<string>().as('count'),
+        sql<string>`count(distinct coalesce(a.launch_id, a.id))`.as('count'),
         eb.fn.min('a.created_at').as('oldest'),
       ])
       .where('b.id', '=', account.id)
       .where('a.trigger', '=', 'manual')
-      .where('a.created_at', '>', new Date(at.getTime() - seconds * 1000))
-      .executeTakeFirstOrThrow();
+      .where('a.created_at', '>', new Date(at.getTime() - seconds * 1000));
+    if (launchId) launches = launches.where('a.launch_id', 'is distinct from', launchId);
+    const recent = await launches.executeTakeFirstOrThrow();
     const allowance = state.values.get('manual_runs_per_day')!;
     if (Number(recent.count) >= allowance)
       throw new ApiError(429, 'The account manual run allowance is exhausted', {

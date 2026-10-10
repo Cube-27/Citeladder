@@ -40,7 +40,7 @@ first. Size: S (≤2 days), M (≤1 week), L (>1 week).
 | F4 | Public REST API, MCP move to `api.citeladder.com/mcp`, MCP write tools | 3 | L | 3 | F2a (host) | in progress: F4a merged (#358), F4b in review, F4c next | [F4a](F4a-public-api-and-keys.md), [F4b](F4b-mcp-move-to-api-host.md), [F4c](F4c-mcp-write-tools.md) |
 | F5 | Ads in AI answers | 4 | S–M | 1 | — | done | [F5](F5-ai-answer-ads.md) |
 | F6 | Prompt grounding in the project's own search data | 5 | M | 1 | — | done | [F6](F6-prompt-grounding.md) |
-| F7 | Market (location/language) segmentation | 6 | M–L | 1 | D7.x | queued | `market-segmentation.md` |
+| F7 | Market (location/language) segmentation | 6 | M–L | 1 | D7.1–D7.4 settled | in review | [F7](F7-market-segmentation.md) |
 | F8 | Fact-checking against brand facts | 7 (gated) | M | 1 | F3, D8.1 | in review | [F8](F8-fact-checking.md) |
 | F9 | Enterprise SSO and SCIM (WorkOS) | 8 (last) | L | 1–2 | domain verification | proposal | `enterprise-identity.md` |
 
@@ -1161,8 +1161,8 @@ scope), `src/config/providers.json`, `src/config/dataforseo.json`.
 
 ### F7 owner decisions
 
-- **D7.1** Markets per plan (count limit in entitlements).
-- **D7.2** Which DataForSEO locations to allow beyond the current 13.
+- **D7.1–D7.4** Settled; see the [F7 plan](F7-market-segmentation.md) and
+  the decisions register.
 
 ---
 
@@ -1281,8 +1281,10 @@ owner, Part B).
 | D6.1 | Adopt observed questions as candidates | yes | No; existing GSC/Search Intelligence data only steers phrasing (2026-10-10) |
 | D6.2 | LLM Mentions spend per topic action | yes, within ceiling | No new spend or step (2026-10-10) |
 | D6.3 | v3 live calibration before F6 | yes | Not a blocker; compare in the PR if credentials exist |
-| D7.1 | Markets per plan | — | |
-| D7.2 | Allowed DataForSEO locations | — | |
+| D7.1 | Markets per plan | workspace `market_slots`, extra markets only | Trial and Starter 0, Growth 3, Scale 10, no add-on (2026-10-10) |
+| D7.2 | Allowed DataForSEO locations | the picker's 32 countries where verified | The 32 picker countries, each per surface only where the reviewed locations file confirms support; pickers share the list (2026-10-10) |
+| D7.3 | Audit shape for several markets | one audit per market | One audit per market, grouped by launch in run history (2026-10-10) |
+| D7.4 | Market granularity | country plus language | Country plus language only; no region, city or timezone (2026-10-10) |
 | D8.1 | Build fact-checking after F3 | after F3 calibration | |
 | D9.1 | SSO buy vs build | buy when the first deal needs it | WorkOS, last priority (2026-10-10) |
 | D9.2 | SSO plan | enterprise | |
@@ -1427,3 +1429,4 @@ Source: https://us.fitgap.com/products/workos (WorkOS price table)
 | 2026-10-10 | F4 | F4a in review: `auth/actor.ts` and `commands/` for the exposed writes (browser routes call them), API keys (`api_keys`, HMAC under `API_KEY_PEPPER`, scopes ∩ the creator's live role, creator removal revokes, `api_access` + 10 keys on paid plans as `entitlements-v6`), the `/v1` public API on `api.citeladder.com` (route `exposure` with project-nested public paths and path-ID ownership, per-key/workspace limits, required Idempotency-Key with replay/409, paged lists, one-call audit launch with `max_estimated_credits`), `GET /v1/openapi.json` with the docs reference drift check, Settings → API keys, invariant 10 amendment and the docs site API pages. |
 | 2026-10-10 | F4 | F4a merged (#358). F4b in review: hard cut of MCP to `api.citeladder.com/mcp`. The MCP issuer, resource and discovery derive from `PUBLIC_API_URL` (required when MCP is enabled; `MCP_PUBLIC_BASE_URL` retired), the API host Worker forwards `/mcp` and the OAuth paths, the API serves them on that host only, and the apex no longer proxies MCP or redirects consent. `PUBLIC_WEBSITE_URL` now admits the apex Worker (webhooks, catalog). Consent stays on the app; its legal links are fixed policy URLs. Owner steps: ChatGPT app domain re-verification for the API host and reconnecting personal clients. |
 | 2026-10-10 | F8 | Owner approved D8.1–D8.9 as recommended. In review: brand facts with append-only revisions (Agent → Context), the non-public `fact_checking` grant (`entitlements-v7`), the confirmed fact set frozen at brand-audit admission, brand claims extracted in the perception call through a versioned addendum, the `fact_verification` analytics task with deterministic verdict checks (stricter contradiction floor), `GET /visibility/accuracy` and `/accuracy/claims`, execution-evidence claims, the Accuracy tab, `read_fact_checks` with skill lines and the operator-only `pnpm facts:eval --live`. The `fact_contradiction` Action rule and draft-fact suggestions are backlogged. No live provider calls from this change. |
+| 2026-10-10 | F7 | In review: `project_markets` (extra markets only; the default is the project's own country and language), `market_slots` (`entitlements-v8`, Growth 3, Scale 10), one audit per market under a shared `launch_id` (one active run and one manual run per launch), `market_support` per engine with 422 `market_unsupported` before spend and the Gemini API not applicable outside the default market, per-market estimate, schedule `market_ids`, the `market` filter on every visibility read, `/visibility/markets` (By market), MCP `market_id`, the picker list in contracts, and the reviewed `dataforseo-locations.json` with the `pnpm dataforseo:locations` operator CLI. The file is seeded with the 13 verified locations; the owner runs the CLI to add the rest. |

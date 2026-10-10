@@ -1,6 +1,6 @@
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import { AuditQueue, ownedAuditTask, parkAuditTask } from '../src/queue/audit-queue.ts';
-import { createAudit } from '../src/audits/creation.ts';
+import { createAudits } from '../src/audits/creation.ts';
 import { auditRuntime } from '../src/audits/config.ts';
 import { auditInput } from '../src/audits/inputs.ts';
 import { transitionAudit } from '../src/audits/state.ts';
@@ -22,7 +22,7 @@ afterAll(async () => {
 async function seed() {
   const t = await auditTenant(db, fixtures);
   at = new Date();
-  const auditId = await createAudit(
+  const [auditId] = await createAudits(
     db,
     t.workspaceId,
     auditInput.parse({ project_id: t.projectId, prompt_set_id: t.setId, engines: ['chatgpt'] }),

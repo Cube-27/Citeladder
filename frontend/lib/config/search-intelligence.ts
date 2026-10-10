@@ -1,5 +1,5 @@
 /** Mirrors the Search Intelligence request bounds. */
-import { COUNTRY_OPTIONS } from '@/lib/setup/markets';
+import { MARKET_COUNTRIES } from '@citeladder/contracts/markets';
 
 export const SEARCH_MAX_DEPTH = 1_000_000;
 export type SearchColumn = {
@@ -182,7 +182,7 @@ export function searchMarketLabel(locationCode: number | null): string {
   if (locationCode === null) return 'Market not set';
   const countryCode = SEARCH_LOCATION_COUNTRIES[locationCode];
   return (
-    COUNTRY_OPTIONS.find(({ value }) => value === countryCode)?.label ??
+    MARKET_COUNTRIES.find(({ value }) => value === countryCode)?.label ??
     `Location code ${locationCode}`
   );
 }

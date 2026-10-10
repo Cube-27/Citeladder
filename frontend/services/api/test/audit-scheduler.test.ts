@@ -4,7 +4,7 @@ import { testDatabase } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
 import { auditTenant } from './audit-fixtures.ts';
 import { auditRuntime } from '../src/audits/config.ts';
-import { createAudit } from '../src/audits/creation.ts';
+import { createAudits } from '../src/audits/creation.ts';
 import { auditInput } from '../src/audits/inputs.ts';
 import { AuditScheduler, schedulerSettings } from '../src/workers/audit-scheduler.ts';
 import { nextRunAfter } from '../src/audits/schedule-cadence.ts';
@@ -169,7 +169,7 @@ describe('durable audit occurrence planning', () => {
         next_run_at: at.toISOString(),
       }),
     );
-    const auditId = await createAudit(
+    const [auditId] = await createAudits(
       db,
       t.workspaceId,
       auditInput.parse({ project_id: t.projectId, prompt_set_id: t.setId, engines: ['chatgpt'] }),

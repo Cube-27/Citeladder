@@ -5,6 +5,7 @@ import type { z } from 'zod';
 import type { Database } from '../db/database.ts';
 import type { AuditSchedules } from '../generated/db-schema.ts';
 import { ApiError, notFound } from '../errors.ts';
+import { marketIds, resolveMarkets } from '../projects/markets.ts';
 import {
   scheduleIntervalIssue,
   type ScheduleCreate,
@@ -24,6 +25,7 @@ function scoped(db: Database, scope: ScheduleScope) {
 function view(row: Row): z.output<typeof auditScheduleSchema> {
   return auditScheduleSchema.parse({
     ...row,
+    market_ids: marketIds(row.market_ids),
     next_run_at: row.next_run_at?.toISOString() ?? null,
     last_run_at: row.last_run_at?.toISOString() ?? null,
     last_failure_at: row.last_failure_at?.toISOString() ?? null,
@@ -47,6 +49,7 @@ async function requirePromptSet(db: Database, scope: ScheduleScope, id: string) 
 export function createSchedule(db: Database, scope: ScheduleScope, input: ScheduleCreate) {
   return db.transaction().execute(async (trx) => {
     await requirePromptSet(trx, scope, input.prompt_set_id);
+    await resolveMarkets(trx, scope, input.market_ids);
     const now = new Date();
     const row = await trx
       .insertInto('audit_schedules')
@@ -56,6 +59,7 @@ export function createSchedule(db: Database, scope: ScheduleScope, input: Schedu
         workspace_id: scope.workspaceId,
         project_id: scope.projectId,
         engines: JSON.stringify(input.engines),
+        market_ids: JSON.stringify(input.market_ids),
         next_run_at: input.next_run_at ? new Date(input.next_run_at) : now,
         last_run_at: null,
         failure_count: 0,
@@ -107,13 +111,15 @@ export function updateSchedule(
     const message = scheduleIntervalIssue({ ...current, ...input });
     if (message) throw new ApiError(422, message);
     if (input.prompt_set_id !== undefined) await requirePromptSet(trx, scope, input.prompt_set_id);
-    const { engines, next_run_at: _nextRunAt, ...fields } = input;
+    if (input.market_ids !== undefined) await resolveMarkets(trx, scope, input.market_ids);
+    const { engines, market_ids: markets, next_run_at: _nextRunAt, ...fields } = input;
     const now = new Date();
     const row = await trx
       .updateTable('audit_schedules')
       .set({
         ...fields,
         ...(engines === undefined ? {} : { engines: JSON.stringify(engines) }),
+        ...(markets === undefined ? {} : { market_ids: JSON.stringify(markets) }),
         ...nextRunPatch(input, current, now),
         // Resuming a schedule paused by failures starts its failure count afresh.
         ...(input.enabled === true && !current.enabled ? { failure_count: 0, last_error: '' } : {}),

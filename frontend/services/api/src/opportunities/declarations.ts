@@ -179,6 +179,7 @@ async function verifyExistingEvidence(
     .select('id')
     .where('workspace_id', '=', row.workspace_id)
     .where('project_id', '=', row.project_id)
+    .where('market_id', 'is', null)
     .where('status', 'in', DASHBOARD_AUDIT_STATUSES)
     .where('completed_at', '>', after)
     .orderBy('completed_at', 'desc')

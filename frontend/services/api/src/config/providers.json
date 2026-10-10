@@ -211,7 +211,7 @@
       "reasoning_pinnable": true,
       "representative_status": "unverified",
       "surface_kind": "llm",
-      "search_context": null
+      "market_support": "web_search_user_location"
     },
     "claude": {
       "logical_engine": "claude",
@@ -222,7 +222,7 @@
       "reasoning_pinnable": true,
       "representative_status": "unverified",
       "surface_kind": "llm",
-      "search_context": null
+      "market_support": "web_search_user_location"
     },
     "gemini": {
       "logical_engine": "gemini",
@@ -233,7 +233,7 @@
       "reasoning_pinnable": true,
       "representative_status": "unverified",
       "surface_kind": "llm",
-      "search_context": null
+      "market_support": "none"
     },
     "google_ai_overview": {
       "logical_engine": "google_ai_overview",
@@ -244,11 +244,7 @@
       "reasoning_pinnable": null,
       "representative_status": "verified",
       "surface_kind": "search_ai",
-      "search_context": {
-        "location_code": 2840,
-        "language_code": "en",
-        "device": "desktop"
-      }
+      "market_support": "dataforseo_location"
     },
     "chatgpt_search": {
       "logical_engine": "chatgpt_search",
@@ -259,11 +255,7 @@
       "reasoning_pinnable": null,
       "representative_status": "unverified",
       "surface_kind": "llm_scraper",
-      "search_context": {
-        "location_code": 2840,
-        "language_code": "en",
-        "device": "desktop"
-      }
+      "market_support": "dataforseo_location"
     },
     "gemini_consumer": {
       "logical_engine": "gemini_consumer",
@@ -274,11 +266,7 @@
       "reasoning_pinnable": null,
       "representative_status": "unverified",
       "surface_kind": "llm_scraper",
-      "search_context": {
-        "location_code": 2840,
-        "language_code": "en",
-        "device": "desktop"
-      }
+      "market_support": "dataforseo_location"
     }
   },
   "catalog": [

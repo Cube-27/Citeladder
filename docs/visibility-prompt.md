@@ -398,6 +398,32 @@ calls share a separate account-wide rate limit across both scraper products.
 Live-provider
 acceptance remains a separate, explicitly authorized release step.
 
+### Measurement markets
+
+A project measures from its default market, its own `country_code` and
+`language_code`, and from any additional markets in `project_markets` (the
+[markets owner](../frontend/services/api/src/projects/markets.ts); country plus
+language only, one `market_slots` occupancy slot each). A market id of `null`
+means the default everywhere. Prompt wording that names a place is separate
+from the measurement market: a prompt about Sydney can be measured from the US.
+
+A launch (`market_ids`, default `[null]`) admits one audit per market in one
+transaction under a shared `launch_id`; the launch counts once against the
+active-audit and manual-run limits. Each audit freezes its market: the model
+APIs get its country through web search `user_location` and the localized
+instruction, and the DataForSEO surfaces get its location and language. The
+reviewed [locations file](../frontend/services/api/src/config/dataforseo-locations.json)
+says which countries and languages each surface supports; it is regenerated
+only by the operator CLI `pnpm dataforseo:locations` and a reviewed pull
+request, never at request time. Each engine's `market_support` in
+`providers.json` decides admission: an unsupported search surface refuses the
+whole launch with 422 `market_unsupported` before any spend, and an engine with
+no location control (the Gemini API) is not applicable outside the default
+market, recorded as `not_applicable_engines` and never run, failed or billed.
+The estimate sums each engine over the markets it can measure. A schedule
+stores `market_ids`; deleting a market drops it from schedules (an emptied
+schedule measures the default), while its past runs keep their frozen market.
+
 ## Measurement and comparisons
 
 [Analysis](../frontend/services/api/src/analysis/) derives versioned persisted metrics from
@@ -435,8 +461,8 @@ Brand rank is null when share of voice is null.
 
 Rates use their specified eligible evidence denominators. Pagination cannot
 change totals, and the browser does not recompute aggregate share of voice.
-Frozen model/retrieval, prompt/cohort and scope identity determine comparison
-eligibility. Changed measurement conditions cannot become unqualified movement.
+Frozen model/retrieval, prompt/cohort, market (country and language) and scope
+identity determine comparison eligibility. Changed measurement conditions cannot become unqualified movement.
 Unknown, not-run, failed, partial and observed-zero states remain distinct.
 
 ## Answer perception
@@ -583,6 +609,14 @@ Typed URL state retains run/period, engine, cohort, baseline, history, metric an
 evidence filters. The server resolves Latest to a concrete run or compatible
 run set, reused by dependent requests. An invalid explicit run never falls back
 to Latest; historical windows remain separate from selected measurement.
+Every visibility read takes an optional `market` (a market id; omitted is the
+default market): Latest, ranges, trends and baselines stay inside it, and a named
+run implies its own market, so a run set spanning markets is a 422. With more
+than one market, a market switcher appears and Trends opens with **By market**
+(`/visibility/markets`): each market's latest run, its mention rate, share of
+voice and net sentiment with the change since that market's previous comparable
+run; a market never measured is not run, never zero. The Overview, its
+comparisons and Action outcome checks follow the default market.
 
 Sources has Domains and URLs, each with a usage series, a citation-type ring
 and a searchable, sortable, exportable table; a domain opens its URLs and the

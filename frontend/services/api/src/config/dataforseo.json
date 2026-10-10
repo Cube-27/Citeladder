@@ -382,28 +382,22 @@
       "desktop": "windows",
       "mobile": "android"
     },
-    "location_codes": {
-      "US": 2840,
-      "GB": 2826,
-      "AU": 2036,
-      "CA": 2124,
-      "IN": 2356,
-      "NZ": 2554,
-      "IE": 2372,
-      "SG": 2702,
-      "ZA": 2710,
-      "DE": 2276,
-      "FR": 2250,
-      "NL": 2528,
-      "AE": 2784
-    },
-    "supported_location_codes": [
-      2036, 2124, 2250, 2276, 2356, 2372, 2528, 2554, 2702, 2710, 2784, 2826, 2840
-    ],
-    "language_codes": ["de", "en", "es", "fr", "it", "nl", "pt"],
     "default_device": "desktop",
     "default_language_code": "en",
-    "default_location_code": 2840
+    "locations_paths": {
+      "google_ai_overview": {
+        "locations": "/v3/serp/google/locations",
+        "languages": "/v3/serp/google/languages"
+      },
+      "chatgpt_search": {
+        "locations": "/v3/ai_optimization/chat_gpt/llm_scraper/locations",
+        "languages": "/v3/ai_optimization/chat_gpt/llm_scraper/languages"
+      },
+      "gemini_consumer": {
+        "locations": "/v3/ai_optimization/gemini/llm_scraper/locations",
+        "languages": "/v3/ai_optimization/gemini/llm_scraper/languages"
+      }
+    }
   },
   "scraper": {
     "request_settings": {

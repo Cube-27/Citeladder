@@ -130,6 +130,10 @@
             "type": "string",
             "format": "uuid"
           },
+          "market_id": {
+            "type": "string",
+            "format": "uuid"
+          },
           "audit_id": {
             "type": "string",
             "format": "uuid"
@@ -562,6 +566,10 @@
             "type": "string",
             "format": "uuid"
           },
+          "market_id": {
+            "type": "string",
+            "format": "uuid"
+          },
           "audit_id": {
             "type": "string",
             "format": "uuid"
@@ -939,6 +947,10 @@
             "type": "string",
             "format": "uuid"
           },
+          "market_id": {
+            "type": "string",
+            "format": "uuid"
+          },
           "url": {
             "type": "string",
             "minLength": 1,
@@ -973,11 +985,15 @@
     {
       "name": "read_visibility_overview",
       "title": "Read AI visibility",
-      "description": "Mention rate, citation rate, rankings against competitors and run status for the latest or a chosen run. Pass baseline_id to compare two runs.",
+      "description": "Mention rate, citation rate, rankings against competitors and run status for the latest or a chosen run. Pass baseline_id to compare two runs. Each market is measured separately: pass market_id for a non-default market, and never pool markets.",
       "input_schema": {
         "type": "object",
         "properties": {
           "project_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "market_id": {
             "type": "string",
             "format": "uuid"
           },
@@ -1132,6 +1148,10 @@
         "type": "object",
         "properties": {
           "project_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "market_id": {
             "type": "string",
             "format": "uuid"
           },
