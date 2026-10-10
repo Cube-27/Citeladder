@@ -114,6 +114,7 @@ async function admit(
       now,
       tokenHash: source.token_hash!,
       quotaChecked: true,
+      accessChecked: true,
       // The first receipt carries the whole request, undecodable records included.
       rejectedRecords: index === 0 ? rejected : 0,
       receivedBytes: index === 0 ? receivedBytes : 0,

@@ -15,6 +15,7 @@ import { lockCrawlState, enqueueRollup, reportingDay, type CrawlScope } from './
 import { requireCrawlLogs } from './sources.ts';
 import { lockAuthorizedWorkspace } from '../workspaces/service.ts';
 import { clearStall } from './stall.ts';
+import { withReportingTimezone } from './reads.ts';
 
 export async function boundedBody(request: Request) {
   const reader = request.body?.getReader();
@@ -85,8 +86,13 @@ export async function batchQuota(
  * One diagnostic receipt per source and day records the refusal.
  */
 async function receivedBytesCeiling(db: Database, source: Selectable<CrawlLogSources>, now: Date) {
-  const tz = await reportingTimezone(db, source);
-  const day = sql<Date>`(date_trunc('day', ${now}::timestamptz at time zone ${tz}) at time zone ${tz})`;
+  const { reporting_timezone: tz } = await withReportingTimezone(
+    db,
+    { workspaceId: source.workspace_id, projectId: source.project_id },
+    {},
+  );
+  const today = reportingDay(now, tz);
+  const day = sql<Date>`(${today}::date::timestamp at time zone ${tz})`;
   const usage = await db
     .selectFrom('crawl_log_batches')
     .select([
@@ -100,20 +106,10 @@ async function receivedBytesCeiling(db: Database, source: Selectable<CrawlLogSou
     .where('received_at', '>=', day)
     .executeTakeFirstOrThrow();
   if (Number(usage.used) < crawlLogs.received_bytes_per_project_per_day) return;
-  await diagnosticReceipt(db, source, 'bytes_ceiling', now);
+  await diagnosticReceipt(db, source, 'bytes_ceiling', now, tz);
   throw new ApiError(429, 'Daily received log volume reached for this project', {
     headers: { 'Retry-After': String(Math.max(1, usage.retry_after)) },
   });
-}
-/** The project's persisted reporting timezone, read without a lock. */
-async function reportingTimezone(db: Database, source: Selectable<CrawlLogSources>) {
-  const state = await db
-    .selectFrom('crawl_log_states')
-    .select('reporting_timezone')
-    .where('workspace_id', '=', source.workspace_id)
-    .where('project_id', '=', source.project_id)
-    .executeTakeFirst();
-  return state?.reporting_timezone ?? crawlLogs.default_reporting_timezone;
 }
 /**
  * A refusal the sender only sees as a status code, kept as a zero-line receipt.
@@ -124,8 +120,18 @@ export async function diagnosticReceipt(
   source: Selectable<CrawlLogSources>,
   status: 'bytes_ceiling' | 'oversize',
   now: Date,
+  timezone?: string,
 ) {
-  const day = reportingDay(now, await reportingTimezone(db, source));
+  const tz =
+    timezone ??
+    (
+      await withReportingTimezone(
+        db,
+        { workspaceId: source.workspace_id, projectId: source.project_id },
+        {},
+      )
+    ).reporting_timezone;
+  const day = reportingDay(now, tz);
   await db
     .insertInto('crawl_log_batches')
     .values({
@@ -172,13 +178,15 @@ export async function ingest(
     tokenHash?: string;
     actorId?: string;
     quotaChecked?: boolean;
+    /** The caller already refused an unavailable workspace (`authorizeToken`). */
+    accessChecked?: boolean;
     /** Records an adaptor could not decode into lines; counted as rejected lines. */
     rejectedRecords?: number;
     /** Decompressed bytes the sender delivered, when more than this batch's lines. */
     receivedBytes?: number;
   },
 ) {
-  await requireCrawlLogs(db, source.workspace_id);
+  if (!options.accessChecked) await requireCrawlLogs(db, source.workspace_id);
   const now = options.now ?? new Date();
   const key = options.key ?? createHash('sha256').update(body).digest('hex');
   if (!key.trim() || key.length > 255) throw new ApiError(422, 'Invalid idempotency key');
@@ -283,7 +291,8 @@ export async function ingest(
         bytes_received: options.receivedBytes ?? bytes,
       })
       .execute();
-    if (receiptStatus === 'accepted') await clearStall(trx, current);
+    if (receiptStatus === 'accepted' && current.stall_reason !== null)
+      await clearStall(trx, current);
     await insertRequests(trx, scope, id, admitted, counts, now);
     const receipt = await trx
       .updateTable('crawl_log_batches')

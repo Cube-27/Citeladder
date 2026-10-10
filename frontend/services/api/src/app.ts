@@ -68,7 +68,7 @@ export function createApp(
       throw new ApiError(413, 'Request body too large');
     },
   });
-  for (const prefix of ['/api/*', '/v1/*'])
+  for (const prefix of ['/api/*', `${policy.api.machine_prefix}/*`])
     app.use(prefix, (c, next) =>
       streamsOwnBody(c.req.method, c.req.path) ? next() : ordinaryBodyLimit(c, next),
     );

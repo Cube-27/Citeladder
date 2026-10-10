@@ -45,6 +45,12 @@ function uploadProcessed(
 export function crawlLogsAvailable(data: z.infer<typeof crawlSourceListSchema>) {
   return data.availability === 'available' || data.items.length > 0;
 }
+/** The sampling a custom sender declares, from the dialog's fields. */
+function declaredSampling(sampling: string, rate: string, filter: string) {
+  if (sampling === 'sampled') return { kind: 'sampled', rate: Number(rate) } as const;
+  if (sampling === 'filtered') return { kind: 'filtered', description: filter } as const;
+  return { kind: 'none' } as const;
+}
 export function useCrawlConnections({
   projectId,
   workspaceId,
@@ -100,36 +106,18 @@ export function useCrawlConnections({
   const refresh = () => client.invalidateQueries({ queryKey: queryKeys.aiTraffic.all });
   const mutation = useMutation({
     mutationFn: async (action: { kind: 'create' } | { kind: 'rotate' | 'revoke'; id: string }) => {
-      let sourceSampling:
-        | { kind: 'none' }
-        | { kind: 'sampled'; rate: number }
-        | { kind: 'filtered'; description: string } = { kind: 'none' };
-      if (sampling === 'sampled') sourceSampling = { kind: sampling, rate: Number(rate) };
-      if (sampling === 'filtered') sourceSampling = { kind: sampling, description: filter };
-      if (action.kind === 'create' && setup === 'aws_firehose')
-        return aiTrafficApi.createSource(
-          projectId,
-          {
-            setup,
-            origin,
-            buffer_interval_seconds: Number(bufferInterval),
-            declared_filtered: declaredFiltered,
-          },
-          options,
-        );
-      if (action.kind === 'create')
-        return aiTrafficApi.createSource(
-          projectId,
-          {
-            setup,
-            origin,
-            format,
-            collection_point: point,
-            sampling: sourceSampling,
-          },
-          options,
-        );
-      return aiTrafficApi.mutateSource(projectId, action.id, action.kind, options);
+      if (action.kind !== 'create')
+        return aiTrafficApi.mutateSource(projectId, action.id, action.kind, options);
+      // Firehose declares its buffer and filter; other setups declare format, point and sampling.
+      const declared =
+        setup === 'aws_firehose'
+          ? { buffer_interval_seconds: Number(bufferInterval), declared_filtered: declaredFiltered }
+          : {
+              format,
+              collection_point: point,
+              sampling: declaredSampling(sampling, rate, filter),
+            };
+      return aiTrafficApi.createSource(projectId, { setup, origin, ...declared }, options);
     },
     onSuccess: async (result, action) => {
       const issuedSetup =

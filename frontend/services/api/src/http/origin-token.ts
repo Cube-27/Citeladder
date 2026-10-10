@@ -25,9 +25,10 @@ function publicHosts(config: ServiceConfig): Set<string> {
   );
 }
 
-/** Machine routes are declared under `/v1/...`; only the API host serves them, and only them. */
-function isMachinePath(path: string): boolean {
-  return path === '/v1' || path.startsWith('/v1/');
+/** Machine routes live under `policy.api.machine_prefix`; only the API host serves them, and only them. */
+export function isMachinePath(path: string): boolean {
+  const prefix = policy.api.machine_prefix;
+  return path === prefix || path.startsWith(prefix + '/');
 }
 
 /**

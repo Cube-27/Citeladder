@@ -1,4 +1,6 @@
 import { sql, type Selectable } from 'kysely';
+import type { z } from 'zod';
+import type { crawlStallReasonSchema } from '@citeladder/contracts/ai-traffic';
 import type { Database } from '../db/database.ts';
 import type { CrawlLogSources } from '../generated/db-schema.ts';
 import { crawlLogs } from '../config/crawl-logs.ts';
@@ -7,7 +9,7 @@ import { crawlLogs } from '../config/crawl-logs.ts';
  * Why a live source stopped delivering. An accepted receipt clears any reason
  * in the transaction that stores it.
  */
-export type StallReason = 'no_receipts' | 'not_in_plan' | 'oversize';
+export type StallReason = z.infer<typeof crawlStallReasonSchema>;
 
 /** Record a refusal the sender cannot see in a receipt; the first reason and time stay. */
 export async function markStalled(
@@ -43,12 +45,11 @@ export async function clearStall(
 
 /**
  * A workspace's live webhook sources older than `stalled_after_hours` with no
- * accepted receipt inside that window become `no_receipts`. Bounded per call;
- * returns how many it marked so the caller can continue.
+ * accepted receipt inside that window become `no_receipts`. Bounded per call.
  */
 export async function stallQuietSources(db: Database, workspaceId: string, now = new Date()) {
   const since = new Date(now.getTime() - crawlLogs.stalled_after_hours * 3600000);
-  const marked = await db
+  await db
     .updateTable('crawl_log_sources')
     .set({ stall_reason: 'no_receipts', stalled_at: now })
     .where('workspace_id', '=', workspaceId)
@@ -78,7 +79,5 @@ export async function stallQuietSources(db: Database, workspaceId: string, now =
         )
         .limit(crawlLogs.sweep_batch_size),
     )
-    .returning('id')
     .execute();
-  return marked.length;
 }

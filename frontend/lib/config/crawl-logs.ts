@@ -1,4 +1,5 @@
 import { docsHref as docsUrl } from './docs';
+import { publicApiOrigin } from './public-origins';
 export const CRAWL_LOG_SETUPS = [
   {
     value: 'cloudflare_worker',
@@ -39,12 +40,11 @@ export const CRAWL_LOG_SETUPS = [
     guide: docsUrl('/ai-traffic/#file-upload'),
   },
 ] as const;
-/** The Firehose buffer interval suggested at setup, and the range the API accepts. */
+/** The Firehose buffer interval suggested at setup; the API enforces its own bounds. */
 export const FIREHOSE_BUFFER_INTERVAL = {
   default: 60,
   min: 60,
   recommendedMax: 300,
-  max: 900,
 } as const;
 /** The generated Firehose transformation Lambda, served by the docs site. */
 export const FIREHOSE_FILTER_TEMPLATE = docsUrl('/templates/citeladder-firehose-filter.mjs');
@@ -61,8 +61,8 @@ export const CLOUDFRONT_LOG_FIELDS = [
 ] as const;
 /** Machine senders post to the API host; locally that is the API container itself. */
 // An origin carries no path, so a configured trailing slash never doubles into `//v1`.
-export const CRAWL_INGEST_ORIGIN = new URL(process.env.PUBLIC_API_ORIGIN || 'http://127.0.0.1:8100')
-  .origin;
+export const CRAWL_INGEST_ORIGIN =
+  publicApiOrigin(undefined, false)?.origin ?? 'http://127.0.0.1:8100';
 export const TRAFFIC_TABS = [
   { value: 'overview', label: 'Overview', crawlOnly: false },
   { value: 'crawlers', label: 'Crawlers', crawlOnly: true },

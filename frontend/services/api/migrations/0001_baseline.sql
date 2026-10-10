@@ -4353,7 +4353,7 @@ CREATE INDEX ix_content_differentiation_reports_project_id ON public.content_dif
 
 CREATE INDEX ix_content_differentiation_reports_workspace_id ON public.content_differentiation_reports USING btree (workspace_id);
 
-CREATE INDEX ix_crawl_log_batches_received ON public.crawl_log_batches USING btree (workspace_id, project_id, received_at);
+CREATE INDEX ix_crawl_log_batches_received ON public.crawl_log_batches USING btree (workspace_id, project_id, received_at) INCLUDE (bytes_received);
 
 CREATE INDEX ix_crawl_log_batches_upload ON public.crawl_log_batches USING btree (workspace_id, project_id, upload_id);
 

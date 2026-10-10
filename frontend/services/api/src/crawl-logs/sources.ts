@@ -12,6 +12,7 @@ import { markStalled } from './stall.ts';
 import { hasGrantedFlag } from '../entitlements/occupancy.ts';
 import { policy } from '../config.ts';
 import { asApiErrorCode } from '@citeladder/contracts/error-codes';
+import { crawlLogAvailabilitySchema } from '@citeladder/contracts/ai-traffic';
 
 const samplingSchema = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('none') }),
@@ -56,7 +57,7 @@ const SETUP_PRESETS = {
   upload: 'custom_ndjson',
 } as const;
 const token = () => 'clw_' + randomBytes(32).toString('base64url');
-export type CrawlLogAvailability = 'available' | 'not_in_plan' | 'disabled';
+export type CrawlLogAvailability = z.infer<typeof crawlLogAvailabilitySchema>;
 const { codes } = policy.entitlements;
 /**
  * The global kill switch first, then the workspace's `crawl_logs` grant.

@@ -14,6 +14,7 @@ import { readBody } from '../http/body.ts';
 import { requireProject } from '../projects/access.ts';
 import { crawlers } from '../config/crawlers.ts';
 import { crawlLogs } from '../config/crawl-logs.ts';
+import { policy } from '../config.ts';
 import { ApiError, notFound } from '../errors.ts';
 import { sourceList } from '../crawl-logs/source-reads.ts';
 import {
@@ -37,8 +38,8 @@ import {
 
 const root = '/api/v1/projects/{project_id}/crawl-logs';
 /** Machine routes: served only on the API host (`api.citeladder.com`). */
-const ingestPath = '/v1/crawl-logs/ingest/{source_id}';
-const firehosePath = '/v1/crawl-logs/firehose/{source_id}';
+const ingestPath = policy.api.machine_prefix + '/crawl-logs/ingest/{source_id}';
+const firehosePath = policy.api.machine_prefix + '/crawl-logs/firehose/{source_id}';
 const uploadBatchPath = root + '/sources/{source_id}/uploads/{upload_id}/batches';
 const selfBounded = [ingestPath, firehosePath, uploadBatchPath].map((template) =>
   template.split('/'),
@@ -160,6 +161,7 @@ export const crawlLogRoutes = [
         encoding: c.req.header('content-encoding'),
         tokenHash: source.token_hash!,
         quotaChecked: true,
+        accessChecked: true,
       });
       return c.json(crawlReceiptSchema.parse(receipt), 202);
     },

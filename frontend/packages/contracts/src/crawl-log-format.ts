@@ -137,12 +137,13 @@ export function parseLogLine(line: string, format: string, mapping: LogMapping):
     return typeof raw === 'string' && absent.has(raw) ? undefined : raw;
   };
   const fallback = mapping.timestamp_fallback;
+  const usesFallback =
+    format !== 'combined' && fallback !== undefined && read(mapping.timestamp) === undefined;
   const field = (key: MappedField) => {
     if (format === 'combined') return row[key];
-    const raw = read(mapping[key]);
-    if (key === 'timestamp' && raw === undefined && fallback)
+    if (key === 'timestamp' && usesFallback)
       return fallbackTimestamp(read(fallback.date), read(fallback.time));
-    return raw;
+    return read(mapping[key]);
   };
   const missing = (['timestamp', 'path', 'user_agent'] as const).filter(
     (key) =>
@@ -150,8 +151,7 @@ export function parseLogLine(line: string, format: string, mapping: LogMapping):
   );
   if (missing.length) throw new UnsupportedLogFormat(missing);
   // A fallback date and time is already ISO, whatever the primary field's unit.
-  const iso =
-    format === 'combined' || (fallback !== undefined && read(mapping.timestamp) === undefined);
+  const iso = format === 'combined' || usesFallback;
   const timestamp = logTimestamp(field('timestamp'), iso ? 'iso' : mapping.timestamp_unit);
   const status = logStatus(field('status'));
   if (timestamp === null || status === null) return null;
