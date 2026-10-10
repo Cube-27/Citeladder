@@ -1,12 +1,14 @@
 import pg from 'pg';
 
 import { localEnvironment } from './local-environment.ts';
-import { resetTarget, ResetRefusal } from './reset-sequence.ts';
-import { applyBaseline } from './schema-baseline.ts';
+import { operatorMain } from './operator.ts';
+import { resetTarget } from './reset-sequence.ts';
+import { applyBaseline, baselineClient } from './schema-baseline.ts';
 
 /** Drop and recreate one authorized database, then apply the SQL baseline. */
-async function main() {
-  const target = resetTarget(localEnvironment());
+await operatorMain(async () => {
+  const env = localEnvironment();
+  const target = resetTarget(env);
   const quoted = `"${target.database.replaceAll('"', '""')}"`;
   const admin = new pg.Client({
     connectionString: target.adminUrl,
@@ -20,21 +22,11 @@ async function main() {
   } finally {
     await admin.end();
   }
-  const schema = new pg.Client({ connectionString: target.databaseUrl });
+  const schema = baselineClient(target.databaseUrl, env);
   await schema.connect();
   try {
     console.log(`Schema baseline ${await applyBaseline(schema)}.`);
   } finally {
     await schema.end();
   }
-}
-
-try {
-  await main();
-} catch (error) {
-  // Connection and driver errors can carry credentials; print only their type.
-  console.error(
-    `Database reset failed: ${error instanceof ResetRefusal ? error.message : error instanceof Error ? error.constructor.name : 'Error'}`,
-  );
-  process.exitCode = 1;
-}
+});

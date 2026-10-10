@@ -2,6 +2,7 @@ import { fileURLToPath } from 'node:url';
 
 import { policy } from '../config.ts';
 import { libpqUrl } from '../db/database.ts';
+import { OperatorRefusal } from './operator.ts';
 
 type Execute = (
   command: string,
@@ -14,35 +15,32 @@ const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
 const DESTRUCTIVE_RESET_VARIABLE = 'RESET_CONFIRM_DESTRUCTIVE';
 const DESTRUCTIVE_RESET_TOKEN = 'drop-and-recreate';
 
-/** A reset refusal whose message names no credential and is safe to print. */
-export class ResetRefusal extends Error {}
-
 /**
  * The database a reset may drop. A development APP_ENV with a loopback host
  * authorizes it; anything else needs the explicit confirmation token.
  */
 export function resetTarget(env: Record<string, string | undefined>) {
   const raw = env.DATABASE_URL?.trim();
-  if (!raw) throw new ResetRefusal('explicit_reset_database_required');
+  if (!raw) throw new OperatorRefusal('explicit_reset_database_required');
   let url: URL;
   try {
     url = new URL(libpqUrl(raw));
   } catch {
-    throw new ResetRefusal('DATABASE_URL is not a valid PostgreSQL URL.');
+    throw new OperatorRefusal('DATABASE_URL is not a valid PostgreSQL URL.');
   }
   if (!['postgres:', 'postgresql:'].includes(url.protocol) || !url.hostname)
-    throw new ResetRefusal('DATABASE_URL must name a PostgreSQL host.');
+    throw new OperatorRefusal('DATABASE_URL must name a PostgreSQL host.');
   const database = decodeURIComponent(url.pathname.slice(1));
-  if (!database) throw new ResetRefusal('DATABASE_URL must name the database to reset.');
+  if (!database) throw new OperatorRefusal('DATABASE_URL must name the database to reset.');
   if (PROTECTED_DATABASES.has(database.toLowerCase()))
-    throw new ResetRefusal(`Refusing to reset protected database '${database}'.`);
+    throw new OperatorRefusal(`Refusing to reset protected database '${database}'.`);
   const appEnv = env.APP_ENV?.trim().toLowerCase() ?? '';
   const host = url.hostname.toLowerCase();
   // An unset APP_ENV is development to the service, but never authorizes a DROP.
   const local =
     appEnv !== '' && policy.development_env_names.includes(appEnv) && LOCAL_HOSTS.has(host);
   if (!local && env[DESTRUCTIVE_RESET_VARIABLE]?.trim() !== DESTRUCTIVE_RESET_TOKEN)
-    throw new ResetRefusal(
+    throw new OperatorRefusal(
       `Refusing to drop the database: APP_ENV is '${appEnv || '(unset)'}' and the target host is '${host}'. ` +
         `Automatic reset requires a development APP_ENV and a loopback host; otherwise set ` +
         `${DESTRUCTIVE_RESET_VARIABLE}=${DESTRUCTIVE_RESET_TOKEN} to confirm this exact database is safe to destroy.`,

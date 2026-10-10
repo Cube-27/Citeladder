@@ -14,6 +14,7 @@ const admin = new pg.Client({
   connectionString: Object.assign(new URL(base), { pathname: '/postgres' }).href,
 });
 const created: string[] = [];
+const baseline = readBaseline();
 
 async function freshDatabase() {
   const name = `citeladder_baseline_test_${randomUUID().replaceAll('-', '')}`;
@@ -56,9 +57,9 @@ describe('a fresh database', () => {
     ]);
 
     // A CRLF checkout is the same baseline.
-    expect(await applyBaseline(client, readBaseline().replaceAll('\n', '\r\n'))).toBe('current');
+    expect(await applyBaseline(client, baseline.replaceAll('\n', '\r\n'))).toBe('current');
     await expect(
-      applyBaseline(client, `${readBaseline()}\nCREATE TABLE public.extra (id integer);\n`),
+      applyBaseline(client, `${baseline}\nCREATE TABLE public.extra (id integer);\n`),
     ).rejects.toThrow(/baseline changed after this database was migrated.*reset_database/u);
     expect(await publicTables(client)).not.toContain('extra');
     expect(
@@ -82,7 +83,8 @@ describe('a database the baseline must not touch', () => {
     await expect(applyBaseline(client)).rejects.toThrow(/tables but no schema_migrations ledger/u);
     await client.query('DROP TABLE public.users');
 
-    const broken = `${readBaseline()}\nSELECT 1 / 0;\n`;
+    // Admission reads only emptiness, so a short failing script proves the rollback.
+    const broken = 'CREATE TABLE public.partial (id integer);\nSELECT 1 / 0;\n';
     await expect(applyBaseline(client, broken)).rejects.toThrow('division by zero');
     expect(await publicTables(client)).toEqual([]);
   }, 120000);

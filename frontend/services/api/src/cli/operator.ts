@@ -53,7 +53,11 @@ const safeFailures = new Set([
   'invalid_grant_validity',
 ]);
 
+/** An operator refusal built only from reviewed text; its message is safe to print. */
+export class OperatorRefusal extends Error {}
+
 export function operatorDiagnostic(error: unknown): string {
+  if (error instanceof OperatorRefusal) return error.message;
   if (error instanceof Error && safeFailures.has(error.message)) return error.message;
   if (error instanceof Error && error.message === 'An active platform administrator is required')
     return 'active_admin_required';

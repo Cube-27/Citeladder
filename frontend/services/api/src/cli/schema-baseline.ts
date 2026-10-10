@@ -8,7 +8,11 @@
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 
-import type pg from 'pg';
+import pg from 'pg';
+
+import { databaseSettings } from '../config.ts';
+import { poolOptions } from '../db/database.ts';
+import { OperatorRefusal } from './operator.ts';
 
 const BASELINE_VERSION = '0001_baseline';
 const BASELINE_FILE = new URL(`../../migrations/${BASELINE_VERSION}.sql`, import.meta.url);
@@ -17,9 +21,6 @@ const LOCK_KEY = createHash('sha256')
   .digest()
   .readBigInt64BE(0);
 const RESET = 'Redeploy with reset_database to replace this database with the current baseline.';
-
-/** A database this baseline must not be applied to; the message is safe to print. */
-export class BaselineRefusal extends Error {}
 
 export function readBaseline(): string {
   return readFileSync(BASELINE_FILE, 'utf8');
@@ -42,12 +43,12 @@ async function admission(client: pg.ClientBase, checksum: string): Promise<'curr
       [BASELINE_VERSION],
     );
     if (ledger.rows[0]?.checksum === checksum) return 'current';
-    throw new BaselineRefusal(
+    throw new OperatorRefusal(
       `The schema baseline changed after this database was migrated (recorded ${ledger.rows[0]?.checksum.slice(0, 12) ?? 'none'}, file ${checksum.slice(0, 12)}). ${RESET}`,
     );
   }
   if (await exists(client, 'public.alembic_version'))
-    throw new BaselineRefusal(
+    throw new OperatorRefusal(
       `This database was created by the retired Alembic migrations. ${RESET}`,
     );
   const relations = await client.query(
@@ -55,10 +56,21 @@ async function admission(client: pg.ClientBase, checksum: string): Promise<'curr
      where n.nspname = 'public' and c.relkind in ('r', 'p', 'v', 'm', 'S', 'f') limit 1`,
   );
   if (relations.rows.length > 0)
-    throw new BaselineRefusal(
+    throw new OperatorRefusal(
       `The database has tables but no schema_migrations ledger, so the baseline was not applied over them. ${RESET}`,
     );
   return 'empty';
+}
+
+/** A schema client with the configured TLS; the apply can outlast any request-path query bound. */
+export function baselineClient(
+  databaseUrl: string,
+  env: Record<string, string | undefined> = process.env,
+) {
+  return new pg.Client({
+    ...poolOptions({ appName: 'CiteLadder migrate', databaseUrl, database: databaseSettings(env) }),
+    query_timeout: undefined,
+  });
 }
 
 /** Apply the baseline to an empty database; a rerun on a current database is a no-op. */
@@ -69,6 +81,9 @@ export async function applyBaseline(
   const checksum = baselineChecksum(sqlText);
   await client.query('begin');
   try {
+    // DDL on an empty database has no statement bound, and a concurrent apply
+    // waits on the advisory lock instead of failing.
+    await client.query('set local statement_timeout = 0; set local lock_timeout = 0');
     await client.query('select pg_advisory_xact_lock($1::bigint)', [LOCK_KEY.toString()]);
     const state = await admission(client, checksum);
     if (state === 'empty') {
