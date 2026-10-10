@@ -606,3 +606,75 @@ it('lists only active Actions as the current work and reads a dismissed one only
     `citeladder://action/${kept.id}`,
   ]);
 });
+
+it('serves answer perception with the same numbers as the Perception read, and its quotes', async () => {
+  expect(await read('read_perception')).toMatchObject({
+    state: 'unavailable',
+    reason: 'no_completed_run',
+  });
+  const auditId = await fixtures.audit(tenant, {
+    configuration: { brand_name: 'Acme', perception: { extractor_version: 'mcp-test' } },
+  });
+  const { taskId, analysisId } = await fixtures.execution(tenant, { auditId, analysis: {} });
+  await db
+    .updateTable('response_analyses')
+    .set({
+      entity_assessments: JSON.stringify([
+        { entity_id: 'brand:acme', entity_name: 'Acme', entity_kind: 'brand', state: 'mentioned' },
+      ]),
+    })
+    .where('id', '=', analysisId!)
+    .execute();
+  const { artifact_id } = await db
+    .selectFrom('response_analyses')
+    .select('artifact_id')
+    .where('id', '=', analysisId!)
+    .executeTakeFirstOrThrow();
+  const perceptionId = randomUUID();
+  await db
+    .insertInto('answer_perceptions')
+    .values({
+      id: perceptionId,
+      workspace_id: tenant.workspaceId,
+      project_id: tenant.projectId,
+      audit_id: auditId,
+      task_id: taskId,
+      analysis_id: analysisId!,
+      artifact_id,
+      extractor_version: 'mcp-test',
+      template_version: 't',
+      outcome: 'classified',
+      created_at: new Date(),
+    })
+    .execute();
+  await db
+    .insertInto('entity_sentiments')
+    .values({
+      id: randomUUID(),
+      workspace_id: tenant.workspaceId,
+      perception_id: perceptionId,
+      entity_id: 'brand:acme',
+      entity_name: 'Acme',
+      entity_kind: 'brand',
+      label: 'negative',
+      confidence: 0.9,
+      low_confidence: false,
+      passage_spans: JSON.stringify([]),
+      aspects: JSON.stringify([
+        { theme: 'pricing', polarity: 'negative', quote: 'Acme is pricey', start: 0, end: 14 },
+      ]),
+    })
+    .execute();
+  const summary = await read('read_perception', { audit_id: auditId });
+  expect(summary).toMatchObject({
+    state: 'available',
+    perception_state: 'value',
+    coverage: { mentions: 1, classified: 1 },
+    brand: { score: { negative: 1, net_sentiment: -100 } },
+    artifact_refs: [expect.objectContaining({ id: expect.stringContaining(auditId) })],
+  });
+  const quotes = await read('read_perception', { view: 'quotes', polarity: 'negative' });
+  expect(quotes.items).toEqual([
+    expect.objectContaining({ text: 'Acme is pricey', run_id: auditId, execution_id: taskId }),
+  ]);
+});

@@ -22,7 +22,12 @@ This is a read the user asked for, not a schedule.
    `read_visibility_sources` with it and the same engine and cohort. A sources
    read is one audit, never a period total. Read at most two pages and `fetch`
    at most three returned references unless asked.
-6. For what changed on the site, call `read_actions` (with `action_id` for one
+6. For a change in answer tone, call `read_perception` for each of the two
+   audits. Always state its coverage ("N of M mentions classified"); a pending
+   or unavailable read has no value, never zero. Compare only runs whose
+   perception versions match. Sources it lists were cited alongside
+   criticism, never shown to cause it.
+7. For what changed on the site, call `read_actions` (with `action_id` for one
    Action's go-live date and measured outcome). For search traffic in the same
    window, call `read_performance` with a comparison, or `read_query_evidence`
    for queries by page.

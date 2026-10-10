@@ -21,7 +21,7 @@
             {
               "description": "Use a project with a completed persisted visibility run, including a zero owned-citation rate.",
               "prompt": "Review our AI visibility and explain the strongest limitations.",
-              "tools_triggered": "list_projects when needed; read_visibility_overview; read_visibility_sources; optionally render_visibility",
+              "tools_triggered": "list_projects when needed; read_visibility_overview; read_visibility_sources; read_perception; optionally render_visibility",
               "expected_behavior": "Overview uses returned canonical rates, response counts, coverage and model provenance; Latest pins one audit_id reused by follow-up reads. Zero differs from unavailable. Returned evidence supports every observation."
             },
             {

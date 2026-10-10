@@ -10,6 +10,7 @@ import { getVisibilityEvidence } from '../visibility/evidence.ts';
 import { getVisibilitySources } from '../visibility/sources.ts';
 import { getSourceUrlDetail } from '../visibility/source-url.ts';
 import { getVisibilityTrends } from '../visibility/trends.ts';
+import { getPerception, getPerceptionQuotes } from '../visibility/perception.ts';
 import {
   AnalysisNotFoundError,
   authorizeRunSet,
@@ -75,6 +76,55 @@ export async function visibilityTrends(
       reference('audit', id),
     ),
   };
+}
+
+/**
+ * Answer perception for the latest or a chosen run: the summary (net
+ * sentiment always with its coverage) or a page of verified quotes. Sources
+ * in `drivers` were cited alongside criticism; they are never a cause.
+ */
+export async function perceptionRead(
+  { db, scope }: ProjectRead,
+  args: Selection &
+    Page & {
+      view: 'summary' | 'quotes';
+      entity?: string | null;
+      theme?: string | null;
+      polarity?: 'positive' | 'negative' | null;
+    },
+): Promise<Evidence> {
+  try {
+    if (args.view === 'quotes') {
+      const page = await getPerceptionQuotes(db, runs(scope, args), {
+        entity: args.entity ?? null,
+        theme: args.theme ?? null,
+        polarity: args.polarity ?? null,
+        cursor: args.cursor ?? null,
+        limit: args.limit ?? mcpPolicy.default_list_limit,
+      });
+      return {
+        state: 'available',
+        view: 'quotes',
+        items: page.items,
+        pagination: pagination(page.items, page.next_cursor),
+        artifact_refs: [...new Set(page.items.map((quote) => quote.run_id))].map((id) =>
+          reference('audit', id),
+        ),
+      };
+    }
+    const summary = await getPerception(db, runs(scope, args));
+    return {
+      ...summary,
+      perception_state: summary.state,
+      state: 'available',
+      view: 'summary',
+      artifact_refs: summary.source_audit_ids.map((id) => reference('audit', id)),
+    };
+  } catch (error) {
+    if (error instanceof AnalysisNotFoundError && !args.audit_id)
+      return unavailable('no_completed_run');
+    throw error;
+  }
 }
 
 /** The dashboard projection for one run, with that run's status and progress. */
