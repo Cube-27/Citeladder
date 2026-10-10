@@ -64,7 +64,7 @@ export async function listAudits(
   if (projectId) query = query.where('project_id', '=', projectId);
   if (afterId)
     query = query.where(
-      sql<boolean>`(audits.created_at, audits.id) < (SELECT anchor.created_at, anchor.id FROM audits AS anchor WHERE anchor.id = ${afterId} AND anchor.workspace_id = ${workspaceId})`,
+      sql<boolean>`(audits.created_at, audits.id) < (SELECT anchor.created_at, anchor.id FROM audits AS anchor WHERE anchor.id = ${afterId} AND anchor.workspace_id = ${workspaceId} AND anchor.project_id = audits.project_id)`,
     );
   return auditResponses(db, await query.execute());
 }

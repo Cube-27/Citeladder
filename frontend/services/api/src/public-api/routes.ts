@@ -23,6 +23,7 @@ import { launchAudit } from '../commands/audits.ts';
 import { addCompetitor, removeCompetitor, updateCompetitor } from '../commands/competitors.ts';
 import { createPrompts } from '../commands/prompts.ts';
 import { configEnvironment, policy } from '../config.ts';
+import { ApiError } from '../errors.ts';
 import { readBody } from '../http/body.ts';
 import { competitorCreate, competitorUpdate, listCompetitors } from '../projects/competitors.ts';
 import { listProjects } from '../projects/service.ts';
@@ -116,10 +117,10 @@ export const publicApiRoutes: readonly ProductRoute[] = [
   defineGetRoute({
     ...base,
     path: `${project}/prompt-sets/{prompt_set_id}/generation-runs`,
-    params: { path: { ...projectPath, prompt_set_id: uuid }, query: {} },
-    response: z.array(generationRunSchema),
-    handle: ({ c, db }, { path }) =>
-      listGenerationRuns(db, c.get('workspace').workspaceId, path.prompt_set_id),
+    params: { path: { ...projectPath, prompt_set_id: uuid }, query: pageQuery },
+    response: pageSchema(generationRunSchema),
+    handle: ({ c, db }, { path, query }) =>
+      listGenerationRuns(db, c.get('workspace').workspaceId, path.prompt_set_id, query),
   }),
   defineGetRoute({
     ...base,
@@ -177,13 +178,27 @@ export const publicApiRoutes: readonly ProductRoute[] = [
     response: pageSchema(auditSchema),
     async handle({ c, db }, { path, query }) {
       const scope = { endpoint: 'audits', filters: { project_id: path.project_id } };
+      const workspaceId = c.get('workspace').workspaceId;
+      const after = cursorId(query.cursor, scope);
+      // A cursor names an audit of this project; a deleted one cannot anchor a page.
+      if (
+        after !== null &&
+        !(await db
+          .selectFrom('audits')
+          .select('id')
+          .where('id', '=', after)
+          .where('workspace_id', '=', workspaceId)
+          .where('project_id', '=', path.project_id)
+          .executeTakeFirst())
+      )
+        throw new ApiError(400, 'Invalid cursor', { code: 'invalid_cursor' });
       // One extra row says whether another page exists.
       const rows = await listAudits(
         db,
-        c.get('workspace').workspaceId,
+        workspaceId,
         path.project_id,
         query.limit + 1,
-        cursorId(query.cursor, scope) ?? undefined,
+        after ?? undefined,
       );
       const items = rows.slice(0, query.limit);
       const last = items.at(-1);

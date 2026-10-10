@@ -407,11 +407,16 @@ async function deleteUnusedAccount(db: Database, session: PlatformSession, email
   }
   // A new account's workspace, billing row and operator baseline (with its
   // derived runtime row) can be removed; any other grant or history blocks this.
+  await revokeCreatorKeys(
+    db,
+    memberships.filter((member) => member.role !== 'owner').map((member) => member.workspace_id),
+    user.id,
+    session.actorId,
+  );
   for (const member of memberships) {
     if (member.role === 'owner')
       await db.deleteFrom('workspaces').where('id', '=', member.workspace_id).execute();
-    else {
-      await revokeCreatorKeys(db, member.workspace_id, user.id, session.actorId);
+    else
       await recordSecurityEvent(
         db,
         'membership.remove',
@@ -419,7 +424,6 @@ async function deleteUnusedAccount(db: Database, session: PlatformSession, email
         member.workspace_id,
         user.id,
       );
-    }
   }
   await db.deleteFrom('users').where('id', '=', user.id).execute();
   await recordSecurityEvent(db, 'account.delete', session.actorId, null, user.id);

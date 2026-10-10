@@ -69,7 +69,7 @@ export async function withIdempotency(
   const text = await response.clone().text();
   await db
     .updateTable('api_idempotency')
-    .set({ status_code: response.status, response_body: text ? text : null })
+    .set({ status_code: response.status, response_body: text || null })
     .where('id', '=', claimed.id)
     .execute();
   return response;
@@ -108,12 +108,12 @@ async function replay(
 }
 
 /** Delete a bounded batch of records past retention. */
-export async function purgeApiIdempotency(
+export function purgeApiIdempotency(
   db: Database,
   now: Date,
   canAdmit: () => boolean = () => true,
 ): Promise<number> {
-  if (!canAdmit()) return 0;
+  if (!canAdmit()) return Promise.resolve(0);
   const cutoff = new Date(now.getTime() - P.idempotency.retention_hours * 3600 * 1000);
   return db.transaction().execute(async (trx) => {
     const rows = await trx

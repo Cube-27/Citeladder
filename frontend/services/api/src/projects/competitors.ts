@@ -58,7 +58,7 @@ export async function lockProject(db: Database, scope: ProjectScope): Promise<vo
   if (project === undefined) throw notFound('Project');
 }
 
-async function competitorsOf(db: Database, projectId: string) {
+function competitorsOf(db: Database, projectId: string) {
   return db
     .selectFrom('competitors')
     .selectAll()

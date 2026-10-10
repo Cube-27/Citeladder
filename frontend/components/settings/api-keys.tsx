@@ -114,7 +114,8 @@ function CreateKeyDialog({
         name,
         scopes: [...scopes],
         project_ids: projectMode === 'all' ? null : [...chosen],
-        expires_at: expiresOn ? `${expiresOn}T23:59:59Z` : null,
+        // The end of the chosen day where the person is, sent as an instant.
+        expires_at: expiresOn ? new Date(`${expiresOn}T23:59:59`).toISOString() : null,
       }),
     onSuccess: (result) => {
       setCreated(result);
@@ -293,11 +294,8 @@ export function ApiKeys() {
           </Alert>
         )}
       </Stack>
-      {keys.length === 0 ? (
-        available ? (
-          <p className={textRole('body')}>No API keys yet.</p>
-        ) : null
-      ) : (
+      {keys.length === 0 && available ? <p className={textRole('body')}>No API keys yet.</p> : null}
+      {keys.length === 0 ? null : (
         <ul className={ledgerClasses('open')}>
           {keys.map((key) => (
             <KeyRow

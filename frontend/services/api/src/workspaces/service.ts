@@ -267,7 +267,7 @@ export async function applyMemberMutation(
       .where('workspace_id', '=', workspaceId)
       .execute();
     await dropWorkspaceFromGrants(trx, member.user_id, workspaceId);
-    await revokeCreatorKeys(trx, workspaceId, member.user_id, actorId);
+    await revokeCreatorKeys(trx, [workspaceId], member.user_id, actorId);
     await recordSecurityEvent(
       trx,
       'leave' in target ? 'membership.leave' : 'membership.remove',

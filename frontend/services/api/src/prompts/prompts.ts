@@ -162,8 +162,23 @@ export async function createPrompts(
       await acquireProjectLock(trx, set.project_id);
       await acquirePromptSetLock(trx, set.id);
       // Bound under the project lock, so the topic vocabulary cannot change before the insert.
-      for (const input of inputs)
-        await requireBinding(trx, set.project_id, input.text, input.topic_id ?? null);
+      const vocabulary = await loadVocabulary(trx, set.project_id);
+      const topicIds = [...new Set(inputs.flatMap((input) => input.topic_id ?? []))];
+      const topics = new Map(
+        await Promise.all(
+          topicIds.map(
+            async (topicId) => [topicId, await topicText(trx, set.project_id, topicId)] as const,
+          ),
+        ),
+      );
+      for (const input of inputs) {
+        const failure = bindingFailure(
+          input.text,
+          vocabulary,
+          input.topic_id ? (topics.get(input.topic_id) ?? '') : '',
+        );
+        if (failure !== null) throw bindingError(failure);
+      }
       const planned = inputs.map((input) => ({
         input,
         id: randomUUID(),

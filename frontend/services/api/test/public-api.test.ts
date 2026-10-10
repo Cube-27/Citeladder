@@ -444,6 +444,13 @@ describe('public API requests', () => {
       items: [{ text: 'Which running shoes suit wide feet?' }],
       next_cursor: null,
     });
+    // A cursor belongs to its endpoint and filters.
+    const elsewhere = await api(
+      secret,
+      `/projects/${tenant.projectId}/prompts?limit=2&status=archived&cursor=${listed.next_cursor}`,
+    );
+    expect(elsewhere.status).toBe(400);
+    expect(await errorCode(elsewhere)).toBe('invalid_cursor');
   });
 
   it('publishes every public operation in the OpenAPI document without a key', async () => {

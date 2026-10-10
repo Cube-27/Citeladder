@@ -66,12 +66,15 @@ export async function requirePathOwnership(
   projectId: string,
   params: Readonly<Record<string, string>>,
 ): Promise<void> {
-  for (const [name, raw] of Object.entries(params)) {
+  const checks = Object.entries(params).flatMap(([name, raw]) => {
     const owner = Object.hasOwn(OWNERS, name) ? OWNERS[name] : undefined;
-    if (owner === undefined) continue;
     const id = parseUuid(raw);
     // A malformed ID is the route's own 422; only a well-formed one is resolved.
-    if (id === null) continue;
-    if ((await owner.project(db, workspaceId, id)) !== projectId) throw notFound(owner.resource);
-  }
+    return owner === undefined || id === null ? [] : [{ owner, id }];
+  });
+  const projects = await Promise.all(
+    checks.map(({ owner, id }) => owner.project(db, workspaceId, id)),
+  );
+  const foreign = checks.find((_, index) => projects[index] !== projectId);
+  if (foreign) throw notFound(foreign.owner.resource);
 }

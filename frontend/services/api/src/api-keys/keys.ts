@@ -112,7 +112,7 @@ export async function createApiKey(
     throw new ApiError(422, 'expires_at must be in the future');
   const scopes: ApiKeyScope[] = ['read', ...input.scopes.filter((scope) => scope !== 'read')];
   const projectIds = input.project_ids === null ? null : [...new Set(input.project_ids)];
-  return db.transaction().execute(async (trx) => {
+  return await db.transaction().execute(async (trx) => {
     await lockAuthorizedWorkspace(trx, workspaceId, userId, 'manage_credentials');
     await admitApiKey(trx, workspaceId, now);
     if (projectIds !== null) {
@@ -125,15 +125,23 @@ export async function createApiKey(
       if (owned.length !== projectIds.length)
         throw new ApiError(422, 'Every project must belong to this workspace');
     }
-    let generated = newSecret();
-    while (
-      await trx
-        .selectFrom('api_keys')
-        .select('id')
-        .where('prefix', '=', generated.prefix)
-        .executeTakeFirst()
-    )
-      generated = newSecret();
+    // 62^8 prefixes: a few candidates checked in one query never all collide.
+    const candidates = Array.from({ length: 4 }, newSecret);
+    const taken = new Set(
+      (
+        await trx
+          .selectFrom('api_keys')
+          .select('prefix')
+          .where(
+            'prefix',
+            'in',
+            candidates.map((candidate) => candidate.prefix),
+          )
+          .execute()
+      ).map((row) => row.prefix),
+    );
+    const generated = candidates.find((candidate) => !taken.has(candidate.prefix));
+    if (generated === undefined) throw new Error('No free API key prefix');
     const id = randomUUID();
     await trx
       .insertInto('api_keys')
@@ -163,7 +171,7 @@ export async function createApiKey(
 }
 
 /** Revoke one key; revoking a revoked key is a no-op. */
-export async function revokeApiKey(
+export function revokeApiKey(
   db: Database,
   workspaceId: string,
   userId: string,
@@ -198,7 +206,7 @@ function invalidKey(message = 'A valid API key is required'): ApiError {
 /** Record a refused revoked/expired key at most once per key per interval. */
 async function recordRejection(
   db: Database,
-  row: ApiKeyRow,
+  row: Pick<ApiKeyRow, 'id' | 'workspace_id' | 'created_by_user_id'>,
   event: 'api_key.rejected_revoked' | 'api_key.rejected_expired',
   now: Date,
 ): Promise<void> {
@@ -219,22 +227,24 @@ async function recordRejection(
 }
 
 /** The live key a `Bearer` header names, or 401 `invalid_api_key`. */
-export async function liveApiKeyRow(
+export async function resolveCaller(
   db: Database,
   pepper: string,
   authorization: string | undefined,
   now = new Date(),
-): Promise<ApiKeyRow> {
+): Promise<Omit<ApiKeyRow, 'secret_hmac'>> {
   const match = /^Bearer\s+(\S+)$/iu.exec(authorization?.trim() ?? '');
-  const secret = match?.[1] ?? '';
-  if (!secret.startsWith(P.key_prefix) || secret.length <= PREFIX_LENGTH) throw invalidKey();
-  const row = await db
+  const presented = match?.[1] ?? '';
+  if (!presented.startsWith(P.key_prefix) || presented.length <= PREFIX_LENGTH) throw invalidKey();
+  const found = await db
     .selectFrom('api_keys')
     .selectAll()
-    .where('prefix', '=', secret.slice(0, PREFIX_LENGTH))
+    .where('prefix', '=', presented.slice(0, PREFIX_LENGTH))
     .executeTakeFirst();
-  const supplied = secretDigest(pepper, secret);
-  if (!row || !timingSafeEqual(row.secret_hmac, supplied)) throw invalidKey();
+  if (!found || !timingSafeEqual(found.secret_hmac, secretDigest(pepper, presented)))
+    throw invalidKey();
+  // The digest has done its job; it never leaves this function.
+  const { secret_hmac: _digest, ...row } = found;
   if (row.revoked_at) {
     await recordRejection(db, row, 'api_key.rejected_revoked', now);
     throw invalidKey('This API key was revoked');
@@ -247,7 +257,11 @@ export async function liveApiKeyRow(
 }
 
 /** Stamp `last_used_at` at most once per resolution window. */
-export async function touchApiKey(db: Database, row: ApiKeyRow, now = new Date()): Promise<void> {
+export async function touchApiKey(
+  db: Database,
+  row: Pick<ApiKeyRow, 'id' | 'last_used_at'>,
+  now = new Date(),
+): Promise<void> {
   const stale = new Date(now.getTime() - P.last_used_resolution_seconds * 1000);
   if (row.last_used_at && row.last_used_at > stale) return;
   await db

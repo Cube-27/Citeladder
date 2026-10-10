@@ -4,12 +4,13 @@
  * persisted rows only.
  */
 import { promptSchema } from '@citeladder/contracts/project';
+import { sql } from 'kysely';
 import { z } from 'zod';
 
 import type { Database } from '../db/database.ts';
 import { listPromptSets } from '../prompts/prompt-sets.ts';
 import { getPromptMetrics, type PromptMetricItem } from '../visibility/prompts.ts';
-import { pageAfter } from './pagination.ts';
+import { cursorId, nextCursor, pageAfter } from './pagination.ts';
 
 type Scope = { workspaceId: string; projectId: string };
 
@@ -100,18 +101,35 @@ export async function listPublicPrompts(
   };
 }
 
+/** A prompt set's generation runs, newest first, one keyset page at a time. */
 export async function listGenerationRuns(
   db: Database,
   workspaceId: string,
   promptSetId: string,
-): Promise<z.input<typeof generationRunSchema>[]> {
-  const rows = await db
+  page: { cursor: string | null; limit: number },
+) {
+  const scope = { endpoint: 'generation-runs', filters: { prompt_set_id: promptSetId } };
+  const after = cursorId(page.cursor, scope);
+  let query = db
     .selectFrom('prompt_generation_runs')
     .select(['id', 'prompt_set_id', 'generator_version', 'created_at'])
     .where('workspace_id', '=', workspaceId)
     .where('prompt_set_id', '=', promptSetId)
     .orderBy('created_at', 'desc')
     .orderBy('id', 'desc')
-    .execute();
-  return rows.map((row) => ({ ...row, created_at: row.created_at.toISOString() }));
+    .limit(page.limit + 1);
+  if (after !== null)
+    query = query.where(
+      sql<boolean>`(created_at, id) < (SELECT anchor.created_at, anchor.id FROM prompt_generation_runs AS anchor WHERE anchor.id = ${after} AND anchor.prompt_set_id = ${promptSetId})`,
+    );
+  const rows = await query.execute();
+  const items = rows.slice(0, page.limit).map((row): z.input<typeof generationRunSchema> => ({
+    ...row,
+    created_at: row.created_at.toISOString(),
+  }));
+  const last = items.at(-1);
+  return {
+    items,
+    next_cursor: rows.length > page.limit && last ? nextCursor(scope, last.id) : null,
+  };
 }
