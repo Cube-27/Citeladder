@@ -8,6 +8,10 @@ import { verifyPullSource } from '../src/crawl-logs/gcp-verify.ts';
 import { sourceList } from '../src/crawl-logs/source-reads.ts';
 import { gcpLogFilter } from '../src/crawl-logs/gcp-filter.ts';
 import { GcpError, pubSubReader } from '../src/crawl-logs/gcp-client.ts';
+import { crawlLogPull, enqueueDuePulls } from '../src/crawl-logs/pull.ts';
+import { refreshCrawlLogs } from '../src/crawl-logs/rollup.ts';
+import { TaskQueue } from '../src/queue/task-queue.ts';
+import { enqueueTask } from '../src/referrals/enqueue.ts';
 
 /** An in-memory Google: metadata, IAM Credentials and one Pub/Sub subscription. */
 function fakeGoogle(
@@ -28,6 +32,10 @@ function fakeGoogle(
     clock: Date.parse('2026-10-10T00:00:00Z'),
     log: [] as string[],
     labels: options.labels ?? {},
+    /** When set, `status` applies to this call only (`:pull` or `:acknowledge`). */
+    failing: '' as '' | ':pull' | ':acknowledge',
+    /** Runs when an acknowledgement arrives, before it is applied. */
+    onAck: async () => {},
   };
   const reply = (status: number, body: unknown) =>
     new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
@@ -46,7 +54,8 @@ function fakeGoogle(
       });
     }
     if (!authorization?.startsWith('Bearer reader-token-')) return reply(401, {});
-    if (state.status !== 200) return reply(state.status, { error: { message: 'secret detail' } });
+    if (state.status !== 200 && (!state.failing || url.endsWith(state.failing)))
+      return reply(state.status, { error: { message: 'secret detail' } });
     if (url.endsWith(':pull')) {
       state.pulls += 1;
       const { maxMessages } = JSON.parse(String(init?.body)) as { maxMessages: number };
@@ -59,6 +68,7 @@ function fakeGoogle(
     }
     if (url.endsWith(':acknowledge')) {
       const { ackIds } = JSON.parse(String(init?.body)) as { ackIds: string[] };
+      await state.onAck();
       state.acked.push(...ackIds.map((id) => id.slice(4)));
       return reply(200, {});
     }
@@ -333,5 +343,266 @@ describe('subscription verification', () => {
       filter_catalog_version: '2',
       filter_current: true,
     });
+  });
+});
+
+const GPTBOT = 'Mozilla/5.0 (compatible; GPTBot/1.2; +https://openai.com/gptbot)';
+let messageSeq = 0;
+/** A Pub/Sub message carrying one Cloud Logging entry, base64 as Pub/Sub delivers it. */
+function message(entry: Record<string, unknown>) {
+  messageSeq += 1;
+  return {
+    messageId: String(1000 + messageSeq),
+    data: Buffer.from(JSON.stringify(entry)).toString('base64'),
+  };
+}
+const lbEntry = (path: string, changes: Record<string, unknown> = {}) => ({
+  insertId: 'insert-' + path,
+  timestamp: new Date().toISOString(),
+  resource: { type: 'http_load_balancer' },
+  httpRequest: {
+    requestMethod: 'GET',
+    requestUrl: `https://acme.example${path}?session=secret#top`,
+    status: 200,
+    userAgent: GPTBOT,
+    remoteIp: '192.0.2.4',
+  },
+  ...changes,
+});
+/** A verified pull source, its labelled Google and the pull executor bound to it. */
+async function verifiedSource() {
+  const { tenant, id } = await pullSource();
+  const google = await labelled(id);
+  await verifyPullSource(db, await row(id), google.reader);
+  return { tenant, id, google, executor: crawlLogPull(() => google.reader) };
+}
+/** Queue the source's pull through the tick's scheduler and run the claimed row. */
+async function runPull(
+  tenant: Tenant,
+  executor: ReturnType<typeof crawlLogPull>,
+  now = new Date(Date.now() + 3600_000 * Math.random()),
+) {
+  await enqueueDuePulls(db, tenant.workspaceId, now, () => true);
+  const task = await db
+    .selectFrom('analytics_tasks')
+    .selectAll()
+    .where('workspace_id', '=', tenant.workspaceId)
+    .where('task_kind', '=', 'crawl_log_pull')
+    .orderBy('created_at', 'desc')
+    .executeTakeFirstOrThrow();
+  await executor(task, { db, maxAttempts: 3, checkCancelled: async () => {} });
+}
+const pullReceipts = (id: string) =>
+  db
+    .selectFrom('crawl_log_batches')
+    .select(['lines_received', 'lines_matched', 'lines_rejected', 'lines_duplicate', 'drained'])
+    .where('source_id', '=', id)
+    .orderBy('received_at')
+    .execute();
+
+describe('pull task', () => {
+  it('admits mapped requests, acknowledges after the commit and records the drain', async () => {
+    const { tenant, id, google, executor } = await verifiedSource();
+    google.state.messages.push(
+      message(lbEntry('/guide')),
+      message(lbEntry('/pricing', { resource: { type: 'cloud_run_revision' } })),
+      message(lbEntry('/other', { resource: { type: 'gce_instance' } })),
+      { messageId: '9999', data: '%%%' },
+    );
+    const committedAtAck: number[] = [];
+    google.state.onAck = async () => {
+      committedAtAck.push((await pullReceipts(id)).length);
+    };
+    await runPull(tenant, executor);
+    expect(committedAtAck).toEqual([1]);
+    expect(google.state.acked.sort()).toEqual(google.state.messages.map((m) => m.messageId).sort());
+    expect(await pullReceipts(id)).toEqual([
+      {
+        lines_received: 4,
+        lines_matched: 2,
+        lines_rejected: 2,
+        lines_duplicate: 0,
+        drained: false,
+      },
+      { lines_received: 0, lines_matched: 0, lines_rejected: 0, lines_duplicate: 0, drained: true },
+    ]);
+    const paths = await db
+      .selectFrom('bot_requests')
+      .select('display_path')
+      .where('source_id', '=', id)
+      .orderBy('display_path')
+      .execute();
+    expect(paths).toEqual([{ display_path: '/guide' }, { display_path: '/pricing' }]);
+    expect((await sourceList(db, scope(tenant))).items[0]).toMatchObject({
+      state: 'active',
+      connection: 'connected',
+      pull: { last_drained_at: expect.any(String), last_pull_at: expect.any(String) },
+    });
+  });
+  it('deduplicates a redelivery after a lost acknowledgement', async () => {
+    const { tenant, id, google, executor } = await verifiedSource();
+    google.state.messages.push(message(lbEntry('/a')), message(lbEntry('/b')));
+    google.state.failing = ':acknowledge';
+    google.state.status = 503;
+    await runPull(tenant, executor);
+    expect(google.state.acked).toEqual([]);
+    // Redelivered alongside a new message, the batch has a new key; request IDs dedupe it.
+    google.state.messages.push(message(lbEntry('/c')));
+    google.state.status = 200;
+    await runPull(tenant, executor);
+    expect(google.state.acked).toHaveLength(3);
+    expect(await pullReceipts(id)).toEqual([
+      {
+        lines_received: 2,
+        lines_matched: 2,
+        lines_rejected: 0,
+        lines_duplicate: 0,
+        drained: false,
+      },
+      {
+        lines_received: 3,
+        lines_matched: 1,
+        lines_rejected: 0,
+        lines_duplicate: 2,
+        drained: false,
+      },
+      { lines_received: 0, lines_matched: 0, lines_rejected: 0, lines_duplicate: 0, drained: true },
+    ]);
+  });
+  it('stalls on a refused pull and stops pulling until a check passes', async () => {
+    const { tenant, id, google, executor } = await verifiedSource();
+    google.state.failing = ':pull';
+    google.state.status = 403;
+    await runPull(tenant, executor);
+    expect((await sourceList(db, scope(tenant))).items[0]).toMatchObject({
+      state: 'stalled',
+      stall_reason: 'verification_failed',
+      pull: { verification_failure: 'permission_denied' },
+    });
+    const pulls = google.state.pulls;
+    // Within the day, the tick holds the stalled source back.
+    await enqueueDuePulls(db, tenant.workspaceId, new Date(Date.now() + 600_000), () => true);
+    expect(
+      await db
+        .selectFrom('analytics_tasks')
+        .select('id')
+        .where('workspace_id', '=', tenant.workspaceId)
+        .where('task_kind', '=', 'crawl_log_pull')
+        .execute(),
+    ).toHaveLength(1);
+    expect(google.state.pulls).toBe(pulls);
+    expect(await pullReceipts(id)).toEqual([]);
+  });
+  it('schedules verified sources only, once per interval', async () => {
+    const unverified = await pullSource();
+    const { tenant } = await verifiedSource();
+    const at = new Date('2030-01-01T00:01:00Z');
+    for (const workspace of [unverified.tenant, tenant])
+      for (const now of [at, new Date(at.getTime() + 60_000)])
+        await enqueueDuePulls(db, workspace.workspaceId, now, () => true);
+    const queued = (workspaceId: string) =>
+      db
+        .selectFrom('analytics_tasks')
+        .select('payload')
+        .where('workspace_id', '=', workspaceId)
+        .where('task_kind', '=', 'crawl_log_pull')
+        .execute();
+    expect(await queued(unverified.tenant.workspaceId)).toEqual([]);
+    expect((await queued(tenant.workspaceId)).length).toBe(1);
+  });
+  it('leases a pull for its own longer TTL', async () => {
+    const tenant = await fixtures.tenant();
+    const queue = new TaskQueue(db, {
+      leaseTtlSeconds: 120,
+      leaseTtlSecondsByKind: { crawl_log_pull: 300 },
+    });
+    for (const kind of ['crawl_log_pull', 'crawl_log_rollup_refresh'])
+      await enqueueTask(db, {
+        workspaceId: tenant.workspaceId,
+        projectId: tenant.projectId,
+        kind,
+        payload: {},
+        keyParts: [tenant.projectId, 'lease'],
+        maxAttempts: 1,
+      });
+    const claimed = await queue.claim({
+      owner: 'lease-test',
+      kinds: ['crawl_log_pull', 'crawl_log_rollup_refresh'],
+      limit: 2,
+      scope: {
+        workspaceId: tenant.workspaceId,
+        taskIds: (
+          await db
+            .selectFrom('analytics_tasks')
+            .select('id')
+            .where('workspace_id', '=', tenant.workspaceId)
+            .execute()
+        ).map((t) => t.id),
+      },
+    });
+    const leases = Object.fromEntries(
+      claimed.map((t) => [
+        t.task_kind,
+        Math.round((t.lease_expires_at!.getTime() - t.heartbeat_at!.getTime()) / 1000),
+      ]),
+    );
+    expect(leases).toEqual({ crawl_log_pull: 300, crawl_log_rollup_refresh: 120 });
+  });
+});
+
+describe('pull coverage', () => {
+  const day = new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10);
+  const start = new Date(day + 'T00:00:00Z');
+  /** Drains every `gap` minutes across the day, then one `settle` minutes after it closed. */
+  async function coverageFor(
+    options: { gap?: number; settle?: number | null; rate?: number; catalog?: string } = {},
+  ) {
+    const { tenant, id } = await pullSource(undefined, options.rate);
+    await db
+      .updateTable('crawl_log_sources')
+      .set({ created_at: new Date(start.getTime() - 3600_000), verified_at: start })
+      .where('id', '=', id)
+      .execute();
+    const seed = await ingest(db, await row(id), Buffer.alloc(0), {
+      now: start,
+      key: 'seed',
+      drained: true,
+    });
+    const gap = options.gap ?? 29;
+    const times = Array.from(
+      { length: Math.floor((24 * 60) / gap) },
+      (_, i) => start.getTime() + (i + 1) * gap * 60000,
+    );
+    const settle = options.settle === undefined ? 16 : options.settle;
+    if (settle !== null) times.push(start.getTime() + 86400000 + settle * 60000);
+    await db
+      .insertInto('crawl_log_batches')
+      .values(
+        times.map((t, i) => ({
+          ...seed,
+          id: crypto.randomUUID(),
+          idempotency_key: 'drain-' + i,
+          received_at: new Date(t),
+          catalog_version: options.catalog ?? seed.catalog_version,
+        })),
+      )
+      .execute();
+    await refreshCrawlLogs(db, scope(tenant), new Date(), [day]);
+    return db
+      .selectFrom('crawl_log_coverage_daily')
+      .select(['coverage', 'reason'])
+      .where('source_id', '=', id)
+      .where('reporting_date', '=', start)
+      .executeTakeFirstOrThrow();
+  }
+  it.each([
+    [{}, 'complete', 'drained_unsampled_current_filter'],
+    [{ gap: 31 }, 'partial', 'pull_drain_gap'],
+    [{ settle: 14 }, 'partial', 'pull_awaiting_settle'],
+    [{ settle: null }, 'partial', 'pull_awaiting_settle'],
+    [{ rate: 0.5 }, 'partial', 'pull_sampled'],
+    [{ catalog: '1' }, 'partial', 'sink_filter_outdated'],
+  ] as const)('judges drains %j as %s (%s)', async (options, coverage, reason) => {
+    expect(await coverageFor(options)).toEqual({ coverage, reason });
   });
 });

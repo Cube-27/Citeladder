@@ -75,6 +75,20 @@ export async function verifyPullSource(
 ) {
   const failure = await checkSubscription(source, reader);
   if (failure === 'unavailable') return { verified: false, failure } as const;
+  await recordVerification(db, source, failure, options);
+  return { verified: failure === null, failure };
+}
+
+/**
+ * Persist a subscription check's outcome; a pull refused for permission or a
+ * missing subscription records the same failure as a check would.
+ */
+export async function recordVerification(
+  db: Database,
+  source: Pick<PullSource, 'id' | 'workspace_id' | 'project_id'>,
+  failure: Exclude<VerificationFailure, 'unavailable'> | null,
+  options: { now?: Date; actorId?: string } = {},
+) {
   const now = options.now ?? new Date();
   const scope = { workspaceId: source.workspace_id, projectId: source.project_id };
   await db.transaction().execute(async (trx) => {
@@ -114,5 +128,4 @@ export async function verifyPullSource(
       .where('id', '=', source.id)
       .execute();
   });
-  return { verified: failure === null, failure };
 }
