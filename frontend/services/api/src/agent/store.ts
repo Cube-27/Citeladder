@@ -31,11 +31,6 @@ export type FundingIdentity = Pick<
 /** Admission owns capability, route selection and abuse capacity, in this transaction.
  * Required injection deliberately has no unmetered/platform fallback. */
 export type Admission = (db: Database, scope: Scope) => Promise<FundingIdentity>;
-// `agent-runtime-ts-5` → `agent-runtime-ts-`: every TypeScript runtime revision.
-const TS_RUNTIME_PREFIX = agentPolicy.runtime_version.slice(
-  0,
-  agentPolicy.runtime_version.lastIndexOf('-') + 1,
-);
 const messageSchema = z.string().trim().min(1).max(agentPolicy.message_max_chars);
 export type TurnInput = {
   chatId?: string;
@@ -163,11 +158,7 @@ export class AgentStore {
       if (replay) {
         if (replay.project_id !== scope.projectId) throw notFound('Run');
         if (replay.user_id !== scope.userId) throw new AgentError('agent_idempotency_conflict');
-        // Python hashes escaped JSON. Reusing that key requires its original runtime;
-        // never interpret it as a TypeScript hash, even for an ASCII-only request.
-        // Every TypeScript runtime version shares one request fingerprint.
-        if (!replay.runtime_version.startsWith(TS_RUNTIME_PREFIX))
-          throw new AgentError('agent_legacy_replay');
+        // Every runtime version shares one request fingerprint.
         if (replay.request_fingerprint !== hash) throw new AgentError('agent_idempotency_conflict');
         return replay;
       }

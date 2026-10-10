@@ -39,7 +39,7 @@ const GOVERNANCE = [
     points: [
       'PostgreSQL holds durable state and the work queue',
       'Leases, heartbeats, retries and terminal states are recorded for every run',
-      'Runtime Zod and Pydantic contracts validate the browser/API boundary',
+      'Runtime Zod contracts validate the browser/API boundary',
     ],
   },
 ] as const;

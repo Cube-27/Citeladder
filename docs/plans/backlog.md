@@ -158,9 +158,6 @@ are shipped. Remaining investigation and policy-dependent work:
   - Flatten the route-ownership manifest to a family list: its `stack` can only be
     `typescript` since Python's retirement, but invariant 1 and the route-ownership
     gate are written around it.
-  - After the first post-retirement `reset_database` deploy, delete the
-    Alembic-stamp refusal in `cli/schema-baseline.ts` and its mentions in
-    DEVELOPMENT, the GCP runbook, architecture, invariants and `run.tf`.
 
 Security alerts remain explicitly deferred, not an implicit release prerequisite.
 Infrastructure redesigns and paid security tiers require demonstrated need. Recovery,

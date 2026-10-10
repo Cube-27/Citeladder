@@ -50,7 +50,6 @@ describe('a fresh database', () => {
     expect(await publicTables(client)).toEqual(
       expect.arrayContaining(['schema_migrations', 'workspaces']),
     );
-    expect(await publicTables(client)).not.toContain('alembic_version');
     const ledger = await client.query('select version, checksum from public.schema_migrations');
     expect(ledger.rows).toEqual([
       { version: '0001_baseline', checksum: expect.stringMatching(/^[0-9a-f]{64}$/u) },
@@ -69,18 +68,15 @@ describe('a fresh database', () => {
 });
 
 describe('a database the baseline must not touch', () => {
-  it('refuses an Alembic stamp or unledgered tables, and a failing baseline leaves nothing behind', async () => {
+  it('refuses unledgered tables, and a failing baseline leaves nothing behind', async () => {
     const { client } = await freshDatabase();
     clients.push(client);
 
-    await client.query('CREATE TABLE public.alembic_version (version_num varchar(32) PRIMARY KEY)');
+    await client.query('CREATE TABLE public.users (id integer)');
     await expect(applyBaseline(client)).rejects.toThrow(
-      /retired Alembic migrations.*reset_database/u,
+      /tables but no schema_migrations ledger.*reset_database/u,
     );
-    expect(await publicTables(client)).toEqual(['alembic_version']);
-
-    await client.query('ALTER TABLE public.alembic_version RENAME TO users');
-    await expect(applyBaseline(client)).rejects.toThrow(/tables but no schema_migrations ledger/u);
+    expect(await publicTables(client)).toEqual(['users']);
     await client.query('DROP TABLE public.users');
 
     // Admission reads only emptiness, so a short failing script proves the rollback.
@@ -91,6 +87,7 @@ describe('a database the baseline must not touch', () => {
 
   it('fails the migrate job with the reset instruction', async () => {
     const { client, url } = await freshDatabase();
+    // Any schema the ledger did not record, such as a pre-retirement Alembic database.
     await client.query('CREATE TABLE public.alembic_version (version_num varchar(32) PRIMARY KEY)');
     await client.end();
     const run = promisify(execFile)(
@@ -104,7 +101,7 @@ describe('a database the baseline must not touch', () => {
     await expect(run).rejects.toMatchObject({
       code: 1,
       stderr: expect.stringContaining(
-        'created by the retired Alembic migrations. Redeploy with reset_database',
+        'no schema_migrations ledger, so the baseline was not applied over them. Redeploy with reset_database',
       ),
     });
   }, 90000);

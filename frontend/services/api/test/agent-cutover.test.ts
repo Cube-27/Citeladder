@@ -224,34 +224,6 @@ describe('served Agent cutover on PostgreSQL', () => {
     const list = await app.request(`/api/v1/projects/${scope.projectId}/agent/chats`, { headers });
     expect(agentChatsPageSchema.parse(await list.json()).items).toEqual([]);
   });
-  it('refuses a non-ASCII Python-era key explicitly, while current-runtime replays share the original run', async () => {
-    const { scope, headers } = await setup(),
-      key = randomUUID();
-    const path = `/api/v1/projects/${scope.projectId}/agent/chats`;
-    const request = {
-      method: 'POST',
-      headers: { ...headers, 'Idempotency-Key': key },
-      body: JSON.stringify({ message: 'Réécrivez 東京' }),
-    };
-    const first = agentTurnAcceptedSchema.parse(await (await app.request(path, request)).json());
-    expect(
-      agentTurnAcceptedSchema.parse(await (await app.request(path, request)).json()).run.id,
-    ).toBe(first.run.id);
-    await db
-      .updateTable('agent_runs')
-      .set({
-        runtime_version: 'agent-runtime-2',
-        request_fingerprint: 'historical-python-fingerprint',
-      })
-      .where('workspace_id', '=', scope.workspaceId)
-      .where('id', '=', first.run.id)
-      .execute();
-    const replay = await app.request(path, request);
-    expect(replay.status).toBe(409);
-    expect(await replay.json()).toMatchObject({
-      error: { code: 'agent_idempotency_conflict', details: { reason: 'legacy_runtime' } },
-    });
-  });
   it('ends an expired claim as interrupted, fences cancellation and refuses foreign chat reads', async () => {
     const { scope, bindings, headers, worker } = await setup();
     const run = await bindings.store.enqueue(scope, {

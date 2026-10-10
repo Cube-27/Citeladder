@@ -78,7 +78,7 @@ Never return stack traces, SQL, credentials or raw provider bodies.
 UI code handles every error shape the API emits:
 
 1. canonical `error.message` / `error.code` / `error.retryable` / `error.request_id`;
-2. string `detail`, which the envelope repeats from `error.message`;
+2. string `detail`, which defaults to `error.message` unless the route supplies an explicit value;
 3. object `detail.message` / `detail.code`;
 4. a validation array — first item humanized as `field.path: message`;
 5. the response status text.

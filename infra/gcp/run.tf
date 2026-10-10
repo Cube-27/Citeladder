@@ -1,6 +1,6 @@
 locals {
   # Waits for a fresh or replaced database VM, applies the SQL baseline (a
-  # changed baseline or an Alembic-era database fails here), then runs the
+  # changed baseline or unledgered tables fail here), then runs the
   # native identity/grants/catalog bootstrap. Any failure prevents the API
   # rollout; the job can be retried idempotently.
   migrate_script = "node src/cli/migrate.ts --wait-seconds 300 && exec node src/cli/bootstrap-account.ts"
