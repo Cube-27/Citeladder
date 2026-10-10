@@ -22,7 +22,7 @@ import type { ApiKey, ApiKeyCreated, ApiKeyScope } from '@citeladder/contracts/a
 import { apiKeysApi } from '@/lib/api/api-keys';
 import { humanizeApiError } from '@/lib/api/errors';
 import { queryKeys } from '@/lib/api/query-keys';
-import { API_HOST_ORIGIN } from '@/lib/config/public-origins';
+import { API_HOST_ORIGIN } from '@/lib/config/api-host';
 import { workspaceDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
 

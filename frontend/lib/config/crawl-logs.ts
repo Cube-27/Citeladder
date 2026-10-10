@@ -1,5 +1,5 @@
 import { docsHref as docsUrl } from './docs';
-import { API_HOST_ORIGIN } from './public-origins';
+import { API_HOST_ORIGIN } from './api-host';
 export const CRAWL_LOG_SETUPS = [
   {
     value: 'cloudflare_worker',
