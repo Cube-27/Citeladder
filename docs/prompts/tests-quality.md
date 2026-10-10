@@ -16,7 +16,7 @@ test protects**. Your output is a findings report, not code changes.
 3. `docs/DEVELOPMENT.md` section "Testing".
 
 **Pick one area per run** (for example `frontend/services/api/test/` for one
-domain, `frontend/components/<surface>/`, `backend/tests/`).
+domain, `frontend/components/<surface>/`).
 
 ## Scope
 

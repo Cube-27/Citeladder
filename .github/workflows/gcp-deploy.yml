@@ -55,7 +55,7 @@ jobs:
       - name: Verify exact main commit
         shell: bash
         run: test "$GITHUB_SHA" = "$(git rev-parse origin/main)"
-      # This workflow publishes only the API, migration and PostgreSQL images;
+      # This workflow publishes only the API (which also runs migrations) and PostgreSQL images;
       # the Workers ship through their own workflows. ci.yml has already run
       # every affected owner suite on this exact main commit, so the deploy
       # requires that green record instead of repeating the suites.
@@ -134,7 +134,6 @@ jobs:
             --arg region "$REGION" --arg zone "$ZONE" \
             --arg domain "$DOMAIN_NAME" --arg app "$APP_DOMAIN_NAME" \
             --arg api "$registry/api-service@$placeholder" \
-            --arg migrate "$registry/backend@$placeholder" \
             --arg postgres "$registry/postgres@$placeholder" \
             --arg agent_url "$DEFAULT_AGENT_BASE_URL" --arg agent_model "$DEFAULT_AGENT_MODEL" \
             --argjson demo "$DEMO_MODE" --arg expires "$DEMO_EXPIRES_AT" \
@@ -143,7 +142,7 @@ jobs:
             --arg tick "$TICK_SCHEDULE" \
             '{project_id:$project,billing_account:$billing,budget_currency_code:$currency,
               budget_units:$units,region:$region,zone:$zone,domain_name:$domain,
-              app_domain_name:$app,api_image:$api,migrate_image:$migrate,postgres_image:$postgres,
+              app_domain_name:$app,api_image:$api,postgres_image:$postgres,
               agent_base_url:$agent_url,agent_model:$agent_model,demo_mode:$demo,
               demo_expires_at:$expires,dev_login_email:$email,dev_login_counter_allowance:$allowance,
               oauth_google_enabled:$google,public_signup_enabled:$signup,tick_schedule:$tick,
@@ -179,15 +178,14 @@ jobs:
             test -n "$digest"
             echo "$registry/$name@$digest"
           }
-          migrate="$(publish backend "$GITHUB_SHA" ../..)"
           api="$(publish api-service "$GITHUB_SHA" -f ../../frontend/services/api/Dockerfile ../..)"
           postgres="$(publish postgres "16-$(sha256sum postgres/Dockerfile | cut -c1-12)" postgres)"
-          jq --arg api "$api" --arg migrate "$migrate" --arg postgres "$postgres" \
-            '.api_image=$api | .migrate_image=$migrate | .postgres_image=$postgres' \
+          jq --arg api "$api" --arg postgres "$postgres" \
+            '.api_image=$api | .postgres_image=$postgres' \
             deploy.auto.tfvars.json > /tmp/tfvars
           mv /tmp/tfvars deploy.auto.tfvars.json
-          printf -- '- API service: `%s`\n- Migration: `%s`\n- PostgreSQL: `%s`\n' \
-            "$api" "$migrate" "$postgres" > /tmp/release-images.md
+          printf -- '- API service and migrate job: `%s`\n- PostgreSQL: `%s`\n' \
+            "$api" "$postgres" > /tmp/release-images.md
       - name: Synchronize runtime secret versions
         working-directory: infra/gcp
         shell: bash
@@ -252,10 +250,9 @@ jobs:
           add_generated citeladder-referral-salt
           # 10.28.0.10 is the database VM's fixed private address (locals.tf).
           db_password="$(gcloud secrets versions access latest --secret citeladder-db-password --project "$PROJECT_ID")"
-          db_password_uri="$(DB_PASSWORD="$db_password" python3 -c \
-            'import os, urllib.parse; print(urllib.parse.quote(os.environ["DB_PASSWORD"], safe=""))')"
+          db_password_uri="$(jq -rn --arg value "$db_password" '$value | @uri')"
           sync_value citeladder-database-url \
-            "postgresql+asyncpg://citeladder:${db_password_uri}@10.28.0.10:5432/citeladder"
+            "postgresql://citeladder:${db_password_uri}@10.28.0.10:5432/citeladder"
           if [ "${#DEMO_LOGIN_PASSWORD}" -lt 8 ] || [ "${#DEMO_LOGIN_PASSWORD}" -gt 128 ]; then
             echo '::error::DEMO_LOGIN_PASSWORD must hold 8 to 128 characters.'
             exit 1

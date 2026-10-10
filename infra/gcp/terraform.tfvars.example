@@ -5,7 +5,6 @@ budget_units         = 500
 domain_name          = "citeladder.com"
 app_domain_name      = "app.citeladder.com"
 api_image            = "us-central1-docker.pkg.dev/project/citeladder/api-service@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-migrate_image        = "us-central1-docker.pkg.dev/project/citeladder/backend@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 postgres_image       = "us-central1-docker.pkg.dev/project/citeladder/postgres@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 agent_base_url       = "https://provider.example/v1"
 agent_model          = "provider-model-id"

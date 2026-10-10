@@ -49,7 +49,7 @@ window without four queries per fetch. Progress reports the phase, whether the
 homepage was read, and, once research finishes, the pages read and competitors
 found.
 
-[BrandResearchSnapshot](../backend/app/models/discovery.py) retains the evidence
+The brand research snapshot (`brand_research_snapshots`) retains the evidence
 manifest, model calls with prompt versions, field citations and research
 metrics. First-party captures carry a content-derived source ID and extraction
 version; external research keeps the provider source ID (or a content-derived

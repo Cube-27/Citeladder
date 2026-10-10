@@ -35,7 +35,7 @@ is evidence that money can be taken correctly.
 
 Paths above are relative to `frontend/services/api/`. Native config owns billing
 execution, authoring, tax/seller policy and read-only operator credentials.
-Python retains only schema vocabulary and migration/check tooling. Identity,
+The SQL schema baseline and its TypeScript migrate CLI own the schema. Identity,
 bootstrap, seeding and grants are native. Public pricing
 and billing reads consume persisted state without provider calls.
 

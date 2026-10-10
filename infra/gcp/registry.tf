@@ -1,7 +1,7 @@
 resource "google_artifact_registry_repository" "images" {
   location      = var.region
   repository_id = local.name
-  description   = "Immutable CiteLadder API, schema tooling (backend path), and PostgreSQL images"
+  description   = "Immutable CiteLadder API and PostgreSQL images"
   format        = "DOCKER"
   docker_config {
     immutable_tags = true

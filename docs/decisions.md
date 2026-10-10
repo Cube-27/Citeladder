@@ -4,26 +4,26 @@ Keep accepted, still-applicable choices with their reason, scope and actual
 source. Feature-local rationale belongs in its feature owner; correctness
 rules belong in [invariants](invariants.md). Git and PRs retain superseded history.
 
-## TypeScript application, Python schema tooling
+## TypeScript application, SQL schema baseline
 
-The application uses TypeScript with Hono, Kysely and
-Zod, with Python retained for schema metadata, Alembic migrations and their
-maintenance/check tooling. Product operators, account bootstrap, development
-seed/login tools and application policy belong to the existing TypeScript owners.
-The retained Python package targets SQLAlchemy, Alembic and asyncpg as its direct
-schema dependencies; schema test/static-analysis tools remain development
-dependencies. Kysely types continue to come from the Alembic-migrated database.
+The application uses TypeScript with Hono, Kysely and Zod; the repository
+contains no Python. The schema is one SQL file,
+`frontend/services/api/migrations/0001_baseline.sql`, the only schema author
+under [invariant 17](invariants.md#17-the-migration-baseline-remains-singular).
+The TypeScript migrate CLI (`src/cli/migrate.ts`, `pnpm migrate`) applies it
+once under an advisory lock in one transaction and records its SHA-256 in
+`schema_migrations`; it runs from the API image, so the deploy builds one
+application image. Kysely types are generated from a baseline-migrated database.
 
-The owner chose this stopping point to avoid migrating established schema
-tooling merely to remove the remaining Python. Alembic remains the sole schema
-author under [invariant 17](invariants.md#17-the-migration-baseline-remains-singular).
-The migration reuses existing infrastructure; it requires no additional
-always-on service. PRs 1–5 implement this boundary: operators, bootstrap, seed
-tools and application policy are native; Python retains schema maintenance.
+There is no adoption shim: a database stamped only by Alembic, a non-empty
+database without the ledger, or a ledger checksum that differs from the file
+fails the migrate job with an instruction to redeploy with `reset_database`.
+Until there are live customers every schema change is folded into the baseline
+and reaches production only through that reset option, whose confirmation check
+stays.
 
-Source: owner-selected target in the 4 October 2026 migration-planning
-conversation, implemented through PR #268. Schema migration and full
-Python-environment retirement are outside the accepted scope.
+Source: owner decision of 10 October 2026 (feature 14, execution platform),
+superseding the 4 October 2026 choice to retain Python schema tooling.
 
 ## One commercial account per workspace
 

@@ -368,7 +368,7 @@ describe('crawl control admission', () => {
     ).rejects.toMatchObject({ status: 403, code: 'monitoring_not_allowed' });
   });
 
-  it('lets the Python dev seed invoke real TypeScript creation and bulk selection through its local CLI', async () => {
+  it('lets the dev seed invoke real TypeScript creation and bulk selection through its local CLI', async () => {
     const tenant = await fixtures.tenant({ websiteUrl: 'https://example.test/' });
     await allow(tenant, 2);
     async function seedControl(payload: Record<string, string>) {

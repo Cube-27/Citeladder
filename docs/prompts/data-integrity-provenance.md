@@ -18,8 +18,7 @@ report, not code changes.
 
 ## Scope
 
-- Schema: `migrations/versions/0001_initial.py` and SQLAlchemy models in
-  `backend/app/models/` (schema authority only — not runtime).
+- Schema: `frontend/services/api/migrations/0001_baseline.sql` (the only schema author).
 - Generated types: `frontend/services/api/src/generated/db-schema.ts`.
 - Writers in `frontend/services/api/src/`: search for `insertInto`,
   `updateTable`, `deleteFrom` and list which tables each touches.
@@ -46,9 +45,9 @@ report, not code changes.
    `workspace_id`; missing unique constraints that the code's idempotency
    relies on; enum/check constraints narrower or wider than the TypeScript union.
 5. **Generated type drift.** Columns in `db-schema.ts` that do not match
-   `0001_initial.py` (types, nullability) — indicates stale generation.
+   `0001_baseline.sql` (types, nullability) — indicates stale generation.
 6. **Second schema author.** Any DDL (`CREATE`, `ALTER`, `sql\`create …\``) in
-   TypeScript, or a migration file other than `0001_initial.py` (Invariant 17).
+   TypeScript, or a migration file other than `0001_baseline.sql` (Invariant 17).
 7. **Generated content becoming fact.** Model output written into a table or
    column the product treats as confirmed fact (company facts, competitors,
    prices) without an explicit user confirmation step (Invariant 12).

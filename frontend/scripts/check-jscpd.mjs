@@ -17,7 +17,6 @@ const JSCPD_ENTRYPOINT = path.join(FRONTEND, 'node_modules', 'jscpd', 'run-jscpd
 const REVISION = /^(?:HEAD|[0-9a-fA-F]{40})$/;
 export const TOOL_VERSION = '5.2.1';
 export const EXPECTED_SCOPE = [
-  'backend/app',
   'frontend/apps/app/src',
   'frontend/apps/marketing/src',
   'frontend/components',
@@ -42,13 +41,9 @@ function endOfBlockComment(source, index) {
   return end < 0 ? source.length : end + 2;
 }
 
-function quoteDelimiter(source, index, format) {
+function quoteDelimiter(source, index) {
   const quote = source[index];
-  const supported = quote === "'" || quote === '"' || (format !== 'python' && quote === '`');
-  if (!supported) return null;
-  return format === 'python' && source.slice(index, index + 3) === quote.repeat(3)
-    ? quote.repeat(3)
-    : quote;
+  return quote === "'" || quote === '"' || quote === '`' ? quote : null;
 }
 
 function quotedSegment(source, index, delimiter) {
@@ -63,15 +58,14 @@ function quotedSegment(source, index, delimiter) {
   return { value: source.slice(index, cursor), next: cursor };
 }
 
-function ignoredCommentEnd(source, index, format) {
-  if (format === 'python' && source[index] === '#') return endOfLine(source, index);
-  if (format === 'python' || source[index] !== '/') return null;
+function ignoredCommentEnd(source, index) {
+  if (source[index] !== '/') return null;
   if (source[index + 1] === '/') return endOfLine(source, index + 2);
   if (source[index + 1] === '*') return endOfBlockComment(source, index);
   return null;
 }
 
-function normalizedCloneContent(source, format) {
+function normalizedCloneContent(source) {
   let result = '';
   let index = 0;
   while (index < source.length) {
@@ -79,12 +73,12 @@ function normalizedCloneContent(source, format) {
       index += 1;
       continue;
     }
-    const commentEnd = ignoredCommentEnd(source, index, format);
+    const commentEnd = ignoredCommentEnd(source, index);
     if (commentEnd !== null) {
       index = commentEnd;
       continue;
     }
-    const delimiter = quoteDelimiter(source, index, format);
+    const delimiter = quoteDelimiter(source, index);
     if (delimiter) {
       const segment = quotedSegment(source, index, delimiter);
       result += segment.value;
@@ -97,7 +91,7 @@ function normalizedCloneContent(source, format) {
   return result;
 }
 
-function cloneBody(file, format) {
+function cloneBody(file) {
   const reported = String(file.name);
   const nativePath = reported.startsWith('\\\\?\\') ? reported.slice(4) : reported;
   const source = fs
@@ -105,17 +99,16 @@ function cloneBody(file, format) {
     .split(/\r?\n/)
     .slice(file.start - 1, file.end)
     .join('\n');
-  return normalizedCloneContent(source, format);
+  return normalizedCloneContent(source);
 }
 
 export function cloneFingerprint(clone) {
   const occurrences = [clone.firstFile, clone.secondFile]
     .map((file) => normalizeName(file.name))
     .sort((left, right) => left.localeCompare(right));
-  const bodies = [
-    cloneBody(clone.firstFile, clone.format),
-    cloneBody(clone.secondFile, clone.format),
-  ].sort((left, right) => left.localeCompare(right));
+  const bodies = [cloneBody(clone.firstFile), cloneBody(clone.secondFile)].sort((left, right) =>
+    left.localeCompare(right),
+  );
   const contentHash = createHash('sha256').update(bodies.join('\0')).digest('hex').slice(0, 16);
   return `${clone.format}|${occurrences[0]}|${occurrences[1]}|${contentHash}|${clone.lines}|${clone.tokens}`;
 }
@@ -279,17 +272,12 @@ function appendBaselineDiffFailures(failures, baseline, baseBaseline) {
 }
 
 function advisoryTestScan() {
-  const backend = runJscpd(['../backend/tests'], ['--format', 'python']);
   const frontend = runJscpd(
     ['./apps/app/src', './apps/marketing/src', './components', './lib'],
     ['--format', 'typescript,tsx,javascript,jsx', '--pattern', '**/*.{test,spec}.{ts,tsx,js,jsx}'],
   );
-  const backendPercentage = Number(backend.statistics?.total?.percentage ?? 0);
   const frontendPercentage = Number(frontend.statistics?.total?.percentage ?? 0);
-  console.log(
-    `jscpd test scan advisory: backend ${backendPercentage.toFixed(4)}%, ` +
-      `frontend ${frontendPercentage.toFixed(4)}% duplicated lines`,
-  );
+  console.log(`jscpd test scan advisory: ${frontendPercentage.toFixed(4)}% duplicated lines`);
 }
 
 function main() {
@@ -302,8 +290,8 @@ function main() {
   const revision = diffIndex >= 0 ? process.argv[diffIndex + 1] : undefined;
   if (diffIndex >= 0 && !revision) throw new Error('--check-policy-diff requires a revision');
   const report = runJscpd(
-    ['../backend/app', './apps/app/src', './apps/marketing/src', './components', './lib'],
-    ['--format', 'python,typescript,tsx,javascript,jsx'],
+    ['./apps/app/src', './apps/marketing/src', './components', './lib'],
+    ['--format', 'typescript,tsx,javascript,jsx'],
   );
   const failures = productionFailures(
     report,

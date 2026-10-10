@@ -260,10 +260,6 @@ and account management's workspace → membership → user order without lock
 inversion, including password resets across workspaces. Terminal prompts never
 hold this lock.
 
-The native workspace config owns the role matrix. The Python workspace-policy
-bridge and its exporter are retired; SQLAlchemy models retain structural defaults.
-
-Python identity, abuse, workspace mutations, grants, bootstrap and seed/login
-services and their exclusive tests are retired. Their native PostgreSQL replacements cover authorization,
-replay, revocation, rollback and workspace isolation. SQLAlchemy schema models
-and meaningful schema tests remain; Alembic still owns the schema.
+The native workspace config owns the role matrix. Native PostgreSQL tests cover
+authorization, replay, revocation, rollback and workspace isolation, including
+the schema's composite workspace keys. The SQL schema baseline owns the schema.

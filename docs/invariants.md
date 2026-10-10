@@ -30,7 +30,7 @@ Split complex internals under the existing owner rather than creating parallel
 stores or policy authorities; do not relax repository gates to accommodate them.
 
 A route family, task kind or table has exactly one TypeScript application writer.
-Python owns schema metadata and Alembic maintenance, never application writes.
+The SQL baseline (invariant 17) defines tables; it never writes application rows.
 For route families the route-ownership manifest is the single record, and
 ingress must route each family's paths only to the stack it names. For
 analytics task kinds the native catalog in
@@ -46,9 +46,10 @@ budgets, models, and templates live under
 do not embed alternate policy. A public check has at most one AEO pillar and
 equal weight within that pillar. Rule count and page-kind cohort size cannot
 manufacture score influence. Policy used only by TypeScript belongs to its
-owning frontend config. Python retains only structural schema vocabulary and fixed metadata defaults;
-application policy has one native config owner. Native writes explicitly supply
-policy-dependent values, and PostgreSQL/schema coverage guards their contracts.
+owning frontend config. The SQL baseline carries only structural defaults and
+constraints; application policy has one native config owner. Native writes
+explicitly supply policy-dependent values, and PostgreSQL/schema coverage guards
+their contracts.
 
 ## 3. Workspace authorization is mandatory
 
@@ -235,12 +236,17 @@ never ad-hoc mutation of historical rows.
 
 ## 17. The migration baseline remains singular
 
-Before launch, schema changes are folded into
-`migrations/versions/0001_initial.py`. Verify from an empty disposable database
-with `alembic upgrade head` and `alembic check`; do not add `0002+` without an
-explicit policy change. Semantic versions follow invariant 5. Alembic is the only schema author in every
-language: TypeScript services hold generated Kysely types and never contain
-migrations or DDL (`scripts/quality.mjs --scope api`).
+Before launch, schema changes are folded into the single SQL baseline
+`frontend/services/api/migrations/0001_baseline.sql`; do not add `0002+` without
+an explicit policy change. The migrate CLI (`pnpm migrate`) applies it to an
+empty database in one transaction and records its SHA-256 in `schema_migrations`;
+a rerun is a no-op. A changed baseline, an Alembic-era database or unledgered
+tables fail the migrate job, so a changed baseline reaches a populated database
+only by replacing it (the deploy's confirmed `reset_database`), never by adapting
+it in place. Verify a change from an empty disposable database with `pnpm migrate`
+and `pnpm db:types:check`. Semantic versions follow invariant 5. The baseline is
+the only schema author: TypeScript services hold generated Kysely types and
+contain no other migration files or DDL (`scripts/quality.mjs --scope api`).
 
 ## 18. Input and extraction boundaries
 

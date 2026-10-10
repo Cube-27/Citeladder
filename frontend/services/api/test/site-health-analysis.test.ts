@@ -28,9 +28,9 @@ const atom = (row: RuleEvaluation, name: string) =>
   (
     row.evidence.atoms as { name: string; outcome: string; evidence: Record<string, unknown> }[]
   ).find((item) => item.name === name)!;
-// Shared with the Python fact-extraction tests: one copy of each recorded page.
+// One copy of each recorded page, shared with the dev seed transports.
 const fixture = (name: string) =>
-  readFileSync(new URL(`../../../../backend/tests/fixtures/site_health/${name}`, import.meta.url));
+  readFileSync(new URL(`./fixtures/site-health/${name}`, import.meta.url));
 const fixtureFacts = (name: string, url: string) =>
   extractPageFacts(fixture(name), { finalUrl: url, contentType: 'text/html' });
 

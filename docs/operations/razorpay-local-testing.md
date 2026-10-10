@@ -13,14 +13,8 @@ approved BYOK-only scope.
 
 ## 1. Start the isolated environment
 
-Install Docker with Compose support for `!override`, PowerShell 7, `uv`, and
-`cloudflared`. If the backend virtual environment is missing:
-
-```powershell
-Push-Location backend
-uv sync --frozen --extra dev
-Pop-Location
-```
+Install Docker with Compose support for `!override`, PowerShell 7 and
+`cloudflared`.
 
 The ignored `billing-test.env` has already been prepared for this workspace.
 On another machine create a private copy of `.env.example`, supply local database

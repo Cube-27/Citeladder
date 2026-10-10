@@ -24,12 +24,6 @@ const config = {
     // per commit. A function task gets no staged paths appended; a long path
     // list would otherwise split it into parallel duplicate runs.
     'frontend/**/*.{css,ts,tsx,astro,svg}': () => 'node frontend/scripts/check-design-system.mjs',
-    // Ruff finds backend/pyproject.toml from each file path; --no-sync keeps
-    // the hook from resolving dependencies on every commit.
-    'backend/**/*.py': [
-      'uv run --project backend --no-sync ruff check --fix',
-      'uv run --project backend --no-sync ruff format',
-    ],
   },
 };
 

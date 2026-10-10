@@ -1,24 +1,9 @@
 locals {
-  migrate_script = <<-EOT
-    set -e
-    # The database VM may still be initializing on a fresh or replaced disk.
-    python - <<'PY'
-    import os, socket, time, urllib.parse
-    url = urllib.parse.urlsplit(os.environ["DATABASE_URL"])
-    deadline = time.monotonic() + 300
-    while True:
-        try:
-            socket.create_connection((url.hostname, url.port or 5432), 3).close()
-            break
-        except OSError:
-            if time.monotonic() > deadline:
-                raise
-            time.sleep(5)
-    PY
-    # Alembic drift admission, then native identity/grants/catalog bootstrap.
-    # Any failure prevents the API rollout; the job can be retried idempotently.
-    exec /bin/sh /app/bootstrap-environment.sh
-  EOT
+  # Waits for a fresh or replaced database VM, applies the SQL baseline (a
+  # changed baseline or an Alembic-era database fails here), then runs the
+  # native identity/grants/catalog bootstrap. Any failure prevents the API
+  # rollout; the job can be retried idempotently.
+  migrate_script = "node src/cli/migrate.ts --wait-seconds 300 && exec node src/cli/bootstrap-account.ts"
 }
 
 resource "google_cloud_run_v2_service" "api" {
@@ -191,7 +176,7 @@ resource "google_cloud_run_v2_job" "migrate" {
       }
 
       containers {
-        image   = var.migrate_image
+        image   = var.api_image
         command = ["/bin/sh", "-c"]
         args    = [local.migrate_script]
 

@@ -20,7 +20,7 @@ not code changes.
 
 - Read routes and read helpers: `frontend/services/api/src/routes/`, every
   `reads.ts`/`reads/` module, `site-health/reads/`, `visibility/`, `projects/`.
-- Schema and indexes: `migrations/versions/0001_initial.py`.
+- Schema and indexes: `frontend/services/api/migrations/0001_baseline.sql`.
 - Startup path: `frontend/services/api/src/server.ts`, `app.ts`, `config.ts`.
 
 ## Hunt list
@@ -30,7 +30,7 @@ not code changes.
    starves other requests — flag both.
 2. **Missing indexes.** For the hottest read predicates (`workspace_id`,
    `project_id`, crawl/audit IDs, status + created_at for queues, keyset sort
-   columns), check `0001_initial.py` has a matching index whose leading
+   columns), check `0001_baseline.sql` has a matching index whose leading
    columns fit the `WHERE` and `ORDER BY`. Quote the query and the absent index.
 3. **Unbounded reads.** Selects without `limit` on tables that grow per crawl,
    per page or per answer (pages, links, answers, attempts, events); `select *`
@@ -61,7 +61,7 @@ not code changes.
 - A: Site Health reads (largest tables).
 - B: Visibility/audits/prompts reads.
 - C: everything else in `routes/` plus startup path.
-- Lead: cross-check every candidate against `0001_initial.py` indexes.
+- Lead: cross-check every candidate against `0001_baseline.sql` indexes.
 
 ## Output
 

@@ -16,8 +16,8 @@ Native [connected-data config](../frontend/services/api/src/config/connected-dat
 owns sync settings, transports, dataset grains, traffic and referral catalogs,
 analytics task kinds and OAuth policy. [Demand config](../frontend/services/api/src/config/demand.json)
 owns query/lexical policy and [Search Intelligence config](../frontend/services/api/src/config/search-intelligence.json)
-owns acquisition and pricing. Python retains fixed schema defaults and structural
-provenance vocabulary. Dataset arity and
+owns acquisition and pricing. The [schema baseline](../frontend/services/api/migrations/0001_baseline.sql) holds column defaults.
+Dataset arity and
 dimension separators derive from the native integration catalog.
 
 ## Consent and mapping

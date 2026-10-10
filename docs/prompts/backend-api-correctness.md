@@ -10,7 +10,7 @@ PostgreSQL). Your output is a findings report, not code changes.
 
 **Read first:**
 
-1. `docs/prompts/_contract.md` (note: Python has no HTTP process).
+1. `docs/prompts/_contract.md`.
 2. `docs/invariants.md` sections 6, 7, 9 and 18.
 3. `docs/backend-architecture.md` section "API and persistence rules".
 4. `docs/api-error-contract.md` sections 1, 2 and 4.
@@ -56,7 +56,7 @@ area's response schemas.
    enum values the contract does not list, nullable vs optional mismatch).
 8. **Transactions.** Multi-statement mutations not wrapped in one transaction,
    so a mid-way failure leaves partial state; check-then-insert races that rely
-   on a unique index that does not exist in `migrations/versions/0001_initial.py`.
+   on a unique index that does not exist in `frontend/services/api/migrations/0001_baseline.sql`.
 9. **Determinism.** Scores or metrics that depend on unordered query results,
    `Date.now()` inside derivations that should be reproducible, or model output
    used to set a deterministic metric (Invariant 9).
@@ -66,7 +66,6 @@ area's response schemas.
 - Handlers that return persisted "missing"/"unavailable" states — that is the
   intended read behaviour.
 - `version = 1` constants.
-- Python SQLAlchemy metadata under `backend/app/models` — not the application runtime.
 
 ## Subagent split
 

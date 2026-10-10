@@ -19,6 +19,7 @@ RUN pnpm install --frozen-lockfile --ignore-scripts
 COPY frontend/packages/contracts/src ./packages/contracts/src
 COPY frontend/services/api/src ./services/api/src
 COPY frontend/services/api/assets ./services/api/assets
+COPY frontend/services/api/migrations ./services/api/migrations
 COPY frontend/packages/mcp-app ./packages/mcp-app
 COPY frontend/components ./components
 COPY frontend/lib ./lib

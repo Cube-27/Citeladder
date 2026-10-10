@@ -21,7 +21,7 @@ facts that cause false positives) and section 4 (what counts as a finding).
    differs materially, the verdict is **Rejected — evidence mismatch**.
 2. Search for guards the original author may have missed: `routes/define.ts`
    authorization, `WorkspaceScope`, a unique index or foreign key in
-   `migrations/versions/0001_initial.py`, a zod schema in
+   `frontend/services/api/migrations/0001_baseline.sql`, a zod schema in
    `frontend/packages/contracts`, a config bound, an upstream caller check.
 3. Trace reachability from a real entry point (route, worker lane in
    `runner.ts`/`tick.ts`, CLI, UI event).

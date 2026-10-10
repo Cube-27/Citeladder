@@ -5,7 +5,8 @@
   "type": "module",
   "files": [
     "src",
-    "assets"
+    "assets",
+    "migrations"
   ],
   "scripts": {
     "start": "node src/server.ts",
@@ -23,6 +24,7 @@
     "bootstrap:catalog": "node src/cli/bootstrap-catalog.ts",
     "bootstrap:account": "node src/cli/bootstrap-account.ts",
     "provision:dev": "node src/cli/provision-dev-login.ts",
+    "migrate": "node src/cli/migrate.ts",
     "reset:db": "node src/cli/reset-database.ts",
     "seed:site-health": "node scripts/seed-site-health.ts",
     "seed:dev": "node src/cli/seed-dev-data.ts",
@@ -33,8 +35,8 @@
     "prompts:eval": "node scripts/eval-prompt-generation.ts",
     "mcp:reference": "node scripts/export-mcp-tool-reference.ts",
     "crawl:worker": "node scripts/export-crawl-worker.ts",
-    "db:types": "kysely-codegen --dialect postgres --url \"env(TYPES_DATABASE_URL)\" --exclude-pattern alembic_version --out-file src/generated/db-schema.ts",
-    "db:types:check": "kysely-codegen --dialect postgres --url \"env(TYPES_DATABASE_URL)\" --exclude-pattern alembic_version --out-file src/generated/db-schema.ts --verify"
+    "db:types": "kysely-codegen --dialect postgres --url \"env(TYPES_DATABASE_URL)\" --exclude-pattern schema_migrations --out-file src/generated/db-schema.ts",
+    "db:types:check": "kysely-codegen --dialect postgres --url \"env(TYPES_DATABASE_URL)\" --exclude-pattern schema_migrations --out-file src/generated/db-schema.ts --verify"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "0.128.0",

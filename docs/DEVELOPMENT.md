@@ -32,22 +32,18 @@ repository check script includes the documentation build.
 
 | Tool                               | Version        | Notes                                                                                                                                |
 | ---------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| Python                             | 3.12+          | Schema and Alembic tooling                                                                                                           |
-| [`uv`](https://docs.astral.sh/uv/) | latest         | Backend dependency + venv manager                                                                                                    |
 | Node.js                            | 26+            | Frontend and TypeScript services. 26 is the supported minimum and CI version; protected production delivery uses Cloudflare Workers. |
 | pnpm                               | Repository pin | Use the exact `packageManager` version in [`frontend/package.json`](../frontend/package.json).                                       |
 | PostgreSQL                         | 15+            | Via Docker or local                                                                                                                  |
 | Docker + Compose                   | latest         | Local stack                                                                                                                          |
 
-## Backend setup
+## API setup
 
 ```bash
-cd backend
-uv sync                     # creates backend/.venv and installs deps from uv.lock
-export DATABASE_URL="postgresql+asyncpg://postgres:<password>@localhost:5432/citeladder"
-uv run alembic upgrade head
-cd ../frontend
+cd frontend
 pnpm install
+export DATABASE_URL="postgresql://postgres:<password>@localhost:5432/citeladder"
+pnpm --filter @citeladder/api migrate   # applies the SQL baseline to an empty database
 pnpm --filter @citeladder/api start
 ```
 
@@ -57,8 +53,6 @@ pnpm --filter @citeladder/api start
 not deployed artifact or legal acceptance. Its `sources` record the package-manager
 commands used to refresh it; no repository-specific generator exists. Frontend
 license metadata comes from `pnpm licenses list --prod --json` after frozen install.
-Python production membership comes from `uv export --frozen --no-dev --no-emit-project
---no-hashes --no-header`, with license metadata from that frozen environment.
 Local optional packages depend on the installation platform; confirm the actual
 Linux image and Worker artifacts separately for release notices.
 
@@ -197,41 +191,6 @@ Select tests for the behavior at risk, following
 in the examples with real affected files or test identifiers. Full selected
 owner suites belong to CI; ordinary documentation edits do not launch them.
 
-### Backend
-
-Backend tests use a real Postgres (each test runs against an isolated schema). The
-suite creates a throwaway `citeladder_tests_<runid>` database for the run and drops it
-on teardown — nothing persists and the dev database is never touched.
-
-**Tests never read `.env`.** A developer `.env` carries real provider keys, OAuth client
-secrets, and the encryption key; loading them into a test run turns "is this provider
-configured?" branches ON, which is how a component test once posted evidence to a live
-provider endpoint. `backend/tests/conftest.py` therefore sets
-`CITELADDER_DISABLE_DOTENV`, supplies its own deterministic secrets, and clears inherited
-`*_API_KEY` / `*_CLIENT_SECRET` / `*_CLIENT_ID` variables before importing the app.
-`backend/tests/unit/test_dotenv_isolation.py` enforces it, and
-`backend/app/core/config/dotenv.py` is the single owner of the opt-out.
-
-The one thing the suite cannot invent is a Postgres server, so tell it where one is.
-Export this once per shell (or in your profile); CI already sets `DATABASE_URL`:
-
-```powershell
-$env:TEST_DATABASE_URL = "postgresql+asyncpg://postgres:<password>@127.0.0.1:55432/citeladder"
-```
-
-```bash
-export TEST_DATABASE_URL="postgresql+asyncpg://postgres:<password>@127.0.0.1:55432/citeladder"
-```
-
-`TEST_DATABASE_URL` is preferred; a `DATABASE_URL` already exported in the shell is used
-as a fallback, and without either the localhost default is tried. Only the server
-(host/port/credentials) is reused — never that server's own database.
-
-```bash
-cd backend
-uv run pytest "tests/<area>/test_<behavior>.py" -q
-```
-
 ### Frontend
 
 The first command runs selected tests. The remaining entries are a command
@@ -267,21 +226,24 @@ it does not enable or test a live checkout/provider.
 ### API service (TypeScript)
 
 `frontend/services/api` is a pnpm workspace package; `pnpm install` in `frontend/`
-installs it. Its suite writes and deletes fixture rows, so it never reads
-`TEST_DATABASE_URL`: point `API_TEST_DATABASE_URL` at a **disposable** database that
-`alembic upgrade head` has migrated, never the development database.
+installs it. Its suite writes and deletes fixture rows: point `API_TEST_DATABASE_URL`
+at a **disposable** database that `pnpm migrate` has migrated, never the development
+database. Tests never read `.env` (`test/environment.ts` sets
+`CITELADDER_DISABLE_DOTENV`), and the schema, bootstrap and seed tests create and
+drop their own `citeladder_*_test_*` databases on that server.
 The API bootstrap refuses inherited provider credentials, including
 `DEFAULT_AGENT_API_KEY`, `DEFAULT_AGENT_BASE_URL` and `DEFAULT_AGENT_MODEL`.
 Clear these before running tests; dotenv loading is disabled.
 
 ```bash
 cd frontend/services/api
+DATABASE_URL="postgresql://postgres:<password>@127.0.0.1:<port>/<disposable-db>" pnpm migrate
 API_TEST_DATABASE_URL="postgresql://postgres:<password>@127.0.0.1:<port>/<disposable-db>" pnpm test
 TYPES_DATABASE_URL="<same disposable database>" pnpm db:types   # regenerate Kysely types after a schema change
 ```
 
-Application policy and the workspace role matrix live in native config; there
-is no Python policy export to regenerate. From the repository root,
+Application policy and the workspace role matrix live in native config. From the
+repository root,
 `node scripts/quality.mjs --mode check --scope api` needs only Node/pnpm and checks
 types, schema authority and route ownership (`pnpm check:routes`: every
 native operation declares exactly one manifest family); CI
@@ -354,7 +316,7 @@ default validator for a small follow-up on that branch.
 The pre-commit hook (`vp staged`, configured in the root `vite.config.ts`) runs
 `vp check --fix` on staged JS/TS/CSS/JSON files, the design-system policy
 (`frontend/scripts/check-design-system.mjs`) when frontend CSS, TS/TSX, Astro or
-SVG files are staged, and Ruff lint/format fixes on staged backend Python files.
+SVG files are staged.
 
 The design-system policy ratchets its stylesheet, TSX geometry and SVG colour
 rules against `frontend/scripts/design-system-baseline.json`: a file's count per
@@ -396,8 +358,9 @@ and at most 60 lines per failure. The cross-platform `pnpm quality:fix` and
 `pnpm quality:check` default to every owner and every build; CI passes an
 explicit `--scope`.
 
-Run focused behavior tests directly with the native runner: pytest from
-`backend/`, `pnpm exec vp test run <test-paths>` from `frontend/`, or
+Run focused behavior tests directly with the native runner:
+`pnpm exec vp test run <test-paths>` from `frontend/`, `pnpm exec vitest run
+<test-paths>` from `frontend/services/api/`, or
 `node --test <test-paths>` from the root. Browser checks use
 `pnpm exec playwright test --config playwright.config.ts <spec-paths>`.
 Choose tests from the behavior at risk; there is no local test mapping or retry
@@ -414,8 +377,8 @@ browser E2E. Browser-sensitive paths run only the specs mapped in
 `scripts/e2e-paths.json`; the complete default Playwright suite is reserved
 for `main`, merge-queue validation, unknown shared paths, and changes to
 Playwright's global configuration. Shared, configuration, and
-contract paths select native API/browser checks; schema inputs also select the
-Python schema owner and native API checks. The clean-clone Compose smoke runs
+contract paths select native API/browser checks; the SQL baseline selects the
+native API owner and the Compose smoke. The clean-clone Compose smoke runs
 on application/Compose-sensitive PR
 changes, merge queue validation, and every push to `main`.
 
@@ -429,16 +392,6 @@ skipped workflow can leave its required statuses pending.
 Static-analysis commands, pinned by the frozen locks:
 
 ```powershell
-# From backend/. Vulture, import-linter and deptry are CI gates; Radon is an
-# advisory report. `app` and `scripts` are gated: an
-# operational script that silently rots is a script nobody can run on the day
-# they need it.
-uv run vulture app scripts --min-confidence 80
-uv run lint-imports          # layer contracts, backend/.importlinter
-uv run deptry .              # declared-but-unused / used-but-undeclared deps
-uv run radon cc app -s -n C
-uv run radon mi app -s -n B
-
 # From frontend/. These production checks are CI ratchets; the test scan is advisory.
 pnpm check:complexity
 pnpm check:duplicates
@@ -446,10 +399,7 @@ pnpm check:dead-code
 pnpm report:duplicates:tests
 ```
 
-The backend complexity policy enforces **CC 12 per function and 800 LOC per
-module** across `app` and `scripts`; the retired `evaluations` root remains
-guarded if code is reintroduced. The frontend policy has its own ceilings.
-The exception lists are empty and should stay that way, and there
+The frontend complexity policy has its own ceilings. The exception lists are empty and should stay that way, and there
 is no rebaseline command: CI compares the policy with the PR base and rejects
 higher ceilings, higher exceptions, and newly added exceptions. Roots may be
 _added_ (widening the gate is a tightening) but never removed.
@@ -467,31 +417,12 @@ and contracts. CI runs full selected owner suites; `scripts/e2e-paths.json`
 only selects browser specs for browser-sensitive paths. Production scripts and
 migrations remain covered by static policy gates.
 
-### Architecture policy
-
-`backend/.importlinter` is the backend counterpart to the frontend's
-`pnpm check:policy`. Four contracts guard the schema boundary: `core` imports no model/business
-owners, models import no migration environment, the retained finish-reason
-vocabulary imports no upper layer, and schema tooling imports no retired
-application dependencies. Native architecture contracts guard API/worker owners.
-The retired Prompt normalization callback has no Python writer; retained
-imports obey the layer contracts without exceptions.
-
-### Suppressions
-
-`RUF100` is enabled, so a `# noqa` that suppresses nothing fails the build. A
-suppression must name a rule this config actually enables and must currently
-apply; every one carries its reason inline. This was added after an audit found
-22 dead directives, including two file-level `# ruff: noqa: E501` blankets on
-files with no long lines and thirteen `# noqa: BLE001` comments for a rule that
-was enabled in one subpackage only.
-
 ## Project utility scripts
 
 These commands do not authorize an operation. Obtain explicit task authorization
 before resets, grants, billing changes, live-provider calls or external mutations,
-and verify the target/environment first. Run the commands below from `backend/`
-unless stated otherwise. Use `--help` when arguments are not shown here.
+and verify the target/environment first. Each command states where it runs.
+Use `--help` when arguments are not shown here.
 
 Seed local demo data (**development or disposable database only**):
 
@@ -547,9 +478,9 @@ makes no provider calls. Agreement reference JSON is read from bounded stdin
 (PowerShell: `Get-Content -Raw local-reference.json | pnpm --filter
 @citeladder/api agreement:record --actor <admin-email>`). The account manager
 requires an interactive terminal for passwords and confirmation for mutations.
-The native API image also supports these entrypoints via
-`node src/cli/<entrypoint>.ts`; the root Python image defaults to `alembic --help`
-and remains usable for migrations/bootstrap.
+The API image also supports these entrypoints via
+`node src/cli/<entrypoint>.ts`, including the migrate job's `migrate.ts` and
+`bootstrap-account.ts`.
 
 Execution repricing is native: from `frontend/`, run
 `pnpm --filter @citeladder/api audit:reprice --help`. Preview is the default;
@@ -585,11 +516,11 @@ From the repository root, reset and recreate the database named by
 ./scripts/reset-db.ps1
 ```
 
-`reset-db.py` performs only the protected reset and Alembic upgrade; the PowerShell
-wrapper resolves the explicit target once, then sequences bounded native
-login/catalog provisioning with the same environment. Dotenv-disable admission
-applies to both stages. Failures stop the sequence. Run the Python command
-directly only for a schema-only reset.
+The wrapper runs `pnpm --filter @citeladder/api reset:db`: it authorizes the
+explicit target once, drops and recreates it and applies the SQL baseline
+(`src/cli/reset-schema.ts`), then sequences bounded native login/catalog
+provisioning with the same environment. Dotenv-disable admission applies to both
+stages. Failures stop the sequence.
 
 The reset runs without an extra token only when `APP_ENV` is a development
 value and `DATABASE_URL` targets `localhost`, `127.0.0.1`, or `::1`. A remote
@@ -598,33 +529,35 @@ the explicit `RESET_CONFIRM_DESTRUCTIVE=drop-and-recreate` token.
 
 ## Migrations (single greenfield baseline)
 
-Python runs only schema/migration maintenance and its checks. The three direct
-runtime dependencies are `sqlalchemy[asyncio]`, `alembic` and `asyncpg`;
-Ruff, mypy, import/dependency, complexity and schema tests remain development
-tooling. Metadata imports are environment-independent and do not open connections.
-Alembic requires an explicit `DATABASE_URL` from the environment or root/backend
-`.env` files (process values win); `CITELADDER_DISABLE_DOTENV=1` prevents file
-loading for tests. Both PostgreSQL URL schemes are accepted; encoded passwords
-are preserved. `DB_SSL_MODE` accepts `disable`/`require`, and migrations outside
-development/test require `require`. Conflicting URL/env TLS settings are refused.
-Native startup owns application-secret and runtime validation.
+The schema is one SQL file,
+[`frontend/services/api/migrations/0001_baseline.sql`](../frontend/services/api/migrations/0001_baseline.sql),
+and nothing else authors DDL (invariant 17). `pnpm --filter @citeladder/api migrate`
+(`src/cli/migrate.ts`) applies it under an advisory lock in one transaction and
+records its SHA-256 in `schema_migrations`. A rerun on a current database is a
+no-op. The command fails, and the deploy stops before the API rolls forward, when:
 
-CiteLadder is greenfield and keeps one complete `0001_initial` revision. Fold
-every schema change into that baseline, reset only disposable databases, and
-verify the complete schema from scratch. Do not introduce additive revision
-files while this policy is in effect.
+- the recorded checksum differs from the file (the baseline changed);
+- the database carries only an Alembic `alembic_version` stamp (created before
+  Python was retired);
+- the database has tables but no ledger.
 
-Verify the bootstrap only against a disposable database:
+Each message says to redeploy with `reset_database`
+([GCP runbook](operations/GCP_RUNBOOK.md)). Locally, `./scripts/reset-db.ps1`
+replaces a development database the same way. `DATABASE_URL` must be explicit;
+`DB_SSL_MODE=require` encrypts the connection. `--wait-seconds N` retries the
+first connection, for a database VM that is still starting.
+
+CiteLadder is greenfield and keeps one complete baseline. Fold every schema
+change into the SQL file, reset only disposable databases, and verify the
+complete schema from scratch. Do not introduce additive migration files while
+this policy is in effect. Verify against a disposable database only:
 
 ```bash
-cd backend
-uv run alembic upgrade head
-uv run alembic check            # explicit revisions match Base.metadata
-uv run alembic downgrade base   # destructive; disposable database only
-uv run alembic upgrade head
+cd frontend/services/api
+DATABASE_URL="postgresql://postgres:<password>@127.0.0.1:<port>/<empty-db>" pnpm migrate
+TYPES_DATABASE_URL="<same database>" pnpm db:types        # regenerate Kysely types
+TYPES_DATABASE_URL="<same database>" pnpm db:types:check  # CI runs this
 ```
-
-`alembic check` must converge with `Base.metadata` after every baseline edit.
 
 ---
 

@@ -11,15 +11,8 @@
 **/.env.*
 **/*.env
 !**/.env.example
-.secrets.baseline
 
-**/.venv
-**/venv
 **/node_modules
-**/.pytest_cache
-**/.ruff_cache
-**/__pycache__
-**/*.py[cod]
 **/*.tsbuildinfo
 **/coverage
 **/test-results
@@ -31,6 +24,4 @@ docs
 frontend/e2e
 frontend/**/*.test.ts
 frontend/**/*.test.tsx
-backend/tests
-backend/scripts/*
-!backend/scripts/account_manager.py
+frontend/services/api/test

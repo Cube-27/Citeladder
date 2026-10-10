@@ -42,7 +42,7 @@ try {
             $databaseUser = if ($values.POSTGRES_USER) { $values.POSTGRES_USER } else { 'postgres' }
             $encodedUser = [Uri]::EscapeDataString($databaseUser)
             $encodedPassword = [Uri]::EscapeDataString($values.POSTGRES_PASSWORD)
-            $env:DATABASE_URL = "postgresql+asyncpg://${encodedUser}:${encodedPassword}@127.0.0.1:55433/citeladder_billing_test"
+            $env:DATABASE_URL = "postgresql://${encodedUser}:${encodedPassword}@127.0.0.1:55433/citeladder_billing_test"
             $env:CITELADDER_DISABLE_DOTENV = '1'
             if ($Action -eq 'reconcile') {
                 Push-Location (Join-Path $root 'frontend')

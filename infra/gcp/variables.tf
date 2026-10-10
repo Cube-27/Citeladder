@@ -70,19 +70,10 @@ variable "app_domain_name" {
 
 variable "api_image" {
   type        = string
-  description = "API service image (API, runner and tick) by immutable digest."
+  description = "API service image (API, runner, tick and migrate) by immutable digest."
   validation {
     condition     = can(regex("^us-central1-docker\\.pkg\\.dev/[a-z0-9-]+/citeladder/api-service@sha256:[0-9a-f]{64}$", var.api_image))
     error_message = "api_image must be an immutable citeladder/api-service digest."
-  }
-}
-
-variable "migrate_image" {
-  type        = string
-  description = "Alembic/schema image with native bootstrap by immutable digest."
-  validation {
-    condition     = can(regex("^us-central1-docker\\.pkg\\.dev/[a-z0-9-]+/citeladder/backend@sha256:[0-9a-f]{64}$", var.migrate_image))
-    error_message = "migrate_image must be an immutable citeladder/backend digest."
   }
 }
 

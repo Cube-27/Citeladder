@@ -14,7 +14,6 @@
   <a href="https://github.com/Cube-27/Citeladder/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/Cube-27/Citeladder?style=flat-square" /></a>
   <a href="https://github.com/Cube-27/Citeladder/issues"><img alt="GitHub issues" src="https://img.shields.io/github/issues/Cube-27/Citeladder?style=flat-square" /></a>
   <a href="https://github.com/Cube-27/Citeladder/blob/main/LICENSE"><img alt="MIT License" src="https://img.shields.io/github/license/Cube-27/Citeladder?style=flat-square" /></a>
-  <img alt="Python schema tooling" src="https://img.shields.io/badge/Python-schema%20tooling-3776AB?logo=python&amp;logoColor=white&amp;style=flat-square" />
   <img alt="TypeScript API" src="https://img.shields.io/badge/TypeScript-native%20API-3178C6?logo=typescript&amp;logoColor=white&amp;style=flat-square" />
   <img alt="Astro and Vite" src="https://img.shields.io/badge/Frontend-Astro%20%2B%20Vite-646CFF?style=flat-square" />
   <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&amp;logoColor=white&amp;style=flat-square" />
@@ -185,9 +184,8 @@ Archived history, when present, is **not** an implementation authority.
 frontend/apps/                         marketing, product and docs delivery on Cloudflare Workers
 frontend/services/api/                 TypeScript API, workers, business logic and operators on Cloud Run
 frontend/services/api/src/config/      native application policy
+frontend/services/api/migrations/      the single SQL schema baseline (pre-launch)
 frontend/packages/contracts/           shared TypeScript API contracts
-backend/app/                           SQLAlchemy schema metadata and migration configuration
-migrations/versions/0001_initial.py    pre-launch canonical database baseline
 docs/README.md                         sole active documentation index
 docs/plans/                            consolidated backlog and current-work index
 docs/archive/                          historical plans and evidence; no active dependencies
@@ -195,7 +193,7 @@ docs/decisions.md                      accepted cross-feature decisions and rati
 ```
 
 PostgreSQL owns durable data and queues. Google Cloud hosts the application runtime
-and database in the United States (`us-central1`); Alembic is the only schema author.
+and database in the United States (`us-central1`); the SQL baseline is the only schema author.
 
 <a id="full-validation"></a>
 <a id="focused-validation"></a>

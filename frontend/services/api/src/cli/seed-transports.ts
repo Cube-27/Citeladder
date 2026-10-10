@@ -121,7 +121,7 @@ export function seedIntegrationClient(metricDate: string) {
 
 /** Reuse the retained HTML corpus; paths are deterministic and no network is reachable. */
 export async function seedWebsiteFetcher(): Promise<WebsiteFetcher> {
-  const fixtures = new URL('../../../../../backend/tests/fixtures/site_health/', import.meta.url);
+  const fixtures = new URL('../../test/fixtures/site-health/', import.meta.url);
   const pages = new Map<string, { body: Buffer; contentType: string }>();
   pages.set('/', {
     body: await readFile(new URL('flat_category_listing.html', fixtures)),

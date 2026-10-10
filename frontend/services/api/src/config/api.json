@@ -17,7 +17,7 @@
     "database_url": {
       "env": ["DATABASE_URL"],
       "type": "str",
-      "default": "postgresql+asyncpg://postgres:postgres@localhost:5432/citeladder"
+      "default": "postgresql://postgres:postgres@localhost:5432/citeladder"
     },
     "db_pool_size": {
       "env": ["DB_POOL_SIZE"],

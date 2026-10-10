@@ -12,7 +12,7 @@ report, not code changes.
 
 **Read first:**
 
-1. `docs/prompts/_contract.md` (Python models/Alembic/schema maintenance are intentional).
+1. `docs/prompts/_contract.md` (the repository contains no Python).
 2. `docs/invariants.md` section 1, especially "Replacement and retirement".
 3. `docs/architecture.md` sections "Languages and the TypeScript service" and
    "Delivery topology".
@@ -21,27 +21,22 @@ report, not code changes.
 
 ## Scope
 
-- `backend/app/` and `backend/scripts/` (what Python still owns vs what moved).
+- Any Python file, `backend/` or `migrations/versions/` path anywhere: all of it is residue.
 - `frontend/services/api/src/` and `frontend/packages/contracts/src/route-ownership.ts`.
-- `docker-compose.yml`, `Dockerfile`, `frontend/**/Dockerfile`, `infra/`,
+- `docker-compose.yml`, `frontend/**/Dockerfile`, `infra/`,
   `.github/workflows/`, `scripts/`.
 - Active documents listed in `docs/README.md`.
 
 ## Hunt list
 
-1. **Dual writers.** A table, task kind or route family written by both a
-   Python module and a TypeScript module (Invariant 1: exactly one writing
-   stack). Compare Python `session.add`/`insert`/`update` sites against
-   TypeScript writers for the same table.
-2. **Orphaned Python runtime.** Python domain services, connectors or workers
-   that no supported operator, bootstrap, migration or test imports any more,
-   yet still exist (dead behaviour that looks authoritative).
-3. **Stale configuration copies.** A Python config section whose last consumer
-   moved to TypeScript but whose definition and exporter builder remain
-   (backend-architecture: moving a policy section removes its Python
-   definition and exporter builder).
+1. **Dual writers.** A table, task kind or route family written by two
+   TypeScript owners (Invariant 1: exactly one writing owner).
+2. **Python residue.** Any Python source, tooling, dependency manifest, CI step
+   or image (Alembic, SQLAlchemy, uv, pytest, ruff) — Python is retired.
+3. **Stale configuration copies.** A config section whose last consumer was
+   retired but whose definition remains.
 4. **Retired infrastructure references.** Mentions of Caddy, VM worker daemons,
-   the Mumbai VM, Logfire, Redis or the Python HTTP API in active code,
+   the Mumbai VM, Logfire, Redis, Alembic or the Python HTTP API in active code,
    compose files, workflows, scripts or active documents.
 5. **Bridges without exit.** Compatibility shims or re-exports with no
    identified external caller, focused test or deletion condition.
@@ -54,13 +49,13 @@ report, not code changes.
 ## Not a finding
 
 - Historical content retained in Git and PRs, or completed plans.
-- SQLAlchemy models, Alembic, migration configuration, schema checks and protected
-  local database reset tooling in Python. Bootstrap and product operators are native.
+- Statements about persisted historical data formats (for example Python-era
+  fingerprints or tokens that native code still reads).
 - Generated files under `frontend/services/api/src/generated/`.
 
 ## Subagent split
 
-- A: Python ↔ TypeScript writer and owner comparison (1, 2, 3, 5).
+- A: Python residue and writer/owner comparison (1, 2, 3, 5).
 - B: infrastructure, compose, workflows, scripts (4).
 - C: active documentation paths and links (6, 7).
 

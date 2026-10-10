@@ -88,7 +88,7 @@ of the document host; DCR remains the compatibility path.
 
 ## Grants and tokens
 
-[MCP models](../backend/app/models/mcp.py) persist clients, transactions, codes
+The `mcp_*` tables in the [schema baseline](../frontend/services/api/migrations/0001_baseline.sql) persist clients, transactions, codes
 and grants. Bearer, refresh, code and transaction values are stored as HMACs
 keyed by the session secret (rotating it ends every connection); client secrets
 use encrypted custody.

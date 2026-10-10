@@ -1,15 +1,5 @@
 version: 2
 updates:
-  - package-ecosystem: uv
-    directory: /backend
-    schedule:
-      interval: weekly
-      day: monday
-    open-pull-requests-limit: 3
-    groups:
-      patch-and-minor:
-        update-types: [patch, minor]
-
   # Dependabot uses the npm ecosystem for pnpm lockfiles.
   - package-ecosystem: npm
     directory: /frontend
@@ -72,29 +62,6 @@ updates:
       - dependency-name: postgres
         update-types:
           - version-update:semver-major
-
-  - package-ecosystem: docker
-    directory: /
-    schedule:
-      interval: weekly
-      day: monday
-    open-pull-requests-limit: 3
-    groups:
-      patch-and-minor:
-        update-types: [patch, minor]
-    # The interpreter version is one decision spread over four files: the root
-    # Dockerfile, backend/.python-version, the `python-version` of the CI gate,
-    # and the `requires-python` floor in backend/pyproject.toml. Dependabot can
-    # only move the first, so a feature bump ships a container running an
-    # interpreter no gate validated. That happened once (see the Dockerfile
-    # header) and the 3.14.7 PR was the same bump again. Patch releases inside
-    # the pinned 3.12 line still arrive; a feature bump is a deliberate,
-    # four-file change.
-    ignore:
-      - dependency-name: python
-        update-types:
-          - version-update:semver-major
-          - version-update:semver-minor
 
   - package-ecosystem: github-actions
     directory: /

@@ -21,8 +21,7 @@ an audit.
 
 Generated prompts are **candidates**, not prompts. Each Generate request records
 a `PromptGenerationRun` (request, generator version, provenance) and pending
-`PromptCandidate` rows in [their own tables](../backend/app/models/prompt_candidate.py)
-(the backend holds only the SQLAlchemy schema and migrations),
+`PromptCandidate` rows in [their own tables](../frontend/services/api/migrations/0001_baseline.sql),
 so no audit, capacity/occupancy or visibility query can see a proposal. The
 [staging owner](../frontend/services/api/src/prompts/generation.ts) drops texts already
 tracked or already pending. The TypeScript API owns the prompt library: prompt
