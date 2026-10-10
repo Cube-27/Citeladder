@@ -86,6 +86,11 @@
       "type": "int",
       "default": 7
     },
+    "trial_data_retention_days": {
+      "env": ["BILLING_TRIAL_DATA_RETENTION_DAYS"],
+      "type": "int",
+      "default": 30
+    },
     "http_max_connections": {
       "env": ["BILLING_HTTP_MAX_CONNECTIONS"],
       "type": "int",

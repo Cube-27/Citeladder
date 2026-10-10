@@ -32,8 +32,7 @@ export const authApi = {
       | 'forgot-password'
       | 'verify-email'
       | 'reset-password'
-      | 'change-password'
-      | 'logout-all',
+      | 'change-password',
     body: Record<string, string> = {},
   ) => {
     const response = await apiClient.post<RegistrationResponse>(`/auth/${operation}`, body);

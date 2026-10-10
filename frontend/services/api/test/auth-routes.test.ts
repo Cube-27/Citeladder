@@ -288,8 +288,8 @@ describe('password auth routes', () => {
       .where('operation', '=', 'auth.login.email_failure')
       .execute();
     const limited = createApp(testConfig({ ABUSE_LOGIN_EMAIL_LIMIT: '2' }), db);
-    const attempt = (secret: string) =>
-      call('/auth/login', { email, password: secret }, undefined, limited).then((r) => r.status);
+    const attempt = async (secret: string) =>
+      (await call('/auth/login', { email, password: secret }, undefined, limited)).status;
     // A success forgets earlier failures, so one wrong guess does not carry over.
     expect(await attempt('incorrect')).toBe(401);
     expect(await attempt(password)).toBe(200);
@@ -355,8 +355,8 @@ describe('Google sign-in', () => {
   const oauthConfig = testConfig({
     PUBLIC_SIGNUP_ENABLED: 'true',
     OAUTH_GOOGLE_ENABLED: 'true',
-    INTEGRATION_GOOGLE_CLIENT_ID: 'recorded-client',
-    INTEGRATION_GOOGLE_CLIENT_SECRET: 'recorded-secret',
+    OAUTH_GOOGLE_CLIENT_ID: 'recorded-client',
+    OAUTH_GOOGLE_CLIENT_SECRET: 'recorded-secret',
     FRONTEND_URL: 'https://app.example.test',
   });
   let subject = 'google-subject';
@@ -397,22 +397,25 @@ describe('Google sign-in', () => {
     );
   }
 
-  it('keeps the coded provider detail for unknown and unconfigured providers', async () => {
-    const unknown = await call('/auth/oauth/gitlab/start');
-    expect(unknown.status).toBe(404);
-    expect(((await unknown.json()) as { detail: unknown }).detail).toEqual({
-      code: 'oauth_provider_unknown',
-      provider: 'gitlab',
-    });
+  it('codes unknown providers (GitHub included) and an unconfigured Google', async () => {
+    type Coded = { error: { code: string; details: { provider: string } } };
+    for (const provider of ['gitlab', 'github']) {
+      const unknown = await call(`/auth/oauth/${provider}/start`);
+      expect(unknown.status).toBe(404);
+      expect(((await unknown.json()) as Coded).error).toMatchObject({
+        code: 'oauth_provider_unknown',
+        details: { provider },
+      });
+    }
     const unconfigured = await call('/auth/oauth/google/start');
     expect(unconfigured.status).toBe(503);
-    expect(((await unconfigured.json()) as { detail: unknown }).detail).toEqual({
+    expect(((await unconfigured.json()) as Coded).error).toMatchObject({
       code: 'oauth_provider_not_configured',
-      provider: 'google',
+      details: { provider: 'google' },
     });
   });
 
-  it('uses shared Google client credentials and identity scopes, with cookie-bound state', async () => {
+  it('uses the sign-in Google client and identity scopes, with cookie-bound state', async () => {
     const { data, nonceCookie } = await start();
     const params = new URL(data.authorize_url).searchParams;
     expect(params.get('client_id')).toBe('recorded-client');

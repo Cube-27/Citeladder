@@ -377,6 +377,56 @@ describe('membership continuity and transactional receipts', () => {
         .execute(),
     ).toHaveLength(0);
   });
+  it('removes the workspace from a removed member MCP grants and keeps their others', async () => {
+    const member = await fixtures.user();
+    actors.push(member);
+    await fixtures.member(workspace, member, 'member');
+    const elsewhere = await fixtures.ownedWorkspace(member);
+    const clientId = randomUUID();
+    await db
+      .insertInto('mcp_oauth_clients')
+      .values({
+        id: randomUUID(),
+        client_id: clientId,
+        client_metadata: JSON.stringify({ client_name: 'test' }),
+        client_secret_encrypted: '',
+        created_at: new Date(),
+      })
+      .execute();
+    const grantId = randomUUID();
+    await db
+      .insertInto('mcp_oauth_grants')
+      .values({
+        id: grantId,
+        client_id: clientId,
+        user_id: member,
+        workspace_ids: JSON.stringify([workspace, elsewhere]),
+        scopes: JSON.stringify(['citeladder:read']),
+        resource: 'https://protocol.example.test/mcp',
+        access_token_hash: randomUUID(),
+        refresh_token_hash: randomUUID(),
+        access_expires_at: new Date(Date.now() + 3600000),
+        refresh_expires_at: new Date(Date.now() + 7200000),
+        revoked_at: null,
+        created_at: new Date(),
+        updated_at: new Date(),
+      })
+      .execute();
+    try {
+      expect(
+        (await request(`/${workspace}/members/${await memberId(member)}`, 'DELETE')).status,
+      ).toBe(204);
+      const grant = await db
+        .selectFrom('mcp_oauth_grants')
+        .select('workspace_ids')
+        .where('id', '=', grantId)
+        .executeTakeFirstOrThrow();
+      expect(grant.workspace_ids).toEqual([elsewhere]);
+    } finally {
+      await db.deleteFrom('mcp_oauth_clients').where('client_id', '=', clientId).execute();
+    }
+  });
+
   it('lets only the owner transfer ownership, not an admin naming themselves', async () => {
     const admin = await fixtures.user();
     actors.push(admin);

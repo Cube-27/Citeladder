@@ -41,8 +41,7 @@ screens and their tests (2026-10-10) found, after verification:
   limit binds; the document claims the counter commits before verification.
 - **Login CSRF.** No route checks Content-Type or Origin, and `readBody` parses
   any body as JSON, so a cross-site `text/plain` form POST to `/auth/login`
-  signs the victim into the attacker's account. (There is no CORS, so requiring
-  `application/json` closes it.)
+  signs the victim into the attacker's account.
 - **Shared global counters are cheap to exhaust.** The daily trial counter is
   spent before registration (including duplicates) and the global mail counter
   on every forgot/resend for any address; a few IPs stop all signups or all
@@ -143,8 +142,8 @@ membership live; query keys carry workspace identity.
 | 2.2 | Delete the `legacy` registration origin: no column default; operator identities are `operator` | `0001_baseline.sql`, `auth/eligibility.ts`, `entitlements/*` |
 | 2.3 | One logout (signs out everywhere, which is what both do today); one client sign-out path that clears account-scoped state | `routes/auth.ts`, `lib/api/auth.ts`, `components/auth`, `components/settings` |
 | 2.4 | Access resolution reads the billing account once; project-authorized routes stop re-reading the project; `/auth/me` reuses the session row | `entitlements/access.ts`, `state.ts`, route families |
-| 2.5 | Project view: batch its eight sequential queries | `projects/service.ts` |
-| 2.6 | `security_events` retention (365 days) pruned by the runner with `usage_windows`; Google login event only on an issued session; per-route mailbox meters | `workers/runner.ts`, `auth/oauth.ts`, `routes/auth.ts` |
+| 2.5 | Declined: the project view's eight queries are indexed lookups (about 1 ms each, same region); running them in parallel would take up to eight pool connections per request from the e2-micro budget | — |
+| 2.6 | Google login receipt only on an issued session; no mailbox meter keyed on a fresh token; sessions carry `iat`. `security_events` retention moved to the backlog as an owner decision | `auth/oauth.ts`, `routes/auth.ts`, `auth/service.ts` |
 | 2.7 | Drop the two redundant indexes, Python comments, the `?tab=billing` shim and stale comments | baseline, `auth/*`, `components/settings` |
 
 Deferred to the backlog: replacing the production `DEV_LOGIN_*` gate with an
@@ -156,9 +155,9 @@ belongs with those features); sliding session renewal; per-device sign-out
 
 | # | Change | Where |
 |---|---|---|
-| 4.1 | Billing and usage references to audits, crawls, audit tasks and Agent runs/attempts become `ON DELETE SET NULL`; the ledger keeps workspace, account, amount and kind | `0001_baseline.sql`, `entitlements/ledger.ts` readers |
-| 4.2 | Delete requires `manage_members`-level authority (Owner/Admin) and a workspace with a non-trial grant; trial workspaces get 403 with a reason; deletion frees the slot | `projects/service.ts`, `routes/projects.ts`, `config/workspaces.json` |
-| 4.3 | Runner sweep purges projects of workspaces whose only grants are trial grants that ended more than 30 days ago, a bounded batch per pass | `workers/runner.ts`, `projects/service.ts` |
+| 4.1 | Billing and usage references to audits, crawls, audit tasks and Agent runs/attempts become `ON DELETE SET NULL`; the ledger keeps workspace, account, amount, kind and subject. References inside a project move from `RESTRICT` to `NO ACTION` so one cascade can delete them | `0001_baseline.sql` |
+| 4.2 | Delete requires the `delete_projects` capability (Owner/Admin) and the existing `project_deletion` entitlement, which trials lack; refused while metered work holds reserved units | `projects/service.ts`, `routes/projects.ts`, `entitlements/ledger.ts` |
+| 4.3 | Runner sweep purges projects of workspaces whose only grants are trial grants that ended more than 30 days ago, a bounded batch per pass | `workers/runner.ts`, `projects/trial-purge.ts` |
 
 ## Phase 3: usability
 

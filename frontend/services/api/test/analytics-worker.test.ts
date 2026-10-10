@@ -42,8 +42,8 @@ beforeEach(async () => {
     await db.deleteFrom('analytics_tasks').where('workspace_id', 'in', created).execute();
   }
   // Grants and property mappings are unique per workspace: one per test.
-  workspaceId = await fixtures.ownedWorkspace(owner);
-  otherWorkspaceId = await fixtures.ownedWorkspace(owner);
+  workspaceId = await fixtures.joinedWorkspace(owner);
+  otherWorkspaceId = await fixtures.joinedWorkspace(owner);
   created.push(workspaceId, otherWorkspaceId);
   projectId = await seedProject(db, workspaceId);
 });

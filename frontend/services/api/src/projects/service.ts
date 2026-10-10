@@ -14,6 +14,7 @@ import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { jsonObject, strings } from '../db/json.ts';
 import { admitProject, requireProjectDeletion } from '../entitlements/occupancy.ts';
+import { projectHoldsReservations } from '../entitlements/ledger.ts';
 import { ApiError, notFound } from '../errors.ts';
 import type { Projects } from '../generated/db-schema.ts';
 import { promptSetView } from '../prompts/views.ts';
@@ -435,29 +436,29 @@ export async function updateProject(db: Database, scope: ProjectScope, input: Pr
   });
   return readProject(db, scope);
 }
+/**
+ * Delete the project and everything it owns. Billing and usage records stay,
+ * unlinked from the deleted audits, crawls and Agent runs. Refused while
+ * metered work still holds reserved units.
+ */
 export async function deleteProject(db: Database, scope: ProjectScope) {
-  try {
-    await db.transaction().execute(async (trx) => {
-      await acquireProjectLock(trx, scope.projectId);
-      await projectRow(trx, scope);
-      await requireProjectDeletion(trx, scope.workspaceId);
-      await trx
-        .deleteFrom('projects')
-        .where('workspace_id', '=', scope.workspaceId)
-        .where('id', '=', scope.projectId)
-        .execute();
-    });
-  } catch (error) {
-    if (['23503', '23001'].includes(jsonObjectErrorCode(error)))
-      throw new ApiError(409, 'Project is referenced by immutable execution evidence');
-    throw error;
-  }
+  await db.transaction().execute(async (trx) => {
+    await acquireProjectLock(trx, scope.projectId);
+    await projectRow(trx, scope);
+    await requireProjectDeletion(trx, scope.workspaceId);
+    await removeProject(trx, scope);
+  });
 }
-function jsonObjectErrorCode(error: unknown) {
-  return error !== null &&
-    typeof error === 'object' &&
-    'code' in error &&
-    typeof error.code === 'string'
-    ? error.code
-    : '';
+
+/** The deletion itself, for a caller holding the project lock and its authority. */
+export async function removeProject(trx: Database, scope: ProjectScope) {
+  if (await projectHoldsReservations(trx, scope.workspaceId, scope.projectId))
+    throw new ApiError(409, 'Wait for running audits, crawls and Agent replies to finish', {
+      code: 'project_work_running',
+    });
+  await trx
+    .deleteFrom('projects')
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('id', '=', scope.projectId)
+    .execute();
 }

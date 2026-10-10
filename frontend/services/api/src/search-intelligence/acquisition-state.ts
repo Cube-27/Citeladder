@@ -13,6 +13,7 @@ import { INT4_MAX, normalizeResponse } from './normalization.ts';
 import type { ResearchResponse } from './live.ts';
 import type { ProviderError } from '../answer-engines/contracts.ts';
 import { isDataError } from '../db/errors.ts';
+import { rolesWith } from '../auth/workspace.ts';
 import { loadWorkerSettings } from '../config.ts';
 import {
   enqueueImplementationVerification,
@@ -126,7 +127,7 @@ export class AcquisitionState {
       .select('id')
       .where('workspace_id', '=', run.workspace_id)
       .where('user_id', '=', run.actor_user_id)
-      .where('role', '!=', 'viewer')
+      .where('role', 'in', rolesWith('run'))
       .executeTakeFirst();
     if (!member) return undefined;
     return db

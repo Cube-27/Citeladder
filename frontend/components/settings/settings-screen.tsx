@@ -81,6 +81,7 @@ function ProjectDeletionControls() {
   const { activeProject, activeWorkspaceId } = useProjectContext();
   const selectProject = useSelectProject();
   const { hasCapability } = useEntitlement();
+  const mayDelete = useWorkspaceCapability('delete_projects');
   const [confirmOpen, setConfirmOpen] = useState(false);
   const deleteMutation = useMutation({
     mutationFn: (projectId: string) =>
@@ -111,7 +112,8 @@ function ProjectDeletionControls() {
     },
   });
 
-  if (!hasCapability(PROJECT_DELETION_CAPABILITY)) return null;
+  // Both must allow it: the plan grants deletion, and the role (Owner/Admin) may use it.
+  if (!hasCapability(PROJECT_DELETION_CAPABILITY) || !mayDelete) return null;
   return (
     <>
       <Stack as="section" gap="workspace">

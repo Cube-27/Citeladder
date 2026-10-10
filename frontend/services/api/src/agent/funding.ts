@@ -175,7 +175,8 @@ export function agentFunding(settings: Settings, platform: GatewaySettings): Fun
     },
     settle: async (db, attempt, result) => {
       if (attempt.funding_source !== 'platform') return { credits: 0, status: 'zero_debit' };
-      if (!attempt.reservation_id) throw new AgentError('funding_unavailable');
+      // An open hold keeps its run: project deletion waits for settlement.
+      if (!attempt.reservation_id || !attempt.run_id) throw new AgentError('funding_unavailable');
       // Missing historical terms close against the exact dispatch hold; never today’s policy.
       const rate = await historicalRate(db, attempt.requested_model, attempt.pricing_revision);
       const charged = rate && result ? chargeCredits(rate, result.usage) : null;

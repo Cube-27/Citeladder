@@ -147,7 +147,7 @@ export interface AgentModelAttempts {
   output_hash: string;
   output_tokens: Int8 | null;
   pricing_revision: string;
-  project_id: string;
+  project_id: string | null;
   provider_adapter: string;
   provider_connection_id: string | null;
   provider_route_id: string | null;
@@ -159,7 +159,7 @@ export interface AgentModelAttempts {
   returned_model: string;
   route_revision: string | null;
   run_attempt: number;
-  run_id: string;
+  run_id: string | null;
   settled_at: Timestamp | null;
   settlement_status: string;
   total_tokens: Int8 | null;
@@ -532,7 +532,7 @@ export interface BillingAccounts {
   id: string;
   owner_user_id: string | null;
   registration_cohort_at: Generated<Timestamp>;
-  registration_origin: Generated<string>;
+  registration_origin: string;
   status: string;
   updated_at: Timestamp;
   workspace_id: string;
@@ -2929,7 +2929,7 @@ export interface Users {
   hashed_password: string | null;
   id: string;
   is_active: boolean;
-  registration_origin: Generated<string>;
+  registration_origin: string;
   role: string;
   session_version: number;
   updated_at: Timestamp;

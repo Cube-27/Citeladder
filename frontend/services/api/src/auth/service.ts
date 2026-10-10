@@ -29,6 +29,7 @@ export function sessionView(user: User) {
 export function issueSession(config: ServiceConfig, user: User): Promise<string> {
   return new SignJWT({ sub: user.id, ver: user.session_version })
     .setProtectedHeader({ alg: config.session.algorithm })
+    .setIssuedAt()
     .setExpirationTime(Math.floor(Date.now() / 1000) + config.session.expireSeconds)
     .sign(new TextEncoder().encode(config.session.secretKey));
 }

@@ -19,6 +19,7 @@ export async function billingAccount(db: Database, workspaceId: string): Promise
     .values({
       id,
       workspace_id: workspaceId,
+      registration_origin: 'operator',
       status: 'active',
       billing_country: 'IN',
       country_verification: 'self_declared',

@@ -34,7 +34,7 @@ beforeAll(async () => {
   signer = await fixtures.user();
   await db.updateTable('users').set({ role: 'admin' }).where('id', '=', admin).execute();
   workspace = await fixtures.ownedWorkspace(signer);
-  cliWorkspace = await fixtures.ownedWorkspace(signer);
+  cliWorkspace = await fixtures.joinedWorkspace(signer);
   foreign = await fixtures.ownedWorkspace(await fixtures.user());
 });
 afterAll(async () => {
@@ -117,7 +117,7 @@ it('requires active operator and signatory authority in the exact workspace', as
   await expect(
     recordAgreementReference(db, email(admin), { ...agreement(), workspace_id: foreign }, true),
   ).rejects.toThrow('target workspace');
-  for (const role of ['member', 'viewer', 'unknown']) {
+  for (const role of ['member', 'viewer']) {
     await db
       .updateTable('workspace_members')
       .set({ role })

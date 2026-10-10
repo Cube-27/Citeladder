@@ -1,4 +1,4 @@
-/** Registration provenance selects the lifetime public trial or retained legacy baseline. */
+/** Registration provenance selects the lifetime public trial or the operator baseline. */
 import { randomUUID, createHash } from 'node:crypto';
 import { sql, type Selectable } from 'kysely';
 import { policy, resolveSettingSpec } from '../config.ts';
@@ -113,8 +113,7 @@ export async function ensureWorkspaceBilling(
     });
     return;
   }
-  if (!['legacy', 'operator'].includes(locked.registration_origin))
-    throw new Error('registration_origin_unresolved');
+  if (locked.registration_origin !== 'operator') throw new Error('registration_origin_unresolved');
   const cfg = policy.entitlements.baseline;
   const idempotencyKey = baselineGrantKey();
   const existing = await db

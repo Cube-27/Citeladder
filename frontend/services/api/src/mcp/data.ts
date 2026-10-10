@@ -8,14 +8,13 @@ import { McpInputError, type Evidence, type EvidencePrincipal } from './types.ts
 import { mcpPolicy } from './config.ts';
 import { workspaceAccess } from '../entitlements/access.ts';
 import { requiresEmailVerification } from '../auth/eligibility.ts';
+import { rolesWith } from '../auth/workspace.ts';
 import { effectiveStatus } from '../opportunities/action-status.ts';
 import { appLink, recordPath } from './links.ts';
 import { containsPattern } from '../db/like.ts';
 
 /** Roles whose capabilities include reading workspace evidence. */
-export const READ_ROLES = Object.entries(policy.workspaces.roles)
-  .filter(([, caps]) => caps.includes('read'))
-  .map(([role]) => role);
+export const READ_ROLES = rolesWith('read');
 
 // A tool call that authorizes several reads checks grant and membership once.
 // Only a principal minted for one call shares its check; any other is live.

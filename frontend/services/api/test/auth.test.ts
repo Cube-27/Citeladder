@@ -5,7 +5,6 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { sessionUser } from '../src/auth/session.ts';
 import { workspaceMember } from '../src/auth/workspace.ts';
-import { policy } from '../src/config.ts';
 import type { AppEnv } from '../src/context.ts';
 import { onError } from '../src/errors.ts';
 import { Fixtures, sessionToken, testConfig, testDatabase } from './support.ts';
@@ -68,8 +67,7 @@ describe('session verification', () => {
     ],
     ['a non-UUID subject', () => sessionToken({ sub: 'someone', ver: 2 }), 'Invalid token'],
     ['a missing version', () => sessionToken({ sub: userId }), 'Invalid token'],
-    // Deliberately stricter than Python's int(payload["ver"]): Python only
-    // mints integer versions, so a coercible string or float was never issued.
+    // Sessions are only issued with integer versions, so a coercible one is forged.
     ['a string version', () => sessionToken({ sub: userId, ver: '2' }), 'Invalid token'],
     ['a fractional version', () => sessionToken({ sub: userId, ver: 2.9 }), 'Invalid token'],
     [
@@ -113,16 +111,13 @@ describe('workspace membership', () => {
   it('authorizes a member with the role capability set', async () => {
     const { status, body } = await call(`/w/${viewed}`, viewerToken);
     expect(status).toBe(200);
-    expect(body).toEqual({ id: viewed, capabilities: policy.workspaces.roles.viewer });
+    expect(body).toEqual({ id: viewed, capabilities: ['read'] });
   });
 
-  it('refuses a capability the role lacks with the backend wording', async () => {
+  it('refuses a capability the role lacks', async () => {
     const { status, body } = await call(`/w/${viewed}`, viewerToken, 'POST');
     expect(status).toBe(403);
-    expect(body.error).toMatchObject({
-      code: 'workspace_role_forbidden',
-      message: 'Workspace member access is required',
-    });
+    expect(body.error).toMatchObject({ code: 'workspace_role_forbidden' });
   });
 
   it('cannot tell a foreign workspace from a missing one', async () => {

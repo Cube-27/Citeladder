@@ -47,9 +47,9 @@ async function task(workspaceId: string, kind: string, priority = 0): Promise<st
 beforeAll(async () => {
   const owner = await fixtures.user();
   workspaces = [
-    await fixtures.ownedWorkspace(owner),
-    await fixtures.ownedWorkspace(owner),
-    await fixtures.ownedWorkspace(owner),
+    await fixtures.joinedWorkspace(owner),
+    await fixtures.joinedWorkspace(owner),
+    await fixtures.joinedWorkspace(owner),
   ];
 });
 

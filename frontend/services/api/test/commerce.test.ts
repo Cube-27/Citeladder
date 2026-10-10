@@ -92,7 +92,7 @@ describe('Commerce workspace boundaries', () => {
     const outsider = await fixtures.user();
     const viewer = await fixtures.user();
     await fixtures.member(t.workspaceId, viewer, 'viewer');
-    const otherWorkspace = await fixtures.ownedWorkspace(t.userId);
+    const otherWorkspace = await fixtures.joinedWorkspace(t.userId);
     for (const [path, method, body] of routes) {
       expect((await call(path, { method, body, anonymous: true })).status).toBe(401);
       expect((await call(path, { method, body, user: outsider })).status).toBe(404);

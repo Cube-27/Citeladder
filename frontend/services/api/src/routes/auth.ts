@@ -30,8 +30,6 @@ import {
 import {
   knownProvider,
   providerConfigured,
-  providerError,
-  requireProviderConfigured,
   startSignIn,
   completeSignIn,
   SignInError,
@@ -202,7 +200,7 @@ export const authRoutes = [
       body: challengeSchema,
       async handle({ c, db, config }) {
         const payload = await readBody(c, challengeSchema);
-        await mailboxMeter(db, c, config, payload.token);
+        await mailboxMeter(db, c, config);
         const email = await consumeChallenge(
           db,
           payload.token,
@@ -237,18 +235,6 @@ export const authRoutes = [
       clearSessionCookie(c, config);
       clearOAuthCookies(c, config);
       return { message: 'Password changed. Sign in again.' };
-    },
-  }),
-  definePostRoute({
-    ...base,
-    authorize: 'session',
-    path: '/api/v1/auth/logout-all',
-    response: registrationResponseSchema,
-    async handle({ c, db, config }) {
-      await logoutUser(db, c.get('user').id);
-      clearSessionCookie(c, config);
-      clearOAuthCookies(c, config);
-      return { message: 'All sessions signed out.' };
     },
   }),
   definePostRoute({
@@ -379,11 +365,7 @@ export const authRoutes = [
     async handle({ c, db, config }, { path, query }) {
       clearAuthOAuthCookie(c, config);
       const provider = knownProvider(path.provider);
-      if (
-        !providerConfigured(config, provider) ||
-        !oauth.implemented.includes(provider) ||
-        demoAccessExpired(config)
-      )
+      if (!providerConfigured(config, provider) || demoAccessExpired(config))
         return signInRedirect(c, config, 'oauth_signin_disabled');
       if (query.error) return signInRedirect(c, config, 'oauth_signin_failed');
       if (!query.code || !query.state)
@@ -414,23 +396,6 @@ export const authRoutes = [
         if (error instanceof SignInError) return signInRedirect(c, config, error.code);
         throw error;
       }
-    },
-  }),
-  definePostRoute({
-    ...base,
-    path: '/api/v1/auth/oauth/{provider}/callback',
-    params: { path: oauthPath, query: {} },
-    response: z.null(),
-    handle({ c, config }, { path }): Promise<never> {
-      clearAuthOAuthCookie(c, config);
-      const provider = knownProvider(path.provider);
-      requireProviderConfigured(config, provider);
-      throw providerError(
-        501,
-        'oauth_callback_not_implemented',
-        'OAuth callback is not implemented',
-        provider,
-      );
     },
   }),
 ];

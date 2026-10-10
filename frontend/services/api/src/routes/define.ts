@@ -130,8 +130,7 @@ function honoPath(path: string): string {
   return path.replaceAll(/\{([^}]+)\}/gu, ':$1');
 }
 
-// Starlette answers a matched path requested with another method 405, before
-// any dependency runs.
+// A matched path requested with another method is 405 before any authorization runs.
 function methodNotAllowed(method: string): never {
   throw new ApiError(405, 'Method Not Allowed', { headers: { allow: method } });
 }

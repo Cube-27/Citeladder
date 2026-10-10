@@ -18,7 +18,7 @@ export async function workspaceAccess(
     .executeTakeFirst();
   const unresolved = { status: 'access_unresolved' as const, expires_at: null };
   if (!account || account.status !== 'active') return unresolved;
-  const state = await accountState(db, workspaceId, account.id, at);
+  const state = await accountState(db, workspaceId, account.id, at, account);
   if (state.error) return unresolved;
   const selected = state.grants.filter((grant) =>
     state.selected.some((row) => row.id === grant.id),
@@ -42,7 +42,7 @@ export async function workspaceAccess(
       expires_at: authority.valid_until?.toISOString() ?? null,
     };
   if (
-    ['legacy', 'operator'].includes(account.registration_origin) &&
+    account.registration_origin === 'operator' &&
     selected.some((grant) => grant.bundle_role === 'primary')
   )
     return { status: 'active', expires_at: state.validUntil?.toISOString() ?? null };

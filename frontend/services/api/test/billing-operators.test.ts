@@ -221,11 +221,15 @@ it('issues and revokes once, exposes same-transaction projection, and enforces e
   ).rejects.toThrow();
 });
 it('concurrent baseline repair freezes cohort and development top-ups stay in one workspace', async () => {
-  const owned = await fixtures.ownedWorkspace(actorId, { access: false });
+  // A development top-up targets the operator's own workspace; a person owns
+  // one, so this operator is fresh.
+  const operator = await fixtures.user();
+  await db.updateTable('users').set({ role: 'admin' }).where('id', '=', operator).execute();
+  const owned = await fixtures.ownedWorkspace(operator, { access: false });
   const actor = await db
     .selectFrom('users')
     .selectAll()
-    .where('id', '=', actorId)
+    .where('id', '=', operator)
     .executeTakeFirstOrThrow();
   await Promise.all([
     db.transaction().execute((trx) => ensureWorkspaceBilling(trx, owned, actor)),
@@ -237,7 +241,7 @@ it('concurrent baseline repair freezes cohort and development top-ups stay in on
     .where('workspace_id', '=', owned)
     .executeTakeFirstOrThrow();
   const input = {
-    actor: `${actorId}@example.test`,
+    actor: `${operator}@example.test`,
     workspaceId: owned,
     reason: 'development fixture',
     apply: true,
@@ -255,7 +259,7 @@ it('concurrent baseline repair freezes cohort and development top-ups stay in on
   expect(records).toContainEqual(
     expect.objectContaining({
       event: 'billing.override_grant_issued',
-      actor_id: actorId,
+      actor_id: operator,
       account_id: account.id,
       reason: input.reason,
       dry_run: false,

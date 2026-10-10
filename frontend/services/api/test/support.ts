@@ -53,6 +53,7 @@ export class Fixtures {
         id,
         email: `${id}@example.test`,
         role: 'user',
+        registration_origin: 'operator',
         is_active: options.active ?? true,
         session_version: options.sessionVersion ?? 0,
         created_at: new Date(),
@@ -80,6 +81,19 @@ export class Fixtures {
       ? await insert(this.db)
       : await this.db.transaction().execute(insert);
     this.workspaces.push(id);
+    return id;
+  }
+
+  /**
+   * Another tenant workspace the user joined (a person owns at most one): a
+   * fresh Owner holds it and the user is a member with `role`.
+   */
+  async joinedWorkspace(
+    userId: string,
+    options: { access?: boolean; role?: 'admin' | 'member' | 'viewer' } = {},
+  ): Promise<string> {
+    const id = await this.ownedWorkspace(await this.user(), options);
+    await this.member(id, userId, options.role ?? 'admin');
     return id;
   }
 

@@ -110,7 +110,7 @@ export type AuthResponse = z.infer<typeof authResponseSchema>;
 export type RegistrationResponse = z.infer<typeof registrationResponseSchema>;
 // OAuth provider ids are a request-input union (not a response payload), so
 // they stay a plain literal type rather than a `z.infer`.
-export type OAuthProvider = 'google' | 'github' | 'apple';
+export type OAuthProvider = 'google';
 export type OAuthStartResponse = z.infer<typeof oauthStartResponseSchema>;
 export type Workspace = z.infer<typeof workspaceSchema>;
 export type CommandCenter = z.infer<typeof commandCenterSchema>;

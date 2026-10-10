@@ -4,6 +4,7 @@ import { sql } from 'kysely';
 import { z } from 'zod';
 
 import { policy } from '../config.ts';
+import { roleAllows } from '../auth/workspace.ts';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import { createJevClient, type JevClient } from '../models/jev.ts';
@@ -101,11 +102,8 @@ async function prepare(db: Database, task: QueueTask, client: JevClient | null) 
       .where('workspace_id', '=', run.workspace_id)
       .where('user_id', '=', run.actor_id)
       .executeTakeFirst();
-    const capabilities =
-      membership &&
-      policy.workspaces.roles[membership.role as keyof typeof policy.workspaces.roles];
     let reason = client ? '' : 'provider_unconfigured';
-    if (!capabilities?.includes('run')) reason = 'permission_unavailable';
+    if (!membership || !roleAllows(membership.role, 'run')) reason = 'permission_unavailable';
     const events = await trx
       .selectFrom('site_internal_link_events')
       .select(['candidate_id', 'kind'])

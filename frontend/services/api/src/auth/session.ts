@@ -1,9 +1,7 @@
 /**
- * Session verification, including cookies issued by the former Python runtime.
- *
- * An HS256 JWT in the
- * HttpOnly session cookie, whose `ver` claim must equal the user's
- * `session_version`. Issuance belongs to the TypeScript auth service.
+ * Session verification: an HS256 JWT in the HttpOnly session cookie, whose
+ * `ver` claim must equal the user's `session_version`. Issuance belongs to the
+ * auth service.
  */
 import type { MiddlewareHandler } from 'hono';
 import { getCookie } from 'hono/cookie';
@@ -21,10 +19,8 @@ type SessionClaims = Record<string, unknown>;
 export type SessionUser = { id: string; sessionVersion: number };
 
 /**
- * Verify a session token as `decode_access_token` does, or return null.
- *
- * `exp` and `nbf` are enforced by jose; joserfc additionally rejects an `iat`
- * in the future, so that is checked here.
+ * Verify a session token, or return null. jose enforces `exp` and `nbf`; an
+ * `iat` in the future is refused here.
  */
 async function decodeSessionToken(
   token: string,

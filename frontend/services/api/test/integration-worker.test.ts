@@ -30,7 +30,7 @@ afterAll(async () => {
 });
 
 async function seedRun(provider: 'gsc' | 'ga4' | 'bing' = 'gsc') {
-  const workspaceId = await fixtures.ownedWorkspace(ownerId);
+  const workspaceId = await fixtures.joinedWorkspace(ownerId);
   const projectId = await seedProject(db, workspaceId);
   const grantId = randomUUID();
   const connectionId = randomUUID();

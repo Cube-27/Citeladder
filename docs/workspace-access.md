@@ -14,8 +14,9 @@ The designation is distinct from platform/operator administration.
 Registration returns a generic acknowledgement rather than a session, and is
 refused unless `PUBLIC_SIGNUP_ENABLED` is set; operators otherwise create
 accounts with the native `account:manage` CLI. New public identities are pending
-until mailbox verification; legacy/operator identities retain their explicit
-access policy without invented verification timestamps. Google sign-in is gated
+until mailbox verification; operator-created identities retain their explicit
+access policy without invented verification timestamps. Every identity names its
+origin (`public` or `operator`); any other origin requires verification. Google sign-in is gated
 by `OAUTH_GOOGLE_ENABLED`; new Google identities also require `PUBLIC_SIGNUP_ENABLED`.
 Email/password login and Google sign-in establish the HttpOnly session;
 session-version checks invalidate stale sessions. The frontend crosses the
@@ -32,25 +33,33 @@ a pending public identity with authoritative Google proof clears its password
 and invalidates old sessions/challenges. Third-party Google addresses use mailbox
 recovery before access. Provider requests have host, redirect,
 deadline and response-size bounds. PostgreSQL abuse counters commit before
-password verification or provider I/O; successful credentials bypass email
-failure budgets.
+password verification or provider I/O. A spent per-email failure budget refuses
+even the correct password until its window passes; a successful sign-in or a
+password reset clears it. The shared daily trial and mail budgets are spent only
+by identities and mail actually issued. A non-GET request a browser marks
+`Sec-Fetch-Site: cross-site` is refused, so another site cannot submit a sign-in
+or any other write. Google is the only sign-in provider.
 
 [TypeScript authorization](../frontend/services/api/src/auth/workspace.ts) resolves
-membership and exposes safe capabilities. Flat APIs use an explicit workspace header or the user's
-default membership. A project-detail or image request can resolve membership
-through its project ID, but never trusts that ID alone. Foreign/missing objects
-do not reveal product data.
+membership and exposes safe capabilities; it is the one owner of the role
+matrix, which other modules query through it. Flat APIs use an explicit
+workspace header or the user's default membership. Routes under a project path
+resolve membership through the project ID, never trusting that ID alone. Foreign
+and missing objects do not reveal product data.
 
 The [native role policy](../frontend/services/api/src/config/workspaces.json)
 owns the authorization matrix:
 
-| Role          | Product read | Product write/run | Billing, members, credentials |
-| ------------- | ------------ | ----------------- | ----------------------------- |
-| Owner / Admin | Yes          | Yes               | Yes                           |
-| Member        | Yes          | Yes               | No                            |
-| Viewer        | Yes          | No                | No                            |
+| Role   | Product read | Product write/run | Billing, members, credentials, project deletion | Ownership transfer |
+| ------ | ------------ | ----------------- | ----------------------------------------------- | ------------------ |
+| Owner  | Yes          | Yes               | Yes                                             | Yes                |
+| Admin  | Yes          | Yes               | Yes                                             | No                 |
+| Member | Yes          | Yes               | No                                              | No                 |
+| Viewer | Yes          | No                | No                                              | No                 |
 
-Unknown roles fail closed. Role authorization and entitlement availability are
+The schema accepts only these four roles, at most one Owner per workspace and at
+most one owned workspace per person; Admin, Member and Viewer memberships are
+unlimited. A role outside the matrix confers nothing. Role authorization and entitlement availability are
 separate checks; both must permit an action. Workspace Admin is not an operator
 authorized to publish the global billing catalog or administer other workspaces.
 
@@ -93,8 +102,10 @@ acceptance, role changes, removal and ownership transfer. Invitation tokens are
 hashed, expiring and single-use; acceptance requires the matching authenticated
 identity. Repeated acceptance is inert. Owner is not an assignable invitation
 role. Transfer installs a replacement atomically, and removal, demotion or
-departure cannot leave a workspace ownerless. Owned-workspace limits count
-ownership rather than invited memberships, including ownership transfer.
+departure cannot leave a workspace ownerless. Only the Owner can transfer
+ownership, and only to a member who owns no workspace. Removal or departure also
+drops the workspace from that person's MCP grants, so a later re-invitation needs
+fresh MCP consent.
 Workspace-root locks serialize membership and invitation changes; mutations
 recheck live authority after taking the lock. Creation and incoming ownership
 share the per-user creation advisory lock. Terms reads never repair state.
@@ -110,7 +121,7 @@ single consumption and bounded request/send budgets. Links carry tokens in the
 fragment; GET never consumes them. Verification requires the signup password.
 Reset replaces the password, may verify a pending mailbox, invalidates outstanding
 challenges and revokes sessions. Password change requires the current password;
-logout and explicit sign-out-all revoke every session. Account security reports
+signing out revokes every session (there is one sign-out, and it is everywhere). Account security reports
 actual methods and verification state inline in Settings → Account, with compact
 password, Google-linking and session controls. The blocked-access screen opens
 the same controls in a recovery dialog. Mail is request-bounded, not a durable queue:
@@ -125,6 +136,20 @@ at the current time. Expiry preserves data while allowing account security,
 minimal membership/access discovery, Terms, invitation acceptance and switching
 to another workspace. The shell blocks product content and clears product caches
 when access ends. Missing access authority is distinct from an expired trial.
+
+## Project deletion and trial retention
+
+Deleting a project needs both the `delete_projects` role capability (Owner or
+Admin) and the plan's `project_deletion` entitlement, which trials do not carry.
+It removes the project and everything it owns. Billing and usage records stay,
+with their links to the deleted audits, crawls and Agent runs cleared. Deletion
+is refused (`project_work_running`) while an audit, crawl or Agent run still
+holds reserved units, because nothing could release that hold afterwards.
+
+A trial-only workspace (no plan, add-on, top-up or operator grant) loses access
+when its trial ends. The runner deletes its projects
+`BILLING_TRIAL_DATA_RETENTION_DAYS` (default 30) after that, a bounded batch per
+pass, rechecking access through the persisted access read first.
 
 ## Browser selection and reads
 

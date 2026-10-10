@@ -58,6 +58,7 @@ export const projectRoutes = [
   definePatchRoute({
     family,
     path: `${root}/{project_id}`,
+    authorize: 'project',
     capability: 'write',
     params: { path: projectPath, query: {} },
     body: projectUpdate,
@@ -73,7 +74,8 @@ export const projectRoutes = [
   defineDeleteRoute({
     family,
     path: `${root}/{project_id}`,
-    capability: 'write',
+    authorize: 'project',
+    capability: 'delete_projects',
     params: { path: projectPath, query: {} },
     handle: ({ c, db }, { path }) =>
       deleteProject(db, {
@@ -84,6 +86,7 @@ export const projectRoutes = [
   definePostRoute({
     family,
     path: `${root}/{project_id}/logos/refresh`,
+    authorize: 'project',
     capability: 'write',
     params: { path: projectPath, query: {} },
     response: projectSchema,
@@ -101,6 +104,7 @@ export const projectRoutes = [
   defineGetRoute({
     family,
     path: `${root}/{project_id}/command-center`,
+    authorize: 'project',
     params: { path: projectPath, query: { audit_id: { scalar: { kind: 'uuid' } } } },
     response: commandCenterSchema,
     handle: ({ c, db }, { path, query }) =>

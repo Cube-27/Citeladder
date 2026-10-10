@@ -12,6 +12,7 @@ import { contactSalesHref } from '@/lib/config/contact';
 import { websiteHref } from '@/lib/config/app-link';
 import { getBootstrapReadTimeoutMs } from '@/lib/config/operational';
 import { hardNavigate } from '@/lib/navigation/hard-navigate';
+import { clearAccountScopedClientState } from '@/lib/auth/account-transition';
 import { Button } from '@/components/ui/button';
 import { Alert } from '@/components/ui/alert';
 import { ShellFallback } from '@/components/layout/shell-fallback';
@@ -157,7 +158,7 @@ export function WorkspaceAccessGate({ children }: Readonly<{ children: ReactNode
           variant="secondary"
           onClick={async () => {
             await authApi.logout();
-            client.clear();
+            await clearAccountScopedClientState(client);
             hardNavigate('/login');
           }}
         >

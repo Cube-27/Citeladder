@@ -20,46 +20,6 @@
       "type": "bool",
       "default": false
     },
-    "github_client_id": {
-      "env": ["OAUTH_GITHUB_CLIENT_ID"],
-      "type": "str",
-      "default": ""
-    },
-    "github_client_secret": {
-      "env": ["OAUTH_GITHUB_CLIENT_SECRET"],
-      "type": "str",
-      "default": ""
-    },
-    "github_redirect_uri": {
-      "env": ["OAUTH_GITHUB_REDIRECT_URI"],
-      "type": "str",
-      "default": ""
-    },
-    "github_enabled": {
-      "env": ["OAUTH_GITHUB_ENABLED"],
-      "type": "bool",
-      "default": false
-    },
-    "apple_client_id": {
-      "env": ["OAUTH_APPLE_CLIENT_ID"],
-      "type": "str",
-      "default": ""
-    },
-    "apple_client_secret": {
-      "env": ["OAUTH_APPLE_CLIENT_SECRET"],
-      "type": "str",
-      "default": ""
-    },
-    "apple_redirect_uri": {
-      "env": ["OAUTH_APPLE_REDIRECT_URI"],
-      "type": "str",
-      "default": ""
-    },
-    "apple_enabled": {
-      "env": ["OAUTH_APPLE_ENABLED"],
-      "type": "bool",
-      "default": false
-    },
     "state_ttl_seconds": {
       "env": ["OAUTH_STATE_TTL_SECONDS"],
       "type": "int",
@@ -68,29 +28,20 @@
     }
   },
   "labels": {
-    "google": "Google",
-    "github": "GitHub",
-    "apple": "Apple"
+    "google": "Google"
   },
   "authorize_urls": {
-    "google": "https://accounts.google.com/o/oauth2/v2/auth",
-    "github": "https://github.com/login/oauth/authorize",
-    "apple": "https://appleid.apple.com/auth/authorize"
+    "google": "https://accounts.google.com/o/oauth2/v2/auth"
   },
   "token_urls": {
-    "google": "https://oauth2.googleapis.com/token",
-    "github": "https://github.com/login/oauth/access_token",
-    "apple": "https://appleid.apple.com/auth/token"
+    "google": "https://oauth2.googleapis.com/token"
   },
   "userinfo_urls": {
     "google": "https://openidconnect.googleapis.com/v1/userinfo"
   },
   "scopes": {
-    "google": "openid email profile",
-    "github": "read:user user:email",
-    "apple": "name email"
+    "google": "openid email profile"
   },
-  "implemented": ["google"],
   "approved_hosts": [
     "accounts.google.com",
     "oauth2.googleapis.com",

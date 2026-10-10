@@ -14,6 +14,7 @@ import type { Database } from '../db/database.ts';
 import { ApiError, notFound } from '../errors.ts';
 import type { Users, Workspaces } from '../generated/db-schema.ts';
 import { ensureWorkspaceBilling } from '../entitlements/bootstrap.ts';
+import { dropWorkspaceFromGrants } from '../mcp/connections.ts';
 
 export type User = Selectable<Users>;
 type Role = keyof typeof policy.workspaces.roles;
@@ -254,6 +255,7 @@ export async function applyMemberMutation(
       .where('id', '=', member.id)
       .where('workspace_id', '=', workspaceId)
       .execute();
+    await dropWorkspaceFromGrants(trx, member.user_id, workspaceId);
     await recordSecurityEvent(
       trx,
       'leave' in target ? 'membership.leave' : 'membership.remove',
