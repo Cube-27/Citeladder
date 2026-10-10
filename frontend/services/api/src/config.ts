@@ -51,6 +51,7 @@ import { mcp } from './config/mcp.ts';
 import { promptGeneration } from './config/prompt-generation.ts';
 import { brandLogos } from './config/brand-logos.ts';
 import { internalLinks } from './config/internal-links.ts';
+import { perception } from './config/perception.ts';
 import {
   billingSettings,
   razorpaySettings,
@@ -192,6 +193,7 @@ export const policy = {
   brand_evidence: brandEvidence,
   brand_logos: brandLogos,
   internal_links: internalLinks,
+  perception,
 };
 
 const TRUE_VALUES = new Set(['1', 'on', 't', 'true', 'y', 'yes']);

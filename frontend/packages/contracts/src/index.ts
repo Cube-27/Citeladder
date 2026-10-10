@@ -6,6 +6,7 @@ export * from './visibility.ts';
 export * from './site-health.ts';
 export * from './visibility-trends.ts';
 export * from './visibility-evidence.ts';
+export * from './visibility-perception.ts';
 export * from './source-pages.ts';
 export * from './integrations.ts';
 export * from './analytics.ts';
