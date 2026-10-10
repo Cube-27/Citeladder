@@ -12,7 +12,7 @@ const uuid = () => z.uuid();
 // Per answer: `applicable` (parsed for ads, so zero ads is observed),
 // `unavailable` (an ads engine whose answer was not parsed for ads) or
 // `not_applicable` (an engine that does not show ads).
-export const adApplicabilitySchema = z.enum(['applicable', 'unavailable', 'not_applicable']);
+const adApplicabilitySchema = z.enum(['applicable', 'unavailable', 'not_applicable']);
 export const adOwnershipSchema = z.enum(['owned', 'competitor', 'other']);
 
 // `value`: at least one answer parsed for ads. `not_applicable`: the engine

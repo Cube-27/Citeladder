@@ -136,7 +136,7 @@ const brandRuns = (db: Database, scope: RunScope) =>
     .where('audit_scope', '=', visibility.brand_audit_scope);
 
 /** The latest dashboard-ready brand run: what "Latest" means on every visibility read. */
-export async function latestDashboardRunId(db: Database, scope: RunScope): Promise<string> {
+async function latestDashboardRunId(db: Database, scope: RunScope): Promise<string> {
   const latest = await brandRuns(db, scope)
     .select('id')
     .where('status', 'in', visibility.dashboard_audit_statuses)
