@@ -47,6 +47,22 @@
       "client_ip": "client_ip",
       "request_id": "request_id",
       "timestamp_unit": "iso"
+    },
+    "cloudfront_v2_json": {
+      "collection_point": "cdn_edge",
+      "sampling": { "kind": "none" },
+      "timestamp": "timestamp(ms)",
+      "host": "x-host-header",
+      "path": "cs-uri-stem",
+      "method": "cs-method",
+      "status": "sc-status",
+      "user_agent": "cs(User-Agent)",
+      "client_ip": "c-ip",
+      "request_id": "x-edge-request-id",
+      "timestamp_unit": "milliseconds",
+      "timestamp_fallback": { "date": "date", "time": "time" },
+      "missing_tokens": ["-"],
+      "user_agent_decode": "url"
     }
   },
   "max_batch_bytes": 5242880,

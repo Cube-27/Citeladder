@@ -233,6 +233,63 @@ describe('bounded formats', () => {
     expect(() => decodedBody(Buffer.from([255]), undefined)).toThrow(/UTF-8/);
   });
 });
+/** One CloudFront standard logging (v2) JSON record, as Firehose delivers it. */
+const cloudfront = (changes: Record<string, unknown> = {}) => ({
+  'timestamp(ms)': String(now.getTime()),
+  date: now.toISOString().slice(0, 10),
+  time: now.toISOString().slice(11, 19),
+  'c-ip': '192.0.2.2',
+  'sc-status': '200',
+  'cs-method': 'GET',
+  'cs-uri-stem': '/products/guide',
+  'x-edge-request-id': 'edge-request-1',
+  'x-host-header': 'acme.example',
+  'cs(Host)': 'd111111abcdef8.cloudfront.net',
+  'cs(User-Agent)':
+    'Mozilla/5.0%20AppleWebKit/537.36%20(KHTML,%20like%20Gecko;%20compatible;%20GPTBot/1.2;%20+https://openai.com/gptbot)',
+  ...changes,
+});
+describe('CloudFront v2 preset', () => {
+  const preset = crawlLogs.presets.cloudfront_v2_json!;
+  it('reads string epoch milliseconds, the viewer host and the URL-decoded user agent', () => {
+    expect(parseLogLine(JSON.stringify(cloudfront()), 'ndjson', preset)).toEqual({
+      timestamp: now.toISOString(),
+      host: 'acme.example',
+      path: '/products/guide',
+      method: 'GET',
+      status: 200,
+      user_agent:
+        'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.2; +https://openai.com/gptbot)',
+      client_ip: '192.0.2.2',
+      request_id: 'edge-request-1',
+    });
+  });
+  it('treats "-" as absent and falls back to the UTC date and time', () => {
+    const line = JSON.stringify(
+      cloudfront({ 'timestamp(ms)': '-', 'c-ip': '-', 'x-edge-request-id': '-' }),
+    );
+    expect(parseLogLine(line, 'ndjson', preset)).toMatchObject({
+      timestamp: now.toISOString().slice(0, 19) + 'Z',
+      client_ip: null,
+      request_id: null,
+    });
+    expect(
+      parseLogLine(JSON.stringify(cloudfront({ 'sc-status': '-' })), 'ndjson', preset),
+    ).toBeNull();
+    expect(() =>
+      parseLogLine(JSON.stringify(cloudfront({ 'cs(User-Agent)': '-' })), 'ndjson', preset),
+    ).toThrow(UnsupportedLogFormat);
+  });
+  it('keeps an undecodable user agent as sent', () => {
+    expect(
+      parseLogLine(
+        JSON.stringify(cloudfront({ 'cs(User-Agent)': 'GPTBot%E0%A4' })),
+        'ndjson',
+        preset,
+      )?.user_agent,
+    ).toBe('GPTBot%E0%A4');
+  });
+});
 describe('sanitized durable admission', () => {
   it('requires distinct heartbeat keys and rejects a malformed line without losing the batch', async () => {
     const { source } = await setup();

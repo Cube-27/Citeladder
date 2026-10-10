@@ -20,6 +20,11 @@ const preset = z.strictObject({
   client_ip: z.string().min(1),
   request_id: z.string().min(1),
   timestamp_unit: z.enum(['iso', 'seconds', 'milliseconds', 'nanoseconds']),
+  timestamp_fallback: z
+    .strictObject({ date: z.string().min(1), time: z.string().min(1) })
+    .optional(),
+  missing_tokens: z.array(z.string().min(1)).optional(),
+  user_agent_decode: z.literal('url').optional(),
 });
 const schema = z.strictObject({
   ingestion_enabled: z.boolean(),
