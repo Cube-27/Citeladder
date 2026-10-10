@@ -5,8 +5,8 @@ import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import { applyQualityPolicy, probability } from './generation-quality.ts';
+import { groundedSql } from './observed-queries.ts';
 
-const OBSERVED_REF = JSON.stringify([{ kind: policy.prompts.generation.observed.evidence_kind }]);
 type Row = {
   decision: Record<string, unknown>;
   disposition: string;
@@ -86,16 +86,18 @@ export function calibrationReport(rows: Row[]) {
     // Grounded versus ungrounded review outcomes; counts only, never query text.
     by_grounding: Object.fromEntries(
       (['grounded', 'ungrounded'] as const).map((key) => {
-        const members = current.filter((row) => row.grounded === (key === 'grounded'));
-        const yes = members.filter((row) => row.disposition === 'accepted').length,
-          no = members.filter((row) => row.disposition === 'rejected').length;
+        const counts = tally(
+          current.filter((row) => row.grounded === (key === 'grounded')).map((r) => r.disposition),
+        );
+        const accepted = counts.accepted ?? 0,
+          rejected = counts.rejected ?? 0;
         return [
           key,
           {
-            gate_rejected: members.filter((row) => row.disposition === 'gate_rejected').length,
-            accepted: yes,
-            rejected: no,
-            accept_rate: rate(yes, yes + no),
+            gate_rejected: counts.gate_rejected ?? 0,
+            accepted,
+            rejected,
+            accept_rate: rate(accepted, accepted + rejected),
           },
         ];
       }),
@@ -146,7 +148,7 @@ export async function loadCalibration(db: Database, actor: string, since?: Date)
       'candidate.jev_decision',
       'candidate.disposition',
       sql<string>`profile.business_context->>'category'`.as('category'),
-      sql<boolean>`candidate.evidence_refs @> ${OBSERVED_REF}::jsonb`.as('grounded'),
+      groundedSql(sql.ref('candidate.evidence_refs')).as('grounded'),
     ])
     .where('candidate.jev_decision', 'is not', null)
     .where('candidate.disposition', 'in', ['accepted', ...policy.prompts.candidate.outcomes]);

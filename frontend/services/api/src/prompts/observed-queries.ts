@@ -5,7 +5,7 @@
  * rows; it never fetches, and a weight orders queries without ever being
  * presented as AI prompt volume.
  */
-import { sql } from 'kysely';
+import { sql, type RawBuilder } from 'kysely';
 
 import { namesEntity, type EntityPolicy } from '../analysis/aliases.ts';
 import { policy } from '../config.ts';
@@ -13,7 +13,7 @@ import type { Database } from '../db/database.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { classifyProjectQueries, normalizeQuery } from '../demand/classification.ts';
 import { compareText } from '../text-order.ts';
-import { bindingTokens } from './binding.ts';
+import { bindingTokens, sharedTokens } from './binding.ts';
 
 const O = policy.prompts.generation.observed;
 
@@ -27,7 +27,24 @@ export type ObservedQuery = {
   /** Impressions for Search Console, search volume for keyword research: ordering only. */
   weight: number;
 };
-type Sourced = Omit<ObservedQuery, 'topic_id'> & { impressions: number; volume: number };
+type Sourced = Omit<ObservedQuery, 'topic_id'>;
+
+/** The evidence ref a candidate carries for each search that grounded its slot. */
+export const observedRef = (query: Pick<ObservedQuery, 'id' | 'source'>) => ({
+  kind: O.evidence_kind,
+  source: query.source,
+  id: query.id,
+});
+/** Whether evidence refs include an observed search: the one `grounded` rule. */
+export const isGrounded = (refs: unknown) =>
+  Array.isArray(refs) &&
+  refs.some(
+    (ref: unknown) =>
+      typeof ref === 'object' && ref !== null && 'kind' in ref && ref.kind === O.evidence_kind,
+  );
+/** `isGrounded` in SQL, for a jsonb evidence-refs expression; false when absent. */
+export const groundedSql = (refs: RawBuilder<unknown>) =>
+  sql<boolean>`coalesce(${refs} @> ${JSON.stringify([{ kind: O.evidence_kind }])}::jsonb, false)`;
 
 export type ObservedScope = {
   workspaceId: string;
@@ -73,8 +90,6 @@ async function searchConsoleQueries(db: Database, scope: ObservedScope): Promise
     source: 'gsc',
     text: row.normalized_query,
     weight: row.impressions,
-    impressions: row.impressions,
-    volume: 0,
   }));
 }
 
@@ -114,8 +129,6 @@ async function keywordResearchQueries(db: Database, scope: ObservedScope): Promi
     source: 'search_intelligence',
     text: normalizeQuery(row.keyword),
     weight: row.search_volume ?? 0,
-    impressions: 0,
-    volume: row.search_volume ?? 0,
   }));
 }
 
@@ -132,14 +145,17 @@ function bindTopic(text: string, topics: readonly { id: string; tokens: Set<stri
   const own = bindingTokens(text);
   let best: { id: string; shared: number } | null = null;
   for (const topic of topics) {
-    const shared = [...own].filter((token) => topic.tokens.has(token)).length;
+    const shared = sharedTokens(own, topic.tokens);
     if (shared > (best?.shared ?? 0)) best = { id: topic.id, shared };
   }
   return best?.id ?? null;
 }
 
+/** Search Console impressions before keyword volume: weights of different sources never compare. */
 const byWeight = (a: Sourced, b: Sourced) =>
-  b.impressions - a.impressions || b.volume - a.volume || compareText(a.text, b.text);
+  Number(b.source === 'gsc') - Number(a.source === 'gsc') ||
+  b.weight - a.weight ||
+  compareText(a.text, b.text);
 
 /**
  * Non-branded, competitor-free, query-shaped searches bound to one of the
@@ -174,7 +190,7 @@ export async function loadObservedQueries(
   }));
   const kept = new Map<string, number>();
   const seen = new Set<string>();
-  return shaped.toSorted(byWeight).flatMap(({ impressions: _i, volume: _v, ...row }) => {
+  return shaped.toSorted(byWeight).flatMap((row) => {
     if (seen.has(row.text)) return [];
     seen.add(row.text);
     if (classes.get(row.text)?.classification !== 'non_branded') return [];

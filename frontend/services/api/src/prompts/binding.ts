@@ -93,6 +93,13 @@ export function bindingTokens(text: string): Set<string> {
   return new Set(tokensOf(text).map(stem));
 }
 
+/** How many of `a`'s comparable tokens `b` also has. */
+export function sharedTokens(a: ReadonlySet<string>, b: ReadonlySet<string>): number {
+  let count = 0;
+  for (const token of a) if (b.has(token)) count += 1;
+  return count;
+}
+
 function tokensOf(text: string): string[] {
   const normalized = normalize(text);
   return normalized ? normalized.split(' ').filter(eligible) : [];

@@ -5,7 +5,7 @@
  */
 import { namesAlias } from '../analysis/aliases.ts';
 import { policy } from '../config.ts';
-import { bindingTokens } from './binding.ts';
+import { bindingTokens, sharedTokens } from './binding.ts';
 import { hasPlaceholder, words, type Draft } from './generation-drafts.ts';
 import { namesPlace } from './generation-plan.ts';
 import { promptTextHash } from './normalization.ts';
@@ -38,7 +38,7 @@ export function distribution(drafts: readonly Draft[], geo: readonly string[]) {
 
 function jaccard(a: ReadonlySet<string>, b: ReadonlySet<string>) {
   const union = new Set([...a, ...b]).size;
-  return union ? [...a].filter((token) => b.has(token)).length / union : 0;
+  return union ? sharedTokens(a, b) / union : 0;
 }
 
 export type SetMetricsInput = {

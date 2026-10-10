@@ -9,7 +9,7 @@ import { record, strings } from '../db/json.ts';
 import type { GenerationContext, OfferingMap } from './generation-context.ts';
 import { generationSetting, type GenerationInput } from './generation-input.ts';
 import { isNonEmpty, type NonEmpty } from '../lists.ts';
-import { bindingTokens } from './binding.ts';
+import { bindingTokens, sharedTokens } from './binding.ts';
 import type { ObservedQuery } from './observed-queries.ts';
 
 const G = policy.prompts.generation;
@@ -188,17 +188,22 @@ function nextCombo(plan: Planner, combos: NonEmpty<Facet[]>): Facet[] {
  * loader's ranking (Search Console impressions, then keyword volume, then
  * text): weights of different sources are never compared directly.
  */
+type TokenizedSearch = { query: ObservedQuery; tokens: Set<string> };
+/** Each topic's observed searches in loader order, tokenized once per plan. */
+const searchesByTopic = (observed: readonly ObservedQuery[]) =>
+  Map.groupBy(
+    observed.map((query) => ({ query, tokens: bindingTokens(query.text) })),
+    (search) => search.query.topic_id,
+  );
+
 function groundingFor(
-  observed: readonly ObservedQuery[],
-  topicId: string,
+  searches: readonly TokenizedSearch[],
   need: Record<string, string>,
 ): Grounding[] {
   const cell = bindingTokens(Object.values(need).join(' '));
-  const shared = (text: string) => [...bindingTokens(text)].filter((t) => cell.has(t)).length;
   return (
-    observed
-      .filter((query) => query.topic_id === topicId)
-      .map((query) => ({ query, shared: shared(query.text) }))
+    searches
+      .map(({ query, tokens }) => ({ query, shared: sharedTokens(tokens, cell) }))
       // A stable sort, so equal overlap keeps the loader's order.
       .toSorted((a, b) => b.shared - a.shared)
       .slice(0, G.observed.examples_per_slot)
@@ -218,6 +223,7 @@ export function planSlots(
   suggestions: OfferingMap[],
 ): Slot[] {
   const plans = planners(context, suggestions);
+  const searches = searchesByTopic(context.observed);
   const markets = plannedMarkets(context),
     share = locationShare(context),
     stages = G.stages;
@@ -254,7 +260,7 @@ export function planSlots(
       const need: Record<string, string> = { offering: plan.map?.offering ?? plan.topic.name };
       for (const facet of combo) need[facets[facet.dimension]!] = facet.value;
       if (market) need.market = market;
-      const grounding = groundingFor(context.observed, plan.topic.id, need);
+      const grounding = groundingFor(searches.get(plan.topic.id) ?? [], need);
       return {
         slot_id: `q${index + 1}`,
         topic_id: plan.topic.id,

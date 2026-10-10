@@ -37,6 +37,7 @@ import { distribution } from './generation-metrics.ts';
 import { dimensions, geoTerms } from './generation-plan.ts';
 import { gatedOut, judgeDrafts, selectDrafts } from './generation-quality.ts';
 import { acquireProjectLock, acquirePromptSetLock } from './locks.ts';
+import { observedRef } from './observed-queries.ts';
 import { scopedPromptSet } from './prompt-sets.ts';
 import { listTopics } from './topics.ts';
 import { compareText } from '../text-order.ts';
@@ -80,11 +81,7 @@ function candidateRow(draft: Draft, { workspaceId, setId, runId, cohort, now }: 
     slot_id: draft.slot.slot_id,
     evidence_refs: JSON.stringify([
       draft.slot.evidence_ref,
-      ...(draft.slot.grounding ?? []).map((example) => ({
-        kind: policy.prompts.generation.observed.evidence_kind,
-        source: example.source,
-        id: example.id,
-      })),
+      ...(draft.slot.grounding ?? []).map(observedRef),
     ]),
     validation: JSON.stringify({
       admission: 'passed',

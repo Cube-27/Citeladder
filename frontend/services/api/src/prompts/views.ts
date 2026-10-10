@@ -14,8 +14,9 @@ import type { Selectable } from 'kysely';
 import { z } from 'zod';
 
 import { policy } from '../config.ts';
-import { jsonObject, record, strings } from '../db/json.ts';
+import { jsonObject, strings } from '../db/json.ts';
 import type { PromptCandidates, Prompts, PromptSets, Topics } from '../generated/db-schema.ts';
+import { isGrounded } from './observed-queries.ts';
 
 export type PromptRow = Selectable<Prompts>;
 export type PromptSetRow = Selectable<PromptSets>;
@@ -77,11 +78,6 @@ export function topicView(row: TopicRow, activeCount: number): TopicView {
     updated_at: row.updated_at.toISOString(),
   };
 }
-
-const OBSERVED = policy.prompts.generation.observed.evidence_kind;
-/** Whether a candidate's evidence includes one of the project's observed searches. */
-const isGrounded = (refs: unknown) =>
-  Array.isArray(refs) && refs.some((ref: unknown) => record(ref).kind === OBSERVED);
 
 /** `judged`, the run's reported gate (`off`/`unavailable`), or `not_judged`. */
 function qualityStatus(decision: Record<string, unknown> | null, runGate: string | null) {

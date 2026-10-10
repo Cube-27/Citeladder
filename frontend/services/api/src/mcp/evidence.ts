@@ -1,6 +1,7 @@
 /** Project reads over the prompt, Action, demand, commerce and research owners. */
 import { sql } from 'kysely';
 import { policy } from '../config.ts';
+import { groundedSql } from '../prompts/observed-queries.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { strings } from '../db/json.ts';
 import { isoDateText, utcText } from '../db/timestamps.ts';
@@ -118,8 +119,6 @@ export function integrationStatus({ db, scope }: ProjectRead): Promise<Evidence>
   return readProjectReadiness(db, scope);
 }
 
-const OBSERVED_REF = JSON.stringify([{ kind: policy.prompts.generation.observed.evidence_kind }]);
-
 export async function promptPortfolio(
   { db, scope }: ProjectRead,
   args: Page & {
@@ -150,11 +149,7 @@ export async function promptPortfolio(
     ])
     .select(utcText(sql.ref('p.created_at')).as('cursor_at'))
     // Whether the project's own searches informed the wording; never the queries.
-    .select(
-      sql<boolean>`coalesce(p.generation_evidence->'evidence_refs' @> ${OBSERVED_REF}::jsonb, false)`.as(
-        'grounded',
-      ),
-    )
+    .select(groundedSql(sql`p.generation_evidence->'evidence_refs'`).as('grounded'))
     .where('projects.id', '=', scope.projectId);
   if (args.prompt_set_id) query = query.where('s.id', '=', args.prompt_set_id);
   if (args.active_only)
