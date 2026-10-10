@@ -25,6 +25,7 @@
     "dev:app-worker": "wrangler dev -c apps/app/wrangler.jsonc --local",
     "types:app-worker": "wrangler types -c apps/app/wrangler.jsonc --no-include-runtime apps/app/worker-configuration.d.ts && node scripts/scope-worker-types.mjs && vp fmt --write apps/app/worker-configuration.d.ts",
     "deploy:app": "wrangler deploy -c apps/app/wrangler.jsonc",
+    "deploy:api-host": "wrangler deploy -c apps/api-host/wrangler.jsonc",
     "preview:vite": "vp preview -c apps/app/vite.config.ts",
     "lint": "vp lint",
     "format": "vp fmt --write",

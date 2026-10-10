@@ -111,7 +111,7 @@ Machine ingest lives on the API host `api.citeladder.com` (API-OWNED; see the
 `POST /v1/crawl-logs/ingest/{source_id}` with the source's Bearer token, and
 `POST /v1/crawl-logs/firehose/{source_id}` for Amazon Data Firehose. The token
 identifies its existing authorized workspace/project; no caller-supplied project
-can redirect it. The marketing Worker forwards only these two routes to the
+can redirect it. The API host's own Worker (`apps/api-host`) forwards only these two routes to the
 protected origin, without cookies; the API serves `/v1` routes on that host
 alone, and the apex and app hosts refuse them. Browser APIs stay same-origin
 `/api/v1`.

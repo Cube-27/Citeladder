@@ -1,6 +1,10 @@
-import { proxyWorkerRequest } from '@/lib/server/worker-origin-proxy';
+import { proxyWorkerRequest } from '../../lib/server/worker-origin-proxy';
 
-/** Bindings the API host needs; the marketing host's bindings stay with apex-route. */
+/**
+ * The `api.citeladder.com` Worker (API-OWNED): machine senders only, no assets,
+ * no cookies. It forwards an allowlist to Cloud Run with the origin token and
+ * answers everything else with a JSON 404.
+ */
 export interface ApiHostEnv {
   ORIGIN_UPSTREAM: string;
   ORIGIN_TOKEN: string;
@@ -18,11 +22,6 @@ const MACHINE_ROUTES: readonly { method: string; path: RegExp }[] = [
   { method: 'POST', path: new RegExp(`^/v1/crawl-logs/firehose/${UUID}$`, 'u') },
 ];
 
-/** Whether this request is addressed to the API host; it never reaches Astro or the assets. */
-export function isApiHostRequest(request: Request, env: ApiHostEnv): boolean {
-  return env.PUBLIC_API_HOST !== '' && new URL(request.url).hostname === env.PUBLIC_API_HOST;
-}
-
 function notFound(): Response {
   return Response.json(
     { error: { code: 'not_found' } },
@@ -38,6 +37,8 @@ export async function routeApiHostRequest(request: Request, env: ApiHostEnv): Pr
   const url = new URL(request.url);
   const localHttp = env.LOCAL_WORKER_ORIGIN === 'true' && url.protocol === 'http:';
   if (!localHttp && url.protocol !== 'https:') return notFound();
+  // Only the configured host; a workers.dev or preview URL is never served.
+  if (url.hostname !== env.PUBLIC_API_HOST) return notFound();
   const allowed = MACHINE_ROUTES.some(
     (route) => route.method === request.method && route.path.test(url.pathname),
   );
@@ -51,3 +52,9 @@ export async function routeApiHostRequest(request: Request, env: ApiHostEnv): Pr
     allowDevelopmentHttp: localHttp,
   });
 }
+
+const apiHostWorker = {
+  fetch: (request: Request, env: ApiHostEnv) => routeApiHostRequest(request, env),
+};
+
+export default apiHostWorker;

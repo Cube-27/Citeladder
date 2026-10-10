@@ -3,7 +3,6 @@ import { readFile } from 'node:fs/promises';
 const expected = {
   name: 'citeladder-marketing',
   domain: 'citeladder.com',
-  apiDomain: 'api.citeladder.com',
   upstream: 'https://citeladder-api-44437656491.us-central1.run.app',
   app: 'https://app.citeladder.com',
 };
@@ -13,14 +12,10 @@ const config = JSON.parse(
 );
 const correctTarget =
   config.name === expected.name &&
-  config.routes?.length === 2 &&
+  config.routes?.length === 1 &&
   config.routes[0].pattern === expected.domain &&
   config.routes[0].custom_domain === true &&
-  config.routes[1].pattern === expected.apiDomain &&
-  config.routes[1].custom_domain === true &&
-  config.assets?.run_worker_first === true &&
   config.vars?.PUBLIC_WEBSITE_HOST === expected.domain &&
-  config.vars?.PUBLIC_API_HOST === expected.apiDomain &&
   config.vars?.ORIGIN_UPSTREAM === expected.upstream &&
   config.vars?.PUBLIC_APP_ORIGIN === expected.app &&
   config.workers_dev === false &&

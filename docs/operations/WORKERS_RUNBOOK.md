@@ -69,7 +69,7 @@ not make a second progress document.
 | `PUBLIC_WEBSITE_ORIGIN` | `https://citeladder.com` |
 | `PUBLIC_APP_ORIGIN` | `https://app.citeladder.com` |
 | `PUBLIC_API_ORIGIN` (app build) | `https://api.citeladder.com` |
-| Marketing Worker `PUBLIC_API_HOST` (committed) | `api.citeladder.com` |
+| API host Worker `PUBLIC_API_HOST` (committed) | `api.citeladder.com` |
 | Workers `ORIGIN_UPSTREAM` (committed) | `https://citeladder-api-44437656491.us-central1.run.app` |
 
 `PUBLIC_*` values are baked into Worker artifacts. Changing either requires a
@@ -97,19 +97,18 @@ method, owner, focused test and removal condition in the release record.
 ## API host (api.citeladder.com)
 
 `api.citeladder.com` is **API-OWNED**: machine senders (CDN log streams, and
-later the public API and MCP) call it; browsers never do. It is a second Custom
-Domain on the marketing Worker, so it uses the same origin token and needs no new
-origin credential.
+later the public API and MCP) call it; browsers never do. It is its own small
+Worker, **citeladder-api-host** (`frontend/apps/api-host/`), with no assets. The
+marketing Worker keeps serving its static files without a Worker invocation, so
+marketing traffic never spends the free plan's daily Worker requests; only machine
+deliveries to this host do. It uses the same origin token as the other Workers.
 
-- The Worker entry (`apps/marketing/src/worker.ts`) answers the API host before
-  Astro or the assets binding (`run_worker_first: true`), so no marketing page
-  or file is served there. The marketing host still gets its files through
-  `env.ASSETS.fetch`, with `_headers` caching intact.
-- Allowlist (`apps/marketing/src/api-host-route.ts`), forwarded unchanged with
+- Allowlist (`apps/api-host/worker.ts`), forwarded unchanged with
   `X-CiteLadder-Origin-Token` and `X-CiteLadder-Public-Host: api.citeladder.com`:
   `POST /v1/crawl-logs/ingest/{uuid}` and `POST /v1/crawl-logs/firehose/{uuid}`.
   Anything else is `404 {"error":{"code":"not_found"}}`. Cookies are neither
   read nor forwarded.
+- Any other hostname (a `workers.dev` or preview URL) gets the same 404.
 - The API admits the host from `PUBLIC_API_URL` and serves it `/v1/...` only.
   The apex and app hosts refuse `/v1/...` with 404.
 
@@ -117,9 +116,15 @@ Owner steps (DNS and Cloudflare; code cannot do these):
 
 1. Deploy the API with `PUBLIC_API_URL=https://api.citeladder.com` (set by
    `infra/gcp/locals.tf`) before the Worker, so the origin accepts the host.
-2. Deploy the marketing Worker. Wrangler attaches the `api.citeladder.com`
-   Custom Domain from `wrangler.jsonc`; Cloudflare creates the DNS record and
-   certificate. If a DNS record named `api` already exists, remove it first.
+2. Set the Worker secret once:
+   `pnpm exec wrangler secret put ORIGIN_TOKEN -c apps/api-host/wrangler.jsonc`
+   from `frontend/`, with the same value as the other Workers. Then run
+   **API host Worker delivery** (`.github/workflows/workers-api-host-deploy.yml`,
+   which reuses the `workers-app-production` environment's Cloudflare
+   credentials) or `pnpm deploy:api-host`. Wrangler attaches the
+   `api.citeladder.com` Custom Domain from `apps/api-host/wrangler.jsonc`;
+   Cloudflare creates the DNS record and certificate. If a DNS record named
+   `api` already exists, remove it first.
 3. Build and deploy the app Worker with `PUBLIC_API_ORIGIN=https://api.citeladder.com`
    so crawl-log setup shows the API host.
 4. Run the release smoke below.
@@ -189,8 +194,8 @@ client-supplied copies.
    Store it in the protected `gcp-demo` GitHub environment secret
    `CITELADDER_ORIGIN_TOKEN`. The deploy versions it into Secret Manager as
    `citeladder-worker-origin-token`, and only the Cloud Run API receives it.
-   Store the same value as the `ORIGIN_TOKEN` Worker secret on `citeladder-app`
-   and `citeladder-marketing`. Never reuse JWT, provider or customer
+   Store the same value as the `ORIGIN_TOKEN` Worker secret on `citeladder-app`,
+   `citeladder-marketing` and `citeladder-api-host`. Never reuse JWT, provider or customer
    credentials for this purpose.
 2. `ORIGIN_UPSTREAM` is committed in each `wrangler.jsonc`. The project number
    makes it deterministic, and the deploy summary prints the same URL.
@@ -201,7 +206,7 @@ client-supplied copies.
 
 For rotation, set `CITELADDER_ORIGIN_TOKEN_PREVIOUS` to the currently active
 value and change `CITELADDER_ORIGIN_TOKEN` to a new value in the protected
-environment. Deploy the API so it accepts both, update both Workers to the new
+environment. Deploy the API so it accepts both, update every Worker to the new
 secret, and verify through each deployed path. Then clear the previous value
 and redeploy. Record version references and test results, never values.
 

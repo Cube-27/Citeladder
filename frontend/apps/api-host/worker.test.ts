@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
-import { isApiHostRequest, routeApiHostRequest, type ApiHostEnv } from './api-host-route';
+import { routeApiHostRequest, type ApiHostEnv } from './worker';
 
 const env: ApiHostEnv = {
   ORIGIN_UPSTREAM: 'https://origin.citeladder.com',
@@ -24,12 +24,17 @@ function captureUpstream() {
 }
 
 describe('API host route ownership', () => {
-  it('claims only requests addressed to the API host', () => {
-    expect(isApiHostRequest(new Request('https://api.citeladder.com/pricing'), env)).toBe(true);
-    expect(isApiHostRequest(new Request('https://citeladder.com/pricing'), env)).toBe(false);
-    expect(
-      isApiHostRequest(new Request('https://api.citeladder.com/'), { ...env, PUBLIC_API_HOST: '' }),
-    ).toBe(false);
+  it('serves only the configured host', async () => {
+    const sent = captureUpstream();
+    const response = await routeApiHostRequest(
+      new Request(`https://citeladder-api-host.workers.dev/v1/crawl-logs/ingest/${SOURCE}`, {
+        method: 'POST',
+        body: '{}',
+      }),
+      env,
+    );
+    expect(response.status).toBe(404);
+    expect(sent).toHaveLength(0);
   });
   it.each(['ingest', 'firehose'])(
     'forwards POST /v1/crawl-logs/%s with the origin token and API public host, without cookies',
