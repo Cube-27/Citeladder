@@ -8,6 +8,7 @@ import { assessEntities } from './entity-assessment.ts';
 import { classifySourceDomain, classifySourceOrigin } from './opportunities/source-patterns.ts';
 import { citationIdentity } from '../source-pages/identity.ts';
 import { fanoutProjection } from './fanout.ts';
+import { enqueuePerception } from '../perception/admission.ts';
 
 /** Caller holds the scoped audit/task lock and commits alongside the immutable artifact. */
 export const analyzeExecution: DeriveExecution = async (db, task, audit, artifactId) => {
@@ -53,7 +54,8 @@ export const analyzeExecution: DeriveExecution = async (db, task, audit, artifac
   };
   const at = new Date(),
     id = randomUUID(),
-    versions = policy.audits.analysis;
+    versions = policy.audits.analysis,
+    assessments = assessEntities(artifact.answer_text, config);
   await db
     .insertInto('response_analyses')
     .values({
@@ -88,7 +90,7 @@ export const analyzeExecution: DeriveExecution = async (db, task, audit, artifac
       }),
       avg_position: score.brand_position,
       score: JSON.stringify(score),
-      entity_assessments: JSON.stringify(assessEntities(artifact.answer_text, config)),
+      entity_assessments: JSON.stringify(assessments),
       created_at: at,
     })
     .execute();
@@ -165,4 +167,12 @@ export const analyzeExecution: DeriveExecution = async (db, task, audit, artifac
     .where('audit_id', '=', audit.id)
     .where('id', '=', task.id)
     .execute();
+  await enqueuePerception(db, {
+    workspaceId: task.workspace_id,
+    projectId: audit.project_id,
+    auditScope: audit.audit_scope,
+    configuration: audit.configuration,
+    analysisId: id,
+    assessments,
+  });
 };

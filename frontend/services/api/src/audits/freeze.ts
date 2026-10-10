@@ -10,6 +10,7 @@ import type { AuditInput } from './inputs.ts';
 import { freezeCommerceContext } from '../commerce/audit-context.ts';
 import { frozenEntityMatching, projectEntityMatching } from '../analysis/entity-matching.ts';
 import { strings } from '../db/json.ts';
+import { currentPerceptionVersions } from '../perception/admission.ts';
 import {
   searchPayload,
   searchPolicy,
@@ -280,6 +281,8 @@ export async function prepareAudit(
     request_timeout_seconds: settings.audit_timeout_seconds,
     anthropic_max_uses: providerSettings.anthropicMaxUses,
     slot_order_version: 'mt19937-v1',
+    // Perception results carry the versions in force at admission.
+    perception: currentPerceptionVersions(),
     panel_id: panelHash.slice(0, 16),
     panel_hash: panelHash,
     prompt_hashes: promptRows.map((row) => createHash('sha256').update(row.text).digest('hex')),

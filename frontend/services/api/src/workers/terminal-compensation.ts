@@ -8,10 +8,12 @@ import { getLogger } from '../logging.ts';
 import type { QueueTask, ClaimScope } from '../queue/task-queue.ts';
 import { compensateInternalLinks } from '../site-health/internal-link-judgments.ts';
 import { compensateInspection } from '../source-pages/inspector.ts';
+import { compensatePerception } from '../perception/executor.ts';
 
 const compensators: Record<string, (db: Database, task: QueueTask) => Promise<void>> = {
   source_page_inspection: compensateInspection,
   internal_link_judgment: compensateInternalLinks,
+  answer_perception: compensatePerception,
 };
 
 function mark(db: Database, task: QueueTask, fields: Record<string, unknown>) {
