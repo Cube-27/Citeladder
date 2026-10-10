@@ -186,22 +186,31 @@ export async function crawlLogTick(
     .select('workspace_id')
     .distinct()
     .execute();
-  for (const workspace of workspaces) {
-    // A paused collection is not the sender's silence.
-    if (crawlLogs.ingestion_enabled) {
-      if (!canAdmit()) return;
-      await stallQuietSources(db, workspace.workspace_id, now);
-    }
-    for (const kind of ['bot_request_retention_sweep', 'crawl_log_upload_abandon_sweep']) {
-      if (!canAdmit()) return;
-      await enqueueTask(db, {
-        workspaceId: workspace.workspace_id,
-        projectId: null,
-        kind,
-        payload: {},
-        keyParts: [workspace.workspace_id, now.toISOString().slice(0, 10)],
-        maxAttempts: crawlLogs.task_max_attempts,
-      });
-    }
+  for (const workspace of workspaces)
+    if (!(await maintainWorkspace(db, workspace.workspace_id, now, canAdmit))) return;
+}
+/** One workspace's daily crawl-log upkeep; false once the tick's budget is spent. */
+async function maintainWorkspace(
+  db: Database,
+  workspaceId: string,
+  now: Date,
+  canAdmit: () => boolean,
+) {
+  // A paused collection is not the sender's silence.
+  if (crawlLogs.ingestion_enabled) {
+    if (!canAdmit()) return false;
+    await stallQuietSources(db, workspaceId, now);
   }
+  for (const kind of ['bot_request_retention_sweep', 'crawl_log_upload_abandon_sweep']) {
+    if (!canAdmit()) return false;
+    await enqueueTask(db, {
+      workspaceId,
+      projectId: null,
+      kind,
+      payload: {},
+      keyParts: [workspaceId, now.toISOString().slice(0, 10)],
+      maxAttempts: crawlLogs.task_max_attempts,
+    });
+  }
+  return true;
 }

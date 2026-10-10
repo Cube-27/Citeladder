@@ -18,7 +18,6 @@ import { getLogger } from '../logging.ts';
 import { authorizeToken } from './sources.ts';
 import { batchQuota, boundedBody, decodedBody, diagnosticReceipt, ingest } from './ingest.ts';
 import { markStalled } from './stall.ts';
-import { reportingDay } from './state.ts';
 
 const logger = getLogger('api.crawl_logs.firehose');
 /** Firehose's own bounds: 10,000 records, each at most 1,000 KiB decoded. */
@@ -86,7 +85,8 @@ function envelope(text: string, requestId: string) {
   let rejected = 0;
   for (const record of parsed.data.records) {
     const decoded = recordLines(record.data);
-    if (decoded) lines.push(...decoded);
+    // One record may hold many lines; append without spreading them as arguments.
+    if (decoded) for (const line of decoded) lines.push(line);
     else rejected += 1;
   }
   return { lines, rejected };
@@ -99,25 +99,26 @@ async function admit(
   requestId: string,
   { lines, rejected }: { lines: string[]; rejected: number },
   now: Date,
+  receivedBytes: number,
 ) {
   const size = crawlLogs.max_lines_per_batch;
   const chunks = Math.max(1, Math.ceil(lines.length / size));
   for (let index = 0; index < chunks; index += 1) {
     const key = `firehose:${requestId}:${index}`;
-    // The first chunk's attempt quota was spent before the body was read.
-    if (index > 0) await batchQuota(db, source, now, key);
-    await ingest(
-      db,
-      source,
-      Buffer.from(lines.slice(index * size, (index + 1) * size).join('\n')),
-      {
-        key,
-        now,
-        tokenHash: source.token_hash!,
-        quotaChecked: true,
-        rejectedRecords: index === 0 ? rejected : 0,
-      },
-    );
+    // Chunks are admitted in order, each under its own key and attempt quota;
+    // the first chunk's quota was spent before the body was read.
+    if (index > 0) await batchQuota(db, source, now, key); // NOSONAR
+    const chunk = Buffer.from(lines.slice(index * size, (index + 1) * size).join('\n'));
+    const options = {
+      key,
+      now,
+      tokenHash: source.token_hash!,
+      quotaChecked: true,
+      // The first receipt carries the whole request, undecodable records included.
+      rejectedRecords: index === 0 ? rejected : 0,
+      receivedBytes: index === 0 ? receivedBytes : 0,
+    };
+    await ingest(db, source, chunk, options); // NOSONAR
   }
 }
 
@@ -146,7 +147,7 @@ export async function firehoseDelivery(
       throw new ApiError(409, 'This source is not an Amazon Firehose source');
     await batchQuota(db, source, now, `firehose:${requestId}:0`);
     const body = decodedBody(await boundedBody(request), headers.encoding);
-    await admit(db, source, requestId, envelope(body, requestId), now);
+    await admit(db, source, requestId, envelope(body, requestId), now, Buffer.byteLength(body));
     return reply(200, requestId);
   } catch (error) {
     if (!(error instanceof ApiError)) {
@@ -158,7 +159,7 @@ export async function firehoseDelivery(
     }
     // Firehose drops a 413 batch for good; the receipt and the source row say so.
     if (error.status === 413 && source) {
-      await diagnosticReceipt(db, source, 'oversize', now, reportingDay(now, 'UTC'));
+      await diagnosticReceipt(db, source, 'oversize', now);
       await markStalled(db, source, 'oversize', now);
     }
     return reply(statusFor(error), requestId, error.message);

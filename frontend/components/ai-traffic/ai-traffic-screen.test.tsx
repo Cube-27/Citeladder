@@ -118,6 +118,52 @@ describe('AI Traffic state and navigation', () => {
       screen.getByText('A batch over 5 MiB was dropped. Lower the stream buffer size.'),
     ).toBeVisible();
   });
+  it('shows the Firehose endpoint for a rotated Amazon CloudFront token', async () => {
+    const id = '99999999-9999-4999-8999-999999999999';
+    mswServer.use(
+      http.get(root + '/crawl-logs/sources', () =>
+        HttpResponse.json({
+          availability: 'available',
+          items: [
+            {
+              id,
+              kind: 'webhook',
+              setup: 'aws_firehose',
+              preset: 'cloudfront_v2_json',
+              buffer_interval_seconds: 60,
+              format: 'ndjson',
+              collection_point: 'cdn_edge',
+              sampling: { kind: 'none' },
+              origin: 'https://example.test',
+              host: 'example.test',
+              status: 'active',
+              state: 'active',
+              stall_reason: null,
+              stalled_at: null,
+              token_prefix: 'clw_abcdefgh',
+              connection: 'connected',
+              last_accepted_batch: null,
+              last_processed_at: null,
+              rejected_lines: 0,
+              overlapping_lines: 0,
+              unsupported_uploads: 0,
+              unsupported_batches: 0,
+            },
+          ],
+        }),
+      ),
+      http.post(root + '/crawl-logs/sources/' + id + '/rotate', () =>
+        HttpResponse.json({ id, token: 'clw_rotated' }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderWithProviders(<CrawlLogConnections />);
+    await user.click(await screen.findByRole('button', { name: 'Rotate token' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Connect crawl logs' });
+    expect(
+      await within(dialog).findByText(new RegExp('/v1/crawl-logs/firehose/' + id)),
+    ).toBeVisible();
+  });
   it('keeps setup unavailable on a failed availability read and recovers on retry', async () => {
     mswServer.use(
       http.get(root + '/crawl-logs/sources', () => new HttpResponse(null, { status: 500 })),

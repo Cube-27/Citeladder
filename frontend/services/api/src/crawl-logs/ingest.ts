@@ -85,13 +85,7 @@ export async function batchQuota(
  * One diagnostic receipt per source and day records the refusal.
  */
 async function receivedBytesCeiling(db: Database, source: Selectable<CrawlLogSources>, now: Date) {
-  const state = await db
-    .selectFrom('crawl_log_states')
-    .select('reporting_timezone')
-    .where('workspace_id', '=', source.workspace_id)
-    .where('project_id', '=', source.project_id)
-    .executeTakeFirst();
-  const tz = state?.reporting_timezone ?? crawlLogs.default_reporting_timezone;
+  const tz = await reportingTimezone(db, source);
   const day = sql<Date>`(date_trunc('day', ${now}::timestamptz at time zone ${tz}) at time zone ${tz})`;
   const usage = await db
     .selectFrom('crawl_log_batches')
@@ -106,22 +100,32 @@ async function receivedBytesCeiling(db: Database, source: Selectable<CrawlLogSou
     .where('received_at', '>=', day)
     .executeTakeFirstOrThrow();
   if (Number(usage.used) < crawlLogs.received_bytes_per_project_per_day) return;
-  await diagnosticReceipt(db, source, 'bytes_ceiling', now, reportingDay(now, tz));
+  await diagnosticReceipt(db, source, 'bytes_ceiling', now);
   throw new ApiError(429, 'Daily received log volume reached for this project', {
     headers: { 'Retry-After': String(Math.max(1, usage.retry_after)) },
   });
 }
+/** The project's persisted reporting timezone, read without a lock. */
+async function reportingTimezone(db: Database, source: Selectable<CrawlLogSources>) {
+  const state = await db
+    .selectFrom('crawl_log_states')
+    .select('reporting_timezone')
+    .where('workspace_id', '=', source.workspace_id)
+    .where('project_id', '=', source.project_id)
+    .executeTakeFirst();
+  return state?.reporting_timezone ?? crawlLogs.default_reporting_timezone;
+}
 /**
  * A refusal the sender only sees as a status code, kept as a zero-line receipt.
- * Keyed per source, kind and reporting day, so retries add no rows.
+ * Keyed per source, kind and the project's reporting day, so retries add no rows.
  */
 export async function diagnosticReceipt(
   db: Database,
   source: Selectable<CrawlLogSources>,
   status: 'bytes_ceiling' | 'oversize',
   now: Date,
-  day: string,
 ) {
+  const day = reportingDay(now, await reportingTimezone(db, source));
   await db
     .insertInto('crawl_log_batches')
     .values({
@@ -170,6 +174,8 @@ export async function ingest(
     quotaChecked?: boolean;
     /** Records an adaptor could not decode into lines; counted as rejected lines. */
     rejectedRecords?: number;
+    /** Decompressed bytes the sender delivered, when more than this batch's lines. */
+    receivedBytes?: number;
   },
 ) {
   await requireCrawlLogs(db, source.workspace_id);
@@ -274,7 +280,7 @@ export async function ingest(
           !validation &&
           lines.length === 0 &&
           rejectedRecords === 0,
-        bytes_received: bytes,
+        bytes_received: options.receivedBytes ?? bytes,
       })
       .execute();
     if (receiptStatus === 'accepted') await clearStall(trx, current);

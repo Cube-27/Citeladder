@@ -153,7 +153,7 @@ function FirehoseFields({ model }: Readonly<{ model: ReturnType<typeof useCrawlC
     <>
       <Field
         label="Firehose buffer interval (seconds)"
-        hint={`Use the value set on the stream; ${FIREHOSE_BUFFER_INTERVAL.min}–300 is recommended.`}
+        hint={`Use the value set on the stream; ${FIREHOSE_BUFFER_INTERVAL.min}–${FIREHOSE_BUFFER_INTERVAL.recommendedMax} is recommended.`}
       >
         {(field) => (
           <Input

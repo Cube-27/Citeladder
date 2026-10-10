@@ -132,7 +132,11 @@ export function useCrawlConnections({
       return aiTrafficApi.mutateSource(projectId, action.id, action.kind, options);
     },
     onSuccess: async (result, action) => {
-      setIssued(action.kind === 'create' ? { ...result, setup } : result);
+      const issuedSetup =
+        action.kind === 'create'
+          ? setup
+          : sources.data?.items.find((source) => source.id === action.id)?.setup;
+      setIssued({ ...result, setup: issuedSetup });
       if (action.kind === 'create' && setup === 'upload') setSourceId(result.id);
       if (action.kind === 'revoke' && sourceId === action.id) setSourceId('');
       await refresh();

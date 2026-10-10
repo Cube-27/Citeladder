@@ -86,6 +86,7 @@
   "rollup_freeze_margin_days": 7,
   "refresh_delay_seconds": 120,
   "max_delivery_gap_minutes": 5,
+  "buffered_delivery_grace_minutes": 5,
   "ip_range_refresh_hours": 24,
   "ip_range_max_age_hours": 72,
   "ip_range_contemporaneous_hours": 24,

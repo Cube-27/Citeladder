@@ -121,26 +121,30 @@ describe('Firehose delivery', () => {
   });
   it('isolates an undecodable record and scopes by the viewer host, not the distribution', async () => {
     const { id, token } = await firehoseSource();
-    const response = await deliver(
-      id,
-      token,
-      envelope('req-isolated', [
-        { data: '%%%not-base64%%%' },
-        record(log(), log({ 'x-host-header': 'elsewhere.example' })),
-      ]),
-      { requestId: 'req-isolated' },
-    );
+    const body = envelope('req-isolated', [
+      { data: '%%%not-base64%%%' },
+      record(log(), log({ 'x-host-header': 'elsewhere.example' })),
+    ]);
+    const response = await deliver(id, token, body, { requestId: 'req-isolated' });
     expect(response.status).toBe(200);
     const [receipt] = await db
       .selectFrom('crawl_log_batches')
-      .select(['lines_received', 'lines_matched', 'lines_rejected', 'lines_out_of_scope'])
+      .select([
+        'lines_received',
+        'lines_matched',
+        'lines_rejected',
+        'lines_out_of_scope',
+        'bytes_received',
+      ])
       .where('source_id', '=', id)
       .execute();
+    // The whole decompressed request counts toward the daily volume, bad records included.
     expect(receipt).toEqual({
       lines_received: 3,
       lines_matched: 1,
       lines_rejected: 1,
       lines_out_of_scope: 1,
+      bytes_received: Buffer.byteLength(body),
     });
   });
   it('replays a retried request ID with its original receipt and no quota spend', async () => {

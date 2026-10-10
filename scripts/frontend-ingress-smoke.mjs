@@ -60,13 +60,13 @@ await Promise.all(
 );
 // Machine routes belong to the API host alone.
 assert.equal((await get(app, MACHINE_PATH)).status, 404, 'The app host refuses /v1 machine paths');
-if (api) {
-  for (const path of ['/', '/pricing', '/api/v1/brand-discovery-catalog']) {
-    const refused = await get(api, path);
-    assert.equal(refused.status, 404, `The API host does not serve ${path}`);
-    assert.deepEqual(await refused.json(), { error: { code: 'not_found' } });
-  }
+async function apiHostRejects(path) {
+  const refused = await get(api, path);
+  assert.equal(refused.status, 404, `The API host does not serve ${path}`);
+  assert.deepEqual(await refused.json(), { error: { code: 'not_found' } });
 }
+if (api)
+  await Promise.all(['/', '/pricing', '/api/v1/brand-discovery-catalog'].map(apiHostRejects));
 await Promise.all(
   [
     '/login',

@@ -52,6 +52,7 @@ const schema = z.strictObject({
   rollup_freeze_margin_days: positive,
   refresh_delay_seconds: positive,
   max_delivery_gap_minutes: positive,
+  buffered_delivery_grace_minutes: positive,
   ip_range_refresh_hours: positive,
   ip_range_max_age_hours: positive,
   ip_range_contemporaneous_hours: positive,

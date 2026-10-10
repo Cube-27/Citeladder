@@ -97,13 +97,20 @@ function logTimestamp(value: unknown, unit: LogMapping['timestamp_unit']) {
     ? timestamp
     : null;
 }
-/** UTC date and time fields as one ISO timestamp, or absent. */
+/** UTC date and time fields as one ISO timestamp, or absent; a calendar-impossible value is absent. */
 function fallbackTimestamp(date: unknown, time: unknown) {
-  return typeof date === 'string' &&
-    typeof time === 'string' &&
-    /^\d{4}-\d{2}-\d{2}$/u.test(date) &&
-    /^\d{2}:\d{2}:\d{2}$/u.test(time)
-    ? `${date}T${time}Z`
+  if (
+    typeof date !== 'string' ||
+    typeof time !== 'string' ||
+    !/^\d{4}-\d{2}-\d{2}$/u.test(date) ||
+    !/^\d{2}:\d{2}:\d{2}$/u.test(time)
+  )
+    return undefined;
+  const stamp = `${date}T${time}`;
+  const parsed = Date.parse(stamp + 'Z');
+  // Date normalizes 2026-02-31 into March; only a value that round-trips is a real instant.
+  return Number.isFinite(parsed) && new Date(parsed).toISOString().slice(0, 19) === stamp
+    ? stamp + 'Z'
     : undefined;
 }
 function decodedUserAgent(value: string, decode: LogMapping['user_agent_decode']) {

@@ -40,7 +40,12 @@ export const CRAWL_LOG_SETUPS = [
   },
 ] as const;
 /** The Firehose buffer interval suggested at setup, and the range the API accepts. */
-export const FIREHOSE_BUFFER_INTERVAL = { default: 60, min: 60, max: 900 } as const;
+export const FIREHOSE_BUFFER_INTERVAL = {
+  default: 60,
+  min: 60,
+  recommendedMax: 300,
+  max: 900,
+} as const;
 /** The generated Firehose transformation Lambda, served by the docs site. */
 export const FIREHOSE_FILTER_TEMPLATE = docsUrl('/templates/citeladder-firehose-filter.mjs');
 /** CloudFront standard logging (v2) fields the Firehose stream must deliver, in setup order. */
@@ -55,7 +60,9 @@ export const CLOUDFRONT_LOG_FIELDS = [
   'cs(User-Agent)',
 ] as const;
 /** Machine senders post to the API host; locally that is the API container itself. */
-export const CRAWL_INGEST_ORIGIN = process.env.PUBLIC_API_ORIGIN || 'http://127.0.0.1:8100';
+// An origin carries no path, so a configured trailing slash never doubles into `//v1`.
+export const CRAWL_INGEST_ORIGIN = new URL(process.env.PUBLIC_API_ORIGIN || 'http://127.0.0.1:8100')
+  .origin;
 export const TRAFFIC_TABS = [
   { value: 'overview', label: 'Overview', crawlOnly: false },
   { value: 'crawlers', label: 'Crawlers', crawlOnly: true },

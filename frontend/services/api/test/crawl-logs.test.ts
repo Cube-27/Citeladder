@@ -280,6 +280,14 @@ describe('CloudFront v2 preset', () => {
       parseLogLine(JSON.stringify(cloudfront({ 'cs(User-Agent)': '-' })), 'ndjson', preset),
     ).toThrow(UnsupportedLogFormat);
   });
+  it('refuses a calendar-impossible fallback date instead of moving it to another day', () => {
+    const line = (date: string) =>
+      JSON.stringify(cloudfront({ 'timestamp(ms)': '-', date, time: '10:00:00' }));
+    expect(parseLogLine(line('2026-02-28'), 'ndjson', preset)?.timestamp).toBe(
+      '2026-02-28T10:00:00Z',
+    );
+    expect(() => parseLogLine(line('2026-02-31'), 'ndjson', preset)).toThrow(UnsupportedLogFormat);
+  });
   it('keeps an undecodable user agent as sent', () => {
     expect(
       parseLogLine(

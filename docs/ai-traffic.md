@@ -167,7 +167,7 @@ Coverage is per source/reporting day:
 
 - `complete`: unsampled live collection, active for the whole completed day,
   with bounded receipt gaps, including heartbeats when no requests occur. The
-  bound is `max(max_delivery_gap_minutes, ceil(buffer_interval_seconds / 60) + 5)`
+  bound is `max(max_delivery_gap_minutes, ceil(buffer_interval_seconds / 60) + buffered_delivery_grace_minutes)`
   per source, so a Firehose stream is judged against its buffer interval.
 - `declared_complete`: a completed upload declares a complete day within its
   client-reported scan. This claim is labelled as such.
