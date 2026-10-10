@@ -59,7 +59,20 @@ export function VisibilityAccuracy({
         pending={query.isFetching}
       />
     );
-  if (!enabled) return <AccuracyState state="no_facts" reason={null} />;
+  // No run selected: nothing to read yet, which says nothing about the facts.
+  if (!enabled)
+    return (
+      <Card>
+        <CardContent>
+          <EmptyState
+            variant="compact"
+            icon={ShieldCheck}
+            heading="No run selected"
+            description="Choose a run to see how its answers state your facts."
+          />
+        </CardContent>
+      </Card>
+    );
   if (!query.data)
     return (
       <Stack gap="workspace" aria-busy>

@@ -100,7 +100,7 @@ export function BrandFactsPanel({
               fact={fact}
               mayEdit={mayEdit}
               pending={change.isPending}
-              onChange={(update) => change.mutate({ fact, update })}
+              onChange={(update) => change.mutateAsync({ fact, update })}
             />
           ))}
         </ul>
@@ -182,7 +182,8 @@ function FactRow({
   fact: BrandFact;
   mayEdit: boolean;
   pending: boolean;
-  onChange: (update: Change['update']) => void;
+  /** Settles with the save; the panel shows the error notice when it fails. */
+  onChange: (update: Change['update']) => Promise<unknown>;
 }>) {
   const [editing, setEditing] = useState<string | null>(null);
   return (
@@ -203,7 +204,7 @@ function FactRow({
         <span className={textRole('body')}>{fact.statement}</span>
       ) : (
         <Textarea
-          aria-label="Fact"
+          aria-label="Edit fact"
           rows={2}
           maxLength={300}
           value={editing}
@@ -221,7 +222,7 @@ function FactRow({
                 <Button
                   size="sm"
                   disabled={pending}
-                  onClick={() => onChange({ status: 'confirmed' })}
+                  onClick={() => void onChange({ status: 'confirmed' }).catch(() => undefined)}
                 >
                   Confirm
                 </Button>
@@ -233,7 +234,7 @@ function FactRow({
                 size="sm"
                 variant="ghost"
                 disabled={pending}
-                onClick={() => onChange({ status: 'retired' })}
+                onClick={() => void onChange({ status: 'retired' }).catch(() => undefined)}
               >
                 Retire
               </Button>
@@ -244,8 +245,11 @@ function FactRow({
                 size="sm"
                 disabled={pending || !editing.trim()}
                 onClick={() => {
-                  onChange({ statement: editing.trim() });
-                  setEditing(null);
+                  // Keep the draft open until the save lands, so a failed save loses nothing.
+                  onChange({ statement: editing.trim() }).then(
+                    () => setEditing(null),
+                    () => undefined,
+                  );
                 }}
               >
                 Save

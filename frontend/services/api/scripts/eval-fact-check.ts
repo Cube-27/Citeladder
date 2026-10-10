@@ -77,8 +77,12 @@ type Answer = (typeof fixtures.answers)[number];
 type Brand = (typeof fixtures.brands)[number];
 type Actual = { quote: string; topic: string; verdict: string };
 
+// Some adapters report only input and output tokens; count those rather than zero.
 const tokensOf = (call: { usage: Record<string, unknown> | null }) =>
-  Number(call.usage?.total_tokens ?? 0);
+  Number(
+    call.usage?.total_tokens ??
+      Number(call.usage?.input_tokens ?? 0) + Number(call.usage?.output_tokens ?? 0),
+  );
 
 /** The brand's facts frozen the way admission freezes them, so scope and coverage match a pilot audit. */
 function frozen(brand: Brand): FrozenFactCheck {
