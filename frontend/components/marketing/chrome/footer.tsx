@@ -72,11 +72,14 @@ function FooterColumnLink({ link }: Readonly<{ link: FooterLink }>) {
   );
 }
 
+// Read once at load; the cached footer renders it without calling Date.
+const COPYRIGHT_YEAR = new Date().getFullYear();
+
 /** Shared footer: every published destination, the ownership line and each policy. */
 export async function MarketingFooter() {
   'use cache';
 
-  const year = new Date().getFullYear();
+  const year = COPYRIGHT_YEAR;
 
   return (
     <footer className="site-footer">

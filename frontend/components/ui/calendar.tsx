@@ -100,8 +100,9 @@ export function Calendar({
   ariaLabel: string;
 }>) {
   const selected = anchor(value);
-  const fallback = anchor(max ?? '') ?? new Date();
-  const [month, setMonth] = useState<Date>(() => addMonths(selected ?? fallback, 0));
+  const [month, setMonth] = useState<Date>(() =>
+    addMonths(selected ?? anchor(max ?? '') ?? new Date(), 0),
+  );
   const days = monthGrid(month);
   const monthIndex = month.getUTCMonth();
 
