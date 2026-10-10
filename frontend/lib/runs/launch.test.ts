@@ -13,6 +13,7 @@ import {
   promptBatches,
   PROMPT_BATCH_SIZE,
   toggleEngine,
+  toggleMarket,
   type LaunchSelection,
 } from './launch';
 
@@ -51,6 +52,23 @@ describe('canLaunch', () => {
         selection({ promptSetId: null, promptIds: ['33333333-3333-4333-8333-333333333333'] }),
       ),
     ).toBe(true);
+  });
+});
+
+describe('markets', () => {
+  const GERMANY = '55555555-5555-4555-8555-555555555555';
+
+  it('sends the picked markets, and refuses a launch with none', () => {
+    expect(buildLaunchPayload(selection({ marketIds: [null, GERMANY] })).market_ids).toEqual([
+      null,
+      GERMANY,
+    ]);
+    expect(canLaunch(selection({ marketIds: [] }))).toBe(false);
+  });
+
+  it('toggles the default market apart from a named one', () => {
+    expect(toggleMarket([null, GERMANY], null)).toEqual([GERMANY]);
+    expect(toggleMarket([GERMANY], null)).toEqual([GERMANY, null]);
   });
 });
 

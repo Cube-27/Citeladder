@@ -1,5 +1,6 @@
 /** The project overview: each section is its owner's read, run in parallel. */
 import type { Database } from '../db/database.ts';
+import { listMarkets } from '../projects/markets.ts';
 import { readBrandMemory } from '../projects/brand-profile.ts';
 import { authorizeProject, unavailable } from './data.ts';
 import {
@@ -45,7 +46,8 @@ export async function businessContext(
   const project = await authorizeProject(db, principal, projectId);
   const read = { db, origin, scope: { workspaceId: project.workspace_id, projectId: project.id } };
   const wanted = new Set(selected);
-  const [profile, entities, ...results] = await Promise.all([
+  const [markets, profile, entities, ...results] = await Promise.all([
+    listMarkets(db, read.scope),
     wanted.has('profile') ? readBrandMemory(db, read.scope) : null,
     wanted.has('profile') ? competitorsAndDomains(read) : null,
     ...Object.entries(sections)
@@ -63,6 +65,14 @@ export async function businessContext(
       primary_market: project.primary_market,
       country_code: project.country_code,
       language_code: project.language_code,
+      // Each market is measured separately; visibility reads take its id (null: default).
+      markets: markets.map(({ id, label, country_code, language_code, is_default }) => ({
+        id,
+        label,
+        country_code,
+        language_code,
+        is_default,
+      })),
       link: appLink(origin, '/visibility', project.id),
     },
     ...(wanted.has('profile')

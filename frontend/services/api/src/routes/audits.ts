@@ -69,7 +69,7 @@ export const auditRoutes = [
     status: 201,
     capability: 'run',
     body: auditCreateInput,
-    response: auditSchema,
+    response: auditSchema.array(),
     handle: async ({ c, db, config }) =>
       createQueuedAudit(db, config, actorOf(c), await readBody(c, auditCreateInput)),
   }),

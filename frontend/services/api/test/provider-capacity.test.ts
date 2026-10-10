@@ -7,7 +7,7 @@ import {
 } from '../src/providers/capacity.ts';
 import { dataforseoAccountIdentity } from '../src/providers/dataforseo-identity.ts';
 import { createSecretCipher } from '../src/integrations/fernet.ts';
-import { createAudit } from '../src/audits/creation.ts';
+import { createAudits } from '../src/audits/creation.ts';
 import { auditRuntime } from '../src/audits/config.ts';
 import { auditInput } from '../src/audits/inputs.ts';
 import { testDatabase } from './support.ts';
@@ -40,7 +40,7 @@ afterAll(async () => {
 });
 async function seed() {
   const t = await auditTenant(db, fixtures);
-  const id = await createAudit(
+  const [id] = await createAudits(
     db,
     t.workspaceId,
     auditInput.parse({ project_id: t.projectId, prompt_set_id: t.setId, engines: ['chatgpt'] }),

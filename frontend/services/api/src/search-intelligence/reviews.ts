@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
+import { searchLanguageOf, surfaceSupports } from '../search-surfaces/locations.ts';
 import { asApiErrorCode } from '@citeladder/contracts/error-codes';
-import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { strings } from '../db/json.ts';
 import { ApiError, notFound } from '../errors.ts';
@@ -189,9 +189,7 @@ export async function createReview(
       current.project.language_code;
     if (
       payload.datasets.some((item) => !si.backlink_kinds.includes(item.kind)) &&
-      (!location ||
-        !policy.dataforseo.constants.supported_location_codes.includes(location) ||
-        !policy.dataforseo.constants.language_codes.includes(language))
+      (!location || !surfaceSupports('google_ai_overview', location, searchLanguageOf(language)))
     )
       throw error('unsupported_market', 'Select a supported Labs location and language');
     const plan: Record<string, unknown>[] = [],

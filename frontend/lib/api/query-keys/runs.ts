@@ -43,6 +43,8 @@ export const visibilityKeys = {
   // must not refetch a projection that does not take one.
   surfaceRates: (projectId: string, filters: ListFilters = {}) =>
     ['visibility', 'surface-rates', projectId, filters] as const,
+  markets: (projectId: string, filters: ListFilters = {}) =>
+    ['visibility', 'markets', projectId, filters] as const,
   prompts: (projectId: string, auditId?: string) =>
     ['visibility', 'prompts', projectId, auditId ?? 'latest'] as const,
   competitorSuggestions: (projectId: string) =>

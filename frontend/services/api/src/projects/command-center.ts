@@ -49,7 +49,8 @@ async function comparableAudits(db: Database, scope: ProjectScope, auditId: stri
     .orderBy('completed_at', 'desc')
     .orderBy('id', 'desc');
   const [latest, chosen] = await Promise.all([
-    query.limit(1).executeTakeFirst(),
+    // The overview follows the default market; a chosen run brings its own.
+    query.where('market_id', 'is', null).limit(1).executeTakeFirst(),
     auditId ? query.where('id', '=', auditId).executeTakeFirst() : undefined,
   ]);
   const selected = auditId ? chosen : latest;
@@ -58,6 +59,7 @@ async function comparableAudits(db: Database, scope: ProjectScope, auditId: stri
     return null;
   }
   const audits = await query
+    .where('market_id', 'is not distinct from', selected.market_id)
     .where(sql<boolean>`coalesce(completed_at, created_at) <= ${new Date(instant(selected))}`)
     .limit(policy.projects.command_center_max_audits)
     .execute();

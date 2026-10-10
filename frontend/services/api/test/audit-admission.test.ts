@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { afterAll, describe, expect, it, vi } from 'vitest';
 import * as costing from '../src/audits/costs.ts';
 import { setLogSink } from '../src/logging.ts';
-import { createAudit } from '../src/audits/creation.ts';
+import { createAudits } from '../src/audits/creation.ts';
 import { auditRuntime } from '../src/audits/config.ts';
 import { auditInput } from '../src/audits/inputs.ts';
 import { record } from '../src/db/json.ts';
@@ -43,7 +43,7 @@ describe('atomic audit admission', () => {
       },
     }));
     try {
-      const { createAudit: createWithoutAdapter } = await import('../src/audits/creation.ts');
+      const { createAudits: createWithoutAdapter } = await import('../src/audits/creation.ts');
       const { scheduleCreate } = await import('../src/audits/schedule-inputs.ts');
       await expect(
         createWithoutAdapter(db, t.workspaceId, input(t), {}, runtime),
@@ -114,7 +114,7 @@ describe('atomic audit admission', () => {
         audits: { ...runtime.audits, audit_prompt_count: 10 },
       };
       const request = { ...input(t), credential_mode: 'funded' as const };
-      const id = await createAudit(db, t.workspaceId, request, {}, fundedRuntime);
+      const [id] = await createAudits(db, t.workspaceId, request, {}, fundedRuntime);
       const tasks = await db
         .selectFrom('audit_tasks')
         .selectAll()
@@ -136,7 +136,7 @@ describe('atomic audit admission', () => {
         tasks.reduce((sum, task) => sum + task.max_attempts, 0),
       );
       await expect(
-        createAudit(db, t.workspaceId, request, {}, fundedRuntime),
+        createAudits(db, t.workspaceId, request, {}, fundedRuntime),
       ).rejects.toMatchObject({ code: 'funded_budget_exhausted' });
       expect(await queued(t.workspaceId)).toHaveLength(1);
       expect(
@@ -155,7 +155,7 @@ describe('atomic audit admission', () => {
   });
   it('persists replayable slots, immutable snapshots, credential identity and queue events together', async () => {
     const t = await auditTenant(db, fixtures);
-    const id = await createAudit(db, t.workspaceId, input(t), {}, runtime);
+    const [id] = await createAudits(db, t.workspaceId, input(t), {}, runtime);
     const audit = (await queued(t.workspaceId))[0]!;
     expect(audit).toMatchObject({
       id,
@@ -205,7 +205,7 @@ describe('atomic audit admission', () => {
     const t = await auditTenant(db, fixtures);
     const outcomes = await Promise.allSettled(
       [1, 2].map(() =>
-        createAudit(db, t.workspaceId, input(t), {}, { ...runtime, activeLimit: 1 }),
+        createAudits(db, t.workspaceId, input(t), {}, { ...runtime, activeLimit: 1 }),
       ),
     );
     expect(outcomes.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
@@ -226,7 +226,7 @@ describe('atomic audit admission', () => {
     const accountId = await billingAccount(db, t.workspaceId);
     await grant(db, accountId, { key: 'manual_runs_per_day', value: 1, sourceKind: 'override' });
     const outcomes = await Promise.allSettled(
-      [1, 2].map(() => createAudit(db, t.workspaceId, input(t), {}, runtime)),
+      [1, 2].map(() => createAudits(db, t.workspaceId, input(t), {}, runtime)),
     );
     expect(outcomes.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
     expect(outcomes.find((result) => result.status === 'rejected')).toMatchObject({
@@ -238,7 +238,7 @@ describe('atomic audit admission', () => {
     const t = await auditTenant(db, fixtures);
     await billingAccount(db, t.workspaceId);
     await expect(
-      createAudit(
+      createAudits(
         db,
         t.workspaceId,
         { ...input(t), credential_mode: 'funded' },
@@ -257,9 +257,9 @@ describe('atomic audit admission', () => {
   it('rejects a foreign project before consuming admission capacity', async () => {
     const t = await auditTenant(db, fixtures),
       foreign = await auditTenant(db, fixtures);
-    await expect(createAudit(db, foreign.workspaceId, input(t), {}, runtime)).rejects.toMatchObject(
-      { status: 404 },
-    );
+    await expect(
+      createAudits(db, foreign.workspaceId, input(t), {}, runtime),
+    ).rejects.toMatchObject({ status: 404 });
     expect(await queued(foreign.workspaceId)).toEqual([]);
   });
 });

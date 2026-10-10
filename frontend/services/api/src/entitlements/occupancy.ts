@@ -105,6 +105,38 @@ export async function admitApiKey(db: Database, workspaceId: string, now: Date):
 }
 
 /**
+ * Admit one more additional measurement market: the workspace's extra markets
+ * must stay within `market_slots` (a project's default market is free). No
+ * grant means none, so a trial or Starter plan is refused with 403
+ * `occupancy_limit_exceeded`. Runs under the capacity lock in the insert's
+ * transaction.
+ */
+export async function admitMarket(db: Database, workspaceId: string): Promise<void> {
+  const accountId = await lockWorkspaceCapacity(db, workspaceId);
+  const resolved = await resolveAccountEntitlement(db, { accountId, workspaceId }, new Date());
+  if (resolved.status !== 'resolved')
+    throw new ApiError(403, 'Billing entitlement is unavailable for this account', {
+      code: UNRESOLVED,
+    });
+  const key = policy.entitlements.market_slots;
+  const allowance = resolved.values.get(key) ?? 0;
+  const row = await db
+    .selectFrom('project_markets')
+    .select(sql<string>`count(*)`.as('count'))
+    .where('workspace_id', '=', workspaceId)
+    .executeTakeFirstOrThrow();
+  const current = Number(row.count);
+  if (current + 1 > allowance)
+    throw new ApiError(
+      403,
+      allowance
+        ? `This workspace already uses ${current} of ${allowance} additional markets`
+        : "Additional markets are not included in this workspace's plan",
+      { code: LIMIT_EXCEEDED, details: { key, allowance, current, requested: 1 } },
+    );
+}
+
+/**
  * Refuse unless the workspace's plan grants `key`, a flag that trials lack.
  * Takes the account capacity lock, so grant issuance serializes with the action.
  */

@@ -3,7 +3,7 @@ import { testDatabase } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
 import { auditTenant, auditTestKey } from './audit-fixtures.ts';
 import { seedAudit } from '../src/audits/seed.ts';
-import { createAudit } from '../src/audits/creation.ts';
+import { createAudits } from '../src/audits/creation.ts';
 import { auditInput } from '../src/audits/inputs.ts';
 import { auditRuntime } from '../src/audits/config.ts';
 const db = testDatabase(),
@@ -20,7 +20,7 @@ it('drains only its admitted audit through deterministic execution and persists 
       engines: ['chatgpt'],
       repetitions: 1,
     });
-  const untouched = await createAudit(db, t.workspaceId, input, {}, auditRuntime({}));
+  const [untouched] = await createAudits(db, t.workspaceId, input, {}, auditRuntime({}));
   const id = await seedAudit(
     db,
     {

@@ -494,6 +494,7 @@ CREATE TABLE public.audit_schedules (
     interval_minutes integer,
     timezone character varying(64) NOT NULL,
     engines jsonb NOT NULL,
+    market_ids jsonb DEFAULT '[null]'::jsonb NOT NULL,
     repetitions integer,
     benchmark_mode character varying(32),
     enabled boolean NOT NULL,
@@ -585,7 +586,9 @@ CREATE TABLE public.audits (
     created_at timestamp with time zone NOT NULL,
     updated_at timestamp with time zone NOT NULL,
     started_at timestamp with time zone,
-    completed_at timestamp with time zone
+    completed_at timestamp with time zone,
+    market_id uuid,
+    launch_id uuid
 );
 
 CREATE TABLE public.auth_challenges (
@@ -1949,6 +1952,16 @@ CREATE TABLE public.policy_acceptances (
     privacy_notice_revision character varying(64) NOT NULL,
     context character varying(32) NOT NULL,
     accepted_at timestamp with time zone NOT NULL
+);
+
+CREATE TABLE public.project_markets (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    project_id uuid NOT NULL,
+    label character varying(64) NOT NULL,
+    country_code character varying(2) NOT NULL,
+    language_code character varying(16) NOT NULL,
+    created_at timestamp with time zone NOT NULL
 );
 
 CREATE TABLE public.projects (
@@ -3549,6 +3562,15 @@ ALTER TABLE ONLY public.opportunity_verification_events
 ALTER TABLE ONLY public.owned_domains
     ADD CONSTRAINT owned_domains_pkey PRIMARY KEY (id);
 
+ALTER TABLE ONLY public.project_markets
+    ADD CONSTRAINT project_markets_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.project_markets
+    ADD CONSTRAINT uq_project_markets_ws_project_id UNIQUE (workspace_id, project_id, id);
+
+ALTER TABLE ONLY public.project_markets
+    ADD CONSTRAINT uq_project_markets_market UNIQUE (project_id, country_code, language_code);
+
 ALTER TABLE ONLY public.pending_activations
     ADD CONSTRAINT pending_activations_pkey PRIMARY KEY (id);
 
@@ -3827,9 +3849,6 @@ ALTER TABLE ONLY public.audits
 
 ALTER TABLE ONLY public.audit_prompt_snapshots
     ADD CONSTRAINT uq_audit_prompt_snapshot_index UNIQUE (audit_id, prompt_index);
-
-ALTER TABLE ONLY public.audits
-    ADD CONSTRAINT uq_audit_schedule_slot UNIQUE (schedule_id, scheduled_for);
 
 ALTER TABLE ONLY public.audit_tasks
     ADD CONSTRAINT uq_audit_task_idempotency_key UNIQUE (idempotency_key);
@@ -4395,6 +4414,10 @@ CREATE INDEX ix_audits_parent_audit_id ON public.audits USING btree (parent_audi
 CREATE INDEX ix_audits_project_id ON public.audits USING btree (project_id);
 
 CREATE INDEX ix_audits_schedule_id ON public.audits USING btree (schedule_id);
+
+CREATE INDEX ix_audits_launch_id ON public.audits USING btree (launch_id);
+
+CREATE UNIQUE INDEX uq_audit_schedule_slot ON public.audits USING btree (schedule_id, scheduled_for, market_id) NULLS NOT DISTINCT WHERE (schedule_id IS NOT NULL);
 
 CREATE INDEX ix_audits_status ON public.audits USING btree (status);
 
@@ -6131,6 +6154,9 @@ ALTER TABLE ONLY public.opportunity_verification_events
 
 ALTER TABLE ONLY public.owned_domains
     ADD CONSTRAINT owned_domains_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.project_markets
+    ADD CONSTRAINT project_markets_workspace_id_project_id_fkey FOREIGN KEY (workspace_id, project_id) REFERENCES public.projects(workspace_id, id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.pending_activations
     ADD CONSTRAINT pending_activations_billing_account_id_fkey FOREIGN KEY (billing_account_id) REFERENCES public.billing_accounts(id) ON DELETE CASCADE;

@@ -18,6 +18,8 @@ export type LaunchSelection = {
   promptSetId: string | null;
   promptIds?: string[];
   engines: LogicalEngine[];
+  /** One run per market; `null` is the project default. Omitted measures the default only. */
+  marketIds?: (string | null)[];
   repetitions: number;
   auditScope?: 'brand' | 'commerce';
 };
@@ -78,7 +80,9 @@ export function clampRepetitions(value: number): number {
  */
 export function canLaunch(selection: LaunchSelection): boolean {
   return (
-    Boolean(selection.promptSetId || selection.promptIds?.length) && selection.engines.length > 0
+    Boolean(selection.promptSetId || selection.promptIds?.length) &&
+    selection.engines.length > 0 &&
+    selection.marketIds?.length !== 0
   );
 }
 
@@ -96,9 +100,15 @@ export function buildLaunchPayload(selection: LaunchSelection): LaunchAuditInput
       ? { prompt_ids: [...selection.promptIds] }
       : { prompt_set_id: selection.promptSetId! }),
     engines: [...selection.engines],
+    ...(selection.marketIds ? { market_ids: [...selection.marketIds] } : {}),
     repetitions: clampRepetitions(selection.repetitions),
     audit_scope: selection.auditScope ?? 'brand',
   };
+}
+
+/** Toggle a market in/out of the current selection (immutably); `null` is the default market. */
+export function toggleMarket(markets: (string | null)[], market: string | null): (string | null)[] {
+  return markets.includes(market) ? markets.filter((id) => id !== market) : [...markets, market];
 }
 
 /** Toggle a logical engine in/out of the current selection (immutably). */

@@ -36,6 +36,7 @@ const CAPABILITY_LABELS: Readonly<Record<string, string>> = {
   crawl_logs: 'AI crawler logs',
   api_access: 'REST API access',
   api_keys: 'API keys',
+  market_slots: 'Additional markets',
   ai_credits: 'AI credits',
   query_fanouts: 'Query fanouts',
   fanout: 'Query fanouts',

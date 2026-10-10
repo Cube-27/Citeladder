@@ -45,6 +45,7 @@ import { applyMarks, rankingMarks } from './ranking-marks.ts';
 import {
   engineSnapshots,
   loadMeasuredRuns,
+  marketOf,
   selectedScore,
   trendSource,
   type MeasuredRun,
@@ -79,7 +80,7 @@ export type DashboardQuery = {
 
 export async function getVisibility(
   db: Database,
-  scope: RunScope,
+  requested: RunScope,
   query: DashboardQuery,
 ): Promise<VisibilityResponse> {
   validateEngineAndRange(query);
@@ -87,8 +88,10 @@ export async function getVisibility(
   if (query.selectionMode === 'run' && query.auditId === null) {
     throw new TrendQueryError('A specific run selection requires audit_id');
   }
-  if (query.selectionMode === 'range') return rangeVisibility(db, scope, query);
-  const run = await selectedRun(db, scope, query.auditId);
+  if (query.selectionMode === 'range') return rangeVisibility(db, requested, query);
+  const run = await selectedRun(db, requested, query.auditId);
+  // A named run is read in its own market: comparisons stay inside it.
+  const scope = { ...requested, marketId: run.marketId };
   const view = await runView(db, scope, run, query);
   const comparison = await compareSelection(
     db,
@@ -139,6 +142,7 @@ const brandRuns = (db: Database, scope: RunScope) =>
 async function latestDashboardRunId(db: Database, scope: RunScope): Promise<string> {
   const latest = await brandRuns(db, scope)
     .select('id')
+    .where('market_id', 'is not distinct from', marketOf(scope))
     .where('status', 'in', visibility.dashboard_audit_statuses)
     .orderBy(sql`completed_at desc nulls last`)
     .orderBy('created_at', 'desc')
@@ -163,10 +167,16 @@ async function selectedRun(
   db: Database,
   scope: RunScope,
   auditId: string | null,
-): Promise<SelectedRun> {
+): Promise<SelectedRun & { marketId: string | null }> {
   const selectedId = auditId ?? (await latestDashboardRunId(db, scope));
   const audit = await brandRuns(db, scope)
-    .select(['id', 'status', 'configuration', utcText(sql.ref('completed_at')).as('completed_at')])
+    .select([
+      'id',
+      'status',
+      'configuration',
+      'market_id',
+      utcText(sql.ref('completed_at')).as('completed_at'),
+    ])
     .where('id', '=', selectedId)
     .executeTakeFirst();
   if (audit === undefined) throw new AnalysisNotFoundError('Audit not found');
@@ -196,6 +206,7 @@ async function selectedRun(
     snapshotCreatedAt: snapshot.created_at,
     configuration: audit.configuration,
     completedAt: audit.completed_at,
+    marketId: audit.market_id,
     provenance: modelProvenanceFor(routes.get(audit.id) ?? [], audit.configuration),
   };
 }

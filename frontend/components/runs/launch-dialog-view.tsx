@@ -10,6 +10,7 @@ import { MutationNotice } from '@/components/ui/mutation-notice';
 import { Select } from '@/components/ui/select';
 import type { MutationNotice as MutationNoticeData } from '@/lib/api/mutation-notice';
 import type { LogicalEngine, Prompt, PromptSet } from '@/lib/api/types';
+import type { ProjectMarket } from '@citeladder/contracts/markets';
 import { ENGINE_LABELS, ENGINE_ORDER, isConsumerEngine } from '@/lib/providers/catalog';
 import {
   batchLabel,
@@ -17,6 +18,7 @@ import {
   MAX_REPETITIONS,
   MIN_REPETITIONS,
   toggleEngine,
+  toggleMarket,
 } from '@/lib/runs/launch';
 import { textRole } from '@/components/ui/typography';
 import { panelClasses } from '@/components/ui/panel';
@@ -158,6 +160,43 @@ function InlineProviderSetup({
   );
 }
 
+/**
+ * Which markets to measure from: one run each. Only offered once the project
+ * has more than its default market.
+ */
+function MarketsField({
+  markets,
+  marketIds,
+  setMarketIds,
+}: Readonly<{
+  markets: readonly ProjectMarket[];
+  marketIds: (string | null)[];
+  setMarketIds: React.Dispatch<React.SetStateAction<(string | null)[]>>;
+}>) {
+  if (markets.length < 2) return null;
+  return (
+    <fieldset className="grid gap-2">
+      <legend className={textRole('label')}>
+        Markets <span className="text-muted">*</span>
+      </legend>
+      <p className="type-caption text-muted">
+        Each market runs separately. An engine that cannot measure a market is skipped there.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {markets.map((market) => (
+          <FilterChip
+            key={market.id ?? 'default'}
+            active={marketIds.includes(market.id)}
+            onClick={() => setMarketIds((current) => toggleMarket(current, market.id))}
+          >
+            {market.label}
+          </FilterChip>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
 /** A prompt set names its size only when the server counted it. */
 function promptSetLabel(set: Readonly<{ name: string; prompt_count?: number | null }>): string {
   const count = typeof set.prompt_count === 'number' ? ` (${set.prompt_count})` : '';
@@ -180,6 +219,9 @@ export function LaunchDialogView({
   setEngines,
   repetitions,
   setRepetitions,
+  markets,
+  marketIds,
+  setMarketIds,
   estimate,
   launchPending,
   launchNotice,
@@ -205,6 +247,9 @@ export function LaunchDialogView({
   setEngines: React.Dispatch<React.SetStateAction<LogicalEngine[]>>;
   repetitions: number;
   setRepetitions: React.Dispatch<React.SetStateAction<number>>;
+  markets: readonly ProjectMarket[];
+  marketIds: (string | null)[];
+  setMarketIds: React.Dispatch<React.SetStateAction<(string | null)[]>>;
   estimate?: Estimate;
   launchPending: boolean;
   launchNotice: MutationNoticeData | null;
@@ -298,6 +343,7 @@ export function LaunchDialogView({
             <InlineProviderSetup connecting={connecting} onClose={() => setConnecting(null)} />
           ) : null}
         </fieldset>
+        <MarketsField markets={markets} marketIds={marketIds} setMarketIds={setMarketIds} />
         <Field
           label="Repetitions"
           hint={`How many times to run each prompt per engine (${MIN_REPETITIONS}–${MAX_REPETITIONS}).`}

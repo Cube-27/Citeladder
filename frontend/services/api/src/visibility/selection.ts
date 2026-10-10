@@ -26,6 +26,8 @@ export class TrendQueryError extends Error {}
 export type RunSelection = {
   workspaceId: string;
   projectId: string;
+  /** The measurement market; `null` is the project default. Named runs imply their own. */
+  marketId: string | null;
   auditId: string | null;
   auditIds: string[] | null;
   logicalEngine: string | null;
@@ -77,7 +79,14 @@ export function selectedCohorts(cohort: string): readonly string[] {
   return cohort === visibility.core_cohort ? visibility.organic_cohorts : [cohort];
 }
 
-/** Every run in `auditIds` belongs to the project and is dashboard-ready, or throw. */
+/** Without named runs a selection reads its market; named runs bring their own. */
+export const readsMarket = (selection: Pick<RunSelection, 'auditId' | 'auditIds'>) =>
+  selection.auditId === null && !selection.auditIds?.length;
+
+/**
+ * Every run in `auditIds` belongs to the project, is dashboard-ready and
+ * measured one market, or throw: markets never pool.
+ */
 export async function authorizeRunSet(
   db: Database,
   scope: { workspaceId: string; projectId: string },
@@ -90,7 +99,7 @@ export async function authorizeRunSet(
   }
   const owned = await db
     .selectFrom('audits')
-    .select('id')
+    .select(['id', 'market_id'])
     .where('workspace_id', '=', scope.workspaceId)
     .where('project_id', '=', scope.projectId)
     .where('id', 'in', [...ids])
@@ -98,6 +107,8 @@ export async function authorizeRunSet(
     .where('audit_scope', '=', visibility.brand_audit_scope)
     .execute();
   if (owned.length !== ids.size) throw new AnalysisNotFoundError('Selected run set not found');
+  if (new Set(owned.map((run) => run.market_id)).size > 1)
+    throw new TrendQueryError('Selected runs measured different markets');
 }
 
 /**
@@ -150,6 +161,8 @@ export function evidenceScope(db: Database, selection: RunSelection) {
     .where('ra.cohort', 'in', cohorts);
   if (selection.auditId !== null) query = query.where('ra.audit_id', '=', selection.auditId);
   if (selection.auditIds?.length) query = query.where('ra.audit_id', 'in', selection.auditIds);
+  if (readsMarket(selection))
+    query = query.where('audit.market_id', 'is not distinct from', selection.marketId);
   if (selection.logicalEngine !== null) {
     query = query.where('ra.logical_engine', '=', selection.logicalEngine);
   }

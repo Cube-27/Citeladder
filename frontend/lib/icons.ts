@@ -12,6 +12,7 @@ import {
   Lightbulb,
   ListChecks,
   LoaderCircle,
+  MapPin,
   MessageSquareText,
   OctagonAlert,
   Package,
@@ -82,6 +83,7 @@ export const ICONS = {
   settings: Settings,
   billing: CreditCard,
   // Shared UI concepts.
+  market: MapPin,
   spinner: LoaderCircle,
   warning: TriangleAlert,
   danger: AlertCircle,

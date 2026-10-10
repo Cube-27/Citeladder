@@ -7,6 +7,14 @@ order: 400
 
 These notes describe implemented changes in the codebase. Dates are the recorded commit dates; availability in your workspace depends on deployment, access and configuration.
 
+## October 10, 2026: Markets
+
+Measure the same prompts from more than one country and language. Growth plans can add 3 markets to their projects and Scale plans 10, in the project edit panel. Each market runs as its own audit, launched or scheduled together, and Visibility reads one market at a time with a **By market** table comparing their latest runs. Engines that cannot measure a market are skipped there or refused before anything runs, never counted as failures.
+
+**For your team:** see where your brand is named in each country you sell in, without mixing one market's answers into another's.
+
+[Read about markets](/visibility/#measure-more-than-one-market)
+
 ## October 10, 2026: Fact-checking pilot
 
 Workspaces in the fact-checking pilot can confirm brand facts (pricing, plans, integrations, markets, policies and more) in **Agent → Context**. Audits then check the factual claims answers make about you against those facts, and the new **Accuracy** tab in Visibility shows how many claims were supported or contradicted, each contradiction quoted next to your fact. Assistants connected with MCP, and the in-app Agent, read the same results with `read_fact_checks`.

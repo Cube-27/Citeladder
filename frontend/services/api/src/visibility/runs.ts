@@ -45,7 +45,12 @@ export type MeasuredRun = {
   provenance: ModelProvenance[];
 };
 
-export type RunScope = { workspaceId: string; projectId: string };
+/**
+ * A project's runs in one measurement market. Markets never mix in a
+ * projection: an omitted or `null` market is the project default.
+ */
+export type RunScope = { workspaceId: string; projectId: string; marketId?: string | null };
+export const marketOf = (scope: { marketId?: string | null }) => scope.marketId ?? null;
 
 /** A request timestamp, or a stored one read back as `utcText`. */
 export type Instant = ParsedDatetime | string;
@@ -84,6 +89,7 @@ export async function loadMeasuredRuns(
     .where('snapshot.project_id', '=', scope.projectId)
     .where('audit.workspace_id', '=', scope.workspaceId)
     .where('audit.project_id', '=', scope.projectId)
+    .where('audit.market_id', 'is not distinct from', marketOf(scope))
     .where('audit.audit_scope', '=', visibility.brand_audit_scope)
     .where('audit.status', 'in', visibility.dashboard_audit_statuses)
     .where('audit.completed_at', 'is not', null);

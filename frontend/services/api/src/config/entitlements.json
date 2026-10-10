@@ -1,5 +1,5 @@
 {
-  "registry_revision": "entitlements-v7",
+  "registry_revision": "entitlements-v8",
   "capabilities": {
     "workspace_access": {
       "type": "flag",
@@ -200,6 +200,14 @@
       "issuable": true,
       "public": false,
       "rolling_window_seconds": null
+    },
+    "market_slots": {
+      "type": "counter.occupancy",
+      "levels": 0,
+      "ordered_values": [],
+      "issuable": true,
+      "public": true,
+      "rolling_window_seconds": null
     }
   },
   "grant_source_kinds": ["addon", "override", "plan", "topup", "trial"],
@@ -214,6 +222,7 @@
   "api_access": "api_access",
   "api_keys": "api_keys",
   "fact_checking": "fact_checking",
+  "market_slots": "market_slots",
   "capacity_lock": {
     "namespace": 1128353857,
     "person": "citeladder-cap"

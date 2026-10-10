@@ -15,6 +15,8 @@ import { Select } from '@/components/ui/select';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { queryKeys } from '@/lib/api/query-keys';
 import { runsApi } from '@/lib/api/runs';
+import { toggleMarket } from '@/lib/runs/launch';
+import type { ProjectMarket } from '@citeladder/contracts/markets';
 import type {
   AuditSchedule,
   AuditScheduleCadence,
@@ -26,6 +28,7 @@ import { DisplayTime } from '@/components/ui/display-time';
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses } from '@/components/ui/workspace';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
+import { useProjectMarkets } from '@/lib/project/use-project-markets';
 import { ENGINE_ORDER, ENGINE_LABELS } from '@/lib/providers/catalog';
 import { schedulePauseReason } from '@/lib/runs/status';
 
@@ -78,7 +81,9 @@ function WorkspaceSchedules({
   const [cadence, setCadence] = useState<AuditScheduleCadence>('weekly');
   const [intervalMinutes, setIntervalMinutes] = useState('60');
   const [engines, setEngines] = useState<LogicalEngine[]>(['chatgpt']);
+  const [marketIds, setMarketIds] = useState<(string | null)[]>([null]);
   const schedulesQuery = useAuditSchedules(projectId);
+  const markets = useProjectMarkets(projectId, workspaceId);
   const createMutation = useMutation({
     mutationFn: () => {
       return runsApi.createSchedule(
@@ -90,6 +95,7 @@ function WorkspaceSchedules({
           interval_minutes: cadence === 'every_n_minutes' ? Number(intervalMinutes) : undefined,
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
           engines,
+          market_ids: marketIds,
         },
         { workspaceId },
       );
@@ -100,7 +106,7 @@ function WorkspaceSchedules({
       });
     },
   });
-  const canCreate = Boolean(promptSetId) && engines.length > 0 && !createMutation.isPending;
+  const canCreate = !createMutation.isPending && scheduleReady(promptSetId, engines, marketIds);
   const resumeMutation = useMutation({
     mutationFn: (scheduleId: string) =>
       runsApi.updateSchedule(projectId, scheduleId, { enabled: true }, { workspaceId }),
@@ -130,6 +136,7 @@ function WorkspaceSchedules({
               <ScheduleRow
                 key={schedule.id}
                 schedule={schedule}
+                markets={markets}
                 resuming={resumeMutation.isPending}
                 onResume={() => resumeMutation.mutate(schedule.id)}
               />
@@ -207,6 +214,7 @@ function WorkspaceSchedules({
                 ))}
               </div>
             </fieldset>
+            <MarketChecklist markets={markets} marketIds={marketIds} onToggle={setMarketIds} />
             <div className="flex items-end">
               <Button onClick={() => createMutation.mutate()} disabled={!canCreate}>
                 {createMutation.isPending ? 'Scheduling…' : 'Schedule audit'}
@@ -229,6 +237,40 @@ function WorkspaceSchedules({
   );
 }
 
+const scheduleReady = (
+  promptSetId: string,
+  engines: readonly LogicalEngine[],
+  marketIds: readonly (string | null)[],
+) => Boolean(promptSetId) && engines.length > 0 && marketIds.length > 0;
+
+/** Which markets each occurrence measures; offered once a project has more than its default. */
+function MarketChecklist({
+  markets,
+  marketIds,
+  onToggle,
+}: Readonly<{
+  markets: readonly ProjectMarket[];
+  marketIds: (string | null)[];
+  onToggle: React.Dispatch<React.SetStateAction<(string | null)[]>>;
+}>) {
+  if (markets.length < 2) return null;
+  return (
+    <fieldset className="grid gap-1 sm:col-span-2">
+      <legend className={textRole('label')}>Markets</legend>
+      <div className="flex flex-wrap gap-2">
+        {markets.map((market) => (
+          <Checkbox
+            key={market.id ?? 'default'}
+            label={market.label}
+            checked={marketIds.includes(market.id)}
+            onCheckedChange={() => onToggle((current) => toggleMarket(current, market.id))}
+          />
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
 const finishedOnce = (schedule: AuditSchedule) =>
   schedule.cadence === 'one_time' && !schedule.next_run_at && !schedule.failure_count;
 
@@ -239,11 +281,26 @@ function pauseLabel(schedule: AuditSchedule) {
     : 'Paused.';
 }
 
+/** The schedule's markets by label, or nothing while the project has only its default. */
+function marketSummary(schedule: AuditSchedule, markets: readonly ProjectMarket[]): string {
+  if (markets.length < 2) return '';
+  const labels = schedule.market_ids.map(
+    (id) => markets.find((market) => market.id === id)?.label ?? 'Removed market',
+  );
+  return ` · ${labels.join(', ')}`;
+}
+
 function ScheduleRow({
   schedule,
+  markets,
   resuming,
   onResume,
-}: Readonly<{ schedule: AuditSchedule; resuming: boolean; onResume: () => void }>) {
+}: Readonly<{
+  schedule: AuditSchedule;
+  markets: readonly ProjectMarket[];
+  resuming: boolean;
+  onResume: () => void;
+}>) {
   return (
     <li className="type-body flex flex-wrap items-center justify-between gap-2 px-3 py-2">
       <span className={textRole('emphasis', 'text-foreground')}>
@@ -259,6 +316,7 @@ function ScheduleRow({
           )}
           {' · '}
           {schedule.audit_scope === 'commerce' ? 'Commerce' : 'Brand'}
+          {marketSummary(schedule, markets)}
         </span>
       ) : (
         <span className="text-secondary flex flex-wrap items-center gap-2">

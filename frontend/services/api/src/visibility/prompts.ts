@@ -28,7 +28,7 @@ import {
 } from './comparison.ts';
 import { ratio, round2 } from './metrics.ts';
 import { runSetComparisonStatus } from './run-sets.ts';
-import type { RunScope } from './runs.ts';
+import { marketOf, type RunScope } from './runs.ts';
 import {
   AnalysisNotFoundError,
   authorizeRunSet,
@@ -74,6 +74,7 @@ async function latestRunId(db: Database, scope: RunScope): Promise<string | null
     .select('id')
     .where('workspace_id', '=', scope.workspaceId)
     .where('project_id', '=', scope.projectId)
+    .where('market_id', 'is not distinct from', marketOf(scope))
     .where('audit_scope', '=', visibility.brand_audit_scope)
     .where('status', 'in', visibility.dashboard_audit_statuses)
     .orderBy(sql`completed_at desc nulls last`)

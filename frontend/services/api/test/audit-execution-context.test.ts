@@ -1,5 +1,5 @@
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
-import { createAudit } from '../src/audits/creation.ts';
+import { createAudits } from '../src/audits/creation.ts';
 import { auditRuntime } from '../src/audits/config.ts';
 import { auditInput } from '../src/audits/inputs.ts';
 import {
@@ -54,7 +54,7 @@ async function seed(surface = false) {
       async () => ({ status: 200, body: { status_code: 20000, tasks: [] } }),
     );
   }
-  const id = await createAudit(
+  const [id] = await createAudits(
     db,
     t.workspaceId,
     auditInput.parse({

@@ -4,6 +4,8 @@ import { useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { MeasurementContext } from '@/components/runs/measurement-context';
+import { ENGINE_LABELS } from '@/lib/providers/catalog';
+import { marketLabel } from '@citeladder/contracts/markets';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Meter } from '@/components/ui/meter';
@@ -130,7 +132,14 @@ function ProgressStatus({ audit, polling }: Readonly<{ audit: Audit; polling: bo
       <Badge variant="run-status" value={auditBadgeValue(audit.status)}>
         {auditStatusLabel(audit.status)}
       </Badge>
+      <Badge variant="neutral">{marketLabel(audit.market)}</Badge>
       <MeasurementContext provenance={audit.model_provenance} />
+      {audit.not_applicable_engines.length ? (
+        <Badge variant="neutral">
+          Not available in this market:{' '}
+          {audit.not_applicable_engines.map((engine) => ENGINE_LABELS[engine]).join(', ')}
+        </Badge>
+      ) : null}
       {polling ? (
         <span
           className="type-caption inline-flex items-center gap-2 tabular-nums"

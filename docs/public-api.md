@@ -90,11 +90,13 @@ retryable 409 rather than a second write. Records are kept
 
 ## Operations
 
-Reads: projects, the business map, topics, prompt sets, prompts with their
+Reads: projects, their measurement markets, the business map, topics, prompt sets, prompts with their
 latest measurement (`measured` with mention and citation rates that may be
 `null`, `not_measured`, or `unavailable` for brand diagnostics), generation runs and candidates, competitors and
 suggestions, audits (paged), an audit, an estimate, schedules, visibility
-overview, trends, prompts, sources, fanout, perception and ads, actions,
+overview, trends, prompts, sources, fanout, perception, ads and the By market
+comparison (each visibility read takes `market`, a market id; omitted is the
+default market), actions,
 Site Health's latest snapshot, crawl pages and issues, AI Traffic overview,
 pages and crawl-log coverage, Performance totals and dimension tables, and
 Search Intelligence runs and dataset rows.
@@ -105,11 +107,13 @@ competitor add, edit, remove and suggestion accept (`competitors:write`);
 audit launch and cancel (`audits:run`); schedules (`schedules:write`); action
 status and implementation declaration (`actions:write`).
 
-An audit launch creates and queues the audit in one call. The caller sends
-`max_estimated_credits`; when the estimate's `maximum_attempt_count` (the most
-audit credits the run can reserve) is higher, nothing is created and the
-response is 409 `estimate_exceeds_limit` with both numbers. The runner
-executes the queued audit.
+An audit launch creates and queues one audit per `market_ids` entry (default
+the project's default market) in one call and returns them as a list sharing a
+`launch_id`. The caller sends `max_estimated_credits`; when the estimate's
+`maximum_attempt_count` (the most audit credits the launch can reserve, summed
+over its markets) is higher, nothing is created and the response is 409
+`estimate_exceeds_limit` with both numbers. The runner executes the queued
+audits.
 
 Changes within v1 are additive. Machine-readable state fields keep unknown,
 unavailable and not-measured values distinct, as everywhere in the product.

@@ -21,6 +21,7 @@ import {
   projectSchema,
 } from '@citeladder/contracts/project';
 import { strictValidate } from '@citeladder/contracts/validation';
+import { projectMarketSchema, type ProjectMarketCreate } from '@citeladder/contracts/markets';
 import type {
   BrandProfile,
   BrandProfileDraft,
@@ -34,6 +35,7 @@ import type {
 
 const workspaceListSchema = z.array(workspaceSchema);
 const projectListSchema = z.array(projectSchema);
+const projectMarketListSchema = z.array(projectMarketSchema);
 
 export type ProjectInput = {
   name: string;
@@ -113,6 +115,17 @@ export const projectsApi = {
   },
   deleteProject: (projectId: string, options?: ApiRequestOptions) =>
     apiClient.delete<void>(`/projects/${projectId}`, options),
+  /** The project's measurement markets, its default first (`id: null`). */
+  listMarkets: async (projectId: string, options?: ApiRequestOptions) => {
+    const res = await apiClient.get(`/projects/${projectId}/markets`, options);
+    return strictValidate(projectMarketListSchema, res, 'projects.listMarkets');
+  },
+  addMarket: async (projectId: string, input: ProjectMarketCreate, options?: ApiRequestOptions) => {
+    const res = await apiClient.post(`/projects/${projectId}/markets`, input, options);
+    return strictValidate(projectMarketListSchema, res, 'projects.addMarket');
+  },
+  deleteMarket: (projectId: string, marketId: string, options?: ApiRequestOptions) =>
+    apiClient.delete<void>(`/projects/${projectId}/markets/${marketId}`, options),
   refreshProjectLogos: async (projectId: string, options?: ApiRequestOptions) => {
     const res = await apiClient.post<Project>(`/projects/${projectId}/logos/refresh`, {}, options);
     return strictValidate(projectSchema, res, 'projects.refreshProjectLogos');

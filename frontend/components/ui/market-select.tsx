@@ -36,7 +36,7 @@ import {
 } from 'country-flag-icons/react/3x2';
 
 import { SearchableSelect, type SearchableSelectOption } from '@/components/ui/searchable-select';
-import type { MarketOption } from '@/lib/setup/markets';
+import type { MarketOption } from '@citeladder/contracts/markets';
 
 const COUNTRY_FLAGS = {
   AE,

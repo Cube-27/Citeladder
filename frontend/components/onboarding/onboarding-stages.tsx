@@ -7,13 +7,13 @@ import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { MarketSelect } from '@/components/ui/market-select';
-import { COUNTRY_OPTIONS, LANGUAGE_OPTIONS } from '@/lib/setup/markets';
+import { MARKET_COUNTRIES, MARKET_LANGUAGES } from '@citeladder/contracts/markets';
 import { discoveryActivity } from '@/lib/onboarding/discovery-activity';
 import { onboardingErrorMessage, type BrandStepValues } from '@/lib/onboarding/forms';
 import { hasConfirmedIcp, IcpAudience, IcpCategory } from './icp-confirmation';
 import { ReviewStep } from './review-step';
 
-const MARKET_OPTIONS = [{ value: 'GLOBAL', label: 'Global' }, ...COUNTRY_OPTIONS];
+const MARKET_OPTIONS = [{ value: 'GLOBAL', label: 'Global' }, ...MARKET_COUNTRIES];
 
 function StageHeader({ title, children }: Readonly<{ title: ReactNode; children: ReactNode }>) {
   return (
@@ -86,7 +86,7 @@ export function BrandStage({
                   value={field.value}
                   onChange={field.onChange}
                   onBlur={field.onBlur}
-                  options={LANGUAGE_OPTIONS}
+                  options={MARKET_LANGUAGES}
                 />
               )}
             />

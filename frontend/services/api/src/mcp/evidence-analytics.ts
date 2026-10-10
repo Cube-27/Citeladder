@@ -27,13 +27,18 @@ import { McpInputError, type Evidence, type ProjectRead, type ReadScope } from '
 import { mcpPolicy } from './config.ts';
 
 type Selection = {
+  market_id?: string | null;
   audit_id?: string | null;
   engine?: string | null;
   cohort: string;
 };
 type Page = { cursor?: string | null; limit?: number | null };
-const runs = (scope: ReadScope, args: Selection): RunSelection => ({
+const inMarket = (scope: ReadScope, args: Selection) => ({
   ...scope,
+  marketId: args.market_id ?? null,
+});
+const runs = (scope: ReadScope, args: Selection): RunSelection => ({
+  ...inMarket(scope, args),
   auditId: args.audit_id ?? null,
   auditIds: null,
   logicalEngine: args.engine ?? null,
@@ -61,7 +66,7 @@ export async function visibilityTrends(
   )
     throw new McpInputError(`Trend windows are limited to ${mcpPolicy.trend_max_window_days} days`);
   const points = visibilityTrendListSchema.parse(
-    await getVisibilityTrends(db, scope, {
+    await getVisibilityTrends(db, inMarket(scope, args), {
       logicalEngine: args.engine ?? null,
       fromAt,
       toAt,
@@ -218,7 +223,7 @@ export async function visibilityOverview(
   try {
     if (args.baseline_id) await authorizeRunSet(db, scope, [args.baseline_id]);
     const projection = visibilitySchema.parse(
-      await getVisibility(db, scope, {
+      await getVisibility(db, inMarket(scope, args), {
         auditId: args.audit_id ?? null,
         logicalEngine: args.engine ?? null,
         baselineId: args.baseline_id ?? null,

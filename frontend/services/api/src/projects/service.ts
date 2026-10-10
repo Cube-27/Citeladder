@@ -23,6 +23,7 @@ import { cleanList, type ProjectCreate, type ProjectUpdate } from './inputs.ts';
 import { brandLogoUrl, competitorLogoUrl } from './logos.ts';
 import type { ProjectScope } from './brand-profile.ts';
 import { firstOf } from '../lists.ts';
+import { searchContext } from '../search-surfaces/locations.ts';
 
 export type ProjectView = z.input<typeof projectSchema>;
 const stringArray = projectSchema.shape.owned_domains;
@@ -161,15 +162,6 @@ export async function listProjects(db: Database, workspaceId: string): Promise<P
     .orderBy('id', 'desc')
     .execute();
   return views(db, workspaceId, rows);
-}
-
-function searchContext(country: string, language: string) {
-  const locations: Record<string, number> = policy.projects.location_codes;
-  const normalized = language.toLowerCase();
-  return {
-    serp_location_code: locations[country.toUpperCase()] ?? 0,
-    serp_language_code: policy.projects.language_codes.includes(normalized) ? normalized : '',
-  };
 }
 
 /** Caller owns the transaction, including onboarding's atomic completion. */

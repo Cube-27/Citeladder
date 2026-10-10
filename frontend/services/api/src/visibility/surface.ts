@@ -210,6 +210,8 @@ export async function executionSurfaceEvidence(
 type RateScope = {
   workspaceId: string;
   projectId: string;
+  /** Without named runs, the market whose observations count; `null` is the default. */
+  marketId: string | null;
   auditId: string | null;
   auditIds: string[] | null;
   cohort: string;
@@ -236,6 +238,7 @@ function scopedObservations(db: Database, scope: RateScope) {
     .where('snapshot.cohort', '=', scope.cohort);
   if (scope.auditIds?.length) query = query.where('observation.audit_id', 'in', scope.auditIds);
   else if (scope.auditId !== null) query = query.where('observation.audit_id', '=', scope.auditId);
+  else query = query.where('audit.market_id', 'is not distinct from', scope.marketId);
   return query;
 }
 

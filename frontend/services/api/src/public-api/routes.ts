@@ -232,7 +232,7 @@ export const publicApiRoutes: readonly ProductRoute[] = [
     path: `${project}/audits`,
     params: { path: projectPath, query: {} },
     body: auditLaunchInput,
-    response: auditSchema,
+    response: auditSchema.array(),
     handle: async ({ c, db, config }, { path }) =>
       launchAudit(db, config, actorOf(c), path.project_id, await readBody(c, auditLaunchInput)),
   }),

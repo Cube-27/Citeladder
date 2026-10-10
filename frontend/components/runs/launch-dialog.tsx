@@ -11,6 +11,7 @@ import { runsApi } from '@/lib/api/runs';
 import type { Audit, LogicalEngine, PromptSet } from '@/lib/api/types';
 import { ENGINE_ORDER, isConfigured, isVerified, isConsumerEngine } from '@/lib/providers/catalog';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
+import { useProjectMarkets } from '@/lib/project/use-project-markets';
 import {
   auditablePrompts,
   buildLaunchPayload,
@@ -135,6 +136,9 @@ export function LaunchDialog({
     }
   }, [open, connectionsQuery.isSuccess, configuredEngines]);
   const [repetitions, setRepetitions] = useState(DEFAULT_REPETITIONS);
+  const markets = useProjectMarkets(projectId, workspaceId, open);
+  // The default market alone until the reader picks more.
+  const [marketIds, setMarketIds] = useState<(string | null)[]>([null]);
   // The inline provider setup: closed, open on no particular provider, or
   // open on the provider that measures the engine the user clicked.
   const [connecting, setConnecting] = useState<LogicalEngine | 'any' | null>(null);
@@ -178,6 +182,7 @@ export function LaunchDialog({
     promptSetId: promptSelection.payloadPromptSetId,
     promptIds: promptSelection.promptIds,
     engines: selectedEngines,
+    marketIds,
     repetitions,
     auditScope,
   };
@@ -191,6 +196,7 @@ export function LaunchDialog({
     setEngines([]);
     setPromptSetId(null);
     setRepetitions(DEFAULT_REPETITIONS);
+    setMarketIds([null]);
     setBatchIndex(null);
   };
   const launchMutation = useMutation({
@@ -198,12 +204,12 @@ export function LaunchDialog({
       if (!workspaceId) throw new Error('Workspace is not available.');
       return runsApi.launchAudit(buildLaunchPayload(selection), { workspaceId });
     },
-    onSuccess: async (audit) => {
-      queryClient.setQueryData(queryKeys.runs.detail(audit.id), audit);
+    onSuccess: async (audits) => {
+      for (const audit of audits) queryClient.setQueryData(queryKeys.runs.detail(audit.id), audit);
       await queryClient.invalidateQueries({ queryKey: queryKeys.runs.all });
       onOpenChange(false);
       reset();
-      onLaunched?.(audit);
+      if (audits[0]) onLaunched?.(audits[0]);
     },
   });
   const launchNotice = launchMutation.isError
@@ -233,6 +239,9 @@ export function LaunchDialog({
       }
       repetitions={repetitions}
       setRepetitions={setRepetitions}
+      markets={markets}
+      marketIds={marketIds}
+      setMarketIds={setMarketIds}
       estimate={estimateQuery.data}
       launchPending={launchMutation.isPending}
       launchNotice={launchNotice}

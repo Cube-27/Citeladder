@@ -1,5 +1,6 @@
 import { projectSchema } from '@citeladder/contracts/project';
 import { commandCenterSchema } from '@citeladder/contracts/opportunities';
+import { projectMarketCreateSchema, projectMarketSchema } from '@citeladder/contracts/markets';
 import { z } from 'zod';
 
 import { policy, resolveSettingSpec } from '../config.ts';
@@ -14,6 +15,7 @@ import {
   deleteProject,
 } from '../projects/service.ts';
 import { commandCenter } from '../projects/command-center.ts';
+import { addMarket, deleteMarket, listMarkets } from '../projects/markets.ts';
 import { refreshLogos } from '../projects/logo-refresh.ts';
 import { defineGetRoute, definePostRoute, definePatchRoute, defineDeleteRoute } from './define.ts';
 
@@ -21,6 +23,8 @@ const family = 'projects';
 const root = '/api/v1/projects';
 const uuid = { scalar: { kind: 'uuid' }, required: true } as const;
 const projectPath = { project_id: uuid };
+const marketPath = { project_id: uuid, market_id: uuid };
+const scopeOf = (workspaceId: string, projectId: string) => ({ workspaceId, projectId });
 export const projectRoutes = [
   defineGetRoute({
     family,
@@ -114,5 +118,41 @@ export const projectRoutes = [
         { workspaceId: c.get('workspace').workspaceId, projectId: path.project_id },
         query.audit_id,
       ),
+  }),
+  defineGetRoute({
+    family,
+    exposure: 'both',
+    path: `${root}/{project_id}/markets`,
+    authorize: 'project',
+    params: { path: projectPath, query: {} },
+    response: z.array(projectMarketSchema),
+    handle: ({ c, db }, { path }) =>
+      listMarkets(db, scopeOf(c.get('workspace').workspaceId, path.project_id)),
+  }),
+  definePostRoute({
+    family,
+    path: `${root}/{project_id}/markets`,
+    authorize: 'project',
+    capability: 'write',
+    status: 201,
+    params: { path: projectPath, query: {} },
+    body: projectMarketCreateSchema,
+    response: z.array(projectMarketSchema),
+    async handle({ c, db }, { path }) {
+      return addMarket(
+        db,
+        scopeOf(c.get('workspace').workspaceId, path.project_id),
+        await readBody(c, projectMarketCreateSchema),
+      );
+    },
+  }),
+  defineDeleteRoute({
+    family,
+    path: `${root}/{project_id}/markets/{market_id}`,
+    authorize: 'project',
+    capability: 'write',
+    params: { path: marketPath, query: {} },
+    handle: ({ c, db }, { path }) =>
+      deleteMarket(db, scopeOf(c.get('workspace').workspaceId, path.project_id), path.market_id),
   }),
 ];

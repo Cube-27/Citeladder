@@ -5,7 +5,7 @@ import { VisibilityFixtures } from './visibility-fixtures.ts';
 import { auditTenant } from './audit-fixtures.ts';
 import { auditRuntime } from '../src/audits/config.ts';
 import { auditInput } from '../src/audits/inputs.ts';
-import { createAudit } from '../src/audits/creation.ts';
+import { createAudits } from '../src/audits/creation.ts';
 import { AuditQueue } from '../src/queue/audit-queue.ts';
 import { persistExecutionSuccess, type ExecutionResult } from '../src/audits/result-persistence.ts';
 import { categoryByName, newProduct, addMembership } from '../src/commerce/catalog-store.ts';
@@ -238,7 +238,7 @@ describe('frozen Commerce shelf projections', () => {
         created_at: new Date(),
       })
       .execute();
-    const auditId = await createAudit(
+    const [auditId] = await createAudits(
       db,
       t.workspaceId,
       auditInput.parse({

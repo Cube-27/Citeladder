@@ -7,7 +7,7 @@ import { auditTenant } from './audit-fixtures.ts';
 import { billingAccount } from './prompt-fixtures.ts';
 import { auditRuntime } from '../src/audits/config.ts';
 import { auditInput } from '../src/audits/inputs.ts';
-import { createAudit } from '../src/audits/creation.ts';
+import { createAudits } from '../src/audits/creation.ts';
 import { AuditMaintenance, cancelAudit, repairOwnedCompletion } from '../src/audits/maintenance.ts';
 import { auditProjections } from '../src/audits/projections.ts';
 import { analyzeExecution } from '../src/analysis/execution.ts';
@@ -56,7 +56,7 @@ afterAll(async () => {
 async function seed() {
   const t = await auditTenant(db, fixtures);
   workspaces.push(t.workspaceId);
-  const auditId = await createAudit(
+  const [auditId] = await createAudits(
     db,
     t.workspaceId,
     auditInput.parse({ project_id: t.projectId, prompt_set_id: t.setId, engines: ['chatgpt'] }),
