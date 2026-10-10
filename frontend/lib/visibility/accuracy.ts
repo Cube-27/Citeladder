@@ -10,6 +10,8 @@ import type {
   FactTopic,
 } from '@citeladder/contracts/fact-checking';
 
+import type { SentimentValue } from '@/components/ui/badge-variants';
+
 export const TOPIC_LABELS: Record<FactTopic, string> = {
   pricing: 'Pricing',
   plans: 'Plans',
@@ -26,6 +28,14 @@ export const VERDICT_LABELS: Record<ClaimVerdict, string> = {
   contradicted: 'Contradicted',
   inconclusive: 'Inconclusive',
   not_covered: 'Not covered',
+};
+
+/** The shared tone scale: supported reads as success, contradicted as danger. */
+export const VERDICT_TONE: Record<ClaimVerdict, SentimentValue> = {
+  supported: 'positive',
+  contradicted: 'negative',
+  inconclusive: 'mixed',
+  not_covered: 'neutral',
 };
 
 type Reason = NonNullable<AccuracyResponse['reason']>;

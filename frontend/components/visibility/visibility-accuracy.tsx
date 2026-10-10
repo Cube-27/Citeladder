@@ -5,12 +5,10 @@ import {
   type AccuracyClaim,
   type AccuracyCoverage,
   type AccuracyResponse,
-  type ClaimVerdict,
 } from '@citeladder/contracts/fact-checking';
 import { ShieldCheck } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
-import type { SentimentValue } from '@/components/ui/badge-variants';
 import { BusyBar } from '@/components/ui/busy-bar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -31,7 +29,6 @@ import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import { MissingValue } from '@/components/ui/unavailable-value';
 import type { SourceFilters } from '@/components/visibility/source-rows';
-import { measured, formatPercent } from '@/lib/format';
 import {
   accuracyCoverageLine,
   accuracyStateCopy,
@@ -39,16 +36,9 @@ import {
   VERDICT_LABELS,
 } from '@/lib/visibility/accuracy';
 import { engineLabel } from '@/lib/visibility/dashboard';
+import { formatShare } from '@/lib/visibility/perception';
 import { useAccuracy } from '@/lib/visibility/use-accuracy';
 import type { SourceQueries } from '@/lib/visibility/use-source-analysis';
-
-/** The shared tone scale: supported reads as success, contradicted as danger. */
-export const VERDICT_TONE: Record<ClaimVerdict, SentimentValue> = {
-  supported: 'positive',
-  contradicted: 'negative',
-  inconclusive: 'mixed',
-  not_covered: 'neutral',
-};
 
 /**
  * What answers claimed about the brand, checked against its confirmed facts.
@@ -146,7 +136,7 @@ function Headline({ data }: Readonly<{ data: AccuracyResponse }>) {
             {
               key: 'accuracy',
               label: 'Accuracy',
-              value: measured(formatPercent(data.score.accuracy)),
+              value: formatShare(data.score.accuracy),
               missingLabel: 'Unavailable',
               detail: 'Supported, of claims that were supported or contradicted.',
             },
@@ -260,9 +250,7 @@ function BreakdownTable({
                 <TableCell numeric>{row.score.coverage.claims}</TableCell>
                 <TableCell numeric>{row.score.coverage.supported}</TableCell>
                 <TableCell numeric>{row.score.coverage.contradicted}</TableCell>
-                <TableCell numeric>
-                  {measured(formatPercent(row.score.accuracy)) ?? <MissingValue />}
-                </TableCell>
+                <TableCell numeric>{formatShare(row.score.accuracy) ?? <MissingValue />}</TableCell>
               </TableRow>
             ))}
           </TableBody>

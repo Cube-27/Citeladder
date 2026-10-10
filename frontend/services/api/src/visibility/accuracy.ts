@@ -47,7 +47,8 @@ import { isNamed } from '../perception/passages.ts';
 import { factCheckingEnabled } from '../projects/brand-facts.ts';
 import { compareText } from '../text-order.ts';
 import { scopedSelection } from './dashboard.ts';
-import { evidenceScope, observedAt, type RunSelection } from './selection.ts';
+import { perceptionRows } from './perception.ts';
+import { citationsByAnalysis, evidenceScope, observedAt, type RunSelection } from './selection.ts';
 
 const settings = policy.perception.fact_check;
 const CLAIMS_CURSOR_SCOPE = 'visibility.accuracy.claims';
@@ -58,13 +59,19 @@ const brandNamedSchema = z
   .transform((rows) => rows.some((row) => row.entity_kind === 'brand' && isNamed(row.state)));
 const revisionIdsSchema = z.array(z.string()).catch([]);
 
-type Frozen = { versions: PerceptionVersions; factCheck: FrozenFactCheck };
+type Frozen = {
+  versions: PerceptionVersions;
+  factCheck: FrozenFactCheck;
+  /** Topics with a frozen fact; a claim on any other topic is not covered. */
+  topics: ReadonlySet<string>;
+};
 type Subject = { analysisId: string; frozen: Frozen };
 
 function frozenOf(configuration: unknown): Frozen | null {
   const versions = frozenPerceptionVersions(configuration);
   const factCheck = frozenFactCheck(configuration);
-  return versions && factCheck ? { versions, factCheck } : null;
+  if (!versions || !factCheck) return null;
+  return { versions, factCheck, topics: new Set(factCheck.facts.map((fact) => fact.topic)) };
 }
 
 function identityOf({ versions, factCheck }: Frozen) {
@@ -82,21 +89,15 @@ async function claimsOf(
   workspaceId: string,
   subjects: readonly Subject[],
 ): Promise<Map<string, { extraction: Extraction; claims: ClaimRow[] }>> {
-  if (!subjects.length) return new Map();
   const byAnalysis = new Map(subjects.map((subject) => [subject.analysisId, subject]));
-  const perceptions = (
-    await chunked([...byAnalysis.keys()], (ids) =>
-      db
-        .selectFrom('answer_perceptions')
-        .select(['id', 'analysis_id', 'extractor_version', 'outcome', 'outcome_reason'])
-        .where('workspace_id', '=', workspaceId)
-        .where('analysis_id', 'in', ids)
-        .execute(),
-    )
-  ).filter(
-    (row) =>
-      byAnalysis.get(row.analysis_id)?.frozen.versions.extractor_version === row.extractor_version,
+  const perceptions = await perceptionRows(
+    db,
+    workspaceId,
+    new Map(
+      subjects.map(({ analysisId, frozen }) => [analysisId, frozen.versions.extractor_version]),
+    ),
   );
+  if (!perceptions.length) return new Map();
   const perceptionIds = perceptions.map((row) => row.id);
   const [claimRows, verifications] = await Promise.all([
     chunked(perceptionIds, (ids) =>
@@ -127,10 +128,20 @@ async function claimsOf(
         .where('verification_id', 'in', ids)
         .execute(),
   );
-  const verdicts = new Map(verdictRows.map((row) => [row.claim_id, row]));
-  const revisionIds = [
-    ...new Set(verdictRows.flatMap((row) => revisionIdsSchema.parse(row.fact_revision_ids))),
-  ];
+  const verdicts = new Map(
+    verdictRows.map((row) => [
+      row.claim_id,
+      {
+        verdict: claimVerdictSchema.parse(row.verdict),
+        low_confidence: row.low_confidence,
+        revisionIds: revisionIdsSchema.parse(row.fact_revision_ids),
+      },
+    ]),
+  );
+  const revisionIds = [...new Set([...verdicts.values()].flatMap((row) => row.revisionIds))];
+  const verificationOf = new Map(
+    verifications.map((row) => [`${row.perception_id}:${row.verify_template_version}`, row]),
+  );
   const revisions = new Map(
     (
       await chunked(revisionIds, (ids) =>
@@ -155,7 +166,7 @@ async function claimsOf(
   const claimsByPerception = groupBy(claimRows, (row) => row.perception_id);
   const result = new Map<string, { extraction: Extraction; claims: ClaimRow[] }>();
   for (const perception of perceptions) {
-    const { factCheck } = byAnalysis.get(perception.analysis_id)!.frozen;
+    const { factCheck, topics } = byAnalysis.get(perception.analysis_id)!.frozen;
     const reason = unavailableReason(perception);
     if (reason) {
       result.set(perception.analysis_id, {
@@ -164,22 +175,13 @@ async function claimsOf(
       });
       continue;
     }
-    const topics = new Set<string>(factCheck.facts.map((fact) => fact.topic));
-    const verification = verifications.find(
-      (row) =>
-        row.perception_id === perception.id &&
-        row.verify_template_version === factCheck.verify_template_version,
+    const verification = verificationOf.get(
+      `${perception.id}:${factCheck.verify_template_version}`,
     );
     const claims = (claimsByPerception.get(perception.id) ?? []).flatMap((row): ClaimRow[] => {
       const topic = factTopicSchema.safeParse(row.topic);
       if (!topic.success) return [];
-      const stored = verdicts.get(row.id);
-      const verdict = stored
-        ? {
-            verdict: claimVerdictSchema.parse(stored.verdict),
-            low_confidence: stored.low_confidence,
-          }
-        : undefined;
+      const verdict = verdicts.get(row.id);
       return [
         {
           ordinal: row.ordinal,
@@ -194,11 +196,7 @@ async function claimsOf(
             verification,
             verdict,
           }),
-          facts: stored
-            ? revisionIdsSchema
-                .parse(stored.fact_revision_ids)
-                .flatMap((id) => revisions.get(id) ?? [])
-            : [],
+          facts: (verdict?.revisionIds ?? []).flatMap((id) => revisions.get(id) ?? []),
         },
       ];
     });
@@ -240,15 +238,7 @@ async function selectionAnswers(
       rows.map((row) => ({ analysisId: row.id, frozen: row.frozen })),
     ),
     options.citations
-      ? chunked(ids, (chunk) =>
-          db
-            .selectFrom('citations')
-            .select(['analysis_id', 'domain', 'url'])
-            .where('workspace_id', '=', scoped.workspaceId)
-            .where('analysis_id', 'in', chunk)
-            .orderBy('ordinal')
-            .execute(),
-        ).then((found) => groupBy(found, (citation) => citation.analysis_id))
+      ? citationsByAnalysis(db, scoped.workspaceId, ids)
       : new Map<string, { domain: string; url: string }[]>(),
   ]);
   const answers = rows.map((row): FactAnswer => {
@@ -262,7 +252,7 @@ async function selectionAnswers(
       identity: identityOf(row.frozen),
       extraction: found?.extraction ?? { kind: 'pending' },
       claims: found?.claims ?? [],
-      citations: (citations.get(row.id) ?? []).map(({ domain, url }) => ({ domain, url })),
+      citations: citations.get(row.id) ?? [],
     };
   });
   return { answers, auditIds: [...new Set(rows.map((row) => row.audit_id))].sort(compareText) };
@@ -324,12 +314,13 @@ export async function getAccuracyClaims(
   if (!(await factCheckingEnabled(db, selection.workspaceId)))
     return { items: [], next_cursor: null };
   const { answers } = await selectionAnswers(db, selection, { citations: false });
-  const claims = positionedClaims(answers).filter(
+  const claims = positionedClaims(
+    answers,
     (claim) =>
       (filters.topic === null || claim.topic === filters.topic) &&
-      (filters.verdict === null || claim.verdict === filters.verdict) &&
-      (after === null || claimOrder(claim, after) > 0),
-  );
+      (filters.verdict === null ||
+        (claim.status.kind === 'verdict' && claim.status.verdict === filters.verdict)),
+  ).filter((claim) => after === null || claimOrder(claim, after) > 0);
   const page = claims.slice(0, filters.limit);
   const last = page.at(-1);
   return {

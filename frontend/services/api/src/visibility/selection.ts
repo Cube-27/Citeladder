@@ -13,6 +13,7 @@ import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { timestamptz } from '../db/timestamps.ts';
 import { epochMicros, toUtc, type ParsedDatetime } from '../http/datetimes.ts';
+import { chunked, groupBy } from '../lists.ts';
 
 const visibility = policy.visibility;
 
@@ -163,3 +164,21 @@ export function evidenceScope(db: Database, selection: RunSelection) {
 
 /** `coalesce(audit.completed_at, audit.created_at)`: when the run was observed. */
 export const observedAt = sql`coalesce(audit.completed_at, audit.created_at)`;
+
+/** Each analysis's citations in answer order, for readers that report cited domains. */
+export async function citationsByAnalysis(
+  db: Database,
+  workspaceId: string,
+  analysisIds: readonly string[],
+): Promise<Map<string, { domain: string; url: string }[]>> {
+  const found = await chunked([...analysisIds], (chunk) =>
+    db
+      .selectFrom('citations')
+      .select(['analysis_id', 'domain', 'url'])
+      .where('workspace_id', '=', workspaceId)
+      .where('analysis_id', 'in', chunk)
+      .orderBy('ordinal')
+      .execute(),
+  );
+  return groupBy(found, (citation) => citation.analysis_id);
+}

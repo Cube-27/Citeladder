@@ -12,7 +12,6 @@
 import { randomUUID } from 'node:crypto';
 
 import { factTopicSchema } from '@citeladder/contracts/fact-checking';
-import { sql } from 'kysely';
 
 import { policy } from '../config.ts';
 import type { FactCheckPolicy } from '../config/perception.ts';
@@ -20,12 +19,17 @@ import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import { parseUuid } from '../http/uuid.ts';
 import type { ModelGateway } from '../models/gateway.ts';
-import { ModelError } from '../models/http.ts';
 import type { QueueTask } from '../queue/task-queue.ts';
 import { scalarText } from '../text-order.ts';
 import { payloadString, taskProject, type Executor } from '../workers/executor.ts';
 import { frozenFactCheck, type FrozenFactCheck } from './admission.ts';
-import { configuredGateway } from './executor.ts';
+import {
+  callStructured,
+  configuredGateway,
+  outcomeColumns,
+  overCap,
+  type ModelCall,
+} from './model-call.ts';
 import {
   validateVerdicts,
   verifyHash,
@@ -34,7 +38,6 @@ import {
   verifyPrompt,
   type VerifiedVerdict,
   type VerifyClaim,
-  type VerifyPackage,
 } from './verify.ts';
 
 /** Outcomes that spent a model call; caps count only these. */
@@ -45,14 +48,6 @@ type Outcome =
   | { outcome: 'unavailable'; reason: 'platform_cap' | 'model_not_configured' | 'task_failed' }
   | { outcome: 'invalid_output' }
   | { outcome: 'model_error'; reason: string };
-
-type Call = {
-  provider: string;
-  model: string;
-  inputHash: string;
-  usage: Record<string, unknown> | null;
-  latencyMs: number | null;
-};
 
 type Subject = Awaited<ReturnType<typeof loadSubject>>;
 
@@ -125,40 +120,13 @@ async function alreadyVerified(db: Database, subject: Subject, version: string) 
   return row !== undefined;
 }
 
-async function overCap(
-  db: Database,
-  task: QueueTask,
-  subject: Subject,
-  settings: FactCheckPolicy,
-): Promise<boolean> {
-  const counted = db
-    .selectFrom('fact_verifications')
-    .select((eb) => eb.fn.countAll<string>().as('count'))
-    .where('workspace_id', '=', task.workspace_id)
-    .where('outcome', 'in', CALLED);
-  const [audit, day] = await Promise.all([
-    counted.where('audit_id', '=', subject.audit_id).executeTakeFirstOrThrow(),
-    counted
-      .where(
-        'created_at',
-        '>=',
-        sql<Date>`date_trunc('day', now() at time zone 'utc') at time zone 'utc'`,
-      )
-      .executeTakeFirstOrThrow(),
-  ]);
-  return (
-    Number(audit.count) >= settings.max_verifications_per_audit ||
-    Number(day.count) >= settings.max_verifications_per_workspace_per_day
-  );
-}
-
 function persist(
   task: QueueTask,
   projectId: string,
   subject: Subject,
   version: string,
   outcome: Outcome,
-  call: Call | null,
+  call: ModelCall | null,
 ) {
   return async (db: Database) => {
     const id = randomUUID();
@@ -172,15 +140,7 @@ function persist(
         task_id: subject.task_id,
         perception_id: subject.perception_id,
         verify_template_version: version,
-        model_provider: call?.provider ?? null,
-        model: call?.model ?? null,
-        input_hash: call?.inputHash ?? null,
-        outcome: outcome.outcome,
-        outcome_reason: 'reason' in outcome ? outcome.reason : null,
-        drop_counts: JSON.stringify(outcome.outcome === 'verified' ? outcome.drops : {}),
-        usage: call?.usage ? JSON.stringify(call.usage) : null,
-        latency_ms: call?.latencyMs ?? null,
-        created_at: new Date(),
+        ...outcomeColumns(outcome, outcome.outcome === 'verified' ? outcome.drops : {}, call),
       })
       .onConflict((conflict) =>
         conflict.columns(['perception_id', 'verify_template_version']).doNothing(),
@@ -207,43 +167,24 @@ function persist(
   };
 }
 
-/** Up to `max_attempts` calls while the output fails to parse; a provider fault ends at once. */
-async function verify(
+/** One verification call over the package; code decides which verdicts stand. */
+function verify(
   gateway: ModelGateway,
   built: ReturnType<typeof verifyPackage>,
   settings: FactCheckPolicy,
 ) {
-  const pkg: VerifyPackage = built.pkg;
-  const { system, user } = verifyPrompt(pkg, settings);
-  const call: Call = {
-    provider: gateway.adapter,
-    model: gateway.model,
-    inputHash: verifyHash(pkg),
-    usage: null,
-    latencyMs: null,
-  };
-  for (let attempt = 1; attempt <= settings.max_attempts; attempt++) {
-    try {
-      const { value, result } = await gateway.structured(system, user, verifyOutputSchema);
-      call.model = result.returned_model;
-      call.usage = { ...result.usage, attempts: attempt };
-      call.latencyMs = result.latency_ms;
-      const validated = validateVerdicts(value, built, settings);
-      return { call, outcome: { outcome: 'verified', ...validated } satisfies Outcome };
-    } catch (error) {
-      if (!(error instanceof ModelError)) throw error;
-      call.usage = { attempts: attempt };
-      if (error.code !== 'parse')
-        return {
-          call,
-          outcome: {
-            outcome: 'model_error',
-            reason: error.status ? `http_${error.status}` : error.code,
-          } satisfies Outcome,
-        };
-    }
-  }
-  return { call, outcome: { outcome: 'invalid_output' } satisfies Outcome };
+  const { system, user } = verifyPrompt(built.pkg, settings);
+  return callStructured(
+    gateway,
+    {
+      system,
+      user,
+      schema: verifyOutputSchema,
+      inputHash: verifyHash(built.pkg),
+      maxAttempts: settings.max_attempts,
+    },
+    (value): Outcome => ({ outcome: 'verified', ...validateVerdicts(value, built, settings) }),
+  );
 }
 
 export function factVerification(
@@ -257,15 +198,26 @@ export function factVerification(
     // An audit admitted outside the pilot is never verified.
     if (!factCheck) return;
     const version = factCheck.verify_template_version;
-    if (await alreadyVerified(db, subject, version)) return;
-    const settle = (outcome: Outcome, call: Call | null = null) => ({
+    const [verified, claims] = await Promise.all([
+      alreadyVerified(db, subject, version),
+      eligibleClaims(db, task.workspace_id, subject, factCheck),
+    ]);
+    if (verified || !claims.length) return;
+    const settle = (outcome: Outcome, call: ModelCall | null = null) => ({
       error: null,
       persist: persist(task, projectId, subject, version, outcome, call),
     });
-    const claims = await eligibleClaims(db, task.workspace_id, subject, factCheck);
-    if (!claims.length) return;
-    if (await overCap(db, task, subject, settings))
-      return settle({ outcome: 'unavailable', reason: 'platform_cap' });
+    const [capped, facts] = await Promise.all([
+      overCap(db, 'fact_verifications', {
+        workspaceId: task.workspace_id,
+        auditId: subject.audit_id,
+        called: CALLED,
+        perAudit: settings.max_verifications_per_audit,
+        perDay: settings.max_verifications_per_workspace_per_day,
+      }),
+      frozenFacts(db, task.workspace_id, factCheck),
+    ]);
+    if (capped) return settle({ outcome: 'unavailable', reason: 'platform_cap' });
     const gateway = gatewayFactory();
     if (!gateway) return settle({ outcome: 'unavailable', reason: 'model_not_configured' });
     const configuration = record(subject.configuration);
@@ -273,7 +225,7 @@ export function factVerification(
       version,
       brand: scalarText(configuration.brand_name),
       language: scalarText(configuration.language_code),
-      facts: await frozenFacts(db, task.workspace_id, factCheck),
+      facts,
       claims,
       maxFacts: settings.max_facts_per_verification,
     });

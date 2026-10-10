@@ -17,6 +17,7 @@ import type { Transaction } from 'kysely';
 import { z } from 'zod';
 
 import { policy } from '../config.ts';
+import { factTopicOrder } from '../config/perception.ts';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import type { DB } from '../generated/db-schema.ts';
@@ -84,15 +85,14 @@ export async function admittedFactCheck(
     .orderBy('fact.created_at')
     .orderBy('fact.id')
     .execute();
-  const order = new Map(settings.topics.map((topic, index) => [topic, index]));
   const facts = rows
     .flatMap((row) => {
       const topic = factTopicSchema.safeParse(row.topic);
-      return topic.success && order.has(topic.data)
+      return topic.success && factTopicOrder.has(topic.data)
         ? [{ revision_id: row.id, topic: topic.data }]
         : [];
     })
-    .sort((a, b) => (order.get(a.topic) ?? 0) - (order.get(b.topic) ?? 0))
+    .sort((a, b) => (factTopicOrder.get(a.topic) ?? 0) - (factTopicOrder.get(b.topic) ?? 0))
     .slice(0, settings.max_frozen_facts);
   if (!facts.length) return null;
   const ids = facts.map((fact) => fact.revision_id).sort();

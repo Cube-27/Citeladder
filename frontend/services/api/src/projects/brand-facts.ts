@@ -20,6 +20,7 @@ import type { Selectable } from 'kysely';
 import { z } from 'zod';
 
 import { policy } from '../config.ts';
+import { factTopicOrder } from '../config/perception.ts';
 import type { Database } from '../db/database.ts';
 import { hasGrantedFlag } from '../entitlements/occupancy.ts';
 import { ApiError, notFound } from '../errors.ts';
@@ -75,8 +76,6 @@ function view(row: Selectable<BrandFacts>): BrandFact {
   };
 }
 
-const TOPIC_ORDER = new Map(limits.topics.map((topic, index) => [topic, index]));
-
 /** The project's facts by topic, confirmed first; empty and disabled outside the pilot. */
 export async function listBrandFacts(db: Database, scope: ProjectScope): Promise<BrandFactList> {
   if (!(await factCheckingEnabled(db, scope.workspaceId))) return { enabled: false, facts: [] };
@@ -93,7 +92,7 @@ export async function listBrandFacts(db: Database, scope: ProjectScope): Promise
     .map(view)
     .sort(
       (a, b) =>
-        (TOPIC_ORDER.get(a.topic) ?? 0) - (TOPIC_ORDER.get(b.topic) ?? 0) ||
+        (factTopicOrder.get(a.topic) ?? 0) - (factTopicOrder.get(b.topic) ?? 0) ||
         status.indexOf(a.status) - status.indexOf(b.status),
     );
   return { enabled: true, facts };

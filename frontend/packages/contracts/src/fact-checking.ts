@@ -49,7 +49,7 @@ export const claimVerdictSchema = z.enum([
 ]);
 
 // Why a claim has no verdict.
-const claimUnavailableReasonSchema = z.enum([
+export const claimUnavailableReasonSchema = z.enum([
   'model_not_configured',
   'platform_cap',
   'invalid_output',

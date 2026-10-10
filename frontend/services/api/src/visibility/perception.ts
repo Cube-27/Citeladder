@@ -36,7 +36,7 @@ import {
 import { isNamed } from '../perception/passages.ts';
 import { compareText } from '../text-order.ts';
 import { scopedSelection } from './dashboard.ts';
-import { evidenceScope, observedAt, type RunSelection } from './selection.ts';
+import { citationsByAnalysis, evidenceScope, observedAt, type RunSelection } from './selection.ts';
 
 const visibility = policy.visibility;
 const QUOTES_CURSOR_SCOPE = 'visibility.perception.quotes';
@@ -76,14 +76,14 @@ type Perceived = {
   entities: Map<string, EntityRow>;
 };
 
-/** Each analysis's perception at its extractor version, with its entity rows. */
-async function perceptionsOf(
+/** Each analysis's perception row at the extractor version its audit froze (`wanted`). */
+export async function perceptionRows(
   db: Database,
   workspaceId: string,
   wanted: ReadonlyMap<string, string>,
-): Promise<Map<string, Perceived>> {
-  if (!wanted.size) return new Map();
-  const perceptions = (
+) {
+  if (!wanted.size) return [];
+  return (
     await chunked([...wanted.keys()], (ids) =>
       db
         .selectFrom('answer_perceptions')
@@ -93,6 +93,16 @@ async function perceptionsOf(
         .execute(),
     )
   ).filter((row) => wanted.get(row.analysis_id) === row.extractor_version);
+}
+
+/** Each analysis's perception at its extractor version, with its entity rows. */
+async function perceptionsOf(
+  db: Database,
+  workspaceId: string,
+  wanted: ReadonlyMap<string, string>,
+): Promise<Map<string, Perceived>> {
+  const perceptions = await perceptionRows(db, workspaceId, wanted);
+  if (!perceptions.length) return new Map();
   const entities = groupBy(
     await chunked(
       perceptions.map((row) => row.id),
@@ -180,15 +190,7 @@ async function selectionAnswers(
       new Map(rows.map((row) => [row.id, row.versions.extractor_version])),
     ),
     options.citations
-      ? chunked(ids, (chunk) =>
-          db
-            .selectFrom('citations')
-            .select(['analysis_id', 'domain', 'url'])
-            .where('workspace_id', '=', scoped.workspaceId)
-            .where('analysis_id', 'in', chunk)
-            .orderBy('ordinal')
-            .execute(),
-        ).then((found) => groupBy(found, (citation) => citation.analysis_id))
+      ? citationsByAnalysis(db, scoped.workspaceId, ids)
       : new Map<string, { domain: string; url: string }[]>(),
   ]);
   const answers = rows.map((row): PerceptionAnswer => {

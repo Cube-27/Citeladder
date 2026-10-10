@@ -107,4 +107,9 @@ function loadPerception(input: unknown) {
 
 export const perception = loadPerception(value);
 export type PerceptionPolicy = typeof perception;
+
+/** Each configured fact topic's display and freeze order; unconfigured topics are absent. */
+export const factTopicOrder: ReadonlyMap<string, number> = new Map(
+  perception.fact_check.topics.map((topic, index) => [topic, index]),
+);
 export type FactCheckPolicy = PerceptionPolicy['fact_check'];

@@ -233,17 +233,15 @@ function themes(quotes: readonly PerceptionQuote[], perTheme: number) {
     );
 }
 
-/** Domains cited in answers where the brand drew a negative aspect: co-occurrence only. */
-function drivers(answers: readonly PerceptionAnswer[], limit: number) {
+/** Domains cited in the answers `flagged` accepts, by answer count: co-occurrence only. */
+export function citedDomains<A extends { citations: readonly { domain: string; url: string }[] }>(
+  answers: readonly A[],
+  flagged: (answer: A) => boolean,
+  limit: number,
+) {
   const domains = new Map<string, { answers: number; example_url: string | null }>();
   for (const answer of answers) {
-    const negative = answer.mentions.some(
-      (mention) =>
-        mention.isBrand &&
-        mention.status.kind === 'classified' &&
-        mention.aspects.some((aspect) => aspect.polarity === 'negative'),
-    );
-    if (!negative) continue;
+    if (!flagged(answer)) continue;
     const seen = new Set<string>();
     for (const citation of answer.citations) {
       if (!citation.domain || seen.has(citation.domain)) continue;
@@ -257,6 +255,21 @@ function drivers(answers: readonly PerceptionAnswer[], limit: number) {
     .map(([domain, row]) => ({ domain, ...row }))
     .sort((a, b) => b.answers - a.answers || compareText(a.domain, b.domain))
     .slice(0, limit);
+}
+
+/** Domains cited in answers where the brand drew a negative aspect. */
+function drivers(answers: readonly PerceptionAnswer[], limit: number) {
+  return citedDomains(
+    answers,
+    (answer) =>
+      answer.mentions.some(
+        (mention) =>
+          mention.isBrand &&
+          mention.status.kind === 'classified' &&
+          mention.aspects.some((aspect) => aspect.polarity === 'negative'),
+      ),
+    limit,
+  );
 }
 
 const RECOMMENDATION_LIMITATION =
@@ -276,12 +289,15 @@ function recommended(answers: readonly PerceptionAnswer[]) {
   };
 }
 
-/** One point per run; a version change from the previous point breaks comparability. */
-function trend(answers: readonly PerceptionAnswer[]) {
-  const runs = new Map<
-    string,
-    { first: PerceptionAnswer; rows: PerceptionAnswer[]; completedAt: string }
-  >();
+/**
+ * Answers grouped into runs, oldest completion first; a run whose identity
+ * differs from the previous run's is not comparable with it.
+ */
+export function runPoints<A extends { auditId: string; observedAt: string }>(
+  answers: readonly A[],
+  identity: (first: A) => string,
+) {
+  const runs = new Map<string, { first: A; rows: A[]; completedAt: string }>();
   for (const answer of answers) {
     const run = runs.get(answer.auditId);
     if (!run)
@@ -295,23 +311,32 @@ function trend(answers: readonly PerceptionAnswer[]) {
   return [...runs]
     .map(([auditId, run]) => ({ auditId, ...run }))
     .sort((a, b) => compareText(a.completedAt, b.completedAt) || compareText(a.auditId, b.auditId))
-    .map(({ auditId, first, rows, completedAt }) => {
-      const versions = first.versions;
-      const identity = JSON.stringify([versions.extractor, versions.template, versions.metrics]);
-      const comparable = previous === null || previous === identity;
-      previous = identity;
-      const brand = rows.flatMap((row) => row.mentions.filter((mention) => mention.isBrand));
-      return {
-        audit_id: auditId,
-        completed_at: completedAt,
-        score: score(brand),
-        mentions: brand.length,
-        extractor_version: versions.extractor,
-        template_version: versions.template,
-        metrics_version: versions.metrics,
-        comparable,
-      };
+    .map((run) => {
+      const key = identity(run.first);
+      const comparable = previous === null || previous === key;
+      previous = key;
+      return { ...run, comparable };
     });
+}
+
+/** One point per run; a version change from the previous point breaks comparability. */
+function trend(answers: readonly PerceptionAnswer[]) {
+  return runPoints(answers, ({ versions }) =>
+    JSON.stringify([versions.extractor, versions.template, versions.metrics]),
+  ).map(({ auditId, first, rows, completedAt, comparable }) => {
+    const versions = first.versions;
+    const brand = rows.flatMap((row) => row.mentions.filter((mention) => mention.isBrand));
+    return {
+      audit_id: auditId,
+      completed_at: completedAt,
+      score: score(brand),
+      mentions: brand.length,
+      extractor_version: versions.extractor,
+      template_version: versions.template,
+      metrics_version: versions.metrics,
+      comparable,
+    };
+  });
 }
 
 export function perceptionSummary(

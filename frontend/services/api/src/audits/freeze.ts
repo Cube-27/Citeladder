@@ -170,7 +170,7 @@ export async function prepareAudit(
     .selectAll()
     .where('project_id', '=', project.id)
     .executeTakeFirst();
-  const [aliases, owned, unintended, competitors, profile] = await Promise.all([
+  const [aliases, owned, unintended, competitors, profile, factCheck] = await Promise.all([
     brand
       ? db
           .selectFrom('brand_aliases')
@@ -203,6 +203,7 @@ export async function prepareAudit(
       .where('workspace_id', '=', workspaceId)
       .where('project_id', '=', project.id)
       .executeTakeFirst(),
+    admittedFactCheck(db, { workspaceId, projectId: project.id, auditScope: input.audit_scope }),
   ]);
   const localized = auditPolicy.constants.localized_instruction
     .replace('{country_code}', project.country_code || 'unspecified')
@@ -253,11 +254,6 @@ export async function prepareAudit(
   } catch {
     throw invalid('random_seed must be an integer');
   }
-  const factCheck = await admittedFactCheck(db, {
-    workspaceId,
-    projectId: project.id,
-    auditScope: input.audit_scope,
-  });
   const configuration = {
     brand_name: brand?.name ?? project.brand_name,
     brand_aliases: aliases.map((row) => row.alias),

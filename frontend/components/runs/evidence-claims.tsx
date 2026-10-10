@@ -5,9 +5,8 @@ import type { ExecutionClaim } from '@citeladder/contracts/fact-checking';
 import { Badge } from '@/components/ui/badge';
 import { panelClasses } from '@/components/ui/panel';
 import { Label, textRole } from '@/components/ui/typography';
-import { VERDICT_TONE } from '@/components/visibility/visibility-accuracy';
 import type { Highlight } from '@/lib/markdown/highlight';
-import { TOPIC_LABELS, VERDICT_LABELS } from '@/lib/visibility/accuracy';
+import { TOPIC_LABELS, VERDICT_LABELS, VERDICT_TONE } from '@/lib/visibility/accuracy';
 
 /** Supported and contradicted claims, to mark in the rendered answer. */
 export function claimHighlights(claims: readonly ExecutionClaim[]): Highlight[] {

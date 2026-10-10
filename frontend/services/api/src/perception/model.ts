@@ -46,7 +46,7 @@ type ClaimsOutput = z.infer<typeof claimsOutputSchema>;
 export type ExtractedClaim = ClaimsOutput['claims'][number];
 
 /** The claims addendum a fact-checked audit appends to the perception templates. */
-export type ClaimsRequest = Pick<
+type ClaimsRequest = Pick<
   FactCheckPolicy,
   'topics' | 'max_claims_per_answer' | 'claims_system_addendum' | 'claims_user_addendum'
 >;

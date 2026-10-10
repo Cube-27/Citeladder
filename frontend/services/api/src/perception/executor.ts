@@ -10,15 +10,13 @@
  * never fails because perception could not run.
  */
 import { randomUUID } from 'node:crypto';
-import { sql } from 'kysely';
 
 import { scoringConfig } from '../analysis/scoring.ts';
 import { policy } from '../config.ts';
 import type { FactCheckPolicy, PerceptionPolicy } from '../config/perception.ts';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
-import { createModelGateway, gatewaySettings, type ModelGateway } from '../models/gateway.ts';
-import { ModelError } from '../models/http.ts';
+import type { ModelGateway } from '../models/gateway.ts';
 import { parseUuid } from '../http/uuid.ts';
 import type { QueueTask } from '../queue/task-queue.ts';
 import { scalarText } from '../text-order.ts';
@@ -26,6 +24,13 @@ import { payloadString, taskProject, type Executor } from '../workers/executor.t
 import { enqueueTask } from '../referrals/enqueue.ts';
 import { frozenFactCheck, frozenPerceptionVersions, type FrozenFactCheck } from './admission.ts';
 import { claimsOutputSchema, perceptionOutputSchema, perceptionPrompt } from './model.ts';
+import {
+  callStructured,
+  configuredGateway,
+  outcomeColumns,
+  overCap,
+  type ModelCall,
+} from './model-call.ts';
 import { entityPassages, packageHash, type PerceptionPackage } from './passages.ts';
 import {
   validateClaims,
@@ -51,14 +56,6 @@ type Outcome =
     }
   | { outcome: 'invalid_output' }
   | { outcome: 'model_error'; reason: string };
-
-type Call = {
-  provider: string;
-  model: string;
-  inputHash: string;
-  usage: Record<string, unknown> | null;
-  latencyMs: number | null;
-};
 
 type Subject = Awaited<ReturnType<typeof loadSubject>>;
 
@@ -97,36 +94,8 @@ async function alreadyPerceived(db: Database, subject: Subject, extractorVersion
   return row !== undefined;
 }
 
-async function overCap(
-  db: Database,
-  task: QueueTask,
-  subject: Subject,
-  settings: PerceptionPolicy,
-): Promise<boolean> {
-  const counted = db
-    .selectFrom('answer_perceptions')
-    .select((eb) => eb.fn.countAll<string>().as('count'))
-    .where('workspace_id', '=', task.workspace_id)
-    .where('outcome', 'in', CALLED);
-  const [audit, day] = await Promise.all([
-    counted.where('audit_id', '=', subject.audit_id).executeTakeFirstOrThrow(),
-    counted
-      .where(
-        'created_at',
-        '>=',
-        sql<Date>`date_trunc('day', now() at time zone 'utc') at time zone 'utc'`,
-      )
-      .executeTakeFirstOrThrow(),
-  ]);
-  return (
-    Number(audit.count) >= settings.max_classifications_per_audit ||
-    Number(day.count) >= settings.max_classifications_per_workspace_per_day
-  );
-}
-
 /** Whether any confident claim has a frozen fact on its topic, so verification has work. */
-function needsVerification(claims: readonly VerifiedClaim[], factCheck: FrozenFactCheck | null) {
-  if (!factCheck) return false;
+function needsVerification(claims: readonly VerifiedClaim[], factCheck: FrozenFactCheck) {
   const topics = new Set(factCheck.facts.map((fact) => fact.topic));
   return claims.some((claim) => !claim.low_confidence && topics.has(claim.topic));
 }
@@ -137,8 +106,8 @@ function persist(
   subject: Subject,
   versions: { extractor_version: string; template_version: string },
   outcome: Outcome,
-  call: Call | null,
-  factCheck: FrozenFactCheck | null = null,
+  call: ModelCall | null,
+  factCheck: FrozenFactCheck | null,
 ) {
   return async (db: Database) => {
     const id = randomUUID();
@@ -154,15 +123,7 @@ function persist(
         artifact_id: subject.artifact_id,
         extractor_version: versions.extractor_version,
         template_version: versions.template_version,
-        model_provider: call?.provider ?? null,
-        model: call?.model ?? null,
-        input_hash: call?.inputHash ?? null,
-        outcome: outcome.outcome,
-        outcome_reason: 'reason' in outcome ? outcome.reason : null,
-        drop_counts: JSON.stringify(outcome.outcome === 'classified' ? outcome.drops : {}),
-        usage: call?.usage ? JSON.stringify(call.usage) : null,
-        latency_ms: call?.latencyMs ?? null,
-        created_at: new Date(),
+        ...outcomeColumns(outcome, outcome.outcome === 'classified' ? outcome.drops : {}, call),
       })
       .onConflict((conflict) => conflict.columns(['analysis_id', 'extractor_version']).doNothing())
       .returning('id')
@@ -219,69 +180,35 @@ function persist(
   };
 }
 
-/** Up to `max_attempts` calls while the output fails to parse; a provider fault ends at once. */
-async function classify(
+/** One classification; claims ride the same call only for a fact-checked audit. */
+function classify(
   gateway: ModelGateway,
   pkg: PerceptionPackage,
   settings: PerceptionPolicy,
   claimsRequest: FactCheckPolicy | null,
 ) {
   const { system, user } = perceptionPrompt(pkg, settings, claimsRequest);
-  const call: Call = {
-    provider: gateway.adapter,
-    model: gateway.model,
-    inputHash: packageHash(pkg),
-    usage: null,
-    latencyMs: null,
+  const request = { system, user, inputHash: packageHash(pkg), maxAttempts: settings.max_attempts };
+  const classified = (
+    value: Parameters<typeof validateOutput>[1],
+    claims: ReturnType<typeof validateClaims>,
+  ): Outcome => {
+    const validated = validateOutput(pkg, value, settings);
+    return {
+      outcome: 'classified',
+      entities: validated.entities,
+      claims: claims.claims,
+      drops: { ...validated.drops, ...claims.drops },
+    };
   };
-  for (let attempt = 1; attempt <= settings.max_attempts; attempt++) {
-    try {
-      // Without claims the plain schema is used, so plain perception is unchanged.
-      const { value, result } = claimsRequest
-        ? await gateway.structured(system, user, claimsOutputSchema)
-        : await gateway.structured(system, user, perceptionOutputSchema).then((parsed) => ({
-            ...parsed,
-            value: { ...parsed.value, claims: [] },
-          }));
-      call.model = result.returned_model;
-      call.usage = { ...result.usage, attempts: attempt };
-      call.latencyMs = result.latency_ms;
-      const validated = validateOutput(pkg, value, settings);
-      const claims = claimsRequest
-        ? validateClaims(pkg, value.claims, claimsRequest)
-        : { claims: [], drops: {} };
-      return {
-        call,
-        outcome: {
-          outcome: 'classified',
-          entities: validated.entities,
-          claims: claims.claims,
-          drops: { ...validated.drops, ...claims.drops },
-        } satisfies Outcome,
-      };
-    } catch (error) {
-      if (!(error instanceof ModelError)) throw error;
-      call.usage = { attempts: attempt };
-      if (error.code !== 'parse')
-        return {
-          call,
-          outcome: {
-            outcome: 'model_error',
-            reason: error.status ? `http_${error.status}` : error.code,
-          } satisfies Outcome,
-        };
-    }
-  }
-  return { call, outcome: { outcome: 'invalid_output' } satisfies Outcome };
-}
-
-export function configuredGateway(): ModelGateway | null {
-  try {
-    return createModelGateway(gatewaySettings());
-  } catch (error) {
-    if (error instanceof ModelError && error.code === 'not_configured') return null;
-    throw error;
-  }
+  // Without claims the plain schema is used, so plain perception is unchanged.
+  if (!claimsRequest)
+    return callStructured(gateway, { ...request, schema: perceptionOutputSchema }, (value) =>
+      classified(value, { claims: [], drops: {} }),
+    );
+  return callStructured(gateway, { ...request, schema: claimsOutputSchema }, (value) =>
+    classified(value, validateClaims(pkg, value.claims, claimsRequest)),
+  );
 }
 
 export function answerPerception(
@@ -295,12 +222,18 @@ export function answerPerception(
     // An audit admitted without perception is never classified.
     if (!versions || (await alreadyPerceived(db, subject, versions.extractor_version))) return;
     const factCheck = frozenFactCheck(subject.configuration);
-    const settle = (outcome: Outcome, call: Call | null = null) => ({
+    const settle = (outcome: Outcome, call: ModelCall | null = null) => ({
       error: null,
       persist: persist(task, projectId, subject, versions, outcome, call, factCheck),
     });
-    if (await overCap(db, task, subject, settings))
-      return settle({ outcome: 'unavailable', reason: 'platform_cap' });
+    const capped = await overCap(db, 'answer_perceptions', {
+      workspaceId: task.workspace_id,
+      auditId: subject.audit_id,
+      called: CALLED,
+      perAudit: settings.max_classifications_per_audit,
+      perDay: settings.max_classifications_per_workspace_per_day,
+    });
+    if (capped) return settle({ outcome: 'unavailable', reason: 'platform_cap' });
     const gateway = gatewayFactory();
     if (!gateway) return settle({ outcome: 'unavailable', reason: 'model_not_configured' });
     const config = scoringConfig(subject.configuration);
@@ -341,6 +274,7 @@ export async function compensatePerception(db: Database, task: QueueTask) {
     subject,
     versions,
     { outcome: 'unavailable', reason: 'task_failed' },
+    null,
     null,
   )(db);
 }
