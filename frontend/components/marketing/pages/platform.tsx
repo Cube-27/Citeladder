@@ -4,6 +4,7 @@ import { ArrowRight, Check, ChevronDown, MessageCircleQuestion } from 'lucide-re
 import { appHref } from '@/lib/config/app-link';
 import { docsHref } from '@/lib/config/docs';
 import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';
+import type { FaqItem } from '@/lib/marketing-content/faq';
 import { PLATFORM_GROUPS, PLATFORM_OVERVIEW, platformLabel } from '@/lib/marketing-content/nav';
 import type {
   PlatformCta,
@@ -203,7 +204,7 @@ function Shot({ visual, title }: Readonly<{ visual: PlatformVisual; title?: stri
   );
 }
 
-export function FaqList({ faqs }: Readonly<{ faqs: readonly { q: string; a: string }[] }>) {
+export function FaqList({ faqs }: Readonly<{ faqs: readonly FaqItem[] }>) {
   return (
     <div className="mk-faq-list">
       {faqs.map((faq) => (

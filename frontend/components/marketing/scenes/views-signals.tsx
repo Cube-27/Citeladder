@@ -1,28 +1,9 @@
-import { Info, Quote } from 'lucide-react';
+import { Quote } from 'lucide-react';
 
 import { EngineLogo, type OfficialEngineKey } from '../primitives/engine-logo';
-import { Favicon, PanelHead, Pill } from './product-view-parts';
+import { BarCell, Favicon, PanelHead, Pill, StatTiles } from './product-view-parts';
 
 /** Answer-level signals beside visibility: perception, ads and engines. Synthetic records only. */
-
-function Stats({ items }: Readonly<{ items: readonly (readonly [string, string, string?])[] }>) {
-  return (
-    <div className="pv-stats">
-      {items.map(([label, value, note]) => (
-        <div key={label} className="pv-stat">
-          <span className="pv-stat-label">
-            {label}
-            <Info className="size-3" aria-hidden />
-          </span>
-          <span className="pv-stat-value">
-            <strong>{value}</strong>
-            {note && <span className="pv-meta">{note}</span>}
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 const THEMES = [
   ['Ease of use', 14, 2],
@@ -31,11 +12,12 @@ const THEMES = [
   ['Pricing', 3, 7],
   ['Support', 5, 1],
 ] as const;
+const THEME_MAX = Math.max(...THEMES.flatMap(([, positive, negative]) => [positive, negative]));
 
 export function PerceptionView() {
   return (
     <div className="pv-view">
-      <Stats
+      <StatTiles
         items={[
           ['Net sentiment', '+38', '41 of 48 classified'],
           ['Positive', '61%'],
@@ -61,16 +43,14 @@ export function PerceptionView() {
                 <tr key={theme}>
                   <td>{theme}</td>
                   <td>
-                    <span className="pv-bar-cell">
-                      <i data-tone="accent" style={{ width: `${(positive / 14) * 100}%` }} />
+                    <BarCell value={positive} max={THEME_MAX} tone="accent">
                       {positive}
-                    </span>
+                    </BarCell>
                   </td>
                   <td>
-                    <span className="pv-bar-cell">
-                      <i data-tone="danger" style={{ width: `${(negative / 14) * 100}%` }} />
+                    <BarCell value={negative} max={THEME_MAX} tone="danger">
                       {negative}
-                    </span>
+                    </BarCell>
                   </td>
                 </tr>
               ))}
@@ -111,7 +91,7 @@ export function AdsView() {
         </span>
         <span className="pv-meta">Ads are recorded apart from citations and scores.</span>
       </div>
-      <Stats
+      <StatTiles
         items={[
           ['Ad presence', '18%', '44 of 240 answers'],
           ['Your ad share', 'Not advertising'],
@@ -144,10 +124,9 @@ export function AdsView() {
                 <td>{appearances}</td>
                 <td>{prompts}</td>
                 <td>
-                  <span className="pv-bar-cell">
-                    <i data-tone={tone} style={{ width: `${share}%` }} />
+                  <BarCell value={share} max={100} tone={tone}>
                     {share}%
-                  </span>
+                  </BarCell>
                 </td>
               </tr>
             ))}
@@ -198,10 +177,9 @@ export function EnginesView() {
                 </td>
                 <td>{surface}</td>
                 <td>
-                  <span className="pv-bar-cell">
-                    <i data-tone="accent" style={{ width: `${visibility}%` }} />
+                  <BarCell value={visibility} max={100} tone="accent">
                     {visibility}%
-                  </span>
+                  </BarCell>
                 </td>
                 <td>#{position.toFixed(1)}</td>
               </tr>

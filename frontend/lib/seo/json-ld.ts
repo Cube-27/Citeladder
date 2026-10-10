@@ -1,7 +1,7 @@
 import { CONTACT_EMAIL } from '@/lib/config/contact';
 import type { BlogPost } from '@/lib/marketing-content/blog';
 import { blogPostFreshness, type BlogPostSummary } from '@/lib/marketing-content/blog-index';
-import type { FaqGroup } from '@/lib/marketing-content/faq';
+import type { FaqItem } from '@/lib/marketing-content/faq';
 import { PARENT_COMPANY } from '@/lib/marketing-content/legal';
 import { FOUNDER, PRODUCT_HEAD } from '@/lib/marketing-content/people';
 import { CITELADDER_LINKEDIN } from '@/lib/marketing-content/social';
@@ -124,17 +124,15 @@ export function platformWebPageJsonLd(page: {
   };
 }
 
-export function faqPageJsonLd(groups: readonly FaqGroup[]): JsonLdObject {
+export function faqPageJsonLd(items: readonly FaqItem[]): JsonLdObject {
   return {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
-    mainEntity: groups.flatMap((group) =>
-      group.items.map((item) => ({
-        '@type': 'Question',
-        name: item.q,
-        acceptedAnswer: { '@type': 'Answer', text: item.a },
-      })),
-    ),
+    mainEntity: items.map((item) => ({
+      '@type': 'Question',
+      name: item.q,
+      acceptedAnswer: { '@type': 'Answer', text: item.a },
+    })),
   };
 }
 

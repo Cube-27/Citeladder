@@ -1,6 +1,6 @@
 import { CircleAlert, Quote } from 'lucide-react';
 
-import { Favicon, PanelHead, Pill } from './product-view-parts';
+import { BarCell, Favicon, PanelHead, Pill, StatTiles } from './product-view-parts';
 
 /** Evidence views: AI crawler logs, earned sources and Site Health pillars. Synthetic records only. */
 
@@ -11,6 +11,7 @@ const CRAWLERS = [
   ['PerplexityBot', 'AI search', 1206, 'Unverifiable', 'warning'],
   ['GPTBot', 'Training', 988, 'Verified', 'accent'],
 ] as const;
+const CRAWLER_MAX = Math.max(...CRAWLERS.map(([, , requests]) => requests));
 
 export function CrawlerView() {
   return (
@@ -40,10 +41,9 @@ export function CrawlerView() {
                 <td>{name}</td>
                 <td>{purpose}</td>
                 <td>
-                  <span className="pv-bar-cell">
-                    <i data-tone="info" style={{ width: `${(requests / 3912) * 100}%` }} />
+                  <BarCell value={requests} max={CRAWLER_MAX} tone="info">
                     {requests.toLocaleString('en-US')}
-                  </span>
+                  </BarCell>
                 </td>
                 <td>
                   <Pill tone={tone}>{status}</Pill>
@@ -130,27 +130,13 @@ const PILLARS = [
 export function PillarsView() {
   return (
     <div className="pv-view">
-      <div className="pv-stats">
-        <div className="pv-stat">
-          <span className="pv-stat-label">AEO Readiness</span>
-          <span className="pv-stat-value">
-            <strong>72</strong>
-          </span>
-        </div>
-        <div className="pv-stat">
-          <span className="pv-stat-label">Web Fundamentals</span>
-          <span className="pv-stat-value">
-            <strong>81</strong>
-          </span>
-        </div>
-        <div className="pv-stat">
-          <span className="pv-stat-label">Pages analyzed</span>
-          <span className="pv-stat-value">
-            <strong>148</strong>
-            <span className="pv-meta">of 150 pages analyzed</span>
-          </span>
-        </div>
-      </div>
+      <StatTiles
+        items={[
+          ['AEO Readiness', '72'],
+          ['Web Fundamentals', '81'],
+          ['Pages analyzed', '148', 'of 150'],
+        ]}
+      />
       <div className="pv-panel pv-panel-flush">
         <div className="pv-card-head">
           <span className="pv-panel-title pv-card-title">Answer-readiness pillars</span>
@@ -162,13 +148,9 @@ export function PillarsView() {
               <tr key={pillar}>
                 <td>{pillar}</td>
                 <td>
-                  <span className="pv-bar-cell pv-bar-wide">
-                    <i
-                      data-tone={score < 65 ? 'warning' : 'accent'}
-                      style={{ width: `${score}%` }}
-                    />
+                  <BarCell value={score} max={100} tone={score < 65 ? 'warning' : 'accent'} wide>
                     {score}
-                  </span>
+                  </BarCell>
                 </td>
               </tr>
             ))}

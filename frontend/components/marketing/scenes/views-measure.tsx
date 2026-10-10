@@ -1,7 +1,7 @@
 import { Check, LayoutGrid, Link2 } from 'lucide-react';
 
 import { EngineLogo } from '../primitives/engine-logo';
-import { Favicon, Pill, PanelHead } from './product-view-parts';
+import { BarCell, Favicon, Pill, PanelHead } from './product-view-parts';
 
 /** Measurement views: answers, sources, referrals and commerce. Synthetic records only. */
 
@@ -64,6 +64,7 @@ const SOURCES = [
   ['D', 'discuss.example', 'Community', 'community', 19],
   ['B', 'brelovanta.example', 'Competitor', 'competitor', 16],
 ] as const;
+const SOURCE_MAX = Math.max(...SOURCES.map(([, , , , count]) => count));
 
 export function SourcesView() {
   return (
@@ -102,10 +103,9 @@ export function SourcesView() {
                   <Pill tone={tone}>{type}</Pill>
                 </td>
                 <td>
-                  <span className="pv-bar-cell">
-                    <i data-tone={tone} style={{ width: `${(count / 38) * 100}%` }} />
+                  <BarCell value={count} max={SOURCE_MAX} tone={tone}>
                     {count}
-                  </span>
+                  </BarCell>
                 </td>
               </tr>
             ))}

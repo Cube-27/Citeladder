@@ -8,6 +8,8 @@
  * collection. Keep claims inside those boundaries.
  */
 
+import type { FaqItem } from './faq';
+
 /** Which coded product view illustrates a page or feature. */
 export type PlatformVisual =
   | 'visibility'
@@ -68,7 +70,7 @@ export type PlatformPage = {
   /** Plain availability statement shown under the hero actions. */
   note?: string;
   /** Rendered on the page and mirrored as FAQPage structured data. */
-  faqs: readonly { q: string; a: string }[];
+  faqs: readonly FaqItem[];
   closing: string;
   related: readonly string[];
 };

@@ -7,7 +7,7 @@
  * and never invent numbers, customers, or certainty.
  */
 
-type FaqItem = {
+export type FaqItem = {
   q: string;
   a: string;
   links?: readonly { label: string; href: string }[];

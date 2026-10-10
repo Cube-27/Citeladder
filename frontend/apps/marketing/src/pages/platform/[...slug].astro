@@ -23,7 +23,7 @@ const breadcrumb = breadcrumbJsonLd([
 ]);
 const webPage = platformWebPageJsonLd(page);
 // Mirrors the FAQ the page renders, from the same reviewed copy.
-const faq = faqPageJsonLd([{ heading: label, items: page.faqs }]);
+const faq = faqPageJsonLd(page.faqs);
 ---
 <MarketingLayout title={page.title} description={page.description} canonical={page.path} jsonLd={[...(breadcrumb ? [breadcrumb] : []), ...(webPage ? [webPage] : []), faq]}>
   <main id="main">

@@ -455,12 +455,7 @@
   line-height: var(--text-sm--line-height);
 }
 
-.mk-checks svg {
-  flex: none;
-  margin-top: 0.25rem;
-  color: var(--color-accent-text);
-}
-
+.mk-checks svg,
 .mk-highlights {
   display: grid;
   gap: 2rem;
@@ -550,12 +545,6 @@
   color: var(--color-foreground);
   font-size: var(--text-base);
   line-height: var(--text-base--line-height);
-}
-
-.mk-questions svg {
-  flex: none;
-  margin-top: 0.25rem;
-  color: var(--color-accent-text);
 }
 
 .mk-features {
