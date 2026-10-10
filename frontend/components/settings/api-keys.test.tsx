@@ -16,6 +16,8 @@ const WORKSPACE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const ACME = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const BETA = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 const KEY = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+/** A fixture shaped like a key, deliberately low-entropy so it reads as fake. */
+const SHOWN_ONCE = `cl_live_Ab12Cd34${'x'.repeat(43)}`;
 
 const { list, create, revoke } = vi.hoisted(() => ({
   list: vi.fn<(workspaceId: string) => Promise<ApiKeyList>>(),
@@ -86,7 +88,7 @@ it('lists a key by name, prefix, scopes and projects without its ID', async () =
 it('creates a key for chosen projects and shows its secret once', async () => {
   const user = userEvent.setup();
   list.mockResolvedValue({ available: true, limit: 10, keys: [] });
-  create.mockResolvedValue({ key: ciKey, secret: 'cl_live_Ab12Cd34secretpart' });
+  create.mockResolvedValue({ key: ciKey, secret: SHOWN_ONCE });
   renderTab();
   await user.click(await screen.findByRole('button', { name: 'Create key' }));
   const dialog = screen.getByRole('dialog', { name: 'Create an API key' });
@@ -103,8 +105,8 @@ it('creates a key for chosen projects and shows its secret once', async () => {
     expires_at: null,
   });
   const shown = await screen.findByRole('dialog', { name: 'Copy your API key' });
-  expect(shown).toHaveTextContent('cl_live_Ab12Cd34secretpart');
+  expect(shown).toHaveTextContent(SHOWN_ONCE);
   expect(shown).toHaveTextContent('You won’t see this key again.');
   await user.click(within(shown).getByRole('button', { name: 'Done' }));
-  expect(screen.queryByText('cl_live_Ab12Cd34secretpart')).toBeNull();
+  expect(screen.queryByText(SHOWN_ONCE)).toBeNull();
 });
