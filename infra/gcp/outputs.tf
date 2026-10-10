@@ -7,6 +7,11 @@ output "api_url" {
   value = "https://${google_cloud_run_v2_service.api.name}-${data.google_project.current.number}.${var.region}.run.app"
 }
 
+# The service account customers grant on their crawl-log subscription.
+output "crawl_log_reader_email" {
+  value = google_service_account.log_reader.email
+}
+
 output "db_instance" {
   value = google_compute_instance.db.name
 }

@@ -5,6 +5,70 @@ import { crawlLogs } from '../src/config/crawl-logs.ts';
 import { createSource, createSourceSchema } from '../src/crawl-logs/sources.ts';
 import { sourceList } from '../src/crawl-logs/source-reads.ts';
 import { gcpLogFilter } from '../src/crawl-logs/gcp-filter.ts';
+import { GcpError, pubSubReader } from '../src/crawl-logs/gcp-client.ts';
+
+/** An in-memory Google: metadata, IAM Credentials and one Pub/Sub subscription. */
+function fakeGoogle(
+  options: {
+    labels?: Record<string, string>;
+    push?: boolean;
+    ackDeadline?: number;
+    status?: number;
+    tokenLifetimeMs?: number;
+  } = {},
+) {
+  const state = {
+    messages: [] as { messageId: string; data: string }[],
+    acked: [] as string[],
+    tokensMinted: 0,
+    pulls: 0,
+    status: options.status ?? 200,
+    clock: Date.parse('2026-10-10T00:00:00Z'),
+    log: [] as string[],
+  };
+  const reply = (status: number, body: unknown) =>
+    new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
+  const transport = async (input: string | URL | Request, init?: RequestInit) => {
+    const url = String(input);
+    const authorization = new Headers(init?.headers).get('authorization');
+    state.log.push(`${init?.method ?? 'GET'} ${url}`);
+    if (url.startsWith('http://metadata.google.internal/'))
+      return reply(200, { access_token: 'runtime-token' });
+    if (url.startsWith('https://iamcredentials.googleapis.com/')) {
+      if (authorization !== 'Bearer runtime-token') return reply(401, {});
+      state.tokensMinted += 1;
+      return reply(200, {
+        accessToken: 'reader-token-' + state.tokensMinted,
+        expireTime: new Date(state.clock + (options.tokenLifetimeMs ?? 900_000)).toISOString(),
+      });
+    }
+    if (!authorization?.startsWith('Bearer reader-token-')) return reply(401, {});
+    if (state.status !== 200) return reply(state.status, { error: { message: 'secret detail' } });
+    if (url.endsWith(':pull')) {
+      state.pulls += 1;
+      const { maxMessages } = JSON.parse(String(init?.body)) as { maxMessages: number };
+      const batch = state.messages
+        .filter((m) => !state.acked.includes(m.messageId))
+        .slice(0, maxMessages);
+      return reply(200, {
+        receivedMessages: batch.map((message) => ({ ackId: 'ack-' + message.messageId, message })),
+      });
+    }
+    if (url.endsWith(':acknowledge')) {
+      const { ackIds } = JSON.parse(String(init?.body)) as { ackIds: string[] };
+      state.acked.push(...ackIds.map((id) => id.slice(4)));
+      return reply(200, {});
+    }
+    return reply(200, {
+      name: SUBSCRIPTION,
+      labels: options.labels ?? {},
+      pushConfig: options.push ? { pushEndpoint: 'https://example.test/push' } : {},
+      ackDeadlineSeconds: options.ackDeadline ?? 120,
+    });
+  };
+  const reader = pubSubReader({ readerEmail: READER, transport, now: () => state.clock });
+  return { state, reader };
+}
 
 const config = testConfig(),
   db = testDatabase(config),
@@ -143,5 +207,41 @@ describe('sink filter', () => {
         String.raw`AND httpRequest.userAgent=~"(?i)(a\\+b\\(c\\)|gptbot/1\\.0|say \"hi\")"`,
       ].join('\n'),
     );
+  });
+});
+
+describe('Google REST client', () => {
+  it('reuses the reader token until shortly before it expires, then mints another', async () => {
+    const google = fakeGoogle();
+    await google.reader.subscription(SUBSCRIPTION);
+    google.state.clock += 830_000;
+    await google.reader.subscription(SUBSCRIPTION);
+    expect(google.state.tokensMinted).toBe(1);
+    google.state.clock += 20_000;
+    await google.reader.subscription(SUBSCRIPTION);
+    expect(google.state.tokensMinted).toBe(2);
+    expect(google.state.log.filter((line) => line.includes('pubsub.googleapis.com'))).toEqual([
+      'GET https://pubsub.googleapis.com/v1/projects/acme-prod/subscriptions/citeladder-ai-crawlers-sub',
+      'GET https://pubsub.googleapis.com/v1/projects/acme-prod/subscriptions/citeladder-ai-crawlers-sub',
+      'GET https://pubsub.googleapis.com/v1/projects/acme-prod/subscriptions/citeladder-ai-crawlers-sub',
+    ]);
+  });
+  it.each([
+    [403, 'permission_denied'],
+    [404, 'not_found'],
+    [400, 'invalid'],
+    [503, 'unavailable'],
+  ])('maps a %i subscription response to %s without its body', async (status, failure) => {
+    const google = fakeGoogle({ status });
+    const error = await google.reader.subscription(SUBSCRIPTION).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(GcpError);
+    expect(error).toMatchObject({ failure, message: 'gcp_' + failure });
+  });
+  it('reports a failed token mint as unavailable, never as the customer denying access', async () => {
+    const reader = pubSubReader({
+      readerEmail: READER,
+      transport: async () => new Response('{}', { status: 403 }),
+    });
+    await expect(reader.pull(SUBSCRIPTION, 10)).rejects.toMatchObject({ failure: 'unavailable' });
   });
 });

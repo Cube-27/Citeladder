@@ -81,6 +81,8 @@ $apis = @(
     'iam.googleapis.com',
     'iamcredentials.googleapis.com',
     'iap.googleapis.com',
+    # The crawl-log reader pulls customers' subscriptions with this project's identity.
+    'pubsub.googleapis.com',
     'run.googleapis.com',
     'secretmanager.googleapis.com',
     'serviceusage.googleapis.com',
