@@ -567,6 +567,8 @@ export type WorkerSettings = {
   leaseReclaimBatchSize: number;
   drainBudgetSeconds: number;
   leaseTtlSeconds: number;
+  /** Kinds that hold an external resource longer than the default lease covers. */
+  leaseTtlSecondsByKind: Readonly<Record<string, number>>;
   heartbeatIntervalSeconds: number;
   taskMaxAttempts: number;
   pollIntervalSeconds: number;
@@ -602,6 +604,7 @@ export function loadWorkerSettings(
     leaseReclaimBatchSize: setting('lease_reclaim_batch_size'),
     drainBudgetSeconds: setting('drain_budget_seconds'),
     leaseTtlSeconds: setting('lease_ttl_seconds'),
+    leaseTtlSecondsByKind: policy.analytics.task_lease_ttl_seconds,
     heartbeatIntervalSeconds: setting('heartbeat_interval_seconds'),
     taskMaxAttempts: setting('task_max_attempts'),
     pollIntervalSeconds: setting('poll_interval_seconds'),
@@ -609,8 +612,9 @@ export function loadWorkerSettings(
     accessCheckTtlSeconds: setting('access_check_ttl_seconds'),
   };
   // A heartbeat slower than the lease guarantees expiry during healthy work.
-  if (settings.heartbeatIntervalSeconds >= settings.leaseTtlSeconds) {
-    throw new ConfigError('heartbeat_interval_seconds must be shorter than lease_ttl_seconds');
+  const leases = [settings.leaseTtlSeconds, ...Object.values(settings.leaseTtlSecondsByKind)];
+  if (leases.some((lease) => settings.heartbeatIntervalSeconds >= lease)) {
+    throw new ConfigError('heartbeat_interval_seconds must be shorter than every lease TTL');
   }
   return settings;
 }

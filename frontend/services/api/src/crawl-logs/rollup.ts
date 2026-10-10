@@ -12,6 +12,8 @@ import { record, strings } from '../db/json.ts';
 import { lockCrawlState, type CrawlScope } from './state.ts';
 import type { Executor } from '../workers/executor.ts';
 import { enqueueTrafficInsights } from './insights-enqueue.ts';
+import { gapMinutes, pullCoverage } from './pull-coverage.ts';
+import { isLiveKind } from './sources.ts';
 
 /** Full recomputation under the project row lock prevents stale publication. */
 export async function refreshCrawlLogs(
@@ -76,18 +78,28 @@ export async function refreshCrawlLogs(
       .execute();
     let batchQuery = trx
       .selectFrom('crawl_log_batches')
-      .select(['source_id', 'received_at', 'first_line_at', 'last_line_at', 'heartbeat'])
+      .select([
+        'source_id',
+        'received_at',
+        'first_line_at',
+        'last_line_at',
+        'heartbeat',
+        'drained',
+        'catalog_version',
+      ])
       .where('workspace_id', '=', scope.workspaceId)
       .where('project_id', '=', scope.projectId)
       .where('status', '=', 'accepted')
       .where(sql<boolean>`(lines_matched>0 or lines_duplicate>0 or lines_unmatched>0 or heartbeat)`)
       .where('received_at', '>=', sql<Date>`${floor}::timestamp at time zone ${tz}`);
-    // Only receipts received on, or carrying lines from, the refreshed days decide their coverage.
+    // Only receipts received on, or carrying lines from, the refreshed days decide their coverage,
+    // plus the settling drain a pull source needs after a refreshed day closes.
     if (span.length) {
       const from = sql<Date>`${span[0]}::date::timestamp at time zone ${tz}`,
         to = sql<Date>`(${span.at(-1)}::date + 1)::timestamp at time zone ${tz}`;
       batchQuery = batchQuery.where(
         sql<boolean>`((received_at >= ${from} and received_at < ${to})
+          or (drained and received_at >= ${to} and received_at < ${to} + interval '1 day')
           or (first_line_at < ${to} and last_line_at >= ${from}))`,
       );
     }
@@ -153,7 +165,13 @@ type ReportingDay = { day: string; start: Date; end: Date };
 type Source = Selectable<CrawlLogSources>;
 type Batch = Pick<
   Selectable<CrawlLogBatches>,
-  'source_id' | 'received_at' | 'first_line_at' | 'last_line_at' | 'heartbeat'
+  | 'source_id'
+  | 'received_at'
+  | 'first_line_at'
+  | 'last_line_at'
+  | 'heartbeat'
+  | 'drained'
+  | 'catalog_version'
 >;
 type Upload = Selectable<CrawlLogUploads>;
 /**
@@ -209,17 +227,14 @@ function coverageRows(
     const scans = declarations.filter((d) => d.date === day.day);
     if (source.kind === 'upload' && !evidence && !scans.length && !receipts.length) return [];
     if (
-      source.kind === 'webhook' &&
+      isLiveKind(source.kind) &&
       (source.created_at >= day.end || (source.revoked_at && source.revoked_at <= day.start))
     )
       return [];
-    const times = [
-      day.start.getTime(),
-      ...receipts.map((b) => b.received_at.getTime()).sort((a, b) => a - b),
-      day.end.getTime(),
-    ];
-    const gap = Math.max(...times.slice(1).map((t, i) => (t - times[i]!) / 60000));
-    const decision = coverageDecision(source, day, now, receipts.length, gap, evidence, scans);
+    const { decision, gap } =
+      source.kind === 'pull'
+        ? pullCoverage(source, batches, day)
+        : liveCoverage(source, day, now, receipts, evidence, scans);
     return [
       {
         id: randomUUID(),
@@ -235,6 +250,24 @@ function coverageRows(
       },
     ];
   });
+}
+/** A webhook or upload day: the decision and the longest wait between receipts. */
+function liveCoverage(
+  source: Source,
+  day: ReportingDay,
+  now: Date,
+  receipts: Batch[],
+  evidence: boolean,
+  scans: { status: string; complete: unknown }[],
+) {
+  const gap = gapMinutes(
+    receipts.map((b) => b.received_at),
+    day,
+  );
+  return {
+    decision: coverageDecision(source, day, now, receipts.length, gap, evidence, scans),
+    gap,
+  };
 }
 function coverageDecision(
   source: Source,

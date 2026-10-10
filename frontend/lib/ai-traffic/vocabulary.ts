@@ -46,8 +46,20 @@ const STALL_REASON = {
   no_receipts: 'No accepted batches for a day. Check that the sender is still running.',
   not_in_plan: 'Batches are refused because the plan no longer includes AI crawler logs.',
   oversize: 'A batch over 5 MiB was dropped. Lower the stream buffer size.',
+  verification_failed: 'The subscription failed its check. Fix it, then verify again.',
 } as const;
 export const stallReasonLabel = (token: string) => label(STALL_REASON, token);
+
+/** Which subscription check failed, phrased as the fix. */
+const VERIFICATION_FAILURE = {
+  label_mismatch: 'The subscription does not carry this source’s citeladder-source label.',
+  push_subscription: 'The subscription pushes or exports messages; use a pull subscription.',
+  ack_deadline: 'The acknowledgement deadline is under 60 seconds; set it to 120.',
+  permission_denied: 'CiteLadder’s reader lacks subscriber and viewer roles on the subscription.',
+  not_found: 'The subscription does not exist or the reader cannot see it.',
+  unavailable: 'Google Cloud could not be reached. Try again in a few minutes.',
+} as const;
+export const verificationFailureLabel = (token: string) => label(VERIFICATION_FAILURE, token);
 
 const LEG_STATE = {
   value: 'Measured',
@@ -79,6 +91,12 @@ const REASON = {
   unsampled_gap_free_declared_scope: 'Unsampled delivery without gaps',
   client_reported: 'Declared complete by an uploaded file',
   delivery_gaps_or_partial_scan: 'Delivery gaps or a partial file',
+  drained_unsampled_current_filter: 'Unsampled and fully drained with the current sink filter',
+  pull_not_live_all_day: 'The source was not connected for the whole day',
+  pull_sampled: 'Load balancer logging is sampled',
+  sink_filter_outdated: 'The sink filter did not match the crawler catalog all day',
+  pull_drain_gap: 'The subscription was not drained for over 30 minutes',
+  pull_awaiting_settle: 'Waiting for the drain after the day closed',
   no_data: 'No data',
 } as const;
 

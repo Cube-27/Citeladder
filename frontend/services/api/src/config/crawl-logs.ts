@@ -26,6 +26,21 @@ const preset = z.strictObject({
   missing_tokens: z.array(z.string().min(1)).optional(),
   user_agent_decode: z.literal('url').optional(),
 });
+/** Google Cloud Pub/Sub pull cadence, coverage bounds and request bounds. */
+const gcpPull = z.strictObject({
+  pull_interval_seconds: positive,
+  pull_max_iterations: positive,
+  pull_max_messages: positive.max(1000),
+  max_pull_gap_minutes: positive,
+  pull_settle_minutes: positive,
+  verification_interval_hours: positive,
+  min_ack_deadline_seconds: positive,
+  request_timeout_seconds: positive,
+  pull_wait_seconds: positive,
+  token_lifetime_seconds: positive.max(3600),
+  token_refresh_margin_seconds: positive,
+  source_label: z.string().regex(/^[a-z][a-z0-9_-]{0,62}$/u),
+});
 const schema = z.strictObject({
   ingestion_enabled: z.boolean(),
   default_reporting_timezone: z.literal('UTC'),
@@ -34,6 +49,7 @@ const schema = z.strictObject({
   formula_version: z.string().min(1),
   formats: z.array(z.enum(['ndjson', 'json_array', 'combined'])).min(1),
   presets: z.record(z.string(), preset),
+  gcp_pull: gcpPull,
   max_batch_bytes: positive,
   max_lines_per_batch: positive,
   upload_sample_lines: positive,
@@ -86,7 +102,10 @@ export function loadCrawlLogs(value: unknown) {
     config.max_batch_bytes > config.received_bytes_per_project_per_day ||
     config.worker_batch_lines > config.max_lines_per_batch ||
     config.worker_batch_lines * config.max_line_bytes > config.max_batch_bytes ||
-    config.ip_range_contemporaneous_hours > config.ip_range_max_age_hours
+    config.ip_range_contemporaneous_hours > config.ip_range_max_age_hours ||
+    config.gcp_pull.pull_max_messages > config.max_lines_per_batch ||
+    config.gcp_pull.token_refresh_margin_seconds >= config.gcp_pull.token_lifetime_seconds ||
+    config.gcp_pull.pull_interval_seconds > config.gcp_pull.max_pull_gap_minutes * 60
   )
     throw new ConfigError('Inconsistent crawl log bounds');
   try {

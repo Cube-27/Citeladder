@@ -104,7 +104,7 @@ Owner/Admin can create, rotate or revoke through
 credential authority and append security events. A webhook's `clw_` credential
 contains 32 random bytes, is returned once, and is stored only as a hash and
 prefix. Rotation invalidates the old token; revocation retains history and
-frees the host. Repeated revocation keeps the first `revoked_at` boundary. One active webhook per project/host is enforced by PostgreSQL.
+frees the host. Repeated revocation keeps the first `revoked_at` boundary. One active live source (webhook or pull) per project/host is enforced by PostgreSQL.
 
 Machine ingest lives on the API host `api.citeladder.com` (API-OWNED; see the
 [Workers runbook](operations/WORKERS_RUNBOOK.md#api-host-apiciteladdercom)):
@@ -131,11 +131,53 @@ Firehose's JSON contract with 200/400/401/409/413/429/500 and never a redirect;
 a 413, which Firehose drops without backup, keeps an `oversize` receipt and stalls
 the source.
 
-Sources show `state` `active`, `stalled` or `revoked`. `stall_reason` is
-`no_receipts` (a live webhook source with no accepted receipt for
+`gcp_pubsub_pull` is the one `pull` kind: CiteLadder drains a customer's Pub/Sub
+subscription (`projects/<p>/subscriptions/<s>`, validated) that a Cloud Logging
+sink fills with load balancer and Cloud Run request entries. It holds no token.
+Every pull source is read as one reader service account, `citeladder-log-reader`
+(`CRAWL_LOG_READER_EMAIL`; empty hides the connector as `pull_unavailable`),
+which the runtime service account impersonates through IAM Credentials
+([`gcp-client.ts`](../frontend/services/api/src/crawl-logs/gcp-client.ts): plain
+`fetch`, metadata token → 900 s Pub/Sub token cached until 60 s before expiry;
+a failed mint is `unavailable`, never the customer's fault). Because that
+identity is shared, a workspace could name another customer's subscription; the
+confused deputy is closed by a 26-character base32 nonce generated per source:
+[`gcp-verify.ts`](../frontend/services/api/src/crawl-logs/gcp-verify.ts) requires
+the subscription label `citeladder-source=<nonce>`, no push/BigQuery/Cloud
+Storage delivery and an ack deadline of at least `min_ack_deadline_seconds`.
+`POST .../sources/{id}/verify` runs it synchronously (a command, not a read)
+and activates the source; the pull task reruns it every
+`verification_interval_hours`. A failure stalls the source as
+`verification_failed` with `verification_failure`; an unavailable Google
+changes nothing, and only a passing check lifts that stall.
+
+`crawl_log_pull` ([`pull.ts`](../frontend/services/api/src/crawl-logs/pull.ts),
+lease 300 s through `task_lease_ttl_seconds`) is queued by the tick for verified
+live pull sources every `pull_interval_seconds`, and daily while
+`verification_failed` or `not_in_plan` holds them. It commits `last_pull_at`,
+then loops at most `pull_max_iterations`: pull up to `pull_max_messages` outside
+any transaction, map each LogEntry
+([`gcp-entry.ts`](../frontend/services/api/src/crawl-logs/gcp-entry.ts), preset
+`gcp_log_entry`; unknown resource types and unreadable messages are rejected
+lines), admit through `ingest()` keyed `pull:<source>:<first>:<last>`, and
+acknowledge only after that commit. A lost acknowledgement redelivers into
+request-ID dedupe. An empty pull records a `drained` heartbeat receipt and
+`last_drained_at`. Permission denied or a missing subscription stalls as
+`verification_failed`; 409/429 admission refusals leave the messages for later.
+The sink filter ([`gcp-filter.ts`](../frontend/services/api/src/crawl-logs/gcp-filter.ts))
+is generated from the crawler catalog with every pattern RE2-escaped; the source
+stores the catalog version it was installed with, the row asks for an update
+when the catalog changes, and `POST .../sources/{id}/filter-confirmation`
+records the update. `crawl:gcp-filter --check` keeps the docs guide's copy
+current.
+
+Sources show `state` `active`, `awaiting_verification` (a pull source never
+verified), `stalled` or `revoked`. `stall_reason` is `no_receipts` (a live
+webhook or verified pull source with no accepted receipt for
 `stalled_after_hours`, swept by the crawl-log tick while collection is on),
-`not_in_plan` (a webhook refused for a lapsed plan) or `oversize`. An accepted
-receipt clears it in the same transaction. Receipts record decompressed
+`not_in_plan` (refused for a lapsed plan), `oversize` or `verification_failed`.
+An accepted receipt clears any reason except `verification_failed` in the same
+transaction. Receipts record decompressed
 `bytes_received`; above `received_bytes_per_project_per_day` on the project's
 reporting day, admission answers 429 with `Retry-After` to the next day and
 keeps one `bytes_ceiling` diagnostic receipt per source and day. Diagnostic
@@ -169,6 +211,14 @@ Coverage is per source/reporting day:
   with bounded receipt gaps, including heartbeats when no requests occur. The
   bound is `max(max_delivery_gap_minutes, ceil(buffer_interval_seconds / 60) + buffered_delivery_grace_minutes)`
   per source, so a Firehose stream is judged against its buffer interval.
+  A pull source ([`pull-coverage.ts`](../frontend/services/api/src/crawl-logs/pull-coverage.ts))
+  is complete only when it was live all day, every receipt that day carries the
+  catalog version of its installed sink filter (and any confirmation preceded
+  the day), `declared_sample_rate` is 1, no gap between drains exceeds
+  `max_pull_gap_minutes` and a drain landed at least `pull_settle_minutes`
+  after the day closed; otherwise `partial` with the failing condition as the
+  reason. Pulls run only while verified, so unbroken drains also prove the day
+  stayed verified.
 - `declared_complete`: a completed upload declares a complete day within its
   client-reported scan. This claim is labelled as such.
 - `partial`: sampled/filtered collection, delivery gaps, partial scans or

@@ -11,6 +11,8 @@ import {
   crawlCoverageResponseSchema,
   crawlSourceListSchema,
   crawlTokenSchema,
+  crawlVerificationSchema,
+  crawlSourceIdSchema,
   crawlCatalogSchema,
   crawlUploadSchema,
   crawlReceiptSchema,
@@ -79,6 +81,24 @@ export const aiTrafficApi = {
       'crawl-logs/sources/' + sourceId + '/' + action,
       {},
       crawlTokenSchema,
+      options,
+    ),
+  /** Check a Google Cloud source's subscription now; it activates on a pass. */
+  verifySource: (projectId: string, sourceId: string, options?: ApiRequestOptions) =>
+    write(
+      projectId,
+      'crawl-logs/sources/' + sourceId + '/verify',
+      {},
+      crawlVerificationSchema,
+      options,
+    ),
+  /** The customer installed the sink filter for the current crawler catalog. */
+  confirmSinkFilter: (projectId: string, sourceId: string, options?: ApiRequestOptions) =>
+    write(
+      projectId,
+      'crawl-logs/sources/' + sourceId + '/filter-confirmation',
+      {},
+      crawlSourceIdSchema,
       options,
     ),
   createUpload: (

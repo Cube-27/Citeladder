@@ -12,6 +12,7 @@ import { sql } from 'kysely';
 import { enqueueRollup, lockCrawlState, type CrawlScope } from './state.ts';
 import { enqueueTrafficInsights } from './insights-enqueue.ts';
 import { stallQuietSources } from './stall.ts';
+import { enqueueDuePulls } from './pull.ts';
 
 export function botIpRangeRefresh(fetcher: WebsiteFetcher = fetchWebsite): Executor {
   return async (task, { checkCancelled }) => {
@@ -200,6 +201,7 @@ async function maintainWorkspace(
   if (crawlLogs.ingestion_enabled) {
     if (!canAdmit()) return false;
     await stallQuietSources(db, workspaceId, now);
+    if (!(await enqueueDuePulls(db, workspaceId, now, canAdmit))) return false;
   }
   for (const kind of ['bot_request_retention_sweep', 'crawl_log_upload_abandon_sweep']) {
     if (!canAdmit()) return false;

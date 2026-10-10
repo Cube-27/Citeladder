@@ -8,6 +8,8 @@ import {
   crawlCatalogSchema,
   crawlUploadSchema,
   firehoseResponseSchema,
+  crawlVerificationSchema,
+  crawlSourceIdSchema,
 } from '@citeladder/contracts/ai-traffic';
 import { defineGetRoute, definePostRoute } from './define.ts';
 import { readBody } from '../http/body.ts';
@@ -23,7 +25,11 @@ import {
   mutateSource,
   authorizeToken,
   requireCrawlLogs,
+  pullSourceFor,
+  confirmSinkFilter,
 } from '../crawl-logs/sources.ts';
+import { requirePubSubReader } from '../crawl-logs/gcp-client.ts';
+import { verifyPullSource } from '../crawl-logs/gcp-verify.ts';
 import { ingest, boundedBody, batchQuota } from '../crawl-logs/ingest.ts';
 import { firehoseDelivery } from '../crawl-logs/firehose.ts';
 import { lockAuthorizedWorkspace } from '../workspaces/service.ts';
@@ -110,6 +116,40 @@ export const crawlLogRoutes = [
         scope(c.get('workspace').workspaceId, path.project_id),
         c.get('user').id,
         await readBody(c, createSourceSchema),
+      ),
+  }),
+  definePostRoute({
+    ...writes,
+    path: root + '/sources/{source_id}/verify',
+    params: { path: sourcePath, query: {} },
+    response: crawlVerificationSchema,
+    async handle({ c, db }, { path }) {
+      const target = scope(c.get('workspace').workspaceId, path.project_id);
+      const actorId = c.get('user').id;
+      await requireCrawlLogs(db, target.workspaceId);
+      // Authority is checked before the Google call and again when its outcome is written.
+      await db
+        .transaction()
+        .execute((trx) =>
+          lockAuthorizedWorkspace(trx, target.workspaceId, actorId, 'manage_credentials'),
+        );
+      const source = await pullSourceFor(db, target, path.source_id);
+      const reader = requirePubSubReader();
+      const outcome = await verifyPullSource(db, source, reader, { actorId });
+      return { id: source.id, ...outcome };
+    },
+  }),
+  definePostRoute({
+    ...writes,
+    path: root + '/sources/{source_id}/filter-confirmation',
+    params: { path: sourcePath, query: {} },
+    response: crawlSourceIdSchema,
+    handle: ({ c, db }, { path }) =>
+      confirmSinkFilter(
+        db,
+        scope(c.get('workspace').workspaceId, path.project_id),
+        c.get('user').id,
+        path.source_id,
       ),
   }),
   ...(['rotate', 'revoke'] as const).map((action) =>

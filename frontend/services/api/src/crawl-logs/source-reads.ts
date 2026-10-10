@@ -3,15 +3,50 @@ import { crawlSourceListSchema } from '@citeladder/contracts/ai-traffic';
 import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
 import type { CrawlScope } from './state.ts';
+import type { Selectable } from 'kysely';
+import type { CrawlLogSources } from '../generated/db-schema.ts';
+import { crawlers } from '../config/crawlers.ts';
 import { crawlLogAvailability } from './sources.ts';
+import { crawlLogReaderEmail } from './gcp-client.ts';
+import { gcpLogFilter } from './gcp-filter.ts';
 
+type Source = Selectable<CrawlLogSources>;
+/** The crawler catalog is static per process, so its sink filter is built once. */
+const LOG_FILTER = gcpLogFilter();
 function connection(status: string, accepted: Date | null | undefined, completed: number) {
   if (status === 'revoked') return 'not_connected';
   return accepted || completed ? 'connected' : 'awaiting_data';
 }
-function sourceState(status: string, stallReason: string | null) {
-  if (status === 'revoked') return 'revoked';
-  return stallReason ? 'stalled' : 'active';
+function sourceState(s: Source) {
+  if (s.status === 'revoked') return 'revoked';
+  if (s.stall_reason) return 'stalled';
+  return s.kind === 'pull' && !s.verified_at ? 'awaiting_verification' : 'active';
+}
+const iso = (at: Date | null) => at?.toISOString() ?? null;
+/** What a pull source's row shows: verification, filter currency and drains. */
+function pullView(s: Source) {
+  if (
+    s.kind !== 'pull' ||
+    s.subscription === null ||
+    s.verification_nonce === null ||
+    s.filter_catalog_version === null ||
+    s.declared_sample_rate === null
+  )
+    return null;
+  return {
+    subscription: s.subscription,
+    verification_nonce: s.verification_nonce,
+    verified_at: iso(s.verified_at),
+    verification_checked_at: iso(s.verification_checked_at),
+    verification_failure: s.verification_failure,
+    filter_catalog_version: s.filter_catalog_version,
+    filter_confirmed_at: iso(s.filter_confirmed_at),
+    filter_current: s.filter_catalog_version === crawlers.catalog_version,
+    // numeric(4,3) arrives as text.
+    declared_sample_rate: Number(s.declared_sample_rate),
+    last_pull_at: iso(s.last_pull_at),
+    last_drained_at: iso(s.last_drained_at),
+  };
 }
 /** Three scoped reads, independent of source count; never refreshes or verifies. */
 export async function sourceList(
@@ -68,9 +103,10 @@ export async function sourceList(
       origin: s.origin,
       host: s.host,
       status: s.status,
-      state: sourceState(s.status, s.stall_reason),
+      state: sourceState(s),
       stall_reason: s.status === 'revoked' ? null : s.stall_reason,
-      stalled_at: s.status === 'revoked' ? null : (s.stalled_at?.toISOString() ?? null),
+      stalled_at: s.status === 'revoked' ? null : iso(s.stalled_at),
+      pull: pullView(s),
       token_prefix: s.token_prefix,
       connection: connection(s.status, batch?.last, upload?.completed ?? 0),
       last_accepted_batch: batch?.last?.toISOString() ?? null,
@@ -81,8 +117,15 @@ export async function sourceList(
       unsupported_batches: batch?.unsupported ?? 0,
     };
   });
+  const readerEmail = crawlLogReaderEmail();
   return crawlSourceListSchema.parse({
     availability: await crawlLogAvailability(db, scope.workspaceId),
+    gcp_pull: {
+      availability: readerEmail ? 'available' : 'pull_unavailable',
+      reader_email: readerEmail || null,
+      log_filter: LOG_FILTER,
+      catalog_version: crawlers.catalog_version,
+    },
     items,
   });
 }

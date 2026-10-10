@@ -51,7 +51,8 @@ through Settings → Integrations and sync before interpreting the Referrals tab
 ## Coverage and verification
 
 - **Complete:** an unsampled live source covers a completed reporting day with
-  no receipt gap above the configured bound, including empty heartbeats.
+  no receipt gap above the configured bound, including empty heartbeats. A
+  Google Cloud source needs regular drains instead; see its guide.
 - **Declared complete:** a completed file scan reports a full day. This is
   client-reported, not independently verified provider coverage.
 - **Partial:** sampled or filtered logs, delivery gaps, incomplete scans or
@@ -86,7 +87,7 @@ Integrations. Choose a method, site origin, collection point and actual sampling
 The host must belong to the project. Only one active live source covers a host;
 file uploads are backfill and cannot overlap days from another source of that host.
 
-Copy the endpoint and `clw_` token when issued. Endpoints are on
+Senders other than Google Cloud get an endpoint and token. Copy the endpoint and `clw_` token when issued. Endpoints are on
 `https://api.citeladder.com`, the host for machine senders. Store the token as a
 secret; it is shown once. Send it in the `Authorization: Bearer <token>` header
 (Amazon Data Firehose sends it as its access key), never in an event body or a
@@ -206,6 +207,73 @@ file names the catalog version) and drops the rest. Tick **The stream runs the
 CiteLadder filter Lambda** when you create the source: quiet periods then send
 nothing, so coverage stays partial.
 
+## Google Cloud (Pub/Sub)
+
+For an external Application Load Balancer or Cloud Run services, a Cloud Logging
+sink routes crawler requests to a Pub/Sub topic in your project, and CiteLadder
+pulls the topic's subscription. Nothing in your project calls CiteLadder and no
+token is issued: CiteLadder reads the subscription as its own reader service
+account, which you grant access to that subscription only.
+
+In the connect dialog choose **Google Cloud**, enter the subscription path
+(`projects/<project>/subscriptions/<subscription>`) and the load balancer's
+logging sample rate, and create the source. The dialog then shows the commands
+below with your project, your subscription, CiteLadder's reader service account
+and this source's verification label filled in. Run them in Cloud Shell:
+
+1. Create the topic, and the subscription with a 120-second acknowledgement
+   deadline, 7-day retention and the label `citeladder-source=<label>`.
+2. Create the Logging sink with the filter below and grant the sink's writer
+   identity `roles/pubsub.publisher` on the topic.
+3. Grant CiteLadder's reader `roles/pubsub.subscriber` and `roles/pubsub.viewer`
+   on the subscription.
+4. Enable logging on each load balancer backend service with
+   `--enable-logging --logging-sample-rate=1.0`. Cloud Run request logs need no
+   setting.
+5. Select **Verify subscription**. CiteLadder reads the subscription once and
+   activates the source when the label matches this source, the subscription is
+   a pull subscription (not push, BigQuery or Cloud Storage) and its
+   acknowledgement deadline is at least 60 seconds.
+
+The label proves the subscription is yours: another workspace cannot name it,
+because only someone who can edit the subscription can set this source's label.
+The check repeats daily. If it fails, or a pull is refused for permission or a
+missing subscription, the source shows **Stalled** with the failed check and no
+pulls run until **Verify subscription** passes again.
+
+The sink filter, generated from the current crawler catalog, keeps load balancer
+and Cloud Run request entries whose user agent matches a recognized crawler:
+
+<!-- gcp-log-filter:start -->
+
+```text
+(resource.type="http_load_balancer"
+  OR (resource.type="cloud_run_revision" AND log_id("run.googleapis.com/requests")))
+AND httpRequest.userAgent=~"(?i)(applebot/|bingbot/|chatgpt-user/|claude-searchbot|claude-user|claudebot|googlebot/|gptbot/|oai-searchbot/|perplexity-user/|perplexitybot/)"
+```
+
+<!-- gcp-log-filter:end -->
+
+When CiteLadder adds crawlers, the source row shows **Update your sink filter**
+with the new filter. Update the sink, then select **I've updated it**; until
+then coverage stays partial.
+
+CiteLadder pulls each verified subscription every five to ten minutes, up to
+10,000 messages a run, and acknowledges messages only after storing them; a
+redelivered message is deduplicated by its log entry ID. From each entry it reads
+the timestamp, request URL (host and path; the query and fragment are dropped),
+method, status, user agent, remote IP (used transiently for verification) and
+insert ID. Entries of other resource types count as rejected lines.
+
+You pay Google for Cloud Logging routing and Pub/Sub. The crawler-only filter
+keeps both small, and CiteLadder's pulls batch up to 1,000 messages per request.
+A reporting day is **complete** only when the source was verified and connected
+all day, the sink used the current filter all day (or you confirmed the update
+before the day began), the declared sample rate is 1.0, the subscription was
+drained at least every 30 minutes, and a drain completed at least 15 minutes
+after the day closed. Otherwise the day is partial and the coverage strip names
+the condition that failed.
+
 ## Custom webhook
 
 Use NDJSON, a JSON array, or Apache/Nginx Combined with a user agent. Plain Common
@@ -278,8 +346,13 @@ live but not delivering, and its coverage is not complete; the row says why:
   plan no longer includes them.
 - **Oversized batch:** a Firehose request over 5 MiB was dropped. Lower the
   stream's buffer size.
+- **Subscription check failed:** a Google Cloud subscription lost its label,
+  became a push subscription, has an acknowledgement deadline under 60 seconds,
+  no longer grants CiteLadder's reader access, or no longer exists.
 
-The next accepted batch clears the stall.
+The next accepted batch clears the stall, except a failed subscription check,
+which only a passing **Verify subscription** clears. A Google Cloud source shows
+**Awaiting verification** until its first check passes.
 
 ## Availability and retention
 

@@ -55,6 +55,9 @@
       "exclusive_minimum": 0
     }
   },
+  "task_lease_ttl_seconds": {
+    "crawl_log_pull": 300
+  },
   "executor_not_wired_error": "executor_not_wired",
   "retry_error": "unknown",
   "terminal_compensation_batch": 100,
@@ -62,6 +65,7 @@
   "tasks": {
     "ai_traffic_insights_refresh": "ai_traffic_insights_refresh",
     "crawl_log_rollup_refresh": "crawl_log_rollup_refresh",
+    "crawl_log_pull": "crawl_log_pull",
     "bot_ip_range_refresh": "bot_ip_range_refresh",
     "bot_request_retention_sweep": "bot_request_retention_sweep",
     "crawl_log_upload_abandon_sweep": "crawl_log_upload_abandon_sweep",

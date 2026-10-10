@@ -13,6 +13,7 @@
 import { randomBytes } from 'node:crypto';
 import { crawlLogRollupRefresh } from '../crawl-logs/rollup.ts';
 import { refreshTrafficInsights } from '../crawl-logs/insights.ts';
+import { crawlLogPull } from '../crawl-logs/pull.ts';
 import {
   botIpRangeRefresh,
   botRequestRetentionSweep,
@@ -57,6 +58,7 @@ const ERROR_DETAIL_LIMIT = 2000;
 export const EXECUTORS: Readonly<Record<string, Executor>> = {
   ai_traffic_insights_refresh: refreshTrafficInsights,
   crawl_log_rollup_refresh: crawlLogRollupRefresh,
+  crawl_log_pull: crawlLogPull(),
   bot_ip_range_refresh: botIpRangeRefresh(),
   bot_request_retention_sweep: botRequestRetentionSweep,
   crawl_log_upload_abandon_sweep: crawlLogUploadAbandonSweep,
@@ -139,7 +141,10 @@ export class AnalyticsWorker {
   ) {
     this.#db = db;
     this.#settings = settings;
-    this.#queue = new TaskQueue(db, { leaseTtlSeconds: settings.leaseTtlSeconds });
+    this.#queue = new TaskQueue(db, {
+      leaseTtlSeconds: settings.leaseTtlSeconds,
+      leaseTtlSecondsByKind: settings.leaseTtlSecondsByKind,
+    });
     this.#executors = options.executors ?? EXECUTORS;
     this.#scope = options.taskScope;
     this.#signal = options.signal;

@@ -23,7 +23,13 @@ import {
 } from '@/components/ui/table';
 import { CrawlLogSetup, CrawlLogSetupSubmit, CrawlLogCredential } from './crawl-log-setup';
 import { CrawlLogAvailabilityNotice } from './crawl-log-availability';
-import { collectionPointLabel, stallReasonLabel, words } from '@/lib/ai-traffic/vocabulary';
+import {
+  collectionPointLabel,
+  stallReasonLabel,
+  verificationFailureLabel,
+  words,
+} from '@/lib/ai-traffic/vocabulary';
+import { SinkFilterUpdates } from './gcp-pull-setup';
 import { CRAWL_LOG_SETUPS } from '@/lib/config/crawl-logs';
 
 const setupLabel = (setup: string) =>
@@ -102,6 +108,18 @@ function Connections({
             mutation.mutate({ kind: 'rotate', id });
           }}
           onRevoke={setRevoking}
+          onSetup={(id) => {
+            setIssued({ id, token: null, setup: 'gcp_pubsub_pull' });
+            setOpen(true);
+          }}
+        />
+      ) : null}
+      {sources.data ? (
+        <SinkFilterUpdates
+          data={sources.data}
+          projectId={input.projectId}
+          workspaceId={input.workspaceId}
+          canManage={canManage}
         />
       ) : null}
       <RevokeSourceDialog source={revoking} mutation={mutation} onClose={() => setRevoking(null)} />
@@ -121,7 +139,7 @@ function Connections({
         className="w-144"
         footer={setupAvailable ? <CrawlLogSetupSubmit model={model} /> : undefined}
       >
-        <CrawlLogCredential issued={model.issued} />
+        <CrawlLogCredential model={model} />
         <SetupAvailability model={model} />
       </Dialog>
     </section>
@@ -157,16 +175,30 @@ function SetupAvailability({ model }: Readonly<{ model: ReturnType<typeof useCra
     </>
   );
 }
+/** Why a source is stalled; a failed subscription check also says which check. */
+function StallDetail({ source }: Readonly<{ source: z.infer<typeof crawlSourceSchema> }>) {
+  if (!source.stall_reason) return null;
+  const failure = source.pull?.verification_failure;
+  return (
+    <span className="type-caption">
+      {stallReasonLabel(source.stall_reason)}
+      {failure ? ' ' + verificationFailureLabel(failure) : ''}
+    </span>
+  );
+}
 function SourceDiagnostics({
   items,
   canManage,
   onRotate,
   onRevoke,
+  onSetup,
 }: Readonly<{
   items: z.infer<typeof crawlSourceSchema>[];
   canManage: boolean;
   onRotate: (id: string) => void;
   onRevoke: (source: z.infer<typeof crawlSourceSchema>) => void;
+  /** Reopen a Google Cloud source's setup commands and subscription check. */
+  onSetup: (id: string) => void;
 }>) {
   return (
     <Table>
@@ -189,9 +221,7 @@ function SourceDiagnostics({
                 <span className="type-caption">
                   {setupLabel(s.setup)} · {words(s.connection)} · {words(s.state)}
                 </span>
-                {s.stall_reason ? (
-                  <span className="type-caption">{stallReasonLabel(s.stall_reason)}</span>
-                ) : null}
+                <StallDetail source={s} />
               </div>
             </TableCell>
             <TableCell>
@@ -208,6 +238,12 @@ function SourceDiagnostics({
                   Processed:{' '}
                   <DisplayTime value={s.last_processed_at} fallback="Awaiting processing" />
                 </span>
+                {s.pull ? (
+                  <span className="type-caption">
+                    Drained:{' '}
+                    <DisplayTime value={s.pull.last_drained_at} fallback="Not drained yet" />
+                  </span>
+                ) : null}
               </div>
             </TableCell>
             <TableCell>
@@ -227,6 +263,16 @@ function SourceDiagnostics({
                       }}
                     >
                       Rotate token
+                    </Button>
+                  ) : null}
+                  {s.kind === 'pull' ? (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => onSetup(s.id)}
+                      aria-label={`Set up and verify ${s.host}`}
+                    >
+                      Set up and verify
                     </Button>
                   ) : null}
                   <Button

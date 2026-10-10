@@ -51,6 +51,40 @@ function declaredSampling(sampling: string, rate: string, filter: string) {
   if (sampling === 'filtered') return { kind: 'filtered', description: filter } as const;
   return { kind: 'none' } as const;
 }
+/**
+ * What a setup declares: Firehose its buffer and filter, Google Cloud its
+ * subscription and sample rate, the others format, point and sampling.
+ */
+function declaredFields(
+  setup: (typeof CRAWL_LOG_SETUPS)[number]['value'],
+  fields: Readonly<{
+    format: string;
+    point: string;
+    sampling: string;
+    rate: string;
+    filter: string;
+    bufferInterval: string;
+    declaredFiltered: boolean;
+    subscription: string;
+    sampleRate: string;
+  }>,
+) {
+  if (setup === 'aws_firehose')
+    return {
+      buffer_interval_seconds: Number(fields.bufferInterval),
+      declared_filtered: fields.declaredFiltered,
+    };
+  if (setup === 'gcp_pubsub_pull')
+    return {
+      subscription: fields.subscription.trim(),
+      declared_sample_rate: Number(fields.sampleRate),
+    };
+  return {
+    format: fields.format,
+    collection_point: fields.point,
+    sampling: declaredSampling(fields.sampling, fields.rate, fields.filter),
+  };
+}
 export function useCrawlConnections({
   projectId,
   workspaceId,
@@ -90,6 +124,8 @@ export function useCrawlConnections({
   const [point, setPoint] = useState('cdn_edge');
   const [bufferInterval, setBufferInterval] = useState(String(FIREHOSE_BUFFER_INTERVAL.default)),
     [declaredFiltered, setDeclaredFiltered] = useState(false);
+  const [subscription, setSubscription] = useState(''),
+    [sampleRate, setSampleRate] = useState('1');
   const [issued, setIssued] = useState<{
     id: string;
     token: string | null;
@@ -108,16 +144,25 @@ export function useCrawlConnections({
     mutationFn: async (action: { kind: 'create' } | { kind: 'rotate' | 'revoke'; id: string }) => {
       if (action.kind !== 'create')
         return aiTrafficApi.mutateSource(projectId, action.id, action.kind, options);
-      // Firehose declares its buffer and filter; other setups declare format, point and sampling.
-      const declared =
-        setup === 'aws_firehose'
-          ? { buffer_interval_seconds: Number(bufferInterval), declared_filtered: declaredFiltered }
-          : {
-              format,
-              collection_point: point,
-              sampling: declaredSampling(sampling, rate, filter),
-            };
-      return aiTrafficApi.createSource(projectId, { setup, origin, ...declared }, options);
+      return aiTrafficApi.createSource(
+        projectId,
+        {
+          setup,
+          origin,
+          ...declaredFields(setup, {
+            format,
+            point,
+            sampling,
+            rate,
+            filter,
+            bufferInterval,
+            declaredFiltered,
+            subscription,
+            sampleRate,
+          }),
+        },
+        options,
+      );
     },
     onSuccess: async (result, action) => {
       const issuedSetup =
@@ -161,6 +206,7 @@ export function useCrawlConnections({
 
   return {
     canManage,
+    projectId,
     workspaceId,
     sources,
     open,
@@ -183,6 +229,10 @@ export function useCrawlConnections({
     setBufferInterval,
     declaredFiltered,
     setDeclaredFiltered,
+    subscription,
+    setSubscription,
+    sampleRate,
+    setSampleRate,
     issued,
     setIssued,
     sourceId,

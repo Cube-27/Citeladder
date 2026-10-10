@@ -283,6 +283,12 @@ function apiServiceChecks() {
     'crawl:firehose-filter',
     '--check',
   ]);
+  pnpm('Google Cloud sink filter docs', [
+    '--filter',
+    '@citeladder/api',
+    'crawl:gcp-filter',
+    '--check',
+  ]);
   process.stdout.write('API service schema authority…\n');
   const violations = schemaAuthorityViolations(join(frontendRoot, 'services'));
   if (violations.length) {

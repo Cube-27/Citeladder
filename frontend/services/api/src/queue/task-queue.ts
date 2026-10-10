@@ -56,6 +56,8 @@ const { statuses, claimable } = policy.task_queue;
 
 export type TaskQueueOptions = {
   leaseTtlSeconds: number;
+  /** Per-kind leases, for work that holds an external resource (a pulled batch) longer. */
+  leaseTtlSecondsByKind?: Readonly<Record<string, number>>;
   /** The clock; tests pin it. */
   now?: () => Date;
 };
@@ -128,13 +130,20 @@ export function claimStatement(
 
 export class TaskQueue<T extends QueueTable = 'analytics_tasks'> {
   readonly #db: Database;
-  readonly #leaseTtlSeconds: number;
+  /** The row's lease length: its kind's override, else the queue default. */
+  readonly #leaseTtlSeconds: RawBuilder<number>;
   readonly #now: () => Date;
   readonly #table: QueueTable;
 
   constructor(db: Database, options: TaskQueueOptions, table: T = QUEUE_TABLE as T) {
     this.#db = db;
-    this.#leaseTtlSeconds = options.leaseTtlSeconds;
+    const overrides = Object.entries(options.leaseTtlSecondsByKind ?? {});
+    this.#leaseTtlSeconds = overrides.length
+      ? sql<number>`(case task_kind ${sql.join(
+          overrides.map(([kind, seconds]) => sql`when ${kind} then ${seconds}::float8`),
+          sql` `,
+        )} else ${options.leaseTtlSeconds}::float8 end)`
+      : sql<number>`${options.leaseTtlSeconds}`;
     this.#now = options.now ?? (() => new Date());
     this.#table = table;
   }

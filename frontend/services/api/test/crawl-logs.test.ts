@@ -620,7 +620,7 @@ describe('sanitized durable admission', () => {
         origin: 'https://acme.example',
         format: 'ndjson',
       }),
-    ).rejects.toThrow(/active webhook/);
+    ).rejects.toThrow(/active live source/);
   });
 });
 describe('verification vocabulary', () => {

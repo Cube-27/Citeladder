@@ -13,6 +13,20 @@ resource "google_service_account" "scheduler" {
   display_name = "CiteLadder tick scheduler"
 }
 
+# Customers grant this identity subscriber and viewer on their own Pub/Sub
+# subscription; it holds no role in this project and has no key.
+resource "google_service_account" "log_reader" {
+  account_id   = "${local.name}-log-reader"
+  display_name = "CiteLadder crawl-log reader (customer Pub/Sub subscriptions)"
+}
+
+# The runtime mints short-lived reader tokens through IAM Credentials.
+resource "google_service_account_iam_member" "runtime_impersonates_log_reader" {
+  service_account_id = google_service_account.log_reader.name
+  role               = "roles/iam.serviceAccountTokenCreator"
+  member             = "serviceAccount:${google_service_account.runtime.email}"
+}
+
 resource "google_project_iam_member" "db_logging" {
   for_each = toset(["roles/logging.logWriter", "roles/monitoring.metricWriter"])
   project  = var.project_id

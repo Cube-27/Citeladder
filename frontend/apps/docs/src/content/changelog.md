@@ -15,6 +15,21 @@ Generated prompts now borrow wording from how your buyers already search. When S
 
 [Read about grounded generation](/prompts/#grounded-in-your-search-data)
 
+## October 10, 2026: Google Cloud crawler logs
+
+Connect **Google Cloud** load balancer and Cloud Run request logs to AI crawler
+logs. A Cloud Logging sink sends crawler requests to a Pub/Sub subscription in
+your project, and CiteLadder pulls it every few minutes as its own reader
+account; no token or endpoint is involved. The connect dialog generates the
+`gcloud` commands, including a label that proves the subscription is yours, and
+**Verify subscription** activates the source. When CiteLadder recognizes new
+crawlers, the source asks you to update the sink filter.
+
+**For your team:** if your site runs behind a Google Cloud load balancer or on
+Cloud Run, you can now measure AI crawler visits with complete daily coverage.
+
+[Connect Google Cloud](/ai-traffic/#google-cloud-pubsub)
+
 ## October 10, 2026: Ads in ChatGPT answers
 
 AI Visibility has an **Ads** view: how often ChatGPT Search answers showed paid ads, who advertised, your own ad share, the prompts that surface ads and each ad as text. Each ChatGPT Search answer in a run lists its ads apart from its citations. Ads never count as citations or change your visibility scores, and other surfaces read not applicable.
