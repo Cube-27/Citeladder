@@ -4,7 +4,13 @@ import PublicFonts from '@/components/marketing/chrome/PublicFonts.astro';
 import { CookieBanner } from '@/components/marketing/chrome/cookie-banner';
 import { MarketingFooter } from '@/components/marketing/chrome/footer';
 import { MarketingNavIsland } from '../components/MarketingNavIsland';
-import { organizationJsonLd, softwareApplicationJsonLd, websiteJsonLd, type JsonLdObject } from '@/lib/seo/json-ld';
+import {
+  organizationJsonLd,
+  serializeJsonLd,
+  softwareApplicationJsonLd,
+  websiteJsonLd,
+  type JsonLdObject,
+} from '@/lib/seo/json-ld';
 import {
   absoluteUrl,
   DEFAULT_SOCIAL_IMAGE,
@@ -52,9 +58,11 @@ const {
   jsonLd = [],
 } = Astro.props;
 const canonicalUrl = canonical ? (absoluteUrl(canonical) ?? canonical) : undefined;
-const socialTitle = title.endsWith(` · ${SITE_NAME}`)
-  ? title.slice(0, -` · ${SITE_NAME}`.length)
-  : title;
+// Social cards carry the site name separately (og:site_name), so drop it from the title.
+const socialTitle = [` · ${SITE_NAME}`, ` | ${SITE_NAME}`].reduce(
+  (value, suffix) => (value.endsWith(suffix) ? value.slice(0, -suffix.length) : value),
+  title,
+);
 // A page image without its own alt text is described by the page title.
 const socialImage = image ? { path: image, alt: imageAlt || socialTitle } : DEFAULT_SOCIAL_IMAGE;
 const imageUrl = absoluteUrl(socialImage.path) ?? undefined;
@@ -63,7 +71,6 @@ const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 const sharedJsonLd = [organizationJsonLd(), websiteJsonLd(), softwareApplicationJsonLd()].filter(
   (data): data is JsonLdObject => data !== null,
 );
-const serializeJsonLd = (data: JsonLdObject) => JSON.stringify(data).replace(/</g, '\u003c');
 ---
 
 <!doctype html>
@@ -109,6 +116,6 @@ const serializeJsonLd = (data: JsonLdObject) => JSON.stringify(data).replace(/</
     <MarketingNavIsland path={Astro.url.pathname} client:load />
     <div class="relative z-1 pt-[var(--marketing-nav-offset)]"><slot /></div>
     <div class="relative z-1"><MarketingFooter /></div>
-    <CookieBanner client:load />
+    <CookieBanner client:idle />
   </body>
 </html>

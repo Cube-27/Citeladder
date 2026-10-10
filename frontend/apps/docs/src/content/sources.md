@@ -28,14 +28,14 @@ A brand listed beside a cited URL co-occurred in answers that cited the URL. Tha
 
 For example, an answer can cite a general industry report and independently mention a software vendor. Inspecting the report is a separate step.
 
-## Work on earned-source opportunities
+## Work on an earned Action
 
-An external publisher page may support an earned Action when inspected evidence shows an actionable gap or discrepancy. Read the saved inspection and its date before planning outreach.
+CiteLadder reads pages that AI answers cite. When a cited page lists one of your competitors and does not list you, it opens an earned Action for that page. Read the saved reading and its date before planning outreach.
 
 Use the Agent to prepare a reviewable brief. Your team decides whether and how to contact a publisher; CiteLadder does not send outreach or secure placement automatically.
 
 ## Verify the right thing
 
-An owned-site edit and an earned placement need different evidence. A new listing on a publisher page can be observed separately from any later AI visibility change.
+An earned Action is measured on the tracked prompts whose answers cited the page: after you declare it implemented, later visibility runs show whether those prompts moved. That reading does not prove the listing caused the change.
 
 Use [Actions and measurement](/agent/actions/) to understand how implementation and later checks are connected.

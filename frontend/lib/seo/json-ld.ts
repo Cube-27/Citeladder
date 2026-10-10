@@ -190,7 +190,17 @@ export function blogPostingJsonLd(post: BlogPost): JsonLdObject {
  * newest publication date -- revising an older post changes what this page
  * indexes, and reading only `date` would leave the signal stale.
  */
-export function blogIndexJsonLd(posts: readonly BlogPostSummary[]): JsonLdObject | null {
+/**
+ * The blog listing: dated posts and the research guides it also lists. Guides
+ * carry no publication date, so only posts set the listing's freshness.
+ */
+export function blogIndexJsonLd({
+  posts,
+  guides,
+}: {
+  posts: readonly BlogPostSummary[];
+  guides: readonly { title: string; path: string }[];
+}): JsonLdObject | null {
   const url = absoluteUrl('/blog');
   if (!url) return null;
   const dates = posts.flatMap((post) => {
@@ -213,18 +223,14 @@ export function blogIndexJsonLd(posts: readonly BlogPostSummary[]): JsonLdObject
     publisher: { '@type': 'Organization', name: SITE_NAME, url: absoluteUrl('/') ?? url },
     mainEntity: {
       '@type': 'ItemList',
-      numberOfItems: posts.length,
-      itemListElement: posts.flatMap((post, index) => {
-        const postUrl = absoluteUrl(`/blog/${post.slug}`);
-        if (!postUrl) return [];
-        return [
-          {
-            '@type': 'ListItem',
-            position: index + 1,
-            url: postUrl,
-            name: post.title,
-          },
-        ];
+      numberOfItems: posts.length + guides.length,
+      itemListElement: [
+        ...posts.map((post) => ({ path: `/blog/${post.slug}`, title: post.title })),
+        ...guides,
+      ].flatMap((item, index) => {
+        const itemUrl = absoluteUrl(item.path);
+        if (!itemUrl) return [];
+        return [{ '@type': 'ListItem', position: index + 1, url: itemUrl, name: item.title }];
       }),
     },
   };

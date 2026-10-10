@@ -25,7 +25,12 @@ const apiRequestTimeout = JSON.stringify(
 );
 
 export default defineConfig({
-  output: 'server',
+  // Pages are built once and served as free static assets. Only routes that
+  // read the request (pricing, contact, the 404 negotiation and the apex
+  // proxy in middleware) opt out with `prerender = false`.
+  output: 'static',
+  build: { format: 'file' },
+  trailingSlash: 'never',
   session: false,
   // External webhook and MCP POSTs reach exact routes; the backend verifies
   // signatures, OAuth transactions and CSRF at their owning endpoints.
@@ -68,6 +73,9 @@ export default defineConfig({
       ),
       'process.env.PUBLIC_DOCS_ORIGIN': JSON.stringify(
         process.env.PUBLIC_DOCS_ORIGIN ?? environment.PUBLIC_DOCS_ORIGIN ?? '',
+      ),
+      'process.env.PUBLIC_TURNSTILE_SITE_KEY': JSON.stringify(
+        process.env.PUBLIC_TURNSTILE_SITE_KEY ?? environment.PUBLIC_TURNSTILE_SITE_KEY ?? '',
       ),
       'process.env.LOCAL_COMPOSE_BUILD': JSON.stringify(process.env.LOCAL_COMPOSE_BUILD ?? ''),
     },

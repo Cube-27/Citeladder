@@ -14,6 +14,7 @@ secondary_keywords:
 search_intent: 'Understand and implement brand and website citation monitoring'
 content_type: 'product-led educational pillar'
 reviewed_at: '2026-10-06'
+image: '/blog/editorial/article-citations.png'
 publication_status: 'editorial_review'
 ---
 

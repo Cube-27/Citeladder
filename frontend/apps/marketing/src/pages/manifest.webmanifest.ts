@@ -1,6 +1,6 @@
 import { SITE_NAME, SITE_TAGLINE } from '@/lib/seo/site';
 
-/** Standards-based install metadata for the public web application. */
+/** Name and icon for browsers; the site is a website, not an installable app. */
 export function GET() {
   return new Response(
     JSON.stringify({
@@ -8,7 +8,6 @@ export function GET() {
       short_name: SITE_NAME,
       description: SITE_TAGLINE,
       start_url: '/',
-      display: 'standalone',
       icons: [{ src: '/citeladder-favicon.ico', type: 'image/x-icon', sizes: '256x256' }],
     }),
     {

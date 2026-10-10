@@ -1,15 +1,22 @@
 import type { ZodError } from 'zod';
 import {
   CONTACT_MAX_BODY_BYTES,
-  contactSubmissionSchema,
+  CONTACT_TURNSTILE_ACTION,
+  contactRequestSchema,
   type ContactSubmission,
 } from '@/lib/config/contact';
+import { verifyTurnstile } from './turnstile';
 
 type SendContact = (submission: ContactSubmission) => Promise<boolean>;
 type ContactLimiter = { limit(input: { key: string }): Promise<{ success: boolean }> };
 export type ContactRateLimits = {
   ip?: ContactLimiter;
   burst?: ContactLimiter;
+};
+export type ContactChallenge = {
+  /** Turnstile secret; without it the intake fails closed. */
+  secret: string | undefined;
+  hostnames: readonly string[];
 };
 function result(status: number, outcome: string, fields?: Record<string, string>): Response {
   return Response.json(
@@ -56,6 +63,7 @@ export async function handleContactRequest(
   request: Request,
   send: SendContact,
   limits: ContactRateLimits,
+  challenge: ContactChallenge,
 ): Promise<Response> {
   if (request.method !== 'POST') return result(405, 'validation_error');
   if (request.headers.get('origin') !== new URL(request.url).origin)
@@ -70,19 +78,32 @@ export async function handleContactRequest(
   } catch {
     return result(400, 'validation_error');
   }
-  const parsed = contactSubmissionSchema.safeParse(payload);
+  const parsed = contactRequestSchema.safeParse(payload);
   if (!parsed.success) return validationError(parsed.error);
-  if (parsed.data.website.trim()) return result(403, 'spam_rejected');
+  const { turnstile_token: token, ...submission } = parsed.data;
+  if (submission.website.trim()) return result(403, 'spam_rejected');
   try {
     const ip = request.headers.get('CF-Connecting-IP');
     if (!ip) return result(403, 'spam_rejected');
     if (!limits.ip || !limits.burst) return result(503, 'send_failed');
+    if (!challenge.secret) {
+      console.error('Contact verification is not configured.');
+      return result(503, 'send_failed');
+    }
     if (
       !(await limits.ip.limit({ key: ip })).success ||
       !(await limits.burst.limit({ key: '/api/v1/contact' })).success
     )
       return result(429, 'rate_limited');
-    return (await send(parsed.data)) ? result(200, 'success') : result(503, 'send_failed');
+    const verified = await verifyTurnstile({
+      secret: challenge.secret,
+      token,
+      ip,
+      action: CONTACT_TURNSTILE_ACTION,
+      hostnames: challenge.hostnames,
+    });
+    if (!verified) return result(403, 'verification_failed');
+    return (await send(submission)) ? result(200, 'success') : result(503, 'send_failed');
   } catch {
     console.error('Contact email delivery failed.');
     return result(503, 'send_failed');

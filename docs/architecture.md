@@ -107,7 +107,8 @@ generated from a baseline-migrated database.
 
 ## Delivery topology
 
-The marketing Worker serves `citeladder.com` with Astro SSR and keeps public
+The marketing Worker serves `citeladder.com` as prerendered static pages, with
+on-demand pricing, contact and 404 routes, and keeps public
 MCP and signed webhook paths on their established apex identity. The product
 Worker serves `app.citeladder.com`, including same-origin `/api/v1`, browser
 login, callbacks and consent. Each Worker reaches the native API on scale-to-zero

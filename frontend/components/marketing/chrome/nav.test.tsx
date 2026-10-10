@@ -87,4 +87,36 @@ describe('marketing navigation', () => {
     expect(trigger).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByRole('link', { name: /Platform overview/ })).not.toBeInTheDocument();
   });
+
+  it('closes a hover-opened menu on Escape without taking focus from a field on the page', async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <MarketingNav />
+        <input aria-label="Message" />
+      </>,
+    );
+    const trigger = screen.getByRole('button', { name: 'Platform' });
+    await user.hover(trigger);
+    await waitFor(() => expect(trigger).toHaveAttribute('aria-expanded', 'true'));
+    const field = screen.getByRole('textbox', { name: 'Message' });
+    field.focus();
+    await user.keyboard('{Escape}');
+    expect(field).toHaveFocus();
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('takes the page behind the open mobile menu out of reach until it closes', async () => {
+    const user = userEvent.setup();
+    const page = document.body.appendChild(document.createElement('main'));
+    try {
+      render(<MarketingNav />);
+      await user.click(screen.getByLabelText('Open menu'));
+      expect(page).toHaveAttribute('inert');
+      await user.keyboard('{Escape}');
+      expect(page).not.toHaveAttribute('inert');
+    } finally {
+      page.remove();
+    }
+  });
 });

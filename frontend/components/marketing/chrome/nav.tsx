@@ -229,7 +229,8 @@ function useDesktopDropdown() {
     if (openDrop === null) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
-      returnFocus.current?.focus();
+      // A panel opened by hover must not pull focus out of a field elsewhere.
+      if (navRef.current?.contains(document.activeElement)) returnFocus.current?.focus();
       clearDropClose();
       closeDrop();
     };
@@ -309,9 +310,17 @@ export function MarketingNav() {
       const chrome = chromeRef.current;
       if (chrome && !chrome.contains(event.target as Node | null)) closeMenu();
     };
+    // The sheet covers the page, so the page behind it leaves the tab order
+    // and the accessibility tree until the sheet closes.
+    const chrome = chromeRef.current;
+    const hidden = [...document.body.children].filter(
+      (element) => chrome && !element.contains(chrome) && !element.hasAttribute('inert'),
+    );
+    for (const element of hidden) element.setAttribute('inert', '');
     document.addEventListener('keydown', onKeyDown);
     document.addEventListener('pointerdown', onPointerDown);
     return () => {
+      for (const element of hidden) element.removeAttribute('inert');
       document.removeEventListener('keydown', onKeyDown);
       document.removeEventListener('pointerdown', onPointerDown);
     };

@@ -1,4 +1,5 @@
 ---
+import type { GetStaticPaths } from 'astro';
 import MarketingLayout from '../../layouts/MarketingLayout.astro';
 import { PageHero } from '@/components/marketing/primitives/page-hero';
 import { Section } from '@/components/marketing/primitives/section';
@@ -10,8 +11,10 @@ import { SitemapComparison } from '@/components/marketing/tools/sitemap-tool';
 import { SocialPreview } from '@/components/marketing/tools/social-tool';
 import catalog from '@/services/api/src/config/crawlers.json';
 
-const tool = FREE_TOOLS.find((entry) => entry.slug === Astro.params.slug);
-if (!tool) return new Response('Tool not found', { status: 404 });
+export const getStaticPaths = (() =>
+  FREE_TOOLS.map((tool) => ({ params: { slug: tool.slug }, props: { tool } }))) satisfies GetStaticPaths;
+
+const { tool } = Astro.props;
 // Project only the public catalog fields; no server configuration enters the browser.
 const bots = catalog.bots.map((bot) => ({ label: bot.label, purpose: bot.purpose, tokens: bot.robots_tokens }));
 ---

@@ -28,9 +28,6 @@
     "public/blog/editorial/article-audit.svg": {
       "svg-color": 46
     },
-    "public/blog/editorial/article-citations.svg": {
-      "svg-color": 26
-    },
     "public/blog/editorial/article-connect.svg": {
       "svg-color": 59
     },
@@ -42,15 +39,6 @@
     },
     "public/blog/editorial/article-prompts.svg": {
       "svg-color": 22
-    },
-    "public/blog/editorial/article-track.svg": {
-      "svg-color": 57
-    },
-    "public/blog/editorial/article-verify.svg": {
-      "svg-color": 53
-    },
-    "public/blog/editorial/hero-ai-visibility.svg": {
-      "svg-color": 36
     }
   }
 }

@@ -1,7 +1,7 @@
 # Frontend architecture
 
-The frontend has three runtime owners: the marketing Worker serves Astro SSR and
-public routes at `citeladder.com`; the product Worker serves the Vite/React
+The frontend has three runtime owners: the marketing Worker serves prerendered
+Astro pages and a few on-demand routes at `citeladder.com`; the product Worker serves the Vite/React
 Router SPA at `app.citeladder.com`; the static documentation Worker serves Astro
 pages at `docs.citeladder.com`. Local Compose runs the same three Workers under
 `wrangler dev` on ports 3000, 3001 and 4322 for development and clean-clone smoke.
@@ -20,19 +20,33 @@ and client acceptance requirements.
 
 The product Worker at `frontend/apps/app/worker.ts` serves Vite assets,
 app-host API, browser MCP consent and guarded navigation. The marketing
-Worker uses Astro SSR at `frontend/apps/marketing`, proxies only exact apex
-protocol/webhook paths and reads the public catalog through protected origin
-transport without visitor credentials. Production delivery and acceptance remain
+Worker at `frontend/apps/marketing` builds every page at deploy time
+(`output: 'static'`) and serves it as a free static asset: the full HTML that
+search engines and AI crawlers read, without a Worker invocation per visit.
+Only routes that read the request opt out with `prerender = false`: `/pricing`,
+the contact intake, `/health` and the 404 page, which answers
+`Accept: text/markdown` with a Markdown body. The middleware runs only for
+those, proxies only exact apex protocol/webhook paths and keeps the retired
+research redirects; asset delivery normalizes trailing slashes. `/pricing`
+reads the public catalog through protected origin transport without visitor
+credentials. It serves a per-country copy from the edge cache for ten minutes
+and the last good copy for up to seven days while the API is unreachable; with
+no copy it answers 503 with `noindex`. Production delivery and acceptance remain
 operator gated. The first release retains captured prior VM artifacts for a
 bounded rollback; later frontend releases use accepted Worker versions.
 
 The marketing Worker owns public `/contact` and its same-origin
 `POST /api/v1/contact` intake. It validates bounded JSON, checks Origin and a
-honeypot, applies native Cloudflare limits by trusted client IP and aggregate
-contact traffic, and sends escaped HTML and plain text through Resend to
+honeypot, applies native Cloudflare limits by trusted client IP and a
+per-location burst cap, verifies a Cloudflare Turnstile token (action `contact`,
+hostname from `TURNSTILE_HOSTNAMES`, single use) and only then sends escaped
+HTML and plain text through Resend to
 `contact@citeladder.com`, with the visitor email as Reply-To. It stores no
-enquiries in the application database. The Resend key is a runtime Worker
-secret; no mail service enters the browser bundle. Demo CTAs use `/contact`;
+enquiries in the application database. The Resend key and
+`TURNSTILE_SECRET_KEY` are runtime Worker secrets, and the intake fails closed
+without either; the build check rejects output containing a Turnstile secret.
+The public Turnstile site key is baked in at build. Only `/contact` allows the
+Turnstile script and challenge frame in its policy. Demo CTAs use `/contact`;
 legacy Cube27 contact URLs from published billing catalogs resolve to this
 intake without altering persisted catalogs. Cube27 product and legal identity
 remain in the public chrome and policies. Successful submission analytics
@@ -40,11 +54,14 @@ require existing cookie consent and contain only the source page.
 
 The product Worker runs before asset matching, so root, deep-link and direct
 HTML responses all carry the same enforced Content Security Policy and no-store
-policy. Fingerprinted resources retain immutable caching. Marketing static
-resources use Cloudflare asset delivery; unmatched routes reach Astro SSR.
-Astro emits a CSP header with hashes for compiled hydration scripts, and the
-marketing middleware preserves it or supplies a restrictive fallback for proxy
-and error responses. Browser destinations live in
+policy. Fingerprinted resources retain immutable caching. Marketing pages and
+resources use Cloudflare asset delivery; unmatched routes reach the Worker.
+Astro hashes compiled hydration scripts into the policy: prerendered pages carry
+it as a `<meta>` element, and on-demand responses as a header that the marketing
+middleware preserves or replaces with a restrictive fallback for proxy and error
+responses. `scripts/check-marketing-worker-output.mjs` writes the static
+`_headers` (X-Frame-Options, HSTS, nosniff, referrer policy, and month-long caching
+for fonts and the favicon), because a meta policy cannot set `frame-ancestors`. Browser destinations live in
 `frontend/lib/config/content-security-policy.ts`; inline script and eval are
 not enabled. Inline styles support React layout, charts and consent pages.
 The app's pre-paint theme bootstrap is an external same-origin script. Upstream
@@ -108,8 +125,10 @@ The guide and product page self-canonicalize separately. The existing measuremen
 destination retains the distinct share-of-appearances worked example. The older
 `/blog/tracking-brand-visibility-ai-search` and `/check-ai-visibility` redirect
 permanently to the measurement destination; `/blog/track-optimize-ai-citations`
-redirects to citation tracking. The middleware also redirects article slash
-variants, preserving query parameters after the existing host/protocol gate.
+redirects to citation tracking. Asset delivery redirects slash variants to the
+canonical path. `public-routes.ts` is the one list of indexable pages: the
+sitemap and `llms.txt` both read it, so a page listed in one is listed in the
+other.
 Named competitor comparisons keep their separate product-versus-product intent.
 
 Only the four linked public JSON inputs/templates are served from

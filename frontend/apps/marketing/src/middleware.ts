@@ -3,13 +3,15 @@ import { routeApexRequest } from './apex-route';
 import { workerApexEnv } from './worker-env';
 import { FALLBACK_CONTENT_SECURITY_POLICY } from '@/lib/config/content-security-policy';
 import { negotiateNotFound } from './not-found';
-import { researchArticle, RESEARCH_REDIRECTS } from './research-articles';
+import { RESEARCH_REDIRECTS } from './research-articles';
 
-export const onRequest: MiddlewareHandler = async ({ request }, next) => {
+// Prerendered pages are static assets: their headers come from the generated
+// `_headers` file (scripts/check-marketing-worker-output.mjs), so this only
+// shapes responses the Worker renders on demand.
+export const onRequest: MiddlewareHandler = async ({ request, isPrerendered }, next) => {
+  if (isPrerendered) return next();
   const url = new URL(request.url);
-  const path = url.pathname.replace(/\/$/, '');
-  const destination =
-    RESEARCH_REDIRECTS[path] ?? (path !== url.pathname && researchArticle(path) ? path : undefined);
+  const destination = RESEARCH_REDIRECTS[url.pathname.replace(/\/$/, '')];
   const routed = await routeApexRequest(request, workerApexEnv());
   let redirect: Response | undefined;
   if (!routed && destination && (request.method === 'GET' || request.method === 'HEAD')) {

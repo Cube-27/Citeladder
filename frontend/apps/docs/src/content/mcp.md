@@ -19,7 +19,7 @@ The hosted endpoint is **https://citeladder.com/mcp**. One address works for eve
 
 ## What you can read
 
-The server exposes project discovery, business context, prompts, visibility results and sources, Site Health, connected-data status, performance, AI referrals, demand, opportunities and saved Search Intelligence datasets.
+The server exposes project discovery, business context, prompts, visibility results and sources, Actions, the AI Shelf, Site Health and crawler access, AI traffic and crawl logs, connected-data status, performance, AI referrals, search demand and saved Search Intelligence datasets.
 
 Use the [tool reference](/mcp/tools/) for the registered catalog and [example requests](/mcp/examples/) for practical starting points.
 
@@ -27,7 +27,7 @@ Use the [tool reference](/mcp/tools/) for the registered catalog and [example re
 
 The in-app [Agent](/agent/) works inside a project-pinned chat with saved deliverables and revisions. MCP supplies read access to an external client, which controls its own conversation and outputs.
 
-MCP does not expose the Agent's private skill methodologies or its Agent-only Action reads.
+The Agent reads evidence through the same catalogue of read tools, limited to its chat's project. MCP does not expose the Agent's skill methodologies, its chats or its saved outputs.
 
 ## What the connection cannot do
 

@@ -3,6 +3,7 @@ import { ArrowUpRight, BookOpen, Bot, Plug, History, List } from 'lucide-react';
 import { LogoMark } from '@/components/ui/logo-mark';
 import { ButtonLink } from '@/components/marketing/primitives/button';
 import PublicFonts from '@/components/marketing/chrome/PublicFonts.astro';
+import { appHref, websiteHref } from '@/lib/config/app-link';
 import { docsHref } from '@/lib/config/docs';
 import DocsNav from '../components/DocsNav.astro';
 import DocsContents from '../components/DocsContents.astro';
@@ -17,6 +18,8 @@ interface Props {
 }
 const { title, description, headings = [], noindex = false } = Astro.props;
 const path = Astro.url.pathname;
+const website = websiteHref('/');
+const contact = websiteHref('/contact');
 const tabs = [
   { href: '/', label: 'Guides', icon: BookOpen, selected: !/^\/(agent|mcp|changelog)(\/|$)/.test(path) },
   { href: '/agent/', label: 'Agent', icon: Bot, selected: path.startsWith('/agent') },
@@ -49,10 +52,10 @@ const tabs = [
         <nav aria-label="Documentation sections" class="docs-tabs">
           {tabs.map((tab) => { const Icon = tab.icon; return <a href={tab.href} aria-current={tab.selected ? 'page' : undefined}><Icon className="size-4" aria-hidden />{tab.label}</a>; })}
         </nav>
-        <div class="docs-search"><DocsSearch client:load /><noscript>Use the guide navigation below.</noscript></div>
+        <div class="docs-search"><DocsSearch client:idle /><noscript>Use the guide navigation below.</noscript></div>
         <div class="docs-header-actions">
-          <a class="docs-site-link website-nav" href="https://citeladder.com">citeladder.com</a>
-          <ButtonLink href="https://app.citeladder.com">Open app <ArrowUpRight aria-hidden /></ButtonLink>
+          <a class="docs-site-link website-nav" href={website}>{new URL(website).host}</a>
+          <ButtonLink href={appHref('/')}>Open app <ArrowUpRight aria-hidden /></ButtonLink>
         </div>
       </div>
     </header>
@@ -64,13 +67,13 @@ const tabs = [
         <slot />
         <footer class="docs-footer website-label">
           <span>© CiteLadder documentation</span>
-          <a href="https://citeladder.com/contact">Get help</a>
-          <a href="https://citeladder.com/privacy">Privacy</a>
+          <a href={contact}>Get help</a>
+          <a href={websiteHref('/privacy')}>Privacy</a>
         </footer>
       </main>
       <aside class="docs-toc" aria-label="On this page">
         {headings.length > 0 && <><p class="website-label docs-nav-heading"><List className="size-4" aria-hidden />On this page</p><DocsContents headings={headings} /></>}
-        <a class="docs-toc-help" href="https://citeladder.com/contact">Need a hand? Get in touch <ArrowUpRight className="size-3" aria-hidden /></a>
+        <a class="docs-toc-help" href={contact}>Need a hand? Get in touch <ArrowUpRight className="size-3" aria-hidden /></a>
       </aside>
     </div>
   </body>

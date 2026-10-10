@@ -1,6 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
-import { organizationJsonLd, softwareApplicationJsonLd, websiteJsonLd } from './json-ld';
+import { POSTS } from '@/lib/marketing-content/blog';
+import { toBlogPostSummary } from '@/lib/marketing-content/blog-index';
+import {
+  blogIndexJsonLd,
+  organizationJsonLd,
+  softwareApplicationJsonLd,
+  websiteJsonLd,
+} from './json-ld';
 
 const ORIGINAL = process.env.PUBLIC_WEBSITE_ORIGIN;
 
@@ -43,5 +50,34 @@ describe('organizationJsonLd', () => {
     expect(
       (softwareApplicationJsonLd()?.publisher as Record<string, unknown> | undefined)?.['@id'],
     ).toBe(data?.['@id']);
+  });
+});
+
+describe('blogIndexJsonLd', () => {
+  it('lists dated posts, then the research guides the page shows, in one numbered list', () => {
+    process.env.PUBLIC_WEBSITE_ORIGIN = 'https://example.test';
+    const post = toBlogPostSummary(POSTS[0]!);
+    const data = blogIndexJsonLd({
+      posts: [post],
+      guides: [{ title: 'GEO vs SEO', path: '/blog/geo-vs-seo' }],
+    });
+    expect(data?.mainEntity).toEqual({
+      '@type': 'ItemList',
+      numberOfItems: 2,
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          url: `https://example.test/blog/${post.slug}`,
+          name: post.title,
+        },
+        {
+          '@type': 'ListItem',
+          position: 2,
+          url: 'https://example.test/blog/geo-vs-seo',
+          name: 'GEO vs SEO',
+        },
+      ],
+    });
   });
 });

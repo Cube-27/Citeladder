@@ -1,11 +1,9 @@
-'use client';
-
-import { useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { Check } from 'lucide-react';
 
 import { appHref } from '@/lib/config/app-link';
 import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';
-import { cn, cycled } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 
 import { EngineLogo, type OfficialEngineKey } from '../primitives/engine-logo';
 import { ButtonLink, DemoButtonLink } from '../primitives/button';
@@ -13,14 +11,11 @@ import { CapabilityGrid, FaqList } from '../pages/platform';
 import {
   AgentView,
   AnswerView,
-  AppShellFrame,
   DemandView,
   ProductShot,
   SiteHealthView,
   SourcesView,
   VisibilityView,
-  type AppShellChrome,
-  type ShellFilters,
 } from '../scenes/product-views';
 
 import { FAQS } from './landing-data';
@@ -42,120 +37,9 @@ function PrimaryActions({ size = 'marketing' }: Readonly<{ size?: 'lg' | 'market
   );
 }
 
-/* ── Hero and product tour ──────────────────────────────────────────────── */
+/* ── Hero ───────────────────────────────────────────────────────────────── */
 
-/* The real AI Visibility page's tabs and filter bar. */
-const VISIBILITY_TABS = ['Trends', 'Sources', 'Query fanouts'] as const;
-const VISIBILITY_FILTERS: ShellFilters = [
-  ['Latest run', 'Last 90 days', 'Per run'],
-  ['Visibility prompts', 'All surfaces'],
-];
-
-const TOUR = [
-  {
-    id: 'visibility',
-    label: 'Visibility',
-    shell: {
-      active: 'AI Visibility',
-      title: 'AI Visibility',
-      action: 'Launch audit',
-      tabs: VISIBILITY_TABS,
-      activeTab: 'Trends',
-      filters: VISIBILITY_FILTERS,
-    },
-    View: VisibilityView,
-  },
-  {
-    id: 'citations',
-    label: 'Citations',
-    shell: {
-      active: 'AI Visibility',
-      title: 'AI Visibility',
-      action: 'Launch audit',
-      tabs: VISIBILITY_TABS,
-      activeTab: 'Sources',
-      filters: VISIBILITY_FILTERS,
-    },
-    View: SourcesView,
-  },
-  {
-    id: 'health',
-    label: 'Site Health',
-    shell: {
-      active: 'Website',
-      title: 'Website',
-      tabs: ['Overview', 'Pages', 'Architecture', 'AEO Readiness', 'Internal links', 'Changes'],
-      activeTab: 'Overview',
-    },
-    View: SiteHealthView,
-  },
-  {
-    id: 'agent',
-    label: 'Agent',
-    shell: {
-      mode: 'agent',
-      active: 'Technical fix brief for /platform',
-      title: 'Agent',
-    },
-    View: AgentView,
-  },
-] as const satisfies readonly {
-  id: string;
-  label: string;
-  shell: AppShellChrome;
-  View: () => ReactNode;
-}[];
-
-type TourId = (typeof TOUR)[number]['id'];
-
-function HeroTour() {
-  const [active, setActive] = useState<TourId>('visibility');
-  const step = TOUR.find((item) => item.id === active) ?? TOUR[0];
-  return (
-    <div className="lp-tour">
-      <div className="lp-tour-tabs" role="tablist" aria-label="Product tour">
-        {TOUR.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            role="tab"
-            id={`tour-tab-${item.id}`}
-            aria-selected={item.id === active}
-            aria-controls="tour-panel"
-            tabIndex={item.id === active ? 0 : -1}
-            onClick={() => setActive(item.id)}
-            onKeyDown={(event) => {
-              if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
-              const index = TOUR.findIndex((entry) => entry.id === active);
-              const next = cycled(TOUR, index + (event.key === 'ArrowRight' ? 1 : TOUR.length - 1));
-              setActive(next.id);
-              document.getElementById(`tour-tab-${next.id}`)?.focus();
-            }}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
-      <div className="lp-hero-stage product-stage">
-        <div
-          id="tour-panel"
-          role="tabpanel"
-          aria-labelledby={`tour-tab-${step.id}`}
-          className="lp-hero-frame product-fit"
-        >
-          <AppShellFrame {...step.shell}>
-            <step.View />
-          </AppShellFrame>
-        </div>
-      </div>
-      <p className="product-caption text-center">
-        Illustrative example with synthetic data. Engine availability depends on your plan.
-      </p>
-    </div>
-  );
-}
-
-function Hero() {
+function Hero({ tour }: Readonly<{ tour?: ReactNode }>) {
   return (
     <header className="lp-hero">
       <div className="lp-wrap lp-hero-copy mk-hero-in">
@@ -170,9 +54,7 @@ function Hero() {
           <p className="lp-hero-note">7-day free trial on ChatGPT answers. Trial limits apply.</p>
         )}
       </div>
-      <div className="lp-wrap lp-wrap-wide">
-        <HeroTour />
-      </div>
+      <div className="lp-wrap lp-wrap-wide">{tour}</div>
     </header>
   );
 }
@@ -429,10 +311,11 @@ function Closing() {
   );
 }
 
-export function LandingPage() {
+/** Server-rendered; `tour` is the hydrated product tour (see `HeroTour`). */
+export function LandingPage({ tour }: Readonly<{ tour?: ReactNode }>) {
   return (
     <div className="lp">
-      <Hero />
+      <Hero tour={tour} />
       <EngineStrip />
       <Statement />
       <Loop />

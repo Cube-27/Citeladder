@@ -210,7 +210,8 @@ workspace-scoped checkout controller. Every purchase (plan, add-on, top-up or
 upgrade) shows the backend-resolved quote before the separate payment
 confirmation. No purchase
 starts from a GET, login or reload. The prepared marketing Worker renders the
-validated public catalog in initial HTML and links bounded selections to app
+validated public catalog in initial HTML (from a short-lived edge-cached copy)
+and links bounded selections to app
 `/pricing`. It sends no visitor credentials on the catalog read and performs no
 billing mutation. The captured old apex runtime remains available for
 first-cutover recovery.
