@@ -91,7 +91,7 @@ async function publish(db: Database, task: QueueTask, revision: string, terminal
   });
 }
 
-async function prepare(db: Database, task: QueueTask, client: JevClient | null) {
+function prepare(db: Database, task: QueueTask, client: JevClient | null) {
   return db.transaction().execute(async (trx) => {
     const run = await lockedRun(trx, task);
     if (!run || run.state === 'cancelled') return [];

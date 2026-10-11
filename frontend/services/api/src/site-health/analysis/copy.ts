@@ -14,7 +14,7 @@ export const NEXT_ACTION =
 const BYLINE_AT_START = new RegExp(`^(?:${authorship.byline_pattern})`);
 const BYLINE_SUFFIX = new RegExp(`^(?:${authorship.byline_metadata_suffix_pattern})$`, 'i');
 const SHORT_DATE = new RegExp(
-  `^(?:${authorship.short_date_pattern.replaceAll('\\d', '\\p{Nd}')})$`,
+  `^(?:${authorship.short_date_pattern.replaceAll(String.raw`\d`, String.raw`\p{Nd}`)})$`,
   'iu',
 );
 const METADATA_TOKENS = new Set([

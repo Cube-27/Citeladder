@@ -192,11 +192,9 @@ function stage(
     const drops: Drops = { ...output.drops };
     const dropRecords = [...output.dropRecords];
     const eligible = output.drafts.filter((row, row_index) => {
-      const reason = known.has(row.hash)
-        ? 'duplicate'
-        : topics.some((topic) => topic.id === row.slot.topic_id)
-          ? null
-          : 'unknown_topic';
+      let reason: 'duplicate' | 'unknown_topic' | null = null;
+      if (known.has(row.hash)) reason = 'duplicate';
+      else if (!topics.some((topic) => topic.id === row.slot.topic_id)) reason = 'unknown_topic';
       if (!reason) return true;
       countDrop(drops, reason);
       dropRecords.push({

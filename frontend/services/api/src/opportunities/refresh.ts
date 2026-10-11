@@ -120,8 +120,10 @@ async function auditHits(
   // Page-keyed, over the FULL eligible answer set rather than the gap prompts.
   hits.push(...(await earnedPageHits(db, scope, audit, visibility)));
   hits = hits.map((hit) => ({ ...hit, source_metric_ids: [metricId] }));
-  hits.push(...(await commerceHits(db, scope, audit.id)));
-  hits.push(...(await confirmedDeclineHits(db, scope.workspaceId, audit.id)));
+  hits.push(
+    ...(await commerceHits(db, scope, audit.id)),
+    ...(await confirmedDeclineHits(db, scope.workspaceId, audit.id)),
+  );
   return { audit, hits, sourceMix, limitations };
 }
 
@@ -194,8 +196,8 @@ async function collectHits(db: Database, scope: Scope, sources: Sources): Promis
       );
     collected.hits.push(
       ...(await internalLinkHits(db, scope, sources.identity.internal_link_run_id)),
+      ...(await changeHits(db, scope.workspaceId, sources.crawl)),
     );
-    collected.hits.push(...(await changeHits(db, scope.workspaceId, sources.crawl)));
   }
   const gaps = await searchGapHits(db, scope, sources.gaps, sources.demand, sources.crawl);
   collected.hits.push(...gaps.hits);

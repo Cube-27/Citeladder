@@ -13,9 +13,8 @@ const failures = routeOwnershipFailures({
 });
 
 if (failures.length > 0) {
-  process.stderr.write(
-    `Route ownership failed:\n${failures.map((line) => `- ${line}`).join('\n')}\n`,
-  );
+  const listing = failures.map((line) => `- ${line}`).join('\n');
+  process.stderr.write(`Route ownership failed:\n${listing}\n`);
   process.exit(1);
 }
 process.stdout.write(`Route ownership passed: ${ROUTE_FAMILIES.length} families.\n`);

@@ -194,12 +194,10 @@ async function screen<T extends { text: string; topic_id?: string | null }>(
     );
     const duplicate = failure === null && taken.has(hash);
     if (failure === null) taken.add(hash);
-    return {
-      input,
-      hash,
-      problem:
-        failure !== null ? { kind: 'binding', failure } : duplicate ? { kind: 'duplicate' } : null,
-    };
+    let problem: Screened<unknown>['problem'] = null;
+    if (failure !== null) problem = { kind: 'binding', failure };
+    else if (duplicate) problem = { kind: 'duplicate' };
+    return { input, hash, problem };
   });
 }
 

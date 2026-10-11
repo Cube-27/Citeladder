@@ -7,6 +7,7 @@ import { advisoryXactLock } from '../db/advisory-lock.ts';
 import { accountState, drawOrder } from './state.ts';
 import { digest } from '../billing/contracts.ts';
 import { getLogger } from '../logging.ts';
+import { compareText } from '../text-order.ts';
 import { isNonEmpty } from '../lists.ts';
 
 export class LedgerError extends Error {}
@@ -18,9 +19,7 @@ const logger = getLogger('api.entitlements');
 
 /** The persisted audit ledger hashes compact JSON with sorted ASCII keys. */
 function auditFingerprint(value: Record<string, string | number>) {
-  return digest(
-    Object.fromEntries(Object.entries(value).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))),
-  );
+  return digest(Object.fromEntries(Object.entries(value).sort(([a], [b]) => compareText(a, b))));
 }
 
 function verifySubject(db: Database, subject: Subject) {

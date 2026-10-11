@@ -91,6 +91,12 @@ export function compareContent(
   ];
   return base;
 }
+function countFeatureValues(compared: ComparisonPage[], feature: (typeof FEATURES)[number]) {
+  const counts = new Map<string, number>();
+  for (const page of compared)
+    for (const value of features(page)[feature]) counts.set(value, (counts.get(value) ?? 0) + 1);
+  return counts;
+}
 /** Split feature values into parity, gaps and unique owned contributions. */
 function classify(
   owned: ComparisonPage,
@@ -101,9 +107,7 @@ function classify(
   const denominator = compared.length;
   const threshold = Math.max(1, Math.ceil(denominator * p.most_pages_ratio));
   for (const feature of FEATURES) {
-    const counts = new Map<string, number>();
-    for (const page of compared)
-      for (const value of features(page)[feature]) counts.set(value, (counts.get(value) ?? 0) + 1);
+    const counts = countFeatureValues(compared, feature);
     for (const [value, count] of [...counts].sort(([a], [b]) => compareText(a, b))) {
       if (count < threshold) continue;
       const target = own[feature].has(value) ? into.parity : into.gaps;
@@ -165,7 +169,7 @@ export function ownedFacts(id: string, facts: unknown, host: string): Comparison
     domains,
   };
 }
-export async function refreshDifferentiation(
+export function refreshDifferentiation(
   db: Database,
   scope: SourceScope,
   auditId: string,

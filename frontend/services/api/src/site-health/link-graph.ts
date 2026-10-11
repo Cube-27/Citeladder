@@ -112,10 +112,10 @@ function depths(home: string | undefined, outgoing: Map<string, LinkEdge[]>) {
   if (!home) return result;
   result.set(home, 0);
   const queue = [home];
-  for (let i = 0; i < queue.length; i += 1)
-    for (const edge of outgoing.get(queue[i]!) ?? []) {
+  for (const current of queue)
+    for (const edge of outgoing.get(current) ?? []) {
       if (!edge.follow || !edge.target || result.has(edge.target)) continue;
-      result.set(edge.target, result.get(queue[i]!)! + 1);
+      result.set(edge.target, result.get(current)! + 1);
       queue.push(edge.target);
     }
   return result;

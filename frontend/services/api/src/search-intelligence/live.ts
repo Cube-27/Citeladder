@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { ProviderError } from '../answer-engines/contracts.ts';
 import { createSecretCipher } from '../integrations/fernet.ts';
 import { providerSettings } from '../providers/config.ts';
-import { approvedEndpoint } from '../providers/connections.ts';
+import { approvedEndpoint, basicAuthorization } from '../providers/connections.ts';
 import { boundedJson } from '../providers/response.ts';
 import { providerErrorCode } from '../models/http.ts';
 import { canonicalJson, si } from './requests.ts';
@@ -59,7 +59,7 @@ export function resolveLive(
   }
   return {
     url: `${base}${input.endpoint}`,
-    authorization: `Basic ${Buffer.from(`${pair.login}:${pair.password}`).toString('base64')}`,
+    authorization: basicAuthorization(pair),
   };
 }
 

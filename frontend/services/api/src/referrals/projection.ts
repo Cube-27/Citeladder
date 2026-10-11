@@ -88,16 +88,8 @@ function latestFacts(facts: readonly ReferralFact[]): ReferralFact[] {
     if (existing === undefined || fact.resync_seq > existing.resync_seq) latest.set(key, fact);
   }
   const idKey = (fact: ReferralFact) => fact.classification_id ?? '';
-  return [...latest.values()].sort((a, b) =>
-    a.occurred_date === b.occurred_date
-      ? idKey(a) < idKey(b)
-        ? -1
-        : idKey(a) > idKey(b)
-          ? 1
-          : 0
-      : a.occurred_date < b.occurred_date
-        ? -1
-        : 1,
+  return [...latest.values()].sort(
+    (a, b) => compareText(a.occurred_date, b.occurred_date) || compareText(idKey(a), idKey(b)),
   );
 }
 
@@ -163,15 +155,7 @@ export function buildAiReferralsProjection(options: {
             sessions,
             share: windowTotal > 0 ? sessions / windowTotal : null,
           }))
-          .sort((a, b) =>
-            a.sessions !== b.sessions
-              ? b.sessions - a.sessions
-              : a.ai_source < b.ai_source
-                ? -1
-                : a.ai_source > b.ai_source
-                  ? 1
-                  : 0,
-          );
+          .sort((a, b) => b.sessions - a.sessions || compareText(a.ai_source, b.ai_source));
 
   return {
     metrics: { referral_volume: referralVolume, referral_share: referralShare, sources },

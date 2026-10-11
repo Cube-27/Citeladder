@@ -19,7 +19,7 @@ async function remaining(db: Database, scope: SourceScope, now: Date) {
     .executeTakeFirstOrThrow();
   return Math.max(0, p.budget_per_window - Number(row.spent));
 }
-async function spend(
+function spend(
   db: Database,
   scope: SourceScope,
   kind: string,
@@ -47,7 +47,7 @@ async function spend(
  * Charge one redirect token: `charged` to follow it, `duplicate` if already
  * paid in this budget window. A token that failed is retried in a later window.
  */
-export async function spendRedirect(
+export function spendRedirect(
   db: Database,
   scope: SourceScope,
   url: string,
@@ -76,12 +76,7 @@ const hoursAgo = (now: Date, hours: number) => new Date(now.getTime() - hours * 
  * then retries. A failed read waits a budget window and a blocked one the
  * stale period, so neither is re-fetched every run.
  */
-export async function claimPages(
-  db: Database,
-  scope: SourceScope,
-  now = new Date(),
-  task?: QueueTask,
-) {
+export function claimPages(db: Database, scope: SourceScope, now = new Date(), task?: QueueTask) {
   return db.transaction().execute(async (trx) => {
     await fenceInspectionTask(trx, task);
     await requireScope(trx, scope);

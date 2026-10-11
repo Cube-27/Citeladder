@@ -154,18 +154,16 @@ export function sourcePageInspector(fetcher?: WebsiteFetcher): Executor {
             ? extractSourcePage(result.body, result.charset)
             : undefined;
         const assessment = extracted ? assessPage(extracted, configuration) : undefined;
-        const recorded = await recordInspection(
-          db,
-          task,
+        const recorded = await recordInspection(db, task, {
           scope,
-          id,
+          pageId: id,
           lease,
-          fetched,
-          audit.id,
+          fetch: fetched,
+          auditId: audit.id,
           roster,
           extracted,
           assessment,
-        );
+        });
         if (recorded) inspected.push(id);
       } catch (error) {
         if (error instanceof TaskCancelledError) throw error;

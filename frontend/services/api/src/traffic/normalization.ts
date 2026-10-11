@@ -41,7 +41,7 @@ export function canonicalPage(input: string, origin?: string | null): string | n
     const port = parsed.port ? Number(parsed.port) : defaultPort;
     if (!policy.traffic.url_ports.includes(port)) return null;
     const path = (rawPath || '/').replace(/%([0-9a-f]{2})/giu, (_match, hex: string) => {
-      const char = String.fromCharCode(Number.parseInt(hex, 16));
+      const char = String.fromCodePoint(Number.parseInt(hex, 16));
       return /[a-z0-9\-._~]/iu.test(char) ? char : `%${hex.toUpperCase()}`;
     });
     const encoded = [...path]

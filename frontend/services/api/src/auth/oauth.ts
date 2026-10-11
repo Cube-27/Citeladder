@@ -253,6 +253,50 @@ async function identify(
 
 type SignInEvent = 'auth.oauth_registered' | 'auth.oauth_linked';
 
+/** An address that already has an account: link it, or claim an unverified one via Google. */
+async function claimExistingAccount(
+  db: Database,
+  existing: User,
+  identity: SignInIdentity,
+  authoritative: boolean,
+  proof?: LinkProof,
+): Promise<{ user: User; event: SignInEvent }> {
+  if (
+    existing.is_active &&
+    proof?.userId === existing.id &&
+    proof.version === existing.session_version &&
+    !requiresEmailVerification(existing)
+  )
+    return { user: existing, event: 'auth.oauth_linked' };
+  if (!existing.is_active) throw new SignInError('oauth_signin_failed');
+  if (!identity.email_verified) throw new SignInError('oauth_signin_email_unverified');
+  if (!requiresEmailVerification(existing)) throw new SignInError('oauth_signin_link_required');
+  if (!authoritative) throw new SignInError('oauth_signin_email_unverified');
+  const claimed = await db
+    .updateTable('users')
+    .set({
+      hashed_password: null,
+      email_verified_at: new Date(),
+      email_verification_method: 'google',
+      session_version: sql`session_version + 1`,
+      updated_at: new Date(),
+    })
+    .where('id', '=', existing.id)
+    .where('session_version', '=', existing.session_version)
+    .where('email_verified_at', 'is', null)
+    .where('is_active', '=', true)
+    .returningAll()
+    .executeTakeFirst();
+  if (!claimed) throw new SignInError('oauth_signin_state_invalid');
+  await db
+    .updateTable('auth_challenges')
+    .set({ consumed_at: new Date() })
+    .where('user_id', '=', existing.id)
+    .where('consumed_at', 'is', null)
+    .execute();
+  return { user: claimed, event: 'auth.oauth_linked' };
+}
+
 /**
  * The verified address's account. A missing one is created passwordless only
  * by a signup start with its Terms decision; sign-in sends the person to sign up.
@@ -268,42 +312,7 @@ async function accountForEmail(
   const existing = await byEmail.executeTakeFirst();
   const authoritative =
     identity.email_verified && (identity.email.endsWith('@gmail.com') || Boolean(identity.hd));
-  if (existing) {
-    if (
-      existing.is_active &&
-      proof?.userId === existing.id &&
-      proof.version === existing.session_version &&
-      !requiresEmailVerification(existing)
-    )
-      return { user: existing, event: 'auth.oauth_linked' };
-    if (!existing.is_active) throw new SignInError('oauth_signin_failed');
-    if (!identity.email_verified) throw new SignInError('oauth_signin_email_unverified');
-    if (!requiresEmailVerification(existing)) throw new SignInError('oauth_signin_link_required');
-    if (!authoritative) throw new SignInError('oauth_signin_email_unverified');
-    const claimed = await db
-      .updateTable('users')
-      .set({
-        hashed_password: null,
-        email_verified_at: new Date(),
-        email_verification_method: 'google',
-        session_version: sql`session_version + 1`,
-        updated_at: new Date(),
-      })
-      .where('id', '=', existing.id)
-      .where('session_version', '=', existing.session_version)
-      .where('email_verified_at', 'is', null)
-      .where('is_active', '=', true)
-      .returningAll()
-      .executeTakeFirst();
-    if (!claimed) throw new SignInError('oauth_signin_state_invalid');
-    await db
-      .updateTable('auth_challenges')
-      .set({ consumed_at: new Date() })
-      .where('user_id', '=', existing.id)
-      .where('consumed_at', 'is', null)
-      .execute();
-    return { user: claimed, event: 'auth.oauth_linked' };
-  }
+  if (existing) return claimExistingAccount(db, existing, identity, authoritative, proof);
   if (config.demo.enabled || !config.auth.publicSignup)
     throw new SignInError('oauth_signin_disabled');
   if (!signupTermsRevision) throw new SignInError('oauth_signin_no_account', identity.email);

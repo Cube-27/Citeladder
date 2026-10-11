@@ -57,7 +57,7 @@ it('provisions/authenticates once, refuses wrong credentials and tops up without
       .execute();
   const original = await grants();
   expect(await provisionDevelopmentLogin(db, config, input)).toEqual(first);
-  expect((await grants()).length).toBe(original.length);
+  expect(await grants()).toHaveLength(original.length);
   await expect(
     provisionDevelopmentLogin(db, config, { ...input, password: 'other-password' }),
   ).rejects.toThrow('unexpected_development_identity');

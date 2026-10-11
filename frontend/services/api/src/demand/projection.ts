@@ -69,6 +69,11 @@ export type Evaluation = {
   counts_by_classification: Record<string, number>;
   limitations: string[];
 };
+/** Partial when any row abstained, else available only when rows were evaluated. */
+export function collectionState(abstained: number, rowCount: number) {
+  if (abstained) return 'partial';
+  return rowCount ? 'available' : 'unavailable';
+}
 export const unique = (values: string[]) => [...new Set(values)].sort(compareText);
 function priority(impressions: number, ctr: number | null, gap: number) {
   const demand = Math.min(1, Math.log1p(Math.max(impressions, 0)) / Math.log1p(10000));
@@ -264,7 +269,7 @@ export function detectStrikingDistance(rows: QueryInput[]): Evaluation {
     );
   }
   return {
-    state: abstained ? 'partial' : rows.length ? 'available' : 'unavailable',
+    state: collectionState(abstained, rows.length),
     candidates,
     counts_by_classification: classificationCounts(rows),
     limitations: abstained

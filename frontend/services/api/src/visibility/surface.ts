@@ -277,11 +277,10 @@ export async function surfaceRates(
   }
   // A single run is authorized exactly as a run set is: an unknown one is
   // not found, never zero-denominator rates.
-  await authorizeRunSet(
-    db,
-    scope,
-    scope.auditIds?.length ? scope.auditIds : scope.auditId !== null ? [scope.auditId] : null,
-  );
+  let runSet: string[] | null = null;
+  if (scope.auditIds?.length) runSet = scope.auditIds;
+  else if (scope.auditId !== null) runSet = [scope.auditId];
+  await authorizeRunSet(db, scope, runSet);
   const observations = await scopedObservations(db, scope)
     .select([
       'observation.outcome',

@@ -57,6 +57,23 @@ type ProjectionOwners = {
   finalize: (workspaceId: string, auditId: string) => Promise<unknown>;
 };
 
+type DataforseoClient = ReturnType<typeof createDataforseoClient>;
+/** A scraper submission with no task id yet reconciles under the reconciliation pool, not the answer pool. */
+function reconciliationCapacity(claimed: AuditTask, context: ExecutionContext) {
+  const capacity = { ...context.capacity };
+  if (
+    ['chatgpt_search', 'gemini_consumer'].includes(claimed.logical_engine) &&
+    claimed.provider_submission_ref &&
+    !claimed.provider_task_id &&
+    capacity.source === 'byok'
+  ) {
+    capacity.engine = providerPolicy.scraper_reconciliation_capacity_engine;
+    capacity.accountPoolIdentity = createHash('sha256')
+      .update(`${capacity.accountPoolIdentity}:${capacity.engine}`)
+      .digest('hex');
+  }
+  return capacity;
+}
 /** One lease advances one stored phase. Provider retries live exclusively in PostgreSQL. */
 export class AuditWorker {
   readonly owner: string;
@@ -132,73 +149,77 @@ export class AuditWorker {
       if ((await this.#checkDeadline(claimed)).expired) return;
       context = await this.#loadContext(claimed);
       if (!context) return;
-      const surface = context.task.transport_provider === 'dataforseo';
       const { expired, recovery } = await this.#checkDeadline(claimed, context);
       if (expired) return;
-      const capacity = { ...context.capacity };
-      if (
-        ['chatgpt_search', 'gemini_consumer'].includes(claimed.logical_engine) &&
-        claimed.provider_submission_ref &&
-        !claimed.provider_task_id &&
-        capacity.source === 'byok'
-      ) {
-        capacity.engine = providerPolicy.scraper_reconciliation_capacity_engine;
-        capacity.accountPoolIdentity = createHash('sha256')
-          .update(`${capacity.accountPoolIdentity}:${capacity.engine}`)
-          .digest('hex');
-      }
+      const capacity = reconciliationCapacity(claimed, context);
       const decision = await acquireCapacity(this.#db, capacity, this.#runtime, this.#now());
       if (!decision.acquired) {
         await this.#parkCapacity(claimed, decision, recovery);
         return;
       }
 
-      try {
-        // Recheck ownership after acquiring capacity, immediately before any network boundary.
-        const live = await this.#db
-          .transaction()
-          .execute((trx) => ownedAuditTask(trx, claimed, this.owner));
-        if (!live || dispatchSignal.aborted) return;
-        if (!(await this.#queue.markRunning(claimed, this.owner))) return;
-        if (surface) await this.#surface(context, dispatchSignal);
-        else {
-          await this.#dispatchDirect(claimed, context, dispatch, dispatchSignal);
-        }
-      } catch (error) {
-        if (error instanceof ProviderError) dispatch.rateError = error;
-        throw error;
-      } finally {
-        await releaseCapacity(
-          this.#db,
-          capacity,
-          this.#runtime,
-          {
-            rateLimited: dispatch.rateError?.code === 'rate_limit',
-            retryAfterSeconds: dispatch.rateError?.retryAfterSeconds,
-          },
-          this.#now(),
-        );
-      }
+      await this.#dispatchLeased(claimed, context, capacity, dispatch, dispatchSignal);
     } catch (error) {
-      logger.info('audit_task_internal_failure', {
-        task_id: claimed.id,
-        error_code: error instanceof ProviderError ? error.code : 'unknown',
-      });
-      if (claimed.transport_provider === 'dataforseo')
-        await this.#failSurface(claimed, context, 'submission_unreconciled', false);
-      else
-        await persistExecutionFailure(
-          this.#db,
-          claimed,
-          this.owner,
-          error instanceof ProviderError ? error : new ProviderError('unknown'),
-          this.#runtime,
-          { preCall: !dispatch.started, ...(context ? { context } : {}), at: this.#now() },
-        );
+      await this.#recordInternalFailure(claimed, context, dispatch, error);
     } finally {
       await heartbeat.stop();
       await this.#projections.finalize(claimed.workspace_id, claimed.audit_id);
     }
+  }
+  /** The leased dispatch: ownership is rechecked right before any network boundary. */
+  async #dispatchLeased(
+    claimed: AuditTask,
+    context: ExecutionContext,
+    capacity: ExecutionContext['capacity'],
+    dispatch: DispatchState,
+    signal: AbortSignal,
+  ) {
+    try {
+      // Recheck ownership after acquiring capacity, immediately before any network boundary.
+      const live = await this.#db
+        .transaction()
+        .execute((trx) => ownedAuditTask(trx, claimed, this.owner));
+      if (!live || signal.aborted) return;
+      if (!(await this.#queue.markRunning(claimed, this.owner))) return;
+      if (context.task.transport_provider === 'dataforseo') await this.#surface(context, signal);
+      else await this.#dispatchDirect(claimed, context, dispatch, signal);
+    } catch (error) {
+      if (error instanceof ProviderError) dispatch.rateError = error;
+      throw error;
+    } finally {
+      await releaseCapacity(
+        this.#db,
+        capacity,
+        this.#runtime,
+        {
+          rateLimited: dispatch.rateError?.code === 'rate_limit',
+          retryAfterSeconds: dispatch.rateError?.retryAfterSeconds,
+        },
+        this.#now(),
+      );
+    }
+  }
+  async #recordInternalFailure(
+    claimed: AuditTask,
+    context: ExecutionContext | null,
+    dispatch: DispatchState,
+    error: unknown,
+  ) {
+    logger.info('audit_task_internal_failure', {
+      task_id: claimed.id,
+      error_code: error instanceof ProviderError ? error.code : 'unknown',
+    });
+    if (claimed.transport_provider === 'dataforseo')
+      await this.#failSurface(claimed, context, 'submission_unreconciled', false);
+    else
+      await persistExecutionFailure(
+        this.#db,
+        claimed,
+        this.owner,
+        error instanceof ProviderError ? error : new ProviderError('unknown'),
+        this.#runtime,
+        { preCall: !dispatch.started, ...(context ? { context } : {}), at: this.#now() },
+      );
   }
   async #dispatchDirect(
     claimed: AuditTask,
@@ -335,9 +356,7 @@ export class AuditWorker {
       : this.#projections.execution;
   }
   async #surface(context: ExecutionContext, signal: AbortSignal) {
-    const task = context.task,
-      engine = task.logical_engine as SearchEngine,
-      c = searchPolicy.constants;
+    const task = context.task;
     const client = createDataforseoClient(
       { secret: context.secret, base_url: context.endpoint },
       this.#runtime.providers,
@@ -345,67 +364,81 @@ export class AuditWorker {
       this.#send,
       signal,
     );
-    if (task.provider_task_id) {
-      if (engine === 'google_ai_overview' && task.provider_poll_count >= c.poll_ceiling) {
-        await this.#failSurface(task, context, 'poll_ceiling_exceeded', false);
-        return;
-      }
-      try {
-        const payload = await client.retrieve(engine, task.provider_task_id);
-        const result =
-          engine === 'google_ai_overview'
-            ? parseOverview(payload, task.provider_task_id)
-            : parseScraper(payload, task.provider_task_id, engine);
-        if (result === 'still_pending')
-          await persistSurfaceExchange(
-            this.#db,
-            task,
-            this.owner,
-            { poll: true, delaySeconds: c.poll_interval_seconds },
-            this.#now(),
-          );
-        else if (engine === 'google_ai_overview')
-          await persistOverview(
-            this.#db,
-            task,
-            this.owner,
-            result as OverviewResult,
-            this.#runtime,
-            this.#now(),
-            true,
-            false,
-            searchPolicy.surface.successful_outcomes.includes((result as OverviewResult).outcome)
-              ? await this.#prepare(context, overviewAnswer(result as OverviewResult))
-              : this.#projections.execution,
-          );
-        else
-          await persistExecutionSuccess(
-            this.#db,
-            task,
-            this.owner,
-            result as Exclude<typeof result, OverviewResult>,
-            await this.#prepare(context, result as ExecutionResult),
-            { surface: true, at: this.#now() },
-          );
-      } catch (error) {
-        const safe = error instanceof ProviderError ? error : new ProviderError('parse_error');
-        if (safe.retryable)
-          await persistSurfaceExchange(
-            this.#db,
-            task,
-            this.owner,
-            { error: safe, poll: true, delaySeconds: c.poll_interval_seconds },
-            this.#now(),
-          );
-        else await this.#failSurface(task, context, 'provider_error', true, safe);
-        if (safe.code === 'rate_limit') throw safe;
-      }
+    if (task.provider_task_id) await this.#pollSurface(context, client, task.provider_task_id);
+    else if (task.provider_submission_ref) await this.#reconcile(context, client);
+    else await this.#submitSurface(context, client);
+  }
+  async #pollSurface(context: ExecutionContext, client: DataforseoClient, taskId: string) {
+    const task = context.task,
+      engine = task.logical_engine as SearchEngine,
+      c = searchPolicy.constants;
+    if (engine === 'google_ai_overview' && task.provider_poll_count >= c.poll_ceiling) {
+      await this.#failSurface(task, context, 'poll_ceiling_exceeded', false);
       return;
     }
-    if (task.provider_submission_ref) {
-      await this.#reconcile(context, client);
-      return;
+    try {
+      const payload = await client.retrieve(engine, taskId);
+      const result =
+        engine === 'google_ai_overview'
+          ? parseOverview(payload, taskId)
+          : parseScraper(payload, taskId, engine);
+      await this.#persistPolled(context, result);
+    } catch (error) {
+      const safe = error instanceof ProviderError ? error : new ProviderError('parse_error');
+      if (safe.retryable)
+        await persistSurfaceExchange(
+          this.#db,
+          task,
+          this.owner,
+          { error: safe, poll: true, delaySeconds: c.poll_interval_seconds },
+          this.#now(),
+        );
+      else await this.#failSurface(task, context, 'provider_error', true, safe);
+      if (safe.code === 'rate_limit') throw safe;
     }
+  }
+  async #persistPolled(
+    context: ExecutionContext,
+    result: ReturnType<typeof parseOverview> | ReturnType<typeof parseScraper>,
+  ) {
+    const task = context.task,
+      engine = task.logical_engine as SearchEngine,
+      c = searchPolicy.constants;
+    if (result === 'still_pending')
+      await persistSurfaceExchange(
+        this.#db,
+        task,
+        this.owner,
+        { poll: true, delaySeconds: c.poll_interval_seconds },
+        this.#now(),
+      );
+    else if (engine === 'google_ai_overview')
+      await persistOverview(
+        this.#db,
+        task,
+        this.owner,
+        result as OverviewResult,
+        this.#runtime,
+        this.#now(),
+        true,
+        false,
+        searchPolicy.surface.successful_outcomes.includes((result as OverviewResult).outcome)
+          ? await this.#prepare(context, overviewAnswer(result as OverviewResult))
+          : this.#projections.execution,
+      );
+    else
+      await persistExecutionSuccess(
+        this.#db,
+        task,
+        this.owner,
+        result as Exclude<typeof result, OverviewResult>,
+        await this.#prepare(context, result as ExecutionResult),
+        { surface: true, at: this.#now() },
+      );
+  }
+  async #submitSurface(context: ExecutionContext, client: DataforseoClient) {
+    const engine = context.task.logical_engine as SearchEngine,
+      c = searchPolicy.constants;
     const intent = await commitSubmissionIntent(this.#db, context, this.owner, this.#now());
     if (!intent) return;
     if (!intent.fresh) {
@@ -454,7 +487,7 @@ export class AuditWorker {
       }
     }
   }
-  async #reconcile(context: ExecutionContext, client: ReturnType<typeof createDataforseoClient>) {
+  async #reconcile(context: ExecutionContext, client: DataforseoClient) {
     const task = context.task,
       engine = task.logical_engine as SearchEngine,
       c = searchPolicy.constants,

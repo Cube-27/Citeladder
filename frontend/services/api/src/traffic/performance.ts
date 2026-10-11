@@ -147,11 +147,9 @@ function performanceWindow(
   };
   const observed = [totals.clicks, totals.impressions, totals.sessions, totals.key_events];
   const series = record(raw.series);
-  const evidenceState: 'not_run' | 'available' | 'observed_zero' = observed.every((v) => v === null)
-    ? 'not_run'
-    : observed.some(Boolean)
-      ? 'available'
-      : 'observed_zero';
+  let evidenceState: 'not_run' | 'available' | 'observed_zero' = 'observed_zero';
+  if (observed.every((v) => v === null)) evidenceState = 'not_run';
+  else if (observed.some(Boolean)) evidenceState = 'available';
   return {
     snapshot_id: snapshot?.id ?? null,
     window_start: snapshot?.start ?? window?.[0] ?? '',

@@ -16,7 +16,7 @@ export async function executeLinkRun(
 ) {
   const env = configEnvironment(config);
   const settings = loadWorkerSettings(env);
-  const tasks = async (kind: string) =>
+  const tasks = (kind: string) =>
     db
       .selectFrom('analytics_tasks')
       .select('id')
