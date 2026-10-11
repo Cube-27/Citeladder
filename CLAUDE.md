@@ -110,7 +110,9 @@ rather than a new file per run. Report exit status and inspect failure tails fir
 - Never reset, deploy, call live providers, activate payments or mutate external
   systems unless the task explicitly authorizes the operation.
 - Edit files with your editing tool (`apply_patch` or equivalent), not shell
-  rewrites. Stage explicit paths and preserve user-owned changes.
+  rewrites, heredocs or throwaway edit scripts. Developer and agent workflow
+  scripts are Node, run through pnpm (`pnpm gate`, `pnpm test:api`); do not add
+  PowerShell or bash scripts for them. Stage explicit paths and preserve user-owned changes.
 
 ## Completion and review
 
