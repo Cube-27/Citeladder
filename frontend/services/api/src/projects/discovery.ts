@@ -7,7 +7,9 @@ import {
 import type { Selectable } from 'kysely';
 import { z } from 'zod';
 
-import { policy } from '../config.ts';
+import { enforceWorkspaceRequest } from '../abuse/usage.ts';
+import { activeJobRetrySeconds, policy, resolveSettingSpec } from '../config.ts';
+import { subjectXactLock } from '../db/advisory-lock.ts';
 import type { Database } from '../db/database.ts';
 import { jsonObject } from '../db/json.ts';
 import { ApiError, notFound } from '../errors.ts';
@@ -75,6 +77,32 @@ export function discoveryCatalog() {
     ),
   };
 }
+/**
+ * Discovery spends outbound fetches, model calls and research-provider calls,
+ * so a workspace holds a bounded number at once and per day. A replayed
+ * idempotency key returns before this and spends nothing.
+ */
+async function admitDiscovery(trx: Database, workspaceId: string) {
+  await subjectXactLock(trx, `brand-discovery-admission:${workspaceId}`);
+  const active = await trx
+    .selectFrom('brand_discovery_tasks')
+    .select((eb) => eb.fn.countAll<string>().as('count'))
+    .where('workspace_id', '=', workspaceId)
+    .where('status', 'in', policy.task_queue.active)
+    .executeTakeFirstOrThrow();
+  if (
+    Number(active.count) >=
+    Number(resolveSettingSpec(policy.abuse.active_brand_discoveries_per_workspace))
+  )
+    throw new ApiError(429, 'Workspace active brand discovery limit exceeded', {
+      headers: { 'retry-after': String(activeJobRetrySeconds()) },
+    });
+  await enforceWorkspaceRequest(trx, workspaceId, {
+    operation: 'brand_discovery.create',
+    limit: Number(resolveSettingSpec(policy.abuse.brand_discoveries_per_workspace_daily)),
+    windowSeconds: 86400,
+  });
+}
 export function createDiscovery(
   db: Database,
   workspaceId: string,
@@ -89,6 +117,7 @@ export function createDiscovery(
       .where('idempotency_key', '=', key)
       .executeTakeFirst();
     if (existing) return discoveryView(existing);
+    await admitDiscovery(trx, workspaceId);
     const industries: Record<string, { subindustries?: string[] }> =
       policy.discovery.industry_library.industries;
     if (!Object.hasOwn(industries, input.industry))

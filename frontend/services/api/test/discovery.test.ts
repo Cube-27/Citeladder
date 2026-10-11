@@ -223,6 +223,36 @@ describe('durable onboarding', () => {
     }
   });
 
+  it('bounds active and daily discoveries per workspace while replays stay free', async () => {
+    const [t, other] = [await tenant(), await tenant()];
+    vi.stubEnv('ABUSE_ACTIVE_BRAND_DISCOVERIES_PER_WORKSPACE', '2');
+    vi.stubEnv('ABUSE_BRAND_DISCOVERIES_PER_WORKSPACE_DAILY', '3');
+    try {
+      const key = randomUUID();
+      const first = await createDiscovery(db, t.workspaceId, input, key);
+      await createDiscovery(db, t.workspaceId, input, randomUUID());
+      await expect(createDiscovery(db, t.workspaceId, input, randomUUID())).rejects.toMatchObject({
+        status: 429,
+      });
+      expect((await createDiscovery(db, t.workspaceId, input, key)).id).toBe(first.id);
+      await db
+        .updateTable('brand_discovery_tasks')
+        .set({ status: 'succeeded' })
+        .where('workspace_id', '=', t.workspaceId)
+        .execute();
+      await createDiscovery(db, t.workspaceId, input, randomUUID());
+      // The daily window counts every admitted discovery, finished or not.
+      await expect(createDiscovery(db, t.workspaceId, input, randomUUID())).rejects.toMatchObject({
+        status: 429,
+      });
+      expect((await createDiscovery(db, other.workspaceId, input, randomUUID())).status).toBe(
+        'queued',
+      );
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it('reclaims leases once across sweepers, bounds batches and atomically reconciles exhausted parents', async () => {
     const first = await tenant(),
       second = await tenant();
