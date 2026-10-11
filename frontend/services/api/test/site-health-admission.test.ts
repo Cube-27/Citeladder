@@ -41,6 +41,18 @@ describe('URL admission', () => {
     expect(admitted('/axb', ['*/a[!]x]b'])).toBe(false);
     // A reversed range cannot compile; the glob then matches only itself.
     expect(admitted('/x', ['*[z-a]*'])).toBe(false);
+    expect(admitted('/archive-7/x', ['*/archive-[0-9]/?'])).toBe(true);
+    expect(admitted('/archive-x/x', ['*/archive-[0-9]/?'])).toBe(false);
+  });
+
+  it('matches many-star globs in linear time on long near-miss URLs', () => {
+    const glob = `https://example.test/${'*a'.repeat(200)}*b`;
+    const url = `https://example.test/${'a'.repeat(900)}`;
+    const started = performance.now();
+    const decision = classifyUrlAdmission(url, { ...scope, include: [glob] });
+    expect(decision.reason).toBe(reasons.narrowed);
+    expect(classifyUrlAdmission(`${url}b`, { ...scope, include: [glob] }).accepted).toBe(true);
+    expect(performance.now() - started).toBeLessThan(1000);
   });
 
   it('separates hard exclusions, tracking variants and documents from ordinary pages', () => {
