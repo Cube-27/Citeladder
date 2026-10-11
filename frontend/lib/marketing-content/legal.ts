@@ -186,7 +186,7 @@ export const AI_POLICY: LegalDocument = {
   slug: 'ai-policy',
   title: 'AI Policy',
   description:
-    'How CiteLadder uses AI systems in the product and what we do not do with your data.',
+    'How CiteLadder uses AI: answer engines generate responses, scoring is deterministic, and Customer Data is never sold or used to train third-party models.',
   lastUpdated: '2026-09-28',
   sections: [
     {
