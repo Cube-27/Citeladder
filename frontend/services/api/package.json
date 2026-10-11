@@ -29,6 +29,7 @@
     "seed:site-health": "node scripts/seed-site-health.ts",
     "seed:dev": "node src/cli/seed-dev-data.ts",
     "test": "vitest run",
+    "test:local": "node scripts/api-test.ts",
     "typecheck": "tsc -p tsconfig.json",
     "check:routes": "node scripts/check-route-ownership.ts",
     "jev:calibrate": "node scripts/jev-calibration.ts",

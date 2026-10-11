@@ -7,15 +7,18 @@ import { fileURLToPath } from 'node:url';
 import { execFileSync, spawnSync } from 'node:child_process';
 
 import { classifyPaths } from './ci-changes.mjs';
+import { claimMachineSlot, claimWorktree } from './check-slots.mjs';
+import { gitPaths as listGitPaths, workingDiffPaths as branchDiffPaths } from './working-diff.mjs';
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const frontendRoot = join(repositoryRoot, 'frontend');
 const args = process.argv.slice(2).filter((argument) => argument !== '--');
 
+// The last occurrence wins, so `pnpm gate --mode check` overrides the script's defaults.
 function option(name, fallback) {
-  const separateIndex = args.indexOf(name);
+  const separateIndex = args.lastIndexOf(name);
   if (separateIndex >= 0) return args[separateIndex + 1] ?? fallback;
-  const inline = args.find((argument) => argument.startsWith(`${name}=`));
+  const inline = args.findLast((argument) => argument.startsWith(`${name}=`));
   return inline?.slice(name.length + 1) ?? fallback;
 }
 
@@ -36,23 +39,8 @@ function git(arguments_, options = {}) {
   return execFileSync('git', ['-C', repositoryRoot, ...arguments_], options); // NOSONAR: trusted PATH.
 }
 
-function gitPaths(arguments_) {
-  return git(arguments_, { encoding: 'utf8' })
-    .split(/\r?\n/u)
-    .filter(Boolean)
-    .map((path) => path.replaceAll('\\', '/'));
-}
-
-function workingDiffPaths() {
-  const mergeBase = gitPaths(['merge-base', 'origin/main', 'HEAD'])[0];
-  const pathSets = [
-    gitPaths(['diff', '--no-renames', '--name-only', '--diff-filter=ACMDT', `${mergeBase}..HEAD`]),
-    gitPaths(['diff', '--no-renames', '--name-only', '--diff-filter=ACMDT']),
-    gitPaths(['diff', '--cached', '--no-renames', '--name-only', '--diff-filter=ACMDT']),
-    gitPaths(['ls-files', '--others', '--exclude-standard']),
-  ];
-  return [...new Set(pathSets.flat())];
-}
+const gitPaths = (arguments_) => listGitPaths(repositoryRoot, arguments_);
+const workingDiffPaths = () => branchDiffPaths(repositoryRoot);
 
 function changedScopes() {
   const paths = workingDiffPaths();
@@ -67,6 +55,20 @@ function resolveScopes() {
 }
 
 const scopes = resolveScopes();
+const gitDirectory = gitPaths(['rev-parse', '--absolute-git-dir'])[0];
+
+// A local `changed` run is the pre-push gate: one per worktree, and it scans the
+// branch's changed files for secrets even when no code owner is affected.
+if (requestedScopes.includes('changed')) {
+  claimWorktree(gitDirectory);
+  const scan = spawnSync(process.execPath, [join(repositoryRoot, 'scripts/secrets-scan.mjs')], {
+    stdio: 'inherit',
+  });
+  if (scan.status !== 0) {
+    process.stderr.write('\nSecrets scan failed; see the findings above.\n');
+    process.exit(1);
+  }
+}
 
 if (scopes.size === 0) {
   process.stdout.write('\nNo affected quality owners for the current working diff.\n');
@@ -117,7 +119,6 @@ function selectedBuilds() {
 
 // A passing run records the exact tree it judged. Rerunning the same checks on
 // an unchanged tree cannot produce new evidence, so it is skipped.
-const gitDirectory = gitPaths(['rev-parse', '--absolute-git-dir'])[0];
 const passRecordPath = join(gitDirectory, 'quality-pass.json');
 
 function treeFingerprint() {
@@ -151,6 +152,9 @@ if (
   );
   process.exit(0);
 }
+
+// The checks below are heavy; at most CITELADDER_HEAVY_CHECKS run on one machine.
+await claimMachineSlot();
 
 const logDirectory = join(gitDirectory, 'quality-logs');
 mkdirSync(logDirectory, { recursive: true });

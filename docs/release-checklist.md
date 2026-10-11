@@ -27,12 +27,12 @@ cp .env.example .env
 
 env -u POSTGRES_PASSWORD -u POSTGRES_USER -u POSTGRES_DB -u DATABASE_URL \
   POSTGRES_PASSWORD="$(grep -E '^POSTGRES_PASSWORD=' .env | cut -d= -f2-)" \
-  docker compose --env-file .env -f docker-compose.yml \
+  docker compose --env-file .env -f docker-compose.yml --profile app \
   up -d --build --force-recreate
 
 env -u POSTGRES_PASSWORD -u POSTGRES_USER -u POSTGRES_DB -u DATABASE_URL \
   POSTGRES_PASSWORD="$(grep -E '^POSTGRES_PASSWORD=' .env | cut -d= -f2-)" \
-  docker compose --env-file .env -f docker-compose.yml ps
+  docker compose --env-file .env -f docker-compose.yml --profile app ps
 # The Workers may still be starting; retry until they answer.
 curl -fsS --retry 20 --retry-delay 3 --retry-all-errors --max-time 10 http://127.0.0.1:3000/
 curl -fsS --retry 20 --retry-delay 3 --retry-all-errors --max-time 10 http://127.0.0.1:3001/health
@@ -64,7 +64,7 @@ curl -fsS http://localhost:8100/health
 - [ ] Stop the evidence stack when finished: `env -u POSTGRES_PASSWORD -u POSTGRES_USER
       -u POSTGRES_DB -u DATABASE_URL POSTGRES_PASSWORD="$(grep -E
       '^POSTGRES_PASSWORD=' .env | cut -d= -f2-)" docker compose --env-file .env -f
-      docker-compose.yml down` (use `down -v` only when deleting disposable data).
+      docker-compose.yml --profile app down` (use `down -v` only when deleting disposable data).
 
 ## 3. Run repository gates
 
@@ -73,8 +73,8 @@ Use the canonical repository completion and CI owners from
 run all static checks and use CI for full test suites; do not maintain a second
 partial gate recipe here.
 
-```powershell
-.\scripts\check.ps1
+```bash
+cd frontend && pnpm gate --scope all --builds all
 ```
 
 - [ ] Required backend, frontend, security, migration, and end-to-end checks pass.

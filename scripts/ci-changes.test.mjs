@@ -17,6 +17,7 @@ test('frontend paths select only their owning suites', () => {
     api: false,
     e2e: false,
     security: false,
+    infra: false,
     compose: false,
   });
 });
@@ -48,7 +49,7 @@ test('browser-sensitive frontend paths select E2E without escalating every front
   ]);
   assert.deepEqual(selectE2EFiles(['frontend/e2e/shell.spec.ts']), ['e2e/shell.spec.ts']);
   assert.deepEqual(selectE2EFiles(['frontend/e2e/shell.spec.mjs']), []);
-  assert.equal(classifyPaths(['scripts/check.ps1', '.github/workflows/ci.yml']).e2e, false);
+  assert.equal(classifyPaths(['scripts/quality.mjs', '.github/workflows/ci.yml']).e2e, false);
 });
 
 test('billing and browser configuration select existing browser suites', () => {
@@ -112,11 +113,12 @@ test('documentation-only changes avoid implementation suites', () => {
     api: false,
     e2e: false,
     security: false,
+    infra: false,
     compose: false,
   });
 });
 
-test('external-service and deploy-only configuration runs only the security owner', () => {
+test('external-service and deploy-only configuration runs only the security and infra owners', () => {
   assert.deepEqual(
     classifyPaths(['.sonarcloud.properties', '.github/workflows/gcp-deploy.yml', 'docs/x.md']),
     {
@@ -125,11 +127,19 @@ test('external-service and deploy-only configuration runs only the security owne
       api: false,
       e2e: false,
       security: true,
+      infra: true,
       compose: false,
     },
   );
   // The CI workflow itself still escalates: owners run under its definition.
   assert.equal(classifyPaths(['.github/workflows/ci.yml']).api, true);
+});
+
+test('Terraform and workflow changes are validated before deploy', () => {
+  assert.equal(classifyPaths(['infra/gcp/run.tf']).infra, true);
+  assert.equal(classifyPaths(['.github/workflows/compose-smoke.yml']).infra, true);
+  assert.equal(classifyPaths(['frontend/services/api/src/app.ts']).infra, false);
+  assert.equal(classifyPaths(['scripts/quality.mjs']).infra, false);
 });
 
 test('main skips full validation only for an owner-free push', () => {
@@ -146,6 +156,7 @@ test('root governance and product prose avoid implementation suites', () => {
     api: false,
     e2e: false,
     security: false,
+    infra: false,
     compose: false,
   });
 });
@@ -159,6 +170,7 @@ test('packaged Agent skills select their native API and image owners', () => {
       api: true,
       e2e: false,
       security: false,
+      infra: false,
       compose: true,
     },
   );
@@ -169,7 +181,7 @@ test('Compose selects container-shaped changes only, on every push of a PR', () 
   // owners already cover it. `{ initial: true }` is asserted alongside the plain
   // call because a PR's first push used to escalate to Compose on any changed
   // application file -- re-adding that option must not bring the escalation back.
-  for (const path of ['frontend/components/card.tsx', 'scripts/check.ps1']) {
+  for (const path of ['frontend/components/card.tsx', 'scripts/quality.mjs']) {
     assert.equal(classifyPaths([path], { initial: true }).compose, false, path);
     assert.equal(classifyPaths([path]).compose, false, path);
   }
@@ -208,6 +220,7 @@ test('previous CI evidence requires every owner to be successful or intentionall
       'API service (TypeScript)',
       'E2E (playwright)',
       'Security (secrets scan)',
+      'Infra (Terraform and workflows)',
     ].map((name) => ({ name, status: 'completed', conclusion: 'skipped' })),
   ];
   assert.equal(hasTrustworthyJobEvidence(complete, 'ci.yml'), true);

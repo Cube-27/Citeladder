@@ -71,9 +71,10 @@ Validation has three tiers; each one owns what the one before it skips.
    Authorization, persistence, concurrency and shared runtime changes need
    stronger affected-owner coverage.
 2. **For changes to contracts, persistence, authorization, concurrency, shared
-   runtime, dependencies or build configuration**, run `./scripts/check.ps1`
-   once when the executable diff is complete. Use `-All` only for shared-config
-   changes or an explicitly requested release check; `-CheckOnly` is non-mutating.
+   runtime, dependencies or build configuration**, run `pnpm gate` (from
+   `frontend/`) once when the executable diff is complete. Add `--scope all
+   --builds all` only for shared-config changes or an explicitly requested
+   release check; `--mode check` is non-mutating.
    Routine feature fixes use focused checks for the changed behavior instead.
 3. **CI** runs the full selected owner suites, every production build, E2E and
    release validation. Do not reproduce it locally, including the full backend suite.
@@ -90,8 +91,8 @@ Agent skills and templates, needs validation of the affected consumer instead.
 
 Do not overlap test/check processes or repeat successful runs for a commit,
 handoff or milestone. If later executable changes invalidate the evidence, rerun
-what they affect before claiming completion. `check.ps1` keeps its own bounded
-logs; send native test output to one reusable log in the worktree's Git directory
+what they affect before claiming completion. `pnpm gate` keeps its own bounded
+logs and waits for a machine-wide check slot; send native test output to one reusable log in the worktree's Git directory
 rather than a new file per run. Report exit status and inspect failure tails first.
 [Development](docs/DEVELOPMENT.md#repository-validation-harness) owns command details.
 
@@ -103,12 +104,15 @@ rather than a new file per run. Report exit status and inspect failure tails fir
 - Tests disable dotenv and use deterministic configuration; inherited live
   provider credentials must never reach a test run.
 - Pre-launch schema changes stay in `frontend/services/api/migrations/0001_baseline.sql`
-  and are verified only on disposable data. Never reset shared, staging or production
-  data under that policy.
+  and are verified on the one local development database (no customers yet; run
+  tests with `pnpm test:api <files>`, never create per-branch databases). Only the
+  owner resets it. Never reset staging or production data under that policy.
 - Never reset, deploy, call live providers, activate payments or mutate external
   systems unless the task explicitly authorizes the operation.
 - Edit files with your editing tool (`apply_patch` or equivalent), not shell
-  rewrites. Stage explicit paths and preserve user-owned changes.
+  rewrites, heredocs or throwaway edit scripts. Developer and agent workflow
+  scripts are Node, run through pnpm (`pnpm gate`, `pnpm test:api`); do not add
+  PowerShell or bash scripts for them. Stage explicit paths and preserve user-owned changes.
 
 ## Completion and review
 

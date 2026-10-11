@@ -30,12 +30,14 @@
     "lint": "vp lint",
     "format": "vp fmt --write",
     "format:check": "vp fmt --check",
+    "gen": "pnpm --filter @citeladder/api public-api:reference && pnpm --filter @citeladder/api mcp:reference && vp fmt apps/docs/src/data/public-api.json apps/docs/src/data/mcp-tools.json",
     "check": "vp check",
     "check:fix": "vp check --fix",
     "test": "vp test run",
     "test:watch": "vp test watch",
     "test:coverage": "vp test run --coverage",
     "test:e2e": "playwright test --config playwright.config.ts",
+    "test:api": "pnpm --filter @citeladder/api test:local",
     "test:workers": "playwright test --config playwright.workers.config.ts",
     "check:complexity": "node scripts/check-frontend-complexity.mjs",
     "check:duplicates": "node scripts/check-jscpd.mjs",
@@ -45,7 +47,8 @@
     "check:bundle": "node scripts/check-bundle-budget.mjs",
     "check:dead-code": "knip",
     "quality:fix": "node ../scripts/quality.mjs --mode fix",
-    "quality:check": "node ../scripts/quality.mjs --mode check"
+    "quality:check": "node ../scripts/quality.mjs --mode check",
+    "gate": "node ../scripts/quality.mjs --mode fix --scope changed --builds affected"
   },
   "dependencies": {
     "@astrojs/cloudflare": "14.3.4",

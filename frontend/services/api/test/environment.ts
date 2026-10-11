@@ -1,11 +1,8 @@
+import { isInheritedCredential } from './inherited-credentials.ts';
+
 /** Fail before importing application owners if a runner inherited live credentials. */
 const inheritedCredentials = Object.entries(process.env)
-  .filter(
-    ([name, value]) =>
-      value &&
-      (/(?:_API_KEY|_CLIENT_SECRET|_CLIENT_ID)$/iu.test(name) ||
-        /^(?:DEFAULT_AGENT_(?:BASE_URL|MODEL)|BILLING_|RAZORPAY_)/iu.test(name)),
-  )
+  .filter(([name, value]) => value && isInheritedCredential(name))
   .map(([name]) => name);
 if (inheritedCredentials.length)
   throw new Error(
