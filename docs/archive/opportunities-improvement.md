@@ -94,7 +94,7 @@ Manual order applies per keyset page; priority is a bare number with no "why
 this rank"; status counts are not shown in the filter; the catalog-field load is
 unscoped; placement and traffic observations lack a top-level source id column;
 the per-observation comparison result still costs about 20 queries. Each is in
-the [backlog](backlog.md) with its reason.
+the [backlog](../plans/backlog.md) with its reason.
 
 ## Tests and documents
 

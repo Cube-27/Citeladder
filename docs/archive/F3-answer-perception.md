@@ -1,5 +1,7 @@
 # F3 — Answer perception (sentiment, themes, recommended rate)
 
+**Status: complete — merged in #352, calibrated in #360 (2026-10-10).** Shipped behaviour is owned by the feature documents linked below, not by this plan.
+
 Competitive tracker row F3, one PR. Owner documents:
 [Prompts and Visibility](../visibility-prompt.md) (new "Answer perception"
 section), [Agent](../agents.md), [MCP](../mcp.md). New module

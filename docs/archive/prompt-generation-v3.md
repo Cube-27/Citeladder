@@ -373,8 +373,8 @@ that restate `markets` alternation once the planner is replaced.
 [visibility-prompt.md](../visibility-prompt.md) (generation and matching
 sections, rewritten from shipped behaviour), [agents.md](../agents.md)
 (handoff and skill revision), the `prompt_discovery` SKILL.md, the
-[backlog](backlog.md) prompt-generation row, the [tracker](feature-review-tracker.md)
-log and [ACTIVE.md](ACTIVE.md). Invariants need no new text: 2, 5, 9 and 12
+[backlog](../plans/backlog.md) prompt-generation row, the [tracker](feature-review-tracker.md)
+log and [ACTIVE.md](../plans/ACTIVE.md). Invariants need no new text: 2, 5, 9 and 12
 already cover the policy, version bumps and labelled model classification.
 
 ## Risks

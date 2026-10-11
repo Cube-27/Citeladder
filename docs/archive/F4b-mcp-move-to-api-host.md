@@ -1,5 +1,7 @@
 # F4b — Move MCP and its OAuth endpoints to `api.citeladder.com`
 
+**Status: complete — merged in #359 (2026-10-10).** Shipped behaviour is owned by the feature documents linked below, not by this plan.
+
 Competitive tracker row F4, PR 2 of 3. **Requires [F2a](F2a-ai-traffic-api-host-and-aws.md)**
 (API host) and should follow [F4a](F4a-public-api-and-keys.md) (shared
 Worker allowlist). Next: [F4c](F4c-mcp-write-tools.md).

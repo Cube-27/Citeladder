@@ -5,15 +5,10 @@ Remaining work is consolidated in the backlog; historical plans are not active a
 
 ## Active
 
-- [Competitive feature tracker](competitive-feature-tracker.md): closing the
-  feature gaps against Peec AI, Searchable and Profound. F1 (documentation truth
-  pass) is done. F2–F6 have decision-complete per-PR plans (implementation
-  order F2a → F2b, F3, F4a → F4b → F4c, F5, F6; F4a needs F2a); F2a, F2b, F3, F4a, F4b, F5 and F6 are merged and F4c is in review; F7 and F8
-  ([plan](F8-fact-checking.md)) are merged; F9 is queued pending owner decisions.
-- [Feature review tracker](feature-review-tracker.md): owner-assigned
-  feature-by-feature audit and rebuild (2026-10-07). Features 1–10 and 12–16 are
-  done and their plans are archived under [docs/archive](../archive/); feature 11
-  (Billing, entitlements and usage) is queued.
+None. The feature review programme and the competitive feature tracker are complete
+and archived under [docs/archive](../archive/); their unfinished items, including
+billing, entitlements and usage (feature 11) and enterprise SSO and SCIM (F9), are
+in the backlog.
 
 ## Queued
 

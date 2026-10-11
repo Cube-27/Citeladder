@@ -1,5 +1,7 @@
 # F6 — Ground prompt generation in the project's own search data
 
+**Status: complete — merged in #355 (2026-10-10).** Shipped behaviour is owned by the feature documents linked below, not by this plan.
+
 Competitive tracker row F6, one PR. (Former F6-PR2 "AI interest estimates"
 is moved to the backlog — see below.)
 Owner documents: [Prompts and Visibility](../visibility-prompt.md),

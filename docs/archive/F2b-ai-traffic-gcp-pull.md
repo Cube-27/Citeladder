@@ -1,5 +1,7 @@
 # F2b — AI Traffic GCP connector (Cloud Logging → Pub/Sub → CiteLadder pull)
 
+**Status: complete — merged in #356 (2026-10-10).** Shipped behaviour is owned by the feature documents linked below, not by this plan.
+
 Competitive tracker row F2, PR 2 of 2. **Requires [F2a](F2a-ai-traffic-api-host-and-aws.md)
 merged** (entitlement, `stalled` state, gap-bound generalisation).
 Owner documents: [AI Traffic](../ai-traffic.md), `infra/gcp/identity.tf`,

@@ -1,5 +1,7 @@
 # Feature review tracker
 
+**Status: archived 2026-10-11.** Features 1–10 and 12–16 are done. Feature 11 (billing, entitlements and usage) moved to the [backlog](../plans/backlog.md#billing-entitlements-and-usage-review).
+
 Started 2026-10-07. This is the master record for a feature-by-feature review
 of the whole application. Each feature's documentation and implementation are
 re-examined from first principles, then rebuilt where needed. The programme
@@ -10,7 +12,7 @@ otherwise.
 
 Improve the application's architecture and reduce technical and test debt.
 Every feature also ships at least one user-facing improvement, taken from the
-[backlog](backlog.md) or found during the audit. All of this serves the
+[backlog](../plans/backlog.md) or found during the audit. All of this serves the
 product's core objective: increasing a business's return by improving its
 visibility in AI answer engines and search.
 
@@ -60,7 +62,7 @@ no parallel stores or policy copies, no dead code, and tests that earn their pla
    [architecture](../architecture.md) and the backend and frontend architecture
    documents where the feature changed or disproved them.
 8. **Close.** Mark the row done with the PR links. Move remaining items to the
-   [backlog](backlog.md) with a reason.
+   [backlog](../plans/backlog.md) with a reason.
 
 A feature is done when every phase in its plan is shipped or explicitly
 deferred by the owner, and its documents describe the shipped behavior.

@@ -154,7 +154,7 @@ section and/or a `SKILL.md`, plus workflow entries.
 Multi-channel repurposing in one chat (one output carries one format), durable
 partial-text resume (decision 1 chose ephemeral SSE), per-project skill
 enablement, memory promotion and plan execution stay in the
-[backlog](backlog.md) deferred proposals.
+[backlog](../plans/backlog.md) deferred proposals.
 
 As shipped: item 1.8 kept the per-step `requireWorkspaceAccess` check, so a
 trial or plan change still stops a turn between steps. The panel does not yet

@@ -1,5 +1,7 @@
 # F2a — AI Traffic enablement, `api.citeladder.com`, AWS Firehose connector
 
+**Status: complete — merged in #353 (2026-10-10).** Shipped behaviour is owned by the feature documents linked below, not by this plan.
+
 Competitive tracker row F2, PR 1 of 2. Next: [F2b](F2b-ai-traffic-gcp-pull.md).
 Owner documents: [AI Traffic](../ai-traffic.md),
 [Workers runbook](../operations/WORKERS_RUNBOOK.md),

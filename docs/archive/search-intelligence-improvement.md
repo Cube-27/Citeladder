@@ -142,7 +142,7 @@ Owner decisions for PR 2 (2026-10-09):
 ## Deferred to the backlog
 
 Per-workspace acquisition limits, bounded readiness and paging indexes, and raw
-response retention are in the [backlog](backlog.md#search-intelligence-remainder)
+response retention are in the [backlog](../plans/backlog.md#search-intelligence-remainder)
 with their reasons.
 
 ## Tests and documents

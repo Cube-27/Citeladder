@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 
 /**
- * The design-system debt ratchet (docs/plans/design-system-consistency.md D10).
+ * The design-system debt ratchet (docs/archive/design-system-consistency.md D10).
  *
  * Findings are counted per file and rule. A count may fall but never rise
  * above its checked-in baseline, and a file or rule missing from the baseline

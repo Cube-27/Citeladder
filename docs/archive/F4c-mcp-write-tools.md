@@ -1,5 +1,7 @@
 # F4c — MCP write tools with confirmation
 
+**Status: complete — merged in #363 (2026-10-11).** Shipped behaviour is owned by the feature documents linked below, not by this plan.
+
 Competitive tracker row F4, PR 3 of 3. **Requires [F4a](F4a-public-api-and-keys.md)**
 (Actor + commands) and **[F4b](F4b-mcp-move-to-api-host.md)** (single MCP origin).
 Owner documents: [MCP](../mcp.md), [Invariants](../invariants.md) §10,

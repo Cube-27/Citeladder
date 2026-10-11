@@ -85,7 +85,7 @@ started from.
 
 ## Deferred to the backlog
 
-Each item is in the [backlog](backlog.md) with its reason.
+Each item is in the [backlog](../plans/backlog.md) with its reason.
 
 - **Snapshot retention and stats stored per granularity.** This needs a
   reference inventory across verification, Opportunity and Demand provenance,

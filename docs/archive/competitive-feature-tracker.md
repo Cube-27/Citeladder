@@ -1,5 +1,7 @@
 # Competitive feature tracker
 
+**Status: archived 2026-10-11.** F1–F8 shipped (#352–#363). F9 (enterprise SSO and SCIM) moved to the [backlog](../plans/backlog.md#enterprise-sso-and-scim); deferred items from each feature are recorded there.
+
 Started 2026-10-10. Master record for closing the feature gaps found against
 Peec AI, Searchable and Profound. High-level architecture for each feature, in
 priority order, written so a coding agent can plan and ship each PR without

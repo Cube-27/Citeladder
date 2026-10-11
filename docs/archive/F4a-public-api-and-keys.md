@@ -1,5 +1,7 @@
 # F4a — Command layer, API keys and the public REST API
 
+**Status: complete — merged in #358 (2026-10-10).** Shipped behaviour is owned by the feature documents linked below, not by this plan.
+
 Competitive tracker row F4, PR 1 of 3. Next: [F4b](F4b-mcp-move-to-api-host.md),
 then [F4c](F4c-mcp-write-tools.md). **Requires [F2a](F2a-ai-traffic-api-host-and-aws.md)
 merged** (it provisions `api.citeladder.com`, the API-host Worker router and

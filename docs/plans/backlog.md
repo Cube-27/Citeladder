@@ -1,6 +1,7 @@
 # Backlog
 
-Consolidated on 7 October 2026. This is the single remaining-work record, queued
+Consolidated on 7 October 2026 and again on 11 October 2026, when the feature
+review programme and the competitive feature tracker were archived. This is the single remaining-work record, queued
 through [plan status](ACTIVE.md). It records documented status, not a fresh code
 audit or production acceptance. Historical plans have been archived; their removal
 does not close the unfinished work below.
@@ -199,6 +200,58 @@ starts the project list, entitlement and access reads from the URL or stored
 workspace; a slimmer project list for the switcher; and a command-center
 comparable-audit lookup by narrow columns with one `opportunity_orders` read.
 
+### Billing, entitlements and usage review
+
+Feature 11, the only feature the 2026-10-07 review programme
+([tracker](../archive/feature-review-tracker.md)) did not reach. Important and
+complex: a full audit and rebuild of `billing`, `entitlements` and
+`components/billing` against [Billing and entitlements](../billing-entitlements.md)
+and [billing provider readiness](../billing-provider-readiness.md), following the
+tracker's per-feature process (inventory, verified audit on the four review
+parameters, a plan with owner decisions, phased PRs, then the owner documents).
+
+Items already waiting on it:
+
+- Per-workspace acquisition limits for Search Intelligence (entitlement-owned
+  depth and spend; see Search Intelligence remainder).
+- The registry has grown one version per feature (`entitlements-v6` API access,
+  `v7` the `fact_checking` pilot grant, `v8` market slots): review the plan
+  bundles, trial and add-on shape as a whole.
+- Settle the funded monthly reservation to recorded spend once every paid path
+  records its attempt cost (Visibility review row); billing `nextDue` and a
+  runner-seconds cap (Production hardening); extended history after a plan
+  upgrade (Integrations).
+- Which plan carries SSO and SCIM (D9.2, below).
+
+Payments stay disabled until the Razorpay acceptance gate below is signed off.
+
+### Enterprise SSO and SCIM
+
+F9 of the [competitive feature tracker](../archive/competitive-feature-tracker.md#f9-enterprise-sso-and-scim-last),
+moved here unbuilt. Important and complex; one or two PRs. Decided (D9.1,
+2026-10-10): WorkOS, implemented last. Open: **D9.2**, which plan carries SSO and
+SCIM (decide with feature 11).
+
+- Prerequisite: the domain verification owner from Authorized crawl and domain
+  verification (DNS TXT challenge, append-only receipts, re-verification,
+  revocation).
+- WorkOS SSO and Directory Sync through a `src/auth/workos.ts` adapter on the
+  shared safe fetcher; a signed directory-event webhook on `api.citeladder.com`.
+- `sso_connections` (workspace, provider, external id, verified domains,
+  `enforce`, default role, disabled_at). Login: email domain lookup, WorkOS
+  redirect, signed-state callback, identity origin `sso`, just-in-time
+  membership with the default role. `enforce` blocks password and Google sign-in
+  for members on verified domains, except the Owner's break-glass path.
+- SCIM: user created, deactivated and group changed map to membership create,
+  removal and role; removal ends sessions and revokes MCP grants and that
+  member's API keys.
+- Entitlement `sso`; a security event for every change.
+- Cost: WorkOS SSO and Directory Sync are each $125 per connection per month
+  at 1–15 connections (volume discounts above); audit log streaming is $125
+  per SIEM connection per month.
+
+Owners: [Workspace access](../workspace-access.md) and [invariants](../invariants.md).
+
 ## Deferred proposals
 
 Optional later assignments, not prerequisites for completed features:
@@ -222,9 +275,10 @@ Optional later assignments, not prerequisites for completed features:
 | Commerce review | Deferred by the feature 10 review (2026-10-09): a slim catalog list read with per-target product detail (today the whole catalog is returned and polled during projection); rejected import rows first in `row_outcomes` and an import outcome view; a merge policy for a CSV product and a crawled product that share a SKU under different URLs; product edit and archive flows (`edit_version`, `lifecycle_state` and `observed_external_id` stay unused until then); a snapshot trend per target; Tavily country targeting in place of the locale in the query text, verified against the live provider. |
 | Earned sources review | Deferred by the feature 9 review (2026-10-09): an authorized "read this page now" command within the inspection budget. |
 | Traffic impact | Owner request (2026-10-08), its own PR: show how visibility work converts to website traffic from the connected sources (Search Console, analytics, AI referrals, crawl logs), as observed change around declared work with overlapping actions named — never as attributed causation. May need public copy, which changes only on the owner's request. |
+| AI answer ads | Deferred by F5: ad observations are not in audit exports (`src/audits/exports.ts`); add them with the parser version when exports are next changed. |
 | Fact-checking follow-ups | Deferred by F8 (D8.3, D8.6), after the pilot's false-contradiction review: an Action rule `fact_contradiction` (target the owned page for the topic if one exists, else an earned source; verify on later runs by a verdict change on the same prompts), and draft brand facts suggested from the onboarding research snapshot. |
 | Internal links | Separate judgment-policy version, normalized recommendation rows and catalog-based product variants, only if real runs justify them. |
-| AI Traffic extensions | Customer-authorized Cloudflare deployment, durable Queue-backed Worker, additional log providers/presets (Vercel, Fastly, Akamai, Netlify; Google Cloud and Amazon CloudFront shipped), reverse-DNS verification, device/geography breakdowns, first-party session tracking, real-time streaming and Opportunities from insights. |
+| AI Traffic extensions | Customer-authorized Cloudflare deployment, durable Queue-backed Worker, additional log providers/presets (Vercel, Fastly, Akamai, Netlify; Google Cloud and Amazon CloudFront shipped), an S3-pull connector for ALB and legacy CloudFront logs (cross-account role with a per-source ExternalId), a WordPress plugin, reverse-DNS verification, device/geography breakdowns, first-party session tracking, real-time streaming and Opportunities from insights. |
 | Funded billing | Managed AI checkout, funded prices and scheduled-coverage reserve remain separate; current payment launch scope is BYOK. |
 
 Owners: [Agent](../agents.md), [MCP](../mcp.md), [Workspace access](../workspace-access.md),
@@ -278,6 +332,11 @@ Retain unresolved approvals under the
 Security hardening (#255), design contracts (#230) and design-system consistency
 (#318–#320) are complete implementation history, not new assignments. Their
 operational/legal exceptions are retained above.
+
+The [feature review programme](../archive/feature-review-tracker.md) (features
+1–10 and 12–16) and the [competitive feature tracker](../archive/competitive-feature-tracker.md)
+(F1–F8, #352–#363) are complete; their plans are archived and their remaining
+items are recorded above.
 
 Invitation delivery is implemented, the prompt-generation policy is published and
 internal-links work is merged. Do not reopen these tasks from stale historical text.

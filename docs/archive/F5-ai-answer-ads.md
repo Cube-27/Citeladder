@@ -1,5 +1,7 @@
 # F5 — Ads in AI answers (ChatGPT)
 
+**Status: complete — merged in #354 (2026-10-10).** Shipped behaviour is owned by the feature documents linked below, not by this plan.
+
 Competitive tracker row F5, one PR. No dependency on other features.
 Owner document: [Prompts and Visibility](../visibility-prompt.md).
 

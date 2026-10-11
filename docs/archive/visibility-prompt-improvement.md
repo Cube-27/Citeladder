@@ -2,7 +2,7 @@
 
 Feature 3 of the [feature review tracker](feature-review-tracker.md); this is its
 audit-derived plan. **Status: done (2026-10-08).** Phases 1-5 merged in #309;
-deferred items are in the [backlog](backlog.md). The follow-up below is
+deferred items are in the [backlog](../plans/backlog.md). The follow-up below is
 implemented by [Prompt generation v3](prompt-generation-v3.md). Shipped behaviour is
 owned by [Visibility](../visibility-prompt.md), not by this plan. Constraints:
 [invariants](../invariants.md), especially workspace authorization,

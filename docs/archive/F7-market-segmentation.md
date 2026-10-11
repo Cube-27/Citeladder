@@ -1,5 +1,7 @@
 # F7 — Market (location and language) segmentation
 
+**Status: complete — merged in #362 (2026-10-11).** Shipped behaviour is owned by the feature documents linked below, not by this plan.
+
 Competitive tracker row F7, one PR.
 Owner documents: [Prompts and Visibility](../visibility-prompt.md),
 [Onboarding](../onboarding.md) (market scope),

@@ -1,5 +1,7 @@
 # F8 — Fact-checking against brand facts (gated pilot)
 
+**Status: complete — merged in #361 (2026-10-11); the pilot rollout is a backlog acceptance gate.** Shipped behaviour is owned by the feature documents linked below, not by this plan.
+
 Competitive tracker row F8, one PR. Owner documents:
 [Onboarding and company facts](../onboarding.md) (brand facts),
 [Prompts and Visibility](../visibility-prompt.md) ("Answer perception" gains
