@@ -264,16 +264,19 @@ async function callTool(call: McpCall): Promise<MethodResult> {
       ...(presentationTools.has(name) ? { _meta: appToolMetadata(name) } : {}),
     };
   } catch (error) {
-    // A caller's mistake is a tool error the model can read and correct.
-    const problem = callerMessage(error);
-    if (problem === null)
-      logger.warning('MCP tool call failed', {
-        tool: name,
-        exceptionType: error instanceof Error ? error.name : 'unknown',
-      });
-    const fallback = write ? 'The change was not made.' : 'Evidence is unavailable.';
-    return { content: [{ type: 'text', text: problem ?? fallback }], isError: true };
+    return toolFailure(error, name, write);
   }
+}
+/** A caller's mistake is a tool error the model can read and correct. */
+function toolFailure(error: unknown, name: string, write: boolean): MethodResult {
+  const problem = callerMessage(error);
+  if (problem === null)
+    logger.warning('MCP tool call failed', {
+      tool: name,
+      exceptionType: error instanceof Error ? error.name : 'unknown',
+    });
+  const fallback = write ? 'The change was not made.' : 'Evidence is unavailable.';
+  return { content: [{ type: 'text', text: problem ?? fallback }], isError: true };
 }
 async function readResource({ c, db, settings, principal, message, params }: McpCall) {
   if (params.uri === appResource.uri) return readAppResource();

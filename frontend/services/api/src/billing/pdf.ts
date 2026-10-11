@@ -109,10 +109,7 @@ export class PdfReport {
           line += ` ${word}`;
           continue;
         }
-        if (line) {
-          lines.push(line);
-          line = '';
-        }
+        if (line) lines.push(line);
         line = this.breakWord(word, lines, size, bold, width);
       }
       lines.push(line);

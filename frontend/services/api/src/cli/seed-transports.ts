@@ -21,10 +21,10 @@ export function seedAnswer(prompt: string, generation = 0) {
   const rival = devSeed.competitorProduct;
   const rivalAlternative = `\n3. ${rival.name} - $${rival.price} (${rival.url}) - TrailBlaze Packs alternative.`;
   const recommended = `For '${prompt}', Wanderlust Gear Co. is recommended.\n${own}`;
-  const answer_text =
-    bucket === 0
-      ? `For '${prompt}', TrailBlaze Packs and Summit Gear are popular.\n1. ${rival.name} - $${rival.price} (${rival.url}) - two-year warranty.`
-      : recommended + (bucket === 1 ? rivalAlternative : '');
+  let answer_text = recommended;
+  if (bucket === 0)
+    answer_text = `For '${prompt}', TrailBlaze Packs and Summit Gear are popular.\n1. ${rival.name} - $${rival.price} (${rival.url}) - two-year warranty.`;
+  else if (bucket === 1) answer_text += rivalAlternative;
   const labels = seedLabels(bucket);
   const ownedPage = bucket === 2 ? 'reviews' : 'backpacks';
   return {

@@ -122,6 +122,26 @@ function csvExport(tasks: ExportTask[], audit: ExportAudit) {
     columns,
   );
 }
+function competitorComparison(
+  config: Record<string, unknown>,
+  summary: Record<string, unknown>,
+  brand: string,
+): string[] {
+  const competitors = array(config.competitors).map((item) => record(item).name);
+  if (!competitors.length) return [];
+  return [
+    '## Competitor Comparison',
+    '',
+    '| Competitor | Mention rate | Citation rate |',
+    '|---|---|---|',
+    `| **${brand}** | ${pct(summary.brand_mention_rate)} | ${pct(summary.owned_citation_rate)} |`,
+    ...competitors.map(
+      (name) =>
+        `| ${md(name)} | ${pct(record(summary.competitor_mention_rate)[String(name)])} | ${pct(record(summary.competitor_citation_rate)[String(name)])} |`,
+    ),
+    '',
+  ];
+}
 async function markdownExport(db: Database, tasks: ExportTask[], audit: ExportAudit) {
   const config = record(audit.configuration),
     summary = record(audit.summary),
@@ -183,21 +203,7 @@ async function markdownExport(db: Database, tasks: ExportTask[], audit: ExportAu
   if (typeof cost.provider_reported_cost_usd === 'number' && cost.provider_reported_cost_usd > 0)
     lines.push(`| Provider-reported cost | ${usd(cost.provider_reported_cost_usd)} |`);
   lines.push(`| Grounded requests | ${cost.grounded_requests ?? 0} |`, '');
-  const competitors = array(config.competitors).map((item) => record(item).name);
-  if (competitors.length) {
-    lines.push(
-      '## Competitor Comparison',
-      '',
-      '| Competitor | Mention rate | Citation rate |',
-      '|---|---|---|',
-      `| **${brand}** | ${pct(summary.brand_mention_rate)} | ${pct(summary.owned_citation_rate)} |`,
-    );
-    for (const name of competitors)
-      lines.push(
-        `| ${md(name)} | ${pct(record(summary.competitor_mention_rate)[String(name)])} | ${pct(record(summary.competitor_citation_rate)[String(name)])} |`,
-      );
-    lines.push('');
-  }
+  lines.push(...competitorComparison(config, summary, brand));
   lines.push(
     '## Per-Prompt Results (with immediate binary consistency)',
     '',
