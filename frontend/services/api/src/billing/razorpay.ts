@@ -28,6 +28,7 @@ const subscriptionSchema = z.object({
 const paymentSchema = z.object({
   id: reference,
   status: z.string(),
+  captured: z.boolean().optional().default(false),
   amount,
   currency: z.enum(['USD', 'INR']),
   created_at: amount,
@@ -91,9 +92,6 @@ export interface BillingProvider {
   change(reference: string, priceRef: string): Promise<void>;
   refund(reference: string): Promise<RefundEvidence>;
 }
-
-// Clock difference tolerated between this service and the provider's created_at.
-const RECOVERY_SKEW_SECONDS = 300;
 
 function basicCredentials(keyId: string, keySecret: string) {
   return Buffer.from(`${keyId}:${keySecret}`).toString('base64');
@@ -165,6 +163,8 @@ function payment(data: unknown): PaymentEvidence | null {
   const statuses: Record<string, string> = policy.billing.contracts.razorpay_payment_status_map;
   if (!statuses[row.status]) throw new ProviderError(true, 'provider_invalid_response');
   if (statuses[row.status] !== 'paid') return null;
+  // An authorization that lapses uncaptured is auto-refunded: no funds moved.
+  if (row.status === 'refunded' && !row.captured) return null;
   return {
     id: row.id,
     orderId: row.order_id ?? null,
@@ -281,7 +281,7 @@ export class RazorpayProvider implements BillingProvider {
     const path =
       pending.activation_kind === 'base'
         ? `/subscriptions?plan_id=${encodeURIComponent(pending.external_price_id ?? '')}` +
-          `&from=${created - RECOVERY_SKEW_SECONDS}` +
+          `&from=${created - this.shared.skewSeconds}` +
           `&to=${created + this.shared.abandonSeconds}`
         : `/orders?receipt=${encodeURIComponent(pending.id)}`;
     const matches = (await this.collection(path)).filter((row) => {

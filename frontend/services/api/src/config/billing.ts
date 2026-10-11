@@ -17,6 +17,9 @@ export const billing = {
       c.subscription_past_due,
       c.subscription_cancel_scheduled,
     ].sort(compareText),
+    terminal_subscription_statuses: [c.subscription_cancelled, c.subscription_expired].sort(
+      compareText,
+    ),
     razorpay_payment_status_map: {
       created: c.payment_pending,
       authorized: c.payment_pending,
@@ -26,7 +29,8 @@ export const billing = {
       failed: c.payment_failed,
       cancelled: c.payment_failed,
       expired: c.payment_failed,
-      // A refunded payment was captured; its refund settles as its own record.
+      // A captured payment later refunded; its refund settles as its own record.
+      // An uncaptured auto-refund is not paid (see the Razorpay adapter).
       refunded: c.payment_paid,
     },
     razorpay_status_map: {

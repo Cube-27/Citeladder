@@ -202,7 +202,16 @@ the payment is still the customer's.
 
 **B29 — Engineering, 2026-10-11.** A fully refunded payment remains evidence
 of the period it paid for; the refund settles as its own record. It previously
-broke reconciliation of that subscription on every sweep.
+broke reconciliation of that subscription on every sweep. This holds only for a
+payment Razorpay captured: an authorization that lapsed and was auto-refunded
+moved no money and grants nothing.
+
+**B30 — Engineering, 2026-10-11.** An add-on or top-up grants only if it was
+paid inside the base subscription's current period, from start to end. One paid
+during a gap between periods keeps its receipt and is flagged for an operator
+refund, even if a later period is live when it settles. When the provider
+refuses to cancel an expiring base checkout, the sweep re-reads it and activates
+it if the customer paid meanwhile.
 
 ## Owner inputs still required
 

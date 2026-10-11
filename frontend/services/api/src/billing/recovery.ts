@@ -131,13 +131,21 @@ async function cancelAtProvider(provider: BillingProvider, reference: string, at
     const cancelled = await provider.cancel(reference, atEnd);
     return (
       cancelled.id === reference &&
-      (atEnd ? cancelled.cancelAtEnd : ['cancelled', 'expired'].includes(cancelled.status))
+      (atEnd
+        ? cancelled.cancelAtEnd
+        : policy.billing.contracts.terminal_subscription_statuses.includes(cancelled.status))
     );
   } catch (error) {
     if (!(error instanceof ProviderError) || error.uncertain) throw error;
     logger.warning('billing.cancellation_refused', { reference, exception: error.message });
     return true;
   }
+}
+
+function unpaid(evidence: Evidence | null) {
+  return (
+    !evidence || (evidence.kind === 'base' ? !evidence.subscription.payment : !evidence.payment)
+  );
 }
 
 /** Claims one row at a time so a batch never expires while waiting for earlier I/O. */
@@ -169,18 +177,15 @@ async function pendingProbe(
     reference ??= await provider.recover(pending);
     if (reference)
       evidence = await provider.evidence(reference, pending.activation_kind === 'base');
-    const unpaid =
-      !evidence || (evidence.kind === 'base' ? !evidence.subscription.payment : !evidence.payment);
-    const abandoned =
-      unpaid &&
+    let abandoned =
+      unpaid(evidence) &&
       pending.created_at.getTime() <= now.getTime() - config.billing.abandonSeconds * 1000;
-    if (
-      abandoned &&
-      reference &&
-      pending.activation_kind === 'base' &&
-      !(await cancelAtProvider(provider, reference, false))
-    )
-      return pending.id;
+    if (abandoned && reference && pending.activation_kind === 'base') {
+      if (!(await cancelAtProvider(provider, reference, false))) return pending.id;
+      // A refusal can mean the customer paid meanwhile: settle what the provider now reports.
+      evidence = await provider.evidence(reference, true);
+      abandoned = unpaid(evidence);
+    }
     await db.transaction().execute(async (trx) => {
       await lockOwner(trx, pending.billing_account_id);
       const owned = await trx

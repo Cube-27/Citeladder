@@ -221,6 +221,33 @@ describe('billing money and access owner', () => {
     // The terminal row no longer blocks a new base purchase.
     expect((await buy(t.workspaceId)).status).toBe('pending');
   });
+  it('activates a lapsing checkout the customer paid just before its cancellation was refused', async () => {
+    const t = await fixtures.tenant({ access: false });
+    const row = await pending((await buy(t.workspaceId)).activation_id);
+    await db
+      .updateTable('pending_activations')
+      .set({
+        created_at: new Date(Date.now() - (config.billing.abandonSeconds + 60) * 1000),
+        reconciliation_next_at: new Date(),
+      })
+      .where('id', '=', row.id)
+      .execute();
+    const reads = [
+      paidSubscription(row, { status: 'created', payment: null }),
+      paidSubscription(row),
+    ];
+    await recoverBilling(
+      db,
+      { ...config, billing: { ...config.billing, batchSize: 1000 } },
+      fakeProvider({
+        evidence: async () => reads.shift() ?? paidSubscription(row),
+        cancel: async () => {
+          throw new ProviderError(false, 'provider_rejected');
+        },
+      }),
+    );
+    expect((await pending(row.id)).status).toBe('activated');
+  });
   it('settles concurrent evidence once and refuses an active subscription without a captured invoice', async () => {
     const t = await fixtures.tenant({ access: false });
     const response = await buy(t.workspaceId);
@@ -751,6 +778,67 @@ describe('billing money and access owner', () => {
         fakeProvider(),
       ),
     ).rejects.toMatchObject({ status: 409 });
+  });
+  it('keeps the receipt for an add-on paid before the current base period began, granting nothing', async () => {
+    await fixtures.catalog();
+    const t = await activated();
+    const published = await db
+      .selectFrom('billing_catalog_revisions')
+      .selectAll()
+      .where('publication_state', '=', 'published')
+      .executeTakeFirstOrThrow();
+    const item = (published.payload as { addons: { key: string }[] }).addons[0]!;
+    const response = await purchase(
+      db,
+      config,
+      t.workspaceId,
+      { kind: 'addon', key: item.key, quantity: 1, mode: 'byok' },
+      randomUUID(),
+      fakeProvider(),
+    );
+    const row = await pending(response.activation_id);
+    const paymentId = `pay_${randomUUID().replaceAll('-', '')}`;
+    const paidAt = new Date(t.sub.current_period_start!.getTime() - 86_400_000);
+    await db.transaction().execute((trx) =>
+      settlePending(
+        trx,
+        row.id,
+        'test',
+        {
+          kind: 'payment',
+          reference: row.external_reference!,
+          notes: { citeladder_intent_id: row.id, citeladder_account_ref: t.accountId },
+          payment: {
+            id: paymentId,
+            invoiceId: null,
+            orderId: row.external_reference,
+            amount: response.quote.total_price.amount_minor,
+            currency: response.quote.total_price.currency,
+            paidAt,
+            periodStart: null,
+            periodEnd: null,
+            taxMinor: null,
+            method: 'card',
+          },
+        },
+        'webhook',
+      ),
+    );
+    const receipts = await db
+      .selectFrom('billing_payments')
+      .select('id')
+      .where('billing_account_id', '=', t.accountId)
+      .where('external_payment_id', '=', paymentId)
+      .execute();
+    const grants = await db
+      .selectFrom('account_grants')
+      .select('id')
+      .where('source_ref', '=', `activation:${row.id}`)
+      .execute();
+    expect({ receipts: receipts.length, grants: grants.length }).toEqual({
+      receipts: 1,
+      grants: 0,
+    });
   });
   it('keeps a declined order open for a retry and settles a capture that lands after abandonment', async () => {
     const t = await activated();

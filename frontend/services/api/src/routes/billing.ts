@@ -307,13 +307,26 @@ export const billingRoutes = [
         (pending.status === 'abandoned' && pending.activation_kind === 'base')
       )
         conflict('checkout_unavailable');
+      // Re-checked in the update: the sweep may abandon a base intent meanwhile.
+      // Clearing the lease voids any in-flight probe's stale unpaid reading.
       const now = new Date();
       await db
         .updateTable('pending_activations')
-        .set({ status: 'pending', reconciliation_next_at: now, updated_at: now })
+        .set({
+          status: 'pending',
+          reconciliation_next_at: now,
+          reconciliation_lease_token: null,
+          reconciliation_lease_expires_at: null,
+          updated_at: now,
+        })
         .where('id', '=', pending.id)
         .where('billing_account_id', '=', pending.billing_account_id)
-        .where('status', 'in', ['pending', 'abandoned'])
+        .where((eb) =>
+          eb.or([
+            eb('status', '=', 'pending'),
+            eb.and([eb('status', '=', 'abandoned'), eb('activation_kind', '!=', 'base')]),
+          ]),
+        )
         .execute();
       return activationResponse(pending);
     },

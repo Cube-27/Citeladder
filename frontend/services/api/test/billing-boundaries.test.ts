@@ -12,6 +12,48 @@ import { billingConfig, buyer } from './billing-support.ts';
 import { createHmac } from 'node:crypto';
 import { billingSettings } from '../src/billing/config.ts';
 
+/** Provider responses for an active subscription whose one invoice was paid by `payment`. */
+function paidRenewal(payment: Record<string, unknown>): Record<string, unknown> {
+  return {
+    '/subscriptions/sub_fixture': {
+      id: 'sub_fixture',
+      plan_id: 'plan_fixture',
+      status: 'active',
+      current_start: 100,
+      current_end: 200,
+      updated_at: 300,
+      notes: [],
+    },
+    '/invoices': {
+      items: [
+        {
+          id: 'inv_fixture',
+          subscription_id: 'sub_fixture',
+          status: 'paid',
+          billing_start: 100,
+          billing_end: 200,
+          payment_id: 'pay_fixture',
+          amount_paid: 4900,
+          amount_due: 0,
+          currency: 'USD',
+          paid_at: 150,
+        },
+      ],
+    },
+    '/payments/pay_fixture': {
+      id: 'pay_fixture',
+      status: 'captured',
+      captured: true,
+      amount: 4900,
+      currency: 'USD',
+      created_at: 150,
+      invoice_id: 'inv_fixture',
+      notes: null,
+      ...payment,
+    },
+  };
+}
+
 describe('billing input and provider boundaries', () => {
   it.each(['', '/contact', '//example.test/contact', 'javascript:alert(1)', 'data:text/html,test'])(
     'rejects unsafe contact sales URL %s during settings admission',
@@ -116,40 +158,7 @@ describe('billing input and provider boundaries', () => {
   });
   it('requires a captured payment bound to the paid subscription invoice and rejects ambiguous collections', async () => {
     const responses: Record<string, unknown> = {
-      '/subscriptions/sub_fixture': {
-        id: 'sub_fixture',
-        plan_id: 'plan_fixture',
-        status: 'active',
-        current_start: 100,
-        current_end: 200,
-        updated_at: 300,
-        notes: [],
-      },
-      '/invoices': {
-        items: [
-          {
-            id: 'inv_fixture',
-            subscription_id: 'sub_fixture',
-            status: 'paid',
-            billing_start: 100,
-            billing_end: 200,
-            payment_id: 'pay_fixture',
-            amount_paid: 4900,
-            amount_due: 0,
-            currency: 'USD',
-            paid_at: 150,
-          },
-        ],
-      },
-      '/payments/pay_fixture': {
-        id: 'pay_fixture',
-        status: 'captured',
-        amount: 4900,
-        currency: 'USD',
-        created_at: 150,
-        invoice_id: 'inv_fixture',
-        notes: null,
-      },
+      ...paidRenewal({}),
       '/refunds/rfnd_fixture': {
         id: 'rfnd_fixture',
         payment_id: 'pay_fixture',
@@ -204,46 +213,22 @@ describe('billing input and provider boundaries', () => {
       'provider_collection_incomplete',
     );
   });
-  it('reads a fully refunded renewal as the paid period it was, and an order with only declined attempts as unpaid', async () => {
+  it('reads a refunded capture as the paid period it was, but never an uncaptured auto-refund or declined attempts', async () => {
     const responses: Record<string, unknown> = {
-      '/subscriptions/sub_refunded': {
-        id: 'sub_refunded',
-        plan_id: 'plan_fixture',
-        status: 'active',
-        current_start: 100,
-        current_end: 200,
-        updated_at: 300,
-        notes: [],
-      },
-      '/invoices': {
-        items: [
-          {
-            id: 'inv_refunded',
-            subscription_id: 'sub_refunded',
-            status: 'paid',
-            billing_start: 100,
-            billing_end: 200,
-            payment_id: 'pay_refunded',
-            amount_paid: 4900,
-            amount_due: 0,
-            currency: 'USD',
-            paid_at: 150,
-          },
-        ],
-      },
-      '/payments/pay_refunded': {
-        id: 'pay_refunded',
-        status: 'refunded',
-        amount: 4900,
-        currency: 'USD',
-        created_at: 150,
-        invoice_id: 'inv_refunded',
-        notes: null,
-      },
+      ...paidRenewal({ status: 'refunded' }),
       '/orders/order_declined': { id: 'order_declined', amount: 900, currency: 'USD', notes: [] },
       '/orders/order_declined/payments': {
         items: [
           { id: 'pay_declined', status: 'failed', amount: 900, currency: 'USD', created_at: 150 },
+          {
+            id: 'pay_lapsed',
+            status: 'refunded',
+            captured: false,
+            amount: 900,
+            currency: 'USD',
+            created_at: 160,
+            order_id: 'order_declined',
+          },
         ],
       },
     };
@@ -251,8 +236,8 @@ describe('billing input and provider boundaries', () => {
       Response.json(responses[new URL(String(input)).pathname.replace('/v1', '')]),
     );
     const provider = new RazorpayProvider(config.billing, config.razorpay, transport);
-    expect(await provider.evidence('sub_refunded', true)).toMatchObject({
-      subscription: { payment: { id: 'pay_refunded', amount: 4900 } },
+    expect(await provider.evidence('sub_fixture', true)).toMatchObject({
+      subscription: { payment: { id: 'pay_fixture', amount: 4900 } },
     });
     expect(await provider.evidence('order_declined', false)).toEqual({
       kind: 'payment',

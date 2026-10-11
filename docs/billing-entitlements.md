@@ -135,15 +135,18 @@ declined attempt never fails an order, because the customer may retry on it. An
 unpaid checkout is abandoned after the reconciliation window instead of holding
 the one-pending slot; for a base-plan intent the provider subscription is
 cancelled first, and a failed cancellation keeps the intent pending for retry.
+A refused cancellation is followed by a fresh read, so a subscription the
+customer paid meanwhile activates instead of being abandoned.
 Orders cannot be cancelled at the provider, so a capture after abandonment still
-settles (and a signed callback reopens the order for one probe); an add-on or
-top-up paid once no base period is live keeps its receipt, grants nothing and
-is logged for an operator refund. A halted subscription (provider retries
+settles (and a signed callback reopens the order for one probe, voiding any
+in-flight probe's lease); an add-on or top-up paid outside the live base
+period keeps its receipt, grants nothing and is logged for an operator refund. A halted subscription (provider retries
 exhausted) stays current, blocking a second base plan, until the subscription
 sweep has cancelled it at the provider; a subscription that resumes first is
 left renewing. A definite provider refusal of a cancellation is final and the
-sweep applies the provider's state; a fully refunded payment remains evidence
-of its paid period, and the refund settles separately.
+sweep applies the provider's state; a fully refunded capture remains evidence
+of its paid period, and the refund settles separately. An authorization that
+lapsed uncaptured and was auto-refunded is not a payment.
 [Plan changes](../frontend/services/api/src/billing/plan-changes.ts) edit the one base
 subscription: an upgrade charges the prorated base-price difference for the rest
 of the paid period and, once paid, issues the higher plan's bundle for that

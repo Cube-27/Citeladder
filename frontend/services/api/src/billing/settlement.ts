@@ -39,7 +39,7 @@ export const scheduledSchema = z.object({
   terms: frozenTermsSchema,
 });
 const grantedStates = new Set(['active', 'cancel_scheduled']);
-const terminalStates = new Set(['cancelled', 'expired']);
+const terminalStates = new Set(policy.billing.contracts.terminal_subscription_statuses);
 // Halted at the provider: the row stays current, so it blocks a second base
 // subscription, until the sweep's cancellation is confirmed.
 const UNPAID = policy.billing.contracts.subscription_unpaid;
@@ -191,12 +191,14 @@ async function settlePack(
   // The receipt stands whatever happens to the grant: money was collected.
   await recordPayment(db, pending, payment, quote, pending.tax_snapshot, null, item.name);
   if (
-    !base?.current_period_end ||
+    !base?.current_period_start ||
+    !base.current_period_end ||
+    payment.paidAt < base.current_period_start ||
     payment.paidAt >= base.current_period_end ||
     !policy.billing.contracts.live_subscription_statuses.includes(base.status)
   ) {
-    // Paid (late, after abandonment) once no base period is live: nothing to
-    // supplement. An operator reviews the payment for a refund.
+    // Paid (late, after abandonment) while no base period covered it: nothing
+    // to supplement. An operator reviews the payment for a refund.
     logger.warning('billing.pack_paid_without_base', { activation_id: pending.id });
     return;
   }
