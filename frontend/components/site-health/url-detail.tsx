@@ -9,7 +9,8 @@ import { ReadError } from '@/components/ui/read-error';
 import { Badge } from '@/components/ui/badge';
 import { InlineEmpty } from '@/components/ui/inline-empty';
 import { Pager } from '@/components/ui/pager';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Drawer } from '@/components/ui/drawer';
 import { queryKeys } from '@/lib/api/query-keys';
 import { siteHealthMutations, siteHealthQueries } from '@/lib/api/site-health';
 import type { IssueHistoryPage, PageDetail } from '@/lib/api/types';
@@ -123,14 +124,16 @@ export function UrlDetail({
         setRerunError(null);
         rerun.mutate({ crawlId, siteUrlId });
       }}
+      history={
+        <IssueHistoryButton
+          key={`history:${crawlId}:${siteUrlId}`}
+          workspaceId={workspaceId!}
+          crawlId={crawlId}
+          siteUrlId={siteUrlId}
+        />
+      }
     >
       {rerunError ? <Alert tone="danger">{rerunError}</Alert> : null}
-      <IssueHistory
-        key={`history:${crawlId}:${siteUrlId}`}
-        workspaceId={workspaceId!}
-        crawlId={crawlId}
-        siteUrlId={siteUrlId}
-      />
     </UrlDetailView>
   );
 }
@@ -164,11 +167,38 @@ function rerunErrorMessage(error: unknown): string {
   return 'Could not re-audit this page. Please try again.';
 }
 
-function IssueHistory({
-  workspaceId,
-  crawlId,
-  siteUrlId,
-}: Readonly<{ workspaceId: string; crawlId: string; siteUrlId: string }>) {
+type HistoryTarget = Readonly<{ workspaceId: string; crawlId: string; siteUrlId: string }>;
+
+/** Opens the page's resolved issues in a drawer; nothing is read until it opens. */
+function IssueHistoryButton(target: HistoryTarget) {
+  const [open, setOpen] = useState(false);
+  // Read on first open, then kept so the drawer does not blank as it closes.
+  const [requested, setRequested] = useState(false);
+  return (
+    <>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => {
+          setRequested(true);
+          setOpen(true);
+        }}
+      >
+        History
+      </Button>
+      <Drawer
+        open={open}
+        onOpenChange={setOpen}
+        title="Issue history"
+        description="Issues found on this page before that this crawl no longer reports."
+      >
+        {requested ? <IssueHistory {...target} /> : null}
+      </Drawer>
+    </>
+  );
+}
+
+function IssueHistory({ workspaceId, crawlId, siteUrlId }: HistoryTarget) {
   const pager = useCursorTable(`${workspaceId}|${crawlId}|${siteUrlId}`);
   const historyQuery = useQuery(
     siteHealthQueries.issueHistory(workspaceId, crawlId, siteUrlId, {
@@ -180,27 +210,22 @@ function IssueHistory({
   const nextCursor = historyQuery.data?.next_cursor ?? null;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Issue History</CardTitle>
-      </CardHeader>
-      <CardContent className="grid gap-3">
-        {historyQuery.isError ? (
-          <ReadError
-            error={historyQuery.error}
-            fallback="Could not load issue history."
-            onRetry={() => void historyQuery.refetch()}
-            pending={historyQuery.isFetching}
-          />
-        ) : null}
-        {historyQuery.isLoading ? <PageLoading label="Loading issue history" /> : null}
-        {!historyQuery.isLoading && !historyQuery.isError && rows.length === 0 ? (
-          <InlineEmpty>No prior issue records for this page.</InlineEmpty>
-        ) : null}
-        {rows.length > 0 ? <HistoryRows rows={rows} /> : null}
-        {rows.length > 0 ? <Pager {...cursorControls(pager, nextCursor)} /> : null}
-      </CardContent>
-    </Card>
+    <div className="grid gap-3">
+      {historyQuery.isError ? (
+        <ReadError
+          error={historyQuery.error}
+          fallback="Could not load issue history."
+          onRetry={() => void historyQuery.refetch()}
+          pending={historyQuery.isFetching}
+        />
+      ) : null}
+      {historyQuery.isLoading ? <PageLoading label="Loading issue history" /> : null}
+      {!historyQuery.isLoading && !historyQuery.isError && rows.length === 0 ? (
+        <InlineEmpty>No resolved issues for this page.</InlineEmpty>
+      ) : null}
+      {rows.length > 0 ? <HistoryRows rows={rows} /> : null}
+      {rows.length > 0 ? <Pager {...cursorControls(pager, nextCursor)} /> : null}
+    </div>
   );
 }
 
@@ -215,7 +240,7 @@ function HistoryRows({ rows }: Readonly<{ rows: IssueHistoryPage['items'] }>) {
               {issueTitle(row)}
             </span>
             <span className="type-caption tabular-nums">
-              {formatAudited(row.created_at, timeZone)}
+              Last found {formatAudited(row.created_at, timeZone)}
             </span>
           </span>
           <span className="flex shrink-0 items-center gap-2">

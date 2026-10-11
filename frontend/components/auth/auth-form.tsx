@@ -111,12 +111,12 @@ export function AuthPasswordField({
 }
 
 /**
- * The Terms decision, made at signup and when a person creates their workspace.
+ * The Terms decision, made once on the signup form for both email and Google.
  *
  * Unticked by default and required. The Privacy Policy is linked as notice,
  * not bundled into the agreement: processing does not rest on this consent.
  */
-export function TermsConsent({
+function TermsConsent({
   ref,
   agreed,
   missing,

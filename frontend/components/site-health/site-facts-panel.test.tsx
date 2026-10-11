@@ -14,6 +14,11 @@ it('renders all policies and Not specified with accessible purpose tables and an
       <SiteFactsPanel crawl={crawl} dashboard={undefined} />
     </MemoryRouter>,
   );
+  // Closed by default: one summary line instead of the crawler rows.
+  expect(screen.queryByRole('table')).not.toBeInTheDocument();
+  await user.click(
+    screen.getByText('4 crawlers: 1 all allowed, 1 restricted, 1 all disallowed, 1 unknown'),
+  );
   const training = screen.getByRole('table', { name: 'Crawler robots policy by purpose' });
   expect(within(training).getByRole('row', { name: /GPTBot/ })).toHaveTextContent('All disallowed');
   expect(within(training).getByRole('row', { name: /ClaudeBot/ })).toHaveTextContent('All allowed');

@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-plus/test';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { mswServer } from '@/test/msw-server';
@@ -249,6 +249,47 @@ describe('UrlDetail', () => {
     expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
     expect(screen.queryByText(/may not exist/)).not.toBeInTheDocument();
   });
+  it('opens resolved issue history in a drawer instead of inline', async () => {
+    let historyReads = 0;
+    mswServer.use(
+      http.get(`/api/v1/site-crawls/${CRAWL}/pages/${URL_ID}`, () => HttpResponse.json(detail())),
+      http.get(`/api/v1/site-crawls/${CRAWL}/pages/${URL_ID}/issue-history`, () => {
+        historyReads += 1;
+        return HttpResponse.json({
+          items: [
+            {
+              id: ISSUE_L,
+              crawl_id: CRAWL,
+              rule_id: 'technical.title_present',
+              dimension: 'technical',
+              category: 'metadata',
+              severity: 'medium',
+              finding_class: 'defect',
+              title: 'Page title is missing',
+              description: 'The page has no title.',
+              remediation: 'Add a title.',
+              analyzer_version: 'a1',
+              rule_version: 'r1',
+              created_at: '2026-07-01T00:00:00Z',
+            },
+          ],
+          next_cursor: null,
+        });
+      }),
+    );
+    const user = userEvent.setup();
+    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
+
+    await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
+    expect(screen.queryByText('Issue history')).not.toBeInTheDocument();
+    expect(historyReads).toBe(0);
+
+    await user.click(screen.getByRole('button', { name: 'History' }));
+    const drawer = await screen.findByRole('dialog', { name: 'Issue history' });
+    expect(await within(drawer).findByText('Page title is missing')).toBeInTheDocument();
+    expect(within(drawer).getByText(/^Last found/)).toBeInTheDocument();
+  });
+
   it('renders scores, delivery metrics, and severity-ordered issues', async () => {
     mswServer.use(...handlers(detail()));
 

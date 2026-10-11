@@ -21,8 +21,9 @@ by `OAUTH_GOOGLE_ENABLED`; new Google identities also require `PUBLIC_SIGNUP_ENA
 Email/password login and Google sign-in establish the HttpOnly session;
 session-version checks invalidate stale sessions. Neither signing up nor signing
 in creates a workspace. Onboarding creates the person's own workspace
-(`POST /workspaces`) before its first project; that request carries the Terms
-revision shown (`GET /auth/policies`), records the acceptance, spends the shared
+(`POST /workspaces`) before its first project; that request carries the
+published Terms revision (`GET /auth/policies`), records the acceptance the
+person gave on the signup form, spends the shared
 daily trial budget for a public identity, and starts the trial. A person has one
 trial: a workspace created after handing ownership away inherits the window of
 their first. After sign-in the
@@ -79,9 +80,10 @@ authorized to publish the global billing catalog or administer other workspaces.
 
 Every workspace a person opens needs their acceptance of the current Terms
 revision (`/workspaces/{id}/policies`). This covers password, Google-created and
-operator-created identities. The decision is taken at signup (an unticked,
-required checkbox) and when the person creates their workspace, which records it
-with the creation; signing in asks nothing. A signup decision made in the same tab
+operator-created identities. The decision is taken once, on the signup form (an
+unticked, required checkbox that gates both email and Google sign-up); creating
+the person's workspace records it with no second consent step, and signing in
+asks nothing. A signup decision made in the same tab
 is recorded for a workspace the person then joins. Otherwise, for a workspace
 joined without that decision or after a new revision, the explicit review screen
 appears, with sign-out and, when there is another workspace, a switch to the

@@ -12,8 +12,9 @@ import { findingClassSchema, issueDimensionSchema, issueSeveritySchema } from '.
 import { rootErrorSchema } from './pages.ts';
 import { cursorPageSchema } from './pagination.ts';
 
-// One per-URL issue-history row — an issue occurrence from the selected crawl
-// or a prior crawl in the project chronology (immutable failure projection).
+// One per-URL issue-history row — a resolved issue: the latest record of a rule
+// the selected crawl's current analysis no longer reports, from a superseded
+// analysis or a prior crawl in the project chronology. Never a current issue.
 const issueHistoryRowSchema = responseObject({
   id: uuid(),
   crawl_id: uuid(),

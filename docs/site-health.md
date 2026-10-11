@@ -511,6 +511,12 @@ promote metadata or cosmetic-refresh actions (`config/site-health/change-intel.t
 Page detail, Issues, history, Changes, snapshots, exports, the Agent and MCP
 read the same persisted final results.
 
+A URL's issue history lists only resolved issues: rules recorded on the page in
+the selected crawl's superseded analyses or the project's earlier crawls that its
+current finalized analysis no longer reports, one row per rule at its latest
+record. Current issues stay in page detail and never repeat there; without a
+finalized current analysis nothing is shown as resolved.
+
 A content handoff names a crawl, a `site_url_id` and a required
 `source_analysis_id`. That analysis must be the current finalized analysis or
 the one it supersedes. The handoff returns only the requested missing or

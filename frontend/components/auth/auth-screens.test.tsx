@@ -100,6 +100,26 @@ describe('account entry', () => {
     registerAccount.mockRestore();
   });
 
+  it('takes the same Terms decision before a Google sign-up starts', async () => {
+    window.sessionStorage.clear();
+    const oauthStart = vi.spyOn(authApi, 'oauthStart').mockReturnValue(new Promise(() => {}));
+    const user = userEvent.setup();
+    renderWithProviders(
+      <RegisterScreen demoMode={false} signupOpen replace={vi.fn()} searchParams={noParams} />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Continue with Google' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Agree to the Terms of Service');
+    expect(oauthStart).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('checkbox', { name: 'I agree to the Terms of Service' }));
+    await user.click(screen.getByRole('button', { name: 'Continue with Google' }));
+
+    await waitFor(() => expect(oauthStart).toHaveBeenCalledWith('google', undefined, undefined));
+    expect(hasSignupTermsConsent()).toBe(true);
+    oauthStart.mockRestore();
+  });
+
   it('shows no registration form on a direct visit to the sign-up page', () => {
     renderWithProviders(
       <RegisterScreen

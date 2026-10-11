@@ -26,7 +26,7 @@ function Location() {
 describe('WorkspaceSetup', () => {
   afterEach(() => vi.restoreAllMocks());
 
-  it('creates the workspace only with a name and the shown Terms revision, then continues setup', async () => {
+  it('creates the workspace with a name and the published Terms revision, with no second consent step', async () => {
     vi.spyOn(authApi, 'policies').mockResolvedValue({
       terms_revision: '2026-09-24',
       privacy_notice_revision: '2026-09-24',
@@ -55,10 +55,10 @@ describe('WorkspaceSetup', () => {
     await waitFor(() => expect(submit).toBeEnabled());
     await user.click(submit);
     expect(screen.getByText('Name your workspace.')).toBeVisible();
-    expect(screen.getByText('Agree to the Terms of Service to continue.')).toBeVisible();
+    // The Terms were agreed on the signup form; setup asks for nothing more.
+    expect(screen.queryByRole('checkbox')).toBeNull();
 
     await user.type(screen.getByLabelText(/^Workspace name/), '  Acme ');
-    await user.click(screen.getByRole('checkbox', { name: 'I agree to the Terms of Service' }));
     await user.click(submit);
 
     await waitFor(() =>

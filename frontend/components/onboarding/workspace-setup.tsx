@@ -4,7 +4,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { TermsConsent } from '@/components/auth/auth-form';
 import { FlowActions, FlowShell } from '@/components/auth/flow-shell';
 import { FlowAccountControls } from '@/components/layout/flow-account-controls';
 import { Alert } from '@/components/ui/alert';
@@ -16,7 +15,6 @@ import { humanizeApiError } from '@/lib/api/errors';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { Workspace } from '@/lib/api/types';
 import { workspacesApi } from '@/lib/api/workspaces';
-import { useTermsConsent } from '@/lib/auth/terms-consent';
 import { workspaceDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
 
@@ -24,7 +22,8 @@ const FORM_ID = 'workspace-setup-form';
 
 /**
  * Create the person's own workspace before its first project. This is where
- * they accept the Terms and where their trial starts.
+ * their trial starts. They agreed to the Terms on the signup form; creating
+ * the workspace records that acceptance against the revision published now.
  */
 export function WorkspaceSetup() {
   const queryClient = useQueryClient();
@@ -32,7 +31,6 @@ export function WorkspaceSetup() {
   const { setActiveWorkspaceId } = useProjectContext();
   const [name, setName] = useState('');
   const [nameMissing, setNameMissing] = useState(false);
-  const consent = useTermsConsent();
   const terms = useQuery({
     queryKey: queryKeys.auth.policies(),
     queryFn: () => authApi.policies(),
@@ -56,8 +54,7 @@ export function WorkspaceSetup() {
     event.preventDefault();
     const missingName = name.trim() === '';
     setNameMissing(missingName);
-    const agreed = consent.confirm();
-    if (missingName || !agreed || !terms.data) return;
+    if (missingName || !terms.data) return;
     create.mutate(terms.data.terms_revision);
   };
 
@@ -105,7 +102,6 @@ export function WorkspaceSetup() {
             />
           )}
         </Field>
-        <TermsConsent {...consent.field} />
         {error ? (
           <Alert tone="danger">
             {humanizeApiError(error).message}

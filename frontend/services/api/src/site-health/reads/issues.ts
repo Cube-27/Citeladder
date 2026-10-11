@@ -344,8 +344,12 @@ export async function issueDetail(
 }
 
 /**
- * A URL's issues in the selected crawl and the project's earlier crawls,
- * newest first. A later crawl's issues never appear on an older crawl.
+ * A URL's resolved issues: rules found on it in the selected crawl's superseded
+ * analyses or the project's earlier crawls that its current, finalized
+ * analysis no longer reports. One row per rule, its latest record, newest
+ * first. Current open issues never appear (they are the page detail), nor does
+ * a later crawl's record on an older crawl; without a finalized current
+ * analysis nothing is known to be resolved.
  */
 export async function issueHistory(
   db: Database,
@@ -363,18 +367,32 @@ export async function issueHistory(
     const id = parseUuid(raw);
     if (!created || !/^\d{4}-\d{2}-\d{2}T[\d:.]+$/u.test(created) || id === null || rest.length)
       throw new InvalidCursorError('invalid cursor');
-    after = sql`and (i.created_at, i.id) < (${storedInstant(created)}, ${id}::uuid)`;
+    after = sql`and (r.created_at, r.id) < (${storedInstant(created)}, ${id}::uuid)`;
   }
   const { rows } = await sql<IssueRow & { created_text: string }>`
-    select i.*, ${utcTextOf(sql.ref('i.created_at'))} as created_text
-    from site_issues i
-    join site_crawls c on c.id = i.crawl_id
-    join site_crawls selected on selected.id = ${crawl.id}
-    where i.workspace_id = ${workspaceId} and i.project_id = ${crawl.project_id}
-      and i.site_url_id = ${siteUrlId} and c.project_id = ${crawl.project_id}
-      and (c.created_at, c.id) <= (selected.created_at, selected.id)
-      ${after}
-    order by i.created_at desc, i.id desc limit ${paging.limit + 1}`.execute(db);
+    with resolved as (
+      select distinct on (i.rule_id) i.*
+      from site_issues i
+      join site_crawls c on c.id = i.crawl_id
+      join site_crawls selected on selected.id = ${crawl.id}
+      where i.workspace_id = ${workspaceId} and i.project_id = ${crawl.project_id}
+        and i.site_url_id = ${siteUrlId} and c.project_id = ${crawl.project_id}
+        and (c.created_at, c.id) <= (selected.created_at, selected.id)
+        and exists (
+          select 1 from site_page_analyses a
+          where a.workspace_id = ${workspaceId} and a.crawl_id = ${crawl.id}
+            and a.site_url_id = ${siteUrlId} and a.is_current and a.finalized_at is not null)
+        and not exists (
+          select 1 from site_issues still_open
+          where still_open.workspace_id = ${workspaceId} and still_open.crawl_id = ${crawl.id}
+            and still_open.evaluation_id in ${currentEvaluations(crawl)}
+            and still_open.site_url_id = ${siteUrlId} and still_open.rule_id = i.rule_id)
+      order by i.rule_id, i.created_at desc, i.id desc
+    )
+    select r.*, ${utcTextOf(sql.ref('r.created_at'))} as created_text
+    from resolved r
+    where true ${after}
+    order by r.created_at desc, r.id desc limit ${paging.limit + 1}`.execute(db);
   const items = rows.slice(0, paging.limit);
   const last = items.at(-1);
   return issueHistoryPageSchema.parse({
