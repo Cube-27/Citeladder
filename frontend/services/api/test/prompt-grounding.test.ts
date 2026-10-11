@@ -360,7 +360,7 @@ describe('grounded generation', () => {
       .where('workspace_id', '=', p.workspaceId)
       .executeTakeFirstOrThrow();
     expect(run.provenance).toMatchObject({
-      generator_version: 'prompt-gen-v5',
+      generator_version: 'prompt-gen-v1',
       grounding: {
         gsc: 2,
         search_intelligence: 1,

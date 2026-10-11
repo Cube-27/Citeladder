@@ -1,7 +1,7 @@
 {
   "task_kind": "answer_perception",
   "extractor_version": "perception-extract-v1",
-  "template_version": "perception-template-v2",
+  "template_version": "perception-template-v1",
   "metrics_version": "perception-metrics-v1",
   "min_confidence": 0.6,
   "max_entities": 8,
@@ -34,7 +34,7 @@
     "sustainability",
     "other"
   ],
-  "eval_policy_version": "perception-eval-v2",
+  "eval_policy_version": "perception-eval-v1",
   "eval_thresholds": {
     "min_label_agreement": 0.8,
     "min_macro_f1": 0.7,
@@ -45,8 +45,8 @@
   "user_template": "Question asked: {prompt}\nAnswer language: {language}\nAllowed themes: {themes}\nAt most {max_aspects} aspects per business.\n\nBusinesses and their passages (JSON):\n{entities}\n\nReturn one entry per business, using its entity_id exactly.",
   "fact_check": {
     "verification_task_kind": "fact_verification",
-    "claims_version": "perception-claims-v2",
-    "verify_template_version": "fact-verify-v2",
+    "claims_version": "perception-claims-v1",
+    "verify_template_version": "fact-verify-v1",
     "metrics_version": "fact-metrics-v1",
     "topics": [
       "pricing",
@@ -84,7 +84,7 @@
     "max_cited_alongside": 10,
     "claims_default_limit": 20,
     "claims_max_limit": 100,
-    "eval_policy_version": "fact-eval-v2",
+    "eval_policy_version": "fact-eval-v1",
     "eval_thresholds": {
       "max_false_contradiction_rate": 0.05,
       "min_verdict_agreement": 0.8,

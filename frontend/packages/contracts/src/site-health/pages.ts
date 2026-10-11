@@ -42,6 +42,14 @@ const pageFactsSchema = responseObject({
   structured_data_types: z.array(z.string()),
 });
 
+// Pages this crawl found linking to the URL, first sighting first and bounded
+// by crawl policy. Empty for the root and sitemap-only URLs — never "nothing
+// links here", which the link metrics own.
+export const referrerSchema = responseObject({
+  site_url_id: uuid(),
+  url: z.string(),
+});
+
 // Analyzed-page summary row (`/pages` list). Scores/issue-count are null when
 // analysis has not completed; `error_code` is '' when there is no error.
 export const pageSummarySchema = responseObject({
@@ -53,6 +61,7 @@ export const pageSummarySchema = responseObject({
   monitored: z.boolean(),
   analysis_status: pageAnalysisStatusSchema,
   error_code: z.string(),
+  linked_from: z.array(referrerSchema),
   ...analysisSummaryFields,
   // Persisted internal-link metrics for this crawl. `null` means UNMEASURED —
   // the crawl wrote no metric row for the URL — never "nothing links here".
@@ -157,6 +166,7 @@ export const pageDetailSchema = responseObject({
   title: z.string().nullable(),
   analysis_status: pageAnalysisStatusSchema,
   error_code: z.string(),
+  linked_from: z.array(referrerSchema),
   field_cwv_available: z.literal(false),
   web_fundamentals_score: z.number().nullable(),
   web_fundamentals_coverage: z.number().nullable(),

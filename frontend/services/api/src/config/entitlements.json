@@ -1,5 +1,5 @@
 {
-  "registry_revision": "entitlements-v8",
+  "registry_revision": "entitlements-v1",
   "capabilities": {
     "workspace_access": {
       "type": "flag",

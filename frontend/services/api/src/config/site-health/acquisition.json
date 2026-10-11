@@ -84,6 +84,7 @@
     },
     "max_declared_sitemaps": 16,
     "max_url_chars": 2048,
+    "max_referrers_per_url": 10,
     "frontier_statuses": {
       "admitted": "admitted",
       "pending": "pending"

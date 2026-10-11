@@ -100,7 +100,7 @@ export const jev = {
 };
 
 export const quality = {
-  question_schema_version: 'prompt-quality-questions-2',
+  question_schema_version: 'prompt-quality-questions-1',
   policy_version: 'jev-gate-1',
   retry_after_cap_seconds: 10,
   calibration_sweep: [0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.5],

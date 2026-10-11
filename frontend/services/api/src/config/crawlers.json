@@ -1,5 +1,5 @@
 {
-  "catalog_version": "2",
+  "catalog_version": "1",
   "resource_rules": [
     {
       "resource_class": "robots",

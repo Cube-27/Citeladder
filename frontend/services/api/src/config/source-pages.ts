@@ -3,10 +3,10 @@
  */
 export const sourcePages = {
   identity_version: 'citation-identity-1',
-  inspector_version: 'source-page-inspector-2',
-  extractor_version: 'source-page-extractor-2',
-  presence_version: 'source-page-presence-2',
-  format_version: 'source-page-format-2',
+  inspector_version: 'source-page-inspector-1',
+  extractor_version: 'source-page-extractor-1',
+  presence_version: 'source-page-presence-1',
+  format_version: 'source-page-format-1',
   passage_chars: 300,
   passages_per_entity: 2,
   max_text_chars: 400000,

@@ -148,6 +148,10 @@ export function httpError(status: number): [string, boolean] | null {
   return status >= 500 ? [codes.http_5xx, true] : null;
 }
 
+/** Whether this failed attempt settles the task as failed rather than retrying it. */
+export const finalFailure = (task: SiteTask, retryable: boolean) =>
+  !retryable || task.attempt_count + 1 >= task.max_attempts;
+
 /** Settle the leased task: success with its artifact, a backed-off retry, or a terminal failure. */
 export async function settleTask(
   trx: Database,
@@ -185,7 +189,7 @@ export async function settleTask(
       .execute();
     return;
   }
-  const retry = outcome.retryable && attempt < task.max_attempts;
+  const retry = !finalFailure(task, outcome.retryable);
   const delay =
     outcome.retryAfterSeconds === undefined
       ? retryDelay(ctx.settings, attempt)

@@ -3,7 +3,7 @@
 // standard logs (JSON): keeps a record's log lines whose cs(User-Agent) belongs to a
 // recognized crawler and drops the record when none does. A stream running it is
 // filtered, so CiteLadder reports its coverage as partial.
-export const CATALOG_VERSION = '2';
+export const CATALOG_VERSION = '1';
 const bots = [
   {
     ua_patterns: ['googlebot/'],

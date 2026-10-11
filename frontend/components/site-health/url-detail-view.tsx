@@ -27,6 +27,7 @@ import {
   formatAudited,
   pageDisplayTitle,
   pageStatusBadgeValue,
+  isFetchFailure,
   statusLabel,
 } from '@/lib/site-health/status';
 import { TrafficUrlButton } from '@/components/ai-traffic/url-panel';
@@ -69,6 +70,7 @@ export function UrlDetailView({
     >
       <Stack gap="workspace">
         <PageMetadata detail={detail} />
+        <LinkedFrom detail={detail} />
         <UrlScoreSummary detail={detail} />
         <PageMeasurements detail={detail} />
         <IssuesList issues={detail.issues} />
@@ -152,6 +154,34 @@ function PageMeasurements({ detail }: Readonly<{ detail: PageDetail }>) {
             )}
           </TabPanel>
         </Tabs>
+      </CardContent>
+    </Card>
+  );
+}
+
+/** A URL that failed to fetch: the pages that link it, which is where the fix goes. */
+function LinkedFrom({ detail }: Readonly<{ detail: PageDetail }>) {
+  if (!isFetchFailure(detail.analysis_status) || !detail.linked_from.length) return null;
+  return (
+    <Card className="min-w-0">
+      <CardHeader>
+        <CardTitle>Linked From</CardTitle>
+        <CardDescription>Pages this crawl found linking to this URL</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <ul className={ledgerClasses()}>
+          {detail.linked_from.map((referrer) => (
+            <li key={referrer.site_url_id} className="py-2">
+              <TextLink
+                variant="external"
+                href={referrer.url}
+                className="min-w-0 [overflow-wrap:anywhere] tabular-nums"
+              >
+                {referrer.url}
+              </TextLink>
+            </li>
+          ))}
+        </ul>
       </CardContent>
     </Card>
   );

@@ -452,8 +452,7 @@ frozen copy, and the comparison key includes it. One
 [matcher](../frontend/services/api/src/analysis/aliases.ts) serves scoring, entity
 assessment and generation admission; text in scripts written without spaces is
 word-segmented first, so a Chinese, Japanese or Thai name inside a sentence is
-found. These semantics are `grounded-analysis-v2` and `entity-assessment-2`;
-earlier results keep their versions. Source-pattern and Opportunity mapping stay in
+found. These semantics are `grounded-analysis-v1` and `entity-assessment-1`. Source-pattern and Opportunity mapping stay in
 [Opportunities](opportunities.md).
 
 **Visibility** means the brand mention rate everywhere: the share of answers
