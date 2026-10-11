@@ -35,7 +35,8 @@ beforeAll(async () => {
     .set({ role: 'admin', hashed_password: await hashPassword(password) })
     .where('id', '=', actor)
     .execute();
-  workspace = await fixtures.ownedWorkspace(await fixtures.user());
+  // Unprovisioned: the account manager is what grants this shared workspace its access.
+  workspace = await fixtures.ownedWorkspace(await fixtures.user(), { access: false });
   accountId = await billingAccount(db, workspace);
   session = await authenticatePlatformOperator(db, `${actor}@example.test`, password);
 });

@@ -107,7 +107,7 @@ it('previews a prompt add without writing, then activates it once on confirmatio
   expect(prepared).toMatchObject({
     state: 'needs_confirmation',
     preview:
-      'Add 1 active prompt(s) to "Set": "Which running shoes last longest?". Dropped: "Which running shoes suit road use?" (An equivalent prompt already exists in this set). Prompt slots after: 2.',
+      'Add 1 active prompt(s) to "Set": "Which running shoes last longest?". Dropped: "Which running shoes suit road use?" (An equivalent prompt already exists in this set). Prompt slots after: 2 of 10000.',
     dropped: [
       {
         text: 'Which running shoes suit road use?',

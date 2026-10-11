@@ -205,8 +205,6 @@
     "capability_not_granted": "capability_not_granted",
     "crawl_logs_not_in_plan": "crawl_logs_not_in_plan",
     "crawl_logs_disabled": "crawl_logs_disabled",
-    "fact_checking_not_in_plan": "fact_checking_not_in_plan",
-    "commerce_not_in_plan": "commerce_not_in_plan",
-    "search_intelligence_not_in_plan": "search_intelligence_not_in_plan"
+    "fact_checking_not_in_plan": "fact_checking_not_in_plan"
   }
 }

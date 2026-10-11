@@ -81,11 +81,13 @@ export class Fixtures {
           'search_intelligence',
         ])
           await grant(trx, account, { key, value: 1, sourceKind: 'override' });
-        await grant(trx, account, {
-          key: 'prompt_runs_per_period',
-          value: 100_000,
-          sourceKind: 'override',
-        });
+        // Generous defaults; a test that sets one of these limits replaces it (see grant()).
+        for (const [key, value] of [
+          ['prompt_runs_per_period', 100_000],
+          ['project_slots', 1_000],
+          ['prompt_slots', 10_000],
+        ] as const)
+          await grant(trx, account, { key, value, sourceKind: 'override', fixtureDefault: true });
       }
       return workspaceId;
     };

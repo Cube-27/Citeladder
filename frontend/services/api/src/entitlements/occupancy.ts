@@ -9,8 +9,8 @@
  * after the project and prompt-set locks.
  *
  * Fail closed: a workspace with no billing account, or an account whose
- * grants cannot resolve, is a 403 `occupancy_unresolved`. A resolved account
- * with no `prompt_slots` grant is unprovisioned and not gated.
+ * grants cannot resolve, is a 403 `occupancy_unresolved`, and a resolved account
+ * with no `prompt_slots` grant has an allowance of zero.
  */
 import { asApiErrorCode } from '@citeladder/contracts/error-codes';
 import { sql } from 'kysely';
@@ -55,8 +55,7 @@ export async function admitProject(db: Database, workspaceId: string): Promise<v
       code: UNRESOLVED,
     });
   const key = policy.entitlements.project_slots;
-  const allowance = resolved.values.get(key);
-  if (allowance === undefined) return;
+  const allowance = resolved.values.get(key) ?? 0;
   const row = await db
     .selectFrom('projects')
     .innerJoin('billing_accounts', 'billing_accounts.workspace_id', 'projects.workspace_id')
@@ -233,15 +232,14 @@ async function promptCount(db: Database, accountId: string): Promise<number> {
 /**
  * Prompts beyond the workspace's `prompt_slots` allowance, the newest first
  * out: after a downgrade they are kept, shown, and never measured. Unlocked,
- * so reads can use it; an unresolvable account excludes nothing here because
- * admission refuses it anyway.
+ * so reads can use it. Like admission it fails closed: with no grant, or grants
+ * that cannot resolve, no prompt is within the limit.
  */
 export async function overLimitPromptIds(
   db: Database,
   workspaceId: string,
 ): Promise<ReadonlySet<string>> {
-  const allowance = (await grantedValues(db, workspaceId))?.get(PROMPT_SLOTS);
-  if (allowance === undefined) return new Set();
+  const allowance = (await grantedValues(db, workspaceId))?.get(PROMPT_SLOTS) ?? 0;
   const rows = await slotPrompts(db)
     .select('prompts.id')
     .where('projects.workspace_id', '=', workspaceId)
@@ -261,13 +259,13 @@ export function overLimitSelection(excluded: number) {
 }
 
 /**
- * Prompt slots in use and the `prompt_slots` allowance, null when ungated.
+ * Prompt slots in use and the `prompt_slots` allowance, zero when none is granted.
  * Takes the capacity lock, so it reads after a same-transaction insert.
  */
 export async function promptOccupancy(
   db: Database,
   workspaceId: string,
-): Promise<{ used: number; allowance: number | null }> {
+): Promise<{ used: number; allowance: number }> {
   const accountId = await lockWorkspaceCapacity(db, workspaceId);
   const entitlement = await resolveAccountEntitlement(db, { accountId, workspaceId }, new Date());
   // Unresolved is unavailable, not ungated: refuse as admission does.
@@ -277,7 +275,7 @@ export async function promptOccupancy(
     });
   return {
     used: await promptCount(db, accountId),
-    allowance: entitlement.values.get(PROMPT_SLOTS) ?? null,
+    allowance: entitlement.values.get(PROMPT_SLOTS) ?? 0,
   };
 }
 
@@ -302,8 +300,7 @@ export async function admitPrompts(
       code: UNRESOLVED,
     });
   }
-  const allowance = entitlement.values.get(PROMPT_SLOTS);
-  if (allowance === undefined) return;
+  const allowance = entitlement.values.get(PROMPT_SLOTS) ?? 0;
   const current = await promptCount(db, accountId);
   if (current + requested <= allowance) return;
   logger.info('billing.occupancy_limit_exceeded', {
@@ -321,5 +318,25 @@ export async function admitPrompts(
       code: LIMIT_EXCEEDED,
       details: { key: PROMPT_SLOTS, allowance, current, requested },
     },
+  );
+}
+
+/** Commerce actions that do new work; data already collected stays readable. */
+export function requireCommerce(db: Database, workspaceId: string): Promise<void> {
+  return requireGrantedFlag(
+    db,
+    workspaceId,
+    policy.entitlements.commerce,
+    'Commerce is not included in your plan',
+  );
+}
+
+/** Search Intelligence actions that do new work; past runs stay readable. */
+export function requireSearchIntelligence(db: Database, workspaceId: string): Promise<void> {
+  return requireGrantedFlag(
+    db,
+    workspaceId,
+    policy.entitlements.search_intelligence,
+    'Search Intelligence is not included in your plan',
   );
 }

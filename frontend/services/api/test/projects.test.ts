@@ -412,6 +412,13 @@ describe('project owner', () => {
         .set({ registration_origin: 'public' })
         .where('id', '=', t.accountId)
         .execute();
+      // Made while the trial was open, then the fixture's operator grants give way to it.
+      const project = await createProject(
+        db,
+        t.workspaceId,
+        t.userId,
+        projectCreate.parse({ name: 'Trial' }),
+      );
       // The fixture's operator access grant is not a trial; this account is trial-only.
       await db.deleteFrom('account_grants').where('billing_account_id', '=', t.accountId).execute();
       const end = new Date(Date.now() - endedDaysAgo * day);
@@ -435,12 +442,6 @@ describe('project owner', () => {
         })
         .execute();
       if (paid) await grant(db, t.accountId, { key: 'project_slots', value: 1 });
-      const project = await createProject(
-        db,
-        t.workspaceId,
-        t.userId,
-        projectCreate.parse({ name: 'Trial' }),
-      );
       return project.id;
     }
     const expired = await trialProject(31);
