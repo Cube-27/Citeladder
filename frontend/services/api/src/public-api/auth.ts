@@ -3,7 +3,7 @@
  * and `X-Workspace-Id` are never read.
  *
  * A request passes, in order: the key (401 `invalid_api_key`), the per-key
- * and per-workspace rate limits (429), the creator's live membership, the
+ * and per-workspace rate limits (429), the creator's active account and live membership, the
  * workspace's access and `api_access` grant (403), the operation's capability
  * from the creator's live role intersected with the key's scope (403), then
  * the path project and its owned IDs (404 outside the workspace, the key's
@@ -15,6 +15,7 @@ import type { MiddlewareHandler } from 'hono';
 import { enforceSubjectRequest } from '../abuse/usage.ts';
 import { resolveCaller, touchApiKey } from '../api-keys/keys.ts';
 import { requireCapability, type Actor } from '../auth/actor.ts';
+import { requiresEmailVerification } from '../auth/eligibility.ts';
 import {
   findWorkspaceMember,
   pathUuid,
@@ -47,7 +48,14 @@ export function apiKeyAuth(
     await enforceSubjectRequest(db, 'api_key', key.id, limit('api_key'));
     await enforceSubjectRequest(db, 'workspace', key.workspace_id, limit('workspace'));
     const member = await findWorkspaceMember(db, key.created_by_user_id, key.workspace_id);
-    if (member === undefined)
+    // A key acts as its creator, so it stops when an operator disables them,
+    // exactly as their sessions and MCP connections do.
+    const creator = await db
+      .selectFrom('users')
+      .select(['is_active', 'registration_origin', 'email_verified_at'])
+      .where('id', '=', key.created_by_user_id)
+      .executeTakeFirst();
+    if (member === undefined || !creator?.is_active || requiresEmailVerification(creator))
       throw new ApiError(401, 'This API key no longer has workspace access', {
         code: 'invalid_api_key',
       });
