@@ -6,8 +6,8 @@ import {
   type InternalLinkAnalysis,
 } from '@citeladder/contracts/site-health';
 
-import { enforceWorkspaceRequest } from '../abuse/usage.ts';
-import { policy, resolveSettingSpec } from '../config.ts';
+import { dailyWorkspaceLimit, enforceWorkspaceRequest } from '../abuse/usage.ts';
+import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import { ApiError } from '../errors.ts';
@@ -152,11 +152,11 @@ export async function admitLinkRun(
       .executeTakeFirst();
     if (settling) throw new ApiError(409, 'The previous internal link analysis is still stopping');
     // Each run can make many platform-paid judge calls; replays above spend nothing.
-    await enforceWorkspaceRequest(trx, scope.workspaceId, {
-      operation: 'internal_links.analysis',
-      limit: Number(resolveSettingSpec(policy.abuse.internal_link_analyses_per_workspace_daily)),
-      windowSeconds: 86400,
-    });
+    await enforceWorkspaceRequest(
+      trx,
+      scope.workspaceId,
+      dailyWorkspaceLimit('internal_links.analysis', 'internal_link_analyses_per_workspace_daily'),
+    );
     const crawl = await trx
       .selectFrom('site_crawls')
       .select('id')

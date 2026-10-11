@@ -41,6 +41,22 @@ export function agentCallLimit(amount: number): UsageLimit {
   };
 }
 
+type DailyWorkspaceSetting = Extract<keyof typeof policy.abuse, `${string}_per_workspace_daily`>;
+
+/** A per-workspace budget over one day, sized by its `config/abuse.ts` setting. */
+export function dailyWorkspaceLimit(
+  operation: string,
+  setting: DailyWorkspaceSetting,
+  amount = 1,
+): UsageLimit {
+  return {
+    operation,
+    limit: Number(resolveSettingSpec(policy.abuse[setting])),
+    windowSeconds: 86400,
+    amount,
+  };
+}
+
 /** Consume one unit for the workspace, or throw 429 with `Retry-After`. */
 export async function enforceWorkspaceRequest(
   db: Database,

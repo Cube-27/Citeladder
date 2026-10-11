@@ -2,7 +2,7 @@
 import { randomUUID } from 'node:crypto';
 import { commerceTargetSchema, commerceTargetsSchema } from '@citeladder/contracts/commerce-suite';
 import { z } from 'zod';
-import { enforceWorkspaceRequest } from '../abuse/usage.ts';
+import { dailyWorkspaceLimit, enforceWorkspaceRequest } from '../abuse/usage.ts';
 import { loadWorkerSettings, policy, resolveSettingSpec } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { meterFor } from '../billing/metering.ts';
@@ -89,12 +89,15 @@ export function enqueueDiscoveries(
       `${target.kind}:${target.id.toLowerCase()}`;
     const targets = new Map(input.targets.map((target) => [targetKey(target), target]));
     // Each target spends platform research-provider calls and outbound fetches.
-    await enforceWorkspaceRequest(trx, scope.workspaceId, {
-      operation: 'commerce.competitor_discovery',
-      limit: Number(resolveSettingSpec(policy.abuse.commerce_discoveries_per_workspace_daily)),
-      windowSeconds: 86400,
-      amount: targets.size,
-    });
+    await enforceWorkspaceRequest(
+      trx,
+      scope.workspaceId,
+      dailyWorkspaceLimit(
+        'commerce.competitor_discovery',
+        'commerce_discoveries_per_workspace_daily',
+        targets.size,
+      ),
+    );
     const ids = new Map(
       await Promise.all(
         [...targets].map(async ([key, target]) => {

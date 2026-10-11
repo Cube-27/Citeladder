@@ -55,7 +55,7 @@ async function projectRuntime(
  * The mailbox an address delivers to, for trial eligibility: lowercased, any
  * `+tag` dropped, and for Gmail the dots ignored and googlemail.com folded in.
  */
-function canonicalMailbox(email: RawBuilder<unknown> | ReturnType<typeof sql.ref>) {
+function canonicalMailbox(email: RawBuilder<unknown>) {
   const lowered = sql<string>`lower(${email})`;
   const domain = sql<string>`case split_part(${lowered}, '@', 2) when 'googlemail.com' then 'gmail.com' else split_part(${lowered}, '@', 2) end`;
   const local = sql<string>`split_part(split_part(${lowered}, '@', 1), '+', 1)`;

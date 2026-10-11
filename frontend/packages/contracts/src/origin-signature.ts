@@ -33,16 +33,31 @@ function payload(facts: OriginSignedFacts) {
   ].join('\n');
 }
 
+// One import per origin key (current and, during rotation, previous) per isolate.
+const importedKeys = new Map<string, Promise<CryptoKey>>();
+
+function hmacKey(key: string): Promise<CryptoKey> {
+  let imported = importedKeys.get(key);
+  if (!imported) {
+    imported = crypto.subtle.importKey(
+      'raw',
+      encoder.encode(key),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign'],
+    );
+    importedKeys.set(key, imported);
+  }
+  return imported;
+}
+
 /** Lowercase hex HMAC-SHA256 of the signed facts under one origin key. */
 export async function signOriginRequest(key: string, facts: OriginSignedFacts): Promise<string> {
-  const cryptoKey = await crypto.subtle.importKey(
-    'raw',
-    encoder.encode(key),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign'],
+  const signature = await crypto.subtle.sign(
+    'HMAC',
+    await hmacKey(key),
+    encoder.encode(payload(facts)),
   );
-  const signature = await crypto.subtle.sign('HMAC', cryptoKey, encoder.encode(payload(facts)));
   return Array.from(new Uint8Array(signature), (byte) => byte.toString(16).padStart(2, '0')).join(
     '',
   );

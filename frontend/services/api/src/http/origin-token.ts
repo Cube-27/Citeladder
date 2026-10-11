@@ -45,13 +45,11 @@ function isApiHostPath(path: string): boolean {
 /** Whether a supplied hex signature equals one made with any current origin key. */
 async function signedByOrigin(keys: readonly string[], facts: OriginSignedFacts, supplied: string) {
   const given = Buffer.from(supplied, 'utf8');
-  const matches = await Promise.all(
-    keys.map(async (key) => {
-      const expected = Buffer.from(await signOriginRequest(key, facts), 'utf8');
-      return expected.length === given.length && timingSafeEqual(expected, given);
-    }),
-  );
-  return matches.includes(true);
+  for (const key of keys) {
+    const expected = Buffer.from(await signOriginRequest(key, facts), 'utf8');
+    if (expected.length === given.length && timingSafeEqual(expected, given)) return true;
+  }
+  return false;
 }
 
 /**
