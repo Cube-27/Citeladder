@@ -23,6 +23,12 @@ app-host API, browser MCP consent and guarded navigation. The marketing
 Worker at `frontend/apps/marketing` builds every page at deploy time
 (`output: 'static'`) and serves it as a free static asset: the full HTML that
 search engines and AI crawlers read, without a Worker invocation per visit.
+The shared chrome (navigation, cookie consent banner and the consent-gated
+Google tag) is Astro markup with small module scripts in
+`frontend/components/marketing/chrome/` and `frontend/components/analytics/`,
+so content pages ship no framework JavaScript; React islands hydrate only on
+pages with interactive tools, such as the homepage tour, blog explorer,
+contact form, pricing and the free tools.
 Only routes that read the request opt out with `prerender = false`: `/pricing`,
 the contact intake, `/health` and the 404 page, which answers
 `Accept: text/markdown` with a Markdown body. The middleware runs only for

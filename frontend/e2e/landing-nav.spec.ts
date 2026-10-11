@@ -3,15 +3,12 @@ import { expect, test } from '@playwright/test';
 import { NAV_DROPS } from '@/lib/marketing-content/nav';
 
 /**
- * Marketing navigation, real-engine claims ONLY.
+ * Marketing navigation in a real engine.
  *
- * The per-dropdown interaction contract — hover/focus opens, Escape closes,
- * truthful `aria-expanded`/`aria-controls`, one link per configured item — is
- * pinned in jsdom by components/marketing/chrome/nav.test.tsx. The panel is
- * rendered from React state (nav-desktop.tsx), not a CSS `:hover` rule, so
- * re-running that matrix in a browser proves nothing new and costs a page load
- * per dropdown. What a real engine DOES decide is which of the two navs the
- * viewport gets (a `lg:` media query) and whether the page overflows.
+ * The navigation is server-rendered Astro markup with a plain script
+ * (components/marketing/chrome/marketing-nav.ts), so its interaction contract
+ * — hover intent, focus return, the inert page behind the mobile sheet — is
+ * pinned here against the built site rather than in jsdom.
  */
 const DROP_KEYS = NAV_DROPS.map((drop) => drop.key);
 
@@ -27,7 +24,6 @@ test.describe('marketing navigation (real-engine CSS contract)', () => {
     });
     const page = await context.newPage();
     await page.goto('/platform');
-    await page.waitForFunction(() => !document.querySelector('astro-island[ssr]'));
     const toggle = page
       .getByRole('navigation', { name: 'Main navigation' })
       .getByRole('button', { name: 'Platform', exact: true });
@@ -42,7 +38,6 @@ test.describe('marketing navigation (real-engine CSS contract)', () => {
   test('Escape restores the desktop disclosure focus without reopening it', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('/platform/site-health');
-    await page.waitForFunction(() => !document.querySelector('astro-island[ssr]'));
     const toggle = page
       .getByRole('navigation', { name: 'Main navigation' })
       .getByRole('button', { name: 'Platform', exact: true });
@@ -70,13 +65,6 @@ test.describe('marketing navigation (real-engine CSS contract)', () => {
     await expect(page.getByRole('button', { name: 'Open menu' })).toBeHidden();
 
     await page.setViewportSize({ width: 375, height: 812 });
-    await page.waitForFunction(() =>
-      [...document.querySelectorAll('astro-island')].some(
-        (island) =>
-          island.getAttribute('component-url')?.includes('MarketingNavIsland') &&
-          !island.hasAttribute('ssr'),
-      ),
-    );
     const openMenu = page.getByRole('button', { name: 'Open menu' });
     await expect(openMenu).toBeVisible();
 
@@ -90,6 +78,64 @@ test.describe('marketing navigation (real-engine CSS contract)', () => {
       await expect(page.locator(`button[aria-controls="acc-${key}"]`)).toBeVisible();
     }
     await page.getByRole('button', { name: 'Close menu' }).click();
+    await expect(menu).toBeHidden();
+  });
+
+  test('a resting pointer opens a menu that a click pins and a second click closes', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/faq');
+    const trigger = page
+      .getByRole('navigation', { name: 'Main navigation' })
+      .getByRole('button', { name: 'Platform', exact: true });
+    await trigger.hover();
+    await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    await trigger.click();
+    await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    await expect(
+      page.locator('#desktop-nav-panel-platform').getByRole('link', { name: /Platform overview/ }),
+    ).toHaveAttribute('href', '/platform');
+    await trigger.click();
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    await expect(page.locator('#desktop-nav-panel-platform')).toBeHidden();
+  });
+
+  test('Escape closes a hover-opened menu without taking focus from a field', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/faq');
+    await page.evaluate(() => {
+      const field = document.createElement('input');
+      field.setAttribute('aria-label', 'Message');
+      document.querySelector('main')?.prepend(field);
+    });
+    const trigger = page
+      .getByRole('navigation', { name: 'Main navigation' })
+      .getByRole('button', { name: 'Platform', exact: true });
+    await trigger.hover();
+    await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    const field = page.getByRole('textbox', { name: 'Message' });
+    await field.focus();
+    await page.keyboard.press('Escape');
+    await expect(field).toBeFocused();
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  test('the open mobile menu takes the page behind it out of reach', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 900 });
+    await page.goto('/faq');
+    const pageInert = () =>
+      page.evaluate(() => document.querySelector('main')?.closest('[inert]') !== null);
+    await page.getByRole('button', { name: 'Open menu' }).click();
+    await expect.poll(pageInert).toBe(true);
+    const menu = page.locator('#mobile-menu');
+    await menu.getByRole('button', { name: 'Platform', exact: true }).click();
+    await expect(menu.getByRole('link', { name: /Platform overview/ })).toBeVisible();
+    const logIn = menu.getByRole('link', { name: 'Log in' });
+    // The product origin playwright.config.ts gives the marketing build.
+    await expect(logIn).toHaveAttribute('href', 'http://127.0.0.1:3100/login');
+    await page.keyboard.press('Escape');
+    await expect.poll(pageInert).toBe(false);
     await expect(menu).toBeHidden();
   });
 

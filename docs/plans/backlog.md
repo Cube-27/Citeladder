@@ -178,11 +178,8 @@ Owner: [Connected data](../integrations-traffic-analytics.md#search-intelligence
 
 ### Public site remainder
 
-From the [public site review](../archive/public-site-improvement.md): every marketing page
-still ships about 94 KB (gzip) of React for the navigation island and cookie
-banner. Rebuilding both as Astro components with small scripts would leave
-content pages with no framework JavaScript. Also deferred: per-page stylesheets,
-and one app-origin source for pricing CTAs once pricing is enabled. Owner:
+From the [public site review](../archive/public-site-improvement.md): per-page
+stylesheets, and one app-origin source for pricing CTAs once pricing is enabled. Owner:
 [Frontend architecture](../frontend-architecture.md).
 
 ### Design system remainder

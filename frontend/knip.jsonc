@@ -31,7 +31,7 @@
         "apps/app/**/*.{ts,tsx}",
         "apps/marketing/**/*.{astro,ts,tsx}",
         "apps/docs/**/*.{astro,ts,tsx}",
-        "components/**/*.{ts,tsx}",
+        "components/**/*.{astro,ts,tsx}",
         "lib/**/*.{ts,tsx}",
         "test/**/*.{ts,tsx}",
         "e2e/**/*.{ts,tsx}",

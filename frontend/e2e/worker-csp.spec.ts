@@ -74,6 +74,9 @@ test('built marketing hydrates with one enforced header and blocks injected scri
       [...document.querySelectorAll('astro-island')].every((island) => !island.hasAttribute('ssr')),
     );
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    // The banner is revealed by the chrome's own script, so it proves the
+    // policy admits the page scripts as well as the islands.
+    await expect(page.getByRole('region', { name: 'Cookie consent' })).toBeVisible();
   }
   expect(violations).toEqual([]);
   await page.evaluate(() => {

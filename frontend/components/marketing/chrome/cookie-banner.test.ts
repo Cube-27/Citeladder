@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
-import { render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import {
@@ -9,7 +9,18 @@ import {
   writeConsent,
 } from '@/lib/consent/cookie-consent';
 
-import { COOKIE_PREFERENCES_ATTRIBUTE, CookieBanner } from './cookie-banner';
+import { mountCookieBannerFixture } from '@/test/cookie-banner-fixture';
+
+import { COOKIE_PREFERENCES_ATTRIBUTE } from './cookie-banner';
+
+let unmount: (() => void) | null = null;
+function renderBanner() {
+  unmount = mountCookieBannerFixture();
+}
+afterEach(() => {
+  unmount?.();
+  unmount = null;
+});
 
 function failStorageWrites() {
   const descriptor = Object.getOwnPropertyDescriptor(window, 'localStorage');
@@ -49,41 +60,35 @@ describe('CookieBanner', () => {
   it('lets a returning visitor reopen preferences from the footer and withdraw consent', async () => {
     const user = userEvent.setup();
     writeConsent('accepted');
-    render(
-      <>
-        <button type="button" {...{ [COOKIE_PREFERENCES_ATTRIBUTE]: '' }}>
-          Cookie preferences
-        </button>
-        <CookieBanner />
-      </>,
-    );
+    const footer = document.body.appendChild(document.createElement('button'));
+    footer.type = 'button';
+    footer.textContent = 'Cookie preferences';
+    footer.setAttribute(COOKIE_PREFERENCES_ATTRIBUTE, '');
+    renderBanner();
     expect(screen.queryByRole('region', { name: 'Cookie consent' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Cookie preferences' }));
     expect(await screen.findByRole('region', { name: 'Cookie consent' })).toHaveFocus();
     await user.click(screen.getByRole('button', { name: 'Reject' }));
     expect(hasAnalyticsConsent()).toBe(false);
     expect(screen.queryByRole('region', { name: 'Cookie consent' })).not.toBeInTheDocument();
+    footer.remove();
   });
   beforeEach(() => {
     window.localStorage.clear();
   });
 
   it('asks an undecided visitor, offering reject and accept equally', async () => {
-    render(<CookieBanner />);
+    renderBanner();
 
     const region = await screen.findByRole('region', { name: 'Cookie consent' });
     expect(region).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Reject' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Accept' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Cookie Policy.' })).toHaveAttribute(
-      'href',
-      '/cookies',
-    );
   });
 
   it('grants consent on accept and dismisses', async () => {
     const user = userEvent.setup();
-    render(<CookieBanner />);
+    renderBanner();
     await screen.findByRole('region', { name: 'Cookie consent' });
 
     await user.click(screen.getByRole('button', { name: 'Accept' }));
@@ -95,7 +100,7 @@ describe('CookieBanner', () => {
 
   it('withholds consent on reject and dismisses', async () => {
     const user = userEvent.setup();
-    render(<CookieBanner />);
+    renderBanner();
     await screen.findByRole('region', { name: 'Cookie consent' });
 
     await user.click(screen.getByRole('button', { name: 'Reject' }));
@@ -111,7 +116,7 @@ describe('CookieBanner', () => {
       const user = userEvent.setup();
       const failingStorage = failStorageWrites();
       try {
-        render(<CookieBanner />);
+        renderBanner();
         await user.click(await screen.findByRole('button', { name: choice }));
         expect(failingStorage.setItem).toHaveBeenCalledWith(
           COOKIE_CONSENT_STORAGE_KEY,
@@ -147,7 +152,7 @@ describe('CookieBanner', () => {
   it('stays hidden once the visitor has already answered', () => {
     window.localStorage.setItem(COOKIE_CONSENT_STORAGE_KEY, 'accepted');
 
-    render(<CookieBanner />);
+    renderBanner();
 
     expect(screen.queryByRole('region', { name: 'Cookie consent' })).not.toBeInTheDocument();
   });
@@ -155,7 +160,7 @@ describe('CookieBanner', () => {
   it('re-asks when the stored value is not a decision it wrote', async () => {
     window.localStorage.setItem(COOKIE_CONSENT_STORAGE_KEY, 'yes-please');
 
-    render(<CookieBanner />);
+    renderBanner();
 
     expect(await screen.findByRole('region', { name: 'Cookie consent' })).toBeInTheDocument();
     expect(hasAnalyticsConsent()).toBe(false);

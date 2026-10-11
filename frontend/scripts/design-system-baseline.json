@@ -4,12 +4,6 @@
     "components/layout/app-shell.tsx": {
       "tsx-size": 1
     },
-    "components/marketing/chrome/cookie-banner.tsx": {
-      "tsx-size": 1
-    },
-    "components/marketing/chrome/nav-desktop.tsx": {
-      "tsx-style": 2
-    },
     "components/marketing/pages/legal.tsx": {
       "tsx-size": 1
     },

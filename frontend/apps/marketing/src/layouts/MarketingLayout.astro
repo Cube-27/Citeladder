@@ -1,9 +1,9 @@
 ---
-import { GoogleAnalytics } from '@/components/analytics/google-analytics';
+import GoogleAnalytics from '@/components/analytics/GoogleAnalytics.astro';
+import CookieBanner from '@/components/marketing/chrome/CookieBanner.astro';
+import MarketingNav from '@/components/marketing/chrome/MarketingNav.astro';
 import PublicFonts from '@/components/marketing/chrome/PublicFonts.astro';
-import { CookieBanner } from '@/components/marketing/chrome/cookie-banner';
 import { MarketingFooter } from '@/components/marketing/chrome/footer';
-import { MarketingNavIsland } from '../components/MarketingNavIsland';
 import {
   organizationJsonLd,
   serializeJsonLd,
@@ -111,11 +111,11 @@ const sharedJsonLd = [organizationJsonLd(), websiteJsonLd(), softwareApplication
     {jsonLd.map((data) => <script type="application/ld+json" set:html={serializeJsonLd(data)} />)}
   </head>
   <body class="bg-background text-foreground relative isolate min-h-dvh">
-    {gaMeasurementId && <GoogleAnalytics measurementId={gaMeasurementId} client:load />}
+    {gaMeasurementId && <GoogleAnalytics />}
     <a href="#main" class="skip-link">Skip to main content</a>
-    <MarketingNavIsland path={Astro.url.pathname} client:load />
+    <MarketingNav path={Astro.url.pathname} />
     <div class="relative z-1 pt-[var(--marketing-nav-offset)]"><slot /></div>
     <div class="relative z-1"><MarketingFooter /></div>
-    <CookieBanner client:idle />
+    <CookieBanner />
   </body>
 </html>
