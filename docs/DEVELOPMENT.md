@@ -230,20 +230,17 @@ it does not enable or test a live checkout/provider.
 `frontend/services/api` is a pnpm workspace package; `pnpm install` in `frontend/`
 installs it. Its suite writes and deletes fixture rows. Pre-launch there are no
 customers, so it runs against the one local development database (`citeladder`
-in docker compose); do not create per-branch copies. `scripts/api-test.ps1`
-builds the URL from `.env`, clears inherited provider credentials and logs to
-`<git-dir>/api-test.log`. After a baseline change the owner resets that database
-(`scripts/reset-db.ps1`), then `-Types` regenerates the Kysely types. Tests never read `.env` (`test/environment.ts` sets
-`CITELADDER_DISABLE_DOTENV`), and the schema, bootstrap and seed tests create and
-drop their own `citeladder_*_test_*` databases on that server.
-The API bootstrap refuses inherited provider credentials, including
-`DEFAULT_AGENT_API_KEY`, `DEFAULT_AGENT_BASE_URL` and `DEFAULT_AGENT_MODEL`.
-Clear these before running tests; dotenv loading is disabled.
+in docker compose); do not create per-branch copies. Run it with
+`scripts/api-test.ps1`, which clears the provider credentials the test guard
+(`test/inherited-credentials.ts`) refuses. After a baseline change the owner
+resets that database (`scripts/reset-db.ps1`). Tests never read `.env`
+(`test/environment.ts` sets `CITELADDER_DISABLE_DOTENV`), and the schema,
+bootstrap and seed tests create and drop their own `citeladder_*_test_*`
+databases on that server.
 
 ```powershell
 ./scripts/api-test.ps1 test/billing.test.ts test/catalog-authoring.test.ts   # named files
 ./scripts/api-test.ps1 -Types     # regenerate src/generated/db-schema.ts after a schema change
-./scripts/api-test.ps1 -Migrate   # apply the SQL baseline to a freshly reset database
 pnpm gen                         # (in frontend/) regenerate the public API and MCP references
 ```
 
@@ -354,8 +351,8 @@ API service's set `noUncheckedIndexedAccess`, so an indexed read is
 worktree lock and passes `--scope changed`. The affected owners are the ones
 the CI classifier (`scripts/ci-changes.mjs`) selects for the branch diff against
 `origin/main`, plus staged, unstaged and untracked files. After the quality gate,
-`scripts/secrets-scan.ps1` runs CI's gitleaks version and allowlist over those
-same changed files in Docker (skipped with a warning without Docker). With `--builds affected`,
+`scripts/secrets-scan.mjs` runs CI's gitleaks version (read from `ci.yml`) and
+allowlist over those same changed files in Docker (skipped with a warning without Docker). With `--builds affected`,
 the Astro marketing, Astro docs and Vite app builds run only when their sources
 or shared build configuration changed; tsc and `vp check` still cover ordinary
 TypeScript. A passing run records the tree it judged in `.git/quality-pass.json`,

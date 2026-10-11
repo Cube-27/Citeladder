@@ -24,7 +24,7 @@ Push-Location $repoRoot
 try {
     & node scripts/quality.mjs --mode $mode --scope $scope --builds $builds
     if ($LASTEXITCODE -ne 0) { throw "Quality gate failed with exit code $LASTEXITCODE." }
-    & (Join-Path $PSScriptRoot 'secrets-scan.ps1')
+    & node scripts/secrets-scan.mjs
     if ($LASTEXITCODE -ne 0) { throw "Secrets scan failed with exit code $LASTEXITCODE." }
 }
 finally {

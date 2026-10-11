@@ -114,11 +114,6 @@ async function workspace(mode: 'managed' | 'byok') {
   return { ...t, scope, review };
 }
 
-function worker(send: typeof fetch) {
-  return new AnalyticsWorker(db, loadWorkerSettings(), {
-    executors: { search_intelligence_acquisition: acquisitionExecutor({ send, env }) },
-  });
-}
 const receipt = (cost: number) =>
   Response.json({
     status_code: 20000,
@@ -130,9 +125,16 @@ const runRow = (id: string) =>
     .selectAll()
     .where('id', '=', id)
     .executeTakeFirstOrThrow();
-/** Works the analysis until it ends; the shared platform account paces its requests. */
+/**
+ * Works only this analysis's task until it ends: the local database is shared,
+ * and the platform account paces its requests.
+ */
 async function runToEnd(id: string, send: typeof fetch) {
-  const research = worker(send);
+  const run = await runRow(id);
+  const research = new AnalyticsWorker(db, loadWorkerSettings(), {
+    executors: { search_intelligence_acquisition: acquisitionExecutor({ send, env }) },
+    taskScope: { workspaceId: run.workspace_id, taskIds: [run.analytics_task_id!] },
+  });
   for (let attempt = 0; attempt < 50; attempt += 1) {
     await research.runOnce();
     if (!['queued', 'running'].includes((await runRow(id)).status)) return;
@@ -165,10 +167,10 @@ describe('managed Search Intelligence', () => {
     });
 
     const authorizations: (string | null)[] = [];
-    await worker(async (_url, init) => {
+    await runToEnd(confirmed.id, async (_url, init) => {
       authorizations.push(new Headers(init?.headers).get('authorization'));
       return receipt(0.0061);
-    }).runOnce();
+    });
 
     const platformAuthorization = `Basic ${Buffer.from(`${platformLogin}:platform-secret`).toString('base64')}`;
     expect(authorizations).toEqual([platformAuthorization]);
@@ -236,10 +238,10 @@ describe('managed Search Intelligence', () => {
     });
     await confirmRun(db, t.scope, t.review.id);
     const authorizations: (string | null)[] = [];
-    await worker(async (_url, init) => {
+    await runToEnd(t.review.id, async (_url, init) => {
       authorizations.push(new Headers(init?.headers).get('authorization'));
       return receipt(0.0061);
-    }).runOnce();
+    });
     expect(authorizations).toEqual([
       `Basic ${Buffer.from('own@example.com:own').toString('base64')}`,
     ]);

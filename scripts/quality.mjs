@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { execFileSync, spawnSync } from 'node:child_process';
 
 import { classifyPaths } from './ci-changes.mjs';
+import { gitPaths as listGitPaths, workingDiffPaths as branchDiffPaths } from './working-diff.mjs';
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const frontendRoot = join(repositoryRoot, 'frontend');
@@ -36,23 +37,8 @@ function git(arguments_, options = {}) {
   return execFileSync('git', ['-C', repositoryRoot, ...arguments_], options); // NOSONAR: trusted PATH.
 }
 
-function gitPaths(arguments_) {
-  return git(arguments_, { encoding: 'utf8' })
-    .split(/\r?\n/u)
-    .filter(Boolean)
-    .map((path) => path.replaceAll('\\', '/'));
-}
-
-function workingDiffPaths() {
-  const mergeBase = gitPaths(['merge-base', 'origin/main', 'HEAD'])[0];
-  const pathSets = [
-    gitPaths(['diff', '--no-renames', '--name-only', '--diff-filter=ACMDT', `${mergeBase}..HEAD`]),
-    gitPaths(['diff', '--no-renames', '--name-only', '--diff-filter=ACMDT']),
-    gitPaths(['diff', '--cached', '--no-renames', '--name-only', '--diff-filter=ACMDT']),
-    gitPaths(['ls-files', '--others', '--exclude-standard']),
-  ];
-  return [...new Set(pathSets.flat())];
-}
+const gitPaths = (arguments_) => listGitPaths(repositoryRoot, arguments_);
+const workingDiffPaths = () => branchDiffPaths(repositoryRoot);
 
 function changedScopes() {
   const paths = workingDiffPaths();
