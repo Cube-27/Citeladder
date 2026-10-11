@@ -43,12 +43,15 @@ export function UrlDetailView({
   rerunPending,
   rerunQueued,
   onRerun,
+  history,
   children,
 }: Readonly<{
   detail: PageDetail;
   rerunPending: boolean;
   rerunQueued: boolean;
   onRerun: () => void;
+  /** The page action that opens its resolved-issue history. */
+  history?: React.ReactNode;
   children?: React.ReactNode;
 }>) {
   return (
@@ -56,6 +59,7 @@ export function UrlDetailView({
       title={pageDisplayTitle(detail.title, detail.display_url)}
       actions={
         <>
+          {history}
           {detail.url_hash ? <TrafficUrlButton urlHash={detail.url_hash} /> : null}
           <Button size="sm" onClick={onRerun} disabled={rerunPending}>
             {rerunLabel(rerunPending, rerunQueued)}

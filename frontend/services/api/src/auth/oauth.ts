@@ -13,6 +13,7 @@ import { recordSecurityEvent } from './security-events.ts';
 import { requiresEmailVerification } from './eligibility.ts';
 import { requestChallenge } from './challenges.ts';
 import type { LinkProof } from './continuation.ts';
+import { recordAccountTermsDecision } from '../workspaces/policies.ts';
 
 const cfg = policy.auth.oauth;
 const logger = getLogger('app.auth');
@@ -23,10 +24,14 @@ export class SignInError extends Error {
     | 'oauth_signin_failed'
     | 'oauth_signin_email_unverified'
     | 'oauth_signin_link_required'
+    | 'oauth_signin_no_account'
     | 'oauth_signin_disabled';
-  constructor(code: SignInError['code']) {
+  /** The Google address that has no account, for the signup form to prefill. */
+  readonly email: string | undefined;
+  constructor(code: SignInError['code'], email?: string) {
     super(code);
     this.code = code;
+    this.email = email;
   }
 }
 
@@ -83,7 +88,15 @@ function requireProviderConfigured(config: ServiceConfig, provider: OAuthProvide
     );
 }
 
-export async function startSignIn(config: ServiceConfig, provider: OAuthProvider) {
+/**
+ * Start Google sign-in. Only a signup start carries a Terms decision (the
+ * published revision the visitor accepted), and only it may create an account.
+ */
+export async function startSignIn(
+  config: ServiceConfig,
+  provider: OAuthProvider,
+  signupTermsRevision?: string,
+) {
   requireProviderConfigured(config, provider);
   const nonce = randomBytes(32).toString('base64url');
   const ttl = Number(config.auth.oauthSettings.state_ttl_seconds);
@@ -91,6 +104,7 @@ export async function startSignIn(config: ServiceConfig, provider: OAuthProvider
     sub: 'oauth-state',
     provider,
     session_nonce: nonce,
+    ...(signupTermsRevision ? { terms_revision: signupTermsRevision } : {}),
   })
     .setProtectedHeader({ alg: config.session.algorithm })
     .setExpirationTime(Math.floor(Date.now() / 1000) + ttl)
@@ -111,7 +125,7 @@ async function verifyState(
   provider: OAuthProvider,
   state: string,
   nonce: string,
-): Promise<void> {
+): Promise<{ signupTermsRevision: string | undefined }> {
   try {
     const { payload } = await jwtVerify(state, new TextEncoder().encode(config.session.secretKey), {
       algorithms: [config.session.algorithm],
@@ -129,6 +143,10 @@ async function verifyState(
       !timingSafeEqual(received, expected)
     )
       throw new SignInError('oauth_signin_state_invalid');
+    return {
+      signupTermsRevision:
+        typeof payload.terms_revision === 'string' ? payload.terms_revision : undefined,
+    };
   } catch (error) {
     if (error instanceof joseErrors.JOSEError) throw new SignInError('oauth_signin_state_invalid');
     throw error;
@@ -235,12 +253,16 @@ async function identify(
 
 type SignInEvent = 'auth.oauth_registered' | 'auth.oauth_linked';
 
-/** The verified address's account, created passwordless when absent. */
+/**
+ * The verified address's account. A missing one is created passwordless only
+ * by a signup start with its Terms decision; sign-in sends the person to sign up.
+ */
 async function accountForEmail(
   db: Database,
   config: ServiceConfig,
   identity: SignInIdentity,
   proof?: LinkProof,
+  signupTermsRevision?: string,
 ): Promise<{ user: User; event: SignInEvent }> {
   const byEmail = db.selectFrom('users').selectAll().where('email', '=', identity.email);
   const existing = await byEmail.executeTakeFirst();
@@ -284,6 +306,10 @@ async function accountForEmail(
   }
   if (config.demo.enabled || !config.auth.publicSignup)
     throw new SignInError('oauth_signin_disabled');
+  if (!signupTermsRevision) throw new SignInError('oauth_signin_no_account', identity.email);
+  // The Terms changed while the visitor was at Google: they start again.
+  if (signupTermsRevision !== policy.auth.terms_revision)
+    throw new SignInError('oauth_signin_state_invalid');
   const now = new Date();
   const inserted = await db
     .insertInto('users')
@@ -303,7 +329,14 @@ async function accountForEmail(
     .onConflict((conflict) => conflict.column('email').doNothing())
     .returningAll()
     .executeTakeFirst();
-  if (inserted) return { user: inserted, event: 'auth.oauth_registered' };
+  if (inserted) {
+    await recordAccountTermsDecision(db, {
+      actorId: inserted.id,
+      revision: signupTermsRevision,
+      context: 'signup',
+    });
+    return { user: inserted, event: 'auth.oauth_registered' };
+  }
   throw new SignInError('oauth_signin_state_invalid');
 }
 
@@ -346,6 +379,7 @@ async function resolveAccount(
   provider: OAuthProvider,
   identity: SignInIdentity,
   proof?: LinkProof,
+  signupTermsRevision?: string,
 ) {
   // Stable subject and normalized address serialize linking; every path takes
   // "auth.email:" before "oauth:" so the two locks never invert.
@@ -368,7 +402,7 @@ async function resolveAccount(
     if (!owner) throw new SignInError('oauth_signin_state_invalid');
     user = owner;
   } else {
-    ({ user, event } = await accountForEmail(db, config, identity, proof));
+    ({ user, event } = await accountForEmail(db, config, identity, proof, signupTermsRevision));
     await linkIdentity(db, provider, identity, user.id);
   }
   if (!user.is_active) throw new SignInError('oauth_signin_state_invalid');
@@ -400,10 +434,17 @@ export async function completeSignIn(
   nonce: string,
   continuation?: { returnTo?: string; proof?: LinkProof },
 ) {
-  await verifyState(config, provider, state, nonce);
+  const { signupTermsRevision } = await verifyState(config, provider, state, nonce);
   const identity = await identify(config, provider, code);
   const resolved = await db.transaction().execute(async (trx) => {
-    const account = await resolveAccount(trx, config, provider, identity, continuation?.proof);
+    const account = await resolveAccount(
+      trx,
+      config,
+      provider,
+      identity,
+      continuation?.proof,
+      signupTermsRevision,
+    );
     // Only a sign-in that issues a session is a login; an unverified mailbox is sent recovery mail.
     if (!requiresEmailVerification(account.user))
       await recordSecurityEvent(trx, 'auth.google_login', account.user.id);

@@ -90,7 +90,6 @@ export default function MailboxScreen() {
         pendingLabel="Working…"
         {...mailboxFooter(operation, incomplete, secrets.returnTo)}
         showOAuth={false}
-        requireTerms={false}
         showForm={!mutation.isSuccess && !incomplete}
         error={mutation.isError ? authErrorMessage(mutation.error) : undefined}
       >

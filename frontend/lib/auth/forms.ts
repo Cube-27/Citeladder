@@ -71,6 +71,10 @@ const OAUTH_SIGNIN_ERRORS = new Map<string, string>([
     'oauth_signin_link_required',
     'Sign in with your existing password and connect Google from Account security. If you need a password, use the password reset link.',
   ],
+  [
+    'oauth_signin_no_account',
+    'No account uses that Google address. Agree to the Terms to create one.',
+  ],
   ['oauth_signin_disabled', 'Google sign-in is unavailable right now. Please use email below.'],
   ['oauth_signin_failed', OAUTH_SIGNIN_FALLBACK],
 ]);

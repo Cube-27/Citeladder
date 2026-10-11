@@ -12,8 +12,9 @@ import { findingClassSchema, issueDimensionSchema, issueSeveritySchema } from '.
 import { rootErrorSchema } from './pages.ts';
 import { cursorPageSchema } from './pagination.ts';
 
-// One per-URL issue-history row — an issue occurrence from the selected crawl
-// or a prior crawl in the project chronology (immutable failure projection).
+// One per-URL issue-history row — a resolved issue: the latest record of a rule
+// the selected crawl's current analysis no longer reports, from a superseded
+// analysis or a prior crawl in the project chronology. Never a current issue.
 const issueHistoryRowSchema = responseObject({
   id: uuid(),
   crawl_id: uuid(),
@@ -31,7 +32,11 @@ const issueHistoryRowSchema = responseObject({
 });
 
 // Per-URL issue history page (crawl-bounded, newest-first, cursor-paginated).
-export const issueHistoryPageSchema = cursorPageSchema(issueHistoryRowSchema);
+// Without a finalized current analysis nothing is known to be resolved, which
+// is not the same as an empty history.
+export const issueHistoryPageSchema = cursorPageSchema(issueHistoryRowSchema).extend({
+  current_analysis_finalized: z.boolean(),
+});
 
 // Append-only safe crawl event. Free payloads never carry total/frontier/
 // overflow data; `event_type` is an open string (backend owns the catalogue).

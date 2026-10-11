@@ -10,6 +10,7 @@ import { LoginScreen } from './login-screen';
 import { RegisterScreen } from './register-screen';
 
 const noParams = new URLSearchParams();
+const PUBLISHED = { terms_revision: '2026-09-24', privacy_notice_revision: '2026-09-24' };
 
 describe('account entry', () => {
   it('guides an existing account to credential-authorized Google linking', () => {
@@ -78,6 +79,7 @@ describe('account entry', () => {
 
   it('takes the Terms decision before an account is created', async () => {
     window.sessionStorage.clear();
+    const policies = vi.spyOn(authApi, 'policies').mockResolvedValue(PUBLISHED);
     const registerAccount = vi.spyOn(authApi, 'register').mockReturnValue(new Promise(() => {}));
     const user = userEvent.setup();
     renderWithProviders(
@@ -95,9 +97,83 @@ describe('account entry', () => {
     await user.click(screen.getByRole('checkbox', { name: 'I agree to the Terms of Service' }));
     await user.click(screen.getByRole('button', { name: 'Create account' }));
 
-    await waitFor(() => expect(registerAccount).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(registerAccount).toHaveBeenCalledWith({
+        email: 'reader@example.com',
+        password: 'correct horse battery',
+        termsRevision: '2026-09-24',
+        returnTo: undefined,
+      }),
+    );
     expect(hasSignupTermsConsent()).toBe(true);
     registerAccount.mockRestore();
+    policies.mockRestore();
+  });
+
+  it('takes the same Terms decision before a Google sign-up starts', async () => {
+    window.sessionStorage.clear();
+    const policies = vi.spyOn(authApi, 'policies').mockResolvedValue(PUBLISHED);
+    const oauthStart = vi.spyOn(authApi, 'oauthStart').mockReturnValue(new Promise(() => {}));
+    const user = userEvent.setup();
+    renderWithProviders(
+      <RegisterScreen demoMode={false} signupOpen replace={vi.fn()} searchParams={noParams} />,
+    );
+
+    const google = screen.getByRole('button', { name: 'Continue with Google' });
+    await waitFor(() => expect(google).toBeEnabled());
+    await user.click(google);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Agree to the Terms of Service');
+    expect(oauthStart).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('checkbox', { name: 'I agree to the Terms of Service' }));
+    await user.click(screen.getByRole('button', { name: 'Continue with Google' }));
+
+    await waitFor(() =>
+      expect(oauthStart).toHaveBeenCalledWith('google', {
+        returnTo: undefined,
+        signupTermsRevision: '2026-09-24',
+      }),
+    );
+    expect(hasSignupTermsConsent()).toBe(true);
+    oauthStart.mockRestore();
+    policies.mockRestore();
+  });
+
+  it('starts Google from sign-in without a Terms decision, so it cannot create an account', async () => {
+    const oauthStart = vi.spyOn(authApi, 'oauthStart').mockReturnValue(new Promise(() => {}));
+    const user = userEvent.setup();
+    renderWithProviders(<LoginScreen demoMode={false} signupOpen searchParams={noParams} />);
+
+    await user.click(screen.getByRole('button', { name: 'Continue with Google' }));
+
+    await waitFor(() =>
+      expect(oauthStart).toHaveBeenCalledWith('google', {
+        returnTo: undefined,
+        signupTermsRevision: undefined,
+      }),
+    );
+    oauthStart.mockRestore();
+  });
+
+  it('prefills a Google address that has no account and says so', async () => {
+    const policies = vi.spyOn(authApi, 'policies').mockResolvedValue(PUBLISHED);
+    renderWithProviders(
+      <RegisterScreen
+        demoMode={false}
+        signupOpen
+        replace={vi.fn()}
+        searchParams={
+          new URLSearchParams({ error: 'oauth_signin_no_account', email: 'new@gmail.com' })
+        }
+      />,
+    );
+
+    expect(screen.getByLabelText(/^Email address/)).toHaveValue('new@gmail.com');
+    expect(screen.getByText(/No account uses that Google address/)).toBeVisible();
+    expect(
+      screen.getByRole('checkbox', { name: 'I agree to the Terms of Service' }),
+    ).not.toBeChecked();
+    policies.mockRestore();
   });
 
   it('shows no registration form on a direct visit to the sign-up page', () => {

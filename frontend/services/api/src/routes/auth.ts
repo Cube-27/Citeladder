@@ -2,6 +2,7 @@ import {
   authResponseSchema,
   authSecuritySchema,
   policyRevisionSchema,
+  policyStatusSchema,
   registrationResponseSchema,
   oauthStartResponseSchema,
   oauthProvidersResponseSchema,
@@ -47,13 +48,24 @@ import {
   changePassword,
   LOGIN_FAILURE_OPERATION,
 } from '../auth/challenges.ts';
-import { currentPolicyRevision } from '../workspaces/policies.ts';
+import {
+  accountTermsStatus,
+  currentPolicyRevision,
+  recordAccountTermsDecision,
+  requireCurrentRevision,
+} from '../workspaces/policies.ts';
 
 const credentialsSchema = z.object({
   return_to: z.string().max(1024).optional(),
   email: z.email().trim().max(255),
   password: passwordSchema,
 });
+// Creating an account is a Terms decision: the request must carry it.
+const termsDecisionSchema = z.object({
+  terms_revision: z.string().min(1).max(64),
+  accept_terms: z.literal(true),
+});
+const registrationSchema = credentialsSchema.extend(termsDecisionSchema.shape);
 const base = { family: 'auth', authorize: 'public', params: { path: {}, query: {} } } as const;
 const oauthPath = { provider: { scalar: { kind: 'str' }, required: true } } as const;
 const oauth = policy.auth.oauth;
@@ -103,6 +115,24 @@ function loginFailureBudget(config: ServiceConfig) {
   };
 }
 
+/**
+ * Google found no account for the address on a sign-in: send the person to
+ * sign up, where they make the Terms decision, with the address prefilled.
+ */
+function signUpRedirect(
+  c: Context,
+  config: ServiceConfig,
+  email: string | undefined,
+  returnTo: string | undefined,
+): Response {
+  clearAuthOAuthCookie(c, config);
+  const url = new URL(`${withoutTrailingSlashes(config.auth.frontendUrl)}${oauth.signup_path}`);
+  url.searchParams.set('error', 'oauth_signin_no_account');
+  if (email) url.searchParams.set('email', email);
+  if (returnTo) url.searchParams.set('return_to', returnTo);
+  return c.redirect(url.toString(), 302);
+}
+
 function signInRedirect(c: Context, config: ServiceConfig, error?: string): Response {
   clearAuthOAuthCookie(c, config);
   const url = new URL(
@@ -150,12 +180,40 @@ export const authRoutes = [
   }),
   defineGetRoute({
     ...base,
-    authorize: 'session',
-    // The revision a person accepts when they create their workspace.
+    // The published revision the signup form asks a visitor to accept.
     path: '/api/v1/auth/policies',
     response: policyRevisionSchema,
     async handle() {
       return currentPolicyRevision();
+    },
+  }),
+  defineGetRoute({
+    ...base,
+    authorize: 'session',
+    // The person's own Terms decision on the published revision.
+    path: '/api/v1/auth/terms',
+    response: policyStatusSchema,
+    handle: ({ c, db }) => accountTermsStatus(db, c.get('user').id),
+  }),
+  definePostRoute({
+    ...base,
+    authorize: 'session',
+    // A person without a recorded decision (an operator- or invitation-made
+    // account) reviews the Terms before creating their own workspace.
+    path: '/api/v1/auth/terms',
+    response: policyStatusSchema,
+    body: termsDecisionSchema,
+    async handle({ c, db }) {
+      const { terms_revision } = await readBody(c, termsDecisionSchema);
+      const actorId = c.get('user').id;
+      return db.transaction().execute(async (trx) => {
+        await recordAccountTermsDecision(trx, {
+          actorId,
+          revision: terms_revision,
+          context: 'review',
+        });
+        return accountTermsStatus(trx, actorId);
+      });
     },
   }),
   defineGetRoute({
@@ -252,14 +310,14 @@ export const authRoutes = [
     path: '/api/v1/auth/register',
     response: registrationResponseSchema,
     status: 202,
-    body: credentialsSchema,
+    body: registrationSchema,
     async handle({ c, db, config }) {
       if (config.demo.enabled || !config.auth.publicSignup)
         throw new ApiError(403, 'Registration is disabled');
-      const payload = await readBody(c, credentialsSchema);
+      const payload = await readBody(c, registrationSchema);
       await meter(db, c, config, true);
       await mailboxMeter(db, c, config, payload.email);
-      await registerUser(db, payload.email, payload.password);
+      await registerUser(db, payload.email, payload.password, payload.terms_revision);
       await requestChallenge(db, config, payload.email, 'verification', payload.return_to);
       return acknowledgment;
     },
@@ -330,13 +388,26 @@ export const authRoutes = [
   defineGetRoute({
     ...base,
     path: '/api/v1/auth/oauth/{provider}/start',
-    params: { path: oauthPath, query: { return_to: { scalar: { kind: 'str' }, default: '' } } },
+    params: {
+      path: oauthPath,
+      query: {
+        return_to: { scalar: { kind: 'str' }, default: '' },
+        // A signup start carries the visitor's Terms decision; sign-in does not.
+        accept_terms: { scalar: { kind: 'str' }, default: '' },
+        terms_revision: { scalar: { kind: 'str' }, default: '' },
+      },
+    },
     response: oauthStartResponseSchema,
     async handle({ c, db, config }, { path, query }) {
       await mailboxMeter(db, c, config);
+      const signup = query.accept_terms === 'true';
+      if (signup !== Boolean(query.terms_revision))
+        throw new ApiError(422, 'A Google sign-up needs the Terms decision and its revision.');
+      if (signup) requireCurrentRevision(query.terms_revision);
       const { authorize_url, state, nonce } = await startSignIn(
         config,
         knownProvider(path.provider),
+        signup ? query.terms_revision : undefined,
       );
       setCookie(c, oauth.cookie_name, nonce, {
         ...cookieOptions(config),
@@ -379,8 +450,9 @@ export const authRoutes = [
       if (!query.code || !query.state)
         return signInRedirect(c, config, 'oauth_signin_state_invalid');
       await meter(db, c, config);
+      let continuation: Awaited<ReturnType<typeof openContinuation>> = undefined;
       try {
-        const continuation = await openContinuation(
+        continuation = await openContinuation(
           config,
           getCookie(c, oauth.cookie_name) ?? '',
           getCookie(c, continuationCookie),
@@ -401,6 +473,8 @@ export const authRoutes = [
           ? c.redirect(new URL(continuation.returnTo, config.auth.frontendUrl).toString(), 302)
           : signInRedirect(c, config);
       } catch (error) {
+        if (error instanceof SignInError && error.code === 'oauth_signin_no_account')
+          return signUpRedirect(c, config, error.email, continuation?.returnTo);
         if (error instanceof SignInError) return signInRedirect(c, config, error.code);
         throw error;
       }

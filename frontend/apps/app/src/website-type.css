@@ -36,6 +36,9 @@
      a half with both margins empty. */
   --flow-measure-wide: 64rem;
   --flow-auth-measure: 27.5rem;
+  /* Account access splits one sheet into the form column and a brand panel. */
+  --flow-auth-form-column: 30rem;
+  --flow-auth-split-measure: 62rem;
   --flow-gutter: 1.5rem;
   --flow-header-gap: 2.5rem;
   --flow-block: 2rem;
@@ -445,8 +448,164 @@
    onboarding measure. It is still the SAME sheet: the auth layout used to wrap
    its children in a second surface inside this one, which is how login ended up
    as a white card sitting on a white card. */
+/* Below the split breakpoint the sheet is the form alone; from it up, the same
+   sheet carries the form column and a calm brand panel side by side. */
 .flow-content[data-flow-measure='auth'] {
   width: min(100%, var(--flow-auth-measure));
+  padding: 0;
+}
+
+.auth-split-form {
+  min-width: 0;
+  padding: var(--flow-block) var(--flow-gutter);
+}
+
+.auth-brand-panel {
+  display: none;
+}
+
+@media (min-width: 900px) {
+  .flow-content[data-flow-measure='auth'] {
+    display: grid;
+    grid-template-columns: minmax(0, var(--flow-auth-form-column)) minmax(0, 1fr);
+    width: min(100%, var(--flow-auth-split-measure));
+    overflow: clip;
+  }
+
+  .auth-split-form {
+    align-self: center;
+    padding: var(--flow-header-gap);
+  }
+
+  .auth-brand-panel {
+    position: relative;
+    isolation: isolate;
+    display: grid;
+    align-content: center;
+    gap: var(--flow-header-gap);
+    padding: var(--flow-header-gap);
+    border-left: 1px solid var(--color-border-subtle);
+    background: var(--color-accent-soft);
+    overflow: clip;
+  }
+
+  /* The shared stage lattice, masked away from the tagline. */
+  .auth-brand-panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: var(--lattice);
+    mask-image: radial-gradient(90% 70% at 70% 80%, black, transparent);
+    opacity: 0.6;
+  }
+}
+
+.auth-brand-tagline {
+  margin: 0;
+  max-width: 18ch;
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  line-height: var(--text-2xl--line-height);
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  color: var(--color-foreground);
+  text-wrap: balance;
+}
+
+/* An illustrative answer with one cited source, then a rising citation share.
+   Pure shape: it carries no claims, so it is hidden from assistive tech. */
+.auth-brand-scene {
+  display: grid;
+  gap: var(--flow-answer);
+}
+
+.auth-brand-card {
+  display: grid;
+  gap: 0.75rem;
+  width: min(100%, 20rem);
+  padding: 1rem;
+  border-radius: var(--radius-card);
+  background: var(--color-panel);
+}
+
+.auth-brand-dots,
+.auth-brand-sources {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.auth-brand-dots span {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: var(--radius-full);
+  background: var(--color-ink-faint);
+}
+
+.auth-brand-line {
+  display: block;
+  height: 0.5rem;
+  border-radius: var(--radius-full);
+  background: var(--color-track);
+}
+
+.auth-brand-line[data-length='long'] {
+  width: 85%;
+}
+
+.auth-brand-line[data-length='short'] {
+  width: 55%;
+}
+
+.auth-brand-sources span {
+  width: 3.5rem;
+  height: 1.25rem;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-full);
+  background: var(--color-track);
+}
+
+.auth-brand-sources span[data-cited='true'] {
+  border-color: var(--color-accent-border);
+  background: var(--color-accent-soft);
+}
+
+.auth-brand-chart {
+  display: flex;
+  align-items: flex-end;
+  justify-self: end;
+  width: min(100%, 12rem);
+  height: 6rem;
+  margin-top: -2rem;
+}
+
+.auth-brand-chart span {
+  flex: 1;
+  border-radius: var(--radius-xs);
+  background: var(--color-track);
+}
+
+.auth-brand-chart span[data-step='1'] {
+  height: 20%;
+}
+
+.auth-brand-chart span[data-step='2'] {
+  height: 35%;
+}
+
+.auth-brand-chart span[data-step='3'] {
+  height: 50%;
+}
+
+.auth-brand-chart span[data-step='4'] {
+  height: 70%;
+  background: var(--color-accent-border);
+}
+
+.auth-brand-chart span[data-step='5'] {
+  height: 100%;
+  background: var(--color-accent);
 }
 
 /* The task column is the white paper (it carries `app-pane` at its call site);
@@ -1025,7 +1184,7 @@
     padding-block: 1rem;
   }
 
-  .flow-content[data-flow-measure='auth'] {
+  .auth-split-form {
     padding-block: 1rem;
   }
 

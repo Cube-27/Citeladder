@@ -9,6 +9,7 @@ import { hashPassword, verifyAccountPassword } from './password.ts';
 import { recordSecurityEvent } from './security-events.ts';
 import { requiresEmailVerification } from './eligibility.ts';
 import { subjectXactLock } from '../db/advisory-lock.ts';
+import { recordAccountTermsDecision } from '../workspaces/policies.ts';
 import type { ServiceConfig } from '../config.ts';
 
 const logger = getLogger('app.auth');
@@ -33,18 +34,29 @@ export function issueSession(config: ServiceConfig, user: User): Promise<string>
     .sign(new TextEncoder().encode(config.session.secretKey));
 }
 
-export async function registerUser(db: Database, email: string, password: string): Promise<void> {
+export async function registerUser(
+  db: Database,
+  email: string,
+  password: string,
+  termsRevision: string,
+): Promise<void> {
   // Duplicate addresses pay the same hashing cost and receive the same response.
   const encoded = await hashPassword(password);
   const registeredId = await db.transaction().execute(async (trx) => {
     // Signing up creates no workspace: onboarding creates the owned one and its trial.
     const user = await createIdentity(trx, email, encoded);
-    if (user)
+    if (user) {
       await trx
         .updateTable('users')
         .set({ registration_origin: 'public' })
         .where('id', '=', user.id)
         .execute();
+      await recordAccountTermsDecision(trx, {
+        actorId: user.id,
+        revision: termsRevision,
+        context: 'signup',
+      });
+    }
     return user?.id;
   });
   if (registeredId) logger.info('auth.registered', { user_id: registeredId });

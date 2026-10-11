@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, expect, it } from 'vitest';
+import { policy } from '../src/config.ts';
 import { Fixtures, testConfig, testDatabase } from './support.ts';
 import { provisionDevelopmentLogin } from '../src/auth/bootstrap.ts';
 import { authenticateUser, registerUser } from '../src/auth/service.ts';
@@ -100,7 +101,7 @@ it('refuses existing ordinary/inactive identities; public signup only receives t
     }),
   ).rejects.toThrow('unexpected_development_identity');
   const email = `${randomUUID()}@example.test`;
-  await registerUser(db, email, 'fixture-password');
+  await registerUser(db, email, 'fixture-password', policy.auth.terms_revision);
   const registered = await db
     .selectFrom('users')
     .select('id')

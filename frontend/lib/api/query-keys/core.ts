@@ -4,6 +4,7 @@ export const authKeys = {
   all: ['auth'] as const,
   me: () => ['auth', 'me'] as const,
   policies: () => ['auth', 'policies'] as const,
+  terms: () => ['auth', 'terms'] as const,
 };
 
 export const workspaceKeys = {

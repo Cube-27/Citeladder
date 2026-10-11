@@ -3,6 +3,7 @@ import {
   aeoReadinessSchema,
   architectureSchema,
   changeSummarySchema,
+  issueHistoryPageSchema,
   pagesPageSchema,
   pageDetailSchema,
   siteCrawlEventSchema,
@@ -670,6 +671,36 @@ describe('snapshot projections', () => {
       const line = tree.split('\n').find((line) => line.includes(`https://example.test${path}`));
       expect(line).toContain('[product]');
     }
+  });
+});
+
+describe('issue history', () => {
+  it('lists only resolved issues, never the page’s current ones', async () => {
+    const seed = await fixtures.crawl();
+    const home = await page(seed, '/');
+    // A superseded analysis of the same URL in this crawl, before a re-audit.
+    const earlier = await fixtures.page(seed, '/', {}, { current: false, siteUrlId: home.id });
+    await issue(seed, earlier, 'technical.indexable');
+    await issue(seed, earlier, 'technical.title_present');
+    await issue(seed, home, 'technical.indexable');
+
+    const path = `/site-crawls/${seed.crawlId}/pages/${home.id}/issue-history`;
+    const history = await json(seed, path, issueHistoryPageSchema);
+    expect(history.current_analysis_finalized).toBe(true);
+    expect(history.items.map((row: { rule_id: string }) => row.rule_id)).toEqual([
+      'technical.title_present',
+    ]);
+    // An unfinished analysis says so instead of reading as "nothing resolved".
+    const pending = await fixtures.page(seed, '/pending', {});
+    await observe(seed, pending.id);
+    expect(
+      await json(
+        seed,
+        `/site-crawls/${seed.crawlId}/pages/${pending.id}/issue-history`,
+        issueHistoryPageSchema,
+      ),
+    ).toEqual({ items: [], next_cursor: null, current_analysis_finalized: false });
+    expect((await get(await fixtures.crawl(), path)).status).toBe(404);
   });
 });
 

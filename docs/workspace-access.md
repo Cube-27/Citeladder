@@ -17,12 +17,19 @@ accounts with the native `account:manage` CLI. New public identities are pending
 until mailbox verification; operator-created identities retain their explicit
 access policy without invented verification timestamps. Every identity names its
 origin (`public` or `operator`); any other origin requires verification. Google sign-in is gated
-by `OAUTH_GOOGLE_ENABLED`; new Google identities also require `PUBLIC_SIGNUP_ENABLED`.
+by `OAUTH_GOOGLE_ENABLED`; new Google identities also require `PUBLIC_SIGNUP_ENABLED`
+and a sign-up start. Only Google started from the signup form carries the Terms
+decision (`accept_terms` and the published `terms_revision`, sealed in the signed
+state) and may create an account. Google started from sign-in never creates one:
+an unknown address is redirected to `/register` with the address prefilled and a
+`oauth_signin_no_account` notice.
 Email/password login and Google sign-in establish the HttpOnly session;
 session-version checks invalidate stale sessions. Neither signing up nor signing
 in creates a workspace. Onboarding creates the person's own workspace
-(`POST /workspaces`) before its first project; that request carries the Terms
-revision shown (`GET /auth/policies`), records the acceptance, spends the shared
+(`POST /workspaces`) before its first project; that request carries the
+published Terms revision, is refused (`terms_decision_required`) unless the
+creator has a recorded account Terms decision on it, records the workspace
+acceptance, spends the shared
 daily trial budget for a public identity, and starts the trial. A person has one
 trial: a workspace created after handing ownership away inherits the window of
 their first. After sign-in the
@@ -79,9 +86,16 @@ authorized to publish the global billing catalog or administer other workspaces.
 
 Every workspace a person opens needs their acceptance of the current Terms
 revision (`/workspaces/{id}/policies`). This covers password, Google-created and
-operator-created identities. The decision is taken at signup (an unticked,
-required checkbox) and when the person creates their workspace, which records it
-with the creation; signing in asks nothing. A signup decision made in the same tab
+operator-created identities. Creating an account is itself a Terms decision:
+`POST /auth/register` and a Google sign-up start refuse a request without
+`accept_terms` and the published revision (`GET /auth/policies`, public), and
+record it in `account_policy_acceptances` (actor, revision, context `signup`,
+timestamp; append-only, idempotent per revision) with the account. The signup
+form's unticked, required checkbox gates both ways in, so normal signup has no
+second consent step and signing in asks nothing. A person without a recorded
+account decision (an operator- or invitation-made account, or a new revision)
+sees the same review screen at workspace setup before naming the workspace;
+`GET/POST /auth/terms` read and record it (context `review`). A signup decision made in the same tab
 is recorded for a workspace the person then joins. Otherwise, for a workspace
 joined without that decision or after a new revision, the explicit review screen
 appears, with sign-out and, when there is another workspace, a switch to the
