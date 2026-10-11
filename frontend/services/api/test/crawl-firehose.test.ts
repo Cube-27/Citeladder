@@ -155,6 +155,11 @@ describe('Firehose delivery', () => {
       for (let attempt = 0; attempt < 3; attempt++)
         expect((await deliver(id, token, body, { requestId: 'req-retry' })).status).toBe(200);
       expect(await receipts(id)).toHaveLength(1);
+      // A delivered request ID is answered before its body is read or decoded.
+      const garbled = await deliver(id, token, 'not a Firehose request', {
+        requestId: 'req-retry',
+      });
+      expect(garbled.status).toBe(200);
       const other = await deliver(id, token, envelope('req-next', [record(log())]), {
         requestId: 'req-next',
       });

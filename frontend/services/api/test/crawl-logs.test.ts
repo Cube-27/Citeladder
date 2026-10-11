@@ -508,6 +508,23 @@ describe('sanitized durable admission', () => {
         .execute(),
     ).toHaveLength(2);
   });
+  it('answers a retried key from its stored receipt without decoding the new body', async () => {
+    const { source, token } = await setup();
+    const key = randomUUID();
+    const accepted = await send(source.id, token, body(event()), key);
+    expect(accepted.status).toBe(202);
+    const retried = await app.request('/v1/crawl-logs/ingest/' + source.id, {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer ' + token,
+        'content-encoding': 'gzip',
+        'idempotency-key': key,
+      },
+      body: new Uint8Array(Buffer.from('not a gzip stream')),
+    });
+    expect(retried.status).toBe(202);
+    expect(await retried.json()).toEqual(await accepted.json());
+  });
   it('refuses wrong, rotated and revoked tokens and never permits a token from another project', async () => {
     const a = await setup(),
       b = await setup();
