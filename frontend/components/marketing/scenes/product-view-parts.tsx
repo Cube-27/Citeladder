@@ -78,7 +78,9 @@ export function BarCell({
 }: Readonly<{ value: number; max: number; tone: string; wide?: boolean; children: ReactNode }>) {
   return (
     <span className={cn('pv-bar-cell', wide && 'pv-bar-wide')}>
-      <i data-tone={tone} style={{ width: `${(value / max) * 100}%` }} />
+      <span className="pv-bar-track" aria-hidden>
+        <i data-tone={tone} style={{ width: `${(value / max) * 100}%` }} />
+      </span>
       {children}
     </span>
   );

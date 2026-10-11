@@ -348,7 +348,7 @@
 
 .mk-capability-desc {
   display: block;
-  color: var(--color-muted);
+  color: var(--color-secondary);
   font-size: var(--text-sm);
   line-height: var(--text-sm--line-height);
 }
@@ -451,8 +451,8 @@
   display: flex;
   gap: 0.5rem;
   color: var(--color-secondary);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  font-size: var(--text-base);
+  line-height: var(--text-base--line-height);
 }
 
 .mk-checks svg,
