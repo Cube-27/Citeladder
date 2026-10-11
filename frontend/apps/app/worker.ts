@@ -1,6 +1,7 @@
 import { proxyWorkerRequest } from '../../lib/server/worker-origin-proxy';
 import { APP_CONTENT_SECURITY_POLICY } from '../../lib/config/content-security-policy';
 import { SECURITY_HEADERS as SHARED_SECURITY_HEADERS } from '../../lib/config/security-headers';
+import { routePath } from '../../lib/navigation/route-path';
 import type { WorkerEnv as GeneratedEnv } from './worker-configuration';
 
 // Local Compose runs this Worker under `wrangler dev` over HTTP against the
@@ -159,11 +160,7 @@ export async function handleAppRequest(request: Request, env: WorkerEnv): Promis
   }
   const routed = await dynamicRoute(request, env, path);
   const result = routed ? decorate(routed) : await staticOrNavigation(request, env, url, path);
-  if (
-    ['/verify-email', '/reset-password', '/invitations/accept'].includes(
-      path.replace(/\/+$/u, '').toLowerCase(),
-    )
-  ) {
+  if (['/verify-email', '/reset-password', '/invitations/accept'].includes(routePath(path))) {
     const headers = new Headers(result.headers);
     headers.set('Referrer-Policy', 'no-referrer');
     headers.set('Cache-Control', 'no-store');

@@ -15,6 +15,7 @@ import type { WorkspaceEntitlement } from '@/lib/api/billing';
 import { PROJECT_SLOTS_CAPABILITY } from '@/lib/config/billing';
 import { capabilityRemaining } from '@/lib/billing/entitlement-capability';
 import type { SelectionStatus } from '@/lib/project/selection';
+import { routePath } from '@/lib/navigation/route-path';
 
 /**
  * Routes that manage the WORKSPACE rather than work inside a project.
@@ -58,7 +59,7 @@ export function ownsWorkspace(workspaces: readonly { role: string }[]): boolean 
  * leaving.
  */
 export function isWorkspaceFreeRoute(pathname: string, search: string): boolean {
-  const path = pathname.replace(/\/+$/u, '').toLowerCase();
+  const path = routePath(pathname);
   if (path === WORKSPACE_CHOOSER_PATH) return true;
   return path === '/onboarding' && new URLSearchParams(search).get('setup') === 'workspace';
 }

@@ -6,6 +6,7 @@ import { AuthEmailField, AuthFormShell, AuthPasswordField } from './auth-form';
 import { authApi } from '@/lib/api/auth';
 import { authFormPolicy, passwordHint } from '@/lib/config/auth';
 import { authErrorMessage } from '@/lib/auth/forms';
+import { routePath } from '@/lib/navigation/route-path';
 import { safeAuthReturnPath, withAuthReturnPath } from '@/lib/auth/auth-return-path';
 
 type MailboxOperation =
@@ -40,10 +41,7 @@ function mailboxFooter(operation: MailboxOperation, incomplete: boolean, returnT
 export default function MailboxScreen() {
   const location = useLocation();
   const [search] = useSearchParams();
-  const operation = location.pathname
-    .replace(/\/+$/u, '')
-    .slice(1)
-    .toLowerCase() as MailboxOperation;
+  const operation = routePath(location.pathname).slice(1) as MailboxOperation;
   const confirmation = operation === 'verify-email' || operation === 'reset-password';
   const [secrets] = useState(() => {
     const fragment = new URLSearchParams(window.location.hash.slice(1));

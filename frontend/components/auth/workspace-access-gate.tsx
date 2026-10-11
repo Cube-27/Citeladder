@@ -8,6 +8,7 @@ import { queryKeys } from '@/lib/api/query-keys';
 import { workspaceAccessSchema as accessSchema } from '@citeladder/contracts/auth';
 import { useProjectContext } from '@/lib/project/project-context';
 import { isWorkspaceFreeRoute } from '@/lib/project/bootstrap';
+import { routePath } from '@/lib/navigation/route-path';
 import { contactSalesHref } from '@/lib/config/contact';
 import { websiteHref } from '@/lib/config/app-link';
 import { getBootstrapReadTimeoutMs } from '@/lib/config/operational';
@@ -82,7 +83,7 @@ export function WorkspaceAccessGate({ children }: Readonly<{ children: ReactNode
   // Accepting an invitation, choosing a workspace and setting up your own never
   // wait on the selected workspace's access; someone with no workspace has none.
   const recovery =
-    location.pathname.replace(/\/+$/u, '').toLowerCase() === '/invitations/accept' ||
+    routePath(location.pathname) === '/invitations/accept' ||
     isWorkspaceFreeRoute(location.pathname, location.search) ||
     status === 'no_workspace';
   const access = useQuery({

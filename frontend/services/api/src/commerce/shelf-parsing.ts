@@ -5,6 +5,7 @@ import { canonicalPage } from '../traffic/normalization.ts';
 import { localizedPrice } from './projection-facts.ts';
 import { onlyOf } from '../lists.ts';
 import { domainMatches } from '../analysis/domains.ts';
+import { stripTrailing } from '../text-order.ts';
 
 export const shelfPolicy = auditPolicy.commerce_shelf;
 export const boundedText = (text: string, limit: number) => [...text].slice(0, limit).join('');
@@ -272,7 +273,7 @@ export function resolvedCompetitorUrl(
     return null;
   // Sentence punctuation after a URL is not part of it.
   const inAnswer = (evidence.answer.match(/https?:\/\/[^\s)\]}>,"']+/giu) ?? []).some(
-    (value) => canonicalPage(value.replace(/[.;:!?]+$/u, '')) === canonical,
+    (value) => canonicalPage(stripTrailing(value, '.;:!?')) === canonical,
   );
   if (!inAnswer) return null;
   const parsed = new URL(canonical);
