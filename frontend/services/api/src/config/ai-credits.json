@@ -1,0 +1,28 @@
+{
+  "revision": "ai-pricing-v1",
+  "credit_microusd": 1000,
+  "markup_percent": 130,
+  "unknown_usage_credits": 10,
+  "unsettled_after_seconds": 900,
+  "gateway_default_price": "claude-haiku-5-5",
+  "models": {
+    "claude-haiku-5-5": {
+      "input_microusd_per_million": 100000,
+      "cached_input_microusd_per_million": 10000,
+      "output_microusd_per_million": 500000
+    }
+  },
+  "features": {
+    "agent": "credits",
+    "prompt_generation": "credits",
+    "project_research": "credits",
+    "commerce_buyer_prompts": "credits",
+    "answer_perception": "included",
+    "fact_verification": "included",
+    "commerce_shelf": "included",
+    "prompt_quality_judge": "not_charged",
+    "internal_link_judge": "not_charged",
+    "commerce_competitor_discovery": "not_charged",
+    "research_evidence": "not_charged"
+  }
+}

@@ -16,6 +16,7 @@ import {
   type Transport,
 } from './http.ts';
 import { anthropicCompletion, isAnthropicEndpoint } from './anthropic.ts';
+import { assertMetered } from './meter-scope.ts';
 
 export type GatewaySettings = {
   apiKey: string;
@@ -219,13 +220,26 @@ export function createModelGateway(
   }
   // The platform's base URL alone chooses the API, so switching provider is configuration.
   const anthropic = api === 'detect' && isAnthropicEndpoint(endpoint);
-  const complete = anthropic
+  const send = anthropic
     ? anthropicCompletion(settings, transport, endpoint)
     : openAICompletion(settings, transport, endpoint);
+  // Every platform model call runs inside a metering scope (B18).
+  const complete: Complete = async (...args) => {
+    assertMetered('model_gateway');
+    return send(...args);
+  };
   return {
     model: settings.model,
+    maxOutputTokens: settings.maxOutputTokens,
     baseUrlHost: endpoint.hostname,
     adapter: anthropic ? ('anthropic' as const) : ('openai_compatible' as const),
+    ...gatewayCalls(complete),
+  };
+}
+
+/** The structured-call surface over one `complete`, metered or raw. */
+export function gatewayCalls(complete: Complete) {
+  return {
     complete,
     async completeStructured(
       system: string,
@@ -243,7 +257,8 @@ export function createModelGateway(
       try {
         return { value: schema.parse(JSON.parse(unfenced(result.content))), result };
       } catch {
-        throw new ModelError('parse');
+        // The provider was paid for an answer the caller cannot use; its usage still settles.
+        throw new ModelError('parse', undefined, undefined, result.usage);
       }
     },
   };

@@ -1,5 +1,4 @@
 import type { Database } from '../db/database.ts';
-import { policy, resolveSettingSpec } from '../config.ts';
 import { gatewaySettings } from '../models/gateway.ts';
 import { agentSettings } from './config.ts';
 import { loadSkillCatalog } from './skills.ts';
@@ -32,11 +31,7 @@ export async function createAgentBindings(db: Database, env = process.env) {
     tools,
     models,
     attachTarget: attachAgentTarget,
-    modelFor: agentModels(
-      db,
-      String(resolveSettingSpec(policy.settings.encryption_key, env)),
-      platform,
-    ),
+    modelFor: agentModels(platform),
   });
   return {
     catalog,

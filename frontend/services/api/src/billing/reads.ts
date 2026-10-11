@@ -12,6 +12,7 @@ import { accountState, drawOrder, grantExpiry } from '../entitlements/state.ts';
 import { ledgerBalances } from '../entitlements/ledger.ts';
 import { workspaceAccount } from './purchases.ts';
 import { catalog, capabilityValue } from './catalog.ts';
+import { credentialModeOf } from './credential-mode.ts';
 import { checkoutAvailable } from './razorpay.ts';
 import { scheduledSchema } from './settlement.ts';
 
@@ -57,24 +58,24 @@ export async function publicCatalog(db: Database, config: ServiceConfig, country
     currency,
     currency_minor_units: 2,
     plans: published.payload.plans.map((plan) => {
-      const price = plan.regional_byok_prices[region];
-      const available =
-        plan.self_serve &&
-        !plan.contact_only &&
-        Boolean(price?.provider_price_ref) &&
-        price?.tax_verified &&
-        price.provider_mode === config.razorpay.mode &&
-        checkoutAvailable(config.billing, config.razorpay, region);
-      const funded = plan.funded_price;
-      const coming = new Set<string>(policy.billing.contracts.coming_soon_plan_capability_keys);
-      const capabilities = [
-        ...plan.grants,
-        ...(policy.billing.contracts.coming_soon_row_plan_keys.includes(plan.key)
-          ? [...coming]
-              .filter((key) => !plan.grants.some((grant) => grant.key === key))
-              .map((key) => ({ key, value: null }))
-          : []),
-      ];
+      // Each mode is purchasable only with its own verified provider plan (B32).
+      const offer = (mode: 'byok' | 'funded') => {
+        const price = plan.regional_prices[mode][region];
+        const listed = mode === 'byok' ? plan.byok_price : plan.funded_price;
+        return {
+          price: money(price ?? (region === 'international' ? listed : null)),
+          available: Boolean(
+            plan.self_serve &&
+            !plan.contact_only &&
+            price?.provider_price_ref &&
+            price.tax_verified &&
+            price.provider_mode === config.razorpay.mode &&
+            checkoutAvailable(config.billing, config.razorpay, region),
+          ),
+        };
+      };
+      const byok = offer('byok'),
+        funded = offer('funded');
       return {
         key: plan.key,
         name: plan.name,
@@ -83,18 +84,18 @@ export async function publicCatalog(db: Database, config: ServiceConfig, country
         self_serve: plan.self_serve,
         contact_only: plan.contact_only,
         contact_url: plan.contact_only ? config.billing.contactUrl : null,
-        base_price: money(price ?? (region === 'international' ? plan.byok_price : null)),
-        credit_price: null,
-        funded_total_price: funded ? money(funded) : null,
-        checkout_available: Boolean(available),
-        unavailable_reason: unavailableReason(Boolean(available), plan.contact_only),
-        capabilities: capabilities.map((grant) => ({
+        base_price: byok.price,
+        funded_total_price: funded.price,
+        checkout_available: byok.available,
+        funded_checkout_available: funded.available,
+        unavailable_reason: unavailableReason(byok.available, plan.contact_only),
+        capabilities: plan.grants.map((grant) => ({
           key: grant.key,
           capability_type:
             policy.entitlements.capabilities[
               grant.key as keyof typeof policy.entitlements.capabilities
             ]?.type,
-          value: grant.value === null ? null : capabilityValue(grant.key, grant.value),
+          value: capabilityValue(grant.key, grant.value),
           issuable:
             policy.entitlements.capabilities[
               grant.key as keyof typeof policy.entitlements.capabilities
@@ -291,6 +292,7 @@ export async function workspaceEntitlementRead(db: Database, workspaceId: string
     registry_revision: policy.entitlements.registry_revision,
     entitlement_lifecycle_version: account?.entitlement_lifecycle_version ?? 0,
     valid_until: state?.validUntil?.toISOString() ?? null,
+    credential_mode: credentialModeOf(state?.subscription),
     capabilities: state
       ? [...state.values].map(([key, value]) => ({
           key,

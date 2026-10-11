@@ -4,8 +4,8 @@
  * These functions are the ONLY place a price, limit, or availability decision
  * is derived, and they derive it entirely from the catalog response. No module
  * here holds a price constant, and none may compute a total the server did not
- * send: a null `credit_price` means funded is not yet priced, which is a
- * distinct outcome from "free" and must never collapse to zero.
+ * send: a null price means that mode is not priced, which is a distinct
+ * outcome from "free" and must never collapse to zero.
  */
 import type {
   BillingCatalog,
@@ -39,18 +39,17 @@ export function isSelfServeKey(key: string): key is SelfServePlanKey {
 /**
  * The price to display for one plan in one credential mode.
  *
- * BYOK resolves to `base_price` — the only measured, available price in this
- * release. Funded resolves to `credit_price`, which is null while funded
- * inputs are unset, so it returns an explicit unavailable result. A
- * contact-only plan never shows a number at all.
+ * BYOK resolves to `base_price` and managed to `funded_total_price`; a null
+ * price returns an explicit unavailable result. A contact-only plan never
+ * shows a number at all.
  */
 export function headlinePrice(plan: CatalogPlan, mode: CredentialMode): HeadlinePrice {
   if (plan.contact_only) {
     return { kind: 'contact' };
   }
   if (mode === 'funded') {
-    return plan.credit_price
-      ? { kind: 'price', money: plan.credit_price }
+    return plan.funded_total_price
+      ? { kind: 'price', money: plan.funded_total_price }
       : { kind: 'unavailable', reason: plan.unavailable_reason };
   }
   return plan.base_price
@@ -65,18 +64,14 @@ export type CheckoutSelection =
 /**
  * The checkout request fields for one plan, or a refusal.
  *
- * Refuses contact-only plans, plans the catalog marks unpurchasable, and any
- * funded selection while `credit_price` is null — the client must not be able
- * to start a checkout the backend would have to reject.
+ * Refuses contact-only plans and any mode the catalog marks unpurchasable —
+ * the client must not be able to start a checkout the backend would reject.
  */
 export function checkoutSelection(plan: CatalogPlan, mode: CredentialMode): CheckoutSelection {
   if (plan.contact_only || !plan.self_serve || !isSelfServeKey(plan.key)) {
     return { ok: false, reason: plan.unavailable_reason };
   }
-  if (!plan.checkout_available) {
-    return { ok: false, reason: plan.unavailable_reason };
-  }
-  if (mode === 'funded') {
+  if (!(mode === 'funded' ? plan.funded_checkout_available : plan.checkout_available)) {
     return { ok: false, reason: plan.unavailable_reason };
   }
   return { ok: true, catalog_key: plan.key, credential_mode: mode };

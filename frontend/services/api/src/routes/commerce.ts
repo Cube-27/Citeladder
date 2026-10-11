@@ -28,6 +28,7 @@ import type { Database } from '../db/database.ts';
 import { ApiError } from '../errors.ts';
 import { readBody } from '../http/body.ts';
 import { requireProject } from '../projects/access.ts';
+import { requireCommerce } from '../entitlements/occupancy.ts';
 import { defineGetRoute, definePatchRoute, definePostRoute } from './define.ts';
 
 const family = 'commerce';
@@ -60,6 +61,13 @@ async function scopeOf(db: Database, c: Context<AppEnv>, projectId: string) {
   return { workspaceId: workspace.workspaceId, projectId };
 }
 
+/** Changes and new work need Commerce in the plan; reads of collected data do not. */
+async function writeScopeOf(db: Database, c: Context<AppEnv>, projectId: string) {
+  const scope = await scopeOf(db, c, projectId);
+  await requireCommerce(db, scope.workspaceId);
+  return scope;
+}
+
 export const commerceRoutes = [
   definePostRoute({
     family,
@@ -69,7 +77,7 @@ export const commerceRoutes = [
     body: executeDiscoveriesBody,
     response: z.array(competitorDiscoveryTaskSchema),
     async handle({ c, db, config }, { path }) {
-      const scope = await scopeOf(db, c, path.project_id);
+      const scope = await writeScopeOf(db, c, path.project_id);
       const { task_ids } = await readBody(c, executeDiscoveriesBody);
       return executeCompetitorDiscoveries(db, config, scope, task_ids);
     },
@@ -85,7 +93,7 @@ export const commerceRoutes = [
     async handle({ c, db }, { path }) {
       return enqueueDiscoveries(
         db,
-        await scopeOf(db, c, path.project_id),
+        await writeScopeOf(db, c, path.project_id),
         await readBody(c, discoveryInput),
       );
     },
@@ -101,7 +109,7 @@ export const commerceRoutes = [
     async handle({ c, db }, { path }) {
       return generateBuyerPrompts(
         db,
-        await scopeOf(db, c, path.project_id),
+        await writeScopeOf(db, c, path.project_id),
         await readBody(c, buyerGenerateInput),
       );
     },
@@ -117,7 +125,7 @@ export const commerceRoutes = [
     async handle({ c, db }, { path }) {
       return manualBuyerPrompt(
         db,
-        await scopeOf(db, c, path.project_id),
+        await writeScopeOf(db, c, path.project_id),
         await readBody(c, buyerManualInput),
       );
     },
@@ -140,7 +148,7 @@ export const commerceRoutes = [
     body: importBody,
     response: catalogImportSchema,
     async handle({ c, db }, { path }) {
-      const scope = await scopeOf(db, c, path.project_id);
+      const scope = await writeScopeOf(db, c, path.project_id);
       return importCatalog(db, scope, await readBody(c, importBody));
     },
   }),
@@ -170,7 +178,7 @@ export const commerceRoutes = [
     body: candidateBody,
     response: competitorCandidateSchema,
     async handle({ c, db }, { path }) {
-      const scope = await scopeOf(db, c, path.project_id);
+      const scope = await writeScopeOf(db, c, path.project_id);
       return decideCandidate(
         db,
         scope,
@@ -196,7 +204,7 @@ export const commerceRoutes = [
     body: promptBody,
     response: buyerPromptSchema,
     async handle({ c, db }, { path }) {
-      const scope = await scopeOf(db, c, path.project_id);
+      const scope = await writeScopeOf(db, c, path.project_id);
       return decideBuyerPrompt(db, scope, path.prompt_id, (await readBody(c, promptBody)).approved);
     },
   }),

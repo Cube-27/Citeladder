@@ -10,6 +10,7 @@ import { analyzeExecution } from '../analysis/execution.ts';
 import { auditPolicy } from '../audits/config.ts';
 import { createModelGateway, gatewaySettings } from '../models/gateway.ts';
 import { agentCallLimit, enforceWorkspaceRequest } from '../abuse/usage.ts';
+import { meterFor, type Meter } from '../billing/metering.ts';
 import { lockCatalog } from './catalog-store.ts';
 import { ownedHosts } from './discovery-validation.ts';
 import {
@@ -29,22 +30,29 @@ import {
 export function frozenShelfIds(frozen: Record<string, unknown>) {
   return strings(frozen.prompt_target_ids).filter((id) => z.uuid().safeParse(id).success);
 }
+/** A resolver that runs its model call under the answer's workspace meter. */
+export type MeterableShelfResolver = {
+  model: string;
+  resolve(spans: string[], meter: Meter): Promise<unknown>;
+};
 export function configuredShelfResolver(
   env: Record<string, string | undefined> = process.env,
   signal?: AbortSignal,
-): ShelfResolver | undefined {
+): MeterableShelfResolver | undefined {
   try {
     const gateway = createModelGateway(gatewaySettings(env));
     return {
       model: gateway.model,
-      resolve: async (spans) =>
+      resolve: async (spans, meter) =>
         (
-          await gateway.structured(
-            'Extract only recommended products from these numbered answer spans. For each product, set span to the index of the span that recommends it. Keep product identity separate from merchant and citation URLs. Set product_url only when a URL written in that span identifies the recommended PDP; set merchant_url only for a seller link. Omit any span you are uncertain about.',
-            JSON.stringify({ spans: spans.map((text, index) => ({ index, text })) }),
-            resolvedBatchSchema,
-            signal,
-          )
+          await meter
+            .gateway(gateway, 'commerce_shelf')
+            .structured(
+              'Extract only recommended products from these numbered answer spans. For each product, set span to the index of the span that recommends it. Keep product identity separate from merchant and citation URLs. Set product_url only when a URL written in that span identifies the recommended PDP; set merchant_url only for a seller link. Omit any span you are uncertain about.',
+              JSON.stringify({ spans: spans.map((text, index) => ({ index, text })) }),
+              resolvedBatchSchema,
+              signal,
+            )
         ).value,
     };
   } catch {
@@ -60,14 +68,14 @@ export function configuredShelfResolver(
 function metered(
   db: Database,
   workspaceId: string,
-  resolver: ShelfResolver | null | undefined,
+  resolver: MeterableShelfResolver | null | undefined,
 ): ShelfResolver | undefined {
   if (!resolver) return undefined;
   return {
     model: resolver.model,
     resolve: async (spans) => {
       await enforceWorkspaceRequest(db, workspaceId, agentCallLimit(1));
-      return resolver.resolve(spans);
+      return resolver.resolve(spans, meterFor(db, workspaceId));
     },
   };
 }
@@ -235,7 +243,7 @@ export async function prepareShelfExecution(
   db: Database,
   task: AuditTask,
   result: Pick<ExecutionResult, 'answer_text'>,
-  resolver: ShelfResolver | null | undefined = undefined,
+  resolver: MeterableShelfResolver | null | undefined = undefined,
 ): Promise<DeriveExecution> {
   const audit = await db
     .selectFrom('audits')

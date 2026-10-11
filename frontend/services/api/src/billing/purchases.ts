@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
+
 import { activationSchema, resolvedQuoteSchema } from '@citeladder/contracts/billing';
 import type { Database } from '../db/database.ts';
 import type { ServiceConfig } from '../config.ts';
@@ -25,11 +26,13 @@ import {
   type BillingProvider,
 } from './razorpay.ts';
 
+const credentialMode = z.enum(['byok', 'funded']);
+
 const nullableState = z.string().trim().nullable().default(null);
 export const baseRequest = z
   .object({
     catalog_key: z.enum(['tier_1', 'tier_2', 'tier_3']),
-    credential_mode: z.enum(['byok', 'funded']),
+    credential_mode: credentialMode,
     country_code: z
       .string()
       .trim()
@@ -47,7 +50,6 @@ export const baseRequest = z
         !value || identitySchema.shape.customer_gstin.safeParse(value.toUpperCase()).success,
     ),
     export_eligibility_attested: z.boolean().default(false),
-    trial_requested: z.boolean().default(false),
   })
   .strict();
 export const packRequest = z
@@ -93,7 +95,6 @@ export function activationResponse(pending: Pending) {
     quantity: pending.quantity,
     status: pending.status,
     quote: resolvedQuoteSchema.parse(pending.quote),
-    checkout_url: null,
     expires_at: pending.expires_at.toISOString(),
     failure_code: pending.failure_code,
   });
@@ -123,7 +124,8 @@ function matches(pending: Pending, request: ReturnType<typeof requestIdentity>) 
     pending.activation_kind === request.kind &&
     pending.catalog_key === request.key &&
     pending.quantity === request.quantity &&
-    pending.credential_mode === request.mode &&
+    // A pack follows the plan's mode; only a base purchase chooses one.
+    (request.kind !== 'base' || pending.credential_mode === request.mode) &&
     pending.country_code === request.country &&
     digest(snapshot.customer) === digest(request.identity)
   );
@@ -154,7 +156,7 @@ export function createPending(
       catalog_key: intent.key,
       catalog_revision: intent.quote.catalog_revision,
       quantity: intent.quantity,
-      credential_mode: 'byok',
+      credential_mode: intent.mode,
       country_code: intent.country,
       region: intent.region,
       status: 'pending',
@@ -165,7 +167,6 @@ export function createPending(
       external_price_id: intent.priceRef || null,
       provider: 'razorpay',
       provider_mode: mode,
-      checkout_url: null,
       idempotency_key: key,
       request_fingerprint: fingerprint,
       expires_at: new Date(intent.quote.expires_at),
@@ -268,12 +269,13 @@ function purchaseIntent(
     intent = baseIntent(
       config.billing,
       plan,
+      credentialMode.parse(request.mode),
       identity.country,
       identity.identity,
       frozen.revision,
       now,
     );
-    const price = plan.regional_byok_prices[intent.region];
+    const price = plan.regional_prices[intent.mode][intent.region];
     if (price?.provider_mode !== config.razorpay.mode) conflict('checkout_unavailable');
   } else {
     const item = (request.kind === 'addon' ? frozen.payload.addons : frozen.payload.topups).find(
@@ -282,6 +284,7 @@ function purchaseIntent(
     if (!item) conflict('catalog_key_unknown');
     intent = packIntent(config.billing, item, {
       kind: request.kind,
+      mode: credentialMode.parse(current!.credential_mode),
       quantity: request.quantity,
       planKey: current!.catalog_key,
       country: identity.country,
@@ -324,7 +327,6 @@ export async function purchase(
         .executeTakeFirst()
     )
       conflict('idempotency_key_reused');
-    if (request.mode !== 'byok') conflict('checkout_unavailable');
     const current = await purchasable(trx, account.id, request);
     const frozen = await catalog(trx);
     const now = new Date();

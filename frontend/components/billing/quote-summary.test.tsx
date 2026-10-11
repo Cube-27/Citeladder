@@ -19,7 +19,6 @@ function quote(overrides: Partial<BillingQuote>): BillingQuote {
     subtotal_price: inr(449900),
     discount: inr(0),
     taxable_value: inr(449900),
-    credit_price: null,
     tax: inr(80982),
     tax_treatment: 'CGST_SGST',
     tax_rate: '0.18',

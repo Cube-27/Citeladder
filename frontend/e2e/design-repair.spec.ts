@@ -125,6 +125,7 @@ for (const additionalAllowed of [false, true]) {
           registry_revision: 'entitlements-v1',
           entitlement_lifecycle_version: 1,
           valid_until: null,
+          credential_mode: 'byok',
           capabilities: [],
           occupancy: [
             { key: 'project_slots', allowance, consumed, remaining: allowance - consumed },

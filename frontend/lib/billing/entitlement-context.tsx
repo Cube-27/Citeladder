@@ -22,6 +22,11 @@ type EntitlementContextValue = {
    */
   hasCapability: (key: string) => boolean;
   canStartPaidWork: boolean;
+  /**
+   * A managed plan: the platform supplies engine and DataForSEO keys, so the
+   * workspace neither sees nor needs provider settings (B32).
+   */
+  managed: boolean;
 };
 
 const FAIL_CLOSED: Omit<EntitlementContextValue, 'isLoading'> = {
@@ -31,6 +36,7 @@ const FAIL_CLOSED: Omit<EntitlementContextValue, 'isLoading'> = {
   usageIsError: false,
   hasCapability: () => false,
   canStartPaidWork: false,
+  managed: false,
 };
 
 const EntitlementContext = createContext<EntitlementContextValue | null>(null);
@@ -127,6 +133,7 @@ export function EntitlementProvider({ children }: Readonly<{ children: ReactNode
       // Product controls follow effective capability authority, not a plan name
       // or historical grant kind. Backend admission remains authoritative.
       canStartPaidWork: hasCapability(AGENT_CAPABILITY),
+      managed: data.credential_mode === 'funded',
     };
   }, [
     canReadBilling,
@@ -153,3 +160,11 @@ export function useEntitlement() {
  * it without this provider.
  */
 export { capabilityRemaining } from '@/lib/billing/entitlement-capability';
+
+/**
+ * Whether the workspace is on a managed plan (B32). Fails closed like every
+ * entitlement hint: outside a resolved entitlement it reads as BYOK.
+ */
+export function useManagedPlan(): boolean {
+  return useContext(EntitlementContext)?.managed ?? false;
+}

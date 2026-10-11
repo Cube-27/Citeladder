@@ -14,7 +14,6 @@ import { providerSettings } from '../src/providers/config.ts';
 import { createConnectionInput, updateConnectionInput } from '../src/providers/inputs.ts';
 import { probeConnection } from '../src/providers/probes.ts';
 import { connectionStates } from '../src/providers/states.ts';
-import { sendProbe } from '../src/providers/probe-transport.ts';
 import { Fixtures, sessionToken, testConfig, testDatabase } from './support.ts';
 
 const config = testConfig();
@@ -65,18 +64,6 @@ describe('provider credential custody', () => {
       { transport_provider: 'openai', api_login: 'user', api_password: 'password' },
       { transport_provider: 'openai' },
       { transport_provider: 'openai', api_key: 'key', base_url: 'http://private.example.test' },
-      {
-        transport_provider: 'openai',
-        api_key: 'key',
-        app_routes: [
-          {
-            feature: 'agent',
-            model: 'model',
-            disclosure_accepted: true,
-            api_base_url: 'https://user:password@example.test',
-          },
-        ],
-      },
     ])
       expect(createConnectionInput.safeParse(input).success).toBe(false);
     expect(updateConnectionInput.safeParse({ api_login: 'user' }).success).toBe(false);
@@ -86,15 +73,6 @@ describe('provider credential custody', () => {
     await expect(create({ routes: [{ logical_engine: 'claude' }] })).rejects.toMatchObject({
       status: 400,
     });
-    await expect(
-      sendProbe({
-        url: 'https://127.0.0.1/v1',
-        headers: {},
-        timeoutSeconds: 1,
-        maxBytes: 128,
-        customerDestination: true,
-      }),
-    ).rejects.toMatchObject({ code: 'ssrf_blocked' });
   });
 
   it('preserves credentials on omitted updates and makes successful verification stale after rotation', async () => {
@@ -139,54 +117,6 @@ describe('provider credential custody', () => {
     ).rejects.toMatchObject({ status: 400 });
   });
 
-  it('bounds app compatibility retries and rejects stale app-route probe success', async () => {
-    const w = await fixtures.ownedWorkspace(await fixtures.user());
-    const input = {
-      disclosure_accepted: true as const,
-      feature: 'agent',
-      model: 'old-model',
-      api_base_url: 'https://models.example.test/v1',
-    };
-    const response = await createConnection(
-      db,
-      w,
-      actor,
-      createConnectionInput.parse({
-        transport_provider: 'openai',
-        api_key: 'test-key',
-        app_routes: [input],
-      }),
-      key,
-      settings,
-    );
-    let calls = 0;
-    const result = await probeConnection(db, w, response.id, key, settings, async (request) => {
-      calls++;
-      if (calls === 1)
-        return { status: 400, body: { error: { message: 'max_completion_tokens unsupported' } } };
-      expect(request.body).toHaveProperty('max_tokens');
-      expect(request.body).not.toHaveProperty('max_completion_tokens');
-      await updateConnection(
-        db,
-        w,
-        actor,
-        response.id,
-        updateConnectionInput.parse({ app_routes: [{ ...input, model: 'new-model' }] }),
-        key,
-        settings,
-      );
-      return { status: 200, body: { choices: [{ message: { content: 'ok' } }] } };
-    });
-    expect(calls).toBe(2);
-    expect(result).toMatchObject({ status: 'failed', error_code: 'revision_changed' });
-    expect((await getConnection(db, w, response.id)).last_tested_at).toBeNull();
-    const appRoute = await db
-      .selectFrom('provider_app_routes')
-      .selectAll()
-      .where('connection_id', '=', response.id)
-      .executeTakeFirstOrThrow();
-    expect(appRoute.probed_revision).toBeNull();
-  });
   it('stores only encrypted credentials, preserves disabled capabilities on explicit rollout, and isolates workspaces', async () => {
     const response = await create({
       transport_provider: 'dataforseo',
@@ -233,75 +163,6 @@ describe('provider credential custody', () => {
         settings,
       ),
     ).rejects.toMatchObject({ status: 400 });
-  });
-
-  it('serializes app feature ownership and refuses destination changes without fresh confirmed custody', async () => {
-    const input = {
-      app_routes: [
-        {
-          disclosure_accepted: true,
-          feature: 'agent',
-          model: 'test-model',
-          api_base_url: 'https://models.example.test/v1',
-        },
-      ],
-    };
-    const owner = await fixtures.user();
-    const w = await fixtures.ownedWorkspace(owner);
-    const attempt = () =>
-      createConnection(
-        db,
-        w,
-        owner,
-        createConnectionInput.parse({
-          transport_provider: 'openai',
-          api_key: 'test-key',
-          ...input,
-        }),
-        key,
-        settings,
-      );
-    const outcomes = await Promise.allSettled([attempt(), attempt()]);
-    expect(outcomes.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
-    const result = outcomes.find((item) => item.status === 'fulfilled');
-    if (result?.status !== 'fulfilled') throw new Error('No created connection');
-    const change = {
-      app_routes: [{ ...input.app_routes[0], api_base_url: 'https://different.example.test/v1' }],
-    };
-    await expect(
-      updateConnection(
-        db,
-        w,
-        owner,
-        result.value.id,
-        updateConnectionInput.parse(change),
-        key,
-        settings,
-      ),
-    ).rejects.toMatchObject({ status: 400 });
-    const updated = await updateConnection(
-      db,
-      w,
-      owner,
-      result.value.id,
-      updateConnectionInput.parse({
-        ...change,
-        api_key: 'fresh-key',
-        confirm_destination_change: true,
-      }),
-      key,
-      settings,
-    );
-    expect(updated.app_routes[0]?.verified).toBe(false);
-    const disclosures = await db
-      .selectFrom('provider_disclosures')
-      .select('destination')
-      .where('connection_id', '=', updated.id)
-      .execute();
-    expect(disclosures.map((row) => row.destination)).toEqual([
-      'https://models.example.test/v1',
-      'https://different.example.test/v1',
-    ]);
   });
 
   it('commits probe I/O outside locks and prevents a rotated credential from becoming verified', async () => {

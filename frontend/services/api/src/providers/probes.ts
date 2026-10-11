@@ -1,8 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import type { Selectable } from 'kysely';
 import { z } from 'zod';
 import type { Database } from '../db/database.ts';
-import type { ProviderAppRoutes } from '../generated/db-schema.ts';
 import { createSecretCipher } from '../integrations/fernet.ts';
 import { providerErrorCode } from '../models/http.ts';
 import {
@@ -53,7 +51,6 @@ function requireAnswer(transport: string, body: unknown): string | undefined {
   return typeof parsed.model === 'string' ? parsed.model : undefined;
 }
 type ProbeItem = {
-  app: Selectable<ProviderAppRoutes> | undefined;
   engine: string;
   model: string;
   transport: string;
@@ -68,48 +65,16 @@ async function attemptProbe(o: {
   encryptionKey: string;
   settings: ProviderSettings;
   send: ProbeTransport;
-  started: number;
 }) {
-  const { connection, item, engine, encryptionKey, settings, send, started } = o;
+  const { connection, item, engine, encryptionKey, settings, send } = o;
   const transport = connection.transport_provider;
   let model = item.model;
   const secret = probeSecret(connection.api_key_encrypted, encryptionKey);
-  const request = probeRequest(
-    connection.base_url,
-    transport,
-    model,
-    secret,
-    item.app,
-    settings,
-    engine,
-  );
-  let response = await send(request);
-  // A single bounded compatibility retry, only when the rejected parameter is named.
-  if (
-    item.app &&
-    [400, 422].includes(response.status) &&
-    JSON.stringify(response.body).includes('max_completion_tokens')
-  ) {
-    const payload = request.body as Record<string, unknown>;
-    const { max_completion_tokens: cap, ...rest } = payload;
-    response = await send({
-      ...request,
-      body: { ...rest, max_tokens: cap },
-      timeoutSeconds: Math.max(
-        0.001,
-        request.timeoutSeconds - (performance.now() - started) / 1000,
-      ),
-    });
-  }
+  const request = probeRequest(connection.base_url, transport, model, secret, settings, engine);
+  const response = await send(request);
   if (response.status < 200 || response.status >= 300)
     throw new ProbeError(providerErrorCode(response.status));
-  if (item.app) {
-    z.object({
-      choices: z
-        .array(z.object({ message: z.object({ content: z.string().trim().min(1) }) }))
-        .min(1),
-    }).parse(response.body);
-  } else if (transport === 'dataforseo') {
+  if (transport === 'dataforseo') {
     if (object.parse(response.body).status_code !== providerPolicy.dataforseo.success_status)
       throw new ProbeError('auth_failure');
   } else model = requireAnswer(transport, response.body) ?? model;
@@ -134,25 +99,17 @@ function recordProbe(
       .where('c.id', '=', id)
       .forUpdate('c')
       .executeTakeFirst();
-    const app = item.app
-      ? await trx
-          .selectFrom('provider_app_routes')
-          .selectAll()
-          .where('workspace_id', '=', workspaceId)
-          .where('id', '=', item.app.id)
-          .forUpdate()
-          .executeTakeFirst()
-      : undefined;
     const matches =
       current?.credential_revision === connection.credential_revision &&
-      current?.base_url === connection.base_url &&
-      (!item.app || (app?.revision === item.app.revision && app.active));
+      current?.base_url === connection.base_url;
     if (!matches) {
       status = 'failed';
       errorCode = 'revision_changed';
     }
     const detail =
-      status === 'ok' ? providerPolicy.app.success_detail : `Connection test failed: ${errorCode}`;
+      status === 'ok'
+        ? providerPolicy.probe_success_detail
+        : `Connection test failed: ${errorCode}`;
     if (current) {
       await trx
         .insertInto('provider_connection_tests')
@@ -176,17 +133,6 @@ function recordProbe(
           .set({ last_test_status: status, last_tested_at: testedAt, updated_at: testedAt })
           .where('id', '=', id)
           .execute();
-        if (status === 'ok' && app)
-          await trx
-            .updateTable('provider_app_routes')
-            .set({
-              probed_revision: app.revision,
-              probed_credential_revision: current.credential_revision,
-              probed_at: testedAt,
-              updated_at: testedAt,
-            })
-            .where('id', '=', app.id)
-            .execute();
       }
     }
     return {
@@ -212,14 +158,6 @@ export async function probeConnection(
 ) {
   const connection = await getConnection(db, workspaceId, id);
   requireActiveTransport(connection);
-  const apps = await db
-    .selectFrom('provider_app_routes')
-    .selectAll()
-    .where('workspace_id', '=', workspaceId)
-    .where('connection_id', '=', id)
-    .where('active', '=', true)
-    .orderBy('feature')
-    .execute();
   const routes = await db
     .selectFrom('provider_routes')
     .selectAll()
@@ -234,9 +172,7 @@ export async function probeConnection(
   )![0];
   const engine = (routes[0]?.logical_engine ?? defaultEngine) as Engine;
   const catalog = providerPolicy.routes[engine];
-  const work = apps.length
-    ? apps.map((app) => ({ app, engine: app.feature, model: app.model, transport: app.protocol }))
-    : [{ app: undefined, engine, model: catalog.transport_model, transport }];
+  const work: ProbeItem[] = [{ engine, model: catalog.transport_model, transport }];
   const results = [];
   for (const item of work) {
     const started = performance.now();
@@ -251,7 +187,6 @@ export async function probeConnection(
         encryptionKey,
         settings,
         send,
-        started,
       });
     } catch (error) {
       status = 'failed';
@@ -274,31 +209,13 @@ function probeRequest(
   transport: string,
   model: string,
   secret: string,
-  app: { api_base_url: string } | undefined,
   settings: ProviderSettings,
   engine: Engine,
 ): ProbeRequest {
   const common = {
     timeoutSeconds: settings.timeoutSeconds,
-    maxBytes: providerPolicy.app.max_response_bytes,
-    customerDestination: false,
+    maxBytes: providerPolicy.probe_max_response_bytes,
   };
-  if (app)
-    return {
-      ...common,
-      customerDestination: true,
-      timeoutSeconds: providerPolicy.app.probe_timeout_seconds,
-      url: app.api_base_url.endsWith('/chat/completions')
-        ? app.api_base_url
-        : `${app.api_base_url}/chat/completions`,
-      headers: { authorization: `Bearer ${secret}` },
-      body: {
-        model,
-        messages: [{ role: 'user', content: providerPolicy.app.probe_prompt }],
-        stream: false,
-        max_completion_tokens: providerPolicy.app.probe_max_output_tokens,
-      },
-    };
   const url = approvedEndpoint(transport, baseUrl, settings);
   const prompt = providerPolicy.probe_prompt;
   const cap = settings.outputTokens;

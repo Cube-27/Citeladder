@@ -29,11 +29,19 @@ export class ModelError extends Error {
   readonly code: 'not_configured' | 'parse' | 'http' | 'connection';
   readonly status: number | undefined;
   readonly retryAfter: string | undefined;
-  constructor(code: ModelError['code'], status?: number, retryAfter?: string) {
+  /** Tokens the provider reported for a call that still failed, such as an unparseable answer. */
+  readonly usage: Record<string, number | null> | undefined;
+  constructor(
+    code: ModelError['code'],
+    status?: number,
+    retryAfter?: string,
+    usage?: Record<string, number | null>,
+  ) {
     super(status === undefined ? `Model ${code}` : `Model returned HTTP ${status}`);
     this.code = code;
     this.status = status;
     this.retryAfter = retryAfter;
+    this.usage = usage;
   }
 }
 

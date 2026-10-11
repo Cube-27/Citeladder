@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { expectedCost, projectCost, rateCard, type RateCard } from '../src/audits/costs.ts';
+import { projectCost, rateCard, type RateCard } from '../src/audits/costs.ts';
 import { providerPolicy } from '../src/providers/config.ts';
 const pricing: RateCard = {
   uncached_input_microusd_per_million: 3_000_000,
@@ -66,15 +66,8 @@ describe('audit execution costing', () => {
       output_tokens: null,
     });
   });
-  it('fails funded admission closed without measured execution envelopes', () => {
+  it('prices only known catalog versions and models', () => {
     const route = providerPolicy.routes.claude;
-    expect(expectedCost(route, false)).toMatchObject({
-      complete: false,
-      token_cost_microusd: null,
-      search_fee_microusd: null,
-      expected_searches: null,
-      total_microusd: null,
-    });
     expect(rateCard(route, 'unknown-version')).toBeNull();
     expect(rateCard({ ...route, transport_model: 'historical-model' })).toMatchObject({
       output_microusd_per_million: null,

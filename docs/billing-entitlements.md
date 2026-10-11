@@ -45,25 +45,26 @@ admit prompt slots in [`src/entitlements/`](../frontend/services/api/src/entitle
 under the [account capacity lock](../frontend/services/api/src/entitlements/occupancy.ts)
 (a personalized BLAKE2b of `OCCUPANCY_LOCK_NAMESPACE` and the account id).
 Commerce, project and prompt writers serialize on that same TypeScript boundary.
-Registry `entitlements-v5` adds the public flag `crawl_logs` ("AI crawler
-logs"), granted by every launch plan bundle and absent from the public trial.
-[Crawl-log](ai-traffic.md) admission checks it without the capacity lock and
-refuses with 409 `crawl_logs_not_in_plan`; reads stay available.
-Registry `entitlements-v6` adds the public flag `api_access` and the occupancy
-counter `api_keys` (live API keys), both granted by every launch plan bundle
-(`api_keys` = 10) and absent from the public trial. Key creation admits under
-the capacity lock; [public API](public-api.md) requests check the flag without
-it and refuse with 403 `api_access_not_in_plan`.
-Registry `entitlements-v7` adds the non-public flag `fact_checking`, in no plan
-bundle and absent from the public trial. Operators grant it per pilot workspace
-with `billing:admin grant`; [fact-checking](visibility-prompt.md#fact-checking-pilot)
-and brand-fact writes check it without the capacity lock (409
-`fact_checking_not_in_plan`), and its reads report `not_enabled`.
-Registry `entitlements-v1` has the occupancy counter `market_slots`: a
-workspace's additional measurement markets (a project's default market is
-free). Growth grants 3 and Scale 10; Starter and the public trial have none, so
-adding a market there is refused with 403 `occupancy_limit_exceeded`. Market
-creation admits under the capacity lock.
+The [registry](../frontend/services/api/src/config/entitlements.json) (`entitlements-v1`)
+holds what plans grant. Every paid plan bundle grants `workspace_access`,
+`team_members`, `project_deletion`, `crawl_logs`, `api_access` with ten
+`api_keys`, `commerce`, `search_intelligence`, its occupancy counters,
+`prompt_runs_per_period` and `ai_credits`; Growth and Scale add `agent` and
+`market_slots`. Audit cadence, exports and fan-out are not gated
+([B5](billing-decisions.md)). Flags are checked without the capacity lock:
+[crawl logs](ai-traffic.md) refuse with 409 `crawl_logs_not_in_plan`, the
+[public API](public-api.md) with 403 `api_access_not_in_plan`, and Commerce and
+Search Intelligence work (Commerce writes and Commerce-scope audits; Search
+Intelligence reviews, confirmations and citation matching) with 403
+`capability_not_granted`. Data already collected stays readable after a
+downgrade. The non-public flag `fact_checking` is in no bundle; operators grant
+it per pilot workspace with `billing:admin grant`, and
+[fact-checking](visibility-prompt.md#fact-checking-pilot) refuses without it (409
+`fact_checking_not_in_plan`).
+Occupancy fails closed: an account with no grant for projects, prompts, markets
+or API keys has an allowance of zero. A project's default market is free; extra
+markets admit under the capacity lock and refuse with 403
+`occupancy_limit_exceeded`.
 Prompt slots are checked when prompts are added; after a downgrade, the
 workspace's prompts beyond `prompt_slots` (newest first out) are kept, read as
 `over_plan_limit`, and excluded from audits until slots free up.
@@ -73,11 +74,9 @@ issues `public-trial-v1` once, starting at the original registration cohort and
 ending after `BILLING_TRIAL_DAYS` (release value 7). Login and operator repair
 cannot add a permanent baseline to that account. Public provenance also consumes
 eligibility for the separate no-card campaign. Existing non-public grants remain.
-The trial allows one project, 20 prompts, 20 monitored URLs and ChatGPT only;
-Agent and AI credits remain unavailable. Its separate `successful_answers` ledger
-reserves 20 lifetime answers, debits successful tasks once and releases terminal
-failures. Immutable task snapshots retain the original prompt ID for the one-success
-per-prompt limit, including audit repair. Attempt funding remains separately bounded.
+The trial allows one project, 20 prompts, 20 monitored URLs and ChatGPT only,
+with 20 prompt runs and 5,000 AI credits for its whole length; the Agent and
+top-ups remain unavailable.
 
 `entitlements/access.ts` resolves `active`, `trial_active`, `trial_expired`,
 `subscription_lapsed` and `access_unresolved` without writes. A workspace
@@ -184,24 +183,45 @@ explicit-target, reasoned, dry-run-reviewed administrative operations.
 
 [TypeScript grant writes](../frontend/services/api/src/entitlements/grants.ts)
 and the [ledger](../frontend/services/api/src/entitlements/ledger.ts) own the
-billing boundary. [Agent funding](../frontend/services/api/src/agent/funding.ts)
-and [AI credit rates](../frontend/services/api/src/billing/ai-credits.ts) use that
-ledger for runtime accounting. Reservation, release, debit and refund retain typed parent
-identity, allocation order, fingerprints and dispatch provenance. An Agent run
-holds one reservation per model step, so each debit carries that step's
-dispatch key. Commit the
-hold and attempt evidence before provider I/O; settle through the owning
-transaction. Successful-answer charging and actual provider cost are distinct
-quantities. Finite persisted rate/cap policy bounds funded work and unknown
-usage. Missing, malformed or inconsistent usage (including cached input exceeding
-input) settles at the frozen policy's unknown-usage charge, bounded by the
-admitted hold. It is not clamped into an exact observed token debit. Failed
-dispatches also settle unknown usage exactly once. Customer BYOK consumes no
-platform credits and never silently falls back.
+billing boundary. Reservation, release, debit and refund retain typed subject
+identity (audit task, Agent run, Site Health crawl or platform call),
+allocation order, fingerprints and dispatch provenance. Every hold commits
+before provider I/O and settles once through its owner.
+
+**Prompt runs.** Each engine or search-surface answer is one run of the plan's
+`prompt_runs_per_period`, whichever key pays: every audit task holds one run at
+admission (manual, scheduled, MCP, public API and repair alike), only a recorded
+answer spends it, and every other terminal path releases it
+([prompt runs](../frontend/services/api/src/audits/prompt-runs.ts)). Answer
+analysis is included in the run. An exhausted allowance refuses the launch with
+403 `prompt_runs_exhausted`.
+
+**AI credits.** Every platform model call spends AI credits through the
+[metering owner](../frontend/services/api/src/billing/metering.ts): prompt
+generation, onboarding research and brand discovery, Commerce buyer prompts and
+the Agent. A call holds its maximum cost (every input byte plus the output cap)
+at the serving model's [token price](../frontend/services/api/src/config/ai-credits.json)
+with the markup, in whole credits rounded up, then settles once to the reported
+tokens. Unreadable usage settles at a fixed fallback no larger than the hold; a
+failed call that reports no usage is not charged; a hold a crash left open
+settles at the fallback in the billing lane. A model with no configured price is
+refused, except the platform gateway model, priced at the default rate. Answer
+perception, fact verification and the Commerce shelf are recorded as included in
+the run; the JEV judge, Tavily and Keenable are recorded and not charged. Every
+call is recorded in `platform_calls`. The gateway, JEV, Tavily and Keenable
+clients refuse a call made outside a metering scope, so a new feature cannot
+reach a paid provider unmetered. Customers see only credits; the prices, markup
+and the credit's money value stay internal. The Agent holds and settles each
+model step through its own dispatch records with the same pricing and ledger,
+and always uses the platform gateway.
+
+**Managed plans.** A workspace on a live managed plan measures every engine,
+DataForSEO surfaces included, on the platform's keys; the request never chooses
+the mode. Its monthly platform budget admits a launch while the month's recorded
+spend is below the ceiling (`BILLING_FUNDED_MONTHLY_BUDGET_MINOR`).
 [Site Health fetch budget](../frontend/services/api/src/site-health/fetch-budget.ts)
 reserves a crawl's page budget at creation and settles analyzed pages on every
-terminal path; accounts without a page-fetch grant are not metered there.
-Audit reservations, debits and releases use the ledger owner. Audit
+terminal path; accounts without a page-fetch grant are not metered there. Audit
 fingerprints hash compact JSON with sorted ASCII keys
 ([ledger](../frontend/services/api/src/entitlements/ledger.ts)), so a replay with
 the same key and facts is idempotent. Entries persisted in an earlier format are
@@ -263,8 +283,9 @@ first-cutover recovery.
 
 The no-card introductory offer is separate from checkout: explicit consent,
 once-per-account eligibility and idempotent activation are catalog-controlled.
-Its seeded campaign is disabled/draft. Card-trial quote remains unavailable.
-Provider keys are write-only; neither UI nor logs receive their plaintext.
+Its seeded campaign is disabled/draft.
+Provider keys are write-only; neither UI nor logs receive their plaintext. A
+managed workspace has no provider settings, and its runs offer every engine.
 
 ## Acceptance limits
 

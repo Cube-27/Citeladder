@@ -1,10 +1,9 @@
 import { randomUUID } from 'node:crypto';
-import { reserveTrialAnswer } from './trial-answers.ts';
+import { PROMPT_RUNS, reservePromptRun } from './prompt-runs.ts';
 import { requireWorkspaceAccess } from '../entitlements/access.ts';
 import { policy } from '../config.ts';
 import { inTransaction, type Database } from '../db/database.ts';
 import { subjectXactLock } from '../db/advisory-lock.ts';
-import { reserveUsage, releaseUsage } from '../entitlements/ledger.ts';
 import { ApiError, notFound } from '../errors.ts';
 import { searchPolicy } from '../search-surfaces/dataforseo.ts';
 import type { Engine } from '../providers/config.ts';
@@ -19,6 +18,7 @@ import {
 import { auditEvent, transitionAudit } from './state.ts';
 import { auditPolicy, auditRuntime, type AuditRuntime } from './config.ts';
 import { auditInput, type AuditInput } from './inputs.ts';
+import { workspaceCredentialMode } from '../billing/credential-mode.ts';
 import { resolveMarkets, type Market } from '../projects/markets.ts';
 
 export type AuditLaunch = {
@@ -106,6 +106,7 @@ async function createMarketAudit(
     if (prior) return prior.id;
   } else if (launch.scheduledFor)
     throw new ApiError(400, 'Scheduled occurrence requires its schedule');
+  const funded = (await workspaceCredentialMode(trx, workspaceId)) === 'funded';
   const plan = await prepareAudit(
     trx,
     workspaceId,
@@ -113,7 +114,7 @@ async function createMarketAudit(
     runtime.audits,
     runtime.providers,
     trigger,
-    { search: runtime.search, at, selected: measured.market },
+    { search: runtime.search, at, selected: measured.market, funded },
   );
   const slots = auditSlots(
     plan.prompts.length,
@@ -133,15 +134,10 @@ async function createMarketAudit(
       'The requested engine or repetition count is outside the trial allowance',
     );
   await reserveAuditCapacity(trx, workspaceId, slots.length, measured.launchId, runtime, at);
-  const funded = await admitAudit(
-    trx,
-    workspaceId,
-    plan,
-    input.credential_mode === 'funded',
-    trigger,
-    runtime,
-    { at, launchId: measured.launchId },
-  );
+  const funding = await admitAudit(trx, workspaceId, funded, trigger, runtime, {
+    at,
+    launchId: measured.launchId,
+  });
   const id = randomUUID();
   await trx
     .insertInto('audits')
@@ -163,9 +159,8 @@ async function createMarketAudit(
       completed_count: 0,
       failed_count: 0,
       error_message: '',
-      funding_account_id: funded?.accountId ?? null,
-      funded_budget_period_start: funded?.month ?? null,
-      funded_reserved_cost_microusd: funded?.cost ?? null,
+      funding_account_id: funding?.accountId ?? null,
+      funded_budget_period_start: funding?.month ?? null,
       created_at: at,
       updated_at: at,
       started_at: null,
@@ -186,7 +181,7 @@ async function createMarketAudit(
     plan,
     slots,
     snapshots,
-    funded,
+    funded: funding,
     runtime,
     at,
     devTestLogin: launch.devTestLogin ?? false,
@@ -340,14 +335,6 @@ async function persistTasks(
       })
       .execute();
     const binding = await bindTask(options, taskId, route);
-    await reserveTrialAnswer(
-      db,
-      scope.workspaceId,
-      auditId,
-      taskId,
-      plan.prompts[slot.prompt]!.id,
-      at,
-    );
     await db
       .updateTable('audit_tasks')
       .set({ status: 'queued', provider_route_snapshot: JSON.stringify(binding) })
@@ -365,7 +352,7 @@ async function persistTasks(
       connection_id: binding.connection_id,
       reservation_id: binding.reservation_id,
     };
-    if (binding.reservation_id) taskReservations[taskId] = binding.reservation_id;
+    taskReservations[taskId] = binding.reservation_id;
     // The frozen route also carries its credential source for execution.
     const boundRoute = {
       ...route,
@@ -376,21 +363,18 @@ async function persistTasks(
     };
     engineRoutes[slot.engine] = boundRoute;
   }
-  if (funded && funded.cost > BigInt(Number.MAX_SAFE_INTEGER))
-    throw new Error('Funded cost exceeds JSON integer precision');
   return {
     engine_routes: engineRoutes,
     task_credentials: taskCredentials,
+    task_reservations: taskReservations,
     ...(funded
       ? {
-          task_reservations: taskReservations,
           funding: {
             credential_mode: 'funded',
-            capability_key: 'audit_credits',
+            capability_key: PROMPT_RUNS,
             funding_account_id: funded.accountId,
             admission_at: at.toISOString(),
             budget_period_start: funded.month.toISOString(),
-            reserved_cost_microusd: Number(funded.cost),
             entitlement: funded.provenance,
           },
         }
@@ -398,37 +382,15 @@ async function persistTasks(
   };
 }
 
-async function reserveFundedUsage(
-  { db, scope, auditId, plan, at }: TaskBinding,
-  funded: FundedAdmission,
-  taskId: string,
-) {
-  try {
-    return await reserveUsage(db, {
-      accountId: funded.accountId,
-      capability: 'audit_credits',
-      subject: { kind: 'audit', id: taskId, workspaceId: scope.workspaceId, auditId },
-      units: plan.measurement.max_attempts,
-      key: `${auditId}:${taskId}:funded-reserve`,
-      at,
-    });
-  } catch (error) {
-    if (error instanceof Error && error.message === 'funded_credits_exhausted')
-      throw new ApiError(403, 'Funded credits are exhausted', {
-        code: 'funded_credits_exhausted',
-      });
-    throw error;
-  }
-}
 async function resolveConnection(
   { db, scope, runtime, at, devTestLogin, funded }: TaskBinding,
   route: FrozenAudit['routes'][number],
   taskId: string,
-  reservationId: string | null,
+  reservationId: string,
 ) {
   if (route.connection_id !== null)
     return { connection_id: route.connection_id, base_url: route.base_url };
-  if (!funded || !reservationId) return null;
+  if (!funded) return null;
   return platformRoute(db, route, runtime, at, devTestLogin, {
     workspaceId: scope.workspaceId,
     accountId: funded.accountId,
@@ -442,51 +404,40 @@ async function bindTask(
   route: FrozenAudit['routes'][number],
 ) {
   const { db, scope, auditId, plan, funded, at } = binding;
-  let reservationId: string | null = funded
-    ? await reserveFundedUsage(binding, funded, taskId)
-    : null;
+  const run = await reservePromptRun(db, { workspaceId: scope.workspaceId, auditId, taskId, at });
   const byok = route.connection_id !== null;
-  const connection = await resolveConnection(binding, route, taskId, reservationId);
+  const connection = await resolveConnection(binding, route, taskId, run.reservationId);
   if (!connection)
     throw new ApiError(403, 'No executable credential available for this task', {
       code: 'execution_credentials_unavailable',
     });
-  if (byok && funded && reservationId) {
-    await releaseUsage(db, {
-      workspaceId: scope.workspaceId,
-      accountId: funded.accountId,
-      reservationId,
-      key: `${auditId}:${taskId}:byok-release`,
-      at,
-    });
-    reservationId = null;
-  }
-  const allocations = reservationId
-    ? await db
-        .selectFrom('consumable_ledger')
-        .select(['grant_id', 'units'])
-        .where('workspace_id', '=', scope.workspaceId)
-        .where('billing_account_id', '=', funded!.accountId)
-        .where('reservation_id', '=', reservationId)
-        .where('entry_kind', '=', 'reservation')
-        .orderBy('allocation_order')
-        .execute()
-    : [];
+  const allocations =
+    !byok && funded
+      ? await db
+          .selectFrom('consumable_ledger')
+          .select(['grant_id', 'units'])
+          .where('workspace_id', '=', scope.workspaceId)
+          .where('billing_account_id', '=', run.accountId)
+          .where('reservation_id', '=', run.reservationId)
+          .where('entry_kind', '=', 'reservation')
+          .orderBy('allocation_order')
+          .execute()
+      : [];
   return {
     ...route,
     ...connection,
     credential_source: byok ? 'byok' : 'platform',
-    reservation_id: reservationId,
+    reservation_id: run.reservationId,
     ...auditPolicy.route_policies[route.logical_engine],
     ...plan.measurement,
-    ...(reservationId && funded
+    ...(!byok && funded
       ? {
           funding: {
             credential_mode: 'funded',
-            capability_key: 'audit_credits',
-            funding_account_id: funded.accountId,
-            reservation_id: reservationId,
-            reserved_units: plan.measurement.max_attempts,
+            capability_key: PROMPT_RUNS,
+            funding_account_id: run.accountId,
+            reservation_id: run.reservationId,
+            reserved_units: 1,
             grant_allocations: allocations,
             entitlement: funded.provenance,
           },

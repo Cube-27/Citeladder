@@ -9,7 +9,7 @@ import type { SessionUser } from '@/lib/api/types';
 import { makeProject } from '@/test/fixtures/project';
 
 const { entitlementState } = vi.hoisted(() => ({
-  entitlementState: { canDeleteProject: false, roleMayDelete: true },
+  entitlementState: { canDeleteProject: false, roleMayDelete: true, managed: false },
 }));
 const { security, mailbox } = vi.hoisted(() => ({ security: vi.fn(), mailbox: vi.fn() }));
 vi.mock('@/lib/api/auth', () => ({ authApi: { security, mailbox } }));
@@ -30,6 +30,7 @@ vi.mock('@/lib/billing/entitlement-context', () => ({
   useEntitlement: () => ({
     hasCapability: () => entitlementState.canDeleteProject,
   }),
+  useManagedPlan: () => entitlementState.managed,
 }));
 
 // Active project context — the danger zone deletes the active project.
@@ -109,6 +110,7 @@ describe('SettingsScreen', () => {
     listProjects.mockResolvedValue([]);
     setActiveProjectId.mockClear();
     entitlementState.canDeleteProject = false;
+    entitlementState.managed = false;
     entitlementState.roleMayDelete = true;
     window.history.replaceState(null, '', '/settings');
   });
@@ -152,6 +154,14 @@ describe('SettingsScreen', () => {
     renderScreen();
     expect(screen.getByRole('tab', { name: 'Providers' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByTestId('provider-settings-panel')).toBeVisible();
+  });
+
+  it('offers no provider settings on a managed plan, even from a deep link', () => {
+    entitlementState.managed = true;
+    window.history.replaceState(null, '', '/settings?tab=providers');
+    renderScreen();
+    expect(screen.queryByRole('tab', { name: 'Providers' })).not.toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Account' })).toHaveAttribute('aria-selected', 'true');
   });
 
   it('opens the Integrations tab from a ?tab=integrations deep link (the C2 OAuth-callback landing)', () => {

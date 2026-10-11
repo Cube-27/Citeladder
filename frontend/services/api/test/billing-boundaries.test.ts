@@ -72,6 +72,7 @@ describe('billing input and provider boundaries', () => {
     expect(roundedRatio(5n, 2n)).toBe(3);
     const input = {
       kind: 'base',
+      mode: 'byok',
       key: 'tier_1',
       quantity: 1,
       country: 'IN',

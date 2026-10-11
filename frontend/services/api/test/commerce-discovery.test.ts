@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeEach, expect, it } from 'vitest';
+import { recordingMeter } from './meter-fixtures.ts';
 import { competitorDiscovery, enqueueDiscoveries } from '../src/commerce/discovery.ts';
 import { competitorSearch, type CompetitorSearch } from '../src/commerce/discovery-provider.ts';
 import { discoveryQuery } from '../src/commerce/discovery-validation.ts';
@@ -73,6 +74,7 @@ const fetcher: WebsiteFetcher = async (url) => ({
   contentType: url.endsWith('/robots.txt') ? 'text/plain' : 'text/html',
   body: Buffer.from(url.endsWith('/robots.txt') ? 'User-agent: *\nAllow: /\n' : productHtml),
 });
+const { meter } = recordingMeter();
 const successful: CompetitorSearch = async () => ({
   status: 'succeeded',
   errorCode: '',
@@ -88,7 +90,7 @@ const successful: CompetitorSearch = async () => ({
 
 it('validates real page facts, preserves every verdict and source attempt, and never overrides approval', async () => {
   const search: CompetitorSearch = async () => ({
-    ...(await successful('', '')),
+    ...(await successful('', '', meter)),
     results: [
       { url: 'https://owned.example/products/tool', title: 'Owned', content: '' },
       { url: 'https://amazon.com/products/tool', title: 'Marketplace', content: '' },
@@ -189,7 +191,7 @@ it('distinguishes unavailable providers from transient failures and retries with
 
 it('counts only verified survivors against accept slots and preserves the over-limit verdict', async () => {
   const search: CompetitorSearch = async () => ({
-    ...(await successful('', '')),
+    ...(await successful('', '', meter)),
     results: [
       { url: 'https://broken.example/products/tool', title: 'Unavailable tool', content: '' },
       ...Array.from({ length: policy.commerce.discovery.result_limit + 1 }, (_, index) => ({
@@ -244,7 +246,7 @@ it('refuses an oversized valid Tavily envelope before parsing candidates', async
       padding: 'x'.repeat(policy.commerce.discovery.response_max_bytes),
     }),
   );
-  expect(await search('Tool', '')).toMatchObject({
+  expect(await search('Tool', '', meter)).toMatchObject({
     status: 'unavailable',
     retry: true,
     results: [],
@@ -336,7 +338,7 @@ it('discards publication after cancellation or reclaim even if the same owner is
         expect(await queue.markRunning(id, 'discovery-test', 1)).toBe(true);
         expect(await queue.heartbeat(id, 'discovery-test', t.workspaceId, 0)).toBe(false);
       }
-      return successful('', '');
+      return successful('', '', meter);
     };
     await worker(search, fetcher).runOnce();
     expect(await queueTask(id)).toMatchObject({
@@ -450,7 +452,7 @@ it('falls back from failed Tavily to the existing Keenable transport and refuses
           });
     },
   );
-  expect(await search('buy tool online store', 'en-US')).toMatchObject({
+  expect(await search('buy tool online store', 'en-US', meter)).toMatchObject({
     status: 'succeeded',
     providerVersion: policy.discovery.constants.keenable_research_version,
     results: [

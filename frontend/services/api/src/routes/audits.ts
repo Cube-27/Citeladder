@@ -11,7 +11,7 @@ import { configEnvironment, policy } from '../config.ts';
 import { readBody } from '../http/body.ts';
 import { actorOf } from '../auth/actor.ts';
 import { cancelAudit, createQueuedAudit, runAudit } from '../commands/audits.ts';
-import { auditCreateInput } from '../audits/inputs.ts';
+import { auditInput } from '../audits/inputs.ts';
 import { auditRuntime } from '../audits/config.ts';
 import { estimateAudit, estimateInput } from '../audits/estimate.ts';
 import {
@@ -68,10 +68,10 @@ export const auditRoutes = [
     params: empty,
     status: 201,
     capability: 'run',
-    body: auditCreateInput,
+    body: auditInput,
     response: auditSchema.array(),
     handle: async ({ c, db, config }) =>
-      createQueuedAudit(db, config, actorOf(c), await readBody(c, auditCreateInput)),
+      createQueuedAudit(db, config, actorOf(c), await readBody(c, auditInput)),
   }),
   definePostRoute({
     family,

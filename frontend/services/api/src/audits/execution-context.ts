@@ -4,7 +4,7 @@ import { sql } from 'kysely';
 import { openReservedUnits } from '../entitlements/ledger.ts';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
-import { resolveSettingSpec } from '../config.ts';
+import { policy, resolveSettingSpec } from '../config.ts';
 import { approvedEndpoint } from '../providers/connections.ts';
 import { providerPolicy, type Engine, type ProviderTransport } from '../providers/config.ts';
 import { dataforseoAccountIdentity } from '../providers/dataforseo-identity.ts';
@@ -137,11 +137,11 @@ export async function loadExecutionContext(
         .where('subject_kind', '=', 'audit')
         .where('subject_id', '=', task.id)
         .where('reservation_id', '=', route.funding.reservation_id)
-        .where('capability_key', '=', 'audit_credits')
+        .where('capability_key', '=', policy.entitlements.prompt_runs)
         .executeTakeFirstOrThrow();
       if (!hold.reserved || (!task.provider_submission_ref && BigInt(hold.remaining) < 1n))
         throw unavailable();
-    } else if (route.funding || route.reservation_id) throw unavailable();
+    } else if (route.funding) throw unavailable();
     let secret: string;
     try {
       secret =

@@ -7,6 +7,9 @@ import { extractPage, offeringLinks, type PageEvidence } from './html-evidence.t
 import { publicUrl, type WebsiteFetcher } from './safe-fetch.ts';
 import { discoverySettings } from './discovery-inputs.ts';
 import type { ResolvedSite } from './site-resolution.ts';
+import type { Meter } from '../billing/metering.ts';
+import type { MeteredFeature } from '../billing/ai-pricing.ts';
+import { assertMetered } from '../models/meter-scope.ts';
 
 export type ResearchEvidence = {
   source_id: string;
@@ -141,6 +144,7 @@ export function createResearchClient(
   settings: ResearchSettings,
   budget: ResearchBudget,
   transport: ResearchTransport,
+  meter: { meter: Meter; feature: MeteredFeature },
 ) {
   const base = new URL(settings.keenable_base_url);
   if (
@@ -156,7 +160,19 @@ export function createResearchClient(
   async function request(path: string, body?: Record<string, unknown>) {
     if (!settings.keenable_api_key || !budget.take(1))
       throw new Error('external_research_unavailable');
-    const response = await transport(new URL(path, base), {
+    const response = await meter.meter.call(
+      meter.feature,
+      { provider: 'keenable', model: 'keenable' },
+      async () => {
+        assertMetered('keenable');
+        return { value: await send(path, body), usage: null };
+      },
+    );
+    if (!response.ok) throw new Error('external_research_failed');
+    return z.record(z.string(), z.unknown()).parse(await response.json());
+  }
+  function send(path: string, body?: Record<string, unknown>) {
+    return transport(new URL(path, base), {
       method: body ? 'POST' : 'GET',
       headers: {
         'X-API-Key': settings.keenable_api_key,
@@ -167,8 +183,6 @@ export function createResearchClient(
       redirect: 'error',
       signal: AbortSignal.timeout(settings.keenable_request_timeout_seconds * 1000),
     });
-    if (!response.ok) throw new Error('external_research_failed');
-    return z.record(z.string(), z.unknown()).parse(await response.json());
   }
   return {
     async search(

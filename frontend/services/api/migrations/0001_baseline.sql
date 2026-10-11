@@ -132,10 +132,6 @@ CREATE TABLE public.agent_model_attempts (
     run_attempt integer NOT NULL,
     ordinal integer NOT NULL,
     funding_source character varying(24) NOT NULL,
-    provider_connection_id uuid,
-    provider_route_id uuid,
-    credential_revision uuid,
-    route_revision uuid,
     provider_adapter character varying(64) NOT NULL,
     endpoint_host character varying(255) NOT NULL,
     requested_model character varying(255) NOT NULL,
@@ -217,10 +213,6 @@ CREATE TABLE public.agent_runs (
     registry_version character varying(32) NOT NULL,
     skill_catalog_version character varying(32) NOT NULL,
     funding_source character varying(24) NOT NULL,
-    route_id uuid,
-    connection_id uuid,
-    route_revision uuid,
-    credential_revision uuid,
     requested_model character varying(255) NOT NULL,
     max_attempts integer NOT NULL,
     skill_id character varying(64),
@@ -581,7 +573,6 @@ CREATE TABLE public.audits (
     scheduled_for timestamp with time zone,
     funding_account_id uuid,
     funded_budget_period_start timestamp with time zone,
-    funded_reserved_cost_microusd bigint,
     system_instruction text NOT NULL,
     repetitions integer NOT NULL,
     random_seed character varying(32) NOT NULL,
@@ -1224,6 +1215,7 @@ CREATE TABLE public.consumable_ledger (
     task_id uuid,
     agent_run_id uuid,
     site_crawl_id uuid,
+    platform_call_id uuid,
     dispatch_key character varying(128) NOT NULL,
     request_fingerprint character varying(64) NOT NULL,
     allocation_order integer NOT NULL,
@@ -1235,7 +1227,7 @@ CREATE TABLE public.consumable_ledger (
     CONSTRAINT ck_consumable_ledger_attempt_shape CHECK (((((entry_kind)::text = ANY ((ARRAY['debit'::character varying, 'refund'::character varying])::text[])) AND (attempt IS NOT NULL) AND (attempt > 0)) OR (((entry_kind)::text <> ALL ((ARRAY['debit'::character varying, 'refund'::character varying])::text[])) AND (attempt IS NULL)))),
     CONSTRAINT ck_consumable_ledger_entry_kind CHECK (((entry_kind)::text = ANY ((ARRAY['reservation'::character varying, 'debit'::character varying, 'release'::character varying, 'refund'::character varying])::text[]))),
     CONSTRAINT ck_consumable_ledger_refund_shape CHECK ((((entry_kind)::text = 'refund'::text) = (refund_of_id IS NOT NULL))),
-    CONSTRAINT ck_consumable_ledger_typed_subject CHECK (((((subject_kind)::text = 'audit'::text) AND (audit_id IS NOT NULL) AND (task_id IS NOT NULL) AND (agent_run_id IS NULL) AND (site_crawl_id IS NULL)) OR (((subject_kind)::text = 'agent'::text) AND (audit_id IS NULL) AND (task_id IS NULL) AND (agent_run_id IS NOT NULL) AND (site_crawl_id IS NULL)) OR (((subject_kind)::text = 'site_crawl'::text) AND (audit_id IS NULL) AND (task_id IS NULL) AND (agent_run_id IS NULL) AND (site_crawl_id IS NOT NULL)))),
+    CONSTRAINT ck_consumable_ledger_typed_subject CHECK (((((subject_kind)::text = 'audit'::text) AND (audit_id IS NOT NULL) AND (task_id IS NOT NULL) AND (agent_run_id IS NULL) AND (site_crawl_id IS NULL) AND (platform_call_id IS NULL)) OR (((subject_kind)::text = 'agent'::text) AND (audit_id IS NULL) AND (task_id IS NULL) AND (agent_run_id IS NOT NULL) AND (site_crawl_id IS NULL) AND (platform_call_id IS NULL)) OR (((subject_kind)::text = 'site_crawl'::text) AND (audit_id IS NULL) AND (task_id IS NULL) AND (agent_run_id IS NULL) AND (site_crawl_id IS NOT NULL) AND (platform_call_id IS NULL)) OR (((subject_kind)::text = 'platform_call'::text) AND (audit_id IS NULL) AND (task_id IS NULL) AND (agent_run_id IS NULL) AND (site_crawl_id IS NULL) AND (platform_call_id IS NOT NULL)))),
     CONSTRAINT ck_consumable_ledger_units_positive CHECK ((units > 0))
 );
 
@@ -1932,7 +1924,6 @@ CREATE TABLE public.pending_activations (
     provider_mode character varying(8) NOT NULL,
     external_reference character varying(255),
     external_price_id character varying(255),
-    checkout_url text,
     quote jsonb,
     tax_snapshot jsonb,
     change_terms jsonb,
@@ -1967,6 +1958,33 @@ CREATE TABLE public.performance_dimension_stats (
     source_metric_row_ids jsonb,
     source_artifact_ids jsonb,
     created_at timestamp with time zone NOT NULL
+);
+
+CREATE TABLE public.platform_calls (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    billing_account_id uuid,
+    feature character varying(48) NOT NULL,
+    provider character varying(32) NOT NULL,
+    model character varying(255) NOT NULL,
+    charge character varying(16) NOT NULL,
+    status character varying(16) NOT NULL,
+    pricing_revision character varying(64) NOT NULL,
+    reservation_id uuid,
+    reserved_credits integer NOT NULL,
+    credits integer NOT NULL,
+    input_tokens integer,
+    cached_input_tokens integer,
+    output_tokens integer,
+    cost_microusd bigint,
+    error_code character varying(64) NOT NULL,
+    created_at timestamp with time zone NOT NULL,
+    settled_at timestamp with time zone,
+    CONSTRAINT ck_platform_calls_charge CHECK (((charge)::text = ANY ((ARRAY['credits'::character varying, 'included'::character varying, 'not_charged'::character varying])::text[]))),
+    CONSTRAINT ck_platform_calls_status CHECK (((status)::text = ANY ((ARRAY['reserved'::character varying, 'settled'::character varying, 'failed'::character varying])::text[]))),
+    CONSTRAINT ck_platform_calls_credits CHECK (((credits >= 0) AND (reserved_credits >= 0) AND (credits <= reserved_credits))),
+    CONSTRAINT ck_platform_calls_hold CHECK (((((charge)::text = 'credits'::text) AND (billing_account_id IS NOT NULL) AND (reserved_credits > 0)) OR (((charge)::text <> 'credits'::text) AND (reservation_id IS NULL) AND (reserved_credits = 0)))),
+    CONSTRAINT ck_platform_calls_settled CHECK ((((status)::text = 'reserved'::text) = (settled_at IS NULL)))
 );
 
 CREATE TABLE public.policy_acceptances (
@@ -2101,23 +2119,6 @@ CREATE TABLE public.prompts (
     updated_at timestamp with time zone NOT NULL
 );
 
-CREATE TABLE public.provider_app_routes (
-    id uuid NOT NULL,
-    workspace_id uuid NOT NULL,
-    connection_id uuid NOT NULL,
-    feature character varying(32) NOT NULL,
-    protocol character varying(32) NOT NULL,
-    model character varying(255) NOT NULL,
-    api_base_url character varying(1024) NOT NULL,
-    active boolean DEFAULT true NOT NULL,
-    revision uuid NOT NULL,
-    probed_revision uuid,
-    probed_credential_revision uuid,
-    probed_at timestamp with time zone,
-    created_at timestamp with time zone NOT NULL,
-    updated_at timestamp with time zone NOT NULL
-);
-
 CREATE TABLE public.provider_attempts (
     id uuid NOT NULL,
     task_id uuid NOT NULL,
@@ -2199,17 +2200,6 @@ CREATE TABLE public.provider_connections (
     credential_revision uuid NOT NULL,
     created_at timestamp with time zone NOT NULL,
     updated_at timestamp with time zone NOT NULL
-);
-
-CREATE TABLE public.provider_disclosures (
-    id uuid NOT NULL,
-    workspace_id uuid NOT NULL,
-    actor_id uuid NOT NULL,
-    connection_id uuid NOT NULL,
-    destination character varying(1024) NOT NULL,
-    model character varying(255) NOT NULL,
-    disclosure_revision character varying(32) NOT NULL,
-    acknowledged_at timestamp with time zone NOT NULL
 );
 
 CREATE TABLE public.provider_routes (
@@ -3609,6 +3599,9 @@ ALTER TABLE ONLY public.pending_activations
 ALTER TABLE ONLY public.performance_dimension_stats
     ADD CONSTRAINT performance_dimension_stats_pkey PRIMARY KEY (id);
 
+ALTER TABLE ONLY public.platform_calls
+    ADD CONSTRAINT platform_calls_pkey PRIMARY KEY (id);
+
 ALTER TABLE ONLY public.policy_acceptances
     ADD CONSTRAINT policy_acceptances_pkey PRIMARY KEY (id);
 
@@ -3630,9 +3623,6 @@ ALTER TABLE ONLY public.prompt_sets
 ALTER TABLE ONLY public.prompts
     ADD CONSTRAINT prompts_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY public.provider_app_routes
-    ADD CONSTRAINT provider_app_routes_pkey PRIMARY KEY (id);
-
 ALTER TABLE ONLY public.provider_attempts
     ADD CONSTRAINT provider_attempts_pkey PRIMARY KEY (id);
 
@@ -3647,9 +3637,6 @@ ALTER TABLE ONLY public.provider_connection_tests
 
 ALTER TABLE ONLY public.provider_connections
     ADD CONSTRAINT provider_connections_pkey PRIMARY KEY (id);
-
-ALTER TABLE ONLY public.provider_disclosures
-    ADD CONSTRAINT provider_disclosures_pkey PRIMARY KEY (id);
 
 ALTER TABLE ONLY public.provider_routes
     ADD CONSTRAINT provider_routes_pkey PRIMARY KEY (id);
@@ -4088,9 +4075,6 @@ ALTER TABLE ONLY public.prompt_metric_snapshots
 
 ALTER TABLE ONLY public.prompts
     ADD CONSTRAINT uq_prompt_set_normalized_text UNIQUE (prompt_set_id, normalized_text_hash);
-
-ALTER TABLE ONLY public.provider_app_routes
-    ADD CONSTRAINT uq_provider_app_route_feature UNIQUE (workspace_id, feature);
 
 ALTER TABLE ONLY public.provider_capacity_buckets
     ADD CONSTRAINT uq_provider_capacity_bucket_pool UNIQUE NULLS NOT DISTINCT (pool_kind, transport_provider, account_pool_identity, connection_id, billing_account_id);
@@ -4620,6 +4604,10 @@ CREATE INDEX ix_consumable_ledger_reservation_kind ON public.consumable_ledger U
 
 CREATE INDEX ix_consumable_ledger_subject ON public.consumable_ledger USING btree (subject_kind, subject_id);
 
+CREATE INDEX ix_platform_calls_workspace_created ON public.platform_calls USING btree (workspace_id, created_at);
+
+CREATE INDEX ix_platform_calls_unsettled ON public.platform_calls USING btree (created_at) WHERE ((status)::text = 'reserved'::text);
+
 CREATE INDEX ix_content_differentiation_candidates_audit_id ON public.content_differentiation_candidates USING btree (audit_id);
 
 CREATE INDEX ix_content_differentiation_candidates_audit_task_id ON public.content_differentiation_candidates USING btree (audit_task_id);
@@ -4890,10 +4878,6 @@ CREATE INDEX ix_prompts_prompt_set_id ON public.prompts USING btree (prompt_set_
 
 CREATE INDEX ix_prompts_topic_id ON public.prompts USING btree (topic_id);
 
-CREATE INDEX ix_provider_app_routes_connection_id ON public.provider_app_routes USING btree (connection_id);
-
-CREATE INDEX ix_provider_app_routes_workspace_id ON public.provider_app_routes USING btree (workspace_id);
-
 CREATE INDEX ix_provider_attempts_audit_id ON public.provider_attempts USING btree (audit_id);
 
 CREATE INDEX ix_provider_attempts_task_id ON public.provider_attempts USING btree (task_id);
@@ -4915,8 +4899,6 @@ CREATE INDEX ix_provider_connection_tests_workspace_id ON public.provider_connec
 CREATE INDEX ix_provider_connections_workspace_id ON public.provider_connections USING btree (workspace_id);
 
 CREATE INDEX ix_provider_connections_workspace_source ON public.provider_connections USING btree (workspace_id, credential_source, transport_provider);
-
-CREATE INDEX ix_provider_disclosures_workspace_id ON public.provider_disclosures USING btree (workspace_id);
 
 CREATE INDEX ix_provider_routes_connection_id ON public.provider_routes USING btree (connection_id);
 
@@ -5335,12 +5317,6 @@ ALTER TABLE ONLY public.agent_messages
     ADD CONSTRAINT agent_messages_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.agent_model_attempts
-    ADD CONSTRAINT agent_model_attempts_provider_connection_id_fkey FOREIGN KEY (provider_connection_id) REFERENCES public.provider_connections(id) ON DELETE RESTRICT;
-
-ALTER TABLE ONLY public.agent_model_attempts
-    ADD CONSTRAINT agent_model_attempts_provider_route_id_fkey FOREIGN KEY (provider_route_id) REFERENCES public.provider_app_routes(id) ON DELETE RESTRICT;
-
-ALTER TABLE ONLY public.agent_model_attempts
     ADD CONSTRAINT agent_model_attempts_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE RESTRICT;
 
 ALTER TABLE ONLY public.agent_output_revisions
@@ -5383,13 +5359,7 @@ ALTER TABLE ONLY public.agent_runs
     ADD CONSTRAINT agent_runs_chat_id_fkey FOREIGN KEY (chat_id) REFERENCES public.agent_chats(id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.agent_runs
-    ADD CONSTRAINT agent_runs_connection_id_fkey FOREIGN KEY (connection_id) REFERENCES public.provider_connections(id) ON DELETE RESTRICT;
-
-ALTER TABLE ONLY public.agent_runs
     ADD CONSTRAINT agent_runs_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
-
-ALTER TABLE ONLY public.agent_runs
-    ADD CONSTRAINT agent_runs_route_id_fkey FOREIGN KEY (route_id) REFERENCES public.provider_app_routes(id) ON DELETE RESTRICT;
 
 ALTER TABLE ONLY public.agent_runs
     ADD CONSTRAINT agent_runs_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE SET NULL;
@@ -5822,6 +5792,12 @@ ALTER TABLE ONLY public.consumable_ledger
 
 ALTER TABLE ONLY public.consumable_ledger
     ADD CONSTRAINT consumable_ledger_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.platform_calls
+    ADD CONSTRAINT platform_calls_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.platform_calls
+    ADD CONSTRAINT platform_calls_billing_account_id_fkey FOREIGN KEY (billing_account_id) REFERENCES public.billing_accounts(id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.content_differentiation_candidates
     ADD CONSTRAINT content_differentiation_candidates_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
@@ -6269,12 +6245,6 @@ ALTER TABLE ONLY public.prompts
 
 ALTER TABLE ONLY public.prompts
     ADD CONSTRAINT prompts_topic_id_fkey FOREIGN KEY (topic_id) REFERENCES public.topics(id) ON DELETE SET NULL;
-
-ALTER TABLE ONLY public.provider_app_routes
-    ADD CONSTRAINT provider_app_routes_connection_id_fkey FOREIGN KEY (connection_id) REFERENCES public.provider_connections(id) ON DELETE CASCADE;
-
-ALTER TABLE ONLY public.provider_app_routes
-    ADD CONSTRAINT provider_app_routes_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.provider_attempts
     ADD CONSTRAINT provider_attempts_artifact_id_fkey FOREIGN KEY (artifact_id) REFERENCES public.raw_response_artifacts(id) ON DELETE SET NULL;

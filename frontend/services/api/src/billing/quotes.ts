@@ -3,11 +3,14 @@ import { z } from 'zod';
 import { resolvedQuoteSchema } from '@citeladder/contracts/billing';
 import { amount, conflict, taxSchema, type Identity } from './contracts.ts';
 import type { BillingSettings } from './config.ts';
+import type { CredentialMode } from './credential-mode.ts';
 import type { CatalogPlan, CatalogItem } from './catalog.ts';
 
 export type Quote = z.infer<typeof resolvedQuoteSchema>;
 export type Intent = {
   kind: 'base' | 'addon' | 'topup' | 'upgrade';
+  /** Whose keys the purchase measures with (B32). */
+  mode: CredentialMode;
   key: string;
   quantity: number;
   region: 'india' | 'international';
@@ -41,6 +44,7 @@ export function quoteIntent(
   settings: BillingSettings,
   input: {
     kind: Intent['kind'];
+    mode: CredentialMode;
     key: string;
     quantity: number;
     country: string;
@@ -122,14 +126,13 @@ export function quoteIntent(
     quote_id: quoteId,
     catalog_revision: revision,
     catalog_key: key,
-    credential_mode: 'byok',
+    credential_mode: input.mode,
     country_code: country,
     region,
     base_price: money(subtotal),
     subtotal_price: money(subtotal),
     discount: money(0),
     taxable_value: money(subtotal),
-    credit_price: null,
     tax: money(tax.tax_minor),
     tax_treatment: treatment,
     tax_rate: rate,
@@ -142,6 +145,7 @@ export function quoteIntent(
   });
   return {
     kind,
+    mode: input.mode,
     key,
     quantity,
     country,
@@ -156,16 +160,18 @@ export function quoteIntent(
 export function baseIntent(
   settings: BillingSettings,
   plan: CatalogPlan,
+  mode: CredentialMode,
   country: string,
   identity: Identity,
   revision: string,
   now: Date,
 ): Intent {
-  const regional = plan.regional_byok_prices[country === 'IN' ? 'india' : 'international'];
+  const regional = plan.regional_prices[mode][country === 'IN' ? 'india' : 'international'];
   if (!plan.self_serve || plan.contact_only) conflict('contact_only');
   if (!regional?.provider_price_ref || !regional.tax_verified) conflict('checkout_unavailable');
   const intent = quoteIntent(settings, {
     kind: 'base',
+    mode,
     key: plan.key,
     quantity: 1,
     country,
@@ -186,6 +192,7 @@ export function packIntent(
   item: CatalogItem,
   {
     kind,
+    mode,
     quantity,
     planKey,
     country,
@@ -194,6 +201,7 @@ export function packIntent(
     now,
   }: {
     kind: 'addon' | 'topup';
+    mode: CredentialMode;
     quantity: number;
     planKey: string;
     country: string;
@@ -206,10 +214,11 @@ export function packIntent(
   if (!item.available) conflict('provider_unavailable');
   if (quantity < item.quantity_min || quantity > item.quantity_max)
     conflict('quantity_out_of_bounds');
-  const price = item.modes.byok?.regional_prices[country === 'IN' ? 'india' : 'international'];
+  const price = item.modes[mode]?.regional_prices[country === 'IN' ? 'india' : 'international'];
   if (!price) conflict('checkout_unavailable');
   return quoteIntent(settings, {
     kind,
+    mode,
     key: item.key,
     quantity,
     country,

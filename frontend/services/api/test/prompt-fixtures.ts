@@ -41,21 +41,34 @@ export type GrantInput = {
   priority?: number;
   validFrom?: Date;
   validUntil?: Date | null;
+  /** A tenant's default allowance, replaced by any explicit grant of the same key. */
+  fixtureDefault?: boolean;
 };
+
+const FIXTURE_DEFAULT = 'fixture-default';
 
 export async function grant(db: Database, accountId: string, input: GrantInput): Promise<string> {
   const id = randomUUID();
+  const key = input.key ?? 'prompt_slots';
+  // An explicit grant sets the limit the test means, not one added to the default.
+  if (!input.fixtureDefault)
+    await db
+      .deleteFrom('account_grants')
+      .where('billing_account_id', '=', accountId)
+      .where('key', '=', key)
+      .where('source_ref', '=', FIXTURE_DEFAULT)
+      .execute();
   await db
     .insertInto('account_grants')
     .values({
       id,
       billing_account_id: accountId,
       source_kind: input.sourceKind ?? 'plan',
-      source_ref: 'test',
+      source_ref: input.fixtureDefault ? FIXTURE_DEFAULT : 'test',
       bundle_role: input.role ?? 'supplement',
       bundle_id: input.bundle ?? '',
       profile_priority: input.priority ?? 0,
-      key: input.key ?? 'prompt_slots',
+      key,
       value: input.value,
       valid_from: input.validFrom ?? new Date(Date.now() - 60_000),
       valid_until: input.validUntil ?? null,
@@ -233,7 +246,12 @@ export function echoDependencies({
     return Response.json({ choices: [{ message: { content: JSON.stringify({ prompts }) } }] });
   });
   const gateway = createModelGateway(
-    { ...gatewaySettings({}), apiKey: 'test-only', model: 'test', baseUrl: 'https://model.test' },
+    {
+      ...gatewaySettings({}),
+      apiKey: 'test-only',
+      model: 'claude-haiku-5-5',
+      baseUrl: 'https://model.test',
+    },
     { fetch, sleep: async () => {} },
   );
   return { gateway: () => gateway, judge: () => null, io: { fetch } };

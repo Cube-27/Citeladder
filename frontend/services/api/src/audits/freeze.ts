@@ -11,7 +11,11 @@ import { freezeCommerceContext } from '../commerce/audit-context.ts';
 import { frozenEntityMatching, projectEntityMatching } from '../analysis/entity-matching.ts';
 import { strings } from '../db/json.ts';
 import { admittedFactCheck, admittedPerceptionVersions } from '../perception/admission.ts';
-import { overLimitPromptIds, overLimitSelection } from '../entitlements/occupancy.ts';
+import {
+  overLimitPromptIds,
+  overLimitSelection,
+  requireCommerce,
+} from '../entitlements/occupancy.ts';
 import { marketLabel } from '@citeladder/contracts/markets';
 import type { Market } from '../projects/markets.ts';
 import {
@@ -68,7 +72,10 @@ export function marketEngines(
   if (!engines.length)
     throw new ApiError(422, `No selected engine can measure ${marketLabel(market)}`, {
       code: 'market_unsupported',
-      details: { country_code: market.country_code, language_code: market.language_code },
+      details: {
+        country_code: market.country_code,
+        language_code: market.language_code,
+      },
     });
   return { engines, notApplicable };
 }
@@ -119,18 +126,20 @@ async function loadPrompts(
   return prompts;
 }
 function assertPromptCount(
-  input: AuditInput,
+  funded: boolean,
   trigger: string,
   promptCount: number,
   settings: ReturnType<typeof auditSettings>,
 ) {
-  if (input.credential_mode !== 'funded' && trigger !== 'trial') return;
+  if (!funded && trigger !== 'trial') return;
   if (settings.audit_prompt_count === null)
     throw new ApiError(422, 'Audit prompt-count policy is unconfigured', {
       code: 'prompt_count_policy_unconfigured',
     });
   if (promptCount > settings.audit_prompt_count)
-    throw new ApiError(403, 'Too many selected prompts', { code: 'prompt_count_exceeded' });
+    throw new ApiError(403, 'Too many selected prompts', {
+      code: 'prompt_count_exceeded',
+    });
 }
 function assertRepetitions(repetitions: number) {
   if (
@@ -198,7 +207,7 @@ function validateSearchRequests(
 async function freezeRoutes({
   db,
   workspaceId,
-  input,
+  funded,
   engines,
   prompts,
   project,
@@ -208,7 +217,8 @@ async function freezeRoutes({
 }: {
   db: Database;
   workspaceId: string;
-  input: AuditInput;
+  /** A managed workspace measures on platform keys for every engine (B32). */
+  funded: boolean;
   engines: Engine[];
   prompts: { text: string }[];
   project: SearchProject;
@@ -216,41 +226,44 @@ async function freezeRoutes({
   providerSettings: ProviderSettings;
   at: Date;
 }) {
-  const candidates = await db
-    .selectFrom('provider_routes as r')
-    .innerJoin('provider_connections as c', 'c.id', 'r.connection_id')
-    .innerJoin('workspaces as w', 'w.id', 'c.workspace_id')
-    .select([
-      'r.logical_engine',
-      'r.transport_provider',
-      'r.transport_model',
-      'c.id as connection_id',
-      'c.base_url',
-      'c.paused_at',
-      'c.pause_until',
-      'c.last_test_status',
-      sql<boolean>`c.api_key_encrypted <> ''`.as('has_key'),
-    ])
-    .where('r.workspace_id', '=', workspaceId)
-    .where('c.workspace_id', '=', workspaceId)
-    .where('w.is_system', '=', false)
-    .where('c.credential_source', '=', 'byok')
-    .where('r.active', '=', true)
-    .where('c.active', '=', true)
-    .orderBy('r.is_default', 'desc')
-    .orderBy('r.created_at')
-    .orderBy('r.id')
-    .execute();
+  // A managed workspace's own routes are never used, so they are not read.
+  const candidates = funded
+    ? []
+    : await db
+        .selectFrom('provider_routes as r')
+        .innerJoin('provider_connections as c', 'c.id', 'r.connection_id')
+        .innerJoin('workspaces as w', 'w.id', 'c.workspace_id')
+        .select([
+          'r.logical_engine',
+          'r.transport_provider',
+          'r.transport_model',
+          'c.id as connection_id',
+          'c.base_url',
+          'c.paused_at',
+          'c.pause_until',
+          'c.last_test_status',
+          sql<boolean>`c.api_key_encrypted <> ''`.as('has_key'),
+        ])
+        .where('r.workspace_id', '=', workspaceId)
+        .where('c.workspace_id', '=', workspaceId)
+        .where('w.is_system', '=', false)
+        .where('c.credential_source', '=', 'byok')
+        .where('r.active', '=', true)
+        .where('c.active', '=', true)
+        .orderBy('r.is_default', 'desc')
+        .orderBy('r.created_at')
+        .orderBy('r.id')
+        .execute();
   const routes: FrozenRoute[] = [];
   for (const engine of engines) {
     const catalog = providerPolicy.routes[engine];
     const observed = catalog.transport_provider === 'dataforseo';
-    if (input.credential_mode === 'funded' && observed)
-      throw invalid('Search surfaces require your own DataForSEO credentials');
-    const selected = candidates.find((candidate) =>
-      usableCandidate(candidate, engine, catalog.transport_provider, providerSettings, at),
-    );
-    if (input.credential_mode === 'byok' && !selected)
+    const selected = funded
+      ? undefined
+      : candidates.find((candidate) =>
+          usableCandidate(candidate, engine, catalog.transport_provider, providerSettings, at),
+        );
+    if (!funded && !selected)
       throw new ApiError(400, `No active provider route configured for ${engine}`, {
         code: 'execution_credentials_unavailable',
       });
@@ -354,6 +367,8 @@ type PrepareOptions = {
   at?: Date;
   /** The market to measure from; the project's default when omitted. */
   selected?: Market | null;
+  /** A managed workspace's audit, run on platform keys. */
+  funded?: boolean;
 };
 export async function prepareAudit(
   db: Database,
@@ -362,11 +377,18 @@ export async function prepareAudit(
   settings: ReturnType<typeof auditSettings>,
   providerSettings: ProviderSettings,
   trigger: string,
-  { search = searchSettings(), at = new Date(), selected = null }: PrepareOptions = {},
+  {
+    search = searchSettings(),
+    at = new Date(),
+    selected = null,
+    funded = false,
+  }: PrepareOptions = {},
 ) {
   trigger = trigger.trim().toLowerCase();
   if (!auditPolicy.constants.audit_triggers.includes(trigger))
     throw invalid(`Unsupported trigger: ${trigger}`);
+  // Commerce measurement runs AI shelf extraction, a Commerce capability.
+  if (input.audit_scope === 'commerce') await requireCommerce(db, workspaceId);
   const stored = await db
     .selectFrom('projects')
     .selectAll()
@@ -394,7 +416,7 @@ export async function prepareAudit(
   if (requested.some((engine) => !auditPolicy.selectable_engines.includes(engine)))
     throw invalid('An engine is unavailable');
   const { engines, notApplicable } = marketEngines(requested, market, project);
-  assertPromptCount(input, trigger, prompts.length, settings);
+  assertPromptCount(funded, trigger, prompts.length, settings);
   const repetitions = input.repetitions ?? settings.audit_repetitions;
   assertRepetitions(repetitions);
   if (prompts.length * repetitions * engines.length > settings.max_tasks_per_audit)
@@ -402,7 +424,7 @@ export async function prepareAudit(
   const routes = await freezeRoutes({
     db,
     workspaceId,
-    input,
+    funded,
     engines,
     prompts,
     project,
@@ -417,7 +439,12 @@ export async function prepareAudit(
     .executeTakeFirst();
   const { aliases, owned, unintended, competitors, profile, factCheck } = await loadBrandContext(
     db,
-    { workspaceId, project, brand, auditScope: input.audit_scope },
+    {
+      workspaceId,
+      project,
+      brand,
+      auditScope: input.audit_scope,
+    },
   );
   const systemInstruction = frameInstruction(mode, project);
   const measurement = {
@@ -450,7 +477,10 @@ export async function prepareAudit(
     entity_matching: frozenEntityMatching(
       projectEntityMatching(profile?.business_context, strings(profile?.products_services), [
         { name: brandName, aliases: aliases.map((row) => row.alias) },
-        ...competitors.map((row) => ({ name: row.name, aliases: strings(row.aliases) })),
+        ...competitors.map((row) => ({
+          name: row.name,
+          aliases: strings(row.aliases),
+        })),
       ]),
     ),
     country_code: project.country_code,

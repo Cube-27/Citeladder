@@ -291,11 +291,10 @@ const writeDefinitions = {
         return promptOccupancy(trx, actor.workspaceId);
       });
       const droppedItems = dropped.map((item) => `"${item.text}" (${item.reason})`).join('; ');
-      const allowanceSuffix = slots.allowance === null ? '' : ` of ${slots.allowance}`;
       const lines = [
         `Add ${admitted.length} active prompt(s) to "${set.name}": ${quoted(admitted.map((item) => item.text))}.`,
         dropped.length ? `Dropped: ${droppedItems}.` : '',
-        `Prompt slots after: ${slots.used}${allowanceSuffix}.`,
+        `Prompt slots after: ${slots.used} of ${slots.allowance}.`,
       ];
       return prepared(
         context,

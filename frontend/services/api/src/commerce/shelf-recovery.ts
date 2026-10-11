@@ -3,7 +3,7 @@ import { record } from '../db/json.ts';
 import { policy } from '../config.ts';
 import { auditPolicy } from '../audits/config.ts';
 import type { DeriveExecution } from '../audits/result-persistence.ts';
-import type { ShelfResolver } from './shelf-parsing.ts';
+import type { MeterableShelfResolver } from './shelf.ts';
 import { prepareShelfExecution } from './shelf.ts';
 
 /** Older writers saved answers before derivation. Prepare recovery outside the audit transaction. */
@@ -11,7 +11,7 @@ export async function prepareSavedShelf(
   db: Database,
   workspaceId: string,
   auditId: string,
-  resolver?: ShelfResolver | null,
+  resolver?: MeterableShelfResolver | null,
 ) {
   const prepared = new Map<string, DeriveExecution>();
   const audit = await db

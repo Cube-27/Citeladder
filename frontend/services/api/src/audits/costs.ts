@@ -38,31 +38,8 @@ export function rateCard(
     }
   );
 }
-export function expectedCost(route: RouteIdentity, retrieval: boolean) {
-  const entries = costPolicy.expected_costs as {
-    identity: RouteIdentity;
-    cost: {
-      token_cost_microusd: number | null;
-      search_fee_microusd: number | null;
-      expected_searches: number | null;
-    };
-  }[];
-  const estimate = entries.find((entry) => sameRoute(entry.identity, route))?.cost;
-  const token = estimate?.token_cost_microusd ?? null;
-  const fee = retrieval ? (estimate?.search_fee_microusd ?? null) : null;
-  const searches = retrieval ? (estimate?.expected_searches ?? null) : null;
-  const complete = token !== null && (!retrieval || (fee !== null && searches !== null));
-  const searchCost = retrieval ? fee! * searches! : 0;
-  return {
-    token_cost_microusd: token,
-    search_fee_microusd: fee,
-    expected_searches: searches,
-    complete,
-    total_microusd: complete ? token! + searchCost : null,
-  };
-}
 type CostStatus = 'complete' | 'partial' | 'unknown';
-export function costStatus(values: readonly (number | null)[]): CostStatus {
+function costStatus(values: readonly (number | null)[]): CostStatus {
   const known = values.filter((value) => value !== null).length;
   return known === values.length && values.length ? 'complete' : known ? 'partial' : 'unknown';
 }

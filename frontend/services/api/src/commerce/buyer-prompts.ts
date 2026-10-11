@@ -8,6 +8,7 @@ import { agentCallLimit, enforceWorkspaceRequest } from '../abuse/usage.ts';
 import { policy } from '../config.ts';
 import { commerceBuyerPromptSystem } from '../config/commerce.ts';
 import type { Database } from '../db/database.ts';
+import { meterFor, type Meter } from '../billing/metering.ts';
 import { record, strings } from '../db/json.ts';
 import { admitPrompts } from '../entitlements/occupancy.ts';
 import { ApiError } from '../errors.ts';
@@ -331,13 +332,14 @@ export async function generateBuyerPrompts(
   scope: CommerceScope,
   input: z.infer<typeof buyerGenerateInput>,
   gatewayFactory: () => ModelGateway = createModelGateway,
+  meter: Meter = meterFor(db, scope.workspaceId),
 ) {
   const contexts = [];
   for (const target of input.targets) contexts.push(await targetContext(db, scope, target));
   // Skip already tracked texts so a repeat generation is not a 409; the
   // unique normalized hash still guards writes that race this read.
   const tracked = await trackedHashes(db, scope.projectId);
-  const gateway = createGateway(gatewayFactory);
+  const gateway = meter.gateway(createGateway(gatewayFactory), 'commerce_buyer_prompts');
   await enforceWorkspaceRequest(db, scope.workspaceId, agentCallLimit(input.targets.length));
   // Each target keeps what it admitted, so one weak batch or a later model
   // failure does not discard the prompts already paid for. Only a request that

@@ -116,10 +116,6 @@ export class AgentFixtures extends VisibilityFixtures {
         Promise.resolve({
           funding_source: 'development',
           requested_model: 'test-model',
-          route_id: null,
-          connection_id: null,
-          route_revision: null,
-          credential_revision: null,
         } satisfies FundingIdentity),
       context: () => Promise.resolve(emptyPackage),
       ...overrides,

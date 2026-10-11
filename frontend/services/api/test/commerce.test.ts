@@ -102,6 +102,22 @@ describe('Commerce workspace boundaries', () => {
     }
     expect((await call('/catalog', { user: viewer })).status).toBe(200);
   });
+  it('refuses new Commerce work without the plan capability, keeping collected data readable', async () => {
+    await importCsv();
+    await db
+      .deleteFrom('account_grants')
+      .where('key', '=', 'commerce')
+      .where('billing_account_id', '=', (eb) =>
+        eb.selectFrom('billing_accounts').select('id').where('workspace_id', '=', t.workspaceId),
+      )
+      .execute();
+    for (const [path, method, body] of routes.filter(([, method]) => method !== 'GET'))
+      expect(await call(path, { method, body })).toMatchObject({
+        status: 403,
+        body: { error: { code: 'capability_not_granted', details: { key: 'commerce' } } },
+      });
+    expect((await call<CommerceCatalog>('/catalog')).body.products).toHaveLength(1);
+  });
 });
 
 describe('CSV evidence and catalog', () => {

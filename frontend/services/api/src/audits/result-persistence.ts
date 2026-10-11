@@ -1,13 +1,11 @@
 import { randomUUID } from 'node:crypto';
-import { settleTrialAnswer } from './trial-answers.ts';
+import { settlePromptRun } from './prompt-runs.ts';
 import { sql, type Selectable } from 'kysely';
-import { z } from 'zod';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import type { Audits } from '../generated/db-schema.ts';
 import { ProviderError, normalizedUsage, type Answer } from '../answer-engines/contracts.ts';
 import type { Engine, ProviderTransport } from '../providers/config.ts';
-import { debitUsage, releaseUsage } from '../entitlements/ledger.ts';
 import { ownedAuditTask, parkAuditTask, type AuditTask } from '../queue/audit-queue.ts';
 import { appendCostProjection } from './costs.ts';
 import { auditPolicy, type AuditRuntime } from './config.ts';
@@ -24,82 +22,6 @@ export type DeriveExecution = (
   audit: Selectable<Audits>,
   artifactId: string,
 ) => Promise<void>;
-
-/** Release from durable, scoped ledger proof even if a task's funding snapshot is damaged. */
-export async function releaseTerminalTaskCredits(db: Database, task: AuditTask, at: Date) {
-  await settleTrialAnswer(db, task, false, at);
-  const holds = await db
-    .selectFrom('consumable_ledger')
-    .select(['reservation_id', 'billing_account_id'])
-    .distinct()
-    .where('workspace_id', '=', task.workspace_id)
-    .where('audit_id', '=', task.audit_id)
-    .where('subject_kind', '=', 'audit')
-    .where('subject_id', '=', task.id)
-    .where('capability_key', '=', 'audit_credits')
-    .where('entry_kind', '=', 'reservation')
-    .orderBy('billing_account_id')
-    .orderBy('reservation_id')
-    .execute();
-  for (const hold of holds)
-    await releaseUsage(db, {
-      workspaceId: task.workspace_id,
-      accountId: hold.billing_account_id,
-      reservationId: hold.reservation_id,
-      key: `audit:${task.id}:terminal`,
-      at,
-    });
-}
-
-/** Reservations belong to this workspace, audit and task; never infer a hold from an ID alone. */
-export async function settleTaskCredits(
-  db: Database,
-  task: AuditTask,
-  billable: boolean,
-  terminal: boolean,
-  at: Date,
-) {
-  if (!billable) {
-    if (terminal) await releaseTerminalTaskCredits(db, task, at);
-    return;
-  }
-  const route = record(task.provider_route_snapshot);
-  if (route.credential_source === 'byok') return;
-  const funding = z
-    .object({ reservation_id: z.uuid(), funding_account_id: z.uuid() })
-    .safeParse(route.funding);
-  if (
-    route.credential_source !== 'platform' ||
-    !funding.success ||
-    route.reservation_id !== funding.data.reservation_id
-  )
-    throw new Error('Invalid frozen audit funding');
-  const { reservation_id: reservationId, funding_account_id: accountId } = funding.data;
-  const hold = await db
-    .selectFrom('consumable_ledger')
-    .select('id')
-    .where('workspace_id', '=', task.workspace_id)
-    .where('billing_account_id', '=', accountId)
-    .where('reservation_id', '=', reservationId)
-    .where('audit_id', '=', task.audit_id)
-    .where('subject_kind', '=', 'audit')
-    .where('subject_id', '=', task.id)
-    .where('capability_key', '=', 'audit_credits')
-    .where('entry_kind', '=', 'reservation')
-    .executeTakeFirst();
-  if (!hold) throw new Error('Audit reservation not found');
-  const request = { workspaceId: task.workspace_id, accountId, reservationId, at };
-  if (billable)
-    await debitUsage(db, {
-      ...request,
-      subjectId: task.id,
-      attempt: task.attempt_count,
-      units: 1,
-      key: `audit:${task.id}:attempt:${task.attempt_count}`,
-      dispatchKey: String(task.attempt_count),
-    });
-  if (terminal) await releaseUsage(db, { ...request, key: `audit:${task.id}:terminal` });
-}
 
 /** Evidence numbering counts every exchange; surface polling never spends the paid retry budget. */
 export async function appendProviderAttempt(
@@ -225,8 +147,7 @@ export function persistExecutionSuccess(
     await appendProviderAttempt(trx, task, at, { artifactId, latencyMs: result.latency_ms });
     await derive(trx, task, locked.audit, artifactId);
     await appendCostProjection(trx, task.workspace_id, artifactId);
-    await settleTaskCredits(trx, task, !options.surface, true, at);
-    await settleTrialAnswer(trx, task, true, at);
+    await settlePromptRun(trx, task, true, at);
     await auditEvent(
       trx,
       task.audit_id,
@@ -333,15 +254,8 @@ export function persistExecutionFailure(
         ...(failureArtifactId ? { artifactId: failureArtifactId } : {}),
       });
     if (failureArtifactId) await appendCostProjection(trx, task.workspace_id, failureArtifactId);
-    if (!retry) await settleTrialAnswer(trx, task, false, at);
     await options.evidence?.(trx, task, locked.audit);
-    await settleTaskCredits(
-      trx,
-      task,
-      Boolean(options.paidSurface) || (!options.preCall && !options.surface),
-      !retry,
-      at,
-    );
+    if (!retry) await settlePromptRun(trx, task, false, at);
     if (error.code === 'auth_failure' && options.context)
       await pauseExecutionCredential(trx, options.context, runtime, at);
     if (retry)

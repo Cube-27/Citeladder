@@ -14,7 +14,7 @@ await operatorMain(async () => {
   });
   if (values.help)
     console.log(
-      'billing:backfill --actor ADMIN_EMAIL --workspace-id UUID --reason REASON [--apply] [--development-allowance N]. Default preview; target one workspace.',
+      'billing:provision-workspace --actor ADMIN_EMAIL --workspace-id UUID --reason REASON [--apply] [--development-allowance N]. Default preview; target one workspace.',
     );
   else {
     const developmentAllowance =

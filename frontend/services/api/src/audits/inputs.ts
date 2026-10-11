@@ -24,22 +24,18 @@ const auditFields = z.object({
   /** One audit per market; `null` is the project's default market. */
   market_ids: marketIdsInput,
   audit_scope: z.enum(['brand', 'commerce']).default('brand'),
-  credential_mode: z.enum(['byok', 'funded']).default('byok'),
   random_seed: z.string().nullish(),
 });
 const selectedPrompts = (input: { prompt_set_id?: string | null; prompt_ids: string[] }) =>
   Boolean(input.prompt_set_id || input.prompt_ids.length);
-/** Funding selection belongs to trusted billing/trial callers, never the HTTP body. */
-export const auditCreateInput = auditFields
-  .omit({ credential_mode: true })
-  .refine(selectedPrompts, 'Select a prompt set or prompt IDs');
+/** Funding follows the workspace's plan (B32), never the request body. */
 export const auditInput = auditFields.refine(selectedPrompts, 'Select a prompt set or prompt IDs');
 /**
  * A public API launch: the project comes from the path, and the caller caps the
  * estimate's maximum attempt count (the most audit credits the run can reserve).
  */
 export const auditLaunchInput = auditFields
-  .omit({ credential_mode: true, project_id: true })
+  .omit({ project_id: true })
   .extend({ max_estimated_credits: z.int().min(1) })
   .refine(selectedPrompts, 'Select a prompt set or prompt IDs');
 export type AuditInput = z.output<typeof auditInput>;

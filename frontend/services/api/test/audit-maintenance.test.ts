@@ -1,10 +1,8 @@
-import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import { testDatabase } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
 import { auditTenant } from './audit-fixtures.ts';
-import { billingAccount } from './prompt-fixtures.ts';
 import { auditRuntime } from '../src/audits/config.ts';
 import { auditInput } from '../src/audits/inputs.ts';
 import { createAudits } from '../src/audits/creation.ts';
@@ -12,8 +10,6 @@ import { AuditMaintenance, cancelAudit, repairOwnedCompletion } from '../src/aud
 import { auditProjections } from '../src/audits/projections.ts';
 import { analyzeExecution } from '../src/analysis/execution.ts';
 import { persistExecutionSuccess, type ExecutionResult } from '../src/audits/result-persistence.ts';
-import { issueBundle } from '../src/entitlements/grants.ts';
-import { reserveUsage, ledgerBalances } from '../src/entitlements/ledger.ts';
 import type { AuditTask } from '../src/queue/audit-queue.ts';
 
 const db = testDatabase(),
@@ -73,41 +69,17 @@ async function seed() {
   taskIds.push(...tasks.map((task) => task.id));
   return { ...t, auditId, tasks };
 }
-async function fund(task: AuditTask) {
-  const accountId = await billingAccount(db, task.workspace_id),
-    at = new Date();
-  const grants = await db.transaction().execute((trx) =>
-    issueBundle(trx, {
-      workspaceId: task.workspace_id,
-      accountId,
-      key: randomUUID(),
-      sourceKind: 'override',
-      sourceRef: 'fixture',
-      specs: [{ key: 'audit_credits', value: 5 }],
-      revision: 'fixture',
-      from: at,
-      until: null,
-      primary: false,
-      profile: '',
-      priority: 0,
-    }),
-  );
-  await db.transaction().execute((trx) =>
-    reserveUsage(trx, {
-      accountId,
-      capability: 'audit_credits',
-      subject: {
-        kind: 'audit',
-        id: task.id,
-        workspaceId: task.workspace_id,
-        auditId: task.audit_id,
-      },
-      units: 3,
-      key: randomUUID(),
-      at,
-    }),
-  );
-  return { accountId, grantId: grants[0]!.id };
+/** One task's prompt run, held at admission: spent, and still held. */
+async function runs(taskId: string) {
+  const rows = await db
+    .selectFrom('consumable_ledger')
+    .select(['entry_kind', 'units'])
+    .where('subject_id', '=', taskId)
+    .where('capability_key', '=', 'prompt_runs_per_period')
+    .execute();
+  const total = (kind: string) =>
+    rows.filter((row) => row.entry_kind === kind).reduce((sum, row) => sum + row.units, 0);
+  return { reserved: total('reservation') - total('release'), consumed: total('debit') };
 }
 function answer(task: AuditTask): ExecutionResult {
   return {
@@ -170,8 +142,8 @@ describe('audit recovery against PostgreSQL', () => {
   it('reclaims each expired lease once, diverts paid uncertainty without spending budget and settles scoped terminal holds', async () => {
     const t = await seed(),
       foreign = await seed();
-    const held = await fund(t.tasks[2]!),
-      otherHeld = await fund(foreign.tasks[0]!);
+    const held = t.tasks[2]!.id,
+      otherHeld = foreign.tasks[0]!.id;
     const at = new Date();
     await db
       .updateTable('audit_tasks')
@@ -215,12 +187,12 @@ describe('audit recovery against PostgreSQL', () => {
       attempt_count: 3,
     });
     expect(tasks.find((row) => row.id === t.tasks[2]!.id)).toMatchObject({ status: 'failed' });
-    expect((await ledgerBalances(db, held.accountId)).get(held.grantId)).toEqual({
+    expect(await runs(held)).toEqual({
       reserved: 0,
       consumed: 0,
     });
-    expect((await ledgerBalances(db, otherHeld.accountId)).get(otherHeld.grantId)).toEqual({
-      reserved: 3,
+    expect(await runs(otherHeld)).toEqual({
+      reserved: 1,
       consumed: 0,
     });
     expect(parents).toContain(t.auditId);
@@ -230,8 +202,8 @@ describe('audit recovery against PostgreSQL', () => {
     const t = await seed(),
       foreign = await seed(),
       task = t.tasks[0]!;
-    const held = await fund(task),
-      otherHeld = await fund(foreign.tasks[0]!);
+    const held = task.id,
+      otherHeld = foreign.tasks[0]!.id;
     await expect(cancelAudit(db, foreign.workspaceId, t.auditId)).rejects.toMatchObject({
       status: 404,
     });
@@ -257,12 +229,12 @@ describe('audit recovery against PostgreSQL', () => {
           .execute()
       ).every((row) => row.status === 'cancelled'),
     ).toBe(true);
-    expect((await ledgerBalances(db, held.accountId)).get(held.grantId)).toEqual({
+    expect(await runs(held)).toEqual({
       reserved: 0,
       consumed: 0,
     });
-    expect((await ledgerBalances(db, otherHeld.accountId)).get(otherHeld.grantId)).toEqual({
-      reserved: 3,
+    expect(await runs(otherHeld)).toEqual({
+      reserved: 1,
       consumed: 0,
     });
   });

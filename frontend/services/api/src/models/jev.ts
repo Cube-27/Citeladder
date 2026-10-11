@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { policy, resolveSettingSpec } from '../config.ts';
 import { getLogger } from '../logging.ts';
+import { assertMetered } from './meter-scope.ts';
 import {
   defaultTransport,
   endpointUrl,
@@ -47,6 +48,7 @@ export function createJevClient(settings = jevSettings(), transport: Transport =
   return {
     model: settings.model,
     async decide(state: unknown, questions: Record<string, unknown>, signal?: AbortSignal) {
+      assertMetered('jev');
       const response = await postModel(
         endpointUrl(settings.baseUrl, '/v1/systemone'),
         settings.apiKey,

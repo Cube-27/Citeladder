@@ -15,8 +15,6 @@ import {
   type ExecutionResult,
 } from '../src/audits/result-persistence.ts';
 import { ProviderError } from '../src/answer-engines/contracts.ts';
-import { issueBundle } from '../src/entitlements/grants.ts';
-import { reserveUsage, ledgerBalances } from '../src/entitlements/ledger.ts';
 import { record } from '../src/db/json.ts';
 import { analyzeExecution } from '../src/analysis/execution.ts';
 import { finalizeAudit } from '../src/analysis/finalization.ts';
@@ -63,38 +61,16 @@ async function seed(funded = false) {
     {},
   );
   tasks.push(context!.task.id);
-  let accountId = '',
-    grantId = '';
+  let accountId = '';
   if (funded) {
     accountId = await billingAccount(db, t.workspaceId);
-    const at = new Date();
-    const grants = await db.transaction().execute((trx) =>
-      issueBundle(trx, {
-        workspaceId: t.workspaceId,
-        accountId,
-        key: randomUUID(),
-        sourceKind: 'override',
-        sourceRef: 'fixture',
-        specs: [{ key: 'audit_credits', value: 5 }],
-        revision: 'fixture',
-        from: at,
-        until: null,
-        primary: false,
-        profile: '',
-        priority: 0,
-      }),
-    );
-    grantId = grants[0]!.id;
-    const reservationId = await db.transaction().execute((trx) =>
-      reserveUsage(trx, {
-        accountId,
-        capability: 'audit_credits',
-        subject: { kind: 'audit', id: context!.task.id, workspaceId: t.workspaceId, auditId },
-        units: 5,
-        key: randomUUID(),
-        at,
-      }),
-    );
+    // Admission already holds the task's prompt run; fund the dispatch from it.
+    const { reservation_id: reservationId } = await db
+      .selectFrom('consumable_ledger')
+      .select('reservation_id')
+      .where('subject_id', '=', context!.task.id)
+      .where('entry_kind', '=', 'reservation')
+      .executeTakeFirstOrThrow();
     await db
       .updateTable('audit_tasks')
       .set({
@@ -108,7 +84,7 @@ async function seed(funded = false) {
       .where('id', '=', context!.task.id)
       .execute();
   }
-  return { ...t, auditId, context: context!, accountId, grantId };
+  return { ...t, auditId, context: context!, accountId };
 }
 const result: ExecutionResult = {
   logical_engine: 'chatgpt',
@@ -132,8 +108,20 @@ const result: ExecutionResult = {
     provider_cost_microusd: null,
   },
 };
+/** One task's prompt run: spent, and still held. */
+async function runs(taskId: string) {
+  const rows = await db
+    .selectFrom('consumable_ledger')
+    .select(['entry_kind', 'units'])
+    .where('subject_id', '=', taskId)
+    .where('capability_key', '=', 'prompt_runs_per_period')
+    .execute();
+  const total = (kind: string) =>
+    rows.filter((row) => row.entry_kind === kind).reduce((sum, row) => sum + row.units, 0);
+  return { consumed: total('debit'), reserved: total('reservation') - total('release') };
+}
 describe('atomic audit execution persistence', () => {
-  it('commits evidence and the terminal queue state once, billing one call and releasing the remainder', async () => {
+  it('commits evidence and the terminal queue state once, spending the task’s prompt run', async () => {
     const t = await seed(true);
     const response = { ...result, transport_model: t.context.task.transport_model };
     const derive = analyzeExecution;
@@ -176,7 +164,7 @@ describe('atomic audit execution persistence', () => {
       attempt_count: 1,
       result_artifact_id: artifactId,
     });
-    expect((await ledgerBalances(db, t.accountId)).get(t.grantId)).toEqual({
+    expect(await runs(t.context.task.id)).toEqual({
       consumed: 1,
       reserved: 0,
     });
@@ -227,9 +215,9 @@ describe('atomic audit execution persistence', () => {
         .where('task_id', '=', t.context.task.id)
         .execute(),
     ).toHaveLength(0);
-    expect((await ledgerBalances(db, t.accountId)).get(t.grantId)).toEqual({
+    expect(await runs(t.context.task.id)).toEqual({
       consumed: 0,
-      reserved: 5,
+      reserved: 1,
     });
     await db
       .updateTable('audit_tasks')
@@ -247,7 +235,7 @@ describe('atomic audit execution persistence', () => {
         .execute(),
     ).toHaveLength(0);
   });
-  it('bills a timeout once, parks the retry, then pauses only the failing credential revision', async () => {
+  it('charges no run for a timeout, parks the retry, then pauses only the failing credential revision and returns the run', async () => {
     const t = await seed(true);
     const failure = await persistExecutionFailure(
       db,
@@ -257,9 +245,9 @@ describe('atomic audit execution persistence', () => {
       runtime,
     );
     expect(failure).toEqual({ retry: true, attempt: 1 });
-    expect((await ledgerBalances(db, t.accountId)).get(t.grantId)).toEqual({
-      consumed: 1,
-      reserved: 4,
+    expect(await runs(t.context.task.id)).toEqual({
+      consumed: 0,
+      reserved: 1,
     });
     await db
       .updateTable('audit_tasks')
@@ -295,8 +283,8 @@ describe('atomic audit execution persistence', () => {
       .where('id', '=', t.connectionId)
       .executeTakeFirstOrThrow();
     expect(connection.paused_at).toBeNull();
-    expect((await ledgerBalances(db, t.accountId)).get(t.grantId)).toEqual({
-      consumed: 2,
+    expect(await runs(t.context.task.id)).toEqual({
+      consumed: 0,
       reserved: 0,
     });
   });
@@ -319,7 +307,7 @@ describe('atomic audit execution persistence', () => {
         .where('task_id', '=', t.context.task.id)
         .execute(),
     ).toEqual([]);
-    expect((await ledgerBalances(db, t.accountId)).get(t.grantId)).toEqual({
+    expect(await runs(t.context.task.id)).toEqual({
       consumed: 0,
       reserved: 0,
     });

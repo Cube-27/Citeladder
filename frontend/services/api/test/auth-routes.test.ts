@@ -200,7 +200,7 @@ describe('password auth routes', () => {
         (row) => row.valid_until?.getTime() === account.created_at.getTime() + 7 * 86400000,
       ),
     ).toBe(true);
-    expect(grants.find((row) => row.key === 'successful_answers')?.value).toBe(20);
+    expect(grants.find((row) => row.key === 'prompt_runs_per_period')?.value).toBe(20);
     expect(account.registration_cohort_at).toEqual(
       (
         await db

@@ -10,7 +10,7 @@ import { requireCapability, type Actor } from '../auth/actor.ts';
 import { auditRuntime } from '../audits/config.ts';
 import { createAudits } from '../audits/creation.ts';
 import { estimateAudit } from '../audits/estimate.ts';
-import { auditCreateInput, auditInput, auditLaunchInput } from '../audits/inputs.ts';
+import { auditInput, auditLaunchInput } from '../audits/inputs.ts';
 import { executeInteractiveAudit } from '../audits/interactive.ts';
 import { cancelAudit as cancelOwnedAudit } from '../audits/maintenance.ts';
 import { readAudit, readAudits } from '../audits/reads.ts';
@@ -24,7 +24,7 @@ export async function createQueuedAudit(
   db: Database,
   config: ServiceConfig,
   actor: Actor,
-  input: z.output<typeof auditCreateInput>,
+  input: z.output<typeof auditInput>,
 ) {
   requireCapability(actor, 'run', SCOPE);
   const ids = await createAudits(

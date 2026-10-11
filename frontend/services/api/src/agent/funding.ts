@@ -1,45 +1,32 @@
-/** Adapter orchestration; entitlement resolution, rates and ledger remain owned elsewhere. */
+/**
+ * Agent funding: the Agent always uses the platform gateway and spends AI
+ * credits (B19). Each dispatch holds its maximum cost at the shared token
+ * prices and settles once to the reported tokens; the ledger and the pricing
+ * are the same ones every other platform AI call uses (B12-B15).
+ */
 import { sql } from 'kysely';
-import { ZodError } from 'zod';
-import { getLogger } from '../logging.ts';
 import type { Database } from '../db/database.ts';
 import { policy } from '../config.ts';
 import { ApiError } from '../errors.ts';
 import { accountState } from '../entitlements/state.ts';
 import { reserveUsage, debitUsage, releaseUsage, LedgerError } from '../entitlements/ledger.ts';
-import { agentCreditRate, chargeCredits } from '../billing/ai-credits.ts';
+import {
+  PRICING_REVISION,
+  chargeCredits,
+  modelPrice,
+  requestInputBytes,
+  reservationCredits,
+  unknownUsageCredits,
+} from '../billing/ai-pricing.ts';
 import { enforceWorkspaceRequest } from '../abuse/usage.ts';
-import { AppRouteUnavailable, resolveAppRoute } from '../providers/app-models.ts';
 import { agentSettings } from './config.ts';
 import { AgentError, type Run, type Scope } from './contracts.ts';
 import type { Admission, FundingIdentity } from './store.ts';
 import type { Funding } from './model-calls.ts';
 import type { GatewaySettings } from '../models/gateway.ts';
-import { frozenRouteMatches } from './models.ts';
 
 type Settings = ReturnType<typeof agentSettings>;
-async function historicalRate(db: Database, model: string, revision: string) {
-  try {
-    return (await agentCreditRate(db, model, revision)).rate;
-  } catch (error) {
-    if (error instanceof ZodError || (error instanceof ApiError && error.status === 503)) {
-      getLogger('app.domain.agent.model_calls').warning('agent.historical_rate_unavailable', {
-        pricing_revision: revision,
-      });
-      return null;
-    }
-    throw error;
-  }
-}
-async function rateFor(db: Database, model: string) {
-  try {
-    return await agentCreditRate(db, model);
-  } catch (error) {
-    if (error instanceof ApiError && error.status === 503)
-      throw new AgentError('funding_unavailable');
-    throw error;
-  }
-}
+
 async function account(db: Database, workspaceId: string) {
   const row = await db
     .selectFrom('billing_accounts')
@@ -69,13 +56,8 @@ async function development(db: Database, userId: string | null, settings: Settin
     user.email.trim().toLowerCase() === settings.devEmail
   );
 }
-async function customerRoute(db: Database, workspaceId: string) {
-  try {
-    return await resolveAppRoute(db, workspaceId);
-  } catch (error) {
-    if (error instanceof AppRouteUnavailable) throw new AgentError('route_unavailable');
-    throw error;
-  }
+function configured(platform: GatewaySettings) {
+  return [platform.apiKey, platform.baseUrl, platform.model].every((value) => value.trim());
 }
 async function identity(
   db: Database,
@@ -84,28 +66,11 @@ async function identity(
   platform: GatewaySettings,
 ): Promise<FundingIdentity> {
   await capability(db, scope.workspaceId);
-  const route = await customerRoute(db, scope.workspaceId);
-  if (route)
-    return {
-      funding_source: 'customer_byok',
-      requested_model: route.model,
-      route_id: route.routeId,
-      connection_id: route.connectionId,
-      credential_revision: route.credentialRevision,
-      route_revision: route.routeRevision,
-    };
-  if (![platform.apiKey, platform.baseUrl, platform.model].every((value) => value.trim()))
-    throw new AgentError('funding_unavailable');
+  if (!configured(platform)) throw new AgentError('funding_unavailable');
   const unmetered = await development(db, scope.userId, settings);
-  if (!unmetered && !(await rateFor(db, platform.model)).rate)
-    throw new AgentError('funding_unavailable');
   return {
     funding_source: unmetered ? 'development' : 'platform',
     requested_model: platform.model,
-    route_id: null,
-    connection_id: null,
-    credential_revision: null,
-    route_revision: null,
   };
 }
 export function agentAdmission(settings: Settings, platform: GatewaySettings): Admission {
@@ -131,11 +96,6 @@ export function agentAdmission(settings: Settings, platform: GatewaySettings): A
 }
 async function recheck(db: Database, run: Run, settings: Settings, platform: GatewaySettings) {
   await capability(db, run.workspace_id);
-  if (run.funding_source === 'customer_byok') {
-    const route = await customerRoute(db, run.workspace_id);
-    if (!frozenRouteMatches(route, run)) throw new AgentError('route_unavailable');
-    return;
-  }
   if (run.requested_model !== platform.model) throw new AgentError('model_changed');
   if (!platform.apiKey || !platform.baseUrl) throw new AgentError('funding_unavailable');
   if (run.funding_source === 'development' && !(await development(db, run.user_id, settings)))
@@ -143,22 +103,27 @@ async function recheck(db: Database, run: Run, settings: Settings, platform: Gat
 }
 export function agentFunding(settings: Settings, platform: GatewaySettings): Funding {
   return {
-    reserve: async (db, run, dispatchId) => {
+    reserve: async (db, run, dispatchId, _model, request) => {
       await recheck(db, run, settings, platform);
       if (run.funding_source !== 'platform')
         return { reservationId: null, credits: 0, pricingRevision: '' };
-      const { revision, rate } = await rateFor(db, run.requested_model);
-      if (!rate) throw new AgentError('funding_unavailable');
-      let reservationId: string;
+      const price = modelPrice(run.requested_model, platform.model);
+      if (!price) throw new AgentError('funding_unavailable');
+      const credits = reservationCredits(
+        price,
+        requestInputBytes(request.system, request.user, request.schema),
+        platform.maxOutputTokens,
+      );
       try {
-        reservationId = await reserveUsage(db, {
+        const reservationId = await reserveUsage(db, {
           accountId: await account(db, run.workspace_id),
-          capability: 'ai_credits',
+          capability: policy.entitlements.ai_credits,
           subject: { kind: 'agent', id: run.id, workspaceId: run.workspace_id },
-          units: rate.call_credit_cap,
+          units: credits,
           key: `agent:${dispatchId}:hold`,
           at: new Date(),
         });
+        return { reservationId, credits, pricingRevision: PRICING_REVISION };
       } catch (error) {
         if (
           error instanceof LedgerError &&
@@ -171,18 +136,15 @@ export function agentFunding(settings: Settings, platform: GatewaySettings): Fun
           throw new AgentError('funding_unavailable');
         throw error;
       }
-      return { reservationId, credits: rate.call_credit_cap, pricingRevision: revision };
     },
     settle: async (db, attempt, result) => {
       if (attempt.funding_source !== 'platform') return { credits: 0, status: 'zero_debit' };
       if (!attempt.reservation_id) throw new AgentError('funding_unavailable');
-      // Missing historical terms close against the exact dispatch hold; never today’s policy.
-      const rate = await historicalRate(db, attempt.requested_model, attempt.pricing_revision);
-      const charged = rate && result ? chargeCredits(rate, result.usage) : null;
-      const credits = Math.min(
-        Number(attempt.reserved_credits),
-        charged ?? rate?.unknown_usage_charge ?? Number(attempt.reserved_credits),
-      );
+      const reserved = Number(attempt.reserved_credits);
+      const price = modelPrice(attempt.requested_model, platform.model);
+      const charged = price && result ? chargeCredits(price, result.usage) : null;
+      // A failed call that reports no usage is not charged; unreadable usage pays the fallback.
+      const credits = !result ? 0 : Math.min(reserved, charged ?? unknownUsageCredits(reserved));
       const accountId = await account(db, attempt.workspace_id);
       const key = `agent:${attempt.id}:settle:${attempt.dispatch_id}`;
       const at = new Date();
@@ -205,7 +167,7 @@ export function agentFunding(settings: Settings, platform: GatewaySettings): Fun
         key: `${key}:excess`,
         at,
       });
-      return { credits, status: rate ? 'settled' : 'unknown_policy' };
+      return { credits, status: credits ? 'settled' : 'zero_debit' };
     },
   };
 }

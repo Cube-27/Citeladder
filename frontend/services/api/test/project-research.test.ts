@@ -2,6 +2,7 @@ import { gzipSync } from 'node:zlib';
 import { createServer } from 'node:http';
 
 import { expect, it, vi } from 'vitest';
+import { recordingMeter } from './meter-fixtures.ts';
 
 import { extractPage, offeringLinks } from '../src/projects/html-evidence.ts';
 import { rasterType } from '../src/projects/logo-refresh.ts';
@@ -56,6 +57,8 @@ function recordedGateway(replies: unknown[]) {
     ),
   };
 }
+const { meter } = recordingMeter();
+const keenable = { meter, feature: 'research_evidence' } as const;
 it('dials the pinned address through the native request boundary while preserving Host', async () => {
   let host: string | undefined;
   const server = createServer((request, response) => {
@@ -113,7 +116,7 @@ it('preserves recorded research metadata and enforces a shared call budget befor
     },
   ];
   const transport = vi.fn(async () => Response.json(replies.shift()));
-  const client = createResearchClient(settings, budget, transport);
+  const client = createResearchClient(settings, budget, transport, keenable);
   const items = await client.search('Acme company', 'acme.com', 10, 'recorded-query');
   expect(items).toHaveLength(1);
   const page = await client.page(items[0]!, false);
@@ -138,6 +141,7 @@ it('preserves recorded research metadata and enforces a shared call budget befor
       { ...settings, keenable_base_url: 'https://untrusted.example' },
       budget,
       transport,
+      keenable,
     ),
   ).toThrow('canonical HTTPS');
 });
@@ -178,6 +182,7 @@ it('keeps identity fixed while retrying malformed provisional competitors', asyn
     discoveryCreate.parse({ brand_name: 'Acme', website_url: 'acme.com', primary_market: 'US' }),
     { url: page.url, domain: 'acme.com', page, warning: '' },
     {
+      meter,
       gateway,
       env: { BRAND_DISCOVERY_IDENTITY_FIRST_PARTY_EVIDENCE_MAX_CHARS: '5' },
       fetcher: async () => {
@@ -221,7 +226,7 @@ it.each(['ready', 'failed'] as const)(
     const result = await researchBrand(
       discoveryCreate.parse({ brand_name: 'Acme', website_url: 'acme.com', primary_market: 'US' }),
       { url: 'https://acme.com/', domain: 'acme.com', page: null, warning: '' },
-      { gateway, transport, env: { KEENABLE_API_KEY: 'test-only' } },
+      { meter, gateway, transport, env: { KEENABLE_API_KEY: 'test-only' } },
     );
     expect(result.competitors.map((item) => item.name)).toEqual(['Globex']);
     expect(result.warnings).toEqual(searchState === 'failed' ? ['competitor_search_failed'] : []);
@@ -356,6 +361,7 @@ it('bounds model attempts and records failed research without fabricating identi
   });
   const gateway = {
     model: 'test-model',
+    maxOutputTokens: 100,
     baseUrlHost: 'model.example',
     adapter: 'openai_compatible' as const,
     complete: vi.fn(),
@@ -365,7 +371,7 @@ it('bounds model attempts and records failed research without fabricating identi
   const result = await researchBrand(
     discoveryCreate.parse({ brand_name: 'Acme', website_url: 'acme.com', primary_market: 'US' }),
     { url: 'https://acme.com/', domain: 'acme.com', page: null, warning: 'research_degraded' },
-    { gateway, env: {} },
+    { meter, gateway, env: {} },
   );
   expect(structured).toHaveBeenCalledTimes(1);
   expect(result.profile.description).toBe('');

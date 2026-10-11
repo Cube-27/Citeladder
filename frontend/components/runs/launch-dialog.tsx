@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { promptsApi } from '@/lib/api/prompts';
 import { providersApi } from '@/lib/api/providers';
+import { useManagedPlan } from '@/lib/billing/entitlement-context';
 import { queryKeys } from '@/lib/api/query-keys';
 import { runsApi } from '@/lib/api/runs';
 import type { Audit, LogicalEngine, PromptSet } from '@/lib/api/types';
@@ -21,6 +22,9 @@ import {
 } from '@/lib/runs/launch';
 
 import { LaunchDialogView } from './launch-dialog-view';
+
+/** A managed plan measures every engine on the platform's keys (B32). */
+const MANAGED_ENGINES = { configuredEngines: [...ENGINE_ORDER], unverifiedEngines: [] };
 
 function availableEngines(
   connections: Awaited<ReturnType<typeof providersApi.listConnections>> | undefined,
@@ -39,6 +43,21 @@ function availableEngines(
     configuredEngines: ENGINE_ORDER.filter((engine) => verified.has(engine)),
     unverifiedEngines: ENGINE_ORDER.filter((engine) => stored.has(engine) && !verified.has(engine)),
   };
+}
+
+/** The engines a launch can measure: the workspace's own routes, or all on a managed plan. */
+function useLaunchEngines(open: boolean, workspaceId: string | null) {
+  const managed = useManagedPlan();
+  const connectionsQuery = useQuery({
+    queryKey: queryKeys.providers.connections(workspaceId ?? 'unresolved'),
+    queryFn: ({ signal }) => providersApi.listConnections({ signal, workspaceId }),
+    enabled: open && workspaceId !== null && !managed,
+  });
+  const engines = useMemo(
+    () => (managed ? MANAGED_ENGINES : availableEngines(connectionsQuery.data)),
+    [managed, connectionsQuery.data],
+  );
+  return { ...engines, enginesReady: managed || connectionsQuery.isSuccess };
 }
 
 function fixedPromptSelection(
@@ -103,14 +122,9 @@ export function LaunchDialog({
     queryFn: ({ signal }) => promptsApi.listPromptSets(projectId, { signal, workspaceId }),
     enabled: open && workspaceId !== null,
   });
-  const connectionsQuery = useQuery({
-    queryKey: queryKeys.providers.connections(workspaceId ?? 'unresolved'),
-    queryFn: ({ signal }) => providersApi.listConnections({ signal, workspaceId }),
-    enabled: open && workspaceId !== null,
-  });
-  const { configuredEngines, unverifiedEngines } = useMemo(
-    () => availableEngines(connectionsQuery.data),
-    [connectionsQuery.data],
+  const { configuredEngines, unverifiedEngines, enginesReady } = useLaunchEngines(
+    open,
+    workspaceId,
   );
   // One contract, derived from the same values the payload is built from:
   // `fixedPromptIds` wins in `buildLaunchPayload`, so it must also lock the
@@ -130,11 +144,11 @@ export function LaunchDialog({
       initialized.current = false;
       return;
     }
-    if (!initialized.current && connectionsQuery.isSuccess) {
+    if (!initialized.current && enginesReady) {
       initialized.current = true;
       setEngines(configuredEngines.filter(isConsumerEngine));
     }
-  }, [open, connectionsQuery.isSuccess, configuredEngines]);
+  }, [open, enginesReady, configuredEngines]);
   const [repetitions, setRepetitions] = useState(DEFAULT_REPETITIONS);
   const markets = useProjectMarkets(projectId, workspaceId, open);
   // The default market alone until the reader picks more.

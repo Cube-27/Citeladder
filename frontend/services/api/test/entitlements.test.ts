@@ -140,7 +140,7 @@ describe('admitPrompts', () => {
           : Promise.reject(error),
     );
 
-  it('fails closed without a billing account and passes an unprovisioned one', async () => {
+  it('fails closed without a billing account, and an account with no prompt_slots grant has none', async () => {
     const t = await tenant();
     expect(
       await denial(() => db.transaction().execute((trx) => admitPrompts(trx, t.workspaceId, 1))),
@@ -150,8 +150,12 @@ describe('admitPrompts', () => {
     });
     await billingAccount(db, t.workspaceId);
     expect(
-      await denial(() => db.transaction().execute((trx) => admitPrompts(trx, t.workspaceId, 1000))),
-    ).toBeNull();
+      await denial(() => db.transaction().execute((trx) => admitPrompts(trx, t.workspaceId, 1))),
+    ).toEqual({
+      status: 403,
+      code: 'occupancy_limit_exceeded',
+      details: { key: 'prompt_slots', allowance: 0, current: 0, requested: 1 },
+    });
   });
 
   it('counts every prompt in the workspace against the allowance', async () => {

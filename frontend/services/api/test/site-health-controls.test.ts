@@ -94,7 +94,7 @@ describe('crawl control admission', () => {
     await db
       .transaction()
       .execute((trx) => replaceMonitoredSet(trx, seed.workspaceId, seed.projectId, [page.id], 1));
-    await grant(db, account, { key: 'fanout', value: 2 });
+    await grant(db, account, { key: 'commerce', value: 2 });
     for (const [path, body] of [
       ['/site-crawls', { project_id: seed.projectId }],
       [`/site-crawls/${seed.crawlId}/pages/${page.id}/rerun`, undefined],

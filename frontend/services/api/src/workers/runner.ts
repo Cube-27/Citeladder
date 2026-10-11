@@ -15,6 +15,7 @@ import { auditRuntime } from '../audits/config.ts';
 import { auditProjections } from '../audits/projections.ts';
 import { AuditMaintenance } from '../audits/maintenance.ts';
 import { recoverBilling } from '../billing/recovery.ts';
+import { settleAbandonedCalls } from '../billing/metering.ts';
 import { reconcileResearch } from '../search-intelligence/maintenance.ts';
 import { AnalyticsWorker } from './analytics-worker.ts';
 import { DiscoveryWorker } from './discovery-worker.ts';
@@ -288,7 +289,7 @@ export async function runnerOwners(db: Database, config: ServiceConfig) {
           Object.values(await recoverBilling(db, config, undefined, canAdmit)).reduce(
             (sum, count) => sum + count,
             0,
-          ),
+          ) + (canAdmit() ? await settleAbandonedCalls(db) : 0),
       },
     ] satisfies RunnerLane[],
     periodic: [

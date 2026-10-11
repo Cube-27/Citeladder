@@ -13,6 +13,7 @@ import { randomUUID } from 'node:crypto';
 
 import { scoringConfig } from '../analysis/scoring.ts';
 import { policy } from '../config.ts';
+import { meterFor } from '../billing/metering.ts';
 import type { FactCheckPolicy, PerceptionPolicy } from '../config/perception.ts';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
@@ -239,8 +240,10 @@ export function answerPerception(
       perDay: settings.max_classifications_per_workspace_per_day,
     });
     if (capped) return settle({ outcome: 'unavailable', reason: 'platform_cap' });
-    const gateway = gatewayFactory();
-    if (!gateway) return settle({ outcome: 'unavailable', reason: 'model_not_configured' });
+    const raw = gatewayFactory();
+    if (!raw) return settle({ outcome: 'unavailable', reason: 'model_not_configured' });
+    // Included in the prompt run (B9): recorded with its tokens, not charged.
+    const gateway = meterFor(db, task.workspace_id).gateway(raw, 'answer_perception');
     const config = scoringConfig(subject.configuration);
     const languageCode = scalarText(record(subject.configuration).language_code);
     const pkg: PerceptionPackage = {

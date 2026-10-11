@@ -200,9 +200,12 @@ export async function changePlan(
     if (!plan) conflict('catalog_key_unknown');
     const now = new Date();
     const identity = identitySchema.parse(account.billing_profile);
+    // A plan change keeps the subscription's mode; switching mode is a new plan.
+    const mode = sub.credential_mode === 'funded' ? 'funded' : 'byok';
     const target = baseIntent(
       config.billing,
       plan,
+      mode,
       account.billing_country,
       identity,
       published.revision,
@@ -211,7 +214,7 @@ export async function changePlan(
     const terms = frozenTermsSchema.parse({
       catalog_key: targetKey,
       catalog_revision: published.revision,
-      credential_mode: 'byok',
+      credential_mode: mode,
       quantity: 1,
       price_ref: target.priceRef,
       currency: target.quote.total_price.currency,
@@ -228,7 +231,7 @@ export async function changePlan(
       !(difference > 0
         ? checkoutAvailable(config.billing, config.razorpay, target.region)
         : configured(config.razorpay)) ||
-      plan.regional_byok_prices[target.region]?.provider_mode !== sub.provider_mode
+      plan.regional_prices[mode][target.region]?.provider_mode !== sub.provider_mode
     )
       conflict('checkout_unavailable');
     const effective = sub.current_period_end.toISOString();
@@ -255,6 +258,7 @@ export async function changePlan(
     if (prorated < config.billing.minimumUpgrade) conflict('plan_change_unavailable');
     const intent = quoteIntent(config.billing, {
       kind: 'upgrade',
+      mode,
       key: targetKey,
       quantity: 1,
       country: account.billing_country,

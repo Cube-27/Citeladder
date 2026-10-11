@@ -22,7 +22,7 @@ const logger = getLogger('api.billing');
 export const frozenTermsSchema = z.object({
   catalog_key: z.string(),
   catalog_revision: z.string(),
-  credential_mode: z.literal('byok'),
+  credential_mode: z.enum(['byok', 'funded']),
   quantity: amount.min(1),
   price_ref: z.string(),
   currency: z.enum(['USD', 'INR']),
@@ -116,7 +116,7 @@ async function settleBase(
   const terms = frozenTermsSchema.parse({
     catalog_key: pending.catalog_key,
     catalog_revision: pending.catalog_revision,
-    credential_mode: 'byok',
+    credential_mode: pending.credential_mode,
     quantity: pending.quantity,
     price_ref: pending.external_price_id,
     currency: quote.total_price.currency,

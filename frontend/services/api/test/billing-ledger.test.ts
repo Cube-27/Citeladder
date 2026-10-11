@@ -26,7 +26,7 @@ describe('shared consumable ledger', () => {
     await fixtures.cleanup();
     await db.destroy();
   });
-  async function tenant(units: number, capability = 'audit_credits') {
+  async function tenant(units: number, capability = 'site_health_page_fetches_per_period') {
     const t = await fixtures.tenant();
     const accountId = await billingAccount(db, t.workspaceId);
     accounts.push(accountId);
@@ -109,9 +109,7 @@ describe('shared consumable ledger', () => {
         budget: '{}',
         cancelled_at: null,
         completed_at: null,
-        connection_id: null,
         context_manifest: '{}',
-        credential_revision: null,
         error_code: '',
         error_detail: '',
         funding_source: 'funded',
@@ -129,8 +127,6 @@ describe('shared consumable ledger', () => {
         requested_model: 'fixture',
         requested_skill_id: null,
         requested_skill_source: null,
-        route_id: null,
-        route_revision: null,
         runtime_version: 'fixture',
         skill_catalog_version: 'fixture',
         skill_id: null,
@@ -144,13 +140,13 @@ describe('shared consumable ledger', () => {
     return { kind: 'agent', id: runId, workspaceId: t.workspaceId };
   }
   it('debits distinct dispatches in one Agent run while suppressing each dispatch replay', async () => {
-    const t = await tenant(4, 'ai_credits');
+    const t = await tenant(4, 'site_health_page_fetches_per_period');
     const subject = await agentSubject(t);
     const reservationId = await db.transaction().execute((trx) =>
       reserveUsage(trx, {
         accountId: t.accountId,
         subject,
-        capability: 'ai_credits',
+        capability: 'site_health_page_fetches_per_period',
         units: 4,
         key: randomUUID(),
         at: t.at,
@@ -193,7 +189,7 @@ describe('shared consumable ledger', () => {
         reserveUsage(trx, {
           accountId: t.accountId,
           subject: t.subject,
-          capability: 'audit_credits',
+          capability: 'site_health_page_fetches_per_period',
           units,
           key,
           at: t.at,
@@ -224,7 +220,7 @@ describe('shared consumable ledger', () => {
         reserveUsage(trx, {
           accountId: other.accountId,
           subject: { ...t.subject, workspaceId: other.workspaceId },
-          capability: 'audit_credits',
+          capability: 'site_health_page_fetches_per_period',
           units: 1,
           key: randomUUID(),
           at: t.at,
@@ -239,7 +235,7 @@ describe('shared consumable ledger', () => {
     const request = {
       accountId: t.accountId,
       subject: t.subject,
-      capability: 'audit_credits',
+      capability: 'site_health_page_fetches_per_period',
       units: 3,
       key,
       at: t.at,
@@ -248,7 +244,7 @@ describe('shared consumable ledger', () => {
     // The historical writer serializes these keys in this exact order.
     const hash = (json: string) => createHash('sha256').update(json).digest('hex');
     const reservationFingerprint = hash(
-      `{"account_id":"${t.accountId}","audit_id":"${t.subject.auditId}","capability_key":"audit_credits","subject_kind":"audit","task_id":"${t.subject.id}","units":3}`,
+      `{"account_id":"${t.accountId}","audit_id":"${t.subject.auditId}","capability_key":"site_health_page_fetches_per_period","subject_kind":"audit","task_id":"${t.subject.id}","units":3}`,
     );
     await db
       .updateTable('consumable_ledger')
@@ -296,7 +292,7 @@ describe('shared consumable ledger', () => {
       reserveUsage(trx, {
         accountId: t.accountId,
         subject: t.subject,
-        capability: 'audit_credits',
+        capability: 'site_health_page_fetches_per_period',
         units: 3,
         key: randomUUID(),
         at: t.at,

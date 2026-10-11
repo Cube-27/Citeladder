@@ -176,7 +176,7 @@ it('issues and revokes once, exposes same-transaction projection, and enforces e
     grantMutation(db, ctx, { ...target(), workspaceId: foreignWorkspace }, operation),
   ).rejects.toThrow();
   await expect(
-    grantMutation(db, context(), target(), { ...operation, key: 'provider.copilot' }),
+    grantMutation(db, context(), target(), { ...operation, key: 'retired_capability' }),
   ).rejects.toThrow('invalid');
   const issued = await grantMutation(db, ctx, target(), operation);
   await grantMutation(db, ctx, target(), operation);

@@ -137,6 +137,7 @@ function permittedWorkspaceEntitlement(workspaceId: string, projectCount = 1) {
     registry_revision: PERMITTED_ENTITLEMENT.registry_revision,
     entitlement_lifecycle_version: PERMITTED_ENTITLEMENT.entitlement_lifecycle_version,
     valid_until: PERMITTED_ENTITLEMENT.valid_until,
+    credential_mode: 'byok',
     capabilities: PERMITTED_ENTITLEMENT.capabilities.map((capability) => ({
       key: capability.key,
       type: capability.capability_type,

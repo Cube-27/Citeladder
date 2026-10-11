@@ -213,6 +213,72 @@ refund, even if a later period is live when it settles. When the provider
 refuses to cancel an expiring base checkout, the sweep re-reads it and activates
 it if the customer paid meanwhile.
 
+## Plans, AI credits and enforcement (PR 2)
+
+**B31 — Owner, 2026-10-11.** Nothing is free. Every platform AI call spends AI
+credits, including prompt generation in onboarding and on the free trial, which
+has its own total credits (B16). Supersedes B11's onboarding exemption and its
+row in B17. Engineering reads "nothing" as including onboarding research and
+brand discovery.
+
+**B32 — Owner, 2026-10-11.** Managed plans are purchasable. The pricing page's
+BYOK/managed toggle selects the mode. For a managed workspace the platform
+supplies the answer-engine and DataForSEO keys internally, and provider settings
+hide them; a BYOK workspace sees and manages its own. That is the only
+difference between the two modes (B4). Extends B20.
+
+**B33 — Owner, 2026-10-11.** Only an answer that succeeds spends a prompt run.
+An answer that fails after its retries releases its hold.
+
+**B34 — Engineering, 2026-10-11.** Prompt runs are held per answer at admission,
+for every audit and every mode, and spent only on a recorded answer (B8, B33).
+They replace the trial's separate per-prompt success limit: the trial has 20
+runs in total and nothing else. Answer analysis is included in the run (B9).
+
+**B35 — Engineering, 2026-10-11.** One metering owner charges AI credits. A
+charged call commits a hold before network I/O, sized as every input byte plus
+the output cap (a token is never fewer than one byte), and settles once to the
+reported tokens. A call that succeeded with unreadable usage, or a hold a crash
+left open for 15 minutes, settles at a 10-credit fallback, never above the hold.
+Every platform call (gateway, JEV, Tavily, Keenable) is recorded in
+`platform_calls`, and those clients refuse a call made outside a metering scope;
+that refusal is the test B18 asks for. Token prices are configuration, not
+catalog data. The Agent keeps its per-step dispatch records but uses the same
+prices and ledger.
+
+**B36 — Engineering, 2026-10-11.** The managed monthly budget admits a launch
+while the month's recorded platform spend is below the ceiling (B20). The
+estimate it used before had no configured expected costs, so it would have
+refused every managed audit. Prompt runs bound the volume; one launch can
+overshoot the ceiling by its own cost.
+
+**B37 — Engineering, 2026-10-11.** A plan carries BYOK and managed prices per
+region, each with its own Razorpay plan (keyed `plan:mode:region`). Grants are
+identical in both modes (B4). A managed workspace is one whose live base
+subscription is managed; the plan decides, never the request. Add-on and
+top-up prices follow the subscription's mode. The configured managed price of
+"Extra 10 prompts" stays $99 although it no longer adds answers; prices are
+configuration (B0).
+
+**B38 — Engineering, 2026-10-11.** Occupancy fails closed everywhere: no grant
+means an allowance of zero for projects and prompts, as for markets and API
+keys. Commerce and Search Intelligence gate new work only; data already
+collected stays readable after a downgrade.
+
+**B39 — Engineering, 2026-10-11.** Removed with the Agent custom model (B19):
+provider app routes and their disclosure records, and the customer-destination
+probe path. Removed as vestigial: the card-trial quote route,
+`trial_requested`, `checkout_url`, `redirect_url` and the hosted-redirect flow,
+`credit_price`, 88 unreferenced contract keys and three unused HTTP settings.
+`billing:backfill` is now `billing:provision-workspace`, which is what it does.
+
+## Open questions
+
+- **Search Intelligence on managed plans.** Search Intelligence runs on the
+  workspace's own DataForSEO key (B17: not charged). A managed workspace hides
+  provider settings (B32), so it cannot add one. Should managed Search
+  Intelligence use the platform key, and if so, how is it charged?
+
 ## Owner inputs still required
 
 Not decisions; needed only for India checkout and live enablement: GST rate,

@@ -112,6 +112,39 @@ describe('atomic Search Intelligence reviews', () => {
       ).status,
     ).toBe(403);
   });
+  it('refuses a review without Search Intelligence in the plan, keeping past runs readable', async () => {
+    const t = await tenant(),
+      app = createApp(testConfig({ ENCRYPTION_KEY: key }), db);
+    const token = await sessionToken({ sub: t.userId, ver: 0 });
+    const request = (path: string, method = 'GET', idempotency = 'gated-review') =>
+      app.request(`/api/v1/projects/${t.projectId}/search-intelligence${path}`, {
+        method,
+        headers: {
+          cookie: `${testConfig().session.cookieName}=${token}`,
+          'content-type': 'application/json',
+          'Idempotency-Key': idempotency,
+        },
+        ...(method === 'POST'
+          ? { body: JSON.stringify({ datasets: [{ kind: 'footprint' }] }) }
+          : {}),
+      });
+    const past = (await (await request('/reviews', 'POST', 'before-downgrade')).json()) as {
+      id: string;
+    };
+    await db
+      .deleteFrom('account_grants')
+      .where('key', '=', 'search_intelligence')
+      .where('billing_account_id', '=', (eb) =>
+        eb.selectFrom('billing_accounts').select('id').where('workspace_id', '=', t.workspaceId),
+      )
+      .execute();
+    const refused = await request('/reviews', 'POST');
+    expect({ status: refused.status, body: await refused.json() }).toMatchObject({
+      status: 403,
+      body: { error: { code: 'capability_not_granted', details: { key: 'search_intelligence' } } },
+    });
+    expect((await request(`/runs/${past.id}`)).status).toBe(200);
+  });
   it('freezes one quoted paged plan under competing idempotent reviews', async () => {
     const t = await tenant(),
       input = reviewBody.parse({

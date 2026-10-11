@@ -147,7 +147,7 @@ are not verified. CiteLadder freezes the taxable value and transaction-level
 CGST/SGST or IGST split before provider I/O, then issues the paid GST receipt
 after captured-payment evidence matches that final total.
 
-Edit the private catalog's `regional_byok_prices.india.provider_price_ref` values
+Edit the private catalog's `regional_prices.byok.india.provider_price_ref` values
 with the three actual `plan_...` IDs. Set each `tax_verified` true only after
 the seller GST settings, transaction policy, and resulting CiteLadder receipt
 totals are reviewed. Keep all other frozen terms unchanged.

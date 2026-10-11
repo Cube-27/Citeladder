@@ -10,7 +10,6 @@ import {
   persistExecutionFailure,
   persistExecutionSuccess,
   appendProviderAttempt,
-  settleTaskCredits,
   type DeriveExecution,
 } from './result-persistence.ts';
 import { type AuditRuntime } from './config.ts';
@@ -147,7 +146,6 @@ export function persistSurfaceExchange(
     await appendProviderAttempt(trx, task, at, {
       ...(exchange.error ? { error: exchange.error } : {}),
     });
-    if (exchange.paid) await settleTaskCredits(trx, task, true, false, at);
     await parkAuditTask(
       trx,
       task,

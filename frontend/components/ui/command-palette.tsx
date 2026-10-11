@@ -18,6 +18,7 @@ import { BrandLogo } from '@/components/ui/brand-logo';
 import { Button } from '@/components/ui/button';
 import { textRole } from '@/components/ui/typography';
 import { useProjectContext } from '@/lib/project/project-context';
+import { useManagedPlan } from '@/lib/billing/entitlement-context';
 import {
   scopedNavigationDestination,
   useSelectProject,
@@ -123,6 +124,7 @@ function toSections(results: readonly Command[]) {
 export function CommandPalette() {
   const router = useNavigate();
   const { projects, activeProjectId, activeWorkspaceId } = useProjectContext();
+  const managed = useManagedPlan();
   const selectProject = useSelectProject();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -199,7 +201,7 @@ export function CommandPalette() {
   }, [open]);
 
   const commands = useMemo<Command[]>(() => {
-    const navigation = resolveCommandGroups().flatMap((group) =>
+    const navigation = resolveCommandGroups({ managed }).flatMap((group) =>
       group.items.map((item) => ({
         id: `nav:${item.href}`,
         label: item.label,
@@ -231,7 +233,7 @@ export function CommandPalette() {
     }));
 
     return [...navigation, ...projectCommands];
-  }, [router, projects, activeProjectId, activeWorkspaceId, selectProject]);
+  }, [router, projects, activeProjectId, activeWorkspaceId, selectProject, managed]);
 
   const results = useMemo(() => {
     const needle = query.trim().toLowerCase();

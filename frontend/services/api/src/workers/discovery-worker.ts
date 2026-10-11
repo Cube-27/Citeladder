@@ -15,6 +15,7 @@ import { discoveryCreate, discoverySettings } from '../projects/discovery-inputs
 import { researchBrand, type ResearchDependencies } from '../projects/research.ts';
 import { resolveSite } from '../projects/site-resolution.ts';
 import { FetchError, fetchWebsite } from '../projects/safe-fetch.ts';
+import { meterFor, type Meter } from '../billing/metering.ts';
 import {
   DiscoveryQueue,
   type DiscoveryTask,
@@ -24,6 +25,10 @@ import {
 const cfg = policy.discovery.constants;
 const logger = getLogger('app.workers.brand_discovery_worker');
 type Result = Awaited<ReturnType<typeof researchBrand>>;
+/** Research dependencies; each task meters its own workspace. */
+type WorkerDependencies = Omit<ResearchDependencies, 'meter'> & {
+  meter?: (workspaceId: string) => Meter;
+};
 function siteFailure(error: unknown): error is FetchError {
   return (
     error instanceof FetchError &&
@@ -41,9 +46,9 @@ export class DiscoveryWorker {
   readonly queue: DiscoveryQueue;
   readonly settings: ReturnType<typeof discoverySettings>;
   readonly db: Database;
-  readonly dependencies: ResearchDependencies;
+  readonly dependencies: WorkerDependencies;
   readonly #access: (workspaceId: string) => Promise<unknown>;
-  constructor(db: Database, dependencies: ResearchDependencies = {}) {
+  constructor(db: Database, dependencies: WorkerDependencies = {}) {
     this.db = db;
     this.dependencies = dependencies;
     this.settings = discoverySettings(dependencies.env);
@@ -88,6 +93,9 @@ export class DiscoveryWorker {
       await this.progress(task, owner, 'understanding_business', 1, homepageRead, site);
       const result = await researchBrand(input, site, {
         ...this.dependencies,
+        meter: (this.dependencies.meter ?? ((workspaceId) => meterFor(this.db, workspaceId)))(
+          task.workspace_id,
+        ),
         fetcher,
         signal: executionSignal,
         checkCancelled,

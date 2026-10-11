@@ -4,6 +4,7 @@ import { commerceTargetSchema, commerceTargetsSchema } from '@citeladder/contrac
 import { z } from 'zod';
 import { loadWorkerSettings, policy, resolveSettingSpec } from '../config.ts';
 import type { Database } from '../db/database.ts';
+import { meterFor } from '../billing/metering.ts';
 import { jsonObject } from '../db/json.ts';
 import { enqueueTask } from '../referrals/enqueue.ts';
 import type { QueueTask } from '../queue/task-queue.ts';
@@ -269,7 +270,11 @@ export function competitorDiscovery(
     const query = discoveryQuery(payload.target, context);
     const owned = await ownedHosts(db, { workspaceId: task.workspace_id, projectId });
     await checkCancelled('competitor search');
-    const outcome = await (options.search ?? competitorSearch())(query, payload.locale);
+    const outcome = await (options.search ?? competitorSearch())(
+      query,
+      payload.locale,
+      meterFor(db, task.workspace_id),
+    );
     await checkCancelled('competitor verification');
     const items = await validate(
       db,
