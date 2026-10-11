@@ -375,17 +375,17 @@ export async function issueHistory(
       from site_issues i
       join site_crawls c on c.id = i.crawl_id
       join site_crawls selected on selected.id = ${crawl.id}
+      -- The page's one current, finalized analysis in the selected crawl.
+      join site_page_analyses cur on cur.workspace_id = ${workspaceId}
+        and cur.crawl_id = ${crawl.id} and cur.site_url_id = ${siteUrlId}
+        and cur.is_current and cur.finalized_at is not null
       where i.workspace_id = ${workspaceId} and i.project_id = ${crawl.project_id}
         and i.site_url_id = ${siteUrlId} and c.project_id = ${crawl.project_id}
         and (c.created_at, c.id) <= (selected.created_at, selected.id)
-        and exists (
-          select 1 from site_page_analyses a
-          where a.workspace_id = ${workspaceId} and a.crawl_id = ${crawl.id}
-            and a.site_url_id = ${siteUrlId} and a.is_current and a.finalized_at is not null)
         and not exists (
           select 1 from site_issues still_open
           where still_open.workspace_id = ${workspaceId} and still_open.crawl_id = ${crawl.id}
-            and still_open.evaluation_id in ${currentEvaluations(crawl)}
+            and still_open.evaluation_id = any(cur.source_evaluation_ids)
             and still_open.site_url_id = ${siteUrlId} and still_open.rule_id = i.rule_id)
       order by i.rule_id, i.created_at desc, i.id desc
     )

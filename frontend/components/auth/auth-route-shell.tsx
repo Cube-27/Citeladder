@@ -38,7 +38,7 @@ function AuthBrandPanel() {
             <span />
             <span />
           </div>
-          <span className="auth-brand-line" data-length="full" />
+          <span className="auth-brand-line" />
           <span className="auth-brand-line" data-length="long" />
           <span className="auth-brand-line" data-length="short" />
           <div className="auth-brand-sources">

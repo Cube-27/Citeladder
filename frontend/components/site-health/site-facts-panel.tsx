@@ -18,6 +18,7 @@ import { textRole } from '@/components/ui/typography';
 import { ProjectLink } from '@/components/layout/scoped-link';
 import type { SiteCrawl, SiteHealthDashboard } from '@/lib/api/types';
 import { agentHandoffHref } from '@/lib/agent/handoff';
+import { formatCount, pluralCount } from '@/lib/format';
 import { useAgentPanelSeed } from '@/lib/agent/panel-context';
 import {
   crawlerMatchedLabels,
@@ -52,7 +53,6 @@ export function SiteFactsPanel({
 }
 function SiteFactsViewPanel({ crawl, view }: Readonly<{ crawl: SiteCrawl; view: SiteFactsView }>) {
   const [purpose, setPurpose] = useState('all');
-  const [crawlersOpen, setCrawlersOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const purposes = [...new Set(view.robots.bots.map((bot) => bot.purpose))];
   const unknown = view.robots.status === 'fetch_failed' || view.robots.status === 'access_blocked';
@@ -97,22 +97,18 @@ function SiteFactsViewPanel({ crawl, view }: Readonly<{ crawl: SiteCrawl; view: 
             No robots.txt was found. No robots rules restrict these known URLs.
           </Alert>
         ) : null}
-        <Disclosure title={crawlerSummary(view)} onOpenChange={setCrawlersOpen}>
-          {crawlersOpen ? (
-            <>
-              <Select
-                className="w-48 max-w-full"
-                ariaLabel="Filter crawlers by purpose"
-                value={purpose}
-                onValueChange={setPurpose}
-                options={[
-                  { value: 'all', label: 'All purposes' },
-                  ...purposes.map((value) => ({ value, label: crawlerPurposeLabels[value] })),
-                ]}
-              />
-              <CrawlerTable view={view} purposes={purposes} purpose={purpose} />
-            </>
-          ) : null}
+        <Disclosure title={crawlerSummary(view)}>
+          <Select
+            className="w-48 max-w-full"
+            ariaLabel="Filter crawlers by purpose"
+            value={purpose}
+            onValueChange={setPurpose}
+            options={[
+              { value: 'all', label: 'All purposes' },
+              ...purposes.map((value) => ({ value, label: crawlerPurposeLabels[value] })),
+            ]}
+          />
+          <CrawlerTable view={view} purposes={purposes} purpose={purpose} />
         </Disclosure>
         <Disclosure title="robots.txt history" onOpenChange={setHistoryOpen}>
           {historyOpen ? (
@@ -127,25 +123,20 @@ function SiteFactsViewPanel({ crawl, view }: Readonly<{ crawl: SiteCrawl; view: 
 /** One line for the closed crawler list: the total, then each policy that occurs. */
 function crawlerSummary(view: SiteFactsView): string {
   const bots = view.robots.bots;
-  const counts = POLICY_ORDER.map((policy) => ({
-    policy,
-    count: bots.filter((bot) => bot.policy === policy).length,
-  })).filter(({ count }) => count > 0);
-  const policies = counts
-    .map(({ policy, count }) => `${count} ${crawlerPolicyLabels[policy].toLowerCase()}`)
+  // The label table lists every policy in display order, so a new one is counted.
+  const policies = Object.entries(crawlerPolicyLabels)
+    .map(([policy, label]) => ({
+      label,
+      count: bots.filter((bot) => bot.policy === policy).length,
+    }))
+    .filter(({ count }) => count > 0)
+    .map(({ label, count }) => `${formatCount(count)} ${label.toLowerCase()}`)
     .join(', ');
-  const total = `${bots.length} ${bots.length === 1 ? 'crawler' : 'crawlers'}`;
+  const total = pluralCount(bots.length, 'crawler');
   return policies ? `${total}: ${policies}` : total;
 }
 
 type CrawlerBot = SiteFactsView['robots']['bots'][number];
-
-const POLICY_ORDER: readonly CrawlerBot['policy'][] = [
-  'all_allowed',
-  'restricted',
-  'all_disallowed',
-  'unknown',
-];
 
 function CrawlerTable({
   view,

@@ -203,9 +203,6 @@ afterAll(() => mswServer.close());
 function handlers(pageDetail: PageDetail) {
   return [
     http.get(`/api/v1/site-crawls/${CRAWL}/pages/${URL_ID}`, () => HttpResponse.json(pageDetail)),
-    http.get(`/api/v1/site-crawls/${CRAWL}/pages/${URL_ID}/issue-history`, () =>
-      HttpResponse.json({ items: [], next_cursor: null }),
-    ),
   ];
 }
 
@@ -508,9 +505,6 @@ describe('UrlDetail', () => {
         });
         return HttpResponse.json(detail({ analysis_status: status }));
       }),
-      http.get(`/api/v1/site-crawls/${CRAWL}/pages/${URL_ID}/issue-history`, () =>
-        HttpResponse.json({ items: [], next_cursor: null }),
-      ),
       http.post(`/api/v1/site-crawls/${CRAWL}/pages/${URL_ID}/rerun`, () =>
         HttpResponse.json(
           {
@@ -629,9 +623,6 @@ describe('UrlDetail', () => {
         getCallCount += 1;
         return HttpResponse.json(detail({ crawl_id: NEW_CRAWL, analysis_status: status }));
       }),
-      http.get(`/api/v1/site-crawls/${NEW_CRAWL}/pages/${URL_ID}/issue-history`, () =>
-        HttpResponse.json({ items: [], next_cursor: null }),
-      ),
     );
 
     renderUrlDetail(
