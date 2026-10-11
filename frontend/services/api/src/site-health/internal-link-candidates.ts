@@ -203,6 +203,7 @@ export function linkCandidates(pages: InternalLinkPage[]): LinkCandidate[] {
         placements: sourcePlacements(
           capturedPassages,
           new Set(vector.get(target.analysis_id)!.keys()),
+          [target.h1, pageName(target.title)],
         ),
       }))
       .filter((item) => item.placements.length > 0)

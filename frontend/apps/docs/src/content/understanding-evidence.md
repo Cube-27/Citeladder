@@ -3,6 +3,7 @@ title: 'Understand your evidence'
 description: 'Read dates, coverage and availability before turning a number into a conclusion.'
 group: 'Start here'
 order: 40
+updated: '2026-10-10'
 ---
 
 CiteLadder shows saved observations. An audit captures a set of answers; a crawl captures website pages; an integration imports a particular provider report. Each describes what was observed under those conditions.

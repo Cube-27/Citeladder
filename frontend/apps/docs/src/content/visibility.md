@@ -3,6 +3,7 @@ title: 'AI Visibility'
 description: 'See how your brand and competitors appear in the answers your project measures.'
 group: 'Measure and understand'
 order: 110
+updated: '2026-10-11'
 ---
 
 Use AI Visibility to investigate brand presence across a defined set of prompts and engines. Start with the selected run and filters, then move from the summary into the answer evidence.

@@ -3,6 +3,7 @@ title: 'Sources and citations'
 description: 'Investigate the domains and pages behind AI answers without confusing citation with endorsement.'
 group: 'Measure and understand'
 order: 120
+updated: '2026-10-10'
 ---
 
 Sources helps you move from "our visibility changed" to the pages used in the measured answers. It has **Domains** and **URLs** views with search, sorting and export.

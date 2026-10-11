@@ -15,7 +15,7 @@ import { projectLinks } from '../src/site-health/internal-link-publish.ts';
 import { policy } from '../src/config.ts';
 import { contextualLinkObserved } from '../src/opportunities/internal-link-verification.ts';
 import { linkUrl } from '../src/site-health/internal-link-pages.ts';
-import { sourcePassages } from '../src/site-health/internal-link-placements.ts';
+import { sourcePassages, sourcePlacements } from '../src/site-health/internal-link-placements.ts';
 
 let counter = 0;
 function page(title: string, overrides: Partial<InternalLinkPage> = {}): InternalLinkPage {
@@ -48,10 +48,10 @@ const pairs = (pages: InternalLinkPage[]) =>
 
 describe('internal link candidates', () => {
   it('suggests related unlinked pages and never a self, linked or ineligible destination', () => {
-    const source = page('Garden soil guide');
+    const source = page('Garden soil testing guide');
     const related = page('Soil testing kit');
-    const linked = page('Healthy soil compost');
-    const noindex = page('Soil pH chart', { eligible_target: false });
+    const linked = page('Soil testing compost');
+    const noindex = page('Soil testing chart', { eligible_target: false });
     source.contextual_targets = [linked.url];
     const found = pairs([source, related, linked, noindex]).filter(
       ([from]) => from === source.analysis_id,
@@ -66,8 +66,13 @@ describe('internal link candidates', () => {
   });
 
   it('skips colour variants of the same product and keeps one destination per product family', () => {
-    const product = (title: string) => page(title, { page_kind: 'product' });
-    const source = product('Black Hi-Cut Cotton Bikini');
+    const product = (title: string, overrides: Partial<InternalLinkPage> = {}) =>
+      page(title, { page_kind: 'product', ...overrides });
+    const source = product('Black Hi-Cut Cotton Bikini', {
+      source_passages: sourcePassages(
+        'Compare the white hi-cut cotton bikini with the black lace front bikini and the white lace front bikini.',
+      ),
+    });
     const variant = product('White Hi-Cut Cotton Bikini');
     const familyA = product('Black Lace Front Bikini');
     const familyB = product('White Lace Front Bikini');
@@ -81,12 +86,13 @@ describe('internal link candidates', () => {
   });
 
   it('gives every source page its own destination budget', () => {
-    // Each word is on four pages, so every page has six related neighbours.
-    const words = 'alpha bravo charlie delta echo foxtrot golf hotel india juliet kilo lima'.split(
-      ' ',
-    );
+    // Each word is on five pages, so every page shares a two-word phrase with six neighbours.
+    const words =
+      'alpha bravo charlie delta echo foxtrot golf hotel india juliet kilo lima mike november oscar papa'.split(
+        ' ',
+      );
     const pages = words.map((_, index) =>
-      page([0, 1, 2, 3].map((offset) => words[(index + offset) % words.length]).join(' ')),
+      page([0, 1, 2, 3, 4].map((offset) => words[(index + offset) % words.length]).join(' ')),
     );
     const candidates = linkCandidates(pages);
     for (const source of pages)
@@ -158,6 +164,23 @@ describe('internal link candidates', () => {
         'Contents',
         'Was this page useful?',
       ]),
+    ).toEqual([]);
+  });
+
+  it('anchors a destination by a phrase or its one-word name, never a lone shared topic word', () => {
+    const passages = sourcePassages(
+      'Track your AI visibility across engines and compare pricing before you upgrade.',
+    );
+    const anchors = (terms: string[], names: string[]) =>
+      sourcePlacements(passages, new Set(terms), names).map((placement) => placement.anchor);
+    expect(anchors(['visibility', 'report'], ['Visibility report'])).toEqual([]);
+    expect(anchors(['ai', 'visibility'], ['AI visibility'])).toEqual(['AI visibility']);
+    expect(anchors(['pricing', 'plans'], ['Pricing'])).toEqual(['pricing']);
+  });
+
+  it('never takes a flattened label/value widget as source prose', () => {
+    expect(
+      sourcePassages('Visibility Visibility shows how often each engine cites your brand.'),
     ).toEqual([]);
   });
 
@@ -278,6 +301,43 @@ describe('internal link publication', () => {
       compost.analysis_id,
     ]);
     expect(result.diagnostics.reasons.overlapping_placement).toBe(1);
+  });
+
+  it('keeps only the most useful links into one destination', () => {
+    const sources = Array.from({ length: 4 }, (_, index) =>
+      page(`Garden bed plan ${index}`, {
+        source_passages: sourcePassages(
+          `Bed ${index} needs a soil testing kit before any planting starts this spring.`,
+        ),
+      }),
+    );
+    const pages = [...sources, target];
+    const candidates = linkCandidates(pages).filter(
+      (candidate) => candidate.target === target.analysis_id,
+    );
+    const usefulness = new Map(
+      sources.map((item, index) => [item.analysis_id, 0.9 - index * 0.05]),
+    );
+    const decisions = new Map(
+      candidates.map((candidate) => [
+        candidate.id,
+        completed(usefulness.get(candidate.source)!, { type: 'choice', choice: 'a0' }),
+      ]),
+    );
+    const result = projectLinks(
+      {
+        ...manifest,
+        pages,
+        candidates,
+        policy: { ...policy.internal_links, max_links_per_target: 2 },
+      },
+      decisions,
+    );
+    expect(result.recommendations.map((link) => link.source.analysis_id)).toEqual([
+      sources[0]!.analysis_id,
+      sources[1]!.analysis_id,
+    ]);
+    expect(result.diagnostics.reasons.target_cap).toBe(2);
   });
 
   it('reads historical saved suggestions without inventing placement evidence', () => {

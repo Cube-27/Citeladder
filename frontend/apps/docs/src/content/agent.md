@@ -3,6 +3,7 @@ title: 'Meet the Agent'
 description: "Work through a question or Action and turn your project's saved evidence into a reviewable deliverable."
 group: 'Improve with Agent'
 order: 200
+updated: '2026-10-09'
 ---
 
 The Agent is CiteLadder's in-app assistant. It can investigate saved project evidence, apply a skill and help you refine a plan, diagnosis, page edit or content draft.

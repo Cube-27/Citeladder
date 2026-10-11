@@ -5,6 +5,7 @@ import { ButtonLink } from '@/components/marketing/primitives/button';
 import PublicFonts from '@/components/marketing/chrome/PublicFonts.astro';
 import { appHref, websiteHref } from '@/lib/config/app-link';
 import { docsHref } from '@/lib/config/docs';
+import { serializeJsonLd } from '@/lib/seo/json-ld';
 import DocsNav from '../components/DocsNav.astro';
 import DocsContents from '../components/DocsContents.astro';
 import { DocsSearch } from '../components/DocsSearch';
@@ -15,8 +16,11 @@ interface Props {
   description: string;
   headings?: { slug: string; depth: number; label: string }[];
   noindex?: boolean;
+  /** The article's last content change, declared as `article:modified_time`. */
+  updated?: string;
+  jsonLd?: Record<string, unknown>;
 }
-const { title, description, headings = [], noindex = false } = Astro.props;
+const { title, description, headings = [], noindex = false, updated, jsonLd } = Astro.props;
 const path = Astro.url.pathname;
 const website = websiteHref('/');
 const contact = websiteHref('/contact');
@@ -41,7 +45,9 @@ const tabs = [
     <meta property="og:description" content={description} />
     <meta property="og:type" content="article" />
     <meta property="og:url" content={docsHref(path)} />
+    {updated && <meta property="article:modified_time" content={updated} />}
     {noindex && <meta name="robots" content="noindex" />}
+    {jsonLd && <script type="application/ld+json" set:html={serializeJsonLd(jsonLd)} />}
     <PublicFonts />
   </head>
   <body class="bg-background text-foreground">

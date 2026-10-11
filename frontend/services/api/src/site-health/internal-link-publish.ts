@@ -121,10 +121,14 @@ function linkState(diagnostics: Diagnostics, omittedPages: unknown) {
   return 'completed';
 }
 
-/** Most useful first; a link whose anchor overlaps a kept one on the same source is dropped. */
-function dedupeOverlaps(links: InternalLink[], diagnostics: Diagnostics) {
+/**
+ * Most useful first; a link whose anchor overlaps a kept one on the same source
+ * is dropped, and a destination keeps at most `perTarget` of its best links.
+ */
+function dedupeOverlaps(links: InternalLink[], perTarget: number, diagnostics: Diagnostics) {
   const anchorStart = (link: InternalLink) => link.placement!.start + link.placement!.anchor_start;
   const recommendations: InternalLink[] = [];
+  const kept = new Map<string, number>();
   for (const link of links.toSorted(
     (a, b) =>
       b.usefulness - a.usefulness ||
@@ -140,8 +144,13 @@ function dedupeOverlaps(links: InternalLink[], diagnostics: Diagnostics) {
         otherStart < start + link.anchor.length
       );
     });
+    const targetCount = kept.get(link.target.analysis_id) ?? 0;
     if (overlaps) countReason(diagnostics, 'overlapping_placement');
-    else recommendations.push(link);
+    else if (targetCount >= perTarget) countReason(diagnostics, 'target_cap');
+    else {
+      kept.set(link.target.analysis_id, targetCount + 1);
+      recommendations.push(link);
+    }
   }
   return recommendations;
 }
@@ -154,7 +163,9 @@ export function projectLinks(manifest: Record<string, unknown>, outcomes: Map<st
       .map((page) => [page.analysis_id, page]),
   );
   const candidates = manifest.candidates as LinkCandidate[];
-  const threshold = Number(record(manifest.policy).accept_threshold);
+  const frozen = record(manifest.policy);
+  const threshold = Number(frozen.accept_threshold);
+  const perTarget = Number(frozen.max_links_per_target);
   const diagnostics = emptyDiagnostics(candidates.length);
   const sourcesWithoutPassages = [...pages.values()].filter(
     (page) => !page.source_passages?.length,
@@ -171,7 +182,7 @@ export function projectLinks(manifest: Record<string, unknown>, outcomes: Map<st
   }
   const state = linkState(diagnostics, manifest.omitted_pages);
   return {
-    recommendations: dedupeOverlaps(links, diagnostics),
+    recommendations: dedupeOverlaps(links, perTarget, diagnostics),
     diagnostics: { ...diagnostics, sources_without_passages: sourcesWithoutPassages },
     state,
   };

@@ -392,7 +392,10 @@ each bot's `checks` array:
 integrity, internal-link targets and hreflang return tags per page, and sitemap
 orphans and reachability on the root. They read only this crawl's persisted
 attempts; targets never fetched, or rate-limited with 429, stay unchecked and
-cannot pass.
+cannot pass. A link is internal when its host shares the page's registrable
+domain, the same scope the crawler admits, so `docs.`/`www.` links count. A
+401/403 link target is sign-in-gated, not broken; a 401/403 sitemap URL is
+still unreachable.
 
 | Canonical integrity outcome | When |
 |---|---|
@@ -463,7 +466,7 @@ found on the site", and omits `root` and `other`.
 |---|---|
 | Classifier `sh-classifier-2+<digest>`: base plus a SHA-256 prefix of every classification input | `classifierVersion`, `config/site-health.ts` |
 | Traits `sh-traits-2` | `analysis.json` |
-| Extractor `sh-extractor-2`, analyzer `sh-analyzer-1`, rules `sh-rules-2` | `config/site-health.ts` |
+| Extractor `sh-extractor-3`, analyzer `sh-analyzer-1`, rules `sh-rules-3` | `config/site-health.ts` |
 | Scoring `sh-scoring-2`, coverage `sh-coverage-1`, classification formula `sh-classification-1` | `reads.json` |
 | URL admission `sh-url-admission-2`, disposition `sh-disposition-1` | `acquisition.json` |
 | Acquisition `sh-acquisition-1` | `acquisition_policy_version` setting |
@@ -485,10 +488,10 @@ JEV judges pairs through the analytics queue. Limits are in
 | Stage | Behavior |
 |---|---|
 | Pages | Excludes `trust_policy` and `about_contact`. Applies eligibility (available, untruncated extraction) before the cap. Above the cap, indexable pages come first, then a stable URL-hash order. Only main-content-indexable pages are destinations. |
-| Passages | Sentence spans with exact offsets into the source artifact; headings are kept separate; missing or truncated text is recorded as unavailable. |
-| Retrieval | TF-IDF over destination title, H1 and path. In larger crawls, very common terms carry no weight, and a placement must share destination vocabulary. |
+| Passages | Sentence spans with exact offsets into the source artifact; headings are kept separate; missing or truncated text is recorded as unavailable. A span with a word repeated back to back is a flattened widget, not prose. |
+| Retrieval | TF-IDF over destination title, H1 and path. In larger crawls, very common terms carry no weight, and a placement must share destination vocabulary. An anchor needs `min_anchor_content_words` non-stop words unless it is the destination's whole one-word name. |
 | Suppression | An existing main-content link suppresses a pair; a navigation-only link does not. A source with truncated anchor capture gets no suggestions. Product pages whose titles differ by at most `variant_max_word_difference` words never suggest each other. |
-| Judgment | One JEV request per source: per target, a Noul usefulness question and a placement Choice (including `none`). Publication re-validates the anchor against frozen evidence, never falls back, and keeps the higher-ranked suggestion when anchors overlap. |
+| Judgment | One JEV request per source: per target, a Noul usefulness question and a placement Choice (including `none`). Publication re-validates the anchor against frozen evidence, never falls back, keeps the higher-ranked suggestion when anchors overlap, and keeps at most `max_links_per_target` suggestions per destination. A source's Action ranks by how far its strongest link clears `accept_threshold`. |
 | Execution | Dispatch events commit before sending. At the deadline, dispatched pairs close as uncertain and are never resent. A missing permission or provider yields unavailable judgments. Cancel stops dispatch; the project's slot stays busy until the judgment task ends. |
 | Verification | After the user marks a link implemented, a later complete, compatible crawl confirms a main-content link to the exact destination, with no model call and no CMS publishing. |
 

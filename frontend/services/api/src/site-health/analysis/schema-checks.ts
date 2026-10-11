@@ -42,7 +42,11 @@ const missingPaths = (block: Block, paths: string[]) => {
   return paths.filter((path) => !present.has(path));
 };
 
-/** Whether a schema name and visible text name the same thing, by shared word tokens. */
+/**
+ * Whether visible text names what a schema name claims: the share of the
+ * claim's words the text shows. A long SEO title holding a short, correct
+ * name still names it, so the title's own length is not held against it.
+ */
 function matchesByTokens(claim: string, visible: string) {
   const claimTokens = claim.toLowerCase().match(TOKEN) ?? [];
   const visibleTokens = visible.toLowerCase().match(TOKEN) ?? [];
@@ -52,10 +56,14 @@ function matchesByTokens(claim: string, visible: string) {
   const claimSet = new Set(claimTokens);
   const visibleSet = new Set(visibleTokens);
   const shared = [...claimSet].filter((token) => visibleSet.has(token)).length;
-  return (
-    Math.min(shared / claimSet.size, shared / visibleSet.size) >=
-    r.schema_content_match_min_token_overlap
-  );
+  return shared / claimSet.size >= r.schema_content_match_min_token_overlap;
+}
+
+/** Every word of the claim appears somewhere in the page's visible text. */
+function shownOnPage(claim: string, bodyText: string) {
+  const claimTokens = claim.toLowerCase().match(TOKEN) ?? [];
+  const visible = new Set(bodyText.toLowerCase().match(TOKEN) ?? []);
+  return claimTokens.length > 0 && claimTokens.every((token) => visible.has(token));
 }
 
 /** A document URL for comparison: http(s), lower-cased host, trailing slash trimmed, no fragment. */
@@ -234,11 +242,13 @@ function schemaMatchesContent(facts: Facts): CheckResult {
   const visible = [text(facts.title), ...textList(record(facts.headings).h1_texts)]
     .filter(Boolean)
     .map((value) => value.toLowerCase());
-  const matched = named.some(({ name, type }) =>
-    visible.some((value) =>
-      matchesByTokens(type === 'Organization' ? companyName(name) : name, value),
-    ),
-  );
+  // Markup conflicts when it names something the page does not show; a name
+  // the title/h1 phrase differently but the page visibly carries is consistent.
+  const bodyText = text(record(facts.body).text);
+  const matched = named.some(({ name, type }) => {
+    const claim = type === 'Organization' ? companyName(name) : name;
+    return visible.some((value) => matchesByTokens(claim, value)) || shownOnPage(claim, bodyText);
+  });
   return [
     passFail(matched),
     {

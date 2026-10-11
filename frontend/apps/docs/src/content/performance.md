@@ -3,6 +3,7 @@ title: 'Performance and integrations'
 description: 'Connect the right properties and interpret saved search and analytics reports.'
 group: 'Measure and understand'
 order: 140
+updated: '2026-10-10'
 ---
 
 Performance brings imported provider evidence into your project. Connecting an account and choosing a project property are separate steps. The account grants access, and the mapping selects which property this project reads.

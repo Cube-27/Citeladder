@@ -692,6 +692,94 @@ describe('classifier calibration corpus', () => {
   });
 });
 
+describe('site audit regressions', () => {
+  const page = (body: string, head = '', url = 'https://example.test/guides/setup') =>
+    facts(`<html><head>${head}</head><body>${body}</body></html>`, url);
+  const ld = (value: unknown) =>
+    `<script type="application/ld+json">${JSON.stringify(value)}</script>`;
+
+  it('treats every host on the site as internal, as the crawl does', () => {
+    const anchors = page(
+      `<main><h1>Setup</h1><p>Read the <a href="https://docs.example.test/start">docs</a>,
+      the <a href="https://www.example.test/pricing">pricing</a>, the <a href="/faq">FAQ</a>
+      and <a href="https://example.org/">a partner</a>.</p></main>`,
+    ).links.anchors.map((anchor) => [anchor.url, anchor.is_internal]);
+    expect(anchors).toEqual([
+      ['https://docs.example.test/start', true],
+      ['https://www.example.test/pricing', true],
+      ['/faq', true],
+      ['https://example.org/', false],
+    ]);
+  });
+
+  it('attaches the links of a numbered reference list as sources', () => {
+    const items = ['openai.com', 'crossref.org', 'arxiv.org', 'aclanthology.org']
+      .map((host) => `<li><span><a href="https://${host}/paper">${host} paper</a></span></li>`)
+      .join('');
+    const support = page(
+      `<main><article><h1>Can ChatGPT find citations?</h1>
+      <p>Language models often cite sources that do not exist when asked for references.</p>
+      <h2>Sources</h2><ol class="sources">${items}</ol></article></main>`,
+    ).source_support;
+    expect(support.attached_sources.map((source) => [source.domain, source.relationship])).toEqual([
+      ['openai.com', 'references_section'],
+      ['crossref.org', 'references_section'],
+      ['arxiv.org', 'references_section'],
+      ['aclanthology.org', 'references_section'],
+    ]);
+  });
+
+  it('counts markup of any schema.org type as structured data', () => {
+    const outcome = (head: string) =>
+      byRule(
+        evaluatePageRules({
+          ...page('<main><h1>Acme</h1><p>Track every project in one place.</p></main>', head),
+          page_kind: 'service',
+        }),
+      ).get('aeo.structured_data_present')!.outcome;
+    expect(outcome(ld({ '@context': 'https://schema.org', '@type': 'SoftwareApplication' }))).toBe(
+      'satisfied',
+    );
+    expect(outcome('')).toBe('missing');
+  });
+
+  it('reads update meta as the modified date and ignores a listed card date', () => {
+    const cards = Array.from(
+      { length: 4 },
+      (_, index) =>
+        `<li><a href="/blog/post-${index}">Post ${index}</a><time datetime="2026-01-0${index + 1}">Jan</time></li>`,
+    ).join('');
+    const dates = page(
+      `<main><h1>Setup</h1><p>Install the agent and connect a project.</p><ul>${cards}</ul></main>`,
+      '<meta property="og:updated_time" content="2026-09-01T00:00:00Z">',
+    ).dates;
+    expect(dates).toEqual({ published: '', modified: '2026-09-01T00:00:00Z' });
+  });
+
+  it('accepts a schema name the page shows but flags one it never shows', () => {
+    const outcome = (name: string) =>
+      byRule(
+        evaluatePageRules({
+          ...page(
+            `<main><p>Blog &amp; guides</p><h1>Practical guides to AI visibility</h1>
+            <p>Acme publishes research on how engines cite brands.</p></main>`,
+            `<title>AI visibility guides and citation tracking resources | Acme</title>${ld({
+              '@context': 'https://schema.org',
+              '@type': 'Blog',
+              '@id': 'https://acme.test/blog',
+              url: 'https://acme.test/blog',
+              name,
+            })}`,
+            'https://acme.test/blog',
+          ),
+          page_kind: 'editorial_index',
+        }),
+      ).get('aeo.schema_matches_content')!.outcome;
+    expect(outcome('Acme Blog')).toBe('satisfied');
+    expect(outcome('Garden Supplies Catalog')).toBe('missing');
+  });
+});
+
 describe('unscored visibility checks', () => {
   const rule = (ruleId: string, extra: Record<string, unknown>) =>
     byRule(

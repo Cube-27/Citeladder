@@ -22,13 +22,23 @@ function proseRanges(text: string, headings: string[]) {
   return ranges;
 }
 
+/** A word repeated back to back ("Actions Actions") is a flattened label/value widget, not prose. */
+function repeatsAdjacentWord(value: string) {
+  const tokens = words(value).map((token) => token[0].toLowerCase());
+  return tokens.some((token, index) => index > 0 && token === tokens[index - 1]);
+}
+
 function usablePassage(value: string) {
   return (
     value.length <= limits.max_passage_chars &&
     words(value).length >= limits.min_passage_words &&
-    /[.!?。！？][\s"'’”)]*$/u.test(value)
+    /[.!?。！？][\s"'’”)]*$/u.test(value) &&
+    !repeatsAdjacentWord(value)
   );
 }
+
+const contentWords = (anchor: string) =>
+  words(anchor).filter((token) => !stopWords.has(token[0].toLowerCase())).length;
 
 /** Exact, bounded source spans; flattened crawl text does not establish DOM paragraphs. */
 export function sourcePassages(text: string, headings: string[] = []): SourcePassages {
@@ -76,8 +86,16 @@ function anchorEnd(
 export function sourcePlacements(
   passages: SourcePassages,
   targetTerms: Set<string>,
+  targetNames: string[],
 ): InternalLinkPlacement[] {
   const found: InternalLinkPlacement[] = [];
+  // A destination whose whole name is one word ("Pricing") may be linked by that
+  // word; any other anchor needs enough words to name the destination, not a topic.
+  const names = new Set(
+    targetNames.map((name) => name.trim().toLowerCase()).filter((name) => words(name).length === 1),
+  );
+  const namesTarget = (anchor: string) =>
+    contentWords(anchor) >= limits.min_anchor_content_words || names.has(anchor.toLowerCase());
   for (const passage of passages) {
     const tokens = words(passage.text);
     for (let start = 0; start < tokens.length; start += 1) {
@@ -86,7 +104,11 @@ export function sourcePlacements(
       const end = anchorEnd(passage.text, tokens, start, targetTerms);
       const last = tokens[end]!;
       const anchor = passage.text.slice(first.index, last.index + last[0].length);
-      if (anchor.length >= limits.min_anchor_chars && anchor.length <= limits.max_anchor_chars)
+      if (
+        anchor.length >= limits.min_anchor_chars &&
+        anchor.length <= limits.max_anchor_chars &&
+        namesTarget(anchor)
+      )
         found.push({ ...passage, anchor, anchor_start: first.index });
       start = end;
     }

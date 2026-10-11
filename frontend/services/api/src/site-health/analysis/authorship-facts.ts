@@ -112,8 +112,12 @@ function visibleValues(page: PageScope) {
   return found;
 }
 
-const firstDeclaredTime = (root: HtmlNode) =>
-  [...elements(root, 'time')].map((node) => attribute(node, 'datetime').trim()).find(Boolean) ?? '';
+/** The page's own first `<time datetime>`: a post card's or footer's date is not the page's. */
+const firstDeclaredTime = (page: PageScope) =>
+  [...elements(page.region, 'time')]
+    .filter((node) => regionNodeIsVisible(node) && outsideContainers(node, page.cards))
+    .map((node) => attribute(node, 'datetime').trim())
+    .find(Boolean) ?? '';
 
 function declaredAuthor(structured: string, meta: string, article: string): [string, string] {
   for (const [value, source] of [
@@ -130,6 +134,7 @@ export function authorshipFacts(
   blocks: SchemaBlock[],
   articleMeta: Record<string, string>,
   metaAuthor: string,
+  metaModified: string,
 ) {
   const structured = { author: '', published: '', modified: '' };
   for (const block of blocks) {
@@ -146,9 +151,12 @@ export function authorshipFacts(
   const published =
     structured.published ||
     (articleMeta['article:published_time'] ?? '').trim() ||
-    firstDeclaredTime(page.root) ||
+    firstDeclaredTime(page) ||
     visible.published;
-  const modified = structured.modified || (articleMeta['article:modified_time'] ?? '').trim();
+  const modified =
+    structured.modified ||
+    (articleMeta['article:modified_time'] ?? '').trim() ||
+    metaModified.trim();
   return {
     author: (declared || visible.author).slice(0, limits.author_chars),
     dates: {

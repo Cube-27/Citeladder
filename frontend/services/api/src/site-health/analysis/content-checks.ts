@@ -59,13 +59,15 @@ function presentField(facts: Facts, field: string, lengthKey?: string): CheckRes
 function structuredDataPresent(facts: Facts): CheckResult {
   const sd = record(facts.structured_data);
   const blocks = count(sd.count);
+  const declared = list(sd.declared_types);
   return [
-    passFail(blocks > 0),
+    passFail(blocks > 0 || declared.length > 0),
     {
       block_count: blocks,
       has_json_ld: Boolean(sd.has_json_ld),
       has_microdata: Boolean(sd.has_microdata),
       types: list(sd.types),
+      declared_types: declared,
     },
   ];
 }

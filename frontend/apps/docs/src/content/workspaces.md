@@ -3,6 +3,7 @@ title: 'Workspaces and access'
 description: "Keep each team's projects, evidence and permissions in the right place."
 group: 'Start here'
 order: 30
+updated: '2026-10-09'
 ---
 
 A **workspace** is the collaboration and access boundary. A **project** is the website and business you are investigating inside that workspace.

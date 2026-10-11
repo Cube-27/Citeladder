@@ -57,7 +57,10 @@ export async function internalLinkHits(
       ],
       source_issue_ids: [],
       source_metric_ids: [run.id],
-      value_factor: policy.opportunity.opportunities.SITE_VALUE_FACTOR,
+      // How far the strongest suggested link clears the acceptance bar: a clear
+      // editorial win ranks above a borderline one instead of every page tying.
+      value_factor:
+        Math.max(...links.map((link) => link.usefulness)) / policy.internal_links.accept_threshold,
       gap_factor: policy.opportunity.opportunities.SITE_GAP_FACTOR,
     };
   });

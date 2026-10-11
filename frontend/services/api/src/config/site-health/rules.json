@@ -743,7 +743,7 @@
   {
     "applicability_key": "page_kind_content:homepage|article|editorial_index|product|category|pricing|docs|faq|about_contact|service|local|guide|how_to|listicle|comparison|alternative|case_study_review|trust_policy",
     "category": "structured_data",
-    "description": "Structured-data names match the visible <title>/h1 content (bounded cross-check).",
+    "description": "Structured-data names match the visible <title>/h1 or are shown in the page text (bounded cross-check).",
     "dimension": "aeo",
     "display_label": "Schema markup does not match visible content",
     "display_label_variants": {},
@@ -779,9 +779,9 @@
     "composite_contract": null
   },
   {
-    "applicability_key": "page_kind_content:alternative|article|comparison|guide|how_to|listicle|case_study_review|docs",
+    "applicability_key": "page_kind_content:alternative|article|comparison|guide|how_to|listicle|case_study_review",
     "category": "citability",
-    "description": "Research-sensitive claims attach sources through a bounded references, methodology, citation-marker, or attribution relation.",
+    "description": "Editorial content attaches external sources through a bounded references, methodology, citation-marker, or attribution relation.",
     "dimension": "aeo",
     "display_label": "Claim support sources missing",
     "display_label_variants": {},

@@ -4,6 +4,8 @@
  * result is the bounded JSON persisted as `site_fetch_artifacts.normalized_facts`
  * and read by every Site Health analyzer. A malformed page yields partial facts.
  */
+import { getDomain } from 'tldts';
+
 import { policy, resolveSettingSpec } from '../../config.ts';
 import { compareText } from '../../text-order.ts';
 import { onlyOf } from '../../lists.ts';
@@ -34,7 +36,12 @@ import { analysisPolicy, limits, squash } from './policy.ts';
 import { mergeRobotsHeader, robotsMeta } from './robots-directives.ts';
 import { elementRegion, nodeIsRendered, pageScope, regionNodeIsVisible } from './regions.ts';
 import { emptySourceSupport, sourceSupportFacts } from './source-support.ts';
-import { jsonLdBlocks, microdataBlocks, productFacts } from './structured-data.ts';
+import {
+  declaredSchemaTypes,
+  jsonLdBlocks,
+  microdataBlocks,
+  productFacts,
+} from './structured-data.ts';
 
 const f = analysisPolicy.facts;
 const HTML_TYPES = new Set(['text/html', 'application/xhtml+xml']);
@@ -82,6 +89,26 @@ const metaContent = (root: HtmlNode, name: string) =>
     .map((meta) => attribute(meta, 'content').trim())
     .find(Boolean)
     ?.slice(0, limits.meta_chars) ?? '';
+
+/** Update-date meta beyond `article:modified_time`, in the order they are trusted. */
+const MODIFIED_META_KEYS = [
+  'og:updated_time',
+  'last-modified',
+  'dcterms.modified',
+  'dc.date.modified',
+];
+
+/** The first update date a page-level meta tag declares. */
+function metaModified(root: HtmlNode) {
+  const declared = new Map<string, string>();
+  for (const meta of elements(root, 'meta')) {
+    const key = (attribute(meta, 'property') || attribute(meta, 'name')).trim().toLowerCase();
+    const content = attribute(meta, 'content').trim();
+    if (content && !declared.has(key)) declared.set(key, content);
+  }
+  const found = MODIFIED_META_KEYS.map((key) => declared.get(key)).find(Boolean) ?? '';
+  return found.slice(0, limits.meta_chars);
+}
 
 /** `<meta property|name="prefix:…">` values; the first declaration of a key wins. */
 function metaPropertyMap(root: HtmlNode, prefix: string) {
@@ -147,9 +174,19 @@ function hrefHost(href: string) {
   const host = authority.slice(authority.lastIndexOf('@') + 1).replace(/:\d*$/u, '');
   return host.replaceAll(/[[\]]/gu, '').toLowerCase() || null;
 }
+/**
+ * Internal means the crawl's own site: the page's registrable domain and every
+ * subdomain of it, the same scope the crawler admits. An exact-host test hid
+ * `www`/`docs` links from the link graph and broken-link checks the crawl fetched.
+ */
 const isInternal = (href: string, baseHost: string) => {
   const host = hrefHost(href);
-  return host === null || (Boolean(baseHost) && host === baseHost.toLowerCase());
+  if (host === null) return true;
+  if (!baseHost) return false;
+  const base = baseHost.toLowerCase();
+  if (host === base) return true;
+  const site = getDomain(base);
+  return site !== null && getDomain(host) === site;
 };
 
 function linksAndAssets(root: HtmlNode, baseHost: string, maxLinks: number) {
@@ -420,6 +457,7 @@ function structuredData(root: HtmlNode, maxBlocks: number) {
     has_json_ld: jsonLd.length > 0,
     has_microdata: microdata.length > 0,
     types: [...new Set(blocks.map((block) => block.type))].sort(compareText),
+    declared_types: declaredSchemaTypes(raw, root, maxBlocks),
     product: productFacts(blocks),
   };
 }
@@ -476,7 +514,13 @@ function extractDocument(
     inline_script_chars: inlineScriptChars(root),
     blocking_resources: blockingResources(root, links.stylesheets.length),
     body: bodyText(root, settings.maxTextChars),
-    ...authorshipFacts(page, sd.blocks, articleMeta, metaContent(root, 'author')),
+    ...authorshipFacts(
+      page,
+      sd.blocks,
+      articleMeta,
+      metaContent(root, 'author'),
+      metaModified(root),
+    ),
     commerce: commerceFacts(page, finalUrl),
   };
   const shell =

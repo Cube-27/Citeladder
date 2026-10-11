@@ -262,6 +262,10 @@
   font-weight: 500;
 }
 
+.docs-article-updated {
+  color: var(--color-muted);
+}
+
 .docs-article-header .website-lead {
   font-size: var(--text-base);
   line-height: var(--text-base--line-height);

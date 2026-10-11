@@ -17,6 +17,7 @@ const ATTRIBUTION = new RegExp(s.attribution_pattern, 'i');
 const CITATION = new RegExp(s.citation_marker_pattern, 'i');
 const SECTION_HEADINGS = new Set(s.section_headings);
 const HEADINGS = new Set(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']);
+const NO_CONTAINERS: ReadonlySet<HtmlElement> = new Set();
 
 type AttachedSource = { url: string; domain: string; source_name: string; relationship: string };
 export function emptySourceSupport() {
@@ -115,7 +116,11 @@ export function sourceSupportFacts(page: PageScope, finalUrl: string) {
   for (const node of elements(page.region)) {
     if (++scanned > regionPolicy.max_containers_scanned) break;
     const isHeading = HEADINGS.has(node.tagName);
-    if ((!isHeading && node.tagName !== 'a') || !pageOwned(node, page.region, page.cards)) continue;
+    if (!isHeading && node.tagName !== 'a') continue;
+    // A numbered reference list is a repeated linked collection, so the card
+    // heuristic excludes it; under a references heading its links are the sources.
+    const containers = section.name && !isHeading ? NO_CONTAINERS : page.cards;
+    if (!pageOwned(node, page.region, containers)) continue;
     if (isHeading) {
       section = nextSection(node, section);
       if (section.name && !facts.context_reasons.includes(section.name))

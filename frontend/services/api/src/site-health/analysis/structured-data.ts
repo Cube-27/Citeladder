@@ -12,7 +12,7 @@ import {
   type HtmlElement,
   type HtmlNode,
 } from '../../web-evidence/html.ts';
-import { scalarText, stripTrailing } from '../../text-order.ts';
+import { compareText, scalarText, stripTrailing } from '../../text-order.ts';
 import { analysisPolicy, limits, squash } from './policy.ts';
 
 const sd = analysisPolicy.structured_data;
@@ -227,6 +227,32 @@ function objectBlocks(object: JsonObject, entityIndex: number): SchemaBlock[] {
         ...enrichment(object),
       };
     });
+}
+
+/**
+ * Every schema.org type the page declares, recognized or not: a page marked up
+ * only as `SoftwareApplication` or `Event` has structured data even though no
+ * deeper check reads that type.
+ */
+export function declaredSchemaTypes(raw: string[], root: HtmlNode, maxTypes: number) {
+  const types = new Set<string>();
+  for (const body of raw) {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(body.trim());
+    } catch {
+      continue;
+    }
+    for (const object of jsonObjects(parsed))
+      for (const type of cleanTypes(object['@type'])) types.add(type);
+  }
+  for (const node of elements(root))
+    if (hasAttribute(node, 'itemscope'))
+      for (const candidate of attribute(node, 'itemtype').split(/\s+/u)) {
+        const type = cleanType(candidate);
+        if (type) types.add(type);
+      }
+  return [...types].sort(compareText).slice(0, maxTypes);
 }
 
 export function jsonLdBlocks(raw: string[], maxBlocks: number): SchemaBlock[] {

@@ -1,6 +1,6 @@
 /** Bounded internal-link retrieval and judgment policy. */
 export const internalLinks = {
-  policy_version: 1,
+  policy_version: 2,
   max_pages: 500,
   targets_per_page: 6,
   common_term_fraction: 0.4,
@@ -16,9 +16,13 @@ export const internalLinks = {
   max_passage_chars: 700,
   max_placements: 4,
   max_anchor_words: 6,
+  // A lone shared word ("visibility", "reference") names a topic, not the destination.
+  min_anchor_content_words: 2,
   min_anchor_chars: 4,
   max_anchor_chars: 90,
   accept_threshold: 0.6,
+  // Hub pages otherwise collect a suggestion from nearly every page on the site.
+  max_links_per_target: 5,
   job_deadline_seconds: 900,
   interactive_deadline_seconds: 180,
   outcome_batch: 50,

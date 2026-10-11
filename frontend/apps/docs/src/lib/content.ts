@@ -15,6 +15,8 @@ const metadata = z.object({
     'Updates',
   ]),
   order: z.number(),
+  /** The date the article's content last changed, shown and declared as its modified date. */
+  updated: z.iso.date(),
 });
 
 type Metadata = z.infer<typeof metadata>;

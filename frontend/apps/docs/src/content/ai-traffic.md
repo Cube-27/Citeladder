@@ -3,6 +3,7 @@ title: 'AI Traffic'
 description: 'Read crawler requests, AI referral sessions and coverage, and configure customer-operated crawl logs.'
 group: 'Measure and understand'
 order: 145
+updated: '2026-10-10'
 ---
 
 AI Traffic separates crawler **requests**, GA4 referral **sessions** and citations

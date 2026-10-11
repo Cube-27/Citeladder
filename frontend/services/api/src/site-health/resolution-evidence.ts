@@ -26,6 +26,8 @@ const sourceIds = (row: Resolution) => [
   ...(row.artifactId ? [row.artifactId] : []),
 ];
 const limit = policy.site_health.page_analysis.facts.limits.evidence_urls;
+/** Statuses that mean "sign in first", not "this link is broken". */
+const ACCESS_RESTRICTED = new Set([401, 403]);
 
 export async function fetchResolutions(db: Database, crawl: Crawl) {
   const rows = await db
@@ -131,6 +133,9 @@ export function resolutionSet(
     }
     if (resolution?.status === undefined || resolution.status === null) continue;
     checked.push(target);
+    // A link to a sign-in-gated page works for the people it is for; a sitemap
+    // that lists one still advertises a URL search engines cannot read.
+    if (!sitemap && ACCESS_RESTRICTED.has(resolution.status)) continue;
     if (resolution.status >= 400) broken.push(target);
   }
   const evaluation =

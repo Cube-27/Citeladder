@@ -44,7 +44,7 @@ async function issue(
   const facts = options.content
     ? extractPageFacts(
         Buffer.from(
-          `<html><title>${name} | Acme</title><main><h1>${name}</h1><p>Use a soil testing kit to understand nutrient levels before planting.</p><p>Add compost to improve moisture retention and support a thriving garden.</p></main></html>`,
+          `<html><title>${name} | Acme</title><main><h1>${name}</h1><p>Follow the garden soil guide and use a soil testing kit to understand nutrient levels before planting.</p><p>Add compost for healthy soil to improve moisture retention and support a thriving garden.</p></main></html>`,
         ),
         { finalUrl: url, contentType: 'text/html', statusCode: 200 },
         factSettings({}),

@@ -3,6 +3,7 @@ title: 'Example requests'
 description: 'Give your assistant a concrete question, a bounded scope and a standard for evidence.'
 group: 'Connect with MCP'
 order: 330
+updated: '2026-10-11'
 ---
 
 Start by selecting a project. These requests are examples you can adapt to the saved data available in your workspace.
