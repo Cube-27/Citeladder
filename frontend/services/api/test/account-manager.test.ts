@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, expect, it } from 'vitest';
 import { hashPassword, verifyPassword } from '../src/auth/password.ts';
 import {
@@ -219,12 +220,98 @@ it('bounds roles, targets members only and invalidates sessions when resetting a
   await expect(
     manageAccount(db, session, { kind: 'role', email: email(foreignUser), role: 'admin' }),
   ).rejects.toThrow('user_not_in_workspace');
+  await expect(
+    manageAccount(db, session, { kind: 'password', email: email(owner), password: 'newpass123' }),
+  ).rejects.toThrow('account_password_forbidden');
+  await expect(
+    manageAccount(db, session, { kind: 'password', email: email(admin), password: 'newpass123' }),
+  ).rejects.toThrow('account_password_forbidden');
   await manageAccount(db, session, { kind: 'role', email: email(target), role: 'viewer' });
-  await manageAccount(db, session, {
-    kind: 'password',
-    email: email(target),
-    password: 'newpass123',
+  const clientId = randomUUID();
+  await db
+    .insertInto('mcp_oauth_clients')
+    .values({
+      id: randomUUID(),
+      client_id: clientId,
+      client_metadata: JSON.stringify({ client_name: 'test' }),
+      client_secret_encrypted: '',
+      created_at: new Date(),
+    })
+    .execute();
+  const delegated = async (userId: string) => {
+    const grantId = randomUUID();
+    const keyId = randomUUID();
+    await db
+      .insertInto('mcp_oauth_grants')
+      .values({
+        id: grantId,
+        client_id: clientId,
+        user_id: userId,
+        workspace_ids: JSON.stringify([workspace]),
+        scopes: JSON.stringify(['citeladder:read']),
+        resource: 'https://protocol.example.test/mcp',
+        access_token_hash: randomUUID(),
+        refresh_token_hash: randomUUID(),
+        access_expires_at: new Date(Date.now() + 3600000),
+        refresh_expires_at: new Date(Date.now() + 7200000),
+        revoked_at: null,
+        created_at: new Date(),
+        updated_at: new Date(),
+      })
+      .execute();
+    await db
+      .insertInto('api_keys')
+      .values({
+        id: keyId,
+        workspace_id: workspace,
+        name: 'automation',
+        prefix: keyId.slice(0, 8),
+        secret_hmac: randomUUID(),
+        scopes: ['read'],
+        project_ids: null,
+        created_by_user_id: userId,
+        created_at: new Date(),
+        expires_at: null,
+        last_used_at: null,
+        rejection_logged_at: null,
+        revoked_at: null,
+        revoke_reason: null,
+      })
+      .execute();
+    return { grantId, keyId };
+  };
+  const targetAccess = await delegated(target);
+  const untouched = await delegated(admin);
+  const revocation = async (ids: { grantId: string; keyId: string }) => ({
+    grant:
+      (
+        await db
+          .selectFrom('mcp_oauth_grants')
+          .select('revoked_at')
+          .where('id', '=', ids.grantId)
+          .executeTakeFirstOrThrow()
+      ).revoked_at !== null,
+    key: (
+      await db
+        .selectFrom('api_keys')
+        .select('revoke_reason')
+        .where('id', '=', ids.keyId)
+        .executeTakeFirstOrThrow()
+    ).revoke_reason,
   });
+  try {
+    await manageAccount(db, session, {
+      kind: 'password',
+      email: email(target),
+      password: 'newpass123',
+    });
+    // Recovery ends what the old credentials could have minted, and nothing else.
+    expect(await revocation(targetAccess)).toEqual({ grant: true, key: 'credential_reset' });
+    expect(await revocation(untouched)).toEqual({ grant: false, key: null });
+  } finally {
+    await db.deleteFrom('api_keys').where('workspace_id', '=', workspace).execute();
+    await db.deleteFrom('mcp_oauth_clients').where('client_id', '=', clientId).execute();
+  }
   const reset = await db
     .selectFrom('users')
     .selectAll()

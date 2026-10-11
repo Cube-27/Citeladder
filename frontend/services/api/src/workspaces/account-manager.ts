@@ -8,6 +8,7 @@ import { WorkspaceContext } from '../auth/workspace.ts';
 import { lockIdentityAdministration, requirePlatformAdmin } from '../auth/operators.ts';
 import { recordSecurityEvent } from '../auth/security-events.ts';
 import { revokeCreatorKeys } from '../api-keys/revocation.ts';
+import { revokeDelegatedAccess } from '../auth/challenges.ts';
 import { baselineGrantKey, fullAccessSpecs } from '../entitlements/bootstrap.ts';
 import { issueBundle, revokeBundle } from '../entitlements/grants.ts';
 import { resolveAccountEntitlement } from '../entitlements/resolve.ts';
@@ -502,6 +503,7 @@ async function applyMemberAction(
     workspaceId,
     member.user_id,
   );
+  await revokeDelegatedAccess(trx, member.user_id, session.actorId);
   return { passwordUpdated: true };
 }
 
@@ -651,7 +653,13 @@ export async function manageAccount(db: Database, session: OperatorSession, acti
     const target = await trx
       .selectFrom('workspace_members')
       .innerJoin('users', 'users.id', 'workspace_members.user_id')
-      .select(['workspace_members.id as memberId', 'users.id as userId', 'users.hashed_password'])
+      .select([
+        'workspace_members.id as memberId',
+        'workspace_members.role as memberRole',
+        'users.id as userId',
+        'users.role as userRole',
+        'users.hashed_password',
+      ])
       .where('workspace_id', '=', session.workspaceId)
       .where('users.email', '=', email!)
       .forUpdate('workspace_members')
@@ -662,6 +670,14 @@ export async function manageAccount(db: Database, session: OperatorSession, acti
         memberId: target.memberId,
         role: role!,
       });
+    // A workspace administrator resets members' passwords, never the owner's,
+    // their own, or a platform identity's: those passwords are global.
+    if (
+      target.memberRole === 'owner' ||
+      target.userId === session.actorId ||
+      target.userRole !== 'user'
+    )
+      throw new Error('account_password_forbidden');
     const user = await trx
       .selectFrom('users')
       .select('hashed_password')
@@ -678,6 +694,14 @@ export async function manageAccount(db: Database, session: OperatorSession, acti
       })
       .where('id', '=', target.userId)
       .execute();
+    await recordSecurityEvent(
+      trx,
+      'auth.password_reset',
+      session.actorId,
+      session.workspaceId,
+      target.userId,
+    );
+    await revokeDelegatedAccess(trx, target.userId, session.actorId);
     return { passwordUpdated: true };
   });
 }

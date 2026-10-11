@@ -11,6 +11,8 @@ import { recordSecurityEvent } from './security-events.ts';
 import { sendAuthMail } from './mail.ts';
 import { requiresEmailVerification } from './eligibility.ts';
 import { safeAuthReturnPath } from '@citeladder/contracts/auth-continuation';
+import { revokeKeysAfterCredentialReset } from '../api-keys/revocation.ts';
+import { revokeGrantsAfterCredentialReset } from '../mcp/oauth.ts';
 
 type Purpose = 'verification' | 'password_reset';
 const cfg = policy.auth.mailbox;
@@ -225,9 +227,21 @@ export async function consumeChallenge(
       user.id,
     );
     // A completed reset proves mailbox ownership, so earlier failures stop counting.
-    if (replacement)
+    if (replacement) {
       await releaseSubjectBudget(trx, 'email', current.email, LOGIN_FAILURE_OPERATION);
+      await revokeDelegatedAccess(trx, user.id, user.id);
+    }
   });
+}
+
+/**
+ * Account recovery revokes what the old credentials could have minted: MCP
+ * grants and the API keys this person created. Runs in the recovery
+ * transaction so access ends with the old sessions.
+ */
+export async function revokeDelegatedAccess(trx: Database, userId: string, actorId: string) {
+  await revokeGrantsAfterCredentialReset(trx, userId);
+  await revokeKeysAfterCredentialReset(trx, userId, actorId);
 }
 
 export async function changePassword(
@@ -271,5 +285,6 @@ export async function changePassword(
       .where('consumed_at', 'is', null)
       .execute();
     await recordSecurityEvent(trx, 'auth.password_changed', userId);
+    await revokeDelegatedAccess(trx, userId, userId);
   });
 }

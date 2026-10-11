@@ -148,10 +148,37 @@ describe('verified self-serve lifecycle', () => {
   });
 
   it('password recovery replaces preregistered credentials and invalidates old sessions and links', async () => {
-    const { user, email } = await pending();
+    const { user, email, workspaceId } = await pending();
+    const keyId = randomUUID();
+    await db
+      .insertInto('api_keys')
+      .values({
+        id: keyId,
+        workspace_id: workspaceId,
+        name: 'minted before recovery',
+        prefix: keyId.slice(0, 8),
+        secret_hmac: randomUUID(),
+        scopes: ['read'],
+        project_ids: null,
+        created_by_user_id: user.id,
+        created_at: new Date(),
+        expires_at: null,
+        last_used_at: null,
+        rejection_logged_at: null,
+        revoked_at: null,
+        revoke_reason: null,
+      })
+      .execute();
     await requestChallenge(db, config, email, 'password_reset');
     const token = mailedToken(email);
     await consumeChallenge(db, token, 'new-owner-password', 'password_reset');
+    expect(
+      await db
+        .selectFrom('api_keys')
+        .select('revoke_reason')
+        .where('id', '=', keyId)
+        .executeTakeFirstOrThrow(),
+    ).toEqual({ revoke_reason: 'credential_reset' });
     expect(await authenticateUser(db, email, password)).toBeNull();
     expect((await authenticateUser(db, email, 'new-owner-password'))?.session_version).toBe(
       user.session_version + 1,

@@ -26,3 +26,27 @@ export async function revokeCreatorKeys(
     ),
   );
 }
+
+/**
+ * Revoke every live key `userId` made, in any workspace, inside the caller's
+ * password-reset or password-change transaction: account recovery must not
+ * leave a key minted by whoever held the old credentials.
+ */
+export async function revokeKeysAfterCredentialReset(
+  trx: Database,
+  userId: string,
+  actorId: string,
+): Promise<void> {
+  const revoked = await trx
+    .updateTable('api_keys')
+    .set({ revoked_at: new Date(), revoke_reason: 'credential_reset' })
+    .where('created_by_user_id', '=', userId)
+    .where('revoked_at', 'is', null)
+    .returning(['id', 'workspace_id'])
+    .execute();
+  await Promise.all(
+    revoked.map((key) =>
+      recordSecurityEvent(trx, 'api_key.revoke', actorId, key.workspace_id, key.id),
+    ),
+  );
+}
