@@ -21,7 +21,7 @@ const GH_EXECUTABLE =
   process.platform === 'win32' ? String.raw`C:\Program Files\GitHub CLI\gh.exe` : '/usr/bin/gh';
 const repository = 'Cube-27/cube27-fonts';
 // Pinned so every deploy ships the same bytes; bump it to adopt a font change.
-const revision = '629a9fa4802a0467e5c53f045f8d44c2bdfb3582';
+const revision = '0c5d0ce158cbc2a869d01d7e150d5b03329aebea';
 const licensedFonts = ['Switzer-Variable.woff2', 'IBMPlexSans-Variable.woff2'];
 
 const frontendRoot = resolve(import.meta.dirname, '..');

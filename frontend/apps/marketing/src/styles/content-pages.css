@@ -289,9 +289,12 @@
 
 /* ── Article layout (blog posts and research guides) ────────────────────── */
 
+/* The article is centred as one reading unit: a 42rem text column with the
+   contents rail beside it. Spreading a narrower column and the rail across the
+   full 80rem container left a wide empty band between them. */
 .cp-article {
   width: 100%;
-  max-width: 80rem;
+  max-width: 62rem;
   margin-inline: auto;
 }
 
@@ -346,7 +349,7 @@
 
 @media (min-width: 64rem) {
   .cp-article-grid {
-    grid-template-columns: minmax(0, 46rem) 14rem;
+    grid-template-columns: minmax(0, 42rem) 14rem;
     justify-content: space-between;
     gap: 4rem;
   }
@@ -429,12 +432,13 @@
   max-width: 68ch;
 }
 
+/* Article copy reads at the website body size, 16px (docs/design.md). */
 .cp-prose > p,
 .cp-prose > ul,
 .cp-prose > ol {
   margin-block: 0 1.25rem;
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  font-size: var(--text-base);
+  line-height: var(--text-base--line-height);
 }
 
 /* Only article lists: diagrams, checklists and the related list are lists too,
@@ -530,8 +534,8 @@
 
 .cp-prose > blockquote p {
   margin: 0;
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  font-size: var(--text-base);
+  line-height: var(--text-base--line-height);
 }
 
 .cp-prose > pre {
@@ -732,8 +736,8 @@
 
 .cp-callout p {
   color: var(--color-secondary);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  font-size: var(--text-base);
+  line-height: var(--text-base--line-height);
 }
 
 /* ── Article end: sources, related, previous/next ──────────────────────── */
