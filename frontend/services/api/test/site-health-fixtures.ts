@@ -10,8 +10,10 @@ import {
   type WebsiteFetcher,
 } from '../src/projects/safe-fetch.ts';
 import { canonicalIdentity } from '../src/site-health/url-identity.ts';
+import { SiteHealthWorker } from '../src/workers/site-health-worker.ts';
 import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
 
+type SiteWorkerOptions = NonNullable<ConstructorParameters<typeof SiteHealthWorker>[1]>;
 export type SiteSeed = Tenant & { crawlId: string; profileId: string; root: string };
 export class SiteFixtures extends VisibilityFixtures {
   readonly siteDb: Database;
@@ -114,6 +116,25 @@ export class SiteFixtures extends VisibilityFixtures {
       })
       .execute();
     return id;
+  }
+  /**
+   * A worker held to the seed's crawl. The local database is shared with other
+   * test runs, so an unscoped worker could claim and run their tasks.
+   */
+  worker(seed: SiteSeed, options: Omit<SiteWorkerOptions, 'taskScope'> = {}) {
+    return new SiteHealthWorker(this.siteDb, {
+      ...options,
+      taskScope: { workspaceId: seed.workspaceId, crawlId: seed.crawlId },
+    });
+  }
+  /** Claims exactly task `id` for `worker`, without executing it. */
+  async claim(worker: SiteHealthWorker, seed: SiteSeed, kind: string, id: string) {
+    const [task] = await worker.queue.claim({
+      owner: worker.owner,
+      kinds: [kind],
+      scope: { workspaceId: seed.workspaceId, taskIds: [id] },
+    });
+    return task!;
   }
   async page(
     seed: SiteSeed,

@@ -232,22 +232,23 @@ describe('committed API work at PostgreSQL', () => {
 it('overlapping runners share real leases and settle each workspace task once', async () => {
   const ids = await Promise.all(workspaces.map((workspace) => enqueue(db, workspace)));
   const executed: string[] = [];
-  const worker = () =>
-    new AnalyticsWorker(db, loadWorkerSettings({}), {
-      executors: {
-        traffic_snapshot_refresh: async (task) => {
-          executed.push(task.id);
-          await Promise.resolve();
+  // A claim scope is one workspace, so each runner drains one lane per workspace
+  // and both runners still overlap on every task.
+  const lanes = () =>
+    workspaces.map((workspaceId, index) => {
+      const worker = new AnalyticsWorker(db, loadWorkerSettings({}), {
+        executors: {
+          traffic_snapshot_refresh: async (task) => {
+            executed.push(task.id);
+            await Promise.resolve();
+          },
         },
-      },
+        taskScope: { workspaceId, taskIds: [ids[index]!] },
+      });
+      return { name: `analytics:${index}`, run: () => worker.runOnce() };
     });
-  const first = worker(),
-    second = worker();
   const options = { signal: new AbortController().signal, deadline: performance.now() + 10000 };
-  await Promise.all([
-    drainLanes([{ name: 'analytics', run: () => first.runOnce() }], options),
-    drainLanes([{ name: 'analytics', run: () => second.runOnce() }], options),
-  ]);
+  await Promise.all([drainLanes(lanes(), options), drainLanes(lanes(), options)]);
   expect(executed.sort()).toEqual(ids.sort());
   const rows = await db
     .selectFrom('analytics_tasks')

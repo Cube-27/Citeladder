@@ -4,6 +4,7 @@ import { readdirSync } from 'node:fs';
 
 import {
   classifyPaths,
+  e2eSpecArgs,
   hasTrustworthyJobEvidence,
   isOwnerFreeChange,
   selectE2EFiles,
@@ -133,6 +134,20 @@ test('external-service and deploy-only configuration runs only the security and 
   );
   // The CI workflow itself still escalates: owners run under its definition.
   assert.equal(classifyPaths(['.github/workflows/ci.yml']).api, true);
+});
+
+test('a shared contract change runs every E2E spec', () => {
+  const paths = [
+    'frontend/packages/contracts/src/search-intelligence.ts',
+    'frontend/components/ui/command-palette.tsx',
+  ];
+  assert.equal(classifyPaths(paths).e2e, true);
+  // Empty: Playwright runs every spec, not only the mapped shell spec.
+  assert.deepEqual(e2eSpecArgs(paths), []);
+  assert.deepEqual(e2eSpecArgs(['frontend/components/ui/command-palette.tsx']), [
+    'e2e/shell.spec.ts',
+  ]);
+  assert.equal(classifyPaths(['frontend/lib/api/projects.ts']).e2e, false);
 });
 
 test('Terraform and workflow changes are validated before deploy', () => {

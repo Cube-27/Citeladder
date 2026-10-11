@@ -9,6 +9,7 @@ import { createSecretCipher } from '../src/integrations/fernet.ts';
 import { WorkspaceScope } from '../src/db/workspace-scope.ts';
 import { loadWorkerSettings } from '../src/config.ts';
 import { testDatabase } from './support.ts';
+import { workspaceTaskIds } from './analytics-drain.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
 
 const db = testDatabase(),
@@ -64,11 +65,14 @@ async function run() {
   await confirmRun(db, scope, review.id);
   return { ...t, runId: review.id };
 }
-function worker(send: typeof fetch) {
+/** Held to the run's acquisition task. */
+async function worker(t: { workspaceId: string }, send: typeof fetch) {
+  const taskIds = await workspaceTaskIds(db, t.workspaceId, 'search_intelligence_acquisition');
   return new AnalyticsWorker(db, loadWorkerSettings(), {
     executors: {
       search_intelligence_acquisition: acquisitionExecutor({ send, env: { ENCRYPTION_KEY: key } }),
     },
+    taskScope: { workspaceId: t.workspaceId, taskIds },
   });
 }
 const receipt = () =>
@@ -86,7 +90,8 @@ describe('native research acquisition worker', () => {
       sent++;
       return receipt();
     };
-    await Promise.all([worker(send).runOnce(), worker(send).runOnce()]);
+    const [first, second] = await Promise.all([worker(t, send), worker(t, send)]);
+    await Promise.all([first.runOnce(), second.runOnce()]);
     expect(sent).toBe(1);
     expect(
       await db
@@ -114,7 +119,7 @@ describe('native research acquisition worker', () => {
   it('parks explicit rate limits without spending the queue retry budget', async () => {
     const t = await run();
     let sent = 0;
-    const w = worker(async () => {
+    const w = await worker(t, async () => {
       sent++;
       return sent === 1
         ? new Response('', { status: 429, headers: { 'retry-after': '0' } })
@@ -153,7 +158,7 @@ describe('native research acquisition worker', () => {
   it('stops an ambiguous paid request and does no further HTTP on replay', async () => {
     const t = await run();
     let sent = 0;
-    const w = worker(async () => {
+    const w = await worker(t, async () => {
       sent++;
       throw new Error('connection lost');
     });

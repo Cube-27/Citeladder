@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
 import { afterAll, describe, expect, it } from 'vitest';
-import { loadWorkerSettings, policy } from '../src/config.ts';
+import { policy } from '../src/config.ts';
 import { importCatalog } from '../src/commerce/import.ts';
 import { enqueueCatalogProjection, projectCatalog } from '../src/commerce/projection.ts';
 import {
@@ -13,7 +13,7 @@ import {
 } from '../src/commerce/projection-facts.ts';
 import { catalog } from '../src/commerce/reads.ts';
 import { record } from '../src/db/json.ts';
-import { AnalyticsWorker } from '../src/workers/analytics-worker.ts';
+import { drainWorkspace } from './analytics-drain.ts';
 import { commerceFixture } from './commerce-support.ts';
 import { freezeCommerceContext } from '../src/commerce/audit-context.ts';
 import { enqueue } from './referral-fixtures.ts';
@@ -147,9 +147,8 @@ describe('catalog projection PostgreSQL boundary', () => {
       kind: 'brand_discovery',
       payload: {},
     });
-    const worker = new AnalyticsWorker(db, loadWorkerSettings({}), { owner: 'commerce-ts-test' });
     await Promise.all([
-      worker.runUntilIdle(),
+      drainWorkspace(db, s.workspaceId, { owner: 'commerce-ts-test' }),
       importCatalog(db, s, {
         filename: 'catalog.csv',
         content_type: 'text/csv',

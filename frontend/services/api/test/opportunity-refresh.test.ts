@@ -14,8 +14,8 @@ import { updateActionStatus, attachOrCreateAction } from '../src/opportunities/a
 import { loadWorkerSettings, policy } from '../src/config.ts';
 import { record } from '../src/db/json.ts';
 import { recomputeOpportunities, refreshOpportunities } from '../src/opportunities/refresh.ts';
-import { AnalyticsWorker } from '../src/workers/analytics-worker.ts';
 import { enqueueOpportunityRefresh } from '../src/opportunities/enqueue.ts';
+import { drainWorkspace } from './analytics-drain.ts';
 import { seedOpportunityScenario, type OpportunitySeed } from './opportunity-fixtures.ts';
 import { sourcePage } from './action-support.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
@@ -91,8 +91,7 @@ async function request(
   return { status: response.status, response };
 }
 
-const worker = () =>
-  new AnalyticsWorker(db, loadWorkerSettings({}), { owner: `pr7-${randomUUID()}` });
+const drain = (s: Seed) => drainWorkspace(db, s.workspace_id, { owner: `pr7-${randomUUID()}` });
 
 let own: Seed;
 let foreign: Seed;
@@ -100,7 +99,8 @@ let foreign: Seed;
 beforeAll(async () => {
   own = await seed();
   foreign = await seed();
-  await worker().runUntilIdle();
+  await drain(own);
+  await drain(foreign);
 });
 
 afterAll(async () => {
@@ -114,7 +114,7 @@ afterAll(async () => {
 describe('opportunity_refresh', () => {
   it('preserves a frozen historical format identifier in the read response', async () => {
     const s = await seed();
-    await worker().runUntilIdle();
+    await drain(s);
     const row = (await live(s))[0]!;
     await db
       .updateTable('opportunities')
@@ -254,7 +254,7 @@ describe('opportunity_refresh', () => {
       .returning('id')
       .executeTakeFirstOrThrow();
 
-    await Promise.all([worker().runUntilIdle(), worker().runUntilIdle()]);
+    await Promise.all([drain(own), drain(own)]);
 
     const task = await db
       .selectFrom('analytics_tasks')

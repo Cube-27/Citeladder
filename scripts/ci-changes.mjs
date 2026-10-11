@@ -99,7 +99,7 @@ export function selectE2EFiles(paths) {
       addTest(path.slice('frontend/'.length));
     }
     for (const rule of E2E_RULES) {
-      if (rule.frontendE2E && matchesAny(path, rule.sources)) {
+      if (Array.isArray(rule.frontendE2E) && matchesAny(path, rule.sources)) {
         for (const test of rule.frontendE2E) addTest(test);
       }
     }
@@ -107,6 +107,18 @@ export function selectE2EFiles(paths) {
   // Test paths, so plain code-point order is the intended ordering; the
   // comparator only says so out loud.
   return [...selected].sort((left, right) => (left < right ? -1 : Number(left > right)));
+}
+
+/** True when a changed path maps to `"frontendE2E": "all"` in e2e-paths.json. */
+function selectsEveryE2E(paths) {
+  return paths.some((path) =>
+    E2E_RULES.some((rule) => rule.frontendE2E === 'all' && matchesAny(path, rule.sources)),
+  );
+}
+
+/** The specs the E2E job passes to Playwright; an empty list runs every spec. */
+export function e2eSpecArgs(paths) {
+  return selectsEveryE2E(paths) ? [] : selectE2EFiles(paths);
 }
 
 function isNonBrowserTooling(path) {
@@ -193,7 +205,10 @@ export function classifyPaths(paths, { full = false } = {}) {
     frontend,
     contract,
     api: shared || normalized.some(isApiService),
-    e2e: unowned.some((path) => !isNonBrowserTooling(path)) || e2eFiles.length > 0,
+    e2e:
+      unowned.some((path) => !isNonBrowserTooling(path)) ||
+      e2eFiles.length > 0 ||
+      selectsEveryE2E(normalized),
     security: shared || normalized.some(isSecuritySensitive),
     infra: normalized.some(isInfra),
     compose: normalized.some(isComposeSensitive),
@@ -353,7 +368,7 @@ async function main(environment = process.env) {
   const paths = changedPaths(diff.range);
   const full = diff.full && !isOwnerFreeChange(paths);
   const result = classifyPaths(paths, { full });
-  const e2eFiles = full ? [] : selectE2EFiles(paths);
+  const e2eFiles = full ? [] : e2eSpecArgs(paths);
 
   process.stdout.write(
     `CI diff: ${full ? 'full main validation' : diff.range}; ${paths.length} changed path(s)\n`,

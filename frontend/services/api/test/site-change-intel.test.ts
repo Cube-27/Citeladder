@@ -9,7 +9,6 @@ import {
 } from '../src/site-health/change-compare.ts';
 import { contentRecord, declaredCheckField } from '../src/site-health/change-snapshot.ts';
 import { siteWorkerSettings } from '../src/site-health/runtime.ts';
-import { SiteHealthWorker } from '../src/workers/site-health-worker.ts';
 import { SiteFixtures, type SiteSeed } from './site-health-fixtures.ts';
 import { testDatabase } from './support.ts';
 
@@ -190,10 +189,11 @@ afterAll(async () => {
   await fixtures.cleanup();
   await db.destroy();
 });
-const worker = new SiteHealthWorker(db, {
-  owner: 'change-intel',
-  settings: { ...siteWorkerSettings({}), retryBase: 0, retryMax: 0, retryJitter: 0 },
-});
+const worker = (seed: SiteSeed) =>
+  fixtures.worker(seed, {
+    owner: 'change-intel',
+    settings: { ...siteWorkerSettings({}), retryBase: 0, retryMax: 0, retryJitter: 0 },
+  });
 const hour = 3_600_000;
 const facts = { title: 'Pricing', headings: { h1_texts: ['Pricing'] } };
 
@@ -222,7 +222,7 @@ async function pair() {
 }
 async function run(seed: SiteSeed) {
   await fixtures.task(seed, 'change_intel');
-  expect(await worker.runOnce()).toBe(1);
+  expect(await worker(seed).runOnce()).toBe(1);
 }
 const snapshots = (seed: SiteSeed) =>
   db
@@ -409,13 +409,14 @@ describe('change_intel task', () => {
   it('a cancelled task writes neither the snapshot nor the handoff', async () => {
     const { b } = await pair();
     const id = await fixtures.task(b, 'change_intel');
-    const [task] = await worker.queue.claim({ owner: worker.owner, kinds: ['change_intel'] });
+    const held = worker(b);
+    const task = await fixtures.claim(held, b, 'change_intel', id);
     await db
       .updateTable('site_crawl_tasks')
       .set({ status: 'cancelled' })
       .where('id', '=', id)
       .execute();
-    await worker.execute(task!);
+    await held.execute(task);
     expect(await snapshots(b)).toEqual([]);
     expect(await analyticsTasks(b)).toEqual([]);
   });

@@ -139,7 +139,7 @@ it('persists scoped current-page metrics and admits one architecture successor i
   await fixtures.page(seed, '/failed', {}, { status: 'failed' });
   await fixtures.page(other, '/', {});
   const id = await fixtures.task(seed);
-  const worker = new SiteHealthWorker(db, { owner: 'metrics', settings });
+  const worker = fixtures.worker(seed, { owner: 'metrics', settings });
   expect(await worker.runOnce()).toBe(1);
   const rows = await db
     .selectFrom('site_page_link_metrics')
@@ -212,14 +212,14 @@ it('cancellation after claim prevents both evidence and successor writes', async
   const seed = await fixtures.crawl();
   await fixtures.page(seed, '/', {});
   const id = await fixtures.task(seed);
-  const worker = new SiteHealthWorker(db, { owner: 'cancel', settings });
-  const [task] = await worker.queue.claim({ owner: worker.owner, kinds: ['link_metrics'] });
+  const worker = fixtures.worker(seed, { owner: 'cancel', settings });
+  const task = await fixtures.claim(worker, seed, 'link_metrics', id);
   await db
     .updateTable('site_crawl_tasks')
     .set({ status: 'cancelled' })
     .where('id', '=', id)
     .execute();
-  await worker.execute(task!);
+  await worker.execute(task);
   expect(
     await db
       .selectFrom('site_page_link_metrics')
@@ -239,7 +239,7 @@ it('cancellation after claim prevents both evidence and successor writes', async
 it('rolls back partial evidence and handoff on failure and spends one bounded attempt', async () => {
   const seed = await fixtures.crawl();
   const id = await fixtures.task(seed, 'link_metrics', { maximum: 1 });
-  const worker = new SiteHealthWorker(db, {
+  const worker = fixtures.worker(seed, {
     settings,
     executors: {
       link_metrics: async (trx, crawl) => {
@@ -271,7 +271,7 @@ it('lets the heartbeat extend the lease while an executor holds the task fence',
   const seed = await fixtures.crawl();
   const id = await fixtures.task(seed);
   let beat: unknown;
-  const worker: SiteHealthWorker = new SiteHealthWorker(db, {
+  const worker: SiteHealthWorker = fixtures.worker(seed, {
     owner: 'beat',
     settings,
     executors: {
@@ -298,7 +298,7 @@ it('requeues database contention without spending a page attempt and fences expi
   const execute = vi.fn(async () => {
     throw Object.assign(new Error('recorded lock conflict'), { code: '40P01' });
   });
-  const worker = new SiteHealthWorker(db, { settings, executors: { link_metrics: execute } });
+  const worker = fixtures.worker(seed, { settings, executors: { link_metrics: execute } });
   expect(await worker.runOnce()).toBe(1);
   const task = await db
     .selectFrom('site_crawl_tasks')

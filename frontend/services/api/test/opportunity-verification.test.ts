@@ -7,13 +7,13 @@ import {
   buildVerificationResult,
   type Declaration,
 } from '../src/opportunities/verification-result.ts';
-import { AnalyticsWorker } from '../src/workers/analytics-worker.ts';
 import type { QueueTask } from '../src/queue/task-queue.ts';
 import type { Json } from '../src/generated/db-schema.ts';
 import { storedOutcomes } from '../src/opportunities/verification-decisions.ts';
 import { seedOpportunityScenario } from './opportunity-fixtures.ts';
 import { seedVerification, type VerificationSeed } from './verification-support.ts';
 import { testDatabase } from './support.ts';
+import { drainWorkspace } from './analytics-drain.ts';
 import { sql } from 'kysely';
 
 const db = testDatabase();
@@ -50,9 +50,8 @@ beforeAll(async () => {
     .selectAll()
     .where('workspace_id', '=', own.workspaceId)
     .executeTakeFirstOrThrow();
-  await new AnalyticsWorker(db, loadWorkerSettings({}), {
-    owner: `pr6-${randomUUID()}`,
-  }).runUntilIdle();
+  for (const s of [own, foreign])
+    await drainWorkspace(db, s.workspaceId, { owner: `pr6-${randomUUID()}` });
 });
 afterAll(async () => {
   for (const seed of seeds) {
