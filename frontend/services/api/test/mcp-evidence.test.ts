@@ -386,7 +386,7 @@ it('fetches the exact page analysis after a newer analysis replaces it, with fac
       .execute();
     const args = { project_id: seed.project_id, crawl_id: seed.crawl_id, limit: 1 };
     const page = await dispatchTool(db, principal, 'read_site_pages', args, origin);
-    expect((page.items as unknown[]).length).toBe(1);
+    expect(page.items as unknown[]).toHaveLength(1);
     await db
       .updateTable('site_page_analyses')
       .set({ is_current: false })

@@ -86,11 +86,12 @@ export function namesPlace(text: string, terms: readonly string[]): boolean {
   const padded = ` ${wordsOf(text).join(' ')} `;
   return terms.some((term) => {
     if (DENSE_SCRIPT.test(term)) return folded(text).includes(folded(term.trim()));
-    if (/^\p{Lu}{2,3}$/u.test(term.replaceAll('.', '')))
-      return new RegExp(
-        String.raw`(?<![\p{L}\p{N}])${term.replaceAll('.', String.raw`\.?`)}(?![\p{L}\p{N}])`,
-        'u',
-      ).test(text);
+    if (/^\p{Lu}{2,3}$/u.test(term.replaceAll('.', ''))) {
+      const optionalDots = term.replaceAll('.', String.raw`\.?`);
+      return new RegExp(String.raw`(?<![\p{L}\p{N}])${optionalDots}(?![\p{L}\p{N}])`, 'u').test(
+        text,
+      );
+    }
     const phrase = wordsOf(term).join(' ');
     return Boolean(phrase) && padded.includes(` ${phrase} `);
   });

@@ -19,7 +19,9 @@ function auditClaimStatement(
   limit: number,
   scope?: AuditClaimScope | AuditClaimScope[],
 ) {
-  const scopes = Array.isArray(scope) ? scope : scope ? [scope] : [];
+  let scopes: AuditClaimScope[] = [];
+  if (Array.isArray(scope)) scopes = scope;
+  else if (scope) scopes = [scope];
   const candidates = db
     .selectFrom(table)
     .select([

@@ -122,71 +122,65 @@ it('appends exact snapshot and quoted-presence provenance only under the owning 
     await recordInspection(
       db,
       { ...own.task, lease_owner: 'stale' },
-      own.scope,
-      claim.id,
-      claim.lease,
-      fetch,
-      own.audit,
-      projectRoster(own.configuration),
-      page,
-      assessment,
+      {
+        scope: own.scope,
+        pageId: claim.id,
+        lease: claim.lease,
+        fetch,
+        auditId: own.audit,
+        roster: projectRoster(own.configuration),
+        extracted: page,
+        assessment,
+      },
     ),
   ).toBeNull();
   expect(
-    await recordInspection(
-      db,
-      own.task,
-      own.scope,
-      claim.id,
-      new Date(0),
+    await recordInspection(db, own.task, {
+      scope: own.scope,
+      pageId: claim.id,
+      lease: new Date(0),
       fetch,
-      own.audit,
-      projectRoster(own.configuration),
-      page,
+      auditId: own.audit,
+      roster: projectRoster(own.configuration),
+      extracted: page,
       assessment,
-    ),
+    }),
   ).toBeNull();
   const foreign = await seed();
   expect(
-    await recordInspection(
-      db,
-      own.task,
-      own.scope,
-      claim.id,
-      claim.lease,
+    await recordInspection(db, own.task, {
+      scope: own.scope,
+      pageId: claim.id,
+      lease: claim.lease,
       fetch,
-      foreign.audit,
-      projectRoster(own.configuration),
-      page,
+      auditId: foreign.audit,
+      roster: projectRoster(own.configuration),
+      extracted: page,
       assessment,
-    ),
+    }),
   ).toBeNull();
-  const snapshot = await recordInspection(
-    db,
-    own.task,
-    own.scope,
-    claim.id,
-    claim.lease,
+  const snapshot = await recordInspection(db, own.task, {
+    scope: own.scope,
+    pageId: claim.id,
+    lease: claim.lease,
     fetch,
-    own.audit,
-    projectRoster(own.configuration),
-    page,
+    auditId: own.audit,
+    roster: projectRoster(own.configuration),
+    extracted: page,
     assessment,
-  );
+  });
   expect(snapshot).not.toBeNull();
   expect(
-    await recordInspection(
-      db,
-      own.task,
-      own.scope,
-      claim.id,
-      claim.lease,
+    await recordInspection(db, own.task, {
+      scope: own.scope,
+      pageId: claim.id,
+      lease: claim.lease,
       fetch,
-      own.audit,
-      projectRoster(own.configuration),
-      page,
+      auditId: own.audit,
+      roster: projectRoster(own.configuration),
+      extracted: page,
       assessment,
-    ),
+    }),
   ).toBeNull();
   const persisted = await db
     .selectFrom('source_page_snapshots')
@@ -485,18 +479,16 @@ it('selects candidate-audit evidence and keeps missing owned relevance explicitl
     const page = extractSourcePage(
       Buffer.from(`<h1>Acme pricing</h1><p>${'Acme pricing is measured. '.repeat(60)}</p>`),
     );
-    const snapshot = await recordInspection(
-      db,
-      own.task,
-      own.scope,
-      claim.id,
-      claim.lease,
-      { outcome: 'inspected', requestedUrl: claim.url },
-      own.audit,
-      projectRoster(own.configuration),
-      page,
-      assessPage(page, own.configuration),
-    );
+    const snapshot = await recordInspection(db, own.task, {
+      scope: own.scope,
+      pageId: claim.id,
+      lease: claim.lease,
+      fetch: { outcome: 'inspected', requestedUrl: claim.url },
+      auditId: own.audit,
+      roster: projectRoster(own.configuration),
+      extracted: page,
+      assessment: assessPage(page, own.configuration),
+    });
     snapshotIds.push(snapshot!);
     await db
       .insertInto('content_differentiation_candidates')
@@ -588,18 +580,16 @@ it('replaces URL format evidence with page evidence and preserves stronger publi
   const claim = (await claimPages(db, own.scope))[0]!;
   const persist = async (html: string, lease: Date | null) => {
     const page = extractSourcePage(Buffer.from(html));
-    await recordInspection(
-      db,
-      own.task,
-      own.scope,
-      claim.id,
+    await recordInspection(db, own.task, {
+      scope: own.scope,
+      pageId: claim.id,
       lease,
-      { outcome: 'inspected', requestedUrl: claim.url },
-      own.audit,
-      projectRoster(own.configuration),
-      page,
-      assessPage(page, own.configuration),
-    );
+      fetch: { outcome: 'inspected', requestedUrl: claim.url },
+      auditId: own.audit,
+      roster: projectRoster(own.configuration),
+      extracted: page,
+      assessment: assessPage(page, own.configuration),
+    });
   };
   await persist(
     '<script type="application/ld+json">{"@type":"Article"}</script><h1>Spring notes</h1>',

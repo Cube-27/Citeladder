@@ -43,13 +43,13 @@ function classifyQuery(
     .filter((term) => ` ${normalized} `.includes(` ${term} `))
     .sort(compareText);
   const canonical = normalizeQuery(brand.brand_name);
-  const classification = !matched.length
-    ? 'non_branded'
-    : canonical.split(' ').length === 1 &&
-        matched.includes(canonical) &&
-        !matched.some((term) => domains.has(term))
-      ? 'ambiguous'
-      : 'branded';
+  const ambiguous =
+    canonical.split(' ').length === 1 &&
+    matched.includes(canonical) &&
+    !matched.some((term) => domains.has(term));
+  let classification: 'non_branded' | 'ambiguous' | 'branded' = 'branded';
+  if (!matched.length) classification = 'non_branded';
+  else if (ambiguous) classification = 'ambiguous';
   return {
     normalized_query: normalized,
     classification,

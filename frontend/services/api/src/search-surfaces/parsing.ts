@@ -107,28 +107,35 @@ function fragments(element: Record<string, unknown>) {
   ].filter(Boolean);
   return values.length ? values : [text(element.markdown)].filter(Boolean);
 }
-/** Envelope and exact task identity precede every presence decision; cards never enter visible text. */
-export function parseOverview(
-  payload: unknown,
+type OverviewTask = {
+  task: Record<string, unknown>;
+  status: number;
+  page: Record<string, unknown>;
+};
+/** The one task answering `expectedId` with a usable page, or the result that ends parsing. */
+function resolveOverviewTask(
+  envelope: Record<string, unknown>,
   expectedId: string,
-): OverviewResult | 'still_pending' {
-  const envelope = record(payload),
-    envelopeStatus = integer(envelope.status_code),
+): OverviewTask | { early: OverviewResult | 'still_pending' } {
+  const envelopeStatus = integer(envelope.status_code),
     c = searchPolicy.constants,
     s = searchPolicy.surface;
   if (envelopeStatus !== null && envelopeStatus !== c.status_ok)
-    return emptyOverview(s.outcome_provider_error, envelope, envelopeStatus);
+    return { early: emptyOverview(s.outcome_provider_error, envelope, envelopeStatus) };
   const matched = objects(envelope.tasks).filter((t) => scalarText(t.id) === expectedId);
   const task = onlyOf(matched);
   if (!task)
-    return emptyOverview(s.outcome_parser_error, {
-      parse_error: 'task identity is missing or ambiguous',
-      payload: envelope,
-    });
+    return {
+      early: emptyOverview(s.outcome_parser_error, {
+        parse_error: 'task identity is missing or ambiguous',
+        payload: envelope,
+      }),
+    };
   const status = integer(task.status_code);
-  if (pending(status)) return 'still_pending';
-  if (status === null) return emptyOverview(s.outcome_parser_error, task);
-  if (status !== c.status_ok) return emptyOverview(s.outcome_provider_error, task, status);
+  if (pending(status)) return { early: 'still_pending' };
+  if (status === null) return { early: emptyOverview(s.outcome_parser_error, task) };
+  if (status !== c.status_ok)
+    return { early: emptyOverview(s.outcome_provider_error, task, status) };
   const pages = list(task.result),
     page = record(pages[0]);
   if (
@@ -136,7 +143,69 @@ export function parseOverview(
     !Object.keys(page).length ||
     (page.items != null && !Array.isArray(page.items))
   )
-    return emptyOverview(s.outcome_parser_error, task);
+    return { early: emptyOverview(s.outcome_parser_error, task) };
+  return { task, status, page };
+}
+/** Visible text fragments and links of the walked elements, each kept once in first-seen order. */
+function overviewContent(walked: [number, Record<string, unknown>][]) {
+  const seenText = new Set<string>(),
+    parts: string[] = [];
+  const links = new Map<string, SurfaceLink>();
+  for (const [index, element] of walked) {
+    for (const fragment of fragments(element)) {
+      // Casefold and whitespace only; punctuation distinguishes visible fragments.
+      const key = fragment
+        .split(/\s+/u)
+        .filter(Boolean)
+        .join(' ')
+        .replaceAll(
+          /./gsu,
+          (char) =>
+            searchPolicy.casefold_overrides[char as keyof typeof searchPolicy.casefold_overrides] ??
+            char.toLowerCase(),
+        );
+      if (!key || seenText.has(key)) continue;
+      seenText.add(key);
+      parts.push(fragment.trim());
+    }
+    for (const link of objects(element.links)) {
+      const url = scalarText(link.url).trim();
+      if (url && !links.has(url))
+        links.set(url, {
+          url,
+          domain: domain(scalarText(link.domain) || url),
+          title: scalarText(link.title),
+          element_index: index,
+        });
+    }
+  }
+  return { parts, links };
+}
+function overviewReferences(block: Record<string, unknown>) {
+  const references = new Map<string, SurfaceReference>();
+  for (const ref of objects(block.references)) {
+    const url = scalarText(ref.url).trim(),
+      host = domain(scalarText(ref.domain) || url);
+    if (url && !references.has(url))
+      references.set(url, {
+        url,
+        domain: host,
+        title: scalarText(ref.title),
+        source_origin: classifySourceOrigin(host),
+      });
+  }
+  return references;
+}
+/** Envelope and exact task identity precede every presence decision; cards never enter visible text. */
+export function parseOverview(
+  payload: unknown,
+  expectedId: string,
+): OverviewResult | 'still_pending' {
+  const envelope = record(payload),
+    s = searchPolicy.surface;
+  const resolved = resolveOverviewTask(envelope, expectedId);
+  if ('early' in resolved) return resolved.early;
+  const { task, status, page } = resolved;
   const block = objects(page.items).find((item) => item.type === 'ai_overview');
   const base = {
     ...emptyOverview(
@@ -151,50 +220,8 @@ export function parseOverview(
   if (!block) return base;
   try {
     const walked = elements(block),
-      seenText = new Set<string>(),
-      parts: string[] = [];
-    const links = new Map<string, SurfaceLink>();
-    for (const [index, element] of walked) {
-      for (const fragment of fragments(element)) {
-        // Casefold and whitespace only; punctuation distinguishes visible fragments.
-        const key = fragment
-          .split(/\s+/u)
-          .filter(Boolean)
-          .join(' ')
-          .replaceAll(
-            /./gsu,
-            (char) =>
-              searchPolicy.casefold_overrides[
-                char as keyof typeof searchPolicy.casefold_overrides
-              ] ?? char.toLowerCase(),
-          );
-        if (!key || seenText.has(key)) continue;
-        seenText.add(key);
-        parts.push(fragment.trim());
-      }
-      for (const link of objects(element.links)) {
-        const url = scalarText(link.url).trim();
-        if (url && !links.has(url))
-          links.set(url, {
-            url,
-            domain: domain(scalarText(link.domain) || url),
-            title: scalarText(link.title),
-            element_index: index,
-          });
-      }
-    }
-    const references = new Map<string, SurfaceReference>();
-    for (const ref of objects(block.references)) {
-      const url = scalarText(ref.url).trim(),
-        host = domain(scalarText(ref.domain) || url);
-      if (url && !references.has(url))
-        references.set(url, {
-          url,
-          domain: host,
-          title: scalarText(ref.title),
-          source_origin: classifySourceOrigin(host),
-        });
-    }
+      { parts, links } = overviewContent(walked);
+    const references = overviewReferences(block);
     return {
       ...base,
       answer_text: parts.join('\n\n'),
@@ -391,11 +418,8 @@ export function parseScraper(
         query_sequence: index,
       }))
     : [];
-  const availability = valid
-    ? events.length
-      ? 'queries_available'
-      : 'no_exposed_queries'
-    : 'unavailable';
+  let availability: 'unavailable' | 'queries_available' | 'no_exposed_queries' = 'unavailable';
+  if (valid) availability = events.length ? 'queries_available' : 'no_exposed_queries';
   const citations: Citation[] = [],
     seen = new Set<string>();
   for (const source of scraperSources(page!)) {

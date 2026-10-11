@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { policy } from '../config.ts';
+import { compareText } from '../text-order.ts';
 import type { CanonicalTarget } from './targets.ts';
 
 export const si = policy.search_intelligence;
@@ -213,13 +214,13 @@ export function canonicalJson(value: unknown, ascii = true): string {
   if (Array.isArray(value)) return `[${value.map((item) => canonicalJson(item, ascii)).join(',')}]`;
   if (value !== null && typeof value === 'object')
     return `{${Object.entries(value)
-      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+      .sort(([a], [b]) => compareText(a, b))
       .map(([k, v]) => `${canonicalJson(k, ascii)}:${canonicalJson(v, ascii)}`)
       .join(',')}}`;
   if (!ascii) return JSON.stringify(value);
   return JSON.stringify(value).replace(
     /[\u0080-\uffff]/g,
-    (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, '0')}`,
+    (char) => String.raw`\u${char.codePointAt(0)!.toString(16).padStart(4, '0')}`,
   );
 }
 export function scopeHash(o: RequestOptions, payload: Record<string, unknown>) {
@@ -248,12 +249,13 @@ export function quoteDataset(kind: DatasetKind, rows: number) {
   const calls = includes(si.list_kinds, kind) ? Math.ceil(rows / si.page_size) : 1;
   const micro = (value: string) => Math.round(Number(value) * 1e6);
   const labs = includes(si.labs_kinds, kind);
+  const requestRate = micro(labs ? si.rates.labs_task : si.rates.backlinks_request);
+  const rowRate = micro(labs ? si.rates.labs_item : si.rates.backlinks_row);
   const cost =
     kind === 'backlink_history'
       ? micro(si.rates.backlinks_request) +
         micro(si.rates.backlinks_row) * si.history_max_observations
-      : micro(labs ? si.rates.labs_task : si.rates.backlinks_request) * calls +
-        micro(labs ? si.rates.labs_item : si.rates.backlinks_row) * rows;
+      : requestRate * calls + rowRate * rows;
   return { calls, rows, costMicrousd: cost };
 }
 /** One request's own estimate: a short final page costs less than a full one. */

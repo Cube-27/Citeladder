@@ -3,6 +3,7 @@ import { addDays } from '../referrals/projection.ts';
 import {
   aggregate,
   classificationCounts,
+  collectionState,
   queryCandidate,
   round,
   unique,
@@ -68,7 +69,7 @@ export function detectCannibalization(rows: QueryInput[]): Evaluation {
     );
   }
   return {
-    state: abstained ? 'partial' : rows.length ? 'available' : 'unavailable',
+    state: collectionState(abstained, rows.length),
     candidates,
     counts_by_classification: classificationCounts(rows),
     limitations: abstained

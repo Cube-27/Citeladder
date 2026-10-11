@@ -39,7 +39,7 @@ export class AuditScheduler {
     this.owner = options.owner ?? `audit-scheduler-ts-${randomBytes(6).toString('hex')}`;
     this.now = options.now ?? (() => new Date());
   }
-  async claimDue(at: Date, limit = this.settings.claim_batch_size): Promise<ScheduleClaim[]> {
+  claimDue(at: Date, limit = this.settings.claim_batch_size): Promise<ScheduleClaim[]> {
     return this.db.transaction().execute(async (trx) => {
       const schedules = await trx
         .selectFrom('audit_schedules')
@@ -80,7 +80,7 @@ export class AuditScheduler {
       }));
     });
   }
-  async planClaim(claim: ScheduleClaim, at = this.now()) {
+  planClaim(claim: ScheduleClaim, at = this.now()) {
     return this.db.transaction().execute(async (trx) => {
       const schedule = await trx
         .selectFrom('audit_schedules')

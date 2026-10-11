@@ -29,7 +29,7 @@ import { OWNED_RANK, searchTerms } from './keyword-verification.ts';
 import type { CrawlSource, DemandSource, Scope } from './sources.ts';
 
 const g = policy.opportunity.opportunities.SEARCH_GAP;
-const USABLE_COVERAGE = ['complete', 'partial', 'empty'];
+const USABLE_COVERAGE = new Set(['complete', 'partial', 'empty']);
 const savedDomains = z.array(z.string());
 
 type Market = { location_code: number | null; language_code: string };
@@ -172,7 +172,7 @@ export async function searchGapSource(
   }
   // The newest reading decides; an unusable one does not revive an older one.
   for (const [key, { dataset }] of latest)
-    if (!USABLE_COVERAGE.includes(dataset.coverage)) latest.delete(key);
+    if (!USABLE_COVERAGE.has(dataset.coverage)) latest.delete(key);
   const datasets = [...latest.values()].flatMap(({ dataset, competitor }) =>
     dataset.dataset_kind === 'missing_keywords' && competitor
       ? [
@@ -363,10 +363,7 @@ export function searchGapDecisions(inputs: GapInputs): {
       'Search Console is not connected; some keyword gaps may already earn impressions.',
     );
   const skipped = [...abstained].filter(([, count]) => count > 0);
-  if (skipped.length)
-    limitations.push(
-      `Keyword gaps not promoted: ${skipped.map(([reason, count]) => `${count} ${reason.replaceAll('_', ' ')}`).join(', ')}.`,
-    );
+  if (skipped.length) limitations.push(`Keyword gaps not promoted: ${skippedSummary(skipped)}.`);
   return { hits, limitations };
 }
 
@@ -584,4 +581,8 @@ export async function searchGapHits(
     search_console: searchConsole,
     pages,
   });
+}
+
+function skippedSummary(skipped: [string, number][]) {
+  return skipped.map(([reason, count]) => `${count} ${reason.replaceAll('_', ' ')}`).join(', ');
 }

@@ -129,7 +129,7 @@ function metrics(
   const prior = previous?.rankings.find((row) => row.is_brand);
   // With no share of voice (nobody named) the sort order is alphabetical, not a rank.
   const rankOf = (view: VisibilityResponse | null, row: typeof brand) =>
-    view && row && row.share_of_voice != null ? view.rankings.indexOf(row) + 1 : null;
+    view && row?.share_of_voice != null ? view.rankings.indexOf(row) + 1 : null;
   const rank = rankOf(current, brand);
   const priorRank = rankOf(previous, prior);
   return {

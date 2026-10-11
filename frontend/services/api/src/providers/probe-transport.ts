@@ -24,8 +24,7 @@ export type ProbeRequest = {
   signal?: AbortSignal;
 };
 export type ProbeTransport = (input: ProbeRequest) => Promise<{ status: number; body: unknown }>;
-export const sendProbe: ProbeTransport = async (input) => {
-  const url = new URL(input.url);
+function assertProbeUrl(url: URL, input: Pick<ProbeRequest, 'customerDestination'>) {
   const loopback = ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
   if (
     (url.protocol !== 'https:' &&
@@ -34,13 +33,9 @@ export const sendProbe: ProbeTransport = async (input) => {
     url.password
   )
     throw new ProbeError('invalid_url');
-  const signal = AbortSignal.any([
-    AbortSignal.timeout(input.timeoutSeconds * 1000),
-    ...(input.signal ? [input.signal] : []),
-  ]);
-  if (signal.aborted) throw new ProbeError('timeout');
-  const host = url.hostname.replaceAll(/[[\]]/gu, '');
-  const addresses = await new Promise<{ address: string; family: number }[]>((resolve, reject) => {
+}
+function resolveAddresses(host: string, signal: AbortSignal) {
+  return new Promise<{ address: string; family: number }[]>((resolve, reject) => {
     const aborted = () => reject(new ProbeError('timeout'));
     signal.addEventListener('abort', aborted, { once: true });
     const result = isIP(host)
@@ -50,17 +45,29 @@ export const sendProbe: ProbeTransport = async (input) => {
       .then(resolve, () => reject(new ProbeError('dns_resolution_failed')))
       .finally(() => signal.removeEventListener('abort', aborted));
   });
-  if (!isNonEmpty(addresses)) throw new ProbeError('dns_resolution_failed');
-  if (input.customerDestination) {
-    if (!providerPolicy.app.allowed_ports.includes(Number(url.port || 443)))
-      throw new ProbeError('invalid_url');
-    try {
-      for (const item of addresses) validateAddress(item.address);
-    } catch (error) {
-      if (error instanceof FetchError) throw new ProbeError(error.code);
-      throw error;
-    }
+}
+function assertCustomerAddresses(url: URL, addresses: { address: string }[]) {
+  if (!providerPolicy.app.allowed_ports.includes(Number(url.port || 443)))
+    throw new ProbeError('invalid_url');
+  try {
+    for (const item of addresses) validateAddress(item.address);
+  } catch (error) {
+    if (error instanceof FetchError) throw new ProbeError(error.code);
+    throw error;
   }
+}
+export const sendProbe: ProbeTransport = async (input) => {
+  const url = new URL(input.url);
+  assertProbeUrl(url, input);
+  const signal = AbortSignal.any([
+    AbortSignal.timeout(input.timeoutSeconds * 1000),
+    ...(input.signal ? [input.signal] : []),
+  ]);
+  if (signal.aborted) throw new ProbeError('timeout');
+  const host = url.hostname.replaceAll(/[[\]]/gu, '');
+  const addresses = await resolveAddresses(host, signal);
+  if (!isNonEmpty(addresses)) throw new ProbeError('dns_resolution_failed');
+  if (input.customerDestination) assertCustomerAddresses(url, addresses);
   const target = addresses[0];
   const body = input.body === undefined ? undefined : Buffer.from(JSON.stringify(input.body));
   if (body && body.length > providerPolicy.app.max_request_bytes)

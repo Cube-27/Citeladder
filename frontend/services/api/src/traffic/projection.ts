@@ -68,22 +68,22 @@ function getOrAdd<T>(map: Map<string, T>, key: string, create: () => T): T {
 }
 function stat(gsc: GscAccum, ga4?: Ga4Accum): Stat {
   const { counts, ...sources } = sourceFields(gsc, ...(ga4 ? [ga4] : []));
-  return { metrics: { ...gsc.measures(), ...(ga4?.measures() ?? {}), ...counts }, ...sources };
+  return { metrics: { ...gsc.measures(), ...ga4?.measures(), ...counts }, ...sources };
 }
 
 export class TrafficProjectionBuilder {
   private readonly window: ProjectionWindow;
   private readonly starts: string[];
-  private pending = new Map<string, MetricRow>();
+  private readonly pending = new Map<string, MetricRow>();
   private orderedIdentity: string | null = null;
-  private totalsGsc = new GscAccum();
-  private totalsGa4 = new Ga4Accum();
-  private buckets = new Map<string, { gsc: GscAccum; ga4: Ga4Accum }>();
-  private pages = new Map<string, { gsc: GscAccum; ga4: Ga4Accum }>();
-  private queries = new Map<string, GscAccum>();
-  private dimensions = new Map<string, Map<string, GscAccum>>();
+  private readonly totalsGsc = new GscAccum();
+  private readonly totalsGa4 = new Ga4Accum();
+  private readonly buckets = new Map<string, { gsc: GscAccum; ga4: Ga4Accum }>();
+  private readonly pages = new Map<string, { gsc: GscAccum; ga4: Ga4Accum }>();
+  private readonly queries = new Map<string, GscAccum>();
+  private readonly dimensions = new Map<string, Map<string, GscAccum>>();
   private excludedHostRows = 0;
-  private qualities = new Map<
+  private readonly qualities = new Map<
     string,
     { day: string; flags: string[]; revision: number | null }[]
   >();

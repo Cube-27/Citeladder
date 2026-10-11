@@ -29,18 +29,18 @@ const rank = (method: string | null) => {
   return index < 0 ? strength.length : index;
 };
 
-export async function recordInspection(
-  db: Database,
-  task: QueueTask,
-  scope: SourceScope,
-  pageId: string,
-  lease: Date | null,
-  fetch: FetchOutcome,
-  auditId: string,
-  roster: string,
-  extracted?: ExtractedPage,
-  assessment?: ReturnType<typeof assessPage>,
-) {
+type InspectionInput = {
+  scope: SourceScope;
+  pageId: string;
+  lease: Date | null;
+  fetch: FetchOutcome;
+  auditId: string;
+  roster: string;
+  extracted?: ExtractedPage;
+  assessment?: ReturnType<typeof assessPage>;
+};
+export function recordInspection(db: Database, task: QueueTask, input: InspectionInput) {
+  const { scope, pageId, lease, fetch, auditId, roster, extracted, assessment } = input;
   return db.transaction().execute(async (trx) => {
     if (!(await lockOwnedTask(trx, task))) return null;
     const audit = await trx

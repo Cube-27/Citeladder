@@ -187,6 +187,55 @@ export async function readBrandMemory(db: Database, scope: ProjectScope) {
   return { ...profile, business_context: { ...business, field_sources: sources } };
 }
 
+type StoredSources = z.infer<typeof storedSources>;
+type StoredArtifacts = z.infer<typeof storedArtifacts>;
+
+/** Writes each supplied field's value and reviewed provenance; mutates `sources` and `artifacts`. */
+function applyFieldEdits(
+  update: BrandProfileUpdate,
+  sources: StoredSources,
+  artifacts: StoredArtifacts,
+  userId: string,
+  now: Date,
+) {
+  const values: Partial<Record<Field, string>> = {};
+  for (const field of FIELDS as readonly Field[]) {
+    const value = update[field];
+    if (value === null || value === undefined) continue;
+    values[field] = typeof value === 'string' ? value.trim() : JSON.stringify(cleanProducts(value));
+    const prior = sources[field];
+    sources[field] = {
+      origin: prior?.origin ?? SOURCE_MANUAL,
+      review_state: prior ? REVIEW_EDITED : REVIEW_CONFIRMED,
+      reviewed_by: userId,
+      reviewed_at: now.toISOString(),
+    };
+    delete artifacts[field];
+  }
+  return values;
+}
+
+/** Records reviewed identity facets in `context`; a changed category drops what derived from it. */
+function applyIdentityFacets(
+  context: Record<string, unknown>,
+  update: BrandProfileUpdate,
+  facets: readonly (typeof IDENTITY_FACETS)[number][],
+) {
+  const fieldSources: Record<string, unknown> = {
+    ...jsonObject(context.field_sources ?? {}, 'business_context.field_sources'),
+  };
+  if (update.category != null && update.category !== context.category)
+    for (const derived of CATEGORY_DERIVED) {
+      delete context[derived];
+      delete fieldSources[derived];
+    }
+  for (const facet of facets) {
+    context[facet] = update[facet];
+    fieldSources[facet] = 'reviewed';
+  }
+  context.field_sources = fieldSources;
+}
+
 /**
  * Apply a person's edits. Each supplied field keeps its original origin, is
  * confirmed (first review) or edited (a later one) by this reviewer, and
@@ -229,40 +278,12 @@ export function updateBrandProfile(
     const row = await loadProfile(trx, scope, true);
     const sources = storedSources.parse(row.sources);
     const artifacts = storedArtifacts.parse(row.source_artifact_ids);
-    const values: Partial<Record<Field, string>> = {};
-    for (const field of FIELDS as readonly Field[]) {
-      const value = update[field];
-      if (value === null || value === undefined) continue;
-      values[field] =
-        typeof value === 'string' ? value.trim() : JSON.stringify(cleanProducts(value));
-      const prior = sources[field];
-      sources[field] = {
-        origin: prior?.origin ?? SOURCE_MANUAL,
-        review_state: prior ? REVIEW_EDITED : REVIEW_CONFIRMED,
-        reviewed_by: userId,
-        reviewed_at: now.toISOString(),
-      };
-      delete artifacts[field];
-    }
+    const values = applyFieldEdits(update, sources, artifacts, userId, now);
     const context = withBuyerType(
       jsonObject(row.business_context, 'brand_profiles.business_context'),
     );
     const facets = IDENTITY_FACETS.filter((facet) => update[facet] != null);
-    if (facets.length) {
-      const fieldSources: Record<string, unknown> = {
-        ...jsonObject(context.field_sources ?? {}, 'business_context.field_sources'),
-      };
-      if (update.category != null && update.category !== context.category)
-        for (const derived of CATEGORY_DERIVED) {
-          delete context[derived];
-          delete fieldSources[derived];
-        }
-      for (const facet of facets) {
-        context[facet] = update[facet];
-        fieldSources[facet] = 'reviewed';
-      }
-      context.field_sources = fieldSources;
-    }
+    if (facets.length) applyIdentityFacets(context, update, facets);
     const updated = await trx
       .updateTable('brand_profiles')
       .set({

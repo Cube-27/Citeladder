@@ -1,10 +1,14 @@
 import { randomUUID } from 'node:crypto';
+import type { Selectable } from 'kysely';
 import { z } from 'zod';
 import type { Database } from '../db/database.ts';
+import type { ProviderAppRoutes } from '../generated/db-schema.ts';
 import { createSecretCipher } from '../integrations/fernet.ts';
 import { providerErrorCode } from '../models/http.ts';
 import {
   approvedEndpoint,
+  basicAuthorization,
+  type Connection,
   getConnection,
   requireActiveTransport,
   tenantConnections,
@@ -48,6 +52,156 @@ function requireAnswer(transport: string, body: unknown): string | undefined {
     throw new ProbeError('parse_error');
   return typeof parsed.model === 'string' ? parsed.model : undefined;
 }
+type ProbeItem = {
+  app: Selectable<ProviderAppRoutes> | undefined;
+  engine: string;
+  model: string;
+  transport: string;
+};
+type ProbeOutcome = { status: 'ok' | 'failed'; errorCode: string; model: string };
+
+/** One bounded probe request against the connection's route; returns the model that answered. */
+async function attemptProbe(o: {
+  connection: Connection;
+  item: ProbeItem;
+  engine: Engine;
+  encryptionKey: string;
+  settings: ProviderSettings;
+  send: ProbeTransport;
+  started: number;
+}) {
+  const { connection, item, engine, encryptionKey, settings, send, started } = o;
+  const transport = connection.transport_provider;
+  let model = item.model;
+  const secret = probeSecret(connection.api_key_encrypted, encryptionKey);
+  const request = probeRequest(
+    connection.base_url,
+    transport,
+    model,
+    secret,
+    item.app,
+    settings,
+    engine,
+  );
+  let response = await send(request);
+  // A single bounded compatibility retry, only when the rejected parameter is named.
+  if (
+    item.app &&
+    [400, 422].includes(response.status) &&
+    JSON.stringify(response.body).includes('max_completion_tokens')
+  ) {
+    const payload = request.body as Record<string, unknown>;
+    const { max_completion_tokens: cap, ...rest } = payload;
+    response = await send({
+      ...request,
+      body: { ...rest, max_tokens: cap },
+      timeoutSeconds: Math.max(
+        0.001,
+        request.timeoutSeconds - (performance.now() - started) / 1000,
+      ),
+    });
+  }
+  if (response.status < 200 || response.status >= 300)
+    throw new ProbeError(providerErrorCode(response.status));
+  if (item.app) {
+    z.object({
+      choices: z
+        .array(z.object({ message: z.object({ content: z.string().trim().min(1) }) }))
+        .min(1),
+    }).parse(response.body);
+  } else if (transport === 'dataforseo') {
+    if (object.parse(response.body).status_code !== providerPolicy.dataforseo.success_status)
+      throw new ProbeError('auth_failure');
+  } else model = requireAnswer(transport, response.body) ?? model;
+  return model;
+}
+
+/** Persists one probe result unless the connection or route changed while it ran. */
+function recordProbe(
+  db: Database,
+  workspaceId: string,
+  connection: Connection,
+  item: ProbeItem,
+  outcome: ProbeOutcome,
+  timing: { latency: number; testedAt: Date },
+) {
+  const id = connection.id;
+  const { latency, testedAt } = timing;
+  const model = outcome.model;
+  let { status, errorCode } = outcome;
+  return db.transaction().execute(async (trx) => {
+    const current = await tenantConnections(trx, workspaceId)
+      .where('c.id', '=', id)
+      .forUpdate('c')
+      .executeTakeFirst();
+    const app = item.app
+      ? await trx
+          .selectFrom('provider_app_routes')
+          .selectAll()
+          .where('workspace_id', '=', workspaceId)
+          .where('id', '=', item.app.id)
+          .forUpdate()
+          .executeTakeFirst()
+      : undefined;
+    const matches =
+      current?.credential_revision === connection.credential_revision &&
+      current?.base_url === connection.base_url &&
+      (!item.app || (app?.revision === item.app.revision && app.active));
+    if (!matches) {
+      status = 'failed';
+      errorCode = 'revision_changed';
+    }
+    const detail =
+      status === 'ok' ? providerPolicy.app.success_detail : `Connection test failed: ${errorCode}`;
+    if (current) {
+      await trx
+        .insertInto('provider_connection_tests')
+        .values({
+          id: randomUUID(),
+          workspace_id: workspaceId,
+          connection_id: id,
+          status,
+          error_code: errorCode,
+          detail,
+          latency_ms: latency,
+          logical_engine: item.engine,
+          transport_provider: item.transport,
+          transport_model: model,
+          created_at: testedAt,
+        })
+        .execute();
+      if (matches) {
+        await trx
+          .updateTable('provider_connections')
+          .set({ last_test_status: status, last_tested_at: testedAt, updated_at: testedAt })
+          .where('id', '=', id)
+          .execute();
+        if (status === 'ok' && app)
+          await trx
+            .updateTable('provider_app_routes')
+            .set({
+              probed_revision: app.revision,
+              probed_credential_revision: current.credential_revision,
+              probed_at: testedAt,
+              updated_at: testedAt,
+            })
+            .where('id', '=', app.id)
+            .execute();
+      }
+    }
+    return {
+      connection_id: id,
+      status,
+      error_code: errorCode,
+      detail,
+      latency_ms: latency,
+      logical_engine: item.engine,
+      transport_provider: item.transport,
+      transport_model: model,
+      tested_at: testedAt.toISOString(),
+    };
+  });
+}
 export async function probeConnection(
   db: Database,
   workspaceId: string,
@@ -90,125 +244,25 @@ export async function probeConnection(
     let errorCode = '';
     let model = item.model;
     try {
-      const secret = probeSecret(connection.api_key_encrypted, encryptionKey);
-      const request = probeRequest(
-        connection.base_url,
-        transport,
-        model,
-        secret,
-        item.app,
-        settings,
+      model = await attemptProbe({
+        connection,
+        item,
         engine,
-      );
-      let response = await send(request);
-      // A single bounded compatibility retry, only when the rejected parameter is named.
-      if (
-        item.app &&
-        [400, 422].includes(response.status) &&
-        JSON.stringify(response.body).includes('max_completion_tokens')
-      ) {
-        const payload = request.body as Record<string, unknown>;
-        const { max_completion_tokens: cap, ...rest } = payload;
-        response = await send({
-          ...request,
-          body: { ...rest, max_tokens: cap },
-          timeoutSeconds: Math.max(
-            0.001,
-            request.timeoutSeconds - (performance.now() - started) / 1000,
-          ),
-        });
-      }
-      if (response.status < 200 || response.status >= 300)
-        throw new ProbeError(providerErrorCode(response.status));
-      if (item.app) {
-        z.object({
-          choices: z
-            .array(z.object({ message: z.object({ content: z.string().trim().min(1) }) }))
-            .min(1),
-        }).parse(response.body);
-      } else if (transport === 'dataforseo') {
-        if (object.parse(response.body).status_code !== providerPolicy.dataforseo.success_status)
-          throw new ProbeError('auth_failure');
-      } else model = requireAnswer(transport, response.body) ?? model;
+        encryptionKey,
+        settings,
+        send,
+        started,
+      });
     } catch (error) {
       status = 'failed';
       errorCode = error instanceof ProbeError ? error.code : 'parse_error';
     }
     const testedAt = new Date();
     const latency = Math.round(performance.now() - started);
-    const result = await db.transaction().execute(async (trx) => {
-      const current = await tenantConnections(trx, workspaceId)
-        .where('c.id', '=', id)
-        .forUpdate('c')
-        .executeTakeFirst();
-      const app = item.app
-        ? await trx
-            .selectFrom('provider_app_routes')
-            .selectAll()
-            .where('workspace_id', '=', workspaceId)
-            .where('id', '=', item.app.id)
-            .forUpdate()
-            .executeTakeFirst()
-        : undefined;
-      const matches =
-        current?.credential_revision === connection.credential_revision &&
-        current?.base_url === connection.base_url &&
-        (!item.app || (app?.revision === item.app.revision && app.active));
-      if (!matches) {
-        status = 'failed';
-        errorCode = 'revision_changed';
-      }
-      const detail =
-        status === 'ok'
-          ? providerPolicy.app.success_detail
-          : `Connection test failed: ${errorCode}`;
-      if (current) {
-        await trx
-          .insertInto('provider_connection_tests')
-          .values({
-            id: randomUUID(),
-            workspace_id: workspaceId,
-            connection_id: id,
-            status,
-            error_code: errorCode,
-            detail,
-            latency_ms: latency,
-            logical_engine: item.engine,
-            transport_provider: item.transport,
-            transport_model: model,
-            created_at: testedAt,
-          })
-          .execute();
-        if (matches) {
-          await trx
-            .updateTable('provider_connections')
-            .set({ last_test_status: status, last_tested_at: testedAt, updated_at: testedAt })
-            .where('id', '=', id)
-            .execute();
-          if (status === 'ok' && app)
-            await trx
-              .updateTable('provider_app_routes')
-              .set({
-                probed_revision: app.revision,
-                probed_credential_revision: current.credential_revision,
-                probed_at: testedAt,
-                updated_at: testedAt,
-              })
-              .where('id', '=', app.id)
-              .execute();
-        }
-      }
-      return {
-        connection_id: id,
-        status,
-        error_code: errorCode,
-        detail,
-        latency_ms: latency,
-        logical_engine: item.engine,
-        transport_provider: item.transport,
-        transport_model: model,
-        tested_at: testedAt.toISOString(),
-      };
+    const outcome = { status, errorCode, model };
+    const result = await recordProbe(db, workspaceId, connection, item, outcome, {
+      latency,
+      testedAt,
     });
     results.push(result);
   }
@@ -258,7 +312,7 @@ function probeRequest(
       timeoutSeconds: settings.dataforseoTimeout,
       url: `${url}${providerPolicy.dataforseo.probe_path}`,
       headers: {
-        authorization: `Basic ${Buffer.from(`${pair.login}:${pair.password}`).toString('base64')}`,
+        authorization: basicAuthorization(pair),
       },
     };
   }

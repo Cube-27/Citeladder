@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { Selectable } from 'kysely';
 import type { Database } from '../db/database.ts';
-import type { ProviderConnections } from '../generated/db-schema.ts';
+import type { ProviderAppRoutes, ProviderConnections } from '../generated/db-schema.ts';
 import { ApiError, notFound } from '../errors.ts';
 import { createSecretCipher } from '../integrations/fernet.ts';
 import { recordSecurityEvent } from '../auth/security-events.ts';
@@ -33,6 +33,11 @@ export function requireActiveTransport(row: Connection) {
       409,
       'This connection uses a retired transport and is historical and read-only',
     );
+}
+/** The `Authorization` header value for a provider's login/password pair. */
+export function basicAuthorization(pair: { login: string; password: string }) {
+  const credentials = Buffer.from(`${pair.login}:${pair.password}`).toString('base64');
+  return `Basic ${credentials}`;
 }
 export function approvedEndpoint(transport: string, baseUrl: string, settings: ProviderSettings) {
   const endpoint = settings.endpoints[transport as keyof typeof settings.endpoints];
@@ -171,6 +176,62 @@ async function replaceRoutes(
       .execute();
   }
 }
+type AppRouteRow = Selectable<ProviderAppRoutes>;
+/** Updates the route a connection already hosts for the feature, or inserts it. */
+async function writeAppRoute(
+  db: Database,
+  row: Connection,
+  input: AppRouteInput,
+  old: AppRouteRow | undefined,
+  now: Date,
+) {
+  if (old) {
+    const changed =
+      old.api_base_url !== input.api_base_url ||
+      old.model !== input.model ||
+      old.protocol !== input.protocol;
+    await db
+      .updateTable('provider_app_routes')
+      .set({
+        api_base_url: input.api_base_url,
+        model: input.model,
+        protocol: input.protocol,
+        active: input.active,
+        updated_at: now,
+        ...(changed
+          ? {
+              revision: randomUUID(),
+              probed_revision: null,
+              probed_credential_revision: null,
+              probed_at: null,
+            }
+          : {}),
+      })
+      .where('id', '=', old.id)
+      .where('workspace_id', '=', row.workspace_id)
+      .execute();
+  } else {
+    await db
+      .insertInto('provider_app_routes')
+      .values({
+        id: randomUUID(),
+        workspace_id: row.workspace_id,
+        connection_id: row.id,
+        feature: input.feature,
+        model: input.model,
+        protocol: input.protocol,
+        api_base_url: input.api_base_url,
+        active: input.active,
+        revision: randomUUID(),
+        probed_revision: null,
+        probed_credential_revision: null,
+        probed_at: null,
+        created_at: now,
+        updated_at: now,
+      })
+      .execute();
+  }
+}
 async function replaceAppRoutes(
   db: Database,
   row: Connection,
@@ -201,52 +262,7 @@ async function replaceAppRoutes(
     if (old && old.api_base_url !== input.api_base_url && (!freshKey || !confirmed))
       throw invalid('Changing an app model destination requires a fresh API key and confirmation');
     const now = new Date();
-    if (old) {
-      const changed =
-        old.api_base_url !== input.api_base_url ||
-        old.model !== input.model ||
-        old.protocol !== input.protocol;
-      await db
-        .updateTable('provider_app_routes')
-        .set({
-          api_base_url: input.api_base_url,
-          model: input.model,
-          protocol: input.protocol,
-          active: input.active,
-          updated_at: now,
-          ...(changed
-            ? {
-                revision: randomUUID(),
-                probed_revision: null,
-                probed_credential_revision: null,
-                probed_at: null,
-              }
-            : {}),
-        })
-        .where('id', '=', old.id)
-        .where('workspace_id', '=', row.workspace_id)
-        .execute();
-    } else {
-      await db
-        .insertInto('provider_app_routes')
-        .values({
-          id: randomUUID(),
-          workspace_id: row.workspace_id,
-          connection_id: row.id,
-          feature: input.feature,
-          model: input.model,
-          protocol: input.protocol,
-          api_base_url: input.api_base_url,
-          active: input.active,
-          revision: randomUUID(),
-          probed_revision: null,
-          probed_credential_revision: null,
-          probed_at: null,
-          created_at: now,
-          updated_at: now,
-        })
-        .execute();
-    }
+    await writeAppRoute(db, row, input, old, now);
     await db
       .insertInto('provider_disclosures')
       .values({

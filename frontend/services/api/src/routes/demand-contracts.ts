@@ -1,8 +1,4 @@
-import {
-  demandRecomputeResponseSchema,
-  demandSignalSchema,
-  demandSnapshotSchema,
-} from '@citeladder/contracts/demand';
+import { demandSignalSchema, demandSnapshotSchema } from '@citeladder/contracts/demand';
 import { z } from 'zod';
 
 const json = z.record(z.string(), z.unknown());
@@ -20,7 +16,7 @@ export const demandSnapshot = demandSnapshotSchema.extend({
     )
     .optional(),
 });
-export const recomputeResponse = demandRecomputeResponseSchema;
+export { demandRecomputeResponseSchema as recomputeResponse } from '@citeladder/contracts/demand';
 const recomputeDates = z.strictObject({ window_start: z.iso.date(), window_end: z.iso.date() });
 export const recomputeBody = recomputeDates.refine((r) => r.window_end >= r.window_start, {
   path: ['window_end'],

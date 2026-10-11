@@ -169,7 +169,8 @@ export function compareMetric(
 }
 
 export function valueState(value: number | null): string {
-  return value === null ? 'unavailable' : value === 0 ? 'observed_zero' : 'available';
+  if (value === null) return 'unavailable';
+  return value === 0 ? 'observed_zero' : 'available';
 }
 export function leg(
   state: string,

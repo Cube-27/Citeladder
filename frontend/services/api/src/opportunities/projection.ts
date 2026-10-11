@@ -129,10 +129,9 @@ function priorityFactors(row: OpportunityRow): Record<string, string | number> {
   );
 }
 
-export function projectItem(
-  row: OpportunityRow,
-  rank: Rank = { system_rank: 0, display_rank: 0, order_source: 'system' },
-) {
+const DEFAULT_RANK: Rank = { system_rank: 0, display_rank: 0, order_source: 'system' };
+
+export function projectItem(row: OpportunityRow, rank: Rank = DEFAULT_RANK) {
   return {
     id: row.id,
     project_id: row.project_id,

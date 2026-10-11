@@ -74,16 +74,14 @@ export async function reconcileResearch(db: Database, at = new Date(), canAdmit 
             .execute();
           uncertain++;
         }
+        let status: 'uncertain' | 'cancelled' | 'partial' | 'failed' = 'failed';
+        if (uncertain) status = 'uncertain';
+        else if (candidate.status === 'cancelled') status = 'cancelled';
+        else if (run.completed_calls) status = 'partial';
         await trx
           .updateTable('search_intelligence_runs')
           .set({
-            status: uncertain
-              ? 'uncertain'
-              : candidate.status === 'cancelled'
-                ? 'cancelled'
-                : run.completed_calls
-                  ? 'partial'
-                  : 'failed',
+            status,
             uncertain_calls: run.uncertain_calls + uncertain,
             error_code: uncertain ? 'provider_result_missing' : 'acquisition_queue_terminal',
             completed_at: at,

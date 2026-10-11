@@ -215,6 +215,50 @@ async function grantAccess(
   };
 }
 
+type SharedWorkspace = { workspaceId: string; accountId: string; role: AssignableRole };
+
+/** Joining an existing workspace: lock it and resolve its account once for the batch. */
+async function resolveSharedWorkspace(
+  db: Database,
+  action: Extract<PlatformAction, { kind: 'create' }>,
+): Promise<SharedWorkspace | undefined> {
+  if (!action.workspaceId) {
+    if (action.role !== 'owner') throw new Error('new_workspace_requires_owner');
+    return undefined;
+  }
+  const workspaceId = z.uuid().parse(action.workspaceId);
+  const role = assignableRoleSchema.parse(action.role);
+  await lockWorkspace(db, workspaceId);
+  const account = await db
+    .selectFrom('billing_accounts')
+    .select('id')
+    .where('workspace_id', '=', workspaceId)
+    .executeTakeFirstOrThrow();
+  return { workspaceId, accountId: account.id, role };
+}
+
+/** Operator-created identities join immediately. Existing identities still use invitations. */
+async function joinSharedWorkspace(
+  db: Database,
+  actorId: string,
+  shared: SharedWorkspace,
+  userId: string,
+) {
+  const now = new Date();
+  await db
+    .insertInto('workspace_members')
+    .values({
+      id: randomUUID(),
+      workspace_id: shared.workspaceId,
+      user_id: userId,
+      role: shared.role,
+      created_at: now,
+      updated_at: now,
+    })
+    .execute();
+  await recordSecurityEvent(db, 'membership.join', actorId, shared.workspaceId, userId);
+}
+
 async function createAccounts(
   db: Database,
   session: PlatformSession,
@@ -230,19 +274,7 @@ async function createAccounts(
   if (new Set(emails).size !== emails.length) throw new Error('duplicate_account_email');
   if ((await db.selectFrom('users').select('id').where('email', 'in', emails).execute()).length)
     throw new Error('user_already_exists');
-  // Joining an existing workspace: lock it and resolve its account once for the batch.
-  let shared: { workspaceId: string; accountId: string; role: AssignableRole } | undefined;
-  if (action.workspaceId) {
-    const workspaceId = z.uuid().parse(action.workspaceId);
-    const role = assignableRoleSchema.parse(action.role);
-    await lockWorkspace(db, workspaceId);
-    const account = await db
-      .selectFrom('billing_accounts')
-      .select('id')
-      .where('workspace_id', '=', workspaceId)
-      .executeTakeFirstOrThrow();
-    shared = { workspaceId, accountId: account.id, role };
-  } else if (action.role !== 'owner') throw new Error('new_workspace_requires_owner');
+  const shared = await resolveSharedWorkspace(db, action);
   const created = [];
   for (const email of emails) {
     const user = await createIdentity(db, email, encoded);
@@ -253,28 +285,7 @@ async function createAccounts(
     const personal = shared ? undefined : await bootstrapWorkspace(db, user.id);
     const target = shared ?? personal;
     if (!target) throw new Error('account_workspace_unresolved');
-    if (shared) {
-      // Operator-created identities join immediately. Existing identities still use invitations.
-      const now = new Date();
-      await db
-        .insertInto('workspace_members')
-        .values({
-          id: randomUUID(),
-          workspace_id: shared.workspaceId,
-          user_id: user.id,
-          role: shared.role,
-          created_at: now,
-          updated_at: now,
-        })
-        .execute();
-      await recordSecurityEvent(
-        db,
-        'membership.join',
-        session.actorId,
-        shared.workspaceId,
-        user.id,
-      );
-    }
+    if (shared) await joinSharedWorkspace(db, session.actorId, shared, user.id);
     await recordSecurityEvent(db, 'account.create', session.actorId, target.workspaceId, user.id);
     const access =
       personal && action.access
@@ -301,6 +312,7 @@ async function createAccounts(
 
 /** Refuse unknown/current FK dependants, including future schema additions. */
 async function requireUnused(db: Database, table: string, id: string, allowed: readonly string[]) {
+  const qualifiedTable = `public.${table}`;
   const references = await sql<{
     schema_name: string;
     table_name: string;
@@ -309,19 +321,19 @@ async function requireUnused(db: Database, table: string, id: string, allowed: r
        FROM pg_constraint f JOIN pg_class c ON c.oid=f.conrelid
        JOIN pg_namespace n ON n.oid=c.relnamespace
        JOIN pg_attribute a ON a.attrelid=c.oid AND a.attnum=ANY(f.conkey)
-      WHERE f.contype='f' AND f.confrelid=${`public.${table}`}::regclass`.execute(db);
+      WHERE f.contype='f' AND f.confrelid=${qualifiedTable}::regclass`.execute(db);
   const checks = references.rows.flatMap((reference) => {
     const name = `${reference.schema_name}.${reference.table_name}.${reference.column_name}`;
     if (allowed.includes(name)) return [];
+    const dependantTable = `${reference.schema_name}.${reference.table_name}`;
     return [
-      sql`SELECT EXISTS(SELECT 1 FROM ${sql.table(`${reference.schema_name}.${reference.table_name}`)}
+      sql`SELECT EXISTS(SELECT 1 FROM ${sql.table(dependantTable)}
       WHERE ${sql.ref(reference.column_name)}=${id}) AS present`,
     ];
   });
   if (!checks.length) return;
-  const dependants = await sql<{ present: boolean }>`${sql.join(checks, sql` UNION ALL `)}`.execute(
-    db,
-  );
+  const unionAll = sql` UNION ALL `;
+  const dependants = await sql<{ present: boolean }>`${sql.join(checks, unionAll)}`.execute(db);
   if (dependants.rows.some((row) => row.present)) throw new Error('account_has_retained_activity');
 }
 
@@ -334,14 +346,11 @@ function requireCustomerIdentity(
   if (user.id === session.actorId || user.role !== 'user') throw new Error(failure);
 }
 
-async function deleteUnusedAccount(db: Database, session: PlatformSession, email: string) {
-  const user = await db
-    .selectFrom('users')
-    .selectAll()
-    .where('email', '=', email)
-    .executeTakeFirstOrThrow();
-  requireCustomerIdentity(user, session, 'account_delete_forbidden');
-  if (user.registration_origin !== 'operator') throw new Error('account_delete_forbidden');
+/** Locks the user's workspaces and row, then refuses if their identity or memberships changed. */
+async function lockMemberships(
+  db: Database,
+  user: { id: string; role: string; registration_origin: string },
+) {
   const loadMemberships = () =>
     db
       .selectFrom('workspace_members')
@@ -368,6 +377,18 @@ async function deleteUnusedAccount(db: Database, session: PlatformSession, email
   const liveMemberships = await loadMemberships();
   if (JSON.stringify(liveMemberships) !== JSON.stringify(memberships))
     throw new Error('account_membership_changed');
+  return memberships;
+}
+
+async function deleteUnusedAccount(db: Database, session: PlatformSession, email: string) {
+  const user = await db
+    .selectFrom('users')
+    .selectAll()
+    .where('email', '=', email)
+    .executeTakeFirstOrThrow();
+  requireCustomerIdentity(user, session, 'account_delete_forbidden');
+  if (user.registration_origin !== 'operator') throw new Error('account_delete_forbidden');
+  const memberships = await lockMemberships(db, user);
   await requireUnused(db, 'users', user.id, [
     'public.workspace_members.user_id',
     'public.billing_accounts.owner_user_id',
@@ -430,6 +451,60 @@ async function deleteUnusedAccount(db: Database, session: PlatformSession, email
   return { deleted: email };
 }
 
+type MemberAction = Extract<PlatformAction, { kind: 'role' | 'password' | 'remove' }>;
+
+/** A role change, removal or password reset for one member of a workspace. */
+async function applyMemberAction(
+  trx: Database,
+  session: PlatformSession,
+  action: MemberAction,
+  encoded: string | null,
+) {
+  const workspaceId = z.uuid().parse(action.workspaceId);
+  await lockWorkspace(trx, workspaceId);
+  const member = await trx
+    .selectFrom('workspace_members')
+    .innerJoin('users', 'users.id', 'workspace_members.user_id')
+    .select(['workspace_members.id', 'workspace_members.user_id'])
+    .where('workspace_id', '=', workspaceId)
+    .where('users.email', '=', emailSchema.parse(action.email))
+    .executeTakeFirstOrThrow();
+  if (action.kind !== 'password')
+    return applyMemberMutation(
+      trx,
+      workspaceId,
+      session.actorId,
+      action.kind === 'role'
+        ? { memberId: member.id, role: assignableRoleSchema.parse(action.role) }
+        : { memberId: member.id, remove: true },
+    );
+  const user = await trx
+    .selectFrom('users')
+    .select(['id', 'role', 'hashed_password'])
+    .where('id', '=', member.user_id)
+    .forNoKeyUpdate()
+    .executeTakeFirstOrThrow();
+  requireCustomerIdentity(user, session, 'account_password_forbidden');
+  if (!user.hashed_password) throw new Error('passwordless_account');
+  await trx
+    .updateTable('users')
+    .set({
+      hashed_password: encoded,
+      session_version: sql`session_version + 1`,
+      updated_at: new Date(),
+    })
+    .where('id', '=', member.user_id)
+    .execute();
+  await recordSecurityEvent(
+    trx,
+    'auth.password_reset',
+    session.actorId,
+    workspaceId,
+    member.user_id,
+  );
+  return { passwordUpdated: true };
+}
+
 /** Preview runs the same transaction and rolls back every identity, membership and grant. */
 export async function managePlatformAccounts(
   db: Database,
@@ -448,51 +523,8 @@ export async function managePlatformAccounts(
       : null;
   const result = await operatorTransaction(db, request.apply === true, async (trx) => {
     await authorizePlatform(trx, session);
-    if (action.kind === 'role' || action.kind === 'password' || action.kind === 'remove') {
-      const workspaceId = z.uuid().parse(action.workspaceId);
-      await lockWorkspace(trx, workspaceId);
-      const member = await trx
-        .selectFrom('workspace_members')
-        .innerJoin('users', 'users.id', 'workspace_members.user_id')
-        .select(['workspace_members.id', 'workspace_members.user_id'])
-        .where('workspace_id', '=', workspaceId)
-        .where('users.email', '=', emailSchema.parse(action.email))
-        .executeTakeFirstOrThrow();
-      if (action.kind !== 'password')
-        return applyMemberMutation(
-          trx,
-          workspaceId,
-          session.actorId,
-          action.kind === 'role'
-            ? { memberId: member.id, role: assignableRoleSchema.parse(action.role) }
-            : { memberId: member.id, remove: true },
-        );
-      const user = await trx
-        .selectFrom('users')
-        .select(['id', 'role', 'hashed_password'])
-        .where('id', '=', member.user_id)
-        .forNoKeyUpdate()
-        .executeTakeFirstOrThrow();
-      requireCustomerIdentity(user, session, 'account_password_forbidden');
-      if (!user.hashed_password) throw new Error('passwordless_account');
-      await trx
-        .updateTable('users')
-        .set({
-          hashed_password: encoded,
-          session_version: sql`session_version + 1`,
-          updated_at: new Date(),
-        })
-        .where('id', '=', member.user_id)
-        .execute();
-      await recordSecurityEvent(
-        trx,
-        'auth.password_reset',
-        session.actorId,
-        workspaceId,
-        member.user_id,
-      );
-      return { passwordUpdated: true };
-    }
+    if (action.kind === 'role' || action.kind === 'password' || action.kind === 'remove')
+      return applyMemberAction(trx, session, action, encoded);
     if (action.kind === 'create') return createAccounts(trx, session, action, request, encoded!);
     if (action.kind === 'access') {
       z.uuid().parse(action.workspaceId);

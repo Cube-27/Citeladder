@@ -48,8 +48,7 @@ export function parseRequestDate(text: string): string | null {
   const day = parseDate(text);
   if (day) return day;
   const instant = parseDatetime(text);
-  return instant &&
-    instant.hour === 0 &&
+  return instant?.hour === 0 &&
     instant.minute === 0 &&
     instant.second === 0 &&
     instant.microsecond === 0

@@ -187,7 +187,7 @@ export async function syncCitedPages(
  * against another roster (a competitor added, a mention rule changed), so the
  * page is read again rather than judged on names it never looked for.
  */
-export async function syncPages(
+export function syncPages(
   db: Database,
   scope: SourceScope,
   auditId: string,

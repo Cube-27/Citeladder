@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { surfaceSupports, type SearchSurface } from './locations.ts';
 import { policy, resolveSettingSpec, ConfigError } from '../config.ts';
 import { providerErrorCode } from '../models/http.ts';
-import { approvedEndpoint } from '../providers/connections.ts';
+import { approvedEndpoint, basicAuthorization } from '../providers/connections.ts';
 import { type ProviderSettings } from '../providers/config.ts';
 import { ProviderError } from '../answer-engines/contracts.ts';
 import { round } from '../analysis/round.ts';
@@ -135,7 +135,7 @@ export function createDataforseoClient(
   const maxBytes = Number(
     resolveSettingSpec(searchPolicy.settings.max_response_bytes, process.env),
   );
-  const authorization = `Basic ${Buffer.from(`${pair.login}:${pair.password}`).toString('base64')}`;
+  const authorization = basicAuthorization(pair);
   async function call(
     path: string,
     payload?: unknown,
