@@ -9,7 +9,7 @@ import { ROUTE_CONTRACTS } from '../src/openapi/routes.ts';
 const failures = routeOwnershipFailures({
   prefixes: [policy.api.prefix, policy.api.machine_prefix],
   families: ROUTE_FAMILIES,
-  typescript: openApiDocument(ROUTE_CONTRACTS),
+  document: openApiDocument(ROUTE_CONTRACTS),
 });
 
 if (failures.length > 0) {

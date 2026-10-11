@@ -18,37 +18,32 @@ export type LeaseRecovery = {
   scope?: RawBuilder<boolean>;
   /** The time the reclaim records; the database clock unless the lane keeps its own. */
   at?: Date;
-  /** A parent column returned as `parent_id`, for lanes that reconcile parents. */
-  parent?: 'crawl_id';
 };
 
-export type ReclaimedLease<Parent extends string | null = null> = {
+export type ReclaimedLease = {
   id: string;
   workspace_id: string;
   status: string;
   attempt_count: number;
-  parent_id: Parent;
 };
 
 /**
  * Return the oldest expired leases to `retry_wait`, or fail those the charge
  * exhausts, without running provider work. `SKIP LOCKED` leaves a lease a
- * heartbeat or publication holds for the next pass. Run it in a transaction
- * when the lane settles parents of failed rows in the same commit.
+ * heartbeat or publication holds for the next pass. It joins the caller's
+ * transaction, so a lane can settle failed rows' parents in the same commit.
  */
 export function reclaimExpiredLeases(
   db: Database,
-  recovery: LeaseRecovery & { parent: 'crawl_id' },
-): Promise<ReclaimedLease<string>[]>;
-export function reclaimExpiredLeases(
-  db: Database,
-  recovery: LeaseRecovery & { parent?: undefined },
-): Promise<ReclaimedLease[]>;
-export async function reclaimExpiredLeases(
-  db: Database,
   recovery: LeaseRecovery,
-): Promise<ReclaimedLease<string | null>[]> {
-  const { table, charge, scope, parent } = recovery;
+): Promise<ReclaimedLease[]> {
+  return db.isTransaction
+    ? reclaim(db, recovery)
+    : db.transaction().execute((trx) => reclaim(trx, recovery));
+}
+
+async function reclaim(db: Database, recovery: LeaseRecovery): Promise<ReclaimedLease[]> {
+  const { table, charge, scope } = recovery;
   const expired = await db
     .selectFrom(table)
     .select(['id', 'workspace_id'])
@@ -88,13 +83,7 @@ export async function reclaimExpiredLeases(
       'in',
       expired.map((row) => row.workspace_id),
     )
-    .returning([
-      'id',
-      'workspace_id',
-      'status',
-      'attempt_count',
-      (parent ? sql<string>`${sql.ref(parent)}` : sql<string | null>`null`).as('parent_id'),
-    ])
+    .returning(['id', 'workspace_id', 'status', 'attempt_count'])
     .execute();
 }
 
@@ -165,14 +154,12 @@ export async function recoverIntegrationLeases(
   scope?: { workspaceId: string; runId: string },
 ) {
   // Integration claims already charge the attempt. Reclaiming must not charge it twice.
-  const tasks = await db.transaction().execute((trx) =>
-    reclaimExpiredLeases(trx, {
-      table: 'integration_sync_runs',
-      charge: 0,
-      batchSize,
-      scope: scope && sql<boolean>`workspace_id = ${scope.workspaceId} and id = ${scope.runId}`,
-    }),
-  );
+  const tasks = await reclaimExpiredLeases(db, {
+    table: 'integration_sync_runs',
+    charge: 0,
+    batchSize,
+    scope: scope && sql<boolean>`workspace_id = ${scope.workspaceId} and id = ${scope.runId}`,
+  });
   logExhausted('integration_sync_runs', tasks);
   return tasks.length;
 }

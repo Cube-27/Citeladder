@@ -7,7 +7,7 @@ function ownershipInputs(overrides: Partial<OwnershipInputs> = {}): OwnershipInp
   return {
     prefixes: ['/api/v1', '/v1'],
     families: ['executions'],
-    typescript: openApiDocument([
+    document: openApiDocument([
       {
         family: 'executions',
         method: 'get',
@@ -48,14 +48,14 @@ describe('route-ownership gate', () => {
         responses: { 200: z.object({ name: z.string() }) },
       },
     ]);
-    expect(routeOwnershipFailures(ownershipInputs({ typescript: machine }))).toEqual([]);
+    expect(routeOwnershipFailures(ownershipInputs({ document: machine }))).toEqual([]);
     expect(
-      routeOwnershipFailures(ownershipInputs({ typescript: machine, prefixes: ['/api/v1'] })),
+      routeOwnershipFailures(ownershipInputs({ document: machine, prefixes: ['/api/v1'] })),
     ).toEqual(["'executions' has no declared route"]);
   });
   it('refuses ambiguous family tags', () => {
     const input = ownershipInputs();
-    input.typescript.paths['/api/v1/executions/{item_id}']!.get!.tags = ['executions', 'billing'];
+    input.document.paths['/api/v1/executions/{item_id}']!.get!.tags = ['executions', 'billing'];
     expect(routeOwnershipFailures(input)).toContainEqual(
       expect.stringContaining('exactly one family tag'),
     );

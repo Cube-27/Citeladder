@@ -10,16 +10,14 @@ const { statuses } = policy.task_queue;
 export async function recoverAnalyticsLeases(db: Database, batchSize: number, scope?: ClaimScope) {
   if (scope && !scope.taskIds.length) return 0;
   const kinds = sql<boolean>`task_kind in (${sql.join(policy.analytics.ts_owned_task_kinds)})`;
-  const rows = await db.transaction().execute((trx) =>
-    reclaimExpiredLeases(trx, {
-      table: 'analytics_tasks',
-      charge: 1,
-      batchSize,
-      scope: scope
-        ? sql<boolean>`${kinds} and workspace_id = ${scope.workspaceId} and id in (${sql.join(scope.taskIds)})`
-        : kinds,
-    }),
-  );
+  const rows = await reclaimExpiredLeases(db, {
+    table: 'analytics_tasks',
+    charge: 1,
+    batchSize,
+    scope: scope
+      ? sql<boolean>`${kinds} and workspace_id = ${scope.workspaceId} and id in (${sql.join(scope.taskIds)})`
+      : kinds,
+  });
   const logger = getLogger('workers.analytics-recovery');
   for (const task of rows.filter((row) => row.status === statuses.failed))
     logger.warning('analytics lease recovery exhausted attempts', {

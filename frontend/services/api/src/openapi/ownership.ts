@@ -6,7 +6,7 @@ export type OwnershipInputs = {
   /** The browser API and API-host machine prefixes. */
   prefixes: readonly string[];
   families: readonly string[];
-  typescript: OpenApiDocument;
+  document: OpenApiDocument;
 };
 
 export function routeOwnershipFailures(inputs: OwnershipInputs): string[] {
@@ -17,7 +17,7 @@ export function routeOwnershipFailures(inputs: OwnershipInputs): string[] {
     declared.add(family);
   }
   const served = new Set<string>();
-  for (const [path, item] of Object.entries(inputs.typescript.paths)) {
+  for (const [path, item] of Object.entries(inputs.document.paths)) {
     if (!inputs.prefixes.some((prefix) => path === prefix || path.startsWith(`${prefix}/`)))
       continue;
     for (const [method, operation] of Object.entries(item)) {

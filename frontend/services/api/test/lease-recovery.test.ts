@@ -1,6 +1,7 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { sql } from 'kysely';
 
+import type { Database } from '../src/db/database.ts';
 import { reclaimExpiredLeases } from '../src/queue/recovery.ts';
 import { SiteFixtures, type SiteSeed } from './site-health-fixtures.ts';
 import { testDatabase } from './support.ts';
@@ -16,16 +17,14 @@ const at = new Date('2026-10-11T08:00:00Z');
 const queuedAt = new Date('2026-10-11T07:00:00Z');
 const scope = (seed: SiteSeed) =>
   sql<boolean>`workspace_id = ${seed.workspaceId} and crawl_id = ${seed.crawlId}`;
-const reclaim = (seed: SiteSeed, charge: 0 | 1) =>
-  db.transaction().execute((trx) =>
-    reclaimExpiredLeases(trx, {
-      table: 'site_crawl_tasks',
-      charge,
-      batchSize: 10,
-      at,
-      scope: scope(seed),
-    }),
-  );
+const reclaim = (seed: SiteSeed, charge: 0 | 1, database: Database = db) =>
+  reclaimExpiredLeases(database, {
+    table: 'site_crawl_tasks',
+    charge,
+    batchSize: 10,
+    at,
+    scope: scope(seed),
+  });
 const row = (id: string) =>
   db
     .selectFrom('site_crawl_tasks')
@@ -127,7 +126,6 @@ describe('expired lease reclaim', () => {
         workspace_id: seed.workspaceId,
         status: expected.status,
         attempt_count: expected.attempt_count,
-        parent_id: null,
       },
     ]);
     expect(await row(id)).toEqual({ ...released, ...expected });
@@ -143,26 +141,15 @@ describe('expired lease reclaim', () => {
     });
   });
 
-  it('returns the parent column a lane asks for', async () => {
-    const { seed, id } = await expiredTask(1);
-    const rows = await db.transaction().execute((trx) =>
-      reclaimExpiredLeases(trx, {
-        table: 'site_crawl_tasks',
-        charge: 1,
-        batchSize: 10,
-        scope: scope(seed),
-        parent: 'crawl_id',
+  it('commits or rolls back with the caller’s transaction', async () => {
+    const { seed, id } = await expiredTask(0);
+    await expect(
+      db.transaction().execute(async (trx) => {
+        expect((await reclaim(seed, 1, trx)).map((task) => task.id)).toEqual([id]);
+        throw new Error('parent settlement failed');
       }),
-    );
-    expect(rows).toEqual([
-      {
-        id,
-        workspace_id: seed.workspaceId,
-        status: 'failed',
-        attempt_count: 2,
-        parent_id: seed.crawlId,
-      },
-    ]);
+    ).rejects.toThrow('parent settlement failed');
+    expect(await row(id)).toMatchObject({ status: 'running', attempt_count: 0 });
   });
 
   it('leaves live leases, locked rows and rows outside the scope', async () => {
@@ -194,7 +181,6 @@ describe('expired lease reclaim', () => {
         workspace_id: seed.workspaceId,
         status: 'retry_wait',
         attempt_count: 1,
-        parent_id: null,
       },
     ]);
     expect((await row(live)).status).toBe('running');
@@ -215,14 +201,12 @@ describe('expired lease reclaim', () => {
         .where('id', '=', id)
         .execute();
     const batch = () =>
-      db.transaction().execute((trx) =>
-        reclaimExpiredLeases(trx, {
-          table: 'site_crawl_tasks',
-          charge: 1,
-          batchSize: 1,
-          scope: scope(seed),
-        }),
-      );
+      reclaimExpiredLeases(db, {
+        table: 'site_crawl_tasks',
+        charge: 1,
+        batchSize: 1,
+        scope: scope(seed),
+      });
     expect((await batch()).map((task) => task.id)).toEqual([ids[1]]);
     expect((await batch()).map((task) => task.id)).toEqual([ids[0]]);
     expect(await batch()).toEqual([]);
