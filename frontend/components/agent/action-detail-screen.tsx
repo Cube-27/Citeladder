@@ -1,7 +1,7 @@
 'use client';
 
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useParams } from 'react-router-dom';
 
 import {
@@ -264,6 +264,37 @@ function Implementation({
   const approach = approachLabel(action.diagnosis.approach ?? action.approach);
   const canDeclare = isDeclarable(action) && mayWrite;
   if (!action.declaration && !canDeclare && !approach) return null;
+  let declarationBody: ReactNode = null;
+  if (action.declaration) {
+    declarationBody = (
+      <DeclarationStatus
+        declaration={action.declaration}
+        workspaceId={workspaceId}
+        focusOnMount={declared}
+      />
+    );
+  } else if (canDeclare) {
+    declarationBody = (
+      <Stack>
+        <p className={textRole('body')}>
+          When this work is live, declare it so CiteLadder can measure it. To declare an Agent
+          output, use Mark implemented in its chat.
+        </p>
+        <div>
+          {action.members.some((member) => member.rule_id === 'site_contextual_links') ? (
+            <ContextualLinkDeclarationRoute />
+          ) : (
+            <MarkImplementedButton
+              workspaceId={workspaceId}
+              action={action}
+              revision={null}
+              onDeclared={() => setDeclared(true)}
+            />
+          )}
+        </div>
+      </Stack>
+    );
+  }
   return (
     <Card aria-labelledby="action-implementation">
       <CardHeader>
@@ -272,32 +303,7 @@ function Implementation({
       <CardContent>
         <Stack>
           {approach ? <p className={textRole('itemTitle')}>{approach}</p> : null}
-          {action.declaration ? (
-            <DeclarationStatus
-              declaration={action.declaration}
-              workspaceId={workspaceId}
-              focusOnMount={declared}
-            />
-          ) : canDeclare ? (
-            <Stack>
-              <p className={textRole('body')}>
-                When this work is live, declare it so CiteLadder can measure it. To declare an Agent
-                output, use Mark implemented in its chat.
-              </p>
-              <div>
-                {action.members.some((member) => member.rule_id === 'site_contextual_links') ? (
-                  <ContextualLinkDeclarationRoute />
-                ) : (
-                  <MarkImplementedButton
-                    workspaceId={workspaceId}
-                    action={action}
-                    revision={null}
-                    onDeclared={() => setDeclared(true)}
-                  />
-                )}
-              </div>
-            </Stack>
-          ) : null}
+          {declarationBody}
         </Stack>
       </CardContent>
     </Card>

@@ -16,6 +16,11 @@ import { EditorialSectionHeader, ledgerClasses } from '@/components/ui/workspace
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import { saveBlob } from '@/lib/download';
 
+function downloadLabel(invoice: BillingInvoice, downloading: string | null): string {
+  if (downloading === invoice.invoice_id) return 'Preparing…';
+  return invoice.status === 'credited' ? 'Download credit note' : 'Download receipt';
+}
+
 export function InvoiceHistory({
   invoices,
   loading,
@@ -86,11 +91,7 @@ export function InvoiceHistory({
                 disabled={downloading === invoice.invoice_id}
                 onClick={() => void download(invoice)}
               >
-                {downloading === invoice.invoice_id
-                  ? 'Preparing…'
-                  : invoice.status === 'credited'
-                    ? 'Download credit note'
-                    : 'Download receipt'}
+                {downloadLabel(invoice, downloading)}
               </Button>
             </div>
           ))}

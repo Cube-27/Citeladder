@@ -69,7 +69,7 @@ function EvidencePromptHeader({
     (promptIndex !== undefined
       ? `Prompt #${promptIndex + 1}`
       : `Prompt #${evidence.prompt_index + 1}`);
-  const displayRepetition = repetition !== undefined ? repetition : evidence.repetition;
+  const displayRepetition = repetition ?? evidence.repetition;
   const promptBadgeNumber = promptIndex !== undefined ? promptIndex + 1 : evidence.prompt_index + 1;
   // Null for an observed search surface, whose engine name is already the whole
   // product fact; the vendor behind it stays on the Settings credential card.
@@ -251,12 +251,14 @@ function outcomeTone(positive: boolean | undefined): 'success' | 'muted' | 'defa
   return positive === false ? 'muted' : 'default';
 }
 
+function brandOutcomeDetail(evidence: ExecutionEvidence): string {
+  if (!evidence.brand_mentioned) return 'No tracked brand alias appeared in the answer';
+  if (evidence.brand_first_offset === null) return 'Brand detected; match position unavailable';
+  return `First match at character ${evidence.brand_first_offset}`;
+}
+
 function EvidenceOutcomes({ evidence }: Readonly<{ evidence: ExecutionEvidence }>) {
-  const brandDetail = evidence.brand_mentioned
-    ? evidence.brand_first_offset === null
-      ? 'Brand detected; match position unavailable'
-      : `First match at character ${evidence.brand_first_offset}`
-    : 'No tracked brand alias appeared in the answer';
+  const brandDetail = brandOutcomeDetail(evidence);
   const ownedNoun = evidence.owned_citation_count === 1 ? 'source' : 'sources';
   const ownedDetail = `${evidence.owned_citation_count} owned ${ownedNoun} found`;
   const searchNoun = evidence.search_query_count === 1 ? 'search' : 'searches';
@@ -363,7 +365,7 @@ function EvidenceFooter({ evidence }: Readonly<{ evidence: ExecutionEvidence }>)
     <footer className="type-caption border-border-subtle flex flex-wrap items-center gap-x-4 gap-y-1 border-t pt-3">
       <span className="inline-flex items-center gap-1">
         <Search className="size-3" aria-hidden />
-        {evidence.prompt_class.replace(/_/g, ' ')} prompt
+        {evidence.prompt_class.replaceAll('_', ' ')} prompt
       </span>
       <span>Analyzer {evidence.analyzer_version}</span>
       <span>Rules {evidence.scoring_rule_version}</span>

@@ -126,9 +126,9 @@ export default defineConfig(({ command, isPreview, mode }): ViteUserConfig => {
           // SPA boot, which is the thing this is trying to protect.
           advancedChunks: {
             groups: [
-              { name: 'vendor-react', test: /node_modules[/](react|react-dom|scheduler)[/]/ },
-              { name: 'vendor-router', test: /node_modules[/]react-router/ },
-              { name: 'vendor-zod', test: /node_modules[/]zod[/]/ },
+              { name: 'vendor-react', test: /node_modules\/(react|react-dom|scheduler)\// },
+              { name: 'vendor-router', test: /node_modules\/react-router/ },
+              { name: 'vendor-zod', test: /node_modules\/zod\// },
             ],
           },
         },

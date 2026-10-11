@@ -2,6 +2,13 @@
 
 import { cn } from '@/lib/utils';
 
+function switchTrackClass(checked: boolean, disabled: boolean) {
+  if (disabled) return 'border-border-subtle bg-disabled';
+  return checked
+    ? 'border-accent bg-accent group-hover:bg-accent-hover group-active:bg-accent-active'
+    : 'border-border-bold bg-track group-hover:bg-hover group-active:bg-active';
+}
+
 /**
  * A two-state toggle.
  *
@@ -29,6 +36,7 @@ export function Switch({
   disabled?: boolean;
   className?: string;
 }>) {
+  const trackStateClass = switchTrackClass(checked, disabled);
   return (
     <button
       type="button"
@@ -48,11 +56,7 @@ export function Switch({
         aria-hidden
         className={cn(
           'relative h-6 w-11 rounded-full border transition-colors duration-[var(--motion-normal)] ease-[var(--ease-standard)]',
-          disabled
-            ? 'border-border-subtle bg-disabled'
-            : checked
-              ? 'border-accent bg-accent group-hover:bg-accent-hover group-active:bg-accent-active'
-              : 'border-border-bold bg-track group-hover:bg-hover group-active:bg-active',
+          trackStateClass,
         )}
       >
         <span

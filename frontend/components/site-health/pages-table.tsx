@@ -221,7 +221,7 @@ export function PagesTable({
                   numeric
                   className={cn('tabular-nums', value === null ? 'type-caption' : 'text-secondary')}
                 >
-                  {value === null ? <UnavailableValue state="not_measured" /> : value}
+                  {value ?? <UnavailableValue state="not_measured" />}
                 </TableCell>
               );
             })}

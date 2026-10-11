@@ -39,6 +39,12 @@ const SYNC_RUN_LABEL: Record<SyncRun['status'], string> = {
   cancelled: 'Cancelled',
 };
 
+function waitingLabel(status: SyncRun['status']): string {
+  if (status === 'leased') return 'assigned to a worker';
+  if (status === 'retry_wait') return 'awaiting retry';
+  return 'waiting for a worker';
+}
+
 /** Test failures in words; the provider code stays out of the UI. */
 const TEST_FAILURE: Record<string, string> = {
   grant_auth_failed: 'The provider refused this grant. Reconnect to renew consent.',
@@ -165,11 +171,7 @@ function ConnectionMetadata({
             ) : (
               <>
                 Enqueued <DisplayTime value={activeRun.created_at} /> ·{' '}
-                {activeRun.status === 'leased'
-                  ? 'assigned to a worker'
-                  : activeRun.status === 'retry_wait'
-                    ? 'awaiting retry'
-                    : 'waiting for a worker'}
+                {waitingLabel(activeRun.status)}
               </>
             )}
           </span>

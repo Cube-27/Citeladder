@@ -23,6 +23,16 @@ export type CheckboxProps = AccessibleCheckbox & {
   'aria-describedby'?: string;
 };
 
+function checkboxStateClass(checked: boolean | 'indeterminate', disabled: boolean | undefined) {
+  if (disabled) return 'border-border-subtle bg-disabled text-muted';
+  return cn(
+    'text-accent-fg',
+    checked
+      ? 'border-accent bg-accent'
+      : 'border-border-bold bg-input group-hover:border-border-strong',
+  );
+}
+
 export function Checkbox({
   checked,
   onCheckedChange,
@@ -39,6 +49,7 @@ export function Checkbox({
     throw new Error('Checkbox requires a visible label or aria-label.');
   }
 
+  const boxStateClass = checkboxStateClass(checked, disabled);
   const control = (
     <CheckboxPrimitive.Root
       id={id}
@@ -54,14 +65,7 @@ export function Checkbox({
       <span
         className={cn(
           'grid size-4 place-items-center rounded-xs border transition-[background-color,border-color] duration-[var(--motion-fast)]',
-          disabled
-            ? 'border-border-subtle bg-disabled text-muted'
-            : cn(
-                'text-accent-fg',
-                checked
-                  ? 'border-accent bg-accent'
-                  : 'border-border-bold bg-input group-hover:border-border-strong',
-              ),
+          boxStateClass,
         )}
       >
         <CheckboxPrimitive.Indicator>

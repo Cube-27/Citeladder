@@ -92,15 +92,25 @@ function GetListed({ url, actionId }: Readonly<{ url: string; actionId: string |
   );
 }
 
+function pageTypeFact(
+  type: string | null | undefined,
+  page: NonNullable<Page>,
+  basis: string | null | undefined,
+): string {
+  if (!type || page.page_format === 'unresolved') {
+    return 'What kind of page this is could not be established.';
+  }
+  const basisNote = basis ? ` (${basis.charAt(0).toLowerCase()}${basis.slice(1)})` : '';
+  return `Page type: ${type}${basisNote}.`;
+}
+
 /** When it was read, how much of it, and what kind of page it is by what evidence. */
 function PageFacts({ page }: Readonly<{ page: NonNullable<Page> }>) {
   const type = urlTypeLabel(page.page_format);
   const basis = pageFormatBasis(page.page_format_method);
   const facts = [
     readingSentence(page.read_at, page.extracted_chars),
-    type && page.page_format !== 'unresolved'
-      ? `Page type: ${type}${basis ? ` (${basis.charAt(0).toLowerCase()}${basis.slice(1)})` : ''}.`
-      : 'What kind of page this is could not be established.',
+    pageTypeFact(type, page, basis),
   ].filter(Boolean);
   return (
     <div className="grid gap-1">
