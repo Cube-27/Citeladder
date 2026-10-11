@@ -131,6 +131,12 @@ function isSecuritySensitive(path) {
   );
 }
 
+// Deploy-time inputs: Terraform and workflow definitions are otherwise first
+// parsed by the deploy itself.
+function isInfra(path) {
+  return path.startsWith('infra/') || path.startsWith('.github/workflows/');
+}
+
 // What Compose uniquely proves: the images build, and a CLEAN database reaches a
 // serving stack. So the trigger is container-shaped changes only -- the images,
 // the stack definition, the schema, and anything that changes what gets
@@ -171,6 +177,7 @@ export function classifyPaths(paths, { full = false } = {}) {
       api: true,
       e2e: true,
       security: true,
+      infra: true,
       compose: true,
     };
   }
@@ -188,6 +195,7 @@ export function classifyPaths(paths, { full = false } = {}) {
     api: shared || normalized.some(isApiService),
     e2e: unowned.some((path) => !isNonBrowserTooling(path)) || e2eFiles.length > 0,
     security: shared || normalized.some(isSecuritySensitive),
+    infra: normalized.some(isInfra),
     compose: normalized.some(isComposeSensitive),
   };
 }

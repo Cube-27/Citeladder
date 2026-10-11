@@ -228,20 +228,23 @@ it does not enable or test a live checkout/provider.
 ### API service (TypeScript)
 
 `frontend/services/api` is a pnpm workspace package; `pnpm install` in `frontend/`
-installs it. Its suite writes and deletes fixture rows: point `API_TEST_DATABASE_URL`
-at a **disposable** database that `pnpm migrate` has migrated, never the development
-database. Tests never read `.env` (`test/environment.ts` sets
+installs it. Its suite writes and deletes fixture rows. Pre-launch there are no
+customers, so it runs against the one local development database (`citeladder`
+in docker compose); do not create per-branch copies. `scripts/api-test.ps1`
+builds the URL from `.env`, clears inherited provider credentials and logs to
+`<git-dir>/api-test.log`. After a baseline change the owner resets that database
+(`scripts/reset-db.ps1`), then `-Types` regenerates the Kysely types. Tests never read `.env` (`test/environment.ts` sets
 `CITELADDER_DISABLE_DOTENV`), and the schema, bootstrap and seed tests create and
 drop their own `citeladder_*_test_*` databases on that server.
 The API bootstrap refuses inherited provider credentials, including
 `DEFAULT_AGENT_API_KEY`, `DEFAULT_AGENT_BASE_URL` and `DEFAULT_AGENT_MODEL`.
 Clear these before running tests; dotenv loading is disabled.
 
-```bash
-cd frontend/services/api
-DATABASE_URL="postgresql://postgres:<password>@127.0.0.1:<port>/<disposable-db>" pnpm migrate
-API_TEST_DATABASE_URL="postgresql://postgres:<password>@127.0.0.1:<port>/<disposable-db>" pnpm test
-TYPES_DATABASE_URL="<same disposable database>" pnpm db:types   # regenerate Kysely types after a schema change
+```powershell
+./scripts/api-test.ps1 test/billing.test.ts test/catalog-authoring.test.ts   # named files
+./scripts/api-test.ps1 -Types     # regenerate src/generated/db-schema.ts after a schema change
+./scripts/api-test.ps1 -Migrate   # apply the SQL baseline to a freshly reset database
+pnpm gen                         # (in frontend/) regenerate the public API and MCP references
 ```
 
 Application policy and the workspace role matrix live in native config. From the
@@ -350,7 +353,9 @@ API service's set `noUncheckedIndexedAccess`, so an indexed read is
 `scripts/quality.mjs` owns these checks. The PowerShell entry point holds a
 worktree lock and passes `--scope changed`. The affected owners are the ones
 the CI classifier (`scripts/ci-changes.mjs`) selects for the branch diff against
-`origin/main`, plus staged, unstaged and untracked files. With `--builds affected`,
+`origin/main`, plus staged, unstaged and untracked files. After the quality gate,
+`scripts/secrets-scan.ps1` runs CI's gitleaks version and allowlist over those
+same changed files in Docker (skipped with a warning without Docker). With `--builds affected`,
 the Astro marketing, Astro docs and Vite app builds run only when their sources
 or shared build configuration changed; tsc and `vp check` still cover ordinary
 TypeScript. A passing run records the tree it judged in `.git/quality-pass.json`,

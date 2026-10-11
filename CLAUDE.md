@@ -103,8 +103,9 @@ rather than a new file per run. Report exit status and inspect failure tails fir
 - Tests disable dotenv and use deterministic configuration; inherited live
   provider credentials must never reach a test run.
 - Pre-launch schema changes stay in `frontend/services/api/migrations/0001_baseline.sql`
-  and are verified only on disposable data. Never reset shared, staging or production
-  data under that policy.
+  and are verified on the one local development database (no customers yet; run
+  tests with `scripts/api-test.ps1`, never create per-branch databases). Only the
+  owner resets it. Never reset staging or production data under that policy.
 - Never reset, deploy, call live providers, activate payments or mutate external
   systems unless the task explicitly authorizes the operation.
 - Edit files with your editing tool (`apply_patch` or equivalent), not shell

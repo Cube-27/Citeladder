@@ -30,6 +30,7 @@
     "lint": "vp lint",
     "format": "vp fmt --write",
     "format:check": "vp fmt --check",
+    "gen": "pnpm --filter @citeladder/api public-api:reference && pnpm --filter @citeladder/api mcp:reference && vp fmt apps/docs/src/data/public-api.json apps/docs/src/data/mcp-tools.json",
     "check": "vp check",
     "check:fix": "vp check --fix",
     "test": "vp test run",

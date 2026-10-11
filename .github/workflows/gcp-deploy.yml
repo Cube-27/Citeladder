@@ -229,6 +229,8 @@ jobs:
             '.api_image=$api | .postgres_image=$postgres' \
             deploy.auto.tfvars.json > /tmp/tfvars
           mv /tmp/tfvars deploy.auto.tfvars.json
+          # The backticks are Markdown code spans, not command substitution.
+          # shellcheck disable=SC2016
           printf -- '- API service and migrate job: `%s`\n- PostgreSQL: `%s`\n' \
             "$api" "$postgres" > /tmp/release-images.md
       - name: Synchronize runtime secret versions
