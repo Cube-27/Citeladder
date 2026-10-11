@@ -25,6 +25,40 @@ function ageTrial(accountId: string) {
     .where('source_kind', '=', 'trial')
     .execute();
 }
+/** A public signup under `email` that has created its workspace. */
+async function publicSignup(email: string) {
+  const t = await fixtures.tenant({ access: false });
+  const user = await db
+    .updateTable('users')
+    .set({ registration_origin: 'public', email })
+    .where('id', '=', t.userId)
+    .returningAll()
+    .executeTakeFirstOrThrow();
+  await db.transaction().execute((trx) => ensureWorkspaceBilling(trx, t.workspaceId, user));
+  const account = await db
+    .selectFrom('billing_accounts')
+    .select('id')
+    .where('workspace_id', '=', t.workspaceId)
+    .executeTakeFirstOrThrow();
+  accounts.push(account.id);
+  return { workspaceId: t.workspaceId, accountId: account.id };
+}
+
+it('gives one mailbox one trial across address aliases', async () => {
+  const name = `trial${randomUUID().slice(0, 8)}`;
+  const first = await publicSignup(`${name.slice(0, 3)}.${name.slice(3)}+one@gmail.com`);
+  await ageTrial(first.accountId);
+  // A tag, dots and the googlemail.com spelling all reach the same Gmail inbox.
+  const alias = await publicSignup(`${name.toUpperCase()}+two@googlemail.com`);
+  expect((await workspaceAccess(db, alias.workspaceId)).status).toBe('trial_expired');
+  // Any domain's tag is dropped, but outside Gmail a dot names another mailbox.
+  await ageTrial((await publicSignup(`${name}+tag@example.test`)).accountId);
+  const untagged = await publicSignup(`${name}@example.test`);
+  expect((await workspaceAccess(db, untagged.workspaceId)).status).toBe('trial_expired');
+  const dotted = await publicSignup(`${name.slice(0, 3)}.${name.slice(3)}@example.test`);
+  expect((await workspaceAccess(db, dotted.workspaceId)).status).toBe('trial_active');
+});
+
 it('distinguishes revoked authority from natural trial expiry', async () => {
   const t = await fixtures.tenant({ access: false });
   const user = await db

@@ -364,6 +364,26 @@ rule changes.
 - B18's "charges prompt runs for every … dispatch" is superseded by B33 and B34:
   only a recorded answer spends a prompt run.
 
+## Security audit (2026-10-12)
+
+**B49 — Owner, 2026-10-12.** One mailbox gets one free trial, whatever alias
+it signs up under ("Normalize email aliases"). Engineering: the mailbox is the
+lowercased address with any `+tag` dropped, and for Gmail the dots ignored and
+`googlemail.com` read as `gmail.com`. A public signup whose mailbox already
+had a trial inherits that trial's exact window, as a person's second workspace
+already does, so a lapsed trial cannot be restarted under an alias. Signups
+for the same mailbox are serialized. The global daily trial budget is
+unchanged.
+
+**B50 — Owner, 2026-10-12.** A refund cancels the subscription it refunds
+("Refund cancels sub"). Not yet implemented: before code, the owner confirms
+whether only a full refund cancels, and whether access ends at once or at the
+end of the paid period.
+
+**B51 — Owner, 2026-10-12.** Payment disputes (chargebacks) stay on the
+backlog to decide later. Today a dispute is neither revoked nor alerted on;
+an operator handles it in the Razorpay Dashboard.
+
 ## Owner inputs still required
 
 Not decisions; needed only for India checkout and live enablement: GST rate,
