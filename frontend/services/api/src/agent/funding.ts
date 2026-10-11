@@ -14,6 +14,7 @@ import {
   PRICING_REVISION,
   chargeCredits,
   modelPrice,
+  requestInputBytes,
   reservationCredits,
   unknownUsageCredits,
 } from '../billing/ai-pricing.ts';
@@ -25,7 +26,6 @@ import type { Funding } from './model-calls.ts';
 import type { GatewaySettings } from '../models/gateway.ts';
 
 type Settings = ReturnType<typeof agentSettings>;
-const bytes = (text: string) => Buffer.byteLength(text, 'utf8');
 
 async function account(db: Database, workspaceId: string) {
   const row = await db
@@ -68,9 +68,6 @@ async function identity(
   await capability(db, scope.workspaceId);
   if (!configured(platform)) throw new AgentError('funding_unavailable');
   const unmetered = await development(db, scope.userId, settings);
-  // A model without a configured price is refused, never charged at another's rate.
-  if (!unmetered && !modelPrice(platform.model, platform.model))
-    throw new AgentError('funding_unavailable');
   return {
     funding_source: unmetered ? 'development' : 'platform',
     requested_model: platform.model,
@@ -114,7 +111,7 @@ export function agentFunding(settings: Settings, platform: GatewaySettings): Fun
       if (!price) throw new AgentError('funding_unavailable');
       const credits = reservationCredits(
         price,
-        bytes(request.system) + bytes(request.user) + bytes(JSON.stringify(request.schema)),
+        requestInputBytes(request.system, request.user, request.schema),
         platform.maxOutputTokens,
       );
       try {

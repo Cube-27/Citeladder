@@ -12,7 +12,7 @@ import { accountState, drawOrder, grantExpiry } from '../entitlements/state.ts';
 import { ledgerBalances } from '../entitlements/ledger.ts';
 import { workspaceAccount } from './purchases.ts';
 import { catalog, capabilityValue } from './catalog.ts';
-import { workspaceCredentialMode } from './credential-mode.ts';
+import { credentialModeOf } from './credential-mode.ts';
 import { checkoutAvailable } from './razorpay.ts';
 import { scheduledSchema } from './settlement.ts';
 
@@ -292,7 +292,7 @@ export async function workspaceEntitlementRead(db: Database, workspaceId: string
     registry_revision: policy.entitlements.registry_revision,
     entitlement_lifecycle_version: account?.entitlement_lifecycle_version ?? 0,
     valid_until: state?.validUntil?.toISOString() ?? null,
-    credential_mode: await workspaceCredentialMode(db, workspaceId),
+    credential_mode: credentialModeOf(state?.subscription),
     capabilities: state
       ? [...state.values].map(([key, value]) => ({
           key,

@@ -193,7 +193,7 @@ describe('platform AI metering', () => {
       .gateway({ ...raw, complete: () => new Promise(() => {}) }, 'commerce_buyer_prompts')
       .complete('s', 'u');
     void crashed;
-    await vi.waitFor(async () => expect((await calls(t.workspaceId)).length).toBe(1));
+    await vi.waitFor(async () => expect(await calls(t.workspaceId)).toHaveLength(1));
     const later = new Date(Date.now() + 3_600_000);
     await settleAbandonedCalls(db, later);
     await settleAbandonedCalls(db, later);

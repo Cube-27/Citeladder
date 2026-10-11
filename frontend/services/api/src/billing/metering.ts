@@ -26,7 +26,9 @@ import {
   chargeMode,
   costMicrousd,
   modelPrice,
+  requestInputBytes,
   reservationCredits,
+  tokenCount,
   unknownUsageCredits,
   type MeteredFeature,
   type TokenUsage,
@@ -55,12 +57,38 @@ function errorCode(error: unknown) {
   return 'call_failed';
 }
 function tokens(usage: TokenUsage | null) {
-  const count = (value: unknown) =>
-    typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : null;
   return {
-    input_tokens: count(usage?.input_tokens),
-    cached_input_tokens: count(usage?.cached_input_tokens),
-    output_tokens: count(usage?.output_tokens),
+    input_tokens: tokenCount(usage?.input_tokens),
+    cached_input_tokens: tokenCount(usage?.cached_input_tokens),
+    output_tokens: tokenCount(usage?.output_tokens),
+  };
+}
+
+const unresolved = () =>
+  new ApiError(403, 'Billing entitlement is unavailable for this workspace', {
+    code: 'entitlement_unresolved',
+  });
+
+/** A `platform_calls` row for `context` and `spec`, before its outcome fields. */
+function callRow(context: MeterContext, spec: CallSpec, at: Date) {
+  return {
+    id: randomUUID(),
+    workspace_id: context.workspaceId,
+    billing_account_id: null as string | null,
+    feature: context.feature,
+    provider: spec.provider,
+    model: spec.model.slice(0, 255),
+    charge: chargeMode(context.feature),
+    status: 'reserved',
+    pricing_revision: PRICING_REVISION,
+    reservation_id: null,
+    reserved_credits: 0,
+    credits: 0,
+    ...tokens(null),
+    cost_microusd: null as number | null,
+    error_code: '',
+    created_at: at,
+    settled_at: null as Date | null,
   };
 }
 
@@ -78,95 +106,67 @@ async function record(
     await db
       .insertInto('platform_calls')
       .values({
-        id: randomUUID(),
-        workspace_id: context.workspaceId,
-        billing_account_id: null,
-        feature: context.feature,
-        provider: spec.provider,
-        model: spec.model.slice(0, 255),
-        charge: chargeMode(context.feature),
+        ...callRow(context, spec, now),
         status: error ? 'failed' : 'settled',
-        pricing_revision: PRICING_REVISION,
-        reservation_id: null,
-        reserved_credits: 0,
-        credits: 0,
         ...tokens(usage),
         cost_microusd: price && usage ? costMicrousd(price, usage) : null,
         error_code: error ? errorCode(error) : '',
-        created_at: now,
         settled_at: now,
       })
       .execute();
-  } catch (failure) {
+  } catch (error_) {
     logger.warning('billing.platform_call_unrecorded', {
       workspace_id: context.workspaceId,
       feature: context.feature,
-      exception: failure instanceof Error ? failure.message : String(failure),
+      exception: error_ instanceof Error ? error_.message : String(error_),
     });
   }
 }
 
 /** Commits the hold and the call record before dispatch. */
-async function reserve(db: Database, context: MeterContext, spec: CallSpec) {
+function reserve(db: Database, context: MeterContext, spec: CallSpec) {
   const price = modelPrice(spec.model);
   if (!price)
     throw new ApiError(503, 'AI pricing is not configured for this model', {
       code: 'ai_pricing_unavailable',
     });
   const reserved = reservationCredits(price, spec.inputBytes ?? 0, spec.maxOutputTokens ?? 0);
-  const id = randomUUID();
   return db.transaction().execute(async (trx) => {
     const account = await trx
       .selectFrom('billing_accounts')
       .select('id')
       .where('workspace_id', '=', context.workspaceId)
       .executeTakeFirst();
-    if (!account)
-      throw new ApiError(403, 'Billing entitlement is unavailable for this workspace', {
-        code: 'entitlement_unresolved',
-      });
+    if (!account) throw unresolved();
     const at = new Date();
-    await trx
-      .insertInto('platform_calls')
-      .values({
-        id,
-        workspace_id: context.workspaceId,
-        billing_account_id: account.id,
-        feature: context.feature,
-        provider: spec.provider,
-        model: spec.model.slice(0, 255),
-        charge: 'credits',
-        status: 'reserved',
-        pricing_revision: PRICING_REVISION,
-        reservation_id: null,
-        reserved_credits: reserved,
-        credits: 0,
-        input_tokens: null,
-        cached_input_tokens: null,
-        output_tokens: null,
-        cost_microusd: null,
-        error_code: '',
-        created_at: at,
-        settled_at: null,
-      })
-      .execute();
+    const row = {
+      ...callRow(context, spec, at),
+      billing_account_id: account.id,
+      reserved_credits: reserved,
+    };
+    const { id } = row;
+    await trx.insertInto('platform_calls').values(row).execute();
     let reservationId: string;
     try {
       reservationId = await reserveUsage(trx, {
         accountId: account.id,
         capability: AI_CREDITS,
-        subject: { kind: 'platform_call', id, workspaceId: context.workspaceId },
+        subject: {
+          kind: 'platform_call',
+          id,
+          workspaceId: context.workspaceId,
+        },
         units: reserved,
         key: `call:${id}`,
         at,
       });
     } catch (error) {
       if (error instanceof LedgerError && error.message === 'funded_credits_exhausted')
-        throw new ApiError(403, 'Your AI credits are used up', { code: 'ai_credits_exhausted' });
-      if (error instanceof LedgerError && error.message === 'entitlement_unresolved')
-        throw new ApiError(403, 'Billing entitlement is unavailable for this workspace', {
-          code: 'entitlement_unresolved',
+        throw new ApiError(403, 'Your AI credits are used up', {
+          code: 'ai_credits_exhausted',
         });
+      if (error instanceof LedgerError && error.message === 'entitlement_unresolved')
+        throw unresolved();
       throw error;
     }
     await trx
@@ -197,8 +197,7 @@ async function settleCall(
       .where('id', '=', callId)
       .forUpdate()
       .executeTakeFirst();
-    if (!call || call.status !== 'reserved' || !call.reservation_id || !call.billing_account_id)
-      return;
+    if (call?.status !== 'reserved' || !call.reservation_id || !call.billing_account_id) return;
     const price = modelPrice(call.model);
     const charged = usage && price ? chargeCredits(price, usage) : null;
     const credits =
@@ -244,33 +243,25 @@ async function metered<T>(
   spec: CallSpec,
   call: () => Promise<Outcome<T>>,
 ): Promise<T> {
-  const scope = { workspaceId: context.workspaceId, feature: context.feature };
-  if (chargeMode(context.feature) !== 'credits') {
-    let outcome: Outcome<T>;
-    try {
-      outcome = await runMetered(scope, call);
-    } catch (error) {
-      await record(db, context, spec, usageOf(error), error);
-      throw error;
-    }
-    await record(db, context, spec, outcome.usage, null);
-    return outcome.value;
-  }
+  const charged = chargeMode(context.feature) === 'credits';
   // The hold commits before network I/O, so it never shares the caller's transaction.
-  if (db.isTransaction) throw new Error('A charged platform call must not run in a transaction');
-  const callId = await reserve(db, context, spec);
+  if (charged && db.isTransaction)
+    throw new Error('A charged platform call must not run in a transaction');
+  const callId = charged ? await reserve(db, context, spec) : null;
+  const finish = (usage: TokenUsage | null, error: unknown) =>
+    callId === null
+      ? record(db, context, spec, usage, error)
+      : settleCall(db, callId, usage, error !== null, error);
   let outcome: Outcome<T>;
   try {
-    outcome = await runMetered(scope, call);
+    outcome = await runMetered(context, call);
   } catch (error) {
-    await settleCall(db, callId, usageOf(error), true, error);
+    await finish(usageOf(error), error);
     throw error;
   }
-  await settleCall(db, callId, outcome.usage, false);
+  await finish(outcome.usage, null);
   return outcome.value;
 }
-
-const bytes = (text: string) => Buffer.byteLength(text, 'utf8');
 
 /** The gateway with every call metered for `context`; the raw gateway refuses unmetered calls. */
 function meteredGateway(db: Database, gateway: ModelGateway, context: MeterContext) {
@@ -281,7 +272,7 @@ function meteredGateway(db: Database, gateway: ModelGateway, context: MeterConte
       {
         provider: 'model_gateway',
         model: gateway.model,
-        inputBytes: bytes(system) + bytes(user) + (schema ? bytes(JSON.stringify(schema)) : 0),
+        inputBytes: requestInputBytes(system, user, schema),
         maxOutputTokens: gateway.maxOutputTokens,
       },
       async () => {
@@ -326,7 +317,10 @@ export function meterFor(db: Database, workspaceId: string) {
           { provider: 'jev', model: client.model },
           async () => {
             const result = await client.decide(state, questions, signal);
-            return { value: result, usage: (result.usage ?? null) as TokenUsage | null };
+            return {
+              value: result,
+              usage: (result.usage ?? null) as TokenUsage | null,
+            };
           },
         ),
     }),

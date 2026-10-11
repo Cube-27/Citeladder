@@ -29,10 +29,6 @@ const auditFields = z.object({
 const selectedPrompts = (input: { prompt_set_id?: string | null; prompt_ids: string[] }) =>
   Boolean(input.prompt_set_id || input.prompt_ids.length);
 /** Funding follows the workspace's plan (B32), never the request body. */
-export const auditCreateInput = auditFields.refine(
-  selectedPrompts,
-  'Select a prompt set or prompt IDs',
-);
 export const auditInput = auditFields.refine(selectedPrompts, 'Select a prompt set or prompt IDs');
 /**
  * A public API launch: the project comes from the path, and the caller caps the

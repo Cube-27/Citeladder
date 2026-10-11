@@ -72,7 +72,10 @@ export function marketEngines(
   if (!engines.length)
     throw new ApiError(422, `No selected engine can measure ${marketLabel(market)}`, {
       code: 'market_unsupported',
-      details: { country_code: market.country_code, language_code: market.language_code },
+      details: {
+        country_code: market.country_code,
+        language_code: market.language_code,
+      },
     });
   return { engines, notApplicable };
 }
@@ -134,7 +137,9 @@ function assertPromptCount(
       code: 'prompt_count_policy_unconfigured',
     });
   if (promptCount > settings.audit_prompt_count)
-    throw new ApiError(403, 'Too many selected prompts', { code: 'prompt_count_exceeded' });
+    throw new ApiError(403, 'Too many selected prompts', {
+      code: 'prompt_count_exceeded',
+    });
 }
 function assertRepetitions(repetitions: number) {
   if (
@@ -221,31 +226,34 @@ async function freezeRoutes({
   providerSettings: ProviderSettings;
   at: Date;
 }) {
-  const candidates = await db
-    .selectFrom('provider_routes as r')
-    .innerJoin('provider_connections as c', 'c.id', 'r.connection_id')
-    .innerJoin('workspaces as w', 'w.id', 'c.workspace_id')
-    .select([
-      'r.logical_engine',
-      'r.transport_provider',
-      'r.transport_model',
-      'c.id as connection_id',
-      'c.base_url',
-      'c.paused_at',
-      'c.pause_until',
-      'c.last_test_status',
-      sql<boolean>`c.api_key_encrypted <> ''`.as('has_key'),
-    ])
-    .where('r.workspace_id', '=', workspaceId)
-    .where('c.workspace_id', '=', workspaceId)
-    .where('w.is_system', '=', false)
-    .where('c.credential_source', '=', 'byok')
-    .where('r.active', '=', true)
-    .where('c.active', '=', true)
-    .orderBy('r.is_default', 'desc')
-    .orderBy('r.created_at')
-    .orderBy('r.id')
-    .execute();
+  // A managed workspace's own routes are never used, so they are not read.
+  const candidates = funded
+    ? []
+    : await db
+        .selectFrom('provider_routes as r')
+        .innerJoin('provider_connections as c', 'c.id', 'r.connection_id')
+        .innerJoin('workspaces as w', 'w.id', 'c.workspace_id')
+        .select([
+          'r.logical_engine',
+          'r.transport_provider',
+          'r.transport_model',
+          'c.id as connection_id',
+          'c.base_url',
+          'c.paused_at',
+          'c.pause_until',
+          'c.last_test_status',
+          sql<boolean>`c.api_key_encrypted <> ''`.as('has_key'),
+        ])
+        .where('r.workspace_id', '=', workspaceId)
+        .where('c.workspace_id', '=', workspaceId)
+        .where('w.is_system', '=', false)
+        .where('c.credential_source', '=', 'byok')
+        .where('r.active', '=', true)
+        .where('c.active', '=', true)
+        .orderBy('r.is_default', 'desc')
+        .orderBy('r.created_at')
+        .orderBy('r.id')
+        .execute();
   const routes: FrozenRoute[] = [];
   for (const engine of engines) {
     const catalog = providerPolicy.routes[engine];
@@ -431,7 +439,12 @@ export async function prepareAudit(
     .executeTakeFirst();
   const { aliases, owned, unintended, competitors, profile, factCheck } = await loadBrandContext(
     db,
-    { workspaceId, project, brand, auditScope: input.audit_scope },
+    {
+      workspaceId,
+      project,
+      brand,
+      auditScope: input.audit_scope,
+    },
   );
   const systemInstruction = frameInstruction(mode, project);
   const measurement = {
@@ -464,7 +477,10 @@ export async function prepareAudit(
     entity_matching: frozenEntityMatching(
       projectEntityMatching(profile?.business_context, strings(profile?.products_services), [
         { name: brandName, aliases: aliases.map((row) => row.alias) },
-        ...competitors.map((row) => ({ name: row.name, aliases: strings(row.aliases) })),
+        ...competitors.map((row) => ({
+          name: row.name,
+          aliases: strings(row.aliases),
+        })),
       ]),
     ),
     country_code: project.country_code,
@@ -497,12 +513,10 @@ export async function prepareAudit(
     ),
     ...(input.audit_scope === 'commerce'
       ? {
-          commerce_measurement: await requireCommerce(db, workspaceId).then(() =>
-            freezeCommerceContext(
-              db,
-              { workspaceId, projectId: project.id },
-              prompts.map((prompt) => prompt.id),
-            ),
+          commerce_measurement: await freezeCommerceContext(
+            db,
+            { workspaceId, projectId: project.id },
+            prompts.map((prompt) => prompt.id),
           ),
         }
       : {}),

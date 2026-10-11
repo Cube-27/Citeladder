@@ -8,6 +8,16 @@ export type CredentialMode = 'byok' | 'funded';
  * DataForSEO keys; every other workspace brings its own (B32). The plan the
  * customer bought decides, never the request.
  */
+export function credentialModeOf(
+  current: { credential_mode: string; status: string } | null | undefined,
+): CredentialMode {
+  return current?.credential_mode === 'funded' &&
+    policy.billing.contracts.live_subscription_statuses.includes(current.status)
+    ? 'funded'
+    : 'byok';
+}
+
+/** The credential mode of the workspace's current base subscription. */
 export async function workspaceCredentialMode(
   db: Database,
   workspaceId: string,
@@ -15,11 +25,10 @@ export async function workspaceCredentialMode(
   const current = await db
     .selectFrom('billing_subscriptions as s')
     .innerJoin('billing_accounts as a', 'a.id', 's.billing_account_id')
-    .select('s.credential_mode')
+    .select(['s.credential_mode', 's.status'])
     .where('a.workspace_id', '=', workspaceId)
     .where('s.is_current', '=', true)
     .where('s.subscription_kind', '=', policy.entitlements.base_subscription_kind)
-    .where('s.status', 'in', policy.billing.contracts.live_subscription_statuses)
     .executeTakeFirst();
-  return current?.credential_mode === 'funded' ? 'funded' : 'byok';
+  return credentialModeOf(current);
 }

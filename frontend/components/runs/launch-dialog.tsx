@@ -57,7 +57,7 @@ function useLaunchEngines(open: boolean, workspaceId: string | null) {
     () => (managed ? MANAGED_ENGINES : availableEngines(connectionsQuery.data)),
     [managed, connectionsQuery.data],
   );
-  return { ...engines, enginesReady: managed || connectionsQuery.isSuccess, connectionsQuery };
+  return { ...engines, enginesReady: managed || connectionsQuery.isSuccess };
 }
 
 function fixedPromptSelection(
