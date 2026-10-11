@@ -15,7 +15,7 @@ Interactive onboarding invokes that same worker through an
 awaited, bounded API mutation scoped to one authorized discovery; background
 execution remains its recovery path. Executive PDFs use the TypeScript command-center
 projection and shared PDF renderer; receipt list/download reads are also
-TypeScript-owned. Ingress routing is
+TypeScript-owned. Every operation's family is
 checked against the shared route-ownership manifest.
 
 Audit admission, providers and answer-engine transports, immutable execution
@@ -95,7 +95,11 @@ owners continue; the job still fails, and the error is logged with the lane.
 Every lane reclaims its own expired leases on each pass, including idle ones,
 and reports when its next task is due: the earliest claimable row or lease
 expiry (Agent: when an unclaimed turn passes its grace). Billing has no probe;
-its retries wait for tick.
+its retries wait for tick. Analytics, discovery, integrations and Site Health
+reclaim through `reclaimExpiredLeases` (`src/queue/recovery.ts`), which takes
+the lane's attempt charge; audit recovery locks the parent audit first and holds
+uncertain submissions, so it stays in `AuditMaintenance`. Every queue claims
+the least recently served workspace first (`queue_workspace_turns`).
 
 `tick.ts` first runs MCP and usage-window cleanup, audit maintenance, Search
 Intelligence reconciliation, due audit schedules, integration dispatch/revocation

@@ -148,19 +148,12 @@ are shipped. Remaining investigation and policy-dependent work:
   per-workspace lateral top-N once queued tasks approach tens of thousands; the
   acceptance is an index-bounded claim plan with 50k queued tasks.
 - Execution platform remainder (from the feature 14 review, 2026-10-10):
-  - One lease-recovery helper in place of the five copies, with each lane's
-    attempt-charge rule as a parameter.
-  - Workspace fairness for integration claims.
-  - Remove the test-only `runUntilIdle` methods on the integration and Agent workers.
   - A billing `nextDue` once payments are live.
   - A due-work probe before a request wake, and a persisted runner-seconds cap,
     once job cost is measured from billing SKUs.
   - Alerts on failed job executions and errors, wanted before customers: two
     multi-hour outages went unnoticed.
   - Destroy superseded Secret Manager versions.
-  - Flatten the route-ownership manifest to a family list: its `stack` can only be
-    `typescript`, but invariant 1 and the route-ownership
-    gate are written around it.
 
 Security alerts remain explicitly deferred, not an implicit release prerequisite.
 Infrastructure redesigns and paid security tiers require demonstrated need. Recovery,

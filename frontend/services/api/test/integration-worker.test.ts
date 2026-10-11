@@ -502,6 +502,49 @@ describe('integration worker paging and resume', () => {
     expect(grants.slice(1).sort()).toEqual([low.grantId, other.grantId].sort());
     expect(await workers[0]!.runOnce()).toBe(false);
   });
+  it('serves the least recently claimed workspace before a busier workspace’s higher priority', async () => {
+    const busy = await seedRun();
+    await seedRun();
+    const backlog = randomUUID();
+    const first = await db
+      .selectFrom('integration_sync_runs')
+      .selectAll()
+      .where('id', '=', busy.runId)
+      .executeTakeFirstOrThrow();
+    await db
+      .insertInto('integration_sync_runs')
+      .values({
+        ...first,
+        id: backlog,
+        idempotency_key: `sync-test:${backlog}`,
+        resync_seq: 2,
+        window_start: new Date('2026-07-21T00:00:00Z'),
+        window_end: new Date('2026-07-22T00:00:00Z'),
+      })
+      .execute();
+    await db
+      .updateTable('integration_sync_runs')
+      .set({ priority: 10 })
+      .where('id', 'in', [busy.runId, backlog])
+      .execute();
+    const claimed: string[] = [];
+    const client = { page: vi.fn(async () => ({ payload: { rows: [] }, rawRowCount: 0 })) };
+    // A token is resolved per page; record each claimed run once.
+    let current: string | undefined;
+    const worker = new IntegrationWorker(db, client, settings, async (_db, grantId) => {
+      if (current === undefined) {
+        current = grantId === busy.grantId ? 'busy' : 'quiet';
+        claimed.push(current);
+      }
+      return 'recorded-token';
+    });
+    const next = async () => {
+      current = undefined;
+      return worker.runOnce();
+    };
+    while (await next());
+    expect(claimed).toEqual(['busy', 'quiet', 'busy']);
+  });
 
   it('heartbeats a live request but denies late publication after recovery takes its lease', async () => {
     const target = await seedRun();
@@ -641,7 +684,7 @@ describe('integration worker paging and resume', () => {
         .where('id', '=', retry.runId)
         .executeTakeFirstOrThrow(),
     ).toEqual({ status: 'succeeded', attempt_count: 2 });
-    expect(await worker.runUntilIdle()).toBe(0);
+    expect(await worker.runOnce()).toBe(false);
   });
   it.each([
     {

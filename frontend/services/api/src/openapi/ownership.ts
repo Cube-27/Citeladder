@@ -5,14 +5,19 @@ import { onlyOf } from '../lists.ts';
 export type OwnershipInputs = {
   /** The browser API and API-host machine prefixes. */
   prefixes: readonly string[];
-  manifest: Readonly<Record<string, string>>;
-  typescript: OpenApiDocument;
+  families: readonly string[];
+  document: OpenApiDocument;
 };
 
 export function routeOwnershipFailures(inputs: OwnershipInputs): string[] {
   const failures: string[] = [];
-  const families = new Set<string>();
-  for (const [path, item] of Object.entries(inputs.typescript.paths)) {
+  const declared = new Set<string>();
+  for (const family of inputs.families) {
+    if (declared.has(family)) failures.push(`'${family}' is listed more than once`);
+    declared.add(family);
+  }
+  const served = new Set<string>();
+  for (const [path, item] of Object.entries(inputs.document.paths)) {
     if (!inputs.prefixes.some((prefix) => path === prefix || path.startsWith(`${prefix}/`)))
       continue;
     for (const [method, operation] of Object.entries(item)) {
@@ -21,16 +26,12 @@ export function routeOwnershipFailures(inputs: OwnershipInputs): string[] {
         failures.push(`${method.toUpperCase()} ${path} must carry exactly one family tag`);
         continue;
       }
-      families.add(family);
-      if (inputs.manifest[family] !== 'typescript')
-        failures.push(
-          `The TypeScript service serves '${family}', which the manifest assigns to ${inputs.manifest[family] ?? 'no stack'}`,
-        );
+      served.add(family);
+      if (!declared.has(family))
+        failures.push(`${method.toUpperCase()} ${path} serves '${family}', which is not a family`);
     }
   }
-  for (const [family, stack] of Object.entries(inputs.manifest)) {
-    if (stack !== 'typescript') failures.push(`'${family}' must be TypeScript-owned`);
-    if (!families.has(family)) failures.push(`'${family}' has no declared route`);
-  }
+  for (const family of declared)
+    if (!served.has(family)) failures.push(`'${family}' has no declared route`);
   return failures;
 }

@@ -96,13 +96,4 @@ export class AgentWorker {
     );
     return recovered;
   }
-  async runUntilIdle(maxBatches = policy.task_queue.max_drain_batches) {
-    let total = 0;
-    for (let batch = 0; batch < maxBatches; batch++) {
-      const ran = await this.runOnce();
-      total += ran;
-      if (!ran) break;
-    }
-    return total;
-  }
 }

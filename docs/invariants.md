@@ -31,8 +31,9 @@ stores or policy authorities; do not relax repository gates to accommodate them.
 
 A route family, task kind or table has exactly one TypeScript application writer.
 The SQL baseline (invariant 17) defines tables; it never writes application rows.
-For route families the route-ownership manifest is the single record, and
-ingress must route each family's paths only to the stack it names. For
+For route families the route-ownership manifest is the single list: every
+API operation declares exactly one listed family, every listed family is
+served, and the gate fails otherwise. For
 analytics task kinds the native catalog in
 `frontend/services/api/src/config/connected-data.ts` owns execution and recovery;
 Product operators and Opportunity enqueue/execution are native.

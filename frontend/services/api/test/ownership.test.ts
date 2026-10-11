@@ -6,8 +6,8 @@ import { routeOwnershipFailures, type OwnershipInputs } from '../src/openapi/own
 function ownershipInputs(overrides: Partial<OwnershipInputs> = {}): OwnershipInputs {
   return {
     prefixes: ['/api/v1', '/v1'],
-    manifest: { executions: 'typescript' },
-    typescript: openApiDocument([
+    families: ['executions'],
+    document: openApiDocument([
       {
         family: 'executions',
         method: 'get',
@@ -24,21 +24,19 @@ describe('route-ownership gate', () => {
     expect(routeOwnershipFailures(ownershipInputs())).toEqual([]);
   });
   it('rejects a served family missing from the manifest', () => {
-    expect(routeOwnershipFailures(ownershipInputs({ manifest: {} }))).toContainEqual(
-      expect.stringContaining('assigns to no stack'),
-    );
+    expect(routeOwnershipFailures(ownershipInputs({ families: [] }))).toEqual([
+      "GET /api/v1/executions/{item_id} serves 'executions', which is not a family",
+    ]);
   });
   it('rejects a manifest family without a route', () => {
     expect(
-      routeOwnershipFailures(
-        ownershipInputs({ manifest: { executions: 'typescript', billing: 'typescript' } }),
-      ),
+      routeOwnershipFailures(ownershipInputs({ families: ['executions', 'billing'] })),
     ).toContainEqual(expect.stringContaining('has no declared route'));
   });
-  it('refuses an unknown route owner', () => {
+  it('refuses a family listed twice', () => {
     expect(
-      routeOwnershipFailures(ownershipInputs({ manifest: { executions: 'other' } })),
-    ).toContainEqual(expect.stringContaining('must be TypeScript-owned'));
+      routeOwnershipFailures(ownershipInputs({ families: ['executions', 'executions'] })),
+    ).toEqual(["'executions' is listed more than once"]);
   });
   it('counts a machine route under /v1 as serving its family', () => {
     const machine = openApiDocument([
@@ -50,14 +48,14 @@ describe('route-ownership gate', () => {
         responses: { 200: z.object({ name: z.string() }) },
       },
     ]);
-    expect(routeOwnershipFailures(ownershipInputs({ typescript: machine }))).toEqual([]);
+    expect(routeOwnershipFailures(ownershipInputs({ document: machine }))).toEqual([]);
     expect(
-      routeOwnershipFailures(ownershipInputs({ typescript: machine, prefixes: ['/api/v1'] })),
+      routeOwnershipFailures(ownershipInputs({ document: machine, prefixes: ['/api/v1'] })),
     ).toEqual(["'executions' has no declared route"]);
   });
   it('refuses ambiguous family tags', () => {
     const input = ownershipInputs();
-    input.typescript.paths['/api/v1/executions/{item_id}']!.get!.tags = ['executions', 'billing'];
+    input.document.paths['/api/v1/executions/{item_id}']!.get!.tags = ['executions', 'billing'];
     expect(routeOwnershipFailures(input)).toContainEqual(
       expect.stringContaining('exactly one family tag'),
     );
