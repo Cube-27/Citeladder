@@ -230,7 +230,8 @@ function schemaMatchesContent(facts: Facts): CheckResult {
   const visible = [text(facts.title), ...textList(record(facts.headings).h1_texts)].map(tokenSet);
   // Markup conflicts when it names something the page does not show; a name
   // the title/h1 phrase differently but the page visibly carries is consistent.
-  const body = tokenSet(text(record(facts.body).text));
+  const bodyFacts = record(facts.body);
+  const body = tokenSet(text(bodyFacts.text));
   const matched = named.some(({ name, type }) => {
     const claim = tokenSet(type === 'Organization' ? companyName(name) : name);
     return (
@@ -239,14 +240,15 @@ function schemaMatchesContent(facts: Facts): CheckResult {
       ) || claimCoverage(claim, body) === 1
     );
   });
-  return [
-    passFail(matched),
-    {
-      page_kind: expectation.page_kind,
-      candidates: named.map(({ name }) => name.slice(0, 256)),
-      matched_visible_content: matched,
-    },
-  ];
+  const evidence = {
+    page_kind: expectation.page_kind,
+    candidates: named.map(({ name }) => name.slice(0, 256)),
+    matched_visible_content: matched,
+  };
+  // Text past the stored cap was never read, so a missing name is unproven there.
+  if (!matched && bodyFacts.truncated === true)
+    return ['unknown', { ...evidence, reason: 'body_text_truncated' }];
+  return [passFail(matched), evidence];
 }
 
 export const SCHEMA_CHECKS: Record<string, (facts: Facts) => CheckResult> = {

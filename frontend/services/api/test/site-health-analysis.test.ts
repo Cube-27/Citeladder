@@ -757,26 +757,31 @@ describe('site audit regressions', () => {
   });
 
   it('accepts a schema name the page shows but flags one it never shows', () => {
-    const outcome = (name: string) =>
-      byRule(
+    const outcome = (name: string, truncated = false) => {
+      const blog = page(
+        `<main><p>Blog &amp; guides</p><h1>Practical guides to AI visibility</h1>
+        <p>Acme publishes research on how engines cite brands.</p></main>`,
+        `<title>AI visibility guides and citation tracking resources | Acme</title>${ld({
+          '@context': 'https://schema.org',
+          '@type': 'Blog',
+          '@id': 'https://acme.test/blog',
+          url: 'https://acme.test/blog',
+          name,
+        })}`,
+        'https://acme.test/blog',
+      );
+      return byRule(
         evaluatePageRules({
-          ...page(
-            `<main><p>Blog &amp; guides</p><h1>Practical guides to AI visibility</h1>
-            <p>Acme publishes research on how engines cite brands.</p></main>`,
-            `<title>AI visibility guides and citation tracking resources | Acme</title>${ld({
-              '@context': 'https://schema.org',
-              '@type': 'Blog',
-              '@id': 'https://acme.test/blog',
-              url: 'https://acme.test/blog',
-              name,
-            })}`,
-            'https://acme.test/blog',
-          ),
+          ...blog,
+          body: { ...blog.body, truncated },
           page_kind: 'editorial_index',
         }),
       ).get('aeo.schema_matches_content')!.outcome;
+    };
     expect(outcome('Acme Blog')).toBe('satisfied');
     expect(outcome('Garden Supplies Catalog')).toBe('missing');
+    // The name could sit in text past the stored cap, so it stays unproven.
+    expect(outcome('Garden Supplies Catalog', true)).toBe('unknown');
   });
 });
 

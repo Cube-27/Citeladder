@@ -116,6 +116,14 @@ export function canonicalResolution(
   return evaluation;
 }
 
+/**
+ * An HTTP error, except that a link to a sign-in-gated page works for the
+ * people it is for; a sitemap that lists one still advertises a URL search
+ * engines cannot read.
+ */
+const isBroken = (status: number, sitemap: boolean) =>
+  status >= 400 && (sitemap || !ACCESS_RESTRICTED.has(status));
+
 export function resolutionSet(
   targets: string[],
   resolutions: Map<string, Resolution>,
@@ -133,10 +141,7 @@ export function resolutionSet(
     }
     if (resolution?.status === undefined || resolution.status === null) continue;
     checked.push(target);
-    // A link to a sign-in-gated page works for the people it is for; a sitemap
-    // that lists one still advertises a URL search engines cannot read.
-    if (!sitemap && ACCESS_RESTRICTED.has(resolution.status)) continue;
-    if (resolution.status >= 400) broken.push(target);
+    if (isBroken(resolution.status, sitemap)) broken.push(target);
   }
   const evaluation =
     sitemap && !targets.length

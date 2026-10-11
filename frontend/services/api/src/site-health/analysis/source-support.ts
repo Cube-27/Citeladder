@@ -103,6 +103,17 @@ function nextSection(node: HtmlElement, current: { name: string; level: number }
   return current;
 }
 
+/**
+ * Whether a heading or link belongs to the page's own content. A numbered
+ * reference list is a repeated linked collection, so the card heuristic
+ * excludes it; under a references heading its links are the sources.
+ */
+function ownedNode(node: HtmlElement, page: PageScope, inSection: boolean) {
+  const isHeading = HEADINGS.has(node.tagName);
+  if (!isHeading && node.tagName !== 'a') return false;
+  return pageOwned(node, page.region, inSection && !isHeading ? NO_CONTAINERS : page.cards);
+}
+
 export function sourceSupportFacts(page: PageScope, finalUrl: string) {
   const facts = emptySourceSupport();
   let base = '';
@@ -116,13 +127,8 @@ export function sourceSupportFacts(page: PageScope, finalUrl: string) {
   let scanned = 0;
   for (const node of elements(page.region)) {
     if (++scanned > regionPolicy.max_containers_scanned) break;
-    const isHeading = HEADINGS.has(node.tagName);
-    if (!isHeading && node.tagName !== 'a') continue;
-    // A numbered reference list is a repeated linked collection, so the card
-    // heuristic excludes it; under a references heading its links are the sources.
-    const containers = section.name && !isHeading ? NO_CONTAINERS : page.cards;
-    if (!pageOwned(node, page.region, containers)) continue;
-    if (isHeading) {
+    if (!ownedNode(node, page, Boolean(section.name))) continue;
+    if (HEADINGS.has(node.tagName)) {
       section = nextSection(node, section);
       if (section.name && !facts.context_reasons.includes(section.name))
         facts.context_reasons.push(section.name);

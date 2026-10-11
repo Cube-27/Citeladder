@@ -351,8 +351,9 @@ function bodyText(root: HtmlNode, maxChars: number) {
       if (PRUNED_BODY_TAGS.has(current.tagName)) pruned = true;
     if (!pruned) raw += node.value;
   }
-  const text = squash(raw).slice(0, maxChars);
-  return { text, word_count: text ? text.split(' ').length : 0 };
+  const full = squash(raw);
+  const text = full.slice(0, maxChars);
+  return { text, word_count: text ? text.split(' ').length : 0, truncated: full.length > maxChars };
 }
 
 function emptyAuthorship() {
@@ -381,7 +382,7 @@ function emptyFacts() {
     images: { count: 0, missing_alt: 0, decorative_alt: 0 },
     accessibility: accessibilityFacts(document(Buffer.alloc(0)), 0),
     mobile: { viewport: { declared: false, content: '' } },
-    body: { text: '', word_count: 0 },
+    body: { text: '', word_count: 0, truncated: false },
     cta_text: [] as string[],
     form_fields: [] as string[],
     link_context: [] as string[],

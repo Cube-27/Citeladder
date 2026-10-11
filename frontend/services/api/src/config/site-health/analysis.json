@@ -630,7 +630,8 @@
         "unknown_applicability",
         "audit_time_unavailable",
         "content_date_in_future",
-        "content_date_unparseable"
+        "content_date_unparseable",
+        "body_text_truncated"
       ],
       "content_recency_max_age_days": 365,
       "content_recency_future_tolerance_days": 2
