@@ -19,21 +19,49 @@ afterAll(async () => {
     await db.deleteFrom('brand_logo_assets').where('domain', 'in', domains).execute();
   await db.destroy();
 });
-async function tenant() {
+async function tenant(domain = `logo-${randomUUID()}.com`, website: string = domain) {
   const userId = await fixtures.user();
   const workspaceId = await fixtures.ownedWorkspace(userId);
   await billingAccount(db, workspaceId);
-  const domain = `logo-${randomUUID()}.com`;
   domains.push(domain);
   const project = await createProject(
     db,
     workspaceId,
     userId,
-    projectCreate.parse({ name: 'Logo', brand_name: 'Logo', website_url: domain }),
+    projectCreate.parse({ name: 'Logo', brand_name: 'Logo', website_url: website }),
   );
   return { workspaceId, projectId: project.id, domain };
 }
 const png = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+const brandLogo = (projectId: string) =>
+  db
+    .selectFrom('brands')
+    .innerJoin('brand_logo_assets as asset', 'asset.id', 'brands.logo_asset_id')
+    .select('asset.image_data')
+    .where('brands.project_id', '=', projectId)
+    .executeTakeFirst();
+it('keys the shared cache by private-suffix host and fetches only that host homepage', async () => {
+  const hostA = `a-${randomUUID()}.github.io`;
+  const a = await tenant(hostA, `https://${hostA}/x`);
+  const b = await tenant(`b-${randomUUID()}.github.io`);
+  const pngFor = (host: string) => Buffer.concat([png, Buffer.from(host)]);
+  const fetcher = vi.fn<WebsiteFetcher>(async (url) => {
+    const { hostname, pathname } = new URL(url);
+    return pathname === '/favicon.ico'
+      ? { url, status: 200, contentType: 'image/png', body: pngFor(hostname) }
+      : { url, status: 200, contentType: 'text/html', body: Buffer.from('<p>No icon</p>') };
+  });
+  await refreshLogos(db, a, fetcher);
+  await refreshLogos(db, b, fetcher);
+  expect(fetcher.mock.calls.map(([url]) => url)).toEqual([
+    `https://${a.domain}/`,
+    `https://${a.domain}/favicon.ico`,
+    `https://${b.domain}/`,
+    `https://${b.domain}/favicon.ico`,
+  ]);
+  expect(await brandLogo(a.projectId)).toEqual({ image_data: pngFor(a.domain) });
+  expect(await brandLogo(b.projectId)).toEqual({ image_data: pngFor(b.domain) });
+});
 it('attaches ready raster assets, reuses fresh cache and retains stale success after failed refresh', async () => {
   const t = await tenant();
   const fetcher = vi.fn<WebsiteFetcher>(async (url) =>
