@@ -1,10 +1,12 @@
 import { afterAll, describe, expect, it } from 'vitest';
 
 import { Hono } from 'hono';
+import { signOriginRequest } from '@citeladder/contracts/origin-signature';
 
 import { createApp } from '../src/app.ts';
 import { trustedClientIdentity } from '../src/auth/client-identity.ts';
 import type { AppEnv } from '../src/context.ts';
+import { onError } from '../src/errors.ts';
 import { originToken } from '../src/http/origin-token.ts';
 import { policy } from '../src/config.ts';
 import { setLogSink } from '../src/logging.ts';
@@ -12,6 +14,34 @@ import { testConfig, testDatabase } from './support.ts';
 
 const config = testConfig();
 const db = testDatabase(config);
+
+/** The headers a Worker sends for one upstream request. */
+async function signed(
+  key: string,
+  request: {
+    path: string;
+    publicHost: string;
+    method?: string;
+    clientIp?: string;
+    timestamp?: number;
+  },
+): Promise<Record<string, string>> {
+  const timestamp = request.timestamp ?? Math.floor(Date.now() / 1000);
+  const clientIp = request.clientIp ?? '';
+  const signature = await signOriginRequest(key, {
+    timestamp,
+    method: request.method ?? 'GET',
+    publicHost: request.publicHost,
+    target: request.path,
+    clientIp,
+  });
+  return {
+    'X-CiteLadder-Origin-Timestamp': String(timestamp),
+    'X-CiteLadder-Origin-Signature': signature,
+    'X-CiteLadder-Public-Host': request.publicHost,
+    ...(clientIp ? { 'X-CiteLadder-Client-IP': clientIp } : {}),
+  };
+}
 
 afterAll(() => db.destroy());
 
@@ -34,7 +64,7 @@ describe('health and readiness', () => {
       (
         await protectedApp.request(path, {
           method,
-          headers: { 'X-CiteLadder-Origin-Token': token, 'X-CiteLadder-Public-Host': publicHost },
+          headers: await signed(token, { method, path, publicHost }),
         })
       ).status;
     const ingest = '/v1/crawl-logs/ingest/11111111-1111-4111-8111-111111111111';
@@ -54,7 +84,7 @@ describe('health and readiness', () => {
       for (const path of ['/mcp', '/.well-known/oauth-authorization-server', '/token'])
         expect(await status('GET', path, publicHost)).toBe(404);
   });
-  it('protects the raw origin, including probes and MCP, and accepts rotated tokens', async () => {
+  it('protects the raw origin, including probes and MCP, and accepts rotated keys', async () => {
     const current = 'current-origin-token-0123456789abcdef';
     const previous = 'previous-origin-token-0123456789abcdef';
     const protectedApp = createApp(
@@ -67,65 +97,82 @@ describe('health and readiness', () => {
       }),
       db,
     );
-    const host = { 'X-CiteLadder-Public-Host': 'app.example.test' };
+    const code = async (path: string, headers: Record<string, string>) =>
+      (await protectedApp.request(path, { headers })).status;
+    const publicHost = 'app.example.test';
     for (const path of ['/health', '/ready', '/api/v1/auth/me', '/mcp']) {
-      expect((await protectedApp.request(path, { headers: host })).status).toBe(403);
-      for (const token of ['wrong', 'x'.repeat(current.length)])
-        expect(
-          (
-            await protectedApp.request(path, {
-              headers: { ...host, 'X-CiteLadder-Origin-Token': token },
-            })
-          ).status,
-        ).toBe(403);
+      expect(await code(path, { 'X-CiteLadder-Public-Host': publicHost })).toBe(403);
+      // The raw key is never a credential, and a foreign key's signature is refused.
+      expect(
+        await code(path, {
+          'X-CiteLadder-Public-Host': publicHost,
+          'X-CiteLadder-Origin-Token': current,
+        }),
+      ).toBe(403);
+      expect(await code(path, await signed('x'.repeat(current.length), { path, publicHost }))).toBe(
+        403,
+      );
     }
     for (const token of [current, previous])
-      for (const publicHost of ['app.example.test', 'EXAMPLE.test'])
+      for (const host of ['app.example.test', 'EXAMPLE.test'])
         expect(
-          (
-            await protectedApp.request('/health', {
-              headers: {
-                'X-CiteLadder-Origin-Token': token,
-                'X-CiteLadder-Public-Host': publicHost,
-              },
-            })
-          ).status,
+          await code('/health', await signed(token, { path: '/health', publicHost: host })),
         ).toBe(200);
-    // The token alone is not enough: the public host must be one the Workers serve.
-    for (const publicHost of [undefined, 'attacker.example', 'api-123.us-central1.run.app'])
+    // A signature covers its path, method, host and time: none can be swapped.
+    const health = await signed(current, { path: '/health', publicHost });
+    expect(await code('/ready', health)).toBe(403);
+    expect(
+      (await protectedApp.request('/health', { method: 'POST', headers: health })).status,
+    ).toBe(403);
+    expect(await code('/health', { ...health, 'X-CiteLadder-Public-Host': 'example.test' })).toBe(
+      403,
+    );
+    const stale = Math.floor(Date.now() / 1000) - 3600;
+    expect(
+      await code(
+        '/health',
+        await signed(current, { path: '/health', publicHost, timestamp: stale }),
+      ),
+    ).toBe(403);
+    // A valid signature alone is not enough: the public host must be one the Workers serve.
+    for (const host of ['attacker.example', 'api-123.us-central1.run.app'])
       expect(
-        (
-          await protectedApp.request('/health', {
-            headers: {
-              'X-CiteLadder-Origin-Token': current,
-              ...(publicHost ? { 'X-CiteLadder-Public-Host': publicHost } : {}),
-            },
-          })
-        ).status,
+        await code('/health', await signed(current, { path: '/health', publicHost: host })),
       ).toBe(403);
   });
-  it('takes the visitor address only from a token-admitted Worker request', async () => {
+  it('takes the visitor address only from a signed Worker request', async () => {
+    const key = 'current-origin-token-0123456789abcdef';
     const protectedConfig = testConfig({
       K_SERVICE: 'api',
-      CITELADDER_ORIGIN_TOKEN: 'current-origin-token-0123456789abcdef',
+      CITELADDER_ORIGIN_TOKEN: key,
       FRONTEND_URL: 'https://app.example.test',
     });
     const probe = new Hono<AppEnv>()
       .use(originToken(protectedConfig))
-      .get('/whoami', (c) => c.text(trustedClientIdentity(c, protectedConfig)));
-    const admitted = {
-      'X-CiteLadder-Origin-Token': 'current-origin-token-0123456789abcdef',
-      'X-CiteLadder-Public-Host': 'app.example.test',
-    };
-    const identity = async (headers: Record<string, string>) =>
-      (await probe.request('/whoami', { headers })).text();
-    expect(await identity({ ...admitted, 'X-CiteLadder-Client-IP': '::ffff:203.0.113.7' })).toBe(
-      '203.0.113.7',
-    );
+      .get('/whoami', (c) => c.text(trustedClientIdentity(c, protectedConfig)))
+      .onError(onError);
+    const identity = async (clientIp: string) =>
+      (
+        await probe.request('/whoami', {
+          headers: await signed(key, { path: '/whoami', publicHost: 'app.example.test', clientIp }),
+        })
+      ).text();
+    expect(await identity('::ffff:203.0.113.7')).toBe('203.0.113.7');
     // A malformed or absent address never becomes a shared rate-limit subject.
-    expect(await identity({ ...admitted, 'X-CiteLadder-Client-IP': 'not-an-ip' })).toBe(
-      'unavailable',
-    );
+    expect(await identity('not-an-ip')).toBe('unavailable');
+    // The address is signed: changing it after signing is refused.
+    const headers = await signed(key, {
+      path: '/whoami',
+      publicHost: 'app.example.test',
+      clientIp: '203.0.113.7',
+    });
+    expect(
+      (
+        await probe.request('/whoami', {
+          headers: { ...headers, 'X-CiteLadder-Client-IP': '198.51.100.9' },
+        })
+      ).status,
+    ).toBe(403);
     const open = new Hono<AppEnv>()
       .use(originToken(config))
       .get('/whoami', (c) => c.text(trustedClientIdentity(c, config)));

@@ -143,13 +143,17 @@ allowed and existing leases arbitrate claims. A failed start is logged without
 tokens/provider bodies and leaves the committed response and work intact for tick.
 
 The Cloud Run API (`K_SERVICE`, or configured runner job outside a job
-execution) requires the existing
-`CITELADDER_ORIGIN_TOKEN` on every request, including health/readiness and MCP;
-the previous token may be accepted during rotation. Missing tokens fail startup.
-An admitted request must also name an allowlisted public host (the app, apex
-or API host), which MCP origin checks use. Only the API host serves `/v1/...`
-and the MCP protocol paths, and it serves nothing else. Its `X-CiteLadder-Client-IP` becomes the
-client identity for rate limits. Cloud Run uses a TCP startup probe;
+execution) requires a Worker signature on every request, including
+health/readiness and MCP. The Workers never send `CITELADDER_ORIGIN_TOKEN`
+itself; they send an HMAC-SHA256 under it over the request's timestamp, method,
+public host, path with query and visitor address
+(`packages/contracts/src/origin-signature.ts`). The API refuses a signature
+older or newer than `policy.api.origin_signature_max_skew_seconds`, and accepts
+the previous key during rotation. Missing keys fail startup. The signed public
+host must be allowlisted (the app, apex or API host), which MCP origin checks
+use. Only the API host serves `/v1/...` and the MCP protocol paths, and it
+serves nothing else. The signed `X-CiteLadder-Client-IP` becomes the client
+identity for rate limits. Cloud Run uses a TCP startup probe;
 authenticated HTTP probes must send the origin and public-host headers. Runtime commands and environment settings are owned by
 [Development](DEVELOPMENT.md#scale-to-zero-runtime).
 

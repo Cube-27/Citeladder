@@ -1,3 +1,11 @@
+import {
+  ORIGIN_CLIENT_IP_HEADER,
+  ORIGIN_PUBLIC_HOST_HEADER,
+  ORIGIN_SIGNATURE_HEADER,
+  ORIGIN_TIMESTAMP_HEADER,
+  signOriginRequest,
+} from '@citeladder/contracts/origin-signature';
+
 /** Server-only transport shared by the product and marketing Workers. */
 export interface WorkerOriginConfig {
   upstream: string;
@@ -26,6 +34,8 @@ const INTERNAL_HEADERS = new Set([
   'x-real-ip',
   'cf-connecting-ip',
   'x-citeladder-origin-token',
+  'x-citeladder-origin-timestamp',
+  'x-citeladder-origin-signature',
   'x-citeladder-public-host',
   'x-citeladder-client-ip',
 ]);
@@ -50,7 +60,11 @@ function upstreamOrigin(value: string, allowDevelopmentHttp = false): URL {
   return url;
 }
 
-function originRequest(request: Request, config: WorkerOriginConfig, incoming: URL): Request {
+async function originRequest(
+  request: Request,
+  config: WorkerOriginConfig,
+  incoming: URL,
+): Promise<Request> {
   const upstream = upstreamOrigin(config.upstream, config.allowDevelopmentHttp);
   upstream.pathname = incoming.pathname;
   upstream.search = incoming.search;
@@ -59,12 +73,21 @@ function originRequest(request: Request, config: WorkerOriginConfig, incoming: U
     const lower = name.toLowerCase();
     if (!HOP_HEADERS.has(lower) && !INTERNAL_HEADERS.has(lower)) headers.append(name, value);
   }
-  headers.set('X-CiteLadder-Origin-Token', config.originToken);
-  headers.set('X-CiteLadder-Public-Host', config.publicHost);
   // Cloudflare sets CF-Connecting-IP on every Worker request; the API trusts it
-  // only alongside the origin token, so per-visitor rate limits survive.
-  const clientIp = request.headers.get('cf-connecting-ip');
-  if (clientIp) headers.set('X-CiteLadder-Client-IP', clientIp);
+  // only inside a valid signature, so per-visitor rate limits survive.
+  const clientIp = request.headers.get('cf-connecting-ip') ?? '';
+  const timestamp = Math.floor(Date.now() / 1000);
+  const signature = await signOriginRequest(config.originToken, {
+    timestamp,
+    method: request.method,
+    publicHost: config.publicHost,
+    target: `${upstream.pathname}${upstream.search}`,
+    clientIp,
+  });
+  headers.set(ORIGIN_TIMESTAMP_HEADER, String(timestamp));
+  headers.set(ORIGIN_SIGNATURE_HEADER, signature);
+  headers.set(ORIGIN_PUBLIC_HOST_HEADER, config.publicHost);
+  if (clientIp) headers.set(ORIGIN_CLIENT_IP_HEADER, clientIp);
   return new Request(upstream, {
     method: request.method,
     headers,
@@ -107,7 +130,7 @@ export async function proxyWorkerRequest(
     throw new Error('Worker origin credential is missing.');
   }
   try {
-    const upstreamResponse = await transport(originRequest(request, config, incoming));
+    const upstreamResponse = await transport(await originRequest(request, config, incoming));
     return originResponse(upstreamResponse);
   } catch (error) {
     if (request.signal.aborted) throw error;
