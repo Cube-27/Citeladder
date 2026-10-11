@@ -2,6 +2,7 @@ import { expect, it } from 'vitest';
 import { loadConfig, policy } from '../src/config.ts';
 import { validateSiteHealthCatalog } from '../src/config/site-health/validation.ts';
 import { classifierVersion } from '../src/config/site-health.ts';
+import { projectWebsiteRoot } from '../src/site-health/planner-policy.ts';
 
 it.each([
   { SITE_HEALTH_MAX_ATTEMPTS: '0' },
@@ -85,6 +86,11 @@ it('keeps score membership in one place and never scores a hidden diagnostic', (
     rule.rule_id === 'aeo.open_graph_present' ? { ...rule, score_roles: ['aeo_readiness'] } : rule,
   );
   expect(() => validate(unpillared)).toThrow('pillar disagree');
+});
+
+it('scopes a crawl to its own tenant of a shared hosting suffix', () => {
+  expect(projectWebsiteRoot('https://acme.github.io/').domain).toBe('acme.github.io');
+  expect(projectWebsiteRoot('https://www.example.com/').domain).toBe('example.com');
 });
 
 it('versions the classifier by every input it reads', () => {

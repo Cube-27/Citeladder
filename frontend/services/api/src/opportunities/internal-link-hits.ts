@@ -39,6 +39,7 @@ export async function internalLinkHits(
   const result = internalLinkAnalysisSchema.parse(run.result);
   // The bar the run's links were judged against, frozen with the run.
   const threshold = Number(record(record(run.manifest).policy).accept_threshold);
+  if (!(threshold > 0)) throw new Error('Internal link run has no frozen accept_threshold');
   const sources = groupBy(result.recommendations, (link) => link.source.site_url_id);
   return [...sources].map(([id, links]) => {
     const source = links[0].source;

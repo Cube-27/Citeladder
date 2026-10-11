@@ -710,16 +710,28 @@ describe('site audit regressions', () => {
       ['/faq', true],
       ['https://example.org/', false],
     ]);
+    // Tenants of a shared hosting suffix are separate sites.
+    const tenant = page(
+      `<main><h1>Docs</h1><p><a href="https://docs.acme.github.io/">Docs</a> and
+      <a href="https://other.github.io/">another project</a>.</p></main>`,
+      '',
+      'https://acme.github.io/',
+    ).links.anchors.map((anchor) => anchor.is_internal);
+    expect(tenant).toEqual([true, false]);
   });
 
   it('attaches the links of a numbered reference list as sources', () => {
     const items = ['openai.com', 'crossref.org', 'arxiv.org', 'aclanthology.org']
       .map((host) => `<li><span><a href="https://${host}/paper">${host} paper</a></span></li>`)
       .join('');
+    const cards = ['partner.org', 'vendor.org', 'agency.org']
+      .map((host) => `<li><div><a href="https://${host}/post">Related ${host}</a></div></li>`)
+      .join('');
     const support = page(
       `<main><article><h1>Can ChatGPT find citations?</h1>
       <p>Language models often cite sources that do not exist when asked for references.</p>
-      <h2>Sources</h2><ol class="sources">${items}</ol></article></main>`,
+      <h2>Sources</h2><ol class="sources">${items}</ol><ul class="related">${cards}</ul>
+      </article></main>`,
     ).source_support;
     expect(support.attached_sources.map((source) => [source.domain, source.relationship])).toEqual([
       ['openai.com', 'references_section'],

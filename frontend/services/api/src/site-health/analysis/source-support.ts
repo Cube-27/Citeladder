@@ -33,7 +33,8 @@ export function emptySourceSupport() {
 type SourceSupport = ReturnType<typeof emptySourceSupport>;
 
 const normalHost = (host: string) => host.toLowerCase().replace(/\.$/u, '');
-const registrable = (host: string) => getDomain(host) ?? host;
+// Private suffixes count: `a.github.io` and `b.github.io` are different sites.
+const registrable = (host: string) => getDomain(host, { allowPrivateDomains: true }) ?? host;
 /** The same host, or a host on the same registrable domain: one site's subdomains. */
 export const sameSite = (host: string, base: string) =>
   host === base || (Boolean(base) && registrable(host) === registrable(base));
@@ -103,15 +104,23 @@ function nextSection(node: HtmlElement, current: { name: string; level: number }
   return current;
 }
 
+const inOrderedList = (node: HtmlElement) => {
+  for (let current = parentElement(node); current; current = parentElement(current))
+    if (current.tagName === 'ol') return true;
+  return false;
+};
+
 /**
  * Whether a heading or link belongs to the page's own content. A numbered
  * reference list is a repeated linked collection, so the card heuristic
- * excludes it; under a references heading its links are the sources.
+ * excludes it; under a references heading its links are the sources, while
+ * related-content cards there stay excluded.
  */
 function ownedNode(node: HtmlElement, page: PageScope, inSection: boolean) {
   const isHeading = HEADINGS.has(node.tagName);
   if (!isHeading && node.tagName !== 'a') return false;
-  return pageOwned(node, page.region, inSection && !isHeading ? NO_CONTAINERS : page.cards);
+  const referenceItem = inSection && !isHeading && inOrderedList(node);
+  return pageOwned(node, page.region, referenceItem ? NO_CONTAINERS : page.cards);
 }
 
 export function sourceSupportFacts(page: PageScope, finalUrl: string) {
