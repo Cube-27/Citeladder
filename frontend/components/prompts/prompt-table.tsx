@@ -3,10 +3,10 @@
 import { useMemo } from 'react';
 import { Archive, Check, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 
+import { ProjectLink } from '@/components/layout/scoped-link';
 import { Tag } from '@/components/ui/tag';
 import { Button } from '@/components/ui/button';
 import { Delta } from '@/components/ui/delta';
-import { Pressable } from '@/components/ui/pressable';
 import {
   Dropdown,
   DropdownContent,
@@ -28,11 +28,14 @@ import { Switch } from '@/components/ui/switch';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import type { Prompt, PromptStatus, Topic } from '@/lib/api/types';
 import { buyerStageLabels, intentLabels } from '@/lib/prompts/forms';
+import { promptHistoryHref } from '@/lib/prompts/history';
 import { formatPosition, formatPositionExact, formatRate } from '@/lib/visibility/dashboard';
 
 /** What the latest run measured for one prompt, keyed by prompt id. */
 export type PromptMeasurement = {
   visibilityRate: number | null;
+  /** Answers citing an owned page, over the prompt's successful answers. */
+  ownedCitationRate: number | null;
   change: number | null;
   position: number | null;
 };
@@ -93,6 +96,7 @@ export function PromptTable({
             <TableHead>Prompt</TableHead>
             <TableHead>Topic</TableHead>
             {measured ? <TableHead numeric>Visibility</TableHead> : null}
+            {measured ? <TableHead numeric>Owned citations</TableHead> : null}
             {/* A mean mention ordinal, not a competitive rank — the rankings
                 table owns that word. Named for what it measures. */}
             {measured ? <TableHead numeric>Avg. mention position</TableHead> : null}
@@ -113,14 +117,18 @@ export function PromptTable({
                     .filter(Boolean)
                     .join(' · ')}
                 >
-                  <Pressable className="text-foreground block">
+                  {/* The question opens its history: the prompt is the object. */}
+                  <ProjectLink
+                    href={promptHistoryHref(prompt.id)}
+                    className="text-foreground block hover:underline"
+                  >
                     {prompt.text}
                     <span className="sr-only">
                       {' '}
                       Stage: {buyerStageLabels[prompt.buyer_stage] || 'Not set'}. Intent:{' '}
                       {intentLabels[prompt.intent] || 'Not set'}.
                     </span>
-                  </Pressable>
+                  </ProjectLink>
                 </Tooltip>
               </TableCell>
               <TableCell className="max-w-45">
@@ -202,6 +210,13 @@ function MeasuredCells({ measurement }: Readonly<{ measurement?: PromptMeasureme
       <TableCell numeric>
         {measurement ? (
           formatRate(measurement.visibilityRate)
+        ) : (
+          <UnavailableValue state="not_measured" />
+        )}
+      </TableCell>
+      <TableCell numeric>
+        {measurement ? (
+          formatRate(measurement.ownedCitationRate)
         ) : (
           <UnavailableValue state="not_measured" />
         )}

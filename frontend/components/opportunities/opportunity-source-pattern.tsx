@@ -79,7 +79,7 @@ export function OpportunitySourcePattern({ pattern }: Readonly<{ pattern: Source
       {pattern.topCitationsTruncated ? (
         <p className="type-caption">
           Showing the first {pattern.topCitations.length} of {pattern.distinctDomainCount} cited
-          domains. Every citation stays available in Visibility → Mentions &amp; Citations.
+          domains. Every citation stays available in Visibility → Sources.
         </p>
       ) : null}
 

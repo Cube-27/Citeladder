@@ -57,6 +57,37 @@ describe('TopicRail', () => {
     ).toBeInTheDocument();
   });
 
+  it('renames a topic in place, keeping the typed name when the save fails', async () => {
+    const user = userEvent.setup();
+    const topic = makeTopic();
+    const renames: string[] = [];
+    let fail = true;
+    const onRename = async (_topic: Topic, name: string) => {
+      renames.push(name);
+      if (fail) throw new Error('rejected');
+    };
+    renderRail({ topics: [topic], onRename });
+    const nav = within(screen.getByRole('navigation', { name: 'Topics' }));
+
+    await user.click(nav.getByRole('button', { name: 'Rename topic Footwear' }));
+    const field = nav.getByRole('textbox', { name: 'New name for Footwear' });
+    await user.clear(field);
+    await user.type(field, 'Running shoes{Enter}');
+    expect(nav.getByRole('textbox', { name: 'New name for Footwear' })).toHaveValue(
+      'Running shoes',
+    );
+
+    fail = false;
+    await user.click(nav.getByRole('button', { name: 'Save' }));
+    expect(renames).toEqual(['Running shoes', 'Running shoes']);
+    expect(nav.queryByRole('textbox')).not.toBeInTheDocument();
+
+    await user.click(nav.getByRole('button', { name: 'Rename topic Footwear' }));
+    await user.type(nav.getByRole('textbox', { name: 'New name for Footwear' }), '{Escape}');
+    expect(nav.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(renames).toHaveLength(2);
+  });
+
   it('preserves topic selection and create/delete actions', async () => {
     const user = userEvent.setup();
     const onSelect = vi.fn();

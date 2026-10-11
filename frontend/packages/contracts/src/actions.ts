@@ -87,8 +87,10 @@ export const declarationCheckSchema = responseObject({
   // Search Intelligence dataset.
   source_kind: z.string().nullable(),
   source_id: z.string().nullable(),
-  // What the check names: a rule, a prompt, a page or query, or a link.
+  // What the check names: a rule, a prompt's text, a page or query, or a link.
   subject: z.string().nullable(),
+  // The tracked prompt a visibility check measures, whose history it links to.
+  prompt_id: uuid().nullable().optional(),
 });
 
 // The user's declaration, frozen server-side: members, targets and checks.

@@ -170,6 +170,16 @@ describe('useSelectProject', () => {
     expect(navigate).toHaveBeenCalledWith(`/site?project=${PROJECT_2}`);
   });
 
+  it("leaves the outgoing project's prompt for the new project's prompt library", () => {
+    activeProjectId = PROJECT_1;
+    pathname = '/prompts/22222222-2222-4222-8222-222222222222';
+    const { result } = renderHook(() => useSelectProject());
+
+    act(() => result.current(PROJECT_2));
+
+    expect(navigate).toHaveBeenCalledWith(`/prompts?project=${PROJECT_2}`);
+  });
+
   it('keeps a path that names no project-owned resource', () => {
     activeProjectId = PROJECT_1;
     pathname = '/issues';

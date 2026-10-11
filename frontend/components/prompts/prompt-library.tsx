@@ -47,6 +47,7 @@ import { ResizableSplitPane } from '@/components/ui/split-pane';
 
 import { PromptActions, PromptFilterControls } from './prompt-toolbar';
 import { TopicRail } from './topic-rail';
+import { useTopicMutations } from './use-topic-mutations';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import { resolveProjectRequestScope } from '@/lib/project/request-scope';
 
@@ -244,29 +245,21 @@ export function PromptLibrary({
     setReviewOnly(reviewRequest);
   }, [generateRequest, reviewRequest, resetGenerate]);
 
-  const createTopicMutation = useMutation({
-    mutationFn: ({ name, parentId }: { name: string; parentId: string | null }) =>
-      topicsApi.create(
-        requestScope.projectId,
-        parentId ? { name, parent_id: parentId } : { name },
-        requestOptions(),
-      ),
-    onSuccess: invalidate,
+  const topicMutations = useTopicMutations({
+    projectId: requestScope.projectId,
+    requestOptions,
+    invalidate,
+    onDeleted: (topic) => {
+      if (selectedTopicId === topic.id) setSelectedTopicId(null);
+    },
   });
 
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
   const confirmDelete = (pending: PendingDelete) => {
-    if (pending.kind === 'topic') return deleteTopicMutation.mutate(pending.topic);
+    if (pending.kind === 'topic') return topicMutations.remove.mutate(pending.topic);
     setBusyId(pending.prompt.id);
     deleteMutation.mutate(pending.prompt.id);
   };
-  const deleteTopicMutation = useMutation({
-    mutationFn: (topic: Topic) => topicsApi.remove(topic.id, requestOptions()),
-    onSuccess: async (_data, topic) => {
-      if (selectedTopicId === topic.id) setSelectedTopicId(null);
-      await invalidate();
-    },
-  });
 
   // Status tab -> topic -> search/filters, preserving order.
   const byStatus = useMemo(
@@ -354,15 +347,6 @@ export function PromptLibrary({
     );
   }
 
-  // Whichever topic mutation failed is the one worth reporting; they cannot
-  // both be in flight from this panel.
-  let topicActionError: string | null = null;
-  if (createTopicMutation.isError) {
-    topicActionError = humanizeApiError(createTopicMutation.error).message;
-  } else if (deleteTopicMutation.isError) {
-    topicActionError = humanizeApiError(deleteTopicMutation.error).message;
-  }
-
   if (isLoading) {
     return (
       <PageShell>
@@ -422,12 +406,15 @@ export function PromptLibrary({
               selectedTopicId={selectedTopicId}
               onSelect={setSelectedTopicId}
               onCreate={async (name, parentId) => {
-                await createTopicMutation.mutateAsync({ name, parentId });
+                await topicMutations.create.mutateAsync({ name, parentId });
               }}
               onDelete={(topic) => setPendingDelete({ kind: 'topic', topic })}
-              isCreating={createTopicMutation.isPending}
+              onRename={async (topic, name) => {
+                await topicMutations.rename.mutateAsync({ topic, name });
+              }}
+              isCreating={topicMutations.create.isPending}
               loadError={topicsQuery.isError}
-              actionError={topicActionError}
+              actionError={topicMutations.error}
             />
           }
         >

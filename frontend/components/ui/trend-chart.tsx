@@ -32,6 +32,19 @@ export type TrendSeries = {
   strokeClass: string;
 };
 
+/**
+ * Something that happened at a moment, drawn as a marker across the plot.
+ *
+ * Placed on the time axis, so it is drawn only when every point carries a
+ * timestamp and the event falls inside their span; a reader gets the full
+ * list beside the chart either way. A marker says when, never what it caused.
+ */
+export type TrendEvent = {
+  key: string;
+  timestamp: number;
+  label: string;
+};
+
 const toLinePath = (segment: { x: number; y: number }[]) =>
   segment
     .map((point, index) => `${index === 0 ? 'M' : 'L'}${point.x.toFixed(1)},${point.y.toFixed(1)}`)
@@ -199,10 +212,11 @@ function plotPoints(
     innerWidth: number;
     innerHeight: number;
     domainMax: number;
+    time: TimeAxis | null;
   }>,
 ): PlottedEntry[] {
-  const { padding, gutterLeft, innerWidth, innerHeight, domainMax } = box;
-  const xOf = xScale(data, gutterLeft, innerWidth);
+  const { padding, gutterLeft, innerWidth, innerHeight, domainMax, time } = box;
+  const xOf = xScale(data, time, gutterLeft, innerWidth);
   const seenCount = new Map<string, number>();
   return data.map((entry, index) => {
     const seen = seenCount.get(entry.label) ?? 0;
@@ -222,6 +236,19 @@ function plotPoints(
 
 const clampTo = (value: number, domainMax: number) => Math.max(0, Math.min(domainMax, value));
 
+type TimeAxis = { first: number; span: number };
+
+/** The time axis, when every point carries a timestamp and they span time. */
+function timeAxis(data: readonly TrendPoint[]): TimeAxis | null {
+  const stamps = data.flatMap((entry) =>
+    entry.timestamp !== undefined && Number.isFinite(entry.timestamp) ? [entry.timestamp] : [],
+  );
+  if (stamps.length !== data.length || stamps.length < 2) return null;
+  const first = Math.min(...stamps);
+  const span = Math.max(...stamps) - first;
+  return span > 0 ? { first, span } : null;
+}
+
 /**
  * Real time on the x axis when every point carries a timestamp.
  *
@@ -230,26 +257,38 @@ const clampTo = (value: number, domainMax: number) => Math.max(0, Math.min(domai
  */
 function xScale(
   data: readonly TrendPoint[],
+  time: TimeAxis | null,
   gutterLeft: number,
   innerWidth: number,
 ): (entry: TrendPoint, index: number) => number {
-  const stamps = data.flatMap((entry) =>
-    entry.timestamp !== undefined && Number.isFinite(entry.timestamp) ? [entry.timestamp] : [],
-  );
-  const timed = stamps.length === data.length;
-  const first = timed ? Math.min(...stamps) : 0;
-  const span = timed ? Math.max(...stamps) - first : 0;
-  if (timed && span > 0) {
-    return (entry) => gutterLeft + (((entry.timestamp ?? first) - first) / span) * innerWidth;
+  if (time) {
+    return (entry) =>
+      gutterLeft + (((entry.timestamp ?? time.first) - time.first) / time.span) * innerWidth;
   }
   if (data.length < 2) return () => gutterLeft + innerWidth / 2;
   const stepX = innerWidth / (data.length - 1);
   return (_entry, index) => gutterLeft + index * stepX;
 }
 
+/** Events inside the plotted time span, in plot coordinates. */
+function plotEvents(
+  time: TimeAxis | null,
+  events: readonly TrendEvent[],
+  gutterLeft: number,
+  innerWidth: number,
+) {
+  if (!time) return [];
+  return events.flatMap((event) => {
+    const offset = event.timestamp - time.first;
+    if (!Number.isFinite(offset) || offset < 0 || offset > time.span) return [];
+    return [{ event, x: gutterLeft + (offset / time.span) * innerWidth }];
+  });
+}
+
 export function TrendChart({
   data,
   series = [],
+  events = [],
   width = 320,
   height = 96,
   label,
@@ -262,6 +301,8 @@ export function TrendChart({
   data: TrendPoint[];
   /** Comparison lines sharing this chart's x positions and scale. */
   series?: readonly TrendSeries[];
+  /** Moments marked across the plot, such as work declared live. */
+  events?: readonly TrendEvent[];
   width?: number;
   height?: number;
   label?: string;
@@ -281,7 +322,9 @@ export function TrendChart({
     yAxisLabel,
   });
   const effectiveDomainMax = domainMax > 0 ? domainMax : 100;
+  const time = timeAxis(data);
   const points = plotPoints(data, {
+    time,
     padding,
     gutterLeft,
     innerWidth,
@@ -293,6 +336,7 @@ export function TrendChart({
   const xTicks = axes ? xAxisTicks(points) : [];
 
   const lineSegments = lineSegmentsOf(points);
+  const markers = plotEvents(time, events, gutterLeft, innerWidth);
   // Comparison lines reuse the primary series' x positions, so the two are read
   // against one scale rather than two charts drawn side by side. A value the
   // series never measured stays a gap here exactly as it does above.
@@ -327,7 +371,10 @@ export function TrendChart({
   const scaleNote = axes
     ? ` ${yAxisLabel ?? 'Value'} from ${formatTick(0)} to ${formatTick(effectiveDomainMax)}${byAxis}.`
     : '';
-  const ariaLabel = `${described}${scaleNote}`;
+  const eventNote = markers.length
+    ? ` Marked: ${markers.map(({ event }) => event.label).join('; ')}.`
+    : '';
+  const ariaLabel = `${described}${scaleNote}${eventNote}`;
 
   return (
     <svg
@@ -380,6 +427,29 @@ export function TrendChart({
           strokeLinejoin="round"
           className="stroke-chart-1"
         />
+      ))}
+      {markers.map(({ event, x }) => (
+        <g key={`event-${event.key}`} data-event-marker="">
+          <line
+            x1={x}
+            y1={padding}
+            x2={x}
+            y2={padding + innerHeight}
+            strokeWidth={1}
+            strokeDasharray="2 3"
+            className="stroke-chart-6 opacity-70"
+            aria-hidden
+          />
+          <rect
+            x={x - 3}
+            y={padding + innerHeight - 3}
+            width={6}
+            height={6}
+            className="fill-chart-6"
+          >
+            <title>{event.label}</title>
+          </rect>
+        </g>
       ))}
       {points.map((point) =>
         point.entry.versionChange ? (

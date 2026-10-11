@@ -1,6 +1,6 @@
 'use client';
 
-import { Plus, Trash2 } from 'lucide-react';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { useId, useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
@@ -30,7 +30,7 @@ function topicErrorMessage(loadError?: boolean, actionError?: string | null): st
  *  - Desktop (lg+): a contained `bg-panel` rail listing the
  *    project's topics with per-status counts, an "All topics" bucket, an inline
  *    add-topic form (optionally under a top-level topic, one level deep), and
- *    per-topic delete.
+ *    per-topic inline rename and delete.
  *  - Narrow (< lg): a compact full-width Topics picker stacked above the
  *    status tabs — the desktop rail would crush the table, so the rail
  *    collapses to a selector, preserving the IA with no overlap.
@@ -44,6 +44,7 @@ export function TopicRail({
   onSelect,
   onCreate,
   onDelete,
+  onRename,
   isCreating,
   loadError,
   actionError,
@@ -59,6 +60,8 @@ export function TopicRail({
    */
   onCreate: (name: string, parentId: string | null) => Promise<void> | void;
   onDelete: (topic: Topic) => void;
+  /** Rename a topic. A rejected promise keeps the edit open with the typed name. */
+  onRename?: (topic: Topic, name: string) => Promise<void>;
   isCreating?: boolean;
   /** Set when the topics list failed to load. */
   loadError?: boolean;
@@ -172,6 +175,7 @@ export function TopicRail({
               selected={selectedTopicId === topic.id}
               onSelect={() => onSelect(topic.id)}
               onDelete={() => onDelete(topic)}
+              onRename={onRename ? (next) => onRename(topic, next) : undefined}
             />
           ))}
         </nav>
@@ -236,6 +240,7 @@ function TopicItem({
   selected,
   onSelect,
   onDelete,
+  onRename,
 }: Readonly<{
   label: string;
   /** Parent-qualified name for a subtopic; top-level items use their text. */
@@ -245,7 +250,20 @@ function TopicItem({
   selected: boolean;
   onSelect: () => void;
   onDelete?: () => void;
+  onRename?: (name: string) => Promise<void>;
 }>) {
+  const [renaming, setRenaming] = useState(false);
+  const name = accessibleName ?? label;
+  if (renaming && onRename)
+    return (
+      <TopicRenameForm
+        current={label}
+        name={name}
+        nested={nested}
+        onRename={onRename}
+        onDone={() => setRenaming(false)}
+      />
+    );
   return (
     <div
       className={cn(
@@ -271,12 +289,24 @@ function TopicItem({
           <span className="type-caption shrink-0 tabular-nums">{activeCount}</span>
         ) : null}
       </Pressable>
+      {onRename ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          aria-label={`Rename topic ${name}`}
+          onClick={() => setRenaming(true)}
+          className="size-8 shrink-0"
+        >
+          <Pencil className="size-4" aria-hidden />
+        </Button>
+      ) : null}
       {onDelete ? (
         <Button
           type="button"
           variant="destructiveGhost"
           size="icon"
-          aria-label={`Delete topic ${accessibleName ?? label}`}
+          aria-label={`Delete topic ${name}`}
           onClick={onDelete}
           className="size-8 shrink-0"
         >
@@ -284,5 +314,67 @@ function TopicItem({
         </Button>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * A topic's name, edited in place. Enter saves and Escape cancels; a failed
+ * save keeps the typed name so the user can retry, and an unchanged or empty
+ * name saves nothing.
+ */
+function TopicRenameForm({
+  current,
+  name,
+  nested,
+  onRename,
+  onDone,
+}: Readonly<{
+  current: string;
+  name: string;
+  nested: boolean;
+  onRename: (name: string) => Promise<void>;
+  onDone: () => void;
+}>) {
+  const [draft, setDraft] = useState(current);
+  const [saving, setSaving] = useState(false);
+  const submit = async () => {
+    const trimmed = draft.trim();
+    if (!trimmed || trimmed === current) {
+      onDone();
+      return;
+    }
+    setSaving(true);
+    try {
+      await onRename(trimmed);
+      onDone();
+    } catch {
+      // Error surfaced via `actionError`; keep the typed name.
+    } finally {
+      setSaving(false);
+    }
+  };
+  return (
+    <form
+      className={cn('flex items-center gap-2 px-1', nested && 'ms-3')}
+      onSubmit={(event) => {
+        event.preventDefault();
+        void submit();
+      }}
+    >
+      <Input
+        // oxlint-disable-next-line jsx-a11y/no-autofocus -- Rename explicitly opens this field; focus follows the invoking action.
+        autoFocus
+        value={draft}
+        onChange={(event) => setDraft(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape') onDone();
+        }}
+        aria-label={`New name for ${name}`}
+        className="h-8"
+      />
+      <Button type="submit" variant="secondary" size="sm" disabled={saving || !draft.trim()}>
+        Save
+      </Button>
+    </form>
   );
 }

@@ -1012,6 +1012,33 @@
         ],
         "additionalProperties": false
       },
+      "AnswerStates": {
+        "type": "object",
+        "properties": {
+          "mentioned_and_cited": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "mentioned_only": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "cited_only": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "neither": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": ["mentioned_and_cited", "mentioned_only", "cited_only", "neither"],
+        "additionalProperties": false
+      },
       "Audit": {
         "type": "object",
         "properties": {
@@ -2240,6 +2267,18 @@
           },
           "subject": {
             "type": ["string", "null"]
+          },
+          "prompt_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -4230,6 +4269,193 @@
         ],
         "additionalProperties": false
       },
+      "PromptHistory": {
+        "type": "object",
+        "properties": {
+          "prompt": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "text": {
+                "type": "string"
+              },
+              "topic_id": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "status": {
+                "type": "string"
+              }
+            },
+            "required": ["id", "text", "topic_id", "status"],
+            "additionalProperties": false
+          },
+          "cohort": {
+            "$ref": "#/components/schemas/PromptCohort"
+          },
+          "market_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "logical_engine": {
+            "type": ["string", "null"]
+          },
+          "points": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PromptHistoryPoint"
+            }
+          },
+          "implementations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PromptHistoryImplementation"
+            }
+          },
+          "latest": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PromptMetricItem"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "prompt",
+          "cohort",
+          "market_id",
+          "logical_engine",
+          "points",
+          "implementations",
+          "latest"
+        ],
+        "additionalProperties": false
+      },
+      "PromptHistoryImplementation": {
+        "type": "object",
+        "properties": {
+          "implementation_event_id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "action_id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ActionStatus"
+          },
+          "implemented_at": {
+            "type": "string"
+          }
+        },
+        "required": ["implementation_event_id", "action_id", "title", "status", "implemented_at"],
+        "additionalProperties": false
+      },
+      "PromptHistoryPoint": {
+        "type": "object",
+        "properties": {
+          "audit_id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "completed_at": {
+            "type": "string"
+          },
+          "prompt_text": {
+            "type": "string"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/MeasurementCounts"
+          },
+          "mention_rate": {
+            "type": ["number", "null"]
+          },
+          "owned_citation_rate": {
+            "type": ["number", "null"]
+          },
+          "answer_states": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AnswerStates"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source_analysis_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          "comparison_key": {
+            "type": ["string", "null"]
+          },
+          "analyzer_version": {
+            "type": "string"
+          },
+          "scoring_rule_version": {
+            "type": "string"
+          },
+          "comparable_with_previous": {
+            "type": ["boolean", "null"]
+          },
+          "source_snapshot_id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          }
+        },
+        "required": [
+          "audit_id",
+          "completed_at",
+          "prompt_text",
+          "counts",
+          "mention_rate",
+          "owned_citation_rate",
+          "answer_states",
+          "source_analysis_ids",
+          "comparison_key",
+          "analyzer_version",
+          "scoring_rule_version",
+          "comparable_with_previous",
+          "source_snapshot_id"
+        ],
+        "additionalProperties": false
+      },
       "PromptIntent": {
         "type": "string",
         "enum": ["", "discovery", "comparison", "purchase", "service", "local"]
@@ -4385,6 +4611,28 @@
           "counts": {
             "$ref": "#/components/schemas/MeasurementCounts"
           },
+          "answer_states": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AnswerStates"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "action_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "outcomes": {
             "type": "array",
             "items": {
@@ -4404,6 +4652,16 @@
                 },
                 "owned_citation_rate": {
                   "type": ["number", "null"]
+                },
+                "answer_states": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/AnswerStates"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
                 },
                 "gap_counts": {
                   "type": "object",
@@ -8760,6 +9018,87 @@
               "default": "core",
               "type": "string",
               "enum": ["core", "comparison"]
+            }
+          }
+        ],
+        "x-citeladder-scope": "read"
+      }
+    },
+    "/v1/projects/{project_id}/visibility/prompts/{prompt_id}/history": {
+      "get": {
+        "tags": ["visibility"],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromptHistory"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "prompt_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "market",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "name": "engine",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": ["string", "null"]
+            }
+          },
+          {
+            "name": "cohort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": ["core", "comparison"]
+                },
+                {
+                  "type": "null"
+                }
+              ]
             }
           }
         ],

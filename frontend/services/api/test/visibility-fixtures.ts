@@ -522,7 +522,13 @@ export class VisibilityFixtures extends Fixtures {
   async promptScore(
     tenant: Tenant,
     auditId: string,
-    input: { promptIndex: number; promptText: string; composite: number; cohort?: string },
+    input: {
+      promptIndex: number;
+      promptText: string;
+      composite: number;
+      cohort?: string;
+      promptId?: string;
+    },
   ): Promise<string> {
     const id = randomUUID();
     await this.database
@@ -532,7 +538,7 @@ export class VisibilityFixtures extends Fixtures {
         workspace_id: tenant.workspaceId,
         project_id: tenant.projectId,
         audit_id: auditId,
-        prompt_id: null,
+        prompt_id: input.promptId ?? null,
         prompt_identity: input.promptText,
         prompt_index: input.promptIndex,
         prompt_text: input.promptText,

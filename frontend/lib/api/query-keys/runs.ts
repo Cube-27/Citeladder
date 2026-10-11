@@ -47,6 +47,8 @@ export const visibilityKeys = {
     ['visibility', 'markets', projectId, filters] as const,
   prompts: (projectId: string, auditId?: string) =>
     ['visibility', 'prompts', projectId, auditId ?? 'latest'] as const,
+  promptHistory: (projectId: string, promptId: string, filters: ListFilters = {}) =>
+    ['visibility', 'prompt-history', projectId, promptId, filters] as const,
   competitorSuggestions: (projectId: string) =>
     ['visibility', 'competitor-suggestions', projectId] as const,
 };

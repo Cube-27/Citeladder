@@ -329,6 +329,10 @@ describe('Action routes', () => {
       baseline_metric_snapshot_id: s.metric_snapshot_id,
       target_prompt_id: s.prompt0_id,
     });
+    // The check reads as the prompt's text and links to its history by id.
+    expect(result.checks).toMatchObject([
+      { kind: 'visibility_metric', subject: 'best crm for small teams', prompt_id: s.prompt0_id },
+    ]);
     const missing = await seed();
     await db
       .deleteFrom('audit_prompt_snapshots')
@@ -391,6 +395,8 @@ describe('Action routes', () => {
       },
     ]);
     expect(body.legs).toMatchObject([{ leg: 'next_visibility_run' }]);
+    // A prompt this project no longer tracks names nothing, never a bare id.
+    expect(body.checks).toMatchObject([{ subject: null, prompt_id: null }]);
     expect((await declare(s, 'earned', 'earned')).status).toBe(200);
     // The existing schema prevents a declaration claiming both target kinds.
     await expect(

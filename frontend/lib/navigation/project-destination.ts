@@ -127,6 +127,7 @@ export function useCanonicalProjectUrl(enabled: boolean) {
 const PROJECT_OWNED_PATH_ROOTS: ReadonlyArray<readonly [RegExp, string]> = [
   [/^\/site\/crawls\//, '/site'],
   [/^\/runs\/[^/]+/, '/runs'],
+  [/^\/prompts\/[^/]+/, '/prompts'],
   [/^\/agent\/chats\/[^/]+/, '/agent'],
   [/^\/agent\/actions\/[^/]+/, '/agent/actions'],
 ];

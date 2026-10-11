@@ -3,9 +3,11 @@
 import { Badge } from '@/components/ui/badge';
 import { OnPageEntities } from '@/components/ui/on-page-entities';
 import { panelClasses } from '@/components/ui/panel';
+import { TextLink } from '@/components/ui/text-link';
 import { Limitations } from '@/components/ui/passage';
 import { Label, textRole } from '@/components/ui/typography';
 import type { OpportunityDetail } from '@/lib/api/types';
+import { promptHistoryHref } from '@/lib/prompts/history';
 import { BrandOnPage } from '@/components/visibility/brand-on-page';
 import { brandVerdict, onPageCompetitors, readingSentence } from '@/lib/visibility/source-pages';
 import { urlTypeLabel } from '@/lib/visibility/vocabulary';
@@ -80,12 +82,15 @@ function Prompts({ prompts }: Readonly<{ prompts?: Handoff['affected_prompts'] }
       <ul className="grid gap-1">
         {prompts.map((prompt) => (
           <li key={prompt.prompt_id} className={textRole('body')}>
-            {prompt.text}
+            <TextLink href={promptHistoryHref(prompt.prompt_id)} text="inherit">
+              {prompt.text}
+            </TextLink>
           </li>
         ))}
       </ul>
       <p className="type-caption">
-        Once you mark this done, visibility on these prompts is measured after the next runs.
+        Once you mark this done, visibility on these prompts is measured after the next runs. The
+        history of each prompt marks when the work went live.
       </p>
     </div>
   );

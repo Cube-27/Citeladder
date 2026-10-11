@@ -69,7 +69,8 @@ selectable.
 
 Topics may have one level of subtopics (`Topic.parent_id`, same project); a
 subtopic cannot have children, and deleting a parent promotes its subtopics.
-The topic rail adds a subtopic under a chosen top-level topic.
+The topic rail adds a subtopic under a chosen top-level topic and renames a
+topic in place (Enter saves, Escape cancels, a failed save keeps the typed name).
 
 The [business map](../frontend/services/api/src/projects/business-map.ts), edited under
 Brand knowledge and stored in `BusinessContext.business_map`, lists per
@@ -257,7 +258,8 @@ prioritizes question text, topic, measurement and enabled state; classification
 is secondary detail on the question, available on keyboard focus and to screen readers.
 
 `/prompts` opens directly on the prompt library: topics rail, Active/Archived
-tabs, and each prompt's topic and latest measured visibility. Its actions are
+tabs, and each prompt's topic, latest measured visibility and owned citation
+rate. A prompt's question opens its detail view (below). Its actions are
 Bulk upload, Generate prompts, Add prompt and **Launch audit**, which reuses the
 shared launch dialog and its admission/funding checks and stays disabled until
 the project has an active prompt. `/prompts?generate=1` opens the Generate
@@ -637,7 +639,38 @@ Browser history restores the analytical context. Competitor suggestions remain
 in Overview Facts rather than becoming measurement evidence automatically.
 
 The [pending integrations work](plans/backlog.md#integrations-and-ai-visibility)
-covers richer observed-state/action links and selected-search-query generation.
+covers Opportunity sorting, Trends summaries and selected-search-query generation.
 Existing observed-query context does not mean that selection/provenance UX is
 complete. Historical evaluation numbers do not establish current acceptance
 or a model recommendation.
+
+### One prompt over time
+
+`GET /visibility/prompts/{prompt_id}/history`
+([prompt history](../frontend/services/api/src/visibility/prompt-history.ts))
+reads one tracked prompt in one market (`market`, optional `engine`, and
+`cohort`, which defaults to the prompt's own):
+the newest `trend_max_points` dashboard-ready brand runs that scored it in
+`prompt_metric_snapshots`, oldest first, each with its mention rate and owned
+citation rate over that run's persisted answers for the prompt, the four
+answer states, the snapshot id and the ids of the answers it counted. A run with no successful answer has null
+rates (unavailable, never zero), and `comparable_with_previous` is false when
+the frozen comparison key, prompt text or analyzer/scoring versions changed.
+`implementations` lists the Actions whose frozen declaration checks measure the
+prompt (prompt-targeted and earned), with each declaration's id and go-live
+time (the newest `trend_max_points` kept); `latest` is the
+newest such run's prompt row with per-engine outcomes. Prompt rows carry
+`answer_states` (mentioned and cited, mentioned only, cited only, neither; one
+answer counted once) and `action_id`, the live Action that targets the prompt
+(an Action whose evidence was cleared is not offered).
+
+`/prompts/{prompt_id}` charts mention and owned citation rates per run, breaks
+the line at non-comparable runs, and marks each implementation, with the list
+of that work and the notice that a marker shows when work went live, not that
+it moved a rate. Its Mentions and citations card shows the latest run's answer
+states overall and per engine, answer coverage, the competitors named where the
+brand was not, and the hand-off to the prompt's Action. Overview's "Where
+you're missing" lists the latest default-market run's prompts and engines whose
+answers named a competitor but not the brand, each linking to its Action (or
+its prompt when none exists yet). An Action's prompt checks and an earned
+brief's cited prompts link to the prompt's view.

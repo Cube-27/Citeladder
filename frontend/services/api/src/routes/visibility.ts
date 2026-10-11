@@ -1,7 +1,7 @@
 /**
  * `visibility`: every persisted visibility read for one measurement
- * selection: the dashboard, prompt scores, trends, query fanout, Sources
- * (table, series and one URL), per-answer evidence, answer perception
+ * selection: the dashboard, prompt scores and one prompt's history, trends,
+ * query fanout, Sources (table, series and one URL), per-answer evidence, answer perception
  * (summary and quotes), fact-check accuracy (summary and claims), ads in AI
  * answers and the observed AI Overview rates.
  *
@@ -16,6 +16,7 @@ import {
   claimVerdictSchema,
 } from '@citeladder/contracts/fact-checking';
 import {
+  promptHistorySchema,
   promptMetricItemSchema,
   visibilityMarketsSchema,
   visibilitySchema,
@@ -47,6 +48,7 @@ import { getVisibilityEvidence } from '../visibility/evidence.ts';
 import { getVisibilityFanout } from '../visibility/fanout.ts';
 import { getMarketVisibility } from '../visibility/markets.ts';
 import { getPerception, getPerceptionQuotes } from '../visibility/perception.ts';
+import { getPromptHistory } from '../visibility/prompt-history.ts';
 import { getPromptMetrics } from '../visibility/prompts.ts';
 import {
   AnalysisNotFoundError,
@@ -324,6 +326,28 @@ export const visibilityRoutes = [
           baselineAuditIds: query.baseline_audit_ids,
           logicalEngine: query.engine,
           baselineId: query.baseline_id,
+          cohort: query.cohort,
+        }),
+      );
+    },
+  }),
+  defineGetRoute({
+    family: 'visibility',
+    exposure: 'both',
+    path: '/api/v1/projects/{project_id}/visibility/prompts/{prompt_id}/history',
+    params: {
+      path: { ...PROJECT_PATH, prompt_id: { scalar: { kind: 'uuid' }, required: true } },
+      // No cohort reads the prompt's own.
+      query: { ...MARKET, engine: { scalar: { kind: 'str' } }, cohort: { scalar: COHORT.scalar } },
+    },
+    response: promptHistorySchema,
+    async handle({ c, db }, { path, query }) {
+      const workspace = c.get('workspace');
+      await requireProject(db, workspace, path.project_id);
+      return selectionErrors(() =>
+        getPromptHistory(db, marketScope(workspace.workspaceId, path.project_id, query.market), {
+          promptId: path.prompt_id,
+          logicalEngine: query.engine,
           cohort: query.cohort,
         }),
       );

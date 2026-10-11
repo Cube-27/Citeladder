@@ -17,20 +17,56 @@ const observationKind = z.enum(['observed', 'verified', 'contradicted']);
 const o = policy.opportunity.opportunities;
 const legOf: Record<string, string> = policy.opportunity.actions.CHECK_KIND_MEASUREMENT_LEG;
 
-/** What a check names, for a reader: its rule, prompt, page or query, link or publisher page. */
-function subject(check: Record<string, unknown>): string | null {
+/**
+ * What a check names, for a reader: its rule, prompt text, page or query, link
+ * or publisher page. A prompt deleted since names nothing.
+ */
+function subject(check: Record<string, unknown>, prompts: ReadonlyMap<string, string>) {
   const text = (value: unknown) => scalarText(value) || null;
   if (check.kind === 'site_rule') return ruleTitle(scalarText(check.rule_id));
-  if (check.kind === 'visibility_metric') return text(check.target_prompt_id);
+  if (check.kind === 'visibility_metric')
+    return prompts.get(scalarText(check.target_prompt_id)) ?? null;
   if (check.kind === 'traffic_metric') return text(check.scope_key);
   if (check.kind === 'keyword_presence') return text(check.keyword);
   return text(check.target_url);
 }
 
+/** The project's tracked prompts that visibility checks measure, by id. */
+async function checkPrompts(
+  db: Database,
+  row: Selectable<OpportunityImplementationEvents>,
+  checks: Record<string, unknown>[],
+): Promise<Map<string, string>> {
+  const ids = [
+    ...new Set(
+      checks.flatMap((check) =>
+        check.kind === 'visibility_metric' && scalarText(check.target_prompt_id)
+          ? [scalarText(check.target_prompt_id)]
+          : [],
+      ),
+    ),
+  ];
+  if (!ids.length) return new Map();
+  const prompts = await db
+    .selectFrom('prompts')
+    .innerJoin('prompt_sets', 'prompt_sets.id', 'prompts.prompt_set_id')
+    .select(['prompts.id', 'prompts.text'])
+    .where('prompt_sets.project_id', '=', row.project_id)
+    .where('prompts.id', 'in', ids)
+    .execute();
+  return new Map(prompts.map((prompt) => [prompt.id, prompt.text]));
+}
+
 /** Each expected check with the state the latest observation folded for it. */
-function checkStates(checks: Record<string, unknown>[], result: unknown) {
+function checkStates(
+  checks: Record<string, unknown>[],
+  result: unknown,
+  prompts: ReadonlyMap<string, string>,
+) {
   const outcomes = storedOutcomes(result);
   return checks.map((check, index) => {
+    const promptId =
+      check.kind === 'visibility_metric' ? scalarText(check.target_prompt_id) || null : null;
     const found = outcomes.get(index);
     return {
       index,
@@ -41,7 +77,8 @@ function checkStates(checks: Record<string, unknown>[], result: unknown) {
       observed_at: found?.observed_at ?? null,
       source_kind: found?.source_kind ?? null,
       source_id: found?.source_id ?? null,
-      subject: subject(check),
+      subject: subject(check, prompts),
+      prompt_id: promptId && prompts.has(promptId) ? promptId : null,
     };
   });
 }
@@ -107,7 +144,9 @@ export async function declarationView(
         last_evidence_at: leg.last_evidence_at?.toISOString() ?? null,
       }),
     ),
-    checks: z.array(declarationCheckSchema).parse(checkStates(checks, latest?.result)),
+    checks: z
+      .array(declarationCheckSchema)
+      .parse(checkStates(checks, latest?.result, await checkPrompts(db, row, checks))),
     measured_until: measuredUntil.toISOString(),
     created_at: row.created_at.toISOString(),
   };

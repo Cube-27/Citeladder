@@ -112,6 +112,29 @@ describe('Declaration status', () => {
     subject: 'Missing structured data',
   });
 
+  it("links a prompt check to that prompt's history", () => {
+    const promptId = '33333333-3333-4333-8333-333333333333';
+    renderWithProviders(
+      <DeclarationStatus
+        declaration={declaration([
+          {
+            ...pageCheck('met'),
+            kind: 'visibility_metric',
+            leg: 'next_visibility_run',
+            subject: 'best crm for agencies',
+            prompt_id: promptId,
+          },
+        ])}
+        workspaceId={WORKSPACE}
+      />,
+      { projectSelection: selection },
+    );
+    expect(screen.getByRole('link', { name: 'best crm for agencies' })).toHaveAttribute(
+      'href',
+      expect.stringMatching(new RegExp(`^/prompts/${promptId}(\\?|$)`)),
+    );
+  });
+
   it('offers a crawl while a page check lacks a met reading, and says why', () => {
     const { unmount } = renderWithProviders(
       <DeclarationStatus

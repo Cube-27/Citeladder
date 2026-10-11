@@ -57,6 +57,7 @@ import type {
   visibilityEvidenceResponseSchema,
   visibilityExecutionEvidenceSchema,
   visibilitySchema,
+  promptHistorySchema,
   promptMetricItemSchema,
   observedCompetitorSchema,
   visibilityTrendPointSchema,
@@ -147,6 +148,7 @@ export type ExecutionStatus = z.infer<typeof executionStatusSchema>;
 export type CitationClassification = z.infer<typeof citationClassificationSchema>;
 export type Execution = z.infer<typeof executionSchema>;
 export type PromptMetricItem = z.infer<typeof promptMetricItemSchema>;
+export type PromptHistory = z.infer<typeof promptHistorySchema>;
 export type ObservedCompetitor = z.infer<typeof observedCompetitorSchema>;
 export type ExecutionEvidence = z.infer<typeof executionEvidenceSchema>;
 export type SearchSurfaceEvidence = z.infer<typeof searchSurfaceEvidenceSchema>;

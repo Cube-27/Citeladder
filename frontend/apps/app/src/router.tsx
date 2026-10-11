@@ -125,6 +125,11 @@ const screenRoutes: RouteObject[] = [
       default: PromptsRouteElement,
     })),
   ),
+  productRoute('/prompts/:promptId', () =>
+    import('./product-routes-prompts-commerce-traffic').then(({ PromptDetailRouteElement }) => ({
+      default: PromptDetailRouteElement,
+    })),
+  ),
   productRoute('/products', () =>
     import('./product-routes-prompts-commerce-traffic').then(({ ProductsRouteElement }) => ({
       default: ProductsRouteElement,

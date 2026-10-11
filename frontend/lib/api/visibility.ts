@@ -26,6 +26,7 @@ import { competitorSchema } from '@citeladder/contracts/project';
 import { strictValidate } from '@citeladder/contracts/validation';
 import {
   observedCompetitorSchema,
+  promptHistorySchema,
   promptMetricItemSchema,
   visibilityMarketsSchema,
   visibilitySchema,
@@ -39,6 +40,7 @@ import { definedQuery, withQuery } from './shared';
 import type {
   ObservedCompetitor,
   Competitor,
+  PromptHistory,
   PromptMetricItem,
   Visibility,
   VisibilityEvidenceResponse,
@@ -338,6 +340,23 @@ export const visibilityApi = {
     );
     const res = await apiClient.get<PromptMetricItem[]>(path, options);
     return strictValidate(promptMetricListSchema, res, 'visibility.getPromptMetrics');
+  },
+  /**
+   * One prompt's mention and owned-citation rates per run in a market, the
+   * Actions declared on it, and its latest per-engine outcomes.
+   */
+  getPromptHistory: async (
+    projectId: string,
+    promptId: string,
+    params: { market?: string; engine?: string },
+    options?: ApiRequestOptions,
+  ): Promise<PromptHistory> => {
+    const path = withQuery(
+      `/projects/${projectId}/visibility/prompts/${promptId}/history`,
+      definedQuery(params),
+    );
+    const res = await apiClient.get<PromptHistory>(path, options);
+    return strictValidate(promptHistorySchema, res, 'visibility.getPromptHistory');
   },
   listCompetitorSuggestions: async (
     projectId: string,

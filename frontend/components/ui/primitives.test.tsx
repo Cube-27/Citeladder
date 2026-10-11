@@ -260,6 +260,27 @@ describe('TrendChart (cross-run Visibility trend)', () => {
     ).toBeInTheDocument();
   });
 
+  it('marks events inside the plotted time span and names them to a screen reader', () => {
+    const day = (date: string) => new Date(`${date}T00:00:00Z`).getTime();
+    render(
+      <TrendChart
+        label="Mention rate"
+        data={[
+          { label: '1 Mar', value: 40, timestamp: day('2026-03-01') },
+          { label: '15 Mar', value: 70, timestamp: day('2026-03-15') },
+        ]}
+        events={[
+          { key: 'inside', timestamp: day('2026-03-05'), label: 'Implemented: reviews page' },
+          { key: 'before', timestamp: day('2026-02-01'), label: 'Implemented: old page' },
+        ]}
+      />,
+    );
+    const chart = screen.getByRole('img', {
+      name: 'Mention rate: Trend from 1 Mar (40) to 15 Mar (70) Marked: Implemented: reviews page.',
+    });
+    expect(chart.querySelectorAll('[data-event-marker]')).toHaveLength(1);
+  });
+
   it('marks a version boundary with an accessible warning marker', () => {
     render(
       <TrendChart
