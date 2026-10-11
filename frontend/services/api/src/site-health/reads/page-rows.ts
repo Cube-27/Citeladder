@@ -19,7 +19,7 @@ import {
 } from '../../http/keyset-cursor.ts';
 import { containsPattern } from '../../db/like.ts';
 import { parseUuid } from '../../http/uuid.ts';
-import { inventoryCrawlIds, isTerminal, ROW_TASK, type Crawl } from './crawl.ts';
+import { inventoryCrawlIds, isTerminal, ROW_TASK, ROW_TASK_ORDER, type Crawl } from './crawl.ts';
 
 const reads = policy.site_health.reads;
 const PERSISTED = ['completed', 'partially_completed'];
@@ -226,7 +226,7 @@ export async function pageRows(
         select t.status, t.error_code from site_crawl_tasks t
         where t.workspace_id = u.workspace_id and t.crawl_id = ${crawl.id}
           and t.site_url_id = u.id and ${ROW_TASK}
-        order by t.task_kind = 'analyze' desc, t.generation desc, t.created_at desc limit 1
+        order by ${ROW_TASK_ORDER}, t.created_at desc limit 1
       ) t on true
       left join site_page_link_metrics l
         on l.workspace_id = u.workspace_id and l.project_id = u.project_id

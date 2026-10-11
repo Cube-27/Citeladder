@@ -27,6 +27,7 @@ import {
   formatAudited,
   pageDisplayTitle,
   pageStatusBadgeValue,
+  isFetchFailure,
   statusLabel,
 } from '@/lib/site-health/status';
 import { TrafficUrlButton } from '@/components/ai-traffic/url-panel';
@@ -160,8 +161,7 @@ function PageMeasurements({ detail }: Readonly<{ detail: PageDetail }>) {
 
 /** A URL that failed to fetch: the pages that link it, which is where the fix goes. */
 function LinkedFrom({ detail }: Readonly<{ detail: PageDetail }>) {
-  if (!['error', 'blocked'].includes(detail.analysis_status) || !detail.linked_from.length)
-    return null;
+  if (!isFetchFailure(detail.analysis_status) || !detail.linked_from.length) return null;
   return (
     <Card className="min-w-0">
       <CardHeader>

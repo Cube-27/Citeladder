@@ -199,6 +199,31 @@ async function writeObservation(
     .where('url_hash', '=', identity.hash)
     .executeTakeFirst();
   if (!url) return null;
+  await insertObservation(trx, crawl, task, url.id, {
+    artifactId,
+    finalUrl: page.url,
+    statusCode: page.status,
+    contentType: page.contentType,
+    title: discovery.title,
+  });
+  return url.id;
+}
+
+/** The task's observation of its URL in this crawl, with the frontier's rewrite provenance. */
+async function insertObservation(
+  trx: Database,
+  crawl: Crawl,
+  task: SiteTask,
+  siteUrlId: string,
+  fetched: {
+    artifactId: string | null;
+    finalUrl: string;
+    statusCode: number | null;
+    contentType: string;
+    title: string;
+  },
+) {
+  const admission = classifyUrlAdmission(task.requested_url);
   const rewrite = await trx
     .selectFrom('site_discovery_frontier')
     .where('workspace_id', '=', crawl.workspace_id)
@@ -213,25 +238,24 @@ async function writeObservation(
       workspace_id: crawl.workspace_id,
       project_id: crawl.project_id,
       crawl_id: crawl.id,
-      site_url_id: url.id,
-      source_kind: sourceKind,
+      site_url_id: siteUrlId,
+      source_kind: task.depth === 0 ? 'root' : 'link',
       parent_site_url_id: task.parent_site_url_id,
-      source_artifact_id: artifactId,
+      source_artifact_id: fetched.artifactId,
       value_kind: admission.valueKind,
       value_priority: admission.priority,
       rewrite_reason: rewrite?.rewrite_reason ?? '',
       rewrite_version: rewrite?.rewrite_version ?? '',
       depth: task.depth,
       observed_url: task.requested_url,
-      final_url: page.url,
-      status_code: page.status,
-      content_type: page.contentType.slice(0, 128),
-      title: discovery.title,
-      created_at: now,
+      final_url: fetched.finalUrl,
+      status_code: fetched.statusCode,
+      content_type: fetched.contentType.slice(0, 128),
+      title: fetched.title,
+      created_at: new Date(),
     })
     .onConflict((conflict) => conflict.columns(['crawl_id', 'site_url_id']).doNothing())
     .execute();
-  return url.id;
 }
 
 /**
@@ -242,32 +266,13 @@ async function writeObservation(
  */
 async function observeFailure(trx: Database, crawl: Crawl, task: SiteTask, outcome: Outcome) {
   if (!task.site_url_id || EXCLUDED.has(outcome.errorCode)) return;
-  const admission = classifyUrlAdmission(task.requested_url);
-  await trx
-    .insertInto('site_url_observations')
-    .values({
-      id: randomUUID(),
-      workspace_id: crawl.workspace_id,
-      project_id: crawl.project_id,
-      crawl_id: crawl.id,
-      site_url_id: task.site_url_id,
-      source_kind: task.depth === 0 ? 'root' : 'link',
-      parent_site_url_id: task.parent_site_url_id,
-      source_artifact_id: null,
-      value_kind: admission.valueKind,
-      value_priority: admission.priority,
-      rewrite_reason: '',
-      rewrite_version: '',
-      depth: task.depth,
-      observed_url: task.requested_url,
-      final_url: outcome.page?.url ?? task.requested_url,
-      status_code: outcome.statusCode,
-      content_type: outcome.page?.contentType.slice(0, 128) ?? '',
-      title: '',
-      created_at: new Date(),
-    })
-    .onConflict((conflict) => conflict.columns(['crawl_id', 'site_url_id']).doNothing())
-    .execute();
+  await insertObservation(trx, crawl, task, task.site_url_id, {
+    artifactId: null,
+    finalUrl: outcome.page?.url ?? task.requested_url,
+    statusCode: outcome.statusCode,
+    contentType: outcome.page?.contentType ?? '',
+    title: '',
+  });
 }
 
 /**

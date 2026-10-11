@@ -322,6 +322,8 @@ export async function rootFailure(db: Database, crawl: Crawl) {
 export const ROW_TASK = sql`(t.task_kind = 'analyze'
   or (t.task_kind = 'discover' and t.status = 'failed'
     and t.error_code <> all(${reads.corpus_exclusion_error_codes}::text[])))`;
+/** Which `ROW_TASK` row wins: the analysis, then the latest generation. */
+export const ROW_TASK_ORDER = sql`t.task_kind = 'analyze' desc, t.generation desc`;
 
 /** Live task counters for the dashboard's selected crawl. */
 export async function crawlCounters(db: Database, crawl: Crawl): Promise<Counters> {
@@ -351,7 +353,7 @@ export async function crawlCounters(db: Database, crawl: Crawl): Promise<Counter
       from site_crawl_tasks t
       where t.workspace_id = ${crawl.workspace_id} and t.crawl_id = ${crawl.id}
         and ${ROW_TASK} and t.site_url_id is not null
-      order by t.site_url_id, t.task_kind = 'analyze' desc, t.generation desc
+      order by t.site_url_id, ${ROW_TASK_ORDER}
     )
     select
       count(*) filter (where status in ('queued','retry_wait','capacity_wait'))::int as queued,

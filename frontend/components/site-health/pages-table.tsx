@@ -27,6 +27,7 @@ import {
   formatScore,
   pageDisplayTitle,
   pageStatusBadgeValue,
+  isFetchFailure,
   statusLabel,
 } from '@/lib/site-health/status';
 import { textRole } from '@/components/ui/typography';
@@ -52,15 +53,17 @@ import { useDisplayTimeZone } from '@/lib/display-timezone';
  * a sort rather than toggling one.
  */
 
-const FAILED_STATUSES = new Set(['error', 'blocked']);
-
 /** Where a failing URL is linked from: the first page, and how many more the crawl found. */
-function linkedFromLabel(referrers: PageSummary['linked_from']) {
-  const [first, ...rest] = referrers;
-  if (!first) return '';
-  return rest.length
-    ? `Linked from ${first.url} and ${rest.length} more`
-    : `Linked from ${first.url}`;
+function LinkedFromLine({ page }: Readonly<{ page: PageSummary }>) {
+  const [first, ...rest] = page.linked_from;
+  if (!first || !isFetchFailure(page.analysis_status)) return null;
+  return (
+    <ClampText lines={1} className="type-caption">
+      {rest.length
+        ? `Linked from ${first.url} and ${rest.length} more`
+        : `Linked from ${first.url}`}
+    </ClampText>
+  );
 }
 
 const LINK_COLUMNS: ReadonlyArray<{
@@ -183,11 +186,7 @@ export function PagesTable({
                 <ClampText lines={1} className="type-caption tabular-nums">
                   {page.display_url}
                 </ClampText>
-                {FAILED_STATUSES.has(page.analysis_status) && page.linked_from.length > 0 ? (
-                  <ClampText lines={1} className="type-caption">
-                    {linkedFromLabel(page.linked_from)}
-                  </ClampText>
-                ) : null}
+                <LinkedFromLine page={page} />
               </span>
             </TableCell>
             <TableCell className="whitespace-nowrap">

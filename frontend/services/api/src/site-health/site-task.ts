@@ -148,11 +148,11 @@ export function httpError(status: number): [string, boolean] | null {
   return status >= 500 ? [codes.http_5xx, true] : null;
 }
 
-/** Settle the leased task: success with its artifact, a backed-off retry, or a terminal failure. */
 /** Whether this failed attempt settles the task as failed rather than retrying it. */
 export const finalFailure = (task: SiteTask, retryable: boolean) =>
   !retryable || task.attempt_count + 1 >= task.max_attempts;
 
+/** Settle the leased task: success with its artifact, a backed-off retry, or a terminal failure. */
 export async function settleTask(
   trx: Database,
   ctx: SiteTaskContext,

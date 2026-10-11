@@ -361,6 +361,11 @@ export function isErrorRow(status: PageAnalysisStatus): boolean {
   );
 }
 
+/** True when the URL itself could not be fetched or analyzed, so its linking pages need the fix. */
+export function isFetchFailure(status: PageAnalysisStatus): boolean {
+  return status === 'error' || status === 'blocked';
+}
+
 /** Human-readable label for any snake_case lifecycle token. */
 export function statusLabel(status: string): string {
   return titleCaseStatus(status);

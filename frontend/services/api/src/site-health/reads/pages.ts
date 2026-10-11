@@ -109,15 +109,17 @@ export async function pages(
 ) {
   const crawl = await loadCrawl(db, workspaceId, crawlId);
   // A failed root fetch never became a page row, so its calls ride alongside.
-  const [{ items, next }, root] = await Promise.all([
-    window(db, crawl, 'pages', filters, sort, paging),
+  const [{ items, next, referrers }, root] = await Promise.all([
+    window(db, crawl, 'pages', filters, sort, paging).then(async (page) => ({
+      ...page,
+      referrers: await linkedFrom(
+        db,
+        crawl,
+        page.items.map((row) => row.site_url_id),
+      ),
+    })),
     rootFailure(db, crawl),
   ]);
-  const referrers = await linkedFrom(
-    db,
-    crawl,
-    items.map((row) => row.site_url_id),
-  );
   return pagesPageSchema.parse({
     items: items.map((row) => pageSummary(row, referrers)),
     next_cursor: next,
