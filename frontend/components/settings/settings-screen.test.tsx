@@ -47,6 +47,8 @@ const nextProject = {
 };
 const setActiveProjectId = vi.fn();
 vi.mock('@/lib/project/project-context', () => ({
+  // Links keep the active project; this screen's links carry none.
+  useOptionalProjectContext: () => null,
   useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   // Controls gate themselves on the caller's effective capability — an Owner here.
   useWorkspaceCapability: (capability: string) =>

@@ -47,6 +47,12 @@ export async function lockWorkspaceCapacity(db: Database, workspaceId: string): 
   return account.id;
 }
 
+/** What the plan allows, in the words the reader uses; never a registry key. */
+function projectLimitMessage(allowance: number, current: number) {
+  if (allowance < 1) return "Your plan doesn't include projects";
+  return `Your plan includes ${allowance} ${allowance === 1 ? 'project' : 'projects'}, and this workspace has ${current}`;
+}
+
 export async function admitProject(db: Database, workspaceId: string): Promise<void> {
   const accountId = await lockWorkspaceCapacity(db, workspaceId);
   const resolved = await resolveAccountEntitlement(db, { accountId, workspaceId }, new Date());
@@ -64,7 +70,7 @@ export async function admitProject(db: Database, workspaceId: string): Promise<v
     .executeTakeFirstOrThrow();
   const current = Number(row.count);
   if (current + 1 > allowance)
-    throw new ApiError(403, `The request would exceed the account's ${key} allowance`, {
+    throw new ApiError(403, projectLimitMessage(allowance, current), {
       code: LIMIT_EXCEEDED,
       details: { key, allowance, current, requested: 1 },
     });
@@ -312,8 +318,8 @@ export async function admitPrompts(
   });
   throw new ApiError(
     403,
-    `The request would exceed the account's ${PROMPT_SLOTS} allowance ` +
-      `(${current} in use, ${requested} requested, allowance ${allowance})`,
+    `Your plan includes ${allowance} ${allowance === 1 ? 'prompt' : 'prompts'}; ` +
+      `this workspace has ${current}, so ${requested} more would go over`,
     {
       code: LIMIT_EXCEEDED,
       details: { key: PROMPT_SLOTS, allowance, current, requested },

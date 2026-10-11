@@ -272,12 +272,69 @@ probe path. Removed as vestigial: the card-trial quote route,
 `credit_price`, 88 unreferenced contract keys and three unused HTTP settings.
 `billing:backfill` is now `billing:provision-workspace`, which is what it does.
 
-## Open questions
+## Operational but hidden (PR 3)
 
-- **Search Intelligence on managed plans.** Search Intelligence runs on the
-  workspace's own DataForSEO key (B17: not charged). A managed workspace hides
-  provider settings (B32), so it cannot add one. Should managed Search
-  Intelligence use the platform key, and if so, how is it charged?
+**B40 — Owner, 2026-10-11.** Search Intelligence on a managed plan runs on the
+platform's DataForSEO key and spends AI credits: the DataForSEO cost converts
+to credits exactly as token cost does (B14: cost × 1.3 ÷ $0.001, rounded up).
+On a BYOK plan DataForSEO is BYOK too: the workspace's own key, not charged
+(B17). Answers the open question raised with B38.
+
+**B41 — Engineering, 2026-10-11.** A managed analysis shows its estimate in
+credits at review. Confirming it holds that estimate; an exhausted balance
+refuses the confirmation and nothing is fetched. When the analysis ends, it is
+charged the DataForSEO cost of every request that succeeded (the reported cost,
+or the request's estimate when DataForSEO reports none), never more than the
+hold, and the rest is released. A failed, refused or unanswered request is never
+billed (B47). The review's existing cost ceiling still stops the run
+before it can pass the estimate. Dollar amounts are never shown for a managed
+analysis (B23).
+
+**B42 — Engineering, 2026-10-11.** The allow-list (B2) is the `billing_checkout`
+flag, non-public, issued with `billing:admin grant` and never part of
+development or account-manager full access. `BILLING_CHECKOUT_AUDIENCE` is
+`allow_list` (default) or `everyone`; the enable PR sets `everyone`. Test keys
+are accepted in production, but a test-mode checkout there serves allow-listed
+workspaces only, even with the audience set to everyone. The public catalog
+never reads a workspace and so never offers checkout before enablement; the app
+reads a workspace catalog with the same rules, so marketing and in-app billing
+show the same availability. While no self-serve plan is open, in-app billing
+lists no prices, as the pricing page does. In-app plan choice offers both modes.
+
+**B43 — Engineering, 2026-10-11.** A workspace whose trial or plan ended keeps
+exactly the path to buying a plan: the workspace catalog, its billing state, a
+new subscription and that subscription's checkout and verification. The
+ended-access screen offers the plans to an Owner or Admin. Add-ons, top-ups,
+plan changes, usage and invoices stay behind access.
+
+**B44 — Engineering, 2026-10-11.** Limit refusals say what the plan includes in
+plain words, never a registry key, and every refusal a bigger plan can lift
+links to billing.
+
+**B45 — Engineering, 2026-10-11.** Seller identity defaults to the values the
+owner recorded on 24 September (legal name, address, email, GSTIN and state);
+SAC, the LUT reference and the GST approval reference stay owner inputs. The
+GST rate has one authority: it is frozen with each India catalog price, plans
+and items alike, and quotes use that rate, never the setting it was authored
+from.
+
+**B46 — Owner, 2026-10-11.** A customer can resume a scheduled cancellation.
+Razorpay cannot undo a cancellation it has received, so CiteLadder holds it
+and sends it only shortly before renewal; resuming clears it until then.
+Engineering: the lead is `BILLING_CANCELLATION_SEND_LEAD_SECONDS` (two days, so
+it lands before any UPI AutoPay pre-debit notice), the subscription sweep
+retries the send every reconciliation interval, and the send is committed
+before the provider call so a resume cannot race it. Gap: if every send in that
+window fails, Razorpay renews once; the customer keeps that paid month and the
+cancellation applies at its end. Refunding that renewal is an operator Dashboard
+refund today, not automatic.
+
+**B47 — Owner, 2026-10-11.** A failed request is never billed to the customer.
+Engineering: a managed Search Intelligence request is charged only when
+DataForSEO returned a successful response that CiteLadder kept and did not later
+mark failed. A refused, unreadable, timed-out or unanswered request costs
+nothing, even when DataForSEO may have billed the platform for it; the hold
+releases that share.
 
 ## Owner inputs still required
 

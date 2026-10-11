@@ -13,7 +13,7 @@ import { textRole } from '@/components/ui/typography';
 import type { SearchIntelligenceRun } from '@/lib/api/search-intelligence';
 import { formatCount } from '@/lib/format';
 import { words } from '@/lib/ai-traffic/vocabulary';
-import { estimateUsd, reportedCost } from './search-intelligence-format';
+import { reportedCost, runEstimate } from './search-intelligence-format';
 
 const RUN_STATUS_LABELS: Readonly<Record<string, string>> = {
   succeeded: 'Complete',
@@ -126,9 +126,13 @@ export function CostDetails({
                 {
                   key: 'estimated',
                   label: 'Estimated',
-                  value: `$${estimateUsd(run.estimated_cost_usd)}`,
+                  value: runEstimate(run),
                 },
-                { key: 'reported', label: 'Charged by DataForSEO', value: reportedCost(run) },
+                {
+                  key: 'reported',
+                  label: run.credential_mode === 'funded' ? 'Charged' : 'Charged by DataForSEO',
+                  value: reportedCost(run),
+                },
                 {
                   key: 'calls',
                   label: 'Requests completed',
@@ -157,7 +161,7 @@ export function CostDetails({
       open={open}
       onOpenChange={onOpenChange}
       title="Cost details"
-      description="What each confirmed analysis was estimated to cost and what DataForSEO charged."
+      description="What each confirmed analysis was estimated to cost and what it was charged."
     >
       {content}
     </Drawer>

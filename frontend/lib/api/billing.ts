@@ -150,10 +150,10 @@ export const billingApi = {
       ),
       'billing.verifyCheckout',
     ),
-  catalog: async (countryCode?: string, options?: ApiRequestOptions) => {
+  workspaceCatalog: async (countryCode?: string, options?: ApiRequestOptions) => {
     const query = countryCode ? `?country=${encodeURIComponent(countryCode)}` : '';
-    const response = await apiClient.get<unknown>(`/billing/catalog${query}`, options);
-    return strictValidate(billingCatalogSchema, response, 'billing.catalog');
+    const response = await apiClient.get<unknown>(`/billing/workspace-catalog${query}`, options);
+    return strictValidate(billingCatalogSchema, response, 'billing.workspaceCatalog');
   },
 
   workspaceEntitlement: async (workspaceId: string, options?: ApiRequestOptions) => {
@@ -274,5 +274,9 @@ export const billingApi = {
   cancelSubscription: async (options?: ApiRequestOptions) => {
     const response = await apiClient.delete<unknown>('/billing/subscription', options);
     return strictValidate(subscriptionChangeSchema, response, 'billing.cancelSubscription');
+  },
+  resumeSubscription: async (options?: ApiRequestOptions) => {
+    const response = await apiClient.post<unknown>('/billing/subscription/resume', {}, options);
+    return strictValidate(subscriptionChangeSchema, response, 'billing.resumeSubscription');
   },
 };

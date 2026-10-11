@@ -24,14 +24,30 @@ const UNRECORDED_RESEARCH_SCOPE = 'exact_host';
 
 const iso = (value: Date | null): string | null => value?.toISOString() ?? null;
 
+/** A managed analysis shows credits only: no dollar amount and no platform connection (B23, B41). */
+function withoutMoney(managed: boolean, value: Record<string, unknown>) {
+  if (!managed) return value;
+  const {
+    estimated_cost_usd: _cost,
+    connection_id: _id,
+    connection_revision: _rev,
+    ...rest
+  } = value;
+  return rest;
+}
+
 export function runView(run: Run): z.input<typeof searchRunSchema> {
+  const managed = run.credential_source === 'platform';
   return {
     id: run.id,
     status: run.status,
     action: run.action,
     pricing_version: run.pricing_version,
-    estimated_cost_usd: run.estimated_cost_usd,
-    provider_reported_cost_usd: run.provider_reported_cost_usd,
+    credential_mode: managed ? 'funded' : 'byok',
+    estimated_cost_usd: managed ? null : run.estimated_cost_usd,
+    provider_reported_cost_usd: managed ? null : run.provider_reported_cost_usd,
+    estimated_credits: run.estimated_credits,
+    charged_credits: run.charged_credits,
     planned_calls: run.planned_calls,
     completed_calls: run.completed_calls,
     planned_rows: run.planned_rows,
@@ -43,8 +59,13 @@ export function runView(run: Run): z.input<typeof searchRunSchema> {
     confirmed_at: iso(run.confirmed_at),
     cancelled_at: iso(run.cancelled_at),
     completed_at: iso(run.completed_at),
-    frozen_scope: jsonObject(run.frozen_scope, 'search_intelligence_runs.frozen_scope'),
-    call_plan: jsonObjects(run.call_plan, 'search_intelligence_runs.call_plan'),
+    frozen_scope: withoutMoney(
+      managed,
+      jsonObject(run.frozen_scope, 'search_intelligence_runs.frozen_scope'),
+    ),
+    call_plan: jsonObjects(run.call_plan, 'search_intelligence_runs.call_plan').map((call) =>
+      withoutMoney(managed, call),
+    ),
     reused_datasets: jsonObjects(run.reused_datasets, 'search_intelligence_runs.reused_datasets'),
     created_at: run.created_at.toISOString(),
   };

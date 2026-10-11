@@ -406,6 +406,44 @@ function effectiveTerms(sub: Subscription, event: SubscriptionEvidence) {
   return { terms, renewal: false };
 }
 
+/** The subscription's state after this evidence; a paid terminal period runs to its end. */
+async function periodOutcome(
+  db: Database,
+  sub: Subscription,
+  event: SubscriptionEvidence,
+  workspaceId: string,
+  now: Date,
+) {
+  const status = event.cancelAtEnd && event.status === 'active' ? 'cancel_scheduled' : event.status;
+  const settled = { status, end: event.end, endedAt: sub.ended_at, current: sub.is_current };
+  if (!terminalStates.has(status)) return settled;
+  const paidEnd = await endTerminal(db, sub, event.version, workspaceId, now);
+  return paidEnd
+    ? { ...settled, end: paidEnd, status: 'cancel_scheduled' }
+    : { ...settled, current: false, endedAt: now };
+}
+
+/** What the evidence asks of later sweeps and of a held cancellation. */
+function followUps(sub: Subscription, event: SubscriptionEvidence, status: string, now: Date) {
+  return {
+    // A cancellation the provider holds can no longer be resumed here (B46).
+    ...(event.cancelAtEnd && !sub.cancellation_sent_at ? { cancellation_sent_at: now } : {}),
+    // The next subscription sweep cancels a halted subscription promptly.
+    ...(status === UNPAID ? { reconciliation_next_at: now } : {}),
+  };
+}
+
+/** The renewed period takes the scheduled change's terms. */
+function renewedTerms(terms: { catalog_key: string; catalog_revision: string; price_ref: string }) {
+  return {
+    catalog_key: terms.catalog_key,
+    catalog_revision: terms.catalog_revision,
+    external_price_id: terms.price_ref,
+    frozen_terms: JSON.stringify(terms),
+    scheduled_change: null,
+  };
+}
+
 export async function settleSubscription(
   db: Database,
   input: Subscription,
@@ -428,21 +466,8 @@ export async function settleSubscription(
   if (event.priceRef !== terms.price_ref) conflict('price_ref_mismatch');
   if (event.payment)
     await settlePeriod(db, sub, event, event.payment, { pending, terms, workspaceId });
-  let end = event.end;
-  let status = event.cancelAtEnd && event.status === 'active' ? 'cancel_scheduled' : event.status;
-  let endedAt = sub.ended_at;
-  let current = sub.is_current;
   const now = new Date();
-  if (terminalStates.has(status)) {
-    const paidEnd = await endTerminal(db, sub, event.version, workspaceId, now);
-    if (paidEnd) {
-      end = paidEnd;
-      status = 'cancel_scheduled';
-    } else {
-      current = false;
-      endedAt = now;
-    }
-  }
+  const { status, end, endedAt, current } = await periodOutcome(db, sub, event, workspaceId, now);
   await db
     .updateTable('billing_subscriptions')
     .set({
@@ -455,18 +480,9 @@ export async function settleSubscription(
       // caught up with; the subscription sweep retries the provider call.
       cancel_at_period_end:
         event.cancelAtEnd || terminalStates.has(event.status) || sub.cancel_at_period_end,
+      ...followUps(sub, event, status, now),
       provider_state_version: event.version,
-      // The next subscription sweep cancels a halted subscription promptly.
-      ...(status === UNPAID ? { reconciliation_next_at: now } : {}),
-      ...(renewal
-        ? {
-            catalog_key: terms.catalog_key,
-            catalog_revision: terms.catalog_revision,
-            external_price_id: terms.price_ref,
-            frozen_terms: JSON.stringify(terms),
-            scheduled_change: null,
-          }
-        : {}),
+      ...(renewal ? renewedTerms(terms) : {}),
       updated_at: now,
     })
     .where('id', '=', sub.id)

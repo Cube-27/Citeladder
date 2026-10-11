@@ -1,5 +1,5 @@
 import { words } from '@/lib/ai-traffic/vocabulary';
-import { formatDisplayDate, formatWindowDate } from '@/lib/format';
+import { formatDisplayDate, formatWindowDate, pluralCount } from '@/lib/format';
 
 /** A provider figure, or null when the provider did not report one. */
 export function searchNumber(value: unknown, maximumFractionDigits = 0): string | null {
@@ -10,12 +10,32 @@ export function searchNumber(value: unknown, maximumFractionDigits = 0): string 
   return new Intl.NumberFormat('en', { maximumFractionDigits }).format(number);
 }
 
-/** A provider-reported charge; unconfirmed work was never charged and an unknown charge is unresolved. */
-export function reportedCost(run: {
+type RunCost = {
+  credential_mode: 'byok' | 'funded';
   confirmed_at: string | null;
+  estimated_cost_usd: string | null;
   provider_reported_cost_usd: string | null;
-}): string {
+  estimated_credits: number | null;
+  charged_credits: number | null;
+};
+
+/**
+ * The analysis's estimate as the workspace pays it: AI credits on a managed
+ * plan, the DataForSEO price on its own account.
+ */
+export function runEstimate(run: RunCost): string {
+  if (run.credential_mode === 'funded')
+    return run.estimated_credits === null
+      ? 'Unavailable'
+      : pluralCount(run.estimated_credits, 'AI credit');
+  return '$' + estimateUsd(run.estimated_cost_usd ?? '0');
+}
+
+/** What the analysis was charged; unconfirmed work never was, and an open charge is pending. */
+export function reportedCost(run: RunCost): string {
   if (!run.confirmed_at) return 'Not charged';
+  if (run.credential_mode === 'funded')
+    return run.charged_credits === null ? 'Pending' : pluralCount(run.charged_credits, 'AI credit');
   if (run.provider_reported_cost_usd === null) return 'Unresolved';
   return '$' + (searchNumber(run.provider_reported_cost_usd, 6) ?? run.provider_reported_cost_usd);
 }

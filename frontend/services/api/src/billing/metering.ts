@@ -6,7 +6,10 @@
  *   serving model's price) before any network I/O, then settles once to the
  *   reported tokens; unreadable usage settles at a fixed fallback no larger
  *   than the hold, and a failed call that reports no usage is not charged;
- * - an included or uncharged feature is recorded with its tokens after the call.
+ * - an included or uncharged feature is recorded with its tokens after the call;
+ * - a provider priced in money (DataForSEO for managed Search Intelligence,
+ *   B40) holds its estimate in the caller's transaction and settles to the
+ *   cost converted to credits.
  *
  * Customers see only the credits; prices and the markup stay internal (B23).
  */
@@ -24,6 +27,7 @@ import {
   PRICING_REVISION,
   chargeCredits,
   chargeMode,
+  costCredits,
   costMicrousd,
   modelPrice,
   requestInputBytes,
@@ -38,7 +42,7 @@ const logger = getLogger('api.billing.metering');
 const AI_CREDITS = policy.entitlements.ai_credits;
 
 export type MeterContext = { workspaceId: string; feature: MeteredFeature };
-type Provider = 'model_gateway' | 'jev' | 'tavily' | 'keenable';
+type Provider = 'model_gateway' | 'jev' | 'tavily' | 'keenable' | 'dataforseo';
 type CallSpec = {
   provider: Provider;
   model: string;
@@ -84,6 +88,8 @@ function callRow(context: MeterContext, spec: CallSpec, at: Date) {
     reservation_id: null,
     reserved_credits: 0,
     credits: 0,
+    // A hold its owner settles (a whole analysis, B41) is never swept as abandoned.
+    owner_settled: false,
     ...tokens(null),
     cost_microusd: null as number | null,
     error_code: '',
@@ -123,6 +129,60 @@ async function record(
   }
 }
 
+/** Records the call and holds `reserved` credits for it in `trx`. */
+async function openHold(
+  trx: Database,
+  context: MeterContext,
+  spec: CallSpec,
+  reserved: number,
+  ownerSettled = false,
+) {
+  const account = await trx
+    .selectFrom('billing_accounts')
+    .select('id')
+    .where('workspace_id', '=', context.workspaceId)
+    .executeTakeFirst();
+  if (!account) throw unresolved();
+  const at = new Date();
+  const row = {
+    ...callRow(context, spec, at),
+    billing_account_id: account.id,
+    reserved_credits: reserved,
+    owner_settled: ownerSettled,
+  };
+  const { id } = row;
+  await trx.insertInto('platform_calls').values(row).execute();
+  let reservationId: string;
+  try {
+    reservationId = await reserveUsage(trx, {
+      accountId: account.id,
+      capability: AI_CREDITS,
+      subject: {
+        kind: 'platform_call',
+        id,
+        workspaceId: context.workspaceId,
+      },
+      units: reserved,
+      key: `call:${id}`,
+      at,
+    });
+  } catch (error) {
+    if (error instanceof LedgerError && error.message === 'funded_credits_exhausted')
+      throw new ApiError(403, 'Your AI credits are used up', {
+        code: 'ai_credits_exhausted',
+      });
+    if (error instanceof LedgerError && error.message === 'entitlement_unresolved')
+      throw unresolved();
+    throw error;
+  }
+  await trx
+    .updateTable('platform_calls')
+    .set({ reservation_id: reservationId })
+    .where('id', '=', id)
+    .execute();
+  return id;
+}
+
 /** Commits the hold and the call record before dispatch. */
 function reserve(db: Database, context: MeterContext, spec: CallSpec) {
   const price = modelPrice(spec.model);
@@ -131,51 +191,90 @@ function reserve(db: Database, context: MeterContext, spec: CallSpec) {
       code: 'ai_pricing_unavailable',
     });
   const reserved = reservationCredits(price, spec.inputBytes ?? 0, spec.maxOutputTokens ?? 0);
-  return db.transaction().execute(async (trx) => {
-    const account = await trx
-      .selectFrom('billing_accounts')
-      .select('id')
-      .where('workspace_id', '=', context.workspaceId)
-      .executeTakeFirst();
-    if (!account) throw unresolved();
-    const at = new Date();
-    const row = {
-      ...callRow(context, spec, at),
-      billing_account_id: account.id,
-      reserved_credits: reserved,
-    };
-    const { id } = row;
-    await trx.insertInto('platform_calls').values(row).execute();
-    let reservationId: string;
-    try {
-      reservationId = await reserveUsage(trx, {
-        accountId: account.id,
-        capability: AI_CREDITS,
-        subject: {
-          kind: 'platform_call',
-          id,
-          workspaceId: context.workspaceId,
-        },
-        units: reserved,
-        key: `call:${id}`,
-        at,
-      });
-    } catch (error) {
-      if (error instanceof LedgerError && error.message === 'funded_credits_exhausted')
-        throw new ApiError(403, 'Your AI credits are used up', {
-          code: 'ai_credits_exhausted',
-        });
-      if (error instanceof LedgerError && error.message === 'entitlement_unresolved')
-        throw unresolved();
-      throw error;
-    }
-    await trx
-      .updateTable('platform_calls')
-      .set({ reservation_id: reservationId })
-      .where('id', '=', id)
-      .execute();
-    return id;
+  return db.transaction().execute((trx) => openHold(trx, context, spec, reserved));
+}
+
+function lockHeld(trx: Database, callId: string) {
+  return trx
+    .selectFrom('platform_calls')
+    .selectAll()
+    .where('id', '=', callId)
+    .where('status', '=', 'reserved')
+    .forUpdate()
+    .executeTakeFirst();
+}
+
+/** Debits `credits` from a held call, releases the rest and closes its record. */
+async function closeHold(
+  trx: Database,
+  call: NonNullable<Awaited<ReturnType<typeof lockHeld>>>,
+  outcome: {
+    credits: number;
+    failed: boolean;
+    usage: TokenUsage | null;
+    cost: number | null;
+    error: unknown;
+  },
+) {
+  const { credits, failed } = outcome;
+  if (!call.reservation_id || !call.billing_account_id) return;
+  const at = new Date();
+  const request = {
+    workspaceId: call.workspace_id,
+    accountId: call.billing_account_id,
+    reservationId: call.reservation_id,
+    at,
+  };
+  if (credits > 0)
+    await debitUsage(trx, {
+      ...request,
+      subjectId: call.id,
+      attempt: 1,
+      units: credits,
+      key: `call:${call.id}:debit`,
+      dispatchKey: 'settle',
+    });
+  await releaseUsage(trx, { ...request, key: `call:${call.id}:release` });
+  await trx
+    .updateTable('platform_calls')
+    .set({
+      status: failed ? 'failed' : 'settled',
+      credits,
+      ...tokens(outcome.usage),
+      cost_microusd: outcome.cost,
+      error_code: failed ? errorCode(outcome.error) : '',
+      settled_at: at,
+    })
+    .where('id', '=', call.id)
+    .execute();
+}
+
+/**
+ * Holds `credits` for a provider priced in money, in the caller's transaction
+ * so the hold commits with the work it pays for (B40, B41).
+ */
+export function holdProviderCredits(
+  trx: Database,
+  context: MeterContext,
+  spec: { provider: Provider; model: string },
+  credits: number,
+) {
+  return openHold(trx, context, spec, credits, true);
+}
+
+/** Charges a money-priced hold its cost in credits, never above the hold; null once settled. */
+export async function settleProviderCredits(trx: Database, callId: string, costMicrousd: number) {
+  const call = await lockHeld(trx, callId);
+  if (!call) return null;
+  const credits = Math.min(call.reserved_credits, costCredits(costMicrousd));
+  await closeHold(trx, call, {
+    credits,
+    failed: false,
+    usage: null,
+    cost: costMicrousd,
+    error: null,
   });
+  return credits;
 }
 
 /**
@@ -191,48 +290,16 @@ async function settleCall(
   error: unknown = null,
 ) {
   await db.transaction().execute(async (trx) => {
-    const call = await trx
-      .selectFrom('platform_calls')
-      .selectAll()
-      .where('id', '=', callId)
-      .forUpdate()
-      .executeTakeFirst();
-    if (call?.status !== 'reserved' || !call.reservation_id || !call.billing_account_id) return;
+    const call = await lockHeld(trx, callId);
+    if (!call) return;
     const price = modelPrice(call.model);
     const charged = usage && price ? chargeCredits(price, usage) : null;
     const credits =
       failed && charged === null
         ? 0
         : Math.min(call.reserved_credits, charged ?? unknownUsageCredits(call.reserved_credits));
-    const at = new Date();
-    const request = {
-      workspaceId: call.workspace_id,
-      accountId: call.billing_account_id,
-      reservationId: call.reservation_id,
-      at,
-    };
-    if (credits > 0)
-      await debitUsage(trx, {
-        ...request,
-        subjectId: call.id,
-        attempt: 1,
-        units: credits,
-        key: `call:${call.id}:debit`,
-        dispatchKey: 'settle',
-      });
-    await releaseUsage(trx, { ...request, key: `call:${call.id}:release` });
-    await trx
-      .updateTable('platform_calls')
-      .set({
-        status: failed ? 'failed' : 'settled',
-        credits,
-        ...tokens(usage),
-        cost_microusd: price && usage ? costMicrousd(price, usage) : null,
-        error_code: failed ? errorCode(error) : '',
-        settled_at: at,
-      })
-      .where('id', '=', call.id)
-      .execute();
+    const cost = price && usage ? costMicrousd(price, usage) : null;
+    await closeHold(trx, call, { credits, failed, usage, cost, error });
   });
 }
 
@@ -290,6 +357,7 @@ export async function settleAbandonedCalls(db: Database, now = new Date(), limit
     .selectFrom('platform_calls')
     .select('id')
     .where('status', '=', 'reserved')
+    .where('owner_settled', '=', false)
     .where('created_at', '<', cutoff)
     .orderBy('created_at')
     .limit(limit)

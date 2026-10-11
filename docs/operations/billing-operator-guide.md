@@ -58,6 +58,12 @@ cd frontend
 pnpm --filter @citeladder/api billing:admin --help
 ```
 
+In production, run the same commands through the `citeladder-billing` Cloud
+Run job, which has the private database and production configuration but no
+local files: pass `--plans-json` instead of `--plans`, and `--import` instead
+of `--output`. The [GCP runbook](GCP_RUNBOOK.md#31-billing-operator-commands)
+owns the `gcloud run jobs execute` syntax.
+
 ## Catalog validation, publication, and recovery
 
 Catalog revisions are immutable rows in `billing_catalog_revisions`. Runtime
@@ -81,21 +87,41 @@ pnpm --filter @citeladder/api billing:admin catalog-seed \
   --idempotency-key catalog-seed:launch-pricing-v1
 ```
 
-Provider plans are immutable artifacts: one per recurring SKU x region of a
-revision. Print the specs, create exactly those plans in the Razorpay Dashboard
-(one-time add-ons, top-ups and upgrade charges are Orders and need none), then
-bind the created ids. `bind` requires the complete SKU x region set, verifies
-each plan's amount, currency and cadence against the frozen terms, and writes the
-payload for a NEW revision, which is imported and published as below. Existing
+Provider plans are immutable artifacts: one per recurring plan x mode (BYOK
+and managed) x region of a revision. Print the specs, create exactly those
+plans in the Razorpay Dashboard (one-time add-ons, top-ups and upgrade charges
+are Orders and need none), then bind the created IDs. `bind` requires the
+complete `plan:mode:region` set, fetches each plan from Razorpay (the
+configured `BILLING_RAZORPAY_MODE` must equal `--environment`) and verifies its
+name, gross amount, currency and cadence against the frozen terms. Existing
 subscribers stay pinned to the plans they authorised.
 
 ```bash
 pnpm --filter @citeladder/api billing:plans propose \
   --revision launch-pricing-v1 --environment test
-# plans.json: {"tier_1:international": "plan_…", "tier_2:international": …}
+# plans.json: {"tier_1:byok:international": "plan_…",
+#              "tier_1:funded:international": "plan_…", …}
 pnpm --filter @citeladder/api billing:plans bind \
   --revision launch-pricing-v1 --environment test \
   --plans review/plans.json --output review/catalog.json
+```
+
+`--output` writes the bound payload for review and the import below. Instead,
+`--import NEW_REVISION` stores it directly as a draft revision, and
+`--publish` also publishes that draft; both take `--actor`, `--reason` and
+`--idempotency-key` and are a dry run until `--apply`. The publish step reuses
+the key with a `:publish` suffix. A dry-run import is rolled back, so dry-run
+without `--publish` and add `--publish --apply` once reviewed. A draft that was
+never published is replaced by a later import under a new idempotency key (for
+example once its plans are bound); a published or retired revision never is.
+
+```bash
+pnpm --filter @citeladder/api billing:plans bind \
+  --revision launch-pricing-v1 --environment test \
+  --plans review/plans.json --import launch-pricing-v1-test \
+  --actor admin@example.com --reason "bind test plans" \
+  --idempotency-key catalog-bind:launch-pricing-v1-test
+# Review, then repeat with --publish --apply.
 ```
 
 ### Import and publish a revision
@@ -219,6 +245,20 @@ Grant and revocation records are append-only. Do not update or delete them with
 ad-hoc SQL. Confirm the workspace-effective entitlement through the authenticated
 `GET /api/v1/workspaces/{workspace_id}/entitlements` boundary after correction.
 
+### Checkout allow-list
+
+While `BILLING_CHECKOUT_AUDIENCE=allow_list` (the default), checkout serves only
+workspaces holding the non-public `billing_checkout` flag. Issue it with the
+same `grant` command (`--key billing_checkout --value 1`) and remove it with
+`revoke` and that grant's ID. It is never part of development or
+account-manager full access. Setting the audience to `everyone` opens checkout
+to all workspaces, except that Razorpay test keys in production still serve
+allow-listed workspaces only. Checkout also needs `BILLING_CHECKOUT_ENABLED=true`,
+configured Razorpay keys, the readiness flag for the mode and the region's
+readiness flag. The public catalog never reads a workspace, so it shows
+checkout unavailable until the audience is `everyone`; the app's workspace
+catalog applies the allow-list to the active workspace.
+
 ## Payment, receipt, subscription, and ledger inspection
 
 There is no broad payment-inspection CLI. Use read-only SQL through an approved,
@@ -289,6 +329,15 @@ provider dashboard—the accepted activation and resulting grants are authority.
   on the current plan until the change is resolved with the customer.
 - Refund from the Dashboard. The `refund.processed` event records the refund,
   issues the credit note and, for a full refund, revokes remaining grants.
+- A customer's cancellation is held in CiteLadder (`cancel_at_period_end` with
+  no `cancellation_sent_at`) and sent to Razorpay only
+  `BILLING_CANCELLATION_SEND_LEAD_SECONDS` (two days) before renewal, because
+  Razorpay cannot undo a cancellation it has received. Until then the customer
+  can resume from Billing. The subscription sweep commits the send before the
+  provider call and retries it every reconciliation interval. If every send in
+  that window fails, Razorpay renews once: the customer keeps that paid month
+  and the cancellation applies at its end. Refunding that renewal is a manual
+  Dashboard refund; nothing issues it automatically.
 
 After a captured payment is accepted, CiteLadder issues one immutable paid tax
 receipt from the frozen quote, customer billing facts, supplier GST settings,
@@ -299,10 +348,10 @@ exports show zero-rated treatment and the frozen LUT reference.
 
 For model-funded work also inspect `agent_model_attempts` (one row per model
 step) for frozen route/key revisions, dispatch identity, usage
-completeness, and settlement status. Customer BYOK attempts have zero platform
-credit debit. Platform-funded calls remain unavailable unless the published
-catalog contains an explicit finite AI-credit policy and the account has an
-allowance.
+completeness, and settlement status, and `platform_calls` for every other
+metered platform call (models, managed Search Intelligence on DataForSEO,
+JEV, Tavily and Keenable) with its usage and cost. The Agent always runs on the platform gateway and
+spends AI credits; a model with no configured token price is refused.
 
 ## Reconciliation
 
@@ -361,15 +410,22 @@ paste either secret.
 - `BILLING_CHECKOUT_ENABLED=false`: primary kill switch for **new checkout**.
   Webhook processing and reconciliation remain available so existing payment
   evidence can settle.
-- `BILLING_RAZORPAY_LIVE_READY=false`: blocks live-provider readiness.
-- `BILLING_RAZORPAY_INTERNATIONAL_READY=false`: blocks the USD/international
-  route independently.
+- `BILLING_CHECKOUT_AUDIENCE=allow_list`: narrows new checkout back to
+  allow-listed workspaces.
+- `BILLING_RAZORPAY_LIVE_READY=false` (or `BILLING_RAZORPAY_TEST_READY=false`
+  in test mode): blocks the provider for new checkout.
+- `BILLING_RAZORPAY_INTERNATIONAL_READY=false` (test mode:
+  `BILLING_RAZORPAY_TEST_INTERNATIONAL_READY`): blocks the USD/international
+  route independently; `BILLING_RAZORPAY_TEST_INDIA_READY=false` blocks the
+  INR route in test mode.
 - Campaign incident: forward-publish a catalog with the no-card campaign
   ended/disabled; do not rely on checkout flags because the no-card offer is
   independent of Razorpay.
-- Platform-funded AI incident: publish a reviewed catalog without the affected
-  AI-credit policy/route or remove the operational route reference through its
-  owning procedure; customer BYOK must never silently fall back to platform.
+- Platform AI incident: unset the model gateway key (`DEFAULT_AGENT_API_KEY`)
+  so every credit-charged platform call is refused before it is sent; for a
+  managed engine or DataForSEO incident, deactivate that platform connection in
+  the system workspace so managed audits and managed Search Intelligence refuse
+  new work. Customer BYOK must never silently fall back to platform keys.
 
 Recommended response order: stop new admission, preserve webhook ingress,
 capture redacted evidence, inspect normalized state, reconcile bounded pending
@@ -378,9 +434,11 @@ workspace-effective access, then reopen only after review.
 
 ## Current release posture
 
-Checkout is disabled by default. The no-card campaign is disabled by default.
-The card trial is unavailable. Tests use deterministic fixtures and mocked
-provider boundaries; there is no production Razorpay lifecycle, payment,
-invoice, settlement, refund, or webhook-rotation evidence. Keep all launch flags
-false until the separate owner requirements and live go/no-go record are
+Checkout is disabled by default, and billing runs hidden: Razorpay test keys
+in production with checkout open only to allow-listed workspaces. The no-card
+campaign is disabled by default. The card trial is unavailable. Tests use
+deterministic fixtures and mocked provider boundaries; there is no production
+Razorpay lifecycle, payment, invoice, settlement, refund, or webhook-rotation
+evidence. Keep `BILLING_RAZORPAY_LIVE_READY=false` and the audience at
+`allow_list` until the separate owner requirements and live go/no-go record are
 complete.

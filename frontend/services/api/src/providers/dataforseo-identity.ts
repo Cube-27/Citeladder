@@ -7,7 +7,13 @@ const credential = z.object({ login: z.string().min(1), password: z.string().min
 const stripCharacters = new Set(Array.from(policy.dataforseo.strip_characters));
 /** Password changes and connection IDs do not split a provider account's quota pool. */
 export function dataforseoAccountIdentity(encryptedSecret: string, encryptionKey: string) {
-  const packed = createSecretCipher(encryptionKey).decrypt(encryptedSecret);
+  return dataforseoSecretIdentity(
+    createSecretCipher(encryptionKey).decrypt(encryptedSecret),
+    encryptionKey,
+  );
+}
+/** The quota-pool identity of a decrypted DataForSEO login pair. */
+export function dataforseoSecretIdentity(packed: string, encryptionKey: string) {
   let payload: unknown;
   try {
     payload = JSON.parse(packed);

@@ -98,9 +98,11 @@ export async function issueInvitationInTransaction(
     .select(['id', 'email_normalized'])
     .execute();
   if (live.length >= policy.workspaces.max_pending_invitations)
-    throw new ApiError(409, 'invitation_limit_exceeded', {
-      code: 'workspace_invitation_limit_exceeded',
-    });
+    throw new ApiError(
+      409,
+      'This workspace has the most pending invitations allowed. Revoke one or wait for it to be accepted',
+      { code: 'workspace_invitation_limit_exceeded' },
+    );
   if (live.some((row) => row.email_normalized === normalized))
     refusal('invitation_already_pending');
   const { token, token_sha256 } = tokenValues();

@@ -24,6 +24,8 @@ import { preferencesBody } from '../routes/search-intelligence-contracts.ts';
 import { competitorTarget, ownedTargets, searchMarket } from './targets.ts';
 import { datasetView, rowView, runView } from './views.ts';
 import { isNonEmpty, lastOf, onlyOf } from '../lists.ts';
+import { workspaceCredentialMode } from '../billing/credential-mode.ts';
+import { platformConnection, workspaceConnections } from './credentials.ts';
 
 const si = policy.search_intelligence;
 const ROW_SORT_FIELDS = new Set<string>(si.row_sort_fields);
@@ -47,17 +49,25 @@ async function publishedDataset(db: Database, scope: Scope, datasetId: string) {
   return dataset;
 }
 
-/** The workspace's DataForSEO connections a review may use: active, tested ok and keyed. */
-function eligibleConnections(db: Database, workspace: WorkspaceScope) {
-  return workspace
-    .selectFrom(db, 'provider_connections')
-    .select('id')
-    .where('transport_provider', '=', si.transport_provider)
-    .where('active', '=', true)
-    .where('last_test_status', '=', si.connection_test_ok)
-    .where('api_key_encrypted', '!=', '')
-    .orderBy('created_at')
-    .execute();
+/**
+ * Whether a review can run, by the plan (B40): a managed workspace on the
+ * platform's account, which it never sees; a BYOK workspace on its one eligible
+ * connection (none or several need the user to fix it).
+ */
+async function researchAccount(db: Database, workspace: WorkspaceScope) {
+  const [mode, platform, own] = await Promise.all([
+    workspaceCredentialMode(db, workspace.workspaceId),
+    platformConnection(db),
+    workspaceConnections(db, workspace),
+  ]);
+  if (mode === 'funded')
+    return { credential_mode: mode, connected: Boolean(platform), connection_id: null };
+  const connection = onlyOf(own) ?? null;
+  return {
+    credential_mode: mode,
+    connected: connection !== null,
+    connection_id: connection?.id ?? null,
+  };
 }
 
 export async function readiness(
@@ -77,7 +87,7 @@ export async function readiness(
     .where('id', '=', scope.projectId)
     .executeTakeFirst();
   if (project === undefined) throw notFound('Project');
-  const [ownedDomains, competitors, connections, latest, datasets] = await Promise.all([
+  const [ownedDomains, competitors, account, latest, datasets] = await Promise.all([
     // Project children carry no workspace column; the join scopes them.
     scope.workspace
       .selectFrom(db, 'projects')
@@ -95,7 +105,7 @@ export async function readiness(
       .orderBy('competitors.created_at')
       .orderBy('competitors.id')
       .execute(),
-    eligibleConnections(db, scope.workspace),
+    researchAccount(db, scope.workspace),
     // An unconfirmed cost review is a draft, never the acquisition the screen follows.
     scope.workspace
       .selectFrom(db, 'search_intelligence_runs')
@@ -116,11 +126,8 @@ export async function readiness(
       .execute(),
   ]);
   const saved = preferencesBody.parse(project.search_intelligence_preferences);
-  // One eligible connection is usable; none or several need the user to fix it.
-  const connection = onlyOf(connections) ?? null;
   return {
-    connected: connection !== null,
-    connection_id: connection?.id ?? null,
+    ...account,
     owned_targets: ownedTargets(project, ownedDomains),
     competitors: competitors.flatMap(
       (row) => competitorTarget(row, savedDomains.parse(row.domains)) ?? [],

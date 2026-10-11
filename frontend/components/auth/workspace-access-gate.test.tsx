@@ -4,18 +4,59 @@ import { beforeEach, expect, it, vi } from 'vite-plus/test';
 import { renderWithProviders } from '@/test/render';
 import { WorkspaceAccessGate } from './workspace-access-gate';
 
-const { access, project, security } = vi.hoisted(() => ({
+const { access, project, security, capability } = vi.hoisted(() => ({
   access: vi.fn(),
   project: vi.fn(),
   security: vi.fn(),
+  capability: vi.fn(),
 }));
 vi.mock('@/lib/api/auth', () => ({ authApi: { security } }));
 vi.mock('@/lib/api/workspaces', () => ({ workspacesApi: { access } }));
 vi.mock('@/lib/project/project-context', () => ({
   useProjectContext: project,
+  useOptionalProjectContext: project,
+  useWorkspaceCapability: capability,
+}));
+// The plans an ended workspace may buy; checkout opens for Starter.
+vi.mock('@/lib/billing/use-workspace-catalog', () => ({
+  useWorkspaceCatalog: () => ({
+    isError: false,
+    data: {
+      catalog_revision: 'commercial-v9',
+      country_code: null,
+      region: 'international',
+      currency: 'USD',
+      currency_minor_units: 2,
+      plans: [
+        {
+          key: 'tier_1',
+          name: 'Starter',
+          description: '',
+          cadence: 'monthly',
+          self_serve: true,
+          contact_only: false,
+          contact_url: null,
+          base_price: { currency: 'USD', amount_minor: 4900 },
+          funded_total_price: null,
+          checkout_available: true,
+          funded_checkout_available: false,
+          unavailable_reason: null,
+          capabilities: [],
+          trial_availability: 'unavailable',
+          trial_unavailable_reason: 'trial_unavailable',
+          trial_days: null,
+        },
+      ],
+      addons: [],
+      topups: [],
+      support_contact: null,
+      providers: [],
+    },
+  }),
 }));
 beforeEach(() => {
   access.mockReset();
+  capability.mockReturnValue(true);
   security.mockResolvedValue({
     email: 'owner@example.test',
     email_verified: true,
@@ -190,10 +231,31 @@ it('blocks expired product content and leaves support, switching and account rec
   expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument();
 });
 
+it('offers an ended trial a plan to continue, and tells a member who may buy it', async () => {
+  access.mockResolvedValue({
+    status: 'trial_expired',
+    expires_at: new Date(Date.now() - 1000).toISOString(),
+  });
+  const { unmount } = renderWithProviders(
+    <WorkspaceAccessGate>Private report</WorkspaceAccessGate>,
+  );
+  expect(await screen.findByRole('heading', { name: 'Choose a plan' })).toBeInTheDocument();
+  expect(screen.getByText('$49 / month')).toBeInTheDocument();
+  expect(screen.queryByText('Private report')).not.toBeInTheDocument();
+  unmount();
+  capability.mockReturnValue(false);
+  renderWithProviders(<WorkspaceAccessGate>Private report</WorkspaceAccessGate>);
+  expect(
+    await screen.findByText('Ask a workspace Owner or Admin to choose a plan for this workspace.'),
+  ).toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: 'Choose a plan' })).toBeNull();
+});
+
 it('distinguishes missing authority from an expired trial', async () => {
   access.mockResolvedValue({ status: 'access_unresolved', expires_at: null });
   renderWithProviders(<WorkspaceAccessGate>Private report</WorkspaceAccessGate>);
   expect(await screen.findByRole('link', { name: 'Contact support' })).toBeInTheDocument();
   expect(screen.queryByText('Your trial has ended')).not.toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: 'Choose a plan' })).toBeNull();
   expect(screen.queryByText('Private report')).not.toBeInTheDocument();
 });

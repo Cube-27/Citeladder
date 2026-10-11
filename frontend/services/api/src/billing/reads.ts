@@ -14,6 +14,7 @@ import { workspaceAccount } from './purchases.ts';
 import { catalog, capabilityValue } from './catalog.ts';
 import { credentialModeOf } from './credential-mode.ts';
 import { checkoutAvailable } from './razorpay.ts';
+import { cancellationHeldUntil } from './cancellation.ts';
 import { scheduledSchema } from './settlement.ts';
 
 const UNITS: Record<string, string> = {
@@ -26,7 +27,17 @@ function unavailableReason(available: boolean, contactOnly: boolean) {
   return contactOnly ? 'contact_only' : 'checkout_unavailable';
 }
 
-export async function publicCatalog(db: Database, config: ServiceConfig, country: string | null) {
+/**
+ * The catalog as a reader may buy from it: anonymous readers (marketing) are
+ * never on the checkout allow-list, a workspace is when the operator granted it
+ * (B2), so in-app billing and marketing follow the same signal.
+ */
+export async function publicCatalog(
+  db: Database,
+  config: ServiceConfig,
+  country: string | null,
+  allowListed = false,
+) {
   const published = await catalog(db);
   const region = country === 'IN' ? 'india' : 'international';
   const currency = region === 'india' ? 'INR' : 'USD';
@@ -36,7 +47,7 @@ export async function publicCatalog(db: Database, config: ServiceConfig, country
     const available =
       row.available &&
       Boolean(row.modes.byok?.regional_prices[region]) &&
-      checkoutAvailable(config.billing, config.razorpay, region);
+      checkoutAvailable(config.billing, config.razorpay, region, allowListed);
     return {
       key: row.key,
       name: row.name,
@@ -70,7 +81,7 @@ export async function publicCatalog(db: Database, config: ServiceConfig, country
             price?.provider_price_ref &&
             price.tax_verified &&
             price.provider_mode === config.razorpay.mode &&
-            checkoutAvailable(config.billing, config.razorpay, region),
+            checkoutAvailable(config.billing, config.razorpay, region, allowListed),
           ),
         };
       };
@@ -153,7 +164,12 @@ async function occupancyHints(
   });
 }
 
-export async function entitlementRead(db: Database, workspaceId: string, at: Date) {
+export async function entitlementRead(
+  db: Database,
+  config: ServiceConfig,
+  workspaceId: string,
+  at: Date,
+) {
   const account = await workspaceAccount(db, workspaceId);
   const state = await accountState(db, workspaceId, account.id, at);
   const sub = state.subscription;
@@ -176,6 +192,7 @@ export async function entitlementRead(db: Database, workspaceId: string, at: Dat
           status: sub.status,
           current_period_end: sub.current_period_end?.toISOString() ?? null,
           cancel_at_period_end: sub.cancel_at_period_end,
+          resumable_until: cancellationHeldUntil(sub, config, at)?.toISOString() ?? null,
           scheduled_change: change
             ? {
                 direction: change.direction,

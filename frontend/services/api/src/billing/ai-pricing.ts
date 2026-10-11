@@ -63,11 +63,21 @@ function microusdTimesMillion(price: ModelPrice, { input, cached, output }: Toke
   );
 }
 
-/** Whole credits for exact token counts, rounded up: `ceil(cost × markup ÷ credit)`. */
-function credits(price: ModelPrice, tokens: Tokens) {
-  const scaled = microusdTimesMillion(price, tokens) * BigInt(pricing.markup_percent);
+/** Whole credits for a cost, rounded up: `ceil(cost × markup ÷ credit)`. */
+function markedUpCredits(costMicrousdTimesMillion: bigint) {
+  const scaled = costMicrousdTimesMillion * BigInt(pricing.markup_percent);
   const divisor = 100n * 1_000_000n * BigInt(pricing.credit_microusd);
   return Number((scaled + divisor - 1n) / divisor);
+}
+
+/** Whole credits for exact token counts at the model's price. */
+function credits(price: ModelPrice, tokens: Tokens) {
+  return markedUpCredits(microusdTimesMillion(price, tokens));
+}
+
+/** Credits for a provider charged in money, converted exactly as token cost is (B40). */
+export function costCredits(costMicrousd: number) {
+  return markedUpCredits(BigInt(costMicrousd) * 1_000_000n);
 }
 
 /** The cost of a settled call in micro-USD before markup, for the internal record. */

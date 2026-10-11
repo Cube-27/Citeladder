@@ -113,16 +113,27 @@ export function configured(
     !settings.conflicting &&
     settings.origin === policy.billing.razorpay_origin &&
     settings.keyId.startsWith(`rzp_${settings.mode}_`) &&
-    Boolean(settings.keySecret) &&
-    !(settings.mode === 'test' && settings.production)
+    Boolean(settings.keySecret)
   );
+}
+
+/**
+ * Whether a buyer may start a checkout (B2). Allow-listed workspaces can buy
+ * while the audience is the allow-list; test keys in production serve only
+ * them even once it is opened to everyone. Anonymous readers are never on it.
+ */
+/** Whether checkout is limited to allow-listed workspaces right now (B2, B42). */
+export function audienceRestricted(settings: BillingSettings, adapter: RazorpaySettings) {
+  return settings.audience !== 'everyone' || (adapter.mode === 'test' && adapter.production);
 }
 
 export function checkoutAvailable(
   settings: BillingSettings,
   adapter: RazorpaySettings,
   region: string,
+  allowListed: boolean,
 ): boolean {
+  const audience = allowListed || !audienceRestricted(settings, adapter);
   const independent =
     settings.quoteSecret &&
     ![adapter.keySecret, adapter.webhookSecret, adapter.previousSecret].includes(
@@ -130,6 +141,7 @@ export function checkoutAvailable(
     );
   return (
     Boolean(independent) &&
+    audience &&
     settings.enabled &&
     settings.provider === 'razorpay' &&
     configured(adapter) &&

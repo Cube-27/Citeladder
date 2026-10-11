@@ -18,6 +18,7 @@ import { useProjectContext } from '@/lib/project/project-context';
 
 import { OnboardingScreen } from './onboarding-screen';
 import { WorkspaceSetup } from './workspace-setup';
+import { PLANS_HREF } from '@/lib/billing/plan-limit';
 
 export function OnboardingPageClient() {
   return (
@@ -92,8 +93,8 @@ function ProjectSetupGate() {
   }
   if (remainingProjectSlots === 0) {
     return (
-      <ProjectSetupBlocked title="Project limit reached" projectsHref={projectsHref}>
-        Your current access does not include another project.
+      <ProjectSetupBlocked title="Project limit reached" projectsHref={projectsHref} plans>
+        Your plan does not include another project. Choose a bigger plan to add one.
       </ProjectSetupBlocked>
     );
   }
@@ -145,11 +146,14 @@ function ProjectSetupBlocked({
   children,
   onRetry,
   projectsHref,
+  plans = false,
 }: Readonly<{
   title: string;
   children: ReactNode;
   onRetry?: () => void;
   projectsHref: string;
+  /** A limit a bigger plan lifts: offer the plans first. */
+  plans?: boolean;
 }>) {
   return (
     <main
@@ -163,6 +167,11 @@ function ProjectSetupBlocked({
             Retry
           </Button>
         )}
+        {plans ? (
+          <Button asChild className="w-fit">
+            <Link to={PLANS_HREF}>See plans</Link>
+          </Button>
+        ) : null}
         <Button asChild variant="secondary" className="w-fit">
           <Link to={projectsHref}>Back to projects</Link>
         </Button>

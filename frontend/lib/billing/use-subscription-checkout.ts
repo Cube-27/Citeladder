@@ -123,6 +123,9 @@ export function useSubscriptionCheckout() {
           : 'Payment verified. Your purchase is active.',
       );
       await queryClient.invalidateQueries({ queryKey: queryKeys.billing.all });
+      // A new plan can restore a workspace whose trial or plan had ended.
+      if (workspaceId)
+        await queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.access(workspaceId) });
     } else if (state.status !== 'pending') {
       setNotice(`Checkout ${state.status}. No new access was granted.`);
     } else setNotice('Payment verification pending. You can refresh status here.');

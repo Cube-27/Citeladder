@@ -242,6 +242,12 @@ export function scopeHash(o: RequestOptions, payload: Record<string, unknown>) {
     )
     .digest('hex');
 }
+/** A stored decimal USD amount in exact 1e-8 units; a missing amount is zero. */
+export function usdUnits(value: string | null | undefined): number {
+  if (value === null || value === undefined) return 0;
+  const [whole = '0', fraction = ''] = value.trim().split('.');
+  return Number(BigInt(whole || '0') * 100_000_000n + BigInt(fraction.padEnd(8, '0').slice(0, 8)));
+}
 /** Integer microdollars keep quoted totals exact across pages. */
 export function quoteDataset(kind: DatasetKind, rows: number) {
   if (!Number.isSafeInteger(rows) || rows < 1 || rows > si.max_depth)

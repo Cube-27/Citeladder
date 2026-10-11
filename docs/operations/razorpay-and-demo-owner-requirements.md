@@ -17,7 +17,9 @@ API contracts. Follow the tested command and incident procedures in
 
 ## 0. Recorded owner decisions (24 September 2026)
 
-Non-secret values only. The [launch configuration](CiteLadder_Launch_Config.md)
+A dated record. Managed plans have since become purchasable
+([B32](../billing-decisions.md)); the [decision log](../billing-decisions.md)
+supersedes this block wherever they differ. Non-secret values only. The [launch configuration](CiteLadder_Launch_Config.md)
 owns the commercial contract; the
 [payment acceptance backlog](../plans/backlog.md#acceptance-calibration-and-rollout)
 tracks remaining acceptance and sign-off.
@@ -115,7 +117,7 @@ country, Indian GST state, optional GSTIN, and export attestation. CiteLadder
 determines tax before calling Razorpay and owns the GST/export receipt. Provider
 payment reconciliation remains a live-launch gate: until sandbox evidence proves
 that the selected INR/USD route charges the exact application total, keep
-`BILLING_RAZORPAY_LIVE_READY=false` and `BILLING_CHECKOUT_ENABLED=false`.
+`BILLING_RAZORPAY_LIVE_READY=false` and `BILLING_CHECKOUT_AUDIENCE=allow_list`.
 
 ## 3. Razorpay account readiness
 
@@ -147,45 +149,60 @@ Do not infer one method's approval from another. The USD route requires
 
 ## 4. Secrets and non-secret identifiers
 
-Each deployment reads the following exact settings. Install test values only in
-staging and live values only in production; the names stay the same because the
-deployment boundary provides the separation.
+Production has one deployment. Razorpay test keys run there while billing is
+hidden: a test-mode checkout serves only allow-listed workspaces, whatever the
+audience. The enable change swaps in live keys. The names stay the same in both
+modes.
 
-Secret values — install directly in the deployment secret manager:
+Secret values — GitHub `gcp-demo` environment **secrets**, which every deploy
+copies into Secret Manager:
 
 ```text
-BILLING_RAZORPAY_KEY_SECRET
-BILLING_QUOTE_SIGNING_SECRET # independent signing secret
-BILLING_RAZORPAY_WEBHOOK_SECRET
-BILLING_RAZORPAY_WEBHOOK_PREVIOUS_SECRET # only during the bounded rotation overlap
+BILLING_RAZORPAY_KEY_SECRET               # required when the mode is not disabled
+BILLING_RAZORPAY_WEBHOOK_SECRET           # required when the mode is not disabled
+BILLING_RAZORPAY_WEBHOOK_PREVIOUS_SECRET  # only during the bounded rotation overlap
 ```
 
-Non-secret but environment-specific values:
+`BILLING_QUOTE_SIGNING_SECRET` is generated once in Secret Manager
+(`citeladder-billing-quote-secret`) and never passes through GitHub; checkout
+stays unavailable if it equals any Razorpay secret. The deploy fails when
+`BILLING_RAZORPAY_MODE` is `test` or `live` without the key ID and both
+required secrets.
+
+Non-secret values — GitHub `gcp-demo` environment **variables**:
 
 ```text
-BILLING_RAZORPAY_KEY_ID
-BILLING_RAZORPAY_MODE=disabled
-BILLING_INDIA_GST_RATE=<approved-decimal-rate> # required; no source default
+BILLING_RAZORPAY_MODE=disabled                  # disabled | test | live
+BILLING_RAZORPAY_KEY_ID=<rzp_test_… or rzp_live_…, matching the mode>
+BILLING_CHECKOUT_ENABLED=false                  # new-checkout kill switch
+BILLING_CHECKOUT_AUDIENCE=allow_list            # allow_list | everyone
+BILLING_RAZORPAY_TEST_READY=false               # test-mode acceptance passed
+BILLING_RAZORPAY_TEST_INTERNATIONAL_READY=false # USD route in test mode
+BILLING_RAZORPAY_TEST_INDIA_READY=false         # INR route in test mode
+BILLING_RAZORPAY_LIVE_READY=false               # live lifecycle passed
+BILLING_RAZORPAY_INTERNATIONAL_READY=false      # USD route in live mode
+BILLING_RAZORPAY_WEBHOOK_PREVIOUS_SECRET_STARTED_AT=<RFC 3339, rotation only>
+BILLING_RAZORPAY_WEBHOOK_PREVIOUS_SECRET_EXPIRES_AT=<RFC 3339, at most 24 h later>
+BILLING_INDIA_GST_RATE=<approved-decimal-rate>  # no source default
 BILLING_INDIA_GST_APPROVAL_REFERENCE=<approval record reference> # required with the rate
-BILLING_SELLER_LEGAL_NAME=<registered supplier name>
-BILLING_SELLER_LEGAL_ADDRESS=<registered supplier address>
-BILLING_SELLER_EMAIL=<billing contact>
-BILLING_SELLER_GSTIN=<supplier GSTIN>
-BILLING_SELLER_GST_STATE_CODE=<two-digit code>
-BILLING_SELLER_GST_STATE_NAME=<registered state>
 BILLING_SELLER_SAC=<approved service accounting code>
 BILLING_SELLER_LUT_REFERENCE=<current LUT reference>
-BILLING_INVOICE_PREFIX=<approved serial prefix>
-BILLING_CHECKOUT_ENABLED=false        # stays false until go-live sign-off
-BILLING_RAZORPAY_LIVE_READY=false     # stays false until live lifecycle passes
-BILLING_RAZORPAY_INTERNATIONAL_READY=false # required only before USD checkout
-BILLING_SUBSCRIPTION_TOTAL_CYCLES=<approved-cycles-for-selected-period>
-BILLING_PAST_DUE_GRACE_DAYS=3
 ```
+
+The seller's legal name, address, email, GSTIN and GST state default to the
+values recorded in section 0
+(`frontend/services/api/src/config/billing.json`); only SAC, the LUT reference
+and the GST approval reference remain owner inputs. Other settings in that
+file keep their defaults in production, including
+`BILLING_SUBSCRIPTION_TOTAL_CYCLES` (1,200 monthly cycles, Razorpay's 100-year
+maximum), `BILLING_INVOICE_PREFIX` (`CL`) and
+`BILLING_CANCELLATION_SEND_LEAD_SECONDS` (two days: how long before renewal a
+held cancellation is sent to Razorpay). The deploy workflow does not pass them,
+so changing one is a code change to its default.
 
 Rules:
 
-- Never reuse test keys, live keys, or webhook secrets across environments.
+- Never reuse live keys or webhook secrets as test values, or the reverse.
 - The Razorpay API key secret is not the webhook secret.
 - Never send a secret to the browser or place it in a `NEXT_PUBLIC_*` variable.
 - Provisioning must fail while the GST rate, treatment, approval reference, or
@@ -195,16 +212,17 @@ Rules:
   `billing_period × interval × total_cycles` never exceeds Razorpay's 100-year
   maximum. For interval 1 this permits at most 1,200 monthly or 100 annual
   cycles; recompute the limit for every other period/interval.
-- For a planned webhook-secret rotation, first deploy dual-secret verification.
-  Store the previous secret in a separate, access-restricted Secrets Manager
-  version, verify against the active secret and then the previous secret for one
-  bounded **24-hour overlap**, and preserve the same event-ID and provider-state
-  idempotency checks for both. At expiry, remove verifier access to the previous
-  version, record its removal and the rotation evidence, and alert if removal
-  fails. Rotate immediately on suspected compromise; do not extend the overlap,
-  and reconcile any failed old-secret delivery explicitly.
-- Plan ids are not credentials, but still belong in environment configuration so
-  test/live cannot be crossed accidentally.
+- For a planned webhook-secret rotation, set the previous secret and its
+  started/expires window in the same deploy as the new active secret. The
+  endpoint accepts the previous secret only inside that window, and never for
+  longer than **24 hours**, with the same event-ID and provider-state
+  idempotency checks for both. At expiry, clear the previous secret and window
+  and redeploy, which disables its Secret Manager versions; record the rotation
+  evidence. Rotate immediately on suspected compromise; do not extend the
+  overlap, and reconcile any failed old-secret delivery explicitly.
+- Plan IDs are not credentials. They live in the published catalog revision,
+  keyed by plan, mode and region, and each one is bound to the provider mode it
+  was created in, so test and live cannot be crossed.
 
 ## 5. Production URLs and webhook setup
 
@@ -220,13 +238,15 @@ Webhook alert email:
 Operations incident email/channel:
 ```
 
-The expected public webhook path is:
+The webhook URL is served by the marketing (apex) Worker, which forwards only
+`POST` on this path to the API; the app and API hosts refuse it:
 
 ```text
-https://<backend-public-origin>/api/v1/billing/webhooks/razorpay
+https://citeladder.com/api/v1/billing/webhooks/razorpay
 ```
 
-Subscribe only to the implemented subscription allow-list:
+Use the same URL for the test-mode and live webhooks, each with its own secret.
+Subscribe to exactly the events the endpoint handles:
 
 ```text
 subscription.authenticated
@@ -239,10 +259,19 @@ subscription.completed
 subscription.expired
 subscription.paused
 subscription.resumed
+order.paid
+payment.captured
+payment.failed
+refund.processed
 ```
 
+Order and payment events settle one-time orders (add-ons, top-ups and upgrade
+charges); a payment that belongs to a subscription invoice, or has no order (a
+payment link or QR code), is acknowledged and ignored. `refund.processed`
+records a Dashboard refund and issues its credit note.
+
 The endpoint verifies every signature over the exact raw body before dispatch. A validly
-signed event outside this allow-list is acknowledged with `204` and does not mutate billing
+signed event outside this list is acknowledged with `204` and does not mutate billing
 state. An allow-listed event for an unknown external subscription is recorded as `unmatched`,
 acknowledged with `204`, and does not mutate entitlements. Duplicate event ids and stale
 provider-state versions are also acknowledged idempotently. Malformed payloads and invalid
@@ -351,7 +380,8 @@ General India launch approval/date:
 ```
 
 If any required approval, live lifecycle, webhook monitoring, or rollback control
-is missing, the correct state is `BILLING_CHECKOUT_ENABLED=false`. That switch
+is missing, the correct state is `BILLING_CHECKOUT_AUDIENCE=allow_list`, or
+`BILLING_CHECKOUT_ENABLED=false` to stop checkout entirely. That switch
 blocks new checkout but must not disable webhook ingestion or bounded
 reconciliation for already-created intents. A no-card campaign incident requires
 an independent reviewed catalog forward-publication with the campaign

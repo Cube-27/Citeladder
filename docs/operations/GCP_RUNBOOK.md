@@ -13,7 +13,8 @@ Google sign-in uses explicit server client credentials and
 `https://app.citeladder.com/api/v1/auth/oauth/google/callback`; register that exact
 URI in Google Console. Existing Google login can remain enabled while signup is
 closed. Coordinate API creation with both Workers' `SELF_SERVE_SIGNUP` builds.
-Keep checkout disabled and Razorpay mode disabled for this release.
+Keep `BILLING_CHECKOUT_AUDIENCE=allow_list` for this release, so checkout serves
+only allow-listed workspaces (section 3.1).
 
 The schema baseline adds identity verification, auth challenges and billing
 registration provenance. It does **not** upgrade an already migrated database.
@@ -36,6 +37,7 @@ Browser ─► Cloudflare Workers (marketing citeladder.com, app app.citeladder.
               │ commits work, then starts ─► job citeladder-runner (drain, exit)
               │ Cloud Scheduler every 10 min ─► job citeladder-tick
               │ deploy only ─► job citeladder-migrate (SQL baseline + dev bootstrap, API image)
+              │ operator only ─► job citeladder-billing (billing CLIs, API image)
               ▼ Direct VPC egress (private IP 10.28.0.10)
          e2-micro VM citeladder-db (free tier, COS, no public IP): PostgreSQL 16 only
 ```
@@ -106,6 +108,22 @@ owner as required reviewer.
 | `OAUTH_GOOGLE_ENABLED` | **new**, optional | `false` (default); `true` turns on Google sign-in |
 | `PUBLIC_SIGNUP_ENABLED` | **new**, optional | `false` (default); `true` opens self-serve sign-up |
 | `TICK_SCHEDULE` | **new**, optional | cron in UTC; default `*/10 * * * *` |
+| `BILLING_CHECKOUT_ENABLED` | optional | `false` (default); `true` admits new checkout for the audience below. Webhooks and reconciliation run either way |
+| `BILLING_CHECKOUT_AUDIENCE` | optional | `allow_list` (default) sells only to workspaces holding the `billing_checkout` grant; `everyone` opens checkout (test-mode keys still serve allow-listed workspaces only) |
+| `BILLING_RAZORPAY_MODE` | optional | `disabled` (default), `test` or `live`; any other mode needs `BILLING_RAZORPAY_KEY_ID` plus the key and webhook secrets, or the deploy fails |
+| `BILLING_RAZORPAY_KEY_ID` | optional | public key ID matching the mode (`rzp_test_…` or `rzp_live_…`); empty by default |
+| `BILLING_RAZORPAY_TEST_READY` | optional | `false` (default); `true` once test-mode acceptance passes |
+| `BILLING_RAZORPAY_TEST_INTERNATIONAL_READY` | optional | `false` (default); opens the USD route in test mode |
+| `BILLING_RAZORPAY_TEST_INDIA_READY` | optional | `false` (default); opens the INR route in test mode |
+| `BILLING_RAZORPAY_LIVE_READY` | optional | `false` (default); `true` after live sign-off |
+| `BILLING_RAZORPAY_INTERNATIONAL_READY` | optional | `false` (default); opens the USD route in live mode (the live INR route needs only `LIVE_READY`) |
+| `BILLING_RAZORPAY_WEBHOOK_PREVIOUS_SECRET_STARTED_AT` / `…_EXPIRES_AT` | optional pair | RFC 3339 window, at most 24 hours, in which the previous webhook secret is still accepted; empty by default |
+| `BILLING_INDIA_GST_RATE` | optional | approved decimal GST rate; empty by default, which leaves India prices unauthored |
+| `BILLING_INDIA_GST_APPROVAL_REFERENCE` | optional | approval record for the rate; required with it |
+| `BILLING_SELLER_SAC` / `BILLING_SELLER_LUT_REFERENCE` | optional | receipt SAC and current LUT reference; empty by default. The rest of the seller identity defaults in `billing.json` |
+| `BILLING_FUNDED_MONTHLY_BUDGET_MINOR` | optional | managed-plan monthly platform spend ceiling in US cents; app default `50000` |
+| `PROVIDER_PLATFORM_OPENAI_CREDENTIAL_REF` / `…_GOOGLE_…` / `…_ANTHROPIC_…` | optional | opaque reference that the platform connection for that engine stores; it must match for the platform key to be used. Empty by default |
+| `DATAFORSEO_PLATFORM_CREDENTIAL_REF` | optional | the same for the platform DataForSEO connection, which uses the `DATAFORSEO_API_*` pair |
 | `ORIGIN_DOMAIN_NAME` | **delete** | no longer used |
 | `API_DB_POOL_SIZE` | **delete** | Cloud Run uses a fixed pool of 4 |
 | `GCP_PROJECT_NUMBER` | delete (optional) | unused |
@@ -113,6 +131,12 @@ owner as required reviewer.
 To open sign-up, set `OAUTH_GOOGLE_ENABLED` and `PUBLIC_SIGNUP_ENABLED` here
 and the `SELF_SERVE_SIGNUP` repository variable used by the Worker builds.
 Then redeploy the backend and both Workers.
+
+The billing and platform-credential variables reach every Cloud Run workload
+through Terraform's `billing_env`; an empty variable keeps the app default from
+`frontend/services/api/src/config/billing.json` or `providers.json`, which
+leaves checkout closed. The deploy refuses a name ending in `SECRET`,
+`API_KEY` or `PASSWORD` there; those belong in section 1.4.
 
 ### 1.4 GitHub `gcp-demo` environment: secrets
 
@@ -128,14 +152,21 @@ Then redeploy the backend and both Workers.
 | `JEV_API_KEY` | keep | prompt and internal-link quality judgments |
 | `BING_OAUTH_CLIENT_ID` / `BING_OAUTH_CLIENT_SECRET` | optional pair | Bing Webmaster Tools → Settings → API Access |
 | `DATAFORSEO_API_LOGIN` / `DATAFORSEO_API_PASSWORD` | **new**, optional pair | DataForSEO platform credentials; set both or neither |
+| `BILLING_RAZORPAY_KEY_SECRET` | **new**, optional | Razorpay API key secret for `BILLING_RAZORPAY_MODE`; required when the mode is not `disabled` |
+| `BILLING_RAZORPAY_WEBHOOK_SECRET` | **new**, optional | Razorpay webhook signing secret, never the API key secret; required when the mode is not `disabled` |
+| `BILLING_RAZORPAY_WEBHOOK_PREVIOUS_SECRET` | **new**, optional | only during a webhook-secret rotation, with the window variables in section 1.3 |
+| `PROVIDER_PLATFORM_OPENAI_API_KEY` / `…_GOOGLE_…` / `…_ANTHROPIC_…` | **new**, optional | platform engine keys that managed plans measure on; each is used only while its `…_CREDENTIAL_REF` matches |
 | `CLOUDFLARE_ORIGIN_CERT` / `CLOUDFLARE_ORIGIN_KEY` | **delete** | the Origin CA path is retired |
 
 Every deploy copies these into Secret Manager. Changed values create a new
 version; an emptied optional secret has its versions disabled and is dropped
-from Cloud Run. The database, JWT, encryption, referral and API key pepper
-(`API_KEY_PEPPER`, `citeladder-api-key-pepper`) secrets are generated once in
-Secret Manager. They never pass through GitHub or Terraform. Rotating the API
-key pepper invalidates every public API key.
+from Cloud Run. The database, JWT, encryption, referral, API key pepper
+(`API_KEY_PEPPER`, `citeladder-api-key-pepper`) and checkout quote-signing
+(`BILLING_QUOTE_SIGNING_SECRET`, `citeladder-billing-quote-secret`) secrets are
+generated once in Secret Manager. They never pass through GitHub or Terraform.
+Rotating the API key pepper invalidates every public API key. The Razorpay and
+platform engine secrets reach every Cloud Run workload, because billing
+recovery runs in the runner.
 
 ### 1.5 Provider redirect URIs
 
@@ -186,7 +217,7 @@ Billing → Reports grouped by SKU and remove anything unexpectedly non-zero.
 ## 3. Daily operation
 
 - **Logs:** Cloud Run → `citeladder-api`, and Jobs → `citeladder-runner`,
-  `citeladder-tick` and `citeladder-migrate` → Logs. The database container
+  `citeladder-tick`, `citeladder-migrate` and `citeladder-billing` → Logs. The database container
   logs reach Cloud Logging under the `citeladder-db` instance.
 - **Database shell** (break-glass, IAP):
 
@@ -250,6 +281,45 @@ Billing → Reports grouped by SKU and remove anything unexpectedly non-zero.
   tick's cadence; a source stalled as `verification_failed` is a customer-side
   label, subscription or IAM change, not an outage here. A failed token mint
   shows as an `unavailable` pull that retries without stalling the source.
+
+### 3.1 Billing operator commands
+
+The `citeladder-billing` job runs `node` in the API image against the private
+database with the production configuration; it has no files and its default
+arguments only print help. Pass the whole command line as `--args`, one
+comma-separated list that replaces those defaults, and read the result in
+Cloud Run → Jobs → `citeladder-billing` → Logs. Every mutation needs an active
+admin `--actor`, a `--reason` and a stable `--idempotency-key`, and is a dry run
+until the same command is repeated with `--apply`. The
+[billing operator guide](billing-operator-guide.md) owns what each command does.
+
+Put a workspace on the checkout allow-list (dry run, then add `--apply`):
+
+```powershell
+gcloud run jobs execute citeladder-billing --region us-central1 --wait `
+  '--args=src/cli/billing-admin.ts,grant,--workspace-id,<workspace-uuid>,--account-id,<billing-account-uuid>,--key,billing_checkout,--value,1,--valid-from,2026-10-11T00:00:00Z,--actor,<admin-email>,--reason,checkout-allow-list,--idempotency-key,grant:checkout:<workspace-uuid>'
+```
+
+`revoke` takes `--grant-id` and `--effective-from` the same way, and
+`account-inspect` reads the account's grants first.
+
+Bind Razorpay plan IDs to a revision, store the result as a draft and publish
+it. The job's `BILLING_RAZORPAY_MODE` must equal `--environment`. The refs JSON
+contains commas, so switch gcloud's list delimiter with its `^;^` prefix and
+separate arguments with `;`. Run this from a POSIX shell such as Cloud Shell,
+where single quotes keep the JSON intact. First the dry run, which verifies
+every plan at Razorpay and previews the import:
+
+```bash
+gcloud run jobs execute citeladder-billing --region us-central1 --wait \
+  '--args=^;^src/cli/provision-razorpay-plans.ts;bind;--revision;launch-pricing-v1;--environment;test;--plans-json;{"tier_1:byok:international":"plan_…","tier_1:funded:international":"plan_…"};--import;launch-pricing-v1-test;--actor;<admin-email>;--reason;bind-test-plans;--idempotency-key;catalog-bind:launch-pricing-v1-test'
+```
+
+The refs object needs one `plan:mode:region` key per recurring price in the
+revision. A dry-run import is rolled back, so there is nothing yet to publish;
+after review, repeat the same command with `;--publish;--apply` appended.
+Other operator entry points under `src/cli/` (for example `catalog-seed` in
+`billing-admin.ts`, or `provision-platform-providers.ts`) run the same way.
 
 ## 4. Updates and rollback
 

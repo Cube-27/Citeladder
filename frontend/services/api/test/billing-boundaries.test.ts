@@ -79,6 +79,7 @@ describe('billing input and provider boundaries', () => {
       identity: { ...buyer, state_code: '27' },
       currency: 'INR',
       unitAmount: 101,
+      taxRate: '0.18',
       priceRef: 'plan_fixture',
       revision: 'fixture',
       now: new Date(),
@@ -89,7 +90,8 @@ describe('billing input and provider boundaries', () => {
       quote.sgst.amount_minor,
       quote.total_price.amount_minor,
     ]).toEqual([9, 9, 119]);
-    expect(() => quoteIntent({ ...config.billing, gstRate: null }, input)).toThrow();
+    // The rate frozen with the catalog price is the only one a quote uses.
+    expect(() => quoteIntent(config.billing, { ...input, taxRate: '' })).toThrow();
     expect(() =>
       quoteIntent(config.billing, {
         ...input,
@@ -136,7 +138,6 @@ describe('billing input and provider boundaries', () => {
     const transport = vi.fn();
     for (const settings of [
       { ...config.razorpay, origin: 'https://attacker.example' },
-      { ...config.razorpay, production: true },
       { ...config.razorpay, keyId: 'rzp_live_fixture' },
       { ...config.razorpay, conflicting: true },
     ])
@@ -147,6 +148,7 @@ describe('billing input and provider boundaries', () => {
         { ...config.billing, quoteSecret: config.razorpay.webhookSecret },
         config.razorpay,
         'international',
+        true,
       ),
     ).toBe(false);
     expect(
@@ -154,8 +156,27 @@ describe('billing input and provider boundaries', () => {
         { ...config.billing, provider: 'missing' },
         config.razorpay,
         'international',
+        true,
       ),
     ).toBe(false);
+  });
+  it('opens checkout to allow-listed workspaces only, and test keys in production only to them', () => {
+    const allowList = { ...config.billing, audience: 'allow_list' as const };
+    const open = (billing: typeof config.billing, production: boolean, allowListed: boolean) =>
+      checkoutAvailable(billing, { ...config.razorpay, production }, 'international', allowListed);
+    expect({
+      listedBeforeLaunch: open(allowList, false, true),
+      othersBeforeLaunch: open(allowList, false, false),
+      listedOnProductionTestKeys: open(config.billing, true, true),
+      othersOnProductionTestKeys: open(config.billing, true, false),
+      everyoneAfterLaunch: open(config.billing, false, false),
+    }).toEqual({
+      listedBeforeLaunch: true,
+      othersBeforeLaunch: false,
+      listedOnProductionTestKeys: true,
+      othersOnProductionTestKeys: false,
+      everyoneAfterLaunch: true,
+    });
   });
   it('requires a captured payment bound to the paid subscription invoice and rejects ambiguous collections', async () => {
     const responses: Record<string, unknown> = {

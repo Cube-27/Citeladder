@@ -1,21 +1,23 @@
 # CiteLadder launch configuration
 
 - Version: `launch-pricing-v1`
-- Date: `2026-09-08`
+- Date: `2026-10-11`
 - Repository: `Cube-27/Citeladder`
 
-Sections 1–6 are the implementation contract. Section 7 is reference-only economics.
+Sections 1–6 summarize the shipped commercial contract. Section 7 is reference-only economics.
 
-> **Owner amendments, 24 September 2026:**
-> launch sells **BYOK plans only**; funded prices stay published but not
-> purchasable. INR prices for add-ons and top-ups follow the catalog rule
-> `ceil(USD × 90 / 100) × 100 − 1` (GST-exclusive), replacing `INR: null`.
-> Add-ons and top-ups are one-time and last 30 days or until the plan ends,
-> whichever is earlier. The Managed answer top-up is published but not sold
-> until managed execution exists.
-These are target settings, not a claim that the current deployment already supports them.
-Map these settings to the existing schemas and entitlement registry; the YAML is not an existing API payload.
-Preserve existing functionality except for the pricing, entitlements, metering, and billing behavior explicitly specified here.
+The values below are configuration, and the configuration wins if they ever
+disagree: plans, prices, allowances, add-ons and top-ups in
+`frontend/services/api/src/config/billing-authoring.ts`; the entitlement
+registry, trial and baseline in `frontend/services/api/src/config/entitlements.json`;
+runtime settings in `frontend/services/api/src/config/billing.json`. At runtime
+the published catalog revision authored from them is the commercial authority.
+The [billing decision log](../billing-decisions.md) records why (B-numbers
+below). The YAML is a summary, not an API payload.
+
+Billing is operational but hidden (B0, B2): it runs in production with
+Razorpay test keys, and checkout serves only allow-listed workspaces until the
+enable change in section 6.
 
 ## 1. Catalog and pricing rules
 
@@ -39,47 +41,49 @@ billing:
   automatic_topups_enabled: false
   automatic_overage_charges_enabled: false
   stacked_launch_discounts_enabled: false
-  funding_modes:
+  funding_modes:              # both purchasable (B32); chosen by the pricing toggle
     funded:
-      display_name: Managed AI
-      customer_provider_keys_required: false
+      display_name: Managed
+      platform_supplies_answer_engine_and_dataforseo_keys: true
+      provider_settings_visible_to_customer: false
     byok:
       display_name: Bring Your Own Keys
       customer_pays_visibility_provider_directly: true
-  funding_mode_change_effective: next_renewal
-  funding_mode_change_midperiod_refund: false
+  modes_differ_only_in_price_and_who_supplies_keys: true   # B4
+  workspace_mode_source: live_base_subscription           # never the request (B37)
+  plan_change_keeps_funding_mode: true
 
 pricing:
   amounts: integer_minor_units
   USD_minor_unit: cents
   INR_minor_unit: paise
   plan_prices_are_full_subscription_totals: true
-  funded_execution_component: funded_total_minus_byok_total
-  add_byok_price_to_funded_total: false
   regional_price_policy: fixed_catalog_prices
+  regions: {india: INR, international: USD}
+  inr_rule: ceil(USD × authoring_rate / 100) × 100 − 1   # rate in billing-authoring.ts
+  inr_prices_exclude_gst: true
+  india_prices_require_gst_rate_and_approval_reference: true
+  gst_rate_frozen_with_each_india_price: true             # B45
   derive_checkout_prices_from_live_fx: false
   unconfigured_regional_price: unavailable
-  displayed_prices_exclude_applicable_customer_tax: true
-  tax_calculation: existing_verified_transaction_tax_logic
   infer_export_tax_treatment_from_currency_alone: false
-  provider_price_refs: provision_per_sku_region_mode_and_revision
+  provider_price_refs: one_razorpay_plan_per_plan_mode_region   # keyed plan:mode:region
   missing_or_unverified_provider_price_ref: checkout_unavailable
 
 scope:
   pooled_per_billing_account:
     - project_slots
     - prompt_slots
+    - market_slots
     - monitored_urls
+    - api_keys
     - site_health_page_fetches_per_period
-    - audit_credits
+    - prompt_runs_per_period
     - ai_credits
     - manual_runs_per_day
-  per_project:
-    - competitors
-    - gsc_properties
-    - ga4_properties
   multiply_pooled_limits_by_project_count: false
   stack_free_primary_profile_with_paid_primary_profile: false
+  missing_occupancy_grant: zero_allowance                 # B38
 ```
 
 ## 2. Plans
@@ -95,9 +99,14 @@ common_paid_features:
   aeo_readiness: true
   opportunity_detection: true
   evidence_based_recommendations: true
-  gsc_properties_per_project: 1
-  ga4_properties_per_project: 1
-  exports: true
+  commerce: true
+  search_intelligence: true        # managed: platform DataForSEO, spends AI credits (B40)
+  crawl_logs: true
+  public_api_access: true
+  api_keys: 10
+  team_members: true
+  project_deletion: true
+  exports: true                    # not gated (B5)
   included_export_formats: [csv]
   mcp_access: true
   mobile_access: true
@@ -119,10 +128,9 @@ common_paid_tracking:
   transports: [openai, anthropic, google, dataforseo]
   surface_count: 4
   answer_engine_count: 3
-  audit_cadence: daily
+  audit_cadence_gated: false       # B5
   scheduled_samples_per_prompt_per_engine_per_day: 1
   site_health_full_refresh_cadence: weekly
-  competitors_per_project: 5
   manual_rate_window_seconds: 86400
   provider_model_routes: existing_verified_route_catalog
   funded_and_byok_use_same_measurement_methodology: true
@@ -138,16 +146,14 @@ plans:
       INR: {funded: 899900, byok: 449900}
     project_slots: 1
     prompt_slots: 10
+    market_slots: 0                # each project's default market is free
     monitored_urls: 50
     site_health_page_fetches_per_period: 500
     history_window: 90d
     manual_runs_per_day: 3
-    audit_credits_per_period: {funded: 1000, byok: 0}
-    ai_credits_per_period: 0
-    fanout: false
+    prompt_runs_per_period: 1000
+    ai_credits_per_period: 5000
     agent: false
-    support_tier: standard
-    support_channel: email
 
   tier_2:
     name: Growth
@@ -157,16 +163,14 @@ plans:
       INR: {funded: 2249900, byok: 899900}
     project_slots: 3
     prompt_slots: 30
+    market_slots: 3
     monitored_urls: 150
     site_health_page_fetches_per_period: 1500
     history_window: 12mo
     manual_runs_per_day: 6
-    audit_credits_per_period: {funded: 3000, byok: 0}
-    ai_credits_per_period: 500
-    fanout: true
+    prompt_runs_per_period: 3000
+    ai_credits_per_period: 12500
     agent: true
-    support_tier: standard
-    support_channel: email
 
   tier_3:
     name: Scale
@@ -176,16 +180,14 @@ plans:
       INR: {funded: 4499900, byok: 1799900}
     project_slots: 10
     prompt_slots: 60
+    market_slots: 10
     monitored_urls: 400
     site_health_page_fetches_per_period: 4000
     history_window: 24mo
     manual_runs_per_day: 12
-    audit_credits_per_period: {funded: 6000, byok: 0}
-    ai_credits_per_period: 1500
-    fanout: true
+    prompt_runs_per_period: 6000
+    ai_credits_per_period: 37500
     agent: true
-    support_tier: priority
-    support_channel: email
 
   enterprise:
     name: Enterprise
@@ -197,74 +199,55 @@ plans:
     automatically_include_unshipped_features: false
 ```
 
-`ai_credits_per_period` and all non-visibility-inference features are identical in funded and BYOK variants.
-Do not restrict MCP or the Agent more than specified above.
+Every grant, prompt runs and AI credits included, is identical in the funded and BYOK
+variants of a plan; only the price and who supplies the provider keys differ (B4, B32).
+Fan-out and exports are available on every plan (B5). Do not restrict MCP or the Agent
+more than specified above.
 
 ## 3. Usage and funding rules
 
 ```yaml
-visibility_answers:
-  entitlement_key: audit_credits
-  unit: one_successful_prompt_engine_sample
-  debit_per_successful_funded_answer: 1
-  full_audit_units: prompt_count_times_surface_count_times_repetitions
-  failed_answer_credit_debit: 0
-  system_duplicate_credit_debit: 0
-  account_for_provider_attempt_costs_separately: true
-  reserve_before_execution: true
-  settle_successes_and_release_failed_reservations: true
-  settlement_idempotent: true
-  automatic_retries_do_not_create_extra_customer_answer_debits: true
-  ordinary_new_manual_rerun_consumes_new_answers: true
-  competitor_analysis_of_existing_answers_consumes_extra_answers: false
-  ui_mcp_and_agent_calls_share_same_ledger: true
+prompt_runs:                   # B8, B33, B34
+  entitlement_key: prompt_runs_per_period
+  unit: one_engine_or_search_surface_answer
+  same_allowance_byok_and_managed: true
+  counted_triggers: [manual, scheduled, mcp, public_api]
+  hold_per_answer_at_admission: true
+  spend_only_on_recorded_answer: true
+  failed_answer_after_retries: release_hold
+  answer_analysis_included: true        # perception, Commerce shelf, fact verification (B9)
+  spend_timing: customer_choice         # all at once or spread across the period
+  exhausted_allowance: refuse_launch    # 403 prompt_runs_exhausted
   manual_job_rate_limit_is_not_a_free_audit_allowance: true
 
-scheduled_coverage:
-  reserve_remaining_scheduled_answers_before_optional_manual_work: true
-  reserve_formula: remaining_scheduled_prompt_engine_samples_in_current_paid_period
-  use_actual_billing_period_and_schedule: true
-  hardcode_31_days_in_runtime: false
-  optional_manual_sources:
-    - unreserved_included_answer_balance
-    - explicitly_purchased_answer_topups
-    - explicitly_selected_byok
-  block_optional_manual_work_that_would_consume_scheduled_reserve: true
-  recalculate_reserve_when_prompts_or_schedules_change: true
-  silently_reduce_scheduled_service_already_sold: false
-
-byok:
-  included_managed_visibility_answers: 0
-  own_key_visibility_runs_debit_audit_credits: false
-  project_prompt_cadence_and_manual_rate_limits_still_apply: true
-  can_purchase_managed_answer_topups: true
-  managed_execution_requires_explicit_routing_and_available_credits: true
-  automatic_fallback_from_failed_byok_to_platform: false
-  automatic_switch_from_managed_to_customer_keys: false
-  require_confirmed_billable_job_or_authorized_saved_schedule: true
-  opening_reports_triggers_provider_execution: false
-  remaining_platform_funded_services:
-    - crawling_within_included_limits
-    - basic_platform_analysis
-    - included_agent_ai_credits
-  discount_applies_to: visibility_inference_funding_only
-  promise_total_provider_plus_platform_savings: false
-
-workflow_ai:
+ai_credits:                    # B12, B23, B31, B35
   entitlement_key: ai_credits
-  features: [agent]
-  separate_from_visibility_answer_credits: true
-  model_cost_budget_usd_per_credit: 0.01
-  model_cost_budget_microusd_per_credit: 10000
-  debit_rule: ceil_verified_billable_model_cost_microusd_divided_by_10000
-  disclose_rounding: true
-  runtime_rates_source: verified_published_route_specific_ai_credit_policy
-  missing_verified_rate_or_execution_cap: block_new_billable_execution
-  unknown_usage_is_zero: false
-  reserve_before_execution_and_reconcile_actual_usage: true
-  tool_calls_use_their_own_applicable_answer_or_crawl_allowances: true
+  charged_calls:
+    - prompt_generation           # onboarding and the free trial included
+    - onboarding_research_and_brand_discovery
+    - commerce_buyer_prompts
+    - agent
+    - managed_search_intelligence # DataForSEO cost, converted like token cost (B40)
+  charge_basis: tokens_at_serving_model_price   # prices in config/ai-credits.json
+  customer_sees: credits_only                   # conversion stays internal (B23)
+  hold_before_call_and_settle_once: true
+  model_without_configured_price: refused
+  recorded_not_charged: [jev_judge, tavily, keenable]   # B13
   topup_unlocks_ineligible_features: false
   guarantee_articles_or_agent_sessions_per_credit: false
+
+managed:                       # B20, B32, B36
+  platform_keys: [openai, anthropic, google, dataforseo]
+  monthly_platform_spend_ceiling: BILLING_FUNDED_MONTHLY_BUDGET_MINOR
+  ceiling_rule: admit_while_recorded_month_spend_below_ceiling
+
+byok:
+  customer_keys: [openai, anthropic, google, dataforseo]
+  search_intelligence_charge: none     # runs on the workspace's own DataForSEO key (B40)
+  automatic_fallback_from_failed_byok_to_platform: false
+  automatic_switch_from_managed_to_customer_keys: false
+  opening_reports_triggers_provider_execution: false
+  promise_total_provider_plus_platform_savings: false
 
 site_health:
   occupancy_unit: monitored_owned_url
@@ -274,9 +257,9 @@ site_health:
   history_reads_and_cached_report_views_trigger_new_fetches: false
 
 prompt_fanout:
-  discovery_eligibility: [tier_2, tier_3]
+  discovery_eligibility: every_plan     # B5
   activated_variation_consumes_prompt_slot: true
-  executed_variation_consumes_normal_answer_units: true
+  executed_variation_consumes_prompt_runs: true
   free_unmetered_hidden_executions: false
 
 recurring_allowances:
@@ -286,34 +269,27 @@ recurring_allowances:
   rollover: false
 ```
 
-### Scheduled-coverage validation fixtures
+### Daily schedule against the prompt-run allowance
 
-| Plan | Prompts | Surfaces | Days | Scheduled answers | Included answers | Optional remaining |
+| Plan | Prompts | Surfaces | Days | Daily-schedule answers | Prompt runs | Remaining |
 |---|---:|---:|---:|---:|---:|---:|
 | Starter | 10 | 4 | 31 | 1,240 | 1,000 | -240 |
 | Growth | 30 | 4 | 31 | 3,720 | 3,000 | -720 |
 | Scale | 60 | 4 | 31 | 7,440 | 6,000 | -1,440 |
 
-**Every remainder above is negative, and that is an unresolved pricing
-decision, not a rounding artifact.** `full_audit_units` multiplies by
-`surface_count`, so measuring a fourth surface on a daily cadence raises
-scheduled consumption by a third while `audit_credits_per_period` is unchanged
-from the three-engine catalog. `scheduled_coverage` reserves the whole
-scheduled period before any optional manual work, so at these numbers every
-plan reserves more than it includes and no manual run is ever admissible.
-
-The shortfall is recorded rather than absorbed because
-`silently_reduce_scheduled_service_already_sold: false` forbids closing it by
-quietly dropping a surface from the schedule. Closing it needs an owner
-decision among: raising `audit_credits_per_period`, funding the observed
-surface from `serp_tasks_per_period` instead of the shared answer pool (it is
-BYOK-only today and has no platform credential), lowering the cadence for the
-observed surface, or repricing. Until one is chosen, do not sell these plans
-with the observed surface on a daily schedule.
+Every surface answer is one prompt run, so a full daily schedule on all four
+surfaces needs more runs than any plan includes in a 31-day month. Nothing is
+reserved for schedules: scheduled and manual audits spend the same allowance in
+whatever order the customer runs them, and a launch is refused once it is
+spent. Raising `promptRuns` in `billing-authoring.ts` (and publishing a new
+revision) is the lever if plans should cover a full daily schedule.
 
 ## 4. Add-ons and top-ups
 
-INR add-on/top-up prices were not specified in the agreed catalog. `null` means unavailable in that region, not zero-priced. Do not infer these prices from the economics FX assumption.
+INR prices follow the plan rule in section 1 and exist only when the GST rate
+and approval reference were set at authoring; without them an item is
+unavailable in India, not zero-priced. The price follows the base
+subscription's mode (B37); grants are the same in both modes.
 
 ```yaml
 addons:
@@ -324,10 +300,8 @@ addons:
     eligible_modes: [byok, funded]
     prices_minor:
       USD: {byok: 1900, funded: 1900}
-      INR: null
     grants_per_unit:
       project_slots: 1
-    additional_prompt_url_answer_or_workflow_grants: false
 
   addon_extra_prompts:
     name: Extra 10 prompts
@@ -335,15 +309,9 @@ addons:
     eligible_plans: [tier_1, tier_2, tier_3]
     eligible_modes: [byok, funded]
     prices_minor:
-      USD: {byok: 1500, funded: 9900}
-      INR: null
+      USD: {byok: 1500, funded: 9900}   # funded price kept as configured (B37)
     grants_per_unit:
-      byok:
-        prompt_slots: 10
-        audit_credits_per_period: 0
-      funded:
-        prompt_slots: 10
-        audit_credits_per_period: 1000
+      prompt_slots: 10
 
   addon_extra_site_health:
     name: Site Health pack
@@ -352,74 +320,73 @@ addons:
     eligible_modes: [byok, funded]
     prices_minor:
       USD: {byok: 1900, funded: 1900}
-      INR: null
     grants_per_unit:
       monitored_urls: 250
       site_health_page_fetches_per_period: 2500
 
 topups:
-  topup_audit_credits:
-    name: Managed answer top-up
-    cadence: one_time
-    eligible_plans: [tier_1, tier_2, tier_3]
-    eligible_modes: [byok, funded]
-    prices_minor: {USD: 9900, INR: null}
-    grants_per_unit:
-      audit_credits: 1000
-
   topup_ai_credits:
-    name: Workflow AI top-up
+    name: AI credit top-up
     cadence: one_time
-    eligible_plans: [tier_2, tier_3]
+    eligible_plans: [tier_1, tier_2, tier_3]   # never the trial (B16)
     eligible_modes: [byok, funded]
-    prices_minor: {USD: 2500, INR: null}
+    prices_minor: {USD: 2500}
     grants_per_unit:
-      ai_credits: 1000
+      ai_credits: 25000
 
 expansion_policy:
   amounts_above_are_per_unit: true
+  quantity_bounds: [1, 20]
   base_paid_subscription_required: true
   addon_grants_are_supplements_not_primary_plans: true
-  topup_expiry_days: 30
-  topup_expiry_anchor: successful_paid_purchase_time
-  topup_expiry_preserved_after_subscription_cancellation: false
+  expiry: 30_days_or_base_subscription_end_whichever_first
+  expiry_anchor: successful_paid_purchase_time
+  paid_outside_live_base_period: receipt_kept_no_grant_operator_refund   # B30
   topup_use_requires_active_paid_access: true
   topup_use_requires_feature_eligibility: true
   auto_purchase_or_auto_renew_topups: false
   topups_increase_project_prompt_or_url_occupancy: false
-  supported_quantity_bounds: preserve_existing_validated_bounds
   quantity_must_scale_price_and_all_grants_together: true
 ```
 
 ## 5. Trial and access lifecycle
 
 ```yaml
-trial:
-  duration_days: 7
-  access: invite_based_until_abuse_controls_verified
+trial:                         # entitlements.json public_trial (B16, B31, B34)
+  duration_days: 7               # BILLING_TRIAL_DAYS
+  access: public_registration_while_PUBLIC_SIGNUP_ENABLED
   payment_card_required: false
   automatic_charge: false
   project_slots: 1
   prompt_slots: 20
   monitored_urls: 20
+  manual_runs_per_day: 100
   logical_engines: [chatgpt]
-  successful_runs_per_prompt: 1
-  successful_answers_total: 20
-  promise_seven_complete_daily_refreshes: false
-  daily_credit_reset: false
-  claim_limit_per_billing_account_lifetime: 1
+  prompt_runs_total: 20          # for the whole trial; nothing else limits answers
+  ai_credits_total: 5000         # prompt generation in onboarding spends them too
+  topups: false
   agent: false
-  ai_credits_total: 0
+  promise_seven_complete_daily_refreshes: false
+  claim_limit_per_billing_account_lifetime: 1
   expiry_stops_new_paid_execution: true
+  data_purged_days_after_end: 30 # BILLING_TRIAL_DATA_RETENTION_DAYS
 
 access_lifecycle:
-  cancellation_preserves_verified_paid_period_access: true
+  plan_change:
+    upgrade: immediate_with_prorated_charge_for_rest_of_period
+    downgrade: at_renewal_no_refund
+    over_limit_prompts_after_downgrade: kept_not_measured   # newest first (B27)
+    keeps_funding_mode: true
+  cancellation: end_of_period
+  cancellation_held_until_lead_before_renewal: true        # resumable until sent (B46)
+  missed_cancellation_send: renews_once_then_cancels; refund_is_manual_dashboard_refund
+  ended_paid_access_state: subscription_lapsed              # never trial_expired (B26)
+  ended_access_keeps_path_to_buy_a_plan: true               # B43
+  halted_subscription: cancelled_at_provider_by_sweep       # B24
+  full_refund: revokes_remaining_grants_no_clawback
   prepaid_topups_do_not_extend_subscription_access: true
   new_terms_do_not_rewrite_historical_invoices_or_grants: true
   free_signup_profile_does_not_grant_permanent_funded_execution: true
-  plan_and_addon_transitions: existing_verified_lifecycle
-  funding_mode_transitions: renewal_only
-  data_deletion_policy: preserve_existing_verified_policy
 ```
 
 ## 6. Release requirements
@@ -445,20 +412,35 @@ checkout_release_requirements:
     - successful_payment_and_renewal_issue_exactly_one_correct_grant_bundle
     - entitlement_enforcement_and_billing_failure_tests_pass
   funded:
-    - platform_routes_and_credentials_provisioned
-    - actual_grounded_execution_usage_and_costs_calibrated
-    - verified_runtime_token_search_and_reasoning_rate_cards
-    - route_capacity_configured_and_tested
-    - answer_reservations_scheduled_coverage_and_settlement_verified
-  agent:
-    - verified_published_ai_credit_policy
-    - model_call_caps_and_credit_enforcement_verified
+    - platform_engine_and_dataforseo_connections_provisioned_with_matching_credential_refs
+    - platform_keys_installed_as_deployment_secrets
+    - token_prices_configured_for_every_serving_model
+    - monthly_platform_spend_ceiling_set_deliberately   # BILLING_FUNDED_MONTHLY_BUDGET_MINOR
+  ai_credits:
+    - every_platform_call_metered_or_explicitly_recorded_not_charged
   expansions:
     - sku_exists_in_persisted_runtime_catalog
     - regional_price_configured
     - quantity_expiry_and_supplement_grants_verified
   public_trial:
     - eligibility_and_abuse_controls_verified
+
+hidden_operation:              # B2, B42; deploy defaults keep even this closed
+  razorpay_mode: test                   # with BILLING_RAZORPAY_TEST_READY and the region's TEST_*_READY flag
+  checkout_enabled: true
+  checkout_audience: allow_list
+  allow_list_grant: billing_checkout    # billing:admin grant, per workspace
+  public_catalog_offers_checkout: false
+  test_mode_in_production_serves_allow_list_only: true
+
+enable_change:                 # one small configuration change (B0, B2)
+  - live Razorpay key: BILLING_RAZORPAY_MODE=live, BILLING_RAZORPAY_KEY_ID variable, BILLING_RAZORPAY_KEY_SECRET and BILLING_RAZORPAY_WEBHOOK_SECRET secrets
+  - live webhook at https://citeladder.com/api/v1/billing/webhooks/razorpay
+  - live plans created, bound and published as a new catalog revision
+  - BILLING_RAZORPAY_LIVE_READY=true; BILLING_RAZORPAY_INTERNATIONAL_READY=true for USD checkout
+  - India: BILLING_INDIA_GST_RATE, BILLING_INDIA_GST_APPROVAL_REFERENCE, BILLING_SELLER_SAC and BILLING_SELLER_LUT_REFERENCE set before the live catalog is authored
+  - BILLING_CHECKOUT_ENABLED=true
+  - BILLING_CHECKOUT_AUDIENCE=everyone
 
 do_not_sell_without_verified_implementation_and_terms:
   - grok

@@ -30,11 +30,16 @@ export function billingSettings(env: Record<string, string | undefined> = proces
   const sellerEmail = (get('seller_email') as string).trim();
   if (sellerEmail && !/^[^@\s]+@[^@.\s]+(?:\.[^@.\s]+)+$/u.test(sellerEmail))
     throw new ConfigError('seller_email must be an email address');
+  const audience = (get('checkout_audience') as string).trim().toLowerCase();
+  if (audience !== 'allow_list' && audience !== 'everyone')
+    throw new ConfigError('checkout_audience must be allow_list or everyone');
   const invoicePrefix = (get('invoice_prefix') as string).trim().toUpperCase();
   if (!/^[A-Z0-9]{1,3}$/u.test(invoicePrefix))
     throw new ConfigError('invoice_prefix must be 1-3 uppercase letters or digits');
   return {
     enabled: get('checkout_enabled') as boolean,
+    /** Who may check out (B2): allow-listed workspaces until enablement opens it to everyone. */
+    audience: audience satisfies 'allow_list' | 'everyone',
     provider: get('checkout_provider') as string,
     quoteSecret: get('quote_signing_secret') as string,
     quoteMinutes: get('quote_validity_minutes') as number,
@@ -49,6 +54,7 @@ export function billingSettings(env: Record<string, string | undefined> = proces
     staleSeconds: get('reconciliation_stale_after_seconds') as number,
     abandonSeconds: get('reconciliation_abandon_after_seconds') as number,
     skewSeconds: get('reconciliation_clock_skew_seconds') as number,
+    cancellationLeadSeconds: get('cancellation_send_lead_seconds') as number,
     attempts: get('reconciliation_max_attempts') as number,
     backoffSeconds: get('reconciliation_backoff_base_seconds') as number,
     listCount: get('reconciliation_list_count') as number,

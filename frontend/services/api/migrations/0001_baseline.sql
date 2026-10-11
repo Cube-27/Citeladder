@@ -707,6 +707,7 @@ CREATE TABLE public.billing_subscriptions (
     current_period_start timestamp with time zone,
     current_period_end timestamp with time zone,
     cancel_at_period_end boolean NOT NULL,
+    cancellation_sent_at timestamp with time zone,
     ended_at timestamp with time zone,
     provider_state_version integer NOT NULL,
     is_current boolean NOT NULL,
@@ -1973,6 +1974,7 @@ CREATE TABLE public.platform_calls (
     reservation_id uuid,
     reserved_credits integer NOT NULL,
     credits integer NOT NULL,
+    owner_settled boolean NOT NULL,
     input_tokens integer,
     cached_input_tokens integer,
     output_tokens integer,
@@ -2491,7 +2493,12 @@ CREATE TABLE public.search_intelligence_runs (
     cancelled_at timestamp with time zone,
     completed_at timestamp with time zone,
     created_at timestamp with time zone NOT NULL,
-    updated_at timestamp with time zone NOT NULL
+    updated_at timestamp with time zone NOT NULL,
+    credential_source character varying(16) NOT NULL,
+    estimated_credits integer,
+    charged_credits integer,
+    platform_call_id uuid,
+    CONSTRAINT ck_si_runs_credential_source CHECK (((((credential_source)::text = 'byok'::text) AND (estimated_credits IS NULL) AND (charged_credits IS NULL) AND (platform_call_id IS NULL)) OR (((credential_source)::text = 'platform'::text) AND (estimated_credits >= 0) AND ((charged_credits IS NULL) OR ((charged_credits >= 0) AND (charged_credits <= estimated_credits))))))
 );
 
 CREATE TABLE public.security_events (
@@ -4606,7 +4613,7 @@ CREATE INDEX ix_consumable_ledger_subject ON public.consumable_ledger USING btre
 
 CREATE INDEX ix_platform_calls_workspace_created ON public.platform_calls USING btree (workspace_id, created_at);
 
-CREATE INDEX ix_platform_calls_unsettled ON public.platform_calls USING btree (created_at) WHERE ((status)::text = 'reserved'::text);
+CREATE INDEX ix_platform_calls_unsettled ON public.platform_calls USING btree (created_at) WHERE (((status)::text = 'reserved'::text) AND (NOT owner_settled));
 
 CREATE INDEX ix_content_differentiation_candidates_audit_id ON public.content_differentiation_candidates USING btree (audit_id);
 
@@ -4981,6 +4988,8 @@ CREATE INDEX ix_search_intelligence_rows_project_id ON public.search_intelligenc
 CREATE INDEX ix_search_intelligence_rows_workspace_id ON public.search_intelligence_rows USING btree (workspace_id);
 
 CREATE INDEX ix_search_intelligence_runs_connection_id ON public.search_intelligence_runs USING btree (connection_id);
+
+CREATE INDEX ix_search_intelligence_runs_platform_call_id ON public.search_intelligence_runs USING btree (platform_call_id) WHERE (platform_call_id IS NOT NULL);
 
 CREATE INDEX ix_search_intelligence_runs_project_id ON public.search_intelligence_runs USING btree (project_id);
 
@@ -6362,6 +6371,9 @@ ALTER TABLE ONLY public.search_intelligence_runs
 
 ALTER TABLE ONLY public.search_intelligence_runs
     ADD CONSTRAINT search_intelligence_runs_connection_id_fkey FOREIGN KEY (connection_id) REFERENCES public.provider_connections(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.search_intelligence_runs
+    ADD CONSTRAINT search_intelligence_runs_platform_call_id_fkey FOREIGN KEY (platform_call_id) REFERENCES public.platform_calls(id) ON DELETE SET NULL;
 
 ALTER TABLE ONLY public.search_intelligence_runs
     ADD CONSTRAINT search_intelligence_runs_previous_run_id_fkey FOREIGN KEY (previous_run_id) REFERENCES public.search_intelligence_runs(id) ON DELETE SET NULL;

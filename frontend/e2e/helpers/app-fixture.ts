@@ -50,6 +50,7 @@ const PERMITTED_ENTITLEMENT = {
     status: 'active',
     current_period_end: ENTITLEMENT_PERIOD_END,
     cancel_at_period_end: false,
+    resumable_until: null,
     scheduled_change: null,
   },
   trial_grant: null,

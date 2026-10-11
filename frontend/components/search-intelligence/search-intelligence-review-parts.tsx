@@ -1,4 +1,4 @@
-import { estimateUsd } from './search-intelligence-format';
+import { estimateUsd, runEstimate } from './search-intelligence-format';
 import {
   FIXED_DEPTH_KINDS,
   SEARCH_DATASET_LABELS,
@@ -282,7 +282,7 @@ export function ReviewFooter({
           Back
         </Button>
         <Button disabled={busy} onClick={onConfirm}>
-          Confirm ${estimateUsd(review.estimated_cost_usd)} analysis
+          Confirm {runEstimate(review)} analysis
         </Button>
       </div>
     );
@@ -336,7 +336,7 @@ export function ReviewSummary({ review }: Readonly<{ review: SearchIntelligenceR
           </div>
           <div>
             <dt className="type-label">Estimated cost</dt>
-            <dd className="type-figure">${estimateUsd(review.estimated_cost_usd)}</dd>
+            <dd className="type-figure">{runEstimate(review)}</dd>
           </div>
           <div>
             <dt className="type-label">Scope</dt>
@@ -344,8 +344,10 @@ export function ReviewSummary({ review }: Readonly<{ review: SearchIntelligenceR
           </div>
         </dl>
         <p className={textRole('caption')}>
-          The estimate is a ceiling: a request that could take the cost past it is not sent.
-          DataForSEO bills your own account.
+          The estimate is a ceiling: a request that could take the cost past it is not sent.{' '}
+          {review.credential_mode === 'funded'
+            ? 'It is held from your AI credits; you are charged only for requests that succeed, never more than the estimate.'
+            : 'DataForSEO bills your own account.'}
         </p>
       </Stack>
       {review.call_plan.length ? (
@@ -365,9 +367,11 @@ export function ReviewSummary({ review }: Readonly<{ review: SearchIntelligenceR
                     {target ? ` · ${target}` : ''}
                     {comparison ? ` vs ${comparison}` : ''}
                   </span>
-                  <span className="text-muted">
-                    ${estimateUsd(String(call.estimated_cost_usd))}
-                  </span>
+                  {call.estimated_cost_usd === undefined ? null : (
+                    <span className="text-muted">
+                      ${estimateUsd(String(call.estimated_cost_usd))}
+                    </span>
+                  )}
                 </li>
               );
             })}

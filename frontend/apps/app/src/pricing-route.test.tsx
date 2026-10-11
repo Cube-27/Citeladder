@@ -57,7 +57,7 @@ describe('app pricing continuation', () => {
     const writes: Array<{ workspace: string | null; key: string | null }> = [];
     let reads = 0;
     mswServer.use(
-      http.get('/api/v1/billing/catalog', () => {
+      http.get('/api/v1/billing/workspace-catalog', () => {
         reads += 1;
         return HttpResponse.json(catalog);
       }),
@@ -97,7 +97,7 @@ describe('app pricing continuation', () => {
 
   it('reports a refused purchase once, in reader copy', async () => {
     mswServer.use(
-      http.get('/api/v1/billing/catalog', () => HttpResponse.json(catalog)),
+      http.get('/api/v1/billing/workspace-catalog', () => HttpResponse.json(catalog)),
       http.get('/api/v1/auth/me', () => HttpResponse.json({ user: signedInUser })),
       http.post('/api/v1/billing/addons', () =>
         HttpResponse.json({ error: { message: 'checkout_unavailable' } }, { status: 409 }),
@@ -178,7 +178,7 @@ describe('app pricing continuation', () => {
       ],
     };
     mswServer.use(
-      http.get('/api/v1/billing/catalog', () => HttpResponse.json(planCatalog)),
+      http.get('/api/v1/billing/workspace-catalog', () => HttpResponse.json(planCatalog)),
       http.get('/api/v1/auth/me', () => HttpResponse.json({ user: signedInUser })),
       http.post('/api/v1/billing/subscriptions', () => {
         created += 1;

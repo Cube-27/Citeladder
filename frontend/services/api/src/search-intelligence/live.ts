@@ -1,7 +1,6 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { ProviderError } from '../answer-engines/contracts.ts';
-import { createSecretCipher } from '../integrations/fernet.ts';
 import { providerSettings } from '../providers/config.ts';
 import { approvedEndpoint, basicAuthorization } from '../providers/connections.ts';
 import { boundedJson } from '../providers/response.ts';
@@ -23,8 +22,8 @@ const numericCost = (value: unknown) =>
     ? String(value)
     : null;
 type LiveInput = {
-  encryptedSecret: string;
-  encryptionKey: string;
+  /** The DataForSEO login pair as JSON, decrypted by the credential owner. */
+  secret: string;
   endpoint: string;
   baseUrl: string;
 };
@@ -47,7 +46,7 @@ export function resolveLive(
   try {
     pair = z
       .object({ login: z.string().min(1), password: z.string().min(1) })
-      .parse(JSON.parse(createSecretCipher(input.encryptionKey).decrypt(input.encryptedSecret)));
+      .parse(JSON.parse(input.secret));
   } catch {
     throw new ProviderError('auth_failure');
   }

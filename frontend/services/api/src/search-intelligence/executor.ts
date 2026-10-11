@@ -6,6 +6,8 @@ import { acquireCapacity, releaseCapacity, type CapacityRequest } from '../provi
 import type { Executor } from '../workers/executor.ts';
 import { record } from '../db/json.ts';
 import { AcquisitionState, type PreparedResearch, type ResearchPlan } from './acquisition-state.ts';
+import { settleResearchCharge } from './charges.ts';
+import { connectionSecret } from './credentials.ts';
 import { resolveLive, sendLive, type LiveTarget } from './live.ts';
 import { si } from './requests.ts';
 
@@ -29,9 +31,8 @@ function resolveTarget(
   try {
     return resolveLive(
       {
-        encryptedSecret: prepared.secret,
-        encryptionKey,
-        baseUrl: prepared.baseUrl,
+        secret: connectionSecret(prepared.connection, encryptionKey, options.env),
+        baseUrl: prepared.connection.base_url,
         endpoint: prepared.call.endpoint,
       },
       options.env,
@@ -110,8 +111,9 @@ async function runStep(
     attempt: sequence * (si.rate_limit_retries + 1) + prepared.ordinal,
     engine: 'search_intelligence',
     transport: 'dataforseo',
-    source: 'byok',
+    source: prepared.run.credential_source === 'platform' ? 'platform' : 'byok',
     connectionId: prepared.run.connection_id,
+    ...(prepared.accountId ? { accountId: prepared.accountId } : {}),
     accountPoolIdentity: prepared.run.account_identity,
   };
   const decision = await acquireCapacity(context.db, capacity, c.runtime);
@@ -125,22 +127,35 @@ async function runStep(
   return (await state.settle(plan, prepared.call.id, later)) ? 'stop' : 'next';
 }
 
-/** Finite frozen plan: park without spending queue attempts; an ambiguous paid dispatch is never repeated. */
+/** Runs the frozen plan until it ends or parks. */
+async function acquire(
+  state: AcquisitionState,
+  task: Parameters<Executor>[0],
+  context: Parameters<Executor>[1],
+  options: AcquisitionOptions,
+) {
+  const plans = await state.start();
+  if (!plans) return;
+  const runtime = auditRuntime(options.env);
+  const encryptionKey = String(resolveSettingSpec(policy.settings.encryption_key, options.env));
+  const step: StepContext = { state, task, context, encryptionKey, runtime, options };
+  for (const [sequence, plan] of plans.entries()) {
+    await context.checkCancelled('research plan');
+    if ((await runStep(step, plan, sequence, plans.slice(sequence + 1))) === 'stop') return;
+  }
+  await state.finish();
+}
+
+/**
+ * Finite frozen plan: park without spending queue attempts; an ambiguous paid
+ * dispatch is never repeated. A managed analysis that ended is charged at once.
+ */
 export function acquisitionExecutor(options: AcquisitionOptions = {}): Executor {
   return async (task, context) => {
     const runId = z.uuid().parse(record(task.payload).run_id);
     if (!task.project_id) throw new Error('Research acquisition requires its project');
-    const state = new AcquisitionState(context.db, task, runId),
-      plans = await state.start();
-    if (!plans) return;
-    const runtime = auditRuntime(options.env);
-    const encryptionKey = String(resolveSettingSpec(policy.settings.encryption_key, options.env));
-    const step: StepContext = { state, task, context, encryptionKey, runtime, options };
-    for (const [sequence, plan] of plans.entries()) {
-      await context.checkCancelled('research plan');
-      if ((await runStep(step, plan, sequence, plans.slice(sequence + 1))) === 'stop') return;
-    }
-    await state.finish();
+    await acquire(new AcquisitionState(context.db, task, runId), task, context, options);
+    await settleResearchCharge(context.db, { workspaceId: task.workspace_id, runId });
   };
 }
 export const acquireResearch = acquisitionExecutor();

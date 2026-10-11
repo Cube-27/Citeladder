@@ -83,6 +83,7 @@ const itemPrice = z.strictObject({
   amount_minor: units.min(100),
   tax_behavior: z.enum(['inclusive', 'exclusive']),
   fx_inr_per_usd: z.string().default(''),
+  tax_rate: z.string().default(''),
 });
 const terms = z.strictObject({
   usd_minor: units.min(100),
@@ -233,9 +234,12 @@ function validateItemPrice(region: string, price: z.infer<typeof itemPrice>, usd
   if (
     price.currency !== 'INR' ||
     price.tax_behavior !== 'exclusive' ||
-    price.amount_minor !== inrMinor(usdMinor, price.fx_inr_per_usd)
+    price.amount_minor !== inrMinor(usdMinor, price.fx_inr_per_usd) ||
+    !price.tax_rate
   )
     throw new Error('catalog_item_price_invalid');
+  // The frozen rate is the one its quotes use (B45); refuse one they could not.
+  taxMinor(price.amount_minor, price.tax_rate);
 }
 
 function validateTopup(row: AuthoredItem) {
@@ -403,6 +407,7 @@ export function launchCatalog(options: {
                 amount_minor: inrMinor(minor, rate),
                 tax_behavior: 'exclusive',
                 fx_inr_per_usd: rate,
+                tax_rate: gst,
               },
             }
           : {}),

@@ -32,6 +32,14 @@ export function catalogPlanByKey(catalog: BillingCatalog, key: string): CatalogP
   return catalog.plans.find((plan) => plan.key === key);
 }
 
+/** The display name of a plan, add-on or top-up; the key when the catalog has none. */
+export function catalogItemName(catalog: BillingCatalog, key: string): string {
+  const entry = [...catalog.plans, ...catalog.addons, ...catalog.topups].find(
+    (candidate) => candidate.key === key,
+  );
+  return entry?.name ?? key;
+}
+
 export function isSelfServeKey(key: string): key is SelfServePlanKey {
   return key === 'tier_1' || key === 'tier_2' || key === 'tier_3';
 }

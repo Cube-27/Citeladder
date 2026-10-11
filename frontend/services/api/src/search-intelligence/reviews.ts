@@ -4,7 +4,9 @@ import { asApiErrorCode } from '@citeladder/contracts/error-codes';
 import type { Database } from '../db/database.ts';
 import { strings } from '../db/json.ts';
 import { ApiError, notFound } from '../errors.ts';
-import { dataforseoAccountIdentity } from '../providers/dataforseo-identity.ts';
+import { costCredits } from '../billing/ai-pricing.ts';
+import { workspaceCredentialMode } from '../billing/credential-mode.ts';
+import { ProviderError } from '../answer-engines/contracts.ts';
 import { resolveSite } from '../projects/site-resolution.ts';
 import { fetchWebsite } from '../projects/safe-fetch.ts';
 import {
@@ -24,7 +26,7 @@ import {
 } from './requests.ts';
 import type { Scope } from './reads.ts';
 import { runView } from './views.ts';
-import { onlyOf } from '../lists.ts';
+import { connectionIdentity, reviewConnection } from './credentials.ts';
 
 const error = (code: string, message: string) =>
   new ApiError(422, message, { code: asApiErrorCode(code) });
@@ -141,27 +143,22 @@ async function assertPreviousRun(
     .executeTakeFirst();
   if (!found) throw notFound('Previous run');
 }
-async function selectConnection(
+/** The frozen connection and its account identity: the plan picks whose account (B40). */
+async function frozenConnection(
   trx: Database,
   scope: Scope,
   connectionId: Review['connection_id'],
+  credentials: { encryptionKey: string; env?: Record<string, string | undefined> },
 ) {
-  let connections = scope.workspace
-    .selectFrom(trx, 'provider_connections')
-    .selectAll()
-    .where('transport_provider', '=', si.transport_provider)
-    .where('active', '=', true)
-    .where('last_test_status', '=', si.connection_test_ok)
-    .where('api_key_encrypted', '!=', '');
-  if (connectionId) connections = connections.where('id', '=', connectionId);
-  const eligible = await connections.orderBy('created_at').execute();
-  const connection = onlyOf(eligible);
-  if (!connection)
-    throw error(
-      eligible.length ? 'dataforseo_connection_ambiguous' : 'dataforseo_connection_required',
-      'Select one eligible DataForSEO connection',
-    );
-  return connection;
+  const mode = await workspaceCredentialMode(trx, scope.workspace.workspaceId);
+  const { connection, source } = await reviewConnection(trx, scope.workspace, mode, connectionId);
+  try {
+    const identity = connectionIdentity(connection, credentials.encryptionKey, credentials.env);
+    return { connection, source, identity };
+  } catch (cause) {
+    if (!(cause instanceof ProviderError) || source === 'byok') throw cause;
+    throw error('dataforseo_connection_required', 'Search Intelligence is unavailable right now');
+  }
 }
 function assertSupportedMarket(payload: Review, location: number | null, language: string) {
   if (
@@ -279,7 +276,11 @@ export async function createReview(
   key: string,
   input: ReviewInput,
   encryptionKey: string,
-  options: { now?: Date; resolve?: typeof resolveCompetitor } = {},
+  options: {
+    now?: Date;
+    resolve?: typeof resolveCompetitor;
+    env?: Record<string, string | undefined>;
+  } = {},
 ) {
   const prior = await existing(db, scope, key);
   if (prior) return runView(prior);
@@ -310,7 +311,12 @@ export async function createReview(
     assertSavedTargetsUnchanged(current, saved);
     const target = pickOwnedTarget(current, payload.owned_target_id);
     await assertPreviousRun(trx, scope, payload.previous_run_id);
-    const connection = await selectConnection(trx, scope, payload.connection_id);
+    const { connection, source, identity } = await frozenConnection(
+      trx,
+      scope,
+      payload.connection_id,
+      { encryptionKey, env: options.env },
+    );
     const at = options.now ?? new Date();
     const location = payload.location_code || current.project.serp_location_code || null;
     const language =
@@ -338,7 +344,12 @@ export async function createReview(
         previous_run_id: payload.previous_run_id,
         connection_id: connection.id,
         connection_revision: connection.credential_revision,
-        account_identity: dataforseoAccountIdentity(connection.api_key_encrypted, encryptionKey),
+        account_identity: identity,
+        credential_source: source,
+        // A managed analysis is priced in AI credits; it is charged the credits only (B40, B41).
+        estimated_credits: source === 'platform' ? costCredits(total) : null,
+        charged_credits: null,
+        platform_call_id: null,
         status: 'reviewed',
         action: payload.action,
         idempotency_key: key,

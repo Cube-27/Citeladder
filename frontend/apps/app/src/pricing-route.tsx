@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 
 import { BillingCountryInput } from '@/components/billing/billing-account-details';
@@ -12,13 +12,13 @@ import { Stack } from '@/components/ui/layout';
 import { panelClasses } from '@/components/ui/panel';
 import { textRole } from '@/components/ui/typography';
 import {
-  billingApi,
   billingDetailsError,
   emptyBillingCustomerDetails,
   type BillingCatalog,
   type BillingCustomerDetails,
 } from '@/lib/api/billing';
 import { queryKeys } from '@/lib/api/query-keys';
+import { useWorkspaceCatalog } from '@/lib/billing/use-workspace-catalog';
 import {
   checkoutSelection,
   formatMoney,
@@ -337,12 +337,7 @@ export default function PricingRoute() {
   const { activeWorkspaceId, activeWorkspace, isError, retry } = useProjectContext();
   const canBuy = useWorkspaceCapability('manage_billing');
   const queryClient = useQueryClient();
-  const catalogQuery = useQuery({
-    queryKey: queryKeys.billing.catalog(country.length === 2 ? country : undefined),
-    queryFn: ({ signal }) =>
-      billingApi.catalog(country.length === 2 ? country : undefined, { signal, workspaceId: null }),
-    staleTime: 0,
-  });
+  const catalogQuery = useWorkspaceCatalog(activeWorkspaceId, country);
   const checkout = useSubscriptionCheckout();
   const resetPrepared = checkout.resetPrepared;
   useEffect(() => {
