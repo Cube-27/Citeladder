@@ -328,7 +328,11 @@ it('launches an audit only on confirmation, within the frozen estimate', async (
     await call(principal, 'confirm_change', {
       confirmation_token: String(prepared.confirmation_token),
     }),
-  ).toMatchObject({ state: 'changed', change: 'launch_audit', audit: { status: 'queued' } });
+  ).toMatchObject({
+    state: 'changed',
+    change: 'launch_audit',
+    audits: [{ status: 'queued', market: { id: null } }],
+  });
   expect(await audits()).toEqual([{ status: 'queued' }]);
 });
 

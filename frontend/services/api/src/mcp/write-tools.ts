@@ -17,6 +17,7 @@ import { cancelAudit, launchAudit } from '../commands/audits.ts';
 import { addCompetitor } from '../commands/competitors.ts';
 import { auditRuntime } from '../audits/config.ts';
 import { estimateAudit } from '../audits/estimate.ts';
+import { marketIdList } from '../audits/inputs.ts';
 import {
   createPrompts,
   createTopic,
@@ -357,7 +358,7 @@ const writeDefinitions = {
   prepare_launch_audit: tool({
     title: 'Prepare to launch an audit',
     description:
-      'Preview launching an audit of a prompt set (or chosen prompts) on the given engines, with its estimated maximum audit credits. Pass max_estimated_credits to cap it. Nothing runs until the user agrees and you call confirm_change.',
+      'Preview launching an audit of a prompt set (or chosen prompts) on the given engines, with its estimated maximum audit credits. Pass market_ids (from the project context; null is the default market) to run one audit per market. Pass max_estimated_credits to cap it. Nothing runs until the user agrees and you call confirm_change.',
     schema: z.strictObject({
       ...project,
       prompt_set_id: uuid.nullish(),
@@ -368,6 +369,7 @@ const writeDefinitions = {
         .min(policy.projects.min_repetitions)
         .max(policy.projects.max_repetitions)
         .nullish(),
+      market_ids: marketIdList.nullish(),
       max_estimated_credits: z.int().min(1).nullish(),
     }),
     annotations: hints(false, false),
@@ -382,6 +384,7 @@ const writeDefinitions = {
         prompt_ids: promptIds,
         engines: args.engines,
         repetitions: args.repetitions ?? null,
+        market_ids: args.market_ids ?? [null],
       };
       const estimate = await estimateAudit(
         context.db,
@@ -404,7 +407,7 @@ const writeDefinitions = {
           projectId: args.project_id,
           kind: 'launch_audit',
           payload: { project_id: args.project_id, request: launch },
-          preview: `Launch an audit of ${estimate.prompt_count} prompt(s) on ${args.engines.join(', ')}, ${estimate.repetition_count} repetition(s): ${estimate.execution_count} answers, using at most ${estimate.maximum_attempt_count} audit credits (refused if the estimate exceeds ${ceiling}).`,
+          preview: `Launch ${estimate.market_count === 1 ? 'an audit' : `${estimate.market_count} audits, one per market,`} of ${estimate.prompt_count} prompt(s) on ${args.engines.join(', ')}, ${estimate.repetition_count} repetition(s): ${estimate.execution_count} answers, using at most ${estimate.maximum_attempt_count} audit credits (refused if the estimate exceeds ${ceiling}).`,
         },
         { estimated_credits: estimate.maximum_attempt_count, max_estimated_credits: ceiling },
       );
@@ -413,7 +416,7 @@ const writeDefinitions = {
   prepare_schedule: tool({
     title: 'Prepare an audit schedule',
     description:
-      'Preview a recurring audit schedule for a prompt set. Each scheduled run uses audit credits. Nothing changes until the user agrees and you call confirm_change.',
+      'Preview a recurring audit schedule for a prompt set. Pass market_ids (from the project context; null is the default market) to run one audit per market. Each scheduled run uses audit credits. Nothing changes until the user agrees and you call confirm_change.',
     schema: z.strictObject({
       ...project,
       prompt_set_id: uuid.nullish(),
@@ -427,6 +430,7 @@ const writeDefinitions = {
         .nullish(),
       interval_minutes: z.int().positive().nullish(),
       next_run_at: z.iso.datetime({ offset: true }).nullish(),
+      market_ids: marketIdList.nullish(),
     }),
     annotations: hints(false, false),
     run: async (context, args) => {
@@ -440,6 +444,7 @@ const writeDefinitions = {
         repetitions: args.repetitions ?? null,
         interval_minutes: args.interval_minutes ?? null,
         next_run_at: args.next_run_at ?? null,
+        ...(args.market_ids ? { market_ids: args.market_ids } : {}),
       });
       await rehearse(context.db, (trx) => createSchedule(trx, actor, args.project_id, schedule));
       return prepared(context, {
@@ -447,7 +452,7 @@ const writeDefinitions = {
         projectId: args.project_id,
         kind: 'schedule',
         payload: { project_id: args.project_id, schedule },
-        preview: `Create a ${schedule.cadence.replaceAll('_', ' ')} audit schedule for "${set.name}" on ${schedule.engines.join(', ')} (${schedule.timezone}), first run ${schedule.next_run_at ?? 'right away'}. Each run uses audit credits.`,
+        preview: `Create a ${schedule.cadence.replaceAll('_', ' ')} audit schedule for "${set.name}" on ${schedule.engines.join(', ')}${schedule.market_ids.length > 1 ? ` in ${schedule.market_ids.length} markets` : ''} (${schedule.timezone}), first run ${schedule.next_run_at ?? 'right away'}. Each run uses audit credits.`,
       });
     },
   }),

@@ -529,7 +529,7 @@
         "required": ["project_id"],
         "additionalProperties": false
       },
-      "read_only": true
+      "access": "read"
     },
     {
       "name": "read_integration_status",
@@ -1518,7 +1518,7 @@
     {
       "name": "prepare_launch_audit",
       "title": "Prepare to launch an audit",
-      "description": "Preview launching an audit of a prompt set (or chosen prompts) on the given engines, with its estimated maximum audit credits. Pass max_estimated_credits to cap it. Nothing runs until the user agrees and you call confirm_change.",
+      "description": "Preview launching an audit of a prompt set (or chosen prompts) on the given engines, with its estimated maximum audit credits. Pass market_ids (from the project context; null is the default market) to run one audit per market. Pass max_estimated_credits to cap it. Nothing runs until the user agrees and you call confirm_change.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -1558,6 +1558,15 @@
             "minimum": 1,
             "maximum": 10
           },
+          "market_ids": {
+            "minItems": 1,
+            "maxItems": 11,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
           "max_estimated_credits": {
             "type": "integer",
             "minimum": 1
@@ -1571,7 +1580,7 @@
     {
       "name": "prepare_schedule",
       "title": "Prepare an audit schedule",
-      "description": "Preview a recurring audit schedule for a prompt set. Each scheduled run uses audit credits. Nothing changes until the user agrees and you call confirm_change.",
+      "description": "Preview a recurring audit schedule for a prompt set. Pass market_ids (from the project context; null is the default market) to run one audit per market. Each scheduled run uses audit credits. Nothing changes until the user agrees and you call confirm_change.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -1618,6 +1627,15 @@
           "next_run_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "market_ids": {
+            "minItems": 1,
+            "maxItems": 11,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         },
         "required": ["project_id", "cadence", "engines"],
