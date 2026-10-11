@@ -28,7 +28,7 @@ it('checksums supplementary Unicode as ASCII escapes', () => {
   // hashlib.sha256(json.dumps(validated_payload, sort_keys=True,
   // separators=(',', ':'), ensure_ascii=True).encode()).hexdigest()
   expect(catalogDigest(validateCatalog(payload))).toBe(
-    '88dc8375631b923dd07011404df2293d4938dedb2c63761625cf6c8da5ec44a1',
+    'de7e44681e8e250e45e31277b34340d518f25ba502ed5e5c5e2bf6947872bbda',
   );
 });
 

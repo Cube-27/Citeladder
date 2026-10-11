@@ -271,6 +271,7 @@ export async function changePlan(
       identity,
       currency: terms.currency,
       unitAmount: prorated,
+      taxRate: target.taxSnapshot.tax.tax_rate,
       priceRef: target.priceRef,
       revision: published.revision,
       now,

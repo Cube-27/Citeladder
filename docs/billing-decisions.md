@@ -310,6 +310,13 @@ plan changes, usage and invoices stay behind access.
 plain words, never a registry key, and every refusal a bigger plan can lift
 links to billing.
 
+**B45 — Engineering, 2026-10-11.** Seller identity defaults to the values the
+owner recorded on 24 September (legal name, address, email, GSTIN and state);
+SAC, the LUT reference and the GST approval reference stay owner inputs. The
+GST rate has one authority: it is frozen with each India catalog price, plans
+and items alike, and quotes use that rate, never the setting it was authored
+from.
+
 ## Owner inputs still required
 
 Not decisions; needed only for India checkout and live enablement: GST rate,

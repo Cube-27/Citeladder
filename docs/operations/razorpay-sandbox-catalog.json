@@ -295,7 +295,8 @@
               "currency": "INR",
               "amount_minor": 179900,
               "tax_behavior": "exclusive",
-              "fx_inr_per_usd": "90"
+              "fx_inr_per_usd": "90",
+              "tax_rate": "0.18"
             }
           },
           "grants": [
@@ -317,7 +318,8 @@
               "currency": "INR",
               "amount_minor": 179900,
               "tax_behavior": "exclusive",
-              "fx_inr_per_usd": "90"
+              "fx_inr_per_usd": "90",
+              "tax_rate": "0.18"
             }
           },
           "grants": [
@@ -351,7 +353,8 @@
               "currency": "INR",
               "amount_minor": 139900,
               "tax_behavior": "exclusive",
-              "fx_inr_per_usd": "90"
+              "fx_inr_per_usd": "90",
+              "tax_rate": "0.18"
             }
           },
           "grants": [
@@ -373,7 +376,8 @@
               "currency": "INR",
               "amount_minor": 899900,
               "tax_behavior": "exclusive",
-              "fx_inr_per_usd": "90"
+              "fx_inr_per_usd": "90",
+              "tax_rate": "0.18"
             }
           },
           "grants": [
@@ -411,7 +415,8 @@
               "currency": "INR",
               "amount_minor": 179900,
               "tax_behavior": "exclusive",
-              "fx_inr_per_usd": "90"
+              "fx_inr_per_usd": "90",
+              "tax_rate": "0.18"
             }
           },
           "grants": [
@@ -437,7 +442,8 @@
               "currency": "INR",
               "amount_minor": 179900,
               "tax_behavior": "exclusive",
-              "fx_inr_per_usd": "90"
+              "fx_inr_per_usd": "90",
+              "tax_rate": "0.18"
             }
           },
           "grants": [
@@ -477,7 +483,8 @@
               "currency": "INR",
               "amount_minor": 899900,
               "tax_behavior": "exclusive",
-              "fx_inr_per_usd": "90"
+              "fx_inr_per_usd": "90",
+              "tax_rate": "0.18"
             }
           },
           "grants": [
@@ -499,7 +506,8 @@
               "currency": "INR",
               "amount_minor": 899900,
               "tax_behavior": "exclusive",
-              "fx_inr_per_usd": "90"
+              "fx_inr_per_usd": "90",
+              "tax_rate": "0.18"
             }
           },
           "grants": [
@@ -533,7 +541,8 @@
               "currency": "INR",
               "amount_minor": 229900,
               "tax_behavior": "exclusive",
-              "fx_inr_per_usd": "90"
+              "fx_inr_per_usd": "90",
+              "tax_rate": "0.18"
             }
           },
           "grants": [
@@ -555,7 +564,8 @@
               "currency": "INR",
               "amount_minor": 229900,
               "tax_behavior": "exclusive",
-              "fx_inr_per_usd": "90"
+              "fx_inr_per_usd": "90",
+              "tax_rate": "0.18"
             }
           },
           "grants": [

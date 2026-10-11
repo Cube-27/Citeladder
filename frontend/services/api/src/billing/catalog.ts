@@ -68,7 +68,11 @@ const item = z
         usd_minor: amount,
         regional_prices: z.partialRecord(
           z.enum(['india', 'international']),
-          price.extend({ fx_inr_per_usd: z.string().default('') }),
+          // The GST rate is frozen with the price, the one rate its quotes use.
+          price.extend({
+            fx_inr_per_usd: z.string().default(''),
+            tax_rate: z.string().default(''),
+          }),
         ),
         grants,
       }),

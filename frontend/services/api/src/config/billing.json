@@ -19,32 +19,32 @@
     "seller_legal_name": {
       "env": ["BILLING_SELLER_LEGAL_NAME"],
       "type": "str",
-      "default": ""
+      "default": "CUBE27 IT PRIVATE LIMITED"
     },
     "seller_legal_address": {
       "env": ["BILLING_SELLER_LEGAL_ADDRESS"],
       "type": "str",
-      "default": ""
+      "default": "Plot No 12, Mulberry Garden 1, Magarpatta City, Hadapsar, Pune, Maharashtra 411013, India"
     },
     "seller_email": {
       "env": ["BILLING_SELLER_EMAIL"],
       "type": "str",
-      "default": ""
+      "default": "contact@cube27.com"
     },
     "seller_gstin": {
       "env": ["BILLING_SELLER_GSTIN"],
       "type": "str",
-      "default": ""
+      "default": "27AAJCC0427H1ZU"
     },
     "seller_gst_state_code": {
       "env": ["BILLING_SELLER_GST_STATE_CODE"],
       "type": "str",
-      "default": ""
+      "default": "27"
     },
     "seller_gst_state_name": {
       "env": ["BILLING_SELLER_GST_STATE_NAME"],
       "type": "str",
-      "default": ""
+      "default": "Maharashtra"
     },
     "seller_sac": {
       "env": ["BILLING_SELLER_SAC"],

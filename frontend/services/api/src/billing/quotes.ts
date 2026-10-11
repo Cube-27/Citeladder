@@ -51,6 +51,8 @@ export function quoteIntent(
     identity: Identity;
     currency: 'USD' | 'INR';
     unitAmount: number;
+    /** The GST rate frozen with the catalog price: the only rate a quote uses. */
+    taxRate: string;
     priceRef: string;
     revision: string;
     now: Date;
@@ -82,13 +84,13 @@ export function quoteIntent(
     if (
       currency !== 'INR' ||
       !identity.state_code ||
-      !settings.gstRate ||
+      !input.taxRate ||
       !seller.gst_approval_reference
     )
       conflict('checkout_unavailable');
     if (identity.customer_gstin && identity.customer_gstin.slice(0, 2) !== identity.state_code)
       conflict('billing_gstin_state_mismatch');
-    rate = settings.gstRate;
+    rate = input.taxRate;
     const tax = gstMinor(subtotal, rate);
     if (identity.state_code === seller.state_code) {
       treatment = 'CGST_SGST';
@@ -178,6 +180,7 @@ export function baseIntent(
     identity,
     currency: regional.currency,
     unitAmount: regional.amount_minor,
+    taxRate: regional.tax_rate,
     priceRef: regional.provider_price_ref,
     revision,
     now,
@@ -225,6 +228,7 @@ export function packIntent(
     identity,
     currency: price.currency,
     unitAmount: price.amount_minor,
+    taxRate: price.tax_rate,
     priceRef: '',
     revision,
     now,

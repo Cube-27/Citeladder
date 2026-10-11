@@ -79,6 +79,7 @@ describe('billing input and provider boundaries', () => {
       identity: { ...buyer, state_code: '27' },
       currency: 'INR',
       unitAmount: 101,
+      taxRate: '0.18',
       priceRef: 'plan_fixture',
       revision: 'fixture',
       now: new Date(),
@@ -89,7 +90,8 @@ describe('billing input and provider boundaries', () => {
       quote.sgst.amount_minor,
       quote.total_price.amount_minor,
     ]).toEqual([9, 9, 119]);
-    expect(() => quoteIntent({ ...config.billing, gstRate: null }, input)).toThrow();
+    // The rate frozen with the catalog price is the only one a quote uses.
+    expect(() => quoteIntent(config.billing, { ...input, taxRate: '' })).toThrow();
     expect(() =>
       quoteIntent(config.billing, {
         ...input,
