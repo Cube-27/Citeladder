@@ -99,7 +99,7 @@ async function runStep(
   if (prepared.action === 'skip') return 'next';
   if (prepared.action === 'publish')
     return (await state.settle(plan, prepared.call.id, later)) ? 'stop' : 'next';
-  const target = await resolveTarget(prepared, c.encryptionKey, c.options);
+  const target = resolveTarget(prepared, c.encryptionKey, c.options);
   if (target instanceof ProviderError) {
     await state.refuse(prepared, target);
     return 'stop';
