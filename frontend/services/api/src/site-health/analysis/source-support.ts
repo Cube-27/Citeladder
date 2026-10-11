@@ -34,7 +34,8 @@ type SourceSupport = ReturnType<typeof emptySourceSupport>;
 
 const normalHost = (host: string) => host.toLowerCase().replace(/\.$/u, '');
 const registrable = (host: string) => getDomain(host) ?? host;
-const sameSite = (host: string, base: string) =>
+/** The same host, or a host on the same registrable domain: one site's subdomains. */
+export const sameSite = (host: string, base: string) =>
   host === base || (Boolean(base) && registrable(host) === registrable(base));
 
 /** The external host of an http(s) link, or '' for same-site or non-web links. */

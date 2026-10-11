@@ -61,7 +61,7 @@ function structuredDataPresent(facts: Facts): CheckResult {
   const blocks = count(sd.count);
   const declared = list(sd.declared_types);
   return [
-    passFail(blocks > 0 || declared.length > 0),
+    passFail(declared.length > 0),
     {
       block_count: blocks,
       has_json_ld: Boolean(sd.has_json_ld),

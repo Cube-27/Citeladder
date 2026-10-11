@@ -234,18 +234,8 @@ function objectBlocks(object: JsonObject, entityIndex: number): SchemaBlock[] {
  * only as `SoftwareApplication` or `Event` has structured data even though no
  * deeper check reads that type.
  */
-export function declaredSchemaTypes(raw: string[], root: HtmlNode, maxTypes: number) {
-  const types = new Set<string>();
-  for (const body of raw) {
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(body.trim());
-    } catch {
-      continue;
-    }
-    for (const object of jsonObjects(parsed))
-      for (const type of cleanTypes(object['@type'])) types.add(type);
-  }
+export function declaredSchemaTypes(objects: JsonObject[], root: HtmlNode, maxTypes: number) {
+  const types = new Set(objects.flatMap((object) => cleanTypes(object['@type'])));
   for (const node of elements(root))
     if (hasAttribute(node, 'itemscope'))
       for (const candidate of attribute(node, 'itemtype').split(/\s+/u)) {
@@ -255,22 +245,26 @@ export function declaredSchemaTypes(raw: string[], root: HtmlNode, maxTypes: num
   return [...types].sort(compareText).slice(0, maxTypes);
 }
 
-export function jsonLdBlocks(raw: string[], maxBlocks: number): SchemaBlock[] {
-  const blocks: SchemaBlock[] = [];
-  let entityIndex = 0;
+/** Every object in the page's JSON-LD scripts, in document order, each script parsed once. */
+export function jsonLdObjects(raw: string[]): JsonObject[] {
+  const objects: JsonObject[] = [];
   for (const body of raw) {
-    const text = body.trim();
-    if (!text) continue;
     let parsed: unknown;
     try {
-      parsed = JSON.parse(text);
+      parsed = JSON.parse(body.trim());
     } catch {
       continue; // A malformed block cannot discard the others.
     }
-    for (const object of jsonObjects(parsed)) {
-      blocks.push(...objectBlocks(object, entityIndex++));
-      if (blocks.length >= maxBlocks) return blocks.slice(0, maxBlocks);
-    }
+    objects.push(...jsonObjects(parsed));
+  }
+  return objects;
+}
+
+export function jsonLdBlocks(objects: JsonObject[], maxBlocks: number): SchemaBlock[] {
+  const blocks: SchemaBlock[] = [];
+  for (const [entityIndex, object] of objects.entries()) {
+    blocks.push(...objectBlocks(object, entityIndex));
+    if (blocks.length >= maxBlocks) return blocks.slice(0, maxBlocks);
   }
   return blocks;
 }

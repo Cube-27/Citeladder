@@ -23,17 +23,16 @@ function proseRanges(text: string, headings: string[]) {
 }
 
 /** A word repeated back to back ("Actions Actions") is a flattened label/value widget, not prose. */
-function repeatsAdjacentWord(value: string) {
-  const tokens = words(value).map((token) => token[0].toLowerCase());
-  return tokens.some((token, index) => index > 0 && token === tokens[index - 1]);
-}
+const repeatsAdjacentWord = (tokens: string[]) =>
+  tokens.some((token, index) => index > 0 && token === tokens[index - 1]);
 
 function usablePassage(value: string) {
+  const tokens = words(value).map((token) => token[0].toLowerCase());
   return (
     value.length <= limits.max_passage_chars &&
-    words(value).length >= limits.min_passage_words &&
+    tokens.length >= limits.min_passage_words &&
     /[.!?。！？][\s"'’”)]*$/u.test(value) &&
-    !repeatsAdjacentWord(value)
+    !repeatsAdjacentWord(tokens)
   );
 }
 

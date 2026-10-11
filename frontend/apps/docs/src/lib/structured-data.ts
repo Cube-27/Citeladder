@@ -1,3 +1,5 @@
+import { SITE_NAME } from '@/lib/seo/site';
+
 /**
  * JSON-LD for a documentation article. Every value comes from the article's
  * own frontmatter and route, so the markup states only what the page shows:
@@ -30,7 +32,7 @@ export function docsArticleJsonLd({
     publisher: {
       '@type': 'Organization',
       '@id': organization,
-      name: 'CiteLadder',
+      name: SITE_NAME,
       url: websiteUrl,
     },
   };

@@ -153,10 +153,7 @@ export function authorshipFacts(
     (articleMeta['article:published_time'] ?? '').trim() ||
     firstDeclaredTime(page) ||
     visible.published;
-  const modified =
-    structured.modified ||
-    (articleMeta['article:modified_time'] ?? '').trim() ||
-    metaModified.trim();
+  const modified = structured.modified || metaModified.trim();
   return {
     author: (declared || visible.author).slice(0, limits.author_chars),
     dates: {

@@ -4,8 +4,6 @@
  * result is the bounded JSON persisted as `site_fetch_artifacts.normalized_facts`
  * and read by every Site Health analyzer. A malformed page yields partial facts.
  */
-import { getDomain } from 'tldts';
-
 import { policy, resolveSettingSpec } from '../../config.ts';
 import { compareText } from '../../text-order.ts';
 import { onlyOf } from '../../lists.ts';
@@ -35,10 +33,11 @@ import { emptyEntityFacts, entityFacts } from './entity-facts.ts';
 import { analysisPolicy, limits, squash } from './policy.ts';
 import { mergeRobotsHeader, robotsMeta } from './robots-directives.ts';
 import { elementRegion, nodeIsRendered, pageScope, regionNodeIsVisible } from './regions.ts';
-import { emptySourceSupport, sourceSupportFacts } from './source-support.ts';
+import { emptySourceSupport, sameSite, sourceSupportFacts } from './source-support.ts';
 import {
   declaredSchemaTypes,
   jsonLdBlocks,
+  jsonLdObjects,
   microdataBlocks,
   productFacts,
 } from './structured-data.ts';
@@ -90,25 +89,14 @@ const metaContent = (root: HtmlNode, name: string) =>
     .find(Boolean)
     ?.slice(0, limits.meta_chars) ?? '';
 
-/** Update-date meta beyond `article:modified_time`, in the order they are trusted. */
+/** Update-date meta keys, in the order they are trusted. */
 const MODIFIED_META_KEYS = [
+  'article:modified_time',
   'og:updated_time',
   'last-modified',
   'dcterms.modified',
   'dc.date.modified',
 ];
-
-/** The first update date a page-level meta tag declares. */
-function metaModified(root: HtmlNode) {
-  const declared = new Map<string, string>();
-  for (const meta of elements(root, 'meta')) {
-    const key = (attribute(meta, 'property') || attribute(meta, 'name')).trim().toLowerCase();
-    const content = attribute(meta, 'content').trim();
-    if (content && !declared.has(key)) declared.set(key, content);
-  }
-  const found = MODIFIED_META_KEYS.map((key) => declared.get(key)).find(Boolean) ?? '';
-  return found.slice(0, limits.meta_chars);
-}
 
 /** `<meta property|name="prefix:…">` values; the first declaration of a key wins. */
 function metaPropertyMap(root: HtmlNode, prefix: string) {
@@ -181,12 +169,7 @@ function hrefHost(href: string) {
  */
 const isInternal = (href: string, baseHost: string) => {
   const host = hrefHost(href);
-  if (host === null) return true;
-  if (!baseHost) return false;
-  const base = baseHost.toLowerCase();
-  if (host === base) return true;
-  const site = getDomain(base);
-  return site !== null && getDomain(host) === site;
+  return host === null || (Boolean(baseHost) && sameSite(host, baseHost.toLowerCase()));
 };
 
 function linksAndAssets(root: HtmlNode, baseHost: string, maxLinks: number) {
@@ -448,7 +431,8 @@ function structuredData(root: HtmlNode, maxBlocks: number) {
   const raw = [...elements(root, 'script')]
     .filter((node) => attribute(node, 'type').toLowerCase() === 'application/ld+json')
     .map(textContent);
-  const jsonLd = jsonLdBlocks(raw, maxBlocks);
+  const objects = jsonLdObjects(raw);
+  const jsonLd = jsonLdBlocks(objects, maxBlocks);
   const microdata = microdataBlocks(root, maxBlocks);
   const blocks = [...jsonLd, ...microdata].slice(0, maxBlocks);
   return {
@@ -457,7 +441,7 @@ function structuredData(root: HtmlNode, maxBlocks: number) {
     has_json_ld: jsonLd.length > 0,
     has_microdata: microdata.length > 0,
     types: [...new Set(blocks.map((block) => block.type))].sort(compareText),
-    declared_types: declaredSchemaTypes(raw, root, maxBlocks),
+    declared_types: declaredSchemaTypes(objects, root, maxBlocks),
     product: productFacts(blocks),
   };
 }
@@ -481,6 +465,8 @@ function extractDocument(
   const links = linksAndAssets(root, baseHost, settings.maxLinks);
   const viewport = metaContent(root, 'viewport');
   const articleMeta = metaPropertyMap(root, 'article:');
+  const allMeta = metaPropertyMap(root, '');
+  const modifiedMeta = MODIFIED_META_KEYS.map((key) => allMeta[key]).find(Boolean) ?? '';
   const facts: DocumentFacts = {
     ...emptyFacts(),
     has_html: true,
@@ -514,13 +500,7 @@ function extractDocument(
     inline_script_chars: inlineScriptChars(root),
     blocking_resources: blockingResources(root, links.stylesheets.length),
     body: bodyText(root, settings.maxTextChars),
-    ...authorshipFacts(
-      page,
-      sd.blocks,
-      articleMeta,
-      metaContent(root, 'author'),
-      metaModified(root),
-    ),
+    ...authorshipFacts(page, sd.blocks, articleMeta, metaContent(root, 'author'), modifiedMeta),
     commerce: commerceFacts(page, finalUrl),
   };
   const shell =
