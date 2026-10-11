@@ -87,20 +87,20 @@ export async function cancelSubscription(db: Database, config: ServiceConfig, wo
 
 /** Keeps the plan renewing: possible only while the cancellation is still held (B46). */
 export async function resumeSubscription(db: Database, config: ServiceConfig, workspaceId: string) {
-  const row = await db.transaction().execute(async (trx) => {
-    const sub = await currentBase(trx, workspaceId);
-    if (!sub.cancel_at_period_end) return sub;
-    if (!cancellationHeldUntil(sub, config)) conflict('cancellation_already_sent');
+  const sub = await db.transaction().execute(async (trx) => {
+    const row = await currentBase(trx, workspaceId);
+    if (!row.cancel_at_period_end) return { row, resumed: false };
+    if (!cancellationHeldUntil(row, config)) conflict('cancellation_already_sent');
     await trx
       .updateTable('billing_subscriptions')
       .set({ cancel_at_period_end: false, reconciliation_next_at: null, updated_at: new Date() })
-      .where('id', '=', sub.id)
+      .where('id', '=', row.id)
       .execute();
-    return sub;
+    return { row, resumed: true };
   });
   return subscriptionChangeSchema.parse({
-    catalog_key: row.catalog_key,
-    status: 'resumed',
-    effective_at: row.current_period_end.toISOString(),
+    catalog_key: sub.row.catalog_key,
+    status: sub.resumed ? 'resumed' : 'nothing_to_resume',
+    effective_at: sub.row.current_period_end.toISOString(),
   });
 }

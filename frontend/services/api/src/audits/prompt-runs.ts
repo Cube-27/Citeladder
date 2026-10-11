@@ -6,24 +6,27 @@
  */
 import type { Database } from '../db/database.ts';
 import type { AuditTask } from '../queue/audit-queue.ts';
-import { reserveUsage, debitUsage, releaseUsage, LedgerError } from '../entitlements/ledger.ts';
+import { reserveUsages, debitUsage, releaseUsage, LedgerError } from '../entitlements/ledger.ts';
 import { ApiError } from '../errors.ts';
 import { policy } from '../config.ts';
 
 export const PROMPT_RUNS = policy.entitlements.prompt_runs;
 
-/** Holds one run for a task inserted in this transaction; refuses when the allowance is spent. */
-export async function reservePromptRun(
+/**
+ * Holds one run per task inserted in this transaction, in one ledger pass;
+ * refuses them all when the allowance cannot cover every task.
+ */
+export async function reservePromptRuns(
   db: Database,
   {
     workspaceId,
     auditId,
-    taskId,
+    taskIds,
     at,
   }: {
     workspaceId: string;
     auditId: string;
-    taskId: string;
+    taskIds: readonly string[];
     at: Date;
   },
 ) {
@@ -37,15 +40,17 @@ export async function reservePromptRun(
       code: 'entitlement_unresolved',
     });
   try {
-    const reservationId = await reserveUsage(db, {
+    const reservationIds = await reserveUsages(db, {
       accountId: account.id,
       capability: PROMPT_RUNS,
-      units: 1,
-      subject: { kind: 'audit', id: taskId, workspaceId, auditId },
-      key: `run:${taskId}`,
       at,
+      holds: taskIds.map((taskId) => ({
+        units: 1,
+        subject: { kind: 'audit', id: taskId, workspaceId, auditId },
+        key: `run:${taskId}`,
+      })),
     });
-    return { accountId: account.id, reservationId };
+    return { accountId: account.id, reservationIds };
   } catch (error) {
     if (error instanceof LedgerError && error.message === 'funded_credits_exhausted')
       throw new ApiError(403, 'Your plan’s prompt runs for this period are used up', {

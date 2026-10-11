@@ -406,6 +406,16 @@ function effectiveTerms(sub: Subscription, event: SubscriptionEvidence) {
   return { terms, renewal: false };
 }
 
+/** A change the provider refused lapses once a period starts on or after its effective date. */
+function rejectedChangeLapsed(sub: Subscription, event: SubscriptionEvidence) {
+  const change = sub.scheduled_change ? scheduledSchema.parse(sub.scheduled_change) : null;
+  return Boolean(
+    change?.state === 'provider_rejected' &&
+    event.start &&
+    event.start >= new Date(change.effective_at),
+  );
+}
+
 /** The subscription's state after this evidence; a paid terminal period runs to its end. */
 async function periodOutcome(
   db: Database,
@@ -482,6 +492,7 @@ export async function settleSubscription(
         event.cancelAtEnd || terminalStates.has(event.status) || sub.cancel_at_period_end,
       ...followUps(sub, event, status, now),
       provider_state_version: event.version,
+      ...(rejectedChangeLapsed(sub, event) ? { scheduled_change: null } : {}),
       ...(renewal ? renewedTerms(terms) : {}),
       updated_at: now,
     })

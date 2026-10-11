@@ -318,9 +318,9 @@ it('launches an audit only on confirmation, within the frozen estimate', async (
   });
   expect(prepared).toMatchObject({
     state: 'needs_confirmation',
-    estimated_credits: expect.any(Number),
+    maximum_attempt_count: expect.any(Number),
   });
-  expect(prepared.max_estimated_credits).toBe(prepared.estimated_credits);
+  expect(prepared.max_attempts).toBe(prepared.maximum_attempt_count);
   const audits = () =>
     db.selectFrom('audits').select('status').where('project_id', '=', tenant.projectId).execute();
   expect(await audits()).toEqual([]);

@@ -1,5 +1,6 @@
 import { expect, it } from 'vitest';
 import { mkdtemp, mkdir, symlink, rm, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -19,17 +20,26 @@ import {
   writeBoundCatalog,
 } from '../src/billing/plan-operators.ts';
 import { redact } from '../src/billing/admin.ts';
-import storedCatalog from './billing-catalog.fixture.json' with { type: 'json' };
 import { catalogDigest } from '../src/billing/catalog-authoring.ts';
 
-it('checksums supplementary Unicode as ASCII escapes', () => {
-  const payload = structuredClone(storedCatalog);
+it('checksums sorted compact JSON with supplementary Unicode as surrogate escapes', () => {
+  const payload = launchCatalog({ mode: 'test', settings: billingSettings({}) });
   payload.plans[0]!.description = 'Unicode 😀';
-  // hashlib.sha256(json.dumps(validated_payload, sort_keys=True,
-  // separators=(',', ':'), ensure_ascii=True).encode()).hexdigest()
-  expect(catalogDigest(validateCatalog(payload))).toBe(
-    'de7e44681e8e250e45e31277b34340d518f25ba502ed5e5c5e2bf6947872bbda',
-  );
+  const sorted = (value: unknown): unknown => {
+    if (Array.isArray(value)) return value.map(sorted);
+    if (!value || typeof value !== 'object') return value;
+    return Object.fromEntries(
+      Object.entries(value)
+        .sort(([a], [b]) => (a < b ? -1 : 1))
+        .map(([key, item]) => [key, sorted(item)]),
+    );
+  };
+  const validated = validateCatalog(payload);
+  // U+1F600 as its UTF-16 surrogate pair, written as ASCII escape text.
+  const escaped = ['d83d', 'de00'].map((unit) => `\\u${unit}`).join('');
+  const canonical = JSON.stringify(sorted(validated)).replace('😀', escaped);
+  expect(canonical).toContain(`"description":"Unicode ${escaped}"`);
+  expect(catalogDigest(validated)).toBe(createHash('sha256').update(canonical).digest('hex'));
 });
 
 it('normalizes seller configuration and rejects malformed invoice identity', () => {

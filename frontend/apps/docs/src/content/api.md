@@ -69,10 +69,10 @@ curl https://api.citeladder.com/v1/projects/$PROJECT/audits/estimate \
 curl https://api.citeladder.com/v1/projects/$PROJECT/audits \
   -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" \
   -H "Idempotency-Key: $(uuidgen)" \
-  -d '{"prompt_set_id":"…","engines":["chatgpt"],"max_estimated_credits":12}'
+  -d '{"prompt_set_id":"…","engines":["chatgpt"],"max_attempts":12}'
 ```
 
-`max_estimated_credits` caps the estimate's `maximum_attempt_count`, the most credits the audit can reserve. If the estimate is higher, nothing is created and the response is `409 estimate_exceeds_limit` with both numbers. A launched audit is queued and runs on its own; read its status with `GET /v1/projects/{project_id}/audits/{audit_id}`.
+`max_attempts` caps the estimate's `maximum_attempt_count`: every answer the audit asks for, times its retries. Each recorded answer spends one prompt run. If the estimate is higher, nothing is created and the response is `409 estimate_exceeds_limit` with both numbers. A launched audit is queued and runs on its own; read its status with `GET /v1/projects/{project_id}/audits/{audit_id}`.
 
 ## Rate limits
 

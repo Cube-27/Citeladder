@@ -340,7 +340,7 @@ describe('public API requests', () => {
     }
   });
 
-  it('launches an audit in one call only within max_estimated_credits', async () => {
+  it('launches an audit in one call only within max_attempts', async () => {
     const tenant = await withApiAccess(await auditTenant(db, fixtures));
     const { secret } = await createKey(tenant, { scopes: ['audits:run'] });
     const request = { prompt_set_id: tenant.setId, engines: ['chatgpt'] };
@@ -349,19 +349,19 @@ describe('public API requests', () => {
     ).json()) as { maximum_attempt_count: number };
 
     const refused = await api(secret, `/projects/${tenant.projectId}/audits`, {
-      body: { ...request, max_estimated_credits: estimate.maximum_attempt_count - 1 },
+      body: { ...request, max_attempts: estimate.maximum_attempt_count - 1 },
       idempotencyKey: 'launch-1',
     });
     expect(refused.status).toBe(409);
     expect(await refused.json()).toMatchObject({
       error: {
         code: 'estimate_exceeds_limit',
-        details: { estimated_credits: estimate.maximum_attempt_count },
+        details: { maximum_attempt_count: estimate.maximum_attempt_count },
       },
     });
 
     const launched = await api(secret, `/projects/${tenant.projectId}/audits`, {
-      body: { ...request, max_estimated_credits: estimate.maximum_attempt_count },
+      body: { ...request, max_attempts: estimate.maximum_attempt_count },
       idempotencyKey: 'launch-2',
     });
     expect(launched.status).toBe(201);

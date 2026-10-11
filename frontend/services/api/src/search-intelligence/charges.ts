@@ -8,6 +8,7 @@
 import type { NotNull } from 'kysely';
 import { settleProviderCredits } from '../billing/metering.ts';
 import type { Database } from '../db/database.ts';
+import { getLogger } from '../logging.ts';
 import { si, usdUnits } from './requests.ts';
 
 const ENDED = ['succeeded', 'failed', 'partial', 'cancelled', 'uncertain'];
@@ -84,9 +85,16 @@ export async function settleResearchCharges(db: Database, at = new Date(), canAd
   let settled = 0;
   for (const run of open) {
     if (!canAdmit()) break;
-    // One run per transaction, each under its own lock.
+    // One run per transaction, each under its own lock; a failing run never stops the batch.
     const key = { workspaceId: run.workspace_id, runId: run.id };
-    if (await settleResearchCharge(db, key, at)) settled++; // NOSONAR
+    try {
+      if (await settleResearchCharge(db, key, at)) settled++; // NOSONAR
+    } catch (error) {
+      getLogger('workers.research').warning('research_charge_settlement_failed', {
+        run_id: run.id,
+        exception: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
   return settled;
 }

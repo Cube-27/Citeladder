@@ -4,7 +4,7 @@ import { afterAll, expect, it } from 'vitest';
 import { testDatabase } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
 import { ensureWorkspaceBilling } from '../src/entitlements/bootstrap.ts';
-import { reservePromptRun, settlePromptRun } from '../src/audits/prompt-runs.ts';
+import { reservePromptRuns, settlePromptRun } from '../src/audits/prompt-runs.ts';
 import { cachedWorkspaceAccess, workspaceAccess } from '../src/entitlements/access.ts';
 import { issueBundle, revokeBundle } from '../src/entitlements/grants.ts';
 import type { AuditTask } from '../src/queue/audit-queue.ts';
@@ -120,7 +120,7 @@ it('serializes the trial’s 20 prompt runs, returns failed runs and spends a su
   accounts.push(account.id);
   const auditId = await fixtures.audit(t);
   const tasks: AuditTask[] = [];
-  for (let index = 0; index < 22; index++) {
+  for (let index = 0; index < 25; index++) {
     const execution = await fixtures.execution(t, { auditId, analysis: null });
     tasks.push(
       await db
@@ -130,15 +130,16 @@ it('serializes the trial’s 20 prompt runs, returns failed runs and spends a su
         .executeTakeFirstOrThrow(),
     );
   }
-  const reserve = (task: AuditTask) =>
+  const reserveAll = (batch: AuditTask[]) =>
     db.transaction().execute((trx) =>
-      reservePromptRun(trx, {
+      reservePromptRuns(trx, {
         workspaceId: t.workspaceId,
         auditId,
-        taskId: task.id,
+        taskIds: batch.map((task) => task.id),
         at: new Date(),
       }),
     );
+  const reserve = (task: AuditTask) => reserveAll([task]);
   const settle = (task: AuditTask, success: boolean) =>
     db.transaction().execute((trx) => settlePromptRun(trx, task, success, new Date()));
   const results = await Promise.allSettled(tasks.slice(0, 21).map(reserve));
@@ -153,6 +154,14 @@ it('serializes the trial’s 20 prompt runs, returns failed runs and spends a su
   // A recorded answer spends its run, once however often it settles.
   await settle(held[1]!, true);
   await settle(held[1]!, true);
+  // One audit's runs are held together: two free runs refuse three tasks outright.
+  await settle(held[2]!, false);
+  await settle(held[3]!, false);
+  await expect(reserveAll(tasks.slice(22, 25))).rejects.toMatchObject({
+    code: 'prompt_runs_exhausted',
+  });
+  expect((await reserveAll(tasks.slice(22, 24))).reservationIds).toHaveLength(2);
+  await expect(reserve(tasks[24]!)).rejects.toMatchObject({ code: 'prompt_runs_exhausted' });
   const spent = await db
     .selectFrom('consumable_ledger')
     .select(({ fn }) => fn.sum<string>('units').as('units'))

@@ -1142,6 +1142,41 @@ describe('billing money and access owner', () => {
       status: 'already_scheduled',
     });
   });
+  it('drops a downgrade the provider refused once the next period starts', async () => {
+    const t = await activated();
+    await fixtures.catalog((payload) => {
+      const plan = payload.plans.find((row) => row.key === 'tier_2')!;
+      plan.byok_price!.amount_minor = 100;
+      plan.regional_prices.byok.international!.amount_minor = 100;
+    });
+    const reject = vi.fn(async () => {
+      throw new ProviderError(false, 'provider_rejected');
+    });
+    await expect(
+      changePlan(
+        db,
+        config,
+        t.workspaceId,
+        'tier_2',
+        randomUUID(),
+        fakeProvider({ change: reject }),
+      ),
+    ).rejects.toMatchObject({ status: 502 });
+    const change = async () =>
+      (await entitlementRead(db, config, t.workspaceId, new Date())).subscription?.scheduled_change
+        ?.state ?? null;
+    const refused = await change();
+    const start = t.sub.current_period_end!;
+    const end = new Date(start.getTime() + 30 * 86_400_000);
+    const renewal = { ...t.evidence.subscription, version: 2, start, end, payment: null };
+    await db
+      .transaction()
+      .execute((trx) => settleSubscription(trx, t.sub, renewal, t.row, t.workspaceId));
+    expect({ refused, renewed: await change() }).toEqual({
+      refused: 'provider_rejected',
+      renewed: null,
+    });
+  });
   it('holds a cancellation for resume until the lead before renewal, then sends it once', async () => {
     const t = await activated();
     const subscription = () =>
@@ -1179,6 +1214,9 @@ describe('billing money and access owner', () => {
     expect(await subscription()).toEqual({
       cancel_at_period_end: false,
       cancellation_sent_at: null,
+    });
+    expect(await resumeSubscription(db, config, t.workspaceId)).toMatchObject({
+      status: 'nothing_to_resume',
     });
 
     // Cancelled again and inside the lead: recovery sends it, and resume is over.
@@ -1474,6 +1512,43 @@ describe('billing money and access owner', () => {
     } finally {
       transport.mockRestore();
     }
+  });
+  it('lists a managed workspace the add-on price its purchase is quoted at', async () => {
+    await fixtures.catalog((payload) => {
+      const item = payload.addons.find((row) => row.key === 'addon_extra_prompts')!;
+      item.modes.byok!.regional_prices.international!.amount_minor = 1500;
+      item.modes.funded!.regional_prices.international!.amount_minor = 9900;
+    });
+    const t = await activated();
+    await db
+      .updateTable('billing_subscriptions')
+      .set({ credential_mode: 'funded' })
+      .where('id', '=', t.sub.id)
+      .execute();
+    const listed = await createApp(config, db).request(
+      '/api/v1/billing/workspace-catalog?country=US',
+      {
+        headers: {
+          cookie: `${config.session.cookieName}=${await sessionToken({ sub: t.userId, ver: 0 })}`,
+          'x-workspace-id': t.workspaceId,
+        },
+      },
+    );
+    const body = (await listed.json()) as {
+      addons: { key: string; unit_price: { amount_minor: number } | null }[];
+    };
+    const quoted = await purchase(
+      db,
+      config,
+      t.workspaceId,
+      { kind: 'addon', key: 'addon_extra_prompts', quantity: 1, mode: 'byok' },
+      randomUUID(),
+      fakeProvider(),
+    );
+    expect({
+      listed: body.addons.find((row) => row.key === 'addon_extra_prompts')?.unit_price,
+      quoted: [quoted.quote.credential_mode, quoted.quote.base_price.amount_minor],
+    }).toEqual({ listed: { currency: 'USD', amount_minor: 9900 }, quoted: ['funded', 9900] });
   });
   it('sells only to allow-listed workspaces before enablement, in the app and at purchase, never on marketing', async () => {
     const listed = await fixtures.tenant(),

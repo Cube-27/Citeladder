@@ -12,7 +12,7 @@ import { accountState, drawOrder, grantExpiry } from '../entitlements/state.ts';
 import { ledgerBalances } from '../entitlements/ledger.ts';
 import { workspaceAccount } from './purchases.ts';
 import { catalog, capabilityValue } from './catalog.ts';
-import { credentialModeOf } from './credential-mode.ts';
+import { credentialModeOf, type CredentialMode } from './credential-mode.ts';
 import { checkoutAvailable } from './razorpay.ts';
 import { cancellationHeldUntil } from './cancellation.ts';
 import { scheduledSchema } from './settlement.ts';
@@ -30,13 +30,15 @@ function unavailableReason(available: boolean, contactOnly: boolean) {
 /**
  * The catalog as a reader may buy from it: anonymous readers (marketing) are
  * never on the checkout allow-list, a workspace is when the operator granted it
- * (B2), so in-app billing and marketing follow the same signal.
+ * (B2), so in-app billing and marketing follow the same signal. Add-ons and
+ * top-ups are priced in the workspace's credential mode, the mode a purchase is
+ * quoted in; anonymous readers see the BYOK price.
  */
 export async function publicCatalog(
   db: Database,
   config: ServiceConfig,
   country: string | null,
-  allowListed = false,
+  { allowListed = false, mode = 'byok' }: { allowListed?: boolean; mode?: CredentialMode } = {},
 ) {
   const published = await catalog(db);
   const region = country === 'IN' ? 'india' : 'international';
@@ -44,20 +46,21 @@ export async function publicCatalog(
   const money = (price: { currency: string; amount_minor: number } | null | undefined) =>
     price ? { currency: price.currency, amount_minor: price.amount_minor } : null;
   const item = (row: (typeof published.payload.addons)[number]) => {
+    const offer = row.modes[mode];
     const available =
       row.available &&
-      Boolean(row.modes.byok?.regional_prices[region]) &&
+      Boolean(offer?.regional_prices[region]) &&
       checkoutAvailable(config.billing, config.razorpay, region, allowListed);
     return {
       key: row.key,
       name: row.name,
       description: row.description,
-      unit_price: money(row.modes.byok?.regional_prices[region]),
+      unit_price: money(offer?.regional_prices[region]),
       quantity_min: row.quantity_min,
       quantity_max: row.quantity_max,
       availability: available ? 'available' : 'unavailable',
       unavailable_reason: available ? null : 'checkout_unavailable',
-      grants_per_unit: row.modes.byok?.grants ?? [],
+      grants_per_unit: offer?.grants ?? [],
       eligible_plan_keys: row.eligible_plan_keys,
       expiry_days: row.expiry_days,
     };

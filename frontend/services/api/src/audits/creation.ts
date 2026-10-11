@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { PROMPT_RUNS, reservePromptRun } from './prompt-runs.ts';
+import { PROMPT_RUNS, reservePromptRuns } from './prompt-runs.ts';
 import { requireWorkspaceAccess } from '../entitlements/access.ts';
 import { policy } from '../config.ts';
 import { inTransaction, type Database } from '../db/database.ts';
@@ -275,11 +275,12 @@ async function persistTasks(
   const taskCredentials: Record<string, unknown> = {},
     taskReservations: Record<string, string> = {};
   const engineRoutes = { ...plan.configuration.engine_routes };
+  const inserted = [];
   for (const [position, slot] of slots.entries()) {
     const route = plan.routes.find((row) => row.logical_engine === slot.engine)!;
-    const prompt = snapshots.prompts[slot.prompt]!,
-      engine = snapshots.engines.get(slot.engine)!;
+    const prompt = snapshots.prompts[slot.prompt]!;
     const taskId = randomUUID();
+    inserted.push({ taskId, slot, route });
     await db
       .insertInto('audit_tasks')
       .values({
@@ -288,7 +289,7 @@ async function persistTasks(
         project_id: scope.projectId,
         audit_id: auditId,
         prompt_snapshot_id: prompt.id,
-        engine_snapshot_id: engine.id,
+        engine_snapshot_id: snapshots.engines.get(slot.engine)!.id,
         prompt_index: slot.prompt,
         repetition: slot.repetition,
         randomized_position: position,
@@ -334,7 +335,19 @@ async function persistTasks(
         updated_at: at,
       })
       .execute();
-    const binding = await bindTask(options, taskId, route);
+  }
+  const runs = await reservePromptRuns(db, {
+    workspaceId: scope.workspaceId,
+    auditId,
+    taskIds: inserted.map((task) => task.taskId),
+    at,
+  });
+  for (const [index, { taskId, slot, route }] of inserted.entries()) {
+    const engine = snapshots.engines.get(slot.engine)!;
+    const binding = await bindTask(options, taskId, route, {
+      accountId: runs.accountId,
+      reservationId: runs.reservationIds[index]!,
+    });
     await db
       .updateTable('audit_tasks')
       .set({ status: 'queued', provider_route_snapshot: JSON.stringify(binding) })
@@ -402,9 +415,9 @@ async function bindTask(
   binding: TaskBinding,
   taskId: string,
   route: FrozenAudit['routes'][number],
+  run: { accountId: string; reservationId: string },
 ) {
-  const { db, scope, auditId, plan, funded, at } = binding;
-  const run = await reservePromptRun(db, { workspaceId: scope.workspaceId, auditId, taskId, at });
+  const { db, scope, plan, funded } = binding;
   const byok = route.connection_id !== null;
   const connection = await resolveConnection(binding, route, taskId, run.reservationId);
   if (!connection)

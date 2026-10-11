@@ -343,7 +343,7 @@ export const planChangeSchema = responseObject({
  */
 export const subscriptionChangeSchema = responseObject({
   catalog_key: z.string(),
-  status: z.enum(['cancellation_scheduled', 'already_scheduled', 'resumed']),
+  status: z.enum(['cancellation_scheduled', 'already_scheduled', 'resumed', 'nothing_to_resume']),
   effective_at: z.string(),
 });
 

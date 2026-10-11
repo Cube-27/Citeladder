@@ -120,4 +120,4 @@ The [public API](public-api.md) returns 401 `invalid_api_key` (with
 `api_key_limit_reached` (details `allowance`, `current`) at the key allowance;
 409 `idempotency_conflict` for a reused Idempotency-Key with another body or
 while its first request runs (retryable); and 409 `estimate_exceeds_limit`
-(details `estimated_credits`, `max_estimated_credits`) for a refused launch.
+(details `maximum_attempt_count`, `max_attempts`) for a refused launch.
