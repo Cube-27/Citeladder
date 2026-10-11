@@ -206,7 +206,7 @@ The sizes below are generated from the role definitions in `globals.css` and `we
 
 ### Website and focused-flow ladder
 
-Roles own all typography properties. The ladder is mobile-first with one step at 768px. Ordinary paragraphs stay at or above 14px. Prose measure is 45–75 characters, except the documentation article column, which can reach 85ch to sit closer to its side navigation; long paragraphs never use accent ink. Body tracking is zero or slightly negative; large text uses calm leading.
+Roles own all typography properties. The ladder is mobile-first with one step at 768px. Ordinary paragraphs stay at or above 14px. Prose measure is 45–75 characters, except the documentation article column, which can reach 85ch to sit closer to its side navigation, and blog articles, which span the site container with the text column filling the space up to the contents rail (owner decision, 2026-10-11); long paragraphs never use accent ink. Body tracking is zero or slightly negative; large text uses calm leading.
 
 | Role | Class | Job |
 | --- | --- | --- |
