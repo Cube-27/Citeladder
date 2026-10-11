@@ -15,7 +15,7 @@ import type { Database } from '../db/database.ts';
 import { latestReadings, pageEntities, readAt, readingPresences } from '../source-pages/reading.ts';
 import { wireUtcOrNull, utcText } from '../db/timestamps.ts';
 import { brandIdentities, identityKey } from './brand-identities.ts';
-import { earnedPageActions } from './page-standing.ts';
+import { earnedPageActions, pageStanding } from './page-standing.ts';
 import { authorizedSelection, evidenceScope, observedAt, type RunSelection } from './selection.ts';
 import { compareText } from '../text-order.ts';
 
@@ -213,6 +213,7 @@ async function pageSection(
     page_format_method: page.page_format_method,
     source_class: page.source_class,
     entities: reading ? pageEntities(reading, presences) : [],
+    standing: pageStanding(page, reading, presences),
     action_id: actionId ?? null,
   };
 }

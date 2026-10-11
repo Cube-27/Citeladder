@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 import {
@@ -170,51 +170,54 @@ export function useOnboardingFlow(transactionKey: string) {
     router(`/onboarding?${reset.toString()}`, { replace: true, preventScrollReset: true });
   }, [activeWorkspaceId, form, initialDiscoveryId, orphanedCompletion, router, searchParams]);
 
-  // Edits saved before a reload win over the discovery's suggestions.
+  // Edits saved before a reload win over the discovery's suggestions. Read
+  // once per discovery; the save effect below keeps it current.
+  const readyDiscoveryId = discoveryState?.status === 'ready' ? discoveryState.id : null;
+  const savedDraft = useMemo(
+    () => (readyDiscoveryId ? readReviewDraft(readyDiscoveryId) : null),
+    [readyDiscoveryId],
+  );
   useEffect(() => {
     if (discoveryState?.status !== 'ready') return;
-    const saved = readReviewDraft(discoveryState.id);
     // oxlint-disable-next-line react-hooks/set-state-in-effect -- seed an editable persisted draft.
     setDomains((current) =>
       current.length
         ? current
-        : (saved?.domains ??
+        : (savedDraft?.domains ??
           discoveryState.domains.map((domain, index) => ({
             id: `domain:${index}:${domain}`,
             domain,
             selected: true,
           }))),
     );
-    setProfile((current) => current ?? saved?.profile ?? discoveryState.profile);
-  }, [discoveryState]);
+    setProfile((current) => current ?? savedDraft?.profile ?? discoveryState.profile);
+  }, [discoveryState, savedDraft]);
 
   useEffect(() => {
     if (discoveryState?.status !== 'ready' || maximumCompetitors === undefined) return;
     // Suggestions arrive ranked; the first ones up to the cap start selected
     // and the reader deselects any that are wrong before creation.
-    const saved = readReviewDraft(discoveryState.id);
     // oxlint-disable-next-line react-hooks/set-state-in-effect -- seed an editable persisted draft.
     setCompetitors((current) =>
       current.length
         ? current
-        : (saved?.competitors ??
+        : (savedDraft?.competitors ??
           discoveryState.competitors.map((competitor, index) => ({
             ...competitor,
             id: `competitor:${index}:${competitor.name}`,
             selected: index < maximumCompetitors,
           }))),
     );
-  }, [discoveryState, maximumCompetitors]);
+  }, [discoveryState, maximumCompetitors, savedDraft]);
 
   // Keep the reader's review edits for this tab, so a reload returns to them.
-  const reviewDiscoveryId = discoveryState?.status === 'ready' ? discoveryState.id : null;
   useEffect(() => {
     // Competitors seed once the catalog's cap is known; saving before then
     // would store an empty list over the suggestions.
-    if (step !== 2 || !reviewDiscoveryId || profile === null || maximumCompetitors === undefined)
+    if (step !== 2 || !readyDiscoveryId || profile === null || maximumCompetitors === undefined)
       return;
-    saveReviewDraft(reviewDiscoveryId, { domains, competitors, profile });
-  }, [competitors, domains, maximumCompetitors, profile, reviewDiscoveryId, step]);
+    saveReviewDraft(readyDiscoveryId, { domains, competitors, profile });
+  }, [competitors, domains, maximumCompetitors, profile, readyDiscoveryId, step]);
 
   // The completion response is the committed write receipt. Do not hold the
   // user here for another detail request: the destination owns that bounded

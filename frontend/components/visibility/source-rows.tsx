@@ -328,14 +328,11 @@ function PageStandingCell({
   actionId,
 }: Readonly<{ standing: SourceItem['standing']; actionId: string | null }>) {
   const label = standingLabel(standing);
+  const tone = standing === 'gap' ? 'warning' : standing === 'listed' ? 'success' : null;
   return (
     <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-      {standing === 'gap' ? (
-        <Badge variant="status" value="warning">
-          {label}
-        </Badge>
-      ) : standing === 'listed' ? (
-        <Badge variant="status" value="success">
+      {tone ? (
+        <Badge variant="status" value={tone}>
           {label}
         </Badge>
       ) : (

@@ -13,7 +13,6 @@ import { agentHandoffHref } from '@/lib/agent/handoff';
 import {
   brandVerdict,
   onPageCompetitors,
-  pageStanding,
   readingSentence,
   standingSentence,
 } from '@/lib/visibility/source-pages';
@@ -36,7 +35,7 @@ export function SourceUrlPageCard({
 }: Readonly<{ url: string; page: Page | undefined; loading: boolean }>) {
   if (loading) return <Skeleton className="h-32 w-full" />;
   if (page === undefined) return null;
-  const standing = pageStanding(page);
+  const standing = page?.standing ?? 'untracked';
   const brand = brandVerdict(page?.entities);
   return (
     <Card>

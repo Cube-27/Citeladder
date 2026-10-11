@@ -15,10 +15,7 @@
 import type { z } from 'zod';
 
 import type { pageEntitySchema } from '@citeladder/contracts/source-pages';
-import type {
-  pageStandingSchema,
-  visibilitySourceUrlSchema,
-} from '@citeladder/contracts/visibility-evidence';
+import type { pageStandingSchema } from '@citeladder/contracts/visibility-evidence';
 import { formatCount } from '@/lib/format';
 import { sinceLabel } from '@/lib/visibility/sources';
 
@@ -88,33 +85,12 @@ export function absenceBasis(
   return method ? `Searched ${read} for ${method}.` : `Searched ${read}; ${fallback}.`;
 }
 
-type PageSection = NonNullable<z.infer<typeof visibilitySourceUrlSchema>['page']>;
-
 /**
- * Where the business stands on one cited page, the first thing its detail
- * view says.
- *
- * `gap` is the earned opportunity: the page was read, competitors are on it
- * and the business is not. A page that belongs to the business or to a
- * competitor can never list it, so it is named as such rather than judged.
- * A page nobody read says so instead of reading as an absence.
+ * Where the business stands on one cited page, as the server judges it from
+ * the latest successful reading (`visibility/page-standing.ts`). A page this
+ * project has no record of is `untracked`.
  */
 export type PageStanding = z.infer<typeof pageStandingSchema> | 'untracked';
-
-export function pageStanding(page: PageSection | null): PageStanding {
-  if (!page) return 'untracked';
-  if (page.source_class === 'brand_owned') return 'yours';
-  if (page.source_class === 'competitor_owned') return 'competitor';
-  if (!page.read_at) {
-    if (page.state === 'blocked') return 'blocked';
-    return page.state === 'failed' ? 'unreadable' : 'not_read';
-  }
-  const brand = brandVerdict(page.entities);
-  if (brand?.presence === 'present') return 'listed';
-  return onPageCompetitors(page.entities).length && brand?.presence === 'not_detected'
-    ? 'gap'
-    : 'read';
-}
 
 const STANDING_SENTENCES: Record<PageStanding, string> = {
   untracked: 'This page has not been added to your source inventory yet.',

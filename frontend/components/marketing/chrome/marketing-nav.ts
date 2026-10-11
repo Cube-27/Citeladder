@@ -238,7 +238,7 @@ function mountDesktopDropdowns(nav: HTMLElement, links: HTMLElement) {
       return;
     } else {
       suppressedDrop = null;
-      returnFocus = document.getElementById(`desktop-nav-trigger-${key}`);
+      returnFocus = drops.find((drop) => drop.key === key)?.trigger ?? null;
     }
     clearDropClose();
     cancelPendingOpen();
@@ -296,18 +296,24 @@ function mountDesktopDropdowns(nav: HTMLElement, links: HTMLElement) {
   });
 }
 
-/** The mobile sheet: a toggle, accordions, and the page behind it made inert. */
+/**
+ * The mobile sheet: a toggle, accordions, and the page behind it made inert.
+ * Returns the function that closes it.
+ */
 function mountMobileSheet(chrome: HTMLElement) {
   const toggle = chrome.querySelector<HTMLButtonElement>('button[aria-controls="mobile-menu"]');
   const sheet = document.getElementById('mobile-menu');
   const sheetWrapper = sheet?.parentElement;
   const actions = chrome.querySelector<HTMLElement>('[data-nav-actions]');
-  if (!toggle || !sheet || !sheetWrapper) return { closeMenu: () => undefined };
+  if (!toggle || !sheet || !sheetWrapper) return () => undefined;
   const openIcon = toggle.querySelector<SVGElement>('[data-icon="open"]');
   const closeIcon = toggle.querySelector<SVGElement>('[data-icon="close"]');
   const accordions = [
     ...sheet.querySelectorAll<HTMLButtonElement>('button[aria-controls^="acc-"]'),
-  ];
+  ].map((button) => {
+    const key = button.getAttribute('aria-controls')?.slice('acc-'.length) ?? '';
+    return { key, button, panel: document.getElementById(`acc-${key}`) };
+  });
 
   let mobileOpen = false;
   let openAcc: string | null = null;
@@ -324,12 +330,10 @@ function mountMobileSheet(chrome: HTMLElement) {
     openIcon?.toggleAttribute('hidden', mobileOpen);
     closeIcon?.toggleAttribute('hidden', !mobileOpen);
     sheetWrapper.hidden = !mobileOpen;
-    for (const accordion of accordions) {
-      const key = accordion.getAttribute('aria-controls')?.slice('acc-'.length) ?? null;
-      const expanded = key !== null && openAcc === key;
-      accordion.setAttribute('aria-expanded', String(expanded));
-      accordion.querySelector('svg')?.classList.toggle('rotate-180', expanded);
-      const panel = document.getElementById(`acc-${key}`);
+    for (const { key, button, panel } of accordions) {
+      const expanded = openAcc === key;
+      button.setAttribute('aria-expanded', String(expanded));
+      button.querySelector('svg')?.classList.toggle('rotate-180', expanded);
       if (panel) panel.hidden = !expanded;
     }
   };
@@ -385,15 +389,14 @@ function mountMobileSheet(chrome: HTMLElement) {
   };
 
   toggle.addEventListener('click', () => setMobileOpen(!mobileOpen));
-  for (const accordion of accordions) {
-    accordion.addEventListener('click', () => {
-      const key = accordion.getAttribute('aria-controls')?.slice('acc-'.length) ?? null;
+  for (const { key, button } of accordions) {
+    button.addEventListener('click', () => {
       openAcc = openAcc === key ? null : key;
       render();
     });
   }
   for (const link of sheet.querySelectorAll('a')) link.addEventListener('click', closeMenu);
-  return { closeMenu };
+  return closeMenu;
 }
 
 /**
@@ -419,6 +422,5 @@ export function mountMarketingNav(chrome: HTMLElement) {
   const links = chrome.querySelector<HTMLElement>('[data-nav-links]');
   watchScrolled(chrome);
   if (nav && links) mountDesktopDropdowns(nav, links);
-  const { closeMenu } = mountMobileSheet(chrome);
-  mountHomeLogo(chrome, closeMenu);
+  mountHomeLogo(chrome, mountMobileSheet(chrome));
 }

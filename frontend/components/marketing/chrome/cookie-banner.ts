@@ -57,8 +57,8 @@ export function mountCookieBanner(region: HTMLElement): () => void {
         ?.getAttribute(CONSENT_CHOICE_ATTRIBUTE) ?? undefined;
     if (!isDecision(choice)) return;
     editing = false;
+    // Writing notifies the consent subscription below, which re-renders.
     writeConsent(choice);
-    render();
   };
 
   document.addEventListener('click', reopen);

@@ -36,6 +36,7 @@ function page(overrides: Partial<Page> = {}): Page {
         passages: ['Globex leads the list for small teams.'],
       },
     ],
+    standing: 'gap',
     action_id: ACTION,
     ...overrides,
   };
@@ -64,7 +65,13 @@ describe('what a cited page means for you', () => {
     render(
       <SourceUrlPageCard
         url={URL}
-        page={page({ read_at: null, state: 'blocked', entities: [], action_id: null })}
+        page={page({
+          read_at: null,
+          state: 'blocked',
+          entities: [],
+          standing: 'blocked',
+          action_id: null,
+        })}
         loading={false}
       />,
     );
@@ -80,7 +87,7 @@ describe('what a cited page means for you', () => {
     render(
       <SourceUrlPageCard
         url={URL}
-        page={page({ source_class: 'competitor_owned' })}
+        page={page({ source_class: 'competitor_owned', standing: 'competitor' })}
         loading={false}
       />,
     );

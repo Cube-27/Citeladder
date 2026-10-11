@@ -7,7 +7,7 @@
  * carries no verdict. Reads persisted rows only; nothing here fetches.
  */
 import type { pageStandingSchema } from '@citeladder/contracts/visibility-evidence';
-import { sql, type Expression } from 'kysely';
+import { sql } from 'kysely';
 import type { z } from 'zod';
 
 import { earnedTargetKey } from '../analysis/opportunities/earned-pages.ts';
@@ -48,13 +48,14 @@ export function pageStanding(
 }
 
 /**
- * Whether the cited page identified by `urlHash` is a `gap`, as a SQL
- * predicate: the same rule as `pageStanding`, so the filter pages through
- * exactly the rows that would show the gap standing.
+ * The url hashes of this project's `gap` pages, as an uncorrelated SQL
+ * subquery: the same rule as `pageStanding`, so the filter pages through
+ * exactly the rows that show the gap standing. Evaluated once per read, not
+ * once per citation.
  */
-export function isGapPage(selection: RunSelection, urlHash: Expression<string | null>) {
-  return sql<boolean>`exists (
-    select 1
+export function gapPageHashes(selection: RunSelection) {
+  return sql<string>`
+    select gap_page.url_hash
     from source_pages gap_page
     cross join lateral (
       select reading.id
@@ -68,7 +69,6 @@ export function isGapPage(selection: RunSelection, urlHash: Expression<string | 
     ) latest
     where gap_page.workspace_id = ${selection.workspaceId}
       and gap_page.project_id = ${selection.projectId}
-      and gap_page.url_hash = ${urlHash}
       and coalesce(gap_page.source_class, '') not in (${sql.join([...OWN_PAGE_CLASSES])})
       and exists (
         select 1 from source_page_entity_presences brand
@@ -83,8 +83,7 @@ export function isGapPage(selection: RunSelection, urlHash: Expression<string | 
           and rival.workspace_id = ${selection.workspaceId}
           and rival.entity_kind <> ${s.ENTITY_KIND_BRAND}
           and rival.presence = ${s.PRESENCE_PRESENT}
-      )
-  )`;
+      )`;
 }
 
 /**
@@ -106,6 +105,7 @@ export async function earnedPageActions(
         .onRef('action.project_id', '=', 'opportunity.project_id')
         .on(sql<boolean>`action.member_opportunity_ids @> jsonb_build_array(opportunity.id::text)`),
     )
+    .distinctOn('opportunity.target_key')
     .select(['opportunity.target_key', 'action.id'])
     .where('opportunity.workspace_id', '=', selection.workspaceId)
     .where('opportunity.project_id', '=', selection.projectId)
@@ -117,7 +117,7 @@ export async function earnedPageActions(
     .execute();
   for (const row of rows) {
     const hash = targets.get(row.target_key);
-    if (hash && !actions.has(hash)) actions.set(hash, row.id);
+    if (hash) actions.set(hash, row.id);
   }
   return actions;
 }

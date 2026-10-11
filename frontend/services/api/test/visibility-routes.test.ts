@@ -608,6 +608,7 @@ describe('GET /projects/{project_id}/visibility/sources/*', () => {
           passages: ['Globex leads the list.'],
         },
       ],
+      standing: 'gap',
       action_id: action.id,
     });
 

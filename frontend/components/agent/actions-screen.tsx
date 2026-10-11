@@ -30,6 +30,7 @@ import {
 } from '@/lib/agent/vocabulary';
 import { actionsQueries, type Action, type ActionStatus } from '@/lib/api/actions';
 import { actionStatusSchema } from '@citeladder/contracts/actions';
+import { queueCount, useActionStatusCounts } from '@/lib/agent/use-action-status-counts';
 import { AGENT_ACTIONS_PAGE_SIZE } from '@/lib/config/agent';
 import { ICONS } from '@/lib/icons';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
@@ -46,8 +47,7 @@ const TARGET_CODEC = stringUrlCodec<string>([ALL_TARGETS, ...ACTION_TARGET_KINDS
 type StatusCounts = Partial<Record<string, number>>;
 
 function statusCount(value: StatusFilter, counts: StatusCounts) {
-  if (value !== QUEUE) return counts[value] ?? 0;
-  return (counts.open ?? 0) + (counts.in_progress ?? 0);
+  return value === QUEUE ? queueCount(counts) : (counts[value] ?? 0);
 }
 
 /**
@@ -73,11 +73,7 @@ export function ActionsScreen() {
   const { activeProjectId, activeWorkspaceId, isLoading } = useProjectContext();
   const [status, setStatus] = useUrlState('status', STATUS_CODEC);
   const [target, setTarget] = useUrlState('target', TARGET_CODEC);
-  // The unfiltered first page, which the navigation's open count also reads.
-  const counts = useQuery({
-    ...actionsQueries.list(activeWorkspaceId ?? '', activeProjectId ?? ''),
-    enabled: Boolean(activeWorkspaceId && activeProjectId),
-  }).data?.status_counts;
+  const counts = useActionStatusCounts();
   return (
     <PageShell
       controls={

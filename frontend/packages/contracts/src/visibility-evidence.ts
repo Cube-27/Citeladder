@@ -254,6 +254,8 @@ export const visibilitySourceUrlSchema = responseObject({
     page_format_method: z.string().nullable(),
     source_class: z.string().nullable(),
     entities: z.array(pageEntitySchema),
+    // Where the business stands on the page, by the same rule as the URL table.
+    standing: pageStandingSchema,
     // The open Action to get listed here, when competitors are on the page and you are not.
     action_id: uuid().nullable(),
   }).nullable(),

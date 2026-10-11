@@ -1,5 +1,5 @@
 ---
-import { ArrowRight, ArrowUpRight, ChevronDown, Menu, X } from 'lucide-react';
+import { ArrowRight, ChevronDown, Menu, X } from 'lucide-react';
 
 import { LogoMark } from '@/components/ui/logo-mark';
 import { appHref } from '@/lib/config/app-link';
@@ -8,14 +8,13 @@ import {
   NAV_DROPS,
   NAV_LINKS,
   PLATFORM_OVERVIEW,
-  type NavDropItem,
   type NavDropKey,
 } from '@/lib/marketing-content/nav';
 import { cn } from '@/lib/utils';
 
 import { buttonLinkAttributes } from '../primitives/button';
-import { NavIcon, hasNavIcon } from './nav-icons';
 import { DROP_LAYOUT } from './marketing-nav';
+import NavRow from './NavRow.astro';
 
 /**
  * Fixed marketing chrome with accessible desktop dropdowns and a mobile sheet.
@@ -37,16 +36,6 @@ const signupOpen = selfServeSignupOpen();
 const NAV_LINK =
   'nav-link website-nav relative inline-flex items-center gap-1 whitespace-nowrap ' +
   'rounded-[var(--radius-control)] px-3 py-2';
-const ROW =
-  'nav-row group flex items-start gap-3 rounded-[var(--radius-control)] px-3 py-2.5 ' +
-  'transition-colors duration-[var(--motion-normal)] hover:bg-background-alt focus-visible:bg-background-alt';
-
-/** One navigation row, shared by the desktop panels and the mobile sheet. */
-function row(item: NavDropItem) {
-  const external = 'external' in item && item.external === true;
-  return { item, external, current: !external && path === item.href ? 'page' : undefined };
-}
-
 const { className: signUpClass, ...signUpData } = buttonLinkAttributes({
   className: 'hidden sm:inline-flex',
 });
@@ -113,57 +102,16 @@ function panelStyle(key: NavDropKey) {
               class="nav-panel absolute top-full mt-1.5 overflow-auto"
             >
               <div
-                class={cn(
-                  'grid gap-x-2 p-2',
-                  key === 'platform' && 'grid-cols-3',
-                  key !== 'platform' && 'grid-cols-1',
-                )}
+                class={cn('grid gap-x-2 p-2', key === 'platform' ? 'grid-cols-3' : 'grid-cols-1')}
               >
                 {groups.map((group) => (
                   <div
                     class={cn('min-w-0', key === 'resources' && 'grid grid-cols-2 gap-x-2')}
                   >
                     {group.label && <p class="nav-group-label">{group.label}</p>}
-                    {group.items.map((item) => {
-                      const link = row(item);
-                      return link.external ? (
-                        <a
-                          class={cn(ROW, 'justify-between')}
-                          href={item.href}
-                          target="_blank"
-                          rel="noopener"
-                        >
-                          <span class="flex items-start gap-3">
-                            {hasNavIcon(item.href) && (
-                              <span class="nav-row-icon" aria-hidden="true">
-                                <NavIcon href={item.href} className="size-4" />
-                              </span>
-                            )}
-                            <span class="min-w-0">
-                              <span class="nav-row-title">{item.title}</span>
-                              <span class="nav-row-desc">{item.desc}</span>
-                            </span>
-                          </span>
-                          <ArrowUpRight
-                            className="text-muted mt-0.5 size-3.5 shrink-0"
-                            aria-hidden
-                          />
-                          <span class="sr-only">(opens in a new tab)</span>
-                        </a>
-                      ) : (
-                        <a class={ROW} href={item.href} aria-current={link.current}>
-                          {hasNavIcon(item.href) && (
-                            <span class="nav-row-icon" aria-hidden="true">
-                              <NavIcon href={item.href} className="size-4" />
-                            </span>
-                          )}
-                          <span class="min-w-0">
-                            <span class="nav-row-title">{item.title}</span>
-                            <span class="nav-row-desc">{item.desc}</span>
-                          </span>
-                        </a>
-                      );
-                    })}
+                    {group.items.map((item) => (
+                      <NavRow item={item} path={path} />
+                    ))}
                   </div>
                 ))}
               </div>
@@ -255,49 +203,12 @@ function panelStyle(key: NavDropKey) {
                   />
                 </button>
                 <div id={`acc-${key}`} hidden class="-mx-3 pb-3">
-                  {items.map(({ label: groupLabel, item }) => {
-                    const link = row(item);
-                    return (
-                      <>
-                        {groupLabel && <p class="nav-group-label">{groupLabel}</p>}
-                        {link.external ? (
-                          <a
-                            class={cn(ROW, 'justify-between')}
-                            href={item.href}
-                            target="_blank"
-                            rel="noopener"
-                          >
-                            <span class="flex items-start gap-3">
-                              {hasNavIcon(item.href) && (
-                                <span class="nav-row-icon" aria-hidden="true">
-                                  <NavIcon href={item.href} className="size-4" />
-                                </span>
-                              )}
-                              <span class="min-w-0">
-                                <span class="nav-row-title">{item.title}</span>
-                              </span>
-                            </span>
-                            <ArrowUpRight
-                              className="text-muted mt-0.5 size-3.5 shrink-0"
-                              aria-hidden
-                            />
-                            <span class="sr-only">(opens in a new tab)</span>
-                          </a>
-                        ) : (
-                          <a class={ROW} href={item.href} aria-current={link.current}>
-                            {hasNavIcon(item.href) && (
-                              <span class="nav-row-icon" aria-hidden="true">
-                                <NavIcon href={item.href} className="size-4" />
-                              </span>
-                            )}
-                            <span class="min-w-0">
-                              <span class="nav-row-title">{item.title}</span>
-                            </span>
-                          </a>
-                        )}
-                      </>
-                    );
-                  })}
+                  {items.map(({ label: groupLabel, item }) => (
+                    <>
+                      {groupLabel && <p class="nav-group-label">{groupLabel}</p>}
+                      <NavRow item={item} path={path} compact />
+                    </>
+                  ))}
                 </div>
               </div>
             );

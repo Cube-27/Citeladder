@@ -25,7 +25,7 @@ import {
 import { latestReadings, readingPresences } from '../source-pages/reading.ts';
 import { compareText } from '../text-order.ts';
 import { brandIdentities, identityKey } from './brand-identities.ts';
-import { earnedPageActions, isGapPage, pageStanding } from './page-standing.ts';
+import { earnedPageActions, gapPageHashes, pageStanding } from './page-standing.ts';
 import { ratio } from './metrics.ts';
 import { runSetComparisonStatus } from './run-sets.ts';
 import {
@@ -112,7 +112,7 @@ function filteredCitations(
     .where('citation.workspace_id', '=', selection.workspaceId);
   if (query.domain) citations = citations.where('citation.domain', '=', query.domain);
   if (query.standing === 'gap')
-    citations = citations.where(isGapPage(selection, sql.ref('citation.url_hash')));
+    citations = citations.where(sql<boolean>`citation.url_hash in (${gapPageHashes(selection)})`);
   if (!query.sourceClass) return citations;
   if (!pages) return citations.where('citation.source_class', '=', query.sourceClass);
   return citations
@@ -341,33 +341,37 @@ async function attachPageLinks(
   }
   if (byHash.size === 0) return;
   const hashes = [...byHash.keys()];
-  const pages = await db
-    .selectFrom('source_pages as page')
-    .leftJoin('opportunities as opportunity', (join) =>
-      join
-        .on('opportunity.target_key', '=', sql<string>`${PAGE_TARGET_PREFIX} || page.url_hash`)
-        .on('opportunity.workspace_id', '=', selection.workspaceId)
-        .onRef('opportunity.project_id', '=', 'page.project_id')
-        .on('opportunity.superseded_at', 'is', null),
-    )
-    .leftJoin('source_page_snapshots as snapshot', 'snapshot.id', 'page.latest_snapshot_id')
-    .select([
-      'page.id',
-      'page.url_hash',
-      'page.source_class',
-      'page.inspection_state',
-      'page.page_format',
-      'page.page_format_method',
-      'snapshot.page_facts',
-      'opportunity.id as opportunity_id',
-    ])
-    .where('page.workspace_id', '=', selection.workspaceId)
-    .where('page.project_id', '=', selection.projectId)
-    .where('page.url_hash', 'in', hashes)
-    // The highest-priority live action first, should a page ever have two.
-    .orderBy('page.url_hash')
-    .orderBy(sql`opportunity.priority_score desc nulls last`)
-    .execute();
+  // The Action lookup needs only the hashes, so it runs beside the page read.
+  const [pages, actions] = await Promise.all([
+    db
+      .selectFrom('source_pages as page')
+      .leftJoin('opportunities as opportunity', (join) =>
+        join
+          .on('opportunity.target_key', '=', sql<string>`${PAGE_TARGET_PREFIX} || page.url_hash`)
+          .on('opportunity.workspace_id', '=', selection.workspaceId)
+          .onRef('opportunity.project_id', '=', 'page.project_id')
+          .on('opportunity.superseded_at', 'is', null),
+      )
+      .leftJoin('source_page_snapshots as snapshot', 'snapshot.id', 'page.latest_snapshot_id')
+      .select([
+        'page.id',
+        'page.url_hash',
+        'page.source_class',
+        'page.inspection_state',
+        'page.page_format',
+        'page.page_format_method',
+        'snapshot.page_facts',
+        'opportunity.id as opportunity_id',
+      ])
+      .where('page.workspace_id', '=', selection.workspaceId)
+      .where('page.project_id', '=', selection.projectId)
+      .where('page.url_hash', 'in', hashes)
+      // The highest-priority live action first, should a page ever have two.
+      .orderBy('page.url_hash')
+      .orderBy(sql`opportunity.priority_score desc nulls last`)
+      .execute(),
+    earnedPageActions(db, selection, hashes),
+  ]);
   const scope = { workspaceId: selection.workspaceId, projectId: selection.projectId };
   const readings = await latestReadings(db, scope, [...new Set(pages.map((page) => page.id))]);
   const presences = await readingPresences(
@@ -375,7 +379,6 @@ async function attachPageLinks(
     scope,
     [...readings.values()].map((reading) => reading.id),
   );
-  const actions = await earnedPageActions(db, selection, hashes);
   const seen = new Set<string>();
   for (const page of pages) {
     if (seen.has(page.url_hash)) continue;
