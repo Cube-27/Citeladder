@@ -5,6 +5,7 @@ import { z } from 'zod';
 import {
   WorkspaceContext,
   resolveWorkspaceMember,
+  roleAllows,
   type WorkspaceCapability,
 } from '../auth/workspace.ts';
 import { enforceSubjectRequest } from '../abuse/usage.ts';
@@ -229,6 +230,19 @@ export async function mutateMemberInTransaction(
   return applyMemberMutation(trx, workspaceId, actorId, target);
 }
 
+/** A member who can no longer invite loses the pending invitations they issued. */
+async function revokeIssuedInvitations(trx: Database, workspaceId: string, userId: string) {
+  const now = new Date();
+  await trx
+    .updateTable('workspace_invitations')
+    .set({ revoked_at: now, updated_at: now })
+    .where('workspace_id', '=', workspaceId)
+    .where('invited_by_user_id', '=', userId)
+    .where('accepted_at', 'is', null)
+    .where('revoked_at', 'is', null)
+    .execute();
+}
+
 /** The member change itself, for a caller that already authorized and locked the workspace. */
 export async function applyMemberMutation(
   trx: Database,
@@ -259,8 +273,11 @@ export async function applyMemberMutation(
         .where('workspace_id', '=', workspaceId)
         .execute();
       await recordSecurityEvent(trx, 'membership.role', actorId, workspaceId, member.user_id);
+      if (!roleAllows(target.role, 'manage_members'))
+        await revokeIssuedInvitations(trx, workspaceId, member.user_id);
     }
   } else {
+    await revokeIssuedInvitations(trx, workspaceId, member.user_id);
     await trx
       .deleteFrom('workspace_members')
       .where('id', '=', member.id)

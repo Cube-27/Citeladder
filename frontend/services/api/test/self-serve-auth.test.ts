@@ -157,7 +157,7 @@ describe('verified self-serve lifecycle', () => {
         workspace_id: workspaceId,
         name: 'minted before recovery',
         prefix: keyId.slice(0, 8),
-        secret_hmac: randomUUID(),
+        secret_hmac: Buffer.from(randomUUID()),
         scopes: ['read'],
         project_ids: null,
         created_by_user_id: user.id,

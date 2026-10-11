@@ -174,6 +174,8 @@ export function updateInvitation(
       ? { revoked_at: now, updated_at: now }
       : {
           token_sha256,
+          // The member who reissues a link vouches for it from now on.
+          invited_by_user_id: actorId,
           expires_at: new Date(now.getTime() + policy.workspaces.invitation_ttl_hours * 3_600_000),
           updated_at: now,
         };

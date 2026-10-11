@@ -266,7 +266,7 @@ it('bounds roles, targets members only and invalidates sessions when resetting a
         workspace_id: workspace,
         name: 'automation',
         prefix: keyId.slice(0, 8),
-        secret_hmac: randomUUID(),
+        secret_hmac: Buffer.from(randomUUID()),
         scopes: ['read'],
         project_ids: null,
         created_by_user_id: userId,

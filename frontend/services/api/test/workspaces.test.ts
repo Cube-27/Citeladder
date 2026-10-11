@@ -369,6 +369,53 @@ describe('team members need a plan', () => {
   });
 });
 
+describe('invitations follow their issuer authority', () => {
+  it('revokes the links a member issued once they are demoted or removed, and keeps the rest', async () => {
+    // Its own workspace, so its role receipts stay out of the shared one.
+    const spaceOwner = await fixtures.user();
+    actors.push(spaceOwner);
+    const space = await fixtures.ownedWorkspace(spaceOwner);
+    const ownerCookie = await userCookie(spaceOwner);
+    const admin = await fixtures.user();
+    actors.push(admin);
+    await fixtures.member(space, admin, 'admin');
+    const adminCookie = await userCookie(admin);
+    const member = async (body?: object) =>
+      (
+        await request(
+          `/${space}/members/${await memberId(admin, space)}`,
+          body ? 'PATCH' : 'DELETE',
+          body,
+          ownerCookie,
+        )
+      ).status;
+    const invite = async (cookie: string) => {
+      const guest = await fixtures.user();
+      actors.push(guest);
+      const response = await request(
+        `/${space}/invitations`,
+        'POST',
+        { email: `${guest}@example.test`, role: 'admin' },
+        cookie,
+      );
+      expect(response.status).toBe(201);
+      const { token } = (await response.json()) as { token: string };
+      return async () =>
+        (await request('/invitations/accept', 'POST', { token }, await userCookie(guest))).status;
+    };
+    const beforeDemotion = await invite(adminCookie);
+    const ownersLink = await invite(ownerCookie);
+    expect(await member({ role: 'member' })).toBe(200);
+    expect(await beforeDemotion()).toBe(400);
+
+    expect(await member({ role: 'admin' })).toBe(200);
+    const beforeRemoval = await invite(adminCookie);
+    expect(await member()).toBe(204);
+    expect(await beforeRemoval()).toBe(400);
+    expect(await ownersLink()).toBe(200);
+  });
+});
+
 describe('membership continuity and transactional receipts', () => {
   it('rolls back a role change when its security receipt cannot be appended', async () => {
     const user = await fixtures.user();

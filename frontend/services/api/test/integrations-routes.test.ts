@@ -321,6 +321,60 @@ describe('integration connection routes', () => {
     ).toBe('pending_revocation');
   });
 
+  it('lets only credential managers bind or retire a property on the admin grant', async () => {
+    const member = await fixtures.user();
+    await fixtures.member(workspaceId, member, 'member');
+    const headers = {
+      cookie: `${config.session.cookieName}=${await sessionToken({ sub: member, ver: 0 })}`,
+      'x-workspace-id': workspaceId,
+      'content-type': 'application/json',
+    };
+    const saved = await app.request(`/api/v1/integrations/${connectionId}/mappings`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ provider: 'ga4', property_ref: '123456789', project_id: projectId }),
+    });
+    expect(saved.status).toBe(403);
+    expect(
+      await db
+        .selectFrom('integration_property_mappings')
+        .select('id')
+        .where('connection_id', '=', connectionId)
+        .where('property_ref', '=', '123456789')
+        .execute(),
+    ).toEqual([]);
+    const mappingId = randomUUID();
+    await db
+      .insertInto('integration_property_mappings')
+      .values({
+        id: mappingId,
+        workspace_id: workspaceId,
+        connection_id: connectionId,
+        provider: 'ga4',
+        property_ref: '987654321',
+        project_id: projectId,
+        status: 'active',
+        created_at: new Date(),
+        updated_at: new Date(),
+      })
+      .execute();
+    const retired = await app.request(`/api/v1/integrations/mappings/${mappingId}`, {
+      method: 'DELETE',
+      headers,
+    });
+    expect(retired.status).toBe(403);
+    expect(
+      (
+        await db
+          .selectFrom('integration_property_mappings')
+          .select('status')
+          .where('id', '=', mappingId)
+          .executeTakeFirstOrThrow()
+      ).status,
+    ).toBe('active');
+    await db.deleteFrom('integration_property_mappings').where('id', '=', mappingId).execute();
+  });
+
   it('reports a saved mapping whose history enqueue failed and allows retry without duplication', async () => {
     const token = await sessionToken({ sub: ownerId, ver: 0 });
     const save = () =>
