@@ -25,7 +25,7 @@ export function classifierVersion(base: string, inputs: unknown) {
   return `${base}+${digest}`;
 }
 const { version: classifierBase, ...classificationPolicy } = analysis.page_analysis.classification;
-const ruleVersion = 'sh-rules-3';
+const ruleVersion = 'sh-rules-1';
 
 /** Mutation-time allowance projection shares the acquisition owner's bounds. */
 export const siteHealthRuntime = {
@@ -60,7 +60,7 @@ export const siteHealth = {
   ...links,
   ...acquisition,
   versions: {
-    extractor: 'sh-extractor-3',
+    extractor: 'sh-extractor-1',
     analyzer: 'sh-analyzer-1',
     rules: ruleVersion,
     architecture: architecture.architecture.formula_version,

@@ -89,8 +89,8 @@ it('keeps score membership in one place and never scores a hidden diagnostic', (
 
 it('versions the classifier by every input it reads', () => {
   const routes = [['product', '/products?/']];
-  const base = classifierVersion('sh-classifier-2', [{}, routes]);
-  expect(classifierVersion('sh-classifier-2', [{}, routes])).toBe(base);
-  expect(classifierVersion('sh-classifier-2', [{}, [['product', '/p/']]])).not.toBe(base);
-  expect(base.startsWith('sh-classifier-2+')).toBe(true);
+  const base = classifierVersion('sh-classifier-1', [{}, routes]);
+  expect(classifierVersion('sh-classifier-1', [{}, routes])).toBe(base);
+  expect(classifierVersion('sh-classifier-1', [{}, [['product', '/p/']]])).not.toBe(base);
+  expect(base.startsWith('sh-classifier-1+')).toBe(true);
 });

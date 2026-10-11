@@ -93,7 +93,7 @@ function architecture(overrides: Record<string, unknown> = {}) {
         { key: 'depth_3_plus', page_count: 0, percentage: 0 },
       ],
     },
-    architecture_formula_version: 'sh-architecture-2',
+    architecture_formula_version: 'sh-architecture-1',
     limitations: [],
     coverage_reasons: [],
     ...overrides,

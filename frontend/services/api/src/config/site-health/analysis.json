@@ -227,7 +227,7 @@
       "product_nested_value_keys": ["name", "ratingValue"]
     },
     "classification": {
-      "version": "sh-classifier-2",
+      "version": "sh-classifier-1",
       "page_kinds": [
         "homepage",
         "article",
@@ -330,7 +330,7 @@
       }
     },
     "traits": {
-      "version": "sh-traits-2",
+      "version": "sh-traits-1",
       "order": [
         "has_faq",
         "has_reviews",

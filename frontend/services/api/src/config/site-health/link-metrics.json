@@ -1,6 +1,6 @@
 {
   "link_metrics": {
-    "formula_version": "sh-link-metrics-3",
+    "formula_version": "sh-link-metrics-1",
     "top_neighbour_limit": 10,
     "generic_texts": ["click here", "learn more", "read more", "view more", "view product"],
     "repeated_destination_min": 2,

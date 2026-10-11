@@ -1,6 +1,6 @@
 /** Bounded internal-link retrieval and judgment policy. */
 export const internalLinks = {
-  policy_version: 2,
+  policy_version: 1,
   max_pages: 500,
   targets_per_page: 6,
   common_term_fraction: 0.4,

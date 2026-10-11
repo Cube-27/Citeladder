@@ -44,7 +44,7 @@ describe('SiteHealthScreen — Website tab deep links', () => {
             unmeasured_page_count: 0,
             buckets: [],
           },
-          architecture_formula_version: 'sh-architecture-2',
+          architecture_formula_version: 'sh-architecture-1',
           limitations: ['Architecture is not available yet.'],
         }),
       ),

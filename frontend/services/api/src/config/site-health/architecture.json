@@ -1,6 +1,6 @@
 {
   "architecture": {
-    "formula_version": "sh-architecture-2",
+    "formula_version": "sh-architecture-1",
     "hub_page_kinds": ["category", "docs", "homepage"],
     "detail_page_kinds": [
       "alternative",

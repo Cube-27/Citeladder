@@ -464,17 +464,18 @@ found on the site", and omits `root` and `other`.
 
 | Version | Source |
 |---|---|
-| Classifier `sh-classifier-2+<digest>`: base plus a SHA-256 prefix of every classification input | `classifierVersion`, `config/site-health.ts` |
-| Traits `sh-traits-2` | `analysis.json` |
-| Extractor `sh-extractor-3`, analyzer `sh-analyzer-1`, rules `sh-rules-3` | `config/site-health.ts` |
-| Scoring `sh-scoring-2`, coverage `sh-coverage-1`, classification formula `sh-classification-1` | `reads.json` |
-| URL admission `sh-url-admission-2`, disposition `sh-disposition-1` | `acquisition.json` |
+| Classifier `sh-classifier-1+<digest>`: base plus a SHA-256 prefix of every classification input | `classifierVersion`, `config/site-health.ts` |
+| Traits `sh-traits-1` | `analysis.json` |
+| Extractor `sh-extractor-1`, analyzer `sh-analyzer-1`, rules `sh-rules-1` | `config/site-health.ts` |
+| Scoring `sh-scoring-1`, coverage `sh-coverage-1`, classification formula `sh-classification-1` | `reads.json` |
+| URL admission `sh-url-admission-1`, disposition `sh-disposition-1` | `acquisition.json` |
 | Acquisition `sh-acquisition-1` | `acquisition_policy_version` setting |
 
 Crawls freeze these in their configuration. Final analyses keep
 `supersedes_analysis_id`, `source_evaluation_ids`, `source_artifact_ids` and a
 frozen `expected_checkpoint_profile`. Any classification edit changes the
-classifier digest. Other semantic changes bump their version under
+classifier digest. Versions stay at 1 until customers exist; after that, other
+semantic changes bump their version under
 [invariant 5](invariants.md#5-derived-artifacts-record-provenance).
 
 ## Internal links
