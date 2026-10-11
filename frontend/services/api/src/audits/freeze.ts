@@ -11,10 +11,8 @@ import { freezeCommerceContext } from '../commerce/audit-context.ts';
 import { frozenEntityMatching, projectEntityMatching } from '../analysis/entity-matching.ts';
 import { strings } from '../db/json.ts';
 import { admittedFactCheck, admittedPerceptionVersions } from '../perception/admission.ts';
-import { overLimitPromptIds } from '../entitlements/occupancy.ts';
+import { overLimitPromptIds, overLimitSelection } from '../entitlements/occupancy.ts';
 import { marketLabel } from '@citeladder/contracts/markets';
-import { asApiErrorCode } from '@citeladder/contracts/error-codes';
-import { policy } from '../config.ts';
 import type { Market } from '../projects/markets.ts';
 import {
   isSearchSurface,
@@ -109,13 +107,7 @@ async function loadPrompts(
   const overLimit = await overLimitPromptIds(db, workspaceId);
   const prompts = selected.filter((prompt) => !overLimit.has(prompt.id));
   if (input.prompt_ids.length && prompts.length !== selected.length)
-    throw new ApiError(403, 'Some selected prompts are beyond your plan’s prompt limit', {
-      code: asApiErrorCode(policy.entitlements.codes.limit_exceeded),
-      details: {
-        key: policy.entitlements.prompt_slots,
-        excluded: selected.length - prompts.length,
-      },
-    });
+    throw overLimitSelection(selected.length - prompts.length);
   if (!prompts.length)
     throw invalid(
       selected.length

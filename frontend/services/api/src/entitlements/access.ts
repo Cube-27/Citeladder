@@ -2,7 +2,7 @@ import type { z } from 'zod';
 import type { workspaceAccessSchema } from '@citeladder/contracts/auth';
 import type { Database } from '../db/database.ts';
 import { ApiError } from '../errors.ts';
-import { accountState } from './state.ts';
+import { accountState, grantExpiry } from './state.ts';
 import { policy } from '../config.ts';
 
 export type WorkspaceAccess = z.infer<typeof workspaceAccessSchema>['status'];
@@ -64,20 +64,18 @@ export async function workspaceAccess(
     return { status: 'active', expires_at: state.validUntil?.toISOString() ?? null };
   // A paid plan's access that took effect and has ended: a lapsed customer,
   // whatever trial preceded it.
-  const lapsed = state.grants
+  const ends = state.grants
     .filter(
       (grant) =>
         grant.key === 'workspace_access' && grant.source_kind === 'plan' && grant.valid_from <= at,
     )
-    .map((grant) => {
-      const revoked = state.revokedAt.get(grant.id);
-      return revoked && (!grant.valid_until || revoked < grant.valid_until)
-        ? revoked
-        : grant.valid_until;
-    })
-    .filter((end): end is Date => end !== null && end <= at)
-    .sort((a, b) => b.getTime() - a.getTime())[0];
-  if (lapsed) return { status: 'subscription_lapsed', expires_at: lapsed.toISOString() };
+    .flatMap((grant) => {
+      const expiry = grantExpiry(grant, state.end)?.getTime() ?? Infinity;
+      const end = Math.min(expiry, state.revokedAt.get(grant.id)?.getTime() ?? Infinity);
+      return end <= at.getTime() ? [end] : [];
+    });
+  if (ends.length)
+    return { status: 'subscription_lapsed', expires_at: new Date(Math.max(...ends)).toISOString() };
   const trial = state.grants.find(
     (grant) =>
       grant.profile_key === policy.entitlements.public_trial.profile &&
@@ -92,9 +90,7 @@ export async function workspaceAccess(
 export async function requireWorkspaceAccess(db: Database, workspaceId: string) {
   const access = await workspaceAccess(db, workspaceId);
   if (!accessGranted(access.status))
-    throw new ApiError(403, DENIALS[access.status], {
-      code: access.status,
-    });
+    throw new ApiError(403, DENIALS[access.status], { code: access.status });
   return access;
 }
 

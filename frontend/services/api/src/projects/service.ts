@@ -93,17 +93,19 @@ async function views(
     .orderBy('created_at')
     .orderBy('id')
     .execute();
-  const prompts = await db
-    .selectFrom('prompts')
-    .innerJoin('prompt_sets', 'prompt_sets.id', 'prompts.prompt_set_id')
-    .innerJoin('projects', 'projects.id', 'prompt_sets.project_id')
-    .selectAll('prompts')
-    .where('projects.workspace_id', '=', workspaceId)
-    .where('projects.id', 'in', ids)
-    .orderBy('prompts.created_at')
-    .orderBy('prompts.id')
-    .execute();
-  const overLimit = await overLimitPromptIds(db, workspaceId);
+  const [prompts, overLimit] = await Promise.all([
+    db
+      .selectFrom('prompts')
+      .innerJoin('prompt_sets', 'prompt_sets.id', 'prompts.prompt_set_id')
+      .innerJoin('projects', 'projects.id', 'prompt_sets.project_id')
+      .selectAll('prompts')
+      .where('projects.workspace_id', '=', workspaceId)
+      .where('projects.id', 'in', ids)
+      .orderBy('prompts.created_at')
+      .orderBy('prompts.id')
+      .execute(),
+    overLimitPromptIds(db, workspaceId),
+  ]);
   return rows.map((row) => {
     const brand = brands.find((item) => item.project_id === row.id);
     const brandName = brand?.name ?? row.brand_name;

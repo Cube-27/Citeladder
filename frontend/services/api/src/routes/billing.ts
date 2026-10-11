@@ -307,9 +307,10 @@ export const billingRoutes = [
         (pending.status === 'abandoned' && pending.activation_kind === 'base')
       )
         conflict('checkout_unavailable');
+      const now = new Date();
       await db
         .updateTable('pending_activations')
-        .set({ status: 'pending', reconciliation_next_at: new Date(), updated_at: new Date() })
+        .set({ status: 'pending', reconciliation_next_at: now, updated_at: now })
         .where('id', '=', pending.id)
         .where('billing_account_id', '=', pending.billing_account_id)
         .where('status', 'in', ['pending', 'abandoned'])

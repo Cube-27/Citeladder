@@ -42,7 +42,7 @@ const grantedStates = new Set(['active', 'cancel_scheduled']);
 const terminalStates = new Set(['cancelled', 'expired']);
 // Halted at the provider: the row stays current, so it blocks a second base
 // subscription, until the sweep's cancellation is confirmed.
-export const UNPAID = policy.billing.contracts.subscription_unpaid;
+const UNPAID = policy.billing.contracts.subscription_unpaid;
 
 /** The frozen revision's display name for a plan, as receipts print it. */
 async function planName(db: Database, revision: string, key: string) {

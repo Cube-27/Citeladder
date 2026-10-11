@@ -10,7 +10,8 @@ import {
   type BillingProvider,
   type Evidence,
 } from './razorpay.ts';
-import { lockOwner, settlePending, settleSubscription, UNPAID } from './settlement.ts';
+import { policy } from '../config.ts';
+import { lockOwner, settlePending, settleSubscription } from './settlement.ts';
 import { recordRefund } from './receipts.ts';
 import { pushChange } from './plan-changes.ts';
 import { webhookSummary } from './webhooks.ts';
@@ -463,7 +464,7 @@ async function subscriptionProbe(
     let evidence = await provider.evidence(sub.external_subscription_id, true);
     const state = evidence.kind === 'base' ? evidence.subscription : null;
     // Halted (retries exhausted) ends now, so it can never charge again unseen.
-    const halted = state?.status === UNPAID;
+    const halted = state?.status === policy.billing.contracts.subscription_unpaid;
     // A durable cancellation intent survives an interrupted provider request;
     // cancel only while the provider still shows the subscription renewing.
     const unwanted = sub.cancel_at_period_end && state?.status === 'active' && !state.cancelAtEnd;

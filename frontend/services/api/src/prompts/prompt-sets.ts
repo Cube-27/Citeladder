@@ -52,18 +52,20 @@ async function views(
   sets: readonly PromptSetRow[],
 ): Promise<PromptSetView[]> {
   if (sets.length === 0) return [];
-  const overLimit = await overLimitPromptIds(db, workspaceId);
-  const prompts = await db
-    .selectFrom('prompts')
-    .selectAll()
-    .where(
-      'prompt_set_id',
-      'in',
-      sets.map((set) => set.id),
-    )
-    .orderBy('created_at')
-    .orderBy('id')
-    .execute();
+  const [overLimit, prompts] = await Promise.all([
+    overLimitPromptIds(db, workspaceId),
+    db
+      .selectFrom('prompts')
+      .selectAll()
+      .where(
+        'prompt_set_id',
+        'in',
+        sets.map((set) => set.id),
+      )
+      .orderBy('created_at')
+      .orderBy('id')
+      .execute(),
+  ]);
   const bySet = Map.groupBy(prompts, (prompt) => prompt.prompt_set_id);
   return sets.map((set) => promptSetView(set, bySet.get(set.id) ?? [], overLimit));
 }
