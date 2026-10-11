@@ -12,10 +12,11 @@ function copy(pending: PendingDelete) {
         'Future runs stop measuring it. Results from past runs are kept. Archive it instead to keep it in the library.',
     };
   const count = pending.topic.active_count;
+  const activePrompts = count === 1 ? 'active prompt' : `${count} active prompts`;
   return {
     title: `Delete topic “${pending.topic.name}”?`,
     description: count
-      ? `Its ${count === 1 ? 'active prompt' : `${count} active prompts`}, any other prompts and any subtopics stay in the library without a topic.`
+      ? `Its ${activePrompts}, any other prompts and any subtopics stay in the library without a topic.`
       : 'Its prompts and subtopics, if any, stay in the library without a topic.',
   };
 }

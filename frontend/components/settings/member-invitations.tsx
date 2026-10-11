@@ -34,6 +34,14 @@ function acceptanceLink(token: string): string {
   return `${origin}/invitations/accept?token=${encodeURIComponent(token)}`;
 }
 
+function deliveryNotice(delivery: 'accepted' | 'failed' | undefined): string {
+  if (delivery === 'accepted') {
+    return 'The email provider accepted the invitation. Inbox delivery is not confirmed. ';
+  }
+  if (delivery === 'failed') return 'The email provider did not accept the invitation. ';
+  return 'Email delivery status is unavailable. ';
+}
+
 /**
  * Issue an invitation and hand back its ONE-TIME acceptance link.
  *
@@ -126,11 +134,7 @@ export function InviteDialog({
           <Alert tone="info">
             <div className="grid gap-2">
               <span>
-                {delivery === 'accepted'
-                  ? 'The email provider accepted the invitation. Inbox delivery is not confirmed. '
-                  : delivery === 'failed'
-                    ? 'The email provider did not accept the invitation. '
-                    : 'Email delivery status is unavailable. '}
+                {deliveryNotice(delivery)}
                 Share this one-time acceptance link. It is shown once and cannot be retrieved again
                 — resending issues a new link and invalidates this one.
               </span>

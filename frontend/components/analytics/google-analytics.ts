@@ -18,7 +18,8 @@ function clearAnalyticsCookies() {
     const name = cookie.trim().split('=')[0]!;
     if (!/^(_ga(?:_|$)|_gid$|_gat(?:_|$))/.test(name)) continue;
     for (const domain of domains) {
-      document.cookie = `${name}=; Max-Age=0; path=/${domain ? `; domain=${domain}` : ''}`;
+      const domainAttribute = domain ? `; domain=${domain}` : '';
+      document.cookie = `${name}=; Max-Age=0; path=/${domainAttribute}`;
     }
   }
 }

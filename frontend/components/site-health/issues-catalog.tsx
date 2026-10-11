@@ -38,6 +38,12 @@ import { issueTitle } from '@/lib/site-health/issues';
 import { cn } from '@/lib/utils';
 import { textRole } from '@/components/ui/typography';
 
+const FILTER_GROUP_KEYS: Record<'All issues' | 'Severity' | 'Category', readonly string[]> = {
+  'All issues': ['all'],
+  Severity: ['high', 'medium', 'low'],
+  Category: ['technical', 'aeo'],
+};
+
 /** The toggle's label, with the count only once a summary has landed. */
 function findingViewLabel(view: FindingClass, summary: IssuesSummary | null): string {
   const defects = view === 'defect';
@@ -129,12 +135,7 @@ export function IssuesCatalog({
       />
       <div className="flex max-w-full min-w-0 flex-wrap items-end gap-4">
         {(['All issues', 'Severity', 'Category'] as const).map((group) => {
-          const keys =
-            group === 'Severity'
-              ? ['high', 'medium', 'low']
-              : group === 'Category'
-                ? ['technical', 'aeo']
-                : ['all'];
+          const keys = FILTER_GROUP_KEYS[group];
           const options = issueFilterClasses(findingView).filter((item) => keys.includes(item.key));
           return options.length > 0 ? (
             <SegmentedControl
@@ -144,7 +145,9 @@ export function IssuesCatalog({
               ariaLabel={group}
               options={options.map((item) => ({
                 value: item.key,
-                label: `${item.label}${summary ? ` (${filterCount(item.key, summary, findingView)})` : ''}`,
+                label: summary
+                  ? `${item.label} (${filterCount(item.key, summary, findingView)})`
+                  : item.label,
               }))}
             />
           ) : null;

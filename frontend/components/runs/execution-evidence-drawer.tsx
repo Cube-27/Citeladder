@@ -119,17 +119,19 @@ export function ExecutionEvidenceDrawer({
     );
   }
 
+  let description: string | undefined;
+  if (execution?.prompt_index !== undefined) {
+    const repetitionSuffix =
+      execution.repetition === undefined ? '' : ` · repetition ${execution.repetition}`;
+    description = `Prompt #${execution.prompt_index + 1}${repetitionSuffix}`;
+  }
+
   return (
     <Drawer
       open={open}
       onOpenChange={onOpenChange}
       title="Execution evidence"
-      description={
-        execution?.prompt_index === undefined
-          ? undefined
-          : `Prompt #${execution.prompt_index + 1}` +
-            (execution.repetition === undefined ? '' : ` · repetition ${execution.repetition}`)
-      }
+      description={description}
       className="sm:max-w-220"
       closeLabel="Close evidence drawer"
     >

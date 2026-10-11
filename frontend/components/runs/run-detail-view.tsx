@@ -36,7 +36,7 @@ function AuditSection({
   rerunNotice,
   onCancel,
   onRerunFailures,
-}: RunDetailViewProps) {
+}: Readonly<RunDetailViewProps>) {
   if (auditRead.error && !audit) {
     return (
       <ReadError
@@ -65,9 +65,11 @@ function ExecutionsSection({
   executionsLoading,
   executionsRead,
   onSelectEvidence,
-}: Pick<
-  RunDetailViewProps,
-  'executions' | 'executionsLoading' | 'executionsRead' | 'onSelectEvidence'
+}: Readonly<
+  Pick<
+    RunDetailViewProps,
+    'executions' | 'executionsLoading' | 'executionsRead' | 'onSelectEvidence'
+  >
 >) {
   if (executionsRead.error && !executions) {
     return <ReadError {...readErrorProps(executionsRead)} fallback="Could not load executions." />;
@@ -102,7 +104,7 @@ function ExecutionsSection({
   );
 }
 
-export function RunDetailView(props: RunDetailViewProps) {
+export function RunDetailView(props: Readonly<RunDetailViewProps>) {
   return (
     <Stack gap="workspace">
       <AuditSection {...props} />

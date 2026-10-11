@@ -56,7 +56,10 @@ const splitList = (value: string): string[] =>
  * one mounted list, never persisted or sent to the backend.
  */
 let competitorKeySeq = 0;
-const nextCompetitorKey = () => `competitor-${(competitorKeySeq += 1)}`;
+const nextCompetitorKey = () => {
+  competitorKeySeq += 1;
+  return `competitor-${competitorKeySeq}`;
+};
 
 // Aliases are not edited here; each row carries its own so a rename keeps them.
 type CompetitorDraft = {

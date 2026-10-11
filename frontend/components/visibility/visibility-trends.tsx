@@ -153,7 +153,7 @@ export function VisibilityTrends({
  * from one of them under a chip that says "all runs", with no way to tell that
  * runs were dropped or that the dropped ones scored differently.
  */
-function PooledSelectionNote({ selected }: { selected: Visibility }) {
+function PooledSelectionNote({ selected }: Readonly<{ selected: Visibility }>) {
   const groups = selected.configuration_groups;
   if (selected.selection_mode !== 'range' || !groups) return null;
   const total = Object.values(groups).reduce((sum, count) => sum + count, 0);
@@ -167,7 +167,7 @@ function PooledSelectionNote({ selected }: { selected: Visibility }) {
 }
 
 /** The answers behind the tiles and what their change line compares against. */
-function CoverageStrip({ selected }: { selected: Visibility }) {
+function CoverageStrip({ selected }: Readonly<{ selected: Visibility }>) {
   const timeZone = useDisplayTimeZone();
   const summary = coverageSummary(selected, (iso) => formatDisplayDate(iso, timeZone));
   return (
@@ -177,7 +177,7 @@ function CoverageStrip({ selected }: { selected: Visibility }) {
   );
 }
 
-function HeadlineMetrics({ selected }: { selected: Visibility }) {
+function HeadlineMetrics({ selected }: Readonly<{ selected: Visibility }>) {
   const brand = selected.rankings.find((row) => row.is_brand);
   const count = selected.counts;
   const comparison = selected.comparison;
@@ -252,7 +252,7 @@ function MeasurementHistory({
   focused,
   onClearFocus,
   brandName,
-}: {
+}: Readonly<{
   query: UseQueryResult<VisibilityTrendPoint[], unknown>;
   metric: (typeof VISIBILITY_METRICS)[number]['value'];
   setMetric: (value: (typeof VISIBILITY_METRICS)[number]['value']) => void;
@@ -260,7 +260,7 @@ function MeasurementHistory({
   focused: string | null;
   onClearFocus: () => void;
   brandName: string | null;
-}) {
+}>) {
   const timeZone = useDisplayTimeZone();
   const points = query.data ?? [];
   const metricLabel =

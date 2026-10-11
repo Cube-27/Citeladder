@@ -54,7 +54,7 @@ function prepareBase(input: PurchaseInput) {
   const { selection, catalog, country, details, checkout } = input;
   const plan = catalog.plans.find((candidate) => candidate.key === selection.catalog_key);
   const current = plan && checkoutSelection(plan, selection.byok ? 'byok' : 'funded');
-  if (!current || !current.ok || selection.quantity !== 1) {
+  if (!current?.ok || selection.quantity !== 1) {
     throw new Error('This plan is no longer available. Please select it again.');
   }
   const error = billingDetailsError(country, details);

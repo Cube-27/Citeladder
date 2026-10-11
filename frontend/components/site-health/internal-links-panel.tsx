@@ -386,7 +386,7 @@ function LinksBody({
 function emptyReason(analysis: InternalLinkAnalysis): string {
   const summary = analysis.diagnostics;
   if (analysis.recommendations.length) return 'No suggestions match these filters.';
-  if (!summary || !summary.candidates)
+  if (!summary?.candidates)
     return 'No supported source placements for unlinked destinations were found in this crawl.';
   return `${formatCount(summary.completed)} page pairs were checked and none qualified for a contextual link.`;
 }

@@ -114,7 +114,7 @@ function SearchDemandView({
       const haystack = [
         signalTarget(signal),
         signal.page_url,
-        signal.signal_type.replace(/_/g, ' '),
+        signal.signal_type.replaceAll('_', ' '),
       ]
         .join(' ')
         .toLowerCase();

@@ -63,7 +63,7 @@ function detectorStateLabel(state: string): string {
     case 'unavailable':
       return 'Unavailable';
     default:
-      return state.replace(/_/g, ' ');
+      return state.replaceAll('_', ' ');
   }
 }
 
