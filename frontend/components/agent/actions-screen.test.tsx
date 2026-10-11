@@ -49,12 +49,13 @@ describe('Actions', () => {
     mswServer.use(
       http.get(`/api/v1/projects/${PROJECT}/actions`, ({ request }) => {
         const params = new URL(request.url).searchParams;
-        searches.push(params.get('status') ?? 'queue');
+        // The unpaged read is the project-wide status count, not the table.
+        if (params.has('limit')) searches.push(params.get('status') ?? 'queue');
         const items = params.get('status') === 'dismissed' ? [] : [action];
         return HttpResponse.json({
           items,
           next_cursor: null,
-          status_counts: { open: 1, dismissed: 0 },
+          status_counts: { open: 1, in_progress: 2, dismissed: 0 },
         });
       }),
     );
@@ -68,11 +69,18 @@ describe('Actions', () => {
     expect(row).toHaveAttribute('href', `/agent/actions/${ACTION}?project=${PROJECT}`);
     expect(screen.getByText('82.5')).toBeVisible();
 
-    await user.click(screen.getByRole('combobox', { name: 'Status' }));
-    await user.click(await screen.findByRole('option', { name: 'Dismissed' }));
+    const status = screen.getByRole('combobox', { name: 'Status' });
+    expect(await within(status).findByText('Open and in progress (3)')).toBeVisible();
+    await user.click(status);
+    await user.click(await screen.findByRole('option', { name: 'Dismissed (0)' }));
 
     expect(await screen.findByText('No Actions match these filters')).toBeVisible();
     expect(searches).toEqual(['queue', 'dismissed']);
+
+    // Counts cover every target type, so a target filter drops them.
+    await user.click(screen.getByRole('combobox', { name: 'Target type' }));
+    await user.click(await screen.findByRole('option', { name: 'Page' }));
+    expect(await within(status).findByText('Dismissed')).toBeVisible();
   });
 
   it('dismisses an Action from its detail and links Work on this to a new chat', async () => {

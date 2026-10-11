@@ -43,10 +43,23 @@ const STATUS_CODEC = stringUrlCodec<StatusFilter>(STATUS_FILTERS, QUEUE);
 const ALL_TARGETS = 'all';
 const TARGET_CODEC = stringUrlCodec<string>([ALL_TARGETS, ...ACTION_TARGET_KINDS], ALL_TARGETS);
 
-const STATUS_OPTIONS = STATUS_FILTERS.map((value) => ({
-  value,
-  label: value === QUEUE ? 'Open and in progress' : ACTION_STATUS_LABEL[value],
-}));
+type StatusCounts = Partial<Record<string, number>>;
+
+function statusCount(value: StatusFilter, counts: StatusCounts) {
+  if (value !== QUEUE) return counts[value] ?? 0;
+  return (counts.open ?? 0) + (counts.in_progress ?? 0);
+}
+
+/**
+ * Status choices, each with its project-wide count. The counts cover every
+ * target type, so they are shown only while the target filter is unset.
+ */
+function statusOptions(counts: StatusCounts | undefined) {
+  return STATUS_FILTERS.map((value) => {
+    const label = value === QUEUE ? 'Open and in progress' : ACTION_STATUS_LABEL[value];
+    return { value, label: counts ? `${label} (${statusCount(value, counts)})` : label };
+  });
+}
 const TARGET_OPTIONS = [
   { value: ALL_TARGETS, label: 'All targets' },
   ...ACTION_TARGET_KINDS.map((kind) => ({ value: kind, label: targetKindLabel(kind) ?? kind })),
@@ -60,6 +73,11 @@ export function ActionsScreen() {
   const { activeProjectId, activeWorkspaceId, isLoading } = useProjectContext();
   const [status, setStatus] = useUrlState('status', STATUS_CODEC);
   const [target, setTarget] = useUrlState('target', TARGET_CODEC);
+  // The unfiltered first page, which the navigation's open count also reads.
+  const counts = useQuery({
+    ...actionsQueries.list(activeWorkspaceId ?? '', activeProjectId ?? ''),
+    enabled: Boolean(activeWorkspaceId && activeProjectId),
+  }).data?.status_counts;
   return (
     <PageShell
       controls={
@@ -67,7 +85,7 @@ export function ActionsScreen() {
           <Select
             ariaLabel="Status"
             value={status}
-            options={STATUS_OPTIONS}
+            options={statusOptions(target === ALL_TARGETS ? counts : undefined)}
             onValueChange={(value) => setStatus(value, 'replace')}
           />
           <Select
