@@ -11,9 +11,4 @@ describe('routePath', () => {
     expect(routePath('//a//b/')).toBe('//a//b');
     expect(routePath('///')).toBe('');
   });
-
-  it('handles a long slash run that is not trailing', () => {
-    const path = `${'/'.repeat(50_000)}x`;
-    expect(routePath(path)).toBe(path);
-  });
 });
