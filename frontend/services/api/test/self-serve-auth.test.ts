@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, describe, expect, it } from 'vitest';
+import { policy } from '../src/config.ts';
 import { testConfig, testDatabase } from './support.ts';
 import { registerUser, authenticateUser, issueSession } from '../src/auth/service.ts';
 import { requestChallenge, consumeChallenge } from '../src/auth/challenges.ts';
@@ -28,7 +29,7 @@ config.auth.fetch = async (_url, init) => {
 
 async function pending() {
   const email = `${randomUUID()}@example.test`;
-  await registerUser(db, email, password);
+  await registerUser(db, email, password, policy.auth.terms_revision);
   const user = await db
     .selectFrom('users')
     .selectAll()
@@ -230,8 +231,8 @@ describe('verified self-serve lifecycle', () => {
   it('does not overwrite duplicate signup credentials or issue a second trial', async () => {
     const { user, email } = await pending();
     await Promise.all([
-      registerUser(db, email.toUpperCase(), 'another-password'),
-      registerUser(db, email, 'another-password'),
+      registerUser(db, email.toUpperCase(), 'another-password', policy.auth.terms_revision),
+      registerUser(db, email, 'another-password', policy.auth.terms_revision),
     ]);
     const current = await db
       .selectFrom('users')
@@ -260,7 +261,7 @@ describe('verified self-serve lifecycle', () => {
       },
     };
     const closed = { ...google, auth: { ...google.auth, publicSignup: false } };
-    const start = await startSignIn(google, 'google');
+    const start = await startSignIn(google, 'google', policy.auth.terms_revision);
     await expect(
       completeSignIn(db, closed, 'google', 'code', start.state, start.nonce),
     ).rejects.toMatchObject({ code: 'oauth_signin_disabled' });

@@ -271,6 +271,7 @@ describe('UrlDetail', () => {
             },
           ],
           next_cursor: null,
+          current_analysis_finalized: true,
         });
       }),
     );

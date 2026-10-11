@@ -11,7 +11,12 @@ import { workspaceAccess } from '../entitlements/access.ts';
 import { deliverInvitation } from '../workspaces/invitation-mail.ts';
 import { defineGetRoute, definePostRoute, definePatchRoute, defineDeleteRoute } from './define.ts';
 import { readBody } from '../http/body.ts';
-import { acceptPolicy, policyStatus, recordPolicyAcceptance } from '../workspaces/policies.ts';
+import {
+  acceptPolicy,
+  policyStatus,
+  recordPolicyAcceptance,
+  requireAccountTermsDecision,
+} from '../workspaces/policies.ts';
 import {
   createWorkspace,
   listMembers,
@@ -89,7 +94,9 @@ export const workspaceRoutes = [
     async handle({ c, db }) {
       const { name, terms_revision } = await readBody(c, workspaceCreate);
       const userId = c.get('user').id;
-      // Creating a workspace is the signup's Terms decision for it.
+      // The creator's own recorded Terms decision (signup or review) carries
+      // into the workspace they create; without it the request is refused.
+      await requireAccountTermsDecision(db, userId, terms_revision);
       return db.transaction().execute(async (trx) => {
         const workspace = await createWorkspace(trx, userId, name);
         await recordPolicyAcceptance(trx, {

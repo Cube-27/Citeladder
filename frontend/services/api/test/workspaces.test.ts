@@ -88,6 +88,18 @@ describe('workspace authorization and root allocation', () => {
     actors.push(user);
     const cookie = await userCookie(user);
     const terms = { terms_revision: policy.auth.terms_revision, accept_terms: true };
+    // A fixture account made no signup decision; it reviews the Terms first.
+    const refused = await request('', 'POST', { name: 'Unreviewed', ...terms }, cookie);
+    expect(refused.status).toBe(409);
+    expect(((await refused.json()) as { error: { code: string } }).error.code).toBe(
+      'terms_decision_required',
+    );
+    const reviewed = await app.request('/api/v1/auth/terms', {
+      method: 'POST',
+      headers: { Cookie: cookie, 'Content-Type': 'application/json' },
+      body: JSON.stringify(terms),
+    });
+    expect(((await reviewed.json()) as { accepted_at: string | null }).accepted_at).not.toBeNull();
     const results = await Promise.all([
       request('', 'POST', { name: 'First', ...terms }, cookie),
       request('', 'POST', { name: 'Second', ...terms }, cookie),

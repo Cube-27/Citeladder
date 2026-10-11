@@ -8,6 +8,7 @@ import {
   authSecuritySchema,
   oauthStartResponseSchema,
   policyRevisionSchema,
+  policyStatusSchema,
   registrationResponseSchema,
 } from '@citeladder/contracts/auth';
 import { strictValidate } from '@citeladder/contracts/validation';
@@ -19,9 +20,23 @@ import type {
 } from './types';
 
 export const authApi = {
-  /** The Terms revision a person accepts when they create their workspace. */
+  /** The published Terms revision the signup form asks a visitor to accept. */
   policies: async () =>
     strictValidate(policyRevisionSchema, await apiClient.get('/auth/policies'), 'auth.policies'),
+  /** The signed-in person's own Terms decision on the published revision. */
+  terms: async (signal?: AbortSignal) =>
+    strictValidate(
+      policyStatusSchema,
+      await apiClient.get('/auth/terms', { signal }),
+      'auth.terms',
+    ),
+  /** Record that decision when the person has none (review before creating a workspace). */
+  acceptTerms: async (termsRevision: string) =>
+    strictValidate(
+      policyStatusSchema,
+      await apiClient.post('/auth/terms', { terms_revision: termsRevision, accept_terms: true }),
+      'auth.acceptTerms',
+    ),
   security: async () =>
     strictValidate(authSecuritySchema, await apiClient.get('/auth/security'), 'auth.security'),
   linkGoogle: async (password: string) =>
@@ -42,15 +57,20 @@ export const authApi = {
     const response = await apiClient.post<RegistrationResponse>(`/auth/${operation}`, body);
     return strictValidate(registrationResponseSchema, response, `auth.${operation}`);
   },
+  /** Create an account; the request carries the Terms decision made on the form. */
   register: async (
-    email: string,
-    password: string,
+    input: { email: string; password: string; termsRevision: string; returnTo?: string },
     options?: ApiRequestOptions,
-    returnTo?: string,
   ) => {
     const res = await apiClient.post<RegistrationResponse>(
       '/auth/register',
-      { email, password, return_to: returnTo },
+      {
+        email: input.email,
+        password: input.password,
+        terms_revision: input.termsRevision,
+        accept_terms: true,
+        return_to: input.returnTo,
+      },
       options,
     );
     return strictValidate(registrationResponseSchema, res, 'auth.register');
@@ -64,8 +84,21 @@ export const authApi = {
   // to navigate to; an unconfigured one answers 503
   // (`detail.code = 'oauth_provider_not_configured'`), which callers surface
   // as a coming-soon notice rather than an error.
-  oauthStart: async (provider: OAuthProvider, options?: ApiRequestOptions, returnTo?: string) => {
-    const suffix = returnTo ? `?return_to=${encodeURIComponent(returnTo)}` : '';
+  //
+  // Only a sign-up start carries the Terms decision, and only it may create an
+  // account; a sign-in start for an unknown address lands on sign-up instead.
+  oauthStart: async (
+    provider: OAuthProvider,
+    input: { returnTo?: string; signupTermsRevision?: string } = {},
+    options?: ApiRequestOptions,
+  ) => {
+    const query = new URLSearchParams();
+    if (input.returnTo) query.set('return_to', input.returnTo);
+    if (input.signupTermsRevision) {
+      query.set('accept_terms', 'true');
+      query.set('terms_revision', input.signupTermsRevision);
+    }
+    const suffix = query.size ? `?${query}` : '';
     const res = await apiClient.get<OAuthStartResponse>(
       `/auth/oauth/${provider}/start${suffix}`,
       options,

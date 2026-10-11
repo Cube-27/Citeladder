@@ -47,6 +47,15 @@ export interface AccountGrants {
   value: number;
 }
 
+export interface AccountPolicyAcceptances {
+  accepted_at: Timestamp;
+  actor_id: string;
+  context: string;
+  id: string;
+  privacy_notice_revision: string;
+  terms_revision: string;
+}
+
 export interface Actions {
   approach: string;
   created_at: Timestamp;
@@ -3192,6 +3201,7 @@ export interface WorkspaceSiteHealthRuntime {
 
 export interface DB {
   account_grants: AccountGrants;
+  account_policy_acceptances: AccountPolicyAcceptances;
   action_status_events: ActionStatusEvents;
   actions: Actions;
   agent_chats: AgentChats;

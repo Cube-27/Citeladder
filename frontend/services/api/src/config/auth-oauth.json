@@ -52,6 +52,7 @@
   "callback_path": "/api/v1/auth/oauth/{provider}/callback",
   "landing_path": "/workspaces",
   "error_path": "/login",
+  "signup_path": "/register",
   "timeout_seconds": 15.0,
   "response_max_bytes": 65536
 }

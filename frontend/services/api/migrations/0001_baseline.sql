@@ -35,6 +35,15 @@ CREATE TABLE public.account_grants (
     CONSTRAINT ck_account_grant_value_nonneg CHECK ((value >= 0))
 );
 
+CREATE TABLE public.account_policy_acceptances (
+    id uuid NOT NULL,
+    actor_id uuid NOT NULL,
+    terms_revision character varying(64) NOT NULL,
+    privacy_notice_revision character varying(64) NOT NULL,
+    context character varying(32) NOT NULL,
+    accepted_at timestamp with time zone NOT NULL
+);
+
 CREATE TABLE public.action_status_events (
     id uuid NOT NULL,
     workspace_id uuid NOT NULL,
@@ -3227,6 +3236,9 @@ CREATE TABLE public.workspaces (
 ALTER TABLE ONLY public.account_grants
     ADD CONSTRAINT account_grants_pkey PRIMARY KEY (id);
 
+ALTER TABLE ONLY public.account_policy_acceptances
+    ADD CONSTRAINT account_policy_acceptances_pkey PRIMARY KEY (id);
+
 ALTER TABLE ONLY public.action_status_events
     ADD CONSTRAINT action_status_events_pkey PRIMARY KEY (id);
 
@@ -4063,6 +4075,9 @@ ALTER TABLE ONLY public.performance_dimension_stats
 
 ALTER TABLE ONLY public.policy_acceptances
     ADD CONSTRAINT uq_policy_acceptance_revision UNIQUE (actor_id, workspace_id, terms_revision);
+
+ALTER TABLE ONLY public.account_policy_acceptances
+    ADD CONSTRAINT uq_account_policy_acceptance_revision UNIQUE (actor_id, terms_revision);
 
 ALTER TABLE ONLY public.projects
     ADD CONSTRAINT uq_projects_ws_id UNIQUE (workspace_id, id);

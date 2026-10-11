@@ -63,10 +63,9 @@ export function LoginScreen({
       footerHref={withAuthReturnPath('/register', returnTo)}
       footerLabel="Sign up"
       footerLinkVariant="emphasis"
+      // Sign-in asks no Terms decision, so Google here never creates an
+      // account: an unknown address is sent to sign up.
       showOAuth
-      // The Terms are accepted at signup and when a workspace is created, not
-      // on every sign-in.
-      requireTerms={false}
       showFooter={!demoMode && signupOpen}
     >
       <AuthEmailField error={errors.email?.message} inputProps={register('email')} />

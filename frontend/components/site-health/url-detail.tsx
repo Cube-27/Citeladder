@@ -126,7 +126,8 @@ export function UrlDetail({
       }}
       history={
         <IssueHistoryButton
-          key={`history:${crawlId}:${siteUrlId}`}
+          // A finished re-audit changes what is resolved: start the history over.
+          key={`history:${crawlId}:${siteUrlId}:${detailQuery.data.last_audited ?? ''}`}
           workspaceId={workspaceId!}
           crawlId={crawlId}
           siteUrlId={siteUrlId}
@@ -200,12 +201,14 @@ function IssueHistoryButton(target: HistoryTarget) {
 
 function IssueHistory({ workspaceId, crawlId, siteUrlId }: HistoryTarget) {
   const pager = useCursorTable(`${workspaceId}|${crawlId}|${siteUrlId}`);
-  const historyQuery = useQuery(
-    siteHealthQueries.issueHistory(workspaceId, crawlId, siteUrlId, {
+  const historyQuery = useQuery({
+    ...siteHealthQueries.issueHistory(workspaceId, crawlId, siteUrlId, {
       cursor: pager.cursor,
       limit: HISTORY_LIMIT,
     }),
-  );
+    // Read fresh each time the drawer is first opened for an audit.
+    staleTime: 0,
+  });
   const rows = historyQuery.isError ? [] : (historyQuery.data?.items ?? []);
   const nextCursor = historyQuery.data?.next_cursor ?? null;
 
@@ -220,7 +223,12 @@ function IssueHistory({ workspaceId, crawlId, siteUrlId }: HistoryTarget) {
         />
       ) : null}
       {historyQuery.isLoading ? <PageLoading label="Loading issue history" /> : null}
-      {!historyQuery.isLoading && !historyQuery.isError && rows.length === 0 ? (
+      {historyQuery.data && !historyQuery.data.current_analysis_finalized ? (
+        <InlineEmpty>
+          Resolved issues are known once this page’s current analysis finishes.
+        </InlineEmpty>
+      ) : null}
+      {historyQuery.data?.current_analysis_finalized && rows.length === 0 ? (
         <InlineEmpty>No resolved issues for this page.</InlineEmpty>
       ) : null}
       {rows.length > 0 ? <HistoryRows rows={rows} /> : null}

@@ -177,6 +177,64 @@ function TermsConsent({
   );
 }
 
+/**
+ * Continue with Google. A sign-up start carries the Terms revision, so only it
+ * can create an account; `consentGiven` holds it until the box is ticked.
+ */
+function GoogleEntry({
+  signupTermsRevision,
+  disabled,
+  consentGiven,
+}: Readonly<{
+  signupTermsRevision: string | undefined;
+  disabled: boolean;
+  consentGiven: () => boolean;
+}>) {
+  const [notice, setNotice] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+
+  async function start() {
+    // The button stays live for the whole round trip otherwise, and a second
+    // click starts a second authorization before the first can redirect.
+    if (pending || !consentGiven()) return;
+    setPending(true);
+    setNotice(null);
+    try {
+      const { authorize_url } = await authApi.oauthStart('google', {
+        returnTo: safeAuthReturnPath(new URLSearchParams(window.location.search).get('return_to')),
+        signupTermsRevision,
+      });
+      hardNavigate(authorize_url);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 503) {
+        setNotice('Google sign-in is coming soon — please use email below.');
+      } else {
+        setNotice('Unable to start Google sign-in. Please try email below.');
+      }
+    } finally {
+      // Cleared even on the success path: `hardNavigate` may be a no-op in a
+      // test, and a permanently disabled button would strand the user.
+      setPending(false);
+    }
+  }
+
+  return (
+    <>
+      <Button
+        variant="secondary"
+        size="lg"
+        className="w-full gap-2"
+        disabled={pending || disabled}
+        onClick={() => void start()}
+      >
+        <GoogleIcon />
+        <span>{pending ? 'Starting Google sign-in…' : 'Continue with Google'}</span>
+      </Button>
+      {notice ? <MktAlert>{notice}</MktAlert> : null}
+    </>
+  );
+}
+
 export function AuthFormShell({
   title,
   description,
@@ -192,7 +250,7 @@ export function AuthFormShell({
   showOAuth = true,
   showForm = true,
   showFooter = true,
-  requireTerms = true,
+  signup,
   children,
 }: Readonly<{
   title: string;
@@ -209,19 +267,22 @@ export function AuthFormShell({
   showOAuth?: boolean;
   showForm?: boolean;
   showFooter?: boolean;
-  requireTerms?: boolean;
+  /**
+   * Sign-up: both ways in create an account, so both wait for the Terms box
+   * and carry the published revision (undefined while it loads). Sign-in
+   * omits it and asks nothing.
+   */
+  signup?: { termsRevision: string | undefined };
   children: ReactNode;
 }>) {
-  const [oauthNotice, setOauthNotice] = useState<string | null>(null);
-  const [oauthPending, setOauthPending] = useState(false);
   const consent = useTermsConsent();
-  // Both ways in lead into the app, so both carry the same Terms decision.
-  const requiresConsent = requireTerms && (showForm || showOAuth);
+  const requiresConsent = Boolean(signup) && (showForm || showOAuth);
+  const revisionPending = requiresConsent && !signup?.termsRevision;
 
   /** Hold any way in until the Terms box is ticked; remember the decision once it is. */
   function consentGiven(): boolean {
     if (!requiresConsent) return true;
-    if (!consent.confirm()) return false;
+    if (revisionPending || !consent.confirm()) return false;
     recordSignupTermsConsent();
     return true;
   }
@@ -234,33 +295,6 @@ export function AuthFormShell({
     onSubmit?.(event);
   };
 
-  async function handleGoogleSignIn() {
-    // The button stays live for the whole round trip otherwise, and a second
-    // click starts a second authorization before the first can redirect.
-    if (oauthPending) return;
-    if (!consentGiven()) return;
-    setOauthPending(true);
-    setOauthNotice(null);
-    try {
-      const { authorize_url } = await authApi.oauthStart(
-        'google',
-        undefined,
-        safeAuthReturnPath(new URLSearchParams(window.location.search).get('return_to')),
-      );
-      hardNavigate(authorize_url);
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 503) {
-        setOauthNotice('Google sign-in is coming soon — please use email below.');
-      } else {
-        setOauthNotice('Unable to start Google sign-in. Please try email below.');
-      }
-    } finally {
-      // Cleared even on the success path: `hardNavigate` may be a no-op in a
-      // test, and a permanently disabled button would strand the user.
-      setOauthPending(false);
-    }
-  }
-
   return (
     <div className="auth-form-shell grid w-full gap-6">
       <div className="auth-form-heading grid gap-2">
@@ -271,19 +305,11 @@ export function AuthFormShell({
       <div className="auth-form-body grid gap-4">
         {showOAuth && (
           <>
-            <Button
-              variant="secondary"
-              size="lg"
-              className="w-full gap-2"
-              disabled={oauthPending}
-              onClick={() => void handleGoogleSignIn()}
-            >
-              <GoogleIcon />
-              <span>{oauthPending ? 'Starting Google sign-in…' : 'Continue with Google'}</span>
-            </Button>
-
-            {oauthNotice ? <MktAlert>{oauthNotice}</MktAlert> : null}
-
+            <GoogleEntry
+              signupTermsRevision={signup?.termsRevision}
+              disabled={revisionPending}
+              consentGiven={consentGiven}
+            />
             <div className="auth-form-divider flex items-center gap-3">
               <span className="bg-border h-px flex-1" aria-hidden="true" />
               <span className="flow-meta">or</span>
@@ -304,7 +330,7 @@ export function AuthFormShell({
               type="submit"
               size="lg"
               className="auth-form-submit mt-2 w-full"
-              disabled={pending}
+              disabled={pending || revisionPending}
             >
               {pending ? pendingLabel : submitLabel}
             </Button>

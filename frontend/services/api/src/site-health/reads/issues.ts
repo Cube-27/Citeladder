@@ -360,6 +360,21 @@ export async function issueHistory(
 ) {
   const crawl = await loadCrawl(db, workspaceId, crawlId);
   await requireAdmitted(db, crawl, siteUrlId);
+  const finalized = await db
+    .selectFrom('site_page_analyses')
+    .select('id')
+    .where('workspace_id', '=', workspaceId)
+    .where('crawl_id', '=', crawl.id)
+    .where('site_url_id', '=', siteUrlId)
+    .where('is_current', '=', true)
+    .where('finalized_at', 'is not', null)
+    .executeTakeFirst();
+  if (!finalized)
+    return issueHistoryPageSchema.parse({
+      items: [],
+      next_cursor: null,
+      current_analysis_finalized: false,
+    });
   const fingerprint = { site_url_id: siteUrlId, project_id: crawl.project_id, crawl_id: crawl.id };
   let after = sql``;
   if (paging.cursor) {
@@ -376,9 +391,7 @@ export async function issueHistory(
       join site_crawls c on c.id = i.crawl_id
       join site_crawls selected on selected.id = ${crawl.id}
       -- The page's one current, finalized analysis in the selected crawl.
-      join site_page_analyses cur on cur.workspace_id = ${workspaceId}
-        and cur.crawl_id = ${crawl.id} and cur.site_url_id = ${siteUrlId}
-        and cur.is_current and cur.finalized_at is not null
+      join site_page_analyses cur on cur.id = ${finalized.id}
       where i.workspace_id = ${workspaceId} and i.project_id = ${crawl.project_id}
         and i.site_url_id = ${siteUrlId} and c.project_id = ${crawl.project_id}
         and (c.created_at, c.id) <= (selected.created_at, selected.id)
@@ -396,6 +409,7 @@ export async function issueHistory(
   const items = rows.slice(0, paging.limit);
   const last = items.at(-1);
   return issueHistoryPageSchema.parse({
+    current_analysis_finalized: true,
     items: items.map((issue) => ({
       id: issue.id,
       crawl_id: issue.crawl_id,

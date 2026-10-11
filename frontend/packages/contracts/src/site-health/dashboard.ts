@@ -32,7 +32,11 @@ const issueHistoryRowSchema = responseObject({
 });
 
 // Per-URL issue history page (crawl-bounded, newest-first, cursor-paginated).
-export const issueHistoryPageSchema = cursorPageSchema(issueHistoryRowSchema);
+// Without a finalized current analysis nothing is known to be resolved, which
+// is not the same as an empty history.
+export const issueHistoryPageSchema = cursorPageSchema(issueHistoryRowSchema).extend({
+  current_analysis_finalized: z.boolean(),
+});
 
 // Append-only safe crawl event. Free payloads never carry total/frontier/
 // overflow data; `event_type` is an open string (backend owns the catalogue).

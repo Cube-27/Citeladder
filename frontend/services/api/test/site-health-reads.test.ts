@@ -686,9 +686,20 @@ describe('issue history', () => {
 
     const path = `/site-crawls/${seed.crawlId}/pages/${home.id}/issue-history`;
     const history = await json(seed, path, issueHistoryPageSchema);
+    expect(history.current_analysis_finalized).toBe(true);
     expect(history.items.map((row: { rule_id: string }) => row.rule_id)).toEqual([
       'technical.title_present',
     ]);
+    // An unfinished analysis says so instead of reading as "nothing resolved".
+    const pending = await fixtures.page(seed, '/pending', {});
+    await observe(seed, pending.id);
+    expect(
+      await json(
+        seed,
+        `/site-crawls/${seed.crawlId}/pages/${pending.id}/issue-history`,
+        issueHistoryPageSchema,
+      ),
+    ).toEqual({ items: [], next_cursor: null, current_analysis_finalized: false });
     expect((await get(await fixtures.crawl(), path)).status).toBe(404);
   });
 });

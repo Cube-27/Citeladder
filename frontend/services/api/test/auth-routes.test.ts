@@ -14,6 +14,8 @@ const prefix = `pr14-${randomUUID()}`;
 const email = `${prefix}@example.test`;
 const password = 'password123';
 const createdUsers: string[] = [];
+// The signup decision every account-creating request has to carry.
+const signup = { terms_revision: policy.auth.terms_revision, accept_terms: true };
 let cookie: string;
 let userId: string;
 let workspaceId: string;
@@ -39,7 +41,7 @@ async function clearClientBudget() {
 
 beforeAll(async () => {
   await clearClientBudget();
-  const response = await call('/auth/register', { email, password });
+  const response = await call('/auth/register', { email, password, ...signup });
   expect(response.status).toBe(202);
   const user = await db
     .selectFrom('users')
@@ -91,6 +93,10 @@ afterAll(async () => {
         )
         .execute();
     await db.deleteFrom('security_events').where('actor_id', 'in', createdUsers).execute();
+    await db
+      .deleteFrom('account_policy_acceptances')
+      .where('actor_id', 'in', createdUsers)
+      .execute();
     await db.deleteFrom('users').where('id', 'in', createdUsers).execute();
   }
   await clearClientBudget();
@@ -101,8 +107,8 @@ describe('password auth routes', () => {
   it('serializes registration races into one identity that owns nothing yet', async () => {
     const address = `${prefix}-raced@example.test`;
     const responses = await Promise.all([
-      call('/auth/register', { email: address, password }),
-      call('/auth/register', { email: address, password }),
+      call('/auth/register', { email: address, password, ...signup }),
+      call('/auth/register', { email: address, password, ...signup }),
     ]);
     expect(responses.map((response) => response.status)).toEqual([202, 202]);
     const user = await db
@@ -118,6 +124,37 @@ describe('password auth routes', () => {
         .where('user_id', '=', user.id)
         .execute(),
     ).toEqual([]);
+  });
+
+  it('refuses to create an account without the Terms decision and records the one it gets', async () => {
+    const address = `${prefix}-undecided@example.test`;
+    for (const body of [
+      { email: address, password },
+      { email: address, password, terms_revision: policy.auth.terms_revision },
+      { email: address, password, ...signup, accept_terms: false },
+    ])
+      expect((await call('/auth/register', body)).status).toBe(422);
+    const stale = await call('/auth/register', {
+      email: address,
+      password,
+      ...signup,
+      terms_revision: 'an-older-revision',
+    });
+    expect(stale.status).toBe(409);
+    expect(
+      await db.selectFrom('users').select('id').where('email', '=', address).execute(),
+    ).toEqual([]);
+    expect(
+      await db
+        .selectFrom('account_policy_acceptances')
+        .select(['context', 'terms_revision'])
+        .where('actor_id', '=', userId)
+        .execute(),
+    ).toEqual([{ context: 'signup', terms_revision: policy.auth.terms_revision }]);
+    expect(await (await call('/auth/terms', undefined, cookie)).json()).toMatchObject({
+      terms_revision: policy.auth.terms_revision,
+      accepted_at: expect.any(String),
+    });
   });
 
   it('creates the owned workspace once, with the Terms decision and a trial from that moment', async () => {
@@ -145,7 +182,7 @@ describe('password auth routes', () => {
   });
 
   it('keeps duplicate registration generic, session-free and trial provisioning idempotent', async () => {
-    const duplicate = await call('/auth/register', { email, password });
+    const duplicate = await call('/auth/register', { email, password, ...signup });
     expect(duplicate.status).toBe(202);
     expect(duplicate.headers.get('set-cookie')).toBeNull();
     const account = await db
@@ -184,8 +221,14 @@ describe('password auth routes', () => {
 
   it('gates signup and demo expiry on the server', async () => {
     expect(
-      (await call('/auth/register', { email, password }, undefined, createApp(testConfig(), db)))
-        .status,
+      (
+        await call(
+          '/auth/register',
+          { email, password, ...signup },
+          undefined,
+          createApp(testConfig(), db),
+        )
+      ).status,
     ).toBe(403);
     expect(
       (
@@ -373,8 +416,14 @@ describe('Google sign-in', () => {
     db,
   );
 
-  async function start(service = oauthApp) {
-    const response = await call('/auth/oauth/google/start', undefined, undefined, service);
+  /** A sign-in start, or a signup start carrying the visitor's Terms decision. */
+  async function start(service = oauthApp, decision = '') {
+    const response = await call(
+      `/auth/oauth/google/start${decision}`,
+      undefined,
+      undefined,
+      service,
+    );
     const data = (await response.json()) as { state: string; authorize_url: string };
     return {
       data,
@@ -447,8 +496,40 @@ describe('Google sign-in', () => {
     }
   });
 
-  it('creates and reuses a passwordless account with its login receipt, landing on the workspace chooser', async () => {
+  it('never creates an account from sign-in: it sends the address to sign up instead', async () => {
     const { data, nonceCookie } = await start();
+    const refused = await callback(data.state, nonceCookie);
+    expect(refused.status).toBe(302);
+    expect(refused.headers.get('location')).toBe(
+      `https://app.example.test/register?${new URLSearchParams({
+        error: 'oauth_signin_no_account',
+        email: identityEmail,
+      })}`,
+    );
+    expect(
+      refused.headers.getSetCookie().some((value) => value.startsWith(config.session.cookieName)),
+    ).toBe(false);
+    expect(
+      await db.selectFrom('users').select('id').where('email', '=', identityEmail).execute(),
+    ).toEqual([]);
+    // A signup start must carry both the decision and the published revision.
+    const statuses = [];
+    for (const query of [
+      '?accept_terms=true',
+      `?terms_revision=${policy.auth.terms_revision}`,
+      '?accept_terms=true&terms_revision=an-older-revision',
+    ])
+      statuses.push(
+        (await call(`/auth/oauth/google/start${query}`, undefined, undefined, oauthApp)).status,
+      );
+    expect(statuses).toEqual([422, 422, 409]);
+  });
+
+  it('creates and reuses a passwordless account with its login receipt, landing on the workspace chooser', async () => {
+    const { data, nonceCookie } = await start(
+      oauthApp,
+      `?accept_terms=true&terms_revision=${policy.auth.terms_revision}`,
+    );
     const success = await callback(data.state, nonceCookie);
     expect(success.status).toBe(302);
     expect(success.headers.get('location')).toBe('https://app.example.test/workspaces');
@@ -459,6 +540,13 @@ describe('Google sign-in', () => {
       .executeTakeFirstOrThrow();
     createdUsers.push(user.id);
     expect(user.hashed_password).toBeNull();
+    expect(
+      await db
+        .selectFrom('account_policy_acceptances')
+        .select('context')
+        .where('actor_id', '=', user.id)
+        .execute(),
+    ).toEqual([{ context: 'signup' }]);
     // Google sign-in creates the identity only; onboarding creates the workspace.
     expect(
       await db

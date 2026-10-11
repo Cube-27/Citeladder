@@ -27,9 +27,10 @@ describe('WorkspaceSetup', () => {
   afterEach(() => vi.restoreAllMocks());
 
   it('creates the workspace with a name and the published Terms revision, with no second consent step', async () => {
-    vi.spyOn(authApi, 'policies').mockResolvedValue({
+    vi.spyOn(authApi, 'terms').mockResolvedValue({
       terms_revision: '2026-09-24',
       privacy_notice_revision: '2026-09-24',
+      accepted_at: '2026-10-01T00:00:00Z',
     });
     const create = vi.spyOn(workspacesApi, 'create').mockResolvedValue(CREATED);
     const setActiveWorkspaceId = vi.fn();
@@ -65,6 +66,46 @@ describe('WorkspaceSetup', () => {
       expect(create).toHaveBeenCalledWith({ name: 'Acme', termsRevision: '2026-09-24' }),
     );
     expect(setActiveWorkspaceId).toHaveBeenCalledWith(CREATED.id);
-    expect(screen.getByTestId('location')).toHaveTextContent(`/onboarding?workspace=${CREATED.id}`);
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent(
+        `/onboarding?workspace=${CREATED.id}`,
+      ),
+    );
+  });
+});
+
+describe('WorkspaceSetup without a recorded Terms decision', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('reviews the Terms first, records the decision, then asks for the name', async () => {
+    const undecided = {
+      terms_revision: '2026-09-24',
+      privacy_notice_revision: '2026-09-24',
+      accepted_at: null,
+    };
+    vi.spyOn(authApi, 'terms').mockResolvedValue(undecided);
+    const acceptTerms = vi
+      .spyOn(authApi, 'acceptTerms')
+      .mockResolvedValue({ ...undecided, accepted_at: '2026-10-11T00:00:00Z' });
+    const user = userEvent.setup();
+    renderWithProviders(<WorkspaceSetup />, {
+      initialEntries: ['/onboarding?setup=workspace'],
+      projectSelection: {
+        workspaces: [],
+        activeWorkspace: null,
+        activeWorkspaceId: null,
+        status: 'no_workspace',
+        setActiveWorkspaceId: vi.fn(),
+      },
+    });
+
+    const accept = await screen.findByRole('button', { name: 'Accept and continue' });
+    expect(accept).toBeDisabled();
+    expect(screen.queryByLabelText(/^Workspace name/)).toBeNull();
+    await user.click(screen.getByRole('checkbox', { name: 'I agree to the Terms of Service.' }));
+    await user.click(accept);
+
+    await waitFor(() => expect(acceptTerms).toHaveBeenCalledWith('2026-09-24'));
+    expect(await screen.findByLabelText(/^Workspace name/)).toBeVisible();
   });
 });

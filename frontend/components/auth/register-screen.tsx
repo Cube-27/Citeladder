@@ -1,13 +1,19 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 
 import { AuthEmailField, AuthFormShell, AuthPasswordField } from '@/components/auth/auth-form';
 import { authApi } from '@/lib/api/auth';
 import { passwordHint } from '@/lib/config/auth';
-import { authErrorMessage, registerFormSchema, type RegisterFormValues } from '@/lib/auth/forms';
+import { queryKeys } from '@/lib/api/query-keys';
+import {
+  authErrorMessage,
+  oauthSignInErrorMessage,
+  registerFormSchema,
+  type RegisterFormValues,
+} from '@/lib/auth/forms';
 import { safeAuthReturnPath, withAuthReturnPath } from '@/lib/auth/auth-return-path';
 
 type SearchParams = Pick<URLSearchParams, 'get'>;
@@ -28,21 +34,38 @@ export function RegisterScreen({
   // resume path has to survive registration AND the sign-in that follows it,
   // so it is carried back onto /login rather than consumed here.
   const returnTo = safeAuthReturnPath(searchParams.get('return_to'));
+  // Google sign-in found no account: the address arrives here to sign up.
+  const oauthNotice = oauthSignInErrorMessage(searchParams.get('error'));
+  const terms = useQuery({
+    queryKey: queryKeys.auth.policies(),
+    queryFn: () => authApi.policies(),
+    // The published revision changes only with a deployment.
+    staleTime: Number.POSITIVE_INFINITY,
+    enabled: !demoMode && signupOpen,
+  });
+  const termsRevision = terms.data?.terms_revision;
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerFormSchema),
-    defaultValues: { email: '', password: '', confirmPassword: '' },
+    defaultValues: { email: searchParams.get('email') ?? '', password: '', confirmPassword: '' },
   });
   const mutation = useMutation({
-    mutationFn: (values: RegisterFormValues) =>
-      authApi.register(values.email, values.password, undefined, returnTo),
+    mutationFn: (values: RegisterFormValues & { termsRevision: string }) =>
+      authApi.register({
+        email: values.email,
+        password: values.password,
+        termsRevision: values.termsRevision,
+        returnTo,
+      }),
     onSuccess: () => replace(withAuthReturnPath('/login?registered=1', returnTo)),
   });
   const submit = (values: RegisterFormValues) =>
-    mutation.mutateAsync(values).catch(() => undefined);
+    termsRevision
+      ? mutation.mutateAsync({ ...values, termsRevision }).catch(() => undefined)
+      : undefined;
 
   if (demoMode || !signupOpen) {
     return (
@@ -72,7 +95,7 @@ export function RegisterScreen({
     <AuthFormShell
       title="Create your account"
       description="Verify your email, then set up your workspace to start your trial. No card required."
-      error={mutation.isError ? authErrorMessage(mutation.error) : undefined}
+      error={registerError(mutation.isError ? mutation.error : null, terms.error, oauthNotice)}
       onSubmit={handleSubmit(submit)}
       pending={isSubmitting || mutation.isPending}
       submitLabel="Create account"
@@ -80,6 +103,7 @@ export function RegisterScreen({
       footerPrompt="Already have an account?"
       footerHref={withAuthReturnPath('/login', returnTo)}
       footerLabel="Sign in"
+      signup={{ termsRevision }}
     >
       <AuthEmailField error={errors.email?.message} inputProps={register('email')} />
       <AuthPasswordField
@@ -98,4 +122,14 @@ export function RegisterScreen({
       />
     </AuthFormShell>
   );
+}
+
+/** The form's one alert: a refused sign-up, then an unreadable Terms revision, then Google's notice. */
+function registerError(
+  submitError: unknown,
+  termsError: unknown,
+  oauthNotice: string | undefined,
+): string | undefined {
+  const error = submitError ?? termsError;
+  return error ? authErrorMessage(error) : oauthNotice;
 }

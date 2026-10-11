@@ -141,6 +141,7 @@ const API_ERROR_CODES = [
   'sync_target_unresolved',
   'sync_window_invalid',
   'target_changed',
+  'terms_decision_required',
   'timeout',
   'token_refresh_failed',
   'tool_failed',

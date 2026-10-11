@@ -514,8 +514,9 @@ read the same persisted final results.
 A URL's issue history lists only resolved issues: rules recorded on the page in
 the selected crawl's superseded analyses or the project's earlier crawls that its
 current finalized analysis no longer reports, one row per rule at its latest
-record. Current issues stay in page detail and never repeat there; without a
-finalized current analysis nothing is shown as resolved.
+record. Current issues stay in page detail and never repeat there. Without a
+finalized current analysis nothing is known to be resolved, and the page says so
+(`current_analysis_finalized: false`) instead of reading as an empty history.
 
 A content handoff names a crawl, a `site_url_id` and a required
 `source_analysis_id`. That analysis must be the current finalized analysis or
