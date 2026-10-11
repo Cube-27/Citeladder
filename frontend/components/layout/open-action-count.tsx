@@ -1,21 +1,13 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
-
 import { textRole } from '@/components/ui/typography';
-import { actionsQueries } from '@/lib/api/actions';
-import { useProjectContext } from '@/lib/project/project-context';
+import { queueCount, useActionStatusCounts } from '@/lib/agent/use-action-status-counts';
 
 /** Open plus in-progress Actions for the active project, beside the Actions destination. */
 export function OpenActionCount() {
-  const { activeProjectId, activeWorkspaceId } = useProjectContext();
-  const query = useQuery({
-    ...actionsQueries.list(activeWorkspaceId ?? '', activeProjectId ?? ''),
-    enabled: Boolean(activeWorkspaceId && activeProjectId),
-  });
-  const counts = query.data?.status_counts;
+  const counts = useActionStatusCounts();
   if (!counts) return null;
-  const count = (counts.open ?? 0) + (counts.in_progress ?? 0);
+  const count = queueCount(counts);
   return (
     <>
       <span aria-hidden className={textRole('caption', 'tabular-nums')}>

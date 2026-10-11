@@ -435,6 +435,7 @@ export const visibilityRoutes = [
         cohort: COHORT,
         domain: { scalar: { kind: 'str', maxLength: 255 } },
         source_type: { scalar: { kind: 'str', maxLength: 64 } },
+        standing: { scalar: { kind: 'literal', values: ['gap'] } },
         dimension: { scalar: { kind: 'literal', values: ['domain', 'url'] }, default: 'domain' },
         ...WINDOW,
         as_of: { scalar: { kind: 'datetime' } },
@@ -450,6 +451,7 @@ export const visibilityRoutes = [
         getVisibilitySources(db, runSelection(workspace.workspaceId, path.project_id, query), {
           domain: query.domain,
           sourceClass: query.source_type,
+          standing: query.standing,
           dimension: query.dimension,
           asOf: query.as_of,
           cursor: query.cursor,

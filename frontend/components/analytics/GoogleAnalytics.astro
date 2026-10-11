@@ -1,0 +1,13 @@
+---
+/**
+ * The optional Google tag. Rendered only when the build sets a measurement ID;
+ * nothing loads until the visitor accepts analytics cookies.
+ */
+---
+
+<script>
+  import { startGoogleAnalytics } from './google-analytics';
+
+  const measurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+  if (measurementId) startGoogleAnalytics(measurementId);
+</script>

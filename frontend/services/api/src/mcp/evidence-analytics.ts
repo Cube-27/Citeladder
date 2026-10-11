@@ -302,6 +302,7 @@ export async function visibilitySources(
   const page = await getVisibilitySources(db, runs(scope, args), {
     domain: args.domain ?? null,
     sourceClass: null,
+    standing: null,
     dimension: args.level,
     asOf: null,
     cursor: args.cursor ?? null,

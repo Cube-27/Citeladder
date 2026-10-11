@@ -1,0 +1,61 @@
+---
+import { ArrowUpRight } from 'lucide-react';
+
+import type { NavDropItem } from '@/lib/marketing-content/nav';
+import { cn } from '@/lib/utils';
+
+import { NavIcon, hasNavIcon } from './nav-icons';
+
+/**
+ * One navigation row, shared by the desktop panels and the mobile sheet.
+ *
+ * An ordinary link, never an ARIA `menuitem`: the panels do not implement
+ * arrow-key navigation, and the role would hide the link a screen reader
+ * should announce. External rows (CiteLadder's own docs) open in a new tab,
+ * keep the referrer so docs traffic stays attributable, and say so.
+ */
+interface Props {
+  item: NavDropItem;
+  path: string;
+  /** The mobile sheet shows titles only. */
+  compact?: boolean;
+}
+
+const { item, path, compact = false } = Astro.props;
+const external = 'external' in item && item.external === true;
+const ROW =
+  'nav-row group flex items-start gap-3 rounded-[var(--radius-control)] px-3 py-2.5 ' +
+  'transition-colors duration-[var(--motion-normal)] hover:bg-background-alt focus-visible:bg-background-alt';
+---
+
+{
+  external ? (
+    <a class={cn(ROW, 'justify-between')} href={item.href} target="_blank" rel="noopener">
+      <span class="flex items-start gap-3">
+        {hasNavIcon(item.href) && (
+          <span class="nav-row-icon" aria-hidden="true">
+            <NavIcon href={item.href} className="size-4" />
+          </span>
+        )}
+        <span class="min-w-0">
+          <span class="nav-row-title">{item.title}</span>
+          {!compact && <span class="nav-row-desc">{item.desc}</span>}
+        </span>
+      </span>
+      <ArrowUpRight className="text-muted mt-0.5 size-3.5 shrink-0" aria-hidden />
+      <span class="sr-only">(opens in a new tab)</span>
+    </a>
+  ) : (
+    <a class={ROW} href={item.href} aria-current={path === item.href ? 'page' : undefined}>
+      {hasNavIcon(item.href) && (
+        <span class="nav-row-icon" aria-hidden="true">
+          <NavIcon href={item.href} className="size-4" />
+        </span>
+      )}
+      <span class="min-w-0">
+        <span class="nav-row-title">{item.title}</span>
+        {!compact && <span class="nav-row-desc">{item.desc}</span>}
+      </span>
+    </a>
+  )
+}

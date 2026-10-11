@@ -11,11 +11,11 @@ import type { visibilitySourceUrlSchema } from '@citeladder/contracts/visibility
 import { sql } from 'kysely';
 import type { z } from 'zod';
 
-import { earnedTargetKey } from '../analysis/opportunities/earned-pages.ts';
 import type { Database } from '../db/database.ts';
 import { latestReadings, pageEntities, readAt, readingPresences } from '../source-pages/reading.ts';
 import { wireUtcOrNull, utcText } from '../db/timestamps.ts';
 import { brandIdentities, identityKey } from './brand-identities.ts';
+import { earnedPageActions, pageStanding } from './page-standing.ts';
 import { authorizedSelection, evidenceScope, observedAt, type RunSelection } from './selection.ts';
 import { compareText } from '../text-order.ts';
 
@@ -203,22 +203,7 @@ async function pageSection(
   const presences = reading
     ? ((await readingPresences(db, scope, [reading.id])).get(reading.id) ?? [])
     : [];
-  const action = await db
-    .selectFrom('opportunities as opportunity')
-    .innerJoin('actions as action', (join) =>
-      join
-        .onRef('action.project_id', '=', 'opportunity.project_id')
-        .on(sql<boolean>`action.member_opportunity_ids @> jsonb_build_array(opportunity.id::text)`),
-    )
-    .select('action.id')
-    .where('opportunity.workspace_id', '=', selection.workspaceId)
-    .where('opportunity.project_id', '=', selection.projectId)
-    .where('opportunity.target_key', '=', earnedTargetKey(page.url_hash))
-    .where('opportunity.superseded_at', 'is', null)
-    .where('action.workspace_id', '=', selection.workspaceId)
-    .orderBy('opportunity.priority_score', 'desc')
-    .limit(1)
-    .executeTakeFirst();
+  const actionId = (await earnedPageActions(db, selection, [page.url_hash])).get(page.url_hash);
   return {
     state: page.inspection_state,
     reason: page.inspection_reason,
@@ -228,7 +213,8 @@ async function pageSection(
     page_format_method: page.page_format_method,
     source_class: page.source_class,
     entities: reading ? pageEntities(reading, presences) : [],
-    action_id: action?.id ?? null,
+    standing: pageStanding(page, reading, presences),
+    action_id: actionId ?? null,
   };
 }
 

@@ -88,6 +88,22 @@ export const visibilityEvidenceResponseSchema = responseObject({
   prompt_options: z.array(responseObject({ id: uuid(), label: z.string() })).optional(),
 });
 
+/**
+ * Where the business stands on one cited page, from its latest successful
+ * reading: its own or a competitor's page, not read yet (and why), a `gap`
+ * (competitors listed and the business not), listed, or read with neither.
+ */
+export const pageStandingSchema = z.enum([
+  'yours',
+  'competitor',
+  'blocked',
+  'unreadable',
+  'not_read',
+  'gap',
+  'listed',
+  'read',
+]);
+
 export const visibilitySourcesSchema = responseObject({
   previous_cursor: z.string().nullable().optional(),
   total: z.number().int(),
@@ -129,6 +145,10 @@ export const visibilitySourcesSchema = responseObject({
       url_hash: z.string().nullable(),
       inspection_state: z.string().nullable(),
       opportunity_id: uuid().nullable(),
+      // Also page rows only: the page's standing (null until this project has
+      // a record of the page) and the Action to get listed on it, if any.
+      standing: pageStandingSchema.nullable(),
+      action_id: uuid().nullable(),
       // Page facts, for the URL table. `page_format_method` says how the kind
       // was established, so a format read off the address alone is never
       // presented as one read off the page.
@@ -234,6 +254,8 @@ export const visibilitySourceUrlSchema = responseObject({
     page_format_method: z.string().nullable(),
     source_class: z.string().nullable(),
     entities: z.array(pageEntitySchema),
+    // Where the business stands on the page, by the same rule as the URL table.
+    standing: pageStandingSchema,
     // The open Action to get listed here, when competitors are on the page and you are not.
     action_id: uuid().nullable(),
   }).nullable(),

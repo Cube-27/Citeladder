@@ -188,6 +188,7 @@ export const visibilityApi = {
       cohort?: string;
       domain?: string;
       source_type?: string;
+      standing?: 'gap';
       dimension?: 'domain' | 'url';
       cursor?: string;
       as_of?: string;

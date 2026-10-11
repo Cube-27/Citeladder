@@ -1,6 +1,6 @@
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 
-import { Button as SharedButton } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button-variants';
 import { DEMO_CTA, DEMO_EXTERNAL, DEMO_HREF } from '@/lib/marketing-content/nav';
 import { cn } from '@/lib/utils';
 
@@ -18,10 +18,30 @@ const SHARED_VARIANT: Record<Variant, 'primary' | 'secondary' | 'ghost'> = {
 
 const sharedVariant = (variant: Variant) => SHARED_VARIANT[variant];
 
+/**
+ * A marketing button link's attributes, shared with server-rendered Astro
+ * markup (the navigation) so both produce the same element.
+ */
+export function buttonLinkAttributes({ variant = 'primary', size = 'lg', className }: VisualProps) {
+  const shared = sharedVariant(variant);
+  return {
+    'data-marketing-cta': '',
+    'data-button-variant': shared,
+    'data-button-size': size,
+    className: cn(
+      buttonVariants({ variant: shared, size }),
+      '[&_svg]:size-4 [&_svg]:shrink-0',
+      variant !== 'ghost' && variant !== 'nav' && 'marketing-cta-button',
+      variant === 'soft' && 'marketing-soft-button',
+      className,
+    ),
+  };
+}
+
 export function ButtonLink({
   href,
-  variant = 'primary',
-  size = 'lg',
+  variant,
+  size,
   className,
   children,
   ...rest
@@ -30,21 +50,9 @@ export function ButtonLink({
     'href' | 'className' | 'children'
   >) {
   return (
-    <SharedButton
-      asChild
-      variant={sharedVariant(variant)}
-      size={size}
-      className={cn(
-        '[&_svg]:size-4 [&_svg]:shrink-0',
-        variant !== 'ghost' && variant !== 'nav' && 'marketing-cta-button',
-        variant === 'soft' && 'marketing-soft-button',
-        className,
-      )}
-    >
-      <a href={href} data-marketing-cta="" {...rest}>
-        {children}
-      </a>
-    </SharedButton>
+    <a href={href} {...buttonLinkAttributes({ variant, size, className })} {...rest}>
+      {children}
+    </a>
   );
 }
 

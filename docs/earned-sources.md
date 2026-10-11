@@ -139,7 +139,15 @@ outcome. Neither claims the listing caused a movement.
 ## Reading it
 
 The Sources URL table shows each page's format with its basis (a tooltip and
-hidden text). Opening a URL leads with where the business stands:
+hidden text), the page's standing in a word (below) and a link to its Action
+when one exists. Standing comes from the latest successful reading, computed by
+one server owner (`visibility/page-standing.ts`) for the URL table and the URL's
+page alike. The table's gap filter (`standing=gap` on the Sources read, shared
+by the public API) pages through exactly the pages whose standing is
+"competitors listed, you are not"; totals and the type ring follow it, the
+usage series does not. Publisher (domain) rows have no standing, so the filter
+is refused there. A page nobody read is never a gap. Opening a URL leads
+with where the business stands:
 
 | Standing | When |
 |---|---|

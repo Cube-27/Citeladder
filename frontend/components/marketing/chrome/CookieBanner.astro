@@ -1,0 +1,83 @@
+---
+import { buttonVariants } from '@/components/ui/button-variants';
+import { cn } from '@/lib/utils';
+
+import { CONSENT_CHOICE_ATTRIBUTE } from './cookie-banner';
+
+/**
+ * The cookie consent banner. Server-rendered hidden; `cookie-banner.ts`
+ * reveals it only for an undecided visitor or a reopened preference.
+ *
+ * There are no category toggles: nothing non-essential is installed beyond
+ * the optional analytics tag this gates.
+ */
+
+/**
+ * The public website's outlined alternate action, matching `ButtonLink`'s
+ * `dark`/`nav` treatment. The shared `secondary` fill is the authenticated
+ * flows' tonal quiet action and reads wrong on the marketing paper ground.
+ */
+const MARKETING_SECONDARY =
+  'border-border-strong bg-panel hover:border-border-bold hover:bg-background-alt';
+
+const reject = cn(buttonVariants({ variant: 'secondary' }), 'relative', MARKETING_SECONDARY, 'w-full');
+const accept = cn(buttonVariants({ variant: 'primary' }), 'relative', 'w-full');
+const choice = (decision: 'accepted' | 'rejected') => ({ [CONSENT_CHOICE_ATTRIBUTE]: decision });
+---
+
+<section
+  hidden
+  aria-label="Cookie consent"
+  tabindex="-1"
+  data-cookie-banner
+  class="fixed right-4 bottom-0 left-4 z-[var(--z-index-overlay)] sm:right-6 sm:left-auto sm:w-[27rem] print:hidden"
+>
+  {/* A landmark section, not a dialog: it does not trap focus or block the page. */}
+  <div class="pb-[max(1rem,env(safe-area-inset-bottom))]">
+    <div
+      class="border-border-strong bg-panel shadow-overlay grid gap-4 rounded-[var(--radius-card)] border p-5"
+    >
+      <div class="grid gap-2">
+        <h2 class="website-feature-heading text-foreground">Cookie settings</h2>
+        <p class="website-body">
+          We use essential cookies to keep you signed in and secure. With your permission,
+          non-essential cookies help us understand site usage. Read our{' '}
+          <a
+            href="/cookies"
+            class="text-foreground underline underline-offset-4 hover:no-underline"
+          >
+            Cookie Policy.
+          </a>
+        </p>
+      </div>
+      {/* Reject first in the DOM so it is the first tab stop, and visually equal in weight. */}
+      <div class="grid grid-cols-2 gap-3">
+        <button
+          type="button"
+          data-button-variant="secondary"
+          data-button-size="md"
+          class={reject}
+          {...choice('rejected')}
+        >
+          <span class="inline-flex items-center gap-2">Reject</span>
+        </button>
+        <button
+          type="button"
+          data-button-variant="primary"
+          data-button-size="md"
+          class={accept}
+          {...choice('accepted')}
+        >
+          <span class="inline-flex items-center gap-2">Accept</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  import { mountCookieBanner } from './cookie-banner';
+
+  const region = document.querySelector<HTMLElement>('[data-cookie-banner]');
+  if (region) mountCookieBanner(region);
+</script>

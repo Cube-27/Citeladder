@@ -4,8 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 
 import { COOKIE_CONSENT_STORAGE_KEY, writeConsent } from '@/lib/consent/cookie-consent';
 
-import { CookieBanner } from '../marketing/chrome/cookie-banner';
-import { GoogleAnalytics } from './google-analytics';
+import { mountCookieBannerFixture } from '@/test/cookie-banner-fixture';
+
+import { startGoogleAnalytics } from './google-analytics';
 import { ButtonLink, DemoButtonLink } from '../marketing/primitives/button';
 
 /**
@@ -19,9 +20,21 @@ function gtagCommands(): unknown[] {
   );
 }
 
+const cleanups: (() => void)[] = [];
+/** Start the loader as the layout's script does, stopping it after the test. */
+function startAnalytics() {
+  const stop = startGoogleAnalytics('G-TEST');
+  cleanups.push(stop);
+  return stop;
+}
+function renderBanner() {
+  cleanups.push(mountCookieBannerFixture());
+}
+
 describe('GoogleAnalytics', () => {
   beforeEach(() => window.localStorage.clear());
   afterEach(() => {
+    for (const cleanup of cleanups.splice(0)) cleanup();
     document
       .querySelectorAll('[data-testid="external-script"]')
       .forEach((script) => script.remove());
@@ -35,9 +48,9 @@ describe('GoogleAnalytics', () => {
     const gtag = vi.fn();
     Reflect.set(window, 'gtag', gtag);
     window.history.replaceState(null, '', '/ai-citation-tracking?email=private@example.com');
-    const view = render(
+    const stop = startAnalytics();
+    render(
       <>
-        <GoogleAnalytics measurementId="G-TEST" />
         <header data-cta-placement="hero">
           <DemoButtonLink onClick={(event) => event.preventDefault()}>
             <span>Book a demo</span>
@@ -82,9 +95,13 @@ describe('GoogleAnalytics', () => {
     gtag.mockClear();
     await user.click(screen.getByText('Book a demo'));
     expect(gtag).not.toHaveBeenCalled();
-    view.unmount();
+    // Once stopped, even a consented demo CTA is no longer tracked.
+    stop();
     act(() => writeConsent('accepted'));
-    document.body.insertAdjacentHTML('beforeend', '<a href="/contact" id="detached-demo">Demo</a>');
+    document.body.insertAdjacentHTML(
+      'beforeend',
+      '<a href="/contact" id="detached-demo" data-demo-cta="">Demo</a>',
+    );
     const detached = document.getElementById('detached-demo')!;
     detached.addEventListener('click', (event) => event.preventDefault());
     await user.click(detached);
@@ -95,12 +112,8 @@ describe('GoogleAnalytics', () => {
 
   it('does not render a tag before consent or after rejection', async () => {
     const user = userEvent.setup();
-    render(
-      <>
-        <GoogleAnalytics measurementId="G-TEST" />
-        <CookieBanner />
-      </>,
-    );
+    startAnalytics();
+    renderBanner();
 
     expect(screen.queryByTestId('external-script')).not.toBeInTheDocument();
     await user.click(await screen.findByRole('button', { name: 'Reject' }));
@@ -109,12 +122,8 @@ describe('GoogleAnalytics', () => {
 
   it('loads the tag after acceptance in the same tab', async () => {
     const user = userEvent.setup();
-    render(
-      <>
-        <GoogleAnalytics measurementId="G-TEST" />
-        <CookieBanner />
-      </>,
-    );
+    startAnalytics();
+    renderBanner();
 
     await user.click(await screen.findByRole('button', { name: 'Accept' }));
 
@@ -144,12 +153,8 @@ describe('GoogleAnalytics', () => {
       throw new DOMException('Storage unavailable');
     });
     try {
-      render(
-        <>
-          <GoogleAnalytics measurementId="G-TEST" />
-          <CookieBanner />
-        </>,
-      );
+      startAnalytics();
+      renderBanner();
 
       await user.click(await screen.findByRole('button', { name: 'Accept' }));
 
@@ -166,7 +171,7 @@ describe('GoogleAnalytics', () => {
     const gtag = vi.fn();
     try {
       writeConsent('accepted');
-      render(<GoogleAnalytics measurementId="G-TEST" />);
+      startAnalytics();
       const script = within(document.documentElement).getByTestId('external-script');
       act(() => script.dispatchEvent(new Event('load')));
       Object.defineProperty(window, 'gtag', { value: gtag, configurable: true, writable: true });
@@ -189,7 +194,7 @@ describe('GoogleAnalytics', () => {
 
   it('does not configure a pending tag after consent is revoked', async () => {
     writeConsent('accepted');
-    render(<GoogleAnalytics measurementId="G-TEST" />);
+    startAnalytics();
     const script = within(document.documentElement).getByTestId('external-script');
 
     await act(async () => writeConsent('rejected'));
@@ -204,7 +209,7 @@ describe('GoogleAnalytics', () => {
 
   it('preserves other consent defaults when revoking a pending tag', async () => {
     writeConsent('accepted');
-    render(<GoogleAnalytics measurementId="G-TEST" />);
+    startAnalytics();
     const dataLayer = (window as Window & { dataLayer?: unknown[] }).dataLayer ?? [];
     const ownDefault = dataLayer[0] as Record<number, unknown>;
     ownDefault[2] = { analytics_storage: 'granted', ad_storage: 'denied' };
@@ -224,14 +229,14 @@ describe('GoogleAnalytics', () => {
     expect(adOnlyDefault[2]).toEqual({ ad_storage: 'granted' });
   });
 
-  it('reuses the document tag after remount without configuring twice', () => {
+  it('reuses the document tag after a restart without configuring twice', () => {
     writeConsent('accepted');
-    const first = render(<GoogleAnalytics measurementId="G-TEST" />);
+    const stopFirst = startAnalytics();
     const script = within(document.documentElement).getByTestId('external-script');
     act(() => script.dispatchEvent(new Event('load')));
-    first.unmount();
+    stopFirst();
 
-    render(<GoogleAnalytics measurementId="G-TEST" />);
+    startAnalytics();
 
     expect(document.querySelectorAll('#citeladder-google-analytics')).toHaveLength(1);
     expect(

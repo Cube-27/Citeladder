@@ -1,7 +1,3 @@
-'use client';
-
-import { useEffect, useSyncExternalStore } from 'react';
-
 import { hasAnalyticsConsent, subscribeToConsent } from '@/lib/consent/cookie-consent';
 
 /**
@@ -102,56 +98,65 @@ export function trackContactSubmitted() {
   (window as GtagWindow).gtag?.('event', 'contact_form_submitted', { source_page: '/contact' });
 }
 
-/** Load the optional Google tag only after an explicit analytics opt-in. */
-export function GoogleAnalytics({ measurementId }: Readonly<{ measurementId: string }>) {
-  const allowed = useSyncExternalStore(subscribeToConsent, hasAnalyticsConsent, () => false);
-
-  useEffect(() => {
-    document.addEventListener('click', trackMarketingCta);
-    return () => document.removeEventListener('click', trackMarketingCta);
-  }, []);
-
-  useEffect(() => {
-    const withGtag = window as GtagWindow;
-    // Google's hard opt-out also stops cookieless measurement after withdrawal.
-    Reflect.set(window, `ga-disable-${measurementId}`, !allowed);
-    const existing = document.getElementById(SCRIPT_ID) as HTMLScriptElement | null;
-    if (!allowed) {
-      clearAnalyticsCookies();
-      if (!existing) return;
-      // A pending tag must never replay an old granted default on load.
-      if (existing.dataset.loaded !== 'true') {
-        denyPendingAnalyticsDefaults(withGtag.dataLayer);
-      }
-      withGtag.gtag?.('consent', 'update', { analytics_storage: 'denied' });
-      return;
+/** Load, update or withdraw the tag to match the current consent decision. */
+function applyConsent(measurementId: string, allowed: boolean) {
+  const withGtag = window as GtagWindow;
+  // Google's hard opt-out also stops cookieless measurement after withdrawal.
+  Reflect.set(window, `ga-disable-${measurementId}`, !allowed);
+  const existing = document.getElementById(SCRIPT_ID);
+  if (!allowed) {
+    clearAnalyticsCookies();
+    if (!(existing instanceof HTMLScriptElement)) return;
+    // A pending tag must never replay an old granted default on load.
+    if (existing.dataset.loaded !== 'true') {
+      denyPendingAnalyticsDefaults(withGtag.dataLayer);
     }
-    if (existing) {
-      withGtag.gtag?.('consent', 'update', { analytics_storage: 'granted' });
-      configureLoadedTag(existing, measurementId);
-      return;
-    }
-    withGtag.dataLayer = withGtag.dataLayer || [];
-    withGtag.gtag = gtagQueue(withGtag.dataLayer);
-    withGtag.gtag('consent', 'default', {
-      analytics_storage: hasAnalyticsConsent() ? 'granted' : 'denied',
-    });
-    withGtag.gtag('js', new Date());
-    const script = document.createElement('script');
-    script.id = SCRIPT_ID;
-    script.async = true;
-    script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(measurementId)}`;
-    script.dataset.testid = 'external-script';
-    script.addEventListener(
-      'load',
-      () => {
-        script.dataset.loaded = 'true';
-        configureLoadedTag(script, measurementId);
-      },
-      { once: true },
-    );
-    document.head.appendChild(script);
-  }, [allowed, measurementId]);
+    withGtag.gtag?.('consent', 'update', { analytics_storage: 'denied' });
+    return;
+  }
+  if (existing instanceof HTMLScriptElement) {
+    withGtag.gtag?.('consent', 'update', { analytics_storage: 'granted' });
+    configureLoadedTag(existing, measurementId);
+    return;
+  }
+  withGtag.dataLayer = withGtag.dataLayer || [];
+  withGtag.gtag = gtagQueue(withGtag.dataLayer);
+  withGtag.gtag('consent', 'default', {
+    analytics_storage: hasAnalyticsConsent() ? 'granted' : 'denied',
+  });
+  withGtag.gtag('js', new Date());
+  const script = document.createElement('script');
+  script.id = SCRIPT_ID;
+  script.async = true;
+  script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(measurementId)}`;
+  script.dataset.testid = 'external-script';
+  script.addEventListener(
+    'load',
+    () => {
+      script.dataset.loaded = 'true';
+      configureLoadedTag(script, measurementId);
+    },
+    { once: true },
+  );
+  document.head.appendChild(script);
+}
 
-  return null;
+/**
+ * Load the optional Google tag only after an explicit analytics opt-in, and
+ * follow every later decision in this tab or another. Returns a stop function.
+ */
+export function startGoogleAnalytics(measurementId: string): () => void {
+  let allowed = hasAnalyticsConsent();
+  document.addEventListener('click', trackMarketingCta);
+  applyConsent(measurementId, allowed);
+  const unsubscribe = subscribeToConsent(() => {
+    const next = hasAnalyticsConsent();
+    if (next === allowed) return;
+    allowed = next;
+    applyConsent(measurementId, allowed);
+  });
+  return () => {
+    unsubscribe();
+    document.removeEventListener('click', trackMarketingCta);
+  };
 }

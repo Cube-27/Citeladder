@@ -30,6 +30,7 @@ import {
 } from '@/lib/agent/vocabulary';
 import { actionsQueries, type Action, type ActionStatus } from '@/lib/api/actions';
 import { actionStatusSchema } from '@citeladder/contracts/actions';
+import { queueCount, useActionStatusCounts } from '@/lib/agent/use-action-status-counts';
 import { AGENT_ACTIONS_PAGE_SIZE } from '@/lib/config/agent';
 import { ICONS } from '@/lib/icons';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
@@ -43,10 +44,22 @@ const STATUS_CODEC = stringUrlCodec<StatusFilter>(STATUS_FILTERS, QUEUE);
 const ALL_TARGETS = 'all';
 const TARGET_CODEC = stringUrlCodec<string>([ALL_TARGETS, ...ACTION_TARGET_KINDS], ALL_TARGETS);
 
-const STATUS_OPTIONS = STATUS_FILTERS.map((value) => ({
-  value,
-  label: value === QUEUE ? 'Open and in progress' : ACTION_STATUS_LABEL[value],
-}));
+type StatusCounts = Partial<Record<string, number>>;
+
+function statusCount(value: StatusFilter, counts: StatusCounts) {
+  return value === QUEUE ? queueCount(counts) : (counts[value] ?? 0);
+}
+
+/**
+ * Status choices, each with its project-wide count. The counts cover every
+ * target type, so they are shown only while the target filter is unset.
+ */
+function statusOptions(counts: StatusCounts | undefined) {
+  return STATUS_FILTERS.map((value) => {
+    const label = value === QUEUE ? 'Open and in progress' : ACTION_STATUS_LABEL[value];
+    return { value, label: counts ? `${label} (${statusCount(value, counts)})` : label };
+  });
+}
 const TARGET_OPTIONS = [
   { value: ALL_TARGETS, label: 'All targets' },
   ...ACTION_TARGET_KINDS.map((kind) => ({ value: kind, label: targetKindLabel(kind) ?? kind })),
@@ -60,6 +73,7 @@ export function ActionsScreen() {
   const { activeProjectId, activeWorkspaceId, isLoading } = useProjectContext();
   const [status, setStatus] = useUrlState('status', STATUS_CODEC);
   const [target, setTarget] = useUrlState('target', TARGET_CODEC);
+  const counts = useActionStatusCounts();
   return (
     <PageShell
       controls={
@@ -67,7 +81,7 @@ export function ActionsScreen() {
           <Select
             ariaLabel="Status"
             value={status}
-            options={STATUS_OPTIONS}
+            options={statusOptions(target === ALL_TARGETS ? counts : undefined)}
             onValueChange={(value) => setStatus(value, 'replace')}
           />
           <Select

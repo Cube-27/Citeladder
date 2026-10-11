@@ -1,0 +1,249 @@
+---
+import { ArrowRight, ChevronDown, Menu, X } from 'lucide-react';
+
+import { LogoMark } from '@/components/ui/logo-mark';
+import { appHref } from '@/lib/config/app-link';
+import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';
+import {
+  NAV_DROPS,
+  NAV_LINKS,
+  PLATFORM_OVERVIEW,
+  type NavDropKey,
+} from '@/lib/marketing-content/nav';
+import { cn } from '@/lib/utils';
+
+import { buttonLinkAttributes } from '../primitives/button';
+import { DROP_LAYOUT } from './marketing-nav';
+import NavRow from './NavRow.astro';
+
+/**
+ * Fixed marketing chrome with accessible desktop dropdowns and a mobile sheet.
+ *
+ * Every panel and the sheet are server-rendered, hidden; `marketing-nav.ts`
+ * adds the behaviour with plain listeners, so pages ship no framework script.
+ * Neither surface uses the ARIA menu pattern: the panels hold ordinary links,
+ * and `menuitem` roles would promise arrow-key navigation this nav does not
+ * implement.
+ */
+interface Props {
+  path: string;
+}
+
+const { path } = Astro.props;
+const home = path === '/';
+const signupOpen = selfServeSignupOpen();
+
+const NAV_LINK =
+  'nav-link website-nav relative inline-flex items-center gap-1 whitespace-nowrap ' +
+  'rounded-[var(--radius-control)] px-3 py-2';
+const { className: signUpClass, ...signUpData } = buttonLinkAttributes({
+  className: 'hidden sm:inline-flex',
+});
+const { className: sheetLogInClass, ...sheetLogInData } = buttonLinkAttributes({
+  variant: 'soft',
+  size: 'marketing',
+  className: 'w-full',
+});
+const { className: sheetSignUpClass, ...sheetSignUpData } = buttonLinkAttributes({
+  size: 'marketing',
+  className: 'w-full',
+});
+
+function panelStyle(key: NavDropKey) {
+  return `left:0px;width:${DROP_LAYOUT[key].width}px;max-width:calc(100vw - 2rem);max-height:calc(100dvh - var(--marketing-nav-offset) - 2rem)`;
+}
+---
+
+<div
+  data-marketing-nav="true"
+  class="safe-top fixed inset-x-0 top-0 z-50 w-full max-w-full transition-[background-color,box-shadow] duration-[var(--motion-menu)] bg-transparent"
+>
+  {
+    home && (
+      <div class="lp-announcement" data-cta-placement="announcement">
+        <a href="/platform/mcp" class="website-label" data-marketing-cta="">
+          <span class="truncate">New: connect CiteLadder to Claude, ChatGPT and more</span>
+          <ArrowRight aria-hidden className="size-4 shrink-0" />
+        </a>
+      </div>
+    )
+  }
+  <nav
+    aria-label="Main navigation"
+    class="mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-4 px-[var(--site-gutter)] lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]"
+  >
+    <a
+      href="/"
+      aria-label="CiteLadder home"
+      class="focus-ring inline-flex shrink-0 items-center justify-self-start rounded-xs"
+    >
+      <LogoMark />
+    </a>
+
+    <div class="relative hidden items-center lg:flex" data-nav-links>
+      {
+        NAV_DROPS.map(({ key, label, href, groups }) => (
+          <div class="flex items-center">
+            <button
+              id={`desktop-nav-trigger-${key}`}
+              type="button"
+              class={NAV_LINK}
+              data-current={path === href || path.startsWith(`${href}/`) ? 'true' : undefined}
+              aria-expanded="false"
+              aria-controls={`desktop-nav-panel-${key}`}
+            >
+              {label}
+              <ChevronDown aria-hidden className="nav-chevron size-3.5" />
+            </button>
+            <div
+              hidden
+              id={`desktop-nav-panel-${key}`}
+              style={panelStyle(key)}
+              class="nav-panel absolute top-full mt-1.5 overflow-auto"
+            >
+              <div
+                class={cn('grid gap-x-2 p-2', key === 'platform' ? 'grid-cols-3' : 'grid-cols-1')}
+              >
+                {groups.map((group) => (
+                  <div
+                    class={cn('min-w-0', key === 'resources' && 'grid grid-cols-2 gap-x-2')}
+                  >
+                    {group.label && <p class="nav-group-label">{group.label}</p>}
+                    {group.items.map((item) => (
+                      <NavRow item={item} path={path} />
+                    ))}
+                  </div>
+                ))}
+              </div>
+              {
+                key === 'platform' && (
+                  <a class="nav-panel-footer" href={PLATFORM_OVERVIEW.href}>
+                    <span>
+                      <span class="nav-row-title">{PLATFORM_OVERVIEW.title}</span>
+                      <span class="nav-row-desc">
+                        How measurement, diagnosis and action connect in one project.
+                      </span>
+                    </span>
+                    <ArrowRight aria-hidden className="size-4" />
+                  </a>
+                )
+              }
+            </div>
+          </div>
+        ))
+      }
+      {
+        NAV_LINKS.map(({ label, href }) => (
+          <a href={href} aria-current={path === href ? 'page' : undefined} class={NAV_LINK}>
+            {label}
+          </a>
+        ))
+      }
+    </div>
+
+    <div class="flex shrink-0 items-center gap-2 justify-self-end">
+      <div class="flex items-center gap-2" data-nav-actions>
+        <a
+          href={appHref('/login')}
+          class="nav-link website-nav rounded-[var(--radius-control)] px-3 py-2"
+        >
+          Log in
+        </a>
+        {
+          signupOpen && (
+            <a href={appHref('/register')} class={signUpClass} {...signUpData}>
+              Sign up
+            </a>
+          )
+        }
+      </div>
+      <button
+        type="button"
+        class="text-foreground hover:bg-background-alt grid size-10 place-items-center rounded-[var(--radius-control)] lg:hidden"
+        aria-label="Open menu"
+        aria-expanded="false"
+        aria-controls="mobile-menu"
+      >
+        <Menu className="size-4" aria-hidden data-icon="open" />
+        <X className="size-4" aria-hidden data-icon="close" hidden />
+      </button>
+    </div>
+  </nav>
+
+  <div hidden>
+    {/* A sheet, not a dropdown card: it fills the viewport below the bar and pins the two account actions to its foot. */}
+    <div
+      id="mobile-menu"
+      class="safe-bottom bg-panel flex max-h-[calc(100dvh-var(--marketing-nav-offset))] min-h-[calc(100dvh-var(--marketing-nav-offset))] flex-col overflow-y-auto overscroll-contain px-[var(--site-gutter)] pt-2 pb-4 lg:hidden"
+    >
+      <div class="grid">
+        {
+          NAV_DROPS.map(({ key, label, groups }) => {
+            const items = [
+              ...(key === 'platform' ? [{ label: undefined, item: PLATFORM_OVERVIEW }] : []),
+              ...groups.flatMap((group) =>
+                group.items.map((item, index) => ({
+                  label: index === 0 ? group.label : undefined,
+                  item,
+                })),
+              ),
+            ];
+            return (
+              <div class="border-border-subtle border-b">
+                <button
+                  type="button"
+                  class="mobile-nav-trigger"
+                  aria-expanded="false"
+                  aria-controls={`acc-${key}`}
+                >
+                  {label}
+                  <ChevronDown
+                    aria-hidden
+                    className="text-muted size-4 transition-transform duration-[var(--motion-normal)]"
+                  />
+                </button>
+                <div id={`acc-${key}`} hidden class="-mx-3 pb-3">
+                  {items.map(({ label: groupLabel, item }) => (
+                    <>
+                      {groupLabel && <p class="nav-group-label">{groupLabel}</p>}
+                      <NavRow item={item} path={path} compact />
+                    </>
+                  ))}
+                </div>
+              </div>
+            );
+          })
+        }
+        {
+          NAV_LINKS.map(({ label, href }) => (
+            <a
+              href={href}
+              aria-current={path === href ? 'page' : undefined}
+              class="mobile-nav-trigger border-border-subtle border-b"
+            >
+              {label}
+            </a>
+          ))
+        }
+      </div>
+
+      <div class="mt-auto grid gap-2 pt-6">
+        <a href={appHref('/login')} class={sheetLogInClass} {...sheetLogInData}>Log in</a>
+        {
+          signupOpen && (
+            <a href={appHref('/register')} class={sheetSignUpClass} {...sheetSignUpData}>
+              Sign up
+            </a>
+          )
+        }
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  import { mountMarketingNav } from './marketing-nav';
+
+  const chrome = document.querySelector<HTMLElement>('[data-marketing-nav]');
+  if (chrome) mountMarketingNav(chrome);
+</script>

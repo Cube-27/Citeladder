@@ -8,6 +8,7 @@ import { CardHeader } from '@/components/ui/card';
 import { FilterRow } from '@/components/ui/filter-row';
 import { SearchField } from '@/components/ui/search-field';
 import { downloadCsv } from '@/lib/csv/download';
+import { standingLabel } from '@/lib/visibility/source-pages';
 import { typeLabel, type SourceItem } from '@/lib/visibility/sources';
 
 const DOMAIN_HEADERS = [
@@ -24,6 +25,7 @@ const URL_HEADERS = [
   'URL',
   'Page title',
   'URL type',
+  'On the page',
   'Retrievals',
   'Citation rate',
   'Citations',
@@ -69,6 +71,7 @@ export function SourceTableToolbar({
           row.key,
           row.title ?? '',
           typeLabel(row.page_format, 'url') ?? '',
+          standingLabel(row.standing),
           row.responses,
           row.citation_rate,
           row.annotations,

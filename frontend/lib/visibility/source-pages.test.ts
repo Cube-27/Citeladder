@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test';
 
-import { absenceBasis, pageStanding, presenceLabel } from './source-pages';
+import { absenceBasis, presenceLabel } from './source-pages';
 
 /**
  * "Nobody looked" and "we looked and you are not there" are different
@@ -43,58 +43,5 @@ describe('cited-page vocabulary', () => {
 
   it('offers no basis for a page nobody read, where nothing was searched', () => {
     expect(absenceBasis('not_detected', null, 0)).toBeNull();
-  });
-});
-
-describe('where you stand on a cited page', () => {
-  const page = (overrides: Partial<Parameters<typeof pageStanding>[0] & object> = {}) => ({
-    state: 'inspected',
-    reason: null,
-    read_at: '2026-10-01T00:00:00Z',
-    extracted_chars: 4200,
-    page_format: 'listicle',
-    page_format_method: 'heading_evidence',
-    source_class: 'editorial_third_party',
-    entities: [
-      {
-        entity_kind: 'brand',
-        entity_name: 'Acme',
-        presence: 'not_detected',
-        match_method: 'none',
-        match_count: 0,
-        passages: [],
-      },
-      {
-        entity_kind: 'competitor',
-        entity_name: 'Globex',
-        match_count: 1,
-        presence: 'present',
-        match_method: 'exact_alias',
-        passages: ['Globex leads.'],
-      },
-    ],
-    action_id: null,
-    ...overrides,
-  });
-
-  it('calls a read page with rivals and without you an opportunity', () => {
-    expect(pageStanding(page())).toBe('gap');
-  });
-
-  it('never judges a page nobody read, and says why it was not read', () => {
-    expect(pageStanding(page({ read_at: null, entities: [] }))).toBe('not_read');
-    expect(pageStanding(page({ read_at: null, state: 'blocked', entities: [] }))).toBe('blocked');
-    expect(pageStanding(null)).toBe('untracked');
-  });
-
-  it("does not offer a competitor's own page as somewhere to be listed", () => {
-    expect(pageStanding(page({ source_class: 'competitor_owned' }))).toBe('competitor');
-  });
-
-  it('reports you listed once your name is on the page', () => {
-    const listed = page().entities.map((entity) =>
-      entity.entity_kind === 'brand' ? { ...entity, presence: 'present' } : entity,
-    );
-    expect(pageStanding(page({ entities: listed }))).toBe('listed');
   });
 });

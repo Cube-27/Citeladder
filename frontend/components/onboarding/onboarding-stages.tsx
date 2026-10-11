@@ -15,10 +15,15 @@ import { ReviewStep } from './review-step';
 
 const MARKET_OPTIONS = [{ value: 'GLOBAL', label: 'Global' }, ...MARKET_COUNTRIES];
 
+/** Each stage's heading; focus moves here when the stage changes. */
+export const STAGE_HEADING_ID = 'onboarding-stage-heading';
+
 function StageHeader({ title, children }: Readonly<{ title: ReactNode; children: ReactNode }>) {
   return (
     <div className="flow-header">
-      <h1 className="flow-title">{title}</h1>
+      <h1 id={STAGE_HEADING_ID} tabIndex={-1} className="flow-title outline-none">
+        {title}
+      </h1>
       <p className="flow-help">{children}</p>
     </div>
   );
@@ -247,25 +252,9 @@ export function ReviewStage({
         ) : null}
         <CompletionStateAlert failed={completionFailed} />
       </ReviewNotices>
-      {/* Decisions first: what you sell and who buys it share the top row, then
-          the auto-verified websites and the competitor picks run full width.
-          Two independent columns left one of them half empty beside the
-          competitor list, and on a phone put the category — the answer every
-          later score depends on — a screen and a half down. */}
+      {/* The websites and competitor picks run full width first, each with its
+          hint beneath; then what you sell and who buys it share a row. */}
       <div className="flow-review">
-        {profile ? (
-          <>
-            <div className="flow-review-cell">
-              <IcpCategory profile={profile} onChange={setProfile} />
-              {!hasConfirmedIcp(profile) ? (
-                <p className="flow-review-hint">Choose or describe what you sell.</p>
-              ) : null}
-            </div>
-            <div className="flow-review-card flow-review-audience">
-              <IcpAudience profile={profile} onChange={setProfile} />
-            </div>
-          </>
-        ) : null}
         <ReviewStep
           domains={domains}
           competitors={competitors}
@@ -287,6 +276,19 @@ export function ReviewStage({
         ) : null}
         {flow.hasIncompleteCompetitor ? (
           <p className="flow-review-hint">Add a name and website for each selected competitor.</p>
+        ) : null}
+        {profile ? (
+          <>
+            <div className="flow-review-cell">
+              <IcpCategory profile={profile} onChange={setProfile} />
+              {!hasConfirmedIcp(profile) ? (
+                <p className="flow-review-hint">Choose or describe what you sell.</p>
+              ) : null}
+            </div>
+            <div className="flow-review-card flow-review-audience">
+              <IcpAudience profile={profile} onChange={setProfile} />
+            </div>
+          </>
         ) : null}
       </div>
     </div>

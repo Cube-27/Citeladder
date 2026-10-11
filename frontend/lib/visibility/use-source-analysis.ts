@@ -30,6 +30,8 @@ export type SourceScope = {
   cursor: string | null;
   asOf: string | null;
   sourceType: string | null;
+  /** Only pages that list a tracked competitor and not the business. */
+  gapOnly: boolean;
   pageSize: number;
 };
 
@@ -78,6 +80,7 @@ export function useSourceAnalysis(
       comparison?.status === 'comparable' ? comparison.baseline_audit_ids : undefined,
     domain: set(scope.domain),
     source_type: set(scope.sourceType),
+    standing: scope.gapOnly ? ('gap' as const) : undefined,
     dimension: scope.dimension,
     cursor: set(scope.cursor),
     as_of: set(scope.asOf),

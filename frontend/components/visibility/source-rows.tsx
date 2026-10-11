@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { InlineEmpty } from '@/components/ui/inline-empty';
 import { Pressable } from '@/components/ui/pressable';
 import { Skeleton } from '@/components/ui/skeleton';
+import { TextLink } from '@/components/ui/text-link';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import {
   SortableTableHead,
@@ -29,6 +30,7 @@ import {
   type SourceItem,
 } from '@/lib/visibility/sources';
 import { HintedHead } from '@/components/visibility/source-heads';
+import { standingLabel } from '@/lib/visibility/source-pages';
 import { pageFormatBasis } from '@/lib/visibility/vocabulary';
 import type { useVisibilityFilters } from '@/lib/visibility/use-visibility-dashboard';
 
@@ -89,8 +91,9 @@ const DOMAIN_COLUMNS = [
 ] as const;
 
 const URL_COLUMNS = [
-  'w-[32%]',
-  'w-[13%]',
+  'w-[28%]',
+  'w-[12%]',
+  'hidden md:table-cell w-[14%]',
   '',
   '',
   'hidden xl:table-cell',
@@ -317,6 +320,30 @@ function MentionedChips({
 }
 
 /**
+ * Where the business stands on the page, and the Action to get listed on it
+ * when one exists. Only a read page carries a verdict.
+ */
+function PageStandingCell({
+  standing,
+  actionId,
+}: Readonly<{ standing: SourceItem['standing']; actionId: string | null }>) {
+  const label = standingLabel(standing);
+  const tone = standing === 'gap' ? 'warning' : standing === 'listed' ? 'success' : null;
+  return (
+    <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+      {tone ? (
+        <Badge variant="status" value={tone}>
+          {label}
+        </Badge>
+      ) : (
+        <span className={textRole('caption', 'text-secondary truncate')}>{label}</span>
+      )}
+      {actionId ? <TextLink href={`/agent/actions/${actionId}`}>Action</TextLink> : null}
+    </span>
+  );
+}
+
+/**
  * The cited pages.
  *
  * "Mentioned" is co-occurrence, never presence on the page: the chips are the
@@ -352,6 +379,11 @@ export function UrlTable({
             hint="What kind of page this is: from the page itself once it has been read, otherwise from its address. A page whose kind is not evident shows as Other."
             className={URL_COLUMNS[1]}
           />
+          <HintedHead
+            label="On the page"
+            hint="Whether this page has been read, and where you stand on it. A gap lists competitors and not you."
+            className={URL_COLUMNS[2]}
+          />
           <SortableTableHead
             label="Retrievals"
             {...sortProps(sort, onSort, 'responses')}
@@ -368,19 +400,19 @@ export function UrlTable({
             label="Mentions"
             {...sortProps(sort, onSort, 'mentions')}
             numeric
-            className={URL_COLUMNS[4]}
+            className={URL_COLUMNS[5]}
             hint="Distinct brands named in the answers that cited this URL. Co-occurrence in the answer, not presence on the page."
           />
           <HintedHead
             label="Mentioned"
             hint="The brands named in the answers that cited this URL. Co-occurrence in the answer, not presence on the page."
-            className={URL_COLUMNS[5]}
+            className={URL_COLUMNS[6]}
           />
           <SortableTableHead
             label="Last seen"
             {...sortProps(sort, onSort, 'last_cited_at')}
             numeric
-            className={URL_COLUMNS[6]}
+            className={URL_COLUMNS[7]}
             hint="The most recent run in this selection whose answer used this URL as a source."
           />
         </TableRow>
@@ -410,13 +442,16 @@ export function UrlTable({
                     method={row.page_format_method}
                   />
                 </TableCell>
+                <TableCell className={URL_COLUMNS[2]}>
+                  <PageStandingCell standing={row.standing} actionId={row.action_id} />
+                </TableCell>
                 <NumericCell value={count(row.responses)} />
                 <NumericCell value={ratio(row.citation_rate)} />
-                <NumericCell value={count(row.mentions)} className={URL_COLUMNS[4]} />
-                <TableCell className={URL_COLUMNS[5]}>
+                <NumericCell value={count(row.mentions)} className={URL_COLUMNS[5]} />
+                <TableCell className={URL_COLUMNS[6]}>
                   <MentionedChips brands={row.brands} total={row.mentions} />
                 </TableCell>
-                <NumericCell value={sinceLabel(row.last_cited_at)} className={URL_COLUMNS[6]} />
+                <NumericCell value={sinceLabel(row.last_cited_at)} className={URL_COLUMNS[7]} />
               </TableRow>
             ))}
       </TableBody>
