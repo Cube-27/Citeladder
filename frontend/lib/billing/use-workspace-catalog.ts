@@ -1,4 +1,4 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 
 import { billingApi } from '@/lib/api/billing';
 import { queryKeys } from '@/lib/api/query-keys';
@@ -13,6 +13,11 @@ export function useWorkspaceCatalog(workspaceId: string | null, country: string)
     queryKey: queryKeys.billing.workspaceCatalog(workspaceId, code),
     queryFn: ({ signal }) => billingApi.workspaceCatalog(code, { signal, workspaceId }),
     enabled: workspaceId !== null,
-    placeholderData: keepPreviousData,
+    // An ended workspace buys its plan from this list, so the access gate keeps it.
+    meta: { accessRecovery: true },
+    // A country change keeps the shown plans while the new prices load; another
+    // workspace's plans are never shown for this one.
+    placeholderData: (previous, previousQuery) =>
+      previousQuery?.queryKey[2] === (workspaceId ?? 'unresolved') ? previous : undefined,
   });
 }

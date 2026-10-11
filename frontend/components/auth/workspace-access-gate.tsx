@@ -36,12 +36,13 @@ function accessTitle(access: z.infer<typeof accessSchema> | undefined, deadline:
     : 'Workspace access';
 }
 
-function recoveryQuery(key: readonly unknown[]) {
+/** Reads that serve recovery: identity, workspaces, and any query marked `accessRecovery`. */
+function recoveryQuery(query: { queryKey: readonly unknown[]; meta?: Record<string, unknown> }) {
+  const key = query.queryKey;
   return (
     key[0] === 'auth' ||
     (key[0] === 'workspaces' && ['list', 'access'].includes(String(key[1]))) ||
-    // The plans an ended workspace may buy to restore itself.
-    (key[0] === 'billing' && key[1] === 'workspace-catalog')
+    query.meta?.accessRecovery === true
   );
 }
 
@@ -69,7 +70,7 @@ function useAccessLoss(workspaceId: string | null) {
       void client.resetQueries({ queryKey: queryKeys.workspaces.access(workspaceId), exact: true });
     };
     const queries = client.getQueryCache().subscribe((event) => {
-      if (!recoveryQuery(event.query.queryKey)) denied(event.query.state.error);
+      if (!recoveryQuery(event.query)) denied(event.query.state.error);
     });
     const mutations = client
       .getMutationCache()
@@ -137,10 +138,10 @@ export function WorkspaceAccessGate({ children }: Readonly<{ children: ReactNode
   useEffect(() => {
     if (!access.data || allowed || recovery) return;
     void client.cancelQueries({
-      predicate: (query) => !recoveryQuery(query.queryKey),
+      predicate: (query) => !recoveryQuery(query),
     });
     client.removeQueries({
-      predicate: (query) => !recoveryQuery(query.queryKey),
+      predicate: (query) => !recoveryQuery(query),
     });
   }, [allowed, access.data, client, recovery]);
   if (recovery || allowed) return children;

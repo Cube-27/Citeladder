@@ -96,7 +96,14 @@ export function runConnection(db: Database, run: Run) {
     .$if(run.credential_source === 'byok', (query) =>
       query.where('c.workspace_id', '=', run.workspace_id),
     )
-    .$if(run.credential_source === 'platform', (query) => query.where('w.is_system', '=', true))
+    .$if(run.credential_source === 'platform', (query) =>
+      query
+        .where('w.is_system', '=', true)
+        // A paused platform connection sends nothing until its pause ends.
+        .where((eb) =>
+          eb.or([eb('c.paused_at', 'is', null), eb('c.pause_until', '<=', new Date())]),
+        ),
+    )
     .executeTakeFirst();
 }
 

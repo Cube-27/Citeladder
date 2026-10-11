@@ -346,7 +346,7 @@ export function ReviewSummary({ review }: Readonly<{ review: SearchIntelligenceR
         <p className={textRole('caption')}>
           The estimate is a ceiling: a request that could take the cost past it is not sent.{' '}
           {review.credential_mode === 'funded'
-            ? 'It is held from your AI credits and you are charged only for what is fetched.'
+            ? 'It is held from your AI credits; you are charged for the requests sent, never more than the estimate.'
             : 'DataForSEO bills your own account.'}
         </p>
       </Stack>

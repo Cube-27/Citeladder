@@ -150,12 +150,6 @@ export const billingApi = {
       ),
       'billing.verifyCheckout',
     ),
-  catalog: async (countryCode?: string, options?: ApiRequestOptions) => {
-    const query = countryCode ? `?country=${encodeURIComponent(countryCode)}` : '';
-    const response = await apiClient.get<unknown>(`/billing/catalog${query}`, options);
-    return strictValidate(billingCatalogSchema, response, 'billing.catalog');
-  },
-
   workspaceCatalog: async (countryCode?: string, options?: ApiRequestOptions) => {
     const query = countryCode ? `?country=${encodeURIComponent(countryCode)}` : '';
     const response = await apiClient.get<unknown>(`/billing/workspace-catalog${query}`, options);

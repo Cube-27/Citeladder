@@ -1947,6 +1947,7 @@ export interface PlatformCalls {
   input_tokens: number | null;
   model: string;
   output_tokens: number | null;
+  owner_settled: boolean;
   pricing_revision: string;
   provider: string;
   reservation_id: string | null;

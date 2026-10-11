@@ -26,7 +26,7 @@ import { textRole } from '@/components/ui/typography';
 
 export function PlanRow({
   plan,
-  mode = 'byok',
+  mode,
   currencyMinorUnits,
   country,
   billingDetails,
@@ -36,7 +36,7 @@ export function PlanRow({
 }: Readonly<{
   plan: CatalogPlan;
   /** Your own provider keys, or managed: the platform's keys at the managed price (B32). */
-  mode?: CredentialMode;
+  mode: CredentialMode;
   currencyMinorUnits: number;
   country: string;
   billingDetails: BillingCustomerDetails;

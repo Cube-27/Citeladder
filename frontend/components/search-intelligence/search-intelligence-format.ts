@@ -24,7 +24,10 @@ type RunCost = {
  * plan, the DataForSEO price on its own account.
  */
 export function runEstimate(run: RunCost): string {
-  if (run.credential_mode === 'funded') return pluralCount(run.estimated_credits ?? 0, 'AI credit');
+  if (run.credential_mode === 'funded')
+    return run.estimated_credits === null
+      ? 'Unavailable'
+      : pluralCount(run.estimated_credits, 'AI credit');
   return '$' + estimateUsd(run.estimated_cost_usd ?? '0');
 }
 

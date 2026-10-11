@@ -97,8 +97,12 @@ variable "billing_env" {
   default     = {}
   description = "Plain billing and platform-credential settings by env name; absent names keep the app defaults, which leave checkout closed."
   validation {
-    condition     = alltrue([for name in keys(var.billing_env) : !can(regex("(SECRET|API_KEY|PASSWORD)$", name))])
-    error_message = "billing_env holds plain settings only; secrets belong in optional_secret_env."
+    condition = alltrue([
+      for name in keys(var.billing_env) :
+      can(regex("^(BILLING_|PROVIDER_PLATFORM_[A-Z]+_CREDENTIAL_REF$|DATAFORSEO_PLATFORM_CREDENTIAL_REF$)", name))
+      && !can(regex("(SECRET|API_KEY|PASSWORD)$", name))
+    ])
+    error_message = "billing_env holds plain billing and platform-credential-reference settings only; secrets belong in optional_secret_env."
   }
 }
 

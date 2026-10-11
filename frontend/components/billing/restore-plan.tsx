@@ -8,14 +8,11 @@ import { PurchaseReview } from '@/components/billing/purchase-review';
 import { Alert } from '@/components/ui/alert';
 import { Stack } from '@/components/ui/layout';
 import { Skeleton } from '@/components/ui/skeleton';
-import { emptyBillingCustomerDetails, type BillingCatalog } from '@/lib/api/billing';
+import { emptyBillingCustomerDetails } from '@/lib/api/billing';
+import { catalogItemName } from '@/lib/billing/catalog';
 import { useSubscriptionCheckout } from '@/lib/billing/use-subscription-checkout';
 import { useWorkspaceCatalog } from '@/lib/billing/use-workspace-catalog';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
-
-function itemName(catalog: BillingCatalog, key: string) {
-  return catalog.plans.find((plan) => plan.key === key)?.name ?? key;
-}
 
 /**
  * Buying a plan from the ended-access screen: only the plans, the quote and the
@@ -42,7 +39,7 @@ export function RestorePlan({ workspaceId }: Readonly<{ workspaceId: string }>) 
       <PurchaseReview
         checkout={checkout}
         catalog={catalog}
-        itemName={(key) => itemName(catalog, key)}
+        itemName={(key) => catalogItemName(catalog, key)}
         renewsOn={null}
       />
       <ChoosePlan

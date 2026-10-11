@@ -312,7 +312,7 @@ every plan at Razorpay and previews the import:
 
 ```bash
 gcloud run jobs execute citeladder-billing --region us-central1 --wait \
-  '--args=^;^src/cli/provision-razorpay-plans.ts;bind;--revision;launch-pricing-v1;--environment;test;--plans-json;{"tier_1:byok:international":"plan_…","tier_1:funded:international":"plan_…"};--import;launch-pricing-v1-test;--actor;<admin-email>;--reason;bind-test-plans;--idempotency-key;bind:launch-pricing-v1-test'
+  '--args=^;^src/cli/provision-razorpay-plans.ts;bind;--revision;launch-pricing-v1;--environment;test;--plans-json;{"tier_1:byok:international":"plan_…","tier_1:funded:international":"plan_…"};--import;launch-pricing-v1-test;--actor;<admin-email>;--reason;bind-test-plans;--idempotency-key;catalog-bind:launch-pricing-v1-test'
 ```
 
 The refs object needs one `plan:mode:region` key per recurring price in the

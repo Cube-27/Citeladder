@@ -1,6 +1,5 @@
 export const billingKeys = {
   all: ['billing'] as const,
-  catalog: (countryCode?: string) => ['billing', 'catalog', countryCode ?? 'default'] as const,
   // What one workspace may buy; it stays readable when the workspace's access has ended.
   workspaceCatalog: (workspaceId: string | null, countryCode?: string) =>
     [

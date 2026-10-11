@@ -27,7 +27,7 @@ import {
   type SelfServePlanKey,
 } from '@/lib/api/billing';
 import { queryKeys } from '@/lib/api/query-keys';
-import { catalogPlanByKey } from '@/lib/billing/catalog';
+import { catalogItemName, catalogPlanByKey } from '@/lib/billing/catalog';
 import { useWorkspaceCatalog } from '@/lib/billing/use-workspace-catalog';
 import { useEntitlement } from '@/lib/billing/entitlement-context';
 import { useSubscriptionCheckout } from '@/lib/billing/use-subscription-checkout';
@@ -177,7 +177,7 @@ export function BillingScreen() {
         <CurrentPlan
           entitlement={entitlement}
           currentPlan={currentPlanOf(catalog, entitlement)}
-          planName={(key) => (catalog ? itemName(catalog, key) : key)}
+          planName={(key) => (catalog ? catalogItemName(catalog, key) : key)}
           canManage={canManage}
           cancellation={cancellation}
         />
@@ -185,7 +185,7 @@ export function BillingScreen() {
           <PurchaseReview
             checkout={checkout}
             catalog={catalog}
-            itemName={(key) => itemName(catalog, key)}
+            itemName={(key) => catalogItemName(catalog, key)}
             renewsOn={entitlement?.subscription?.current_period_end ?? null}
           />
         ) : null}
@@ -214,13 +214,6 @@ export function BillingScreen() {
       </Stack>
     </PageShell>
   );
-}
-
-function itemName(catalog: BillingCatalog, key: string): string {
-  const entry = [...catalog.plans, ...catalog.addons, ...catalog.topups].find(
-    (candidate) => candidate.key === key,
-  );
-  return entry?.name ?? key;
 }
 
 function PlanSection({

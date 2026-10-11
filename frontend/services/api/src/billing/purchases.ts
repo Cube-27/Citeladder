@@ -332,7 +332,7 @@ export async function purchase(
     const frozen = await catalog(trx);
     const now = new Date();
     const intent = purchaseIntent(config, frozen, request, identity, current, now);
-    const allowListed = await onCheckoutAllowList(trx, workspaceId);
+    const allowListed = await onCheckoutAllowList(trx, config, workspaceId);
     if (!checkoutAvailable(config.billing, config.razorpay, intent.region, allowListed))
       conflict('checkout_unavailable');
     if (request.kind === 'base')

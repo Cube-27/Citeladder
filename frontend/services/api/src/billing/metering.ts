@@ -88,6 +88,8 @@ function callRow(context: MeterContext, spec: CallSpec, at: Date) {
     reservation_id: null,
     reserved_credits: 0,
     credits: 0,
+    // A hold its owner settles (a whole analysis, B41) is never swept as abandoned.
+    owner_settled: false,
     ...tokens(null),
     cost_microusd: null as number | null,
     error_code: '',
@@ -128,7 +130,13 @@ async function record(
 }
 
 /** Records the call and holds `reserved` credits for it in `trx`. */
-async function openHold(trx: Database, context: MeterContext, spec: CallSpec, reserved: number) {
+async function openHold(
+  trx: Database,
+  context: MeterContext,
+  spec: CallSpec,
+  reserved: number,
+  ownerSettled = false,
+) {
   const account = await trx
     .selectFrom('billing_accounts')
     .select('id')
@@ -140,6 +148,7 @@ async function openHold(trx: Database, context: MeterContext, spec: CallSpec, re
     ...callRow(context, spec, at),
     billing_account_id: account.id,
     reserved_credits: reserved,
+    owner_settled: ownerSettled,
   };
   const { id } = row;
   await trx.insertInto('platform_calls').values(row).execute();
@@ -250,7 +259,7 @@ export function holdProviderCredits(
   spec: { provider: Provider; model: string },
   credits: number,
 ) {
-  return openHold(trx, context, spec, credits);
+  return openHold(trx, context, spec, credits, true);
 }
 
 /** Charges a money-priced hold its cost in credits, never above the hold; null once settled. */
@@ -348,8 +357,7 @@ export async function settleAbandonedCalls(db: Database, now = new Date(), limit
     .selectFrom('platform_calls')
     .select('id')
     .where('status', '=', 'reserved')
-    // A Search Intelligence hold spans a whole analysis, which settles it.
-    .where('feature', '!=', 'search_intelligence')
+    .where('owner_settled', '=', false)
     .where('created_at', '<', cutoff)
     .orderBy('created_at')
     .limit(limit)

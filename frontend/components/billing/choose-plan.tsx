@@ -79,7 +79,11 @@ export function ChoosePlan({
 >): ReactNode {
   const [chosen, setChosen] = useState<SelfServePlanKey | null>(null);
   const [mode, setMode] = useState<CredentialMode>('byok');
-  if (selfServeCheckoutComingSoon(catalog))
+  // Closed only when neither mode can be bought; managed alone still sells.
+  if (
+    selfServeCheckoutComingSoon(catalog) &&
+    !catalog.plans.some((plan) => plan.funded_checkout_available)
+  )
     return (
       <section className={panelClasses({}, 'grid gap-4')} aria-labelledby="choose-plan-title">
         <EditorialSectionHeader

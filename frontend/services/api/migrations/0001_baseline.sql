@@ -1974,6 +1974,7 @@ CREATE TABLE public.platform_calls (
     reservation_id uuid,
     reserved_credits integer NOT NULL,
     credits integer NOT NULL,
+    owner_settled boolean NOT NULL,
     input_tokens integer,
     cached_input_tokens integer,
     output_tokens integer,
@@ -4612,7 +4613,7 @@ CREATE INDEX ix_consumable_ledger_subject ON public.consumable_ledger USING btre
 
 CREATE INDEX ix_platform_calls_workspace_created ON public.platform_calls USING btree (workspace_id, created_at);
 
-CREATE INDEX ix_platform_calls_unsettled ON public.platform_calls USING btree (created_at) WHERE ((status)::text = 'reserved'::text);
+CREATE INDEX ix_platform_calls_unsettled ON public.platform_calls USING btree (created_at) WHERE (((status)::text = 'reserved'::text) AND (NOT owner_settled));
 
 CREATE INDEX ix_content_differentiation_candidates_audit_id ON public.content_differentiation_candidates USING btree (audit_id);
 

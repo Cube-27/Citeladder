@@ -477,7 +477,8 @@ async function subscriptionProbe(
       sub.cancel_at_period_end &&
       sub.current_period_end !== null &&
       cancellationSendAt(sub.current_period_end, config) <= new Date();
-    const unwanted = due && state?.status === 'active' && !state.cancelAtEnd;
+    const unwanted =
+      due && state?.status === policy.billing.contracts.subscription_active && !state.cancelAtEnd;
     // Marked sent before the request, so a resume can never race it.
     const send = halted || (unwanted && (await markCancellationSent(db, sub.id)));
     if (send) {

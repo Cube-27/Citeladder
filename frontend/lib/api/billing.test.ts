@@ -155,7 +155,7 @@ describe('billing API contract', () => {
       providers: [],
     });
 
-    await expect(billingApi.catalog('IN')).rejects.toThrow(/billing\.catalog/);
+    await expect(billingApi.workspaceCatalog('IN')).rejects.toThrow(/billing\.workspaceCatalog/);
   });
 
   it('strips leaked provider fields from the catalog (tolerant-on-unknown)', async () => {
@@ -175,7 +175,7 @@ describe('billing API contract', () => {
 
     // Additive provider fields must never break the UI — they are stripped
     // from the parsed output, so the leak never reaches app state.
-    const catalog = await billingApi.catalog('IN');
+    const catalog = await billingApi.workspaceCatalog('IN');
     expect('razorpay_plan_id' in catalog).toBe(false);
   });
 

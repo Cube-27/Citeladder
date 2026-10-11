@@ -120,7 +120,7 @@ pnpm --filter @citeladder/api billing:plans bind \
   --revision launch-pricing-v1 --environment test \
   --plans review/plans.json --import launch-pricing-v1-test \
   --actor admin@example.com --reason "bind test plans" \
-  --idempotency-key bind:launch-pricing-v1-test
+  --idempotency-key catalog-bind:launch-pricing-v1-test
 # Review, then repeat with --publish --apply.
 ```
 

@@ -55,14 +55,14 @@ async function publishedDataset(db: Database, scope: Scope, datasetId: string) {
  * connection (none or several need the user to fix it).
  */
 async function researchAccount(db: Database, workspace: WorkspaceScope) {
-  const mode = await workspaceCredentialMode(db, workspace.workspaceId);
+  const [mode, platform, own] = await Promise.all([
+    workspaceCredentialMode(db, workspace.workspaceId),
+    platformConnection(db),
+    workspaceConnections(db, workspace),
+  ]);
   if (mode === 'funded')
-    return {
-      credential_mode: mode,
-      connected: Boolean(await platformConnection(db)),
-      connection_id: null,
-    };
-  const connection = onlyOf(await workspaceConnections(db, workspace)) ?? null;
+    return { credential_mode: mode, connected: Boolean(platform), connection_id: null };
+  const connection = onlyOf(own) ?? null;
   return {
     credential_mode: mode,
     connected: connection !== null,

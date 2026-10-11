@@ -128,6 +128,10 @@ jobs:
       - name: Initialize Terraform and render inputs
         working-directory: infra/gcp
         shell: bash
+        env:
+          # Presence only: refuse an incomplete Razorpay mode before any secret changes.
+          RAZORPAY_KEY_SECRET_SET: ${{ secrets.BILLING_RAZORPAY_KEY_SECRET != '' }}
+          RAZORPAY_WEBHOOK_SECRET_SET: ${{ secrets.BILLING_RAZORPAY_WEBHOOK_SECRET != '' }}
         run: |
           set -euo pipefail
           test -n "$PROJECT_ID" && test -n "$STATE_BUCKET" && test -n "$BILLING_ACCOUNT"
@@ -137,6 +141,11 @@ jobs:
           [[ "$PUBLIC_SIGNUP_ENABLED" =~ ^(true|false)$ ]]
           [[ "$BILLING_CHECKOUT_AUDIENCE" =~ ^(allow_list|everyone)$ ]]
           [[ "$BILLING_RAZORPAY_MODE" =~ ^(disabled|test|live)$ ]]
+          if [ "$BILLING_RAZORPAY_MODE" != disabled ] && { [ -z "$BILLING_RAZORPAY_KEY_ID" ] \
+            || [ "$RAZORPAY_KEY_SECRET_SET" != true ] || [ "$RAZORPAY_WEBHOOK_SECRET_SET" != true ]; }; then
+            echo "::error::BILLING_RAZORPAY_MODE=$BILLING_RAZORPAY_MODE needs BILLING_RAZORPAY_KEY_ID and both Razorpay secrets."
+            exit 1
+          fi
           # Plain billing settings reach every service; empty ones keep the app default.
           billing_names=(BILLING_CHECKOUT_ENABLED BILLING_CHECKOUT_AUDIENCE BILLING_RAZORPAY_MODE
             BILLING_RAZORPAY_KEY_ID BILLING_RAZORPAY_TEST_READY BILLING_RAZORPAY_TEST_INTERNATIONAL_READY
@@ -326,12 +335,6 @@ jobs:
           sync_optional_value citeladder-platform-openai-key "$PROVIDER_PLATFORM_OPENAI_API_KEY"
           sync_optional_value citeladder-platform-google-key "$PROVIDER_PLATFORM_GOOGLE_API_KEY"
           sync_optional_value citeladder-platform-anthropic-key "$PROVIDER_PLATFORM_ANTHROPIC_API_KEY"
-          # Checkout needs the key pair and its webhook secret together.
-          if [ "$BILLING_RAZORPAY_MODE" != disabled ] && { [ -z "$BILLING_RAZORPAY_KEY_ID" ] \
-            || [ -z "$BILLING_RAZORPAY_KEY_SECRET" ] || [ -z "$BILLING_RAZORPAY_WEBHOOK_SECRET" ]; }; then
-            echo "::error::BILLING_RAZORPAY_MODE=$BILLING_RAZORPAY_MODE needs BILLING_RAZORPAY_KEY_ID and both Razorpay secrets."
-            exit 1
-          fi
           for pair in citeladder-bing-oauth-client citeladder-dataforseo; do
             count=0
             for name in "${enabled_optional[@]}"; do

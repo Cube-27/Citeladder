@@ -122,15 +122,18 @@ export function configured(
  * while the audience is the allow-list; test keys in production serve only
  * them even once it is opened to everyone. Anonymous readers are never on it.
  */
+/** Whether checkout is limited to allow-listed workspaces right now (B2, B42). */
+export function audienceRestricted(settings: BillingSettings, adapter: RazorpaySettings) {
+  return settings.audience !== 'everyone' || (adapter.mode === 'test' && adapter.production);
+}
+
 export function checkoutAvailable(
   settings: BillingSettings,
   adapter: RazorpaySettings,
   region: string,
   allowListed: boolean,
 ): boolean {
-  const audience =
-    allowListed ||
-    (settings.audience === 'everyone' && !(adapter.mode === 'test' && adapter.production));
+  const audience = allowListed || !audienceRestricted(settings, adapter);
   const independent =
     settings.quoteSecret &&
     ![adapter.keySecret, adapter.webhookSecret, adapter.previousSecret].includes(

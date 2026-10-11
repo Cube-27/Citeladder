@@ -238,6 +238,8 @@ function validateItemPrice(region: string, price: z.infer<typeof itemPrice>, usd
     !price.tax_rate
   )
     throw new Error('catalog_item_price_invalid');
+  // The frozen rate is the one its quotes use (B45); refuse one they could not.
+  taxMinor(price.amount_minor, price.tax_rate);
 }
 
 function validateTopup(row: AuthoredItem) {

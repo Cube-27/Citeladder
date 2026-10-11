@@ -86,7 +86,7 @@ export const billingRoutes = [
         db,
         config,
         query.country?.trim().toUpperCase() ?? null,
-        await onCheckoutAllowList(db, c.get('workspace').workspaceId),
+        await onCheckoutAllowList(db, config, c.get('workspace').workspaceId),
       ),
   }),
   defineRoute({
@@ -270,7 +270,7 @@ export const billingRoutes = [
     async handle({ c, db, config }, { path }) {
       const workspaceId = c.get('workspace').workspaceId;
       const pending = await workspaceActivation(db, workspaceId, path.activation_id);
-      const allowListed = await onCheckoutAllowList(db, workspaceId);
+      const allowListed = await onCheckoutAllowList(db, config, workspaceId);
       if (
         pending.status !== 'pending' ||
         pending.expires_at <= new Date() ||

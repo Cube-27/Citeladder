@@ -234,7 +234,7 @@ export async function changePlan(
             config.billing,
             config.razorpay,
             target.region,
-            await onCheckoutAllowList(trx, workspaceId),
+            await onCheckoutAllowList(trx, config, workspaceId),
           )
         : configured(config.razorpay)) ||
       plan.regional_prices[mode][target.region]?.provider_mode !== sub.provider_mode

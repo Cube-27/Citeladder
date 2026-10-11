@@ -170,20 +170,14 @@ export async function cancelRun(db: Database, scope: Scope, runId: string) {
     }
     return runView(cancelled);
   });
-  // A request still in flight keeps the hold open; recovery settles it later.
-  const workspaceId = scope.workspace.workspaceId;
-  return (await settleResearchCharge(db, { workspaceId, runId }))
-    ? runView(await settledRun(db, scope, runId))
-    : view;
-}
-
-function settledRun(db: Database, scope: Scope, runId: string) {
-  return scope.workspace
-    .selectFrom(db, 'search_intelligence_runs')
-    .selectAll()
-    .where('project_id', '=', scope.projectId)
-    .where('id', '=', runId)
-    .executeTakeFirstOrThrow();
+  // Only a managed analysis holds credits; one with a request in flight keeps
+  // its hold open until recovery settles it.
+  if (view.credential_mode !== 'funded') return view;
+  const settled = await settleResearchCharge(db, {
+    workspaceId: scope.workspace.workspaceId,
+    runId,
+  });
+  return settled ? runView(settled) : view;
 }
 
 export async function savePreferences(db: Database, scope: Scope, preferences: Preferences) {

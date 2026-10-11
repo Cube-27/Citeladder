@@ -15,6 +15,24 @@ export function cancellationSendAt(periodEnd: Date, config: ServiceConfig) {
   return new Date(periodEnd.getTime() - config.billing.cancellationLeadSeconds * 1000);
 }
 
+/**
+ * Until when a scheduled cancellation is still held and can be resumed; null
+ * when none is scheduled, it was sent, or its send time has come.
+ */
+export function cancellationHeldUntil(
+  sub: {
+    cancel_at_period_end: boolean;
+    cancellation_sent_at: Date | null;
+    current_period_end: Date | null;
+  },
+  config: ServiceConfig,
+  at = new Date(),
+) {
+  if (!sub.cancel_at_period_end || sub.cancellation_sent_at || !sub.current_period_end) return null;
+  const until = cancellationSendAt(sub.current_period_end, config);
+  return until > at ? until : null;
+}
+
 async function currentBase(trx: Database, workspaceId: string) {
   const account = await workspaceAccount(trx, workspaceId);
   await lockAccount(trx, workspaceId, account.id);
@@ -72,11 +90,7 @@ export async function resumeSubscription(db: Database, config: ServiceConfig, wo
   const row = await db.transaction().execute(async (trx) => {
     const sub = await currentBase(trx, workspaceId);
     if (!sub.cancel_at_period_end) return sub;
-    if (
-      sub.cancellation_sent_at !== null ||
-      cancellationSendAt(sub.current_period_end, config) <= new Date()
-    )
-      conflict('cancellation_already_sent');
+    if (!cancellationHeldUntil(sub, config)) conflict('cancellation_already_sent');
     await trx
       .updateTable('billing_subscriptions')
       .set({ cancel_at_period_end: false, reconciliation_next_at: null, updated_at: new Date() })

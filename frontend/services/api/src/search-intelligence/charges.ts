@@ -2,24 +2,20 @@
  * The AI-credit charge of a managed analysis (B40, B41). Confirmation held the
  * estimate; once the analysis ends it is charged the DataForSEO cost of every
  * request sent, never above the hold, and the rest is released. A request
- * DataForSEO refused outright costs nothing; one whose outcome or cost is
- * unknown costs its estimate.
+ * DataForSEO refused with no response costs nothing; one whose outcome or cost
+ * is unknown costs its estimate.
  */
 import type { NotNull } from 'kysely';
 import { settleProviderCredits } from '../billing/metering.ts';
 import type { Database } from '../db/database.ts';
-import { si } from './requests.ts';
+import { si, usdUnits } from './requests.ts';
 
 const ENDED = ['succeeded', 'failed', 'partial', 'cancelled', 'uncertain'];
 
-/** A decimal USD amount as whole micro-USD, rounded up; exact for the stored scale. */
-function microusd(value: string) {
-  const [whole = '0', fraction = ''] = value.trim().split('.');
-  const units = BigInt(whole || '0') * 100_000_000n + BigInt(fraction.padEnd(8, '0').slice(0, 8));
-  return Number((units + 99n) / 100n);
-}
+/** A stored USD amount as whole micro-USD, rounded up. */
+const microusd = (value: string) => Math.ceil(usdUnits(value) / 100);
 
-/** Settles one ended analysis's hold; false while it runs, a request is in flight, or it is settled. */
+/** Settles one ended analysis's hold and returns the run; null while it runs, a request is in flight, or it is settled. */
 export function settleResearchCharge(
   db: Database,
   run: { workspaceId: string; runId: string },
@@ -33,7 +29,7 @@ export function settleResearchCharge(
       .where('id', '=', run.runId)
       .forUpdate()
       .executeTakeFirst();
-    if (!locked?.platform_call_id || !ENDED.includes(locked.status)) return false;
+    if (!locked?.platform_call_id || !ENDED.includes(locked.status)) return null;
     const sent = await trx
       .selectFrom('search_intelligence_calls')
       .select(['status', 'dispatched_at', 'sanitized_response', 'estimated_cost_usd'])
@@ -53,21 +49,22 @@ export function settleResearchCharge(
           call.dispatched_at.getTime() > settledBy,
       )
     )
-      return false;
+      return null;
     const cost = sent.reduce((sum, call) => {
       if (call.provider_reported_cost_usd !== null)
         return sum + microusd(call.provider_reported_cost_usd);
-      return call.status === 'failed' ? sum : sum + microusd(call.estimated_cost_usd);
+      const refused = call.status === 'failed' && call.sanitized_response === null;
+      return refused ? sum : sum + microusd(call.estimated_cost_usd);
     }, 0);
     const credits = await settleProviderCredits(trx, locked.platform_call_id, cost);
-    if (credits === null) return false;
-    await trx
+    if (credits === null) return null;
+    return trx
       .updateTable('search_intelligence_runs')
       .set({ charged_credits: credits, updated_at: at })
       .where('workspace_id', '=', run.workspaceId)
       .where('id', '=', run.runId)
-      .execute();
-    return true;
+      .returningAll()
+      .executeTakeFirstOrThrow();
   });
 }
 
