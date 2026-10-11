@@ -125,14 +125,14 @@ describe('comparisonRows', () => {
                 value: 5,
                 issuable: true,
               },
-              { key: 'audit_web_search', capability_type: 'flag', value: true, issuable: true },
+              { key: 'crawl_logs', capability_type: 'flag', value: true, issuable: true },
             ],
           }),
         ],
       }),
     );
 
-    expect(rows.map((row) => row.key)).toEqual(['project_slots', 'audit_web_search']);
+    expect(rows.map((row) => row.key)).toEqual(['project_slots', 'crawl_logs']);
     expect(rows[0]?.values.tier_2?.value).toBe(5);
     // A plan that does not publish a key has no value for it — the caller
     // renders that as "not included", never as zero.

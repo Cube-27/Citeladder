@@ -32,10 +32,10 @@ const selectedPrompts = (input: { prompt_set_id?: string | null; prompt_ids: str
 export const auditInput = auditFields.refine(selectedPrompts, 'Select a prompt set or prompt IDs');
 /**
  * A public API launch: the project comes from the path, and the caller caps the
- * estimate's maximum attempt count (the most audit credits the run can reserve).
+ * estimate's maximum attempt count (every answer times its retry budget).
  */
 export const auditLaunchInput = auditFields
   .omit({ project_id: true })
-  .extend({ max_estimated_credits: z.int().min(1) })
+  .extend({ max_attempts: z.int().min(1) })
   .refine(selectedPrompts, 'Select a prompt set or prompt IDs');
 export type AuditInput = z.output<typeof auditInput>;

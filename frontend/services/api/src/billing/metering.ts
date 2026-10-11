@@ -183,14 +183,20 @@ async function openHold(
   return id;
 }
 
-/** Commits the hold and the call record before dispatch. */
+/**
+ * Commits the hold and the call record before dispatch. A charged call must
+ * bound its size: an unbounded hold would floor at one credit and cap the
+ * charge there, so a feature switched to credits without bounds fails loudly.
+ */
 function reserve(db: Database, context: MeterContext, spec: CallSpec) {
+  if (spec.inputBytes === undefined || spec.maxOutputTokens === undefined)
+    throw new Error(`Charged feature ${context.feature} must bound its call size`);
   const price = modelPrice(spec.model);
   if (!price)
     throw new ApiError(503, 'AI pricing is not configured for this model', {
       code: 'ai_pricing_unavailable',
     });
-  const reserved = reservationCredits(price, spec.inputBytes ?? 0, spec.maxOutputTokens ?? 0);
+  const reserved = reservationCredits(price, spec.inputBytes, spec.maxOutputTokens);
   return db.transaction().execute((trx) => openHold(trx, context, spec, reserved));
 }
 
@@ -315,10 +321,21 @@ async function metered<T>(
   if (charged && db.isTransaction)
     throw new Error('A charged platform call must not run in a transaction');
   const callId = charged ? await reserve(db, context, spec) : null;
+  // A failed settlement never replaces the provider's outcome: the hold stays
+  // reserved and the abandoned-call sweep settles it.
+  const settle = async (id: string, usage: TokenUsage | null, error: unknown) => {
+    try {
+      await settleCall(db, id, usage, error !== null, error);
+    } catch (error_) {
+      logger.exception('billing.platform_call_unsettled', error_, {
+        workspace_id: context.workspaceId,
+        feature: context.feature,
+        call_id: id,
+      });
+    }
+  };
   const finish = (usage: TokenUsage | null, error: unknown) =>
-    callId === null
-      ? record(db, context, spec, usage, error)
-      : settleCall(db, callId, usage, error !== null, error);
+    callId === null ? record(db, context, spec, usage, error) : settle(callId, usage, error);
   let outcome: Outcome<T>;
   try {
     outcome = await runMetered(context, call);

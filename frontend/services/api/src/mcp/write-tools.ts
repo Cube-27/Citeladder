@@ -359,7 +359,7 @@ const writeDefinitions = {
   prepare_launch_audit: tool({
     title: 'Prepare to launch an audit',
     description:
-      'Preview launching an audit of a prompt set (or chosen prompts) on the given engines, with its estimated maximum audit credits. Pass market_ids (from the project context; null is the default market) to run one audit per market. Pass max_estimated_credits to cap it. Nothing runs until the user agrees and you call confirm_change.',
+      'Preview launching an audit of a prompt set (or chosen prompts) on the given engines, with the prompt runs it can spend and its maximum provider attempts. Pass market_ids (from the project context; null is the default market) to run one audit per market. Pass max_attempts to cap the attempts. Nothing runs until the user agrees and you call confirm_change.',
     schema: z.strictObject({
       ...project,
       prompt_set_id: uuid.nullish(),
@@ -371,7 +371,7 @@ const writeDefinitions = {
         .max(policy.projects.max_repetitions)
         .nullish(),
       market_ids: marketIdList.nullish(),
-      max_estimated_credits: z.int().min(1).nullish(),
+      max_attempts: z.int().min(1).nullish(),
     }),
     annotations: hints(false, false),
     run: async (context, args) => {
@@ -393,10 +393,10 @@ const writeDefinitions = {
         { ...request, project_id: args.project_id },
         auditRuntime(configEnvironment(context.config)),
       );
-      const ceiling = args.max_estimated_credits ?? estimate.maximum_attempt_count;
+      const ceiling = args.max_attempts ?? estimate.maximum_attempt_count;
       const launch = payloads.launch_audit.shape.request.parse({
         ...request,
-        max_estimated_credits: ceiling,
+        max_attempts: ceiling,
       });
       await rehearse(context.db, (trx) =>
         launchAudit(trx, context.config, actor, args.project_id, launch),
@@ -412,16 +412,16 @@ const writeDefinitions = {
           projectId: args.project_id,
           kind: 'launch_audit',
           payload: { project_id: args.project_id, request: launch },
-          preview: `Launch ${launched} of ${estimate.prompt_count} prompt(s) on ${args.engines.join(', ')}, ${estimate.repetition_count} repetition(s): ${estimate.execution_count} answers, using at most ${estimate.maximum_attempt_count} audit credits (refused if the estimate exceeds ${ceiling}).`,
+          preview: `Launch ${launched} of ${estimate.prompt_count} prompt(s) on ${args.engines.join(', ')}, ${estimate.repetition_count} repetition(s): ${estimate.execution_count} answers, spending at most ${estimate.execution_count} prompt run(s) in at most ${estimate.maximum_attempt_count} provider attempts (refused if the attempts exceed ${ceiling}).`,
         },
-        { estimated_credits: estimate.maximum_attempt_count, max_estimated_credits: ceiling },
+        { maximum_attempt_count: estimate.maximum_attempt_count, max_attempts: ceiling },
       );
     },
   }),
   prepare_schedule: tool({
     title: 'Prepare an audit schedule',
     description:
-      'Preview a recurring audit schedule for a prompt set. Pass market_ids (from the project context; null is the default market) to run one audit per market. Each scheduled run uses audit credits. Nothing changes until the user agrees and you call confirm_change.',
+      'Preview a recurring audit schedule for a prompt set. Pass market_ids (from the project context; null is the default market) to run one audit per market. Each recorded answer spends one prompt run. Nothing changes until the user agrees and you call confirm_change.',
     schema: z.strictObject({
       ...project,
       prompt_set_id: uuid.nullish(),
@@ -459,7 +459,7 @@ const writeDefinitions = {
         projectId: args.project_id,
         kind: 'schedule',
         payload: { project_id: args.project_id, schedule },
-        preview: `Create a ${schedule.cadence.replaceAll('_', ' ')} audit schedule for "${set.name}" on ${schedule.engines.join(', ')}${marketNote} (${schedule.timezone}), first run ${schedule.next_run_at ?? 'right away'}. Each run uses audit credits.`,
+        preview: `Create a ${schedule.cadence.replaceAll('_', ' ')} audit schedule for "${set.name}" on ${schedule.engines.join(', ')}${marketNote} (${schedule.timezone}), first run ${schedule.next_run_at ?? 'right away'}. Each recorded answer spends one prompt run.`,
       });
     },
   }),

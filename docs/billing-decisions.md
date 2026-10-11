@@ -344,6 +344,26 @@ mark failed. A refused, unreadable, timed-out or unanswered request costs
 nothing, even when DataForSEO may have billed the platform for it; the hold
 releases that share.
 
+**B48 — Engineering, 2026-10-11.** Fixes from the review of PRs 1–3; no money
+rule changes.
+- In-app billing lists add-ons and top-ups at the workspace's credential mode,
+  the mode its purchase is quoted in, so a managed workspace sees the managed
+  price. Anonymous readers see the BYOK price.
+- A settlement that fails after a charged call returns never replaces the call's
+  outcome. The hold stays open and settles as a crash-left hold (B35).
+- An audit's prompt runs are held in one ledger pass per audit, under one
+  capacity lock, and still as one hold per answer (B34). If the allowance cannot
+  cover every answer, the whole audit is refused.
+- A downgrade the provider refused lapses when a period starts on or after its
+  effective date.
+- A charged feature must bound its call size. Without bounds the hold would
+  floor at one credit and cap the charge there, so the call is refused.
+- The audit-launch ceiling is `max_attempts`, compared with the estimate's
+  `maximum_attempt_count`. It bounds provider attempts, not spend.
+- Resuming a plan with no scheduled cancellation answers `nothing_to_resume`.
+- B18's "charges prompt runs for every … dispatch" is superseded by B33 and B34:
+  only a recorded answer spends a prompt run.
+
 ## Owner inputs still required
 
 Not decisions; needed only for India checkout and live enablement: GST rate,

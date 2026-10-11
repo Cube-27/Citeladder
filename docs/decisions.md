@@ -161,7 +161,7 @@ role on every request; removing the creator revokes the key. A write through a
 key holding the matching scope is therefore an explicit user decision under
 [invariant 10](invariants.md#10-automation-stays-bounded), and it runs through
 the same command layer as the browser. Creating or spending POSTs require an
-`Idempotency-Key`; an audit launch carries the caller's `max_estimated_credits`.
+`Idempotency-Key`; an audit launch carries the caller's `max_attempts` ceiling.
 
 Source: owner decisions D4.1–D4.3 of 10 October 2026 (competitive tracker F4).
 [Public API](public-api.md) owns the shipped behavior.

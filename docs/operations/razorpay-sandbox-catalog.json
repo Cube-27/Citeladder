@@ -384,10 +384,6 @@
             {
               "key": "prompt_slots",
               "value": 10
-            },
-            {
-              "key": "prompt_runs_per_period",
-              "value": 1000
             }
           ]
         }
@@ -462,74 +458,16 @@
   ],
   "topups": [
     {
-      "key": "topup_audit_credits",
-      "name": "Managed answer top-up",
-      "description": "1,000 managed visibility answers, usable for 30 days.",
-      "available": false,
+      "key": "topup_ai_credits",
+      "name": "AI credit top-up",
+      "description": "25,000 AI credits, usable for 30 days.",
+      "available": true,
       "eligible_plan_keys": ["tier_1", "tier_2", "tier_3"],
       "quantity_min": 1,
       "quantity_max": 20,
       "expiry_days": 30,
       "modes": {
         "byok": {
-          "usd_minor": 9900,
-          "regional_prices": {
-            "international": {
-              "currency": "USD",
-              "amount_minor": 9900,
-              "tax_behavior": "inclusive"
-            },
-            "india": {
-              "currency": "INR",
-              "amount_minor": 899900,
-              "tax_behavior": "exclusive",
-              "fx_inr_per_usd": "90",
-              "tax_rate": "0.18"
-            }
-          },
-          "grants": [
-            {
-              "key": "prompt_runs_per_period",
-              "value": 1000
-            }
-          ]
-        },
-        "funded": {
-          "usd_minor": 9900,
-          "regional_prices": {
-            "international": {
-              "currency": "USD",
-              "amount_minor": 9900,
-              "tax_behavior": "inclusive"
-            },
-            "india": {
-              "currency": "INR",
-              "amount_minor": 899900,
-              "tax_behavior": "exclusive",
-              "fx_inr_per_usd": "90",
-              "tax_rate": "0.18"
-            }
-          },
-          "grants": [
-            {
-              "key": "prompt_runs_per_period",
-              "value": 1000
-            }
-          ]
-        }
-      }
-    },
-    {
-      "key": "topup_ai_credits",
-      "name": "Workflow AI top-up",
-      "description": "1,000 AI credits for the Agent, 30 days.",
-      "available": true,
-      "eligible_plan_keys": ["tier_2", "tier_3"],
-      "quantity_min": 1,
-      "quantity_max": 20,
-      "expiry_days": 30,
-      "modes": {
-        "byok": {
           "usd_minor": 2500,
           "regional_prices": {
             "international": {
@@ -548,7 +486,7 @@
           "grants": [
             {
               "key": "ai_credits",
-              "value": 1000
+              "value": 25000
             }
           ]
         },
@@ -571,7 +509,7 @@
           "grants": [
             {
               "key": "ai_credits",
-              "value": 1000
+              "value": 25000
             }
           ]
         }

@@ -222,6 +222,12 @@ Items already waiting on it:
   runner-seconds cap (Production hardening); extended history after a plan
   upgrade (Integrations).
 - Which plan carries SSO and SCIM (D9.2, below).
+- Owner decision (raised by the billing review, #383): when a platform call's
+  provider request fails and its settlement also fails, the call stays reserved
+  and `settleAbandonedCalls` later charges the B35 fallback (up to 10 credits),
+  which may conflict with B47 (a failed request is never billed). Releasing such
+  holds instead needs an Owner entry in [billing decisions](../billing-decisions.md)
+  before code.
 
 Payments stay disabled until the Razorpay acceptance gate below is signed off.
 

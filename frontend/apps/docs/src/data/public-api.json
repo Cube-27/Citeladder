@@ -12967,13 +12967,13 @@
                   "random_seed": {
                     "type": ["string", "null"]
                   },
-                  "max_estimated_credits": {
+                  "max_attempts": {
                     "type": "integer",
                     "minimum": 1,
                     "maximum": 9007199254740991
                   }
                 },
-                "required": ["engines", "max_estimated_credits"]
+                "required": ["engines", "max_attempts"]
               }
             }
           }

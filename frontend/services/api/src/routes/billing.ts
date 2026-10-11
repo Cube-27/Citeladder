@@ -35,6 +35,7 @@ import { offerRead, claimOffer, endOffer, claimRequest } from '../billing/journe
 import { cancelSubscription, resumeSubscription } from '../billing/cancellation.ts';
 import { checkoutAvailable, configured, verifyCallback } from '../billing/razorpay.ts';
 import { onCheckoutAllowList } from '../billing/checkout-access.ts';
+import { workspaceCredentialMode } from '../billing/credential-mode.ts';
 import { receiveWebhook } from '../billing/webhooks.ts';
 
 const family = 'billing';
@@ -81,13 +82,17 @@ export const billingRoutes = [
     path: `${root}/workspace-catalog`,
     params: { path: {}, query: { country: { scalar: { kind: 'str', maxLength: 2 } } } },
     response: billingCatalogSchema,
-    handle: async ({ c, db, config }, { query }) =>
-      publicCatalog(
-        db,
-        config,
-        query.country?.trim().toUpperCase() ?? null,
-        await onCheckoutAllowList(db, config, c.get('workspace').workspaceId),
-      ),
+    handle: async ({ c, db, config }, { query }) => {
+      const workspaceId = c.get('workspace').workspaceId;
+      const [allowListed, mode] = await Promise.all([
+        onCheckoutAllowList(db, config, workspaceId),
+        workspaceCredentialMode(db, workspaceId),
+      ]);
+      return publicCatalog(db, config, query.country?.trim().toUpperCase() ?? null, {
+        allowListed,
+        mode,
+      });
+    },
   }),
   defineRoute({
     family,

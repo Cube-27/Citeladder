@@ -185,6 +185,49 @@ describe('platform AI metering', () => {
     expect(await spent(t.workspaceId)).toEqual({ held: 0, debited: 0 });
   });
 
+  it('returns a paid answer when its settlement fails, leaving the hold for the sweep', async () => {
+    const t = await fixtures.tenant();
+    await credited(t, 100);
+    const { gateway: raw } = gateway(
+      answer('{"ok":true}', { prompt_tokens: 10_000, completion_tokens: 2_000 }),
+    );
+    const transaction = db.transaction.bind(db);
+    const spy = vi
+      .spyOn(db, 'transaction')
+      .mockImplementationOnce(transaction)
+      .mockImplementationOnce(() => {
+        throw new Error('could not serialize access');
+      });
+    try {
+      const result = await meterFor(db, t.workspaceId)
+        .gateway(raw, 'prompt_generation')
+        .structured('s', 'u', z.object({ ok: z.boolean() }));
+      expect(result.value).toEqual({ ok: true });
+    } finally {
+      spy.mockRestore();
+    }
+    expect((await calls(t.workspaceId)).map((call) => call.status)).toEqual(['reserved']);
+    await settleAbandonedCalls(db, new Date(Date.now() + 3_600_000));
+    expect(await spent(t.workspaceId)).toEqual({ held: 0, debited: 10 });
+  });
+
+  it('refuses a charged call that does not bound its size, before any I/O', async () => {
+    const t = await fixtures.tenant();
+    await credited(t, 100);
+    const call = vi.fn(async () => ({ value: null, usage: null }));
+    await expect(
+      meterFor(db, t.workspaceId).call(
+        'prompt_generation',
+        { provider: 'model_gateway', model: 'claude-haiku-5-5' },
+        call,
+      ),
+    ).rejects.toThrow('Charged feature prompt_generation must bound its call size');
+    expect({ dispatched: call.mock.calls.length, recorded: await calls(t.workspaceId) }).toEqual({
+      dispatched: 0,
+      recorded: [],
+    });
+  });
+
   it('settles a hold a crash left open at the fixed fallback, once', async () => {
     const t = await fixtures.tenant();
     await credited(t, 100);

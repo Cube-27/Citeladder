@@ -1518,7 +1518,7 @@
     {
       "name": "prepare_launch_audit",
       "title": "Prepare to launch an audit",
-      "description": "Preview launching an audit of a prompt set (or chosen prompts) on the given engines, with its estimated maximum audit credits. Pass market_ids (from the project context; null is the default market) to run one audit per market. Pass max_estimated_credits to cap it. Nothing runs until the user agrees and you call confirm_change.",
+      "description": "Preview launching an audit of a prompt set (or chosen prompts) on the given engines, with the prompt runs it can spend and its maximum provider attempts. Pass market_ids (from the project context; null is the default market) to run one audit per market. Pass max_attempts to cap the attempts. Nothing runs until the user agrees and you call confirm_change.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -1567,7 +1567,7 @@
               "format": "uuid"
             }
           },
-          "max_estimated_credits": {
+          "max_attempts": {
             "type": "integer",
             "minimum": 1
           }
@@ -1580,7 +1580,7 @@
     {
       "name": "prepare_schedule",
       "title": "Prepare an audit schedule",
-      "description": "Preview a recurring audit schedule for a prompt set. Pass market_ids (from the project context; null is the default market) to run one audit per market. Each scheduled run uses audit credits. Nothing changes until the user agrees and you call confirm_change.",
+      "description": "Preview a recurring audit schedule for a prompt set. Pass market_ids (from the project context; null is the default market) to run one audit per market. Each recorded answer spends one prompt run. Nothing changes until the user agrees and you call confirm_change.",
       "input_schema": {
         "type": "object",
         "properties": {

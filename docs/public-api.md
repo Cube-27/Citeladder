@@ -109,10 +109,11 @@ status and implementation declaration (`actions:write`).
 
 An audit launch creates and queues one audit per `market_ids` entry (default
 the project's default market) in one call and returns them as a list sharing a
-`launch_id`. The caller sends `max_estimated_credits`; when the estimate's
-`maximum_attempt_count` (the most audit credits the launch can reserve, summed
-over its markets) is higher, nothing is created and the response is 409
-`estimate_exceeds_limit` with both numbers. The runner executes the queued
+`launch_id`. The caller sends `max_attempts`; when the estimate's
+`maximum_attempt_count` (every answer times its retry budget, summed over its
+markets) is higher, nothing is created and the response is 409
+`estimate_exceeds_limit` with both numbers. The ceiling bounds provider
+attempts, not spend: each recorded answer spends one prompt run. The runner executes the queued
 audits.
 
 Changes within v1 are additive. Machine-readable state fields keep unknown,

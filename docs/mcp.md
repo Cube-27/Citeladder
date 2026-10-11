@@ -210,7 +210,7 @@ A record named by ID must belong to that project.
 | Kind | Tools |
 | --- | --- |
 | Direct (one call, one transaction with its security event) | `create_topic`, `rename_topic`, `update_prompt_text`, `add_competitor`, `update_action_status`, `cancel_audit` |
-| Prepared | `prepare_add_prompts` (1–50; drops duplicates and binding failures with reasons; shows prompt slots after), `prepare_archive_prompts`, `prepare_launch_audit` (estimate shown; `max_estimated_credits` frozen into the payload), `prepare_schedule`, `prepare_declare_implemented` |
+| Prepared | `prepare_add_prompts` (1–50; drops duplicates and binding failures with reasons; shows prompt slots after), `prepare_archive_prompts`, `prepare_launch_audit` (estimate shown; `max_attempts` frozen into the payload), `prepare_schedule`, `prepare_declare_implemented` |
 | Confirm | `confirm_change` |
 
 A prepare tool runs its command as a **dry run** (`rehearse` in the write

@@ -7,7 +7,7 @@ import { auditPolicy } from './config.ts';
 import { auditEvent, transitionAudit } from './state.ts';
 import { compareText } from '../text-order.ts';
 import { requireWorkspaceAccess } from '../entitlements/access.ts';
-import { reservePromptRun } from './prompt-runs.ts';
+import { reservePromptRuns } from './prompt-runs.ts';
 
 export const repairInput = z.object({
   provider: z.string().nullish(),
@@ -202,8 +202,12 @@ export function createRepairAudit(
       )
       .returningAll()
       .execute();
-    for (const task of repaired)
-      await reservePromptRun(trx, { workspaceId, auditId: id, taskId: task.id, at }); // NOSONAR -- ledger holds share the transaction and its lock.
+    await reservePromptRuns(trx, {
+      workspaceId,
+      auditId: id,
+      taskIds: repaired.map((task) => task.id),
+      at,
+    });
     await transitionAudit(trx, workspaceId, id, 'validating', at, 'repair audit validating');
     await transitionAudit(trx, workspaceId, id, 'queued', at, 'repair audit queued');
     await auditEvent(

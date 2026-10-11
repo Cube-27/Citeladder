@@ -29,8 +29,6 @@ const CAPABILITY_LABELS: Readonly<Record<string, string>> = {
   monitored_urls: 'Monitored URLs',
   manual_runs_per_day: 'Manual runs per day',
   prompt_runs_per_period: 'Prompt runs per month',
-  audit_web_search: 'Web-search-grounded audits',
-  authenticated_exports: 'Authenticated exports',
   agent: 'Agent',
   crawl_logs: 'AI crawler logs',
   api_access: 'REST API access',
@@ -39,10 +37,6 @@ const CAPABILITY_LABELS: Readonly<Record<string, string>> = {
   ai_credits: 'AI credits',
   commerce: 'Commerce',
   search_intelligence: 'Search Intelligence',
-  query_fanouts: 'Query fanouts',
-  grok: 'Grok',
-  perplexity: 'Perplexity',
-  copilot: 'Microsoft Copilot',
 };
 
 export function capabilityLabel(key: string): string {

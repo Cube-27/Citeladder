@@ -47,8 +47,8 @@ export async function runAudit(db: Database, config: ServiceConfig, actor: Actor
 
 /**
  * Estimate, then create the queued audit only when the estimate's maximum
- * attempt count (the most audit credits the run can reserve) is within the
- * caller's ceiling: 409 `estimate_exceeds_limit` otherwise.
+ * attempt count (every answer times its retry budget) is within the caller's
+ * ceiling: 409 `estimate_exceeds_limit` otherwise.
  */
 export async function launchAudit(
   db: Database,
@@ -58,7 +58,7 @@ export async function launchAudit(
   input: z.output<typeof auditLaunchInput>,
 ) {
   requireCapability(actor, 'run', SCOPE);
-  const { max_estimated_credits: ceiling, ...request } = input;
+  const { max_attempts: ceiling, ...request } = input;
   const runtime = auditRuntime(configEnvironment(config));
   const estimate = await estimateAudit(
     db,
@@ -67,11 +67,11 @@ export async function launchAudit(
     runtime,
   );
   if (estimate.maximum_attempt_count > ceiling)
-    throw new ApiError(409, 'The audit estimate exceeds max_estimated_credits', {
+    throw new ApiError(409, 'The audit estimate exceeds max_attempts', {
       code: 'estimate_exceeds_limit',
       details: {
-        estimated_credits: estimate.maximum_attempt_count,
-        max_estimated_credits: ceiling,
+        maximum_attempt_count: estimate.maximum_attempt_count,
+        max_attempts: ceiling,
       },
     });
   const ids = await createAudits(
