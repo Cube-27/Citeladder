@@ -86,7 +86,7 @@ export function confirmChange<T>(
       .where('token_hmac', '=', tokenHmac(config, token))
       .forUpdate()
       .executeTakeFirst();
-    if (!row || row.grant_id !== principal.grantId)
+    if (row?.grant_id !== principal.grantId)
       throw new McpInputError(
         'This confirmation token is not valid for this connection. Prepare the change again.',
       );

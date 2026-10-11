@@ -1,5 +1,5 @@
 /** Live authorization for persisted MCP evidence. */
-import { sql } from 'kysely';
+import { sql, type RawBuilder } from 'kysely';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { parseUuid } from '../http/uuid.ts';
@@ -237,6 +237,75 @@ export async function listAccountProjects(
     ),
   };
 }
+type SearchContext = {
+  db: Database;
+  workspaces: string[];
+  projectId: string | null;
+  limit: number;
+  results: Record<string, string>[];
+  like: (column: string) => RawBuilder<boolean>;
+  append: (kind: string, id: string, project: string, title: string, text: string) => unknown;
+};
+async function searchProjects({ db, workspaces, projectId, limit, like, append }: SearchContext) {
+  let projects = db
+    .selectFrom('projects')
+    .select(['id', 'name', 'brand_name', 'website_url'])
+    .where('workspace_id', 'in', workspaces)
+    .where((eb) =>
+      eb.or([like('name'), like('brand_name'), like('website_url'), like('industry')]),
+    );
+  if (projectId) projects = projects.where('id', '=', projectId);
+  for (const row of await projects.orderBy('name').orderBy('id').limit(limit).execute())
+    append('project', row.id, row.id, row.name, `${row.brand_name} — ${row.website_url}`);
+}
+async function searchActions({
+  db,
+  workspaces,
+  projectId,
+  limit,
+  results,
+  like,
+  append,
+}: SearchContext) {
+  // Active Actions only: dismissed and finished work is not a current lead.
+  let actions = db
+    .selectFrom('actions')
+    .select(['id', 'project_id', 'target_label', 'approach'])
+    .where('workspace_id', 'in', workspaces)
+    .where(effectiveStatus(), 'in', policy.opportunity.actions.ACTION_ACTIVE_STATUSES)
+    .where((eb) => eb.or([like('target_label'), like('approach'), like('target_url')]));
+  if (projectId) actions = actions.where('project_id', '=', projectId);
+  for (const row of await actions
+    .orderBy(sql`priority_score desc nulls last`)
+    .orderBy('id')
+    .limit(limit - results.length)
+    .execute())
+    append('action', row.id, row.project_id, row.target_label || 'Action', row.approach ?? '');
+}
+async function searchPrompts({
+  db,
+  workspaces,
+  projectId,
+  limit,
+  results,
+  like,
+  append,
+}: SearchContext) {
+  let prompts = db
+    .selectFrom('prompts as p')
+    .innerJoin('prompt_sets as s', 's.id', 'p.prompt_set_id')
+    .innerJoin('projects as project', 'project.id', 's.project_id')
+    .select(['p.id', 's.project_id', 'p.text', 'p.theme'])
+    .where('project.workspace_id', 'in', workspaces)
+    .where((eb) => eb.or([like('p.text'), like('p.theme')]));
+  if (projectId) prompts = prompts.where('project.id', '=', projectId);
+  for (const row of await prompts
+    .orderBy('p.text')
+    .orderBy('p.id')
+    .limit(limit - results.length)
+    .execute())
+    append('prompt', row.id, row.project_id, row.theme || 'Prompt', row.text);
+}
 export async function searchBusinessContext(
   db: Database,
   principal: EvidencePrincipal,
@@ -255,54 +324,23 @@ export async function searchBusinessContext(
   if (!workspaces.length) return { query: normalized, results };
   const pattern = containsPattern(normalized);
   const like = (column: string) => sql<boolean>`${sql.ref(column)} ilike ${pattern} escape '\\'`;
-  const append = (kind: string, id: string, project: string, title: string, text: string) =>
-    results.push({
-      id: `citeladder://${kind}/${id}`,
-      title,
-      text: text.slice(0, mcpPolicy.search_snippet_chars),
-      url: appLink(origin, recordPath(kind, { id }), project),
-    });
-  let projects = db
-    .selectFrom('projects')
-    .select(['id', 'name', 'brand_name', 'website_url'])
-    .where('workspace_id', 'in', workspaces)
-    .where((eb) =>
-      eb.or([like('name'), like('brand_name'), like('website_url'), like('industry')]),
-    );
-  if (projectId) projects = projects.where('id', '=', projectId);
-  for (const row of await projects.orderBy('name').orderBy('id').limit(limit).execute())
-    append('project', row.id, row.id, row.name, `${row.brand_name} — ${row.website_url}`);
-  if (results.length < limit) {
-    // Active Actions only: dismissed and finished work is not a current lead.
-    let actions = db
-      .selectFrom('actions')
-      .select(['id', 'project_id', 'target_label', 'approach'])
-      .where('workspace_id', 'in', workspaces)
-      .where(effectiveStatus(), 'in', policy.opportunity.actions.ACTION_ACTIVE_STATUSES)
-      .where((eb) => eb.or([like('target_label'), like('approach'), like('target_url')]));
-    if (projectId) actions = actions.where('project_id', '=', projectId);
-    for (const row of await actions
-      .orderBy(sql`priority_score desc nulls last`)
-      .orderBy('id')
-      .limit(limit - results.length)
-      .execute())
-      append('action', row.id, row.project_id, row.target_label || 'Action', row.approach ?? '');
-  }
-  if (results.length < limit) {
-    let prompts = db
-      .selectFrom('prompts as p')
-      .innerJoin('prompt_sets as s', 's.id', 'p.prompt_set_id')
-      .innerJoin('projects as project', 'project.id', 's.project_id')
-      .select(['p.id', 's.project_id', 'p.text', 'p.theme'])
-      .where('project.workspace_id', 'in', workspaces)
-      .where((eb) => eb.or([like('p.text'), like('p.theme')]));
-    if (projectId) prompts = prompts.where('project.id', '=', projectId);
-    for (const row of await prompts
-      .orderBy('p.text')
-      .orderBy('p.id')
-      .limit(limit - results.length)
-      .execute())
-      append('prompt', row.id, row.project_id, row.theme || 'Prompt', row.text);
-  }
+  const ctx: SearchContext = {
+    db,
+    workspaces,
+    projectId,
+    limit,
+    results,
+    like,
+    append: (kind, id, project, title, text) =>
+      results.push({
+        id: `citeladder://${kind}/${id}`,
+        title,
+        text: text.slice(0, mcpPolicy.search_snippet_chars),
+        url: appLink(origin, recordPath(kind, { id }), project),
+      }),
+  };
+  await searchProjects(ctx);
+  if (results.length < limit) await searchActions(ctx);
+  if (results.length < limit) await searchPrompts(ctx);
   return { query: normalized, results };
 }

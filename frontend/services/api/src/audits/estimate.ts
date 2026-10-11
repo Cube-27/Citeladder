@@ -24,6 +24,11 @@ export const estimateInput = z.object({
     .nullish(),
   market_ids: marketIdsInput,
 });
+function aggregateCostStatus(statuses: ReadonlySet<string>) {
+  if (statuses.size !== 1) return 'partial';
+  if (statuses.has('complete')) return 'complete';
+  return statuses.has('unknown') ? 'unknown' : 'partial';
+}
 /**
  * Provider-free preview reads accepted prompt source and versioned rates; no
  * credential or health lookup. A launch runs one audit per market, so each
@@ -143,12 +148,7 @@ export async function estimateAudit(
         ? runtime.search.recoveryDeadlineHours * 3600
         : (attempts * settings.audit_timeout_seconds) / Math.max(1, settings.worker_concurrency),
     ),
-    cost_status:
-      statuses.size === 1 && statuses.has('complete')
-        ? 'complete'
-        : statuses.size === 1 && statuses.has('unknown')
-          ? 'unknown'
-          : 'partial',
+    cost_status: aggregateCostStatus(statuses),
     estimated_total_cost_microusd: knownTotal(
       engines.map((engine) => engine.estimated_total_cost_microusd),
     ),

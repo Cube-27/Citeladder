@@ -1,10 +1,9 @@
 import { parseArgs } from 'node:util';
-import { loadConfig } from '../config.ts';
+import { loadConfig, policy } from '../config.ts';
 import { createDatabase } from '../db/database.ts';
 import { provisionDevelopmentLogin } from '../auth/bootstrap.ts';
 import { initializeCatalog } from '../billing/admin.ts';
 import { operatorMain, required } from './operator.ts';
-import { policy } from '../config.ts';
 import { localEnvironment } from './local-environment.ts';
 
 await operatorMain(async () => {

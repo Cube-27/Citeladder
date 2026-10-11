@@ -17,7 +17,11 @@ import { decodeCursor, encodeCursor, pagination, reference, unavailable } from '
 import { McpInputError, type Evidence, type ProjectRead } from './types.ts';
 
 type Page = { cursor?: string | null; limit?: number | null };
-const AGGREGATE_KINDS = ['backlink_summary', 'referring_domains', 'destination_pages'];
+const AGGREGATE_KINDS = new Set<string>([
+  'backlink_summary',
+  'referring_domains',
+  'destination_pages',
+]);
 
 export async function demandSnapshot({ db, scope }: ProjectRead): Promise<Evidence> {
   const row = await new WorkspaceScope(scope.workspaceId)
@@ -198,7 +202,7 @@ export async function searchIntelligence({ db, scope }: ProjectRead): Promise<Ev
   const datasets = result.datasets.map((row) => ({
     ...row,
     record_uri: `citeladder://search_dataset/${row.id}`,
-    aggregate_not_individual_links: AGGREGATE_KINDS.includes(row.dataset_kind),
+    aggregate_not_individual_links: AGGREGATE_KINDS.has(row.dataset_kind),
   }));
   return {
     state: datasets.length ? 'available' : 'unavailable',
@@ -236,7 +240,7 @@ export async function searchDataset(
   return {
     state: 'available',
     dataset: page.dataset,
-    aggregate_not_individual_links: AGGREGATE_KINDS.includes(page.dataset.dataset_kind),
+    aggregate_not_individual_links: AGGREGATE_KINDS.has(page.dataset.dataset_kind),
     items,
     pagination: pagination(items, page.next_cursor, page.dataset.filtered_saved_count ?? null),
     artifact_refs: [reference('search_dataset', page.dataset.id)],

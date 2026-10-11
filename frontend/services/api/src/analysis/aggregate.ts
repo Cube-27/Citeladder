@@ -101,6 +101,14 @@ function citationAggregates(rows: AggregateExecution[]) {
     ),
   };
 }
+function tokenLineEstimate(tokens: number, rate: number | null | undefined) {
+  if (tokens === 0) return 0;
+  return rate == null ? null : tokens * rate;
+}
+function searchFeeEstimate(grounded: number, fee: number | null | undefined) {
+  if (grounded === 0) return 0;
+  return fee == null ? null : (grounded * fee) / policy.costs.microusd_per_usd;
+}
 function tokenCost(rows: AggregateExecution[], config: ScoringConfig) {
   const totals = Object.fromEntries(
     ['uncached_input_tokens', 'cached_input_tokens', 'output_tokens', 'total_tokens'].map((key) => [
@@ -125,19 +133,12 @@ function tokenCost(rows: AggregateExecution[], config: ScoringConfig) {
     ['cached_input_tokens', pricing?.cached_input_microusd_per_million],
     ['output_tokens', pricing?.output_microusd_per_million],
   ] as const;
-  const estimates = lines.map(([key, r]) =>
-    totals[key] === 0 ? 0 : r == null ? null : totals[key]! * r,
-  );
+  const estimates = lines.map(([key, r]) => tokenLineEstimate(totals[key]!, r));
   const tokenEstimate = estimates.every((n) => n !== null)
     ? sum(estimates as number[]) / (policy.costs.tokens_per_million * policy.costs.microusd_per_usd)
     : null;
   const grounded = rows.filter((row) => row.score.search_used).length;
-  const searchEstimate =
-    grounded === 0
-      ? 0
-      : pricing?.search_fee_microusd == null
-        ? null
-        : (grounded * pricing.search_fee_microusd) / policy.costs.microusd_per_usd;
+  const searchEstimate = searchFeeEstimate(grounded, pricing?.search_fee_microusd);
   const reported = rows
     .map((row) => usageCount(row.usage.provider_cost_microusd))
     .filter((n): n is number => n !== null);

@@ -423,6 +423,52 @@ async function scheduleDowngrade(
   return response;
 }
 
+async function replayedPlanChange(db: Database, accountId: string, key: string, targetKey: string) {
+  const prior = await db
+    .selectFrom('pending_activations')
+    .selectAll()
+    .where('billing_account_id', '=', accountId)
+    .where('idempotency_key', '=', key)
+    .executeTakeFirst();
+  if (prior) {
+    if (prior.activation_kind !== 'upgrade' || prior.catalog_key !== targetKey)
+      conflict('idempotency_key_reused');
+    const frozen = z.object({ effective_at: z.string() }).parse(prior.change_terms);
+    return {
+      pending: prior,
+      response: planChangeSchema.parse({
+        direction: 'upgrade',
+        catalog_key: targetKey,
+        status: 'payment_required',
+        effective_at: frozen.effective_at,
+        activation: activationResponse(prior),
+      }),
+      fresh: false,
+      subId: null,
+    };
+  }
+  const replay = await db
+    .selectFrom('idempotency_records')
+    .selectAll()
+    .where('billing_account_id', '=', accountId)
+    .where('idempotency_key', '=', key)
+    .executeTakeFirst();
+  if (replay) {
+    if (
+      replay.operation !== 'subscription.change' ||
+      replay.request_fingerprint !== digest({ targetKey })
+    )
+      conflict('idempotency_key_reused');
+    return {
+      pending: null,
+      response: planChangeSchema.parse(replay.response_body),
+      fresh: false,
+      subId: null,
+    };
+  }
+  return null;
+}
+
 export async function changePlan(
   db: Database,
   config: ServiceConfig,
@@ -434,48 +480,8 @@ export async function changePlan(
   const prepared = await db.transaction().execute(async (trx) => {
     const account = await workspaceAccount(trx, workspaceId);
     await lockAccount(trx, workspaceId, account.id);
-    const prior = await trx
-      .selectFrom('pending_activations')
-      .selectAll()
-      .where('billing_account_id', '=', account.id)
-      .where('idempotency_key', '=', key)
-      .executeTakeFirst();
-    if (prior) {
-      if (prior.activation_kind !== 'upgrade' || prior.catalog_key !== targetKey)
-        conflict('idempotency_key_reused');
-      const frozen = z.object({ effective_at: z.string() }).parse(prior.change_terms);
-      return {
-        pending: prior,
-        response: planChangeSchema.parse({
-          direction: 'upgrade',
-          catalog_key: targetKey,
-          status: 'payment_required',
-          effective_at: frozen.effective_at,
-          activation: activationResponse(prior),
-        }),
-        fresh: false,
-        subId: null,
-      };
-    }
-    const replay = await trx
-      .selectFrom('idempotency_records')
-      .selectAll()
-      .where('billing_account_id', '=', account.id)
-      .where('idempotency_key', '=', key)
-      .executeTakeFirst();
-    if (replay) {
-      if (
-        replay.operation !== 'subscription.change' ||
-        replay.request_fingerprint !== digest({ targetKey })
-      )
-        conflict('idempotency_key_reused');
-      return {
-        pending: null,
-        response: planChangeSchema.parse(replay.response_body),
-        fresh: false,
-        subId: null,
-      };
-    }
+    const replayed = await replayedPlanChange(trx, account.id, key, targetKey);
+    if (replayed) return replayed;
     const sub = await trx
       .selectFrom('billing_subscriptions')
       .selectAll()

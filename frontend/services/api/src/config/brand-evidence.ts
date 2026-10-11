@@ -140,9 +140,8 @@ export const brandEvidence = {
   offering_label_min_chars: 3,
   offering_max_path_depth: 3,
   min_offering_nodes: 3,
-  detail_path_pattern:
-    '(?:/p/|/dp/|/product/|/item/|[?&]pid=|/blog/|/news/|/press/|/\\d{4}/\\d{2}/)',
-  person_label_pattern: '^(?:dr|mr|mrs|ms|prof)\\.?\\s',
+  detail_path_pattern: String.raw`(?:/p/|/dp/|/product/|/item/|[?&]pid=|/blog/|/news/|/press/|/\d{4}/\d{2}/)`,
+  person_label_pattern: String.raw`^(?:dr|mr|mrs|ms|prof)\.?\s`,
   max_page_chars: 6000,
   max_total_chars: 12000,
   min_words: 40,

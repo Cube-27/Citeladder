@@ -60,8 +60,9 @@ const runs: Record<ConfirmedKind, Run> = {
   launch_audit: async (trx, config, actor, change) => {
     const payload = payloads.launch_audit.parse(change.payload);
     const audits = await launchAudit(trx, config, actor, payload.project_id, payload.request);
+    const launched = audits.length === 1 ? 'the audit' : `${audits.length} audits, one per market`;
     return {
-      summary: `Launched ${audits.length === 1 ? 'the audit' : `${audits.length} audits, one per market`}. Queued; runs start shortly.`,
+      summary: `Launched ${launched}. Queued; runs start shortly.`,
       audits: audits.map((audit) => ({ id: audit.id, status: audit.status, market: audit.market })),
     };
   },

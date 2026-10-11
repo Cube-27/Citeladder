@@ -23,6 +23,22 @@ export function grantableScopes(requested: string | null | undefined): string[] 
     (scope) => !named.length || scope === mcpPolicy.read_scope || named.includes(scope),
   );
 }
+const isBareHttpOrigin = (url: URL) =>
+  ['http:', 'https:'].includes(url.protocol) &&
+  !url.username &&
+  !url.password &&
+  !url.search &&
+  !url.hash &&
+  url.pathname === '/';
+function assertEncryptionKey(config: ServiceConfig, encryptionKey: string) {
+  if (
+    !policy.development_env_names.includes(config.appEnv.trim().toLowerCase()) &&
+    (secretIsWeak(encryptionKey) || encryptionKey === config.session.secretKey)
+  )
+    throw new ConfigError(
+      'ENCRYPTION_KEY must meet the production strength policy and be independent of JWT_SECRET_KEY',
+    );
+}
 export function loadMcpConfig(
   config: ServiceConfig,
   env: Record<string, string | undefined> = configEnvironment(config),
@@ -40,13 +56,7 @@ export function loadMcpConfig(
   const allowedEmail = String(value('allowed_account_email')).trim().toLowerCase();
   const encryptionKey = String(resolveSettingSpec(policy.settings.encryption_key, env));
   if (enabled) {
-    if (
-      !policy.development_env_names.includes(config.appEnv.trim().toLowerCase()) &&
-      (secretIsWeak(encryptionKey) || encryptionKey === config.session.secretKey)
-    )
-      throw new ConfigError(
-        'ENCRYPTION_KEY must meet the production strength policy and be independent of JWT_SECRET_KEY',
-      );
+    assertEncryptionKey(config, encryptionKey);
     if (!configured) throw new ConfigError('PUBLIC_API_URL must be configured for MCP');
     let parsed: URL;
     try {
@@ -54,25 +64,11 @@ export function loadMcpConfig(
     } catch {
       throw new ConfigError('PUBLIC_API_URL must be an HTTP(S) origin');
     }
-    if (
-      !['http:', 'https:'].includes(parsed.protocol) ||
-      parsed.username ||
-      parsed.password ||
-      parsed.search ||
-      parsed.hash ||
-      parsed.pathname !== '/'
-    )
+    if (!isBareHttpOrigin(parsed))
       throw new ConfigError('PUBLIC_API_URL must be an HTTP(S) origin');
     origin = parsed.origin;
     const browser = new URL(browserOrigin);
-    if (
-      !['http:', 'https:'].includes(browser.protocol) ||
-      browser.username ||
-      browser.password ||
-      browser.search ||
-      browser.hash ||
-      browser.pathname !== '/'
-    )
+    if (!isBareHttpOrigin(browser))
       throw new ConfigError('FRONTEND_URL must be an HTTP(S) origin for MCP consent');
     browserOrigin = browser.origin;
     if (config.appEnv.trim().toLowerCase() === 'production' && parsed.protocol !== 'https:')

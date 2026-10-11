@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
+import type { Selectable } from 'kysely';
 import type { Database } from '../db/database.ts';
+import type { Audits } from '../generated/db-schema.ts';
 import { record, strings } from '../db/json.ts';
 import type { AuditTask } from '../queue/audit-queue.ts';
 import type { DeriveExecution, ExecutionResult } from '../audits/result-persistence.ts';
@@ -20,6 +22,7 @@ import {
   resolvedBatchSchema,
   resolvedCompetitorUrl,
   shelfPolicy,
+  type FrozenShelfTarget,
   type ShelfResolver,
 } from './shelf-parsing.ts';
 
@@ -67,6 +70,164 @@ function metered(
       return resolver.resolve(spans);
     },
   };
+}
+
+type PreparedItem = Awaited<ReturnType<typeof prepareRecommendations>>[number];
+type ShelfMatch = ReturnType<typeof matchRecommendation>;
+type ShelfContext = {
+  task: AuditTask;
+  audit: Selectable<Audits>;
+  target: { target_kind: string; target_id: string };
+  catalog: FrozenShelfTarget;
+  versions: { parser: string; matcher: string };
+  owned: string[];
+  locale: string;
+};
+
+async function findOrCreateCandidate(
+  db: Database,
+  { task, audit, target }: ShelfContext,
+  resolved: NonNullable<PreparedItem['resolved']>,
+  spanText: string,
+  url: string,
+) {
+  const find = () =>
+    db
+      .selectFrom('commerce_competitor_candidates')
+      .selectAll()
+      .where('workspace_id', '=', task.workspace_id)
+      .where('project_id', '=', audit.project_id)
+      .where('target_kind', '=', target.target_kind)
+      .where('target_id', '=', target.target_id)
+      .where('canonical_url', '=', url)
+      .executeTakeFirst();
+  const existing = await find();
+  if (existing) return existing;
+  // Concurrent audit completions serialize new pending candidates on the owning project.
+  await lockCatalog(db, { workspaceId: task.workspace_id, projectId: audit.project_id });
+  const raced = await find();
+  if (raced) return raced;
+  return db
+    .insertInto('commerce_competitor_candidates')
+    .values({
+      id: randomUUID(),
+      workspace_id: task.workspace_id,
+      project_id: audit.project_id,
+      target_kind: target.target_kind,
+      target_id: target.target_id,
+      canonical_url: url,
+      product_name: resolved.title,
+      brand_name: resolved.brand,
+      state: 'pending',
+      source_kind: 'ai_observed',
+      evidence: JSON.stringify({
+        observation_text: boundedText(spanText, shelfPolicy.span_chars),
+        resolved_product_url: url,
+        merchant_url: resolved.merchant_url,
+      }),
+      attempt_id: null,
+      decision_at: null,
+      created_at: new Date(),
+    })
+    .returningAll()
+    .executeTakeFirstOrThrow();
+}
+/** A recommendation matching neither catalog product nor approved competitor may be a new AI-observed competitor. */
+async function observedCandidate(
+  db: Database,
+  ctx: ShelfContext,
+  { span, resolved }: PreparedItem,
+  matched: ShelfMatch,
+  evidence: { answerText: string; sourceUrls: string[] },
+) {
+  if (matched.product || matched.competitor || !resolved) return null;
+  const url = resolvedCompetitorUrl(resolved.product_url, {
+    answer: evidence.answerText,
+    citations: evidence.sourceUrls,
+    ownedHosts: ctx.owned,
+  });
+  return url ? findOrCreateCandidate(db, ctx, resolved, span.text, url) : null;
+}
+function observationClassification(matched: ShelfMatch, candidate: { id: string } | null) {
+  if (matched.product) return 'owned';
+  if (matched.competitor) return 'approved_competitor';
+  return candidate ? 'ai_observed_competitor' : 'unresolved';
+}
+async function recordObservation(
+  db: Database,
+  { task, audit, target, versions, locale }: ShelfContext,
+  { span, resolved, model }: PreparedItem,
+  evidence: {
+    matched: ShelfMatch;
+    candidate: { id: string; product_name: string; brand_name: string } | null;
+    artifactId: string;
+    answerText: string;
+    citations: { id: string; url: string }[];
+  },
+) {
+  const { matched, candidate, artifactId, answerText, citations } = evidence;
+  // Price and seller come from the answer's own text; a resolver-supplied
+  // merchant link counts only when the answer carries it.
+  const price = observedPrice(span.text, locale);
+  const merchantUrl = resolved?.merchant_url.trim() ?? '';
+  const merchant = observedMerchant(
+    span.text,
+    merchantUrl && answerText.includes(merchantUrl) ? merchantUrl : undefined,
+  );
+  const id = randomUUID();
+  await db
+    .insertInto('commerce_recommendation_observations')
+    .values({
+      id,
+      workspace_id: task.workspace_id,
+      project_id: audit.project_id,
+      audit_id: audit.id,
+      task_id: task.id,
+      artifact_id: artifactId,
+      target_kind: target.target_kind,
+      target_id: target.target_id,
+      parser_version: versions.parser,
+      matcher_version: versions.matcher,
+      product_id: matched.product?.id ?? null,
+      competitor_candidate_id: matched.competitor?.id ?? candidate?.id ?? null,
+      classification: observationClassification(matched, candidate),
+      observed_product:
+        matched.product?.name ??
+        matched.competitor?.product_name ??
+        candidate?.product_name ??
+        resolved?.title ??
+        boundedText(span.text, 512),
+      observed_brand:
+        matched.product?.brand ??
+        matched.competitor?.brand_name ??
+        candidate?.brand_name ??
+        resolved?.brand ??
+        '',
+      observed_title: resolved?.title ?? boundedText(span.text, 512),
+      observed_price: price.price === null ? null : String(price.price),
+      observed_currency: price.currency,
+      merchant_url: merchant.url,
+      merchant_domain: merchant.domain,
+      model_version: model,
+      match_confidence: matched.confidence,
+      rank: span.rank,
+      order_observable: span.orderObservable,
+      surface_kind: resolved?.surface_kind ?? 'recommendation',
+      created_at: new Date(),
+    })
+    .execute();
+  const linked = citations.filter((citation) => citation.url && span.text.includes(citation.url));
+  if (linked.length)
+    await db
+      .insertInto('commerce_observation_citations')
+      .values(
+        linked.map((citation) => ({
+          id: randomUUID(),
+          observation_id: id,
+          citation_id: citation.id,
+        })),
+      )
+      .execute();
 }
 
 /** Read frozen context, then finish optional model I/O before the caller opens its persistence transaction. */
@@ -129,6 +290,7 @@ export async function prepareShelfExecution(
   const locale = [config.language_code, config.country_code]
     .filter((value) => typeof value === 'string' && value)
     .join('-');
+  const ctx: ShelfContext = { task, audit, target, catalog, versions, owned, locale };
   return async (trx, current, lockedAudit, artifactId) => {
     await analyzeExecution(trx, current, lockedAudit, artifactId);
     if (
@@ -177,136 +339,17 @@ export async function prepareShelfExecution(
         ? `${resolved.title} ${resolved.brand} ${resolved.product_url}`
         : span.text;
       const matched = matchRecommendation(identity, catalog);
-      let candidateId = matched.competitor?.id ?? null;
-      let observedCandidate: { product_name: string; brand_name: string } | undefined;
-      if (!matched.product && !matched.competitor && resolved) {
-        const url = resolvedCompetitorUrl(resolved.product_url, {
-          answer: artifact.answer_text,
-          citations: sourceUrls,
-          ownedHosts: owned,
-        });
-        if (url) {
-          let candidate = await trx
-            .selectFrom('commerce_competitor_candidates')
-            .selectAll()
-            .where('workspace_id', '=', task.workspace_id)
-            .where('project_id', '=', audit.project_id)
-            .where('target_kind', '=', target.target_kind)
-            .where('target_id', '=', target.target_id)
-            .where('canonical_url', '=', url)
-            .executeTakeFirst();
-          if (!candidate) {
-            // Concurrent audit completions serialize new pending candidates on the owning project.
-            await lockCatalog(trx, { workspaceId: task.workspace_id, projectId: audit.project_id });
-            candidate = await trx
-              .selectFrom('commerce_competitor_candidates')
-              .selectAll()
-              .where('workspace_id', '=', task.workspace_id)
-              .where('project_id', '=', audit.project_id)
-              .where('target_kind', '=', target.target_kind)
-              .where('target_id', '=', target.target_id)
-              .where('canonical_url', '=', url)
-              .executeTakeFirst();
-            if (!candidate)
-              candidate = await trx
-                .insertInto('commerce_competitor_candidates')
-                .values({
-                  id: randomUUID(),
-                  workspace_id: task.workspace_id,
-                  project_id: audit.project_id,
-                  target_kind: target.target_kind,
-                  target_id: target.target_id,
-                  canonical_url: url,
-                  product_name: resolved.title,
-                  brand_name: resolved.brand,
-                  state: 'pending',
-                  source_kind: 'ai_observed',
-                  evidence: JSON.stringify({
-                    observation_text: boundedText(span.text, shelfPolicy.span_chars),
-                    resolved_product_url: url,
-                    merchant_url: resolved.merchant_url,
-                  }),
-                  attempt_id: null,
-                  decision_at: null,
-                  created_at: new Date(),
-                })
-                .returningAll()
-                .executeTakeFirstOrThrow();
-          }
-          candidateId = candidate.id;
-          observedCandidate = candidate;
-        }
-      }
-      // Price and seller come from the answer's own text; a resolver-supplied
-      // merchant link counts only when the answer carries it.
-      const price = observedPrice(span.text, locale);
-      const merchantUrl = resolved?.merchant_url.trim() ?? '';
-      const merchant = observedMerchant(
-        span.text,
-        merchantUrl && artifact.answer_text.includes(merchantUrl) ? merchantUrl : undefined,
-      );
-      const id = randomUUID();
-      await trx
-        .insertInto('commerce_recommendation_observations')
-        .values({
-          id,
-          workspace_id: task.workspace_id,
-          project_id: audit.project_id,
-          audit_id: audit.id,
-          task_id: task.id,
-          artifact_id: artifactId,
-          target_kind: target.target_kind,
-          target_id: target.target_id,
-          parser_version: versions.parser,
-          matcher_version: versions.matcher,
-          product_id: matched.product?.id ?? null,
-          competitor_candidate_id: candidateId,
-          classification: matched.product
-            ? 'owned'
-            : matched.competitor
-              ? 'approved_competitor'
-              : observedCandidate
-                ? 'ai_observed_competitor'
-                : 'unresolved',
-          observed_product:
-            matched.product?.name ??
-            matched.competitor?.product_name ??
-            observedCandidate?.product_name ??
-            resolved?.title ??
-            boundedText(span.text, 512),
-          observed_brand:
-            matched.product?.brand ??
-            matched.competitor?.brand_name ??
-            observedCandidate?.brand_name ??
-            resolved?.brand ??
-            '',
-          observed_title: resolved?.title ?? boundedText(span.text, 512),
-          observed_price: price.price === null ? null : String(price.price),
-          observed_currency: price.currency,
-          merchant_url: merchant.url,
-          merchant_domain: merchant.domain,
-          model_version: item.model,
-          match_confidence: matched.confidence,
-          rank: span.rank,
-          order_observable: span.orderObservable,
-          surface_kind: resolved?.surface_kind ?? 'recommendation',
-          created_at: new Date(),
-        })
-        .execute();
-      const linked = citations.filter(
-        (citation) => citation.url && span.text.includes(citation.url),
-      );
-      if (linked.length)
-        await trx
-          .insertInto('commerce_observation_citations')
-          .values(
-            linked.map((citation) => ({
-              id: randomUUID(),
-              observation_id: id,
-              citation_id: citation.id,
-            })),
-          )
-          .execute();
+      const candidate = await observedCandidate(trx, ctx, item, matched, {
+        answerText: artifact.answer_text,
+        sourceUrls,
+      });
+      await recordObservation(trx, ctx, item, {
+        matched,
+        candidate,
+        artifactId,
+        answerText: artifact.answer_text,
+        citations,
+      });
     }
   };
 }

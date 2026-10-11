@@ -68,6 +68,10 @@ function modelStepStatus(outcome: string, latest: boolean) {
   if (outcome !== 'completed') return outcome;
   return latest ? 'processing' : 'reasoned';
 }
+function pendingStepStatus(outcome: string, live: boolean, latest: boolean) {
+  if (live) return modelStepStatus(outcome, latest);
+  return outcome === 'dispatched' ? 'interrupted' : modelStepStatus(outcome, false);
+}
 export async function progress(db: Database, run: Run) {
   if (run.attempt_count < 1) return [];
   const attempts = await db
@@ -99,11 +103,11 @@ export async function progress(db: Database, run: Run) {
       ordinal: row.ordinal,
       status:
         row.tool_status ??
-        (row.run_attempt === run.attempt_count && active.includes(run.status)
-          ? modelStepStatus(row.outcome, index === attempts.length - 1)
-          : row.outcome === 'dispatched'
-            ? 'interrupted'
-            : modelStepStatus(row.outcome, false)),
+        pendingStepStatus(
+          row.outcome,
+          row.run_attempt === run.attempt_count && active.includes(run.status),
+          index === attempts.length - 1,
+        ),
       tool: row.tool_name,
       model_attempt_id: row.model_id,
       tool_attempt_id: row.tool_id,

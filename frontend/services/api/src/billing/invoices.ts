@@ -182,6 +182,29 @@ function percent(rate: string, multiplier: bigint): string {
   return `${digits.slice(0, point)}.${digits.slice(point)}`.replace(/\.?0*$/u, '');
 }
 
+type InvoicePayload = ReturnType<typeof payload>;
+function lineDescription(line: InvoicePayload['line']) {
+  let description = line.description;
+  if (line.sac) description += `\nSAC: ${line.sac}`;
+  if (line.period_start && line.period_end)
+    description += `\n${periodDate(line.period_start)} to ${periodDate(line.period_end)}`;
+  return description;
+}
+function taxRows(amounts: InvoicePayload['amounts'], money: (amount: number) => string) {
+  if (amounts.tax_treatment === 'CGST_SGST') {
+    const half = percent(amounts.tax_rate, 50n);
+    return [
+      [`CGST (${half}%)`, money(amounts.cgst_minor)],
+      [`SGST (${half}%)`, money(amounts.sgst_minor)],
+    ];
+  }
+  const label =
+    amounts.tax_treatment === 'IGST'
+      ? `IGST (${percent(amounts.tax_rate, 100n)}%)`
+      : 'GST - export of service (zero-rated)';
+  return [[label, money(amounts.igst_minor)]];
+}
+
 export async function renderInvoicePdf(invoice: Invoice): Promise<Uint8Array> {
   const value = payload(invoice);
   const amounts = value.amounts;
@@ -207,30 +230,13 @@ export async function renderInvoicePdf(invoice: Invoice): Promise<Uint8Array> {
   );
   report.heading(`${money(invoice.total_amount_minor)} ${credit ? 'credited' : 'paid'}`);
   const line = value.line;
-  let description = line.description;
-  if (line.sac) description += `\nSAC: ${line.sac}`;
-  if (line.period_start && line.period_end)
-    description += `\n${periodDate(line.period_start)} to ${periodDate(line.period_end)}`;
+  const description = lineDescription(line);
   report.table(
     ['Description', 'Qty', 'Unit price', 'Amount'],
     [[description, String(line.quantity), money(line.unit_price_minor), money(line.amount_minor)]],
     [6, 1, 2, 2],
   );
-  const half = percent(amounts.tax_rate, 50n);
-  const taxes =
-    amounts.tax_treatment === 'CGST_SGST'
-      ? [
-          [`CGST (${half}%)`, money(amounts.cgst_minor)],
-          [`SGST (${half}%)`, money(amounts.sgst_minor)],
-        ]
-      : [
-          [
-            amounts.tax_treatment === 'IGST'
-              ? `IGST (${percent(amounts.tax_rate, 100n)}%)`
-              : 'GST - export of service (zero-rated)',
-            money(amounts.igst_minor),
-          ],
-        ];
+  const taxes = taxRows(amounts, money);
   report.heading('Totals');
   report.table(
     ['Description', 'Amount'],

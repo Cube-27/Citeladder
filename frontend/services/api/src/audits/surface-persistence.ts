@@ -130,14 +130,13 @@ export function persistSurfaceExchange(
     )
       metadata.provider_submission_cost_microusd = exchange.chargeMicrousd;
     if (exchange.reconciliation !== undefined) metadata.reconciliation = exchange.reconciliation;
+    const pollDelta = exchange.poll ? 1 : 0;
     const task = await trx
       .updateTable('audit_tasks')
       .set({
         provider_metadata: JSON.stringify(metadata),
         provider_task_id: exchange.taskId ?? locked.task.provider_task_id,
-        provider_poll_count: exchange.resetPoll
-          ? 0
-          : locked.task.provider_poll_count + (exchange.poll ? 1 : 0),
+        provider_poll_count: exchange.resetPoll ? 0 : locked.task.provider_poll_count + pollDelta,
         attempt_count: locked.task.attempt_count + (exchange.paid ? 1 : 0),
         updated_at: at,
       })

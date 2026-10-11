@@ -166,6 +166,7 @@ export function consentPage(view: ConsentView) {
   );
   const needsTerms = shareable.some((workspace) => workspace.state === 'terms');
   const termsOnly = needsTerms && shareable.every((workspace) => workspace.state === 'terms');
+  const termsRequired = termsOnly ? 'required' : '';
   const consentPath = `/mcp/oauth/consent?transaction=${encodeURIComponent(view.transaction)}`;
   const setup = new URLSearchParams({ return_to: consentPath });
   return document(
@@ -216,12 +217,7 @@ export function consentPage(view: ConsentView) {
         ${
           needsTerms
             ? html`<label class="terms">
-                <input
-                  type="checkbox"
-                  name="accept_terms"
-                  value="yes"
-                  ${termsOnly ? 'required' : ''}
-                />
+                <input type="checkbox" name="accept_terms" value="yes" ${termsRequired} />
                 <span
                   >I agree to the
                   <a href="${mcpPolicy.terms_url}" target="_blank" rel="noreferrer"

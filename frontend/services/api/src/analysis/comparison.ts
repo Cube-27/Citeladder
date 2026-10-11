@@ -25,7 +25,7 @@ function comparisonJson(value: unknown): string {
       if (c.codePointAt(0)! < 0x7f) return c;
       return c
         .split('')
-        .map((unit) => `\\u${unit.charCodeAt(0).toString(16).padStart(4, '0')}`)
+        .map((unit) => String.raw`\u${unit.codePointAt(0)!.toString(16).padStart(4, '0')}`)
         .join('');
     })
     .join('');

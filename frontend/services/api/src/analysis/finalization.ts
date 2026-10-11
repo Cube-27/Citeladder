@@ -64,8 +64,28 @@ function cohortMetrics(
   };
 }
 
+function tallyStatusCounts(statusCounts: { status: string; count: string }[]) {
+  let completed = 0,
+    failed = 0,
+    open = 0;
+  for (const { status, count } of statusCounts) {
+    if (status === 'succeeded') completed += Number(count);
+    else if (policy.task_queue.terminal.includes(status)) failed += Number(count);
+    else open += Number(count);
+  }
+  return { completed, failed, open };
+}
+function artifactsByTask<T extends { task_id: string }>(artifacts: T[]) {
+  const byTask = new Map<string, T>();
+  for (const artifact of artifacts) {
+    if (byTask.has(artifact.task_id)) throw new Error('Multiple immutable artifacts for one task');
+    byTask.set(artifact.task_id, artifact);
+  }
+  return byTask;
+}
+
 /** Root lock serializes progress and finalization; the caller supplies the Commerce projection owner. */
-export async function finalizeAudit(
+export function finalizeAudit(
   db: Database,
   workspaceId: string,
   auditId: string,
@@ -91,14 +111,7 @@ export async function finalizeAudit(
       .where('audit_id', '=', audit.id)
       .groupBy('status')
       .execute();
-    let completed = 0,
-      failed = 0,
-      open = 0;
-    for (const { status, count } of statusCounts) {
-      if (status === 'succeeded') completed += Number(count);
-      else if (policy.task_queue.terminal.includes(status)) failed += Number(count);
-      else open += Number(count);
-    }
+    const { completed, failed, open } = tallyStatusCounts(statusCounts);
     if (audit.completed_count !== completed || audit.failed_count !== failed)
       await trx
         .updateTable('audits')
@@ -166,12 +179,7 @@ export async function finalizeAudit(
       .where('a.workspace_id', '=', workspaceId)
       .where('r.audit_id', '=', auditId)
       .execute();
-    const byTask = new Map<string, (typeof artifacts)[number]>();
-    for (const artifact of artifacts) {
-      if (byTask.has(artifact.task_id))
-        throw new Error('Multiple immutable artifacts for one task');
-      byTask.set(artifact.task_id, artifact);
-    }
+    const byTask = artifactsByTask(artifacts);
     const snapshots = await trx
       .selectFrom('audit_prompt_snapshots')
       .selectAll()

@@ -98,6 +98,21 @@ async function replayClaim(
   });
 }
 
+async function assertNoPriorAccess(db: Database, accountId: string) {
+  const history = await db
+    .selectFrom('account_grants')
+    .select('id')
+    .where('billing_account_id', '=', accountId)
+    .where('bundle_role', '=', 'primary')
+    .where('profile_key', '!=', 'free')
+    .executeTakeFirst();
+  const subscription = await db
+    .selectFrom('billing_subscriptions')
+    .select('id')
+    .where('billing_account_id', '=', accountId)
+    .executeTakeFirst();
+  if (history || subscription) conflict('introductory_access_cannot_stack');
+}
 export function claimOffer(
   db: Database,
   workspaceId: string,
@@ -127,19 +142,7 @@ export function claimOffer(
     const offer = await offerRead(trx, workspaceId, now);
     if (offer.campaign_id !== request.campaign_id) conflict('campaign_identity_changed');
     if (offer.status !== 'available') conflict(offer.unavailable_reason ?? offer.status);
-    const history = await trx
-      .selectFrom('account_grants')
-      .select('id')
-      .where('billing_account_id', '=', account.id)
-      .where('bundle_role', '=', 'primary')
-      .where('profile_key', '!=', 'free')
-      .executeTakeFirst();
-    const subscription = await trx
-      .selectFrom('billing_subscriptions')
-      .select('id')
-      .where('billing_account_id', '=', account.id)
-      .executeTakeFirst();
-    if (history || subscription) conflict('introductory_access_cannot_stack');
+    await assertNoPriorAccess(trx, account.id);
     const user = await trx
       .selectFrom('users')
       .select('email')

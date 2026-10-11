@@ -18,14 +18,9 @@ import { operatorDiagnostic, withOperatorDatabase } from './operator.ts';
 /** One terminal answer, trimmed, with an optional default. */
 export async function accountPrompt(label: string, fallback?: string): Promise<string> {
   const terminal = createInterface({ input: process.stdin, output: process.stdout });
+  const hint = fallback === undefined ? '' : ` [${fallback}]`;
   try {
-    return (
-      (
-        await terminal.question(`${label}${fallback === undefined ? '' : ` [${fallback}]`}: `)
-      ).trim() ||
-      fallback ||
-      ''
-    );
+    return (await terminal.question(`${label}${hint}: `)).trim() || fallback || '';
   } finally {
     terminal.close();
   }
@@ -83,44 +78,44 @@ async function accessSettings() {
   return { allowance, until: expiry ? calendarDate(expiry) : null };
 }
 
-async function collectPlatformAction(
-  db: Database,
-  session: PlatformSession,
-  choice: string,
-): Promise<PlatformAction | null> {
-  if (choice === '2') {
-    const emails = splitList(await accountPrompt('Emails (comma separated)'));
-    const password = await confirmedPassword('New login password');
-    const destination = await accountPrompt(
-      '1 New owned workspace per account  2 Join existing workspace',
-      '1',
-    );
-    const target = destination === '2' ? await selectWorkspace(db, session) : undefined;
-    if (!['1', '2'].includes(destination)) return null;
-    const role = target
-      ? await accountPrompt('Workspace role (admin/member/viewer)', 'admin')
-      : 'owner';
-    const grant = await accountPrompt(
-      'Grant extra full evaluation entitlements? (yes/no)',
-      target ? 'no' : 'yes',
-    );
-    if (!['yes', 'no'].includes(grant)) return null;
-    return {
-      kind: 'create',
-      emails,
-      password,
-      workspaceId: target?.workspaceId,
-      role,
-      access: grant === 'yes' ? await accessSettings() : undefined,
-    };
-  }
-  if (choice === '5')
-    return {
-      kind: 'access',
-      ...(await selectWorkspace(db, session)),
-      access: await accessSettings(),
-    };
-  if (choice === '3' || choice === '4' || choice === '8') {
+type Collector = (db: Database, session: PlatformSession) => Promise<PlatformAction | null>;
+
+const collectCreate: Collector = async (db, session) => {
+  const emails = splitList(await accountPrompt('Emails (comma separated)'));
+  const password = await confirmedPassword('New login password');
+  const destination = await accountPrompt(
+    '1 New owned workspace per account  2 Join existing workspace',
+    '1',
+  );
+  const target = destination === '2' ? await selectWorkspace(db, session) : undefined;
+  if (!['1', '2'].includes(destination)) return null;
+  const role = target
+    ? await accountPrompt('Workspace role (admin/member/viewer)', 'admin')
+    : 'owner';
+  const grant = await accountPrompt(
+    'Grant extra full evaluation entitlements? (yes/no)',
+    target ? 'no' : 'yes',
+  );
+  if (!['yes', 'no'].includes(grant)) return null;
+  return {
+    kind: 'create',
+    emails,
+    password,
+    workspaceId: target?.workspaceId,
+    role,
+    access: grant === 'yes' ? await accessSettings() : undefined,
+  };
+};
+
+const collectAccess: Collector = async (db, session) => ({
+  kind: 'access',
+  ...(await selectWorkspace(db, session)),
+  access: await accessSettings(),
+});
+
+const collectMemberAction =
+  (choice: '3' | '4' | '8'): Collector =>
+  async (db, session) => {
     const { workspaceId } = await selectWorkspace(db, session);
     const email = await accountPrompt('Member email');
     if (choice === '3')
@@ -137,33 +132,52 @@ async function collectPlatformAction(
       email,
       password: await confirmedPassword('New password'),
     };
-  }
-  if (choice === '6') {
-    const scope = await selectWorkspace(db, session);
-    const grants = await platformAccountGrants(db, session, scope);
-    display(grants);
-    return {
-      kind: 'revoke',
-      ...scope,
-      grantIds: splitList(await accountPrompt('Exact grant IDs to revoke (comma separated)')),
-    };
-  }
-  if (choice === '7') {
-    const email = await accountPrompt('Account email');
+  };
+
+const collectRevoke: Collector = async (db, session) => {
+  const scope = await selectWorkspace(db, session);
+  const grants = await platformAccountGrants(db, session, scope);
+  display(grants);
+  return {
+    kind: 'revoke',
+    ...scope,
+    grantIds: splitList(await accountPrompt('Exact grant IDs to revoke (comma separated)')),
+  };
+};
+
+const collectAccountState: Collector = async () => {
+  const email = await accountPrompt('Account email');
+  console.log(
+    '1 Disable login (retains workspaces and history)  2 Enable login  3 Permanently delete unused account',
+  );
+  const decision = await accountPrompt('Account action');
+  if (decision === '3') {
     console.log(
-      '1 Disable login (retains workspaces and history)  2 Enable login  3 Permanently delete unused account',
+      'Permanent deletion removes only empty personal workspaces and the identity. Any retained activity or grants blocks deletion.',
     );
-    const decision = await accountPrompt('Account action');
-    if (decision === '3') {
-      console.log(
-        'Permanent deletion removes only empty personal workspaces and the identity. Any retained activity or grants blocks deletion.',
-      );
-      return { kind: 'delete', email };
-    }
-    if (decision === '1' || decision === '2')
-      return { kind: 'state', email, active: decision === '2' };
+    return { kind: 'delete', email };
   }
+  if (decision === '1' || decision === '2')
+    return { kind: 'state', email, active: decision === '2' };
   return null;
+};
+
+const collectors = new Map<string, Collector>([
+  ['2', collectCreate],
+  ['3', collectMemberAction('3')],
+  ['4', collectMemberAction('4')],
+  ['5', collectAccess],
+  ['6', collectRevoke],
+  ['7', collectAccountState],
+  ['8', collectMemberAction('8')],
+]);
+
+async function collectPlatformAction(
+  db: Database,
+  session: PlatformSession,
+  choice: string,
+): Promise<PlatformAction | null> {
+  return (await collectors.get(choice)?.(db, session)) ?? null;
 }
 
 export function runPlatformAccountManager(actor: string) {

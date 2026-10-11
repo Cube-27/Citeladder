@@ -377,6 +377,20 @@ async function endTerminal(
   return null;
 }
 
+/** A scheduled change takes effect when the provider reports its first period at the new price. */
+function effectiveTerms(sub: Subscription, event: SubscriptionEvidence) {
+  const terms = frozenTermsSchema.parse(sub.frozen_terms);
+  const change = sub.scheduled_change ? scheduledSchema.parse(sub.scheduled_change) : null;
+  if (
+    change &&
+    event.priceRef === change.terms.price_ref &&
+    event.start &&
+    event.start >= new Date(change.effective_at)
+  )
+    return { terms: change.terms, renewal: true };
+  return { terms, renewal: false };
+}
+
 export async function settleSubscription(
   db: Database,
   input: Subscription,
@@ -395,14 +409,7 @@ export async function settleSubscription(
   if (event.id !== sub.external_subscription_id) conflict('provider_reference_mismatch');
   if (event.version < sub.provider_state_version) return;
   if (!sub.is_current && sub.ended_at) return;
-  let terms = frozenTermsSchema.parse(sub.frozen_terms);
-  const change = sub.scheduled_change ? scheduledSchema.parse(sub.scheduled_change) : null;
-  const renewal =
-    change &&
-    event.priceRef === change.terms.price_ref &&
-    event.start &&
-    event.start >= new Date(change.effective_at);
-  if (renewal) terms = change.terms;
+  const { terms, renewal } = effectiveTerms(sub, event);
   if (event.priceRef !== terms.price_ref) conflict('price_ref_mismatch');
   if (event.payment)
     await settlePeriod(db, sub, event, event.payment, { pending, terms, workspaceId });

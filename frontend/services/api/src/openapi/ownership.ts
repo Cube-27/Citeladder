@@ -9,13 +9,15 @@ export type OwnershipInputs = {
   document: OpenApiDocument;
 };
 
-export function routeOwnershipFailures(inputs: OwnershipInputs): string[] {
-  const failures: string[] = [];
+function declaredFamilies(families: readonly string[], failures: string[]) {
   const declared = new Set<string>();
-  for (const family of inputs.families) {
+  for (const family of families) {
     if (declared.has(family)) failures.push(`'${family}' is listed more than once`);
     declared.add(family);
   }
+  return declared;
+}
+function servedFamilies(inputs: OwnershipInputs, declared: Set<string>, failures: string[]) {
   const served = new Set<string>();
   for (const [path, item] of Object.entries(inputs.document.paths)) {
     if (!inputs.prefixes.some((prefix) => path === prefix || path.startsWith(`${prefix}/`)))
@@ -31,6 +33,13 @@ export function routeOwnershipFailures(inputs: OwnershipInputs): string[] {
         failures.push(`${method.toUpperCase()} ${path} serves '${family}', which is not a family`);
     }
   }
+  return served;
+}
+
+export function routeOwnershipFailures(inputs: OwnershipInputs): string[] {
+  const failures: string[] = [];
+  const declared = declaredFamilies(inputs.families, failures);
+  const served = servedFamilies(inputs, declared, failures);
   for (const family of declared)
     if (!served.has(family)) failures.push(`'${family}' has no declared route`);
   return failures;

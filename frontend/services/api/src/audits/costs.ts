@@ -51,15 +51,14 @@ export function expectedCost(route: RouteIdentity, retrieval: boolean) {
   const token = estimate?.token_cost_microusd ?? null;
   const fee = retrieval ? (estimate?.search_fee_microusd ?? null) : null;
   const searches = retrieval ? (estimate?.expected_searches ?? null) : null;
+  const complete = token !== null && (!retrieval || (fee !== null && searches !== null));
+  const searchCost = retrieval ? fee! * searches! : 0;
   return {
     token_cost_microusd: token,
     search_fee_microusd: fee,
     expected_searches: searches,
-    complete: token !== null && (!retrieval || (fee !== null && searches !== null)),
-    total_microusd:
-      token !== null && (!retrieval || (fee !== null && searches !== null))
-        ? token + (retrieval ? fee! * searches! : 0)
-        : null,
+    complete,
+    total_microusd: complete ? token! + searchCost : null,
   };
 }
 type CostStatus = 'complete' | 'partial' | 'unknown';
@@ -141,12 +140,10 @@ export function projectCost(usage: unknown, pricing: RateCard) {
       ? knownTotal(applicable)
       : null;
   const total = count('total_tokens') ?? knownTotal([uncached, cached, output, reasoning]);
-  const status =
-    projected !== null
-      ? 'complete'
-      : [total, reported, ...counts, ...lineCosts].some((value) => value !== null)
-        ? 'partial'
-        : 'unknown';
+  const anyKnown = [total, reported, ...counts, ...lineCosts].some((value) => value !== null);
+  let status: CostStatus = 'unknown';
+  if (projected !== null) status = 'complete';
+  else if (anyKnown) status = 'partial';
   return {
     projection_status: status,
     uncached_input_tokens: uncached,

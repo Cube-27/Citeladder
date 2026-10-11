@@ -59,7 +59,10 @@ export const outputPayloadSchema = z
     format_id: z.string().nullish(),
   })
   .strict();
-type OutputBounds = Pick<typeof agentPolicy, 'output_title_max_chars' | 'output_body_max_chars'>;
+export type OutputBounds = Pick<
+  typeof agentPolicy,
+  'output_title_max_chars' | 'output_body_max_chars'
+>;
 export function outputSchema(bounds: OutputBounds = agentPolicy) {
   return outputPayloadSchema.extend({
     title: z.string().trim().min(1).max(bounds.output_title_max_chars),
@@ -161,12 +164,7 @@ export function parseStep(
     );
   const value = parsed.data;
   const allowed = spec.skillIds ?? (skills ? [...skills.keys()] : undefined);
-  if (value.skill_id && allowed && !allowed.includes(value.skill_id))
-    throw new AgentProtocolError(
-      spec.skillIds?.length
-        ? `Set skill_id to null or one of: ${spec.skillIds.join(', ')}. Do not use a label or output kind as skill_id.`
-        : 'Set skill_id to null on this step.',
-    );
+  assertAllowedSkill(value.skill_id, allowed, spec);
   const skill = value.skill_id ? { skillId: value.skill_id } : {};
   if (value.action === 'use_skill' && value.skill_id)
     return { action: value.action, skillId: value.skill_id };
@@ -186,6 +184,18 @@ export function parseStep(
     };
   throw new AgentProtocolError(
     'For use_skill, provide skill_id. For call_tool, provide a nonblank tool name and arguments_json. For respond, provide a nonblank reply.',
+  );
+}
+function assertAllowedSkill(
+  skillId: string | null | undefined,
+  allowed: readonly string[] | undefined,
+  spec: StepSpec,
+) {
+  if (!skillId || !allowed || allowed.includes(skillId)) return;
+  throw new AgentProtocolError(
+    spec.skillIds?.length
+      ? `Set skill_id to null or one of: ${spec.skillIds.join(', ')}. Do not use a label or output kind as skill_id.`
+      : 'Set skill_id to null on this step.',
   );
 }
 function decodeArguments(text: string | null | undefined): Record<string, Json> {

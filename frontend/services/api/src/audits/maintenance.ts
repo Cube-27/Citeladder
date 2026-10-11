@@ -12,13 +12,13 @@ import { auditEvent, transitionAudit } from './state.ts';
 
 const batchSize = auditPolicy.constants.audit_lease_sweep_batch_size;
 type Parent = { workspaceId: string; auditId: string };
+function expiredLeaseStatus(uncertain: boolean, failed: boolean, auditStatus: string) {
+  if (uncertain) return 'submission_uncertain';
+  if (!failed) return 'retry_wait';
+  return auditStatus === 'cancelled' ? 'cancelled' : 'failed';
+}
 /** Evidence may be committed before its separate queue transition; repair the gap. */
-export async function repairOwnedCompletion(
-  db: Database,
-  claimed: AuditTask,
-  owner: string,
-  at: Date,
-) {
+export function repairOwnedCompletion(db: Database, claimed: AuditTask, owner: string, at: Date) {
   return db.transaction().execute(async (trx) => {
     const locked = await ownedAuditTask(trx, claimed, owner);
     if (!locked) return false;
@@ -183,13 +183,7 @@ export class AuditMaintenance {
         await trx
           .updateTable('audit_tasks')
           .set({
-            status: uncertain
-              ? 'submission_uncertain'
-              : failed
-                ? audit.status === 'cancelled'
-                  ? 'cancelled'
-                  : 'failed'
-                : 'retry_wait',
+            status: expiredLeaseStatus(uncertain, failed, audit.status),
             attempt_count: attempts,
             available_at: at,
             lease_owner: null,

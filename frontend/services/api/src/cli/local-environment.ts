@@ -21,7 +21,8 @@ export function localEnvironment(env: NodeJS.ProcessEnv = process.env) {
     ].every((key) => values[key])
   ) {
     const host = values.POSTGRES_HOST!;
-    values.DATABASE_URL = `postgresql://${encodeURIComponent(values.POSTGRES_USER!)}:${encodeURIComponent(values.POSTGRES_PASSWORD!)}@${host.includes(':') ? `[${host}]` : host}:${values.POSTGRES_HOST_PORT}/${encodeURIComponent(values.POSTGRES_DB!)}`;
+    const hostname = host.includes(':') ? `[${host}]` : host;
+    values.DATABASE_URL = `postgresql://${encodeURIComponent(values.POSTGRES_USER!)}:${encodeURIComponent(values.POSTGRES_PASSWORD!)}@${hostname}:${values.POSTGRES_HOST_PORT}/${encodeURIComponent(values.POSTGRES_DB!)}`;
   }
   values.CITELADDER_DISABLE_DOTENV = '1';
   return values;

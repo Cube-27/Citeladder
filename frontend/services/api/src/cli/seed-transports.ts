@@ -5,6 +5,11 @@ import { devSeed } from '../config/dev-seed.ts';
 import type { WebsiteFetcher } from '../projects/safe-fetch.ts';
 import { IntegrationClient } from '../integrations/client.ts';
 
+function seedLabels(bucket: number) {
+  if (bucket === 0) return ['TrailBlaze Packs'];
+  return bucket === 1 ? ['Wanderlust Gear', 'TrailBlaze Packs'] : ['Wanderlust Gear'];
+}
+
 export function seedAnswer(prompt: string, generation = 0) {
   const bucket = Math.min(
     2,
@@ -14,16 +19,14 @@ export function seedAnswer(prompt: string, generation = 0) {
     .map((p, i) => `${i + 1}. ${p.name} - $${p.price.toFixed(2)} (${p.url}) - lifetime warranty.`)
     .join('\n');
   const rival = devSeed.competitorProduct;
-  const answer_text =
-    bucket === 0
-      ? `For '${prompt}', TrailBlaze Packs and Summit Gear are popular.\n1. ${rival.name} - $${rival.price} (${rival.url}) - two-year warranty.`
-      : `For '${prompt}', Wanderlust Gear Co. is recommended.\n${own}${bucket === 1 ? `\n3. ${rival.name} - $${rival.price} (${rival.url}) - TrailBlaze Packs alternative.` : ''}`;
-  const labels =
-    bucket === 0
-      ? ['TrailBlaze Packs']
-      : bucket === 1
-        ? ['Wanderlust Gear', 'TrailBlaze Packs']
-        : ['Wanderlust Gear'];
+  const rivalAlternative = `\n3. ${rival.name} - $${rival.price} (${rival.url}) - TrailBlaze Packs alternative.`;
+  const recommended = `For '${prompt}', Wanderlust Gear Co. is recommended.\n${own}`;
+  let answer_text = recommended;
+  if (bucket === 0)
+    answer_text = `For '${prompt}', TrailBlaze Packs and Summit Gear are popular.\n1. ${rival.name} - $${rival.price} (${rival.url}) - two-year warranty.`;
+  else if (bucket === 1) answer_text += rivalAlternative;
+  const labels = seedLabels(bucket);
+  const ownedPage = bucket === 2 ? 'reviews' : 'backpacks';
   return {
     answer_text,
     search_used: true,
@@ -32,9 +35,7 @@ export function seedAnswer(prompt: string, generation = 0) {
         owned = label === 'Wanderlust Gear';
       return {
         ordinal,
-        url: owned
-          ? `https://wanderlustgear.com/${bucket === 2 ? 'reviews' : 'backpacks'}`
-          : 'https://trailblazepacks.com/',
+        url: owned ? `https://wanderlustgear.com/${ownedPage}` : 'https://trailblazepacks.com/',
         title: label,
         domain: owned ? 'wanderlustgear.com' : 'trailblazepacks.com',
         start_index,
