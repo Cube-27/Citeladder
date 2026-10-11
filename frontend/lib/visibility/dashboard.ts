@@ -21,7 +21,10 @@ import type {
 } from '@/lib/api/types';
 
 /** Audit statuses that carry a dashboard-ready metric snapshot (B6). */
-const DASHBOARD_STATUSES: readonly AuditStatus[] = ['completed', 'partially_completed'];
+const DASHBOARD_STATUSES: ReadonlySet<AuditStatus> = new Set<AuditStatus>([
+  'completed',
+  'partially_completed',
+]);
 
 /**
  * The Visibility workspace tabs, in display order. `trends` is the default.
@@ -81,7 +84,7 @@ export type RunOption = {
 
 /** Is this a status the dashboard projection can be built from? */
 export function isDashboardStatus(status: AuditStatus): boolean {
-  return DASHBOARD_STATUSES.includes(status);
+  return DASHBOARD_STATUSES.has(status);
 }
 
 /**

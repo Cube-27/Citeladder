@@ -111,6 +111,8 @@ describe('siteHealthEntitlementSchema (quota authority)', () => {
 
 describe('crawl admission and URL preview', () => {
   beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
+  afterEach(() => mswServer.resetHandlers());
+  afterAll(() => mswServer.close());
   it('starts execution in the creating workspace without holding up crawl admission', async () => {
     let release!: () => void;
     const pending = new Promise<void>((resolve) => {
@@ -134,8 +136,6 @@ describe('crawl admission and URL preview', () => {
       release();
     }
   });
-  afterEach(() => mswServer.resetHandlers());
-  afterAll(() => mswServer.close());
   it('uses the same-origin preview endpoint and preserves exclusion reasons', async () => {
     mswServer.use(
       http.post('/api/v1/site-crawls/url-preview', async ({ request }) => {

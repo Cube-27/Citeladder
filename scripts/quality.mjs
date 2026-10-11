@@ -60,11 +60,13 @@ function changedScopes() {
   return new Set(['frontend', 'contract', 'api'].filter((owner) => owners[owner]));
 }
 
-const scopes = requestedScopes.includes('all')
-  ? new Set(['frontend', 'contract', 'api'])
-  : requestedScopes.includes('changed')
-    ? changedScopes()
-    : new Set(requestedScopes);
+function resolveScopes() {
+  if (requestedScopes.includes('all')) return new Set(['frontend', 'contract', 'api']);
+  if (requestedScopes.includes('changed')) return changedScopes();
+  return new Set(requestedScopes);
+}
+
+const scopes = resolveScopes();
 
 if (scopes.size === 0) {
   process.stdout.write('\nNo affected quality owners for the current working diff.\n');

@@ -1,7 +1,7 @@
 /** Characters browsers may reinterpret or strip while parsing a destination. */
 export function hasUnsafeUrlCharacters(value: string): boolean {
   return Array.from(value).some((character) => {
-    const code = character.charCodeAt(0);
+    const code = character.codePointAt(0)!;
     return code < 32 || code === 127 || character === '\\';
   });
 }

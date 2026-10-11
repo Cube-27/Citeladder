@@ -130,7 +130,8 @@ function main() {
 
   console.log(lines.join('\n'));
   if (failures.length > 0) {
-    console.error(`\nBundle budget exceeded:\n${failures.map((line) => `  - ${line}`).join('\n')}`);
+    const failureList = failures.map((line) => `  - ${line}`).join('\n');
+    console.error(`\nBundle budget exceeded:\n${failureList}`);
     console.error(
       `\nShed the bytes, or raise the limit in ${POLICY_REPOSITORY_PATH} with a measurement in the PR saying what they buy.`,
     );

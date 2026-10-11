@@ -5,7 +5,7 @@ export function readCsvFileText(file: File): Promise<string> {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result ?? ''));
-    reader.onerror = () => reject(reader.error);
+    reader.onerror = () => reject(reader.error ?? new Error('Could not read file'));
     reader.readAsText(file);
   });
 }

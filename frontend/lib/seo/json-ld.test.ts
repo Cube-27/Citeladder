@@ -5,9 +5,18 @@ import { toBlogPostSummary } from '@/lib/marketing-content/blog-index';
 import {
   blogIndexJsonLd,
   organizationJsonLd,
+  serializeJsonLd,
   softwareApplicationJsonLd,
   websiteJsonLd,
 } from './json-ld';
+
+describe('serializeJsonLd', () => {
+  it('escapes every < so a value cannot close its script element', () => {
+    expect(serializeJsonLd({ name: 'a</script><b' })).toBe(
+      String.raw`{"name":"a\u003c/script>\u003cb"}`,
+    );
+  });
+});
 
 const ORIGINAL = process.env.PUBLIC_WEBSITE_ORIGIN;
 

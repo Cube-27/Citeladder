@@ -37,7 +37,9 @@ export function presenceLine(presence: AdPresence): string {
 /** The landing page as host and path; the query string never reaches the read. */
 export function landingLabel(url: string): string {
   const parsed = parseAbsoluteHttpUrl(url);
-  return parsed ? `${parsed.host}${parsed.pathname === '/' ? '' : parsed.pathname}` : url;
+  if (!parsed) return url;
+  const path = parsed.pathname === '/' ? '' : parsed.pathname;
+  return `${parsed.host}${path}`;
 }
 
 /** The heading and sentence for a read that has no ads to show. */

@@ -114,7 +114,7 @@ function consumePlainCharacter(state: CsvState, text: string, index: number): nu
 
 /** Tokenize CSV text into a matrix of string cells (RFC-4180-ish). */
 export function tokenizeCsv(raw: string): string[][] {
-  const text = raw.charCodeAt(0) === 0xfeff ? raw.slice(1) : raw;
+  const text = raw.codePointAt(0) === 0xfeff ? raw.slice(1) : raw;
   const state: CsvState = { rows: [], field: '', row: [], inQuotes: false };
 
   for (let index = 0; index < text.length; index += 1) {

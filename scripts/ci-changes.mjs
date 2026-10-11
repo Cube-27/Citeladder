@@ -295,7 +295,7 @@ async function previousRunIsTrusted(environment) {
   if (!runsResponse.ok) throw new Error(`workflow-runs query returned ${runsResponse.status}`);
   const runs = await runsResponse.json();
   const previous = runs.workflow_runs.find((run) => run.head_sha === environment.CI_BEFORE_SHA);
-  if (!previous || previous.status !== 'completed') return false;
+  if (previous?.status !== 'completed') return false;
 
   const jobsResponse = await fetch(
     `https://api.github.com/repos/${repository}/actions/runs/${previous.id}/jobs?per_page=100`,

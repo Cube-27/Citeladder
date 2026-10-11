@@ -62,8 +62,8 @@ export function usePromptSet() {
     },
   });
 
-  const ensurePromptSet = useCallback(async (): Promise<PromptSet> => {
-    if (promptSet) return promptSet;
+  const ensurePromptSet = useCallback((): Promise<PromptSet> => {
+    if (promptSet) return Promise.resolve(promptSet);
     return createMutation.mutateAsync();
   }, [promptSet, createMutation]);
 

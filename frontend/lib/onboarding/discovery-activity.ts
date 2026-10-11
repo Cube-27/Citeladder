@@ -36,6 +36,12 @@ function stepState(index: number, current: number): ActivityStep['state'] {
   return 'active';
 }
 
+function openingLabel(discovery: BrandDiscovery | undefined, current: number): string {
+  if (!discovery) return 'Loading research progress';
+  if (discovery.status === 'queued') return 'Waiting to start website research';
+  return current > 0 ? 'Opened your website' : 'Opening your website';
+}
+
 /**
  * Convert persisted discovery facts into customer language. Unknown backend
  * details never become a copy fallback; adding a phase must be handled here.
@@ -44,13 +50,7 @@ export function discoveryActivity(discovery: BrandDiscovery | undefined): Activi
   const current = currentStep(discovery);
   const progress = discovery?.progress;
   const labels = [
-    !discovery
-      ? 'Loading research progress'
-      : discovery.status === 'queued'
-        ? 'Waiting to start website research'
-        : current > 0
-          ? 'Opened your website'
-          : 'Opening your website',
+    openingLabel(discovery, current),
     'Reading what you offer',
     current > 2 ? 'Found comparable brands' : 'Finding comparable brands',
     current > 3 ? 'Prepared your review' : 'Preparing your review',
