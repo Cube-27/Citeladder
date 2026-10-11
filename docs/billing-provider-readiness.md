@@ -2,8 +2,9 @@
 
 Runtime/configuration owner updated on 2 October 2026; provider acceptance is unchanged.
 
-**Payments are not enabled.** `BILLING_CHECKOUT_ENABLED` and
-`BILLING_RAZORPAY_LIVE_READY` are false and no real payment has been taken.
+**Payments are not enabled.** `BILLING_RAZORPAY_LIVE_READY` is false,
+`BILLING_CHECKOUT_AUDIENCE` keeps checkout to allow-listed workspaces, and no
+real payment has been taken.
 Nothing in this repository has been verified against a live payment network.
 
 ## Razorpay: approved, being activated
@@ -44,23 +45,47 @@ and billing reads consume persisted state without provider calls.
 Provider-independent execution, tax/seller and operator policy lives in
 `frontend/services/api/src/config/billing.json`:
 
-- `BILLING_CHECKOUT_ENABLED` — the operational kill switch.
+- `BILLING_CHECKOUT_ENABLED` — the operational kill switch (default `false`).
+- `BILLING_CHECKOUT_AUDIENCE` — `allow_list` (default) sells only to
+  workspaces holding the non-public `billing_checkout` grant; `everyone` opens
+  checkout. Test keys in production serve allow-listed workspaces only.
 - `BILLING_CHECKOUT_PROVIDER` — which provider identity admits NEW checkout.
   An identity with no registered, configured adapter makes new checkout
   unavailable; it never falls back to another provider.
-- `BILLING_QUOTE_SIGNING_SECRET` — independent, with no gateway fallback.
+- `BILLING_QUOTE_SIGNING_SECRET` — independent, with no gateway fallback;
+  checkout is unavailable when it is empty or equals a Razorpay secret.
 - `BILLING_INDIA_GST_RATE` and `BILLING_INDIA_GST_APPROVAL_REFERENCE` —
-  required together; there is no source default.
-- the seller identity, the HTTP pool, and the sweep bounds.
+  required together to author India prices; there is no source default. The
+  rate is frozen with each India catalog price, and quotes use that.
+- the seller identity (legal name, address, email, GSTIN and state default to
+  the recorded values; `BILLING_SELLER_SAC` and `BILLING_SELLER_LUT_REFERENCE`
+  are owner inputs), the invoice prefix and the HTTP timeout.
+- `BILLING_CANCELLATION_SEND_LEAD_SECONDS` — how long before renewal a held
+  cancellation is sent to the provider (default two days).
+- `BILLING_FUNDED_MONTHLY_BUDGET_MINOR` — the managed-plan monthly platform
+  spend ceiling.
+- the trial length and purge, quote validity, subscription cycles, and the
+  reconciliation and webhook bounds.
 
 Commercial terms (prices, grants, add-ons and top-ups) are never
 environment settings: they live in the published `BillingCatalogRevision`.
 The contact-sales display URL is configured by `BILLING_CONTACT_SALES_URL`.
 
-Razorpay-owned (native `config/billing.json` and shared operator credentials in
-`frontend/services/api/src/config/billing.json`): `BILLING_RAZORPAY_MODE`,
-`BILLING_RAZORPAY_KEY_ID`, `BILLING_RAZORPAY_KEY_SECRET`,
-`BILLING_RAZORPAY_WEBHOOK_SECRET`, the readiness flags and the fixed API origin.
+Razorpay-owned settings, in the same file: `BILLING_RAZORPAY_MODE`
+(`disabled`, `test` or `live`), `BILLING_RAZORPAY_KEY_ID`,
+`BILLING_RAZORPAY_KEY_SECRET`, `BILLING_RAZORPAY_WEBHOOK_SECRET`, the
+rotation-only `BILLING_RAZORPAY_WEBHOOK_PREVIOUS_SECRET` with its
+`…_STARTED_AT`/`…_EXPIRES_AT` window, the fixed API origin, and the readiness
+flags: `BILLING_RAZORPAY_TEST_READY`, `BILLING_RAZORPAY_TEST_INTERNATIONAL_READY`
+and `BILLING_RAZORPAY_TEST_INDIA_READY` in test mode,
+`BILLING_RAZORPAY_LIVE_READY` and `BILLING_RAZORPAY_INTERNATIONAL_READY` in
+live mode (the live INR route needs no regional flag). Managed plans measure on
+the platform credentials in `frontend/services/api/src/config/providers.json`:
+`PROVIDER_PLATFORM_<TRANSPORT>_CREDENTIAL_REF` with
+`PROVIDER_PLATFORM_<TRANSPORT>_API_KEY` for OpenAI, Google and Anthropic, and
+`DATAFORSEO_PLATFORM_CREDENTIAL_REF` with the `DATAFORSEO_API_*` pair. The
+[GCP runbook](operations/GCP_RUNBOOK.md#13-github-gcp-demo-environment-variables)
+lists where production sets each one.
 
 ## Adding another provider
 

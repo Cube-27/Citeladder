@@ -70,7 +70,10 @@ async function importBound(db: Database, values: Values, payload: unknown) {
   console.log(
     JSON.stringify(await catalogMutation(db, context, { kind: 'import', revision, payload })),
   );
-  if (values.publish)
+  // A dry run rolls the import back, so there is no draft yet to publish.
+  if (values.publish && !context.apply)
+    console.log('publish runs only with --apply, after the import commits');
+  else if (values.publish)
     console.log(
       JSON.stringify(
         await catalogMutation(

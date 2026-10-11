@@ -495,9 +495,14 @@ commercial evidence; use only an explicitly authorized target.
 
 Platform provider provisioning stores only each non-secret opaque reference.
 At execution, that reference must exactly match the corresponding
-`PROVIDER_PLATFORM_<TRANSPORT>_CREDENTIAL_REF`; the deployment secret manager
-injects the key into `PROVIDER_PLATFORM_<TRANSPORT>_API_KEY`. Never pass a raw
-provider key to the provisioning command. Creation and credential rotation
+`PROVIDER_PLATFORM_<TRANSPORT>_CREDENTIAL_REF` (for DataForSEO,
+`DATAFORSEO_PLATFORM_CREDENTIAL_REF`), and the key comes from
+`PROVIDER_PLATFORM_<TRANSPORT>_API_KEY` (DataForSEO: the `DATAFORSEO_API_*`
+pair). In production the deploy workflow sets the references from `gcp-demo`
+environment variables and copies the OpenAI, Google and Anthropic keys from
+environment secrets into optional Secret Manager secrets
+([GCP runbook](operations/GCP_RUNBOOK.md#13-github-gcp-demo-environment-variables)).
+Never pass a raw provider key to the provisioning command. Creation and credential rotation
 leave probe status unverified; this metadata command does not establish route
 readiness. Admission remains closed until a successful provider test is recorded.
 
