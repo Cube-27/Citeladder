@@ -32,6 +32,7 @@ import { queryKeys } from '@/lib/api/query-keys';
 import type { Project, Workspace } from '@/lib/api/types';
 import { getBootstrapReadTimeoutMs } from '@/lib/config/operational';
 import { projectDestination, workspaceDestination } from '@/lib/navigation/project-destination';
+import { routePath } from '@/lib/navigation/route-path';
 import {
   readStoredActiveProjectId,
   readStoredActiveWorkspaceId,
@@ -198,7 +199,7 @@ function readWorkspaceState(client: QueryClient, workspaceId: string, pathname: 
           }),
       }),
     ),
-    pathname.replace(/\/+$/u, '').toLowerCase() === '/invitations/accept'
+    routePath(pathname) === '/invitations/accept'
       ? null
       : settle(
           client.ensureQueryData({
