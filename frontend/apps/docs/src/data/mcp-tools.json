@@ -1,6 +1,5 @@
 {
   "server_version": "2.0.0",
-  "access": "read_only",
   "tools": [
     {
       "name": "fetch",
@@ -16,7 +15,7 @@
         "required": ["id"],
         "additionalProperties": false
       },
-      "read_only": true
+      "access": "read"
     },
     {
       "name": "get_project_business_context",
@@ -53,7 +52,7 @@
         "required": ["project_id"],
         "additionalProperties": false
       },
-      "read_only": true
+      "access": "read"
     },
     {
       "name": "list_projects",
@@ -73,7 +72,7 @@
         },
         "additionalProperties": false
       },
-      "read_only": true
+      "access": "read"
     },
     {
       "name": "open_analytics",
@@ -84,7 +83,7 @@
         "properties": {},
         "additionalProperties": false
       },
-      "read_only": true
+      "access": "read"
     },
     {
       "name": "read_actions",
@@ -117,7 +116,7 @@
         "required": ["project_id"],
         "additionalProperties": false
       },
-      "read_only": true
+      "access": "read"
     },
     {
       "name": "read_ai_ads",
@@ -166,7 +165,7 @@
         "required": ["project_id"],
         "additionalProperties": false
       },
-      "read_only": true
+      "access": "read"
     },
     {
       "name": "read_ai_crawlability",
@@ -187,7 +186,7 @@
         "required": ["project_id"],
         "additionalProperties": false
       },
-      "read_only": true
+      "access": "read"
     },
     {
       "name": "read_ai_referrals",
@@ -206,19 +205,17 @@
           },
           "start_date": {
             "type": "string",
-            "format": "date",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+            "format": "date"
           },
           "end_date": {
             "type": "string",
-            "format": "date",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+            "format": "date"
           }
         },
         "required": ["project_id"],
         "additionalProperties": false
       },
-      "read_only": true
+      "access": "read"
     },
     {
       "name": "read_ai_shelf",
@@ -243,7 +240,7 @@
         "required": ["project_id"],
         "additionalProperties": false
       },
-      "read_only": true
+      "access": "read"
     },
     {
       "name": "read_ai_traffic_insights",
@@ -262,19 +259,17 @@
           },
           "start_date": {
             "type": "string",
-            "format": "date",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+            "format": "date"
           },
           "end_date": {
             "type": "string",
-            "format": "date",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+            "format": "date"
           }
         },
         "required": ["project_id"],
         "additionalProperties": false
       },
-      "read_only": true
+      "access": "read"
     },
     {
       "name": "read_ai_traffic_pages",
@@ -293,13 +288,11 @@
           },
           "start_date": {
             "type": "string",
-            "format": "date",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+            "format": "date"
           },
           "end_date": {
             "type": "string",
-            "format": "date",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+            "format": "date"
           },
           "folder": {
             "type": "string",
@@ -335,7 +328,7 @@
         "required": ["project_id"],
         "additionalProperties": false
       },
-      "read_only": true
+      "access": "read"
     },
     {
       "name": "read_ai_traffic_url",
@@ -359,19 +352,17 @@
           },
           "start_date": {
             "type": "string",
-            "format": "date",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+            "format": "date"
           },
           "end_date": {
             "type": "string",
-            "format": "date",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+            "format": "date"
           }
         },
         "required": ["project_id", "url"],
         "additionalProperties": false
       },
-      "read_only": true
+      "access": "read"
     },
     {
       "name": "read_content_differentiation",
@@ -388,7 +379,7 @@
         "required": ["project_id"],
         "additionalProperties": false
       },
-      "read_only": true
+      "access": "read"
     },
     {
       "name": "read_crawl_logs",
@@ -412,13 +403,11 @@
           },
           "start_date": {
             "type": "string",
-            "format": "date",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+            "format": "date"
           },
           "end_date": {
             "type": "string",
-            "format": "date",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+            "format": "date"
           },
           "verification": {
             "type": "string",
@@ -452,7 +441,7 @@
         "required": ["project_id"],
         "additionalProperties": false
       },
-      "read_only": true
+      "access": "read"
     },
     {
       "name": "read_demand",
@@ -469,7 +458,7 @@
         "required": ["project_id"],
         "additionalProperties": false
       },
-      "read_only": true
+      "access": "read"
     },
     {
       "name": "read_fact_checks",
@@ -540,7 +529,7 @@
         "required": ["project_id"],
         "additionalProperties": false
       },
-      "read_only": true
+      "access": "read"
     },
     {
       "name": "read_integration_status",
@@ -557,7 +546,7 @@
         "required": ["project_id"],
         "additionalProperties": false
       },
-      "read_only": true
+      "access": "read"
     },
     {
       "name": "read_perception",
@@ -641,7 +630,7 @@
         "required": ["project_id"],
         "additionalProperties": false
       },
-      "read_only": true
+      "access": "read"
     },
     {
       "name": "read_performance",
@@ -660,13 +649,11 @@
           },
           "start_date": {
             "type": "string",
-            "format": "date",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+            "format": "date"
           },
           "end_date": {
             "type": "string",
-            "format": "date",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+            "format": "date"
           },
           "granularity": {
             "type": "string",
@@ -678,13 +665,11 @@
           },
           "compare_start_date": {
             "type": "string",
-            "format": "date",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+            "format": "date"
           },
           "compare_end_date": {
             "type": "string",
-            "format": "date",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+            "format": "date"
           },
           "dimension": {
             "type": "string",
@@ -713,7 +698,7 @@
         "required": ["project_id"],
         "additionalProperties": false
       },
-      "read_only": true
+      "access": "read"
     },
     {
       "name": "read_prompt_portfolio",
@@ -750,7 +735,7 @@
         "required": ["project_id"],
         "additionalProperties": false
       },
-      "read_only": true
+      "access": "read"
     },
     {
       "name": "read_query_evidence",
@@ -765,13 +750,11 @@
           },
           "window_start": {
             "type": "string",
-            "format": "date",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+            "format": "date"
           },
           "window_end": {
             "type": "string",
-            "format": "date",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+            "format": "date"
           },
           "query": {
             "type": ["string", "null"]
@@ -795,7 +778,7 @@
         "required": ["project_id", "window_start", "window_end"],
         "additionalProperties": false
       },
-      "read_only": true
+      "access": "read"
     },
     {
       "name": "read_search_dataset",
@@ -832,7 +815,7 @@
         "required": ["project_id", "dataset_id"],
         "additionalProperties": false
       },
-      "read_only": true
+      "access": "read"
     },
     {
       "name": "read_search_intelligence",
@@ -849,7 +832,7 @@
         "required": ["project_id"],
         "additionalProperties": false
       },
-      "read_only": true
+      "access": "read"
     },
     {
       "name": "read_site_health",
@@ -870,7 +853,7 @@
         "required": ["project_id"],
         "additionalProperties": false
       },
-      "read_only": true
+      "access": "read"
     },
     {
       "name": "read_site_links",
@@ -903,7 +886,7 @@
         "required": ["project_id"],
         "additionalProperties": false
       },
-      "read_only": true
+      "access": "read"
     },
     {
       "name": "read_site_pages",
@@ -938,7 +921,7 @@
         "required": ["project_id"],
         "additionalProperties": false
       },
-      "read_only": true
+      "access": "read"
     },
     {
       "name": "read_source_url",
@@ -984,7 +967,7 @@
         "required": ["project_id", "url"],
         "additionalProperties": false
       },
-      "read_only": true
+      "access": "read"
     },
     {
       "name": "read_visibility_overview",
@@ -1029,7 +1012,7 @@
         "required": ["project_id"],
         "additionalProperties": false
       },
-      "read_only": true
+      "access": "read"
     },
     {
       "name": "read_visibility_results",
@@ -1087,7 +1070,7 @@
         "required": ["project_id", "audit_id"],
         "additionalProperties": false
       },
-      "read_only": true
+      "access": "read"
     },
     {
       "name": "read_visibility_sources",
@@ -1142,7 +1125,7 @@
         "required": ["project_id", "audit_id"],
         "additionalProperties": false
       },
-      "read_only": true
+      "access": "read"
     },
     {
       "name": "read_visibility_trends",
@@ -1161,13 +1144,11 @@
           },
           "from_at": {
             "type": "string",
-            "format": "date-time",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+            "format": "date-time"
           },
           "to_at": {
             "type": "string",
-            "format": "date-time",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+            "format": "date-time"
           },
           "engine": {
             "type": "string",
@@ -1201,7 +1182,7 @@
         "required": ["project_id", "from_at", "to_at"],
         "additionalProperties": false
       },
-      "read_only": true
+      "access": "read"
     },
     {
       "name": "render_site_health",
@@ -1222,7 +1203,7 @@
         "required": ["project_id"],
         "additionalProperties": false
       },
-      "read_only": true
+      "access": "read"
     },
     {
       "name": "render_visibility",
@@ -1259,13 +1240,11 @@
           },
           "from_at": {
             "type": "string",
-            "format": "date-time",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+            "format": "date-time"
           },
           "to_at": {
             "type": "string",
-            "format": "date-time",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+            "format": "date-time"
           },
           "transport_model": {
             "type": "string",
@@ -1303,7 +1282,7 @@
         "required": ["project_id"],
         "additionalProperties": false
       },
-      "read_only": true
+      "access": "read"
     },
     {
       "name": "search",
@@ -1330,7 +1309,416 @@
         "required": ["query"],
         "additionalProperties": false
       },
-      "read_only": true
+      "access": "read"
+    },
+    {
+      "name": "add_competitor",
+      "title": "Add a competitor",
+      "description": "Track one more competitor in AI answers. Runs at once.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "aliases": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 1024
+            }
+          },
+          "domains": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 1024
+            }
+          },
+          "project_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": ["name", "project_id"],
+        "additionalProperties": false
+      },
+      "access": "write"
+    },
+    {
+      "name": "cancel_audit",
+      "title": "Cancel an audit",
+      "description": "Stop a queued or running audit. Runs at once and cannot be undone; results so far are kept.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "audit_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": ["project_id", "audit_id"],
+        "additionalProperties": false
+      },
+      "access": "write"
+    },
+    {
+      "name": "confirm_change",
+      "title": "Confirm a prepared change",
+      "description": "Make a change a prepare tool previewed. Call only after the user explicitly agreed to that preview in this conversation. A token works once, for ten minutes.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "confirmation_token": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          }
+        },
+        "required": ["confirmation_token"],
+        "additionalProperties": false
+      },
+      "access": "write"
+    },
+    {
+      "name": "create_topic",
+      "title": "Create a topic",
+      "description": "Add a topic to group prompts under. Runs at once.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 1024
+          }
+        },
+        "required": ["project_id", "name"],
+        "additionalProperties": false
+      },
+      "access": "write"
+    },
+    {
+      "name": "prepare_add_prompts",
+      "title": "Prepare to add prompts",
+      "description": "Preview adding 1–50 prompts to a prompt set: which can be added, which are dropped and why, and prompt slots after. Nothing changes until the user agrees and you call confirm_change; confirmed prompts are measured from the next audit.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "prompt_set_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "prompts": {
+            "minItems": 1,
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 300
+                },
+                "topic_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "intent": {
+                  "type": "string",
+                  "maxLength": 64
+                },
+                "cohort": {
+                  "type": "string",
+                  "enum": ["core", "brand_diagnostic", "comparison", "commerce"]
+                }
+              },
+              "required": ["text"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["project_id", "prompts"],
+        "additionalProperties": false
+      },
+      "access": "write"
+    },
+    {
+      "name": "prepare_archive_prompts",
+      "title": "Prepare to archive prompts",
+      "description": "Preview archiving tracked prompts so future audits stop measuring them; past results stay. Nothing changes until the user agrees and you call confirm_change.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "prompt_ids": {
+            "minItems": 1,
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": ["project_id", "prompt_ids"],
+        "additionalProperties": false
+      },
+      "access": "write"
+    },
+    {
+      "name": "prepare_declare_implemented",
+      "title": "Prepare to declare an Action implemented",
+      "description": "Preview declaring that the work of an open Action is done, so CiteLadder checks later evidence against it. Nothing changes until the user agrees and you call confirm_change.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "action_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "declared_implemented_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": ["project_id", "action_id"],
+        "additionalProperties": false
+      },
+      "access": "write"
+    },
+    {
+      "name": "prepare_launch_audit",
+      "title": "Prepare to launch an audit",
+      "description": "Preview launching an audit of a prompt set (or chosen prompts) on the given engines, with its estimated maximum audit credits. Pass market_ids (from the project context; null is the default market) to run one audit per market. Pass max_estimated_credits to cap it. Nothing runs until the user agrees and you call confirm_change.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "prompt_set_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "prompt_ids": {
+            "maxItems": 500,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "engines": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "chatgpt",
+                "gemini",
+                "claude",
+                "google_ai_overview",
+                "chatgpt_search",
+                "gemini_consumer"
+              ]
+            }
+          },
+          "repetitions": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10
+          },
+          "market_ids": {
+            "minItems": 1,
+            "maxItems": 11,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "max_estimated_credits": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": ["project_id", "engines"],
+        "additionalProperties": false
+      },
+      "access": "write"
+    },
+    {
+      "name": "prepare_schedule",
+      "title": "Prepare an audit schedule",
+      "description": "Preview a recurring audit schedule for a prompt set. Pass market_ids (from the project context; null is the default market) to run one audit per market. Each scheduled run uses audit credits. Nothing changes until the user agrees and you call confirm_change.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "prompt_set_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cadence": {
+            "type": "string",
+            "enum": ["one_time", "every_n_minutes", "hourly", "daily", "weekly"]
+          },
+          "engines": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "chatgpt",
+                "gemini",
+                "claude",
+                "google_ai_overview",
+                "chatgpt_search",
+                "gemini_consumer"
+              ]
+            }
+          },
+          "timezone": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "repetitions": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10
+          },
+          "interval_minutes": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "next_run_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "market_ids": {
+            "minItems": 1,
+            "maxItems": 11,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": ["project_id", "cadence", "engines"],
+        "additionalProperties": false
+      },
+      "access": "write"
+    },
+    {
+      "name": "rename_topic",
+      "title": "Rename a topic",
+      "description": "Rename one topic. Runs at once.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "topic_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "required": ["project_id", "topic_id", "name"],
+        "additionalProperties": false
+      },
+      "access": "write"
+    },
+    {
+      "name": "update_action_status",
+      "title": "Update an Action status",
+      "description": "Reopen or dismiss one Action. Runs at once.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "action_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["dismissed", "open"]
+          }
+        },
+        "required": ["project_id", "action_id", "status"],
+        "additionalProperties": false
+      },
+      "access": "write"
+    },
+    {
+      "name": "update_prompt_text",
+      "title": "Edit a prompt",
+      "description": "Replace the wording of one tracked prompt. Runs at once; earlier measurements keep the old wording.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "prompt_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          }
+        },
+        "required": ["project_id", "prompt_id", "text"],
+        "additionalProperties": false
+      },
+      "access": "write"
     }
   ]
 }

@@ -13,7 +13,7 @@ import type { Selectable } from 'kysely';
 import { z } from 'zod';
 
 import { policy } from '../config.ts';
-import type { Database } from '../db/database.ts';
+import { inTransaction, type Database } from '../db/database.ts';
 import { ApiError, notFound } from '../errors.ts';
 import type { Competitors } from '../generated/db-schema.ts';
 import type { ProjectScope } from './brand-profile.ts';
@@ -93,7 +93,7 @@ export function addCompetitor(
   scope: ProjectScope,
   input: z.output<typeof competitorCreate>,
 ): Promise<Competitor> {
-  return db.transaction().execute(async (trx) => {
+  return inTransaction(db, async (trx) => {
     await lockProject(trx, scope);
     const rows = await competitorsOf(trx, scope.projectId);
     refuseDuplicate(rows, input.name);

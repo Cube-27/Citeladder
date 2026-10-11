@@ -160,6 +160,13 @@ who created and scoped the key authorized that class of write. The key
 never exceeds its creator's current role, and the same command layer
 authorizes it as the browser ([Public API](public-api.md)).
 
+A write through MCP is an explicit user decision when the grant holds
+`citeladder:write` (the person ticked **Allow changes** at consent), the
+member's live role in the project's workspace allows it, and the change is
+either a bounded direct edit or was confirmed through `confirm_change` against
+the preview its prepare tool returned. Prompts added that way are active on
+confirmation. The in-app Agent stays read-only ([MCP](mcp.md#changes)).
+
 ## 11. Context is selected and inspectable
 
 Generative and agent tasks receive an authorized, task-specific bounded context

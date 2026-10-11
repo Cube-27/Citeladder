@@ -54,6 +54,9 @@ export const mcp = {
     consent_csp:
       "default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
     read_scope: 'citeladder:read',
+    // Changes are offered only when the person ticks Allow changes on consent.
+    write_scope: 'citeladder:write',
+    scopes_supported: ['citeladder:read', 'citeladder:write'],
     server_version: '2.0.0',
     documentation_url: 'https://docs.citeladder.com/mcp/',
     // Fixed production pages, like documentation_url: consent links them from every
@@ -92,6 +95,9 @@ export const mcp = {
     tool_call_window_seconds: 60,
     tool_call_grant_limit: 120,
     tool_call_user_limit: 600,
+    // Executed writes also spend this narrower per-grant budget, in the same window.
+    write_call_grant_limit: 30,
+    confirmation_ttl_seconds: 600,
     // Consumed codes outlive every grant they minted, so a late replay still revokes.
     protocol_retention_seconds: 15552000,
   },

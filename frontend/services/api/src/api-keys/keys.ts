@@ -6,7 +6,7 @@
  * stored, found by its public prefix and compared in constant time. A key
  * whose creator leaves the workspace is revoked in that transaction.
  */
-import { createHmac, randomInt, randomUUID, timingSafeEqual } from 'node:crypto';
+import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 
 import {
   apiKeySchema,
@@ -21,6 +21,7 @@ import type { z } from 'zod';
 
 import { recordSecurityEvent } from '../auth/security-events.ts';
 import { policy } from '../config.ts';
+import { base62, base62Length } from '../crypto-text.ts';
 import type { Database } from '../db/database.ts';
 import { admitApiKey, grantedValues } from '../entitlements/occupancy.ts';
 import { ApiError, notFound } from '../errors.ts';
@@ -30,18 +31,13 @@ import { lockAuthorizedWorkspace } from '../workspaces/service.ts';
 export type ApiKeyRow = Selectable<ApiKeys>;
 
 const P = policy.public_api;
-const BASE62 = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
 const PREFIX_LENGTH = P.key_prefix.length + P.prefix_random_chars;
-
-function base62(length: number): string {
-  return Array.from({ length }, () => BASE62[randomInt(BASE62.length)]).join('');
-}
 
 /** `cl_live_` + random prefix characters + 32 random bytes, base62. */
 function newSecret(): { prefix: string; secret: string } {
   const prefix = P.key_prefix + base62(P.prefix_random_chars);
   // 43 base62 characters carry at least 256 bits.
-  const body = base62(Math.ceil((P.secret_random_bytes * 8) / Math.log2(BASE62.length)));
+  const body = base62(base62Length(P.secret_random_bytes * 8));
   return { prefix, secret: prefix + body };
 }
 

@@ -1,6 +1,7 @@
 /**
- * Who performs a product command: a signed-in member, or a public API key
- * acting for the member who created it.
+ * Who performs a product command: a signed-in member, a public API key
+ * acting for the member who created it, or an MCP grant holding
+ * `citeladder:write` acting for its member after their confirmation.
  *
  * `role` is always the live membership role, loaded for the request, so a
  * demotion narrows what a key can do at once. A key's scopes intersect that
@@ -13,7 +14,7 @@ import type { AppEnv } from '../context.ts';
 import { capabilityDenied, roleAllows, type WorkspaceCapability } from './workspace.ts';
 
 export type Actor = {
-  kind: 'member' | 'api_key';
+  kind: 'member' | 'api_key' | 'mcp';
   workspaceId: string;
   userId: string;
   role: string;

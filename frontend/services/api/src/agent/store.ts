@@ -1,6 +1,7 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
 import { z } from 'zod';
+import { fingerprint } from '../crypto-text.ts';
 import type { Database } from '../db/database.ts';
 import { notFound } from '../errors.ts';
 import { jsonObject } from '../db/json.ts';
@@ -53,22 +54,6 @@ export async function requireIdle(db: Database, chat: Chat) {
     .where('status', 'in', active)
     .executeTakeFirst();
   if (run) throw new AgentError('agent_run_active');
-}
-// Hash canonical JSON to bind nested refs as well as the visible message.
-function canonical(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(canonical);
-  if (value && typeof value === 'object')
-    return Object.fromEntries(
-      Object.entries(value)
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([key, item]) => [key, canonical(item)]),
-    );
-  return value;
-}
-export function fingerprint(value: unknown) {
-  return createHash('sha256')
-    .update(JSON.stringify(canonical(value)))
-    .digest('hex');
 }
 
 function requestIdentity(scope: Scope, input: TurnInput, mode: string, approvalRevision?: string) {
@@ -143,6 +128,7 @@ export class AgentStore {
     };
     z.string().trim().min(1).max(agentPolicy.idempotency_key_max_chars).parse(input.key);
     const mode = approvalRevision ? 'draft_from_outline' : 'turn';
+    // Canonical JSON binds nested refs as well as the visible message.
     const hash = fingerprint(requestIdentity(scope, input, mode, approvalRevision));
     const lockKey = 'agent-enqueue:' + scope.workspaceId;
     return this.db.transaction().execute(async (trx) => {

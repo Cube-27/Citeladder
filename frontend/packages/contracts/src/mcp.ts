@@ -6,6 +6,8 @@ export const mcpConnectionSchema = z.object({
   workspaces: z.array(z.object({ id: z.string().uuid(), name: z.string() })),
   /** The connecting account, shown only in a workspace Owner/Admin view. */
   user_email: z.string().nullable(),
+  /** `read_and_change` when the person ticked Allow changes on consent. */
+  access: z.enum(['read', 'read_and_change']),
   created_at: z.string(),
   last_used_at: z.string().nullable(),
   requires_consent: z.boolean(),

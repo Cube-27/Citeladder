@@ -226,6 +226,27 @@ async function promptCount(db: Database, accountId: string): Promise<number> {
 }
 
 /**
+ * Prompt slots in use and the `prompt_slots` allowance, null when ungated.
+ * Takes the capacity lock, so it reads after a same-transaction insert.
+ */
+export async function promptOccupancy(
+  db: Database,
+  workspaceId: string,
+): Promise<{ used: number; allowance: number | null }> {
+  const accountId = await lockWorkspaceCapacity(db, workspaceId);
+  const entitlement = await resolveAccountEntitlement(db, { accountId, workspaceId }, new Date());
+  // Unresolved is unavailable, not ungated: refuse as admission does.
+  if (entitlement.status !== 'resolved')
+    throw new ApiError(403, 'Billing entitlement is unavailable for this account', {
+      code: UNRESOLVED,
+    });
+  return {
+    used: await promptCount(db, accountId),
+    allowance: entitlement.values.get(PROMPT_SLOTS) ?? null,
+  };
+}
+
+/**
  * Admit `requested` new prompts for the workspace, or throw a 403. Takes the
  * capacity lock; the caller inserts in the same transaction.
  */

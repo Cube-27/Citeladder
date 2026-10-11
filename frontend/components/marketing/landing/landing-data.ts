@@ -6,7 +6,11 @@ export const INTEGRATIONS = [
   ['BING', 'Bing Webmaster Tools', 'Bing search data through its own consent flow.'],
   ['AI', 'Model providers', 'OpenAI, Google and Anthropic accounts for audits.'],
   ['DFS', 'DataForSEO', 'Optional keyword, competitor and backlink research.'],
-  ['MCP', 'MCP clients', 'Read your project evidence from compatible assistants.'],
+  [
+    'MCP',
+    'MCP clients',
+    'Read your project evidence and make changes you confirm from compatible assistants.',
+  ],
 ] as const;
 
 export const FAQS = [

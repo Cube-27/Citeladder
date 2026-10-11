@@ -4,8 +4,8 @@
  *
  * Availability statements here are deliberate: the public trial is a limited
  * ChatGPT visibility entry point, the Agent is outside it, Commerce depends on
- * project eligibility, MCP is read-only, and paid research is confirmed per
- * collection. Keep claims inside those boundaries.
+ * project eligibility, MCP changes happen only when allowed and confirmed by
+ * the user, and paid research is confirmed per collection. Keep claims inside those boundaries.
  */
 
 import type { FaqItem } from './faq';

@@ -165,3 +165,18 @@ the same command layer as the browser. Creating or spending POSTs require an
 
 Source: owner decisions D4.1–D4.3 of 10 October 2026 (competitive tracker F4).
 [Public API](public-api.md) owns the shipped behavior.
+
+## MCP writes are confirmed user decisions
+
+An MCP connection can change product data only when the person ticked
+**Allow changes** (unticked by default) at consent, adding `citeladder:write`,
+and only as far as their live role in the project's workspace allows. Larger
+changes are prepared, validated by a dry run of their command, and run only
+through `confirm_change` after the user agreed to the preview; such a
+confirmation satisfies [invariant 10](invariants.md#10-automation-stays-bounded).
+Prompts added this way are active immediately, with no candidate staging,
+unlike generated prompts. Existing grants are not re-consented (greenfield).
+The in-app Agent stays read-only.
+
+Source: owner decisions D4.2 and D4.4 of 10 October 2026 (competitive tracker F4).
+[MCP](mcp.md#changes) owns the shipped behavior.

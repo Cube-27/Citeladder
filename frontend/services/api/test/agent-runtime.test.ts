@@ -25,7 +25,7 @@ import { contextCitations, manifestSchema, suppliedManifest } from '../src/agent
 import { bounded } from '../src/agent/runtime.ts';
 import { scrubRecordRefs } from '../src/agent/sources.ts';
 import { parseWorkflows } from '../src/agent/workflows.ts';
-import { fingerprint } from '../src/agent/store.ts';
+import { fingerprint } from '../src/crypto-text.ts';
 import { readAgentContext } from '../src/agent/context-adapter.ts';
 import { runAgentOnce } from '../src/agent/worker.ts';
 import { loadSkillCatalog } from '../src/agent/skills.ts';

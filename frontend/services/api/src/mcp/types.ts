@@ -8,6 +8,8 @@ export type McpPrincipal = {
   grantId: string;
   workspaceIds: string[];
   tokenHash: string;
+  /** The grant holds `citeladder:write`; each change still needs the live role. */
+  canWrite: boolean;
 };
 /** Internal evidence readers use live membership, pinned to one project. */
 export type EvidencePrincipal =

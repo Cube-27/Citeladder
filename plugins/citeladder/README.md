@@ -2,7 +2,10 @@
 
 The source package contains public read-only review skills and the existing
 `https://api.citeladder.com/mcp` connection. It requires a connected CiteLadder
-account, explicit workspace consent and existing project measurements. There
+account, explicit workspace consent and existing project measurements. A
+connection approved with **Allow changes** also lists change tools; a change
+runs only after the user agrees to its preview, and the skills never call
+`confirm_change` without that explicit yes. There
 is no sample mode. The repository marketplace is
 `.agents/plugins/marketplace.json`; restart ChatGPT desktop to discover it.
 Portable clients use `mcp.json`. A registered ChatGPT connection binding must
