@@ -20,7 +20,9 @@ function aliasMatches(alias: string, answer: string): RegExpExecArray[] {
   const tokens = normalized
     .split(' ')
     .map((token) => (token === 'and' ? '(?:and|&)' : escapeRegex(token)));
-  const body = tokens.join('[^0-9A-Za-z]*');
+  // The separator is disjoint from the token alphabet (letters, marks, digits,
+  // '_'), so a near-miss cannot backtrack polynomially over a long answer.
+  const body = tokens.join(String.raw`[^\p{L}\p{M}\p{N}_]*`);
   const pattern = DENSE_SCRIPT.test(normalized) ? body : `(?<!${word})${body}(?!${word})`;
   return [...answer.matchAll(new RegExp(pattern, 'giu'))];
 }

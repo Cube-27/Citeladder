@@ -77,7 +77,8 @@ const bounded = (body: string, alias: string) =>
  */
 function spellings(alias: string): RegExp[] {
   const compact = [...normalizeAlias(alias).replaceAll(' ', '')];
-  const joined = compact.map(escape).join(String.raw`[^\p{L}\p{N}]{0,3}`);
+  // Separators are disjoint from the alias alphabet so matching never backtracks across them.
+  const joined = compact.map(escape).join(String.raw`[^\p{L}\p{M}\p{N}_]{0,3}`);
   return [bounded(escape(alias), alias), ...(compact.length ? [bounded(joined, alias)] : [])];
 }
 /** Up to the per-entity quote allowance, so one entity never starves the others. */
