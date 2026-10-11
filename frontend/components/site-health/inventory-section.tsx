@@ -11,6 +11,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Label, textRole } from '@/components/ui/typography';
 import { Pager } from '@/components/ui/pager';
 import {
+  ClampText,
   Table,
   TableBody,
   TableCell,
@@ -130,12 +131,12 @@ function DiscoveringInventory({ crawl }: Readonly<{ crawl: SiteCrawl }>) {
                 {/* Clamped for the same reason as the scored table: a long
                     query-string URL is one unbreakable token and would size
                     the column to its full width. */}
-                <span
-                  className="type-caption text-foreground block max-w-[40rem] truncate tabular-nums"
-                  title={row.display_url}
+                <ClampText
+                  lines={1}
+                  className="type-caption text-foreground max-w-[40rem] tabular-nums"
                 >
                   {row.display_url}
-                </span>
+                </ClampText>
               </TableCell>
               <TableCell className="type-caption">
                 {row.source ? statusLabel(row.source) : <UnavailableValue state="unknown" />}

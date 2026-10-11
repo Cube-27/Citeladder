@@ -16,6 +16,7 @@ import { ScoreBar } from '@/components/ui/score-bar';
 import { TextLink } from '@/components/ui/text-link';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import {
+  ClampText,
   Table,
   TableBody,
   TableCell,
@@ -28,7 +29,6 @@ import { siteHealthQueries } from '@/lib/api/site-health';
 import type { ReadinessCheck, ReadinessDimension } from '@/lib/api/types';
 import { formatScore, PLACEHOLDER } from '@/lib/site-health/status';
 import { textRole } from '@/components/ui/typography';
-import { Stack } from '@/components/ui/layout';
 import { EditorialSectionHeader, ledgerClasses } from '@/components/ui/workspace';
 
 function pageLabel(url: string) {
@@ -166,10 +166,14 @@ function ReadinessLedger({
                   className="grid h-auto grid-cols-1 py-2 md:table-row md:h-[var(--table-row-height)] md:py-0"
                 >
                   <TableCell className="block min-w-0 border-b-0 px-4 py-2 md:table-cell md:min-w-64 md:border-b md:px-[var(--table-cell-padding-x)] md:py-[var(--table-cell-padding-y)]">
-                    <Stack gap="tight">
-                      <span className={textRole('emphasis')}>{dimension.label}</span>
-                      <span className="type-caption">{dimension.description}</span>
-                    </Stack>
+                    <div className="grid max-w-md min-w-0">
+                      <ClampText lines={1} className={textRole('emphasis')}>
+                        {dimension.label}
+                      </ClampText>
+                      <ClampText lines={1} className="type-caption">
+                        {dimension.description}
+                      </ClampText>
+                    </div>
                   </TableCell>
                   <TableRecordMetricCell label="Score">
                     {formatScore(dimension.score)}

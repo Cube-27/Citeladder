@@ -1,6 +1,5 @@
-import { ArrowRight, Download } from 'lucide-react';
+import { ArrowRight, Download, TrendingUp } from 'lucide-react';
 import {
-  EditorialSectionHeader,
   hairlineBandClasses,
   hairlineBandItemClasses,
   ledgerClasses,
@@ -13,7 +12,14 @@ import { Badge } from '@/components/ui/badge';
 import { TagGroup } from '@/components/ui/tag';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardEyebrow, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardEyebrow,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Delta } from '@/components/ui/delta';
 import { EmptyState } from '@/components/ui/empty-state';
 import { TextLink } from '@/components/ui/text-link';
@@ -33,9 +39,18 @@ import {
   StateMetric,
   VS_PREVIOUS_RUN,
 } from './dashboard-primitives';
-import { Stack } from '@/components/ui/layout';
 import { Tooltip } from '@/components/ui/tooltip';
 
+/** Overview rows pair a primary card with an aside; both cards share the row's height. */
+function overviewRow() {
+  return splitPaneClasses('main-aside', 'lg:items-stretch');
+}
+
+function brandName(data: CommandCenter) {
+  return data.project.brand_name || data.project.name;
+}
+
+/** The project's identity: logo, name, website and the run it was last tracked in. */
 export function DashboardHeader({
   data,
   activeProject,
@@ -45,44 +60,42 @@ export function DashboardHeader({
 }>) {
   const website = data.project.website_url;
   return (
-    <Stack as="section" gap="workspace">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex min-w-0 items-center gap-4">
-          <BrandLogo
-            name={data.project.brand_name || data.project.name}
-            logoUrl={activeProject.brand.logo_url}
-            websiteUrl={website}
-            size="xl"
-            className="size-12 rounded-[var(--radius-control)]"
-          />
-          <div className="grid min-w-0 gap-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className={textRole('sectionTitle', 'truncate')}>
-                {data.project.brand_name || data.project.name}
-              </h2>
-              {website ? (
-                <TextLink
-                  variant="external"
-                  text="label"
-                  href={/^https?:\/\//i.test(website) ? website : `https://${website}`}
-                  className="min-w-0"
-                >
-                  <span className="truncate">
-                    {website.replace(/^https?:\/\//i, '').replace(/\/$/, '')}
-                  </span>
-                </TextLink>
-              ) : null}
-            </div>
-            {data.measurement ? (
-              <p className={textRole('caption')}>
-                Tracked <DisplayTime value={data.measurement.completed_at} /> ·{' '}
-                {data.measurement.logical_engines.join(', ')}
-              </p>
+    <Card aria-labelledby="project-identity">
+      <CardContent className="flex min-w-0 items-center gap-4">
+        <BrandLogo
+          name={brandName(data)}
+          logoUrl={activeProject.brand.logo_url}
+          websiteUrl={website}
+          size="xl"
+          className="size-12 rounded-[var(--radius-control)]"
+        />
+        <div className="grid min-w-0 gap-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <CardTitle id="project-identity" className="truncate">
+              {brandName(data)}
+            </CardTitle>
+            {website ? (
+              <TextLink
+                variant="external"
+                text="label"
+                href={/^https?:\/\//i.test(website) ? website : `https://${website}`}
+                className="min-w-0"
+              >
+                <span className="truncate">
+                  {website.replace(/^https?:\/\//i, '').replace(/\/$/, '')}
+                </span>
+              </TextLink>
             ) : null}
           </div>
+          {data.measurement ? (
+            <p className={textRole('caption')}>
+              Tracked <DisplayTime value={data.measurement.completed_at} /> ·{' '}
+              {data.measurement.logical_engines.join(', ')}
+            </p>
+          ) : null}
         </div>
-      </div>
-    </Stack>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -90,41 +103,44 @@ export function CompanyFacts({ data }: Readonly<{ data: CommandCenter }>) {
   const facts = data.facts;
   const offerings = facts.products_services.filter((label) => label.trim());
   return (
-    <section aria-labelledby="company-facts" className="grid gap-3">
-      <EditorialSectionHeader
-        title="Company facts"
-        headingId="company-facts"
+    <Card aria-labelledby="company-facts">
+      <CardHeader
         actions={
-          <div className="flex items-center gap-3">
+          <>
             <span className={textRole('label')}>{facts.industry || 'Industry not set'}</span>
             <Button asChild variant="ghost" size="sm">
               <ProjectLink href="/agent/context">
                 Edit in Agent context <ArrowRight className="ms-1 size-3.5" aria-hidden />
               </ProjectLink>
             </Button>
-          </div>
+          </>
         }
-      />
-      <div className={cn(hairlineBandClasses, 'border-y-0 sm:grid-cols-3')}>
-        <FactSummary
-          label="Positioning"
-          value={facts.positioning || facts.description}
-          emptyState="not_set"
-        />
-        <FactSummary label="Target audience" value={facts.target_audience} emptyState="not_set" />
-        <div className={cn(hairlineBandItemClasses, 'grid content-start gap-2')}>
-          <p className={textRole('label')}>Offerings & competitors</p>
-          {offerings.length ? (
-            <TagGroup labels={offerings} tone="purple" />
-          ) : (
-            <UnavailableValue state="not_set" />
-          )}
-          <p className={textRole('caption')}>
-            {facts.competitors.length} tracked competitor{facts.competitors.length === 1 ? '' : 's'}
-          </p>
+      >
+        <CardTitle id="company-facts">Company facts</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className={cn(hairlineBandClasses, 'sm:grid-cols-3')}>
+          <FactSummary
+            label="Positioning"
+            value={facts.positioning || facts.description}
+            emptyState="not_set"
+          />
+          <FactSummary label="Target audience" value={facts.target_audience} emptyState="not_set" />
+          <div className={cn(hairlineBandItemClasses, 'grid content-start gap-2')}>
+            <p className={textRole('label')}>Offerings & competitors</p>
+            {offerings.length ? (
+              <TagGroup labels={offerings} tone="purple" />
+            ) : (
+              <UnavailableValue state="not_set" />
+            )}
+            <p className={textRole('caption')}>
+              {facts.competitors.length} tracked competitor
+              {facts.competitors.length === 1 ? '' : 's'}
+            </p>
+          </div>
         </div>
-      </div>
-    </section>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -161,7 +177,7 @@ function FactSummary({
   emptyState: 'not_set';
 }>) {
   return (
-    <div className={cn(hairlineBandItemClasses, 'grid gap-2')}>
+    <div className={cn(hairlineBandItemClasses, 'grid content-start gap-2')}>
       <p className={textRole('label')}>{label}</p>
       {value.trim() ? (
         <div className="min-w-0">
@@ -195,10 +211,11 @@ function PdfButton({
   );
 }
 
+/** Current state beside citation share, then movement beside the next step. */
 export function SummarySections({ data }: Readonly<{ data: CommandCenter }>) {
   return (
     <>
-      <div className={splitPaneClasses('main-aside')}>
+      <div className={overviewRow()}>
         <Card aria-labelledby="project-state">
           <CardHeader
             actions={<Badge>{data.measurement ? 'Citation-capable audit' : 'Not run'}</Badge>}
@@ -215,8 +232,10 @@ export function SummarySections({ data }: Readonly<{ data: CommandCenter }>) {
         </Card>
         <Track data={data} />
       </div>
-      <Movement data={data} />
-      <NextAction data={data} />
+      <div className={overviewRow()}>
+        <Movement data={data} />
+        <NextAction data={data} />
+      </div>
     </>
   );
 }
@@ -239,7 +258,11 @@ const NEXT_ACTION_COPY: Record<
 
 function NextAction({ data }: Readonly<{ data: CommandCenter }>) {
   return (
-    <Card tone="recommendation" aria-labelledby="next-action" className="text-foreground">
+    <Card
+      tone="recommendation"
+      aria-labelledby="next-action"
+      className="text-foreground flex flex-col justify-between"
+    >
       <CardHeader
         actions={
           <span className={textRole('label')}>
@@ -250,10 +273,7 @@ function NextAction({ data }: Readonly<{ data: CommandCenter }>) {
         <CardEyebrow>Next action</CardEyebrow>
         <CardTitle id="next-action">{data.next_action.title}</CardTitle>
       </CardHeader>
-      <CardContent className="grid justify-items-start gap-3">
-        <p className={textRole('caption')}>
-          Prioritized from deterministic evidence and current visibility coverage.
-        </p>
+      <CardContent>
         <Button asChild variant="primary" size="md">
           <ProjectLink href={data.next_action.href}>
             {NEXT_ACTION_COPY[data.next_action.kind].link}
@@ -306,19 +326,30 @@ function Track({ data }: Readonly<{ data: CommandCenter }>) {
   );
 }
 
+/** With nothing comparable yet the section is wholly empty, so the empty state stands alone. */
 function Movement({ data }: Readonly<{ data: CommandCenter }>) {
-  return (
-    <section aria-labelledby="movement" className="grid gap-3">
-      <EditorialSectionHeader
-        title="Movement"
-        headingId="movement"
-        description="Only comparable persisted measurements are shown."
+  if (data.movements.length === 0)
+    return (
+      <EmptyState
+        variant="compact"
+        icon={TrendingUp}
+        heading="No comparable measurement yet"
+        description="Needs a second run with the same prompts and engines."
       />
-      <MovementChart movements={data.movements} />
-    </section>
+    );
+  return (
+    <Card aria-labelledby="movement">
+      <CardHeader>
+        <CardTitle id="movement">Movement</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <MovementChart movements={data.movements} />
+      </CardContent>
+    </Card>
   );
 }
 
+/** The shared, reorderable action list beside what has been resolved since the comparable run. */
 export function ActionsAndProof({
   data,
   actions,
@@ -331,50 +362,58 @@ export function ActionsAndProof({
   onMove: (from: number, to: number) => void;
 }>) {
   return (
-    <Stack gap="workspace">
-      <section aria-labelledby="ranked-actions" className="grid gap-3">
-        <EditorialSectionHeader
-          title="Ranked actions"
-          headingId="ranked-actions"
-          description="Shared order · drag or use the arrow controls."
-          actions={
-            <Button asChild variant="ghost" size="sm">
-              <ProjectLink href="/agent/actions">
-                View all <ArrowRight className="ms-1 size-3.5" aria-hidden />
-              </ProjectLink>
-            </Button>
-          }
+    <div className={overviewRow()}>
+      {actions.length ? (
+        <Card aria-labelledby="ranked-actions">
+          <CardHeader actions={<ViewAllActions />}>
+            <CardTitle id="ranked-actions">Ranked actions</CardTitle>
+            <CardDescription>Shared order · drag or use the arrow controls.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ol className={ledgerClasses('open')}>
+              {actions.map((action, index) => (
+                <ActionRow
+                  key={action.id}
+                  action={action}
+                  index={index}
+                  total={actions.length}
+                  onMove={onMove}
+                  onDrop={onMove}
+                  reorderPending={pending}
+                />
+              ))}
+            </ol>
+          </CardContent>
+        </Card>
+      ) : (
+        <EmptyState
+          variant="compact"
+          icon={ArrowRight}
+          heading="No open actions"
+          description="Run another audit to look for new opportunities."
+          action={<ViewAllActions />}
         />
-        {actions.length ? (
-          <ol className={ledgerClasses('open')}>
-            {actions.map((action, index) => (
-              <ActionRow
-                key={action.id}
-                action={action}
-                index={index}
-                total={actions.length}
-                onMove={onMove}
-                onDrop={onMove}
-                reorderPending={pending}
-              />
-            ))}
-          </ol>
-        ) : (
-          <EmptyState
-            variant="compact"
-            icon={ArrowRight}
-            heading="No open actions"
-            description="Run another audit to look for new opportunities."
-          />
-        )}
-      </section>
-      <section aria-labelledby="progress-proof">
-        <EditorialSectionHeader
-          title="Progress and report proof"
-          headingId="progress-proof"
-          description={`${data.resolved_actions.count} action(s) resolved since the comparable run. Metric movement is shown alongside completion without claiming causation.`}
-        />
-      </section>
-    </Stack>
+      )}
+      <Card aria-labelledby="progress-proof">
+        <CardHeader>
+          <CardTitle id="progress-proof">Progress and report proof</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className={textRole('body')}>
+            {data.resolved_actions.count} action(s) resolved since the comparable run.
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function ViewAllActions() {
+  return (
+    <Button asChild variant="ghost" size="sm">
+      <ProjectLink href="/agent/actions">
+        View all <ArrowRight className="ms-1 size-3.5" aria-hidden />
+      </ProjectLink>
+    </Button>
   );
 }

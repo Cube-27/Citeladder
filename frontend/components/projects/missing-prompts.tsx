@@ -5,10 +5,11 @@ import { useMemo } from 'react';
 
 import { ProjectLink } from '@/components/layout/scoped-link';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ReadError } from '@/components/ui/read-error';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
-import { EditorialSectionHeader, ledgerClasses } from '@/components/ui/workspace';
+import { ledgerClasses } from '@/components/ui/workspace';
 import { missingPrompts, promptHistoryHref, type MissingPrompt } from '@/lib/prompts/history';
 import { resolveProjectRequestScope } from '@/lib/project/request-scope';
 import { engineLabel } from '@/lib/providers/catalog';
@@ -32,11 +33,8 @@ export function MissingPrompts({
   // No run yet has nothing to compare, so the section stays out of the way.
   if (query.isPending || query.data?.length === 0) return null;
   return (
-    <section aria-labelledby="missing-prompts" className="grid gap-3">
-      <EditorialSectionHeader
-        title="Where you're missing"
-        headingId="missing-prompts"
-        description="Prompts in the latest run where an answer named a competitor but not you."
+    <Card aria-labelledby="missing-prompts">
+      <CardHeader
         actions={
           rows.length > SHOWN ? (
             <Button asChild variant="ghost" size="sm">
@@ -46,28 +44,35 @@ export function MissingPrompts({
             </Button>
           ) : null
         }
-      />
-      {query.isError ? (
-        <ReadError
-          error={query.error}
-          fallback="Prompt results could not be loaded."
-          onRetry={() => void query.refetch()}
-          pending={query.isFetching}
-        />
-      ) : null}
-      {query.data && rows.length === 0 ? (
-        <p className={textRole('caption')}>
-          No answer in the latest run named a tracked competitor while leaving you out.
-        </p>
-      ) : null}
-      {rows.length ? (
-        <ul className={ledgerClasses('open')}>
-          {rows.slice(0, SHOWN).map((row) => (
-            <MissingRow key={row.promptId} row={row} />
-          ))}
-        </ul>
-      ) : null}
-    </section>
+      >
+        <CardTitle id="missing-prompts">{"Where you're missing"}</CardTitle>
+        <CardDescription>
+          Prompts in the latest run where an answer named a competitor but not you.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-3">
+        {query.isError ? (
+          <ReadError
+            error={query.error}
+            fallback="Prompt results could not be loaded."
+            onRetry={() => void query.refetch()}
+            pending={query.isFetching}
+          />
+        ) : null}
+        {query.data && rows.length === 0 ? (
+          <p className={textRole('caption')}>
+            No answer in the latest run named a tracked competitor while leaving you out.
+          </p>
+        ) : null}
+        {rows.length ? (
+          <ul className={ledgerClasses('open')}>
+            {rows.slice(0, SHOWN).map((row) => (
+              <MissingRow key={row.promptId} row={row} />
+            ))}
+          </ul>
+        ) : null}
+      </CardContent>
+    </Card>
   );
 }
 

@@ -993,7 +993,6 @@ export function productContractViolations(root) {
     '--control-height-sm',
     '--control-height-md',
     '--menu-item-height',
-    '--table-row-height-dense',
     '--badge-height-sm',
     '--badge-height-md',
     '--control-height-lg',

@@ -190,14 +190,65 @@ describe('DashboardScreen', () => {
         .closest('[data-outcome]'),
     ).toHaveAttribute('data-outcome', 'improved');
     expect(screen.getByRole('heading', { name: 'Project state' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Movement' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Ranked actions' })).toBeInTheDocument();
-    expect(screen.getByText(/2 action\(s\) resolved/i)).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('region', { name: 'Movement' })).getByText('68.3%'),
+    ).toBeVisible();
+    // With no open actions the section is only its empty state, still linking to every action.
+    expect(screen.getByRole('heading', { name: 'No open actions' })).toBeVisible();
+    expect(screen.queryByRole('heading', { name: 'Ranked actions' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'View all' })).toHaveAttribute(
+      'href',
+      '/agent/actions?project=00000000-0000-4000-8000-000000000001',
+    );
+    expect(
+      within(screen.getByRole('region', { name: 'Progress and report proof' })).getByText(
+        '2 action(s) resolved since the comparable run.',
+      ),
+    ).toBeVisible();
     expect(screen.getByText('Evidence-first analytics')).toBeVisible();
     expect(screen.getByText('Growth leaders')).toBeVisible();
     expect(screen.getByText('Analytics')).toBeVisible();
     expect(screen.getByRole('heading', { name: 'Company facts' })).toBeVisible();
     expect(screen.getByText('Monitor — no required action')).toBeVisible();
+  });
+  it('ranks open actions with their evidence and links each to its Action', () => {
+    queryResult.data = {
+      ...commandCenter,
+      actions: [
+        {
+          id: '00000000-0000-4000-8000-0000000000c1',
+          action_id: '00000000-0000-4000-8000-0000000000d1',
+          title: 'Publish a comparison page',
+          severity: 'critical',
+          target_label: '/pricing',
+          evidence_summary: { count: 3 },
+          priority_score: 7.46,
+        },
+      ],
+    };
+    renderDashboard(
+      <TooltipProvider>
+        <DashboardScreen />
+      </TooltipProvider>,
+    );
+    const ranked = within(screen.getByRole('region', { name: 'Ranked actions' }));
+    expect(ranked.getByRole('link', { name: 'Publish a comparison page' })).toHaveAttribute(
+      'href',
+      '/agent/actions/00000000-0000-4000-8000-0000000000d1?project=00000000-0000-4000-8000-000000000001',
+    );
+    expect(ranked.getByText('/pricing · 3 persisted evidence item(s)')).toBeVisible();
+    expect(ranked.getByText('7.5')).toBeVisible();
+    expect(screen.queryByRole('heading', { name: 'No open actions' })).not.toBeInTheDocument();
+  });
+  it('shows an empty state instead of a movement card before a comparable run', () => {
+    queryResult.data = { ...commandCenter, movements: [] };
+    renderDashboard(
+      <TooltipProvider>
+        <DashboardScreen />
+      </TooltipProvider>,
+    );
+    expect(screen.getByRole('heading', { name: 'No comparable measurement yet' })).toBeVisible();
+    expect(screen.queryByRole('region', { name: 'Movement' })).not.toBeInTheDocument();
   });
   it("lists prompts where answers named a competitor but not the brand, with each prompt's Action", () => {
     const outcome = (engine: string, gaps: Record<string, number>) => ({

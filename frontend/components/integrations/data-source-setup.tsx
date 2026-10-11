@@ -252,11 +252,14 @@ export function DataSourceSetup({
   optional = [],
   title,
   description,
+  whenReady = null,
 }: Readonly<{
   required: readonly IntegrationProvider[];
   optional?: readonly IntegrationProvider[];
   title: string;
   description: string;
+  /** Shown in place of the setup card once every required source is ready. */
+  whenReady?: ReactNode;
 }>) {
   const { activeProject, activeWorkspaceId } = useProjectContext();
   const canManage = useWorkspaceCapability('manage_credentials');
@@ -268,7 +271,7 @@ export function DataSourceSetup({
 
   if (!activeProject || !activeWorkspaceId) return null;
   const allReady = required.every((provider) => sources.steps.get(provider)?.kind === 'ready');
-  if (!sources.loading && !sources.error && allReady && !oauth.error) return null;
+  if (!sources.loading && !sources.error && allReady && !oauth.error) return whenReady;
 
   // The callback params were already stripped from the address on return.
   const startConnect = (family: GrantFamily) =>

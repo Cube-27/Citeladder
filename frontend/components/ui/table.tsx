@@ -1,4 +1,13 @@
-import type { HTMLAttributes, ReactNode, Ref, TdHTMLAttributes, ThHTMLAttributes } from 'react';
+import {
+  Children,
+  useEffect,
+  useState,
+  type HTMLAttributes,
+  type ReactNode,
+  type Ref,
+  type TdHTMLAttributes,
+  type ThHTMLAttributes,
+} from 'react';
 import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
 
 import { Tooltip } from '@/components/ui/tooltip';
@@ -13,7 +22,11 @@ import { cn } from '@/lib/utils';
  *    single object-rung under-rule, so the labels separate from the rows by
  *    the hairline alone; no vertical column-separator hairlines, which made
  *    the tables read as spreadsheets rather than designed surfaces
- *  - --table-row-height rows, --text-sm cells, subtle ROW hairlines only
+ *  - one row rhythm everywhere: --table-row-height is the floor, every cell
+ *    carries the same --table-cell-padding-y, and text never runs past two
+ *    lines — `ClampText` cuts it there and moves the rest into a tooltip, so
+ *    a row is either one line or two, never a three-line outlier
+ *  - --text-sm cells, subtle ROW hairlines only
  *  - data columns are centre-aligned and tabular; text columns stay left.
  *    The header centres with its values, so a column reads as one block
  *    rather than a label floating off the numbers beneath it
@@ -101,17 +114,13 @@ export function TableRow({
   children,
   className,
   highlight,
-  density = 'compact',
   ...props
-}: Readonly<
-  HTMLAttributes<HTMLTableRowElement> & { highlight?: boolean; density?: 'compact' | 'multiline' }
->) {
+}: Readonly<HTMLAttributes<HTMLTableRowElement> & { highlight?: boolean }>) {
   return (
     <tr
       {...props}
       className={cn(
         'hover:bg-hover active:bg-active aria-selected:bg-selected aria-selected:hover:bg-selected h-[var(--table-row-height)] transition-colors',
-        density === 'multiline' && '[&>td]:py-3',
         highlight && 'bg-selected hover:bg-selected',
         className,
       )}
@@ -144,6 +153,62 @@ export function TableHead({
   );
 }
 
+/** Plain text content — the cells `TableCell` clamps on its own. */
+function isPlainText(children: ReactNode) {
+  const parts = Children.toArray(children);
+  return (
+    parts.length > 0 && parts.every((part) => typeof part === 'string' || typeof part === 'number')
+  );
+}
+
+/**
+ * Text cut at `lines` (two by default, one for a title or URL stacked over a
+ * second line), with the whole text in a tooltip only when something was
+ * actually cut. This is what holds every row to one or two lines.
+ *
+ * `tooltip` overrides the tooltip content, e.g. a full URL behind a label.
+ */
+export function ClampText({
+  children,
+  lines = 2,
+  tooltip,
+  className,
+}: Readonly<{
+  children: ReactNode;
+  lines?: 1 | 2;
+  tooltip?: ReactNode;
+  className?: string;
+}>) {
+  // A callback ref held as state: wrapping in the tooltip remounts the span,
+  // and the observer has to follow the new node.
+  const [node, setNode] = useState<HTMLSpanElement | null>(null);
+  const [clipped, setClipped] = useState(false);
+  useEffect(() => {
+    if (!node) return;
+    const measure = () =>
+      setClipped(
+        node.scrollHeight > node.clientHeight + 1 || node.scrollWidth > node.clientWidth + 1,
+      );
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [node, children, lines]);
+  const text = (
+    <span
+      ref={setNode}
+      className={cn(
+        'block min-w-0 break-words',
+        lines === 1 ? 'truncate' : 'line-clamp-2',
+        className,
+      )}
+    >
+      {children}
+    </span>
+  );
+  return clipped ? <Tooltip content={tooltip ?? children}>{text}</Tooltip> : text;
+}
+
 export function TableCell({
   children,
   className,
@@ -157,12 +222,13 @@ export function TableCell({
         'type-body text-foreground border-border-subtle px-[var(--table-cell-padding-x)] py-[var(--table-cell-padding-y)] text-left align-middle',
         // Row rule, dropped on the last row.
         'border-b [tr:last-child>&]:border-b-0',
-        numeric && 'tabular-nums',
+        // A value never wraps: "Not measured" split over two lines read as two values.
+        numeric && 'whitespace-nowrap tabular-nums',
         numeric === 'end' ? 'text-right' : numeric && 'text-center',
         className,
       )}
     >
-      {children}
+      {!numeric && isPlainText(children) ? <ClampText>{children}</ClampText> : children}
     </td>
   );
 }

@@ -24,6 +24,7 @@ import { StatGrid, StatItem } from '@/components/ui/stat-grid';
 import { TextLink } from '@/components/ui/text-link';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import {
+  ClampText,
   Table,
   TableBody,
   TableCell,
@@ -166,14 +167,6 @@ function ArchitectureLedger({ data }: Readonly<{ data: SiteArchitecture }>) {
             duplicatePages={duplicatePages}
             orphanCount={data.internal_linking.orphan_page_count}
           />
-          {data.limitations.map((limitation) => (
-            <Alert key={limitation} tone="info">
-              {limitation}
-            </Alert>
-          ))}
-          {/* Independent of `limitations`, which the API empties for complete
-              coverage: nesting the reasons inside it meant a crawl could carry
-              persisted reasons that nothing ever rendered. */}
           <CoverageReasons reasons={data.coverage_reasons} />
           {pageKinds.length === 0 ? (
             <InlineEmpty>No page kinds were measured.</InlineEmpty>
@@ -315,14 +308,15 @@ function PageKindPages({
                 {crawlId ? (
                   <TextLink
                     text="body"
-                    className="min-w-0 truncate"
+                    className="block min-w-0"
                     href={`/site/crawls/${crawlId}/pages/${page.site_url_id}`}
-                    title={page.url}
                   >
-                    {page.url}
+                    <ClampText lines={1}>{page.url}</ClampText>
                   </TextLink>
                 ) : (
-                  <span className="type-body text-foreground min-w-0 truncate">{page.url}</span>
+                  <ClampText lines={1} className="type-body text-foreground">
+                    {page.url}
+                  </ClampText>
                 )}
               </li>
             ))}

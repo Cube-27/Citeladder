@@ -75,13 +75,14 @@ function serve(connections: unknown[], mappings: Record<string, unknown[]> = {})
   );
 }
 
-function renderSetup(path = `/performance?project=${PROJECT}`) {
+function renderSetup(path = `/performance?project=${PROJECT}`, whenReady?: string) {
   return renderWithProviders(
     <DataSourceSetup
       required={['gsc']}
       optional={['ga4']}
       title="Connect Search Console"
       description="Performance reads this project's own search data."
+      whenReady={whenReady}
     />,
     { initialEntries: [path] },
   );
@@ -194,5 +195,27 @@ describe('DataSourceSetup', () => {
     // It shows while loading, then nothing: the screen keeps it mounted without noise.
     expect(screen.getByTestId('data-source-setup')).toBeInTheDocument();
     await waitFor(() => expect(screen.queryByTestId('data-source-setup')).toBeNull());
+  });
+
+  it('shows the ready content in place of the setup card once sources are ready', async () => {
+    serve([connection(GSC, 'gsc')], { [GSC]: [mapping(GSC, PROJECT)] });
+    mswServer.use(
+      http.get(`/api/v1/integrations/${GSC}/syncs/progress`, () =>
+        HttpResponse.json({
+          connection_id: GSC,
+          state: 'complete',
+          total_windows: 1,
+          completed_windows: 1,
+          failed_windows: 0,
+          covered_from: '2026-01-01',
+          covered_through: '2026-07-20',
+        }),
+      ),
+    );
+    renderSetup(undefined, 'Waiting for the first import.');
+
+    expect(screen.getByTestId('data-source-setup')).toBeInTheDocument();
+    expect(await screen.findByText('Waiting for the first import.')).toBeInTheDocument();
+    expect(screen.queryByTestId('data-source-setup')).toBeNull();
   });
 });

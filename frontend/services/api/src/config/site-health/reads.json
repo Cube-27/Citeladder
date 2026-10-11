@@ -95,7 +95,6 @@
     "unknown_rule_remediation_route": "code",
     "issue_history_max_crawls": 24,
     "inventory_source_crawl_ids_key": "inventory_source_crawl_ids",
-    "coverage_complete_state": "complete",
     "coverage_formula_version": "sh-coverage-1",
     "classification_formula_version": "sh-classification-1",
     "overview_trend_point_limit": 12,

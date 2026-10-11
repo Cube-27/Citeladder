@@ -49,7 +49,7 @@ export function RunsTable({ audits }: Readonly<{ audits: Audit[] }>) {
             <TableHead numeric>Requested</TableHead>
             <TableHead numeric>Completed</TableHead>
             <TableHead numeric>Failed</TableHead>
-            <TableHead>Created</TableHead>
+            <TableHead numeric>Created</TableHead>
             <TableHead className="sr-only">Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -79,7 +79,7 @@ export function RunsTable({ audits }: Readonly<{ audits: Audit[] }>) {
               <TableCell numeric className="tabular-nums">
                 {audit.failed_count}
               </TableCell>
-              <TableCell className="text-secondary">
+              <TableCell numeric className="text-secondary">
                 {sameLaunch(audit, pagedAudits[index - 1])
                   ? 'Same launch'
                   : formatDateTime(audit.created_at, timeZone)}

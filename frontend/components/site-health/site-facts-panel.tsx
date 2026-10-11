@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Disclosure } from '@/components/ui/disclosure';
 import { Select } from '@/components/ui/select';
 import {
+  ClampText,
   Table,
   TableBody,
   TableCell,
@@ -175,14 +176,14 @@ function CrawlerTable({
               .filter((bot) => bot.purpose === group)
               .map((bot) => (
                 <TableRow key={bot.bot_id}>
-                  <TableCell className="truncate">{bot.label}</TableCell>
-                  <TableCell className="truncate">{bot.operator}</TableCell>
-                  <TableCell className="truncate">{crawlerMatchedLabels[bot.matched]}</TableCell>
-                  <TableCell>
+                  <TableCell>{bot.label}</TableCell>
+                  <TableCell>{bot.operator}</TableCell>
+                  <TableCell>{crawlerMatchedLabels[bot.matched]}</TableCell>
+                  <TableCell className="whitespace-nowrap">
                     <Badge>{crawlerRootAccessLabels[bot.root_access]}</Badge>
                   </TableCell>
                   <TableCell>
-                    <span className="flex min-w-0 items-center gap-2">
+                    <span className="flex min-w-0 items-center gap-2 whitespace-nowrap">
                       <Badge>{crawlerPolicyLabels[bot.policy]}</Badge>
                       <PolicySample bot={bot} />
                     </span>
@@ -202,8 +203,8 @@ function PolicySample({ bot }: Readonly<{ bot: CrawlerBot }>) {
       : `${bot.disallowed_url_count} of ${bot.evaluated_url_count} known URLs disallowed`;
   // One line per crawler: the sample truncates in a narrow column and keeps its full text.
   return (
-    <span className={textRole('caption', 'truncate')} title={sample}>
+    <ClampText lines={1} className={textRole('caption')}>
       {sample}
-    </span>
+    </ClampText>
   );
 }

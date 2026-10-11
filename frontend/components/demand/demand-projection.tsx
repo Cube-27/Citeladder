@@ -334,22 +334,7 @@ function demandFallback({
 }>) {
   if (projectLoading || latest.isLoading) return <PageLoading label="Loading search demand…" />;
   if (!hasProject) return <ProjectRequiredState />;
-  if (latest.data === null) {
-    return (
-      <Stack gap="workspace">
-        <DataSourceSetup
-          required={['gsc']}
-          title="Connect Search Console"
-          description="Search Demand finds opportunities in this project's own search queries. Connect Google and use the property for this site."
-        />
-        <EmptyState
-          icon={Search}
-          heading="No Search Demand snapshot yet"
-          description="Search Demand appears here once Search Console data has been imported and analysed."
-        />
-      </Stack>
-    );
-  }
+  if (latest.data === null) return <SearchConsoleSetup />;
   if (latest.isError)
     return (
       <ReadError
@@ -358,17 +343,22 @@ function demandFallback({
       />
     );
   if (latest.data === undefined) return null;
+  return <SearchConsoleSetup />;
+}
+
+/** No usable Search Console evidence yet: connect it, or wait for its import. */
+function SearchConsoleSetup() {
   return (
-    <Stack gap="workspace">
-      <DataSourceSetup
-        required={['gsc']}
-        title="Connect Search Console"
-        description="This snapshot has no Search Console evidence. Connect Google and use the property for this site."
-      />
-      <Alert tone="info">
-        Search Console evidence is unavailable for this snapshot. Search Demand refreshes after the
-        next Search Console import.
-      </Alert>
-    </Stack>
+    <DataSourceSetup
+      required={['gsc']}
+      title="Connect Search Console"
+      description="Search Demand finds opportunities in this project's own search queries. Connect Google and use the property for this site."
+      whenReady={
+        <EmptyState
+          icon={Search}
+          heading="Search Demand appears after the next Search Console import."
+        />
+      }
+    />
   );
 }

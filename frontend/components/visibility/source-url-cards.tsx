@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { InlineEmpty } from '@/components/ui/inline-empty';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
+  ClampText,
   Table,
   TableBody,
   TableCell,
@@ -116,12 +117,14 @@ export function EnginesCard({
             {engines.map((row) => (
               <TableRow key={`${row.logical_engine}:${row.transport_model ?? ''}`}>
                 <TableCell>
-                  <span className="grid">
-                    <span>{engineLabel(row.logical_engine) || row.logical_engine}</span>
+                  <span className="grid min-w-0">
+                    <ClampText lines={1}>
+                      {engineLabel(row.logical_engine) || row.logical_engine}
+                    </ClampText>
                     {productModelLabel(row.logical_engine, row.transport_model) ? (
-                      <span className={textRole('caption', 'text-secondary')}>
+                      <ClampText lines={1} className={textRole('caption', 'text-secondary')}>
                         {productModelLabel(row.logical_engine, row.transport_model)}
-                      </span>
+                      </ClampText>
                     ) : null}
                   </span>
                 </TableCell>

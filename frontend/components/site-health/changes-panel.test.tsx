@@ -126,12 +126,7 @@ describe('Website Changes', () => {
     expect(screen.getByText(/After:/).parentElement).toHaveTextContent('503');
   });
 
-  it('states partial and non-comparable limitations honestly', async () => {
-    handlers('available', false);
-    const rendered = renderWithProviders(<ChangesPanel projectId={PROJECT} />);
-    expect(await screen.findByText(/shared observed URLs only/i)).toBeInTheDocument();
-    rendered.unmount();
-
+  it('says when two crawls cannot be compared', async () => {
     handlers('non_comparable');
     renderWithProviders(<ChangesPanel projectId={PROJECT} />);
     expect(await screen.findByText(/analysis version mismatch/i)).toBeInTheDocument();

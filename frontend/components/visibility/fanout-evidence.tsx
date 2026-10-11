@@ -10,6 +10,7 @@ import { FilterChoice, FilterRow } from '@/components/ui/filter-row';
 import { Pager, pageNumberControls, useTablePage } from '@/components/ui/pager';
 import { SearchField } from '@/components/ui/search-field';
 import {
+  ClampText,
   Table,
   TableBody,
   TableCell,
@@ -349,7 +350,7 @@ function SearchGroupRows({ group }: Readonly<{ group: SearchGroup }>) {
       {group.label ? (
         <TableRow>
           <TableCell colSpan={3} className="bg-surface-2">
-            <span className={textRole('itemTitle')}>{group.label}</span>
+            <ClampText className={textRole('itemTitle')}>{group.label}</ClampText>
           </TableCell>
         </TableRow>
       ) : null}
@@ -360,7 +361,7 @@ function SearchGroupRows({ group }: Readonly<{ group: SearchGroup }>) {
               className={group.label ? 'flex items-start gap-2 ps-4' : 'flex items-start gap-2'}
             >
               <Search className="text-muted mt-0.5 size-3 shrink-0" aria-hidden />
-              <span className="break-words">{row.query}</span>
+              <ClampText>{row.query}</ClampText>
             </span>
           </TableCell>
           <TableCell>{row.engines.map(engineLabel).join(', ')}</TableCell>

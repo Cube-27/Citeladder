@@ -309,6 +309,20 @@ export function endSentence(text: string): string {
 }
 
 /** Map an overall crawl status onto a run-status badge value. */
+/**
+ * The status a reader sees. A crawl that is partial only because some
+ * discovered links were dead, blocked or not web pages analyzed everything it
+ * reached — that is a normal crawl, so it reads as completed rather than as an
+ * unexplained "partial".
+ */
+export function crawlDisplayStatus(
+  crawl: Readonly<{ status: CrawlOverallStatus; partial_reason?: string | null }>,
+): CrawlOverallStatus {
+  return crawl.status === 'partially_completed' && crawl.partial_reason === 'discovery_incomplete'
+    ? 'completed'
+    : crawl.status;
+}
+
 export function crawlBadgeValue(status: CrawlOverallStatus): RunStatusValue {
   switch (status) {
     case 'validating':

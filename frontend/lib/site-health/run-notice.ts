@@ -7,9 +7,8 @@
  *
  * The rule that shapes the partial copy: a crawl that could not FETCH some URLs
  * and one whose ANALYSES fell short are different outcomes, and only the second
- * is a problem with the audit. Every real site has some dead, blocked, or
- * non-page links, so one message blaming analysis fired on effectively every
- * crawl. The backend names the reason; this module never infers it.
+ * is a problem with the audit, so only the second gets a notice. The backend
+ * names the reason; this module never infers it.
  */
 import type { RunStatusValue } from '@/components/ui/badge-variants';
 import type { SiteCrawl } from '@/lib/api/types';
@@ -79,26 +78,27 @@ export type DashboardRunNotice = {
  * What a `partially_completed` crawl actually means, from the backend's own
  * reason code.
  *
- * These are different outcomes and only one of them is a problem with the
- * audit. On any real site a handful of discovered links are dead, blocked, or
- * not web pages at all — that is a normal crawl, not a failed analysis, and
- * "re-crawl to retry" will not change it. The screen used to show the analysis
- * sentence for every partial crawl, so effectively every crawl looked broken.
+ * On any real site a handful of discovered links are dead, blocked, or not web
+ * pages at all — that is a normal crawl with nothing to retry, so a
+ * discovery-only shortfall gets no notice. Only an analysis shortfall is a
+ * problem with the audit, and re-crawling can fix it.
  */
-const PARTIAL_MESSAGES: Record<string, string> = {
-  discovery_incomplete:
-    'Some links could not be fetched — they were dead, blocked, or not web pages.',
-  analysis_incomplete:
-    'Some pages could not be analyzed — showing partial results. Re-crawl to retry the remaining pages.',
-  discovery_and_analysis_incomplete:
-    'Some links could not be fetched, and some fetched pages could not be analyzed. Re-crawl to retry the pages that failed analysis.',
-};
+const ANALYSIS_INCOMPLETE =
+  'Some pages could not be analyzed — showing partial results. Re-crawl to retry the remaining pages.';
 
 const PARTIAL_FALLBACK =
   'This crawl finished with partial results — showing everything it did analyze.';
 
-function partialCrawlMessage(partialReason: string): string {
-  return PARTIAL_MESSAGES[partialReason] ?? PARTIAL_FALLBACK;
+function partialCrawlNotice(partialReason: string): DashboardRunNotice {
+  switch (partialReason) {
+    case 'discovery_incomplete':
+      return null;
+    case 'analysis_incomplete':
+    case 'discovery_and_analysis_incomplete':
+      return { badge: 'partial', tone: 'warning', message: ANALYSIS_INCOMPLETE };
+    default:
+      return { badge: 'partial', tone: 'warning', message: PARTIAL_FALLBACK };
+  }
 }
 
 export function dashboardRunNotice(
@@ -116,13 +116,7 @@ export function dashboardRunNotice(
           'This run was cancelled — showing the pages analyzed so far. Re-crawl to complete the analysis.',
       };
     case 'partially_completed':
-      return {
-        badge: 'partial',
-        // A discovery-only shortfall is an observation, not a warning: nothing
-        // about the analysis went wrong and there is nothing to retry.
-        tone: crawl.partial_reason === 'discovery_incomplete' ? 'info' : 'warning',
-        message: partialCrawlMessage(crawl.partial_reason),
-      };
+      return partialCrawlNotice(crawl.partial_reason);
     case 'paused':
       return {
         badge: 'paused',

@@ -15,6 +15,7 @@ import { InlineEmpty } from '@/components/ui/inline-empty';
 import { ReadError } from '@/components/ui/read-error';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
+  ClampText,
   Table,
   TableBody,
   TableCell,
@@ -190,12 +191,12 @@ function PromptRow({
             className="mt-0.5"
           />
           <span className="grid min-w-0">
-            <span className="truncate">{item.prompt_text || 'Untitled prompt'}</span>
-            <span className={textRole('caption', 'text-secondary truncate')}>
+            <ClampText lines={1}>{item.prompt_text || 'Untitled prompt'}</ClampText>
+            <ClampText lines={1} className={textRole('caption', 'text-secondary')}>
               {productModelLabel(item.logical_engine, item.transport_model) ||
                 engineLabel(item.logical_engine) ||
                 item.logical_engine}
-            </span>
+            </ClampText>
           </span>
         </span>
       </TableCell>
@@ -226,7 +227,6 @@ function PromptRow({
               audit_id: item.audit_id,
               prompt_text: item.prompt_text,
               prompt_index: item.prompt_index,
-              repetition: item.repetition,
               logical_engine: item.logical_engine,
             })
           }

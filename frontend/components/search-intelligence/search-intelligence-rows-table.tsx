@@ -1,6 +1,7 @@
 import { Pressable } from '@/components/ui/pressable';
 import { TextLink } from '@/components/ui/text-link';
 import {
+  ClampText,
   SortableTableHead,
   Table,
   TableBody,
@@ -73,21 +74,16 @@ export function SearchIntelligenceRowsTable({
         {visibleRows.map((row) => (
           <TableRow key={row.id}>
             {columns.map((column) => (
-              <TableCell
-                key={column.field}
-                numeric={column.numeric}
-                className="truncate"
-                title={column.numeric ? undefined : (cellText(row[column.field]) ?? undefined)}
-              >
+              <TableCell key={column.field} numeric={column.numeric}>
                 {column === columns[0] ? (
                   <TextLink asChild text="inherit">
                     <Pressable
                       type="button"
-                      className="block max-w-full truncate text-left"
+                      className="block max-w-full text-left"
                       aria-label={`View evidence for ${row.keyword || row.domain || row.url}`}
                       onClick={() => onSelect(row)}
                     >
-                      {displayValue(row, column)}
+                      <ClampText>{displayValue(row, column)}</ClampText>
                     </Pressable>
                   </TextLink>
                 ) : (

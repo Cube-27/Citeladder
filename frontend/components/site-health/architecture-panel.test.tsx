@@ -146,14 +146,10 @@ describe('Architecture panel', () => {
   });
 
   it('reports the orphan count under partial coverage, scoped to what was crawled', async () => {
-    stubArchitecture({
-      coverage_state: 'partial',
-      limitations: ['This crawl hit its page budget, so these are the pages observed.'],
-    });
+    stubArchitecture({ coverage_state: 'partial' });
     renderWithProviders(<ArchitecturePanel projectId={PROJECT} crawlId={CRAWL} />);
 
     expect(await screen.findByText('Partial coverage')).toBeInTheDocument();
-    expect(screen.getByRole('alert')).toHaveTextContent('page budget');
     const orphans = screen.getAllByText('Orphaned pages')[0]!.closest('div');
     expect(within(orphans!).getByText('1')).toBeInTheDocument();
     expect(screen.queryByText(/withheld/i)).toBeNull();
@@ -182,7 +178,6 @@ describe('Architecture panel', () => {
   it('names why coverage fell short instead of only that it did', async () => {
     stubArchitecture({
       coverage_state: 'unknown',
-      limitations: ['This crawl could not prove it saw the whole site.'],
       coverage_reasons: ['discovery_failed', 'frontier_not_exhausted'],
     });
     renderWithProviders(<ArchitecturePanel projectId={PROJECT} crawlId={CRAWL} />);
@@ -190,16 +185,6 @@ describe('Architecture panel', () => {
     expect(await screen.findByText('Coverage unknown')).toBeInTheDocument();
     expect(screen.getByText(/a discovery request failed/)).toBeInTheDocument();
     expect(screen.getByText(/the crawl finished with URLs still queued/)).toBeInTheDocument();
-  });
-
-  it('renders coverage reasons even when there are no limitations', async () => {
-    // `limitations` is empty for complete coverage, so nesting the reasons
-    // inside it meant persisted reasons that nothing ever rendered.
-    stubArchitecture({ limitations: [], coverage_reasons: ['frontier_exhausted'] });
-    renderWithProviders(<ArchitecturePanel projectId={PROJECT} crawlId={CRAWL} />);
-
-    expect(await screen.findByText(/the crawl emptied its discovery queue/)).toBeInTheDocument();
-    expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('opens the pages the orphan count refers to from the count itself', async () => {

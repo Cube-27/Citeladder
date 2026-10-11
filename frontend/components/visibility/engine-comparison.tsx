@@ -2,6 +2,7 @@
 
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import {
+  ClampText,
   Table,
   TableBody,
   TableCell,
@@ -64,14 +65,14 @@ export function EngineComparison({
                         {engineLabel(engine.logical_engine)}
                       </Button>
                     ) : (
-                      engineLabel(engine.logical_engine)
+                      <ClampText lines={1}>{engineLabel(engine.logical_engine)}</ClampText>
                     )}
-                    <p className={textRole('caption', 'text-secondary')}>
+                    <ClampText lines={1} className={textRole('caption', 'text-secondary')}>
                       {visibility.model_provenance
                         .filter((item) => item.logical_engine === engine.logical_engine)
                         .map((item) => item.transport_model)
                         .join(', ')}
-                    </p>
+                    </ClampText>
                   </TableCell>
                   <TableCell numeric>
                     {measured(formatRate(engine.brand_mention_rate)) ?? <MissingValue />}

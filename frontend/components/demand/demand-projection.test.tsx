@@ -22,7 +22,10 @@ const project = vi.hoisted(() => ({
 }));
 
 vi.mock('@/components/integrations/data-source-setup', () => ({
-  DataSourceSetup: ({ title }: { title: string }) => <section aria-label={title} />,
+  // Stands in for a connected source, so the screen's ready content renders too.
+  DataSourceSetup: ({ title, whenReady }: { title: string; whenReady?: ReactNode }) => (
+    <section aria-label={title}>{whenReady}</section>
+  ),
 }));
 vi.mock('@/lib/project/project-context', () => {
   const context = () => ({
@@ -284,14 +287,16 @@ describe('DemandProjection', () => {
     expect(await screen.findByRole('status')).toHaveAccessibleName('Loading search demand…');
   });
 
-  it('distinguishes unavailable Search Console evidence', async () => {
+  it('offers Search Console setup instead of signals when the snapshot has no Search Console evidence', async () => {
     vi.mocked(demandApi.getLatest).mockResolvedValue({
       ...snapshot,
       coverage: { ...snapshot.coverage, search: 'unavailable' },
     });
     renderProjection();
 
-    expect(await screen.findByText(/Search Console evidence is unavailable/)).toBeInTheDocument();
+    expect(await screen.findByRole('region', { name: 'Connect Search Console' })).toHaveTextContent(
+      'Search Demand appears after the next Search Console import.',
+    );
     expect(screen.queryByText('school fees')).not.toBeInTheDocument();
   });
 
@@ -305,7 +310,9 @@ describe('DemandProjection', () => {
   it('answers a revisit without a snapshot from cache instead of reloading the skeleton', async () => {
     vi.mocked(demandApi.getLatest).mockRejectedValue(new ApiError('No demand snapshot', 404, ''));
     const first = renderProjection();
-    expect(await screen.findByText('No Search Demand snapshot yet')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Search Demand appears after the next Search Console import.'),
+    ).toBeInTheDocument();
     first.unmount();
     const readsBeforeRevisit = vi.mocked(demandApi.getLatest).mock.calls.length;
 
@@ -317,7 +324,9 @@ describe('DemandProjection', () => {
       </QueryClientProvider>,
       { wrapper: RouterTestWrapper },
     );
-    expect(screen.getByText('No Search Demand snapshot yet')).toBeInTheDocument();
+    expect(
+      screen.getByText('Search Demand appears after the next Search Console import.'),
+    ).toBeInTheDocument();
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
     expect(vi.mocked(demandApi.getLatest).mock.calls).toHaveLength(readsBeforeRevisit);
   });
@@ -326,7 +335,9 @@ describe('DemandProjection', () => {
     vi.mocked(demandApi.getLatest).mockRejectedValue(new ApiError('No demand snapshot', 404, ''));
     renderProjection();
 
-    expect(await screen.findByText('No Search Demand snapshot yet')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Search Demand appears after the next Search Console import.'),
+    ).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Connect Search Console' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Open Performance' })).not.toBeInTheDocument();
   });

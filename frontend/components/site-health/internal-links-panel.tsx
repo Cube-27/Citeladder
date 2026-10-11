@@ -17,6 +17,7 @@ import { ReadError } from '@/components/ui/read-error';
 import { SearchField } from '@/components/ui/search-field';
 import { Select } from '@/components/ui/select';
 import {
+  ClampText,
   Table,
   TableBody,
   TableCell,
@@ -314,12 +315,6 @@ function LinksResult({
         </Alert>
       ) : null}
       {notice ? <Alert tone="info">{notice}</Alert> : null}
-      {summary?.sources_without_passages ? (
-        <Alert tone="info">
-          {formatCount(summary.sources_without_passages)} pages had no usable captured source
-          passages. They were not checked for link placement.
-        </Alert>
-      ) : null}
       {/* A run that could not check pairs has no result; never render it as empty. */}
       {['unavailable', 'failed', 'cancelled'].includes(analysis.state) &&
       !analysis.recommendations.length ? null : (
@@ -426,7 +421,7 @@ function LinksTable({
                 <PageCell title={link.target.title} url={link.target.url} />
               </TableCell>
               <TableCell>{link.anchor}</TableCell>
-              <TableCell>
+              <TableCell className="whitespace-nowrap">
                 {link.action_status && link.action_status in ACTION_STATUS_LABEL ? (
                   <ActionStatusBadge status={link.action_status as ActionStatus} />
                 ) : (
@@ -471,13 +466,13 @@ function LinksTable({
 function PageCell({ title, url }: Readonly<{ title: string; url: string }>) {
   const path = new URL(url).pathname;
   return (
-    <span className="grid max-w-sm min-w-0 gap-0.5">
-      <span className="truncate" title={title || url}>
+    <span className="grid max-w-sm min-w-0">
+      <ClampText lines={1} tooltip={title || url}>
         {title || path}
-      </span>
-      <span className="type-caption truncate" title={url}>
+      </ClampText>
+      <ClampText lines={1} tooltip={url} className="type-caption">
         {decodeURIPath(path)}
-      </span>
+      </ClampText>
     </span>
   );
 }

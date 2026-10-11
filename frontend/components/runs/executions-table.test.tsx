@@ -43,7 +43,7 @@ function execution(overrides: Partial<Execution> = {}): Execution {
 }
 
 describe('ExecutionsTable', () => {
-  it('shows the frozen prompt text and its repetition', () => {
+  it('shows the frozen prompt text without a repetition label', () => {
     render(
       <ExecutionsTable
         executions={[execution({ prompt_text: 'Best trail shoes', repetition: 2 })]}
@@ -52,7 +52,7 @@ describe('ExecutionsTable', () => {
     );
 
     expect(screen.getByText('Best trail shoes')).toBeVisible();
-    expect(screen.getByText('rep 2')).toBeVisible();
+    expect(screen.queryByText(/rep 2/)).not.toBeInTheDocument();
   });
 
   it('falls back to the prompt ordinal when the snapshot text is empty', () => {

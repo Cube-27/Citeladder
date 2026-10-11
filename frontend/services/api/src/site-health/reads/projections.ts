@@ -52,23 +52,6 @@ function snapshotFor(db: Database, crawl: Crawl) {
     .executeTakeFirst();
 }
 
-function overviewLimitations(snapshot: {
-  aeo_measurement_state: string;
-  coverage_state: string;
-  analyzed_url_count: number;
-}) {
-  const limitations: string[] = [];
-  if (snapshot.aeo_measurement_state !== 'measured')
-    limitations.push(
-      'AEO Readiness has limited evidence; broader page-purpose coverage is needed.',
-    );
-  if (snapshot.coverage_state !== 'complete')
-    limitations.push(
-      `AEO Readiness describes ${snapshot.analyzed_url_count} audited pages, not the whole site.`,
-    );
-  return limitations;
-}
-
 export async function overview(
   db: Database,
   workspaceId: string,
@@ -182,7 +165,6 @@ export async function overview(
       metrics: [],
       cohort_composition: NO_COMPARABLE,
     },
-    limitations: overviewLimitations(snapshot),
   });
 }
 
@@ -299,12 +281,6 @@ export async function architecture(
     linking.pages_with_incoming_count === model.page_count
   )
     orphans = 0;
-  const limitation =
-    coverageState === reads.coverage_complete_state
-      ? []
-      : [
-          `${coverageState === 'partial' ? 'Page budget reached' : 'Full coverage unproven'} — counts cover the pages crawled, not the whole site.`,
-        ];
   return architectureSchema.parse({
     state: 'available',
     crawl_id: crawl.id,
@@ -336,7 +312,7 @@ export async function architecture(
     internal_linking: { orphan_pages: [], ...linking, orphan_page_count: orphans },
     structure_depth: record(model.structure_depth),
     architecture_formula_version: model.architecture_formula_version,
-    limitations: limitation,
+    limitations: [],
   });
 }
 

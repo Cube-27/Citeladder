@@ -4,7 +4,6 @@
  * persisted chat until the run reaches a terminal state.
  */
 export const AGENT_CHAT_PAGE_SIZE = 30;
-export const AGENT_ACTIONS_PAGE_SIZE = 50;
 /** A turn without this tab's stream is polled quickly at first, then less often. */
 export const AGENT_RUN_POLL_STEPS: readonly { untilMs: number; everyMs: number }[] = [
   { untilMs: 30_000, everyMs: 2_000 },

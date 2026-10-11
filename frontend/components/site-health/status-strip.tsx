@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import {
   canShowDiscoveredTotal,
   crawlBadgeValue,
+  crawlDisplayStatus,
   crawlFailureCopy,
   dashboardRunNotice,
   discoveryProgressLabel,
@@ -182,12 +183,12 @@ function DashboardNotice({ crawl }: Readonly<{ crawl: SiteCrawl }>) {
 function RunNotice({
   crawl,
   message,
-  badge = crawlBadgeValue(crawl.status),
+  badge = crawlBadgeValue(crawlDisplayStatus(crawl)),
 }: Readonly<{ crawl: SiteCrawl; message: string; badge?: ReturnType<typeof crawlBadgeValue> }>) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Badge variant="run-status" value={badge}>
-        {statusLabel(crawl.status)}
+        {statusLabel(crawlDisplayStatus(crawl))}
       </Badge>
       <span>{message}</span>
     </div>
@@ -217,8 +218,8 @@ function ProgressRow({
     <div className="grid gap-3">
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
         <div className="flex min-w-0 items-center gap-3">
-          <Badge variant="run-status" value={crawlBadgeValue(crawl.status)}>
-            {statusLabel(crawl.status)}
+          <Badge variant="run-status" value={crawlBadgeValue(crawlDisplayStatus(crawl))}>
+            {statusLabel(crawlDisplayStatus(crawl))}
           </Badge>
           <span className="type-body flex min-w-0 items-center gap-2">
             {active ? (

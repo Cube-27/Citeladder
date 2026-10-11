@@ -246,7 +246,7 @@ function BreakdownTable({
         <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent className="p-0">
-        <Table className="table-dense">
+        <Table>
           <TableHeader>
             <TableRow>
               <TableHead>{column}</TableHead>
@@ -289,7 +289,7 @@ function CitedTable({ cited }: Readonly<{ cited: AccuracyResponse['cited_alongsi
             No sources cited alongside contradictions.
           </InlineEmpty>
         ) : (
-          <Table className="table-dense">
+          <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Domain</TableHead>

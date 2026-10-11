@@ -705,8 +705,7 @@ describe('AI Traffic state and navigation', () => {
     await user.click(screen.getByRole('button', { name: 'Export CSV' }));
     await waitFor(() => expect(exportStatus).toBe('404'));
     await user.click(screen.getByRole('tab', { name: 'Referrals' }));
-    expect(await screen.findByText('No AI-referral data yet')).toBeVisible();
-    expect(screen.getByLabelText('Chart interval')).toBeVisible();
+    expect(await screen.findByLabelText('Chart interval')).toBeVisible();
     await user.click(screen.getByRole('tab', { name: 'Pages' }));
     await screen.findByRole('table', { name: 'Path-level AI Traffic with separate signal units' });
     fireEvent.change(screen.getByRole('textbox', { name: 'Folder' }), {

@@ -250,10 +250,6 @@ export function AppModelCard({ connections }: Readonly<{ connections: ProviderCo
             </>
           }
         />
-        <Alert tone="info">
-          Fallback: none. If this route is missing, revoked, or fails validation, the request is
-          refused rather than silently using a platform key.
-        </Alert>
         <OperationFeedback controller={controller} />
         <FormActions controller={controller} />
       </CardContent>

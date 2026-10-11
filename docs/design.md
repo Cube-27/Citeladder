@@ -269,13 +269,14 @@ Controls share one height ladder on every surface (generated below): the product
 | `--badge-height-md` | `24px` |
 | `--tab-height` | `32px` |
 | `--table-row-height` | `36px` |
-| `--table-row-height-dense` | `32px` |
 | `--table-header-height` | `32px` |
 <!-- generated:controls:end -->
 
 Metric columns retain centred tabular figures with `numeric`; ordinary numeric columns can use `numeric="end"` for trailing alignment. Headers and cells use the same shared alignment option. Text columns stay left-aligned.
 
-`TableRow density="multiline"` adds 12px vertical cell padding for title/URL and status/helper rows. Height remains content-driven; compact rows keep their existing geometry. Wide tables use the shared scroll wrapper.
+Every table shares one row rhythm: `--table-row-height` (36px) is the floor and every cell carries the same 6px `--table-cell-padding-y`, so a row is one line or two and never more. `TableCell` clamps plain text at two lines; JSX cells use `ClampText` (`lines={1}` for each half of a title-over-URL stack). Cut text shows in full in a tooltip. There are no density variants. Numeric cells never wrap. Wide tables use the shared scroll wrapper.
+
+An `EmptyState` on the sheet is its own card surface (`.empty-state-surface`); nested in a card, panel, dialog or table it shares that container's surface. Never wrap one in a `Card`.
 
 Website Overview, Pages, and page details use `components/site-health/audit-metric-strip.tsx`: one paper card, equal segments, leading icons, 48px rings at the upper right, visible measurement qualifications, and a consistent footer slot. Only supported drill-downs render “View details”. Strips reflow through two columns to one, with dividers following the arrangement.
 

@@ -383,7 +383,6 @@ export const siteHealthOverviewSchema = responseObject({
     ),
     cohort_composition: cohortCompositionSchema,
   }),
-  limitations: z.array(z.string()),
 });
 
 // Stable coded failures (plan §API contract). The frontend keys UX (upgrade

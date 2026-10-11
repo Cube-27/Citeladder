@@ -140,7 +140,6 @@ function overview(crawlId = CRAWL) {
       metrics: [],
       cohort_composition: UNCHANGED_COHORT_COMPOSITION,
     },
-    limitations: [],
   };
 }
 

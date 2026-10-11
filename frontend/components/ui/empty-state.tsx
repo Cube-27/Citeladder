@@ -10,8 +10,11 @@ import { textRole } from '@/components/ui/typography';
  *
  * Replaces the per-surface empty states that had each grown their own copy and
  * layout. Shape: a small icon beside the heading → one short line → one action,
- * hung on the section's left margin. It is not a card: an empty region should
- * read as absent content on the page, not as an object floating on it.
+ * hung on the section's left margin. On the sheet it is its own card surface
+ * (`.empty-state-surface`), so a "connect to start" prompt never reads as bare
+ * text beside the page's other cards; inside a card, dialog or table it drops
+ * that surface and shares the container's. Never wrap it in a Card yourself —
+ * that is what doubled the padding.
  *
  * **Keep `description` to a single sentence.** The empty states this replaces
  * had drifted into two- and three-clause explanations of what the screen would
@@ -58,10 +61,8 @@ export function EmptyState({
     <div
       data-empty-state={variant}
       className={cn(
-        'grid',
-        variant === 'compact'
-          ? 'gap-3 py-[var(--empty-state-padding)] min-[981px]:gap-1 min-[981px]:py-[var(--compact-gap)]'
-          : 'gap-3 py-[var(--empty-state-padding)]',
+        'empty-state-surface grid gap-3',
+        variant === 'compact' && 'min-[981px]:gap-1',
         className,
       )}
     >

@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  ClampText,
   Table,
   TableBody,
   TableCell,
@@ -125,13 +126,17 @@ function BrandName({
   selected: boolean;
   onSelect?: (name: string | null) => void;
 }>) {
-  const name = <span className={textRole('emphasis')}>{row.name}</span>;
+  const name = (
+    <ClampText lines={1} className={textRole('emphasis')}>
+      {row.name}
+    </ClampText>
+  );
   if (!onSelect) return name;
   return (
     <Pressable
       aria-pressed={selected}
       aria-label={selected ? `Stop plotting ${row.name} on its own` : `Plot ${row.name} on its own`}
-      className="hover:text-accent-text w-auto"
+      className="hover:text-accent-text w-auto min-w-0"
       onClick={(event) => {
         event.stopPropagation();
         onSelect(selected ? null : row.name);
@@ -239,13 +244,13 @@ export function RankingRowsTable({
                     />
                     <BrandName row={row} selected={selected} onSelect={onSelect} />
                     {row.is_brand ? (
-                      <span className={textRole('label', tagClasses())}>You</span>
+                      <span className={textRole('label', tagClasses('well', 'shrink-0'))}>You</span>
                     ) : null}
                   </span>
-                  <span className={textRole('caption', 'text-secondary md:hidden')}>
+                  <ClampText lines={1} className={textRole('caption', 'text-secondary md:hidden')}>
                     {formatRate(row.share_of_voice)} share of voice ·{' '}
                     {formatRate(row.citation_rate)} citations
-                  </span>
+                  </ClampText>
                 </TableCell>
                 {/* The rate is the column. Printing its fraction under every
                   row turned a scannable column of percentages into two

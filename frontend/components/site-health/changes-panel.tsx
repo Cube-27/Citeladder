@@ -11,6 +11,7 @@ import { InlineEmpty } from '@/components/ui/inline-empty';
 import { Pager } from '@/components/ui/pager';
 import { StatGrid } from '@/components/ui/stat-grid';
 import {
+  ClampText,
   Table,
   TableBody,
   TableCell,
@@ -275,7 +276,9 @@ function comparisonState(summary: ChangeSummary | undefined, pairAvailable: bool
       </Alert>
     );
   return pairAvailable ? null : (
-    <Alert tone="danger">The persisted comparison is missing its exact crawl pair.</Alert>
+    <Alert tone="danger">
+      This comparison is no longer available. Run a new crawl to compare again.
+    </Alert>
   );
 }
 
@@ -295,12 +298,6 @@ function ChangesTable({
   const counts = summary.summary.counts_by_class as Record<string, number> | undefined;
   return (
     <div className="grid min-w-0 gap-[var(--workspace-gap)]" data-testid="website-changes">
-      {!summary.complete_pair ? (
-        <Alert tone="warning">
-          This comparison includes shared observed URLs only. Added and removed page claims are
-          suppressed for partial crawls.
-        </Alert>
-      ) : null}
       <Card>
         <CardHeader>
           <CardTitle>Website Changes</CardTitle>
@@ -336,11 +333,11 @@ function ChangesTable({
                         text="emphasis"
                         href={`/site/crawls/${summary.crawl_b_id}/pages/${row.site_url_id}`}
                       >
-                        {displayPath(row.normalized_url)}
+                        <ClampText>{displayPath(row.normalized_url)}</ClampText>
                       </TextLink>
                     </TableCell>
                     <TableCell>{row.field.replaceAll('_', ' ')}</TableCell>
-                    <TableCell>
+                    <TableCell className="whitespace-nowrap">
                       <Badge>{CLASS_LABELS[row.change_class]}</Badge>
                       {row.expected ? <span className="type-caption ml-2">Expected</span> : null}
                     </TableCell>

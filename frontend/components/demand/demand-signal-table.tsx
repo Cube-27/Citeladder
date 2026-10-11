@@ -70,7 +70,9 @@ export function DemandSignalTable({
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead className="w-10">#</TableHead>
+          <TableHead numeric className="w-10">
+            #
+          </TableHead>
           <TableHead>Query</TableHead>
           <TableHead>Signal</TableHead>
           <TableHead numeric>Impressions</TableHead>
@@ -106,9 +108,11 @@ function SignalRow({
   const target = signalTarget(signal);
   return (
     <TableRow>
-      <TableCell className={textRole('caption', 'tabular-nums')}>#{rank}</TableCell>
-      <TableCell className="max-w-80 break-words">{target}</TableCell>
-      <TableCell>
+      <TableCell numeric className={textRole('caption')}>
+        #{rank}
+      </TableCell>
+      <TableCell className="max-w-80">{target}</TableCell>
+      <TableCell className="whitespace-nowrap">
         <SignalChip signalType={signal.signal_type} />
       </TableCell>
       <TableCell numeric>
@@ -123,7 +127,7 @@ function SignalRow({
       <TableCell numeric>
         <Position value={numericMetric(signal, 'position')} />
       </TableCell>
-      <TableCell>
+      <TableCell className="whitespace-nowrap">
         <div className="flex justify-end gap-2">
           <Button
             variant="ghost"

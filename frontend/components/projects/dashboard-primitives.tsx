@@ -1,5 +1,4 @@
-import { ArrowDown, ArrowUp, GripVertical, TrendingUp } from 'lucide-react';
-import { EmptyState } from '@/components/ui/empty-state';
+import { ArrowDown, ArrowUp, GripVertical } from 'lucide-react';
 import { metricItemClasses } from '@/components/ui/workspace';
 import { useState } from 'react';
 
@@ -69,20 +68,12 @@ export function StateMetric({
 /**
  * Each engine's brand mention rate in the previous and the current comparable
  * run. Both are shares of answers on the same 0–100 scale, so they are drawn as
- * meters against that scale rather than against the largest bar on screen.
+ * meters against that scale rather than against the largest bar on screen. The
+ * caller owns the empty case.
  */
 export function MovementChart({ movements }: Readonly<{ movements: CommandCenter['movements'] }>) {
-  if (movements.length === 0)
-    return (
-      <EmptyState
-        variant="compact"
-        icon={TrendingUp}
-        heading="No comparable measurement yet"
-        description="Needs a second run with the same prompts and engines."
-      />
-    );
   return (
-    <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
       {movements.map((row) => (
         <div key={row.label} className="grid min-w-0 content-start gap-2">
           <div className="flex items-center justify-between gap-2">

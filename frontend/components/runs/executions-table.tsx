@@ -3,6 +3,7 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
+  ClampText,
   Table,
   TableBody,
   TableCell,
@@ -23,7 +24,7 @@ import { textRole } from '@/components/ui/typography';
 /**
  * Executions table for a run (F10, design.md §9.7).
  *
- * One row per execution/queue task: prompt index + repetition (mono), the
+ * One row per execution/queue task: the prompt, the
  * engine badge (logical + transport), status badge, and latency (mono).
  * Succeeded rows open the evidence drawer without leaving the run.
  */
@@ -32,7 +33,7 @@ export function ExecutionsTable({
   onSelectEvidence,
 }: Readonly<{ executions: Execution[]; onSelectEvidence: (execution: Execution) => void }>) {
   return (
-    <Table className="table-dense">
+    <Table>
       <TableHeader>
         <TableRow>
           <TableHead>Prompt</TableHead>
@@ -44,22 +45,23 @@ export function ExecutionsTable({
       </TableHeader>
       <TableBody>
         {executions.map((execution) => (
-          <TableRow key={execution.id} density="multiline">
+          <TableRow key={execution.id}>
             <TableCell className="max-w-2xl">
-              <div className="flex flex-col gap-1">
-                <span className="break-words" title={execution.prompt_text}>
-                  {execution.prompt_text || `Prompt #${execution.prompt_index + 1}`}
-                </span>
-                <span className="type-caption tabular-nums">rep {execution.repetition}</span>
-              </div>
+              <ClampText>
+                {execution.prompt_text || `Prompt #${execution.prompt_index + 1}`}
+              </ClampText>
             </TableCell>
             <TableCell>
-              <span className={textRole('itemTitle')}>{engineLabel(execution.logical_engine)}</span>
-              {productTransportLabel(execution.transport_provider) ? (
-                <span className="type-caption ml-2">
-                  {productTransportLabel(execution.transport_provider)}
+              <ClampText>
+                <span className={textRole('itemTitle')}>
+                  {engineLabel(execution.logical_engine)}
                 </span>
-              ) : null}
+                {productTransportLabel(execution.transport_provider) ? (
+                  <span className="type-caption ml-2">
+                    {productTransportLabel(execution.transport_provider)}
+                  </span>
+                ) : null}
+              </ClampText>
             </TableCell>
             <TableCell>
               <div className="flex flex-col items-start gap-1">
@@ -67,9 +69,9 @@ export function ExecutionsTable({
                   {executionStatusLabel(execution.status, engineLabel(execution.logical_engine))}
                 </Badge>
                 {execution.status === 'failed' ? (
-                  <p className="type-caption max-w-xs">
+                  <ClampText lines={1} className="type-caption max-w-xs">
                     {executionFailureReason(execution.error_code)}
-                  </p>
+                  </ClampText>
                 ) : null}
               </div>
             </TableCell>

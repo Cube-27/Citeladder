@@ -16,6 +16,7 @@ import { ReadError } from '@/components/ui/read-error';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatGrid } from '@/components/ui/stat-grid';
 import {
+  ClampText,
   Table,
   TableBody,
   TableCell,
@@ -180,7 +181,7 @@ function EntityTable({ entities }: Readonly<{ entities: PerceptionResponse['enti
         </CardDescription>
       </CardHeader>
       <CardContent className="p-0">
-        <Table className="table-dense">
+        <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Business</TableHead>
@@ -194,10 +195,12 @@ function EntityTable({ entities }: Readonly<{ entities: PerceptionResponse['enti
             {entities.map((entity) => (
               <TableRow key={entity.name}>
                 <TableCell>
-                  {entity.name}
-                  {entity.is_brand ? (
-                    <span className={textRole('caption', 'text-muted ms-2')}>You</span>
-                  ) : null}
+                  <span className="flex min-w-0 items-center gap-2">
+                    <ClampText>{entity.name}</ClampText>
+                    {entity.is_brand ? (
+                      <span className={textRole('caption', 'text-muted shrink-0')}>You</span>
+                    ) : null}
+                  </span>
                 </TableCell>
                 <TableCell numeric>
                   {entity.score.classified} of {entity.coverage.mentions}
@@ -229,7 +232,7 @@ function ThemeTable({ themes }: Readonly<{ themes: PerceptionResponse['themes'] 
         {!themes.length ? (
           <InlineEmpty className="p-[var(--card-padding)]">No themes in these answers.</InlineEmpty>
         ) : (
-          <Table className="table-dense">
+          <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Theme</TableHead>
@@ -245,7 +248,11 @@ function ThemeTable({ themes }: Readonly<{ themes: PerceptionResponse['themes'] 
                   <TableCell numeric>{theme.positive}</TableCell>
                   <TableCell numeric>{theme.negative}</TableCell>
                   <TableCell>
-                    {theme.quotes[0] ? <QuoteLink quote={theme.quotes[0]} /> : null}
+                    {theme.quotes[0] ? (
+                      <ClampText tooltip={`“${theme.quotes[0].text}”`}>
+                        <QuoteLink quote={theme.quotes[0]} />
+                      </ClampText>
+                    ) : null}
                   </TableCell>
                 </TableRow>
               ))}
@@ -314,7 +321,7 @@ function DriverTable({ drivers }: Readonly<{ drivers: PerceptionResponse['driver
             No sources cited alongside criticism.
           </InlineEmpty>
         ) : (
-          <Table className="table-dense">
+          <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Domain</TableHead>
