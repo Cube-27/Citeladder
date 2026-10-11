@@ -610,6 +610,26 @@ describe('GET /projects/{project_id}/visibility/sources/*', () => {
       ],
       action_id: action.id,
     });
+
+    // The URL table carries the same standing and Action, and its gap filter
+    // keeps exactly the pages that show that standing.
+    const urlRows = async (query: Record<string, string>) => {
+      const { body: page } = await get(
+        tenant,
+        `/api/v1/projects/${tenant.projectId}/visibility/sources`,
+        { query: { audit_id: selected, dimension: 'url', ...query } },
+      );
+      return (page.items as Record<string, unknown>[]).map((row) => [
+        row.key,
+        row.standing,
+        row.action_id,
+      ]);
+    };
+    expect(await urlRows({})).toEqual([
+      [url, 'gap', action.id],
+      ['https://other.example/x', null, null],
+    ]);
+    expect(await urlRows({ standing: 'gap' })).toEqual([[url, 'gap', action.id]]);
   });
 
   it("draws one page's own line for its detail view", async () => {

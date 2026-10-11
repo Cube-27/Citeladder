@@ -100,7 +100,7 @@ export function VisibilitySources({
   );
 }
 
-/** The Domains / URLs inventory: usage chart, type ring, and the table. */
+/** The Domains / URLs inventory: the table, then the usage chart and type ring. */
 function SourcesInventory({
   filters,
   queries,
@@ -116,7 +116,7 @@ function SourcesInventory({
   // the type filter cannot carry over: page three of domains is not page three
   // of URLs, and `editorial` is not a page format.
   const [rawDimension, setDimension] = useUrlState('source_dim', optionalStringUrlCodec, {
-    clearKeys: ['source_cursor', 'source_offset', 'source_as_of', 'source_type'],
+    clearKeys: ['source_cursor', 'source_offset', 'source_as_of', 'source_type', 'source_standing'],
   });
   const dimension = rawDimension === 'url' ? 'url' : 'domain';
   return (
@@ -193,6 +193,11 @@ export function SourcesPanel({
   const [sourceType, setSourceType] = useUrlState('source_type', optionalStringUrlCodec, {
     clearKeys: ['source_cursor', 'source_offset', 'source_as_of'],
   });
+  // Only pages have a standing, so the gap filter applies to the URL table.
+  const [standing, setStanding] = useUrlState('source_standing', optionalStringUrlCodec, {
+    clearKeys: ['source_cursor', 'source_offset', 'source_as_of'],
+  });
+  const gapOnly = dimension === 'url' && standing === 'gap';
   const [pageSize, setPageSize] = useState<TablePageSize>(TABLE_DEFAULT_PAGE_SIZE);
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<SortState>(null);
@@ -217,7 +222,7 @@ export function SourcesPanel({
   });
   const domainOptions = useSourceDomains(filters, queries);
   const activeDomain = domain ?? pickedDomain;
-  const scope = { dimension, domain: activeDomain, cursor, asOf, sourceType, pageSize };
+  const scope = { dimension, domain: activeDomain, cursor, asOf, sourceType, gapOnly, pageSize };
   const { sourceQuery } = useSourceAnalysis(filters, queries, scope);
   const seriesQuery = useSourceSeries(filters, queries, {
     dimension,
@@ -261,11 +266,6 @@ export function SourcesPanel({
         />
       ) : null}
 
-      <div className={splitPaneClasses('main-aside')}>
-        <UsageCard dimension={dimension} query={seriesQuery} />
-        <TypesCard slices={slices} total={data?.total_citations ?? 0} query={sourceQuery} />
-      </div>
-
       <Card className="relative">
         <BusyBar active={sourceQuery.isFetching} label="Updating sources" />
         <SourceTableToolbar
@@ -284,12 +284,17 @@ export function SourcesPanel({
             )
           }
           typeControl={
-            <TypeFilter
-              dimension={dimension}
-              value={sourceType}
-              options={types}
-              onChange={setSourceType}
-            />
+            <>
+              <TypeFilter
+                dimension={dimension}
+                value={sourceType}
+                options={types}
+                onChange={setSourceType}
+              />
+              {dimension === 'url' ? (
+                <GapFilter value={gapOnly} onChange={(next) => setStanding(next ? 'gap' : null)} />
+              ) : null}
+            </>
           }
         />
         {/* A floor, with the footer pinned to the bottom of it. The card used
@@ -309,6 +314,7 @@ export function SourcesPanel({
             pageSize={pageSize}
             narrowed={Boolean(search || sourceType)}
             searching={Boolean(search)}
+            gapOnly={gapOnly}
           />
           <SourcePaging
             data={data}
@@ -324,6 +330,12 @@ export function SourcesPanel({
           />
         </CardContent>
       </Card>
+
+      {/* The table leads; the usage over time and the type mix explain it below. */}
+      <div className={splitPaneClasses('main-aside')}>
+        <UsageCard dimension={dimension} query={seriesQuery} />
+        <TypesCard slices={slices} total={data?.total_citations ?? 0} query={sourceQuery} />
+      </div>
     </Stack>
   );
 }
@@ -350,6 +362,27 @@ function DomainFilter({
         ...options.map((entry) => ({ value: entry, label: entry })),
       ]}
       onChange={(next) => onChange(next === 'all' ? null : next)}
+    />
+  );
+}
+
+/**
+ * Narrows the URL table to gaps: pages whose latest reading lists a tracked
+ * competitor and not you. A page nobody has read is never a gap.
+ */
+function GapFilter({
+  value,
+  onChange,
+}: Readonly<{ value: boolean; onChange: (gapOnly: boolean) => void }>) {
+  return (
+    <FilterChoice
+      label="Filter by standing"
+      value={value ? 'gap' : 'all'}
+      options={[
+        { value: 'all', label: 'All pages' },
+        { value: 'gap', label: 'Gaps: competitors listed, not you' },
+      ]}
+      onChange={(next) => onChange(next === 'gap')}
     />
   );
 }
@@ -398,16 +431,23 @@ function tableState({
   pageSize,
   narrowed,
   searching,
+  gapOnly,
 }: Readonly<{
   query: ReturnType<typeof useSourceAnalysis>['sourceQuery'];
   rows: ReturnType<typeof sortItems>;
   pageSize: number;
   narrowed: boolean;
   searching: boolean;
+  gapOnly: boolean;
 }>): SourceTableState {
   if (query.isLoading) return { kind: 'loading', rows: pageSize };
   if (rows.length) return { kind: 'rows' };
   if (searching) return { kind: 'empty', message: 'No sources on this page match your search.' };
+  if (gapOnly)
+    return {
+      kind: 'empty',
+      message: 'No read page in this selection lists competitors without you.',
+    };
   if (narrowed) return { kind: 'empty', message: 'No sources of this type in this selection.' };
   return { kind: 'empty', message: 'No cited sources in this selection.' };
 }
@@ -424,6 +464,7 @@ function SourceTable({
   pageSize,
   narrowed,
   searching,
+  gapOnly,
 }: Readonly<{
   dimension: 'domain' | 'url';
   query: ReturnType<typeof useSourceAnalysis>['sourceQuery'];
@@ -435,6 +476,7 @@ function SourceTable({
   pageSize: number;
   narrowed: boolean;
   searching: boolean;
+  gapOnly: boolean;
 }>) {
   // A failed read is the one state that has no table to fill: there are no
   // columns to be honest about, and leaving an empty grid under an error
@@ -450,7 +492,7 @@ function SourceTable({
       />
     );
   }
-  const state = tableState({ query, rows, pageSize, narrowed, searching });
+  const state = tableState({ query, rows, pageSize, narrowed, searching, gapOnly });
   return dimension === 'url' ? (
     <UrlTable rows={rows} sort={sort} onSort={onSort} onOpenUrl={onOpenUrl} state={state} />
   ) : (

@@ -623,8 +623,8 @@ voice and net sentiment with the change since that market's previous comparable
 run; a market never measured is not run, never zero. The Overview, its
 comparisons and Action outcome checks follow the default market.
 
-Sources has Domains and URLs, each with a usage series, a citation-type ring
-and a searchable, sortable, exportable table; a domain opens its URLs and the
+Sources has Domains and URLs, each led by a searchable, sortable, exportable
+table with a usage series and a citation-type ring below it; a domain opens its URLs and the
 prompts that reached it, and a URL opens its own page. Fanout state and trimmed
 queries settle on each response analysis, retaining its artifact/task provenance
 and fanout projection version. Source/fanout totals are server aggregates over

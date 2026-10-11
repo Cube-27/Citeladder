@@ -4,8 +4,9 @@
  * Shared API/MCP projection. Every rate's denominator is the
  * selection bounded by `as_of`, so paging never picks up a run that finished
  * mid-read. Totals follow the same filters as the rows. Page rows carry what
- * this project knows about the page and the brands named in the answers that
- * cited it, which is co-occurrence, never presence on the page.
+ * this project knows about the page (its standing and the Action to get listed
+ * on it) and the brands named in the answers that cited it, which is
+ * co-occurrence, never presence on the page.
  */
 import type { visibilitySourcesSchema } from '@citeladder/contracts/visibility-evidence';
 import { sql } from 'kysely';
@@ -21,8 +22,10 @@ import {
   encodeKeysetCursor,
   InvalidCursorError,
 } from '../http/keyset-cursor.ts';
+import { latestReadings, readingPresences } from '../source-pages/reading.ts';
 import { compareText } from '../text-order.ts';
 import { brandIdentities, identityKey } from './brand-identities.ts';
+import { earnedPageActions, isGapPage, pageStanding } from './page-standing.ts';
 import { ratio } from './metrics.ts';
 import { runSetComparisonStatus } from './run-sets.ts';
 import {
@@ -44,6 +47,8 @@ const PAGE_TARGET_PREFIX = policy.opportunity.earned_actions.EARNED_PAGE_TARGET_
 export type SourceQuery = {
   domain: string | null;
   sourceClass: string | null;
+  /** `gap`: only pages that list a tracked competitor and not the business. */
+  standing: 'gap' | null;
   dimension: 'domain' | 'url';
   asOf: ParsedDatetime | null;
   cursor: string | null;
@@ -106,6 +111,8 @@ function filteredCitations(
     .innerJoin(scope, 'scope.analysis_id', 'citation.analysis_id')
     .where('citation.workspace_id', '=', selection.workspaceId);
   if (query.domain) citations = citations.where('citation.domain', '=', query.domain);
+  if (query.standing === 'gap')
+    citations = citations.where(isGapPage(selection, sql.ref('citation.url_hash')));
   if (!query.sourceClass) return citations;
   if (!pages) return citations.where('citation.source_class', '=', query.sourceClass);
   return citations
@@ -164,6 +171,7 @@ export async function getVisibilitySources(
     auditIds: [...(selection.auditIds ?? [])].sort(compareText),
     domain: query.domain,
     sourceClass: query.sourceClass,
+    standing: query.standing,
     dimension: query.dimension,
     baselineAuditIds: [...(query.baselineAuditIds ?? [])].sort(compareText),
   };
@@ -265,6 +273,8 @@ export async function getVisibilitySources(
       response_delta: null,
       inspection_state: null,
       opportunity_id: null,
+      standing: null,
+      action_id: null,
       title: null,
       page_format: null,
       page_format_method: null,
@@ -315,9 +325,10 @@ export async function getVisibilitySources(
 }
 
 /**
- * Each page row's inspection state, live action and page facts. A page this
- * project has no record of keeps every field unset: nobody looked, which is
- * not the same as nothing wrong. Two cited URLs can resolve to one page.
+ * Each page row's inspection state, standing, live Opportunity and Action, and
+ * page facts. A page this project has no record of keeps every field unset:
+ * nobody looked, which is not the same as nothing wrong. Two cited URLs can
+ * resolve to one page.
  */
 async function attachPageLinks(
   db: Database,
@@ -341,7 +352,9 @@ async function attachPageLinks(
     )
     .leftJoin('source_page_snapshots as snapshot', 'snapshot.id', 'page.latest_snapshot_id')
     .select([
+      'page.id',
       'page.url_hash',
+      'page.source_class',
       'page.inspection_state',
       'page.page_format',
       'page.page_format_method',
@@ -355,14 +368,26 @@ async function attachPageLinks(
     .orderBy('page.url_hash')
     .orderBy(sql`opportunity.priority_score desc nulls last`)
     .execute();
+  const scope = { workspaceId: selection.workspaceId, projectId: selection.projectId };
+  const readings = await latestReadings(db, scope, [...new Set(pages.map((page) => page.id))]);
+  const presences = await readingPresences(
+    db,
+    scope,
+    [...readings.values()].map((reading) => reading.id),
+  );
+  const actions = await earnedPageActions(db, selection, hashes);
   const seen = new Set<string>();
   for (const page of pages) {
     if (seen.has(page.url_hash)) continue;
     seen.add(page.url_hash);
     const title = record(page.page_facts).title;
+    const reading = readings.get(page.id);
+    const standing = pageStanding(page, reading, reading ? (presences.get(reading.id) ?? []) : []);
     for (const row of byHash.get(page.url_hash) ?? []) {
       row.inspection_state = page.inspection_state;
       row.opportunity_id = page.opportunity_id;
+      row.standing = standing;
+      row.action_id = actions.get(page.url_hash) ?? null;
       row.title = typeof title === 'string' && title ? title : null;
       row.page_format = page.page_format;
       row.page_format_method = page.page_format_method;

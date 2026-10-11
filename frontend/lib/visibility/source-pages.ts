@@ -15,7 +15,10 @@
 import type { z } from 'zod';
 
 import type { pageEntitySchema } from '@citeladder/contracts/source-pages';
-import type { visibilitySourceUrlSchema } from '@citeladder/contracts/visibility-evidence';
+import type {
+  pageStandingSchema,
+  visibilitySourceUrlSchema,
+} from '@citeladder/contracts/visibility-evidence';
 import { formatCount } from '@/lib/format';
 import { sinceLabel } from '@/lib/visibility/sources';
 
@@ -96,16 +99,7 @@ type PageSection = NonNullable<z.infer<typeof visibilitySourceUrlSchema>['page']
  * competitor can never list it, so it is named as such rather than judged.
  * A page nobody read says so instead of reading as an absence.
  */
-export type PageStanding =
-  | 'untracked'
-  | 'yours'
-  | 'competitor'
-  | 'blocked'
-  | 'unreadable'
-  | 'not_read'
-  | 'gap'
-  | 'listed'
-  | 'read';
+export type PageStanding = z.infer<typeof pageStandingSchema> | 'untracked';
 
 export function pageStanding(page: PageSection | null): PageStanding {
   if (!page) return 'untracked';
@@ -136,6 +130,24 @@ const STANDING_SENTENCES: Record<PageStanding, string> = {
 
 export function standingSentence(standing: PageStanding): string {
   return STANDING_SENTENCES[standing];
+}
+
+/** The same standing in a word or two, for a table cell. */
+const STANDING_LABELS: Record<PageStanding, string> = {
+  untracked: 'Not tracked',
+  yours: 'Your page',
+  competitor: "Competitor's page",
+  blocked: 'Blocked',
+  unreadable: 'Read failed',
+  not_read: 'Not read',
+  gap: 'Gap',
+  listed: 'Listed',
+  read: 'Read',
+};
+
+/** A URL row's standing; a page this project has no record of is untracked. */
+export function standingLabel(standing: PageStanding | null): string {
+  return STANDING_LABELS[standing ?? 'untracked'];
 }
 
 export type PageEntity = z.infer<typeof pageEntitySchema>;

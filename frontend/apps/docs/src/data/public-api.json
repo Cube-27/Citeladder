@@ -3075,6 +3075,19 @@
         "required": ["items", "next_cursor", "root_errors"],
         "additionalProperties": false
       },
+      "PageStanding": {
+        "type": "string",
+        "enum": [
+          "yours",
+          "competitor",
+          "blocked",
+          "unreadable",
+          "not_read",
+          "gap",
+          "listed",
+          "read"
+        ]
+      },
       "PageSummary": {
         "type": "object",
         "properties": {
@@ -7231,6 +7244,28 @@
                     }
                   ]
                 },
+                "standing": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/PageStanding"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "action_id": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
                 "title": {
                   "type": ["string", "null"]
                 },
@@ -7296,6 +7331,8 @@
                 "url_hash",
                 "inspection_state",
                 "opportunity_id",
+                "standing",
+                "action_id",
                 "title",
                 "page_format",
                 "page_format_method",
@@ -9533,6 +9570,22 @@
                 {
                   "type": "string",
                   "maxLength": 64
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "name": "standing",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": ["gap"]
                 },
                 {
                   "type": "null"
