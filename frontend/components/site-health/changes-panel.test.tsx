@@ -22,33 +22,32 @@ beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
-function response(state: 'available' | 'unavailable' | 'non_comparable', complete = true) {
+function response(state: 'available' | 'unavailable' | 'non_comparable') {
   return {
     state,
     reason_code: state === 'non_comparable' ? 'analysis_version_mismatch' : null,
     snapshot_id: state === 'unavailable' ? null : SNAPSHOT,
     crawl_a_id: state === 'unavailable' ? null : CRAWL_A,
     crawl_b_id: state === 'unavailable' ? null : CRAWL_B,
-    complete_pair: complete,
+    complete_pair: true,
     analyzer_version: 'site-change-v1',
     page_analyzer_version: 'page-v1',
     extractor_version: 'extract-v1',
     source_analysis_ids: [],
     coverage: {},
     summary: { counts_by_class: { 'critical-regression': 1 } },
-    limitations: complete ? [] : ['partial_crawl_shared_urls_only'],
+    limitations: [],
     created_at: state === 'unavailable' ? null : '2026-08-15T00:00:00Z',
   };
 }
 
 function handlers(
   state: 'available' | 'unavailable' | 'non_comparable',
-  complete = true,
   values: Record<string, unknown> = {},
 ) {
   const base = `/api/v1/projects/${PROJECT}/site-health/changes`;
   mswServer.use(
-    http.get(`${base}/summary`, () => HttpResponse.json(response(state, complete))),
+    http.get(`${base}/summary`, () => HttpResponse.json(response(state))),
     http.get(base, ({ request }) => {
       const url = new URL(request.url);
       if (
@@ -58,7 +57,7 @@ function handlers(
         return HttpResponse.json({ error: { message: 'exact pair required' } }, { status: 422 });
       }
       return HttpResponse.json({
-        ...response(state, complete),
+        ...response(state),
         items:
           state === 'available'
             ? [
@@ -91,7 +90,7 @@ function handlers(
 
 describe('Website Changes', () => {
   it('labels and bounds content records and nested arrays instead of dumping JSON', async () => {
-    handlers('available', true, {
+    handlers('available', {
       field: 'content_change',
       before_value: { word_count: 100, heading_outline: ['Introduction'] },
       after_value: {

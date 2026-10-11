@@ -865,14 +865,11 @@ a.focus-ring:active .type-caption {
   box-shadow: none;
 }
 
-/* An empty state on the sheet is an object of its own: the card fill, edge and
-   padding, so a "connect to start" prompt never floats as bare text. Nested in
+/* An empty state on the sheet is an object of its own (the shared card classes
+   plus card padding), so a "connect to start" prompt never floats as bare text. Nested in
    a card, a panel, a dialog or a table it shares that container's surface and keeps
    only a little vertical room — the container already supplies the inset. */
 .empty-state-surface {
-  background: var(--color-panel);
-  border-radius: var(--radius-card);
-  box-shadow: var(--elevation-card);
   padding: var(--card-padding);
 }
 

@@ -308,7 +308,6 @@ export function endSentence(text: string): string {
   return /[.!?]$/.test(text) ? text : `${text}.`;
 }
 
-/** Map an overall crawl status onto a run-status badge value. */
 /**
  * The status a reader sees. A crawl that is partial only because some
  * discovered links were dead, blocked or not web pages analyzed everything it
@@ -323,6 +322,7 @@ export function crawlDisplayStatus(
     : crawl.status;
 }
 
+/** Map an overall crawl status onto a run-status badge value. */
 export function crawlBadgeValue(status: CrawlOverallStatus): RunStatusValue {
   switch (status) {
     case 'validating':

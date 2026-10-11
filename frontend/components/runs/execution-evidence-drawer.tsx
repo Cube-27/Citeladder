@@ -117,8 +117,8 @@ export function ExecutionEvidenceDrawer({
     );
   }
 
-  let description: string | undefined;
-  if (execution?.prompt_index !== undefined) description = `Prompt #${execution.prompt_index + 1}`;
+  const description =
+    execution?.prompt_index === undefined ? undefined : `Prompt #${execution.prompt_index + 1}`;
 
   return (
     <Drawer

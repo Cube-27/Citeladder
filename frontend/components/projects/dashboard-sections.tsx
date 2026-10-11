@@ -26,7 +26,7 @@ import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import { MetricValue } from '@/components/ui/metric-value';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
-import { availabilityLabel } from '@/lib/format';
+import { availabilityLabel, pluralCount } from '@/lib/format';
 import type { CommandCenter, Project } from '@/lib/api/types';
 import { DisplayTime } from '@/components/ui/display-time';
 import { cn } from '@/lib/utils';
@@ -42,9 +42,7 @@ import {
 import { Tooltip } from '@/components/ui/tooltip';
 
 /** Overview rows pair a primary card with an aside; both cards share the row's height. */
-function overviewRow() {
-  return splitPaneClasses('main-aside', 'lg:items-stretch');
-}
+const OVERVIEW_ROW = splitPaneClasses('main-aside', 'lg:items-stretch');
 
 function brandName(data: CommandCenter) {
   return data.project.brand_name || data.project.name;
@@ -134,8 +132,7 @@ export function CompanyFacts({ data }: Readonly<{ data: CommandCenter }>) {
               <UnavailableValue state="not_set" />
             )}
             <p className={textRole('caption')}>
-              {facts.competitors.length} tracked competitor
-              {facts.competitors.length === 1 ? '' : 's'}
+              {pluralCount(facts.competitors.length, 'tracked competitor')}
             </p>
           </div>
         </div>
@@ -215,7 +212,7 @@ function PdfButton({
 export function SummarySections({ data }: Readonly<{ data: CommandCenter }>) {
   return (
     <>
-      <div className={overviewRow()}>
+      <div className={OVERVIEW_ROW}>
         <Card aria-labelledby="project-state">
           <CardHeader
             actions={<Badge>{data.measurement ? 'Citation-capable audit' : 'Not run'}</Badge>}
@@ -232,7 +229,7 @@ export function SummarySections({ data }: Readonly<{ data: CommandCenter }>) {
         </Card>
         <Track data={data} />
       </div>
-      <div className={overviewRow()}>
+      <div className={OVERVIEW_ROW}>
         <Movement data={data} />
         <NextAction data={data} />
       </div>
@@ -362,7 +359,7 @@ export function ActionsAndProof({
   onMove: (from: number, to: number) => void;
 }>) {
   return (
-    <div className={overviewRow()}>
+    <div className={OVERVIEW_ROW}>
       {actions.length ? (
         <Card aria-labelledby="ranked-actions">
           <CardHeader actions={<ViewAllActions />}>

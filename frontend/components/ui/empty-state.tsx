@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
 
+import { cardClasses } from '@/components/ui/card-variants';
 import { textRole } from '@/components/ui/typography';
 
 /**
@@ -61,6 +62,7 @@ export function EmptyState({
     <div
       data-empty-state={variant}
       className={cn(
+        cardClasses(),
         'empty-state-surface grid gap-3',
         variant === 'compact' && 'min-[981px]:gap-1',
         className,

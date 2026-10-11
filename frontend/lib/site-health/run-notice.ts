@@ -13,7 +13,7 @@
 import type { RunStatusValue } from '@/components/ui/badge-variants';
 import type { SiteCrawl } from '@/lib/api/types';
 
-import { endSentence } from './status';
+import { crawlDisplayStatus, endSentence } from './status';
 
 /**
  * Reason + what-to-do copy for a failed crawl (SH-2/SH-5 — B1), shared by the
@@ -80,7 +80,8 @@ export type DashboardRunNotice = {
  *
  * On any real site a handful of discovered links are dead, blocked, or not web
  * pages at all — that is a normal crawl with nothing to retry, so a
- * discovery-only shortfall gets no notice. Only an analysis shortfall is a
+ * discovery-only shortfall reads as completed (`crawlDisplayStatus`) and gets
+ * no notice. Only an analysis shortfall is a
  * problem with the audit, and re-crawling can fix it.
  */
 const ANALYSIS_INCOMPLETE =
@@ -91,8 +92,6 @@ const PARTIAL_FALLBACK =
 
 function partialCrawlNotice(partialReason: string): DashboardRunNotice {
   switch (partialReason) {
-    case 'discovery_incomplete':
-      return null;
     case 'analysis_incomplete':
     case 'discovery_and_analysis_incomplete':
       return { badge: 'partial', tone: 'warning', message: ANALYSIS_INCOMPLETE };
@@ -107,7 +106,7 @@ export function dashboardRunNotice(
     'status' | 'analyzed_count' | 'error_message' | 'failure_summary' | 'partial_reason'
   >,
 ): DashboardRunNotice {
-  switch (crawl.status) {
+  switch (crawlDisplayStatus(crawl)) {
     case 'cancelled':
       return {
         badge: 'cancelled',

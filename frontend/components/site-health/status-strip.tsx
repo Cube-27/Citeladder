@@ -3,24 +3,21 @@
 import type { ReactNode } from 'react';
 
 import { Alert } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
 import { textRole } from '@/components/ui/typography';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import type { PageSummary, SiteCrawl, SiteHealthEntitlement } from '@/lib/api/types';
 import { ICONS } from '@/lib/icons';
 import { cn } from '@/lib/utils';
+import { CrawlStatusBadge } from '@/components/site-health/crawl-status-badge';
 import {
   canShowDiscoveredTotal,
-  crawlBadgeValue,
-  crawlDisplayStatus,
   crawlFailureCopy,
   dashboardRunNotice,
   discoveryProgressLabel,
   endSentence,
   isDiscoveryProvisional,
   isDiscoveryTerminal,
-  statusLabel,
   type SiteHealthPhase,
 } from '@/lib/site-health/status';
 
@@ -180,16 +177,10 @@ function DashboardNotice({ crawl }: Readonly<{ crawl: SiteCrawl }>) {
   );
 }
 
-function RunNotice({
-  crawl,
-  message,
-  badge = crawlBadgeValue(crawlDisplayStatus(crawl)),
-}: Readonly<{ crawl: SiteCrawl; message: string; badge?: ReturnType<typeof crawlBadgeValue> }>) {
+function RunNotice({ crawl, message }: Readonly<{ crawl: SiteCrawl; message: string }>) {
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <Badge variant="run-status" value={badge}>
-        {statusLabel(crawlDisplayStatus(crawl))}
-      </Badge>
+      <CrawlStatusBadge crawl={crawl} />
       <span>{message}</span>
     </div>
   );
@@ -218,9 +209,7 @@ function ProgressRow({
     <div className="grid gap-3">
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
         <div className="flex min-w-0 items-center gap-3">
-          <Badge variant="run-status" value={crawlBadgeValue(crawlDisplayStatus(crawl))}>
-            {statusLabel(crawlDisplayStatus(crawl))}
-          </Badge>
+          <CrawlStatusBadge crawl={crawl} />
           <span className="type-body flex min-w-0 items-center gap-2">
             {active ? (
               <span

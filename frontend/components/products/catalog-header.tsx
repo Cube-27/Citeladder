@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { CrawlStatusBadge } from '@/components/site-health/crawl-status-badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { CsvImportTrigger } from '@/components/ui/csv-import';
 import { StatGrid, type StatItemProps } from '@/components/ui/stat-grid';
@@ -14,12 +15,7 @@ import { commerceApi } from '@/lib/api/commerce';
 import { queryKeys } from '@/lib/api/query-keys';
 import { siteHealthApi, siteHealthQueries } from '@/lib/api/site-health';
 import { pluralCount } from '@/lib/format';
-import {
-  crawlBadgeValue,
-  crawlDisplayStatus,
-  crawlPollInterval,
-  statusLabel,
-} from '@/lib/site-health/status';
+import { crawlPollInterval } from '@/lib/site-health/status';
 
 import type { SiteCrawl } from '@/lib/api/types';
 import type { CommerceCatalog } from '@citeladder/contracts/commerce-suite';
@@ -88,13 +84,7 @@ function CatalogStats({
     {
       key: 'site-health',
       label: 'Site Health',
-      value: crawl ? (
-        <Badge variant="run-status" value={crawlBadgeValue(crawlDisplayStatus(crawl))}>
-          {statusLabel(crawlDisplayStatus(crawl))}
-        </Badge>
-      ) : (
-        <Badge>No crawl yet</Badge>
-      ),
+      value: crawl ? <CrawlStatusBadge crawl={crawl} /> : <Badge>No crawl yet</Badge>,
     },
   ];
   const projection = projectionBadge(counts?.projection);

@@ -1,6 +1,4 @@
 import {
-  Children,
-  useEffect,
   useState,
   type HTMLAttributes,
   type ReactNode,
@@ -155,16 +153,26 @@ export function TableHead({
 
 /** Plain text content — the cells `TableCell` clamps on its own. */
 function isPlainText(children: ReactNode) {
-  const parts = Children.toArray(children);
+  if (typeof children === 'string' || typeof children === 'number') return true;
   return (
-    parts.length > 0 && parts.every((part) => typeof part === 'string' || typeof part === 'number')
+    Array.isArray(children) &&
+    children.length > 0 &&
+    children.every((part) => typeof part === 'string' || typeof part === 'number')
   );
+}
+
+function isCut(node: HTMLElement) {
+  return node.scrollHeight > node.clientHeight + 1 || node.scrollWidth > node.clientWidth + 1;
 }
 
 /**
  * Text cut at `lines` (two by default, one for a title or URL stacked over a
  * second line), with the whole text in a tooltip only when something was
  * actually cut. This is what holds every row to one or two lines.
+ *
+ * Measuring is lazy: nothing is observed until a pointer or focus reaches the
+ * text, so a table of hundreds of cells costs no layout reads at rest. The
+ * tooltip mounts open on that first reach and behaves normally afterwards.
  *
  * `tooltip` overrides the tooltip content, e.g. a full URL behind a label.
  */
@@ -179,24 +187,19 @@ export function ClampText({
   tooltip?: ReactNode;
   className?: string;
 }>) {
-  // A callback ref held as state: wrapping in the tooltip remounts the span,
-  // and the observer has to follow the new node.
-  const [node, setNode] = useState<HTMLSpanElement | null>(null);
-  const [clipped, setClipped] = useState(false);
-  useEffect(() => {
-    if (!node) return;
-    const measure = () =>
-      setClipped(
-        node.scrollHeight > node.clientHeight + 1 || node.scrollWidth > node.clientWidth + 1,
-      );
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [node, children, lines]);
+  // The full text as plain text: styled children (a title role, a caption)
+  // would carry their own ink onto the inverse tooltip chip.
+  const [fullText, setFullText] = useState<string | null>(null);
+  const check =
+    fullText === null
+      ? (event: { currentTarget: HTMLElement }) => {
+          if (isCut(event.currentTarget)) setFullText(event.currentTarget.textContent ?? '');
+        }
+      : undefined;
   const text = (
     <span
-      ref={setNode}
+      onPointerEnter={check}
+      onFocus={check}
       className={cn(
         'block min-w-0 break-words',
         lines === 1 ? 'truncate' : 'line-clamp-2',
@@ -206,7 +209,13 @@ export function ClampText({
       {children}
     </span>
   );
-  return clipped ? <Tooltip content={tooltip ?? children}>{text}</Tooltip> : text;
+  return fullText === null ? (
+    text
+  ) : (
+    <Tooltip content={tooltip ?? fullText} defaultOpen>
+      {text}
+    </Tooltip>
+  );
 }
 
 export function TableCell({
