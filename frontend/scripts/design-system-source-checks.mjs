@@ -1141,8 +1141,10 @@ export function websiteContractViolations(root) {
   const cssLabel = relative(root, cssPath).replaceAll('\\', '/');
   const rules = cssRules(readFileSync(cssPath, 'utf8'));
 
-  violations.push(...missingRoleViolations(rules, cssLabel));
-  violations.push(...typeLadderViolations(rules, cssLabel));
+  violations.push(
+    ...missingRoleViolations(rules, cssLabel),
+    ...typeLadderViolations(rules, cssLabel),
+  );
 
   for (const selector of TOKEN_COLORED_ROLES) {
     const selectorRegex = selectorPattern(selector);
