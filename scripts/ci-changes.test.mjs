@@ -220,6 +220,7 @@ test('previous CI evidence requires every owner to be successful or intentionall
       'API service (TypeScript)',
       'E2E (playwright)',
       'Security (secrets scan)',
+      'Infra (Terraform and workflows)',
     ].map((name) => ({ name, status: 'completed', conclusion: 'skipped' })),
   ];
   assert.equal(hasTrustworthyJobEvidence(complete, 'ci.yml'), true);

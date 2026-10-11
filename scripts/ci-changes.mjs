@@ -264,6 +264,7 @@ export function hasTrustworthyJobEvidence(jobs, workflowFile) {
           'API service (TypeScript)',
           'E2E (playwright)',
           'Security (secrets scan)',
+          'Infra (Terraform and workflows)',
         ];
   const jobsByName = new Map(jobs.map((job) => [job.name, job]));
   const classifier = jobsByName.get('Classify affected owners');

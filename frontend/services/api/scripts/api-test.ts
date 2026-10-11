@@ -21,7 +21,9 @@ const args = process.argv.slice(2).filter((arg) => arg !== '--');
 const types = args.includes('--types');
 const files = args.filter((arg) => arg !== '--types');
 
-const url = localEnvironment().DATABASE_URL;
+// Always the local POSTGRES_* database: an inherited DATABASE_URL could name a
+// shared or remote one, and the suite writes and deletes rows.
+const url = localEnvironment({ ...process.env, DATABASE_URL: undefined }).DATABASE_URL;
 if (!url) throw new Error('Set POSTGRES_* in .env (see .env.example).');
 const env = Object.fromEntries(
   Object.entries(process.env).filter(([name]) => !isInheritedCredential(name)),
