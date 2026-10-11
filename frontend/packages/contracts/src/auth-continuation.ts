@@ -1,3 +1,9 @@
+function continuationParameter(pathname: string): string | undefined {
+  if (pathname === '/mcp/oauth/consent') return 'transaction';
+  if (pathname === '/invitations/accept') return 'token';
+  return undefined;
+}
+
 /** Reconstruct an allowlisted app-relative destination; never forward opaque URLs. */
 export function safeAuthReturnPath(value: string | null | undefined): string | undefined {
   if (
@@ -10,12 +16,7 @@ export function safeAuthReturnPath(value: string | null | undefined): string | u
   )
     return undefined;
   const url = new URL(value, 'https://citeladder.invalid');
-  const parameter =
-    url.pathname === '/mcp/oauth/consent'
-      ? 'transaction'
-      : url.pathname === '/invitations/accept'
-        ? 'token'
-        : undefined;
+  const parameter = continuationParameter(url.pathname);
   if (
     !parameter ||
     url.origin !== 'https://citeladder.invalid' ||
@@ -29,7 +30,7 @@ export function safeAuthReturnPath(value: string | null | undefined): string | u
 
 export function withAuthReturnPath(destination: string, returnTo: string | undefined): string {
   const safe = safeAuthReturnPath(returnTo);
-  return safe
-    ? `${destination}${destination.includes('?') ? '&' : '?'}return_to=${encodeURIComponent(safe)}`
-    : destination;
+  if (!safe) return destination;
+  const separator = destination.includes('?') ? '&' : '?';
+  return `${destination}${separator}return_to=${encodeURIComponent(safe)}`;
 }

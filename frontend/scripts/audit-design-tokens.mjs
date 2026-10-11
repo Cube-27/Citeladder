@@ -80,7 +80,7 @@ const SAME_AS = [
 const NON_SERIES =
   /^--color-(?:accent(?:-[\w-]+)?|(?:success|warning|danger|info|neutral)(?:-[\w-]+)?)$/;
 
-const escaped = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const escaped = (value) => value.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
 const byName = (left, right) => {
   if (left === right) return 0;
   return left < right ? -1 : 1;

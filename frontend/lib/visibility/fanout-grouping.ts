@@ -55,32 +55,35 @@ export type SearchGroup = {
   noExposedQueries: number;
 };
 
+type StateCounts = Pick<SearchGroup, 'undisclosed' | 'silent' | 'unavailable' | 'noExposedQueries'>;
+
+function tallyState(counts: StateCounts, state: VisibilityExecutionEvidence['state']): void {
+  if (state === 'count_only') counts.undisclosed += 1;
+  if (state === 'no_search') counts.silent += 1;
+  if (state === 'unavailable') counts.unavailable += 1;
+  if (state === 'no_exposed_queries') counts.noExposedQueries += 1;
+}
+
+function addQuery(
+  rows: Map<string, SearchRow>,
+  query: string,
+  engine: VisibilityExecutionEvidence['logical_engine'],
+): void {
+  const row = rows.get(query);
+  if (!row) {
+    rows.set(query, { query, engines: engine ? [engine] : [], occurrences: 1 });
+    return;
+  }
+  row.occurrences += 1;
+  if (engine && !row.engines.includes(engine)) row.engines.push(engine);
+}
+
 function foldRows(executions: readonly VisibilityExecutionEvidence[]): SearchGroup {
   const rows = new Map<string, SearchRow>();
-  let undisclosed = 0;
-  let silent = 0;
-  let unavailable = 0;
-  let noExposedQueries = 0;
+  const counts = { undisclosed: 0, silent: 0, unavailable: 0, noExposedQueries: 0 };
   for (const execution of executions) {
-    if (execution.state === 'count_only') undisclosed += 1;
-    if (execution.state === 'no_search') silent += 1;
-    if (execution.state === 'unavailable') unavailable += 1;
-    if (execution.state === 'no_exposed_queries') noExposedQueries += 1;
-    for (const query of queryTexts(execution)) {
-      const row = rows.get(query);
-      if (row) {
-        row.occurrences += 1;
-        if (execution.logical_engine && !row.engines.includes(execution.logical_engine)) {
-          row.engines.push(execution.logical_engine);
-        }
-      } else {
-        rows.set(query, {
-          query,
-          engines: execution.logical_engine ? [execution.logical_engine] : [],
-          occurrences: 1,
-        });
-      }
-    }
+    tallyState(counts, execution.state);
+    for (const query of queryTexts(execution)) addQuery(rows, query, execution.logical_engine);
   }
   return {
     key: '',
@@ -90,10 +93,7 @@ function foldRows(executions: readonly VisibilityExecutionEvidence[]): SearchGro
     rows: [...rows.values()].sort(
       (a, b) => b.occurrences - a.occurrences || a.query.localeCompare(b.query),
     ),
-    undisclosed,
-    silent,
-    unavailable,
-    noExposedQueries,
+    ...counts,
   };
 }
 
@@ -135,11 +135,10 @@ export function searchRowsByTopic(
       order.push(topic);
     }
   }
-  return order
-    .sort((a, b) => a.localeCompare(b))
-    .map((topic) => ({
-      ...foldRows(buckets.get(topic)!),
-      key: topic,
-      label: topic,
-    }));
+  order.sort((a, b) => a.localeCompare(b));
+  return order.map((topic) => ({
+    ...foldRows(buckets.get(topic)!),
+    key: topic,
+    label: topic,
+  }));
 }

@@ -156,8 +156,6 @@ export function SessionGuard({
 
   if (isLoading || isRedirecting) {
     // Loading, or unauthenticated and mid-redirect: never render protected UI.
-    // Surface the underlying error only for debugging (kept out of the DOM).
-    void error;
     return <>{renderSessionFallback(fallback)}</>;
   }
 

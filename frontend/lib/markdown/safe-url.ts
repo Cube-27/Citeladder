@@ -5,7 +5,7 @@
  * component module that also exports plain functions cannot keep state across a
  * Fast Refresh. The security contract is unchanged and still unit-tested.
  */
-const SAFE_PROTOCOLS = ['http:', 'https:', 'mailto:'];
+const SAFE_PROTOCOLS: ReadonlySet<string> = new Set(['http:', 'https:', 'mailto:']);
 
 /** Allow only http/https/mailto; anything else (javascript:, data:, vbscript:,
  * protocol-relative tricks) collapses to an empty, inert URL. Relative URLs
@@ -22,7 +22,7 @@ export function safeUrlTransform(url: string): string {
   if (trimmed.startsWith('//')) return '';
   try {
     const parsed = new URL(trimmed, 'https://local.invalid');
-    if (!SAFE_PROTOCOLS.includes(parsed.protocol)) return '';
+    if (!SAFE_PROTOCOLS.has(parsed.protocol)) return '';
   } catch {
     return '';
   }

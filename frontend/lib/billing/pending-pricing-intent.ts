@@ -28,7 +28,7 @@ export type PendingPricingIntentV1 = {
   created_at_ms: number;
 };
 
-const KINDS: readonly PendingIntentKind[] = ['checkout', 'addon', 'topup'];
+const KINDS: ReadonlySet<string> = new Set<PendingIntentKind>(['checkout', 'addon', 'topup']);
 
 type IntentFields = Omit<PendingPricingIntentV1, 'version' | 'return_path'>;
 
@@ -37,7 +37,7 @@ function recordFrom(raw: unknown): Record<string, unknown> | null {
 }
 
 function validKind(value: unknown): value is PendingIntentKind {
-  return typeof value === 'string' && KINDS.includes(value as PendingIntentKind);
+  return typeof value === 'string' && KINDS.has(value);
 }
 
 function isNonEmptyString(value: unknown): value is string {

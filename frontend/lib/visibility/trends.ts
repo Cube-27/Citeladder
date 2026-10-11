@@ -43,7 +43,7 @@ export const TREND_ENGINES: readonly LogicalEngine[] = ENGINE_ORDER;
  */
 export function rangeToFrom(range: TrendRange, now: Date = new Date()): string | undefined {
   if (range === 'all') return undefined;
-  const from = new Date(now.getTime());
+  const from = new Date(now);
   if (range === '30d') from.setUTCDate(from.getUTCDate() - 30);
   else if (range === '90d') from.setUTCDate(from.getUTCDate() - 90);
   else if (range === '1y') from.setUTCFullYear(from.getUTCFullYear() - 1);

@@ -287,5 +287,5 @@ export function breadcrumbJsonLd(
 
 /** Prevent a JSON value from terminating its containing script element. */
 export function serializeJsonLd(data: JsonLdObject): string {
-  return JSON.stringify(data).replace(/</g, '\\u003c');
+  return JSON.stringify(data).replaceAll('<', String.raw`\u003c`);
 }

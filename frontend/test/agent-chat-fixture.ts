@@ -23,14 +23,15 @@ export function revision(id: string, number: number, author: 'agent' | 'user', b
   };
 }
 
-export function detail(
-  latest: ReturnType<typeof revision>,
-  run: {
-    status: string;
-    error_code?: string;
-    progress?: { ordinal: number; status: string; tool: string | null }[];
-  } = { status: 'succeeded' },
-) {
+type DetailRun = {
+  status: string;
+  error_code?: string;
+  progress?: { ordinal: number; status: string; tool: string | null }[];
+};
+
+const DEFAULT_RUN: DetailRun = { status: 'succeeded' };
+
+export function detail(latest: ReturnType<typeof revision>, run: DetailRun = DEFAULT_RUN) {
   return {
     chat: {
       id: CHAT,

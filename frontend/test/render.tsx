@@ -122,7 +122,7 @@ export function renderWithProviders(ui: ReactElement, options?: ProvidersOptions
   const { projectSelection, initialEntries, ...renderOptions } = options ?? {};
   const selection = projectSelection === null ? null : testProjectSelection(projectSelection);
 
-  function Wrapper({ children }: { children: ReactNode }) {
+  function Wrapper({ children }: Readonly<{ children: ReactNode }>) {
     return (
       <MemoryRouter
         initialEntries={

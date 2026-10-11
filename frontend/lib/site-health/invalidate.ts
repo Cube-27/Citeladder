@@ -24,7 +24,7 @@ import { queryKeys } from '@/lib/api/query-keys';
  * `cursor: null` for a first page.
  */
 function isFirstPage(queryKey: readonly unknown[]): boolean {
-  const filters = queryKey[queryKey.length - 1];
+  const filters = queryKey.at(-1);
   if (typeof filters !== 'object' || filters === null) return true;
   return (filters as { cursor?: unknown }).cursor == null;
 }

@@ -9,7 +9,7 @@
 type Entry = Pick<IntersectionObserverEntry, 'isIntersecting' | 'target'>;
 
 class IntersectionObserverStub {
-  static instances = new Set<IntersectionObserverStub>();
+  static readonly instances = new Set<IntersectionObserverStub>();
 
   readonly targets = new Set<Element>();
   readonly root = null;

@@ -494,111 +494,121 @@ export function standalonePlaceholderViolations(source, label, ownsProductUi) {
   return violations;
 }
 
+const outsideUiPackage = (label) => !label.startsWith('components/ui/');
+
+/**
+ * Independent class rules for product UI. Each rule inspects one JSX element's
+ * class string; `appliesTo` scopes it by file, `test` decides the violation.
+ */
+const PRODUCT_UI_CLASS_RULES = [
+  {
+    test: (classes, entry) =>
+      entry.tag === 'Card' &&
+      /\b(?:border(?:-[^\s]+)?|rounded(?:-[^\s]+)?|(?:hover:)?shadow-[^\s]+)\b/.test(classes),
+    message: 'Card geometry and elevation belong to its owner',
+  },
+  // Call sites consume role-owned typography; the owner chooses its weights.
+  {
+    appliesTo: outsideUiPackage,
+    test: (classes) => /\bfont-(?:normal|medium|semibold|bold)\b/.test(classes),
+    message: 'font weight belongs to a text role (components/ui/typography.tsx)',
+  },
+  // A bordered, filled, padded box is a Panel. Twenty-seven of these were
+  // rebuilt by hand, each with its own fill, border colour, radius and
+  // padding, which is why the same evidence box looked different in six
+  // screens. Card could not absorb them — a Card may not nest in a Card — so
+  // panelClasses is the owner. Chips, icon tiles and controls are excluded by
+  // requiring an all-sides padding.
+  {
+    appliesTo: outsideUiPackage,
+    test: (classes) =>
+      /(?<![:\w\]-])bg-(?:panel|well|background-alt)(?:\/\d+)?\b/.test(classes) &&
+      /(?<![:\w\]-])border(?![-\w])/.test(classes) &&
+      /(?<![:\w\]-])rounded-\[var\(--radius-(?:control|card|overlay)\)\]/.test(classes) &&
+      /(?<![:\w\]-])p-(?:\d[\d.]*|\[var\([^)]+\)\])/.test(classes),
+    message: 'a bordered filled box is a Panel (components/ui/panel.tsx)',
+  },
+  // Vertical rhythm belongs to the container. A child that sets its own
+  // `mt-*` owns its distance from a sibling it cannot see, which is why
+  // ninety-odd of these accumulated in a dozen values and why changing a
+  // screen's rhythm meant editing every child taking part in it. Use `Stack`
+  // or a `gap`.
+  //
+  // Exempt: a className that also sizes a glyph (`size-*`), which is optical
+  // alignment against a text baseline rather than rhythm; negative margins,
+  // which are deliberate overlap; and 2px, which is too small to be rhythm.
+  {
+    appliesTo: outsideUiPackage,
+    test: (classes) =>
+      !/(?<![:\w\]-])size-[0-9.]+\b/.test(classes) &&
+      /(?<![:\w\]-])(?:mt|mb|my)-(?!0\b|0\.5\b|px\b)[0-9.]+\b/.test(classes),
+    message: 'vertical rhythm belongs to a container gap (components/ui/layout.tsx)',
+  },
+  {
+    test: (classes) => /\btext-\[[^\]]+\]/.test(classes),
+    message: 'product type must use shared semantic type roles',
+  },
+  // The type ladder is the `.type-*` roles in globals.css, reached through
+  // `textRole()` or the class itself. A raw size, leading, tracking or face
+  // at a call site is a private rung of the ladder: that is how a caption
+  // came to out-size the value it described.
+  {
+    appliesTo: outsideUiPackage,
+    test: (classes) => RAW_TYPE_SCALE.test(classes),
+    message: 'text size belongs to a type role (components/ui/typography.tsx)',
+  },
+  {
+    appliesTo: outsideUiPackage,
+    test: (classes) => RAW_TYPE_METRICS.test(classes),
+    message: 'leading, tracking and face belong to a type role (components/ui/typography.tsx)',
+  },
+  {
+    test: (classes) => /(?<![\w-])(?:[\w-]+:)*text-subtle(?![\w-])/.test(classes),
+    message: 'the subtle ink is retired; labels and meta use muted',
+  },
+  // Spacing is the 4px grid (2px only as a hairline inset). Six- and
+  // ten-pixel steps are how one screen's rhythm stopped matching the next.
+  {
+    test: (classes) => OFF_GRID_SPACING.test(classes),
+    message: 'spacing must sit on the 4px grid',
+  },
+  // A line is a token at full strength: an alpha-faded edge is an eleventh
+  // grey that no longer matches the separation ladder.
+  {
+    test: (classes) => /(?<![\w-])(?:[\w-]+:)*border-[a-z-]+\/\d+(?![\w-])/.test(classes),
+    message: 'borders use a line token, never a faded colour',
+  },
+  {
+    test: (classes) => /\b(?:(?:sm|md|lg|xl):)?(?:gap|p|px|py)-[568]\b/.test(classes),
+    message: 'product large spacing must use a semantic CSS variable',
+  },
+  {
+    test: (classes) =>
+      /\bwebsite-(?:hero|page|section|feature|small|lead|body|nav|label)/.test(classes),
+    message: 'product UI must not consume website type roles',
+  },
+  {
+    appliesTo: outsideUiPackage,
+    test: (classes) => /\b(?:hover:)?shadow-(?:xs|sm|card|card-hover|lg)\b/.test(classes),
+    message: 'feature-owned static elevation is retired',
+  },
+  {
+    test: (classes) =>
+      /\b(?:bg|text|border|ring)-(?:gray|indigo|cyan|coral|lime|amber)-\d+\b/.test(classes),
+    message: 'product UI must consume semantic colour roles',
+  },
+];
+
 /** Product UI must consume the even type ladder and semantic large-spacing roles. */
 export function productUiSourceViolations(source, label, ownsProductUi) {
   if (!ownsProductUi || !label.endsWith('.tsx')) return [];
   const violations = [];
   for (const entry of jsxClassData(source, label)) {
-    if (
-      entry.tag === 'Card' &&
-      /\b(?:border(?:-[^\s]+)?|rounded(?:-[^\s]+)?|(?:hover:)?shadow-[^\s]+)\b/.test(entry.classes)
-    ) {
-      violations.push(`${label}:${entry.line}: Card geometry and elevation belong to its owner`);
-    }
-    // Call sites consume role-owned typography; the owner chooses its weights.
-    if (
-      !label.startsWith('components/ui/') &&
-      /\bfont-(?:normal|medium|semibold|bold)\b/.test(entry.classes)
-    ) {
-      violations.push(
-        `${label}:${entry.line}: font weight belongs to a text role (components/ui/typography.tsx)`,
-      );
-    }
-    // A bordered, filled, padded box is a Panel. Twenty-seven of these were
-    // rebuilt by hand, each with its own fill, border colour, radius and
-    // padding, which is why the same evidence box looked different in six
-    // screens. Card could not absorb them — a Card may not nest in a Card — so
-    // panelClasses is the owner. Chips, icon tiles and controls are excluded by
-    // requiring an all-sides padding.
-    if (
-      !label.startsWith('components/ui/') &&
-      /(?<![:\w\]-])bg-(?:panel|well|background-alt)(?:\/\d+)?\b/.test(entry.classes) &&
-      /(?<![:\w\]-])border(?![-\w])/.test(entry.classes) &&
-      /(?<![:\w\]-])rounded-\[var\(--radius-(?:control|card|overlay)\)\]/.test(entry.classes) &&
-      /(?<![:\w\]-])p-(?:\d[\d.]*|\[var\([^)]+\)\])/.test(entry.classes)
-    ) {
-      violations.push(
-        `${label}:${entry.line}: a bordered filled box is a Panel (components/ui/panel.tsx)`,
-      );
-    }
-    // Vertical rhythm belongs to the container. A child that sets its own
-    // `mt-*` owns its distance from a sibling it cannot see, which is why
-    // ninety-odd of these accumulated in a dozen values and why changing a
-    // screen's rhythm meant editing every child taking part in it. Use `Stack`
-    // or a `gap`.
-    //
-    // Exempt: a className that also sizes a glyph (`size-*`), which is optical
-    // alignment against a text baseline rather than rhythm; negative margins,
-    // which are deliberate overlap; and 2px, which is too small to be rhythm.
-    if (
-      !label.startsWith('components/ui/') &&
-      !/(?<![:\w\]-])size-[0-9.]+\b/.test(entry.classes) &&
-      /(?<![:\w\]-])(?:mt|mb|my)-(?!0\b|0\.5\b|px\b)[0-9.]+\b/.test(entry.classes)
-    ) {
-      violations.push(
-        `${label}:${entry.line}: vertical rhythm belongs to a container gap (components/ui/layout.tsx)`,
-      );
-    }
-    if (/\btext-\[[^\]]+\]/.test(entry.classes)) {
-      violations.push(`${label}:${entry.line}: product type must use shared semantic type roles`);
-    }
-    // The type ladder is the `.type-*` roles in globals.css, reached through
-    // `textRole()` or the class itself. A raw size, leading, tracking or face
-    // at a call site is a private rung of the ladder: that is how a caption
-    // came to out-size the value it described.
-    if (!label.startsWith('components/ui/') && RAW_TYPE_SCALE.test(entry.classes)) {
-      violations.push(
-        `${label}:${entry.line}: text size belongs to a type role (components/ui/typography.tsx)`,
-      );
-    }
-    if (!label.startsWith('components/ui/') && RAW_TYPE_METRICS.test(entry.classes)) {
-      violations.push(
-        `${label}:${entry.line}: leading, tracking and face belong to a type role (components/ui/typography.tsx)`,
-      );
-    }
-    if (/(?<![\w-])(?:[\w-]+:)*text-subtle(?![\w-])/.test(entry.classes)) {
-      violations.push(
-        `${label}:${entry.line}: the subtle ink is retired; labels and meta use muted`,
-      );
-    }
-    // Spacing is the 4px grid (2px only as a hairline inset). Six- and
-    // ten-pixel steps are how one screen's rhythm stopped matching the next.
-    if (OFF_GRID_SPACING.test(entry.classes)) {
-      violations.push(`${label}:${entry.line}: spacing must sit on the 4px grid`);
-    }
-    // A line is a token at full strength: an alpha-faded edge is an eleventh
-    // grey that no longer matches the separation ladder.
-    if (/(?<![\w-])(?:[\w-]+:)*border-[a-z-]+\/\d+(?![\w-])/.test(entry.classes)) {
-      violations.push(`${label}:${entry.line}: borders use a line token, never a faded colour`);
-    }
-    if (/\b(?:(?:sm|md|lg|xl):)?(?:gap|p|px|py)-(?:5|6|8)\b/.test(entry.classes)) {
-      violations.push(
-        `${label}:${entry.line}: product large spacing must use a semantic CSS variable`,
-      );
-    }
-    if (/\bwebsite-(?:hero|page|section|feature|small|lead|body|nav|label)/.test(entry.classes)) {
-      violations.push(`${label}:${entry.line}: product UI must not consume website type roles`);
-    }
-    if (
-      !label.startsWith('components/ui/') &&
-      /\b(?:hover:)?shadow-(?:xs|sm|card|card-hover|lg)\b/.test(entry.classes)
-    ) {
-      violations.push(`${label}:${entry.line}: feature-owned static elevation is retired`);
-    }
-    if (
-      /\b(?:bg|text|border|ring)-(?:gray|indigo|cyan|coral|lime|amber)-\d+\b/.test(entry.classes)
-    ) {
-      violations.push(`${label}:${entry.line}: product UI must consume semantic colour roles`);
+    for (const rule of PRODUCT_UI_CLASS_RULES) {
+      if (rule.appliesTo && !rule.appliesTo(label)) continue;
+      if (rule.test(entry.classes, entry)) {
+        violations.push(`${label}:${entry.line}: ${rule.message}`);
+      }
     }
   }
   return violations;
@@ -1046,7 +1056,7 @@ export function landingThemeViolations(root) {
   const violations = [];
   if (/#[\da-f]{3,8}\b/i.test(css))
     violations.push(`${LANDING_CSS}: component colours must use semantic tokens`);
-  if (/font-size\s*:\s*(?:1[01](?:\.\d+)?|[0-9](?:\.\d+)?|\.\d+)px\b/i.test(css))
+  if (/font-size\s*:\s*(?:1[01](?:\.\d+)?|\d(?:\.\d+)?|\.\d+)px\b/i.test(css))
     violations.push(`${LANDING_CSS}: rendered text must be at least 12px`);
   const transitionDeclarations = css.matchAll(
     /(?:^|[;{])\s*transition(?:-property)?\s*:\s*([^;{}]*)/gi,
@@ -1088,18 +1098,18 @@ function selectorPattern(selector) {
   return new RegExp(escapeRegExp(selector) + String.raw`(?![\w-])`);
 }
 
-export function websiteContractViolations(root) {
+function missingRoleViolations(rules, cssLabel) {
   const violations = [];
-  const cssPath = join(root, ...WEBSITE_CSS.split('/'));
-  const cssLabel = relative(root, cssPath).replaceAll('\\', '/');
-  const rules = cssRules(readFileSync(cssPath, 'utf8'));
-
   for (const selector of REQUIRED_WEBSITE_ROLES) {
     if (!rules.some((candidate) => candidate.prelude.trim() === selector)) {
       violations.push(cssLabel + ': missing website selector ' + selector);
     }
   }
+  return violations;
+}
 
+function typeLadderViolations(rules, cssLabel) {
+  const violations = [];
   const ladder = WEBSITE_TYPE_LADDER.map((selector) => ({
     selector,
     size: fontSizeRem(rules, selector),
@@ -1122,6 +1132,19 @@ export function websiteContractViolations(root) {
       );
     }
   }
+  return violations;
+}
+
+export function websiteContractViolations(root) {
+  const violations = [];
+  const cssPath = join(root, ...WEBSITE_CSS.split('/'));
+  const cssLabel = relative(root, cssPath).replaceAll('\\', '/');
+  const rules = cssRules(readFileSync(cssPath, 'utf8'));
+
+  violations.push(
+    ...missingRoleViolations(rules, cssLabel),
+    ...typeLadderViolations(rules, cssLabel),
+  );
 
   for (const selector of TOKEN_COLORED_ROLES) {
     const selectorRegex = selectorPattern(selector);

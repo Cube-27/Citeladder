@@ -11,6 +11,8 @@
  */
 import { saveBlob } from '@/lib/download';
 
+type CsvCell = string | number | null | undefined;
+
 /**
  * RFC 4180 quoting: double the quotes, wrap anything that could be misread.
  *
@@ -18,7 +20,7 @@ import { saveBlob } from '@/lib/download';
  * formula triggers in spreadsheet software, and a cited page title beginning
  * with one would otherwise be evaluated when the file is opened.
  */
-function escapeCell(value: string | number | null | undefined): string {
+function escapeCell(value: CsvCell): string {
   if (value === null || value === undefined) return '';
   const text = String(value);
   const risky = /^\s*[=+\-@]|^[\t\r\n]/.test(text);
