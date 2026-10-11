@@ -77,15 +77,16 @@ export async function settlePromptRun(db: Database, task: AuditTask, success: bo
       reservationId: hold.reservation_id,
       at,
     };
-    if (success)
-      await debitUsage(db, {
-        ...request,
-        subjectId: task.id,
-        attempt: 1,
-        units: 1,
-        key: `run:${hold.reservation_id}:answer`,
-        dispatchKey: 'answer',
-      });
-    await releaseUsage(db, { ...request, key: `run:${hold.reservation_id}:release` });
+    const answer = {
+      ...request,
+      subjectId: task.id,
+      attempt: 1,
+      units: 1,
+      key: `run:${hold.reservation_id}:answer`,
+      dispatchKey: 'answer',
+    };
+    // Ledger writes share the transaction and its capacity lock, so they run in order.
+    if (success) await debitUsage(db, answer); // NOSONAR
+    await releaseUsage(db, { ...request, key: `run:${hold.reservation_id}:release` }); // NOSONAR
   }
 }

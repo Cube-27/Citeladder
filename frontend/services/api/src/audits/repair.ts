@@ -203,7 +203,7 @@ export function createRepairAudit(
       .returningAll()
       .execute();
     for (const task of repaired)
-      await reservePromptRun(trx, { workspaceId, auditId: id, taskId: task.id, at });
+      await reservePromptRun(trx, { workspaceId, auditId: id, taskId: task.id, at }); // NOSONAR -- ledger holds share the transaction and its lock.
     await transitionAudit(trx, workspaceId, id, 'validating', at, 'repair audit validating');
     await transitionAudit(trx, workspaceId, id, 'queued', at, 'repair audit queued');
     await auditEvent(

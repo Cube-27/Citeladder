@@ -294,7 +294,7 @@ export async function settleAbandonedCalls(db: Database, now = new Date(), limit
     .orderBy('created_at')
     .limit(limit)
     .execute();
-  for (const call of stale) await settleCall(db, call.id, null, false);
+  for (const call of stale) await settleCall(db, call.id, null, false); // NOSONAR -- one bounded settle transaction at a time.
   return stale.length;
 }
 

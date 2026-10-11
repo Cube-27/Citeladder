@@ -88,7 +88,7 @@ export class Fixtures {
           ['prompt_slots', 10_000],
           ['ai_credits', 1_000_000],
         ] as const)
-          await grant(trx, account, { key, value, sourceKind: 'override', fixtureDefault: true });
+          await grant(trx, account, { key, value, sourceKind: 'override', fixtureDefault: true }); // NOSONAR -- one transaction connection; grants serialize.
       }
       return workspaceId;
     };

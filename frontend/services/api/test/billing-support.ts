@@ -41,6 +41,21 @@ export const buyer = {
   export_eligibility_attested: true,
 };
 
+/** The authored launch catalog with every price bound and every item on sale. */
+function sellableCatalog() {
+  const payload = catalogSchema.parse(
+    launchCatalog({ mode: 'test', settings: billingConfig().billing }),
+  );
+  for (const plan of payload.plans)
+    for (const mode of ['byok', 'funded'] as const)
+      for (const [region, price] of Object.entries(plan.regional_prices[mode])) {
+        price.provider_price_ref = `plan_${plan.key.replaceAll('_', '')}${mode}${region}`;
+        price.tax_verified = true;
+      }
+  for (const item of [...payload.addons, ...payload.topups]) item.available = true;
+  return payload;
+}
+
 export class BillingFixtures extends Fixtures {
   readonly database: Database;
   private readonly revisions: string[] = [];
@@ -74,31 +89,12 @@ export class BillingFixtures extends Fixtures {
     published = true,
   ) {
     // The authored launch catalog, so tests exercise the bundles customers buy.
-    const payload = catalogSchema.parse(
-      launchCatalog({ mode: 'test', settings: billingConfig().billing }),
-    );
-    for (const plan of payload.plans)
-      for (const mode of ['byok', 'funded'] as const)
-        for (const [region, price] of Object.entries(plan.regional_prices[mode])) {
-          price.provider_price_ref = `plan_${plan.key.replaceAll('_', '')}${mode}${region}`;
-          price.tax_verified = true;
-        }
-    for (const item of [...payload.addons, ...payload.topups]) item.available = true;
+    const payload = sellableCatalog();
     modify?.(payload);
     const revision = `fixture-${randomUUID()}`;
     payload.contact_sales_url = `https://example.test/contact/${revision}`;
     const actor = await this.user();
-    if (published) {
-      const retired = await this.database
-        .updateTable('billing_catalog_revisions')
-        .set({ publication_state: 'retired' })
-        .where('publication_state', '=', 'published')
-        .returning('revision')
-        .execute();
-      for (const row of retired)
-        if (!row.revision.startsWith('fixture-') && !this.retired.includes(row.revision))
-          this.retired.push(row.revision);
-    }
+    if (published) await this.retirePublished();
     await this.database
       .insertInto('billing_catalog_revisions')
       .values({
@@ -117,6 +113,18 @@ export class BillingFixtures extends Fixtures {
       .execute();
     this.revisions.push(revision);
     return { revision, payload };
+  }
+  /** Retires the published catalog, remembering a non-fixture one so cleanup restores it. */
+  private async retirePublished() {
+    const retired = await this.database
+      .updateTable('billing_catalog_revisions')
+      .set({ publication_state: 'retired' })
+      .where('publication_state', '=', 'published')
+      .returning('revision')
+      .execute();
+    for (const row of retired)
+      if (!row.revision.startsWith('fixture-') && !this.retired.includes(row.revision))
+        this.retired.push(row.revision);
   }
   override async cleanup() {
     if (this.accounts.length) {
