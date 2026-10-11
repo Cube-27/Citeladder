@@ -78,6 +78,8 @@ describe('MarketingFooter', () => {
         element?.tagName === 'P' && /a cube27 product/i.test(element.textContent ?? ''),
     );
     expect(ownership).toBeInTheDocument();
+    // Guard against the epoch year leaking into the copyright line.
+    expect(ownership.textContent).not.toMatch(/© 1970/);
     expect(within(ownership).getByRole('link', { name: 'Cube27' })).toHaveAttribute(
       'href',
       PARENT_COMPANY.href,

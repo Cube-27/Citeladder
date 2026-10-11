@@ -72,8 +72,10 @@ function FooterColumnLink({ link }: Readonly<{ link: FooterLink }>) {
   );
 }
 
-// Read once at load; the cached footer renders it without calling Date.
-const COPYRIGHT_YEAR = new Date().getFullYear();
+// Stamped by the build. Pages prerender in workerd, where Date reads the Unix
+// epoch outside a request, so a module-level `new Date()` rendered "© 1970".
+// Tests run without the define and fall back to the local clock.
+const COPYRIGHT_YEAR = Number(process.env.PUBLIC_BUILD_YEAR) || new Date().getFullYear();
 
 /** Shared footer: every published destination, the ownership line and each policy. */
 export async function MarketingFooter() {
