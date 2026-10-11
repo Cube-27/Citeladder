@@ -175,7 +175,7 @@ export async function admitAudit(
 }
 export type FundedAdmission = NonNullable<Awaited<ReturnType<typeof admitAudit>>>;
 
-/** Platform selection is possible only after a persisted hold proves funded authorization. */
+/** Platform selection is possible only after the task's persisted run hold proves admission. */
 export async function platformRoute(
   db: Database,
   route: FrozenRoute,
@@ -199,7 +199,7 @@ export async function platformRoute(
     .where('subject_id', '=', proof.taskId)
     .where('reservation_id', '=', proof.reservationId)
     .where('entry_kind', '=', 'reservation')
-    .where('capability_key', '=', 'audit_credits')
+    .where('capability_key', '=', policy.entitlements.prompt_runs)
     .executeTakeFirst();
   if (!hold || !expectedCost(route, true).complete) throw unavailableCredential();
   const candidates = await db

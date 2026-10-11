@@ -54,10 +54,6 @@
       },
       "grants": [
         {
-          "key": "audit_cadence",
-          "value": 2
-        },
-        {
           "key": "project_slots",
           "value": 1
         },
@@ -80,14 +76,6 @@
         {
           "key": "manual_runs_per_day",
           "value": 3
-        },
-        {
-          "key": "exports",
-          "value": 1
-        },
-        {
-          "key": "support_tier",
-          "value": 0
         }
       ]
     },
@@ -144,10 +132,6 @@
       },
       "grants": [
         {
-          "key": "audit_cadence",
-          "value": 2
-        },
-        {
           "key": "project_slots",
           "value": 3
         },
@@ -172,20 +156,8 @@
           "value": 6
         },
         {
-          "key": "exports",
-          "value": 1
-        },
-        {
-          "key": "support_tier",
-          "value": 0
-        },
-        {
           "key": "ai_credits",
           "value": 500
-        },
-        {
-          "key": "fanout",
-          "value": 1
         },
         {
           "key": "agent",
@@ -246,10 +218,6 @@
       },
       "grants": [
         {
-          "key": "audit_cadence",
-          "value": 2
-        },
-        {
           "key": "project_slots",
           "value": 10
         },
@@ -274,20 +242,8 @@
           "value": 12
         },
         {
-          "key": "exports",
-          "value": 1
-        },
-        {
-          "key": "support_tier",
-          "value": 1
-        },
-        {
           "key": "ai_credits",
           "value": 1500
-        },
-        {
-          "key": "fanout",
-          "value": 1
         },
         {
           "key": "agent",
@@ -417,7 +373,7 @@
               "value": 10
             },
             {
-              "key": "audit_credits",
+              "key": "prompt_runs_per_period",
               "value": 1000
             }
           ]
@@ -517,7 +473,7 @@
           },
           "grants": [
             {
-              "key": "audit_credits",
+              "key": "prompt_runs_per_period",
               "value": 1000
             }
           ]
@@ -539,7 +495,7 @@
           },
           "grants": [
             {
-              "key": "audit_credits",
+              "key": "prompt_runs_per_period",
               "value": 1000
             }
           ]

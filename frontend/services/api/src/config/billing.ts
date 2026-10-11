@@ -51,7 +51,6 @@ export const billing = {
       [c.region_international]: c.currency_usd,
     },
     self_serve_plan_keys: [c.plan_tier_1, c.plan_tier_2, c.plan_tier_3],
-    coming_soon_row_plan_keys: [c.plan_tier_2, c.plan_tier_3],
     activation_kinds: [
       c.activation_kind_base,
       c.activation_kind_addon,

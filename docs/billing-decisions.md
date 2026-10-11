@@ -213,6 +213,23 @@ refund, even if a later period is live when it settles. When the provider
 refuses to cancel an expiring base checkout, the sweep re-reads it and activates
 it if the customer paid meanwhile.
 
+## Plans, AI credits and enforcement (PR 2)
+
+**B31 — Owner, 2026-10-11.** Nothing is free. Every platform AI call spends AI
+credits, including prompt generation in onboarding and on the free trial, which
+has its own total credits (B16). Supersedes B11's onboarding exemption and its
+row in B17. Engineering reads "nothing" as including onboarding research and
+brand discovery.
+
+**B32 — Owner, 2026-10-11.** Managed plans are purchasable. The pricing page's
+BYOK/managed toggle selects the mode. For a managed workspace the platform
+supplies the answer-engine and DataForSEO keys internally, and provider settings
+hide them; a BYOK workspace sees and manages its own. That is the only
+difference between the two modes (B4). Extends B20.
+
+**B33 — Owner, 2026-10-11.** Only an answer that succeeds spends a prompt run.
+An answer that fails after its retries releases its hold.
+
 ## Owner inputs still required
 
 Not decisions; needed only for India checkout and live enablement: GST rate,

@@ -284,7 +284,7 @@ describe('project owner', () => {
     await grant(db, account, { key: 'project_deletion', value: 1 });
     const audit = await retained.audit(t);
     const { taskId } = await retained.execution(t, { auditId: audit });
-    const grantId = await grant(db, account, { key: 'audit_credits', value: 1 });
+    const grantId = await grant(db, account, { key: 'prompt_runs_per_period', value: 1 });
     const reservationId = randomUUID();
     const entry = (kind: 'reservation' | 'release') => {
       const id = randomUUID();
@@ -292,7 +292,7 @@ describe('project owner', () => {
         id,
         billing_account_id: account,
         grant_id: grantId,
-        capability_key: 'audit_credits',
+        capability_key: 'prompt_runs_per_period',
         entry_kind: kind,
         reservation_id: reservationId,
         subject_kind: 'audit',
@@ -343,7 +343,7 @@ describe('project owner', () => {
     const retained = new VisibilityFixtures(db);
     const t = await retained.tenant();
     const account = await billingAccount(db, t.workspaceId);
-    await grant(db, account, { key: 'audit_credits', value: 1 });
+    await grant(db, account, { key: 'prompt_runs_per_period', value: 1 });
     const audit = await retained.audit(t);
     const { taskId } = await retained.execution(t, { auditId: audit });
     const { reservation } = await db.transaction().execute(async (deletion) => {
@@ -354,7 +354,7 @@ describe('project owner', () => {
         .execute((trx) =>
           reserveUsage(trx, {
             accountId: account,
-            capability: 'audit_credits',
+            capability: 'prompt_runs_per_period',
             subject: { kind: 'audit', id: taskId, workspaceId: t.workspaceId, auditId: audit },
             units: 1,
             key: randomUUID(),

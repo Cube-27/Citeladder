@@ -29,7 +29,7 @@ it('checksums supplementary Unicode as ASCII escapes', () => {
   // hashlib.sha256(json.dumps(validated_payload, sort_keys=True,
   // separators=(',', ':'), ensure_ascii=True).encode()).hexdigest()
   expect(catalogDigest(validateCatalog(payload))).toBe(
-    'b992b6089a1fe03e793b03697db12a01e5fc470c0bbf01bf368a4985b1a92493',
+    '9387b25c1f2223ae3624a69af1beb30208131580ecda300aae7d3cd0355f37e2',
   );
 });
 
@@ -97,8 +97,6 @@ it('authors checkout regions only for named modes and approved India tax', () =>
 });
 it.each([
   (p: ReturnType<typeof launchCatalog>) => p.plans[0]!.grants.push({ key: 'unknown', value: 1 }),
-  (p: ReturnType<typeof launchCatalog>) =>
-    p.plans[0]!.grants.push({ key: 'provider.copilot', value: 1 }),
   (p: ReturnType<typeof launchCatalog>) => p.plans[0]!.grants.push({ key: 'agent', value: 1 }),
   (p: ReturnType<typeof launchCatalog>) => {
     p.plans[1]!.grants = p.plans[1]!.grants.filter((g) => g.key !== 'agent');

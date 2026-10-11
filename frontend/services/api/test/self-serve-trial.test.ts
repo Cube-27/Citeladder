@@ -4,7 +4,7 @@ import { afterAll, expect, it } from 'vitest';
 import { testDatabase } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
 import { ensureWorkspaceBilling } from '../src/entitlements/bootstrap.ts';
-import { reserveTrialAnswer, settleTrialAnswer } from '../src/audits/trial-answers.ts';
+import { reservePromptRun, settlePromptRun } from '../src/audits/prompt-runs.ts';
 import { cachedWorkspaceAccess, workspaceAccess } from '../src/entitlements/access.ts';
 import { issueBundle, revokeBundle } from '../src/entitlements/grants.ts';
 import type { AuditTask } from '../src/queue/audit-queue.ts';
@@ -103,7 +103,7 @@ afterAll(async () => {
   await db.destroy();
 });
 
-it('serializes lifetime answer holds, releases failures and preserves per-prompt successful use', async () => {
+it('serializes the trial’s 20 prompt runs, returns failed runs and spends a success once', async () => {
   const t = await fixtures.tenant({ access: false });
   const user = await db
     .updateTable('users')
@@ -119,47 +119,48 @@ it('serializes lifetime answer holds, releases failures and preserves per-prompt
     .executeTakeFirstOrThrow();
   accounts.push(account.id);
   const auditId = await fixtures.audit(t);
-  const tasks: { task: AuditTask; promptId: string }[] = [];
-  for (let index = 0; index < 21; index++) {
-    const promptId = randomUUID();
+  const tasks: AuditTask[] = [];
+  for (let index = 0; index < 22; index++) {
     const execution = await fixtures.execution(t, { auditId, analysis: null });
-    const task = await db
-      .updateTable('audit_tasks')
-      .set({ request_snapshot: JSON.stringify({ original_prompt_id: promptId }) })
-      .where('id', '=', execution.taskId)
-      .returningAll()
-      .executeTakeFirstOrThrow();
-    tasks.push({ task, promptId });
+    tasks.push(
+      await db
+        .selectFrom('audit_tasks')
+        .selectAll()
+        .where('id', '=', execution.taskId)
+        .executeTakeFirstOrThrow(),
+    );
   }
-  const reserve = (entry: (typeof tasks)[number]) =>
-    db
-      .transaction()
-      .execute((trx) =>
-        reserveTrialAnswer(trx, t.workspaceId, auditId, entry.task.id, entry.promptId, new Date()),
-      );
-  const results = await Promise.allSettled(tasks.map(reserve));
+  const reserve = (task: AuditTask) =>
+    db.transaction().execute((trx) =>
+      reservePromptRun(trx, {
+        workspaceId: t.workspaceId,
+        auditId,
+        taskId: task.id,
+        at: new Date(),
+      }),
+    );
+  const settle = (task: AuditTask, success: boolean) =>
+    db.transaction().execute((trx) => settlePromptRun(trx, task, success, new Date()));
+  const results = await Promise.allSettled(tasks.slice(0, 21).map(reserve));
   expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(20);
-  const failed = tasks[results.findIndex((result) => result.status === 'rejected')]!;
-  const held = tasks.filter((_, index) => results[index]!.status === 'fulfilled');
-  await db.transaction().execute((trx) => settleTrialAnswer(trx, held[0]!.task, false, new Date()));
-  await reserve(failed);
-  await db.transaction().execute((trx) => settleTrialAnswer(trx, held[1]!.task, true, new Date()));
-  await db.transaction().execute((trx) => settleTrialAnswer(trx, held[1]!.task, true, new Date()));
-  const replacement = await fixtures.execution(t, { auditId, analysis: null });
-  await expect(
-    db
-      .transaction()
-      .execute((trx) =>
-        reserveTrialAnswer(
-          trx,
-          t.workspaceId,
-          auditId,
-          replacement.taskId,
-          held[1]!.promptId,
-          new Date(),
-        ),
-      ),
-  ).rejects.toMatchObject({ status: 403 });
+  expect(results.find((result) => result.status === 'rejected')).toMatchObject({
+    reason: { status: 403, code: 'prompt_runs_exhausted' },
+  });
+  const held = tasks.slice(0, 21).filter((_, index) => results[index]!.status === 'fulfilled');
+  // A failed answer returns its run, so one more can be held.
+  await settle(held[0]!, false);
+  await reserve(tasks[21]!);
+  // A recorded answer spends its run, once however often it settles.
+  await settle(held[1]!, true);
+  await settle(held[1]!, true);
+  const spent = await db
+    .selectFrom('consumable_ledger')
+    .select(({ fn }) => fn.sum<string>('units').as('units'))
+    .where('billing_account_id', '=', account.id)
+    .where('capability_key', '=', 'prompt_runs_per_period')
+    .where('entry_kind', '=', 'debit')
+    .executeTakeFirstOrThrow();
+  expect(Number(spent.units)).toBe(1);
 });
 
 it('only explicit restoration reopens an expired workspace, preserving its data', async () => {

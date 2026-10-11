@@ -116,6 +116,7 @@ const API_ERROR_CODES = [
   'prompt_count_exceeded',
   'prompt_count_policy_unconfigured',
   'prompt_off_topic',
+  'prompt_runs_exhausted',
   'property_discovery_unsupported',
   'property_not_accessible',
   'protocol_violation',

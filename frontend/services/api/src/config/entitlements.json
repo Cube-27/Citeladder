@@ -9,22 +9,6 @@
       "public": false,
       "rolling_window_seconds": null
     },
-    "successful_answers": {
-      "type": "counter.consumable",
-      "levels": 0,
-      "ordered_values": [],
-      "issuable": true,
-      "public": false,
-      "rolling_window_seconds": null
-    },
-    "audit_cadence": {
-      "type": "level",
-      "levels": 3,
-      "ordered_values": ["unset", "weekly", "daily"],
-      "issuable": true,
-      "public": true,
-      "rolling_window_seconds": null
-    },
     "history_window": {
       "type": "level",
       "levels": 4,
@@ -33,15 +17,7 @@
       "public": true,
       "rolling_window_seconds": null
     },
-    "support_tier": {
-      "type": "level",
-      "levels": 2,
-      "ordered_values": ["standard", "priority"],
-      "issuable": true,
-      "public": true,
-      "rolling_window_seconds": null
-    },
-    "audit_credits": {
+    "prompt_runs_per_period": {
       "type": "counter.consumable",
       "levels": 0,
       "ordered_values": [],
@@ -81,46 +57,6 @@
       "public": true,
       "rolling_window_seconds": null
     },
-    "fanout": {
-      "type": "flag",
-      "levels": 0,
-      "ordered_values": [],
-      "issuable": true,
-      "public": true,
-      "rolling_window_seconds": null
-    },
-    "provider.grok": {
-      "type": "flag",
-      "levels": 0,
-      "ordered_values": [],
-      "issuable": true,
-      "public": true,
-      "rolling_window_seconds": null
-    },
-    "provider.perplexity": {
-      "type": "flag",
-      "levels": 0,
-      "ordered_values": [],
-      "issuable": true,
-      "public": true,
-      "rolling_window_seconds": null
-    },
-    "provider.copilot": {
-      "type": "flag",
-      "levels": 0,
-      "ordered_values": [],
-      "issuable": false,
-      "public": true,
-      "rolling_window_seconds": null
-    },
-    "exports": {
-      "type": "flag",
-      "levels": 0,
-      "ordered_values": [],
-      "issuable": true,
-      "public": true,
-      "rolling_window_seconds": null
-    },
     "manual_runs_per_day": {
       "type": "counter.rate",
       "levels": 0,
@@ -128,14 +64,6 @@
       "issuable": true,
       "public": true,
       "rolling_window_seconds": 86400
-    },
-    "serp_tasks_per_period": {
-      "type": "counter.consumable",
-      "levels": 0,
-      "ordered_values": [],
-      "issuable": true,
-      "public": true,
-      "rolling_window_seconds": null
     },
     "site_health_page_fetches_per_period": {
       "type": "counter.consumable",
@@ -170,6 +98,22 @@
       "rolling_window_seconds": null
     },
     "crawl_logs": {
+      "type": "flag",
+      "levels": 0,
+      "ordered_values": [],
+      "issuable": true,
+      "public": true,
+      "rolling_window_seconds": null
+    },
+    "commerce": {
+      "type": "flag",
+      "levels": 0,
+      "ordered_values": [],
+      "issuable": true,
+      "public": true,
+      "rolling_window_seconds": null
+    },
+    "search_intelligence": {
       "type": "flag",
       "levels": 0,
       "ordered_values": [],
@@ -223,6 +167,10 @@
   "api_keys": "api_keys",
   "fact_checking": "fact_checking",
   "market_slots": "market_slots",
+  "prompt_runs": "prompt_runs_per_period",
+  "ai_credits": "ai_credits",
+  "commerce": "commerce",
+  "search_intelligence": "search_intelligence",
   "capacity_lock": {
     "namespace": 1128353857,
     "person": "citeladder-cap"
@@ -239,7 +187,6 @@
   "public_trial": {
     "engines": ["chatgpt"],
     "repetitions": 1,
-    "successful_answers_per_prompt": 1,
     "revision": "public-trial-v1",
     "profile": "public_trial",
     "grants": {
@@ -247,8 +194,8 @@
       "project_slots": 1,
       "prompt_slots": 20,
       "monitored_urls": 20,
-      "successful_answers": 20,
-      "audit_credits": 100,
+      "prompt_runs_per_period": 20,
+      "ai_credits": 5000,
       "manual_runs_per_day": 100
     }
   },
@@ -258,6 +205,8 @@
     "capability_not_granted": "capability_not_granted",
     "crawl_logs_not_in_plan": "crawl_logs_not_in_plan",
     "crawl_logs_disabled": "crawl_logs_disabled",
-    "fact_checking_not_in_plan": "fact_checking_not_in_plan"
+    "fact_checking_not_in_plan": "fact_checking_not_in_plan",
+    "commerce_not_in_plan": "commerce_not_in_plan",
+    "search_intelligence_not_in_plan": "search_intelligence_not_in_plan"
   }
 }

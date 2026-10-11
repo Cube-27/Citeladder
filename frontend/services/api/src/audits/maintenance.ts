@@ -6,7 +6,7 @@ import { getLogger } from '../logging.ts';
 import { searchPolicy } from '../search-surfaces/dataforseo.ts';
 import { ownedAuditTask, type AuditTask } from '../queue/audit-queue.ts';
 import { leasedStatuses } from '../queue/next-due.ts';
-import { releaseTerminalTaskCredits } from './result-persistence.ts';
+import { settlePromptRun } from './prompt-runs.ts';
 import { auditPolicy } from './config.ts';
 import { auditEvent, transitionAudit } from './state.ts';
 
@@ -54,7 +54,7 @@ export function repairOwnedCompletion(db: Database, claimed: AuditTask, owner: s
     } else if (successfulObservation)
       throw new Error('Successful observation has no immutable artifact');
     if (successfulObservation) failed = false;
-    await releaseTerminalTaskCredits(trx, task, at);
+    await settlePromptRun(trx, task, false, at);
     await trx
       .updateTable('audit_tasks')
       .set({
@@ -110,7 +110,7 @@ export async function cancelAudit(
       .where('status', 'not in', policy.task_queue.terminal)
       .returningAll()
       .execute();
-    for (const task of tasks) await releaseTerminalTaskCredits(trx, task, at);
+    for (const task of tasks) await settlePromptRun(trx, task, false, at);
     await trx
       .updateTable('audits')
       .set({ completed_at: at })
@@ -206,7 +206,7 @@ export class AuditMaintenance {
           .where('audit_id', '=', audit.id)
           .where('id', '=', task.id)
           .execute();
-        if (failed) await releaseTerminalTaskCredits(trx, task, at);
+        if (failed) await settlePromptRun(trx, task, false, at);
         return failed;
       });
       if (terminal === null) continue;
@@ -244,7 +244,7 @@ export class AuditMaintenance {
       )
       .select(['t.id', 't.workspace_id', 't.audit_id'])
       .where('l.subject_kind', '=', 'audit')
-      .where('l.capability_key', '=', 'audit_credits')
+      .where('l.capability_key', '=', policy.entitlements.prompt_runs)
       .where('t.status', 'in', policy.task_queue.terminal)
       .groupBy(['t.id', 't.workspace_id', 't.audit_id'])
       .having(
@@ -275,7 +275,7 @@ export class AuditMaintenance {
           .where('status', 'in', policy.task_queue.terminal)
           .forUpdate()
           .executeTakeFirst();
-        if (task) await releaseTerminalTaskCredits(trx, task, at);
+        if (task) await settlePromptRun(trx, task, false, at);
       });
       parents.set(candidate.audit_id, {
         workspaceId: candidate.workspace_id,

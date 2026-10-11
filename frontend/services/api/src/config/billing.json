@@ -314,11 +314,6 @@
     "payment_paid": "paid",
     "payment_failed": "payment_failed",
     "cadence_custom": "custom",
-    "coming_soon_plan_capability_keys": [
-      "provider.grok",
-      "provider.perplexity",
-      "provider.copilot"
-    ],
     "activation_kind_base": "base",
     "activation_kind_addon": "addon",
     "activation_kind_topup": "topup",

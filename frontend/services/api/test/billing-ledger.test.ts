@@ -26,7 +26,7 @@ describe('shared consumable ledger', () => {
     await fixtures.cleanup();
     await db.destroy();
   });
-  async function tenant(units: number, capability = 'audit_credits') {
+  async function tenant(units: number, capability = 'ai_credits') {
     const t = await fixtures.tenant();
     const accountId = await billingAccount(db, t.workspaceId);
     accounts.push(accountId);
@@ -193,7 +193,7 @@ describe('shared consumable ledger', () => {
         reserveUsage(trx, {
           accountId: t.accountId,
           subject: t.subject,
-          capability: 'audit_credits',
+          capability: 'ai_credits',
           units,
           key,
           at: t.at,
@@ -224,7 +224,7 @@ describe('shared consumable ledger', () => {
         reserveUsage(trx, {
           accountId: other.accountId,
           subject: { ...t.subject, workspaceId: other.workspaceId },
-          capability: 'audit_credits',
+          capability: 'ai_credits',
           units: 1,
           key: randomUUID(),
           at: t.at,
@@ -239,7 +239,7 @@ describe('shared consumable ledger', () => {
     const request = {
       accountId: t.accountId,
       subject: t.subject,
-      capability: 'audit_credits',
+      capability: 'ai_credits',
       units: 3,
       key,
       at: t.at,
@@ -248,7 +248,7 @@ describe('shared consumable ledger', () => {
     // The historical writer serializes these keys in this exact order.
     const hash = (json: string) => createHash('sha256').update(json).digest('hex');
     const reservationFingerprint = hash(
-      `{"account_id":"${t.accountId}","audit_id":"${t.subject.auditId}","capability_key":"audit_credits","subject_kind":"audit","task_id":"${t.subject.id}","units":3}`,
+      `{"account_id":"${t.accountId}","audit_id":"${t.subject.auditId}","capability_key":"ai_credits","subject_kind":"audit","task_id":"${t.subject.id}","units":3}`,
     );
     await db
       .updateTable('consumable_ledger')
@@ -296,7 +296,7 @@ describe('shared consumable ledger', () => {
       reserveUsage(trx, {
         accountId: t.accountId,
         subject: t.subject,
-        capability: 'audit_credits',
+        capability: 'ai_credits',
         units: 3,
         key: randomUUID(),
         at: t.at,

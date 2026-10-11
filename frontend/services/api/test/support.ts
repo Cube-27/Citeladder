@@ -69,11 +69,23 @@ export class Fixtures {
     const insert = async (trx: Database) => {
       const workspaceId = await this.insertWorkspace(trx, false);
       await this.insertMember(trx, workspaceId, ownerId, 'owner');
-      // An operator-provisioned workspace: open, able to admit a team and collect crawl logs.
+      // An operator-provisioned workspace: open, able to admit a team, collect crawl
+      // logs, use Commerce and Search Intelligence, and run audits.
       if (options.access !== false) {
         const account = await billingAccount(trx, workspaceId);
-        for (const key of ['workspace_access', 'team_members', 'crawl_logs'])
+        for (const key of [
+          'workspace_access',
+          'team_members',
+          'crawl_logs',
+          'commerce',
+          'search_intelligence',
+        ])
           await grant(trx, account, { key, value: 1, sourceKind: 'override' });
+        await grant(trx, account, {
+          key: 'prompt_runs_per_period',
+          value: 100_000,
+          sourceKind: 'override',
+        });
       }
       return workspaceId;
     };
@@ -145,6 +157,11 @@ export class Fixtures {
 
   async cleanup(): Promise<void> {
     if (this.workspaces.length) {
+      // The append-only ledger does not cascade; every audit holds prompt runs.
+      await this.db
+        .deleteFrom('consumable_ledger')
+        .where('workspace_id', 'in', this.workspaces)
+        .execute();
       await this.db.deleteFrom('workspaces').where('id', 'in', this.workspaces).execute();
     }
     if (this.users.length) {

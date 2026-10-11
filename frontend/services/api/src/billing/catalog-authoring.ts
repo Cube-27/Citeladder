@@ -308,26 +308,21 @@ export function launchCatalog(options: {
       { key: 'workspace_access', value: 1 },
       { key: 'team_members', value: 1 },
       { key: 'project_deletion', value: 1 },
-      { key: 'audit_cadence', value: level('audit_cadence', 'daily') },
       { key: 'project_slots', value: p.projects },
       { key: 'prompt_slots', value: p.prompts },
       { key: 'monitored_urls', value: p.urls },
       { key: 'site_health_page_fetches_per_period', value: p.fetches },
       { key: 'history_window', value: level('history_window', p.history) },
       { key: 'manual_runs_per_day', value: p.runs },
-      { key: 'exports', value: 1 },
       { key: 'crawl_logs', value: 1 },
       { key: 'api_access', value: 1 },
       { key: 'api_keys', value: 10 },
       ...(p.markets ? [{ key: 'market_slots', value: p.markets }] : []),
-      { key: 'support_tier', value: level('support_tier', p.support) },
-      ...(p.credits ? [{ key: 'ai_credits', value: p.credits }] : []),
-      ...(p.upper
-        ? [
-            { key: 'fanout', value: 1 },
-            { key: 'agent', value: 1 },
-          ]
-        : []),
+      { key: 'commerce', value: 1 },
+      { key: 'search_intelligence', value: 1 },
+      { key: 'prompt_runs_per_period', value: p.promptRuns },
+      { key: 'ai_credits', value: p.credits },
+      ...(p.upper ? [{ key: 'agent', value: 1 }] : []),
     ];
     const common = {
       provider_price_ref: '',
@@ -412,11 +407,11 @@ export function launchCatalog(options: {
       name: i.name,
       description: i.description,
       available: i.available,
-      eligible_plan_keys: i.upperOnly ? ['tier_2', 'tier_3'] : ['tier_1', 'tier_2', 'tier_3'],
+      eligible_plan_keys: ['tier_1', 'tier_2', 'tier_3'],
       quantity_min: 1,
       quantity_max: cfg.quantityMax,
       expiry_days: cfg.expiryDays,
-      modes: { byok: terms(i.byok, i.grants), funded: terms(i.funded, i.fundedGrants ?? i.grants) },
+      modes: { byok: terms(i.byok, i.grants), funded: terms(i.funded, i.grants) },
     };
   });
   return validateCatalog({

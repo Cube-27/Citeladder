@@ -97,7 +97,7 @@ describe('atomic audit admission', () => {
       .where('id', '=', platform.connectionId)
       .execute();
     const accountId = await billingAccount(db, t.workspaceId);
-    await grant(db, accountId, { key: 'audit_credits', value: 100 });
+    await grant(db, accountId, { key: 'prompt_runs_per_period', value: 100 });
     const estimate = vi.spyOn(costing, 'expectedCost').mockReturnValue({
       token_cost_microusd: 1000,
       search_fee_microusd: 0,
@@ -132,9 +132,8 @@ describe('atomic audit admission', () => {
           (task) => record(task.provider_route_snapshot).credential_source === 'platform',
         ),
       ).toBe(true);
-      expect(holds.reduce((sum, hold) => sum + hold.units, 0)).toBe(
-        tasks.reduce((sum, task) => sum + task.max_attempts, 0),
-      );
+      // One prompt run per answer, whatever the retry budget.
+      expect(holds.reduce((sum, hold) => sum + hold.units, 0)).toBe(tasks.length);
       await expect(
         createAudits(db, t.workspaceId, request, {}, fundedRuntime),
       ).rejects.toMatchObject({ code: 'funded_budget_exhausted' });
@@ -175,7 +174,7 @@ describe('atomic audit admission', () => {
     expect(record(tasks[0]?.provider_route_snapshot)).toMatchObject({
       credential_source: 'byok',
       connection_id: t.connectionId,
-      reservation_id: null,
+      reservation_id: expect.any(String),
       retrieval_enabled: true,
     });
     await db

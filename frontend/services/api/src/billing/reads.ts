@@ -66,15 +66,6 @@ export async function publicCatalog(db: Database, config: ServiceConfig, country
         price.provider_mode === config.razorpay.mode &&
         checkoutAvailable(config.billing, config.razorpay, region);
       const funded = plan.funded_price;
-      const coming = new Set<string>(policy.billing.contracts.coming_soon_plan_capability_keys);
-      const capabilities = [
-        ...plan.grants,
-        ...(policy.billing.contracts.coming_soon_row_plan_keys.includes(plan.key)
-          ? [...coming]
-              .filter((key) => !plan.grants.some((grant) => grant.key === key))
-              .map((key) => ({ key, value: null }))
-          : []),
-      ];
       return {
         key: plan.key,
         name: plan.name,
@@ -88,13 +79,13 @@ export async function publicCatalog(db: Database, config: ServiceConfig, country
         funded_total_price: funded ? money(funded) : null,
         checkout_available: Boolean(available),
         unavailable_reason: unavailableReason(Boolean(available), plan.contact_only),
-        capabilities: capabilities.map((grant) => ({
+        capabilities: plan.grants.map((grant) => ({
           key: grant.key,
           capability_type:
             policy.entitlements.capabilities[
               grant.key as keyof typeof policy.entitlements.capabilities
             ]?.type,
-          value: grant.value === null ? null : capabilityValue(grant.key, grant.value),
+          value: capabilityValue(grant.key, grant.value),
           issuable:
             policy.entitlements.capabilities[
               grant.key as keyof typeof policy.entitlements.capabilities
