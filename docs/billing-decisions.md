@@ -283,9 +283,10 @@ On a BYOK plan DataForSEO is BYOK too: the workspace's own key, not charged
 **B41 — Engineering, 2026-10-11.** A managed analysis shows its estimate in
 credits at review. Confirming it holds that estimate; an exhausted balance
 refuses the confirmation and nothing is fetched. When the analysis ends, it is
-charged the DataForSEO cost of every request sent (the reported cost, or the
-request's estimate when DataForSEO reports none), never more than the hold, and
-the rest is released. The review's existing cost ceiling still stops the run
+charged the DataForSEO cost of every request that succeeded (the reported cost,
+or the request's estimate when DataForSEO reports none), never more than the
+hold, and the rest is released. A failed, refused or unanswered request is never
+billed (B47). The review's existing cost ceiling still stops the run
 before it can pass the estimate. Dollar amounts are never shown for a managed
 analysis (B23).
 
@@ -327,6 +328,13 @@ before the provider call so a resume cannot race it. Gap: if every send in that
 window fails, Razorpay renews once; the customer keeps that paid month and the
 cancellation applies at its end. Refunding that renewal is an operator Dashboard
 refund today, not automatic.
+
+**B47 — Owner, 2026-10-11.** A failed request is never billed to the customer.
+Engineering: a managed Search Intelligence request is charged only when
+DataForSEO returned a successful response that CiteLadder kept and did not later
+mark failed. A refused, unreadable, timed-out or unanswered request costs
+nothing, even when DataForSEO may have billed the platform for it; the hold
+releases that share.
 
 ## Owner inputs still required
 

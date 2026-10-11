@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { setTimeout as sleep } from 'node:timers/promises';
 import { afterAll, describe, expect, it } from 'vitest';
 import { loadWorkerSettings } from '../src/config.ts';
 import { WorkspaceScope } from '../src/db/workspace-scope.ts';
@@ -129,6 +130,15 @@ const runRow = (id: string) =>
     .selectAll()
     .where('id', '=', id)
     .executeTakeFirstOrThrow();
+/** Works the analysis until it ends; the shared platform account paces its requests. */
+async function runToEnd(id: string, send: typeof fetch) {
+  const research = worker(send);
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    await research.runOnce();
+    if (!['queued', 'running'].includes((await runRow(id)).status)) return;
+    await sleep(100);
+  }
+}
 const platformCall = (id: string | null) =>
   db
     .selectFrom('platform_calls')
@@ -170,6 +180,25 @@ describe('managed Search Intelligence', () => {
       reserved_credits: 16,
       credits: 8,
       cost_microusd: '6100',
+    });
+  });
+
+  it('never bills a request that failed or went unanswered', async () => {
+    const refused = await workspace('managed');
+    const refusedRun = await confirmRun(db, refused.scope, refused.review.id);
+    await runToEnd(refusedRun.id, async () => new Response('bad request', { status: 400 }));
+    expect(await runRow(refusedRun.id)).toMatchObject({ charged_credits: 0 });
+
+    const unanswered = await workspace('managed');
+    const unansweredRun = await confirmRun(db, unanswered.scope, unanswered.review.id);
+    await runToEnd(unansweredRun.id, async () => {
+      throw new TypeError('connection reset');
+    });
+    const settled = await runRow(unansweredRun.id);
+    expect(settled).toMatchObject({ charged_credits: 0 });
+    expect(await platformCall(settled.platform_call_id)).toMatchObject({
+      status: 'settled',
+      credits: 0,
     });
   });
 

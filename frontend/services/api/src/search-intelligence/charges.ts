@@ -1,9 +1,9 @@
 /**
  * The AI-credit charge of a managed analysis (B40, B41). Confirmation held the
  * estimate; once the analysis ends it is charged the DataForSEO cost of every
- * request sent, never above the hold, and the rest is released. A request
- * DataForSEO refused with no response costs nothing; one whose outcome or cost
- * is unknown costs its estimate.
+ * request that succeeded (its estimate when DataForSEO reports none), never
+ * above the hold, and the rest is released. A failed, refused or unanswered
+ * request is never billed to the customer.
  */
 import type { NotNull } from 'kysely';
 import { settleProviderCredits } from '../billing/metering.ts';
@@ -50,12 +50,13 @@ export function settleResearchCharge(
       )
     )
       return null;
-    const cost = sent.reduce((sum, call) => {
-      if (call.provider_reported_cost_usd !== null)
-        return sum + microusd(call.provider_reported_cost_usd);
-      const refused = call.status === 'failed' && call.sanitized_response === null;
-      return refused ? sum : sum + microusd(call.estimated_cost_usd);
-    }, 0);
+    // Only a request that succeeded is billed; a failed or unanswered one is free.
+    const cost = sent
+      .filter((call) => call.sanitized_response !== null && call.status !== 'failed')
+      .reduce(
+        (sum, call) => sum + microusd(call.provider_reported_cost_usd ?? call.estimated_cost_usd),
+        0,
+      );
     const credits = await settleProviderCredits(trx, locked.platform_call_id, cost);
     if (credits === null) return null;
     return trx
