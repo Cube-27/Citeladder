@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { afterAll, beforeEach, expect, it } from 'vitest';
+import { afterAll, beforeEach, expect, it, vi } from 'vitest';
 import { recordingMeter } from './meter-fixtures.ts';
 import { competitorDiscovery, enqueueDiscoveries } from '../src/commerce/discovery.ts';
 import { competitorSearch, type CompetitorSearch } from '../src/commerce/discovery-provider.ts';
@@ -86,6 +86,27 @@ const successful: CompetitorSearch = async () => ({
       content: 'Search evidence',
     },
   ],
+});
+
+it('bounds daily competitor discovery targets per workspace before queueing work', async () => {
+  vi.stubEnv('ABUSE_COMMERCE_DISCOVERIES_PER_WORKSPACE_DAILY', '2');
+  try {
+    // A repeated target is one discovery and spends one unit of the window.
+    await enqueueDiscoveries(db, scope(), { targets: [target, target] });
+    await enqueue();
+    await expect(enqueueDiscoveries(db, scope(), { targets: [target] })).rejects.toMatchObject({
+      status: 429,
+    });
+    const queued = await db
+      .selectFrom('analytics_tasks')
+      .select('id')
+      .where('workspace_id', '=', t.workspaceId)
+      .where('task_kind', '=', 'commerce_competitor_discovery')
+      .execute();
+    expect(queued).toHaveLength(2);
+  } finally {
+    vi.unstubAllEnvs();
+  }
 });
 
 it('validates real page facts, preserves every verdict and source attempt, and never overrides approval', async () => {
