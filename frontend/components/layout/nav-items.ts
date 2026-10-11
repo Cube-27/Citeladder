@@ -93,8 +93,14 @@ const SUPPORT_NAV_ITEMS = [
   { label: 'Settings', href: '/settings', icon: ICONS.settings, scope: 'workspace' },
 ] as const satisfies readonly NavItem[];
 
-/** Every shell destination, grouped for the command palette. */
-export function resolveCommandGroups(): readonly { title: string; items: readonly NavItem[] }[] {
+/**
+ * Every shell destination, grouped for the command palette. A managed plan has
+ * no provider settings (B32).
+ */
+export function resolveCommandGroups({ managed = false }: { managed?: boolean } = {}): readonly {
+  title: string;
+  items: readonly NavItem[];
+}[] {
   return [
     // Actions is listed once, under Agent.
     ...NAV_GROUPS.filter((group) => group.title !== 'Act').map((group) => ({
@@ -105,7 +111,10 @@ export function resolveCommandGroups(): readonly { title: string; items: readonl
       title: 'Agent',
       items: [{ label: 'New chat', href: AGENT_HOME, icon: ICONS.newChat }, ...AGENT_NAV_ITEMS],
     },
-    { title: 'Settings', items: SUPPORT_NAV_ITEMS },
+    {
+      title: 'Settings',
+      items: SUPPORT_NAV_ITEMS.filter((item) => !managed || item.label !== 'Providers'),
+    },
   ];
 }
 

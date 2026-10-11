@@ -19,7 +19,7 @@
     "account:manage": "node src/cli/account-manager.ts",
     "billing:admin": "node src/cli/billing-admin.ts",
     "billing:plans": "node src/cli/provision-razorpay-plans.ts",
-    "billing:backfill": "node src/cli/backfill-billing.ts",
+    "billing:provision-workspace": "node src/cli/provision-workspace-billing.ts",
     "entitlement:site-health": "node src/cli/set-site-health-entitlement.ts",
     "bootstrap:catalog": "node src/cli/bootstrap-catalog.ts",
     "bootstrap:account": "node src/cli/bootstrap-account.ts",

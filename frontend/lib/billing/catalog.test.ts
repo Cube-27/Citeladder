@@ -21,9 +21,9 @@ function plan(overrides: Partial<CatalogPlan> = {}): CatalogPlan {
     contact_only: false,
     contact_url: null,
     base_price: { currency: 'USD', amount_minor: 4900 },
-    credit_price: null,
     funded_total_price: null,
     checkout_available: true,
+    funded_checkout_available: false,
     unavailable_reason: null,
     capabilities: [],
     trial_availability: 'unavailable',
@@ -59,7 +59,7 @@ describe('headlinePrice', () => {
 
   // The central rule of this release: unpriced is NOT free. A funded headline
   // must never resolve to a number, least of all zero.
-  it('returns unavailable — never zero — when credit_price is null', () => {
+  it('returns unavailable — never zero — when the managed price is null', () => {
     const result = headlinePrice(plan({ unavailable_reason: 'funded_not_priced' }), 'funded');
     expect(result).toEqual({ kind: 'unavailable', reason: 'funded_not_priced' });
   });
@@ -80,8 +80,13 @@ describe('checkoutSelection', () => {
     });
   });
 
-  it('refuses funded while credit_price is null', () => {
+  it('offers managed checkout only when the catalog marks managed purchasable', () => {
     expect(checkoutSelection(plan(), 'funded').ok).toBe(false);
+    expect(checkoutSelection(plan({ funded_checkout_available: true }), 'funded')).toEqual({
+      ok: true,
+      catalog_key: 'tier_1',
+      credential_mode: 'funded',
+    });
   });
 
   it('refuses a contact-only plan', () => {

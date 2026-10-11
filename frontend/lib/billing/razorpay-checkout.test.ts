@@ -24,7 +24,6 @@ describe('subscription modal', () => {
         activation_id: 'activation',
         provider: 'razorpay',
         provider_mode: 'test',
-        flow: 'provider_sdk',
         sdk_name: 'razorpay-checkout',
         // The PUBLIC initialization fields: a publishable key and the
         // provider's own reference for the intent. No secret, no amount.

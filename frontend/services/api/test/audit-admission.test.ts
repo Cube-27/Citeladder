@@ -1,6 +1,5 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { afterAll, describe, expect, it, vi } from 'vitest';
-import * as costing from '../src/audits/costs.ts';
 import { setLogSink } from '../src/logging.ts';
 import { createAudits } from '../src/audits/creation.ts';
 import { auditRuntime } from '../src/audits/config.ts';
@@ -9,7 +8,7 @@ import { record } from '../src/db/json.ts';
 import { testDatabase } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
 import { billingAccount, grant } from './prompt-fixtures.ts';
-import { auditTenant } from './audit-fixtures.ts';
+import { auditTenant, managedPlan } from './audit-fixtures.ts';
 import providers from '../src/config/providers.json' with { type: 'json' };
 
 const db = testDatabase();
@@ -74,7 +73,7 @@ describe('atomic audit admission', () => {
     expect(() => auditRuntime({ AUDIT_HEARTBEAT_INTERVAL_SECONDS: '120' })).toThrow('heartbeat');
     expect(() => auditRuntime({ AUDIT_RETRY_BASE_DELAY_SECONDS: '46' })).toThrow('retry');
   });
-  it('commits platform funding holds and denies another run at the monthly budget boundary', async () => {
+  it('measures a managed workspace on platform keys and refuses it once recorded spend reaches the budget', async () => {
     const t = await auditTenant(db, fixtures),
       platform = await auditTenant(db, fixtures);
     await db
@@ -96,15 +95,8 @@ describe('atomic audit admission', () => {
       })
       .where('id', '=', platform.connectionId)
       .execute();
-    const accountId = await billingAccount(db, t.workspaceId);
-    await grant(db, accountId, { key: 'prompt_runs_per_period', value: 100 });
-    const estimate = vi.spyOn(costing, 'expectedCost').mockReturnValue({
-      token_cost_microusd: 1000,
-      search_fee_microusd: 0,
-      expected_searches: 0,
-      complete: true,
-      total_microusd: 1000,
-    });
+    // The plan, not the request, makes the workspace managed (B32).
+    const accountId = await managedPlan(db, t.workspaceId);
     const logs: string[] = [],
       prior = setLogSink((line) => logs.push(line));
     try {
@@ -113,7 +105,7 @@ describe('atomic audit admission', () => {
         fundedBudgetMinor: 1,
         audits: { ...runtime.audits, audit_prompt_count: 10 },
       };
-      const request = { ...input(t), credential_mode: 'funded' as const };
+      const request = input(t);
       const [id] = await createAudits(db, t.workspaceId, request, {}, fundedRuntime);
       const tasks = await db
         .selectFrom('audit_tasks')
@@ -134,10 +126,44 @@ describe('atomic audit admission', () => {
       ).toBe(true);
       // One prompt run per answer, whatever the retry budget.
       expect(holds.reduce((sum, hold) => sum + hold.units, 0)).toBe(tasks.length);
+      // This month's recorded platform spend reaches the one-cent budget (B20).
+      const spentAudit = await fixtures.audit(t);
+      const { taskId } = await fixtures.execution(t, { auditId: spentAudit });
+      const artifact = await db
+        .selectFrom('raw_response_artifacts')
+        .select('id')
+        .where('task_id', '=', taskId)
+        .executeTakeFirstOrThrow();
+      const now = new Date();
+      await db
+        .updateTable('audits')
+        .set({
+          funding_account_id: accountId,
+          funded_budget_period_start: new Date(
+            Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1),
+          ),
+        })
+        .where('id', '=', spentAudit)
+        .execute();
+      await db
+        .insertInto('execution_cost_projections')
+        .values({
+          id: randomUUID(),
+          audit_id: spentAudit,
+          task_id: taskId,
+          raw_response_artifact_id: artifact.id,
+          pricing_version: 'fixture',
+          formula_version: 'fixture',
+          projection_status: 'complete',
+          projected_total_cost_microusd: 10_000,
+          created_at: now,
+        })
+        .execute();
+      const before = (await queued(t.workspaceId)).length;
       await expect(
         createAudits(db, t.workspaceId, request, {}, fundedRuntime),
       ).rejects.toMatchObject({ code: 'funded_budget_exhausted' });
-      expect(await queued(t.workspaceId)).toHaveLength(1);
+      expect(await queued(t.workspaceId)).toHaveLength(before);
       expect(
         logs
           .map((line) => JSON.parse(line))
@@ -147,7 +173,6 @@ describe('atomic audit admission', () => {
           ),
       ).toBe(true);
     } finally {
-      estimate.mockRestore();
       setLogSink(prior);
       await db.deleteFrom('consumable_ledger').where('workspace_id', '=', t.workspaceId).execute();
     }
@@ -232,26 +257,6 @@ describe('atomic audit admission', () => {
       reason: { code: 'manual_run_rate_exceeded' },
     });
     expect(await queued(t.workspaceId)).toHaveLength(1);
-  });
-  it('rolls back the usage window and queue when funded cost is unresolved', async () => {
-    const t = await auditTenant(db, fixtures);
-    await billingAccount(db, t.workspaceId);
-    await expect(
-      createAudits(
-        db,
-        t.workspaceId,
-        { ...input(t), credential_mode: 'funded' },
-        {},
-        { ...runtime, audits: { ...runtime.audits, audit_prompt_count: 10 } },
-      ),
-    ).rejects.toMatchObject({ status: 422, code: 'funded_cost_unresolved' });
-    expect(await queued(t.workspaceId)).toEqual([]);
-    const ledger = await db
-      .selectFrom('consumable_ledger')
-      .select('id')
-      .where('workspace_id', '=', t.workspaceId)
-      .execute();
-    expect(ledger).toEqual([]);
   });
   it('rejects a foreign project before consuming admission capacity', async () => {
     const t = await auditTenant(db, fixtures),

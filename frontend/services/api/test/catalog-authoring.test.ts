@@ -28,7 +28,7 @@ it('checksums supplementary Unicode as ASCII escapes', () => {
   // hashlib.sha256(json.dumps(validated_payload, sort_keys=True,
   // separators=(',', ':'), ensure_ascii=True).encode()).hexdigest()
   expect(catalogDigest(validateCatalog(payload))).toBe(
-    'd3a1ce6b7b3b7d75945c09a6fe30e1a6ca68a7b2caf743289ab257cfac7c8b70',
+    '88dc8375631b923dd07011404df2293d4938dedb2c63761625cf6c8da5ec44a1',
   );
 });
 
@@ -72,11 +72,11 @@ it('rounds GST half up at the minor-unit boundary and rejects untrusted rates', 
 it('authors checkout regions only for named modes and approved India tax', () => {
   expect(
     launchCatalog({ mode: null, settings: billingSettings({}) }).plans.every(
-      (p) => !Object.keys(p.regional_byok_prices).length,
+      (p) => !Object.keys(p.regional_prices.byok).length,
     ),
   ).toBe(true);
   const unapproved = launchCatalog({ mode: 'test', settings: billingSettings({}) });
-  expect(Object.keys(unapproved.plans[0]!.regional_byok_prices)).toEqual(['international']);
+  expect(Object.keys(unapproved.plans[0]!.regional_prices.byok)).toEqual(['international']);
   // An item never offers India where no plan can be quoted there.
   expect(Object.keys(unapproved.addons[0]!.modes.byok!.regional_prices)).toEqual(['international']);
   const approved = launchCatalog({
@@ -86,7 +86,7 @@ it('authors checkout regions only for named modes and approved India tax', () =>
       BILLING_INDIA_GST_APPROVAL_REFERENCE: 'CA-1',
     }),
   });
-  expect(approved.plans[0]!.regional_byok_prices.india).toMatchObject({
+  expect(approved.plans[0]!.regional_prices.byok.india).toMatchObject({
     amount_minor: 449900,
     tax_minor: 80982,
     tax_verified: true,
@@ -104,7 +104,7 @@ it.each([
     p.plans[0]!.funded_price!.amount_minor = 1;
   },
   (p: ReturnType<typeof launchCatalog>) => {
-    p.plans[0]!.regional_byok_prices.international!.tax_minor = 1;
+    p.plans[0]!.regional_prices.byok.international!.tax_minor = 1;
   },
   (p: ReturnType<typeof launchCatalog>) => {
     p.addons[0]!.modes.byok!.regional_prices.international!.amount_minor = 100;

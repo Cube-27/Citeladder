@@ -204,11 +204,7 @@ export const billingApi = {
     return strictValidate(noCardClaimSchema, response, 'billing.claimNoCardOffer');
   },
 
-  /**
-   * Start a base-plan checkout. `trial_requested` is always false in this
-   * release — the backend answers `trial_unavailable` for anything else, so
-   * there is no trial UI to expose.
-   */
+  /** Start a base-plan checkout. */
   createSubscription: async (
     input: SubscriptionCheckoutInput,
     idempotencyKey: string,
@@ -224,7 +220,6 @@ export const billingApi = {
         billing_state_code: indianBilling ? input.billing_state_code.trim() : null,
         customer_gstin: indianBilling ? input.customer_gstin.trim() : null,
         export_eligibility_attested: indianBilling ? false : input.export_eligibility_attested,
-        trial_requested: false,
       },
       { ...options, idempotencyKey },
     );

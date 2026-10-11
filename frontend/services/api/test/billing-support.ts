@@ -78,10 +78,11 @@ export class BillingFixtures extends Fixtures {
       launchCatalog({ mode: 'test', settings: billingConfig().billing }),
     );
     for (const plan of payload.plans)
-      for (const [region, price] of Object.entries(plan.regional_byok_prices)) {
-        price.provider_price_ref = `plan_${plan.key.replaceAll('_', '')}${region}`;
-        price.tax_verified = true;
-      }
+      for (const mode of ['byok', 'funded'] as const)
+        for (const [region, price] of Object.entries(plan.regional_prices[mode])) {
+          price.provider_price_ref = `plan_${plan.key.replaceAll('_', '')}${mode}${region}`;
+          price.tax_verified = true;
+        }
     for (const item of [...payload.addons, ...payload.topups]) item.available = true;
     modify?.(payload);
     const revision = `fixture-${randomUUID()}`;

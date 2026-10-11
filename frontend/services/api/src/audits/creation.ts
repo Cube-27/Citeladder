@@ -18,6 +18,7 @@ import {
 import { auditEvent, transitionAudit } from './state.ts';
 import { auditPolicy, auditRuntime, type AuditRuntime } from './config.ts';
 import { auditInput, type AuditInput } from './inputs.ts';
+import { workspaceCredentialMode } from '../billing/credential-mode.ts';
 import { resolveMarkets, type Market } from '../projects/markets.ts';
 
 export type AuditLaunch = {
@@ -105,6 +106,7 @@ async function createMarketAudit(
     if (prior) return prior.id;
   } else if (launch.scheduledFor)
     throw new ApiError(400, 'Scheduled occurrence requires its schedule');
+  const funded = (await workspaceCredentialMode(trx, workspaceId)) === 'funded';
   const plan = await prepareAudit(
     trx,
     workspaceId,
@@ -112,7 +114,7 @@ async function createMarketAudit(
     runtime.audits,
     runtime.providers,
     trigger,
-    { search: runtime.search, at, selected: measured.market },
+    { search: runtime.search, at, selected: measured.market, funded },
   );
   const slots = auditSlots(
     plan.prompts.length,
@@ -132,15 +134,10 @@ async function createMarketAudit(
       'The requested engine or repetition count is outside the trial allowance',
     );
   await reserveAuditCapacity(trx, workspaceId, slots.length, measured.launchId, runtime, at);
-  const funded = await admitAudit(
-    trx,
-    workspaceId,
-    plan,
-    input.credential_mode === 'funded',
-    trigger,
-    runtime,
-    { at, launchId: measured.launchId },
-  );
+  const funding = await admitAudit(trx, workspaceId, funded, trigger, runtime, {
+    at,
+    launchId: measured.launchId,
+  });
   const id = randomUUID();
   await trx
     .insertInto('audits')
@@ -162,9 +159,8 @@ async function createMarketAudit(
       completed_count: 0,
       failed_count: 0,
       error_message: '',
-      funding_account_id: funded?.accountId ?? null,
-      funded_budget_period_start: funded?.month ?? null,
-      funded_reserved_cost_microusd: funded?.cost ?? null,
+      funding_account_id: funding?.accountId ?? null,
+      funded_budget_period_start: funding?.month ?? null,
       created_at: at,
       updated_at: at,
       started_at: null,
@@ -185,7 +181,7 @@ async function createMarketAudit(
     plan,
     slots,
     snapshots,
-    funded,
+    funded: funding,
     runtime,
     at,
     devTestLogin: launch.devTestLogin ?? false,
@@ -367,8 +363,6 @@ async function persistTasks(
     };
     engineRoutes[slot.engine] = boundRoute;
   }
-  if (funded && funded.cost > BigInt(Number.MAX_SAFE_INTEGER))
-    throw new Error('Funded cost exceeds JSON integer precision');
   return {
     engine_routes: engineRoutes,
     task_credentials: taskCredentials,
@@ -381,7 +375,6 @@ async function persistTasks(
             funding_account_id: funded.accountId,
             admission_at: at.toISOString(),
             budget_period_start: funded.month.toISOString(),
-            reserved_cost_microusd: Number(funded.cost),
             entitlement: funded.provenance,
           },
         }

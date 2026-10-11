@@ -98,6 +98,7 @@ function entitlement() {
     registry_revision: 'r1',
     entitlement_lifecycle_version: 1,
     valid_until: null,
+    credential_mode: 'byok',
     capabilities: [],
     occupancy: [{ key: 'project_slots', allowance: 1, consumed: 1 - remaining, remaining }],
   };

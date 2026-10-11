@@ -20,38 +20,6 @@
         "tax_behavior": "inclusive",
         "provider_price_ref": ""
       },
-      "regional_byok_prices": {
-        "international": {
-          "provider_price_ref": "",
-          "provider_mode": "test",
-          "interval": 1,
-          "period": "monthly",
-          "fx_inr_per_usd": "90",
-          "metadata": "launch-pricing-v1",
-          "currency": "USD",
-          "amount_minor": 4900,
-          "tax_behavior": "inclusive",
-          "tax_minor": 0,
-          "provider_plan_name": "CiteLadder Starter BYOK USD",
-          "tax_rate": "0",
-          "tax_verified": true
-        },
-        "india": {
-          "provider_price_ref": "",
-          "provider_mode": "test",
-          "interval": 1,
-          "period": "monthly",
-          "fx_inr_per_usd": "90",
-          "metadata": "launch-pricing-v1",
-          "currency": "INR",
-          "amount_minor": 449900,
-          "tax_behavior": "exclusive",
-          "tax_minor": 80982,
-          "provider_plan_name": "CiteLadder Starter BYOK INR",
-          "tax_rate": "0.18",
-          "tax_verified": true
-        }
-      },
       "grants": [
         {
           "key": "project_slots",
@@ -77,7 +45,42 @@
           "key": "manual_runs_per_day",
           "value": 3
         }
-      ]
+      ],
+      "regional_prices": {
+        "byok": {
+          "international": {
+            "provider_price_ref": "",
+            "provider_mode": "test",
+            "interval": 1,
+            "period": "monthly",
+            "fx_inr_per_usd": "90",
+            "metadata": "launch-pricing-v1",
+            "currency": "USD",
+            "amount_minor": 4900,
+            "tax_behavior": "inclusive",
+            "tax_minor": 0,
+            "provider_plan_name": "CiteLadder Starter BYOK USD",
+            "tax_rate": "0",
+            "tax_verified": true
+          },
+          "india": {
+            "provider_price_ref": "",
+            "provider_mode": "test",
+            "interval": 1,
+            "period": "monthly",
+            "fx_inr_per_usd": "90",
+            "metadata": "launch-pricing-v1",
+            "currency": "INR",
+            "amount_minor": 449900,
+            "tax_behavior": "exclusive",
+            "tax_minor": 80982,
+            "provider_plan_name": "CiteLadder Starter BYOK INR",
+            "tax_rate": "0.18",
+            "tax_verified": true
+          }
+        },
+        "funded": {}
+      }
     },
     {
       "key": "tier_2",
@@ -97,38 +100,6 @@
         "amount_minor": 24900,
         "tax_behavior": "inclusive",
         "provider_price_ref": ""
-      },
-      "regional_byok_prices": {
-        "international": {
-          "provider_price_ref": "",
-          "provider_mode": "test",
-          "interval": 1,
-          "period": "monthly",
-          "fx_inr_per_usd": "90",
-          "metadata": "launch-pricing-v1",
-          "currency": "USD",
-          "amount_minor": 9900,
-          "tax_behavior": "inclusive",
-          "tax_minor": 0,
-          "provider_plan_name": "CiteLadder Growth BYOK USD",
-          "tax_rate": "0",
-          "tax_verified": true
-        },
-        "india": {
-          "provider_price_ref": "",
-          "provider_mode": "test",
-          "interval": 1,
-          "period": "monthly",
-          "fx_inr_per_usd": "90",
-          "metadata": "launch-pricing-v1",
-          "currency": "INR",
-          "amount_minor": 899900,
-          "tax_behavior": "exclusive",
-          "tax_minor": 161982,
-          "provider_plan_name": "CiteLadder Growth BYOK INR",
-          "tax_rate": "0.18",
-          "tax_verified": true
-        }
       },
       "grants": [
         {
@@ -163,7 +134,42 @@
           "key": "agent",
           "value": 1
         }
-      ]
+      ],
+      "regional_prices": {
+        "byok": {
+          "international": {
+            "provider_price_ref": "",
+            "provider_mode": "test",
+            "interval": 1,
+            "period": "monthly",
+            "fx_inr_per_usd": "90",
+            "metadata": "launch-pricing-v1",
+            "currency": "USD",
+            "amount_minor": 9900,
+            "tax_behavior": "inclusive",
+            "tax_minor": 0,
+            "provider_plan_name": "CiteLadder Growth BYOK USD",
+            "tax_rate": "0",
+            "tax_verified": true
+          },
+          "india": {
+            "provider_price_ref": "",
+            "provider_mode": "test",
+            "interval": 1,
+            "period": "monthly",
+            "fx_inr_per_usd": "90",
+            "metadata": "launch-pricing-v1",
+            "currency": "INR",
+            "amount_minor": 899900,
+            "tax_behavior": "exclusive",
+            "tax_minor": 161982,
+            "provider_plan_name": "CiteLadder Growth BYOK INR",
+            "tax_rate": "0.18",
+            "tax_verified": true
+          }
+        },
+        "funded": {}
+      }
     },
     {
       "key": "tier_3",
@@ -183,38 +189,6 @@
         "amount_minor": 49900,
         "tax_behavior": "inclusive",
         "provider_price_ref": ""
-      },
-      "regional_byok_prices": {
-        "international": {
-          "provider_price_ref": "",
-          "provider_mode": "test",
-          "interval": 1,
-          "period": "monthly",
-          "fx_inr_per_usd": "90",
-          "metadata": "launch-pricing-v1",
-          "currency": "USD",
-          "amount_minor": 19900,
-          "tax_behavior": "inclusive",
-          "tax_minor": 0,
-          "provider_plan_name": "CiteLadder Scale BYOK USD",
-          "tax_rate": "0",
-          "tax_verified": true
-        },
-        "india": {
-          "provider_price_ref": "",
-          "provider_mode": "test",
-          "interval": 1,
-          "period": "monthly",
-          "fx_inr_per_usd": "90",
-          "metadata": "launch-pricing-v1",
-          "currency": "INR",
-          "amount_minor": 1799900,
-          "tax_behavior": "exclusive",
-          "tax_minor": 323982,
-          "provider_plan_name": "CiteLadder Scale BYOK INR",
-          "tax_rate": "0.18",
-          "tax_verified": true
-        }
       },
       "grants": [
         {
@@ -249,7 +223,42 @@
           "key": "agent",
           "value": 1
         }
-      ]
+      ],
+      "regional_prices": {
+        "byok": {
+          "international": {
+            "provider_price_ref": "",
+            "provider_mode": "test",
+            "interval": 1,
+            "period": "monthly",
+            "fx_inr_per_usd": "90",
+            "metadata": "launch-pricing-v1",
+            "currency": "USD",
+            "amount_minor": 19900,
+            "tax_behavior": "inclusive",
+            "tax_minor": 0,
+            "provider_plan_name": "CiteLadder Scale BYOK USD",
+            "tax_rate": "0",
+            "tax_verified": true
+          },
+          "india": {
+            "provider_price_ref": "",
+            "provider_mode": "test",
+            "interval": 1,
+            "period": "monthly",
+            "fx_inr_per_usd": "90",
+            "metadata": "launch-pricing-v1",
+            "currency": "INR",
+            "amount_minor": 1799900,
+            "tax_behavior": "exclusive",
+            "tax_minor": 323982,
+            "provider_plan_name": "CiteLadder Scale BYOK INR",
+            "tax_rate": "0.18",
+            "tax_verified": true
+          }
+        },
+        "funded": {}
+      }
     },
     {
       "key": "enterprise",

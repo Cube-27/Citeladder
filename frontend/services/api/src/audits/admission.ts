@@ -8,7 +8,6 @@ import { accountState } from '../entitlements/state.ts';
 import { approvedEndpoint } from '../providers/connections.ts';
 import type { FrozenRoute, prepareAudit } from './freeze.ts';
 import { auditPolicy, type AuditRuntime } from './config.ts';
-import { expectedCost } from './costs.ts';
 import { getLogger } from '../logging.ts';
 
 export type FrozenAudit = Awaited<ReturnType<typeof prepareAudit>>;
@@ -94,24 +93,14 @@ async function assertManualRunAllowance(
       },
     });
 }
-function plannedCost(plan: FrozenAudit) {
-  let cost = 0n;
-  for (const route of plan.routes) {
-    const expected = expectedCost(route, plan.measurement.retrieval_enabled);
-    if (!expected.complete || expected.total_microusd === null)
-      throw new ApiError(422, `Expected execution cost is unresolved for ${route.logical_engine}`, {
-        code: 'funded_cost_unresolved',
-      });
-    cost +=
-      BigInt(expected.total_microusd) *
-      BigInt(plan.prompts.length * plan.repetitions * plan.measurement.max_attempts);
-  }
-  return cost;
-}
+/**
+ * Admits a launch: the manual-run rate for every account, and for a managed
+ * workspace the monthly platform budget, which counts the cost actually
+ * recorded this month rather than any estimate (B20). Prompt runs bound volume.
+ */
 export async function admitAudit(
   db: Database,
   workspaceId: string,
-  plan: FrozenAudit,
   funded: boolean,
   trigger: string,
   runtime: AuditRuntime,
@@ -138,23 +127,26 @@ export async function admitAudit(
       launchId,
     });
   if (!funded) return null;
-  const cost = plannedCost(plan);
   const month = new Date(Date.UTC(at.getUTCFullYear(), at.getUTCMonth(), 1));
   const end = new Date(Date.UTC(at.getUTCFullYear(), at.getUTCMonth() + 1, 1));
   const spent = await db
-    .selectFrom('audits')
-    .select(sql<string>`coalesce(sum(funded_reserved_cost_microusd),0)`.as('amount'))
-    .where('funding_account_id', '=', account.id)
-    .where('funded_budget_period_start', '>=', month)
-    .where('funded_budget_period_start', '<', end)
+    .selectFrom('execution_cost_projections as p')
+    .innerJoin('audits as a', 'a.id', 'p.audit_id')
+    .select(
+      sql<string>`coalesce(sum(coalesce(p.provider_reported_cost_microusd, p.projected_total_cost_microusd)), 0)`.as(
+        'amount',
+      ),
+    )
+    .where('a.funding_account_id', '=', account.id)
+    .where('a.funded_budget_period_start', '>=', month)
+    .where('a.funded_budget_period_start', '<', end)
     .executeTakeFirstOrThrow();
   const ceiling =
     (BigInt(runtime.fundedBudgetMinor) * BigInt(policy.costs.microusd_per_usd)) / 100n;
-  if (BigInt(spent.amount) + cost > ceiling) {
+  if (BigInt(spent.amount) >= ceiling) {
     getLogger('api.entitlements').info(policy.billing.contracts.telemetry_funded_budget_exhausted, {
       workspace_id: workspaceId,
       account_id: account.id,
-      requested_microusd: cost.toString(),
       spent_microusd: spent.amount,
       ceiling_microusd: ceiling.toString(),
     });
@@ -164,7 +156,6 @@ export async function admitAudit(
   }
   return {
     accountId: account.id,
-    cost,
     month,
     provenance: {
       registry_revision: policy.entitlements.registry_revision,
@@ -201,7 +192,7 @@ export async function platformRoute(
     .where('entry_kind', '=', 'reservation')
     .where('capability_key', '=', policy.entitlements.prompt_runs)
     .executeTakeFirst();
-  if (!hold || !expectedCost(route, true).complete) throw unavailableCredential();
+  if (!hold) throw unavailableCredential();
   const candidates = await db
     .selectFrom('provider_routes as r')
     .innerJoin('provider_connections as c', 'c.id', 'r.connection_id')

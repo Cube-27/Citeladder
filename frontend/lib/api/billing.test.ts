@@ -13,7 +13,6 @@ const QUOTE = {
   subtotal_price: { currency: 'INR', amount_minor: 499900 },
   discount: { currency: 'INR', amount_minor: 0 },
   taxable_value: { currency: 'INR', amount_minor: 499900 },
-  credit_price: null,
   tax: { currency: 'INR', amount_minor: 89982 },
   tax_treatment: 'CGST_SGST',
   tax_rate: '18',
@@ -32,7 +31,6 @@ const ACTIVATION = {
   quantity: 1,
   status: 'pending',
   quote: QUOTE,
-  checkout_url: 'https://rzp.io/i/test',
   expires_at: '2026-08-01T12:00:00Z',
   failure_code: null,
 };
@@ -87,12 +85,11 @@ describe('billing API contract', () => {
       billing_postal_code: '560001',
       customer_gstin: '',
       export_eligibility_attested: false,
-      trial_requested: false,
     });
     expect(new Headers(init.headers).get('Idempotency-Key')).toBe('checkout-idempotency-key');
   });
 
-  it('sends trial_requested:false — the backend answers trial_unavailable otherwise', async () => {
+  it('sends no Indian tax fields for a buyer outside India', async () => {
     const fetchMock = stubFetch(ACTIVATION);
     await billingApi.createSubscription(
       {
@@ -115,7 +112,6 @@ describe('billing API contract', () => {
       billing_state_code: null,
       customer_gstin: null,
       export_eligibility_attested: true,
-      trial_requested: false,
     });
   });
 

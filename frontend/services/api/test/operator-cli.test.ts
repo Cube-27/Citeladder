@@ -87,7 +87,7 @@ it.each(['invalid', '0', '1.5'])(
       execute(
         process.execPath,
         [
-          join(root, 'frontend/services/api/src/cli/backfill-billing.ts'),
+          join(root, 'frontend/services/api/src/cli/provision-workspace-billing.ts'),
           '--development-allowance',
           allowance,
         ],

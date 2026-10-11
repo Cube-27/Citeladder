@@ -136,6 +136,39 @@ describe('billing money and access owner', () => {
       expires_at: periodEnd.toISOString(),
     });
   });
+  it('sells the managed plan at its own price, after which the workspace reads as managed', async () => {
+    const t = await fixtures.tenant({ access: false });
+    const response = await purchase(
+      db,
+      config,
+      t.workspaceId,
+      { kind: 'base', key: 'tier_1', quantity: 1, mode: 'funded', country: 'US', identity: buyer },
+      randomUUID(),
+      fakeProvider(),
+    );
+    const row = await pending(response.activation_id);
+    expect({
+      mode: row.credential_mode,
+      plan: row.external_price_id,
+      total: response.quote?.total_price,
+    }).toEqual({
+      mode: 'funded',
+      plan: 'plan_tier1fundedinternational',
+      total: { currency: 'USD', amount_minor: 9900 },
+    });
+    // Unpaid, the workspace is not yet managed.
+    expect((await workspaceEntitlementRead(db, t.workspaceId, new Date())).credential_mode).toBe(
+      'byok',
+    );
+    await db
+      .transaction()
+      .execute((trx) =>
+        settlePending(trx, row.id, 'test', paidSubscription(row), 'reconciliation'),
+      );
+    expect((await workspaceEntitlementRead(db, t.workspaceId, new Date())).credential_mode).toBe(
+      'funded',
+    );
+  });
   it('preserves uncertain creation and recovers without creating or granting twice', async () => {
     const t = await fixtures.tenant();
     const key = randomUUID();
@@ -1030,7 +1063,7 @@ describe('billing money and access owner', () => {
     await fixtures.catalog((payload) => {
       const plan = payload.plans.find((row) => row.key === 'tier_2')!;
       plan.byok_price!.amount_minor = 100;
-      plan.regional_byok_prices.international!.amount_minor = 100;
+      plan.regional_prices.byok.international!.amount_minor = 100;
     });
     const closed = { ...config, billing: { ...config.billing, enabled: false } };
     const change = vi.fn(async () => {});
@@ -1043,7 +1076,7 @@ describe('billing money and access owner', () => {
     await fixtures.catalog((payload) => {
       const plan = payload.plans.find((row) => row.key === 'tier_2')!;
       plan.byok_price!.amount_minor = 100;
-      plan.regional_byok_prices.international!.amount_minor = 100;
+      plan.regional_prices.byok.international!.amount_minor = 100;
     });
     const change = vi.fn(async () => {});
     const result = await changePlan(

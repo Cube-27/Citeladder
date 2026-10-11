@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { promptsApi } from '@/lib/api/prompts';
 import { providersApi } from '@/lib/api/providers';
+import { useManagedPlan } from '@/lib/billing/entitlement-context';
 import { queryKeys } from '@/lib/api/query-keys';
 import { runsApi } from '@/lib/api/runs';
 import type { Audit, LogicalEngine, PromptSet } from '@/lib/api/types';
@@ -21,6 +22,9 @@ import {
 } from '@/lib/runs/launch';
 
 import { LaunchDialogView } from './launch-dialog-view';
+
+/** A managed plan measures every engine on the platform's keys (B32). */
+const MANAGED_ENGINES = { configuredEngines: [...ENGINE_ORDER], unverifiedEngines: [] };
 
 function availableEngines(
   connections: Awaited<ReturnType<typeof providersApi.listConnections>> | undefined,
@@ -103,15 +107,17 @@ export function LaunchDialog({
     queryFn: ({ signal }) => promptsApi.listPromptSets(projectId, { signal, workspaceId }),
     enabled: open && workspaceId !== null,
   });
+  const managed = useManagedPlan();
   const connectionsQuery = useQuery({
     queryKey: queryKeys.providers.connections(workspaceId ?? 'unresolved'),
     queryFn: ({ signal }) => providersApi.listConnections({ signal, workspaceId }),
-    enabled: open && workspaceId !== null,
+    enabled: open && workspaceId !== null && !managed,
   });
   const { configuredEngines, unverifiedEngines } = useMemo(
-    () => availableEngines(connectionsQuery.data),
-    [connectionsQuery.data],
+    () => (managed ? MANAGED_ENGINES : availableEngines(connectionsQuery.data)),
+    [managed, connectionsQuery.data],
   );
+  const enginesReady = managed || connectionsQuery.isSuccess;
   // One contract, derived from the same values the payload is built from:
   // `fixedPromptIds` wins in `buildLaunchPayload`, so it must also lock the
   // field and name the selection. Locking only on `fixedPromptSetId` left the
@@ -130,11 +136,11 @@ export function LaunchDialog({
       initialized.current = false;
       return;
     }
-    if (!initialized.current && connectionsQuery.isSuccess) {
+    if (!initialized.current && enginesReady) {
       initialized.current = true;
       setEngines(configuredEngines.filter(isConsumerEngine));
     }
-  }, [open, connectionsQuery.isSuccess, configuredEngines]);
+  }, [open, enginesReady, configuredEngines]);
   const [repetitions, setRepetitions] = useState(DEFAULT_REPETITIONS);
   const markets = useProjectMarkets(projectId, workspaceId, open);
   // The default market alone until the reader picks more.

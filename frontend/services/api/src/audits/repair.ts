@@ -120,7 +120,6 @@ export function createRepairAudit(
         summary: null,
         funding_account_id: null,
         funded_budget_period_start: null,
-        funded_reserved_cost_microusd: null,
         created_at: at,
         updated_at: at,
         started_at: null,

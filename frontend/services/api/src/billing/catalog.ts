@@ -44,7 +44,12 @@ const plan = z.object({
   contact_only: z.boolean(),
   byok_price: price.nullable(),
   funded_price: price.nullable(),
-  regional_byok_prices: z.record(z.string(), regional).default({}),
+  regional_prices: z
+    .object({
+      byok: z.record(z.string(), regional).default({}),
+      funded: z.record(z.string(), regional).default({}),
+    })
+    .default({ byok: {}, funded: {} }),
   grants,
 });
 const item = z

@@ -40,5 +40,4 @@ export const EXPORT_CHECKOUT_BODY = {
   billing_postal_code: '10001',
   customer_gstin: null,
   export_eligibility_attested: true,
-  trial_requested: false,
 };

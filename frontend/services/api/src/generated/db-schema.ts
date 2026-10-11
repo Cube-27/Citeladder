@@ -505,7 +505,6 @@ export interface Audits {
   error_message: string;
   failed_count: number;
   funded_budget_period_start: Timestamp | null;
-  funded_reserved_cost_microusd: Int8 | null;
   funding_account_id: string | null;
   id: string;
   launch_id: string | null;
@@ -1893,7 +1892,6 @@ export interface PendingActivations {
   catalog_key: string;
   catalog_revision: string;
   change_terms: Json | null;
-  checkout_url: string | null;
   country_code: string;
   created_at: Timestamp;
   credential_mode: string;

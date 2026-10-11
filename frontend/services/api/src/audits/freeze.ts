@@ -123,12 +123,12 @@ async function loadPrompts(
   return prompts;
 }
 function assertPromptCount(
-  input: AuditInput,
+  funded: boolean,
   trigger: string,
   promptCount: number,
   settings: ReturnType<typeof auditSettings>,
 ) {
-  if (input.credential_mode !== 'funded' && trigger !== 'trial') return;
+  if (!funded && trigger !== 'trial') return;
   if (settings.audit_prompt_count === null)
     throw new ApiError(422, 'Audit prompt-count policy is unconfigured', {
       code: 'prompt_count_policy_unconfigured',
@@ -202,7 +202,7 @@ function validateSearchRequests(
 async function freezeRoutes({
   db,
   workspaceId,
-  input,
+  funded,
   engines,
   prompts,
   project,
@@ -212,7 +212,8 @@ async function freezeRoutes({
 }: {
   db: Database;
   workspaceId: string;
-  input: AuditInput;
+  /** A managed workspace measures on platform keys for every engine (B32). */
+  funded: boolean;
   engines: Engine[];
   prompts: { text: string }[];
   project: SearchProject;
@@ -249,12 +250,12 @@ async function freezeRoutes({
   for (const engine of engines) {
     const catalog = providerPolicy.routes[engine];
     const observed = catalog.transport_provider === 'dataforseo';
-    if (input.credential_mode === 'funded' && observed)
-      throw invalid('Search surfaces require your own DataForSEO credentials');
-    const selected = candidates.find((candidate) =>
-      usableCandidate(candidate, engine, catalog.transport_provider, providerSettings, at),
-    );
-    if (input.credential_mode === 'byok' && !selected)
+    const selected = funded
+      ? undefined
+      : candidates.find((candidate) =>
+          usableCandidate(candidate, engine, catalog.transport_provider, providerSettings, at),
+        );
+    if (!funded && !selected)
       throw new ApiError(400, `No active provider route configured for ${engine}`, {
         code: 'execution_credentials_unavailable',
       });
@@ -358,6 +359,8 @@ type PrepareOptions = {
   at?: Date;
   /** The market to measure from; the project's default when omitted. */
   selected?: Market | null;
+  /** A managed workspace's audit, run on platform keys. */
+  funded?: boolean;
 };
 export async function prepareAudit(
   db: Database,
@@ -366,7 +369,12 @@ export async function prepareAudit(
   settings: ReturnType<typeof auditSettings>,
   providerSettings: ProviderSettings,
   trigger: string,
-  { search = searchSettings(), at = new Date(), selected = null }: PrepareOptions = {},
+  {
+    search = searchSettings(),
+    at = new Date(),
+    selected = null,
+    funded = false,
+  }: PrepareOptions = {},
 ) {
   trigger = trigger.trim().toLowerCase();
   if (!auditPolicy.constants.audit_triggers.includes(trigger))
@@ -400,7 +408,7 @@ export async function prepareAudit(
   if (requested.some((engine) => !auditPolicy.selectable_engines.includes(engine)))
     throw invalid('An engine is unavailable');
   const { engines, notApplicable } = marketEngines(requested, market, project);
-  assertPromptCount(input, trigger, prompts.length, settings);
+  assertPromptCount(funded, trigger, prompts.length, settings);
   const repetitions = input.repetitions ?? settings.audit_repetitions;
   assertRepetitions(repetitions);
   if (prompts.length * repetitions * engines.length > settings.max_tasks_per_audit)
@@ -408,7 +416,7 @@ export async function prepareAudit(
   const routes = await freezeRoutes({
     db,
     workspaceId,
-    input,
+    funded,
     engines,
     prompts,
     project,

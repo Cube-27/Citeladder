@@ -24,7 +24,7 @@ import { projectsApi } from '@/lib/api/projects';
 import { humanizeApiError } from '@/lib/api/errors';
 import { queryKeys } from '@/lib/api/query-keys';
 import { useSessionUser } from '@/lib/auth/session-guard';
-import { useEntitlement } from '@/lib/billing/entitlement-context';
+import { useEntitlement, useManagedPlan } from '@/lib/billing/entitlement-context';
 import { PROJECT_DELETION_CAPABILITY } from '@/lib/config/billing';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
 import { useSelectProject, workspaceDestination } from '@/lib/navigation/project-destination';
@@ -66,10 +66,14 @@ type SettingsTab = (typeof SETTINGS_TABS)[number]['id'];
  * Someone who belongs to no workspace yet has only their account to manage;
  * API keys are for the Owners and Admins who manage credentials.
  */
-function visibleTabs(hasWorkspace: boolean, managesCredentials: boolean) {
+/** A managed plan brings the platform's keys, so it has no provider settings (B32). */
+function visibleTabs(hasWorkspace: boolean, managesCredentials: boolean, managed: boolean) {
   return SETTINGS_TABS.filter(
     (tab) =>
-      tab.id === 'account' || (hasWorkspace && (tab.id !== 'api-keys' || managesCredentials)),
+      tab.id === 'account' ||
+      (hasWorkspace &&
+        (tab.id !== 'api-keys' || managesCredentials) &&
+        (tab.id !== 'providers' || !managed)),
   );
 }
 
@@ -227,7 +231,8 @@ export function SettingsScreen() {
   const [requestedTab, setActiveTab] = useUrlState('tab', SETTINGS_TAB_CODEC);
   const { activeWorkspace } = useProjectContext();
   const managesCredentials = useWorkspaceCapability('manage_credentials');
-  const tabs = visibleTabs(activeWorkspace !== null, managesCredentials);
+  const managed = useManagedPlan();
+  const tabs = visibleTabs(activeWorkspace !== null, managesCredentials, managed);
   // `?tab=` is deep-linkable, so someone can arrive asking for a tab that is
   // not offered. Fall back to Account rather than selecting
   // a tab that no longer exists, which would leave no panel visible at all.

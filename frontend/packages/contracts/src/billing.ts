@@ -59,7 +59,6 @@ export const resolvedQuoteSchema = responseObject({
   subtotal_price: moneySchema,
   discount: moneySchema,
   taxable_value: moneySchema,
-  credit_price: moneySchema.nullable(),
   tax: moneySchema,
   tax_treatment: taxTreatmentSchema,
   tax_rate: z.string(),
@@ -108,12 +107,12 @@ const catalogPlanSchema = responseObject({
   self_serve: z.boolean(),
   contact_only: z.boolean(),
   contact_url: z.string().nullable(),
+  /** The BYOK price; customers pay their providers directly. */
   base_price: moneySchema.nullable(),
-  // Null in this release: funded inputs are deliberately unset. Never coerce
-  // to zero and never derive a funded total from it.
-  credit_price: moneySchema.nullable(),
+  /** The managed price, with platform keys included (B32). */
   funded_total_price: moneySchema.nullable(),
   checkout_available: z.boolean(),
+  funded_checkout_available: z.boolean(),
   unavailable_reason: z.string().nullable(),
   capabilities: z.array(capabilityValueSchema),
   trial_availability: catalogAvailabilitySchema,
@@ -156,6 +155,8 @@ export const workspaceEntitlementSchema = responseObject({
   registry_revision: z.string(),
   entitlement_lifecycle_version: z.number().int().nonnegative(),
   valid_until: z.string().nullable(),
+  /** 'funded' on a managed plan: the platform supplies engine and DataForSEO keys (B32). */
+  credential_mode: credentialModeSchema,
   capabilities: z.array(
     responseObject({
       key: z.string(),
@@ -201,10 +202,6 @@ export const noCardClaimSchema = responseObject({
 export const introductoryEndSchema = responseObject({
   status: z.literal('ended'),
   ended_at: z.string(),
-});
-export const cardTrialUnavailableSchema = responseObject({
-  status: z.literal('unavailable'),
-  reason: z.literal('provider_evidence_required'),
 });
 
 export const billingCatalogSchema = responseObject({
@@ -320,7 +317,6 @@ export const activationSchema = responseObject({
   quantity: z.number().int(),
   status: activationStatusSchema,
   quote: resolvedQuoteSchema,
-  checkout_url: z.string().nullable(),
   expires_at: z.string(),
   failure_code: z.string().nullable(),
 });
@@ -381,16 +377,13 @@ export const providerConnectionStatesSchema = responseObject({
   providers: z.array(providerConnectionStateEntrySchema),
 });
 
-// The small PUBLIC checkout-init contract. `flow` says whether the browser
-// follows a validated `redirect_url` or loads the adapter-named SDK with
-// `public_key` and `reference`. Only public initialization fields appear here:
+// The small PUBLIC checkout-init contract: the browser loads the adapter-named
+// SDK with `public_key` and `reference`. Only public initialization fields appear here:
 // never a secret, an amount, or a private price reference.
 export const subscriptionCheckoutSchema = responseObject({
   activation_id: uuid(),
   provider: z.string(),
   provider_mode: z.enum(['test', 'live']),
-  flow: z.enum(['hosted_redirect', 'provider_sdk']),
-  redirect_url: z.string(),
   /** The browser SDK adapter that opens this checkout. */
   sdk_name: z.literal('razorpay-checkout'),
   public_key: z.string(),

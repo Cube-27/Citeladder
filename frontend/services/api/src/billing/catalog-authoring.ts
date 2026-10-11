@@ -69,9 +69,13 @@ const plan = z.strictObject({
   ...catalogSchema.shape.plans.element.shape,
   byok_price: basePrice.nullable(),
   funded_price: basePrice.nullable(),
-  regional_byok_prices: z
-    .partialRecord(z.enum(['india', 'international']), regionalPrice)
-    .default({}),
+  /** Recurring prices per credential mode and region: BYOK, and managed (B32). */
+  regional_prices: z
+    .strictObject({
+      byok: z.partialRecord(z.enum(['india', 'international']), regionalPrice).default({}),
+      funded: z.partialRecord(z.enum(['india', 'international']), regionalPrice).default({}),
+    })
+    .default({ byok: {}, funded: {} }),
   grants,
 });
 const itemPrice = z.strictObject({
@@ -190,11 +194,14 @@ function validateRegionalPrice(region: string, price: RegionalPrice, usdMinor: n
 
 function validatePlanPrices(row: AuthoredPlan): string[] {
   const refs: string[] = [];
-  for (const [region, price] of Object.entries(row.regional_byok_prices)) {
-    if (!price) continue;
-    if (!row.byok_price || row.contact_only) throw new Error('contact_only_regional_price');
-    if (price.provider_price_ref) refs.push(price.provider_price_ref);
-    validateRegionalPrice(region, price, row.byok_price.amount_minor);
+  for (const mode of ['byok', 'funded'] as const) {
+    const base = mode === 'byok' ? row.byok_price : row.funded_price;
+    for (const [region, price] of Object.entries(row.regional_prices[mode])) {
+      if (!price) continue;
+      if (!base || row.contact_only) throw new Error('contact_only_regional_price');
+      if (price.provider_price_ref) refs.push(price.provider_price_ref);
+      validateRegionalPrice(region, price, base.amount_minor);
+    }
   }
   return refs;
 }
@@ -330,32 +337,34 @@ export function launchCatalog(options: {
       fx_inr_per_usd: rate,
       metadata: cfg.revision,
     };
-    const regional = !options.mode
-      ? {}
-      : {
-          international: {
-            ...common,
-            ...price(p.byok),
-            tax_minor: 0,
-            provider_plan_name: `CiteLadder ${p.name} BYOK USD`,
-            tax_rate: '0',
-            tax_verified: true,
-          },
-          ...(gst
-            ? {
-                india: {
-                  ...common,
-                  currency: 'INR',
-                  amount_minor: inrMinor(p.byok, rate),
-                  tax_behavior: 'exclusive',
-                  tax_minor: taxMinor(inrMinor(p.byok, rate), gst),
-                  provider_plan_name: `CiteLadder ${p.name} BYOK INR`,
-                  tax_rate: gst,
-                  tax_verified: true,
-                },
-              }
-            : {}),
-        };
+    // One recurring provider plan per credential mode and region.
+    const regional = (mode: 'BYOK' | 'Managed', usdMinor: number) =>
+      !options.mode
+        ? {}
+        : {
+            international: {
+              ...common,
+              ...price(usdMinor),
+              tax_minor: 0,
+              provider_plan_name: `CiteLadder ${p.name} ${mode} USD`,
+              tax_rate: '0',
+              tax_verified: true,
+            },
+            ...(gst
+              ? {
+                  india: {
+                    ...common,
+                    currency: 'INR',
+                    amount_minor: inrMinor(usdMinor, rate),
+                    tax_behavior: 'exclusive',
+                    tax_minor: taxMinor(inrMinor(usdMinor, rate), gst),
+                    provider_plan_name: `CiteLadder ${p.name} ${mode} INR`,
+                    tax_rate: gst,
+                    tax_verified: true,
+                  },
+                }
+              : {}),
+          };
     return {
       key: p.key,
       name: p.name,
@@ -365,7 +374,7 @@ export function launchCatalog(options: {
       contact_only: false,
       byok_price: price(p.byok),
       funded_price: price(p.funded),
-      regional_byok_prices: regional,
+      regional_prices: { byok: regional('BYOK', p.byok), funded: regional('Managed', p.funded) },
       grants: bundle,
     };
   });

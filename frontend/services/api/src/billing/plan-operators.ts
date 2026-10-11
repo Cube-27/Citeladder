@@ -12,20 +12,17 @@ const planReference = z
   .string()
   .regex(/^plan_[A-Za-z0-9]+$/u)
   .max(255);
+/** Every recurring provider plan the catalog needs: one per plan, mode and region. */
 export function recurringPrices(input: unknown) {
   return validateCatalog(input).plans.flatMap((plan) =>
-    Object.entries(plan.regional_byok_prices).flatMap(([region, price]) =>
-      price
-        ? [
-            {
-              key: `${plan.key}:${region}`,
-              price,
-            },
-          ]
-        : [],
+    MODES.flatMap((mode) =>
+      Object.entries(plan.regional_prices[mode]).flatMap(([region, price]) =>
+        price ? [{ key: `${plan.key}:${mode}:${region}`, price }] : [],
+      ),
     ),
   );
 }
+const MODES = ['byok', 'funded'] as const;
 export function bindPlanRefs(input: unknown, inputRefs: unknown) {
   const payload = validateCatalog(input);
   const refs = z.record(z.string(), planReference).parse(inputRefs);
@@ -36,8 +33,9 @@ export function bindPlanRefs(input: unknown, inputRefs: unknown) {
   )
     throw new Error('plan_reference_set_mismatch');
   for (const plan of payload.plans)
-    for (const [region, price] of Object.entries(plan.regional_byok_prices))
-      if (price) price.provider_price_ref = refs[`${plan.key}:${region}`]!;
+    for (const mode of MODES)
+      for (const [region, price] of Object.entries(plan.regional_prices[mode]))
+        if (price) price.provider_price_ref = refs[`${plan.key}:${mode}:${region}`]!;
   return validateCatalog(payload);
 }
 export function verifyPlan(

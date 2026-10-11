@@ -8,7 +8,6 @@ import {
   noCardOfferSchema,
   noCardClaimSchema,
   introductoryEndSchema,
-  cardTrialUnavailableSchema,
   subscriptionChangeSchema,
   subscriptionCheckoutSchema,
   planChangeSchema,
@@ -127,13 +126,6 @@ export const billingRoutes = [
   }),
   defineRoute({
     ...privateRoute,
-    path: `${root}/card-trial/quote`,
-    response: cardTrialUnavailableSchema,
-    handle: () =>
-      Promise.resolve({ status: 'unavailable', reason: 'provider_evidence_required' } as const),
-  }),
-  defineRoute({
-    ...privateRoute,
     path: `${root}/subscriptions`,
     method: 'post',
     headers: keyHeaders,
@@ -144,7 +136,6 @@ export const billingRoutes = [
     raw: true,
     async handle({ c, db, config }) {
       const input = await readBody(c, baseRequest);
-      if (input.trial_requested) conflict('trial_unavailable');
       const identity = identitySchema.parse({
         name: input.billing_name,
         address_line1: input.billing_address_line1,
@@ -264,8 +255,6 @@ export const billingRoutes = [
         activation_id: pending.id,
         provider: pending.provider,
         provider_mode: pending.provider_mode,
-        flow: 'provider_sdk',
-        redirect_url: '',
         sdk_name: 'razorpay-checkout',
         public_key: config.razorpay.keyId,
         reference: pending.external_reference,

@@ -10,8 +10,6 @@ export const billing = {
   ai_credits: aiCredits,
   contracts: {
     ...c,
-    cadences: [c.cadence_monthly].sort(compareText),
-    subscription_kinds: [c.subscription_kind_base].sort(compareText),
     live_subscription_statuses: [
       c.subscription_pending,
       c.subscription_trialing,
@@ -47,36 +45,6 @@ export const billing = {
       expired: c.subscription_expired,
       paused: c.subscription_past_due,
     },
-    regions: [c.region_india, c.region_international],
-    region_currencies: {
-      [c.region_india]: c.currency_inr,
-      [c.region_international]: c.currency_usd,
-    },
-    self_serve_plan_keys: [c.plan_tier_1, c.plan_tier_2, c.plan_tier_3],
-    activation_kinds: [
-      c.activation_kind_base,
-      c.activation_kind_addon,
-      c.activation_kind_topup,
-      c.activation_kind_upgrade,
-    ].sort(compareText),
-    one_time_activation_kinds: [
-      c.activation_kind_addon,
-      c.activation_kind_topup,
-      c.activation_kind_upgrade,
-    ].sort(compareText),
-    activation_statuses: [
-      c.activation_pending,
-      c.activation_activated,
-      c.activation_failed,
-      c.activation_abandoned,
-    ].sort(compareText),
-    credential_modes: [c.credential_mode_byok, c.credential_mode_funded].sort(compareText),
-    billing_telemetry_events: [
-      c.telemetry_entitlement_unresolved,
-      c.telemetry_funded_budget_exhausted,
-      c.telemetry_consumable_credits_exhausted,
-      c.telemetry_duplicate_grant_prevented,
-    ],
   },
   providers: providers.catalog.map((entry) => {
     const route = providers.routes[entry.key as keyof typeof providers.routes];
