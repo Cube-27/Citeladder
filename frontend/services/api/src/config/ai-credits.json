@@ -23,6 +23,7 @@
     "prompt_quality_judge": "not_charged",
     "internal_link_judge": "not_charged",
     "commerce_competitor_discovery": "not_charged",
-    "research_evidence": "not_charged"
+    "research_evidence": "not_charged",
+    "search_intelligence": "credits"
   }
 }

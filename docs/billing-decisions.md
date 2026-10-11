@@ -272,12 +272,22 @@ probe path. Removed as vestigial: the card-trial quote route,
 `credit_price`, 88 unreferenced contract keys and three unused HTTP settings.
 `billing:backfill` is now `billing:provision-workspace`, which is what it does.
 
-## Open questions
+## Operational but hidden (PR 3)
 
-- **Search Intelligence on managed plans.** Search Intelligence runs on the
-  workspace's own DataForSEO key (B17: not charged). A managed workspace hides
-  provider settings (B32), so it cannot add one. Should managed Search
-  Intelligence use the platform key, and if so, how is it charged?
+**B40 — Owner, 2026-10-11.** Search Intelligence on a managed plan runs on the
+platform's DataForSEO key and spends AI credits: the DataForSEO cost converts
+to credits exactly as token cost does (B14: cost × 1.3 ÷ $0.001, rounded up).
+On a BYOK plan DataForSEO is BYOK too: the workspace's own key, not charged
+(B17). Answers the open question raised with B38.
+
+**B41 — Engineering, 2026-10-11.** A managed analysis shows its estimate in
+credits at review. Confirming it holds that estimate; an exhausted balance
+refuses the confirmation and nothing is fetched. When the analysis ends, it is
+charged the DataForSEO cost of every request sent (the reported cost, or the
+request's estimate when DataForSEO reports none), never more than the hold, and
+the rest is released. The review's existing cost ceiling still stops the run
+before it can pass the estimate. Dollar amounts are never shown for a managed
+analysis (B23).
 
 ## Owner inputs still required
 

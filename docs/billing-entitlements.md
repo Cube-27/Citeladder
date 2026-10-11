@@ -219,6 +219,12 @@ and always uses the platform gateway.
 DataForSEO surfaces included, on the platform's keys; the request never chooses
 the mode. Its monthly platform budget admits a launch while the month's recorded
 spend is below the ceiling (`BILLING_FUNDED_MONTHLY_BUDGET_MINOR`).
+Search Intelligence on a managed plan researches on the platform's DataForSEO
+account and spends AI credits: the review prices the estimate in credits (the
+DataForSEO cost converted exactly as token cost is), confirmation holds it in the
+same transaction, and the ended analysis is charged the cost of the requests
+sent, never above the hold ([charges](../frontend/services/api/src/search-intelligence/charges.ts)).
+A BYOK workspace researches on its own key and is not charged.
 [Site Health fetch budget](../frontend/services/api/src/site-health/fetch-budget.ts)
 reserves a crawl's page budget at creation and settles analyzed pages on every
 terminal path; accounts without a page-fetch grant are not metered there. Audit

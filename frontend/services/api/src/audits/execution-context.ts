@@ -4,10 +4,11 @@ import { sql } from 'kysely';
 import { openReservedUnits } from '../entitlements/ledger.ts';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
-import { policy, resolveSettingSpec } from '../config.ts';
+import { policy } from '../config.ts';
 import { approvedEndpoint } from '../providers/connections.ts';
 import { providerPolicy, type Engine, type ProviderTransport } from '../providers/config.ts';
 import { dataforseoAccountIdentity } from '../providers/dataforseo-identity.ts';
+import { platformSecret } from '../providers/platform-secrets.ts';
 import type { CapacityRequest } from '../providers/capacity.ts';
 import { createSecretCipher } from '../integrations/fernet.ts';
 import { ProviderError, answerRequestSchema } from '../answer-engines/contracts.ts';
@@ -34,27 +35,13 @@ const routeSchema = z.object({
 });
 const unavailable = () => new ProviderError(auditPolicy.constants.error_no_connection);
 
-function platformSecret(
+function requiredPlatformSecret(
   transport: ProviderTransport,
   reference: string,
   env: Record<string, string | undefined>,
 ) {
-  if (transport === 'dataforseo') {
-    const spec = providerPolicy.platform_dataforseo;
-    if (
-      !reference ||
-      reference !== String(resolveSettingSpec(spec.platform_credential_ref, env)).trim()
-    )
-      throw unavailable();
-    const login = String(resolveSettingSpec(spec.api_login, env)).trim();
-    const password = String(resolveSettingSpec(spec.api_password, env));
-    if (!login || !password) throw unavailable();
-    return JSON.stringify({ login, password });
-  }
-  const spec = providerPolicy.platform_credentials[transport];
-  const secret = String(resolveSettingSpec(spec.secret, env));
-  if (!reference || reference !== String(resolveSettingSpec(spec.reference, env)).trim() || !secret)
-    throw unavailable();
+  const secret = platformSecret(transport, reference, env);
+  if (secret === null) throw unavailable();
   return secret;
 }
 
@@ -146,7 +133,7 @@ export async function loadExecutionContext(
     try {
       secret =
         route.credential_source === 'platform'
-          ? platformSecret(
+          ? requiredPlatformSecret(
               connection.transport_provider as ProviderTransport,
               connection.platform_credential_ref,
               env,

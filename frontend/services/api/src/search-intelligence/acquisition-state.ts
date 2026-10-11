@@ -4,10 +4,12 @@ import type { Database } from '../db/database.ts';
 import { jsonObjects, record, strings } from '../db/json.ts';
 import type { QueueTask } from '../queue/task-queue.ts';
 import type {
+  ProviderConnections,
   SearchIntelligenceRuns,
   SearchIntelligenceCalls,
   SearchIntelligenceDatasets,
 } from '../generated/db-schema.ts';
+import { runConnection } from './credentials.ts';
 import { datasetKind, pageEstimateMicrousd, si } from './requests.ts';
 import { INT4_MAX, normalizeResponse } from './normalization.ts';
 import type { ResearchResponse } from './live.ts';
@@ -36,8 +38,9 @@ export type PreparedResearch =
       call: Call;
       dataset: Dataset;
       ordinal: number;
-      secret: string;
-      baseUrl: string;
+      connection: Selectable<ProviderConnections>;
+      /** The paying account of a managed analysis; null for BYOK. */
+      accountId: string | null;
     };
 const terminal = new Set(['succeeded', 'failed', 'partial', 'cancelled', 'uncertain']);
 /** What one failed send means for the call and the run. */
@@ -177,15 +180,17 @@ export class AcquisitionState {
       .where('role', 'in', rolesWith('run'))
       .executeTakeFirst();
     if (!member) return undefined;
-    return db
-      .selectFrom('provider_connections')
-      .selectAll()
+    return runConnection(db, run);
+  }
+  /** The billing account a managed analysis is held against. */
+  private async payer(db: Database, run: Run) {
+    if (run.credential_source !== 'platform') return null;
+    const account = await db
+      .selectFrom('billing_accounts')
+      .select('id')
       .where('workspace_id', '=', run.workspace_id)
-      .where('id', '=', run.connection_id)
-      .where('transport_provider', '=', 'dataforseo')
-      .where('active', '=', true)
-      .where('credential_revision', '=', run.connection_revision)
       .executeTakeFirst();
+    return account?.id ?? null;
   }
   start(at = new Date()) {
     return this.db.transaction().execute(async (trx) => {
@@ -322,8 +327,8 @@ export class AcquisitionState {
         call,
         dataset,
         ordinal: (latest?.ordinal ?? 0) + 1,
-        secret: connection.api_key_encrypted,
-        baseUrl: connection.base_url,
+        connection,
+        accountId: await this.payer(trx, run),
       };
     });
   }

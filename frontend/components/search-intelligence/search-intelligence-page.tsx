@@ -179,12 +179,20 @@ export function SearchIntelligencePage() {
     return (
       <TabsRoot value={tab} onValueChange={setTab}>
         <PageShell tabs={tabs}>
-          <EmptyState
-            icon={Unplug}
-            heading="Connect DataForSEO"
-            description="Search Intelligence uses your workspace’s own DataForSEO account. Add its login once; every analysis shows its cost before anything is fetched."
-            action={<TextLink href={PROVIDER_SETTINGS}>Open provider settings</TextLink>}
-          />
+          {data.credential_mode === 'funded' ? (
+            <EmptyState
+              icon={Unplug}
+              heading="Search Intelligence is unavailable"
+              description="Research is temporarily unavailable on your plan. Try again later."
+            />
+          ) : (
+            <EmptyState
+              icon={Unplug}
+              heading="Connect DataForSEO"
+              description="Search Intelligence uses your workspace’s own DataForSEO account. Add its login once; every analysis shows its cost before anything is fetched."
+              action={<TextLink href={PROVIDER_SETTINGS}>Open provider settings</TextLink>}
+            />
+          )}
         </PageShell>
       </TabsRoot>
     );
@@ -241,12 +249,7 @@ export function SearchIntelligencePage() {
         }
       >
         <Stack gap="workspace" className="min-w-0">
-          {data.connected ? null : (
-            <Alert>
-              DataForSEO is not connected, so saved results can be read but not refreshed.{' '}
-              <TextLink href={PROVIDER_SETTINGS}>Open provider settings</TextLink>
-            </Alert>
-          )}
+          <UnavailableNotice data={data} />
           <RunNotice
             run={data.latest_run}
             onCancel={(runId) => cancelMutation.mutate(runId)}
@@ -394,4 +397,23 @@ function CollectionAction({
       </Button>
     );
   return null;
+}
+
+/** Why saved results cannot be refreshed: a missing connection, or managed research being down. */
+function UnavailableNotice({
+  data,
+}: Readonly<{ data: { connected: boolean; credential_mode: 'byok' | 'funded' } }>) {
+  if (data.connected) return null;
+  if (data.credential_mode === 'funded')
+    return (
+      <Alert>
+        Research is temporarily unavailable, so saved results can be read but not refreshed.
+      </Alert>
+    );
+  return (
+    <Alert>
+      DataForSEO is not connected, so saved results can be read but not refreshed.{' '}
+      <TextLink href={PROVIDER_SETTINGS}>Open provider settings</TextLink>
+    </Alert>
+  );
 }

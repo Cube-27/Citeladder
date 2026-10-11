@@ -11,6 +11,7 @@ import { SearchIntelligenceReviewDrawer } from './search-intelligence-review-dra
 
 const RUN_ID = 'a5df36ea-cb35-40f9-a7a9-a50ff7309cf1';
 const readiness: SearchIntelligenceReadiness = {
+  credential_mode: 'byok',
   connected: true,
   connection_id: '72dbc77c-676f-4bf7-8c29-16f163cb09f5',
   owned_targets: [
@@ -40,6 +41,9 @@ const reviewedRun: SearchIntelligenceRun = {
   status: 'reviewed',
   action: 'analysis',
   pricing_version: 'dataforseo-live-2026-09-20',
+  credential_mode: 'byok',
+  estimated_credits: null,
+  charged_credits: null,
   estimated_cost_usd: '0.14412000',
   provider_reported_cost_usd: null,
   planned_calls: 2,
@@ -307,6 +311,34 @@ describe('SearchIntelligenceReviewDrawer', () => {
     expect(await screen.findByText('$0.1442')).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: 'Confirm $0.1442 analysis' }));
+    expect(confirm).toHaveBeenCalledWith(RUN_ID);
+  });
+
+  it('prices a managed analysis in AI credits with no dollar amount anywhere', async () => {
+    const managedRun = {
+      ...reviewedRun,
+      credential_mode: 'funded' as const,
+      estimated_cost_usd: null,
+      estimated_credits: 188,
+      call_plan: reviewedRun.call_plan.map(({ estimated_cost_usd: _cost, ...call }) => call),
+    };
+    const confirm = vi.fn().mockResolvedValue(undefined);
+    render(
+      <SearchIntelligenceReviewDrawer
+        open
+        action="analysis"
+        readiness={{ ...readiness, credential_mode: 'funded', connection_id: null }}
+        onOpenChange={vi.fn()}
+        onReview={vi.fn().mockResolvedValue(managedRun)}
+        onConfirm={confirm}
+        busy={false}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Review cost' }));
+    expect(await screen.findByText('188 AI credits')).toBeInTheDocument();
+    expect(screen.queryByText(/\$/u)).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Confirm 188 AI credits analysis' }));
     expect(confirm).toHaveBeenCalledWith(RUN_ID);
   });
 });

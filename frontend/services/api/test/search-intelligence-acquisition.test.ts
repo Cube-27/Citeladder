@@ -2,15 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { ProviderError } from '../src/answer-engines/contracts.ts';
 import { resolveLive, sendLive } from '../src/search-intelligence/live.ts';
 import { INT4_MAX, normalizeResponse } from '../src/search-intelligence/normalization.ts';
-import { createSecretCipher } from '../src/integrations/fernet.ts';
 
-const key = 'research-test-key',
-  encryptedSecret = createSecretCipher(key).encrypt(
-    JSON.stringify({ login: 'user', password: 'secret' }),
-  );
 const input = {
-  encryptedSecret,
-  encryptionKey: key,
+  secret: JSON.stringify({ login: 'user', password: 'secret' }),
   endpoint: '/v3/dataforseo_labs/google/ranked_keywords/live',
   payload: { target: 'example.com' },
   baseUrl: '',
@@ -63,9 +57,9 @@ describe('single-dispatch research transport and scoped normalization', () => {
       sent++;
       return Response.json(body({ items: [] }));
     };
-    await expect(
-      executeLive({ ...input, encryptedSecret: 'not-a-secret' }, { send }),
-    ).rejects.toMatchObject({ code: 'auth_failure' });
+    await expect(executeLive({ ...input, secret: 'not-a-secret' }, { send })).rejects.toMatchObject(
+      { code: 'auth_failure' },
+    );
     expect(() => resolveLive({ ...input, endpoint: '/v3/unknown/live' })).toThrow(ProviderError);
     expect(() => resolveLive({ ...input, baseUrl: 'https://elsewhere.example' })).toThrow(
       ProviderError,

@@ -17,6 +17,7 @@ import { AuditMaintenance } from '../audits/maintenance.ts';
 import { recoverBilling } from '../billing/recovery.ts';
 import { settleAbandonedCalls } from '../billing/metering.ts';
 import { reconcileResearch } from '../search-intelligence/maintenance.ts';
+import { settleResearchCharges } from '../search-intelligence/charges.ts';
 import { AnalyticsWorker } from './analytics-worker.ts';
 import { DiscoveryWorker } from './discovery-worker.ts';
 import { IntegrationWorker } from './integration-worker.ts';
@@ -318,7 +319,9 @@ export async function runnerOwners(db: Database, config: ServiceConfig) {
       { name: 'audit-maintenance', run: (canAdmit) => maintenance.runOnce(new Date(), canAdmit) },
       {
         name: 'research-recovery',
-        run: (canAdmit) => reconcileResearch(db, new Date(), canAdmit),
+        run: async (canAdmit) =>
+          (await reconcileResearch(db, new Date(), canAdmit)) +
+          (await settleResearchCharges(db, new Date(), canAdmit)),
       },
       { name: 'audit-scheduler', run: (canAdmit) => scheduler.runOnce(scheduler.now(), canAdmit) },
       { name: 'integration-dispatcher', run: (canAdmit) => dispatcher.runOnce(canAdmit) },

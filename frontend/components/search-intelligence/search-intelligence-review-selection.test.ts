@@ -41,6 +41,7 @@ const comparison = (targetOrigin: string): SearchIntelligenceDataset => ({
 });
 
 const readiness = (datasets: SearchIntelligenceDataset[]): SearchIntelligenceReadiness => ({
+  credential_mode: 'byok',
   connected: true,
   connection_id: '72dbc77c-676f-4bf7-8c29-16f163cb09f5',
   owned_targets: [target('shop', 'www.shop.example'), target('blog', 'blog.example')],

@@ -11,6 +11,8 @@ export const searchTargetSchema = responseObject({
   source_kind: z.string(),
 });
 export const researchScopeSchema = z.enum(['exact_host', 'domain_subdomains']);
+/** 'funded' on a managed plan: the platform's DataForSEO account, paid in AI credits (B40). */
+const researchCredentialModeSchema = z.enum(['byok', 'funded']);
 export const searchPreferencesSchema = responseObject({
   research_scope: researchScopeSchema.optional(),
   owned_target_id: z.string().nullable(),
@@ -25,8 +27,12 @@ export const searchRunSchema = responseObject({
   status: z.string(),
   action: z.string(),
   pricing_version: z.string(),
-  estimated_cost_usd: z.string(),
+  credential_mode: researchCredentialModeSchema,
+  /** Dollar amounts exist only for a BYOK analysis; a managed one is priced in credits (B41). */
+  estimated_cost_usd: z.string().nullable(),
   provider_reported_cost_usd: z.string().nullable(),
+  estimated_credits: z.number().int().nullable(),
+  charged_credits: z.number().int().nullable(),
   planned_calls: z.number().int(),
   completed_calls: z.number().int(),
   planned_rows: z.number().int(),
@@ -69,6 +75,7 @@ export const searchDatasetSchema = responseObject({
   filtered_saved_count: z.number().int().nullable().optional(),
 }).catchall(z.unknown());
 export const searchReadinessSchema = responseObject({
+  credential_mode: researchCredentialModeSchema,
   connected: z.boolean(),
   connection_id: z.uuid().nullable(),
   owned_targets: z.array(searchTargetSchema),

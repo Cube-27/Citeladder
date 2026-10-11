@@ -2491,7 +2491,12 @@ CREATE TABLE public.search_intelligence_runs (
     cancelled_at timestamp with time zone,
     completed_at timestamp with time zone,
     created_at timestamp with time zone NOT NULL,
-    updated_at timestamp with time zone NOT NULL
+    updated_at timestamp with time zone NOT NULL,
+    credential_source character varying(16) NOT NULL,
+    estimated_credits integer,
+    charged_credits integer,
+    platform_call_id uuid,
+    CONSTRAINT ck_si_runs_credential_source CHECK (((((credential_source)::text = 'byok'::text) AND (estimated_credits IS NULL) AND (charged_credits IS NULL) AND (platform_call_id IS NULL)) OR (((credential_source)::text = 'platform'::text) AND (estimated_credits >= 0) AND ((charged_credits IS NULL) OR ((charged_credits >= 0) AND (charged_credits <= estimated_credits))))))
 );
 
 CREATE TABLE public.security_events (
@@ -4982,6 +4987,8 @@ CREATE INDEX ix_search_intelligence_rows_workspace_id ON public.search_intellige
 
 CREATE INDEX ix_search_intelligence_runs_connection_id ON public.search_intelligence_runs USING btree (connection_id);
 
+CREATE INDEX ix_search_intelligence_runs_platform_call_id ON public.search_intelligence_runs USING btree (platform_call_id) WHERE (platform_call_id IS NOT NULL);
+
 CREATE INDEX ix_search_intelligence_runs_project_id ON public.search_intelligence_runs USING btree (project_id);
 
 CREATE INDEX ix_search_intelligence_runs_workspace_id ON public.search_intelligence_runs USING btree (workspace_id);
@@ -6362,6 +6369,9 @@ ALTER TABLE ONLY public.search_intelligence_runs
 
 ALTER TABLE ONLY public.search_intelligence_runs
     ADD CONSTRAINT search_intelligence_runs_connection_id_fkey FOREIGN KEY (connection_id) REFERENCES public.provider_connections(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.search_intelligence_runs
+    ADD CONSTRAINT search_intelligence_runs_platform_call_id_fkey FOREIGN KEY (platform_call_id) REFERENCES public.platform_calls(id) ON DELETE SET NULL;
 
 ALTER TABLE ONLY public.search_intelligence_runs
     ADD CONSTRAINT search_intelligence_runs_previous_run_id_fkey FOREIGN KEY (previous_run_id) REFERENCES public.search_intelligence_runs(id) ON DELETE SET NULL;

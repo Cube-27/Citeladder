@@ -5,17 +5,22 @@
  * analytics worker executes it once queued. Confirmation is the
  * only step that commits the workspace to paid calls, so it re-checks the
  * review under the project lock and enqueues the acquisition in the same
- * transaction. Every mutation takes the `search_intelligence_runs` row lock.
+ * transaction. A managed analysis holds its estimate in AI credits in that
+ * same transaction (B41). Every mutation takes the `search_intelligence_runs`
+ * row lock.
  */
 import { asApiErrorCode, type ApiErrorCode } from '@citeladder/contracts/error-codes';
 
 import { loadWorkerSettings, policy } from '../config.ts';
+import { holdProviderCredits } from '../billing/metering.ts';
 import type { Database } from '../db/database.ts';
 import { jsonObjects } from '../db/json.ts';
 import { ApiError, notFound } from '../errors.ts';
 import { enqueueTask, taskKey } from '../referrals/enqueue.ts';
 import type { Preferences } from '../routes/search-intelligence-contracts.ts';
 import type { Scope } from './reads.ts';
+import { settleResearchCharge } from './charges.ts';
+import { runConnection } from './credentials.ts';
 import { runView } from './views.ts';
 
 const si = policy.search_intelligence;
@@ -57,12 +62,7 @@ async function assertConfirmable(trx: Database, scope: Scope, run: LockedRun, no
     throw conflict(asApiErrorCode('review_expired'), 'Review expired; create a new cost review');
   if (run.pricing_version !== si.price_version)
     throw conflict(asApiErrorCode('pricing_changed'), 'Pricing changed; create a new cost review');
-  const connection = await scope.workspace
-    .selectFrom(trx, 'provider_connections')
-    .select(['active', 'credential_revision'])
-    .where('id', '=', run.connection_id)
-    .executeTakeFirst();
-  if (!connection?.active || connection.credential_revision !== run.connection_revision)
+  if (!(await runConnection(trx, run)))
     throw conflict(
       asApiErrorCode('connection_changed'),
       'DataForSEO connection changed; create a new review',
@@ -79,6 +79,17 @@ async function assertConfirmable(trx: Database, scope: Scope, run: LockedRun, no
       asApiErrorCode('acquisition_in_progress'),
       'Another Search Intelligence acquisition is already active',
     );
+}
+
+/** A managed analysis's credit hold, committed with its confirmation; none for BYOK. */
+async function holdCredits(trx: Database, run: LockedRun) {
+  if (run.credential_source !== 'platform' || !run.estimated_credits) return null;
+  return holdProviderCredits(
+    trx,
+    { workspaceId: run.workspace_id, feature: 'search_intelligence' },
+    { provider: 'dataforseo', model: si.transport_provider },
+    run.estimated_credits,
+  );
 }
 
 /** Enqueue acquisition; return the existing task when already enqueued. */
@@ -120,7 +131,11 @@ export function confirmRun(db: Database, scope: Scope, runId: string) {
     const transition =
       plan.length === 0
         ? { status: RUN_SUCCEEDED, completed_at: now }
-        : { status: RUN_QUEUED, analytics_task_id: await enqueueAcquisition(trx, scope, run.id) };
+        : {
+            status: RUN_QUEUED,
+            platform_call_id: await holdCredits(trx, run),
+            analytics_task_id: await enqueueAcquisition(trx, scope, run.id),
+          };
     const confirmed = await trx
       .updateTable('search_intelligence_runs')
       .set({ ...transition, confirmed_at: now, updated_at: now })
@@ -131,9 +146,9 @@ export function confirmRun(db: Database, scope: Scope, runId: string) {
   });
 }
 
-/** Cancel an unfinished run and its unfinished acquisition task. */
-export function cancelRun(db: Database, scope: Scope, runId: string) {
-  return db.transaction().execute(async (trx) => {
+/** Cancel an unfinished run and its unfinished acquisition task; a managed hold settles. */
+export async function cancelRun(db: Database, scope: Scope, runId: string) {
+  const view = await db.transaction().execute(async (trx) => {
     const run = await lockRun(trx, scope, runId);
     if (run === undefined) throw notFound('Run');
     if (FINISHED_RUN_STATUSES.has(run.status)) return runView(run);
@@ -155,6 +170,20 @@ export function cancelRun(db: Database, scope: Scope, runId: string) {
     }
     return runView(cancelled);
   });
+  // A request still in flight keeps the hold open; recovery settles it later.
+  const workspaceId = scope.workspace.workspaceId;
+  return (await settleResearchCharge(db, { workspaceId, runId }))
+    ? runView(await settledRun(db, scope, runId))
+    : view;
+}
+
+function settledRun(db: Database, scope: Scope, runId: string) {
+  return scope.workspace
+    .selectFrom(db, 'search_intelligence_runs')
+    .selectAll()
+    .where('project_id', '=', scope.projectId)
+    .where('id', '=', runId)
+    .executeTakeFirstOrThrow();
 }
 
 export async function savePreferences(db: Database, scope: Scope, preferences: Preferences) {

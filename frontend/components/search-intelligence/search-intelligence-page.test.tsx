@@ -20,6 +20,9 @@ const run: SearchIntelligenceRun = {
   status: 'running',
   action: 'analysis',
   pricing_version: 'dataforseo-standard-2026-09-20',
+  credential_mode: 'byok',
+  estimated_credits: null,
+  charged_credits: null,
   estimated_cost_usd: '0.14412',
   provider_reported_cost_usd: null,
   planned_calls: 4,
@@ -39,6 +42,7 @@ const run: SearchIntelligenceRun = {
   created_at: '2026-10-09T10:00:00Z',
 };
 const readiness: SearchIntelligenceReadiness = {
+  credential_mode: 'byok',
   connected: true,
   connection_id: '72dbc77c-676f-4bf7-8c29-16f163cb09f5',
   owned_targets: [
@@ -129,6 +133,14 @@ it('says when saved results can no longer be refreshed', async () => {
     await screen.findByText(/saved results can be read but not refreshed/),
   ).toBeInTheDocument();
   expect(screen.getByRole('link', { name: 'Open provider settings' })).toBeInTheDocument();
+});
+
+it('never sends a managed workspace to provider settings it does not have', async () => {
+  renderPage({ ...readiness, credential_mode: 'funded', connected: false, connection_id: null });
+  expect(
+    await screen.findByRole('heading', { name: 'Search Intelligence is unavailable' }),
+  ).toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: 'Open provider settings' })).toBeNull();
 });
 
 it('offers citation matching only for the website whose list is on screen', async () => {

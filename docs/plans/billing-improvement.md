@@ -192,6 +192,8 @@ Findings 16–21, 23–26 under B2, and the owner documents.
   resume a scheduled cancellation.
 - Owner documents rewritten from the shipped behaviour, including the webhook
   host, event list and variable names in the owner requirements.
+- Managed Search Intelligence on the platform DataForSEO account, charged in AI
+  credits (B40, B41).
 
 Acceptance: with the gate on for one workspace and test keys, the operator
 completes plan purchase, upgrade, downgrade, add-on, top-up, refund, cancel and
