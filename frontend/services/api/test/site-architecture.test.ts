@@ -2,7 +2,6 @@ import { afterAll, expect, it } from 'vitest';
 import { architectureSchema } from '@citeladder/contracts/site-health/architecture';
 import { buildArchitecture, type ArchitecturePage } from '../src/site-health/architecture-model.ts';
 import { architectureRules } from '../src/site-health/architecture-rules.ts';
-import { SiteHealthWorker } from '../src/workers/site-health-worker.ts';
 import { siteWorkerSettings } from '../src/site-health/runtime.ts';
 import { policy } from '../src/config.ts';
 import { record } from '../src/db/json.ts';
@@ -190,15 +189,9 @@ afterAll(async () => {
   await db.destroy();
 });
 type Seed = Awaited<ReturnType<SiteFixtures['crawl']>>;
-/** Held to one crawl's tasks: the local database is shared with other test runs. */
-const scopedWorker = (seed: Seed) =>
-  new SiteHealthWorker(db, {
-    settings,
-    taskScope: { workspaceId: seed.workspaceId, crawlId: seed.crawlId },
-  });
 async function derive(seed: Seed) {
   await fixtures.task(seed, 'link_metrics');
-  const worker = scopedWorker(seed);
+  const worker = fixtures.worker(seed, { settings });
   expect(await worker.runOnce()).toBe(1);
   expect(await worker.runOnce()).toBe(1);
 }
@@ -284,7 +277,7 @@ it('persists exact source IDs, six root evaluations and replay-safe architecture
   expect(evaluations.filter((row) => row.outcome === 'unknown')).toHaveLength(3);
   expect(record(architecture.archetype).archetype).toBe('commerce');
   await fixtures.task(seed, 'architecture');
-  expect(await scopedWorker(seed).runOnce()).toBe(1);
+  expect(await fixtures.worker(seed, { settings }).runOnce()).toBe(1);
   expect(
     await db
       .selectFrom('site_observed_architectures')
@@ -342,7 +335,7 @@ it('requires a persisted coverage snapshot and current-version metrics before cr
     .where('crawl_id', '=', seed.crawlId)
     .execute();
   await fixtures.task(seed, 'architecture');
-  expect(await scopedWorker(seed).runOnce()).toBe(1);
+  expect(await fixtures.worker(seed, { settings }).runOnce()).toBe(1);
   expect(
     await db
       .selectFrom('site_observed_architectures')

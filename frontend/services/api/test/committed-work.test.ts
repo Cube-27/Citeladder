@@ -233,7 +233,7 @@ it('overlapping runners share real leases and settle each workspace task once', 
   const ids = await Promise.all(workspaces.map((workspace) => enqueue(db, workspace)));
   const executed: string[] = [];
   // A claim scope is one workspace, so each runner drains one lane per workspace
-  // and both runners still overlap on every task: the local database is shared.
+  // and both runners still overlap on every task.
   const lanes = () =>
     workspaces.map((workspaceId, index) => {
       const worker = new AnalyticsWorker(db, loadWorkerSettings({}), {

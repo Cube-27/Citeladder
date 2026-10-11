@@ -50,7 +50,6 @@ beforeAll(async () => {
     .selectAll()
     .where('workspace_id', '=', own.workspaceId)
     .executeTakeFirstOrThrow();
-  // Only these seeds' workspaces: the local database is shared with other test runs.
   for (const s of [own, foreign])
     await drainWorkspace(db, s.workspaceId, { owner: `pr6-${randomUUID()}` });
 });

@@ -29,7 +29,7 @@ afterAll(async () => {
   await db.destroy();
 });
 
-/** A worker held to one seeded run: the local database is shared with other test runs. */
+/** A worker held to one seeded run. */
 function runWorker(
   run: { workspaceId: string; runId: string },
   client: Pick<IntegrationClient, 'page'>,
@@ -149,13 +149,10 @@ describe('integration worker paging and resume', () => {
             throw new Error('Interrupted transport');
           },
         };
-        const worker = new IntegrationWorker(
-          db,
-          client,
-          { ...settings, sync_request_timeout_seconds: timeout },
-          async () => 'recorded-token',
-          { workspaceId: selected.workspaceId, runId: selected.runId },
-        );
+        const worker = runWorker(selected, client, {
+          ...settings,
+          sync_request_timeout_seconds: timeout,
+        });
         await worker.runOnce(controller.signal);
         expect(await worker.runOnce(controller.signal)).toBe(false);
         const rows = await db
@@ -204,10 +201,7 @@ describe('integration worker paging and resume', () => {
         .returning('max_attempts')
         .executeTakeFirstOrThrow();
       expect(run.max_attempts).toBe(4);
-      await new IntegrationWorker(db, client, settings, async () => 'recorded-token', {
-        workspaceId,
-        runId,
-      }).runOnce(controller.signal);
+      await runWorker({ workspaceId, runId }, client).runOnce(controller.signal);
       // The fourth attempt reached the deadline after committing a page: it is
       // refunded, so the run stays claimable instead of exhausting its attempts.
       expect(
@@ -317,10 +311,7 @@ describe('integration worker paging and resume', () => {
       const client: Pick<IntegrationClient, 'page'> = {
         page: async () => ({ payload: { rows: [] }, rawRowCount: 0 }),
       };
-      const worker = new IntegrationWorker(db, client, settings, async () => 'recorded-token', {
-        workspaceId: selected.workspaceId,
-        runId: selected.runId,
-      });
+      const worker = runWorker(selected, client);
       expect(await worker.runOnce()).toBe(true);
       expect(
         (
@@ -714,43 +705,43 @@ describe('integration worker paging and resume', () => {
     },
   );
   it('rejects a mapping retired while a provider request is in flight', async () => {
-    const { workspaceId, mappingId, runId } = await seedRun();
+    const run = await seedRun();
     const client: Pick<IntegrationClient, 'page'> = {
       async page() {
         await db
           .updateTable('integration_property_mappings')
           .set({ status: 'disabled' })
-          .where('id', '=', mappingId)
+          .where('id', '=', run.mappingId)
           .execute();
         return { payload: { rows: [] }, rawRowCount: 0 };
       },
     };
-    await runWorker({ workspaceId, runId }, client).runOnce();
-    const run = await db
+    await runWorker(run, client).runOnce();
+    const outcome = await db
       .selectFrom('integration_sync_runs')
       .select(['status', 'error_code'])
-      .where('id', '=', runId)
+      .where('id', '=', run.runId)
       .executeTakeFirstOrThrow();
-    expect(run).toEqual({ status: 'failed', error_code: 'unmapped_property' });
+    expect(outcome).toEqual({ status: 'failed', error_code: 'unmapped_property' });
     expect(
       await db
         .selectFrom('integration_import_artifacts')
         .select('id')
-        .where('sync_run_id', '=', runId)
+        .where('sync_run_id', '=', run.runId)
         .execute(),
     ).toEqual([]);
   });
 
   it('resumes the next uncommitted page of a run whose snapshot records only startRow', async () => {
-    const { workspaceId, connectionId, runId } = await seedRun();
+    const run = await seedRun();
     for (const offset of [0, 2]) {
       await db
         .insertInto('integration_import_artifacts')
         .values({
           id: randomUUID(),
-          sync_run_id: runId,
-          workspace_id: workspaceId,
-          connection_id: connectionId,
+          sync_run_id: run.runId,
+          workspace_id: run.workspaceId,
+          connection_id: run.connectionId,
           provider: 'gsc',
           dataset: 'gsc_page_daily',
           query_snapshot: JSON.stringify({ startRow: offset }),
@@ -769,21 +760,21 @@ describe('integration worker paging and resume', () => {
         return { payload: { rows: [] }, rawRowCount: 0 };
       },
     };
-    await runWorker({ workspaceId, runId }, client).runOnce();
+    await runWorker(run, client).runOnce();
     expect(offsets).toEqual([4]);
     expect(
       (
         await db
           .selectFrom('integration_sync_runs')
           .select('status')
-          .where('id', '=', runId)
+          .where('id', '=', run.runId)
           .executeTakeFirstOrThrow()
       ).status,
     ).toBe('succeeded');
   });
 
   it('keeps the raw Bing report but derives only real dates inside its frozen window', async () => {
-    const { workspaceId, runId } = await seedRun('bing');
+    const run = await seedRun('bing');
     const rows = ['2026-07-19', '2026-07-20', '2026-07-22', '2026-02-30'].map((date) => ({
       keys: ['example query', date],
       clicks: 3,
@@ -794,7 +785,7 @@ describe('integration worker paging and resume', () => {
         return { payload: { rows }, rawRowCount: rows.length };
       },
     };
-    await runWorker({ workspaceId, runId }, client).runOnce();
+    await runWorker(run, client).runOnce();
     const metrics = await db
       .selectFrom('integration_metric_rows as metric')
       .innerJoin(
@@ -803,7 +794,7 @@ describe('integration worker paging and resume', () => {
         'metric.source_artifact_id',
       )
       .select('metric.dimension_key')
-      .where('artifact.sync_run_id', '=', runId)
+      .where('artifact.sync_run_id', '=', run.runId)
       .execute();
     expect(metrics.map((row) => row.dimension_key)).toEqual([
       'example query | 2026-07-20',
@@ -812,7 +803,7 @@ describe('integration worker paging and resume', () => {
     const artifacts = await db
       .selectFrom('integration_import_artifacts')
       .select('payload')
-      .where('sync_run_id', '=', runId)
+      .where('sync_run_id', '=', run.runId)
       .execute();
     expect(
       artifacts.every((artifact) => (artifact.payload as { rows: unknown[] }).rows.length === 4),
@@ -820,7 +811,7 @@ describe('integration worker paging and resume', () => {
   });
 
   it('publishes a Bing run whose full-history report reaches outside the window', async () => {
-    const { workspaceId, runId, projectId } = await seedRun('bing');
+    const run = await seedRun('bing');
     const rows = ['2026-05-01', '2026-07-20', '2026-07-21'].map((date) => ({
       keys: ['example query', date],
       clicks: 3,
@@ -831,13 +822,13 @@ describe('integration worker paging and resume', () => {
         return { payload: { rows }, rawRowCount: rows.length };
       },
     };
-    await runWorker({ workspaceId, runId }, client).runOnce();
+    await runWorker(run, client).runOnce();
     // Out-of-window days are not invalid rows, so the partition is complete and
     // the readers select it.
     const selected = await db
       .selectFrom('integration_metric_rows')
       .select('dimension_key')
-      .where('project_id', '=', projectId)
+      .where('project_id', '=', run.projectId)
       .where('dataset', '=', 'bing_query_daily')
       .where(selectedPartition())
       .orderBy('dimension_key')
@@ -849,7 +840,7 @@ describe('integration worker paging and resume', () => {
   });
 
   it('falls back narrowly for GA4, reuses the capability, and produces consumable referral keys', async () => {
-    const { workspaceId, runId, connectionId, projectId } = await seedRun('ga4');
+    const run = await seedRun('ga4');
     const requested: string[] = [];
     const client: Pick<IntegrationClient, 'page'> = {
       async page(_provider, _token, _property, template) {
@@ -875,18 +866,18 @@ describe('integration worker paging and resume', () => {
         return { payload: { rows }, rawRowCount: rows.length };
       },
     };
-    await runWorker({ workspaceId, runId }, client).runOnce();
+    await runWorker(run, client).runOnce();
     const finished = await db
       .selectFrom('integration_sync_runs')
       .selectAll()
-      .where('id', '=', runId)
+      .where('id', '=', run.runId)
       .executeTakeFirstOrThrow();
     expect(finished.status).toBe('succeeded');
     const successors = await db
       .selectFrom('analytics_tasks')
       .select('task_kind')
       .where('workspace_id', '=', finished.workspace_id)
-      .where('project_id', '=', projectId)
+      .where('project_id', '=', run.projectId)
       .execute();
     expect(successors.map((task) => task.task_kind)).toEqual(
       expect.arrayContaining(['ingest_referrals', 'traffic_snapshot_refresh']),
@@ -898,14 +889,14 @@ describe('integration worker paging and resume', () => {
     const metric = await db
       .selectFrom('integration_metric_rows')
       .select(['dataset', 'dimension_key'])
-      .where('project_id', '=', projectId)
+      .where('project_id', '=', run.projectId)
       .where('dataset', '=', 'ga4_source_medium_daily')
       .executeTakeFirstOrThrow();
     expect(referralEventFields({ ...metric, date: '2026-07-20' })?.utm_source).toBe('chatgpt.com');
     const connection = await db
       .selectFrom('integration_connections')
       .select('dataset_capabilities')
-      .where('id', '=', connectionId)
+      .where('id', '=', run.connectionId)
       .executeTakeFirstOrThrow();
     expect(
       (connection.dataset_capabilities as Record<string, { selected_dataset: string }>)[
@@ -918,7 +909,7 @@ describe('integration worker paging and resume', () => {
       .values({
         ...finished,
         id: second,
-        idempotency_key: `second:${runId}`,
+        idempotency_key: `second:${run.runId}`,
         resync_seq: 2,
         status: 'queued',
         attempt_count: 0,
@@ -926,14 +917,14 @@ describe('integration worker paging and resume', () => {
       })
       .execute();
     requested.length = 0;
-    await runWorker({ workspaceId, runId: second }, client).runOnce();
+    await runWorker({ ...run, runId: second }, client).runOnce();
     expect(requested.filter((dataset) => dataset.startsWith('ga4_item_'))).toEqual([
       'ga4_item_channel_group_daily',
     ]);
   });
 
   it('does not turn an unrelated GA4 provider error into a fallback', async () => {
-    const { workspaceId, runId } = await seedRun('ga4');
+    const run = await seedRun('ga4');
     const requested: string[] = [];
     const client: Pick<IntegrationClient, 'page'> = {
       async page(_provider, _token, _property, template) {
@@ -943,19 +934,19 @@ describe('integration worker paging and resume', () => {
         return { payload: { rows: [] }, rawRowCount: 0 };
       },
     };
-    await runWorker({ workspaceId, runId }, client).runOnce();
+    await runWorker(run, client).runOnce();
     expect(requested).not.toContain('ga4_item_channel_group_daily');
     expect(
       await db
         .selectFrom('integration_sync_runs')
         .select(['status', 'error_code'])
-        .where('id', '=', runId)
+        .where('id', '=', run.runId)
         .executeTakeFirstOrThrow(),
     ).toEqual({ status: 'failed', error_code: 'provider_api_error' });
   });
 
   it('does not dispatch a GA4 fallback after losing its real PostgreSQL lease', async () => {
-    const { workspaceId, runId } = await seedRun('ga4');
+    const run = await seedRun('ga4');
     const requested: string[] = [];
     const client: Pick<IntegrationClient, 'page'> = {
       async page(_provider, _token, _property, template) {
@@ -964,7 +955,7 @@ describe('integration worker paging and resume', () => {
           await db
             .updateTable('integration_sync_runs')
             .set({ lease_owner: 'successor' })
-            .where('id', '=', runId)
+            .where('id', '=', run.runId)
             .execute();
           await new Promise((resolve) => {
             setTimeout(resolve, 50);
@@ -974,7 +965,7 @@ describe('integration worker paging and resume', () => {
         return { payload: { rows: [] }, rawRowCount: 0 };
       },
     };
-    await runWorker({ workspaceId, runId }, client, {
+    await runWorker(run, client, {
       ...settings,
       heartbeat_interval_seconds: 0.01,
     }).runOnce();
@@ -983,7 +974,7 @@ describe('integration worker paging and resume', () => {
       await db
         .selectFrom('integration_sync_runs')
         .select(['status', 'lease_owner'])
-        .where('id', '=', runId)
+        .where('id', '=', run.runId)
         .executeTakeFirstOrThrow(),
     ).toEqual({ status: 'running', lease_owner: 'successor' });
   });
@@ -995,7 +986,7 @@ describe('integration worker paging and resume', () => {
       ) as Record<string, unknown>;
     const pageOne = await recordedPage('gsc_search_analytics_page1.json');
     const pageTwo = await recordedPage('gsc_search_analytics_page2.json');
-    const { workspaceId, runId } = await seedRun();
+    const run = await seedRun();
     const firstDataset = Object.values(integrationPolicy.datasets).find(
       (item) => item.dataset === 'gsc_page_daily',
     );
@@ -1016,20 +1007,20 @@ describe('integration worker paging and resume', () => {
         return { payload, rawRowCount: rows.length };
       },
     };
-    const worker = runWorker({ workspaceId, runId }, client);
+    const worker = runWorker(run, client);
 
     expect(await worker.runOnce()).toBe(true);
     const firstAttempt = await db
       .selectFrom('integration_sync_runs')
       .select(['status', 'attempt_count'])
-      .where('id', '=', runId)
+      .where('id', '=', run.runId)
       .executeTakeFirstOrThrow();
     expect(firstAttempt.status).toBe('retry_wait');
     expect(firstAttempt.attempt_count).toBe(1);
     const committed = await db
       .selectFrom('integration_import_artifacts')
       .select(['query_snapshot', 'row_count'])
-      .where('sync_run_id', '=', runId)
+      .where('sync_run_id', '=', run.runId)
       .where('dataset', '=', firstDataset.dataset)
       .executeTakeFirstOrThrow();
     expect(committed.row_count).toBe(2);
@@ -1038,20 +1029,20 @@ describe('integration worker paging and resume', () => {
     await db
       .updateTable('integration_sync_runs')
       .set({ available_at: new Date(Date.now() - 1000) })
-      .where('id', '=', runId)
+      .where('id', '=', run.runId)
       .execute();
     expect(await worker.runOnce()).toBe(true);
     const finished = await db
       .selectFrom('integration_sync_runs')
       .select('status')
-      .where('id', '=', runId)
+      .where('id', '=', run.runId)
       .executeTakeFirstOrThrow();
     expect(finished.status).toBe('succeeded');
     expect(offsets).toEqual([0, 2, 2]);
     const pages = await db
       .selectFrom('integration_import_artifacts')
       .select(['query_snapshot', 'row_count'])
-      .where('sync_run_id', '=', runId)
+      .where('sync_run_id', '=', run.runId)
       .where('dataset', '=', firstDataset.dataset)
       .execute();
     const pageSummary = pages
@@ -1072,7 +1063,7 @@ describe('integration worker paging and resume', () => {
         'metric.source_artifact_id',
       )
       .select(['metric.source_artifact_id'])
-      .where('artifact.sync_run_id', '=', runId)
+      .where('artifact.sync_run_id', '=', run.runId)
       .where('artifact.dataset', '=', firstDataset.dataset)
       .execute();
     expect(metrics).toHaveLength(3);

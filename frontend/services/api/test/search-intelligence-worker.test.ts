@@ -9,6 +9,7 @@ import { createSecretCipher } from '../src/integrations/fernet.ts';
 import { WorkspaceScope } from '../src/db/workspace-scope.ts';
 import { loadWorkerSettings } from '../src/config.ts';
 import { testDatabase } from './support.ts';
+import { workspaceTaskIds } from './analytics-drain.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
 
 const db = testDatabase(),
@@ -64,19 +65,14 @@ async function run() {
   await confirmRun(db, scope, review.id);
   return { ...t, runId: review.id };
 }
-/** Held to the run's acquisition task: the local database is shared with other test runs. */
+/** Held to the run's acquisition task. */
 async function worker(t: { workspaceId: string }, send: typeof fetch) {
-  const tasks = await db
-    .selectFrom('analytics_tasks')
-    .select('id')
-    .where('workspace_id', '=', t.workspaceId)
-    .where('task_kind', '=', 'search_intelligence_acquisition')
-    .execute();
+  const taskIds = await workspaceTaskIds(db, t.workspaceId, 'search_intelligence_acquisition');
   return new AnalyticsWorker(db, loadWorkerSettings(), {
     executors: {
       search_intelligence_acquisition: acquisitionExecutor({ send, env: { ENCRYPTION_KEY: key } }),
     },
-    taskScope: { workspaceId: t.workspaceId, taskIds: tasks.map((task) => task.id) },
+    taskScope: { workspaceId: t.workspaceId, taskIds },
   });
 }
 const receipt = () =>

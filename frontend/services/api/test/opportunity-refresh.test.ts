@@ -91,7 +91,6 @@ async function request(
   return { status: response.status, response };
 }
 
-/** Drains only this seed's workspace: the local database is shared with other test runs. */
 const drain = (s: Seed) => drainWorkspace(db, s.workspace_id, { owner: `pr7-${randomUUID()}` });
 
 let own: Seed;

@@ -1,5 +1,9 @@
 [
   {
+    "sources": ["frontend/packages/contracts/**"],
+    "frontendE2E": "all"
+  },
+  {
     "sources": ["frontend/components/agent/new-chat-screen.tsx"],
     "frontendE2E": ["e2e/surface-layout.spec.ts"]
   },

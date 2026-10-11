@@ -64,9 +64,13 @@ const tasks = (kind: string) =>
 
 const worker = (executors?: Record<string, Executor>) =>
   new AnalyticsWorker(db, settings, { owner: 'worker-test', executors });
-/** Held to this test's tasks: the local database is shared with other test runs. */
-const scoped = (taskIds: string[], executors?: Record<string, Executor>) =>
-  new AnalyticsWorker(db, settings, {
+/** Held to this test's tasks. */
+const scoped = (
+  taskIds: string[],
+  executors?: Record<string, Executor>,
+  workerSettings: typeof settings = settings,
+) =>
+  new AnalyticsWorker(db, workerSettings, {
     owner: 'worker-test',
     executors,
     taskScope: { workspaceId, taskIds },
@@ -115,13 +119,10 @@ it('stops at the next I/O boundary after sustained heartbeat errors', async () =
     }
   };
   try {
-    await new AnalyticsWorker(
-      db,
+    await scoped(
+      [id],
+      { commerce_catalog_projection: execute },
       { ...settings, heartbeatIntervalSeconds: 1 },
-      {
-        executors: { commerce_catalog_projection: execute },
-        taskScope: { workspaceId, taskIds: [id] },
-      },
     ).runOnce();
     expect(beat).toHaveBeenCalledTimes(2);
     expect(stopped).toBe(true);
@@ -481,14 +482,12 @@ describe('finalize', () => {
     throw new Error('projection failed');
   };
 
-  async function runOne(executors: Record<string, Executor>, unscoped = false): Promise<QueueTask> {
+  const read = (id: string) =>
+    db.selectFrom('analytics_tasks').selectAll().where('id', '=', id).executeTakeFirstOrThrow();
+  async function runOne(executors: Record<string, Executor>): Promise<QueueTask> {
     const id = await enqueue(db, { workspaceId, projectId, kind: 'ingest_referrals', payload: {} });
-    await (unscoped ? worker(executors) : scoped([id], executors)).runOnce();
-    return db
-      .selectFrom('analytics_tasks')
-      .selectAll()
-      .where('id', '=', id)
-      .executeTakeFirstOrThrow();
+    await scoped([id], executors).runOnce();
+    return read(id);
   }
 
   it('retries a failed attempt, then fails it at the attempt budget', async () => {
@@ -521,8 +520,10 @@ describe('finalize', () => {
 
   it('fails a kind with no executor without retrying it', async () => {
     const { ingest_referrals: _removed, ...rest } = EXECUTORS;
+    const id = await enqueue(db, { workspaceId, projectId, kind: 'ingest_referrals', payload: {} });
     // A scoped worker claims only kinds it has executors for; this needs the global claim.
-    expect(await runOne(rest, true)).toMatchObject({
+    await worker(rest).runOnce();
+    expect(await read(id)).toMatchObject({
       status: 'failed',
       attempt_count: 1,
       error_code: policy.analytics.executor_not_wired_error,

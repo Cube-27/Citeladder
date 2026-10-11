@@ -386,8 +386,8 @@ successful suites, and ordinary frontend edits do not automatically launch
 browser E2E. Browser-sensitive paths run only the specs mapped in
 `scripts/e2e-paths.json`; the complete default Playwright suite is reserved
 for `main`, merge-queue validation, unknown shared paths, changes to
-Playwright's global configuration, and changes to the shared API schemas in
-`frontend/packages/contracts/` (every spec's stubs are validated against them). Shared, configuration, and
+Playwright's global configuration, and paths mapped to `"frontendE2E": "all"`
+(the shared API schemas in `frontend/packages/contracts/`). Shared, configuration, and
 contract paths select native API/browser checks; the SQL baseline selects the
 native API owner and the Compose smoke. The clean-clone Compose smoke runs
 on application/Compose-sensitive PR
