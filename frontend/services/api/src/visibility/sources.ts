@@ -166,6 +166,12 @@ export async function getVisibilitySources(
   query: SourceQuery,
 ): Promise<SourcesResponse> {
   const selection = await authorizedSelection(db, requested);
+  // Selecting a domain is the drill-down into its pages; the URL dimension
+  // is pages across every domain.
+  const pages = Boolean(query.domain) || query.dimension === 'url';
+  // Standing belongs to a page; a publisher row has none to filter on.
+  if (query.standing && !pages)
+    throw new TrendQueryError("'standing' applies to page rows: set 'dimension=url' or a domain");
   const filters = {
     ...selection,
     auditIds: [...(selection.auditIds ?? [])].sort(compareText),
@@ -186,9 +192,6 @@ export async function getVisibilitySources(
     .executeTakeFirstOrThrow();
   const responses = Number(denominator.responses);
   const prompts = Number(denominator.prompts);
-  // Selecting a domain is the drill-down into its pages; the URL dimension
-  // is pages across every domain.
-  const pages = Boolean(query.domain) || query.dimension === 'url';
   const selected = citationSelection(db, scope, selection, query, pages);
   const base = db.with(
     (cte) => cte('selected').materialized(),

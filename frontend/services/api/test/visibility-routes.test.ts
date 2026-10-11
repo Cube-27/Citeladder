@@ -631,6 +631,11 @@ describe('GET /projects/{project_id}/visibility/sources/*', () => {
       ['https://other.example/x', null, null],
     ]);
     expect(await urlRows({ standing: 'gap' })).toEqual([[url, 'gap', action.id]]);
+    // Publisher rows have no standing, so the filter is refused there.
+    const domains = await get(tenant, `/api/v1/projects/${tenant.projectId}/visibility/sources`, {
+      query: { audit_id: selected, standing: 'gap' },
+    });
+    expect(domains.status).toBe(422);
   });
 
   it("draws one page's own line for its detail view", async () => {

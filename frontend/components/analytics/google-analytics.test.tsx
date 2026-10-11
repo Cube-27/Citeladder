@@ -95,9 +95,13 @@ describe('GoogleAnalytics', () => {
     gtag.mockClear();
     await user.click(screen.getByText('Book a demo'));
     expect(gtag).not.toHaveBeenCalled();
+    // Once stopped, even a consented demo CTA is no longer tracked.
     stop();
     act(() => writeConsent('accepted'));
-    document.body.insertAdjacentHTML('beforeend', '<a href="/contact" id="detached-demo">Demo</a>');
+    document.body.insertAdjacentHTML(
+      'beforeend',
+      '<a href="/contact" id="detached-demo" data-demo-cta="">Demo</a>',
+    );
     const detached = document.getElementById('detached-demo')!;
     detached.addEventListener('click', (event) => event.preventDefault());
     await user.click(detached);
