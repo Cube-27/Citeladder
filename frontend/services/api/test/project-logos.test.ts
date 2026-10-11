@@ -62,6 +62,30 @@ it('keys the shared cache by private-suffix host and fetches only that host home
   expect(await brandLogo(a.projectId)).toEqual({ image_data: pngFor(a.domain) });
   expect(await brandLogo(b.projectId)).toEqual({ image_data: pngFor(b.domain) });
 });
+it('records no shared failure when the refresh deadline aborts the fetch', async () => {
+  const t = await tenant();
+  const stalled = vi.fn<WebsiteFetcher>(
+    (_url, { signal }) =>
+      new Promise((_resolve, reject) => {
+        if (signal?.aborted) reject(signal.reason);
+        signal?.addEventListener('abort', () => reject(signal.reason));
+      }),
+  );
+  const deadline = policy.brand_logos.refresh_timeout_seconds;
+  policy.brand_logos.refresh_timeout_seconds = 0.05;
+  try {
+    expect((await refreshLogos(db, t, stalled)).brand.logo_url).toBeNull();
+  } finally {
+    policy.brand_logos.refresh_timeout_seconds = deadline;
+  }
+  expect(
+    await db
+      .selectFrom('brand_logo_assets')
+      .select('status')
+      .where('domain', '=', t.domain)
+      .execute(),
+  ).toEqual([]);
+});
 it('attaches ready raster assets, reuses fresh cache and retains stale success after failed refresh', async () => {
   const t = await tenant();
   const fetcher = vi.fn<WebsiteFetcher>(async (url) =>

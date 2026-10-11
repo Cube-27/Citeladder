@@ -176,6 +176,7 @@ export async function refreshLogos(db: Database, scope: ProjectScope, fetcher = 
   const signal = AbortSignal.timeout(cfg.refresh_timeout_seconds * 1000);
   // Batch to enforce the configured concurrency while sharing one deadline.
   for (let offset = 0; offset < missing.length; offset += cfg.fetch_concurrency) {
+    if (signal.aborted) break;
     const outcomes = await Promise.all(
       missing
         .slice(offset, offset + cfg.fetch_concurrency)
@@ -185,6 +186,9 @@ export async function refreshLogos(db: Database, scope: ProjectScope, fetcher = 
       await acquireProjectLock(trx, scope.projectId);
       // Persist each asset before reading its ID and attaching it on this transaction connection.
       for (const { target, logo } of outcomes) {
+        // A miss under this request's own deadline says nothing about the host;
+        // it must not become a shared failure that blocks every tenant's retry.
+        if (!logo && signal.aborted) continue;
         const at = new Date();
         const values = {
           status: logo ? cfg.status_ready : cfg.status_failed,
