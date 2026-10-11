@@ -267,12 +267,15 @@ describe('discover', () => {
   it('lists a link that fails to fetch as an error, with every page that links it', async () => {
     const seed = await crawl();
     const root = await queued(seed, 'discover');
+    // A seeded URL (exact-URL input) starts without an identity, and nothing links it.
+    const seeded = await queued(seed, 'discover', '/seeded');
     const site = worker({
       '/': { body: links('/a', '/gone') },
       '/a': { body: links('/gone', '/') },
       '/gone': { status: 404, body: 'missing' },
+      '/seeded': { status: 410, body: 'gone' },
     });
-    await run(site, root);
+    await run(site, root, seeded);
     const children = await tasks(seed, 'discover');
     const child = (path: string) => children.find((row) => row.requested_url === url(path))!.id;
     await run(site, child('/a'), child('/gone'));
@@ -294,9 +297,10 @@ describe('discover', () => {
       })),
     ).toEqual([
       { url: url('/gone'), status: 'error', code: 'http_4xx', linked_from: [url('/'), url('/a')] },
+      { url: url('/seeded'), status: 'error', code: 'http_4xx', linked_from: [] },
     ]);
     const counters = await crawlCounters(db, await crawlRow(seed));
-    expect(counters).toMatchObject({ errors: 1, failure_breakdown: { http_4xx: 1 } });
+    expect(counters).toMatchObject({ errors: 2, failure_breakdown: { http_4xx: 2 } });
   });
 
   it('keeps a document as inventory and excludes a canonical alias of an active page', async () => {

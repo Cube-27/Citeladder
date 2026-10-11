@@ -161,6 +161,20 @@ async function writeObservation(
   discovery: Discovery,
   artifactId: string,
 ) {
+  const siteUrlId = await siteUrlFor(trx, crawl, task);
+  if (!siteUrlId) return null;
+  await insertObservation(trx, crawl, task, siteUrlId, {
+    artifactId,
+    finalUrl: page.url,
+    statusCode: page.status,
+    contentType: page.contentType,
+    title: discovery.title,
+  });
+  return siteUrlId;
+}
+
+/** The task URL's identity, created on first sight (a planner seed has none yet). */
+async function siteUrlFor(trx: Database, crawl: Crawl, task: SiteTask) {
   const identity = canonicalIdentity(task.requested_url);
   const admission = classifyUrlAdmission(task.requested_url);
   const sourceKind = task.depth === 0 ? 'root' : 'link';
@@ -198,15 +212,7 @@ async function writeObservation(
     .where('project_id', '=', crawl.project_id)
     .where('url_hash', '=', identity.hash)
     .executeTakeFirst();
-  if (!url) return null;
-  await insertObservation(trx, crawl, task, url.id, {
-    artifactId,
-    finalUrl: page.url,
-    statusCode: page.status,
-    contentType: page.contentType,
-    title: discovery.title,
-  });
-  return url.id;
+  return url?.id ?? null;
 }
 
 /** The task's observation of its URL in this crawl, with the frontier's rewrite provenance. */
@@ -265,8 +271,21 @@ async function insertObservation(
  * policy excluded is not an error.
  */
 async function observeFailure(trx: Database, crawl: Crawl, task: SiteTask, outcome: Outcome) {
-  if (!task.site_url_id || EXCLUDED.has(outcome.errorCode)) return;
-  await insertObservation(trx, crawl, task, task.site_url_id, {
+  const root = canonicalIdentity(crawl.root_url).hash === task.url_hash;
+  if (root || EXCLUDED.has(outcome.errorCode)) return;
+  let siteUrlId = task.site_url_id;
+  if (!siteUrlId) {
+    siteUrlId = await siteUrlFor(trx, crawl, task);
+    if (!siteUrlId) return;
+    // The failed task is the row's status, so it must name the identity it failed for.
+    await trx
+      .updateTable('site_crawl_tasks')
+      .set({ site_url_id: siteUrlId })
+      .where('id', '=', task.id)
+      .where('workspace_id', '=', crawl.workspace_id)
+      .execute();
+  }
+  await insertObservation(trx, crawl, task, siteUrlId, {
     artifactId: null,
     finalUrl: outcome.page?.url ?? task.requested_url,
     statusCode: outcome.statusCode,
