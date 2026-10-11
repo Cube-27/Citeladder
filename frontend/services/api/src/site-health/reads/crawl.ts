@@ -314,6 +314,15 @@ export async function rootFailure(db: Database, crawl: Crawl) {
   };
 }
 
+/**
+ * The task a page's status reads (alias `t`): its analysis, else a fetch that
+ * failed for good, so a URL that could never be fetched counts and lists as
+ * an error. A URL the crawl's own policy excluded is not one.
+ */
+export const ROW_TASK = sql`(t.task_kind = 'analyze'
+  or (t.task_kind = 'discover' and t.status = 'failed'
+    and t.error_code <> all(${reads.corpus_exclusion_error_codes}::text[])))`;
+
 /** Live task counters for the dashboard's selected crawl. */
 export async function crawlCounters(db: Database, crawl: Crawl): Promise<Counters> {
   const blocking = reads.policy_blocking_error_codes;
@@ -338,11 +347,11 @@ export async function crawlCounters(db: Database, crawl: Crawl): Promise<Counter
     next_available_at: Date | null;
   }>`
     with latest as (
-      select distinct on (site_url_id) status, error_code, available_at, lease_expires_at
-      from site_crawl_tasks
-      where workspace_id = ${crawl.workspace_id} and crawl_id = ${crawl.id}
-        and task_kind = 'analyze' and site_url_id is not null
-      order by site_url_id, generation desc
+      select distinct on (t.site_url_id) t.status, t.error_code, t.available_at, t.lease_expires_at
+      from site_crawl_tasks t
+      where t.workspace_id = ${crawl.workspace_id} and t.crawl_id = ${crawl.id}
+        and ${ROW_TASK} and t.site_url_id is not null
+      order by t.site_url_id, t.task_kind = 'analyze' desc, t.generation desc
     )
     select
       count(*) filter (where status in ('queued','retry_wait','capacity_wait'))::int as queued,

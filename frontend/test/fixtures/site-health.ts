@@ -192,6 +192,7 @@ export function makePageSummary(overrides: Partial<PageSummary> = {}): PageSumma
     monitored: true,
     analysis_status: 'completed',
     error_code: '',
+    linked_from: [],
     issue_count: 3,
     web_fundamentals_score: 46,
     web_fundamentals_coverage: 1,

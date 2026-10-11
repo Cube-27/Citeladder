@@ -45,6 +45,7 @@ function detail(overrides: Partial<PageDetail> = {}): PageDetail {
     title: 'Best&Less Online',
     analysis_status: 'completed',
     error_code: '',
+    linked_from: [],
     field_cwv_available: false,
     web_fundamentals_score: 46,
     web_fundamentals_coverage: 1,

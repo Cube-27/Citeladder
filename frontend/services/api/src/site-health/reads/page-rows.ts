@@ -19,12 +19,13 @@ import {
 } from '../../http/keyset-cursor.ts';
 import { containsPattern } from '../../db/like.ts';
 import { parseUuid } from '../../http/uuid.ts';
-import { inventoryCrawlIds, isTerminal, type Crawl } from './crawl.ts';
+import { inventoryCrawlIds, isTerminal, ROW_TASK, type Crawl } from './crawl.ts';
 
 const reads = policy.site_health.reads;
 const PERSISTED = ['completed', 'partially_completed'];
 // The largest integer depth; an unmeasured page sorts after every measured one.
 const UNMEASURED_DEPTH = 2_147_483_647;
+const MAX_REFERRERS = policy.site_health.crawl.max_referrers_per_url;
 
 export const PAGE_SORTS = ['status', 'url', 'inbound', 'main_content_inbound', 'depth'] as const;
 export type PageSort = (typeof PAGE_SORTS)[number];
@@ -224,8 +225,8 @@ export async function pageRows(
       left join lateral (
         select t.status, t.error_code from site_crawl_tasks t
         where t.workspace_id = u.workspace_id and t.crawl_id = ${crawl.id}
-          and t.task_kind = 'analyze' and t.site_url_id = u.id
-        order by t.generation desc, t.created_at desc limit 1
+          and t.site_url_id = u.id and ${ROW_TASK}
+        order by t.task_kind = 'analyze' desc, t.generation desc, t.created_at desc limit 1
       ) t on true
       left join site_page_link_metrics l
         on l.workspace_id = u.workspace_id and l.project_id = u.project_id
@@ -248,6 +249,43 @@ export async function pageRows(
     order by sort_value ${direction}, site_url_id ${direction}
     limit ${limit + 1}`.execute(db);
   return result.rows;
+}
+
+export type Referrer = { site_url_id: string; url: string };
+
+/**
+ * The pages this crawl found linking to each URL, first sighting first: the
+ * frontier's bounded referrer list, else the page that admitted the URL.
+ */
+export async function linkedFrom(db: Database, crawl: Crawl, siteUrlIds: string[]) {
+  const result = new Map<string, Referrer[]>();
+  if (!siteUrlIds.length) return result;
+  const { rows } = await sql<{ site_url_id: string; referrer_id: string; url: string }>`
+    select x.site_url_id, r.id as referrer_id,
+      coalesce(nullif(r.display_url, ''), r.normalized_url) as url
+    from (
+      select u.id as site_url_id, f.referrer_site_url_ids as ids, 0 as source
+      from site_urls u
+      join site_discovery_frontier f
+        on f.workspace_id = u.workspace_id and f.crawl_id = ${crawl.id} and f.url_hash = u.url_hash
+      where u.workspace_id = ${crawl.workspace_id} and u.id = any(${siteUrlIds}::uuid[])
+      union all
+      select o.site_url_id, array[o.parent_site_url_id], 1
+      from site_url_observations o
+      where o.workspace_id = ${crawl.workspace_id} and o.crawl_id = ${crawl.id}
+        and o.site_url_id = any(${siteUrlIds}::uuid[]) and o.parent_site_url_id is not null
+    ) x
+    cross join lateral unnest(x.ids) with ordinality as e(id, position)
+    join site_urls r on r.id = e.id and r.workspace_id = ${crawl.workspace_id}
+    order by x.site_url_id, x.source, e.position`.execute(db);
+  for (const row of rows) {
+    const referrers = result.get(row.site_url_id) ?? [];
+    const known = referrers.some((referrer) => referrer.site_url_id === row.referrer_id);
+    if (!known && referrers.length < MAX_REFERRERS)
+      referrers.push({ site_url_id: row.referrer_id, url: row.url });
+    result.set(row.site_url_id, referrers);
+  }
+  return result;
 }
 
 /** A page window's items and the cursor after its last row. */

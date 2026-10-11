@@ -188,6 +188,17 @@ timing cannot change what fits. Admissible URLs, up to
 recorded in `site_facts.sitemap.urls`, the authority for sitemap membership;
 older crawls fall back to `source_kind = sitemap` observations.
 
+**Referrers and failed fetches.** Each discovered URL keeps the pages that
+linked it, first sighting first. The frontier row holds up to
+`max_referrers_per_url` of them and still records new ones after the frontier
+is full. The admitting page is also stored as the observation's and task's
+`parent_site_url_id`. A non-root `discover` that fails for good is observed
+with its status code, unless its code is one of `corpus_exclusion_error_codes`.
+Without an analysis task, the page row and the crawl counters read that failed
+`discover`. A broken link therefore appears in Errors & Blocked, and in the
+HTTP 4XX/5XX counts, with the pages that link it (`linked_from`), even when no
+selected page links it.
+
 **Canonical aliases** (`canonical-alias.ts`). A system-selected page whose
 declared canonical names another active page becomes `duplicate` and loses its
 membership. Finalization resolves chains and cycles. User selections and the

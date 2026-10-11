@@ -5,8 +5,8 @@ export const opportunityDeclaration = { output_phase_outline: 'outline' };
 
 export const opportunities = {
   ANALYZER_VERSION: 'opp-analyzer-1',
-  RULE_VERSION: 'opp-rules-4',
-  FORMULA_VERSION: 'opp-formula-2',
+  RULE_VERSION: 'opp-rules-1',
+  FORMULA_VERSION: 'opp-formula-1',
   CODE_IMPLEMENTATION_IDEMPOTENCY_CONFLICT: 'implementation_idempotency_conflict',
   CODE_IMPLEMENTATION_TARGET_CONFLICT: 'implementation_target_conflict',
   CODE_OPPORTUNITY_ORDER_CONFLICT: 'opportunity_order_conflict',
@@ -27,7 +27,7 @@ export const opportunities = {
   OPPORTUNITY_SEVERITIES: ['critical', 'high', 'info', 'low', 'medium'],
   IMPLEMENTATION_IDEMPOTENCY_KEY_MAX_LEN: 160,
   IMPLEMENTATION_TARGETS_MAX: 64,
-  IMPLEMENTATION_VERIFIER_VERSION: 'implementation-verifier-3',
+  IMPLEMENTATION_VERIFIER_VERSION: 'implementation-verifier-1',
   IMPLEMENTATION_VERIFICATION_BATCH_MAX: 100,
   IMPLEMENTATION_VERIFICATION_HISTORY_MAX: 50,
   // New evidence re-checks a declaration only this long after it went live;

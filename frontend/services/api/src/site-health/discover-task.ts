@@ -32,6 +32,7 @@ import { isBotBlock } from './page-fetch.ts';
 import {
   Abandoned,
   ACTIVE_CRAWL,
+  finalFailure,
   httpError,
   loadScope,
   lockRunningTask,
@@ -48,6 +49,7 @@ import { canonicalIdentity } from './url-identity.ts';
 const crawlPolicy = policy.site_health.crawl;
 const acquisition = policy.site_health.page_analysis.acquisition;
 const DOCUMENT_TYPES = new Set(crawlPolicy.document_media_types);
+const EXCLUDED = new Set(policy.site_health.reads.corpus_exclusion_error_codes);
 
 type Discovery = { title: string; links: DiscoveredLink[] };
 type Outcome = AttemptOutcome & {
@@ -196,7 +198,7 @@ async function writeObservation(
     .where('project_id', '=', crawl.project_id)
     .where('url_hash', '=', identity.hash)
     .executeTakeFirst();
-  if (!url) return;
+  if (!url) return null;
   const rewrite = await trx
     .selectFrom('site_discovery_frontier')
     .where('workspace_id', '=', crawl.workspace_id)
@@ -229,15 +231,56 @@ async function writeObservation(
     })
     .onConflict((conflict) => conflict.columns(['crawl_id', 'site_url_id']).doNothing())
     .execute();
+  return url.id;
 }
 
 /**
- * The page's links as frontier candidates. The root also admits itself: a
- * sample's allowance is filled from admitted identities, and the root has no
- * inventory row before its first fetch.
+ * A URL whose fetch failed for good is still part of the crawl: observe it
+ * with its status and the page that linked it, so it lists as an error with
+ * its source. The root's failure is the crawl's own, and a URL the crawl's
+ * policy excluded is not an error.
  */
-function candidatesFor(task: SiteTask, discovery: Discovery, exact: boolean): Candidate[] {
-  if (exact) return [];
+async function observeFailure(trx: Database, crawl: Crawl, task: SiteTask, outcome: Outcome) {
+  if (!task.site_url_id || EXCLUDED.has(outcome.errorCode)) return;
+  const admission = classifyUrlAdmission(task.requested_url);
+  await trx
+    .insertInto('site_url_observations')
+    .values({
+      id: randomUUID(),
+      workspace_id: crawl.workspace_id,
+      project_id: crawl.project_id,
+      crawl_id: crawl.id,
+      site_url_id: task.site_url_id,
+      source_kind: task.depth === 0 ? 'root' : 'link',
+      parent_site_url_id: task.parent_site_url_id,
+      source_artifact_id: null,
+      value_kind: admission.valueKind,
+      value_priority: admission.priority,
+      rewrite_reason: '',
+      rewrite_version: '',
+      depth: task.depth,
+      observed_url: task.requested_url,
+      final_url: outcome.page?.url ?? task.requested_url,
+      status_code: outcome.statusCode,
+      content_type: outcome.page?.contentType.slice(0, 128) ?? '',
+      title: '',
+      created_at: new Date(),
+    })
+    .onConflict((conflict) => conflict.columns(['crawl_id', 'site_url_id']).doNothing())
+    .execute();
+}
+
+/**
+ * The page's links as frontier candidates, each naming this page as its
+ * referrer. The root also admits itself: a sample's allowance is filled from
+ * admitted identities, and the root has no inventory row before its first fetch.
+ */
+function candidatesFor(
+  task: SiteTask,
+  discovery: Discovery,
+  options: { exact: boolean; referrerId: string | null },
+): Candidate[] {
+  if (options.exact) return [];
   const links = discovery.links.map((link) =>
     candidate(link.admission, {
       url: link.admission.url,
@@ -248,6 +291,7 @@ function candidatesFor(task: SiteTask, discovery: Discovery, exact: boolean): Ca
       linkOrdinal: link.ordinal,
       rewriteReason: link.rewriteReason,
       rewriteVersion: link.rewriteVersion,
+      referrerId: options.referrerId,
     }),
   );
   if (task.depth !== 0) return links;
@@ -286,6 +330,7 @@ async function dispose(
       hash: task.url_hash,
       depth: task.depth,
       priority: task.priority,
+      parentSiteUrlId: task.parent_site_url_id,
     });
 }
 
@@ -309,12 +354,12 @@ async function persist(ctx: SiteTaskContext, claimed: SiteTask, outcome: Outcome
           latencyMs: outcome.latencyMs ?? 0,
           purpose: 'discover',
         });
-        await writeObservation(trx, crawl, task, page, discovery, artifactId);
+        const referrerId = await writeObservation(trx, crawl, task, page, discovery, artifactId);
         const exact = record(crawl.configuration).input_mode === 'exact_urls';
         const admission = await admitCandidates(
           trx,
           crawl,
-          candidatesFor(task, discovery, exact),
+          candidatesFor(task, discovery, { exact, referrerId }),
           runtime,
           { enqueueChildren: !exact, sourceArtifactId: artifactId },
         );
@@ -325,6 +370,8 @@ async function persist(ctx: SiteTaskContext, claimed: SiteTask, outcome: Outcome
       }
       const locked = await lockRunningTask(trx, claimed, ctx.owner);
       if (!locked || !ACTIVE_CRAWL.has(locked.crawl.status)) throw new Abandoned();
+      if (!artifactId && finalFailure(locked.task, outcome.retryable))
+        await observeFailure(trx, locked.crawl, locked.task, outcome);
       if (artifactId) {
         await trx
           .updateTable('site_crawls')

@@ -403,7 +403,7 @@ describe('decisions and persisted reads', () => {
           successful_execution_count: Number(executions),
           recognized_slot_count: 0,
           ranked_execution_count: 0,
-          formula_version: 'commerce-shelf-formulas-2',
+          formula_version: 'commerce-shelf-formulas-1',
           source_observation_ids: '[]',
           context_snapshot: '{}',
           created_at: new Date(),

@@ -205,6 +205,7 @@ export async function insertObservations(
         observed_url: item.url,
         final_url: item.url,
         source_artifact_id: artifactId,
+        parent_site_url_id: item.referrerId,
         content_type: '',
         title: '',
         created_at: now,
@@ -239,24 +240,26 @@ export async function enqueueSiteTasks(
   const column = <T>(pick: (seed: TaskSeed) => T) => seeds.map(pick);
   const { rows } = await sql<{ inserted: boolean }>`
     INSERT INTO site_crawl_tasks (
-      id, crawl_id, workspace_id, site_url_id, task_kind, requested_url, url_hash,
-      depth, generation, idempotency_key, status, priority, randomized_position,
+      id, crawl_id, workspace_id, site_url_id, parent_site_url_id, task_kind, requested_url,
+      url_hash, depth, generation, idempotency_key, status, priority, randomized_position,
       max_attempts, attempt_count, conflict_count, available_at, created_at,
       updated_at, error_code, error_detail, classification_expected
     )
-    SELECT v.id, c.id, c.workspace_id, v.site_url_id, ${kind}, v.url, v.hash, v.depth, 0,
-      v.idempotency_key, 'queued', v.priority, v.position, ${maxAttempts}, 0, 0,
-      now(), now(), now(), '', '', false
+    SELECT v.id, c.id, c.workspace_id, v.site_url_id, v.parent_site_url_id, ${kind}, v.url,
+      v.hash, v.depth, 0, v.idempotency_key, 'queued', v.priority, v.position, ${maxAttempts},
+      0, 0, now(), now(), now(), '', '', false
     FROM unnest(
       ${column(() => randomUUID())}::uuid[],
       ${column((seed) => seed.siteUrlId)}::uuid[],
+      ${column((seed) => seed.item.referrerId)}::uuid[],
       ${column((seed) => seed.item.url)}::text[],
       ${column((seed) => seed.item.hash)}::text[],
       ${column((seed) => seed.item.depth)}::int[],
       ${column((seed) => seed.priority)}::int[],
       ${column((seed) => seed.position)}::int[],
       ${column((seed) => `${crawl.id}:${kind}:${seed.item.hash}:0`)}::text[]
-    ) AS v(id, site_url_id, url, hash, depth, priority, position, idempotency_key)
+    ) AS v(id, site_url_id, parent_site_url_id, url, hash, depth, priority, position,
+      idempotency_key)
     CROSS JOIN site_crawls c
     WHERE c.id = ${crawl.id}::uuid AND c.workspace_id = ${crawl.workspace_id}::uuid
       AND c.status = ANY(${[...ACTIVE_CRAWL]})

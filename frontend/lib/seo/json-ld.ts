@@ -179,6 +179,43 @@ export function blogPostingJsonLd(post: BlogPost): JsonLdObject {
 }
 
 /**
+ * A research guide as an `Article` by the CiteLadder organization. Guides name
+ * no person author and no publication date, so neither is claimed: the
+ * visible research review date is the only date, as `dateModified`.
+ */
+export function researchArticleJsonLd(guide: {
+  title: string;
+  slug: string;
+  meta_description: string;
+  reviewed_at?: string;
+  image?: string;
+}): JsonLdObject | null {
+  const url = absoluteUrl(guide.slug);
+  const home = absoluteUrl('/');
+  if (!url || !home) return null;
+  const image = guide.image ? absoluteUrl(guide.image) : null;
+  const organization = {
+    '@type': 'Organization',
+    '@id': new URL('#organization', home).toString(),
+    name: SITE_NAME,
+    url: home,
+  };
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: guide.title,
+    description: guide.meta_description,
+    inLanguage: 'en',
+    url,
+    mainEntityOfPage: { '@type': 'WebPage', '@id': url },
+    ...(image ? { image } : {}),
+    author: organization,
+    publisher: organization,
+    ...(guide.reviewed_at ? { dateModified: guide.reviewed_at } : {}),
+  };
+}
+
+/**
  * The blog index as a `Blog`, with its posts and then the research guides it
  * also lists as one `ItemList`.
  *

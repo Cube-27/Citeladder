@@ -12,8 +12,8 @@
     "cancelled": []
   },
   "analysis": {
-    "entity_assessment_version": "entity-assessment-2",
-    "scoring_rule_version": "prompt-composite-v2",
+    "entity_assessment_version": "entity-assessment-1",
+    "scoring_rule_version": "prompt-composite-v1",
     "prompt_score_visibility_weight": 0.6,
     "prompt_score_competitive_weight": 0.25,
     "prompt_score_owned_citation_weight": 0.15,
@@ -60,7 +60,7 @@
       "freshness": ["latest", "current", "today", "2026"],
       "product_evidence": ["material", "fabric", "size", "multipack", "availability", "stock"]
     },
-    "analyzer_version": "grounded-analysis-v2"
+    "analyzer_version": "grounded-analysis-v1"
   },
   "observed_competitors": {
     "analyzer_version": "observed-competitor-v1",
@@ -328,8 +328,8 @@
   },
   "commerce_versions": {
     "template_version": "commerce-buyer-prompts-1",
-    "parser_version": "commerce-recommendation-parser-2",
-    "matcher_version": "commerce-recommendation-matcher-2",
-    "formula_version": "commerce-shelf-formulas-2"
+    "parser_version": "commerce-recommendation-parser-1",
+    "matcher_version": "commerce-recommendation-matcher-1",
+    "formula_version": "commerce-shelf-formulas-1"
   }
 }

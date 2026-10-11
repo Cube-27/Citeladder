@@ -2615,6 +2615,7 @@ export interface SiteDiscoveryFrontier {
   link_ordinal: number;
   normalized_url: string;
   parent_position: number;
+  referrer_site_url_ids: string[];
   rewrite_reason: string;
   rewrite_version: string;
   source_kind: string;

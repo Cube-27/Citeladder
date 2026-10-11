@@ -3,8 +3,8 @@ import { opportunities } from './opportunity.ts';
 
 export const actions = {
   ACTION_STATUS_OPEN: 'open',
-  ACTION_GROUPING_VERSION: 'action-grouping-2',
-  ACTION_DIAGNOSIS_VERSION: 'action-diagnosis-2',
+  ACTION_GROUPING_VERSION: 'action-grouping-1',
+  ACTION_DIAGNOSIS_VERSION: 'action-diagnosis-1',
   ACTION_PRIORITY_VERSION: 'action-priority-1',
   TARGET_PAGE: 'page',
   TARGET_EARNED_PAGE: 'earned_page',

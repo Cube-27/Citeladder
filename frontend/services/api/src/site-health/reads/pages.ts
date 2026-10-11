@@ -14,6 +14,7 @@ import { notFound } from '../../errors.ts';
 import { loadCrawl, rootFailure, type Crawl } from './crawl.ts';
 import {
   currentIssueFilter,
+  linkedFrom,
   measurementFields,
   pageCursor,
   pageRows,
@@ -21,6 +22,7 @@ import {
   type PageRow,
   type PageRowFilters,
   type PageSort,
+  type Referrer,
 } from './page-rows.ts';
 import { issueOccurrence, ruleTitle, severityOrder, type IssueRow } from './rules.ts';
 import { hash } from '../../traffic/normalization.ts';
@@ -29,7 +31,7 @@ type Paging = { limit: number; cursor: string | null };
 // A pathological artifact never balloons a detail response.
 const MAX_EVALUATIONS = policy.site_health.reads.max_detail_evaluations;
 
-const pageSummary = (row: PageRow) => ({
+const pageSummary = (row: PageRow, referrers: Map<string, Referrer[]>) => ({
   site_url_id: row.site_url_id,
   crawl_id: row.crawl_id,
   normalized_url: row.normalized_url,
@@ -38,6 +40,7 @@ const pageSummary = (row: PageRow) => ({
   monitored: row.monitored,
   analysis_status: row.analysis_status,
   error_code: row.error_code,
+  linked_from: referrers.get(row.site_url_id) ?? [],
   ...measurementFields(row),
   inbound_count: row.inbound_count,
   main_content_inbound_count: row.main_content_inbound_count,
@@ -110,8 +113,13 @@ export async function pages(
     window(db, crawl, 'pages', filters, sort, paging),
     rootFailure(db, crawl),
   ]);
+  const referrers = await linkedFrom(
+    db,
+    crawl,
+    items.map((row) => row.site_url_id),
+  );
   return pagesPageSchema.parse({
-    items: items.map(pageSummary),
+    items: items.map((row) => pageSummary(row, referrers)),
     next_cursor: next,
     root_errors: root.errors,
   });
@@ -190,7 +198,7 @@ export async function pageDetail(
   const [row] = await pageRows(db, crawl, { filters: { siteUrlId }, sort: 'url', limit: 1 });
   if (row === undefined) throw notFound('Site URL');
   const workspace = new WorkspaceScope(workspaceId);
-  const [analysis, metric] = await Promise.all([
+  const [analysis, metric, referrers] = await Promise.all([
     row.analysis_id === null
       ? undefined
       : workspace
@@ -216,6 +224,7 @@ export async function pageDetail(
       .where('extractor_version', '=', crawl.extractor_version)
       .where('formula_version', '=', policy.site_health.link_metrics.formula_version)
       .executeTakeFirst(),
+    linkedFrom(db, crawl, [siteUrlId]),
   ]);
   const evaluationIds = analysis ? strings(analysis.source_evaluation_ids) : [];
   const [issues, evaluations] = await Promise.all([
@@ -279,6 +288,7 @@ export async function pageDetail(
     title: row.title,
     analysis_status: row.analysis_status,
     error_code: row.error_code,
+    linked_from: referrers.get(siteUrlId) ?? [],
     field_cwv_available: false,
     page_kind_evidence: analysis ? record(analysis.page_kind_evidence) : null,
     page_traits: analysis ? strings(analysis.page_traits) : null,

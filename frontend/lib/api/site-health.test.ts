@@ -405,6 +405,7 @@ describe('pageDetailSchema (field_cwv_available literal false)', () => {
     title: 'Home',
     analysis_status: 'completed' as const,
     error_code: '',
+    linked_from: [],
     field_cwv_available: false as const,
     web_fundamentals_score: 90,
     web_fundamentals_coverage: 1,

@@ -2647,6 +2647,7 @@ CREATE TABLE public.site_discovery_frontier (
     value_priority integer NOT NULL,
     parent_position integer NOT NULL,
     link_ordinal integer NOT NULL,
+    referrer_site_url_ids uuid[] NOT NULL,
     rewrite_reason character varying(64) NOT NULL,
     rewrite_version character varying(32) NOT NULL,
     status character varying(16) NOT NULL,

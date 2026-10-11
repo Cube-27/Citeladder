@@ -1,7 +1,7 @@
 /** Buyer-query generation policy and templates; no model output is raw truth. */
 export const promptGeneration = {
-  version: 'prompt-gen-v5',
-  policy_version: 'buyer-query-policy-2',
+  version: 'prompt-gen-v1',
+  policy_version: 'buyer-query-policy-1',
   cell_max_facets: 2,
   map_calls: 1,
   map_max_entries: 5,

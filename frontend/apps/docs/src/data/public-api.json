@@ -3119,6 +3119,12 @@
           "error_code": {
             "type": "string"
           },
+          "linked_from": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Referrer"
+            }
+          },
           "issue_count": {
             "anyOf": [
               {
@@ -3216,6 +3222,7 @@
           "monitored",
           "analysis_status",
           "error_code",
+          "linked_from",
           "issue_count",
           "web_fundamentals_score",
           "web_fundamentals_coverage",
@@ -4843,6 +4850,21 @@
           "mention_count",
           "avg_position"
         ],
+        "additionalProperties": false
+      },
+      "Referrer": {
+        "type": "object",
+        "properties": {
+          "site_url_id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": ["site_url_id", "url"],
         "additionalProperties": false
       },
       "ResearchScope": {

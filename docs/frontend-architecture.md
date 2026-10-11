@@ -143,9 +143,10 @@ Only the four linked public JSON inputs/templates are served from
 `/research/citeladder-2026-10/` in `frontend/public`. Editorial handoff files and
 local research notes are not public assets. Source review dates are visible
 research metadata, never publication dates or sitemap `lastmod` values.
-Authorship and actual publication metadata must be approved before publication;
-new Article markup is deferred while those details are absent. Breadcrumbs
-describe the visible navigation using the existing JSON-LD owner.
+Each guide emits `Article` JSON-LD with the CiteLadder organization as author
+and publisher and the visible review date as `dateModified`; it claims no person
+author and no `datePublished` until approved publication metadata exists.
+Breadcrumbs describe the visible navigation using the existing JSON-LD owner.
 
 ### Public browser tools
 

@@ -124,6 +124,33 @@ describe('PagesTable', () => {
     expect(screen.getAllByText('Not measured').length).toBeGreaterThan(0);
   });
 
+  it('names where a failing URL is linked from, and only for a failing URL', () => {
+    const referrers = [
+      { site_url_id: UUID, url: 'https://example.com/' },
+      { site_url_id: SOURCE_CRAWL, url: 'https://example.com/docs' },
+    ];
+    renderPages(
+      <PagesTable
+        crawlId={CRAWL}
+        pages={[
+          page({
+            display_url: 'https://example.com/gone',
+            analysis_status: 'error',
+            linked_from: referrers,
+          }),
+          page({
+            site_url_id: SOURCE_CRAWL,
+            display_url: 'https://example.com/fine',
+            linked_from: referrers,
+          }),
+        ]}
+      />,
+    );
+    expect(screen.getAllByText(/^Linked from/u).map((node) => node.textContent)).toEqual([
+      'Linked from https://example.com/ and 1 more',
+    ]);
+  });
+
   it('navigates to the per-URL detail when the row is clicked', () => {
     renderPages(<PagesTable pages={[page()]} crawlId={CRAWL} />);
     fireEvent.click(screen.getByText('Homepage'));

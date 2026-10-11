@@ -60,6 +60,8 @@ export type Candidate = {
   itemKind: string;
   rewriteReason: string;
   rewriteVersion: string;
+  /** The page whose link found this URL; null for the root and sitemap entries. */
+  referrerId: string | null;
 };
 
 /** A candidate carrying one admission decision's whole verdict, so priority and disposition never drift. */
@@ -69,11 +71,12 @@ export function candidate(
     Candidate,
     'url' | 'hash' | 'depth' | 'sourceKind' | 'parentPosition' | 'linkOrdinal'
   > &
-    Partial<Pick<Candidate, 'rewriteReason' | 'rewriteVersion'>>,
+    Partial<Pick<Candidate, 'rewriteReason' | 'rewriteVersion' | 'referrerId'>>,
 ): Candidate {
   return {
     rewriteReason: '',
     rewriteVersion: '',
+    referrerId: null,
     ...fields,
     priority: admission.priority,
     valueKind: admission.valueKind,
@@ -237,18 +240,19 @@ async function enqueueSiteTask(
     depth: number;
     priority: number;
     position?: number;
+    parentSiteUrlId: string | null;
   },
   settings: Settings,
 ) {
   const { rows } = await sql<{ id: string; inserted: boolean }>`
     INSERT INTO site_crawl_tasks (
-      id, crawl_id, workspace_id, site_url_id, task_kind, requested_url, url_hash,
-      depth, generation, idempotency_key, status, priority, randomized_position,
+      id, crawl_id, workspace_id, site_url_id, parent_site_url_id, task_kind, requested_url,
+      url_hash, depth, generation, idempotency_key, status, priority, randomized_position,
       max_attempts, attempt_count, conflict_count, available_at, created_at,
       updated_at, error_code, error_detail, classification_expected
     )
-    SELECT ${randomUUID()}::uuid, c.id, c.workspace_id, ${task.siteUrlId}::uuid, ${task.kind},
-      ${task.url}, ${task.hash}, ${task.depth}, 0,
+    SELECT ${randomUUID()}::uuid, c.id, c.workspace_id, ${task.siteUrlId}::uuid,
+      ${task.parentSiteUrlId}::uuid, ${task.kind}, ${task.url}, ${task.hash}, ${task.depth}, 0,
       ${`${crawl.id}:${task.kind}:${task.hash}:0`}, 'queued', ${task.priority},
       ${task.position ?? 0}, ${settings.maxAttempts}, 0, 0, now(), now(), now(), '', '', false
     FROM site_crawls c
@@ -334,6 +338,7 @@ async function observe(
       observed_url: item.url,
       final_url: item.url,
       source_artifact_id: options.artifactId ?? null,
+      parent_site_url_id: item.referrerId,
       content_type: '',
       title: '',
       created_at: new Date(),
@@ -352,6 +357,7 @@ async function observe(
         hash: item.hash,
         depth: item.depth,
         priority: item.priority + crawlPolicy.analyze_priority_boost,
+        parentSiteUrlId: item.referrerId,
       },
       settings,
     );
@@ -423,7 +429,6 @@ async function storeFrontier(
     .where('crawl_id', '=', crawl.id)
     .executeTakeFirstOrThrow();
   const capacity = Math.max(0, frontierLimit(crawl, settings) - Number(existing.count));
-  if (!capacity) return;
   // One array parameter, so a sitemap-sized batch stays clear of the driver's bind limit.
   const known = new Set(
     (
@@ -439,6 +444,12 @@ async function storeFrontier(
     ).map((row) => row.url_hash),
   );
   const twinKnown = (item: Candidate) => known.has(hostTwinHash(item.url) ?? '');
+  await addReferrers(
+    trx,
+    crawl,
+    eligible.filter((item) => known.has(item.hash) || twinKnown(item)),
+  );
+  if (!capacity) return;
   const fresh = eligible
     .filter((item) => !known.has(item.hash) && !twinKnown(item))
     .slice(0, capacity);
@@ -459,6 +470,7 @@ async function storeFrontier(
           value_priority: item.priority,
           parent_position: item.parentPosition,
           link_ordinal: item.linkOrdinal,
+          referrer_site_url_ids: item.referrerId ? [item.referrerId] : [],
           rewrite_reason: item.rewriteReason,
           rewrite_version: item.rewriteVersion,
           status: crawlPolicy.frontier_statuses.pending,
@@ -466,6 +478,35 @@ async function storeFrontier(
         })),
       )
       .onConflict((conflict) => conflict.columns(['crawl_id', 'url_hash']).doNothing())
+      .execute();
+}
+
+/**
+ * Another page links a URL the frontier already holds: remember that page too,
+ * up to the policy's bound, so a failing URL can name the pages that link it.
+ */
+async function addReferrers(trx: Database, crawl: Crawl, seen: Candidate[]) {
+  const byReferrer = new Map<string, string[]>();
+  for (const item of seen) {
+    if (!item.referrerId) continue;
+    const hashes = byReferrer.get(item.referrerId) ?? [];
+    hashes.push(item.hash, hostTwinHash(item.url) ?? '');
+    byReferrer.set(item.referrerId, hashes);
+  }
+  // A discovered page's links share one referrer, so this is one statement per page.
+  for (const [referrer, hashes] of byReferrer)
+    await trx // NOSONAR: one statement per referring page, in order in one transaction.
+      .updateTable('site_discovery_frontier')
+      .set({
+        referrer_site_url_ids: sql`array_append(referrer_site_url_ids, ${referrer}::uuid)`,
+      })
+      .where('workspace_id', '=', crawl.workspace_id)
+      .where('crawl_id', '=', crawl.id)
+      .where('url_hash', '=', (eb) => eb.fn.any(eb.val(hashes)))
+      .where(sql<boolean>`not (${referrer}::uuid = any(referrer_site_url_ids))`)
+      .where(
+        sql<boolean>`cardinality(referrer_site_url_ids) < ${crawlPolicy.max_referrers_per_url}`,
+      )
       .execute();
 }
 
@@ -504,6 +545,7 @@ async function pendingFrontier(trx: Database, crawl: Crawl, settings: Settings) 
         linkOrdinal: row.link_ordinal,
         rewriteReason: row.rewrite_reason,
         rewriteVersion: row.rewrite_version,
+        referrerId: row.referrer_site_url_ids[0] ?? null,
       },
     ),
   }));
@@ -735,7 +777,14 @@ export async function admitCandidates(
 export async function enqueueDiscoveredAnalysis(
   trx: Database,
   crawl: Crawl,
-  page: { siteUrlId: string | null; url: string; hash: string; depth: number; priority: number },
+  page: {
+    siteUrlId: string | null;
+    url: string;
+    hash: string;
+    depth: number;
+    priority: number;
+    parentSiteUrlId: string | null;
+  },
   settings = frontierSettings(),
 ) {
   const siteUrlId =
@@ -769,6 +818,7 @@ export async function enqueueDiscoveredAnalysis(
       hash: page.hash,
       depth: page.depth,
       priority: page.priority + crawlPolicy.analyze_priority_boost,
+      parentSiteUrlId: page.parentSiteUrlId,
     },
     settings,
   );

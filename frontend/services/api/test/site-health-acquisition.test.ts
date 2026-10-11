@@ -11,6 +11,8 @@ import {
 } from '../src/site-health/frontier.ts';
 import { reconcileDuplicateAliases } from '../src/site-health/canonical-alias.ts';
 import { valueKindCoverage } from '../src/site-health/coverage.ts';
+import { crawlCounters } from '../src/site-health/reads/crawl.ts';
+import { pages } from '../src/site-health/reads/pages.ts';
 import { SitePageFetcher, siteFetchSettings } from '../src/site-health/page-fetch.ts';
 import { siteWorkerSettings } from '../src/site-health/runtime.ts';
 import { runSiteSetup, setupSettings } from '../src/site-health/site-setup-task.ts';
@@ -260,6 +262,41 @@ describe('discover', () => {
       url('/'),
       url('/products/a'),
     ]);
+  });
+
+  it('lists a link that fails to fetch as an error, with every page that links it', async () => {
+    const seed = await crawl();
+    const root = await queued(seed, 'discover');
+    const site = worker({
+      '/': { body: links('/a', '/gone') },
+      '/a': { body: links('/gone', '/') },
+      '/gone': { status: 404, body: 'missing' },
+    });
+    await run(site, root);
+    const children = await tasks(seed, 'discover');
+    const child = (path: string) => children.find((row) => row.requested_url === url(path))!.id;
+    await run(site, child('/a'), child('/gone'));
+
+    const errors = await pages(
+      db,
+      seed.workspaceId,
+      seed.crawlId,
+      { status: 'error_or_blocked' },
+      'url',
+      { limit: 10, cursor: null },
+    );
+    expect(
+      errors.items.map((item) => ({
+        url: item.normalized_url,
+        status: item.analysis_status,
+        code: item.error_code,
+        linked_from: item.linked_from.map((referrer) => referrer.url),
+      })),
+    ).toEqual([
+      { url: url('/gone'), status: 'error', code: 'http_4xx', linked_from: [url('/'), url('/a')] },
+    ]);
+    const counters = await crawlCounters(db, await crawlRow(seed));
+    expect(counters).toMatchObject({ errors: 1, failure_breakdown: { http_4xx: 1 } });
   });
 
   it('keeps a document as inventory and excludes a canonical alias of an active page', async () => {

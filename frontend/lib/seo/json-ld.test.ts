@@ -5,6 +5,7 @@ import { toBlogPostSummary } from '@/lib/marketing-content/blog-index';
 import {
   blogIndexJsonLd,
   organizationJsonLd,
+  researchArticleJsonLd,
   serializeJsonLd,
   softwareApplicationJsonLd,
   websiteJsonLd,
@@ -87,6 +88,37 @@ describe('blogIndexJsonLd', () => {
           name: 'GEO vs SEO',
         },
       ],
+    });
+  });
+});
+
+describe('researchArticleJsonLd', () => {
+  it('credits the organization and dates a guide only by its review date', () => {
+    process.env.PUBLIC_WEBSITE_ORIGIN = 'https://example.test';
+    const organization = {
+      '@type': 'Organization',
+      '@id': 'https://example.test/#organization',
+      name: 'CiteLadder',
+      url: 'https://example.test/',
+    };
+    expect(
+      researchArticleJsonLd({
+        title: 'GEO vs SEO',
+        slug: '/blog/geo-vs-seo',
+        meta_description: 'Where to spend effort.',
+        reviewed_at: '2026-10-06',
+      }),
+    ).toEqual({
+      '@context': 'https://schema.org',
+      '@type': 'Article',
+      headline: 'GEO vs SEO',
+      description: 'Where to spend effort.',
+      inLanguage: 'en',
+      url: 'https://example.test/blog/geo-vs-seo',
+      mainEntityOfPage: { '@type': 'WebPage', '@id': 'https://example.test/blog/geo-vs-seo' },
+      author: organization,
+      publisher: organization,
+      dateModified: '2026-10-06',
     });
   });
 });

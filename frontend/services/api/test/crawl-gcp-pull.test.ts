@@ -347,7 +347,7 @@ describe('subscription verification', () => {
     const other = await fixtures.tenant();
     await db
       .updateTable('crawl_log_sources')
-      .set({ filter_catalog_version: '1' })
+      .set({ filter_catalog_version: '0' })
       .where('id', '=', id)
       .execute();
     expect((await sourceList(db, scope(tenant))).items[0]!.pull!.filter_current).toBe(false);
@@ -355,10 +355,10 @@ describe('subscription verification', () => {
     await expect(confirmSinkFilter(db, scope(other), other.userId, id)).rejects.toMatchObject({
       status: 404,
     });
-    expect((await row(id)).filter_catalog_version).toBe('1');
+    expect((await row(id)).filter_catalog_version).toBe('0');
     await confirmSinkFilter(db, scope(tenant), tenant.userId, id);
     expect((await sourceList(db, scope(tenant))).items[0]!.pull).toMatchObject({
-      filter_catalog_version: '2',
+      filter_catalog_version: '1',
       filter_current: true,
     });
   });
@@ -632,7 +632,7 @@ describe('pull coverage', () => {
     [{ settle: 14 }, 'partial', 'pull_awaiting_settle'],
     [{ settle: null }, 'partial', 'pull_awaiting_settle'],
     [{ rate: 0.5 }, 'partial', 'pull_sampled'],
-    [{ catalog: '1' }, 'partial', 'sink_filter_outdated'],
+    [{ catalog: '0' }, 'partial', 'sink_filter_outdated'],
     // Verified ten minutes after midnight: the drain gap alone would not notice.
     [{ verifiedLateMinutes: 10 }, 'partial', 'pull_not_live_all_day'],
   ] as const)('judges drains %j as %s (%s)', async (options, coverage, reason) => {

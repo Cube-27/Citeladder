@@ -52,6 +52,17 @@ import { useDisplayTimeZone } from '@/lib/display-timezone';
  * a sort rather than toggling one.
  */
 
+const FAILED_STATUSES = new Set(['error', 'blocked']);
+
+/** Where a failing URL is linked from: the first page, and how many more the crawl found. */
+function linkedFromLabel(referrers: PageSummary['linked_from']) {
+  const [first, ...rest] = referrers;
+  if (!first) return '';
+  return rest.length
+    ? `Linked from ${first.url} and ${rest.length} more`
+    : `Linked from ${first.url}`;
+}
+
 const LINK_COLUMNS: ReadonlyArray<{
   sort: Exclude<PagesSort, 'url'>;
   label: string;
@@ -172,6 +183,11 @@ export function PagesTable({
                 <ClampText lines={1} className="type-caption tabular-nums">
                   {page.display_url}
                 </ClampText>
+                {FAILED_STATUSES.has(page.analysis_status) && page.linked_from.length > 0 ? (
+                  <ClampText lines={1} className="type-caption">
+                    {linkedFromLabel(page.linked_from)}
+                  </ClampText>
+                ) : null}
               </span>
             </TableCell>
             <TableCell className="whitespace-nowrap">
