@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
 import { FlowActions, FlowShell, type FlowStep } from '@/components/auth/flow-shell';
@@ -10,7 +11,13 @@ import { useProjectContext } from '@/lib/project/project-context';
 
 import { hasConfirmedIcp } from './icp-confirmation';
 import { useOnboardingFlow } from './onboarding-flow';
-import { BrandStage, CreationStage, DiscoveryStage, ReviewStage } from './onboarding-stages';
+import {
+  BrandStage,
+  CreationStage,
+  DiscoveryStage,
+  ReviewStage,
+  STAGE_HEADING_ID,
+} from './onboarding-stages';
 
 const STEPS: readonly FlowStep[] = [
   { id: 'brand', label: 'Basics' },
@@ -49,6 +56,7 @@ function OnboardingTransaction({ transactionKey }: Readonly<{ transactionKey: st
     ? projectDestination('/projects', null, activeProjectId)
     : undefined;
   const stage = onboardingStage(flow);
+  useStageHeadingFocus(flow.isCompleting ? 'creating' : flow.step);
   const measure = !flow.isCompleting && flow.step === 2 ? 'wide' : 'default';
 
   return (
@@ -73,6 +81,20 @@ function OnboardingTransaction({ transactionKey }: Readonly<{ transactionKey: st
       {stage}
     </FlowShell>
   );
+}
+
+/**
+ * Move focus to the new stage's heading when the stage changes, so keyboard
+ * and screen-reader users start at the top of what replaced the old stage.
+ * The first render leaves focus where the page load put it.
+ */
+function useStageHeadingFocus(stage: string | number) {
+  const previous = useRef(stage);
+  useEffect(() => {
+    if (previous.current === stage) return;
+    previous.current = stage;
+    document.getElementById(STAGE_HEADING_ID)?.focus();
+  }, [stage]);
 }
 
 function stripTrailingSlashes(pathname: string): string {

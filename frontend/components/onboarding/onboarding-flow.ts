@@ -30,6 +30,7 @@ import {
   startOnboardingCompletionRequest,
   startOnboardingNavigationHandoff,
 } from '@/lib/onboarding/timing';
+import { clearReviewDraft, readReviewDraft, saveReviewDraft } from '@/lib/onboarding/review-draft';
 import { useBrandDiscovery } from '@/lib/onboarding/use-brand-discovery';
 import { refreshBrandLogos } from '@/lib/project/brand-logos';
 import { useProjectContext } from '@/lib/project/project-context';
@@ -148,6 +149,7 @@ export function useOnboardingFlow(transactionKey: string) {
     if (!orphanedCompletion) return;
     // Project deletion preserves discovery provenance by nulling project_id.
     // A bookmarked completion URL must not resurrect that old transaction.
+    if (initialDiscoveryId) clearReviewDraft(initialDiscoveryId);
     // oxlint-disable-next-line react-hooks/set-state-in-effect -- discard the stale route-owned draft.
     setResumeDiscoveryId(null);
     setBrand(null);
@@ -166,38 +168,53 @@ export function useOnboardingFlow(transactionKey: string) {
     const workspace = searchParams?.get('workspace') ?? activeWorkspaceId;
     if (workspace) reset.set('workspace', workspace);
     router(`/onboarding?${reset.toString()}`, { replace: true, preventScrollReset: true });
-  }, [activeWorkspaceId, form, orphanedCompletion, router, searchParams]);
+  }, [activeWorkspaceId, form, initialDiscoveryId, orphanedCompletion, router, searchParams]);
 
+  // Edits saved before a reload win over the discovery's suggestions.
   useEffect(() => {
     if (discoveryState?.status !== 'ready') return;
+    const saved = readReviewDraft(discoveryState.id);
     // oxlint-disable-next-line react-hooks/set-state-in-effect -- seed an editable persisted draft.
     setDomains((current) =>
       current.length
         ? current
-        : discoveryState.domains.map((domain, index) => ({
+        : (saved?.domains ??
+          discoveryState.domains.map((domain, index) => ({
             id: `domain:${index}:${domain}`,
             domain,
             selected: true,
-          })),
+          }))),
     );
-    setProfile((current) => current ?? discoveryState.profile);
+    setProfile((current) => current ?? saved?.profile ?? discoveryState.profile);
   }, [discoveryState]);
 
   useEffect(() => {
     if (discoveryState?.status !== 'ready' || maximumCompetitors === undefined) return;
     // Suggestions arrive ranked; the first ones up to the cap start selected
     // and the reader deselects any that are wrong before creation.
+    const saved = readReviewDraft(discoveryState.id);
     // oxlint-disable-next-line react-hooks/set-state-in-effect -- seed an editable persisted draft.
     setCompetitors((current) =>
       current.length
         ? current
-        : discoveryState.competitors.map((competitor, index) => ({
+        : (saved?.competitors ??
+          discoveryState.competitors.map((competitor, index) => ({
             ...competitor,
             id: `competitor:${index}:${competitor.name}`,
             selected: index < maximumCompetitors,
-          })),
+          }))),
     );
   }, [discoveryState, maximumCompetitors]);
+
+  // Keep the reader's review edits for this tab, so a reload returns to them.
+  const reviewDiscoveryId = discoveryState?.status === 'ready' ? discoveryState.id : null;
+  useEffect(() => {
+    // Competitors seed once the catalog's cap is known; saving before then
+    // would store an empty list over the suggestions.
+    if (step !== 2 || !reviewDiscoveryId || profile === null || maximumCompetitors === undefined)
+      return;
+    saveReviewDraft(reviewDiscoveryId, { domains, competitors, profile });
+  }, [competitors, domains, maximumCompetitors, profile, reviewDiscoveryId, step]);
 
   // The completion response is the committed write receipt. Do not hold the
   // user here for another detail request: the destination owns that bounded
@@ -262,6 +279,7 @@ export function useOnboardingFlow(transactionKey: string) {
     // Completion creates the project, with no prompts yet, in the request.
     onSuccess: async (result) => {
       if (!result.project_id) return;
+      if (discoveryState) clearReviewDraft(discoveryState.id);
       if (activeWorkspaceId) refreshBrandLogos(queryClient, result.project_id, activeWorkspaceId);
       await openProject(result.project_id);
     },
@@ -320,6 +338,7 @@ export function useOnboardingFlow(transactionKey: string) {
       discoveryState?.status === 'failed' ||
       (brand !== null && JSON.stringify(brand) !== JSON.stringify(values));
     if (rediscovers) {
+      if (discoveryState) clearReviewDraft(discoveryState.id);
       setDomains([]);
       setCompetitors([]);
       setProfile(null);

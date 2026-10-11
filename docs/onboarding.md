@@ -57,7 +57,8 @@ one) and the parent search for fetched pages. Reads never repeat discovery.
 
 ## Review and completion
 
-The review step shows the discovered websites (selected) and competitors. The
+The review step shows the discovered websites (selected) and competitors first,
+then what the brand sells and where its buyers are. The
 first suggestions up to the five-competitor cap start selected; the user can
 deselect, edit or add competitors by name and domain. Editing a suggestion
 changes its name and primary domain and keeps its other domains. The user
@@ -83,7 +84,11 @@ offerings, unreviewed, linked to the research snapshot.
 
 The [onboarding screen](../frontend/components/onboarding/onboarding-screen.tsx)
 keeps the discovery ID and step in the URL, so a reload resumes research or
-review; review edits themselves are held in the page until creation. It enters
+review. In-progress review edits (websites, competitors and the confirmed
+profile) are kept in the tab's session storage, keyed by discovery, so a reload
+returns to them; completion or a changed brand clears them, and the server
+validates everything at completion. Focus moves to the new stage's heading on
+each step change, but not on a reload. It enters
 the project as soon as completion returns its ID, through the shared project
 destination owner, and shows page-level creation progress meanwhile. A
 retryable completion failure returns to the review; a failed discovery stays

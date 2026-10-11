@@ -190,6 +190,7 @@ afterEach(() => {
   useRealDiscovery = false;
   selection.activeProjectId = ACTIVE_PROJECT_ID;
   visitedLocations.length = 0;
+  window.sessionStorage.clear();
 });
 afterAll(() => mswServer.close());
 
@@ -684,6 +685,38 @@ describe('OnboardingScreen', () => {
     expect(screen.queryByLabelText(/positioning/i)).toBeNull();
     expect(screen.queryByLabelText(/target audience/i)).toBeNull();
     expect(screen.queryByLabelText(/^description/i)).toBeNull();
+  });
+
+  it('focuses each new stage heading and keeps review edits across a reload', async () => {
+    discoveryState = discovery('ready', 'preparing_review');
+    mswServer.use(catalogHandler());
+    const first = renderOnboarding();
+
+    const user = await enterBrand();
+    expect(screen.getByRole('heading', { level: 1, name: 'Finding what to track' })).toHaveFocus();
+    await user.click(screen.getByRole('button', { name: 'Review' }));
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Does this look right?' }),
+    ).toHaveFocus();
+    await user.click(screen.getByRole('button', { name: 'Globex' }));
+    await user.click(screen.getByRole('button', { name: 'acme.example' }));
+    first.unmount();
+
+    searchParams = `discovery=${DISCOVERY_ID}&step=review`;
+    renderOnboarding();
+
+    expect(await screen.findByRole('button', { name: 'Globex' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+    expect(screen.getByRole('button', { name: 'acme.example' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+    // A reload leaves focus where the page load put it.
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Does this look right?' }),
+    ).not.toHaveFocus();
   });
 
   it('preselects suggestions up to the cap and keeps every choice reversible', async () => {
