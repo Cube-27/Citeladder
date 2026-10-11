@@ -22,6 +22,8 @@ locals {
     DEV_LOGIN_PASSWORD               = "citeladder-demo-password"
     INTEGRATION_GOOGLE_CLIENT_ID     = "citeladder-google-oauth-client-id"
     INTEGRATION_GOOGLE_CLIENT_SECRET = "citeladder-google-oauth-client-secret"
+    # Signs checkout quotes; generated, and independent of every provider secret.
+    BILLING_QUOTE_SIGNING_SECRET = "citeladder-billing-quote-secret"
   }
   # Present only while the protected environment supplies a value; Cloud Run
   # cannot reference a secret without an enabled version.
@@ -35,6 +37,14 @@ locals {
     INTEGRATION_MICROSOFT_CLIENT_SECRET = "citeladder-bing-oauth-client-secret"
     DATAFORSEO_API_LOGIN                = "citeladder-dataforseo-login"
     DATAFORSEO_API_PASSWORD             = "citeladder-dataforseo-password"
+    # Billing (recovery runs in the runner, so every service needs them) and
+    # the platform engine keys managed plans measure on.
+    BILLING_RAZORPAY_KEY_SECRET              = "citeladder-razorpay-key-secret"
+    BILLING_RAZORPAY_WEBHOOK_SECRET          = "citeladder-razorpay-webhook-secret"
+    BILLING_RAZORPAY_WEBHOOK_PREVIOUS_SECRET = "citeladder-razorpay-webhook-previous-secret"
+    PROVIDER_PLATFORM_OPENAI_API_KEY         = "citeladder-platform-openai-key"
+    PROVIDER_PLATFORM_GOOGLE_API_KEY         = "citeladder-platform-google-key"
+    PROVIDER_PLATFORM_ANTHROPIC_API_KEY      = "citeladder-platform-anthropic-key"
   }
   api_secret_env = {
     CITELADDER_ORIGIN_TOKEN = "citeladder-worker-origin-token"
@@ -92,5 +102,6 @@ locals {
       RUNNER_DB_POOL_SIZE              = "4"
     },
     var.demo_expires_at == "" ? {} : { DEMO_EXPIRES_AT = var.demo_expires_at },
+    var.billing_env,
   )
 }

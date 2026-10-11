@@ -92,6 +92,16 @@ variable "optional_secrets" {
   description = "Optional runtime secret IDs that currently hold an enabled version."
 }
 
+variable "billing_env" {
+  type        = map(string)
+  default     = {}
+  description = "Plain billing and platform-credential settings by env name; absent names keep the app defaults, which leave checkout closed."
+  validation {
+    condition     = alltrue([for name in keys(var.billing_env) : !can(regex("(SECRET|API_KEY|PASSWORD)$", name))])
+    error_message = "billing_env holds plain settings only; secrets belong in optional_secret_env."
+  }
+}
+
 variable "agent_base_url" {
   type        = string
   description = "HTTPS base URL of the platform OpenAI-compatible Agent provider."

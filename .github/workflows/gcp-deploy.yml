@@ -47,6 +47,28 @@ jobs:
       DEFAULT_AGENT_BASE_URL: ${{ vars.DEFAULT_AGENT_BASE_URL }}
       DEFAULT_AGENT_MODEL: ${{ vars.DEFAULT_AGENT_MODEL }}
       TICK_SCHEDULE: ${{ vars.TICK_SCHEDULE || '*/10 * * * *' }}
+      # Billing stays closed and allow-listed unless these say otherwise (B2, B42).
+      BILLING_CHECKOUT_ENABLED: ${{ vars.BILLING_CHECKOUT_ENABLED || 'false' }}
+      BILLING_CHECKOUT_AUDIENCE: ${{ vars.BILLING_CHECKOUT_AUDIENCE || 'allow_list' }}
+      BILLING_RAZORPAY_MODE: ${{ vars.BILLING_RAZORPAY_MODE || 'disabled' }}
+      BILLING_RAZORPAY_KEY_ID: ${{ vars.BILLING_RAZORPAY_KEY_ID }}
+      BILLING_RAZORPAY_TEST_READY: ${{ vars.BILLING_RAZORPAY_TEST_READY || 'false' }}
+      BILLING_RAZORPAY_TEST_INTERNATIONAL_READY: ${{ vars.BILLING_RAZORPAY_TEST_INTERNATIONAL_READY || 'false' }}
+      BILLING_RAZORPAY_TEST_INDIA_READY: ${{ vars.BILLING_RAZORPAY_TEST_INDIA_READY || 'false' }}
+      BILLING_RAZORPAY_LIVE_READY: ${{ vars.BILLING_RAZORPAY_LIVE_READY || 'false' }}
+      BILLING_RAZORPAY_INTERNATIONAL_READY: ${{ vars.BILLING_RAZORPAY_INTERNATIONAL_READY || 'false' }}
+      BILLING_RAZORPAY_WEBHOOK_PREVIOUS_SECRET_STARTED_AT: ${{ vars.BILLING_RAZORPAY_WEBHOOK_PREVIOUS_SECRET_STARTED_AT }}
+      BILLING_RAZORPAY_WEBHOOK_PREVIOUS_SECRET_EXPIRES_AT: ${{ vars.BILLING_RAZORPAY_WEBHOOK_PREVIOUS_SECRET_EXPIRES_AT }}
+      BILLING_INDIA_GST_RATE: ${{ vars.BILLING_INDIA_GST_RATE }}
+      BILLING_INDIA_GST_APPROVAL_REFERENCE: ${{ vars.BILLING_INDIA_GST_APPROVAL_REFERENCE }}
+      BILLING_SELLER_SAC: ${{ vars.BILLING_SELLER_SAC }}
+      BILLING_SELLER_LUT_REFERENCE: ${{ vars.BILLING_SELLER_LUT_REFERENCE }}
+      BILLING_FUNDED_MONTHLY_BUDGET_MINOR: ${{ vars.BILLING_FUNDED_MONTHLY_BUDGET_MINOR }}
+      # Managed plans measure on these platform credentials (B32, B40).
+      PROVIDER_PLATFORM_OPENAI_CREDENTIAL_REF: ${{ vars.PROVIDER_PLATFORM_OPENAI_CREDENTIAL_REF }}
+      PROVIDER_PLATFORM_GOOGLE_CREDENTIAL_REF: ${{ vars.PROVIDER_PLATFORM_GOOGLE_CREDENTIAL_REF }}
+      PROVIDER_PLATFORM_ANTHROPIC_CREDENTIAL_REF: ${{ vars.PROVIDER_PLATFORM_ANTHROPIC_CREDENTIAL_REF }}
+      DATAFORSEO_PLATFORM_CREDENTIAL_REF: ${{ vars.DATAFORSEO_PLATFORM_CREDENTIAL_REF }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -113,6 +135,20 @@ jobs:
           [[ "$DEMO_MODE" =~ ^(true|false)$ ]]
           [[ "$OAUTH_GOOGLE_ENABLED" =~ ^(true|false)$ ]]
           [[ "$PUBLIC_SIGNUP_ENABLED" =~ ^(true|false)$ ]]
+          [[ "$BILLING_CHECKOUT_AUDIENCE" =~ ^(allow_list|everyone)$ ]]
+          [[ "$BILLING_RAZORPAY_MODE" =~ ^(disabled|test|live)$ ]]
+          # Plain billing settings reach every service; empty ones keep the app default.
+          billing_names=(BILLING_CHECKOUT_ENABLED BILLING_CHECKOUT_AUDIENCE BILLING_RAZORPAY_MODE
+            BILLING_RAZORPAY_KEY_ID BILLING_RAZORPAY_TEST_READY BILLING_RAZORPAY_TEST_INTERNATIONAL_READY
+            BILLING_RAZORPAY_TEST_INDIA_READY BILLING_RAZORPAY_LIVE_READY BILLING_RAZORPAY_INTERNATIONAL_READY
+            BILLING_RAZORPAY_WEBHOOK_PREVIOUS_SECRET_STARTED_AT BILLING_RAZORPAY_WEBHOOK_PREVIOUS_SECRET_EXPIRES_AT
+            BILLING_INDIA_GST_RATE BILLING_INDIA_GST_APPROVAL_REFERENCE BILLING_SELLER_SAC
+            BILLING_SELLER_LUT_REFERENCE BILLING_FUNDED_MONTHLY_BUDGET_MINOR
+            PROVIDER_PLATFORM_OPENAI_CREDENTIAL_REF PROVIDER_PLATFORM_GOOGLE_CREDENTIAL_REF
+            PROVIDER_PLATFORM_ANTHROPIC_CREDENTIAL_REF DATAFORSEO_PLATFORM_CREDENTIAL_REF)
+          billing_env="$(for name in "${billing_names[@]}"; do
+            jq -n --arg key "$name" --arg value "${!name}" 'select($value != "") | {($key): $value}'
+          done | jq -s 'add // {}')"
           # The Workers commit the deterministic Cloud Run URL, which embeds the
           # project number; refuse to deploy an API they would not reach.
           api_url="https://citeladder-api-$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)').${REGION}.run.app"
@@ -139,14 +175,14 @@ jobs:
             --argjson demo "$DEMO_MODE" --arg expires "$DEMO_EXPIRES_AT" \
             --arg email "$DEMO_LOGIN_EMAIL" --argjson allowance "$DEV_LOGIN_COUNTER_ALLOWANCE" \
             --argjson google "$OAUTH_GOOGLE_ENABLED" --argjson signup "$PUBLIC_SIGNUP_ENABLED" \
-            --arg tick "$TICK_SCHEDULE" \
+            --arg tick "$TICK_SCHEDULE" --argjson billing_env "$billing_env" \
             '{project_id:$project,billing_account:$billing,budget_currency_code:$currency,
               budget_units:$units,region:$region,zone:$zone,domain_name:$domain,
               app_domain_name:$app,api_image:$api,postgres_image:$postgres,
               agent_base_url:$agent_url,agent_model:$agent_model,demo_mode:$demo,
               demo_expires_at:$expires,dev_login_email:$email,dev_login_counter_allowance:$allowance,
               oauth_google_enabled:$google,public_signup_enabled:$signup,tick_schedule:$tick,
-              optional_secrets:[]}' > deploy.auto.tfvars.json
+              billing_env:$billing_env,optional_secrets:[]}' > deploy.auto.tfvars.json
           # Images and secret versions need the registry and secret containers
           # first. On the first run this also replaces the retired asia-south1
           # registry, deleting every stale image with it.
@@ -204,6 +240,12 @@ jobs:
           BING_OAUTH_CLIENT_SECRET: ${{ secrets.BING_OAUTH_CLIENT_SECRET }}
           DATAFORSEO_API_LOGIN: ${{ secrets.DATAFORSEO_API_LOGIN }}
           DATAFORSEO_API_PASSWORD: ${{ secrets.DATAFORSEO_API_PASSWORD }}
+          BILLING_RAZORPAY_KEY_SECRET: ${{ secrets.BILLING_RAZORPAY_KEY_SECRET }}
+          BILLING_RAZORPAY_WEBHOOK_SECRET: ${{ secrets.BILLING_RAZORPAY_WEBHOOK_SECRET }}
+          BILLING_RAZORPAY_WEBHOOK_PREVIOUS_SECRET: ${{ secrets.BILLING_RAZORPAY_WEBHOOK_PREVIOUS_SECRET }}
+          PROVIDER_PLATFORM_OPENAI_API_KEY: ${{ secrets.PROVIDER_PLATFORM_OPENAI_API_KEY }}
+          PROVIDER_PLATFORM_GOOGLE_API_KEY: ${{ secrets.PROVIDER_PLATFORM_GOOGLE_API_KEY }}
+          PROVIDER_PLATFORM_ANTHROPIC_API_KEY: ${{ secrets.PROVIDER_PLATFORM_ANTHROPIC_API_KEY }}
         run: |
           set -euo pipefail
           has_version() {
@@ -249,6 +291,7 @@ jobs:
           add_generated citeladder-encryption-key
           add_generated citeladder-referral-salt
           add_generated citeladder-api-key-pepper
+          add_generated citeladder-billing-quote-secret
           # 10.28.0.10 is the database VM's fixed private address (locals.tf).
           db_password="$(gcloud secrets versions access latest --secret citeladder-db-password --project "$PROJECT_ID")"
           db_password_uri="$(jq -rn --arg value "$db_password" '$value | @uri')"
@@ -277,6 +320,18 @@ jobs:
           sync_optional_value citeladder-bing-oauth-client-secret "$BING_OAUTH_CLIENT_SECRET"
           sync_optional_value citeladder-dataforseo-login "$DATAFORSEO_API_LOGIN"
           sync_optional_value citeladder-dataforseo-password "$DATAFORSEO_API_PASSWORD"
+          sync_optional_value citeladder-razorpay-key-secret "$BILLING_RAZORPAY_KEY_SECRET"
+          sync_optional_value citeladder-razorpay-webhook-secret "$BILLING_RAZORPAY_WEBHOOK_SECRET"
+          sync_optional_value citeladder-razorpay-webhook-previous-secret "$BILLING_RAZORPAY_WEBHOOK_PREVIOUS_SECRET"
+          sync_optional_value citeladder-platform-openai-key "$PROVIDER_PLATFORM_OPENAI_API_KEY"
+          sync_optional_value citeladder-platform-google-key "$PROVIDER_PLATFORM_GOOGLE_API_KEY"
+          sync_optional_value citeladder-platform-anthropic-key "$PROVIDER_PLATFORM_ANTHROPIC_API_KEY"
+          # Checkout needs the key pair and its webhook secret together.
+          if [ "$BILLING_RAZORPAY_MODE" != disabled ] && { [ -z "$BILLING_RAZORPAY_KEY_ID" ] \
+            || [ -z "$BILLING_RAZORPAY_KEY_SECRET" ] || [ -z "$BILLING_RAZORPAY_WEBHOOK_SECRET" ]; }; then
+            echo "::error::BILLING_RAZORPAY_MODE=$BILLING_RAZORPAY_MODE needs BILLING_RAZORPAY_KEY_ID and both Razorpay secrets."
+            exit 1
+          fi
           for pair in citeladder-bing-oauth-client citeladder-dataforseo; do
             count=0
             for name in "${enabled_optional[@]}"; do

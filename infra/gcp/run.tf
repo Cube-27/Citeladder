@@ -88,6 +88,9 @@ resource "google_cloud_run_v2_job" "execution" {
   for_each = {
     runner = { args = ["src/runner.ts"], memory = "1Gi" }
     tick   = { args = ["src/tick.ts"], memory = "1Gi" }
+    # Operator billing commands against the private database, run with
+    # `gcloud run jobs execute citeladder-billing --args=...` (runbook).
+    billing = { args = ["src/cli/billing-admin.ts", "--help"], memory = "512Mi" }
   }
 
   name                = "${local.name}-${each.key}"

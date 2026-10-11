@@ -97,11 +97,31 @@ async function importCatalog(
       : operation.payload,
   );
   if (row) {
-    if (
+    const changed =
       digest(validateCatalog(jsonObject(row.payload, 'billing_catalog_revisions.payload'))) !==
-      digest(payload)
+      digest(payload);
+    // A draft never published may be replaced, e.g. once its provider plans are
+    // bound; a published or retired revision is immutable.
+    if (
+      changed &&
+      row.publication_state === 'draft' &&
+      row.created_idempotency_key &&
+      row.created_idempotency_key !== ctx.idempotencyKey
     )
-      throw new Error('catalog_revision_conflict');
+      return db
+        .updateTable('billing_catalog_revisions')
+        .set({
+          payload: JSON.stringify(payload),
+          payload_sha256: digest(payload),
+          created_by_user_id: actorId,
+          created_reason: ctx.reason,
+          created_idempotency_key: ctx.idempotencyKey,
+          created_at: new Date(),
+        })
+        .where('id', '=', row.id)
+        .returningAll()
+        .executeTakeFirstOrThrow();
+    if (changed) throw new Error('catalog_revision_conflict');
     if (!row.created_idempotency_key) throw new Error('catalog_bootstrap_revision_exists');
     if (row.created_idempotency_key !== ctx.idempotencyKey)
       throw new Error('catalog_revision_conflict');

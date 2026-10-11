@@ -90,6 +90,27 @@ it('denies unauthorized actors and preview catalog writes leave no durable rows'
       .execute(),
   ).toEqual([]);
 });
+it('replaces a draft never published under a new request, and never a published revision', async () => {
+  const revision = `bind-${randomUUID()}`;
+  revisions.push(revision);
+  const payload = (label: string) =>
+    (
+      db
+        .selectFrom('billing_catalog_revisions')
+        .select('payload')
+        .where('revision', '=', revision)
+        .executeTakeFirstOrThrow() as Promise<{ payload: { contact_sales_url: string } }>
+    ).then((row) => row.payload.contact_sales_url === `https://example.test/${label}`);
+  await catalogMutation(db, context(), { kind: 'import', revision, payload: authored('first') });
+  // Binding provider plans re-imports the draft with its references.
+  await catalogMutation(db, context(), { kind: 'import', revision, payload: authored('bound') });
+  expect(await payload('bound')).toBe(true);
+  await catalogMutation(db, context(), { kind: 'publish', revision });
+  await expect(
+    catalogMutation(db, context(), { kind: 'import', revision, payload: authored('late') }),
+  ).rejects.toThrow('revision_conflict');
+  expect(await payload('bound')).toBe(true);
+});
 it('replays immutable imports, rejects changed requests and serializes competing publications', async () => {
   const a = `a-${randomUUID()}`,
     b = `b-${randomUUID()}`;
