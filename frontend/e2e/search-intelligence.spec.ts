@@ -138,6 +138,7 @@ for (const viewport of [
           base,
           {
             connected: true,
+            credential_mode: 'byok',
             connection_id: id(50),
             owned_targets: [target],
             competitors: [competitor],
