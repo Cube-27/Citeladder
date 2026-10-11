@@ -220,6 +220,12 @@
       "default": 1.0,
       "exclusive_minimum": 0
     },
+    "sse_max_duration_seconds": {
+      "env": ["AUDIT_SSE_MAX_DURATION_SECONDS"],
+      "type": "int",
+      "default": 300,
+      "exclusive_minimum": 0
+    },
     "sse_terminal_grace_polls": {
       "env": ["AUDIT_SSE_TERMINAL_GRACE_POLLS"],
       "type": "int",

@@ -5599,7 +5599,7 @@ ALTER TABLE ONLY public.brand_discoveries
     ADD CONSTRAINT brand_discoveries_initial_crawl_id_fkey FOREIGN KEY (initial_crawl_id) REFERENCES public.site_crawls(id) ON DELETE SET NULL;
 
 ALTER TABLE ONLY public.brand_discoveries
-    ADD CONSTRAINT brand_discoveries_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE SET NULL;
+    ADD CONSTRAINT brand_discoveries_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.brand_discoveries
     ADD CONSTRAINT brand_discoveries_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;

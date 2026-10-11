@@ -440,6 +440,9 @@ describe('durable onboarding', () => {
     await expect(
       completeDiscovery(db, t.workspaceId, t.userId, row.id, completion, 'different'),
     ).rejects.toMatchObject({ status: 409 });
+    // Deleting the project removes the research that created it.
+    await db.deleteFrom('projects').where('id', '=', projectId).execute();
+    await expect(discoveryRow(db, t.workspaceId, row.id)).rejects.toMatchObject({ status: 404 });
   });
   it('rolls back completion on capacity denial without freezing a partial review', async () => {
     const t = await tenant();
