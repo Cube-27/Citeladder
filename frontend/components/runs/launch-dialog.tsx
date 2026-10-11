@@ -45,6 +45,21 @@ function availableEngines(
   };
 }
 
+/** The engines a launch can measure: the workspace's own routes, or all on a managed plan. */
+function useLaunchEngines(open: boolean, workspaceId: string | null) {
+  const managed = useManagedPlan();
+  const connectionsQuery = useQuery({
+    queryKey: queryKeys.providers.connections(workspaceId ?? 'unresolved'),
+    queryFn: ({ signal }) => providersApi.listConnections({ signal, workspaceId }),
+    enabled: open && workspaceId !== null && !managed,
+  });
+  const engines = useMemo(
+    () => (managed ? MANAGED_ENGINES : availableEngines(connectionsQuery.data)),
+    [managed, connectionsQuery.data],
+  );
+  return { ...engines, enginesReady: managed || connectionsQuery.isSuccess, connectionsQuery };
+}
+
 function fixedPromptSelection(
   fixedPromptSetId: string | undefined,
   fixedPromptIds: string[] | undefined,
@@ -107,17 +122,10 @@ export function LaunchDialog({
     queryFn: ({ signal }) => promptsApi.listPromptSets(projectId, { signal, workspaceId }),
     enabled: open && workspaceId !== null,
   });
-  const managed = useManagedPlan();
-  const connectionsQuery = useQuery({
-    queryKey: queryKeys.providers.connections(workspaceId ?? 'unresolved'),
-    queryFn: ({ signal }) => providersApi.listConnections({ signal, workspaceId }),
-    enabled: open && workspaceId !== null && !managed,
-  });
-  const { configuredEngines, unverifiedEngines } = useMemo(
-    () => (managed ? MANAGED_ENGINES : availableEngines(connectionsQuery.data)),
-    [managed, connectionsQuery.data],
+  const { configuredEngines, unverifiedEngines, enginesReady } = useLaunchEngines(
+    open,
+    workspaceId,
   );
-  const enginesReady = managed || connectionsQuery.isSuccess;
   // One contract, derived from the same values the payload is built from:
   // `fixedPromptIds` wins in `buildLaunchPayload`, so it must also lock the
   // field and name the selection. Locking only on `fixedPromptSetId` left the

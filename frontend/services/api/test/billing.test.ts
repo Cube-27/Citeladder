@@ -169,6 +169,32 @@ describe('billing money and access owner', () => {
       'funded',
     );
   });
+  it('refuses a top-up on the free trial, which has no plan to add to', async () => {
+    const t = await fixtures.tenant({ access: false });
+    await db
+      .updateTable('billing_accounts')
+      .set({ registration_origin: 'public' })
+      .where('id', '=', t.accountId)
+      .execute();
+    const user = await db
+      .updateTable('users')
+      .set({ registration_origin: 'public' })
+      .where('id', '=', t.userId)
+      .returningAll()
+      .executeTakeFirstOrThrow();
+    await db.transaction().execute((trx) => ensureWorkspaceBilling(trx, t.workspaceId, user));
+    expect((await workspaceAccess(db, t.workspaceId)).status).toBe('trial_active');
+    await expect(
+      purchase(
+        db,
+        config,
+        t.workspaceId,
+        { kind: 'topup', key: 'topup_ai_credits', quantity: 1, mode: 'byok' },
+        randomUUID(),
+        fakeProvider(),
+      ),
+    ).rejects.toMatchObject({ status: 409 });
+  });
   it('preserves uncertain creation and recovers without creating or granting twice', async () => {
     const t = await fixtures.tenant();
     const key = randomUUID();

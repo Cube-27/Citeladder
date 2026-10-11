@@ -258,6 +258,19 @@ describe('atomic audit admission', () => {
     });
     expect(await queued(t.workspaceId)).toHaveLength(1);
   });
+  it('refuses a BYOK launch once its prompt runs are spent, queuing nothing', async () => {
+    const t = await auditTenant(db, fixtures);
+    await grant(db, await billingAccount(db, t.workspaceId), {
+      key: 'prompt_runs_per_period',
+      value: 2,
+    });
+    // Three answers cannot fit in two runs.
+    await expect(createAudits(db, t.workspaceId, input(t), {}, runtime)).rejects.toMatchObject({
+      status: 403,
+      code: 'prompt_runs_exhausted',
+    });
+    expect(await queued(t.workspaceId)).toEqual([]);
+  });
   it('rejects a foreign project before consuming admission capacity', async () => {
     const t = await auditTenant(db, fixtures),
       foreign = await auditTenant(db, fixtures);

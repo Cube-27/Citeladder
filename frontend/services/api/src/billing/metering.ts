@@ -36,7 +36,7 @@ const logger = getLogger('api.billing.metering');
 const AI_CREDITS = policy.entitlements.ai_credits;
 
 export type MeterContext = { workspaceId: string; feature: MeteredFeature };
-export type Provider = 'model_gateway' | 'jev' | 'tavily' | 'keenable';
+type Provider = 'model_gateway' | 'jev' | 'tavily' | 'keenable';
 type CallSpec = {
   provider: Provider;
   model: string;
@@ -183,7 +183,7 @@ async function reserve(db: Database, context: MeterContext, spec: CallSpec) {
  * (or was lost to a crash) charges the fallback; a failure with no usage
  * charges nothing.
  */
-export async function settleCall(
+async function settleCall(
   db: Database,
   callId: string,
   usage: TokenUsage | null,
@@ -238,7 +238,7 @@ export async function settleCall(
 }
 
 /** Runs one platform provider call under its metering context. */
-export async function metered<T>(
+async function metered<T>(
   db: Database,
   context: MeterContext,
   spec: CallSpec,
@@ -273,7 +273,7 @@ export async function metered<T>(
 const bytes = (text: string) => Buffer.byteLength(text, 'utf8');
 
 /** The gateway with every call metered for `context`; the raw gateway refuses unmetered calls. */
-export function meteredGateway(db: Database, gateway: ModelGateway, context: MeterContext) {
+function meteredGateway(db: Database, gateway: ModelGateway, context: MeterContext) {
   const complete: Complete = (system, user, signal, onText, schema) =>
     metered(
       db,

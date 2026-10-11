@@ -62,7 +62,7 @@ export function expectedCost(route: RouteIdentity, retrieval: boolean) {
   };
 }
 type CostStatus = 'complete' | 'partial' | 'unknown';
-export function costStatus(values: readonly (number | null)[]): CostStatus {
+function costStatus(values: readonly (number | null)[]): CostStatus {
   const known = values.filter((value) => value !== null).length;
   return known === values.length && values.length ? 'complete' : known ? 'partial' : 'unknown';
 }

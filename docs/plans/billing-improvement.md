@@ -151,30 +151,28 @@ above 500 provider rows.
 
 ### PR 2 — Plans, AI credits and enforcement
 
-Findings 4, 6, 27, 28 under B4–B20 and B23.
+Findings 4, 6, 27, 28 under B4–B20, B23 and B31–B39.
 
 - The credit unit, token prices and allowances (B14, B16); the AI top-up open to
   every paid plan and refused on the trial; customers see credits only (B23).
-- One platform-AI metering owner: every gateway call outside onboarding reserves
-  credits before dispatch and settles its tokens at the serving model's price
-  (or the fallback charge) once, through the existing ledger. Agent funding moves
-  onto it rather than keeping a second path. JEV, Tavily and Keenable calls are
-  recorded but not charged (B13).
+- One platform-AI metering owner charges every platform model call, onboarding
+  included (B31), holding credits before dispatch and settling tokens at the
+  serving model's price once (B35). Analysis calls are recorded as included; JEV,
+  Tavily and Keenable are recorded but not charged (B13). The gateway and those
+  clients refuse an unmetered call (B18). The Agent uses the same prices and ledger.
 - `prompt_runs_per_period` replaces `audit_credits` and `successful_answers`;
-  every audit (manual, scheduled, MCP, public API; BYOK and platform) reserves
-  runs per answer before dispatch and settles once.
+  every answer holds a run at admission and only a recorded answer spends it
+  (B33, B34).
 - `commerce` and `search_intelligence` capabilities; the dropped capabilities
-  removed from the registry, bundles, display and tests; occupancy fails closed
-  consistently.
-- The funded monthly budget settles to recorded spend on every terminal path.
-- The Agent custom model removed (B19) under the replacement gate: route table,
-  provider owner, settings card, funding branch and their tests.
-- Dead `contracts` keys and settings, vestigial routes and modes removed.
+  removed; occupancy fails closed (B38).
+- Managed plans purchasable at their own prices, measuring on platform keys with
+  provider settings hidden (B32, B37); the budget admits on recorded spend (B36).
+- The Agent custom model removed (B19); dead keys, settings and vestigial routes
+  removed (B39).
 
-Acceptance: real-database tests for every row of the coverage matrix (charged,
-included or exempt as listed), a scheduled BYOK audit refused when runs are
-exhausted, a trial refused a top-up, and a failed funded audit releasing its
-budget; the bypass test fails on an unmetered gateway call.
+Acceptance: real-database tests for the coverage matrix (charged, included or
+recorded as listed), a scheduled audit refused when runs are exhausted, a trial
+refused a top-up, and the bypass test refusing an unmetered call.
 
 ### PR 3 — Operational but hidden
 
