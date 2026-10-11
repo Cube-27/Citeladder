@@ -275,7 +275,6 @@
      it carry the elevated paper fill. The focused flow pane stays paper. */
   /* No seam: the tonal steps between rail, ground, and paper are the separation. */
   --modal-padding: 24px;
-  --empty-state-padding: 24px;
   --control-height-sm: 28px;
   --control-height-md: 32px;
   --control-height-lg: 36px;
@@ -331,10 +330,10 @@
   --page-header-padding-bottom: 24px;
   --page-header-gap: 16px;
   --table-row-height: 36px;
-  --table-row-height-dense: 32px;
   --table-header-height: var(--control-height-md);
   --table-cell-padding-x: 12px;
-  --table-cell-padding-y: 0px;
+  /* Every row, one line or two, keeps the same breathing room above and below. */
+  --table-cell-padding-y: 6px;
   /* A wide table keeps readable columns and scrolls inside its frame below
      its minimum width. A table picks the rung its columns need. */
   --table-min-width-sm: 36rem;
@@ -866,6 +865,21 @@ a.focus-ring:active .type-caption {
   box-shadow: none;
 }
 
+/* An empty state on the sheet is an object of its own (the shared card classes
+   plus card padding), so a "connect to start" prompt never floats as bare text. Nested in
+   a card, a panel, a dialog or a table it shares that container's surface and keeps
+   only a little vertical room — the container already supplies the inset. */
+.empty-state-surface {
+  padding: var(--card-padding);
+}
+
+:where(.surface-card, .surface-panel, [role='dialog'], .table-frame) .empty-state-surface {
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  padding: var(--compact-gap) 0;
+}
+
 .flow-content.app-pane {
   box-shadow: var(--elevation-flow);
 }
@@ -1300,11 +1314,6 @@ input:-webkit-autofill:focus {
     outline: 1px solid ButtonText;
     outline-offset: -1px;
   }
-}
-
-.table-dense {
-  --table-row-height: var(--table-row-height-dense);
-  --badge-height-md: var(--badge-height-sm);
 }
 
 @media (max-width: 700px) {

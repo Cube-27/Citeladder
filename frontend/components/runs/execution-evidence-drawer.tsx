@@ -36,7 +36,6 @@ export type EvidenceSubject = {
   answer_text?: string;
   prompt_text?: string;
   prompt_index?: number;
-  repetition?: number;
   logical_engine?: string;
   search_surface_outcome?: string;
 };
@@ -112,19 +111,14 @@ export function ExecutionEvidenceDrawer({
         answerText={answer.answerText}
         promptText={execution?.prompt_text}
         promptIndex={execution?.prompt_index}
-        repetition={execution?.repetition}
         isSearchSurface={execution?.logical_engine === 'google_ai_overview'}
         outcome={answer.outcome}
       />
     );
   }
 
-  let description: string | undefined;
-  if (execution?.prompt_index !== undefined) {
-    const repetitionSuffix =
-      execution.repetition === undefined ? '' : ` · repetition ${execution.repetition}`;
-    description = `Prompt #${execution.prompt_index + 1}${repetitionSuffix}`;
-  }
+  const description =
+    execution?.prompt_index === undefined ? undefined : `Prompt #${execution.prompt_index + 1}`;
 
   return (
     <Drawer

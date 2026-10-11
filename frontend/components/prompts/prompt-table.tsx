@@ -109,18 +109,27 @@ export function PromptTable({
           {pagedPrompts.map((prompt) => (
             <TableRow key={prompt.id}>
               <TableCell className="max-w-130 min-w-60">
+                {/* The question is held to two lines, so the tooltip carries the
+                    whole question above its classification. */}
                 <Tooltip
-                  content={[
-                    prompt.buyer_stage ? buyerStageLabels[prompt.buyer_stage] : '',
-                    intentLabels[prompt.intent],
-                  ]
-                    .filter(Boolean)
-                    .join(' · ')}
+                  content={
+                    <span className="grid gap-1">
+                      <span>{prompt.text}</span>
+                      <span>
+                        {[
+                          prompt.buyer_stage ? buyerStageLabels[prompt.buyer_stage] : '',
+                          intentLabels[prompt.intent],
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </span>
+                    </span>
+                  }
                 >
                   {/* The question opens its history: the prompt is the object. */}
                   <ProjectLink
                     href={promptHistoryHref(prompt.id)}
-                    className="text-foreground block hover:underline"
+                    className="text-foreground line-clamp-2 break-words hover:underline"
                   >
                     {prompt.text}
                     <span className="sr-only">

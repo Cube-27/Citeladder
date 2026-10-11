@@ -69,9 +69,10 @@ describe('AiReferralsScreen', () => {
     );
     renderWithProviders(<AiReferralsScreen />);
 
-    expect(await screen.findByText('No AI-referral data yet')).toBeInTheDocument();
     // GA4 is connected in place rather than through Settings.
-    expect(screen.getByRole('region', { name: 'Connect Google Analytics 4' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('region', { name: 'Connect Google Analytics 4' }),
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^Range:/ })).toBeVisible();
   });
 

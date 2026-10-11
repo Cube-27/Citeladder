@@ -12,6 +12,7 @@ import { ReadError } from '@/components/ui/read-error';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatGrid } from '@/components/ui/stat-grid';
 import {
+  ClampText,
   Table,
   TableBody,
   TableCell,
@@ -198,30 +199,34 @@ function AdvertiserTable({
         {!advertisers.length ? (
           <InlineEmpty className="p-[var(--card-padding)]">No ads in these answers.</InlineEmpty>
         ) : (
-          <Table className="table-dense">
+          <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Advertiser</TableHead>
                 <TableHead numeric>Appearances</TableHead>
                 <TableHead numeric>Prompts</TableHead>
                 <TableHead numeric>Share</TableHead>
-                <TableHead>Seen</TableHead>
+                <TableHead numeric>Seen</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {advertisers.map((advertiser) => (
                 <TableRow key={advertiser.domain}>
                   <TableCell>
-                    <span className="flex flex-wrap items-center gap-2">
-                      {advertiser.name}
-                      <span className={textRole('caption', 'text-muted')}>{advertiser.domain}</span>
-                      <AdOwnershipChip ownership={advertiser.ownership} />
+                    <span className="grid min-w-0">
+                      <span className="flex min-w-0 items-center gap-2">
+                        <ClampText lines={1}>{advertiser.name}</ClampText>
+                        <AdOwnershipChip ownership={advertiser.ownership} />
+                      </span>
+                      <ClampText lines={1} className={textRole('caption', 'text-muted')}>
+                        {advertiser.domain}
+                      </ClampText>
                     </span>
                   </TableCell>
                   <TableCell numeric>{advertiser.appearances}</TableCell>
                   <TableCell numeric>{advertiser.prompts}</TableCell>
                   <TableCell numeric>{formatPercent(advertiser.share)}</TableCell>
-                  <TableCell>
+                  <TableCell numeric>
                     {formatDisplayShortDate(advertiser.first_seen_at, timeZone)} –{' '}
                     {formatDisplayShortDate(advertiser.last_seen_at, timeZone)}
                   </TableCell>
@@ -249,7 +254,7 @@ function PromptTable({ prompts }: Readonly<{ prompts: VisibilityAdsResponse['pro
         {!prompts.length ? (
           <InlineEmpty className="p-[var(--card-padding)]">No prompt surfaced an ad.</InlineEmpty>
         ) : (
-          <Table className="table-dense">
+          <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Prompt</TableHead>

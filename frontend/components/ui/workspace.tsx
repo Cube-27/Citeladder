@@ -85,7 +85,7 @@ export const stickyPaneClasses =
  */
 const LEDGER_SHELL = {
   open: '',
-  boxed: 'bg-panel border-border overflow-hidden rounded-[var(--radius-card)] border',
+  boxed: 'surface-panel bg-panel border-border overflow-hidden rounded-[var(--radius-card)] border',
 } as const;
 
 export type LedgerShell = keyof typeof LEDGER_SHELL;

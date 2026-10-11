@@ -22,6 +22,7 @@ export function Tooltip({
   align = 'center',
   className,
   delayDuration = 200,
+  defaultOpen,
 }: Readonly<{
   children: ReactNode;
   content: ReactNode;
@@ -29,9 +30,11 @@ export function Tooltip({
   align?: 'start' | 'center' | 'end';
   className?: string;
   delayDuration?: number;
+  /** Open on mount — for a tooltip mounted in response to the pointer already being there. */
+  defaultOpen?: boolean;
 }>) {
   return (
-    <TooltipPrimitive.Root delayDuration={delayDuration}>
+    <TooltipPrimitive.Root delayDuration={delayDuration} defaultOpen={defaultOpen}>
       <TooltipPrimitive.Trigger asChild>{children}</TooltipPrimitive.Trigger>
       <TooltipPrimitive.Portal>
         <TooltipPrimitive.Content

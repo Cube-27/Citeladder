@@ -57,19 +57,16 @@ function EvidencePromptHeader({
   evidence,
   promptText,
   promptIndex,
-  repetition,
 }: Readonly<{
   evidence: ExecutionEvidence;
   promptText?: string | null;
   promptIndex?: number;
-  repetition?: number;
 }>) {
   const displayPrompt =
     promptText ||
     (promptIndex !== undefined
       ? `Prompt #${promptIndex + 1}`
       : `Prompt #${evidence.prompt_index + 1}`);
-  const displayRepetition = repetition ?? evidence.repetition;
   const promptBadgeNumber = promptIndex !== undefined ? promptIndex + 1 : evidence.prompt_index + 1;
   // Null for an observed search surface, whose engine name is already the whole
   // product fact; the vendor behind it stays on the Settings credential card.
@@ -78,10 +75,7 @@ function EvidencePromptHeader({
   return (
     <section className="border-border-subtle grid min-w-0 gap-2 border-b pb-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <Badge variant="neutral">Prompt #{promptBadgeNumber}</Badge>
-          <span className="type-caption tabular-nums">rep {displayRepetition}</span>
-        </div>
+        <Badge variant="neutral">Prompt #{promptBadgeNumber}</Badge>
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="neutral">
             {engineLabel(evidence.logical_engine)}
@@ -379,7 +373,6 @@ export function EvidenceCard({
   answerText,
   promptText,
   promptIndex,
-  repetition,
   isSearchSurface,
   outcome,
 }: Readonly<{
@@ -387,18 +380,12 @@ export function EvidenceCard({
   answerText?: string | null;
   promptText?: string | null;
   promptIndex?: number;
-  repetition?: number;
   isSearchSurface?: boolean;
   outcome?: string;
 }>) {
   return (
     <div className="grid min-w-0 gap-[var(--workspace-gap)]">
-      <EvidencePromptHeader
-        evidence={evidence}
-        promptText={promptText}
-        promptIndex={promptIndex}
-        repetition={repetition}
-      />
+      <EvidencePromptHeader evidence={evidence} promptText={promptText} promptIndex={promptIndex} />
       <EvidenceMetrics evidence={evidence} />
       <EvidenceAnswer
         answerText={answerText}

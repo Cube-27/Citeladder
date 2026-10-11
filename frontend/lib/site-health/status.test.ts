@@ -4,6 +4,7 @@ import {
   PLACEHOLDER,
   POLL_INTERVAL_MS,
   canShowDiscoveredTotal,
+  crawlDisplayStatus,
   crawlFailureCopy,
   dashboardRunNotice,
   discoveryProgressLabel,
@@ -301,29 +302,19 @@ describe('dashboardRunNotice', () => {
     expect(notice?.message).toMatch(/could not be analyzed/i);
   });
 
-  it('reports unreachable links as an observation, not an analysis failure', () => {
-    // Every real site has a few dead or non-page links. Reporting that as
-    // "pages could not be analyzed" made effectively every crawl look broken.
-    const notice = dashboardRunNotice({
-      ...noticeBase,
-      status: 'partially_completed',
-      partial_reason: 'discovery_incomplete',
+  it('shows no notice when only discovered links could not be fetched', () => {
+    // Every real site has a few dead or non-page links; that is a normal crawl
+    // with nothing to retry, so only an analysis shortfall earns a notice.
+    const partial = { ...noticeBase, status: 'partially_completed' as const };
+    expect(dashboardRunNotice({ ...partial, partial_reason: 'discovery_incomplete' })).toBeNull();
+    expect(
+      dashboardRunNotice({ ...partial, partial_reason: 'discovery_and_analysis_incomplete' }),
+    ).toEqual({
+      badge: 'partial',
+      tone: 'warning',
+      message:
+        'Some pages could not be analyzed — showing partial results. Re-crawl to retry the remaining pages.',
     });
-    expect(notice?.tone).toBe('info');
-    expect(notice?.message).toMatch(/could not be fetched/i);
-    expect(notice?.message).not.toMatch(/every page that was fetched has been analyzed/i);
-    expect(notice?.message).not.toMatch(/could not be analyzed/i);
-  });
-
-  it('names both shortfalls when discovery and analysis each fell short', () => {
-    const notice = dashboardRunNotice({
-      ...noticeBase,
-      status: 'partially_completed',
-      partial_reason: 'discovery_and_analysis_incomplete',
-    });
-    expect(notice?.tone).toBe('warning');
-    expect(notice?.message).toMatch(/could not be fetched/i);
-    expect(notice?.message).toMatch(/could not be analyzed/i);
   });
 
   it('labels a paused dashboard with actionable partial-results copy', () => {
@@ -400,6 +391,16 @@ describe('badge mapping', () => {
     expect(isErrorRow('blocked')).toBe(true);
     expect(isErrorRow('cancelled')).toBe(true);
     expect(isErrorRow('completed')).toBe(false);
+  });
+
+  it('reads a crawl that only missed unreachable links as completed', () => {
+    expect(
+      crawlDisplayStatus({ status: 'partially_completed', partial_reason: 'discovery_incomplete' }),
+    ).toBe('completed');
+    expect(
+      crawlDisplayStatus({ status: 'partially_completed', partial_reason: 'analysis_incomplete' }),
+    ).toBe('partially_completed');
+    expect(crawlDisplayStatus({ status: 'failed', partial_reason: null })).toBe('failed');
   });
 });
 

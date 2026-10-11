@@ -7,6 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { TextLink } from '@/components/ui/text-link';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import {
+  ClampText,
   SortableTableHead,
   Table,
   TableBody,
@@ -46,9 +47,11 @@ function SourceName({
     <span className="flex min-w-0 items-center gap-2">
       <BrandLogo name={name} websiteUrl={host ? `https://${host}` : null} size="sm" />
       <span className="grid min-w-0">
-        <span className="truncate">{name}</span>
+        <ClampText lines={secondary ? 1 : 2}>{name}</ClampText>
         {secondary ? (
-          <span className={textRole('caption', 'text-secondary truncate')}>{secondary}</span>
+          <ClampText lines={1} className={textRole('caption', 'text-secondary')}>
+            {secondary}
+          </ClampText>
         ) : null}
       </span>
     </span>
@@ -206,7 +209,7 @@ export function DomainTable({
     // `table-fixed` with explicit column widths: without it every column sizes
     // to its own longest cell, so filtering to a shorter set of domains
     // re-lays out the whole table under the reader's pointer.
-    <Table className="table-dense table-fixed">
+    <Table className="table-fixed">
       <TableHeader>
         <TableRow>
           <SortableTableHead
@@ -336,7 +339,9 @@ function PageStandingCell({
           {label}
         </Badge>
       ) : (
-        <span className={textRole('caption', 'text-secondary truncate')}>{label}</span>
+        <ClampText lines={1} className={textRole('caption', 'text-secondary')}>
+          {label}
+        </ClampText>
       )}
       {actionId ? <TextLink href={`/agent/actions/${actionId}`}>Action</TextLink> : null}
     </span>
@@ -366,7 +371,7 @@ export function UrlTable({
   state?: SourceTableState;
 }>) {
   return (
-    <Table className="table-dense table-fixed">
+    <Table className="table-fixed">
       <TableHeader>
         <TableRow>
           <SortableTableHead

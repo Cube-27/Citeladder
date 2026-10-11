@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
+  ClampText,
   Table,
   TableBody,
   TableCell,
@@ -103,11 +104,11 @@ function MemberRow({
       <TableCell>
         <div className="flex min-w-0 items-center gap-2">
           <Avatar name={member.email} size="sm" />
-          <span className="min-w-0 truncate">{member.email}</span>
+          <ClampText lines={1}>{member.email}</ClampText>
           {member.is_self ? <Badge variant="neutral">You</Badge> : null}
         </div>
       </TableCell>
-      <TableCell>
+      <TableCell className="whitespace-nowrap">
         {inert ? (
           <Badge variant="neutral">{roleLabel(member.role)}</Badge>
         ) : (
@@ -120,7 +121,7 @@ function MemberRow({
           />
         )}
       </TableCell>
-      <TableCell>
+      <TableCell className="whitespace-nowrap">
         <div className="flex items-center justify-end gap-2">
           {inert ? null : (
             <>

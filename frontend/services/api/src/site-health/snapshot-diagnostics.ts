@@ -36,11 +36,7 @@ const counts = (rows: Evaluation[]) =>
     ]),
   );
 
-export function readinessDiagnostic(
-  crawl: Crawl,
-  projection: MeasurementProjection,
-  coverageState: string,
-) {
+export function readinessDiagnostic(crawl: Crawl, projection: MeasurementProjection) {
   const logical = new Map(
     projection.rows.flatMap((row) =>
       (row.source_evaluation_ids ?? []).map((id) => [id, row.id] as const),
@@ -130,12 +126,6 @@ export function readinessDiagnostic(
   });
   const aggregate = projection.aggregate;
   const limitations: string[] = [];
-  if (aggregate.aeo_measurement_state !== 'measured')
-    limitations.push('Readiness evidence is limited; review dimension coverage below.');
-  if (coverageState !== 'complete')
-    limitations.push(
-      `AEO Readiness describes ${pages.size} audited pages; crawl coverage is ${coverageState}.`,
-    );
   if (all.length > rows.length)
     limitations.push(
       `Readiness diagnostic counts and evidence are truncated at ${reads.aeo_max_evaluations} evaluations.`,

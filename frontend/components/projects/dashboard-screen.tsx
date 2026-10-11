@@ -99,27 +99,25 @@ function DashboardData({
         />
       }
     >
-      <Stack gap="section">
-        <Stack gap="section">
-          <DashboardHeader data={data} activeProject={activeProject} />
-          {data.active_prompt_count === 0 ? <PromptSetupCard /> : null}
-          {actions.downloadError ? (
-            <Alert tone="danger">The report could not be downloaded. Try again.</Alert>
-          ) : null}
-          {actions.reorderError ? (
-            <Alert tone="warning">
-              The shared action order changed. Review the refreshed order and try again.
-            </Alert>
-          ) : null}
-          <SummarySections data={data} />
-          <MissingPrompts projectId={activeProject.id} workspaceId={activeProject.workspace_id} />
-          <ActionsAndProof
-            data={data}
-            actions={actions.actions}
-            pending={actions.reorderPending}
-            onMove={actions.move}
-          />
-        </Stack>
+      <Stack gap="workspace">
+        <DashboardHeader data={data} activeProject={activeProject} />
+        {data.active_prompt_count === 0 ? <PromptSetupCard /> : null}
+        {actions.downloadError ? (
+          <Alert tone="danger">The report could not be downloaded. Try again.</Alert>
+        ) : null}
+        {actions.reorderError ? (
+          <Alert tone="warning">
+            The shared action order changed. Review the refreshed order and try again.
+          </Alert>
+        ) : null}
+        <SummarySections data={data} />
+        <MissingPrompts projectId={activeProject.id} workspaceId={activeProject.workspace_id} />
+        <ActionsAndProof
+          data={data}
+          actions={actions.actions}
+          pending={actions.reorderPending}
+          onMove={actions.move}
+        />
         <CompanyFacts data={data} />
       </Stack>
     </PageShell>

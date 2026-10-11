@@ -8,6 +8,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { panelClasses } from '@/components/ui/panel';
 import { StatGrid, StatItem } from '@/components/ui/stat-grid';
 import {
+  ClampText,
   Table,
   TableBody,
   TableCell,
@@ -73,15 +74,15 @@ function EntityRow({ entity }: Readonly<{ entity: SurfaceEntity }>) {
         scope="row"
         className="border-border-subtle border-b px-[var(--table-cell-padding-x)] py-[var(--table-cell-padding-y)] text-left align-middle [tr:last-child>&]:border-b-0"
       >
-        <span className="flex min-w-0 flex-wrap items-center gap-2">
-          <span className={textRole('itemTitle', 'truncate')}>{entity.name}</span>
+        <span className="flex min-w-0 items-center gap-2">
+          <ClampText className={textRole('itemTitle')}>{entity.name}</ClampText>
           {entity.kind === 'brand' ? <Badge variant="neutral">Your brand</Badge> : null}
         </span>
       </th>
       <SignalCell present={entity.mentioned} label="Named in the answer" />
       <SignalCell present={entity.linked} label="Linked from the answer" />
       <SignalCell present={entity.cited} label="Cited in the references" />
-      <TableCell>
+      <TableCell numeric>
         {/* Null is "never named", which is not last place, so it says so
             rather than taking a number one position behind everyone else. */}
         {entity.mention_order === null ? (
@@ -113,7 +114,9 @@ function PresenceTable({ entities }: Readonly<{ entities: readonly SurfaceEntity
           <TableHead scope="col">Named</TableHead>
           <TableHead scope="col">Linked</TableHead>
           <TableHead scope="col">Cited</TableHead>
-          <TableHead scope="col">Mention order</TableHead>
+          <TableHead scope="col" numeric>
+            Mention order
+          </TableHead>
         </tr>
       </TableHeader>
       <TableBody>

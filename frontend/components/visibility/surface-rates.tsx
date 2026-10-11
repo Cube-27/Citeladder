@@ -2,7 +2,6 @@
 
 import type { UseQueryResult } from '@tanstack/react-query';
 
-import { Alert } from '@/components/ui/alert';
 import { BusyBar } from '@/components/ui/busy-bar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ReadError } from '@/components/ui/read-error';
@@ -108,23 +107,6 @@ function CompetitorRates({ rates }: Readonly<{ rates: SurfaceRates['competitor_m
   );
 }
 
-/**
- * How many observations could not be used, said out loud.
- *
- * A retrieval CiteLadder never completed says nothing about whether Google
- * showed the brand. It is kept out of every denominator above — and reported
- * here, because silently dropping it would let our own gaps read as a clean
- * measurement.
- */
-function ExcludedNote({ data }: Readonly<{ data: SurfaceRates }>) {
-  if (data.excluded === 0) return null;
-  return (
-    <Alert tone="info">
-      {`${data.excluded} ${data.excluded === 1 ? 'observation was' : 'observations were'} not retrievable and ${data.excluded === 1 ? 'is' : 'are'} excluded from every rate above. They are not counted as the brand being absent.`}
-    </Alert>
-  );
-}
-
 export function SurfaceRatesPanel({
   query,
 }: Readonly<{ query: UseQueryResult<SurfaceRates, unknown> }>) {
@@ -193,9 +175,6 @@ export function SurfaceRatesPanel({
           />
         </div>
         <CompetitorRates rates={data.competitor_mention_rates} />
-        <div className="px-4 pb-4">
-          <ExcludedNote data={data} />
-        </div>
       </CardContent>
     </Card>
   );

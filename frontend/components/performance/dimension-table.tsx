@@ -11,6 +11,7 @@ import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MissingValue } from '@/components/ui/unavailable-value';
 import {
+  ClampText,
   SortableTableHead,
   Table,
   TableBody,
@@ -247,7 +248,7 @@ export function DimensionTable({
             ? // As many rows as a full page holds, so the table does not
               // resize when the real ones arrive.
               Array.from({ length: table.pageSize }, (_, index) => (
-                <TableRow key={`skeleton-${index}`} className="h-11">
+                <TableRow key={`skeleton-${index}`}>
                   {Array.from({ length: columnCount }, (_, cell) => (
                     <TableCell key={cell} numeric={cell > 0}>
                       <Skeleton className={cell === 0 ? 'h-4 w-3/4' : 'mx-auto h-4 w-16'} />
@@ -264,16 +265,16 @@ export function DimensionTable({
             </TableRow>
           ) : null}
           {rows.map((row) => (
-            <TableRow key={row.dimension_key} className="h-11">
+            <TableRow key={row.dimension_key}>
               <TableCell className="bg-panel sticky left-0 z-10">
-                <span
+                <ClampText
                   className={cn(
                     dimension === 'page' && 'tabular-nums break-all',
                     dimension === 'day' && 'tabular-nums',
                   )}
                 >
                   {formatDimensionValue(dimension, row.display_value)}
-                </span>
+                </ClampText>
               </TableCell>
               {displayedMetrics.flatMap((metric) => {
                 const selectedCell = (

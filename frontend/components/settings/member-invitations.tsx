@@ -13,6 +13,7 @@ import { Stack } from '@/components/ui/layout';
 import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
+  ClampText,
   Table,
   TableBody,
   TableCell,
@@ -176,7 +177,7 @@ export function PendingInvitations({
           <TableRow>
             <TableHead>Invitee</TableHead>
             <TableHead>Workspace role</TableHead>
-            <TableHead>Link expires</TableHead>
+            <TableHead numeric>Link expires</TableHead>
             <TableHead className="text-right">Access</TableHead>
           </TableRow>
         </TableHeader>
@@ -184,15 +185,15 @@ export function PendingInvitations({
           {invitations.map((invitation) => (
             <TableRow key={invitation.id}>
               <TableCell>
-                <span className="min-w-0 truncate">{invitation.email}</span>
+                <ClampText lines={1}>{invitation.email}</ClampText>
               </TableCell>
-              <TableCell>
+              <TableCell className="whitespace-nowrap">
                 <Badge variant="neutral">{roleLabel(invitation.role)}</Badge>
               </TableCell>
-              <TableCell className="type-caption tabular-nums">
+              <TableCell numeric className="type-caption">
                 <DisplayTime value={invitation.expires_at} />
               </TableCell>
-              <TableCell>
+              <TableCell className="whitespace-nowrap">
                 <div className="flex items-center justify-end gap-2">
                   <Button
                     type="button"

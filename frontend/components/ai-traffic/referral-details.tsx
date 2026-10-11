@@ -1,6 +1,7 @@
 import type { AiReferrals } from '@/lib/api/ai-traffic';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import {
+  ClampText,
   Table,
   TableBody,
   TableCell,
@@ -92,7 +93,9 @@ export function ReferralLandingPages({ data }: Readonly<{ data: AiReferrals }>) 
                       urlHash={r.url_hash}
                       filters={{ start_date: data.window_start, end_date: data.window_end }}
                     >
-                      {new URL(r.canonical_url).pathname}
+                      <ClampText lines={1} className="max-w-72">
+                        {new URL(r.canonical_url).pathname}
+                      </ClampText>
                     </TrafficUrlButton>
                   </TableCell>
                   <TableCell>{aiSourceLabel(r.ai_source)}</TableCell>

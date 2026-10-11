@@ -147,9 +147,7 @@ export async function persistCrawlSnapshot(db: Database, crawl: Crawl, persistEm
         projection.classification.scored_page_count_by_kind,
       ),
       readiness_dimensions: JSON.stringify(dimensions),
-      aeo_readiness_diagnostic: JSON.stringify(
-        readinessDiagnostic(crawl, projection, coverage.state),
-      ),
+      aeo_readiness_diagnostic: JSON.stringify(readinessDiagnostic(crawl, projection)),
       ...eligibility,
       eligibility_totals: JSON.stringify(eligibility.eligibility_totals),
       eligibility_reasons: JSON.stringify(eligibility.eligibility_reasons),

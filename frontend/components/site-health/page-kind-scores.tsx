@@ -71,7 +71,7 @@ export function PageKindScores({
             <TableBody>
               {rows.map((row) => (
                 <TableRow key={row.page_kind}>
-                  <TableCell>
+                  <TableCell className="whitespace-nowrap">
                     <PageKindBadge pageKind={row.page_kind} />
                   </TableCell>
                   <TableCell numeric className="text-secondary tabular-nums">

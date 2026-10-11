@@ -3,6 +3,7 @@ import { useState } from 'react';
 import type { z } from 'zod';
 import type { aiTrafficPagesSchema } from '@citeladder/contracts/ai-traffic';
 import {
+  ClampText,
   Table,
   TableBody,
   TableCell,
@@ -60,7 +61,7 @@ export function TrafficPages({
               <TableHead numeric="end">Key events</TableHead>
               <TableHead numeric="end">Tracked citations</TableHead>
               <TableHead numeric="end">Open findings</TableHead>
-              <TableHead>Last crawl</TableHead>
+              <TableHead numeric="end">Last crawl</TableHead>
               <TableHead numeric="end">4xx / 5xx</TableHead>
             </TableRow>
           </TableHeader>
@@ -122,7 +123,7 @@ function TrafficPageRow({
   onOpen: (hash: string) => void;
 }>) {
   return (
-    <TableRow density="multiline">
+    <TableRow>
       <TableCell>
         <Button
           variant="ghost"
@@ -131,9 +132,9 @@ function TrafficPageRow({
           className="max-w-72"
           aria-label={`View AI Traffic for ${r.canonical_url}`}
         >
-          <span className="truncate" title={r.canonical_url}>
+          <ClampText lines={1} tooltip={r.canonical_url}>
             {r.display_path}
-          </span>
+          </ClampText>
         </Button>
       </TableCell>
       <TableCell numeric="end">
@@ -158,7 +159,7 @@ function TrafficPageRow({
       <TableCell numeric="end">
         <TrafficLeg compact leg={r.findings} unit="findings" />
       </TableCell>
-      <TableCell>
+      <TableCell numeric="end">
         {r.last_crawl ? (
           <DisplayTime value={r.last_crawl} />
         ) : (

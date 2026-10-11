@@ -261,30 +261,6 @@ describe('Internal links', () => {
     expect(within(drawer).getByRole('button', { name: /Copy HTML/ })).toBeInTheDocument();
   });
 
-  it('explains when source capture cannot support placement instead of implying no links are needed', async () => {
-    mswServer.use(
-      http.get(endpoint, () =>
-        HttpResponse.json(
-          read(
-            analysis({
-              diagnostics: {
-                ...analysis().diagnostics,
-                candidates: 0,
-                completed: 0,
-                below_threshold: 0,
-                sources_without_passages: 20,
-              },
-            }),
-          ),
-        ),
-      ),
-    );
-    renderPanel();
-    expect(
-      await screen.findByText(/20 pages had no usable captured source passages/),
-    ).toBeInTheDocument();
-  });
-
   it('distinguishes failed analysis and unknown diagnostic reasons', async () => {
     mswServer.use(
       http.get(endpoint, () =>

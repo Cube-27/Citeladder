@@ -11,9 +11,10 @@ import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { Alert } from '@/components/ui/alert';
 import { ReadError, readErrorProps } from '@/components/ui/read-error';
-import { EditorialSectionHeader } from '@/components/ui/workspace';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DisplayTime } from '@/components/ui/display-time';
 import {
+  ClampText,
   Table,
   TableHeader,
   TableBody,
@@ -69,27 +70,20 @@ function Connections({
   const [revoking, setRevoking] = useState<z.infer<typeof crawlSourceSchema> | null>(null);
   const showHeader = headerWhenEmpty || Boolean(sources.data?.items.length);
   const { setupAvailable, unavailable } = setupState(sources);
-  return (
-    <section id="crawl-log-connections" className="grid gap-3" aria-label="Crawl log connections">
-      {showHeader ? (
-        <EditorialSectionHeader
-          title="Crawl logs"
-          actions={
-            unavailable ? undefined : (
-              <Button
-                size="sm"
-                onClick={() => {
-                  setIssued(null);
-                  setOpen(true);
-                }}
-                disabled={!canManage}
-              >
-                Connect crawl logs
-              </Button>
-            )
-          }
-        />
-      ) : null}
+  const connect = unavailable ? undefined : (
+    <Button
+      size="sm"
+      onClick={() => {
+        setIssued(null);
+        setOpen(true);
+      }}
+      disabled={!canManage}
+    >
+      Connect crawl logs
+    </Button>
+  );
+  const body = (
+    <>
       {sources.isError ? (
         <ReadError {...readErrorProps(sources)} fallback="Could not read crawl log sources" />
       ) : null}
@@ -142,7 +136,23 @@ function Connections({
         <CrawlLogCredential model={model} />
         <SetupAvailability model={model} />
       </Dialog>
-    </section>
+    </>
+  );
+  // With a header the section is a card like every other connection on the
+  // page: title left, its one action right, the sources beneath.
+  if (!showHeader)
+    return (
+      <section id="crawl-log-connections" className="grid gap-3" aria-label="Crawl log connections">
+        {body}
+      </section>
+    );
+  return (
+    <Card id="crawl-log-connections" aria-label="Crawl log connections">
+      <CardHeader actions={connect}>
+        <CardTitle>Crawl logs</CardTitle>
+      </CardHeader>
+      <CardContent className="grid gap-3 empty:hidden">{body}</CardContent>
+    </Card>
   );
 }
 /**
@@ -180,10 +190,13 @@ function StallDetail({ source }: Readonly<{ source: z.infer<typeof crawlSourceSc
   if (!source.stall_reason) return null;
   const failure = source.pull?.verification_failure;
   return (
-    <span className="type-caption">
-      {stallReasonLabel(source.stall_reason)}
-      {failure ? ' ' + verificationFailureLabel(failure) : ''}
-    </span>
+    <>
+      {' · '}
+      <span>
+        {stallReasonLabel(source.stall_reason)}
+        {failure ? ' ' + verificationFailureLabel(failure) : ''}
+      </span>
+    </>
   );
 }
 function SourceDiagnostics({
@@ -216,12 +229,12 @@ function SourceDiagnostics({
         {items.map((s) => (
           <TableRow key={s.id}>
             <TableCell>
-              <div className="grid gap-0.5">
-                <span>{s.host}</span>
-                <span className="type-caption">
+              <div className="grid min-w-0">
+                <ClampText lines={1}>{s.host}</ClampText>
+                <ClampText lines={1} className="type-caption">
                   {setupLabel(s.setup)} · {words(s.connection)} · {words(s.state)}
-                </span>
-                <StallDetail source={s} />
+                  <StallDetail source={s} />
+                </ClampText>
               </div>
             </TableCell>
             <TableCell>
@@ -230,20 +243,20 @@ function SourceDiagnostics({
               {s.sampling.kind === 'filtered' ? ' ' + s.sampling.description : ''}
             </TableCell>
             <TableCell>
-              <div className="grid gap-0.5">
-                <span>
+              <div className="grid min-w-0">
+                <ClampText lines={1}>
                   Accepted: <DisplayTime value={s.last_accepted_batch} fallback="Awaiting data" />
-                </span>
-                <span className="type-caption">
+                </ClampText>
+                <ClampText lines={1} className="type-caption">
                   Processed:{' '}
                   <DisplayTime value={s.last_processed_at} fallback="Awaiting processing" />
-                </span>
-                {s.pull ? (
-                  <span className="type-caption">
-                    Drained:{' '}
-                    <DisplayTime value={s.pull.last_drained_at} fallback="Not drained yet" />
-                  </span>
-                ) : null}
+                  {s.pull ? (
+                    <>
+                      {' · '}Drained:{' '}
+                      <DisplayTime value={s.pull.last_drained_at} fallback="Not drained yet" />
+                    </>
+                  ) : null}
+                </ClampText>
               </div>
             </TableCell>
             <TableCell>
@@ -251,7 +264,7 @@ function SourceDiagnostics({
               {s.unsupported_uploads} unsupported uploads · {s.unsupported_batches} unsupported
               batches
             </TableCell>
-            <TableCell>
+            <TableCell className="whitespace-nowrap">
               {canManage && s.status === 'active' ? (
                 <div className="flex gap-2">
                   {s.kind === 'webhook' ? (

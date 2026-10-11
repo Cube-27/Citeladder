@@ -22,6 +22,7 @@ import { Stack } from '@/components/ui/layout';
 import { DisplayTime } from '@/components/ui/display-time';
 import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import {
+  ClampText,
   Table,
   TableHeader,
   TableBody,
@@ -101,7 +102,7 @@ export function TrafficCrawlers({
               <TableHead>Purpose</TableHead>
               <TableHead numeric>Requests</TableHead>
               <TableHead numeric>Path-level pages</TableHead>
-              <TableHead>Last observed</TableHead>
+              <TableHead numeric>Last observed</TableHead>
               <TableHead>Status and verification</TableHead>
               <TableHead>Folder and resource breakdown</TableHead>
             </TableRow>
@@ -122,7 +123,7 @@ export function TrafficCrawlers({
                     {b.pages ?? MISSING_MARK} paths
                   </Button>
                 </TableCell>
-                <TableCell>
+                <TableCell numeric>
                   <DisplayTime value={b.last_seen} />
                 </TableCell>
                 <TableCell>
@@ -166,7 +167,7 @@ export function TrafficActivity({
           <caption className="sr-only">Retained automated request activity</caption>
           <TableHeader>
             <TableRow>
-              <TableHead>Observed</TableHead>
+              <TableHead numeric>Observed</TableHead>
               <TableHead>Bot</TableHead>
               <TableHead>Host and path</TableHead>
               <TableHead>Resource</TableHead>
@@ -177,7 +178,7 @@ export function TrafficActivity({
           <TableBody>
             {data.items.map((r) => (
               <TableRow key={r.id}>
-                <TableCell>
+                <TableCell numeric>
                   <DisplayTime value={r.occurred_at} />
                 </TableCell>
                 <TableCell>
@@ -225,17 +226,20 @@ function SourceLines({
 }: Readonly<{ source?: z.infer<typeof crawlCoverageResponseSchema>['sources'][number] }>) {
   return <CellLines lines={[source?.host ?? 'Removed source', words(source?.setup ?? '')]} />;
 }
-/** A primary value with its qualifiers beneath it in caption ink. */
+/**
+ * A primary value with its qualifiers beneath it in caption ink: one line
+ * each, so the row never grows past two; cut text moves into a tooltip.
+ */
 function CellLines({ lines }: Readonly<{ lines: string[] }>) {
   const [first, ...rest] = lines.filter(Boolean);
   return (
-    <div className="grid gap-0.5">
-      <span>{first}</span>
-      {rest.map((line, index) => (
-        <span key={index} className="type-caption">
-          {line}
-        </span>
-      ))}
+    <div className="grid min-w-0">
+      <ClampText lines={1}>{first}</ClampText>
+      {rest.length > 0 ? (
+        <ClampText lines={1} className="type-caption">
+          {rest.join(' · ')}
+        </ClampText>
+      ) : null}
     </div>
   );
 }

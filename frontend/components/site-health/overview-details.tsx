@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { ProjectLink } from '@/components/layout/scoped-link';
 
 import { CohortCompositionContext } from './cohort-composition-context';
-import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Delta } from '@/components/ui/delta';
@@ -12,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Drawer } from '@/components/ui/drawer';
 import { ScoreBar } from '@/components/ui/score-bar';
 import {
+  ClampText,
   Table,
   TableBody,
   TableCell,
@@ -38,7 +38,6 @@ export function OverviewDetails({ data }: Readonly<{ data: SiteHealthOverview }>
   const [webFundamentalsOpen, setWebFundamentalsOpen] = useState(false);
   return (
     <>
-      {data.limitations.length > 0 ? <Alert tone="info">{data.limitations.join(' ')}</Alert> : null}
       <div className={splitPaneClasses('peers')}>
         <DimensionLedger dimensions={data.aeo_dimensions} />
         <TopIssues issues={data.top_issues} />
@@ -89,29 +88,28 @@ function DimensionLedger({
             {dimensions.map((dimension) => (
               <TableRow key={dimension.key}>
                 <TableCell>
-                  {/* The subtitle stays a single row: the ledger is a scanning
+                  {/* Name over one caption line: the ledger is a scanning
                       surface, and a wrapping sentence pushes the score columns
                       off a screenful. Full text stays available on hover. */}
-                  <div className="grid max-w-md min-w-0 gap-1">
-                    <span className={textRole('emphasis', 'text-foreground')}>
+                  <div className="grid max-w-md min-w-0">
+                    <ClampText lines={1} className={textRole('emphasis', 'text-foreground')}>
                       {dimension.label}
-                    </span>
-                    <span className="type-caption truncate" title={dimension.description}>
-                      {dimension.description}
-                    </span>
-                    {dimension.reason === 'measured_at_site_scope' ? (
-                      <span className="type-caption">Measured at site scope</span>
-                    ) : null}
+                    </ClampText>
+                    <ClampText lines={1} className="type-caption">
+                      {dimension.reason === 'measured_at_site_scope'
+                        ? `Measured at site scope · ${dimension.description}`
+                        : dimension.description}
+                    </ClampText>
                   </div>
                 </TableCell>
                 <TableCell numeric>{formatScore(dimension.score)}</TableCell>
                 <TableCell className="min-w-32">
                   {dimension.score === null ? (
-                    <span className="type-caption">
+                    <ClampText lines={1} className="type-caption">
                       {dimension.reason === 'measured_at_site_scope'
                         ? 'Site-scoped evidence'
                         : statusLabel(dimension.dimension_measurement_state)}
-                    </span>
+                    </ClampText>
                   ) : (
                     <ScoreBar value={dimension.score} label={`${dimension.label} score`} />
                   )}
@@ -166,19 +164,21 @@ function TopIssues({ issues }: Readonly<{ issues: SiteHealthOverview['top_issues
             ) : (
               issues.map((issue) => (
                 <TableRow key={`${issue.rule_id}-${issue.finding_class}`}>
-                  <TableCell>
+                  <TableCell className="whitespace-nowrap">
                     <Badge variant="status" value={impactTone(issue.impact_band)}>
                       {impactLabel(issue.impact_band)}
                     </Badge>
                   </TableCell>
                   <TableCell>
                     <TextLink text="inherit" href={issueHref(issue.rule_id, issue.finding_class)}>
-                      {issue.description || issue.rule_id}
+                      <ClampText>{issue.description || issue.rule_id}</ClampText>
                     </TextLink>
                   </TableCell>
-                  <TableCell>{statusLabel(issue.finding_class)}</TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    {statusLabel(issue.finding_class)}
+                  </TableCell>
                   <TableCell numeric>{issue.affected_pages}</TableCell>
-                  <TableCell>
+                  <TableCell className="whitespace-nowrap">
                     <ScoreEffect roles={issue.score_roles} />
                   </TableCell>
                 </TableRow>
@@ -314,7 +314,7 @@ function ScoreEffect({ roles }: Readonly<{ roles: readonly string[] }>) {
   });
   if (labels.length === 0) return <UnavailableValue state="not_measured" />;
   return (
-    <div className="flex flex-wrap gap-1">
+    <div className="flex gap-1">
       {labels.map(([role, label]) => (
         <Badge key={role}>{label}</Badge>
       ))}

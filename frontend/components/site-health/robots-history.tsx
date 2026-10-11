@@ -3,7 +3,6 @@ import { PageLoading } from '@/components/layout/page-loading';
 import { useQuery } from '@tanstack/react-query';
 import type { robotsHistoryPageSchema } from '@citeladder/contracts/site-health';
 import type { z } from 'zod';
-import { Alert } from '@/components/ui/alert';
 import { InlineEmpty } from '@/components/ui/inline-empty';
 import { Pager } from '@/components/ui/pager';
 import { DisplayTime } from '@/components/ui/display-time';
@@ -57,7 +56,7 @@ export function RobotsHistory({
           <caption className="sr-only">robots.txt observation sequence</caption>
           <TableHeader>
             <TableRow>
-              <TableHead>Observed</TableHead>
+              <TableHead numeric>Observed</TableHead>
               <TableHead>Fetch status</TableHead>
               <TableHead>Policy</TableHead>
               <TableHead>Snapshot</TableHead>
@@ -66,7 +65,7 @@ export function RobotsHistory({
           <TableBody>
             {page.items.map((item) => (
               <TableRow key={item.crawl_id}>
-                <TableCell>
+                <TableCell numeric>
                   <DisplayTime value={item.robots.observed_at} />
                 </TableCell>
                 <TableCell>{robotsStatusLabels[item.robots.status]}</TableCell>
@@ -124,11 +123,6 @@ function RobotsCompare({ page }: Readonly<{ page: RobotsHistoryPage }>) {
       ))}
       {before && after ? (
         <>
-          {before.truncated || after.truncated ? (
-            <Alert tone="warning">
-              A retained robots.txt body was truncated. This diff covers only retained text.
-            </Alert>
-          ) : null}
           <p className={textRole('caption')}>
             Lines removed since the Before observation and added in the After observation. Choose
             two observations on this page.

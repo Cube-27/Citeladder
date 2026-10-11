@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { Badge } from '@/components/ui/badge';
 import {
+  ClampText,
   SortableTableHead,
   Table,
   TableBody,
@@ -141,7 +142,6 @@ export function PagesTable({
         {pages.map((page, index) => (
           <TableRow
             key={page.site_url_id}
-            density="multiline"
             // Preserve native row/cell semantics; View is the announced link.
             tabIndex={0}
             onClick={() => openPage(page.site_url_id)}
@@ -160,27 +160,24 @@ export function PagesTable({
                 full max-content width and shoves every following column off
                 screen — one tracking-parameter URL was enough to make the
                 table unreadable. Both lines are clamped to a fixed column and
-                carry the full value as a title tooltip. */}
+                carry the full value in a tooltip when cut. */}
             {/* The clamp lives on the inner box, not the `<td>`: under the
                 default `table-layout: auto` browsers treat `max-width` on a
                 cell as advisory and size the column to content anyway. */}
             <TableCell>
-              <span className="flex w-72 min-w-0 flex-col gap-1">
-                <span
-                  className={textRole('emphasis', 'text-foreground truncate')}
-                  title={pageDisplayTitle(page.title, page.display_url)}
-                >
+              <span className="flex w-72 min-w-0 flex-col">
+                <ClampText lines={1} className={textRole('emphasis', 'text-foreground')}>
                   {pageDisplayTitle(page.title, page.display_url)}
-                </span>
-                <span className="type-caption truncate tabular-nums" title={page.display_url}>
+                </ClampText>
+                <ClampText lines={1} className="type-caption tabular-nums">
                   {page.display_url}
-                </span>
+                </ClampText>
               </span>
             </TableCell>
-            <TableCell>
+            <TableCell className="whitespace-nowrap">
               <PageKindBadge pageKind={page.page_kind} />
             </TableCell>
-            <TableCell>
+            <TableCell className="whitespace-nowrap">
               <Badge variant="status" value={pageStatusBadgeValue(page.analysis_status)}>
                 {statusLabel(page.analysis_status)}
               </Badge>
@@ -225,7 +222,7 @@ export function PagesTable({
                 </TableCell>
               );
             })}
-            <TableCell className="type-caption">
+            <TableCell className="type-caption whitespace-nowrap">
               {page.main_content_indexable === null ? (
                 <UnavailableValue state="not_measured" />
               ) : (

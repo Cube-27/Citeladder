@@ -25,21 +25,21 @@ export function TrafficNoResults({
 /**
  * Empty state for the AI Traffic referrals view. Referral measurement begins
  * once a GA4 source/medium report has been imported, so GA4 is connected here
- * rather than in Settings.
+ * rather than in Settings; once it is, only the waiting-for-import line shows.
  */
 export function AiReferralsEmptyState() {
   return (
-    <div className="grid gap-4">
-      <DataSourceSetup
-        required={['ga4']}
-        title="Connect Google Analytics 4"
-        description="AI referrals come from this project's own GA4 sessions. Connect Google and choose the Analytics property for this site."
-      />
-      <EmptyState
-        icon={BarChart3}
-        heading="No AI-referral data yet"
-        description="Referrals appear here once GA4 sessions have been imported."
-      />
-    </div>
+    <DataSourceSetup
+      required={['ga4']}
+      title="Connect Google Analytics 4"
+      description="AI referrals come from this project's own GA4 sessions. Connect Google and choose the Analytics property for this site."
+      whenReady={
+        <EmptyState
+          icon={BarChart3}
+          heading="No AI-referral data yet"
+          description="Referrals appear here once GA4 sessions have been imported."
+        />
+      }
+    />
   );
 }

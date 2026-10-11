@@ -240,8 +240,8 @@ function SiteHealthNotices({
       ) : null}
       {screen.stalled ? (
         <Alert tone="warning">
-          This crawl has an expired worker lease. Recovery is still being checked; results already
-          persisted remain visible below.
+          This crawl stopped making progress. It resumes automatically if it can; results so far are
+          shown below.
         </Alert>
       ) : null}
     </>

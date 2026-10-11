@@ -119,7 +119,7 @@ export function RequestsByPurpose({
         <caption className="sr-only">Daily recognized automated requests</caption>
         <TableHeader>
           <TableRow>
-            <TableHead>Reporting day</TableHead>
+            <TableHead numeric>Reporting day</TableHead>
             <TableHead>Purpose</TableHead>
             <TableHead numeric>Requests</TableHead>
           </TableRow>
@@ -127,7 +127,7 @@ export function RequestsByPurpose({
         <TableBody>
           {series.map((s) => (
             <TableRow key={s.date + s.purpose}>
-              <TableCell>{s.date}</TableCell>
+              <TableCell numeric>{s.date}</TableCell>
               <TableCell>{words(s.purpose)}</TableCell>
               <TableCell numeric>{s.requests}</TableCell>
             </TableRow>

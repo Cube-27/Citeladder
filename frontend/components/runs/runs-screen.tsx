@@ -178,20 +178,12 @@ function RunsContent({
   }
   if (audits.length === 0) {
     return (
-      <Card>
-        <CardContent>
-          <EmptyState
-            icon={Play}
-            heading="No runs yet"
-            description="Launch your first audit to measure how AI engines answer questions about your brand."
-            action={
-              <Button variant="ghost" onClick={onLaunch}>
-                Launch your first audit
-              </Button>
-            }
-          />
-        </CardContent>
-      </Card>
+      <EmptyState
+        icon={Play}
+        heading="No runs yet"
+        description="Launch your first audit to measure how AI engines answer questions about your brand."
+        action={<Button onClick={onLaunch}>Launch your first audit</Button>}
+      />
     );
   }
 

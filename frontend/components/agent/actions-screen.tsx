@@ -13,6 +13,7 @@ import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { Select } from '@/components/ui/select';
 import { TextLink } from '@/components/ui/text-link';
 import {
+  ClampText,
   Table,
   TableBody,
   TableCell,
@@ -31,11 +32,10 @@ import {
 import { actionsQueries, type Action, type ActionStatus } from '@/lib/api/actions';
 import { actionStatusSchema } from '@citeladder/contracts/actions';
 import { queueCount, useActionStatusCounts } from '@/lib/agent/use-action-status-counts';
-import { AGENT_ACTIONS_PAGE_SIZE } from '@/lib/config/agent';
 import { ICONS } from '@/lib/icons';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { useProjectContext } from '@/lib/project/project-context';
-import { cursorControls, useCursorTable } from '@/lib/table/use-cursor-table';
+import { cursorControls, pageRange, useCursorTable } from '@/lib/table/use-cursor-table';
 
 const QUEUE = 'queue';
 type StatusFilter = typeof QUEUE | ActionStatus;
@@ -129,7 +129,7 @@ function ActionsList({
       status,
       target_kind: targetKind,
       cursor: pager.cursor,
-      limit: AGENT_ACTIONS_PAGE_SIZE,
+      limit: pager.pageSize,
     }),
   );
 
@@ -157,7 +157,12 @@ function ActionsList({
   return (
     <Stack aria-busy={query.isFetching || undefined}>
       <ActionsTable actions={page.items} />
-      <Pager hideWhenSinglePage page={pager.page} {...cursorControls(pager, page.next_cursor)} />
+      <Pager
+        range={{ ...pageRange(pager.page, pager.pageSize, page.items.length), noun: 'Actions' }}
+        pageSize={{ value: pager.pageSize, onChange: pager.setPageSize }}
+        {...cursorControls(pager, page.next_cursor)}
+        busy={query.isFetching}
+      />
     </Stack>
   );
 }
@@ -176,24 +181,22 @@ function ActionsTable({ actions }: Readonly<{ actions: Action[] }>) {
       </TableHeader>
       <TableBody>
         {actions.map((action) => (
-          <TableRow key={action.id} density="multiline">
+          <TableRow key={action.id}>
             <TableCell>
-              <div className="grid max-w-96 min-w-0 gap-1">
-                <TextLink
-                  href={`/agent/actions/${action.id}`}
-                  text="itemTitle"
-                  className="truncate"
-                >
-                  {action.target_label}
-                </TextLink>
-                <span className={textRole('caption')}>
+              <div className="grid max-w-96 min-w-0">
+                <ClampText lines={1} tooltip={action.target_label}>
+                  <TextLink href={`/agent/actions/${action.id}`} text="itemTitle">
+                    {action.target_label}
+                  </TextLink>
+                </ClampText>
+                <ClampText lines={1} className={textRole('caption')}>
                   {[
                     targetKindLabel(action.target_kind),
                     action.origin === 'agent' ? 'From agent work' : null,
                   ]
                     .filter(Boolean)
                     .join(' · ')}
-                </span>
+                </ClampText>
               </div>
             </TableCell>
             <TableCell>

@@ -115,13 +115,4 @@ describe('AI Overview rates', () => {
     expect(screen.getByText('1 of 40')).toBeVisible();
     expect(screen.getByText('30 of 40')).toBeVisible();
   });
-
-  it('says how many observations it could not use', () => {
-    panel(rates({ excluded: 3 }));
-
-    // Excluding them silently would let a gap in our retrieval read as a clean
-    // measurement of the brand being absent.
-    expect(screen.getByText(/3 observations were not retrievable/)).toBeVisible();
-    expect(screen.getByText(/not counted as the brand being absent/)).toBeVisible();
-  });
 });

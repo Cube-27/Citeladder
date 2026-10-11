@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
+  ClampText,
   Table,
   TableBody,
   TableCell,
@@ -71,10 +72,14 @@ export function SearchIntelligenceCompetitors({
               return (
                 <TableRow key={competitor.identity}>
                   <TableCell>
-                    <span className={textRole('itemTitle', 'block')}>{competitor.label}</span>
-                    <span className={textRole('caption')}>
-                      {footprint?.target_hostname ?? competitor.hostname}
-                    </span>
+                    <div className="grid max-w-sm min-w-0">
+                      <ClampText lines={1} className={textRole('itemTitle')}>
+                        {competitor.label}
+                      </ClampText>
+                      <ClampText lines={1} className={textRole('caption')}>
+                        {footprint?.target_hostname ?? competitor.hostname}
+                      </ClampText>
+                    </div>
                   </TableCell>
                   <TableCell numeric>
                     <SearchValue

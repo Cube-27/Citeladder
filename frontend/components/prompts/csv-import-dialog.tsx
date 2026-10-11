@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { CsvImportFileInput, CsvImportPreview, useCsvImportFile } from '@/components/ui/csv-import';
 import { Dialog } from '@/components/ui/dialog';
 import {
+  ClampText,
   Table,
   TableBody,
   TableCell,
@@ -35,7 +36,7 @@ import {
  */
 function RowStatus({ errors }: Readonly<{ errors: readonly string[] }>) {
   if (errors.length > 0)
-    return <span className="type-caption text-danger-text">{errors.join(' ')}</span>;
+    return <ClampText className="type-caption text-danger-text">{errors.join(' ')}</ClampText>;
   return <span className="type-caption text-success-text">Ready</span>;
 }
 
@@ -121,7 +122,7 @@ export function CsvImportDialog({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Row</TableHead>
+                  <TableHead numeric>Row</TableHead>
                   <TableHead>Topic</TableHead>
                   <TableHead>Prompt</TableHead>
                   <TableHead>Status</TableHead>
@@ -135,10 +136,10 @@ export function CsvImportDialog({
                       <TableCell numeric className="text-muted">
                         {row.line}
                       </TableCell>
-                      <TableCell className="max-w-45 truncate">
+                      <TableCell className="max-w-45">
                         {row.input.topic || <UnavailableValue state="not_set" />}
                       </TableCell>
-                      <TableCell className="max-w-90 truncate">
+                      <TableCell className="max-w-90">
                         {row.input.text || <UnavailableValue state="not_set" />}
                       </TableCell>
                       <TableCell>

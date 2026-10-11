@@ -159,7 +159,6 @@ const terminalOverview = (overrides: Record<string, unknown> = {}) => ({
     metrics: [],
     cohort_composition: UNCHANGED_COHORT_COMPOSITION,
   },
-  limitations: ['Audited pages only.'],
   ...overrides,
 });
 

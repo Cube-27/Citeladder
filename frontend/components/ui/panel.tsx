@@ -60,6 +60,9 @@ export function panelClasses(
   className?: string,
 ) {
   return cn(
+    // Marks a container surface: a nested empty state shares it rather than
+    // drawing a second card inside.
+    'surface-panel',
     PANEL_EDGE[edge],
     tone === 'panel' && edge === 'rounded' && 'border-border border',
     PANEL_TONE[tone],
