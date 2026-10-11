@@ -29,9 +29,8 @@ const env = Object.fromEntries(
 env[types ? 'TYPES_DATABASE_URL' : 'API_TEST_DATABASE_URL'] = url;
 
 // Developer tooling runs git and pnpm from the caller's PATH, like quality.mjs.
-const gitDir = execFileSync('git', ['-C', apiRoot, 'rev-parse', '--absolute-git-dir'], {
-  encoding: 'utf8',
-}).trim(); // NOSONAR: trusted PATH.
+const gitArgs = ['-C', apiRoot, 'rev-parse', '--absolute-git-dir'];
+const gitDir = execFileSync('git', gitArgs, { encoding: 'utf8' }).trim(); // NOSONAR: trusted PATH.
 const log = join(gitDir, 'api-test.log');
 const command = types ? ['db:types'] : ['exec', 'vitest', 'run', ...files];
 const output = openSync(log, 'w');
