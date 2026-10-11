@@ -68,27 +68,104 @@ function dependencies(judgeProbability?: number) {
     },
     io,
   );
+  const judgeFetch = vi.fn<typeof fetch>(async () =>
+    Response.json({
+      model: 'test-judge',
+      answers: Object.fromEntries(
+        Object.keys(policy.models.quality.noul_questions).map((key) => [
+          key,
+          { noul: judgeProbability },
+        ]),
+      ),
+    }),
+  );
   const judge =
     judgeProbability === undefined
       ? null
       : createJevClient(
           { ...jevSettings({}), apiKey: 'test-only' },
-          {
-            fetch: async () =>
-              Response.json({
-                model: 'test-judge',
-                answers: Object.fromEntries(
-                  Object.keys(policy.models.quality.noul_questions).map((key) => [
-                    key,
-                    { noul: judgeProbability },
-                  ]),
-                ),
-              }),
-            sleep: async () => {},
-          },
+          { fetch: judgeFetch, sleep: async () => {} },
         );
-  return { gateway: () => gateway, judge: () => judge, io };
+  return { gateway: () => gateway, judge: () => judge, io, judgeFetch };
 }
+type PortfolioPrompt = {
+  topic_id: string;
+  text: string;
+  buyer_stage: string;
+  prompt_intent: string;
+};
+/** Saves an agent prompt-portfolio revision and returns its id. */
+async function savedPortfolio(prompts: PortfolioPrompt[]) {
+  const now = new Date(),
+    chatId = randomUUID(),
+    outputId = randomUUID(),
+    revisionId = randomUUID();
+  const scope = { workspace_id: tenant.workspaceId, project_id: tenant.projectId };
+  await db
+    .insertInto('agent_chats')
+    .values({
+      ...scope,
+      id: chatId,
+      action_id: null,
+      archived_at: null,
+      context_refs: '[]',
+      created_by_user_id: tenant.userId,
+      pinned_skill_id: null,
+      title: 'Portfolio',
+      turn_count: 0,
+      created_at: now,
+      updated_at: now,
+      last_activity_at: now,
+    })
+    .execute();
+  await db
+    .insertInto('agent_outputs')
+    .values({
+      ...scope,
+      id: outputId,
+      chat_id: chatId,
+      action_id: null,
+      format_id: null,
+      kind: 'prompt_portfolio',
+      phase: 'draft',
+      skill_id: 'prompt_discovery',
+      target_kind: null,
+      target_label: null,
+      created_at: now,
+      updated_at: now,
+    })
+    .execute();
+  await db
+    .insertInto('agent_output_revisions')
+    .values({
+      ...scope,
+      id: revisionId,
+      output_id: outputId,
+      number: 1,
+      author: 'user',
+      author_user_id: tenant.userId,
+      phase: 'draft',
+      title: 'Portfolio',
+      body: '```JSON \n' + JSON.stringify({ prompts }) + '\n```',
+      source_refs: '[]',
+      approved_at: null,
+      approved_by_user_id: null,
+      message_id: null,
+      parent_revision_id: null,
+      run_id: null,
+      created_at: now,
+    })
+    .execute();
+  return { outputId, revisionId };
+}
+const selectedTopic = async () =>
+  (
+    await db
+      .selectFrom('topics')
+      .select('id')
+      .where('project_id', '=', tenant.projectId)
+      .executeTakeFirstOrThrow()
+  ).id;
 const oneSlotBatches = () => {
   vi.stubEnv('GENERATION_MODEL_BATCH_SIZE', '1');
   vi.stubEnv('GENERATION_DRAFT_CONCURRENCY', '1');
@@ -99,89 +176,20 @@ const generate = (deps: Parameters<typeof generatePrompts>[4] = dependencies()) 
 
 describe('prompt generation at the PostgreSQL boundary', () => {
   it('admits only scoped saved portfolios without model generation and preserves revision provenance', async () => {
-    const now = new Date(),
-      chatId = randomUUID(),
-      outputId = randomUUID(),
-      revisionId = randomUUID();
-    const scope = { workspace_id: tenant.workspaceId, project_id: tenant.projectId };
-    const selected = await db
-      .selectFrom('topics')
-      .select('id')
-      .where('project_id', '=', tenant.projectId)
-      .executeTakeFirstOrThrow();
-    await db
-      .insertInto('agent_chats')
-      .values({
-        ...scope,
-        id: chatId,
-        action_id: null,
-        archived_at: null,
-        context_refs: '[]',
-        created_by_user_id: tenant.userId,
-        pinned_skill_id: null,
-        title: 'Portfolio',
-        turn_count: 0,
-        created_at: now,
-        updated_at: now,
-        last_activity_at: now,
-      })
-      .execute();
-    await db
-      .insertInto('agent_outputs')
-      .values({
-        ...scope,
-        id: outputId,
-        chat_id: chatId,
-        action_id: null,
-        format_id: null,
-        kind: 'prompt_portfolio',
-        phase: 'draft',
-        skill_id: 'prompt_discovery',
-        target_kind: null,
-        target_label: null,
-        created_at: now,
-        updated_at: now,
-      })
-      .execute();
-    await db
-      .insertInto('agent_output_revisions')
-      .values({
-        ...scope,
-        id: revisionId,
-        output_id: outputId,
-        number: 1,
-        author: 'user',
-        author_user_id: tenant.userId,
-        phase: 'draft',
-        title: 'Portfolio',
-        body:
-          '```JSON \n' +
-          JSON.stringify({
-            prompts: [
-              {
-                topic_id: selected.id,
-                text: 'Which running shoes cushion knees?',
-                buyer_stage: 'consideration',
-                prompt_intent: 'recommend',
-              },
-              {
-                topic_id: randomUUID(),
-                text: 'Which running shoes suit wide feet?',
-                buyer_stage: 'decision',
-                prompt_intent: 'buy',
-              },
-            ],
-          }) +
-          '\n```',
-        source_refs: '[]',
-        approved_at: null,
-        approved_by_user_id: null,
-        message_id: null,
-        parent_revision_id: null,
-        run_id: null,
-        created_at: now,
-      })
-      .execute();
+    const { outputId, revisionId } = await savedPortfolio([
+      {
+        topic_id: await selectedTopic(),
+        text: 'Which running shoes cushion knees?',
+        buyer_stage: 'consideration',
+        prompt_intent: 'recommend',
+      },
+      {
+        topic_id: randomUUID(),
+        text: 'Which running shoes suit wide feet?',
+        buyer_stage: 'decision',
+        prompt_intent: 'buy',
+      },
+    ]);
     const deps = dependencies(),
       request = generationInput.parse({ agent_revision_id: revisionId });
     const result = await generatePrompts(db, tenant.workspaceId, setId, request, deps);
@@ -304,6 +312,35 @@ describe('prompt generation at the PostgreSQL boundary', () => {
     const deps = dependencies();
     await expect(generate(deps)).rejects.toMatchObject({ status: 429 });
     expect(deps.io.fetch).not.toHaveBeenCalled();
+  });
+  it('windows platform judge calls on saved portfolios and model drafts alike', async () => {
+    vi.stubEnv('ABUSE_PROMPT_JUDGE_CALLS_PER_WORKSPACE_DAILY', '1');
+    const topicId = await selectedTopic();
+    const portfolio = async (text: string) =>
+      generationInput.parse({
+        agent_revision_id: (
+          await savedPortfolio([
+            { topic_id: topicId, text, buyer_stage: 'consideration', prompt_intent: 'recommend' },
+          ])
+        ).revisionId,
+      });
+    const deps = dependencies(0.9);
+    const first = await portfolio('Which running shoes cushion knees?');
+    await generatePrompts(db, tenant.workspaceId, setId, first, deps);
+    const judged = deps.judgeFetch.mock.calls.length;
+    expect(judged).toBeGreaterThan(0);
+    const second = await portfolio('Which running shoes suit wide feet?');
+    await expect(
+      generatePrompts(db, tenant.workspaceId, setId, second, deps),
+    ).rejects.toMatchObject({ status: 429 });
+    await expect(generate(deps)).rejects.toMatchObject({ status: 429 });
+    expect(deps.judgeFetch).toHaveBeenCalledTimes(judged);
+    const runs = await db
+      .selectFrom('prompt_generation_runs')
+      .select('id')
+      .where('workspace_id', '=', tenant.workspaceId)
+      .execute();
+    expect(runs).toHaveLength(1);
   });
   it('refuses foreign sets before configuring or calling a model', async () => {
     const other = await fixtures.tenant(),
