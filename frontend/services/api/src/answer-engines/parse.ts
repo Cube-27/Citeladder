@@ -77,23 +77,31 @@ function citation(
     cited_text: citedText,
   };
 }
+function callArguments(call: ObjectValue, transport: string) {
+  if (transport === 'openai') return call.action;
+  return transport === 'google' ? (call.arguments ?? call.args) : call.input;
+}
+function outputItems(source: ObjectValue, transport: string) {
+  if (transport === 'openai') return source.output;
+  return transport === 'google' ? source.steps : source.content;
+}
+function isSearchCall(item: ObjectValue, transport: string) {
+  if (transport === 'openai') return item.type === 'web_search_call';
+  if (transport === 'google') return (item.type ?? item.step_type) === 'google_search_call';
+  return item.type === 'server_tool_use' && item.name === 'web_search';
+}
 function events(calls: ObjectValue[], transport: string): SearchEvent[] {
   return calls
     .flatMap((call, callIndex) => {
-      const args = object(
-        transport === 'openai'
-          ? call.action
-          : transport === 'google'
-            ? (call.arguments ?? call.args)
-            : call.input,
-      );
+      const args = object(callArguments(call, transport));
       const query = transport === 'google' ? '' : text(args.query);
       const queries = [
         ...(query ? [query] : []),
         ...(Array.isArray(args.queries) ? args.queries.map(text).filter(Boolean) : []),
       ];
       // OpenAI and Anthropic preserve a count-only search when query text is absent.
-      const values = queries.length ? queries : transport === 'google' ? [] : [''];
+      const countOnly = transport === 'google' ? [] : [''];
+      const values = queries.length ? queries : countOnly;
       return values.map((value, index) => ({
         sequence: 0,
         query: value,
@@ -142,16 +150,8 @@ const ANTHROPIC_FINISH: Record<string, FinishReason> = {
 export function parseAnswer(payload: unknown, request: AnswerRequest, latencyMs = 0): Answer {
   const source = objectSchema.parse(payload);
   const transport = request.transport_provider;
-  const items = objects(
-    transport === 'openai' ? source.output : transport === 'google' ? source.steps : source.content,
-  );
-  const calls = items.filter((item) =>
-    transport === 'openai'
-      ? item.type === 'web_search_call'
-      : transport === 'google'
-        ? (item.type ?? item.step_type) === 'google_search_call'
-        : item.type === 'server_tool_use' && item.name === 'web_search',
-  );
+  const items = objects(outputItems(source, transport));
+  const calls = items.filter((item) => isSearchCall(item, transport));
   const searchEvents = events(calls, transport);
   const blocks =
     transport === 'anthropic'

@@ -80,6 +80,30 @@ const schema = z.strictObject({
   fact_check: factCheck,
 });
 
+function assertFactCheck(facts: z.output<typeof factCheck>) {
+  if (new Set(facts.topics).size !== facts.topics.length)
+    throw new ConfigError('Fact-check topics must be unique');
+  for (const [topic, related] of Object.entries(facts.related_topics)) {
+    const parsed = factTopicSchema.safeParse(topic);
+    if (
+      !parsed.success ||
+      related.includes(parsed.data) ||
+      related.some((other) => !facts.topics.includes(other))
+    )
+      throw new ConfigError(`Fact-check related topics for ${topic} are invalid`);
+  }
+  if (facts.claims_default_limit > facts.claims_max_limit)
+    throw new ConfigError('Fact-check claim default limit exceeds its maximum');
+  if (facts.min_contradiction_confidence < facts.min_confidence)
+    throw new ConfigError('Fact-check contradiction confidence must not be below the floor');
+  for (const slot of ['{topics}', '{max_claims}'])
+    if (!facts.claims_user_addendum.includes(slot))
+      throw new ConfigError(`Fact-check claims addendum is missing ${slot}`);
+  for (const slot of ['{brand}', '{language}', '{facts}', '{claims}'])
+    if (!facts.verify_user_template.includes(slot))
+      throw new ConfigError(`Fact-check verification template is missing ${slot}`);
+}
+
 function loadPerception(input: unknown) {
   const result = schema.safeParse(input);
   if (!result.success)
@@ -92,26 +116,7 @@ function loadPerception(input: unknown) {
   for (const slot of ['{prompt}', '{language}', '{themes}', '{max_aspects}', '{entities}'])
     if (!config.user_template.includes(slot))
       throw new ConfigError(`Perception user template is missing ${slot}`);
-  const facts = config.fact_check;
-  if (new Set(facts.topics).size !== facts.topics.length)
-    throw new ConfigError('Fact-check topics must be unique');
-  for (const [topic, related] of Object.entries(facts.related_topics))
-    if (
-      !factTopicSchema.safeParse(topic).success ||
-      related.some((other) => other === topic) ||
-      related.some((other) => !facts.topics.includes(other))
-    )
-      throw new ConfigError(`Fact-check related topics for ${topic} are invalid`);
-  if (facts.claims_default_limit > facts.claims_max_limit)
-    throw new ConfigError('Fact-check claim default limit exceeds its maximum');
-  if (facts.min_contradiction_confidence < facts.min_confidence)
-    throw new ConfigError('Fact-check contradiction confidence must not be below the floor');
-  for (const slot of ['{topics}', '{max_claims}'])
-    if (!facts.claims_user_addendum.includes(slot))
-      throw new ConfigError(`Fact-check claims addendum is missing ${slot}`);
-  for (const slot of ['{brand}', '{language}', '{facts}', '{claims}'])
-    if (!facts.verify_user_template.includes(slot))
-      throw new ConfigError(`Fact-check verification template is missing ${slot}`);
+  assertFactCheck(config.fact_check);
   return config;
 }
 

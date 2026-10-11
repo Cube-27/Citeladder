@@ -8,6 +8,42 @@ type RepricingRequest = {
   workspaceId?: string;
   dryRun: boolean;
 };
+type RepricingState = 'exists' | 'preview' | 'missing' | 'appended';
+async function repriceArtifact(
+  db: Database,
+  artifact: { id: string; workspace_id: string },
+  request: RepricingRequest,
+): Promise<RepricingState> {
+  const prior = (database: Database) =>
+    database
+      .selectFrom('execution_cost_projections')
+      .select('id')
+      .where('raw_response_artifact_id', '=', artifact.id)
+      .where('formula_version', '=', request.formulaVersion)
+      .where('pricing_version', '=', request.pricingVersion)
+      .executeTakeFirst();
+  if (request.dryRun) return (await prior(db)) ? 'exists' : 'preview';
+  return db.transaction().execute(async (trx) => {
+    const source = await trx
+      .selectFrom('raw_response_artifacts as r')
+      .innerJoin('audits as a', 'a.id', 'r.audit_id')
+      .select('r.id')
+      .where('r.id', '=', artifact.id)
+      .where('a.workspace_id', '=', artifact.workspace_id)
+      .forUpdate('r')
+      .executeTakeFirst();
+    if (!source) return 'missing';
+    if (await prior(trx)) return 'exists';
+    const appended = await appendCostProjection(
+      trx,
+      artifact.workspace_id,
+      artifact.id,
+      request.pricingVersion,
+      request.formulaVersion,
+    );
+    return appended ? 'appended' : 'missing';
+  });
+}
 /** Operator-selected persisted artifacts; every append uses its authorized workspace and honest version pair. */
 export async function repriceExecutions(db: Database, request: RepricingRequest) {
   if (request.formulaVersion !== costPolicy.formula_version)
@@ -27,39 +63,7 @@ export async function repriceExecutions(db: Database, request: RepricingRequest)
     appended = 0,
     wouldAppend = 0;
   for (const artifact of candidates) {
-    const prior = (database: Database) =>
-      database
-        .selectFrom('execution_cost_projections')
-        .select('id')
-        .where('raw_response_artifact_id', '=', artifact.id)
-        .where('formula_version', '=', request.formulaVersion)
-        .where('pricing_version', '=', request.pricingVersion)
-        .executeTakeFirst();
-    const state = request.dryRun
-      ? (await prior(db))
-        ? 'exists'
-        : 'preview'
-      : await db.transaction().execute(async (trx) => {
-          const source = await trx
-            .selectFrom('raw_response_artifacts as r')
-            .innerJoin('audits as a', 'a.id', 'r.audit_id')
-            .select('r.id')
-            .where('r.id', '=', artifact.id)
-            .where('a.workspace_id', '=', artifact.workspace_id)
-            .forUpdate('r')
-            .executeTakeFirst();
-          if (!source) return 'missing';
-          if (await prior(trx)) return 'exists';
-          return (await appendCostProjection(
-            trx,
-            artifact.workspace_id,
-            artifact.id,
-            request.pricingVersion,
-            request.formulaVersion,
-          ))
-            ? 'appended'
-            : 'missing';
-        });
+    const state = await repriceArtifact(db, artifact, request);
     if (state === 'exists') {
       alreadyProjected++;
       continue;

@@ -61,7 +61,7 @@ export function summarizeSourcePattern(citations: CitationEvidence[]) {
   const counts = new Map<string, number>();
   const competitors = new Map<string, string[]>();
   const independent = new Set<string>();
-  const independentClasses = [
+  const independentClasses = new Set<string>([
     p.SOURCE_CLASS_REVIEW_MARKETPLACE,
     p.SOURCE_CLASS_EDITORIAL_THIRD_PARTY,
     p.SOURCE_CLASS_COMMUNITY,
@@ -69,10 +69,10 @@ export function summarizeSourcePattern(citations: CitationEvidence[]) {
     p.SOURCE_CLASS_INSTITUTIONAL,
     p.SOURCE_CLASS_VIDEO,
     p.SOURCE_CLASS_OTHER_THIRD_PARTY,
-  ];
+  ]);
   for (const [domain, [kind, citation]] of domains) {
     counts.set(kind, (counts.get(kind) ?? 0) + 1);
-    if (independentClasses.includes(kind)) independent.add(domain);
+    if (independentClasses.has(kind)) independent.add(domain);
     if (citation.matched_competitor) {
       const list = competitors.get(citation.matched_competitor) ?? [];
       list.push(domain);

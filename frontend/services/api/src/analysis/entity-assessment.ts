@@ -8,8 +8,8 @@ import {
 } from './aliases.ts';
 import type { ScoringConfig } from './scoring.ts';
 import { policy } from '../config.ts';
-const word = '[\\p{L}\\p{N}_]';
-const escapeRegex = (text: string) => text.replaceAll(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+const word = String.raw`[\p{L}\p{N}_]`;
+const escapeRegex = (text: string) => text.replaceAll(/[.*+?^${}()|[\]\\]/gu, String.raw`\$&`);
 const limitation =
   "Explicit-language detection over English phrasing in a 45-character window around the entity's FIRST mention. Not sentiment, not a calibrated judgement, and not a reading of the whole answer.";
 

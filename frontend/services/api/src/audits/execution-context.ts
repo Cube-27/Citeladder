@@ -58,6 +58,42 @@ function platformSecret(
   return secret;
 }
 
+type RouteSnapshot = z.infer<typeof routeSchema>;
+function assertRouteMatchesCatalog(task: AuditTask, route: RouteSnapshot) {
+  const catalog = providerPolicy.routes[task.logical_engine as Engine];
+  if (
+    !catalog ||
+    catalog.transport_provider !== task.transport_provider ||
+    catalog.transport_model !== task.transport_model ||
+    route.logical_engine !== task.logical_engine ||
+    route.transport_provider !== task.transport_provider ||
+    route.transport_model !== task.transport_model
+  )
+    throw new ProviderError(providerPolicy.errors.invalid_surface);
+}
+async function loadActiveConnection(db: Database, route: RouteSnapshot, task: AuditTask, at: Date) {
+  const connection = await db
+    .selectFrom('provider_connections as c')
+    .innerJoin('workspaces as w', 'w.id', 'c.workspace_id')
+    .selectAll('c')
+    .select('w.is_system')
+    .where('c.id', '=', route.connection_id)
+    .where('c.credential_source', '=', route.credential_source)
+    .where('c.transport_provider', '=', route.transport_provider)
+    .where('w.is_system', '=', route.credential_source === 'platform')
+    .$if(route.credential_source === 'byok', (query) =>
+      query.where('c.workspace_id', '=', task.workspace_id),
+    )
+    .forShare('c')
+    .executeTakeFirst();
+  if (
+    !connection?.active ||
+    connection.last_test_status !== 'ok' ||
+    (connection.paused_at && (!connection.pause_until || connection.pause_until > at))
+  )
+    throw unavailable();
+  return connection;
+}
 /** The execution secret exists only in this detached context, never in snapshots or logs. */
 export async function loadExecutionContext(
   db: Database,
@@ -80,36 +116,8 @@ export async function loadExecutionContext(
     const parsed = routeSchema.safeParse(task.provider_route_snapshot);
     if (!parsed.success) throw unavailable();
     const route = parsed.data;
-    const catalog = providerPolicy.routes[task.logical_engine as Engine];
-    if (
-      !catalog ||
-      catalog.transport_provider !== task.transport_provider ||
-      catalog.transport_model !== task.transport_model ||
-      route.logical_engine !== task.logical_engine ||
-      route.transport_provider !== task.transport_provider ||
-      route.transport_model !== task.transport_model
-    )
-      throw new ProviderError(providerPolicy.errors.invalid_surface);
-    const connection = await trx
-      .selectFrom('provider_connections as c')
-      .innerJoin('workspaces as w', 'w.id', 'c.workspace_id')
-      .selectAll('c')
-      .select('w.is_system')
-      .where('c.id', '=', route.connection_id)
-      .where('c.credential_source', '=', route.credential_source)
-      .where('c.transport_provider', '=', route.transport_provider)
-      .where('w.is_system', '=', route.credential_source === 'platform')
-      .$if(route.credential_source === 'byok', (query) =>
-        query.where('c.workspace_id', '=', task.workspace_id),
-      )
-      .forShare('c')
-      .executeTakeFirst();
-    if (
-      !connection?.active ||
-      connection.last_test_status !== 'ok' ||
-      (connection.paused_at && (!connection.pause_until || connection.pause_until > at))
-    )
-      throw unavailable();
+    assertRouteMatchesCatalog(task, route);
+    const connection = await loadActiveConnection(trx, route, task, at);
     if (
       task.provider_submission_ref &&
       (task.provider_connection_id !== connection.id ||

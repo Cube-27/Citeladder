@@ -100,101 +100,123 @@ export async function buildManifest(
     instructions: instructions ?? null,
   });
 }
-export function suppliedManifest(
-  manifest: Manifest,
-  limit = agentPolicy.context_package_max_chars,
+type SuppliedManifest = {
+  instructions: Manifest['instructions'];
+  package: Manifest['package'];
+  action: Manifest['action'];
+  mentions: Manifest['mentions'];
+  omissions: string[];
+};
+function optionalBackgroundKeys(manifest: Manifest) {
+  const issueReference = manifest.refs.issue_group_reference;
+  const selectedPage =
+    manifest.refs.target_url ||
+    manifest.refs.target_site_url_id ||
+    (issueReference &&
+      typeof issueReference === 'object' &&
+      !Array.isArray(issueReference) &&
+      issueReference.site_url_id);
+  // A specifically selected page remains evidence, not background.
+  return selectedPage ? ['brand'] : ['target_page', 'brand'];
+}
+function trimOccurrences(
+  supplied: SuppliedManifest,
+  group: Record<string, Json>,
+  over: () => boolean,
 ) {
-  const omissions: string[] = [];
-  const supplied = {
-    instructions: manifest.instructions,
-    package: { ...manifest.package, sections: { ...manifest.package.sections } },
-    action: manifest.action,
-    mentions: [...manifest.mentions],
-    omissions,
+  const occurrences = group.occurrences;
+  const sample = group.sample;
+  if (!Array.isArray(occurrences) || !sample || typeof sample !== 'object' || Array.isArray(sample))
+    return;
+  const selected = [...occurrences];
+  const suppliedSample = { ...sample } as Record<string, Json>;
+  supplied.package.sections.issue_group = {
+    ...group,
+    occurrences: selected,
+    sample: suppliedSample,
   };
-  const size = () => JSON.stringify(supplied).length;
-  // Background loses its place before the evidence the user selected. JSONB
-  // key order is not selection priority.
-  if (size() > limit && Object.hasOwn(supplied.package.sections, 'related_site')) {
-    delete supplied.package.sections.related_site;
-    omissions.push('package.sections.related_site');
+  while (over() && selected.length) {
+    selected.pop();
+    suppliedSample.supplied_occurrences = selected.length;
+    suppliedSample.complete = false;
+    if (!supplied.omissions.includes('package.sections.issue_group.occurrences'))
+      supplied.omissions.push('package.sections.issue_group.occurrences');
   }
+}
+function trimIssueGroup(supplied: SuppliedManifest, manifest: Manifest, over: () => boolean) {
   const group = supplied.package.sections.issue_group;
-  if (group && typeof group === 'object' && !Array.isArray(group)) {
-    const issueReference = manifest.refs.issue_group_reference;
-    const selectedPage =
-      manifest.refs.target_url ||
-      manifest.refs.target_site_url_id ||
-      (issueReference &&
-        typeof issueReference === 'object' &&
-        !Array.isArray(issueReference) &&
-        issueReference.site_url_id);
-    // Preserve the selected issue before optional company/page background.
-    // A specifically selected page remains evidence, not background.
-    for (const key of ['target_page', 'brand']) {
-      if (key === 'target_page' && selectedPage) continue;
-      if (size() > limit && Object.hasOwn(supplied.package.sections, key)) {
-        delete supplied.package.sections[key];
-        omissions.push(`package.sections.${key}`);
-      }
-    }
-    const occurrences = group.occurrences;
-    const sample = group.sample;
-    if (
-      Array.isArray(occurrences) &&
-      sample &&
-      typeof sample === 'object' &&
-      !Array.isArray(sample)
-    ) {
-      const selected = [...occurrences];
-      const suppliedSample = { ...sample };
-      supplied.package.sections.issue_group = {
-        ...group,
-        occurrences: selected,
-        sample: suppliedSample,
-      };
-      while (size() > limit && selected.length) {
-        selected.pop();
-        suppliedSample.supplied_occurrences = selected.length;
-        suppliedSample.complete = false;
-        if (!omissions.includes('package.sections.issue_group.occurrences'))
-          omissions.push('package.sections.issue_group.occurrences');
-      }
+  if (!group || typeof group !== 'object' || Array.isArray(group)) return;
+  // Preserve the selected issue before optional company/page background.
+  for (const key of optionalBackgroundKeys(manifest)) {
+    if (over() && Object.hasOwn(supplied.package.sections, key)) {
+      delete supplied.package.sections[key];
+      supplied.omissions.push(`package.sections.${key}`);
     }
   }
+  trimOccurrences(supplied, group, over);
+}
+function dropSections(supplied: SuppliedManifest, over: () => boolean) {
   for (const key of Object.keys(supplied.package.sections).reverse()) {
-    if (size() <= limit) break;
+    if (!over()) break;
     // Selected upstream documents must remain exact, even when they cannot fit.
     if (key === 'upstream_revision') continue;
     delete supplied.package.sections[key];
-    omissions.push(`package.sections.${key}`);
+    supplied.omissions.push(`package.sections.${key}`);
   }
+}
+function dropBlocks(supplied: SuppliedManifest, over: () => boolean) {
   for (const key of [
     'related_site_block',
     'issue_block',
     'target_page_block',
     'brand_block',
   ] as const) {
-    if (size() <= limit) break;
+    if (!over()) break;
     if (supplied.package[key]) {
       supplied.package[key] = '';
-      omissions.push(`package.${key}`);
+      supplied.omissions.push(`package.${key}`);
     }
   }
-  while (size() > limit && supplied.mentions.length) {
+}
+function dropMentions(supplied: SuppliedManifest, over: () => boolean) {
+  while (over() && supplied.mentions.length) {
     const removed = supplied.mentions.pop()!;
-    omissions.push(`mentioned_action:${removed.id}`);
+    supplied.omissions.push(`mentioned_action:${removed.id}`);
   }
-  if (size() > limit && supplied.action) {
+}
+export function suppliedManifest(
+  manifest: Manifest,
+  limit = agentPolicy.context_package_max_chars,
+) {
+  const omissions: string[] = [];
+  const supplied: SuppliedManifest = {
+    instructions: manifest.instructions,
+    package: { ...manifest.package, sections: { ...manifest.package.sections } },
+    action: manifest.action,
+    mentions: [...manifest.mentions],
+    omissions,
+  };
+  const over = () => JSON.stringify(supplied).length > limit;
+  // Background loses its place before the evidence the user selected. JSONB
+  // key order is not selection priority.
+  if (over() && Object.hasOwn(supplied.package.sections, 'related_site')) {
+    delete supplied.package.sections.related_site;
+    omissions.push('package.sections.related_site');
+  }
+  trimIssueGroup(supplied, manifest, over);
+  dropSections(supplied, over);
+  dropBlocks(supplied, over);
+  dropMentions(supplied, over);
+  if (over() && supplied.action) {
     omissions.push(`action.diagnosis:${supplied.action.id}`);
     supplied.action = { ...supplied.action, diagnosis: {} };
   }
   // Keep metadata bounded while retaining named evidence and exact upstream revision.
-  if (size() > limit) {
+  if (over()) {
     supplied.package.summary = { omissions: ['context_summary_size_limit'] };
     omissions.push('package.summary');
   }
-  if (size() > limit) throw new AgentError('context_size_limit');
+  if (over()) throw new AgentError('context_size_limit');
   return {
     text: JSON.stringify(supplied),
     omissions,

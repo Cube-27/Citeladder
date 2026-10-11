@@ -11,6 +11,7 @@ import {
   outputPayloadSchema,
   outputSchema,
   type Chat,
+  type OutputBounds,
   type OutputPayload,
   type Scope,
   type Skill,
@@ -73,7 +74,7 @@ export async function saveAgentOutput(
     refs: string[];
     /** The runtime's format-aware outline rule (long-form content, prompt portfolios). */
     outlineRequired: boolean;
-    bounds?: Parameters<typeof outputSchema>[0];
+    bounds?: OutputBounds;
   },
   attach: AttachTarget,
 ) {

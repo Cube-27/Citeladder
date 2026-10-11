@@ -131,6 +131,10 @@ async function authenticatedClient(
   }
   return { row, metadata };
 }
+function authorizationErrorCode(error: unknown) {
+  if (error instanceof OAuthError) return error.error;
+  return error instanceof ApiError && error.status === 429 ? 'temporarily_unavailable' : null;
+}
 export function registerOAuthRoutes(
   parentApp: Hono<AppEnv>,
   config: ServiceConfig,
@@ -277,12 +281,7 @@ export function registerOAuthRoutes(
           .execute();
       });
     } catch (error) {
-      const code =
-        error instanceof OAuthError
-          ? error.error
-          : error instanceof ApiError && error.status === 429
-            ? 'temporarily_unavailable'
-            : null;
+      const code = authorizationErrorCode(error);
       if (callback === null || code === null) throw error;
       const target = new URL(callback);
       target.searchParams.set('error', code);
@@ -322,10 +321,8 @@ export function registerOAuthRoutes(
         c.req.method === 'POST'
           ? (new URLSearchParams(await c.req.text()).get('transaction') ?? '')
           : (c.req.query('transaction') ?? '');
-      return c.redirect(
-        `${mcp.browserOrigin}/login?return_to=${encodeURIComponent(`/mcp/oauth/consent?transaction=${encodeURIComponent(transaction)}`)}`,
-        302,
-      );
+      const consent = `/mcp/oauth/consent?transaction=${encodeURIComponent(transaction)}`;
+      return c.redirect(`${mcp.browserOrigin}/login?return_to=${encodeURIComponent(consent)}`, 302);
     }
     c.header('cache-control', 'no-store');
     await next();

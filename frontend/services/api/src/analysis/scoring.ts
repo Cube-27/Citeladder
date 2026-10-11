@@ -128,6 +128,10 @@ export function classifyCitation(citation: JsonObject, config: ScoringConfig): C
 }
 
 const rules = policy.audits.analysis;
+function promptClass(brand: boolean, competitors: boolean) {
+  if (brand) return competitors ? 'comparison_branded' : 'branded';
+  return competitors ? 'mixed' : 'non_branded';
+}
 function classifyFanout(query: string) {
   const normalized = query.toLowerCase();
   return Object.entries(rules.fanout_feature_rules)
@@ -189,13 +193,7 @@ export function scoreExecution(input: {
     prompt_contains_brand: promptBrand,
     prompt_contains_competitor: Boolean(promptCompetitors.length),
     prompt_competitors: promptCompetitors,
-    prompt_class: promptBrand
-      ? promptCompetitors.length
-        ? 'comparison_branded'
-        : 'branded'
-      : promptCompetitors.length
-        ? 'mixed'
-        : 'non_branded',
+    prompt_class: promptClass(promptBrand, promptCompetitors.length > 0),
     owned_domain_cited: owned.length > 0,
     owned_citation_count: owned.length,
     qualified_owned_citation_count: qualified.length,

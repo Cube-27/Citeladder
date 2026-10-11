@@ -78,50 +78,20 @@ export type FrozenRoute = {
   connection_id: string | null;
   base_url: string;
 };
-export async function prepareAudit(
+async function loadPrompts(
   db: Database,
   workspaceId: string,
+  projectId: string,
   input: AuditInput,
   settings: ReturnType<typeof auditSettings>,
-  providerSettings: ProviderSettings,
-  trigger: string,
-  search = searchSettings(),
-  at = new Date(),
-  /** The market to measure from; the project's default when omitted. */
-  selected: Market | null = null,
 ) {
-  trigger = trigger.trim().toLowerCase();
-  if (!auditPolicy.constants.audit_triggers.includes(trigger))
-    throw invalid(`Unsupported trigger: ${trigger}`);
-  const stored = await db
-    .selectFrom('projects')
-    .selectAll()
-    .where('id', '=', input.project_id)
-    .where('workspace_id', '=', workspaceId)
-    .executeTakeFirst();
-  if (!stored) throw notFound('Project');
-  const market = selected ?? {
-    id: null,
-    country_code: stored.country_code,
-    language_code: stored.language_code,
-  };
-  // The run measures from its market: every frozen country, language and search context below.
-  const project = {
-    ...stored,
-    country_code: market.country_code,
-    language_code: market.language_code,
-    ...searchContext(market.country_code, market.language_code),
-  };
-  const mode = input.benchmark_mode ?? project.benchmark_mode;
-  if (!auditPolicy.benchmark_modes.includes(mode))
-    throw invalid(`Unsupported benchmark mode: ${mode}`);
   let query = db
     .selectFrom('prompts as p')
     .innerJoin('prompt_sets as s', 's.id', 'p.prompt_set_id')
     .innerJoin('projects as project', 'project.id', 's.project_id')
     .selectAll('p')
     .where('project.workspace_id', '=', workspaceId)
-    .where('project.id', '=', project.id)
+    .where('project.id', '=', projectId)
     .where('p.enabled', '=', true)
     .where('p.status', '=', 'active')
     .orderBy('p.created_at')
@@ -135,27 +105,106 @@ export async function prepareAudit(
   if (!prompts.length) throw invalid('No enabled prompts to audit');
   if (prompts.some((prompt) => Array.from(prompt.text).length > settings.max_prompt_chars))
     throw invalid('Selected prompts exceed the configured length limit');
-  const requested = [...new Set(input.engines)];
-  if (requested.some((engine) => !auditPolicy.selectable_engines.includes(engine)))
-    throw invalid('An engine is unavailable');
-  const { engines, notApplicable } = marketEngines(requested, market, project);
-  if (input.credential_mode === 'funded' || trigger === 'trial') {
-    if (settings.audit_prompt_count === null)
-      throw new ApiError(422, 'Audit prompt-count policy is unconfigured', {
-        code: 'prompt_count_policy_unconfigured',
-      });
-    if (prompts.length > settings.audit_prompt_count)
-      throw new ApiError(403, 'Too many selected prompts', { code: 'prompt_count_exceeded' });
-  }
-  const repetitions = input.repetitions ?? settings.audit_repetitions;
+  return prompts;
+}
+function assertPromptCount(
+  input: AuditInput,
+  trigger: string,
+  promptCount: number,
+  settings: ReturnType<typeof auditSettings>,
+) {
+  if (input.credential_mode !== 'funded' && trigger !== 'trial') return;
+  if (settings.audit_prompt_count === null)
+    throw new ApiError(422, 'Audit prompt-count policy is unconfigured', {
+      code: 'prompt_count_policy_unconfigured',
+    });
+  if (promptCount > settings.audit_prompt_count)
+    throw new ApiError(403, 'Too many selected prompts', { code: 'prompt_count_exceeded' });
+}
+function assertRepetitions(repetitions: number) {
   if (
     !Number.isSafeInteger(repetitions) ||
     repetitions < auditPolicy.min_repetitions ||
     repetitions > auditPolicy.max_repetitions
   )
     throw invalid('Repetition count is outside the configured bounds');
-  if (prompts.length * repetitions * engines.length > settings.max_tasks_per_audit)
-    throw invalid('Audit exceeds the task limit');
+}
+type RouteCandidate = {
+  logical_engine: string;
+  transport_provider: string;
+  base_url: string;
+  paused_at: Date | null;
+  pause_until: Date | null;
+  last_test_status: string;
+  has_key: boolean;
+};
+function usableCandidate(
+  candidate: RouteCandidate,
+  engine: Engine,
+  provider: string,
+  providerSettings: ProviderSettings,
+  at: Date,
+) {
+  if (candidate.logical_engine !== engine || candidate.transport_provider !== provider)
+    return false;
+  if (
+    !candidate.has_key ||
+    candidate.last_test_status !== 'ok' ||
+    (candidate.paused_at !== null && (candidate.pause_until === null || candidate.pause_until > at))
+  )
+    return false;
+  try {
+    approvedEndpoint(candidate.transport_provider, candidate.base_url, providerSettings);
+    return true;
+  } catch {
+    return false;
+  }
+}
+type SearchProject = {
+  serp_location_code: number;
+  serp_language_code: string;
+  serp_device: string;
+};
+function validateSearchRequests(
+  engine: Engine,
+  prompts: { text: string }[],
+  project: SearchProject,
+  settings: ReturnType<typeof auditSettings>,
+) {
+  for (const prompt of prompts)
+    searchPayload(engine as SearchEngine, {
+      query: prompt.text,
+      location_code: project.serp_location_code,
+      language_code: project.serp_language_code || searchPolicy.constants.default_language_code,
+      device: project.serp_device as 'desktop' | 'mobile',
+      depth: searchPolicy.constants.default_depth,
+      load_async_ai_overview: searchPolicy.constants.load_async_ai_overview,
+      timeout_seconds: settings.audit_timeout_seconds,
+      provider_submission_ref: 'admission-validation',
+      request_settings: {},
+    });
+}
+async function freezeRoutes({
+  db,
+  workspaceId,
+  input,
+  engines,
+  prompts,
+  project,
+  settings,
+  providerSettings,
+  at,
+}: {
+  db: Database;
+  workspaceId: string;
+  input: AuditInput;
+  engines: Engine[];
+  prompts: { text: string }[];
+  project: SearchProject;
+  settings: ReturnType<typeof auditSettings>;
+  providerSettings: ProviderSettings;
+  at: Date;
+}) {
   const candidates = await db
     .selectFrom('provider_routes as r')
     .innerJoin('provider_connections as c', 'c.id', 'r.connection_id')
@@ -187,26 +236,9 @@ export async function prepareAudit(
     const observed = catalog.transport_provider === 'dataforseo';
     if (input.credential_mode === 'funded' && observed)
       throw invalid('Search surfaces require your own DataForSEO credentials');
-    const selected = candidates.find((candidate) => {
-      if (
-        candidate.logical_engine !== engine ||
-        candidate.transport_provider !== catalog.transport_provider
-      )
-        return false;
-      if (
-        !candidate.has_key ||
-        candidate.last_test_status !== 'ok' ||
-        (candidate.paused_at !== null &&
-          (candidate.pause_until === null || candidate.pause_until > at))
-      )
-        return false;
-      try {
-        approvedEndpoint(candidate.transport_provider, candidate.base_url, providerSettings);
-        return true;
-      } catch {
-        return false;
-      }
-    });
+    const selected = candidates.find((candidate) =>
+      usableCandidate(candidate, engine, catalog.transport_provider, providerSettings, at),
+    );
     if (input.credential_mode === 'byok' && !selected)
       throw new ApiError(400, `No active provider route configured for ${engine}`, {
         code: 'execution_credentials_unavailable',
@@ -218,25 +250,24 @@ export async function prepareAudit(
       connection_id: selected?.connection_id ?? null,
       base_url: selected?.base_url ?? '',
     });
-    if (observed)
-      for (const prompt of prompts)
-        searchPayload(engine as SearchEngine, {
-          query: prompt.text,
-          location_code: project.serp_location_code,
-          language_code: project.serp_language_code || searchPolicy.constants.default_language_code,
-          device: project.serp_device as 'desktop' | 'mobile',
-          depth: searchPolicy.constants.default_depth,
-          load_async_ai_overview: searchPolicy.constants.load_async_ai_overview,
-          timeout_seconds: settings.audit_timeout_seconds,
-          provider_submission_ref: 'admission-validation',
-          request_settings: {},
-        });
+    if (observed) validateSearchRequests(engine, prompts, project, settings);
   }
-  const brand = await db
-    .selectFrom('brands')
-    .selectAll()
-    .where('project_id', '=', project.id)
-    .executeTakeFirst();
+  return routes;
+}
+async function loadBrandContext(
+  db: Database,
+  {
+    workspaceId,
+    project,
+    brand,
+    auditScope,
+  }: {
+    workspaceId: string;
+    project: { id: string };
+    brand: { id: string } | undefined;
+    auditScope: AuditInput['audit_scope'];
+  },
+) {
   const [aliases, owned, unintended, competitors, profile, factCheck] = await Promise.all([
     brand
       ? db
@@ -270,20 +301,114 @@ export async function prepareAudit(
       .where('workspace_id', '=', workspaceId)
       .where('project_id', '=', project.id)
       .executeTakeFirst(),
-    admittedFactCheck(db, { workspaceId, projectId: project.id, auditScope: input.audit_scope }),
+    admittedFactCheck(db, { workspaceId, projectId: project.id, auditScope }),
   ]);
+  return { aliases, owned, unintended, competitors, profile, factCheck };
+}
+function frameInstruction(mode: string, project: { country_code: string; language_code: string }) {
   const localized = auditPolicy.constants.localized_instruction
     .replace('{country_code}', project.country_code || 'unspecified')
     .replace('{language_code}', project.language_code || 'unspecified');
-  const framing =
-    mode === 'consumer_like'
-      ? ''
-      : mode === 'controlled_localized'
-        ? localized
-        : `${localized} ${auditPolicy.constants.forced_grounded_instruction}`;
-  const systemInstruction = [framing, auditPolicy.constants.audit_answer_instruction]
-    .filter(Boolean)
-    .join(' ');
+  let framing = `${localized} ${auditPolicy.constants.forced_grounded_instruction}`;
+  if (mode === 'consumer_like') framing = '';
+  else if (mode === 'controlled_localized') framing = localized;
+  return [framing, auditPolicy.constants.audit_answer_instruction].filter(Boolean).join(' ');
+}
+/** Panel identity: sorted keys, UTF-8, default JSON separators. */
+function promptPanelHash(promptRows: Record<string, unknown>[]) {
+  const panelJson = `[${promptRows
+    .map(
+      (row) =>
+        `{${Object.entries(row)
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([key, value]) => `${JSON.stringify(key)}: ${JSON.stringify(value)}`)
+          .join(', ')}}`,
+    )
+    .join(', ')}]`;
+  return createHash('sha256').update(panelJson).digest('hex');
+}
+function parseSeed(randomSeed: string | null | undefined) {
+  const trimmed = randomSeed?.trim();
+  if (trimmed && !/^[+-]?\d+$/u.test(trimmed)) throw invalid('random_seed must be an integer');
+  try {
+    return trimmed
+      ? BigInt.asUintN(64, BigInt(trimmed)).toString()
+      : randomBytes(8).readBigUInt64BE().toString();
+  } catch {
+    throw invalid('random_seed must be an integer');
+  }
+}
+type PrepareOptions = {
+  search?: ReturnType<typeof searchSettings>;
+  at?: Date;
+  /** The market to measure from; the project's default when omitted. */
+  selected?: Market | null;
+};
+export async function prepareAudit(
+  db: Database,
+  workspaceId: string,
+  input: AuditInput,
+  settings: ReturnType<typeof auditSettings>,
+  providerSettings: ProviderSettings,
+  trigger: string,
+  { search = searchSettings(), at = new Date(), selected = null }: PrepareOptions = {},
+) {
+  trigger = trigger.trim().toLowerCase();
+  if (!auditPolicy.constants.audit_triggers.includes(trigger))
+    throw invalid(`Unsupported trigger: ${trigger}`);
+  const stored = await db
+    .selectFrom('projects')
+    .selectAll()
+    .where('id', '=', input.project_id)
+    .where('workspace_id', '=', workspaceId)
+    .executeTakeFirst();
+  if (!stored) throw notFound('Project');
+  const market = selected ?? {
+    id: null,
+    country_code: stored.country_code,
+    language_code: stored.language_code,
+  };
+  // The run measures from its market: every frozen country, language and search context below.
+  const project = {
+    ...stored,
+    country_code: market.country_code,
+    language_code: market.language_code,
+    ...searchContext(market.country_code, market.language_code),
+  };
+  const mode = input.benchmark_mode ?? project.benchmark_mode;
+  if (!auditPolicy.benchmark_modes.includes(mode))
+    throw invalid(`Unsupported benchmark mode: ${mode}`);
+  const prompts = await loadPrompts(db, workspaceId, project.id, input, settings);
+  const requested = [...new Set(input.engines)];
+  if (requested.some((engine) => !auditPolicy.selectable_engines.includes(engine)))
+    throw invalid('An engine is unavailable');
+  const { engines, notApplicable } = marketEngines(requested, market, project);
+  assertPromptCount(input, trigger, prompts.length, settings);
+  const repetitions = input.repetitions ?? settings.audit_repetitions;
+  assertRepetitions(repetitions);
+  if (prompts.length * repetitions * engines.length > settings.max_tasks_per_audit)
+    throw invalid('Audit exceeds the task limit');
+  const routes = await freezeRoutes({
+    db,
+    workspaceId,
+    input,
+    engines,
+    prompts,
+    project,
+    settings,
+    providerSettings,
+    at,
+  });
+  const brand = await db
+    .selectFrom('brands')
+    .selectAll()
+    .where('project_id', '=', project.id)
+    .executeTakeFirst();
+  const { aliases, owned, unintended, competitors, profile, factCheck } = await loadBrandContext(
+    db,
+    { workspaceId, project, brand, auditScope: input.audit_scope },
+  );
+  const systemInstruction = frameInstruction(mode, project);
   const measurement = {
     retrieval_enabled: true,
     max_output_tokens: settings.audit_max_output_tokens,
@@ -300,29 +425,11 @@ export async function prepareAudit(
     prompt_intent: prompt.prompt_intent,
     cohort: prompt.cohort,
   }));
-  // Panel identity: sorted keys, UTF-8, default JSON separators.
-  const panelJson = `[${promptRows
-    .map(
-      (row) =>
-        `{${Object.entries(row)
-          .sort(([a], [b]) => a.localeCompare(b))
-          .map(([key, value]) => `${JSON.stringify(key)}: ${JSON.stringify(value)}`)
-          .join(', ')}}`,
-    )
-    .join(', ')}]`;
-  const panelHash = createHash('sha256').update(panelJson).digest('hex');
-  let seed: string;
-  if (input.random_seed?.trim() && !/^[+-]?\d+$/u.test(input.random_seed.trim()))
-    throw invalid('random_seed must be an integer');
-  try {
-    seed = input.random_seed?.trim()
-      ? BigInt.asUintN(64, BigInt(input.random_seed.trim())).toString()
-      : randomBytes(8).readBigUInt64BE().toString();
-  } catch {
-    throw invalid('random_seed must be an integer');
-  }
+  const panelHash = promptPanelHash(promptRows);
+  const seed = parseSeed(input.random_seed);
+  const brandName = brand?.name ?? project.brand_name;
   const configuration = {
-    brand_name: brand?.name ?? project.brand_name,
+    brand_name: brandName,
     brand_aliases: aliases.map((row) => row.alias),
     owned_domains: owned.map((row) => row.domain),
     unintended_domains: unintended.map((row) => row.domain),
@@ -331,7 +438,7 @@ export async function prepareAudit(
     // Analysis matches names under this frozen policy, never the live one.
     entity_matching: frozenEntityMatching(
       projectEntityMatching(profile?.business_context, strings(profile?.products_services), [
-        { name: brand?.name ?? project.brand_name, aliases: aliases.map((row) => row.alias) },
+        { name: brandName, aliases: aliases.map((row) => row.alias) },
         ...competitors.map((row) => ({ name: row.name, aliases: strings(row.aliases) })),
       ]),
     ),

@@ -61,6 +61,53 @@ export async function reserveAuditCapacity(
   );
 }
 
+async function assertManualRunAllowance(
+  db: Database,
+  accountId: string,
+  allowance: number,
+  { at, launchId }: { at: Date; launchId: string | null },
+) {
+  const seconds = policy.entitlements.capabilities.manual_runs_per_day.rolling_window_seconds;
+  // One launch is one manual run, whatever its market count.
+  let launches = db
+    .selectFrom('audits as a')
+    .innerJoin('billing_accounts as b', 'b.workspace_id', 'a.workspace_id')
+    .select((eb) => [
+      sql<string>`count(distinct coalesce(a.launch_id, a.id))`.as('count'),
+      eb.fn.min('a.created_at').as('oldest'),
+    ])
+    .where('b.id', '=', accountId)
+    .where('a.trigger', '=', 'manual')
+    .where('a.created_at', '>', new Date(at.getTime() - seconds * 1000));
+  if (launchId) launches = launches.where('a.launch_id', 'is distinct from', launchId);
+  const recent = await launches.executeTakeFirstOrThrow();
+  if (Number(recent.count) >= allowance)
+    throw new ApiError(429, 'The account manual run allowance is exhausted', {
+      code: 'manual_run_rate_exceeded',
+      details: {
+        allowance,
+        used: Number(recent.count),
+        remaining: 0,
+        reset_at: recent.oldest
+          ? new Date(recent.oldest.getTime() + seconds * 1000).toISOString()
+          : null,
+      },
+    });
+}
+function plannedCost(plan: FrozenAudit) {
+  let cost = 0n;
+  for (const route of plan.routes) {
+    const expected = expectedCost(route, plan.measurement.retrieval_enabled);
+    if (!expected.complete || expected.total_microusd === null)
+      throw new ApiError(422, `Expected execution cost is unresolved for ${route.logical_engine}`, {
+        code: 'funded_cost_unresolved',
+      });
+    cost +=
+      BigInt(expected.total_microusd) *
+      BigInt(plan.prompts.length * plan.repetitions * plan.measurement.max_attempts);
+  }
+  return cost;
+}
 export async function admitAudit(
   db: Database,
   workspaceId: string,
@@ -85,47 +132,13 @@ export async function admitAudit(
   await advisoryXactLock(db, policy.entitlements.capacity_lock, account.id);
   const state = await accountState(db, workspaceId, account.id, at);
   if (state.error) throw unresolved(workspaceId, account.id);
-  if (trigger === 'manual' && state.values.has('manual_runs_per_day')) {
-    const seconds = policy.entitlements.capabilities.manual_runs_per_day.rolling_window_seconds;
-    // One launch is one manual run, whatever its market count.
-    let launches = db
-      .selectFrom('audits as a')
-      .innerJoin('billing_accounts as b', 'b.workspace_id', 'a.workspace_id')
-      .select((eb) => [
-        sql<string>`count(distinct coalesce(a.launch_id, a.id))`.as('count'),
-        eb.fn.min('a.created_at').as('oldest'),
-      ])
-      .where('b.id', '=', account.id)
-      .where('a.trigger', '=', 'manual')
-      .where('a.created_at', '>', new Date(at.getTime() - seconds * 1000));
-    if (launchId) launches = launches.where('a.launch_id', 'is distinct from', launchId);
-    const recent = await launches.executeTakeFirstOrThrow();
-    const allowance = state.values.get('manual_runs_per_day')!;
-    if (Number(recent.count) >= allowance)
-      throw new ApiError(429, 'The account manual run allowance is exhausted', {
-        code: 'manual_run_rate_exceeded',
-        details: {
-          allowance,
-          used: Number(recent.count),
-          remaining: 0,
-          reset_at: recent.oldest
-            ? new Date(recent.oldest.getTime() + seconds * 1000).toISOString()
-            : null,
-        },
-      });
-  }
+  if (trigger === 'manual' && state.values.has('manual_runs_per_day'))
+    await assertManualRunAllowance(db, account.id, state.values.get('manual_runs_per_day')!, {
+      at,
+      launchId,
+    });
   if (!funded) return null;
-  let cost = 0n;
-  for (const route of plan.routes) {
-    const expected = expectedCost(route, plan.measurement.retrieval_enabled);
-    if (!expected.complete || expected.total_microusd === null)
-      throw new ApiError(422, `Expected execution cost is unresolved for ${route.logical_engine}`, {
-        code: 'funded_cost_unresolved',
-      });
-    cost +=
-      BigInt(expected.total_microusd) *
-      BigInt(plan.prompts.length * plan.repetitions * plan.measurement.max_attempts);
-  }
+  const cost = plannedCost(plan);
   const month = new Date(Date.UTC(at.getUTCFullYear(), at.getUTCMonth(), 1));
   const end = new Date(Date.UTC(at.getUTCFullYear(), at.getUTCMonth() + 1, 1));
   const spent = await db

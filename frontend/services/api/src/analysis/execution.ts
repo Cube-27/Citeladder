@@ -3,13 +3,24 @@ import type { DeriveExecution } from '../audits/result-persistence.ts';
 import { policy } from '../config.ts';
 import { record, jsonObjects } from '../db/json.ts';
 import { scalarText } from '../text-order.ts';
-import { scoreExecution, scoringConfig, classifyCitation } from './scoring.ts';
+import {
+  scoreExecution,
+  scoringConfig,
+  classifyCitation,
+  type ClassifiedCitation,
+} from './scoring.ts';
 import { assessEntities } from './entity-assessment.ts';
 import { classifySourceDomain, classifySourceOrigin } from './opportunities/source-patterns.ts';
 import { citationIdentity } from '../source-pages/identity.ts';
 import { fanoutProjection } from './fanout.ts';
 import { enqueuePerception } from '../perception/admission.ts';
 import { answerAds, persistAds } from './ads.ts';
+
+function citationClassification(classified: ClassifiedCitation) {
+  if (classified.is_owned) return 'owned';
+  if (classified.is_unintended) return 'unintended';
+  return classified.matched_competitor ? 'competitor' : 'third_party';
+}
 
 /** Caller holds the scoped audit/task lock and commits alongside the immutable artifact. */
 export const analyzeExecution: DeriveExecution = async (db, task, audit, artifactId) => {
@@ -146,13 +157,7 @@ export const analyzeExecution: DeriveExecution = async (db, task, audit, artifac
             url: scalarText(citation.url),
             title: scalarText(citation.title),
             domain: classified.domain,
-            classification: classified.is_owned
-              ? 'owned'
-              : classified.is_unintended
-                ? 'unintended'
-                : classified.matched_competitor
-                  ? 'competitor'
-                  : 'third_party',
+            classification: citationClassification(classified),
             source_class: classifySourceDomain(
               classified.domain,
               classified.is_owned,

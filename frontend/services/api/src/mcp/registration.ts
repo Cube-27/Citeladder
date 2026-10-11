@@ -8,7 +8,7 @@ import { createSecretCipher } from '../integrations/fernet.ts';
 import { grantableScopes, mcpPolicy, type McpConfig } from './config.ts';
 import { mintToken, OAuthError } from './oauth.ts';
 
-const LOOPBACK = ['localhost', '127.0.0.1', '[::1]'];
+const LOOPBACK = new Set(['localhost', '127.0.0.1', '[::1]']);
 // Unsupported extras (an extra grant, `offline_access`) are narrowed away, not refused.
 const metadataSchema = z.object({
   redirect_uris: z.array(z.string()).min(1).max(mcpPolicy.max_redirect_uris),
@@ -23,7 +23,7 @@ const metadataSchema = z.object({
 });
 
 export function isLoopback(uri: URL) {
-  return uri.protocol === 'http:' && LOOPBACK.includes(uri.hostname);
+  return uri.protocol === 'http:' && LOOPBACK.has(uri.hostname);
 }
 /** HTTPS, loopback HTTP, or a native app's private-use scheme. */
 function acceptedRedirect(raw: string, uri: URL) {

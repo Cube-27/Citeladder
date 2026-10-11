@@ -28,6 +28,60 @@ function owned(candidate: unknown, website: string) {
     return '';
   }
 }
+type OriginDb = Parameters<ContextReader>[0];
+type OriginScope = Parameters<ContextReader>[1];
+type OriginRefs = z.infer<typeof agentContextRefsSchema>;
+async function resolveTarget(db: OriginDb, scope: OriginScope, refs: OriginRefs) {
+  if (!refs.target_site_url_id) return null;
+  const target = await db
+    .selectFrom('site_urls')
+    .selectAll()
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('project_id', '=', scope.projectId)
+    .where('id', '=', refs.target_site_url_id)
+    .executeTakeFirst();
+  if (!target) throw new AgentError('agent_context_unavailable');
+  return target;
+}
+async function resolveOpportunity(db: OriginDb, scope: OriginScope, refs: OriginRefs) {
+  if (!refs.opportunity_id) return null;
+  const opportunity = await getOpportunity(db, scope.workspaceId, refs.opportunity_id);
+  if (opportunity && opportunity.project_id !== scope.projectId)
+    throw new AgentError('agent_context_unavailable');
+  return opportunity;
+}
+async function resolveIssueGroup(db: OriginDb, scope: OriginScope, refs: OriginRefs) {
+  const groupRef = refs.issue_group_reference;
+  if (!groupRef) return null;
+  const crawl = await db
+    .selectFrom('site_crawls')
+    .select('id')
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('project_id', '=', scope.projectId)
+    .where('id', '=', groupRef.crawl_id)
+    .executeTakeFirst();
+  if (!crawl) throw new AgentError('agent_context_unavailable');
+  const detail = await issueDetail(
+    db,
+    scope.workspaceId,
+    groupRef.crawl_id,
+    groupRef.group_id,
+    { limit: policy.agent_context.content_context_max_pages, cursor: null },
+    groupRef.site_url_id,
+  );
+  if (groupRef.site_url_id && !detail.occurrences.length)
+    throw new AgentError('agent_context_unavailable');
+  return {
+    ...detail,
+    selected_site_url_id: groupRef.site_url_id ?? null,
+    sample: {
+      supplied_occurrences: detail.occurrences.length,
+      total_occurrences: detail.occurrence_count,
+      complete: !detail.next_cursor && !groupRef.site_url_id,
+      label: 'bounded occurrence sample',
+    },
+  };
+}
 async function resolveOrigins(
   db: Parameters<ContextReader>[0],
   scope: Parameters<ContextReader>[1],
@@ -40,21 +94,8 @@ async function resolveOrigins(
     .where('id', '=', scope.projectId)
     .executeTakeFirst();
   if (!project) throw new AgentError('agent_context_unavailable');
-  const target = refs.target_site_url_id
-    ? await db
-        .selectFrom('site_urls')
-        .selectAll()
-        .where('workspace_id', '=', scope.workspaceId)
-        .where('project_id', '=', scope.projectId)
-        .where('id', '=', refs.target_site_url_id)
-        .executeTakeFirst()
-    : null;
-  if (refs.target_site_url_id && !target) throw new AgentError('agent_context_unavailable');
-  const opportunity = refs.opportunity_id
-    ? await getOpportunity(db, scope.workspaceId, refs.opportunity_id)
-    : null;
-  if (opportunity && opportunity.project_id !== scope.projectId)
-    throw new AgentError('agent_context_unavailable');
+  const target = await resolveTarget(db, scope, refs);
+  const opportunity = await resolveOpportunity(db, scope, refs);
   const demand = refs.demand_signal_id
     ? await readDemandOrigin(db, scope, refs.demand_signal_id)
     : null;
@@ -71,38 +112,8 @@ async function resolveOrigins(
         refs.search_intelligence_reference.row_ids,
       )
     : null;
+  const issueGroup = await resolveIssueGroup(db, scope, refs);
   const groupRef = refs.issue_group_reference;
-  let issueGroup = null;
-  if (groupRef) {
-    const crawl = await db
-      .selectFrom('site_crawls')
-      .select('id')
-      .where('workspace_id', '=', scope.workspaceId)
-      .where('project_id', '=', scope.projectId)
-      .where('id', '=', groupRef.crawl_id)
-      .executeTakeFirst();
-    if (!crawl) throw new AgentError('agent_context_unavailable');
-    const detail = await issueDetail(
-      db,
-      scope.workspaceId,
-      groupRef.crawl_id,
-      groupRef.group_id,
-      { limit: policy.agent_context.content_context_max_pages, cursor: null },
-      groupRef.site_url_id,
-    );
-    if (groupRef.site_url_id && !detail.occurrences.length)
-      throw new AgentError('agent_context_unavailable');
-    issueGroup = {
-      ...detail,
-      selected_site_url_id: groupRef.site_url_id ?? null,
-      sample: {
-        supplied_occurrences: detail.occurrences.length,
-        total_occurrences: detail.occurrence_count,
-        complete: !detail.next_cursor && !groupRef.site_url_id,
-        label: 'bounded occurrence sample',
-      },
-    };
-  }
   const siteFacts = refs.site_facts_reference
     ? await crawlability(
         { db, scope, origin: '' },

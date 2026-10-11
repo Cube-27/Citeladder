@@ -99,6 +99,7 @@ function direct<S extends z.ZodObject<{ project_id: typeof uuid }>>(
 }
 
 type Owned = 'topic' | 'prompt' | 'action' | 'audit';
+const ownedTables = { topic: 'topics', action: 'actions', audit: 'audits' } as const;
 /** A record named by ID must belong to the project the call authorized. */
 async function requireInProject(db: Database, kind: Owned, id: string, projectId: string) {
   const query =
@@ -110,7 +111,7 @@ async function requireInProject(db: Database, kind: Owned, id: string, projectId
           .where('prompts.id', '=', id)
           .where('prompt_sets.project_id', '=', projectId)
       : db
-          .selectFrom(kind === 'topic' ? 'topics' : kind === 'action' ? 'actions' : 'audits')
+          .selectFrom(ownedTables[kind])
           .select('id')
           .where('id', '=', id)
           .where('project_id', '=', projectId);
@@ -289,12 +290,12 @@ const writeDefinitions = {
         await createPrompts(trx, actor, set.id, admitted);
         return promptOccupancy(trx, actor.workspaceId);
       });
+      const droppedItems = dropped.map((item) => `"${item.text}" (${item.reason})`).join('; ');
+      const allowanceSuffix = slots.allowance === null ? '' : ` of ${slots.allowance}`;
       const lines = [
         `Add ${admitted.length} active prompt(s) to "${set.name}": ${quoted(admitted.map((item) => item.text))}.`,
-        dropped.length
-          ? `Dropped: ${dropped.map((item) => `"${item.text}" (${item.reason})`).join('; ')}.`
-          : '',
-        `Prompt slots after: ${slots.used}${slots.allowance === null ? '' : ` of ${slots.allowance}`}.`,
+        dropped.length ? `Dropped: ${droppedItems}.` : '',
+        `Prompt slots after: ${slots.used}${allowanceSuffix}.`,
       ];
       return prepared(
         context,
@@ -346,12 +347,13 @@ const writeDefinitions = {
           });
       });
       const skipped = rows.length - active.length;
+      const skippedNote = skipped ? ` ${skipped} already archived.` : '';
       return prepared(context, {
         actor,
         projectId: args.project_id,
         kind: 'archive_prompts',
         payload: { groups },
-        preview: `Archive ${active.length} prompt(s): ${quoted(active.map((row) => row.text))}. Future audits stop measuring them; past results stay.${skipped ? ` ${skipped} already archived.` : ''}`,
+        preview: `Archive ${active.length} prompt(s): ${quoted(active.map((row) => row.text))}. Future audits stop measuring them; past results stay.${skippedNote}`,
       });
     },
   }),
@@ -400,6 +402,10 @@ const writeDefinitions = {
       await rehearse(context.db, (trx) =>
         launchAudit(trx, context.config, actor, args.project_id, launch),
       );
+      const launched =
+        estimate.market_count === 1
+          ? 'an audit'
+          : `${estimate.market_count} audits, one per market,`;
       return prepared(
         context,
         {
@@ -407,7 +413,7 @@ const writeDefinitions = {
           projectId: args.project_id,
           kind: 'launch_audit',
           payload: { project_id: args.project_id, request: launch },
-          preview: `Launch ${estimate.market_count === 1 ? 'an audit' : `${estimate.market_count} audits, one per market,`} of ${estimate.prompt_count} prompt(s) on ${args.engines.join(', ')}, ${estimate.repetition_count} repetition(s): ${estimate.execution_count} answers, using at most ${estimate.maximum_attempt_count} audit credits (refused if the estimate exceeds ${ceiling}).`,
+          preview: `Launch ${launched} of ${estimate.prompt_count} prompt(s) on ${args.engines.join(', ')}, ${estimate.repetition_count} repetition(s): ${estimate.execution_count} answers, using at most ${estimate.maximum_attempt_count} audit credits (refused if the estimate exceeds ${ceiling}).`,
         },
         { estimated_credits: estimate.maximum_attempt_count, max_estimated_credits: ceiling },
       );
@@ -447,12 +453,14 @@ const writeDefinitions = {
         ...(args.market_ids ? { market_ids: args.market_ids } : {}),
       });
       await rehearse(context.db, (trx) => createSchedule(trx, actor, args.project_id, schedule));
+      const marketNote =
+        schedule.market_ids.length > 1 ? ` in ${schedule.market_ids.length} markets` : '';
       return prepared(context, {
         actor,
         projectId: args.project_id,
         kind: 'schedule',
         payload: { project_id: args.project_id, schedule },
-        preview: `Create a ${schedule.cadence.replaceAll('_', ' ')} audit schedule for "${set.name}" on ${schedule.engines.join(', ')}${schedule.market_ids.length > 1 ? ` in ${schedule.market_ids.length} markets` : ''} (${schedule.timezone}), first run ${schedule.next_run_at ?? 'right away'}. Each run uses audit credits.`,
+        preview: `Create a ${schedule.cadence.replaceAll('_', ' ')} audit schedule for "${set.name}" on ${schedule.engines.join(', ')}${marketNote} (${schedule.timezone}), first run ${schedule.next_run_at ?? 'right away'}. Each run uses audit credits.`,
       });
     },
   }),

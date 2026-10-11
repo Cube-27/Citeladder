@@ -21,8 +21,7 @@ export async function prepareSavedShelf(
     .where('id', '=', auditId)
     .executeTakeFirst();
   if (
-    !audit ||
-    audit.audit_scope !== 'commerce' ||
+    audit?.audit_scope !== 'commerce' ||
     auditPolicy.constants.audit_terminal_statuses.includes(audit.status)
   )
     return prepared;

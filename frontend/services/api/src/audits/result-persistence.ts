@@ -239,6 +239,40 @@ export function persistExecutionSuccess(
   });
 }
 
+async function insertFailureArtifact(
+  db: Database,
+  claimed: AuditTask,
+  artifactId: string,
+  metadata: Record<string, unknown>,
+  at: Date,
+) {
+  await db
+    .insertInto('raw_response_artifacts')
+    .values({
+      id: artifactId,
+      audit_id: claimed.audit_id,
+      task_id: claimed.id,
+      logical_engine: claimed.logical_engine,
+      transport_provider: claimed.transport_provider,
+      transport_model: claimed.transport_model,
+      answer_text: '',
+      search_used: false,
+      search_events: null,
+      citations: null,
+      finish_reason: 'unknown',
+      raw_finish_reason: '',
+      latency_ms: null,
+      provider_metadata: JSON.stringify(metadata),
+      usage:
+        typeof metadata.provider_submission_cost_microusd === 'number'
+          ? JSON.stringify({
+              provider_cost_microusd: metadata.provider_submission_cost_microusd,
+            })
+          : null,
+      created_at: at,
+    })
+    .execute();
+}
 /** Pre-call rejection terminalizes the task without inventing a provider attempt or debit. */
 export function persistExecutionFailure(
   db: Database,
@@ -277,32 +311,7 @@ export function persistExecutionFailure(
         : {}),
     };
     if (failureArtifactId)
-      await trx
-        .insertInto('raw_response_artifacts')
-        .values({
-          id: failureArtifactId,
-          audit_id: claimed.audit_id,
-          task_id: claimed.id,
-          logical_engine: claimed.logical_engine,
-          transport_provider: claimed.transport_provider,
-          transport_model: claimed.transport_model,
-          answer_text: '',
-          search_used: false,
-          search_events: null,
-          citations: null,
-          finish_reason: 'unknown',
-          raw_finish_reason: '',
-          latency_ms: null,
-          provider_metadata: JSON.stringify(metadata),
-          usage:
-            typeof metadata.provider_submission_cost_microusd === 'number'
-              ? JSON.stringify({
-                  provider_cost_microusd: metadata.provider_submission_cost_microusd,
-                })
-              : null,
-          created_at: at,
-        })
-        .execute();
+      await insertFailureArtifact(trx, claimed, failureArtifactId, metadata, at);
     const task = await trx
       .updateTable('audit_tasks')
       .set({

@@ -90,6 +90,10 @@ export function selectApproach(ids: string[], kind: string) {
     ) ?? p.DEFAULT_APPROACH
   );
 }
+function familyState(family: string, observed: string[], available: string[]) {
+  if (observed.includes(family)) return p.FAMILY_STATE_OBSERVED;
+  return available.includes(family) ? p.FAMILY_STATE_NO_FINDING : p.FAMILY_STATE_UNAVAILABLE;
+}
 function group(
   t: ReturnType<typeof targetFor>,
   members: NonEmpty<ActionMember>,
@@ -130,14 +134,7 @@ function group(
         source_metric_ids: [...m.source_metric_ids],
       })),
       families: Object.fromEntries(
-        p.EVIDENCE_FAMILIES.map((f) => [
-          f,
-          families.includes(f)
-            ? p.FAMILY_STATE_OBSERVED
-            : available.includes(f)
-              ? p.FAMILY_STATE_NO_FINDING
-              : p.FAMILY_STATE_UNAVAILABLE,
-        ]),
+        p.EVIDENCE_FAMILIES.map((f) => [f, familyState(f, families, available)]),
       ),
       approach: branch.approach,
       skill_id: branch.skill_id,

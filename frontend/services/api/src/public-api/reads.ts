@@ -64,6 +64,16 @@ async function latestMetrics(db: Database, scope: Scope): Promise<Map<string, Pr
   return byPrompt;
 }
 
+function latestMeasurement(cohort: string, measured: PromptMetricItem | undefined) {
+  if (!MEASURED_COHORTS.includes(cohort)) return { state: 'unavailable' as const };
+  if (!measured) return { state: 'not_measured' as const };
+  return {
+    state: 'measured' as const,
+    audit_id: measured.audit_id,
+    mention_rate: measured.visibility_rate ?? null,
+    citation_rate: measured.owned_citation_rate ?? null,
+  };
+}
 export async function listPublicPrompts(
   db: Database,
   scope: Scope,
@@ -92,16 +102,7 @@ export async function listPublicPrompts(
       const measured = metrics.get(prompt.id);
       return {
         ...prompt,
-        latest_measurement: !MEASURED_COHORTS.includes(prompt.cohort)
-          ? { state: 'unavailable' as const }
-          : measured
-            ? {
-                state: 'measured' as const,
-                audit_id: measured.audit_id,
-                mention_rate: measured.visibility_rate ?? null,
-                citation_rate: measured.owned_citation_rate ?? null,
-              }
-            : { state: 'not_measured' as const },
+        latest_measurement: latestMeasurement(prompt.cohort, measured),
       };
     }),
   };

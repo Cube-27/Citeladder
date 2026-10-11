@@ -113,17 +113,30 @@ export class PdfReport {
           lines.push(line);
           line = '';
         }
-        for (const character of word) {
-          if (line && this.measure(line + character, size, bold) > width) {
-            lines.push(line);
-            line = '';
-          }
-          line += character;
-        }
+        line = this.breakWord(word, lines, size, bold, width);
       }
       lines.push(line);
     }
     return lines;
+  }
+
+  /** Splits a word wider than the line per character; returns the unfinished last line. */
+  private breakWord(
+    word: string,
+    lines: string[],
+    size: number,
+    bold: boolean,
+    width: number,
+  ): string {
+    let line = '';
+    for (const character of word) {
+      if (line && this.measure(line + character, size, bold) > width) {
+        lines.push(line);
+        line = '';
+      }
+      line += character;
+    }
+    return line;
   }
 
   newPage(): void {

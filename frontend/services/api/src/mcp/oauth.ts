@@ -120,6 +120,46 @@ export type ConsentWorkspace = Readonly<{
   state: 'ready' | 'terms' | 'inactive' | 'unresolved';
 }>;
 
+async function assertUserMayConsent(
+  db: Database,
+  userId: string,
+  config: ServiceConfig,
+  mcp: McpConfig,
+) {
+  const user = await db
+    .selectFrom('users')
+    .select(['email', 'is_active', 'registration_origin', 'email_verified_at'])
+    .where('id', '=', userId)
+    .executeTakeFirst();
+  if (
+    !user?.is_active ||
+    requiresEmailVerification(user) ||
+    !accountAllowed(config, mcp, user.email)
+  )
+    throw new OAuthError('access_denied', 'This account is not enabled for MCP access');
+}
+/** Refuses an unusable selection; returns the selected workspaces that still need the Terms. */
+function validateConsentSelection(
+  unique: string[],
+  shareable: { id: string; state: string }[],
+  decision: { acceptedTermsRevision: string | null },
+) {
+  if (!unique.length) throw new ConsentSelectionError('Select at least one workspace.');
+  const states = new Map(shareable.map((w) => [w.id, w.state]));
+  if (unique.some((id) => !['ready', 'terms'].includes(states.get(id) ?? '')))
+    throw new ConsentSelectionError('Select only workspaces that can be shared right now.');
+  const needTerms = unique.filter((id) => states.get(id) === 'terms');
+  if (
+    decision.acceptedTermsRevision !== null &&
+    decision.acceptedTermsRevision !== policy.mcp.terms_revision
+  )
+    throw new ConsentSelectionError(
+      'The Terms of Service changed since this page loaded. Review them again before approving.',
+    );
+  if (needTerms.length && decision.acceptedTermsRevision === null)
+    throw new ConsentSelectionError('Accept the Terms of Service to share these workspaces.');
+  return needTerms;
+}
 /** Every workspace the account could share, each with what approving it needs. */
 export async function consentWorkspaces(db: Database, userId: string): Promise<ConsentWorkspace[]> {
   const rows = await db
@@ -211,33 +251,10 @@ export function completeConsent(
     destination.searchParams.set('iss', mcp.origin);
     if (decision === null) destination.searchParams.set('error', 'access_denied');
     else {
-      const user = await trx
-        .selectFrom('users')
-        .select(['email', 'is_active', 'registration_origin', 'email_verified_at'])
-        .where('id', '=', userId)
-        .executeTakeFirst();
-      if (
-        !user?.is_active ||
-        requiresEmailVerification(user) ||
-        !accountAllowed(config, mcp, user.email)
-      )
-        throw new OAuthError('access_denied', 'This account is not enabled for MCP access');
+      await assertUserMayConsent(trx, userId, config, mcp);
       const unique = [...new Set(decision.selected)].sort(compareText);
-      if (!unique.length) throw new ConsentSelectionError('Select at least one workspace.');
       const shareable = await consentWorkspaces(trx, userId);
-      const states = new Map(shareable.map((w) => [w.id, w.state]));
-      if (unique.some((id) => !['ready', 'terms'].includes(states.get(id) ?? '')))
-        throw new ConsentSelectionError('Select only workspaces that can be shared right now.');
-      const needTerms = unique.filter((id) => states.get(id) === 'terms');
-      if (
-        decision.acceptedTermsRevision !== null &&
-        decision.acceptedTermsRevision !== policy.mcp.terms_revision
-      )
-        throw new ConsentSelectionError(
-          'The Terms of Service changed since this page loaded. Review them again before approving.',
-        );
-      if (needTerms.length && decision.acceptedTermsRevision === null)
-        throw new ConsentSelectionError('Accept the Terms of Service to share these workspaces.');
+      const needTerms = validateConsentSelection(unique, shareable, decision);
       for (const workspaceId of needTerms)
         await recordPolicyAcceptance(trx, {
           workspaceId,
@@ -284,6 +301,170 @@ export function completeConsent(
 }
 /** A replayed credential: its grant is revoked in a committed transaction first. */
 class Replayed extends Error {}
+type TokenGrant = {
+  config: ServiceConfig;
+  mcp: McpConfig;
+  clientId: string;
+  form: URLSearchParams;
+  access: string;
+  refresh: string;
+  now: Date;
+};
+/** Redeems an authorization code; a replayed code revokes what it minted and yields `Replayed`. */
+async function authorizationCodeGrant(
+  trx: Database,
+  { config, mcp, clientId, form, access, refresh, now }: TokenGrant,
+): Promise<string[] | Replayed> {
+  const codeHash = tokenHash(config, form.get('code') ?? '');
+  const row = await trx
+    .selectFrom('mcp_authorization_codes')
+    .selectAll()
+    .where('code_hash', '=', codeHash)
+    .where('client_id', '=', clientId)
+    .where('consumed_at', 'is', null)
+    .where('expires_at', '>', now)
+    .forUpdate()
+    .executeTakeFirst();
+  if (!row) {
+    // A consumed code presented again revokes what it minted (RFC 6749 §4.1.2).
+    const minted = await trx
+      .selectFrom('mcp_oauth_grants as g')
+      .innerJoin('mcp_authorization_codes as code', 'code.id', 'g.authorization_code_id')
+      .select(['g.id', 'g.user_id'])
+      .where('code.code_hash', '=', codeHash)
+      .where('code.client_id', '=', clientId)
+      .where('code.consumed_at', 'is not', null)
+      .where('g.revoked_at', 'is', null)
+      .forUpdate()
+      .executeTakeFirst();
+    if (minted) {
+      await revokeGrant(trx, minted, 'mcp.token_reuse');
+      return new Replayed();
+    }
+  }
+  const verifier = form.get('code_verifier') ?? '';
+  if (
+    !row ||
+    !/^[A-Za-z0-9._~-]{43,128}$/u.test(verifier) ||
+    !equalSecret(createHash('sha256').update(verifier).digest('base64url'), row.code_challenge) ||
+    (row.redirect_uri_provided_explicitly && form.get('redirect_uri') !== row.redirect_uri) ||
+    (form.has('redirect_uri') && form.get('redirect_uri') !== row.redirect_uri) ||
+    !strings(row.workspace_ids).length
+  )
+    throw new OAuthError('invalid_grant', 'Code is invalid');
+  const user = await trx
+    .selectFrom('users')
+    .select(['email', 'is_active', 'registration_origin', 'email_verified_at'])
+    .where('id', '=', row.user_id)
+    .executeTakeFirst();
+  if (
+    !user?.is_active ||
+    requiresEmailVerification(user) ||
+    !accountAllowed(config, mcp, user.email) ||
+    row.resource !== `${mcp.origin}/mcp` ||
+    !strings(row.scopes).includes(mcpPolicy.read_scope)
+  )
+    throw new OAuthError('invalid_grant', 'Code is invalid');
+  const scopes = strings(row.scopes);
+  await trx
+    .updateTable('mcp_authorization_codes')
+    .set({ consumed_at: now })
+    .where('id', '=', row.id)
+    .execute();
+  await trx
+    .insertInto('mcp_oauth_grants')
+    .values({
+      id: randomUUID(),
+      client_id: clientId,
+      user_id: row.user_id,
+      workspace_ids: JSON.stringify(row.workspace_ids),
+      scopes: JSON.stringify(scopes),
+      resource: row.resource,
+      access_token_hash: tokenHash(config, access),
+      refresh_token_hash: tokenHash(config, refresh),
+      access_expires_at: deadline(mcp.accessTtl),
+      refresh_expires_at: refreshDeadline(mcp, now),
+      revoked_at: null,
+      authorization_code_id: row.id,
+      created_at: now,
+      updated_at: now,
+    })
+    .execute();
+  return scopes;
+}
+/** Rotates a refresh token; a replayed superseded token revokes the grant and yields `Replayed`. */
+async function refreshTokenGrant(
+  trx: Database,
+  { config, mcp, clientId, form, access, refresh, now }: TokenGrant,
+): Promise<string[] | Replayed> {
+  const presented = tokenHash(config, form.get('refresh_token') ?? '');
+  const row = await trx
+    .selectFrom('mcp_oauth_grants')
+    .selectAll()
+    .where('refresh_token_hash', '=', presented)
+    .where('client_id', '=', clientId)
+    .where('revoked_at', 'is', null)
+    .where('refresh_expires_at', '>', now)
+    .forUpdate()
+    .executeTakeFirst();
+  if (!row) {
+    // A superseded token: a concurrent refresh inside the grace window is
+    // refused alone; a later replay means the token leaked, so the grant goes.
+    const superseded = await trx
+      .selectFrom('mcp_oauth_grants')
+      .select(['id', 'user_id', 'refresh_rotated_at'])
+      .where('previous_refresh_token_hash', '=', presented)
+      .where('client_id', '=', clientId)
+      .where('revoked_at', 'is', null)
+      .forUpdate()
+      .executeTakeFirst();
+    const grace = mcpPolicy.refresh_reuse_grace_seconds * 1000;
+    if (
+      superseded?.refresh_rotated_at &&
+      now.getTime() - superseded.refresh_rotated_at.getTime() > grace
+    ) {
+      await revokeGrant(trx, superseded, 'mcp.token_reuse');
+      return new Replayed();
+    }
+  }
+  if (!row || !strings(row.workspace_ids).length)
+    throw new OAuthError('invalid_grant', 'Refresh token is invalid');
+  const user = await trx
+    .selectFrom('users')
+    .select(['email', 'is_active', 'registration_origin', 'email_verified_at'])
+    .where('id', '=', row.user_id)
+    .executeTakeFirst();
+  if (
+    !user?.is_active ||
+    requiresEmailVerification(user) ||
+    !accountAllowed(config, mcp, user.email) ||
+    row.resource !== `${mcp.origin}/mcp`
+  )
+    throw new OAuthError('invalid_grant', 'Refresh token is invalid');
+  const granted = strings(row.scopes);
+  const requested = form.get('scope')?.split(/\s+/u).filter(Boolean) ?? [];
+  // An absent or blank scope keeps the grant; narrowing is allowed, expansion is not.
+  const scopes = requested.length ? requested : granted;
+  if (scopes.some((scope) => !granted.includes(scope)))
+    throw new OAuthError('invalid_scope', 'Refresh cannot expand the original grant');
+  if (!scopes.includes(mcpPolicy.read_scope))
+    throw new OAuthError('invalid_scope', 'Every token keeps the read scope');
+  await trx
+    .updateTable('mcp_oauth_grants')
+    .set({
+      access_token_hash: tokenHash(config, access),
+      refresh_token_hash: tokenHash(config, refresh),
+      previous_refresh_token_hash: row.refresh_token_hash,
+      refresh_rotated_at: now,
+      scopes: JSON.stringify(scopes),
+      access_expires_at: deadline(mcp.accessTtl),
+      refresh_expires_at: refreshDeadline(mcp, row.created_at),
+      updated_at: now,
+    })
+    .where('id', '=', row.id)
+    .execute();
+  return scopes;
+}
 export async function exchangeToken(
   db: Database,
   config: ServiceConfig,
@@ -295,154 +476,15 @@ export async function exchangeToken(
     const access = mintToken();
     const refresh = mintToken(48);
     const now = new Date();
-    let scopes: string[];
-    if (form.get('grant_type') === 'authorization_code') {
-      const codeHash = tokenHash(config, form.get('code') ?? '');
-      const row = await trx
-        .selectFrom('mcp_authorization_codes')
-        .selectAll()
-        .where('code_hash', '=', codeHash)
-        .where('client_id', '=', clientId)
-        .where('consumed_at', 'is', null)
-        .where('expires_at', '>', now)
-        .forUpdate()
-        .executeTakeFirst();
-      if (!row) {
-        // A consumed code presented again revokes what it minted (RFC 6749 §4.1.2).
-        const minted = await trx
-          .selectFrom('mcp_oauth_grants as g')
-          .innerJoin('mcp_authorization_codes as code', 'code.id', 'g.authorization_code_id')
-          .select(['g.id', 'g.user_id'])
-          .where('code.code_hash', '=', codeHash)
-          .where('code.client_id', '=', clientId)
-          .where('code.consumed_at', 'is not', null)
-          .where('g.revoked_at', 'is', null)
-          .forUpdate()
-          .executeTakeFirst();
-        if (minted) {
-          await revokeGrant(trx, minted, 'mcp.token_reuse');
-          return new Replayed();
-        }
-      }
-      const verifier = form.get('code_verifier') ?? '';
-      if (
-        !row ||
-        !/^[A-Za-z0-9._~-]{43,128}$/u.test(verifier) ||
-        !equalSecret(
-          createHash('sha256').update(verifier).digest('base64url'),
-          row.code_challenge,
-        ) ||
-        (row.redirect_uri_provided_explicitly && form.get('redirect_uri') !== row.redirect_uri) ||
-        (form.has('redirect_uri') && form.get('redirect_uri') !== row.redirect_uri) ||
-        !strings(row.workspace_ids).length
-      )
-        throw new OAuthError('invalid_grant', 'Code is invalid');
-      const user = await trx
-        .selectFrom('users')
-        .select(['email', 'is_active', 'registration_origin', 'email_verified_at'])
-        .where('id', '=', row.user_id)
-        .executeTakeFirst();
-      if (
-        !user?.is_active ||
-        requiresEmailVerification(user) ||
-        !accountAllowed(config, mcp, user.email) ||
-        row.resource !== `${mcp.origin}/mcp` ||
-        !strings(row.scopes).includes(mcpPolicy.read_scope)
-      )
-        throw new OAuthError('invalid_grant', 'Code is invalid');
-      scopes = strings(row.scopes);
-      await trx
-        .updateTable('mcp_authorization_codes')
-        .set({ consumed_at: now })
-        .where('id', '=', row.id)
-        .execute();
-      await trx
-        .insertInto('mcp_oauth_grants')
-        .values({
-          id: randomUUID(),
-          client_id: clientId,
-          user_id: row.user_id,
-          workspace_ids: JSON.stringify(row.workspace_ids),
-          scopes: JSON.stringify(scopes),
-          resource: row.resource,
-          access_token_hash: tokenHash(config, access),
-          refresh_token_hash: tokenHash(config, refresh),
-          access_expires_at: deadline(mcp.accessTtl),
-          refresh_expires_at: refreshDeadline(mcp, now),
-          revoked_at: null,
-          authorization_code_id: row.id,
-          created_at: now,
-          updated_at: now,
-        })
-        .execute();
-    } else if (form.get('grant_type') === 'refresh_token') {
-      const presented = tokenHash(config, form.get('refresh_token') ?? '');
-      const row = await trx
-        .selectFrom('mcp_oauth_grants')
-        .selectAll()
-        .where('refresh_token_hash', '=', presented)
-        .where('client_id', '=', clientId)
-        .where('revoked_at', 'is', null)
-        .where('refresh_expires_at', '>', now)
-        .forUpdate()
-        .executeTakeFirst();
-      if (!row) {
-        // A superseded token: a concurrent refresh inside the grace window is
-        // refused alone; a later replay means the token leaked, so the grant goes.
-        const superseded = await trx
-          .selectFrom('mcp_oauth_grants')
-          .select(['id', 'user_id', 'refresh_rotated_at'])
-          .where('previous_refresh_token_hash', '=', presented)
-          .where('client_id', '=', clientId)
-          .where('revoked_at', 'is', null)
-          .forUpdate()
-          .executeTakeFirst();
-        const grace = mcpPolicy.refresh_reuse_grace_seconds * 1000;
-        if (
-          superseded?.refresh_rotated_at &&
-          now.getTime() - superseded.refresh_rotated_at.getTime() > grace
-        ) {
-          await revokeGrant(trx, superseded, 'mcp.token_reuse');
-          return new Replayed();
-        }
-      }
-      if (!row || !strings(row.workspace_ids).length)
-        throw new OAuthError('invalid_grant', 'Refresh token is invalid');
-      const user = await trx
-        .selectFrom('users')
-        .select(['email', 'is_active', 'registration_origin', 'email_verified_at'])
-        .where('id', '=', row.user_id)
-        .executeTakeFirst();
-      if (
-        !user?.is_active ||
-        requiresEmailVerification(user) ||
-        !accountAllowed(config, mcp, user.email) ||
-        row.resource !== `${mcp.origin}/mcp`
-      )
-        throw new OAuthError('invalid_grant', 'Refresh token is invalid');
-      const granted = strings(row.scopes);
-      const requested = form.get('scope')?.split(/\s+/u).filter(Boolean) ?? [];
-      // An absent or blank scope keeps the grant; narrowing is allowed, expansion is not.
-      scopes = requested.length ? requested : granted;
-      if (scopes.some((scope) => !granted.includes(scope)))
-        throw new OAuthError('invalid_scope', 'Refresh cannot expand the original grant');
-      if (!scopes.includes(mcpPolicy.read_scope))
-        throw new OAuthError('invalid_scope', 'Every token keeps the read scope');
-      await trx
-        .updateTable('mcp_oauth_grants')
-        .set({
-          access_token_hash: tokenHash(config, access),
-          refresh_token_hash: tokenHash(config, refresh),
-          previous_refresh_token_hash: row.refresh_token_hash,
-          refresh_rotated_at: now,
-          scopes: JSON.stringify(scopes),
-          access_expires_at: deadline(mcp.accessTtl),
-          refresh_expires_at: refreshDeadline(mcp, row.created_at),
-          updated_at: now,
-        })
-        .where('id', '=', row.id)
-        .execute();
-    } else throw new OAuthError('unsupported_grant_type', 'Grant type is not supported');
+    const grant: TokenGrant = { config, mcp, clientId, form, access, refresh, now };
+    let granted: string[] | Replayed;
+    if (form.get('grant_type') === 'authorization_code')
+      granted = await authorizationCodeGrant(trx, grant);
+    else if (form.get('grant_type') === 'refresh_token')
+      granted = await refreshTokenGrant(trx, grant);
+    else throw new OAuthError('unsupported_grant_type', 'Grant type is not supported');
+    if (granted instanceof Replayed) return granted;
+    const scopes = granted;
     return {
       access_token: access,
       refresh_token: refresh,

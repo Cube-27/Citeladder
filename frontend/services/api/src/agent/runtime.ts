@@ -99,6 +99,11 @@ function unselectedInstruction(remaining: number) {
     return 'No methodology was selected in time. Return only a reply, describe any remaining deliverable work, and leave skill_id and output null.';
   return '';
 }
+function savedNotice(phase: string | undefined, formatLabel: string | null) {
+  const format = formatLabel ? ` in ${formatLabel} format` : '';
+  const approval = phase === 'outline' ? ' Approve this outline before requesting a draft.' : '';
+  return `\n\nSaved ${phase}${format}.${approval}`;
+}
 
 export class AgentRuntime {
   readonly db: Database;
@@ -563,9 +568,10 @@ export class AgentRuntime {
       const formatId = response.output?.format_id ?? currentFormat(turn);
       const outline = skill ? outlineRequired(this.deps.catalog, skill, formatId) : false;
       const phase = outline && !turn.current.outlineApproved ? 'outline' : response.output?.phase;
-      const completion = response.output
-        ? `\n\nSaved ${phase}${formatId ? ` in ${this.deps.catalog.formats?.get(formatId)?.label ?? formatId} format` : ''}.${phase === 'outline' ? ' Approve this outline before requesting a draft.' : ''}`
-        : '';
+      const formatLabel = formatId
+        ? (this.deps.catalog.formats?.get(formatId)?.label ?? formatId)
+        : null;
+      const completion = response.output ? savedNotice(phase, formatLabel) : '';
       if (completion.length > budget.reply_max_chars) throw new AgentError('protocol_violation');
       const message = await appendMessage(trx, chat, {
         role: 'agent',

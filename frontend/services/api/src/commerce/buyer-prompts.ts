@@ -307,6 +307,25 @@ export async function manualBuyerPrompt(
   return firstOf(rows, 'the persisted manual buyer prompt');
 }
 
+async function trackedHashes(db: Database, projectId: string) {
+  const set = await findCommerceSet(db, projectId);
+  if (!set) return new Set<string>();
+  const rows = await db
+    .selectFrom('prompts')
+    .select('normalized_text_hash')
+    .where('prompt_set_id', '=', set.id)
+    .execute();
+  return new Set(rows.map((row) => row.normalized_text_hash));
+}
+function createGateway(factory: () => ModelGateway) {
+  try {
+    return factory();
+  } catch (error) {
+    if (error instanceof ModelError) throw unavailable();
+    throw error;
+  }
+}
+
 export async function generateBuyerPrompts(
   db: Database,
   scope: CommerceScope,
@@ -317,25 +336,8 @@ export async function generateBuyerPrompts(
   for (const target of input.targets) contexts.push(await targetContext(db, scope, target));
   // Skip already tracked texts so a repeat generation is not a 409; the
   // unique normalized hash still guards writes that race this read.
-  const set = await findCommerceSet(db, scope.projectId);
-  const tracked = new Set(
-    set
-      ? (
-          await db
-            .selectFrom('prompts')
-            .select('normalized_text_hash')
-            .where('prompt_set_id', '=', set.id)
-            .execute()
-        ).map((row) => row.normalized_text_hash)
-      : [],
-  );
-  let gateway: ModelGateway;
-  try {
-    gateway = gatewayFactory();
-  } catch (error) {
-    if (error instanceof ModelError) throw unavailable();
-    throw error;
-  }
+  const tracked = await trackedHashes(db, scope.projectId);
+  const gateway = createGateway(gatewayFactory);
   await enforceWorkspaceRequest(db, scope.workspaceId, agentCallLimit(input.targets.length));
   // Each target keeps what it admitted, so one weak batch or a later model
   // failure does not discard the prompts already paid for. Only a request that

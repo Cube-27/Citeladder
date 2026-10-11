@@ -58,15 +58,9 @@ describe('audit admission freeze', () => {
       engines: ['chatgpt'],
       random_seed: '42',
     });
-    const plan = await prepareAudit(
-      db,
-      t.workspaceId,
-      input,
-      settings,
-      providers,
-      'manual',
-      searchSettings({}),
-    );
+    const plan = await prepareAudit(db, t.workspaceId, input, settings, providers, 'manual', {
+      search: searchSettings({}),
+    });
     expect(plan.configuration).toMatchObject({
       brand_name: 'Acme Running',
       engines: ['chatgpt'],
@@ -102,7 +96,7 @@ describe('audit admission freeze', () => {
         settings,
         providers,
         'manual',
-        searchSettings({}),
+        { search: searchSettings({}) },
       );
     expect((await freeze()).configuration.entity_matching).toMatchObject({
       entities: { target: { mode: 'context_required' } },
@@ -119,7 +113,7 @@ describe('audit admission freeze', () => {
         settings,
         providers,
         'manual',
-        searchSettings({}),
+        { search: searchSettings({}) },
       );
     await expect(prepare([t.promptId, foreign.promptId])).rejects.toMatchObject({ status: 400 });
     await db
@@ -136,7 +130,7 @@ describe('audit admission freeze', () => {
         settings,
         providers,
         'manual',
-        searchSettings({}),
+        { search: searchSettings({}) },
       ),
     ).rejects.toMatchObject({ status: 404 });
   });
@@ -159,7 +153,7 @@ describe('audit admission freeze', () => {
         settings,
         providers,
         'manual',
-        searchSettings({}),
+        { search: searchSettings({}) },
       ),
     ).rejects.toMatchObject({ status: 400 });
   });

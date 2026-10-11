@@ -1,4 +1,6 @@
+import type { Selectable } from 'kysely';
 import type { Database } from '../db/database.ts';
+import type { AuditTasks } from '../generated/db-schema.ts';
 import { record } from '../db/json.ts';
 import { executionFrozenProvenance, modelProvenanceFor } from '../analysis/provenance.ts';
 import { rowsToCsv } from '../analysis/opportunities/exports.ts';
@@ -37,8 +39,19 @@ const columns = [
   'latency_ms',
   'error_code',
 ];
-const bool = (value: unknown) =>
-  value === null || value === undefined ? '' : value ? 'True' : 'False';
+const bool = (value: unknown) => {
+  if (value === null || value === undefined) return '';
+  return value ? 'True' : 'False';
+};
+const retrievalLabel = (enabled: boolean | null) => {
+  if (enabled === null) return 'retrieval unrecorded';
+  return enabled ? 'retrieval on' : 'retrieval off';
+};
+const benchmarkModeLabels: Record<string, string> = {
+  consumer_like: 'exact visible prompt; no system instruction',
+  controlled_localized: 'visible prompt plus disclosed market/language context',
+  forced_grounded: 'disclosed market/language context plus forced current-web citations',
+};
 const array = (value: unknown) => (Array.isArray(value) ? value : []);
 const joined = (value: unknown) =>
   !value || (Array.isArray(value) && !value.length) ? '' : JSON.stringify(value);
@@ -55,86 +68,78 @@ function promptPanel(classes: [string, unknown][]): string {
 }
 const md = (value: unknown) =>
   String(value ?? '')
-    .replaceAll('|', '\\|')
+    .replaceAll('|', String.raw`\|`)
     .replaceAll(/[\r\n]/gu, ' ');
 
-export async function exportAudit(
-  db: Database,
-  workspaceId: string,
-  auditId: string,
-  format: 'csv' | 'md',
-) {
-  const audit = await authorizedAudit(db, workspaceId, auditId);
-  const tasks = await db
-    .selectFrom('audit_tasks')
-    .selectAll()
-    .where('workspace_id', '=', workspaceId)
-    .where('audit_id', '=', auditId)
-    .orderBy('prompt_index')
-    .orderBy('repetition')
-    .execute();
-  if (format === 'csv')
-    return rowsToCsv(
-      tasks.map((task) => {
-        const score = record(task.score);
-        return {
-          audit_id: auditId,
-          prompt_index: task.prompt_index,
-          prompt_text: task.prompt_text,
-          repetition: task.repetition,
-          randomized_position: task.randomized_position,
-          logical_engine: task.logical_engine,
-          transport_model: task.transport_model,
-          retrieval_enabled: bool(
-            executionFrozenProvenance({
-              requestSnapshot: task.request_snapshot,
-              routeSnapshot: task.provider_route_snapshot,
-              auditConfiguration: audit.configuration,
-            }),
-          ),
-          status: task.status,
-          search_used: bool(task.search_used),
-          search_query_count: score.search_query_count ?? 0,
-          search_queries: joined(
-            array(task.search_events).map((value) => record(value).query ?? null),
-          ),
-          prompt_class: score.prompt_class ?? '',
-          prompt_contains_brand: bool(score.prompt_contains_brand ?? false),
-          prompt_contains_competitor: bool(score.prompt_contains_competitor ?? false),
-          brand_mentioned: bool(score.brand_mentioned ?? false),
-          brand_injected_in_search: bool(score.brand_injected_in_search ?? false),
-          owned_domain_cited: bool(score.owned_domain_cited ?? false),
-          owned_citation_count: score.owned_citation_count ?? 0,
-          unintended_domain_cited: bool(score.unintended_domain_cited ?? false),
-          citation_count: score.citation_count ?? 0,
-          citation_domains: joined(
-            array(task.citations)
-              .map((value) => record(value).domain)
-              .filter(Boolean),
-          ),
-          competitors_mentioned: joined(score.competitors_mentioned),
-          competitor_domains_cited: joined(score.competitor_domains_cited),
-          fanout_features: joined(score.fanout_features),
-          latency_ms: task.latency_ms,
-          error_code: task.error_code,
-        };
-      }),
-      columns,
-    );
+type ExportTask = Selectable<AuditTasks>;
+type ExportAudit = Awaited<ReturnType<typeof authorizedAudit>>;
+function csvExport(tasks: ExportTask[], audit: ExportAudit) {
+  return rowsToCsv(
+    tasks.map((task) => {
+      const score = record(task.score);
+      return {
+        audit_id: audit.id,
+        prompt_index: task.prompt_index,
+        prompt_text: task.prompt_text,
+        repetition: task.repetition,
+        randomized_position: task.randomized_position,
+        logical_engine: task.logical_engine,
+        transport_model: task.transport_model,
+        retrieval_enabled: bool(
+          executionFrozenProvenance({
+            requestSnapshot: task.request_snapshot,
+            routeSnapshot: task.provider_route_snapshot,
+            auditConfiguration: audit.configuration,
+          }),
+        ),
+        status: task.status,
+        search_used: bool(task.search_used),
+        search_query_count: score.search_query_count ?? 0,
+        search_queries: joined(
+          array(task.search_events).map((value) => record(value).query ?? null),
+        ),
+        prompt_class: score.prompt_class ?? '',
+        prompt_contains_brand: bool(score.prompt_contains_brand ?? false),
+        prompt_contains_competitor: bool(score.prompt_contains_competitor ?? false),
+        brand_mentioned: bool(score.brand_mentioned ?? false),
+        brand_injected_in_search: bool(score.brand_injected_in_search ?? false),
+        owned_domain_cited: bool(score.owned_domain_cited ?? false),
+        owned_citation_count: score.owned_citation_count ?? 0,
+        unintended_domain_cited: bool(score.unintended_domain_cited ?? false),
+        citation_count: score.citation_count ?? 0,
+        citation_domains: joined(
+          array(task.citations)
+            .map((value) => record(value).domain)
+            .filter(Boolean),
+        ),
+        competitors_mentioned: joined(score.competitors_mentioned),
+        competitor_domains_cited: joined(score.competitor_domains_cited),
+        fanout_features: joined(score.fanout_features),
+        latency_ms: task.latency_ms,
+        error_code: task.error_code,
+      };
+    }),
+    columns,
+  );
+}
+async function markdownExport(db: Database, tasks: ExportTask[], audit: ExportAudit) {
   const config = record(audit.configuration),
     summary = record(audit.summary),
     cost = record(summary.cost);
-  const routes = await engineSnapshots(db, [auditId]);
-  const provenance = modelProvenanceFor(routes.get(auditId) ?? [], config);
+  const routes = await engineSnapshots(db, [audit.id]);
+  const provenance = modelProvenanceFor(routes.get(audit.id) ?? [], config);
   const brand = md(config.brand_name ?? 'Brand'),
     mode = String(config.benchmark_mode ?? audit.benchmark_mode);
   const classes = Object.entries(record(summary.prompt_class_counts)).filter(([, count]) => count);
   const panel = promptPanel(classes);
   const lines = [`# AI Search Visibility Audit — ${brand}`, '', '## Methodology', ''];
-  if (provenance.length)
-    lines.push(
-      `- **Model provenance:** ${provenance.map((item) => `\`${item.logical_engine}\` via \`${item.transport_provider}\` model \`${item.transport_model}\` (${item.retrieval_enabled === null ? 'retrieval unrecorded' : item.retrieval_enabled ? 'retrieval on' : 'retrieval off'})`).join('; ')}.`,
+  if (provenance.length) {
+    const routeLines = provenance.map(
+      (item) =>
+        `\`${item.logical_engine}\` via \`${item.transport_provider}\` model \`${item.transport_model}\` (${retrievalLabel(item.retrieval_enabled)})`,
     );
+    lines.push(`- **Model provenance:** ${routeLines.join('; ')}.`);
+  }
   lines.push(
     `- **Engines measured:** ${
       array(config.engines)
@@ -142,7 +147,7 @@ export async function exportAudit(
         .join(', ') || '—'
     }`,
     '- **Statelessness:** every prompt is a fresh, independent request. No account history or chat context influences any answer.',
-    `- **Benchmark mode:** \`${mode}\` — ${{ consumer_like: 'exact visible prompt; no system instruction', controlled_localized: 'visible prompt plus disclosed market/language context', forced_grounded: 'disclosed market/language context plus forced current-web citations' }[mode] ?? mode}.`,
+    `- **Benchmark mode:** \`${mode}\` — ${benchmarkModeLabels[mode] ?? mode}.`,
   );
   if (mode && mode !== 'consumer_like')
     lines.push(
@@ -241,4 +246,21 @@ export async function exportAudit(
     '',
   );
   return lines.join('\n');
+}
+export async function exportAudit(
+  db: Database,
+  workspaceId: string,
+  auditId: string,
+  format: 'csv' | 'md',
+) {
+  const audit = await authorizedAudit(db, workspaceId, auditId);
+  const tasks = await db
+    .selectFrom('audit_tasks')
+    .selectAll()
+    .where('workspace_id', '=', workspaceId)
+    .where('audit_id', '=', auditId)
+    .orderBy('prompt_index')
+    .orderBy('repetition')
+    .execute();
+  return format === 'csv' ? csvExport(tasks, audit) : markdownExport(db, tasks, audit);
 }

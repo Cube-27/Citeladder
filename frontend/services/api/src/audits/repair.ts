@@ -18,7 +18,7 @@ export const repairInput = z.object({
 });
 const denied = (message: string) => new ApiError(409, message);
 /** A repair is an immutable BYOK child of selected failed frozen slots, never a replay of paid dispatch. */
-export async function createRepairAudit(
+export function createRepairAudit(
   db: Database,
   workspaceId: string,
   auditId: string,

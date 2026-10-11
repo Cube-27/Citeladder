@@ -113,9 +113,7 @@ async function createMarketAudit(
     runtime.audits,
     runtime.providers,
     trigger,
-    runtime.search,
-    at,
-    measured.market,
+    { search: runtime.search, at, selected: measured.market },
   );
   const slots = auditSlots(
     plan.prompts.length,
@@ -181,18 +179,18 @@ async function createMarketAudit(
     })
     .execute();
   const snapshots = await persistSnapshots(trx, id, plan, at);
-  const provenance = await persistTasks(
-    trx,
-    { workspaceId, projectId: input.project_id },
-    id,
+  const provenance = await persistTasks({
+    db: trx,
+    scope: { workspaceId, projectId: input.project_id },
+    auditId: id,
     plan,
     slots,
     snapshots,
     funded,
     runtime,
     at,
-    launch.devTestLogin ?? false,
-  );
+    devTestLogin: launch.devTestLogin ?? false,
+  });
   await trx
     .updateTable('audits')
     .set({ configuration: JSON.stringify({ ...plan.configuration, ...provenance }) })
@@ -262,18 +260,23 @@ function frozenSearch(plan: FrozenAudit, engine: Engine) {
       : {}),
   };
 }
+type TaskBinding = {
+  db: Database;
+  scope: AuditScope;
+  auditId: string;
+  plan: FrozenAudit;
+  funded: FundedAdmission | null;
+  runtime: AuditRuntime;
+  at: Date;
+  devTestLogin: boolean;
+};
 async function persistTasks(
-  db: Database,
-  scope: AuditScope,
-  auditId: string,
-  plan: FrozenAudit,
-  slots: ReturnType<typeof auditSlots>,
-  snapshots: Awaited<ReturnType<typeof persistSnapshots>>,
-  funded: FundedAdmission | null,
-  runtime: AuditRuntime,
-  at: Date,
-  devTestLogin: boolean,
+  options: TaskBinding & {
+    slots: ReturnType<typeof auditSlots>;
+    snapshots: Awaited<ReturnType<typeof persistSnapshots>>;
+  },
 ) {
+  const { db, scope, auditId, plan, slots, snapshots, funded, at } = options;
   const taskCredentials: Record<string, unknown> = {},
     taskReservations: Record<string, string> = {};
   const engineRoutes = { ...plan.configuration.engine_routes };
@@ -336,18 +339,7 @@ async function persistTasks(
         updated_at: at,
       })
       .execute();
-    const binding = await bindTask(
-      db,
-      scope,
-      auditId,
-      taskId,
-      route,
-      funded,
-      runtime,
-      at,
-      devTestLogin,
-      plan,
-    );
+    const binding = await bindTask(options, taskId, route);
     await reserveTrialAnswer(
       db,
       scope.workspaceId,
@@ -374,13 +366,15 @@ async function persistTasks(
       reservation_id: binding.reservation_id,
     };
     if (binding.reservation_id) taskReservations[taskId] = binding.reservation_id;
-    engineRoutes[slot.engine] = {
+    // The frozen route also carries its credential source for execution.
+    const boundRoute = {
       ...route,
       ...auditPolicy.route_policies[slot.engine],
       connection_id: binding.connection_id,
       base_url: binding.base_url,
-      ...{ credential_source: binding.credential_source },
+      credential_source: binding.credential_source,
     };
+    engineRoutes[slot.engine] = boundRoute;
   }
   if (funded && funded.cost > BigInt(Number.MAX_SAFE_INTEGER))
     throw new Error('Funded cost exceeds JSON integer precision');
@@ -404,48 +398,55 @@ async function persistTasks(
   };
 }
 
+async function reserveFundedUsage(
+  { db, scope, auditId, plan, at }: TaskBinding,
+  funded: FundedAdmission,
+  taskId: string,
+) {
+  try {
+    return await reserveUsage(db, {
+      accountId: funded.accountId,
+      capability: 'audit_credits',
+      subject: { kind: 'audit', id: taskId, workspaceId: scope.workspaceId, auditId },
+      units: plan.measurement.max_attempts,
+      key: `${auditId}:${taskId}:funded-reserve`,
+      at,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message === 'funded_credits_exhausted')
+      throw new ApiError(403, 'Funded credits are exhausted', {
+        code: 'funded_credits_exhausted',
+      });
+    throw error;
+  }
+}
+async function resolveConnection(
+  { db, scope, runtime, at, devTestLogin, funded }: TaskBinding,
+  route: FrozenAudit['routes'][number],
+  taskId: string,
+  reservationId: string | null,
+) {
+  if (route.connection_id !== null)
+    return { connection_id: route.connection_id, base_url: route.base_url };
+  if (!funded || !reservationId) return null;
+  return platformRoute(db, route, runtime, at, devTestLogin, {
+    workspaceId: scope.workspaceId,
+    accountId: funded.accountId,
+    taskId,
+    reservationId,
+  });
+}
 async function bindTask(
-  db: Database,
-  scope: AuditScope,
-  auditId: string,
+  binding: TaskBinding,
   taskId: string,
   route: FrozenAudit['routes'][number],
-  funded: FundedAdmission | null,
-  runtime: AuditRuntime,
-  at: Date,
-  devTestLogin: boolean,
-  plan: FrozenAudit,
 ) {
-  let reservationId: string | null = null;
-  if (funded) {
-    try {
-      reservationId = await reserveUsage(db, {
-        accountId: funded.accountId,
-        capability: 'audit_credits',
-        subject: { kind: 'audit', id: taskId, workspaceId: scope.workspaceId, auditId },
-        units: plan.measurement.max_attempts,
-        key: `${auditId}:${taskId}:funded-reserve`,
-        at,
-      });
-    } catch (error) {
-      if (error instanceof Error && error.message === 'funded_credits_exhausted')
-        throw new ApiError(403, 'Funded credits are exhausted', {
-          code: 'funded_credits_exhausted',
-        });
-      throw error;
-    }
-  }
+  const { db, scope, auditId, plan, funded, at } = binding;
+  let reservationId: string | null = funded
+    ? await reserveFundedUsage(binding, funded, taskId)
+    : null;
   const byok = route.connection_id !== null;
-  const connection = byok
-    ? { connection_id: route.connection_id!, base_url: route.base_url }
-    : funded && reservationId
-      ? await platformRoute(db, route, runtime, at, devTestLogin, {
-          workspaceId: scope.workspaceId,
-          accountId: funded.accountId,
-          taskId,
-          reservationId,
-        })
-      : null;
+  const connection = await resolveConnection(binding, route, taskId, reservationId);
   if (!connection)
     throw new ApiError(403, 'No executable credential available for this task', {
       code: 'execution_credentials_unavailable',

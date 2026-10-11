@@ -8,10 +8,28 @@ it('links each record to the app screen that shows it, relative for internal rea
   const id = randomUUID();
   const crawl = randomUUID();
   const record = { crawl_id: crawl, site_url_id: id, status: 'completed' };
-  const page = retrievalDocument('site_page', id, 0, record, 'Page', id, null, '');
+  const page = retrievalDocument({
+    kind: 'site_page',
+    id,
+    part: 0,
+    record,
+    title: 'Page',
+    projectId: id,
+    observedAt: null,
+    origin: '',
+  });
   expect(page.url).toBe(`/site/crawls/${crawl}/pages/${id}?project=${id}`);
   expect(JSON.parse(String(page.text))).toEqual(record);
-  const prompt = retrievalDocument('prompt', id, 0, {}, 'Prompt', id, null, 'https://app.test');
+  const prompt = retrievalDocument({
+    kind: 'prompt',
+    id,
+    part: 0,
+    record: {},
+    title: 'Prompt',
+    projectId: id,
+    observedAt: null,
+    origin: 'https://app.test',
+  });
   expect(prompt.url).toBe(`https://app.test/prompts?project=${id}`);
 });
 
@@ -24,48 +42,48 @@ it.each([mcpPolicy.max_document_bytes, 12000])(
       unknown: null,
       zero: 0,
     };
-    const initial = retrievalDocument(
-      'prompt',
+    const initial = retrievalDocument({
+      kind: 'prompt',
       id,
-      0,
+      part: 0,
       record,
-      'Prompt',
-      id,
-      null,
-      'https://app.example.test',
+      title: 'Prompt',
+      projectId: id,
+      observedAt: null,
+      origin: 'https://app.example.test',
       maxBytes,
-    );
+    });
     const metadata = initial.metadata as { part_uris: string[]; complete: boolean };
     expect(metadata.complete).toBe(false);
     const texts = metadata.part_uris.map((uri) => {
       const parsed = parseRecordId(uri);
-      const part = retrievalDocument(
-        parsed.kind,
-        parsed.id,
-        parsed.part,
+      const part = retrievalDocument({
+        kind: parsed.kind,
+        id: parsed.id,
+        part: parsed.part,
         record,
-        'Prompt',
-        id,
-        null,
-        'https://app.example.test',
+        title: 'Prompt',
+        projectId: id,
+        observedAt: null,
+        origin: 'https://app.example.test',
         maxBytes,
-      );
+      });
       expect(Buffer.byteLength(JSON.stringify(part), 'utf8')).toBeLessThanOrEqual(maxBytes);
       return part.text;
     });
     expect(JSON.parse(texts.join(''))).toEqual(record);
     expect(() =>
-      retrievalDocument(
-        'prompt',
+      retrievalDocument({
+        kind: 'prompt',
         id,
-        metadata.part_uris.length,
+        part: metadata.part_uris.length,
         record,
-        'Prompt',
-        id,
-        null,
-        'https://app.example.test',
+        title: 'Prompt',
+        projectId: id,
+        observedAt: null,
+        origin: 'https://app.example.test',
         maxBytes,
-      ),
+      }),
     ).toThrow('not found');
   },
 );

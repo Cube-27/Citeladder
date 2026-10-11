@@ -89,6 +89,27 @@ export class ToolRegistry {
     }
   }
 }
+function packNestedEvidence(
+  selected: Record<string, Json>,
+  omitted: string[],
+  key: string,
+  value: Record<string, Json>,
+  fits: () => boolean,
+) {
+  const nested: Record<string, Json> = {};
+  selected[key] = nested;
+  omitted.splice(omitted.indexOf(key), 1, ...Object.keys(value).map((field) => `${key}.${field}`));
+  for (const [field, child] of Object.entries(value)) {
+    const path = `${key}.${field}`;
+    const at = omitted.indexOf(path);
+    nested[field] = child;
+    omitted.splice(at, 1);
+    if (!fits()) {
+      delete nested[field];
+      omitted.splice(at, 0, path);
+    }
+  }
+}
 export function boundToolData(data: Json, maxChars: number, splitOverview = false) {
   const full = JSON.stringify(data);
   if (full.length <= maxChars) return { text: full, supplied: true, omissions: [] };
@@ -113,23 +134,7 @@ export function boundToolData(data: Json, maxChars: number, splitOverview = fals
         typeof value === 'object' &&
         !Array.isArray(value)
       ) {
-        const nested: Record<string, Json> = {};
-        selected[key] = nested;
-        omitted.splice(
-          omitted.indexOf(key),
-          1,
-          ...Object.keys(value).map((field) => `${key}.${field}`),
-        );
-        for (const [field, child] of Object.entries(value)) {
-          const path = `${key}.${field}`;
-          const at = omitted.indexOf(path);
-          nested[field] = child;
-          omitted.splice(at, 1);
-          if (envelope().length > maxChars) {
-            delete nested[field];
-            omitted.splice(at, 0, path);
-          }
-        }
+        packNestedEvidence(selected, omitted, key, value, () => envelope().length <= maxChars);
       }
     }
   }

@@ -81,6 +81,24 @@ function requestIdentity(scope: Scope, input: TurnInput, mode: string, approvalR
     mentions: input.mentionIds ?? [],
   };
 }
+async function replayedRun(db: Database, scope: Scope, key: string, hash: string) {
+  const replay = await db
+    .selectFrom('agent_runs')
+    .selectAll()
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('idempotency_key', '=', key)
+    .executeTakeFirst();
+  if (!replay) return undefined;
+  if (replay.project_id !== scope.projectId) throw notFound('Run');
+  if (replay.user_id !== scope.userId) throw new AgentError('agent_idempotency_conflict');
+  // Every runtime version shares one request fingerprint.
+  if (replay.request_fingerprint !== hash) throw new AgentError('agent_idempotency_conflict');
+  return replay;
+}
+function userSkillSource(skillId: string | null | undefined) {
+  if (skillId) return 'user';
+  return skillId === null ? 'automatic' : null;
+}
 function skillSource(
   explicit: string | null | undefined,
   pinned: string | null,
@@ -135,19 +153,8 @@ export class AgentStore {
       await authorize(trx, scope);
       // Serialize workspace keys before chat locks: identical races share the winner.
       await sql`select pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`.execute(trx);
-      const replay = await trx
-        .selectFrom('agent_runs')
-        .selectAll()
-        .where('workspace_id', '=', scope.workspaceId)
-        .where('idempotency_key', '=', input.key)
-        .executeTakeFirst();
-      if (replay) {
-        if (replay.project_id !== scope.projectId) throw notFound('Run');
-        if (replay.user_id !== scope.userId) throw new AgentError('agent_idempotency_conflict');
-        // Every runtime version shares one request fingerprint.
-        if (replay.request_fingerprint !== hash) throw new AgentError('agent_idempotency_conflict');
-        return replay;
-      }
+      const replay = await replayedRun(trx, scope, input.key, hash);
+      if (replay) return replay;
       const chat = input.chatId
         ? await getChat(trx, scope, input.chatId, true)
         : await this.createChat(trx, scope, input);
@@ -184,7 +191,7 @@ export class AgentStore {
         content: input.message,
         userId: scope.userId,
         skillId: input.skillId,
-        skillSource: input.skillId ? 'user' : input.skillId === null ? 'automatic' : null,
+        skillSource: userSkillSource(input.skillId),
         mentions: manifest.mentions.map((action) => ({
           kind: 'action',
           id: action.id,
