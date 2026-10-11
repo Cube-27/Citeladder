@@ -12,9 +12,13 @@
 #
 #   env -u POSTGRES_PASSWORD -u POSTGRES_USER -u POSTGRES_DB -u DATABASE_URL \
 #     POSTGRES_PASSWORD=<repo-.env-value> \
-#     docker compose --env-file .env -f docker-compose.yml up -d --force-recreate
+#     docker compose --env-file .env -f docker-compose.yml --profile app up -d --force-recreate
 #
 # Compose reads the root .env by default; copy .env.example -> .env.
+#
+# Plain `up` starts only PostgreSQL (and its one-shot migration): tests and the
+# pnpm dev servers need nothing else. The full stack is the `app` profile:
+# `docker compose --profile app up -d --build`.
 # =============================================================================
 
 services:
@@ -60,6 +64,7 @@ services:
   # marketing http://127.0.0.1:3000, app http://127.0.0.1:3001 (proxies /api
   # to the API container), docs http://127.0.0.1:4322.
   frontend:
+    profiles: ['app']
     build:
       context: .
       dockerfile: frontend/Dockerfile
@@ -84,6 +89,7 @@ services:
       - '127.0.0.1:3000:3000'
 
   docs:
+    profiles: ['app']
     build:
       context: .
       dockerfile: frontend/apps/docs/Dockerfile
@@ -96,6 +102,7 @@ services:
       - '127.0.0.1:4322:4322'
 
   vite-app:
+    profiles: ['app']
     build:
       context: .
       dockerfile: frontend/apps/app/Dockerfile
@@ -118,6 +125,7 @@ services:
   # after committed work and Cloud Scheduler starts a tick. Locally one service
   # repeats the tick (periodic owners, then drain) until stopped.
   runner:
+    profiles: ['app']
     build:
       context: .
       dockerfile: frontend/services/api/Dockerfile
@@ -138,6 +146,7 @@ services:
   # The native API serves every application route family and issues sessions.
   # The app Worker proxies /api/* here; the migrate service owns its schema.
   api-service:
+    profiles: ['app']
     build:
       context: .
       dockerfile: frontend/services/api/Dockerfile

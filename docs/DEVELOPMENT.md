@@ -150,7 +150,7 @@ cp .env.example .env
 # Use the env -u workaround (gotcha 1) and select the copied env file — verbatim:
 env -u POSTGRES_PASSWORD -u POSTGRES_USER -u POSTGRES_DB -u DATABASE_URL \
   POSTGRES_PASSWORD="$(grep -E '^POSTGRES_PASSWORD=' .env | cut -d= -f2-)" \
-  docker compose --env-file .env -f docker-compose.yml \
+  docker compose --env-file .env -f docker-compose.yml --profile app \
   up -d --build --force-recreate
 
 curl -fsS http://127.0.0.1:3000/
@@ -179,7 +179,7 @@ from the shell first, not just `up`:
 ```bash
 env -u POSTGRES_PASSWORD -u POSTGRES_USER -u POSTGRES_DB -u DATABASE_URL \
   POSTGRES_PASSWORD="$(grep -E '^POSTGRES_PASSWORD=' .env | cut -d= -f2-)" \
-  docker compose --env-file .env -f docker-compose.yml ps
+  docker compose --env-file .env -f docker-compose.yml --profile app ps
 ```
 
 The one-shot `migrate` service must have completed successfully. See
@@ -230,18 +230,20 @@ it does not enable or test a live checkout/provider.
 `frontend/services/api` is a pnpm workspace package; `pnpm install` in `frontend/`
 installs it. Its suite writes and deletes fixture rows. Pre-launch there are no
 customers, so it runs against the one local development database (`citeladder`
-in docker compose); do not create per-branch copies. Run it with
-`scripts/api-test.ps1`, which clears the provider credentials the test guard
-(`test/inherited-credentials.ts`) refuses. After a baseline change the owner
+in docker compose; plain `docker compose up -d` starts only it); do not create
+per-branch copies. Run it with `pnpm test:api` from `frontend/`, which drops
+the provider credentials the test guard (`test/inherited-credentials.ts`)
+refuses and logs to `<git-dir>/api-test.log`. After a baseline change the owner
 resets that database (`scripts/reset-db.ps1`). Tests never read `.env`
 (`test/environment.ts` sets `CITELADDER_DISABLE_DOTENV`), and the schema,
 bootstrap and seed tests create and drop their own `citeladder_*_test_*`
 databases on that server.
 
-```powershell
-./scripts/api-test.ps1 test/billing.test.ts test/catalog-authoring.test.ts   # named files
-./scripts/api-test.ps1 -Types     # regenerate src/generated/db-schema.ts after a schema change
-pnpm gen                         # (in frontend/) regenerate the public API and MCP references
+```bash
+# from frontend/
+pnpm test:api test/billing.test.ts test/catalog-authoring.test.ts   # named files
+pnpm test:api --types   # regenerate src/generated/db-schema.ts after a schema change
+pnpm gen                # regenerate the public API and MCP references
 ```
 
 Application policy and the workspace role matrix live in native config. From the
@@ -340,19 +342,23 @@ whose generic controls already hand the handler the option type.
 API service's set `noUncheckedIndexedAccess`, so an indexed read is
 `T | undefined` until it is checked.
 
-```powershell
-.\scripts\check.ps1            # affected owners, affected builds, with fixes
-.\scripts\check.ps1 -CheckOnly # the same, non-mutating
-.\scripts\check.ps1 -Build     # affected owners, every production build
-.\scripts\check.ps1 -All       # every owner and build (release, shared config)
+```bash
+# from frontend/; later arguments override the defaults
+pnpm gate                              # affected owners, affected builds, with fixes
+pnpm gate --mode check                 # the same, non-mutating
+pnpm gate --builds all                 # affected owners, every production build
+pnpm gate --scope all --builds all     # every owner and build (release, shared config)
 ```
 
-`scripts/quality.mjs` owns these checks. The PowerShell entry point holds a
-worktree lock and passes `--scope changed`. The affected owners are the ones
+`scripts/quality.mjs` owns these checks. `pnpm gate` passes `--scope changed`,
+which takes a per-worktree lock and first runs `scripts/secrets-scan.mjs`: CI's
+gitleaks version (read from `ci.yml`) and allowlist over the changed files, in
+Docker (skipped with a warning without Docker). The heavy steps then wait for
+one of `CITELADDER_HEAVY_CHECKS` (default 2) machine-wide slots
+(`scripts/check-slots.mjs`), so parallel agent sessions queue instead of
+starving each other. The affected owners are the ones
 the CI classifier (`scripts/ci-changes.mjs`) selects for the branch diff against
-`origin/main`, plus staged, unstaged and untracked files. After the quality gate,
-`scripts/secrets-scan.mjs` runs CI's gitleaks version (read from `ci.yml`) and
-allowlist over those same changed files in Docker (skipped with a warning without Docker). With `--builds affected`,
+`origin/main`, plus staged, unstaged and untracked files. With `--builds affected`,
 the Astro marketing, Astro docs and Vite app builds run only when their sources
 or shared build configuration changed; tsc and `vp check` still cover ordinary
 TypeScript. A passing run records the tree it judged in `.git/quality-pass.json`,
@@ -617,7 +623,7 @@ repo values.
 ```bash
 env -u POSTGRES_PASSWORD -u POSTGRES_USER -u POSTGRES_DB -u DATABASE_URL \
   POSTGRES_PASSWORD=<repo-.env-value> \
-  docker compose --env-file .env -f docker-compose.yml \
+  docker compose --env-file .env -f docker-compose.yml --profile app \
   up -d --build --force-recreate
 ```
 

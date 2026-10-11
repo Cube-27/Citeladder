@@ -145,7 +145,7 @@ cp .env.example .env
 # 2. From the repository root, build and start the complete local stack.
 env -u POSTGRES_PASSWORD -u POSTGRES_USER -u POSTGRES_DB -u DATABASE_URL \
   POSTGRES_PASSWORD=citeladder_dev_password \
-  docker compose --env-file .env -f docker-compose.yml \
+  docker compose --env-file .env -f docker-compose.yml --profile app \
   up -d --build --force-recreate
 
 # 3. Once `docker compose ... ps` shows the services healthy, verify the application and API.

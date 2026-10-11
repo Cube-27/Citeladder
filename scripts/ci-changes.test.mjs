@@ -49,7 +49,7 @@ test('browser-sensitive frontend paths select E2E without escalating every front
   ]);
   assert.deepEqual(selectE2EFiles(['frontend/e2e/shell.spec.ts']), ['e2e/shell.spec.ts']);
   assert.deepEqual(selectE2EFiles(['frontend/e2e/shell.spec.mjs']), []);
-  assert.equal(classifyPaths(['scripts/check.ps1', '.github/workflows/ci.yml']).e2e, false);
+  assert.equal(classifyPaths(['scripts/quality.mjs', '.github/workflows/ci.yml']).e2e, false);
 });
 
 test('billing and browser configuration select existing browser suites', () => {
@@ -139,7 +139,7 @@ test('Terraform and workflow changes are validated before deploy', () => {
   assert.equal(classifyPaths(['infra/gcp/run.tf']).infra, true);
   assert.equal(classifyPaths(['.github/workflows/compose-smoke.yml']).infra, true);
   assert.equal(classifyPaths(['frontend/services/api/src/app.ts']).infra, false);
-  assert.equal(classifyPaths(['scripts/check.ps1']).infra, false);
+  assert.equal(classifyPaths(['scripts/quality.mjs']).infra, false);
 });
 
 test('main skips full validation only for an owner-free push', () => {
@@ -181,7 +181,7 @@ test('Compose selects container-shaped changes only, on every push of a PR', () 
   // owners already cover it. `{ initial: true }` is asserted alongside the plain
   // call because a PR's first push used to escalate to Compose on any changed
   // application file -- re-adding that option must not bring the escalation back.
-  for (const path of ['frontend/components/card.tsx', 'scripts/check.ps1']) {
+  for (const path of ['frontend/components/card.tsx', 'scripts/quality.mjs']) {
     assert.equal(classifyPaths([path], { initial: true }).compose, false, path);
     assert.equal(classifyPaths([path]).compose, false, path);
   }
