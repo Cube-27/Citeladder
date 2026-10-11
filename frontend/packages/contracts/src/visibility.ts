@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { actionStatusSchema } from './actions.ts';
 import { auditStatusSchema, modelProvenanceSchema } from './audits.ts';
 import { projectMarketSchema } from './markets.ts';
 import { buyerTypeSchema, marketScopeSchema, promptCohortSchema } from './project.ts';
@@ -120,6 +121,16 @@ export const visibilitySchema = responseObject({
   created_at: z.string(),
 });
 
+// How a prompt's successful answers crossed brand mention with an owned
+// citation, one answer counted once. Null when nothing was answered.
+export const answerStatesSchema = responseObject({
+  mentioned_and_cited: z.number().int(),
+  mentioned_only: z.number().int(),
+  cited_only: z.number().int(),
+  neither: z.number().int(),
+});
+export type AnswerStates = z.infer<typeof answerStatesSchema>;
+
 export const promptMetricItemSchema = responseObject({
   id: uuid(),
   audit_id: uuid(),
@@ -153,6 +164,9 @@ export const promptMetricItemSchema = responseObject({
   comparison_status: z.string().optional(),
   comparison: visibilityComparisonSchema.nullable().optional(),
   counts: measurementCountsSchema.optional(),
+  answer_states: answerStatesSchema.nullable().optional(),
+  // The Action that targets this prompt, when the refresh opened one.
+  action_id: uuid().nullable().optional(),
   outcomes: z
     .array(
       responseObject({
@@ -161,10 +175,58 @@ export const promptMetricItemSchema = responseObject({
         counts: measurementCountsSchema,
         visibility_rate: z.number().nullable(),
         owned_citation_rate: z.number().nullable(),
+        answer_states: answerStatesSchema.nullable().optional(),
+        // Competitors named in the answers that did not name the brand.
         gap_counts: z.record(z.string(), z.number().int()),
       }),
     )
     .optional(),
+});
+
+// One run that measured the prompt, oldest first. Rates are null when the run
+// produced no successful answer for it: unavailable, never zero.
+// `comparable_with_previous` is false when the frozen measurement context,
+// prompt text or analyzer/scoring versions changed since the previous point,
+// and null on the first point.
+export const promptHistoryPointSchema = responseObject({
+  audit_id: uuid(),
+  completed_at: z.string(),
+  prompt_text: z.string(),
+  counts: measurementCountsSchema,
+  mention_rate: z.number().nullable(),
+  owned_citation_rate: z.number().nullable(),
+  answer_states: answerStatesSchema.nullable(),
+  comparison_key: z.string().nullable(),
+  analyzer_version: z.string(),
+  scoring_rule_version: z.string(),
+  comparable_with_previous: z.boolean().nullable(),
+  // Provenance: the persisted prompt score this point reads.
+  source_snapshot_id: uuid(),
+});
+
+// An Action whose frozen declaration checks measure this prompt, at the time
+// the user said the work went live. A marker, never an attribution.
+export const promptHistoryImplementationSchema = responseObject({
+  action_id: uuid(),
+  title: z.string(),
+  status: actionStatusSchema,
+  implemented_at: z.string(),
+});
+
+export const promptHistorySchema = responseObject({
+  prompt: responseObject({
+    id: uuid(),
+    text: z.string(),
+    topic_id: uuid().nullable(),
+    status: z.string(),
+  }),
+  cohort: promptCohortSchema,
+  market_id: uuid().nullable(),
+  logical_engine: z.string().nullable(),
+  points: z.array(promptHistoryPointSchema),
+  implementations: z.array(promptHistoryImplementationSchema),
+  // The newest run that measured the prompt, with per-engine outcomes.
+  latest: promptMetricItemSchema.nullable(),
 });
 
 export const observedCompetitorSchema = responseObject({

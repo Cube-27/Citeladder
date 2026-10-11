@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DisplayTime } from '@/components/ui/display-time';
 import { MutationNotice } from '@/components/ui/mutation-notice';
+import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import {
   CHECK_STATE_LABEL,
@@ -19,6 +20,7 @@ import {
 } from '@/lib/agent/vocabulary';
 import type { ActionDeclaration, MeasurementLeg } from '@/lib/api/actions';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
+import { promptHistoryHref } from '@/lib/prompts/history';
 import { queryKeys } from '@/lib/api/query-keys';
 import { siteHealthMutations } from '@/lib/api/site-health';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
@@ -127,7 +129,12 @@ function CheckRow({ check }: Readonly<{ check: ActionDeclaration['checks'][numbe
           <Badge>{CHECK_STATE_LABEL[check.state]}</Badge>
         )}
       </span>
-      {check.subject ? (
+      {check.subject && check.prompt_id ? (
+        <TextLink href={promptHistoryHref(check.prompt_id)} text="caption">
+          {check.subject}
+        </TextLink>
+      ) : null}
+      {check.subject && !check.prompt_id ? (
         <span className={textRole('caption', 'break-all')}>{check.subject}</span>
       ) : null}
       {reason || check.observed_at ? (

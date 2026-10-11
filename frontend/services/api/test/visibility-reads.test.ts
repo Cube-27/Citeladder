@@ -14,6 +14,8 @@ import { VisibilityFixtures, type Json, type Tenant } from './visibility-fixture
 import { compareSelection } from '../src/visibility/comparison.ts';
 import { record } from '../src/db/json.ts';
 import { sql } from 'kysely';
+import { promptSet, prompt as trackedPrompt } from './prompt-fixtures.ts';
+import { actionRow, snapshotRow } from './opportunity-fixtures.ts';
 
 const config = testConfig();
 const db = testDatabase(config);
@@ -532,6 +534,243 @@ describe('GET /visibility/prompts', () => {
       counts: { responses: 2, brand_responses: 1 },
       visibility_rate: 0.5,
     });
+  });
+});
+
+describe('GET /visibility/prompts/{prompt_id}/history', () => {
+  const history = (tenant: Tenant, promptId: string) =>
+    route(tenant, `/prompts/${promptId}/history`);
+
+  /** One run's answers for the tracked prompt, scored under its id. */
+  async function measuredRun(
+    tenant: Tenant,
+    promptId: string,
+    input: {
+      day: string;
+      answers: { mentioned: boolean; cited: boolean; engine?: string }[];
+      failed?: number;
+      configuration?: Json;
+    },
+  ): Promise<string> {
+    const auditId = await fixtures.audit(tenant, {
+      completedAt: new Date(`${input.day}T00:00:00Z`),
+      configuration: input.configuration ?? frozen(),
+    });
+    for (const answer of input.answers) {
+      await fixtures.execution(tenant, {
+        auditId,
+        promptIndex: 0,
+        promptText: 'best crm',
+        engine: answer.engine ?? 'chatgpt',
+        analysis: {
+          brandMentioned: answer.mentioned,
+          ownedCited: answer.cited,
+          score: answer.mentioned ? {} : { competitors_mentioned: ['Globex'] },
+        },
+      });
+    }
+    for (let index = 0; index < (input.failed ?? 0); index += 1) {
+      await fixtures.execution(tenant, {
+        auditId,
+        promptIndex: 0,
+        promptText: 'best crm',
+        taskStatus: 'failed',
+        analysis: null,
+      });
+    }
+    await fixtures.promptScore(tenant, auditId, {
+      promptIndex: 0,
+      promptText: 'best crm',
+      composite: 50,
+      promptId,
+    });
+    return auditId;
+  }
+
+  it('reads mention and owned citation rates per run, keeping unavailable apart from zero', async () => {
+    const tenant = await fixtures.tenant();
+    const promptId = await trackedPrompt(db, await promptSet(db, tenant.projectId), 'best crm');
+    const first = await measuredRun(tenant, promptId, {
+      day: '2026-03-02',
+      answers: [
+        { mentioned: true, cited: true },
+        { mentioned: false, cited: false, engine: 'claude' },
+      ],
+    });
+    const failedOnly = await measuredRun(tenant, promptId, {
+      day: '2026-03-09',
+      answers: [],
+      failed: 1,
+    });
+    const zero = await measuredRun(tenant, promptId, {
+      day: '2026-03-16',
+      answers: [{ mentioned: false, cited: true }],
+    });
+    const moved = await measuredRun(tenant, promptId, {
+      day: '2026-03-23',
+      answers: [{ mentioned: true, cited: false }],
+      configuration: frozen({ country_code: 'GB' }),
+    });
+
+    const { status, body } = await get(tenant, history(tenant, promptId));
+
+    expect(status).toBe(200);
+    expect(body.prompt).toMatchObject({ id: promptId, text: 'best crm', status: 'active' });
+    expect(
+      (body.points as Row[]).map((point) => [
+        point.audit_id,
+        point.mention_rate,
+        point.owned_citation_rate,
+        point.answer_states,
+        point.comparable_with_previous,
+      ]),
+    ).toEqual([
+      [
+        first,
+        0.5,
+        0.5,
+        { mentioned_and_cited: 1, mentioned_only: 0, cited_only: 0, neither: 1 },
+        null,
+      ],
+      [failedOnly, null, null, null, true],
+      [zero, 0, 1, { mentioned_and_cited: 0, mentioned_only: 0, cited_only: 1, neither: 0 }, true],
+      [
+        moved,
+        1,
+        0,
+        { mentioned_and_cited: 0, mentioned_only: 1, cited_only: 0, neither: 0 },
+        false,
+      ],
+    ]);
+    expect(record((body.points as Row[])[1]).counts).toMatchObject({
+      state: 'no_observations',
+      responses: 0,
+      failed: 1,
+    });
+    expect(record(body.latest)).toMatchObject({ audit_id: moved, visibility_rate: 1 });
+
+    const claude = await get(tenant, history(tenant, promptId), { engine: 'claude' });
+    expect((claude.body.points as Row[]).map((point) => point.mention_rate)).toEqual([
+      0,
+      null,
+      null,
+      null,
+    ]);
+  });
+
+  it('stays inside the requested market', async () => {
+    const tenant = await fixtures.tenant();
+    const promptId = await trackedPrompt(db, await promptSet(db, tenant.projectId), 'best crm');
+    const marketId = randomUUID();
+    await db
+      .insertInto('project_markets')
+      .values({
+        id: marketId,
+        workspace_id: tenant.workspaceId,
+        project_id: tenant.projectId,
+        label: 'United Kingdom',
+        country_code: 'GB',
+        language_code: 'en',
+        created_at: new Date(),
+      })
+      .execute();
+    const home = await measuredRun(tenant, promptId, {
+      day: '2026-03-02',
+      answers: [{ mentioned: true, cited: false }],
+    });
+    const abroad = await measuredRun(tenant, promptId, {
+      day: '2026-03-09',
+      answers: [{ mentioned: false, cited: false }],
+    });
+    await db.updateTable('audits').set({ market_id: marketId }).where('id', '=', abroad).execute();
+
+    const byDefault = await get(tenant, history(tenant, promptId));
+    const byMarket = await get(tenant, history(tenant, promptId), { market: marketId });
+
+    expect((byDefault.body.points as Row[]).map((point) => point.audit_id)).toEqual([home]);
+    expect((byMarket.body.points as Row[]).map((point) => point.audit_id)).toEqual([abroad]);
+    expect(byMarket.body.market_id).toBe(marketId);
+  });
+
+  it('marks declared work whose frozen checks measure the prompt, and names its Action', async () => {
+    const tenant = await fixtures.tenant();
+    const setId = await promptSet(db, tenant.projectId);
+    const promptId = await trackedPrompt(db, setId, 'best crm');
+    const otherId = await trackedPrompt(db, setId, 'cheap crm');
+    await measuredRun(tenant, promptId, {
+      day: '2026-03-02',
+      answers: [{ mentioned: false, cited: false }],
+    });
+    const scope = { workspace_id: tenant.workspaceId, project_id: tenant.projectId };
+    const snapshot = snapshotRow(scope);
+    await db.insertInto('opportunity_snapshots').values(snapshot).execute();
+    const promptAction = actionRow(scope, {
+      group_key: `prompt:${promptId}`,
+      target_kind: 'prompt',
+      target_label: 'best crm',
+      target_prompt_id: promptId,
+    });
+    const earned = actionRow(scope, {
+      group_key: 'earned:https://reviews.example/crm',
+      target_kind: 'earned_page',
+      target_label: 'reviews.example/crm',
+      status: 'implemented',
+    });
+    const unrelated = actionRow(scope, {
+      group_key: `prompt:${otherId}`,
+      target_kind: 'prompt',
+      target_label: 'cheap crm',
+      target_prompt_id: otherId,
+      status: 'implemented',
+    });
+    await db.insertInto('actions').values([promptAction, earned, unrelated]).execute();
+    const declare = (actionId: string, at: string, promptIds: string[]) => ({
+      ...scope,
+      id: randomUUID(),
+      action_id: actionId,
+      output_revision_id: null,
+      member_opportunity_ids: '[]',
+      opportunity_snapshot_id: snapshot.id,
+      target_site_url_ids: '[]',
+      target_external_url: null,
+      declared_implemented_at: new Date(at),
+      expected_checks: JSON.stringify(
+        promptIds.map((id) => ({ kind: 'visibility_metric', target_prompt_id: id })),
+      ),
+      actor_user_id: tenant.userId,
+      idempotency_key: randomUUID(),
+      request_fingerprint: 'fingerprint',
+      created_at: new Date(),
+    });
+    await db
+      .insertInto('opportunity_implementation_events')
+      .values([
+        declare(earned.id, '2026-03-05T12:00:00Z', [otherId, promptId]),
+        declare(unrelated.id, '2026-03-04T12:00:00Z', [otherId]),
+      ])
+      .execute();
+
+    const { body } = await get(tenant, history(tenant, promptId));
+
+    expect(body.implementations).toEqual([
+      {
+        action_id: earned.id,
+        title: 'reviews.example/crm',
+        status: 'implemented',
+        implemented_at: '2026-03-05T12:00:00Z',
+      },
+    ]);
+    expect(record(body.latest).action_id).toBe(promptAction.id);
+  });
+
+  it("is a 404 for another workspace's prompt", async () => {
+    const tenant = await fixtures.tenant();
+    const other = await fixtures.tenant();
+    const promptId = await trackedPrompt(db, await promptSet(db, other.projectId), 'best crm');
+
+    const { status, body } = await get(tenant, history(tenant, promptId));
+
+    expect([status, record(body.error).message]).toEqual([404, 'Prompt not found']);
   });
 });
 

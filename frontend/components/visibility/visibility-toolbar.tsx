@@ -118,7 +118,11 @@ export function VisibilityToolbar(props: ToolbarProps) {
 const DEFAULT_MARKET = 'default';
 
 /** Which market the page reads; offered only once a project measures more than one. */
-function MarketFilter({ markets = [], market = null, onChangeMarket }: ToolbarProps) {
+export function MarketFilter({
+  markets = [],
+  market = null,
+  onChangeMarket,
+}: Pick<ToolbarProps, 'markets' | 'market' | 'onChangeMarket'>) {
   if (markets.length < 2 || !onChangeMarket) return null;
   return (
     <FilterChoice

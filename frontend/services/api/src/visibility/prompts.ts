@@ -7,6 +7,7 @@
  * and rates and drops every single-run score.
  */
 import type {
+  AnswerStates,
   measurementCountsSchema,
   promptMetricItemSchema,
 } from '@citeladder/contracts/visibility';
@@ -65,7 +66,30 @@ export async function getPromptMetrics(
   const rows = query.auditIds?.length
     ? await periodRows(db, scope, query, query.auditIds)
     : await runRows(db, scope, query);
-  return rows.map((row) => row.item);
+  const items = rows.map((row) => row.item);
+  await attachActions(db, scope, items);
+  return items;
+}
+
+/** Each row's Action: the one the refresh opened on that prompt, if any. */
+async function attachActions(
+  db: Database,
+  scope: RunScope,
+  items: readonly PromptMetricItem[],
+): Promise<void> {
+  const promptIds = [...new Set(items.flatMap((item) => (item.prompt_id ? [item.prompt_id] : [])))];
+  const actions = promptIds.length
+    ? await db
+        .selectFrom('actions')
+        .select(['id', 'target_prompt_id'])
+        .where('workspace_id', '=', scope.workspaceId)
+        .where('project_id', '=', scope.projectId)
+        .where('target_prompt_id', 'in', promptIds)
+        .execute()
+    : [];
+  const byPrompt = new Map(actions.map((row) => [row.target_prompt_id, row.id]));
+  for (const item of items)
+    item.action_id = (item.prompt_id && byPrompt.get(item.prompt_id)) || null;
 }
 
 async function latestRunId(db: Database, scope: RunScope): Promise<string | null> {
@@ -160,6 +184,8 @@ async function scoreRows(
       comparison_status: 'no_baseline',
       comparison: null,
       counts: emptyCounts(),
+      answer_states: null,
+      action_id: null,
       outcomes: [],
     },
   }));
@@ -206,7 +232,38 @@ type Response = {
 };
 type Task = { status: string; logical_engine: string; transport_model: string };
 
-function outcomeCounts(responses: readonly Response[], tasks: readonly Task[]): Counts {
+/** Each answer once, by whether it named the brand and cited an owned page. */
+export function answerStates(
+  responses: readonly Pick<Response, 'brand_mentioned' | 'owned_domain_cited'>[],
+): AnswerStates | null {
+  if (responses.length === 0) return null;
+  const count = (mentioned: boolean, cited: boolean) =>
+    responses.filter((row) => row.brand_mentioned === mentioned && row.owned_domain_cited === cited)
+      .length;
+  return {
+    mentioned_and_cited: count(true, true),
+    mentioned_only: count(true, false),
+    cited_only: count(false, true),
+    neither: count(false, false),
+  };
+}
+
+/** Summed states; null only when no part answered. */
+function poolStates(parts: readonly (AnswerStates | null | undefined)[]): AnswerStates | null {
+  const present = parts.filter((part) => part != null);
+  if (present.length === 0) return null;
+  return {
+    mentioned_and_cited: present.reduce((total, part) => total + part.mentioned_and_cited, 0),
+    mentioned_only: present.reduce((total, part) => total + part.mentioned_only, 0),
+    cited_only: present.reduce((total, part) => total + part.cited_only, 0),
+    neither: present.reduce((total, part) => total + part.neither, 0),
+  };
+}
+
+export function outcomeCounts(
+  responses: readonly Pick<Response, 'brand_mentioned' | 'owned_domain_cited'>[],
+  tasks: readonly Pick<Task, 'status'>[],
+): Counts {
   return {
     state: responses.length ? 'measured' : 'no_observations',
     responses: responses.length,
@@ -235,6 +292,7 @@ function outcome(engine: string, model: string, responses: Response[], tasks: Ta
     counts,
     visibility_rate: ratio(counts.brand_responses, counts.responses),
     owned_citation_rate: ratio(counts.owned_citation_responses, counts.responses),
+    answer_states: answerStates(responses),
     gap_counts: gaps,
   };
 }
@@ -373,6 +431,7 @@ async function enrichOutcomes(
     item.counts = outcomeCounts(answered, promptTasks);
     item.visibility_rate = ratio(item.counts.brand_responses, item.counts.responses);
     item.owned_citation_rate = ratio(item.counts.owned_citation_responses, item.counts.responses);
+    item.answer_states = answerStates(answered);
     // Over the answers that named the brand: an unnamed answer has no rank.
     const ranked = answered.flatMap((row) => (row.avg_position === null ? [] : [row.avg_position]));
     item.avg_position = ranked.length
@@ -477,6 +536,7 @@ function poolPrompt(rows: readonly PromptRow[]): PromptRow {
       counts,
       visibility_rate: ratio(counts.brand_responses, counts.responses),
       owned_citation_rate: ratio(counts.owned_citation_responses, counts.responses),
+      answer_states: poolStates(rows.map((row) => row.item.answer_states)),
       // A single run's score and movement mean nothing across a pool.
       composite_score: null,
       previous_score: null,
@@ -502,6 +562,7 @@ function poolPrompt(rows: readonly PromptRow[]): PromptRow {
           counts: pooled,
           visibility_rate: ratio(pooled.brand_responses, pooled.responses),
           owned_citation_rate: ratio(pooled.owned_citation_responses, pooled.responses),
+          answer_states: poolStates(entries.map((entry) => entry.answer_states)),
           gap_counts: gaps,
         };
       }),

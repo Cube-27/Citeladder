@@ -20,6 +20,7 @@ import {
   DashboardHeader,
   SummarySections,
 } from './dashboard-sections';
+import { MissingPrompts } from './missing-prompts';
 import { PromptSetupCard } from './prompt-setup-card';
 import { useCommandCenterActions } from './use-command-center-actions';
 
@@ -111,6 +112,7 @@ function DashboardData({
             </Alert>
           ) : null}
           <SummarySections data={data} />
+          <MissingPrompts projectId={activeProject.id} workspaceId={activeProject.workspace_id} />
           <ActionsAndProof
             data={data}
             actions={actions.actions}

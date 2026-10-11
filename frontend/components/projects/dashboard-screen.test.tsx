@@ -3,7 +3,7 @@ import type { ReactElement, ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
-const { project, downloadExecutiveReport, queryResult } = vi.hoisted(() => ({
+const { project, downloadExecutiveReport, queryResult, promptsResult } = vi.hoisted(() => ({
   project: {
     id: '00000000-0000-4000-8000-000000000001',
     workspace_id: '00000000-0000-4000-8000-000000000002',
@@ -19,6 +19,15 @@ const { project, downloadExecutiveReport, queryResult } = vi.hoisted(() => ({
     error: null as unknown,
     isLoading: false,
     isError: false,
+    refetch: vi.fn(),
+  },
+  // The latest run's prompt results, read by "Where you're missing".
+  promptsResult: {
+    data: [] as unknown,
+    error: null as unknown,
+    isPending: false,
+    isError: false,
+    isFetching: false,
     refetch: vi.fn(),
   },
 }));
@@ -111,7 +120,8 @@ vi.mock('@/lib/billing/entitlement-context', () => ({
   capabilityRemaining: () => 0,
 }));
 vi.mock('@tanstack/react-query', () => ({
-  useQuery: () => queryResult,
+  useQuery: (options: { queryKey: readonly unknown[] }) =>
+    options.queryKey[0] === 'visibility' ? promptsResult : queryResult,
   useQueryClient: () => ({ invalidateQueries: vi.fn() }),
   useMutation: () => ({ mutate: vi.fn(), isPending: false }),
 }));
@@ -160,6 +170,7 @@ describe('DashboardScreen', () => {
     queryResult.isLoading = false;
     queryResult.isError = false;
     queryResult.refetch.mockReset();
+    promptsResult.data = [];
   });
   it('renders state, comparable movement, actions, and report proof', () => {
     renderDashboard(
@@ -188,6 +199,64 @@ describe('DashboardScreen', () => {
     expect(screen.getByRole('heading', { name: 'Company facts' })).toBeVisible();
     expect(screen.getByText('Monitor — no required action')).toBeVisible();
   });
+  it("lists prompts where answers named a competitor but not the brand, with each prompt's Action", () => {
+    const outcome = (engine: string, gaps: Record<string, number>) => ({
+      logical_engine: engine,
+      transport_model: 'model',
+      counts: {
+        state: 'measured',
+        responses: 2,
+        brand_responses: 0,
+        owned_citation_responses: 0,
+        entity_presences: null,
+        expected: 2,
+        failed: 0,
+        not_run: 0,
+      },
+      visibility_rate: 0,
+      owned_citation_rate: 0,
+      gap_counts: gaps,
+    });
+    const item = (id: string, text: string, actionId: string | null, outcomes: unknown[]) => ({
+      prompt_id: id,
+      prompt_text: text,
+      action_id: actionId,
+      outcomes,
+    });
+    promptsResult.data = [
+      item('00000000-0000-4000-8000-0000000000a1', 'best crm', null, [
+        outcome('chatgpt', { Globex: 1 }),
+      ]),
+      item(
+        '00000000-0000-4000-8000-0000000000a2',
+        'crm for agencies',
+        '00000000-0000-4000-8000-0000000000b2',
+        [outcome('chatgpt', { Globex: 2, Initech: 1 }), outcome('gemini', { Globex: 1 })],
+      ),
+      item('00000000-0000-4000-8000-0000000000a3', 'what is a crm', null, [outcome('claude', {})]),
+    ];
+    renderDashboard(
+      <TooltipProvider>
+        <DashboardScreen />
+      </TooltipProvider>,
+    );
+
+    const section = within(screen.getByRole('region', { name: "Where you're missing" }));
+    const rows = section.getAllByRole('listitem');
+    expect(rows.map((row) => row.textContent)).toEqual([
+      'crm for agenciesChatGPT API, Gemini API named Globex, InitechOpen the Action',
+      'best crmChatGPT API named GlobexNo Action yet',
+    ]);
+    expect(section.getByRole('link', { name: 'Open the Action' })).toHaveAttribute(
+      'href',
+      '/agent/actions/00000000-0000-4000-8000-0000000000b2?project=00000000-0000-4000-8000-000000000001',
+    );
+    expect(section.getByRole('link', { name: 'best crm' })).toHaveAttribute(
+      'href',
+      '/prompts/00000000-0000-4000-8000-0000000000a1?project=00000000-0000-4000-8000-000000000001',
+    );
+  });
+
   it('does not remount unrelated dashboard state when the action order changes', () => {
     const view = renderDashboard(
       <TooltipProvider>

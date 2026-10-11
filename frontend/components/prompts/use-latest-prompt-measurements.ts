@@ -35,6 +35,7 @@ export function useLatestPromptMeasurements(scope: ProjectRequestScope) {
       if (!row.prompt_id) continue;
       map.set(row.prompt_id, {
         visibilityRate: row.visibility_rate ?? null,
+        ownedCitationRate: row.owned_citation_rate ?? null,
         change: row.visibility_delta ?? null,
         position: row.avg_position ?? null,
       });

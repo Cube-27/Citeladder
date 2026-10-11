@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vite-plus/test';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
 
 import { TooltipProvider } from '@/components/ui/tooltip';
 import type { Prompt, Topic } from '@/lib/api/types';
@@ -26,15 +27,17 @@ const TOPICS = [{ id: '22222222-2222-4222-8222-222222222222', name: 'Running sho
 
 function renderTable(prompts: Prompt[]) {
   return render(
-    <TooltipProvider>
-      <PromptTable
-        prompts={prompts}
-        topics={TOPICS}
-        onEdit={() => {}}
-        onDelete={() => {}}
-        onToggleEnabled={() => {}}
-      />
-    </TooltipProvider>,
+    <MemoryRouter>
+      <TooltipProvider>
+        <PromptTable
+          prompts={prompts}
+          topics={TOPICS}
+          onEdit={() => {}}
+          onDelete={() => {}}
+          onToggleEnabled={() => {}}
+        />
+      </TooltipProvider>
+    </MemoryRouter>,
   );
 }
 
@@ -51,6 +54,45 @@ describe('PromptTable pagination', () => {
     expect(question).toHaveFocus();
     expect(await screen.findByRole('tooltip')).toHaveTextContent('Discovery');
     expect(screen.getByRole('tooltip')).toHaveTextContent('Consideration');
+  });
+
+  it('opens each question on its history and shows its measured rates', () => {
+    const prompt = makePrompt(7);
+    render(
+      <MemoryRouter>
+        <TooltipProvider>
+          <PromptTable
+            prompts={[prompt]}
+            topics={TOPICS}
+            onEdit={() => {}}
+            onDelete={() => {}}
+            onToggleEnabled={() => {}}
+            measurements={
+              new Map([
+                [
+                  prompt.id,
+                  { visibilityRate: 0.5, ownedCitationRate: 0.25, change: null, position: null },
+                ],
+              ])
+            }
+          />
+        </TooltipProvider>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('link', { name: /Prompt number 7/ })).toHaveAttribute(
+      'href',
+      '/prompts/00000000-0000-4000-8000-000000000007',
+    );
+    const [header, row] = screen.getAllByRole('row');
+    const columns = within(header!)
+      .getAllByRole('columnheader')
+      .map((cell) => cell.textContent);
+    const cells = within(row!)
+      .getAllByRole('cell')
+      .map((cell) => cell.textContent);
+    expect(cells[columns.indexOf('Visibility')]).toBe('50%');
+    expect(cells[columns.indexOf('Owned citations')]).toBe('25%');
   });
 
   it('names each row by its topic rather than its internal theme', () => {
@@ -107,15 +149,17 @@ describe('PromptTable pagination', () => {
     const user = userEvent.setup();
     const prompts = Array.from({ length: 12 }, (_, i) => makePrompt(i + 1));
     const { rerender } = render(
-      <TooltipProvider>
-        <PromptTable
-          prompts={prompts}
-          topics={TOPICS}
-          onEdit={() => {}}
-          onDelete={() => {}}
-          onToggleEnabled={() => {}}
-        />
-      </TooltipProvider>,
+      <MemoryRouter>
+        <TooltipProvider>
+          <PromptTable
+            prompts={prompts}
+            topics={TOPICS}
+            onEdit={() => {}}
+            onDelete={() => {}}
+            onToggleEnabled={() => {}}
+          />
+        </TooltipProvider>
+      </MemoryRouter>,
     );
 
     await user.click(screen.getByRole('button', { name: 'Next page' }));
@@ -129,15 +173,17 @@ describe('PromptTable pagination', () => {
 
     // A refetch/filter shrinking the list clamps the page into range.
     rerender(
-      <TooltipProvider>
-        <PromptTable
-          prompts={prompts.slice(0, 5)}
-          topics={TOPICS}
-          onEdit={() => {}}
-          onDelete={() => {}}
-          onToggleEnabled={() => {}}
-        />
-      </TooltipProvider>,
+      <MemoryRouter>
+        <TooltipProvider>
+          <PromptTable
+            prompts={prompts.slice(0, 5)}
+            topics={TOPICS}
+            onEdit={() => {}}
+            onDelete={() => {}}
+            onToggleEnabled={() => {}}
+          />
+        </TooltipProvider>
+      </MemoryRouter>,
     );
     expect(
       screen.getByText(
@@ -153,15 +199,17 @@ describe('PromptTable pagination', () => {
     const user = userEvent.setup();
     const onToggleEnabled = vi.fn();
     render(
-      <TooltipProvider>
-        <PromptTable
-          prompts={[makePrompt(1)]}
-          topics={TOPICS}
-          onEdit={() => {}}
-          onDelete={() => {}}
-          onToggleEnabled={onToggleEnabled}
-        />
-      </TooltipProvider>,
+      <MemoryRouter>
+        <TooltipProvider>
+          <PromptTable
+            prompts={[makePrompt(1)]}
+            topics={TOPICS}
+            onEdit={() => {}}
+            onDelete={() => {}}
+            onToggleEnabled={onToggleEnabled}
+          />
+        </TooltipProvider>
+      </MemoryRouter>,
     );
 
     await user.click(screen.getByRole('switch', { name: 'Disable prompt' }));

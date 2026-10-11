@@ -244,7 +244,10 @@ engines, repetitions, locale and retrieval policy. Missing or incompatible
 evidence remains not-run, unavailable or non-comparable.
 
 The Action detail returns the declaration with its observations, each expected
-check with its latest folded state, reason and subject (`checks`), the end of
+check with its latest folded state, reason and subject (`checks`; a prompt
+check names the prompt's text and `prompt_id`, which links to its history in
+[Visibility](visibility-prompt.md#one-prompt-over-time), and names nothing once
+the prompt is deleted), the end of
 its verification window (`measured_until`), and what each
 [loop leg](../frontend/services/api/src/opportunities/measurement-legs.ts) is waiting
 for, read from persisted rows: the next scheduled visibility run, the next
