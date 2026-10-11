@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it, vi } from 'vitest';
 import { internalLinksReadSchema } from '@citeladder/contracts/site-health';
 
 import { createApp } from '../src/app.ts';
@@ -266,6 +266,45 @@ describe('internal link analysis admission', () => {
       .where('task_kind', '=', 'internal_link_judgment')
       .execute();
     expect((await request(seed, '/analyses', replacement)).status).toBe(202);
+  });
+
+  it('bounds daily analyses per workspace while replays stay free', async () => {
+    const seed = await actionFixture<ActionSeed>('content');
+    const other = await actionFixture<ActionSeed>('content');
+    seeds.push(seed, other);
+    vi.stubEnv('ABUSE_INTERNAL_LINK_ANALYSES_PER_WORKSPACE_DAILY', '1');
+    try {
+      const input = { crawl_id: seed.crawl_id, idempotency_key: randomUUID() };
+      expect((await request(seed, '/analyses', input)).status).toBe(202);
+      expect((await request(seed, '/analyses', input)).status).toBe(202);
+      // Free the active slot so only the daily window can refuse the next run.
+      await db
+        .updateTable('site_internal_link_runs')
+        .set({ state: 'cancelled' })
+        .where('workspace_id', '=', seed.workspace_id)
+        .execute();
+      await db
+        .updateTable('analytics_tasks')
+        .set({ status: 'succeeded' })
+        .where('workspace_id', '=', seed.workspace_id)
+        .where('task_kind', '=', 'internal_link_judgment')
+        .execute();
+      const refused = await request(seed, '/analyses', {
+        crawl_id: seed.crawl_id,
+        idempotency_key: randomUUID(),
+      });
+      expect(refused.status).toBe(429);
+      const runs = await db
+        .selectFrom('site_internal_link_runs')
+        .select('id')
+        .where('workspace_id', '=', seed.workspace_id)
+        .execute();
+      expect(runs).toHaveLength(1);
+      const elsewhere = { crawl_id: other.crawl_id, idempotency_key: randomUUID() };
+      expect((await request(other, '/analyses', elsewhere)).status).toBe(202);
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it('fills the page cap with eligible pages, not the alphabetically first rows', async () => {
