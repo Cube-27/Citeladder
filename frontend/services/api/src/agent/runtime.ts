@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
 import { ApiError } from '../errors.ts';
-import { workspaceAccess } from '../entitlements/access.ts';
+import { accessGranted, workspaceAccess } from '../entitlements/access.ts';
 import { truncatedFinish } from '../models/gateway.ts';
 import { ModelError } from '../models/http.ts';
 import { authorize } from './access.ts';
@@ -275,8 +275,7 @@ export class AgentRuntime {
     events?: TurnEvents,
   ) {
     const access = await workspaceAccess(this.db, lease.workspaceId);
-    if (access.status === 'trial_expired' || access.status === 'access_unresolved')
-      throw new AgentError(access.status);
+    if (!accessGranted(access.status)) throw new AgentError(access.status);
     events?.step?.({ ordinal, tool: null, status: 'working' });
     const result = await this.deps.models.call(
       lease,

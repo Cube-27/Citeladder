@@ -5,10 +5,13 @@ Remaining work is consolidated in the backlog; historical plans are not active a
 
 ## Active
 
-None. The feature review programme and the competitive feature tracker are complete
-and archived under [docs/archive](../archive/); their unfinished items, including
-billing, entitlements and usage (feature 11) and enterprise SSO and SCIM (F9), are
-in the backlog.
+- [Billing improvement](billing-improvement.md) (feature 11, owner decisions
+  recorded 2026-10-11): billing fully operational but hidden, in three PRs, so
+  that enablement is a configuration-only PR.
+
+The feature review programme and the competitive feature tracker are complete
+and archived under [docs/archive](../archive/); their other unfinished items,
+including enterprise SSO and SCIM (F9), are in the backlog.
 
 ## Queued
 

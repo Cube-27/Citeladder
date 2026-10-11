@@ -26,6 +26,7 @@ import { scopedPromptSet } from './prompt-sets.ts';
 import {
   candidateView,
   promptView,
+  WITHIN_LIMIT,
   type CandidateRow,
   type CandidateView,
   type PromptView,
@@ -260,7 +261,7 @@ export function reviewCandidates(
           redundant.push(insertable[index]!.id);
           return [];
         }
-        return [promptView(prompt)];
+        return [promptView(prompt, WITHIN_LIMIT)];
       });
       if (inserted.length > 0) {
         await trx

@@ -82,6 +82,8 @@ export const promptSchema = responseObject({
   enabled: z.boolean(),
   status: promptStatusSchema,
   origin: z.enum(['manual', 'imported', 'generated']),
+  // Beyond the plan's prompt slots (after a downgrade): kept, never measured.
+  over_plan_limit: z.boolean(),
   created_at: z.string().optional(),
   updated_at: z.string().optional(),
 });

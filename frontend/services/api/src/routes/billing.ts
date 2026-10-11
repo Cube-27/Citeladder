@@ -25,13 +25,12 @@ import {
 import {
   baseRequest,
   packRequest,
-  changeRequest,
   idempotencyKey,
   purchase,
-  changePlan,
   workspaceActivation,
   activationResponse,
 } from '../billing/purchases.ts';
+import { changeRequest, changePlan } from '../billing/plan-changes.ts';
 import { identitySchema, conflict } from '../billing/contracts.ts';
 import { offerRead, claimOffer, endOffer, claimRequest } from '../billing/journeys.ts';
 import { cancelSubscription } from '../billing/cancellation.ts';
@@ -267,7 +266,7 @@ export const billingRoutes = [
         provider_mode: pending.provider_mode,
         flow: 'provider_sdk',
         redirect_url: '',
-        sdk_name: 'razorpay',
+        sdk_name: 'razorpay-checkout',
         public_key: config.razorpay.keyId,
         reference: pending.external_reference,
         reference_kind: pending.activation_kind === 'base' ? 'subscription' : 'order',
@@ -300,15 +299,20 @@ export const billingRoutes = [
         conflict('checkout_unavailable');
       verifyCallback(config.razorpay, pending.external_reference, input.fields);
       if (pending.status === 'activated') return activationResponse(pending);
-      // The callback authenticates only; recovery verifies captured funds.
-      if (pending.status !== 'pending' || pending.expires_at <= new Date())
+      // The callback authenticates only; recovery verifies captured funds. A
+      // payment completed after the quote expired is still the customer's money.
+      // An abandoned order with a signed payment reopens for one recovery probe.
+      if (
+        pending.status === 'failed' ||
+        (pending.status === 'abandoned' && pending.activation_kind === 'base')
+      )
         conflict('checkout_unavailable');
       await db
         .updateTable('pending_activations')
-        .set({ reconciliation_next_at: new Date() })
+        .set({ status: 'pending', reconciliation_next_at: new Date(), updated_at: new Date() })
         .where('id', '=', pending.id)
         .where('billing_account_id', '=', pending.billing_account_id)
-        .where('status', '=', 'pending')
+        .where('status', 'in', ['pending', 'abandoned'])
         .execute();
       return activationResponse(pending);
     },

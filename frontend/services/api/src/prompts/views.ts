@@ -32,7 +32,11 @@ const promptOrigin = promptSchema.shape.origin;
 const topicOrigin = topicSchema.shape.origin;
 const [QUALITY_OFF, QUALITY_UNAVAILABLE] = policy.prompts.candidate.quality_gates_reported;
 
-export function promptView(row: PromptRow): PromptView {
+/** No prompt is over the limit: rows just admitted under the plan's slots. */
+export const WITHIN_LIMIT: ReadonlySet<string> = new Set();
+
+/** `overLimit` holds the workspace's prompts beyond its plan's prompt slots. */
+export function promptView(row: PromptRow, overLimit: ReadonlySet<string>): PromptView {
   return {
     id: row.id,
     prompt_set_id: row.prompt_set_id,
@@ -47,18 +51,23 @@ export function promptView(row: PromptRow): PromptView {
     enabled: row.enabled,
     status: promptStatusSchema.parse(row.status),
     origin: promptOrigin.parse(row.origin),
+    over_plan_limit: overLimit.has(row.id),
     created_at: row.created_at.toISOString(),
     updated_at: row.updated_at.toISOString(),
   };
 }
 
-export function promptSetView(row: PromptSetRow, prompts: readonly PromptRow[]): PromptSetView {
+export function promptSetView(
+  row: PromptSetRow,
+  prompts: readonly PromptRow[],
+  overLimit: ReadonlySet<string>,
+): PromptSetView {
   return {
     id: row.id,
     project_id: row.project_id,
     name: row.name,
     description: row.description,
-    prompts: prompts.map(promptView),
+    prompts: prompts.map((prompt) => promptView(prompt, overLimit)),
     prompt_count: prompts.length,
     created_at: row.created_at.toISOString(),
     updated_at: row.updated_at.toISOString(),

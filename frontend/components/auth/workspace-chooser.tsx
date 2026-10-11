@@ -125,6 +125,12 @@ function AccessBadge({ workspaceId }: Readonly<{ workspaceId: string }>) {
           Trial ended
         </Badge>
       );
+    case 'subscription_lapsed':
+      return (
+        <Badge variant="status" value="warning">
+          Plan ended
+        </Badge>
+      );
     case 'access_unresolved':
       return (
         <Badge variant="status" value="danger">

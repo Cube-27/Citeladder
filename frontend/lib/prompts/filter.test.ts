@@ -17,6 +17,7 @@ function prompt(overrides: Partial<Prompt> = {}): Prompt {
     enabled: true,
     origin: 'manual',
     status: 'active',
+    over_plan_limit: false,
     ...overrides,
   };
 }

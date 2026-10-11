@@ -226,6 +226,31 @@ async function promptCount(db: Database, accountId: string): Promise<number> {
 }
 
 /**
+ * Prompts beyond the workspace's `prompt_slots` allowance, the newest first
+ * out: after a downgrade they are kept, shown, and never measured. Unlocked,
+ * so reads can use it; an unresolvable account excludes nothing here because
+ * admission refuses it anyway.
+ */
+export async function overLimitPromptIds(
+  db: Database,
+  workspaceId: string,
+): Promise<ReadonlySet<string>> {
+  const allowance = (await grantedValues(db, workspaceId))?.get(PROMPT_SLOTS);
+  if (allowance === undefined) return new Set();
+  const rows = await db
+    .selectFrom('prompts')
+    .innerJoin('prompt_sets', 'prompt_sets.id', 'prompts.prompt_set_id')
+    .innerJoin('projects', 'projects.id', 'prompt_sets.project_id')
+    .select('prompts.id')
+    .where('projects.workspace_id', '=', workspaceId)
+    .orderBy('prompts.created_at')
+    .orderBy('prompts.id')
+    .offset(allowance)
+    .execute();
+  return new Set(rows.map((row) => row.id));
+}
+
+/**
  * Prompt slots in use and the `prompt_slots` allowance, null when ungated.
  * Takes the capacity lock, so it reads after a same-transaction insert.
  */

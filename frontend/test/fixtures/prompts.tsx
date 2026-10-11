@@ -21,6 +21,7 @@ export function makePrompt(overrides: Partial<Prompt> = {}): Prompt {
     enabled: true,
     status: 'active',
     origin: 'manual',
+    over_plan_limit: false,
     ...overrides,
   };
 }

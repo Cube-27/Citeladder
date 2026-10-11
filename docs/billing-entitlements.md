@@ -64,6 +64,9 @@ workspace's additional measurement markets (a project's default market is
 free). Growth grants 3 and Scale 10; Starter and the public trial have none, so
 adding a market there is refused with 403 `occupancy_limit_exceeded`. Market
 creation admits under the capacity lock.
+Prompt slots are checked when prompts are added; after a downgrade, the
+workspace's prompts beyond `prompt_slots` (newest first out) are kept, read as
+`over_plan_limit`, and excluded from audits until slots free up.
 
 Public registration persists its origin on the identity and billing account and
 issues `public-trial-v1` once, starting at the original registration cohort and
@@ -76,8 +79,11 @@ reserves 20 lifetime answers, debits successful tasks once and releases terminal
 failures. Immutable task snapshots retain the original prompt ID for the one-success
 per-prompt limit, including audit repair. Attempt funding remains separately bounded.
 
-`entitlements/access.ts` resolves `active`, `trial_active`, `trial_expired` and
-`access_unresolved` without writes. Expiry is checked at dispatch and subsequent
+`entitlements/access.ts` resolves `active`, `trial_active`, `trial_expired`,
+`subscription_lapsed` and `access_unresolved` without writes. A workspace
+whose paid plan access took effect and has since ended reads
+`subscription_lapsed`, never `trial_expired`, so trial purge never selects a
+former customer. Expiry is checked at dispatch and subsequent
 network boundaries; already-dispatched evidence may settle. Capacity supplements
 and credit top-ups do not reopen expired access. An explicit operator
 `workspace_access=1` override can restore it through the existing
@@ -124,14 +130,25 @@ disclaimer. Rendering performs no acquisition or settlement.
 Base plans are recurring provider subscriptions. Add-ons, top-ups and an
 upgrade's prorated charge are one-time provider orders: the intent persists the
 order, and the single captured payment on it settles the purchase, so both
-order-paid and payment-captured deliveries converge on one activation. An
+order-paid and payment-captured deliveries converge on one activation. A
+declined attempt never fails an order, because the customer may retry on it. An
 unpaid checkout is abandoned after the reconciliation window instead of holding
 the one-pending slot; for a base-plan intent the provider subscription is
 cancelled first, and a failed cancellation keeps the intent pending for retry.
-[Plan changes](../frontend/services/api/src/billing/purchases.ts) edit the one base
+Orders cannot be cancelled at the provider, so a capture after abandonment still
+settles (and a signed callback reopens the order for one probe); an add-on or
+top-up paid once no base period is live keeps its receipt, grants nothing and
+is logged for an operator refund. A halted subscription (provider retries
+exhausted) stays current, blocking a second base plan, until the subscription
+sweep has cancelled it at the provider; a subscription that resumes first is
+left renewing. A definite provider refusal of a cancellation is final and the
+sweep applies the provider's state; a fully refunded payment remains evidence
+of its paid period, and the refund settles separately.
+[Plan changes](../frontend/services/api/src/billing/plan-changes.ts) edit the one base
 subscription: an upgrade charges the prorated base-price difference for the rest
 of the paid period and, once paid, issues the higher plan's bundle for that
-remainder; a downgrade waits for renewal with no refund. Either way the
+remainder; a downgrade waits for renewal with no refund, and the checkout kill
+switch does not block it because it charges nothing. Either way the
 subscription holds at most one scheduled change carrying the target plan's
 frozen terms, which the renewal billed on the target provider plan swaps in.
 Existing subscribers stay on the provider plan and terms they authorised;
@@ -140,9 +157,14 @@ each catalog revision names one immutable provider plan per SKU and region.
 The [Razorpay REST client](../frontend/services/api/src/billing/razorpay.ts)
 fails closed for unknown or unconfigured providers and fixes the credentialed
 origin, disables redirects and bounds timeouts and collection pagination.
+Recovery finds a crashed checkout's provider record by its own keys (an order by
+receipt, a subscription by plan within its creation window), never by listing
+the account. Payment events with neither an order nor an invoice (payment links,
+QR codes) are acknowledged and ignored.
 Checkout initialization (one route for every activation kind) exposes only safe
 public identity. Callback verification binds its signature to the stored
-subscription or order and schedules bounded reconciliation; durable webhook receipt precedes asynchronous processing. The
+subscription or order and schedules bounded reconciliation, even after the
+quote expired; durable webhook receipt precedes asynchronous processing. The
 checkout kill switch does not disable recovery of existing payment evidence.
 Razorpay vocabulary, headers, keys and webhook path remain adapter-owned.
 The [billing recovery lane](../frontend/services/api/src/billing/recovery.ts) claims each

@@ -201,6 +201,7 @@ function consentState(access: WorkspaceAccess, accepted: boolean): ConsentWorksp
     case 'access_unresolved':
       return 'unresolved';
     case 'trial_expired':
+    case 'subscription_lapsed':
       return 'inactive';
     case 'active':
     case 'trial_active':

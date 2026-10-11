@@ -171,8 +171,9 @@ code-specific
 recovery reply from [`messages.ts`](../frontend/services/api/src/agent/messages.ts)
 saying what happened, that nothing was saved, and what to do next. The one
 exception is a member who lost access (`access_revoked`), whose turn ends
-without a reply. Failure codes keep their meaning: `trial_expired` and
-`access_unresolved` survive from entitlement checks, provider failures are
+without a reply. Failure codes keep their meaning: `trial_expired`,
+`subscription_lapsed` and `access_unresolved` survive from entitlement checks,
+provider failures are
 `provider_error`, validation and storage defects are `internal_error`, and a
 malformed step past its repair bound is `protocol_violation`. At admission a
 lost or changed model route is HTTP 409 `agent_model_unavailable`, distinct from

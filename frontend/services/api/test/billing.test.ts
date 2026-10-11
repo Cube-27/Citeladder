@@ -2,7 +2,8 @@ import { randomUUID, createHmac, createHash } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { sql } from 'kysely';
 import { createApp } from '../src/app.ts';
-import { purchase, changePlan } from '../src/billing/purchases.ts';
+import { purchase } from '../src/billing/purchases.ts';
+import { changePlan } from '../src/billing/plan-changes.ts';
 import { settlePending, settleSubscription } from '../src/billing/settlement.ts';
 import { recordRefund } from '../src/billing/receipts.ts';
 import { cancelSubscription } from '../src/billing/cancellation.ts';
@@ -10,6 +11,8 @@ import { ProviderError } from '../src/billing/razorpay.ts';
 import { recoverBilling } from '../src/billing/recovery.ts';
 import { entitlementRead, usageRead, workspaceEntitlementRead } from '../src/billing/reads.ts';
 import { claimOffer, endOffer, offerRead } from '../src/billing/journeys.ts';
+import { ensureWorkspaceBilling } from '../src/entitlements/bootstrap.ts';
+import { workspaceAccess } from '../src/entitlements/access.ts';
 import { sessionToken, testDatabase } from './support.ts';
 import {
   BillingFixtures,
@@ -40,8 +43,9 @@ describe('billing money and access owner', () => {
     );
   const pending = (id: string) =>
     db.selectFrom('pending_activations').selectAll().where('id', '=', id).executeTakeFirstOrThrow();
+  // A subscriber whose access and flags come only from the plan bundle they bought.
   async function activated() {
-    const t = await fixtures.tenant();
+    const t = await fixtures.tenant({ access: false });
     const response = await buy(t.workspaceId);
     const row = await pending(response.activation_id);
     const evidence = paidSubscription(row);
@@ -91,6 +95,46 @@ describe('billing money and access owner', () => {
       purchase(db, config, t.workspaceId, { ...args, key: 'tier_2' }, key, fakeProvider()),
     ).rejects.toMatchObject({ status: 409 });
     await expect(buy(t.workspaceId)).rejects.toMatchObject({ status: 409 });
+  });
+  it('keeps a public trial customer in their workspace after buying a plan, past the trial', async () => {
+    const t = await fixtures.tenant({ access: false });
+    await db
+      .updateTable('billing_accounts')
+      .set({ registration_origin: 'public' })
+      .where('id', '=', t.accountId)
+      .execute();
+    const user = await db
+      .updateTable('users')
+      .set({ registration_origin: 'public' })
+      .where('id', '=', t.userId)
+      .returningAll()
+      .executeTakeFirstOrThrow();
+    await db.transaction().execute((trx) => ensureWorkspaceBilling(trx, t.workspaceId, user));
+    expect((await workspaceAccess(db, t.workspaceId)).status).toBe('trial_active');
+    const row = await pending((await buy(t.workspaceId)).activation_id);
+    const evidence = paidSubscription(row);
+    await db
+      .transaction()
+      .execute((trx) => settlePending(trx, row.id, 'test', evidence, 'reconciliation'));
+    const afterTrial = new Date(Date.now() + 10 * 86_400_000);
+    expect(await workspaceAccess(db, t.workspaceId, afterTrial)).toMatchObject({
+      status: 'active',
+    });
+    const flags = await db
+      .selectFrom('account_grants')
+      .select('key')
+      .where('billing_account_id', '=', t.accountId)
+      .where('source_kind', '=', 'plan')
+      .where('key', 'in', ['team_members', 'project_deletion'])
+      .execute();
+    expect(flags.map((grant) => grant.key).sort()).toEqual(['project_deletion', 'team_members']);
+    // Once the paid period ends unrenewed, the customer is lapsed, never an expired trial.
+    const periodEnd = evidence.subscription.end!;
+    const afterPlan = new Date(periodEnd.getTime() + 86_400_000);
+    expect(await workspaceAccess(db, t.workspaceId, afterPlan)).toEqual({
+      status: 'subscription_lapsed',
+      expires_at: periodEnd.toISOString(),
+    });
   });
   it('preserves uncertain creation and recovers without creating or granting twice', async () => {
     const t = await fixtures.tenant();
@@ -707,6 +751,204 @@ describe('billing money and access owner', () => {
         fakeProvider(),
       ),
     ).rejects.toMatchObject({ status: 409 });
+  });
+  it('keeps a declined order open for a retry and settles a capture that lands after abandonment', async () => {
+    const t = await activated();
+    const item = (await fixtures.catalog()).payload.topups.find((row) =>
+      row.eligible_plan_keys.includes('tier_1'),
+    )!;
+    const response = await purchase(
+      db,
+      config,
+      t.workspaceId,
+      { kind: 'topup', key: item.key, quantity: 1, mode: 'byok' },
+      randomUUID(),
+      fakeProvider(),
+    );
+    const row = await pending(response.activation_id);
+    const unpaid = {
+      kind: 'payment',
+      reference: row.external_reference!,
+      notes: { citeladder_intent_id: row.id, citeladder_account_ref: t.accountId },
+      payment: null,
+    } as const;
+    // A declined attempt leaves the order open: the customer may retry on it.
+    await db.transaction().execute((trx) => settlePending(trx, row.id, 'test', unpaid, 'webhook'));
+    expect((await pending(row.id)).status).toBe('pending');
+    await db
+      .updateTable('pending_activations')
+      .set({ status: 'abandoned', failed_at: new Date(), failure_code: 'activation_expired' })
+      .where('id', '=', row.id)
+      .execute();
+    const captured = {
+      ...unpaid,
+      payment: {
+        id: `pay_${randomUUID().replaceAll('-', '')}`,
+        invoiceId: null,
+        orderId: row.external_reference,
+        amount: response.quote.total_price.amount_minor,
+        currency: response.quote.total_price.currency,
+        paidAt: new Date(),
+        periodStart: null,
+        periodEnd: null,
+        taxMinor: null,
+        method: 'card',
+      },
+    };
+    const app = createApp(config, db);
+    // The browser's signed callback for that payment reopens the order for recovery.
+    const verified = await app.request(`/api/v1/billing/activations/${row.id}/verify`, {
+      method: 'POST',
+      headers: {
+        cookie: `${config.session.cookieName}=${await sessionToken({ sub: t.userId, ver: 0 })}`,
+        'x-workspace-id': t.workspaceId,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        fields: {
+          razorpay_payment_id: captured.payment.id,
+          razorpay_order_id: row.external_reference!,
+          razorpay_signature: createHmac('sha256', config.razorpay.keySecret)
+            .update(`${row.external_reference}|${captured.payment.id}`)
+            .digest('hex'),
+        },
+      }),
+    });
+    expect(verified.status).toBe(202);
+    expect((await pending(row.id)).status).toBe('pending');
+    // Its probe saw no capture yet and abandoned it again; the webhook still settles it.
+    await db
+      .updateTable('pending_activations')
+      .set({ status: 'abandoned' })
+      .where('id', '=', row.id)
+      .execute();
+    const eventId = randomUUID();
+    const body = JSON.stringify({
+      event: 'order.paid',
+      payload: { order: { entity: { id: row.external_reference, status: 'paid' } } },
+    });
+    const delivered = await app.request('/api/v1/billing/webhooks/razorpay', {
+      method: 'POST',
+      body,
+      headers: {
+        'x-razorpay-event-id': eventId,
+        'x-razorpay-signature': createHmac('sha256', config.razorpay.webhookSecret)
+          .update(body)
+          .digest('hex'),
+      },
+    });
+    expect(delivered.status).toBe(204);
+    await recoverBilling(
+      db,
+      config,
+      fakeProvider({
+        evidence: async (reference) => {
+          if (reference !== row.external_reference) throw new ProviderError(true);
+          return captured;
+        },
+      }),
+    );
+    expect(await pending(row.id)).toMatchObject({ status: 'activated', failure_code: null });
+    const receipts = await db
+      .selectFrom('billing_payments')
+      .select('external_payment_id')
+      .where('billing_account_id', '=', t.accountId)
+      .where('external_payment_id', '=', captured.payment.id)
+      .execute();
+    expect(receipts).toHaveLength(1);
+    const granted = await db
+      .selectFrom('account_grants')
+      .select('key')
+      .where('source_ref', '=', `activation:${row.id}`)
+      .execute();
+    expect(granted.map((grant) => grant.key)).toEqual(item.modes.byok!.grants.map((g) => g.key));
+  });
+  it('cancels a halted subscription at the provider, keeping it current until then, and leaves a resumed one renewing', async () => {
+    const t = await activated();
+    const ref = t.sub.external_subscription_id;
+    const settle = (event: typeof t.evidence.subscription) =>
+      db
+        .transaction()
+        .execute((trx) => settleSubscription(trx, t.sub, event, t.row, t.workspaceId));
+    const current = () =>
+      db
+        .selectFrom('billing_subscriptions')
+        .selectAll()
+        .where('id', '=', t.sub.id)
+        .executeTakeFirstOrThrow();
+    const halted = { ...t.evidence.subscription, status: 'unpaid', payment: null, version: 2 };
+    await settle(halted);
+    expect(await current()).toMatchObject({
+      status: 'unpaid',
+      is_current: true,
+      cancel_at_period_end: false,
+    });
+    // The halted row still blocks a second base subscription.
+    await expect(buy(t.workspaceId)).rejects.toMatchObject({ status: 409 });
+    // The customer fixed the mandate: a resumed subscription is never cancelled.
+    const resumed = { ...t.evidence.subscription, payment: null, version: 3 };
+    await settle(resumed);
+    const untouched = vi.fn(async () => {
+      throw new Error('Unexpected cancellation');
+    });
+    const ours = (state: typeof resumed) =>
+      fakeProvider({
+        evidence: async (reference) => {
+          if (reference !== ref) throw new ProviderError(true);
+          return { kind: 'base', subscription: state };
+        },
+        cancel: untouched,
+      });
+    await db
+      .updateTable('billing_subscriptions')
+      .set({ reconciliation_next_at: new Date() })
+      .where('id', '=', t.sub.id)
+      .execute();
+    // Every current subscription is swept, so this one is reached whatever is queued.
+    const sweep = { ...config, billing: { ...config.billing, batchSize: 1000 } };
+    await recoverBilling(db, sweep, ours(resumed));
+    expect(untouched).not.toHaveBeenCalled();
+    expect(await current()).toMatchObject({ status: 'active', cancel_at_period_end: false });
+    // Halted again: the sweep cancels now, and a definite refusal (already
+    // cancelled at the provider) still lets it apply the provider's state.
+    await settle({ ...halted, version: 4 });
+    let provider = { ...halted, version: 4 };
+    const cancel = vi.fn(async (_reference: string, _atEnd: boolean) => {
+      provider = { ...halted, status: 'cancelled', version: 5 };
+      throw new ProviderError(false, 'provider_rejected');
+    });
+    await recoverBilling(
+      db,
+      sweep,
+      fakeProvider({
+        evidence: async (reference) => {
+          if (reference !== ref) throw new ProviderError(true);
+          return { kind: 'base', subscription: provider };
+        },
+        cancel,
+      }),
+    );
+    expect(cancel.mock.calls).toEqual([[ref, false]]);
+    // The paid period runs to its end; nothing renews after it.
+    expect(await current()).toMatchObject({
+      status: 'cancel_scheduled',
+      is_current: true,
+      current_period_end: t.sub.current_period_end,
+      provider_state_version: 5,
+    });
+  });
+  it('schedules a downgrade while checkout is closed, which charges nothing', async () => {
+    const t = await activated();
+    await fixtures.catalog((payload) => {
+      const plan = payload.plans.find((row) => row.key === 'tier_2')!;
+      plan.byok_price!.amount_minor = 100;
+      plan.regional_byok_prices.international!.amount_minor = 100;
+    });
+    const closed = { ...config, billing: { ...config.billing, enabled: false } };
+    const change = vi.fn(async () => {});
+    expect(
+      await changePlan(db, closed, t.workspaceId, 'tier_2', randomUUID(), fakeProvider({ change })),
+    ).toMatchObject({ direction: 'downgrade', status: 'scheduled' });
   });
   it('freezes downgrade terms and refuses changing cancellation through another environment', async () => {
     const t = await activated();

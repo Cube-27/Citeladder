@@ -26,13 +26,15 @@ export const billing = {
       failed: c.payment_failed,
       cancelled: c.payment_failed,
       expired: c.payment_failed,
-      refunded: c.payment_failed,
+      // A refunded payment was captured; its refund settles as its own record.
+      refunded: c.payment_paid,
     },
     razorpay_status_map: {
       created: c.subscription_pending,
       authenticated: c.subscription_pending,
       active: c.subscription_active,
       pending: c.subscription_past_due,
+      // Retries exhausted: the subscription sweep cancels it at the provider.
       halted: c.subscription_unpaid,
       cancelled: c.subscription_cancelled,
       completed: c.subscription_expired,

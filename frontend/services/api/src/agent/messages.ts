@@ -86,6 +86,8 @@ const RECOVERY: Record<string, string> = {
   turn_timeout:
     'This turn ran past its time limit, so it stopped. Nothing was saved. Narrow the request and try again.',
   trial_expired: 'This workspace’s trial has ended, so the agent cannot run. Nothing was saved.',
+  subscription_lapsed:
+    'This workspace’s plan has ended, so the agent cannot run. Nothing was saved.',
   access_unresolved:
     'Workspace access could not be confirmed, so the agent stopped. Nothing was saved; contact support if this continues.',
   internal_error:

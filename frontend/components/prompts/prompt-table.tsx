@@ -5,6 +5,7 @@ import { Archive, Check, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 
 import { ProjectLink } from '@/components/layout/scoped-link';
 import { Tag } from '@/components/ui/tag';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Delta } from '@/components/ui/delta';
 import {
@@ -145,12 +146,22 @@ export function PromptTable({
               </TableCell>
               {measured ? <MeasuredCells measurement={measurements?.get(prompt.id)} /> : null}
               <TableCell>
-                <Switch
-                  checked={prompt.enabled}
-                  label={`${prompt.enabled ? 'Disable' : 'Enable'} prompt`}
-                  disabled={busyId === prompt.id}
-                  onCheckedChange={() => onToggleEnabled(prompt)}
-                />
+                <span className="flex items-center gap-2">
+                  <Switch
+                    checked={prompt.enabled}
+                    label={`${prompt.enabled ? 'Disable' : 'Enable'} prompt`}
+                    disabled={busyId === prompt.id}
+                    onCheckedChange={() => onToggleEnabled(prompt)}
+                  />
+                  {/* Kept after a downgrade, but audits skip it until a slot frees. */}
+                  {prompt.over_plan_limit ? (
+                    <Tooltip content="Beyond your plan's prompt limit, so audits skip it. Delete other prompts or upgrade to measure it.">
+                      <Badge variant="status" value="warning">
+                        Not measured
+                      </Badge>
+                    </Tooltip>
+                  ) : null}
+                </span>
               </TableCell>
               <TableCell className="text-right">
                 <Dropdown>

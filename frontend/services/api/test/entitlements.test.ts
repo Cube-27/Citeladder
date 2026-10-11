@@ -9,6 +9,7 @@ import {
   type GrantRow,
 } from '../src/entitlements/resolve.ts';
 import { ApiError } from '../src/errors.ts';
+import { readPromptSet } from '../src/prompts/prompt-sets.ts';
 import { billingAccount, grant, prompt, promptSet } from './prompt-fixtures.ts';
 import { testDatabase } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
@@ -169,6 +170,21 @@ describe('admitPrompts', () => {
       code: 'occupancy_limit_exceeded',
       details: { key: 'prompt_slots', allowance: 3, current: 2, requested: 2 },
     });
+  });
+
+  it('keeps prompts beyond a reduced allowance and flags the newest as unmeasured', async () => {
+    const t = await tenant();
+    const account = await billingAccount(db, t.workspaceId);
+    await grant(db, account, { value: 2 });
+    const start = Date.now() - 60_000;
+    for (const [index, text] of ['acme oldest', 'acme middle', 'acme newest'].entries())
+      await prompt(db, t.setId, text, { createdAt: new Date(start + index * 1000) });
+    const view = await readPromptSet(db, t.workspaceId, t.setId);
+    expect(view.prompts.map((row) => [row.text, row.over_plan_limit])).toEqual([
+      ['acme oldest', false],
+      ['acme middle', false],
+      ['acme newest', true],
+    ]);
   });
 
   it('serializes concurrent writers so the grant is never exceeded', async () => {

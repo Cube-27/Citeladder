@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import template from './billing-catalog.fixture.json' with { type: 'json' };
 import { catalogSchema } from '../src/billing/catalog.ts';
+import { launchCatalog } from '../src/billing/catalog-authoring.ts';
 import { digest, type Pending } from '../src/billing/contracts.ts';
 import type { BillingProvider, Evidence, SubscriptionEvidence } from '../src/billing/razorpay.ts';
 import type { Database } from '../src/db/database.ts';
@@ -73,7 +73,10 @@ export class BillingFixtures extends Fixtures {
     modify?: (payload: ReturnType<typeof catalogSchema.parse>) => void,
     published = true,
   ) {
-    const payload = catalogSchema.parse(structuredClone(template));
+    // The authored launch catalog, so tests exercise the bundles customers buy.
+    const payload = catalogSchema.parse(
+      launchCatalog({ mode: 'test', settings: billingConfig().billing }),
+    );
     for (const plan of payload.plans)
       for (const [region, price] of Object.entries(plan.regional_byok_prices)) {
         price.provider_price_ref = `plan_${plan.key.replaceAll('_', '')}${region}`;

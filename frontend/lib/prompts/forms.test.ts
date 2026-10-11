@@ -32,6 +32,7 @@ describe('form mapping', () => {
       cohort: 'comparison',
       branded: true,
       enabled: false,
+      over_plan_limit: false,
       origin: 'manual',
       status: 'active',
     };

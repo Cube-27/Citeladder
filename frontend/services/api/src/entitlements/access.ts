@@ -1,9 +1,25 @@
+import type { z } from 'zod';
+import type { workspaceAccessSchema } from '@citeladder/contracts/auth';
 import type { Database } from '../db/database.ts';
 import { ApiError } from '../errors.ts';
 import { accountState } from './state.ts';
 import { policy } from '../config.ts';
 
-export type WorkspaceAccess = 'active' | 'trial_active' | 'trial_expired' | 'access_unresolved';
+export type WorkspaceAccess = z.infer<typeof workspaceAccessSchema>['status'];
+
+type DeniedAccess = Exclude<WorkspaceAccess, 'active' | 'trial_active'>;
+
+/** The message a request refused in each denied state carries. */
+const DENIALS: Record<DeniedAccess, string> = {
+  trial_expired: 'Your trial has expired. Contact support to restore access.',
+  subscription_lapsed: 'Your plan has ended. Contact support to restore access.',
+  access_unresolved: 'Workspace access is unavailable. Contact support.',
+};
+
+/** Whether this access state admits work in the workspace. */
+export function accessGranted(status: WorkspaceAccess): status is 'active' | 'trial_active' {
+  return status === 'active' || status === 'trial_active';
+}
 
 /** Persisted authority plus wall time; this read never repairs a projection. */
 export async function workspaceAccess(
@@ -46,6 +62,22 @@ export async function workspaceAccess(
     selected.some((grant) => grant.bundle_role === 'primary')
   )
     return { status: 'active', expires_at: state.validUntil?.toISOString() ?? null };
+  // A paid plan's access that took effect and has ended: a lapsed customer,
+  // whatever trial preceded it.
+  const lapsed = state.grants
+    .filter(
+      (grant) =>
+        grant.key === 'workspace_access' && grant.source_kind === 'plan' && grant.valid_from <= at,
+    )
+    .map((grant) => {
+      const revoked = state.revokedAt.get(grant.id);
+      return revoked && (!grant.valid_until || revoked < grant.valid_until)
+        ? revoked
+        : grant.valid_until;
+    })
+    .filter((end): end is Date => end !== null && end <= at)
+    .sort((a, b) => b.getTime() - a.getTime())[0];
+  if (lapsed) return { status: 'subscription_lapsed', expires_at: lapsed.toISOString() };
   const trial = state.grants.find(
     (grant) =>
       grant.profile_key === policy.entitlements.public_trial.profile &&
@@ -59,14 +91,10 @@ export async function workspaceAccess(
 
 export async function requireWorkspaceAccess(db: Database, workspaceId: string) {
   const access = await workspaceAccess(db, workspaceId);
-  if (access.status === 'trial_expired' || access.status === 'access_unresolved')
-    throw new ApiError(
-      403,
-      access.status === 'trial_expired'
-        ? 'Your trial has expired. Contact support to restore access.'
-        : 'Workspace access is unavailable. Contact support.',
-      { code: access.status },
-    );
+  if (!accessGranted(access.status))
+    throw new ApiError(403, DENIALS[access.status], {
+      code: access.status,
+    });
   return access;
 }
 

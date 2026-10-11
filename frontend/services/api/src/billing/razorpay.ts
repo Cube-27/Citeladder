@@ -81,7 +81,6 @@ export type Evidence =
       payment: PaymentEvidence | null;
       reference: string;
       notes: Record<string, string>;
-      failed?: boolean;
     };
 export interface BillingProvider {
   mode: 'test' | 'live';
@@ -92,6 +91,9 @@ export interface BillingProvider {
   change(reference: string, priceRef: string): Promise<void>;
   refund(reference: string): Promise<RefundEvidence>;
 }
+
+// Clock difference tolerated between this service and the provider's created_at.
+const RECOVERY_SKEW_SECONDS = 300;
 
 function basicCredentials(keyId: string, keySecret: string) {
   return Buffer.from(`${keyId}:${keySecret}`).toString('base64');
@@ -269,10 +271,20 @@ export class RazorpayProvider implements BillingProvider {
       throw new ProviderError(true, 'provider_amount_mismatch');
     return reference.parse(data.id);
   }
+  /**
+   * Finds the record a crashed checkout created, by the intent's own keys: an
+   * order by its receipt, a subscription by its plan within the minutes after
+   * the intent committed, never by listing the whole account.
+   */
   async recover(pending: Pending): Promise<string | null> {
-    const matches = (
-      await this.collection(pending.activation_kind === 'base' ? '/subscriptions' : '/orders')
-    ).filter((row) => {
+    const created = Math.floor(pending.created_at.getTime() / 1000);
+    const path =
+      pending.activation_kind === 'base'
+        ? `/subscriptions?plan_id=${encodeURIComponent(pending.external_price_id ?? '')}` +
+          `&from=${created - RECOVERY_SKEW_SECONDS}` +
+          `&to=${created + this.shared.abandonSeconds}`
+        : `/orders?receipt=${encodeURIComponent(pending.id)}`;
+    const matches = (await this.collection(path)).filter((row) => {
       const meta = notes.parse(row.notes);
       return (
         meta.citeladder_intent_id === pending.id &&
@@ -303,21 +315,9 @@ export class RazorpayProvider implements BillingProvider {
         capture.currency !== order.currency)
     )
       throw new ProviderError(true, 'provider_amount_mismatch');
-    const failed =
-      attempts.length > 0 &&
-      attempts.every(
-        (row) =>
-          policy.billing.contracts.razorpay_payment_status_map[
-            row.status as keyof typeof policy.billing.contracts.razorpay_payment_status_map
-          ] === 'payment_failed',
-      );
-    return {
-      kind: 'payment',
-      payment: capture,
-      reference: id,
-      notes: notes.parse(order.notes),
-      failed,
-    };
+    // Declined attempts never fail the order: the customer may retry on it.
+    // Only abandonment ends an unpaid order.
+    return { kind: 'payment', payment: capture, reference: id, notes: notes.parse(order.notes) };
   }
 
   private async subscriptionEvidence(id: string): Promise<Evidence> {
