@@ -4048,6 +4048,9 @@
             "type": "string",
             "enum": ["manual", "imported", "generated"]
           },
+          "over_plan_limit": {
+            "type": "boolean"
+          },
           "created_at": {
             "type": "string"
           },
@@ -4067,7 +4070,8 @@
           "branded",
           "enabled",
           "status",
-          "origin"
+          "origin",
+          "over_plan_limit"
         ],
         "additionalProperties": false
       },
@@ -12131,6 +12135,9 @@
                             "type": "string",
                             "enum": ["manual", "imported", "generated"]
                           },
+                          "over_plan_limit": {
+                            "type": "boolean"
+                          },
                           "created_at": {
                             "type": "string"
                           },
@@ -12199,6 +12206,7 @@
                           "enabled",
                           "status",
                           "origin",
+                          "over_plan_limit",
                           "latest_measurement"
                         ],
                         "additionalProperties": false

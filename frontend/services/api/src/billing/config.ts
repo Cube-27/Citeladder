@@ -48,6 +48,7 @@ export function billingSettings(env: Record<string, string | undefined> = proces
     batchSize: get('reconciliation_batch_size') as number,
     staleSeconds: get('reconciliation_stale_after_seconds') as number,
     abandonSeconds: get('reconciliation_abandon_after_seconds') as number,
+    skewSeconds: get('reconciliation_clock_skew_seconds') as number,
     attempts: get('reconciliation_max_attempts') as number,
     backoffSeconds: get('reconciliation_backoff_base_seconds') as number,
     listCount: get('reconciliation_list_count') as number,

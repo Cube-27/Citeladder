@@ -64,7 +64,11 @@ function eventEntity(parsed: z.infer<typeof envelope>) {
   const subscriptionEvent = policy.billing.contracts.razorpay_event_types.includes(parsed.event);
   let payloadKey = subscriptionEvent ? 'subscription' : PAYLOAD_KEYS[parsed.event];
   // A subscription charge carries its invoice; the subscription events settle it.
-  if (payloadKey === 'payment' && parsed.payload.payment?.entity.invoice_id) payloadKey = undefined;
+  // A payment with neither (a payment link or QR code) is not a checkout of ours,
+  // and refusing it would make the provider disable the endpoint.
+  const charge = parsed.payload.payment?.entity;
+  if (payloadKey === 'payment' && (charge?.invoice_id || (charge && !charge.order_id)))
+    payloadKey = undefined;
   if (!payloadKey) return { entity: null, reference: '' };
   const entity = parsed.payload[payloadKey]?.entity;
   // A supported event without its entity is malformed, not ignorable.

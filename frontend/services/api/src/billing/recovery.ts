@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { Database } from '../db/database.ts';
 import type { ServiceConfig } from '../config.ts';
 import { ApiError } from '../errors.ts';
-import { lockAccount } from '../entitlements/grants.ts';
+import { maintainLease } from '../queue/heartbeat.ts';
 import {
   configured,
   ProviderError,
@@ -10,50 +10,18 @@ import {
   type BillingProvider,
   type Evidence,
 } from './razorpay.ts';
-import { settlePending, settleSubscription } from './settlement.ts';
+import { policy } from '../config.ts';
+import { lockOwner, settlePending, settleSubscription } from './settlement.ts';
 import { recordRefund } from './receipts.ts';
-import { pushChange } from './purchases.ts';
+import { pushChange } from './plan-changes.ts';
 import { webhookSummary } from './webhooks.ts';
 import { getLogger } from '../logging.ts';
 
 const logger = getLogger('api.billing');
 
-/** Renew only an unexpired claim; a delayed worker can never revive a lost lease. */
-function maintainLease(seconds: number, renew: () => Promise<boolean>) {
-  let active: Promise<void> | null = null;
-  const timer = setInterval(
-    () => {
-      if (active) return;
-      active = renew()
-        .then(
-          (owned) => {
-            if (!owned) clearInterval(timer);
-          },
-          () => {
-            clearInterval(timer);
-          },
-        )
-        .finally(() => {
-          active = null;
-        });
-    },
-    Math.max(100, Math.min(30_000, (seconds * 1000) / 3)),
-  );
-  timer.unref();
-  return async () => {
-    clearInterval(timer);
-    await active;
-  };
-}
-
-async function lockOwner(db: Database, accountId: string) {
-  const { workspace_id } = await db
-    .selectFrom('billing_accounts')
-    .select('workspace_id')
-    .where('id', '=', accountId)
-    .executeTakeFirstOrThrow();
-  await lockAccount(db, workspace_id, accountId);
-  return workspace_id;
+/** Renews a claim a third of the way through each lease; returns its stop. */
+function renewing(seconds: number, renew: () => Promise<boolean>) {
+  return maintainLease(renew, Math.max(100, Math.min(30_000, (seconds * 1000) / 3))).stop;
 }
 
 async function applyReference(
@@ -72,7 +40,9 @@ async function applyReference(
     .executeTakeFirst();
   if (!pending) return false;
   const workspace = await lockOwner(db, pending.billing_account_id);
-  if (pending.status === 'pending') await settlePending(db, pending.id, mode, evidence, authority);
+  // Settlement decides whether evidence for an abandoned order is a late capture.
+  if (pending.status === 'pending' || pending.status === 'abandoned')
+    await settlePending(db, pending.id, mode, evidence, authority);
   else if (pending.status === 'activated' && evidence.kind === 'base') {
     const sub = await db
       .selectFrom('billing_subscriptions')
@@ -151,16 +121,31 @@ function claimPending(
   });
 }
 
-/** Cancels an abandoned subscription checkout; false when the provider kept it. */
-async function cancelAbandoned(provider: BillingProvider, reference: string) {
+/**
+ * Asks the provider to cancel; true once it confirms or definitely refuses
+ * (e.g. already cancelled). A refusal is final and the caller reads the
+ * provider's state next; only uncertainty throws, so the sweep retries.
+ */
+async function cancelAtProvider(provider: BillingProvider, reference: string, atEnd: boolean) {
   try {
-    const cancelled = await provider.cancel(reference, false);
-    return cancelled.id === reference && ['cancelled', 'expired'].includes(cancelled.status);
+    const cancelled = await provider.cancel(reference, atEnd);
+    return (
+      cancelled.id === reference &&
+      (atEnd
+        ? cancelled.cancelAtEnd
+        : policy.billing.contracts.terminal_subscription_statuses.includes(cancelled.status))
+    );
   } catch (error) {
-    // A definite refusal (e.g. already cancelled) is final; uncertainty retries.
     if (!(error instanceof ProviderError) || error.uncertain) throw error;
+    logger.warning('billing.cancellation_refused', { reference, exception: error.message });
     return true;
   }
+}
+
+function unpaid(evidence: Evidence | null) {
+  return (
+    !evidence || (evidence.kind === 'base' ? !evidence.subscription.payment : !evidence.payment)
+  );
 }
 
 /** Claims one row at a time so a batch never expires while waiting for earlier I/O. */
@@ -173,7 +158,7 @@ async function pendingProbe(
   const now = new Date();
   const pending = await claimPending(db, config, provider, seen, now);
   if (!pending) return null;
-  const stopLease = maintainLease(config.billing.leaseSeconds, async () => {
+  const stopLease = renewing(config.billing.leaseSeconds, async () => {
     const result = await db
       .updateTable('pending_activations')
       .set({
@@ -192,18 +177,15 @@ async function pendingProbe(
     reference ??= await provider.recover(pending);
     if (reference)
       evidence = await provider.evidence(reference, pending.activation_kind === 'base');
-    const unpaid =
-      !evidence || (evidence.kind === 'base' ? !evidence.subscription.payment : !evidence.payment);
-    const abandoned =
-      unpaid &&
+    let abandoned =
+      unpaid(evidence) &&
       pending.created_at.getTime() <= now.getTime() - config.billing.abandonSeconds * 1000;
-    if (
-      abandoned &&
-      reference &&
-      pending.activation_kind === 'base' &&
-      !(await cancelAbandoned(provider, reference))
-    )
-      return pending.id;
+    if (abandoned && reference && pending.activation_kind === 'base') {
+      if (!(await cancelAtProvider(provider, reference, false))) return pending.id;
+      // A refusal can mean the customer paid meanwhile: settle what the provider now reports.
+      evidence = await provider.evidence(reference, true);
+      abandoned = unpaid(evidence);
+    }
     await db.transaction().execute(async (trx) => {
       await lockOwner(trx, pending.billing_account_id);
       const owned = await trx
@@ -313,7 +295,7 @@ async function webhookProbe(
       .executeTakeFirstOrThrow();
   });
   if (!receipt) return null;
-  const stopLease = maintainLease(config.billing.webhookLeaseSeconds, async () => {
+  const stopLease = renewing(config.billing.webhookLeaseSeconds, async () => {
     const result = await db
       .updateTable('billing_webhook_events')
       .set({ lease_expires_at: new Date(Date.now() + config.billing.webhookLeaseSeconds * 1000) })
@@ -469,7 +451,7 @@ async function subscriptionProbe(
       .executeTakeFirstOrThrow();
   });
   if (!sub) return null;
-  const stopLease = maintainLease(config.billing.leaseSeconds, async () => {
+  const stopLease = renewing(config.billing.leaseSeconds, async () => {
     const result = await db
       .updateTable('billing_subscriptions')
       .set({
@@ -485,15 +467,14 @@ async function subscriptionProbe(
   try {
     await pushChange(db, sub.id, provider);
     let evidence = await provider.evidence(sub.external_subscription_id, true);
+    const state = evidence.kind === 'base' ? evidence.subscription : null;
+    // Halted (retries exhausted) ends now, so it can never charge again unseen.
+    const halted = state?.status === policy.billing.contracts.subscription_unpaid;
     // A durable cancellation intent survives an interrupted provider request;
     // cancel only while the provider still shows the subscription renewing.
-    if (
-      sub.cancel_at_period_end &&
-      evidence.kind === 'base' &&
-      evidence.subscription.status === 'active' &&
-      !evidence.subscription.cancelAtEnd
-    ) {
-      await provider.cancel(sub.external_subscription_id, true);
+    const unwanted = sub.cancel_at_period_end && state?.status === 'active' && !state.cancelAtEnd;
+    if (halted || unwanted) {
+      await cancelAtProvider(provider, sub.external_subscription_id, !halted);
       evidence = await provider.evidence(sub.external_subscription_id, true);
     }
     await db.transaction().execute(async (trx) => {

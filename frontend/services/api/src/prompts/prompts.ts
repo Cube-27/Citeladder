@@ -21,7 +21,7 @@ import { inTransaction, type Database } from '../db/database.ts';
 import { isUniqueViolation } from '../db/errors.ts';
 import { ApiError, notFound } from '../errors.ts';
 import type { DB } from '../generated/db-schema.ts';
-import { admitPrompts } from '../entitlements/occupancy.ts';
+import { admitPrompts, overLimitPromptIds } from '../entitlements/occupancy.ts';
 import {
   BINDING_FAILURES,
   bindingError,
@@ -33,7 +33,13 @@ import { acquireProjectLock, acquirePromptSetLock } from './locks.ts';
 import { promptTextHash } from './normalization.ts';
 import { readPromptSet, scopedPromptSet } from './prompt-sets.ts';
 import { resolveTopicsByName } from './topics.ts';
-import { promptView, type PromptRow, type PromptSetView, type PromptView } from './views.ts';
+import {
+  promptView,
+  WITHIN_LIMIT,
+  type PromptRow,
+  type PromptSetView,
+  type PromptView,
+} from './views.ts';
 import { firstOf, isNonEmpty, type NonEmpty } from '../lists.ts';
 
 const P = policy.prompts;
@@ -272,7 +278,7 @@ export async function createPrompts(
         .returningAll()
         .execute();
       // RETURNING order is unspecified; answer in request order.
-      const byId = new Map(rows.map((row) => [row.id, promptView(row)]));
+      const byId = new Map(rows.map((row) => [row.id, promptView(row, WITHIN_LIMIT)]));
       return planned.flatMap(({ id }) => byId.get(id) ?? []);
     });
   } catch (error) {
@@ -335,7 +341,7 @@ async function applyPromptUpdate(
     .where('id', '=', prompt.id)
     .returningAll()
     .executeTakeFirstOrThrow();
-  return promptView(row);
+  return promptView(row, await overLimitPromptIds(db, workspaceId));
 }
 
 export async function deletePrompt(

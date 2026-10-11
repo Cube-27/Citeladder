@@ -213,16 +213,51 @@ export function requireTeamMembers(db: Database, workspaceId: string): Promise<v
   );
 }
 
-async function promptCount(db: Database, accountId: string): Promise<number> {
-  const row = await db
+/** Every prompt that takes a slot, whatever its status or origin, with its project. */
+function slotPrompts(db: Database) {
+  return db
     .selectFrom('prompts')
     .innerJoin('prompt_sets', 'prompt_sets.id', 'prompts.prompt_set_id')
-    .innerJoin('projects', 'projects.id', 'prompt_sets.project_id')
+    .innerJoin('projects', 'projects.id', 'prompt_sets.project_id');
+}
+
+async function promptCount(db: Database, accountId: string): Promise<number> {
+  const row = await slotPrompts(db)
     .innerJoin('billing_accounts', 'billing_accounts.workspace_id', 'projects.workspace_id')
     .select(sql<string>`count(*)`.as('count'))
     .where('billing_accounts.id', '=', accountId)
     .executeTakeFirstOrThrow();
   return Number(row.count);
+}
+
+/**
+ * Prompts beyond the workspace's `prompt_slots` allowance, the newest first
+ * out: after a downgrade they are kept, shown, and never measured. Unlocked,
+ * so reads can use it; an unresolvable account excludes nothing here because
+ * admission refuses it anyway.
+ */
+export async function overLimitPromptIds(
+  db: Database,
+  workspaceId: string,
+): Promise<ReadonlySet<string>> {
+  const allowance = (await grantedValues(db, workspaceId))?.get(PROMPT_SLOTS);
+  if (allowance === undefined) return new Set();
+  const rows = await slotPrompts(db)
+    .select('prompts.id')
+    .where('projects.workspace_id', '=', workspaceId)
+    .orderBy('prompts.created_at')
+    .orderBy('prompts.id')
+    .offset(allowance)
+    .execute();
+  return new Set(rows.map((row) => row.id));
+}
+
+/** The refusal for an audit that names prompts beyond the plan's prompt slots. */
+export function overLimitSelection(excluded: number) {
+  return new ApiError(403, 'Some selected prompts are beyond your plan’s prompt limit', {
+    code: LIMIT_EXCEEDED,
+    details: { key: PROMPT_SLOTS, excluded },
+  });
 }
 
 /**

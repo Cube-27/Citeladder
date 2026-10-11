@@ -391,7 +391,8 @@ export const subscriptionCheckoutSchema = responseObject({
   provider_mode: z.enum(['test', 'live']),
   flow: z.enum(['hosted_redirect', 'provider_sdk']),
   redirect_url: z.string(),
-  sdk_name: z.string(),
+  /** The browser SDK adapter that opens this checkout. */
+  sdk_name: z.literal('razorpay-checkout'),
   public_key: z.string(),
   reference: z.string(),
   /** A recurring `subscription` or a one-time `order` (add-on, top-up, upgrade). */

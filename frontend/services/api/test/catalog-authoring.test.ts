@@ -78,6 +78,8 @@ it('authors checkout regions only for named modes and approved India tax', () =>
   ).toBe(true);
   const unapproved = launchCatalog({ mode: 'test', settings: billingSettings({}) });
   expect(Object.keys(unapproved.plans[0]!.regional_byok_prices)).toEqual(['international']);
+  // An item never offers India where no plan can be quoted there.
+  expect(Object.keys(unapproved.addons[0]!.modes.byok!.regional_prices)).toEqual(['international']);
   const approved = launchCatalog({
     mode: 'test',
     settings: billingSettings({
@@ -108,7 +110,7 @@ it.each([
     p.plans[0]!.regional_byok_prices.international!.tax_minor = 1;
   },
   (p: ReturnType<typeof launchCatalog>) => {
-    p.addons[0]!.modes.byok!.regional_prices.india!.amount_minor = 100;
+    p.addons[0]!.modes.byok!.regional_prices.international!.amount_minor = 100;
   },
   (p: ReturnType<typeof launchCatalog>) => {
     p.topups[0]!.modes.byok!.grants = [{ key: 'project_slots', value: 1 }];

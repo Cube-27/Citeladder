@@ -12,6 +12,48 @@ import { billingConfig, buyer } from './billing-support.ts';
 import { createHmac } from 'node:crypto';
 import { billingSettings } from '../src/billing/config.ts';
 
+/** Provider responses for an active subscription whose one invoice was paid by `payment`. */
+function paidRenewal(payment: Record<string, unknown>): Record<string, unknown> {
+  return {
+    '/subscriptions/sub_fixture': {
+      id: 'sub_fixture',
+      plan_id: 'plan_fixture',
+      status: 'active',
+      current_start: 100,
+      current_end: 200,
+      updated_at: 300,
+      notes: [],
+    },
+    '/invoices': {
+      items: [
+        {
+          id: 'inv_fixture',
+          subscription_id: 'sub_fixture',
+          status: 'paid',
+          billing_start: 100,
+          billing_end: 200,
+          payment_id: 'pay_fixture',
+          amount_paid: 4900,
+          amount_due: 0,
+          currency: 'USD',
+          paid_at: 150,
+        },
+      ],
+    },
+    '/payments/pay_fixture': {
+      id: 'pay_fixture',
+      status: 'captured',
+      captured: true,
+      amount: 4900,
+      currency: 'USD',
+      created_at: 150,
+      invoice_id: 'inv_fixture',
+      notes: null,
+      ...payment,
+    },
+  };
+}
+
 describe('billing input and provider boundaries', () => {
   it.each(['', '/contact', '//example.test/contact', 'javascript:alert(1)', 'data:text/html,test'])(
     'rejects unsafe contact sales URL %s during settings admission',
@@ -116,40 +158,7 @@ describe('billing input and provider boundaries', () => {
   });
   it('requires a captured payment bound to the paid subscription invoice and rejects ambiguous collections', async () => {
     const responses: Record<string, unknown> = {
-      '/subscriptions/sub_fixture': {
-        id: 'sub_fixture',
-        plan_id: 'plan_fixture',
-        status: 'active',
-        current_start: 100,
-        current_end: 200,
-        updated_at: 300,
-        notes: [],
-      },
-      '/invoices': {
-        items: [
-          {
-            id: 'inv_fixture',
-            subscription_id: 'sub_fixture',
-            status: 'paid',
-            billing_start: 100,
-            billing_end: 200,
-            payment_id: 'pay_fixture',
-            amount_paid: 4900,
-            amount_due: 0,
-            currency: 'USD',
-            paid_at: 150,
-          },
-        ],
-      },
-      '/payments/pay_fixture': {
-        id: 'pay_fixture',
-        status: 'captured',
-        amount: 4900,
-        currency: 'USD',
-        created_at: 150,
-        invoice_id: 'inv_fixture',
-        notes: null,
-      },
+      ...paidRenewal({}),
       '/refunds/rfnd_fixture': {
         id: 'rfnd_fixture',
         payment_id: 'pay_fixture',
@@ -203,6 +212,70 @@ describe('billing input and provider boundaries', () => {
     await expect(bounded.evidence('sub_fixture', true)).rejects.toThrow(
       'provider_collection_incomplete',
     );
+  });
+  it('reads a refunded capture as the paid period it was, but never an uncaptured auto-refund or declined attempts', async () => {
+    const responses: Record<string, unknown> = {
+      ...paidRenewal({ status: 'refunded' }),
+      '/orders/order_declined': { id: 'order_declined', amount: 900, currency: 'USD', notes: [] },
+      '/orders/order_declined/payments': {
+        items: [
+          { id: 'pay_declined', status: 'failed', amount: 900, currency: 'USD', created_at: 150 },
+          {
+            id: 'pay_lapsed',
+            status: 'refunded',
+            captured: false,
+            amount: 900,
+            currency: 'USD',
+            created_at: 160,
+            order_id: 'order_declined',
+          },
+        ],
+      },
+    };
+    const transport = vi.fn<typeof fetch>(async (input) =>
+      Response.json(responses[new URL(String(input)).pathname.replace('/v1', '')]),
+    );
+    const provider = new RazorpayProvider(config.billing, config.razorpay, transport);
+    expect(await provider.evidence('sub_fixture', true)).toMatchObject({
+      subscription: { payment: { id: 'pay_fixture', amount: 4900 } },
+    });
+    expect(await provider.evidence('order_declined', false)).toEqual({
+      kind: 'payment',
+      payment: null,
+      reference: 'order_declined',
+      notes: {},
+    });
+  });
+  it('recovers a crashed checkout by its own receipt or plan window, never by listing the account', async () => {
+    const requested: string[] = [];
+    const transport = vi.fn<typeof fetch>(async (input) => {
+      const url = new URL(String(input));
+      requested.push(`${url.pathname.replace('/v1', '')}${url.search}`);
+      return Response.json({
+        items: [
+          {
+            id: 'order_found',
+            notes: { citeladder_intent_id: 'intent-1', citeladder_account_ref: 'account-1' },
+          },
+        ],
+      });
+    });
+    const provider = new RazorpayProvider(config.billing, config.razorpay, transport);
+    const createdAt = new Date(1_000_000_000);
+    const pending = {
+      id: 'intent-1',
+      billing_account_id: 'account-1',
+      activation_kind: 'topup',
+      external_price_id: null,
+      created_at: createdAt,
+    } as Parameters<typeof provider.recover>[0];
+    expect(await provider.recover({ ...pending })).toBe('order_found');
+    await provider.recover({ ...pending, activation_kind: 'base', external_price_id: 'plan_x' });
+    expect(requested).toEqual([
+      `/orders?receipt=intent-1&count=${config.billing.listCount}&skip=0`,
+      `/subscriptions?plan_id=plan_x&from=${1_000_000 - 300}&to=${1_000_000 + config.billing.abandonSeconds}` +
+        `&count=${config.billing.listCount}&skip=0`,
+    ]);
   });
   it('authenticates exactly the stored checkout reference and never treats browser callbacks as paid evidence', () => {
     const fields = {

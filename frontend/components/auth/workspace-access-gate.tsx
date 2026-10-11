@@ -28,6 +28,7 @@ function accessAllowed(access: z.infer<typeof accessSchema> | undefined, deadlin
 }
 
 function accessTitle(access: z.infer<typeof accessSchema> | undefined, deadline: number | null) {
+  if (access?.status === 'subscription_lapsed') return 'Your plan has ended';
   return access?.status === 'trial_expired' ||
     (access?.status === 'trial_active' && deadline !== null && Date.now() >= deadline)
     ? 'Your trial has ended'
@@ -47,7 +48,7 @@ function useAccessLoss(workspaceId: string | null) {
     const denied = (error: unknown) => {
       if (
         !(error instanceof ApiError) ||
-        !['trial_expired', 'access_unresolved'].includes(error.code ?? '')
+        !['trial_expired', 'subscription_lapsed', 'access_unresolved'].includes(error.code ?? '')
       )
         return;
       // The response may belong to a workspace the user just left. Re-resolve

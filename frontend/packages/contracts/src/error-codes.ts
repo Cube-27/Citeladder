@@ -137,6 +137,7 @@ const API_ERROR_CODES = [
   'skills_changed',
   'stale_selection_version',
   'stopped_at_limit',
+  'subscription_lapsed',
   'sync_active_window_conflict',
   'sync_target_unresolved',
   'sync_window_invalid',

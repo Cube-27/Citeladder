@@ -1,7 +1,14 @@
 import { z } from 'zod';
 
 export const workspaceAccessSchema = z.object({
-  status: z.enum(['active', 'trial_active', 'trial_expired', 'access_unresolved']),
+  status: z.enum([
+    'active',
+    'trial_active',
+    'trial_expired',
+    // A paid plan ended (cancelled, unpaid or refunded); never a trial.
+    'subscription_lapsed',
+    'access_unresolved',
+  ]),
   expires_at: z.string().nullable(),
 });
 export const authSecuritySchema = z.object({

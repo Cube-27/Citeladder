@@ -39,7 +39,10 @@ export const scheduledSchema = z.object({
   terms: frozenTermsSchema,
 });
 const grantedStates = new Set(['active', 'cancel_scheduled']);
-const terminalStates = new Set(['cancelled', 'expired', 'unpaid']);
+const terminalStates = new Set(policy.billing.contracts.terminal_subscription_statuses);
+// Halted at the provider: the row stays current, so it blocks a second base
+// subscription, until the sweep's cancellation is confirmed.
+const UNPAID = policy.billing.contracts.subscription_unpaid;
 
 /** The frozen revision's display name for a plan, as receipts print it. */
 async function planName(db: Database, revision: string, key: string) {
@@ -47,14 +50,15 @@ async function planName(db: Database, revision: string, key: string) {
   return frozen.payload.plans.find((row) => row.key === key)?.name ?? key;
 }
 
-async function accountWorkspace(db: Database, accountId: string) {
-  return (
-    await db
-      .selectFrom('billing_accounts')
-      .select('workspace_id')
-      .where('id', '=', accountId)
-      .executeTakeFirstOrThrow()
-  ).workspace_id;
+/** Takes the account lock through its owning workspace; returns that workspace. */
+export async function lockOwner(db: Database, accountId: string) {
+  const { workspace_id: workspaceId } = await db
+    .selectFrom('billing_accounts')
+    .select('workspace_id')
+    .where('id', '=', accountId)
+    .executeTakeFirstOrThrow();
+  await lockAccount(db, workspaceId, accountId);
+  return workspaceId;
 }
 
 type Frozen = Awaited<ReturnType<typeof catalog>>;
@@ -79,13 +83,13 @@ function verifiedReference(pending: Pending, mode: string, evidence: Evidence) {
   return ref;
 }
 
+/** Only a subscription can fail at the provider; an unpaid order ends by abandonment. */
 function providerFailed(evidence: Evidence) {
-  if (evidence.kind === 'base')
-    return (
-      !evidence.subscription.payment &&
-      ['cancelled', 'expired'].includes(evidence.subscription.status)
-    );
-  return evidence.failed && !evidence.payment;
+  return (
+    evidence.kind === 'base' &&
+    !evidence.subscription.payment &&
+    terminalStates.has(evidence.subscription.status)
+  );
 }
 
 /** Creates the base subscription and settles its first paid period; false while unpaid. */
@@ -179,18 +183,25 @@ async function settlePack(
     .where('is_current', '=', true)
     .where('subscription_kind', '=', 'base')
     .executeTakeFirst();
-  if (
-    !base?.current_period_end ||
-    payment.paidAt >= base.current_period_end ||
-    !policy.billing.contracts.live_subscription_statuses.includes(base.status)
-  )
-    conflict('base_subscription_required');
   const item = [...frozen.payload.addons, ...frozen.payload.topups].find(
     (row) => row.key === pending.catalog_key,
   );
   const specs = item?.modes.byok?.grants;
   if (!item || !specs?.length) conflict('grant_bundle_missing');
+  // The receipt stands whatever happens to the grant: money was collected.
   await recordPayment(db, pending, payment, quote, pending.tax_snapshot, null, item.name);
+  if (
+    !base?.current_period_start ||
+    !base.current_period_end ||
+    payment.paidAt < base.current_period_start ||
+    payment.paidAt >= base.current_period_end ||
+    !policy.billing.contracts.live_subscription_statuses.includes(base.status)
+  ) {
+    // Paid (late, after abandonment) while no base period covered it: nothing
+    // to supplement. An operator reviews the payment for a refund.
+    logger.warning('billing.pack_paid_without_base', { activation_id: pending.id });
+    return;
+  }
   await issueBundle(db, {
     workspaceId,
     accountId: pending.billing_account_id,
@@ -219,8 +230,7 @@ export async function settlePending(
     .selectAll()
     .where('id', '=', pendingId)
     .executeTakeFirstOrThrow();
-  const workspaceId = await accountWorkspace(db, initial.billing_account_id);
-  await lockAccount(db, workspaceId, initial.billing_account_id);
+  const workspaceId = await lockOwner(db, initial.billing_account_id);
   const pending = await db
     .selectFrom('pending_activations')
     .selectAll()
@@ -228,7 +238,10 @@ export async function settlePending(
     .forUpdate()
     .executeTakeFirstOrThrow();
   const ref = verifiedReference(pending, mode, evidence);
-  if (pending.status !== 'pending') return;
+  // An order captured after its checkout was abandoned still settles: the
+  // customer paid. An abandoned subscription was cancelled at the provider.
+  const late = pending.status === 'abandoned' && evidence.kind === 'payment' && evidence.payment;
+  if (pending.status !== 'pending' && !late) return;
   if (providerFailed(evidence)) {
     await db
       .updateTable('pending_activations')
@@ -259,6 +272,8 @@ export async function settlePending(
     .set({
       status: 'activated',
       activated_at: new Date(),
+      failed_at: null,
+      failure_code: null,
       settled_by: authority,
       settled_authority_id: ref,
       updated_at: new Date(),
@@ -441,6 +456,8 @@ export async function settleSubscription(
       cancel_at_period_end:
         event.cancelAtEnd || terminalStates.has(event.status) || sub.cancel_at_period_end,
       provider_state_version: event.version,
+      // The next subscription sweep cancels a halted subscription promptly.
+      ...(status === UNPAID ? { reconciliation_next_at: now } : {}),
       ...(renewal
         ? {
             catalog_key: terms.catalog_key,

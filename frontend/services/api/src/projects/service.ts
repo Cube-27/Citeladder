@@ -13,7 +13,11 @@ import {
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { jsonObject, strings } from '../db/json.ts';
-import { admitProject, requireProjectDeletion } from '../entitlements/occupancy.ts';
+import {
+  admitProject,
+  overLimitPromptIds,
+  requireProjectDeletion,
+} from '../entitlements/occupancy.ts';
 import { projectHoldsReservations } from '../entitlements/ledger.ts';
 import { ApiError, notFound } from '../errors.ts';
 import type { Projects } from '../generated/db-schema.ts';
@@ -89,16 +93,19 @@ async function views(
     .orderBy('created_at')
     .orderBy('id')
     .execute();
-  const prompts = await db
-    .selectFrom('prompts')
-    .innerJoin('prompt_sets', 'prompt_sets.id', 'prompts.prompt_set_id')
-    .innerJoin('projects', 'projects.id', 'prompt_sets.project_id')
-    .selectAll('prompts')
-    .where('projects.workspace_id', '=', workspaceId)
-    .where('projects.id', 'in', ids)
-    .orderBy('prompts.created_at')
-    .orderBy('prompts.id')
-    .execute();
+  const [prompts, overLimit] = await Promise.all([
+    db
+      .selectFrom('prompts')
+      .innerJoin('prompt_sets', 'prompt_sets.id', 'prompts.prompt_set_id')
+      .innerJoin('projects', 'projects.id', 'prompt_sets.project_id')
+      .selectAll('prompts')
+      .where('projects.workspace_id', '=', workspaceId)
+      .where('projects.id', 'in', ids)
+      .orderBy('prompts.created_at')
+      .orderBy('prompts.id')
+      .execute(),
+    overLimitPromptIds(db, workspaceId),
+  ]);
   return rows.map((row) => {
     const brand = brands.find((item) => item.project_id === row.id);
     const brandName = brand?.name ?? row.brand_name;
@@ -141,6 +148,7 @@ async function views(
           promptSetView(
             set,
             prompts.filter((item) => item.prompt_set_id === set.id),
+            overLimit,
           ),
         ),
       created_at: row.created_at.toISOString(),

@@ -1,0 +1,220 @@
+# Billing decision log
+
+The single record of every billing, entitlement and usage decision, for later
+audit. Each entry names who decided (**Owner** or **Engineering**), the date, the
+decision and the reason. A later entry that changes an earlier one says so and
+names the entry it supersedes; earlier entries are not rewritten.
+
+Implementation work is tracked in the [billing improvement plan](plans/billing-improvement.md);
+this log is the authority for what was decided.
+
+## Objective
+
+**B0 — Owner, 2026-10-11.** Billing must be fully operational but hidden, so that
+enabling it later is one small configuration PR. The priority is **coverage, not
+pricing**: every feature is gated by a plan capability and every call that costs
+the platform money is accounted for, or explicitly exempt. Prices, allowances
+and rates are configuration and can change at any time.
+
+## Delivery
+
+**B1 — Owner, 2026-10-11.** Three PRs, built one at a time: each merges and
+`main` is synced before the next branches. Discussion finishes before coding
+starts.
+
+## Hidden operation
+
+**B2 — Owner, 2026-10-11.** Billing runs hidden in production through a
+per-workspace allow-list: a non-public `billing_checkout` grant issued with
+`billing:admin grant`. Razorpay test keys are accepted in production only for
+allow-listed workspaces. The public catalog reads checkout unavailable until
+enablement. Rejected: live keys only; a separate staging stack (extra hosting
+cost).
+
+## Plans and gates
+
+**B3 — Owner, 2026-10-11.** Plans stay as configured: Starter, Growth and Scale,
+plus the separate Enterprise contact plan. Prices and limits are unchanged except
+where an entry below says otherwise.
+
+**B4 — Owner, 2026-10-11.** BYOK and managed are one plan internally; BYOK is only
+a lower price. Each plan has one bundle, and feature gates, prompt runs and AI
+credits are identical whichever key pays.
+
+**B5 — Owner, 2026-10-11.** Audit cadence is not gated. `audit_cadence`,
+`exports`, `fanout`, `support_tier`, `serp_tasks_per_period` and `provider.*` are
+removed from the entitlement registry; exports and fan-out are available to
+every plan. `history_window` stays as it is (it bounds integration sync).
+Supersedes an earlier same-day choice to enforce cadence.
+
+**B6 — Engineering, 2026-10-11.** Every paid plan bundle grants
+`workspace_access`, `team_members` and `project_deletion`. Without
+`workspace_access`, a public customer who buys a plan is locked out, because the
+paid bundle displaces the trial bundle; without the other two, invitations and
+project deletion are refused on every plan.
+
+**B7 — Engineering, 2026-10-11.** New capabilities `commerce` and
+`search_intelligence`, granted by every paid plan and absent from the trial.
+These features had no plan gate.
+
+## Prompt runs
+
+**B8 — Owner, 2026-10-11.** The measurement unit is the **prompt run**: each
+engine or search-surface answer is one run. Every plan, BYOK and managed, has a
+monthly allowance, spent whenever the customer chooses (all at once or spread
+out). Manual, scheduled, MCP and public-API audits all count. This replaces the
+managed-only `audit_credits` and the trial's separate `successful_answers`.
+
+**B9 — Engineering, 2026-10-11.** Answer analysis (perception, the Commerce shelf
+and fact verification) is included in the prompt run, not charged separately,
+following B8 ("charged irrespective of model calls").
+
+**B10 — Engineering, 2026-10-11.** Starting allowances, from the existing managed
+answer allowances: trial 20 runs in total (its current value), Starter 1,000,
+Growth 3,000 and Scale 6,000 per month. Configuration; change freely.
+
+## AI credits
+
+**B11 — Owner, 2026-10-11.** Platform AI calls outside onboarding spend AI
+credits at **cost plus 30%**. Onboarding calls (project research, brand
+discovery, the first prompt draft) consume no credits and no limits.
+
+**B12 — Owner, 2026-10-11.** Credits are charged on **tokens**, at the price of
+the model that served the call, never per call and never one shared rate across
+models. The default Agent gateway model is priced at Claude Haiku 5.5 rates
+($0.10 input, $0.01 cached input, $0.50 output per million tokens) until its own
+price is configured.
+
+**B13 — Owner, 2026-10-11.** The JEV judge model, Tavily and Keenable are **not
+charged for now**. Their calls are still recorded so the cost is visible.
+
+**B14 — Engineering, 2026-10-11.** One credit is $0.001 of usage after the 30%
+markup, so the ledger stays in whole credits. A call costs
+`ceil(tokens × model price × 1.3 ÷ $0.001)` credits: rounding adds at most
+$0.001. At Haiku 5.5 prices, 10k input and 2k output tokens cost $0.002 and are
+charged 3 credits. A model with no configured price is refused, not charged at
+another model's rate. Reason: the owner asked for accounting that is simple to
+code and read; the previous $0.025 credit would need fractions.
+
+**B15 — Engineering, 2026-10-11.** Credits are reserved before the call (the
+call's maximum tokens at its price) and settled once to actual usage; unreadable
+usage settles at a fixed fallback no larger than the reservation. A failed call
+that reports no usage is not charged.
+
+**B16 — Owner and Engineering, 2026-10-11.** Allowances, rescaled to the $0.001
+credit so their money value is unchanged: AI top-up 25,000 credits for $25
+(available on every paid plan, not the trial); Growth 12,500 and Scale 37,500
+per month. The owner set the free trial at 200 old credits ($5): 5,000 credits
+in total, no top-ups. Engineering gave Starter the same 5,000 per month, because
+prompt generation is the core feature and must not require Growth.
+Configuration; change freely.
+
+**B23 — Owner, 2026-10-11.** Internally, usage is calculated from **tokens** at the
+serving model's price (B12, B14). Customers see only **AI credits**: balances,
+allowances, top-ups and per-action spend in credits. The conversion (token
+prices, the 30% markup and the credit's money value) is internal configuration
+and is never shown in the app, API, MCP, receipts or marketing.
+
+## Coverage
+
+**B17 — Engineering, 2026-10-11.** Every call that costs the platform money,
+with its gate and charge. `workspace_access` gates every row.
+
+| Feature / call | Provider | Gate | Charge |
+|---|---|---|---|
+| Audit answers (ChatGPT, Claude, Gemini) | OpenAI, Anthropic, Google | `prompt_slots` | 1 prompt run per answer |
+| AI Overview / AI Mode | DataForSEO | `prompt_slots` | 1 prompt run per answer |
+| Answer perception, Commerce shelf, fact verification | Model gateway | `commerce` / `fact_checking` where applicable | Included in the run |
+| Prompt generation (after onboarding) | Model gateway | — | AI credits on tokens |
+| Prompt quality judge | JEV judge model | — | Not charged now (B13) |
+| Commerce buyer prompts | Model gateway | `commerce` | AI credits on tokens |
+| Commerce competitor discovery | Tavily, Keenable | `commerce` | Not charged now (B13) |
+| Internal-link judge | JEV judge model | — | Not charged now (B13) |
+| Agent | Model gateway | `agent` | AI credits on tokens |
+| Search Intelligence | DataForSEO (customer key) | `search_intelligence` | None |
+| Site Health crawl | Self-fetch | `monitored_urls` | Page-fetch allowance |
+| Onboarding research, brand discovery, first prompt draft | Model gateway, Keenable | — | Exempt (B11) |
+| Source-page inspection, logo refresh | Self-fetch | — | Exempt (abuse limits) |
+| Email | Resend | — | Exempt |
+| Search Console / GA4 sync | Google | `history_window` | None |
+| Crawl-log pulls | Customer GCP | `crawl_logs` | None |
+
+**B18 — Engineering, 2026-10-11.** Charging is enforced at choke points so a new
+feature cannot bypass it: the model gateway requires a metering context
+(workspace, feature, payer) and records every call with its tokens and cost; the
+provider layer charges prompt runs for every answer-engine and search-surface
+dispatch. Tavily and Keenable move behind the same context. A test fails when a
+model or provider call is made without one.
+
+## Removals
+
+**B19 — Owner, 2026-10-11.** The Agent custom model (customer model route) is
+removed; the Agent always uses the platform gateway and spends AI credits.
+
+## Managed plans
+
+**B20 — Owner, 2026-10-11.** Managed (funded) plans are kept and finished: they
+use the same prompt-run allowance (B4, B8), and the funded monthly budget settles
+to recorded spend.
+
+## Engineering implementation choices
+
+**B21 — Engineering, 2026-10-11.** Billing tests build their catalog from the
+authored launch catalog instead of a frozen JSON copy, so the bundles customers
+buy are the ones tested. The frozen copy hid the lockout in B6.
+
+**B22 — Engineering, 2026-10-11.** The checkout SDK name is one literal in the
+shared API contract (`razorpay-checkout`), so the API and the browser cannot
+drift. They had drifted: every checkout would have shown "unsupported".
+
+## Commercial lifecycle (PR 1)
+
+**B24 — Engineering, 2026-10-11.** A halted subscription (the provider's
+retries exhausted) is cancelled at the provider by the next subscription sweep.
+Until that is confirmed the row stays current, so a second base plan cannot be
+bought and a later charge cannot go unseen. A subscription that resumes before
+the sweep is left renewing. Reason: halted was treated as ended locally while
+the provider could still charge.
+
+**B25 — Engineering, 2026-10-11.** A declined attempt never fails an order; only
+abandonment ends an unpaid one. Razorpay orders cannot be cancelled or expired,
+so a capture after abandonment still settles, and a signed checkout callback
+reopens the abandoned order for one recovery probe. An add-on or top-up paid
+once no base period is live keeps its receipt, grants nothing and is logged for
+an operator refund; no automatic refund is issued. Supersedes the plan's "abandoned
+orders expire at the provider", which the provider does not support.
+
+**B26 — Engineering, 2026-10-11.** A new access state, `subscription_lapsed`:
+the workspace's paid-plan access took effect and has ended. It is never shown as
+an expired trial, so trial purge cannot select a former customer. Its message
+says "Contact support" until PR 3 routes it to `/billing`.
+
+**B27 — Engineering, 2026-10-11.** After a downgrade, the workspace's prompts
+beyond `prompt_slots` are kept, read as `over_plan_limit` ("Not measured") and
+excluded from audits. The newest prompts go over first, counting every prompt
+whatever its status, the same rule as slot admission. An audit that names an
+over-limit prompt explicitly is refused (403 `occupancy_limit_exceeded`).
+
+**B28 — Engineering, 2026-10-11.** The checkout kill switch does not block a
+downgrade: it charges nothing and needs only the provider that already bills the
+subscription. A checkout callback is accepted after its quote expired, because
+the payment is still the customer's.
+
+**B29 — Engineering, 2026-10-11.** A fully refunded payment remains evidence
+of the period it paid for; the refund settles as its own record. It previously
+broke reconciliation of that subscription on every sweep. This holds only for a
+payment Razorpay captured: an authorization that lapsed and was auto-refunded
+moved no money and grants nothing.
+
+**B30 — Engineering, 2026-10-11.** An add-on or top-up grants only if it was
+paid inside the base subscription's current period, from start to end. One paid
+during a gap between periods keeps its receipt and is flagged for an operator
+refund, even if a later period is live when it settles. When the provider
+refuses to cancel an expiring base checkout, the sweep re-reads it and activates
+it if the customer paid meanwhile.
+
+## Owner inputs still required
+
+Not decisions; needed only for India checkout and live enablement: GST rate,
+SAC, GST approval reference, LUT reference, Razorpay test and live keys and
+webhook secret.

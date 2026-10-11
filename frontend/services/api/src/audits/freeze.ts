@@ -11,6 +11,7 @@ import { freezeCommerceContext } from '../commerce/audit-context.ts';
 import { frozenEntityMatching, projectEntityMatching } from '../analysis/entity-matching.ts';
 import { strings } from '../db/json.ts';
 import { admittedFactCheck, admittedPerceptionVersions } from '../perception/admission.ts';
+import { overLimitPromptIds, overLimitSelection } from '../entitlements/occupancy.ts';
 import { marketLabel } from '@citeladder/contracts/markets';
 import type { Market } from '../projects/markets.ts';
 import {
@@ -99,10 +100,20 @@ async function loadPrompts(
   if (input.prompt_ids.length) query = query.where('p.id', 'in', input.prompt_ids);
   else if (input.prompt_set_id) query = query.where('p.prompt_set_id', '=', input.prompt_set_id);
   else throw invalid('Select a prompt set or prompt IDs');
-  const prompts = await query.execute();
-  if (input.prompt_ids.length && new Set(input.prompt_ids).size !== prompts.length)
+  const selected = await query.execute();
+  if (input.prompt_ids.length && new Set(input.prompt_ids).size !== selected.length)
     throw invalid('Selected prompts must be active, enabled and in this project');
-  if (!prompts.length) throw invalid('No enabled prompts to audit');
+  // Prompts beyond the plan's slots (after a downgrade) are kept but never measured.
+  const overLimit = await overLimitPromptIds(db, workspaceId);
+  const prompts = selected.filter((prompt) => !overLimit.has(prompt.id));
+  if (input.prompt_ids.length && prompts.length !== selected.length)
+    throw overLimitSelection(selected.length - prompts.length);
+  if (!prompts.length)
+    throw invalid(
+      selected.length
+        ? 'Every enabled prompt here is beyond your plan’s prompt limit'
+        : 'No enabled prompts to audit',
+    );
   if (prompts.some((prompt) => Array.from(prompt.text).length > settings.max_prompt_chars))
     throw invalid('Selected prompts exceed the configured length limit');
   return prompts;

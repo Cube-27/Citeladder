@@ -14,8 +14,9 @@ import { z } from 'zod';
 import type { Database } from '../db/database.ts';
 import { notFound } from '../errors.ts';
 import type { DB } from '../generated/db-schema.ts';
+import { overLimitPromptIds } from '../entitlements/occupancy.ts';
 import { acquireProjectLock, acquirePromptSetLock } from './locks.ts';
-import { promptSetView, type PromptSetRow, type PromptSetView } from './views.ts';
+import { promptSetView, WITHIN_LIMIT, type PromptSetRow, type PromptSetView } from './views.ts';
 
 export const promptSetCreate = z.object({
   project_id: z.uuid(),
@@ -45,21 +46,28 @@ export async function scopedPromptSet(
 }
 
 /** The sets' views, each with its prompts in creation order. */
-async function views(db: Database, sets: readonly PromptSetRow[]): Promise<PromptSetView[]> {
+async function views(
+  db: Database,
+  workspaceId: string,
+  sets: readonly PromptSetRow[],
+): Promise<PromptSetView[]> {
   if (sets.length === 0) return [];
-  const prompts = await db
-    .selectFrom('prompts')
-    .selectAll()
-    .where(
-      'prompt_set_id',
-      'in',
-      sets.map((set) => set.id),
-    )
-    .orderBy('created_at')
-    .orderBy('id')
-    .execute();
+  const [overLimit, prompts] = await Promise.all([
+    overLimitPromptIds(db, workspaceId),
+    db
+      .selectFrom('prompts')
+      .selectAll()
+      .where(
+        'prompt_set_id',
+        'in',
+        sets.map((set) => set.id),
+      )
+      .orderBy('created_at')
+      .orderBy('id')
+      .execute(),
+  ]);
   const bySet = Map.groupBy(prompts, (prompt) => prompt.prompt_set_id);
-  return sets.map((set) => promptSetView(set, bySet.get(set.id) ?? []));
+  return sets.map((set) => promptSetView(set, bySet.get(set.id) ?? [], overLimit));
 }
 
 export async function readPromptSet(
@@ -67,7 +75,9 @@ export async function readPromptSet(
   workspaceId: string,
   promptSetId: string,
 ): Promise<PromptSetView> {
-  const [view] = await views(db, [await scopedPromptSet(db, workspaceId, promptSetId)]);
+  const [view] = await views(db, workspaceId, [
+    await scopedPromptSet(db, workspaceId, promptSetId),
+  ]);
   return view!;
 }
 
@@ -86,7 +96,7 @@ export async function listPromptSets(
     .orderBy('prompt_sets.created_at', 'desc')
     .orderBy('prompt_sets.id')
     .execute();
-  return views(db, sets);
+  return views(db, workspaceId, sets);
 }
 
 export async function createPromptSet(
@@ -114,7 +124,7 @@ export async function createPromptSet(
     })
     .returningAll()
     .executeTakeFirstOrThrow();
-  return promptSetView(row, []);
+  return promptSetView(row, [], WITHIN_LIMIT);
 }
 
 export async function updatePromptSet(

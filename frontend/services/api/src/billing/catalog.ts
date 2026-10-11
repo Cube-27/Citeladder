@@ -61,7 +61,7 @@ const item = z
       z.enum(['byok', 'funded']),
       z.object({
         usd_minor: amount,
-        regional_prices: z.record(
+        regional_prices: z.partialRecord(
           z.enum(['india', 'international']),
           price.extend({ fx_inr_per_usd: z.string().default('') }),
         ),
