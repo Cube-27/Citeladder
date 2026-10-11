@@ -29,6 +29,18 @@ afterAll(async () => {
   await db.destroy();
 });
 
+/** A worker held to one seeded run: the local database is shared with other test runs. */
+function runWorker(
+  run: { workspaceId: string; runId: string },
+  client: Pick<IntegrationClient, 'page'>,
+  workerSettings: typeof settings = settings,
+) {
+  return new IntegrationWorker(db, client, workerSettings, async () => 'recorded-token', {
+    workspaceId: run.workspaceId,
+    runId: run.runId,
+  });
+}
+
 async function seedRun(provider: 'gsc' | 'ga4' | 'bing' = 'gsc') {
   const workspaceId = await fixtures.joinedWorkspace(ownerId);
   const projectId = await seedProject(db, workspaceId);
@@ -343,11 +355,12 @@ describe('integration worker paging and resume', () => {
       .selectAll()
       .where('id', '=', run.runId)
       .executeTakeFirstOrThrow();
+    const newer = randomUUID();
     await db
       .insertInto('integration_sync_runs')
       .values({
         ...original,
-        id: randomUUID(),
+        id: newer,
         idempotency_key: `sync-test:newer:${run.runId}`,
         window_start: new Date('2026-07-19T00:00:00Z'),
         resync_seq: 2,
@@ -360,10 +373,10 @@ describe('integration worker paging and resume', () => {
         return { payload: { rows: [], metadata }, rawRowCount: 0 };
       },
     };
-    const worker = new IntegrationWorker(db, client, settings, async () => 'recorded-token');
-    expect(await worker.runOnce()).toBe(true);
+    // The newer revision (higher priority) first, then the older one finishes later.
+    expect(await runWorker({ ...run, runId: newer }, client).runOnce()).toBe(true);
     metadata = { timeZone: 'Asia/Kolkata', currencyCode: 'INR' };
-    expect(await worker.runOnce()).toBe(true);
+    expect(await runWorker(run, client).runOnce()).toBe(true);
     expect(
       await db
         .selectFrom('integration_property_mappings')
@@ -410,7 +423,7 @@ describe('integration worker paging and resume', () => {
     const originalRetention = crawlLogs.retention_days;
     crawlLogs.retention_days = policy.referrals.retention_days + 30;
     try {
-      await new IntegrationWorker(db, client, settings, async () => 'recorded-token').runOnce();
+      await runWorker(run, client).runOnce();
     } finally {
       crawlLogs.retention_days = originalRetention;
     }
@@ -458,8 +471,7 @@ describe('integration worker paging and resume', () => {
     vi.setSystemTime(new Date(Date.now() + 86400000));
     try {
       const client = { page: async () => ({ payload: { rows: [] }, rawRowCount: 0 }) };
-      const worker = new IntegrationWorker(db, client, settings, async () => 'recorded-token');
-      expect(await worker.runOnce()).toBe(true);
+      expect(await runWorker(run, client).runOnce()).toBe(true);
       const result = await db
         .selectFrom('integration_sync_runs')
         .select('status')
@@ -563,12 +575,7 @@ describe('integration worker paging and resume', () => {
         return { payload: { rows: [] }, rawRowCount: 0 };
       }),
     };
-    const worker = new IntegrationWorker(
-      db,
-      client,
-      { ...settings, heartbeat_interval_seconds: 0.01 },
-      async () => 'recorded-token',
-    );
+    const worker = runWorker(target, client, { ...settings, heartbeat_interval_seconds: 0.01 });
     const running = worker.runOnce();
     const row = () =>
       db
@@ -675,8 +682,7 @@ describe('integration worker paging and resume', () => {
     });
     expect(terminal.completed_at).not.toBeNull();
     const client = { page: vi.fn(async () => ({ payload: { rows: [] }, rawRowCount: 0 })) };
-    const worker = new IntegrationWorker(db, client, settings, async () => 'recorded-token');
-    expect(await worker.runOnce()).toBe(true);
+    expect(await runWorker(retry, client).runOnce()).toBe(true);
     expect(
       await db
         .selectFrom('integration_sync_runs')
@@ -684,7 +690,9 @@ describe('integration worker paging and resume', () => {
         .where('id', '=', retry.runId)
         .executeTakeFirstOrThrow(),
     ).toEqual({ status: 'succeeded', attempt_count: 2 });
-    expect(await worker.runOnce()).toBe(false);
+    // Neither the settled nor the exhausted run is claimable again.
+    expect(await runWorker(retry, client).runOnce()).toBe(false);
+    expect(await runWorker(exhausted, client).runOnce()).toBe(false);
   });
   it.each([
     {
@@ -696,13 +704,7 @@ describe('integration worker paging and resume', () => {
     'records a useful bounded detail for non-Error rejections: $expected',
     async ({ value, expected }) => {
       const target = await seedRun();
-      const worker = new IntegrationWorker(
-        db,
-        { page: vi.fn().mockRejectedValue(value) },
-        settings,
-        async () => 'recorded-token',
-      );
-      await worker.runOnce();
+      await runWorker(target, { page: vi.fn().mockRejectedValue(value) }).runOnce();
       const run = await db
         .selectFrom('integration_sync_runs')
         .select(['status', 'error_detail'])
@@ -712,7 +714,7 @@ describe('integration worker paging and resume', () => {
     },
   );
   it('rejects a mapping retired while a provider request is in flight', async () => {
-    const { mappingId, runId } = await seedRun();
+    const { workspaceId, mappingId, runId } = await seedRun();
     const client: Pick<IntegrationClient, 'page'> = {
       async page() {
         await db
@@ -723,7 +725,7 @@ describe('integration worker paging and resume', () => {
         return { payload: { rows: [] }, rawRowCount: 0 };
       },
     };
-    await new IntegrationWorker(db, client, settings, async () => 'recorded-token').runOnce();
+    await runWorker({ workspaceId, runId }, client).runOnce();
     const run = await db
       .selectFrom('integration_sync_runs')
       .select(['status', 'error_code'])
@@ -767,7 +769,7 @@ describe('integration worker paging and resume', () => {
         return { payload: { rows: [] }, rawRowCount: 0 };
       },
     };
-    await new IntegrationWorker(db, client, settings, async () => 'recorded-token').runOnce();
+    await runWorker({ workspaceId, runId }, client).runOnce();
     expect(offsets).toEqual([4]);
     expect(
       (
@@ -781,7 +783,7 @@ describe('integration worker paging and resume', () => {
   });
 
   it('keeps the raw Bing report but derives only real dates inside its frozen window', async () => {
-    const { runId } = await seedRun('bing');
+    const { workspaceId, runId } = await seedRun('bing');
     const rows = ['2026-07-19', '2026-07-20', '2026-07-22', '2026-02-30'].map((date) => ({
       keys: ['example query', date],
       clicks: 3,
@@ -792,7 +794,7 @@ describe('integration worker paging and resume', () => {
         return { payload: { rows }, rawRowCount: rows.length };
       },
     };
-    await new IntegrationWorker(db, client, settings, async () => 'recorded-token').runOnce();
+    await runWorker({ workspaceId, runId }, client).runOnce();
     const metrics = await db
       .selectFrom('integration_metric_rows as metric')
       .innerJoin(
@@ -818,7 +820,7 @@ describe('integration worker paging and resume', () => {
   });
 
   it('publishes a Bing run whose full-history report reaches outside the window', async () => {
-    const { projectId } = await seedRun('bing');
+    const { workspaceId, runId, projectId } = await seedRun('bing');
     const rows = ['2026-05-01', '2026-07-20', '2026-07-21'].map((date) => ({
       keys: ['example query', date],
       clicks: 3,
@@ -829,7 +831,7 @@ describe('integration worker paging and resume', () => {
         return { payload: { rows }, rawRowCount: rows.length };
       },
     };
-    await new IntegrationWorker(db, client, settings, async () => 'recorded-token').runOnce();
+    await runWorker({ workspaceId, runId }, client).runOnce();
     // Out-of-window days are not invalid rows, so the partition is complete and
     // the readers select it.
     const selected = await db
@@ -847,7 +849,7 @@ describe('integration worker paging and resume', () => {
   });
 
   it('falls back narrowly for GA4, reuses the capability, and produces consumable referral keys', async () => {
-    const { runId, connectionId, projectId } = await seedRun('ga4');
+    const { workspaceId, runId, connectionId, projectId } = await seedRun('ga4');
     const requested: string[] = [];
     const client: Pick<IntegrationClient, 'page'> = {
       async page(_provider, _token, _property, template) {
@@ -873,8 +875,7 @@ describe('integration worker paging and resume', () => {
         return { payload: { rows }, rawRowCount: rows.length };
       },
     };
-    const worker = new IntegrationWorker(db, client, settings, async () => 'recorded-token');
-    await worker.runOnce();
+    await runWorker({ workspaceId, runId }, client).runOnce();
     const finished = await db
       .selectFrom('integration_sync_runs')
       .selectAll()
@@ -911,11 +912,12 @@ describe('integration worker paging and resume', () => {
         integrationPolicy.ga4_capability_key
       ]?.selected_dataset,
     ).toBe('ga4_item_channel_group_daily');
+    const second = randomUUID();
     await db
       .insertInto('integration_sync_runs')
       .values({
         ...finished,
-        id: randomUUID(),
+        id: second,
         idempotency_key: `second:${runId}`,
         resync_seq: 2,
         status: 'queued',
@@ -924,14 +926,14 @@ describe('integration worker paging and resume', () => {
       })
       .execute();
     requested.length = 0;
-    await worker.runOnce();
+    await runWorker({ workspaceId, runId: second }, client).runOnce();
     expect(requested.filter((dataset) => dataset.startsWith('ga4_item_'))).toEqual([
       'ga4_item_channel_group_daily',
     ]);
   });
 
   it('does not turn an unrelated GA4 provider error into a fallback', async () => {
-    const { runId } = await seedRun('ga4');
+    const { workspaceId, runId } = await seedRun('ga4');
     const requested: string[] = [];
     const client: Pick<IntegrationClient, 'page'> = {
       async page(_provider, _token, _property, template) {
@@ -941,7 +943,7 @@ describe('integration worker paging and resume', () => {
         return { payload: { rows: [] }, rawRowCount: 0 };
       },
     };
-    await new IntegrationWorker(db, client, settings, async () => 'recorded-token').runOnce();
+    await runWorker({ workspaceId, runId }, client).runOnce();
     expect(requested).not.toContain('ga4_item_channel_group_daily');
     expect(
       await db
@@ -953,7 +955,7 @@ describe('integration worker paging and resume', () => {
   });
 
   it('does not dispatch a GA4 fallback after losing its real PostgreSQL lease', async () => {
-    const { runId } = await seedRun('ga4');
+    const { workspaceId, runId } = await seedRun('ga4');
     const requested: string[] = [];
     const client: Pick<IntegrationClient, 'page'> = {
       async page(_provider, _token, _property, template) {
@@ -972,12 +974,10 @@ describe('integration worker paging and resume', () => {
         return { payload: { rows: [] }, rawRowCount: 0 };
       },
     };
-    await new IntegrationWorker(
-      db,
-      client,
-      { ...settings, heartbeat_interval_seconds: 0.01 },
-      async () => 'recorded-token',
-    ).runOnce();
+    await runWorker({ workspaceId, runId }, client, {
+      ...settings,
+      heartbeat_interval_seconds: 0.01,
+    }).runOnce();
     expect(requested).not.toContain('ga4_item_channel_group_daily');
     expect(
       await db
@@ -995,7 +995,7 @@ describe('integration worker paging and resume', () => {
       ) as Record<string, unknown>;
     const pageOne = await recordedPage('gsc_search_analytics_page1.json');
     const pageTwo = await recordedPage('gsc_search_analytics_page2.json');
-    const { runId } = await seedRun();
+    const { workspaceId, runId } = await seedRun();
     const firstDataset = Object.values(integrationPolicy.datasets).find(
       (item) => item.dataset === 'gsc_page_daily',
     );
@@ -1016,7 +1016,7 @@ describe('integration worker paging and resume', () => {
         return { payload, rawRowCount: rows.length };
       },
     };
-    const worker = new IntegrationWorker(db, client, settings, async () => 'recorded-access-token');
+    const worker = runWorker({ workspaceId, runId }, client);
 
     expect(await worker.runOnce()).toBe(true);
     const firstAttempt = await db

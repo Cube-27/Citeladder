@@ -19,6 +19,7 @@ import {
   SOURCE_MEDIUM_DAILY,
 } from './referral-fixtures.ts';
 import { Fixtures, testDatabase } from './support.ts';
+import { drainWorkspace } from './analytics-drain.ts';
 
 const db = testDatabase();
 const fixtures = new Fixtures(db);
@@ -63,6 +64,14 @@ const tasks = (kind: string) =>
 
 const worker = (executors?: Record<string, Executor>) =>
   new AnalyticsWorker(db, settings, { owner: 'worker-test', executors });
+/** Held to this test's tasks: the local database is shared with other test runs. */
+const scoped = (taskIds: string[], executors?: Record<string, Executor>) =>
+  new AnalyticsWorker(db, settings, {
+    owner: 'worker-test',
+    executors,
+    taskScope: { workspaceId, taskIds },
+  });
+const drain = () => drainWorkspace(db, workspaceId, { owner: 'worker-test' });
 
 it('reports a retry as the runner lane next due time, so the drain waits for it', async () => {
   const id = await enqueue(db, {
@@ -109,7 +118,10 @@ it('stops at the next I/O boundary after sustained heartbeat errors', async () =
     await new AnalyticsWorker(
       db,
       { ...settings, heartbeatIntervalSeconds: 1 },
-      { executors: { commerce_catalog_projection: execute } },
+      {
+        executors: { commerce_catalog_projection: execute },
+        taskScope: { workspaceId, taskIds: [id] },
+      },
     ).runOnce();
     expect(beat).toHaveBeenCalledTimes(2);
     expect(stopped).toBe(true);
@@ -133,7 +145,7 @@ it('leaves a failed running transition leased without dispatching or consuming a
     .spyOn(TaskQueue.prototype, 'markRunning')
     .mockRejectedValueOnce(new Error('Database transition failed'));
   try {
-    await worker({ commerce_catalog_projection: run }).runOnce();
+    await scoped([id], { commerce_catalog_projection: run }).runOnce();
     expect(run).not.toHaveBeenCalled();
     expect(
       await db
@@ -173,7 +185,7 @@ describe('referral chain', () => {
     });
 
     // ingest -> classify -> ai_referrals_snapshot_refresh.
-    expect(await worker().runUntilIdle()).toBe(3);
+    expect(await drain()).toBe(3);
 
     const classifications = await db
       .selectFrom('referral_classifications')
@@ -258,7 +270,7 @@ describe('referral chain', () => {
       kind: 'ingest_referrals',
       payload: { import_artifact_id: first.artifactId },
     });
-    expect(await worker().runUntilIdle()).toBe(3);
+    expect(await drain()).toBe(3);
 
     const second = await seedImport(db, {
       workspaceId,
@@ -280,7 +292,7 @@ describe('referral chain', () => {
       kind: 'ingest_referrals',
       payload: { import_artifact_id: second.artifactId },
     });
-    expect(await worker().runUntilIdle()).toBe(3);
+    expect(await drain()).toBe(3);
 
     expect((await tasks('ai_referrals_snapshot_refresh')).map((row) => row.status)).toEqual([
       'succeeded',
@@ -317,7 +329,7 @@ describe('referral chain', () => {
         kind: 'ingest_referrals',
         payload: { import_artifact_id: seed.artifactId },
       });
-      await worker().runUntilIdle();
+      await drain();
     }
     const events = await db
       .selectFrom('referral_events')
@@ -349,7 +361,7 @@ describe('referral chain', () => {
       payload: { import_artifact_id: foreign.artifactId },
     });
 
-    await worker().runUntilIdle();
+    await drain();
 
     const [task] = await tasks('ingest_referrals');
     expect(task).toMatchObject({ status: 'retry_wait', error_code: 'unknown', attempt_count: 1 });
@@ -390,7 +402,7 @@ describe('referral retention sweep', () => {
       kind: 'ingest_referrals',
       payload: { import_artifact_id: seed.artifactId },
     });
-    await worker().runUntilIdle();
+    await drain();
 
     await enqueue(db, {
       workspaceId,
@@ -398,7 +410,7 @@ describe('referral retention sweep', () => {
       kind: 'referral_retention_sweep',
       payload: { sweep_key: recent },
     });
-    expect(await worker().runUntilIdle()).toBe(1);
+    expect(await drain()).toBe(1);
 
     const kept = await db
       .selectFrom('referral_events')
@@ -469,9 +481,9 @@ describe('finalize', () => {
     throw new Error('projection failed');
   };
 
-  async function runOne(executors: Record<string, Executor>): Promise<QueueTask> {
+  async function runOne(executors: Record<string, Executor>, unscoped = false): Promise<QueueTask> {
     const id = await enqueue(db, { workspaceId, projectId, kind: 'ingest_referrals', payload: {} });
-    await worker(executors).runOnce();
+    await (unscoped ? worker(executors) : scoped([id], executors)).runOnce();
     return db
       .selectFrom('analytics_tasks')
       .selectAll()
@@ -494,7 +506,7 @@ describe('finalize', () => {
       .set({ attempt_count: retried.max_attempts - 1, status: 'queued', available_at: new Date(0) })
       .where('id', '=', retried.id)
       .execute();
-    await worker({ ingest_referrals: failing }).runOnce();
+    await scoped([retried.id], { ingest_referrals: failing }).runOnce();
     const exhausted = await db
       .selectFrom('analytics_tasks')
       .selectAll()
@@ -509,7 +521,8 @@ describe('finalize', () => {
 
   it('fails a kind with no executor without retrying it', async () => {
     const { ingest_referrals: _removed, ...rest } = EXECUTORS;
-    expect(await runOne(rest)).toMatchObject({
+    // A scoped worker claims only kinds it has executors for; this needs the global claim.
+    expect(await runOne(rest, true)).toMatchObject({
       status: 'failed',
       attempt_count: 1,
       error_code: policy.analytics.executor_not_wired_error,

@@ -2,9 +2,8 @@
 import { afterAll, expect, it } from 'vitest';
 import { sql } from 'kysely';
 import { enqueuePostSyncProjections } from '../src/integrations/projections.ts';
-import { loadWorkerSettings } from '../src/config.ts';
 import { readProjectReadiness } from '../src/integrations/readiness.ts';
-import { AnalyticsWorker } from '../src/workers/analytics-worker.ts';
+import { drainWorkspace } from './analytics-drain.ts';
 import { Fixtures, testDatabase } from './support.ts';
 import { seedImport } from './referral-fixtures.ts';
 import { importSeed, metric, requests, tenant, WINDOW } from './traffic-fixtures.ts';
@@ -102,8 +101,7 @@ it('takes a first connect through both workers to analysis_ready without provide
       await enqueuePostSyncProjections(trx, run);
     }
   });
-  const worker = new AnalyticsWorker(db, loadWorkerSettings({}));
-  expect(await worker.runUntilIdle()).toBeGreaterThanOrEqual(2);
+  expect(await drainWorkspace(db, t.workspaceId)).toBeGreaterThanOrEqual(2);
   const tasks = await db
     .selectFrom('analytics_tasks')
     .select(['task_kind', 'status', 'error_detail'])

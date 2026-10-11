@@ -5,6 +5,14 @@ audit. Each entry names who decided (**Owner** or **Engineering**), the date, th
 decision and the reason. A later entry that changes an earlier one says so and
 names the entry it supersedes; earlier entries are not rewritten.
 
+**Money rules need an Owner entry before code (Owner, 2026-10-11).** Any rule
+that decides what a customer is charged, refunded or held — what counts as
+billable, how an unknown outcome is priced, rounding, markup, tax, proration,
+refunds — is asked and recorded here as an **Owner** entry before it is
+implemented. Engineering may propose one but not decide it. B47 is the example
+that came too late: a failed request was coded as charged before the owner
+ruled it never is. Reviewers treat a money rule with no Owner entry as blocking.
+
 Implementation work is tracked in the [billing improvement plan](plans/billing-improvement.md);
 this log is the authority for what was decided.
 

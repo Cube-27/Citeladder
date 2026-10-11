@@ -122,6 +122,17 @@ function isContract(path) {
   );
 }
 
+// The shared API schemas: every E2E stub is validated against them, so a change
+// here can break any spec (one required field broke Search Intelligence E2E).
+function isSharedContract(path) {
+  return path.replaceAll('\\', '/').startsWith('frontend/packages/contracts/');
+}
+
+/** The specs the E2E job passes to Playwright; an empty list runs every spec. */
+export function e2eSpecArgs(paths, full = false) {
+  return full || paths.some(isSharedContract) ? [] : selectE2EFiles(paths);
+}
+
 function isSecuritySensitive(path) {
   return (
     path === '.gitleaks.toml' ||
@@ -193,7 +204,10 @@ export function classifyPaths(paths, { full = false } = {}) {
     frontend,
     contract,
     api: shared || normalized.some(isApiService),
-    e2e: unowned.some((path) => !isNonBrowserTooling(path)) || e2eFiles.length > 0,
+    e2e:
+      unowned.some((path) => !isNonBrowserTooling(path)) ||
+      e2eFiles.length > 0 ||
+      normalized.some(isSharedContract),
     security: shared || normalized.some(isSecuritySensitive),
     infra: normalized.some(isInfra),
     compose: normalized.some(isComposeSensitive),
@@ -353,7 +367,7 @@ async function main(environment = process.env) {
   const paths = changedPaths(diff.range);
   const full = diff.full && !isOwnerFreeChange(paths);
   const result = classifyPaths(paths, { full });
-  const e2eFiles = full ? [] : selectE2EFiles(paths);
+  const e2eFiles = e2eSpecArgs(paths, full);
 
   process.stdout.write(
     `CI diff: ${full ? 'full main validation' : diff.range}; ${paths.length} changed path(s)\n`,

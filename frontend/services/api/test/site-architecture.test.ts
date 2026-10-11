@@ -189,9 +189,16 @@ afterAll(async () => {
   await fixtures.cleanup();
   await db.destroy();
 });
-async function derive(seed: Awaited<ReturnType<SiteFixtures['crawl']>>) {
+type Seed = Awaited<ReturnType<SiteFixtures['crawl']>>;
+/** Held to one crawl's tasks: the local database is shared with other test runs. */
+const scopedWorker = (seed: Seed) =>
+  new SiteHealthWorker(db, {
+    settings,
+    taskScope: { workspaceId: seed.workspaceId, crawlId: seed.crawlId },
+  });
+async function derive(seed: Seed) {
   await fixtures.task(seed, 'link_metrics');
-  const worker = new SiteHealthWorker(db, { settings });
+  const worker = scopedWorker(seed);
   expect(await worker.runOnce()).toBe(1);
   expect(await worker.runOnce()).toBe(1);
 }
@@ -277,7 +284,7 @@ it('persists exact source IDs, six root evaluations and replay-safe architecture
   expect(evaluations.filter((row) => row.outcome === 'unknown')).toHaveLength(3);
   expect(record(architecture.archetype).archetype).toBe('commerce');
   await fixtures.task(seed, 'architecture');
-  expect(await new SiteHealthWorker(db, { settings }).runOnce()).toBe(1);
+  expect(await scopedWorker(seed).runOnce()).toBe(1);
   expect(
     await db
       .selectFrom('site_observed_architectures')
@@ -335,7 +342,7 @@ it('requires a persisted coverage snapshot and current-version metrics before cr
     .where('crawl_id', '=', seed.crawlId)
     .execute();
   await fixtures.task(seed, 'architecture');
-  expect(await new SiteHealthWorker(db, { settings }).runOnce()).toBe(1);
+  expect(await scopedWorker(seed).runOnce()).toBe(1);
   expect(
     await db
       .selectFrom('site_observed_architectures')

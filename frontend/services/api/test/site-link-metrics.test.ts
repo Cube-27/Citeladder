@@ -5,7 +5,7 @@ import { siteWorkerSettings } from '../src/site-health/runtime.ts';
 import { TaskQueue } from '../src/queue/task-queue.ts';
 import { record } from '../src/db/json.ts';
 import { testDatabase } from './support.ts';
-import { SiteFixtures } from './site-health-fixtures.ts';
+import { SiteFixtures, type SiteSeed } from './site-health-fixtures.ts';
 
 const anchor = (url: string, region = 'main', rel = '', text = '') => ({
   url,
@@ -128,6 +128,8 @@ const settings = {
   conflictBase: 0,
   conflictJitter: 0,
 };
+/** Held to one crawl's tasks: the local database is shared with other test runs. */
+const crawlScope = (seed: SiteSeed) => ({ workspaceId: seed.workspaceId, crawlId: seed.crawlId });
 it('persists scoped current-page metrics and admits one architecture successor in the same commit', async () => {
   const seed = await fixtures.crawl();
   const other = await fixtures.crawl();
@@ -139,7 +141,11 @@ it('persists scoped current-page metrics and admits one architecture successor i
   await fixtures.page(seed, '/failed', {}, { status: 'failed' });
   await fixtures.page(other, '/', {});
   const id = await fixtures.task(seed);
-  const worker = new SiteHealthWorker(db, { owner: 'metrics', settings });
+  const worker = new SiteHealthWorker(db, {
+    owner: 'metrics',
+    settings,
+    taskScope: crawlScope(seed),
+  });
   expect(await worker.runOnce()).toBe(1);
   const rows = await db
     .selectFrom('site_page_link_metrics')
@@ -212,8 +218,16 @@ it('cancellation after claim prevents both evidence and successor writes', async
   const seed = await fixtures.crawl();
   await fixtures.page(seed, '/', {});
   const id = await fixtures.task(seed);
-  const worker = new SiteHealthWorker(db, { owner: 'cancel', settings });
-  const [task] = await worker.queue.claim({ owner: worker.owner, kinds: ['link_metrics'] });
+  const worker = new SiteHealthWorker(db, {
+    owner: 'cancel',
+    settings,
+    taskScope: crawlScope(seed),
+  });
+  const [task] = await worker.queue.claim({
+    owner: worker.owner,
+    kinds: ['link_metrics'],
+    scope: { workspaceId: seed.workspaceId, taskIds: [id] },
+  });
   await db
     .updateTable('site_crawl_tasks')
     .set({ status: 'cancelled' })
@@ -241,6 +255,7 @@ it('rolls back partial evidence and handoff on failure and spends one bounded at
   const id = await fixtures.task(seed, 'link_metrics', { maximum: 1 });
   const worker = new SiteHealthWorker(db, {
     settings,
+    taskScope: crawlScope(seed),
     executors: {
       link_metrics: async (trx, crawl) => {
         await trx
@@ -274,6 +289,7 @@ it('lets the heartbeat extend the lease while an executor holds the task fence',
   const worker: SiteHealthWorker = new SiteHealthWorker(db, {
     owner: 'beat',
     settings,
+    taskScope: crawlScope(seed),
     executors: {
       link_metrics: async () => {
         const blocked = new Promise((resolve) => {
@@ -298,7 +314,11 @@ it('requeues database contention without spending a page attempt and fences expi
   const execute = vi.fn(async () => {
     throw Object.assign(new Error('recorded lock conflict'), { code: '40P01' });
   });
-  const worker = new SiteHealthWorker(db, { settings, executors: { link_metrics: execute } });
+  const worker = new SiteHealthWorker(db, {
+    settings,
+    taskScope: crawlScope(seed),
+    executors: { link_metrics: execute },
+  });
   expect(await worker.runOnce()).toBe(1);
   const task = await db
     .selectFrom('site_crawl_tasks')
