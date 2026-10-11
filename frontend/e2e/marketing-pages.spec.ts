@@ -158,7 +158,7 @@ test.describe('marketing routes', () => {
             [
               '400 14px "Switzer Variable"',
               '500 14px "Switzer Variable"',
-              '500 32px "Sentient Variable"',
+              '500 32px "IBM Plex Sans Variable"',
             ].map((font) => document.fonts.load(font)),
           ),
         );

@@ -240,7 +240,7 @@ function PostHeader({ post }: Readonly<{ post: BlogPost }>) {
         </ol>
       </nav>
       <h1 className="website-page-title website-article-title">{post.title}</h1>
-      <p className="website-lead max-w-[62ch]">{post.excerpt}</p>
+      <p className="website-lead">{post.excerpt}</p>
       {post.tags.length > 0 && (
         <ul className="flex flex-wrap gap-2" aria-label="Topics">
           {post.tags.map((tag) => (
@@ -266,7 +266,7 @@ function PostHeader({ post }: Readonly<{ post: BlogPost }>) {
           {post.readTime && <span>{post.readTime}</span>}
         </p>
       )}
-      {post.editorialNote && <p className="website-label max-w-[68ch]">{post.editorialNote}</p>}
+      {post.editorialNote && <p className="website-label">{post.editorialNote}</p>}
     </header>
   );
 }

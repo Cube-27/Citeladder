@@ -9,5 +9,5 @@
    installed copy or the system stack, never to an undefined var(). */
 :root {
   --font-text: 'Switzer Variable', 'Switzer', ui-sans-serif, system-ui;
-  --font-heading: 'Sentient Variable', 'Sentient', Georgia;
+  --font-heading: 'IBM Plex Sans Variable', 'IBM Plex Sans', ui-sans-serif, system-ui;
 }

@@ -289,6 +289,9 @@
 
 /* ── Article layout (blog posts and research guides) ────────────────────── */
 
+/* The article spans the site container like every other page: the header runs
+   its full width, and the text column fills everything up to the contents
+   rail, so no empty band opens between them. */
 .cp-article {
   width: 100%;
   max-width: 80rem;
@@ -299,13 +302,8 @@
   display: grid;
   justify-items: start;
   gap: 1.25rem;
-  max-width: 56rem;
   padding-top: clamp(3.5rem, 7vw, 6rem);
   padding-bottom: 2rem;
-}
-
-.cp-article-head h1 {
-  max-width: 32ch;
 }
 
 .cp-crumbs ol {
@@ -346,8 +344,7 @@
 
 @media (min-width: 64rem) {
   .cp-article-grid {
-    grid-template-columns: minmax(0, 46rem) 14rem;
-    justify-content: space-between;
+    grid-template-columns: minmax(0, 1fr) 16rem;
     gap: 4rem;
   }
 
@@ -420,21 +417,13 @@
   color: var(--color-secondary);
 }
 
-.cp-prose > p,
-.cp-prose > ul,
-.cp-prose > ol,
-.cp-prose > blockquote,
-.cp-prose > h2,
-.cp-prose > h3 {
-  max-width: 68ch;
-}
-
+/* Article copy reads at the website body size, 16px (docs/design.md). */
 .cp-prose > p,
 .cp-prose > ul,
 .cp-prose > ol {
   margin-block: 0 1.25rem;
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  font-size: var(--text-base);
+  line-height: var(--text-base--line-height);
 }
 
 /* Only article lists: diagrams, checklists and the related list are lists too,
@@ -530,8 +519,8 @@
 
 .cp-prose > blockquote p {
   margin: 0;
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  font-size: var(--text-base);
+  line-height: var(--text-base--line-height);
 }
 
 .cp-prose > pre {
@@ -719,7 +708,6 @@
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   gap: 0.75rem;
-  max-width: 68ch;
   margin-block: 1.75rem;
   padding: 1rem 1.25rem;
   border-radius: var(--radius-card);
@@ -732,8 +720,8 @@
 
 .cp-callout p {
   color: var(--color-secondary);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  font-size: var(--text-base);
+  line-height: var(--text-base--line-height);
 }
 
 /* ── Article end: sources, related, previous/next ──────────────────────── */
@@ -749,7 +737,6 @@
 .cp-sources,
 .cp-prose > .cp-sources {
   display: grid;
-  max-width: 68ch;
   margin-bottom: 0;
   gap: 0.5rem;
   padding-left: 1.25rem;

@@ -141,10 +141,9 @@ export function ReferralView() {
                 <span>{name}</span>
                 <span className="pv-meta">{engaged}% engaged</span>
               </span>
-              <span className="pv-bar-cell pv-bar-wide">
-                <i data-series="1" style={{ width: `${(sessions / 412) * 100}%` }} />
+              <BarCell value={sessions} max={sources[0][2]} tone="accent" wide>
                 {sessions}
-              </span>
+              </BarCell>
             </li>
           ))}
         </ul>

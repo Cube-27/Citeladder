@@ -9,7 +9,7 @@
    baseline here exactly as in the product; 12 is the one rung below it. */
 :where([data-public-surface], [data-flow-surface]) {
   /* The public and focused-flow type world (docs/design.md §Typography):
-     Switzer carries body, UI and data, Sentient the display headings, as in
+     Switzer carries body, UI and data, IBM Plex Sans the display headings, as in
      the product. The scale is the product's (globals.css @theme), unchanged;
      being "roomier" is a job for measure and rhythm, not for resizing rungs. */
   --tracking-tight: -0.02em;
@@ -75,7 +75,7 @@
   line-height: 1.25rem;
   font-weight: 400;
   letter-spacing: 0;
-  color: var(--color-muted);
+  color: var(--color-secondary);
 }
 
 .flow-meta {
@@ -99,8 +99,8 @@
    travel as one contract. The low-specificity colour defaults let explicit
    semantic utilities override them for warnings and evidence states.
 
-   Display rungs set in Sentient at 500, and tracking closes gently as size
-   grows (a serif wants less than a grotesk). The feature heading and body
+   Display rungs set in IBM Plex Sans at 500, and tracking closes as size
+   grows, as a grotesk wants at display sizes. The feature heading and body
    rungs set in Switzer at 400/500. */
 .website-hero-display,
 .website-page-title,
@@ -118,13 +118,13 @@
 .website-hero-display {
   font-size: clamp(1.75rem, 8.6vw, 2rem);
   line-height: 1.1;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
 }
 
 .website-page-title {
   font-size: clamp(1.5rem, 6.4vw, 1.75rem);
   line-height: 1.2;
-  letter-spacing: -0.015em;
+  letter-spacing: -0.02em;
 }
 
 .website-article-title {
@@ -134,7 +134,7 @@
 .website-section-heading {
   font-size: 1.5rem;
   line-height: 2rem;
-  letter-spacing: -0.012em;
+  letter-spacing: -0.018em;
 }
 
 .website-feature-heading {
@@ -192,9 +192,13 @@
   text-wrap: pretty;
 }
 
+/* Reading text is 16px on the website and docs (owner decision, 2026-10-11),
+   the size every leading marketing system reads at. Only reading copy moves:
+   nav, labels, controls and meta keep their 14px and 12px rungs, and the
+   focused flow does not use this role. */
 .website-body {
-  font-size: 0.875rem;
-  line-height: 1.375rem;
+  font-size: 1rem;
+  line-height: 1.625rem;
   font-weight: 400;
   letter-spacing: 0;
   text-wrap: pretty;
