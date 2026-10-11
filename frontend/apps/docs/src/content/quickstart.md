@@ -3,6 +3,7 @@ title: 'Your first project'
 description: 'Create a useful baseline, inspect one finding, and choose a concrete next step.'
 group: 'Start here'
 order: 20
+updated: '2026-10-10'
 ---
 
 You will need access to a CiteLadder workspace, your website address and a clear idea of the market you serve. Available runs and features depend on your workspace's access and allowances.

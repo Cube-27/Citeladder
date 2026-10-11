@@ -3,9 +3,10 @@ title: 'REST API'
 description: 'Read your reports and manage prompts, competitors, audits and actions from your own code.'
 group: 'Use the REST API'
 order: 350
+updated: '2026-10-10'
 ---
 
-The CiteLadder REST API gives your scripts, dashboards and pipelines the same data and actions as the app. It is available on paid plans at **https://api.citeladder.com/v1**. Every request runs through the same checks as the app, so a key can never do more than the person who created it.
+The CiteLadder REST API gives your scripts, dashboards and pipelines the same data and actions as the app. It is available on paid plans at `https://api.citeladder.com/v1`. Every request runs through the same checks as the app, so a key can never do more than the person who created it.
 
 ## Create a key
 

@@ -3,6 +3,7 @@ title: 'Search Demand'
 description: 'Find search opportunities using saved query-page evidence and understand why a signal appeared.'
 group: 'Measure and understand'
 order: 150
+updated: '2026-10-10'
 ---
 
 Search Demand turns imported search evidence into signals worth investigating. These can include striking-distance queries, competing pages, property-relative CTR gaps and coverage-qualified trends.

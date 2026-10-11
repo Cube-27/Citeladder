@@ -3,6 +3,7 @@ title: 'Choose a skill'
 description: 'Select the kind of help you need while keeping one conversation and one deliverable.'
 group: 'Improve with Agent'
 order: 220
+updated: '2026-10-09'
 ---
 
 Skills give the Agent a method for a particular job. They run inside the same Agent workspace and use the same access and evidence boundaries.

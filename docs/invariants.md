@@ -69,10 +69,14 @@ Persistence means observed, not automatically true.
 Analyses, rule evaluations, scores, demand signals, opportunities, briefs,
 prompts, validations, verifications, and agent results reference exact source
 IDs and every relevant extractor, classifier, analyzer, rule, scoring, formula,
-template, provider, and model version. A semantic change bumps the affected
-version once per release, so persisted results from before and after it are
-never compared as like for like; production data is never reset to avoid a
-bump. Resetting an existing database requires explicit authorization and
+template, provider, and model version. Until customers exist, every processing
+base version stays at 1 (a derived suffix such as the classifier's input
+digest still changes with its inputs): a semantic change does not bump it, because pre-launch data
+is reset under the `0001_baseline.sql` policy rather than compared across
+versions. Once customers exist, a semantic change bumps the affected version
+once per release, so persisted results from before and after it are never
+compared as like for like, and production data is never reset to avoid a bump.
+Resetting an existing database requires explicit authorization and
 confirmation that it is disposable development data. Never reset
 non-disposable, shared, staging or production environments.
 

@@ -3,6 +3,7 @@ title: 'Commerce and AI Shelf'
 description: 'Measure product and category appearances with target-specific buyer prompts.'
 group: 'Measure and understand'
 order: 170
+updated: '2026-10-09'
 ---
 
 Commerce's catalog is the starting point: choose a product or category, then inspect its AI Shelf, competitors and buyer prompts. Site Health crawls fill the catalog for businesses that sell a product catalog; any business can import a CSV.

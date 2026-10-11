@@ -12,7 +12,7 @@ import {
   type HtmlElement,
   type HtmlNode,
 } from '../../web-evidence/html.ts';
-import { scalarText, stripTrailing } from '../../text-order.ts';
+import { compareText, scalarText, stripTrailing } from '../../text-order.ts';
 import { analysisPolicy, limits, squash } from './policy.ts';
 
 const sd = analysisPolicy.structured_data;
@@ -229,22 +229,42 @@ function objectBlocks(object: JsonObject, entityIndex: number): SchemaBlock[] {
     });
 }
 
-export function jsonLdBlocks(raw: string[], maxBlocks: number): SchemaBlock[] {
-  const blocks: SchemaBlock[] = [];
-  let entityIndex = 0;
+/**
+ * Every schema.org type the page declares, recognized or not: a page marked up
+ * only as `SoftwareApplication` or `Event` has structured data even though no
+ * deeper check reads that type.
+ */
+export function declaredSchemaTypes(objects: JsonObject[], root: HtmlNode, maxTypes: number) {
+  const types = new Set(objects.flatMap((object) => cleanTypes(object['@type'])));
+  for (const node of elements(root))
+    if (hasAttribute(node, 'itemscope'))
+      for (const candidate of attribute(node, 'itemtype').split(/\s+/u)) {
+        const type = cleanType(candidate);
+        if (type) types.add(type);
+      }
+  return [...types].sort(compareText).slice(0, maxTypes);
+}
+
+/** Every object in the page's JSON-LD scripts, in document order, each script parsed once. */
+export function jsonLdObjects(raw: string[]): JsonObject[] {
+  const objects: JsonObject[] = [];
   for (const body of raw) {
-    const text = body.trim();
-    if (!text) continue;
     let parsed: unknown;
     try {
-      parsed = JSON.parse(text);
+      parsed = JSON.parse(body.trim());
     } catch {
       continue; // A malformed block cannot discard the others.
     }
-    for (const object of jsonObjects(parsed)) {
-      blocks.push(...objectBlocks(object, entityIndex++));
-      if (blocks.length >= maxBlocks) return blocks.slice(0, maxBlocks);
-    }
+    objects.push(...jsonObjects(parsed));
+  }
+  return objects;
+}
+
+export function jsonLdBlocks(objects: JsonObject[], maxBlocks: number): SchemaBlock[] {
+  const blocks: SchemaBlock[] = [];
+  for (const [entityIndex, object] of objects.entries()) {
+    blocks.push(...objectBlocks(object, entityIndex));
+    if (blocks.length >= maxBlocks) return blocks.slice(0, maxBlocks);
   }
   return blocks;
 }

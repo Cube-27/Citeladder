@@ -3,6 +3,7 @@ title: 'Welcome to CiteLadder'
 description: 'Understand where your brand appears, find the evidence behind it, and turn what you learn into better work.'
 group: 'Start here'
 order: 10
+updated: '2026-10-09'
 ---
 
 CiteLadder brings AI search visibility, website health and connected search data into one project. Use it to answer three questions: **Where are we showing up? What should we improve? Did the change appear in later measurements?**

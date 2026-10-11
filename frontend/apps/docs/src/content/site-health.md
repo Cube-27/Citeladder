@@ -3,6 +3,7 @@ title: 'Site Health'
 description: 'Inspect website issues, understand Web and AEO scores, and choose changes with supporting page evidence.'
 group: 'Measure and understand'
 order: 130
+updated: '2026-10-10'
 ---
 
 A Site Health crawl captures pages from your website and analyzes their technical and content properties. Begin with **Run new crawl**, then review the crawl's scope, progress and coverage.

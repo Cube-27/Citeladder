@@ -87,6 +87,30 @@ describe('terminal checks from persisted evidence', () => {
     expect(resolutionSet([...resolutions.keys()], resolutions).outcome).toBe('missing');
   });
 
+  it('reads a sign-in-gated link as working but a gated sitemap URL as unreachable', () => {
+    const resolution = (status: number): Resolution => ({
+      status,
+      finalUrl: '',
+      redirected: false,
+      taskId: `task-${status}`,
+      attemptId: `attempt-${status}`,
+      artifactId: null,
+    });
+    const resolutions = new Map([
+      ['https://api.example.test/mcp', resolution(401)],
+      ['https://example.test/account', resolution(403)],
+      ['https://api.example.test/v1', resolution(404)],
+    ]);
+    const links = resolutionSet([...resolutions.keys()], resolutions);
+    expect(links.evidence.failing_targets).toEqual([
+      { url: 'https://api.example.test/v1', status_code: 404 },
+    ]);
+    const sitemap = resolutionSet(['https://example.test/account'], resolutions, true);
+    expect(sitemap.evidence.failing_targets).toEqual([
+      { url: 'https://example.test/account', status_code: 403 },
+    ]);
+  });
+
   it('weights pages equally and keeps missing measurements out of the score denominator', () => {
     const passed = canonical(['/a']);
     const failed = canonical(['/a'], { statusCode: 404 });

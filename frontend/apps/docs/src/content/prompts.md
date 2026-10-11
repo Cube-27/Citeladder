@@ -3,6 +3,7 @@ title: 'Prompts and topics'
 description: 'Track questions that represent real buying decisions, and keep their purpose clear.'
 group: 'Measure and understand'
 order: 100
+updated: '2026-10-10'
 ---
 
 A prompt is a question you want to investigate in AI search. Topics organize related questions; the prompt's cohort preserves what kind of question it is.

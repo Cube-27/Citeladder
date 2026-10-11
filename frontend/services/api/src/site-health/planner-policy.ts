@@ -96,7 +96,10 @@ async function projectRoot(db: Database, workspaceId: string, projectId: string,
 
 export function projectWebsiteRoot(websiteUrl: string | null) {
   const root = classifyUrlAdmission(websiteUrl ?? '');
-  const domain = root.url ? getDomain(new URL(root.url).hostname) : null;
+  // A private suffix (`a.github.io`) is its own site, not every tenant of `github.io`.
+  const domain = root.url
+    ? getDomain(new URL(root.url).hostname, { allowPrivateDomains: true })
+    : null;
   if (!root.accepted || !root.url || !domain)
     crawlError('Project has no admissible website URL', 'invalid_root');
   return { root: root.url, domain };

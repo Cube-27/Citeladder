@@ -17,6 +17,7 @@ const ATTRIBUTION = new RegExp(s.attribution_pattern, 'i');
 const CITATION = new RegExp(s.citation_marker_pattern, 'i');
 const SECTION_HEADINGS = new Set(s.section_headings);
 const HEADINGS = new Set(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']);
+const NO_CONTAINERS: ReadonlySet<HtmlElement> = new Set();
 
 type AttachedSource = { url: string; domain: string; source_name: string; relationship: string };
 export function emptySourceSupport() {
@@ -32,8 +33,10 @@ export function emptySourceSupport() {
 type SourceSupport = ReturnType<typeof emptySourceSupport>;
 
 const normalHost = (host: string) => host.toLowerCase().replace(/\.$/u, '');
-const registrable = (host: string) => getDomain(host) ?? host;
-const sameSite = (host: string, base: string) =>
+// Private suffixes count: `a.github.io` and `b.github.io` are different sites.
+const registrable = (host: string) => getDomain(host, { allowPrivateDomains: true }) ?? host;
+/** The same host, or a host on the same registrable domain: one site's subdomains. */
+export const sameSite = (host: string, base: string) =>
   host === base || (Boolean(base) && registrable(host) === registrable(base));
 
 /** The external host of an http(s) link, or '' for same-site or non-web links. */
@@ -101,6 +104,25 @@ function nextSection(node: HtmlElement, current: { name: string; level: number }
   return current;
 }
 
+const inOrderedList = (node: HtmlElement) => {
+  for (let current = parentElement(node); current; current = parentElement(current))
+    if (current.tagName === 'ol') return true;
+  return false;
+};
+
+/**
+ * Whether a heading or link belongs to the page's own content. A numbered
+ * reference list is a repeated linked collection, so the card heuristic
+ * excludes it; under a references heading its links are the sources, while
+ * related-content cards there stay excluded.
+ */
+function ownedNode(node: HtmlElement, page: PageScope, inSection: boolean) {
+  const isHeading = HEADINGS.has(node.tagName);
+  if (!isHeading && node.tagName !== 'a') return false;
+  const referenceItem = inSection && !isHeading && inOrderedList(node);
+  return pageOwned(node, page.region, referenceItem ? NO_CONTAINERS : page.cards);
+}
+
 export function sourceSupportFacts(page: PageScope, finalUrl: string) {
   const facts = emptySourceSupport();
   let base = '';
@@ -114,9 +136,8 @@ export function sourceSupportFacts(page: PageScope, finalUrl: string) {
   let scanned = 0;
   for (const node of elements(page.region)) {
     if (++scanned > regionPolicy.max_containers_scanned) break;
-    const isHeading = HEADINGS.has(node.tagName);
-    if ((!isHeading && node.tagName !== 'a') || !pageOwned(node, page.region, page.cards)) continue;
-    if (isHeading) {
+    if (!ownedNode(node, page, Boolean(section.name))) continue;
+    if (HEADINGS.has(node.tagName)) {
       section = nextSection(node, section);
       if (section.name && !facts.context_reasons.includes(section.name))
         facts.context_reasons.push(section.name);

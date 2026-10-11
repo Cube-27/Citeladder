@@ -3,6 +3,7 @@ title: 'Access and troubleshooting'
 description: 'Resolve connection and data problems while keeping account access and client data handling clear.'
 group: 'Connect with MCP'
 order: 340
+updated: '2026-10-11'
 ---
 
 The MCP grant is bound to your CiteLadder account and to the workspaces you selected when you approved the connection. Each read checks that you are still a member, so losing membership removes access even before a token expires. Joining another workspace later does not add it to an existing connection.

@@ -3,6 +3,7 @@ title: 'Give the Agent context'
 description: 'Keep company facts, audience and writing requirements clear before starting work.'
 group: 'Improve with Agent'
 order: 240
+updated: '2026-10-09'
 ---
 
 Open **Agent → Context** to review the brand profile and the project's Agent instructions. Good context helps the Agent produce work that fits your business without inventing missing details.

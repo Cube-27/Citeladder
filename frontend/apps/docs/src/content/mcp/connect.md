@@ -3,6 +3,7 @@ title: 'Connection setup'
 description: 'Add CiteLadder to your AI client, approve workspace access and check which saved datasets are available.'
 group: 'Connect with MCP'
 order: 310
+updated: '2026-10-11'
 ---
 
 Every client connects to the same hosted server:

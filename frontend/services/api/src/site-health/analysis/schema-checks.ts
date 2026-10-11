@@ -42,20 +42,16 @@ const missingPaths = (block: Block, paths: string[]) => {
   return paths.filter((path) => !present.has(path));
 };
 
-/** Whether a schema name and visible text name the same thing, by shared word tokens. */
-function matchesByTokens(claim: string, visible: string) {
-  const claimTokens = claim.toLowerCase().match(TOKEN) ?? [];
-  const visibleTokens = visible.toLowerCase().match(TOKEN) ?? [];
-  if (!claimTokens.length || !visibleTokens.length) return false;
-  for (let start = 0; start + claimTokens.length <= visibleTokens.length; start++)
-    if (claimTokens.every((token, index) => visibleTokens[start + index] === token)) return true;
-  const claimSet = new Set(claimTokens);
-  const visibleSet = new Set(visibleTokens);
-  const shared = [...claimSet].filter((token) => visibleSet.has(token)).length;
-  return (
-    Math.min(shared / claimSet.size, shared / visibleSet.size) >=
-    r.schema_content_match_min_token_overlap
-  );
+const tokenSet = (value: string) => new Set(value.toLowerCase().match(TOKEN) ?? []);
+
+/**
+ * The share of a schema name's words the visible text shows. A long SEO title
+ * holding a short, correct name still names it, so the title's own length is
+ * not held against it.
+ */
+function claimCoverage(claim: Set<string>, visible: Set<string>) {
+  if (!claim.size) return 0;
+  return [...claim].filter((token) => visible.has(token)).length / claim.size;
 }
 
 /** A document URL for comparison: http(s), lower-cased host, trailing slash trimmed, no fragment. */
@@ -231,22 +227,28 @@ function schemaMatchesContent(facts: Facts): CheckResult {
     .filter((block) => block.name)
     .slice(0, r.schema_content_match_max_candidates);
   if (!named.length) return ['not_applicable', { reason: 'no_schema_names' }];
-  const visible = [text(facts.title), ...textList(record(facts.headings).h1_texts)]
-    .filter(Boolean)
-    .map((value) => value.toLowerCase());
-  const matched = named.some(({ name, type }) =>
-    visible.some((value) =>
-      matchesByTokens(type === 'Organization' ? companyName(name) : name, value),
-    ),
-  );
-  return [
-    passFail(matched),
-    {
-      page_kind: expectation.page_kind,
-      candidates: named.map(({ name }) => name.slice(0, 256)),
-      matched_visible_content: matched,
-    },
-  ];
+  const visible = [text(facts.title), ...textList(record(facts.headings).h1_texts)].map(tokenSet);
+  // Markup conflicts when it names something the page does not show; a name
+  // the title/h1 phrase differently but the page visibly carries is consistent.
+  const bodyFacts = record(facts.body);
+  const body = tokenSet(text(bodyFacts.text));
+  const matched = named.some(({ name, type }) => {
+    const claim = tokenSet(type === 'Organization' ? companyName(name) : name);
+    return (
+      visible.some(
+        (value) => claimCoverage(claim, value) >= r.schema_content_match_min_token_overlap,
+      ) || claimCoverage(claim, body) === 1
+    );
+  });
+  const evidence = {
+    page_kind: expectation.page_kind,
+    candidates: named.map(({ name }) => name.slice(0, 256)),
+    matched_visible_content: matched,
+  };
+  // Text past the stored cap was never read, so a missing name is unproven there.
+  if (!matched && bodyFacts.truncated === true)
+    return ['unknown', { ...evidence, reason: 'body_text_truncated' }];
+  return [passFail(matched), evidence];
 }
 
 export const SCHEMA_CHECKS: Record<string, (facts: Facts) => CheckResult> = {

@@ -33,8 +33,14 @@ import { emptyEntityFacts, entityFacts } from './entity-facts.ts';
 import { analysisPolicy, limits, squash } from './policy.ts';
 import { mergeRobotsHeader, robotsMeta } from './robots-directives.ts';
 import { elementRegion, nodeIsRendered, pageScope, regionNodeIsVisible } from './regions.ts';
-import { emptySourceSupport, sourceSupportFacts } from './source-support.ts';
-import { jsonLdBlocks, microdataBlocks, productFacts } from './structured-data.ts';
+import { emptySourceSupport, sameSite, sourceSupportFacts } from './source-support.ts';
+import {
+  declaredSchemaTypes,
+  jsonLdBlocks,
+  jsonLdObjects,
+  microdataBlocks,
+  productFacts,
+} from './structured-data.ts';
 
 const f = analysisPolicy.facts;
 const HTML_TYPES = new Set(['text/html', 'application/xhtml+xml']);
@@ -82,6 +88,15 @@ const metaContent = (root: HtmlNode, name: string) =>
     .map((meta) => attribute(meta, 'content').trim())
     .find(Boolean)
     ?.slice(0, limits.meta_chars) ?? '';
+
+/** Update-date meta keys, in the order they are trusted. */
+const MODIFIED_META_KEYS = [
+  'article:modified_time',
+  'og:updated_time',
+  'last-modified',
+  'dcterms.modified',
+  'dc.date.modified',
+];
 
 /** `<meta property|name="prefix:…">` values; the first declaration of a key wins. */
 function metaPropertyMap(root: HtmlNode, prefix: string) {
@@ -147,9 +162,14 @@ function hrefHost(href: string) {
   const host = authority.slice(authority.lastIndexOf('@') + 1).replace(/:\d*$/u, '');
   return host.replaceAll(/[[\]]/gu, '').toLowerCase() || null;
 }
+/**
+ * Internal means the crawl's own site: the page's registrable domain and every
+ * subdomain of it, the same scope the crawler admits. An exact-host test hid
+ * `www`/`docs` links from the link graph and broken-link checks the crawl fetched.
+ */
 const isInternal = (href: string, baseHost: string) => {
   const host = hrefHost(href);
-  return host === null || (Boolean(baseHost) && host === baseHost.toLowerCase());
+  return host === null || (Boolean(baseHost) && sameSite(host, baseHost.toLowerCase()));
 };
 
 function linksAndAssets(root: HtmlNode, baseHost: string, maxLinks: number) {
@@ -331,8 +351,9 @@ function bodyText(root: HtmlNode, maxChars: number) {
       if (PRUNED_BODY_TAGS.has(current.tagName)) pruned = true;
     if (!pruned) raw += node.value;
   }
-  const text = squash(raw).slice(0, maxChars);
-  return { text, word_count: text ? text.split(' ').length : 0 };
+  const full = squash(raw);
+  const text = full.slice(0, maxChars);
+  return { text, word_count: text ? text.split(' ').length : 0, truncated: full.length > maxChars };
 }
 
 function emptyAuthorship() {
@@ -361,7 +382,7 @@ function emptyFacts() {
     images: { count: 0, missing_alt: 0, decorative_alt: 0 },
     accessibility: accessibilityFacts(document(Buffer.alloc(0)), 0),
     mobile: { viewport: { declared: false, content: '' } },
-    body: { text: '', word_count: 0 },
+    body: { text: '', word_count: 0, truncated: false },
     cta_text: [] as string[],
     form_fields: [] as string[],
     link_context: [] as string[],
@@ -411,7 +432,8 @@ function structuredData(root: HtmlNode, maxBlocks: number) {
   const raw = [...elements(root, 'script')]
     .filter((node) => attribute(node, 'type').toLowerCase() === 'application/ld+json')
     .map(textContent);
-  const jsonLd = jsonLdBlocks(raw, maxBlocks);
+  const objects = jsonLdObjects(raw);
+  const jsonLd = jsonLdBlocks(objects, maxBlocks);
   const microdata = microdataBlocks(root, maxBlocks);
   const blocks = [...jsonLd, ...microdata].slice(0, maxBlocks);
   return {
@@ -420,6 +442,7 @@ function structuredData(root: HtmlNode, maxBlocks: number) {
     has_json_ld: jsonLd.length > 0,
     has_microdata: microdata.length > 0,
     types: [...new Set(blocks.map((block) => block.type))].sort(compareText),
+    declared_types: declaredSchemaTypes(objects, root, maxBlocks),
     product: productFacts(blocks),
   };
 }
@@ -443,6 +466,8 @@ function extractDocument(
   const links = linksAndAssets(root, baseHost, settings.maxLinks);
   const viewport = metaContent(root, 'viewport');
   const articleMeta = metaPropertyMap(root, 'article:');
+  const allMeta = metaPropertyMap(root, '');
+  const modifiedMeta = MODIFIED_META_KEYS.map((key) => allMeta[key]).find(Boolean) ?? '';
   const facts: DocumentFacts = {
     ...emptyFacts(),
     has_html: true,
@@ -476,7 +501,7 @@ function extractDocument(
     inline_script_chars: inlineScriptChars(root),
     blocking_resources: blockingResources(root, links.stylesheets.length),
     body: bodyText(root, settings.maxTextChars),
-    ...authorshipFacts(page, sd.blocks, articleMeta, metaContent(root, 'author')),
+    ...authorshipFacts(page, sd.blocks, articleMeta, metaContent(root, 'author'), modifiedMeta),
     commerce: commerceFacts(page, finalUrl),
   };
   const shell =

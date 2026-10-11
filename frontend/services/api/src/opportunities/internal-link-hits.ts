@@ -3,6 +3,7 @@ import { internalLinkAnalysisSchema } from '@citeladder/contracts/site-health';
 import { policy } from '../config.ts';
 import type { DetectorHit } from '../analysis/opportunities/evidence.ts';
 import type { Database } from '../db/database.ts';
+import { record } from '../db/json.ts';
 import { groupBy } from '../lists.ts';
 import type { Scope } from './sources.ts';
 
@@ -30,12 +31,15 @@ export async function internalLinkHits(
   if (runId === null) return [];
   const run = await db
     .selectFrom('site_internal_link_runs')
-    .select(['id', 'result'])
+    .select(['id', 'result', 'manifest'])
     .where('workspace_id', '=', scope.workspaceId)
     .where('project_id', '=', scope.projectId)
     .where('id', '=', runId)
     .executeTakeFirstOrThrow();
   const result = internalLinkAnalysisSchema.parse(run.result);
+  // The bar the run's links were judged against, frozen with the run.
+  const threshold = Number(record(record(run.manifest).policy).accept_threshold);
+  if (!(threshold > 0)) throw new Error('Internal link run has no frozen accept_threshold');
   const sources = groupBy(result.recommendations, (link) => link.source.site_url_id);
   return [...sources].map(([id, links]) => {
     const source = links[0].source;
@@ -57,7 +61,9 @@ export async function internalLinkHits(
       ],
       source_issue_ids: [],
       source_metric_ids: [run.id],
-      value_factor: policy.opportunity.opportunities.SITE_VALUE_FACTOR,
+      // How far the strongest suggested link clears the acceptance bar: a clear
+      // editorial win ranks above a borderline one instead of every page tying.
+      value_factor: Math.max(...links.map((link) => link.usefulness)) / threshold,
       gap_factor: policy.opportunity.opportunities.SITE_GAP_FACTOR,
     };
   });

@@ -2,6 +2,7 @@ import { expect, it } from 'vitest';
 import { loadConfig, policy } from '../src/config.ts';
 import { validateSiteHealthCatalog } from '../src/config/site-health/validation.ts';
 import { classifierVersion } from '../src/config/site-health.ts';
+import { projectWebsiteRoot } from '../src/site-health/planner-policy.ts';
 
 it.each([
   { SITE_HEALTH_MAX_ATTEMPTS: '0' },
@@ -87,10 +88,15 @@ it('keeps score membership in one place and never scores a hidden diagnostic', (
   expect(() => validate(unpillared)).toThrow('pillar disagree');
 });
 
+it('scopes a crawl to its own tenant of a shared hosting suffix', () => {
+  expect(projectWebsiteRoot('https://acme.github.io/').domain).toBe('acme.github.io');
+  expect(projectWebsiteRoot('https://www.example.com/').domain).toBe('example.com');
+});
+
 it('versions the classifier by every input it reads', () => {
   const routes = [['product', '/products?/']];
-  const base = classifierVersion('sh-classifier-2', [{}, routes]);
-  expect(classifierVersion('sh-classifier-2', [{}, routes])).toBe(base);
-  expect(classifierVersion('sh-classifier-2', [{}, [['product', '/p/']]])).not.toBe(base);
-  expect(base.startsWith('sh-classifier-2+')).toBe(true);
+  const base = classifierVersion('sh-classifier-1', [{}, routes]);
+  expect(classifierVersion('sh-classifier-1', [{}, routes])).toBe(base);
+  expect(classifierVersion('sh-classifier-1', [{}, [['product', '/p/']]])).not.toBe(base);
+  expect(base.startsWith('sh-classifier-1+')).toBe(true);
 });

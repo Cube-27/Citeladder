@@ -3,6 +3,7 @@ title: 'MCP tool reference'
 description: 'Choose the narrowest registered read tool that answers your question, and see which tools make changes.'
 group: 'Connect with MCP'
 order: 320
+updated: '2026-10-11'
 ---
 
 Start with project discovery, inspect available evidence, then ask for the concrete record or dataset you need. List tools are bounded; follow returned cursors instead of assuming the first page is complete.

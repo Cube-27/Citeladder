@@ -1,5 +1,8 @@
 ---
+import { websiteHref } from '@/lib/config/app-link';
+import { docsHref } from '@/lib/config/docs';
 import { articleHeadings, articles } from '../lib/content';
+import { docsArticleJsonLd, updatedLabel } from '../lib/structured-data';
 import DocsLayout from '../layouts/DocsLayout.astro';
 import ToolReference from '../components/ToolReference.astro';
 import ApiReference from '../components/ApiReference.astro';
@@ -15,13 +18,21 @@ export function getStaticPaths() {
 const { article, previous, next } = Astro.props;
 const { Content } = article.entry;
 const headings = await articleHeadings(article);
+const jsonLd = docsArticleJsonLd({
+  title: article.title,
+  description: article.description,
+  url: docsHref(article.href),
+  updated: article.updated,
+  websiteUrl: websiteHref('/'),
+});
 ---
-<DocsLayout title={article.title} description={article.description} headings={headings.map((heading) => ({ ...heading, label: heading.text.replace(/^\d+[.)]\s+/, '') }))}>
+<DocsLayout title={article.title} description={article.description} updated={article.updated} jsonLd={jsonLd} headings={headings.map((heading) => ({ ...heading, label: heading.text.replace(/^\d+[.)]\s+/, '') }))}>
   <article>
     <header class="docs-article-header">
       <p class="docs-article-group website-label">{article.group}</p>
       <h1 class="website-page-title docs-title">{article.title}</h1>
       <p class="website-lead">{article.description}</p>
+      <p class="docs-article-updated website-label">Updated <time datetime={article.updated}>{updatedLabel(article.updated)}</time></p>
     </header>
     <div class="docs-prose website-body"><Content /></div>
     {article.toolReference && <ToolReference />}

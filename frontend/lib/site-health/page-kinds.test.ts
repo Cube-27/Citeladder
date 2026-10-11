@@ -166,7 +166,7 @@ describe('readPageKindEvidence (why-this-type disclosure reader)', () => {
 
 describe('readPageKindEvidence — alternatives, conflicts, other_reason', () => {
   const base = {
-    classifier_version: 'sh-classifier-2',
+    classifier_version: 'sh-classifier-1',
     classified_by: 'path_pattern',
     confidence: 'low',
     tier: 'semantic',
