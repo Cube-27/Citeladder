@@ -202,9 +202,10 @@ async function markdownExport(db: Database, tasks: ExportTask[], audit: ExportAu
   );
   if (typeof cost.provider_reported_cost_usd === 'number' && cost.provider_reported_cost_usd > 0)
     lines.push(`| Provider-reported cost | ${usd(cost.provider_reported_cost_usd)} |`);
-  lines.push(`| Grounded requests | ${cost.grounded_requests ?? 0} |`, '');
-  lines.push(...competitorComparison(config, summary, brand));
   lines.push(
+    `| Grounded requests | ${cost.grounded_requests ?? 0} |`,
+    '',
+    ...competitorComparison(config, summary, brand),
     '## Per-Prompt Results (with immediate binary consistency)',
     '',
     '| # | Prompt | Theme | Brand mentioned | Owned cited | Immediate consistency |',
