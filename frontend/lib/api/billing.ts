@@ -156,6 +156,12 @@ export const billingApi = {
     return strictValidate(billingCatalogSchema, response, 'billing.catalog');
   },
 
+  workspaceCatalog: async (countryCode?: string, options?: ApiRequestOptions) => {
+    const query = countryCode ? `?country=${encodeURIComponent(countryCode)}` : '';
+    const response = await apiClient.get<unknown>(`/billing/workspace-catalog${query}`, options);
+    return strictValidate(billingCatalogSchema, response, 'billing.workspaceCatalog');
+  },
+
   workspaceEntitlement: async (workspaceId: string, options?: ApiRequestOptions) => {
     const response = await apiClient.get<unknown>(
       `/workspaces/${workspaceId}/entitlements`,

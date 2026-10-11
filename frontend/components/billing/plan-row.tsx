@@ -6,6 +6,7 @@ import {
   billingDetailsError,
   type BillingCustomerDetails,
   type CatalogPlan,
+  type CredentialMode,
   type SelfServePlanKey,
 } from '@/lib/api/billing';
 import {
@@ -25,6 +26,7 @@ import { textRole } from '@/components/ui/typography';
 
 export function PlanRow({
   plan,
+  mode = 'byok',
   currencyMinorUnits,
   country,
   billingDetails,
@@ -33,6 +35,8 @@ export function PlanRow({
   onCheckout,
 }: Readonly<{
   plan: CatalogPlan;
+  /** Your own provider keys, or managed: the platform's keys at the managed price (B32). */
+  mode?: CredentialMode;
   currencyMinorUnits: number;
   country: string;
   billingDetails: BillingCustomerDetails;
@@ -43,6 +47,7 @@ export function PlanRow({
 }>) {
   const { priceLabel, selection, canCheckout } = planCheckoutState(
     plan,
+    mode,
     currencyMinorUnits,
     country,
     billingDetails,
@@ -94,7 +99,11 @@ export function PlanRow({
 }
 
 /** Only India adds the tax note; every other country sees the bare figure. */
-function byokPriceLabel(price: HeadlinePrice, currencyMinorUnits: number, country: string): string {
+function monthlyPriceLabel(
+  price: HeadlinePrice,
+  currencyMinorUnits: number,
+  country: string,
+): string {
   if (price.kind === 'contact') return 'Contact us';
   if (price.kind === 'unavailable') return price.reason || 'Unavailable';
   const tax = country === 'IN' ? ' + applicable GST' : '';
@@ -110,14 +119,15 @@ function planCheckoutLabel(pending: boolean, available: boolean, planName: strin
 
 function planCheckoutState(
   plan: CatalogPlan,
+  mode: CredentialMode,
   currencyMinorUnits: number,
   country: string,
   billingDetails: BillingCustomerDetails,
   pending: boolean,
 ) {
-  const price = headlinePrice(plan, 'byok');
-  const selection = checkoutSelection(plan, 'byok');
-  const priceLabel = byokPriceLabel(price, currencyMinorUnits, country);
+  const price = headlinePrice(plan, mode);
+  const selection = checkoutSelection(plan, mode);
+  const priceLabel = monthlyPriceLabel(price, currencyMinorUnits, country);
   return {
     priceLabel,
     selection,

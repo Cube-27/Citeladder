@@ -19,6 +19,7 @@ import {
 } from './contracts.ts';
 import { catalog } from './catalog.ts';
 import { baseIntent, packIntent, type Intent } from './quotes.ts';
+import { onCheckoutAllowList } from './checkout-access.ts';
 import {
   checkoutAvailable,
   RazorpayProvider,
@@ -331,7 +332,8 @@ export async function purchase(
     const frozen = await catalog(trx);
     const now = new Date();
     const intent = purchaseIntent(config, frozen, request, identity, current, now);
-    if (!checkoutAvailable(config.billing, config.razorpay, intent.region))
+    const allowListed = await onCheckoutAllowList(trx, workspaceId);
+    if (!checkoutAvailable(config.billing, config.razorpay, intent.region, allowListed))
       conflict('checkout_unavailable');
     if (request.kind === 'base')
       await trx

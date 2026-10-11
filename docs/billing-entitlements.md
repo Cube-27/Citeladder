@@ -265,6 +265,17 @@ only its hero and coming-soon notice; paid plans, prices, comparisons, extras
 and the closing pricing CTA are hidden. The notice links to registration when
 public signup is open, otherwise to early-access contact. The catalog remains
 the authority for pricing and availability when checkout opens.
+
+Checkout opens per workspace before it opens to everyone
+([checkout access](../frontend/services/api/src/billing/checkout-access.ts)):
+`BILLING_CHECKOUT_AUDIENCE=allow_list` (the default) sells only to workspaces
+holding the non-public `billing_checkout` grant, issued with `billing:admin
+grant`; `everyone` opens it to all. Razorpay test keys work in production, but
+a test-mode checkout there serves allow-listed workspaces only. The public
+catalog never reads a workspace, so it shows checkout unavailable until the
+audience is everyone; the app reads `/billing/workspace-catalog`, which applies
+the same rules to the active workspace, so in-app billing and marketing agree.
+While no self-serve plan is open, in-app billing lists no prices either.
 The app's `/billing` section
 ([billing screen](../frontend/components/billing/billing-screen.tsx) and the
 other [billing components](../frontend/components/billing/)) shows account,
@@ -273,6 +284,12 @@ add-on/top-up purchases. Every purchase reviews the full server quote with
 payment consent and the policy links before the provider opens. The checkout controller polls persisted
 activation; only confirmed activation refreshes access caches. Unavailable
 checkout is shown honestly. Pricing remains usable before project creation.
+In-app plan choice offers your own keys or managed. A workspace whose trial or
+plan ended keeps exactly the path to buying a plan (the workspace catalog, its
+billing state, a new subscription and its checkout and verification), and the
+ended-access screen offers the plans to an Owner or Admin; add-ons, top-ups,
+plan changes, usage and invoices stay behind access. Limit refusals say what the
+plan includes and link to billing.
 The prepared app `/pricing` continuation captures only a bounded catalog
 selection from its URL before sign-in. The app stores its own pending intent;
 after sign-in it resolves the selected workspace and fresh catalog, requires

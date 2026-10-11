@@ -11,6 +11,8 @@ import { Fixtures, testConfig } from './support.ts';
 export function billingConfig() {
   return testConfig({
     BILLING_CHECKOUT_ENABLED: 'true',
+    // Lifecycle tests buy as any workspace; the allow-list has its own tests.
+    BILLING_CHECKOUT_AUDIENCE: 'everyone',
     BILLING_QUOTE_SIGNING_SECRET: 'fixture-independent-quote-secret',
     BILLING_RAZORPAY_MODE: 'test',
     BILLING_RAZORPAY_KEY_ID: 'rzp_test_fixture',

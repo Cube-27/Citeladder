@@ -1,6 +1,14 @@
 export const billingKeys = {
   all: ['billing'] as const,
   catalog: (countryCode?: string) => ['billing', 'catalog', countryCode ?? 'default'] as const,
+  // What one workspace may buy; it stays readable when the workspace's access has ended.
+  workspaceCatalog: (workspaceId: string | null, countryCode?: string) =>
+    [
+      'billing',
+      'workspace-catalog',
+      workspaceId ?? 'unresolved',
+      countryCode ?? 'default',
+    ] as const,
   // Product gating is workspace-effective. The workspace id must participate in
   // the key so switching projects cannot reuse another sponsor's access fold.
   workspaceEntitlement: (workspaceId: string | null) =>

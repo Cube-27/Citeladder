@@ -10,6 +10,7 @@ import { ApiError } from '../errors.ts';
 import { identitySchema, conflict, digest } from './contracts.ts';
 import { catalog } from './catalog.ts';
 import { baseIntent, quoteIntent, roundedRatio } from './quotes.ts';
+import { onCheckoutAllowList } from './checkout-access.ts';
 import {
   checkoutAvailable,
   configured,
@@ -229,7 +230,12 @@ export async function changePlan(
     // needs only the provider that already bills this subscription.
     if (
       !(difference > 0
-        ? checkoutAvailable(config.billing, config.razorpay, target.region)
+        ? checkoutAvailable(
+            config.billing,
+            config.razorpay,
+            target.region,
+            await onCheckoutAllowList(trx, workspaceId),
+          )
         : configured(config.razorpay)) ||
       plan.regional_prices[mode][target.region]?.provider_mode !== sub.provider_mode
     )

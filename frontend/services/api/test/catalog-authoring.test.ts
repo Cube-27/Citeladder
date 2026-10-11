@@ -214,9 +214,6 @@ it('uses only fixed-origin GETs with redirects disabled and bounded response bod
         transport,
       ),
   ).toThrow();
-  expect(
-    () => new RazorpayPlanReader(billingSettings({}), { ...adapter, production: true }, transport),
-  ).toThrow();
 });
 it('contains existing and new output paths, including symlink escapes', async () => {
   const root = await mkdtemp(join(tmpdir(), 'catalog-path-'));

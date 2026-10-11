@@ -1,37 +1,34 @@
 'use client';
 
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
 
-import { BillingCountryInput } from '@/components/billing/billing-account-details';
-import { BillingDetailsForm } from '@/components/billing/billing-details-form';
 import { BillingSupport } from '@/components/billing/billing-policies';
 import { CheckoutStatus } from '@/components/billing/checkout-status';
 import { CurrentPlan, type BillingCancellation } from '@/components/billing/current-plan';
 import { ExtraPurchases, type ExtraPurchase } from '@/components/billing/extra-purchases';
 import { InvoiceHistory } from '@/components/billing/invoice-history';
 import { PlanChanges, type PlanChangeControls } from '@/components/billing/plan-changes';
-import { PlanRow } from '@/components/billing/plan-row';
+import { ChoosePlan, subscribeWith, type NewSubscription } from '@/components/billing/choose-plan';
 import { PurchaseReview } from '@/components/billing/purchase-review';
 import { UsageMeters } from '@/components/billing/usage-meters';
 import { PageLoading } from '@/components/layout/page-loading';
 import { PageShell } from '@/components/layout/page-shell';
 import { Alert } from '@/components/ui/alert';
 import { Stack } from '@/components/ui/layout';
-import { panelClasses } from '@/components/ui/panel';
 import { Skeleton } from '@/components/ui/skeleton';
-import { EditorialSectionHeader, splitPaneClasses } from '@/components/ui/workspace';
+import { splitPaneClasses } from '@/components/ui/workspace';
 import {
   billingApi,
   createIdempotencyKey,
   emptyBillingCustomerDetails,
   type BillingCatalog,
-  type BillingCustomerDetails,
   type BillingEntitlement,
   type SelfServePlanKey,
 } from '@/lib/api/billing';
 import { queryKeys } from '@/lib/api/query-keys';
 import { catalogPlanByKey } from '@/lib/billing/catalog';
+import { useWorkspaceCatalog } from '@/lib/billing/use-workspace-catalog';
 import { useEntitlement } from '@/lib/billing/entitlement-context';
 import { useSubscriptionCheckout } from '@/lib/billing/use-subscription-checkout';
 import { useActiveWorkspaceId, useWorkspaceCapability } from '@/lib/project/project-context';
@@ -57,12 +54,7 @@ function useBillingReads(workspaceId: string | null, country: string) {
     enabled: reads,
     retry: false,
   });
-  const catalogQuery = useQuery({
-    queryKey: queryKeys.billing.catalog(country || undefined),
-    queryFn: ({ signal }) =>
-      billingApi.catalog(country || undefined, { signal, workspaceId: null }),
-    placeholderData: keepPreviousData,
-  });
+  const catalogQuery = useWorkspaceCatalog(workspaceId, country);
   const invoiceQuery = useQuery({
     queryKey: queryKeys.billing.invoices(workspaceId),
     queryFn: ({ signal }) => billingApi.invoices({ signal, workspaceId }),
@@ -84,7 +76,11 @@ function useCancellation(workspaceId: string | null): BillingCancellation {
   });
   return {
     open,
-    setOpen,
+    // Each attempt starts clean: a failure belongs to the dialog that made it.
+    setOpen: (next) => {
+      if (next) mutation.reset();
+      setOpen(next);
+    },
     pending: mutation.isPending,
     error: mutation.error,
     confirm: () => mutation.mutate(),
@@ -115,21 +111,7 @@ function purchaseActions(checkout: Checkout, country: string) {
     void checkout
       .prepare({ purchase: { kind, catalog_key: catalogKey, quantity } })
       .catch(() => undefined);
-  const subscribe = (key: SelfServePlanKey, billingDetails: BillingCustomerDetails) =>
-    void checkout
-      .prepare({
-        purchase: {
-          kind: 'base',
-          input: {
-            catalog_key: key,
-            credential_mode: 'byok',
-            country_code: country,
-            ...billingDetails,
-          },
-        },
-      })
-      .catch(() => undefined);
-  return { buyExtra, subscribe };
+  return { buyExtra, subscribe: subscribeWith(checkout, country) };
 }
 
 function currentPlanOf(catalog: BillingCatalog | null, entitlement: BillingEntitlement | null) {
@@ -234,14 +216,6 @@ function itemName(catalog: BillingCatalog, key: string): string {
   return entry?.name ?? key;
 }
 
-type NewSubscription = {
-  country: string;
-  setCountry: (country: string) => void;
-  details: BillingCustomerDetails;
-  setDetails: (details: BillingCustomerDetails) => void;
-  subscribe: (key: SelfServePlanKey, details: BillingCustomerDetails) => void;
-};
-
 function PlanSection({
   catalog,
   catalogLoading,
@@ -299,53 +273,5 @@ function PlanSection({
       pending={checkout.preparing}
       {...newSubscription}
     />
-  );
-}
-
-function ChoosePlan({
-  catalog,
-  canManage,
-  pending,
-  country,
-  setCountry,
-  details,
-  setDetails,
-  subscribe,
-}: Readonly<
-  NewSubscription & { catalog: BillingCatalog; canManage: boolean; pending: boolean }
->): ReactNode {
-  const [chosen, setChosen] = useState<SelfServePlanKey | null>(null);
-  return (
-    <section className={panelClasses({}, 'grid gap-4')} aria-labelledby="choose-plan-title">
-      <EditorialSectionHeader
-        headingId="choose-plan-title"
-        title="Choose a plan"
-        description="Your billing country sets the currency and tax; you review the exact quote before paying. Audits run on your own provider keys, billed by those providers directly."
-      />
-      <BillingCountryInput country={country} setCountry={setCountry} />
-      <BillingDetailsForm
-        country={country}
-        details={details}
-        setDetails={setDetails}
-        idPrefix="settings"
-      />
-      <div className="grid gap-2">
-        {catalog.plans.map((plan) => (
-          <PlanRow
-            key={plan.key}
-            plan={plan}
-            currencyMinorUnits={catalog.currency_minor_units}
-            country={country}
-            billingDetails={details}
-            pending={pending && chosen === plan.key}
-            locked={!canManage || pending}
-            onCheckout={(key, billingDetails) => {
-              setChosen(key);
-              subscribe(key, billingDetails);
-            }}
-          />
-        ))}
-      </div>
-    </section>
   );
 }

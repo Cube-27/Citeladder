@@ -18,6 +18,7 @@ import { Alert } from '@/components/ui/alert';
 import { ShellFallback } from '@/components/layout/shell-fallback';
 import { Dialog } from '@/components/ui/dialog';
 import AccountSecurity from '@/components/settings/account-security';
+import { RestorePlan } from '@/components/billing/restore-plan';
 
 function accessAllowed(access: z.infer<typeof accessSchema> | undefined, deadline: number | null) {
   return Boolean(
@@ -37,7 +38,19 @@ function accessTitle(access: z.infer<typeof accessSchema> | undefined, deadline:
 
 function recoveryQuery(key: readonly unknown[]) {
   return (
-    key[0] === 'auth' || (key[0] === 'workspaces' && ['list', 'access'].includes(String(key[1])))
+    key[0] === 'auth' ||
+    (key[0] === 'workspaces' && ['list', 'access'].includes(String(key[1]))) ||
+    // The plans an ended workspace may buy to restore itself.
+    (key[0] === 'billing' && key[1] === 'workspace-catalog')
+  );
+}
+
+/** A trial or plan that ended can be restored by buying a plan; anything else cannot. */
+function restorable(access: z.infer<typeof accessSchema> | undefined, deadline: number | null) {
+  return (
+    access?.status === 'trial_expired' ||
+    access?.status === 'subscription_lapsed' ||
+    (access?.status === 'trial_active' && deadline !== null && Date.now() >= deadline)
   );
 }
 
@@ -79,7 +92,6 @@ export function WorkspaceAccessGate({ children }: Readonly<{ children: ReactNode
   const location = useLocation();
   const client = useQueryClient();
   const [, tick] = useState(0);
-  const [securityOpen, setSecurityOpen] = useState(false);
   useAccessLoss(activeWorkspaceId);
   // Accepting an invitation, choosing a workspace and setting up your own never
   // wait on the selected workspace's access; someone with no workspace has none.
@@ -134,17 +146,44 @@ export function WorkspaceAccessGate({ children }: Readonly<{ children: ReactNode
   if (recovery || allowed) return children;
   if (checking) return <ShellFallback />;
   return (
+    <AccessEnded
+      title={accessTitle(access.data, deadline)}
+      restorable={restorable(access.data, deadline)}
+      activeWorkspaceId={activeWorkspaceId}
+      workspaces={workspaces}
+      onRetry={() => (activeWorkspaceId ? void access.refetch() : retryWorkspaces())}
+    />
+  );
+}
+
+/** Where a workspace without access lands: buy a plan, ask support, switch, or leave. */
+function AccessEnded({
+  title,
+  restorable: canRestore,
+  activeWorkspaceId,
+  workspaces,
+  onRetry,
+}: Readonly<{
+  title: string;
+  restorable: boolean;
+  activeWorkspaceId: string | null;
+  workspaces: readonly { id: string; name: string }[];
+  onRetry: () => void;
+}>) {
+  const client = useQueryClient();
+  const [securityOpen, setSecurityOpen] = useState(false);
+  return (
     <ShellFallback>
       <main className="mx-auto grid w-full max-w-xl content-center gap-4 p-8">
-        <h1>{accessTitle(access.data, deadline)}</h1>
+        <h1>{title}</h1>
         <Alert tone="info">
-          Your data is retained. Contact support to restore access, or switch to another workspace.
+          {canRestore
+            ? 'Your data is retained. Choose a plan to continue, contact support, or switch to another workspace.'
+            : 'Your data is retained. Contact support to restore access, or switch to another workspace.'}
         </Alert>
+        {activeWorkspaceId && canRestore ? <RestorePlan workspaceId={activeWorkspaceId} /> : null}
         <a href={contactSalesHref(undefined, websiteHref('/contact'))}>Contact support</a>
-        <Button
-          className="w-fit"
-          onClick={() => (activeWorkspaceId ? void access.refetch() : retryWorkspaces())}
-        >
+        <Button className="w-fit" onClick={onRetry}>
           Retry
         </Button>
         {workspaces

@@ -289,6 +289,27 @@ the rest is released. The review's existing cost ceiling still stops the run
 before it can pass the estimate. Dollar amounts are never shown for a managed
 analysis (B23).
 
+**B42 — Engineering, 2026-10-11.** The allow-list (B2) is the `billing_checkout`
+flag, non-public, issued with `billing:admin grant` and never part of
+development or account-manager full access. `BILLING_CHECKOUT_AUDIENCE` is
+`allow_list` (default) or `everyone`; the enable PR sets `everyone`. Test keys
+are accepted in production, but a test-mode checkout there serves allow-listed
+workspaces only, even with the audience set to everyone. The public catalog
+never reads a workspace and so never offers checkout before enablement; the app
+reads a workspace catalog with the same rules, so marketing and in-app billing
+show the same availability. While no self-serve plan is open, in-app billing
+lists no prices, as the pricing page does. In-app plan choice offers both modes.
+
+**B43 — Engineering, 2026-10-11.** A workspace whose trial or plan ended keeps
+exactly the path to buying a plan: the workspace catalog, its billing state, a
+new subscription and that subscription's checkout and verification. The
+ended-access screen offers the plans to an Owner or Admin. Add-ons, top-ups,
+plan changes, usage and invoices stay behind access.
+
+**B44 — Engineering, 2026-10-11.** Limit refusals say what the plan includes in
+plain words, never a registry key, and every refusal a bigger plan can lift
+links to billing.
+
 ## Owner inputs still required
 
 Not decisions; needed only for India checkout and live enablement: GST rate,

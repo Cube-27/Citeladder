@@ -9,7 +9,7 @@ import { DisplayTime } from '@/components/ui/display-time';
 import { panelClasses } from '@/components/ui/panel';
 import { textRole } from '@/components/ui/typography';
 import type { BillingEntitlement, CatalogPlan } from '@/lib/api/billing';
-import { humanizeApiError } from '@/lib/api/errors';
+import { billingErrorMessage } from '@/lib/billing/reason-copy';
 
 export type BillingCancellation = {
   open: boolean;
@@ -126,9 +126,6 @@ export function CurrentPlan({
         ) : null}
       </div>
       <PlanNotices entitlement={entitlement} planName={planName} />
-      {cancellation.error ? (
-        <Alert tone="danger">{humanizeApiError(cancellation.error).message}</Alert>
-      ) : null}
       <CancelDialog cancellation={cancellation} />
     </section>
   );
@@ -203,7 +200,9 @@ function CancelDialog({ cancellation }: Readonly<{ cancellation: BillingCancella
         deleted when a plan ends.
       </p>
       {cancellation.error ? (
-        <Alert tone="danger">{humanizeApiError(cancellation.error).message}</Alert>
+        <Alert tone="danger">
+          {billingErrorMessage(cancellation.error, 'The cancellation could not be scheduled.')}
+        </Alert>
       ) : null}
     </Dialog>
   );

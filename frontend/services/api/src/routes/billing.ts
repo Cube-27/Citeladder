@@ -34,12 +34,19 @@ import { identitySchema, conflict } from '../billing/contracts.ts';
 import { offerRead, claimOffer, endOffer, claimRequest } from '../billing/journeys.ts';
 import { cancelSubscription } from '../billing/cancellation.ts';
 import { checkoutAvailable, configured, verifyCallback } from '../billing/razorpay.ts';
+import { onCheckoutAllowList } from '../billing/checkout-access.ts';
 import { receiveWebhook } from '../billing/webhooks.ts';
 
 const family = 'billing';
 const root = '/api/v1/billing';
 const params = { path: {}, query: {} } as const;
 const privateRoute = { family, capability: 'manage_billing', params } as const;
+/**
+ * A workspace whose trial or plan ended keeps exactly the path to buying a plan:
+ * the plans, its billing state, a new subscription and that checkout. Add-ons,
+ * top-ups and plan changes need a live plan and stay behind access.
+ */
+const purchaseRecovery = { ...privateRoute, recovery: true } as const;
 const activationParams = {
   path: { activation_id: { scalar: { kind: 'uuid' }, required: true } },
   query: {},
@@ -66,6 +73,22 @@ export const billingRoutes = [
     handle: ({ db, config }, { query }) =>
       publicCatalog(db, config, query.country?.trim().toUpperCase() ?? null),
   }),
+  // Any member reads what the workspace may buy; only billing managers buy it.
+  defineRoute({
+    family,
+    capability: 'read',
+    recovery: true,
+    path: `${root}/workspace-catalog`,
+    params: { path: {}, query: { country: { scalar: { kind: 'str', maxLength: 2 } } } },
+    response: billingCatalogSchema,
+    handle: async ({ c, db, config }, { query }) =>
+      publicCatalog(
+        db,
+        config,
+        query.country?.trim().toUpperCase() ?? null,
+        await onCheckoutAllowList(db, c.get('workspace').workspaceId),
+      ),
+  }),
   defineRoute({
     family,
     path: '/api/v1/workspaces/{workspace_id}/entitlements',
@@ -76,7 +99,7 @@ export const billingRoutes = [
     handle: ({ c, db }) => workspaceEntitlementRead(db, c.get('workspace').workspaceId, new Date()),
   }),
   defineRoute({
-    ...privateRoute,
+    ...purchaseRecovery,
     path: `${root}/entitlement`,
     response: billingEntitlementSchema,
     handle: ({ c, db }) => entitlementRead(db, c.get('workspace').workspaceId, new Date()),
@@ -125,7 +148,7 @@ export const billingRoutes = [
       ),
   }),
   defineRoute({
-    ...privateRoute,
+    ...purchaseRecovery,
     path: `${root}/subscriptions`,
     method: 'post',
     headers: keyHeaders,
@@ -221,7 +244,7 @@ export const billingRoutes = [
     },
   }),
   defineRoute({
-    ...privateRoute,
+    ...purchaseRecovery,
     path: `${root}/activations/{activation_id}`,
     params: activationParams,
     response: activationSchema,
@@ -232,23 +255,21 @@ export const billingRoutes = [
     },
   }),
   defineRoute({
-    ...privateRoute,
+    ...purchaseRecovery,
     path: `${root}/activations/{activation_id}/checkout`,
     params: activationParams,
     response: subscriptionCheckoutSchema,
     async handle({ c, db, config }, { path }) {
-      const pending = await workspaceActivation(
-        db,
-        c.get('workspace').workspaceId,
-        path.activation_id,
-      );
+      const workspaceId = c.get('workspace').workspaceId;
+      const pending = await workspaceActivation(db, workspaceId, path.activation_id);
+      const allowListed = await onCheckoutAllowList(db, workspaceId);
       if (
         pending.status !== 'pending' ||
         pending.expires_at <= new Date() ||
         !pending.external_reference ||
         pending.provider !== 'razorpay' ||
         pending.provider_mode !== config.razorpay.mode ||
-        !checkoutAvailable(config.billing, config.razorpay, pending.region)
+        !checkoutAvailable(config.billing, config.razorpay, pending.region, allowListed)
       )
         conflict('checkout_unavailable');
       return subscriptionCheckoutSchema.parse({
@@ -265,7 +286,7 @@ export const billingRoutes = [
     },
   }),
   defineRoute({
-    ...privateRoute,
+    ...purchaseRecovery,
     path: `${root}/activations/{activation_id}/verify`,
     params: activationParams,
     method: 'post',

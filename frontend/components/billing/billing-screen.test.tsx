@@ -135,7 +135,7 @@ const USAGE = {
 };
 
 const catalogHandler = (catalog: object = CATALOG) =>
-  http.get('/api/v1/billing/catalog', () => HttpResponse.json(catalog));
+  http.get('/api/v1/billing/workspace-catalog', () => HttpResponse.json(catalog));
 const meHandler = () =>
   http.get('/api/v1/auth/me', () =>
     HttpResponse.json({
@@ -328,6 +328,62 @@ describe('BillingScreen', () => {
     expect(within(review).getByRole('button', { name: 'Confirm and pay' })).toBeEnabled();
   });
 
+  it('buys the managed plan at its managed price in managed mode', async () => {
+    entitlementValue = resolvedEntitlement();
+    const bodies: unknown[] = [];
+    const managed = {
+      ...CATALOG,
+      plans: CATALOG.plans.map((plan) =>
+        plan.key === 'tier_1'
+          ? {
+              ...plan,
+              funded_total_price: { currency: 'USD', amount_minor: 14900 },
+              funded_checkout_available: true,
+            }
+          : plan,
+      ),
+    };
+    mswServer.use(
+      meHandler(),
+      catalogHandler(managed),
+      entitlementHandler(),
+      usageHandler(),
+      http.post('/api/v1/billing/subscriptions', async ({ request }) => {
+        bodies.push(await request.json());
+        return HttpResponse.json(activation('base', 'tier_1', 14900));
+      }),
+    );
+
+    renderWithProviders(<BillingScreen />);
+    await screen.findByText('$49 / month');
+    await userEvent.click(screen.getByRole('radio', { name: 'Managed' }));
+    expect(screen.getByText('$149 / month')).toBeInTheDocument();
+    fillExportBillingDetails();
+    await userEvent.click(screen.getByRole('button', { name: /Choose Starter/ }));
+
+    await waitFor(() => expect(bodies).toHaveLength(1));
+    expect(bodies[0]).toEqual({ ...EXPORT_CHECKOUT_BODY, credential_mode: 'funded' });
+  });
+
+  it('lists no prices while self-serve checkout is closed, as the pricing page does', async () => {
+    entitlementValue = resolvedEntitlement();
+    const closed = {
+      ...CATALOG,
+      plans: CATALOG.plans.map((plan) => ({
+        ...plan,
+        checkout_available: false,
+        unavailable_reason: plan.contact_only ? plan.unavailable_reason : 'checkout_unavailable',
+      })),
+    };
+    mswServer.use(catalogHandler(closed), entitlementHandler(), usageHandler());
+
+    renderWithProviders(<BillingScreen />);
+    expect(await screen.findByText('Self-serve plans are not open yet.')).toBeInTheDocument();
+    expect(screen.queryByText('$49 / month')).toBeNull();
+    expect(screen.queryByRole('button', { name: /Choose Starter/ })).toBeNull();
+    expect(screen.getByRole('link', { name: 'Contact us' })).toBeInTheDocument();
+  });
+
   it('renders Enterprise as contact-only, with no checkout and no trial CTA', async () => {
     entitlementValue = resolvedEntitlement();
     mswServer.use(catalogHandler(), entitlementHandler(), usageHandler());
@@ -390,10 +446,48 @@ describe('BillingScreen', () => {
     await waitFor(() => expect(deleted).toBe(1));
   });
 
+  it('shows a refused cancellation once, in its dialog, and starts the next attempt clean', async () => {
+    entitlementValue = resolvedEntitlement({
+      catalog_key: 'tier_1',
+      status: 'active',
+      current_period_end: '2026-09-01T00:00:00Z',
+      cancel_at_period_end: false,
+      scheduled_change: null,
+    });
+    mswServer.use(
+      catalogHandler(),
+      entitlementHandler(),
+      usageHandler(),
+      http.delete('/api/v1/billing/subscription', () =>
+        HttpResponse.json(
+          { error: { code: 'conflict', message: 'Cancellation is unavailable right now' } },
+          { status: 409 },
+        ),
+      ),
+    );
+
+    renderWithProviders(<BillingScreen />);
+    await userEvent.click(
+      (await screen.findAllByRole('button', { name: /Cancel at period end/ }))[0]!,
+    );
+    const dialog = await screen.findByRole('dialog');
+    await userEvent.click(within(dialog).getByRole('button', { name: /Cancel at period end/ }));
+    expect(await within(dialog).findByText('Cancellation is unavailable right now')).toBeVisible();
+    expect(screen.getAllByText('Cancellation is unavailable right now')).toHaveLength(1);
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Keep plan' }));
+    await userEvent.click(screen.getByRole('button', { name: /Cancel at period end/ }));
+    expect(
+      within(await screen.findByRole('dialog')).queryByText(
+        'Cancellation is unavailable right now',
+      ),
+    ).toBeNull();
+  });
+
   it('surfaces a catalog failure without falling back to a price', async () => {
     entitlementValue = resolvedEntitlement();
     mswServer.use(
-      http.get('/api/v1/billing/catalog', () =>
+      http.get('/api/v1/billing/workspace-catalog', () =>
         HttpResponse.json({ error: { message: 'catalog unavailable' } }, { status: 400 }),
       ),
       entitlementHandler(),

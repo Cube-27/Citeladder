@@ -71,6 +71,11 @@
       "type": "bool",
       "default": false
     },
+    "checkout_audience": {
+      "env": ["BILLING_CHECKOUT_AUDIENCE"],
+      "type": "str",
+      "default": "allow_list"
+    },
     "contact_sales_url": {
       "env": ["BILLING_CONTACT_SALES_URL"],
       "type": "str",

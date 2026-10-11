@@ -21,6 +21,7 @@ import {
   fakeProvider,
   paidSubscription,
 } from './billing-support.ts';
+import { grant } from './prompt-fixtures.ts';
 
 describe('billing money and access owner', () => {
   const config = billingConfig();
@@ -1413,6 +1414,122 @@ describe('billing money and access owner', () => {
           .execute(),
       ).toEqual(before);
       expect((await pending(row.id)).reconciliation_next_at).not.toBeNull();
+    } finally {
+      transport.mockRestore();
+    }
+  });
+  it('sells only to allow-listed workspaces before enablement, in the app and at purchase, never on marketing', async () => {
+    const listed = await fixtures.tenant(),
+      other = await fixtures.tenant();
+    await grant(db, listed.accountId, { key: 'billing_checkout', value: 1 });
+    const hidden = { ...config, billing: { ...config.billing, audience: 'allow_list' as const } };
+    const app = createApp(hidden, db);
+    const offered = async (path: string, workspace?: string) => {
+      const response = await app.request(path, {
+        headers: workspace
+          ? {
+              cookie: `${config.session.cookieName}=${await sessionToken({
+                sub: workspace === listed.workspaceId ? listed.userId : other.userId,
+                ver: 0,
+              })}`,
+              'x-workspace-id': workspace,
+            }
+          : {},
+      });
+      const body = (await response.json()) as {
+        plans: { key: string; checkout_available: boolean }[];
+      };
+      return body.plans.find((plan) => plan.key === 'tier_1')?.checkout_available;
+    };
+    expect({
+      marketing: await offered('/api/v1/billing/catalog?country=US'),
+      listed: await offered('/api/v1/billing/workspace-catalog?country=US', listed.workspaceId),
+      other: await offered('/api/v1/billing/workspace-catalog?country=US', other.workspaceId),
+    }).toEqual({ marketing: false, listed: true, other: false });
+    const request = {
+      kind: 'base',
+      key: 'tier_1',
+      quantity: 1,
+      mode: 'byok',
+      country: 'US',
+      identity: buyer,
+    } as const;
+    await expect(
+      purchase(db, hidden, other.workspaceId, request, randomUUID(), fakeProvider()),
+    ).rejects.toThrow('checkout_unavailable');
+    expect(
+      await purchase(db, hidden, listed.workspaceId, request, randomUUID(), fakeProvider()),
+    ).toMatchObject({ status: 'pending' });
+  });
+  it('leaves an expired trial exactly the path to buying a plan', async () => {
+    // A public signup: the trial is its only grant.
+    const userId = await fixtures.user();
+    const workspaceId = await fixtures.ownedWorkspace(userId, { access: false });
+    const user = await db
+      .updateTable('users')
+      .set({ registration_origin: 'public', email_verified_at: new Date() })
+      .where('id', '=', userId)
+      .returningAll()
+      .executeTakeFirstOrThrow();
+    await db.transaction().execute((trx) => ensureWorkspaceBilling(trx, workspaceId, user));
+    const t = {
+      userId,
+      workspaceId,
+      accountId: (
+        await db
+          .selectFrom('billing_accounts')
+          .select('id')
+          .where('workspace_id', '=', workspaceId)
+          .executeTakeFirstOrThrow()
+      ).id,
+    };
+    await db
+      .updateTable('account_grants')
+      .set({
+        valid_from: sql`valid_from - interval '8 days'`,
+        valid_until: sql`valid_until - interval '8 days'`,
+      })
+      .where('billing_account_id', '=', t.accountId)
+      .where('source_kind', '=', 'trial')
+      .execute();
+    expect((await workspaceAccess(db, t.workspaceId)).status).toBe('trial_expired');
+    const app = createApp(config, db);
+    const headers = {
+      cookie: `${config.session.cookieName}=${await sessionToken({ sub: t.userId, ver: 0 })}`,
+      'x-workspace-id': t.workspaceId,
+      'content-type': 'application/json',
+    };
+    const status = async (path: string, init: RequestInit = {}) =>
+      (await app.request(`/api/v1${path}`, { ...init, headers: { ...headers, ...init.headers } }))
+        .status;
+    // A checkout that cannot reach the provider stays pending for recovery.
+    const transport = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('offline'));
+    try {
+      expect({
+        plans: await status('/billing/workspace-catalog?country=US'),
+        billingState: await status('/billing/entitlement'),
+        subscribe: await status('/billing/subscriptions', {
+          method: 'POST',
+          headers: { 'idempotency-key': randomUUID() },
+          body: JSON.stringify({
+            catalog_key: 'tier_1',
+            credential_mode: 'byok',
+            country_code: 'US',
+            billing_name: buyer.name,
+            billing_address_line1: buyer.address_line1,
+            billing_city: buyer.city,
+            billing_postal_code: buyer.postal_code,
+            billing_state_code: null,
+            customer_gstin: null,
+            export_eligibility_attested: true,
+          }),
+        }),
+        addOn: await status('/billing/addons', {
+          method: 'POST',
+          body: JSON.stringify({ catalog_key: 'extra_prompts', quantity: 1 }),
+        }),
+        product: await status('/billing/usage'),
+      }).toEqual({ plans: 200, billingState: 200, subscribe: 202, addOn: 403, product: 403 });
     } finally {
       transport.mockRestore();
     }

@@ -20,6 +20,8 @@ import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project
 
 import { MemberSettings } from './member-settings';
 import { ROLE_SUMMARY, roleLabel } from './member-roles';
+import { TextLink } from '@/components/ui/text-link';
+import { PLANS_HREF } from '@/lib/billing/plan-limit';
 
 /**
  * The selected workspace as you stand in it: its name, your role and what that
@@ -74,7 +76,7 @@ export function WorkspacePanel() {
       {mayManage && !mayInvite ? (
         <Alert tone="info">
           Inviting team members is part of a paid plan. During the trial, this workspace is yours
-          alone.
+          alone. <TextLink href={PLANS_HREF}>See plans</TextLink>
         </Alert>
       ) : null}
       {mayManage ? (

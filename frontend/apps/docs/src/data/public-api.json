@@ -5266,11 +5266,39 @@
           "pricing_version": {
             "type": "string"
           },
+          "credential_mode": {
+            "type": "string",
+            "enum": ["byok", "funded"]
+          },
           "estimated_cost_usd": {
-            "type": "string"
+            "type": ["string", "null"]
           },
           "provider_reported_cost_usd": {
             "type": ["string", "null"]
+          },
+          "estimated_credits": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "charged_credits": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "planned_calls": {
             "type": "integer",
@@ -5351,8 +5379,11 @@
           "status",
           "action",
           "pricing_version",
+          "credential_mode",
           "estimated_cost_usd",
           "provider_reported_cost_usd",
+          "estimated_credits",
+          "charged_credits",
           "planned_calls",
           "completed_calls",
           "planned_rows",
