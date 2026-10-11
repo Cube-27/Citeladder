@@ -140,25 +140,33 @@ export class IntegrationWorker {
 
   #claim(): Promise<Run | null> {
     return this.#db.transaction().execute(async (trx) => {
+      // Least recently served workspace first, so one workspace's backlog cannot starve another's.
       const row = await trx
-        .selectFrom('integration_sync_runs')
-        .selectAll()
-        .where('status', 'in', [statuses.queued, statuses.retry_wait])
-        .where('available_at', '<=', sql<Date>`clock_timestamp()`)
-        .whereRef('attempt_count', '<', 'max_attempts')
+        .selectFrom('integration_sync_runs as run')
+        .leftJoin('queue_workspace_turns as turns', (join) =>
+          join
+            .onRef('turns.workspace_id', '=', 'run.workspace_id')
+            .on('turns.queue_name', '=', 'integration_sync_runs'),
+        )
+        .selectAll('run')
+        .where('run.status', 'in', [statuses.queued, statuses.retry_wait])
+        .where('run.available_at', '<=', sql<Date>`clock_timestamp()`)
+        .whereRef('run.attempt_count', '<', 'run.max_attempts')
         .$if(this.#scope !== undefined, (q) =>
           q
-            .where('workspace_id', '=', this.#scope!.workspaceId)
-            .where('id', '=', this.#scope!.runId),
+            .where('run.workspace_id', '=', this.#scope!.workspaceId)
+            .where('run.id', '=', this.#scope!.runId),
         )
-        .orderBy('priority', 'desc')
-        .orderBy('available_at', 'asc')
-        .orderBy('randomized_position', 'asc')
-        .forUpdate()
+        .orderBy(sql`turns.last_claimed_at asc nulls first`)
+        .orderBy('run.priority', 'desc')
+        .orderBy('run.available_at', 'asc')
+        .orderBy('run.randomized_position', 'asc')
+        .forUpdate('run')
         .skipLocked()
         .limit(1)
         .executeTakeFirst();
       if (!row) return null;
+      const claimedAt = new Date();
       const updated = await trx
         .updateTable('integration_sync_runs')
         .set({
@@ -178,6 +186,21 @@ export class IntegrationWorker {
         ])
         .executeTakeFirst();
       if (updated) {
+        await trx
+          .insertInto('queue_workspace_turns')
+          .values({
+            id: randomUUID(),
+            queue_name: 'integration_sync_runs',
+            workspace_id: updated.workspace_id,
+            last_claimed_at: claimedAt,
+            created_at: claimedAt,
+          })
+          .onConflict((conflict) =>
+            conflict.constraint('uq_queue_workspace_turn').doUpdateSet({
+              last_claimed_at: sql`greatest(queue_workspace_turns.last_claimed_at, ${claimedAt})`,
+            }),
+          )
+          .execute();
         await trx
           .insertInto('integration_events')
           .values({
@@ -203,20 +226,6 @@ export class IntegrationWorker {
       claimable: [statuses.queued, statuses.retry_wait],
       ready: sql`attempt_count < max_attempts`,
     });
-  }
-
-  async runUntilIdle(signal?: AbortSignal) {
-    const deadline = performance.now() + queueRecovery.drainBudgetSeconds * 1000;
-    let count = 0;
-    while (
-      count < policy.task_queue.max_drain_batches &&
-      !signal?.aborted &&
-      performance.now() < deadline
-    ) {
-      if (!(await this.runOnce())) break;
-      count++;
-    }
-    return count;
   }
 
   async #execute(run: Run, signal: AbortSignal): Promise<void> {

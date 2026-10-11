@@ -173,7 +173,7 @@ describe('served Agent cutover on PostgreSQL', () => {
     expect(before.status).toBe(200);
     expect(agentChatDetailSchema.parse(await before.json()).latest_run?.status).toBe('queued');
     // The runner never executes a turn; the browser's run request does.
-    expect(await worker.runUntilIdle()).toBe(0);
+    expect(await worker.runOnce()).toBe(0);
     // It is due for the lane only once no stream has claimed it within the grace.
     const { available_at } = await db
       .selectFrom('agent_runs')
@@ -239,7 +239,7 @@ describe('served Agent cutover on PostgreSQL', () => {
       .where('workspace_id', '=', scope.workspaceId)
       .where('id', '=', run.id)
       .execute();
-    expect(await worker.runUntilIdle()).toBe(1);
+    expect(await worker.runOnce()).toBe(1);
     expect(await fixtures.run(run.id)).toMatchObject({
       status: 'failed',
       error_code: 'interrupted',
@@ -265,14 +265,14 @@ describe('served Agent cutover on PostgreSQL', () => {
         })
       ).status,
     ).toBe(200);
-    expect(await worker.runUntilIdle()).toBe(0);
+    expect(await worker.runOnce()).toBe(0);
     await db
       .updateTable('agent_model_attempts')
       .set({ deadline_at: sql<Date>`clock_timestamp() - interval '1 hour'` })
       .where('workspace_id', '=', scope.workspaceId)
       .where('id', '=', attempt.id)
       .execute();
-    expect(await worker.runUntilIdle()).toBe(0);
+    expect(await worker.runOnce()).toBe(0);
     expect(
       await db
         .selectFrom('agent_model_attempts')
