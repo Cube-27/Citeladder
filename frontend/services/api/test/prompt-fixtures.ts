@@ -246,7 +246,12 @@ export function echoDependencies({
     return Response.json({ choices: [{ message: { content: JSON.stringify({ prompts }) } }] });
   });
   const gateway = createModelGateway(
-    { ...gatewaySettings({}), apiKey: 'test-only', model: 'test', baseUrl: 'https://model.test' },
+    {
+      ...gatewaySettings({}),
+      apiKey: 'test-only',
+      model: 'claude-haiku-5-5',
+      baseUrl: 'https://model.test',
+    },
     { fetch, sleep: async () => {} },
   );
   return { gateway: () => gateway, judge: () => null, io: { fetch } };

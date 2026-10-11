@@ -3,7 +3,6 @@ import { createHash } from 'node:crypto';
 import { policy } from '../config.ts';
 import { catalogAuthoring as cfg } from '../config/billing-authoring.ts';
 import { catalogSchema } from './catalog.ts';
-import { creditPolicy } from './ai-credits.ts';
 import { billingSettings, type BillingSettings } from './config.ts';
 import { compareText } from '../text-order.ts';
 
@@ -119,7 +118,6 @@ const authoringSchema = z.strictObject({
         .refine((value) => !/(sk-|secret|password)/iu.test(value)),
     }),
   ),
-  ai_credit_policy: creditPolicy.nullable().default(null),
   support_contact: z
     .strictObject({
       email: z.email().max(254),
@@ -430,6 +428,5 @@ export function launchCatalog(options: {
     contact_sales_url: cfg.contactUrl,
     support_contact: { email: cfg.supportEmail, phone: '', contact_url: cfg.contactUrl },
     platform_routes: [],
-    ai_credit_policy: null,
   });
 }

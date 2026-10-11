@@ -91,7 +91,6 @@ export const catalogSchema = z
     campaign,
     contact_sales_url: z.string(),
     platform_routes: z.array(z.record(z.string(), z.string())),
-    ai_credit_policy: z.unknown().optional(),
     support_contact: z
       .object({ email: z.string(), phone: z.string().default(''), contact_url: z.string() })
       .nullable()

@@ -67,8 +67,8 @@ async function mapped<T>(action: () => Promise<T>) {
       throw new ApiError(402, 'Agent funding is unavailable', {
         code: asApiErrorCode('agent_funding_unavailable'),
       });
-    if (error.code === 'route_unavailable' || error.code === 'model_changed')
-      throw new ApiError(409, 'The connected Agent model is unavailable', {
+    if (error.code === 'model_changed')
+      throw new ApiError(409, 'The Agent model changed', {
         code: asApiErrorCode('agent_model_unavailable'),
       });
     if (error.code === 'access_revoked' || error.code === 'capability_unavailable')

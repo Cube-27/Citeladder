@@ -23,7 +23,7 @@ const PREFERRED_ORDER = [
   'prompt_slots',
   'project_slots',
   'manual_runs_per_day',
-  'audit_credits',
+  'prompt_runs_per_period',
   'ai_credits',
 ];
 

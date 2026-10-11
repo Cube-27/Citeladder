@@ -39,6 +39,7 @@ import { gatedOut, judgeDrafts, selectDrafts } from './generation-quality.ts';
 import { acquireProjectLock, acquirePromptSetLock } from './locks.ts';
 import { observedRef } from './observed-queries.ts';
 import { scopedPromptSet } from './prompt-sets.ts';
+import { meterFor, type Meter } from '../billing/metering.ts';
 import { listTopics } from './topics.ts';
 import { compareText } from '../text-order.ts';
 import { candidateView, type CandidateRow } from './views.ts';
@@ -46,6 +47,8 @@ import { candidateView, type CandidateRow } from './views.ts';
 type Dependencies = {
   gateway: () => ModelGateway;
   judge: () => JevClient | null;
+  /** Generation spends AI credits and records the judge's calls (B13, B31). */
+  meter?: (db: Database, workspaceId: string) => Meter;
   /** Drafting stops starting batches, and cuts in-flight ones, when this aborts. */
   deadline?: () => AbortSignal;
 };
@@ -383,7 +386,9 @@ export async function generatePrompts(
   }
   const context = await generationContext(db, workspaceId, setId, input);
   try {
-    const gateway = context.revision ? null : dependencies.gateway();
+    const meter = (dependencies.meter ?? meterFor)(db, workspaceId);
+    const raw = context.revision ? null : dependencies.gateway();
+    const gateway = raw ? meter.gateway(raw, 'prompt_generation') : null;
     if (gateway)
       await enforceWorkspaceRequest(
         db,
@@ -392,7 +397,12 @@ export async function generatePrompts(
       );
     const deadline = (dependencies.deadline ?? draftDeadline)();
     const output = await generateDrafts(context, input, gateway, deadline);
-    const gate = await judgeDrafts(context, output.drafts, dependencies.judge());
+    const judge = dependencies.judge();
+    const gate = await judgeDrafts(
+      context,
+      output.drafts,
+      judge ? meter.jev(judge, 'prompt_quality_judge') : null,
+    );
     return await stage(db, workspaceId, context, input, idempotencyKey, output, gate);
   } catch (error) {
     throw error instanceof ModelError ? generationFailure(error) : error;

@@ -13,7 +13,7 @@ import { isNonEmpty } from '../lists.ts';
 export class LedgerError extends Error {}
 export type Subject =
   | { kind: 'audit'; id: string; workspaceId: string; auditId: string }
-  | { kind: 'agent' | 'site_crawl'; id: string; workspaceId: string };
+  | { kind: 'agent' | 'site_crawl' | 'platform_call'; id: string; workspaceId: string };
 type Entry = Selectable<ConsumableLedger>;
 const logger = getLogger('api.entitlements');
 
@@ -32,7 +32,9 @@ function verifySubject(db: Database, subject: Subject) {
       .where('workspace_id', '=', subject.workspaceId)
       .executeTakeFirst();
   }
-  const table = subject.kind === 'agent' ? 'agent_runs' : 'site_crawls';
+  const table = (
+    { agent: 'agent_runs', site_crawl: 'site_crawls', platform_call: 'platform_calls' } as const
+  )[subject.kind];
   return db
     .selectFrom(table)
     .select('id')
@@ -149,6 +151,7 @@ export async function reserveUsage(
         task_id: subject.kind === 'audit' ? subject.id : null,
         agent_run_id: subject.kind === 'agent' ? subject.id : null,
         site_crawl_id: subject.kind === 'site_crawl' ? subject.id : null,
+        platform_call_id: subject.kind === 'platform_call' ? subject.id : null,
         dispatch_key: 'reservation',
         allocation_order: index,
         request_fingerprint: fingerprint,

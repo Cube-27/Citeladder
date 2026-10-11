@@ -1,9 +1,8 @@
-/** Credentialed JSON boundary: no redirects, public pinned DNS for customer destinations. */
+/** Credentialed JSON boundary to approved provider endpoints: no redirects, one pinned address. */
 import { lookup } from 'node:dns/promises';
 import { request as httpsRequest } from 'node:https';
 import { request as httpRequest } from 'node:http';
 import { isIP } from 'node:net';
-import { FetchError, validateAddress } from '../projects/safe-fetch.ts';
 import { providerPolicy } from './config.ts';
 import { isNonEmpty } from '../lists.ts';
 
@@ -20,15 +19,13 @@ export type ProbeRequest = {
   body?: unknown;
   timeoutSeconds: number;
   maxBytes: number;
-  customerDestination: boolean;
   signal?: AbortSignal;
 };
 export type ProbeTransport = (input: ProbeRequest) => Promise<{ status: number; body: unknown }>;
-function assertProbeUrl(url: URL, input: Pick<ProbeRequest, 'customerDestination'>) {
+function assertProbeUrl(url: URL) {
   const loopback = ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
   if (
-    (url.protocol !== 'https:' &&
-      !(url.protocol === 'http:' && loopback && !input.customerDestination)) ||
+    (url.protocol !== 'https:' && !(url.protocol === 'http:' && loopback)) ||
     url.username ||
     url.password
   )
@@ -46,19 +43,9 @@ function resolveAddresses(host: string, signal: AbortSignal) {
       .finally(() => signal.removeEventListener('abort', aborted));
   });
 }
-function assertCustomerAddresses(url: URL, addresses: { address: string }[]) {
-  if (!providerPolicy.app.allowed_ports.includes(Number(url.port || 443)))
-    throw new ProbeError('invalid_url');
-  try {
-    for (const item of addresses) validateAddress(item.address);
-  } catch (error) {
-    if (error instanceof FetchError) throw new ProbeError(error.code);
-    throw error;
-  }
-}
 export const sendProbe: ProbeTransport = async (input) => {
   const url = new URL(input.url);
-  assertProbeUrl(url, input);
+  assertProbeUrl(url);
   const signal = AbortSignal.any([
     AbortSignal.timeout(input.timeoutSeconds * 1000),
     ...(input.signal ? [input.signal] : []),
@@ -67,10 +54,9 @@ export const sendProbe: ProbeTransport = async (input) => {
   const host = url.hostname.replaceAll(/[[\]]/gu, '');
   const addresses = await resolveAddresses(host, signal);
   if (!isNonEmpty(addresses)) throw new ProbeError('dns_resolution_failed');
-  if (input.customerDestination) assertCustomerAddresses(url, addresses);
   const target = addresses[0];
   const body = input.body === undefined ? undefined : Buffer.from(JSON.stringify(input.body));
-  if (body && body.length > providerPolicy.app.max_request_bytes)
+  if (body && body.length > providerPolicy.probe_max_request_bytes)
     throw new ProbeError('request_too_large');
   return new Promise((resolve, reject) => {
     const request = url.protocol === 'https:' ? httpsRequest : httpRequest;

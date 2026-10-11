@@ -11,30 +11,20 @@ import { gatewaySettings } from '../src/models/gateway.ts';
 import { ModelCalls } from '../src/agent/model-calls.ts';
 import { AgentQueue } from '../src/agent/queue.ts';
 import { ledgerBalances } from '../src/entitlements/ledger.ts';
-import { chargeCredits } from '../src/billing/ai-credits.ts';
-import { createConnection } from '../src/providers/connections.ts';
-import { createConnectionInput } from '../src/providers/inputs.ts';
-import { providerSettings } from '../src/providers/config.ts';
-import { probeConnection } from '../src/providers/probes.ts';
 
+// The platform model, priced in configuration at Claude Haiku 5.5 rates.
 const platform = {
   ...gatewaySettings({}),
   apiKey: 'fixture-key',
   baseUrl: 'https://model.test/v1',
-  model: 'test-model',
+  model: 'claude-haiku-5-5',
+  maxOutputTokens: 16_384,
 };
+// A 4-byte request with the full output cap at the marked-up price.
+const HOLD = 11;
+const request = { system: 's', user: 'u', schema: {} };
 const settings = agentSettings({});
-const rate = {
-  feature: 'agent' as const,
-  model: 'test-model',
-  input_credits_per_million: 100000,
-  cached_input_credits_per_million: 50000,
-  output_credits_per_million: 100000,
-  reasoning_credits_per_million: 100000,
-  call_credit_cap: 20,
-  unknown_usage_charge: 12,
-};
-describe('Agent funding through the production ledger and providers', () => {
+describe('Agent funding through the production ledger and shared pricing', () => {
   const db = testDatabase();
   const agents = new AgentFixtures(db),
     billing = new BillingFixtures(db);
@@ -49,9 +39,6 @@ describe('Agent funding through the production ledger and providers', () => {
     billing.accounts.push(accountId);
     await grant(db, accountId, { key: 'agent', value: 1 });
     const grantId = await grant(db, accountId, { key: 'ai_credits', value: credits });
-    await billing.catalog((payload) => {
-      payload.ai_credit_policy = { version: 'fixture-1', rates: [rate] };
-    });
     return { scope, accountId, grantId };
   }
   async function run(scope: Awaited<ReturnType<typeof agents.scope>>) {
@@ -62,18 +49,12 @@ describe('Agent funding through the production ledger and providers', () => {
     if (!claimed || claimed.id !== run.id) throw new Error('Unexpected claim');
     return { run, lease: await queue.start(claimed, 'funding-test'), queue };
   }
-  it('commits the exact hold before I/O, charges usage once and releases excess', async () => {
+  it('commits the hold before I/O, charges the reported tokens once and releases the rest', async () => {
     const { scope, accountId, grantId } = await tenant();
     const { run: saved, lease } = await run(scope);
     const io = {
       fetch: vi.fn<typeof fetch>(async () => {
-        const attempts = await db
-          .selectFrom('agent_model_attempts')
-          .selectAll()
-          .where('run_id', '=', saved.id)
-          .execute();
-        expect(attempts).toMatchObject([{ outcome: 'dispatched', reserved_credits: '20' }]);
-        expect((await ledgerBalances(db, accountId)).get(grantId)?.reserved).toBe(20);
+        expect((await ledgerBalances(db, accountId)).get(grantId)?.reserved).toBe(HOLD);
         return Response.json({
           choices: [{ message: { content: '{"action":"respond","reply":"Answer"}' } }],
           usage: { prompt_tokens: 20, completion_tokens: 10 },
@@ -81,23 +62,22 @@ describe('Agent funding through the production ledger and providers', () => {
       }),
       sleep: vi.fn(async () => {}),
     };
-    const model = await agentModels(db, 'fixture-cipher', platform, {
-      platform: io,
-      customer: async () => {
-        throw new Error('Unexpected customer request');
-      },
-    })(saved);
+    const model = await agentModels(platform, io)(saved);
     const calls = new ModelCalls(db, agentFunding(settings, platform));
-    await calls.call(lease, 1, model, { system: 's', user: 'u', schema: {} });
+    await calls.call(lease, 1, model, request);
     const attempt = await db
       .selectFrom('agent_model_attempts')
       .selectAll()
       .where('run_id', '=', saved.id)
       .executeTakeFirstOrThrow();
+    expect(attempt).toMatchObject({
+      reserved_credits: String(HOLD),
+      pricing_revision: 'ai-pricing-v1',
+    });
     await calls.receipt(scope.workspaceId, attempt.id, result('changed late answer'));
     expect((await ledgerBalances(db, accountId)).get(grantId)).toEqual({
       reserved: 0,
-      consumed: 3,
+      consumed: 1,
     });
     expect(io.fetch).toHaveBeenCalledTimes(1);
   });
@@ -116,20 +96,19 @@ describe('Agent funding through the production ledger and providers', () => {
       });
     },
   );
-  it('settles a failed dispatch with the frozen unknown-usage charge exactly once', async () => {
+  it('charges nothing for a failed dispatch that reported no usage', async () => {
     const { scope, accountId, grantId } = await tenant();
     const { run: saved, lease } = await run(scope);
-    const gateway = await agentModels(db, 'fixture-cipher', platform)(saved);
     const model = {
-      ...gateway,
+      ...(await agentModels(platform)(saved)),
       complete: async () => {
         throw new Error('Provider unavailable');
       },
     };
     const calls = new ModelCalls(db, agentFunding(settings, platform));
-    await expect(
-      calls.call(lease, 1, model, { system: 's', user: 'u', schema: {} }),
-    ).rejects.toMatchObject({ code: 'provider_error' });
+    await expect(calls.call(lease, 1, model, request)).rejects.toMatchObject({
+      code: 'provider_error',
+    });
     const attempt = await db
       .selectFrom('agent_model_attempts')
       .selectAll()
@@ -138,34 +117,26 @@ describe('Agent funding through the production ledger and providers', () => {
     await calls.receipt(scope.workspaceId, attempt.id, null);
     expect((await ledgerBalances(db, accountId)).get(grantId)).toEqual({
       reserved: 0,
-      consumed: rate.unknown_usage_charge,
+      consumed: 0,
     });
   });
-  it('fences expired dispatches and settles unknown usage against historical policy', async () => {
+  it('settles an answer with unreadable usage at the fixed fallback, within the hold', async () => {
     const { scope, accountId, grantId } = await tenant();
     const { run: saved, lease } = await run(scope);
-    const model = await agentModels(db, 'fixture-cipher', platform)(saved);
     const calls = new ModelCalls(db, agentFunding(settings, platform));
-    await calls.dispatch(lease, 1, model, { system: 's', user: 'u', schema: {} });
-    await billing.catalog((payload) => {
-      payload.ai_credit_policy = {
-        version: 'new-fixture',
-        rates: [{ ...rate, unknown_usage_charge: 1 }],
-      };
-    });
-    await db.transaction().execute((trx) => calls.reconcile(trx, saved));
+    const attempt = await calls.dispatch(lease, 1, await agentModels(platform)(saved), request);
+    await calls.receipt(scope.workspaceId, attempt.id, { ...result('{}'), usage: {} });
     expect((await ledgerBalances(db, accountId)).get(grantId)).toEqual({
       reserved: 0,
-      consumed: 12,
+      consumed: 10,
     });
   });
-  it('refuses exhausted credits and configured but unverified BYOK without platform fallback', async () => {
-    const { scope } = await tenant(1);
+  it('refuses a dispatch the remaining credits cannot hold, recording nothing', async () => {
+    const { scope } = await tenant(HOLD - 1);
     const { run: saved, lease } = await run(scope);
-    const model = await agentModels(db, 'fixture-cipher', platform)(saved);
     const calls = new ModelCalls(db, agentFunding(settings, platform));
     await expect(
-      calls.dispatch(lease, 1, model, { system: 's', user: 'u', schema: {} }),
+      calls.dispatch(lease, 1, await agentModels(platform)(saved), request),
     ).rejects.toMatchObject({ code: 'funding_unavailable' });
     expect(
       await db
@@ -174,163 +145,32 @@ describe('Agent funding through the production ledger and providers', () => {
         .where('run_id', '=', saved.id)
         .execute(),
     ).toEqual([]);
-    await createConnection(
-      db,
-      scope.workspaceId,
-      scope.userId,
-      createConnectionInput.parse({
-        transport_provider: 'openai',
-        api_key: 'fixture',
-        app_routes: [
-          {
-            feature: 'agent',
-            model: 'customer-model',
-            api_base_url: 'https://customer.test/v1',
-            disclosure_accepted: true,
-          },
-        ],
-      }),
-      'fixture-cipher',
-      providerSettings({}),
-    );
-    await expect(
-      db.transaction().execute((trx) => agentAdmission(settings, platform)(trx, scope)),
-    ).rejects.toMatchObject({ code: 'route_unavailable' });
-  });
-  it('debits zero for exact verified BYOK and stops after key rotation', async () => {
-    const { scope, accountId, grantId } = await tenant();
-    const connection = await createConnection(
-      db,
-      scope.workspaceId,
-      scope.userId,
-      createConnectionInput.parse({
-        transport_provider: 'openai',
-        api_key: 'fixture',
-        app_routes: [
-          {
-            feature: 'agent',
-            model: 'customer-model',
-            api_base_url: 'https://customer.test/v1',
-            disclosure_accepted: true,
-          },
-        ],
-      }),
-      'fixture-cipher',
-      providerSettings({}),
-    );
-    await probeConnection(
-      db,
-      scope.workspaceId,
-      connection.id,
-      'fixture-cipher',
-      providerSettings({}),
-      async () => ({ status: 200, body: { choices: [{ message: { content: 'ok' } }] } }),
-    );
-    const { run: saved, lease } = await run(scope);
-    const send = vi.fn(async () => ({
-      status: 200,
-      body: {
-        choices: [{ message: { content: '{"action":"respond","reply":"BYOK answer"}' } }],
-        usage: { prompt_tokens: 20, completion_tokens: 10 },
-      },
-    }));
-    const model = await agentModels(db, 'fixture-cipher', platform, {
-      platform: { fetch: vi.fn(), sleep: vi.fn() },
-      customer: send,
-    })(saved);
-    const calls = new ModelCalls(db, agentFunding(settings, platform));
-    await calls.call(lease, 1, model, { system: 's', user: 'u', schema: {} });
-    expect(
-      (await ledgerBalances(db, accountId)).get(grantId) ?? { reserved: 0, consumed: 0 },
-    ).toEqual({ reserved: 0, consumed: 0 });
-    await db
-      .updateTable('provider_connections')
-      .set({ credential_revision: randomUUID() })
-      .where('id', '=', connection.id)
-      .execute();
-    // A newly verified route must still differ from this run's frozen key revision.
-    await probeConnection(
-      db,
-      scope.workspaceId,
-      connection.id,
-      'fixture-cipher',
-      providerSettings({}),
-      async () => ({ status: 200, body: { choices: [{ message: { content: 'ok' } }] } }),
-    );
-    await expect(
-      calls.dispatch(lease, 2, model, { system: 's', user: 'u', schema: {} }),
-    ).rejects.toMatchObject({ code: 'route_unavailable' });
-    await expect(agentModels(db, 'fixture-cipher', platform)(saved)).rejects.toMatchObject({
-      code: 'route_unavailable',
-    });
-    expect(send).toHaveBeenCalledTimes(1);
-  });
-  it('bounds arithmetic and distinguishes invalid usage from observed zero', () => {
-    expect(chargeCredits(rate, { input_tokens: 0, output_tokens: 0 })).toBe(1);
-    expect(chargeCredits(rate, { input_tokens: true, output_tokens: 0 })).toBeNull();
-    expect(
-      chargeCredits(rate, { input_tokens: 20, output_tokens: 10, cached_input_tokens: null }),
-    ).toBeNull();
-    expect(
-      chargeCredits(rate, { input_tokens: 20, output_tokens: 10, cached_input_tokens: 21 }),
-    ).toBeNull();
-    expect(
-      chargeCredits(rate, {
-        input_tokens: Number.MAX_SAFE_INTEGER,
-        output_tokens: Number.MAX_SAFE_INTEGER,
-      }),
-    ).toBe(20);
-  });
-  it('closes the admitted finite hold when historical pricing terms are unreadable', async () => {
-    const { scope, accountId, grantId } = await tenant();
-    const { run: saved, lease } = await run(scope);
-    const calls = new ModelCalls(db, agentFunding(settings, platform));
-    const model = await agentModels(db, 'fixture-cipher', platform)(saved);
-    const attempt = await calls.dispatch(lease, 1, model, { system: 's', user: 'u', schema: {} });
-    const catalog = await db
-      .selectFrom('billing_catalog_revisions')
-      .select('payload')
-      .where('revision', '=', attempt.pricing_revision)
-      .executeTakeFirstOrThrow();
-    const payload = JSON.parse(JSON.stringify(catalog.payload));
-    payload.ai_credit_policy = { version: 'broken', rates: [{ ...rate, call_credit_cap: false }] };
-    await db
-      .updateTable('billing_catalog_revisions')
-      .set({ payload: JSON.stringify(payload) })
-      .where('revision', '=', attempt.pricing_revision)
-      .execute();
-    await calls.receipt(scope.workspaceId, attempt.id, result('{}'));
-    expect((await ledgerBalances(db, accountId)).get(grantId)).toEqual({
-      reserved: 0,
-      consumed: 20,
-    });
-    expect(
-      await db
-        .selectFrom('agent_model_attempts')
-        .select('settlement_status')
-        .where('id', '=', attempt.id)
-        .executeTakeFirstOrThrow(),
-    ).toEqual({ settlement_status: 'unknown_policy' });
   });
   it('serializes concurrent dispatch holds against the same finite credit balance', async () => {
-    const { scope, accountId, grantId } = await tenant(20);
+    const { scope, accountId, grantId } = await tenant(HOLD);
     const first = await run(scope),
       second = await run(scope);
     const calls = new ModelCalls(db, agentFunding(settings, platform));
     const outcomes = await Promise.allSettled(
-      [first, second].map(async (current) => {
-        const model = await agentModels(db, 'fixture-cipher', platform)(current.run);
-        return calls.dispatch(current.lease, 1, model, { system: 's', user: 'u', schema: {} });
-      }),
+      [first, second].map(async (current) =>
+        calls.dispatch(current.lease, 1, await agentModels(platform)(current.run), request),
+      ),
     );
     expect(outcomes.filter((outcome) => outcome.status === 'fulfilled')).toHaveLength(1);
     expect(outcomes.find((outcome) => outcome.status === 'rejected')).toMatchObject({
       reason: { code: 'funding_unavailable' },
     });
     expect((await ledgerBalances(db, accountId)).get(grantId)).toEqual({
-      reserved: 20,
+      reserved: HOLD,
       consumed: 0,
     });
+  });
+  it('refuses a model change between admission and dispatch', async () => {
+    const { scope } = await tenant();
+    const { run: saved } = await run(scope);
+    await expect(agentModels({ ...platform, model: 'another-model' })(saved)).rejects.toMatchObject(
+      { code: 'model_changed' },
+    );
   });
   it('admits development funding only for the configured active administrator', async () => {
     const { scope } = await tenant();

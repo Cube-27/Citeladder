@@ -18,7 +18,6 @@ import {
   readOperatorJson,
   writeBoundCatalog,
 } from '../src/billing/plan-operators.ts';
-import { chargeCredits } from '../src/billing/ai-credits.ts';
 import { redact } from '../src/billing/admin.ts';
 import storedCatalog from './billing-catalog.fixture.json' with { type: 'json' };
 import { catalogDigest } from '../src/billing/catalog-authoring.ts';
@@ -29,7 +28,7 @@ it('checksums supplementary Unicode as ASCII escapes', () => {
   // hashlib.sha256(json.dumps(validated_payload, sort_keys=True,
   // separators=(',', ':'), ensure_ascii=True).encode()).hexdigest()
   expect(catalogDigest(validateCatalog(payload))).toBe(
-    '9387b25c1f2223ae3624a69af1beb30208131580ecda300aae7d3cd0355f37e2',
+    'd3a1ce6b7b3b7d75945c09a6fe30e1a6ca68a7b2caf743289ab257cfac7c8b70',
   );
 });
 
@@ -124,25 +123,8 @@ it.each([
   mutate(payload);
   expect(() => validateCatalog(payload)).toThrow();
 });
-it('bounds AI policy and refuses secret-shaped platform metadata', () => {
+it('refuses secret-shaped platform metadata', () => {
   const payload = launchCatalog({ mode: null, settings: billingSettings({}) });
-  const rate = {
-    feature: 'agent' as const,
-    model: 'fixture',
-    input_credits_per_million: 100,
-    cached_input_credits_per_million: 25,
-    output_credits_per_million: 300,
-    reasoning_credits_per_million: 300,
-    call_credit_cap: 50,
-    unknown_usage_charge: 10,
-  };
-  payload.ai_credit_policy = { version: 'verified-v1', rates: [rate] };
-  validateCatalog(payload);
-  expect(chargeCredits(rate, { input_tokens: 1000000, output_tokens: 0 })).toBe(50);
-  expect(chargeCredits(rate, {})).toBeNull();
-  rate.unknown_usage_charge = 51;
-  expect(() => validateCatalog(payload)).toThrow();
-  payload.ai_credit_policy = null;
   expect(() =>
     validateCatalog({
       ...payload,

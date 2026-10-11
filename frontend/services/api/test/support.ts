@@ -86,6 +86,7 @@ export class Fixtures {
           ['prompt_runs_per_period', 100_000],
           ['project_slots', 1_000],
           ['prompt_slots', 10_000],
+          ['ai_credits', 1_000_000],
         ] as const)
           await grant(trx, account, { key, value, sourceKind: 'override', fixtureDefault: true });
       }

@@ -1,11 +1,13 @@
 /** Commercial execution policy and persisted vocabulary. */
 import { providers } from './providers.ts';
 import runtime from './billing.json' with { type: 'json' };
+import aiCredits from './ai-credits.json' with { type: 'json' };
 import { compareText } from '../text-order.ts';
 
 const c = runtime.contracts;
 export const billing = {
   ...runtime,
+  ai_credits: aiCredits,
   contracts: {
     ...c,
     cadences: [c.cadence_monthly].sort(compareText),

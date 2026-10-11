@@ -24,7 +24,13 @@ type Hold = { reservationId: string | null; credits: number; pricingRevision: st
 /** Funding owner validates the exact frozen destination/capability per dispatch;
  * reserve/settle/reconcile execute on the caller transaction. No credentials returned. */
 export type Funding = {
-  reserve: (db: Database, run: Run, dispatchId: string, model: AgentModel) => Promise<Hold>;
+  reserve: (
+    db: Database,
+    run: Run,
+    dispatchId: string,
+    model: AgentModel,
+    request: ModelRequest,
+  ) => Promise<Hold>;
   settle: (
     db: Database,
     attempt: ModelAttempt,
@@ -62,7 +68,7 @@ export class ModelCalls {
         .executeTakeFirst();
       if (existing) throw new AgentError('lease');
       const dispatchId = randomUUID();
-      const hold = await this.funding.reserve(trx, run, dispatchId, model);
+      const hold = await this.funding.reserve(trx, run, dispatchId, model, request);
       if (
         !Number.isSafeInteger(hold.credits) ||
         hold.credits < 0 ||
@@ -83,10 +89,6 @@ export class ModelCalls {
           run_attempt: run.attempt_count,
           ordinal,
           funding_source: run.funding_source,
-          provider_connection_id: run.connection_id,
-          provider_route_id: run.route_id,
-          credential_revision: run.credential_revision,
-          route_revision: run.route_revision,
           provider_adapter: model.adapter,
           endpoint_host: model.endpointHost,
           requested_model: run.requested_model,

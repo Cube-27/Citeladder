@@ -20,16 +20,8 @@ import { buildManifest, type ContextReader } from './context.ts';
 import { active, terminal } from './queue.ts';
 import { appendMessage, appendRecoveryReply, getChat } from './messages.ts';
 
-export type FundingIdentity = Pick<
-  Run,
-  | 'funding_source'
-  | 'requested_model'
-  | 'route_id'
-  | 'connection_id'
-  | 'route_revision'
-  | 'credential_revision'
->;
-/** Admission owns capability, route selection and abuse capacity, in this transaction.
+export type FundingIdentity = Pick<Run, 'funding_source' | 'requested_model'>;
+/** Admission owns capability, funding selection and abuse capacity, in this transaction.
  * Required injection deliberately has no unmetered/platform fallback. */
 export type Admission = (db: Database, scope: Scope) => Promise<FundingIdentity>;
 const messageSchema = z.string().trim().min(1).max(agentPolicy.message_max_chars);
@@ -162,7 +154,7 @@ export class AgentStore {
       await requireIdle(trx, chat);
       if (chat.turn_count >= agentPolicy.chat_turn_limit) throw new AgentError('agent_turn_limit');
       const funding = await this.dependencies.admission(trx, scope);
-      z.enum(['platform', 'customer_byok', 'development']).parse(funding.funding_source);
+      z.enum(['platform', 'development']).parse(funding.funding_source);
       const refs = z
         .record(z.string(), z.json())
         .parse(jsonObject(chat.context_refs, 'agent_chats.context_refs'));

@@ -1,15 +1,8 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Stack } from '@/components/ui/layout';
-import { Skeleton } from '@/components/ui/skeleton';
-import { AppModelCard } from '@/components/providers/app-model-card';
 import { ProviderList } from '@/components/providers/provider-list';
-import { providersApi } from '@/lib/api/providers';
-import { queryKeys } from '@/lib/api/query-keys';
-import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
 /**
  * BYOK Provider Settings panel, rendered inside the Settings screen's
@@ -17,17 +10,9 @@ import { useActiveWorkspaceId } from '@/lib/project/project-context';
  *
  * Measurement credentials come first as one list row per provider — a
  * DataForSEO login is entered once and serves every consumer-app and search
- * surface — then the Agent's optional customer model route.
+ * surface. The Agent always runs on the platform model.
  */
 export function ProviderSettings() {
-  const workspaceId = useActiveWorkspaceId();
-  const connectionsQuery = useQuery({
-    queryKey: queryKeys.providers.connections(workspaceId ?? 'unresolved'),
-    queryFn: ({ signal }) => providersApi.listConnections({ signal, workspaceId }),
-    enabled: workspaceId !== null,
-  });
-  const connections = connectionsQuery.data ?? [];
-
   return (
     <Stack gap="workspace">
       <Card>
@@ -42,18 +27,6 @@ export function ProviderSettings() {
           <ProviderList />
         </CardContent>
       </Card>
-
-      {connectionsQuery.isLoading ? (
-        <Skeleton className="h-72 w-full" />
-      ) : (
-        <AppModelCard
-          key={
-            connections.find((connection) => (connection.app_routes?.length ?? 0) > 0)?.id ??
-            'new-app-model'
-          }
-          connections={connections}
-        />
-      )}
     </Stack>
   );
 }

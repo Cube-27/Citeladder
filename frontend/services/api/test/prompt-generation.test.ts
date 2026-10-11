@@ -60,7 +60,12 @@ function dependencies(judgeProbability?: number) {
     sleep: async () => {},
   };
   const gateway = createModelGateway(
-    { ...gatewaySettings({}), apiKey: 'test-only', model: 'test', baseUrl: 'https://model.test' },
+    {
+      ...gatewaySettings({}),
+      apiKey: 'test-only',
+      model: 'claude-haiku-5-5',
+      baseUrl: 'https://model.test',
+    },
     io,
   );
   const judge =
@@ -216,8 +221,25 @@ describe('prompt generation at the PostgreSQL boundary', () => {
     ).rejects.toMatchObject({ status: 422 });
   });
   it('stages candidates, preserves provenance, and does not consume slots until acceptance', async () => {
-    const result = await generate();
+    const since = new Date();
+    const deps = dependencies();
+    const result = await generate(deps);
     expect(result.candidates).toHaveLength(2);
+    // Every model call spends AI credits; this provider reports no usage, so each
+    // call settles at the fixed fallback (B15, B31).
+    const charged = await db
+      .selectFrom('platform_calls')
+      .select(['feature', 'charge', 'credits'])
+      .where('workspace_id', '=', tenant.workspaceId)
+      .where('created_at', '>=', since)
+      .execute();
+    expect(charged).toEqual(
+      Array.from({ length: deps.io.fetch.mock.calls.length }, () => ({
+        feature: 'prompt_generation',
+        charge: 'credits',
+        credits: 10,
+      })),
+    );
     expect(
       await db.selectFrom('prompts').select('id').where('prompt_set_id', '=', setId).execute(),
     ).toEqual([]);
@@ -243,8 +265,21 @@ describe('prompt generation at the PostgreSQL boundary', () => {
       await db.selectFrom('prompts').select('id').where('prompt_set_id', '=', setId).execute(),
     ).toEqual([]);
   });
-  it('keeps strong JEV failures only as text-free outcomes', async () => {
+  it('keeps strong JEV failures only as text-free outcomes, recording the judge uncharged', async () => {
+    const since = new Date();
     const result = await generate(dependencies(0.01));
+    const judged = await db
+      .selectFrom('platform_calls')
+      .select(['charge', 'credits'])
+      .where('workspace_id', '=', tenant.workspaceId)
+      .where('feature', '=', 'prompt_quality_judge')
+      .where('created_at', '>=', since)
+      .execute();
+    // One judge call per draft.
+    expect(judged).toEqual([
+      { charge: 'not_charged', credits: 0 },
+      { charge: 'not_charged', credits: 0 },
+    ]);
     expect(result.candidates).toEqual([]);
     expect(result.quality_rejected).toBe(2);
     const rows = await db

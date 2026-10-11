@@ -5,6 +5,8 @@ import { policy, resolveSettingSpec } from '../config.ts';
 import { discoverySettings } from '../projects/discovery-inputs.ts';
 import { createResearchClient, ResearchBudget } from '../projects/research-evidence.ts';
 import { boundedJson } from '../providers/response.ts';
+import type { Meter } from '../billing/metering.ts';
+import { assertMetered } from '../models/meter-scope.ts';
 
 const p = policy.commerce.discovery;
 const result = z.object({
@@ -23,7 +25,13 @@ export type SearchOutcome = {
   results: SearchResult[];
   providerVersion?: string;
 };
-export type CompetitorSearch = (query: string, locale: string) => Promise<SearchOutcome>;
+/** Every Tavily and Keenable request is metered for the workspace (B13, B18). */
+export type CompetitorSearch = (
+  query: string,
+  locale: string,
+  meter: Meter,
+) => Promise<SearchOutcome>;
+const FEATURE = 'commerce_competitor_discovery';
 
 export function competitorSearch(
   env: Record<string, string | undefined> = process.env,
@@ -34,7 +42,7 @@ export function competitorSearch(
   const endpoint = String(setting('tavily_endpoint'));
   const timeout = Number(setting('tavily_timeout_seconds'));
   const research = { ...discoverySettings(env), keenable_snippet_max_chars: p.snippet_chars };
-  return async (query, locale) => {
+  return async (query, locale, meter) => {
     let failed = false;
     if (key) {
       try {
@@ -49,19 +57,27 @@ export function competitorSearch(
         )
           throw new Error('Invalid Tavily destination');
         const signal = AbortSignal.timeout(timeout * 1000);
-        const response = await transport(url, {
-          method: 'POST',
-          redirect: 'error',
-          headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
-          signal,
-          body: JSON.stringify({
-            query: `${query} ${locale}`.trim(),
-            search_depth: 'basic',
-            max_results: p.provider_result_limit,
-            include_answer: false,
-            include_raw_content: false,
-          }),
-        });
+        const response = await meter.call(
+          FEATURE,
+          { provider: 'tavily', model: 'tavily' },
+          async () => {
+            assertMetered('tavily');
+            const value = await transport(url, {
+              method: 'POST',
+              redirect: 'error',
+              headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
+              signal,
+              body: JSON.stringify({
+                query: `${query} ${locale}`.trim(),
+                search_depth: 'basic',
+                max_results: p.provider_result_limit,
+                include_answer: false,
+                include_raw_content: false,
+              }),
+            });
+            return { value, usage: null };
+          },
+        );
         if (!response.ok) throw new Error('Search failed');
         const body = z
           .object({ results: z.array(z.unknown()) })
@@ -103,6 +119,7 @@ export function competitorSearch(
         research,
         new ResearchBudget(research.keenable_total_call_cap),
         transport,
+        { meter, feature: FEATURE },
       );
       const items = await client.search(query, null, p.provider_result_limit, 'commerce');
       return {

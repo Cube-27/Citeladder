@@ -119,9 +119,9 @@ const USAGE = {
       grants: [],
     },
     {
-      key: 'audit_credits',
+      key: 'prompt_runs_per_period',
       capability_type: 'counter.consumable',
-      unit: 'credits',
+      unit: 'runs',
       limit_state: 'unknown',
       allowance: null,
       consumed: null,

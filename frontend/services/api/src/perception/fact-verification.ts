@@ -14,6 +14,7 @@ import { randomUUID } from 'node:crypto';
 import { factTopicSchema } from '@citeladder/contracts/fact-checking';
 
 import { policy } from '../config.ts';
+import { meterFor } from '../billing/metering.ts';
 import type { FactCheckPolicy } from '../config/perception.ts';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
@@ -218,8 +219,10 @@ export function factVerification(
       frozenFacts(db, task.workspace_id, factCheck),
     ]);
     if (capped) return settle({ outcome: 'unavailable', reason: 'platform_cap' });
-    const gateway = gatewayFactory();
-    if (!gateway) return settle({ outcome: 'unavailable', reason: 'model_not_configured' });
+    const raw = gatewayFactory();
+    if (!raw) return settle({ outcome: 'unavailable', reason: 'model_not_configured' });
+    // Included in the prompt run (B9): recorded with its tokens, not charged.
+    const gateway = meterFor(db, task.workspace_id).gateway(raw, 'fact_verification');
     const configuration = record(subject.configuration);
     const built = verifyPackage({
       version,

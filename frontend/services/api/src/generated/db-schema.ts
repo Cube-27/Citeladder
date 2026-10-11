@@ -138,7 +138,6 @@ export interface AgentMessages {
 export interface AgentModelAttempts {
   cached_input_tokens: Int8 | null;
   created_at: Timestamp;
-  credential_revision: string | null;
   deadline_at: Timestamp;
   debited_credits: Int8;
   dispatch_id: string;
@@ -158,15 +157,12 @@ export interface AgentModelAttempts {
   pricing_revision: string;
   project_id: string;
   provider_adapter: string;
-  provider_connection_id: string | null;
-  provider_route_id: string | null;
   reasoning_tokens: Int8 | null;
   request_hash: string;
   requested_model: string;
   reservation_id: string | null;
   reserved_credits: Int8;
   returned_model: string;
-  route_revision: string | null;
   run_attempt: number;
   run_id: string;
   settled_at: Timestamp | null;
@@ -219,10 +215,8 @@ export interface AgentRuns {
   cancelled_at: Timestamp | null;
   chat_id: string;
   completed_at: Timestamp | null;
-  connection_id: string | null;
   context_manifest: Json;
   created_at: Timestamp;
-  credential_revision: string | null;
   error_code: string;
   error_detail: string;
   funding_source: string;
@@ -242,8 +236,6 @@ export interface AgentRuns {
   requested_model: string;
   requested_skill_id: string | null;
   requested_skill_source: string | null;
-  route_id: string | null;
-  route_revision: string | null;
   runtime_version: string;
   skill_catalog_version: string;
   skill_id: string | null;
@@ -1226,6 +1218,7 @@ export interface ConsumableLedger {
   grant_id: string;
   id: string;
   idempotency_key: string;
+  platform_call_id: string | null;
   refund_of_id: string | null;
   request_fingerprint: string;
   reservation_id: string;
@@ -1942,6 +1935,28 @@ export interface PerformanceDimensionStats {
   workspace_id: string;
 }
 
+export interface PlatformCalls {
+  billing_account_id: string | null;
+  cached_input_tokens: number | null;
+  charge: string;
+  cost_microusd: Int8 | null;
+  created_at: Timestamp;
+  credits: number;
+  error_code: string;
+  feature: string;
+  id: string;
+  input_tokens: number | null;
+  model: string;
+  output_tokens: number | null;
+  pricing_revision: string;
+  provider: string;
+  reservation_id: string | null;
+  reserved_credits: number;
+  settled_at: Timestamp | null;
+  status: string;
+  workspace_id: string;
+}
+
 export interface PolicyAcceptances {
   accepted_at: Timestamp;
   actor_id: string;
@@ -2074,23 +2089,6 @@ export interface PromptSets {
   updated_at: Timestamp;
 }
 
-export interface ProviderAppRoutes {
-  active: Generated<boolean>;
-  api_base_url: string;
-  connection_id: string;
-  created_at: Timestamp;
-  feature: string;
-  id: string;
-  model: string;
-  probed_at: Timestamp | null;
-  probed_credential_revision: string | null;
-  probed_revision: string | null;
-  protocol: string;
-  revision: string;
-  updated_at: Timestamp;
-  workspace_id: string;
-}
-
 export interface ProviderAttempts {
   artifact_id: string | null;
   attempt_number: number;
@@ -2170,17 +2168,6 @@ export interface ProviderConnectionTests {
   status: string;
   transport_model: string;
   transport_provider: string;
-  workspace_id: string;
-}
-
-export interface ProviderDisclosures {
-  acknowledged_at: Timestamp;
-  actor_id: string;
-  connection_id: string;
-  destination: string;
-  disclosure_revision: string;
-  id: string;
-  model: string;
   workspace_id: string;
 }
 
@@ -3309,6 +3296,7 @@ export interface DB {
   owned_domains: OwnedDomains;
   pending_activations: PendingActivations;
   performance_dimension_stats: PerformanceDimensionStats;
+  platform_calls: PlatformCalls;
   policy_acceptances: PolicyAcceptances;
   project_markets: ProjectMarkets;
   projects: Projects;
@@ -3317,13 +3305,11 @@ export interface DB {
   prompt_metric_snapshots: PromptMetricSnapshots;
   prompt_sets: PromptSets;
   prompts: Prompts;
-  provider_app_routes: ProviderAppRoutes;
   provider_attempts: ProviderAttempts;
   provider_capacity_buckets: ProviderCapacityBuckets;
   provider_capacity_leases: ProviderCapacityLeases;
   provider_connection_tests: ProviderConnectionTests;
   provider_connections: ProviderConnections;
-  provider_disclosures: ProviderDisclosures;
   provider_routes: ProviderRoutes;
   query_evidence_rows: QueryEvidenceRows;
   query_evidence_snapshots: QueryEvidenceSnapshots;

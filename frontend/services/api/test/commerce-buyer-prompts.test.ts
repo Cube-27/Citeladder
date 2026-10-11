@@ -73,7 +73,12 @@ it('generates target-bound prompts and fails atomically on unusable or foreign t
   };
   const gateway = () =>
     createModelGateway(
-      { ...gatewaySettings({}), apiKey: 'test-only', model: 'test', baseUrl: 'https://model.test' },
+      {
+        ...gatewaySettings({}),
+        apiKey: 'test-only',
+        model: 'claude-haiku-5-5',
+        baseUrl: 'https://model.test',
+      },
       io,
     );
   const rows = await generateBuyerPrompts(
@@ -186,7 +191,12 @@ it("keeps each target's usable prompts and binds category prompts through the ca
   };
   const gateway = () =>
     createModelGateway(
-      { ...gatewaySettings({}), apiKey: 'test-only', model: 'test', baseUrl: 'https://model.test' },
+      {
+        ...gatewaySettings({}),
+        apiKey: 'test-only',
+        model: 'claude-haiku-5-5',
+        baseUrl: 'https://model.test',
+      },
       io,
     );
   const rows = await generateBuyerPrompts(

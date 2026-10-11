@@ -195,8 +195,6 @@ const RUN_ERROR_COPY: Record<string, string> = {
   skills_changed: 'The agent was updated after this request was queued. Send it again.',
   output_conflict:
     'The output changed while the agent was working, so its revision was not saved. Ask again to revise the latest version.',
-  route_unavailable:
-    'The model connection for the agent changed or was removed. Check Settings › Providers and try again.',
   funding_unavailable: 'There are not enough AI credits to finish this request.',
   capability_unavailable: 'Your plan does not include the agent.',
   provider_error: 'The model provider returned an error. Try again.',

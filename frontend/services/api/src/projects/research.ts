@@ -17,6 +17,7 @@ import {
 } from './research-evidence.ts';
 import type { ResolvedSite } from './site-resolution.ts';
 import { fetchWebsite, websiteIdentity, type WebsiteFetcher } from './safe-fetch.ts';
+import type { Meter } from '../billing/metering.ts';
 
 const cfg = policy.discovery.constants;
 export const identityEnvelope = z.object({
@@ -72,6 +73,8 @@ export function cleanSuggestions(
     .slice(0, maximum);
 }
 export type ResearchDependencies = {
+  /** Every model and Keenable call is metered for the workspace (B18, B31). */
+  meter: Meter;
   fetcher?: WebsiteFetcher;
   transport?: ResearchTransport;
   gateway?: ModelGateway | null;
@@ -227,12 +230,15 @@ function researchWarnings(
 export async function researchBrand(
   input: DiscoveryInput,
   site: ResolvedSite,
-  dependencies: ResearchDependencies = {},
+  dependencies: ResearchDependencies,
 ) {
   dependencies.checkCancelled?.();
   const settings = discoverySettings(dependencies.env);
   const budget = new ResearchBudget(settings.keenable_total_call_cap);
-  const client = createResearchClient(settings, budget, dependencies.transport ?? fetch);
+  const client = createResearchClient(settings, budget, dependencies.transport ?? fetch, {
+    meter: dependencies.meter,
+    feature: 'research_evidence',
+  });
   const [firstParty, external] = await Promise.all([
     collectFirstParty(site, dependencies.fetcher ?? fetchWebsite),
     settings.keenable_api_key
@@ -258,6 +264,7 @@ export async function researchBrand(
       gateway = null;
     }
   }
+  if (gateway) gateway = dependencies.meter.gateway(gateway, 'project_research');
   const modelCalls: Record<string, unknown>[] = [];
   dependencies.checkCancelled?.();
   const identity = await generateIdentity(gateway, input, items, modelCalls, dependencies.signal);

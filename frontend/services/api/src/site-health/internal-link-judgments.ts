@@ -8,6 +8,7 @@ import { roleAllows } from '../auth/workspace.ts';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import { createJevClient, type JevClient } from '../models/jev.ts';
+import { meterFor } from '../billing/metering.ts';
 import { ModelError, providerErrorCode } from '../models/http.ts';
 import { enqueueTask } from '../referrals/enqueue.ts';
 import type { QueueTask } from '../queue/task-queue.ts';
@@ -236,7 +237,9 @@ export function internalLinkJudge(
 ): Executor {
   return async (task, { db }) => {
     await taskProject(db, task);
-    const client = clientFactory();
+    const raw = clientFactory();
+    // Recorded, not charged (B13).
+    const client = raw && meterFor(db, task.workspace_id).jev(raw, 'internal_link_judge');
     const requests = await prepare(db, task, client);
     const controller = new AbortController();
     const deadline = setTimeout(() => controller.abort(), settings.job_deadline_seconds * 1000);

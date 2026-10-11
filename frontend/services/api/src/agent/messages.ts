@@ -71,10 +71,7 @@ const RECOVERY: Record<string, string> = {
     'The current document is too large to revise in one turn. Revise one section at a time, or start a new chat for a shorter version.',
   skills_changed:
     'CiteLadder was updated while this request was waiting. Nothing was saved; send it again.',
-  funding_unavailable:
-    'This workspace has no AI credits or connected model available right now. Nothing was saved.',
-  route_unavailable:
-    'The connected AI model changed or is unavailable. Nothing was saved. Check Providers, then try again.',
+  funding_unavailable: 'This workspace has no AI credits available right now. Nothing was saved.',
   model_changed:
     'The AI model changed while this request was waiting. Nothing was saved; send it again.',
   capability_unavailable: 'Your plan does not include the agent. Nothing was saved.',

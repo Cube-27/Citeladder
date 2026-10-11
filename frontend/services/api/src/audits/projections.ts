@@ -3,7 +3,7 @@ import { analyzeExecution } from '../analysis/execution.ts';
 import { finalizeAudit } from '../analysis/finalization.ts';
 import { prepareShelfExecution } from '../commerce/shelf.ts';
 import { finalizeCommerceShelf } from '../commerce/shelf-metrics.ts';
-import type { ShelfResolver } from '../commerce/shelf-parsing.ts';
+import type { MeterableShelfResolver } from '../commerce/shelf.ts';
 import type { ExecutionContext } from './execution-context.ts';
 import type { ExecutionResult } from './result-persistence.ts';
 import { enqueueTask } from '../referrals/enqueue.ts';
@@ -14,7 +14,7 @@ import { prepareSavedShelf } from '../commerce/shelf-recovery.ts';
 /** Compose existing deterministic analysis, bounded shelf preparation and persisted downstream work. */
 export function auditProjections(
   db: Database,
-  resolver?: ShelfResolver | null,
+  resolver?: MeterableShelfResolver | null,
   env: Record<string, string | undefined> = process.env,
 ) {
   return {

@@ -140,14 +140,14 @@ describe('isPurchasable', () => {
     expect(
       isPurchasable({
         key: 'topup_bench',
-        name: 'Audit credits',
+        name: 'AI credits',
         description: '',
         unit_price: null,
         quantity_min: 1,
         quantity_max: 10,
         availability: 'available',
         unavailable_reason: null,
-        grants_per_unit: [{ key: 'audit_credits', value: 1 }],
+        grants_per_unit: [{ key: 'ai_credits', value: 1 }],
         eligible_plan_keys: ['tier_1'],
         expiry_days: 30,
       }),
