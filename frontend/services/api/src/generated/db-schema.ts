@@ -694,6 +694,7 @@ export interface BillingSubscriptions {
   billing_account_id: string;
   cadence: string;
   cancel_at_period_end: boolean;
+  cancellation_sent_at: Timestamp | null;
   catalog_key: string;
   catalog_revision: string;
   created_at: Timestamp;

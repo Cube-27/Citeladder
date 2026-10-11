@@ -146,6 +146,13 @@ left renewing. A definite provider refusal of a cancellation is final and the
 sweep applies the provider's state; a fully refunded capture remains evidence
 of its paid period, and the refund settles separately. An authorization that
 lapsed uncaptured and was auto-refunded is not a payment.
+A customer's cancellation is held in CiteLadder
+([cancellation](../frontend/services/api/src/billing/cancellation.ts)) and sent to
+the provider only `BILLING_CANCELLATION_SEND_LEAD_SECONDS` before renewal, because
+the provider cannot undo one it has received; until then the customer may
+resume. The subscription sweep commits the send before the provider call and
+retries it while the provider still shows the plan renewing; provider evidence
+of a cancellation also ends the resume window.
 [Plan changes](../frontend/services/api/src/billing/plan-changes.ts) edit the one base
 subscription: an upgrade charges the prorated base-price difference for the rest
 of the paid period and, once paid, issues the higher plan's bundle for that

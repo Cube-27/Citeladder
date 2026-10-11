@@ -192,6 +192,7 @@ const ACTIVE_STARTER = {
   status: 'active',
   current_period_end: '2026-09-01T00:00:00Z',
   cancel_at_period_end: false,
+  resumable_until: null,
   scheduled_change: null,
 };
 
@@ -256,6 +257,7 @@ describe('BillingScreen', () => {
       status: 'active',
       current_period_end: '2026-09-01T00:00:00Z',
       cancel_at_period_end: false,
+      resumable_until: null,
       scheduled_change: null,
     });
     mswServer.use(catalogHandler(), entitlementHandler(), usageHandler());
@@ -417,6 +419,7 @@ describe('BillingScreen', () => {
       status: 'active',
       current_period_end: '2026-09-01T00:00:00Z',
       cancel_at_period_end: false,
+      resumable_until: null,
       scheduled_change: null,
     });
     let deleted = 0;
@@ -446,12 +449,44 @@ describe('BillingScreen', () => {
     await waitFor(() => expect(deleted).toBe(1));
   });
 
+  it('offers to resume a held cancellation until its deadline', async () => {
+    entitlementValue = resolvedEntitlement({
+      catalog_key: 'tier_1',
+      status: 'active',
+      current_period_end: '2026-09-01T00:00:00Z',
+      cancel_at_period_end: true,
+      resumable_until: '2026-08-30T00:00:00Z',
+      scheduled_change: null,
+    });
+    let resumed = 0;
+    mswServer.use(
+      catalogHandler(),
+      entitlementHandler(),
+      usageHandler(),
+      http.post('/api/v1/billing/subscription/resume', () => {
+        resumed += 1;
+        return HttpResponse.json({
+          catalog_key: 'tier_1',
+          status: 'resumed',
+          effective_at: '2026-09-01T00:00:00Z',
+        });
+      }),
+    );
+
+    renderWithProviders(<BillingScreen />);
+    expect(await screen.findByText(/You can resume until/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Cancel at period end/ })).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Resume plan' }));
+    await waitFor(() => expect(resumed).toBe(1));
+  });
+
   it('shows a refused cancellation once, in its dialog, and starts the next attempt clean', async () => {
     entitlementValue = resolvedEntitlement({
       catalog_key: 'tier_1',
       status: 'active',
       current_period_end: '2026-09-01T00:00:00Z',
       cancel_at_period_end: false,
+      resumable_until: null,
       scheduled_change: null,
     });
     mswServer.use(

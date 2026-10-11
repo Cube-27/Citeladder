@@ -6,7 +6,7 @@ import { purchase } from '../src/billing/purchases.ts';
 import { changePlan } from '../src/billing/plan-changes.ts';
 import { settlePending, settleSubscription } from '../src/billing/settlement.ts';
 import { recordRefund } from '../src/billing/receipts.ts';
-import { cancelSubscription } from '../src/billing/cancellation.ts';
+import { cancelSubscription, resumeSubscription } from '../src/billing/cancellation.ts';
 import { ProviderError } from '../src/billing/razorpay.ts';
 import { recoverBilling } from '../src/billing/recovery.ts';
 import { entitlementRead, usageRead, workspaceEntitlementRead } from '../src/billing/reads.ts';
@@ -816,7 +816,7 @@ describe('billing money and access owner', () => {
       grants.every((row) => row.bundle_role === 'supplement' && row.valid_until! > row.valid_from),
     ).toBe(true);
     expect(
-      (await entitlementRead(db, t.workspaceId, new Date())).grants
+      (await entitlementRead(db, config, t.workspaceId, new Date())).grants
         .filter((grant) => grants.some((row) => row.id === grant.grant_id))
         .every(
           (grant) =>
@@ -1135,16 +1135,73 @@ describe('billing money and access owner', () => {
         t.workspaceId,
       ),
     ).rejects.toMatchObject({ status: 409 });
-    const cancel = vi.fn(async () => {
-      throw new ProviderError(true);
+    expect(await cancelSubscription(db, config, t.workspaceId)).toMatchObject({
+      status: 'cancellation_scheduled',
     });
-    expect(
-      await cancelSubscription(db, config, t.workspaceId, fakeProvider({ cancel })),
-    ).toMatchObject({ status: 'cancellation_scheduled' });
-    expect(
-      await cancelSubscription(db, config, t.workspaceId, fakeProvider({ cancel })),
-    ).toMatchObject({ status: 'already_scheduled' });
+    expect(await cancelSubscription(db, config, t.workspaceId)).toMatchObject({
+      status: 'already_scheduled',
+    });
+  });
+  it('holds a cancellation for resume until the lead before renewal, then sends it once', async () => {
+    const t = await activated();
+    const subscription = () =>
+      db
+        .selectFrom('billing_subscriptions')
+        .select(['cancel_at_period_end', 'cancellation_sent_at'])
+        .where('id', '=', t.sub.id)
+        .executeTakeFirstOrThrow();
+    const scheduled = await cancelSubscription(db, config, t.workspaceId);
+    expect(scheduled.status).toBe('cancellation_scheduled');
+    const read = await entitlementRead(db, config, t.workspaceId, new Date());
+    expect(read.subscription?.resumable_until).toBe(
+      new Date(t.sub.current_period_end!.getTime() - 2 * 86_400_000).toISOString(),
+    );
+    // Before the lead, recovery sends nothing and the customer may change their mind.
+    const cancel = vi.fn(async () => paidSubscription(t.row).subscription);
+    // Only this subscription answers; the sweep leaves every other one alone.
+    const early = fakeProvider({
+      cancel,
+      evidence: async (id) => {
+        if (id !== t.sub.external_subscription_id) throw new Error('Another subscription');
+        return paidSubscription(t.row);
+      },
+    });
+    await db
+      .updateTable('billing_subscriptions')
+      .set({ reconciliation_next_at: null })
+      .where('id', '=', t.sub.id)
+      .execute();
+    await recoverBilling(db, config, early);
+    expect(cancel).not.toHaveBeenCalled();
+    expect(await resumeSubscription(db, config, t.workspaceId)).toMatchObject({
+      status: 'resumed',
+    });
+    expect(await subscription()).toEqual({
+      cancel_at_period_end: false,
+      cancellation_sent_at: null,
+    });
+
+    // Cancelled again and inside the lead: recovery sends it, and resume is over.
+    await cancelSubscription(db, config, t.workspaceId);
+    const lead = {
+      ...config,
+      billing: { ...config.billing, cancellationLeadSeconds: 40 * 86_400 },
+    };
+    await db
+      .updateTable('billing_subscriptions')
+      .set({ reconciliation_next_at: null })
+      .where('id', '=', t.sub.id)
+      .execute();
+    await recoverBilling(db, lead, early);
     expect(cancel).toHaveBeenCalledTimes(1);
+    expect(cancel).toHaveBeenCalledWith(t.sub.external_subscription_id, true);
+    expect((await subscription()).cancellation_sent_at).not.toBeNull();
+    await expect(resumeSubscription(db, config, t.workspaceId)).rejects.toThrow(
+      'cancellation_already_sent',
+    );
+    expect(
+      (await entitlementRead(db, config, t.workspaceId, new Date())).subscription,
+    ).toMatchObject({ cancel_at_period_end: true, resumable_until: null });
   });
   it('authenticates bounded webhook bytes, persists before settlement, and quarantines conflicting replay', async () => {
     const t = await activated();
@@ -1352,7 +1409,7 @@ describe('billing money and access owner', () => {
       status: 'resolved',
     });
     expect(
-      (await entitlementRead(db, t.workspaceId, new Date())).capabilities.length,
+      (await entitlementRead(db, config, t.workspaceId, new Date())).capabilities.length,
     ).toBeGreaterThan(0);
   });
   it('reads checkout and verifies a browser callback without provider I/O or paid access', async () => {

@@ -14,6 +14,7 @@ import { workspaceAccount } from './purchases.ts';
 import { catalog, capabilityValue } from './catalog.ts';
 import { credentialModeOf } from './credential-mode.ts';
 import { checkoutAvailable } from './razorpay.ts';
+import { cancellationSendAt } from './cancellation.ts';
 import { scheduledSchema } from './settlement.ts';
 
 const UNITS: Record<string, string> = {
@@ -163,7 +164,27 @@ async function occupancyHints(
   });
 }
 
-export async function entitlementRead(db: Database, workspaceId: string, at: Date) {
+/** Until when the customer can undo a scheduled cancellation; null when it has been sent. */
+function resumableUntil(
+  sub: {
+    cancel_at_period_end: boolean;
+    cancellation_sent_at: Date | null;
+    current_period_end: Date | null;
+  },
+  config: ServiceConfig,
+  at: Date,
+) {
+  if (!sub.cancel_at_period_end || sub.cancellation_sent_at || !sub.current_period_end) return null;
+  const until = cancellationSendAt(sub.current_period_end, config);
+  return until > at ? until.toISOString() : null;
+}
+
+export async function entitlementRead(
+  db: Database,
+  config: ServiceConfig,
+  workspaceId: string,
+  at: Date,
+) {
   const account = await workspaceAccount(db, workspaceId);
   const state = await accountState(db, workspaceId, account.id, at);
   const sub = state.subscription;
@@ -186,6 +207,7 @@ export async function entitlementRead(db: Database, workspaceId: string, at: Dat
           status: sub.status,
           current_period_end: sub.current_period_end?.toISOString() ?? null,
           cancel_at_period_end: sub.cancel_at_period_end,
+          resumable_until: resumableUntil(sub, config, at),
           scheduled_change: change
             ? {
                 direction: change.direction,

@@ -707,6 +707,7 @@ CREATE TABLE public.billing_subscriptions (
     current_period_start timestamp with time zone,
     current_period_end timestamp with time zone,
     cancel_at_period_end boolean NOT NULL,
+    cancellation_sent_at timestamp with time zone,
     ended_at timestamp with time zone,
     provider_state_version integer NOT NULL,
     is_current boolean NOT NULL,

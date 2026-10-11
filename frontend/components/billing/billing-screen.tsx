@@ -67,6 +67,10 @@ function useBillingReads(workspaceId: string | null, country: string) {
 function useCancellation(workspaceId: string | null): BillingCancellation {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  const resume = useMutation({
+    mutationFn: () => billingApi.resumeSubscription({ workspaceId }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.billing.all }),
+  });
   const mutation = useMutation({
     mutationFn: () => billingApi.cancelSubscription({ workspaceId }),
     onSuccess: async () => {
@@ -84,6 +88,9 @@ function useCancellation(workspaceId: string | null): BillingCancellation {
     pending: mutation.isPending,
     error: mutation.error,
     confirm: () => mutation.mutate(),
+    resume: () => resume.mutate(),
+    resuming: resume.isPending,
+    resumeError: resume.error,
   };
 }
 

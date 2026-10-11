@@ -455,6 +455,8 @@ export async function settleSubscription(
       // caught up with; the subscription sweep retries the provider call.
       cancel_at_period_end:
         event.cancelAtEnd || terminalStates.has(event.status) || sub.cancel_at_period_end,
+      // A cancellation the provider holds can no longer be resumed here (B46).
+      ...(event.cancelAtEnd && !sub.cancellation_sent_at ? { cancellation_sent_at: now } : {}),
       provider_state_version: event.version,
       // The next subscription sweep cancels a halted subscription promptly.
       ...(status === UNPAID ? { reconciliation_next_at: now } : {}),

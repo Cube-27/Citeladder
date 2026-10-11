@@ -281,4 +281,8 @@ export const billingApi = {
     const response = await apiClient.delete<unknown>('/billing/subscription', options);
     return strictValidate(subscriptionChangeSchema, response, 'billing.cancelSubscription');
   },
+  resumeSubscription: async (options?: ApiRequestOptions) => {
+    const response = await apiClient.post<unknown>('/billing/subscription/resume', {}, options);
+    return strictValidate(subscriptionChangeSchema, response, 'billing.resumeSubscription');
+  },
 };

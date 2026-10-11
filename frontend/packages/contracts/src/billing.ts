@@ -249,6 +249,8 @@ const subscriptionSummarySchema = responseObject({
   status: z.string(),
   current_period_end: z.string().nullable(),
   cancel_at_period_end: z.boolean(),
+  /** Until when a scheduled cancellation can be undone; null when it cannot (B46). */
+  resumable_until: z.string().nullable(),
   scheduled_change: scheduledPlanChangeSchema.nullable(),
 });
 
@@ -341,7 +343,7 @@ export const planChangeSchema = responseObject({
  */
 export const subscriptionChangeSchema = responseObject({
   catalog_key: z.string(),
-  status: z.enum(['cancellation_scheduled', 'already_scheduled']),
+  status: z.enum(['cancellation_scheduled', 'already_scheduled', 'resumed']),
   effective_at: z.string(),
 });
 

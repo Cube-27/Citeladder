@@ -10,6 +10,7 @@ import {
   type BillingProvider,
   type Evidence,
 } from './razorpay.ts';
+import { cancellationSendAt } from './cancellation.ts';
 import { policy } from '../config.ts';
 import { lockOwner, settlePending, settleSubscription } from './settlement.ts';
 import { recordRefund } from './receipts.ts';
@@ -470,10 +471,16 @@ async function subscriptionProbe(
     const state = evidence.kind === 'base' ? evidence.subscription : null;
     // Halted (retries exhausted) ends now, so it can never charge again unseen.
     const halted = state?.status === policy.billing.contracts.subscription_unpaid;
-    // A durable cancellation intent survives an interrupted provider request;
-    // cancel only while the provider still shows the subscription renewing.
-    const unwanted = sub.cancel_at_period_end && state?.status === 'active' && !state.cancelAtEnd;
-    if (halted || unwanted) {
+    // A held cancellation goes to the provider at the lead before renewal and
+    // is retried while the provider still shows the subscription renewing (B46).
+    const due =
+      sub.cancel_at_period_end &&
+      sub.current_period_end !== null &&
+      cancellationSendAt(sub.current_period_end, config) <= new Date();
+    const unwanted = due && state?.status === 'active' && !state.cancelAtEnd;
+    // Marked sent before the request, so a resume can never race it.
+    const send = halted || (unwanted && (await markCancellationSent(db, sub.id)));
+    if (send) {
       await cancelAtProvider(provider, sub.external_subscription_id, !halted);
       evidence = await provider.evidence(sub.external_subscription_id, true);
     }
@@ -516,6 +523,17 @@ async function subscriptionProbe(
     await stopLease();
   }
   return sub.id;
+}
+
+/** Commits that the held cancellation is being sent; false once the customer resumed. */
+async function markCancellationSent(db: Database, id: string) {
+  const marked = await db
+    .updateTable('billing_subscriptions')
+    .set({ cancellation_sent_at: new Date() })
+    .where('id', '=', id)
+    .where('cancel_at_period_end', '=', true)
+    .executeTakeFirst();
+  return marked.numUpdatedRows > 0n;
 }
 
 /** Three bounded sweeps, with persisted leases and no transaction across I/O. */

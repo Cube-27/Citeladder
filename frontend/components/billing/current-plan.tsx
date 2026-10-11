@@ -17,6 +17,10 @@ export type BillingCancellation = {
   pending: boolean;
   error: unknown;
   confirm: () => void;
+  /** Undo a scheduled cancellation while it is still held (B46). */
+  resume: () => void;
+  resuming: boolean;
+  resumeError: unknown;
 };
 
 type Subscription = NonNullable<BillingEntitlement['subscription']>;
@@ -91,11 +95,6 @@ export function CurrentPlan({
   cancellation: BillingCancellation;
 }>) {
   const subscription = entitlement?.subscription ?? null;
-  const cancellable =
-    canManage &&
-    subscription !== null &&
-    !subscription.cancel_at_period_end &&
-    ['active', 'trialing', 'past_due'].includes(subscription.status);
   return (
     <section className={panelClasses({}, 'grid gap-3')} aria-label="Current plan">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -114,20 +113,68 @@ export function CurrentPlan({
             periodEnd={subscription?.current_period_end}
           />
         </div>
-        {cancellable ? (
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled={cancellation.pending}
-            onClick={() => cancellation.setOpen(true)}
-          >
-            {cancellation.pending ? 'Scheduling cancellation…' : 'Cancel at period end'}
-          </Button>
+        {canManage && subscription ? (
+          <CancellationControl subscription={subscription} cancellation={cancellation} />
         ) : null}
       </div>
       <PlanNotices entitlement={entitlement} planName={planName} />
+      <ResumeNotice subscription={subscription} cancellation={cancellation} />
       <CancelDialog cancellation={cancellation} />
     </section>
+  );
+}
+
+/** Resume a held cancellation, or schedule one for a plan that renews. */
+function CancellationControl({
+  subscription,
+  cancellation,
+}: Readonly<{ subscription: Subscription; cancellation: BillingCancellation }>) {
+  if (subscription.resumable_until)
+    return (
+      <Button
+        variant="secondary"
+        size="sm"
+        disabled={cancellation.resuming}
+        onClick={cancellation.resume}
+      >
+        {cancellation.resuming ? 'Resuming…' : 'Resume plan'}
+      </Button>
+    );
+  if (
+    subscription.cancel_at_period_end ||
+    !['active', 'trialing', 'past_due'].includes(subscription.status)
+  )
+    return null;
+  return (
+    <Button
+      variant="secondary"
+      size="sm"
+      disabled={cancellation.pending}
+      onClick={() => cancellation.setOpen(true)}
+    >
+      {cancellation.pending ? 'Scheduling cancellation…' : 'Cancel at period end'}
+    </Button>
+  );
+}
+
+/** How long a cancellation can still be undone, and why an undo failed. */
+function ResumeNotice({
+  subscription,
+  cancellation,
+}: Readonly<{ subscription: Subscription | null; cancellation: BillingCancellation }>) {
+  return (
+    <>
+      {subscription?.resumable_until ? (
+        <p className={textRole('caption')}>
+          You can resume until <DisplayTime value={subscription.resumable_until} dateOnly />.
+        </p>
+      ) : null}
+      {cancellation.resumeError ? (
+        <Alert tone="danger">
+          {billingErrorMessage(cancellation.resumeError, 'The plan could not be resumed.')}
+        </Alert>
+      ) : null}
+    </>
   );
 }
 

@@ -32,7 +32,7 @@ import {
 import { changeRequest, changePlan } from '../billing/plan-changes.ts';
 import { identitySchema, conflict } from '../billing/contracts.ts';
 import { offerRead, claimOffer, endOffer, claimRequest } from '../billing/journeys.ts';
-import { cancelSubscription } from '../billing/cancellation.ts';
+import { cancelSubscription, resumeSubscription } from '../billing/cancellation.ts';
 import { checkoutAvailable, configured, verifyCallback } from '../billing/razorpay.ts';
 import { onCheckoutAllowList } from '../billing/checkout-access.ts';
 import { receiveWebhook } from '../billing/webhooks.ts';
@@ -102,7 +102,8 @@ export const billingRoutes = [
     ...purchaseRecovery,
     path: `${root}/entitlement`,
     response: billingEntitlementSchema,
-    handle: ({ c, db }) => entitlementRead(db, c.get('workspace').workspaceId, new Date()),
+    handle: ({ c, db, config }) =>
+      entitlementRead(db, config, c.get('workspace').workspaceId, new Date()),
   }),
   defineRoute({
     ...privateRoute,
@@ -220,6 +221,13 @@ export const billingRoutes = [
     method: 'delete',
     response: subscriptionChangeSchema,
     handle: ({ c, db, config }) => cancelSubscription(db, config, c.get('workspace').workspaceId),
+  }),
+  defineRoute({
+    ...privateRoute,
+    path: `${root}/subscription/resume`,
+    method: 'post',
+    response: subscriptionChangeSchema,
+    handle: ({ c, db, config }) => resumeSubscription(db, config, c.get('workspace').workspaceId),
   }),
   defineRoute({
     ...privateRoute,

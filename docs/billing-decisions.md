@@ -317,6 +317,17 @@ GST rate has one authority: it is frozen with each India catalog price, plans
 and items alike, and quotes use that rate, never the setting it was authored
 from.
 
+**B46 — Owner, 2026-10-11.** A customer can resume a scheduled cancellation.
+Razorpay cannot undo a cancellation it has received, so CiteLadder holds it
+and sends it only shortly before renewal; resuming clears it until then.
+Engineering: the lead is `BILLING_CANCELLATION_SEND_LEAD_SECONDS` (two days, so
+it lands before any UPI AutoPay pre-debit notice), the subscription sweep
+retries the send every reconciliation interval, and the send is committed
+before the provider call so a resume cannot race it. Gap: if every send in that
+window fails, Razorpay renews once; the customer keeps that paid month and the
+cancellation applies at its end. Refunding that renewal is an operator Dashboard
+refund today, not automatic.
+
 ## Owner inputs still required
 
 Not decisions; needed only for India checkout and live enablement: GST rate,
