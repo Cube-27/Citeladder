@@ -9,6 +9,7 @@ import { ApiError } from '../errors.ts';
 import { requireTeamMembers } from '../entitlements/occupancy.ts';
 import { recordSecurityEvent } from '../auth/security-events.ts';
 import { requiresEmailVerification } from '../auth/eligibility.ts';
+import { roleAllows } from '../auth/workspace.ts';
 import {
   assignableRoleSchema,
   lockAuthorizedWorkspace,
@@ -229,6 +230,19 @@ export function acceptInvitation(db: Database, actorId: string, token: string) {
       invitation.expires_at <= now ||
       user.email.trim().toLowerCase() !== invitation.email_normalized
     )
+      refusal('invitation_invalid', 400);
+    // A link is only as good as its issuer's standing when it is used.
+    const issuer = invitation.invited_by_user_id
+      ? await trx
+          .selectFrom('workspace_members')
+          .innerJoin('users', 'users.id', 'workspace_members.user_id')
+          .select('workspace_members.role')
+          .where('workspace_members.workspace_id', '=', workspace.id)
+          .where('workspace_members.user_id', '=', invitation.invited_by_user_id)
+          .where('users.is_active', '=', true)
+          .executeTakeFirst()
+      : undefined;
+    if (!invitation.accepted_at && !(issuer && roleAllows(issuer.role, 'manage_members')))
       refusal('invitation_invalid', 400);
     let member = await trx
       .selectFrom('workspace_members')

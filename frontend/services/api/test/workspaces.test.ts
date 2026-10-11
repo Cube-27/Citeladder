@@ -412,6 +412,13 @@ describe('invitations follow their issuer authority', () => {
     const beforeRemoval = await invite(adminCookie);
     expect(await member()).toBe(204);
     expect(await beforeRemoval()).toBe(400);
+    // An issuer disabled by an operator keeps membership, but their links stop.
+    const other = await fixtures.user();
+    actors.push(other);
+    await fixtures.member(space, other, 'admin');
+    const fromDisabled = await invite(await userCookie(other));
+    await db.updateTable('users').set({ is_active: false }).where('id', '=', other).execute();
+    expect(await fromDisabled()).toBe(400);
     expect(await ownersLink()).toBe(200);
   });
 });

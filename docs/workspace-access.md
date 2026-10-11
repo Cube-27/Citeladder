@@ -140,7 +140,8 @@ fresh MCP consent, and revokes the API keys that person created in the workspace
 (`creator_removed`). Removal, departure, or a demotion to a role that cannot
 manage members also revokes the pending invitations that person issued, so a
 link they sent cannot restore access after the change; resending a link makes
-the resender its issuer. An [API key](public-api.md) acts for its creator: its
+the resender its issuer. Acceptance also requires the issuer to be active and
+still able to manage members. An [API key](public-api.md) acts for its creator: its
 scopes intersect the creator's current role on every request, so a demotion
 narrows it at once, a disabled or unverified creator stops it, and only Owners
 and Admins (`manage_credentials`) create or revoke keys.
