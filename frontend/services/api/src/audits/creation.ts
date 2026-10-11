@@ -278,9 +278,10 @@ async function persistTasks(
   const inserted = [];
   for (const [position, slot] of slots.entries()) {
     const route = plan.routes.find((row) => row.logical_engine === slot.engine)!;
-    const prompt = snapshots.prompts[slot.prompt]!;
+    const prompt = snapshots.prompts[slot.prompt]!,
+      engine = snapshots.engines.get(slot.engine)!;
     const taskId = randomUUID();
-    inserted.push({ taskId, slot, route });
+    inserted.push({ taskId, slot, route, engine });
     await db
       .insertInto('audit_tasks')
       .values({
@@ -289,7 +290,7 @@ async function persistTasks(
         project_id: scope.projectId,
         audit_id: auditId,
         prompt_snapshot_id: prompt.id,
-        engine_snapshot_id: snapshots.engines.get(slot.engine)!.id,
+        engine_snapshot_id: engine.id,
         prompt_index: slot.prompt,
         repetition: slot.repetition,
         randomized_position: position,
@@ -342,8 +343,7 @@ async function persistTasks(
     taskIds: inserted.map((task) => task.taskId),
     at,
   });
-  for (const [index, { taskId, slot, route }] of inserted.entries()) {
-    const engine = snapshots.engines.get(slot.engine)!;
+  for (const [index, { taskId, slot, route, engine }] of inserted.entries()) {
     const binding = await bindTask(options, taskId, route, {
       accountId: runs.accountId,
       reservationId: runs.reservationIds[index]!,

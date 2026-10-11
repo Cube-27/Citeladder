@@ -46,12 +46,17 @@ export function groupBy<T, K>(rows: Iterable<T>, key: (row: T) => K): Map<K, [T,
 // Bind parameters per statement stay far below PostgreSQL's 65,535 limit.
 const ID_CHUNK = 5000;
 
+/** `items` split into consecutive slices of at most `size`. */
+export function chunksOf<T>(items: readonly T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let at = 0; at < items.length; at += size) chunks.push(items.slice(at, at + size));
+  return chunks;
+}
+
 /** `read` over `ids` in bounded chunks, run concurrently and concatenated. */
 export async function chunked<T>(
   ids: readonly string[],
   read: (chunk: string[]) => Promise<T[]>,
 ): Promise<T[]> {
-  const chunks: string[][] = [];
-  for (let at = 0; at < ids.length; at += ID_CHUNK) chunks.push(ids.slice(at, at + ID_CHUNK));
-  return (await Promise.all(chunks.map(read))).flat();
+  return (await Promise.all(chunksOf(ids, ID_CHUNK).map(read))).flat();
 }

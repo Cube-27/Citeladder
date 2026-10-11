@@ -327,11 +327,10 @@ async function metered<T>(
     try {
       await settleCall(db, id, usage, error !== null, error);
     } catch (error_) {
-      logger.warning('billing.platform_call_unsettled', {
+      logger.exception('billing.platform_call_unsettled', error_, {
         workspace_id: context.workspaceId,
         feature: context.feature,
         call_id: id,
-        exception: error_ instanceof Error ? error_.message : String(error_),
       });
     }
   };

@@ -8,7 +8,7 @@ import { accountState, drawOrder } from './state.ts';
 import { digest } from '../billing/contracts.ts';
 import { getLogger } from '../logging.ts';
 import { compareText } from '../text-order.ts';
-import { isNonEmpty } from '../lists.ts';
+import { chunksOf, isNonEmpty } from '../lists.ts';
 
 export class LedgerError extends Error {}
 export type Subject =
@@ -43,7 +43,10 @@ function verifySubject(db: Database, subject: Subject) {
     .executeTakeFirst();
 }
 
-/** Draws `units` from grants in draw order against their remaining balances. */
+/**
+ * Draws `units` from grants in draw order against their remaining balances,
+ * counting what it draws as reserved so the next draw sees it.
+ */
 function allocate(
   grants: readonly { id: string; value: number }[],
   balances: Map<string, { reserved: number; consumed: number }>,
@@ -54,14 +57,18 @@ function allocate(
   for (const grant of grants) {
     const balance = balances.get(grant.id) ?? { reserved: 0, consumed: 0 };
     const take = Math.min(left, Math.max(0, grant.value - balance.reserved - balance.consumed));
-    if (take) allocations.push({ grantId: grant.id, units: take });
+    if (take) {
+      allocations.push({ grantId: grant.id, units: take });
+      balances.set(grant.id, { ...balance, reserved: balance.reserved + take });
+    }
     left -= take;
   }
   return { allocations, left };
 }
 
 type Hold = { subject: Subject; units: number; key: string };
-// Rows per batched ledger query, well under PostgreSQL's bind-parameter limit.
+// Rows per batched ledger statement, well under PostgreSQL's bind-parameter limit;
+// chunks run in sequence because they share the caller's transaction.
 const CHUNK = 500;
 
 /** Callers pass their transaction and commit the hold before dispatch. */
@@ -79,16 +86,12 @@ async function missingSubject(db: Database, subjects: readonly Subject[]) {
   const tasks = subjects.filter((subject) => subject.kind === 'audit');
   if (tasks.length) {
     const found = new Set<string>();
-    for (let start = 0; start < tasks.length; start += CHUNK) {
-      const chunk = tasks.slice(start, start + CHUNK);
+    for (const chunk of chunksOf(tasks, CHUNK)) {
+      const ids = chunk.map((task) => task.id);
       const rows = await db // NOSONAR -- chunks share the transaction and its lock.
         .selectFrom('audit_tasks')
         .select(['id', 'audit_id', 'workspace_id'])
-        .where(
-          'id',
-          'in',
-          chunk.map((task) => task.id),
-        )
+        .where('id', 'in', ids)
         .execute();
       for (const row of rows) found.add(`${row.id}:${row.audit_id}:${row.workspace_id}`);
     }
@@ -120,13 +123,8 @@ export async function reserveUsages(
     throw new LedgerError('idempotency_key_reused');
   await advisoryXactLock(db, policy.entitlements.capacity_lock, accountId);
   // After the lock, so a project deleted under it is never reserved against.
-  if (
-    await missingSubject(
-      db,
-      holds.map((hold) => hold.subject),
-    )
-  )
-    throw new LedgerError('subject_not_found');
+  const subjects = holds.map((hold) => hold.subject);
+  if (await missingSubject(db, subjects)) throw new LedgerError('subject_not_found');
   const state = await accountState(db, workspaceId, accountId, at);
   const fingerprint = ({ subject, units }: Hold) =>
     subject.kind === 'audit'
@@ -140,13 +138,15 @@ export async function reserveUsages(
         })
       : digest({ accountId, subject, units, capability });
   const priors = new Map<string, Entry>();
-  const keys = holds.map((hold) => hold.key);
-  for (let start = 0; start < keys.length; start += CHUNK)
+  for (const keys of chunksOf(
+    holds.map((hold) => hold.key),
+    CHUNK,
+  ))
     for (const row of await db // NOSONAR -- chunks share the transaction and its lock.
       .selectFrom('consumable_ledger')
       .selectAll()
       .where('billing_account_id', '=', accountId)
-      .where('idempotency_key', 'in', keys.slice(start, start + CHUNK))
+      .where('idempotency_key', 'in', keys)
       .execute())
       priors.set(row.idempotency_key, row);
   for (const hold of holds) {
@@ -193,11 +193,6 @@ export async function reserveUsages(
       const reservationId = randomUUID();
       ids.set(key, reservationId);
       for (const [index, allocation] of allocations.entries()) {
-        const balance = balances.get(allocation.grantId) ?? { reserved: 0, consumed: 0 };
-        balances.set(allocation.grantId, {
-          ...balance,
-          reserved: balance.reserved + allocation.units,
-        });
         rows.push({
           id: randomUUID(),
           billing_account_id: accountId,
@@ -224,11 +219,8 @@ export async function reserveUsages(
         });
       }
     }
-    for (let start = 0; start < rows.length; start += CHUNK)
-      await db // NOSONAR -- chunks share the transaction and its lock.
-        .insertInto('consumable_ledger')
-        .values(rows.slice(start, start + CHUNK))
-        .execute();
+    for (const chunk of chunksOf(rows, CHUNK))
+      await db.insertInto('consumable_ledger').values(chunk).execute(); // NOSONAR -- chunks share the transaction and its lock.
   }
   return holds.map((hold) => priors.get(hold.key)?.reservation_id ?? ids.get(hold.key)!);
 }

@@ -84,9 +84,13 @@ export const billingRoutes = [
     response: billingCatalogSchema,
     handle: async ({ c, db, config }, { query }) => {
       const workspaceId = c.get('workspace').workspaceId;
+      const [allowListed, mode] = await Promise.all([
+        onCheckoutAllowList(db, config, workspaceId),
+        workspaceCredentialMode(db, workspaceId),
+      ]);
       return publicCatalog(db, config, query.country?.trim().toUpperCase() ?? null, {
-        allowListed: await onCheckoutAllowList(db, config, workspaceId),
-        mode: await workspaceCredentialMode(db, workspaceId),
+        allowListed,
+        mode,
       });
     },
   }),
