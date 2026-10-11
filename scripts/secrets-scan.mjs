@@ -19,7 +19,10 @@ const version = /GITLEAKS_VERSION:\s*([\d.]+)/u.exec(
 )?.[1];
 if (!version) throw new Error('GITLEAKS_VERSION is missing from ci.yml.');
 
-if (spawnSync('docker', ['version'], { stdio: 'ignore' }).status !== 0) {
+// Developer tooling runs `docker` from the caller's PATH, like quality.mjs runs git and pnpm.
+const docker = (args, options) => spawnSync('docker', args, options); // NOSONAR: trusted PATH.
+
+if (docker(['version'], { stdio: 'ignore' }).status !== 0) {
   process.stderr.write(
     'Docker is unavailable; skipping the local secrets scan (CI still runs it).\n',
   );
@@ -39,8 +42,7 @@ const scan = mkdtempSync(join(tmpdir(), 'citeladder-secrets-'));
 let status;
 try {
   for (const path of changed) cpSync(join(root, path), join(scan, path));
-  status = spawnSync(
-    'docker',
+  status = docker(
     [
       'run',
       '--rm',
