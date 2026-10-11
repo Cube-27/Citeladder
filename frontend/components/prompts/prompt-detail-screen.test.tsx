@@ -54,6 +54,7 @@ const point = (
   mention_rate: mention,
   owned_citation_rate: cited,
   answer_states: null,
+  source_analysis_ids: [],
   comparison_key: 'key',
   analyzer_version: 'v1',
   scoring_rule_version: 'v1',
@@ -74,6 +75,7 @@ function history(latestStates: PromptHistory['points'][number]['answer_states'])
     ],
     implementations: [
       {
+        implementation_event_id: RUN(8),
         action_id: EARNED,
         title: 'reviews.example/crm',
         status: 'measuring',

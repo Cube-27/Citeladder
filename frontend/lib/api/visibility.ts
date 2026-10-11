@@ -327,7 +327,6 @@ export const visibilityApi = {
     auditId?: string,
     options?: ApiRequestOptions,
     filters?: {
-      market?: string;
       engine?: string;
       cohort?: string;
       baseline_id?: string;

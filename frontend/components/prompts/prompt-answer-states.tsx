@@ -20,7 +20,7 @@ import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { agentHandoffHref } from '@/lib/agent/handoff';
 import type { PromptMetricItem } from '@/lib/api/types';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
-import { formatDisplayDate } from '@/lib/format';
+import { formatDisplayDate, pluralCount } from '@/lib/format';
 import { ANSWER_STATES, competitorGaps } from '@/lib/prompts/history';
 import { engineLabel } from '@/lib/providers/catalog';
 
@@ -74,7 +74,7 @@ function LatestRun({ latest }: Readonly<{ latest: PromptMetricItem }>) {
       {counts ? (
         <p className="type-caption">
           {counts.responses} of {counts.expected ?? counts.responses} answers succeeded across{' '}
-          {outcomes.length} {outcomes.length === 1 ? 'engine' : 'engines'}
+          {pluralCount(outcomes.length, 'engine')}
           {counts.failed ? `; ${counts.failed} failed` : ''}
           {counts.not_run ? `; ${counts.not_run} not run` : ''}.{' '}
           <TextLink href={`/runs/${latest.audit_id}`}>Read the answers</TextLink>
@@ -109,8 +109,7 @@ function LatestRun({ latest }: Readonly<{ latest: PromptMetricItem }>) {
               >
                 <span className={textRole('itemTitle')}>{gap.name}</span>
                 <span className="type-caption">
-                  {gap.answers} {gap.answers === 1 ? 'answer' : 'answers'} on{' '}
-                  {gap.engines.map(engineLabel).join(', ')}
+                  {pluralCount(gap.answers, 'answer')} on {gap.engines.map(engineLabel).join(', ')}
                 </span>
               </li>
             ))}

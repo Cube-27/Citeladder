@@ -642,6 +642,15 @@ describe('GET /visibility/prompts/{prompt_id}/history', () => {
         false,
       ],
     ]);
+    // Each point names the persisted answers it counted.
+    const zeroAnswers = await db
+      .selectFrom('response_analyses')
+      .select('id')
+      .where('audit_id', '=', zero)
+      .execute();
+    expect(record((body.points as Row[])[2]).source_analysis_ids).toEqual(
+      zeroAnswers.map((row) => row.id),
+    );
     expect(record((body.points as Row[])[1]).counts).toMatchObject({
       state: 'no_observations',
       responses: 0,
@@ -742,18 +751,17 @@ describe('GET /visibility/prompts/{prompt_id}/history', () => {
       request_fingerprint: 'fingerprint',
       created_at: new Date(),
     });
+    const earnedDeclaration = declare(earned.id, '2026-03-05T12:00:00Z', [otherId, promptId]);
     await db
       .insertInto('opportunity_implementation_events')
-      .values([
-        declare(earned.id, '2026-03-05T12:00:00Z', [otherId, promptId]),
-        declare(unrelated.id, '2026-03-04T12:00:00Z', [otherId]),
-      ])
+      .values([earnedDeclaration, declare(unrelated.id, '2026-03-04T12:00:00Z', [otherId])])
       .execute();
 
     const { body } = await get(tenant, history(tenant, promptId));
 
     expect(body.implementations).toEqual([
       {
+        implementation_event_id: earnedDeclaration.id,
         action_id: earned.id,
         title: 'reviews.example/crm',
         status: 'implemented',
@@ -761,6 +769,53 @@ describe('GET /visibility/prompts/{prompt_id}/history', () => {
       },
     ]);
     expect(record(body.latest).action_id).toBe(promptAction.id);
+
+    // An Action whose evidence was cleared is no longer offered as the hand-off.
+    await db
+      .updateTable('actions')
+      .set({ evidence_cleared_at: new Date() })
+      .where('id', '=', promptAction.id)
+      .execute();
+    const cleared = await get(tenant, history(tenant, promptId));
+    expect(record(cleared.body.latest).action_id).toBeNull();
+  });
+
+  it('reads a comparison prompt in its own cohort unless one is named', async () => {
+    const tenant = await fixtures.tenant();
+    const promptId = await trackedPrompt(
+      db,
+      await promptSet(db, tenant.projectId),
+      'acme vs globex',
+    );
+    await db
+      .updateTable('prompts')
+      .set({ cohort: 'comparison' })
+      .where('id', '=', promptId)
+      .execute();
+    const auditId = await fixtures.audit(tenant, { completedAt: new Date('2026-03-02T00:00:00Z') });
+    await fixtures.execution(tenant, {
+      auditId,
+      promptIndex: 0,
+      promptText: 'acme vs globex',
+      cohort: 'comparison',
+      analysis: { brandMentioned: true },
+    });
+    await fixtures.promptScore(tenant, auditId, {
+      promptIndex: 0,
+      promptText: 'acme vs globex',
+      composite: 50,
+      cohort: 'comparison',
+      promptId,
+    });
+
+    const own = await get(tenant, history(tenant, promptId));
+    const core = await get(tenant, history(tenant, promptId), { cohort: 'core' });
+
+    expect([
+      own.body.cohort,
+      (own.body.points as Row[]).map((point) => point.mention_rate),
+    ]).toEqual(['comparison', [1]]);
+    expect([core.body.cohort, core.body.points]).toEqual(['core', []]);
   });
 
   it("is a 404 for another workspace's prompt", async () => {

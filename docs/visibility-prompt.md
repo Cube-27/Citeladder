@@ -648,18 +648,21 @@ or a model recommendation.
 
 `GET /visibility/prompts/{prompt_id}/history`
 ([prompt history](../frontend/services/api/src/visibility/prompt-history.ts))
-reads one tracked prompt in one market (`market`, optional `engine`, `cohort`):
+reads one tracked prompt in one market (`market`, optional `engine`, and
+`cohort`, which defaults to the prompt's own):
 the newest `trend_max_points` dashboard-ready brand runs that scored it in
 `prompt_metric_snapshots`, oldest first, each with its mention rate and owned
 citation rate over that run's persisted answers for the prompt, the four
-answer states and the snapshot id. A run with no successful answer has null
+answer states, the snapshot id and the ids of the answers it counted. A run with no successful answer has null
 rates (unavailable, never zero), and `comparable_with_previous` is false when
 the frozen comparison key, prompt text or analyzer/scoring versions changed.
 `implementations` lists the Actions whose frozen declaration checks measure the
-prompt (prompt-targeted and earned), at their go-live time; `latest` is the
+prompt (prompt-targeted and earned), with each declaration's id and go-live
+time (the newest `trend_max_points` kept); `latest` is the
 newest such run's prompt row with per-engine outcomes. Prompt rows carry
 `answer_states` (mentioned and cited, mentioned only, cited only, neither; one
-answer counted once) and `action_id`, the Action that targets the prompt.
+answer counted once) and `action_id`, the live Action that targets the prompt
+(an Action whose evidence was cleared is not offered).
 
 `/prompts/{prompt_id}` charts mention and owned citation rates per run, breaks
 the line at non-comparable runs, and marks each implementation, with the list

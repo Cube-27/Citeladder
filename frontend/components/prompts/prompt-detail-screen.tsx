@@ -20,6 +20,7 @@ import { ledgerClasses } from '@/components/ui/workspace';
 import { MarketFilter } from '@/components/visibility/visibility-toolbar';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayDate } from '@/lib/format';
+import { formatWholePercent } from '@/lib/visibility/dashboard';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { PromptHistory } from '@/lib/api/types';
 import { visibilityApi } from '@/lib/api/visibility';
@@ -123,7 +124,7 @@ function HistoryCard({ history }: Readonly<{ history: PromptHistory }>) {
               height={168}
               xAxisLabel="Run date"
               yAxisLabel="Rate (%)"
-              formatTick={(value) => `${Math.round(value)}%`}
+              formatTick={formatWholePercent}
               className="h-auto w-full"
             />
             <ul className="flex flex-wrap items-center gap-x-4 gap-y-1">

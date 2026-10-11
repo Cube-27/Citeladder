@@ -14,15 +14,19 @@ import type {
   promptHistoryPointSchema,
   promptHistorySchema,
 } from '@citeladder/contracts/visibility';
+import { promptCohortSchema } from '@citeladder/contracts/project';
 import { sql } from 'kysely';
 import type { z } from 'zod';
 
 import { frozenComparisonKey } from '../analysis/comparison.ts';
 import { policy } from '../config.ts';
+import { notFound } from '../errors.ts';
 import type { Database } from '../db/database.ts';
 import { wireUtc, utcTextOf } from '../db/timestamps.ts';
 import { groupBy } from '../lists.ts';
+import { compareText } from '../text-order.ts';
 import { effectiveStatus } from '../opportunities/action-status.ts';
+import { scopedPrompt } from '../prompts/prompts.ts';
 import { ratio } from './metrics.ts';
 import { answerStates, getPromptMetrics, outcomeCounts } from './prompts.ts';
 import { marketOf, type RunScope } from './runs.ts';
@@ -34,29 +38,32 @@ type PromptHistory = z.input<typeof promptHistorySchema>;
 type HistoryPoint = z.input<typeof promptHistoryPointSchema>;
 type Implementation = z.input<typeof promptHistoryImplementationSchema>;
 
-export class PromptNotFoundError extends Error {}
-
 export type PromptHistoryQuery = {
   promptId: string;
   logicalEngine: string | null;
-  cohort: PromptHistory['cohort'];
+  /** Omitted reads the prompt's own cohort. */
+  cohort: PromptHistory['cohort'] | null;
 };
+
+type ResolvedQuery = PromptHistoryQuery & { cohort: PromptHistory['cohort'] };
 
 export async function getPromptHistory(
   db: Database,
   scope: RunScope,
-  query: PromptHistoryQuery,
+  request: PromptHistoryQuery,
 ): Promise<PromptHistory> {
-  validateEngineAndRange({ logicalEngine: query.logicalEngine, fromAt: null, toAt: null });
+  validateEngineAndRange({ logicalEngine: request.logicalEngine, fromAt: null, toAt: null });
+  const prompt = await scopedPrompt(db, scope.workspaceId, request.promptId);
+  if (prompt.project_id !== scope.projectId) throw notFound('Prompt');
+  // A prompt is measured in its own cohort; one no read serves falls back to core.
+  const own = promptCohortSchema.parse(prompt.cohort);
+  const query: ResolvedQuery = {
+    ...request,
+    cohort:
+      request.cohort ??
+      (visibility.requestable_cohorts.includes(own) ? own : promptCohortSchema.enum.core),
+  };
   validateCohort(query.cohort);
-  const prompt = await db
-    .selectFrom('prompts')
-    .innerJoin('prompt_sets', 'prompt_sets.id', 'prompts.prompt_set_id')
-    .select(['prompts.id', 'prompts.text', 'prompts.topic_id', 'prompts.status'])
-    .where('prompt_sets.project_id', '=', scope.projectId)
-    .where('prompts.id', '=', query.promptId)
-    .executeTakeFirst();
-  if (prompt === undefined) throw new PromptNotFoundError('Prompt not found');
   const [points, implementations] = await Promise.all([
     historyPoints(db, scope, query),
     implementationMarkers(db, scope, query.promptId),
@@ -66,6 +73,7 @@ export async function getPromptHistory(
     ? ((
         await getPromptMetrics(db, scope, {
           auditId: newest.audit_id,
+          promptId: query.promptId,
           auditIds: null,
           baselineAuditIds: null,
           logicalEngine: query.logicalEngine,
@@ -75,7 +83,7 @@ export async function getPromptHistory(
       ).find((item) => item.prompt_id === query.promptId) ?? null)
     : null;
   return {
-    prompt,
+    prompt: { id: prompt.id, text: prompt.text, topic_id: prompt.topic_id, status: prompt.status },
     cohort: query.cohort,
     market_id: marketOf(scope),
     logical_engine: query.logicalEngine,
@@ -89,7 +97,7 @@ export async function getPromptHistory(
 async function historyPoints(
   db: Database,
   scope: RunScope,
-  query: PromptHistoryQuery,
+  query: ResolvedQuery,
 ): Promise<HistoryPoint[]> {
   const snapshots = (
     await db
@@ -125,16 +133,10 @@ async function historyPoints(
   const cohorts = [...selectedCohorts(query.cohort)];
   let answers = db
     .selectFrom('response_analyses')
-    .select(['audit_id', 'prompt_index', 'brand_mentioned', 'owned_domain_cited'])
+    .select(['id', 'audit_id', 'prompt_index', 'brand_mentioned', 'owned_domain_cited'])
     .where('workspace_id', '=', scope.workspaceId)
     .where('cohort', 'in', cohorts)
-    .where((eb) =>
-      eb.or(
-        pairs.map(({ audit, index }) =>
-          eb.and([eb('audit_id', '=', audit), eb('prompt_index', '=', index)]),
-        ),
-      ),
-    );
+    .where(sql<boolean>`(audit_id, prompt_index) in (${pairList(pairs)})`);
   if (query.logicalEngine) answers = answers.where('logical_engine', '=', query.logicalEngine);
   let tasks = db
     .selectFrom('audit_tasks as task')
@@ -142,13 +144,7 @@ async function historyPoints(
     .select(['task.audit_id', 'prompt.prompt_index', 'task.status'])
     .where('task.workspace_id', '=', scope.workspaceId)
     .where('prompt.cohort', 'in', cohorts)
-    .where((eb) =>
-      eb.or(
-        pairs.map(({ audit, index }) =>
-          eb.and([eb('task.audit_id', '=', audit), eb('prompt.prompt_index', '=', index)]),
-        ),
-      ),
-    );
+    .where(sql<boolean>`(task.audit_id, prompt.prompt_index) in (${pairList(pairs)})`);
   if (query.logicalEngine) tasks = tasks.where('task.logical_engine', '=', query.logicalEngine);
   const [answerRows, taskRows] = await Promise.all([answers.execute(), tasks.execute()]);
   const key = (audit: string, index: number) => `${audit}:${index}`;
@@ -180,6 +176,7 @@ async function historyPoints(
       mention_rate: ratio(counts.brand_responses, counts.responses),
       owned_citation_rate: ratio(counts.owned_citation_responses, counts.responses),
       answer_states: answerStates(answered),
+      source_analysis_ids: answered.map((answer) => answer.id).sort(compareText),
       comparison_key: comparisonKey,
       analyzer_version: row.analyzer_version,
       scoring_rule_version: row.scoring_rule_version,
@@ -188,6 +185,10 @@ async function historyPoints(
     };
   });
 }
+
+/** `(audit_id, prompt_index)` row values for a tuple `in` list. */
+const pairList = (pairs: readonly { audit: string; index: number }[]) =>
+  sql.join(pairs.map(({ audit, index }) => sql`(${audit}::uuid, ${index}::int)`));
 
 /** Declarations whose frozen checks measure this prompt, oldest go-live first. */
 async function implementationMarkers(
@@ -200,6 +201,7 @@ async function implementationMarkers(
     .selectFrom('opportunity_implementation_events as ie')
     .innerJoin('actions', 'actions.id', 'ie.action_id')
     .select([
+      'ie.id',
       'ie.action_id',
       'actions.target_label',
       effectiveStatus().as('status'),
@@ -210,11 +212,13 @@ async function implementationMarkers(
     .where('actions.workspace_id', '=', scope.workspaceId)
     .where('actions.project_id', '=', scope.projectId)
     .where(sql<boolean>`ie.expected_checks @> ${checks}::jsonb`)
-    .orderBy('ie.declared_implemented_at', 'asc')
-    .orderBy('ie.id', 'asc')
+    // The newest markers survive the cap; the response lists them oldest first.
+    .orderBy('ie.declared_implemented_at', 'desc')
+    .orderBy('ie.id', 'desc')
     .limit(visibility.trend_max_points)
     .execute();
-  return rows.map((row) => ({
+  return rows.reverse().map((row) => ({
+    implementation_event_id: row.id,
     action_id: row.action_id,
     title: row.target_label,
     status: actionStatusSchema.parse(row.status),

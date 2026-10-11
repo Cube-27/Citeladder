@@ -92,7 +92,7 @@ type Cohort = z.infer<typeof promptCohortSchema>;
 const cohortColumns = (cohort: Cohort) => ({ cohort, branded: BRANDED.has(cohort) });
 
 /** A prompt in the caller's workspace with its project, or `Prompt not found`. */
-async function scopedPrompt(db: Kysely<DB>, workspaceId: string, promptId: string) {
+export async function scopedPrompt(db: Kysely<DB>, workspaceId: string, promptId: string) {
   const row = await db
     .selectFrom('prompts')
     .innerJoin('prompt_sets', 'prompt_sets.id', 'prompts.prompt_set_id')

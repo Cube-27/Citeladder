@@ -3,14 +3,14 @@ import type { AnswerStates } from '@citeladder/contracts/visibility';
 import type { TrendEvent, TrendPoint } from '@/components/ui/trend-chart';
 import type { PromptHistory, PromptMetricItem } from '@/lib/api/types';
 import { formatDisplayDate, formatDisplayShortDate } from '@/lib/format';
+import { formatWholePercent } from '@/lib/visibility/dashboard';
 
 type HistoryPoint = PromptHistory['points'][number];
 type Outcome = NonNullable<PromptMetricItem['outcomes']>[number];
 
-/** Where one prompt's history lives; `market` keeps the reader's market. */
-export function promptHistoryHref(promptId: string, market?: string | null): `/${string}` {
-  const query = market ? `?market=${encodeURIComponent(market)}` : '';
-  return `/prompts/${encodeURIComponent(promptId)}${query}`;
+/** Where one prompt's history lives. */
+export function promptHistoryHref(promptId: string): `/${string}` {
+  return `/prompts/${encodeURIComponent(promptId)}`;
 }
 
 const percent = (rate: number | null) => (rate === null ? null : rate * 100);
@@ -23,9 +23,8 @@ const percent = (rate: number | null) => (rate === null ? null : rate * 100);
 export function mentionRatePoints(points: readonly HistoryPoint[], timeZone: string): TrendPoint[] {
   return points.map((point) => {
     const value = percent(point.mention_rate);
-    const date = formatDisplayDate(point.completed_at, timeZone);
     return {
-      label: `${date} · ${value === null ? 'unavailable' : `${Math.round(value)}%`}`,
+      label: `${formatDisplayDate(point.completed_at, timeZone)} · ${formatWholePercent(value)}`,
       axisLabel: formatDisplayShortDate(point.completed_at, timeZone),
       value,
       timestamp: new Date(point.completed_at).getTime(),
@@ -121,7 +120,9 @@ export function missingPrompts(items: readonly PromptMetricItem[]): MissingPromp
             promptId: item.prompt_id,
             text: item.prompt_text,
             actionId: item.action_id ?? null,
-            engines: [...new Set(gapped.map((outcome) => outcome.logical_engine))].sort(),
+            engines: [...new Set(gapped.map((outcome) => outcome.logical_engine))].sort(
+              (left, right) => left.localeCompare(right),
+            ),
             competitors: gaps.map((gap) => gap.name),
           },
         },

@@ -48,7 +48,7 @@ import { getVisibilityEvidence } from '../visibility/evidence.ts';
 import { getVisibilityFanout } from '../visibility/fanout.ts';
 import { getMarketVisibility } from '../visibility/markets.ts';
 import { getPerception, getPerceptionQuotes } from '../visibility/perception.ts';
-import { getPromptHistory, PromptNotFoundError } from '../visibility/prompt-history.ts';
+import { getPromptHistory } from '../visibility/prompt-history.ts';
 import { getPromptMetrics } from '../visibility/prompts.ts';
 import {
   AnalysisNotFoundError,
@@ -337,24 +337,20 @@ export const visibilityRoutes = [
     path: '/api/v1/projects/{project_id}/visibility/prompts/{prompt_id}/history',
     params: {
       path: { ...PROJECT_PATH, prompt_id: { scalar: { kind: 'uuid' }, required: true } },
-      query: { ...MARKET, engine: { scalar: { kind: 'str' } }, cohort: COHORT },
+      // No cohort reads the prompt's own.
+      query: { ...MARKET, engine: { scalar: { kind: 'str' } }, cohort: { scalar: COHORT.scalar } },
     },
     response: promptHistorySchema,
     async handle({ c, db }, { path, query }) {
       const workspace = c.get('workspace');
       await requireProject(db, workspace, path.project_id);
-      try {
-        return await selectionErrors(() =>
-          getPromptHistory(db, marketScope(workspace.workspaceId, path.project_id, query.market), {
-            promptId: path.prompt_id,
-            logicalEngine: query.engine,
-            cohort: query.cohort,
-          }),
-        );
-      } catch (error) {
-        if (error instanceof PromptNotFoundError) throw notFound('Prompt');
-        throw error;
-      }
+      return selectionErrors(() =>
+        getPromptHistory(db, marketScope(workspace.workspaceId, path.project_id, query.market), {
+          promptId: path.prompt_id,
+          logicalEngine: query.engine,
+          cohort: query.cohort,
+        }),
+      );
     },
   }),
   defineGetRoute({

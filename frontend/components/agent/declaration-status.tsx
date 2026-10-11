@@ -129,14 +129,7 @@ function CheckRow({ check }: Readonly<{ check: ActionDeclaration['checks'][numbe
           <Badge>{CHECK_STATE_LABEL[check.state]}</Badge>
         )}
       </span>
-      {check.subject && check.prompt_id ? (
-        <TextLink href={promptHistoryHref(check.prompt_id)} text="caption">
-          {check.subject}
-        </TextLink>
-      ) : null}
-      {check.subject && !check.prompt_id ? (
-        <span className={textRole('caption', 'break-all')}>{check.subject}</span>
-      ) : null}
+      {check.subject ? <CheckSubject subject={check.subject} promptId={check.prompt_id} /> : null}
       {reason || check.observed_at ? (
         <span className={textRole('caption')}>
           {reason}
@@ -150,6 +143,20 @@ function CheckRow({ check }: Readonly<{ check: ActionDeclaration['checks'][numbe
       ) : null}
     </li>
   );
+}
+
+/** What a check names; a prompt opens its history. */
+function CheckSubject({
+  subject,
+  promptId,
+}: Readonly<{ subject: string; promptId?: string | null }>) {
+  if (promptId)
+    return (
+      <TextLink href={promptHistoryHref(promptId)} text="caption">
+        {subject}
+      </TextLink>
+    );
+  return <span className={textRole('caption', 'break-all')}>{subject}</span>;
 }
 
 function revisionNote(

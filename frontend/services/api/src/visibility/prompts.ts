@@ -49,6 +49,8 @@ type PromptRow = { item: PromptMetricItem; createdAt: string };
 
 export type PromptQuery = {
   auditId: string | null;
+  /** Read only this tracked prompt's row; omitted reads every prompt. */
+  promptId?: string;
   auditIds: string[] | null;
   baselineAuditIds: string[] | null;
   logicalEngine: string | null;
@@ -71,7 +73,7 @@ export async function getPromptMetrics(
   return items;
 }
 
-/** Each row's Action: the one the refresh opened on that prompt, if any. */
+/** Each row's Action: the live one the refresh opened on that prompt, if any. */
 async function attachActions(
   db: Database,
   scope: RunScope,
@@ -85,6 +87,8 @@ async function attachActions(
         .where('workspace_id', '=', scope.workspaceId)
         .where('project_id', '=', scope.projectId)
         .where('target_prompt_id', 'in', promptIds)
+        // An Action whose evidence vanished has nothing left to act on here.
+        .where('evidence_cleared_at', 'is', null)
         .execute()
     : [];
   const byPrompt = new Map(actions.map((row) => [row.target_prompt_id, row.id]));
@@ -136,11 +140,12 @@ async function runRows(
 async function scoreRows(
   db: Database,
   scope: RunScope,
-  query: { cohort: string },
+  query: { cohort: string; promptId?: string },
   auditIds: readonly string[],
 ): Promise<PromptRow[]> {
-  const snapshots = await db
-    .selectFrom('prompt_metric_snapshots')
+  let selected = db.selectFrom('prompt_metric_snapshots');
+  if (query.promptId) selected = selected.where('prompt_id', '=', query.promptId);
+  const snapshots = await selected
     .selectAll()
     .select(utcTextOf(sql.ref('created_at')).as('created_at_text'))
     .where('workspace_id', '=', scope.workspaceId)
@@ -252,11 +257,12 @@ export function answerStates(
 function poolStates(parts: readonly (AnswerStates | null | undefined)[]): AnswerStates | null {
   const present = parts.filter((part) => part != null);
   if (present.length === 0) return null;
+  const total = (key: keyof AnswerStates) => present.reduce((sum, part) => sum + part[key], 0);
   return {
-    mentioned_and_cited: present.reduce((total, part) => total + part.mentioned_and_cited, 0),
-    mentioned_only: present.reduce((total, part) => total + part.mentioned_only, 0),
-    cited_only: present.reduce((total, part) => total + part.cited_only, 0),
-    neither: present.reduce((total, part) => total + part.neither, 0),
+    mentioned_and_cited: total('mentioned_and_cited'),
+    mentioned_only: total('mentioned_only'),
+    cited_only: total('cited_only'),
+    neither: total('neither'),
   };
 }
 

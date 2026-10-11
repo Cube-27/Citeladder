@@ -196,6 +196,8 @@ export const promptHistoryPointSchema = responseObject({
   mention_rate: z.number().nullable(),
   owned_citation_rate: z.number().nullable(),
   answer_states: answerStatesSchema.nullable(),
+  // Provenance: the persisted answers these rates count.
+  source_analysis_ids: z.array(uuid()),
   comparison_key: z.string().nullable(),
   analyzer_version: z.string(),
   scoring_rule_version: z.string(),
@@ -207,6 +209,7 @@ export const promptHistoryPointSchema = responseObject({
 // An Action whose frozen declaration checks measure this prompt, at the time
 // the user said the work went live. A marker, never an attribution.
 export const promptHistoryImplementationSchema = responseObject({
+  implementation_event_id: uuid(),
   action_id: uuid(),
   title: z.string(),
   status: actionStatusSchema,

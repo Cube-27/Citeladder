@@ -4357,6 +4357,11 @@
       "PromptHistoryImplementation": {
         "type": "object",
         "properties": {
+          "implementation_event_id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
           "action_id": {
             "type": "string",
             "format": "uuid",
@@ -4372,7 +4377,7 @@
             "type": "string"
           }
         },
-        "required": ["action_id", "title", "status", "implemented_at"],
+        "required": ["implementation_event_id", "action_id", "title", "status", "implemented_at"],
         "additionalProperties": false
       },
       "PromptHistoryPoint": {
@@ -4408,6 +4413,14 @@
               }
             ]
           },
+          "source_analysis_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
           "comparison_key": {
             "type": ["string", "null"]
           },
@@ -4434,6 +4447,7 @@
           "mention_rate",
           "owned_citation_rate",
           "answer_states",
+          "source_analysis_ids",
           "comparison_key",
           "analyzer_version",
           "scoring_rule_version",
@@ -9076,9 +9090,15 @@
             "in": "query",
             "required": false,
             "schema": {
-              "default": "core",
-              "type": "string",
-              "enum": ["core", "comparison"]
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": ["core", "comparison"]
+                },
+                {
+                  "type": "null"
+                }
+              ]
             }
           }
         ],

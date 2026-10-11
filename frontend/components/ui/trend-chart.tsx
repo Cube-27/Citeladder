@@ -212,10 +212,11 @@ function plotPoints(
     innerWidth: number;
     innerHeight: number;
     domainMax: number;
+    time: TimeAxis | null;
   }>,
 ): PlottedEntry[] {
-  const { padding, gutterLeft, innerWidth, innerHeight, domainMax } = box;
-  const xOf = xScale(data, gutterLeft, innerWidth);
+  const { padding, gutterLeft, innerWidth, innerHeight, domainMax, time } = box;
+  const xOf = xScale(data, time, gutterLeft, innerWidth);
   const seenCount = new Map<string, number>();
   return data.map((entry, index) => {
     const seen = seenCount.get(entry.label) ?? 0;
@@ -235,14 +236,10 @@ function plotPoints(
 
 const clampTo = (value: number, domainMax: number) => Math.max(0, Math.min(domainMax, value));
 
-/**
- * Real time on the x axis when every point carries a timestamp.
- *
- * Falling back to even spacing would draw a run three months late as though it
- * followed the previous one immediately.
- */
+type TimeAxis = { first: number; span: number };
+
 /** The time axis, when every point carries a timestamp and they span time. */
-function timeAxis(data: readonly TrendPoint[]): { first: number; span: number } | null {
+function timeAxis(data: readonly TrendPoint[]): TimeAxis | null {
   const stamps = data.flatMap((entry) =>
     entry.timestamp !== undefined && Number.isFinite(entry.timestamp) ? [entry.timestamp] : [],
   );
@@ -252,12 +249,18 @@ function timeAxis(data: readonly TrendPoint[]): { first: number; span: number } 
   return span > 0 ? { first, span } : null;
 }
 
+/**
+ * Real time on the x axis when every point carries a timestamp.
+ *
+ * Falling back to even spacing would draw a run three months late as though it
+ * followed the previous one immediately.
+ */
 function xScale(
   data: readonly TrendPoint[],
+  time: TimeAxis | null,
   gutterLeft: number,
   innerWidth: number,
 ): (entry: TrendPoint, index: number) => number {
-  const time = timeAxis(data);
   if (time) {
     return (entry) =>
       gutterLeft + (((entry.timestamp ?? time.first) - time.first) / time.span) * innerWidth;
@@ -269,12 +272,11 @@ function xScale(
 
 /** Events inside the plotted time span, in plot coordinates. */
 function plotEvents(
-  data: readonly TrendPoint[],
+  time: TimeAxis | null,
   events: readonly TrendEvent[],
   gutterLeft: number,
   innerWidth: number,
 ) {
-  const time = timeAxis(data);
   if (!time) return [];
   return events.flatMap((event) => {
     const offset = event.timestamp - time.first;
@@ -320,7 +322,9 @@ export function TrendChart({
     yAxisLabel,
   });
   const effectiveDomainMax = domainMax > 0 ? domainMax : 100;
+  const time = timeAxis(data);
   const points = plotPoints(data, {
+    time,
     padding,
     gutterLeft,
     innerWidth,
@@ -332,7 +336,7 @@ export function TrendChart({
   const xTicks = axes ? xAxisTicks(points) : [];
 
   const lineSegments = lineSegmentsOf(points);
-  const markers = plotEvents(data, events, gutterLeft, innerWidth);
+  const markers = plotEvents(time, events, gutterLeft, innerWidth);
   // Comparison lines reuse the primary series' x positions, so the two are read
   // against one scale rather than two charts drawn side by side. A value the
   // series never measured stays a gap here exactly as it does above.

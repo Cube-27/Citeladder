@@ -1,7 +1,7 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
 import { ArrowRight } from 'lucide-react';
+import { useMemo } from 'react';
 
 import { ProjectLink } from '@/components/layout/scoped-link';
 import { Button } from '@/components/ui/button';
@@ -9,10 +9,11 @@ import { ReadError } from '@/components/ui/read-error';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import { EditorialSectionHeader, ledgerClasses } from '@/components/ui/workspace';
-import { queryKeys } from '@/lib/api/query-keys';
-import { visibilityApi } from '@/lib/api/visibility';
 import { missingPrompts, promptHistoryHref, type MissingPrompt } from '@/lib/prompts/history';
+import { resolveProjectRequestScope } from '@/lib/project/request-scope';
 import { engineLabel } from '@/lib/providers/catalog';
+
+import { useLatestPromptMetrics } from '@/components/prompts/use-latest-prompt-measurements';
 
 /** Rows shown on Overview; the rest are one click away in Prompts. */
 const SHOWN = 5;
@@ -26,14 +27,10 @@ export function MissingPrompts({
   projectId,
   workspaceId,
 }: Readonly<{ projectId: string; workspaceId: string }>) {
-  const query = useQuery({
-    queryKey: queryKeys.visibility.prompts(projectId),
-    queryFn: ({ signal }) =>
-      visibilityApi.getPromptMetrics(projectId, undefined, { signal, workspaceId }),
-  });
+  const query = useLatestPromptMetrics(resolveProjectRequestScope(workspaceId, projectId));
+  const rows = useMemo(() => missingPrompts(query.data ?? []), [query.data]);
   // No run yet has nothing to compare, so the section stays out of the way.
-  if (query.isPending || (query.data && query.data.length === 0)) return null;
-  const rows = query.data ? missingPrompts(query.data) : [];
+  if (query.isPending || query.data?.length === 0) return null;
   return (
     <section aria-labelledby="missing-prompts" className="grid gap-3">
       <EditorialSectionHeader
