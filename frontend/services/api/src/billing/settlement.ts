@@ -43,6 +43,33 @@ const terminalStates = new Set(policy.billing.contracts.terminal_subscription_st
 // Halted at the provider: the row stays current, so it blocks a second base
 // subscription, until the sweep's cancellation is confirmed.
 const UNPAID = policy.billing.contracts.subscription_unpaid;
+const CANCELLED = policy.billing.contracts.subscription_cancelled;
+/** A payment whose refunds total its amount no longer pays for its period (B52). */
+const refundedInFull = sql<boolean>`coalesce((
+  select sum(r.amount_minor) from billing_payments r
+  where r.parent_payment_id = billing_payments.id and r.receipt_kind = 'refund'
+), 0) >= billing_payments.amount_minor`;
+
+/** Whether this subscription period's payment was refunded in full (B52). */
+export async function periodRefunded(
+  db: Database,
+  sub: Pick<Subscription, 'id' | 'billing_account_id'>,
+  start: Date | null,
+  end: Date | null,
+) {
+  if (!start || !end) return false;
+  const row = await db
+    .selectFrom('billing_payments')
+    .select('id')
+    .where('subscription_id', '=', sub.id)
+    .where('billing_account_id', '=', sub.billing_account_id)
+    .where('receipt_kind', '=', 'payment')
+    .where('period_start', '=', start)
+    .where('period_end', '=', end)
+    .where(refundedInFull)
+    .executeTakeFirst();
+  return Boolean(row);
+}
 
 /** The frozen revision's display name for a plan, as receipts print it. */
 async function planName(db: Database, revision: string, key: string) {
@@ -350,8 +377,9 @@ async function settlePeriod(
 }
 
 /**
- * A terminal provider state keeps a verified paid period (its end is returned);
- * otherwise the subscription's remaining grants are revoked now.
+ * A terminal provider state keeps a verified paid period (its end is returned)
+ * unless that payment was refunded in full; otherwise the subscription's
+ * remaining grants are revoked now.
  */
 async function endTerminal(
   db: Database,
@@ -369,6 +397,7 @@ async function endTerminal(
     .where('status', '=', 'paid')
     .where('period_start', '<=', now)
     .where('period_end', '>', now)
+    .where(sql<boolean>`not (${refundedInFull})`)
     .orderBy('period_end', 'desc')
     .executeTakeFirst();
   if (paid?.period_end) return paid.period_end;
@@ -378,6 +407,17 @@ async function endTerminal(
     .where('billing_account_id', '=', sub.billing_account_id)
     .where('source_ref', '=', `subscription:${sub.id}`)
     .where((eb) => eb.or([eb('period_end', 'is', null), eb('period_end', '>', now)]))
+    // A grant already revoked by then (a full refund, B52) is not revoked twice.
+    .where(({ not, exists, selectFrom }) =>
+      not(
+        exists(
+          selectFrom('grant_revocations')
+            .select('grant_revocations.id')
+            .whereRef('grant_revocations.grant_id', '=', 'account_grants.id')
+            .where('grant_revocations.effective_from', '<=', now),
+        ),
+      ),
+    )
     .execute();
   await revokeBundle(db, {
     workspaceId,
@@ -415,7 +455,11 @@ async function periodOutcome(
 ) {
   const status = event.cancelAtEnd && event.status === 'active' ? 'cancel_scheduled' : event.status;
   const settled = { status, end: event.end, endedAt: sub.ended_at, current: sub.is_current };
-  if (!terminalStates.has(status)) return settled;
+  if (!terminalStates.has(status))
+    // A fully refunded current period stays cancelled until the provider confirms (B52).
+    return sub.is_current && (await periodRefunded(db, sub, event.start, event.end))
+      ? { ...settled, status: CANCELLED }
+      : settled;
   const paidEnd = await endTerminal(db, sub, event.version, workspaceId, now);
   return paidEnd
     ? { ...settled, end: paidEnd, status: 'cancel_scheduled' }
@@ -427,8 +471,11 @@ function followUps(sub: Subscription, event: SubscriptionEvidence, status: strin
   return {
     // A cancellation the provider holds can no longer be resumed here (B46).
     ...(event.cancelAtEnd && !sub.cancellation_sent_at ? { cancellation_sent_at: now } : {}),
-    // The next subscription sweep cancels a halted subscription promptly.
-    ...(status === UNPAID ? { reconciliation_next_at: now } : {}),
+    // The next subscription sweep cancels a halted or refunded subscription
+    // promptly; one the provider already ends at its cycle waits its cadence.
+    ...(status === UNPAID || (status === CANCELLED && !event.cancelAtEnd)
+      ? { reconciliation_next_at: now }
+      : {}),
   };
 }
 

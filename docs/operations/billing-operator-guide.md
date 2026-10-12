@@ -329,6 +329,11 @@ provider dashboard—the accepted activation and resulting grants are authority.
   on the current plan until the change is resolved with the customer.
 - Refund from the Dashboard. The `refund.processed` event records the refund,
   issues the credit note and, for a full refund, revokes remaining grants.
+  A full refund of the payment for the base plan's current period also
+  cancels the subscription at once (B52): its plan access ends, the row reads
+  `cancelled` and stays current until the subscription sweep has cancelled it
+  at Razorpay immediately, then ends. A partial refund, or a refund of an
+  earlier period, leaves the subscription unchanged.
 - A customer's cancellation is held in CiteLadder (`cancel_at_period_end` with
   no `cancellation_sent_at`) and sent to Razorpay only
   `BILLING_CANCELLATION_SEND_LEAD_SECONDS` (two days) before renewal, because
