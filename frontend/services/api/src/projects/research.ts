@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { policy } from '../config.ts';
 import { createModelGateway, gatewaySettings, type ModelGateway } from '../models/gateway.ts';
 import { competitorSuggestionPrompt } from '../config/discovery.ts';
-import { defaultTransport } from '../models/http.ts';
+import { getLogger } from '../logging.ts';
+import { defaultTransport, ModelError } from '../models/http.ts';
 import { competitorInput, cleanList } from './inputs.ts';
 import { discoveryProfile, discoverySettings, type DiscoveryInput } from './discovery-inputs.ts';
 import {
@@ -20,6 +21,18 @@ import { fetchWebsite, websiteIdentity, type WebsiteFetcher } from './safe-fetch
 import type { Meter } from '../billing/metering.ts';
 
 const cfg = policy.discovery.constants;
+const logger = getLogger('app.projects.research');
+
+/** A failed research call degrades the review; the reason and duration make it diagnosable. */
+function logModelFailure(phase: string, error: unknown, started: number) {
+  logger.warning('brand_discovery.model_call_failed', {
+    phase,
+    reason: error instanceof ModelError ? error.code : 'unusable_answer',
+    status: error instanceof ModelError ? error.status : undefined,
+    elapsed_ms: Math.round(performance.now() - started),
+  });
+}
+
 export const identityEnvelope = z.object({
   status: z.enum(['ready', 'insufficient_evidence', 'conflicting_evidence']),
   profile: discoveryProfile,
@@ -91,6 +104,7 @@ async function generateIdentity(
   signal?: AbortSignal,
 ) {
   if (!gateway) return null;
+  const started = performance.now();
   try {
     const generated = await gateway.structured(
       cfg.identity_research_system_prompt,
@@ -116,8 +130,9 @@ async function generateIdentity(
       content: undefined,
     });
     return identity;
-  } catch {
+  } catch (error) {
     signal?.throwIfAborted();
+    logModelFailure('identity', error, started);
     modelCalls.push({
       phase: 'identity',
       prompt_version: cfg.brand_identity_prompt_version,
@@ -160,6 +175,7 @@ async function suggestCompetitors({
     competitors: z.array(competitorInput).max(settings.competitor_suggestion_maximum),
   });
   for (let attempt = 0; attempt < settings.competitor_model_maximum_attempts; attempt++) {
+    const started = performance.now();
     try {
       const generated = await gateway.structured(
         competitorSuggestionPrompt(settings.competitor_suggestion_maximum),
@@ -188,8 +204,9 @@ async function suggestCompetitors({
         content: undefined,
       });
       return { competitors, available: true };
-    } catch {
+    } catch (error) {
       signal?.throwIfAborted();
+      logModelFailure('competitor_suggestions', error, started);
       modelCalls.push({
         phase: 'competitor_suggestions',
         prompt_version: cfg.brand_competitor_suggestion_version,
