@@ -102,6 +102,27 @@ describe('Perception view', () => {
     expect(screen.getByText('reviews.example')).toBeVisible();
   });
 
+  it('states the recommended count briefly, naming advice against only when it occurred', () => {
+    const { unmount } = render(<PerceptionView data={response()} />);
+    expect(screen.getByText('2 of 5 answers naming you; 1 advised against')).toBeVisible();
+    unmount();
+
+    render(
+      <PerceptionView
+        data={response({
+          recommended: {
+            mentioned: 4,
+            recommended: 0,
+            recommended_against: 0,
+            rate: 0,
+            limitation: 'English phrasing only.',
+          },
+        })}
+      />,
+    );
+    expect(screen.getByText('0 of 4 answers naming you')).toBeVisible();
+  });
+
   it.each([
     ['pending', null, 'Classifying answers…'],
     ['unavailable', 'model_not_configured', 'Perception unavailable'],

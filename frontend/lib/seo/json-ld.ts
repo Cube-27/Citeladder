@@ -4,7 +4,7 @@ import { blogPostFreshness, type BlogPostSummary } from '@/lib/marketing-content
 import type { FaqItem } from '@/lib/marketing-content/faq';
 import { PARENT_COMPANY } from '@/lib/marketing-content/legal';
 import { FOUNDER, PRODUCT_HEAD } from '@/lib/marketing-content/people';
-import { CITELADDER_LINKEDIN } from '@/lib/marketing-content/social';
+import { CITELADDER_LINKEDIN, CITELADDER_X } from '@/lib/marketing-content/social';
 import { absoluteUrl, SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE } from '@/lib/seo/site';
 
 export type JsonLdObject = Record<string, unknown>;
@@ -40,7 +40,7 @@ export function organizationJsonLd(): JsonLdObject | null {
       url: absoluteUrl('/contact'),
       availableLanguage: 'English',
     },
-    sameAs: [CITELADDER_LINKEDIN],
+    sameAs: [CITELADDER_LINKEDIN, CITELADDER_X],
     parentOrganization: {
       '@type': 'Organization',
       name: PARENT_COMPANY.legalName,

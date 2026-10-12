@@ -3,7 +3,6 @@ import { render, screen, within } from '@testing-library/react';
 
 import { FOOTER_LEGAL_LINKS, PARENT_COMPANY } from '@/lib/marketing-content/legal';
 import { PUBLISHED_PLATFORM } from '@/lib/marketing-content/nav';
-import { CITELADDER_LINKEDIN } from '@/lib/marketing-content/social';
 
 import { MarketingFooter } from './footer';
 
@@ -31,11 +30,16 @@ describe('MarketingFooter', () => {
 
     expect(screen.queryByRole('link', { name: /book a demo/i })).toBeNull();
     expect(screen.queryByRole('link', { name: /log in/i })).toBeNull();
-    expect(screen.getByRole('link', { name: 'AI Instructions' })).toHaveAttribute(
+    // The AI references sit in the Company column, not the legal strip.
+    const footerNav = screen.getByRole('navigation', { name: 'Footer' });
+    expect(within(footerNav).getByRole('link', { name: 'AI Instructions' })).toHaveAttribute(
       'href',
       '/ai-instructions',
     );
-    expect(screen.getByRole('link', { name: 'Entity Map' })).toHaveAttribute('href', '/entity-map');
+    expect(within(footerNav).getByRole('link', { name: 'Entity Map' })).toHaveAttribute(
+      'href',
+      '/entity-map',
+    );
   });
 
   it('links to public documentation but not the private repository', async () => {
@@ -84,10 +88,19 @@ describe('MarketingFooter', () => {
       'href',
       PARENT_COMPANY.href,
     );
-    expect(
-      within(screen.getByRole('navigation', { name: 'Footer' })).getByRole('link', {
-        name: 'CiteLadder on LinkedIn',
-      }),
-    ).toHaveAttribute('href', CITELADDER_LINKEDIN);
+  });
+
+  it('links the CiteLadder social profiles by their domains', async () => {
+    render(await MarketingFooter());
+
+    const footerNav = screen.getByRole('navigation', { name: 'Footer' });
+    expect(within(footerNav).getByRole('link', { name: 'x.com' })).toHaveAttribute(
+      'href',
+      'https://x.com/CiteLadderAI',
+    );
+    expect(within(footerNav).getByRole('link', { name: 'linkedin.com' })).toHaveAttribute(
+      'href',
+      'https://www.linkedin.com/company/citeladder',
+    );
   });
 });

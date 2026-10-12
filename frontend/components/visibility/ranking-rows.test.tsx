@@ -36,7 +36,6 @@ describe('RankingRowsTable', () => {
     const rows = screen.getAllByRole('row').slice(1);
     expect(within(rows[0]!).getByText('Leader')).toBeVisible();
     expect(within(rows[1]!).getByText('Acme')).toBeVisible();
-    expect(screen.queryByRole('columnheader', { name: /rank/i })).toBeNull();
   });
   it('identifies the brand and shows actual citation measurements', () => {
     render(<RankingRowsTable rows={[row({ is_brand: true })]} />);
@@ -80,6 +79,8 @@ describe('RankingRowsTable', () => {
         ]}
       />,
     );
+    // Named Rank so it does not read as the headline Average position.
+    expect(screen.getByRole('columnheader', { name: 'Rank' })).toBeVisible();
     const cells = (name: string) =>
       within(screen.getByText(name).closest('tr')!).getByTitle(/ranks #/);
     expect(cells('Leader')).toHaveTextContent('#1');

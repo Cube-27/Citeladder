@@ -120,7 +120,10 @@ function HistoryCard({ history }: Readonly<{ history: PromptHistory }>) {
                 },
               ]}
               events={implementationEvents(history.implementations, timeZone)}
-              width={360}
+              // The chart spans the full page, not half of it as on Visibility,
+              // so a 360-wide viewBox scaled its text and dots up fourfold.
+              // Twice the width keeps the same rendered size as Visibility.
+              width={720}
               height={168}
               xAxisLabel="Run date"
               yAxisLabel="Rate (%)"
