@@ -14,6 +14,15 @@ const availability = z.enum([
   'unavailable',
   policy.demand.QUERY_EVIDENCE_STATE_OBSERVED_ZERO,
 ]);
+/**
+ * What the model reads: the result without its artifact references. Those are
+ * recorded as the attempt's sources (the app shows them), and each row keeps
+ * its own `record_uri` to open; repeating them would crowd rows out of the bound.
+ */
+function modelData<T extends Record<string, unknown>>(data: T) {
+  const { artifact_refs: _refs, ...rest } = data;
+  return rest;
+}
 function outcome(value: unknown) {
   const data = z.record(z.string(), z.json()).parse(value);
   const refs = z.array(reference).parse(data.artifact_refs ?? []);
@@ -22,7 +31,7 @@ function outcome(value: unknown) {
   const reason = unavailable && typeof data.reason === 'string' ? [{ reason: data.reason }] : [];
   return {
     state: unavailable ? ('unavailable' as const) : ('available' as const),
-    data,
+    data: modelData(data),
     artifactRefs: refs.map((ref) => {
       const { record_uri, ...rest } = ref;
       return { ...rest, ...(record_uri ? { record_uri } : {}) };
@@ -68,7 +77,7 @@ function sharedTools(db: Database): ReadTool[] {
           // continuation cursor. Never discard rows behind a later cursor.
           if (Object.hasOwn(fields, 'limit') && Array.isArray(data.items)) {
             let limit = data.items.length;
-            while (JSON.stringify(data).length > maxChars && limit > 1) {
+            while (JSON.stringify(modelData(data)).length > maxChars && limit > 1) {
               limit = Math.max(1, Math.floor(limit / 2));
               input.limit = limit;
               data = await dispatch();

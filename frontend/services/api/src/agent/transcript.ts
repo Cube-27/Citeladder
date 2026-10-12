@@ -32,7 +32,7 @@ export function systemPrefix(catalog: SkillCatalog) {
   );
   return [
     catalog.operatingContract,
-    `# Skills\n\nLoad one with load_skill before writing its deliverable:\n${JSON.stringify(skills)}`,
+    `# Skills\n\nLoad one with load_skill before writing its deliverable, unless this chat already supplied its methodology:\n${JSON.stringify(skills)}`,
     formats.length ? [catalog.formatPreamble ?? '', ...formats].join('\n\n') : '',
   ]
     .filter(Boolean)

@@ -1,10 +1,11 @@
 'use client';
 
 import { Pencil, RotateCcw } from 'lucide-react';
-import { memo, useDeferredValue, useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 
 import { EvidenceChips } from '@/components/agent/evidence-chips';
 import { skillLabel, useSkillCatalog } from '@/components/agent/skill-picker';
+import { LiveReply } from '@/components/agent/live-reply';
 import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
 import { ProjectLink } from '@/components/layout/scoped-link';
 import { Alert } from '@/components/ui/alert';
@@ -50,8 +51,6 @@ export function Conversation({
   pendingMessage?: string | null;
 }>) {
   const skills = useSkillCatalog();
-  const outcome = runOutcome(detail.latest_run);
-  const live = useLiveTurn(outcome.kind === 'running' ? outcome.run.id : null);
   const output = detail.output;
   const outputMessageId = output?.message_id ?? revisionReplyMessage(detail);
   return (
@@ -71,8 +70,7 @@ export function Conversation({
         <div className={panelClasses({}, 'min-w-0')}>{outputView}</div>
       ) : null}
       {pendingMessage ? <PendingMessage text={pendingMessage} /> : null}
-      <LiveReply live={live} />
-      <RunState detail={detail} live={live} />
+      <LiveActivity detail={detail} />
       <TurnActions
         detail={detail}
         canSend={canSend}
@@ -171,44 +169,19 @@ function PendingMessage({ text }: Readonly<{ text: string }>) {
 }
 
 /**
- * The thinking summary, reply and document as they are written. The saved
- * reply replaces all of them, so the thinking summary closes with the turn.
+ * The running turn's live events. Subscribed here, not in the conversation, so
+ * each streamed delta re-renders only this activity, never the earlier messages.
  */
-function LiveReply({ live: latest }: Readonly<{ live: LiveTurn | undefined }>) {
-  const live = useDeferredValue(latest);
-  if (!live) return null;
-  const { thinking, reply, document } = live;
-  if (!thinking && !reply && !document) return null;
+function LiveActivity({ detail }: Readonly<{ detail: AgentChatDetail }>) {
+  const outcome = runOutcome(detail.latest_run);
+  const live = useLiveTurn(outcome.kind === 'running' ? outcome.run.id : null);
   return (
-    <article aria-label="Agent reply in progress" aria-busy="true" className="grid gap-2">
-      <span className={textRole('label')}>Agent</span>
-      {thinking?.text ? (
-        <Disclosure title="Thinking">
-          <p className={textRole('caption', 'whitespace-pre-wrap')}>{thinking.text}</p>
-        </Disclosure>
-      ) : null}
-      {reply?.text ? <ContentMarkdown markdown={reply.text} density="compact" /> : null}
-      {document?.body ? <LiveDocument title={document.title} body={document.body} /> : null}
-    </article>
+    <>
+      <LiveReply live={live} />
+      <RunState detail={detail} live={live} />
+    </>
   );
 }
-
-/** Memoized, so reply and thinking deltas do not re-render the document's Markdown. */
-const LiveDocument = memo(function LiveDocument({
-  title,
-  body,
-}: Readonly<{ title: string | null; body: string }>) {
-  return (
-    <section
-      aria-label={title ? `Writing ${title}` : 'Writing the document'}
-      className={panelClasses({}, 'grid min-w-0 gap-2')}
-    >
-      <span className={textRole('caption')}>Writing…</span>
-      {title ? <h2 className={textRole('sectionTitle')}>{title}</h2> : null}
-      <ContentMarkdown markdown={body} />
-    </section>
-  );
-});
 
 function MessageBubble({
   message,

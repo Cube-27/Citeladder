@@ -96,6 +96,21 @@ export function ReplyComposer({
   );
 }
 
+/**
+ * Floats above the sticky composer, out of flow, so showing it never moves the
+ * input or changes the page height while a reply streams.
+ */
+export function JumpToLatest({ show, onJump }: Readonly<{ show: boolean; onJump: () => void }>) {
+  if (!show) return null;
+  return (
+    <div className="pointer-events-none absolute inset-x-0 bottom-full flex justify-center pb-2">
+      <Button variant="secondary" size="sm" className="pointer-events-auto" onClick={onJump}>
+        Jump to latest
+      </Button>
+    </div>
+  );
+}
+
 function FollowUpFailure({
   turn,
   actionId,

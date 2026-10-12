@@ -2,7 +2,12 @@
 
 import { useParams } from 'react-router-dom';
 
-import { ChatConversation, ReplyComposer, useChatThread } from '@/components/agent/chat-thread';
+import {
+  ChatConversation,
+  JumpToLatest,
+  ReplyComposer,
+  useChatThread,
+} from '@/components/agent/chat-thread';
 import { OutputPane } from '@/components/agent/output-pane';
 import { useFollowLatest } from '@/components/agent/use-follow-latest';
 import { useChatDetail } from '@/components/agent/use-chat-turns';
@@ -23,7 +28,8 @@ export function ChatScreen() {
   const workspaceId = activeWorkspaceId ?? '';
   const query = useChatDetail(workspaceId, chatId);
 
-  if (query.isError)
+  // A failed background refresh keeps the chat on screen; only a first load fails the page.
+  if (query.isError && !query.data)
     return (
       <PageShell>
         <ReadError
@@ -91,11 +97,7 @@ function ChatView({
       </Stack>
       {/* The composer stays at the bottom of the window while the thread scrolls. */}
       <div className="bg-panel z-sticky sticky bottom-0 pt-2 pb-4">
-        {showJump ? (
-          <Button variant="secondary" size="sm" onClick={jumpToLatest}>
-            Jump to latest
-          </Button>
-        ) : null}
+        <JumpToLatest show={showJump} onJump={jumpToLatest} />
         <ReplyComposer
           id="chat-message"
           thread={thread}

@@ -189,9 +189,13 @@ export function suppliedManifest(
   limit = agentPolicy.context_package_max_chars,
 ) {
   const omissions: string[] = [];
+  // Provenance (record IDs, hashes, processor versions) stays in the run's
+  // manifest; the model cannot use it and must never repeat it.
+  const summary = { ...manifest.package.summary };
+  delete summary.provenance;
   const supplied: SuppliedManifest = {
     instructions: manifest.instructions,
-    package: { ...manifest.package, sections: { ...manifest.package.sections } },
+    package: { ...manifest.package, summary, sections: { ...manifest.package.sections } },
     action: manifest.action,
     mentions: [...manifest.mentions],
     omissions,

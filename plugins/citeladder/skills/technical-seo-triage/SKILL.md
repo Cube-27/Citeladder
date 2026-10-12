@@ -11,7 +11,8 @@ description: Triage an authorized CiteLadder project's persisted Site Health sco
    incomplete coverage never means pass. If no snapshot exists, explain that
    the user must run a crawl in CiteLadder first.
 3. Call `read_site_pages` with that `crawl_id` for at most two pages of
-   results. Call `read_actions` for existing prioritized work. Label current
+   results. To list the pages one issue affects, pass its `rule_id` from
+   `top_issues`. Call `read_actions` for existing prioritized work. Label current
    Actions separately from snapshot evidence; link an Action to this snapshot
    only when its returned data supports that link.
 4. For AI search, call `read_ai_crawlability` with the same `crawl_id` for what
