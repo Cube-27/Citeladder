@@ -2,10 +2,10 @@ import { z } from 'zod';
 
 import { policy, resolveSettingSpec } from '../config.ts';
 import { getLogger } from '../logging.ts';
-import { stripTrailing } from '../text-order.ts';
 import {
+  callDeadline,
+  chatCompletionsUrl,
   defaultTransport,
-  endpointUrl,
   ModelError,
   modelJson,
   parseEndpoint,
@@ -255,17 +255,13 @@ function openAICompletion(
   let legacyCap = false;
   let promptSchema = false;
   const retry = { ...settings, retryStatus: transientStatus, retryConnection: true };
-  const base = stripTrailing(endpoint.href, '/');
-  const url = base.endsWith('/chat/completions') ? base : endpointUrl(base, '/chat/completions');
+  const url = chatCompletionsUrl(endpoint);
   return async (system, user, signal, onText, schema) => {
     // A listener asks for a stream; the caller gives one only to transports that pass it through.
     const stream = Boolean(onText);
     const started = performance.now();
     // Retries share one call's timeout, the envelope of a single provider call.
-    const deadline = AbortSignal.any([
-      AbortSignal.timeout(settings.timeoutSeconds * 1000),
-      ...(signal ? [signal] : []),
-    ]);
+    const deadline = callDeadline(settings.timeoutSeconds, signal);
     const send = (legacy: boolean, strict: boolean) =>
       postModel(
         url,

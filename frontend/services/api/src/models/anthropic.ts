@@ -10,7 +10,13 @@ import {
   type Converse,
 } from './conversation.ts';
 import type { GatewaySettings } from './gateway.ts';
-import { ModelError, providerErrorCode, type Complete, type Transport } from './http.ts';
+import {
+  callDeadline,
+  ModelError,
+  providerErrorCode,
+  type Complete,
+  type Transport,
+} from './http.ts';
 
 const logger = getLogger('app.connectors.agent.client');
 
@@ -58,12 +64,8 @@ function anthropicClient(settings: Settings, transport: Transport, endpoint: URL
 }
 
 /** One deadline across the SDK's retries, as the OpenAI-compatible path keeps. */
-function deadline(settings: Settings, signal?: AbortSignal) {
-  return AbortSignal.any([
-    AbortSignal.timeout(settings.timeoutSeconds * 1000),
-    ...(signal ? [signal] : []),
-  ]);
-}
+const deadline = (settings: Settings, signal?: AbortSignal) =>
+  callDeadline(settings.timeoutSeconds, signal);
 
 export function anthropicCompletion(
   settings: Settings,

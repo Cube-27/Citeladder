@@ -77,7 +77,7 @@ export function conversationInputBytes(request: ConversationRequest) {
   return Buffer.byteLength(JSON.stringify({ system, tools, messages: read }), 'utf8');
 }
 
-const blocksSchema = z.array(z.object({ type: z.string() }).catchall(z.json()));
+export const blocksSchema = z.array(z.object({ type: z.string() }).catchall(z.json()));
 /** Provider content as plain JSON blocks; anything else is an unreadable answer. */
 export function parseBlocks(value: unknown): ConversationBlock[] {
   return blocksSchema.parse(JSON.parse(JSON.stringify(value)));
@@ -106,7 +106,7 @@ export function blockToolCalls(blocks: readonly ConversationBlock[]): ToolCall[]
 
 const inputSchema = z.record(z.string(), z.json());
 /** A tool input is a JSON object; anything else becomes `{}`, which the tool then refuses. */
-function toolInput(value: unknown): Record<string, Json> {
+export function toolInput(value: unknown): Record<string, Json> {
   const parsed = inputSchema.safeParse(value);
   return parsed.success ? parsed.data : {};
 }

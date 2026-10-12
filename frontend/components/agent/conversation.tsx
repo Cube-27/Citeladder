@@ -1,7 +1,7 @@
 'use client';
 
 import { Pencil, RotateCcw } from 'lucide-react';
-import { useDeferredValue, useEffect, useState, type ReactNode } from 'react';
+import { memo, useDeferredValue, useEffect, useState, type ReactNode } from 'react';
 
 import { EvidenceChips } from '@/components/agent/evidence-chips';
 import { skillLabel, useSkillCatalog } from '@/components/agent/skill-picker';
@@ -188,19 +188,27 @@ function LiveReply({ live: latest }: Readonly<{ live: LiveTurn | undefined }>) {
         </Disclosure>
       ) : null}
       {reply?.text ? <ContentMarkdown markdown={reply.text} density="compact" /> : null}
-      {document?.body ? (
-        <section
-          aria-label={document.title ? `Writing ${document.title}` : 'Writing the document'}
-          className={panelClasses({}, 'grid min-w-0 gap-2')}
-        >
-          <span className={textRole('caption')}>Writing…</span>
-          {document.title ? <h2 className={textRole('sectionTitle')}>{document.title}</h2> : null}
-          <ContentMarkdown markdown={document.body} />
-        </section>
-      ) : null}
+      {document?.body ? <LiveDocument title={document.title} body={document.body} /> : null}
     </article>
   );
 }
+
+/** Memoized, so reply and thinking deltas do not re-render the document's Markdown. */
+const LiveDocument = memo(function LiveDocument({
+  title,
+  body,
+}: Readonly<{ title: string | null; body: string }>) {
+  return (
+    <section
+      aria-label={title ? `Writing ${title}` : 'Writing the document'}
+      className={panelClasses({}, 'grid min-w-0 gap-2')}
+    >
+      <span className={textRole('caption')}>Writing…</span>
+      {title ? <h2 className={textRole('sectionTitle')}>{title}</h2> : null}
+      <ContentMarkdown markdown={body} />
+    </section>
+  );
+});
 
 function MessageBubble({
   message,
@@ -381,8 +389,9 @@ function FollowUps({
 }
 
 function stepLabel(step: AgentMessage['steps'][number]): string {
-  if (step.kind === 'skill') return 'Loaded the method';
-  if (step.kind === 'document') return 'Saved the document';
+  if (step.kind === 'skill') return toolCallLabel({ tool: 'load_skill', status: 'completed' });
+  if (step.kind === 'document')
+    return toolCallLabel({ tool: 'save_document', status: 'completed' });
   if (step.kind === 'tool')
     return runStepLabel({ tool: step.tool ?? 'read_data', status: step.status ?? 'unknown' });
   return step.ordinal ? `Model call ${step.ordinal}` : 'Worked on the reply';

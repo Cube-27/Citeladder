@@ -9,7 +9,11 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import type { Database } from '../db/database.ts';
-import type { ConversationBlock, ConversationMessage } from '../models/conversation.ts';
+import {
+  blocksSchema,
+  type ConversationBlock,
+  type ConversationMessage,
+} from '../models/conversation.ts';
 import type { Budget, Scope, Skill, SkillCatalog } from './contracts.ts';
 
 /** The system text: the operating contract, the skill catalog and the content formats. */
@@ -36,10 +40,7 @@ export function systemPrefix(catalog: SkillCatalog) {
 }
 
 const messagesSchema = z.array(
-  z.object({
-    role: z.enum(['user', 'assistant']),
-    content: z.array(z.object({ type: z.string() }).catchall(z.json())),
-  }),
+  z.object({ role: z.enum(['user', 'assistant']), content: blocksSchema }),
 );
 export type StoredTranscript = {
   runId: string;
@@ -89,10 +90,12 @@ export async function chatTranscripts(
  */
 export function replayed(transcripts: StoredTranscript[], adapter: string, budget: Budget) {
   if (adapter === 'anthropic') return { kept: transcripts, dropped: 0 };
-  const kept = [...transcripts];
-  const size = () => kept.reduce((total, item) => total + JSON.stringify(item.messages).length, 0);
-  while (kept.length && size() > budget.replay_max_chars) kept.shift();
-  return { kept, dropped: transcripts.length - kept.length };
+  const sizes = transcripts.map((item) => JSON.stringify(item.messages).length);
+  let size = sizes.reduce((total, chars) => total + chars, 0);
+  let dropped = 0;
+  while (dropped < transcripts.length && size > budget.replay_max_chars)
+    size -= sizes[dropped++] ?? 0;
+  return { kept: transcripts.slice(dropped), dropped };
 }
 
 const contextHash = (text: string) => createHash('sha256').update(text).digest('hex');

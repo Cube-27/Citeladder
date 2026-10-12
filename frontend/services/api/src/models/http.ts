@@ -1,4 +1,5 @@
 import { setTimeout } from 'node:timers/promises';
+import { stripTrailing } from '../text-order.ts';
 
 export function providerErrorCode(status: number) {
   if (status === 429) return 'rate_limit';
@@ -16,6 +17,17 @@ export function parseEndpoint(baseUrl: string) {
   } catch {
     throw new ModelError('not_configured');
   }
+}
+
+/** One call's deadline, shared by its retries, or the caller's signal if it fires first. */
+export function callDeadline(timeoutSeconds: number, signal?: AbortSignal) {
+  return AbortSignal.any([AbortSignal.timeout(timeoutSeconds * 1000), ...(signal ? [signal] : [])]);
+}
+
+/** The chat-completions URL of an OpenAI-compatible endpoint, given either form. */
+export function chatCompletionsUrl(endpoint: URL) {
+  const base = stripTrailing(endpoint.href, '/');
+  return base.endsWith('/chat/completions') ? base : endpointUrl(base, '/chat/completions');
 }
 
 /** `base` without trailing slashes, joined to an absolute `path`. */

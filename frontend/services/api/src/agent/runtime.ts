@@ -4,12 +4,7 @@ import type { Database } from '../db/database.ts';
 import { ApiError } from '../errors.ts';
 import { accessGranted, workspaceAccess } from '../entitlements/access.ts';
 import { ModelError } from '../models/http.ts';
-import type {
-  ConversationBlock,
-  ConversationMessage,
-  ConversationTool,
-  ToolCall,
-} from '../models/conversation.ts';
+import type { ConversationBlock, ConversationMessage, ToolCall } from '../models/conversation.ts';
 import { authorize } from './access.ts';
 import {
   isBuiltin,
@@ -233,11 +228,14 @@ export class AgentRuntime {
       dropped_turns: dropped,
     };
     const history = kept.flatMap((item) => item.messages);
+    // The cached prefix: built once per turn from the catalog and the run's frozen bounds.
+    const system = systemPrefix(this.deps.catalog);
+    const tools = agentToolList(this.deps.tools, this.deps.catalog, budget);
     for (let ordinal = 1; ordinal <= budget.max_model_calls; ordinal++) {
       signal?.throwIfAborted();
       const request: ModelRequest = {
-        system: this.system(),
-        tools: this.tools(budget),
+        system,
+        tools,
         messages: [...history, ...state.messages],
         effort: budget.reasoning_effort,
         compactAtTokens: budget.compaction_trigger_tokens,
@@ -314,23 +312,6 @@ export class AgentRuntime {
       messages: [],
       contextHash: '',
     };
-  }
-  #system: string | undefined;
-  /** The catalog is fixed for the runtime's life, so the prefix is built once. */
-  private system() {
-    this.#system ??= systemPrefix(this.deps.catalog);
-    return this.#system;
-  }
-  readonly #tools = new Map<string, ConversationTool[]>();
-  /** The tool list for a run's frozen output bounds, built once per bounds so its bytes never vary. */
-  private tools(budget: Budget) {
-    const key = `${budget.output_title_max_chars}:${budget.output_body_max_chars}`;
-    let tools = this.#tools.get(key);
-    if (!tools) {
-      tools = agentToolList(this.deps.tools, this.deps.catalog, budget);
-      this.#tools.set(key, tools);
-    }
-    return tools;
   }
   /**
    * One response's tool calls. Built-ins run first, in the order written, since

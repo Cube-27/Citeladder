@@ -7,11 +7,11 @@
 import { z } from 'zod';
 
 import { getLogger } from '../logging.ts';
-import { stripTrailing } from '../text-order.ts';
 import {
   blockText,
   blockToolCalls,
   parseBlocks,
+  toolInput,
   type ConversationBlock,
   type ConversationListener,
   type ConversationMessage,
@@ -21,7 +21,8 @@ import {
 } from './conversation.ts';
 import type { GatewaySettings } from './gateway.ts';
 import {
-  endpointUrl,
+  callDeadline,
+  chatCompletionsUrl,
   ModelError,
   modelJson,
   postModel,
@@ -211,8 +212,7 @@ async function readAnswer(response: Response, listener?: ConversationListener): 
 /** Tool arguments as the model wrote them; unreadable JSON becomes `{}`, which the tool refuses. */
 function decodedArguments(text: string): Record<string, Json> {
   try {
-    const parsed = z.record(z.string(), z.json()).safeParse(JSON.parse(text || '{}'));
-    return parsed.success ? parsed.data : {};
+    return toolInput(JSON.parse(text || '{}'));
   } catch {
     return {};
   }
@@ -231,14 +231,10 @@ export function openAIConversation(
   endpoint: URL,
 ): Converse {
   const retry = { ...settings, retryStatus: transientStatus, retryConnection: true };
-  const base = stripTrailing(endpoint.href, '/');
-  const url = base.endsWith('/chat/completions') ? base : endpointUrl(base, '/chat/completions');
+  const url = chatCompletionsUrl(endpoint);
   return async (request, signal, listener) => {
     const started = performance.now();
-    const deadline = AbortSignal.any([
-      AbortSignal.timeout(settings.timeoutSeconds * 1000),
-      ...(signal ? [signal] : []),
-    ]);
+    const deadline = callDeadline(settings.timeoutSeconds, signal);
     const response = await postModel(
       url,
       settings.apiKey,

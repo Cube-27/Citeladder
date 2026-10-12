@@ -4,6 +4,7 @@
  */
 import type { z } from 'zod';
 import type { agentTurnEventSchema } from '@citeladder/contracts/agent';
+import { record } from '../db/json.ts';
 
 // The wire contract owns these shapes; the route adds the `type` tag.
 type TurnEvent = z.input<typeof agentTurnEventSchema>;
@@ -20,7 +21,7 @@ export type TurnEvents = {
 };
 
 const field = (input: unknown, name: string) => {
-  const value = input && typeof input === 'object' ? Reflect.get(input, name) : undefined;
+  const value = record(input)[name];
   return typeof value === 'string' ? value : null;
 };
 
