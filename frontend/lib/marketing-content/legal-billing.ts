@@ -2,11 +2,10 @@ import { LEGAL_ENTITY, PARENT_COMPANY, type LegalDocument } from './legal';
 import { CONTACT_EMAIL } from '@/lib/config/contact';
 
 /**
- * Refund, cancellation and contact pages. The mechanics (period-end
- * cancellation, next-renewal downgrades, one-time add-ons, full-refund grant
- * revocation) are the approved billing behaviour; the refund window for a
- * mistaken add-on purchase and fixed response-time targets are still owner
- * decisions and are deliberately absent.
+ * Refund, cancellation and contact pages. The mechanics are the approved
+ * billing behaviour. There is deliberately no mistaken-purchase refund window
+ * and no fixed response-time target (owner, 2026-10-12); open and resolved
+ * legal decisions live in docs/operations/legal-decisions.md.
  */
 const email = PARENT_COMPANY.email;
 
@@ -26,7 +25,7 @@ export const REFUND_POLICY: LegalDocument = {
       id: 'subscriptions',
       title: 'Subscriptions and ordinary cancellation',
       paragraphs: [
-        'Where granted, an invitation-based trial requires no payment card and never charges at expiry.',
+        'Where granted, a free trial requires no payment card and never charges at expiry.',
         'Once a paid subscription is activated and made available, there is no general change-of-mind refund. Cancelling stops the next renewal and leaves access available through the current paid period; it does not refund the unused part of that period. See the Cancellation Policy at /cancellation-policy.',
       ],
     },
@@ -36,6 +35,7 @@ export const REFUND_POLICY: LegalDocument = {
       bullets: [
         'Duplicate charges, and charges above the confirmed purchase amount caused by our billing error.',
         'A purchase that was paid for but not delivered, where we cannot remedy it within a reasonable time.',
+        'An add-on or top-up paid for when no paid subscription period was active, which grants nothing.',
         'The unused prepaid amount of a paid Service we discontinue without your breach, where we cannot offer a reasonably acceptable alternative.',
         'Any refund that applicable law requires.',
       ],
@@ -68,7 +68,7 @@ export const REFUND_POLICY: LegalDocument = {
       id: 'effect',
       title: 'Effect on access and tax records',
       paragraphs: [
-        'A full refund revokes the remaining access granted by the refunded purchase from the time of the refund. Credits already used are not restored or clawed back. A partial refund does not cancel the subscription or remove remaining access. Refunding an add-on or top-up alone does not cancel the base subscription.',
+        'A full refund revokes the remaining access granted by the refunded purchase from the time of the refund. Credits already used are not restored or clawed back. A full refund of the payment for a subscription’s current period also cancels that subscription at once. A partial refund does not cancel the subscription or remove remaining access. Refunding an add-on or top-up alone does not cancel the base subscription.',
         'Every refund, full or partial, issues a credit note against the original invoice.',
         'Please contact us about a disputed charge so we can investigate. This does not require you to give up a chargeback or any other right under law or payment-network rules.',
       ],
@@ -121,7 +121,7 @@ export const CANCELLATION_POLICY: LegalDocument = {
       id: 'data',
       title: 'Project data',
       paragraphs: [
-        `Cancelling does not immediately delete your workspace or project history. You can ask for an export or for earlier deletion by emailing ${email}; the Privacy Policy at /privacy describes how we handle those requests.`,
+        `Cancelling does not immediately delete your workspace or project history. Once all paid access ends, you have 30 days to request an export; we then delete or de-identify the project data within a further 30 days, as the Privacy Policy at /privacy describes. You can also ask for earlier deletion by emailing ${email}.`,
         'Removing a workspace member, disconnecting an integration and cancelling a subscription are different actions. None of them performs the others automatically.',
       ],
     },
@@ -138,9 +138,9 @@ export const CANCELLATION_POLICY: LegalDocument = {
 
 const entityLines = [
   `CiteLadder is a product of ${PARENT_COMPANY.legalName}.`,
-  `Principal business address: ${PARENT_COMPANY.address}.`,
+  `Registered office: ${PARENT_COMPANY.address}.`,
   LEGAL_ENTITY.registrationNumber
-    ? `Company registration number: ${LEGAL_ENTITY.registrationNumber}.`
+    ? `Company registration: ${LEGAL_ENTITY.registrationNumber}.`
     : null,
   LEGAL_ENTITY.phone ? `Business telephone: ${LEGAL_ENTITY.phone}.` : null,
 ].filter((line): line is string => line !== null);

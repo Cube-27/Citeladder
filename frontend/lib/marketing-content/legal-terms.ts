@@ -12,7 +12,7 @@ export const TERMS_OF_SERVICE: LegalDocument = {
   description: 'The agreement that governs your use of CiteLadder, operated by Cube27.',
   sections: legalSections(`
 ## operator | Operator and agreement
-CiteLadder is operated by ${PARENT_COMPANY.legalName}, with its principal business address at ${PARENT_COMPANY.address} (“Cube27”, “CiteLadder”, “we”, “us” or “our”).
+CiteLadder is operated by ${PARENT_COMPANY.legalName}, with its registered office at ${PARENT_COMPANY.address} (“Cube27”, “CiteLadder”, “we”, “us” or “our”).
 These Terms govern the CiteLadder website, hosted application, APIs, MCP interfaces, reports and related services (the “Service”). By accepting these Terms or placing an order that incorporates them, you enter into an agreement with Cube27. A person accepting for an organisation represents that they are authorised to bind it; “Customer” and “you” then mean that organisation.
 The Service is intended for business and professional use by people aged 18 or over who can enter into a binding agreement. Nothing in these Terms excludes a mandatory consumer or other statutory right.
 A signed enterprise agreement or order takes precedence where it expressly differs. Our Refund Policy at /refund-policy, Cancellation Policy at /cancellation-policy and, where we process personal data on your behalf, our Data Processing Agreement at /dpa form part of these Terms. Our Privacy Policy at /privacy explains how we handle personal data.
@@ -65,7 +65,7 @@ Razorpay processes payments. Cube27 is the supplier of the Service. Failed, reve
 A future pricing change will be communicated before it takes effect, with an opportunity to cancel. Completed purchases and issued invoices are not retrospectively repriced.
 
 ## purchases | Trials, plan changes and additional purchases
-Where granted, an invitation-based trial requires no payment card and does not automatically convert into a paid subscription. Its features and limits are shown when it is granted.
+Where granted, a free trial requires no payment card and does not automatically convert into a paid subscription. Its features, AI credits and limits are shown when it is granted.
 An upgrade takes effect after you confirm and pay the displayed prorated charge. A downgrade takes effect at the next renewal without a mid-period refund.
 Add-ons and top-ups are one-time purchases. Each stays usable until 30 days after successful payment or the end of your paid subscription, whichever comes first. Use requires an active paid subscription: a lapse stops use, and renewing before the original expiry restores the remaining eligible use without extending that expiry. They neither renew automatically nor extend the base subscription.
 

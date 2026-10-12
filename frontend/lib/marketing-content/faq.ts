@@ -127,7 +127,7 @@ export const FAQ_GROUPS: readonly FaqGroup[] = [
       ),
       faqItem(
         'Who operates CiteLadder?',
-        'CiteLadder is a Cube27 product. Cube27 IT Pvt. Ltd. operates from Plot No. 12, Mulberry Gardens 1, Magarpatta City, Hadapsar, Pune, Maharashtra 411013, India. Product is led by Abhineet Jain. Arpan Jain is Founder and CEO. Privacy and terms are Cube27 documents.',
+        'CiteLadder is a Cube27 product. Cube27 IT Pvt. Ltd. operates from Plot No. 12, Mulberry Gardens 1, Magarpatta City, Hadapsar, Pune, Maharashtra 411013, India. Product is led by Abhineet Jain. Arpan Jain is Founder and CEO. CiteLadder publishes its own legal pages, which bind Cube27 IT Private Limited.',
       ),
     ],
   },

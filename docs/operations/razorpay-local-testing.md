@@ -1,209 +1,148 @@
 # Razorpay local testing runbook
 
-Run these commands in **PowerShell 7 from the repository root**. This guide uses
-only the isolated `citeladder-billing-test` Compose project and the ignored
-`billing-test.env`. It does not deploy to GCP. The owner will perform real sandbox
-acceptance; mocked checks are not payment evidence.
-
-On 2026-09-08 the owner confirmed local INR and international approval. Keep
-international and live readiness false until the matching USD plans, webhook
-delivery, recurring methods, sandbox payments, and transaction-level tax
-treatment are verified below. Funded checkout remains disabled under the
-approved BYOK-only scope.
+Manual sandbox acceptance on an isolated local stack. It uses only the
+`citeladder-billing-test` Compose project, the ignored `billing-test.env` and its
+own database; it never deploys to GCP and never touches the ordinary local stack.
+Mocked checks are not payment evidence. The acceptance list to satisfy is
+[owner requirements, section 8](razorpay-and-demo-owner-requirements.md#8-required-sandbox-acceptance-evidence);
+commands and incident procedures are in the
+[billing operator guide](billing-operator-guide.md), and behavior is in
+[billing and entitlements](../billing-entitlements.md). Run the PowerShell
+commands in PowerShell 7 from the repository root.
 
 ## 1. Start the isolated environment
 
 Install Docker with Compose support for `!override`, PowerShell 7 and
-`cloudflared`.
-
-The ignored `billing-test.env` has already been prepared for this workspace.
-On another machine create a private copy of `.env.example`, supply local database
-and application secrets, and set the following explicitly:
+`cloudflared`. Create a private `billing-test.env` from `.env.example` with local
+database and application secrets, and set these explicitly (the launcher refuses
+other values):
 
 ```dotenv
 POSTGRES_DB=citeladder_billing_test
 DEMO_MODE=false
 DEV_LOGIN_PASSWORD=
 BILLING_RAZORPAY_MODE=test
+BILLING_RAZORPAY_KEY_ID=rzp_test_...
 BILLING_CHECKOUT_ENABLED=false
+BILLING_CHECKOUT_AUDIENCE=everyone
 BILLING_RAZORPAY_TEST_READY=false
 BILLING_RAZORPAY_TEST_INDIA_READY=false
 BILLING_RAZORPAY_TEST_INTERNATIONAL_READY=false
 BILLING_RAZORPAY_LIVE_READY=false
 BILLING_RAZORPAY_INTERNATIONAL_READY=false
 BILLING_SUBSCRIPTION_TOTAL_CYCLES=12
-BILLING_SELLER_LEGAL_NAME=<registered supplier name>
-BILLING_SELLER_LEGAL_ADDRESS=<registered supplier address>
-BILLING_SELLER_EMAIL=<billing contact email>
-BILLING_SELLER_GSTIN=<supplier GSTIN>
-BILLING_SELLER_GST_STATE_CODE=<two-digit GST state code>
-BILLING_SELLER_GST_STATE_NAME=<registered state name>
+BILLING_INDIA_GST_RATE=0.18              # sandbox only (B56)
+BILLING_INDIA_GST_APPROVAL_REFERENCE=sandbox
 BILLING_SELLER_SAC=<approved service accounting code>
-BILLING_SELLER_LUT_REFERENCE=<current LUT reference for zero-rated exports>
-BILLING_INVOICE_PREFIX=CL
+BILLING_SELLER_LUT_REFERENCE=<current LUT reference>
 ```
 
-Use `BILLING_RAZORPAY_KEY_ID` and `BILLING_RAZORPAY_KEY_SECRET` for the test
-credentials. Configure an independent `BILLING_QUOTE_SIGNING_SECRET` and a
-separate `BILLING_RAZORPAY_WEBHOOK_SECRET`. Quote secret values in dotenv files.
-Leave platform provider keys and credential references empty. Generic
-`RAZORPAY_KEY_*` names are not application settings. Do not print the environment
-or expanded Compose configuration.
-
-These supplier values must come from the registration/LUT records; do not infer
-them from a Razorpay profile. A missing field keeps checkout unavailable so a
-captured payment can never outrun CiteLadder's receipt evidence.
+`BILLING_RAZORPAY_KEY_SECRET`, a separate `BILLING_RAZORPAY_WEBHOOK_SECRET` and an
+independent `BILLING_QUOTE_SIGNING_SECRET` are also required. Leave platform
+provider keys (`PROVIDER_PLATFORM_*`) and `BILLING_RAZORPAY_LIVE_READY` empty or
+false; the launcher fails otherwise. Seller identity defaults to the recorded
+values ([B45](../billing-decisions.md)); without the GST rate and approval
+reference India prices are not authored, and without SAC or LUT quotes are
+refused. Because this stack is not production, `BILLING_CHECKOUT_AUDIENCE=everyone`
+serves any workspace in test mode; in production the allow-list applies
+([B2, B42](../billing-decisions.md)). Do not print the environment or expanded
+Compose configuration.
 
 ```powershell
 .\scripts\billing-test.ps1 -Action up
 .\scripts\billing-test.ps1 -Action status
 ```
 
-Expected: frontend `http://127.0.0.1:3300`, API port 8300, PostgreSQL port 55433,
-webhook proxy port 8301. Migration exits successfully; api-service/frontend/database and
-the recovery worker remain running. The ordinary local stack uses other ports
-and must remain untouched.
+Expected: app `http://127.0.0.1:3301`, marketing site `http://127.0.0.1:3300`,
+API port 8300, PostgreSQL port 55433, webhook proxy port 8301; migration exits
+successfully and the api-service, frontend, vite-app, database and `runner`
+services stay running. Register the payment customer normally at
+`http://127.0.0.1:3301/register`; this is a managed-key-free stack, so test BYOK
+plans only.
 
-Sign in as the ordinary payment customer `dev@citeladder.com`. Its generated
-local password was stored privately in `.runtime/billing-test-customer.json`.
-If that scratch file was removed, use your saved credentials or a fresh ordinary
-customer; do not assume the password is recoverable from the database. If using
-a new database, register normally at `/register`. Confirm free access
-and no paid/development grants before paying. The existing local customer has
-role `user` and three free-baseline grants. Baseline grants may have source kind
-`override`; inspect their profile and values, not just that field.
+## 2. Create a local catalog operator
 
-## 2. Create a separate local catalog operator
-
-Register `billing-operator@example.com` through the local UI with your own
-password. The admin CLI requires an existing active admin and cannot bootstrap
-one. The following explicit first-admin procedure applies only to this disposable
-local database. Do not promote the payment customer or a deployed account.
-
-Inspect the exact identity (use your configured database user if not `postgres`):
+The admin CLI needs an existing active admin and cannot create one. Register
+`billing-operator@example.com` through the UI, then promote it in this
+disposable database only (never the payment customer or a deployed account):
 
 ```powershell
 docker exec citeladder-billing-test-db-1 psql -U postgres -d citeladder_billing_test -v ON_ERROR_STOP=1 -c "SELECT id,email,role,is_active FROM users WHERE email='billing-operator@example.com';"
 ```
 
-Proceed only if exactly one row is returned for your newly registered operator:
+Proceed only if exactly one row returns, then:
 
 ```powershell
 docker exec citeladder-billing-test-db-1 psql -U postgres -d citeladder_billing_test -v ON_ERROR_STOP=1 -c "UPDATE users SET role='admin' WHERE email='billing-operator@example.com' AND is_active=true RETURNING id,email,role;"
 ```
 
-Require one returned row. Record its UUID and this local administrative action.
-Admin identity does not replace payment entitlement verification.
+Require one returned row and record the UUID and this local action.
 
-## 3. Prepare and import an INR/USD draft
+## 3. Author the catalog, create plans, bind and publish
 
-The committed fixture contains INR and USD proposals. International approval is
-confirmed, but approval alone is not checkout readiness: all six provider plan
-references and the transaction-level tax treatment must still be verified. Use
-a private copy for provider references; do not edit the committed fixture with
-merchant-specific identifiers.
+The launcher runs `billing-admin.ts` (`-Action admin`) and
+`provision-razorpay-plans.ts` (`-Action plans`) against the isolated database.
+Both are dry runs until `--apply`; there is no `--dry-run` flag. Files must live
+inside the repository (use `.runtime/`).
 
 ```powershell
-New-Item -ItemType Directory -Force .runtime | Out-Null
-$catalog = Get-Content docs/operations/razorpay-sandbox-catalog.json -Raw | ConvertFrom-Json -AsHashtable
-$catalogFile = Join-Path (Resolve-Path .runtime).Path 'razorpay-inr-usd-catalog.json'
-$catalog | ConvertTo-Json -Depth 100 | Set-Content -LiteralPath $catalogFile -Encoding utf8NoBOM
-$revision = 'sandbox-global-2026-09-08-r1'
 $actor = 'billing-operator@example.com'
-.\scripts\billing-test.ps1 -Action admin -CommandArgs @('catalog-validate','--file',$catalogFile)
-$importArgs = @('catalog-import','--revision',$revision,'--file',$catalogFile,'--actor',$actor,'--reason','Prepare local INR and USD sandbox','--idempotency-key',"import-$revision")
-.\scripts\billing-test.ps1 -Action admin -CommandArgs $importArgs
+.\scripts\billing-test.ps1 -Action admin -CommandArgs @('catalog-seed','--environment','test','--usd-inr-rate','90','--actor',$actor,'--reason','Author sandbox launch pricing','--idempotency-key','catalog-seed:launch-pricing-v1')
 ```
 
-Review the dry-run, then apply it:
+Review the dry run, repeat with `'--apply'`, then print the plan specs:
 
 ```powershell
-.\scripts\billing-test.ps1 -Action admin -CommandArgs ($importArgs + '--apply')
-.\scripts\billing-test.ps1 -Action plans -CommandArgs @('propose','--revision',$revision,'--environment','test')
+.\scripts\billing-test.ps1 -Action plans -CommandArgs @('propose','--revision','launch-pricing-v1','--environment','test')
 ```
 
-There is no `--dry-run` option: omitting `--apply` is the dry-run. The launcher
-loads only the selected billing environment, disables ordinary dotenv loading
-for host CLI commands, and targets port 55433. Catalog paths must be absolute.
-Proposal makes no provider calls and does not create plans.
-
-## 4. Create and verify actual Razorpay test plans
-
-Select **Test mode** in the Razorpay Dashboard. Confirm Subscriptions and the
-INR recurring methods you intend to exercise. Create three monthly plans with
-interval 1, using the exact names and terms printed by `propose`.
-
-| Plan    | Taxable base, paise | CiteLadder GST, paise | Razorpay plan amount, paise |
-| ------- | ------------------: | --------------------: | --------------------------: |
-| Starter |              449900 |                 80982 |                      530882 |
-| Growth  |              899900 |                161982 |                     1061882 |
-| Scale   |             1799900 |                323982 |                     2123882 |
-
-The fixture follows the launch currency rule at ₹90/USD with a fixture GST rate
-of 0.18, rounding the GST once with decimal HALF_UP. Regenerate it from
-`launch_pricing_v1_payload` rather than editing amounts by hand. Create each Razorpay plan with the **final total** in
-the last column. Razorpay's plan/invoice tax fields are not tax authority and
-are not verified. CiteLadder freezes the taxable value and transaction-level
-CGST/SGST or IGST split before provider I/O, then issues the paid GST receipt
-after captured-payment evidence matches that final total.
-
-Edit the private catalog's `regional_prices.byok.india.provider_price_ref` values
-with the three actual `plan_...` IDs. Set each `tax_verified` true only after
-the seller GST settings, transaction policy, and resulting CiteLadder receipt
-totals are reviewed. Keep all other frozen terms unchanged.
-Import a **new** immutable revision by setting `$revision` to
-`sandbox-inr-2026-09-08-r2`, reconstructing `$importArgs` as above, reviewing its
-dry-run, then applying it. Never overwrite a persisted revision.
+In the Razorpay Dashboard (**Test mode**, Subscriptions enabled), create exactly
+the printed plans: one per recurring plan, mode and region, with the printed names
+and gross amounts. Write the created IDs to `.runtime/plans.json` keyed
+`plan:mode:region`, for example `{"tier_1:byok:international": "plan_..."}`; the
+operator guide shows the shape. Bind them into a new draft revision, review, then
+publish:
 
 ```powershell
-.\scripts\billing-test.ps1 -Action plans -CommandArgs @('verify','--revision',$revision,'--environment','test')
-$publishArgs = @('catalog-publish','--revision',$revision,'--actor',$actor,'--reason','Verified INR sandbox plans','--idempotency-key',"publish-$revision")
-.\scripts\billing-test.ps1 -Action admin -CommandArgs $publishArgs
+$bind = @('bind','--revision','launch-pricing-v1','--environment','test','--plans','.runtime/plans.json','--import','sandbox-r1','--actor',$actor,'--reason','Bind sandbox plans','--idempotency-key','catalog-bind:sandbox-r1')
+.\scripts\billing-test.ps1 -Action plans -CommandArgs $bind
+.\scripts\billing-test.ps1 -Action plans -CommandArgs ($bind + @('--publish','--apply'))
 ```
 
-Require one successful verification for each of the three INR plans before
-publishing. Review the publication dry-run, then:
+`bind` fetches every plan from Razorpay and fails closed on any missing plan or
+mismatch in name, gross amount, currency or cadence; correct by creating a new
+plan and importing a new revision, never by editing a persisted one. Razorpay's
+own tax fields are not authority: CiteLadder freezes the taxable value and the
+CGST/SGST or IGST split before provider I/O and issues the receipt after a
+captured payment matches the final total.
 
-```powershell
-.\scripts\billing-test.ps1 -Action admin -CommandArgs ($publishArgs + '--apply')
-```
+## 4. Configure the test webhook
 
-## 5. Configure the test webhook
-
-In another PowerShell terminal, keep this command running:
+In another terminal, keep this running:
 
 ```powershell
 .\scripts\billing-test.ps1 -Action tunnel
 ```
 
 Configure the Razorpay **Test** webhook with the printed HTTPS hostname plus
-`/api/v1/billing/webhooks/razorpay`. Use the same webhook secret as the private
-billing environment and a monitored alert address. Update the Dashboard after
-every tunnel restart. If the provider rejects the tunnel domain, use an approved
-HTTPS ingress forwarding to the same narrow local proxy; do not expose the
-entire API. Razorpay documents public URL requirements and blocked tunnel
-services in its [webhook testing guide](https://razorpay.com/docs/webhooks/validate-test/?locale=en-US).
+`/api/v1/billing/webhooks/razorpay`, the same secret as `billing-test.env` and a
+monitored alert address; update it after every tunnel restart. If Razorpay rejects
+the tunnel domain, use an approved HTTPS ingress to the same narrow proxy
+(`infra/billing-webhook.nginx.conf`, port 8301); never expose the entire API.
+See Razorpay's [webhook testing guide](https://razorpay.com/docs/webhooks/validate-test/?locale=en-US).
 
-Select only these implemented events:
+Select exactly the events in
+[owner requirements, section 5](razorpay-and-demo-owner-requirements.md#5-production-urls-and-webhook-setup).
 
-- `subscription.authenticated`, `subscription.activated`, `subscription.charged`
-- `subscription.pending`, `subscription.halted`, `subscription.cancelled`
-- `subscription.completed`, `subscription.expired`
-- `subscription.paused`, `subscription.resumed`
-- `payment.captured`, `payment.failed`, `order.paid`
-- `refund.processed`
+Expected responses: an unrelated proxy path returns 404 and a non-POST request
+403 (both from the proxy); a missing or invalid signature returns 400 (as does any
+malformed payload); an accepted signed event returns 204 promptly and is
+processed afterward. Redelivering the same event must not duplicate receipts or
+grants.
 
-Confirm an unrelated proxy path returns 404, a non-POST webhook request returns
-403, a missing signature returns 422, and an invalid signature returns 400.
-An accepted signed event returns 204 promptly (target under five seconds);
-processing happens afterward. Redelivery of the same event must not duplicate
-receipts or grants. Test and live webhook configurations are separate.
-[Webhook overview](https://razorpay.com/docs/webhooks/)
+## 5. Enable checkout and make the first payment
 
-## 6. Enable INR checkout and make the first payment
-
-Only after the preceding merchant, catalog, tax and webhook checks, change these
-values in `billing-test.env`:
+After the catalog and webhook checks, set in `billing-test.env`:
 
 ```dotenv
 BILLING_CHECKOUT_ENABLED=true
@@ -211,132 +150,99 @@ BILLING_RAZORPAY_TEST_READY=true
 BILLING_RAZORPAY_TEST_INDIA_READY=true
 ```
 
-Keep test international, live and live international readiness false. Restart
-with `-Action up` to propagate configuration to all processes. Use `/pricing`,
-select BYOK and India, and pay as the ordinary customer. Confirm the exact tier,
-INR amount, test-mode indicator and customer email in Checkout. This integration
-uses a subscription ID, not an Orders checkout for recurring tiers.
+Keep the USD route (`BILLING_RAZORPAY_TEST_INTERNATIONAL_READY`) and live flags
+false until the USD plans are bound and verified. Run `-Action up` again to
+propagate configuration, then use `/pricing` or in-app Billing, select India, and
+pay as the ordinary customer. Confirm tier, INR amount, test-mode indicator and
+email in Checkout. Use only
+[Razorpay's test payment details](https://razorpay.com/docs/payments/payments/test-card-details/).
 
-Use only [Razorpay's documented test payment details](https://razorpay.com/docs/payments/payments/test-card-details/).
-On callback, the app may display pending while checking persisted provider
-proof. Access requires a captured invoice/payment with the exact account,
-subscription, plan, mode, frozen amount/tax and billing period. A callback alone
-must never grant access. Polling stops after 60 seconds and offers manual refresh.
-
-Inspect the activation response in browser Network and the account with:
+Access requires a captured payment bound to the exact subscription, plan, mode,
+frozen amount and period; a callback alone never grants it. Inspect the account
+(the billing account UUID comes from the signed-in billing API response, not a
+workspace or user ID):
 
 ```powershell
-$accountId = 'REPLACE_WITH_BILLING_ACCOUNT_UUID'
-.\scripts\billing-test.ps1 -Action admin -CommandArgs @('account-inspect','--workspace-id',$workspaceId,'--account-id',$accountId,'--actor',$actor,'--reason','Inspect sandbox payment','--idempotency-key','inspect-inr-1')
+.\scripts\billing-test.ps1 -Action admin -CommandArgs @('account-inspect','--workspace-id','<workspace-uuid>','--account-id','<billing-account-uuid>','--actor',$actor,'--reason','Inspect sandbox payment','--idempotency-key','inspect-inr-1')
 docker logs --tail 30 citeladder-billing-test-runner-1
 ```
 
-Get the billing account UUID from the signed-in billing API response, not a
-workspace or user ID. Inspect exact amounts and periods alongside the provider
-invoice. A successful initial purchase produces one receipt and one paid grant
-bundle. Use a separate ordinary customer for each tier, or cancel and wait for
-the verified paid period to end before buying another base subscription.
+A successful initial purchase produces one receipt and one paid grant bundle. Use
+a separate customer per tier, or change plans through the app.
 
-## 7. Acceptance scenarios
+## 6. Acceptance scenarios
 
-Record each row as passed, failed, merchant-disabled, or not simulatable in
-sandbox. Until attempted it is **unverified**. Repeat applicable payment flows
-for all tiers and each merchant-enabled INR method.
+Record each as passed, failed, merchant-disabled or not simulatable in sandbox;
+until attempted it is **unverified**. The full evidence list is in
+[owner requirements, section 8](razorpay-and-demo-owner-requirements.md#8-required-sandbox-acceptance-evidence).
+Repeat applicable flows for every tier and each enabled INR method.
 
-| Action                                                                                      | Expected evidence                                                                    |
-| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| Dismiss the modal, then retry                                                               | No paid access; retry reuses the activation/idempotency identity.                    |
-| Block `checkout.razorpay.com/v1/checkout.js` in browser request blocking                    | Bounded script timeout/error, retry available, no paid access.                       |
-| Trigger `payment.failed`, retry in the modal                                                | Visible error; a later valid success can still reconcile.                            |
-| Modify a callback signature or omit a required field                                        | Rejection, no paid access; another account's activation is inaccessible.             |
-| Authorize without capture                                                                   | Pending/authenticated state, no captured receipt or paid bundle.                     |
-| Complete initial capture                                                                    | Exact invoice/total/period and one receipt-backed grant bundle.                      |
-| Redeliver or reorder webhook events                                                         | No duplicate receipt/grants and no stale state resurrection.                         |
-| Charge a renewal through test controls                                                      | A distinct verified period and receipt; reused or overlapping periods grant nothing. |
-| Fail renewal; recover from pending/halted                                                   | No unpaid-period grants; verified recovery restores only paid time.                  |
-| Cancel, complete or expire subscription                                                     | Verified paid time remains usable; terminal expiry releases the base slot.           |
-| Stop tunnel during capture, run reconciliation, then restore tunnel                         | Same final receipt/grants; delayed webhook creates no duplicate.                     |
-| Set checkout enabled false and restart                                                      | New checkout blocked; existing recovery continues.                                   |
-| Reopen existing project evidence after expiry                                               | Historical evidence remains readable under workspace authorization.                  |
-| Sign in as an invited workspace member                                                      | Only the correct workspace sponsor's access applies.                                 |
-| Select international before USD plans, webhook delivery and sandbox acceptance are verified | Purchase unavailable; no USD subscription created.                                   |
+| Action                                                           | Expected evidence                                                              |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Dismiss the Checkout modal, then retry                           | No paid access; retry reuses the activation identity.                          |
+| Block `checkout.razorpay.com/v1/checkout.js` in the browser      | Bounded script error, retry available, no paid access.                         |
+| Decline a payment on an order, then pay on the same order        | A declined attempt never fails the order; the paid retry settles ([B25]).      |
+| Tamper with a callback signature or omit a field                 | Rejection, no paid access.                                                     |
+| Authorize without capture                                        | Pending state, no receipt or paid bundle.                                      |
+| Redeliver or reorder webhook events                              | No duplicate receipt or grants; no stale state resurrection.                   |
+| Charge a renewal with Razorpay's **Charge this now**             | A distinct period and receipt.                                                 |
+| Fail renewals until the subscription is halted                   | Sweep cancels it at Razorpay ([B24]); no unpaid-period grants.                 |
+| Schedule a cancellation, resume it, schedule again               | Held in CiteLadder, sent only before renewal ([B46]); resume clears it.        |
+| Upgrade, then downgrade                                          | Prorated order settles and switches the plan; downgrade waits for renewal.     |
+| Buy an add-on and a top-up                                       | Grants inside the current period; one paid outside it is flagged for refund.   |
+| Fully refund the current period's payment in the Dashboard       | Credit note, grants revoked, subscription cancelled at once ([B52]).           |
+| Stop the tunnel during a capture, run reconciliation, restore it | Same final receipt and grants; the delayed webhook creates no duplicate.       |
+| Set checkout enabled false and restart                           | New checkout blocked; webhooks, recovery and downgrade continue ([B28]).       |
+| Select international before USD plans and flags are verified     | Purchase unavailable; no USD subscription created.                             |
 
-Razorpay provides test subsequent-charge controls such as **Charge this now**.
-Schedule card renewal checks within its documented three-day test token window;
-record unsupported lifecycle simulations explicitly.
-[Subscription testing](https://razorpay.com/docs/payments/subscriptions/test/?preferred-country=IN)
+[B24]: ../billing-decisions.md
+[B25]: ../billing-decisions.md
+[B28]: ../billing-decisions.md
+[B46]: ../billing-decisions.md
+[B52]: ../billing-decisions.md
 
-The recovery worker is installed by `infra/compose.billing-test.yml`. The ordinary
-Compose/GCP stack does not enable this sandbox worker or authorize checkout;
-any future billing deployment must explicitly install and monitor reconciliation
-before accepting asynchronous webhooks. Keep `BILLING_RAZORPAY_MODE=test` while
-using the checkout kill switch; `disabled` intentionally prohibits provider I/O.
-Legacy catalogs without explicit provider mode remain display-only until replaced
-by a verified regional revision.
+Razorpay's test controls (**Charge this now**) work within its documented
+three-day test token window; record unsupported lifecycle simulations explicitly
+([subscription testing](https://razorpay.com/docs/payments/subscriptions/test/?preferred-country=IN)).
 
-Subscription discovery reads bounded provider pages and reports an incomplete
-search as an error, never as proof that no subscription exists. Invoice retrieval
-uses the provider's complete subscription-invoice endpoint without an artificial
-count limit. See [subscription pagination](https://razorpay.com/docs/api/payments/subscriptions/fetch-subscriptions/?preferred-country=IN)
-and [subscription invoices](https://razorpay.com/docs/api/payments/subscriptions/fetch-invoices/?preferred-country=IN).
-
-For a one-shot recovery pass (the Compose worker also runs bounded sweeps):
+For a one-shot recovery pass (the `runner` service also runs bounded sweeps):
 
 ```powershell
 .\scripts\billing-test.ps1 -Action reconcile
 ```
 
-## 8. Troubleshooting and secret rotation
+Keep `BILLING_RAZORPAY_MODE=test` while using the kill switch; `disabled`
+prohibits provider I/O.
 
-| Symptom                               | Check / next action                                                                                      |
-| ------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `active_admin_required`               | Separate operator exists, is active and has admin role in the isolated database.                         |
-| Empty or unavailable pricing          | Import and publish the reviewed catalog; reads never seed it.                                            |
-| Missing plan or verification mismatch | Match all referenced provider plans to the exact revision; import a new revision for corrections.        |
-| Provider authentication failure       | Test key pair and explicit test mode agree; do not paste secrets into logs or tickets.                   |
-| GST verification failure              | Record actual provider support and keep INR checkout disabled pending resolution.                        |
-| Callback remains pending              | Inspect provider capture/invoice and recovery logs; authorization is insufficient.                       |
-| Webhook deliveries fail               | Current HTTPS hostname, exact POST path, matching independent secret, proxy and API health.              |
-| Bounded recovery retries exhausted    | Inspect persisted failure and provider evidence before retrying; do not repeatedly create subscriptions. |
+## 7. Troubleshooting and cleanup
 
-For planned webhook secret rotation, configure the previous secret plus
-`BILLING_RAZORPAY_WEBHOOK_PREVIOUS_SECRET_STARTED_AT` and
-`BILLING_RAZORPAY_WEBHOOK_PREVIOUS_SECRET_EXPIRES_AT` as timezone-aware ISO-8601
-values, for example `2026-09-08T10:00:00Z` and `2026-09-09T10:00:00Z`. The overlap
-may not exceed 24 hours. Coordinate the Dashboard change and restart services.
-Clear previous fields afterward; blank optional timestamps are accepted. On
-compromise remove old-secret acceptance immediately and reconcile deliveries.
-The quote-signing secret is independent from provider and webhook secrets.
+| Symptom                               | Check / next action                                                                |
+| ------------------------------------- | ---------------------------------------------------------------------------------- |
+| `active_admin_required`               | The operator exists, is active and has the admin role in the isolated database.    |
+| Empty or unavailable pricing          | Seed, bind and publish the catalog; reads never seed it.                           |
+| Missing plan or verification mismatch | Match every plan to the revision; import a new revision for corrections.           |
+| Provider authentication failure       | Key pair and `BILLING_RAZORPAY_MODE=test` agree; never paste secrets into logs.    |
+| Checkout unavailable                  | Kill switch, audience, readiness flags for mode and region, quote secret distinct. |
+| Callback remains pending              | Inspect provider capture and runner logs; authorization is insufficient.           |
+| Webhook deliveries fail               | Current tunnel hostname, exact POST path, matching secret, proxy and API health.   |
+| Recovery retries exhausted            | Inspect persisted failure and provider evidence; do not create more subscriptions. |
 
-## 9. Record results and shut down
+Webhook-secret rotation follows the
+[operator guide](billing-operator-guide.md#webhook-secret-rotation).
 
-For each scenario record: date, application commit, isolated project/database,
-operator, provider mode, catalog revision/digest, tier/method, expected and actual
-amount/tax, activation/subscription/payment/invoice IDs, resulting receipt and
-grant periods, outcome and limitation. Record the webhook allow-list and verified
-alert recipient. Exclude credentials, signatures, card details and raw payloads.
+Record per scenario: date, commit, provider mode, catalog revision, tier and
+method, expected and actual amount and tax, activation, subscription, payment and
+invoice IDs, resulting receipt and grant periods, and outcome. Exclude
+credentials, signatures, card details and raw payloads.
 
-Initial wiring evidence from 2026-09-08: disposable migration and ORM drift check
-passed; local registration/login/readiness worked; proxy rejection checks worked;
-the recovery worker completed sweeps. Read-only test plan inventory returned 200
-and zero plans. No provider plans or payments were created by the agent. The
-stack was then stopped with its isolated volume preserved. These results do not
-establish real payment acceptance or validate later changes automatically.
-
-Cancel actual test subscriptions in Razorpay, disable its test webhook, stop the
-tunnel with Ctrl+C, set local checkout enabled false, then:
+To finish, cancel the test subscriptions in Razorpay, disable its test webhook,
+stop the tunnel with Ctrl+C, set `BILLING_CHECKOUT_ENABLED=false`, then:
 
 ```powershell
 .\scripts\billing-test.ps1 -Action down
 ```
 
-This preserves local evidence. For an optional clean restart, first inspect
-`docker volume ls --filter label=com.docker.compose.project=citeladder-billing-test`
-and remove only the explicitly reviewed disposable volume after saving evidence.
-The launcher deliberately has no destructive reset. Never reset the ordinary
-local or GCP database as part of this runbook.
-
-For enterprise operations and audited grant corrections, see the
-[billing operator guide](billing-operator-guide.md). Live enablement remains a
-separate outstanding owner decision. International approval is confirmed;
-international readiness evidence remains outstanding.
+This preserves the local volume. The launcher has no destructive reset; remove a
+disposable volume only after saving evidence and inspecting
+`docker volume ls --filter label=com.docker.compose.project=citeladder-billing-test`.
+Never reset the ordinary local or GCP database as part of this runbook.

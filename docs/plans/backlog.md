@@ -316,21 +316,12 @@ and [launch configuration](../operations/CiteLadder_Launch_Config.md).
 
 ## Legal, management and operational decisions
 
-Retain unresolved approvals under the
-[legal review draft](../operations/CiteLadder_Legal_Pages_Final_Review_Draft_2026-09-24.md):
+Open and resolved legal decisions, and the engineering items that keep the
+published legal pages true, live in [legal decisions](../operations/legal-decisions.md).
+Operational items that remain here:
 
-- Named grievance contact and business telephone; enterprise liability, indemnities,
-  dispute forum and agreement precedence; final policy/MSA/order-form approval.
-- Country admission, transfers and mandatory rights; category-specific finance/legal/
-  security retention exceptions and legal-hold procedure. Preserve accepted retention
-  clocks above until an explicit replacement resolves conflicting proposals.
-- Provider contracts, processing locations, no-training settings and ambiguous data-use
-  rights; deployed license/notice clearance and subprocessor-notice ownership/delivery.
-- Named incident/support owners, recovery objectives, operational evidence and
-  cyber/E&O insurance decision.
-- Accountant-approved tax/export inputs and remaining commercial policy decisions,
-  including mistaken add-on/top-up refunds. Proposed clauses are not approved policy.
-- Deferred B20 legal wording and [console spend-cap setup](../operations/GCP_RUNBOOK.md#budget-and-log-controls)
+- Named incident/support owners, recovery objectives and operational evidence.
+- [Console spend-cap setup](../operations/GCP_RUNBOOK.md#budget-and-log-controls),
   retained from completed security/backend work.
 
 ## Completed baseline

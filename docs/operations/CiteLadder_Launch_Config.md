@@ -4,7 +4,8 @@
 - Date: `2026-10-11`
 - Repository: `Cube-27/Citeladder`
 
-Sections 1–6 summarize the shipped commercial contract. Section 7 is reference-only economics.
+Sections 1–6 summarize the shipped commercial contract. Section 7 is the
+provider rate card behind internal cost (B53).
 
 The values below are configuration, and the configuration wins if they ever
 disagree: plans, prices, allowances, add-ons and top-ups in
@@ -229,7 +230,11 @@ ai_credits:                    # B12, B23, B31, B35
     - agent
     - managed_search_intelligence # DataForSEO cost, converted like token cost (B40)
   charge_basis: tokens_at_serving_model_price   # prices in config/ai-credits.json
+  credit_value: usd_0_001_after_30_percent_markup   # B14; ceil(cost x 1.3 / 0.001)
+  internal_cost_basis: provider_published_rates     # B53; plan prices and credit amounts may change
   customer_sees: credits_only                   # conversion stays internal (B23)
+  agent_model: platform_gateway_only            # no customer model route (B19)
+  agent_sonnet_5_5: [tier_2, tier_3]            # B54; not yet built; not trial or Starter
   hold_before_call_and_settle_once: true
   model_without_configured_price: refused
   recorded_not_charged: [jev_judge, tavily, keenable]   # B13
@@ -271,72 +276,30 @@ recurring_allowances:
 
 ### Daily schedule against the prompt-run allowance
 
-| Plan | Prompts | Surfaces | Days | Daily-schedule answers | Prompt runs | Remaining |
-|---|---:|---:|---:|---:|---:|---:|
-| Starter | 10 | 4 | 31 | 1,240 | 1,000 | -240 |
-| Growth | 30 | 4 | 31 | 3,720 | 3,000 | -720 |
-| Scale | 60 | 4 | 31 | 7,440 | 6,000 | -1,440 |
-
-Every surface answer is one prompt run, so a full daily schedule on all four
-surfaces needs more runs than any plan includes in a 31-day month. Nothing is
-reserved for schedules: scheduled and manual audits spend the same allowance in
-whatever order the customer runs them, and a launch is refused once it is
-spent. Raising `promptRuns` in `billing-authoring.ts` (and publishing a new
-revision) is the lever if plans should cover a full daily schedule.
+Every surface answer is one prompt run. At the configured allowances, a full
+daily schedule of every prompt on all four surfaces needs more runs than any
+plan includes in a 31-day month (Starter 1,240 against 1,000; Growth 3,720
+against 3,000; Scale 7,440 against 6,000). This is not intended; plan
+allowances are set after testing, sized with the rate card in section 7 (B55).
 
 ## 4. Add-ons and top-ups
 
-INR prices follow the plan rule in section 1 and exist only when the GST rate
-and approval reference were set at authoring; without them an item is
-unavailable in India, not zero-priced. The price follows the base
-subscription's mode (B37); grants are the same in both modes.
+Add-on and top-up prices, quantities per unit and purchase frequency are not
+documented: they are set after testing (B55) and live only in
+`billing-authoring.ts`. This section records what each can include.
 
 ```yaml
-addons:
-  addon_extra_project:
-    name: Extra project
-    cadence: one_time
-    eligible_plans: [tier_1, tier_2, tier_3]
-    eligible_modes: [byok, funded]
-    prices_minor:
-      USD: {byok: 1900, funded: 1900}
-    grants_per_unit:
-      project_slots: 1
-
-  addon_extra_prompts:
-    name: Extra 10 prompts
-    cadence: one_time
-    eligible_plans: [tier_1, tier_2, tier_3]
-    eligible_modes: [byok, funded]
-    prices_minor:
-      USD: {byok: 1500, funded: 9900}   # funded price kept as configured (B37)
-    grants_per_unit:
-      prompt_slots: 10
-
-  addon_extra_site_health:
-    name: Site Health pack
-    cadence: one_time
-    eligible_plans: [tier_1, tier_2, tier_3]
-    eligible_modes: [byok, funded]
-    prices_minor:
-      USD: {byok: 1900, funded: 1900}
-    grants_per_unit:
-      monitored_urls: 250
-      site_health_page_fetches_per_period: 2500
+addons:                         # paid plans only; never the trial
+  addon_extra_project: adds project slots
+  addon_extra_prompts: adds prompt slots
+  addon_extra_site_health: adds monitored URLs and Site Health page fetches
 
 topups:
-  topup_ai_credits:
-    name: AI credit top-up
-    cadence: one_time
-    eligible_plans: [tier_1, tier_2, tier_3]   # never the trial (B16)
-    eligible_modes: [byok, funded]
-    prices_minor: {USD: 2500}
-    grants_per_unit:
-      ai_credits: 25000
+  topup_ai_credits: adds AI credits   # never the trial (B16)
 
 expansion_policy:
-  amounts_above_are_per_unit: true
-  quantity_bounds: [1, 20]
+  price_follows_base_subscription_mode: true   # B37; grants identical in both modes
+  india_price_requires_gst_rate_and_approval_reference: true
   base_paid_subscription_required: true
   addon_grants_are_supplements_not_primary_plans: true
   expiry: 30_days_or_base_subscription_end_whichever_first
@@ -384,6 +347,8 @@ access_lifecycle:
   ended_access_keeps_path_to_buy_a_plan: true               # B43
   halted_subscription: cancelled_at_provider_by_sweep       # B24
   full_refund: revokes_remaining_grants_no_clawback
+  full_refund_of_current_period_payment: cancels_subscription_at_once   # B52; partial refunds change nothing
+  payment_disputes: manual_in_razorpay_dashboard                        # B51
   prepaid_topups_do_not_extend_subscription_access: true
   new_terms_do_not_rewrite_historical_invoices_or_grants: true
   free_signup_profile_does_not_grant_permanent_funded_execution: true
@@ -454,96 +419,70 @@ do_not_sell_without_verified_implementation_and_terms:
   - unlimited_execution
 ```
 
-## 7. Economics — reference only
+## 7. Provider rate card (internal cost)
 
-Source: `CiteLadder_Launch_Pricing_and_Cost_Model.xlsx`, sheets `Provider inputs`, `Unit economics`, and `Read me`, dated 2026-09-08.
+Internal cost is calculated at each provider's published rates (B53). This
+card records those rates for the models and endpoints the product actually
+calls, so sizing work does not need a fresh web search. Customer prices and
+credit amounts are separate commercial settings (B53, B55).
 
-Planning assumptions, not measured production costs or an execution rate card. Do not copy these estimates into runtime provider pricing. All revenue below excludes customer taxes.
+**Verified 2026-10-12** from each provider's official pricing page. Re-verify
+before using a figure for a pricing decision, and update the row and date here.
+Runtime charging reads `config/ai-credits.json`, `config/dataforseo.json` and
+`config/search-intelligence.json`, not this table; a mismatch is a config bug
+to fix, not a reason to edit this card.
 
-### Cost inputs
+### Model tokens (USD per million tokens)
 
-| Input | Value |
-|---|---:|
-| Billed input tokens/answer, including retrieval context | 2,000 |
-| Billed output tokens/answer | 600 |
-| Retry/variable-use reserve | 15% |
-| Rounded managed budget/answer | $0.04 |
-| Higher-cost scenario/answer; not a maximum | $0.07 |
-| Payment/collection reserve | 5% of subscription revenue |
-| Other delivery reserve, Starter / Growth / Scale | $10 / $20 / $35 per month |
-| Included workflow model-cost budgets | $0 / $5 / $15 per month |
-| Illustrative cost-model FX only | ₹90/USD |
-| Illustrative India GST only; actual treatment is transaction-specific | 18% |
+| Model | Used for | Input | 5-min cache write | Cache read | Output | Notes |
+|---|---|---:|---:|---:|---:|---|
+| Claude Haiku 5.5 (prompt ≤100K) | Agent default, gateway calls (prompt generation, research, commerce) | 0.10 | 0.125 | 0.01 | 0.50 | 1-hour cache write 0.20 |
+| Claude Haiku 5.5 (prompt >100K) | — (the Agent stays below this tier) | 0.50 | 0.625 | 0.05 | 2.50 | 5× the lower tier |
+| Claude Sonnet 5.5 | Claude answer engine (`claude-sonnet-5-5`); Agent option on Growth and Scale (B54) | 2.00 | 2.50 | 0.10 | 10.00 | 1-hour cache write 4.00; one rate across the full context |
+| OpenAI gpt-6.1-sol (≤272K input) | ChatGPT answer engine | 2.00 | — | 0.10 | 10.00 | Automatic caching |
+| OpenAI gpt-6.1-sol (>272K input) | — | 4.00 | — | 0.20 | 15.00 | |
+| Google gemini-3.6-flash | Gemini answer engine | 0.75 | — | 0.075 | 3.75 | Through 2026-12-31; 1.50 / 0.15 / 7.50 from 2027-01-01. Output includes thinking. Cache storage 0.50 per million tokens per hour (1.00 from 2027) |
 
-The other-delivery reserve already includes the workflow budgets. Do not add them twice.
-Shared hosting, storage, crawling, internal AI, and delivery overhead are estimates. Acquisition costs and founder salaries are excluded. Low account counts can increase per-account shared costs.
+Thinking (reasoning) tokens are billed as output by every provider above.
 
-### Per-answer model assumptions
+### Search and grounding fees
 
-These reproduce the prior workbook's budgeting inputs, not a fresh verification of provider prices.
+| Provider | Fee | Notes |
+|---|---|---|
+| Anthropic web search | $10 per 1,000 searches | Plus search-result tokens as input, in later turns too |
+| OpenAI web search | $10 per 1,000 calls | Plus search content tokens at model rates |
+| Google grounding with Google Search | $14 per 1,000 requests | After 5,000 free requests a month, shared across Gemini 3 and newer models |
 
-| Route | Input $/million | Output $/million | Search $/query | Queries/answer | Estimated $/answer |
-|---|---:|---:|---:|---:|---:|
-| OpenAI route | 5.00 | 30.00 | 0.010 | 1 | 0.0380 |
-| Anthropic route | 2.00 | 10.00 | 0.010 | 3 | 0.0400 |
-| Google route | 1.50 | 7.50 | 0.014 | 1 | 0.0215 |
-| Equal-weight mean | — | — | — | — | 0.0331667 |
-| Mean plus 15% reserve | — | — | — | — | 0.0381417 |
+### DataForSEO (USD)
+
+| Endpoint family | Used for | Published price | Configured in code |
+|---|---|---|---|
+| SERP Google Organic `task_post` (10 results) | Google AI Overview surface | Standard $0.0006, priority $0.0012, live $0.002 per SERP; async AI Overview loading adds one base price | `observed_standard_task_cost_microusd` 1,200 and `async_ai_overview_surcharge_microusd` 600 (`dataforseo.json`). The 1,200 matches the priority-queue price and was observed live; check which queue the task uses before relying on either figure |
+| AI Optimization LLM Scraper (ChatGPT, Gemini) | ChatGPT Search and Gemini consumer surfaces | Standard $0.0012, priority $0.0024, live $0.004 per results page | Priority 1 (standard queue) in `dataforseo.json` |
+| DataForSEO Labs live endpoints (ranked keywords, page and domain intersection, keyword suggestions, relevant pages, subdomains, domain rank overview) | Search Intelligence | $0.012 per task plus $0.00012 per returned item | `rates.labs_task` and `rates.labs_item` (`search-intelligence.json`) — match |
+| Backlinks API | Search Intelligence | $0.024 per request plus $0.000036 per row | `rates.backlinks_request` and `rates.backlinks_row` — match |
+
+The DataForSEO account needs a minimum $50 payment. Prices are per call
+regardless of who supplies the key; on bring-your-own-key plans the customer's
+account pays.
+
+### Not modelled here
+
+Keenable, Tavily and TypeSafe AI calls are recorded but not charged (B13);
+their contract rates are not public list prices. Google Cloud hosting and
+Cloudflare are fixed infrastructure costs, not per-call rates.
+
+### Converting cost to credits
 
 ```text
-answer_cost =
-  (billed_input_tokens × input_rate_per_million / 1,000,000)
-  + (billed_output_tokens × output_rate_per_million / 1,000,000)
-  + (search_queries × fee_per_query)
-
-managed_contribution =
-  managed_revenue
-  - (included_answer_allowance × modeled_answer_cost)
-  - other_delivery_reserve
-  - (managed_revenue × 0.05)
-
-byok_contribution =
-  byok_revenue
-  - other_delivery_reserve
-  - (byok_revenue × 0.05)
-
-contribution_margin = contribution / subscription_revenue
+call_cost_usd = Σ (tokens_in_class × class_rate / 1,000,000) + search_fees + provider_task_fees
+credits       = ceil(call_cost_usd × 1.3 / 0.001)          # B14: 1 credit = $0.001 after 30% markup
 ```
 
-### Monthly economics at full allowance use
+Example at Haiku 5.5: 10,000 input and 2,000 output tokens cost $0.002 and are
+charged 3 credits. One Claude answer on Sonnet 5.5 (2,000 input, 600 output,
+one web search) costs about $0.020; a Gemini 3.6 Flash answer with one grounded
+request after the free allowance costs about $0.018.
 
-| Metric | Starter | Growth | Scale |
-|---|---:|---:|---:|
-| Managed revenue | $99.00 | $249.00 | $499.00 |
-| BYOK revenue | $49.00 | $99.00 | $199.00 |
-| Managed answer allowance | 1,000 | 3,000 | 6,000 |
-| AI budget at $0.04/answer | $40.00 | $120.00 | $240.00 |
-| Other delivery reserve | $10.00 | $20.00 | $35.00 |
-| Managed collection reserve | $4.95 | $12.45 | $24.95 |
-| Managed contribution | $44.05 | $96.55 | $199.05 |
-| Managed contribution margin | 44.5% | 38.8% | 39.9% |
-| Managed contribution at $0.07/answer | $14.05 | $6.55 | $19.05 |
-| Managed margin at $0.07/answer | 14.2% | 2.6% | 3.8% |
-| BYOK contribution | $36.55 | $74.05 | $154.05 |
-| BYOK contribution margin | 74.6% | 74.8% | 77.4% |
-
-### BYOK buyer: scheduled tracking only, 31 days
-
-Uses the buffered estimate of $0.0381417/answer, not the rounded $0.04 internal budget.
-Extra manual usage and provider-specific taxes or fees are excluded.
-
-Scheduled answers here count the three ANSWER ENGINES only (10/30/60 prompts x 3 x 31
-days), deliberately unlike the section 3 fixtures. The per-answer cost model above is
-built from LLM token and search-query rates, and an observed SERP task is neither; its
-cost belongs to a SERP rate card that is not modeled here.
-
-| Metric | Starter | Growth | Scale |
-|---|---:|---:|---:|
-| Scheduled answers | 930 | 2,790 | 5,580 |
-| CiteLadder subscription | $49.00 | $99.00 | $199.00 |
-| Estimated provider bill | $35.47 | $106.42 | $212.83 |
-| Estimated combined spending | $84.47 | $205.42 | $411.83 |
-| Managed subscription | $99.00 | $249.00 | $499.00 |
-| Estimated net saving | $14.53 | $43.58 | $87.17 |
-
-Operational reference: revalidate new managed sales when representative measured blended cost exceeds $0.04 per delivered answer. Do not silently cut scheduled coverage already sold.
+The superseded 2026-09-08 workbook economics (old token rates and margins) are
+in git history.

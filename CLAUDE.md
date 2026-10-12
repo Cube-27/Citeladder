@@ -25,6 +25,29 @@ Coding-agent skills may supply tool-specific procedures, not a second copy of
 repository policy. Packaged Agent `SKILL.md` files are production inputs,
 not redundant engineering skills; their owner is the [Agent](docs/agents.md).
 
+### Which document answers what
+
+| Question | Read |
+|---|---|
+| How does a feature behave today? | Its feature owner in the [index](docs/README.md#feature-owners) |
+| What must never break? | [Invariants](docs/invariants.md), affected sections only |
+| Why was a cross-feature choice made? | [Decisions](docs/decisions.md) |
+| Any billing, pricing, credits or plan-gating decision | [Billing decision log](docs/billing-decisions.md) (B-numbers) |
+| How billing, entitlements and usage accounting behave | [Billing and entitlements](docs/billing-entitlements.md) |
+| Prices, allowances, add-ons and top-ups (the numbers) | `frontend/services/api/src/config/billing-authoring.ts`; documents never restate add-on or top-up numbers (B55) |
+| Provider token, search and DataForSEO rates (internal cost) | [Provider rate card](docs/operations/CiteLadder_Launch_Config.md#7-provider-rate-card-internal-cost); runtime prices in `config/ai-credits.json`, `dataforseo.json`, `search-intelligence.json` |
+| Legal commitments, subprocessors, company details | [Legal decisions](docs/operations/legal-decisions.md); page text in `frontend/lib/marketing-content/legal*.ts` |
+| What work is current, and what is queued | [Plan status](docs/plans/ACTIVE.md), then the assigned plan; [backlog](docs/plans/backlog.md) is queued, not assigned |
+| Setup, commands and validation | [Development](docs/DEVELOPMENT.md) |
+| Deployment and operator procedures | [Operations](docs/operations/) runbooks and the [billing operator guide](docs/operations/billing-operator-guide.md) |
+| Product scope and positioning | [Product](PRODUCT.md) |
+
+Owner decisions live only in `decisions.md`, `billing-decisions.md`,
+`operations/legal-decisions.md` and a plan's owner-decisions section, each with
+its date and source. Notes an agent wrote in a PR, plan or code comment are not
+owner decisions. A new owner answer is recorded in the matching log in the same
+pull request that relies on it.
+
 ## Non-negotiable guardrails
 
 - Every project-owned read and write is workspace-authorized. IDs are UUIDs,

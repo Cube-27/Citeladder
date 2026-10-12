@@ -4,8 +4,9 @@ import { PARENT_COMPANY, type LegalDocument } from './legal';
  * The Data Processing Agreement and the provider list it relies on.
  *
  * The provider rows come from an audit of the code and production
- * configuration (24 September 2026), not from the review draft's template.
- * Each row names only a service the product actually calls. The crawler, a
+ * configuration (last 12 October 2026). Each row names only a service the
+ * product actually calls; open questions live in
+ * docs/operations/legal-decisions.md. The crawler, a
  * dormant monitoring option and unconfigured sign-in providers are
  * deliberately absent. When a provider is added, removed or re-routed, this
  * list changes in the same pull request.
@@ -136,7 +137,7 @@ export const SUBPROCESSORS: LegalDocument = {
   slug: 'subprocessors',
   title: 'Subprocessors',
   description: 'The service providers that process data for CiteLadder, and why.',
-  lastUpdated: '2026-10-10',
+  lastUpdated: '2026-10-12',
   sections: [
     {
       id: 'subprocessors',
@@ -161,9 +162,33 @@ export const SUBPROCESSORS: LegalDocument = {
             'Global network',
           ],
           [
+            'Anthropic',
+            'AI models for the Agent and other platform-provided AI assistance, and the Claude answer engine when CiteLadder supplies the keys',
+            'Your instructions, the prompts you run and the relevant project context',
+            'United States',
+          ],
+          [
             'OpenAI',
-            'Platform-provided AI assistance, such as the Agent, when you have not set your own provider',
-            'Your instructions and the relevant project context',
+            'AI models for the Agent and other platform-provided AI assistance, and the ChatGPT answer engine when CiteLadder supplies the keys',
+            'Your instructions, the prompts you run and the relevant project context',
+            'United States',
+          ],
+          [
+            'Google (Gemini)',
+            'The Gemini answer engine when CiteLadder supplies the keys',
+            'The prompts you run and the relevant project context',
+            'United States',
+          ],
+          [
+            'DataForSEO',
+            'Google AI Overview and search intelligence data when CiteLadder supplies the account',
+            'Search queries, locations and domains you configure',
+            'Estonia (provider’s registered office)',
+          ],
+          [
+            'Resend',
+            'Sending account emails: sign-in and verification links, password resets and workspace invitations',
+            'The recipient’s email address and the message',
             'United States',
           ],
           [
@@ -194,8 +219,8 @@ export const SUBPROCESSORS: LegalDocument = {
         'When you connect a provider under your own credentials, that provider acts under your agreement with it, not as our subprocessor. We send it only the requests you configure or run.',
       ],
       bullets: [
-        'AI answer engines and assistants you set in Providers settings, such as OpenAI, Anthropic and Google Gemini, under your own API keys. This includes any Agent model you choose.',
-        'DataForSEO, under your own credentials, for Google AI Overview and search intelligence data.',
+        'AI answer engines you set in Providers settings under your own API keys, such as OpenAI, Anthropic and Google Gemini. The Agent always uses the platform providers listed above.',
+        'DataForSEO under your own credentials, for Google AI Overview and search intelligence data.',
         'Google Search Console, Google Analytics and Bing Webmaster Tools, for the properties you authorise.',
         'Google sign-in, when you choose it to sign in.',
         'MCP and API clients you authorise, such as an AI assistant, which receive the data they request under their own terms.',
@@ -205,7 +230,7 @@ export const SUBPROCESSORS: LegalDocument = {
       id: 'independent',
       title: 'Independent service providers',
       bullets: [
-        'Resend delivers messages submitted through the CiteLadder contact form, including your name, email, optional company and message. These enquiries are not stored in the application database or used to subscribe you to marketing.',
+        'Resend also delivers messages submitted through the CiteLadder contact form, including your name, email, optional company and message. These enquiries are not stored in the application database or used to subscribe you to marketing.',
         'Razorpay processes payments as an independent payment provider under its own terms. We never receive full card details.',
         'Google Analytics measures website visits only when it is enabled and you accept optional cookies.',
       ],

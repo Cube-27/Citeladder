@@ -24,10 +24,10 @@ and no autonomous action.
 | A1 | Build a native tool-use loop now; no agent framework (LangGraph, Claude Agent SDK). |
 | A2 | The Agent's providers are Anthropic or OpenAI. Gemini is not now. Customer (BYOK) Agent routes stay removed. |
 | A3 | Default model Claude Haiku 5.5 at reasoning effort medium. Users may pick Haiku 5.5 or Sonnet 5.5. |
-| A4 | Sonnet 5.5 is for paid plans only (see finding F11 and owner input O1). |
+| A4 | Sonnet 5.5 is offered on Growth and Scale, not on the trial or Starter. This is a current business decision, kept in plan configuration so it can change without code (see F11). |
 | A5 | The model and reasoning choice is per chat and changeable on any message. Each run freezes what was selected. |
 | A6 | Users see reasoning levels Low, Medium (default) and High. |
-| A7 | Thinking summaries stream into the activity line. They are collapsible and not persisted. |
+| A7 | Thinking summaries stream into the activity line, collapsed by default, and are not shown again after the turn. The server may store thinking blocks for replay; customers are not shown all of it. |
 | A8 | Later improvements (PR 3) are written as two options for the owner: Anthropic Managed Agents or the native runtime. |
 
 ## Verified findings
@@ -92,14 +92,15 @@ contracts, the frontend Agent surfaces, and the docs and marketing.
   - Anthropic cache-write tokens are folded into input at the base price; the
     API bills them at a premium.
   - Thinking tokens arrive inside `output_tokens`.
-  - Haiku 5.5's list price doubles above 100K prompt tokens, and the price row
-    has a single rate.
+  - Haiku 5.5's list price rises fivefold above 100K prompt tokens ($0.50
+    input, $2.50 output), and the price row has a single rate.
 - **F11. The Agent is already paid-only.**
   - The `agent` capability is granted only to Growth and Scale.
     `catalog-authoring.ts` validates that tier 1 has no Agent, and the public
     trial grants none.
-  - So every workspace that can run the Agent is on a paid plan. "Sonnet for paid
-    plans only" needs no new capability unless the trial later gains the Agent.
+  - So today every workspace that can run the Agent may use Sonnet (A4). A4 is
+    a business decision that can change, so PR 2 gates each model by its own
+    plan list in config rather than relying on this.
 - **F12. Commit before network I/O.**
   - `ModelCalls.dispatch` reserves the hold and inserts the
     `agent_model_attempts` row (unique per `run_id, run_attempt, ordinal`) and
@@ -229,8 +230,7 @@ during the turn:
   - It is workspace and project scoped, cascades with the run, and is written
     in the same transaction as the reply.
   - Stored thinking blocks are replay input only. They are never shown or
-    returned by any read. Storing them at all needs owner input O8: A7 says
-    summaries are not persisted.
+    returned by any read (A7, O8).
 - **The chat's conversation is only ever appended to, across turns as well as
   within one.**
   - Haiku 5.5 and Sonnet 5.5 keep previous-turn thinking blocks. Deleting a
@@ -313,7 +313,10 @@ changed byte invalidates everything after it.
 - **Config.** An Agent model allow-list in config, each entry with:
   - provider;
   - price row key;
-  - the capability it requires (`agent` for both, per F11);
+  - the plans allowed to use it: Haiku on every plan with the Agent, Sonnet
+    on Growth and Scale only (A4). The model's own plan list gates it, not the
+    `agent` capability alone, so Sonnet stays off Starter even if Starter later
+    gains the Agent;
   - labels, and the effort mapping Low/Medium/High → provider effort or
     `reasoning_effort`.
 - **Chat and run columns.**
@@ -508,11 +511,13 @@ focused tests.
 
 ### PR 2 — Model and reasoning picker, pricing and public copy
 
-**Prerequisite:** owner entries O1 and O4 are recorded.
+**Prerequisite:** O1 is decided (A4); O4 (refusal fallback) is recorded.
 
 **Backend**
-- Add the allow-list config and a Sonnet 5.5 price row ($2.00 input, $0.20
-  cached input, $10.00 output per million tokens, at the existing markup).
+- Add the allow-list config and a Sonnet 5.5 price row at the published rates
+  in the [provider rate card](../operations/CiteLadder_Launch_Config.md#7-provider-rate-card-internal-cost)
+  ($2.00 input, $2.50 cache write, $0.10 cached input, $10.00 output per
+  million tokens).
 - Schema and contracts:
   - `agent_chats.model` and `reasoning_level`, and
     `agent_runs.reasoning_level` (baseline edit, reset);
@@ -551,8 +556,8 @@ focused tests.
 **Documents and copy**
 - [billing-entitlements.md](../billing-entitlements.md) AI credits section:
   per-model prices, cache-write and thinking rules.
-- [billing-decisions.md](../billing-decisions.md): the O1–O4 entries are
-  recorded by the owner.
+- [billing-decisions.md](../billing-decisions.md): A4 is B54; record O4 once
+  the owner decides it.
 - Supersede B12 rather than rewriting it.
 - [billing-operator-guide.md](../operations/billing-operator-guide.md): drop
   "one row per model step" wording and the BYOK incident line.
@@ -641,37 +646,31 @@ outputs for the UI.
 
 Record each in the billing decision log before the PR that needs it.
 
-- **O1 (PR 2).** Sonnet 5.5 is available to every plan that includes the Agent,
-  currently Growth and Scale, since the trial has no Agent (F11). It is priced
-  by usage at the standard markup.
-  - Confirm this, or name a narrower gate (for example Scale only).
+- **O1 (decided, A4,
+  [B54](../billing-decisions.md#agent-native-runtime-2026-10-12)).** Sonnet 5.5
+  is on Growth and Scale, not on the trial or Starter. It is a current business
+  decision, so the gate lives in plan configuration and can change without code.
 - **O2–O3 (PR 1): decided as
-  [B53](../billing-decisions.md#agent-native-runtime-2026-10-12).** Tokens are
-  charged at the provider's published prices:
+  [B53](../billing-decisions.md#agent-native-runtime-2026-10-12).** Internal
+  cost is calculated at the provider's published rates:
   - cache writes at the published write rate;
   - thinking tokens as output;
   - every call kept below a model's long-context price tier.
+  - Customers pay a subscription that includes AI credits. Plan prices and
+    credit amounts can change at any time without changing the internal cost
+    calculation, which is what informs them per tier.
 - **O4 (PR 2).** Refusal fallbacks are deferred. A refused Sonnet turn ends with
   a recovery reply instead of silently re-running on another model.
 - **O5 (done).** The live eval is built and the baseline is recorded; see
   [Eval](#eval).
 - **O6 (PR 3).** Choose Option A or Option B, and approve the invariant changes
   it needs.
-- **O7 (separate, legal).**
-  - `lib/marketing-content/legal-dpa.ts` still names OpenAI as the Agent's
-    processor and offers an Agent model "under your own API keys".
-  - The legal review draft in `docs/operations` matches it.
-  - This needs owner or legal review. It is not part of these PRs.
-- **O8 (PR 1, before the transcript table).** Preserved thinking needs the
-  provider's thinking blocks, including the readable summary, stored to replay
-  the next turn. This conflicts with A7's "not persisted".
-  - Recommended: read A7 as "never shown again". Store the blocks only in
-    `agent_run_transcripts`, never return them from a read, and delete them with
-    the chat.
-  - Alternative: store no thinking. Each follow-up turn then starts a new
-    conversation from the saved replies and tool results. It loses the
-    previous turn's reasoning, and the cache misses from the first follow-up
-    onward.
+- **O7 (done).** The legal pages name Anthropic and OpenAI as the Agent's
+  providers and describe stored Agent conversations; see R12 and R15 in
+  [legal decisions](../operations/legal-decisions.md).
+- **O8 (decided).** Thinking blocks may be stored for replay. They are kept only
+  in `agent_run_transcripts`, never returned by a read, and deleted with the
+  chat. Customers are not shown everything the model thought (A7).
 
 ## Eval
 

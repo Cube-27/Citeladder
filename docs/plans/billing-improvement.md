@@ -5,6 +5,13 @@ started 2026-10-11 from the [backlog](backlog.md#billing-entitlements-and-usage-
 Owner documents: [Billing and entitlements](../billing-entitlements.md) and
 [provider readiness](../billing-provider-readiness.md).
 
+## Status (2026-10-12)
+
+PRs 1–3 merged (#376, #377, #379; review fixes #383). The operations documents
+were brought in line with the shipped behaviour on 2026-10-12. Remaining:
+operator acceptance, plan and add-on sizing after testing (B55), and the
+enable PR.
+
 ## Objective
 
 Billing works end to end in the deployed environment while staying hidden from

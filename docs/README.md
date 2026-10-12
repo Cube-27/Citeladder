@@ -71,12 +71,20 @@ retain superseded history; deleting a document does not resolve an open finding.
 ## Operations and retained evidence
 
 [Release acceptance](release-checklist.md) retains manual and external gates.
+[Billing decisions](billing-decisions.md) is the owner decision log for billing,
+entitlements and usage (B0 onward); [Billing and entitlements](billing-entitlements.md)
+owns the resulting behavior and the [billing improvement plan](plans/billing-improvement.md)
+its delivery.
 [Billing provider readiness](billing-provider-readiness.md) separates implemented
-adapters from accepted payment operation.
+adapters from accepted payment operation. The
+[provider rate card](operations/CiteLadder_Launch_Config.md#7-provider-rate-card-internal-cost)
+holds the verified internal provider rates.
 [Workers operations](operations/WORKERS_RUNBOOK.md) owns protected
 origin provisioning, configuration and cutover release records.
 [Operations](operations/) contains live deployment, billing and recovery
 procedures; use the procedure relevant to the requested operation.
+[Legal decisions](operations/legal-decisions.md) owns company details and the
+open and resolved decisions behind the published legal pages.
 
 Fixtures consumed by current tests remain with those tests. Git and PRs retain
 historical plans, audits and dated evidence. Archived copies are disposable;

@@ -2,18 +2,17 @@ import { PARENT_COMPANY, type LegalDocument } from './legal';
 import { legalSections } from './legal-text';
 
 /**
- * CiteLadder Privacy Policy. Retention windows, response-time targets and
- * provider-specific commitments are still owner decisions, so this version
- * states only what the product does today and what the law already requires.
+ * CiteLadder Privacy Policy. Open and resolved legal decisions live in
+ * docs/operations/legal-decisions.md; change commitments here only from there.
  */
 export const PRIVACY_POLICY: LegalDocument = {
   slug: 'privacy',
   title: 'Privacy Policy',
   description: 'What personal data CiteLadder processes, why, and the choices you have.',
-  lastUpdated: '2026-10-10',
+  lastUpdated: '2026-10-12',
   sections: legalSections(`
 ## who | Who we are
-${PARENT_COMPANY.legalName} (“Cube27”, “we”, “us”) operates CiteLadder. Our principal business address is ${PARENT_COMPANY.address}. Contact us at ${PARENT_COMPANY.email}.
+${PARENT_COMPANY.legalName} (“Cube27”, “we”, “us”) operates CiteLadder. Our registered office is ${PARENT_COMPANY.address}. Contact us at ${PARENT_COMPANY.email}.
 This Policy covers the CiteLadder website, hosted application, account administration, purchases, support and data processed through CiteLadder features. For our own account, billing, security and support purposes we decide why and how personal data is processed. For personal data processed on a customer’s instructions, we act on behalf of that customer.
 
 ## information | Information we process
@@ -40,7 +39,8 @@ We use it to deliver requested features, preserve project evidence, manage accou
 A requested crawl processes page bodies to extract relevant information. Extracted content, findings, links and technical provenance can remain in the workspace for history and comparison. AI responses and connected-provider imports may be retained as evidence. Evidence can contain personal or confidential information.
 
 ## ai | AI providers and data use
-An enabled AI feature may send your prompt and relevant project context to the provider used for that feature. BYOK calls also run under your own provider account and settings.
+An enabled AI feature may send your prompt and relevant project context to the provider used for that feature. The in-app Agent always uses our platform providers (Anthropic or OpenAI); AI answer-engine audit calls you configure with your own API keys (BYOK) run under your own provider account and settings.
+Agent conversations are stored in your workspace so a chat can continue where it left off. This includes the model’s working notes used to continue a chat, which are not all shown to you.
 When you generate prompt suggestions, we may send each suggestion with your project’s business facts to a quality-checking provider, which answers fixed questions about whether the suggestion fits your business and reads like a real buyer’s question. When you run an internal link analysis, we send the provider short descriptions of pairs of your crawled pages, which it uses to answer whether one page should link to the other. Its answers decide which suggestions we show you; they are not used to score your business. Our subprocessor list at /subprocessors names this provider and the data it receives.
 We do not sell Customer Data or use it to train third-party foundation models, and we do not disclose one customer’s private project information to another customer. Provider retention and processing depend on the provider’s service, agreement and configuration; we do not promise that every provider deletes data immediately.
 
@@ -54,14 +54,15 @@ Workspace administrators and authorised members may access information according
 We may also disclose information to advisers or authorities where necessary and lawful.
 
 ## retention | Retention, export and deletion
-We retain project data while your workspace needs it for the Service. Cancelling a subscription does not immediately delete your workspace or its history.
-You can ask us to export supported Customer Data or delete your data by emailing ${PARENT_COMPANY.email}. We will verify your identity and authority, then act on the request within the period applicable law requires.
+We retain project data, including Agent conversations, while your workspace has access to the Service and until you delete it. Cancelling a subscription does not immediately delete your workspace or its history.
+Once all paid access to a workspace ends, you have 30 days to request an export of supported Customer Data. We then delete or de-identify the workspace’s project data within a further 30 days. A free trial workspace that is not converted to a paid plan is deleted with its data 30 days after the trial ends.
+You can ask us to export supported Customer Data or delete your data at any time by emailing ${PARENT_COMPANY.email}. We will verify your identity and authority, then complete a verified deletion request within 30 days. Any backup copies are removed within 90 days after deletion from our active systems.
 When you reject a suggested prompt that was quality-checked, we keep the check’s result, without the suggestion’s text, for up to 180 days to improve those checks.
 We may keep limited billing, tax, accounting, consent, security, fraud or dispute records for the period the law requires. Third-party providers and external clients you authorised may retain their own copies under their terms.
 
 ## security | Security and international processing
 We use safeguards appropriate to the data and risks, including controlled workspace access, protected credentials, encrypted transport and operational security measures. No online service provides absolute security.
-We operate from India. Our providers may process information in other countries. We do not promise storage in any particular country unless a signed agreement says so.
+We operate from India. The Service is hosted on Google Cloud in the United States (us-central1), with Cloudflare delivering the website and app from its global network. Our other providers may process information in other countries; our subprocessor list at /subprocessors gives each provider’s location.
 
 ## rights | Your choices and requests
 Depending on applicable law, you may request access to, correction of, erasure of or a copy of your personal data; withdraw consent; object to or restrict certain processing; nominate a person where that right applies; or complain to the relevant authority.

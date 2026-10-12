@@ -1,21 +1,23 @@
 # Payment provider readiness
 
-Runtime/configuration owner updated on 2 October 2026; provider acceptance is unchanged.
+Runtime/configuration owner; provider acceptance is unchanged.
 
-**Payments are not enabled.** `BILLING_RAZORPAY_LIVE_READY` is false,
-`BILLING_CHECKOUT_AUDIENCE` keeps checkout to allow-listed workspaces, and no
-real payment has been taken.
-Nothing in this repository has been verified against a live payment network.
+**Payments are not enabled.** Only the free trial is live.
+`BILLING_RAZORPAY_LIVE_READY` is false, `BILLING_CHECKOUT_AUDIENCE` keeps checkout
+to allow-listed workspaces, and no real payment has been taken. Nothing in this
+repository has been verified against a live payment network.
 
-## Razorpay: approved, being activated
+## Razorpay: approved, hidden, awaiting acceptance
 
 Razorpay approved the merchant, including Subscriptions and international
-payments. Activation follows the
-[payment acceptance backlog](plans/backlog.md#acceptance-calibration-and-rollout): PR A
-(commercial core) implements the launch catalog, currency rule, tax,
-documents and entitlements with checkout still off; PR B connects the payment
-paths; PR C builds the customer surfaces (all three implemented); test-mode acceptance and the live
-sign-off come last. Enablement still requires recorded live sign-off.
+payments. The commercial core, payment paths and customer surfaces are
+implemented and billing runs hidden in production ([B0, B2](billing-decisions.md);
+[billing improvement plan](plans/billing-improvement.md)). What remains is
+test-mode acceptance through the allow-list, the owner's tax inputs and recorded
+live sign-off: see the
+[owner requirements](operations/razorpay-and-demo-owner-requirements.md) and the
+[payment acceptance backlog](plans/backlog.md#acceptance-calibration-and-rollout).
+Enablement is then a configuration change, not code.
 
 Everything below marked "verified" is verified by LOCAL tests only. None of it
 is evidence that money can be taken correctly.
@@ -34,11 +36,9 @@ is evidence that money can be taken correctly.
 | Uncertain creation is recovered without another create request                            | `src/billing/recovery.ts`                                         | `billing.test.ts`            |
 | Quote signing uses an independent secret with no gateway fallback                         | `src/billing/razorpay.ts`                                         | `billing-boundaries.test.ts` |
 
-Paths above are relative to `frontend/services/api/`. Native config owns billing
-execution, authoring, tax/seller policy and read-only operator credentials.
-The SQL schema baseline and its TypeScript migrate CLI own the schema. Identity,
-bootstrap, seeding and grants are native. Public pricing
-and billing reads consume persisted state without provider calls.
+Paths above are relative to `frontend/services/api/`, and the tests are in its
+`test/` directory. Public pricing and billing reads consume persisted state
+without provider calls.
 
 ## Configuration
 
@@ -56,7 +56,8 @@ Provider-independent execution, tax/seller and operator policy lives in
   checkout is unavailable when it is empty or equals a Razorpay secret.
 - `BILLING_INDIA_GST_RATE` and `BILLING_INDIA_GST_APPROVAL_REFERENCE` —
   required together to author India prices; there is no source default. The
-  rate is frozen with each India catalog price, and quotes use that.
+  rate is frozen with each India catalog price, and quotes use that
+  ([B45](billing-decisions.md)).
 - the seller identity (legal name, address, email, GSTIN and state default to
   the recorded values; `BILLING_SELLER_SAC` and `BILLING_SELLER_LUT_REFERENCE`
   are owner inputs), the invoice prefix and the HTTP timeout.
@@ -64,8 +65,8 @@ Provider-independent execution, tax/seller and operator policy lives in
   cancellation is sent to the provider (default two days).
 - `BILLING_FUNDED_MONTHLY_BUDGET_MINOR` — the managed-plan monthly platform
   spend ceiling.
-- the trial length and purge, quote validity, subscription cycles, and the
-  reconciliation and webhook bounds.
+- the trial length and purge, quote validity, subscription cycles, the
+  minimum plan-change charge, and the reconciliation and webhook bounds.
 
 Commercial terms (prices, grants, add-ons and top-ups) are never
 environment settings: they live in the published `BillingCatalogRevision`.
