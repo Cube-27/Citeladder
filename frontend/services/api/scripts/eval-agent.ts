@@ -79,9 +79,9 @@ const recordSchema = z.looseObject({
   total_ms: z.number().nullish(),
   model_calls: z.number().optional(),
   tool_calls: z.number().optional(),
-  input_tokens: z.number().optional(),
-  cached_input_tokens: z.number().optional(),
-  output_tokens: z.number().optional(),
+  input_tokens: z.number().nullish(),
+  cached_input_tokens: z.number().nullish(),
+  output_tokens: z.number().nullish(),
   message: z.string().optional(),
   reply: z.string().nullish(),
   output: z.looseObject({ phase: z.string(), title: z.string(), body: z.string() }).nullish(),
@@ -105,6 +105,7 @@ async function live() {
   if (!values.label) throw new Error('Name the run with --label');
   const label = values.label;
   const log = labelFile(label, '.jsonl');
+  const api = localApi(values.api);
   const env = localEnvironment();
   const config = loadConfig(env);
   requireLocalDevelopment(config);
@@ -115,14 +116,14 @@ async function live() {
     const project = await resolveProject(db, env.DEV_LOGIN_EMAIL, values.project);
     const vars = await placeholders(db, project.id);
     const client = await session(
-      values.api,
+      api,
       env.DEV_LOGIN_EMAIL,
       env.DEV_LOGIN_PASSWORD,
       project.workspaceId,
     );
     await mkdir(directory, { recursive: true });
     const write = (record: object) => appendFile(log, `${JSON.stringify({ label, ...record })}\n`);
-    const context: CaseContext = { db, client, projectId: project.id, vars, write };
+    const context: CaseContext = { db, client, project, vars, write };
     for (const item of cases) {
       if (!values.case || item.id.startsWith(values.case)) await runCase(context, item);
     }
@@ -132,23 +133,33 @@ async function live() {
   }
 }
 
+/** The development login's password goes only to a loopback API. */
+function localApi(value: string) {
+  const url = new URL(value);
+  if (!['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname))
+    throw new Error('--api must be a loopback URL; the eval sends the development login');
+  return url.href.replace(/\/+$/, '');
+}
+
+type Project = { id: string; workspaceId: string };
+
 type CaseContext = {
   db: Database;
   client: Client;
-  projectId: string;
+  project: Project;
   vars: Placeholders;
   write: (record: object) => Promise<void>;
 };
 
 /** Runs a case's turns in one chat; a failed turn ends the case. */
 async function runCase(context: CaseContext, item: (typeof cases)[number]) {
-  const { db, client, projectId, vars, write } = context;
+  const { db, client, project, vars, write } = context;
   let chatId: string | null = null;
   for (const [index, spec] of item.turns.entries()) {
     const step = index + 1;
     try {
-      const body = await requestBody(db, projectId, spec, vars, chatId === null);
-      const result = await turn(db, client, projectId, chatId, body);
+      const body = await requestBody(db, project.id, spec, vars, chatId === null);
+      const result = await turn(db, client, project, chatId, body);
       chatId = result.chat_id;
       const record = { case: item.id, step, ...result };
       await write(record);
@@ -162,7 +173,11 @@ async function runCase(context: CaseContext, item: (typeof cases)[number]) {
   }
 }
 
-async function resolveProject(db: Database, email: string, requested: string | undefined) {
+async function resolveProject(
+  db: Database,
+  email: string,
+  requested: string | undefined,
+): Promise<Project> {
   const rows = await db
     .selectFrom('projects')
     .innerJoin('workspace_members', 'workspace_members.workspace_id', 'projects.workspace_id')
@@ -172,7 +187,12 @@ async function resolveProject(db: Database, email: string, requested: string | u
     .orderBy('projects.created_at')
     .execute();
   const project = requested ? rows.find((row) => row.id === requested) : rows[0];
-  if (!project) throw new Error('No project for the development login; pass --project');
+  if (!project)
+    throw new Error(
+      requested
+        ? `Project ${requested} is not available to the development login`
+        : 'No project for the development login; pass --project',
+    );
   console.log(`Project: ${project.name}`);
   return { id: project.id, workspaceId: project.workspace_id };
 }
@@ -271,11 +291,11 @@ async function call(client: Client, path: string, init: RequestInit = {}) {
 async function turn(
   db: Database,
   client: Client,
-  projectId: string,
+  project: Project,
   chatId: string | null,
   body: RequestBody,
 ) {
-  const path = chatId ? `/agent/chats/${chatId}/messages` : `/projects/${projectId}/agent/chats`;
+  const path = chatId ? `/agent/chats/${chatId}/messages` : `/projects/${project.id}/agent/chats`;
   const accepted = agentTurnAcceptedSchema.parse(
     await (
       await call(client, path, {
@@ -301,7 +321,7 @@ async function turn(
     run_status: detail.latest_run?.status ?? null,
     run_error: detail.latest_run?.error_code || error,
     ...timing,
-    ...(await attempts(db, accepted.run.id)),
+    ...(await attempts(db, project.workspaceId, accepted.run.id)),
     reply: reply?.content ?? null,
     output:
       detail.output && revision
@@ -365,7 +385,7 @@ function parseFrame(frame: string) {
   return event.success ? event.data : null;
 }
 
-async function attempts(db: Database, runId: string) {
+async function attempts(db: Database, workspaceId: string, runId: string) {
   const [calls, tools] = await Promise.all([
     db
       .selectFrom('agent_model_attempts')
@@ -378,19 +398,30 @@ async function attempts(db: Database, runId: string) {
         'reasoning_tokens',
         'finish_status',
       ])
+      .where('workspace_id', '=', workspaceId)
       .where('run_id', '=', runId)
       .orderBy('ordinal')
       .execute(),
     db
       .selectFrom('agent_tool_attempts')
-      .select(['ordinal', 'tool_name', 'status'])
-      .where('run_id', '=', runId)
-      .orderBy('ordinal')
+      .innerJoin('agent_runs', 'agent_runs.id', 'agent_tool_attempts.run_id')
+      .select([
+        'agent_tool_attempts.ordinal',
+        'agent_tool_attempts.tool_name',
+        'agent_tool_attempts.status',
+      ])
+      .where('agent_runs.workspace_id', '=', workspaceId)
+      .where('agent_tool_attempts.run_id', '=', runId)
+      .orderBy('agent_tool_attempts.ordinal')
       .execute(),
   ]);
+  // A call that reported no count makes the turn's total unknown, not lower.
   const sum = (
     key: 'input_tokens' | 'cached_input_tokens' | 'output_tokens' | 'reasoning_tokens',
-  ) => calls.reduce((total, row) => total + Number(row[key] ?? 0), 0);
+  ) =>
+    calls.some((row) => row[key] === null)
+      ? null
+      : calls.reduce((total, row) => total + Number(row[key]), 0);
   return {
     model_calls: calls.length,
     tool_calls: tools.length,
@@ -414,10 +445,13 @@ function summaryLine(record: EvalRecord) {
 
 async function load(label: string) {
   const text = await readFile(labelFile(label, '.jsonl'), 'utf8');
-  return text
+  const records = text
     .split('\n')
     .filter(Boolean)
     .map((line) => recordSchema.parse(JSON.parse(line)));
+  // A rerun under the same label replaces that turn's earlier record.
+  const latest = new Map(records.map((record) => [`${record.case}#${record.step}`, record]));
+  return [...latest.values()];
 }
 
 function percentile(samples: number[], p: number) {
@@ -430,13 +464,24 @@ function metrics(records: EvalRecord[]): Record<string, string> {
   const done = records.filter((record) => !record.failed);
   const numbers = (key: keyof EvalRecord) =>
     done.map((record) => record[key]).filter((value): value is number => typeof value === 'number');
-  const total = (key: keyof EvalRecord) => numbers(key).reduce((sum, value) => sum + value, 0);
-  const perTurn = (key: keyof EvalRecord) => total(key) / Math.max(1, done.length);
+  // Turns with an unknown count are left out and flagged, never counted as zero.
+  const perTurn = (key: keyof EvalRecord, digits = 1) => {
+    const samples = numbers(key);
+    if (samples.length === 0) return '—';
+    const mean = samples.reduce((sum, value) => sum + value, 0) / samples.length;
+    const text = digits ? mean.toFixed(digits) : Math.round(mean).toLocaleString('en');
+    return samples.length < done.length ? `${text} (${samples.length} turns)` : text;
+  };
   const seconds = (key: keyof EvalRecord, p: number) => {
     const ms = percentile(numbers(key), p);
     return ms === null ? '—' : `${(ms / 1000).toFixed(1)}s`;
   };
-  const input = total('input_tokens');
+  const both = done.filter(
+    (record) =>
+      typeof record.input_tokens === 'number' && typeof record.cached_input_tokens === 'number',
+  );
+  const input = both.reduce((sum, record) => sum + record.input_tokens!, 0);
+  const cached = both.reduce((sum, record) => sum + record.cached_input_tokens!, 0);
   return {
     Turns: `${done.length} of ${records.length}`,
     Succeeded: String(done.filter((record) => record.run_status === 'succeeded').length),
@@ -444,13 +489,11 @@ function metrics(records: EvalRecord[]): Record<string, string> {
     'First text, p90': seconds('first_text_ms', 90),
     'Total, median': seconds('total_ms', 50),
     'Total, p90': seconds('total_ms', 90),
-    'Model calls per turn': perTurn('model_calls').toFixed(1),
-    'Tool calls per turn': perTurn('tool_calls').toFixed(1),
-    'Input tokens per turn': Math.round(perTurn('input_tokens')).toLocaleString('en'),
-    'Cached share of input': input
-      ? `${((100 * total('cached_input_tokens')) / input).toFixed(0)}%`
-      : '—',
-    'Output tokens per turn': Math.round(perTurn('output_tokens')).toLocaleString('en'),
+    'Model calls per turn': perTurn('model_calls'),
+    'Tool calls per turn': perTurn('tool_calls'),
+    'Input tokens per turn': perTurn('input_tokens', 0),
+    'Cached share of input': input ? `${((100 * cached) / input).toFixed(0)}%` : '—',
+    'Output tokens per turn': perTurn('output_tokens', 0),
   };
 }
 

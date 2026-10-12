@@ -199,9 +199,12 @@ during the turn:
      rules, and returns what was staged.
      - It is refused until a skill is loaded.
      - The phase is forced to `outline` while an outline is unapproved.
+     - It runs at most once per response. A second `save_document` in the
+       same response gets an `is_error` result asking for one document, so
+       completion timing never picks the winner. Responses are sequential, so
+       across responses the latest staged version wins.
      - The staged document is committed in `finish` with the reply in one
-       transaction (the last staged version wins). F14's fencing and recovery
-       copy stay true.
+       transaction. F14's fencing and recovery copy stay true.
 5. **End of turn.**
    - The turn ends when the model stops calling tools.
    - The final text is the reply. It is scrubbed of record references and
@@ -210,9 +213,11 @@ during the turn:
      parallel calls per response, result size and turn timeout. Proposed: 16,
      24, 6, 16 000 characters, unchanged 840 s.
    - At the cap, the model gets one final call whose appended instruction says
-     to answer now; any tool call in that response is refused. The turn still
-     answers instead of ending in `stopped_at_limit`. The tools stay the same so
-     the cache holds; see Prompt caching.
+     to answer now; any tool call in that response is refused. The tools stay
+     the same so the cache holds; see Prompt caching.
+   - If that final response has no text, the turn ends with a fixed
+     limit reply that names the reads made and asks the user to narrow the
+     request. A turn never finishes without a reply.
 
 ### Memory across turns
 
@@ -224,7 +229,8 @@ during the turn:
   - It is workspace and project scoped, cascades with the run, and is written
     in the same transaction as the reply.
   - Stored thinking blocks are replay input only. They are never shown or
-    returned by any read (A7 still holds).
+    returned by any read. Storing them at all needs owner input O8: A7 says
+    summaries are not persisted.
 - **The chat's conversation is only ever appended to, across turns as well as
   within one.**
   - Haiku 5.5 and Sonnet 5.5 keep previous-turn thinking blocks. Deleting a
@@ -656,6 +662,16 @@ Record each in the billing decision log before the PR that needs it.
     processor and offers an Agent model "under your own API keys".
   - The legal review draft in `docs/operations` matches it.
   - This needs owner or legal review. It is not part of these PRs.
+- **O8 (PR 1, before the transcript table).** Preserved thinking needs the
+  provider's thinking blocks, including the readable summary, stored to replay
+  the next turn. This conflicts with A7's "not persisted".
+  - Recommended: read A7 as "never shown again". Store the blocks only in
+    `agent_run_transcripts`, never return them from a read, and delete them with
+    the chat.
+  - Alternative: store no thinking. Each follow-up turn then starts a new
+    conversation from the saved replies and tool results. It loses the
+    previous turn's reasoning, and the cache misses from the first follow-up
+    onward.
 
 ## Eval
 
