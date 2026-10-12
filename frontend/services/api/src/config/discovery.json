@@ -61,9 +61,9 @@
     "research_model_timeout_seconds": {
       "env": ["BRAND_DISCOVERY_RESEARCH_MODEL_TIMEOUT_SECONDS"],
       "type": "float",
-      "default": 20.0,
+      "default": 40.0,
       "exclusive_minimum": 0,
-      "maximum": 20.0
+      "maximum": 40.0
     },
     "keenable_api_key": {
       "env": ["KEENABLE_API_KEY"],
