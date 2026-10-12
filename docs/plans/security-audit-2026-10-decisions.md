@@ -21,11 +21,13 @@ owner decision, each with Engineering's recommendation.
     long-lived key in Cloudflare.
 
   The signature binds time, method, host, path, query and visitor address, but
-  not the body, cookies or Authorization header. Within 60 seconds, a captured
-  set of signed headers could carry a different body on the same method and
-  path. That would need an attacker already inside the Worker→Cloud Run path,
-  where they could read the request anyway. Optional later step: sign a body
-  digest.
+  not the body, cookies or Authorization header. The API accepts a timestamp
+  within ±60 seconds and does not check where a request came from. Anyone who
+  obtains a set of valid signed headers can therefore be admitted for the same
+  method, host, path, query and visitor address within that window, including
+  with a different body. Obtaining them needs access to the Worker→Cloud Run
+  traffic or a Worker's logs, which would already expose the request.
+  Optional later step: sign a body digest.
 - **Recovery revokes MCP grants and own API keys (Owner).** Shipped in PR 1.
 - **One trial per mailbox ([B49](../billing-decisions.md)).** Shipped in PR 1.
 
