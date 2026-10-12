@@ -121,7 +121,7 @@ export const CANCELLATION_POLICY: LegalDocument = {
       id: 'data',
       title: 'Project data',
       paragraphs: [
-        `Cancelling does not immediately delete your workspace or project history. Once all paid access ends, you have 30 days to request an export before the project data is deleted, as the Privacy Policy at /privacy describes. You can also ask for earlier deletion by emailing ${email}.`,
+        `Cancelling does not immediately delete your workspace or project history. Once all paid access ends, you have 30 days to request an export; we then delete or de-identify the project data within a further 30 days, as the Privacy Policy at /privacy describes. You can also ask for earlier deletion by emailing ${email}.`,
         'Removing a workspace member, disconnecting an integration and cancelling a subscription are different actions. None of them performs the others automatically.',
       ],
     },

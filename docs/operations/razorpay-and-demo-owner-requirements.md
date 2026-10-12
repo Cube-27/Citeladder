@@ -17,7 +17,7 @@ supply, and the acceptance evidence still to collect. The
 [payment acceptance backlog](../plans/backlog.md#acceptance-calibration-and-rollout)
 tracks rollout.
 
-## 0. Recorded merchant facts (24 September 2026)
+## 0. Recorded merchant facts (12 October 2026)
 
 Non-secret, owner-approved values that code does not hold:
 

@@ -53,10 +53,11 @@ Compose configuration.
 .\scripts\billing-test.ps1 -Action status
 ```
 
-Expected: frontend `http://127.0.0.1:3300`, API port 8300, PostgreSQL port 55433,
-webhook proxy port 8301; migration exits successfully and the api-service,
-frontend, database and `runner` services stay running. Register the payment
-customer normally at `/register`; this is a managed-key-free stack, so test BYOK
+Expected: app `http://127.0.0.1:3301`, marketing site `http://127.0.0.1:3300`,
+API port 8300, PostgreSQL port 55433, webhook proxy port 8301; migration exits
+successfully and the api-service, frontend, vite-app, database and `runner`
+services stay running. Register the payment customer normally at
+`http://127.0.0.1:3301/register`; this is a managed-key-free stack, so test BYOK
 plans only.
 
 ## 2. Create a local catalog operator
