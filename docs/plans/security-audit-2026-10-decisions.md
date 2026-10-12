@@ -44,9 +44,18 @@ the owner decides an item, it moves to the [backlog](backlog.md) or into a PR.
 
 ## Authentication and sessions
 
-4. **Sign-out is sign-out-everywhere, and it does not revoke MCP grants or API
-   keys.** *Recommend:* keep it. Sign-out is not a compromise signal, and
-   revoking would break integrations every time someone signs out.
+4. **Sign-out does not yet revoke MCP grants or API keys. Confirm before
+   implementing.** The owner's recovery answer covered password reset, password
+   change *and* sign-out-everywhere. PR 1 implemented the first two. Sign-out
+   was held back because CiteLadder has only one sign-out, and it is
+   sign-out-everywhere. Applying the rule there would disconnect every MCP
+   client and revoke every API key the person made, each time they sign out
+   anywhere. *Options:*
+   - (a) Apply it as answered.
+   - (b) Add a separate "sign out everywhere and disconnect integrations"
+     control, and leave plain sign-out alone.
+
+   *Recommend:* (b).
 5. **The change-password and link-Google flows do not spend the per-email
    login-failure budget.** *Recommend:* spend it (small change).
 6. **The request body is parsed as JSON whatever its `Content-Type`.**
