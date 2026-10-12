@@ -115,7 +115,6 @@
   z-index: -1;
   background: var(--grain);
   opacity: 0.12;
-  mix-blend-mode: multiply;
   mask-image: linear-gradient(to bottom, black, transparent 70%);
   pointer-events: none;
 }
@@ -360,16 +359,34 @@
       .pv-doc
     ) {
     animation: lp-view-in var(--motion-reveal) var(--ease-out-expo) backwards;
-    animation-delay: calc(var(--motion-stagger) * (var(--lp-enter, 0) + var(--lp-i, 0)));
   }
 
   .lp-tour .pv-chart polyline {
     animation: lp-draw-in var(--motion-reveal) var(--ease-out-expo) backwards;
-    animation-delay: calc(var(--motion-stagger) * var(--lp-enter, 0));
   }
 
   .lp-tour :is(.pv-stack-bar, .pv-bar-track i) {
     animation: lp-grow-in var(--motion-reveal) var(--ease-out-expo) backwards;
+  }
+
+  /* One delay for every entrance: its group's start plus its place in the
+     stagger. After the shorthands, which would otherwise reset it. */
+  .lp-tour
+    :is(
+      .pv-stat,
+      .pv-kpi,
+      tbody tr,
+      .pv-list li,
+      .pv-chart-end,
+      .pv-message-user,
+      .pv-agent-name,
+      .pv-step,
+      .pv-agent .pv-message > p,
+      .pv-doc,
+      .pv-chart polyline,
+      .pv-stack-bar,
+      .pv-bar-track i
+    ) {
     animation-delay: calc(var(--motion-stagger) * (var(--lp-enter, 0) + var(--lp-i, 0)));
   }
 }

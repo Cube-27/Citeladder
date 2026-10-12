@@ -15,8 +15,6 @@ const ENGINES = [
 
 const ROTOR_INTERVAL_MS = 2400;
 
-type Rotation = { index: number; previous: number | null };
-
 function RotorItem({ index, state }: Readonly<{ index: number; state?: 'in' | 'out' | 'sizer' }>) {
   const [engine, name] = cycled(ENGINES, index);
   return (
@@ -34,16 +32,13 @@ function RotorItem({ index, state }: Readonly<{ index: number; state?: 'in' | 'o
  */
 export function EngineRotor() {
   const slot = useRef<HTMLSpanElement>(null);
-  const [{ index, previous }, setRotation] = useState<Rotation>({ index: 0, previous: null });
+  // Steps taken so far; `cycled` maps a step to its engine.
+  const [step, setStep] = useState(0);
 
   useAutoplay({
     target: slot,
     intervalMs: ROTOR_INTERVAL_MS,
-    onTick: () =>
-      setRotation((rotation) => ({
-        index: (rotation.index + 1) % ENGINES.length,
-        previous: rotation.index,
-      })),
+    onTick: () => setStep((taken) => taken + 1),
   });
 
   // Hidden copies of every name size the slot to the widest, so the line
@@ -53,8 +48,8 @@ export function EngineRotor() {
       {ENGINES.map(([engine], sizer) => (
         <RotorItem key={engine} index={sizer} state="sizer" />
       ))}
-      {previous === null ? null : <RotorItem key={`out-${index}`} index={previous} state="out" />}
-      <RotorItem key={index} index={index} state={previous === null ? undefined : 'in'} />
+      {step === 0 ? null : <RotorItem key={`out-${step}`} index={step - 1} state="out" />}
+      <RotorItem key={step} index={step} state={step === 0 ? undefined : 'in'} />
     </span>
   );
 }
