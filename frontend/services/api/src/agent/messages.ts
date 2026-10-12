@@ -67,8 +67,6 @@ const RECOVERY: Record<string, string> = {
     'The result was longer than one reply can hold, so nothing was saved. Ask for one section at a time or a shorter format.',
   context_size_limit:
     'This request and its selected evidence are too large for one turn. Remove some references or ask about one part at a time.',
-  output_context_size_limit:
-    'The current document is too large to revise in one turn. Revise one section at a time, or start a new chat for a shorter version.',
   skills_changed:
     'CiteLadder was updated while this request was waiting. Nothing was saved; send it again.',
   funding_unavailable: 'This workspace has no AI credits available right now. Nothing was saved.',
@@ -89,8 +87,8 @@ const RECOVERY: Record<string, string> = {
     'Workspace access could not be confirmed, so the agent stopped. Nothing was saved; contact support if this continues.',
   internal_error:
     'Something went wrong on our side while finishing this request. Nothing was saved; try again in a moment.',
-  protocol_violation:
-    'The AI model’s answer did not follow the required structure, so nothing was saved. Try again, or rephrase the request.',
+  model_refused:
+    'The AI model declined to answer this request, so nothing was saved. Rephrase it, or ask about one part at a time.',
 };
 const GENERIC_RECOVERY =
   'I couldn’t complete this request. Nothing was saved; your messages and existing work are still here. Try again in this chat.';

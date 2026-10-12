@@ -272,15 +272,279 @@ describe('configured model gateway', () => {
         status: 429,
         retryAfter: '7',
       });
-      // A customer route on the same host was validated as OpenAI-compatible and stays so.
-      const customer = transport([reply()]);
-      await createModelGateway(anthropic, customer, { api: 'openai_compatible' }).complete(
-        's',
-        'u',
+    }),
+  );
+
+  it(
+    'converses with Anthropic natively: cached prefix, streamed thinking, text and tool input',
+    metered(async () => {
+      const frames = [
+        {
+          type: 'message_start',
+          message: {
+            id: 'msg_2',
+            type: 'message',
+            role: 'assistant',
+            model: 'claude-haiku-5-5',
+            content: [],
+            stop_reason: null,
+            stop_sequence: null,
+            usage: {
+              input_tokens: 10,
+              output_tokens: 1,
+              cache_read_input_tokens: 100,
+              cache_creation_input_tokens: 20,
+            },
+          },
+        },
+        {
+          type: 'content_block_start',
+          index: 0,
+          content_block: { type: 'thinking', thinking: '', signature: '' },
+        },
+        {
+          type: 'content_block_delta',
+          index: 0,
+          delta: { type: 'thinking_delta', thinking: 'Need visibility.' },
+        },
+        {
+          type: 'content_block_delta',
+          index: 0,
+          delta: { type: 'signature_delta', signature: 'sig-1' },
+        },
+        { type: 'content_block_stop', index: 0 },
+        { type: 'content_block_start', index: 1, content_block: { type: 'text', text: '' } },
+        { type: 'content_block_delta', index: 1, delta: { type: 'text_delta', text: 'Checking.' } },
+        { type: 'content_block_stop', index: 1 },
+        {
+          type: 'content_block_start',
+          index: 2,
+          content_block: { type: 'tool_use', id: 'toolu_1', name: 'read_visibility', input: {} },
+        },
+        {
+          type: 'content_block_delta',
+          index: 2,
+          delta: { type: 'input_json_delta', partial_json: '{"limit":' },
+        },
+        {
+          type: 'content_block_delta',
+          index: 2,
+          delta: { type: 'input_json_delta', partial_json: '5}' },
+        },
+        { type: 'content_block_stop', index: 2 },
+        {
+          type: 'message_delta',
+          delta: { stop_reason: 'tool_use', stop_sequence: null },
+          usage: { output_tokens: 40 },
+        },
+        { type: 'message_stop' },
+      ];
+      const sse = frames
+        .map((frame) => `event: ${frame.type}\ndata: ${JSON.stringify(frame)}\n\n`)
+        .join('');
+      const io = transport([
+        new Response(sse, { headers: { 'content-type': 'text/event-stream' } }),
+      ]);
+      const gateway = createModelGateway(
+        { ...settings, baseUrl: 'https://api.anthropic.com/v1', attempts: 1 },
+        io,
       );
-      expect(String(customer.fetch.mock.calls[0]![0])).toBe(
-        'https://api.anthropic.com/v1/chat/completions',
+      const history = [
+        { role: 'user' as const, content: [{ type: 'text', text: 'How visible are we?' }] },
+      ];
+      const seen = { text: [] as string[], thinking: [] as string[], input: [] as unknown[] };
+      const result = await gateway.converse(
+        {
+          system: 'contract',
+          tools: [
+            {
+              name: 'read_visibility',
+              description: 'Read visibility.',
+              input_schema: { type: 'object', properties: { limit: { type: 'integer' } } },
+            },
+            {
+              name: 'save_document',
+              description: 'Stage the document.',
+              input_schema: { type: 'object', properties: {} },
+              stream_input: true,
+            },
+          ],
+          messages: history,
+          effort: 'medium',
+          compactAtTokens: 80_000,
+        },
+        undefined,
+        {
+          text: (delta) => seen.text.push(delta),
+          thinking: (delta) => seen.thinking.push(delta),
+          toolInput: (_name, input) => seen.input.push(input),
+        },
       );
+      expect(result).toMatchObject({
+        text: 'Checking.',
+        stop: 'tool_use',
+        finish_status: 'tool_use',
+        toolCalls: [{ id: 'toolu_1', name: 'read_visibility', input: { limit: 5 } }],
+        usage: {
+          input_tokens: 130,
+          cached_input_tokens: 100,
+          cache_write_input_tokens: 20,
+          output_tokens: 40,
+        },
+      });
+      // The thinking block keeps its signature so the next call can replay it unchanged.
+      expect(result.blocks[0]).toMatchObject({
+        type: 'thinking',
+        thinking: 'Need visibility.',
+        signature: 'sig-1',
+      });
+      expect(seen).toEqual({
+        text: ['Checking.'],
+        thinking: ['Need visibility.'],
+        input: [{}, { limit: 5 }],
+      });
+      const [, init] = io.fetch.mock.calls[0]!;
+      expect(new Headers(init!.headers).get('anthropic-beta')).toContain('compact-2026-01-12');
+      expect(JSON.parse(String(init!.body))).toMatchObject({
+        system: [{ type: 'text', text: 'contract', cache_control: { type: 'ephemeral' } }],
+        cache_control: { type: 'ephemeral' },
+        thinking: { type: 'adaptive', display: 'summarized' },
+        output_config: { effort: 'medium' },
+        context_management: {
+          edits: [{ type: 'compact_20260112', trigger: { type: 'input_tokens', value: 80_000 } }],
+        },
+        messages: history,
+        tools: [
+          { name: 'read_visibility' },
+          { name: 'save_document', eager_input_streaming: true },
+        ],
+      });
+    }),
+  );
+
+  it(
+    'converses over chat completions: translated history, parallel streamed calls and usage',
+    metered(async () => {
+      const chunks = [
+        { model: 'gpt-test', choices: [{ delta: { content: 'Reading both.' } }] },
+        {
+          choices: [
+            {
+              delta: {
+                tool_calls: [
+                  { index: 0, id: 'call_1', function: { name: 'read_a', arguments: '{"li' } },
+                ],
+              },
+            },
+          ],
+        },
+        {
+          choices: [
+            {
+              delta: {
+                tool_calls: [
+                  { index: 0, function: { arguments: 'mit":5}' } },
+                  { index: 1, id: 'call_2', function: { name: 'read_b', arguments: '{}' } },
+                ],
+              },
+              finish_reason: 'tool_calls',
+            },
+          ],
+        },
+        {
+          choices: [],
+          usage: {
+            prompt_tokens: 50,
+            completion_tokens: 7,
+            prompt_tokens_details: { cached_tokens: 30 },
+          },
+        },
+      ];
+      const sse = `${chunks.map((chunk) => `data: ${JSON.stringify(chunk)}\n\n`).join('')}data: [DONE]\n\n`;
+      const io = transport([
+        new Response(sse, { headers: { 'content-type': 'text/event-stream' } }),
+      ]);
+      const deltas: string[] = [];
+      const result = await createModelGateway(settings, io).converse(
+        {
+          system: 'contract',
+          tools: [{ name: 'read_a', description: 'A.', input_schema: { type: 'object' } }],
+          messages: [
+            {
+              role: 'user',
+              content: [
+                { type: 'text', text: 'Context' },
+                { type: 'text', text: 'Question' },
+              ],
+            },
+            {
+              role: 'assistant',
+              content: [
+                { type: 'thinking', thinking: 'hidden', signature: 's' },
+                { type: 'text', text: 'Looking.' },
+                { type: 'tool_use', id: 'call_0', name: 'read_a', input: { limit: 2 } },
+              ],
+            },
+            {
+              role: 'user',
+              content: [
+                { type: 'tool_result', tool_use_id: 'call_0', content: '{"rows":[]}' },
+                { type: 'text', text: 'Two calls left.' },
+              ],
+            },
+          ],
+          effort: 'low',
+          compactAtTokens: 80_000,
+        },
+        undefined,
+        { text: (delta) => deltas.push(delta) },
+      );
+      expect(result).toMatchObject({
+        text: 'Reading both.',
+        stop: 'tool_use',
+        returned_model: 'gpt-test',
+        toolCalls: [
+          { id: 'call_1', name: 'read_a', input: { limit: 5 } },
+          { id: 'call_2', name: 'read_b', input: {} },
+        ],
+        usage: {
+          input_tokens: 50,
+          output_tokens: 7,
+          cached_input_tokens: 30,
+          cache_write_input_tokens: 0,
+        },
+      });
+      expect(deltas).toEqual(['Reading both.']);
+      const body = JSON.parse(String(io.fetch.mock.calls[0]![1]!.body));
+      expect(body).toMatchObject({
+        reasoning_effort: 'low',
+        parallel_tool_calls: true,
+        stream: true,
+        tools: [
+          {
+            type: 'function',
+            function: { name: 'read_a', description: 'A.', parameters: { type: 'object' } },
+          },
+        ],
+      });
+      // Thinking cannot cross to chat completions; tool results precede the user's text.
+      expect(body.messages).toEqual([
+        { role: 'system', content: 'contract' },
+        { role: 'user', content: 'Context\n\nQuestion' },
+        {
+          role: 'assistant',
+          content: 'Looking.',
+          tool_calls: [
+            {
+              id: 'call_0',
+              type: 'function',
+              function: { name: 'read_a', arguments: '{"limit":2}' },
+            },
+          ],
+        },
+        { role: 'tool', tool_call_id: 'call_0', content: '{"rows":[]}' },
+        { role: 'user', content: 'Two calls left.' },
+      ]);
     }),
   );
 

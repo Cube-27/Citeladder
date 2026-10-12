@@ -101,6 +101,22 @@ Source: owner-settled Agent workspace plan,
 25 September 2026. [Agent](agents.md) and [Opportunities](opportunities.md)
 own shipped behavior.
 
+## The Agent uses native tool calling
+
+The Agent runs a native tool-calling loop on the providers' own APIs with no
+agent framework (A1): the model calls reads and two built-ins (`load_skill`,
+`save_document`) directly, one response's reads run together, and a chat's
+earlier turns are replayed append-only so the prompt cache and thinking carry
+across turns. It keeps both providers, Anthropic and OpenAI-compatible (A2),
+behind the platform gateway. The default model is Claude Haiku 5.5 at medium
+effort (A3). This replaces the JSON step protocol, which allowed one read per
+step, threw away earlier reasoning and re-sent a rebuilt prompt each step.
+
+Source: owner decisions A1–A3 of 12 October 2026 in the
+[Agent native runtime plan](plans/agent-native-runtime.md); pricing in
+[B53](billing-decisions.md#agent-native-runtime-2026-10-12). [Agent](agents.md)
+owns the shipped behavior.
+
 ## Onboarding creates no prompts
 
 Onboarding confirms business context and competitors, then creates the project

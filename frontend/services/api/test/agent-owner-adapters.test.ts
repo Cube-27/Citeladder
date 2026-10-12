@@ -2,7 +2,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import { afterAll, describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import * as sharedTools from '../src/mcp/tools.ts';
-import { AgentFixtures, agentPolicy, catalog, deliverable, scripted } from './agent-support.ts';
+import { AgentFixtures, reply, save, scripted, toolUse, type Response } from './agent-support.ts';
 import { testDatabase } from './support.ts';
 import { agentTools } from '../src/agent/tool-adapters.ts';
 import { attachAgentTarget } from '../src/agent/target-adapter.ts';
@@ -193,53 +193,33 @@ describe('Agent bindings to the evidence and Action owners', () => {
       JSON.parse((await tools.execute(db, scope, 'read_actions', {}, signal())).text).items,
     ).toEqual([expect.objectContaining({ id: action.id })]);
   });
-  it('offers earlier reads as re-read hints and lists only this turn’s reads as sources', async () => {
+  it('replays earlier reads to the model and lists only this turn’s reads as sources', async () => {
     const scope = await fixtures.scope();
     const tools = agentTools(db);
     const store = fixtures.store({ registryVersion: tools.version });
     const queue = new AgentQueue(db, 30);
     const uri = `citeladder://project/${scope.projectId}`;
-    const fetch = {
-      action: 'call_tool',
-      tool: 'fetch',
-      arguments_json: JSON.stringify({ id: uri }),
-    };
-    const answer = { action: 'respond', reply: `Project evidence ${uri}` };
+    const fetch = (id: string) => [toolUse('fetch', { id: uri }, id)];
+    const answer = reply(`Project evidence ${uri}`);
     const first = await store.enqueue(scope, { key: randomUUID(), message: 'Explain project' });
-    const execute = async (steps: unknown[], inspect?: Parameters<typeof scripted>[1]) => {
+    const execute = async (responses: Response[], inspect?: Parameters<typeof scripted>[1]) => {
       const claimed = await queue.claim('evidence-continuity', [scope.workspaceId]);
       const lease = await queue.start(claimed!, 'evidence-continuity');
-      await fixtures.runtime(scope, scripted(steps, inspect), { tools }).execute(lease);
+      await fixtures.runtime(scope, scripted(responses, inspect), { tools }).execute(lease);
       return readChat(db, scope, first.chat_id);
     };
-    expect((await execute([fetch, answer])).messages.at(-1)?.evidence_refs).toEqual([uri]);
-    const attempt = await db
-      .selectFrom('agent_tool_attempts')
-      .selectAll()
-      .where('run_id', '=', first.id)
-      .executeTakeFirstOrThrow();
-    const failedUri = `citeladder://project/${randomUUID()}`;
-    await db
-      .insertInto('agent_tool_attempts')
-      .values(
-        Array.from({ length: agentPolicy.prior_evidence_max_refs + 1 }, (_, index) => ({
-          ...attempt,
-          id: randomUUID(),
-          ordinal: index + 2,
-          input: {},
-          omissions: '[]',
-          status: index === 0 ? 'failed' : 'completed',
-          artifact_refs: JSON.stringify(index === 0 ? [{ record_uri: failedUri }] : []),
-          created_at: new Date(attempt.created_at.getTime() + index + 1),
-        })),
-      )
-      .execute();
+    expect((await execute([fetch('call_fetch'), answer])).messages.at(-1)?.evidence_refs).toEqual([
+      uri,
+    ]);
     await store.enqueue(scope, { key: randomUUID(), chatId: first.chat_id, message: 'Follow up' });
+    const replayedResults: string[] = [];
     const withoutRead = await execute([answer], async (request) => {
-      expect(request.system).toContain(uri);
-      expect(request.system).not.toContain(failedUri);
-      expect(JSON.parse(request.user).observations).toEqual([]);
+      for (const message of request.messages)
+        for (const block of message.content)
+          if (block.type === 'tool_result') replayedResults.push(String(block.tool_use_id));
     });
+    // The model still holds the earlier result; the reply cites only this turn's reads.
+    expect(replayedResults).toEqual(['call_fetch']);
     expect(withoutRead.messages.at(-1)?.evidence_refs).toEqual([]);
     expect(withoutRead.messages.at(-1)?.content).toBe('Project evidence');
     await store.enqueue(scope, {
@@ -247,7 +227,7 @@ describe('Agent bindings to the evidence and Action owners', () => {
       chatId: first.chat_id,
       message: 'Read it again',
     });
-    const refreshed = await execute([fetch, answer]);
+    const refreshed = await execute([fetch('call_again'), answer]);
     expect(refreshed.messages.at(-1)?.evidence_refs).toEqual([uri]);
     expect(refreshed.latest_run?.progress.filter((step) => step.tool === 'fetch')).toHaveLength(1);
   });
@@ -261,10 +241,16 @@ describe('Agent bindings to the evidence and Action owners', () => {
     const tools = agentTools(db);
     const store = fixtures.store({ registryVersion: tools.version, context: readAgentContext });
     const queue = new AgentQueue(db, 30);
-    const execute = async (steps: unknown[], inspect?: Parameters<typeof scripted>[1]) => {
+    /** The opening message the model received on a turn's first call. */
+    const opened: string[] = [];
+    const execute = async (responses: Response[]) => {
       const claimed = await queue.claim('workflow-acceptance', [scope.workspaceId]);
       const lease = await queue.start(claimed!, 'workflow-acceptance');
-      await fixtures.runtime(scope, scripted(steps, inspect), { tools }).execute(lease);
+      opened.length = 0;
+      const model = scripted(responses, async (request, ordinal) => {
+        if (ordinal === 1) opened.push(JSON.stringify(request.messages.at(-1)));
+      });
+      await fixtures.runtime(scope, model, { tools }).execute(lease);
       return readChat(db, scope, claimed!.chat_id);
     };
     const first = await store.enqueue(scope, {
@@ -273,13 +259,12 @@ describe('Agent bindings to the evidence and Action owners', () => {
       skillId: 'content',
       message: 'Write a buyer guide',
     });
-    const outlined = await execute([deliverable('draft', 'Proposed outline')], async (request) => {
-      expect(JSON.parse(request.user).context.action.id).toBe(action.id);
-    });
+    const outlined = await execute([save('draft', 'Proposed outline')]);
+    expect(opened[0]).toContain(action.id);
     const outline = outlined.output!.latest_revision!;
     expect(outline.phase).toBe('outline');
     await store.approveOutline(scope, first.chat_id, outline.id, randomUUID());
-    const drafted = await execute([deliverable('draft', 'Approved draft')]);
+    const drafted = await execute([save('draft', 'Approved draft')]);
     const edited = await new AgentOutputs(db).edit(
       scope,
       first.chat_id,
@@ -295,15 +280,9 @@ describe('Agent bindings to the evidence and Action owners', () => {
       chatId: first.chat_id,
       message: 'Refine my edit',
     });
-    const refined = await execute(
-      [deliverable('draft', 'Refined accepted guide')],
-      async (request) => {
-        expect(JSON.parse(request.user).current_revision).toMatchObject({
-          id: edited.id,
-          body: 'User edited draft',
-        });
-      },
-    );
+    const refined = await execute([save('draft', 'Refined accepted guide')]);
+    // The user's edit is new to the model, so the turn supplies it.
+    expect(opened[0]).toContain('User edited draft');
     const accepted = refined.output!.latest_revision!;
     expect(accepted.parent_revision_id).toBe(edited.id);
     expect(refined.output!.message_id).toBe(refined.messages.at(-1)!.id);
@@ -315,12 +294,9 @@ describe('Agent bindings to the evidence and Action owners', () => {
         output_revision_reference: { output_id: refined.output!.id, revision_id: accepted.id },
       },
     });
-    const next = await execute([deliverable('final', 'Distribution plan')], async (request) => {
-      expect(JSON.parse(request.user).context.package.sections.upstream_revision).toMatchObject({
-        id: accepted.id,
-        body: 'Refined accepted guide',
-      });
-    });
+    const next = await execute([save('final', 'Distribution plan')]);
+    expect(opened[0]).toContain(accepted.id);
+    expect(opened[0]).toContain('Refined accepted guide');
     expect(next.output?.kind).toBe('plan');
     expect(next.chat.id).not.toBe(first.chat_id);
   });
@@ -353,16 +329,11 @@ describe('Agent bindings to the evidence and Action owners', () => {
       .runtime(
         scope,
         scripted([
-          {
-            ...deliverable('outline'),
-            output: {
-              title: 'Guide',
-              body: 'Evidence-grounded guide',
-              phase: 'outline',
-              target_kind: 'planned_page',
-              target: 'Buyer guide',
-            },
-          },
+          save('outline', 'Evidence-grounded guide', {
+            title: 'Guide',
+            target_kind: 'planned_page',
+            target: 'Buyer guide',
+          }),
         ]),
         { attachTarget: attachAgentTarget },
       )
@@ -380,16 +351,11 @@ describe('Agent bindings to the evidence and Action owners', () => {
       .runtime(
         scope,
         scripted([
-          {
-            ...deliverable('outline'),
-            output: {
-              title: 'Guide',
-              body: 'Revised guide',
-              phase: 'outline',
-              target_kind: 'page',
-              target: 'https://other.test/page',
-            },
-          },
+          save('outline', 'Revised guide', {
+            title: 'Guide',
+            target_kind: 'page',
+            target: 'https://other.test/page',
+          }),
         ]),
         { attachTarget: attachAgentTarget },
       )
@@ -400,16 +366,11 @@ describe('Agent bindings to the evidence and Action owners', () => {
       .runtime(
         scope,
         scripted([
-          {
-            ...deliverable('outline'),
-            output: {
-              title: 'Guide',
-              body: 'Saved for retargeting',
-              phase: 'outline',
-              target_kind: 'page',
-              target: 'https://other.test/page',
-            },
-          },
+          save('outline', 'Saved for retargeting', {
+            title: 'Guide',
+            target_kind: 'page',
+            target: 'https://other.test/page',
+          }),
         ]),
         { attachTarget: attachAgentTarget },
       )
@@ -418,49 +379,5 @@ describe('Agent bindings to the evidence and Action owners', () => {
       action_id: null,
       latest_revision: { body: 'Saved for retargeting' },
     });
-  });
-  it('loads only the selected format methodology into a follow-up model request', async () => {
-    const scope = await fixtures.scope();
-    const formats = new Map([
-      [
-        'guide',
-        { id: 'guide', label: 'Guide', body: 'Explain the purchasing decision.', longForm: true },
-      ],
-      [
-        'faq',
-        {
-          id: 'faq',
-          label: 'FAQ',
-          body: 'Answer each customer question separately.',
-          longForm: false,
-        },
-      ],
-    ]);
-    const bound = { ...catalog, formats, formatPreamble: 'Use persisted evidence.' };
-    const first = await fixtures.claimed(scope, { skillId: 'content' });
-    await fixtures
-      .runtime(
-        scope,
-        scripted([
-          {
-            ...deliverable('outline'),
-            output: {
-              title: 'Guide',
-              body: 'Outline',
-              phase: 'outline',
-              format_id: 'guide',
-            },
-          },
-        ]),
-        { catalog: bound },
-      )
-      .execute(first.lease);
-    const second = await fixtures.claimed(scope, { chatId: first.run.chat_id });
-    const model = scripted([deliverable('outline')], async (request) => {
-      expect(request.system).toContain(formats.get('guide')!.body);
-      expect(request.system).not.toContain(formats.get('faq')!.body);
-    });
-    await fixtures.runtime(scope, model, { catalog: bound }).execute(second.lease);
-    expect((await fixtures.run(second.run.id)).status).toBe('succeeded');
   });
 });

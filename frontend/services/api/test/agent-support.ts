@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import type { Database } from '../src/db/database.ts';
-import type { Scope, SkillCatalog } from '../src/agent/contracts.ts';
+import type { Json, Scope, SkillCatalog } from '../src/agent/contracts.ts';
+import { blockText, blockToolCalls, type ConversationBlock } from '../src/models/conversation.ts';
 import { AgentStore, type FundingIdentity } from '../src/agent/store.ts';
 import { AgentQueue } from '../src/agent/queue.ts';
 import {
@@ -52,29 +53,55 @@ export const emptyPackage = {
   summary: { omissions: [{ reason: 'no_persisted_evidence', count: 1 }] },
   sections: {},
 };
-export function result(content: unknown): ModelResult {
+/** One scripted model response: the content blocks a provider would return. */
+export type Response = ConversationBlock[];
+export const text = (value: string): ConversationBlock => ({ type: 'text', text: value });
+export const toolUse = (
+  name: string,
+  input: Record<string, Json> = {},
+  id = `toolu_${randomUUID().slice(0, 8)}`,
+): ConversationBlock => ({ type: 'tool_use', id, name, input });
+export const reply = (value = 'Answer from supplied evidence.'): Response => [text(value)];
+export const read = (input: Record<string, Json> = {}, name = 'read_evidence'): Response => [
+  toolUse(name, input),
+];
+export const loadSkill = (skillId: string): Response => [
+  toolUse('load_skill', { skill_id: skillId }),
+];
+export const save = (
+  phase = 'draft',
+  body = 'Requested document',
+  extra: Record<string, Json> = {},
+): Response => [toolUse('save_document', { title: 'Document', body, phase, ...extra })];
+/** A request for a dispatch that never reaches a model. */
+export const request: ModelRequest = {
+  system: 'test',
+  tools: [],
+  messages: [{ role: 'user', content: [text('test')] }],
+  effort: 'medium',
+  compactAtTokens: 80_000,
+};
+export function result(blocks: Response, overrides: Partial<ModelResult> = {}): ModelResult {
+  const toolCalls = blockToolCalls(blocks);
+  const stop = toolCalls.length ? 'tool_use' : 'end_turn';
   return {
-    content: typeof content === 'string' ? content : JSON.stringify(content),
+    blocks,
+    text: blockText(blocks),
+    toolCalls,
+    stop,
     provider_adapter: 'test',
     endpoint_host: 'model.example.test',
     requested_model: 'test-model',
     returned_model: 'test-model',
     usage: { input_tokens: 20, output_tokens: 10 },
     latency_ms: 1,
-    finish_status: 'stop',
+    finish_status: stop,
+    ...overrides,
   };
 }
-export const reply = (text = 'Answer from supplied evidence.') => ({
-  action: 'respond',
-  reply: text,
-});
-export const deliverable = (phase = 'draft', body = 'Requested document') => ({
-  action: 'respond',
-  reply: 'Saved your document.',
-  output: { title: 'Document', body, phase },
-});
+/** A model that returns `responses` in order, then plain replies; it streams as a provider does. */
 export function scripted(
-  steps: unknown[],
+  responses: (Response | ModelResult)[],
   onCall?: (request: ModelRequest, ordinal: number) => Promise<void>,
 ): AgentModel {
   let count = 0;
@@ -82,11 +109,19 @@ export function scripted(
     model: 'test-model',
     adapter: 'test',
     endpointHost: 'model.example.test',
-    complete: async (request, _signal, onText) => {
-      await onCall?.(request, count + 1);
-      const outcome = result(steps[count++] ?? reply());
-      onText?.(outcome.content.slice(0, Math.ceil(outcome.content.length / 2)));
-      onText?.(outcome.content);
+    converse: async (request, _signal, listener) => {
+      const ordinal = ++count;
+      await onCall?.(request, ordinal);
+      const next = responses[ordinal - 1] ?? reply();
+      const outcome = Array.isArray(next) ? result(next) : next;
+      for (const block of outcome.blocks)
+        if (block.type === 'thinking') listener?.thinking?.(String(block.thinking ?? ''));
+      const half = Math.ceil(outcome.text.length / 2);
+      if (outcome.text) {
+        listener?.text?.(outcome.text.slice(0, half));
+        listener?.text?.(outcome.text.slice(half));
+      }
+      for (const call of outcome.toolCalls) listener?.toolInput?.(call.name, call.input);
       return outcome;
     },
   };

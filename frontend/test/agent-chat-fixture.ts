@@ -71,8 +71,10 @@ export function detail(latest: ReturnType<typeof revision>, run: DetailRun = DEF
         skill_source: 'model',
         evidence_refs: [],
         steps: [
+          { kind: 'model', ordinal: 1 },
           { kind: 'skill', skill_id: 'gsc_optimize' },
-          { kind: 'tool', tool: 'read_integration_status', status: 'completed' },
+          { kind: 'tool', ordinal: 1, tool: 'read_integration_status', status: 'completed' },
+          { kind: 'model', ordinal: 2 },
         ],
         created_at: NOW,
       },
@@ -91,6 +93,7 @@ export function detail(latest: ReturnType<typeof revision>, run: DetailRun = DEF
       progress: (run.progress ?? []).map((step) => ({
         model_attempt_id: RUN,
         tool_attempt_id: null,
+        call_id: null,
         run_attempt: 1,
         runtime_version: 'agent-runtime-2',
         protocol_version: 'agent-protocol-1',

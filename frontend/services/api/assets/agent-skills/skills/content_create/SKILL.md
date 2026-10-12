@@ -16,7 +16,7 @@ Write the complete piece the user asked for, grounded in the business's real fac
 
 ## How the work flows
 
-- Answer questions about the content or the draft directly, without a new output.
+- Answer questions about the content or the draft directly, without saving a new document.
 - Choose the format and set `format_id`. Long-form formats start with an outline (audience, angle, sections, key facts, call to action) for the user to approve; then write the full piece. Short formats (X, LinkedIn, Instagram, TikTok, Reddit, glossary definition) are drafted directly.
 - Follow the guidance for the chosen format.
 - Use Comparison content for named competitor comparisons and Programmatic SEO pilot for repeated page families.

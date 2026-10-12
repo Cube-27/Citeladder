@@ -31,10 +31,15 @@ export function modelPrice(
   return model && model === gatewayModel ? models[pricing.gateway_default_price]! : null;
 }
 
-/** Token counts as the gateway reports them; input includes cached input. */
+/**
+ * Token counts as the gateway reports them. Input includes cached and
+ * cache-written input; output includes thinking, which providers bill as
+ * output (B53). A report without a cache-write count wrote none.
+ */
 export type TokenUsage = {
   input_tokens?: number | null;
   cached_input_tokens?: number | null;
+  cache_write_input_tokens?: number | null;
   output_tokens?: number | null;
 };
 
@@ -43,22 +48,29 @@ export function tokenCount(value: unknown) {
   return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : null;
 }
 
-type Tokens = { input: number; cached: number; output: number };
+type Tokens = { input: number; cached: number; written: number; output: number };
 
 /** Exact token counts from reported usage; `null` when the usage cannot be read. */
 function readUsage(usage: TokenUsage): Tokens | null {
   const input = tokenCount(usage.input_tokens),
     cached = tokenCount(usage.cached_input_tokens ?? 0),
+    written = tokenCount(usage.cache_write_input_tokens ?? 0),
     output = tokenCount(usage.output_tokens);
-  if (input === null || cached === null || output === null || cached > input) return null;
-  return { input, cached, output };
+  if (input === null || cached === null || written === null || output === null) return null;
+  if (cached + written > input) return null;
+  return { input, cached, written, output };
 }
 
-/** The tokens' cost in micro-USD, multiplied by a million to stay exact. */
-function microusdTimesMillion(price: ModelPrice, { input, cached, output }: Tokens) {
+/**
+ * The tokens' cost in micro-USD at the provider's published rates, multiplied
+ * by a million to stay exact: cache reads at the cached rate, cache writes at
+ * the write rate, the rest of the input at the base rate (B53).
+ */
+function microusdTimesMillion(price: ModelPrice, { input, cached, written, output }: Tokens) {
   return (
-    BigInt(input - cached) * BigInt(price.input_microusd_per_million) +
+    BigInt(input - cached - written) * BigInt(price.input_microusd_per_million) +
     BigInt(cached) * BigInt(price.cached_input_microusd_per_million) +
+    BigInt(written) * BigInt(price.cache_write_input_microusd_per_million) +
     BigInt(output) * BigInt(price.output_microusd_per_million)
   );
 }
@@ -104,7 +116,31 @@ export function requestInputBytes(system: string, user: string, schema?: unknown
  * tokenizer never emits more tokens than bytes) plus the full output cap.
  */
 export function reservationCredits(price: ModelPrice, inputBytes: number, maxOutputTokens: number) {
-  return Math.max(1, credits(price, { input: inputBytes, cached: 0, output: maxOutputTokens }));
+  return Math.max(
+    1,
+    credits(price, { input: inputBytes, cached: 0, written: 0, output: maxOutputTokens }),
+  );
+}
+
+/**
+ * The most a cached call can cost: every input byte at the dearer of the base
+ * and cache-write rates, plus the full output cap.
+ */
+export function cachedReservationCredits(
+  price: ModelPrice,
+  inputBytes: number,
+  maxOutputTokens: number,
+) {
+  const writes = price.cache_write_input_microusd_per_million > price.input_microusd_per_million;
+  return Math.max(
+    1,
+    credits(price, {
+      input: inputBytes,
+      cached: 0,
+      written: writes ? inputBytes : 0,
+      output: maxOutputTokens,
+    }),
+  );
 }
 
 /** What an unreadable settlement charges: a fixed fallback, never above the hold. */

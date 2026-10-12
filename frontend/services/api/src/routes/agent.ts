@@ -82,7 +82,7 @@ async function mapped<T>(action: () => Promise<T>) {
 }
 function conflictCode(code: string) {
   if (code === 'output_conflict') return 'agent_output_conflict';
-  if (code === 'protocol_violation') return 'validation_error';
+  if (code === 'agent_skill_unknown') return 'validation_error';
   return code;
 }
 /** One interactive turn as server-sent events, with a heartbeat under proxy idle limits. */
@@ -113,7 +113,10 @@ function turnStream(
       );
       void execute({
         step: (event) => send({ type: 'step', ...event }),
-        text: (event) => send({ type: 'text', ...event }),
+        reply: (event) => send({ type: 'reply_delta', ...event }),
+        document: (event) => send({ type: 'document_delta', ...event }),
+        thinking: (event) => send({ type: 'thinking', ...event }),
+        tool: (event) => send({ type: 'tool', ...event }),
       })
         .then(async () => send({ type: 'done', run: await finished() }))
         .catch((error: unknown) =>

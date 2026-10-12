@@ -14,14 +14,15 @@ const agentRunStatusSchema = z.enum([
   'cancelled',
 ]);
 
-// One committed step of an active run: a model call still in flight
-// (`working`), a receipt still being processed (`processing`), an earlier
-// step that returned without reading (`reasoned`), or a read's
-// outcome (`completed`, `unavailable`, `failed`, `refused`).
+// One committed piece of an active run. A model call (`tool` null) is in
+// flight (`working`), being processed (`processing`) or done (`reasoned`);
+// each read it requested follows it with its `call_id` and outcome
+// (`completed`, `unavailable`, `failed`, `refused`).
 export const agentRunStepSchema = responseObject({
   ordinal: z.number().int(),
   status: z.string(),
   tool: z.string().nullable(),
+  call_id: z.string().nullable(),
   model_attempt_id: uuid(),
   tool_attempt_id: uuid().nullable(),
   run_attempt: z.number().int(),
@@ -47,24 +48,43 @@ export const agentRunSchema = responseObject({
   progress: z.array(agentRunStepSchema).default([]),
 });
 
+/** A read or built-in call's state while a turn runs. */
+export const agentToolStatusSchema = z.enum([
+  'started',
+  'completed',
+  'unavailable',
+  'refused',
+  'failed',
+]);
+
 /**
  * Live events of one interactive turn, streamed by `POST …/run` when the
- * browser accepts `text/event-stream`. Display only: `text` is the reply and
- * document as they are written, and the persisted chat read stays the record.
+ * browser accepts `text/event-stream`. Display only; the persisted chat read
+ * stays the record and the saved reply replaces the streamed text.
+ *
+ * - `step`: a model call started (the heartbeat of a turn).
+ * - `reply_delta`: the next piece of that call's answer text; a later call's
+ *   text replaces an earlier call's.
+ * - `document_delta`: the document being saved, so far (a snapshot).
+ * - `thinking`: the next piece of that call's thinking summary.
+ * - `tool`: one call's state, keyed by `call_id`; calls in one step run together.
  */
 export const agentTurnEventSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('step'), ordinal: z.number().int() }),
+  z.object({ type: z.literal('reply_delta'), ordinal: z.number().int(), text: z.string() }),
   z.object({
-    type: z.literal('step'),
+    type: z.literal('document_delta'),
     ordinal: z.number().int(),
-    tool: z.string().nullable(),
-    status: z.string(),
-  }),
-  z.object({
-    type: z.literal('text'),
-    ordinal: z.number().int(),
-    reply: z.string(),
     title: z.string().nullable(),
     body: z.string().nullable(),
+  }),
+  z.object({ type: z.literal('thinking'), ordinal: z.number().int(), text: z.string() }),
+  z.object({
+    type: z.literal('tool'),
+    ordinal: z.number().int(),
+    call_id: z.string(),
+    tool: z.string(),
+    status: agentToolStatusSchema,
   }),
   z.object({ type: z.literal('done'), run: agentRunSchema }),
   z.object({ type: z.literal('error'), code: z.string() }),
@@ -99,12 +119,15 @@ export const agentOutputSchema = responseObject({
   latest_revision: agentRevisionSchema.nullable(),
 });
 
-// A step summary is `{kind: 'skill', skill_id}` or `{kind: 'tool', tool, status}`.
+// A step summary is `{kind: 'model', ordinal}`, `{kind: 'skill', skill_id}`,
+// `{kind: 'document'}` or `{kind: 'tool', tool, status, call_id, ordinal}`.
 const agentStepSchema = responseObject({
   kind: z.string(),
+  ordinal: z.number().int().optional(),
   skill_id: z.string().optional(),
   tool: z.string().optional(),
   status: z.string().optional(),
+  call_id: z.string().optional(),
 });
 
 export const agentMessageSchema = responseObject({

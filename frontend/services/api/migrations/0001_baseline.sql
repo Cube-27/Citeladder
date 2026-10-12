@@ -142,6 +142,7 @@ CREATE TABLE public.agent_model_attempts (
     debited_credits bigint NOT NULL,
     input_tokens bigint,
     cached_input_tokens bigint,
+    cache_write_input_tokens bigint,
     output_tokens bigint,
     reasoning_tokens bigint,
     total_tokens bigint,
@@ -237,11 +238,26 @@ CREATE TABLE public.agent_runs (
     completed_at timestamp with time zone
 );
 
+CREATE TABLE public.agent_run_transcripts (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    project_id uuid NOT NULL,
+    run_id uuid NOT NULL,
+    chat_id uuid NOT NULL,
+    provider_adapter character varying(64) NOT NULL,
+    model character varying(255) NOT NULL,
+    skill_id character varying(64),
+    context_hash character varying(64) NOT NULL,
+    messages jsonb NOT NULL,
+    created_at timestamp with time zone NOT NULL
+);
+
 CREATE TABLE public.agent_tool_attempts (
     id uuid NOT NULL,
     run_id uuid NOT NULL,
     run_attempt integer NOT NULL,
     ordinal integer NOT NULL,
+    call_id character varying(64) NOT NULL,
     tool_name character varying(128) NOT NULL,
     registry_version character varying(32) NOT NULL,
     status character varying(16) NOT NULL,
@@ -3264,6 +3280,9 @@ ALTER TABLE ONLY public.agent_outputs
 ALTER TABLE ONLY public.agent_runs
     ADD CONSTRAINT agent_runs_pkey PRIMARY KEY (id);
 
+ALTER TABLE ONLY public.agent_run_transcripts
+    ADD CONSTRAINT agent_run_transcripts_pkey PRIMARY KEY (id);
+
 ALTER TABLE ONLY public.agent_tool_attempts
     ADD CONSTRAINT agent_tool_attempts_pkey PRIMARY KEY (id);
 
@@ -3813,8 +3832,11 @@ ALTER TABLE ONLY public.agent_output_revisions
 ALTER TABLE ONLY public.agent_runs
     ADD CONSTRAINT uq_agent_run_ws_idempotency UNIQUE (workspace_id, idempotency_key);
 
+ALTER TABLE ONLY public.agent_run_transcripts
+    ADD CONSTRAINT uq_agent_run_transcript_run UNIQUE (run_id);
+
 ALTER TABLE ONLY public.agent_tool_attempts
-    ADD CONSTRAINT uq_agent_tool_attempt_slot UNIQUE (run_id, run_attempt, ordinal);
+    ADD CONSTRAINT uq_agent_tool_attempt_slot UNIQUE (run_id, run_attempt, ordinal, call_id);
 
 ALTER TABLE ONLY public.ai_referral_landing_daily
     ADD CONSTRAINT uq_ai_referral_landing_grain UNIQUE (workspace_id, project_id, reporting_date, reporting_timezone, url_hash, ai_source);
@@ -4328,6 +4350,10 @@ CREATE INDEX ix_agent_runs_workspace_id ON public.agent_runs USING btree (worksp
 CREATE INDEX ix_agent_tool_attempts_project_id ON public.agent_tool_attempts USING btree (project_id);
 
 CREATE INDEX ix_agent_tool_attempts_run_id ON public.agent_tool_attempts USING btree (run_id);
+
+CREATE INDEX ix_agent_run_transcripts_chat_id ON public.agent_run_transcripts USING btree (chat_id);
+
+CREATE INDEX ix_agent_run_transcripts_workspace_id ON public.agent_run_transcripts USING btree (workspace_id);
 
 CREATE INDEX ix_agent_tool_attempts_workspace_id ON public.agent_tool_attempts USING btree (workspace_id);
 
@@ -5378,6 +5404,18 @@ ALTER TABLE ONLY public.agent_runs
 
 ALTER TABLE ONLY public.agent_runs
     ADD CONSTRAINT agent_runs_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.agent_run_transcripts
+    ADD CONSTRAINT agent_run_transcripts_chat_id_fkey FOREIGN KEY (chat_id) REFERENCES public.agent_chats(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.agent_run_transcripts
+    ADD CONSTRAINT agent_run_transcripts_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.agent_run_transcripts
+    ADD CONSTRAINT agent_run_transcripts_run_id_fkey FOREIGN KEY (run_id) REFERENCES public.agent_runs(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.agent_run_transcripts
+    ADD CONSTRAINT agent_run_transcripts_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.agent_tool_attempts
     ADD CONSTRAINT agent_tool_attempts_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;

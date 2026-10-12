@@ -121,7 +121,6 @@ const API_ERROR_CODES = [
   'prompt_runs_exhausted',
   'property_discovery_unsupported',
   'property_not_accessible',
-  'protocol_violation',
   'provider_api_error',
   'provider_connection_missing',
   'provider_error',

@@ -202,11 +202,13 @@ generated from reviewed visible content rather than substituted for it.
 ## 13. The Agent is bounded orchestration
 
 The Agent uses the shared registered read tools on a server-pinned project and
-config-owned step, tool-call and size budgets frozen per run. Every call is
-authorized as the chat member, bounded, versioned, and idempotent where
-required. The Agent has no write tool, arbitrary SQL, unrestricted URL access,
-provider impersonation, private data store, autonomous recursion, or unapproved
-external mutation. Generating or approving an output never declares
+config-owned budgets frozen per run: model calls, tool calls, parallel reads per
+response, result size and time. Every call is authorized as the chat member,
+bounded, versioned, and idempotent where required. The Agent has no write tool,
+arbitrary SQL, unrestricted URL access, provider impersonation, private data
+store, autonomous recursion, or unapproved external mutation. Persisted run
+transcripts are run records replayed to the model, never a knowledge store: no
+read returns them and they are never shown. Generating or approving an output never declares
 implementation or claims an improvement without new measured evidence.
 
 ## 14. Secrets and private evidence do not leak
@@ -245,8 +247,7 @@ evidence. Redirects, checkout callbacks, receipts, webhook delivery, or provider
 Dashboard state alone never grant access; webhook and reconciliation must settle
 through the same idempotent activation owner. A workspace's own provider keys
 (BYOK) consume no platform credits and never silently fall back to platform
-keys; the Agent has no customer model route and always uses the platform gateway
-(B19). Every platform model call spends AI credits at the serving model's
+keys. Every platform model call spends AI credits at the serving model's
 configured token price and is refused without one (B12, B14, B35); the sole
 exception is the provisioned development login's unmetered `development` Agent
 funding, which still records every model attempt. The

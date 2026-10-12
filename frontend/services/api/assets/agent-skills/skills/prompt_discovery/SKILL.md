@@ -44,7 +44,7 @@ Place, persona or constraint wording belongs in a question only when it is the n
 
 ## Deliver
 
-Answer questions about prompts or coverage directly with `output` null; do not create another coverage plan just because this skill is selected.
+Answer questions about prompts or coverage directly without saving a document; do not create another coverage plan just because this skill is loaded.
 
 ### First: the coverage plan (outline)
 

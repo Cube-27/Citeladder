@@ -7,7 +7,12 @@ import { createModelGateway, gatewaySettings } from '../src/models/gateway.ts';
 import { createJevClient, jevSettings } from '../src/models/jev.ts';
 import { UnmeteredCallError } from '../src/models/meter-scope.ts';
 import { meterFor, settleAbandonedCalls } from '../src/billing/metering.ts';
-import { chargeCredits, modelPrice } from '../src/billing/ai-pricing.ts';
+import {
+  cachedReservationCredits,
+  chargeCredits,
+  modelPrice,
+  reservationCredits,
+} from '../src/billing/ai-pricing.ts';
 
 const db = testDatabase();
 const fixtures = new VisibilityFixtures(db);
@@ -71,6 +76,27 @@ describe('platform AI metering', () => {
     expect(
       chargeCredits(haiku, { input_tokens: 5, cached_input_tokens: 6, output_tokens: 1 }),
     ).toBeNull();
+    // B53: cache reads at the cached rate, cache writes at the write rate, thinking inside output.
+    // $0.01 uncached + $0.008 read + $0.0125 written + $0.05 output = $0.0805; ×1.3 → 105 credits.
+    expect(
+      chargeCredits(haiku, {
+        input_tokens: 1_000_000,
+        cached_input_tokens: 800_000,
+        cache_write_input_tokens: 100_000,
+        output_tokens: 100_000,
+      }),
+    ).toBe(105);
+    expect(
+      chargeCredits(haiku, {
+        input_tokens: 10,
+        cached_input_tokens: 6,
+        cache_write_input_tokens: 5,
+        output_tokens: 1,
+      }),
+    ).toBeNull();
+    // A cached call's hold prices every input byte at the write rate: 1M bytes → $0.125 → 163.
+    expect(cachedReservationCredits(haiku, 1_000_000, 0)).toBe(163);
+    expect(reservationCredits(haiku, 1_000_000, 0)).toBe(130);
     // An unpriced model has no price, except the configured gateway model at the default rate.
     expect(modelPrice('unpriced-model', 'gateway-model')).toBeNull();
     expect(modelPrice('gateway-model', 'gateway-model')).toEqual(haiku);

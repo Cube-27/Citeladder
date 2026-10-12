@@ -360,6 +360,10 @@ describe('ChatScreen', () => {
     const held = new Promise<void>((resolve) => {
       release = resolve;
     });
+    let read!: () => void;
+    const reading = new Promise<void>((resolve) => {
+      read = resolve;
+    });
     const frame = (event: unknown) =>
       new TextEncoder().encode(`data: ${JSON.stringify(event)}\n\n`);
     mswServer.use(
@@ -377,12 +381,20 @@ describe('ChatScreen', () => {
       http.post(`/api/v1/agent/chats/${CHAT}/runs/${STREAMED_RUN}/run`, () => {
         const body = new ReadableStream<Uint8Array>({
           async start(controller) {
-            controller.enqueue(frame({ type: 'step', ordinal: 1, tool: null, status: 'working' }));
-            controller.enqueue(
-              frame({ type: 'text', ordinal: 1, reply: 'Partly written', title: null, body: null }),
-            );
+            controller.enqueue(frame({ type: 'step', ordinal: 1 }));
+            controller.enqueue(frame({ type: 'thinking', ordinal: 1, text: 'Comparing pages' }));
+            controller.enqueue(frame({ type: 'reply_delta', ordinal: 1, text: 'Partly ' }));
+            controller.enqueue(frame({ type: 'reply_delta', ordinal: 1, text: 'written' }));
+            for (const [call_id, tool] of [
+              ['a', 'read_site_health'],
+              ['b', 'read_performance'],
+            ])
+              controller.enqueue(
+                frame({ type: 'tool', ordinal: 1, call_id, tool, status: 'started' }),
+              );
+            await reading;
             // A later step never blanks what was already written.
-            controller.enqueue(frame({ type: 'step', ordinal: 2, tool: null, status: 'working' }));
+            controller.enqueue(frame({ type: 'step', ordinal: 2 }));
             await held;
             phase = 'done';
             controller.enqueue(frame({ type: 'done', run: finished.latest_run }));
@@ -397,9 +409,19 @@ describe('ChatScreen', () => {
 
     await user.type(await screen.findByLabelText('Reply to the agent'), 'Why this order?');
     await user.click(screen.getByRole('button', { name: 'Send' }));
+    const live = await screen.findByRole('article', { name: 'Agent reply in progress' });
+    await vi.waitFor(() => expect(live).toHaveTextContent('Partly written'));
+    expect(within(live).getByText('Thinking')).toBeVisible();
+    // Reads one response asked for run together and are shown together.
+    expect(await screen.findByText('Running 2 reads at once…')).toBeVisible();
     expect(
-      await screen.findByRole('article', { name: 'Agent reply in progress' }),
-    ).toHaveTextContent('Partly written');
+      within(screen.getByRole('list', { name: 'Current reads' }))
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual(['Reading site health…', 'Reading performance…']);
+    read();
+    expect(await screen.findByText('Deciding the next step…')).toBeVisible();
+    expect(live).toHaveTextContent('Partly written');
     release();
     expect(await screen.findByText('The saved answer.')).toBeVisible();
     expect(

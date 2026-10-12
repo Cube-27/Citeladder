@@ -364,6 +364,7 @@ it('bounds model attempts and records failed research without fabricating identi
     maxOutputTokens: 100,
     baseUrlHost: 'model.example',
     adapter: 'openai_compatible' as const,
+    converse: vi.fn(),
     complete: vi.fn(),
     completeStructured: vi.fn(),
     structured,

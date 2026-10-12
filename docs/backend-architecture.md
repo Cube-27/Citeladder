@@ -69,15 +69,20 @@ database connection settings, so it needs no application secrets.
 Fernet-encrypted provider/OAuth secrets and least-privilege worker environments
 keep credential custody separate from product projections.
 
-The default agent is one OpenAI-compatible chat-completions client configured by
-`DEFAULT_AGENT_API_KEY`, `DEFAULT_AGENT_BASE_URL` and `DEFAULT_AGENT_MODEL`;
-there is no per-provider adapter. Requests use the portable subset: messages,
-an output cap sent as `max_completion_tokens` (retried once as `max_tokens` when
-the provider rejects the former by name), and JSON Schema instructions in the
-prompt rather than a provider-specific response format. Customer (BYOK) app
-routes and their connection test follow the same rules through
-`frontend/services/api/src/models/`. Callers validate the returned JSON against
-their own schemas and evidence contracts before persistence.
+The platform model gateway in `frontend/services/api/src/models/` is configured
+by `DEFAULT_AGENT_API_KEY`, `DEFAULT_AGENT_BASE_URL` and `DEFAULT_AGENT_MODEL`;
+the base URL alone chooses the API. `api.anthropic.com` uses the Messages API
+through the official SDK, and any other endpoint OpenAI-compatible chat
+completions (an output cap sent as `max_completion_tokens`, retried once as
+`max_tokens` when the provider rejects the former by name). The gateway has two
+metered surfaces:
+
+- `complete` and `structured` for single calls, with JSON Schema instructions
+  in the prompt. Callers validate the returned JSON against their own schemas
+  and evidence contracts before persistence.
+- `converse` for the Agent's native tool calling: content blocks, tools,
+  reasoning effort and caching, returned as blocks for append-only replay
+  ([Agent](agents.md#streaming-and-the-chat)).
 
 ## Task queue contract
 

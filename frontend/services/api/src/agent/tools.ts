@@ -3,7 +3,10 @@ import { z } from 'zod';
 import type { Database } from '../db/database.ts';
 import { authorize } from './access.ts';
 import { abortable } from './async.ts';
+import { argumentProblem, inputSchema } from '../mcp/tools.ts';
 import { callerMessage } from '../mcp/types.ts';
+import type { ConversationTool } from '../models/conversation.ts';
+import { compareText } from '../text-order.ts';
 import { agentPolicy, type Scope, type Json } from './contracts.ts';
 
 type ToolResult = {
@@ -32,6 +35,24 @@ export type ReadTool = {
   ) => Promise<ToolResult>;
 };
 
+const jsonObject = z.record(z.string(), z.json());
+/**
+ * What the model is offered: the same compact input schema MCP publishes, so
+ * the provider checks the arguments the tool will parse, sorted by name so the
+ * cached prompt prefix never changes order.
+ */
+export function toolDefinitions(
+  tools: readonly Pick<ReadTool, 'name' | 'description' | 'arguments'>[],
+): ConversationTool[] {
+  return tools
+    .map((tool) => ({
+      name: tool.name,
+      description: tool.description,
+      input_schema: jsonObject.parse(inputSchema(tool.arguments)),
+    }))
+    .toSorted((a, b) => compareText(a.name, b.name));
+}
+
 /** Server-pinned scope; registry entries are read adapters, never HTTP or SQL tools. */
 export class ToolRegistry {
   readonly #tools: Map<string, ReadTool>;
@@ -42,11 +63,7 @@ export class ToolRegistry {
     if (this.#tools.size !== tools.length) throw new TypeError('Duplicate Agent tool');
   }
   catalog() {
-    return [...this.#tools.values()].map((tool) => ({
-      name: tool.name,
-      description: tool.description,
-      arguments: z.toJSONSchema(tool.arguments),
-    }));
+    return toolDefinitions([...this.#tools.values()]);
   }
   has(name: string) {
     return this.#tools.has(name);
@@ -61,14 +78,16 @@ export class ToolRegistry {
   ): Promise<ToolOutcome> {
     await authorize(db, scope);
     const tool = this.#tools.get(name);
-    const parsed = tool?.arguments.safeParse(args);
-    if (
-      !tool ||
-      !parsed?.success ||
-      Object.hasOwn(args, 'project_id') ||
-      Object.hasOwn(args, 'workspace_id')
-    )
-      return refused('unknown_tool_or_arguments');
+    // Refusals tell the model how to correct the call; it reads them as a tool result.
+    if (!tool)
+      return refused('unknown_tool', `Unknown tool ${name}. Call one of the listed tools.`);
+    if (Object.hasOwn(args, 'project_id') || Object.hasOwn(args, 'workspace_id'))
+      return refused(
+        'invalid_arguments',
+        'The project is fixed for this chat. Remove project_id and workspace_id.',
+      );
+    const parsed = tool.arguments.safeParse(args);
+    if (!parsed.success) return refused('invalid_arguments', argumentProblem(parsed.error));
     try {
       const result = await abortable(() => tool.read(scope, parsed.data, signal, maxChars), signal);
       const serialized = JSON.stringify(result.data);
@@ -84,8 +103,11 @@ export class ToolRegistry {
     } catch (error) {
       // A correctable argument is refused with the owner's reason; anything else failed.
       const problem = callerMessage(error);
-      if (problem !== null) return { ...refused('invalid_arguments'), text: problem };
-      return { ...refused('tool_failed'), status: 'failed' };
+      if (problem !== null) return refused('invalid_arguments', problem);
+      return {
+        ...refused('tool_failed', 'This read failed. Try a different read or answer without it.'),
+        status: 'failed',
+      };
     }
   }
 }
@@ -148,6 +170,7 @@ export function boundToolData(data: Json, maxChars: number, splitOverview = fals
     omissions: [{ reason: 'tool_result_truncated', count: 1, sections: omitted }],
   };
 }
-export function refused(error: string): ToolOutcome {
-  return { status: 'refused', text: error, refs: [], omissions: [], hash: '', error };
+/** A call not run: `error` is the recorded code, `text` what the model is told. */
+export function refused(error: string, text: string): ToolOutcome {
+  return { status: 'refused', text, refs: [], omissions: [], hash: '', error };
 }
