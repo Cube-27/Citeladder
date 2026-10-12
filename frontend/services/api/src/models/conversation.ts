@@ -82,11 +82,11 @@ export const blocksSchema = z.array(z.object({ type: z.string() }).catchall(z.js
 export function parseBlocks(value: unknown): ConversationBlock[] {
   return blocksSchema.parse(JSON.parse(JSON.stringify(value)));
 }
-/** The answer text of a block list. */
-export function blockText(blocks: readonly ConversationBlock[]) {
+/** The answer text of a block list; blocks that are separate passages need a `separator`. */
+export function blockText(blocks: readonly ConversationBlock[], separator = '') {
   return blocks
     .flatMap((block) => (block.type === 'text' ? [String(block.text ?? '')] : []))
-    .join('');
+    .join(separator);
 }
 
 /** The tool calls of a block list, in the order the model wrote them. */

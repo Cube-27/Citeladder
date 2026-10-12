@@ -100,10 +100,13 @@ export function methodology(
   state: Pick<DocumentState, 'formatId' | 'outlineApproved'>,
   bounds: OutputBounds,
 ) {
+  const current = state.formatId
+    ? `; this chat uses ${state.formatId} unless the user asks for another`
+    : '';
   const rules = [
     `Save the deliverable with save_document: a title of at most ${bounds.output_title_max_chars} characters and a Markdown body of at most ${bounds.output_body_max_chars} characters.`,
     usesFormats(skill)
-      ? `Name its format in format_id, from the content formats in your instructions${state.formatId ? `; this chat uses ${state.formatId} unless the user asks for another` : ''}.`
+      ? `Name its format in format_id, from the content formats in your instructions${current}.`
       : '',
     skill.outlineFirst && !state.outlineApproved
       ? 'Long-form deliverables start as an outline (phase outline) that the user approves before the draft.'

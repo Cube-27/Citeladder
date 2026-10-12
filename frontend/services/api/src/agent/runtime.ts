@@ -99,9 +99,9 @@ function savedNotice(phase: string, formatLabel: string | null) {
 }
 /** A turn never ends without a reply, even when the model wrote none. */
 function noReply(reads: number) {
-  const read = reads === 1 ? 'one source' : `${reads} sources`;
+  const read = reads === 1 ? 'one read' : `${reads} reads`;
   return reads
-    ? `I read ${read} but reached this turn’s limit before writing an answer. Nothing was saved. Narrow the request to one page, prompt or date range and ask again.`
+    ? `I completed ${read} but reached this turn’s limit before writing an answer. Nothing was saved. Narrow the request to one page, prompt or date range and ask again.`
     : 'I reached this turn’s limit before writing an answer. Nothing was saved. Narrow the request and ask again.';
 }
 /** Appended after a step's tool results, never deleted, so the cached history stays exact. */
@@ -241,7 +241,11 @@ export class AgentRuntime {
         compactAtTokens: budget.compaction_trigger_tokens,
       };
       const response = await this.callModel(lease, ordinal, model, request, signal, events);
-      state.messages.push({ role: 'assistant', content: response.blocks });
+      // An empty assistant message would make every later replay of this chat invalid.
+      const blocks = response.blocks.length
+        ? response.blocks
+        : [{ type: 'text', text: '(no answer)' }];
+      state.messages.push({ role: 'assistant', content: blocks });
       state.steps.push({ kind: 'model', ordinal });
       if (!response.toolCalls.length)
         return this.finish(lease, turn, model, state, response.text, latest.summary);
@@ -250,9 +254,7 @@ export class AgentRuntime {
         lease,
         turn,
         state,
-        ordinal,
-        response.toolCalls,
-        last,
+        { ordinal, calls: response.toolCalls, last },
         signal,
         events,
       );
@@ -322,9 +324,7 @@ export class AgentRuntime {
     lease: Lease,
     turn: Turn,
     state: TurnState,
-    ordinal: number,
-    calls: ToolCall[],
-    last: boolean,
+    { ordinal, calls, last }: { ordinal: number; calls: ToolCall[]; last: boolean },
     signal?: AbortSignal,
     events?: TurnEvents,
   ) {
@@ -488,9 +488,14 @@ export class AgentRuntime {
       const completion = document ? savedNotice(document.phase, formatLabel) : '';
       const reply = scrubRecordRefs(text).trim();
       let content = completion;
-      if (reply)
-        content = `${bounded(reply, budget.reply_max_chars - completion.length - 2, '\n[reply truncated at its size bound]')}${completion ? `\n\n${completion}` : ''}`;
-      else if (!document) content = noReply(reads.length);
+      if (reply) {
+        const answer = bounded(
+          reply,
+          budget.reply_max_chars - completion.length - 2,
+          '\n[reply truncated at its size bound]',
+        );
+        content = [answer, completion].filter(Boolean).join('\n\n');
+      } else if (!document) content = noReply(reads.length);
       const message = await appendMessage(trx, chat, {
         role: 'agent',
         replyTo: run.user_message_id,

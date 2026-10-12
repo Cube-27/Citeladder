@@ -133,11 +133,13 @@ export function openingMessage(input: {
     });
   const { revision } = input;
   // The model wrote the latest revision itself when its run is replayed; a user edit is new.
-  if (revision && !(revision.author === 'agent' && revision.run_id && runs.has(revision.run_id)))
+  if (revision && !(revision.author === 'agent' && revision.run_id && runs.has(revision.run_id))) {
+    const kind = input.formatId ? `${revision.phase}, format ${input.formatId}` : revision.phase;
     blocks.push({
       type: 'text',
-      text: `The chat's current document (${revision.phase}${input.formatId ? `, format ${input.formatId}` : ''}), which a revision updates:\n${JSON.stringify({ title: revision.title, body: revision.body })}`,
+      text: `The chat's current document (${kind}), which a revision updates:\n${JSON.stringify({ title: revision.title, body: revision.body })}`,
     });
+  }
   if (input.pinned && !input.kept.some((item) => item.skillId === input.pinned?.skill.id))
     blocks.push({ type: 'text', text: input.pinned.text });
   blocks.push({ type: 'text', text: input.request });

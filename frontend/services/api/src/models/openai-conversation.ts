@@ -57,7 +57,7 @@ function resultText(block: ConversationBlock) {
 function chatMessages(message: ConversationMessage): ChatMessage[] {
   if (message.role === 'assistant') {
     const calls = blockToolCalls(message.content);
-    const text = blockText(message.content);
+    const text = blockText(message.content, '\n\n');
     return [
       {
         role: 'assistant',
@@ -85,7 +85,7 @@ function chatMessages(message: ConversationMessage): ChatMessage[] {
         ]
       : [],
   );
-  const text = blockText(message.content);
+  const text = blockText(message.content, '\n\n');
   return text ? [...results, { role: 'user', content: text }] : results;
 }
 

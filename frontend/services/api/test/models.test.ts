@@ -470,7 +470,13 @@ describe('configured model gateway', () => {
           system: 'contract',
           tools: [{ name: 'read_a', description: 'A.', input_schema: { type: 'object' } }],
           messages: [
-            { role: 'user', content: [{ type: 'text', text: 'Question' }] },
+            {
+              role: 'user',
+              content: [
+                { type: 'text', text: 'Context' },
+                { type: 'text', text: 'Question' },
+              ],
+            },
             {
               role: 'assistant',
               content: [
@@ -524,7 +530,7 @@ describe('configured model gateway', () => {
       // Thinking cannot cross to chat completions; tool results precede the user's text.
       expect(body.messages).toEqual([
         { role: 'system', content: 'contract' },
-        { role: 'user', content: 'Question' },
+        { role: 'user', content: 'Context\n\nQuestion' },
         {
           role: 'assistant',
           content: 'Looking.',
