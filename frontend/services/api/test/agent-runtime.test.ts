@@ -540,19 +540,22 @@ describe('Agent runtime on PostgreSQL', () => {
         { ordinal: 1, call_id: 'call_c', tool: 'read_evidence', status: 'refused' },
       ]),
     );
-    expect(
-      (await progress(db, await fixtures.run(run.id))).map(({ ordinal, tool, call_id }) => [
-        ordinal,
-        tool,
-        call_id,
-      ]),
-    ).toEqual([
+    // Each model call is followed by its reads, which are listed as they finished.
+    const rows = (await progress(db, await fixtures.run(run.id))).map(
+      ({ ordinal, tool, call_id }) => [ordinal, tool, call_id],
+    );
+    expect(rows).toHaveLength(5);
+    expect([rows[0], rows[4]]).toEqual([
       [1, null, null],
-      [1, 'read_evidence', 'call_a'],
-      [1, 'read_evidence', 'call_b'],
-      [1, 'read_evidence', 'call_c'],
       [2, null, null],
     ]);
+    expect(rows.slice(1, 4)).toEqual(
+      expect.arrayContaining([
+        [1, 'read_evidence', 'call_a'],
+        [1, 'read_evidence', 'call_b'],
+        [1, 'read_evidence', 'call_c'],
+      ]),
+    );
   });
 
   it('claims once under contention and ends an expired turn as interrupted, never claiming it again', async () => {

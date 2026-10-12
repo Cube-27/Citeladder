@@ -72,7 +72,7 @@ function pendingStepStatus(outcome: string, live: boolean, latest: boolean) {
   if (live) return modelStepStatus(outcome, latest);
   return outcome === 'dispatched' ? 'interrupted' : modelStepStatus(outcome, false);
 }
-/** Each model call, followed by the reads its response made, in the order they were written. */
+/** Each model call, followed by the reads its response made, in the order they finished. */
 export async function progress(db: Database, run: Run) {
   if (run.attempt_count < 1) return [];
   const [models, tools] = await Promise.all([

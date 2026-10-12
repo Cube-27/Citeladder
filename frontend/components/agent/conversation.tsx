@@ -71,7 +71,7 @@ export function Conversation({
         <div className={panelClasses({}, 'min-w-0')}>{outputView}</div>
       ) : null}
       {pendingMessage ? <PendingMessage text={pendingMessage} /> : null}
-      {live && (live.reply || live.document || live.thinking) ? <LiveReply live={live} /> : null}
+      <LiveReply live={live} />
       <RunState detail={detail} live={live} />
       <TurnActions
         detail={detail}
@@ -174,8 +174,11 @@ function PendingMessage({ text }: Readonly<{ text: string }>) {
  * The thinking summary, reply and document as they are written. The saved
  * reply replaces all of them, so the thinking summary closes with the turn.
  */
-function LiveReply({ live: latest }: Readonly<{ live: LiveTurn }>) {
-  const { thinking, reply, document } = useDeferredValue(latest);
+function LiveReply({ live: latest }: Readonly<{ live: LiveTurn | undefined }>) {
+  const live = useDeferredValue(latest);
+  if (!live) return null;
+  const { thinking, reply, document } = live;
+  if (!thinking && !reply && !document) return null;
   return (
     <article aria-label="Agent reply in progress" aria-busy="true" className="grid gap-2">
       <span className={textRole('label')}>Agent</span>

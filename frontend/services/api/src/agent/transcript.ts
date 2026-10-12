@@ -95,7 +95,7 @@ export function replayed(transcripts: StoredTranscript[], adapter: string, budge
   return { kept, dropped: transcripts.length - kept.length };
 }
 
-export const contextHash = (text: string) => createHash('sha256').update(text).digest('hex');
+const contextHash = (text: string) => createHash('sha256').update(text).digest('hex');
 
 type Revision = {
   id: string;

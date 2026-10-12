@@ -9,7 +9,7 @@ import type { agentTurnEventSchema } from '@citeladder/contracts/agent';
 type TurnEvent = z.input<typeof agentTurnEventSchema>;
 type Payload<T extends TurnEvent['type']> = Omit<Extract<TurnEvent, { type: T }>, 'type'>;
 export type TurnDocument = Payload<'document_delta'>;
-export type TurnTool = Payload<'tool'>;
+type TurnTool = Payload<'tool'>;
 /** Optional listeners for one execution; the worker passes none. */
 export type TurnEvents = {
   step?: (event: Payload<'step'>) => void;

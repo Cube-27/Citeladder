@@ -209,20 +209,6 @@ export interface AgentOutputs {
   workspace_id: string;
 }
 
-export interface AgentRunTranscripts {
-  chat_id: string;
-  context_hash: string;
-  created_at: Timestamp;
-  id: string;
-  messages: Json;
-  model: string;
-  project_id: string;
-  provider_adapter: string;
-  run_id: string;
-  skill_id: string | null;
-  workspace_id: string;
-}
-
 export interface AgentRuns {
   attempt_count: number;
   available_at: Timestamp;
@@ -261,6 +247,20 @@ export interface AgentRuns {
   updated_at: Timestamp;
   user_id: string | null;
   user_message_id: string;
+  workspace_id: string;
+}
+
+export interface AgentRunTranscripts {
+  chat_id: string;
+  context_hash: string;
+  created_at: Timestamp;
+  id: string;
+  messages: Json;
+  model: string;
+  project_id: string;
+  provider_adapter: string;
+  run_id: string;
+  skill_id: string | null;
   workspace_id: string;
 }
 

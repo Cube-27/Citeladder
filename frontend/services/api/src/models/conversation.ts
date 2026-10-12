@@ -20,7 +20,7 @@ export type ConversationTool = {
   /** Stream this tool's input as it is written (Anthropic), so a document is seen live. */
   stream_input?: boolean;
 };
-export type ReasoningEffort = 'low' | 'medium' | 'high';
+type ReasoningEffort = 'low' | 'medium' | 'high';
 export type ConversationRequest = {
   /** The stable prefix: identical for every chat, so providers serve it from cache. */
   system: string;
@@ -106,7 +106,7 @@ export function blockToolCalls(blocks: readonly ConversationBlock[]): ToolCall[]
 
 const inputSchema = z.record(z.string(), z.json());
 /** A tool input is a JSON object; anything else becomes `{}`, which the tool then refuses. */
-export function toolInput(value: unknown): Record<string, Json> {
+function toolInput(value: unknown): Record<string, Json> {
   const parsed = inputSchema.safeParse(value);
   return parsed.success ? parsed.data : {};
 }

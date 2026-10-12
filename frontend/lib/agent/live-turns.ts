@@ -18,7 +18,7 @@ import { readSseResponse, streamHeaders } from '@/lib/sse/use-event-stream';
 export type TurnEvent = z.infer<typeof agentTurnEventSchema>;
 type ToolEvent = Extract<TurnEvent, { type: 'tool' }>;
 /** One call's latest state; calls from one model response run together. */
-export type LiveTool = Omit<ToolEvent, 'type'>;
+type LiveTool = Omit<ToolEvent, 'type'>;
 /** Text built from one model call's deltas; a later call's text replaces it. */
 type Written = { ordinal: number; text: string };
 

@@ -122,10 +122,6 @@ async function streamedCompletion(
 
 const logger = getLogger('app.connectors.agent.client');
 
-/** OpenAI-compatible providers name an output-cap stop either way. */
-export function truncatedFinish(finishStatus: string) {
-  return finishStatus === 'length' || finishStatus === 'max_tokens';
-}
 /** The provider's answer, folded from its stream when a listener asked for one. */
 async function readCompletion(
   response: Response,
