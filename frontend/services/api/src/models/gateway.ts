@@ -15,8 +15,11 @@ import {
   type Complete,
   type Transport,
 } from './http.ts';
-import { anthropicCompletion, isAnthropicEndpoint } from './anthropic.ts';
+import { anthropicCompletion, anthropicConversation, isAnthropicEndpoint } from './anthropic.ts';
+import type { Converse } from './conversation.ts';
 import { assertMetered } from './meter-scope.ts';
+import { openAIConversation } from './openai-conversation.ts';
+import { normalizedUsage } from './usage.ts';
 
 export type GatewaySettings = {
   apiKey: string;
@@ -175,37 +178,9 @@ function unfenced(content: string) {
   return text.trim();
 }
 
-function normalizedUsage(raw: Record<string, unknown> | undefined) {
-  const usage: Record<string, number | null> = {};
-  const nested = (name: string, field: string) => {
-    const details = raw?.[name];
-    return details && typeof details === 'object' ? Reflect.get(details, field) : undefined;
-  };
-  const fallback: Record<string, unknown> = {
-    cached_input_tokens: nested('prompt_tokens_details', 'cached_tokens'),
-    reasoning_tokens: nested('completion_tokens_details', 'reasoning_tokens'),
-  };
-  for (const [target, aliases] of Object.entries({
-    input_tokens: ['input_tokens', 'prompt_tokens'],
-    output_tokens: ['output_tokens', 'completion_tokens'],
-    total_tokens: ['total_tokens'],
-    cached_input_tokens: ['cached_input_tokens'],
-    reasoning_tokens: ['reasoning_tokens'],
-  })) {
-    const alias = aliases.find((name) => raw && Object.hasOwn(raw, name));
-    const value = alias ? raw?.[alias] : fallback[target];
-    if (value !== undefined)
-      usage[target] =
-        typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : null;
-  }
-  return usage;
-}
-
 export function createModelGateway(
   settings = gatewaySettings(),
   transport: Transport = defaultTransport,
-  // Customer routes are validated as OpenAI-compatible whatever their host.
-  { api = 'detect' }: { api?: 'detect' | 'openai_compatible' } = {},
 ) {
   if (![settings.apiKey, settings.baseUrl, settings.model].every((part) => part.trim())) {
     throw new ModelError('not_configured');
@@ -219,20 +194,29 @@ export function createModelGateway(
     throw new ModelError('not_configured');
   }
   // The platform's base URL alone chooses the API, so switching provider is configuration.
-  const anthropic = api === 'detect' && isAnthropicEndpoint(endpoint);
+  const anthropic = isAnthropicEndpoint(endpoint);
   const send = anthropic
     ? anthropicCompletion(settings, transport, endpoint)
     : openAICompletion(settings, transport, endpoint);
+  const talk = anthropic
+    ? anthropicConversation(settings, transport, endpoint)
+    : openAIConversation(settings, transport, endpoint);
   // Every platform model call runs inside a metering scope (B18).
   const complete: Complete = async (...args) => {
     assertMetered('model_gateway');
     return send(...args);
+  };
+  /** Native tool calling for the Agent; a sibling of `complete`, never a widening of it. */
+  const converse: Converse = async (...args) => {
+    assertMetered('model_gateway');
+    return talk(...args);
   };
   return {
     model: settings.model,
     maxOutputTokens: settings.maxOutputTokens,
     baseUrlHost: endpoint.hostname,
     adapter: anthropic ? ('anthropic' as const) : ('openai_compatible' as const),
+    converse,
     ...gatewayCalls(complete),
   };
 }
