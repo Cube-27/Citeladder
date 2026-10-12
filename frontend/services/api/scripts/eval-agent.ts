@@ -92,10 +92,19 @@ const eventSchema = z.looseObject({ type: z.string() });
 
 const directory = join(gitDirectory(process.cwd()), 'agent-eval');
 
+/** Labels name files in the eval directory, so they stay plain file names. */
+function labelFile(label: string, extension: string) {
+  if (!/^[\w-]+$/.test(label))
+    throw new Error(`Label "${label}" may use only letters, digits, - and _`);
+  return join(directory, `${label}${extension}`);
+}
+
 async function live() {
   if (!values.live)
     throw new Error('The Agent eval calls the configured model provider; pass --live to run it');
   if (!values.label) throw new Error('Name the run with --label');
+  const label = values.label;
+  const log = labelFile(label, '.jsonl');
   const env = localEnvironment();
   const config = loadConfig(env);
   requireLocalDevelopment(config);
@@ -112,32 +121,44 @@ async function live() {
       project.workspaceId,
     );
     await mkdir(directory, { recursive: true });
-    const log = join(directory, `${values.label}.jsonl`);
-    const write = (record: object) =>
-      appendFile(log, `${JSON.stringify({ label: values.label, ...record })}\n`);
+    const write = (record: object) => appendFile(log, `${JSON.stringify({ label, ...record })}\n`);
+    const context: CaseContext = { db, client, projectId: project.id, vars, write };
     for (const item of cases) {
-      if (values.case && !item.id.startsWith(values.case)) continue;
-      let chatId: string | null = null;
-      for (const [index, spec] of item.turns.entries()) {
-        const step = index + 1;
-        try {
-          const body = await requestBody(db, project.id, spec, vars, chatId === null);
-          const result = await turn(db, client, project.id, chatId, body);
-          chatId = result.chat_id;
-          const record = { case: item.id, step, ...result };
-          await write(record);
-          console.log(summaryLine(record));
-        } catch (error) {
-          const failed = error instanceof Error ? error.message : String(error);
-          await write({ case: item.id, step, failed });
-          console.log(`${item.id}#${step} FAILED ${failed}`);
-          break;
-        }
-      }
+      if (!values.case || item.id.startsWith(values.case)) await runCase(context, item);
     }
     console.log(`Recorded ${log}`);
   } finally {
     await db.destroy();
+  }
+}
+
+type CaseContext = {
+  db: Database;
+  client: Client;
+  projectId: string;
+  vars: Placeholders;
+  write: (record: object) => Promise<void>;
+};
+
+/** Runs a case's turns in one chat; a failed turn ends the case. */
+async function runCase(context: CaseContext, item: (typeof cases)[number]) {
+  const { db, client, projectId, vars, write } = context;
+  let chatId: string | null = null;
+  for (const [index, spec] of item.turns.entries()) {
+    const step = index + 1;
+    try {
+      const body = await requestBody(db, projectId, spec, vars, chatId === null);
+      const result = await turn(db, client, projectId, chatId, body);
+      chatId = result.chat_id;
+      const record = { case: item.id, step, ...result };
+      await write(record);
+      console.log(summaryLine(record));
+    } catch (error) {
+      const failed = error instanceof Error ? error.message : String(error);
+      await write({ case: item.id, step, failed });
+      console.log(`${item.id}#${step} FAILED ${failed}`);
+      return;
+    }
   }
 }
 
@@ -311,18 +332,11 @@ async function stream(client: Client, chatId: string, runId: string) {
   for await (const chunk of response.body) {
     buffer += decoder.decode(chunk, { stream: true });
     for (let cut = buffer.indexOf('\n\n'); cut >= 0; cut = buffer.indexOf('\n\n')) {
-      const frame = buffer.slice(0, cut);
+      const event = parseFrame(buffer.slice(0, cut));
       buffer = buffer.slice(cut + 2);
-      const data = frame
-        .split('\n')
-        .filter((line) => line.startsWith('data:'))
-        .map((line) => line.slice(5).trim())
-        .join('\n');
-      if (!data) continue;
-      const event = eventSchema.safeParse(JSON.parse(data));
-      if (!event.success) continue;
+      if (!event) continue;
       const at = Math.round(performance.now() - started);
-      const { type, reply, body, code } = event.data;
+      const { type, reply, body, code } = event;
       firstEvent ??= at;
       events[type] = (events[type] ?? 0) + 1;
       const visible =
@@ -338,6 +352,17 @@ async function stream(client: Client, chatId: string, runId: string) {
     events,
     error,
   };
+}
+
+function parseFrame(frame: string) {
+  const data = frame
+    .split('\n')
+    .filter((line) => line.startsWith('data:'))
+    .map((line) => line.slice(5).trim())
+    .join('\n');
+  if (!data) return null;
+  const event = eventSchema.safeParse(JSON.parse(data));
+  return event.success ? event.data : null;
 }
 
 async function attempts(db: Database, runId: string) {
@@ -379,15 +404,16 @@ async function attempts(db: Database, runId: string) {
 }
 
 function summaryLine(record: EvalRecord) {
+  const status = [record.run_status, record.run_error].filter(Boolean).join(' ');
   return (
-    `${record.case}#${record.step} ${record.run_status}${record.run_error ? ` ${record.run_error}` : ''} ` +
+    `${record.case}#${record.step} ${status} ` +
     `first_text=${record.first_text_ms}ms total=${record.total_ms}ms calls=${record.model_calls} ` +
     `tools=${record.tool_calls} in=${record.input_tokens} cached=${record.cached_input_tokens} out=${record.output_tokens}`
   );
 }
 
 async function load(label: string) {
-  const text = await readFile(join(directory, `${label}.jsonl`), 'utf8');
+  const text = await readFile(labelFile(label, '.jsonl'), 'utf8');
   return text
     .split('\n')
     .filter(Boolean)
@@ -449,13 +475,7 @@ async function report(labels: string[]) {
         label: run.label,
         record: run.records.find((record) => record.case === item.id && record.step === step),
       }));
-      const answers = found.map(({ label, record }) => {
-        const output = record?.output;
-        const document = output
-          ? `\n\n**Document (${output.phase}): ${output.title}**\n\n${output.body}`
-          : '';
-        return `### ${label}\n\n${record?.failed ? `Failed: ${record.failed}` : `${record?.reply ?? '(no turn)'}${document}`}`;
-      });
+      const answers = found.map(({ label, record }) => answer(label, record));
       const asked = found.map(({ record }) => record?.message).find(Boolean) ?? spec.message;
       return [
         `## ${item.id} · turn ${step}`,
@@ -465,9 +485,18 @@ async function report(labels: string[]) {
       ].join('\n\n');
     }),
   );
-  const file = join(directory, `report-${labels.join('-vs-')}.md`);
+  const file = labelFile(`report-${labels.join('-vs-')}`, '.md');
   await writeFile(file, [`# Agent eval: ${labels.join(' vs ')}`, table, ...review].join('\n\n'));
   console.log(`\nReview written to ${file}`);
+}
+
+function answer(label: string, record: EvalRecord | undefined) {
+  const parts = [`### ${label}`];
+  if (record?.failed) parts.push(`Failed: ${record.failed}`);
+  else parts.push(record?.reply ?? '(no turn)');
+  const output = record?.failed ? null : record?.output;
+  if (output) parts.push(`**Document (${output.phase}): ${output.title}**`, output.body);
+  return parts.join('\n\n');
 }
 
 // Runs after every declaration above is initialised.
