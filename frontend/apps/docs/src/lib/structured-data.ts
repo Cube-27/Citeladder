@@ -18,7 +18,13 @@ export function docsArticleJsonLd({
   updated: string;
   websiteUrl: string;
 }): Record<string, unknown> {
-  const organization = new URL('#organization', websiteUrl).toString();
+  // Docs name no person author: the CiteLadder organization writes and publishes them.
+  const organization = {
+    '@type': 'Organization',
+    '@id': new URL('#organization', websiteUrl).toString(),
+    name: SITE_NAME,
+    url: websiteUrl,
+  };
   return {
     '@context': 'https://schema.org',
     '@type': 'TechArticle',
@@ -29,12 +35,8 @@ export function docsArticleJsonLd({
     inLanguage: 'en',
     dateModified: updated,
     mainEntityOfPage: { '@type': 'WebPage', '@id': url },
-    publisher: {
-      '@type': 'Organization',
-      '@id': organization,
-      name: SITE_NAME,
-      url: websiteUrl,
-    },
+    author: organization,
+    publisher: organization,
   };
 }
 

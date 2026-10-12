@@ -227,7 +227,8 @@ export type TaskSeed = {
 /**
  * Enqueue tasks of one kind for an active crawl. A conflicting queued row only
  * has its priority raised (and its wake-up pulled forward), so discovery's
- * boost reaches a pre-seeded analyze task. Returns how many rows were new.
+ * boost reaches a pre-seeded analyze task. Returns how many rows were new,
+ * leaving out the URL hashes in `uncounted`.
  */
 export async function enqueueSiteTasks(
   trx: Database,
@@ -235,10 +236,11 @@ export async function enqueueSiteTasks(
   kind: 'discover' | 'analyze',
   seeds: TaskSeed[],
   maxAttempts: number,
+  uncounted: ReadonlySet<string> = new Set(),
 ) {
   if (!seeds.length) return 0;
   const column = <T>(pick: (seed: TaskSeed) => T) => seeds.map(pick);
-  const { rows } = await sql<{ inserted: boolean }>`
+  const { rows } = await sql<{ inserted: boolean; url_hash: string }>`
     INSERT INTO site_crawl_tasks (
       id, crawl_id, workspace_id, site_url_id, parent_site_url_id, task_kind, requested_url,
       url_hash, depth, generation, idempotency_key, status, priority, randomized_position,
@@ -267,8 +269,8 @@ export async function enqueueSiteTasks(
       SET priority = excluded.priority,
           available_at = least(site_crawl_tasks.available_at, now())
       WHERE site_crawl_tasks.status = 'queued' AND site_crawl_tasks.priority < excluded.priority
-    RETURNING (xmax = 0) AS inserted`.execute(trx);
-  return rows.filter((row) => row.inserted).length;
+    RETURNING (xmax = 0) AS inserted, url_hash`.execute(trx);
+  return rows.filter((row) => row.inserted && !uncounted.has(row.url_hash)).length;
 }
 
 export async function markFrontierAdmitted(

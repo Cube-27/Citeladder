@@ -11,6 +11,7 @@ import {
 } from '../src/site-health/frontier.ts';
 import { reconcileDuplicateAliases } from '../src/site-health/canonical-alias.ts';
 import { valueKindCoverage } from '../src/site-health/coverage.ts';
+import { reconcileCrawl } from '../src/site-health/lifecycle.ts';
 import { crawlCounters } from '../src/site-health/reads/crawl.ts';
 import { pages } from '../src/site-health/reads/pages.ts';
 import { SitePageFetcher, siteFetchSettings } from '../src/site-health/page-fetch.ts';
@@ -638,6 +639,16 @@ describe('frontier admission', () => {
     expect((await memberships(seed)).filter((row) => row.active)).toHaveLength(4);
     expect(await tasks(seed, 'discover')).toHaveLength(6);
     expect((await crawlRow(seed)).admitted_url_count).toBe(6);
+  });
+
+  it('counts a recrawl’s monitored pages once when it discovers them again', async () => {
+    const seed = await crawl({ config: { automatic_monitor_limit: 0, requested_page_limit: 10 } });
+    await queued(seed, 'discover');
+    // A recrawl seeds an observation for each monitored page before it fetches anything.
+    for (const path of ['/a', '/b', '/c']) await fixtures.page(seed, path, {}, { observed: true });
+    await reconcileCrawl(db, seed.workspaceId, seed.crawlId);
+    await admit(seed, ['/a', '/b', '/c']);
+    expect((await crawlRow(seed)).admitted_url_count).toBe(3);
   });
 
   it('skips an already-discovering URL without spending the ceiling on it', async () => {

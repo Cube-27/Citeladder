@@ -2,7 +2,7 @@ import type { Insertable } from 'kysely';
 import { afterAll, describe, expect, it, vi } from 'vitest';
 import type { SiteCrawls } from '../src/generated/db-schema.ts';
 import { finalizeCrawlAnalyses } from '../src/site-health/lifecycle-finalize.ts';
-import { persistCrawlSnapshot } from '../src/site-health/snapshot.ts';
+import { addArchitectureIssues, persistCrawlSnapshot } from '../src/site-health/snapshot.ts';
 import {
   publishCancelledCrawls,
   reconcileAfterTask,
@@ -160,6 +160,72 @@ describe('terminal analysis publication', () => {
         .where('analysis_id', '=', page.analysisId)
         .execute(),
     ).toEqual([]);
+  });
+
+  it('counts graph-scope architecture issues in the snapshot and crawl summary', async () => {
+    const seed = await fixtures.crawl();
+    await fixtures.snapshot(seed, 'complete');
+    await fixtures.page(seed, '/', {});
+    await fixtures.page(seed, '/orphan/product', {});
+    await fixtures.task(seed, 'link_metrics');
+    const settings = { ...siteWorkerSettings({}), concurrency: 1 };
+    const worker = fixtures.worker(seed, { settings });
+    expect(await worker.runOnce()).toBe(1);
+    expect(await worker.runOnce()).toBe(1);
+    await db
+      .updateTable('site_crawls')
+      .set({ score_summary: JSON.stringify({ issue_count: 0 }) })
+      .where('id', '=', seed.crawlId)
+      .execute();
+    const crawl = await db
+      .selectFrom('site_crawls')
+      .selectAll()
+      .where('id', '=', seed.crawlId)
+      .executeTakeFirstOrThrow();
+    // Replaying the fold leaves one count per persisted issue.
+    expect(await addArchitectureIssues(db, crawl)).toBe(true);
+    expect(await addArchitectureIssues(db, crawl)).toBe(true);
+    const snapshot = await db
+      .selectFrom('site_health_snapshots')
+      .select(['issue_count', 'top_issues'])
+      .where('crawl_id', '=', seed.crawlId)
+      .executeTakeFirstOrThrow();
+    expect(snapshot.issue_count).toBe(2);
+    expect(
+      (snapshot.top_issues as { rule_id: string }[]).map((row) => row.rule_id).toSorted(),
+    ).toEqual(['architecture.orphan_pages', 'architecture.parentless_detail_pages']);
+    const summary = await db
+      .selectFrom('site_crawls')
+      .select('score_summary')
+      .where('id', '=', seed.crawlId)
+      .executeTakeFirstOrThrow();
+    expect(summary.score_summary).toEqual({ issue_count: 2 });
+  });
+
+  it('does not wait on internal links the crawler can never fetch', async () => {
+    const seed = await fixtures.crawl('running');
+    const anchor = (url: string) => ({ url, is_internal: true });
+    const neverFetched = [anchor('https://app.example.test/'), anchor('/data/manifest.json')];
+    const excludedOnly = await fixtures.page(seed, '/about', {
+      links: { anchors: neverFetched },
+    });
+    const withPage = await fixtures.page(seed, '/guide', {
+      links: { anchors: [...neverFetched, anchor('/pricing')] },
+    });
+    await finalize(seed);
+    const brokenLinks = async (analysisId: string) => {
+      const row = await db
+        .selectFrom('site_rule_evaluations')
+        .select(['outcome', 'evidence'])
+        .where('analysis_id', '=', analysisId)
+        .where('rule_id', '=', 'technical.broken_internal_link')
+        .executeTakeFirstOrThrow();
+      const evidence = row.evidence as { total_count: number };
+      return [row.outcome, evidence.total_count];
+    };
+    expect(await brokenLinks(excludedOnly.analysisId)).toEqual(['satisfied', 0]);
+    // A fetchable target that was never checked still leaves the check open.
+    expect(await brokenLinks(withPage.analysisId)).toEqual(['unknown', 1]);
   });
 
   it('does not publish another workspace through a mismatched crawl scope', async () => {

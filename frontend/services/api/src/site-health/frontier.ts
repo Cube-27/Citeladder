@@ -590,6 +590,8 @@ type Planned = Entry & {
   observe: boolean;
   analyze: boolean;
   discover: boolean;
+  /** Already observed in this crawl, as a recrawl's monitored pages are from its start. */
+  seen: boolean;
 };
 
 /** The batch's known state, in URL-hash space, updated as each admission is decided. */
@@ -615,9 +617,14 @@ class AdmissionLedger {
     this.active.add(item.hash);
     return true;
   }
-  /** Count toward the ceiling only what is new: a sample's observation, otherwise its discover task. */
+  /**
+   * Count toward the ceiling only what is new: a sample's observation, otherwise
+   * its discover task, unless the crawl already observed (and so counted) it.
+   */
   count(hash: string, sample: boolean, discover: boolean) {
-    const known = sample ? this.observed.has(hash) : discover && this.discovering.has(hash);
+    const known = sample
+      ? this.observed.has(hash)
+      : discover && (this.discovering.has(hash) || this.observed.has(hash));
     if (!known) this.admitted++;
   }
 }
@@ -645,6 +652,7 @@ function planAdmission(
     if (sample && twin && ledger.observed.has(twin)) continue;
     const selected = ledger.select(entry.item);
     const observe = sample || selected;
+    const seen = ledger.observed.has(hash);
     ledger.count(hash, sample, discover);
     if (observe) ledger.observed.add(hash);
     if (discover) ledger.discovering.add(hash);
@@ -655,6 +663,7 @@ function planAdmission(
       observe,
       analyze: selected && (sample || !options.enqueueChildren),
       discover,
+      seen,
     });
   }
   return { planned, remaining: ledger.remaining };
@@ -712,6 +721,8 @@ async function writeAdmission(
         position: entry.position,
       })),
     settings.maxAttempts,
+    // The crawl's observation counter already holds these pages.
+    new Set(planned.flatMap((entry) => (entry.seen ? [entry.item.hash] : []))),
   );
   await markFrontierAdmitted(
     trx,

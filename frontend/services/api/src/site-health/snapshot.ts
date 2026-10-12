@@ -1,5 +1,6 @@
 /** The terminal snapshot and matching crawl summary publish in one transaction. */
 import { randomUUID } from 'node:crypto';
+import { sql } from 'kysely';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { numberRecord } from '../db/json.ts';
@@ -190,6 +191,68 @@ export async function persistCrawlSnapshot(db: Database, crawl: Crawl, persistEm
     })
     .where('id', '=', crawl.id)
     .where('workspace_id', '=', crawl.workspace_id)
+    .execute();
+  return true;
+}
+
+/**
+ * Graph-scope architecture rules run as a successor of the snapshot (they read
+ * its coverage), so their evaluations join its manifest afterwards: the issue
+ * rollups and the crawl summary's count then cover every persisted issue.
+ * Replay-safe: the manifest is a set and the rollups are recomputed from it.
+ */
+export async function addArchitectureIssues(db: Database, crawl: Crawl) {
+  const architectureEvaluations = await db
+    .selectFrom('site_rule_evaluations as e')
+    .innerJoin('site_observed_architectures as a', (join) =>
+      join
+        .onRef('a.id', '=', 'e.source_architecture_id')
+        .onRef('a.workspace_id', '=', 'e.workspace_id'),
+    )
+    .select('e.id')
+    .where('a.workspace_id', '=', crawl.workspace_id)
+    .where('a.project_id', '=', crawl.project_id)
+    .where('a.crawl_id', '=', crawl.id)
+    .orderBy('e.id')
+    .execute();
+  if (!architectureEvaluations.length) return false;
+  const snapshot = await db
+    .selectFrom('site_health_snapshots')
+    .select(['id', 'source_evaluation_ids'])
+    .where('workspace_id', '=', crawl.workspace_id)
+    .where('project_id', '=', crawl.project_id)
+    .where('crawl_id', '=', crawl.id)
+    .forUpdate()
+    .executeTakeFirst();
+  if (!snapshot) return false;
+  const evaluationIds = [
+    ...new Set([
+      ...(snapshot.source_evaluation_ids ?? []),
+      ...architectureEvaluations.map((row) => row.id),
+    ]),
+  ];
+  const issues = await snapshotIssues(db, crawl, evaluationIds);
+  await db
+    .updateTable('site_health_snapshots')
+    .set({
+      ...issues,
+      top_issues: JSON.stringify(issues.top_issues),
+      severity_counts: JSON.stringify(issues.severity_counts),
+      category_counts: JSON.stringify(issues.category_counts),
+      source_evaluation_ids: evaluationIds,
+    })
+    .where('id', '=', snapshot.id)
+    .where('workspace_id', '=', crawl.workspace_id)
+    .execute();
+  const count = issues.issue_count;
+  await db
+    .updateTable('site_crawls')
+    .set({
+      score_summary: sql`jsonb_set(score_summary, '{issue_count}', to_jsonb(${count}::int))`,
+    })
+    .where('id', '=', crawl.id)
+    .where('workspace_id', '=', crawl.workspace_id)
+    .where('score_summary', 'is not', null)
     .execute();
   return true;
 }

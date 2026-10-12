@@ -120,6 +120,7 @@
     ["service", "^/(?:[^/]+/)*?(services?|solutions?)(/|$)"],
     ["local", "^/(?:[^/]+/)*?(locations?|stores?|offices?)(/|$)"],
     ["guide", "^/(?:[^/]+/)*?(guides?|care-guide|how-to|tutorials?)(/|$)"],
+    ["editorial_index", "^/(?:[^/]+/)*?(compare|comparisons)$"],
     ["comparison", "^/(?:[^/]+/)*?(compare|comparisons?|vs)(/|$)"],
     ["pricing", "^/(?:[^/]+/)*?(pricing|plans)(/|$)"],
     ["faq", "^/(?:[^/]+/)*?faqs?(/|$)"],

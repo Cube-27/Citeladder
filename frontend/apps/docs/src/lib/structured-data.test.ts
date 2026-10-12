@@ -2,7 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { docsArticleJsonLd, updatedLabel } from './structured-data';
 
 describe('docs article structured data', () => {
-  it('declares the visible headline, updated date and the website organization as publisher', () => {
+  it('declares the visible headline, updated date and the website organization as author and publisher', () => {
+    const organization = {
+      '@type': 'Organization',
+      '@id': 'https://citeladder.com/#organization',
+      name: 'CiteLadder',
+      url: 'https://citeladder.com/',
+    };
     expect(
       docsArticleJsonLd({
         title: 'Connect with MCP',
@@ -21,12 +27,8 @@ describe('docs article structured data', () => {
       inLanguage: 'en',
       dateModified: '2026-10-11',
       mainEntityOfPage: { '@type': 'WebPage', '@id': 'https://docs.citeladder.com/mcp/' },
-      publisher: {
-        '@type': 'Organization',
-        '@id': 'https://citeladder.com/#organization',
-        name: 'CiteLadder',
-        url: 'https://citeladder.com/',
-      },
+      author: organization,
+      publisher: organization,
     });
   });
 

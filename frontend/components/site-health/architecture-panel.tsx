@@ -343,7 +343,11 @@ function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
           </CardHeader>
           <CardContent className="grid gap-4 pt-2">
             <StatGrid columns={3} size="figure">
-              <StatItem label="Internal links" value={linking.internal_link_count} />
+              <StatItem
+                label="In-content links"
+                value={linking.content_link_count}
+                detail={`${linking.internal_link_count} including menus`}
+              />
               <StatItem
                 label="Have incoming links"
                 value={linkedShare === null ? null : formatPercentage(linkedShare)}

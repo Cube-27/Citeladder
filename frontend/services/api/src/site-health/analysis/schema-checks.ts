@@ -10,6 +10,7 @@ const r = analysisPolicy.rules;
 type Expectation = (typeof r.expected_schema)[keyof typeof r.expected_schema];
 type Block = Record<string, unknown>;
 const TOKEN = /[\p{L}\p{N}]+/gu;
+const RELATIONSHIPS = new Set(r.schema_relationship_properties);
 
 /** Normalize only legal suffixes; the rest of the declared company identity must still match. */
 function companyName(value: string) {
@@ -82,13 +83,18 @@ function entityKey(block: Block) {
 const satisfiesRequired = (block: Block, expectation: Expectation) =>
   !missingPaths(block, propertiesFor(expectation, text(block.type), false)).length;
 
-/** Expected-type blocks, at most one per entity; a satisfied contract wins within an entity. */
+/**
+ * Expected-type blocks, at most one per entity; a satisfied contract wins within
+ * an entity. An object nested as another's publisher, author or parent
+ * organization describes that relationship, not the page.
+ */
 function expectedBlocks(blocks: Block[], expectation: Expectation) {
   const expected = new Set(expectation.expected_types);
   const grouped = new Map<string, Block>();
   const anonymous: Block[] = [];
   for (const block of blocks) {
     if (!expected.has(text(block.type))) continue;
+    if (RELATIONSHIPS.has(text(block.parent_property))) continue;
     const key = entityKey(block);
     if (key === null) anonymous.push(block);
     else {
@@ -128,12 +134,27 @@ function bindings(blocks: Block[], candidates: Block[], urls: Set<string>) {
 
 type Selection = { outcome: string; blocks: Block[]; evidence: Record<string, unknown> };
 
+/**
+ * Bound candidates of distinct types name one entity each, so the earliest
+ * expected type is the page's primary (a homepage's Organization over its
+ * WebSite); two bound candidates of one type stay ambiguous.
+ */
+function byExpectedOrder(candidates: Block[], selected: Set<number>, expectedTypes: string[]) {
+  const typeOf = (index: number) => text(candidates[index]?.type);
+  const types = [...selected].map(typeOf);
+  if (selected.size < 2 || new Set(types).size !== types.length) return selected;
+  const rank = (index: number) => expectedTypes.indexOf(typeOf(index));
+  const first = [...selected].reduce((best, index) => (rank(index) < rank(best) ? index : best));
+  return new Set([first]);
+}
+
 function resolveSelection(
   candidates: Block[],
   evidence: Record<string, unknown>,
-  declared: Set<number>,
-  byUrl: Set<number>,
+  bound: { declared: Set<number>; byUrl: Set<number> },
+  expectedTypes: string[],
 ): Selection {
+  const { declared, byUrl } = bound;
   let selected = declared.size ? declared : byUrl;
   if (declared.size && byUrl.size) {
     const corroborated = new Set([...declared].filter((index) => byUrl.has(index)));
@@ -150,6 +171,7 @@ function resolveSelection(
       };
     selected = corroborated;
   }
+  selected = byExpectedOrder(candidates, selected, expectedTypes);
   const index = onlyOf(selected);
   const chosen = index === undefined ? undefined : candidates[index];
   if (chosen) return { outcome: 'satisfied', blocks: [chosen], evidence };
@@ -184,8 +206,8 @@ function primarySelection(facts: Facts, expectation: Expectation): Selection {
       blocks: [],
       evidence: { ...evidence, reason: 'expected_schema_absent' },
     };
-  const { declared, byUrl } = bindings(all, candidates, documentUrls(facts));
-  return resolveSelection(candidates, evidence, declared, byUrl);
+  const bound = bindings(all, candidates, documentUrls(facts));
+  return resolveSelection(candidates, evidence, bound, expectation.expected_types);
 }
 
 function propertyCheck(facts: Facts, recommended: boolean): CheckResult {

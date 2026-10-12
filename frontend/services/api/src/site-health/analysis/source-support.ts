@@ -15,7 +15,7 @@ import { pageOwned, type PageScope } from './regions.ts';
 const s = analysisPolicy.facts.source_support;
 const ATTRIBUTION = new RegExp(s.attribution_pattern, 'i');
 const CITATION = new RegExp(s.citation_marker_pattern, 'i');
-const SECTION_HEADINGS = new Set(s.section_headings);
+const SECTION_HEADINGS: readonly string[] = s.section_headings;
 const HEADINGS = new Set(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']);
 const NO_CONTAINERS: ReadonlySet<HtmlElement> = new Set();
 
@@ -95,9 +95,13 @@ function recordAnchor(
 function nextSection(node: HtmlElement, current: { name: string; level: number }) {
   const level = Number(node.tagName[1]);
   const heading = stripLeading(stripTrailing(squash(textContent(node).toLowerCase()), ':'), ':');
-  if (SECTION_HEADINGS.has(heading))
+  // "Sources and review date" opens a sources section: a configured heading as the leading words.
+  const opening = SECTION_HEADINGS.find(
+    (name) => heading === name || heading.startsWith(`${name} `),
+  );
+  if (opening)
     return {
-      name: heading === 'methodology' ? 'methodology_section' : 'references_section',
+      name: opening === 'methodology' ? 'methodology_section' : 'references_section',
       level,
     };
   if (current.name && level <= current.level) return { name: '', level: 0 };

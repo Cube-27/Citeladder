@@ -8,6 +8,7 @@
  * as not selected rather than borrowing older evidence. The presentation
  * status is derived in SQL, so status filters page like any other filter.
  */
+import { pageAnalysisStatusSchema } from '@citeladder/contracts/site-health';
 import { sql, type RawBuilder } from 'kysely';
 
 import { policy } from '../../config.ts';
@@ -53,6 +54,12 @@ const SORTS: Record<PageSort, SortSpec> = {
   },
 };
 
+/** The statuses a page filter takes: every presented status, plus both terminal failures. */
+export const PAGE_STATUS_FILTERS = [
+  ...pageAnalysisStatusSchema.exclude(['failed']).options,
+  'error_or_blocked',
+] as const;
+
 export type PageRowFilters = {
   /** A presentation status, or `error_or_blocked` for both terminal failures. */
   status?: string | null;
@@ -61,6 +68,8 @@ export type PageRowFilters = {
   /** Case-insensitive substring of the normalized or display URL. */
   query?: string | null;
   siteUrlId?: string;
+  /** Pages whose current analysis reports an issue of this rule. */
+  rule?: string | null;
 };
 
 export type PageRow = {
@@ -241,6 +250,15 @@ export async function pageRows(
         ${filters.siteUrlId ? sql`and u.id = ${filters.siteUrlId}` : sql``}
         ${pattern ? sql`and (lower(u.normalized_url) like ${pattern} or lower(u.display_url) like ${pattern})` : sql``}
         ${filters.pageKind ? sql`and a.page_kind = ${filters.pageKind}` : sql``}
+        ${
+          filters.rule
+            ? sql`and exists (
+          select 1 from site_issues i
+          where i.workspace_id = u.workspace_id and i.crawl_id = ${crawl.id}
+            and i.site_url_id = u.id and i.rule_id = ${filters.rule}
+            and ${currentIssueFilter('i', 'a')})`
+            : sql``
+        }
         ${filters.monitored === true ? sql`and m.site_url_id is not null` : sql``}
         ${filters.monitored === false ? sql`and m.site_url_id is null` : sql``}
     )
@@ -249,6 +267,29 @@ export async function pageRows(
     order by sort_value ${direction}, site_url_id ${direction}
     limit ${limit + 1}`.execute(db);
   return result.rows;
+}
+
+/**
+ * The rule ids of each analysis's current issues, by finding class in rule
+ * order: the same issues `issue_count` counts.
+ */
+export async function currentIssueRules(db: Database, crawl: Crawl, analysisIds: string[]) {
+  const result = new Map<string, Record<string, string[]>>();
+  if (!analysisIds.length) return result;
+  const { rows } = await sql<{ analysis_id: string; finding_class: string; rule_id: string }>`
+    select distinct a.id as analysis_id, i.finding_class, i.rule_id
+    from site_page_analyses a
+    join site_issues i on i.workspace_id = a.workspace_id and i.crawl_id = ${crawl.id}
+      and i.site_url_id = a.site_url_id and ${currentIssueFilter('i', 'a')}
+    where a.workspace_id = ${crawl.workspace_id} and a.crawl_id = ${crawl.id}
+      and a.id = any(${analysisIds}::uuid[])
+    order by a.id, i.finding_class, i.rule_id`.execute(db);
+  for (const row of rows) {
+    const classes = result.get(row.analysis_id) ?? {};
+    (classes[row.finding_class] ??= []).push(row.rule_id);
+    result.set(row.analysis_id, classes);
+  }
+  return result;
 }
 
 export type Referrer = { site_url_id: string; url: string };

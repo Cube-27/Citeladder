@@ -45,6 +45,15 @@ describe('page-purpose regression boundaries', () => {
     ]);
   });
 
+  it('reads a bare compare section root as an index and its children as comparisons', () => {
+    const kind = (path: string) => routePageKind(`https://example.test${path}`);
+    expect([kind('/compare'), kind('/en/comparisons/'), kind('/compare/acme-and-other')]).toEqual([
+      'editorial_index',
+      'editorial_index',
+      'comparison',
+    ]);
+  });
+
   it('treats language-region and script roots as homepages, not ordinary hyphenated paths', () => {
     for (const path of ['/en-in', '/es-419', '/zh-hant', '/pt_br'])
       expect(isHomepagePath(path), path).toBe(true);

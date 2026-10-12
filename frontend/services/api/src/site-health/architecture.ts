@@ -6,6 +6,7 @@ import { record } from '../db/json.ts';
 import { canonicalUrl } from './url-identity.ts';
 import { buildArchitecture, type ArchitecturePage } from './architecture-model.ts';
 import { architectureRules } from './architecture-rules.ts';
+import { addArchitectureIssues } from './snapshot.ts';
 import type { Crawl } from './task-fence.ts';
 
 function string(value: unknown) {
@@ -39,6 +40,7 @@ async function architecturePages(db: Database, crawl: Crawl) {
       'metric.depth_from_home',
       'metric.inbound_count',
       'metric.outbound_count',
+      'metric.main_content_outbound_count',
     ])
     .where('analysis.workspace_id', '=', crawl.workspace_id)
     .where('analysis.project_id', '=', crawl.project_id)
@@ -96,6 +98,7 @@ async function architecturePages(db: Database, crawl: Crawl) {
         depth: row.depth_from_home,
         inbound: row.inbound_count,
         outbound: row.outbound_count,
+        contentOutbound: row.main_content_outbound_count,
         indexable: verdicts.get(row.analysisId) ?? null,
         facts,
       },
@@ -233,5 +236,8 @@ export async function persistArchitecture(db: Database, crawl: Crawl) {
     .executeTakeFirst();
   if (!row) return 0;
   await persistRules(db, crawl, row.id, root, pages, architectureRules(model, pages, coverage));
+  // The snapshot was published first (architecture reads its coverage); its
+  // issue counts now take in the site-level findings.
+  await addArchitectureIssues(db, crawl);
   return 1;
 }
