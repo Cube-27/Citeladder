@@ -92,8 +92,8 @@ contracts, the frontend Agent surfaces, and the docs and marketing.
   - Anthropic cache-write tokens are folded into input at the base price; the
     API bills them at a premium.
   - Thinking tokens arrive inside `output_tokens`.
-  - Haiku 5.5's list price doubles above 100K prompt tokens, and the price row
-    has a single rate.
+  - Haiku 5.5's list price rises fivefold above 100K prompt tokens ($0.50
+    input, $2.50 output), and the price row has a single rate.
 - **F11. The Agent is already paid-only.**
   - The `agent` capability is granted only to Growth and Scale.
     `catalog-authoring.ts` validates that tier 1 has no Agent, and the public
@@ -514,8 +514,10 @@ focused tests.
 **Prerequisite:** O1 is decided (A4); O4 (refusal fallback) is recorded.
 
 **Backend**
-- Add the allow-list config and a Sonnet 5.5 price row ($2.00 input, $0.20
-  cached input, $10.00 output per million tokens, at the existing markup).
+- Add the allow-list config and a Sonnet 5.5 price row at the published rates
+  in the [provider rate card](../operations/CiteLadder_Launch_Config.md#7-provider-rate-card-internal-cost)
+  ($2.00 input, $2.50 cache write, $0.10 cached input, $10.00 output per
+  million tokens).
 - Schema and contracts:
   - `agent_chats.model` and `reasoning_level`, and
     `agent_runs.reasoning_level` (baseline edit, reset);

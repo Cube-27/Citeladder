@@ -24,7 +24,7 @@
     "seller_legal_address": {
       "env": ["BILLING_SELLER_LEGAL_ADDRESS"],
       "type": "str",
-      "default": "Plot No 12, Mulberry Garden 1, Magarpatta City, Hadapsar, Pune, Maharashtra 411013, India"
+      "default": "Plot No. 12, Mulberry Gardens 1, Magarpatta City, Hadapsar, Pune, Maharashtra 411013, India"
     },
     "seller_email": {
       "env": ["BILLING_SELLER_EMAIL"],

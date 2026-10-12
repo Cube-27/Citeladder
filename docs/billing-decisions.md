@@ -407,18 +407,32 @@ credit numbers for each tier. In the internal calculation, prompt-cache writes
 cost the provider's published cache-write rate (Anthropic: 1.25× input for the
 5-minute cache), not input at the base rate; cache reads cost the cached-input
 rate; thinking (reasoning) tokens cost the output rate, as providers bill them.
-Engineering: the
-Agent keeps every call's prompt below a model's long-context price tier (Claude
-Haiku 5.5 doubles above 100K prompt tokens), so one price row per model stays
-exact; a model whose calls can cross a tier needs a tiered price before use.
+Engineering: the Agent keeps every call's prompt below a model's long-context
+price tier (Claude Haiku 5.5 costs five times as much above 100K prompt tokens),
+so one price row per model stays exact; a model whose calls can cross a tier
+needs a tiered price before use. The verified published rates live in the
+[provider rate card](operations/CiteLadder_Launch_Config.md#7-provider-rate-card-internal-cost).
 See the [Agent native runtime plan](plans/agent-native-runtime.md).
 
 **B54 — Owner, 2026-10-12.** Claude Sonnet 5.5 is offered in the Agent on
 Growth and Scale, not on the free trial or Starter. This is a current business
 decision that may change, so it lives in plan configuration, not code.
 
+**B55 — Owner, 2026-10-12.** Add-on and top-up prices, quantities and purchase
+frequency, and plan allowances (prompt runs, AI credits), are set after testing,
+sized from internal cost (B53). Until then documentation states only what each
+add-on and top-up can include, never its price or frequency; the configured
+values in `billing-authoring.ts` are placeholders. This supersedes the numbers
+in B16 and B37. The current allowances not covering a full daily four-surface
+schedule is a known gap to close in that sizing, not intended behaviour.
+
+**B56 — Owner, 2026-10-12.** The local Razorpay sandbox uses a test-only India
+GST rate of 18% (`BILLING_INDIA_GST_RATE=0.18`) and the approval reference
+`sandbox`. Production still waits for the accountant's inputs.
+
 ## Owner inputs still required
 
 Not decisions; needed only for India checkout and live enablement: GST rate,
 SAC, GST approval reference, LUT reference, Razorpay test and live keys and
-webhook secret.
+webhook secret. Plan allowances and add-on and top-up numbers follow testing
+(B55).

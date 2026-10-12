@@ -176,23 +176,13 @@ their frozen accepted terms; decide any customer correction separately.
 
 ## No-card offer and card trial controls
 
-The no-card Tier 1 campaign is catalog-governed. The seeded payload is
-`state=draft`, `enabled=false`, `claim_available=false`, with no cohort start.
-These lifecycle fields move together under catalog validation. To enable or end
-the offer, prepare and publish a new reviewed catalog revision; there is no
-runtime environment toggle and no offer-admin dashboard.
-
-Before enabling, verify Phase 4 acceptance, exact cohort start/end, seven-day
-Tier 1 terms, eligibility policy, optional operator-code policy, and support
-ownership. Claims require explicit terms and data-sharing consent and are atomic,
-idempotent, and once per billing account across introductory variants. To stop
-new claims, forward-publish a revision with the campaign ended/disabled. Existing
-claims retain their recorded expiry unless the account owner uses the supported
-end-early-access endpoint or an operator performs a separately approved grant
-correction.
-
-A card trial is not offered and has no customer surface. No catalog
-publication or environment flag enables it.
+The no-card Tier 1 campaign is catalog-governed and seeded disabled
+(`state=draft`, `enabled=false`, `claim_available=false`); behaviour is owned by
+[billing-entitlements.md](../billing-entitlements.md#read-and-ui-surfaces). To
+enable or end it, forward-publish a reviewed catalog revision; there is no
+runtime toggle. Existing claims keep their recorded expiry unless the account
+owner ends them (`DELETE .../early-access`) or an operator makes a separately
+approved grant correction.
 
 ## Account inspection and grant correction
 
@@ -247,17 +237,12 @@ ad-hoc SQL. Confirm the workspace-effective entitlement through the authenticate
 
 ### Checkout allow-list
 
-While `BILLING_CHECKOUT_AUDIENCE=allow_list` (the default), checkout serves only
-workspaces holding the non-public `billing_checkout` flag. Issue it with the
-same `grant` command (`--key billing_checkout --value 1`) and remove it with
-`revoke` and that grant's ID. It is never part of development or
-account-manager full access. Setting the audience to `everyone` opens checkout
-to all workspaces, except that Razorpay test keys in production still serve
-allow-listed workspaces only. Checkout also needs `BILLING_CHECKOUT_ENABLED=true`,
-configured Razorpay keys, the readiness flag for the mode and the region's
-readiness flag. The public catalog never reads a workspace, so it shows
-checkout unavailable until the audience is `everyone`; the app's workspace
-catalog applies the allow-list to the active workspace.
+The rules are in
+[billing-entitlements.md](../billing-entitlements.md#read-and-ui-surfaces) (B2,
+B42). Issue the non-public `billing_checkout` flag with the same `grant` command
+(`--key billing_checkout --value 1`) and remove it with `revoke` and that
+grant's ID. Checkout also needs `BILLING_CHECKOUT_ENABLED=true`, configured
+Razorpay keys and the readiness flags for the mode and region.
 
 ## Payment, receipt, subscription, and ledger inspection
 
@@ -320,43 +305,35 @@ provider dashboard—the accepted activation and resulting grants are authority.
 
 - Enable automatic capture for Standard Checkout payments in the Dashboard: an
   order settles only on a captured payment.
-- A captured payment for an intent that was already abandoned or failed is
-  rejected with the persisted `settlement_rejected` result and grants nothing; review and
-  refund it.
-- An upgrade's provider plan switch runs from the reconciliation watcher after
-  the prorated charge settles. Scheduled-change state `provider_rejected` means Razorpay
-  refused the switch: the paid remainder of the period stands, and renewal stays
-  on the current plan until the change is resolved with the customer.
-- Refund from the Dashboard. The `refund.processed` event records the refund,
-  issues the credit note and, for a full refund, revokes remaining grants.
-  A full refund of the payment for the base plan's current period also
-  cancels the subscription at once (B52): its plan access ends, the row reads
-  `cancelled` and stays current until the subscription sweep has cancelled it
-  at Razorpay immediately, then ends. A partial refund, or a refund of an
-  earlier period, leaves the subscription unchanged.
-- A customer's cancellation is held in CiteLadder (`cancel_at_period_end` with
-  no `cancellation_sent_at`) and sent to Razorpay only
-  `BILLING_CANCELLATION_SEND_LEAD_SECONDS` (two days) before renewal, because
-  Razorpay cannot undo a cancellation it has received. Until then the customer
-  can resume from Billing. The subscription sweep commits the send before the
-  provider call and retries it every reconciliation interval. If every send in
-  that window fails, Razorpay renews once: the customer keeps that paid month
-  and the cancellation applies at its end. Refunding that renewal is a manual
-  Dashboard refund; nothing issues it automatically.
+Behaviour is owned by
+[billing-entitlements.md](../billing-entitlements.md#explicit-purchase-to-settlement);
+the operator actions that remain are:
 
-After a captured payment is accepted, CiteLadder issues one immutable paid tax
-receipt from the frozen quote, customer billing facts, supplier GST settings,
-and normalized payment evidence. Customers download it from Billing. Razorpay's
-invoice tax fields are not used to decide or allocate GST. Same-state Indian
-receipts show 9% CGST plus 9% SGST; interstate receipts show 18% IGST; eligible
-exports show zero-rated treatment and the frozen LUT reference.
+- Enable automatic capture for Standard Checkout payments in the Razorpay
+  Dashboard: an order settles only on a captured payment. A capture after the
+  intent was abandoned still settles (B25).
+- An add-on or top-up paid outside the base subscription's current period keeps
+  its receipt, grants nothing and needs an operator refund (B25, B30); no
+  automatic refund is issued.
+- A scheduled change in state `provider_rejected` means Razorpay refused the
+  plan switch: renewal stays on the current plan until the change is resolved
+  with the customer.
+- Refund from the Razorpay Dashboard. A full refund of the base plan's current
+  period cancels the subscription at once (B52).
+- A customer's cancellation is sent to Razorpay only
+  `BILLING_CANCELLATION_SEND_LEAD_SECONDS` before renewal (B46). If every send
+  fails, Razorpay renews once; refunding that renewal is a manual Dashboard
+  refund and nothing issues it automatically.
+- Payment disputes (chargebacks) are neither revoked nor alerted on; handle them
+  in the Razorpay Dashboard (B51).
 
-For model-funded work also inspect `agent_model_attempts` (one row per model
-step) for frozen route/key revisions, dispatch identity, usage
-completeness, and settlement status, and `platform_calls` for every other
-metered platform call (models, managed Search Intelligence on DataForSEO,
-JEV, Tavily and Keenable) with its usage and cost. The Agent always runs on the platform gateway and
-spends AI credits; a model with no configured token price is refused.
+Tax receipts and GST treatment are owned by billing-entitlements.md and
+[legal-decisions.md](legal-decisions.md); this guide does not restate them.
+
+For platform spend inspect `platform_calls` (every metered call: model gateway,
+managed Search Intelligence on DataForSEO, JEV, Tavily, Keenable) and
+`agent_model_attempts` (the Agent's per-step dispatch records). Credit rules are
+B11-B14 and B53 of the [decision log](../billing-decisions.md).
 
 ## Reconciliation
 
@@ -427,10 +404,8 @@ paste either secret.
   ended/disabled; do not rely on checkout flags because the no-card offer is
   independent of Razorpay.
 - Platform AI incident: unset the model gateway key (`DEFAULT_AGENT_API_KEY`)
-  so every credit-charged platform call is refused before it is sent; for a
-  managed engine or DataForSEO incident, deactivate that platform connection in
-  the system workspace so managed audits and managed Search Intelligence refuse
-  new work. Customer BYOK must never silently fall back to platform keys.
+  so gateway-backed platform calls, the Agent included, are refused before they
+  are sent. Customer BYOK must never silently fall back to platform keys.
 
 Recommended response order: stop new admission, preserve webhook ingress,
 capture redacted evidence, inspect normalized state, reconcile bounded pending
@@ -439,11 +414,10 @@ workspace-effective access, then reopen only after review.
 
 ## Current release posture
 
-Checkout is disabled by default, and billing runs hidden: Razorpay test keys
-in production with checkout open only to allow-listed workspaces. The no-card
-campaign is disabled by default. The card trial is unavailable. Tests use
-deterministic fixtures and mocked provider boundaries; there is no production
-Razorpay lifecycle, payment, invoice, settlement, refund, or webhook-rotation
-evidence. Keep `BILLING_RAZORPAY_LIVE_READY=false` and the audience at
-`allow_list` until the separate owner requirements and live go/no-go record are
-complete.
+Billing runs hidden (B0, B2): Razorpay test keys in production with checkout
+open only to allow-listed workspaces; checkout is disabled by default. Only the
+free trial is live for customers. The no-card campaign is disabled by default.
+Tests use mocked provider boundaries; there is no production Razorpay
+lifecycle, payment, invoice, settlement, refund, or webhook-rotation evidence.
+Keep `BILLING_RAZORPAY_LIVE_READY=false` and the audience at `allow_list` until
+the separate owner requirements and live go/no-go record are complete.
