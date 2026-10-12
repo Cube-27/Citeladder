@@ -136,7 +136,7 @@ export const SUBPROCESSORS: LegalDocument = {
   slug: 'subprocessors',
   title: 'Subprocessors',
   description: 'The service providers that process data for CiteLadder, and why.',
-  lastUpdated: '2026-10-10',
+  lastUpdated: '2026-10-12',
   sections: [
     {
       id: 'subprocessors',
@@ -161,8 +161,14 @@ export const SUBPROCESSORS: LegalDocument = {
             'Global network',
           ],
           [
+            'Anthropic',
+            'AI models for the Agent and other platform-provided AI assistance',
+            'Your instructions and the relevant project context',
+            'United States',
+          ],
+          [
             'OpenAI',
-            'Platform-provided AI assistance, such as the Agent, when you have not set your own provider',
+            'AI models for the Agent and other platform-provided AI assistance',
             'Your instructions and the relevant project context',
             'United States',
           ],
@@ -194,7 +200,7 @@ export const SUBPROCESSORS: LegalDocument = {
         'When you connect a provider under your own credentials, that provider acts under your agreement with it, not as our subprocessor. We send it only the requests you configure or run.',
       ],
       bullets: [
-        'AI answer engines and assistants you set in Providers settings, such as OpenAI, Anthropic and Google Gemini, under your own API keys. This includes any Agent model you choose.',
+        'AI answer engines and assistants you set in Providers settings, such as OpenAI, Anthropic and Google Gemini, under your own API keys. The Agent always uses the platform providers listed above.',
         'DataForSEO, under your own credentials, for Google AI Overview and search intelligence data.',
         'Google Search Console, Google Analytics and Bing Webmaster Tools, for the properties you authorise.',
         'Google sign-in, when you choose it to sign in.',

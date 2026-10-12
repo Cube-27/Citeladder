@@ -398,16 +398,24 @@ running when the provider reports the subscription ended.
 
 ## Agent native runtime (2026-10-12)
 
-**B53 — Owner, 2026-10-12.** Model tokens are charged at the serving
-provider's **published prices**, token class by token class, extending B12.
-Prompt-cache writes are charged at the provider's published cache-write rate
-(Anthropic: 1.25× input for the 5-minute cache), not folded into input at the
-base rate; cache reads stay at the cached-input rate. Thinking (reasoning)
-tokens are charged as output tokens, as providers bill them. Engineering: the
+**B53 — Owner, 2026-10-12.** Internal cost is calculated at the serving
+provider's **published rates**, token class by token class, extending B12.
+Customers pay a subscription that includes AI credits. Plan prices and credit
+amounts are commercial settings that can change at any time; changing them never
+changes the internal cost calculation, which is what informs the plan and
+credit numbers for each tier. In the internal calculation, prompt-cache writes
+cost the provider's published cache-write rate (Anthropic: 1.25× input for the
+5-minute cache), not input at the base rate; cache reads cost the cached-input
+rate; thinking (reasoning) tokens cost the output rate, as providers bill them.
+Engineering: the
 Agent keeps every call's prompt below a model's long-context price tier (Claude
 Haiku 5.5 doubles above 100K prompt tokens), so one price row per model stays
 exact; a model whose calls can cross a tier needs a tiered price before use.
 See the [Agent native runtime plan](plans/agent-native-runtime.md).
+
+**B54 — Owner, 2026-10-12.** Claude Sonnet 5.5 is offered in the Agent on
+Growth and Scale, not on the free trial or Starter. This is a current business
+decision that may change, so it lives in plan configuration, not code.
 
 ## Owner inputs still required
 
