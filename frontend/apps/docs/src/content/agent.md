@@ -3,7 +3,7 @@ title: 'Meet the Agent'
 description: "Work through a question or Action and turn your project's saved evidence into a reviewable deliverable."
 group: 'Improve with Agent'
 order: 200
-updated: '2026-10-09'
+updated: '2026-10-12'
 ---
 
 The Agent is CiteLadder's in-app assistant. It can investigate saved project evidence, apply a skill and help you refine a plan, diagnosis, page edit or content draft.
@@ -41,6 +41,14 @@ Follow-up messages revise the same deliverable. Start a new chat when you want a
 
 Long-form content starts with an outline. Review and explicitly approve that outline before the Agent writes the draft. See [Outputs and revisions](/agent/outputs/).
 
+## Watch it work
+
+While a turn runs, the activity line shows what the Agent is doing. When it needs several pieces of data, it reads them at the same time and lists each read. Open **Thinking** to see a short summary of its reasoning. The reply and the document fill in as they are written.
+
+The Agent remembers the chat: a follow-up builds on what it already read and wrote in earlier turns, so it does not repeat that work. Your own edits to the document are always passed on to it.
+
+When a reply is saved, its run summary shows how many model calls and data reads the turn used, and **Sources** shows the data it read in that turn.
+
 ## Know the boundary
 
 The Agent reads saved CiteLadder evidence. It does not browse the live web, publish content, contact publishers, activate prompts, run crawls or purchase research datasets.
@@ -51,4 +59,4 @@ It also cannot declare an Action implemented on your behalf. You make the extern
 
 Queued, running, cancelled, failed and stopped-at-limit are different outcomes. Use **Stop** while a turn is active if you no longer want it to continue.
 
-A turn that reaches its runtime budget does not save a partial deliverable as a finished output. Inspect the status, narrow the request if needed, and start a follow-up only when you want another turn. Earlier saved revisions remain available.
+A turn that reaches its limit answers from what it has read so far and does not save a partial deliverable as a finished output. Narrow the request if needed, and start a follow-up only when you want another turn. Earlier saved revisions remain available.

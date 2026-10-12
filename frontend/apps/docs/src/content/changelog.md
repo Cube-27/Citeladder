@@ -3,10 +3,18 @@ title: 'Changelog'
 description: 'Product changes and what they mean for your workflow.'
 group: 'Updates'
 order: 400
-updated: '2026-10-11'
+updated: '2026-10-12'
 ---
 
 These notes describe implemented changes in the codebase. Dates are the recorded commit dates; availability in your workspace depends on deployment, access and configuration.
+
+## October 12, 2026: A faster Agent that remembers the chat
+
+The Agent now reads several pieces of data at once instead of one at a time, and shows each read as it runs. A follow-up builds on what it already read and wrote earlier in the chat instead of starting over. While it works, you can open a short summary of its thinking, and the reply and document fill in as they are written. A saved reply's run summary counts the model calls and data reads it used.
+
+**For your team:** ask broader questions in one message, and keep refining in the same chat; the Agent carries the earlier work forward.
+
+[Watch the Agent work](/agent/#watch-it-work)
 
 ## October 11, 2026: Confirmed changes through MCP
 

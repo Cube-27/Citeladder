@@ -90,56 +90,69 @@ text remains untrusted observation. Issue groups keep complete owner counts
 beside a labelled bounded sample, and background pages are dropped before the
 selected issue or page.
 
-The prompt is one structured JSON envelope. Stable instructions (operating
-contract, methodology, format guidance, tool catalog) come first so providers
-can reuse the cached prefix; the per-step action and remaining-budget lines
-follow. The current saved revision is always exact. Old history (a message
-over its bound is shortened at a character boundary with a marker) and whole
-tool observations may be dropped with disclosed markers; serialized JSON is
-never sliced. If the exact current revision cannot fit, the turn ends with
-`output_context_size_limit` before dispatch.
+The [runtime](../frontend/services/api/src/agent/runtime.ts) runs a native
+tool-calling loop ([decision](decisions.md#the-agent-uses-native-tool-calling)):
+the model answers in text or calls tools, and the turn ends when a response
+calls none. Its final text is the reply.
 
-The [runtime](../frontend/services/api/src/agent/runtime.ts) runs a bounded loop of
-structured steps under [protocol v3](../frontend/services/api/src/agent/contracts.ts).
-Each step is one of:
+- **The conversation.** [`transcript.ts`](../frontend/services/api/src/agent/transcript.ts)
+  builds it append-only. The stable prefix is the tools (sorted by name), then
+  the system text: the operating contract, the skill catalog and every content
+  format. It holds nothing per chat, so providers serve it from cache for every
+  chat. Earlier turns of the chat follow, replayed exactly as stored. The turn's
+  opening message then adds the frozen context (only when it changed since a
+  replayed turn), the current document (unless the model saved it in a
+  replayed turn, so a user's edit is always supplied), a pinned methodology
+  (unless already loaded) and the request.
+- **Memory.** Each run's exchange, including thinking and compaction blocks, is
+  saved in `agent_run_transcripts` with the reply in one transaction. A
+  transcript is a run record for replay, not a knowledge store: no read returns
+  it and it is never shown. Rewriting or dropping an earlier block would miss the
+  cache and invalidate later thinking, so replay never edits history. On
+  Anthropic, server-side compaction bounds a long chat (its trigger,
+  `compaction_trigger_tokens`, sits below Haiku 5.5's long-context price tier).
+  Chat completions return no compaction, so the oldest whole turns are dropped at
+  turn start beyond `replay_max_chars`.
+- **Tools.** The model has the [read tools](#read-tools) and two built-ins
+  ([`builtin-tools.ts`](../frontend/services/api/src/agent/builtin-tools.ts)).
+  `load_skill` returns a methodology and its saving rules; a turn uses one
+  methodology, and a methodology whose kind differs from the chat's document is
+  refused. `save_document` stages the deliverable after a methodology is loaded:
+  it is checked against the output, format and outline rules, its phase is
+  forced to `outline` while an outline is unapproved, and the staged document is
+  committed only with the reply. Questions need no methodology. The skill is
+  taken, in order, from the user's pick or workflow, the chat's pin, the
+  attached Action's diagnosis, and otherwise the model's `load_skill`; a pinned
+  methodology is supplied in the opening message. Fixed handoffs such as Site
+  Health's **Ask agent** pin their skill.
+- **One response's tool calls.** Built-ins run first, in the order written;
+  reads then run concurrently, each recorded as its own attempt keyed by the
+  provider's call ID. Every call gets a result in call order. A refused,
+  unknown, invalid or over-budget call returns an error result saying how to
+  correct it, so the model fixes the call instead of the turn ending. Only the
+  first `save_document` in one response is kept.
+- **Limits.** [Agent runtime configuration](../frontend/services/api/src/config/agent-runtime.json)
+  bounds model calls per turn, tool calls per turn, parallel reads per response,
+  result size and the turn's time. Near the cap, a note appended after the tool
+  results says how many calls are left; the tools never change, so the cache
+  holds. Tool calls in the last call are refused and its text is the reply. A
+  last call with no text ends with a fixed reply naming the reads made and
+  asking the user to narrow the request, so a turn never finishes without a
+  reply.
 
-- `use_skill`: load a methodology without reading anything;
-- `call_tool`: one read, optionally naming `skill_id` to load a methodology in
-  the same step;
-- `respond`: a nonblank reply and, only for a requested deliverable, an `output`.
-
-Questions need no methodology. A deliverable is accepted only after its
-methodology has been supplied: without a selected skill the response schema
-forbids `output`, so an auto-routed deliverable is generated once. The skill is
-taken, in order, from the user's pick or workflow, the chat's pin, the attached
-Action's diagnosis, and otherwise the model's `use_skill`/`skill_id`. Fixed
-handoffs such as Site Health's **Ask agent** pin their skill.
-
-Each step has one step specification: the actions, skill IDs and content
-formats it allows. The provider is held to it as a strict structured-output
-schema (every field present and nullable, every object closed), and the reply
-is parsed against the same specification, so the model is never told one shape
-and judged by another. Tool arguments travel as `arguments_json`, one JSON
-object encoded in a string, because each tool's arguments differ. `format_id`
-is offered only for skills whose kind uses content formats; any other skill's
-value is dropped. Invalid steps get a bounded repair hint containing only
-server-owned instructions and catalog IDs, never the rejected provider text.
-The last step may only respond (reply-only when no methodology was selected);
-calls with no read budget omit the tool catalog.
-
-A response cut off by the model's output limit (`finish_status: length`) ends
-the turn as `output_too_long` after that one call; asking again would be cut
-again, so there is no repair call. The runtime enforces step, tool-call,
-transcript and output limits, and a turn that exhausts them saves no partial
-deliverable.
+A response cut off by the model's output limit ends the turn as
+`output_too_long`, and a model refusal as `model_refused`, after that one call;
+asking again would be cut or refused again. A turn that ends early saves no
+partial deliverable.
 
 ### Size budget
 
 [Agent runtime configuration](../frontend/services/api/src/config/agent-runtime.json)
-owns one coherent budget: a 40 000-character body bound (user edits share it)
+owns one coherent budget. A 40 000-character body bound (user edits share it)
 fits the output-token cap in
-[gateway settings](../frontend/services/api/src/config/model-gateway.json), and
-the 150 000-character transcript holds the system prompt plus a bound body.
+[gateway settings](../frontend/services/api/src/config/model-gateway.json). Each
+read result is bounded to `tool_result_max_chars`, and the frozen context to
+`context_package_max_chars`.
 
 ### Sources
 
@@ -148,8 +161,8 @@ Sources are derived by the server, not reported by the model. The model has no
 plus the findings of the attached and mentioned Actions
 ([`sources.ts`](../frontend/services/api/src/agent/sources.ts), bounded and
 deduplicated). A new revision keeps its predecessor's sources and adds this
-turn's. Records read earlier in the chat are offered only as re-read hints,
-which spend the turn's read budget.
+turn's. Results read in earlier turns stay in the replayed conversation, but
+only this turn's reads are its sources.
 
 The model never writes record references for the user. Before saving, the
 runtime removes `citeladder://` references and UUIDs from the reply and the
@@ -171,8 +184,7 @@ exception is a member who lost access (`access_revoked`), whose turn ends
 without a reply. Failure codes keep their meaning: `trial_expired`,
 `subscription_lapsed` and `access_unresolved` survive from entitlement checks,
 provider failures are
-`provider_error`, validation and storage defects are `internal_error`, and a
-malformed step past its repair bound is `protocol_violation`. At admission a
+`provider_error`, and validation and storage defects are `internal_error`. At admission a
 changed platform model is HTTP 409 `agent_model_unavailable`, distinct from
 402 `agent_funding_unavailable` (no AI credits to hold).
 
@@ -184,15 +196,17 @@ server-side: the model cannot supply `project_id`, and `fetch` refuses a record
 from another project. `list_projects` and the MCP App views (`render_visibility`,
 `render_site_health`, `open_analytics`) are not Agent tools. Each call runs as
 the chat member through MCP's membership predicate, and workspace access
-(trial and plan) is rechecked before every model step. The Agent and MCP read
+(trial and plan) is rechecked before every model call. The Agent and MCP read
 the same catalogue, including `read_actions`, `read_content_differentiation`, `read_perception`, `read_fact_checks` and `read_ai_ads`;
 there are no Agent-only reads. A caller's mistake (a bad cursor, window or
 filter) is refused with the owner's reason so the model can correct the call.
 No tool writes: the MCP write catalogue and `confirm_change` are not Agent
 tools, and the Agent stays read-only.
 
-Each tool attempt (`agent_tool_attempts` in the [schema baseline](../frontend/services/api/migrations/0001_baseline.sql)) records tool, arguments,
-status, returned record references, omissions, output hash and latency.
+Each tool attempt (`agent_tool_attempts` in the [schema baseline](../frontend/services/api/migrations/0001_baseline.sql)) records the model call
+and call ID, tool, arguments, status, returned record references, omissions,
+output hash and latency. Tool descriptions say when to use each read and what it
+returns, and the model is offered each tool's compact MCP input schema.
 `unavailable` is distinct from a successful empty or zero read and from failure
 or refusal. Oversized results keep whole JSON fields in an incomplete envelope
 with named omissions, never a mid-JSON slice presented as complete; paged tools
@@ -209,7 +223,8 @@ never create Citation rows or affect Visibility scoring.
 The [skill catalog](../frontend/services/api/src/agent/skills.ts) loads the packaged
 `SKILL.md` methodologies, one shared
 [operating contract](../frontend/services/api/assets/agent-skills/operating_contract.md)
-and a content-format reference supplied one format at a time. These files under
+and a content-format reference, all formats of which sit in the cached system
+text. These files under
 [`assets/agent-skills`](../frontend/services/api/assets/agent-skills/) are
 production model input, not coding-agent skills, and the API image packages
 them read-only. A body may name an application vocabulary as `{{name}}`, which
@@ -270,33 +285,41 @@ switching provider or model is configuration (`DEFAULT_AGENT_BASE_URL`,
 consumer, not only the Agent:
 
 - `api.anthropic.com` uses the native Messages API through the official SDK
-  ([`anthropic.ts`](../frontend/services/api/src/models/anthropic.ts)). It
-  always streams, enforces a step schema as a structured output, and reports
-  usage with cached prompt tokens counted as input.
-- Any other endpoint is OpenAI-compatible chat completions. With a listener the
-  [gateway](../frontend/services/api/src/models/gateway.ts) requests
-  `stream: true` with usage on the final chunk and folds the event stream into
-  the same completion result; a provider that answers with JSON is read as
-  usual. Structured calls send the step schema as a strict `json_schema`
-  response format; a destination that rejects it is asked again with the
-  schema in the prompt, and the gateway remembers that for the destination.
+  ([`anthropic.ts`](../frontend/services/api/src/models/anthropic.ts)). The
+  Agent's `converse` streams with adaptive thinking (summarized), the configured
+  effort, a cache breakpoint on the system text plus automatic caching of the
+  conversation, server-side compaction, and `save_document`'s input streamed as
+  it is written. Usage counts cache reads and writes as input and reports cache
+  writes and thinking tokens separately.
+- Any other endpoint is OpenAI-compatible chat completions
+  ([`openai-conversation.ts`](../frontend/services/api/src/models/openai-conversation.ts)).
+  The gateway translates the same blocks to messages with `tool_calls`, sends
+  `reasoning_effort` and a shared `prompt_cache_key`, and folds the streamed
+  text and tool-call deltas into one result; a provider that answers with JSON
+  is read as usual.
 
-Both produce one completion result, so settlement and parsing never depend on
-the provider. Other model consumers' `structured` calls keep their schema in
-the prompt, because their schemas may hold optional fields that strict outputs
-refuse.
+Both produce one conversation result, so settlement and the loop never depend
+on the provider. Other model consumers keep `complete` and `structured`
+unchanged.
 
-The runtime emits `step` events, and for a respond step `text` events carrying
-the reply and the document's title and body decoded from the incomplete JSON
-([`stream.ts`](../frontend/services/api/src/agent/stream.ts), throttled). They are
-display only: the settlement transaction saves the validated message and
-revision, and partial text is never persisted.
+The runtime emits display-only events
+([`stream.ts`](../frontend/services/api/src/agent/stream.ts)):
+
+- `step`: a model call started;
+- `reply_delta`: the next piece of that call's text;
+- `thinking`: the next piece of its thinking summary;
+- `document_delta`: the document being saved so far, as a throttled snapshot;
+- `tool`: one call's state (`started`, then `completed`, `unavailable`,
+  `refused` or `failed`), keyed by call ID.
+
+The settlement transaction saves the validated message and revision; partial
+text is never persisted.
 
 After accepting a new chat, message or outline approval, the browser
 ([`live-turns.ts`](../frontend/lib/agent/live-turns.ts)) opens
 `POST …/runs/{run_id}/run` with `Accept: text/event-stream`. The route answers
-`step`, `text`, `done` (with the run view) and `error` events and a keep-alive
-comment under proxy idle limits; without that header it answers JSON.
+those events, `done` (with the run view) and `error`, and a keep-alive comment
+under proxy idle limits; without that header it answers JSON.
 
 A turn executes only inside that request, exactly once:
 
@@ -309,12 +332,13 @@ A turn executes only inside that request, exactly once:
 - A provider failure is retried once within the call
   (`provider_max_attempts`); if that also fails the turn ends as
   `provider_error`. Nothing requeues a turn, so a turn never replays from its
-  first step.
+  first call.
 - A repeated request finds the run already claimed and never re-executes it.
 
-Streamed text stays on screen through later steps until the saved reply
-replaces it. Chat polling pauses while the stream is open, the chat is read
-again the moment it closes, and another tab or a reload polls with a backoff.
+Streamed text stays on screen through later calls until a newer call writes or
+the saved reply replaces it. Chat polling pauses while the stream is open, the
+chat is read again the moment it closes, and another tab or a reload polls with
+a backoff.
 
 The full chat and the Dashboard panel share one thread and composer
 ([`chat-thread.tsx`](../frontend/components/agent/chat-thread.tsx)):
@@ -325,7 +349,11 @@ The full chat and the Dashboard panel share one thread and composer
 - the last turn offers **Try again** (after a failure or stop) or
   **Regenerate**, each a new turn, and **Edit last request**; nothing earlier is
   rewritten;
-- the activity line names the current step in plain words with elapsed time;
+- a collapsed **Thinking** summary and the reply and document appear as they
+  are written;
+- the activity line names the current call in plain words with elapsed time,
+  and lists the reads a response runs together;
+- a saved reply's run summary counts its model calls and data reads;
 - **Context used** lists the included context in plain words, without record
   identities, budgets or omission codes.
 
@@ -366,7 +394,7 @@ lease and a heartbeat. Creating a chat does not start the runner job. The
 runner's [agent lane](../frontend/services/api/src/workers/agent-worker.ts) never
 executes a turn: it ends as `interrupted` a turn whose lease expired or that no
 stream claimed within `unclaimed_grace_seconds`, and settles cancelled turns'
-outstanding model attempts. Before each model step the turn
+outstanding model attempts. Before each model call the turn
 rechecks lease ownership, cancellation, the member's run permission, the
 capability and the admitted platform model,
 then [commits the dispatch](../frontend/services/api/src/agent/model-calls.ts)
@@ -375,8 +403,12 @@ Settlement survives cancellation and lease loss while replies and revisions
 stay fenced, and recovery runs accounting in the same transaction as its
 terminal write.
 
-Every model step is funded independently. Platform funding reserves a finite
-AI-credit hold per call and settles it against returned usage; a lost result
+Every model call is funded independently. Platform funding reserves a finite
+AI-credit hold per call: every input byte the provider reads (from the last
+compaction on) at the dearer of the base and cache-write rates, plus the full
+output cap. It settles against returned usage, with cache reads, cache writes
+and output (thinking included) at their own rates
+([B53](billing-decisions.md#agent-native-runtime-2026-10-12)); a lost result
 settles once as bounded unknown usage. The configured development
 login (`DEV_LOGIN_EMAIL`, an active admin) runs as `development` funding with
 no hold or debit but the same dispatch evidence. Capability and credit rate are
@@ -387,22 +419,28 @@ keyed `agent`; [Billing](billing-entitlements.md) owns the ledger.
 Native suites in [`services/api/test`](../frontend/services/api/test/) use
 scripted models and real PostgreSQL, never live providers:
 
-- `agent-runtime.test.ts`: admission, idempotency, isolation, methodology
-  before output, `output_too_long` without repair, outline-first by format,
-  carried sources, workflow pinning, recovery replies, budgets and fencing.
+- `agent-runtime.test.ts`: admission, idempotency, isolation, parallel reads
+  recorded per call, error results the model corrects, `save_document` refused
+  before a methodology and committed only with the reply, the cap's final
+  answer, `output_too_long` and `model_refused`, transcripts replayed unchanged
+  (thinking and compaction included), a byte-identical prefix across calls and
+  chats, outline-first by format, carried sources, workflow pinning, recovery
+  replies and fencing.
+- `agent-builtin-tools.test.ts`: the built-ins' refusals and staging rules.
 - `agent-owner-adapters.test.ts`: tool binding and project pinning, excluded
-  tools, re-read hints versus sources, Action attachment and next-step revisions.
-- `agent-prompt.test.ts` and `agent-context.test.ts`: prompt assembly under
-  size pressure and context resolution.
+  tools, replayed reads versus sources, Action attachment and next-step
+  revisions.
+- `agent-prompt.test.ts` and `agent-context.test.ts`: context and tool results
+  under size pressure, replay bounds, and context resolution.
 - `agent-skills.test.ts`: catalog loading, vocabularies, the long-form marker,
   fingerprints and workflow validation.
-- `agent-stream.test.ts` and `models.test.ts`: partial-JSON decoding from every
-  prefix; streamed and buffered gateway calls settle the same result.
-- `agent-cutover.test.ts`: HTTP admission, the SSE route (events, saved reply,
-  no re-execution, a closed stream ending the turn as interrupted), catalog
-  projection, recovery and cancellation.
-- `agent-funding.test.ts`: holds, settlement, unknown usage and development
-  funding.
+- `models.test.ts`: `converse` for both providers (streamed tool calls, empty
+  content, usage).
+- `agent-cutover.test.ts`: HTTP admission, the SSE route (thinking, tool, document
+  and reply events, the saved reply, no re-execution, a closed stream ending the
+  turn as interrupted), catalog projection, recovery and cancellation.
+- `agent-funding.test.ts`: holds before I/O, settlement with cache writes and
+  thinking, unknown usage and development funding.
 
 Live quality and speed are measured outside CI by the operator-only eval,
 `pnpm --filter @citeladder/api agent:eval --live --label <name>`:
@@ -411,12 +449,14 @@ Live quality and speed are measured outside CI by the operator-only eval,
   through the local Agent API as the development login, against a local
   development database.
 - Per turn, it records the time to first visible text, the total time, model
-  and tool calls, and tokens (cached included), with the saved reply and
-  document.
+  and tool calls, and tokens (cache reads and writes included), with the saved
+  reply and document.
 - `--report <a>,<b>` compares two runs and writes a side-by-side review to the
   Git directory.
 
 In the browser, `chat-screen.test.tsx` covers the streamed-then-saved reply,
-Regenerate, Stop, section edits, sources and next steps; `new-chat-screen.test.tsx`
+thinking and parallel reads, Regenerate, Stop, section edits, sources and next
+steps; `live-turns.test.ts` the stream reducer; `conversation.test.tsx` the run
+summary; `new-chat-screen.test.tsx`
 the workflow form, pinned next steps, handoffs and commands; and
 `agent-panel.test.tsx` the panel.

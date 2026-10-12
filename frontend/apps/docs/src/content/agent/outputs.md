@@ -3,10 +3,10 @@ title: 'Outputs and revisions'
 description: 'Review, edit and export Agent work while preserving the history of what changed.'
 group: 'Improve with Agent'
 order: 230
-updated: '2026-10-09'
+updated: '2026-10-12'
 ---
 
-The output is the working document for a chat. It appears in the conversation right after the reply that produced it, so you can refine the deliverable without losing the discussion around it. While the Agent writes, the reply and the document fill in as they are generated; the saved version replaces them when the turn finishes.
+The output is the working document for a chat. It appears in the conversation right after the reply that produced it, so you can refine the deliverable without losing the discussion around it. While the Agent writes, the reply and the document fill in as they are generated; the saved version replaces them when the turn finishes. The document is saved together with the reply, so a turn that stops early saves neither.
 
 ## Review the first output
 
