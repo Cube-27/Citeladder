@@ -1,5 +1,6 @@
 'use client';
 
+import { useSyncExternalStore } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 
@@ -93,10 +94,28 @@ export function PromptDetailScreen() {
   );
 }
 
+// Tailwind's `lg`, where Visibility splits its chart into a half-width pane.
+const WIDE_VIEWPORT_QUERY = '(min-width: 64rem)';
+
+function subscribeWideViewport(notify: () => void): () => void {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function')
+    return () => undefined;
+  const media = window.matchMedia(WIDE_VIEWPORT_QUERY);
+  media.addEventListener('change', notify);
+  return () => media.removeEventListener('change', notify);
+}
+
+function isWideViewport(): boolean {
+  return typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+    ? window.matchMedia(WIDE_VIEWPORT_QUERY).matches
+    : false;
+}
+
 /** Mention and owned-citation rates per run, with declared work marked. */
 function HistoryCard({ history }: Readonly<{ history: PromptHistory }>) {
   const timeZone = useDisplayTimeZone();
   const data = mentionRatePoints(history.points, timeZone);
+  const wide = useSyncExternalStore(subscribeWideViewport, isWideViewport, () => false);
   return (
     <Card>
       <CardHeader>
@@ -120,7 +139,11 @@ function HistoryCard({ history }: Readonly<{ history: PromptHistory }>) {
                 },
               ]}
               events={implementationEvents(history.implementations, timeZone)}
-              width={360}
+              // The viewBox scales to the card, so its text does too. On wide
+              // screens this card spans the page where Visibility's chart spans
+              // half, and a 360-wide viewBox drew text twice Visibility's size;
+              // below `lg` both span the card and share the 360 width.
+              width={wide ? 720 : 360}
               height={168}
               xAxisLabel="Run date"
               yAxisLabel="Rate (%)"

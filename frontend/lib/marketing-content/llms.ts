@@ -3,7 +3,7 @@ import { docsHref } from '@/lib/config/docs';
 import { MCP_SERVER_URL } from '@/lib/config/mcp-clients';
 import { PARENT_COMPANY } from './legal';
 import { FOUNDER, PRODUCT_HEAD } from './people';
-import { CITELADDER_LINKEDIN } from './social';
+import { CITELADDER_LINKEDIN, CITELADDER_X } from './social';
 
 /** MCP and its OAuth metadata are served on the API host, not the website. */
 const MCP_ORIGIN = new URL(MCP_SERVER_URL).origin;
@@ -27,6 +27,7 @@ export function llmsTxt({ pages }: { pages: readonly LlmsPage[] }) {
     `Parent: ${PARENT_COMPANY.legalName} (${PARENT_COMPANY.href})`,
     `Principal business address: ${PARENT_COMPANY.address}`,
     `LinkedIn: ${CITELADDER_LINKEDIN}`,
+    `X: ${CITELADDER_X}`,
     `Product: ${PRODUCT_HEAD.name}, ${PRODUCT_HEAD.role} (${PRODUCT_HEAD.linkedin})`,
     `Company: ${FOUNDER.name}, ${FOUNDER.role} (${FOUNDER.linkedin})`,
     `Contact: ${CONTACT_EMAIL}`,

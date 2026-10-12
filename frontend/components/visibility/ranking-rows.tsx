@@ -211,7 +211,10 @@ export function RankingRowsTable({
           <TableRow>
             <TableHead>Brand</TableHead>
             <TableHead numeric>Visibility</TableHead>
-            {anyPosition ? <TableHead numeric>Position</TableHead> : null}
+            {/* "Rank", not "Position": the headline Average position is the
+                mean order an answer names you in, a different measure that can
+                read #1 while this column reads #3. */}
+            {anyPosition ? <TableHead numeric>Rank</TableHead> : null}
             {anyChange ? <TableHead numeric>Change</TableHead> : null}
             <TableHead numeric className="hidden md:table-cell">
               Share of voice

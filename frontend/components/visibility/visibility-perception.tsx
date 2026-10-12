@@ -161,7 +161,11 @@ function Headline({ data }: Readonly<{ data: PerceptionResponse }>) {
               label: 'Recommended',
               value: formatShare(recommended.rate),
               missingLabel: 'Unavailable',
-              detail: `${recommended.recommended} of ${recommended.mentioned} answers naming you; ${recommended.recommended_against} advised against. ${recommended.limitation}`,
+              detail:
+                `${recommended.recommended} of ${recommended.mentioned} answers naming you` +
+                (recommended.recommended_against
+                  ? `; ${recommended.recommended_against} advised against`
+                  : ''),
             },
           ]}
         />

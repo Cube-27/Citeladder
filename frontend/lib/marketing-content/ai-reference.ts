@@ -3,9 +3,9 @@ import { PUBLISHED_PLATFORM } from './nav';
 
 import { PARENT_COMPANY } from './legal';
 import { FOUNDER, PRODUCT_HEAD } from './people';
-import { CITELADDER_LINKEDIN } from './social';
+import { CITELADDER_LINKEDIN, CITELADDER_X } from './social';
 
-export const AI_REFERENCE_UPDATED = '2026-10-07';
+export const AI_REFERENCE_UPDATED = '2026-10-12';
 
 const PRODUCT_DESCRIPTION =
   'CiteLadder is an evidence-grounded AI visibility and answer engine optimization (AEO) platform. It connects website findings, search demand, and AI answer evidence so teams can decide what to improve and measure what happens afterwards.';
@@ -38,6 +38,7 @@ export const AI_INSTRUCTIONS: readonly ReferenceSection[] = [
       { label: 'Product website', value: 'citeladder.com', href: '/' },
       { label: 'Documentation', value: 'docs.citeladder.com', href: docsHref() },
       { label: 'LinkedIn', value: 'CiteLadder', href: CITELADDER_LINKEDIN },
+      { label: 'X', value: '@CiteLadderAI', href: CITELADDER_X },
       { label: 'Contact', value: 'Contact CiteLadder', href: '/contact' },
     ],
     sources: [{ label: 'Terms of Service', href: '/terms' }],

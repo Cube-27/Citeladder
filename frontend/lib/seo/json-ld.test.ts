@@ -41,6 +41,10 @@ describe('organizationJsonLd', () => {
     expect(data?.url).toBe('https://citeladder.com/');
     expect(data?.logo).toBe('https://citeladder.com/citeladder-logo.svg');
     expect(data?.['@id']).toBe('https://citeladder.com/#organization');
+    expect(data?.sameAs).toEqual([
+      'https://www.linkedin.com/company/citeladder',
+      'https://x.com/CiteLadderAI',
+    ]);
   });
 
   it('resolves logo and @id against the configured origin, not the apex', () => {
