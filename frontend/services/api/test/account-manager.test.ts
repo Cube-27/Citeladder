@@ -226,6 +226,13 @@ it('bounds roles, targets members only and invalidates sessions when resetting a
   await expect(
     manageAccount(db, session, { kind: 'password', email: email(admin), password: 'newpass123' }),
   ).rejects.toThrow('account_password_forbidden');
+  // A member who also belongs elsewhere keeps their global password out of this admin's reach.
+  const shared = await fixtures.user();
+  await fixtures.member(workspace, shared, 'member');
+  await fixtures.member(foreign, shared, 'member');
+  await expect(
+    manageAccount(db, session, { kind: 'password', email: email(shared), password: 'newpass123' }),
+  ).rejects.toThrow('account_password_forbidden');
   await manageAccount(db, session, { kind: 'role', email: email(target), role: 'viewer' });
   const clientId = randomUUID();
   await db

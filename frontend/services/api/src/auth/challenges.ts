@@ -240,7 +240,7 @@ export async function consumeChallenge(
  * transaction so access ends with the old sessions.
  */
 export async function revokeDelegatedAccess(trx: Database, userId: string, actorId: string) {
-  await revokeGrantsAfterCredentialReset(trx, userId);
+  await revokeGrantsAfterCredentialReset(trx, userId, actorId);
   await revokeKeysAfterCredentialReset(trx, userId, actorId);
 }
 

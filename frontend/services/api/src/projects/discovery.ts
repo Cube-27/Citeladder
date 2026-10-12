@@ -83,7 +83,6 @@ export function discoveryCatalog() {
  * idempotency key returns before this and spends nothing.
  */
 async function admitDiscovery(trx: Database, workspaceId: string) {
-  await subjectXactLock(trx, `brand-discovery-admission:${workspaceId}`);
   const active = await trx
     .selectFrom('brand_discovery_tasks')
     .select((eb) => eb.fn.countAll<string>().as('count'))
@@ -110,6 +109,9 @@ export function createDiscovery(
   key: string,
 ) {
   return db.transaction().execute(async (trx) => {
+    // Locked before the replay lookup, so a concurrent retry of the same key
+    // sees the first request's row instead of spending a second admission.
+    await subjectXactLock(trx, `brand-discovery-admission:${workspaceId}`);
     const existing = await trx
       .selectFrom('brand_discoveries')
       .selectAll()

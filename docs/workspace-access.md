@@ -301,7 +301,8 @@ removes only the identity and its empty personal workspace, account and baseline
 rows. Security receipts remain. Platform administrators and the current operator
 cannot have their password reset, or be disabled or deleted, by this menu. The
 workspace CLI's password reset likewise refuses the workspace Owner, the
-operator themself and any platform administrator, and records
+operator themself, any platform administrator and anyone who also belongs to
+another workspace, because a password is global; it records
 `auth.password_reset`.
 
 Trusted workspace operators can run the interactive

@@ -657,7 +657,6 @@ export async function manageAccount(db: Database, session: OperatorSession, acti
         'workspace_members.id as memberId',
         'workspace_members.role as memberRole',
         'users.id as userId',
-        'users.role as userRole',
         'users.hashed_password',
       ])
       .where('workspace_id', '=', session.workspaceId)
@@ -670,20 +669,29 @@ export async function manageAccount(db: Database, session: OperatorSession, acti
         memberId: target.memberId,
         role: role!,
       });
-    // A workspace administrator resets members' passwords, never the owner's,
-    // their own, or a platform identity's: those passwords are global.
-    if (
-      target.memberRole === 'owner' ||
-      target.userId === session.actorId ||
-      target.userRole !== 'user'
-    )
-      throw new Error('account_password_forbidden');
+    // A password is global, so a workspace administrator may reset only a
+    // member whose whole account lives in this workspace: never the owner,
+    // themself, a platform identity, or anyone who belongs to another workspace.
+    // The role is read from the locked user row so a concurrent promotion waits.
     const user = await trx
       .selectFrom('users')
-      .select('hashed_password')
+      .select(['hashed_password', 'role'])
       .where('id', '=', target.userId)
       .forNoKeyUpdate()
       .executeTakeFirstOrThrow();
+    const elsewhere = await trx
+      .selectFrom('workspace_members')
+      .select('id')
+      .where('user_id', '=', target.userId)
+      .where('workspace_id', '!=', session.workspaceId)
+      .executeTakeFirst();
+    if (
+      target.memberRole === 'owner' ||
+      target.userId === session.actorId ||
+      user.role !== 'user' ||
+      elsewhere
+    )
+      throw new Error('account_password_forbidden');
     if (!user.hashed_password) throw new Error('passwordless_account');
     await trx
       .updateTable('users')

@@ -185,7 +185,11 @@ describe('audit HTTP family cutover', () => {
 
   it('ends a running audit stream at its maximum duration', async () => {
     const t = await seed();
-    const bounded = auditRuntime({ AUDIT_SSE_MAX_DURATION_SECONDS: '1' });
+    // A poll interval longer than the stream may live: the wait itself must stop at the deadline.
+    const bounded = auditRuntime({
+      AUDIT_SSE_MAX_DURATION_SECONDS: '1',
+      AUDIT_SSE_POLL_SECONDS: '5',
+    });
     const frames = auditEventFrames(
       db,
       t.workspaceId,
@@ -198,6 +202,6 @@ describe('audit HTTP family cutover', () => {
     let count = 0;
     for await (const _frame of frames) count++;
     expect(count).toBeGreaterThan(0);
-    expect(Date.now() - started).toBeLessThan(5000);
+    expect(Date.now() - started).toBeLessThan(2500);
   });
 });

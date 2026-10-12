@@ -111,6 +111,8 @@ export class HostPacer {
     state.active++;
   }
   async slot<T>(authority: string, seconds: number, send: () => Promise<T>, signal?: AbortSignal) {
+    // Before the host state exists, so a cancelled call never leaves an idle entry behind.
+    signal?.throwIfAborted();
     const state = this.#host(authority);
     await this.#acquire(state, signal);
     try {

@@ -183,7 +183,7 @@ export const crawlLogRoutes = [
     }),
     async handle({ c, db }, { path }) {
       const source = await authorizeToken(db, path.source_id, c.req.header('authorization'));
-      const stored = await batchQuota(db, source, new Date(), c.req.header('idempotency-key'));
+      // The media type is checked first, so a refused request spends no batch attempt.
       const type = c.req.header('content-type')?.split(';')[0];
       if (
         type &&
@@ -196,6 +196,7 @@ export const crawlLogRoutes = [
         ].includes(type)
       )
         throw new ApiError(415, 'Unsupported log media type');
+      const stored = await batchQuota(db, source, new Date(), c.req.header('idempotency-key'));
       // A retried key spent no quota, so it is answered without reading the body.
       const receipt = stored
         ? answeredReceipt(stored)

@@ -401,7 +401,8 @@ jobs:
             local status=000
             for _ in $(seq 10); do
               status="$(signed "$1" "$2" || true)"
-              [[ "$status" != 000 ]] && break
+              # Retry what curl --retry did: no response, 408, 429 and 5xx while the revision starts.
+              [[ "$status" != 000 && "$status" != 408 && "$status" != 429 && "$status" != 5* ]] && break
               sleep 6
             done
             echo "$status"

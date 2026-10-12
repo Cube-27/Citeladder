@@ -137,6 +137,15 @@ describe('frozen deterministic execution scoring', () => {
     expect(brand!.state).toBe('absent');
     expect(performance.now() - started).toBeLessThan(1000);
   });
+  it('rejects an "and" near-miss over a long run of ampersands without stalling, and still reads &', () => {
+    const nearMiss = scoringConfig({ brand_name: 'Acme', brand_aliases: ['and and and and x'] });
+    const started = performance.now();
+    const [brand] = assessEntities(`a ${'&'.repeat(5000)}`, nearMiss);
+    expect(brand!.state).toBe('absent');
+    expect(performance.now() - started).toBeLessThan(1000);
+    const pair = scoringConfig({ brand_name: 'Tom and Jerry' });
+    expect(assessEntities('Watch Tom & Jerry tonight.', pair)[0]!.state).toBe('mentioned');
+  });
   it('matches a spaced name written hyphenated, spaced or joined', () => {
     const hardware = scoringConfig({ brand_name: 'Ace Hardware' });
     const spans = (answer: string) =>

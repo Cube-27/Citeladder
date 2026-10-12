@@ -17,12 +17,15 @@ const limitation =
 function aliasMatches(alias: string, answer: string): RegExpExecArray[] {
   const normalized = normalizeAlias(alias);
   if (!normalized) return [];
-  const tokens = normalized
-    .split(' ')
-    .map((token) => (token === 'and' ? '(?:and|&)' : escapeRegex(token)));
+  const words = normalized.split(' ');
+  const tokens = words.map((token) => (token === 'and' ? '(?:and|&)' : escapeRegex(token)));
   // The separator is disjoint from the token alphabet (letters, marks, digits,
-  // '_'), so a near-miss cannot backtrack polynomially over a long answer.
-  const body = tokens.join(String.raw`[^\p{L}\p{M}\p{N}_]*`);
+  // '_', and '&' when an "and" token can match it), so a near-miss cannot
+  // backtrack polynomially over a long answer.
+  const separator = words.includes('and')
+    ? String.raw`[^\p{L}\p{M}\p{N}_&]*`
+    : String.raw`[^\p{L}\p{M}\p{N}_]*`;
+  const body = tokens.join(separator);
   const pattern = DENSE_SCRIPT.test(normalized) ? body : `(?<!${word})${body}(?!${word})`;
   return [...answer.matchAll(new RegExp(pattern, 'giu'))];
 }

@@ -110,7 +110,11 @@ async function revokeGrant(
  * password-change transaction, so a client connected with the old
  * credentials loses access along with the old sessions.
  */
-export async function revokeGrantsAfterCredentialReset(trx: Database, userId: string) {
+export async function revokeGrantsAfterCredentialReset(
+  trx: Database,
+  userId: string,
+  actorId: string,
+) {
   const revoked = await trx
     .updateTable('mcp_oauth_grants')
     .set({ revoked_at: new Date(), updated_at: new Date() })
@@ -119,7 +123,7 @@ export async function revokeGrantsAfterCredentialReset(trx: Database, userId: st
     .returning('id')
     .execute();
   await Promise.all(
-    revoked.map((grant) => recordSecurityEvent(trx, 'mcp.revoke', userId, null, grant.id)),
+    revoked.map((grant) => recordSecurityEvent(trx, 'mcp.revoke', actorId, null, grant.id)),
   );
 }
 /**

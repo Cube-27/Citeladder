@@ -53,7 +53,11 @@ export async function* auditEventFrames(
       terminalPolls++;
       if (terminalPolls >= runtime.audits.sse_terminal_grace_polls) return;
     }
-    await waitForPoll(runtime.audits.sse_poll_seconds * 1000, signal);
+    // Never wait past the stream's deadline, whatever the poll interval.
+    await waitForPoll(
+      Math.min(runtime.audits.sse_poll_seconds * 1000, Math.max(0, deadline - Date.now())),
+      signal,
+    );
   }
 }
 export function eventStreamResponse(
