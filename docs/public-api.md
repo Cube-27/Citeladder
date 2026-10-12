@@ -76,6 +76,13 @@ prompt set, topic, audit, action and crawl IDs in the path must belong to that
 project ([ownership](../frontend/services/api/src/public-api/ownership.ts)),
 so a key restricted to one project never reaches another project's rows.
 
+A request body must be JSON sent with `Content-Type: application/json`
+(parameters such as `charset` are allowed); any other media type is 415
+`unsupported_media_type` ([body reader](../frontend/services/api/src/http/body.ts)).
+The browser routes share this reader, so a cross-site form or plain-text post
+cannot reach a JSON route either. Raw routes (billing webhooks, crawl-log
+ingest, MCP and its OAuth form endpoints) parse their own bodies.
+
 Every non-read POST (creates, spends and cancels) needs an `Idempotency-Key` (at most 255
 characters; [idempotency](../frontend/services/api/src/public-api/idempotency.ts)).
 The first request claims the key before it runs; a repeat with the same method,

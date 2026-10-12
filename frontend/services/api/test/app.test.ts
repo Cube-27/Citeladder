@@ -10,7 +10,7 @@ import { onError } from '../src/errors.ts';
 import { originToken } from '../src/http/origin-token.ts';
 import { policy } from '../src/config.ts';
 import { setLogSink } from '../src/logging.ts';
-import { testConfig, testDatabase } from './support.ts';
+import { Fixtures, sessionToken, testConfig, testDatabase } from './support.ts';
 
 const config = testConfig();
 const db = testDatabase(config);
@@ -43,7 +43,12 @@ async function signed(
   };
 }
 
-afterAll(() => db.destroy());
+const fixtures = new Fixtures(db);
+
+afterAll(async () => {
+  await fixtures.cleanup();
+  await db.destroy();
+});
 
 describe('health and readiness', () => {
   it('serves /v1 machine routes and the MCP protocol on the API host only, and nothing else there', async () => {
@@ -253,6 +258,31 @@ describe('request ids and the error envelope', () => {
 
     const replaced = await app.request('/health', { headers: { 'X-Request-ID': 'no;way' } });
     expect(replaced.headers.get('X-Request-ID')).toMatch(/^[0-9a-f]{16}$/u);
+  });
+
+  it('reads a JSON route body only when it declares application/json', async () => {
+    const user = await fixtures.user();
+    const cookie = `${config.session.cookieName}=${await sessionToken({ sub: user, ver: 0 })}`;
+    const app = createApp(config, db);
+    const post = async (contentType: string | null, body: string) => {
+      const response = await app.request('/api/v1/auth/terms', {
+        method: 'POST',
+        headers: { cookie, ...(contentType ? { 'Content-Type': contentType } : {}) },
+        body,
+      });
+      const { error } = (await response.json()) as { error: { code: string } };
+      return [response.status, error.code];
+    };
+    const json = JSON.stringify({ terms_revision: 'r' });
+    expect(await post('text/plain', json)).toEqual([415, 'unsupported_media_type']);
+    expect(await post('application/x-www-form-urlencoded', 'terms_revision=r')).toEqual([
+      415,
+      'unsupported_media_type',
+    ]);
+    expect(await post(null, json)).toEqual([415, 'unsupported_media_type']);
+    // A declared JSON body reaches validation, which refuses the missing decision.
+    expect(await post('application/json', json)).toEqual([422, 'validation_error']);
+    expect(await post('application/json; charset=utf-8', json)).toEqual([422, 'validation_error']);
   });
 
   it('answers an unknown path with the coded 404 envelope', async () => {

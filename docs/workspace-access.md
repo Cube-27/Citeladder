@@ -58,7 +58,9 @@ guesses cannot exceed it; a spent budget refuses even the correct password (429)
 until its window passes, and a correct password or a password reset clears it. The shared daily trial and mail budgets are spent only
 by identities and mail actually issued. A non-GET request a browser marks
 `Sec-Fetch-Site: cross-site` or `same-site` is refused, so another site cannot submit a sign-in
-or any other write. Google is the only sign-in provider.
+or any other write. JSON routes also refuse a body not sent as
+`Content-Type: application/json` (415), so a form or plain-text post that skips
+the CORS preflight never reaches them. Google is the only sign-in provider.
 
 [TypeScript authorization](../frontend/services/api/src/auth/workspace.ts) resolves
 membership and exposes safe capabilities; it is the one owner of the role

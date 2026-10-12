@@ -223,7 +223,7 @@ describe('project owner', () => {
     expect(await response.json()).toMatchObject({ workspace_id: t.workspaceId });
     const denied = await app.request(`/api/v1/projects/${project.id}`, {
       method: 'PATCH',
-      headers: { ...headers, 'X-Workspace-Id': t.workspaceId },
+      headers: { ...headers, 'X-Workspace-Id': t.workspaceId, 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: 'No' }),
     });
     expect(denied.status).toBe(403);
@@ -243,6 +243,7 @@ describe('project owner', () => {
       const headers = {
         cookie: `${testConfig().session.cookieName}=${await sessionToken({ sub: user, ver: 0 })}`,
         'X-Workspace-Id': t.workspaceId,
+        'Content-Type': 'application/json',
       };
       const response = await createApp(testConfig(), db).request('/api/v1/projects', {
         method: 'POST',
