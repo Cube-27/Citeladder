@@ -8,6 +8,9 @@ import { parseUuid } from '../http/uuid.ts';
 import { rootFailure } from '../site-health/reads/crawl.ts';
 import { currentIssueRules, pageRows } from '../site-health/reads/page-rows.ts';
 import { isKnownRule } from '../site-health/reads/rules.ts';
+import { policy } from '../config.ts';
+
+const FORMULA_VERSION = policy.site_health.link_metrics.formula_version;
 import { compareText } from '../text-order.ts';
 import { mcpPolicy } from './config.ts';
 import { appLink } from './links.ts';
@@ -127,7 +130,10 @@ export async function siteLinks(
     .selectAll('site_page_link_metrics')
     .select(sql<string>`coalesce(nullif(u.display_url, ''), u.normalized_url)`.as('url'))
     .where('site_page_link_metrics.project_id', '=', read.scope.projectId)
-    .where('site_page_link_metrics.crawl_id', '=', crawl.id);
+    .where('site_page_link_metrics.crawl_id', '=', crawl.id)
+    // The crawl's current metrics only, as the page read selects them.
+    .where('site_page_link_metrics.extractor_version', '=', crawl.extractor_version)
+    .where('site_page_link_metrics.formula_version', '=', FORMULA_VERSION);
   if (pages.length) links = links.where('site_page_link_metrics.site_url_id', 'in', pages);
   if (args.cursor) {
     const [key, id] = decodeCursor(args.cursor, 2);
@@ -157,15 +163,7 @@ export async function siteLinks(
   return {
     state: 'available',
     crawl_id: crawl.id,
-    // Each distinct processing version pair once, so a mixed crawl shows all of them.
-    versions: [
-      ...new Map(
-        selected.map((row) => [
-          `${row.extractor_version}\u0000${row.formula_version}`,
-          { extractor: row.extractor_version, formula: row.formula_version },
-        ]),
-      ).values(),
-    ],
+    versions: { extractor: crawl.extractor_version, formula: FORMULA_VERSION },
     items,
     // A requested page without link metrics in this crawl is named, never dropped silently.
     ...(pages.length && !args.cursor && rows.length <= count

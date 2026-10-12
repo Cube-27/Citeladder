@@ -915,7 +915,7 @@ it('reads the internal links of several pages in one call, by page URL rather th
         ]),
         top_outbound: JSON.stringify([]),
         extractor_version: policy.site_health.versions.extractor,
-        formula_version: 'fixture',
+        formula_version: policy.site_health.link_metrics.formula_version,
         created_at: new Date(),
       })
       .execute();
@@ -947,9 +947,10 @@ it('reads the internal links of several pages in one call, by page URL rather th
     ],
   ]);
   expect(links.missing_site_url_ids).toEqual([missing]);
-  expect(links.versions).toEqual([
-    { extractor: policy.site_health.versions.extractor, formula: 'fixture' },
-  ]);
+  expect(links.versions).toEqual({
+    extractor: policy.site_health.versions.extractor,
+    formula: policy.site_health.link_metrics.formula_version,
+  });
 });
 
 it('reports performance as not connected until a search source is connected, then as not projected', async () => {

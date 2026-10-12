@@ -1,5 +1,6 @@
 import pg from 'pg';
-import { afterAll, expect, it } from 'vitest';
+import { afterAll, expect, it, onTestFinished } from 'vitest';
+import { fixtureWorkspaceName } from './fixture-workspace.ts';
 import { quiesceFixtureQueues } from './queue-isolation.ts';
 import { SiteFixtures } from './site-health-fixtures.ts';
 import { testDatabase } from './support.ts';
@@ -11,11 +12,11 @@ afterAll(() => db.destroy());
 it('settles fixture work but never ends the local app crawl that shares the database', async () => {
   const fixture = await fixtures.crawl('running');
   const app = await fixtures.crawl('running');
-  await db
-    .updateTable('workspaces')
-    .set({ name: 'Local app' })
-    .where('id', '=', app.workspaceId)
-    .execute();
+  const rename = (name: string) =>
+    db.updateTable('workspaces').set({ name }).where('id', '=', app.workspaceId).execute();
+  await rename('Local app');
+  // Whatever the outcome, the workspace is a fixture again for later files to settle.
+  onTestFinished(() => rename(fixtureWorkspaceName(app.workspaceId)).then(() => undefined));
   const fixtureTask = await fixtures.task(fixture, 'discover');
   const appTask = await fixtures.task(app, 'discover');
 
@@ -43,15 +44,4 @@ it('settles fixture work but never ends the local app crawl that shares the data
   expect(status(tasks, fixtureTask)).toBe('cancelled');
   expect(status(crawls, app.crawlId)).toBe('running');
   expect(status(tasks, appTask)).toBe('queued');
-  // The app crawl is no test's to finish; settle it so later files start quiescent.
-  await db
-    .updateTable('site_crawls')
-    .set({ status: 'failed' })
-    .where('id', '=', app.crawlId)
-    .execute();
-  await db
-    .updateTable('site_crawl_tasks')
-    .set({ status: 'cancelled' })
-    .where('id', '=', appTask)
-    .execute();
 });
