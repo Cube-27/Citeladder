@@ -10,16 +10,15 @@
 import pg from 'pg';
 import { beforeAll } from 'vitest';
 import { policy } from '../src/config.ts';
+import { FIXTURE_WORKSPACE_ROW } from './fixture-workspace.ts';
 
 const ACTIVE_CRAWL = ['draft', 'validating', 'queued', 'running'];
-/** Fixture workspaces are named after their own id (see `test/support.ts`). */
-const FIXTURE = `workspace_id in (select id from workspaces where name = 'Workspace ' || id::text)`;
 
 export async function quiesceFixtureQueues(client: pg.ClientBase) {
   const active = policy.task_queue.active;
   await client.query(
     `update site_crawls set status = 'failed', completed_at = coalesce(completed_at, now())
-     where status = any($1::text[]) and ${FIXTURE}`,
+     where status = any($1::text[]) and ${FIXTURE_WORKSPACE_ROW}`,
     [ACTIVE_CRAWL],
   );
   // One client runs these in order; there is nothing to gain from awaiting each.
@@ -27,7 +26,7 @@ export async function quiesceFixtureQueues(client: pg.ClientBase) {
     ['site_crawl_tasks', 'analytics_tasks', 'brand_discovery_tasks'].map((table) =>
       client.query(
         `update ${table} set status = 'cancelled', lease_owner = null, lease_expires_at = null
-         where status = any($1::text[]) and ${FIXTURE}`,
+         where status = any($1::text[]) and ${FIXTURE_WORKSPACE_ROW}`,
         [active],
       ),
     ),

@@ -621,10 +621,8 @@ class AdmissionLedger {
    * Count toward the ceiling only what is new: a sample's observation, otherwise
    * its discover task, unless the crawl already observed (and so counted) it.
    */
-  count(hash: string, sample: boolean, discover: boolean) {
-    const known = sample
-      ? this.observed.has(hash)
-      : discover && (this.discovering.has(hash) || this.observed.has(hash));
+  count(hash: string, seen: boolean, sample: boolean, discover: boolean) {
+    const known = sample ? seen : discover && (seen || this.discovering.has(hash));
     if (!known) this.admitted++;
   }
 }
@@ -653,7 +651,7 @@ function planAdmission(
     const selected = ledger.select(entry.item);
     const observe = sample || selected;
     const seen = ledger.observed.has(hash);
-    ledger.count(hash, sample, discover);
+    ledger.count(hash, seen, sample, discover);
     if (observe) ledger.observed.add(hash);
     if (discover) ledger.discovering.add(hash);
     planned.push({
@@ -709,7 +707,7 @@ async function writeAdmission(
       })),
     settings.maxAttempts,
   );
-  const discoverNew = await enqueueSiteTasks(
+  const discovering = await enqueueSiteTasks(
     trx,
     crawl,
     'discover',
@@ -721,9 +719,10 @@ async function writeAdmission(
         position: entry.position,
       })),
     settings.maxAttempts,
-    // The crawl's observation counter already holds these pages.
-    new Set(planned.flatMap((entry) => (entry.seen ? [entry.item.hash] : []))),
   );
+  // The crawl's observation counter already holds the pages it had observed.
+  const seen = new Set(planned.flatMap((entry) => (entry.seen ? [entry.item.hash] : [])));
+  const discoverNew = discovering.filter((hash) => !seen.has(hash)).length;
   await markFrontierAdmitted(
     trx,
     crawl,

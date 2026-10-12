@@ -178,9 +178,11 @@ export async function finalizeCrawlAnalyses(db: Database, crawl: Crawl) {
   }
   const rootUrl = canonicalUrl(crawl.root_url);
   const rootHash = rootUrl ? canonicalIdentity(rootUrl).hash : '';
-  const linked = new Set(
-    rows.flatMap((row) => internalTargets(row.final_url, record(row.normalized_facts))),
+  // Admission checks each target in full, so each row's targets are found once.
+  const targets = new Map(
+    rows.map((row) => [row.id, internalTargets(row.final_url, record(row.normalized_facts))]),
   );
+  const linked = new Set([...targets.values()].flat());
   const recorded = await recordedRules(
     db,
     crawl,
@@ -191,7 +193,7 @@ export async function finalizeCrawlAnalyses(db: Database, crawl: Crawl) {
     const evaluations = [
       hreflang(canonicalUrl(row.final_url), facts, pages, resolutions),
       canonicalResolution(canonicalDeclarations(facts), row.final_url, resolutions),
-      resolutionSet(internalTargets(row.final_url, facts), resolutions),
+      resolutionSet(targets.get(row.id) ?? [], resolutions),
     ];
     if (row.url_hash === rootHash)
       evaluations.push(...(await rootEvaluations(db, crawl, linked, resolutions))); // NOSONAR: only the root page.

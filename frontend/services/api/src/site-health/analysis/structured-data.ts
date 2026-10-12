@@ -88,9 +88,9 @@ const cleanTypes = (value: unknown) => [
 ];
 
 /** A JSON-LD object and the property that nests it: '' at the top level or in `@graph`. */
-export type JsonLdObject = { object: JsonObject; parentProperty: string };
+type NestedJsonLd = { object: JsonObject; parentProperty: string };
 
-function* jsonObjects(node: unknown, depth = 0, parentProperty = ''): Generator<JsonLdObject> {
+function* jsonObjects(node: unknown, depth = 0, parentProperty = ''): Generator<NestedJsonLd> {
   if (depth > limits.jsonld_depth) return;
   if (Array.isArray(node)) {
     for (const child of node)
@@ -219,7 +219,7 @@ function enrichment(object: JsonObject, type: string) {
 
 /** One block per recognized type; every block names the object it came from. */
 function objectBlocks(
-  { object, parentProperty }: JsonLdObject,
+  { object, parentProperty }: NestedJsonLd,
   entityIndex: number,
 ): SchemaBlock[] {
   return cleanTypes(object['@type'])
@@ -247,7 +247,7 @@ function objectBlocks(
  * only as `SoftwareApplication` or `Event` has structured data even though no
  * deeper check reads that type.
  */
-export function declaredSchemaTypes(objects: JsonLdObject[], root: HtmlNode, maxTypes: number) {
+export function declaredSchemaTypes(objects: NestedJsonLd[], root: HtmlNode, maxTypes: number) {
   const types = new Set(objects.flatMap(({ object }) => cleanTypes(object['@type'])));
   for (const node of elements(root))
     if (hasAttribute(node, 'itemscope'))
@@ -259,8 +259,8 @@ export function declaredSchemaTypes(objects: JsonLdObject[], root: HtmlNode, max
 }
 
 /** Every object in the page's JSON-LD scripts, in document order, each script parsed once. */
-export function jsonLdObjects(raw: string[]): JsonLdObject[] {
-  const objects: JsonLdObject[] = [];
+export function jsonLdObjects(raw: string[]): NestedJsonLd[] {
+  const objects: NestedJsonLd[] = [];
   for (const body of raw) {
     let parsed: unknown;
     try {
@@ -273,7 +273,7 @@ export function jsonLdObjects(raw: string[]): JsonLdObject[] {
   return objects;
 }
 
-export function jsonLdBlocks(objects: JsonLdObject[], maxBlocks: number): SchemaBlock[] {
+export function jsonLdBlocks(objects: NestedJsonLd[], maxBlocks: number): SchemaBlock[] {
   const blocks: SchemaBlock[] = [];
   for (const [entityIndex, object] of objects.entries()) {
     blocks.push(...objectBlocks(object, entityIndex));

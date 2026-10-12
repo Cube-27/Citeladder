@@ -1,4 +1,4 @@
-import { SITE_NAME } from '@/lib/seo/site';
+import { organizationReference } from '@/lib/seo/site';
 
 /**
  * JSON-LD for a documentation article. Every value comes from the article's
@@ -19,12 +19,7 @@ export function docsArticleJsonLd({
   websiteUrl: string;
 }): Record<string, unknown> {
   // Docs name no person author: the CiteLadder organization writes and publishes them.
-  const organization = {
-    '@type': 'Organization',
-    '@id': new URL('#organization', websiteUrl).toString(),
-    name: SITE_NAME,
-    url: websiteUrl,
-  };
+  const organization = organizationReference(websiteUrl);
   return {
     '@context': 'https://schema.org',
     '@type': 'TechArticle',

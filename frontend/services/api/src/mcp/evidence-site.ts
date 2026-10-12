@@ -2,12 +2,12 @@
 import { robotsFactsSchema } from '@citeladder/contracts/site-health';
 import { sql } from 'kysely';
 import { z } from 'zod';
-import { policy } from '../config.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { record } from '../db/json.ts';
 import { parseUuid } from '../http/uuid.ts';
 import { rootFailure } from '../site-health/reads/crawl.ts';
 import { currentIssueRules, pageRows } from '../site-health/reads/page-rows.ts';
+import { isKnownRule } from '../site-health/reads/rules.ts';
 import { compareText } from '../text-order.ts';
 import { mcpPolicy } from './config.ts';
 import { appLink } from './links.ts';
@@ -95,23 +95,18 @@ export async function crawlability(
 }
 
 /** A sampled link neighbor as the model reads it: the page, not its internal id. */
-const neighborSchema = z.looseObject({
+const neighborSchema = z.object({
   url: z.string(),
   anchor_count: z.number().nullish(),
   main_content: z.boolean().nullish(),
   nofollow: z.boolean().nullish(),
 });
+const neighborList = z.array(z.unknown()).catch([]);
 const neighbors = (value: unknown) =>
-  z
-    .array(z.unknown())
-    .catch([])
-    .parse(value)
-    .flatMap((item) => {
-      const parsed = neighborSchema.safeParse(item);
-      if (!parsed.success) return [];
-      const { url, anchor_count, main_content, nofollow } = parsed.data;
-      return [{ url, anchor_count, main_content, nofollow }];
-    });
+  neighborList.parse(value).flatMap((item) => {
+    const parsed = neighborSchema.safeParse(item);
+    return parsed.success ? [parsed.data] : [];
+  });
 
 export async function siteLinks(
   read: ProjectRead,
@@ -144,6 +139,7 @@ export async function siteLinks(
     .limit(count + 1)
     .execute();
   const selected = rows.slice(0, count);
+  const found = new Set(rows.map((row) => row.site_url_id));
   const items = selected.map((row) => ({
     site_url_id: row.site_url_id,
     url: row.url,
@@ -167,7 +163,7 @@ export async function siteLinks(
     items,
     // A requested page without link metrics in this crawl is named, never dropped silently.
     ...(pages.length && !args.cursor && rows.length <= count
-      ? { missing_site_url_ids: pages.filter((id) => !rows.some((r) => r.site_url_id === id)) }
+      ? { missing_site_url_ids: pages.filter((id) => !found.has(id)) }
       : {}),
     pagination: pagination(
       items,
@@ -180,9 +176,6 @@ export async function siteLinks(
   };
 }
 
-/** The issue rule a page filter names must be a catalog rule, so a typo is not "no pages". */
-const KNOWN_RULES = new Set(policy.site_health.rule_catalog.map((rule) => rule.rule_id));
-
 export async function sitePages(
   read: ProjectRead,
   args: Page & {
@@ -192,7 +185,8 @@ export async function sitePages(
     rule_id?: string | null;
   },
 ): Promise<Evidence> {
-  if (args.rule_id && !KNOWN_RULES.has(args.rule_id))
+  // The rule a page filter names must be a catalog rule, so a typo is not "no pages".
+  if (args.rule_id && !isKnownRule(args.rule_id))
     throw new McpInputError(
       `Unknown rule_id '${args.rule_id}'. Use a rule_id exactly as read_site_health top_issues or an issue group returned it.`,
     );

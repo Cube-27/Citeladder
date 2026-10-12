@@ -19,7 +19,7 @@ const availability = z.enum([
  * recorded as the attempt's sources (the app shows them), and each row keeps
  * its own `record_uri` to open; repeating them would crowd rows out of the bound.
  */
-function modelData<T extends Record<string, unknown>>(data: T) {
+function modelData(data: Record<string, Json>) {
   const { artifact_refs: _refs, ...rest } = data;
   return rest;
 }
@@ -77,7 +77,7 @@ function sharedTools(db: Database): ReadTool[] {
           // continuation cursor. Never discard rows behind a later cursor.
           if (Object.hasOwn(fields, 'limit') && Array.isArray(data.items)) {
             let limit = data.items.length;
-            while (JSON.stringify(modelData(data)).length > maxChars && limit > 1) {
+            while (JSON.stringify(outcome(data).data).length > maxChars && limit > 1) {
               limit = Math.max(1, Math.floor(limit / 2));
               input.limit = limit;
               data = await dispatch();

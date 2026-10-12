@@ -8,22 +8,13 @@ import { CITELADDER_LINKEDIN, CITELADDER_X } from '@/lib/marketing-content/socia
 import {
   absoluteUrl,
   DEFAULT_SOCIAL_IMAGE,
+  organizationReference,
   SITE_DESCRIPTION,
   SITE_NAME,
   SITE_TAGLINE,
 } from '@/lib/seo/site';
 
 export type JsonLdObject = Record<string, unknown>;
-
-/** A reference to the site's one Organization entity, for publisher and author fields. */
-function organizationReference(home: string): JsonLdObject {
-  return {
-    '@type': 'Organization',
-    '@id': new URL('#organization', home).toString(),
-    name: SITE_NAME,
-    url: home,
-  };
-}
 
 export function organizationJsonLd(): JsonLdObject | null {
   const url = absoluteUrl('/');

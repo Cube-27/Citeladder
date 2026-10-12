@@ -51,14 +51,26 @@ export type IssueFilters = {
   findingClass: string;
 };
 
-/** Evaluation ids of the crawl's current, finalized analyses (optionally one page kind). */
+/**
+ * Evaluation ids of the crawl's current, finalized analyses (optionally one
+ * page kind), plus its site-level architecture evaluations, which the
+ * snapshot's issue counts include.
+ */
 function currentEvaluations(crawl: Crawl, pageKind: string | null = null) {
   const kindFilter = pageKind ? sql`and a.page_kind = ${pageKind}` : sql``;
+  const architecture = pageKind
+    ? sql``
+    : sql`union all
+  select e.id from site_rule_evaluations e
+  join site_observed_architectures o
+    on o.id = e.source_architecture_id and o.workspace_id = e.workspace_id
+  where o.workspace_id = ${crawl.workspace_id} and o.crawl_id = ${crawl.id}`;
   return sql`(
   select unnest(a.source_evaluation_ids) from site_page_analyses a
   where a.workspace_id = ${crawl.workspace_id} and a.crawl_id = ${crawl.id}
     and a.is_current and a.finalized_at is not null
-    ${kindFilter})`;
+    ${kindFilter}
+  ${architecture})`;
 }
 
 /** Issues of the crawl's current analyses. */

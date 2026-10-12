@@ -153,10 +153,7 @@ export async function persistCrawlSnapshot(db: Database, crawl: Crawl, persistEm
       eligibility_totals: JSON.stringify(eligibility.eligibility_totals),
       eligibility_reasons: JSON.stringify(eligibility.eligibility_reasons),
       status_counts: JSON.stringify(eligibility.status_counts),
-      ...issues,
-      top_issues: JSON.stringify(issues.top_issues),
-      severity_counts: JSON.stringify(issues.severity_counts),
-      category_counts: JSON.stringify(issues.category_counts),
+      ...issueColumns(issues),
       web_fundamentals: JSON.stringify(webDiagnostic(projection)),
       trend: JSON.stringify(trends.trend),
       change_summary: JSON.stringify(trends.change_summary),
@@ -195,6 +192,16 @@ export async function persistCrawlSnapshot(db: Database, crawl: Crawl, persistEm
   return true;
 }
 
+/** The snapshot's issue columns, with their JSON rollups serialized. */
+function issueColumns(issues: Awaited<ReturnType<typeof snapshotIssues>>) {
+  return {
+    ...issues,
+    top_issues: JSON.stringify(issues.top_issues),
+    severity_counts: JSON.stringify(issues.severity_counts),
+    category_counts: JSON.stringify(issues.category_counts),
+  };
+}
+
 /**
  * Graph-scope architecture rules run as a successor of the snapshot (they read
  * its coverage), so their evaluations join its manifest afterwards: the issue
@@ -225,30 +232,22 @@ export async function addArchitectureIssues(db: Database, crawl: Crawl) {
     .forUpdate()
     .executeTakeFirst();
   if (!snapshot) return false;
-  const evaluationIds = [
-    ...new Set([
-      ...(snapshot.source_evaluation_ids ?? []),
-      ...architectureEvaluations.map((row) => row.id),
-    ]),
-  ];
+  const known = new Set(snapshot.source_evaluation_ids ?? []);
+  const added = architectureEvaluations.filter((row) => !known.has(row.id));
+  // A replay that adds nothing leaves the published rollups as they are.
+  if (!added.length) return false;
+  const evaluationIds = [...known, ...added.map((row) => row.id)];
   const issues = await snapshotIssues(db, crawl, evaluationIds);
   await db
     .updateTable('site_health_snapshots')
-    .set({
-      ...issues,
-      top_issues: JSON.stringify(issues.top_issues),
-      severity_counts: JSON.stringify(issues.severity_counts),
-      category_counts: JSON.stringify(issues.category_counts),
-      source_evaluation_ids: evaluationIds,
-    })
+    .set({ ...issueColumns(issues), source_evaluation_ids: evaluationIds })
     .where('id', '=', snapshot.id)
     .where('workspace_id', '=', crawl.workspace_id)
     .execute();
-  const count = issues.issue_count;
   await db
     .updateTable('site_crawls')
     .set({
-      score_summary: sql`jsonb_set(score_summary, '{issue_count}', to_jsonb(${count}::int))`,
+      score_summary: sql`jsonb_set(score_summary, '{issue_count}', to_jsonb(${issues.issue_count}::int))`,
     })
     .where('id', '=', crawl.id)
     .where('workspace_id', '=', crawl.workspace_id)

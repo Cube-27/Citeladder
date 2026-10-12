@@ -2,6 +2,7 @@ import type { Insertable } from 'kysely';
 import { afterAll, describe, expect, it, vi } from 'vitest';
 import type { SiteCrawls } from '../src/generated/db-schema.ts';
 import { finalizeCrawlAnalyses } from '../src/site-health/lifecycle-finalize.ts';
+import { issues } from '../src/site-health/reads/issues.ts';
 import { addArchitectureIssues, persistCrawlSnapshot } from '../src/site-health/snapshot.ts';
 import {
   publishCancelledCrawls,
@@ -168,23 +169,23 @@ describe('terminal analysis publication', () => {
     await fixtures.page(seed, '/', {});
     await fixtures.page(seed, '/orphan/product', {});
     await fixtures.task(seed, 'link_metrics');
-    const settings = { ...siteWorkerSettings({}), concurrency: 1 };
-    const worker = fixtures.worker(seed, { settings });
-    expect(await worker.runOnce()).toBe(1);
-    expect(await worker.runOnce()).toBe(1);
     await db
       .updateTable('site_crawls')
       .set({ score_summary: JSON.stringify({ issue_count: 0 }) })
       .where('id', '=', seed.crawlId)
       .execute();
+    const settings = { ...siteWorkerSettings({}), concurrency: 1 };
+    const worker = fixtures.worker(seed, { settings });
+    // Link metrics, then architecture, which folds its issues into the snapshot.
+    expect(await worker.runOnce()).toBe(1);
+    expect(await worker.runOnce()).toBe(1);
     const crawl = await db
       .selectFrom('site_crawls')
       .selectAll()
       .where('id', '=', seed.crawlId)
       .executeTakeFirstOrThrow();
-    // Replaying the fold leaves one count per persisted issue.
-    expect(await addArchitectureIssues(db, crawl)).toBe(true);
-    expect(await addArchitectureIssues(db, crawl)).toBe(true);
+    // A replay adds nothing and leaves one count per persisted issue.
+    expect(await addArchitectureIssues(db, crawl)).toBe(false);
     const snapshot = await db
       .selectFrom('site_health_snapshots')
       .select(['issue_count', 'top_issues'])
@@ -200,6 +201,27 @@ describe('terminal analysis publication', () => {
       .where('id', '=', seed.crawlId)
       .executeTakeFirstOrThrow();
     expect(summary.score_summary).toEqual({ issue_count: 2 });
+    // The issue list a top issue opens holds the same site-level findings.
+    const listed = await issues(
+      db,
+      seed.workspaceId,
+      seed.crawlId,
+      {
+        query: null,
+        severity: null,
+        category: null,
+        dimension: null,
+        rule: null,
+        siteUrlId: null,
+        pageKind: null,
+        findingClass: 'defect',
+      },
+      { limit: 10, cursor: null },
+    );
+    expect(listed.items.map((group) => group.rule_id).toSorted()).toEqual([
+      'architecture.orphan_pages',
+      'architecture.parentless_detail_pages',
+    ]);
   });
 
   it('does not wait on internal links the crawler can never fetch', async () => {

@@ -16,6 +16,16 @@ export const DEFAULT_SOCIAL_IMAGE = {
   alt: 'CiteLadder: AI visibility with evidence you can open',
 } as const;
 
+/** A reference to the site's one Organization entity, for publisher and author fields. */
+export function organizationReference(home: string): Record<string, unknown> {
+  return {
+    '@type': 'Organization',
+    '@id': new URL('#organization', home).toString(),
+    name: SITE_NAME,
+    url: home,
+  };
+}
+
 /** Canonical website origin supplied by the public-origin config owner. */
 export function siteOrigin(): URL | null {
   return publicOrigins().website;

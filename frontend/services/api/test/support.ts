@@ -4,6 +4,7 @@ import { SignJWT } from 'jose';
 
 import { loadConfig, type ServiceConfig } from '../src/config.ts';
 import { createDatabase, type Database } from '../src/db/database.ts';
+import { fixtureWorkspaceName } from './fixture-workspace.ts';
 import { billingAccount, grant } from './prompt-fixtures.ts';
 
 const TEST_SESSION_KEY = 'api-service-test-session-key-0123456789abcdef';
@@ -130,7 +131,7 @@ export class Fixtures {
       .insertInto('workspaces')
       .values({
         id,
-        name: `Workspace ${id}`,
+        name: fixtureWorkspaceName(id),
         is_system: system,
         created_at: new Date(),
         updated_at: new Date(),
