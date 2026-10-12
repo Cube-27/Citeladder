@@ -80,6 +80,9 @@ export const authApi = {
     return strictValidate(authResponseSchema, res, 'auth.login').user;
   },
   logout: (options?: ApiRequestOptions) => apiClient.post<void>('/auth/logout', undefined, options),
+  // Also disconnects every MCP client and revokes the API keys this person created.
+  logoutAndDisconnect: (options?: ApiRequestOptions) =>
+    apiClient.post<void>('/auth/logout-and-disconnect', undefined, options),
   // OAuth scaffold: a configured provider answers 200 with the authorize URL
   // to navigate to; an unconfigured one answers 503
   // (`detail.code = 'oauth_provider_not_configured'`), which callers surface

@@ -163,7 +163,11 @@ challenges and revokes sessions. Reset, password change and an operator password
 reset also revoke the person's MCP grants and the API keys they created
 (`credential_reset`), so recovering an account removes delegated access a
 compromised password may have minted. Password change requires the current password;
-signing out revokes every session (there is one sign-out, and it is everywhere). Settings → Account
+signing out revokes every session (sign-out is always everywhere) and leaves MCP
+grants and API keys working. A separate, confirmed "Sign out everywhere and
+disconnect integrations" control (`POST /api/v1/auth/logout-and-disconnect`)
+also revokes the person's MCP grants and the API keys they created in the same
+transaction, recording `auth.logout_disconnect`. Settings → Account
 shows the email and the person's role in the selected workspace, never internal
 identifiers, and reports sign-in methods and verification state in plain words,
 with compact password, Google-linking and session controls. Settings → Workspace

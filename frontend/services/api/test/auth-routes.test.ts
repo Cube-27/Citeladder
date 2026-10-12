@@ -4,6 +4,7 @@ import { jwtVerify } from 'jose';
 import { createApp } from '../src/app.ts';
 import { policy } from '../src/config.ts';
 import { hashPassword } from '../src/auth/password.ts';
+import { billingAccount, grant } from './prompt-fixtures.ts';
 import { Fixtures, sessionToken, testConfig, testDatabase } from './support.ts';
 
 const config = testConfig({ PUBLIC_SIGNUP_ENABLED: 'true' });
@@ -387,6 +388,132 @@ describe('password auth routes', () => {
       .where('event', '=', 'auth.logout')
       .execute();
     expect(receipt).toHaveLength(1);
+  });
+});
+
+describe('sign out everywhere and disconnect integrations', () => {
+  const clientIds: string[] = [];
+
+  afterAll(async () => {
+    await db.deleteFrom('mcp_oauth_clients').where('client_id', 'in', clientIds).execute();
+  });
+
+  async function sessionCookie(id: string, ver: number) {
+    return `${config.session.cookieName}=${await sessionToken({ sub: id, ver })}`;
+  }
+
+  /** A person with an MCP grant and an API key they created, as connecting a client does. */
+  async function connectedPerson() {
+    const person = await fixtures.user();
+    createdUsers.push(person);
+    const workspace = await fixtures.ownedWorkspace(person);
+    const account = await billingAccount(db, workspace);
+    await grant(db, account, { key: 'api_access', value: 1, sourceKind: 'override' });
+    await grant(db, account, { key: 'api_keys', value: 10, sourceKind: 'override' });
+    const created = await app.request('/api/v1/api-keys', {
+      method: 'POST',
+      headers: {
+        Cookie: await sessionCookie(person, 0),
+        'x-workspace-id': workspace,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ name: 'CI export' }),
+    });
+    expect(created.status).toBe(201);
+    const { secret } = (await created.json()) as { secret: string };
+    const clientId = randomUUID();
+    clientIds.push(clientId);
+    await db
+      .insertInto('mcp_oauth_clients')
+      .values({
+        id: randomUUID(),
+        client_id: clientId,
+        client_metadata: JSON.stringify({ client_name: 'test' }),
+        client_secret_encrypted: '',
+        created_at: new Date(),
+      })
+      .execute();
+    const grantId = randomUUID();
+    await db
+      .insertInto('mcp_oauth_grants')
+      .values({
+        id: grantId,
+        client_id: clientId,
+        user_id: person,
+        workspace_ids: JSON.stringify([workspace]),
+        scopes: JSON.stringify(['citeladder:read']),
+        resource: 'https://protocol.example.test/mcp',
+        access_token_hash: randomUUID(),
+        refresh_token_hash: randomUUID(),
+        access_expires_at: new Date(Date.now() + 3600000),
+        refresh_expires_at: new Date(Date.now() + 7200000),
+        revoked_at: null,
+        created_at: new Date(),
+        updated_at: new Date(),
+      })
+      .execute();
+    return { person, secret, grantId };
+  }
+
+  async function integrations(person: { secret: string; grantId: string }) {
+    const listed = await app.request('/v1/projects', {
+      headers: { authorization: `Bearer ${person.secret}` },
+    });
+    const mcp = await db
+      .selectFrom('mcp_oauth_grants')
+      .select('revoked_at')
+      .where('id', '=', person.grantId)
+      .executeTakeFirstOrThrow();
+    return { apiKeyStatus: listed.status, mcpGrantRevoked: mcp.revoked_at !== null };
+  }
+
+  async function events(person: string) {
+    const rows = await db
+      .selectFrom('security_events')
+      .select('event')
+      .where('actor_id', '=', person)
+      .where('event', 'in', ['auth.logout', 'auth.logout_disconnect', 'mcp.revoke'])
+      .orderBy('event')
+      .execute();
+    return rows.map((row) => row.event);
+  }
+
+  it('plain sign-out ends every session but leaves the MCP grant and API key working', async () => {
+    const connected = await connectedPerson();
+    const cookie = await sessionCookie(connected.person, 0);
+    const logout = await app.request('/api/v1/auth/logout', {
+      method: 'POST',
+      headers: { Cookie: cookie },
+    });
+    expect(logout.status).toBe(204);
+    expect((await call('/auth/me', undefined, cookie)).status).toBe(401);
+    expect(await integrations(connected)).toEqual({ apiKeyStatus: 200, mcpGrantRevoked: false });
+    expect(await events(connected.person)).toEqual(['auth.logout']);
+  });
+
+  it('ends every session and revokes that person’s MCP grant and API key, and nobody else’s', async () => {
+    const connected = await connectedPerson();
+    const bystander = await connectedPerson();
+    const cookie = await sessionCookie(connected.person, 0);
+    const disconnect = await app.request('/api/v1/auth/logout-and-disconnect', {
+      method: 'POST',
+      headers: { Cookie: cookie },
+    });
+    expect(disconnect.status).toBe(204);
+    expect((await call('/auth/me', undefined, cookie)).status).toBe(401);
+    expect(await integrations(connected)).toEqual({ apiKeyStatus: 401, mcpGrantRevoked: true });
+    expect(await integrations(bystander)).toEqual({ apiKeyStatus: 200, mcpGrantRevoked: false });
+    expect(await events(connected.person)).toEqual(['auth.logout_disconnect', 'mcp.revoke']);
+  });
+
+  it('refuses a cross-site request to disconnect', async () => {
+    const connected = await connectedPerson();
+    const refused = await app.request('/api/v1/auth/logout-and-disconnect', {
+      method: 'POST',
+      headers: { Cookie: await sessionCookie(connected.person, 0), 'sec-fetch-site': 'cross-site' },
+    });
+    expect(refused.status).toBe(403);
+    expect(await integrations(connected)).toEqual({ apiKeyStatus: 200, mcpGrantRevoked: false });
   });
 });
 

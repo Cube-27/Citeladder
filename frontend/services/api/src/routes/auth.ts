@@ -372,6 +372,22 @@ export const authRoutes = [
       return c.body(null, 204);
     },
   }),
+  // Sign-out everywhere that also disconnects MCP clients and revokes the
+  // API keys this person created; an explicit, separate choice.
+  definePostRoute({
+    ...base,
+    authorize: 'session',
+    path: '/api/v1/auth/logout-and-disconnect',
+    response: z.null(),
+    raw: true,
+    status: 204,
+    async handle({ c, db, config }) {
+      await logoutUser(db, c.get('user').id, { disconnect: true });
+      clearSessionCookie(c, config);
+      clearOAuthCookies(c, config);
+      return c.body(null, 204);
+    },
+  }),
   defineGetRoute({
     ...base,
     path: '/api/v1/auth/oauth/providers',
