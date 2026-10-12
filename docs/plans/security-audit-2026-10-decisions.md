@@ -1,9 +1,14 @@
 # Security audit 2026-10: decisions for the owner
 
-Items from the [security audit](security-audit-2026-10.md) that need an owner
-decision. None of them changes runtime behaviour until the owner decides. Each
-entry gives the finding, the options and Engineering's recommendation. Once
-the owner decides an item, it moves to the [backlog](backlog.md) or into a PR.
+Items from the [security audit](security-audit-2026-10.md) that needed an
+owner decision, each with Engineering's recommendation.
+
+**Owner answers, 2026-10-12.**
+- **Implement in this PR:** #1 (B52), #4 option (b), #5, #6, #10, #11 and the
+  API-key/reset race.
+- **Accept the recommendation, no change:** #2, #3, #7, #8, #9 and #13, and the
+  same-key retry race.
+- **Still pending, revisit later:** #12 and the infrastructure items #14–#18.
 
 ## Already decided (recorded for review)
 
@@ -33,7 +38,7 @@ the owner decides an item, it moves to the [backlog](backlog.md) or into a PR.
 
    *Recommend:* a full refund of the current period's payment cancels the
    subscription at once and revokes that period's plan grants. Partial refunds
-   change nothing.
+   change nothing. **Owner: as recommended ([B52](../billing-decisions.md)).**
 2. **Disputes ([B51](../billing-decisions.md)), on the backlog.** Today a
    chargeback is neither revoked nor alerted on. *Recommend later:* on
    `payment.dispute.created`, alert an operator. Revoke only on
@@ -55,7 +60,7 @@ the owner decides an item, it moves to the [backlog](backlog.md) or into a PR.
    - (b) Add a separate "sign out everywhere and disconnect integrations"
      control, and leave plain sign-out alone.
 
-   *Recommend:* (b).
+   *Recommend:* (b). **Owner: (b).**
 5. **The change-password and link-Google flows do not spend the per-email
    login-failure budget.** *Recommend:* spend it (small change).
 6. **The request body is parsed as JSON whatever its `Content-Type`.**
