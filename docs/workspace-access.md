@@ -51,10 +51,11 @@ a pending public identity with authoritative Google proof clears its password
 and invalidates old sessions/challenges. Third-party Google addresses use mailbox
 recovery before access. Provider requests have host, redirect,
 deadline and response-size bounds. PostgreSQL abuse counters commit before
-password verification or provider I/O. Every sign-in attempt spends a unit of
-its email's failure budget before the password is checked, so concurrent guesses
-cannot exceed it; a spent budget refuses even the correct password until its
-window passes, and a successful sign-in or a password reset clears it. The shared daily trial and mail budgets are spent only
+password verification or provider I/O. Every sign-in attempt, and every
+current-password check when changing a password or linking Google, spends a unit
+of its email's failure budget before the password is checked, so concurrent
+guesses cannot exceed it; a spent budget refuses even the correct password (429)
+until its window passes, and a correct password or a password reset clears it. The shared daily trial and mail budgets are spent only
 by identities and mail actually issued. A non-GET request a browser marks
 `Sec-Fetch-Site: cross-site` or `same-site` is refused, so another site cannot submit a sign-in
 or any other write. Google is the only sign-in provider.

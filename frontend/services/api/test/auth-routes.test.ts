@@ -312,6 +312,53 @@ describe('password auth routes', () => {
     expect(await attempt(password)).toBe(429);
   });
 
+  it('spends the same email failure budget when changing a password or linking Google', async () => {
+    await clearClientBudget();
+    const limited = createApp(testConfig({ ABUSE_LOGIN_EMAIL_LIMIT: '2' }), db);
+    const account = async () => {
+      const id = await fixtures.user();
+      await db
+        .updateTable('users')
+        .set({ hashed_password: await hashPassword(password) })
+        .where('id', '=', id)
+        .execute();
+      return id;
+    };
+    const sessionOf = async (id: string, ver: number) =>
+      `${config.session.cookieName}=${await sessionToken({ sub: id, ver })}`;
+
+    const changer = await account();
+    const change = async (current: string, ver: number) =>
+      (
+        await call(
+          '/auth/change-password',
+          { current_password: current, password: 'replacement123' },
+          await sessionOf(changer, ver),
+          limited,
+        )
+      ).status;
+    // A success forgets the earlier failure; the replaced password then spends anew.
+    expect(await change('incorrect', 0)).toBe(400);
+    expect(await change(password, 0)).toBe(200);
+    expect(await change('incorrect', 1)).toBe(400);
+    expect(await change('incorrect', 1)).toBe(400);
+    expect(await change('replacement123', 1)).toBe(429);
+    const signIn = { email: `${changer}@example.test`, password: 'replacement123' };
+    expect((await call('/auth/login', signIn, undefined, limited)).status).toBe(429);
+
+    const linker = await account();
+    const link = async (secret: string) =>
+      (await call('/auth/link-google', { password: secret }, await sessionOf(linker, 0), limited))
+        .status;
+    expect(await link('incorrect')).toBe(401);
+    expect(await link('incorrect')).toBe(401);
+    expect(await link(password)).toBe(429);
+    expect(
+      (await call('/auth/login', { email: `${linker}@example.test`, password }, undefined, limited))
+        .status,
+    ).toBe(429);
+  });
+
   it('lets concurrent wrong guesses verify no more passwords than the email budget', async () => {
     await clearClientBudget();
     await db
