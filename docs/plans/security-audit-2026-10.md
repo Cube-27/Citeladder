@@ -67,8 +67,8 @@ schemes do not interoperate, and there is no compatibility shim.
 
 ## PR 2: items for the owner
 
-PR 2 adds a decisions record listing every item that needs the owner, each with
-a recommendation. These include the refund and dispute details (B50, B51),
+PR 1 shipped as #384. The [decisions record](security-audit-2026-10-decisions.md)
+lists every item that needs the owner, each with a recommendation. These include the refund and dispute details (B50, B51),
 Cloud Run ingress and deploy-identity scope, a per-user SSE cap, sign-out and
 member-removal side effects, and the remaining hardening. Items move to the
 [backlog](backlog.md) once the owner decides them. PR 2 changes no runtime
