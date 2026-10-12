@@ -157,9 +157,15 @@ export async function siteLinks(
   return {
     state: 'available',
     crawl_id: crawl.id,
-    versions: isNonEmpty(selected)
-      ? { extractor: selected[0].extractor_version, formula: selected[0].formula_version }
-      : null,
+    // Each distinct processing version pair once, so a mixed crawl shows all of them.
+    versions: [
+      ...new Map(
+        selected.map((row) => [
+          `${row.extractor_version}\u0000${row.formula_version}`,
+          { extractor: row.extractor_version, formula: row.formula_version },
+        ]),
+      ).values(),
+    ],
     items,
     // A requested page without link metrics in this crawl is named, never dropped silently.
     ...(pages.length && !args.cursor && rows.length <= count

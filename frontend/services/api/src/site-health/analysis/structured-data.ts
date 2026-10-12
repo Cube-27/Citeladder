@@ -93,16 +93,24 @@ type NestedJsonLd = { object: JsonObject; parentProperty: string };
 function* jsonObjects(node: unknown, depth = 0, parentProperty = ''): Generator<NestedJsonLd> {
   if (depth > limits.jsonld_depth) return;
   if (Array.isArray(node)) {
-    for (const child of node)
-      if (typeof child === 'object' && child !== null)
-        yield* jsonObjects(child, depth + 1, parentProperty);
+    // A list's items keep the property that holds the list.
+    for (const child of node) yield* nestedObjects(child, depth, parentProperty);
     return;
   }
   if (!isObject(node)) return;
   yield { object: node, parentProperty };
   for (const [key, child] of Object.entries(node))
-    if (typeof child === 'object' && child !== null)
-      yield* jsonObjects(child, depth + 1, key === '@graph' ? '' : key);
+    yield* nestedObjects(child, depth, key === '@graph' ? '' : key);
+}
+
+/** The JSON-LD objects within one child value, a level deeper. */
+function* nestedObjects(
+  child: unknown,
+  depth: number,
+  parentProperty: string,
+): Generator<NestedJsonLd> {
+  if (typeof child === 'object' && child !== null)
+    yield* jsonObjects(child, depth + 1, parentProperty);
 }
 
 /** A dotted one-level path; a list collapses to its first object. */

@@ -286,7 +286,7 @@ export async function currentIssueRules(db: Database, crawl: Crawl, analysisIds:
     order by a.id, i.finding_class, i.rule_id`.execute(db);
   for (const row of rows) {
     const classes = result.get(row.analysis_id) ?? {};
-    (classes[row.finding_class] ??= []).push(row.rule_id);
+    classes[row.finding_class] = [...(classes[row.finding_class] ?? []), row.rule_id];
     result.set(row.analysis_id, classes);
   }
   return result;

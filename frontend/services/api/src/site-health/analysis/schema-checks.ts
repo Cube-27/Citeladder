@@ -144,7 +144,9 @@ function byExpectedOrder(candidates: Block[], selected: Set<number>, expectedTyp
   const types = [...selected].map(typeOf);
   if (selected.size < 2 || new Set(types).size !== types.length) return selected;
   const rank = (index: number) => expectedTypes.indexOf(typeOf(index));
-  const first = [...selected].reduce((best, index) => (rank(index) < rank(best) ? index : best));
+  const [head, ...rest] = [...selected];
+  if (head === undefined) return selected;
+  const first = rest.reduce((best, index) => (rank(index) < rank(best) ? index : best), head);
   return new Set([first]);
 }
 

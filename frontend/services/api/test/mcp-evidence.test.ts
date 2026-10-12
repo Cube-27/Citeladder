@@ -947,6 +947,9 @@ it('reads the internal links of several pages in one call, by page URL rather th
     ],
   ]);
   expect(links.missing_site_url_ids).toEqual([missing]);
+  expect(links.versions).toEqual([
+    { extractor: policy.site_health.versions.extractor, formula: 'fixture' },
+  ]);
 });
 
 it('reports performance as not connected until a search source is connected, then as not projected', async () => {
