@@ -18,6 +18,8 @@ export type ArchitecturePage = {
   depth: number | null;
   inbound: number;
   outbound: number;
+  /** Outbound links placed in the page's main content, not its shared menus. */
+  contentOutbound: number;
   indexable: boolean | null;
   facts: Record<string, unknown>;
 };
@@ -65,7 +67,9 @@ function linking(pages: ArchitecturePage[]) {
   const incoming = pages.filter((page) => page.inbound > 0).length;
   const orphans = pages.filter((page) => page.kind !== 'homepage' && page.inbound === 0);
   return {
+    // Unique destinations per page, summed; site-wide menus repeat on every page.
     internal_link_count: pages.reduce((sum, page) => sum + page.outbound, 0),
+    content_link_count: pages.reduce((sum, page) => sum + page.contentOutbound, 0),
     pages_with_incoming_count: incoming,
     pages_with_incoming_percentage: pages.length
       ? Number((incoming / pages.length).toFixed(4))

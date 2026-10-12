@@ -21,7 +21,7 @@
     {
       "name": "get_project_business_context",
       "title": "Get project overview",
-      "description": "One overview of a project: business profile, competitors, active prompts, latest visibility, top Actions, Site Health and connected data. Pass sections to read fewer.",
+      "description": "One overview of a project: business profile, competitors, active prompts, latest visibility, top Actions, Site Health and connected data. Pass sections to read fewer; valid sections: profile, visibility, actions, prompts, site_health, crawlability, demand, performance, referrals, crawl_logs, integrations, search_intelligence.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -642,7 +642,7 @@
     {
       "name": "read_performance",
       "title": "Read search performance",
-      "description": "Search Console and GA4 totals for a range with an optional comparison. Pass dimension for a breakdown by query, page, country, device or day.",
+      "description": "Search Console and GA4 totals for a range with an optional comparison. range is one of 3_months, 6_months, custom, day, last_synced, month, week (default last_synced); custom needs start_date and end_date. Pass dimension for a breakdown by query, page, country, device or day. not_connected means no search data source is connected, which is not zero.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -868,7 +868,7 @@
     {
       "name": "read_site_links",
       "title": "Read internal links",
-      "description": "Internal link counts per page for a crawl, with sampled linking pages and anchors. Pass site_url_id (from read_site_pages) for one page.",
+      "description": "Internal link counts per page for a crawl, with sampled linking and linked pages and anchor diagnostics. Pass site_url_ids (from read_site_pages) to read several pages in one call.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -881,9 +881,14 @@
             "format": "uuid",
             "description": "A crawl id that read_site_health returned; omit for the latest crawl."
           },
-          "site_url_id": {
-            "type": "string",
-            "format": "uuid"
+          "site_url_ids": {
+            "minItems": 1,
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           },
           "cursor": {
             "type": "string",
@@ -903,7 +908,7 @@
     {
       "name": "read_site_pages",
       "title": "Read site pages",
-      "description": "Pages from a crawl with page type, scores and issue counts, paged. Use it to find pages by type or status; read_site_health gives the totals.",
+      "description": "Pages from a crawl, paged: URL, title, page type, status, scores, issue count and the rule ids of each page's issues by finding class. Pass rule_id (from read_site_health top_issues or an issue group) to list exactly the pages affected by that issue; filter by page_kind or status to find pages by type or status. read_site_health gives the totals.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -916,11 +921,50 @@
             "format": "uuid",
             "description": "A crawl id that read_site_health returned; omit for the latest crawl."
           },
+          "rule_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120,
+            "description": "A Site Health rule_id; returns only the pages with a current issue of it."
+          },
           "page_kind": {
-            "type": ["string", "null"]
+            "type": "string",
+            "enum": [
+              "about_contact",
+              "alternative",
+              "article",
+              "case_study_review",
+              "category",
+              "comparison",
+              "docs",
+              "editorial_index",
+              "faq",
+              "guide",
+              "homepage",
+              "how_to",
+              "listicle",
+              "local",
+              "other",
+              "pricing",
+              "product",
+              "service",
+              "trust_policy"
+            ]
           },
           "status": {
-            "type": ["string", "null"]
+            "type": "string",
+            "enum": [
+              "not_selected",
+              "not_measured",
+              "pending",
+              "running",
+              "completed",
+              "partially_completed",
+              "error",
+              "blocked",
+              "cancelled",
+              "error_or_blocked"
+            ]
           },
           "cursor": {
             "type": "string",
@@ -1091,7 +1135,7 @@
     {
       "name": "read_visibility_sources",
       "title": "Read cited sources",
-      "description": "Which domains or URLs engines cited in one run, how often, and whether you or competitors are listed on them. Use it to find the sources to earn a place on.",
+      "description": "Which domains or URLs engines cited in the latest or a chosen run, how often, and whether you or competitors are listed on them. level is domain (publishers) or url (pages); pass domain for its pages. Use it to find the sources to earn a place on.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -1099,10 +1143,14 @@
             "type": "string",
             "format": "uuid"
           },
+          "market_id": {
+            "type": "string",
+            "format": "uuid"
+          },
           "audit_id": {
             "type": "string",
             "format": "uuid",
-            "description": "A run id (audit_id) that read_visibility_overview returned."
+            "description": "A run id (audit_id); omit for the latest run."
           },
           "engine": {
             "type": "string",
@@ -1140,7 +1188,7 @@
             "maximum": 200
           }
         },
-        "required": ["project_id", "audit_id"],
+        "required": ["project_id"],
         "additionalProperties": false
       },
       "access": "read"

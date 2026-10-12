@@ -43,6 +43,7 @@ function page(
     depth: null,
     inbound: 0,
     outbound: 0,
+    contentOutbound: 0,
     indexable: null,
     facts: {},
     ...extra,
@@ -98,6 +99,14 @@ it('abstains on redirect collisions and breaks cycles while retaining an outside
   expect(
     ambiguous.hierarchy.find((row) => row.site_url_id === 'child')!.parent_site_url_id,
   ).toBeNull();
+});
+it('counts in-content links apart from the links that menus repeat on every page', () => {
+  const pages = [
+    page('home', '/', 'homepage', { depth: 0, outbound: 12, contentOutbound: 4 }),
+    page('a', '/a', 'product', { depth: 1, inbound: 1, outbound: 10, contentOutbound: 1 }),
+  ];
+  const { internal_linking } = buildArchitecture(pages, 'complete', context);
+  expect(internal_linking).toMatchObject({ internal_link_count: 22, content_link_count: 5 });
 });
 it('keeps observed orphan and duplicate counts under partial coverage but gates absence findings', () => {
   const pages = [

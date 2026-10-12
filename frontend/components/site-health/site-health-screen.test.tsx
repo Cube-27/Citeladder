@@ -35,6 +35,7 @@ describe('SiteHealthScreen — Website tab deep links', () => {
           nodes: [],
           internal_linking: {
             internal_link_count: 0,
+            content_link_count: 0,
             pages_with_incoming_count: 0,
             pages_with_incoming_percentage: null,
             orphan_page_count: null,

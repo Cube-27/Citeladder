@@ -5,7 +5,7 @@ import { visibilityTrendListSchema } from '@citeladder/contracts/visibility-tren
 import { WorkspaceScope } from '../db/workspace-scope.ts';
 import type { Database } from '../db/database.ts';
 import { parseDatetime } from '../http/datetimes.ts';
-import { getVisibility } from '../visibility/dashboard.ts';
+import { getVisibility, scopedSelection } from '../visibility/dashboard.ts';
 import { getVisibilityEvidence } from '../visibility/evidence.ts';
 import { getVisibilitySources } from '../visibility/sources.ts';
 import { getSourceUrlDetail } from '../visibility/source-url.ts';
@@ -299,7 +299,18 @@ export async function visibilitySources(
   { db, scope }: ProjectRead,
   args: Selection & Page & { level: 'domain' | 'url'; domain?: string | null },
 ): Promise<Evidence> {
-  const page = await getVisibilitySources(db, runs(scope, args), {
+  let selection: RunSelection;
+  try {
+    // One run, as the description promises: the named run or the market's latest.
+    selection = await scopedSelection(db, runs(scope, args));
+  } catch (error) {
+    if (error instanceof AnalysisNotFoundError && !args.audit_id)
+      return unavailable('no_completed_run');
+    throw error;
+  }
+  const auditId = selection.auditId;
+  if (auditId === null) throw new Error('A sources read selects exactly one run');
+  const page = await getVisibilitySources(db, selection, {
     domain: args.domain ?? null,
     sourceClass: null,
     standing: null,
@@ -311,12 +322,13 @@ export async function visibilitySources(
   });
   return {
     state: 'available',
+    audit_id: auditId,
     level: args.level,
     coverage: { responses: page.responses, prompts: page.prompts, citations: page.total_citations },
     items: page.items,
     pagination: pagination(page.items, page.next_cursor, page.total),
     as_of: page.as_of,
-    ...(args.audit_id ? { artifact_refs: [reference('audit', args.audit_id)] } : {}),
+    artifact_refs: [reference('audit', auditId)],
   };
 }
 

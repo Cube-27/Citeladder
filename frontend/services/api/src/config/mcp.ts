@@ -69,6 +69,8 @@ export const mcp = {
     overview_action_limit: 10,
     default_search_limit: 10,
     max_list_limit: 200,
+    // Pages one internal-link read names; each row carries sampled neighbors.
+    max_link_pages: 10,
     max_document_bytes: 256000,
     registration_max_body_bytes: 16384,
     authorization_max_query_bytes: 8192,

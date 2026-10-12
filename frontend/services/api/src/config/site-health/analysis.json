@@ -397,6 +397,22 @@
         "page_trait_content": "page_trait_content:",
         "page_kind_or_trait_content": "page_kind_or_trait_content:"
       },
+      "schema_relationship_properties": [
+        "author",
+        "brand",
+        "copyrightHolder",
+        "creator",
+        "founder",
+        "funder",
+        "manufacturer",
+        "memberOf",
+        "parentOrganization",
+        "provider",
+        "publisher",
+        "sourceOrganization",
+        "sponsor",
+        "subOrganization"
+      ],
       "expected_schema": {
         "homepage": {
           "page_kind": "homepage",

@@ -68,11 +68,22 @@ function profileUrl(node: HtmlElement, author: string) {
   return (link ? attribute(link, 'href').trim() : '').slice(0, limits.url_chars);
 }
 
-function authorCandidate(text: string, tag: string, authorTokens: boolean) {
+const hasAuthorToken = (tokens: Set<string>) =>
+  [...tokens].some((token) => AUTHOR_TOKENS.has(token));
+
+/** A bare Title-Case heading names an author only inside an author or byline container. */
+const insideAuthorContainer = (node: HtmlElement) =>
+  [...ancestors(node)].some((item) => hasAuthorToken(attributeTokens(item)));
+
+function authorCandidate(node: HtmlElement, text: string, authorTokens: boolean) {
   const byline = visibleByline(text);
   if (byline) return byline;
   if (authorTokens) return visibleAuthorName(text);
-  if (['h2', 'h3'].includes(tag) && !HEADING_EXCLUSIONS.has(text.toLowerCase()))
+  if (
+    ['h2', 'h3'].includes(node.tagName) &&
+    !HEADING_EXCLUSIONS.has(text.toLowerCase()) &&
+    insideAuthorContainer(node)
+  )
     return visibleAuthorName(text);
   return '';
 }
@@ -82,9 +93,9 @@ function observedAuthor(node: HtmlElement, text: string, tokens: Set<string>) {
   if (['p', 'small', 'span'].includes(node.tagName))
     author =
       stripTrailing((PUBLISHER.exec(text)?.[1] ?? '').trim(), '.,;:') || visibleByline(text, true);
-  const authorTokens = [...tokens].some((token) => AUTHOR_TOKENS.has(token));
+  const authorTokens = hasAuthorToken(tokens);
   if (!author && (authorTokens || ['h1', 'h2', 'h3'].includes(node.tagName)))
-    author = authorCandidate(text, node.tagName, authorTokens);
+    author = authorCandidate(node, text, authorTokens);
   return author;
 }
 

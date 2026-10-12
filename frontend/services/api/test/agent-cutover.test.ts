@@ -124,7 +124,7 @@ describe('served Agent cutover on PostgreSQL', () => {
       await (await app.request(`/api/v1/agent/chats/${accepted.chat_id}`, { headers })).json(),
     );
     expect(detail.messages.at(-1)?.content).toBe(
-      `${long}\n\nSaved outline in Website page format. Approve this outline before requesting a draft.`,
+      `${long}\n\nOutline saved in Website page format. Approve it before requesting a draft.`,
     );
     expect(detail.output?.latest_revision?.body).toBe('Outline body');
     // A second request for the finished turn never executes it again.

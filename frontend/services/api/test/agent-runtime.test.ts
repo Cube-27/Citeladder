@@ -407,7 +407,7 @@ describe('Agent runtime on PostgreSQL', () => {
       steps_used: 6,
     });
     expect(detail.output?.latest_revision?.body).toBe('First');
-    expect(detail.messages.at(-1)?.content).toBe('The plan is ready.\n\nSaved final.');
+    expect(detail.messages.at(-1)?.content).toBe('The plan is ready.\n\nDocument saved.');
   });
   it('keeps a staged document out of the chat when the turn fails before its reply', async () => {
     const scope = await fixtures.scope();
@@ -451,7 +451,7 @@ describe('Agent runtime on PostgreSQL', () => {
     ]);
     expect(detail.output).toMatchObject({ phase: 'outline', format_id: 'page' });
     expect(detail.messages.at(-1)?.content).toBe(
-      'Answer from supplied evidence.\n\nSaved outline in Website page format. Approve this outline before requesting a draft.',
+      'Answer from supplied evidence.\n\nOutline saved in Website page format. Approve it before requesting a draft.',
     );
     expect(detail.messages.filter((message) => message.role === 'agent')).toHaveLength(1);
   });
@@ -673,7 +673,7 @@ describe('Agent runtime on PostgreSQL', () => {
     expect(detail.messages.at(-1)).toMatchObject({
       role: 'agent',
       evidence_refs: [uri],
-      content: 'Read; invented.\n\nSaved final.',
+      content: 'Read; invented.\n\nDocument saved.',
       steps: [
         { kind: 'model', ordinal: 1 },
         { kind: 'skill', skill_id: 'plan' },
@@ -884,7 +884,7 @@ describe('Agent runtime on PostgreSQL', () => {
     let detail = await readChat(db, scope, run.chat_id);
     const original = detail.output!.latest_revision!;
     expect(original.phase).toBe('outline');
-    expect(detail.messages.at(-1)?.content).toContain('Saved outline');
+    expect(detail.messages.at(-1)?.content).toContain('Outline saved');
     await expect(
       fixtures.store().enqueue(scope, {
         chatId: run.chat_id,

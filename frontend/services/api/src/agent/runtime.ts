@@ -92,10 +92,11 @@ function withSummary(summary: PromptSummary) {
     context_manifest: sql<Json>`context_manifest || jsonb_build_object('prompt_summary', ${JSON.stringify(summary)}::jsonb)`,
   };
 }
+const SAVED_PHASE: Record<string, string> = { outline: 'Outline saved', draft: 'Draft saved' };
 function savedNotice(phase: string, formatLabel: string | null) {
   const format = formatLabel ? ` in ${formatLabel} format` : '';
-  const approval = phase === 'outline' ? ' Approve this outline before requesting a draft.' : '';
-  return `Saved ${phase}${format}.${approval}`;
+  const approval = phase === 'outline' ? ' Approve it before requesting a draft.' : '';
+  return `${SAVED_PHASE[phase] ?? 'Document saved'}${format}.${approval}`;
 }
 /** A turn never ends without a reply, even when the model wrote none. */
 function noReply(reads: number) {

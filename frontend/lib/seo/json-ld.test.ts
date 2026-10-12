@@ -120,9 +120,22 @@ describe('researchArticleJsonLd', () => {
       inLanguage: 'en',
       url: 'https://example.test/blog/geo-vs-seo',
       mainEntityOfPage: { '@type': 'WebPage', '@id': 'https://example.test/blog/geo-vs-seo' },
+      image: 'https://example.test/social/citeladder.png',
       author: organization,
       publisher: organization,
       dateModified: '2026-10-06',
     });
+  });
+
+  it("uses a guide's own image instead of the site social card when it has one", () => {
+    process.env.PUBLIC_WEBSITE_ORIGIN = 'https://example.test';
+    expect(
+      researchArticleJsonLd({
+        title: 'GEO vs SEO',
+        slug: '/blog/geo-vs-seo',
+        meta_description: 'Where to spend effort.',
+        image: '/blog/geo-vs-seo.png',
+      })?.image,
+    ).toBe('https://example.test/blog/geo-vs-seo.png');
   });
 });

@@ -12,7 +12,8 @@ import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
 import { actionFixture, type ActionSeed } from './action-support.ts';
 import { attachOrCreateAction } from '../src/opportunities/actions.ts';
 import { getVisibility } from '../src/visibility/dashboard.ts';
-import { SiteFixtures } from './site-health-fixtures.ts';
+import { SiteFixtures, type SiteSeed } from './site-health-fixtures.ts';
+import { seedImport } from './referral-fixtures.ts';
 
 const db = testDatabase();
 const fixtures = new VisibilityFixtures(db);
@@ -747,5 +748,256 @@ it('serves ads in ChatGPT answers with the same numbers as the Ads read', async 
     advertisers: [{ name: 'Rival', domain: 'rival.example', appearances: 1, share: 1 }],
     creatives: { items: [{ title: 'Rival A', landing_url: 'https://rival.example/a' }] },
     artifact_refs: [expect.objectContaining({ id: expect.stringContaining(auditId) })],
+  });
+});
+
+/** A finalized, measured page observed in the crawl. */
+async function sitePage(seed: SiteSeed, path: string) {
+  const page = await siteFixtures.page(seed, path, {}, { observed: true });
+  await db
+    .updateTable('site_page_analyses')
+    .set({
+      finalized_at: new Date(),
+      web_fundamentals_state: 'measured',
+      web_fundamentals_score: 80,
+      aeo_measurement_state: 'limited_evidence',
+    })
+    .where('id', '=', page.analysisId)
+    .execute();
+  return page;
+}
+/** A failing evaluation of `ruleId` on the page's current analysis, and its issue. */
+async function siteIssue(
+  seed: SiteSeed,
+  page: Awaited<ReturnType<typeof sitePage>>,
+  ruleId: string,
+) {
+  const rule = policy.site_health.rule_catalog.find((item) => item.rule_id === ruleId)!;
+  const { source_evaluation_ids } = await db
+    .selectFrom('site_page_analyses')
+    .select('source_evaluation_ids')
+    .where('id', '=', page.analysisId)
+    .executeTakeFirstOrThrow();
+  const evaluationId = await siteFixtures.evaluation(seed, page, ruleId, 'missing');
+  await db
+    .updateTable('site_page_analyses')
+    .set({ source_evaluation_ids: [...(source_evaluation_ids ?? []), evaluationId] })
+    .where('id', '=', page.analysisId)
+    .execute();
+  await db
+    .insertInto('site_issues')
+    .values({
+      id: randomUUID(),
+      workspace_id: seed.workspaceId,
+      project_id: seed.projectId,
+      crawl_id: seed.crawlId,
+      site_url_id: page.id,
+      analysis_id: page.analysisId,
+      evaluation_id: evaluationId,
+      source_artifact_id: page.artifactId,
+      rule_id: ruleId,
+      rule_version: rule.rule_version,
+      dimension: rule.dimension,
+      category: rule.category,
+      severity: rule.severity,
+      finding_class: rule.finding_class,
+      description: rule.description,
+      remediation: rule.remediation,
+      analyzer_version: policy.site_health.versions.analyzer,
+      created_at: new Date(),
+    })
+    .execute();
+}
+const siteMember = (seed: SiteSeed) => ({
+  kind: 'member' as const,
+  userId: seed.userId,
+  workspaceId: seed.workspaceId,
+  projectId: seed.projectId,
+});
+
+it("lists exactly the pages a Site Health rule affects, with each page's failing rules in compact rows", async () => {
+  const seed = await siteFixtures.crawl();
+  const titled = await sitePage(seed, '/pricing');
+  const described = await sitePage(seed, '/docs');
+  await sitePage(seed, '/clean');
+  await siteIssue(seed, titled, 'technical.title_present');
+  await siteIssue(seed, titled, 'technical.meta_description_present');
+  await siteIssue(seed, described, 'technical.meta_description_present');
+  const pages = (args: Record<string, unknown>) =>
+    dispatchTool(
+      db,
+      siteMember(seed),
+      'read_site_pages',
+      { project_id: seed.projectId, ...args },
+      origin,
+    );
+
+  const affected = await pages({ rule_id: 'technical.meta_description_present' });
+  expect(affected.items).toEqual([
+    {
+      site_url_id: described.id,
+      url: 'https://example.test/docs',
+      title: null,
+      page_kind: 'product',
+      status: 'completed',
+      web_fundamentals_score: 80,
+      aeo_readiness_score: null,
+      aeo_measurement_state: 'limited_evidence',
+      issue_count: 1,
+      issue_rules: { advisory: ['technical.meta_description_present'] },
+      inbound_count: null,
+      depth_from_home: null,
+      record_uri: `citeladder://site_page/${described.analysisId}`,
+    },
+    expect.objectContaining({
+      site_url_id: titled.id,
+      issue_count: 2,
+      issue_rules: {
+        advisory: ['technical.meta_description_present'],
+        defect: ['technical.title_present'],
+      },
+    }),
+  ]);
+  const one = await pages({ rule_id: 'technical.title_present', limit: 1 });
+  expect((one.items as { site_url_id: string }[]).map((item) => item.site_url_id)).toEqual([
+    titled.id,
+  ]);
+  expect((one.pagination as { next_cursor: string | null }).next_cursor).toBeNull();
+  // A cursor is bound to its filter, and an unknown rule or page kind is refused, not "no pages".
+  const firstPage = await pages({ rule_id: 'technical.meta_description_present', limit: 1 });
+  await expect(
+    pages({
+      rule_id: 'technical.title_present',
+      cursor: (firstPage.pagination as { next_cursor: string }).next_cursor,
+    }),
+  ).rejects.toThrow('cursor is invalid');
+  await expect(pages({ rule_id: 'technical.no_such_rule' })).rejects.toThrow(
+    "Unknown rule_id 'technical.no_such_rule'",
+  );
+  await expect(pages({ page_kind: 'categories' })).rejects.toThrow('page_kind');
+});
+
+it('reads the internal links of several pages in one call, by page URL rather than internal neighbor ids', async () => {
+  const seed = await siteFixtures.crawl();
+  const [home, docs, blog] = [
+    await sitePage(seed, '/'),
+    await sitePage(seed, '/docs'),
+    await sitePage(seed, '/blog'),
+  ];
+  const metrics = async (page: typeof home, inbound: number) =>
+    db
+      .insertInto('site_page_link_metrics')
+      .values({
+        id: randomUUID(),
+        workspace_id: seed.workspaceId,
+        project_id: seed.projectId,
+        crawl_id: seed.crawlId,
+        site_url_id: page.id,
+        inbound_count: inbound,
+        outbound_count: 1,
+        main_content_inbound_count: inbound,
+        main_content_outbound_count: 1,
+        nofollow_inbound_count: 0,
+        depth_from_home: 1,
+        source_page_count: inbound,
+        authority_share: 0,
+        authority_rank: 1,
+        anchor_diagnostics: JSON.stringify([]),
+        top_inbound: JSON.stringify([
+          {
+            rel: [],
+            url: 'https://example.test/',
+            nofollow: false,
+            site_url_id: home.id,
+            anchor_count: 2,
+            main_content: true,
+          },
+        ]),
+        top_outbound: JSON.stringify([]),
+        extractor_version: policy.site_health.versions.extractor,
+        formula_version: policy.site_health.link_metrics.formula_version,
+        created_at: new Date(),
+      })
+      .execute();
+  await metrics(docs, 3);
+  await metrics(blog, 5);
+  const missing = randomUUID();
+  const links = await dispatchTool(
+    db,
+    siteMember(seed),
+    'read_site_links',
+    { project_id: seed.projectId, site_url_ids: [blog.id, docs.id, missing] },
+    origin,
+  );
+  const items = links.items as { url: string; inbound_count: number; top_inbound: unknown[] }[];
+  expect(
+    items
+      .map((item) => [item.url, item.inbound_count, item.top_inbound])
+      .sort((a, b) => String(a[0]).localeCompare(String(b[0]))),
+  ).toEqual([
+    [
+      'https://example.test/blog',
+      5,
+      [{ url: 'https://example.test/', anchor_count: 2, main_content: true, nofollow: false }],
+    ],
+    [
+      'https://example.test/docs',
+      3,
+      [{ url: 'https://example.test/', anchor_count: 2, main_content: true, nofollow: false }],
+    ],
+  ]);
+  expect(links.missing_site_url_ids).toEqual([missing]);
+  expect(links.versions).toEqual({
+    extractor: policy.site_health.versions.extractor,
+    formula: policy.site_health.link_metrics.formula_version,
+  });
+});
+
+it('reports performance as not connected until a search source is connected, then as not projected', async () => {
+  expect(await read('read_performance', { range: 'month' })).toMatchObject({
+    state: 'unavailable',
+    reason: 'not_connected',
+    readiness_stage: 'not_connected',
+  });
+  await seedImport(db, {
+    ...tenant,
+    dataset: 'gsc_day_daily',
+    window: ['2026-09-01', '2026-09-30'],
+    provider: 'gsc',
+  });
+  expect(await read('read_performance', { range: '3_months' })).toMatchObject({
+    state: 'unavailable',
+    reason: 'performance_range_not_projected',
+    readiness_stage: 'connected',
+  });
+});
+
+it('reads cited sources for the latest run when no audit_id is named', async () => {
+  expect(await read('read_visibility_sources')).toMatchObject({
+    state: 'unavailable',
+    reason: 'no_completed_run',
+  });
+  const first = await fixtures.audit(tenant, { completedAt: new Date('2026-10-01T00:00:00Z') });
+  await fixtures.execution(tenant, {
+    auditId: first,
+    answerText: 'Acme answer',
+    analysis: { citations: [{ url: 'https://publisher.example/a', domain: 'publisher.example' }] },
+  });
+  expect(await read('read_visibility_sources')).toMatchObject({
+    state: 'available',
+    audit_id: first,
+    coverage: { responses: 1 },
+    items: [expect.objectContaining({ key: 'publisher.example' })],
+    artifact_refs: [expect.objectContaining({ id: first })],
+  });
+  const latest = await fixtures.audit(tenant, { completedAt: new Date('2026-10-02T00:00:00Z') });
+  expect(await read('read_visibility_sources')).toMatchObject({
+    audit_id: latest,
+    coverage: { responses: 0 },
+    items: [],
+  });
+  expect(await read('read_visibility_sources', { audit_id: first })).toMatchObject({
+    audit_id: first,
+    coverage: { responses: 1 },
   });
 });

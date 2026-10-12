@@ -48,6 +48,25 @@ describe('structurally bounded Agent context and tool results', () => {
     expect(supplied.omissions).toContain('package.sections.issue_group.occurrences');
     expect(supplied.text.length).toBeLessThanOrEqual(input.budget.context_package_max_chars);
   });
+  it('gives the model the context summary without its record provenance', () => {
+    const manifest = {
+      version: 'agent-context-1',
+      refs: {},
+      instructions: null,
+      action: null,
+      mentions: [],
+      package: {
+        ...emptyPackage,
+        summary: {
+          page_count: 2,
+          provenance: [{ analysis_id: '58fde15a-53a5-4ffc-b32b-8fd34a67ecd8' }],
+        },
+      },
+    };
+    const supplied = suppliedManifest(manifest);
+    expect(JSON.parse(supplied.text).package.summary).toEqual({ page_count: 2 });
+    expect(manifest.package.summary.provenance).toHaveLength(1);
+  });
   it('drops oversized company background without trimming the selected issue or page', () => {
     const group = {
       affected_url_count: 94,

@@ -8,6 +8,9 @@ import { uuidV5 } from '../../uuid-v5.ts';
 const reads = policy.site_health.reads;
 const RULES = new Map(policy.site_health.rule_catalog.map((rule) => [rule.rule_id, rule]));
 
+/** Whether the catalog defines this rule. */
+export const isKnownRule = (ruleId: string) => RULES.has(ruleId);
+
 /** Critical first; a severity the catalog no longer defines sorts after every known one. */
 const SEVERITY_RANK = new Map(
   ['critical', 'high', 'medium', 'low', 'info'].map((severity, rank) => [severity, rank]),

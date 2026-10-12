@@ -119,6 +119,22 @@ describe('page checklist', () => {
     }
   });
 
+  it('reads a Title-Case heading as an author only inside an author container', () => {
+    const legal = facts(
+      `<main><h1>Privacy policy</h1><p class='updated'>Updated 2026-09-24</p>
+      <h2>Overview</h2><p>We describe what we collect.</p><h2>Subprocessors</h2><p>Hosting.</p></main>`,
+      'https://example.test/privacy',
+    );
+    expect(legal.authorship.visible_byline).toBe('');
+    expect(analyzePage(legal, context).assessment.evidence.classified_by).not.toBe(
+      'byline_and_date',
+    );
+    const authored = facts(
+      `<main><h1>Notes</h1><div class='author-card'><h3>Jane Doe</h3></div><p>Body.</p></main>`,
+    );
+    expect(authored.authorship.visible_byline).toBe('Jane Doe');
+  });
+
   it('reports actual primary heading skips and abstains when the outline is unavailable', () => {
     const headings = (body: string) =>
       evaluations(`<main><h1>Notes</h1>${body}</main>`, 'https://example.test/blog/notes').get(
@@ -481,6 +497,36 @@ describe('primary schema entity', () => {
     expect(types).toEqual(['BlogPosting', 'Blog']);
     expect(rows.get('aeo.schema_required_valid')!.outcome).toBe('satisfied');
   });
+
+  it('picks a homepage Organization over its WebSite and ignores a nested parent organization', () => {
+    const organization = {
+      '@type': 'Organization',
+      '@id': 'https://acme.test/#organization',
+      name: 'Acme',
+      url: 'https://acme.test/',
+      parentOrganization: { '@type': 'Organization', name: 'Holding', url: 'https://hold.test/' },
+    };
+    const { rows } = listing(
+      {
+        '@context': 'https://schema.org',
+        '@graph': [
+          organization,
+          {
+            '@type': 'WebSite',
+            name: 'Acme',
+            url: 'https://acme.test/',
+            publisher: { '@type': 'Organization', '@id': 'https://acme.test/#organization' },
+          },
+        ],
+      },
+      'https://acme.test/',
+      'homepage',
+    );
+    expect(rows.get('aeo.schema_required_valid')).toMatchObject({
+      outcome: 'satisfied',
+      evidence: { schema_type: 'Organization', missing: [] },
+    });
+  });
 });
 
 describe('page traits', () => {
@@ -738,6 +784,53 @@ describe('site audit regressions', () => {
       ['crossref.org', 'references_section'],
       ['arxiv.org', 'references_section'],
       ['aclanthology.org', 'references_section'],
+    ]);
+  });
+
+  it('opens a sources section from a heading that leads with a configured name', () => {
+    const domains = (heading: string) =>
+      page(
+        `<main><article><h1>Comparing visibility tools</h1>
+        <p>Teams compare tools by the engines they track and how often they refresh.</p>
+        <h2>${heading}</h2><ol><li><a href="https://openai.com/paper">OpenAI</a></li>
+        <li><a href="https://arxiv.org/paper">arXiv</a></li></ol></article></main>`,
+      ).source_support.attached_sources.map((source) => [source.domain, source.relationship]);
+    const attached = [
+      ['openai.com', 'references_section'],
+      ['arxiv.org', 'references_section'],
+    ];
+    expect(domains('Sources and review date')).toEqual(attached);
+    expect(domains('References and further reading')).toEqual(attached);
+    expect(domains('Resourceful teams')).toEqual([]);
+  });
+
+  it('reads a breadcrumb trail only from BreadcrumbList markup, not a hub ItemList', () => {
+    const list = (type: string) => ({
+      '@type': type,
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, item: 'https://example.test/compare/a' },
+        { '@type': 'ListItem', position: 2, item: 'https://example.test/compare/b' },
+      ],
+    });
+    const blocks = page(
+      '<main><h1>Compare</h1></main>',
+      ld({
+        '@context': 'https://schema.org',
+        '@graph': [
+          {
+            '@type': 'CollectionPage',
+            url: 'https://example.test/compare',
+            mainEntity: list('ItemList'),
+          },
+          list('BreadcrumbList'),
+        ],
+      }),
+      'https://example.test/compare',
+    ).structured_data.blocks as { type: string; breadcrumb_items: string[] }[];
+    expect(blocks.map((block) => [block.type, block.breadcrumb_items])).toEqual([
+      ['CollectionPage', []],
+      ['ItemList', []],
+      ['BreadcrumbList', ['https://example.test/compare/a', 'https://example.test/compare/b']],
     ]);
   });
 

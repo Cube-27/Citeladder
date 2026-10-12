@@ -590,6 +590,8 @@ type Planned = Entry & {
   observe: boolean;
   analyze: boolean;
   discover: boolean;
+  /** Already observed in this crawl, as a recrawl's monitored pages are from its start. */
+  seen: boolean;
 };
 
 /** The batch's known state, in URL-hash space, updated as each admission is decided. */
@@ -615,9 +617,12 @@ class AdmissionLedger {
     this.active.add(item.hash);
     return true;
   }
-  /** Count toward the ceiling only what is new: a sample's observation, otherwise its discover task. */
-  count(hash: string, sample: boolean, discover: boolean) {
-    const known = sample ? this.observed.has(hash) : discover && this.discovering.has(hash);
+  /**
+   * Count toward the ceiling only what is new: a sample's observation, otherwise
+   * its discover task, unless the crawl already observed (and so counted) it.
+   */
+  count(hash: string, seen: boolean, sample: boolean, discover: boolean) {
+    const known = sample ? seen : discover && (seen || this.discovering.has(hash));
     if (!known) this.admitted++;
   }
 }
@@ -645,7 +650,8 @@ function planAdmission(
     if (sample && twin && ledger.observed.has(twin)) continue;
     const selected = ledger.select(entry.item);
     const observe = sample || selected;
-    ledger.count(hash, sample, discover);
+    const seen = ledger.observed.has(hash);
+    ledger.count(hash, seen, sample, discover);
     if (observe) ledger.observed.add(hash);
     if (discover) ledger.discovering.add(hash);
     planned.push({
@@ -655,6 +661,7 @@ function planAdmission(
       observe,
       analyze: selected && (sample || !options.enqueueChildren),
       discover,
+      seen,
     });
   }
   return { planned, remaining: ledger.remaining };
@@ -700,7 +707,7 @@ async function writeAdmission(
       })),
     settings.maxAttempts,
   );
-  const discoverNew = await enqueueSiteTasks(
+  const discovering = await enqueueSiteTasks(
     trx,
     crawl,
     'discover',
@@ -713,6 +720,9 @@ async function writeAdmission(
       })),
     settings.maxAttempts,
   );
+  // The crawl's observation counter already holds the pages it had observed.
+  const seen = new Set(planned.flatMap((entry) => (entry.seen ? [entry.item.hash] : [])));
+  const discoverNew = discovering.filter((hash) => !seen.has(hash)).length;
   await markFrontierAdmitted(
     trx,
     crawl,

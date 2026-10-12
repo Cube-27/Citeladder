@@ -14,6 +14,7 @@ import { readAiReferrals } from '../analytics/ai-referrals.ts';
 import { queryEvidencePage } from '../demand/reads.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { ApiError } from '../errors.ts';
+import { readProjectReadiness } from '../integrations/readiness.ts';
 import { getPerformance, getPerformanceTable } from '../traffic/performance.ts';
 import { canonicalPage } from '../traffic/normalization.ts';
 import { pathIdentity } from '../crawl-logs/identity.ts';
@@ -51,7 +52,16 @@ export async function performanceRead(
     formula: dashboard.formula_version,
     normalization: dashboard.normalization_version,
   };
-  if (!snapshotId) return unavailable('performance_range_not_projected');
+  if (!snapshotId) {
+    // Nothing connected is its own state, not a range that has yet to be projected.
+    const { stage } = await readProjectReadiness(db, scope);
+    return {
+      ...unavailable(
+        stage === 'not_connected' ? 'not_connected' : 'performance_range_not_projected',
+      ),
+      readiness_stage: stage,
+    };
+  }
   const refs = [
     reference('traffic_snapshot', snapshotId),
     ...(dashboard.comparison?.snapshot_id

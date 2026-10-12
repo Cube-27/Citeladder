@@ -237,7 +237,9 @@ refuses and logs to `<git-dir>/api-test.log`. After a baseline change the owner
 resets that database (`scripts/reset-db.ps1`). Tests never read `.env`
 (`test/environment.ts` sets `CITELADDER_DISABLE_DOTENV`), and the schema,
 bootstrap and seed tests create and drop their own `citeladder_*_test_*`
-databases on that server.
+databases on that server. Before each file, `test/queue-isolation.ts` settles
+the active crawls and tasks of fixture workspaces only (named `Workspace <id>`),
+so a test run never ends work the local app has in progress.
 
 ```bash
 # from frontend/

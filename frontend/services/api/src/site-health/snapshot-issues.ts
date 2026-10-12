@@ -1,4 +1,8 @@
-/** Immutable issue counts and ranked groups over the terminal evaluation manifest. */
+/**
+ * Issue counts and ranked groups over the terminal evaluation manifest. The
+ * snapshot's manifest grows once more when the site-level architecture
+ * evaluations that run after it are folded in (`addArchitectureIssues`).
+ */
 import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
 import { issueImpact } from './reads/rules.ts';

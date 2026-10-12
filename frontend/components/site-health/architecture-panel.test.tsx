@@ -71,6 +71,7 @@ function architecture(overrides: Record<string, unknown> = {}) {
     ],
     internal_linking: {
       internal_link_count: 8,
+      content_link_count: 5,
       pages_with_incoming_count: 2,
       pages_with_incoming_percentage: 0.6667,
       orphan_page_count: 1,
@@ -117,7 +118,8 @@ describe('Architecture panel', () => {
     expect(screen.getByRole('region', { name: 'Observed hierarchy pages' })).toBeInTheDocument();
     // Persisted summaries, not recomputed ones.
     expect(screen.getByText('67%')).toBeInTheDocument();
-    expect(screen.getByText('8')).toBeInTheDocument();
+    expect(screen.getByText('5')).toBeInTheDocument();
+    expect(screen.getByText('8 including menus')).toBeInTheDocument();
   });
 
   it('renders the persisted parent hierarchy and relationship source', async () => {

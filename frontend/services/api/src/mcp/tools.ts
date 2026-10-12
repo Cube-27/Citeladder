@@ -6,6 +6,7 @@ import { performanceDimensionSchema } from '@citeladder/contracts/performance';
 import { policy } from '../config.ts';
 import { crawlLogs } from '../config/crawl-logs.ts';
 import type { Database } from '../db/database.ts';
+import { PAGE_STATUS_FILTERS } from '../site-health/reads/page-rows.ts';
 import { mcpPolicy } from './config.ts';
 import {
   authorizeProject,
@@ -134,8 +135,7 @@ export const definitions = {
   }),
   get_project_business_context: tool({
     title: 'Get project overview',
-    description:
-      'One overview of a project: business profile, competitors, active prompts, latest visibility, top Actions, Site Health and connected data. Pass sections to read fewer.',
+    description: `One overview of a project: business profile, competitors, active prompts, latest visibility, top Actions, Site Health and connected data. Pass sections to read fewer; valid sections: ${overviewSections.join(', ')}.`,
     schema: z.strictObject({ ...project, sections: optional(z.array(z.enum(overviewSections))) }),
     read: ({ db, principal, origin }, args) =>
       businessContext(db, principal, args.project_id, origin, args.sections ?? undefined),
@@ -266,10 +266,11 @@ export const definitions = {
   read_visibility_sources: projectTool({
     title: 'Read cited sources',
     description:
-      'Which domains or URLs engines cited in one run, how often, and whether you or competitors are listed on them. Use it to find the sources to earn a place on.',
+      'Which domains or URLs engines cited in the latest or a chosen run, how often, and whether you or competitors are listed on them. level is domain (publishers) or url (pages); pass domain for its pages. Use it to find the sources to earn a place on.',
     schema: z.strictObject({
       ...project,
-      audit_id: run,
+      market_id,
+      audit_id: optional(run.describe('A run id (audit_id); omit for the latest run.')),
       engine,
       cohort,
       level: z.enum(['domain', 'url']).default('domain'),
@@ -345,12 +346,20 @@ export const definitions = {
   read_site_pages: projectTool({
     title: 'Read site pages',
     description:
-      'Pages from a crawl with page type, scores and issue counts, paged. Use it to find pages by type or status; read_site_health gives the totals.',
+      "Pages from a crawl, paged: URL, title, page type, status, scores, issue count and the rule ids of each page's issues by finding class. Pass rule_id (from read_site_health top_issues or an issue group) to list exactly the pages affected by that issue; filter by page_kind or status to find pages by type or status. read_site_health gives the totals.",
     schema: z.strictObject({
       ...project,
       crawl_id,
-      page_kind: optional(z.string()),
-      status: optional(z.string()),
+      rule_id: optional(
+        z
+          .string()
+          .trim()
+          .min(1)
+          .max(120)
+          .describe('A Site Health rule_id; returns only the pages with a current issue of it.'),
+      ),
+      page_kind: optional(z.enum(policy.site_health.page_analysis.classification.page_kinds)),
+      status: optional(z.enum(PAGE_STATUS_FILTERS)),
       ...page,
     }),
     read: sitePages,
@@ -358,11 +367,11 @@ export const definitions = {
   read_site_links: projectTool({
     title: 'Read internal links',
     description:
-      'Internal link counts per page for a crawl, with sampled linking pages and anchors. Pass site_url_id (from read_site_pages) for one page.',
+      'Internal link counts per page for a crawl, with sampled linking and linked pages and anchor diagnostics. Pass site_url_ids (from read_site_pages) to read several pages in one call.',
     schema: z.strictObject({
       ...project,
       crawl_id,
-      site_url_id: optional(uuid),
+      site_url_ids: optional(z.array(uuid).min(1).max(mcpPolicy.max_link_pages)),
       ...page,
     }),
     read: siteLinks,
@@ -438,8 +447,7 @@ export const definitions = {
   }),
   read_performance: projectTool({
     title: 'Read search performance',
-    description:
-      'Search Console and GA4 totals for a range with an optional comparison. Pass dimension for a breakdown by query, page, country, device or day.',
+    description: `Search Console and GA4 totals for a range with an optional comparison. range is one of ${policy.traffic.PERFORMANCE_RANGES.join(', ')} (default ${policy.traffic.PERFORMANCE_DEFAULT_RANGE}); custom needs start_date and end_date. Pass dimension for a breakdown by query, page, country, device or day. not_connected means no search data source is connected, which is not zero.`,
     schema: z.strictObject({
       ...project,
       range: optional(z.enum(policy.traffic.PERFORMANCE_RANGES)),

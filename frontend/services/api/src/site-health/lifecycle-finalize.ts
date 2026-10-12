@@ -1,7 +1,6 @@
 /** Cross-page terminal evaluations and final revisions share the caller's crawl lock. */
 import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
-import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { record, strings } from '../db/json.ts';
 import { compareText, scalarText } from '../text-order.ts';
@@ -16,17 +15,19 @@ import {
 } from './resolution-evidence.ts';
 import { publishFinalPageAnalyses } from './terminal-analysis.ts';
 import type { Crawl } from './task-fence.ts';
+import { hardExcluded } from './url-admission.ts';
 import { canonicalUrl, canonicalIdentity } from './url-identity.ts';
 
 type Facts = Record<string, unknown>;
 type Alternates = Map<string, Facts[]>;
 
-const excludedPaths = policy.site_health.page_analysis.acquisition.hard_exclusion_path_patterns.map(
-  (pattern) => new RegExp(pattern),
-);
 const sorted = (values: Iterable<string>) => [...new Set(values)].sort(compareText);
 
-/** One graph edge per source and target; a path admission refuses is never an edge. */
+/**
+ * One graph edge per source and target. A URL admission refuses (an excluded
+ * host such as `app.`, path, query or asset extension) is never fetched, so it
+ * is never an edge nor a target the broken-link check waits on.
+ */
 function internalTargets(finalUrl: string, facts: Facts) {
   const anchors = record(facts.links).anchors;
   const result = new Set<string>();
@@ -34,8 +35,7 @@ function internalTargets(finalUrl: string, facts: Facts) {
     const anchor = record(value);
     if (!anchor.is_internal) continue;
     const url = canonicalUrl(scalarText(anchor.url), finalUrl);
-    if (url && !excludedPaths.some((pattern) => pattern.test(new URL(url).pathname)))
-      result.add(url);
+    if (url && !hardExcluded(new URL(url))) result.add(url);
   }
   return sorted(result);
 }
@@ -178,9 +178,11 @@ export async function finalizeCrawlAnalyses(db: Database, crawl: Crawl) {
   }
   const rootUrl = canonicalUrl(crawl.root_url);
   const rootHash = rootUrl ? canonicalIdentity(rootUrl).hash : '';
-  const linked = new Set(
-    rows.flatMap((row) => internalTargets(row.final_url, record(row.normalized_facts))),
+  // Admission checks each target in full, so each row's targets are found once.
+  const targets = new Map(
+    rows.map((row) => [row.id, internalTargets(row.final_url, record(row.normalized_facts))]),
   );
+  const linked = new Set([...targets.values()].flat());
   const recorded = await recordedRules(
     db,
     crawl,
@@ -191,7 +193,7 @@ export async function finalizeCrawlAnalyses(db: Database, crawl: Crawl) {
     const evaluations = [
       hreflang(canonicalUrl(row.final_url), facts, pages, resolutions),
       canonicalResolution(canonicalDeclarations(facts), row.final_url, resolutions),
-      resolutionSet(internalTargets(row.final_url, facts), resolutions),
+      resolutionSet(targets.get(row.id) ?? [], resolutions),
     ];
     if (row.url_hash === rootHash)
       evaluations.push(...(await rootEvaluations(db, crawl, linked, resolutions))); // NOSONAR: only the root page.

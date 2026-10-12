@@ -40,6 +40,8 @@ export type SchemaBlock = {
   type: string;
   syntax: 'json-ld' | 'microdata';
   entity_index?: number;
+  /** The JSON-LD property nesting this object (`publisher`, `author`…); '' at the top level. */
+  parent_property?: string;
   required: string[];
   present: string[];
   missing: string[];
@@ -85,16 +87,30 @@ const cleanTypes = (value: unknown) => [
   ...new Set((Array.isArray(value) ? value : [value]).map(cleanType).filter(Boolean)),
 ];
 
-function* jsonObjects(node: unknown, depth = 0): Generator<JsonObject> {
+/** A JSON-LD object and the property that nests it: '' at the top level or in `@graph`. */
+type NestedJsonLd = { object: JsonObject; parentProperty: string };
+
+function* jsonObjects(node: unknown, depth = 0, parentProperty = ''): Generator<NestedJsonLd> {
   if (depth > limits.jsonld_depth) return;
-  let children: unknown[] = [];
-  if (Array.isArray(node)) children = node;
-  else if (isObject(node)) {
-    yield node;
-    children = Object.values(node);
+  if (Array.isArray(node)) {
+    // A list's items keep the property that holds the list.
+    for (const child of node) yield* nestedObjects(child, depth, parentProperty);
+    return;
   }
-  for (const child of children)
-    if (typeof child === 'object' && child !== null) yield* jsonObjects(child, depth + 1);
+  if (!isObject(node)) return;
+  yield { object: node, parentProperty };
+  for (const [key, child] of Object.entries(node))
+    yield* nestedObjects(child, depth, key === '@graph' ? '' : key);
+}
+
+/** The JSON-LD objects within one child value, a level deeper. */
+function* nestedObjects(
+  child: unknown,
+  depth: number,
+  parentProperty: string,
+): Generator<NestedJsonLd> {
+  if (typeof child === 'object' && child !== null)
+    yield* jsonObjects(child, depth + 1, parentProperty);
 }
 
 /** A dotted one-level path; a list collapses to its first object. */
@@ -182,7 +198,7 @@ function productEnrichment(object: JsonObject): SchemaProduct {
   };
 }
 
-function enrichment(object: JsonObject) {
+function enrichment(object: JsonObject, type: string) {
   const sameAs = typeof object.sameAs === 'string' ? [object.sameAs] : object.sameAs;
   return {
     schema_id: bounded(relationshipUrl(object['@id']), limits.same_as_chars),
@@ -203,13 +219,17 @@ function enrichment(object: JsonObject) {
     is_part_of_url: bounded(relationshipUrl(object.isPartOf), limits.same_as_chars),
     main_entity_id: bounded(relationshipUrl(object.mainEntity), limits.same_as_chars),
     main_entity_of_page_id: bounded(relationshipUrl(object.mainEntityOfPage), limits.same_as_chars),
-    breadcrumb_items: breadcrumbItems(object.itemListElement),
+    // Only a BreadcrumbList's items are a trail; a CollectionPage's ItemList lists children.
+    breadcrumb_items: type === 'BreadcrumbList' ? breadcrumbItems(object.itemListElement) : [],
     product: productEnrichment(object),
   };
 }
 
 /** One block per recognized type; every block names the object it came from. */
-function objectBlocks(object: JsonObject, entityIndex: number): SchemaBlock[] {
+function objectBlocks(
+  { object, parentProperty }: NestedJsonLd,
+  entityIndex: number,
+): SchemaBlock[] {
   return cleanTypes(object['@type'])
     .filter((type) => RECOGNIZED.has(type))
     .map((type) => {
@@ -220,11 +240,12 @@ function objectBlocks(object: JsonObject, entityIndex: number): SchemaBlock[] {
         type,
         syntax: 'json-ld',
         entity_index: entityIndex,
+        parent_property: parentProperty,
         required,
         present,
         missing,
         valid: !missing.length,
-        ...enrichment(object),
+        ...enrichment(object, type),
       };
     });
 }
@@ -234,8 +255,8 @@ function objectBlocks(object: JsonObject, entityIndex: number): SchemaBlock[] {
  * only as `SoftwareApplication` or `Event` has structured data even though no
  * deeper check reads that type.
  */
-export function declaredSchemaTypes(objects: JsonObject[], root: HtmlNode, maxTypes: number) {
-  const types = new Set(objects.flatMap((object) => cleanTypes(object['@type'])));
+export function declaredSchemaTypes(objects: NestedJsonLd[], root: HtmlNode, maxTypes: number) {
+  const types = new Set(objects.flatMap(({ object }) => cleanTypes(object['@type'])));
   for (const node of elements(root))
     if (hasAttribute(node, 'itemscope'))
       for (const candidate of attribute(node, 'itemtype').split(/\s+/u)) {
@@ -246,8 +267,8 @@ export function declaredSchemaTypes(objects: JsonObject[], root: HtmlNode, maxTy
 }
 
 /** Every object in the page's JSON-LD scripts, in document order, each script parsed once. */
-export function jsonLdObjects(raw: string[]): JsonObject[] {
-  const objects: JsonObject[] = [];
+export function jsonLdObjects(raw: string[]): NestedJsonLd[] {
+  const objects: NestedJsonLd[] = [];
   for (const body of raw) {
     let parsed: unknown;
     try {
@@ -260,7 +281,7 @@ export function jsonLdObjects(raw: string[]): JsonObject[] {
   return objects;
 }
 
-export function jsonLdBlocks(objects: JsonObject[], maxBlocks: number): SchemaBlock[] {
+export function jsonLdBlocks(objects: NestedJsonLd[], maxBlocks: number): SchemaBlock[] {
   const blocks: SchemaBlock[] = [];
   for (const [entityIndex, object] of objects.entries()) {
     blocks.push(...objectBlocks(object, entityIndex));

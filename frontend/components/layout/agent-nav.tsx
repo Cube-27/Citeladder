@@ -109,7 +109,8 @@ function ChatHistory({
       <SearchField
         value={search}
         onValueChange={setSearch}
-        pending={chats.isFetching && !chats.isFetchingNextPage}
+        // Only a new search shows the spinner; background polls while a chat runs do not.
+        pending={chats.isFetching && !chats.isFetchingNextPage && !chats.isRefetching}
         aria-label="Search chats"
         placeholder="Search chats"
         size="compact"

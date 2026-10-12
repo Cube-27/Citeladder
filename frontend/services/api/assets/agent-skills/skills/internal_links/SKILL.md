@@ -18,7 +18,7 @@ Make important pages easy to reach from relevant content, and guide readers to t
 
 - `read_site_health` for the latest crawl and its coverage (pages crawled, crawl limits, date).
 - `read_site_pages` with that `crawl_id` for page facts and each page's `site_url_id`.
-- `read_site_links` with the `crawl_id` (and a page's `site_url_id`) for inbound and outbound link counts and a sample of linked pages. These are aggregates, not a complete link graph.
+- `read_site_links` with the `crawl_id` for inbound and outbound link counts across the site. These are aggregates, not a complete link graph. For the few priority targets the plan is about, read their own links in one call with their `site_url_ids`.
 - `get_project_business_context` for the conversion pages that matter.
 
 If the priority pages are not known, propose a small map (money, hub, support, trust pages) from what pages actually do, and say it is a proposal.

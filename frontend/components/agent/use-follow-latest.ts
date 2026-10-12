@@ -33,6 +33,18 @@ export function useFollowLatest(detail: AgentChatDetail) {
     return () => surface.removeEventListener('scroll', onScroll);
   }, []);
 
+  // Streamed text grows the thread without a new read; keep following it, so the
+  // end of a turn never jumps by everything that arrived meanwhile.
+  useEffect(() => {
+    const thread = endRef.current?.parentElement;
+    if (!thread || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => {
+      if (following.current) endRef.current?.scrollIntoView?.({ block: 'end' });
+    });
+    observer.observe(thread);
+    return () => observer.disconnect();
+  }, []);
+
   const progress = detail.latest_run?.progress.at(-1);
   useEffect(() => {
     if (following.current) endRef.current?.scrollIntoView?.({ block: 'end' });

@@ -3,7 +3,12 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
-import { ChatConversation, ReplyComposer, useChatThread } from '@/components/agent/chat-thread';
+import {
+  ChatConversation,
+  JumpToLatest,
+  ReplyComposer,
+  useChatThread,
+} from '@/components/agent/chat-thread';
 import { Composer } from '@/components/agent/composer';
 import { SkillPicker } from '@/components/agent/skill-picker';
 import { useComposerCommands } from '@/components/agent/use-composer-commands';
@@ -188,7 +193,7 @@ function PanelChat({
   toolbar: ReactNode;
 }>) {
   const query = useChatDetail(workspaceId, chatId);
-  if (query.isError)
+  if (query.isError && !query.data)
     return (
       <ReadError
         error={query.error}
@@ -236,11 +241,7 @@ function PanelConversation({
       end={<div ref={endRef} />}
       composer={
         <>
-          {showJump ? (
-            <Button variant="secondary" size="sm" onClick={jumpToLatest}>
-              Jump to latest
-            </Button>
-          ) : null}
+          <JumpToLatest show={showJump} onJump={jumpToLatest} />
           <ReplyComposer
             id="agent-panel-reply"
             thread={thread}

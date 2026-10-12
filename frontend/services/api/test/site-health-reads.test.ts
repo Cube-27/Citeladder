@@ -647,6 +647,7 @@ describe('snapshot projections', () => {
         ]),
         internal_linking: JSON.stringify({
           internal_link_count: 2,
+          content_link_count: 1,
           pages_with_incoming_count: 3,
           pages_with_incoming_percentage: 100,
         }),
