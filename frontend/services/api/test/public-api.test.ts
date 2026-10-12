@@ -2,7 +2,10 @@ import { randomUUID } from 'node:crypto';
 
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 
+import { apiKeyCreateSchema } from '@citeladder/contracts/api-keys';
+
 import { enforceSubjectRequest } from '../src/abuse/usage.ts';
+import { createApiKey } from '../src/api-keys/keys.ts';
 import { createApp } from '../src/app.ts';
 import { policy } from '../src/config.ts';
 import { ROUTE_CONTRACTS } from '../src/openapi/routes.ts';
@@ -123,6 +126,41 @@ describe('API keys', () => {
     });
     expect(cookieOnly.status).toBe(401);
     expect(await securityEvents(key.id)).toEqual(['api_key.create']);
+  });
+
+  it('refuses to mint a key for a session that a password reset ended mid-request', async () => {
+    const tenant = await withApiAccess(await fixtures.tenant());
+    // The request authenticated at version 0; a reset committed before its transaction.
+    await db
+      .updateTable('users')
+      .set({ session_version: 1 })
+      .where('id', '=', tenant.userId)
+      .execute();
+    const input = apiKeyCreateSchema.parse({ name: 'Raced' });
+    const mint = (sessionVersion: number) =>
+      createApiKey(
+        db,
+        config.auth.apiKeyPepper,
+        tenant.workspaceId,
+        { id: tenant.userId, sessionVersion },
+        input,
+      );
+    const keyNames = async () =>
+      (
+        await db
+          .selectFrom('api_keys')
+          .select('name')
+          .where('created_by_user_id', '=', tenant.userId)
+          .execute()
+      ).map((row) => row.name);
+
+    await expect(mint(0)).rejects.toMatchObject({
+      status: 401,
+      message: 'Session no longer valid',
+    });
+    expect(await keyNames()).toEqual([]);
+    expect((await mint(1)).key.name).toBe('Raced');
+    expect(await keyNames()).toEqual(['Raced']);
   });
 
   it('refuses key creation without the api_access grant and requests once the grant is gone', async () => {

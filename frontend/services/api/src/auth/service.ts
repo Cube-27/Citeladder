@@ -7,6 +7,7 @@ import { getLogger } from '../logging.ts';
 import type { User } from '../workspaces/service.ts';
 import { hashPassword, verifyAccountPassword } from './password.ts';
 import { recordSecurityEvent } from './security-events.ts';
+import { revokeDelegatedAccess } from './challenges.ts';
 import { requiresEmailVerification } from './eligibility.ts';
 import { subjectXactLock } from '../db/advisory-lock.ts';
 import { recordAccountTermsDecision } from '../workspaces/policies.ts';
@@ -131,7 +132,16 @@ export async function authenticateUser(
   return authenticated;
 }
 
-export async function logoutUser(db: Database, userId: string): Promise<void> {
+/**
+ * Sign out everywhere: every session ends. `disconnect` also revokes this
+ * person's MCP grants and the API keys they created, in the same transaction;
+ * plain sign-out leaves integrations working.
+ */
+export async function logoutUser(
+  db: Database,
+  userId: string,
+  options: Readonly<{ disconnect: boolean }> = { disconnect: false },
+): Promise<void> {
   await db.transaction().execute(async (trx) => {
     const result = await trx
       .updateTable('users')
@@ -139,6 +149,11 @@ export async function logoutUser(db: Database, userId: string): Promise<void> {
       .where('id', '=', userId)
       .executeTakeFirst();
     if (result.numUpdatedRows !== 1n) throw new ApiError(401, 'Session no longer valid');
-    await recordSecurityEvent(trx, 'auth.logout', userId);
+    if (!options.disconnect) {
+      await recordSecurityEvent(trx, 'auth.logout', userId);
+      return;
+    }
+    await recordSecurityEvent(trx, 'auth.logout_disconnect', userId);
+    await revokeDelegatedAccess(trx, userId, userId);
   });
 }

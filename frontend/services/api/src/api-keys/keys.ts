@@ -20,6 +20,7 @@ import { sql, type Selectable } from 'kysely';
 import type { z } from 'zod';
 
 import { recordSecurityEvent } from '../auth/security-events.ts';
+import type { SessionUser } from '../auth/session.ts';
 import { policy } from '../config.ts';
 import { base62, base62Length } from '../crypto-text.ts';
 import type { Database } from '../db/database.ts';
@@ -95,13 +96,20 @@ export async function listApiKeys(db: Database, workspaceId: string): Promise<Ap
  * Create a key for the acting Owner/Admin. `read` is always granted; every
  * allowlisted project must belong to the workspace.
  */
+/**
+ * Mint a key for the signed-in creator. The creator's row is locked and their
+ * session version rechecked in the transaction, so a key cannot be minted by a
+ * session that a concurrent password reset or change has already ended (the
+ * reset revokes only keys that exist when it commits).
+ */
 export async function createApiKey(
   db: Database,
   pepper: string,
   workspaceId: string,
-  userId: string,
+  creator: SessionUser,
   input: z.output<typeof apiKeyCreateSchema>,
 ): Promise<ApiKeyCreated> {
+  const userId = creator.id;
   const now = new Date();
   const expiresAt = input.expires_at === null ? null : new Date(input.expires_at);
   if (expiresAt !== null && expiresAt <= now)
@@ -110,6 +118,14 @@ export async function createApiKey(
   const projectIds = input.project_ids === null ? null : [...new Set(input.project_ids)];
   return await db.transaction().execute(async (trx) => {
     await lockAuthorizedWorkspace(trx, workspaceId, userId, 'manage_credentials');
+    const live = await trx
+      .selectFrom('users')
+      .select(['is_active', 'session_version'])
+      .where('id', '=', userId)
+      .forNoKeyUpdate()
+      .executeTakeFirst();
+    if (!live?.is_active || live.session_version !== creator.sessionVersion)
+      throw new ApiError(401, 'Session no longer valid');
     await admitApiKey(trx, workspaceId, now);
     if (projectIds !== null) {
       const owned = await trx

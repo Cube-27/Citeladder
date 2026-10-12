@@ -39,16 +39,17 @@ export default function AccountSecurity({
 }: Readonly<{ showHeading?: boolean }>) {
   const [current, setCurrent] = useState('');
   const [password, setPassword] = useState('');
-  const [confirm, setConfirm] = useState(false);
+  const [confirm, setConfirm] = useState<'sign-out' | 'disconnect' | null>(null);
   const client = useQueryClient();
   const security = useQuery({
     queryKey: ['auth', 'security'],
     queryFn: authApi.security,
   });
   const mutation = useMutation({
-    // Both end every session, this device's included (a sign-out is always everywhere).
-    mutationFn: async (operation: 'change-password' | 'sign-out') => {
+    // All end every session, this device's included (a sign-out is always everywhere).
+    mutationFn: async (operation: 'change-password' | 'sign-out' | 'disconnect') => {
       if (operation === 'sign-out') return authApi.logout();
+      if (operation === 'disconnect') return authApi.logoutAndDisconnect();
       await authApi.mailbox(operation, { current_password: current, password });
     },
     onSuccess: () => restartAt(client, '/login'),
@@ -133,12 +134,17 @@ export default function AccountSecurity({
       {setup.isError && <Alert tone="danger">{authErrorMessage(setup.error)}</Alert>}
       {mutation.isError && <Alert tone="danger">{authErrorMessage(mutation.error)}</Alert>}
       {link.isError && <Alert tone="danger">{authErrorMessage(link.error)}</Alert>}
-      <Button className="w-fit" variant="secondary" onClick={() => setConfirm(true)}>
-        Sign out all sessions
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        <Button variant="secondary" onClick={() => setConfirm('sign-out')}>
+          Sign out all sessions
+        </Button>
+        <Button variant="destructiveGhost" onClick={() => setConfirm('disconnect')}>
+          Sign out everywhere and disconnect integrations
+        </Button>
+      </div>
       <Dialog
-        open={confirm}
-        onOpenChange={setConfirm}
+        open={confirm === 'sign-out'}
+        onOpenChange={(open) => setConfirm(open ? 'sign-out' : null)}
         title="Sign out all sessions?"
         footer={
           <Button disabled={mutation.isPending} onClick={() => mutation.mutate('sign-out')}>
@@ -147,6 +153,26 @@ export default function AccountSecurity({
         }
       >
         <p>This signs out every device, including this one.</p>
+      </Dialog>
+      <Dialog
+        open={confirm === 'disconnect'}
+        onOpenChange={(open) => setConfirm(open ? 'disconnect' : null)}
+        title="Disconnect integrations and sign out?"
+        footer={
+          <Button
+            variant="destructive"
+            disabled={mutation.isPending}
+            onClick={() => mutation.mutate('disconnect')}
+          >
+            Sign out and disconnect
+          </Button>
+        }
+      >
+        <p>
+          This signs out every device, including this one. It also disconnects every MCP client you
+          connected and revokes every API key you created. Integrations that use them stop working
+          until you connect them again.
+        </p>
       </Dialog>
     </Stack>
   );

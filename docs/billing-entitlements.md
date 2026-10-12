@@ -109,7 +109,12 @@ Normalized refunds cannot exceed payment value. Redirects grant nothing.
 [Receipts](../frontend/services/api/src/billing/receipts.ts) issue one receipt per
 captured payment and one credit note per processed refund, each series
 consecutive per financial year. A full refund revokes the purchase's remaining
-grants; consumed units are not clawed back. Refunds arrive as provider refund
+grants; consumed units are not clawed back. A full refund of the payment for
+the base subscription's current period also cancels that subscription at once
+(B52): the period's plan grants, an upgrade's included, are revoked when the
+refund settles, and the row reads `cancelled` but stays current, like a halted
+one, until the subscription sweep's immediate provider cancellation is
+confirmed. A partial refund changes nothing. Refunds arrive as provider refund
 events and settle against the original payment receipt.
 
 Receipt list/download reads and PDF rendering are TypeScript-owned in

@@ -49,7 +49,10 @@ Creation needs the plan's `api_access` flag (403 `api_access_not_in_plan`)
 and stays within the `api_keys` allowance of live (unrevoked, unexpired) keys
 (409 `api_key_limit_reached`), checked under the account capacity lock. Every
 paid plan grants `api_access` and ten keys; the public trial grants neither
-([Billing and entitlements](billing-entitlements.md)). Security events record
+([Billing and entitlements](billing-entitlements.md)). Creation also locks the
+creator's user row and rechecks the session version the request signed in
+with, so a password reset or change that commits first refuses it (401
+`Session no longer valid`) instead of leaving a key its revocation missed. Security events record
 `api_key.create`, `api_key.revoke`, and at most one `api_key.rejected_revoked`
 or `api_key.rejected_expired` per key per hour. `last_used_at` is stamped at
 most every five minutes.
@@ -75,6 +78,13 @@ the path project inside the workspace and the key's allowlist (404). Prompt,
 prompt set, topic, audit, action and crawl IDs in the path must belong to that
 project ([ownership](../frontend/services/api/src/public-api/ownership.ts)),
 so a key restricted to one project never reaches another project's rows.
+
+A request body must be JSON sent with `Content-Type: application/json`
+(parameters such as `charset` are allowed); any other media type is 415
+`unsupported_media_type` ([body reader](../frontend/services/api/src/http/body.ts)).
+The browser routes share this reader, so a cross-site form or plain-text post
+cannot reach a JSON route either. Raw routes (billing webhooks, crawl-log
+ingest, MCP and its OAuth form endpoints) parse their own bodies.
 
 Every non-read POST (creates, spends and cancels) needs an `Idempotency-Key` (at most 255
 characters; [idempotency](../frontend/services/api/src/public-api/idempotency.ts)).

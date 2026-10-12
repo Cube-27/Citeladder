@@ -1,7 +1,7 @@
 /**
  * Trial data retention: once a trial-only workspace's trial has been over for
- * the retention period, its projects are deleted, a bounded batch of
- * workspaces per pass. A workspace that ever held a non-trial grant (a plan,
+ * the retention period, its projects and incomplete brand discoveries are
+ * deleted, a bounded batch of workspaces per pass. A workspace that ever held a non-trial grant (a plan,
  * add-on, top-up or operator override) is never purged; billing and usage
  * records survive the deletion with their source IDs.
  */
@@ -18,7 +18,10 @@ const logger = getLogger('app.projects');
 const setting = (key: 'trial_data_retention_days' | 'trial_purge_workspace_batch') =>
   Number(resolveSettingSpec(policy.billing.settings[key]));
 
-/** Delete the projects of up to a batch of long-expired trials; returns how many went. */
+/**
+ * Delete the projects and incomplete discoveries of up to a batch of
+ * long-expired trials; returns how many projects and discoveries went.
+ */
 export async function purgeExpiredTrialProjects(
   db: Database,
   now: Date,
@@ -31,12 +34,20 @@ export async function purgeExpiredTrialProjects(
     .selectFrom('billing_accounts as account')
     .select('account.workspace_id')
     .where('account.registration_origin', '=', 'public')
-    .where(({ exists, selectFrom }) =>
-      exists(
-        selectFrom('projects')
-          .select('projects.id')
-          .whereRef('projects.workspace_id', '=', 'account.workspace_id'),
-      ),
+    .where(({ exists, or, selectFrom }) =>
+      or([
+        exists(
+          selectFrom('projects')
+            .select('projects.id')
+            .whereRef('projects.workspace_id', '=', 'account.workspace_id'),
+        ),
+        exists(
+          selectFrom('brand_discoveries')
+            .select('brand_discoveries.id')
+            .whereRef('brand_discoveries.workspace_id', '=', 'account.workspace_id')
+            .where('brand_discoveries.project_id', 'is', null),
+        ),
+      ]),
     )
     .where(({ exists, not, selectFrom }) =>
       not(
@@ -84,12 +95,7 @@ export async function purgeExpiredTrialProjects(
       const scope = { workspaceId, projectId };
       const removed = await db.transaction().execute(async (trx) => {
         await acquireProjectLock(trx, projectId);
-        // The capacity lock serializes with grant issuance and reservations, so
-        // an upgrade or new work committed before it is seen here.
-        await lockWorkspaceCapacity(trx, workspaceId);
-        const access = await workspaceAccess(trx, workspaceId, now);
-        if (access.status !== 'trial_expired' || !access.expires_at) return false;
-        if (Date.parse(access.expires_at) > cutoff.getTime()) return false;
+        if (!(await stillPurgeable(trx, workspaceId, now, cutoff))) return false;
         if (await projectHoldsReservations(trx, workspaceId, projectId)) return false;
         await removeProject(trx, scope);
         return true;
@@ -98,6 +104,48 @@ export async function purgeExpiredTrialProjects(
       purged += 1;
       logger.info('project.trial_purged', { workspace_id: workspaceId, project_id: projectId });
     }
+    const discoveries = await purgeIncompleteDiscoveries(db, workspaceId, now, cutoff);
+    if (discoveries === 0) continue;
+    purged += discoveries;
+    logger.info('brand_discovery.trial_purged', { workspace_id: workspaceId, discoveries });
   }
   return purged;
+}
+
+/**
+ * Lock the workspace's capacity and recheck its access. The capacity lock
+ * serializes with grant issuance and reservations, so an upgrade or new work
+ * committed before it is seen here.
+ */
+async function stillPurgeable(trx: Database, workspaceId: string, now: Date, cutoff: Date) {
+  await lockWorkspaceCapacity(trx, workspaceId);
+  const access = await workspaceAccess(trx, workspaceId, now);
+  if (access.status !== 'trial_expired' || !access.expires_at) return false;
+  return Date.parse(access.expires_at) <= cutoff.getTime();
+}
+
+/**
+ * A discovery that never produced a project has no project to cascade from;
+ * remove it and its tasks with the workspace's projects. Returns how many went.
+ */
+function purgeIncompleteDiscoveries(db: Database, workspaceId: string, now: Date, cutoff: Date) {
+  return db.transaction().execute(async (trx) => {
+    if (!(await stillPurgeable(trx, workspaceId, now, cutoff))) return 0;
+    const incomplete = trx
+      .selectFrom('brand_discoveries')
+      .select('id')
+      .where('workspace_id', '=', workspaceId)
+      .where('project_id', 'is', null);
+    await trx
+      .deleteFrom('brand_discovery_tasks')
+      .where('workspace_id', '=', workspaceId)
+      .where('discovery_id', 'in', incomplete)
+      .execute();
+    const deleted = await trx
+      .deleteFrom('brand_discoveries')
+      .where('workspace_id', '=', workspaceId)
+      .where('project_id', 'is', null)
+      .executeTakeFirst();
+    return Number(deleted.numDeletedRows);
+  });
 }

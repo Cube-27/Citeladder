@@ -33,7 +33,7 @@ export const API_KEY_ROUTES: readonly ProductRoute[] = [
         db,
         config.auth.apiKeyPepper,
         c.get('workspace').workspaceId,
-        c.get('user').id,
+        c.get('user'),
         await readBody(c, apiKeyCreateSchema),
       ),
   }),

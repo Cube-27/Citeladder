@@ -9,7 +9,8 @@ Remaining work is consolidated in the backlog; historical plans are not active a
   recorded 2026-10-11): billing fully operational but hidden, in three PRs, so
   that enablement is a configuration-only PR.
 - [Security audit 2026-10](security-audit-2026-10.md): the fixes needing no
-  decision ship in PR 1; the items needing the owner's decision are recorded in PR 2.
+  decision shipped in #384; the items needing the owner's decision are in the
+  [decisions record](security-audit-2026-10-decisions.md).
 
 The feature review programme and the competitive feature tracker are complete
 and archived under [docs/archive](../archive/); their other unfinished items,

@@ -384,6 +384,18 @@ end of the paid period.
 backlog to decide later. Today a dispute is neither revoked nor alerted on;
 an operator handles it in the Razorpay Dashboard.
 
+**B52 — Owner, 2026-10-12.** Completes B50. Only a full refund of a payment
+for the subscription's current period cancels the subscription. It cancels at
+once, and the plan grants for that period are revoked when the refund settles.
+A partial refund changes nothing. Engineering: "full" means the refunds of
+that one payment now total its amount, so two partial refunds that complete it
+cancel on the second. The period's plan grants include an upgrade bought in
+it. As with a halted subscription (B24), the row reads `cancelled` but stays
+current until the subscription sweep's immediate provider cancellation is
+confirmed, so the provider cannot charge unseen and a second base plan cannot
+be bought meanwhile. A fully refunded payment no longer keeps its period
+running when the provider reports the subscription ended.
+
 ## Owner inputs still required
 
 Not decisions; needed only for India checkout and live enablement: GST rate,

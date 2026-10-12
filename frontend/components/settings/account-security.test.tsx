@@ -4,13 +4,16 @@ import { beforeEach, expect, it, vi } from 'vite-plus/test';
 import { renderWithProviders } from '@/test/render';
 import AccountSecurity from './account-security';
 
-const { mailbox, logout, security, hardNavigate } = vi.hoisted(() => ({
+const { mailbox, logout, logoutAndDisconnect, security, hardNavigate } = vi.hoisted(() => ({
   mailbox: vi.fn(),
   logout: vi.fn(),
+  logoutAndDisconnect: vi.fn(),
   security: vi.fn(),
   hardNavigate: vi.fn(),
 }));
-vi.mock('@/lib/api/auth', () => ({ authApi: { mailbox, logout, security } }));
+vi.mock('@/lib/api/auth', () => ({
+  authApi: { mailbox, logout, logoutAndDisconnect, security },
+}));
 vi.mock('@/lib/navigation/hard-navigate', () => ({ hardNavigate }));
 
 beforeEach(() => {
@@ -22,6 +25,24 @@ beforeEach(() => {
   });
   mailbox.mockResolvedValue({ message: 'Done.' });
   logout.mockResolvedValue(undefined);
+  logoutAndDisconnect.mockResolvedValue(undefined);
+});
+
+it('disconnects integrations only after the person confirms what it revokes', async () => {
+  renderWithProviders(<AccountSecurity />);
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole('button', { name: 'Sign out everywhere and disconnect integrations' }),
+  );
+  const dialog = await screen.findByRole('dialog');
+  expect(dialog).toHaveTextContent(
+    'It also disconnects every MCP client you connected and revokes every API key you created.',
+  );
+  expect(logoutAndDisconnect).not.toHaveBeenCalled();
+  await user.click(screen.getByRole('button', { name: 'Sign out and disconnect' }));
+  await waitFor(() => expect(hardNavigate).toHaveBeenCalledWith('/login'));
+  expect(logoutAndDisconnect).toHaveBeenCalledTimes(1);
+  expect(logout).not.toHaveBeenCalled();
 });
 
 it.each(['change-password', 'sign-out'] as const)(
@@ -39,6 +60,7 @@ it.each(['change-password', 'sign-out'] as const)(
       await user.click(screen.getByRole('button', { name: 'Sign out everywhere' }));
       await waitFor(() => expect(logout).toHaveBeenCalledTimes(1));
       expect(mailbox).not.toHaveBeenCalled();
+      expect(logoutAndDisconnect).not.toHaveBeenCalled();
     } else {
       await user.click(screen.getByRole('button', { name: 'Change password and sign out' }));
       await waitFor(() =>

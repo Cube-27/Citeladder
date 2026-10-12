@@ -4,7 +4,7 @@ import { sql } from 'kysely';
 import { policy, type ServiceConfig } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { subjectXactLock } from '../db/advisory-lock.ts';
-import { enforceSubjectRequest, releaseSubjectBudget } from '../abuse/usage.ts';
+import { enforceSubjectRequest, releaseSubjectBudget, type UsageLimit } from '../abuse/usage.ts';
 import { ApiError } from '../errors.ts';
 import { hashPassword, verifyAccountPassword } from './password.ts';
 import { recordSecurityEvent } from './security-events.ts';
@@ -145,6 +145,32 @@ async function deliverChallenge(
 /** The per-address failed sign-in counter that a password reset clears. */
 export const LOGIN_FAILURE_OPERATION = 'auth.login.email_failure';
 
+export function loginFailureBudget(config: ServiceConfig): UsageLimit {
+  return {
+    operation: LOGIN_FAILURE_OPERATION,
+    limit: config.auth.limits.login_email_limit,
+    windowSeconds: config.auth.limits.login_window_seconds,
+  };
+}
+
+/**
+ * Checks an account password against its address's failure budget, as sign-in
+ * does: the attempt spends a unit before hashing, so concurrent guesses cannot
+ * outrun the budget and an exhausted address refuses even the correct password
+ * (429); a match hands its unit and earlier failures back.
+ */
+export async function verifyBudgetedPassword(
+  db: Database,
+  config: ServiceConfig,
+  user: { email: string; hashed_password: string | null },
+  password: string,
+): Promise<boolean> {
+  await enforceSubjectRequest(db, 'email', user.email, loginFailureBudget(config));
+  if (!(await verifyAccountPassword(password, user.hashed_password))) return false;
+  await releaseSubjectBudget(db, 'email', user.email, LOGIN_FAILURE_OPERATION);
+  return true;
+}
+
 export async function consumeChallenge(
   db: Database,
   token: string,
@@ -246,17 +272,20 @@ export async function revokeDelegatedAccess(trx: Database, userId: string, actor
 
 export async function changePassword(
   db: Database,
-  userId: string,
-  sessionVersion: number,
-  oldPassword: string,
-  password: string,
+  config: ServiceConfig,
+  {
+    userId,
+    sessionVersion,
+    currentPassword,
+    password,
+  }: { userId: string; sessionVersion: number; currentPassword: string; password: string },
 ) {
   const user = await db
     .selectFrom('users')
     .selectAll()
     .where('id', '=', userId)
     .executeTakeFirstOrThrow();
-  if (!(await verifyAccountPassword(oldPassword, user.hashed_password)))
+  if (!(await verifyBudgetedPassword(db, config, user, currentPassword)))
     throw new ApiError(400, 'Current password is incorrect');
   const encoded = await hashPassword(password);
   await db.transaction().execute(async (trx) => {

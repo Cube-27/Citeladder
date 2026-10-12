@@ -25,6 +25,7 @@ type SecurityEvent =
   | 'auth.login'
   | 'auth.google_login'
   | 'auth.logout'
+  | 'auth.logout_disconnect'
   | 'policy.accept'
   | 'membership.role'
   | 'membership.remove'

@@ -1,4 +1,7 @@
-/** PostgreSQL-enforced abuse budgets; all environment overrides must be positive integers. */
+/**
+ * Abuse budgets, PostgreSQL-enforced except `sse_streams_per_user`, which each
+ * API instance counts in memory; all environment overrides must be positive integers.
+ */
 const defaults = {
   login_email_limit: 10,
   login_client_limit: 30,
@@ -33,6 +36,7 @@ const defaults = {
   internal_link_analyses_per_workspace_daily: 10,
   prompt_judge_calls_per_workspace_daily: 500,
   active_job_retry_after_seconds: 60,
+  sse_streams_per_user: 3,
   usage_window_cleanup_batch: 500,
 };
 

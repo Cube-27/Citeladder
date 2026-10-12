@@ -624,6 +624,101 @@ describe('billing money and access owner', () => {
         ),
     ).rejects.toMatchObject({ status: 409 });
   });
+  it('cancels the subscription and ends plan access once the current period is refunded in full, never on a partial refund or a replay', async () => {
+    const t = await activated();
+    const ref = t.sub.external_subscription_id;
+    const payment = await db
+      .selectFrom('billing_payments')
+      .selectAll()
+      .where('billing_account_id', '=', t.accountId)
+      .executeTakeFirstOrThrow();
+    const settle = (refund: Parameters<typeof recordRefund>[5]) =>
+      db
+        .transaction()
+        .execute((trx) =>
+          recordRefund(trx, t.workspaceId, t.accountId, 'razorpay', 'test', refund),
+        );
+    const current = () =>
+      db
+        .selectFrom('billing_subscriptions')
+        .select(['status', 'is_current', 'cancel_at_period_end'])
+        .where('id', '=', t.sub.id)
+        .executeTakeFirstOrThrow();
+    const revocations = async () =>
+      (
+        await db
+          .selectFrom('grant_revocations')
+          .innerJoin('account_grants', 'account_grants.id', 'grant_revocations.grant_id')
+          .select('grant_revocations.id')
+          .where('account_grants.billing_account_id', '=', t.accountId)
+          .execute()
+      ).length;
+    const partial = {
+      id: `rfnd_${randomUUID().replaceAll('-', '')}`,
+      paymentId: payment.external_payment_id,
+      amount: 1,
+      status: 'processed',
+      createdAt: new Date(),
+    };
+    const before = await revocations();
+    await settle(partial);
+    expect((await workspaceAccess(db, t.workspaceId)).status).toBe('active');
+    expect(await current()).toEqual({
+      status: 'active',
+      is_current: true,
+      cancel_at_period_end: false,
+    });
+    expect(await revocations()).toBe(before);
+    const rest = {
+      ...partial,
+      id: `rfnd_${randomUUID().replaceAll('-', '')}`,
+      amount: payment.amount_minor - 1,
+    };
+    await settle(rest);
+    expect((await workspaceAccess(db, t.workspaceId)).status).toBe('subscription_lapsed');
+    // Cancelled now; the row stays current until the provider confirms, so a
+    // second base plan cannot be bought meanwhile.
+    expect(await current()).toEqual({
+      status: 'cancelled',
+      is_current: true,
+      cancel_at_period_end: true,
+    });
+    await expect(buy(t.workspaceId)).rejects.toMatchObject({ status: 409 });
+    await expect(resumeSubscription(db, config, t.workspaceId)).rejects.toMatchObject({
+      status: 409,
+    });
+    const revoked = await revocations();
+    await settle(rest);
+    expect(await revocations()).toBe(revoked);
+    // The sweep cancels at the provider immediately, then ends the subscription.
+    let state = { ...t.evidence.subscription, version: 2 };
+    const cancel = vi.fn(async (_reference: string, _atEnd: boolean) => {
+      state = { ...state, status: 'cancelled', version: 3 };
+      return state;
+    });
+    const provider = fakeProvider({
+      evidence: async (reference) => {
+        if (reference !== ref) throw new ProviderError(true);
+        return { kind: 'base', subscription: state };
+      },
+      cancel,
+    });
+    const sweep = { ...config, billing: { ...config.billing, batchSize: 1000 } };
+    await recoverBilling(db, sweep, provider);
+    expect(cancel.mock.calls).toEqual([[ref, false]]);
+    expect(await current()).toEqual({
+      status: 'cancelled',
+      is_current: false,
+      cancel_at_period_end: true,
+    });
+    expect((await workspaceAccess(db, t.workspaceId)).status).toBe('subscription_lapsed');
+    // A replayed refund and a later sweep change nothing; a new plan can be bought.
+    await settle(rest);
+    await recoverBilling(db, sweep, provider);
+    expect(cancel).toHaveBeenCalledTimes(1);
+    expect(await revocations()).toBe(revoked);
+    expect((await buy(t.workspaceId)).activation_id).toMatch(/^[0-9a-f-]{36}$/u);
+  });
   it('allocates unique GST-length invoice and receipt numbers across the Indian April boundary', async () => {
     const times = ['2026-03-31T18:29:59Z', '2026-03-31T18:30:00Z', '2026-03-31T18:30:01Z'];
     const rows = await Promise.all(

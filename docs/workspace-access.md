@@ -51,13 +51,16 @@ a pending public identity with authoritative Google proof clears its password
 and invalidates old sessions/challenges. Third-party Google addresses use mailbox
 recovery before access. Provider requests have host, redirect,
 deadline and response-size bounds. PostgreSQL abuse counters commit before
-password verification or provider I/O. Every sign-in attempt spends a unit of
-its email's failure budget before the password is checked, so concurrent guesses
-cannot exceed it; a spent budget refuses even the correct password until its
-window passes, and a successful sign-in or a password reset clears it. The shared daily trial and mail budgets are spent only
+password verification or provider I/O. Every sign-in attempt, and every
+current-password check when changing a password or linking Google, spends a unit
+of its email's failure budget before the password is checked, so concurrent
+guesses cannot exceed it; a spent budget refuses even the correct password (429)
+until its window passes, and a correct password or a password reset clears it. The shared daily trial and mail budgets are spent only
 by identities and mail actually issued. A non-GET request a browser marks
 `Sec-Fetch-Site: cross-site` or `same-site` is refused, so another site cannot submit a sign-in
-or any other write. Google is the only sign-in provider.
+or any other write. JSON routes also refuse a body not sent as
+`Content-Type: application/json` (415), so a form or plain-text post that skips
+the CORS preflight never reaches them. Google is the only sign-in provider.
 
 [TypeScript authorization](../frontend/services/api/src/auth/workspace.ts) resolves
 membership and exposes safe capabilities; it is the one owner of the role
@@ -162,8 +165,14 @@ Reset replaces the password, may verify a pending mailbox, invalidates outstandi
 challenges and revokes sessions. Reset, password change and an operator password
 reset also revoke the person's MCP grants and the API keys they created
 (`credential_reset`), so recovering an account removes delegated access a
-compromised password may have minted. Password change requires the current password;
-signing out revokes every session (there is one sign-out, and it is everywhere). Settings → Account
+compromised password may have minted; key creation locks the creator's row and
+rechecks its session version, so a key minted in flight cannot slip past that
+revocation. Password change requires the current password;
+signing out revokes every session (sign-out is always everywhere) and leaves MCP
+grants and API keys working. A separate, confirmed "Sign out everywhere and
+disconnect integrations" control (`POST /api/v1/auth/logout-and-disconnect`)
+also revokes the person's MCP grants and the API keys they created in the same
+transaction, recording `auth.logout_disconnect`. Settings → Account
 shows the email and the person's role in the selected workspace, never internal
 identifiers, and reports sign-in methods and verification state in plain words,
 with compact password, Google-linking and session controls. Settings → Workspace
@@ -195,7 +204,8 @@ is refused (`project_work_running`) while an audit, crawl or Agent run still
 holds reserved units, because nothing could release that hold afterwards.
 
 A trial-only workspace (no plan, add-on, top-up or operator grant) loses access
-when its trial ends. The runner deletes its projects
+when its trial ends. The runner deletes its projects, and any brand discovery
+that never produced a project together with its tasks,
 `BILLING_TRIAL_DATA_RETENTION_DAYS` (default 30) after that, a bounded batch of
 workspaces per pass (`BILLING_TRIAL_PURGE_WORKSPACE_BATCH`). Each deletion holds
 the project and account-capacity locks and rechecks access, so a grant issued or

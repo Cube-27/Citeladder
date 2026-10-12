@@ -12,7 +12,7 @@ import {
 } from './razorpay.ts';
 import { cancellationSendAt } from './cancellation.ts';
 import { policy } from '../config.ts';
-import { lockOwner, settlePending, settleSubscription } from './settlement.ts';
+import { lockOwner, periodRefunded, settlePending, settleSubscription } from './settlement.ts';
 import { recordRefund } from './receipts.ts';
 import { pushChange } from './plan-changes.ts';
 import { webhookSummary } from './webhooks.ts';
@@ -471,6 +471,12 @@ async function subscriptionProbe(
     const state = evidence.kind === 'base' ? evidence.subscription : null;
     // Halted (retries exhausted) ends now, so it can never charge again unseen.
     const halted = state?.status === policy.billing.contracts.subscription_unpaid;
+    // A fully refunded current period ends now: its cancellation was committed
+    // with the refund and is sent here, retried until the provider ends it (B52).
+    const refunded =
+      state !== null &&
+      !policy.billing.contracts.terminal_subscription_statuses.includes(state.status) &&
+      (await periodRefunded(db, sub, sub.current_period_start, sub.current_period_end));
     // A held cancellation goes to the provider at the lead before renewal and
     // is retried while the provider still shows the subscription renewing (B46).
     const due =
@@ -480,9 +486,10 @@ async function subscriptionProbe(
     const unwanted =
       due && state?.status === policy.billing.contracts.subscription_active && !state.cancelAtEnd;
     // Marked sent before the request, so a resume can never race it.
-    const send = halted || (unwanted && (await markCancellationSent(db, sub.id)));
+    const immediate = halted || refunded;
+    const send = immediate || (unwanted && (await markCancellationSent(db, sub.id)));
     if (send) {
-      await cancelAtProvider(provider, sub.external_subscription_id, !halted);
+      await cancelAtProvider(provider, sub.external_subscription_id, !immediate);
       evidence = await provider.evidence(sub.external_subscription_id, true);
     }
     await db.transaction().execute(async (trx) => {

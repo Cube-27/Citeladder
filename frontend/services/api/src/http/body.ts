@@ -1,6 +1,7 @@
 /** zod validation with the published status/code/location/type error contract. */
 import type { Context } from 'hono';
 import { z } from 'zod';
+import { ApiError } from '../errors.ts';
 import { RequestValidationError, type ValidationEntry } from './params.ts';
 import { parseRequestDate } from './datetimes.ts';
 
@@ -51,7 +52,17 @@ export async function readBody<T extends z.ZodType>(c: Context, schema: T): Prom
   return value;
 }
 
-/** An optional JSON body: empty or `null` reads as null. */
+/** Whether the request declares a JSON body (`application/json`, any parameters such as charset). */
+function declaresJson(c: Context): boolean {
+  const media = c.req.header('content-type')?.split(';')[0]?.trim().toLowerCase();
+  return media === 'application/json';
+}
+
+/**
+ * An optional JSON body: empty or `null` reads as null. A non-empty body must
+ * declare `Content-Type: application/json`, so a form or plain-text post that a
+ * browser sends without a preflight never reaches a JSON route (415).
+ */
 export async function readOptionalBody<T extends z.ZodType>(
   c: Context,
   schema: T,
@@ -59,6 +70,7 @@ export async function readOptionalBody<T extends z.ZodType>(
   let value: unknown;
   const raw = await c.req.text();
   if (!raw) return null;
+  if (!declaresJson(c)) throw new ApiError(415, 'Content-Type must be application/json');
   try {
     value = JSON.parse(raw);
   } catch (error) {

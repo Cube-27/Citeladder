@@ -41,11 +41,13 @@ import { trustedClientIdentity } from '../auth/client-identity.ts';
 import { enforceSubjectRequest, releaseSubjectBudget } from '../abuse/usage.ts';
 import type { Context } from 'hono';
 import type { Database } from '../db/database.ts';
-import { passwordSchema, verifyAccountPassword } from '../auth/password.ts';
+import { passwordSchema } from '../auth/password.ts';
 import {
   requestChallenge,
   consumeChallenge,
   changePassword,
+  loginFailureBudget,
+  verifyBudgetedPassword,
   LOGIN_FAILURE_OPERATION,
 } from '../auth/challenges.ts';
 import {
@@ -107,14 +109,6 @@ async function meter(db: Database, c: Context, config: ServiceConfig, register =
   });
 }
 
-function loginFailureBudget(config: ServiceConfig) {
-  return {
-    operation: LOGIN_FAILURE_OPERATION,
-    limit: config.auth.limits.login_email_limit,
-    windowSeconds: config.auth.limits.login_window_seconds,
-  };
-}
-
 /**
  * Google found no account for the address on a sign-in: send the person to
  * sign up, where they make the Terms decision, with the address prefilled.
@@ -157,7 +151,7 @@ export const authRoutes = [
         .selectAll()
         .where('id', '=', c.get('user').id)
         .executeTakeFirstOrThrow();
-      if (!(await verifyAccountPassword(payload.password, user.hashed_password)))
+      if (!(await verifyBudgetedPassword(db, config, user, payload.password)))
         throw new ApiError(401, 'Invalid credentials');
       const started = await startSignIn(config, 'google');
       const options = {
@@ -293,13 +287,12 @@ export const authRoutes = [
       const payload = await readBody(c, changePasswordSchema);
       await mailboxMeter(db, c, config);
       const user = c.get('user');
-      await changePassword(
-        db,
-        user.id,
-        user.sessionVersion,
-        payload.current_password,
-        payload.password,
-      );
+      await changePassword(db, config, {
+        userId: user.id,
+        sessionVersion: user.sessionVersion,
+        currentPassword: payload.current_password,
+        password: payload.password,
+      });
       clearSessionCookie(c, config);
       clearOAuthCookies(c, config);
       return { message: 'Password changed. Sign in again.' };
@@ -367,6 +360,22 @@ export const authRoutes = [
     status: 204,
     async handle({ c, db, config }) {
       await logoutUser(db, c.get('user').id);
+      clearSessionCookie(c, config);
+      clearOAuthCookies(c, config);
+      return c.body(null, 204);
+    },
+  }),
+  // Sign-out everywhere that also disconnects MCP clients and revokes the
+  // API keys this person created; an explicit, separate choice.
+  definePostRoute({
+    ...base,
+    authorize: 'session',
+    path: '/api/v1/auth/logout-and-disconnect',
+    response: z.null(),
+    raw: true,
+    status: 204,
+    async handle({ c, db, config }) {
+      await logoutUser(db, c.get('user').id, { disconnect: true });
       clearSessionCookie(c, config);
       clearOAuthCookies(c, config);
       return c.body(null, 204);
