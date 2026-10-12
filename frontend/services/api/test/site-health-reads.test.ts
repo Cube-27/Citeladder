@@ -511,6 +511,14 @@ describe('crawl events', () => {
     const text = await stream.text();
     expect(text.match(/^event: /gmu)).toHaveLength(3);
     expect(text).toContain(`id: ${ids[2]}`);
+    // A completed stream frees its per-user slot: more sequential streams than the cap all open.
+    const statuses: number[] = [];
+    for (let index = 0; index < 4; index++) {
+      const next = await get(seed, `/site-crawls/${seed.crawlId}/events?stream=true`);
+      statuses.push(next.status);
+      await next.text(); // NOSONAR: each stream finishes before the next opens.
+    }
+    expect(statuses).toEqual([200, 200, 200, 200]);
   });
 });
 

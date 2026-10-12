@@ -208,6 +208,7 @@ export const auditRoutes = [
             runtime,
             c.req.raw.signal,
             events,
+            { userId: c.get('user').id, limits: config.auth.limits },
           )
         : c.json(events);
     },

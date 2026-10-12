@@ -1,5 +1,6 @@
 import type { Database } from '../db/database.ts';
 import { RequestValidationError } from '../http/params.ts';
+import { slottedEventStream, type StreamOwner } from '../http/stream-slots.ts';
 import { parseUuid } from '../http/uuid.ts';
 import { waitForPoll } from '../workers/poll.ts';
 import { auditPolicy, type AuditRuntime } from './config.ts';
@@ -68,13 +69,14 @@ export function eventStreamResponse(
   runtime: AuditRuntime,
   requestSignal: AbortSignal,
   initial: Awaited<ReturnType<typeof auditEvents>>,
+  owner: StreamOwner,
 ) {
   const cancellation = new AbortController(),
     signal = AbortSignal.any([cancellation.signal, requestSignal]);
-  const frames = auditEventFrames(db, workspaceId, auditId, after, runtime, signal, initial);
   const encoder = new TextEncoder();
-  return new Response(
-    new ReadableStream<Uint8Array>({
+  const open = () => {
+    const frames = auditEventFrames(db, workspaceId, auditId, after, runtime, signal, initial);
+    return new ReadableStream<Uint8Array>({
       async pull(controller) {
         try {
           const next = await frames.next();
@@ -88,13 +90,13 @@ export function eventStreamResponse(
         cancellation.abort();
         await frames.return();
       },
-    }),
-    {
-      headers: {
-        'content-type': 'text/event-stream; charset=utf-8',
-        'cache-control': 'no-cache',
-        'x-accel-buffering': 'no',
-      },
+    });
+  };
+  return new Response(slottedEventStream({ ...owner, signal: requestSignal, open }), {
+    headers: {
+      'content-type': 'text/event-stream; charset=utf-8',
+      'cache-control': 'no-cache',
+      'x-accel-buffering': 'no',
     },
-  );
+  });
 }

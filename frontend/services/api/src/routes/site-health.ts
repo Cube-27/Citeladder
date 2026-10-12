@@ -27,6 +27,7 @@ import { z } from 'zod';
 import { policy } from '../config.ts';
 import { ApiError } from '../errors.ts';
 import { InvalidCursorError } from '../http/keyset-cursor.ts';
+import { slottedEventStream } from '../http/stream-slots.ts';
 import { parseUuid } from '../http/uuid.ts';
 import { loadCrawl, projectCrawl, rootFailure } from '../site-health/reads/crawl.ts';
 import { dashboard } from '../site-health/reads/dashboard.ts';
@@ -287,13 +288,20 @@ export const siteHealthRoutes = [
     },
     response: z.array(siteCrawlEventSchema),
     raw: true,
-    async handle({ c, db }, { path, query }) {
+    async handle({ c, db, config }, { path, query }) {
       const workspaceId = c.get('workspace').workspaceId;
       // Resume after the client's last event, from the SSE header or the query.
       const after = parseUuid(c.req.header('last-event-id') ?? query.last_event_id);
       if (!query.stream) return c.json(await eventReplay(db, workspaceId, path.crawl_id, after));
       const crawl = await loadCrawl(db, workspaceId, path.crawl_id);
-      return new Response(eventStream(db, workspaceId, crawl, after, c.req.raw.signal), {
+      const signal = c.req.raw.signal;
+      const body = slottedEventStream({
+        userId: c.get('user').id,
+        limits: config.auth.limits,
+        signal,
+        open: () => eventStream(db, workspaceId, crawl, after, signal),
+      });
+      return new Response(body, {
         headers: {
           'content-type': 'text/event-stream',
           'cache-control': 'no-cache',

@@ -166,6 +166,37 @@ describe('audit HTTP family cutover', () => {
       ).toBe(422);
     }
   });
+  it('admits at most three open streams per user until one is aborted', async () => {
+    const t = await seed(),
+      other = await seed();
+    const open = async (userId: string, workspaceId: string, auditId: string) => {
+      const abort = new AbortController();
+      const response = await app.request(`/api/v1/audits/${auditId}/events?stream=true`, {
+        headers: {
+          cookie: `${config.session.cookieName}=${await sessionToken({ sub: userId, ver: 0 })}`,
+          'x-workspace-id': workspaceId,
+        },
+        signal: abort.signal,
+      });
+      return { response, abort };
+    };
+    const held = [
+      await open(t.userId, t.workspaceId, t.auditId),
+      await open(t.userId, t.workspaceId, t.auditId),
+      await open(t.userId, t.workspaceId, t.auditId),
+    ];
+    expect(held.map(({ response }) => response.status)).toEqual([200, 200, 200]);
+    const refused = await open(t.userId, t.workspaceId, t.auditId);
+    expect(refused.response.status).toBe(429);
+    expect(refused.response.headers.get('retry-after')).toMatch(/^[1-9]\d*$/);
+    const otherUser = await open(other.userId, other.workspaceId, other.auditId);
+    expect(otherUser.response.status).toBe(200);
+    held[0]!.abort.abort();
+    const admitted = await open(t.userId, t.workspaceId, t.auditId);
+    expect(admitted.response.status).toBe(200);
+    for (const stream of [...held, otherUser, admitted]) stream.abort.abort();
+  });
+
   it('stops a stream on cancellation without polling or retaining a transaction', async () => {
     const t = await seed(),
       signal = new AbortController();

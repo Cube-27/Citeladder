@@ -194,6 +194,14 @@ account-capacity locks are the sole business authority. Native config owns the
 capability registry; native PostgreSQL tests cover the schema's constraints.
 Do not introduce Redis without measured need.
 
+The audit and Site Health event streams (Server-Sent Events) each end at a
+maximum duration, and a user may hold at most `ABUSE_SSE_STREAMS_PER_USER`
+(default 3) open at once on each API instance. The
+[stream slot counter](../frontend/services/api/src/http/stream-slots.ts) lives in
+process memory, not PostgreSQL: a further stream is refused with 429 and
+`Retry-After`, and a slot frees when its stream completes, errors, is cancelled
+or the client disconnects.
+
 Backend schemas own the wire contract. Coordinate frontend schemas and API
 clients when a DTO changes. [API errors](api-error-contract.md) owns coded
 cross-stack error shapes; domain errors are translated at the HTTP boundary,
