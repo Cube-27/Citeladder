@@ -5,7 +5,7 @@ import type { Database } from '../db/database.ts';
 import { policy } from '../config.ts';
 import { definitions, dispatchTool, presentationTools } from '../mcp/tools.ts';
 import { parseRecordId } from '../mcp/retrieval.ts';
-import { ToolRegistry, type ReadTool } from './tools.ts';
+import { ToolRegistry, toolDefinitions, type ReadTool } from './tools.ts';
 import { type Json, type Scope } from './contracts.ts';
 
 const reference = z.object({ id: z.string(), record_uri: z.string().nullish() }).catchall(z.json());
@@ -85,11 +85,8 @@ function sharedTools(db: Database): ReadTool[] {
 }
 export function agentTools(db: Database) {
   const entries = sharedTools(db);
-  const catalog = entries.map(({ name, description, arguments: schema }) => ({
-    name,
-    description,
-    schema: z.toJSONSchema(schema, { io: 'input' }),
-  }));
-  const version = `agent-tools-${createHash('sha256').update(JSON.stringify(catalog)).digest('hex').slice(0, 16)}`;
+  // The version fingerprints exactly what the model is offered.
+  const catalog = JSON.stringify(toolDefinitions(entries));
+  const version = `agent-tools-${createHash('sha256').update(catalog).digest('hex').slice(0, 16)}`;
   return new ToolRegistry(version, entries);
 }

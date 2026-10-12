@@ -384,7 +384,7 @@ export class AgentRuntime {
     const started = performance.now();
     // The model receipt just rechecked the lease; the result is fenced again on record.
     const outcome = refusal
-      ? refused(refusal)
+      ? refused(refusal, refusal)
       : await this.deps.tools.execute(
           this.db,
           scope,

@@ -51,7 +51,13 @@ import { McpInputError, type Evidence, type EvidencePrincipal, type ProjectRead 
 const optional = <T extends z.ZodType>(schema: T) => schema.nullish();
 const uuid = z.uuid();
 const limit = optional(z.number().int().min(1).max(mcpPolicy.max_list_limit));
-const page = { cursor: optional(z.string()), limit };
+const cursor = optional(z.string().describe('The next_cursor a previous page returned.'));
+const page = { cursor, limit };
+/** A visibility run, named the way every read returns it. */
+const run = uuid.describe('A run id (audit_id) that read_visibility_overview returned.');
+const crawl_id = optional(
+  uuid.describe('A crawl id that read_site_health returned; omit for the latest crawl.'),
+);
 const project = { project_id: uuid };
 const engine = optional(z.enum(policy.visibility.logical_engines));
 const cohort = z.enum(['core', 'comparison']).default('core');
@@ -136,7 +142,8 @@ export const definitions = {
   }),
   search: tool({
     title: 'Search',
-    description: 'Find projects, active Actions and prompts by text. Pass a result id to fetch.',
+    description:
+      'Find projects, active Actions and prompts by text when you do not know where a record is. Returns matching records with ids; pass one to fetch for the full record.',
     schema: z.strictObject({
       query: z.string().trim().min(1),
       project_id: optional(uuid),
@@ -152,8 +159,11 @@ export const definitions = {
   }),
   fetch: tool({
     title: 'Fetch a record',
-    description: 'Read one record by the citeladder:// id another read returned.',
-    schema: z.strictObject({ id: z.string() }),
+    description:
+      'Read one full record (an answer, Action, prompt or page) by the citeladder:// id another read returned. Never construct an id.',
+    schema: z.strictObject({
+      id: z.string().describe('A citeladder:// id exactly as a read returned it.'),
+    }),
     read: ({ db, principal, origin, maxBytes }, args) =>
       fetchRecord(db, principal, args.id, origin, maxBytes),
   }),
@@ -240,10 +250,10 @@ export const definitions = {
   read_visibility_results: projectTool({
     title: 'Read AI answers',
     description:
-      'The answers engines gave in one run, with mentions and cited sources. Filter by prompt, cited domain or URL.',
+      'The answers engines gave in one run, with mentions and cited sources, paged. Use it to see what an engine said for a prompt; filter by prompt_id, cited domain or URL to read fewer.',
     schema: z.strictObject({
       ...project,
-      audit_id: uuid,
+      audit_id: run,
       engine,
       cohort,
       prompt_id: optional(uuid),
@@ -256,10 +266,10 @@ export const definitions = {
   read_visibility_sources: projectTool({
     title: 'Read cited sources',
     description:
-      'Which domains or URLs engines cited in one run, how often, and whether you or competitors are listed on them.',
+      'Which domains or URLs engines cited in one run, how often, and whether you or competitors are listed on them. Use it to find the sources to earn a place on.',
     schema: z.strictObject({
       ...project,
-      audit_id: uuid,
+      audit_id: run,
       engine,
       cohort,
       level: z.enum(['domain', 'url']).default('domain'),
@@ -309,7 +319,8 @@ export const definitions = {
   }),
   read_content_differentiation: projectTool({
     title: 'Read content comparisons',
-    description: 'How cited competitor pages differ from yours, from pages CiteLadder has read.',
+    description:
+      'How cited competitor pages differ from yours on the topics they win, from pages CiteLadder has already read. Use it before rewriting a page to compete.',
     schema: z.strictObject(project),
     read: differentiationRead,
   }),
@@ -333,10 +344,11 @@ export const definitions = {
   }),
   read_site_pages: projectTool({
     title: 'Read site pages',
-    description: 'Pages from a crawl with page type, scores and issue counts.',
+    description:
+      'Pages from a crawl with page type, scores and issue counts, paged. Use it to find pages by type or status; read_site_health gives the totals.',
     schema: z.strictObject({
       ...project,
-      crawl_id: optional(uuid),
+      crawl_id,
       page_kind: optional(z.string()),
       status: optional(z.string()),
       ...page,
@@ -346,10 +358,10 @@ export const definitions = {
   read_site_links: projectTool({
     title: 'Read internal links',
     description:
-      'Internal link counts per page for a crawl, with sampled linking pages and anchors.',
+      'Internal link counts per page for a crawl, with sampled linking pages and anchors. Pass site_url_id (from read_site_pages) for one page.',
     schema: z.strictObject({
       ...project,
-      crawl_id: optional(uuid),
+      crawl_id,
       site_url_id: optional(uuid),
       ...page,
     }),
@@ -359,7 +371,7 @@ export const definitions = {
     title: 'Read AI crawler access',
     description:
       'Whether robots.txt lets each AI crawler in, for the latest or a chosen crawl. Permission, not observed visits.',
-    schema: z.strictObject({ ...project, crawl_id: optional(uuid) }),
+    schema: z.strictObject({ ...project, crawl_id }),
     read: crawlability,
   }),
   read_crawl_logs: projectTool({
@@ -400,7 +412,8 @@ export const definitions = {
   }),
   read_ai_traffic_url: projectTool({
     title: 'Read AI traffic for a URL',
-    description: 'The AI traffic timeline of one page on the project site.',
+    description:
+      'The AI crawler and referral timeline of one page on the project site, for a range. Use it after read_ai_traffic_pages names the page.',
     schema: z.strictObject({
       ...project,
       url: z.string().trim().min(1).max(4096),
@@ -459,19 +472,22 @@ export const definitions = {
   }),
   read_demand: projectTool({
     title: 'Read search demand',
-    description: 'Latest search demand: what people search for in this market and how it changed.',
+    description:
+      'Latest search demand: what people search for in this market, with volumes and how they changed. Volumes are provider estimates.',
     schema: z.strictObject(project),
     read: demandSnapshot,
   }),
   read_integration_status: projectTool({
     title: 'Read connected data',
-    description: 'Which data sources are connected and how far their import has got.',
+    description:
+      'Which data sources (Search Console, GA4, server logs) are connected and how far their import has got. Read it when a traffic or search read is unavailable, before reading it again.',
     schema: z.strictObject(project),
     read: integrationStatus,
   }),
   read_search_intelligence: projectTool({
     title: 'Read keyword and backlink research',
-    description: 'The keyword, competitor and backlink datasets researched for this project.',
+    description:
+      'The keyword, competitor and backlink datasets researched for this project, with their ids. Pass a dataset_id to read_search_dataset for its rows.',
     schema: z.strictObject(project),
     read: searchIntelligence,
   }),

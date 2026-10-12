@@ -4,12 +4,13 @@
     {
       "name": "fetch",
       "title": "Fetch a record",
-      "description": "Read one record by the citeladder:// id another read returned.",
+      "description": "Read one full record (an answer, Action, prompt or page) by the citeladder:// id another read returned. Never construct an id.",
       "input_schema": {
         "type": "object",
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "description": "A citeladder:// id exactly as a read returned it."
           }
         },
         "required": ["id"],
@@ -62,7 +63,8 @@
         "type": "object",
         "properties": {
           "cursor": {
-            "type": ["string", "null"]
+            "type": "string",
+            "description": "The next_cursor a previous page returned."
           },
           "limit": {
             "type": "integer",
@@ -105,7 +107,8 @@
             "enum": ["open", "in_progress", "implemented", "measuring", "done", "dismissed"]
           },
           "cursor": {
-            "type": ["string", "null"]
+            "type": "string",
+            "description": "The next_cursor a previous page returned."
           },
           "limit": {
             "type": "integer",
@@ -154,7 +157,8 @@
             "enum": ["core", "comparison"]
           },
           "cursor": {
-            "type": ["string", "null"]
+            "type": "string",
+            "description": "The next_cursor a previous page returned."
           },
           "limit": {
             "type": "integer",
@@ -180,7 +184,8 @@
           },
           "crawl_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A crawl id that read_site_health returned; omit for the latest crawl."
           }
         },
         "required": ["project_id"],
@@ -333,7 +338,7 @@
     {
       "name": "read_ai_traffic_url",
       "title": "Read AI traffic for a URL",
-      "description": "The AI traffic timeline of one page on the project site.",
+      "description": "The AI crawler and referral timeline of one page on the project site, for a range. Use it after read_ai_traffic_pages names the page.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -367,7 +372,7 @@
     {
       "name": "read_content_differentiation",
       "title": "Read content comparisons",
-      "description": "How cited competitor pages differ from yours, from pages CiteLadder has read.",
+      "description": "How cited competitor pages differ from yours on the topics they win, from pages CiteLadder has already read. Use it before rewriting a page to compete.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -446,7 +451,7 @@
     {
       "name": "read_demand",
       "title": "Read search demand",
-      "description": "Latest search demand: what people search for in this market and how it changed.",
+      "description": "Latest search demand: what people search for in this market, with volumes and how they changed. Volumes are provider estimates.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -518,7 +523,8 @@
             "enum": ["supported", "contradicted", "inconclusive", "not_covered"]
           },
           "cursor": {
-            "type": ["string", "null"]
+            "type": "string",
+            "description": "The next_cursor a previous page returned."
           },
           "limit": {
             "type": "integer",
@@ -534,7 +540,7 @@
     {
       "name": "read_integration_status",
       "title": "Read connected data",
-      "description": "Which data sources are connected and how far their import has got.",
+      "description": "Which data sources (Search Console, GA4, server logs) are connected and how far their import has got. Read it when a traffic or search read is unavailable, before reading it again.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -619,7 +625,8 @@
             "enum": ["positive", "negative"]
           },
           "cursor": {
-            "type": ["string", "null"]
+            "type": "string",
+            "description": "The next_cursor a previous page returned."
           },
           "limit": {
             "type": "integer",
@@ -724,7 +731,8 @@
             "type": "boolean"
           },
           "cursor": {
-            "type": ["string", "null"]
+            "type": "string",
+            "description": "The next_cursor a previous page returned."
           },
           "limit": {
             "type": "integer",
@@ -767,7 +775,8 @@
             "type": ["string", "null"]
           },
           "cursor": {
-            "type": ["string", "null"]
+            "type": "string",
+            "description": "The next_cursor a previous page returned."
           },
           "limit": {
             "type": "integer",
@@ -804,7 +813,8 @@
             "enum": ["asc", "desc"]
           },
           "cursor": {
-            "type": ["string", "null"]
+            "type": "string",
+            "description": "The next_cursor a previous page returned."
           },
           "limit": {
             "type": "integer",
@@ -820,7 +830,7 @@
     {
       "name": "read_search_intelligence",
       "title": "Read keyword and backlink research",
-      "description": "The keyword, competitor and backlink datasets researched for this project.",
+      "description": "The keyword, competitor and backlink datasets researched for this project, with their ids. Pass a dataset_id to read_search_dataset for its rows.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -858,7 +868,7 @@
     {
       "name": "read_site_links",
       "title": "Read internal links",
-      "description": "Internal link counts per page for a crawl, with sampled linking pages and anchors.",
+      "description": "Internal link counts per page for a crawl, with sampled linking pages and anchors. Pass site_url_id (from read_site_pages) for one page.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -868,14 +878,16 @@
           },
           "crawl_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A crawl id that read_site_health returned; omit for the latest crawl."
           },
           "site_url_id": {
             "type": "string",
             "format": "uuid"
           },
           "cursor": {
-            "type": ["string", "null"]
+            "type": "string",
+            "description": "The next_cursor a previous page returned."
           },
           "limit": {
             "type": "integer",
@@ -891,7 +903,7 @@
     {
       "name": "read_site_pages",
       "title": "Read site pages",
-      "description": "Pages from a crawl with page type, scores and issue counts.",
+      "description": "Pages from a crawl with page type, scores and issue counts, paged. Use it to find pages by type or status; read_site_health gives the totals.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -901,7 +913,8 @@
           },
           "crawl_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A crawl id that read_site_health returned; omit for the latest crawl."
           },
           "page_kind": {
             "type": ["string", "null"]
@@ -910,7 +923,8 @@
             "type": ["string", "null"]
           },
           "cursor": {
-            "type": ["string", "null"]
+            "type": "string",
+            "description": "The next_cursor a previous page returned."
           },
           "limit": {
             "type": "integer",
@@ -1017,7 +1031,7 @@
     {
       "name": "read_visibility_results",
       "title": "Read AI answers",
-      "description": "The answers engines gave in one run, with mentions and cited sources. Filter by prompt, cited domain or URL.",
+      "description": "The answers engines gave in one run, with mentions and cited sources, paged. Use it to see what an engine said for a prompt; filter by prompt_id, cited domain or URL to read fewer.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -1027,7 +1041,8 @@
           },
           "audit_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A run id (audit_id) that read_visibility_overview returned."
           },
           "engine": {
             "type": "string",
@@ -1059,7 +1074,8 @@
             "format": "uri"
           },
           "cursor": {
-            "type": ["string", "null"]
+            "type": "string",
+            "description": "The next_cursor a previous page returned."
           },
           "limit": {
             "type": "integer",
@@ -1075,7 +1091,7 @@
     {
       "name": "read_visibility_sources",
       "title": "Read cited sources",
-      "description": "Which domains or URLs engines cited in one run, how often, and whether you or competitors are listed on them.",
+      "description": "Which domains or URLs engines cited in one run, how often, and whether you or competitors are listed on them. Use it to find the sources to earn a place on.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -1085,7 +1101,8 @@
           },
           "audit_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A run id (audit_id) that read_visibility_overview returned."
           },
           "engine": {
             "type": "string",
@@ -1114,7 +1131,8 @@
             "maxLength": 253
           },
           "cursor": {
-            "type": ["string", "null"]
+            "type": "string",
+            "description": "The next_cursor a previous page returned."
           },
           "limit": {
             "type": "integer",
@@ -1287,7 +1305,7 @@
     {
       "name": "search",
       "title": "Search",
-      "description": "Find projects, active Actions and prompts by text. Pass a result id to fetch.",
+      "description": "Find projects, active Actions and prompts by text when you do not know where a record is. Returns matching records with ids; pass one to fetch for the full record.",
       "input_schema": {
         "type": "object",
         "properties": {
