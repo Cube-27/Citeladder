@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 
 import { cycled } from '@/lib/utils';
 
@@ -13,6 +13,7 @@ import {
   type AppShellChrome,
   type ShellFilters,
 } from '../scenes/product-views';
+import { useAutoplay } from './use-autoplay';
 
 /* The real AI Visibility page's tabs and filter bar. */
 const VISIBILITY_TABS = ['Trends', 'Sources', 'Query fanouts'] as const;
@@ -76,31 +77,53 @@ const TOUR = [
   View: () => ReactNode;
 }[];
 
-type TourId = (typeof TOUR)[number]['id'];
+const TOUR_INTERVAL_MS = 8000;
 
 /** The page's only interactive region; Astro hydrates it as its own island. */
 export function HeroTour() {
-  const [active, setActive] = useState<TourId>('visibility');
-  const step = TOUR.find((item) => item.id === active) ?? TOUR[0];
+  const root = useRef<HTMLDivElement>(null);
+  const [active, setActive] = useState(0);
+  // The first click or key on the tabs hands the tour to the reader for good.
+  const [autoplay, setAutoplay] = useState(true);
+  const step = cycled(TOUR, active);
+  const choose = (index: number) => {
+    setAutoplay(false);
+    setActive(index % TOUR.length);
+  };
+
+  useAutoplay({
+    target: root,
+    intervalMs: TOUR_INTERVAL_MS,
+    enabled: autoplay,
+    onTick: () => setActive((index) => (index + 1) % TOUR.length),
+  });
+
   return (
-    <div className="lp-tour">
-      <div className="lp-tour-tabs" role="tablist" aria-label="Product tour">
-        {TOUR.map((item) => (
+    <div ref={root} className="lp-tour">
+      {/* Focus counts as interaction too: autoplay moving the selection away
+          from a focused tab would leave arrow keys starting from the wrong one. */}
+      <div
+        className="lp-tour-tabs"
+        role="tablist"
+        aria-label="Product tour"
+        onFocus={() => setAutoplay(false)}
+      >
+        {TOUR.map((item, index) => (
           <button
             key={item.id}
             type="button"
             role="tab"
             id={`tour-tab-${item.id}`}
-            aria-selected={item.id === active}
+            aria-selected={index === active}
             aria-controls="tour-panel"
-            tabIndex={item.id === active ? 0 : -1}
-            onClick={() => setActive(item.id)}
+            tabIndex={index === active ? 0 : -1}
+            onClick={() => choose(index)}
             onKeyDown={(event) => {
               if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
-              const index = TOUR.findIndex((entry) => entry.id === active);
-              const next = cycled(TOUR, index + (event.key === 'ArrowRight' ? 1 : TOUR.length - 1));
-              setActive(next.id);
-              document.getElementById(`tour-tab-${next.id}`)?.focus();
+              event.preventDefault();
+              const next = active + (event.key === 'ArrowRight' ? 1 : TOUR.length - 1);
+              choose(next);
+              document.getElementById(`tour-tab-${cycled(TOUR, next).id}`)?.focus();
             }}
           >
             {item.label}
@@ -108,7 +131,9 @@ export function HeroTour() {
         ))}
       </div>
       <div className="lp-hero-stage product-stage">
+        {/* Keyed by step so the view's entrance animations replay on each switch. */}
         <div
+          key={step.id}
           id="tour-panel"
           role="tabpanel"
           aria-labelledby={`tour-tab-${step.id}`}
