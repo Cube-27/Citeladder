@@ -17,6 +17,8 @@ import { reserveUsage } from '../src/entitlements/ledger.ts';
 import { advisoryXactLock } from '../src/db/advisory-lock.ts';
 import { commandCenter } from '../src/projects/command-center.ts';
 import { purgeExpiredTrialProjects } from '../src/projects/trial-purge.ts';
+import { createDiscovery } from '../src/projects/discovery.ts';
+import { discoveryCreate } from '../src/projects/discovery-inputs.ts';
 import { policy } from '../src/config.ts';
 import { billingAccount, grant, prompt, promptSet } from './prompt-fixtures.ts';
 import { Fixtures, sessionToken, testConfig, testDatabase } from './support.ts';
@@ -403,9 +405,9 @@ describe('project owner', () => {
     expect(await remove('admin')).toBe(204);
   });
 
-  it('purges trial-only projects 30 days after the trial ends, and nothing else', async () => {
+  it('purges trial-only projects and incomplete discoveries 30 days after the trial ends, and nothing else', async () => {
     const day = 86_400_000;
-    async function trialProject(endedDaysAgo: number, paid = false) {
+    async function trialWorkspace(endedDaysAgo: number, { paid = false, project = true } = {}) {
       const t = await tenant();
       await db
         .updateTable('billing_accounts')
@@ -413,11 +415,19 @@ describe('project owner', () => {
         .where('id', '=', t.accountId)
         .execute();
       // Made while the trial was open, then the fixture's operator grants give way to it.
-      const project = await createProject(
+      const created = project
+        ? await createProject(db, t.workspaceId, t.userId, projectCreate.parse({ name: 'Trial' }))
+        : null;
+      // A discovery still in progress has no project to cascade from.
+      const discovery = await createDiscovery(
         db,
         t.workspaceId,
-        t.userId,
-        projectCreate.parse({ name: 'Trial' }),
+        discoveryCreate.parse({
+          brand_name: 'Acme',
+          website_url: 'acme.com',
+          primary_market: 'US',
+        }),
+        randomUUID(),
       );
       // The fixture's operator access grant is not a trial; this account is trial-only.
       await db.deleteFrom('account_grants').where('billing_account_id', '=', t.accountId).execute();
@@ -442,18 +452,36 @@ describe('project owner', () => {
         })
         .execute();
       if (paid) await grant(db, t.accountId, { key: 'project_slots', value: 1 });
-      return project.id;
+      return { projectId: created?.id ?? null, discoveryId: discovery.id };
     }
-    const expired = await trialProject(31);
-    const recent = await trialProject(10);
-    const upgraded = await trialProject(31, true);
+    const expired = await trialWorkspace(31);
+    const discoveryOnly = await trialWorkspace(31, { project: false });
+    const recent = await trialWorkspace(10);
+    const upgraded = await trialWorkspace(31, { paid: true });
     await purgeExpiredTrialProjects(db, new Date());
     const left = await db
       .selectFrom('projects')
       .select('id')
-      .where('id', 'in', [expired, recent, upgraded])
+      .where('id', 'in', [expired.projectId!, recent.projectId!, upgraded.projectId!])
       .execute();
-    expect(left.map((row) => row.id).sort()).toEqual([recent, upgraded].sort());
+    expect(left.map((row) => row.id).sort()).toEqual([recent.projectId, upgraded.projectId].sort());
+    const seeded = [expired, discoveryOnly, recent, upgraded].map((w) => w.discoveryId);
+    const discoveries = await db
+      .selectFrom('brand_discoveries')
+      .select('id')
+      .where('id', 'in', seeded)
+      .execute();
+    expect(discoveries.map((row) => row.id).sort()).toEqual(
+      [recent.discoveryId, upgraded.discoveryId].sort(),
+    );
+    const tasks = await db
+      .selectFrom('brand_discovery_tasks')
+      .select('discovery_id')
+      .where('discovery_id', 'in', seeded)
+      .execute();
+    expect(tasks.map((row) => row.discovery_id).sort()).toEqual(
+      [recent.discoveryId, upgraded.discoveryId].sort(),
+    );
   });
 
   it('overview reads persisted state and counts only enabled active prompts', async () => {

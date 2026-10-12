@@ -199,7 +199,8 @@ is refused (`project_work_running`) while an audit, crawl or Agent run still
 holds reserved units, because nothing could release that hold afterwards.
 
 A trial-only workspace (no plan, add-on, top-up or operator grant) loses access
-when its trial ends. The runner deletes its projects
+when its trial ends. The runner deletes its projects, and any brand discovery
+that never produced a project together with its tasks,
 `BILLING_TRIAL_DATA_RETENTION_DAYS` (default 30) after that, a bounded batch of
 workspaces per pass (`BILLING_TRIAL_PURGE_WORKSPACE_BATCH`). Each deletion holds
 the project and account-capacity locks and rechecks access, so a grant issued or
