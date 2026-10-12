@@ -3,8 +3,10 @@
  * development login and records, per turn, the time to the first visible text,
  * the total time, model and tool calls, tokens (cached included) and the saved
  * reply and document. Operator-run only (it calls the configured model and
- * spends provider budget); never part of CI. It reads only the HTTP API and the
- * attempt rows, so the same cases measure any runtime that keeps them.
+ * spends provider budget); never part of CI. Turns go through the HTTP API and
+ * are measured from the attempt rows, so the same cases measure any runtime
+ * that keeps them; project rows only resolve the cases' placeholders and
+ * Actions.
  *
  *   pnpm --filter @citeladder/api agent:eval --live --label baseline
  *   pnpm --filter @citeladder/api agent:eval --report baseline,native
@@ -18,6 +20,8 @@ import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 import { z } from 'zod';
 
+import { agentChatDetailSchema, agentTurnAcceptedSchema } from '@citeladder/contracts/agent';
+import { requireLocalDevelopment } from '../src/auth/bootstrap.ts';
 import { localEnvironment } from '../src/cli/local-environment.ts';
 import { loadConfig } from '../src/config.ts';
 import { createDatabase, type Database } from '../src/db/database.ts';
@@ -35,11 +39,25 @@ const { values } = parseArgs({
   },
 });
 
+const PLACEHOLDERS = ['brand', 'top_prompt', 'competitor'] as const;
+type Placeholders = Record<(typeof PLACEHOLDERS)[number], string>;
+const PLACEHOLDER = /\{\{(\w+)\}\}/g;
+
 const turnSchema = z.strictObject({
-  message: z.string(),
+  message: z
+    .string()
+    .refine(
+      (message) =>
+        [...message.matchAll(PLACEHOLDER)].every(([, key]) =>
+          (PLACEHOLDERS as readonly string[]).includes(key!),
+        ),
+      'Unknown {{placeholder}}',
+    ),
   skill_id: z.string().optional(),
   action: z.strictObject({ skill_id: z.string(), target_kind: z.string().optional() }).optional(),
 });
+type TurnSpec = z.infer<typeof turnSchema>;
+// Parsed at start, so a typo in a case fails before any provider spend.
 const cases = z
   .array(
     z.strictObject({
@@ -66,9 +84,11 @@ const recordSchema = z.looseObject({
   output_tokens: z.number().optional(),
   message: z.string().optional(),
   reply: z.string().nullish(),
-  output: z.unknown().optional(),
+  output: z.looseObject({ phase: z.string(), title: z.string(), body: z.string() }).nullish(),
 });
 type EvalRecord = z.infer<typeof recordSchema>;
+// Event shapes differ between runtimes; only the type tag is required.
+const eventSchema = z.looseObject({ type: z.string() });
 
 const directory = join(gitDirectory(process.cwd()), 'agent-eval');
 
@@ -78,12 +98,7 @@ async function live() {
   if (!values.label) throw new Error('Name the run with --label');
   const env = localEnvironment();
   const config = loadConfig(env);
-  const target = new URL(config.databaseUrl);
-  if (
-    config.appEnv !== 'development' ||
-    !['localhost', '127.0.0.1', '[::1]'].includes(target.hostname)
-  )
-    throw new Error('The Agent eval runs only against a local development database');
+  requireLocalDevelopment(config);
   if (!env.DEV_LOGIN_EMAIL || !env.DEV_LOGIN_PASSWORD)
     throw new Error('Set DEV_LOGIN_EMAIL and DEV_LOGIN_PASSWORD for the local development login');
   const db = createDatabase(config);
@@ -98,6 +113,8 @@ async function live() {
     );
     await mkdir(directory, { recursive: true });
     const log = join(directory, `${values.label}.jsonl`);
+    const write = (record: object) =>
+      appendFile(log, `${JSON.stringify({ label: values.label, ...record })}\n`);
     for (const item of cases) {
       if (values.case && !item.id.startsWith(values.case)) continue;
       let chatId: string | null = null;
@@ -108,14 +125,11 @@ async function live() {
           const result = await turn(db, client, project.id, chatId, body);
           chatId = result.chat_id;
           const record = { case: item.id, step, ...result };
-          await appendFile(log, `${JSON.stringify({ label: values.label, ...record })}\n`);
-          console.log(summaryLine(item.id, step, record));
+          await write(record);
+          console.log(summaryLine(record));
         } catch (error) {
           const failed = error instanceof Error ? error.message : String(error);
-          await appendFile(
-            log,
-            `${JSON.stringify({ label: values.label, case: item.id, step, failed })}\n`,
-          );
+          await write({ case: item.id, step, failed });
           console.log(`${item.id}#${step} FAILED ${failed}`);
           break;
         }
@@ -143,56 +157,59 @@ async function resolveProject(db: Database, email: string, requested: string | u
 }
 
 /** Values the cases name, read from the project so the cases fit any local data. */
-async function placeholders(db: Database, projectId: string) {
-  const project = await db
-    .selectFrom('projects')
-    .select(['name', 'brand_name'])
-    .where('id', '=', projectId)
-    .executeTakeFirstOrThrow();
-  const prompt = await db
-    .selectFrom('actions')
-    .select('target_label')
-    .where('project_id', '=', projectId)
-    .where('target_kind', '=', 'prompt')
-    .where('status', '=', 'open')
-    .orderBy('priority_score', 'desc')
-    .executeTakeFirst();
-  const competitor = await db
-    .selectFrom('competitors')
-    .select('name')
-    .where('project_id', '=', projectId)
-    .orderBy('created_at')
-    .executeTakeFirst();
+async function placeholders(db: Database, projectId: string): Promise<Placeholders> {
+  const [project, prompt, competitor] = await Promise.all([
+    db
+      .selectFrom('projects')
+      .select(['name', 'brand_name'])
+      .where('id', '=', projectId)
+      .executeTakeFirstOrThrow(),
+    db
+      .selectFrom('actions')
+      .select('target_label')
+      .where('project_id', '=', projectId)
+      .where('target_kind', '=', 'prompt')
+      .where('status', '=', 'open')
+      .orderBy('priority_score', 'desc')
+      .executeTakeFirst(),
+    db
+      .selectFrom('competitors')
+      .select('name')
+      .where('project_id', '=', projectId)
+      .orderBy('created_at')
+      .executeTakeFirst(),
+  ]);
   return {
     brand: project.brand_name ?? project.name,
     top_prompt: prompt?.target_label ?? 'our most important tracked prompt',
     competitor: competitor?.name ?? 'our closest competitor',
-  } as Record<string, string>;
+  };
 }
+
+type RequestBody = { message: string; skill_id?: string; action_id?: string };
 
 async function requestBody(
   db: Database,
   projectId: string,
-  spec: z.infer<typeof turnSchema>,
-  vars: Record<string, string>,
+  spec: TurnSpec,
+  vars: Placeholders,
   first: boolean,
-) {
-  const message = spec.message.replaceAll(/\{\{(\w+)\}\}/g, (_, key: string) => vars[key] ?? key);
-  const body: Record<string, unknown> = { message };
-  if (spec.skill_id) body.skill_id = spec.skill_id;
-  if (spec.action && first) {
-    let query = db
-      .selectFrom('actions')
-      .select('id')
-      .where('project_id', '=', projectId)
-      .where('status', '=', 'open')
-      .where('skill_id', '=', spec.action.skill_id);
-    if (spec.action.target_kind) query = query.where('target_kind', '=', spec.action.target_kind);
-    const action = await query.orderBy('priority_score', 'desc').executeTakeFirst();
-    if (!action) throw new Error(`No open ${spec.action.skill_id} Action in the project`);
-    body.action_id = action.id;
-  }
-  return body;
+): Promise<RequestBody> {
+  const message = spec.message.replaceAll(
+    PLACEHOLDER,
+    (_, key: string) => vars[key as keyof Placeholders],
+  );
+  if (!spec.action || !first) return { message, skill_id: spec.skill_id };
+  let query = db
+    .selectFrom('actions')
+    .select('id')
+    .where('project_id', '=', projectId)
+    .where('status', '=', 'open')
+    .where('skill_id', '=', spec.action.skill_id);
+  if (spec.action.target_kind) query = query.where('target_kind', '=', spec.action.target_kind);
+  const action = await query.orderBy('priority_score', 'desc').executeTakeFirst();
+  if (!action) throw new Error(`No open ${spec.action.skill_id} Action in the project`);
+  return { message, skill_id: spec.skill_id, action_id: action.id };
 }
 
 type Client = { api: string; headers: Record<string, string> };
@@ -230,36 +247,15 @@ async function call(client: Client, path: string, init: RequestInit = {}) {
   return response;
 }
 
-const acceptedSchema = z.looseObject({
-  chat_id: z.string(),
-  run: z.looseObject({ id: z.string() }),
-});
-const detailSchema = z.looseObject({
-  messages: z.array(z.looseObject({ role: z.string(), content: z.string() })),
-  latest_run: z.looseObject({ status: z.string(), error_code: z.string().nullish() }).nullable(),
-  output: z
-    .looseObject({
-      phase: z.string(),
-      latest_revision: z
-        .looseObject({
-          number: z.number(),
-          title: z.string(),
-          body: z.string(),
-        })
-        .nullable(),
-    })
-    .nullable(),
-});
-
 async function turn(
   db: Database,
   client: Client,
   projectId: string,
   chatId: string | null,
-  body: Record<string, unknown>,
+  body: RequestBody,
 ) {
   const path = chatId ? `/agent/chats/${chatId}/messages` : `/projects/${projectId}/agent/chats`;
-  const accepted = acceptedSchema.parse(
+  const accepted = agentTurnAcceptedSchema.parse(
     await (
       await call(client, path, {
         method: 'POST',
@@ -271,29 +267,30 @@ async function turn(
       })
     ).json(),
   );
-  const timing = await stream(client, accepted.chat_id, accepted.run.id);
-  const detail = detailSchema.parse(
+  const { error, ...timing } = await stream(client, accepted.chat_id, accepted.run.id);
+  const detail = agentChatDetailSchema.parse(
     await (await call(client, `/agent/chats/${accepted.chat_id}`)).json(),
   );
   const reply = detail.messages.findLast((message) => message.role === 'agent');
-  const usage = await attempts(db, accepted.run.id);
+  const revision = detail.output?.latest_revision;
   return {
     chat_id: accepted.chat_id,
     run_id: accepted.run.id,
-    message: String(body.message),
+    message: body.message,
     run_status: detail.latest_run?.status ?? null,
-    run_error: detail.latest_run?.error_code ?? timing.error,
+    run_error: detail.latest_run?.error_code || error,
     ...timing,
-    ...usage,
+    ...(await attempts(db, accepted.run.id)),
     reply: reply?.content ?? null,
-    output: detail.output?.latest_revision
-      ? {
-          phase: detail.output.phase,
-          revision: detail.output.latest_revision.number,
-          title: detail.output.latest_revision.title,
-          body: detail.output.latest_revision.body,
-        }
-      : null,
+    output:
+      detail.output && revision
+        ? {
+            phase: detail.output.phase,
+            revision: revision.number,
+            title: revision.title,
+            body: revision.body,
+          }
+        : null,
   };
 }
 
@@ -304,14 +301,11 @@ async function stream(client: Client, chatId: string, runId: string) {
     method: 'POST',
     headers: { Accept: 'text/event-stream' },
   });
-  const timing = {
-    first_event_ms: null as number | null,
-    first_text_ms: null as number | null,
-    total_ms: 0,
-    events: {} as Record<string, number>,
-    error: null as string | null,
-  };
   if (!response.body) throw new Error('The run answered without a stream');
+  let firstEvent: number | null = null;
+  let firstText: number | null = null;
+  let error: string | null = null;
+  const events: Record<string, number> = {};
   const decoder = new TextDecoder();
   let buffer = '';
   for await (const chunk of response.body) {
@@ -325,46 +319,50 @@ async function stream(client: Client, chatId: string, runId: string) {
         .map((line) => line.slice(5).trim())
         .join('\n');
       if (!data) continue;
-      const event = z.looseObject({ type: z.string() }).safeParse(JSON.parse(data));
+      const event = eventSchema.safeParse(JSON.parse(data));
       if (!event.success) continue;
       const at = Math.round(performance.now() - started);
-      const { type } = event.data;
-      timing.first_event_ms ??= at;
-      timing.events[type] = (timing.events[type] ?? 0) + 1;
-      const fields = event.data as Record<string, unknown>;
+      const { type, reply, body, code } = event.data;
+      firstEvent ??= at;
+      events[type] = (events[type] ?? 0) + 1;
       const visible =
-        type === 'reply_delta' ||
-        type === 'document_delta' ||
-        (type === 'text' && Boolean(fields.reply || fields.body));
-      if (visible) timing.first_text_ms ??= at;
-      if (type === 'error') timing.error = String(fields.code);
+        type === 'reply_delta' || type === 'document_delta' || (type === 'text' && (reply || body));
+      if (visible) firstText ??= at;
+      if (type === 'error') error = String(code);
     }
   }
-  timing.total_ms = Math.round(performance.now() - started);
-  return timing;
+  return {
+    first_event_ms: firstEvent,
+    first_text_ms: firstText,
+    total_ms: Math.round(performance.now() - started),
+    events,
+    error,
+  };
 }
 
 async function attempts(db: Database, runId: string) {
-  const calls = await db
-    .selectFrom('agent_model_attempts')
-    .select([
-      'ordinal',
-      'latency_ms',
-      'input_tokens',
-      'cached_input_tokens',
-      'output_tokens',
-      'reasoning_tokens',
-      'finish_status',
-    ])
-    .where('run_id', '=', runId)
-    .orderBy('ordinal')
-    .execute();
-  const tools = await db
-    .selectFrom('agent_tool_attempts')
-    .select(['ordinal', 'tool_name', 'status'])
-    .where('run_id', '=', runId)
-    .orderBy('ordinal')
-    .execute();
+  const [calls, tools] = await Promise.all([
+    db
+      .selectFrom('agent_model_attempts')
+      .select([
+        'ordinal',
+        'latency_ms',
+        'input_tokens',
+        'cached_input_tokens',
+        'output_tokens',
+        'reasoning_tokens',
+        'finish_status',
+      ])
+      .where('run_id', '=', runId)
+      .orderBy('ordinal')
+      .execute(),
+    db
+      .selectFrom('agent_tool_attempts')
+      .select(['ordinal', 'tool_name', 'status'])
+      .where('run_id', '=', runId)
+      .orderBy('ordinal')
+      .execute(),
+  ]);
   const sum = (
     key: 'input_tokens' | 'cached_input_tokens' | 'output_tokens' | 'reasoning_tokens',
   ) => calls.reduce((total, row) => total + Number(row[key] ?? 0), 0);
@@ -380,9 +378,9 @@ async function attempts(db: Database, runId: string) {
   };
 }
 
-function summaryLine(id: string, step: number, record: EvalRecord) {
+function summaryLine(record: EvalRecord) {
   return (
-    `${id}#${step} ${record.run_status}${record.run_error ? ` ${record.run_error}` : ''} ` +
+    `${record.case}#${record.step} ${record.run_status}${record.run_error ? ` ${record.run_error}` : ''} ` +
     `first_text=${record.first_text_ms}ms total=${record.total_ms}ms calls=${record.model_calls} ` +
     `tools=${record.tool_calls} in=${record.input_tokens} cached=${record.cached_input_tokens} out=${record.output_tokens}`
   );
@@ -396,36 +394,38 @@ async function load(label: string) {
     .map((line) => recordSchema.parse(JSON.parse(line)));
 }
 
-function percentile(values: number[], p: number) {
-  if (values.length === 0) return null;
-  const sorted = values.toSorted((a, b) => a - b);
+function percentile(samples: number[], p: number) {
+  if (samples.length === 0) return null;
+  const sorted = samples.toSorted((a, b) => a - b);
   return sorted[Math.min(sorted.length - 1, Math.ceil((p / 100) * sorted.length) - 1)]!;
 }
 
-function metrics(records: EvalRecord[]) {
+function metrics(records: EvalRecord[]): Record<string, string> {
   const done = records.filter((record) => !record.failed);
   const numbers = (key: keyof EvalRecord) =>
     done.map((record) => record[key]).filter((value): value is number => typeof value === 'number');
   const total = (key: keyof EvalRecord) => numbers(key).reduce((sum, value) => sum + value, 0);
-  const seconds = (ms: number | null) => (ms === null ? '—' : `${(ms / 1000).toFixed(1)}s`);
+  const perTurn = (key: keyof EvalRecord) => total(key) / Math.max(1, done.length);
+  const seconds = (key: keyof EvalRecord, p: number) => {
+    const ms = percentile(numbers(key), p);
+    return ms === null ? '—' : `${(ms / 1000).toFixed(1)}s`;
+  };
   const input = total('input_tokens');
   return {
     Turns: `${done.length} of ${records.length}`,
     Succeeded: String(done.filter((record) => record.run_status === 'succeeded').length),
-    'First text, median': seconds(percentile(numbers('first_text_ms'), 50)),
-    'First text, p90': seconds(percentile(numbers('first_text_ms'), 90)),
-    'Total, median': seconds(percentile(numbers('total_ms'), 50)),
-    'Total, p90': seconds(percentile(numbers('total_ms'), 90)),
-    'Model calls per turn': (total('model_calls') / Math.max(1, done.length)).toFixed(1),
-    'Tool calls per turn': (total('tool_calls') / Math.max(1, done.length)).toFixed(1),
-    'Input tokens per turn': Math.round(input / Math.max(1, done.length)).toLocaleString('en'),
+    'First text, median': seconds('first_text_ms', 50),
+    'First text, p90': seconds('first_text_ms', 90),
+    'Total, median': seconds('total_ms', 50),
+    'Total, p90': seconds('total_ms', 90),
+    'Model calls per turn': perTurn('model_calls').toFixed(1),
+    'Tool calls per turn': perTurn('tool_calls').toFixed(1),
+    'Input tokens per turn': Math.round(perTurn('input_tokens')).toLocaleString('en'),
     'Cached share of input': input
       ? `${((100 * total('cached_input_tokens')) / input).toFixed(0)}%`
       : '—',
-    'Output tokens per turn': Math.round(
-      total('output_tokens') / Math.max(1, done.length),
-    ).toLocaleString('en'),
-  } as Record<string, string>;
+    'Output tokens per turn': Math.round(perTurn('output_tokens')).toLocaleString('en'),
+  };
 }
 
 async function report(labels: string[]) {
@@ -443,31 +443,23 @@ async function report(labels: string[]) {
   ].join('\n');
   console.log(table);
   const review = cases.flatMap((item) =>
-    item.turns.map((_, index) => {
+    item.turns.map((spec, index) => {
       const step = index + 1;
-      const answers = runs.map((run) => {
-        const record = run.records.find(
-          (candidate) => candidate.case === item.id && candidate.step === step,
-        );
-        const output = z
-          .object({ phase: z.string(), title: z.string(), body: z.string() })
-          .nullish()
-          .safeParse(record?.output);
-        const document =
-          output.success && output.data
-            ? `\n\n**Document (${output.data.phase}): ${output.data.title}**\n\n${output.data.body}`
-            : '';
-        return `### ${run.label}\n\n${record?.failed ? `Failed: ${record.failed}` : `${record?.reply ?? '(no turn)'}${document}`}`;
+      const found = runs.map((run) => ({
+        label: run.label,
+        record: run.records.find((record) => record.case === item.id && record.step === step),
+      }));
+      const answers = found.map(({ label, record }) => {
+        const output = record?.output;
+        const document = output
+          ? `\n\n**Document (${output.phase}): ${output.title}**\n\n${output.body}`
+          : '';
+        return `### ${label}\n\n${record?.failed ? `Failed: ${record.failed}` : `${record?.reply ?? '(no turn)'}${document}`}`;
       });
-      const asked = runs
-        .map(
-          (run) =>
-            run.records.find((record) => record.case === item.id && record.step === step)?.message,
-        )
-        .find(Boolean);
+      const asked = found.map(({ record }) => record?.message).find(Boolean) ?? spec.message;
       return [
         `## ${item.id} · turn ${step}`,
-        `**Asked:** ${asked ?? item.turns[index]!.message}`,
+        `**Asked:** ${asked}`,
         `**Check:** ${item.review}`,
         ...answers,
       ].join('\n\n');
