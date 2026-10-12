@@ -16,7 +16,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import { agentHandoffHref } from '@/lib/agent/handoff';
-import { runErrorCopy, runStepLabel } from '@/lib/agent/vocabulary';
+import { runErrorCopy, runStepLabel, toolCallLabel } from '@/lib/agent/vocabulary';
 import { runOutcome } from '@/lib/agent/run-state';
 import { useLiveTurn, type LiveTurn } from '@/lib/agent/live-turns';
 import type { AgentChatDetail, AgentMessage, AgentRun } from '@/lib/api/agent';
@@ -71,7 +71,7 @@ export function Conversation({
         <div className={panelClasses({}, 'min-w-0')}>{outputView}</div>
       ) : null}
       {pendingMessage ? <PendingMessage text={pendingMessage} /> : null}
-      {live?.text ? <LiveReply text={live.text} /> : null}
+      {live && (live.reply || live.document || live.thinking) ? <LiveReply live={live} /> : null}
       <RunState detail={detail} live={live} />
       <TurnActions
         detail={detail}
@@ -170,21 +170,29 @@ function PendingMessage({ text }: Readonly<{ text: string }>) {
   );
 }
 
-/** The reply and document as they are written; the saved versions replace them. */
-function LiveReply({ text: latest }: Readonly<{ text: NonNullable<LiveTurn['text']> }>) {
-  const text = useDeferredValue(latest);
+/**
+ * The thinking summary, reply and document as they are written. The saved
+ * reply replaces all of them, so the thinking summary closes with the turn.
+ */
+function LiveReply({ live: latest }: Readonly<{ live: LiveTurn }>) {
+  const { thinking, reply, document } = useDeferredValue(latest);
   return (
     <article aria-label="Agent reply in progress" aria-busy="true" className="grid gap-2">
       <span className={textRole('label')}>Agent</span>
-      {text.reply ? <ContentMarkdown markdown={text.reply} density="compact" /> : null}
-      {text.body ? (
+      {thinking?.text ? (
+        <Disclosure title="Thinking">
+          <p className={textRole('caption', 'whitespace-pre-wrap')}>{thinking.text}</p>
+        </Disclosure>
+      ) : null}
+      {reply?.text ? <ContentMarkdown markdown={reply.text} density="compact" /> : null}
+      {document?.body ? (
         <section
-          aria-label={text.title ? `Writing ${text.title}` : 'Writing the document'}
+          aria-label={document.title ? `Writing ${document.title}` : 'Writing the document'}
           className={panelClasses({}, 'grid min-w-0 gap-2')}
         >
           <span className={textRole('caption')}>Writing…</span>
-          {text.title ? <h2 className={textRole('sectionTitle')}>{text.title}</h2> : null}
-          <ContentMarkdown markdown={text.body} />
+          {document.title ? <h2 className={textRole('sectionTitle')}>{document.title}</h2> : null}
+          <ContentMarkdown markdown={document.body} />
         </section>
       ) : null}
     </article>
@@ -224,6 +232,7 @@ function MessageBubble({
         </div>
       </div>
     );
+  const calls = message.steps.filter((step) => step.kind === 'model').length;
   const tools = message.steps.filter((step) => step.kind === 'tool').length;
   const readsLabel = tools === 1 ? 'read' : 'reads';
   return (
@@ -242,7 +251,7 @@ function MessageBubble({
       {message.steps.length > 0 ? (
         <details className="group">
           <summary className={textRole('caption', 'cursor-pointer')}>
-            Run complete · {message.steps.length} {message.steps.length === 1 ? 'step' : 'steps'}
+            Run complete · {calls} model {calls === 1 ? 'call' : 'calls'}
             {tools > 0 ? ` · ${tools} data ${readsLabel}` : ''}
           </summary>
           <ul className="grid gap-1 ps-4 pt-2">
@@ -369,10 +378,11 @@ function FollowUps({
 }
 
 function stepLabel(step: AgentMessage['steps'][number]): string {
-  if (step.kind === 'skill') return 'Chose a skill';
+  if (step.kind === 'skill') return 'Loaded the method';
+  if (step.kind === 'document') return 'Saved the document';
   if (step.kind === 'tool')
     return runStepLabel({ tool: step.tool ?? 'read_data', status: step.status ?? 'unknown' });
-  return 'Worked on the reply';
+  return step.ordinal ? `Model call ${step.ordinal}` : 'Worked on the reply';
 }
 
 function RunState({
@@ -402,6 +412,8 @@ function RunningState({
     queued && !live?.step
       ? 'Waiting to start…'
       : (liveStepLabel(live) ?? activeStepLabel(run.progress, run.attempt_count));
+  // The current model call's tool calls run at the same time.
+  const current = live?.tools.filter((tool) => tool.ordinal === live.step) ?? [];
   return (
     <div className="grid gap-2">
       <span className={cn('flex items-center gap-3', textRole('caption'))}>
@@ -411,12 +423,28 @@ function RunningState({
           <Elapsed since={live?.startedAt ?? Date.parse(run.created_at)} />
         </output>
       </span>
+      {current.length > 1 ? (
+        <ul aria-label="Current reads" className="grid gap-1 ps-8">
+          {current.map((tool) => (
+            <li key={tool.call_id} className={textRole('caption')}>
+              {toolCallLabel(tool)}
+            </li>
+          ))}
+        </ul>
+      ) : null}
       {run.progress.length > 0 ? <RunActivity progress={run.progress} /> : null}
     </div>
   );
 }
+/** What the newest model call is doing: its running reads, else deciding. */
 function liveStepLabel(live: LiveTurn | undefined) {
-  return live?.step ? runStepLabel(live.step) : null;
+  if (!live?.step) return null;
+  const running = live.tools.filter(
+    (tool) => tool.ordinal === live.step && tool.status === 'started',
+  );
+  if (running.length > 1) return `Running ${running.length} reads at once…`;
+  if (running[0]) return toolCallLabel(running[0]);
+  return runStepLabel({ status: 'working', tool: null });
 }
 function Elapsed({ since }: Readonly<{ since: number }>) {
   const now = useNow(1000);
@@ -442,7 +470,10 @@ function RunActivity({ progress }: Readonly<{ progress: AgentRun['progress'] }>)
       <summary className={textRole('caption', 'cursor-pointer')}>View activity</summary>
       <ol aria-label="Agent progress" className="grid gap-1 ps-4 pt-2">
         {progress.map((step) => (
-          <li key={`${step.run_attempt}:${step.ordinal}`} className={textRole('caption')}>
+          <li
+            key={`${step.run_attempt}:${step.ordinal}:${step.call_id ?? 'model'}`}
+            className={textRole('caption')}
+          >
             {runStepLabel(step)}
           </li>
         ))}

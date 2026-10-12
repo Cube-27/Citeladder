@@ -202,11 +202,10 @@ const RUN_ERROR_COPY: Record<string, string> = {
   turn_timeout:
     'This turn ran past its time limit. Nothing was saved; narrow the request and try again.',
   tool_failed: 'A data read failed. Try again.',
-  protocol_violation: 'The agent returned a response it could not use. Try again.',
+  model_refused:
+    'The model declined to answer this request. Nothing was saved; rephrase it or ask about one part at a time.',
   incompatible_budget:
     'The agent policy changed incompatibly after admission. Send this request again.',
-  output_context_size_limit:
-    'The current document is too large to refine within this turn’s context limit. It was preserved in full and no model call was made. Use a smaller document for refinement.',
   context_size_limit:
     'The selected context is too large for this turn. Remove a context reference or use a smaller upstream brief and send again.',
 };
@@ -233,6 +232,32 @@ export function runStepLabel(step: RunStep): string {
   if (step.status === 'failed') return 'Step failed';
   if (step.status === 'interrupted') return 'Earlier attempt interrupted';
   return 'Step status unknown';
+}
+
+/** The Agent's own tools; every other tool is a data read. */
+const BUILTIN_TOOL_LABEL: Record<string, Record<'started' | 'completed' | 'refused', string>> = {
+  load_skill: {
+    started: 'Loading the method…',
+    completed: 'Loaded the method',
+    refused: 'Method not loaded',
+  },
+  save_document: {
+    started: 'Saving the document…',
+    completed: 'Saved the document',
+    refused: 'Document not saved',
+  },
+};
+
+/** One tool call of a live turn; a model response's calls run together. */
+export function toolCallLabel({ tool, status }: { tool: string; status: string }): string {
+  const builtin = BUILTIN_TOOL_LABEL[tool];
+  if (builtin)
+    return status === 'started' || status === 'completed' || status === 'refused'
+      ? builtin[status]
+      : `${builtin.refused} · failed`;
+  if (status === 'started')
+    return `Reading ${tool.replace(/^(read|get)_/u, '').replaceAll('_', ' ')}…`;
+  return runStepLabel({ tool, status });
 }
 
 export function runErrorCopy(code: string): string {

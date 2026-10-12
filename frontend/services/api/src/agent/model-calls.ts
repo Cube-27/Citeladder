@@ -1,23 +1,27 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
-import type { ModelGateway } from '../models/gateway.ts';
+import type {
+  ConversationListener,
+  ConversationRequest,
+  ConversationResult,
+} from '../models/conversation.ts';
 import { authorize } from './access.ts';
 import { abortable } from './async.ts';
 import { AgentError, budgetSchema, type Lease, type ModelAttempt, type Run } from './contracts.ts';
 import { lockRun } from './queue.ts';
 
-export type ModelResult = Awaited<ReturnType<ModelGateway['complete']>>;
-export type ModelRequest = { system: string; user: string; schema: Record<string, unknown> };
+export type ModelResult = ConversationResult;
+export type ModelRequest = ConversationRequest;
 export type AgentModel = {
   adapter: string;
   endpointHost: string;
   model: string;
-  /** `onText` receives the growing response when the destination can stream it. */
-  complete: (
+  /** `listener` sees text, thinking and tool input as they stream; display only. */
+  converse: (
     request: ModelRequest,
     signal: AbortSignal,
-    onText?: (content: string) => void,
+    listener?: ConversationListener,
   ) => Promise<ModelResult>;
 };
 type Hold = { reservationId: string | null; credits: number; pricingRevision: string };
@@ -55,7 +59,7 @@ export class ModelCalls {
         userId: run.user_id,
       });
       const budget = budgetSchema.parse(run.budget);
-      if (!Number.isInteger(ordinal) || ordinal < 1 || ordinal > budget.max_steps)
+      if (!Number.isInteger(ordinal) || ordinal < 1 || ordinal > budget.max_model_calls)
         throw new AgentError('stopped_at_limit');
       if (run.requested_model !== model.model) throw new AgentError('model_changed');
       const existing = await trx
@@ -105,7 +109,7 @@ export class ModelCalls {
           total_tokens: null,
           usage_complete: false,
           settlement_status: run.funding_source === 'platform' ? 'pending' : 'not_applicable',
-          request_hash: hash(`${request.system}\n\n${request.user}`),
+          request_hash: hash(JSON.stringify(request)),
           output_hash: '',
           dispatched_at: now,
           deadline_at: new Date(now.getTime() + budget.execution_timeout_seconds * 1000),
@@ -195,7 +199,7 @@ export class ModelCalls {
           late_receipt: now > attempt.deadline_at,
           returned_model: result?.returned_model.slice(0, 255) ?? '',
           finish_status: result?.finish_status.slice(0, 64) ?? '',
-          output_hash: result ? hash(result.content) : '',
+          output_hash: result ? hash(JSON.stringify(result.blocks)) : '',
           error_code: result ? '' : 'provider_error',
           latency_ms: result?.latency_ms ?? null,
           settlement_status: settled.status,
@@ -212,7 +216,7 @@ export class ModelCalls {
     model: AgentModel,
     request: ModelRequest,
     executionSignal?: AbortSignal,
-    onText?: (content: string) => void,
+    listener?: ConversationListener,
   ) {
     executionSignal?.throwIfAborted();
     const attempt = await this.dispatch(lease, ordinal, model, request);
@@ -222,7 +226,7 @@ export class ModelCalls {
       if (remaining <= 0) throw new AgentError('provider_error');
       const deadline = AbortSignal.timeout(remaining);
       const signal = executionSignal ? AbortSignal.any([deadline, executionSignal]) : deadline;
-      result = await abortable(() => model.complete(request, signal, onText), signal);
+      result = await abortable(() => model.converse(request, signal, listener), signal);
     } catch {
       await this.receipt(lease.workspaceId, attempt.id, null);
       throw new AgentError('provider_error');

@@ -1,43 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { admittedBudget, parseStep, stepJsonSchema } from '../src/agent/contracts.ts';
-import { assemblePrompt } from '../src/agent/prompt.ts';
+import { admittedBudget } from '../src/agent/contracts.ts';
 import { suppliedManifest } from '../src/agent/context.ts';
 import { boundToolData } from '../src/agent/tools.ts';
+import { replayed } from '../src/agent/transcript.ts';
 import { emptyPackage } from './agent-support.ts';
 
-describe('structurally bounded Agent prompts', () => {
-  const input = {
-    system: 'Instructions',
-    schema: {},
-    request: 'Refine this document',
-    context: '{}',
-    revision: { id: 'exact-revision', body: '😀\\\"'.repeat(4000) },
-    history: Array.from({ length: 12 }, (_, index) => ({
-      role: 'user',
-      content: `${index}:` + 'h'.repeat(5000),
-    })),
-    historyLimited: true,
-    observations: Array.from({ length: 6 }, (_, index) =>
-      JSON.stringify({ index, body: 'o'.repeat(11000) }),
-    ),
-    budget: admittedBudget(10),
-  };
-  it('preserves exact Unicode revisions, newest history and whole tool observations under pressure', () => {
-    const prompt = assemblePrompt(input);
-    const user = JSON.parse(prompt.request.user);
-    expect(user.current_revision).toEqual(input.revision);
-    expect(user.request).toBe(input.request);
-    expect(prompt.serializedChars).toBeLessThanOrEqual(input.budget.transcript_max_chars);
-    expect(user.omissions).toContain('oldest_history_messages');
-    expect(user.omissions).toContain('history_query_limit');
-    for (const text of user.observations) expect(() => JSON.parse(text)).not.toThrow();
-  });
-  it('refuses a saved revision too large for the transcript before dispatch without changing it', () => {
-    const size = input.budget.transcript_max_chars;
-    const revision = { body: 'x'.repeat(size) };
-    expect(() => assemblePrompt({ ...input, revision })).toThrow('output_context_size_limit');
-    expect(revision.body).toHaveLength(size);
-  });
+describe('structurally bounded Agent context and tool results', () => {
+  const input = { budget: admittedBudget(10) };
   it('keeps selected issue totals and whole occurrence samples when background exceeds the budget', () => {
     const occurrences = Array.from({ length: 10 }, (_, index) => ({
       site_url_id: `page-${index}`,
@@ -163,61 +132,23 @@ describe('structurally bounded Agent prompts', () => {
   });
 });
 
-describe('the step schema a provider enforces', () => {
-  // Strict structured outputs reject an open object or an optional field anywhere.
-  function openings(node: unknown, path = '$'): string[] {
-    if (!node || typeof node !== 'object') return [];
-    const own =
-      'properties' in node && node.properties && typeof node.properties === 'object'
-        ? [
-            ...('additionalProperties' in node && node.additionalProperties === false
-              ? []
-              : [`${path} is open`]),
-            ...Object.keys(node.properties).flatMap((key) =>
-              'required' in node && Array.isArray(node.required) && node.required.includes(key)
-                ? []
-                : [`${path}.${key} is optional`],
-            ),
-          ]
-        : [];
-    return [
-      ...own,
-      ...Object.entries(node).flatMap(([key, child]) => openings(child, `${path}.${key}`)),
-    ];
-  }
-  it('closes every object, requires every field and names only allowed values', () => {
-    const spec = {
-      actions: ['call_tool', 'respond'] as const,
-      skillIds: ['technical_health'],
-      output: { formatIds: [] },
-    } satisfies Parameters<typeof stepJsonSchema>[0];
-    const schema = stepJsonSchema(spec);
-    expect(openings(schema)).toEqual([]);
-    expect(JSON.stringify(schema)).not.toContain('$schema');
-    // The same spec reads a model's reply: a format the skill cannot have is dropped.
-    const step = parseStep(
-      JSON.stringify({
-        action: 'respond',
-        reply: 'Fixes below.',
-        output: {
-          title: 'Fixes',
-          body: 'Use HTTPS assets.',
-          phase: 'final',
-          format_id: 'markdown',
-        },
-      }),
-      undefined,
-      undefined,
-      spec,
-    );
-    expect(step).toMatchObject({ action: 'respond', output: { format_id: null } });
-    expect(() =>
-      parseStep(
-        JSON.stringify({ action: 'use_skill', skill_id: 'content_create' }),
-        undefined,
-        undefined,
-        { ...spec, actions: ['use_skill', 'respond'] },
-      ),
-    ).toThrow('protocol_violation');
+describe('replayed chat history', () => {
+  const turn = (runId: string, chars: number) => ({
+    runId,
+    contextHash: '',
+    skillId: null,
+    messages: [{ role: 'user' as const, content: [{ type: 'text', text: 'x'.repeat(chars) }] }],
+  });
+  const transcripts = [turn('oldest', 900), turn('middle', 900), turn('newest', 900)];
+  const budget = { ...admittedBudget(10), replay_max_chars: 2_000 };
+  it('drops the oldest whole turns for chat completions, which cannot compact', () => {
+    const { kept, dropped } = replayed(transcripts, 'openai_compatible', budget);
+    expect(kept.map((item) => item.runId)).toEqual(['middle', 'newest']);
+    expect(dropped).toBe(1);
+  });
+  it('keeps every turn for Anthropic, whose server-side compaction bounds the chat', () => {
+    const { kept, dropped } = replayed(transcripts, 'anthropic', budget);
+    expect(kept.map((item) => item.runId)).toEqual(['oldest', 'middle', 'newest']);
+    expect(dropped).toBe(0);
   });
 });

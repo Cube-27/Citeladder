@@ -22,15 +22,9 @@ export function agentModels(platform: GatewaySettings, transport: Transport = de
         model: gateway.model,
         endpointHost: gateway.baseUrlHost,
         adapter: gateway.adapter,
-        complete: (request, signal, onText) =>
+        converse: (request, signal, listener) =>
           runMetered({ workspaceId: run.workspace_id, feature: 'agent' }, () =>
-            gateway.completeStructured(
-              request.system,
-              request.user,
-              request.schema,
-              signal,
-              onText,
-            ),
+            gateway.converse(request, signal, listener),
           ),
       };
     });

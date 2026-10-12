@@ -357,12 +357,10 @@ async function stream(client: Client, chatId: string, runId: string) {
       buffer = buffer.slice(cut + 2);
       if (!event) continue;
       const at = Math.round(performance.now() - started);
-      const { type, reply, body, code } = event;
+      const { type, code } = event;
       firstEvent ??= at;
       events[type] = (events[type] ?? 0) + 1;
-      const visible =
-        type === 'reply_delta' || type === 'document_delta' || (type === 'text' && (reply || body));
-      if (visible) firstText ??= at;
+      if (type === 'reply_delta' || type === 'document_delta') firstText ??= at;
       if (type === 'error') error = String(code);
     }
   }

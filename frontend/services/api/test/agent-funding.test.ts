@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, describe, expect, it, vi } from 'vitest';
 import { testDatabase } from './support.ts';
-import { AgentFixtures, result } from './agent-support.ts';
+import { AgentFixtures, reply, request, result } from './agent-support.ts';
 import { BillingFixtures } from './billing-support.ts';
 import { billingAccount, grant } from './prompt-fixtures.ts';
 import { agentSettings } from '../src/agent/config.ts';
@@ -20,9 +20,8 @@ const platform = {
   model: 'claude-haiku-5-5',
   maxOutputTokens: 16_384,
 };
-// A 4-byte request with the full output cap at the marked-up price.
+// A small request with the full output cap at the marked-up price.
 const HOLD = 11;
-const request = { system: 's', user: 'u', schema: {} };
 const settings = agentSettings({});
 describe('Agent funding through the production ledger and shared pricing', () => {
   const db = testDatabase();
@@ -56,7 +55,7 @@ describe('Agent funding through the production ledger and shared pricing', () =>
       fetch: vi.fn<typeof fetch>(async () => {
         expect((await ledgerBalances(db, accountId)).get(grantId)?.reserved).toBe(HOLD);
         return Response.json({
-          choices: [{ message: { content: '{"action":"respond","reply":"Answer"}' } }],
+          choices: [{ message: { content: 'Answer' }, finish_reason: 'stop' }],
           usage: { prompt_tokens: 20, completion_tokens: 10 },
         });
       }),
@@ -74,7 +73,7 @@ describe('Agent funding through the production ledger and shared pricing', () =>
       reserved_credits: String(HOLD),
       pricing_revision: 'ai-pricing-v1',
     });
-    await calls.receipt(scope.workspaceId, attempt.id, result('changed late answer'));
+    await calls.receipt(scope.workspaceId, attempt.id, result(reply('changed late answer')));
     expect((await ledgerBalances(db, accountId)).get(grantId)).toEqual({
       reserved: 0,
       consumed: 1,
@@ -101,7 +100,7 @@ describe('Agent funding through the production ledger and shared pricing', () =>
     const { run: saved, lease } = await run(scope);
     const model = {
       ...(await agentModels(platform)(saved)),
-      complete: async () => {
+      converse: async () => {
         throw new Error('Provider unavailable');
       },
     };
@@ -125,10 +124,40 @@ describe('Agent funding through the production ledger and shared pricing', () =>
     const { run: saved, lease } = await run(scope);
     const calls = new ModelCalls(db, agentFunding(settings, platform));
     const attempt = await calls.dispatch(lease, 1, await agentModels(platform)(saved), request);
-    await calls.receipt(scope.workspaceId, attempt.id, { ...result('{}'), usage: {} });
+    await calls.receipt(scope.workspaceId, attempt.id, result(reply(), { usage: {} }));
     expect((await ledgerBalances(db, accountId)).get(grantId)).toEqual({
       reserved: 0,
       consumed: 10,
+    });
+  });
+  it('charges cache writes at the write rate and thinking only as output (B53)', async () => {
+    const { scope, accountId, grantId } = await tenant();
+    const { run: saved, lease } = await run(scope);
+    const calls = new ModelCalls(db, agentFunding(settings, platform));
+    const attempt = await calls.dispatch(lease, 1, await agentModels(platform)(saved), request);
+    // 40 000 written tokens at the write rate plus 2 000 output tokens, 1 500 of them thinking.
+    const usage = {
+      input_tokens: 40_000,
+      cached_input_tokens: 0,
+      cache_write_input_tokens: 40_000,
+      output_tokens: 2_000,
+      reasoning_tokens: 1_500,
+    };
+    await calls.receipt(scope.workspaceId, attempt.id, result(reply(), { usage }));
+    expect((await ledgerBalances(db, accountId)).get(grantId)).toEqual({
+      reserved: 0,
+      consumed: 8,
+    });
+    expect(
+      await db
+        .selectFrom('agent_model_attempts')
+        .select(['cache_write_input_tokens', 'reasoning_tokens', 'debited_credits'])
+        .where('id', '=', attempt.id)
+        .executeTakeFirst(),
+    ).toEqual({
+      cache_write_input_tokens: '40000',
+      reasoning_tokens: '1500',
+      debited_credits: '8',
     });
   });
   it('refuses a dispatch the remaining credits cannot hold, recording nothing', async () => {

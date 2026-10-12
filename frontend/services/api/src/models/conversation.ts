@@ -63,6 +63,20 @@ export type Converse = (
   listener?: ConversationListener,
 ) => Promise<ConversationResult>;
 
+/**
+ * The UTF-8 bytes a provider reads, the basis of a call's credit hold. A
+ * compaction block replaces everything before it, so earlier messages, still
+ * sent for append-only replay, are not read and not held for.
+ */
+export function conversationInputBytes(request: ConversationRequest) {
+  const start = request.messages.findLastIndex((message) =>
+    message.content.some((block) => block.type === 'compaction'),
+  );
+  const { system, tools, messages } = request;
+  const read = start < 0 ? messages : messages.slice(start);
+  return Buffer.byteLength(JSON.stringify({ system, tools, messages: read }), 'utf8');
+}
+
 const blocksSchema = z.array(z.object({ type: z.string() }).catchall(z.json()));
 /** Provider content as plain JSON blocks; anything else is an unreadable answer. */
 export function parseBlocks(value: unknown): ConversationBlock[] {

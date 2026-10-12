@@ -72,53 +72,76 @@ function pendingStepStatus(outcome: string, live: boolean, latest: boolean) {
   if (live) return modelStepStatus(outcome, latest);
   return outcome === 'dispatched' ? 'interrupted' : modelStepStatus(outcome, false);
 }
+/** Each model call, followed by the reads its response made, in the order they were written. */
 export async function progress(db: Database, run: Run) {
   if (run.attempt_count < 1) return [];
-  const attempts = await db
-    .selectFrom('agent_model_attempts as model')
-    .leftJoin('agent_tool_attempts as tool', (join) =>
-      join
-        .onRef('tool.run_id', '=', 'model.run_id')
-        .onRef('tool.workspace_id', '=', 'model.workspace_id')
-        .onRef('tool.run_attempt', '=', 'model.run_attempt')
-        .onRef('tool.ordinal', '=', 'model.ordinal'),
-    )
-    .select([
-      'model.id as model_id',
-      'model.ordinal',
-      'model.run_attempt',
-      'model.outcome',
-      'tool.id as tool_id',
-      'tool.tool_name',
-      'tool.status as tool_status',
-      'tool.registry_version',
-    ])
-    .where('model.workspace_id', '=', run.workspace_id)
-    .where('model.run_id', '=', run.id)
-    .orderBy('model.run_attempt')
-    .orderBy('model.ordinal')
-    .execute();
-  return attempts.map((row, index) =>
+  const [models, tools] = await Promise.all([
+    db
+      .selectFrom('agent_model_attempts')
+      .select(['id', 'ordinal', 'run_attempt', 'outcome'])
+      .where('workspace_id', '=', run.workspace_id)
+      .where('run_id', '=', run.id)
+      .orderBy('run_attempt')
+      .orderBy('ordinal')
+      .execute(),
+    db
+      .selectFrom('agent_tool_attempts')
+      .select([
+        'id',
+        'ordinal',
+        'run_attempt',
+        'call_id',
+        'tool_name',
+        'status',
+        'registry_version',
+      ])
+      .where('workspace_id', '=', run.workspace_id)
+      .where('run_id', '=', run.id)
+      .orderBy('run_attempt')
+      .orderBy('ordinal')
+      .orderBy('created_at')
+      .orderBy('id')
+      .execute(),
+  ]);
+  const live = active.includes(run.status);
+  const versions = {
+    runtime_version: run.runtime_version,
+    protocol_version: run.protocol_version,
+    skill_catalog_version: run.skill_catalog_version,
+    projection_version: agentPolicy.progress_version,
+  };
+  return models.flatMap((model, index) => [
     agentRunStepSchema.parse({
-      ordinal: row.ordinal,
-      status:
-        row.tool_status ??
-        pendingStepStatus(
-          row.outcome,
-          row.run_attempt === run.attempt_count && active.includes(run.status),
-          index === attempts.length - 1,
-        ),
-      tool: row.tool_name,
-      model_attempt_id: row.model_id,
-      tool_attempt_id: row.tool_id,
-      run_attempt: row.run_attempt,
-      runtime_version: run.runtime_version,
-      protocol_version: run.protocol_version,
-      registry_version: row.registry_version ?? run.registry_version,
-      skill_catalog_version: run.skill_catalog_version,
-      projection_version: agentPolicy.progress_version,
+      ordinal: model.ordinal,
+      status: pendingStepStatus(
+        model.outcome,
+        model.run_attempt === run.attempt_count && live,
+        index === models.length - 1,
+      ),
+      tool: null,
+      call_id: null,
+      model_attempt_id: model.id,
+      tool_attempt_id: null,
+      run_attempt: model.run_attempt,
+      registry_version: run.registry_version,
+      ...versions,
     }),
-  );
+    ...tools
+      .filter((tool) => tool.run_attempt === model.run_attempt && tool.ordinal === model.ordinal)
+      .map((tool) =>
+        agentRunStepSchema.parse({
+          ordinal: tool.ordinal,
+          status: tool.status,
+          tool: tool.tool_name,
+          call_id: tool.call_id,
+          model_attempt_id: model.id,
+          tool_attempt_id: tool.id,
+          run_attempt: tool.run_attempt,
+          registry_version: tool.registry_version,
+          ...versions,
+        }),
+      ),
+  ]);
 }
 export async function readChat(db: Database, scope: Scope, chatId: string) {
   await authorize(db, scope, false);

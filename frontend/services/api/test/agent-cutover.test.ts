@@ -8,7 +8,16 @@ import * as bindingsOwner from '../src/agent/bindings.ts';
 import { ModelCalls } from '../src/agent/model-calls.ts';
 import { recoveryReply } from '../src/agent/messages.ts';
 import { AgentWorker } from '../src/workers/agent-worker.ts';
-import { AgentFixtures, agentPolicy, scripted, deliverable, zeroFunding } from './agent-support.ts';
+import {
+  AgentFixtures,
+  agentPolicy,
+  reply,
+  request,
+  save,
+  scripted,
+  toolUse,
+  zeroFunding,
+} from './agent-support.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 import {
   agentTurnAcceptedSchema,
@@ -34,12 +43,7 @@ describe('served Agent cutover on PostgreSQL', () => {
     bindings.store.dependencies.admission = fixtures.store().dependencies.admission;
     bindings.runtime.deps.models = new ModelCalls(db, zeroFunding);
     bindings.runtime.deps.modelFor = () =>
-      scripted([
-        {
-          ...deliverable('outline'),
-          output: { ...deliverable('outline').output, format_id: 'content_page' },
-        },
-      ]);
+      scripted([save('outline', 'Requested document', { format_id: 'content_page' })]);
     bindings.models = bindings.runtime.deps.models;
     vi.spyOn(bindingsOwner, 'agentBindings').mockResolvedValue(bindings);
     const token = await sessionToken({ sub: scope.userId, ver: 0 });
@@ -72,23 +76,57 @@ describe('served Agent cutover on PostgreSQL', () => {
     );
     return { accepted, response };
   }
-  it('streams one interactive turn as step, text and done events, saving the same reply', async () => {
+  it('streams thinking, tool states, the document and the reply, then saves the same reply', async () => {
     const { scope, bindings, headers } = await setup();
     const long = `Here is the answer. ${'Detail. '.repeat(40)}`.trim();
-    bindings.runtime.deps.modelFor = () => scripted([{ action: 'respond', reply: long }]);
+    bindings.runtime.deps.modelFor = () =>
+      scripted([
+        [
+          { type: 'thinking', thinking: 'Choosing a method', signature: 'sig' },
+          toolUse('load_skill', { skill_id: 'content_create' }, 'call_skill'),
+        ],
+        save('outline', 'Outline body', { format_id: 'content_page' }),
+        reply(long),
+      ]);
     const { accepted, response } = await startTurn(scope.projectId, headers);
     expect(response.headers.get('content-type')).toContain('text/event-stream');
     const events = (await response.text())
       .split('\n\n')
       .filter((frame) => frame.startsWith('data: '))
       .map((frame) => agentTurnEventSchema.parse(JSON.parse(frame.slice(6))));
-    expect(events.map((event) => event.type)).toEqual(['step', 'text', 'text', 'done']);
-    expect(events.at(-2)).toMatchObject({ type: 'text', reply: long });
+    expect(events.slice(0, -1)).toEqual([
+      { type: 'step', ordinal: 1 },
+      { type: 'thinking', ordinal: 1, text: 'Choosing a method' },
+      { type: 'tool', ordinal: 1, call_id: 'call_skill', tool: 'load_skill', status: 'started' },
+      { type: 'tool', ordinal: 1, call_id: 'call_skill', tool: 'load_skill', status: 'completed' },
+      { type: 'step', ordinal: 2 },
+      { type: 'document_delta', ordinal: 2, title: 'Document', body: 'Outline body' },
+      {
+        type: 'tool',
+        ordinal: 2,
+        call_id: expect.any(String),
+        tool: 'save_document',
+        status: 'started',
+      },
+      {
+        type: 'tool',
+        ordinal: 2,
+        call_id: expect.any(String),
+        tool: 'save_document',
+        status: 'completed',
+      },
+      { type: 'step', ordinal: 3 },
+      { type: 'reply_delta', ordinal: 3, text: long.slice(0, Math.ceil(long.length / 2)) },
+      { type: 'reply_delta', ordinal: 3, text: long.slice(Math.ceil(long.length / 2)) },
+    ]);
     expect(events.at(-1)).toMatchObject({ type: 'done', run: { status: 'succeeded' } });
     const detail = agentChatDetailSchema.parse(
       await (await app.request(`/api/v1/agent/chats/${accepted.chat_id}`, { headers })).json(),
     );
-    expect(detail.messages.at(-1)?.content).toBe(long);
+    expect(detail.messages.at(-1)?.content).toBe(
+      `${long}\n\nSaved outline in Website page format. Approve this outline before requesting a draft.`,
+    );
+    expect(detail.output?.latest_revision?.body).toBe('Outline body');
     // A second request for the finished turn never executes it again.
     const again = await app.request(
       `/api/v1/agent/chats/${accepted.chat_id}/runs/${accepted.run.id}/run`,
@@ -105,7 +143,7 @@ describe('served Agent cutover on PostgreSQL', () => {
     bindings.runtime.deps.modelFor = () => ({
       ...scripted([]),
       // The model answers only when the turn is stopped.
-      complete: (_request, signal) =>
+      converse: (_request, signal) =>
         new Promise((_resolve, reject) => {
           started();
           signal?.addEventListener('abort', () => reject(signal.reason));
@@ -252,11 +290,7 @@ describe('served Agent cutover on PostgreSQL', () => {
     const dispatch = await bindings.queue.claim('cancel-worker', [scope.workspaceId]);
     const lease = await bindings.queue.start(dispatch!, 'cancel-worker');
     const model = scripted([]);
-    const attempt = await bindings.models.dispatch(lease, 1, model, {
-      system: 'Use facts',
-      user: 'Continue',
-      schema: {},
-    });
+    const attempt = await bindings.models.dispatch(lease, 1, model, request);
     expect(
       (
         await app.request(`/api/v1/agent/chats/${run.chat_id}/runs/${next.id}/cancel`, {

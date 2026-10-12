@@ -12,12 +12,12 @@ import { accountState } from '../entitlements/state.ts';
 import { reserveUsage, debitUsage, releaseUsage, LedgerError } from '../entitlements/ledger.ts';
 import {
   PRICING_REVISION,
+  cachedReservationCredits,
   chargeCredits,
   modelPrice,
-  requestInputBytes,
-  reservationCredits,
   unknownUsageCredits,
 } from '../billing/ai-pricing.ts';
+import { conversationInputBytes } from '../models/conversation.ts';
 import { enforceWorkspaceRequest } from '../abuse/usage.ts';
 import { agentSettings } from './config.ts';
 import { AgentError, type Run, type Scope } from './contracts.ts';
@@ -109,9 +109,9 @@ export function agentFunding(settings: Settings, platform: GatewaySettings): Fun
         return { reservationId: null, credits: 0, pricingRevision: '' };
       const price = modelPrice(run.requested_model, platform.model);
       if (!price) throw new AgentError('funding_unavailable');
-      const credits = reservationCredits(
+      const credits = cachedReservationCredits(
         price,
-        requestInputBytes(request.system, request.user, request.schema),
+        conversationInputBytes(request),
         platform.maxOutputTokens,
       );
       try {

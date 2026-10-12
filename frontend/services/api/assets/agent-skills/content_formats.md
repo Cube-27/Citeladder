@@ -1,6 +1,6 @@
 # Content formats
 
-Only the section for the chosen format is supplied. Choose the format from the buyer task and the evidence; not every business needs a blog. No format has a minimum word count, a compulsory FAQ or a formulaic conclusion. Never fabricate proof, quotations, metrics, reviews, ratings, prices, availability, credentials, dates or history, and do not add schema merely to seek AI citations. Editorial notes and evidence needs go in a separate section, never in the public copy.
+Name the chosen format in `save_document`'s format_id and follow its section. Choose the format from the buyer task and the evidence; not every business needs a blog. No format has a minimum word count, a compulsory FAQ or a formulaic conclusion. Never fabricate proof, quotations, metrics, reviews, ratings, prices, availability, credentials, dates or history, and do not add schema merely to seek AI citations. Editorial notes and evidence needs go in a separate section, never in the public copy.
 
 ## content_page — Website page [long-form]
 

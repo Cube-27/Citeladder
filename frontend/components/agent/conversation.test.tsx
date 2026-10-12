@@ -55,3 +55,23 @@ describe('Conversation order', () => {
     },
   );
 });
+
+describe('A finished reply’s run summary', () => {
+  it('counts model calls and data reads and lists what each step did', async () => {
+    mswServer.use(http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)));
+    renderWithProviders(
+      <Conversation
+        detail={agentChatDetailSchema.parse(detail(revision(REV2, 2, 'agent', 'Saved result.')))}
+        onRefine={vi.fn()}
+        onRecover={vi.fn()}
+        onRetry={vi.fn()}
+        canSend
+      />,
+    );
+    const summary = await screen.findByText(/^Run complete/u);
+    expect(summary).toHaveTextContent('Run complete · 2 model calls · 1 data read');
+    expect(
+      Array.from(summary.parentElement?.querySelectorAll('li') ?? [], (item) => item.textContent),
+    ).toEqual(['Model call 1', 'Loaded the method', 'Read integration status', 'Model call 2']);
+  });
+});

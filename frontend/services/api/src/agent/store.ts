@@ -342,7 +342,7 @@ export class AgentStore {
       (explicit === null ? null : chat.pinned_skill_id) ??
       (actionSkill && catalog.has(actionSkill) ? actionSkill : null);
     let source = skillSource(explicit, chat.pinned_skill_id, id);
-    if (id && !catalog.has(id)) throw new AgentError('protocol_violation');
+    if (id && !catalog.has(id)) throw new AgentError('agent_skill_unknown');
     const output = await db
       .selectFrom('agent_outputs')
       .select(['kind', 'skill_id'])
