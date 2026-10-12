@@ -77,6 +77,8 @@ adapters from accepted payment operation.
 origin provisioning, configuration and cutover release records.
 [Operations](operations/) contains live deployment, billing and recovery
 procedures; use the procedure relevant to the requested operation.
+[Legal decisions](operations/legal-decisions.md) owns company details and the
+open and resolved decisions behind the published legal pages.
 
 Fixtures consumed by current tests remain with those tests. Git and PRs retain
 historical plans, audits and dated evidence. Archived copies are disposable;

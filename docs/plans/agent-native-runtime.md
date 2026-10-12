@@ -663,13 +663,9 @@ Record each in the billing decision log before the PR that needs it.
   [Eval](#eval).
 - **O6 (PR 3).** Choose Option A or Option B, and approve the invariant changes
   it needs.
-- **O7 (product facts done; legal open).**
-  - The subprocessor table in `lib/marketing-content/legal-dpa.ts` now lists
-    Anthropic and OpenAI as the Agent's providers, and no longer offers a
-    customer-chosen Agent model.
-  - Still open for owner or legal review: subprocessor-change notice to DPA
-    customers, and the 2026-09-24 legal review draft in `docs/operations`,
-    which still recommends OpenAI as the only platform AI provider.
+- **O7 (done).** The legal pages name Anthropic and OpenAI as the Agent's
+  providers and describe stored Agent conversations; see R12 and R15 in
+  [legal decisions](../operations/legal-decisions.md).
 - **O8 (decided).** Thinking blocks may be stored for replay. They are kept only
   in `agent_run_transcripts`, never returned by a read, and deleted with the
   chat. Customers are not shown everything the model thought (A7).

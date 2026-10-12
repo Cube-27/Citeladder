@@ -32,7 +32,7 @@ export const AI_INSTRUCTIONS: readonly ReferenceSection[] = [
     facts: [
       { label: 'Product', value: 'CiteLadder', href: '/' },
       { label: 'Operator', value: PARENT_COMPANY.legalName, href: PARENT_COMPANY.href },
-      { label: 'Principal business address', value: PARENT_COMPANY.address },
+      { label: 'Registered office', value: PARENT_COMPANY.address },
       { label: 'Product Head', value: PRODUCT_HEAD.name, href: PRODUCT_HEAD.linkedin },
       { label: 'Cube27 Founder & CEO', value: FOUNDER.name, href: FOUNDER.linkedin },
       { label: 'Product website', value: 'citeladder.com', href: '/' },
@@ -166,7 +166,7 @@ export const REFERENCE_ENTITIES: readonly ReferenceEntity[] = [
     id: 'cube27',
     name: PARENT_COMPANY.legalName,
     kind: 'Organization',
-    description: `Cube27 operates CiteLadder. Its principal business address is ${PARENT_COMPANY.address}.`,
+    description: `Cube27 operates CiteLadder. Its registered office is ${PARENT_COMPANY.address}.`,
     relations: [
       { label: 'Operates', target: product },
       { label: 'Founder & CEO', target: entity(FOUNDER.name, 'arpan-jain') },

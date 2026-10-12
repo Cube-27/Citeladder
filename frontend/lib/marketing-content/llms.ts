@@ -25,7 +25,7 @@ export function llmsTxt({ pages }: { pages: readonly LlmsPage[] }) {
     '',
     'CiteLadder is a Cube27 product.',
     `Parent: ${PARENT_COMPANY.legalName} (${PARENT_COMPANY.href})`,
-    `Principal business address: ${PARENT_COMPANY.address}`,
+    `Registered office: ${PARENT_COMPANY.address}`,
     `LinkedIn: ${CITELADDER_LINKEDIN}`,
     `X: ${CITELADDER_X}`,
     `Product: ${PRODUCT_HEAD.name}, ${PRODUCT_HEAD.role} (${PRODUCT_HEAD.linkedin})`,
