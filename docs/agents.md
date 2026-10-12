@@ -410,6 +410,18 @@ scripted models and real PostgreSQL, never live providers:
 - `agent-funding.test.ts`: holds, settlement, unknown usage, BYOK and
   development funding.
 
+Live quality and speed are measured outside CI by the operator-only eval,
+`pnpm --filter @citeladder/api agent:eval --live --label <name>`:
+- It drives the chats in
+  [`eval-cases.json`](../frontend/services/api/test/fixtures/agent/eval-cases.json)
+  through the local Agent API as the development login, against a local
+  development database.
+- Per turn, it records the time to first visible text, the total time, model
+  and tool calls, and tokens (cached included), with the saved reply and
+  document.
+- `--report <a>,<b>` compares two runs and writes a side-by-side review to the
+  Git directory.
+
 In the browser, `chat-screen.test.tsx` covers the streamed-then-saved reply,
 Regenerate, Stop, section edits, sources and next steps; `new-chat-screen.test.tsx`
 the workflow form, pinned next steps, handoffs and commands; and

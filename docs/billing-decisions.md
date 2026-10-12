@@ -396,6 +396,19 @@ confirmed, so the provider cannot charge unseen and a second base plan cannot
 be bought meanwhile. A fully refunded payment no longer keeps its period
 running when the provider reports the subscription ended.
 
+## Agent native runtime (2026-10-12)
+
+**B53 — Owner, 2026-10-12.** Model tokens are charged at the serving
+provider's **published prices**, token class by token class, extending B12.
+Prompt-cache writes are charged at the provider's published cache-write rate
+(Anthropic: 1.25× input for the 5-minute cache), not folded into input at the
+base rate; cache reads stay at the cached-input rate. Thinking (reasoning)
+tokens are charged as output tokens, as providers bill them. Engineering: the
+Agent keeps every call's prompt below a model's long-context price tier (Claude
+Haiku 5.5 doubles above 100K prompt tokens), so one price row per model stays
+exact; a model whose calls can cross a tier needs a tiered price before use.
+See the [Agent native runtime plan](plans/agent-native-runtime.md).
+
 ## Owner inputs still required
 
 Not decisions; needed only for India checkout and live enablement: GST rate,
