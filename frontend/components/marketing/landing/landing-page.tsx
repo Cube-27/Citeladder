@@ -19,6 +19,7 @@ import {
 } from '../scenes/product-views';
 
 import { FAQS } from './landing-data';
+import { EngineRotor } from './landing-rotor';
 import { Integrations, Teams, TextLink, Trust } from './landing-sections';
 
 /* ── Shared bits ────────────────────────────────────────────────────────── */
@@ -39,15 +40,23 @@ function PrimaryActions({ size = 'marketing' }: Readonly<{ size?: 'lg' | 'market
 
 /* ── Hero ───────────────────────────────────────────────────────────────── */
 
-function Hero({ tour }: Readonly<{ tour?: ReactNode }>) {
+function Hero({ tour, rotor }: Readonly<{ tour?: ReactNode; rotor?: ReactNode }>) {
   return (
     <header className="lp-hero">
       <div className="lp-wrap lp-hero-copy mk-hero-in">
-        <h1 className="website-hero-display">Know what AI tells your buyers about you.</h1>
+        <h1 className="website-hero-display">
+          <span className="sr-only">
+            Analyze what ChatGPT, Gemini and Claude tell your buyers about you.
+          </span>
+          <span aria-hidden>
+            Analyze what {rotor ?? <EngineRotor />}
+            <br />
+            tells your buyers about you.
+          </span>
+        </h1>
         <p className="website-lead lp-hero-lead">
-          CiteLadder tracks how ChatGPT, Gemini, Claude and Google AI Overviews answer the questions
-          your buyers ask: which brands they recommend and which pages they cite. Then it shows what
-          to fix to earn a place in the answer.
+          See which brands AI recommends, which pages it cites, and what to fix to improve
+          visibility.
         </p>
         <PrimaryActions />
         {selfServeSignupOpen() && (
@@ -311,11 +320,15 @@ function Closing() {
   );
 }
 
-/** Server-rendered; `tour` is the hydrated product tour (see `HeroTour`). */
-export function LandingPage({ tour }: Readonly<{ tour?: ReactNode }>) {
+/**
+ * Server-rendered; `tour` and `rotor` are the hydrated product tour and
+ * headline rotor (see `HeroTour`, `EngineRotor`). Without `rotor` the
+ * headline renders its static first engine.
+ */
+export function LandingPage({ tour, rotor }: Readonly<{ tour?: ReactNode; rotor?: ReactNode }>) {
   return (
     <div className="lp">
-      <Hero tour={tour} />
+      <Hero tour={tour} rotor={rotor} />
       <EngineStrip />
       <Statement />
       <Loop />

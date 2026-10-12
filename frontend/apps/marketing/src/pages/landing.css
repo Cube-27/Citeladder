@@ -96,9 +96,28 @@
 
 /* Hero ───────────────────────────────────────────────────────────────────── */
 
+/* A forest wash from behind the top bar to the headline, fading to the page
+   ground before the product, with fine grain that fades out the same way.
+   The hero runs up under the transparent nav, so the bar sits on the wash. */
 .lp-hero {
-  padding-top: clamp(3.5rem, 8vw, 6.5rem);
+  position: relative;
+  isolation: isolate;
+  margin-top: calc(var(--marketing-nav-offset) * -1);
+  padding-top: calc(var(--marketing-nav-offset) + clamp(3.5rem, 8vw, 6.5rem));
   padding-bottom: clamp(2rem, 4vw, 3rem);
+  background: linear-gradient(to bottom, var(--color-accent-soft), var(--color-background) 65%);
+}
+
+.lp-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--grain);
+  opacity: 0.12;
+  mix-blend-mode: multiply;
+  mask-image: linear-gradient(to bottom, black, transparent 70%);
+  pointer-events: none;
 }
 
 .lp-hero-copy {
@@ -108,8 +127,72 @@
   text-align: center;
 }
 
-.lp-hero-copy .website-hero-display {
-  max-width: 22ch;
+/* The headline's engine rotor: one line whose items share a single grid
+   cell. Hidden copies of every name hold it at the widest name's width, so
+   the centred line never shifts; each name dissolves into the next. */
+.lp-rotor {
+  display: inline-grid;
+  align-items: baseline;
+  justify-items: start;
+  white-space: nowrap;
+}
+
+.lp-rotor-item {
+  display: inline-flex;
+  grid-area: 1 / 1;
+  align-items: baseline;
+  gap: 0.2em;
+}
+
+.lp-rotor-item[data-state='sizer'] {
+  visibility: hidden;
+}
+
+.lp-rotor-logo {
+  flex: none;
+  align-self: center;
+  width: 0.8em;
+  height: 0.8em;
+}
+
+/* The marks wear their own colours; OpenAI's is monochrome, so it keeps the ink. */
+.lp-rotor-logo[data-engine-logo='claude'] {
+  color: var(--color-brand-claude);
+}
+
+.lp-rotor-logo[data-engine-logo='gemini'] {
+  color: var(--color-brand-gemini);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .lp-rotor-item[data-state='in'] {
+    animation: lp-rotor-in var(--motion-reveal) var(--ease-out-expo) both;
+  }
+
+  .lp-rotor-item[data-state='out'] {
+    animation: lp-rotor-out var(--motion-slow) var(--ease-exit) forwards;
+  }
+}
+
+/* A reader who turns reduced motion on mid-rotation keeps one static name. */
+@media (prefers-reduced-motion: reduce) {
+  .lp-rotor-item[data-state='out'] {
+    display: none;
+  }
+}
+
+@keyframes lp-rotor-in {
+  from {
+    opacity: 0;
+    filter: blur(6px);
+  }
+}
+
+@keyframes lp-rotor-out {
+  to {
+    opacity: 0;
+    filter: blur(6px);
+  }
 }
 
 .lp-hero-lead {
@@ -196,6 +279,123 @@
 @media (prefers-reduced-motion: no-preference) {
   .lp-hero-frame .pv-main > :last-child {
     animation: lp-view-in var(--motion-menu) var(--ease-out-expo) both;
+  }
+}
+
+/* Each tour view assembles itself when it arrives: tiles rise, chart lines
+   draw, bars grow and rows follow in a short stagger. The panel is keyed by
+   tab, so this replays on every switch. Only `from` frames and backwards fill
+   are used, so every element rests on its own unchanged style. The whole
+   block sits behind no-preference: the global reduced-motion clamp shortens
+   durations but not delays, which would hold staggered rows hidden. */
+@media (prefers-reduced-motion: no-preference) {
+  .lp-tour :is(.pv-stat, .pv-kpi, tbody tr, .pv-list li):nth-child(2) {
+    --lp-i: 1;
+  }
+
+  .lp-tour :is(.pv-stat, .pv-kpi, tbody tr, .pv-list li):nth-child(3) {
+    --lp-i: 2;
+  }
+
+  .lp-tour :is(.pv-stat, .pv-kpi, tbody tr, .pv-list li):nth-child(4) {
+    --lp-i: 3;
+  }
+
+  .lp-tour :is(.pv-stat, .pv-kpi, tbody tr, .pv-list li):nth-child(5) {
+    --lp-i: 4;
+  }
+
+  /* Start of each group, in stagger steps after the view arrives. */
+  .lp-tour :is(.pv-table, .pv-list) {
+    --lp-enter: 3;
+  }
+
+  .lp-tour .pv-split > :nth-child(2) .pv-list {
+    --lp-enter: 5;
+  }
+
+  .lp-tour .pv-chart {
+    --lp-enter: 2;
+  }
+
+  .lp-tour .pv-chart-end {
+    --lp-enter: 9;
+  }
+
+  .lp-tour .pv-bar-track {
+    --lp-enter: 5;
+  }
+
+  .lp-tour .pv-agent-name {
+    --lp-enter: 4;
+  }
+
+  .lp-tour .pv-step {
+    --lp-enter: 7;
+  }
+
+  .lp-tour .pv-step + .pv-step {
+    --lp-enter: 11;
+  }
+
+  .lp-tour .pv-agent .pv-message > p {
+    --lp-enter: 15;
+  }
+
+  .lp-tour .pv-doc {
+    --lp-enter: 17;
+  }
+
+  .lp-tour
+    :is(
+      .pv-stat,
+      .pv-kpi,
+      tbody tr,
+      .pv-list li,
+      .pv-chart-end,
+      .pv-message-user,
+      .pv-agent-name,
+      .pv-step,
+      .pv-agent .pv-message > p,
+      .pv-doc
+    ) {
+    animation: lp-view-in var(--motion-reveal) var(--ease-out-expo) backwards;
+    animation-delay: calc(var(--motion-stagger) * (var(--lp-enter, 0) + var(--lp-i, 0)));
+  }
+
+  .lp-tour .pv-chart polyline {
+    animation: lp-draw-in var(--motion-reveal) var(--ease-out-expo) backwards;
+    animation-delay: calc(var(--motion-stagger) * var(--lp-enter, 0));
+  }
+
+  .lp-tour :is(.pv-stack-bar, .pv-bar-track i) {
+    animation: lp-grow-in var(--motion-reveal) var(--ease-out-expo) backwards;
+    animation-delay: calc(var(--motion-stagger) * (var(--lp-enter, 0) + var(--lp-i, 0)));
+  }
+}
+
+/* The polylines carry no pathLength, so the dash spans more than the longest
+   line in either user or screen units; it exists only while drawing. */
+@keyframes lp-draw-in {
+  from {
+    stroke-dasharray: 1000;
+    stroke-dashoffset: 1000;
+  }
+
+  to {
+    stroke-dasharray: 1000;
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes lp-grow-in {
+  from {
+    transform: scaleX(0);
+    transform-origin: left;
+  }
+
+  to {
+    transform-origin: left;
   }
 }
 
