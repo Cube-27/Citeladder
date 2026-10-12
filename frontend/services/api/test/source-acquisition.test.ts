@@ -173,6 +173,35 @@ it('starts a hop timeout after its host slot and aborts an unresolved DNS lookup
     name: 'TimeoutError',
   });
 });
+it('hands a host slot past cancelled waiters so later callers still run', async () => {
+  const pacer = new HostPacer();
+  let release!: () => void;
+  const held = pacer.slot(
+    'https://example.test',
+    0,
+    () =>
+      new Promise<string>((resolve) => {
+        release = () => resolve('first');
+      }),
+  );
+  const queued = new AbortController();
+  const woken = new AbortController();
+  const cancelledWhileQueued = pacer.slot(
+    'https://example.test',
+    0,
+    async () => 'never',
+    queued.signal,
+  );
+  const cancelledOnWake = pacer.slot('https://example.test', 0, async () => 'never', woken.signal);
+  const last = pacer.slot('https://example.test', 0, async () => 'last');
+  queued.abort(new Error('queued abort'));
+  await expect(cancelledWhileQueued).rejects.toThrow('queued abort');
+  release();
+  woken.abort(new Error('woken abort'));
+  expect(await held).toBe('first');
+  await expect(cancelledOnWake).rejects.toThrow('woken abort');
+  expect(await last).toBe('last');
+});
 it('enforces the decoded byte cap on compressed bodies', () => {
   expect(() => decodedBody(gzipSync(Buffer.alloc(10000)), 'gzip', 100)).toThrow(
     'response_too_large',

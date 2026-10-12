@@ -4,7 +4,7 @@ import type { Insertable, Selectable } from 'kysely';
 import { sql } from 'kysely';
 import { logLines, UnsupportedLogFormat } from '@citeladder/contracts/crawl-log-format';
 import type { Database } from '../db/database.ts';
-import type { BotRequests, CrawlLogSources } from '../generated/db-schema.ts';
+import type { BotRequests, CrawlLogBatches, CrawlLogSources } from '../generated/db-schema.ts';
 import { ApiError, notFound } from '../errors.ts';
 import { crawlLogs } from '../config/crawl-logs.ts';
 import { crawlers } from '../config/crawlers.ts';
@@ -49,24 +49,41 @@ export function decodedBody(body: Buffer, encoding: string | undefined) {
     throw new ApiError(422, 'Invalid compressed or UTF-8 log batch');
   }
 }
+/** The receipt this source already stored under an idempotency key, if any. */
+function storedReceipt(db: Database, source: Selectable<CrawlLogSources>, key: string) {
+  return db
+    .selectFrom('crawl_log_batches')
+    .selectAll()
+    .where('workspace_id', '=', source.workspace_id)
+    .where('source_id', '=', source.id)
+    .where('idempotency_key', '=', key)
+    .executeTakeFirst();
+}
+/** A receipt as its sender is answered: an unsupported format is refused with its missing fields. */
+export function answeredReceipt(receipt: Selectable<CrawlLogBatches>) {
+  if (receipt.status === 'unsupported_format')
+    throw new ApiError(
+      422,
+      'This log format does not contain the fields needed for crawler identification.',
+      {
+        details: { status: receipt.status, missing_fields: strings(receipt.missing_fields) },
+      },
+    );
+  return receipt;
+}
+/**
+ * Spend one batch attempt, or return the receipt already stored under `key`.
+ * A retried key spends no quota, so its caller answers from that receipt
+ * without reading or decoding the body again.
+ */
 export async function batchQuota(
   db: Database,
   source: Selectable<CrawlLogSources>,
   now = new Date(),
   key?: string | null,
-) {
-  // A retried, already-accepted key returns its stored receipt without spending quota.
-  if (
-    key &&
-    (await db
-      .selectFrom('crawl_log_batches')
-      .select('id')
-      .where('workspace_id', '=', source.workspace_id)
-      .where('source_id', '=', source.id)
-      .where('idempotency_key', '=', key)
-      .executeTakeFirst())
-  )
-    return;
+): Promise<Selectable<CrawlLogBatches> | undefined> {
+  const stored = key ? await storedReceipt(db, source, key) : undefined;
+  if (stored) return stored;
   await receivedBytesCeiling(db, source, now);
   await enforceSubjectRequest(
     db,
@@ -248,13 +265,7 @@ export async function ingest(
     if (current.status !== 'active') throw new ApiError(409, 'Crawl log source revoked');
     if (options.tokenHash && current.token_hash !== options.tokenHash)
       throw new ApiError(401, 'Invalid crawl log token');
-    const original = await trx
-      .selectFrom('crawl_log_batches')
-      .selectAll()
-      .where('workspace_id', '=', scope.workspaceId)
-      .where('source_id', '=', source.id)
-      .where('idempotency_key', '=', key)
-      .executeTakeFirst();
+    const original = await storedReceipt(trx, source, key);
     if (original) return original;
     await assertUpload(trx, scope, source.id, options.uploadId, options.seq);
     const admitted = await admitRequests(
@@ -327,15 +338,7 @@ export async function ingest(
     await enqueueRollup(trx, scope, now, { first, last });
     return receipt;
   });
-  if (receipt.status === 'unsupported_format')
-    throw new ApiError(
-      422,
-      'This log format does not contain the fields needed for crawler identification.',
-      {
-        details: { status: receipt.status, missing_fields: strings(receipt.missing_fields) },
-      },
-    );
-  return receipt;
+  return answeredReceipt(receipt);
 }
 async function admitRequests(
   trx: Database,

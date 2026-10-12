@@ -515,7 +515,7 @@ export const integrationRoutes = [
   defineDeleteRoute({
     family,
     path: '/api/v1/integrations/mappings/{mapping_id}',
-    capability: 'write',
+    capability: 'manage_credentials',
     params: { path: { mapping_id: uuid }, query: {} },
     async handle({ c, db }, { path }) {
       const mapping = await db
@@ -543,7 +543,8 @@ export const integrationRoutes = [
     family,
     path: '/api/v1/integrations/{connection_id}/mappings',
     status: 201,
-    capability: 'write',
+    // A mapping spends the connecting admin's provider grant, so it needs their authority.
+    capability: 'manage_credentials',
     params: { path: connectionPath, query: {} },
     body: mappingRequest,
     response: integrationPropertyMappingListSchema.element,

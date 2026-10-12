@@ -43,8 +43,6 @@ export type Admission = {
   itemKind: string;
 };
 
-const escapeRegExp = (text: string) => text.replaceAll(/[\\^$.*+?()[\]{}|/]/gu, String.raw`\$&`);
-
 /** One bracket set from `[`'s position: its regex source and where it ends, or null when unclosed. */
 function bracketSet(glob: string, open: number) {
   let end = open + 1;
@@ -62,40 +60,100 @@ function bracketSet(glob: string, open: number) {
   return { source: `[${set}]`, close };
 }
 
+type GlobToken = { kind: 'star' } | { kind: 'char'; accepts: (char: string) => boolean };
+
+const literalToken = (literal: string): GlobToken => ({
+  kind: 'char',
+  accepts: (char) => char === literal,
+});
+
 /**
- * Shell-style glob semantics: `*` spans `/`, `?` is one character, `[!…]`
- * negates. A glob that still cannot compile (a reversed range) matches only
- * itself, literally, rather than failing the task.
+ * Shell-style glob tokens: `*` spans `/`, `?` is one character, `[!…]`
+ * negates. A glob with a set that cannot compile (a reversed range) matches
+ * only itself, literally, rather than failing the task.
  */
-function globPattern(glob: string) {
-  let source = '';
+function globTokens(glob: string): GlobToken[] {
+  const tokens: GlobToken[] = [];
   let index = 0;
   while (index < glob.length) {
     const char = glob[index]!;
     const set = char === '[' ? bracketSet(glob, index) : null;
-    if (char === '*') source += '.*';
-    else if (char === '?') source += '.';
-    else if (set) source += set.source;
-    else source += escapeRegExp(char);
+    if (char === '*') {
+      if (tokens.at(-1)?.kind !== 'star') tokens.push({ kind: 'star' });
+    } else if (char === '?') tokens.push({ kind: 'char', accepts: () => true });
+    else if (set) {
+      let member: RegExp;
+      try {
+        member = new RegExp(`^${set.source}$`, 'su');
+      } catch {
+        return Array.from(glob, literalToken);
+      }
+      tokens.push({ kind: 'char', accepts: (value) => member.test(value) });
+    } else tokens.push(literalToken(char));
     index = (set?.close ?? index) + 1;
   }
-  try {
-    return new RegExp(`^${source}$`, 'su');
-  } catch {
-    return new RegExp(`^${escapeRegExp(glob)}$`, 'su');
-  }
+  return tokens;
 }
-const globs = (values: readonly string[] | null | undefined) =>
-  (values ?? [])
-    .map((value) => String(value).trim())
-    .filter(Boolean)
-    .map(globPattern);
+
+/**
+ * A glob as a bit-parallel NFA (shift-and): bit `i` is "the first `i` tokens
+ * matched". Each input character costs a fixed number of bitset operations,
+ * so matching is linear in the URL however many stars the glob holds; a
+ * backtracking RegExp translation is polynomial in the star count.
+ */
+function globMatcher(glob: string) {
+  const tokens = globTokens(glob);
+  let starEntry = 0n;
+  let starLoop = 0n;
+  tokens.forEach((token, index) => {
+    if (token.kind !== 'star') return;
+    starEntry |= 1n << BigInt(index);
+    starLoop |= 1n << BigInt(index + 1);
+  });
+  const accepted = 1n << BigInt(tokens.length);
+  const closure = (state: bigint) => state | ((state & starEntry) << 1n);
+  const consumers = new Map<string, bigint>();
+  const consumes = (char: string) => {
+    let mask = consumers.get(char);
+    if (mask === undefined) {
+      mask = 0n;
+      tokens.forEach((token, index) => {
+        if (token.kind === 'char' && token.accepts(char)) mask! |= 1n << BigInt(index + 1);
+      });
+      consumers.set(char, mask);
+    }
+    return mask;
+  };
+  return (url: string) => {
+    let state = closure(1n);
+    for (const char of url) {
+      state = closure(((state << 1n) & consumes(char)) | (state & starLoop));
+      if (!state) return false;
+    }
+    return (state & accepted) !== 0n;
+  };
+}
+
+const compiledGlobs = new WeakMap<readonly string[], ((url: string) => boolean)[]>();
+/** Each scope's globs compile once, not once per admitted URL. */
+function globs(values: readonly string[] | null | undefined) {
+  if (!values) return [];
+  let compiled = compiledGlobs.get(values);
+  if (!compiled) {
+    compiled = values
+      .map((value) => String(value).trim())
+      .filter(Boolean)
+      .map(globMatcher);
+    compiledGlobs.set(values, compiled);
+  }
+  return compiled;
+}
 
 /** Include/exclude narrowing of a canonical URL; any exclusion wins, no includes admits all. */
 function narrowed(url: string, scope: Scope) {
-  if (globs(scope.exclude).some((pattern) => pattern.test(url))) return false;
+  if (globs(scope.exclude).some((matches) => matches(url))) return false;
   const include = globs(scope.include);
-  return !include.length || include.some((pattern) => pattern.test(url));
+  return !include.length || include.some((matches) => matches(url));
 }
 
 /** The root registrable domain plus every subdomain. */

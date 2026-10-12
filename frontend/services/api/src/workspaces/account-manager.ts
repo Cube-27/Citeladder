@@ -8,6 +8,7 @@ import { WorkspaceContext } from '../auth/workspace.ts';
 import { lockIdentityAdministration, requirePlatformAdmin } from '../auth/operators.ts';
 import { recordSecurityEvent } from '../auth/security-events.ts';
 import { revokeCreatorKeys } from '../api-keys/revocation.ts';
+import { revokeDelegatedAccess } from '../auth/challenges.ts';
 import { baselineGrantKey, fullAccessSpecs } from '../entitlements/bootstrap.ts';
 import { issueBundle, revokeBundle } from '../entitlements/grants.ts';
 import { resolveAccountEntitlement } from '../entitlements/resolve.ts';
@@ -502,6 +503,7 @@ async function applyMemberAction(
     workspaceId,
     member.user_id,
   );
+  await revokeDelegatedAccess(trx, member.user_id, session.actorId);
   return { passwordUpdated: true };
 }
 
@@ -651,7 +653,12 @@ export async function manageAccount(db: Database, session: OperatorSession, acti
     const target = await trx
       .selectFrom('workspace_members')
       .innerJoin('users', 'users.id', 'workspace_members.user_id')
-      .select(['workspace_members.id as memberId', 'users.id as userId', 'users.hashed_password'])
+      .select([
+        'workspace_members.id as memberId',
+        'workspace_members.role as memberRole',
+        'users.id as userId',
+        'users.hashed_password',
+      ])
       .where('workspace_id', '=', session.workspaceId)
       .where('users.email', '=', email!)
       .forUpdate('workspace_members')
@@ -662,12 +669,29 @@ export async function manageAccount(db: Database, session: OperatorSession, acti
         memberId: target.memberId,
         role: role!,
       });
+    // A password is global, so a workspace administrator may reset only a
+    // member whose whole account lives in this workspace: never the owner,
+    // themself, a platform identity, or anyone who belongs to another workspace.
+    // The role is read from the locked user row so a concurrent promotion waits.
     const user = await trx
       .selectFrom('users')
-      .select('hashed_password')
+      .select(['hashed_password', 'role'])
       .where('id', '=', target.userId)
       .forNoKeyUpdate()
       .executeTakeFirstOrThrow();
+    const elsewhere = await trx
+      .selectFrom('workspace_members')
+      .select('id')
+      .where('user_id', '=', target.userId)
+      .where('workspace_id', '!=', session.workspaceId)
+      .executeTakeFirst();
+    if (
+      target.memberRole === 'owner' ||
+      target.userId === session.actorId ||
+      user.role !== 'user' ||
+      elsewhere
+    )
+      throw new Error('account_password_forbidden');
     if (!user.hashed_password) throw new Error('passwordless_account');
     await trx
       .updateTable('users')
@@ -678,6 +702,14 @@ export async function manageAccount(db: Database, session: OperatorSession, acti
       })
       .where('id', '=', target.userId)
       .execute();
+    await recordSecurityEvent(
+      trx,
+      'auth.password_reset',
+      session.actorId,
+      session.workspaceId,
+      target.userId,
+    );
+    await revokeDelegatedAccess(trx, target.userId, session.actorId);
     return { passwordUpdated: true };
   });
 }

@@ -182,4 +182,26 @@ describe('audit HTTP family cutover', () => {
     expect((await frames.next()).done).toBe(true);
     expect(resumeCursor(`{${t.auditId}}`)).toBe(t.auditId);
   });
+
+  it('ends a running audit stream at its maximum duration', async () => {
+    const t = await seed();
+    // A poll interval longer than the stream may live: the wait itself must stop at the deadline.
+    const bounded = auditRuntime({
+      AUDIT_SSE_MAX_DURATION_SECONDS: '1',
+      AUDIT_SSE_POLL_SECONDS: '5',
+    });
+    const frames = auditEventFrames(
+      db,
+      t.workspaceId,
+      t.auditId,
+      undefined,
+      bounded,
+      new AbortController().signal,
+    );
+    const started = Date.now();
+    let count = 0;
+    for await (const _frame of frames) count++;
+    expect(count).toBeGreaterThan(0);
+    expect(Date.now() - started).toBeLessThan(2500);
+  });
 });

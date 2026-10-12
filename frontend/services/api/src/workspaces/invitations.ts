@@ -9,6 +9,7 @@ import { ApiError } from '../errors.ts';
 import { requireTeamMembers } from '../entitlements/occupancy.ts';
 import { recordSecurityEvent } from '../auth/security-events.ts';
 import { requiresEmailVerification } from '../auth/eligibility.ts';
+import { roleAllows } from '../auth/workspace.ts';
 import {
   assignableRoleSchema,
   lockAuthorizedWorkspace,
@@ -174,6 +175,8 @@ export function updateInvitation(
       ? { revoked_at: now, updated_at: now }
       : {
           token_sha256,
+          // The member who reissues a link vouches for it from now on.
+          invited_by_user_id: actorId,
           expires_at: new Date(now.getTime() + policy.workspaces.invitation_ttl_hours * 3_600_000),
           updated_at: now,
         };
@@ -228,6 +231,18 @@ export function acceptInvitation(db: Database, actorId: string, token: string) {
       user.email.trim().toLowerCase() !== invitation.email_normalized
     )
       refusal('invitation_invalid', 400);
+    // A link is only as good as its issuer's standing when it is used.
+    if (!invitation.accepted_at) {
+      const issuer = await trx
+        .selectFrom('workspace_members')
+        .innerJoin('users', 'users.id', 'workspace_members.user_id')
+        .select('workspace_members.role')
+        .where('workspace_members.workspace_id', '=', workspace.id)
+        .where('workspace_members.user_id', '=', invitation.invited_by_user_id)
+        .where('users.is_active', '=', true)
+        .executeTakeFirst();
+      if (!issuer || !roleAllows(issuer.role, 'manage_members')) refusal('invitation_invalid', 400);
+    }
     let member = await trx
       .selectFrom('workspace_members')
       .selectAll()

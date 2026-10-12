@@ -4,8 +4,8 @@ import { promptGenerateResponseSchema } from '@citeladder/contracts/project';
 import { sql } from 'kysely';
 import type { z } from 'zod';
 
-import { agentCallLimit, enforceWorkspaceRequest } from '../abuse/usage.ts';
-import { policy } from '../config.ts';
+import { agentCallLimit, dailyWorkspaceLimit, enforceWorkspaceRequest } from '../abuse/usage.ts';
+import { policy, resolveSettingSpec } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { record, strings } from '../db/json.ts';
 import { ApiError } from '../errors.ts';
@@ -398,6 +398,21 @@ export async function generatePrompts(
     const deadline = (dependencies.deadline ?? draftDeadline)();
     const output = await generateDrafts(context, input, gateway, deadline);
     const judge = dependencies.judge();
+    // Judge calls are platform-paid on both the drafting and the revision
+    // path, so each generation spends its bounded call count before judging.
+    if (judge && output.drafts.length)
+      await enforceWorkspaceRequest(
+        db,
+        workspaceId,
+        dailyWorkspaceLimit(
+          'prompt_generation.judge',
+          'prompt_judge_calls_per_workspace_daily',
+          Math.min(
+            output.drafts.length,
+            Number(resolveSettingSpec(policy.models.jev.max_calls_per_generation)),
+          ),
+        ),
+      );
     const gate = await judgeDrafts(
       context,
       output.drafts,

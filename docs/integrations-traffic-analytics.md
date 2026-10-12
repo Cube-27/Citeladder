@@ -35,7 +35,10 @@ request marks each Search Console or Bing property that belongs to its site
 ([host scope](../frontend/services/api/src/integrations/host-scope.ts): the
 project website and owned domains, `sc-domain:` and a leading `www.` ignored).
 GA4 summaries carry no site, so their match is unknown (`null`).
-Members/viewers read saved mappings.
+Saving or disabling a mapping is also `manage_credentials`: a mapping makes the
+worker read the connecting admin's provider grant, so a member who cannot list
+the grant's properties cannot bind one either. Members/viewers read saved
+mappings.
 OAuth completion rechecks current credential authority before code exchange
 and under the workspace lock before grant persistence; exchange holds no
 database transaction open.

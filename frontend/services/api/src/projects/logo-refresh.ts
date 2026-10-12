@@ -1,5 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 
+import { getDomain } from 'tldts';
+
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { acquireProjectLock } from '../prompts/locks.ts';
@@ -69,7 +71,7 @@ async function attach(db: Database, scope: ProjectScope, target: Target, assetId
     .where('workspace_id', '=', scope.workspaceId)
     .executeTakeFirst();
   if (!project) return;
-  if (target.brandId && safeIdentity(project.website_url)?.domain === target.domain)
+  if (target.brandId && logoKey(project.website_url) === target.domain)
     await db
       .updateTable('brands')
       .set({ logo_asset_id: assetId, updated_at: new Date() })
@@ -97,7 +99,7 @@ async function attach(db: Database, scope: ProjectScope, target: Target, assetId
       !competitor ||
       !Array.isArray(competitor.domains) ||
       !competitor.domains.some(
-        (domain) => typeof domain === 'string' && safeIdentity(domain)?.domain === target.domain,
+        (domain) => typeof domain === 'string' && logoKey(domain) === target.domain,
       )
     )
       continue;
@@ -109,9 +111,15 @@ async function attach(db: Database, scope: ProjectScope, target: Target, assetId
       .execute();
   }
 }
-function safeIdentity(value: string) {
+/**
+ * The global cache key for a website's logo: its registrable domain with private
+ * suffixes honoured, so `a.github.io` and `b.github.io` never share an asset
+ * while `www.example.com` still shares `example.com`'s.
+ */
+function logoKey(value: string) {
   try {
-    return websiteIdentity(value);
+    const { url } = websiteIdentity(value);
+    return getDomain(new URL(url).hostname, { allowPrivateDomains: true });
   } catch {
     return null;
   }
@@ -125,15 +133,21 @@ export async function refreshLogos(db: Database, scope: ProjectScope, fetcher = 
     .executeTakeFirst();
   const targets = new Map<string, Target>();
   function add(value: string, brandId: string | null, competitorId: string | null) {
-    const identity = safeIdentity(value);
-    if (!identity) return;
-    const target = targets.get(identity.domain) ?? { ...identity, brandId, competitorIds: [] };
+    const domain = logoKey(value);
+    if (!domain) return;
+    // Only the keyed host's own homepage decides the shared asset, never a requester's path.
+    const target = targets.get(domain) ?? {
+      domain,
+      url: `https://${domain}/`,
+      brandId,
+      competitorIds: [],
+    };
     if (competitorId) target.competitorIds.push(competitorId);
-    targets.set(identity.domain, target);
+    targets.set(domain, target);
   }
   if (brand) add(project.website_url, brand.id, null);
   for (const competitor of project.competitors) {
-    const domain = competitor.domains.find((value) => safeIdentity(value));
+    const domain = competitor.domains.find((value) => logoKey(value));
     if (domain) add(domain, null, competitor.id);
   }
   if (!targets.size) return project;
@@ -162,6 +176,7 @@ export async function refreshLogos(db: Database, scope: ProjectScope, fetcher = 
   const signal = AbortSignal.timeout(cfg.refresh_timeout_seconds * 1000);
   // Batch to enforce the configured concurrency while sharing one deadline.
   for (let offset = 0; offset < missing.length; offset += cfg.fetch_concurrency) {
+    if (signal.aborted) break;
     const outcomes = await Promise.all(
       missing
         .slice(offset, offset + cfg.fetch_concurrency)
@@ -171,6 +186,9 @@ export async function refreshLogos(db: Database, scope: ProjectScope, fetcher = 
       await acquireProjectLock(trx, scope.projectId);
       // Persist each asset before reading its ID and attaching it on this transaction connection.
       for (const { target, logo } of outcomes) {
+        // A miss under this request's own deadline says nothing about the host;
+        // it must not become a shared failure that blocks every tenant's retry.
+        if (!logo && signal.aborted) continue;
         const at = new Date();
         const values = {
           status: logo ? cfg.status_ready : cfg.status_failed,

@@ -16,7 +16,14 @@ import { ApiError } from '../errors.ts';
 import { crawlLogs } from '../config/crawl-logs.ts';
 import { getLogger } from '../logging.ts';
 import { authorizeToken } from './sources.ts';
-import { batchQuota, boundedBody, decodedBody, diagnosticReceipt, ingest } from './ingest.ts';
+import {
+  answeredReceipt,
+  batchQuota,
+  boundedBody,
+  decodedBody,
+  diagnosticReceipt,
+  ingest,
+} from './ingest.ts';
 import { markStalled } from './stall.ts';
 import { base64Text } from './base64-text.ts';
 
@@ -85,6 +92,9 @@ function envelope(text: string, requestId: string) {
   return { lines, rejected };
 }
 
+/** The key of one chunk; chunk 0 is committed last, so it marks a fully stored request. */
+const chunkKey = (requestId: string, index: number) => `firehose:${requestId}:${index}`;
+
 /** Admit the lines as idempotent chunks, each within the per-batch line bound. */
 async function admit(
   db: Database,
@@ -96,10 +106,11 @@ async function admit(
 ) {
   const size = crawlLogs.max_lines_per_batch;
   const chunks = Math.max(1, Math.ceil(lines.length / size));
-  for (let index = 0; index < chunks; index += 1) {
-    const key = `firehose:${requestId}:${index}`;
-    // Chunks are admitted in order, each under its own key and attempt quota;
-    // the first chunk's quota was spent before the body was read.
+  // Chunks are admitted last to first, each under its own key and attempt quota,
+  // so a stored chunk 0 proves every chunk of the request was stored. Chunk 0's
+  // quota was spent before the body was read.
+  for (let index = chunks - 1; index >= 0; index -= 1) {
+    const key = chunkKey(requestId, index);
     if (index > 0) await batchQuota(db, source, now, key); // NOSONAR
     const chunk = Buffer.from(lines.slice(index * size, (index + 1) * size).join('\n'));
     const options = {
@@ -108,7 +119,7 @@ async function admit(
       tokenHash: source.token_hash!,
       quotaChecked: true,
       accessChecked: true,
-      // The first receipt carries the whole request, undecodable records included.
+      // Chunk 0's receipt carries the whole request, undecodable records included.
       rejectedRecords: index === 0 ? rejected : 0,
       receivedBytes: index === 0 ? receivedBytes : 0,
     };
@@ -139,7 +150,13 @@ export async function firehoseDelivery(
     source = await authorizeToken(db, sourceId, `Bearer ${headers.accessKey ?? ''}`);
     if (source.setup !== 'aws_firehose')
       throw new ApiError(409, 'This source is not an Amazon Firehose source');
-    await batchQuota(db, source, now, `firehose:${requestId}:0`);
+    // A retried request whose every chunk is stored is answered without reading the body.
+    const stored = await batchQuota(db, source, now, chunkKey(requestId, 0));
+    if (stored) {
+      // Refuses a stored unsupported format exactly as its first delivery was refused.
+      answeredReceipt(stored);
+      return reply(200, requestId);
+    }
     const body = decodedBody(await boundedBody(request), headers.encoding);
     await admit(db, source, requestId, envelope(body, requestId), now, Buffer.byteLength(body));
     return reply(200, requestId);

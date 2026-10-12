@@ -27,6 +27,11 @@ const defaults = {
   audit_tasks_per_workspace_daily: 1500,
   active_agent_runs_per_workspace: 5,
   agent_runs_per_workspace_daily: 200,
+  active_brand_discoveries_per_workspace: 3,
+  brand_discoveries_per_workspace_daily: 20,
+  commerce_discoveries_per_workspace_daily: 50,
+  internal_link_analyses_per_workspace_daily: 10,
+  prompt_judge_calls_per_workspace_daily: 500,
   active_job_retry_after_seconds: 60,
   usage_window_cleanup_batch: 500,
 };

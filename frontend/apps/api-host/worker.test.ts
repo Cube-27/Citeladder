@@ -79,7 +79,8 @@ describe('API host route ownership', () => {
       expect(sent[0]!.url).toBe(`https://origin.citeladder.com/v1/crawl-logs/${kind}/${SOURCE}`);
       expect(new Uint8Array(await sent[0]!.arrayBuffer())).toEqual(payload);
       expect(sent[0]!.headers.get('authorization')).toBe('Bearer clw_test');
-      expect(sent[0]!.headers.get('x-citeladder-origin-token')).toBe(env.ORIGIN_TOKEN);
+      expect(sent[0]!.headers.get('x-citeladder-origin-token')).toBeNull();
+      expect(sent[0]!.headers.get('x-citeladder-origin-signature')).toMatch(/^[0-9a-f]{64}$/u);
       expect(sent[0]!.headers.get('x-citeladder-public-host')).toBe('api.citeladder.com');
       expect(sent[0]!.headers.get('cookie')).toBeNull();
     },

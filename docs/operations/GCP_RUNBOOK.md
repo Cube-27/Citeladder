@@ -31,7 +31,7 @@ long-lived Google service-account key in GitHub.
 
 ```text
 Browser ─► Cloudflare Workers (marketing citeladder.com, app app.citeladder.com, docs, api api.citeladder.com)
-              │ /api/* and MCP, with X-CiteLadder-Origin-Token
+              │ /api/* and MCP, signed with the origin token (HMAC)
               ▼
          Cloud Run us-central1: citeladder-api (min 0, max 2)
               │ commits work, then starts ─► job citeladder-runner (drain, exit)

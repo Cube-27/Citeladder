@@ -7,7 +7,9 @@ import {
 import type { Selectable } from 'kysely';
 import { z } from 'zod';
 
-import { policy } from '../config.ts';
+import { dailyWorkspaceLimit, enforceWorkspaceRequest } from '../abuse/usage.ts';
+import { activeJobRetrySeconds, policy, resolveSettingSpec } from '../config.ts';
+import { subjectXactLock } from '../db/advisory-lock.ts';
 import type { Database } from '../db/database.ts';
 import { jsonObject } from '../db/json.ts';
 import { ApiError, notFound } from '../errors.ts';
@@ -75,6 +77,31 @@ export function discoveryCatalog() {
     ),
   };
 }
+/**
+ * Discovery spends outbound fetches, model calls and research-provider calls,
+ * so a workspace holds a bounded number at once and per day. A replayed
+ * idempotency key returns before this and spends nothing.
+ */
+async function admitDiscovery(trx: Database, workspaceId: string) {
+  const active = await trx
+    .selectFrom('brand_discovery_tasks')
+    .select((eb) => eb.fn.countAll<string>().as('count'))
+    .where('workspace_id', '=', workspaceId)
+    .where('status', 'in', policy.task_queue.active)
+    .executeTakeFirstOrThrow();
+  if (
+    Number(active.count) >=
+    Number(resolveSettingSpec(policy.abuse.active_brand_discoveries_per_workspace))
+  )
+    throw new ApiError(429, 'Workspace active brand discovery limit exceeded', {
+      headers: { 'retry-after': String(activeJobRetrySeconds()) },
+    });
+  await enforceWorkspaceRequest(
+    trx,
+    workspaceId,
+    dailyWorkspaceLimit('brand_discovery.create', 'brand_discoveries_per_workspace_daily'),
+  );
+}
 export function createDiscovery(
   db: Database,
   workspaceId: string,
@@ -82,6 +109,9 @@ export function createDiscovery(
   key: string,
 ) {
   return db.transaction().execute(async (trx) => {
+    // Locked before the replay lookup, so a concurrent retry of the same key
+    // sees the first request's row instead of spending a second admission.
+    await subjectXactLock(trx, `brand-discovery-admission:${workspaceId}`);
     const existing = await trx
       .selectFrom('brand_discoveries')
       .selectAll()
@@ -89,6 +119,7 @@ export function createDiscovery(
       .where('idempotency_key', '=', key)
       .executeTakeFirst();
     if (existing) return discoveryView(existing);
+    await admitDiscovery(trx, workspaceId);
     const industries: Record<string, { subindustries?: string[] }> =
       policy.discovery.industry_library.industries;
     if (!Object.hasOwn(industries, input.industry))

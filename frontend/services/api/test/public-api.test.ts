@@ -195,6 +195,23 @@ describe('API keys', () => {
     expect(row.revoke_reason).toBe('creator_removed');
   });
 
+  it('stops a key while an operator has disabled its creator', async () => {
+    const tenant = await withApiAccess(await fixtures.tenant());
+    const { secret } = await createKey(tenant);
+    const active = (value: boolean) =>
+      db.updateTable('users').set({ is_active: value }).where('id', '=', tenant.userId).execute();
+    expect((await api(secret, '/projects')).status).toBe(200);
+    await active(false);
+    try {
+      const disabled = await api(secret, '/projects');
+      expect(disabled.status).toBe(401);
+      expect(await errorCode(disabled)).toBe('invalid_api_key');
+    } finally {
+      await active(true);
+    }
+    expect((await api(secret, '/projects')).status).toBe(200);
+  });
+
   it('refuses revoked and expired keys and records each refusal once per hour', async () => {
     const tenant = await withApiAccess(await fixtures.tenant());
     const { key, secret } = await createKey(tenant);

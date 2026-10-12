@@ -106,6 +106,27 @@ async function revokeGrant(
   await recordSecurityEvent(trx, event, grant.user_id, null, grant.id);
 }
 /**
+ * Revoke every live grant of `userId` inside the caller's password-reset or
+ * password-change transaction, so a client connected with the old
+ * credentials loses access along with the old sessions.
+ */
+export async function revokeGrantsAfterCredentialReset(
+  trx: Database,
+  userId: string,
+  actorId: string,
+) {
+  const revoked = await trx
+    .updateTable('mcp_oauth_grants')
+    .set({ revoked_at: new Date(), updated_at: new Date() })
+    .where('user_id', '=', userId)
+    .where('revoked_at', 'is', null)
+    .returning('id')
+    .execute();
+  await Promise.all(
+    revoked.map((grant) => recordSecurityEvent(trx, 'mcp.revoke', actorId, null, grant.id)),
+  );
+}
+/**
  * Why a workspace can or cannot be approved right now. `terms` is resolvable on
  * the consent page itself; `inactive` is an expired trial or subscription that
  * billing can fix; `unresolved` means access could not be determined, which is

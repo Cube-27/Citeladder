@@ -105,7 +105,7 @@ marketing traffic never spends the free plan's daily Worker requests; only machi
 deliveries to this host do. It uses the same origin token as the other Workers.
 
 - Allowlist (`apps/api-host/worker.ts`), forwarded unchanged with
-  `X-CiteLadder-Origin-Token` and `X-CiteLadder-Public-Host: api.citeladder.com`:
+  the origin signature and `X-CiteLadder-Public-Host: api.citeladder.com`:
   `POST /v1/crawl-logs/ingest/{uuid}` and `POST /v1/crawl-logs/firehose/{uuid}`
   (no other `/v1/crawl-logs/...` request), and `GET`, `POST`, `PATCH` or
   `DELETE` on any other `/v1/...` path for the [public API](../public-api.md),
@@ -195,13 +195,18 @@ credential. Configure no Titan incoming-mail or DNS changes for this feature.
 
 The Workers call the Cloud Run API directly; there is no origin hostname,
 Origin CA certificate or reverse proxy. The API rejects every request,
-including `/health`, `/ready` and MCP, unless it carries the origin token and an
-allowlisted public host (`citeladder.com`, `app.citeladder.com` or
-`api.citeladder.com`). The API host reaches only `/v1/...` routes and `/v1/...`
-routes answer only for the API host; every other combination is a 404. The
-Workers set `X-CiteLadder-Origin-Token`, `X-CiteLadder-Public-Host` and
-`X-CiteLadder-Client-IP` (from `CF-Connecting-IP`), and strip any
-client-supplied copies.
+including `/health`, `/ready` and MCP, unless it carries a fresh origin
+signature and an allowlisted public host (`citeladder.com`,
+`app.citeladder.com` or `api.citeladder.com`). The API host reaches only
+`/v1/...` routes and `/v1/...` routes answer only for the API host; every other
+combination is a 404. The Workers never send the origin token: they set
+`X-CiteLadder-Origin-Timestamp`, `X-CiteLadder-Origin-Signature` (HMAC-SHA256
+under the token over time, method, public host, path with query and visitor
+address), `X-CiteLadder-Public-Host` and `X-CiteLadder-Client-IP` (from
+`CF-Connecting-IP`), and strip any client-supplied copies. A signature expires
+after `policy.api.origin_signature_max_skew_seconds`, so the API and Workers
+must keep their clocks and key in step; deploy the API and the Workers
+back-to-back when the signing scheme changes.
 
 1. Generate a dedicated random value of at least 32 characters outside chat.
    Store it in the protected `gcp-demo` GitHub environment secret

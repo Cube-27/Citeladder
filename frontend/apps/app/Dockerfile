@@ -59,6 +59,8 @@ COPY --from=wrangler --chown=node:node /wrangler/node_modules ./node_modules
 COPY --from=builder --chown=node:node /app/package.json /app/tsconfig.json ./
 COPY --from=builder --chown=node:node /app/lib ./lib
 COPY --from=builder --chown=node:node /app/packages ./packages
+# The Worker bundles the shared origin signer; wrangler resolves it as a package.
+COPY --from=builder --chown=node:node /app/packages/contracts ./node_modules/@citeladder/contracts
 COPY --from=builder --chown=node:node /app/apps/app ./apps/app
 
 USER node

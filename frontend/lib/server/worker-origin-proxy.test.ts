@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vite-plus/test';
 
+import { signOriginRequest } from '@citeladder/contracts/origin-signature';
+
 import { proxyWorkerRequest } from './worker-origin-proxy';
 
 const config = {
@@ -12,7 +14,19 @@ describe('Worker origin transport', () => {
   it('fixes the upstream and strips spoofed forwarding credentials', async () => {
     const transport = vi.fn(async (request: Request) => {
       expect(request.url).toBe('https://origin.citeladder.com/api/v1/items?next=%2F');
-      expect(request.headers.get('x-citeladder-origin-token')).toBe(config.originToken);
+      // The key itself never leaves the Worker; the request carries a signature over its facts.
+      expect(request.headers.get('x-citeladder-origin-token')).toBeNull();
+      const timestamp = Number(request.headers.get('x-citeladder-origin-timestamp'));
+      expect(Math.abs(timestamp - Date.now() / 1000)).toBeLessThan(5);
+      expect(request.headers.get('x-citeladder-origin-signature')).toBe(
+        await signOriginRequest(config.originToken, {
+          timestamp,
+          method: 'GET',
+          publicHost: 'app.citeladder.com',
+          target: '/api/v1/items?next=%2F',
+          clientIp: '203.0.113.7',
+        }),
+      );
       expect(request.headers.get('x-citeladder-public-host')).toBe(config.publicHost);
       expect(request.headers.get('x-forwarded-host')).toBeNull();
       expect(request.headers.get('x-citeladder-client-ip')).toBe('203.0.113.7');
@@ -28,6 +42,8 @@ describe('Worker origin transport', () => {
         Origin: 'https://app.citeladder.com',
         'X-Forwarded-Host': 'attacker.example',
         'X-CiteLadder-Origin-Token': 'spoof',
+        'X-CiteLadder-Origin-Signature': 'spoof',
+        'X-CiteLadder-Origin-Timestamp': '1',
         'X-CiteLadder-Client-IP': '198.51.100.1',
         'CF-Connecting-IP': '203.0.113.7',
       },

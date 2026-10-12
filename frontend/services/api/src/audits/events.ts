@@ -18,7 +18,12 @@ export function resumeCursor(value: string | undefined) {
     ]);
   return parsed;
 }
-/** Each page finishes its reads before yielding or waiting; no streaming transaction remains open. */
+/**
+ * Each page finishes its reads before yielding or waiting; no streaming
+ * transaction remains open. A stream ends after its maximum duration, so a
+ * held connection cannot outlast the caller's access: the client resumes
+ * with Last-Event-ID through the full authorization path.
+ */
 export async function* auditEventFrames(
   db: Database,
   workspaceId: string,
@@ -31,7 +36,8 @@ export async function* auditEventFrames(
   let cursor = after,
     terminalPolls = 0,
     prepared = initial;
-  while (!signal.aborted) {
+  const deadline = Date.now() + runtime.audits.sse_max_duration_seconds * 1000;
+  while (!signal.aborted && Date.now() < deadline) {
     const events =
       prepared ??
       (await auditEvents(db, workspaceId, auditId, cursor, runtime.audits.max_event_page));
@@ -47,7 +53,11 @@ export async function* auditEventFrames(
       terminalPolls++;
       if (terminalPolls >= runtime.audits.sse_terminal_grace_polls) return;
     }
-    await waitForPoll(runtime.audits.sse_poll_seconds * 1000, signal);
+    // Never wait past the stream's deadline, whatever the poll interval.
+    await waitForPoll(
+      Math.min(runtime.audits.sse_poll_seconds * 1000, Math.max(0, deadline - Date.now())),
+      signal,
+    );
   }
 }
 export function eventStreamResponse(

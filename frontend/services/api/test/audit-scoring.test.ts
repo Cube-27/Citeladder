@@ -127,6 +127,34 @@ describe('frozen deterministic execution scoring', () => {
       assessEntities('おすすめは小米です。', scoringConfig({ brand_name: '小米' }))[0]!.state,
     ).toBe('mentioned');
   });
+  it('rejects a near-miss alias over a long dense-script answer without stalling', () => {
+    const nearMiss = scoringConfig({
+      brand_name: 'Acme',
+      brand_aliases: ['的 的 的 的 的 的 的 的 x'],
+    });
+    const started = performance.now();
+    const [brand] = assessEntities('的'.repeat(5000), nearMiss);
+    expect(brand!.state).toBe('absent');
+    expect(performance.now() - started).toBeLessThan(1000);
+  });
+  it('rejects an "and" near-miss over a long run of ampersands without stalling, and still reads &', () => {
+    const nearMiss = scoringConfig({ brand_name: 'Acme', brand_aliases: ['and and and and x'] });
+    const started = performance.now();
+    const [brand] = assessEntities(`a ${'&'.repeat(5000)}`, nearMiss);
+    expect(brand!.state).toBe('absent');
+    expect(performance.now() - started).toBeLessThan(1000);
+    const pair = scoringConfig({ brand_name: 'Tom and Jerry' });
+    expect(assessEntities('Watch Tom & Jerry tonight.', pair)[0]!.state).toBe('mentioned');
+  });
+  it('matches a spaced name written hyphenated, spaced or joined', () => {
+    const hardware = scoringConfig({ brand_name: 'Ace Hardware' });
+    const spans = (answer: string) =>
+      assessEntities(answer, hardware)[0]!.evidence_spans.map((span) => span.text);
+    expect(spans('Try ace-hardware today.')).toEqual(['Try ace-hardware today.']);
+    expect(spans('Try Ace Hardware today.')).toEqual(['Try Ace Hardware today.']);
+    expect(spans('Try AceHardware today.')).toEqual(['Try AceHardware today.']);
+    expect(spans('Try Acer hardware today.')).toEqual([]);
+  });
   it('preserves code-point ordering after Unicode folding', () => {
     expect(firstAliasOffset('Straße', normalizeAlias('😀 Rival then STRASSE'))).toBe(11);
     expect(firstAliasOffset('DuranDuran', normalizeAlias('Duran DuranDuran'))).toBe(6);

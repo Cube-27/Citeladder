@@ -1,6 +1,7 @@
 /** Registration provenance selects the lifetime public trial or the operator baseline. */
 import { randomUUID, createHash } from 'node:crypto';
-import { sql, type Selectable } from 'kysely';
+import { sql, type RawBuilder, type Selectable } from 'kysely';
+import { subjectXactLock } from '../db/advisory-lock.ts';
 import { policy, resolveSettingSpec } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import type { Users } from '../generated/db-schema.ts';
@@ -50,6 +51,17 @@ async function projectRuntime(
     .execute();
 }
 
+/**
+ * The mailbox an address delivers to, for trial eligibility: lowercased, any
+ * `+tag` dropped, and for Gmail the dots ignored and googlemail.com folded in.
+ */
+function canonicalMailbox(email: RawBuilder<unknown>) {
+  const lowered = sql<string>`lower(${email})`;
+  const domain = sql<string>`case split_part(${lowered}, '@', 2) when 'googlemail.com' then 'gmail.com' else split_part(${lowered}, '@', 2) end`;
+  const local = sql<string>`split_part(split_part(${lowered}, '@', 1), '+', 1)`;
+  return sql<string>`(case when ${domain} = 'gmail.com' then replace(${local}, '.', '') else ${local} end || '@' || ${domain})`;
+}
+
 /** Caller owns commit; account row serializes both stacks' baseline issuance. */
 export async function ensureWorkspaceBilling(
   db: Database,
@@ -92,13 +104,19 @@ export async function ensureWorkspaceBilling(
       .where('source_ref', '=', 'system:public-signup')
       .executeTakeFirst();
     if (existing) return;
-    // The trial starts when the person creates their workspace. One person has
-    // one trial: a later workspace inherits the exact window of their first.
+    // The trial starts when the person creates their workspace. One mailbox has
+    // one trial: a later workspace, or an account under an alias of the same
+    // mailbox, inherits the exact window of the first.
+    const { mailbox } = await db
+      .selectNoFrom(canonicalMailbox(sql.val(user.email)).as('mailbox'))
+      .executeTakeFirstOrThrow();
+    await subjectXactLock(db, `trial-mailbox:${mailbox}`);
     const earlier = await db
       .selectFrom('account_grants')
       .innerJoin('billing_accounts', 'billing_accounts.id', 'account_grants.billing_account_id')
+      .innerJoin('users', 'users.id', 'billing_accounts.owner_user_id')
       .select(['account_grants.valid_from', 'account_grants.valid_until'])
-      .where('billing_accounts.owner_user_id', '=', user.id)
+      .where(canonicalMailbox(sql.ref('users.email')), '=', mailbox)
       .where('account_grants.source_kind', '=', 'trial')
       .where('account_grants.source_ref', '=', 'system:public-signup')
       .orderBy('account_grants.valid_from')

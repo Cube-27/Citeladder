@@ -5,6 +5,14 @@ import { policy, type ServiceConfig } from '../config.ts';
 import type { AppEnv } from '../context.ts';
 import { ApiError, notFound } from '../errors.ts';
 import { MCP_API_HOST_PATHS } from '@citeladder/contracts/route-ownership';
+import {
+  ORIGIN_CLIENT_IP_HEADER,
+  ORIGIN_PUBLIC_HOST_HEADER,
+  ORIGIN_SIGNATURE_HEADER,
+  ORIGIN_TIMESTAMP_HEADER,
+  signOriginRequest,
+  type OriginSignedFacts,
+} from '@citeladder/contracts/origin-signature';
 
 function hostOf(origin: string): string {
   try {
@@ -34,33 +42,52 @@ function isApiHostPath(path: string): boolean {
   return isMachinePath(path) || MCP_API_HOST_PATHS.has(path);
 }
 
+/** Whether a supplied hex signature equals one made with any current origin key. */
+async function signedByOrigin(keys: readonly string[], facts: OriginSignedFacts, supplied: string) {
+  const given = Buffer.from(supplied, 'utf8');
+  for (const key of keys) {
+    const expected = Buffer.from(await signOriginRequest(key, facts), 'utf8');
+    if (expected.length === given.length && timingSafeEqual(expected, given)) return true;
+  }
+  return false;
+}
+
 /**
- * Cloud Run admission: only the Workers hold the origin token. An admitted
- * request also carries its public host (allowlisted) and the visitor address
- * Cloudflare observed, which no other hop can supply on a raw run.app URL.
+ * Cloud Run admission: only the Workers hold the origin key, and they never
+ * send it. Each request carries an HMAC over its time, method, public host,
+ * path and visitor address; a request without a fresh, valid signature from
+ * the current or previous key is refused before any route runs. The signed
+ * public host must be allowlisted, and the signed visitor address is the only
+ * client address the API trusts.
  */
 export function originToken(config: ServiceConfig): MiddlewareHandler<AppEnv> {
-  const allowed = config.execution.protectOrigin
-    ? [config.execution.originToken, config.execution.previousOriginToken]
-        .filter(Boolean)
-        .map((token) => Buffer.from(token, 'utf8'))
+  const keys = config.execution.protectOrigin
+    ? [config.execution.originToken, config.execution.previousOriginToken].filter(Boolean)
     : [];
-  const hosts = allowed.length ? publicHosts(config) : new Set<string>();
+  const hosts = keys.length ? publicHosts(config) : new Set<string>();
   const apiHost = hostOf(config.auth.publicApiUrl);
+  const maxSkew = policy.api.origin_signature_max_skew_seconds;
   return async (c, next) => {
-    if (allowed.length) {
-      const supplied = Buffer.from(c.req.header('X-CiteLadder-Origin-Token') ?? '', 'utf8');
-      if (
-        !allowed.some(
-          (token) => token.length === supplied.length && timingSafeEqual(token, supplied),
-        )
-      )
+    if (keys.length) {
+      const timestamp = Number(c.req.header(ORIGIN_TIMESTAMP_HEADER) ?? '');
+      const now = Math.floor(Date.now() / 1000);
+      if (!Number.isSafeInteger(timestamp) || Math.abs(now - timestamp) > maxSkew)
         throw new ApiError(403, 'Forbidden');
-      const publicHost = c.req.header('X-CiteLadder-Public-Host')?.trim().toLowerCase() ?? '';
+      const publicHost = c.req.header(ORIGIN_PUBLIC_HOST_HEADER)?.trim().toLowerCase() ?? '';
+      const clientIp = c.req.header(ORIGIN_CLIENT_IP_HEADER)?.trim() ?? '';
+      const url = new URL(c.req.url);
+      const facts = {
+        timestamp,
+        method: c.req.method,
+        publicHost,
+        target: `${url.pathname}${url.search}`,
+        clientIp,
+      };
+      if (!(await signedByOrigin(keys, facts, c.req.header(ORIGIN_SIGNATURE_HEADER) ?? '')))
+        throw new ApiError(403, 'Forbidden');
       if (!hosts.has(publicHost)) throw new ApiError(403, 'Forbidden');
       if ((publicHost === apiHost) !== isApiHostPath(c.req.path)) throw notFound('Route');
       c.set('publicHost', publicHost);
-      const clientIp = c.req.header('X-CiteLadder-Client-IP')?.trim() ?? '';
       if (ipaddr.isValid(clientIp)) c.set('clientIp', ipaddr.process(clientIp).toString());
     }
     await next();

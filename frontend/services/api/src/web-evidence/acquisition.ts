@@ -82,17 +82,37 @@ export class HostPacer {
     const state = this.#host(authority);
     state.last = Math.max(state.last, performance.now() + seconds * 1000);
   }
+  /**
+   * Wait for a free slot. An abort while queued leaves the queue at once; a
+   * waiter that is woken but has been aborted passes the wake-up on, so a
+   * cancelled caller never strands the callers behind it.
+   */
   async #acquire(state: HostState, signal?: AbortSignal) {
+    signal?.throwIfAborted();
     while (state.active >= this.concurrency) {
-      const freed = new Promise<void>((resolve) => {
-        state.waiting.push(resolve);
-      });
-      await freed; // NOSONAR: wait for a slot, then re-check; waiters resume one at a time.
-      signal?.throwIfAborted();
+      await new Promise<void>((resolve, reject) => {
+        const wake = () => {
+          signal?.removeEventListener('abort', abort);
+          resolve();
+        };
+        const abort = () => {
+          const index = state.waiting.indexOf(wake);
+          if (index >= 0) state.waiting.splice(index, 1);
+          reject(signal!.reason);
+        };
+        state.waiting.push(wake);
+        signal?.addEventListener('abort', abort, { once: true });
+      }); // NOSONAR: wait for a slot, then re-check; waiters resume one at a time.
+      if (signal?.aborted) {
+        state.waiting.shift()?.();
+        signal.throwIfAborted();
+      }
     }
     state.active++;
   }
   async slot<T>(authority: string, seconds: number, send: () => Promise<T>, signal?: AbortSignal) {
+    // Before the host state exists, so a cancelled call never leaves an idle entry behind.
+    signal?.throwIfAborted();
     const state = this.#host(authority);
     await this.#acquire(state, signal);
     try {

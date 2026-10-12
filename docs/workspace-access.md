@@ -137,10 +137,14 @@ departure cannot leave a workspace ownerless. Only the Owner can transfer
 ownership, and only to a member who owns no workspace. Removal or departure also
 drops the workspace from that person's MCP grants, so a later re-invitation needs
 fresh MCP consent, and revokes the API keys that person created in the workspace
-(`creator_removed`). An [API key](public-api.md) acts for its creator: its
+(`creator_removed`). Removal, departure, or a demotion to a role that cannot
+manage members also revokes the pending invitations that person issued, so a
+link they sent cannot restore access after the change; resending a link makes
+the resender its issuer. Acceptance also requires the issuer to be active and
+still able to manage members. An [API key](public-api.md) acts for its creator: its
 scopes intersect the creator's current role on every request, so a demotion
-narrows it at once, and only Owners and Admins (`manage_credentials`) create or
-revoke keys.
+narrows it at once, a disabled or unverified creator stops it, and only Owners
+and Admins (`manage_credentials`) create or revoke keys.
 Workspace-root locks serialize membership and invitation changes; mutations
 recheck live authority after taking the lock. Creation and incoming ownership
 share the per-user creation advisory lock. Terms reads never repair state.
@@ -155,7 +159,10 @@ Verification and password reset use purpose-bound SHA-256 token digests, atomic
 single consumption and bounded request/send budgets. Links carry tokens in the
 fragment; GET never consumes them. Verification requires the signup password.
 Reset replaces the password, may verify a pending mailbox, invalidates outstanding
-challenges and revokes sessions. Password change requires the current password;
+challenges and revokes sessions. Reset, password change and an operator password
+reset also revoke the person's MCP grants and the API keys they created
+(`credential_reset`), so recovering an account removes delegated access a
+compromised password may have minted. Password change requires the current password;
 signing out revokes every session (there is one sign-out, and it is everywhere). Settings → Account
 shows the email and the person's role in the selected workspace, never internal
 identifiers, and reports sign-in methods and verification state in plain words,
@@ -181,7 +188,7 @@ when access ends. Missing access authority is distinct from an expired trial.
 
 Deleting a project needs both the `delete_projects` role capability (Owner or
 Admin) and the plan's `project_deletion` entitlement, which trials do not carry.
-It removes the project and everything it owns. Billing and usage records stay
+It removes the project and everything it owns, including its brand discoveries. Billing and usage records stay
 and keep the exact IDs of the deleted audits, crawls and Agent runs; those
 provenance columns carry no foreign key, so deletion never rewrites them. Deletion
 is refused (`project_work_running`) while an audit, crawl or Agent run still
@@ -292,7 +299,11 @@ Permanent deletion refuses retained FK dependencies, any grant beyond the
 operator baseline, consumption, product data and shared owned workspaces; it
 removes only the identity and its empty personal workspace, account and baseline
 rows. Security receipts remain. Platform administrators and the current operator
-cannot have their password reset, or be disabled or deleted, by this menu.
+cannot have their password reset, or be disabled or deleted, by this menu. The
+workspace CLI's password reset likewise refuses the workspace Owner, the
+operator themself, any platform administrator and anyone who also belongs to
+another workspace, because a password is global; it records
+`auth.password_reset`.
 
 Trusted workspace operators can run the interactive
 [account manager](../frontend/services/api/src/cli/account-manager.ts) from a terminal

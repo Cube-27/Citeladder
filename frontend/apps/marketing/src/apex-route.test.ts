@@ -57,7 +57,8 @@ describe('apex route ownership', () => {
     );
     expect(webhook?.status).toBe(204);
     expect(await sent[0]?.text()).toBe('signed-body');
-    expect(sent[0]?.headers.get('x-citeladder-origin-token')).toBe(env.ORIGIN_TOKEN);
+    expect(sent[0]?.headers.get('x-citeladder-origin-token')).toBeNull();
+    expect(sent[0]?.headers.get('x-citeladder-origin-signature')).toMatch(/^[0-9a-f]{64}$/u);
     expect(await routeApexRequest(new Request('https://citeladder.com/pricing'), env)).toBeNull();
     expect(
       await routeApexRequest(
