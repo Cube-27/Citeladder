@@ -538,6 +538,7 @@ export class AgentRuntime {
           run_id: lease.runId,
           run_attempt: lease.attempt,
           ordinal,
+          call_id: String(ordinal),
           tool_name: step.tool.slice(0, 128),
           registry_version: this.deps.tools.version,
           status: outcome.status,

@@ -99,6 +99,7 @@ export class ModelCalls {
           debited_credits: 0,
           input_tokens: null,
           cached_input_tokens: null,
+          cache_write_input_tokens: null,
           output_tokens: null,
           reasoning_tokens: null,
           total_tokens: null,
@@ -151,23 +152,24 @@ export class ModelCalls {
         input_tokens: usage('input_tokens'),
         output_tokens: usage('output_tokens'),
         cached_input_tokens: usage('cached_input_tokens'),
+        cache_write_input_tokens: usage('cache_write_input_tokens'),
         reasoning_tokens: usage('reasoning_tokens'),
         total_tokens: usage('total_tokens'),
         usage_complete: usage('input_tokens') !== null && usage('output_tokens') !== null,
         outcome,
         settled_at: now,
       };
+      const stored = (value: number | null) => (value === null ? null : String(value));
       const settled = await this.funding.settle(
         trx,
         {
           ...updated,
-          input_tokens: updated.input_tokens === null ? null : String(updated.input_tokens),
-          output_tokens: updated.output_tokens === null ? null : String(updated.output_tokens),
-          cached_input_tokens:
-            updated.cached_input_tokens === null ? null : String(updated.cached_input_tokens),
-          reasoning_tokens:
-            updated.reasoning_tokens === null ? null : String(updated.reasoning_tokens),
-          total_tokens: updated.total_tokens === null ? null : String(updated.total_tokens),
+          input_tokens: stored(updated.input_tokens),
+          output_tokens: stored(updated.output_tokens),
+          cached_input_tokens: stored(updated.cached_input_tokens),
+          cache_write_input_tokens: stored(updated.cache_write_input_tokens),
+          reasoning_tokens: stored(updated.reasoning_tokens),
+          total_tokens: stored(updated.total_tokens),
         },
         result,
       );
@@ -184,6 +186,7 @@ export class ModelCalls {
           input_tokens: updated.input_tokens,
           output_tokens: updated.output_tokens,
           cached_input_tokens: updated.cached_input_tokens,
+          cache_write_input_tokens: updated.cache_write_input_tokens,
           reasoning_tokens: updated.reasoning_tokens,
           total_tokens: updated.total_tokens,
           usage_complete: updated.usage_complete,

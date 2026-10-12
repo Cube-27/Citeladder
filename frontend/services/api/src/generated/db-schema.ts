@@ -136,6 +136,7 @@ export interface AgentMessages {
 }
 
 export interface AgentModelAttempts {
+  cache_write_input_tokens: Int8 | null;
   cached_input_tokens: Int8 | null;
   created_at: Timestamp;
   deadline_at: Timestamp;
@@ -208,6 +209,20 @@ export interface AgentOutputs {
   workspace_id: string;
 }
 
+export interface AgentRunTranscripts {
+  chat_id: string;
+  context_hash: string;
+  created_at: Timestamp;
+  id: string;
+  messages: Json;
+  model: string;
+  project_id: string;
+  provider_adapter: string;
+  run_id: string;
+  skill_id: string | null;
+  workspace_id: string;
+}
+
 export interface AgentRuns {
   attempt_count: number;
   available_at: Timestamp;
@@ -251,6 +266,7 @@ export interface AgentRuns {
 
 export interface AgentToolAttempts {
   artifact_refs: Json;
+  call_id: string;
   created_at: Timestamp;
   error_code: string;
   id: string;
@@ -3202,6 +3218,7 @@ export interface DB {
   agent_model_attempts: AgentModelAttempts;
   agent_output_revisions: AgentOutputRevisions;
   agent_outputs: AgentOutputs;
+  agent_run_transcripts: AgentRunTranscripts;
   agent_runs: AgentRuns;
   agent_tool_attempts: AgentToolAttempts;
   ai_referral_landing_daily: AiReferralLandingDaily;

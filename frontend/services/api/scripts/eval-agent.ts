@@ -81,6 +81,7 @@ const recordSchema = z.looseObject({
   tool_calls: z.number().optional(),
   input_tokens: z.number().nullish(),
   cached_input_tokens: z.number().nullish(),
+  cache_write_input_tokens: z.number().nullish(),
   output_tokens: z.number().nullish(),
   message: z.string().optional(),
   reply: z.string().nullish(),
@@ -394,6 +395,7 @@ async function attempts(db: Database, workspaceId: string, runId: string) {
         'latency_ms',
         'input_tokens',
         'cached_input_tokens',
+        'cache_write_input_tokens',
         'output_tokens',
         'reasoning_tokens',
         'finish_status',
@@ -417,7 +419,12 @@ async function attempts(db: Database, workspaceId: string, runId: string) {
   ]);
   // A call that reported no count makes the turn's total unknown, not lower.
   const sum = (
-    key: 'input_tokens' | 'cached_input_tokens' | 'output_tokens' | 'reasoning_tokens',
+    key:
+      | 'input_tokens'
+      | 'cached_input_tokens'
+      | 'cache_write_input_tokens'
+      | 'output_tokens'
+      | 'reasoning_tokens',
   ) =>
     calls.some((row) => row[key] === null)
       ? null
@@ -427,6 +434,7 @@ async function attempts(db: Database, workspaceId: string, runId: string) {
     tool_calls: tools.length,
     input_tokens: sum('input_tokens'),
     cached_input_tokens: sum('cached_input_tokens'),
+    cache_write_input_tokens: sum('cache_write_input_tokens'),
     output_tokens: sum('output_tokens'),
     reasoning_tokens: sum('reasoning_tokens'),
     calls: calls.map((row) => ({ ...row, latency_ms: Number(row.latency_ms) })),
@@ -439,7 +447,7 @@ function summaryLine(record: EvalRecord) {
   return (
     `${record.case}#${record.step} ${status} ` +
     `first_text=${record.first_text_ms}ms total=${record.total_ms}ms calls=${record.model_calls} ` +
-    `tools=${record.tool_calls} in=${record.input_tokens} cached=${record.cached_input_tokens} out=${record.output_tokens}`
+    `tools=${record.tool_calls} in=${record.input_tokens} cached=${record.cached_input_tokens} written=${record.cache_write_input_tokens} out=${record.output_tokens}`
   );
 }
 
@@ -493,6 +501,7 @@ function metrics(records: EvalRecord[]): Record<string, string> {
     'Tool calls per turn': perTurn('tool_calls'),
     'Input tokens per turn': perTurn('input_tokens', 0),
     'Cached share of input': input ? `${((100 * cached) / input).toFixed(0)}%` : '—',
+    'Cache writes per turn': perTurn('cache_write_input_tokens', 0),
     'Output tokens per turn': perTurn('output_tokens', 0),
   };
 }
