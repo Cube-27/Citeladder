@@ -49,7 +49,10 @@ Creation needs the plan's `api_access` flag (403 `api_access_not_in_plan`)
 and stays within the `api_keys` allowance of live (unrevoked, unexpired) keys
 (409 `api_key_limit_reached`), checked under the account capacity lock. Every
 paid plan grants `api_access` and ten keys; the public trial grants neither
-([Billing and entitlements](billing-entitlements.md)). Security events record
+([Billing and entitlements](billing-entitlements.md)). Creation also locks the
+creator's user row and rechecks the session version the request signed in
+with, so a password reset or change that commits first refuses it (401
+`Session no longer valid`) instead of leaving a key its revocation missed. Security events record
 `api_key.create`, `api_key.revoke`, and at most one `api_key.rejected_revoked`
 or `api_key.rejected_expired` per key per hour. `last_used_at` is stamped at
 most every five minutes.

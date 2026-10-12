@@ -165,7 +165,9 @@ Reset replaces the password, may verify a pending mailbox, invalidates outstandi
 challenges and revokes sessions. Reset, password change and an operator password
 reset also revoke the person's MCP grants and the API keys they created
 (`credential_reset`), so recovering an account removes delegated access a
-compromised password may have minted. Password change requires the current password;
+compromised password may have minted; key creation locks the creator's row and
+rechecks its session version, so a key minted in flight cannot slip past that
+revocation. Password change requires the current password;
 signing out revokes every session (sign-out is always everywhere) and leaves MCP
 grants and API keys working. A separate, confirmed "Sign out everywhere and
 disconnect integrations" control (`POST /api/v1/auth/logout-and-disconnect`)
