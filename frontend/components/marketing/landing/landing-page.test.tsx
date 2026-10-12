@@ -51,6 +51,16 @@ describe('LandingPage', () => {
     expect(screen.getByRole('tabpanel')).toHaveAccessibleName('Agent');
   });
 
+  it('stops autoplay once keyboard focus enters the tour tabs', () => {
+    vi.useFakeTimers();
+    render(<HeroTour />);
+    const tabs = screen.getByRole('tablist', { name: 'Product tour' });
+
+    act(() => within(tabs).getByRole('tab', { name: 'Visibility' }).focus());
+    act(() => vi.advanceTimersByTime(24_000));
+    expect(screen.getByRole('tabpanel')).toHaveAccessibleName('Visibility');
+  });
+
   it('labels API collection apart from consumer answer surfaces', () => {
     render(<LandingPage tour={<HeroTour />} />);
 

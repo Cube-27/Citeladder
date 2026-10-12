@@ -100,7 +100,14 @@ export function HeroTour() {
 
   return (
     <div ref={root} className="lp-tour">
-      <div className="lp-tour-tabs" role="tablist" aria-label="Product tour">
+      {/* Focus counts as interaction too: autoplay moving the selection away
+          from a focused tab would leave arrow keys starting from the wrong one. */}
+      <div
+        className="lp-tour-tabs"
+        role="tablist"
+        aria-label="Product tour"
+        onFocus={() => setAutoplay(false)}
+      >
         {TOUR.map((item, index) => (
           <button
             key={item.id}
@@ -113,6 +120,7 @@ export function HeroTour() {
             onClick={() => choose(index)}
             onKeyDown={(event) => {
               if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+              event.preventDefault();
               const next = active + (event.key === 'ArrowRight' ? 1 : TOUR.length - 1);
               choose(next);
               document.getElementById(`tour-tab-${cycled(TOUR, next).id}`)?.focus();
