@@ -18,14 +18,11 @@ deliverable, and a question about a saved document leaves it unchanged. The
 supplied history is bounded working context, and task preferences do not
 become reviewed company facts.
 
-## Model destination admission
+## Model destination
 
-Customer Agent destinations require acknowledgement of the recipient, transmitted
-context categories and the customer's provider terms. The form requires a fresh
-acknowledgement on every save (a URL change also clears it); every submitted app
-route requires it server-side and appends an actor/workspace/destination/model/revision
-receipt. Credential encryption, endpoint validation and verified-route checks
-remain with the provider owner.
+The Agent always uses the platform model gateway; there is no customer Agent
+model route ([B19](billing-decisions.md)). The serving providers are listed on
+the subprocessor page ([legal decisions](operations/legal-decisions.md), R15).
 
 ## Chats, runs and outputs
 
@@ -176,8 +173,8 @@ without a reply. Failure codes keep their meaning: `trial_expired`,
 provider failures are
 `provider_error`, validation and storage defects are `internal_error`, and a
 malformed step past its repair bound is `protocol_violation`. At admission a
-lost or changed model route is HTTP 409 `agent_model_unavailable`, distinct from
-402 `agent_funding_unavailable` (no credits and no connected model).
+changed platform model is HTTP 409 `agent_model_unavailable`, distinct from
+402 `agent_funding_unavailable` (no AI credits to hold).
 
 ## Read tools
 
@@ -281,15 +278,13 @@ consumer, not only the Agent:
   `stream: true` with usage on the final chunk and folds the event stream into
   the same completion result; a provider that answers with JSON is read as
   usual. Structured calls send the step schema as a strict `json_schema`
-  response format; a destination that rejects it (some customer routes) is
-  asked again with the schema in the prompt, and the gateway remembers that for
-  the destination.
+  response format; a destination that rejects it is asked again with the
+  schema in the prompt, and the gateway remembers that for the destination.
 
 Both produce one completion result, so settlement and parsing never depend on
 the provider. Other model consumers' `structured` calls keep their schema in
 the prompt, because their schemas may hold optional fields that strict outputs
-refuse. Customer (BYOK) routes are validated as OpenAI-compatible and always
-use that API, whatever their host; they buffer and answer in one piece.
+refuse.
 
 The runtime emits `step` events, and for a respond step `text` events carrying
 the reply and the document's title and body decoded from the incomplete JSON
@@ -373,7 +368,7 @@ executes a turn: it ends as `interrupted` a turn whose lease expired or that no
 stream claimed within `unclaimed_grace_seconds`, and settles cancelled turns'
 outstanding model attempts. Before each model step the turn
 rechecks lease ownership, cancellation, the member's run permission, the
-capability and the exact customer route/key revision or admitted platform model,
+capability and the admitted platform model,
 then [commits the dispatch](../frontend/services/api/src/agent/model-calls.ts)
 before any network I/O; no transaction is held across provider or tool I/O.
 Settlement survives cancellation and lease loss while replies and revisions
@@ -382,11 +377,10 @@ terminal write.
 
 Every model step is funded independently. Platform funding reserves a finite
 AI-credit hold per call and settles it against returned usage; a lost result
-settles once as bounded unknown usage. Customer BYOK consumes no platform
-credits and never falls back to platform funding. The configured development
+settles once as bounded unknown usage. The configured development
 login (`DEV_LOGIN_EMAIL`, an active admin) runs as `development` funding with
-no hold or debit but the same dispatch evidence. Capability, customer route and
-credit rate are keyed `agent`; [Billing](billing-entitlements.md) owns the ledger.
+no hold or debit but the same dispatch evidence. Capability and credit rate are
+keyed `agent`; [Billing](billing-entitlements.md) owns the ledger.
 
 ## Coverage
 
@@ -407,8 +401,8 @@ scripted models and real PostgreSQL, never live providers:
 - `agent-cutover.test.ts`: HTTP admission, the SSE route (events, saved reply,
   no re-execution, a closed stream ending the turn as interrupted), catalog
   projection, recovery and cancellation.
-- `agent-funding.test.ts`: holds, settlement, unknown usage, BYOK and
-  development funding.
+- `agent-funding.test.ts`: holds, settlement, unknown usage and development
+  funding.
 
 Live quality and speed are measured outside CI by the operator-only eval,
 `pnpm --filter @citeladder/api agent:eval --live --label <name>`:

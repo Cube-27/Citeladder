@@ -39,26 +39,48 @@ Source: owner-confirmed commercial and workspace decisions, implemented in
 [PR #61](https://github.com/Cube-27/Citeladder/pull/61) (44fc0d22), with shell
 selection in [PR #58](https://github.com/Cube-27/Citeladder/pull/58) (cae5717f).
 [Workspace access](workspace-access.md) and [billing](billing-entitlements.md)
-own shipped behavior. Sign-in workspace selection remains deferred; invitation
-delivery is implemented through self-serve authentication (#280).
+own shipped behavior. The sign-in workspace chooser and invitation delivery
+through self-serve authentication (#280) are implemented.
 
-## Preserve provider portability; do not enable payments
+## Preserve provider portability; billing is operational but hidden
 
-The owner paused completion of Razorpay integration while preserving its adapter
-and the option to return or select another provider. The commercial core binds
-each intent/subscription/receipt to its originating provider and environment;
-vendor keys and webhook vocabulary remain vendor-owned. This avoids rewriting
-commercial accounting to change a payment transport.
+The commercial core binds each intent/subscription/receipt to its originating
+provider and environment; vendor keys and webhook vocabulary remain
+vendor-owned. This avoids rewriting commercial accounting to change a payment
+transport. Razorpay is the implemented provider; the option to select another
+remains.
+
+Billing is fully operational but hidden, so that enabling it is one small
+configuration change. Checkout serves only workspaces holding the non-public
+`billing_checkout` grant (Razorpay test keys are accepted in production for
+them alone); the public catalog reads checkout unavailable, and only the free
+trial is live. Enablement waits for the owner's separate live sign-off tracked in
+the [backlog](plans/backlog.md#acceptance-calibration-and-rollout).
 
 Source: owner-confirmed provider-portability decision, implemented in
-[PR #61](https://github.com/Cube-27/Citeladder/pull/61) (44fc0d22).
-On 24 September 2026 the owner resumed
-Razorpay activation; payments stay disabled until the separate live sign-off
-tracked in the [backlog](plans/backlog.md#acceptance-calibration-and-rollout).
+[PR #61](https://github.com/Cube-27/Citeladder/pull/61) (44fc0d22); the owner
+resumed Razorpay activation on 24 September 2026 and set hidden operation on
+11 October 2026 (billing decisions B0 and B2, refined by B42 in the
+[billing decision log](billing-decisions.md)).
 
 Real sandbox captures, recurring-method acceptance and GST parity remain
 unverified. [Provider readiness](billing-provider-readiness.md) owns the
 acceptance and separate enablement boundary.
+
+## Platform AI is metered in AI credits; the Agent has no customer model route
+
+Every platform model call spends AI credits (1 credit is $0.001 of usage after a
+30% markup), charged on tokens at the serving model's price, and internal cost
+follows the provider's published rates; customers see only credits. Prompt runs
+replace audit credits as the measurement unit. The Agent always uses the
+platform gateway: its customer (BYOK) model route was removed. Customer provider
+keys (BYOK) remain only for answer-engine and research providers, as a lower
+price of the same plan.
+
+Source: owner decisions of 11 and 12 October 2026, billing decisions B4, B8,
+B11, B12, B19, B23, B31 and B53 in the [billing decision log](billing-decisions.md).
+Plan sizes and prices are configuration (B55). [Billing and
+entitlements](billing-entitlements.md) and [Agent](agents.md) own shipped behavior.
 
 ## One Agent runtime; the Action is the unit of work
 

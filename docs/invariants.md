@@ -218,7 +218,7 @@ identity.
 
 Tests disable dotenv, use deterministic configuration and exclude inherited live
 provider credentials. The isolation mechanism and commands belong to
-[Development](DEVELOPMENT.md#backend).
+[Development](DEVELOPMENT.md#api-service-typescript).
 
 ## 15. PostgreSQL is the durable queue
 
@@ -234,18 +234,23 @@ subscription/period terms never follow the current catalog retroactively.
 Checkout, the no-card campaign, and card trial are separate controls and must
 never imply one another. Checkout and the seeded no-card campaign default to
 disabled; card trial remains unavailable until a separately implemented and
-verified provider flow exists.
+verified provider flow exists. Billing is operational but hidden: checkout
+serves only workspaces holding the non-public `billing_checkout` grant until an
+enablement change (B2, B42).
 
 Entitlement resolution selects one primary profile and deliberate supplements.
 Grants, revocations, consumable reservations/releases/debits/refunds, normalized
 payment/refund receipts, model attempts, and introductory claims are immutable
 evidence. Redirects, checkout callbacks, receipts, webhook delivery, or provider
 Dashboard state alone never grant access; webhook and reconciliation must settle
-through the same idempotent activation owner. Customer BYOK consumes zero
-platform credits and never silently falls back. Platform-funded model work is
-unavailable without an explicit persisted finite rate/cap policy and allowance;
-the sole exception is the provisioned development login's unmetered `development`
-Agent funding, which still records every model attempt.
+through the same idempotent activation owner. A workspace's own provider keys
+(BYOK) consume no platform credits and never silently fall back to platform
+keys; the Agent has no customer model route and always uses the platform gateway
+(B19). Every platform model call spends AI credits at the serving model's
+configured token price and is refused without one (B12, B14, B35); the sole
+exception is the provisioned development login's unmetered `development` Agent
+funding, which still records every model attempt. The
+[billing decision log](billing-decisions.md) records each rule's owner decision.
 
 Every trusted billing mutation is explicit-target, active-admin authorized,
 reasoned, idempotent, dry-run reviewed, and redacted. Operators correct by

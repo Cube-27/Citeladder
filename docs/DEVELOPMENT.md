@@ -523,7 +523,9 @@ publication/forward-recovery, campaign controls, grant correction, evidence
 inspection, reconciliation, webhook rotation, and incident switches. Local
 fixtures are not production-provider evidence, and the default development
 posture keeps checkout and the no-card campaign disabled with card trial
-unavailable.
+unavailable. In production, checkout stays hidden behind the non-public
+`billing_checkout` grant issued with `billing:admin grant`
+([billing decisions](billing-decisions.md) B2, B42).
 
 From the repository root, reset and recreate the database named by
 `DATABASE_URL` (**never against shared, staging, or production data**):
