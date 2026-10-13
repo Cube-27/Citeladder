@@ -1,5 +1,5 @@
 # Node 26 bookworm-slim; preserve this image family when updating the digest.
-FROM node@sha256:662933cf47f013bc8e4beb31a6116448427a82057ba7c42c97e4c5ba766504c2 AS dependencies
+FROM node@sha256:32fa97f3363975684b08bf4e8a68a47c7905175cc20275b50b974bbd02aba731 AS dependencies
 
 ENV PNPM_HOME=/pnpm
 ENV PATH="${PNPM_HOME}:${PATH}"
@@ -20,7 +20,7 @@ FROM dependencies AS wrangler
 COPY frontend/scripts/copy-wrangler-runtime.mjs ./scripts/
 RUN node scripts/copy-wrangler-runtime.mjs /wrangler
 
-FROM node@sha256:662933cf47f013bc8e4beb31a6116448427a82057ba7c42c97e4c5ba766504c2 AS builder
+FROM node@sha256:32fa97f3363975684b08bf4e8a68a47c7905175cc20275b50b974bbd02aba731 AS builder
 
 ARG BUILD_REVISION=unknown
 ARG NEXT_PUBLIC_API_REQUEST_TIMEOUT_MS
@@ -52,7 +52,7 @@ COPY frontend/postcss.config.mjs frontend/tsconfig.json ./
 COPY frontend/services/api/src/config/crawlers.json ./services/api/src/config/crawlers.json
 RUN pnpm build:marketing
 
-FROM node@sha256:662933cf47f013bc8e4beb31a6116448427a82057ba7c42c97e4c5ba766504c2 AS runtime
+FROM node@sha256:32fa97f3363975684b08bf4e8a68a47c7905175cc20275b50b974bbd02aba731 AS runtime
 
 ARG BUILD_REVISION=unknown
 LABEL org.opencontainers.image.title="citeladder-marketing" \

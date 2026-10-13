@@ -2,7 +2,7 @@
 # Node 26 strips the service's erasable TypeScript at load time, so the image
 # ships source. Digest updates must retain Node 26 and the bookworm-slim variant.
 # Node 26 bookworm-slim; preserve this image family when updating the digest.
-FROM node@sha256:662933cf47f013bc8e4beb31a6116448427a82057ba7c42c97e4c5ba766504c2 AS dependencies
+FROM node@sha256:32fa97f3363975684b08bf4e8a68a47c7905175cc20275b50b974bbd02aba731 AS dependencies
 
 ENV PNPM_HOME=/pnpm
 ENV PATH="${PNPM_HOME}:${PATH}"
@@ -38,7 +38,7 @@ RUN mkdir -p /runtime/packages \
     && mv "$(readlink -f /runtime/node_modules/@citeladder/contracts)" /runtime/packages/contracts \
     && ln -sfn ../../packages/contracts /runtime/node_modules/@citeladder/contracts
 
-FROM node@sha256:662933cf47f013bc8e4beb31a6116448427a82057ba7c42c97e4c5ba766504c2 AS runtime
+FROM node@sha256:32fa97f3363975684b08bf4e8a68a47c7905175cc20275b50b974bbd02aba731 AS runtime
 
 ARG BUILD_REVISION=unknown
 LABEL org.opencontainers.image.title="citeladder-api-service" \
