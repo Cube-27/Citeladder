@@ -13,7 +13,7 @@
 <p align="center">
   <a href="https://github.com/Cube-27/Citeladder/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/Cube-27/Citeladder?style=flat-square" /></a>
   <a href="https://github.com/Cube-27/Citeladder/issues"><img alt="GitHub issues" src="https://img.shields.io/github/issues/Cube-27/Citeladder?style=flat-square" /></a>
-  <a href="https://github.com/Cube-27/Citeladder/blob/main/LICENSE"><img alt="MIT License" src="https://img.shields.io/github/license/Cube-27/Citeladder?style=flat-square" /></a>
+  <a href="https://github.com/Cube-27/Citeladder/blob/main/LICENSE"><img alt="AGPL-3.0 License" src="https://img.shields.io/github/license/Cube-27/Citeladder?style=flat-square" /></a>
   <img alt="TypeScript API" src="https://img.shields.io/badge/TypeScript-native%20API-3178C6?logo=typescript&amp;logoColor=white&amp;style=flat-square" />
   <img alt="Astro and Vite" src="https://img.shields.io/badge/Frontend-Astro%20%2B%20Vite-646CFF?style=flat-square" />
   <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&amp;logoColor=white&amp;style=flat-square" />
@@ -215,4 +215,4 @@ and follow the repository's task-level validation policy.
 <a id="license"></a>
 ## License
 
-[MIT](LICENSE)
+[GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0-only)

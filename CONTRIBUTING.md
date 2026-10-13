@@ -78,4 +78,4 @@ for the exact candidate commit before creating release artifacts.
 
 Include reproduction steps, expected/actual behavior, versions and safe logs or
 screenshots. Disclose secret-handling and other security issues privately.
-Contributions are licensed under the [MIT License](LICENSE).
+Contributions are licensed under the [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0-only).

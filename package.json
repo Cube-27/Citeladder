@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Evidence-grounded growth intelligence platform. Root manifest: a single entry point for the install, build, test, and lint commands of the Astro/Vite frontend and native API (frontend/). It declares no dependencies of its own and is never installed — pnpm's workspace root is frontend/.",
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/abhij1306/Citeladder.git"
