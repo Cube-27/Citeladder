@@ -16,8 +16,12 @@ function RouterTestWrapper({ children }: Readonly<{ children: ReactNode }>) {
 }
 
 /** The signal table's body rows, in display order. */
+function signalTable() {
+  return within(screen.getByRole('region', { name: 'Signals' })).getByRole('table');
+}
+
 function signalRows() {
-  return within(screen.getByRole('table')).getAllByRole('row').slice(1);
+  return within(signalTable()).getAllByRole('row').slice(1);
 }
 
 /** The pager's announced position, e.g. "1–10 of 28 signals". */
@@ -195,14 +199,17 @@ describe('DemandProjection', () => {
         .getAllByRole('listitem')
         .map((item) => item.textContent),
     ).toEqual([
-      'Striking distanceActive',
-      'CannibalizationNot reported',
-      'CTR gapUnavailable',
-      'TrendsNeeds more history',
+      'Striking distance · Active',
+      'Cannibalization · Not reported',
+      'CTR gap · Unavailable',
+      'Trends · Needs more history',
     ]);
+    // Caveats shared by the signals sit behind the count's hint, not a row.
+    expect(within(detectors).getByRole('button', { name: 'Data caveats' })).toBeVisible();
+    expect(screen.queryByText('Privacy-filtered queries may be omitted.')).not.toBeInTheDocument();
 
     // One flat table: a row per signal, its landing page under the query.
-    const table = screen.getByRole('table');
+    const table = signalTable();
     expect(signalRows().map((row) => row.textContent)).toEqual([
       expect.stringMatching(/^1ai marketing tools\/ai-toolsStriking distance25012/),
       expect.stringMatching(/^2school fees\/feesLow CTR10000\.0%12\.0/),
@@ -252,7 +259,12 @@ describe('DemandProjection', () => {
     expect(link.getAttribute('href')).toContain(
       '/agent/actions/66666666-6666-4666-8666-666666666666',
     );
-    // The unpromoted signal is read and asked about from the table only.
+    // One table row per Action, with its signal chips beside the page.
+    const rows = within(within(band).getByRole('table')).getAllByRole('row').slice(1);
+    expect(rows.map((row) => row.textContent)).toEqual([
+      expect.stringMatching(/^https:\/\/example\.com\/ai-toolsStriking distance/),
+    ]);
+    // The unpromoted signal is read and asked about from the signals table only.
     expect(within(band).queryByText('https://example.com/fees')).not.toBeInTheDocument();
   });
 

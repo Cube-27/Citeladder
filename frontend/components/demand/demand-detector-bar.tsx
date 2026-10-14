@@ -1,5 +1,3 @@
-import { Info } from 'lucide-react';
-
 import { Badge } from '@/components/ui/badge';
 import { InfoHint } from '@/components/ui/info-hint';
 import { textRole } from '@/components/ui/typography';
@@ -32,8 +30,9 @@ function isRunning(state: string | undefined) {
 }
 
 /**
- * Which detectors ran on this snapshot. A read-only status list: each name,
- * its state, and an info hint carrying the rule and anything that limited it.
+ * Which detectors ran on this snapshot, as one read-only line: the count, then
+ * each detector's status chip with an info hint carrying its rule and anything
+ * that limited it. Data caveats shared by the signals sit in the count's hint.
  */
 export function DemandDetectorBar({ snapshot }: Readonly<{ snapshot: DemandSnapshot }>) {
   const detectors = detectorStates(snapshot.summary);
@@ -45,41 +44,41 @@ export function DemandDetectorBar({ snapshot }: Readonly<{ snapshot: DemandSnaps
   );
 
   return (
-    <section aria-labelledby="demand-detectors" className="grid gap-3">
-      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+    <section
+      aria-labelledby="demand-detectors"
+      className="flex flex-wrap items-center gap-x-4 gap-y-2"
+    >
+      <div className="flex items-center gap-2">
         <h3 id="demand-detectors" className={textRole('label')}>
           Detectors
         </h3>
         <span className={textRole('caption', 'tabular-nums')}>
-          {reported ? `${running} of ${DETECTORS.length} active` : 'No detector status reported'}
+          {reported ? `${running} of ${DETECTORS.length} active` : 'No status reported'}
         </span>
+        {limitations.length > 0 ? (
+          <InfoHint label="Data caveats">{limitations.join(' ')}</InfoHint>
+        ) : null}
       </div>
-      <ul className="flex flex-wrap items-center gap-x-6 gap-y-2">
+      <ul className="flex flex-wrap items-center gap-x-3 gap-y-2">
         {DETECTORS.map(({ key, label, rule }) => {
           const detector = detectors[key];
           const status = detectorStatus(detector?.state);
           const hint = [rule, ...(detector?.limitations ?? [])].join(' ');
+          const text = `${label} · ${status.label}`;
           return (
-            <li key={key} className="flex items-center gap-2">
-              <span className={textRole('body', 'text-foreground')}>{label}</span>
+            <li key={key} className="flex items-center gap-1">
               {status.tone ? (
                 <Badge variant="status" value={status.tone}>
-                  {status.label}
+                  {text}
                 </Badge>
               ) : (
-                <Badge>{status.label}</Badge>
+                <Badge>{text}</Badge>
               )}
               <InfoHint label={`How the ${label} detector works`}>{hint}</InfoHint>
             </li>
           );
         })}
       </ul>
-      {limitations.length > 0 ? (
-        <p className={textRole('caption', 'flex items-start gap-2')}>
-          <Info className="mt-1 size-3 shrink-0" aria-hidden="true" />
-          {limitations.join(' ')}
-        </p>
-      ) : null}
     </section>
   );
 }
