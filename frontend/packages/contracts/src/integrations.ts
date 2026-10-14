@@ -87,6 +87,8 @@ export const integrationTestResultSchema = responseObject({
 // Sync-run history/detail projection (status, window, row counts — invariant
 // 7: a read-only projection of the queue row). `row_count` is the number of
 // imported rows; `error_code` / `error_detail` are '' when there is no error.
+// `processing` is true while the project's post-sync projection tasks are
+// still queued or running, so the pages do not yet show this import.
 export const integrationSyncRunSchema = responseObject({
   id: uuid(),
   connection_id: uuid(),
@@ -95,6 +97,7 @@ export const integrationSyncRunSchema = responseObject({
   window_start: z.string(),
   window_end: z.string(),
   row_count: z.number().int(),
+  processing: z.boolean(),
   resync_seq: z.number().int(),
   error_code: z.string(),
   error_detail: z.string(),

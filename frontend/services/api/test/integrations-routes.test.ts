@@ -502,19 +502,25 @@ describe('integration connection routes', () => {
     expect(connections.every((item) => item.workspace_id === workspaceId)).toBe(true);
   });
 
-  it('enqueues every mapped provider, including Bing, for Performance sync', async () => {
+  it('enqueues every mapped provider, including Bing, for Performance sync, then refuses a repeat', async () => {
     const token = await sessionToken({ sub: ownerId, ver: 0 });
-    const response = await app.request(`/api/v1/projects/${projectId}/performance/sync`, {
-      method: 'POST',
-      headers: {
-        cookie: `${config.session.cookieName}=${token}`,
-        'x-workspace-id': workspaceId,
-      },
-    });
+    const sync = () =>
+      app.request(`/api/v1/projects/${projectId}/performance/sync`, {
+        method: 'POST',
+        headers: {
+          cookie: `${config.session.cookieName}=${token}`,
+          'x-workspace-id': workspaceId,
+        },
+      });
+    const response = await sync();
     expect(response.status).toBe(202);
     const body = (await response.json()) as { connection_id: string; status: string }[];
     expect(body.map((row) => row.connection_id).sort()).toEqual([...projectConnections].sort());
     expect(body.every((row) => row.status === 'queued')).toBe(true);
+    // Every property still has its run in flight, so nothing new is queued.
+    const repeat = await sync();
+    expect(repeat.status).toBe(409);
+    expect(await repeat.json()).toMatchObject({ error: { code: 'sync_active_window_conflict' } });
   });
 
   it('hides another workspace connection and requires authentication', async () => {

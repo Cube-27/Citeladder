@@ -229,6 +229,7 @@ export function PerformanceNotices({
         </Alert>
       ) : null}
       {sync.notice ? <Alert tone="info">{sync.notice}</Alert> : null}
+      {sync.error ? <Alert tone="info">{sync.error}</Alert> : null}
       {sync.outcome === 'failed' ? (
         <Alert tone="warning">
           Sync finished with errors — previously imported data is unchanged. Check Settings →

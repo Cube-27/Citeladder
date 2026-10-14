@@ -9,6 +9,7 @@ import {
 import { createApp } from '../src/app.ts';
 import { integrationSettings, integrationPolicy } from '../src/integrations/config.ts';
 import { enqueueSyncRun, enqueueHistoryBackfill } from '../src/integrations/sync.ts';
+import { enqueueTask } from '../src/referrals/enqueue.ts';
 import { seedProject } from './referral-fixtures.ts';
 import { Fixtures, sessionToken, testConfig, testDatabase } from './support.ts';
 
@@ -317,6 +318,61 @@ describe('integration sync API and immutable windows', () => {
       resync_seq: 0,
       status: 'succeeded',
     });
+  });
+
+  it('keeps one plain sync in flight per property, on demand or scheduled', async () => {
+    const target = await seedTarget();
+    const first = await enqueue(target);
+    const repeat = await request(target, '/sync', undefined, ownerId, 'POST');
+    expect(repeat.status).toBe(409);
+    expect(await repeat.json()).toMatchObject({
+      error: {
+        code: 'sync_active_window_conflict',
+        message: 'A sync is already running for this property',
+      },
+    });
+    await expect(enqueueSyncRun(db, { ...target, syncKind: 'scheduled' })).rejects.toMatchObject({
+      status: 409,
+    });
+    // An explicit window is a different range, so it is still admitted.
+    expect(
+      (await enqueue(target, { window_start: '2026-07-01', window_end: '2026-07-01' })).status,
+    ).toBe('queued');
+    await db
+      .updateTable('integration_sync_runs')
+      .set({ status: 'succeeded', completed_at: new Date() })
+      .where('mapping_id', '=', target.mappingId)
+      .execute();
+    expect((await enqueue(target)).sync_run_id).not.toBe(first.sync_run_id);
+  });
+
+  it('reports a finished run as processing while the project still rebuilds its reports', async () => {
+    const target = await seedTarget();
+    const enqueued = await enqueue(target);
+    await db
+      .updateTable('integration_sync_runs')
+      .set({ status: 'succeeded', completed_at: new Date() })
+      .where('id', '=', enqueued.sync_run_id)
+      .execute();
+    expect(await detail(target, enqueued.sync_run_id)).toMatchObject({
+      status: 'succeeded',
+      processing: false,
+    });
+    await enqueueTask(db, {
+      workspaceId: target.workspaceId,
+      projectId: target.projectId,
+      kind: 'traffic_snapshot_refresh',
+      payload: { window_start: '2026-07-01', window_end: '2026-07-03' },
+      keyParts: [target.projectId, 'processing-test'],
+      maxAttempts: 3,
+    });
+    expect((await detail(target, enqueued.sync_run_id)).processing).toBe(true);
+    await db
+      .updateTable('analytics_tasks')
+      .set({ status: 'succeeded' })
+      .where('workspace_id', '=', target.workspaceId)
+      .execute();
+    expect((await detail(target, enqueued.sync_run_id)).processing).toBe(false);
   });
 
   it('reads one run and sums only its own immutable artifacts', async () => {

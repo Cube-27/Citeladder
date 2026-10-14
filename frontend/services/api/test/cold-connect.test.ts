@@ -54,6 +54,56 @@ it('refreshes AI Referrals after classification, not also before it, for referra
   expect(queued.filter((row) => row.task_kind === 'ingest_referrals')).toHaveLength(1);
 });
 
+it('shares one queued Traffic refresh per window and queues a successor once it starts', async () => {
+  const t = await tenant(db, fixtures);
+  const gsc = await seedImport(db, {
+    ...t,
+    dataset: 'gsc_day_daily',
+    window: WINDOW,
+    provider: 'gsc',
+  });
+  const ga4 = await importSeed(db, t, 'ga4_channel_daily');
+  const project = async (seeds: (typeof gsc)[]) =>
+    db.transaction().execute(async (trx) => {
+      for (const seed of seeds) {
+        const run = await trx
+          .selectFrom('integration_sync_runs')
+          .selectAll()
+          .select([
+            sql<string>`window_start::text`.as('window_start'),
+            sql<string>`window_end::text`.as('window_end'),
+          ])
+          .where('id', '=', seed.syncRunId)
+          .executeTakeFirstOrThrow();
+        // A failed run always refreshes, whatever it imported.
+        await enqueuePostSyncProjections(trx, run, true);
+      }
+    });
+  const refreshes = () =>
+    db
+      .selectFrom('analytics_tasks')
+      .select(['status', sql<string>`payload->>'source_revision'`.as('source')])
+      .where('workspace_id', '=', t.workspaceId)
+      .where('task_kind', '=', 'traffic_snapshot_refresh')
+      .orderBy('created_at')
+      .execute();
+
+  await project([gsc, ga4]);
+  expect(await refreshes()).toEqual([{ status: 'queued', source: gsc.syncRunId }]);
+
+  await db
+    .updateTable('analytics_tasks')
+    .set({ status: 'running' })
+    .where('workspace_id', '=', t.workspaceId)
+    .where('task_kind', '=', 'traffic_snapshot_refresh')
+    .execute();
+  await project([ga4]);
+  expect(await refreshes()).toEqual([
+    { status: 'running', source: gsc.syncRunId },
+    { status: 'queued', source: ga4.syncRunId },
+  ]);
+});
+
 it('takes a first connect through both workers to analysis_ready without provider I/O', async () => {
   const t = await tenant(db, fixtures);
   const gsc = await seedImport(db, {

@@ -4,7 +4,8 @@ import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
 import { ApiError, notFound } from '../errors.ts';
 import { resolveAccountEntitlement } from '../entitlements/resolve.ts';
-import { integrationPolicy, integrationSettings } from './config.ts';
+import { codes, integrationPolicy, integrationSettings } from './config.ts';
+import { policy } from '../config.ts';
 import { enforceWorkspaceRequest } from '../abuse/usage.ts';
 import { isoDateText } from '../db/timestamps.ts';
 
@@ -63,6 +64,12 @@ export function enqueueSyncRun(db: Database, input: SyncInput) {
     const target = await resolveSyncTarget(trx, input);
     const [windowStart, windowEnd] = await syncWindow(trx, input, target.id);
     const kind = input.syncKind ?? 'on_demand';
+    // A plain sync re-reads the late-data days, which an active on-demand or
+    // scheduled run for the property already covers; refusing it under the
+    // workspace lock keeps one in flight. Explicit windows and history backfill
+    // are separate ranges.
+    if (input.windowStart === undefined && kind !== codes.SYNC_KIND_BACKFILL)
+      await refuseWhilePropertySyncs(trx, input.workspaceId, target.id);
     if (kind === 'on_demand')
       await admitOnDemandSync(trx, input.workspaceId, target.id, windowStart, windowEnd);
     const prior = await previousSequence(trx, input, target);
@@ -114,6 +121,24 @@ export function enqueueSyncRun(db: Database, input: SyncInput) {
   });
 }
 
+const ACTIVE_SYNC = ['queued', 'leased', 'running', 'retry_wait'] as const;
+
+async function refuseWhilePropertySyncs(trx: Database, workspaceId: string, mappingId: string) {
+  const active = await trx
+    .selectFrom('integration_sync_runs')
+    .select('id')
+    .where('workspace_id', '=', workspaceId)
+    .where('mapping_id', '=', mappingId)
+    .where('sync_kind', '!=', codes.SYNC_KIND_BACKFILL)
+    .where('status', 'in', ACTIVE_SYNC)
+    .executeTakeFirst();
+  if (active)
+    throw new ApiError(409, 'A sync is already running for this property', {
+      code: 'sync_active_window_conflict',
+      details: { enqueued_connection_ids: [] },
+    });
+}
+
 async function admitOnDemandSync(
   trx: Database,
   workspaceId: string,
@@ -124,7 +149,7 @@ async function admitOnDemandSync(
   const active = trx
     .selectFrom('integration_sync_runs')
     .where('workspace_id', '=', workspaceId)
-    .where('status', 'in', ['queued', 'leased', 'running', 'retry_wait']);
+    .where('status', 'in', ACTIVE_SYNC);
   const duplicate = await active
     .select('id')
     .where('mapping_id', '=', mappingId)
@@ -403,6 +428,21 @@ export async function getSyncRun(
     .select((eb) =>
       eb.fn.coalesce(eb.fn.sum<number>('artifacts.row_count'), eb.val(0)).as('row_count'),
     )
+    // The pages read projections, not imports: work after the import is still
+    // building them while any post-sync task for the project is active.
+    .select((eb) =>
+      eb
+        .exists(
+          eb
+            .selectFrom('analytics_tasks as tasks')
+            .select('tasks.id')
+            .whereRef('tasks.workspace_id', '=', 'runs.workspace_id')
+            .whereRef('tasks.project_id', '=', 'runs.project_id')
+            .where('tasks.task_kind', 'in', integrationPolicy.post_sync_task_kinds)
+            .where('tasks.status', 'in', policy.task_queue.active),
+        )
+        .as('processing'),
+    )
     .where('runs.workspace_id', '=', workspaceId)
     .where('runs.connection_id', '=', connectionId)
     .where('runs.id', '=', syncRunId)
@@ -417,6 +457,7 @@ export async function getSyncRun(
       updated_at: isoTimestamp(row.updated_at),
       completed_at: isoTimestamp(row.completed_at),
       row_count: Number(row.row_count),
+      processing: Boolean(row.processing),
     }
   );
 }
