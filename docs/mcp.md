@@ -256,7 +256,13 @@ refusal is a tool error naming the retry time.
 
 The TypeScript transport supports the `2025-11-25` initialize lifecycle and the
 `2026-07-28` per-request lifecycle (`server/discover`, protocol and method
-headers, reserved request metadata). Protocol routes keep request-body, host
+headers, reserved request metadata). On that lifecycle every result carries
+`resultType`, and the cacheable ones (`server/discover`, the three lists of
+tools, resources and templates, `prompts/list` and `resources/read`) carry the
+required `ttlMs` and `cacheScope`: catalogue documents and the app view are
+`public` for an hour, the grant-shaped tool list `private` for an hour, and a
+project read `private` and immediately stale. OpenAI's plugin scanner validates
+these fields and stops the scan without them. Protocol routes keep request-body, host
 and origin guards; the credential-free OAuth and metadata endpoints also answer
 browser-hosted clients with CORS. With MCP disabled every protocol path is absent
 and the rest of the application starts normally.

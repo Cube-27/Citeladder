@@ -121,14 +121,19 @@ describe('hosted MCP transport', () => {
   it('advertises the interactive app on its presentation tools on both protocol lifecycles', async () => {
     for (const modern of [false, true]) {
       const service = app();
-      const listed = (
+      const listing = (
         await rpc(
           await service.request(
             'https://protocol.example.test/mcp',
             request('tools/list', {}, modern),
           ),
         )
-      ).result.tools as Record<string, unknown>[];
+      ).result;
+      // The tool list follows the grant, so it is cacheable only per authorization.
+      expect([listing.ttlMs, listing.cacheScope]).toEqual(
+        modern ? [3_600_000, 'private'] : [undefined, undefined],
+      );
+      const listed = listing.tools as Record<string, unknown>[];
       expect(listed.find((tool) => tool.name === 'list_projects')).not.toHaveProperty('_meta');
       expect(listed.find((tool) => tool.name === 'open_analytics')?._meta).toEqual({
         ui: { resourceUri: 'ui://citeladder/analytics/v1' },
@@ -150,6 +155,10 @@ describe('hosted MCP transport', () => {
         ),
       );
       expect(loaded.result.contents).toEqual([expect.objectContaining({ uri: appResource.uri })]);
+      // 2026-07-28 validators require CacheableResult on reads; 2025-11-25 has no such fields.
+      expect([loaded.result.ttlMs, loaded.result.cacheScope]).toEqual(
+        modern ? [3_600_000, 'public'] : [undefined, undefined],
+      );
     }
     expect(dispatchTool).not.toHaveBeenCalled();
     vi.mocked(authenticateMcp).mockResolvedValueOnce(null);
@@ -239,6 +248,8 @@ describe('hosted MCP transport', () => {
     );
     expect((await rpc(discovery)).result).toMatchObject({
       resultType: 'complete',
+      ttlMs: 3_600_000,
+      cacheScope: 'public',
       supportedVersions: ['2026-07-28', '2025-11-25'],
       _meta: { 'io.modelcontextprotocol/serverInfo': { name: 'citeladder' } },
     });
