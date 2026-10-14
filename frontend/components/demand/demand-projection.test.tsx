@@ -17,7 +17,7 @@ function RouterTestWrapper({ children }: Readonly<{ children: ReactNode }>) {
 
 /** The signal table's body rows, in display order. */
 function signalTable() {
-  return within(screen.getByRole('region', { name: 'Signals' })).getByRole('table');
+  return screen.getByRole('table');
 }
 
 function signalRows() {
@@ -180,19 +180,20 @@ describe('DemandProjection', () => {
     );
   }
 
-  it('renders one Signals section: summary line, filters carrying counts and detector status, a flat table', async () => {
+  it('renders the top-strip filters carrying counts and detector status, a summary line and a flat table', async () => {
     renderProjection();
 
-    const signals = await screen.findByRole('region', { name: 'Signals' });
     // One summary line; latent demand is the only figure the filters lack.
-    expect(within(signals).getByText('2 signals observed')).toBeInTheDocument();
-    expect(signals).toHaveTextContent('350 impressions on non-branded signals'); // 250 + 100
+    const summary = await screen.findByText('2 signals observed');
+    expect(summary.parentElement).toHaveTextContent('350 impressions on non-branded signals'); // 250 + 100
+    // No section heading: the page title already names the page.
+    expect(screen.queryByRole('heading', { name: 'Signals' })).not.toBeInTheDocument();
 
     // Each filter carries its count once, and its detector's status when that
     // detector did not run in full, including one the snapshot never reported.
-    const filters = within(signals)
+    const filters = screen
       .getAllByRole('button', { pressed: false })
-      .concat(within(signals).getAllByRole('button', { pressed: true }))
+      .concat(screen.getAllByRole('button', { pressed: true }))
       .map((chip) => chip.textContent);
     expect(filters).toEqual(
       expect.arrayContaining([
@@ -202,17 +203,19 @@ describe('DemandProjection', () => {
         'Trends · Needs more history0',
       ]),
     );
-    expect(
-      within(signals).getByRole('button', { name: 'How the CTR gap detector works' }),
-    ).toBeVisible();
+    expect(screen.getByRole('button', { name: 'How the CTR gap detector works' })).toBeVisible();
     // Caveats shared by the signals sit behind one hint, not a row.
-    expect(within(signals).getByRole('button', { name: 'Data caveats' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Data caveats' })).toBeVisible();
     expect(screen.queryByText('Privacy-filtered queries may be omitted.')).not.toBeInTheDocument();
     // No separate summary cards, detector line or Act on this list repeat them.
     expect(screen.queryByText('Latent demand')).not.toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Detectors' })).not.toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Act on this' })).not.toBeInTheDocument();
-    expect(within(signals).getByLabelText('Filter queries or pages')).toBeVisible();
+    // The search and filters sit in the page's top strip, before the table.
+    const search = screen.getByLabelText('Filter queries or pages');
+    expect(
+      search.compareDocumentPosition(signalTable()) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
 
     const table = signalTable();
     expect(signalRows().map((row) => row.textContent)).toEqual([
@@ -477,7 +480,7 @@ describe('DemandProjection', () => {
     });
     renderProjection();
 
-    expect(await screen.findByRole('region', { name: 'Signals' })).toHaveTextContent(
+    expect((await screen.findByText('2 signals observed')).parentElement).toHaveTextContent(
       '250 impressions on 1 of 2 non-branded signals',
     );
   });
