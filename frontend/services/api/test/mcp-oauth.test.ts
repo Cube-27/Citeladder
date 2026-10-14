@@ -478,6 +478,23 @@ it('matches loopback redirects on any port and returns later errors to the clien
   expect((await app.request(`${protocol}/authorize?${query}`)).status).toBe(400);
 });
 
+it('tells the person to re-add a pruned client instead of opening a password prompt', async () => {
+  const response = await app.request(
+    `${protocol}/authorize?${authorizationQuery('52be6762-fd8d-423c-8ee2-531e1effe7fa')}`,
+  );
+  expect([
+    response.status,
+    response.headers.get('www-authenticate'),
+    response.headers.get('location'),
+    await response.text(),
+  ]).toEqual([
+    400,
+    null,
+    null,
+    'This assistant’s CiteLadder registration is no longer valid. Remove CiteLadder from your assistant and add it again.',
+  ]);
+});
+
 it('rotates refresh tokens once and excludes membership changes, new tenants and stale loaded tokens', async () => {
   const { client: c, value, principal } = await grant();
   const extra = await fixtures.joinedWorkspace(tenant.userId);
