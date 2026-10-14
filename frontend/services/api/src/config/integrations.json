@@ -52,7 +52,7 @@
     "GA4_ACCOUNT_SUMMARIES_PAGE_SIZE": 200,
     "GA4_ACCOUNT_SUMMARIES_MAX_PAGES": 25,
     "GA4_PROPERTY_RESOURCE_PREFIX": "properties/",
-    "BING_API_BASE_URL": "https://ssl.bing.com",
+    "BING_API_BASE_URL": "https://www.bing.com",
     "BING_API_JSON_ROOT": "/webmaster/api.svc/json/",
     "BING_SITES_PROBE_METHOD": "GetUserSites",
     "INTEGRATION_APPROVED_ENDPOINT_HOSTS": [
@@ -60,7 +60,6 @@
       "analyticsadmin.googleapis.com",
       "analyticsdata.googleapis.com",
       "oauth2.googleapis.com",
-      "ssl.bing.com",
       "www.bing.com",
       "www.googleapis.com"
     ]
