@@ -194,7 +194,11 @@ it('bounds query bytes and decoded state before writing usage or requests', asyn
   ]) {
     const query = authorizationQuery(c.client_id);
     query.set(key!, value!);
-    expect((await app.request(`${protocol}/authorize?${query}`)).status).toBe(400);
+    const response = await app.request(`${protocol}/authorize?${query}`);
+    expect([response.status, await response.text()]).toEqual([
+      400,
+      'Authorization query is too large',
+    ]);
   }
   expect(
     await db

@@ -207,15 +207,15 @@ export function registerOAuthRoutes(
   app.get('/authorize', async (c) => {
     const url = new URL(c.req.url);
     const q = url.searchParams;
-    if (
-      Buffer.byteLength(url.search) > mcpPolicy.authorization_max_query_bytes ||
-      Buffer.byteLength(q.get('state') ?? '') > mcpPolicy.authorization_max_state_bytes
-    )
-      throw new OAuthError('invalid_request', 'Authorization query is too large');
     const transaction = mintToken();
     // Once the redirect is proven, errors go back to the client (RFC 6749 §4.1.2.1).
     let callback = null as string | null;
     try {
+      if (
+        Buffer.byteLength(url.search) > mcpPolicy.authorization_max_query_bytes ||
+        Buffer.byteLength(q.get('state') ?? '') > mcpPolicy.authorization_max_state_bytes
+      )
+        throw new OAuthError('invalid_request', 'Authorization query is too large');
       await db.transaction().execute(async (trx) => {
         const client = await trx
           .selectFrom('mcp_oauth_clients')
