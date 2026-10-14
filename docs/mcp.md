@@ -260,10 +260,11 @@ and the rest of the application starts normally.
 ## Interactive app
 
 The [MCP app](../frontend/packages/mcp-app) is always offered. `render_visibility`,
-`render_site_health` and `open_analytics` attach `ui://citeladder/analytics/v1`,
-and `open_analytics` also declares ChatGPT's `openai/ui` sidebar (`global`) and
-conversation-panel (`thread`) entries; hosts without MCP Apps ignore the
-metadata and use the read tools. Render tools accept strict selections, never
+`render_site_health` and `open_analytics` attach `ui://citeladder/analytics/v1`
+and render inline in the conversation; hosts without MCP Apps ignore the
+metadata and use the read tools. ChatGPT's `openai/ui` sidebar and panel
+entrypoints are not declared: ChatGPT's own widget lookup returned 404 for them
+while the same view rendered inline (2026-10-14). Render tools accept strict selections, never
 datasets or model-computed totals; Overview and Sources pin a concrete run and
 Site Health a snapshot. The resource is static HTML bundled at image build,
 with no project data, cookies or network origins; data arrives only through the

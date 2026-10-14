@@ -130,11 +130,8 @@ describe('hosted MCP transport', () => {
         )
       ).result.tools as Record<string, unknown>[];
       expect(listed.find((tool) => tool.name === 'list_projects')).not.toHaveProperty('_meta');
-      expect(listed.find((tool) => tool.name === 'open_analytics')).toMatchObject({
-        _meta: {
-          ui: { resourceUri: appResource.uri },
-          'openai/ui': { entrypoints: [{ type: 'global' }, { type: 'thread' }] },
-        },
+      expect(listed.find((tool) => tool.name === 'open_analytics')?._meta).toEqual({
+        ui: { resourceUri: 'ui://citeladder/analytics/v1' },
       });
       expect(
         (

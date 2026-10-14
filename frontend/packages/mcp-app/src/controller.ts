@@ -405,23 +405,3 @@ export function createController(host: Host) {
   };
 }
 export type Controller = ReturnType<typeof createController>;
-
-/** Host deep links carry selections only; every read still reauthorizes them. */
-export function deepLinkSelection(value: unknown): AnalyticsSelection | null {
-  const link = z.object({ url: z.string().max(4096) }).safeParse(value);
-  if (!link.success || !link.data.url.startsWith('/') || link.data.url.startsWith('//'))
-    return null;
-  const url = new URL(link.data.url, 'https://selection.invalid');
-  if (url.hash || url.pathname !== '/analytics') return null;
-  const input: Record<string, unknown> = Object.fromEntries(url.searchParams);
-  if (typeof input.limit === 'string') {
-    if (!/^\d+$/u.test(input.limit)) return null;
-    input.limit = Number(input.limit);
-  }
-  if (typeof input.retrieval_enabled === 'string') {
-    if (input.retrieval_enabled !== 'true' && input.retrieval_enabled !== 'false') return null;
-    input.retrieval_enabled = input.retrieval_enabled === 'true';
-  }
-  const parsed = analyticsSelectionSchema.safeParse(input);
-  return parsed.success ? parsed.data : null;
-}
