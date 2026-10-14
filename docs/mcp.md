@@ -287,7 +287,12 @@ Change Review and Technical SEO Triage over public read tools. Each mirrors its
 in-app methodology (`ai_visibility`, `measure`, `technical_health`), and the
 Agent owner-adapter test fails if a plugin skill names a tool the catalogue does
 not have. The repository marketplace is `.agents/plugins/marketplace.json`;
-portable clients use the package's `mcp.json`.
+portable clients use the package's `mcp.json`. `plugin.json` also carries the
+OpenAI directory listing: category `Data & Analytics` (the category OpenAI's
+own analytics plugins use; `Productivity` failed the listing check), website,
+privacy, terms and support URLs, `assets/icon.svg` (the logo's ladder mark on a
+square), the review test cases and the demo recording. The submitted ZIP is
+this folder without its README.
 
 This repository proves the wire contract, not acceptance in a particular client
 build or the deployed origin. Before public directory submission the release

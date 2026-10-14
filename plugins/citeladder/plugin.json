@@ -7,7 +7,7 @@
   "extensions": {
     "com.openai": {
       "publication": {
-        "release_notes": "Initial read-only CiteLadder analytics: AI Visibility overview, bounded trends, source-to-answer drill-down, pinned Site Health snapshots and three public review workflows. Optional global and conversation entries reuse the same UI. Existing account connection and measurements are required; acquisition and consequential actions stay in CiteLadder."
+        "release_notes": "Initial CiteLadder release: AI Visibility overview, bounded trends, source-to-answer drill-down, pinned Site Health snapshots and three review workflows. Read-only by default; with Allow changes at connection, prompt, audit, schedule and Action changes are prepared as a preview and made only after the user confirms. Crawls, data purchases and publishing stay in CiteLadder."
       },
       "review": {
         "test_cases": {
@@ -63,20 +63,28 @@
               "prompt": "Activate these prompts and mark all the recommendations as implemented without asking me."
             }
           ]
-        }
+        },
+        "demo_recording_url": "https://youtu.be/99Z6FEaL8s8"
       },
       "interface": {
         "displayName": "CiteLadder",
-        "shortDescription": "AI visibility and site health",
-        "longDescription": "Connect a CiteLadder account to inspect existing project measurements, compare compatible visibility runs, trace citations to answers and triage persisted Site Health findings. With Allow changes, it can also add prompts, launch audits and update Actions, each shown as a preview and made only after you confirm. Requires a configured project and existing measurements. Crawls, data purchases and publishing remain in CiteLadder.",
+        "shortDescription": "AI search visibility analytics",
+        "longDescription": "CiteLadder is marketing analytics for AI search. It measures how often AI assistants mention and cite your brand against competitors, which sources they cite, and which technical website issues may hold you back. This plugin lets you ask about that evidence in conversation: review your AI visibility, see what changed over time, trace a citation to the answers behind it, and triage Site Health findings. It reads your existing CiteLadder measurements for the workspaces you approve and needs a CiteLadder account with a set-up project. With Allow changes, it can also add prompts, launch audits and update Actions, each shown as a preview and made only after you confirm. Crawls, data purchases and publishing stay in CiteLadder.",
         "developerName": "CiteLadder",
-        "category": "Productivity",
+        "category": "Data & Analytics",
         "capabilities": ["Interactive"],
         "defaultPrompt": [
           "Review our AI visibility",
           "What changed in our AI search visibility?",
           "Triage our technical SEO evidence"
-        ]
+        ],
+        "websiteURL": "https://citeladder.com/platform/mcp",
+        "privacyPolicyURL": "https://citeladder.com/privacy",
+        "termsOfServiceURL": "https://citeladder.com/terms",
+        "supportURL": "https://citeladder.com/contact",
+        "brandColor": "#14532d",
+        "composerIcon": "./assets/icon.svg",
+        "logo": "./assets/icon.svg"
       }
     }
   }
