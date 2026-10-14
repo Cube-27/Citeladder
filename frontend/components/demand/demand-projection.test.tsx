@@ -441,16 +441,30 @@ describe('DemandProjection', () => {
     expect(screen.queryByRole('link', { name: 'Open Performance' })).not.toBeInTheDocument();
   });
 
+  it('says when latent demand sums only the signals that reported impressions', async () => {
+    vi.mocked(demandApi.getLatest).mockResolvedValue({
+      ...snapshot,
+      signals: [snapshot.signals[0]!, { ...snapshot.signals[1]!, metrics: { position: 12 } }],
+    });
+    renderProjection();
+
+    expect(
+      await screen.findByText('Impressions on 1 of 2 non-branded signals'),
+    ).toBeInTheDocument();
+    const metricValues = screen.getAllByRole('definition').map((node) => node.textContent?.trim());
+    expect(metricValues).toContain('250');
+  });
+
   it('opens the evidence drawer with provenance counts and no internal IDs', async () => {
     vi.mocked(demandApi.getLatest).mockResolvedValue({
       ...snapshot,
       signals: [
         {
           ...snapshot.signals[0]!,
+          // Rows recorded; source imports never were, which is not zero.
           evidence: {
             ...snapshot.signals[0]!.evidence,
             source_metric_row_ids: ['row-1', 'row-2', 'row-3'],
-            source_artifact_ids: ['artifact-1'],
           },
         },
       ],
@@ -465,7 +479,9 @@ describe('DemandProjection', () => {
     expect(within(drawer).getByText('Search Console performance')).toBeInTheDocument();
     const provenance = within(drawer).getByRole('region', { name: 'Provenance' });
     expect(provenance).toHaveTextContent('Search Console rows3');
-    expect(provenance).toHaveTextContent('Source imports1');
+    expect(provenance).toHaveTextContent('Source imports');
+    expect(provenance).toHaveTextContent('Not measured');
+    expect(provenance).not.toHaveTextContent('Source imports0');
     expect(drawer).not.toHaveTextContent('33333333');
     expect(drawer).not.toHaveTextContent('22222222');
   });

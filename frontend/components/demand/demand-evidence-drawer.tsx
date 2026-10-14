@@ -205,10 +205,10 @@ function DemandEvidenceContent({
           </h3>
           <dl className={panelClasses({ tone: 'well', pad: 'compact' }, 'type-caption grid gap-2')}>
             <ProvenanceRow label="Search Console rows">
-              {formatCount(details.metricRowIds.length)}
+              <ProvenanceCount value={details.metricRowCount} />
             </ProvenanceRow>
             <ProvenanceRow label="Source imports">
-              {formatCount(details.artifactIds.length)}
+              <ProvenanceCount value={details.artifactCount} />
             </ProvenanceRow>
             <ProvenanceRow label="Evaluated">
               <DisplayTime value={signal.created_at} dateOnly />
@@ -241,11 +241,16 @@ function demandEvidenceDetails(signal: DemandSignal) {
     positionBand:
       typeof rawBand === 'number' && Number.isFinite(rawBand) ? Math.floor(rawBand) : null,
     linkablePageUrl: safePageUrl(signal.page_url),
-    metricRowIds: Array.isArray(evidence.source_metric_row_ids)
-      ? (evidence.source_metric_row_ids as string[])
-      : [],
-    artifactIds: Array.isArray(evidence.source_artifact_ids)
-      ? (evidence.source_artifact_ids as string[])
-      : [],
+    metricRowCount: sourceCount(evidence.source_metric_row_ids),
+    artifactCount: sourceCount(evidence.source_artifact_ids),
   };
+}
+
+/** How many sources a provenance list names, or null when it was not recorded. */
+function sourceCount(value: unknown): number | null {
+  return Array.isArray(value) ? value.length : null;
+}
+
+function ProvenanceCount({ value }: Readonly<{ value: number | null }>) {
+  return value === null ? <UnavailableValue state="not_measured" /> : formatCount(value);
 }

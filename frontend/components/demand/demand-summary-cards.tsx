@@ -31,28 +31,33 @@ function KpiSegment({
 
 /**
  * Impressions across every non-branded (actionable) signal. With no such
- * signal the sum is a true zero; when signals exist but none reported
- * impressions it was not measured, which is not zero.
+ * signal the sum is a true zero; when none reported impressions it was not
+ * measured, which is not zero; and when only some did, the caption says the
+ * sum covers those signals rather than passing it off as the whole.
  */
-function latentImpressions(snapshot: DemandSnapshot): ReactNode {
+function latentImpressions(snapshot: DemandSnapshot): { value: ReactNode; caption: string } {
   const observed = snapshot.signals
     .filter(isActionableGap)
     .map((signal) => numericMetric(signal, 'impressions'));
   const known = observed.filter((value): value is number => value !== null);
-  if (observed.length > 0 && known.length === 0) return <UnavailableValue state="not_measured" />;
-  return formatCount(known.reduce((sum, value) => sum + value, 0));
+  const caption = 'Impressions on non-branded signals';
+  if (observed.length > 0 && known.length === 0)
+    return { value: <UnavailableValue state="not_measured" />, caption };
+  return {
+    value: formatCount(known.reduce((sum, value) => sum + value, 0)),
+    caption:
+      known.length === observed.length
+        ? caption
+        : `Impressions on ${formatCount(known.length)} of ${formatCount(observed.length)} non-branded signals`,
+  };
 }
 
 export function DemandSummaryCards({ snapshot }: Readonly<{ snapshot: DemandSnapshot }>) {
   const { signals } = snapshot;
+  const latent = latentImpressions(snapshot);
   return (
     <MetricGroup>
-      <KpiSegment
-        label="Latent demand"
-        value={latentImpressions(snapshot)}
-        caption="Impressions on non-branded signals"
-        icon={Zap}
-      />
+      <KpiSegment label="Latent demand" value={latent.value} caption={latent.caption} icon={Zap} />
       <KpiSegment
         label="Striking distance"
         value={formatCount(countByTab(signals, 'striking_distance'))}

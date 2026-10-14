@@ -4,35 +4,8 @@ import { Badge } from '@/components/ui/badge';
 import { InfoHint } from '@/components/ui/info-hint';
 import { textRole } from '@/components/ui/typography';
 import type { DemandSnapshot } from '@/lib/api/demand';
+import { DEMAND_DETECTORS as DETECTORS } from '@/lib/config/demand';
 import { detectorStates } from '@/lib/demand/signals';
-
-/**
- * What each detector looks for, in the words of its rule. The thresholds
- * restate the API's demand policy (`services/api/src/config/demand.json`);
- * change them together.
- */
-const DETECTORS: readonly { key: string; label: string; rule: string }[] = [
-  {
-    key: 'striking_distance',
-    label: 'Striking distance',
-    rule: 'Non-branded queries averaging position 4–15 with at least 50 impressions.',
-  },
-  {
-    key: 'cannibalization',
-    label: 'Cannibalization',
-    rule: 'Non-branded queries where two or more of your pages each earn at least 20 impressions and 10% of the query’s impressions.',
-  },
-  {
-    key: 'property_relative_ctr_gap',
-    label: 'CTR gap',
-    rule: 'Queries with at least 100 impressions whose CTR is at least 25%, and 2 points, below the median at their position. A position needs 20 queries and 500 impressions to set that median.',
-  },
-  {
-    key: 'query_trends',
-    label: 'Trends',
-    rule: 'Queries whose impressions grew 1.5× or more, or fell to 0.67× or less, between the last two 14-day windows. Needs 28 days of continuous Search Console coverage.',
-  },
-];
 
 type DetectorStatus = Readonly<{ label: string; tone: 'success' | 'warning' | 'info' | null }>;
 
