@@ -8,6 +8,9 @@ import {
   integrationSettings,
 } from './config.ts';
 import type { Dataset, IntegrationProvider, IntegrationTransport } from './config.ts';
+import { getLogger } from '../logging.ts';
+
+const logger = getLogger('api.integrations.client');
 
 export class IntegrationError extends Error {
   readonly code: string;
@@ -129,13 +132,27 @@ export class IntegrationClient {
       this.#lastRequest.set(pace, Date.now());
     }
     try {
-      return await this.io.fetch(approved, {
+      const response = await this.io.fetch(approved, {
         ...init,
         redirect: 'error',
         signal: AbortSignal.timeout(this.settings.sync_request_timeout_seconds * 1000),
       });
-    } catch {
-      // Never surface provider bodies, URLs, headers or request exceptions containing credentials.
+      if (response.status !== 200)
+        logger.warning('integration_provider_status', {
+          host: approved.hostname,
+          path: approved.pathname,
+          status: response.status,
+        });
+      return response;
+    } catch (error) {
+      // Never surface provider bodies, URLs, headers or request exceptions
+      // containing credentials; the error's class alone tells a timeout from
+      // a refused redirect or a network failure.
+      logger.warning('integration_provider_request_failed', {
+        host: approved.hostname,
+        path: approved.pathname,
+        error_name: error instanceof Error ? error.name : typeof error,
+      });
       throw new IntegrationError(
         codes.ERROR_PROVIDER_API,
         'Integration provider request failed',
@@ -150,6 +167,9 @@ export class IntegrationClient {
     try {
       return object.parse(await response.json());
     } catch {
+      logger.warning('integration_provider_malformed', {
+        content_type: response.headers.get('content-type') ?? '',
+      });
       throw new IntegrationError(
         codes.ERROR_PROVIDER_API,
         'Malformed integration provider response',
