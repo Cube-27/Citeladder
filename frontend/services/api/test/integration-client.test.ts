@@ -93,15 +93,30 @@ describe('Bing property discovery', () => {
       new URL('./fixtures/integrations/bing_sites_response.json', import.meta.url),
       'utf8',
     );
+    const requests: { url: string; authorization: string | null }[] = [];
     const client = new IntegrationClient(
       {},
       {
-        fetch: async () => new Response(recorded, { status: 200 }),
+        fetch: async (input, init) => {
+          requests.push({
+            url: String(input),
+            authorization: new Headers(init?.headers).get('authorization'),
+          });
+          return new Response(recorded, { status: 200 });
+        },
         sleep: async () => {},
       },
     );
     expect(await client.properties('bing', 'recorded-token')).toEqual([
       { property_ref: 'https://example.com', label: 'https://example.com' },
+    ]);
+    // An OAuth bearer token is accepted only on www.bing.com; ssl.bing.com
+    // serves API-key calls and answers a bearer request with HTTP 400.
+    expect(requests).toEqual([
+      {
+        url: 'https://www.bing.com/webmaster/api.svc/json/GetUserSites',
+        authorization: 'Bearer recorded-token',
+      },
     ]);
   });
 });
