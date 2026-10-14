@@ -40,6 +40,7 @@ const syncRun = {
   window_start: '2026-07-16',
   window_end: '2026-07-22',
   row_count: 0,
+  processing: false,
   resync_seq: 1,
   error_code: '',
   error_detail: '',

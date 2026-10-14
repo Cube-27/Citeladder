@@ -13,12 +13,6 @@
         "test_cases": {
           "positive": [
             {
-              "description": "Use a configured test account with explicit consent to one workspace and an existing measured project. Verify the no-project case separately routes to onboarding without acquisition.",
-              "prompt": "Connect CiteLadder and show me which projects I can review.",
-              "tools_triggered": "list_projects; optionally open_analytics",
-              "expected_behavior": "Only currently authorized projects are listed with workspace identity; empty pages explain setup in CiteLadder. No measurement starts."
-            },
-            {
               "description": "Use a project with a completed persisted visibility run, including a zero owned-citation rate.",
               "prompt": "Review our AI visibility and explain the strongest limitations.",
               "tools_triggered": "list_projects when needed; read_visibility_overview; read_visibility_sources; read_perception; optionally render_visibility",

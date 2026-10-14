@@ -39,6 +39,7 @@ vi.mock('./use-performance-sync', () => ({
     outcome: null,
     startedAt: null,
     syncing: false,
+    error: null,
   }),
 }));
 

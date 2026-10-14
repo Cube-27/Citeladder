@@ -13,6 +13,7 @@ import {
 } from 'vite-plus/test';
 
 import { hardNavigate } from '@/lib/navigation/hard-navigate';
+import { queryKeys } from '@/lib/api/query-keys';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 import { makeProject } from '@/test/fixtures/project';
@@ -109,6 +110,7 @@ function syncRun(overrides: Record<string, unknown> = {}) {
     window_start: '2026-07-16',
     window_end: '2026-07-22',
     row_count: 0,
+    processing: false,
     resync_seq: 1,
     error_code: '',
     error_detail: '',
@@ -342,9 +344,10 @@ describe('IntegrationSettings — sync polling', () => {
     replaceState.mockClear();
   });
 
-  it('Sync now enqueues, polls the run until terminal, then refreshes the connections list', async () => {
+  it('Sync now enqueues, polls the run until its reports are built, then refreshes the connections list', async () => {
     const ue = userEvent.setup();
     let runStatus = 'running';
+    let processing = false;
     let listCalls = 0;
     let syncBody: unknown = null;
     mswServer.use(
@@ -363,6 +366,7 @@ describe('IntegrationSettings — sync polling', () => {
         HttpResponse.json(
           syncRun({
             status: runStatus,
+            processing,
             row_count: 2148,
             completed_at: runStatus === 'succeeded' ? '2026-07-23T04:33:00Z' : null,
           }),
@@ -388,11 +392,21 @@ describe('IntegrationSettings — sync polling', () => {
     expect(within(row).getByText(/2,148 rows · window Jul 16–Jul 22/)).toBeInTheDocument();
     expect(within(row).getByRole('button', { name: syncName })).toBeDisabled();
 
-    // The run finishes server-side; the next poll lands the terminal status,
-    // hides the badge, and refreshes the connections list (last_synced_at).
+    // The import finishes while the project's reports are still rebuilding:
+    // Sync now stays disabled so a second click cannot queue a duplicate.
     runStatus = 'succeeded';
-    await queryClient.invalidateQueries();
-    await waitFor(() => expect(within(row).queryByText('Running')).not.toBeInTheDocument());
+    processing = true;
+    await queryClient.invalidateQueries({ queryKey: queryKeys.integrations.sync(CONN_GSC, SYNC) });
+    expect(await within(row).findByText('Processing')).toBeInTheDocument();
+    expect(within(row).getByText('2,148 rows imported · updating reports')).toBeInTheDocument();
+    expect(within(row).getByRole('button', { name: syncName })).toBeDisabled();
+
+    // Reports rebuilt: the result stays visible, the connections list
+    // refreshes (last_synced_at), and Sync now is available again.
+    processing = false;
+    await queryClient.invalidateQueries({ queryKey: queryKeys.integrations.sync(CONN_GSC, SYNC) });
+    expect(await within(row).findByText('Succeeded')).toBeInTheDocument();
+    expect(within(row).getByText('2,148 rows imported · window Jul 16–Jul 22')).toBeInTheDocument();
     await waitFor(() => expect(listCalls).toBeGreaterThan(1));
     expect(within(row).getByRole('button', { name: syncName })).toBeEnabled();
   });

@@ -84,7 +84,19 @@ its in-flight work rather than relabeling imported evidence.
 An unwindowed on-demand or scheduled sync re-reads only the configured late-data
 days after the newest succeeded window for its mapping; the default window applies
 only before anything has succeeded. Gaps left by failed history chunks belong to
-history retry, never to a routine sync.
+history retry, never to a routine sync. Only one such sync is in flight per
+mapping: while an on-demand or scheduled run for it is queued, leased, running or
+retry-waiting, another unwindowed one is refused with `409
+sync_active_window_conflict` (the dispatcher skips it). Performance sync queues
+the mappings without one and returns the active run for each mapping that has
+one, so the page tracks every property's current sync.
+
+A sync-run read also reports `processing` while the project still has a post-sync
+projection task active (the kinds in `post_sync_task_kinds`). Settings and
+Performance keep polling, show the run as processing and keep Sync disabled until
+it clears, then refetch the projections once. A Traffic refresh still queued for
+the same window covers later runs, so a burst of imports shares one refresh;
+a refresh that has started gets one successor.
 
 On-demand enqueue takes the workspace lock before the connection lock. New
 windows require fewer than 20 active sync runs in that workspace and use a
