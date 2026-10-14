@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button';
 import { MutationNotice } from '@/components/ui/mutation-notice';
 import { ProjectRequiredState } from '@/components/layout/project-required-state';
 import { PageLoading } from '@/components/layout/page-loading';
-import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { PageShell } from '@/components/layout/page-shell';
 import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { DemandEvidenceDrawer } from '@/components/demand/demand-evidence-drawer';
@@ -174,6 +173,16 @@ function SearchDemandView({
           Recompute signals
         </Button>
       }
+      controls={
+        <DemandSignalFilters
+          snapshot={snapshot}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          tabCounts={tabCounts}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+        />
+      }
     >
       <Stack gap="workspace">
         {refreshError ? (
@@ -208,37 +217,22 @@ function SearchDemandView({
           </Alert>
         ) : null}
 
-        {/* One section: its summary line, the filters that carry each type's
-            count and detector status, then the table they narrow. */}
-        <section aria-labelledby="demand-signals" className="grid gap-3">
-          <EditorialSectionHeader
-            headingId="demand-signals"
-            title="Signals"
-            description={
-              <span className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                <span className="type-caption">
-                  {snapshot.signals.length === 1
-                    ? '1 signal observed'
-                    : `${formatCount(snapshot.signals.length)} signals observed`}
-                </span>
-                <span className="type-caption inline-flex items-center gap-1">
-                  <Calendar className="size-3.5" aria-hidden="true" />
-                  {windowLabel}
-                </span>
-                <DemandLatentDemand snapshot={snapshot} />
-              </span>
-            }
-          />
-          <DemandSignalFilters
-            snapshot={snapshot}
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            tabCounts={tabCounts}
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-          />
+        {/* The summary line, then the table the top strip's filters narrow. */}
+        <div className="grid gap-3">
+          <p className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <span className="type-caption">
+              {snapshot.signals.length === 1
+                ? '1 signal observed'
+                : `${formatCount(snapshot.signals.length)} signals observed`}
+            </span>
+            <span className="type-caption inline-flex items-center gap-1">
+              <Calendar className="size-3.5" aria-hidden="true" />
+              {windowLabel}
+            </span>
+            <DemandLatentDemand snapshot={snapshot} />
+          </p>
           {signalsFeed}
-        </section>
+        </div>
 
         <DemandEvidenceDrawer
           signal={selectedSignal}

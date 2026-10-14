@@ -352,10 +352,11 @@ Cursors bind project, snapshot, dimension, filters, sorting and page size.
 The browser resets cursor history when those inputs change.
 Search Demand is one /demand surface; the AI Traffic Referrals tab exposes
 persisted referral volume/share/source totals. Search Demand
-is one Signals section, each fact shown once: a summary line (signal count,
-window, latent demand), then filter chips that carry each type's count and,
-when its detector did not run in full, that detector's status, with the rule
-and limitations in an info hint beside the chip. One flat table follows, a row
+shows each fact once. Like every page, its search and filter chips sit in the
+top control strip; each chip carries its type's count and, when its detector
+did not run in full, that detector's status, with the rule and limitations in
+an info hint beside the chip. Below, a summary line (signal count, window,
+latent demand) leads one flat table, a row
 per signal in priority order: its query, its landing page beneath, and a signal
 chip; a promoted signal's row opens its Action, any other asks the agent. The
 table pages on the client from the persisted snapshot with a rows-per-page
