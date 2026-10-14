@@ -194,7 +194,11 @@ it('bounds query bytes and decoded state before writing usage or requests', asyn
   ]) {
     const query = authorizationQuery(c.client_id);
     query.set(key!, value!);
-    expect((await app.request(`${protocol}/authorize?${query}`)).status).toBe(400);
+    const response = await app.request(`${protocol}/authorize?${query}`);
+    expect([response.status, await response.text()]).toEqual([
+      400,
+      'Authorization query is too large',
+    ]);
   }
   expect(
     await db
@@ -476,6 +480,23 @@ it('matches loopback redirects on any port and returns later errors to the clien
   ]).toEqual(['http://127.0.0.1:51234', 'invalid_request', protocol]);
   query.set('redirect_uri', 'http://127.0.0.1:51234/elsewhere');
   expect((await app.request(`${protocol}/authorize?${query}`)).status).toBe(400);
+});
+
+it('tells the person to re-add a pruned client instead of opening a password prompt', async () => {
+  const response = await app.request(
+    `${protocol}/authorize?${authorizationQuery('52be6762-fd8d-423c-8ee2-531e1effe7fa')}`,
+  );
+  expect([
+    response.status,
+    response.headers.get('www-authenticate'),
+    response.headers.get('location'),
+    await response.text(),
+  ]).toEqual([
+    400,
+    null,
+    null,
+    'This assistant’s CiteLadder registration is no longer valid. Remove CiteLadder from your assistant and add it again.',
+  ]);
 });
 
 it('rotates refresh tokens once and excludes membership changes, new tenants and stale loaded tokens', async () => {

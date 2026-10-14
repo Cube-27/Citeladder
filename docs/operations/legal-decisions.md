@@ -97,6 +97,7 @@ These keep published promises true; none needs an owner decision.
 | R17 | Site Health crawler: declared bot user agent; an unreachable robots.txt pauses the host; 401/403 robots is recorded as access-blocked and not bypassed; a Crawl-delay above the supported maximum pauses the host. | Owner robots policy (#156, #158) |
 | R18 | Google Analytics loads only after cookie consent. Cloudflare Zaraz and Google Tag Gateway are off. | Owner, 2026-10-09 and 2026-10-12 |
 | R19 | Company registration number and registered office are published. | Owner, 2026-10-12 |
+| R20 | The Privacy Policy states what CiteLadder does and has an AI assistant connections (MCP) section covering the data collected, purposes, recipients, retention (unused registrations 24 hours, prepared changes ten minutes, reconsent within 180 days, ended-connection records 180 days) and user controls, as OpenAI's plugin guidelines require. | Owner, 2026-10-14 (OpenAI plugin submission) |
 
 ## Subprocessors at a glance
 

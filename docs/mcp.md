@@ -96,6 +96,10 @@ redirect-host allowlist; the protections are bounds and binding:
 - Once the redirect is proven, every later `/authorize` error returns to the
   client's redirect with `error`, `state` and `iss` (RFC 6749 §4.1.2.1, RFC 9207),
   so the client is never stranded. Successful consent also carries `iss`.
+  Before that (an unknown or pruned client, an unregistered redirect) the
+  person gets a plain-text 400 telling them what to do, never a redirect and
+  never a `Basic` challenge, which browsers show as a password prompt; that
+  challenge belongs only to `/token` and `/revoke` client authentication.
 
 Client ID Metadata Documents are not supported or advertised. Support needs
 SSRF-bounded, cached document fetches, URL-shaped client IDs and consent display

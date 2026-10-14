@@ -207,15 +207,15 @@ export function registerOAuthRoutes(
   app.get('/authorize', async (c) => {
     const url = new URL(c.req.url);
     const q = url.searchParams;
-    if (
-      Buffer.byteLength(url.search) > mcpPolicy.authorization_max_query_bytes ||
-      Buffer.byteLength(q.get('state') ?? '') > mcpPolicy.authorization_max_state_bytes
-    )
-      throw new OAuthError('invalid_request', 'Authorization query is too large');
     const transaction = mintToken();
     // Once the redirect is proven, errors go back to the client (RFC 6749 §4.1.2.1).
     let callback = null as string | null;
     try {
+      if (
+        Buffer.byteLength(url.search) > mcpPolicy.authorization_max_query_bytes ||
+        Buffer.byteLength(q.get('state') ?? '') > mcpPolicy.authorization_max_state_bytes
+      )
+        throw new OAuthError('invalid_request', 'Authorization query is too large');
       await db.transaction().execute(async (trx) => {
         const client = await trx
           .selectFrom('mcp_oauth_clients')
@@ -223,7 +223,11 @@ export function registerOAuthRoutes(
           .where('client_id', '=', q.get('client_id') ?? '')
           .forUpdate()
           .executeTakeFirst();
-        if (!client) throw new OAuthError('invalid_client', 'Client is not registered');
+        if (!client)
+          throw new OAuthError(
+            'invalid_client',
+            'This assistant’s CiteLadder registration is no longer valid. Remove CiteLadder from your assistant and add it again.',
+          );
         const redirect = registeredRedirect(
           strings(record(client.client_metadata).redirect_uris),
           q.get('redirect_uri'),
@@ -281,6 +285,9 @@ export function registerOAuthRoutes(
           .execute();
       });
     } catch (error) {
+      // Before the redirect is proven the person is told here (RFC 6749 §4.1.2.1).
+      // A page, not a 401: a Basic challenge would open the browser's password box.
+      if (callback === null && error instanceof OAuthError) return c.text(error.message, 400);
       const code = authorizationErrorCode(error);
       if (callback === null || code === null) throw error;
       const target = new URL(callback);
