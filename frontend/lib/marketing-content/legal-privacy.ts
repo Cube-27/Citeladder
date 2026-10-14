@@ -9,10 +9,10 @@ export const PRIVACY_POLICY: LegalDocument = {
   slug: 'privacy',
   title: 'Privacy Policy',
   description: 'What personal data CiteLadder processes, why, and the choices you have.',
-  lastUpdated: '2026-10-12',
+  lastUpdated: '2026-10-14',
   sections: legalSections(`
 ## who | Who we are
-${PARENT_COMPANY.legalName} (“Cube27”, “we”, “us”) operates CiteLadder. Our registered office is ${PARENT_COMPANY.address}. Contact us at ${PARENT_COMPANY.email}.
+${PARENT_COMPANY.legalName} (“Cube27”, “we”, “us”) operates CiteLadder, a marketing analytics service that measures how AI assistants and search engines mention and cite a business, which sources they rely on, and which website issues affect that visibility. Our registered office is ${PARENT_COMPANY.address}. Contact us at ${PARENT_COMPANY.email}.
 This Policy covers the CiteLadder website, hosted application, account administration, purchases, support and data processed through CiteLadder features. For our own account, billing, security and support purposes we decide why and how personal data is processed. For personal data processed on a customer’s instructions, we act on behalf of that customer.
 
 ## information | Information we process
@@ -52,6 +52,14 @@ You may disconnect an integration or revoke permissions through the provider. Th
 We disclose data as needed to infrastructure, AI, research, monitoring and support providers that help us run the Service; to our payment processor; and to connected platforms under your instructions.
 Workspace administrators and authorised members may access information according to their roles. If you authorise an API or MCP client, that client receives the data returned within its permissions and its provider may retain it independently. Once delivered, that data is handled under the client’s terms, not ours, and we are not responsible for it. Revoking access stops future requests.
 We may also disclose information to advisers or authorities where necessary and lawful.
+
+## assistants | AI assistant connections (MCP)
+You can connect an AI assistant to CiteLadder through our MCP server, including as an assistant plugin. The assistant registers itself with a self-declared name and its return address, and you sign in to CiteLadder and approve which workspaces it may use and whether it may make changes.
+- Data we collect — the assistant’s registration, your account and the workspaces you approved, the access you granted, when you connected and when the connection was last used. We process each request the assistant sends to answer it and do not keep it, except a change prepared for your confirmation. Access tokens are stored only as keyed hashes.
+- Purpose — to authenticate the assistant, answer its requests from the saved records of the workspaces you approved, make a change only after you confirm its preview, limit request rates and keep the connection secure.
+- Recipients — the assistant receives only the data its requests return within the access you granted; its provider handles that data under its own terms, as described above. We do not sell this data or use it to train models.
+- Retention — an assistant registration never used to connect may be deleted after 24 hours. A prepared change expires after ten minutes if you do not confirm it. A connection lasts until it is revoked, and must be approved again at least every 180 days. Records of ended connections, used approvals and confirmed changes are kept for 180 days for security and audit, then deleted. Each change made through a connection is also recorded in the workspace’s security log.
+- Your controls — remove a connection at any time in Settings → MCP connections or from your assistant; it stops working at its next request. Workspace Owners and Admins can remove connections to their workspace. Changes are offered only if you tick Allow changes, and each one is shown for you to confirm first.
 
 ## retention | Retention, export and deletion
 We retain project data, including Agent conversations, while your workspace has access to the Service and until you delete it. Cancelling a subscription does not immediately delete your workspace or its history.
