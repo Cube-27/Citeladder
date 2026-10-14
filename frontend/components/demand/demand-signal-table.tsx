@@ -1,11 +1,14 @@
 'use client';
 
+import { useState } from 'react';
 import { ChevronRight } from 'lucide-react';
 
 import { ProjectLink } from '@/components/layout/scoped-link';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Pager, pageNumberControls, useTablePage } from '@/components/ui/pager';
 import {
+  ClampText,
   Table,
   TableBody,
   TableCell,
@@ -16,10 +19,12 @@ import {
 import { textRole } from '@/components/ui/typography';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import type { DemandSignal } from '@/lib/api/demand';
+import { TABLE_DEFAULT_PAGE_SIZE, isTablePageSize, type TablePageSize } from '@/lib/config/tables';
 import {
   demandSignalHandoffHref,
-  groupByPage,
   numericMetric,
+  signalPage,
+  signalPageLine,
   signalTarget,
   signalTypeMeta,
   type RankedSignal,
@@ -44,7 +49,7 @@ export function SignalLegend({ signals }: Readonly<{ signals: readonly DemandSig
   if (types.length === 0) return null;
   return (
     <section aria-label="Signal types">
-      <dl className="grid gap-2 sm:grid-cols-2">
+      <dl className="grid gap-x-6 gap-y-2 md:grid-cols-2">
         {types.map((type) => (
           <div key={type} className="flex items-start gap-2">
             <dt className="shrink-0">
@@ -59,44 +64,69 @@ export function SignalLegend({ signals }: Readonly<{ signals: readonly DemandSig
 }
 
 /**
- * One table grouped by page: a row per signal with its Search Console
- * figures and a chip, never prose. Detail stays in the evidence drawer.
+ * The signals, one flat row each in priority order, a page at a time. The
+ * landing page rides under its query as a caption instead of a full-width
+ * group row, so every row is a signal. Detail stays in the evidence drawer.
+ *
+ * The whole list is already in the persisted snapshot, so it pages on the
+ * client. `filterKey` names the active filter: a new filter starts at page 1,
+ * while a refetch of the same filter only clamps the page into range.
  */
 export function DemandSignalTable({
   rows,
+  filterKey,
   onInspect,
-}: Readonly<{ rows: readonly RankedSignal[]; onInspect: (signal: DemandSignal) => void }>) {
+}: Readonly<{
+  rows: readonly RankedSignal[];
+  filterKey: string;
+  onInspect: (signal: DemandSignal) => void;
+}>) {
+  const [pageSize, setPageSize] = useState<TablePageSize>(TABLE_DEFAULT_PAGE_SIZE);
+  const { page, setPage, pageCount, from, to } = useTablePage(rows.length, pageSize);
+  const [pagedFilter, setPagedFilter] = useState(filterKey);
+  if (pagedFilter !== filterKey) {
+    setPagedFilter(filterKey);
+    setPage(1);
+  }
+
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead numeric className="w-10">
-            #
-          </TableHead>
-          <TableHead>Query</TableHead>
-          <TableHead>Signal</TableHead>
-          <TableHead numeric>Impressions</TableHead>
-          <TableHead numeric>Clicks</TableHead>
-          <TableHead numeric>CTR</TableHead>
-          <TableHead numeric>Position</TableHead>
-          <TableHead>
-            <span className="sr-only">Actions</span>
-          </TableHead>
-        </TableRow>
-      </TableHeader>
-      {groupByPage(rows).map((group) => (
-        <TableBody key={group.page ?? 'unresolved'}>
-          <TableRow className="bg-panel-tonal hover:bg-panel-tonal">
-            <TableCell colSpan={8} className={textRole('label', 'break-all')}>
-              {group.page ?? 'No page resolved'}
-            </TableCell>
+    <div>
+      <Table minWidth="lg">
+        <TableHeader>
+          <TableRow>
+            <TableHead numeric className="w-12">
+              Rank
+            </TableHead>
+            <TableHead>Query and page</TableHead>
+            <TableHead>Signal</TableHead>
+            <TableHead numeric>Impressions</TableHead>
+            <TableHead numeric>Clicks</TableHead>
+            <TableHead numeric>CTR</TableHead>
+            <TableHead numeric>Avg. position</TableHead>
+            <TableHead>
+              <span className="sr-only">Actions</span>
+            </TableHead>
           </TableRow>
-          {group.rows.map(({ signal, rank }) => (
+        </TableHeader>
+        <TableBody>
+          {rows.slice(from - 1, to).map(({ signal, rank }) => (
             <SignalRow key={signal.id} signal={signal} rank={rank} onInspect={onInspect} />
           ))}
         </TableBody>
-      ))}
-    </Table>
+      </Table>
+      <Pager
+        frame="table"
+        range={{ from, to, total: rows.length, noun: 'signals' }}
+        pageSize={{
+          value: pageSize,
+          onChange: (size) => {
+            setPageSize(isTablePageSize(size) ? size : TABLE_DEFAULT_PAGE_SIZE);
+            setPage(1);
+          },
+        }}
+        {...pageNumberControls(page, pageCount, setPage)}
+      />
+    </div>
   );
 }
 
@@ -106,12 +136,22 @@ function SignalRow({
   onInspect,
 }: Readonly<{ signal: DemandSignal; rank: number; onInspect: (signal: DemandSignal) => void }>) {
   const target = signalTarget(signal);
+  const pageLine = signalPageLine(signal);
   return (
     <TableRow>
       <TableCell numeric className={textRole('caption')}>
-        #{rank}
+        {rank}
       </TableCell>
-      <TableCell className="max-w-80">{target}</TableCell>
+      <TableCell className="max-w-96">
+        <ClampText lines={1} className={textRole('itemTitle')}>
+          {target}
+        </ClampText>
+        {pageLine ? (
+          <ClampText lines={1} tooltip={signalPage(signal)} className={textRole('caption')}>
+            {pageLine}
+          </ClampText>
+        ) : null}
+      </TableCell>
       <TableCell className="whitespace-nowrap">
         <SignalChip signalType={signal.signal_type} />
       </TableCell>
@@ -128,7 +168,7 @@ function SignalRow({
         <Position value={numericMetric(signal, 'position')} />
       </TableCell>
       <TableCell className="whitespace-nowrap">
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-1">
           <Button
             variant="ghost"
             size="sm"
@@ -137,13 +177,13 @@ function SignalRow({
           >
             Inspect
           </Button>
-          <Button variant="tonal" size="sm" asChild>
+          <Button variant="ghost" size="sm" asChild>
             <ProjectLink
               href={demandSignalHandoffHref(signal)}
               aria-label={`Ask agent about ${target}`}
             >
               Ask agent
-              <ChevronRight className="size-3" aria-hidden />
+              <ChevronRight className="size-3.5" aria-hidden />
             </ProjectLink>
           </Button>
         </div>
