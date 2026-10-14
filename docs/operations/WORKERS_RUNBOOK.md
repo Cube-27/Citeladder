@@ -113,6 +113,9 @@ deliveries to this host do. It uses the same origin token as the other Workers.
   `/mcp/register`, `/authorize`, `/token`, `/revoke`,
   `/.well-known/oauth-authorization-server` and
   `/.well-known/oauth-protected-resource/mcp` (consent stays on the app host).
+  `GET /.well-known/openai-apps-challenge` is answered by the Worker itself
+  with the `OPENAI_APPS_CHALLENGE` secret (OpenAI's plugin domain
+  verification), never forwarded; it is a 404 while the secret is unset.
   Anything else is
   `404 {"error":{"code":"not_found"}}`. Cookies are neither read nor forwarded.
 - Any other hostname (a `workers.dev` or preview URL) gets the same 404.

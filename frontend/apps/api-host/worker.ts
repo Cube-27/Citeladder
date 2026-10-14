@@ -11,7 +11,11 @@ export interface ApiHostEnv {
   ORIGIN_TOKEN: string;
   PUBLIC_API_HOST: string;
   LOCAL_WORKER_ORIGIN?: string;
+  /** OpenAI's plugin domain-verification token; the path 404s while unset. */
+  OPENAI_APPS_CHALLENGE?: string;
 }
+
+const OPENAI_APPS_CHALLENGE_PATH = '/.well-known/openai-apps-challenge';
 
 const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
 /**
@@ -51,6 +55,13 @@ export async function routeApiHostRequest(request: Request, env: ApiHostEnv): Pr
   if (!localHttp && url.protocol !== 'https:') return notFound();
   // Only the configured host; a workers.dev or preview URL is never served.
   if (url.hostname !== env.PUBLIC_API_HOST) return notFound();
+  // Answered here, not at the origin: a static public token, so no Cloud Run call.
+  if (url.pathname === OPENAI_APPS_CHALLENGE_PATH)
+    return request.method === 'GET' && env.OPENAI_APPS_CHALLENGE
+      ? new Response(env.OPENAI_APPS_CHALLENGE, {
+          headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' },
+        })
+      : notFound();
   if (!allowed(request.method, url.pathname)) return notFound();
   const headers = new Headers(request.headers);
   headers.delete('cookie');

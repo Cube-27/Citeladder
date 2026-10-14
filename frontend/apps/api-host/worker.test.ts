@@ -152,6 +152,22 @@ describe('API host route ownership', () => {
     }
     expect(sent).toHaveLength(0);
   });
+  it('answers the OpenAI apps challenge from its setting without reaching the origin', async () => {
+    const sent = captureUpstream();
+    const challenge = (method: string, config: ApiHostEnv) =>
+      routeApiHostRequest(
+        new Request('https://api.citeladder.com/.well-known/openai-apps-challenge', { method }),
+        config,
+      );
+    const configured = { ...env, OPENAI_APPS_CHALLENGE: 'oa-challenge-token' };
+    const response = await challenge('GET', configured);
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe('oa-challenge-token');
+    expect(response.headers.get('content-type')).toBe('text/plain; charset=utf-8');
+    expect((await challenge('POST', configured)).status).toBe(404);
+    expect((await challenge('GET', env)).status).toBe(404);
+    expect(sent).toHaveLength(0);
+  });
   it('refuses plain HTTP unless local Wrangler opts in', async () => {
     const sent = captureUpstream();
     const request = () =>
