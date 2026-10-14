@@ -15,7 +15,32 @@ function Sync({ projectId }: Readonly<{ projectId: string }>) {
   );
 }
 
-afterEach(() => vi.resetAllMocks());
+afterEach(() => {
+  vi.useRealTimers();
+  vi.resetAllMocks();
+});
+
+describe('Performance sync in flight', () => {
+  it('stays syncing after the import finishes until the reports are rebuilt', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    syncNow.mockResolvedValue([
+      {
+        connection_id: '33333333-3333-4333-8333-333333333333',
+        sync_run_id: '44444444-4444-4444-8444-444444444444',
+      },
+    ]);
+    getSync
+      .mockResolvedValueOnce({ status: 'succeeded', processing: true })
+      .mockResolvedValue({ status: 'succeeded', processing: false });
+    renderWithProviders(<Sync projectId="11111111-1111-4111-8111-111111111111" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Sync now' }));
+    await waitFor(() => expect(getSync).toHaveBeenCalledTimes(1));
+    expect(screen.getByRole('button', { name: 'Syncing' })).toBeVisible();
+
+    await act(() => vi.advanceTimersByTimeAsync(3_000));
+    expect(await screen.findByRole('button', { name: 'Sync now' })).toBeVisible();
+  });
+});
 
 describe('Performance sync scope', () => {
   it('stops tracking the old batch when the selected project changes', async () => {

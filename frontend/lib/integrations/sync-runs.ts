@@ -24,6 +24,15 @@ export function isActiveSyncRun(status: SyncRunStatus): boolean {
   );
 }
 
+/**
+ * A sync is still in flight until its import is terminal and the project's
+ * post-sync projections have finished; until then the pages do not show it,
+ * so polling continues and Sync now stays disabled.
+ */
+export function isSyncInFlight(run: Pick<IntegrationSyncRun, 'status' | 'processing'>): boolean {
+  return isActiveSyncRun(run.status) || run.processing;
+}
+
 /** A terminal run succeeded only on the `succeeded` status. */
 export function isSucceededSyncRun(status: SyncRunStatus): boolean {
   return status === 'succeeded';

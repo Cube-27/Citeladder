@@ -30,6 +30,7 @@ import {
   siteDomainsOf,
 } from '../integrations/host-scope.ts';
 import {
+  activePropertySync,
   enqueueHistoryBackfill,
   enqueueSyncRun,
   getBackfillProgress,
@@ -164,6 +165,7 @@ export const integrationRoutes = [
         .orderBy('mapping.id', 'asc')
         .execute();
       const queued = [];
+      let syncing = 0;
       for (const target of targets) {
         try {
           queued.push(
@@ -177,19 +179,22 @@ export const integrationRoutes = [
           );
         } catch (error) {
           if (error instanceof ApiError && error.code === 'sync_target_unresolved') continue;
+          // A property already syncing is current once that run finishes, so the
+          // page tracks that run instead of a new one.
           if (error instanceof ApiError && error.code === 'sync_active_window_conflict') {
-            const details = {
-              error: 'sync_active_window_conflict',
-              enqueued_connection_ids: queued.map((row) => row.connection_id),
-            };
-            throw new ApiError(409, 'A sync window is already active for this connection', {
-              code: 'sync_active_window_conflict',
-              details,
-            });
+            const active = await activePropertySync(db, workspaceId, target.mapping_id);
+            if (active) queued.push(active);
+            else syncing++;
+            continue;
           }
           throw error;
         }
       }
+      if (queued.length === 0 && syncing > 0)
+        throw new ApiError(409, 'A sync is already running for this project', {
+          code: 'sync_active_window_conflict',
+          details: { error: 'sync_active_window_conflict', enqueued_connection_ids: [] },
+        });
       return performanceSyncEnqueueResponseSchema.parse(queued);
     },
   }),

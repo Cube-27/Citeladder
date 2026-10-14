@@ -17,7 +17,12 @@ import { queryKeys } from '@/lib/api/query-keys';
 import { humanizeApiError } from '@/lib/api/errors';
 import { formatCount, formatShortDate } from '@/lib/format';
 import { DisplayTime } from '@/components/ui/display-time';
-import { isActiveSyncRun, SYNC_RUN_BADGE, SYNC_RUN_POLL_MS } from '@/lib/integrations/sync-runs';
+import {
+  isActiveSyncRun,
+  isSyncInFlight,
+  SYNC_RUN_BADGE,
+  SYNC_RUN_POLL_MS,
+} from '@/lib/integrations/sync-runs';
 import { textRole } from '@/components/ui/typography';
 import { panelClasses } from '@/components/ui/panel';
 
@@ -60,7 +65,7 @@ function ConnectionActions({
   Icon,
   busy,
   hasProperty,
-  runActive,
+  runInFlight,
   testPending,
   syncPending,
   removePending,
@@ -74,7 +79,7 @@ function ConnectionActions({
   Icon: LucideIcon;
   busy: boolean;
   hasProperty: boolean;
-  runActive: boolean;
+  runInFlight: boolean;
   testPending: boolean;
   syncPending: boolean;
   removePending: boolean;
@@ -82,7 +87,7 @@ function ConnectionActions({
   onSync: () => void;
   onRemove: () => void;
 }>) {
-  const syncDisabled = busy || runActive || !hasProperty || grant.status !== 'connected';
+  const syncDisabled = busy || runInFlight || !hasProperty || grant.status !== 'connected';
 
   return (
     <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
@@ -140,6 +145,50 @@ function ConnectionActions({
   );
 }
 
+/** The latest sync from this card: waiting, importing, building reports, then its result. */
+function RunSummary({ run, runActive }: Readonly<{ run: SyncRun; runActive: boolean }>) {
+  const rows = `${formatCount(run.row_count)} rows`;
+  const window = `window ${formatShortDate(run.window_start)}–${formatShortDate(run.window_end)}`;
+  if (runActive)
+    return (
+      <div className="flex items-center gap-2">
+        <Badge variant="run-status" value={SYNC_RUN_BADGE[run.status]}>
+          {SYNC_RUN_LABEL[run.status]}
+        </Badge>
+        <span className="type-caption whitespace-nowrap tabular-nums">
+          {run.status === 'running' ? (
+            `${rows} · ${window}`
+          ) : (
+            <>
+              Enqueued <DisplayTime value={run.created_at} /> · {waitingLabel(run.status)}
+            </>
+          )}
+        </span>
+      </div>
+    );
+  if (run.processing)
+    return (
+      <div className="flex items-center gap-2">
+        <Badge variant="run-status" value="running">
+          Processing
+        </Badge>
+        <span className="type-caption whitespace-nowrap tabular-nums">
+          {`${rows} imported · updating reports`}
+        </span>
+      </div>
+    );
+  return (
+    <div className="flex items-center gap-2">
+      <Badge variant="run-status" value={SYNC_RUN_BADGE[run.status]}>
+        {SYNC_RUN_LABEL[run.status]}
+      </Badge>
+      <span className="type-caption whitespace-nowrap tabular-nums">
+        {run.status === 'succeeded' ? `${rows} imported · ${window}` : run.error_detail || window}
+      </span>
+    </div>
+  );
+}
+
 function ConnectionMetadata({
   connection,
   activeRun,
@@ -160,23 +209,7 @@ function ConnectionMetadata({
         </div>
         <BackfillProgress workspaceId={connection.workspace_id} connectionId={connection.id} />
       </div>
-      {runActive && activeRun ? (
-        <div className="flex items-center gap-2">
-          <Badge variant="run-status" value={SYNC_RUN_BADGE[activeRun.status]}>
-            {SYNC_RUN_LABEL[activeRun.status]}
-          </Badge>
-          <span className="type-caption whitespace-nowrap tabular-nums">
-            {activeRun.status === 'running' ? (
-              `${formatCount(activeRun.row_count)} rows · window ${formatShortDate(activeRun.window_start)}–${formatShortDate(activeRun.window_end)}`
-            ) : (
-              <>
-                Enqueued <DisplayTime value={activeRun.created_at} /> ·{' '}
-                {waitingLabel(activeRun.status)}
-              </>
-            )}
-          </span>
-        </div>
-      ) : null}
+      {activeRun ? <RunSummary run={activeRun} runActive={runActive} /> : null}
     </div>
   );
 }
@@ -190,6 +223,7 @@ function ConnectionRowView({
   testState,
   activeRun,
   runActive,
+  runInFlight,
   busy,
   hasProperty,
 }: Readonly<{
@@ -201,6 +235,7 @@ function ConnectionRowView({
   testState: { ok: boolean; message: string } | null;
   activeRun: SyncRun | null;
   runActive: boolean;
+  runInFlight: boolean;
   busy: boolean;
   hasProperty: boolean;
 }>) {
@@ -218,7 +253,7 @@ function ConnectionRowView({
         Icon={Icon}
         busy={busy}
         hasProperty={hasProperty}
-        runActive={runActive}
+        runInFlight={runInFlight}
         testPending={testMutation.isPending}
         syncPending={syncMutation.isPending}
         removePending={removeMutation.isPending}
@@ -297,12 +332,14 @@ export function ConnectionRow({
     enabled: activeSyncId !== null,
     refetchInterval: (query) => {
       const run = query.state.data;
-      return !run || isActiveSyncRun(run.status) ? SYNC_RUN_POLL_MS : false;
+      return !run || isSyncInFlight(run) ? SYNC_RUN_POLL_MS : false;
     },
   });
   const activeRun = syncRunQuery.data ?? null;
   const runActive = activeRun !== null && isActiveSyncRun(activeRun.status);
-  const runTerminal = activeRun !== null && !isActiveSyncRun(activeRun.status);
+  const runInFlight = activeRun !== null && isSyncInFlight(activeRun);
+  // Pages read the projections, so they refresh once the reports are rebuilt.
+  const runTerminal = activeRun !== null && !runInFlight;
 
   useEffect(() => {
     if (runTerminal) {
@@ -332,6 +369,7 @@ export function ConnectionRow({
       testState={testState}
       activeRun={activeRun}
       runActive={runActive}
+      runInFlight={runInFlight}
       busy={busy}
       hasProperty={hasProperty}
     />

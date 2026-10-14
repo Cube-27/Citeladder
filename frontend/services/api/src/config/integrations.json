@@ -398,6 +398,13 @@
   "ga4_capability_version": "ga4-item-attribution-1",
   "ga4_fallback_granularity": "default_channel_group",
   "free_history_window_days": 30,
+  "post_sync_task_kinds": [
+    "ingest_referrals",
+    "classify_referrals",
+    "traffic_snapshot_refresh",
+    "demand_snapshot_refresh",
+    "ai_referrals_snapshot_refresh"
+  ],
   "history_window_days": {
     "unset": 30,
     "90d": 90,
