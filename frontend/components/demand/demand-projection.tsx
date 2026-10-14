@@ -6,20 +6,16 @@ import { Calendar, RefreshCw, Search, Sparkles } from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { FilterChip } from '@/components/ui/filter-chip';
 import { MutationNotice } from '@/components/ui/mutation-notice';
-import { SearchField } from '@/components/ui/search-field';
-import { FilterRow } from '@/components/ui/filter-row';
 import { ProjectRequiredState } from '@/components/layout/project-required-state';
 import { PageLoading } from '@/components/layout/page-loading';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { PageShell } from '@/components/layout/page-shell';
 import { ReadError, readErrorProps } from '@/components/ui/read-error';
-import { DemandActBand } from '@/components/demand/demand-act-band';
-import { DemandDetectorBar } from '@/components/demand/demand-detector-bar';
 import { DemandEvidenceDrawer } from '@/components/demand/demand-evidence-drawer';
+import { DemandLatentDemand } from '@/components/demand/demand-latent-demand';
+import { DemandSignalFilters } from '@/components/demand/demand-signal-filters';
 import { DemandSignalTable, SignalLegend } from '@/components/demand/demand-signal-table';
-import { DemandSummaryCards } from '@/components/demand/demand-summary-cards';
 import { demandApi, type DemandSignal, type DemandSnapshot } from '@/lib/api/demand';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { queryKeys } from '@/lib/api/query-keys';
@@ -32,11 +28,10 @@ import {
   type FilterTab,
   type RankedSignal,
 } from '@/lib/demand/signals';
-import { formatWindowDate } from '@/lib/format';
+import { formatCount, formatWindowDate } from '@/lib/format';
 import { useProjectContext } from '@/lib/project/project-context';
 import { optionalStringUrlCodec, stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { EmptyState } from '@/components/ui/empty-state';
-import { Card, CardContent } from '@/components/ui/card';
 import { Stack } from '@/components/ui/layout';
 import { DataSourceSetup } from '@/components/integrations/data-source-setup';
 
@@ -147,12 +142,12 @@ function SearchDemandView({
   if (filteredSignals.length > 0) {
     signalsFeed = (
       <Stack gap="compact">
-        <SignalLegend signals={filteredSignals.map(({ signal }) => signal)} />
         <DemandSignalTable
           rows={filteredSignals}
           filterKey={`${activeTab}\u0000${searchQuery.trim().toLowerCase()}`}
           onInspect={handleInspect}
         />
+        <SignalLegend signals={filteredSignals.map(({ signal }) => signal)} />
       </Stack>
     );
   } else if (snapshot.signals.length === 0) {
@@ -179,36 +174,6 @@ function SearchDemandView({
           Recompute signals
         </Button>
       }
-      controls={
-        <FilterRow
-          search={
-            <SearchField
-              value={searchQuery}
-              onValueChange={setSearchQuery}
-              placeholder="Filter queries or pages…"
-              aria-label="Filter queries or pages"
-            />
-          }
-        >
-          {FILTER_TABS.map(({ tab, label }) => {
-            const count = tabCounts.get(tab) ?? 0;
-            // The optional cohorts stay hidden while empty, but a tab the user
-            // has already selected must remain visible to switch away from.
-            const optional = tab === 'trends' || tab === 'branded';
-            if (optional && count === 0 && activeTab !== tab) return null;
-            return (
-              <FilterChip
-                key={tab}
-                active={activeTab === tab}
-                onClick={() => setActiveTab(tab)}
-                count={count}
-              >
-                {label}
-              </FilterChip>
-            );
-          })}
-        </FilterRow>
-      }
     >
       <Stack gap="workspace">
         {refreshError ? (
@@ -219,22 +184,6 @@ function SearchDemandView({
             pending={Boolean(retrying)}
           />
         ) : null}
-        <EditorialSectionHeader
-          title={
-            <span className="flex flex-wrap items-center gap-2">
-              <span>
-                {snapshot.signals.length === 1
-                  ? '1 demand signal observed'
-                  : `${snapshot.signals.length} demand signals observed`}
-              </span>
-              <span className="type-caption inline-flex items-center gap-1">
-                <Calendar className="size-3.5" aria-hidden="true" />
-                {windowLabel}
-              </span>
-            </span>
-          }
-        />
-
         {recomputeMutation.isError ? (
           <MutationNotice
             notice={mutationNoticeForError(recomputeMutation.error, {
@@ -259,21 +208,35 @@ function SearchDemandView({
           </Alert>
         ) : null}
 
-        <Card>
-          <CardContent>
-            <Stack gap="workspace">
-              <DemandSummaryCards snapshot={snapshot} />
-              <div className="border-border-subtle border-t pt-[var(--workspace-gap)]">
-                <DemandDetectorBar snapshot={snapshot} />
-              </div>
-            </Stack>
-          </CardContent>
-        </Card>
-
-        <DemandActBand signals={snapshot.signals} />
-
+        {/* One section: its summary line, the filters that carry each type's
+            count and detector status, then the table they narrow. */}
         <section aria-labelledby="demand-signals" className="grid gap-3">
-          <EditorialSectionHeader headingId="demand-signals" title="Signals" />
+          <EditorialSectionHeader
+            headingId="demand-signals"
+            title="Signals"
+            description={
+              <span className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                <span className="type-caption">
+                  {snapshot.signals.length === 1
+                    ? '1 signal observed'
+                    : `${formatCount(snapshot.signals.length)} signals observed`}
+                </span>
+                <span className="type-caption inline-flex items-center gap-1">
+                  <Calendar className="size-3.5" aria-hidden="true" />
+                  {windowLabel}
+                </span>
+                <DemandLatentDemand snapshot={snapshot} />
+              </span>
+            }
+          />
+          <DemandSignalFilters
+            snapshot={snapshot}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            tabCounts={tabCounts}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+          />
           {signalsFeed}
         </section>
 

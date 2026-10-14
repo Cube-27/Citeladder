@@ -16,8 +16,12 @@ function RouterTestWrapper({ children }: Readonly<{ children: ReactNode }>) {
 }
 
 /** The signal table's body rows, in display order. */
+function signalTable() {
+  return within(screen.getByRole('region', { name: 'Signals' })).getByRole('table');
+}
+
 function signalRows() {
-  return within(screen.getByRole('table')).getAllByRole('row').slice(1);
+  return within(signalTable()).getAllByRole('row').slice(1);
 }
 
 /** The pager's announced position, e.g. "1–10 of 28 signals". */
@@ -176,33 +180,41 @@ describe('DemandProjection', () => {
     );
   }
 
-  it('renders one Search Demand view with KPI summary cards, a flat signal table, and no raw priority score', async () => {
+  it('renders one Signals section: summary line, filters carrying counts and detector status, a flat table', async () => {
     renderProjection();
 
-    expect(await screen.findByText('2 demand signals observed')).toBeInTheDocument();
+    const signals = await screen.findByRole('region', { name: 'Signals' });
+    // One summary line; latent demand is the only figure the filters lack.
+    expect(within(signals).getByText('2 signals observed')).toBeInTheDocument();
+    expect(signals).toHaveTextContent('350 impressions on non-branded signals'); // 250 + 100
 
-    // KPI summary cards
-    expect(screen.getByText('Latent demand')).toBeInTheDocument();
-    expect(screen.getByText('350')).toBeInTheDocument(); // 250 + 100
-    expect(screen.getByText('Queries at positions 4–15')).toBeInTheDocument();
-
-    // Detector status: each detector named once with its state, including
-    // one the snapshot never reported.
-    const detectors = screen.getByRole('region', { name: 'Detectors' });
-    expect(detectors).toHaveTextContent('1 of 4 active');
+    // Each filter carries its count once, and its detector's status when that
+    // detector did not run in full, including one the snapshot never reported.
+    const filters = within(signals)
+      .getAllByRole('button', { pressed: false })
+      .concat(within(signals).getAllByRole('button', { pressed: true }))
+      .map((chip) => chip.textContent);
+    expect(filters).toEqual(
+      expect.arrayContaining([
+        'Striking distance1',
+        'Cannibalization · Not reported0',
+        'CTR gaps · Unavailable1',
+        'Trends · Needs more history0',
+      ]),
+    );
     expect(
-      within(detectors)
-        .getAllByRole('listitem')
-        .map((item) => item.textContent),
-    ).toEqual([
-      'Striking distanceActive',
-      'CannibalizationNot reported',
-      'CTR gapUnavailable',
-      'TrendsNeeds more history',
-    ]);
+      within(signals).getByRole('button', { name: 'How the CTR gap detector works' }),
+    ).toBeVisible();
+    // Caveats shared by the signals sit behind one hint, not a row.
+    expect(within(signals).getByRole('button', { name: 'Data caveats' })).toBeVisible();
+    expect(screen.queryByText('Privacy-filtered queries may be omitted.')).not.toBeInTheDocument();
+    // No separate summary cards, detector line or Act on this list repeat them.
+    expect(screen.queryByText('Latent demand')).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Detectors' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Act on this' })).not.toBeInTheDocument();
+    expect(within(signals).getByLabelText('Filter queries or pages')).toBeVisible();
 
-    // One flat table: a row per signal, its landing page under the query.
-    const table = screen.getByRole('table');
+    const table = signalTable();
     expect(signalRows().map((row) => row.textContent)).toEqual([
       expect.stringMatching(/^1ai marketing tools\/ai-toolsStriking distance25012/),
       expect.stringMatching(/^2school fees\/feesLow CTR10000\.0%12\.0/),
@@ -217,11 +229,13 @@ describe('DemandProjection', () => {
     expect(within(table).getByText('7.2')).toBeInTheDocument();
 
     // The internal priority score is never rendered. Asserted against the
-    // metric list specifically — a bare `queryByText('85')` would pass or fail
-    // on any unrelated number that happens to format the same way.
-    const metricValues = screen.getAllByRole('definition').map((node) => node.textContent?.trim());
-    expect(metricValues).not.toContain('85');
-    expect(metricValues).not.toContain('50');
+    // table's cells specifically — a bare `queryByText('85')` would pass or
+    // fail on any unrelated number that happens to format the same way.
+    const cells = within(table)
+      .getAllByRole('cell')
+      .map((node) => node.textContent?.trim());
+    expect(cells).not.toContain('85');
+    expect(cells).not.toContain('50');
     expect(screen.queryByText(/Demand overview/i)).not.toBeInTheDocument();
   });
 
@@ -242,18 +256,26 @@ describe('DemandProjection', () => {
     expect(relevance).toHaveTextContent('Missing from title or H1: fees, school');
   });
 
-  it('links promoted signals to their Action in the Act on this band', async () => {
+  it('opens a promoted signal’s Action from its row and asks about the rest', async () => {
     renderProjection();
 
-    const band = await screen.findByRole('region', { name: 'Act on this' });
-    const link = within(band).getByRole('link', {
-      name: 'Open the Action for https://example.com/ai-tools',
+    await screen.findByText('ai marketing tools');
+    const [promoted, unpromoted] = signalRows();
+    // The promoted signal's row opens its Action instead of asking the agent.
+    const link = within(promoted!).getByRole('link', {
+      name: 'Open the Action for ai marketing tools',
     });
     expect(link.getAttribute('href')).toContain(
       '/agent/actions/66666666-6666-4666-8666-666666666666',
     );
-    // The unpromoted signal is read and asked about from the table only.
-    expect(within(band).queryByText('https://example.com/fees')).not.toBeInTheDocument();
+    expect(within(promoted!).queryByRole('link', { name: /^Ask agent/ })).not.toBeInTheDocument();
+    // An unpromoted signal is asked about instead.
+    expect(
+      within(unpromoted!).getByRole('link', { name: 'Ask agent about school fees' }),
+    ).toBeVisible();
+    expect(
+      within(unpromoted!).queryByRole('link', { name: /^Open the Action/ }),
+    ).not.toBeInTheDocument();
   });
 
   it('keeps a signal’s priority rank stable when a filter hides the signals above it', async () => {
@@ -313,6 +335,13 @@ describe('DemandProjection', () => {
     await user.click(screen.getByRole('button', { name: 'Next page' }));
     expect(pagerSummary()).toBe('26–28 of 28 signals');
     expect(signalRows().map(rankOf)).toEqual(['26', '27', '28']);
+    // The short last page keeps a full page's height: blank rows, hidden from
+    // assistive technology, hold the pager where it was.
+    expect(
+      within(signalTable())
+        .getAllByRole('row', { hidden: true })
+        .filter((row) => row.getAttribute('aria-hidden') === 'true'),
+    ).toHaveLength(22);
 
     // A different filter is a different list: it opens on its first page.
     await user.click(screen.getByRole('button', { name: /^Striking distance/i }));
@@ -448,11 +477,9 @@ describe('DemandProjection', () => {
     });
     renderProjection();
 
-    expect(
-      await screen.findByText('Impressions on 1 of 2 non-branded signals'),
-    ).toBeInTheDocument();
-    const metricValues = screen.getAllByRole('definition').map((node) => node.textContent?.trim());
-    expect(metricValues).toContain('250');
+    expect(await screen.findByRole('region', { name: 'Signals' })).toHaveTextContent(
+      '250 impressions on 1 of 2 non-branded signals',
+    );
   });
 
   it('opens the evidence drawer with provenance counts and no internal IDs', async () => {
@@ -489,7 +516,7 @@ describe('DemandProjection', () => {
   it('reports that recompute was queued rather than implying a finished rebuild', async () => {
     renderProjection();
 
-    expect(await screen.findByText('2 demand signals observed')).toBeInTheDocument();
+    expect(await screen.findByText('2 signals observed')).toBeInTheDocument();
 
     const fetchesBeforeRecompute = vi.mocked(demandApi.getLatest).mock.calls.length;
     fireEvent.click(screen.getByRole('button', { name: /Recompute Signals/i }));
@@ -543,7 +570,7 @@ describe('DemandProjection', () => {
     vi.mocked(demandApi.recompute).mockRejectedValueOnce(new Error('boom'));
     renderProjection();
 
-    expect(await screen.findByText('2 demand signals observed')).toBeInTheDocument();
+    expect(await screen.findByText('2 signals observed')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Recompute Signals/i }));
 
     expect(await screen.findByRole('button', { name: /Try again/i })).toBeInTheDocument();

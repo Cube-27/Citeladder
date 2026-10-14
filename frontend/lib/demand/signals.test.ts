@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vite-plus/test';
 import type { DemandSignal } from '@/lib/api/demand';
 import { parseAgentHandoff } from '@/lib/agent/handoff';
 import {
-  actionGroups,
   competingPages,
   demandSignalHandoffHref,
   detectorStates,
@@ -140,31 +139,5 @@ describe('signalPageLine', () => {
         signal({ page_url: '', evidence: { target_kind: 'page', target: pricing } }),
       ].map(signalPageLine),
     ).toEqual(['/pricing?plan=team', 'example.com/legacy', null, null]);
-  });
-});
-
-describe('actionGroups', () => {
-  it('lists each promoted Action once, in priority order, with its signal types', () => {
-    const first = '55555555-5555-4555-8555-555555555555';
-    const second = '66666666-6666-4666-8666-666666666666';
-    const groups = actionGroups([
-      signal({ action_id: first, signal_type: 'striking_distance', page_url: 'https://a.test/x' }),
-      signal({ action_id: null, signal_type: 'branded_query_performance' }),
-      signal({ action_id: second, signal_type: 'declining_query', page_url: 'https://a.test/y' }),
-      signal({
-        action_id: first,
-        signal_type: 'high_impression_low_ctr',
-        page_url: 'https://a.test/x',
-      }),
-    ]);
-
-    expect(groups).toEqual([
-      {
-        actionId: first,
-        page: 'https://a.test/x',
-        signalTypes: ['striking_distance', 'high_impression_low_ctr'],
-      },
-      { actionId: second, page: 'https://a.test/y', signalTypes: ['declining_query'] },
-    ]);
   });
 });
