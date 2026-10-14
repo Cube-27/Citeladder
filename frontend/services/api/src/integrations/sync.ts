@@ -123,16 +123,21 @@ export function enqueueSyncRun(db: Database, input: SyncInput) {
 
 const ACTIVE_SYNC = ['queued', 'leased', 'running', 'retry_wait'] as const;
 
-async function refuseWhilePropertySyncs(trx: Database, workspaceId: string, mappingId: string) {
-  const active = await trx
+/** The property's active on-demand or scheduled run, which a plain sync waits on. */
+export async function activePropertySync(db: Database, workspaceId: string, mappingId: string) {
+  const run = await db
     .selectFrom('integration_sync_runs')
-    .select('id')
+    .select(['id', 'connection_id', 'status'])
     .where('workspace_id', '=', workspaceId)
     .where('mapping_id', '=', mappingId)
     .where('sync_kind', '!=', codes.SYNC_KIND_BACKFILL)
     .where('status', 'in', ACTIVE_SYNC)
     .executeTakeFirst();
-  if (active)
+  return run && { sync_run_id: run.id, connection_id: run.connection_id, status: run.status };
+}
+
+async function refuseWhilePropertySyncs(trx: Database, workspaceId: string, mappingId: string) {
+  if (await activePropertySync(trx, workspaceId, mappingId))
     throw new ApiError(409, 'A sync is already running for this property', {
       code: 'sync_active_window_conflict',
       details: { enqueued_connection_ids: [] },

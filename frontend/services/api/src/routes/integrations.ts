@@ -30,6 +30,7 @@ import {
   siteDomainsOf,
 } from '../integrations/host-scope.ts';
 import {
+  activePropertySync,
   enqueueHistoryBackfill,
   enqueueSyncRun,
   getBackfillProgress,
@@ -178,9 +179,12 @@ export const integrationRoutes = [
           );
         } catch (error) {
           if (error instanceof ApiError && error.code === 'sync_target_unresolved') continue;
-          // A property already syncing is current once that run finishes.
+          // A property already syncing is current once that run finishes, so the
+          // page tracks that run instead of a new one.
           if (error instanceof ApiError && error.code === 'sync_active_window_conflict') {
-            syncing++;
+            const active = await activePropertySync(db, workspaceId, target.mapping_id);
+            if (active) queued.push(active);
+            else syncing++;
             continue;
           }
           throw error;

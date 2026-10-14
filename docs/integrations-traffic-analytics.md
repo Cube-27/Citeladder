@@ -88,7 +88,8 @@ history retry, never to a routine sync. Only one such sync is in flight per
 mapping: while an on-demand or scheduled run for it is queued, leased, running or
 retry-waiting, another unwindowed one is refused with `409
 sync_active_window_conflict` (the dispatcher skips it). Performance sync queues
-the mappings without one and returns that 409 only when every mapping has one.
+the mappings without one and returns the active run for each mapping that has
+one, so the page tracks every property's current sync.
 
 A sync-run read also reports `processing` while the project still has a post-sync
 projection task active (the kinds in `post_sync_task_kinds`). Settings and
