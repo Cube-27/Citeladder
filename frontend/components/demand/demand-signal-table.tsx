@@ -13,6 +13,7 @@ import {
   TableBody,
   TableCell,
   TableHead,
+  TableFillerRows,
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
@@ -89,29 +90,43 @@ export function DemandSignalTable({
     setPage(1);
   }
 
+  const pageRows = rows.slice(from - 1, to);
+  // Paging never moves the layout: fixed column widths, and a short last
+  // page keeps a full page's height (a single page just ends).
+  const filler = pageCount > 1 ? pageSize - pageRows.length : 0;
+
   return (
     <div>
-      <Table minWidth="lg">
+      <Table minWidth="lg" fixed>
         <TableHeader>
           <TableRow>
-            <TableHead numeric className="w-12">
+            <TableHead numeric className="w-16">
               Rank
             </TableHead>
             <TableHead>Query and page</TableHead>
-            <TableHead>Signal</TableHead>
-            <TableHead numeric>Impressions</TableHead>
-            <TableHead numeric>Clicks</TableHead>
-            <TableHead numeric>CTR</TableHead>
-            <TableHead numeric>Avg. position</TableHead>
-            <TableHead>
+            <TableHead className="w-44">Signal</TableHead>
+            <TableHead numeric className="w-28">
+              Impressions
+            </TableHead>
+            <TableHead numeric className="w-20">
+              Clicks
+            </TableHead>
+            <TableHead numeric className="w-20">
+              CTR
+            </TableHead>
+            <TableHead numeric className="w-28">
+              Avg. position
+            </TableHead>
+            <TableHead className="w-52">
               <span className="sr-only">Actions</span>
             </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.slice(from - 1, to).map(({ signal, rank }) => (
+          {pageRows.map(({ signal, rank }) => (
             <SignalRow key={signal.id} signal={signal} rank={rank} onInspect={onInspect} />
           ))}
+          <TableFillerRows count={filler} colSpan={8} spacer={<TwoLines title=" " caption=" " />} />
         </TableBody>
       </Table>
       <Pager
@@ -142,15 +157,8 @@ function SignalRow({
       <TableCell numeric className={textRole('caption')}>
         {rank}
       </TableCell>
-      <TableCell className="max-w-96">
-        <ClampText lines={1} className={textRole('itemTitle')}>
-          {target}
-        </ClampText>
-        {pageLine ? (
-          <ClampText lines={1} tooltip={signalPage(signal)} className={textRole('caption')}>
-            {pageLine}
-          </ClampText>
-        ) : null}
+      <TableCell>
+        <TwoLines title={target} caption={pageLine} captionTooltip={signalPage(signal)} />
       </TableCell>
       <TableCell className="whitespace-nowrap">
         <SignalChip signalType={signal.signal_type} />
@@ -177,18 +185,52 @@ function SignalRow({
           >
             Inspect
           </Button>
-          <Button variant="ghost" size="sm" asChild>
-            <ProjectLink
-              href={demandSignalHandoffHref(signal)}
-              aria-label={`Ask agent about ${target}`}
-            >
-              Ask agent
-              <ChevronRight className="size-3.5" aria-hidden />
-            </ProjectLink>
-          </Button>
+          {/* A signal promoted into an Action opens it; any other is asked about. */}
+          {signal.action_id ? (
+            <Button variant="secondary" size="sm" asChild>
+              <ProjectLink
+                href={`/agent/actions/${signal.action_id}`}
+                aria-label={`Open the Action for ${target}`}
+              >
+                Open Action
+                <ChevronRight className="size-3.5" aria-hidden />
+              </ProjectLink>
+            </Button>
+          ) : (
+            <Button variant="ghost" size="sm" asChild>
+              <ProjectLink
+                href={demandSignalHandoffHref(signal)}
+                aria-label={`Ask agent about ${target}`}
+              >
+                Ask agent
+                <ChevronRight className="size-3.5" aria-hidden />
+              </ProjectLink>
+            </Button>
+          )}
         </div>
       </TableCell>
     </TableRow>
+  );
+}
+
+/**
+ * The query over its landing page. Always two lines tall, even with no page,
+ * so every row (and a filler row) is the same height.
+ */
+function TwoLines({
+  title,
+  caption,
+  captionTooltip,
+}: Readonly<{ title: string; caption: string | null; captionTooltip?: string | null }>) {
+  return (
+    <>
+      <ClampText lines={1} className={textRole('itemTitle')}>
+        {title}
+      </ClampText>
+      <ClampText lines={1} tooltip={captionTooltip} className={textRole('caption')}>
+        {caption ?? ' '}
+      </ClampText>
+    </>
   );
 }
 

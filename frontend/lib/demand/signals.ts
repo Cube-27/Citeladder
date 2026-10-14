@@ -247,24 +247,3 @@ export function signalPageLine(signal: DemandSignal): string | null {
   const parsed = parseAbsoluteHttpUrl(page);
   return parsed ? `${parsed.pathname}${parsed.search}` : page;
 }
-
-export type ActionGroup = { actionId: string; page: string | null; signalTypes: string[] };
-
-/**
- * Promoted signals, one entry per Action they were grouped into, in priority
- * order. Signals on one page share its Action, so this is grouped by page.
- */
-export function actionGroups(signals: readonly DemandSignal[]): ActionGroup[] {
-  const groups = new Map<string, ActionGroup>();
-  for (const signal of signals) {
-    if (!signal.action_id) continue;
-    const group = groups.get(signal.action_id) ?? {
-      actionId: signal.action_id,
-      page: signalPage(signal),
-      signalTypes: [],
-    };
-    if (!group.signalTypes.includes(signal.signal_type)) group.signalTypes.push(signal.signal_type);
-    groups.set(signal.action_id, group);
-  }
-  return [...groups.values()];
-}

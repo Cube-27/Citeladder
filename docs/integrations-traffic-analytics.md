@@ -352,14 +352,17 @@ Cursors bind project, snapshot, dimension, filters, sorting and page size.
 The browser resets cursor history when those inputs change.
 Search Demand is one /demand surface; the AI Traffic Referrals tab exposes
 persisted referral volume/share/source totals. Search Demand
-leads with an "Act on this" band of promoted signals, one entry per page's
-Action, then one flat table with a row per signal in priority order: its query,
-its landing page beneath, and a signal chip. The table pages on the client
-from the persisted snapshot with a rows-per-page choice; a new filter starts at
-page 1. Each signal type is explained once in a legend, each detector's rule
-and limitations sit in an info hint beside its state, and the evidence drawer
-keeps the reading, relevance, competing pages and provenance counts, never
-internal IDs.
+is one Signals section, each fact shown once: a summary line (signal count,
+window, latent demand), then filter chips that carry each type's count and,
+when its detector did not run in full, that detector's status, with the rule
+and limitations in an info hint beside the chip. One flat table follows, a row
+per signal in priority order: its query, its landing page beneath, and a signal
+chip; a promoted signal's row opens its Action, any other asks the agent. The
+table pages on the client from the persisted snapshot with a rows-per-page
+choice; a new filter starts at page 1, and paging never moves the layout
+(fixed column widths, a short last page padded to full height). Each signal
+type is explained once in a legend, and the evidence drawer keeps the reading,
+relevance, competing pages and provenance counts, never internal IDs.
 [Data source setup](../frontend/components/integrations/data-source-setup.tsx)
 connects sources where they are needed: Performance (Search Console, with GA4 and
 Bing offered), Search Demand (Search Console) and the AI Traffic referrals view
