@@ -7,8 +7,8 @@ import {
   competingPages,
   demandSignalHandoffHref,
   detectorStates,
-  groupByPage,
   safePageUrl,
+  signalPageLine,
   signalTarget,
 } from './signals';
 
@@ -128,24 +128,18 @@ describe('demandSignalHandoffHref', () => {
   });
 });
 
-describe('groupByPage', () => {
-  it('groups query rows under their resolved page and page rows under themselves', () => {
-    const pricing = 'https://example.com/pricing';
-    const rows = [
-      { rank: 1, signal: signal({ page_url: pricing, evidence: { target: 'crm pricing' } }) },
-      { rank: 2, signal: signal({ page_url: '', evidence: { target: 'crm tools' } }) },
-      {
-        rank: 3,
-        signal: signal({ page_url: '', evidence: { target_kind: 'page', target: pricing } }),
-      },
-    ];
+describe('signalPageLine', () => {
+  it('names a query signal’s landing page by path, and gives a page signal no second line', () => {
+    const pricing = 'https://example.com/pricing?plan=team';
 
     expect(
-      groupByPage(rows).map((group) => [group.page, group.rows.map((row) => row.rank)]),
-    ).toEqual([
-      [pricing, [1, 3]],
-      [null, [2]],
-    ]);
+      [
+        signal({ page_url: pricing, evidence: { target: 'crm pricing' } }),
+        signal({ page_url: 'example.com/legacy', evidence: { target: 'crm legacy' } }),
+        signal({ page_url: '', evidence: { target: 'crm tools' } }),
+        signal({ page_url: '', evidence: { target_kind: 'page', target: pricing } }),
+      ].map(signalPageLine),
+    ).toEqual(['/pricing?plan=team', 'example.com/legacy', null, null]);
   });
 });
 

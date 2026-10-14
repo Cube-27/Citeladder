@@ -139,7 +139,7 @@ function SearchDemandView({
             setSearchQuery('');
           }}
         >
-          Clear Filters
+          Clear filters
         </Button>
       }
     />
@@ -148,7 +148,11 @@ function SearchDemandView({
     signalsFeed = (
       <Stack gap="compact">
         <SignalLegend signals={filteredSignals.map(({ signal }) => signal)} />
-        <DemandSignalTable rows={filteredSignals} onInspect={handleInspect} />
+        <DemandSignalTable
+          rows={filteredSignals}
+          filterKey={`${activeTab}\u0000${searchQuery.trim().toLowerCase()}`}
+          onInspect={handleInspect}
+        />
       </Stack>
     );
   } else if (snapshot.signals.length === 0) {
@@ -181,8 +185,8 @@ function SearchDemandView({
             <SearchField
               value={searchQuery}
               onValueChange={setSearchQuery}
-              placeholder="Filter queries or URLs..."
-              aria-label="Filter queries or URLs"
+              placeholder="Filter queries or pages…"
+              aria-label="Filter queries or pages"
             />
           }
         >
@@ -259,16 +263,20 @@ function SearchDemandView({
           <CardContent>
             <Stack gap="workspace">
               <DemandSummaryCards snapshot={snapshot} />
-              <DemandDetectorBar snapshot={snapshot} />
+              <div className="border-border-subtle border-t pt-[var(--workspace-gap)]">
+                <DemandDetectorBar snapshot={snapshot} />
+              </div>
             </Stack>
           </CardContent>
         </Card>
 
         <DemandActBand signals={snapshot.signals} />
 
-        {signalsFeed}
+        <section aria-labelledby="demand-signals" className="grid gap-3">
+          <EditorialSectionHeader headingId="demand-signals" title="Signals" />
+          {signalsFeed}
+        </section>
 
-        {/* Evidence Inspection Drawer */}
         <DemandEvidenceDrawer
           signal={selectedSignal}
           open={selectedSignal !== null}

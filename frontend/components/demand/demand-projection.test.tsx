@@ -1,5 +1,6 @@
 import { QueryClientProvider, type QueryClient } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
@@ -12,6 +13,23 @@ import { DemandProjection } from './demand-projection';
 
 function RouterTestWrapper({ children }: Readonly<{ children: ReactNode }>) {
   return <MemoryRouter initialEntries={['/demand']}>{children}</MemoryRouter>;
+}
+
+/** The signal table's body rows, in display order. */
+function signalRows() {
+  return within(screen.getByRole('table')).getAllByRole('row').slice(1);
+}
+
+/** The pager's announced position, e.g. "1–10 of 28 signals". */
+function pagerSummary() {
+  return screen.getByText(
+    (_, node) =>
+      node?.getAttribute('aria-live') === 'polite' && /signals$/.test(node.textContent ?? ''),
+  ).textContent;
+}
+
+function rankOf(row: HTMLElement) {
+  return within(row).getAllByRole('cell')[0]!.textContent;
 }
 
 // Mutable so a test can switch projects mid-render; `vi.hoisted` keeps it
@@ -136,6 +154,8 @@ import { demandApi } from '@/lib/api/demand';
 
 describe('DemandProjection', () => {
   beforeEach(() => {
+    // The filter and selection live in the address, which outlives a render.
+    window.history.replaceState(null, '', '/demand');
     project.id = '11111111-1111-4111-8111-111111111111';
     vi.mocked(demandApi.getLatest).mockResolvedValue(snapshot);
   });
@@ -156,39 +176,45 @@ describe('DemandProjection', () => {
     );
   }
 
-  it('renders one Search Demand view with KPI summary cards, a page-grouped table, and no raw priority score', async () => {
+  it('renders one Search Demand view with KPI summary cards, a flat signal table, and no raw priority score', async () => {
     renderProjection();
 
     expect(await screen.findByText('2 demand signals observed')).toBeInTheDocument();
 
     // KPI summary cards
-    expect(screen.getByText('Latent Search Demand')).toBeInTheDocument();
+    expect(screen.getByText('Latent demand')).toBeInTheDocument();
     expect(screen.getByText('350')).toBeInTheDocument(); // 250 + 100
-    expect(screen.getByText('Positions 4–15 quick wins')).toBeInTheDocument();
+    expect(screen.getByText('Queries at positions 4–15')).toBeInTheDocument();
 
-    // Detector pills
-    expect(screen.getAllByText(/Striking distance/i).length).toBeGreaterThan(0);
-    expect(screen.getByText('Active')).toBeInTheDocument();
-    expect(screen.getAllByText(/CTR gap/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Unavailable').length).toBeGreaterThan(0);
-    expect(screen.getByText('Query trends')).toBeInTheDocument();
-    expect(screen.getByText('Needs 28d history')).toBeInTheDocument();
+    // Detector status: each detector named once with its state, including
+    // one the snapshot never reported.
+    const detectors = screen.getByRole('region', { name: 'Detectors' });
+    expect(detectors).toHaveTextContent('1 of 4 active');
+    expect(
+      within(detectors)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual([
+      'Striking distanceActive',
+      'CannibalizationNot reported',
+      'CTR gapUnavailable',
+      'TrendsNeeds more history',
+    ]);
 
-    // One table grouped by page, a chip per row, each type explained once
+    // One flat table: a row per signal, its landing page under the query.
     const table = screen.getByRole('table');
-    expect(within(table).getByText('https://example.com/ai-tools')).toBeInTheDocument();
-    expect(within(table).getByText('ai marketing tools')).toBeInTheDocument();
-    expect(within(table).getByText('https://example.com/fees')).toBeInTheDocument();
-    expect(within(table).getByText('school fees')).toBeInTheDocument();
+    expect(signalRows().map((row) => row.textContent)).toEqual([
+      expect.stringMatching(/^1ai marketing tools\/ai-toolsStriking distance25012/),
+      expect.stringMatching(/^2school fees\/feesLow CTR10000\.0%12\.0/),
+    ]);
+    expect(within(table).queryByText('https://example.com/ai-tools')).not.toBeInTheDocument();
     const legend = screen.getByRole('region', { name: 'Signal types' });
     expect(within(legend).getByText(/Earns many impressions but few clicks/)).toBeInTheDocument();
     expect(screen.queryByText('Within reach of the top results')).not.toBeInTheDocument();
 
     // Tabular metrics
-    expect(screen.getByText('250')).toBeInTheDocument();
-    expect(screen.getByText('12')).toBeInTheDocument();
-    expect(screen.getByText('4.8%')).toBeInTheDocument();
-    expect(screen.getByText('7.2')).toBeInTheDocument();
+    expect(within(table).getByText('4.8%')).toBeInTheDocument();
+    expect(within(table).getByText('7.2')).toBeInTheDocument();
 
     // The internal priority score is never rendered. Asserted against the
     // metric list specifically — a bare `queryByText('85')` would pass or fail
@@ -234,16 +260,89 @@ describe('DemandProjection', () => {
     renderProjection();
 
     expect(await screen.findByText('ai marketing tools')).toBeInTheDocument();
-    expect(screen.getByText('#1')).toBeInTheDocument();
-    expect(screen.getByText('#2')).toBeInTheDocument();
+    expect(signalRows().map(rankOf)).toEqual(['1', '2']);
 
     // `school fees` is the second-priority signal; filtering to CTR gaps must
     // not relabel it as the top-priority one.
-    fireEvent.click(screen.getByRole('button', { name: /^CTR Gaps/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^CTR gaps/i }));
 
-    expect(screen.getByText('school fees')).toBeInTheDocument();
-    expect(screen.getByText('#2')).toBeInTheDocument();
-    expect(screen.queryByText('#1')).not.toBeInTheDocument();
+    expect(signalRows().map((row) => [rankOf(row), row.textContent])).toEqual([
+      ['2', expect.stringContaining('school fees')],
+    ]);
+  });
+
+  it('pages a long signal list with rows per page, restarting at page 1 on a new filter', async () => {
+    const strikingRows = Array.from({ length: 27 }, (_, index) => ({
+      ...snapshot.signals[0]!,
+      id: `33333333-3333-4333-8333-${String(index).padStart(12, '0')}`,
+      evidence: { target_kind: 'query', target: `query ${index + 1}` },
+      action_id: null,
+    }));
+    vi.mocked(demandApi.getLatest).mockResolvedValue({
+      ...snapshot,
+      signals: [...strikingRows, snapshot.signals[1]!],
+    });
+    const user = userEvent.setup();
+    renderProjection();
+
+    await screen.findByText('query 1');
+    expect(pagerSummary()).toBe('1–10 of 28 signals');
+    expect(signalRows()).toHaveLength(10);
+
+    await user.click(screen.getByRole('button', { name: 'Next page' }));
+    expect(pagerSummary()).toBe('11–20 of 28 signals');
+    expect(signalRows().map(rankOf)).toEqual([
+      '11',
+      '12',
+      '13',
+      '14',
+      '15',
+      '16',
+      '17',
+      '18',
+      '19',
+      '20',
+    ]);
+
+    // A larger page size shows more rows and starts again from the top.
+    await user.click(screen.getByRole('combobox', { name: 'Rows per page for signals' }));
+    await user.click(await screen.findByRole('option', { name: '25' }));
+    expect(pagerSummary()).toBe('1–25 of 28 signals');
+    expect(signalRows()).toHaveLength(25);
+
+    await user.click(screen.getByRole('button', { name: 'Next page' }));
+    expect(pagerSummary()).toBe('26–28 of 28 signals');
+    expect(signalRows().map(rankOf)).toEqual(['26', '27', '28']);
+
+    // A different filter is a different list: it opens on its first page.
+    await user.click(screen.getByRole('button', { name: /^Striking distance/i }));
+    expect(pagerSummary()).toBe('1–25 of 27 signals');
+    expect(rankOf(signalRows()[0]!)).toBe('1');
+  });
+
+  it('explains each detector in an info hint with its rule and what limited it', async () => {
+    vi.mocked(demandApi.getLatest).mockResolvedValue({
+      ...snapshot,
+      summary: {
+        ...snapshot.summary,
+        detectors: {
+          ...snapshot.summary.detectors,
+          query_trends: {
+            state: 'insufficient_history',
+            limitations: ['At least 28 days of coverage are required.'],
+          },
+        },
+      },
+    });
+    const user = userEvent.setup();
+    renderProjection();
+
+    await user.hover(await screen.findByRole('button', { name: 'How the Trends detector works' }));
+
+    // The rule first, then the snapshot's own reason the detector is held back.
+    expect((await screen.findByRole('tooltip')).textContent).toMatch(
+      /last two 14-day windows\..* At least 28 days of coverage are required\.$/,
+    );
   });
 
   it('allows filtering by signal type filter chips and searching by query text', async () => {
@@ -268,7 +367,7 @@ describe('DemandProjection', () => {
     expect(screen.getByText('school fees')).toBeInTheDocument();
 
     // Search query
-    const searchInput = screen.getByPlaceholderText('Filter queries or URLs...');
+    const searchInput = screen.getByRole('searchbox', { name: 'Filter queries or pages' });
     fireEvent.change(searchInput, { target: { value: 'fees' } });
 
     expect(screen.queryByText('ai marketing tools')).not.toBeInTheDocument();
@@ -342,19 +441,49 @@ describe('DemandProjection', () => {
     expect(screen.queryByRole('link', { name: 'Open Performance' })).not.toBeInTheDocument();
   });
 
-  it('opens the evidence drawer with provenance and candidate breakdown when inspect is clicked', async () => {
+  it('says when latent demand sums only the signals that reported impressions', async () => {
+    vi.mocked(demandApi.getLatest).mockResolvedValue({
+      ...snapshot,
+      signals: [snapshot.signals[0]!, { ...snapshot.signals[1]!, metrics: { position: 12 } }],
+    });
     renderProjection();
 
-    expect(await screen.findByText('ai marketing tools')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Impressions on 1 of 2 non-branded signals'),
+    ).toBeInTheDocument();
+    const metricValues = screen.getAllByRole('definition').map((node) => node.textContent?.trim());
+    expect(metricValues).toContain('250');
+  });
 
-    // Click the first Inspect Evidence button
-    const inspectButtons = screen.getAllByRole('button', { name: /Inspect Evidence/i });
-    fireEvent.click(inspectButtons[0]!);
+  it('opens the evidence drawer with provenance counts and no internal IDs', async () => {
+    vi.mocked(demandApi.getLatest).mockResolvedValue({
+      ...snapshot,
+      signals: [
+        {
+          ...snapshot.signals[0]!,
+          // Rows recorded; source imports never were, which is not zero.
+          evidence: {
+            ...snapshot.signals[0]!.evidence,
+            source_metric_row_ids: ['row-1', 'row-2', 'row-3'],
+          },
+        },
+      ],
+    });
+    renderProjection();
 
-    // Drawer should display title, observed performance, and audit trail
-    expect(await screen.findByText('Demand Signal Evidence')).toBeInTheDocument();
-    expect(screen.getByText('Observed GSC Performance')).toBeInTheDocument();
-    expect(screen.getByText('Audit Trail & Provenance')).toBeInTheDocument();
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Inspect evidence for ai marketing tools' }),
+    );
+
+    const drawer = await screen.findByRole('dialog', { name: 'Signal evidence' });
+    expect(within(drawer).getByText('Search Console performance')).toBeInTheDocument();
+    const provenance = within(drawer).getByRole('region', { name: 'Provenance' });
+    expect(provenance).toHaveTextContent('Search Console rows3');
+    expect(provenance).toHaveTextContent('Source imports');
+    expect(provenance).toHaveTextContent('Not measured');
+    expect(provenance).not.toHaveTextContent('Source imports0');
+    expect(drawer).not.toHaveTextContent('33333333');
+    expect(drawer).not.toHaveTextContent('22222222');
   });
 
   it('reports that recompute was queued rather than implying a finished rebuild', async () => {

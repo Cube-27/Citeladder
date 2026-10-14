@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { ProjectLink } from '@/components/layout/scoped-link';
 import { ArrowUpRight, ShieldCheck, Split } from 'lucide-react';
 
@@ -54,7 +55,7 @@ function DemandEvidenceContent({
     <Drawer
       open={open}
       onOpenChange={onOpenChange}
-      title="Demand Signal Evidence"
+      title="Signal evidence"
       className="max-w-md sm:max-w-lg"
       footer={
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -71,7 +72,6 @@ function DemandEvidenceContent({
       }
     >
       <div className="grid gap-[var(--workspace-gap)]">
-        {/* Header Info */}
         <div className="border-border-subtle grid gap-2 border-b pb-4">
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="neutral">{details.targetKind}</Badge>
@@ -80,7 +80,7 @@ function DemandEvidenceContent({
           <h2 className={textRole('sectionTitle', 'break-words')}>{details.target}</h2>
           {details.linkablePageUrl && (
             <div className="type-caption flex items-center gap-2">
-              <span className={textRole('emphasis', 'shrink-0')}>Resolved URL:</span>
+              <span className={textRole('emphasis', 'shrink-0')}>Landing page</span>
               <TextLink
                 variant="external"
                 text="inherit"
@@ -95,9 +95,8 @@ function DemandEvidenceContent({
 
         <SignalInsight signal={signal} />
 
-        {/* Observed GSC Metrics */}
         <section className="grid gap-2">
-          <h3 className={textRole('label')}>Observed GSC Performance</h3>
+          <h3 className={textRole('label')}>Search Console performance</h3>
           <StatGrid
             surface="well"
             columns={4}
@@ -128,7 +127,7 @@ function DemandEvidenceContent({
               },
               {
                 key: 'position',
-                label: 'Avg Position',
+                label: 'Avg. position',
                 value:
                   typeof details.metrics.position === 'number'
                     ? details.metrics.position.toFixed(1)
@@ -138,13 +137,14 @@ function DemandEvidenceContent({
           />
         </section>
 
-        {/* Cannibalization Breakdown if applicable */}
+        {/* Cannibalization only. Bounded by the rule itself: each competing
+            page holds at least a 10% share, so there are never more than 10. */}
         {details.pages.length > 0 && (
           <section className="grid gap-2">
-            <div className={textRole('label', 'flex items-center gap-2')}>
+            <h3 className={textRole('label', 'flex items-center gap-2')}>
               <Split className="text-muted size-3.5" aria-hidden />
-              <span>Competing URL Breakdown ({details.pages.length} Pages)</span>
-            </div>
+              Competing pages ({details.pages.length})
+            </h3>
             <div className={ledgerClasses('boxed')}>
               {details.pages.map((page) => (
                 <div key={page.url} className="type-caption grid gap-1 p-3">
@@ -163,13 +163,12 @@ function DemandEvidenceContent({
           </section>
         )}
 
-        {/* CTR Gap Cohort Benchmark if applicable */}
         {details.cohortMedianCtr !== null && (
           <section className="grid gap-2">
-            <h3 className={textRole('label')}>Position Cohort Benchmark</h3>
+            <h3 className={textRole('label')}>Position benchmark</h3>
             <div className={panelClasses({ pad: 'compact' }, 'type-caption grid gap-2')}>
               <div className="flex justify-between">
-                <span className="text-muted">Position Band:</span>
+                <span className="text-muted">Position band</span>
                 {details.positionBand !== null ? (
                   <span className={textRole('emphasis', 'text-foreground')}>
                     Positions {details.positionBand}.0 – {details.positionBand}.9
@@ -179,13 +178,13 @@ function DemandEvidenceContent({
                 )}
               </div>
               <div className="flex justify-between">
-                <span className="text-muted">Cohort Median CTR:</span>
+                <span className="text-muted">Median CTR in this band</span>
                 <span className={textRole('emphasis', 'text-secondary tabular-nums')}>
                   {formatPercent(details.cohortMedianCtr, 1)}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted">Observed Actual CTR:</span>
+                <span className="text-muted">This query’s CTR</span>
                 {numericMetric(signal, 'ctr') !== null ? (
                   <span className={textRole('emphasis', 'text-secondary tabular-nums')}>
                     {formatPercent(numericMetric(signal, 'ctr'), 1)}
@@ -198,43 +197,35 @@ function DemandEvidenceContent({
           </section>
         )}
 
-        {/* Provenance & Audit Info */}
-        <section className="border-border-subtle grid gap-2 border-t pt-3">
-          <div className={textRole('label', 'flex items-center gap-2')}>
+        {/* Where the figures came from, as counts and a date; internal IDs stay out of view. */}
+        <section aria-labelledby="demand-provenance" className="grid gap-2">
+          <h3 id="demand-provenance" className={textRole('label', 'flex items-center gap-2')}>
             <ShieldCheck className="text-muted size-3.5" aria-hidden />
-            <span>Audit Trail & Provenance</span>
-          </div>
-          <div
-            className={panelClasses({ tone: 'well', pad: 'compact' }, 'type-caption grid gap-2')}
-          >
-            <div className="flex justify-between">
-              <span>Signal ID:</span>
-              <span className="text-foreground tabular-nums">{signal.id.slice(0, 8)}...</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Snapshot ID:</span>
-              <span className="text-foreground tabular-nums">
-                {signal.snapshot_id.slice(0, 8)}...
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span>Source Metric Rows:</span>
-              <span className="text-foreground">{details.metricRowIds.length} rows linked</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Source Artifacts:</span>
-              <span className="text-foreground">{details.artifactIds.length} artifacts</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Evaluated:</span>
-              <span className="text-foreground">
-                <DisplayTime value={signal.created_at} dateOnly />
-              </span>
-            </div>
-          </div>
+            Provenance
+          </h3>
+          <dl className={panelClasses({ tone: 'well', pad: 'compact' }, 'type-caption grid gap-2')}>
+            <ProvenanceRow label="Search Console rows">
+              <ProvenanceCount value={details.metricRowCount} />
+            </ProvenanceRow>
+            <ProvenanceRow label="Source imports">
+              <ProvenanceCount value={details.artifactCount} />
+            </ProvenanceRow>
+            <ProvenanceRow label="Evaluated">
+              <DisplayTime value={signal.created_at} dateOnly />
+            </ProvenanceRow>
+          </dl>
         </section>
       </div>
     </Drawer>
+  );
+}
+
+function ProvenanceRow({ label, children }: Readonly<{ label: string; children: ReactNode }>) {
+  return (
+    <div className="flex justify-between gap-4">
+      <dt className="text-muted">{label}</dt>
+      <dd className="text-foreground tabular-nums">{children}</dd>
+    </div>
   );
 }
 
@@ -250,11 +241,16 @@ function demandEvidenceDetails(signal: DemandSignal) {
     positionBand:
       typeof rawBand === 'number' && Number.isFinite(rawBand) ? Math.floor(rawBand) : null,
     linkablePageUrl: safePageUrl(signal.page_url),
-    metricRowIds: Array.isArray(evidence.source_metric_row_ids)
-      ? (evidence.source_metric_row_ids as string[])
-      : [],
-    artifactIds: Array.isArray(evidence.source_artifact_ids)
-      ? (evidence.source_artifact_ids as string[])
-      : [],
+    metricRowCount: sourceCount(evidence.source_metric_row_ids),
+    artifactCount: sourceCount(evidence.source_artifact_ids),
   };
+}
+
+/** How many sources a provenance list names, or null when it was not recorded. */
+function sourceCount(value: unknown): number | null {
+  return Array.isArray(value) ? value.length : null;
+}
+
+function ProvenanceCount({ value }: Readonly<{ value: number | null }>) {
+  return value === null ? <UnavailableValue state="not_measured" /> : formatCount(value);
 }

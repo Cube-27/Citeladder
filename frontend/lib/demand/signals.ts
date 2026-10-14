@@ -37,12 +37,12 @@ const SIGNAL_GROUPS: Readonly<Record<Exclude<FilterTab, 'all'>, readonly SignalT
 
 /** Tab order and labels for the filter bar. */
 export const FILTER_TABS: readonly { tab: FilterTab; label: string }[] = [
-  { tab: 'all', label: 'All Signals' },
-  { tab: 'striking_distance', label: 'Striking Distance' },
+  { tab: 'all', label: 'All signals' },
+  { tab: 'striking_distance', label: 'Striking distance' },
   { tab: 'cannibalization', label: 'Cannibalization' },
-  { tab: 'ctr_gap', label: 'CTR Gaps' },
-  { tab: 'trends', label: 'Emerging / Declining' },
-  { tab: 'branded', label: 'Branded Cohort' },
+  { tab: 'ctr_gap', label: 'CTR gaps' },
+  { tab: 'trends', label: 'Trends' },
+  { tab: 'branded', label: 'Branded' },
 ];
 
 type SignalTone = 'info' | 'warning' | 'danger' | 'success' | 'neutral';
@@ -221,13 +221,12 @@ export function demandSignalHandoffHref(signal: DemandSignal): string {
 }
 
 export type RankedSignal = { signal: DemandSignal; rank: number };
-export type PageGroup = { page: string | null; rows: RankedSignal[] };
 
 /**
  * The page a signal is about: its own target for a page signal, the resolved
  * landing page for a query signal, or null when none was resolved.
  */
-function signalPage(signal: DemandSignal): string | null {
+export function signalPage(signal: DemandSignal): string | null {
   if (signalTargetKind(signal) === 'Page') {
     const target = signal.evidence.target;
     return typeof target === 'string' && target.trim() ? target : null;
@@ -235,14 +234,18 @@ function signalPage(signal: DemandSignal): string | null {
   return signal.page_url.trim() || null;
 }
 
-/** Rows grouped by page, in the order each page's best signal ranks. */
-export function groupByPage(rows: readonly RankedSignal[]): PageGroup[] {
-  const groups = new Map<string | null, RankedSignal[]>();
-  for (const row of rows) {
-    const page = signalPage(row.signal);
-    groups.set(page, [...(groups.get(page) ?? []), row]);
-  }
-  return [...groups].map(([page, grouped]) => ({ page, rows: grouped }));
+/**
+ * The page a query signal landed on, as the line under its query: path only
+ * when the page is a safe absolute URL (every page is on the project's own
+ * site, so the host repeats on every row), else the stored value verbatim.
+ * A page signal's subject already IS the page, so it has no second line.
+ */
+export function signalPageLine(signal: DemandSignal): string | null {
+  if (signalTargetKind(signal) === 'Page') return null;
+  const page = signalPage(signal);
+  if (!page) return null;
+  const parsed = parseAbsoluteHttpUrl(page);
+  return parsed ? `${parsed.pathname}${parsed.search}` : page;
 }
 
 export type ActionGroup = { actionId: string; page: string | null; signalTypes: string[] };

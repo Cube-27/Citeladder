@@ -87,6 +87,23 @@ describe('address store', () => {
 
     unsubscribe();
   });
+
+  it('notifies a new subscriber of a write back to an address it moved away from unwatched', () => {
+    window.history.replaceState(null, '', '/demand');
+    const first = subscribeToUrlState(() => undefined);
+    setUrlParams({ view: 'trends' });
+    first();
+
+    // Unwatched, the address moves back without a notice.
+    window.history.replaceState(null, '', '/demand');
+    const seen: string[] = [];
+    const second = subscribeToUrlState(() => seen.push(readUrlState()));
+
+    setUrlParams({ view: 'trends' });
+    expect(seen).toEqual([expect.stringContaining('view=trends')]);
+
+    second();
+  });
 });
 
 describe('router registration', () => {
