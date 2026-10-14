@@ -147,12 +147,12 @@ function SearchDemandView({
   if (filteredSignals.length > 0) {
     signalsFeed = (
       <Stack gap="compact">
-        <SignalLegend signals={filteredSignals.map(({ signal }) => signal)} />
         <DemandSignalTable
           rows={filteredSignals}
           filterKey={`${activeTab}\u0000${searchQuery.trim().toLowerCase()}`}
           onInspect={handleInspect}
         />
+        <SignalLegend signals={filteredSignals.map(({ signal }) => signal)} />
       </Stack>
     );
   } else if (snapshot.signals.length === 0) {
@@ -178,36 +178,6 @@ function SearchDemandView({
           <RefreshCw className="size-3.5" aria-hidden />
           Recompute signals
         </Button>
-      }
-      controls={
-        <FilterRow
-          search={
-            <SearchField
-              value={searchQuery}
-              onValueChange={setSearchQuery}
-              placeholder="Filter queries or pages…"
-              aria-label="Filter queries or pages"
-            />
-          }
-        >
-          {FILTER_TABS.map(({ tab, label }) => {
-            const count = tabCounts.get(tab) ?? 0;
-            // The optional cohorts stay hidden while empty, but a tab the user
-            // has already selected must remain visible to switch away from.
-            const optional = tab === 'trends' || tab === 'branded';
-            if (optional && count === 0 && activeTab !== tab) return null;
-            return (
-              <FilterChip
-                key={tab}
-                active={activeTab === tab}
-                onClick={() => setActiveTab(tab)}
-                count={count}
-              >
-                {label}
-              </FilterChip>
-            );
-          })}
-        </FilterRow>
       }
     >
       <Stack gap="workspace">
@@ -274,6 +244,35 @@ function SearchDemandView({
 
         <section aria-labelledby="demand-signals" className="grid gap-3">
           <EditorialSectionHeader headingId="demand-signals" title="Signals" />
+          {/* The filters sit on the table they narrow, not at the page top. */}
+          <FilterRow
+            search={
+              <SearchField
+                value={searchQuery}
+                onValueChange={setSearchQuery}
+                placeholder="Filter queries or pages…"
+                aria-label="Filter queries or pages"
+              />
+            }
+          >
+            {FILTER_TABS.map(({ tab, label }) => {
+              const count = tabCounts.get(tab) ?? 0;
+              // The optional cohorts stay hidden while empty, but a tab the user
+              // has already selected must remain visible to switch away from.
+              const optional = tab === 'trends' || tab === 'branded';
+              if (optional && count === 0 && activeTab !== tab) return null;
+              return (
+                <FilterChip
+                  key={tab}
+                  active={activeTab === tab}
+                  onClick={() => setActiveTab(tab)}
+                  count={count}
+                >
+                  {label}
+                </FilterChip>
+              );
+            })}
+          </FilterRow>
           {signalsFeed}
         </section>
 

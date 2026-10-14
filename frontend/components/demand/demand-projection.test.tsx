@@ -209,6 +209,11 @@ describe('DemandProjection', () => {
     expect(screen.queryByText('Privacy-filtered queries may be omitted.')).not.toBeInTheDocument();
 
     // One flat table: a row per signal, its landing page under the query.
+    // The filters sit on the table they narrow, not at the top of the page.
+    const signals = screen.getByRole('region', { name: 'Signals' });
+    expect(within(signals).getByLabelText('Filter queries or pages')).toBeVisible();
+    expect(within(signals).getByRole('button', { name: /^CTR gaps/i })).toBeVisible();
+
     const table = signalTable();
     expect(signalRows().map((row) => row.textContent)).toEqual([
       expect.stringMatching(/^1ai marketing tools\/ai-toolsStriking distance25012/),
