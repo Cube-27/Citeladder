@@ -30,7 +30,7 @@ const INSTRUCTIONS = [
 ].join(' ');
 const toolNames = new Set(tools.map((tool) => tool.name));
 const listedTools = tools.map((tool) =>
-  presentationTools.has(tool.name) ? { ...tool, _meta: appToolMetadata(tool.name) } : tool,
+  presentationTools.has(tool.name) ? { ...tool, _meta: appToolMetadata } : tool,
 );
 const listedWithChanges = [...listedTools, ...writeTools];
 const CAPABILITIES = { tools: {}, resources: {}, prompts: {} };
@@ -261,7 +261,7 @@ async function callTool(call: McpCall): Promise<MethodResult> {
       content: [{ type: 'text', text: JSON.stringify(value) }],
       structuredContent: value,
       isError: false,
-      ...(presentationTools.has(name) ? { _meta: appToolMetadata(name) } : {}),
+      ...(presentationTools.has(name) ? { _meta: appToolMetadata } : {}),
     };
   } catch (error) {
     return toolFailure(error, name, write);

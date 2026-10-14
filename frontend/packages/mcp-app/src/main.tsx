@@ -1,7 +1,7 @@
 import { createRoot } from 'react-dom/client';
 import { App } from '@modelcontextprotocol/ext-apps';
 import { Analytics } from './analytics';
-import { createController, deepLinkSelection } from './controller';
+import { createController } from './controller';
 import { appPolicy } from './config';
 import './analytics.css';
 
@@ -38,15 +38,8 @@ const controller = createController({
     });
   },
 });
-let deepLinkUrl: string | undefined;
 const hostContext = (context: Record<string, unknown>) => {
   document.documentElement.dataset.theme = context.theme === 'dark' ? 'dark' : 'light';
-  const selection = deepLinkSelection(context['openai/deepLink']);
-  const key = JSON.stringify(selection);
-  if (selection && key !== deepLinkUrl) {
-    deepLinkUrl = key;
-    void controller.select(selection);
-  }
 };
 app.ontoolresult = (result) => {
   if (result.isError) controller.failHostRead();

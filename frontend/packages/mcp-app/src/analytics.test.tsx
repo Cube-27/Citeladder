@@ -2,7 +2,7 @@ import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { Analytics } from './analytics';
-import { createController, deepLinkSelection } from './controller';
+import { createController } from './controller';
 import { appPolicy } from './config';
 
 const project = '11111111-1111-4111-8111-111111111111';
@@ -517,7 +517,7 @@ describe('CiteLadder MCP App', () => {
     await user.click(screen.getByRole('button', { name: 'Refresh connection' }));
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
-  it('uses concrete source drill-down IDs and validates untrusted model/deep-link selections', async () => {
+  it('uses concrete source drill-down IDs and validates untrusted model selections', async () => {
     const call = vi.fn(async () => ({ items: [] }));
     const controller = createController({ call, context: vi.fn(async () => undefined) });
     controller.receive({
@@ -529,21 +529,6 @@ describe('CiteLadder MCP App', () => {
       'read_visibility_results',
       expect.objectContaining({ audit_id: audit, url: 'https://publisher.example/a' }),
     );
-    expect(
-      deepLinkSelection({ url: `/analytics?project_id=${project}&view=sources&audit_id=${audit}` })
-        ?.audit_id,
-    ).toBe(audit);
-    expect(deepLinkSelection({ url: `//evil.example/analytics?project_id=${project}` })).toBeNull();
-    expect(deepLinkSelection({ url: `/analytics?project_id=${project}&total=100` })).toBeNull();
-    expect(
-      deepLinkSelection({
-        url: `/analytics?project_id=${project}&view=trends&retrieval_enabled=false&limit=25`,
-      }),
-    ).toMatchObject({ project_id: project, view: 'trends', retrieval_enabled: false, limit: 25 });
-    expect(
-      deepLinkSelection({ url: `/analytics?project_id=${project}&retrieval_enabled=yes` }),
-    ).toBeNull();
-    expect(deepLinkSelection({ url: `/analytics?project_id=${project}&limit=25junk` })).toBeNull();
     act(() =>
       controller.receive({ ...result(), links: { ...links, application: 'javascript:alert(1)' } }),
     );
