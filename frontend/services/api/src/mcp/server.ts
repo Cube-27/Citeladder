@@ -376,6 +376,23 @@ async function dispatchMethod(call: McpCall): Promise<MethodResult> {
       return c.json(rpcError(message.id, -32601, 'Method not found'), modern ? 404 : 200);
   }
 }
+/** 2026-07-28 requires `ttlMs` and `cacheScope` on these results (CacheableResult). */
+function cacheHint(method: string, params: Record<string, unknown>) {
+  const { catalogue, grant, project } = mcpPolicy.result_cache;
+  switch (method) {
+    case 'server/discover':
+    case 'resources/list':
+    case 'resources/templates/list':
+    case 'prompts/list':
+      return catalogue;
+    case 'tools/list':
+      return grant;
+    case 'resources/read':
+      return params.uri === appResource.uri ? catalogue : project;
+    default:
+      return {};
+  }
+}
 async function handleMcpRequest(
   c: McpContext,
   db: Database,
@@ -407,7 +424,9 @@ async function handleMcpRequest(
   return c.json({
     jsonrpc: '2.0',
     id: message.id,
-    result: modern ? { ...result, resultType: 'complete' } : result,
+    result: modern
+      ? { ...result, resultType: 'complete', ...cacheHint(message.method, params) }
+      : result,
   });
 }
 

@@ -58,6 +58,13 @@ export const mcp = {
     write_scope: 'citeladder:write',
     scopes_supported: ['citeladder:read', 'citeladder:write'],
     server_version: '2.0.0',
+    // 2026-07-28 CacheableResult hints. Catalogue documents are the same for
+    // every caller; the tool list follows the grant; project reads are live.
+    result_cache: {
+      catalogue: { ttlMs: 3_600_000, cacheScope: 'public' },
+      grant: { ttlMs: 3_600_000, cacheScope: 'private' },
+      project: { ttlMs: 0, cacheScope: 'private' },
+    },
     documentation_url: 'https://docs.citeladder.com/mcp/',
     // Fixed production pages, like documentation_url: consent links them from every
     // environment, including local ones without a website origin.
