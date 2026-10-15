@@ -116,11 +116,9 @@ export function seedIntegrationClient(metricDate: string) {
     {},
     {
       sleep: () => Promise.resolve(),
-      // The executor turns a thrown unexpected request into a rejection, as fetch would.
+      // A thrown unexpected request becomes a rejection, as fetch would.
       fetch: (input, init) =>
-        new Promise<Response>((resolve) => {
-          resolve(seedIntegrationResponse(metricDate, input, init));
-        }),
+        Promise.resolve().then(() => seedIntegrationResponse(metricDate, input, init)),
     },
   );
 }

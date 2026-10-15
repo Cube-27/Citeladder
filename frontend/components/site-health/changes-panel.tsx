@@ -80,15 +80,21 @@ function ChangeValue({ value, depth = 0 }: Readonly<{ value: unknown; depth?: nu
     );
   }
   if (typeof value === 'object') return <ChangeRecord value={value} depth={depth} />;
-  // Persisted evidence is JSON, so anything else is a scalar.
-  if (
-    typeof value === 'string' ||
-    typeof value === 'number' ||
-    typeof value === 'boolean' ||
-    typeof value === 'bigint'
-  )
-    return <>{boundedText(String(value))}</>;
-  return <>Not present</>;
+  const text = scalarText(value);
+  return text === null ? <>Not present</> : <>{boundedText(text)}</>;
+}
+
+/** Persisted evidence is JSON, so anything that is not a container is a scalar. */
+function scalarText(value: unknown): string | null {
+  switch (typeof value) {
+    case 'string':
+    case 'number':
+    case 'boolean':
+    case 'bigint':
+      return String(value);
+    default:
+      return null;
+  }
 }
 
 const CONTENT_FIELD_ORDER = [

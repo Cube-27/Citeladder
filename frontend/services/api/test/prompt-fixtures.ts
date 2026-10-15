@@ -245,12 +245,9 @@ export function echoDependencies({
     }));
     return Response.json({ choices: [{ message: { content: JSON.stringify({ prompts }) } }] });
   };
-  // The executor turns a throw into a rejection, as a real fetch would.
-  const fetch = vi.fn<typeof globalThis.fetch>(
-    (_url, init) =>
-      new Promise((resolve) => {
-        resolve(answer(init));
-      }),
+  // A throw becomes a rejection, as a real fetch would.
+  const fetch = vi.fn<typeof globalThis.fetch>((_url, init) =>
+    Promise.resolve().then(() => answer(init)),
   );
   const gateway = createModelGateway(
     {
