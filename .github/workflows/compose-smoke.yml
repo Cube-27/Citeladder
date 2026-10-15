@@ -140,13 +140,15 @@ jobs:
           done
           node scripts/frontend-ingress-smoke.mjs http://127.0.0.1:3000 http://127.0.0.1:3001
           # The runner loop is the only executor: one tick must complete on a clean database.
+          # grep reads the whole log (no -q): an early exit closes the pipe, `compose logs`
+          # fails with 255, and pipefail turns a match into a failed step.
           for _ in $(seq 1 45); do
-            if "${compose[@]}" logs --no-color runner | grep -q '"runner_completed"'; then
+            if "${compose[@]}" logs --no-color runner | grep '"runner_completed"' >/dev/null; then
               break
             fi
             sleep 2
           done
-          "${compose[@]}" logs --no-color runner | grep -q '"runner_completed"'
+          "${compose[@]}" logs --no-color runner | grep '"runner_completed"' >/dev/null
 
           "${compose[@]}" down --volumes --remove-orphans
           trap - EXIT
