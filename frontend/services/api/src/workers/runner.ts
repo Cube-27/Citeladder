@@ -33,6 +33,7 @@ import { cleanupMcpProtocol } from '../mcp/maintenance.ts';
 import { pruneUsageWindows } from '../abuse/usage.ts';
 import { purgeApiIdempotency } from '../public-api/idempotency.ts';
 import { purgeExpiredTrialProjects } from '../projects/trial-purge.ts';
+import { notifyVerifiedSignups } from '../auth/signup-notifications.ts';
 import { DRAIN_LOCK } from '../config/execution.ts';
 import { maintainLease } from '../queue/heartbeat.ts';
 
@@ -315,6 +316,10 @@ export async function runnerOwners(db: Database, config: ServiceConfig) {
       {
         name: 'trial-data-purge',
         run: (canAdmit) => purgeExpiredTrialProjects(db, new Date(), canAdmit),
+      },
+      {
+        name: 'signup-notices',
+        run: (canAdmit) => notifyVerifiedSignups(db, config, new Date(), canAdmit),
       },
       { name: 'audit-maintenance', run: (canAdmit) => maintenance.runOnce(new Date(), canAdmit) },
       {

@@ -8,6 +8,7 @@ type SecurityEvent =
   | 'account.delete'
   | 'auth.challenge_issued'
   | 'auth.email_verified'
+  | 'auth.signup_notified'
   | 'auth.password_reset'
   | 'auth.password_changed'
   | 'acquisition.control'
