@@ -15,7 +15,7 @@ import type { ReactNode } from 'react';
  * segments — so ordinary prose containing a slash, like "and/or", is left
  * alone.
  */
-const INLINE_TOKEN_RE = /https?:\/\/\S+|\/[a-z][a-z0-9-]*(?:\/[a-z0-9-]+)*/g;
+const INLINE_TOKEN_RE = /https?:\/\/\S+|\/[a-z][a-z0-9-]*(?:\/[a-z0-9-]+)*/g; // NOSONAR -- each segment starts at a literal '/', which no class repeats, so matching is linear
 
 /** Sentence punctuation straight after a URL belongs to the prose, not the href. */
 const TRAILING_PUNCT_RE = /[.,;:!?)]+$/;

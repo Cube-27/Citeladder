@@ -94,14 +94,9 @@ export function billingDetailsError(
  * Mirrors `createRequestId` in `client.ts`. The key is a per-account
  * uniqueness token, not a secret or a capability — it authorizes nothing on
  * its own, and the backend scopes every lookup to the authenticated account.
- * `crypto.randomUUID` is the real path in every supported browser; the suffix
- * fallback only keeps a non-crypto test environment from throwing.
  */
 export function createIdempotencyKey(): string {
-  return (
-    globalThis.crypto?.randomUUID?.() ??
-    `intent-${Date.now()}-${Math.random().toString(16).slice(2)}`
-  );
+  return globalThis.crypto.randomUUID();
 }
 
 export type SubscriptionCheckoutInput = {

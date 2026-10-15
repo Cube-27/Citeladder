@@ -117,10 +117,14 @@ export function tokenizeCsv(raw: string): string[][] {
   const text = raw.codePointAt(0) === 0xfeff ? raw.slice(1) : raw;
   const state: CsvState = { rows: [], field: '', row: [], inQuotes: false };
 
-  for (let index = 0; index < text.length; index += 1) {
-    index = state.inQuotes
+  // Each consumer returns the last index it used, which may skip a paired
+  // character (an escaped quote or the \n of \r\n).
+  let index = 0;
+  while (index < text.length) {
+    const consumed = state.inQuotes
       ? consumeQuotedCharacter(state, text, index)
       : consumePlainCharacter(state, text, index);
+    index = consumed + 1;
   }
   if (state.field.length > 0 || state.row.length > 0) pushRow(state);
   return state.rows.filter((cells) => cells.some((cell) => cell.trim() !== ''));

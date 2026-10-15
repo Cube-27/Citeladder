@@ -42,6 +42,8 @@ export function Drawer({
 }>) {
   const returnFocusRef = useRef<HTMLElement | null>(null);
   const wasOpenRef = useRef(false);
+  // A labelled body is a named region; an unlabelled one stays a plain box.
+  const Body = bodyLabel ? 'section' : 'div';
 
   useInsertionEffect(() => {
     if (open && !wasOpenRef.current) {
@@ -118,8 +120,7 @@ export function Drawer({
               </DialogPrimitive.Close>
             </header>
           )}
-          <div
-            role={bodyLabel ? 'region' : undefined}
+          <Body
             aria-label={bodyLabel}
             className={cn(
               'min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-[var(--modal-padding)] py-4',
@@ -127,7 +128,7 @@ export function Drawer({
             )}
           >
             {children}
-          </div>
+          </Body>
           {footer ? (
             <footer className="border-border border-t px-[var(--modal-padding)] pt-4 pb-[var(--modal-padding)]">
               {footer}

@@ -274,6 +274,7 @@ export function SearchIntelligencePage() {
                 onSelect={setComparison}
                 onExpand={() => openReview('increase_depth')}
                 action={(targetOrigin) => (
+                  // NOSONAR -- a render prop the collection calls, never mounted as a component type
                   <CollectionAction
                     tab={value}
                     datasets={datasets}

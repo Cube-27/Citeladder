@@ -153,7 +153,7 @@ function joinsWithSpace(previous: string, block: string, content: string): boole
  */
 export function normalizeEvidenceMarkdown(markdown: string): string {
   const blocks = markdown
-    .replace(/\r\n/g, '\n')
+    .replaceAll('\r\n', '\n')
     .split(/\n{2,}/)
     .map((block) => block.trimEnd())
     .filter((block) => block.trim());

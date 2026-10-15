@@ -57,6 +57,10 @@ function failStorageWrites() {
  * a future analytics loader stays off.
  */
 describe('CookieBanner', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
   it('lets a returning visitor reopen preferences from the footer and withdraw consent', async () => {
     const user = userEvent.setup();
     writeConsent('accepted');
@@ -72,9 +76,6 @@ describe('CookieBanner', () => {
     expect(hasAnalyticsConsent()).toBe(false);
     expect(screen.queryByRole('region', { name: 'Cookie consent' })).not.toBeInTheDocument();
     footer.remove();
-  });
-  beforeEach(() => {
-    window.localStorage.clear();
   });
 
   it('asks an undecided visitor, offering reject and accept equally', async () => {

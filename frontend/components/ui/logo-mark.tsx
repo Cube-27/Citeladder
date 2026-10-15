@@ -50,7 +50,7 @@ export function LogoMark({
       className={cn('text-brand-ink inline-flex shrink-0 items-center select-none', className)}
       aria-hidden={alt ? undefined : 'true'}
       aria-label={alt || undefined}
-      role={alt ? 'img' : undefined}
+      role={alt ? 'img' : undefined} // NOSONAR -- an inline SVG painted with currentColor theme tokens, which an <img> cannot inherit
     >
       <svg
         viewBox={`0 0 ${viewWidth} 100`}

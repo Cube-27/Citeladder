@@ -378,7 +378,7 @@ export function TrendChart({
 
   return (
     <svg
-      role={data.some((entry) => entry.href) ? 'group' : 'img'}
+      role={data.some((entry) => entry.href) ? 'group' : 'img'} // NOSONAR -- an <svg> chart has no native grouping tag; fieldset/details cannot wrap SVG content
       aria-label={ariaLabel}
       width={width}
       height={height}
@@ -416,9 +416,10 @@ export function TrendChart({
           </path>
         )),
       )}
-      {lineSegments.map((segment, index) => (
+      {lineSegments.map((segment) => (
         <path
-          key={`line-${index}`}
+          // Runs never overlap, so each one's starting x identifies it.
+          key={`line-${segment[0]?.x}`}
           d={toLinePath(segment)}
           fill="none"
           strokeWidth={2}

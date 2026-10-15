@@ -39,7 +39,7 @@ type AgentPanelValue = {
 const AgentPanelContext = createContext<AgentPanelValue | null>(null);
 
 export function AgentPanelProvider({ children }: Readonly<{ children: ReactNode }>) {
-  const [open, setOpenState] = useState(false);
+  const [openState, setOpenState] = useState(false);
   const [seed, setSeed] = useState<Seed | null>(null);
   // Snapshotted on open: a screen refetch while the panel is open must not
   // reset the draft the reader is writing.
@@ -49,11 +49,11 @@ export function AgentPanelProvider({ children }: Readonly<{ children: ReactNode 
   });
   const setOpen = useCallback(
     (next: boolean) => {
-      if (next && !open)
+      if (next && !openState)
         setOpenedWith((current) => ({ seed: seed?.handoff ?? null, count: current.count + 1 }));
       setOpenState(next);
     },
-    [open, seed],
+    [openState, seed],
   );
   const [chat, setChat] = useState<AgentPanelValue['chat']>(null);
   const publishSeed = useCallback((next: Seed) => setSeed(next), []);
@@ -65,7 +65,7 @@ export function AgentPanelProvider({ children }: Readonly<{ children: ReactNode 
   );
   const value = useMemo(
     () => ({
-      open,
+      open: openState,
       setOpen,
       seed: openedWith.seed,
       openCount: openedWith.count,
@@ -74,7 +74,7 @@ export function AgentPanelProvider({ children }: Readonly<{ children: ReactNode 
       publishSeed,
       withdrawSeed,
     }),
-    [open, setOpen, openedWith, chat, publishSeed, withdrawSeed],
+    [openState, setOpen, openedWith, chat, publishSeed, withdrawSeed],
   );
   return <AgentPanelContext.Provider value={value}>{children}</AgentPanelContext.Provider>;
 }

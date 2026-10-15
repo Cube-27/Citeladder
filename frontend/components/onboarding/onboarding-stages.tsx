@@ -320,10 +320,16 @@ export function discoveryResults(
   >['discovery'],
 ): string[] {
   if (!discovery) return [];
-  const website = String(discovery.input_data.website_url ?? '')
-    .replace(/^https?:\/\//, '')
-    .replace(/\/+$/, '');
+  const website = withoutTrailingSlashes(
+    String(discovery.input_data.website_url ?? '').replace(/^https?:\/\//, ''),
+  );
   return [website, ...discovery.competitors.map((competitor) => competitor.name)].filter(Boolean);
+}
+
+function withoutTrailingSlashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value[end - 1] === '/') end -= 1;
+  return value.slice(0, end);
 }
 
 function CompletionStateAlert({ failed }: Readonly<{ failed: boolean }>) {

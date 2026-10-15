@@ -65,7 +65,9 @@ function ChangeValue({ value, depth = 0 }: Readonly<{ value: unknown; depth?: nu
     return (
       <ul className="grid gap-1 pl-3">
         {value.slice(0, CHANGE_EVIDENCE_LIMIT).map((item, index) => (
-          <li key={index}>
+          <li
+            key={index} // NOSONAR -- an immutable evidence array that never reorders and may repeat values; position is the identity
+          >
             <ChangeValue value={item} depth={depth + 1} />
           </li>
         ))}
@@ -78,7 +80,15 @@ function ChangeValue({ value, depth = 0 }: Readonly<{ value: unknown; depth?: nu
     );
   }
   if (typeof value === 'object') return <ChangeRecord value={value} depth={depth} />;
-  return <>{boundedText(String(value))}</>;
+  // Persisted evidence is JSON, so anything else is a scalar.
+  if (
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean' ||
+    typeof value === 'bigint'
+  )
+    return <>{boundedText(String(value))}</>;
+  return <>Not present</>;
 }
 
 const CONTENT_FIELD_ORDER = [

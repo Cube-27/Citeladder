@@ -205,11 +205,8 @@ function mountDesktopDropdowns(nav: HTMLElement, links: HTMLElement) {
     const previous = openDrop;
     const switching = previous !== null && previous !== key;
     entering = previous === null;
-    slideFrom = switching
-      ? order.indexOf(previous) < order.indexOf(key)
-        ? 'left'
-        : 'right'
-      : null;
+    slideFrom = null;
+    if (switching) slideFrom = order.indexOf(previous) < order.indexOf(key) ? 'left' : 'right';
     // A handed-over panel slides out from its own place while its neighbour
     // slides in; closing from the bar folds up where the panel already is.
     closingLeft = panelLeft;

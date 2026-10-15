@@ -131,7 +131,10 @@ function StateRows({
         {Array.from({ length: state.rows }, (_, row) => (
           <TableRow key={`loading-${row}`}>
             {columns.map((columnClass, cell) => (
-              <TableCell key={cell} className={columnClass || undefined}>
+              <TableCell
+                key={cell} // NOSONAR -- placeholder cells of a fixed column layout; the column position is the identity
+                className={columnClass || undefined}
+              >
                 <Skeleton className="h-4 w-full" />
               </TableCell>
             ))}
@@ -322,6 +325,12 @@ function MentionedChips({
   );
 }
 
+function standingTone(standing: SourceItem['standing']) {
+  if (standing === 'gap') return 'warning';
+  if (standing === 'listed') return 'success';
+  return null;
+}
+
 /**
  * Where the business stands on the page, and the Action to get listed on it
  * when one exists. Only a read page carries a verdict.
@@ -331,7 +340,7 @@ function PageStandingCell({
   actionId,
 }: Readonly<{ standing: SourceItem['standing']; actionId: string | null }>) {
   const label = standingLabel(standing);
-  const tone = standing === 'gap' ? 'warning' : standing === 'listed' ? 'success' : null;
+  const tone = standingTone(standing);
   return (
     <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
       {tone ? (

@@ -148,7 +148,11 @@ export function TableFillerRows({
   spacer,
 }: Readonly<{ count: number; colSpan: number; spacer?: ReactNode }>) {
   return Array.from({ length: Math.max(0, count) }, (_, index) => (
-    <tr key={index} aria-hidden="true" className="h-[var(--table-row-height)]">
+    <tr
+      key={index}
+      aria-hidden="true" // NOSONAR -- a blank filler row with no tabIndex or controls; nothing in it is focusable
+      className="h-[var(--table-row-height)]"
+    >
       <TableCell colSpan={colSpan}>{spacer}</TableCell>
     </tr>
   ));

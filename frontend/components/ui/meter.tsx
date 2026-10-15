@@ -79,7 +79,7 @@ export function Meter({
 
   return (
     <div
-      role={kind === 'progress' ? 'progressbar' : 'meter'}
+      role={kind === 'progress' ? 'progressbar' : 'meter'} // NOSONAR -- a native <meter>/<progress> cannot carry the token fill, sweep transition or null-value state
       aria-label={label}
       aria-valuemin={0}
       aria-valuemax={max}
