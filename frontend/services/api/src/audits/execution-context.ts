@@ -58,6 +58,33 @@ function assertRouteMatchesCatalog(task: AuditTask, route: RouteSnapshot) {
   )
     throw new ProviderError(providerPolicy.errors.invalid_surface);
 }
+/** Platform routes need their own open reservation; BYOK routes must carry no funding. */
+async function assertFundingHold(
+  db: Database,
+  task: AuditTask,
+  auditId: string,
+  route: RouteSnapshot,
+) {
+  if (route.credential_source !== 'platform') {
+    if (route.funding) throw unavailable();
+    return;
+  }
+  if (!route.funding || route.funding.reservation_id !== route.reservation_id) throw unavailable();
+  const hold = await db
+    .selectFrom('consumable_ledger')
+    .select(sql<string>`coalesce(${openReservedUnits},0)`.as('remaining'))
+    .select(sql<boolean>`bool_or(entry_kind = 'reservation')`.as('reserved'))
+    .where('workspace_id', '=', task.workspace_id)
+    .where('billing_account_id', '=', route.funding.funding_account_id)
+    .where('audit_id', '=', auditId)
+    .where('subject_kind', '=', 'audit')
+    .where('subject_id', '=', task.id)
+    .where('reservation_id', '=', route.funding.reservation_id)
+    .where('capability_key', '=', policy.entitlements.prompt_runs)
+    .executeTakeFirstOrThrow();
+  if (!hold.reserved || (!task.provider_submission_ref && BigInt(hold.remaining) < 1n))
+    throw unavailable();
+}
 async function loadActiveConnection(db: Database, route: RouteSnapshot, task: AuditTask, at: Date) {
   const connection = await db
     .selectFrom('provider_connections as c')
@@ -111,24 +138,7 @@ export async function loadExecutionContext(
         task.provider_credential_revision !== connection.credential_revision)
     )
       throw new ProviderError('connection_changed');
-    if (route.credential_source === 'platform') {
-      if (!route.funding || route.funding.reservation_id !== route.reservation_id)
-        throw unavailable();
-      const hold = await trx
-        .selectFrom('consumable_ledger')
-        .select(sql<string>`coalesce(${openReservedUnits},0)`.as('remaining'))
-        .select(sql<boolean>`bool_or(entry_kind = 'reservation')`.as('reserved'))
-        .where('workspace_id', '=', task.workspace_id)
-        .where('billing_account_id', '=', route.funding.funding_account_id)
-        .where('audit_id', '=', audit.id)
-        .where('subject_kind', '=', 'audit')
-        .where('subject_id', '=', task.id)
-        .where('reservation_id', '=', route.funding.reservation_id)
-        .where('capability_key', '=', policy.entitlements.prompt_runs)
-        .executeTakeFirstOrThrow();
-      if (!hold.reserved || (!task.provider_submission_ref && BigInt(hold.remaining) < 1n))
-        throw unavailable();
-    } else if (route.funding) throw unavailable();
+    await assertFundingHold(trx, task, audit.id, route);
     let secret: string;
     try {
       secret =

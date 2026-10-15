@@ -8,6 +8,7 @@ import { epochMicros, parseDatetime } from '../http/datetimes.ts';
 import { parseUuid } from '../http/uuid.ts';
 import type { QueueTask } from '../queue/task-queue.ts';
 import { record } from '../db/json.ts';
+import { scalarText } from '../text-order.ts';
 import { taskProject, type Executor } from '../workers/executor.ts';
 import {
   MAX_WINDOW_DAYS,
@@ -21,7 +22,7 @@ import { buildVerificationResult, type Declaration } from './verification-result
 const p = policy.opportunity.opportunities;
 async function verificationSource(db: Database, task: QueueTask, project: string): Promise<Source> {
   const payload = record(task.payload);
-  const kind = String(payload.trigger_kind || '');
+  const kind = scalarText(payload.trigger_kind || '');
   const id = parseUuid(payload.trigger_id);
   if (!id) throw new Error('Implementation verification trigger is invalid');
   const scope = new WorkspaceScope(task.workspace_id);

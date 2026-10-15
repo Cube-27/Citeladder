@@ -200,7 +200,7 @@ function RunsContent({
                 className="bg-info inline-block size-1.5 animate-pulse rounded-full"
                 aria-hidden
               />
-              polling every 3s while a run is active
+              {'polling every 3s while a run is active'}
             </span>
           ) : null
         }

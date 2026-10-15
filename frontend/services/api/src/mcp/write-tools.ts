@@ -28,6 +28,7 @@ import {
 import { createSchedule } from '../commands/schedules.ts';
 import { configEnvironment, policy, type ServiceConfig } from '../config.ts';
 import type { Database } from '../db/database.ts';
+import { plainJson } from '../db/json.ts';
 import { operatorTransaction } from '../db/operator-transaction.ts';
 import { promptOccupancy } from '../entitlements/occupancy.ts';
 import { isNonEmpty } from '../lists.ts';
@@ -541,5 +542,5 @@ export async function dispatchWrite(
   const definition: Definition<z.ZodObject> = writeDefinitions[name];
   const parsed = definition.schema.safeParse(input);
   if (!parsed.success) throw new McpInputError(argumentProblem(parsed.error));
-  return output.parse(JSON.parse(JSON.stringify(await definition.run(context, parsed.data))));
+  return output.parse(plainJson(await definition.run(context, parsed.data)));
 }

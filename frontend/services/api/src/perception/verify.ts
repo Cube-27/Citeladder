@@ -35,10 +35,12 @@ function sharedByTopic(facts: readonly VerifyFact[], topics: readonly FactTopic[
   const queues = new Map<FactTopic, VerifyFact[]>(topics.map((topic) => [topic, []]));
   for (const fact of facts) queues.get(fact.topic)?.push(fact);
   const picked: VerifyFact[] = [];
-  for (let round = 0; picked.length < max; round++) {
+  let round = 0;
+  while (picked.length < max) {
     const next = [...queues.values()].flatMap((queue) => queue[round] ?? []);
     if (!next.length) break;
     picked.push(...next.slice(0, max - picked.length));
+    round += 1;
   }
   return picked;
 }

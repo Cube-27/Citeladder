@@ -4,6 +4,7 @@
  * replayed transcript is byte-identical; the OpenAI adapter translates them.
  */
 import { z } from 'zod';
+import { plainJson } from '../db/json.ts';
 
 export type Json = z.infer<ReturnType<typeof z.json>>;
 
@@ -80,7 +81,7 @@ export function conversationInputBytes(request: ConversationRequest) {
 export const blocksSchema = z.array(z.object({ type: z.string() }).catchall(z.json()));
 /** Provider content as plain JSON blocks; anything else is an unreadable answer. */
 export function parseBlocks(value: unknown): ConversationBlock[] {
-  return blocksSchema.parse(JSON.parse(JSON.stringify(value)));
+  return blocksSchema.parse(plainJson(value));
 }
 /** The answer text of a block list; blocks that are separate passages need a `separator`. */
 export function blockText(blocks: readonly ConversationBlock[], separator = '') {

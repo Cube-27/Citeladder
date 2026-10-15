@@ -194,6 +194,45 @@ async function insertFailureArtifact(
     })
     .execute();
 }
+type FailureOptions = {
+  preCall?: boolean;
+  surface?: boolean;
+  context?: ExecutionContext;
+  at?: Date;
+  recordAttempt?: boolean;
+  scraperFailure?: { outcome: string; raw?: unknown };
+  paidSurface?: boolean;
+  evidence?: (db: Database, task: AuditTask, audit: Selectable<Audits>) => Promise<void>;
+};
+/** Pre-call rejections and unpaid surface polls never spend an attempt. */
+function spendsAttempt(options: FailureOptions): boolean {
+  return !(options.preCall || (options.surface && !options.paidSurface));
+}
+function failureMetadata(
+  providerMetadata: unknown,
+  scraperFailure: FailureOptions['scraperFailure'],
+): Record<string, unknown> {
+  return {
+    ...record(providerMetadata),
+    ...(scraperFailure
+      ? { scraper_outcome: scraperFailure.outcome, raw_response: scraperFailure.raw ?? {} }
+      : {}),
+  };
+}
+async function markTaskFailed(db: Database, task: AuditTask, at: Date) {
+  await db
+    .updateTable('audit_tasks')
+    .set({
+      status: 'failed',
+      lease_owner: null,
+      lease_expires_at: null,
+      heartbeat_at: null,
+      completed_at: at,
+    })
+    .where('id', '=', task.id)
+    .where('workspace_id', '=', task.workspace_id)
+    .execute();
+}
 /** Pre-call rejection terminalizes the task without inventing a provider attempt or debit. */
 export function persistExecutionFailure(
   db: Database,
@@ -201,36 +240,17 @@ export function persistExecutionFailure(
   owner: string,
   error: ProviderError,
   runtime: AuditRuntime,
-  options: {
-    preCall?: boolean;
-    surface?: boolean;
-    context?: ExecutionContext;
-    at?: Date;
-    recordAttempt?: boolean;
-    scraperFailure?: { outcome: string; raw?: unknown };
-    paidSurface?: boolean;
-    evidence?: (db: Database, task: AuditTask, audit: Selectable<Audits>) => Promise<void>;
-  } = {},
+  options: FailureOptions = {},
 ) {
   const at = options.at ?? new Date();
   return db.transaction().execute(async (trx) => {
     const locked = await ownedAuditTask(trx, claimed, owner);
     if (!locked) return null;
-    const attempt =
-      locked.task.attempt_count +
-      (options.preCall || (options.surface && !options.paidSurface) ? 0 : 1);
+    const attempt = locked.task.attempt_count + (spendsAttempt(options) ? 1 : 0);
     const retry =
       !options.preCall && !options.surface && error.retryable && attempt < locked.task.max_attempts;
     const failureArtifactId = options.scraperFailure ? randomUUID() : null;
-    const metadata: Record<string, unknown> = {
-      ...record(locked.task.provider_metadata),
-      ...(options.scraperFailure
-        ? {
-            scraper_outcome: options.scraperFailure.outcome,
-            raw_response: options.scraperFailure.raw ?? {},
-          }
-        : {}),
-    };
+    const metadata = failureMetadata(locked.task.provider_metadata, options.scraperFailure);
     if (failureArtifactId)
       await insertFailureArtifact(trx, claimed, failureArtifactId, metadata, at);
     const task = await trx
@@ -266,19 +286,7 @@ export function persistExecutionFailure(
         new Date(at.getTime() + retryDelay(runtime, attempt, error.retryAfterSeconds) * 1000),
         at,
       );
-    else
-      await trx
-        .updateTable('audit_tasks')
-        .set({
-          status: 'failed',
-          lease_owner: null,
-          lease_expires_at: null,
-          heartbeat_at: null,
-          completed_at: at,
-        })
-        .where('id', '=', task.id)
-        .where('workspace_id', '=', task.workspace_id)
-        .execute();
+    else await markTaskFailed(trx, task, at);
     await auditEvent(
       trx,
       task.audit_id,

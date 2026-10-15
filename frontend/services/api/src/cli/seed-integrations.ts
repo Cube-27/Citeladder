@@ -94,7 +94,7 @@ export async function seedIntegrations(
       db,
       seedIntegrationClient(metricDate),
       integrationSettings({}),
-      async () => 'recorded-seed-access',
+      () => Promise.resolve('recorded-seed-access'),
       { workspaceId: project.workspaceId, runId: run.sync_run_id },
     );
     await drainSeed(

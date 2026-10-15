@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useReducer, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocation, Link } from 'react-router-dom';
 import { z } from 'zod';
@@ -92,7 +92,9 @@ export function WorkspaceAccessGate({ children }: Readonly<{ children: ReactNode
   } = useProjectContext();
   const location = useLocation();
   const client = useQueryClient();
-  const [, tick] = useState(0);
+  // Re-renders once the access deadline passes, so the expired grant is
+  // re-evaluated against the clock.
+  const [, tick] = useReducer((count: number) => count + 1, 0);
   useAccessLoss(activeWorkspaceId);
   // Accepting an invitation, choosing a workspace and setting up your own never
   // wait on the selected workspace's access; someone with no workspace has none.
@@ -124,7 +126,7 @@ export function WorkspaceAccessGate({ children }: Readonly<{ children: ReactNode
             schedule();
             return;
           }
-          tick((value) => value + 1);
+          tick();
           void refetch();
         },
         Math.max(0, Math.min(2_147_483_647, deadline - Date.now())),

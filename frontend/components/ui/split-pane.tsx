@@ -122,10 +122,10 @@ export function ResizableSplitPane({
       <div id={listId} className={cn('min-w-0', stickyList && stickyPaneClasses)}>
         {list}
       </div>
-      <div
+      <div // NOSONAR -- a focusable WAI-ARIA window splitter: pointer and arrow-key handlers resize it
         // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Native hr cannot expose a value or take keyboard focus for resizing.
         role="separator"
-        tabIndex={0}
+        tabIndex={0} // NOSONAR -- a focusable separator is interactive per the WAI-ARIA window splitter pattern
         aria-orientation="vertical"
         aria-label={separatorLabel}
         aria-controls={listId}

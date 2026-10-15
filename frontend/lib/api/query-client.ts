@@ -84,7 +84,8 @@ export function retainPreviousDataForScope<TData>(
 let appQueryClient: QueryClient | undefined;
 
 export function getAppQueryClient(): QueryClient {
-  return (appQueryClient ??= createAppQueryClient());
+  appQueryClient ??= createAppQueryClient();
+  return appQueryClient;
 }
 
 /** Point the singleton at a caller-owned client. Tests only. */

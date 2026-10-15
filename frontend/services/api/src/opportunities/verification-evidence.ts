@@ -71,7 +71,7 @@ async function siteRuleOutcome(ctx: Context, analysis: SiteAnalysis, check: Chec
         .selectFrom(ctx.db, 'site_rule_evaluations')
         .select(['id', 'outcome'])
         .where('id', 'in', ids)
-        .where('rule_id', '=', String(check.rule_id ?? ''))
+        .where('rule_id', '=', scalarText(check.rule_id ?? ''))
         .executeTakeFirst()
     : undefined;
   if (!rule || !['satisfied', 'missing', 'partial'].includes(rule.outcome))

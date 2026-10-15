@@ -6,6 +6,7 @@ import { performanceDimensionSchema } from '@citeladder/contracts/performance';
 import { policy } from '../config.ts';
 import { crawlLogs } from '../config/crawl-logs.ts';
 import type { Database } from '../db/database.ts';
+import { plainJson } from '../db/json.ts';
 import { PAGE_STATUS_FILTERS } from '../site-health/reads/page-rows.ts';
 import { mcpPolicy } from './config.ts';
 import {
@@ -537,12 +538,13 @@ export const definitions = {
     title: 'Open CiteLadder',
     description: 'Open the CiteLadder project picker.',
     schema: z.strictObject({}),
-    read: async ({ origin }) => ({
-      surface: 'citeladder_analytics',
-      selection: null,
-      evidence: {},
-      links: { application: origin, onboarding: `${origin}/onboarding` },
-    }),
+    read: ({ origin }) =>
+      Promise.resolve({
+        surface: 'citeladder_analytics',
+        selection: null,
+        evidence: {},
+        links: { application: origin, onboarding: `${origin}/onboarding` },
+      }),
   }),
 };
 type ToolName = keyof typeof definitions;
@@ -624,5 +626,5 @@ export async function dispatchTool(
   const call = principalForCall(principal);
   const result = await definition.read({ db, principal: call, origin, maxBytes }, parsed.data);
   // Dates serialize as ISO instants; an invalid persisted projection fails here.
-  return output.parse(JSON.parse(JSON.stringify(result)));
+  return output.parse(plainJson(result));
 }

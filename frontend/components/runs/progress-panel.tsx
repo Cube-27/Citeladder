@@ -146,7 +146,7 @@ function ProgressStatus({ audit, polling }: Readonly<{ audit: Audit; polling: bo
           aria-live="polite"
         >
           <span className="activity-dot bg-info inline-block size-1.5" aria-hidden />
-          Updating…
+          {'Updating…'}
         </span>
       ) : null}
     </div>

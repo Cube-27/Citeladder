@@ -4,8 +4,8 @@ export function readCsvFileText(file: File): Promise<string> {
 
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result ?? ''));
+    reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
     reader.onerror = () => reject(reader.error ?? new Error('Could not read file'));
-    reader.readAsText(file);
+    reader.readAsText(file); // NOSONAR -- the fallback for jsdom, whose File has no text(); browsers take the branch above
   });
 }

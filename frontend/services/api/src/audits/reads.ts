@@ -8,6 +8,7 @@ import { notFound } from '../errors.ts';
 import { modelProvenanceFor, executionFrozenProvenance } from '../analysis/provenance.ts';
 import { engineSnapshots } from '../visibility/runs.ts';
 import { firstOf } from '../lists.ts';
+import { scalarText } from '../text-order.ts';
 
 function auditQuery(db: Database, workspaceId: string) {
   return db
@@ -112,7 +113,9 @@ export async function listExecutions(db: Database, workspaceId: string, auditId:
         routeSnapshot: task.provider_route_snapshot,
         auditConfiguration: audit.configuration,
       }),
-      search_surface_outcome: String(record(task.provider_metadata).search_surface_outcome ?? ''),
+      search_surface_outcome: scalarText(
+        record(task.provider_metadata).search_surface_outcome ?? '',
+      ),
     }),
   );
 }

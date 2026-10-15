@@ -157,7 +157,7 @@ export async function pruneUsageWindows(
   canAdmit: () => boolean = () => true,
 ): Promise<number> {
   if (!canAdmit()) return 0;
-  return db.transaction().execute(async (trx) => {
+  return await db.transaction().execute(async (trx) => {
     const rows = await trx
       .selectFrom('usage_windows')
       .select('id')

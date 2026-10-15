@@ -80,7 +80,7 @@ export async function readOptionalBody<T extends z.ZodType>(
     const offset = position === undefined ? raw.length : Number(position);
     throw new RequestValidationError([
       {
-        loc: [String([...raw.slice(0, offset)].length)],
+        loc: [String(Array.from(raw.slice(0, offset)).length)],
         message: 'Invalid JSON',
         type: 'json_invalid',
       },

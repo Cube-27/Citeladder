@@ -20,8 +20,54 @@ const WEBSITE_CSS = 'apps/app/src/website-type.css';
 const TOKEN_CSS = 'apps/app/src/globals.css';
 const LANDING_CSS = 'apps/marketing/src/pages/landing.css';
 
+const LINE_TERMINATOR = /[\n\r\p{Zl}\p{Zp}]/u;
+const WHITESPACE = /\s/;
+
+function lineTerminatorIndex(text, from) {
+  let index = from;
+  while (index < text.length && !LINE_TERMINATOR.test(text[index])) index += 1;
+  return index;
+}
+
+function whitespaceEnd(text, from) {
+  let index = from;
+  while (index < text.length && WHITESPACE.test(text[index])) index += 1;
+  return index;
+}
+
+/**
+ * Drops `//` comment lines, together with any blank lines before them, in one
+ * linear pass: the same text `/^\s*\/\/.*$/gm` removes, without its backtracking.
+ */
+function withoutLineComments(text) {
+  let kept = '';
+  let copied = 0;
+  for (let lineStart = 0; lineStart <= text.length;) {
+    const contentStart = whitespaceEnd(text, lineStart);
+    const lineEnd = lineTerminatorIndex(text, contentStart);
+    if (text.startsWith('//', contentStart)) {
+      kept += text.slice(copied, lineStart);
+      copied = lineEnd;
+    }
+    lineStart = lineEnd + 1;
+  }
+  return kept + text.slice(copied);
+}
+
 function withoutComments(source) {
-  return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  return withoutLineComments(source.replace(/\/\*[\s\S]*?\*\//g, ''));
+}
+
+const RAW_DURATION = /\b(?:\d+(?:\.\d+)?|\.\d+)m?s\b/;
+const RAW_CUBIC_BEZIER = /cubic-bezier\s*\(/;
+const RAW_EASING_KEYWORD = /(?<![\w-])(?:ease(?:-in(?:-out)?|-out)?|linear)(?![\w-])/;
+const RAW_TIMING_UTILITY = /\b(?:duration|delay)-(?:\d+|\[[\d.]+m?s\])/;
+const RAW_EASING_UTILITY = /\bease-(?:in(?:-out)?|out|linear)\b/;
+const RAW_TRANSITION_SHORTHAND =
+  /\b(?:opacity|transform|color|width|height)\s+(?:\d+(?:\.\d+)?|\.\d+)m?s\b/;
+
+function hasRawTiming(value) {
+  return RAW_DURATION.test(value) || RAW_CUBIC_BEZIER.test(value) || RAW_EASING_KEYWORD.test(value);
 }
 
 /** Only motion declarations and utilities are policy: measured durations are data. */
@@ -31,14 +77,11 @@ export function motionRoleViolations(source, label, ownsProductUi) {
   const declarations = text.matchAll(
     /(?:animation|transition)(?:-(?:duration|delay|timing-function))?\s*:\s*['"]?([^;\n}'"]+)/g,
   );
-  const rawTiming =
-    /\b\d*\.?\d+m?s\b|cubic-bezier\s*\(|(?<![\w-])(?:ease(?:-in(?:-out)?|-out)?|linear)(?![\w-])/;
-  const rawUtility =
-    /\b(?:duration|delay)-(?:\d+|\[[\d.]+m?s\])|\bease-(?:in(?:-out)?|out|linear)\b/;
   if (
-    [...declarations].some(([, value]) => rawTiming.test(value)) ||
-    rawUtility.test(text) ||
-    /\b(?:opacity|transform|color|width|height)\s+\d*\.?\d+m?s\b/.test(text)
+    [...declarations].some(([, value]) => hasRawTiming(value)) ||
+    RAW_TIMING_UTILITY.test(text) ||
+    RAW_EASING_UTILITY.test(text) ||
+    RAW_TRANSITION_SHORTHAND.test(text)
   ) {
     return [`${label}: motion must consume duration and easing roles from globals.css`];
   }
@@ -70,7 +113,7 @@ export function shadowRoleViolations(source, label, ownsProductUi) {
   const shadows = text.matchAll(/\bshadow-(\[[^\]]+\]|[\w-]+)/g);
   const rawDeclaration =
     label.endsWith('.css') &&
-    [...text.matchAll(/box-shadow\s*:\s*([^;]+);/g)].some(
+    [...text.matchAll(/box-shadow\s*:([^;]+);/g)].some(
       ([, value]) => !/^(?:none|var\(--shadow-(?:none|overlay|modal)\))$/.test(value.trim()),
     );
   if (
@@ -257,6 +300,50 @@ function staticBindings(program) {
   return bindings;
 }
 
+function identifierClassFragments(node, bindings, seen) {
+  if (seen.has(node.name)) return [];
+  const initializer = bindings.get(node.name);
+  if (!initializer) return [];
+  return classFragments(initializer, bindings, new Set([...seen, node.name]));
+}
+
+function memberClassFragments(node, bindings, seen) {
+  const target = unwrap(
+    node.object?.type === 'Identifier' ? bindings.get(node.object.name) : node.object,
+  );
+  if (target?.type === 'ObjectExpression') {
+    return target.properties.flatMap((property) =>
+      property.type === 'Property' ? classFragments(property.value, bindings, seen) : [],
+    );
+  }
+  return classFragments(target, bindings, seen);
+}
+
+const childFragments = (children, bindings, seen) =>
+  children.flatMap((child) => classFragments(child, bindings, seen));
+
+/** Class fragments per expression type, once literals and wrappers are peeled off. */
+const CLASS_FRAGMENT_READERS = {
+  Identifier: identifierClassFragments,
+  MemberExpression: memberClassFragments,
+  CallExpression: (node, bindings, seen) => childFragments(node.arguments, bindings, seen),
+  ConditionalExpression: (node, bindings, seen) =>
+    childFragments([node.consequent, node.alternate], bindings, seen),
+  BinaryExpression: (node, bindings, seen) =>
+    childFragments([node.left, node.right], bindings, seen),
+  LogicalExpression: (node, bindings, seen) =>
+    childFragments([node.left, node.right], bindings, seen),
+  ArrayExpression: (node, bindings, seen) => childFragments(node.elements, bindings, seen),
+  // Conditional class maps key the class off a flag, so the key is the class.
+  ObjectExpression: (node, bindings, seen) =>
+    childFragments(
+      node.properties.filter((property) => property.type === 'Property').map(({ key }) => key),
+      bindings,
+      seen,
+    ),
+  JSXExpressionContainer: (node, bindings, seen) => classFragments(node.expression, bindings, seen),
+};
+
 function classFragments(node, bindings, seen = new Set()) {
   if (!node) return [];
   const literal = stringValue(node);
@@ -266,55 +353,15 @@ function classFragments(node, bindings, seen = new Set()) {
     // interpolations can resolve to more through the binding table.
     return [
       ...node.quasis.map((quasi) => quasi.value.cooked ?? quasi.value.raw ?? ''),
-      ...node.expressions.flatMap((expression) => classFragments(expression, bindings, seen)),
+      ...childFragments(node.expressions, bindings, seen),
     ];
   }
   const unwrapped = unwrap(node);
   if (unwrapped !== node) return classFragments(unwrapped, bindings, seen);
-  if (node.type === 'Identifier') {
-    if (seen.has(node.name)) return [];
-    const initializer = bindings.get(node.name);
-    if (!initializer) return [];
-    return classFragments(initializer, bindings, new Set([...seen, node.name]));
-  }
-  if (node.type === 'MemberExpression') {
-    const target = unwrap(
-      node.object?.type === 'Identifier' ? bindings.get(node.object.name) : node.object,
-    );
-    if (target?.type === 'ObjectExpression') {
-      return target.properties.flatMap((property) =>
-        property.type === 'Property' ? classFragments(property.value, bindings, seen) : [],
-      );
-    }
-    return classFragments(target, bindings, seen);
-  }
-  if (node.type === 'CallExpression') {
-    return node.arguments.flatMap((argument) => classFragments(argument, bindings, seen));
-  }
-  if (node.type === 'ConditionalExpression') {
-    return [
-      ...classFragments(node.consequent, bindings, seen),
-      ...classFragments(node.alternate, bindings, seen),
-    ];
-  }
-  if (node.type === 'BinaryExpression' || node.type === 'LogicalExpression') {
-    return [
-      ...classFragments(node.left, bindings, seen),
-      ...classFragments(node.right, bindings, seen),
-    ];
-  }
-  if (node.type === 'ArrayExpression') {
-    return node.elements.flatMap((element) => classFragments(element, bindings, seen));
-  }
-  if (node.type === 'ObjectExpression') {
-    // Conditional class maps key the class off a flag, so the key is the class.
-    return node.properties.flatMap((property) =>
-      property.type === 'Property' ? classFragments(property.key, bindings, seen) : [],
-    );
-  }
-  if (node.type === 'JSXExpressionContainer')
-    return classFragments(node.expression, bindings, seen);
-  return [];
+  const reader = Object.hasOwn(CLASS_FRAGMENT_READERS, node.type)
+    ? CLASS_FRAGMENT_READERS[node.type]
+    : null;
+  return reader ? reader(node, bindings, seen) : [];
 }
 
 /** Every prop through which a call site can hand Tailwind classes to a component. */
@@ -361,8 +408,98 @@ const SEMANTIC_TEST_CLASSES = new Set([
   'tabular-nums',
   'value-placeholder',
 ]);
-const RAW_STYLE_ASSERTION_TOKEN =
-  /^-?(?:[^\s:]+:)*(?:\[[^\]]+\]|bg-|text-|border(?:-|$)|rounded(?:-|$)|shadow(?:-|$)|(?:p|px|py|ps|pe|pt|pb|m|mx|my|ms|me|mt|mb|gap|space|w|h)-|min-|max-|z-|(?:truncate|sticky|hidden|grid|flex|inline-flex|block|table-|overflow-|whitespace-|translate-|opacity-|size-|shrink-|grow-|items-|justify-|content-|place-|font-|tracking-|leading-|uppercase|lowercase|break-|ring-|divide-|align-))+/;
+/** Utility stems that are presentation whenever a `-` follows them. */
+const RAW_STYLE_STEMS = new Set([
+  'bg',
+  'text',
+  'border',
+  'rounded',
+  'shadow',
+  'p',
+  'px',
+  'py',
+  'ps',
+  'pe',
+  'pt',
+  'pb',
+  'm',
+  'mx',
+  'my',
+  'ms',
+  'me',
+  'mt',
+  'mb',
+  'gap',
+  'space',
+  'w',
+  'h',
+  'min',
+  'max',
+  'z',
+  'table',
+  'overflow',
+  'whitespace',
+  'translate',
+  'opacity',
+  'size',
+  'shrink',
+  'grow',
+  'items',
+  'justify',
+  'content',
+  'place',
+  'font',
+  'tracking',
+  'leading',
+  'break',
+  'ring',
+  'divide',
+  'align',
+]);
+/** Utilities that are presentation on their own. */
+const RAW_STYLE_BARE_UTILITIES = new Set(['border', 'rounded', 'shadow']);
+/** Utility prefixes that are presentation whatever follows them. */
+const RAW_STYLE_PREFIXES = [
+  'truncate',
+  'sticky',
+  'hidden',
+  'grid',
+  'flex',
+  'inline-flex',
+  'block',
+  'uppercase',
+  'lowercase',
+];
+const ARBITRARY_VALUE_PREFIX = /^\[[^\]]+\]/;
+
+/** Whether a class with its variants stripped starts with a presentation utility. */
+function isRawStyleUtility(utility) {
+  const dash = utility.indexOf('-');
+  return (
+    ARBITRARY_VALUE_PREFIX.test(utility) ||
+    RAW_STYLE_BARE_UTILITIES.has(utility) ||
+    (dash > 0 && RAW_STYLE_STEMS.has(utility.slice(0, dash))) ||
+    RAW_STYLE_PREFIXES.some((prefix) => utility.startsWith(prefix))
+  );
+}
+
+/**
+ * A raw style token is an optional `-`, any non-empty `variant:` prefixes, then
+ * a presentation utility. Every split point between those prefixes is tried.
+ */
+function isRawStyleAssertionToken(token) {
+  if (isRawStyleUtility(token.startsWith('-') ? token.slice(1) : token)) return true;
+  let segmentStart = 0;
+  for (
+    let colon = token.indexOf(':');
+    colon > segmentStart;
+    colon = token.indexOf(':', segmentStart)
+  ) {
+    if (isRawStyleUtility(token.slice(colon + 1))) return true;
+    segmentStart = colon + 1;
+  }
+  return false;
+}
 
 function testExpression(node) {
   let current = node;
@@ -438,9 +575,7 @@ function isSemanticTestClass(token) {
 function rawStyleAssertionTokens(text) {
   return text
     .split(/\s+/)
-    .filter(
-      (token) => token && !isSemanticTestClass(token) && RAW_STYLE_ASSERTION_TOKEN.test(token),
-    );
+    .filter((token) => token && !isSemanticTestClass(token) && isRawStyleAssertionToken(token));
 }
 
 /** Tests assert contracts and consistency, never a frozen presentation recipe. */
@@ -792,13 +927,7 @@ export function rawRadiusViolations(source, label) {
   if (label.includes('.test.') || !/\.(?:tsx|ts)$/.test(label)) return [];
   const violations = [];
   for (const entry of jsxClassData(source, label)) {
-    const raw = entry.classes
-      .split(/\s+/)
-      .filter((token) =>
-        /^(?:[a-z-]+:)*rounded(?:-(?:t|b|l|r|s|e|tl|tr|bl|br|ss|se|es|ee))?(?:-(?:none|sm|md|lg|xl|2xl|3xl))?$/.test(
-          token,
-        ),
-      );
+    const raw = entry.classes.split(/\s+/).filter(isRawRadiusToken);
     if (raw.length) {
       violations.push(
         `${label}:${entry.line}: ${raw.join(', ')} — radius must use a role token (--radius-control|card|lg), rounded-xs, or rounded-full`,
@@ -809,6 +938,22 @@ export function rawRadiusViolations(source, label) {
 }
 
 const RADIUS_SIDES = ['t', 'b', 'l', 'r', 's', 'e', 'tl', 'tr', 'bl', 'br', 'ss', 'se', 'es', 'ee'];
+const RAW_RADIUS_SIZES = new Set(['none', 'sm', 'md', 'lg', 'xl', '2xl', '3xl']);
+const LOWERCASE_VARIANTS = /^(?:[a-z-]+:)*$/;
+
+/** `variant:rounded`, optionally `-side`, then optionally `-size`: the retired raw radius scale. */
+function isRawRadiusToken(token) {
+  const utilityStart = token.lastIndexOf(':') + 1;
+  if (!LOWERCASE_VARIANTS.test(token.slice(0, utilityStart))) return false;
+  const [utility, ...suffixes] = token.slice(utilityStart).split('-');
+  if (utility !== 'rounded' || suffixes.length > 2) return false;
+  if (suffixes.length === 2) {
+    return RADIUS_SIDES.includes(suffixes[0]) && RAW_RADIUS_SIZES.has(suffixes[1]);
+  }
+  return (
+    suffixes.length === 0 || RADIUS_SIDES.includes(suffixes[0]) || RAW_RADIUS_SIZES.has(suffixes[0])
+  );
+}
 const SIZE_UTILITIES = ['w', 'h', 'min-w', 'min-h', 'max-w', 'max-h', 'size'];
 /** A whole class token: variant prefixes, an optional `!`, then `utility-[value]`. */
 const arbitraryToken = (utility) =>
@@ -1065,6 +1210,18 @@ export function landingThemeViolations(root) {
   return violations;
 }
 
+/** The index just past the `}` that balances the `{` at `open`, or -1 when unbalanced. */
+function blockEnd(text, open) {
+  let depth = 1;
+  let close = open + 1;
+  while (close < text.length && depth > 0) {
+    if (text[close] === '{') depth += 1;
+    if (text[close] === '}') depth -= 1;
+    close += 1;
+  }
+  return depth === 0 ? close : -1;
+}
+
 function cssRules(source) {
   const clean = source.replace(/\/\*[\s\S]*?\*\//g, '');
   const rules = [];
@@ -1073,14 +1230,8 @@ function cssRules(source) {
     const open = clean.indexOf('{', cursor);
     if (open === -1) break;
     const prelude = clean.slice(cursor, open).trim();
-    let depth = 1;
-    let close = open + 1;
-    while (close < clean.length && depth > 0) {
-      if (clean[close] === '{') depth += 1;
-      if (clean[close] === '}') depth -= 1;
-      close += 1;
-    }
-    if (depth !== 0) break;
+    const close = blockEnd(clean, open);
+    if (close === -1) break;
     if (prelude && !prelude.startsWith('@')) {
       rules.push({ prelude, body: clean.slice(open + 1, close - 1) });
     }

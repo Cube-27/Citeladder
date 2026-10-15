@@ -55,7 +55,8 @@ const SEARCH_SURFACE_ENGINES: readonly LogicalEngine[] = ['google_ai_overview'] 
 
 /** True when this engine key names an observed surface. */
 export function isSearchSurfaceEngine(key: string): boolean {
-  return SEARCH_SURFACE_ENGINES.some((engine) => engine === key);
+  const surfaces: readonly string[] = SEARCH_SURFACE_ENGINES;
+  return surfaces.includes(key);
 }
 
 export function isConsumerEngine(key: string): boolean {

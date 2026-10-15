@@ -216,7 +216,8 @@ function SelectedPurchase({
   if (!selection || !catalog) return null;
   const { plan, extra } = selectedOffer(catalog, selection);
   if (!plan && !extra) return null;
-  const price = plan ? headlinePrice(plan, selection.byok ? 'byok' : 'funded') : null;
+  const usage = selection.byok ? 'byok' : 'funded';
+  const price = plan ? headlinePrice(plan, usage) : null;
   return (
     <Stack as="section" gap="workspace" className={panelClasses()} aria-label="Selected purchase">
       <h2 className={textRole('sectionTitle')}>{plan?.name ?? extra?.name}</h2>

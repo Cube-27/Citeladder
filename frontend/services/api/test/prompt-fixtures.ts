@@ -228,7 +228,7 @@ export function echoDependencies({
   onRequest?: (request: DraftRequest) => void;
 } = {}) {
   let calls = 0;
-  const fetch = vi.fn<typeof globalThis.fetch>(async (_url, init) => {
+  const answer = (init?: RequestInit): Response => {
     const call = ++calls;
     onCall?.(call);
     if (fail.includes(call)) return new Response('bad request', { status: 400 });
@@ -244,7 +244,11 @@ export function echoDependencies({
       prompt_intent: 'recommend',
     }));
     return Response.json({ choices: [{ message: { content: JSON.stringify({ prompts }) } }] });
-  });
+  };
+  // A throw becomes a rejection, as a real fetch would.
+  const fetch = vi.fn<typeof globalThis.fetch>((_url, init) =>
+    Promise.resolve().then(() => answer(init)),
+  );
   const gateway = createModelGateway(
     {
       ...gatewaySettings({}),

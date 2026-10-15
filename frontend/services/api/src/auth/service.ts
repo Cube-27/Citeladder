@@ -140,7 +140,7 @@ export async function authenticateUser(
 export async function logoutUser(
   db: Database,
   userId: string,
-  options: Readonly<{ disconnect: boolean }> = { disconnect: false },
+  options?: Readonly<{ disconnect: boolean }>,
 ): Promise<void> {
   await db.transaction().execute(async (trx) => {
     const result = await trx
@@ -149,7 +149,7 @@ export async function logoutUser(
       .where('id', '=', userId)
       .executeTakeFirst();
     if (result.numUpdatedRows !== 1n) throw new ApiError(401, 'Session no longer valid');
-    if (!options.disconnect) {
+    if (!options?.disconnect) {
       await recordSecurityEvent(trx, 'auth.logout', userId);
       return;
     }

@@ -32,30 +32,40 @@ export function auditProjections(
         (trx, task, audit, artifactId) =>
           (prepared.get(task.id) ?? analyzeExecution)(trx, task, audit, artifactId),
       );
-      const audit = await db
-        .selectFrom('audits')
-        .select(['project_id', 'status'])
-        .where('workspace_id', '=', workspaceId)
-        .where('id', '=', auditId)
-        .executeTakeFirst();
-      if (!audit || !['completed', 'partially_completed'].includes(audit.status)) return result;
-      try {
-        await enqueueTask(db, {
-          workspaceId,
-          projectId: audit.project_id,
-          kind: 'source_page_inspection',
-          payload: { audit_id: auditId },
-          keyParts: [audit.project_id, auditId],
-          maxAttempts: Number(
-            resolveSettingSpec(policy.analytics.worker_settings.task_max_attempts, env),
-          ),
-        });
-      } catch {
-        getLogger('workers.audit').info('source_page_inspection_enqueue_failed', {
-          audit_id: auditId,
-        });
-      }
+      await enqueueSourcePageInspection(db, workspaceId, auditId, env);
       return result;
     },
   };
+}
+
+/** A finished audit queues its source-page inspection; an enqueue failure never fails finalize. */
+async function enqueueSourcePageInspection(
+  db: Database,
+  workspaceId: string,
+  auditId: string,
+  env: Record<string, string | undefined>,
+) {
+  const audit = await db
+    .selectFrom('audits')
+    .select(['project_id', 'status'])
+    .where('workspace_id', '=', workspaceId)
+    .where('id', '=', auditId)
+    .executeTakeFirst();
+  if (!audit || !['completed', 'partially_completed'].includes(audit.status)) return;
+  try {
+    await enqueueTask(db, {
+      workspaceId,
+      projectId: audit.project_id,
+      kind: 'source_page_inspection',
+      payload: { audit_id: auditId },
+      keyParts: [audit.project_id, auditId],
+      maxAttempts: Number(
+        resolveSettingSpec(policy.analytics.worker_settings.task_max_attempts, env),
+      ),
+    });
+  } catch {
+    getLogger('workers.audit').info('source_page_inspection_enqueue_failed', {
+      audit_id: auditId,
+    });
+  }
 }

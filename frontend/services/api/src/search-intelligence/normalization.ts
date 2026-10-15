@@ -1,8 +1,8 @@
 import { createHash } from 'node:crypto';
 import { record } from '../db/json.ts';
 import { canonicalJson } from './requests.ts';
+import { scalarText as text } from '../text-order.ts';
 
-const text = (value: unknown) => (value == null ? '' : String(value));
 const numeric = (value: unknown): string | null =>
   (typeof value === 'number' || typeof value === 'string') &&
   text(value).trim() &&

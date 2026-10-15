@@ -52,12 +52,10 @@ export async function seedAudit(
   const worker = new AuditWorker(db, runtime, encryptionKey, auditProjections(db, null, env), {
     env,
     taskScope: { workspaceId: request.workspace_id, auditId },
-    send: async () => {
-      throw new Error('Development fixture cannot call a provider');
-    },
-    execute: async (input) => {
+    send: () => Promise.reject(new Error('Development fixture cannot call a provider')),
+    execute: (input) => {
       const fixture = request.answers[input.prompt];
-      if (!fixture) throw new Error('Development fixture answer is missing');
+      if (!fixture) return Promise.reject(new Error('Development fixture answer is missing'));
       const answer: Answer = {
         ...fixture,
         logical_engine: input.logical_engine,
@@ -88,7 +86,7 @@ export async function seedAudit(
         provider_metadata: { query_text_available: true },
         latency_ms: 850,
       };
-      return answer;
+      return Promise.resolve(answer);
     },
   });
   const signal = AbortSignal.timeout(devSeed.budgetSeconds * 1000);

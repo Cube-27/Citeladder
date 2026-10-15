@@ -446,7 +446,7 @@ function useNow(intervalMs: number) {
 }
 function activeStepLabel(progress: AgentRun['progress'], attemptCount: number | undefined) {
   const currentAttempt = attemptCount ?? progress.at(-1)?.run_attempt;
-  const current = progress.filter((step) => step.run_attempt === currentAttempt).at(-1);
+  const current = [...progress].reverse().find((step) => step.run_attempt === currentAttempt);
   return current ? runStepLabel(current) : 'The agent is working…';
 }
 function RunActivity({ progress }: Readonly<{ progress: AgentRun['progress'] }>) {

@@ -177,8 +177,8 @@ export const authRoutes = [
     // The published revision the signup form asks a visitor to accept.
     path: '/api/v1/auth/policies',
     response: policyRevisionSchema,
-    async handle() {
-      return currentPolicyRevision();
+    handle() {
+      return Promise.resolve(currentPolicyRevision());
     },
   }),
   defineGetRoute({

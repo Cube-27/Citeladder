@@ -39,9 +39,10 @@ export function rateCard(
   );
 }
 type CostStatus = 'complete' | 'partial' | 'unknown';
-function costStatus(values: readonly (number | null)[]): CostStatus {
+export function costStatus(values: readonly (number | null)[]): CostStatus {
   const known = values.filter((value) => value !== null).length;
-  return known === values.length && values.length ? 'complete' : known ? 'partial' : 'unknown';
+  if (known === 0) return 'unknown';
+  return known === values.length ? 'complete' : 'partial';
 }
 export function knownTotal(values: readonly (number | null)[]) {
   return values.some((value) => value !== null)

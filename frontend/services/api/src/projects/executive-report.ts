@@ -6,6 +6,7 @@ import { PdfReport } from '../billing/pdf.ts';
 import type { Database } from '../db/database.ts';
 import { jsonObject, strings } from '../db/json.ts';
 import { notFound } from '../errors.ts';
+import { scalarText } from '../text-order.ts';
 import type { ProjectScope } from './brand-profile.ts';
 import { commandCenter } from './command-center.ts';
 
@@ -96,7 +97,7 @@ export async function renderExecutivePdf(view: View): Promise<Uint8Array> {
     const evidence = jsonObject(action.evidence_summary, 'evidence_summary');
     const factors = jsonObject(action.priority_factors, 'priority_factors');
     report.text(
-      `Action: ${action.id}\nTarget: ${action.target_label ?? 'Unknown'}\nEvidence types: ${strings(evidence.kinds).join(', ') || 'Unavailable'}\nFormula: ${factors.formula_version ?? 'Unknown'}`,
+      `Action: ${action.id}\nTarget: ${action.target_label ?? 'Unknown'}\nEvidence types: ${strings(evidence.kinds).join(', ') || 'Unavailable'}\nFormula: ${scalarText(factors.formula_version ?? 'Unknown')}`,
     );
   }
   for (const evidence of view.resolved_actions.evidence)

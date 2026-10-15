@@ -37,8 +37,8 @@ export const providerRoutes = [
     authorize: 'public',
     params: empty,
     response: providerCatalogSchema,
-    async handle() {
-      return {
+    handle() {
+      return Promise.resolve({
         transports: providerPolicy.transports as (
           | 'openai'
           | 'anthropic'
@@ -63,7 +63,7 @@ export const providerRoutes = [
               },
             ],
           })),
-      };
+      });
     },
   }),
   defineGetRoute({

@@ -11,6 +11,7 @@ import {
 import { asApiErrorCode } from '@citeladder/contracts/error-codes';
 import { z } from 'zod';
 import { enqueueTrafficInsights } from '../crawl-logs/insights-enqueue.ts';
+import type { Database } from '../db/database.ts';
 import { ApiError, notFound } from '../errors.ts';
 import { readBody, readOptionalBody } from '../http/body.ts';
 import { executeInteractiveSyncs } from '../integrations/interactive.ts';
@@ -91,6 +92,34 @@ function cookieValue(header: string | undefined, name: string): string {
   return pair?.slice(name.length + 1) ?? '';
 }
 
+/**
+ * One mapped property's on-demand run: the new run, the run already syncing it,
+ * `syncing` when that run has no trackable record, or null when the target no
+ * longer resolves.
+ */
+async function onDemandRun(
+  db: Database,
+  workspaceId: string,
+  target: { mapping_id: string; connection_id: string; project_id: string },
+) {
+  try {
+    return await enqueueSyncRun(db, {
+      workspaceId,
+      connectionId: target.connection_id,
+      mappingId: target.mapping_id,
+      projectId: target.project_id,
+      syncKind: 'on_demand',
+    });
+  } catch (error) {
+    if (error instanceof ApiError && error.code === 'sync_target_unresolved') return null;
+    // A property already syncing is current once that run finishes, so the
+    // page tracks that run instead of a new one.
+    if (error instanceof ApiError && error.code === 'sync_active_window_conflict')
+      return (await activePropertySync(db, workspaceId, target.mapping_id)) ?? 'syncing';
+    throw error;
+  }
+}
+
 function integrationFailure(error: unknown): never {
   if (error instanceof IntegrationError) {
     const status = error.code === 'property_discovery_unsupported' ? 422 : 502;
@@ -167,28 +196,9 @@ export const integrationRoutes = [
       const queued = [];
       let syncing = 0;
       for (const target of targets) {
-        try {
-          queued.push(
-            await enqueueSyncRun(db, {
-              workspaceId,
-              connectionId: target.connection_id,
-              mappingId: target.mapping_id,
-              projectId: target.project_id,
-              syncKind: 'on_demand',
-            }),
-          );
-        } catch (error) {
-          if (error instanceof ApiError && error.code === 'sync_target_unresolved') continue;
-          // A property already syncing is current once that run finishes, so the
-          // page tracks that run instead of a new one.
-          if (error instanceof ApiError && error.code === 'sync_active_window_conflict') {
-            const active = await activePropertySync(db, workspaceId, target.mapping_id);
-            if (active) queued.push(active);
-            else syncing++;
-            continue;
-          }
-          throw error;
-        }
+        const run = await onDemandRun(db, workspaceId, target);
+        if (run === 'syncing') syncing++;
+        else if (run) queued.push(run);
       }
       if (queued.length === 0 && syncing > 0)
         throw new ApiError(409, 'A sync is already running for this project', {
