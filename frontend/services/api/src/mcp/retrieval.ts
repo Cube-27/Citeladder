@@ -278,6 +278,7 @@ const records = {
 } as const;
 // Kinds resolved by their owners rather than the column allowlist.
 const OWNED_KINDS = ['project', 'prompt', 'action'] as const;
+const OWNED_KIND_NAMES: readonly string[] = OWNED_KINDS;
 type Kind = keyof typeof records | (typeof OWNED_KINDS)[number];
 
 const NOT_A_RECORD = 'id must be an allowlisted citeladder:// record URI';
@@ -293,7 +294,7 @@ export function parseRecordId(value: string): { kind: Kind; id: string; part: nu
     uri.port ||
     uri.hash ||
     !id ||
-    (!OWNED_KINDS.some((owned) => owned === kind) && !Object.hasOwn(records, kind))
+    (!OWNED_KIND_NAMES.includes(kind) && !Object.hasOwn(records, kind))
   ) {
     throw new McpInputError(NOT_A_RECORD);
   }

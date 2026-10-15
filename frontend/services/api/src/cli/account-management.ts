@@ -186,7 +186,6 @@ export function runPlatformAccountManager(actor: string) {
     delete process.env.ACCOUNT_MANAGER_OPERATOR_PASSWORD;
     if (!password) password = await terminalPassword('Platform operator password');
     const session = await authenticatePlatformOperator(db, actor, password);
-    password = '';
     console.log(
       `Production account management as ${actor}. Workspace roles never grant platform administration.`,
     );

@@ -13,11 +13,13 @@ export function resolveSkillsDirectory(configured: string): string {
 export function fenceTracker() {
   let fence: string | null = null;
   return (line: string) => {
-    const [, run, info] = /^ {0,3}(`{3,}|~{3,})(.*)$/u.exec(line) ?? [];
+    const [opening = '', fenceRun] = /^ {0,3}(`{3,}|~{3,})/u.exec(line) ?? [];
+    const info = line.slice(opening.length);
+    // A line terminator in the rest (e.g. a CRLF `\r`) means the line is not a fence.
+    const run = /[\n\r\p{Zl}\p{Zp}]/u.test(info) ? undefined : fenceRun;
     if (
       run !== undefined &&
-      info !== undefined &&
-      (!fence || (run[0] === fence[0] && run.length >= fence.length && !info.trim()))
+      (!fence || (run.startsWith(fence.charAt(0)) && run.length >= fence.length && !info.trim()))
     )
       fence = fence ? null : run;
     return { marker: run !== undefined, fenced: fence !== null };

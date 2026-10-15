@@ -80,7 +80,7 @@ export function conversationInputBytes(request: ConversationRequest) {
 export const blocksSchema = z.array(z.object({ type: z.string() }).catchall(z.json()));
 /** Provider content as plain JSON blocks; anything else is an unreadable answer. */
 export function parseBlocks(value: unknown): ConversationBlock[] {
-  return blocksSchema.parse(JSON.parse(JSON.stringify(value)));
+  return blocksSchema.parse(JSON.parse(JSON.stringify(value))); // NOSONAR -- JSON round-trip on purpose: provider objects become plain JSON
 }
 /** The answer text of a block list; blocks that are separate passages need a `separator`. */
 export function blockText(blocks: readonly ConversationBlock[], separator = '') {

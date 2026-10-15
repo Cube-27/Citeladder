@@ -369,9 +369,9 @@ export class SiteHealthWorker {
       let held: Awaited<ReturnType<typeof lockSiteTask>>;
       try {
         held = await lockSiteTask(trx, claimed, this.owner);
-      } catch (lost) {
-        if (lost instanceof TaskCancelledError) return;
-        throw lost;
+      } catch (error_) {
+        if (error_ instanceof TaskCancelledError) return;
+        throw error_;
       }
       const { task } = held;
       const settings = this.settings;

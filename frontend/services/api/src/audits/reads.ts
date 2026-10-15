@@ -112,7 +112,7 @@ export async function listExecutions(db: Database, workspaceId: string, auditId:
         routeSnapshot: task.provider_route_snapshot,
         auditConfiguration: audit.configuration,
       }),
-      search_surface_outcome: String(record(task.provider_metadata).search_surface_outcome ?? ''),
+      search_surface_outcome: String(record(task.provider_metadata).search_surface_outcome ?? ''), // NOSONAR -- persisted JSON scalar
     }),
   );
 }

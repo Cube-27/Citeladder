@@ -21,7 +21,7 @@ import { buildVerificationResult, type Declaration } from './verification-result
 const p = policy.opportunity.opportunities;
 async function verificationSource(db: Database, task: QueueTask, project: string): Promise<Source> {
   const payload = record(task.payload);
-  const kind = String(payload.trigger_kind || '');
+  const kind = String(payload.trigger_kind || ''); // NOSONAR -- queued JSON scalar
   const id = parseUuid(payload.trigger_id);
   if (!id) throw new Error('Implementation verification trigger is invalid');
   const scope = new WorkspaceScope(task.workspace_id);

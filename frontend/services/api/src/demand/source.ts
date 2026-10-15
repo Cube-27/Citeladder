@@ -118,9 +118,9 @@ export async function queryDetectorInputs(
     const fact = row.site_url_id ? byPage.get(row.site_url_id) : undefined;
     const f = record(fact?.normalized_facts),
       headings = record(f.headings);
-    const title = String(f.title ?? ''),
+    const title = String(f.title ?? ''), // NOSONAR -- persisted JSON scalar
       h1 = strings(headings.h1_texts),
-      primary = String(f.primary_content_text ?? '');
+      primary = String(f.primary_content_text ?? ''); // NOSONAR -- persisted JSON scalar
     return [
       {
         observed_date: row.day,

@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { record } from '../db/json.ts';
 import { canonicalJson } from './requests.ts';
 
-const text = (value: unknown) => (value == null ? '' : String(value));
+const text = (value: unknown) => (value == null ? '' : String(value)); // NOSONAR -- provider JSON scalar
 const numeric = (value: unknown): string | null =>
   (typeof value === 'number' || typeof value === 'string') &&
   text(value).trim() &&

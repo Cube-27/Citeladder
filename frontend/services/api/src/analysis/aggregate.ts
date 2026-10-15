@@ -4,7 +4,7 @@ import { scalarText, compareText } from '../text-order.ts';
 import { groupBy } from '../lists.ts';
 import { competitorPosition } from './position.ts';
 import { citationDomain, type ScoringConfig } from './scoring.ts';
-import { rateCard } from '../audits/costs.ts';
+import { costStatus, rateCard } from '../audits/costs.ts';
 import { usageCount } from '../answer-engines/parse.ts';
 import { round } from './round.ts';
 
@@ -142,7 +142,6 @@ function tokenCost(rows: AggregateExecution[], config: ScoringConfig) {
   const reported = rows
     .map((row) => usageCount(row.usage.provider_cost_microusd))
     .filter((n): n is number => n !== null);
-  const known = [tokenEstimate, searchEstimate].filter((n) => n !== null).length;
   return {
     token_usage: tokens,
     cost: {
@@ -150,7 +149,7 @@ function tokenCost(rows: AggregateExecution[], config: ScoringConfig) {
       grounded_requests: grounded,
       paid_list_token_estimate_usd: tokenEstimate === null ? null : round(tokenEstimate, 6),
       grounding_cost_if_billable_usd: searchEstimate === null ? null : round(searchEstimate, 6),
-      cost_status: known === 2 ? 'complete' : known ? 'partial' : 'unknown',
+      cost_status: costStatus([tokenEstimate, searchEstimate]),
       pricing_version: policy.costs.pricing_version,
       provider_reported_cost_usd: reported.length
         ? round(sum(reported) / policy.costs.microusd_per_usd, 6)

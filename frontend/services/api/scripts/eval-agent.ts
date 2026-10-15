@@ -25,6 +25,7 @@ import { requireLocalDevelopment } from '../src/auth/bootstrap.ts';
 import { localEnvironment } from '../src/cli/local-environment.ts';
 import { loadConfig } from '../src/config.ts';
 import { createDatabase, type Database } from '../src/db/database.ts';
+import { stripTrailing } from '../src/text-order.ts';
 import { gitDirectory } from './git-directory.ts';
 import raw from '../test/fixtures/agent/eval-cases.json' with { type: 'json' };
 
@@ -139,7 +140,7 @@ function localApi(value: string) {
   const url = new URL(value);
   if (!['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname))
     throw new Error('--api must be a loopback URL; the eval sends the development login');
-  return url.href.replace(/\/+$/, '');
+  return stripTrailing(url.href, '/');
 }
 
 type Project = { id: string; workspaceId: string };

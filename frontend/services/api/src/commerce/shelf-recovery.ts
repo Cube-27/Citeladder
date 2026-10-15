@@ -39,8 +39,8 @@ export async function prepareSavedShelf(
     .select(['task_id', 'artifact_id'])
     .where('workspace_id', '=', workspaceId)
     .where('audit_id', '=', auditId)
-    .where('parser_version', '=', String(frozen.parser_version ?? versions.parser_version))
-    .where('matcher_version', '=', String(frozen.matcher_version ?? versions.matcher_version))
+    .where('parser_version', '=', String(frozen.parser_version ?? versions.parser_version)) // NOSONAR -- persisted JSON scalar
+    .where('matcher_version', '=', String(frozen.matcher_version ?? versions.matcher_version)) // NOSONAR -- persisted JSON scalar
     .execute();
   for (const task of tasks) {
     if (

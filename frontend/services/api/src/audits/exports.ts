@@ -67,7 +67,7 @@ function promptPanel(classes: [string, unknown][]): string {
     .join(', ')}.`;
 }
 const md = (value: unknown) =>
-  String(value ?? '')
+  String(value ?? '') // NOSONAR -- persisted JSON scalar; String() coercion is intended
     .replaceAll('|', String.raw`\|`)
     .replaceAll(/[\r\n]/gu, ' ');
 
@@ -179,7 +179,7 @@ async function markdownExport(db: Database, tasks: ExportTask[], audit: ExportAu
     `- **Design:** ${audit.requested_count} executions (${audit.repetitions} repetition(s) per prompt x engine), execution order randomized (seed \`${audit.random_seed}\`).`,
     '- **Citations:** only explicit source citations returned by the API are counted. Publisher domains prefer resolved/direct URLs and use the citation title only as fallback; this is not a complete ledger of every page the model read.',
     `- **Scoring:** deterministic alias/domain matching (\`${audit.analyzer_version || 'unversioned'}\`). No LLM is used for headline metrics. Answer perception (sentiment) is classified separately by a model over the passages that name each business, keeps only quotes found verbatim in the answer, and is reported with its coverage in the Perception view, not in these metrics.`,
-    `- **Result:** ${summary.total_completed ?? 0} completed, ${audit.failed_count} failed.`,
+    `- **Result:** ${summary.total_completed ?? 0} completed, ${audit.failed_count} failed.`, // NOSONAR -- persisted JSON count
     '',
     '## Headline Metrics',
     '',
@@ -196,14 +196,14 @@ async function markdownExport(db: Database, tasks: ExportTask[], audit: ExportAu
   ])
     lines.push(`| ${label} | ${pct(summary[key!])} |`);
   lines.push(
-    `| Avg. search queries / answer | ${summary.avg_queries_per_execution ?? 0} |`,
+    `| Avg. search queries / answer | ${summary.avg_queries_per_execution ?? 0} |`, // NOSONAR -- persisted JSON number
     `| Paid-list token cost estimate | ${usd(cost.paid_list_token_estimate_usd)} |`,
     `| Grounding cost if outside free allowance | ${usd(cost.grounding_cost_if_billable_usd)} |`,
   );
   if (typeof cost.provider_reported_cost_usd === 'number' && cost.provider_reported_cost_usd > 0)
     lines.push(`| Provider-reported cost | ${usd(cost.provider_reported_cost_usd)} |`);
   lines.push(
-    `| Grounded requests | ${cost.grounded_requests ?? 0} |`,
+    `| Grounded requests | ${cost.grounded_requests ?? 0} |`, // NOSONAR -- persisted JSON count
     '',
     ...competitorComparison(config, summary, brand),
     '## Per-Prompt Results (with immediate binary consistency)',
@@ -214,7 +214,7 @@ async function markdownExport(db: Database, tasks: ExportTask[], audit: ExportAu
   for (const value of array(summary.per_prompt)) {
     const row = record(value);
     lines.push(
-      `| ${row.prompt_index} | ${md(row.prompt_text)} | ${md(row.theme)} | ${row.brand_mentioned_count}/${row.repetitions ?? 0} | ${row.owned_cited_count}/${row.repetitions ?? 0} | ${pct(row.mention_stability)} |`,
+      `| ${row.prompt_index} | ${md(row.prompt_text)} | ${md(row.theme)} | ${row.brand_mentioned_count}/${row.repetitions ?? 0} | ${row.owned_cited_count}/${row.repetitions ?? 0} | ${pct(row.mention_stability)} |`, // NOSONAR -- persisted JSON counts
     );
   }
   lines.push('');

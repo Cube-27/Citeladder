@@ -97,9 +97,13 @@ export function sourcePlacements(
     contentWords(anchor) >= limits.min_anchor_content_words || names.has(anchor.toLowerCase());
   for (const passage of passages) {
     const tokens = words(passage.text);
-    for (let start = 0; start < tokens.length; start += 1) {
+    let start = 0;
+    while (start < tokens.length) {
       const first = tokens[start]!;
-      if (!targetTerms.has(first[0].toLowerCase())) continue;
+      if (!targetTerms.has(first[0].toLowerCase())) {
+        start += 1;
+        continue;
+      }
       const end = anchorEnd(passage.text, tokens, start, targetTerms);
       const last = tokens[end]!;
       const anchor = passage.text.slice(first.index, last.index + last[0].length);
@@ -109,7 +113,8 @@ export function sourcePlacements(
         namesTarget(anchor)
       )
         found.push({ ...passage, anchor, anchor_start: first.index });
-      start = end;
+      // The next anchor starts after this one.
+      start = end + 1;
     }
   }
   // Longer phrases carry more specific meaning; retain source order for ties.

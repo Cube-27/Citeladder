@@ -18,6 +18,9 @@ import type { ContextReader } from './context.ts';
 import { AgentError } from './contracts.ts';
 import { z } from 'zod';
 
+/** The value as plain JSON data: undefined drops and Dates become ISO strings. */
+const plainJson = (value: unknown): unknown => JSON.parse(JSON.stringify(value)); // NOSONAR -- the JSON round-trip is the point; structuredClone keeps undefined and Dates
+
 function owned(candidate: unknown, website: string) {
   if (typeof candidate !== 'string' || !candidate) return '';
   try {
@@ -245,39 +248,34 @@ export const readAgentContext: ContextReader = async (db, scope, raw, request) =
       related_site_block: '',
       issue_block: '',
       sections: z.record(z.string(), z.json()).parse(
-        JSON.parse(
-          JSON.stringify({
-            brand,
-            target_page:
-              targetPage ?? (targetUrl ? { url: targetUrl, state: 'unavailable' } : null),
-            ...evidence,
-            ...(upstream ? { upstream_revision: upstream } : {}),
-            related_site: related,
-          }),
-        ),
+        plainJson({
+          brand,
+          target_page: targetPage ?? (targetUrl ? { url: targetUrl, state: 'unavailable' } : null),
+          ...evidence,
+          ...(upstream ? { upstream_revision: upstream } : {}),
+          related_site: related,
+        }),
       ),
       summary: z.record(z.string(), z.json()).parse(
-        JSON.parse(
-          JSON.stringify({
-            ...record(selection.summary),
-            brand_memory: memory !== null,
-            brand_fields: memory ? Object.keys(memory.business_context) : [],
-            target_page: targetPage?.title || targetUrl,
-            target_url: targetUrl || null,
-            related_page_count: related.length,
-            crawl_page_count: selection.pages.length,
-            crawl_urls: selection.pages.map((page) => page.final_url),
-            evidence_block_count: Object.keys(evidence).length,
-            opportunity_id: opportunity?.id ?? null,
-            demand_signal_id: demand?.signal.id ?? null,
-            demand_snapshot_id: demand?.snapshot.id ?? null,
-            site_health_reference: refs.site_health_reference ?? null,
-            search_intelligence_reference: refs.search_intelligence_reference ?? null,
-            issue_group_reference: refs.issue_group_reference ?? null,
-            site_facts_reference: refs.site_facts_reference ?? null,
-            output_revision_reference: refs.output_revision_reference ?? null,
-          }),
-        ),
+        plainJson({
+          ...record(selection.summary),
+          brand_memory: memory !== null,
+          brand_fields: memory ? Object.keys(memory.business_context) : [],
+          target_page: targetPage?.title || targetUrl,
+          target_url: targetUrl || null,
+          related_page_count: related.length,
+          crawl_page_count: selection.pages.length,
+          crawl_urls: selection.pages.map((page) => page.final_url),
+          evidence_block_count: Object.keys(evidence).length,
+          opportunity_id: opportunity?.id ?? null,
+          demand_signal_id: demand?.signal.id ?? null,
+          demand_snapshot_id: demand?.snapshot.id ?? null,
+          site_health_reference: refs.site_health_reference ?? null,
+          search_intelligence_reference: refs.search_intelligence_reference ?? null,
+          issue_group_reference: refs.issue_group_reference ?? null,
+          site_facts_reference: refs.site_facts_reference ?? null,
+          output_revision_reference: refs.output_revision_reference ?? null,
+        }),
       ),
     };
   } catch (error) {

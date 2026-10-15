@@ -23,7 +23,7 @@ export function canonicalPage(input: string, origin?: string | null): string | n
     let value = input.trim();
     if (!value) return null;
     if (!/^[a-z][a-z0-9+.-]*:/iu.test(value) && origin)
-      value = new URL(value, `${origin.replace(/\/+$/u, '')}/`).href;
+      value = new URL(value, `${stripTrailing(origin, '/')}/`).href;
     const parsed = new URL(value);
     const scheme = parsed.protocol.slice(0, -1);
     if (!policy.traffic.url_schemes.includes(scheme) || parsed.username || parsed.password)

@@ -46,76 +46,81 @@ export function seedAnswer(prompt: string, generation = 0) {
   };
 }
 
+/** The recorded Search Console or GA4 response; any other request throws. */
+function seedIntegrationResponse(
+  metricDate: string,
+  input: Parameters<typeof fetch>[0],
+  init?: RequestInit,
+): Response {
+  const url = new URL(String(input));
+  const body = JSON.parse(String(init?.body ?? '{}')) as Record<string, unknown>;
+  if (url.hostname === 'www.googleapis.com' && url.pathname.endsWith('/searchAnalytics/query')) {
+    const values: Record<string, string> = {
+      query: 'best hiking backpack',
+      page: 'https://wanderlustgear.com/backpacks',
+      searchAppearance: 'WEB',
+      device: 'MOBILE',
+      country: 'usa',
+      date: metricDate,
+    };
+    const dimensions = body.dimensions as string[];
+    return Response.json({
+      rows:
+        Number(body.startRow ?? 0) > 0
+          ? []
+          : [
+              {
+                keys: dimensions.map((d) => values[d] ?? 'seed'),
+                clicks: 12,
+                impressions: 240,
+                ctr: 0.05,
+                position: 6,
+              },
+            ],
+    });
+  }
+  if (url.hostname === 'analyticsdata.googleapis.com' && url.pathname.endsWith(':runReport')) {
+    const values: Record<string, string> = {
+      date: metricDate.replaceAll('-', ''),
+      sessionDefaultChannelGroup: 'Organic Search',
+      sessionSource: 'google',
+      sessionMedium: 'organic',
+      fullReferrer: 'https://google.com/',
+      landingPage: '/backpacks',
+      landingPagePlusQueryString: '/backpacks',
+      itemId: 'WGC-S40-BLK',
+      itemName: 'Summit 40L Trail Pack',
+    };
+    const dimensions = (body.dimensions as { name: string }[]).map((d) => d.name);
+    const metrics = (body.metrics as { name: string }[]).map((m) => m.name);
+    return Response.json({
+      dimensionHeaders: dimensions.map((name) => ({ name })),
+      metricHeaders: metrics.map((name) => ({ name, type: 'TYPE_INTEGER' })),
+      rows:
+        Number(body.offset ?? 0) > 0
+          ? []
+          : [
+              {
+                dimensionValues: dimensions.map((d) => ({ value: values[d] ?? 'seed' })),
+                metricValues: metrics.map(() => ({ value: '12' })),
+              },
+            ],
+      rowCount: 1,
+    });
+  }
+  throw new Error('unexpected_seed_integration_request');
+}
+
 export function seedIntegrationClient(metricDate: string) {
   return new IntegrationClient(
     {},
     {
-      sleep: async () => undefined,
-      fetch: async (input, init) => {
-        const url = new URL(String(input));
-        const body = JSON.parse(String(init?.body ?? '{}')) as Record<string, unknown>;
-        if (
-          url.hostname === 'www.googleapis.com' &&
-          url.pathname.endsWith('/searchAnalytics/query')
-        ) {
-          const values: Record<string, string> = {
-            query: 'best hiking backpack',
-            page: 'https://wanderlustgear.com/backpacks',
-            searchAppearance: 'WEB',
-            device: 'MOBILE',
-            country: 'usa',
-            date: metricDate,
-          };
-          const dimensions = body.dimensions as string[];
-          return Response.json({
-            rows:
-              Number(body.startRow ?? 0) > 0
-                ? []
-                : [
-                    {
-                      keys: dimensions.map((d) => values[d] ?? 'seed'),
-                      clicks: 12,
-                      impressions: 240,
-                      ctr: 0.05,
-                      position: 6,
-                    },
-                  ],
-          });
-        }
-        if (
-          url.hostname === 'analyticsdata.googleapis.com' &&
-          url.pathname.endsWith(':runReport')
-        ) {
-          const values: Record<string, string> = {
-            date: metricDate.replaceAll('-', ''),
-            sessionDefaultChannelGroup: 'Organic Search',
-            sessionSource: 'google',
-            sessionMedium: 'organic',
-            fullReferrer: 'https://google.com/',
-            landingPage: '/backpacks',
-            landingPagePlusQueryString: '/backpacks',
-            itemId: 'WGC-S40-BLK',
-            itemName: 'Summit 40L Trail Pack',
-          };
-          const dimensions = (body.dimensions as { name: string }[]).map((d) => d.name);
-          const metrics = (body.metrics as { name: string }[]).map((m) => m.name);
-          return Response.json({
-            dimensionHeaders: dimensions.map((name) => ({ name })),
-            metricHeaders: metrics.map((name) => ({ name, type: 'TYPE_INTEGER' })),
-            rows:
-              Number(body.offset ?? 0) > 0
-                ? []
-                : [
-                    {
-                      dimensionValues: dimensions.map((d) => ({ value: values[d] ?? 'seed' })),
-                      metricValues: metrics.map(() => ({ value: '12' })),
-                    },
-                  ],
-            rowCount: 1,
-          });
-        }
-        throw new Error('unexpected_seed_integration_request');
-      },
+      sleep: () => Promise.resolve(),
+      // The executor turns a thrown unexpected request into a rejection, as fetch would.
+      fetch: (input, init) =>
+        new Promise<Response>((resolve) => {
+          resolve(seedIntegrationResponse(metricDate, input, init));
+        }),
     },
   );
 }

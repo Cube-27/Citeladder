@@ -31,10 +31,12 @@ export async function auditTenant(db: Database, fixtures: VisibilityFixtures) {
     auditTestKey,
     providers,
   );
-  await probeConnection(db, t.workspaceId, connection.id, auditTestKey, providers, async () => ({
-    status: 200,
-    body: { status: 'completed', output: [{ content: [{ type: 'output_text', text: 'ok' }] }] },
-  }));
+  await probeConnection(db, t.workspaceId, connection.id, auditTestKey, providers, () =>
+    Promise.resolve({
+      status: 200,
+      body: { status: 'completed', output: [{ content: [{ type: 'output_text', text: 'ok' }] }] },
+    }),
+  );
   return { ...t, setId, promptId, connectionId: connection.id };
 }
 

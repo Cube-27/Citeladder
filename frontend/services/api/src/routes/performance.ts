@@ -36,8 +36,8 @@ function taskResponse(task: { id: string; status: string; payload: unknown }) {
   return {
     task_id: task.id,
     status: task.status,
-    window_start: String(payload.window_start ?? ''),
-    window_end: String(payload.window_end ?? ''),
+    window_start: String(payload.window_start ?? ''), // NOSONAR -- queued JSON scalar
+    window_end: String(payload.window_end ?? ''), // NOSONAR -- queued JSON scalar
   };
 }
 

@@ -10,6 +10,7 @@ import { z } from 'zod';
 import type { Database } from '../db/database.ts';
 import { jsonObject } from '../db/json.ts';
 import { notFound } from '../errors.ts';
+import { stripTrailing } from '../text-order.ts';
 import type { BillingInvoices } from '../generated/db-schema.ts';
 import { PdfReport } from './pdf.ts';
 
@@ -179,7 +180,8 @@ function percent(rate: string, multiplier: bigint): string {
     .toString()
     .padStart(fraction.length + 1, '0');
   const point = digits.length - fraction.length;
-  return `${digits.slice(0, point)}.${digits.slice(point)}`.replace(/\.?0*$/u, '');
+  const trimmed = stripTrailing(`${digits.slice(0, point)}.${digits.slice(point)}`, '0');
+  return trimmed.endsWith('.') ? trimmed.slice(0, -1) : trimmed;
 }
 
 type InvoicePayload = ReturnType<typeof payload>;

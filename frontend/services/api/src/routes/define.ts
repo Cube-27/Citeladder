@@ -149,7 +149,7 @@ const SESSION_COOKIE = z.object({
 
 /** An OpenAPI `{name}` path template as a Hono pattern. */
 function honoPath(path: string): string {
-  return path.replaceAll(/\{([^}]+)\}/gu, ':$1');
+  return path.replaceAll(/\{([^}]+)\}/gu, ':$1'); // NOSONAR -- input is a static OpenAPI route template, never request data
 }
 
 // A matched path requested with another method is 405 before any authorization runs.

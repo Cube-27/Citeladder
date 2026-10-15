@@ -260,6 +260,24 @@ async function joinSharedWorkspace(
   await recordSecurityEvent(db, 'membership.join', actorId, shared.workspaceId, userId);
 }
 
+/**
+ * A person joining a shared workspace owns none until they create their own.
+ * An owned workspace gets the operator baseline; extra access is a separate bundle.
+ */
+async function placeAccount(
+  db: Database,
+  actorId: string,
+  shared: SharedWorkspace | undefined,
+  user: NonNullable<Awaited<ReturnType<typeof createIdentity>>>,
+) {
+  if (!shared) await provisionAccount(db, user);
+  const personal = shared ? undefined : await bootstrapWorkspace(db, user.id);
+  const target = shared ?? personal;
+  if (!target) throw new Error('account_workspace_unresolved');
+  if (shared) await joinSharedWorkspace(db, actorId, shared, user.id);
+  return { personal, target };
+}
+
 async function createAccounts(
   db: Database,
   session: PlatformSession,
@@ -280,13 +298,7 @@ async function createAccounts(
   for (const email of emails) {
     const user = await createIdentity(db, email, encoded);
     if (!user) throw new Error('user_already_exists');
-    // A person joining a shared workspace owns none until they create their own.
-    // An owned workspace gets the operator baseline; extra access is a separate bundle.
-    if (!shared) await provisionAccount(db, user);
-    const personal = shared ? undefined : await bootstrapWorkspace(db, user.id);
-    const target = shared ?? personal;
-    if (!target) throw new Error('account_workspace_unresolved');
-    if (shared) await joinSharedWorkspace(db, session.actorId, shared, user.id);
+    const { personal, target } = await placeAccount(db, session.actorId, shared, user);
     await recordSecurityEvent(db, 'account.create', session.actorId, target.workspaceId, user.id);
     const access =
       personal && action.access

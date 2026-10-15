@@ -17,6 +17,7 @@ import { addDays } from '../referrals/projection.ts';
 import { numberOrNull } from './accumulators.ts';
 import { hash } from './normalization.ts';
 import { record } from '../db/json.ts';
+import { compareText } from '../text-order.ts';
 
 const p = policy.traffic;
 const integer = (value: unknown) => {
@@ -116,7 +117,8 @@ async function selectedDates(
       .executeTakeFirst();
     if (!row?.start || !row.end) return null;
     const floor = addDays(row.end, -(p.TRAFFIC_MAX_WINDOW_DAYS - 1));
-    return [row.start > floor ? row.start : floor, row.end];
+    // ISO dates order as text; the later of the first import and the window floor.
+    return [compareText(row.start, floor) > 0 ? row.start : floor, row.end];
   }
   if (range in extended) {
     // The preset family ends at the refresh's partition anchor; a display-only

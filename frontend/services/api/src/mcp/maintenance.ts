@@ -34,7 +34,7 @@ async function cleanup(
   canAdmit: () => boolean,
 ) {
   if (!canAdmit()) return 0;
-  return db.transaction().execute(async (trx) => {
+  return await db.transaction().execute(async (trx) => {
     const rows =
       table === 'mcp_oauth_grants'
         ? await trx

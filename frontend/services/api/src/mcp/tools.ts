@@ -537,12 +537,13 @@ export const definitions = {
     title: 'Open CiteLadder',
     description: 'Open the CiteLadder project picker.',
     schema: z.strictObject({}),
-    read: async ({ origin }) => ({
-      surface: 'citeladder_analytics',
-      selection: null,
-      evidence: {},
-      links: { application: origin, onboarding: `${origin}/onboarding` },
-    }),
+    read: ({ origin }) =>
+      Promise.resolve({
+        surface: 'citeladder_analytics',
+        selection: null,
+        evidence: {},
+        links: { application: origin, onboarding: `${origin}/onboarding` },
+      }),
   }),
 };
 type ToolName = keyof typeof definitions;
@@ -624,5 +625,5 @@ export async function dispatchTool(
   const call = principalForCall(principal);
   const result = await definition.read({ db, principal: call, origin, maxBytes }, parsed.data);
   // Dates serialize as ISO instants; an invalid persisted projection fails here.
-  return output.parse(JSON.parse(JSON.stringify(result)));
+  return output.parse(JSON.parse(JSON.stringify(result))); // NOSONAR -- JSON round-trip on purpose: Dates become ISO strings, undefined drops
 }

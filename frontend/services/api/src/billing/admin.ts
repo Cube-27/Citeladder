@@ -108,7 +108,7 @@ async function importCatalog(
       row.created_idempotency_key &&
       row.created_idempotency_key !== ctx.idempotencyKey
     )
-      return db
+      return await db
         .updateTable('billing_catalog_revisions')
         .set({
           payload: JSON.stringify(payload),
@@ -127,7 +127,7 @@ async function importCatalog(
       throw new Error('catalog_revision_conflict');
     return row;
   }
-  return db
+  return await db
     .insertInto('billing_catalog_revisions')
     .values({
       id: randomUUID(),

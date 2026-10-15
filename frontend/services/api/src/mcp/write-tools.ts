@@ -541,5 +541,5 @@ export async function dispatchWrite(
   const definition: Definition<z.ZodObject> = writeDefinitions[name];
   const parsed = definition.schema.safeParse(input);
   if (!parsed.success) throw new McpInputError(argumentProblem(parsed.error));
-  return output.parse(JSON.parse(JSON.stringify(await definition.run(context, parsed.data))));
+  return output.parse(JSON.parse(JSON.stringify(await definition.run(context, parsed.data)))); // NOSONAR -- JSON round-trip on purpose: Dates become ISO strings, undefined drops
 }
