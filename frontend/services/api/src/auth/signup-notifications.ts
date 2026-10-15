@@ -30,6 +30,7 @@ export async function notifyVerifiedSignups(
     .selectFrom('users')
     .select(['id', 'email', 'email_verification_method', 'created_at', 'email_verified_at'])
     .where('registration_origin', '=', 'public')
+    .where('is_active', '=', true)
     .where('email_verified_at', '>', since)
     .where(({ exists, not, selectFrom }) =>
       not(
@@ -49,9 +50,10 @@ export async function notifyVerifiedSignups(
   let sent = 0;
   for (const user of pending) {
     if (!canAdmit()) break;
-    // NOSONAR -- Sends run one at a time; a refused one stays pending for the
-    // next tick, and the idempotency key stops a duplicate.
+    // A refused send stays pending for the next tick; the key stops a duplicate.
+    // Sends run one at a time to keep the provider budget bounded.
     const accepted = await sendAuthMail(config, {
+      // NOSONAR -- Sequential by design.
       id: `signup-notice-${user.id}`,
       email: cfg.signup_notice_recipient,
       replyTo: user.email,
@@ -64,7 +66,7 @@ export async function notifyVerifiedSignups(
       ].join('\n'),
     });
     if (!accepted) continue;
-    await recordSecurityEvent(db, NOTIFIED, user.id, null, user.id);
+    await recordSecurityEvent(db, NOTIFIED, user.id, null, user.id); // NOSONAR -- Marks this send.
     sent += 1;
   }
   if (sent) getLogger('app.auth').info('auth.signup_notices_sent', { count: sent });
