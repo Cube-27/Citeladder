@@ -13,6 +13,27 @@ import { recordSecurityEvent } from './security-events.ts';
 const NOTIFIED = 'auth.signup_notified';
 const cfg = policy.auth.mailbox;
 
+function notice(user: {
+  id: string;
+  email: string;
+  email_verification_method: string | null;
+  created_at: Date;
+  email_verified_at: Date;
+}) {
+  return {
+    id: `signup-notice-${user.id}`,
+    email: cfg.signup_notice_recipient,
+    replyTo: user.email,
+    subject: `New CiteLadder signup: ${user.email}`,
+    text: [
+      `Email: ${user.email}`,
+      `Signed up with: ${user.email_verification_method === 'google' ? 'Google' : 'email and password'}`,
+      `Registered: ${user.created_at.toISOString()}`,
+      `Verified: ${user.email_verified_at.toISOString()}`,
+    ].join('\n'),
+  };
+}
+
 /**
  * Notifies a bounded batch of signups verified within the notice window;
  * returns how many were sent. The window keeps each tick's scan small and
@@ -51,20 +72,7 @@ export async function notifyVerifiedSignups(
   for (const user of pending) {
     if (!canAdmit()) break;
     // A refused send stays pending for the next tick; the key stops a duplicate.
-    // Sends run one at a time to keep the provider budget bounded.
-    const accepted = await sendAuthMail(config, {
-      // NOSONAR -- Sequential by design.
-      id: `signup-notice-${user.id}`,
-      email: cfg.signup_notice_recipient,
-      replyTo: user.email,
-      subject: `New CiteLadder signup: ${user.email}`,
-      text: [
-        `Email: ${user.email}`,
-        `Signed up with: ${user.email_verification_method === 'google' ? 'Google' : 'email and password'}`,
-        `Registered: ${user.created_at.toISOString()}`,
-        `Verified: ${user.email_verified_at.toISOString()}`,
-      ].join('\n'),
-    });
+    const accepted = await sendAuthMail(config, notice(user)); // NOSONAR -- Sequential sends.
     if (!accepted) continue;
     await recordSecurityEvent(db, NOTIFIED, user.id, null, user.id); // NOSONAR -- Marks this send.
     sent += 1;
