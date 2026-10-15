@@ -1,6 +1,7 @@
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import { policy } from '../config.ts';
+import { scalarText } from '../text-order.ts';
 import { auditPolicy } from '../audits/config.ts';
 import type { DeriveExecution } from '../audits/result-persistence.ts';
 import type { MeterableShelfResolver } from './shelf.ts';
@@ -39,8 +40,8 @@ export async function prepareSavedShelf(
     .select(['task_id', 'artifact_id'])
     .where('workspace_id', '=', workspaceId)
     .where('audit_id', '=', auditId)
-    .where('parser_version', '=', String(frozen.parser_version ?? versions.parser_version)) // NOSONAR -- persisted JSON scalar
-    .where('matcher_version', '=', String(frozen.matcher_version ?? versions.matcher_version)) // NOSONAR -- persisted JSON scalar
+    .where('parser_version', '=', scalarText(frozen.parser_version ?? versions.parser_version))
+    .where('matcher_version', '=', scalarText(frozen.matcher_version ?? versions.matcher_version))
     .execute();
   for (const task of tasks) {
     if (

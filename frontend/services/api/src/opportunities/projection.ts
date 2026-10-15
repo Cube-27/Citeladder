@@ -196,7 +196,7 @@ function projectContentHandoff(row: OpportunityRow): Record<string, unknown> {
       policy.opportunity.source_patterns.CONTENT_HANDOFF_TEMPLATE_VERSION,
   };
   const skill = persisted.suggested_skill_id
-    ? String(persisted.suggested_skill_id) // NOSONAR -- persisted JSON scalar
+    ? scalarText(persisted.suggested_skill_id)
     : DEFAULT_FORMAT;
   // A detector's frozen brief overlays the row's default brief, so a brief
   // frozen before a field existed still carries every published field.

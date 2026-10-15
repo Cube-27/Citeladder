@@ -14,6 +14,7 @@ import { compareIdentityText } from '../analysis/comparison.ts';
 import { storedEntityMatching } from '../analysis/entity-matching.ts';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
+import { scalarText } from '../text-order.ts';
 import { wireUtc, utcText } from '../db/timestamps.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
 
@@ -26,12 +27,12 @@ export function projectRoster(configuration: unknown): string {
   const competitors = (Array.isArray(config.competitors) ? config.competitors : [])
     .map((item) => {
       const competitor = record(item);
-      return [String(competitor.name || ''), ...sorted(competitor.aliases)]; // NOSONAR -- persisted JSON scalar
+      return [scalarText(competitor.name || ''), ...sorted(competitor.aliases)];
     })
     .sort((a, b) => compareIdentityText(JSON.stringify(a), JSON.stringify(b)));
   const matching = storedEntityMatching(config);
   const identity = {
-    brand: String(config.brand_name || ''), // NOSONAR -- persisted JSON scalar
+    brand: scalarText(config.brand_name || ''),
     brand_aliases: sorted(config.brand_aliases),
     competitors,
     matching: Object.keys(matching)

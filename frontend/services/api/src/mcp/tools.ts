@@ -6,6 +6,7 @@ import { performanceDimensionSchema } from '@citeladder/contracts/performance';
 import { policy } from '../config.ts';
 import { crawlLogs } from '../config/crawl-logs.ts';
 import type { Database } from '../db/database.ts';
+import { plainJson } from '../db/json.ts';
 import { PAGE_STATUS_FILTERS } from '../site-health/reads/page-rows.ts';
 import { mcpPolicy } from './config.ts';
 import {
@@ -625,5 +626,5 @@ export async function dispatchTool(
   const call = principalForCall(principal);
   const result = await definition.read({ db, principal: call, origin, maxBytes }, parsed.data);
   // Dates serialize as ISO instants; an invalid persisted projection fails here.
-  return output.parse(JSON.parse(JSON.stringify(result))); // NOSONAR -- JSON round-trip on purpose: Dates become ISO strings, undefined drops
+  return output.parse(plainJson(result));
 }

@@ -18,6 +18,9 @@ export const numberRecord = (value: unknown): Record<string, number> =>
 export const strings = (value: unknown): string[] =>
   Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
 
+/** The value as plain JSON data: undefined drops and Dates become ISO strings. */
+export const plainJson = (value: unknown): unknown => JSON.parse(JSON.stringify(value)); // NOSONAR -- the JSON round-trip is the point; structuredClone keeps undefined and Dates
+
 /** A stored JSON object; any other value is a corrupt row and fails loudly. */
 export function jsonObject(value: unknown, column: string): Record<string, unknown> {
   if (value !== null && typeof value === 'object' && !Array.isArray(value))

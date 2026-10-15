@@ -10,7 +10,7 @@ import { record, strings } from '../db/json.ts';
 import { classifyProjectQueries } from './classification.ts';
 import { stableHash, unique, type QueryInput, type SearchInput } from './projection.ts';
 import { latestQuerySnapshot, queryEvidenceRevision, type DemandScope } from './query-evidence.ts';
-import { compareText } from '../text-order.ts';
+import { compareText, scalarText } from '../text-order.ts';
 
 export async function trafficSource(db: Database, scope: DemandScope) {
   const workspace = new WorkspaceScope(scope.workspaceId);
@@ -118,9 +118,9 @@ export async function queryDetectorInputs(
     const fact = row.site_url_id ? byPage.get(row.site_url_id) : undefined;
     const f = record(fact?.normalized_facts),
       headings = record(f.headings);
-    const title = String(f.title ?? ''), // NOSONAR -- persisted JSON scalar
+    const title = scalarText(f.title ?? ''),
       h1 = strings(headings.h1_texts),
-      primary = String(f.primary_content_text ?? ''); // NOSONAR -- persisted JSON scalar
+      primary = scalarText(f.primary_content_text ?? '');
     return [
       {
         observed_date: row.day,

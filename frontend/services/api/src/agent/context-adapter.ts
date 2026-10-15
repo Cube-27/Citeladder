@@ -1,7 +1,7 @@
 /** Agent context orchestrates existing persisted owners, never acquisition. */
 import { agentContextRefsSchema } from '@citeladder/contracts/agent';
 import { policy } from '../config.ts';
-import { record } from '../db/json.ts';
+import { plainJson, record } from '../db/json.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { ApiError } from '../errors.ts';
 import { readBrandMemory } from '../projects/brand-profile.ts';
@@ -17,9 +17,6 @@ import { revisionRefs } from './outputs.ts';
 import type { ContextReader } from './context.ts';
 import { AgentError } from './contracts.ts';
 import { z } from 'zod';
-
-/** The value as plain JSON data: undefined drops and Dates become ISO strings. */
-const plainJson = (value: unknown): unknown => JSON.parse(JSON.stringify(value)); // NOSONAR -- the JSON round-trip is the point; structuredClone keeps undefined and Dates
 
 function owned(candidate: unknown, website: string) {
   if (typeof candidate !== 'string' || !candidate) return '';

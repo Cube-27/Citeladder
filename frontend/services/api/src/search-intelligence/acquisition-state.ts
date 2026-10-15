@@ -17,6 +17,7 @@ import type { ProviderError } from '../answer-engines/contracts.ts';
 import { isDataError } from '../db/errors.ts';
 import { rolesWith } from '../auth/workspace.ts';
 import { loadWorkerSettings } from '../config.ts';
+import { scalarText } from '../text-order.ts';
 import {
   enqueueImplementationVerification,
   enqueueOpportunityRefresh,
@@ -735,11 +736,11 @@ export class AcquisitionState {
           target_domain: String(target.registrable_domain),
           target_hostname: String(target.hostname),
           target_origin: String(target.origin),
-          comparison_origin: String(comparison.origin ?? ''), // NOSONAR -- persisted JSON scalar
+          comparison_origin: scalarText(comparison.origin ?? ''),
           location_code: si.backlink_kinds.includes(kind) ? null : Number(request.location_code),
           language_code: si.backlink_kinds.includes(kind)
             ? ''
-            : String(request.language_code ?? ''), // NOSONAR -- persisted JSON scalar
+            : scalarText(request.language_code ?? ''),
           requested_rows: Number(plan.requested_rows),
           provider_filters: JSON.stringify({
             ...request,
