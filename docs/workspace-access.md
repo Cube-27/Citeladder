@@ -23,6 +23,13 @@ decision (`accept_terms` and the published `terms_revision`, sealed in the signe
 state) and may create an account. Google started from sign-in never creates one:
 an unknown address is redirected to `/register` with the address prefilled and a
 `oauth_signin_no_account` notice.
+Once a public identity's mailbox is verified (mailed link, reset or Google), the
+runner tick's `signup-notices` phase
+([signup notifications](../frontend/services/api/src/auth/signup-notifications.ts))
+mails the owner one notice (`mailbox.signup_notice_recipient`) with Reply-To set
+to the new address. The `auth.signup_notified` security event marks it sent; a
+refused send retries on the next tick under the same Resend idempotency key,
+for as long as the verification is inside `signup_notice_window_seconds`.
 Email/password login and Google sign-in establish the HttpOnly session;
 session-version checks invalidate stale sessions. Neither signing up nor signing
 in creates a workspace. Onboarding creates the person's own workspace

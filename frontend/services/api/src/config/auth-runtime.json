@@ -123,7 +123,10 @@
     "request_window_seconds": 3600,
     "sender": "notifications@citeladder.com",
     "reply_to": "contact@citeladder.com",
-    "endpoint": "https://api.resend.com/emails"
+    "endpoint": "https://api.resend.com/emails",
+    "signup_notice_recipient": "abhineet.jain@cube27.com",
+    "signup_notice_batch": 25,
+    "signup_notice_window_seconds": 259200
   },
   "privacy_revision": "2026-09-28",
   "session": { "clock_tolerance_seconds": 30 },

@@ -17,6 +17,7 @@ export async function sendAuthMail(
     email: string;
     subject: string;
     text: string;
+    replyTo?: string;
   },
 ): Promise<boolean> {
   if (!config.auth.mailKey) return false;
@@ -32,7 +33,7 @@ export async function sendAuthMail(
       },
       body: JSON.stringify({
         from: cfg.sender,
-        reply_to: cfg.reply_to,
+        reply_to: input.replyTo ?? cfg.reply_to,
         to: [input.email],
         subject: input.subject,
         text: input.text,
