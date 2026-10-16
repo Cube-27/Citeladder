@@ -42,9 +42,20 @@ describe('parsePromptCsv', () => {
       topic: 'Running shoes',
       theme: '',
       intent: '',
+      buyer_stage: '',
       cohort: 'core',
       enabled: true,
     });
+  });
+
+  it('reads optional intent and buyer stage tags, leaving unknown stages unset', () => {
+    const parsed = parsePromptCsv(
+      'prompt,intent,buyer_stage\nBest shoes?,Purchase,Decision\nShoe care tips,discovery,someday',
+    );
+    expect(parsed.rows.map((row) => [row.input.intent, row.input.buyer_stage])).toEqual([
+      ['purchase', 'decision'],
+      ['discovery', ''],
+    ]);
   });
 
   it('never rejects a row for its internal columns', () => {

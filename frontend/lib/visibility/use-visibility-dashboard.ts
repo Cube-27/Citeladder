@@ -1,10 +1,15 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/api/query-keys';
 import { retainPreviousDataForScope, warmQuery } from '@/lib/api/query-client';
-import { useActiveWorkspaceId } from '@/lib/project/project-context';
+import { useActiveProject, useActiveWorkspaceId } from '@/lib/project/project-context';
+import {
+  cohortUrlCodec,
+  writeStoredCohort,
+  type PromptCohort,
+} from '@/lib/visibility/prompt-cohort';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { resolveProjectRequestScope, type ProjectRequestScope } from '@/lib/project/request-scope';
 import { runsQueries } from '@/lib/api/runs';
@@ -51,7 +56,6 @@ const tabCodec = stringUrlCodec(
 const engineCodec = stringUrlCodec(['all', ...TREND_ENGINES], 'all');
 const rangeCodec = stringUrlCodec<TrendRange>(['all', '30d', '90d', '1y'], '90d');
 const granularityCodec = stringUrlCodec<TrendGranularity>(['run', 'day', 'week', 'month'], 'run');
-const cohortCodec = stringUrlCodec(['core', 'comparison'] as const, 'core');
 
 /**
  * Writes the URL directly rather than closing over hook state, so its identity
@@ -94,9 +98,19 @@ export function useVisibilityFilters() {
     clearKeys: pageKeys,
   });
   const [granularity, setGranularity] = useUrlState('granularity', granularityCodec);
-  const [cohort, setCohort] = useUrlState('cohort', cohortCodec, {
+  // Without `cohort` in the URL the project's remembered choice applies.
+  const projectId = useActiveProject()?.id ?? null;
+  const cohortCodec = useMemo(() => cohortUrlCodec(projectId), [projectId]);
+  const [cohort, setCohortUrl] = useUrlState('cohort', cohortCodec, {
     clearKeys: pageKeys,
   });
+  const setCohort = useCallback(
+    (next: PromptCohort) => {
+      writeStoredCohort(projectId, next);
+      setCohortUrl(next);
+    },
+    [projectId, setCohortUrl],
+  );
   const [baselineId, setBaselineId] = useUrlState('baseline', optionalStringUrlCodec);
   // A non-default market's id; absent is the project default. Runs, baselines
   // and pooled configurations belong to one market, so a switch drops them.

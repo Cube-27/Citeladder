@@ -91,58 +91,60 @@ export function PromptTable({
 
   return (
     <>
-      <Table>
+      {/* Fixed layout: paging or filtering never resizes the columns. */}
+      <Table minWidth="xl" fixed>
         <TableHeader>
           <TableRow>
             <TableHead>Prompt</TableHead>
-            <TableHead>Topic</TableHead>
-            {measured ? <TableHead numeric>Visibility</TableHead> : null}
-            {measured ? <TableHead numeric>Owned citations</TableHead> : null}
+            <TableHead className="w-40">Topic</TableHead>
+            <TableHead className="w-56">Tags</TableHead>
+            {measured ? (
+              <TableHead numeric className="w-24">
+                Visibility
+              </TableHead>
+            ) : null}
+            {measured ? (
+              <TableHead numeric className="w-36">
+                Owned citations
+              </TableHead>
+            ) : null}
             {/* A mean mention ordinal, not a competitive rank — the rankings
                 table owns that word. Named for what it measures. */}
-            {measured ? <TableHead numeric>Avg. mention position</TableHead> : null}
-            {measured ? <TableHead numeric>Change</TableHead> : null}
-            <TableHead>Enabled</TableHead>
+            {measured ? (
+              <TableHead numeric className="w-44">
+                Avg. mention position
+              </TableHead>
+            ) : null}
+            {measured ? (
+              <TableHead numeric className="w-24">
+                Change
+              </TableHead>
+            ) : null}
+            <TableHead className="w-40">Enabled</TableHead>
             <TableHead className="w-16 text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {pagedPrompts.map((prompt) => (
             <TableRow key={prompt.id}>
-              <TableCell className="max-w-130 min-w-60">
+              <TableCell>
                 {/* The question is held to two lines, so the tooltip carries the
-                    whole question above its classification. */}
-                <Tooltip
-                  content={
-                    <span className="grid gap-1">
-                      <span>{prompt.text}</span>
-                      <span>
-                        {[
-                          prompt.buyer_stage ? buyerStageLabels[prompt.buyer_stage] : '',
-                          intentLabels[prompt.intent],
-                        ]
-                          .filter(Boolean)
-                          .join(' · ')}
-                      </span>
-                    </span>
-                  }
-                >
+                    whole question. */}
+                <Tooltip content={prompt.text}>
                   {/* The question opens its history: the prompt is the object. */}
                   <ProjectLink
                     href={promptHistoryHref(prompt.id)}
                     className="text-foreground line-clamp-2 break-words hover:underline"
                   >
                     {prompt.text}
-                    <span className="sr-only">
-                      {' '}
-                      Stage: {buyerStageLabels[prompt.buyer_stage] || 'Not set'}. Intent:{' '}
-                      {intentLabels[prompt.intent] || 'Not set'}.
-                    </span>
                   </ProjectLink>
                 </Tooltip>
               </TableCell>
-              <TableCell className="max-w-45">
+              <TableCell>
                 <TopicBadge name={prompt.topic_id ? topicNames.get(prompt.topic_id) : undefined} />
+              </TableCell>
+              <TableCell>
+                <PromptTags prompt={prompt} />
               </TableCell>
               {measured ? <MeasuredCells measurement={measurements?.get(prompt.id)} /> : null}
               <TableCell>
@@ -220,6 +222,19 @@ function TopicBadge({ name }: Readonly<{ name?: string }>) {
         <span className="min-w-0 truncate">{name}</span>
       </Tag>
     </Tooltip>
+  );
+}
+
+/** Whether the prompt names a brand, then its intent and buyer stage when set. */
+function PromptTags({ prompt }: Readonly<{ prompt: Prompt }>) {
+  return (
+    <span className="flex flex-wrap gap-1">
+      <Tag tone={prompt.branded ? 'amber' : 'neutral'}>
+        {prompt.branded ? 'Branded' : 'Unbranded'}
+      </Tag>
+      {prompt.intent ? <Tag tone="outline">{intentLabels[prompt.intent]}</Tag> : null}
+      {prompt.buyer_stage ? <Tag tone="outline">{buyerStageLabels[prompt.buyer_stage]}</Tag> : null}
+    </span>
   );
 }
 

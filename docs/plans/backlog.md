@@ -58,10 +58,14 @@ Owners: [Workspace access](../workspace-access.md), [MCP](../mcp.md),
 
 ### Integrations and AI Visibility
 
-- AI interest estimates per topic (F6b): DataForSEO AI Keyword Data volume per
-  topic seed keyword, shown on topics only as an estimate. Backlogged by the
-  owner (2026-10-10): a keyword-level paid estimate cannot attach to prompts,
-  and the focus is prompt quality.
+- Prompt tags deferred by [Insight parity](insight-parity.md) I12 (no schema
+  change): a persisted, editable persona tag (generated prompts keep their
+  audience only in `generation_evidence`); an "All prompts" Visibility total,
+  which needs a new finalization aggregate; filing a manual or imported
+  prompt that names the brand as branded; and leaving tags (intent, buyer
+  stage, prompt intent, theme) out of the audit prompt-panel hash
+  (`audits/freeze.ts`), so correcting a tag no longer starts a new comparison
+  series. That changes every existing run's comparison key.
 - Improve evidence-backed Opportunity sorting/labels without another blended score;
   expose existing three-leg verification, gap changes, overlapping actions and
   the causality notice.

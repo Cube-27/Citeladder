@@ -27,6 +27,7 @@ import {
   type VisibilityTab,
 } from '@/lib/visibility/dashboard';
 import { ANSWER_OUTCOMES } from '@/lib/config/visibility';
+import { PROMPT_COHORTS, type PromptCohort } from '@/lib/visibility/prompt-cohort';
 import {
   GRANULARITY_OPTIONS,
   RANGE_OPTIONS,
@@ -39,16 +40,14 @@ type EngineFilter = LogicalEngine | 'all';
 const METRICS_HELP_URL = '/faq';
 
 /**
- * Trigger copy for the prompt cohort.
- *
- * The trigger used to read "Core" — a word from the metrics schema that told a
- * reader nothing about what they were looking at. Both cohorts now name the
- * kind of question that was asked.
+ * Trigger copy for the prompt cohort: whether the questions name a brand.
+ * Unbranded questions are the honest headline; branded comparison questions
+ * name the brand or a competitor, so they read separately.
  */
 const COHORT_LABELS = {
-  core: 'Visibility prompts',
-  comparison: 'Comparison prompts',
-} as const;
+  core: 'Unbranded prompts',
+  comparison: 'Branded prompts',
+} as const satisfies Record<PromptCohort, string>;
 
 type ToolbarProps = Readonly<{
   activeTab: VisibilityTab;
@@ -67,8 +66,8 @@ type ToolbarProps = Readonly<{
   onChangeRange: (range: TrendRange) => void;
   granularity: TrendGranularity;
   onChangeGranularity: (granularity: TrendGranularity) => void;
-  cohort: 'core' | 'comparison';
-  onChangeCohort: (cohort: 'core' | 'comparison') => void;
+  cohort: PromptCohort;
+  onChangeCohort: (cohort: PromptCohort) => void;
   outcome?: string | null;
   onChangeOutcome?: (outcome: string | null) => void;
   markets?: readonly ProjectMarket[];
@@ -140,7 +139,7 @@ export function MarketFilter({
   );
 }
 
-const COHORT_OPTIONS = (['core', 'comparison'] as const).map((value) => ({
+const COHORT_OPTIONS = PROMPT_COHORTS.map((value) => ({
   value,
   label: COHORT_LABELS[value],
 }));
@@ -148,8 +147,8 @@ const COHORT_OPTIONS = (['core', 'comparison'] as const).map((value) => ({
 function CohortFilter({ cohort, onChangeCohort }: ToolbarProps) {
   return (
     <FilterChoice
-      label="Filter by prompt type"
-      menuLabel="Prompt type"
+      label="Filter by branding"
+      menuLabel="Prompts"
       value={cohort}
       defaultValue="core"
       options={COHORT_OPTIONS}

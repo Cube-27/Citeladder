@@ -12,16 +12,24 @@ import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import type { Prompt, Topic } from '@/lib/api/types';
 import {
+  buyerStageLabels,
+  buyerStageValues,
   emptyPromptForm,
+  intentLabels,
+  intentValues,
   promptFormSchema,
   promptToFormValues,
   type PromptFormValues,
 } from '@/lib/prompts/forms';
 
+const INTENT_OPTIONS = intentValues.map((value) => ({ value, label: intentLabels[value] }));
+const STAGE_OPTIONS = buyerStageValues.map((value) => ({ value, label: buyerStageLabels[value] }));
+
 /**
  * Add / edit prompt dialog (F7). react-hook-form + zod; the same form serves
- * create (no `prompt`) and edit (prefilled from `prompt`). It asks only for the
- * prompt and its topic, and hands the validated values to `onSubmit`, whose
+ * create (no `prompt`) and edit (prefilled from `prompt`). It asks for the
+ * prompt and its topic, plus its intent and buyer stage tags when editing,
+ * and hands the validated values to `onSubmit`, whose
  * owner maps them to a create or an update payload.
  */
 /** Saving wins over both; otherwise the verb follows which dialog this is. */
@@ -127,6 +135,52 @@ export function PromptFormDialog({
             />
           )}
         </Field>
+
+        {/* Tags are set on generation or import; editing corrects them. */}
+        {isEdit ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Intent">
+              {(props) => (
+                <Controller
+                  control={control}
+                  name="intent"
+                  render={({ field }) => (
+                    <Select
+                      {...props}
+                      ariaLabel="Intent"
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      options={INTENT_OPTIONS}
+                    />
+                  )}
+                />
+              )}
+            </Field>
+            <Field label="Buyer stage">
+              {(props) => (
+                <Controller
+                  control={control}
+                  name="buyerStage"
+                  render={({ field }) => (
+                    <Select
+                      {...props}
+                      ariaLabel="Buyer stage"
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      options={STAGE_OPTIONS}
+                    />
+                  )}
+                />
+              )}
+            </Field>
+            {/* Tags are part of a run's frozen prompt panel, so a change
+                cannot be compared with runs measured before it. */}
+            <p className="type-caption text-secondary sm:col-span-2">
+              Changing a tag starts a new comparison series: later runs are not compared with
+              earlier ones.
+            </p>
+          </div>
+        ) : null}
       </form>
     </Dialog>
   );

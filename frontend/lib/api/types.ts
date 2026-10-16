@@ -118,6 +118,7 @@ export type CommandCenter = z.infer<typeof commandCenterSchema>;
 export type BrandProfileDraft = z.infer<typeof brandProfileDraftSchema>;
 export type BrandProfile = z.infer<typeof brandProfileSchema>;
 export type PromptIntent = z.infer<typeof promptIntentSchema>;
+export type BuyerStage = Prompt['buyer_stage'];
 export type Prompt = z.infer<typeof promptSchema>;
 export type PromptStatus = z.infer<typeof promptStatusSchema>;
 export type PromptSet = z.infer<typeof promptSetSchema>;

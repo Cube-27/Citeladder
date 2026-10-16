@@ -42,18 +42,26 @@ function renderTable(prompts: Prompt[]) {
 }
 
 describe('PromptTable pagination', () => {
-  it('keeps classification available on the question without extra columns', async () => {
-    renderTable([makePrompt(1, { branded: true, buyer_stage: 'consideration' })]);
+  it('shows each prompt’s branding, intent and buyer stage as tags', () => {
+    renderTable([
+      makePrompt(1, { branded: true, buyer_stage: 'consideration' }),
+      makePrompt(2, { intent: '', buyer_stage: '' }),
+    ]);
 
-    expect(screen.queryByRole('columnheader', { name: 'Branded' })).not.toBeInTheDocument();
-    expect(screen.queryByText('Branded')).not.toBeInTheDocument();
-    const question = screen.getByText('Prompt number 1');
-    expect(question.textContent).toMatch(/Stage: Consideration/);
-    expect(question.textContent).toMatch(/Intent: Discovery/);
+    expect(screen.getByRole('columnheader', { name: 'Tags' })).toBeInTheDocument();
+    const [, tagged, untagged] = screen.getAllByRole('row');
+    expect(within(tagged!).getAllByRole('cell')[2]).toHaveTextContent(
+      'BrandedDiscoveryConsideration',
+    );
+    expect(within(untagged!).getAllByRole('cell')[2]!.textContent).toBe('Unbranded');
+  });
+
+  it('carries the whole question in a tooltip', async () => {
+    renderTable([makePrompt(1)]);
+
     await userEvent.setup().tab();
-    expect(question).toHaveFocus();
-    expect(await screen.findByRole('tooltip')).toHaveTextContent('Discovery');
-    expect(screen.getByRole('tooltip')).toHaveTextContent('Consideration');
+    expect(screen.getByRole('link', { name: 'Prompt number 1' })).toHaveFocus();
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Prompt number 1');
   });
 
   it('opens each question on its history and shows its measured rates', () => {

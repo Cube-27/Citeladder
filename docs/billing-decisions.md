@@ -430,6 +430,14 @@ schedule is a known gap to close in that sizing, not intended behaviour.
 GST rate of 18% (`BILLING_INDIA_GST_RATE=0.18`) and the approval reference
 `sandbox`. Production still waits for the accountant's inputs.
 
+## Insight parity (2026-10-16)
+
+**B57 — Owner, 2026-10-16.** Prompt tags and the unbranded toggle, retrieved
+versus cited sources, top movers and the editable Overview with its PDF export
+are on every plan, including the free trial. They read persisted data only, so
+they add no entitlement, grant or credit charge. See the
+[Insight parity plan](plans/insight-parity.md).
+
 ## Owner inputs still required
 
 Not decisions; needed only for India checkout and live enablement: GST rate,

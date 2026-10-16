@@ -16,6 +16,10 @@ Remaining work is consolidated in the backlog; historical plans are not active a
   decision shipped in #384; the items needing the owner's decision are in the
   [decisions record](security-audit-2026-10-decisions.md).
 
+- [Insight parity](insight-parity.md) (owner decisions recorded 2026-10-16):
+  visible prompt tags with an unbranded toggle, retrieved versus cited sources
+  and top movers, then an editable Overview, in three PRs.
+
 The feature review programme and the competitive feature tracker are complete
 and archived under [docs/archive](../archive/); their other unfinished items,
 including enterprise SSO and SCIM (F9), are in the backlog.

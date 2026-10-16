@@ -172,6 +172,18 @@ describe('prompt edits', () => {
     expect(detached.body.topic_id).toBeNull();
   });
 
+  it('corrects intent and buyer stage tags and refuses an unknown stage', async () => {
+    const id = await prompt(db, t.setId, 'acme trail shoes');
+    const tagged = await patch<Prompt>(`/prompts/${id}`, {
+      intent: 'comparison',
+      buyer_stage: 'decision',
+    });
+    expect([tagged.body.intent, tagged.body.buyer_stage]).toEqual(['comparison', 'decision']);
+    const kept = await patch<Prompt>(`/prompts/${id}`, { theme: 'trail' });
+    expect(kept.body.buyer_stage).toBe('decision');
+    expect((await patch(`/prompts/${id}`, { buyer_stage: 'someday' })).status).toBe(422);
+  });
+
   it('re-binds on activation against the prompt topic', async () => {
     const topicId = await topic(db, t.projectId, 'Trail gear', 'hydration packs');
     const archived = await prompt(db, t.setId, 'lightest hydration packs', {
@@ -235,7 +247,12 @@ describe('import', () => {
     const imported = await post<PromptSet>(`/prompt-sets/${t.setId}/import`, {
       prompts: [
         { text: 'Acme trail shoes?', topic: 'trail gear' },
-        { text: 'acme road shoes', topic: 'trail gear', cohort: 'comparison' },
+        {
+          text: 'acme road shoes',
+          topic: 'trail gear',
+          cohort: 'comparison',
+          buyer_stage: 'consideration',
+        },
         { text: 'acme road shoes.', topic: 'Road' },
         { text: '   ', topic: 'Blank' },
         { text: 'acme racing flats', topic: 'Road' },
@@ -246,6 +263,7 @@ describe('import', () => {
     expect(byText.get('acme road shoes')).toMatchObject({
       topic_id: existingTopic,
       cohort: 'comparison',
+      buyer_stage: 'consideration',
       branded: true,
       origin: 'imported',
     });

@@ -19,6 +19,7 @@ import {
 } from '@citeladder/contracts/project';
 import { strictValidate } from '@citeladder/contracts/validation';
 import type {
+  BuyerStage,
   Prompt,
   PromptCandidate,
   PromptCandidateReviewResponse,
@@ -48,10 +49,14 @@ export type PromptInput = {
 };
 
 /** One CSV import row: the user's topic NAME (created when new, '' = none). */
-export type PromptImportRow = PromptInput & { topic: string };
+export type PromptImportRow = PromptInput & {
+  topic: string;
+  buyer_stage?: BuyerStage;
+};
 
 export type PromptUpdateInput = Partial<Omit<PromptInput, 'topic_id'>> & {
   status?: PromptStatus;
+  buyer_stage?: BuyerStage;
   // Explicit null detaches the prompt from its topic.
   topic_id?: string | null;
 };
