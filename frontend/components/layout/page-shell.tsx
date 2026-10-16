@@ -183,7 +183,14 @@ function IdentityBand({
           'min-[981px]:min-h-[var(--page-band-identity)] min-[981px]:py-0',
         )}
       >
-        <div className={cn('grid min-w-0 flex-1 gap-1', !back && 'max-[700px]:sr-only')}>
+        {/* The title keeps a floor, so a long action row wraps rather than
+            squeezing the page's name to nothing. */}
+        <div
+          className={cn(
+            'grid min-w-0 flex-1 gap-1 min-[701px]:min-w-[var(--page-title-min-width)]',
+            !back && 'max-[700px]:sr-only',
+          )}
+        >
           {back ? (
             <TextLink
               variant="back"
@@ -209,7 +216,7 @@ function IdentityBand({
           // Desktop-only, because that is the only width the glyphs appear at.
           <div
             className={cn(
-              'flex min-w-0 min-h-[var(--control-height-md)] flex-wrap items-center gap-2',
+              'flex min-w-0 min-h-[var(--control-height-md)] flex-wrap items-center gap-2 min-[701px]:justify-end',
               navigationMode(pathname) === 'dashboard'
                 ? 'min-[981px]:pe-[calc(3*var(--control-height-md)+1.25rem)]'
                 : 'min-[981px]:pe-[calc(2*var(--control-height-md)+1rem)]',

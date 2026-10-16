@@ -231,7 +231,7 @@ field colour. Coded product views (`data-ui`) keep the product's own material
 inside their frame, and detached layers (menus, the consent bar) keep their
 overlay shadow. Product views carry no "Illustrative example" caption. The
 marketing H1 is the first screen's dominant element on desktop. The
-authenticated app keeps the shared material.
+authenticated app keeps its own material (see below).
 
 The same day the owner extended the flat rule to sign-in, sign-up, the mailbox
 screens and onboarding (`[data-flow-surface]`, light mode only: dark mode keeps
@@ -242,3 +242,16 @@ scaling counts as desktop): the hero tops out at 68px and the page title is
 
 Source: owner, 16 October 2026 (design-taste-frontend inspection of the public
 pages; "prefer skill over design system"). [Design](design.md) owns the system.
+
+## The product app uses hairlines, not lift
+
+The authenticated app trades its layered shadows for crisp hairlines: cards and
+the workspace sheet are a one-pixel edge, secondary controls keep only a
+one-pixel contact shadow, the primary action is one flat fill with no sheen,
+and the current sidebar destination and selected list rows take the neutral
+selected tint rather than a raised face. Detached menus and dialogs keep their
+overlay shadow, and dark mode keeps its edge rings.
+
+Source: owner, 16 October 2026, asking for an audit and redesign of the app
+because it "doesn't really look professional enterprise grade yet", with the
+design choices left to the agent. [Design](design.md) owns the system.

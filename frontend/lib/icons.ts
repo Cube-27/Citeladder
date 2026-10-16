@@ -1,4 +1,5 @@
 import {
+  Activity,
   AlertCircle,
   BookOpen,
   Bot,
@@ -21,6 +22,7 @@ import {
   Settings,
   ShieldCheck,
   Sparkles,
+  Telescope,
   TrendingUp,
   TriangleAlert,
   Wrench,
@@ -66,7 +68,10 @@ export const ICONS = {
   overview: LayoutDashboard,
   // Nav concepts.
   visibility: Gauge,
+  // The answer engines themselves (the surfaces a run asks).
   analytics: Bot,
+  searchIntelligence: Telescope,
+  aiTraffic: Activity,
   performance: TrendingUp,
   prompts: MessageSquareText,
   products: Package,

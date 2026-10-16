@@ -40,7 +40,11 @@ export const NAV_GROUPS = [
       { label: 'Website', href: '/site', icon: ICONS.site },
       { label: 'Search Demand', href: '/demand', icon: ICONS.demand },
       { label: 'Issues', href: '/issues', icon: ICONS.issues },
-      { label: 'Search Intelligence', href: '/search-intelligence', icon: ICONS.analytics },
+      {
+        label: 'Search Intelligence',
+        href: '/search-intelligence',
+        icon: ICONS.searchIntelligence,
+      },
       { label: 'Performance', href: '/performance', icon: ICONS.performance },
       { label: 'Commerce Suite', href: '/products', icon: ICONS.products },
     ],
@@ -55,7 +59,7 @@ export const NAV_GROUPS = [
       { label: 'Prompts', href: '/prompts', icon: ICONS.prompts },
       { label: 'AI Visibility', href: '/visibility', icon: ICONS.visibility },
       { label: 'Runs', href: '/runs', icon: ICONS.runs },
-      { label: 'AI Traffic', href: '/ai-traffic', icon: ICONS.analytics },
+      { label: 'AI Traffic', href: '/ai-traffic', icon: ICONS.aiTraffic },
     ],
   },
 ] as const satisfies readonly NavGroup[];

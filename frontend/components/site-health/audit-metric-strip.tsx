@@ -29,7 +29,8 @@ export function AuditMetricStrip({
       className={cn(
         cardClasses(),
         'grid grid-cols-1 overflow-hidden sm:grid-cols-2',
-        metrics.length === 3 ? 'xl:grid-cols-3' : 'xl:grid-cols-4',
+        // Three fit one row from 768px; a 2 + 1 grid strands the third.
+        metrics.length === 3 ? 'md:grid-cols-3' : 'xl:grid-cols-4',
       )}
     >
       {metrics.map(
@@ -41,8 +42,8 @@ export function AuditMetricStrip({
               index > 0 && 'border-t',
               index % 2 === 1 && 'sm:border-l',
               index < 2 && 'sm:border-t-0',
-              'xl:border-t-0',
-              index > 0 && 'xl:border-l',
+              metrics.length === 3 ? 'md:border-t-0' : 'xl:border-t-0',
+              index > 0 && (metrics.length === 3 ? 'md:border-l' : 'xl:border-l'),
             )}
           >
             <div className="flex items-center justify-between gap-3">

@@ -43,7 +43,9 @@ import { cn } from '@/lib/utils';
 const COLUMNS = {
   2: 'grid-cols-1 sm:grid-cols-2',
   3: 'grid-cols-2 sm:grid-cols-3',
-  4: 'grid-cols-2 lg:grid-cols-4',
+  // One row from 768px, like `MetricGroup`: the sheet is ~700px wide even
+  // beside the rail at a 980px desktop.
+  4: 'grid-cols-2 md:grid-cols-4',
 } as const;
 
 export type StatGridColumns = keyof typeof COLUMNS;
@@ -130,8 +132,9 @@ function StatValue({
 function StatAnatomy({ item, size }: Readonly<{ item: StatItemProps; size: StatValueSize }>) {
   return (
     <>
-      <dt className={textRole('label', 'flex min-w-0 items-center justify-between gap-2')}>
-        <span className="min-w-0 truncate">{item.label}</span>
+      {/* A label wraps to a second line rather than cutting a metric's name. */}
+      <dt className={textRole('label', 'flex min-w-0 items-start justify-between gap-2')}>
+        <span className="line-clamp-2 min-w-0">{item.label}</span>
         {item.marker ? (
           <span
             className={cn('flex shrink-0 items-center gap-2', item.onSelect && 'relative z-10')}
