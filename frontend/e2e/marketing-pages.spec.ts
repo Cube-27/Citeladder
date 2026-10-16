@@ -45,7 +45,11 @@ test.describe('marketing routes', () => {
         copy.description,
       );
       await expect(page.locator('main')).toContainText(copy.lead);
-      await expect(page.locator('main figure').first()).toContainText('Illustrative example');
+      // The hero product view is server-rendered: its titled window and the
+      // view's figures are in the HTML even with JavaScript disabled.
+      const heroFrame = page.locator('main figure .product-frame[data-ui]').first();
+      await expect(heroFrame.locator('.product-frame-bar')).not.toBeEmpty();
+      await expect(heroFrame).toContainText(/\d/);
       const schemas = await page
         .locator('script[type="application/ld+json"]')
         .evaluateAll((scripts) => scripts.map((script) => JSON.parse(script.textContent ?? '{}')));
@@ -161,6 +165,14 @@ test.describe('marketing routes', () => {
               '500 32px "IBM Plex Sans Variable"',
             ].map((font) => document.fonts.load(font)),
           ),
+        );
+        // A loaded sheet can reach computed style only at the next rendering
+        // update; before it, getComputedStyle reports a state never painted.
+        await page.evaluate(
+          () =>
+            new Promise((resolve) => {
+              requestAnimationFrame(() => requestAnimationFrame(resolve));
+            }),
         );
         const boxes = () =>
           frames.evaluateAll((elements) =>
