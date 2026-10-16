@@ -17,7 +17,12 @@ import {
 } from '@/components/ui/dropdown';
 import { FilterRow, FilterTrigger } from '@/components/ui/filter-row';
 import { SearchField } from '@/components/ui/search-field';
-import { intentLabels, intentValues } from '@/lib/prompts/forms';
+import {
+  buyerStageLabels,
+  buyerStageValues,
+  intentLabels,
+  intentValues,
+} from '@/lib/prompts/forms';
 import type { EnabledFilter, PromptFilters } from '@/lib/prompts/filter';
 
 /**
@@ -55,17 +60,25 @@ export function PromptFilterControls({
 }>) {
   const activeFilterCount =
     filters.intents.length +
+    filters.stages.length +
     (filters.enabled === 'all' ? 0 : 1) +
     (filters.branded === 'all' ? 0 : 1);
 
-  // Set lookup: `checked` is computed per intent option in the render loop.
+  // Set lookups: `checked` is computed per option in the render loops.
   const selectedIntents = new Set(filters.intents);
+  const selectedStages = new Set(filters.stages);
 
   const toggleIntent = (value: string) => {
     const next = selectedIntents.has(value)
       ? filters.intents.filter((intent) => intent !== value)
       : [...filters.intents, value];
     onFiltersChange({ ...filters, intents: next });
+  };
+  const toggleStage = (value: string) => {
+    const next = selectedStages.has(value)
+      ? filters.stages.filter((stage) => stage !== value)
+      : [...filters.stages, value];
+    onFiltersChange({ ...filters, stages: next });
   };
 
   const setEnabled = (value: EnabledFilter) => onFiltersChange({ ...filters, enabled: value });
@@ -100,6 +113,20 @@ export function PromptFilterControls({
               }}
             >
               {intentLabels[value]}
+            </DropdownCheckboxItem>
+          ))}
+          <DropdownSeparator />
+          <DropdownLabel>Buyer stage</DropdownLabel>
+          {buyerStageValues.map((value) => (
+            <DropdownCheckboxItem
+              key={value || 'unspecified'}
+              checked={selectedStages.has(value)}
+              onSelect={(event) => {
+                event.preventDefault();
+                toggleStage(value);
+              }}
+            >
+              {buyerStageLabels[value]}
             </DropdownCheckboxItem>
           ))}
           <DropdownSeparator />

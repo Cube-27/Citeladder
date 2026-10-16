@@ -12,7 +12,11 @@
  */
 import { randomUUID } from 'node:crypto';
 
-import { promptCohortSchema, promptStatusSchema } from '@citeladder/contracts/project';
+import {
+  buyerStageSchema,
+  promptCohortSchema,
+  promptStatusSchema,
+} from '@citeladder/contracts/project';
 import type { Kysely } from 'kysely';
 import { z } from 'zod';
 
@@ -67,6 +71,7 @@ export const promptUpdate = z.strictObject({
   text: text.nullish(),
   theme: theme.nullish(),
   intent: intent.nullish(),
+  buyer_stage: buyerStageSchema.nullish(),
   cohort: promptCohortSchema.nullish(),
   enabled: z.boolean().nullish(),
   status: promptStatusSchema.nullish(),
@@ -80,6 +85,7 @@ const importRow = z.strictObject({
   text: z.string().trim().max(P.text_max_chars),
   theme: theme.default(''),
   intent: intent.default(''),
+  buyer_stage: buyerStageSchema.default(''),
   cohort: promptCohortSchema.default('core'),
   enabled: z.boolean().default(true),
   topic: z.string().trim().max(P.topic_name_max_chars).default(''),
@@ -330,6 +336,7 @@ async function applyPromptUpdate(
       : { text: input.text, normalized_text_hash: promptTextHash(input.text) }),
     ...(input.theme == null ? {} : { theme: input.theme.trim() }),
     ...(input.intent == null ? {} : { intent: normalizeIntent(input.intent) }),
+    ...(input.buyer_stage == null ? {} : { buyer_stage: input.buyer_stage }),
     ...(input.cohort == null ? {} : cohortColumns(input.cohort)),
     ...(input.enabled == null ? {} : { enabled: input.enabled }),
     ...(input.status == null ? {} : { status: input.status }),
@@ -478,6 +485,7 @@ export async function importPrompts(
           normalized_text_hash: hash,
           theme: row.theme.trim(),
           intent: normalizeIntent(row.intent),
+          buyer_stage: row.buyer_stage,
           ...cohortColumns(row.cohort),
           enabled: row.enabled,
           status: P.status_active,

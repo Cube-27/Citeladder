@@ -48,10 +48,14 @@ export type PromptInput = {
 };
 
 /** One CSV import row: the user's topic NAME (created when new, '' = none). */
-export type PromptImportRow = PromptInput & { topic: string };
+export type PromptImportRow = PromptInput & {
+  topic: string;
+  buyer_stage?: Prompt['buyer_stage'];
+};
 
 export type PromptUpdateInput = Partial<Omit<PromptInput, 'topic_id'>> & {
   status?: PromptStatus;
+  buyer_stage?: Prompt['buyer_stage'];
   // Explicit null detaches the prompt from its topic.
   topic_id?: string | null;
 };

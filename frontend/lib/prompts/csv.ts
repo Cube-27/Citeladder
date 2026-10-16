@@ -7,16 +7,16 @@
  * only parsed rows, so this module is the one CSV reader.
  *
  * Users supply only `topic` and `prompt` ({@link PROMPT_CSV_COLUMNS}, which the
- * downloadable sample is also built from). Theme, intent, cohort and enabled
- * remain optional internal columns: unknown or oversized values fall back to
+ * downloadable sample is also built from). Theme, intent, buyer stage, cohort
+ * and enabled remain optional columns: unknown or oversized values fall back to
  * code defaults and never produce a row error.
  *
  * A tiny hand-rolled parser (no dependency) handles quoted fields, escaped
  * quotes (`""`), and embedded newlines — enough for prompt CSVs.
  */
 import type { PromptImportRow } from '@/lib/api/prompts';
-import { promptIntentSchema } from '@citeladder/contracts/project';
-import type { PromptIntent } from '@/lib/api/types';
+import { buyerStageSchema, promptIntentSchema } from '@citeladder/contracts/project';
+import type { Prompt, PromptIntent } from '@/lib/api/types';
 import { PROMPT_IMPORT_MAX_ROWS } from '@/lib/config/prompts';
 
 /** The import's column contract, in the order the sample file uses. */
@@ -39,6 +39,7 @@ const COLUMN_KEYS: Record<PromptCsvColumn, ReadonlySet<string>> = {
 };
 const THEME_KEYS = new Set(['theme']);
 const INTENT_KEYS = new Set(['intent']);
+const STAGE_KEYS = new Set(['buyer_stage', 'buyer stage', 'stage']);
 const COHORT_KEYS = new Set(['cohort']);
 const ENABLED_KEYS = new Set(['enabled', 'is_enabled', 'active']);
 
@@ -49,10 +50,13 @@ const THEME_MAX_CHARS = 255;
 
 const codePoints = (value: string) => Array.from(value);
 
+type BuyerStage = Prompt['buyer_stage'];
+
 const TRUE_VALUES = new Set(['1', 'true', 'yes', 'y', 't']);
 const FALSE_VALUES = new Set(['0', 'false', 'no', 'n', 'f']);
 
 const VALID_INTENTS = new Set<string>(promptIntentSchema.options);
+const VALID_STAGES = new Set<string>(buyerStageSchema.options);
 
 type ParsedPromptRow = {
   /** 1-based source row number (excludes the header) for user feedback. */
@@ -144,11 +148,18 @@ function normalizeIntent(value: string | undefined): PromptIntent {
   return VALID_INTENTS.has(normalized) ? (normalized as PromptIntent) : '';
 }
 
+/** An unknown buyer stage is left unset, like an unknown intent. */
+function normalizeStage(value: string | undefined): BuyerStage {
+  const normalized = (value ?? '').trim().toLowerCase();
+  return VALID_STAGES.has(normalized) ? (normalized as BuyerStage) : '';
+}
+
 type ColumnMap = {
   text: number;
   topic: number;
   theme: number;
   intent: number;
+  stage: number;
   cohort: number;
   enabled: number;
 };
@@ -161,6 +172,7 @@ function detectColumns(headerCells: string[]): ColumnMap | null {
     topic: find(COLUMN_KEYS.topic),
     theme: find(THEME_KEYS),
     intent: find(INTENT_KEYS),
+    stage: find(STAGE_KEYS),
     cohort: find(COHORT_KEYS),
     enabled: find(ENABLED_KEYS),
   };
@@ -174,6 +186,7 @@ const HEADERLESS_COLUMNS: ColumnMap = {
   topic: -1,
   theme: -1,
   intent: -1,
+  stage: -1,
   cohort: -1,
   enabled: -1,
 };
@@ -197,6 +210,7 @@ function parseRow(cells: string[], map: ColumnMap, line: number): ParsedPromptRo
         .slice(0, THEME_MAX_CHARS)
         .join(''),
       intent: normalizeIntent(cell(map.intent)),
+      buyer_stage: normalizeStage(cell(map.stage)),
       cohort: cell(map.cohort)?.trim().toLowerCase() === 'comparison' ? 'comparison' : 'core',
       enabled: asBool(cell(map.enabled), true),
     },

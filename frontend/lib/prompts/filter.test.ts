@@ -66,6 +66,16 @@ describe('filterPrompts', () => {
     expect(result.map((p) => p.id)).toEqual(['b', 'c']);
   });
 
+  it('filters by buyer stage, leaving prompts without one out of a stage filter', () => {
+    const staged = [
+      ...prompts,
+      prompt({ id: 'd', text: 'Which trainers last longest', buyer_stage: 'decision' }),
+      prompt({ id: 'e', text: 'Do I need trainers', buyer_stage: 'awareness' }),
+    ];
+    const result = filterPrompts(staged, '', { ...emptyFilters, stages: ['decision'] });
+    expect(result.map((p) => p.id)).toEqual(['d']);
+  });
+
   it('filters by enabled tri-state', () => {
     expect(
       filterPrompts(prompts, '', { ...emptyFilters, enabled: 'enabled' }).map((p) => p.id),

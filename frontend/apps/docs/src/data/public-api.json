@@ -10992,6 +10992,10 @@
                           "type": "string",
                           "maxLength": 64
                         },
+                        "buyer_stage": {
+                          "default": "",
+                          "$ref": "#/components/schemas/BuyerStage"
+                        },
                         "cohort": {
                           "default": "core",
                           "$ref": "#/components/schemas/PromptCohort"
@@ -11215,6 +11219,16 @@
                       {
                         "type": "string",
                         "maxLength": 64
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "buyer_stage": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/components/schemas/BuyerStage"
                       },
                       {
                         "type": "null"

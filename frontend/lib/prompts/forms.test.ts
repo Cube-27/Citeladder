@@ -36,23 +36,37 @@ describe('form mapping', () => {
       origin: 'manual',
       status: 'active',
     };
-    expect(promptToFormValues(prompt)).toEqual({ text: 'Best shoes?', topicId: TOPIC_ID });
+    expect(promptToFormValues(prompt)).toEqual({
+      text: 'Best shoes?',
+      topicId: TOPIC_ID,
+      intent: 'purchase',
+      buyerStage: '',
+    });
   });
 
   it('creates with only text and topic, leaving internal fields to their defaults', () => {
-    expect(formValuesToPromptInput({ text: '  Best shoes?  ', topicId: TOPIC_ID })).toEqual({
-      text: 'Best shoes?',
-      topic_id: TOPIC_ID,
-    });
-    expect(formValuesToPromptInput({ text: 'Best shoes?', topicId: '' })).toEqual({
+    const tags = { intent: 'discovery', buyerStage: 'decision' } as const;
+    expect(
+      formValuesToPromptInput({ text: '  Best shoes?  ', topicId: TOPIC_ID, ...tags }),
+    ).toEqual({ text: 'Best shoes?', topic_id: TOPIC_ID });
+    expect(formValuesToPromptInput({ text: 'Best shoes?', topicId: '', ...tags })).toEqual({
       text: 'Best shoes?',
     });
   });
 
-  it('updates only what the form edits and detaches an emptied topic', () => {
-    expect(formValuesToPromptUpdate({ text: ' Best shoes? ', topicId: '' })).toEqual({
+  it('updates the text, tags and topic, and detaches an emptied topic', () => {
+    expect(
+      formValuesToPromptUpdate({
+        text: ' Best shoes? ',
+        topicId: '',
+        intent: 'comparison',
+        buyerStage: 'consideration',
+      }),
+    ).toEqual({
       text: 'Best shoes?',
       topic_id: null,
+      intent: 'comparison',
+      buyer_stage: 'consideration',
     });
   });
 });
