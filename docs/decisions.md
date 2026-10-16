@@ -218,3 +218,20 @@ The in-app Agent stays read-only.
 
 Source: owner decisions D4.2 and D4.4 of 10 October 2026 (competitive tracker F4).
 [MCP](mcp.md#changes) owns the shipped behavior.
+
+## The public website is flat
+
+The marketing site and docs (`[data-public-surface]`) follow the
+design-taste-frontend house rules where they differ from the shared
+Attio/Linear material: nothing at rest casts a shadow (Lattice-style flat
+surfaces), there is no thin divider or 1px outlined box outside real tables
+and form fields, no gradient or button sheen, and no icon-topped card rows.
+Surfaces separate by a tone step or by space; a section may change its whole
+field colour. Coded product views (`data-ui`) keep the product's own material
+inside their frame, and detached layers (menus, the consent bar) keep their
+overlay shadow. Product views carry no "Illustrative example" caption. The
+marketing H1 is the first screen's dominant element on desktop. The
+authenticated app, sign-in and onboarding keep the shared material.
+
+Source: owner, 16 October 2026 (design-taste-frontend inspection of the public
+pages; "prefer skill over design system"). [Design](design.md) owns the system.

@@ -77,9 +77,8 @@
   height: 2rem;
   place-items: center;
   border-radius: var(--radius-control);
-  background: var(--color-panel);
+  background: var(--color-background-alt);
   color: var(--color-secondary);
-  box-shadow: var(--elevation-card);
   transition: color var(--motion-fast) var(--ease-standard);
 }
 
@@ -141,7 +140,6 @@
 /* ── Footer ─────────────────────────────────────────────────────────────── */
 
 .site-footer {
-  border-top: 1px solid var(--color-border);
   background: var(--color-background-alt);
 }
 
@@ -170,8 +168,8 @@
 
 .footer-legal-link {
   color: var(--color-muted);
-  font-size: var(--text-xs);
-  line-height: var(--text-xs--line-height);
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
   transition: color var(--motion-fast) var(--ease-standard);
 }
 
@@ -179,19 +177,33 @@
   color: var(--color-foreground);
 }
 
+/* ── Consent bar ────────────────────────────────────────────────────────── */
+
+/* The notice reads at the 14px rung on phones so the bar stays short; from
+   640px it takes the website body size. */
+.consent-copy {
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
+}
+
+@media (min-width: 40rem) {
+  .consent-copy {
+    font-size: var(--text-base);
+    line-height: var(--text-base--line-height);
+  }
+}
+
 /* ── Product frames ─────────────────────────────────────────────────────── */
 
-/* A product view sits in a white frame on a pale stage. The stage's fine dot
-   lattice is the only texture on the public site; it never sits behind text. */
+/* A product view sits in a white frame on a flat pale stage: the tone step is
+   the frame's edge. The stage's fine dot lattice is the only texture on the
+   public site; it never sits behind text. */
 .product-stage {
   position: relative;
   isolation: isolate;
   overflow: hidden;
   border-radius: var(--radius-lg);
-  background:
-    radial-gradient(120% 80% at 50% 0%, var(--color-accent-soft), transparent 70%),
-    var(--color-background-alt);
-  box-shadow: inset 0 0 0 1px var(--color-border-subtle);
+  background: var(--color-background-alt);
 }
 
 .product-stage::before {
@@ -204,11 +216,12 @@
   opacity: 0.55;
 }
 
+/* The frame is a coded product view (`data-ui`): its contents keep the
+   product's material, the frame itself stays flat on the stage. */
 .product-frame {
   overflow: hidden;
   border-radius: var(--radius-lg);
   background: var(--color-panel);
-  box-shadow: var(--elevation-flow);
 }
 
 /* A product view keeps its desktop layout at every width. Below its design
@@ -248,14 +261,12 @@
 
 /* ── Closing band ───────────────────────────────────────────────────────── */
 
+/* The close is a whole field of the soft forest tint, not a wash. */
 .marketing-closing-band {
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  border-top: 1px solid var(--color-border-subtle);
-  background:
-    radial-gradient(60% 90% at 50% 100%, var(--color-accent-soft), transparent 75%),
-    var(--color-background);
+  background: var(--color-accent-soft);
 }
 
 .marketing-closing-band::before {
@@ -353,14 +364,7 @@
   line-height: var(--text-sm--line-height);
 }
 
-.mk-faq-list {
-  border-top: 1px solid var(--color-border);
-}
-
-.mk-faq-list details {
-  border-bottom: 1px solid var(--color-border);
-}
-
+/* Questions are separated by space, not rules. */
 .mk-faq-list summary {
   display: flex;
   cursor: pointer;
@@ -441,6 +445,15 @@
   }
 }
 
+/* From 1280px the marketing H1 is the first screen's one dominant element
+   (owner decision, 2026-10-16): display size, near 5vw at 1440px. */
+@media (min-width: 80rem) {
+  .website-page-title:not(.website-article-title, .mk-dive-title) {
+    --text-marketing-title: 4.25rem;
+    --text-marketing-title--line-height: 4.5rem;
+  }
+}
+
 .mk-checks {
   display: grid;
   gap: 0.75rem;
@@ -472,11 +485,9 @@
   display: grid;
   align-content: start;
   gap: 0.5rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid var(--color-border);
 }
 
-/* How it works: numbered steps joined by one hairline on wide screens. */
+/* How it works: numbered steps side by side on wide screens. */
 .mk-steps {
   position: relative;
   display: grid;
@@ -488,15 +499,6 @@
     grid-auto-columns: minmax(0, 1fr);
     grid-auto-flow: column;
     gap: 2.5rem;
-  }
-
-  .mk-steps::before {
-    content: '';
-    position: absolute;
-    top: 1rem;
-    right: 0;
-    left: 0;
-    border-top: 1px dashed var(--color-border);
   }
 }
 
@@ -514,8 +516,7 @@
   margin-bottom: 0.75rem;
   place-items: center;
   border-radius: var(--radius-full);
-  background: var(--color-panel);
-  border: 1px solid var(--color-accent-border);
+  background: var(--color-accent-subtle);
   color: var(--color-accent-text);
   font-size: var(--text-sm);
   line-height: var(--text-sm--line-height);
@@ -541,7 +542,6 @@
   padding: 1rem 1.25rem;
   border-radius: var(--radius-lg);
   background: var(--color-panel);
-  box-shadow: var(--elevation-card);
   color: var(--color-foreground);
   font-size: var(--text-base);
   line-height: var(--text-base--line-height);
@@ -589,17 +589,26 @@
   height: 100%;
   padding: 1.25rem 1.25rem 1.5rem;
   border-radius: var(--radius-lg);
+  background: var(--color-background-alt);
+  transition: background-color var(--motion-normal) var(--ease-standard);
+}
+
+/* Flat surfaces: a card is one tone step from the band it sits on. */
+[data-citeladder-section='soft'] .mk-related-card {
   background: var(--color-panel);
-  box-shadow: var(--elevation-card);
-  transition: box-shadow var(--motion-normal) var(--ease-standard);
 }
 
 .mk-related-card .nav-row-icon {
   margin-bottom: 0.75rem;
+  background: var(--color-panel);
+}
+
+[data-citeladder-section='soft'] .mk-related-card .nav-row-icon {
+  background: var(--color-background-alt);
 }
 
 .mk-related-card:hover {
-  box-shadow: var(--elevation-flow);
+  background: var(--color-well);
 }
 
 .mk-related-arrow {
@@ -667,12 +676,20 @@
   }
 
   @supports (animation-timeline: view()) {
-    /* Section openers, product stages and cards rise as they scroll in. */
+    /* Section openers, product stages, cards, rows and an article's headings
+       and figures rise as they scroll in. */
     .mk-reveal,
     .lp-head,
     main .product-stage:not(.lp-hero-stage),
     .mk-capability,
-    .mk-related-card {
+    .mk-related-card,
+    .mk-faq-list details,
+    .cm-plan,
+    .cm-access,
+    .cm-extra,
+    .cp-tool-row,
+    .cp-facts li,
+    .cp-prose > :is(h2, h3, figure, blockquote, .cp-table, .cp-figure, .cp-checklist) {
       animation: mk-reveal-in var(--ease-linear) both;
       animation-timeline: view();
       animation-range: entry 0% entry 55%;

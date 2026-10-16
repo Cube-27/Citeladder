@@ -114,9 +114,10 @@
 /* The display ladder is mobile-first and steps at 768px below. On a phone the
    display rungs track the viewport so a page title holds two lines (an article
    title, which runs twice as long, three) from 360px up; a fixed 32px wrapped
-   them to four and five. */
+   them to four and five. The homepage hero's second line is its longest, so
+   it tops out at 26px to stay on two lines at 390px. */
 .website-hero-display {
-  font-size: clamp(1.75rem, 8.6vw, 2rem);
+  font-size: clamp(1.5rem, 6.7vw, 1.625rem);
   line-height: 1.1;
   letter-spacing: -0.025em;
 }
@@ -1234,7 +1235,7 @@
    641–767px band ended up with a hierarchy nothing else on the page shared. */
 @media (min-width: 768px) {
   .website-hero-display {
-    font-size: clamp(2rem, 4.2vw + 0.6rem, 3.75rem);
+    font-size: clamp(2rem, 4.2vw + 0.6rem, 4.5rem);
   }
 
   .website-page-title {

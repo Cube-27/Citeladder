@@ -38,7 +38,7 @@ export const SOLUTION_SEGMENTS: readonly SolutionSegment[] = [
   {
     id: 'in-house',
     label: 'In-house teams',
-    title: 'In-house teams: one starting point for marketing, content and web.',
+    title: 'In-house teams: one view for content and web.',
     lead: 'Review the questions where your brand appears, the sources behind those answers and the website findings worth investigating. Decide together what to improve.',
     body: 'Observed visibility stays separate from referral traffic and commercial outcomes, so internal reports do not mix them.',
     guide: { label: 'Explore Demand Intelligence', href: '/platform/demand-intelligence' },
@@ -57,7 +57,7 @@ export const SOLUTION_SEGMENTS: readonly SolutionSegment[] = [
   {
     id: 'commerce',
     label: 'Ecommerce',
-    title: 'Ecommerce: the product questions buyers need answered.',
+    title: 'Ecommerce: the product questions buyers ask.',
     lead: 'Start with use cases, compatibility, selection criteria and product limitations. Review how those questions are answered and whether your own pages explain them clearly.',
     body: 'Use source analysis and page-level checks to choose focused improvements to product, category or buying-guide content.',
     guide: {

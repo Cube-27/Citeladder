@@ -130,7 +130,7 @@ function BentoTile({
         <h3 className="website-feature-heading">{title}</h3>
         <p className="website-body">{body}</p>
       </div>
-      <div className="lp-tile-visual product-fit app-type-scale" aria-hidden>
+      <div className="lp-tile-visual product-fit app-type-scale" data-ui aria-hidden>
         {children}
       </div>
     </a>

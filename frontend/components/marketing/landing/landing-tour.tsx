@@ -144,9 +144,7 @@ export function HeroTour() {
           </AppShellFrame>
         </div>
       </div>
-      <p className="product-caption text-center">
-        Illustrative example with synthetic data. Engine availability depends on your plan.
-      </p>
+      <p className="product-caption text-center">Engine availability depends on your plan.</p>
     </div>
   );
 }

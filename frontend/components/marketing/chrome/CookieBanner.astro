@@ -34,12 +34,15 @@ const choice = (decision: 'accepted' | 'rejected') => ({ [CONSENT_CHOICE_ATTRIBU
 >
   {/* A landmark section, not a dialog: it does not trap focus or block the page. */}
   <div class="pb-[max(1rem,env(safe-area-inset-bottom))]">
+    {/* Compact on phones, where a full-size panel covered a quarter of every screen. */}
     <div
-      class="border-border-strong bg-panel shadow-overlay grid gap-4 rounded-[var(--radius-card)] border p-5"
+      class="bg-panel shadow-overlay grid gap-3 rounded-[var(--radius-card)] p-4 sm:gap-4 sm:p-5"
     >
       <div class="grid gap-2">
-        <h2 class="website-feature-heading text-foreground">Cookie settings</h2>
-        <p class="website-body">
+        <h2 class="website-feature-heading text-foreground sr-only sm:not-sr-only">
+          Cookie settings
+        </h2>
+        <p class="website-body consent-copy">
           We use essential cookies to keep you signed in and secure. With your permission,
           non-essential cookies help us understand site usage. Read our{' '}
           <a

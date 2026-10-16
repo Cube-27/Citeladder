@@ -29,8 +29,7 @@
   align-items: center;
   height: 2.25rem;
   padding-inline: var(--site-gutter);
-  background: var(--color-accent-soft);
-  border-bottom: 1px solid var(--color-accent-border);
+  background: var(--color-accent-subtle);
 }
 
 .lp-announcement a {
@@ -96,16 +95,16 @@
 
 /* Hero ───────────────────────────────────────────────────────────────────── */
 
-/* A forest wash from behind the top bar to the headline, fading to the page
-   ground before the product, with fine grain that fades out the same way.
-   The hero runs up under the transparent nav, so the bar sits on the wash. */
+/* One flat field of the soft forest tint from behind the top bar to the foot
+   of the product, with fine grain that fades out toward the product. The hero
+   runs up under the transparent nav, so the bar sits on the field. */
 .lp-hero {
   position: relative;
   isolation: isolate;
   margin-top: calc(var(--marketing-nav-offset) * -1);
   padding-top: calc(var(--marketing-nav-offset) + clamp(3.5rem, 8vw, 6.5rem));
   padding-bottom: clamp(2rem, 4vw, 3rem);
-  background: linear-gradient(to bottom, var(--color-accent-soft), var(--color-background) 65%);
+  background: var(--color-accent-soft);
 }
 
 .lp-hero::before {
@@ -220,8 +219,7 @@
   overflow-x: auto;
   padding: 0.25rem;
   border-radius: var(--radius-full);
-  background: var(--color-background-alt);
-  box-shadow: inset 0 0 0 1px var(--color-border-subtle);
+  background: var(--color-accent-subtle);
   scrollbar-width: none;
 }
 
@@ -235,8 +233,7 @@
   font-weight: 500;
   transition:
     color var(--motion-fast) var(--ease-standard),
-    background-color var(--motion-fast) var(--ease-standard),
-    box-shadow var(--motion-fast) var(--ease-standard);
+    background-color var(--motion-fast) var(--ease-standard);
 }
 
 .lp-tour-tabs button:hover {
@@ -246,7 +243,6 @@
 .lp-tour-tabs button[aria-selected='true'] {
   background: var(--color-panel);
   color: var(--color-foreground);
-  box-shadow: var(--elevation-card);
 }
 
 .lp-hero-stage {
@@ -523,12 +519,11 @@
   overflow: hidden;
   border-radius: var(--radius-lg);
   background: var(--color-background-alt);
-  box-shadow: var(--elevation-card);
-  transition: box-shadow var(--motion-normal) var(--ease-standard);
+  transition: background-color var(--motion-normal) var(--ease-standard);
 }
 
 .lp-tile:hover {
-  box-shadow: var(--elevation-flow);
+  background: var(--color-well);
 }
 
 .lp-tile-copy {
@@ -550,7 +545,6 @@
   overflow: hidden;
   border-top-left-radius: var(--radius-card);
   background: var(--color-panel);
-  box-shadow: var(--elevation-flow);
   mask-image: linear-gradient(to bottom, black 70%, transparent);
   pointer-events: none;
 }
@@ -598,14 +592,12 @@
   }
 }
 
+/* Unboxed rows: the source's mark tile carries each one, not a card. */
 .lp-integration-list li {
   display: flex;
   align-items: flex-start;
   gap: 0.75rem;
-  padding: var(--card-padding);
-  border-radius: var(--radius-lg);
-  background: var(--color-panel);
-  box-shadow: var(--elevation-card);
+  padding-block: 0.75rem;
 }
 
 .lp-integration-mark {
@@ -615,24 +607,20 @@
   height: 2.5rem;
   place-items: center;
   border-radius: var(--radius-control);
-  background: var(--color-background-alt);
+  background: var(--color-panel);
   color: var(--color-foreground);
   font-size: var(--text-xs);
   line-height: var(--text-xs--line-height);
   font-weight: 500;
   letter-spacing: 0.02em;
-  box-shadow: inset 0 0 0 1px var(--color-border-subtle);
 }
 
 /* Teams ──────────────────────────────────────────────────────────────────── */
 
+/* Separate tone tiles: space, not grid lines, divides them. */
 .lp-teams {
   display: grid;
-  gap: 1px;
-  overflow: hidden;
-  padding: 1px;
-  border-radius: var(--radius-lg);
-  background: var(--color-border);
+  gap: 0.75rem;
 }
 
 @media (min-width: 40rem) {
@@ -649,21 +637,17 @@
 
 .lp-team {
   display: grid;
-  border-radius: 0;
+  border-radius: var(--radius-lg);
   align-content: start;
   gap: 0.5rem;
   height: 100%;
   padding: 1.5rem;
-  background: var(--color-panel);
+  background: var(--color-background-alt);
   transition: background-color var(--motion-fast) var(--ease-standard);
 }
 
-.lp-team svg {
-  margin-bottom: 1.5rem;
-}
-
 .lp-team:hover {
-  background: var(--color-background-alt);
+  background: var(--color-well);
 }
 
 /* Trust ──────────────────────────────────────────────────────────────────── */
@@ -689,12 +673,6 @@
   display: grid;
   align-content: start;
   gap: 0.5rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid var(--color-border);
-}
-
-.lp-trust svg {
-  margin-bottom: 0.5rem;
 }
 
 /* FAQ ────────────────────────────────────────────────────────────────────── */

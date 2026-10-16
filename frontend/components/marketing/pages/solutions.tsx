@@ -67,12 +67,7 @@ export function SolutionSegments() {
       {SOLUTION_SEGMENTS.map((segment, index) => {
         const { title, View } = SCENE_VIEWS[segment.scene];
         return (
-          <Section
-            key={segment.id}
-            id={segment.id}
-            divided={index > 0}
-            aria-labelledby={`${segment.id}-title`}
-          >
+          <Section key={segment.id} id={segment.id} aria-labelledby={`${segment.id}-title`}>
             <div className={cn('mk-dive', index % 2 === 1 && 'mk-dive-reverse')}>
               <div className="mk-dive-copy">
                 <h2

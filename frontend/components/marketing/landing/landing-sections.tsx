@@ -1,9 +1,7 @@
 import type { ReactNode } from 'react';
-import { ArrowRight, KeyRound, Layers, ShieldCheck, UserCheck } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
 import { NAV_DROPS } from '@/lib/marketing-content/nav';
-
-import { NavIcon } from '../chrome/nav-icons';
 
 import { INTEGRATIONS } from './landing-data';
 
@@ -62,7 +60,6 @@ export function Teams() {
             return (
               <li key={item.href}>
                 <a href={item.href} className="lp-team">
-                  <NavIcon href={item.href} className="text-muted size-5" />
                   <span className="mk-capability-title">{item.title}</span>
                   <span className="mk-capability-desc">{item.desc}</span>
                 </a>
@@ -76,19 +73,10 @@ export function Teams() {
 }
 
 const TRUST = [
+  ['Workspace isolation', 'Every read and write is authorized to its workspace and project.'],
+  ['Encrypted credentials', 'Provider keys and connections are stored encrypted.'],
+  ['Evidence you can audit', 'Raw answers and crawls are append-only; results keep their sources.'],
   [
-    ShieldCheck,
-    'Workspace isolation',
-    'Every read and write is authorized to its workspace and project.',
-  ],
-  [KeyRound, 'Encrypted credentials', 'Provider keys and connections are stored encrypted.'],
-  [
-    Layers,
-    'Evidence you can audit',
-    'Raw answers and crawls are append-only; results keep their sources.',
-  ],
-  [
-    UserCheck,
     'You stay in control',
     'Nothing publishes, contacts third parties or changes your site on its own.',
   ],
@@ -103,9 +91,8 @@ export function Trust() {
           <TextLink href="/enterprise">Enterprise</TextLink>
         </div>
         <ul className="lp-trust">
-          {TRUST.map(([Icon, title, body]) => (
+          {TRUST.map(([title, body]) => (
             <li key={title}>
-              <Icon aria-hidden className="text-accent-text size-5" />
               <h3 className="website-feature-heading">{title}</h3>
               <p className="website-body">{body}</p>
             </li>

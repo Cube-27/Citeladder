@@ -295,18 +295,6 @@
   --surface-ring: rgb(11 15 13 / 8%);
   --surface-drop: rgb(11 15 13 / 5%);
   --surface-sheen: rgb(255 255 255 / 10%);
-  --elevation-control:
-    0 0 0 1px var(--surface-ring), 0 1px 2px var(--surface-drop);
-  --elevation-primary:
-    0 0 0 1px var(--color-accent-active), inset 0 1px 0 var(--surface-highlight),
-    0 1px 2px rgb(11 15 13 / 16%), 0 2px 6px -2px rgb(20 83 45 / 35%);
-  --elevation-card:
-    0 0 0 1px rgb(11 15 13 / 7%), 0 1px 2px rgb(11 15 13 / 4%),
-    0 4px 12px -6px rgb(11 15 13 / 6%);
-  /* The workspace sheet, focused task sheets and public product frames. */
-  --elevation-flow:
-    0 0 0 1px rgb(11 15 13 / 6%), 0 1px 2px rgb(11 15 13 / 4%),
-    0 8px 24px -6px rgb(11 15 13 / 8%), 0 32px 64px -24px rgb(11 15 13 / 12%);
   --elevation-sheet:
     0 0 0 1px rgb(11 15 13 / 6%), 0 1px 2px rgb(11 15 13 / 4%),
     0 8px 24px -12px rgb(11 15 13 / 8%);
@@ -372,6 +360,37 @@
   --skeleton-base: var(--color-well);
   --skeleton-highlight: var(--color-panel);
   --value-placeholder: var(--color-muted);
+}
+
+/* The product material (docs/design.md §Colour): every raised object is a
+   hairline ring plus a close contact shadow, and larger objects add one long
+   soft ambient layer. The public website is flat (owner decision, 2026-10-16),
+   so it binds these to none; a coded product view (`[data-ui]`) restates them
+   and keeps the product's own material inside its frame. */
+:root,
+[data-public-surface] [data-ui] {
+  --elevation-control:
+    0 0 0 1px var(--surface-ring), 0 1px 2px var(--surface-drop);
+  --elevation-primary:
+    0 0 0 1px var(--color-accent-active), inset 0 1px 0 var(--surface-highlight),
+    0 1px 2px rgb(11 15 13 / 16%), 0 2px 6px -2px rgb(20 83 45 / 35%);
+  --elevation-card:
+    0 0 0 1px rgb(11 15 13 / 7%), 0 1px 2px rgb(11 15 13 / 4%),
+    0 4px 12px -6px rgb(11 15 13 / 6%);
+  /* The workspace sheet and focused task sheets. */
+  --elevation-flow:
+    0 0 0 1px rgb(11 15 13 / 6%), 0 1px 2px rgb(11 15 13 / 4%),
+    0 8px 24px -6px rgb(11 15 13 / 8%), 0 32px 64px -24px rgb(11 15 13 / 12%);
+}
+
+/* Flat public website: nothing at rest casts a shadow. Surfaces separate by a
+   tone step or by space; only detached layers (menus, the consent bar) keep
+   their overlay shadow. */
+[data-public-surface] {
+  --elevation-control: none;
+  --elevation-primary: none;
+  --elevation-card: none;
+  --elevation-flow: none;
 }
 
 /* State tints are derived from the surface receiving the interaction. */
@@ -938,7 +957,6 @@ a.focus-ring:active .type-caption {
 
 [data-marketing-nav][data-scrolled='true'] {
   background-color: var(--color-panel);
-  box-shadow: 0 1px 0 var(--color-border);
 }
 
 .shell-link[aria-current='page'] {
@@ -974,20 +992,20 @@ a.focus-ring:active .type-caption {
   padding-inline: 1.25rem;
 }
 
-[data-public-surface] .marketing-cta-button[data-button-variant='primary']:not([aria-disabled='true']) {
-  background-image: linear-gradient(var(--surface-sheen), transparent);
-  box-shadow: var(--elevation-primary);
+/* Public buttons are flat: one fill, no sheen, no ring. The alternate action
+   is a tone step from the page rather than an outline. */
+[data-public-surface] .control-raised:not([data-ui] *) {
+  background-image: none;
 }
 
 [data-public-surface] .marketing-cta-button[data-button-variant='secondary']:not([aria-disabled='true']) {
-  background-color: var(--color-panel);
+  background-color: var(--color-background-alt);
   color: var(--color-foreground);
   border-color: transparent;
-  box-shadow: var(--elevation-card);
 }
 
 [data-public-surface] .marketing-cta-button[data-button-variant='secondary']:not([aria-disabled='true']):hover {
-  background-color: var(--color-background-alt);
+  background-color: var(--color-well);
 }
 
 /* Auth and onboarding take the website's material: the task sheet floats on
@@ -1525,7 +1543,7 @@ samp {
 /* Two public sections of the same tone read as one band, so they share a single
    rhythm rather than stacking both paddings. This is the rule the
    data-citeladder-section hook in marketing/primitives/section.tsx was written for. */
-[data-citeladder-section="paper"] + [data-citeladder-section="paper"]:not(.marketing-closing-band, .border-t) {
+[data-citeladder-section="paper"] + [data-citeladder-section="paper"]:not(.marketing-closing-band) {
   padding-top: 0;
 }
 
@@ -1725,6 +1743,11 @@ samp {
 }
 .skip-link:focus-visible {
   transform: translateY(0);
+}
+
+/* The flat public website: the accent edge alone marks the skip link. */
+[data-public-surface] .skip-link {
+  box-shadow: none;
 }
 
 /* In-page anchors must clear the fixed chrome so linked sections land below it. */

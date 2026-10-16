@@ -143,7 +143,7 @@ export async function MarketingFooter() {
           </nav>
         </div>
 
-        <div className="border-border mt-16 flex flex-col gap-4 border-t pt-6 lg:flex-row lg:items-center lg:justify-between">
+        <div className="mt-16 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           {/* CiteLadder is a Cube27 product, so the parent company is named in
               the ownership line rather than tucked into a link column alone. */}
           <p className="website-label text-muted">
