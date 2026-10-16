@@ -11,9 +11,7 @@ import { z } from 'zod';
 
 import type { PromptInput, PromptUpdateInput } from '@/lib/api/prompts';
 import { buyerStageSchema, promptIntentSchema } from '@citeladder/contracts/project';
-import type { Prompt, PromptIntent } from '@/lib/api/types';
-
-type BuyerStage = z.infer<typeof buyerStageSchema>;
+import type { BuyerStage, Prompt, PromptIntent } from '@/lib/api/types';
 
 export const promptFormSchema = z.object({
   text: z.string().trim().min(1, 'Prompt text is required.'),

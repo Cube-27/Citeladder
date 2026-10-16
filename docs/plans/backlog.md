@@ -61,8 +61,11 @@ Owners: [Workspace access](../workspace-access.md), [MCP](../mcp.md),
 - Prompt tags deferred by [Insight parity](insight-parity.md) I12 (no schema
   change): a persisted, editable persona tag (generated prompts keep their
   audience only in `generation_evidence`); an "All prompts" Visibility total,
-  which needs a new finalization aggregate; and filing a manual or imported
-  prompt that names the brand as branded.
+  which needs a new finalization aggregate; filing a manual or imported
+  prompt that names the brand as branded; and leaving tags (intent, buyer
+  stage, prompt intent, theme) out of the audit prompt-panel hash
+  (`audits/freeze.ts`), so correcting a tag no longer starts a new comparison
+  series. That changes every existing run's comparison key.
 - Improve evidence-backed Opportunity sorting/labels without another blended score;
   expose existing three-leg verification, gap changes, overlapping actions and
   the causality notice.

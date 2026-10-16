@@ -6,8 +6,7 @@ import { queryKeys } from '@/lib/api/query-keys';
 import { retainPreviousDataForScope, warmQuery } from '@/lib/api/query-client';
 import { useActiveProject, useActiveWorkspaceId } from '@/lib/project/project-context';
 import {
-  PROMPT_COHORTS,
-  readStoredCohort,
+  cohortUrlCodec,
   writeStoredCohort,
   type PromptCohort,
 } from '@/lib/visibility/prompt-cohort';
@@ -101,10 +100,7 @@ export function useVisibilityFilters() {
   const [granularity, setGranularity] = useUrlState('granularity', granularityCodec);
   // Without `cohort` in the URL the project's remembered choice applies.
   const projectId = useActiveProject()?.id ?? null;
-  const cohortCodec = useMemo(
-    () => stringUrlCodec(PROMPT_COHORTS, readStoredCohort(projectId)),
-    [projectId],
-  );
+  const cohortCodec = useMemo(() => cohortUrlCodec(projectId), [projectId]);
   const [cohort, setCohortUrl] = useUrlState('cohort', cohortCodec, {
     clearKeys: pageKeys,
   });

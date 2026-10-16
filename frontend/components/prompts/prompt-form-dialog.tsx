@@ -173,6 +173,12 @@ export function PromptFormDialog({
                 />
               )}
             </Field>
+            {/* Tags are part of a run's frozen prompt panel, so a change
+                cannot be compared with runs measured before it. */}
+            <p className="type-caption text-secondary sm:col-span-2">
+              Changing a tag starts a new comparison series: later runs are not compared with
+              earlier ones.
+            </p>
           </div>
         ) : null}
       </form>

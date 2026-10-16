@@ -16,7 +16,7 @@
  */
 import type { PromptImportRow } from '@/lib/api/prompts';
 import { buyerStageSchema, promptIntentSchema } from '@citeladder/contracts/project';
-import type { Prompt, PromptIntent } from '@/lib/api/types';
+import type { BuyerStage, PromptIntent } from '@/lib/api/types';
 import { PROMPT_IMPORT_MAX_ROWS } from '@/lib/config/prompts';
 
 /** The import's column contract, in the order the sample file uses. */
@@ -49,8 +49,6 @@ const TOPIC_MAX_CHARS = 255;
 const THEME_MAX_CHARS = 255;
 
 const codePoints = (value: string) => Array.from(value);
-
-type BuyerStage = Prompt['buyer_stage'];
 
 const TRUE_VALUES = new Set(['1', 'true', 'yes', 'y', 't']);
 const FALSE_VALUES = new Set(['0', 'false', 'no', 'n', 'f']);
