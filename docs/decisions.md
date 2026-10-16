@@ -231,7 +231,14 @@ field colour. Coded product views (`data-ui`) keep the product's own material
 inside their frame, and detached layers (menus, the consent bar) keep their
 overlay shadow. Product views carry no "Illustrative example" caption. The
 marketing H1 is the first screen's dominant element on desktop. The
-authenticated app, sign-in and onboarding keep the shared material.
+authenticated app keeps the shared material.
+
+The same day the owner extended the flat rule to sign-in, sign-up, the mailbox
+screens and onboarding (`[data-flow-surface]`, light mode only: dark mode keeps
+its edge rings), applying only the changes relevant to a form flow, and set the
+desktop marketing H1 4px smaller from 900px (so a desktop at 125% display
+scaling counts as desktop): the hero tops out at 68px and the page title is
+40px, then 64px from 1280px.
 
 Source: owner, 16 October 2026 (design-taste-frontend inspection of the public
 pages; "prefer skill over design system"). [Design](design.md) owns the system.

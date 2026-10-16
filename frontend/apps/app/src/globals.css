@@ -299,7 +299,6 @@
     0 0 0 1px rgb(11 15 13 / 6%), 0 1px 2px rgb(11 15 13 / 4%),
     0 8px 24px -12px rgb(11 15 13 / 8%);
   --elevation-track: inset 0 0 0 1px var(--color-border-subtle);
-  --elevation-field: 0 1px 2px rgb(11 15 13 / 4%);
   --field-end-target: var(--control-height-sm);
   --menu-item-height: 32px;
   --badge-height-sm: 20px;
@@ -364,11 +363,13 @@
 
 /* The product material (docs/design.md §Colour): every raised object is a
    hairline ring plus a close contact shadow, and larger objects add one long
-   soft ambient layer. The public website is flat (owner decision, 2026-10-16),
-   so it binds these to none; a coded product view (`[data-ui]`) restates them
-   and keeps the product's own material inside its frame. */
+   soft ambient layer. The public website, sign-in and onboarding are flat
+   (owner decision, 2026-10-16), so they bind these to none; a coded product
+   view (`[data-ui]`) restates them and keeps the product's own material
+   inside its frame. */
 :root,
 [data-public-surface] [data-ui] {
+  --elevation-field: 0 1px 2px rgb(11 15 13 / 4%);
   --elevation-control:
     0 0 0 1px var(--surface-ring), 0 1px 2px var(--surface-drop);
   --elevation-primary:
@@ -383,10 +384,13 @@
     0 8px 24px -6px rgb(11 15 13 / 8%), 0 32px 64px -24px rgb(11 15 13 / 12%);
 }
 
-/* Flat public website: nothing at rest casts a shadow. Surfaces separate by a
-   tone step or by space; only detached layers (menus, the consent bar) keep
-   their overlay shadow. */
-[data-public-surface] {
+/* Flat public website, sign-in and onboarding: nothing at rest casts a
+   shadow, fields included. Surfaces separate by a tone step or by space; only
+   detached layers (menus, the consent bar) keep their overlay shadow. Dark
+   mode keeps its edge rings, which are the only edge a dark surface has. */
+[data-public-surface],
+:root:not([data-theme='dark']) [data-flow-surface] {
+  --elevation-field: none;
   --elevation-control: none;
   --elevation-primary: none;
   --elevation-card: none;
@@ -994,24 +998,26 @@ a.focus-ring:active .type-caption {
 
 /* Public buttons are flat: one fill, no sheen, no ring. The alternate action
    is a tone step from the page rather than an outline. */
-[data-public-surface] .control-raised:not([data-ui] *) {
+:is([data-public-surface], [data-flow-surface]) .control-raised:not([data-ui] *) {
   background-image: none;
 }
 
-[data-public-surface] .marketing-cta-button[data-button-variant='secondary']:not([aria-disabled='true']) {
+:is([data-public-surface], :root:not([data-theme='dark']) [data-flow-surface])
+  .control-raised[data-button-variant='secondary']:not([data-ui] *, :disabled, [aria-disabled='true']) {
   background-color: var(--color-background-alt);
   color: var(--color-foreground);
   border-color: transparent;
 }
 
-[data-public-surface] .marketing-cta-button[data-button-variant='secondary']:not([aria-disabled='true']):hover {
+:is([data-public-surface], :root:not([data-theme='dark']) [data-flow-surface])
+  .control-raised[data-button-variant='secondary']:not([data-ui] *, :disabled, [aria-disabled='true']):hover {
   background-color: var(--color-well);
 }
 
-/* Auth and onboarding take the website's material: the task sheet floats on
-   the public frame shadow. Primary actions already share the product face. */
-:root:not([data-theme='dark']) [data-flow-surface] .app-pane {
-  box-shadow: var(--elevation-flow);
+/* On the soft band the alternate action steps back up to paper. */
+[data-citeladder-section='soft']
+  .control-raised[data-button-variant='secondary']:not([data-ui] *, :disabled, [aria-disabled='true']) {
+  background-color: var(--color-panel);
 }
 
 [data-public-surface] .marketing-cta-button:not([aria-disabled='true']):active {

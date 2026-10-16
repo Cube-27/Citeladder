@@ -71,7 +71,6 @@ function FeaturedPost({ post }: Readonly<{ post: BlogPost }>) {
     <Section rhythm="tight" className="pt-0" aria-label="Featured article">
       <article className="cp-feature">
         <div className="cp-feature-copy">
-          {post.tags[0] && <span className="cp-chip">{post.tags[0]}</span>}
           <h2 className="website-section-heading cp-feature-title">
             <a href={href} className="cp-title-link focus-ring rounded-xs">
               {post.title}
