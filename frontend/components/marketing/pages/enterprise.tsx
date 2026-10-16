@@ -123,7 +123,7 @@ export function EnterpriseHero() {
 
 export function EnterpriseEvidence() {
   return (
-    <Section rhythm="tight" className="pt-0" aria-label="Evidence trail">
+    <Section rhythm="tight" aria-label="Evidence trail">
       <div className="mk-dive">
         <div className="mk-dive-copy">
           <h2 className="website-page-title mk-dive-title">

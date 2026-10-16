@@ -40,7 +40,7 @@ const PRICING_FAQS = [
 
 export function PricingFaq() {
   return (
-    <Section tone="paper" divided aria-label="Pricing questions">
+    <Section tone="paper" aria-label="Pricing questions">
       <div className="mk-split">
         <SectionHeader
           title="Pricing questions."

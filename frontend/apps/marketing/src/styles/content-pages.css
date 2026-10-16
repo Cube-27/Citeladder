@@ -57,8 +57,7 @@
   display: grid;
   overflow: hidden;
   border-radius: var(--radius-lg);
-  background: var(--color-panel);
-  box-shadow: var(--elevation-card);
+  background: var(--color-background-alt);
 }
 
 @media (min-width: 64rem) {
@@ -84,15 +83,7 @@
   align-content: start;
   gap: 0.75rem;
   padding: clamp(1.5rem, 4vw, 3rem);
-  border-top: 1px solid var(--color-border-subtle);
-  background: var(--color-background-alt);
-}
-
-@media (min-width: 64rem) {
-  .cp-feature-outline {
-    border-top: 0;
-    border-left: 1px solid var(--color-border-subtle);
-  }
+  background: var(--color-well);
 }
 
 .cp-feature-outline ol {
@@ -102,11 +93,6 @@
 
 .cp-feature-outline li {
   counter-increment: cp-outline;
-  border-top: 1px solid var(--color-border);
-}
-
-.cp-feature-outline li:last-child {
-  border-bottom: 1px solid var(--color-border);
 }
 
 .cp-feature-outline a {
@@ -120,7 +106,7 @@
 }
 
 .cp-feature-outline a::before {
-  content: counter(cp-outline, decimal-leading-zero);
+  content: counter(cp-outline);
   flex: none;
   color: var(--color-muted);
   font-variant-numeric: tabular-nums;
@@ -135,7 +121,6 @@
   flex-direction: column;
   gap: 1rem;
   padding-bottom: 1.25rem;
-  border-bottom: 1px solid var(--color-border);
 }
 
 @media (min-width: 48rem) {
@@ -180,7 +165,6 @@
   display: grid;
   gap: 0.75rem;
   padding-block: 1.75rem;
-  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 @media (min-width: 48rem) {
@@ -225,13 +209,11 @@
   justify-items: center;
   gap: 0.75rem;
   padding: 3rem 1.5rem;
-  border-bottom: 1px solid var(--color-border-subtle);
   text-align: center;
 }
 
 .cp-link-list {
   display: grid;
-  border-top: 1px solid var(--color-border);
 }
 
 @media (min-width: 64rem) {
@@ -239,10 +221,6 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     column-gap: 3rem;
   }
-}
-
-.cp-link-list > li {
-  border-bottom: 1px solid var(--color-border);
 }
 
 .cp-link-row {
@@ -282,9 +260,9 @@
 }
 
 .cp-link-desc {
-  color: var(--color-muted);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  color: var(--color-secondary);
+  font-size: var(--text-base);
+  line-height: var(--text-base--line-height);
 }
 
 /* ── Article layout (blog posts and research guides) ────────────────────── */
@@ -332,8 +310,7 @@
 
 .cp-byline {
   width: 100%;
-  padding-top: 1.25rem;
-  border-top: 1px solid var(--color-border-subtle);
+  padding-top: 0.5rem;
 }
 
 .cp-article-grid {
@@ -362,37 +339,29 @@
   display: grid;
   gap: 0.75rem;
   padding-bottom: 1.5rem;
-  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 @media (min-width: 64rem) {
   .cp-toc {
     padding-bottom: 0;
-    border-bottom: 0;
   }
 }
 
 .cp-toc ol {
   display: grid;
   gap: 0.25rem;
-  border-left: 1px solid var(--color-border);
 }
 
 .cp-toc a {
   display: block;
-  margin-left: -1px;
-  padding: 0.25rem 0 0.25rem 0.75rem;
-  border-left: 1px solid transparent;
+  padding-block: 0.25rem;
   color: var(--color-muted);
   font-size: var(--text-sm);
   line-height: var(--text-sm--line-height);
-  transition:
-    color var(--motion-fast) var(--ease-standard),
-    border-color var(--motion-fast) var(--ease-standard);
+  transition: color var(--motion-fast) var(--ease-standard);
 }
 
 .cp-toc a:hover {
-  border-left-color: var(--color-foreground);
   color: var(--color-foreground);
 }
 
@@ -404,9 +373,7 @@
   .cp-author {
     display: grid;
     gap: 0.25rem;
-    margin-top: 2rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid var(--color-border-subtle);
+    margin-top: 2.5rem;
   }
 }
 
@@ -417,10 +384,12 @@
   color: var(--color-secondary);
 }
 
-/* Article copy reads at the website body size, 16px (docs/design.md). */
+/* Article copy reads at the website body size, 16px (docs/design.md), on a
+   ~68 character measure; tables and figures keep the full column. */
 .cp-prose > p,
 .cp-prose > ul,
 .cp-prose > ol {
+  max-width: 68ch;
   margin-block: 0 1.25rem;
   font-size: var(--text-base);
   line-height: var(--text-base--line-height);
@@ -527,7 +496,6 @@
   margin-block: 1.75rem;
   overflow-x: auto;
   padding: 1.25rem;
-  border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-card);
   background: var(--color-background-alt);
   font-family: var(--font-mono, ui-monospace, monospace);
@@ -548,11 +516,11 @@
   text-decoration-line: underline;
 }
 
-/* Tables: hairline rows, quiet headers, tabular numerals. */
+/* Tables: hairline rows, quiet headers, tabular numerals. Lines stay inside
+   real tables only. */
 .cp-table {
   margin-block: 2rem;
   overflow-x: auto;
-  border-top: 1px solid var(--color-border);
 }
 
 .cp-table table {
@@ -605,11 +573,10 @@
   min-width: 40rem;
 }
 
-/* Figures: a quiet hairline frame, white objects inside. */
+/* Figures: a pale tone field, white objects inside. */
 .cp-figure {
   margin-block: 2.25rem;
   padding: clamp(1.25rem, 3vw, 1.75rem);
-  border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-lg);
   background: var(--color-background-alt);
 }
@@ -623,13 +590,12 @@
   align-content: start;
   gap: 0.5rem;
   padding: var(--card-padding);
-  border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-card);
   background: var(--color-panel);
 }
 
 .cp-node-strong {
-  border-color: var(--color-accent-border);
+  background: var(--color-accent-soft);
 }
 
 .cp-node-title {
@@ -680,13 +646,9 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Checklist: hairline rows with a single check mark. */
+/* Checklist: spaced rows with a single check mark. */
 .cp-checklist {
   margin-block: 2rem;
-}
-
-.cp-checklist ul {
-  border-top: 1px solid var(--color-border);
 }
 
 .cp-checklist li {
@@ -694,7 +656,6 @@
   grid-template-columns: auto minmax(0, 1fr);
   gap: 0.25rem 0.75rem;
   padding-block: 0.75rem;
-  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 .cp-checklist li > svg {
@@ -729,9 +690,7 @@
 .cp-article-end {
   display: grid;
   gap: 3rem;
-  margin-top: 3.5rem;
-  padding-top: 2.5rem;
-  border-top: 1px solid var(--color-border);
+  margin-top: 5rem;
 }
 
 .cp-sources,
@@ -773,7 +732,6 @@
   display: grid;
   gap: 0.25rem;
   padding-block: 1rem;
-  border-top: 1px solid var(--color-border);
 }
 
 .cp-pager a:hover .cp-link-title {
@@ -813,15 +771,10 @@
   }
 }
 
+/* Each tool is its own tone tile, one step from the band it sits on. */
 .cp-tool-list {
-  overflow: hidden;
-  border-radius: var(--radius-lg);
-  background: var(--color-panel);
-  box-shadow: var(--elevation-card);
-}
-
-.cp-tool-list > li + li {
-  border-top: 1px solid var(--color-border-subtle);
+  display: grid;
+  gap: 0.5rem;
 }
 
 .cp-tool-row {
@@ -830,11 +783,25 @@
   align-items: center;
   gap: 0.25rem 1rem;
   padding: 1.25rem 1.5rem;
+  border-radius: var(--radius-card);
+  background: var(--color-background-alt);
   transition: background-color var(--motion-fast) var(--ease-standard);
 }
 
-.cp-tool-row:hover {
+[data-citeladder-section='soft'] .cp-tool-row {
+  background: var(--color-panel);
+}
+
+.cp-tool-row .nav-row-icon {
+  background: var(--color-panel);
+}
+
+[data-citeladder-section='soft'] .cp-tool-row .nav-row-icon {
   background: var(--color-background-alt);
+}
+
+.cp-tool-row:hover {
+  background: var(--color-well);
 }
 
 .cp-tool-row:hover .nav-row-icon,
@@ -866,14 +833,12 @@
 
 .cp-facts {
   display: grid;
-  border-top: 1px solid var(--color-border);
 }
 
 .cp-facts li {
   display: grid;
   gap: 0.25rem;
   padding-block: 1.25rem;
-  border-bottom: 1px solid var(--color-border);
 }
 
 @media (min-width: 48rem) {
@@ -894,14 +859,13 @@
   line-height: var(--text-sm--line-height);
 }
 
-/* The tool itself: one white panel, input pane and result pane. */
+/* The tool itself: one pale panel, input pane and a deeper result pane. */
 .cp-tool {
   display: grid;
   min-width: 0;
   overflow: hidden;
   border-radius: var(--radius-lg);
-  background: var(--color-panel);
-  box-shadow: var(--elevation-flow);
+  background: var(--color-background-alt);
 }
 
 @media (min-width: 64rem) {
@@ -919,22 +883,12 @@
 }
 
 .cp-tool-result {
-  border-top: 1px solid var(--color-border-subtle);
-  background: var(--color-background-alt);
-}
-
-@media (min-width: 64rem) {
-  .cp-tool-result {
-    border-top: 0;
-    border-left: 1px solid var(--color-border-subtle);
-  }
+  background: var(--color-well);
 }
 
 .cp-tool-head {
   display: grid;
   gap: 0.25rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 .cp-tool-actions {
@@ -949,8 +903,7 @@
   gap: 0.75rem;
   padding: clamp(1.25rem, 3vw, 2rem);
   border-radius: var(--radius-lg);
-  background: var(--color-panel);
-  box-shadow: var(--elevation-card);
+  background: var(--color-background-alt);
 }
 
 .cp-tool-extra pre {

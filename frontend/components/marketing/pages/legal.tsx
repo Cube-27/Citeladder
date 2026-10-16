@@ -41,7 +41,7 @@ export function LegalDocumentView({ document }: Readonly<{ document: LegalDocume
         </p>
       </PageHero>
 
-      <div className="border-border-subtle border-t">
+      <div>
         <Container className="py-[calc(var(--section-y)*0.75)]">
           <div className={cn('ed-doc', !rail && 'ed-doc-single')}>
             {rail && (

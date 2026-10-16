@@ -10,9 +10,7 @@
   justify-content: center;
   align-self: stretch;
   gap: 0.25rem 1.75rem;
-  margin-top: 2.25rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid var(--color-border-subtle);
+  margin-top: 2.5rem;
 }
 
 .ed-jump a {
@@ -84,22 +82,16 @@
 
 .ed-rail ol {
   display: grid;
-  border-left: 1px solid var(--color-border-subtle);
 }
 
 .ed-rail a {
   display: block;
-  margin-left: -1px;
-  padding: 0.25rem 0 0.25rem 0.75rem;
-  border-left: 1px solid transparent;
+  padding-block: 0.25rem;
   color: var(--color-muted);
-  transition:
-    color var(--motion-fast) var(--ease-standard),
-    border-color var(--motion-fast) var(--ease-standard);
+  transition: color var(--motion-fast) var(--ease-standard);
 }
 
 .ed-rail a:hover {
-  border-color: var(--color-foreground);
   color: var(--color-foreground);
 }
 
@@ -112,12 +104,10 @@
 .ed-prose-section {
   scroll-margin-top: calc(var(--marketing-nav-offset, 5rem) + 1.5rem);
   padding-block: 2.5rem;
-  border-top: 1px solid var(--color-border-subtle);
 }
 
 .ed-prose-section:first-child {
   padding-top: 0;
-  border-top: 0;
 }
 
 .ed-prose-section > * + * {
@@ -184,9 +174,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem 1.5rem;
-  margin-top: 1rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--color-border-subtle);
+  margin-top: 2.5rem;
 }
 
 /* ── Quiet tables ──────────────────────────────────────────────────────── */
@@ -241,8 +229,7 @@
 .ed-example {
   margin-top: 1.5rem;
   border-radius: var(--radius-lg);
-  background: var(--color-panel);
-  box-shadow: var(--elevation-card);
+  background: var(--color-background-alt);
 }
 
 .ed-example-body {
@@ -270,8 +257,7 @@
 }
 
 .ed-example figcaption {
-  padding: 0.75rem 1.25rem;
-  border-top: 1px solid var(--color-border-subtle);
+  padding: 0 1.25rem 1rem;
 }
 
 /* ── Ordered steps (real sequence) ─────────────────────────────────────── */
@@ -286,7 +272,6 @@
   grid-template-columns: 2rem minmax(0, 1fr);
   gap: 0.25rem 0.5rem;
   padding-block: 1.25rem;
-  border-top: 1px solid var(--color-border-subtle);
   counter-increment: ed-step;
 }
 
@@ -302,21 +287,19 @@
 
 /* ── Link ledgers (compare index, related reading) ─────────────────────── */
 
+/* Each row is its own tone tile; space, not rules, separates them. */
 .ed-ledger {
-  border-top: 1px solid var(--color-border);
-}
-
-.ed-ledger li {
-  border-bottom: 1px solid var(--color-border-subtle);
+  display: grid;
+  gap: 0.5rem;
 }
 
 .ed-ledger a {
   display: grid;
   gap: 0.25rem 2rem;
   align-items: baseline;
-  padding: 1.25rem 0.75rem;
-  margin-inline: -0.75rem;
-  border-radius: var(--radius-control);
+  padding: 1.25rem;
+  border-radius: var(--radius-card);
+  background: var(--color-background-alt);
   transition: background-color var(--motion-fast) var(--ease-standard);
 }
 
@@ -327,7 +310,7 @@
 }
 
 .ed-ledger a:hover {
-  background: var(--color-background-alt);
+  background: var(--color-well);
 }
 
 .ed-ledger svg {
@@ -357,17 +340,12 @@
 }
 
 /* Compact single-column ledger for link lists inside a reading column. */
-.ed-links {
-  border-top: 1px solid var(--color-border-subtle);
-}
-
 .ed-links a {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
   padding-block: 0.75rem;
-  border-bottom: 1px solid var(--color-border-subtle);
   color: var(--color-foreground);
   transition: color var(--motion-fast) var(--ease-standard);
 }
@@ -462,15 +440,10 @@
 
 /* ── Reference documents ───────────────────────────────────────────────── */
 
-.ed-facts {
-  border-top: 1px solid var(--color-border-subtle);
-}
-
 .ed-facts > div {
   display: grid;
   gap: 0.25rem 1.5rem;
   padding-block: 0.75rem;
-  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 @media (min-width: 40rem) {

@@ -123,7 +123,7 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
         </div>
       </Section>
 
-      <Section rhythm="tight" divided aria-label="Comparison sources and disclosure">
+      <Section rhythm="tight" aria-label="Comparison sources and disclosure">
         <div className="grid max-w-[68ch] gap-3">
           <p className="website-body">{COMPARISON_DISCLOSURE}</p>
           {competitor.sources.map((item) => (

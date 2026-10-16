@@ -28,7 +28,10 @@ export function SocialPreview() {
     return () => reader.abort();
   }, [file]);
   const preview = (
-    <div className="bg-panel border-border-subtle overflow-hidden rounded-[var(--radius-card)] border">
+    <div
+      className="bg-panel border-border-subtle overflow-hidden rounded-[var(--radius-card)] border"
+      data-ui
+    >
       {file && localImage ? (
         <img
           src={localImage}

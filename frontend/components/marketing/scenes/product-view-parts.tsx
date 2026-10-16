@@ -241,7 +241,7 @@ export function AppShellFrame({
   children,
 }: Readonly<AppShellChrome & { children: ReactNode }>) {
   return (
-    <div className="product-frame pv-shell app-type-scale">
+    <div className="product-frame pv-shell app-type-scale" data-ui>
       <ShellSidebar mode={mode} active={active} />
       <div className="pv-sheet">
         <div className="pv-sheet-head">
@@ -299,13 +299,12 @@ export function AppShellFrame({
 export function ProductShot({
   title,
   children,
-  caption = 'Illustrative example with synthetic data.',
   className,
-}: Readonly<{ title: string; children: ReactNode; caption?: string; className?: string }>) {
+}: Readonly<{ title: string; children: ReactNode; className?: string }>) {
   return (
     <figure className={cn('min-w-0', className)}>
       <div className="product-stage product-fit p-4 sm:p-8 lg:p-10">
-        <div className="product-frame app-type-scale">
+        <div className="product-frame app-type-scale" data-ui>
           <div className="product-frame-bar">
             <span className="inline-flex items-center gap-2">
               <span className="pv-window-dots" aria-hidden>
@@ -320,7 +319,6 @@ export function ProductShot({
           <div className="p-5">{children}</div>
         </div>
       </div>
-      <figcaption className="product-caption mt-3">{caption}</figcaption>
     </figure>
   );
 }

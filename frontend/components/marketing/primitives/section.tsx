@@ -34,8 +34,6 @@ type SectionProps = Readonly<{
   children: ReactNode;
   rhythm?: Rhythm;
   tone?: Tone;
-  /** Hairline rule above the section — only for same-tone adjacency. */
-  divided?: boolean;
   /** Full-bleed: skips the container so the child owns its width. */
   bleed?: boolean;
   /** Dense single-block sections tighten the container gap. */
@@ -50,7 +48,6 @@ export function Section({
   children,
   rhythm = 'base',
   tone = 'paper',
-  divided = false,
   bleed = false,
   dense = false,
   id,
@@ -69,7 +66,6 @@ export function Section({
         'relative w-full scroll-mt-[var(--marketing-nav-offset)]',
         TONE[tone],
         RHYTHM[rhythm],
-        divided && 'border-border-subtle border-t',
         className,
       )}
       {...aria}
