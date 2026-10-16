@@ -361,7 +361,10 @@ function IssueGroupList({
   onSelect: (groupId: string) => void;
 }>) {
   return (
-    <div className="border-border-subtle divide-border-subtle flex min-w-0 divide-x overflow-x-auto border-b lg:grid lg:divide-x-0 lg:divide-y lg:overflow-visible lg:border-r lg:border-b-0">
+    // One vertical list at every width: above the detail when the panes
+    // stack, beside it from lg. A sideways strip of fixed-width cards left a
+    // lone issue stranded at a third of the width.
+    <div className="border-border-subtle divide-border-subtle grid min-w-0 divide-y border-b lg:border-r lg:border-b-0">
       {rows.map((issue) => {
         const selected = issue.group_id === selectedGroupId;
         return (
@@ -371,7 +374,7 @@ function IssueGroupList({
             onClick={() => onSelect(issue.group_id)}
             aria-pressed={selected}
             className={cn(
-              'focus-ring grid w-72 shrink-0 gap-2 px-4 py-3 text-left lg:w-full',
+              'focus-ring grid w-full gap-2 px-4 py-3 text-left',
               listRowClasses({ selected }),
             )}
           >

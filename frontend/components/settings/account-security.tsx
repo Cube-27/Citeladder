@@ -10,7 +10,9 @@ import { Dialog } from '@/components/ui/dialog';
 import { Alert } from '@/components/ui/alert';
 import { AuthPasswordField } from '@/components/auth/auth-form';
 import { Stack } from '@/components/ui/layout';
-import { EditorialSectionHeader } from '@/components/ui/workspace';
+import { textRole } from '@/components/ui/typography';
+
+import { SettingsFacts, SettingsSection } from './settings-section';
 
 const METHOD_LABELS: Record<string, string> = { password: 'Email and password', google: 'Google' };
 
@@ -20,23 +22,20 @@ function SecurityIdentity({
   if (!data) return null;
   const methods = data.methods.map((method) => METHOD_LABELS[method] ?? method);
   return (
-    <dl className="type-body grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
-      <dt className="text-secondary">Sign in with</dt>
-      <dd>{methods.length ? methods.join(' or ') : 'No sign-in method yet'}</dd>
-      <dt className="text-secondary">Email</dt>
-      <dd>{data.email_verified ? 'Verified' : 'Not verified'}</dd>
-      {data.methods.includes('password') && !data.methods.includes('google') ? (
-        <dd className="type-caption col-span-2">
-          To connect Google, enter your current password below, then choose Connect Google.
-        </dd>
-      ) : null}
-    </dl>
+    <SettingsFacts
+      facts={[
+        ['Sign in with', methods.length ? methods.join(' or ') : 'No sign-in method yet'],
+        ['Email', data.email_verified ? 'Verified' : 'Not verified'],
+      ]}
+    />
   );
 }
 
-export default function AccountSecurity({
-  showHeading = true,
-}: Readonly<{ showHeading?: boolean }>) {
+/**
+ * The account's sign-in, password and session controls, as settings
+ * sections. Place it inside `SettingsSections`.
+ */
+export default function AccountSecurity() {
   const [current, setCurrent] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState<'sign-out' | 'disconnect' | null>(null);
@@ -61,87 +60,102 @@ export default function AccountSecurity({
     mutationFn: () => authApi.linkGoogle(current),
     onSuccess: (response) => hardNavigate(response.authorize_url),
   });
+  const hasPassword = security.data?.methods.includes('password') ?? false;
+  const canLinkGoogle = hasPassword && !security.data?.methods.includes('google');
   return (
-    <Stack as="section" gap="workspace" className="max-w-xl" aria-label="Account security">
-      {showHeading && <EditorialSectionHeader title="Account security" />}
-      {security.isPending && <p>Loading account security…</p>}
-      {security.isError && (
-        <Alert tone="danger">
-          {authErrorMessage(security.error)}{' '}
-          <Button className="w-fit" onClick={() => void security.refetch()}>
-            Retry
-          </Button>
-        </Alert>
-      )}
-      <SecurityIdentity data={security.data} />
-      {security.data?.methods.includes('password') ? (
-        <Stack
-          as="form"
-          gap="workspace"
-          onSubmit={(event) => {
-            event.preventDefault();
-            mutation.mutate('change-password');
-          }}
-        >
-          <AuthPasswordField
-            label="Current password"
-            autoComplete="current-password"
-            placeholder="Current password"
-            inputProps={{
-              value: current,
-              onChange: (event) => setCurrent(event.target.value),
-              required: true,
-            }}
-          />
-          <AuthPasswordField
-            label="New password"
-            autoComplete="new-password"
-            placeholder={passwordHint}
-            inputProps={{
-              value: password,
-              onChange: (event) => setPassword(event.target.value),
-              required: true,
-              minLength: authFormPolicy.passwordMinLength,
-              maxLength: authFormPolicy.passwordMaxLength,
-            }}
-          />
-          <div className="flex flex-wrap gap-2">
-            <Button type="submit" disabled={mutation.isPending}>
-              Change password and sign out
+    <>
+      <SettingsSection title="Sign-in" description="How you sign in to CiteLadder.">
+        {security.isPending && <p className={textRole('body')}>Loading account security…</p>}
+        {security.isError && (
+          <Alert tone="danger">
+            {authErrorMessage(security.error)}{' '}
+            <Button className="w-fit" onClick={() => void security.refetch()}>
+              Retry
             </Button>
-            {!security.data.methods.includes('google') && (
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={!current || link.isPending}
-                onClick={() => link.mutate()}
-              >
-                Connect Google
+          </Alert>
+        )}
+        <SecurityIdentity data={security.data} />
+      </SettingsSection>
+      <SettingsSection
+        title="Password"
+        description={
+          canLinkGoogle
+            ? 'Changing it signs you out everywhere. To connect Google, enter your current password, then choose Connect Google.'
+            : 'Changing it signs you out everywhere.'
+        }
+      >
+        {hasPassword ? (
+          <Stack
+            as="form"
+            gap="workspace"
+            className="max-w-md"
+            onSubmit={(event) => {
+              event.preventDefault();
+              mutation.mutate('change-password');
+            }}
+          >
+            <AuthPasswordField
+              label="Current password"
+              autoComplete="current-password"
+              placeholder="Current password"
+              inputProps={{
+                value: current,
+                onChange: (event) => setCurrent(event.target.value),
+                required: true,
+              }}
+            />
+            <AuthPasswordField
+              label="New password"
+              autoComplete="new-password"
+              placeholder={passwordHint}
+              inputProps={{
+                value: password,
+                onChange: (event) => setPassword(event.target.value),
+                required: true,
+                minLength: authFormPolicy.passwordMinLength,
+                maxLength: authFormPolicy.passwordMaxLength,
+              }}
+            />
+            <div className="flex flex-wrap gap-2">
+              <Button type="submit" disabled={mutation.isPending}>
+                Change password and sign out
               </Button>
-            )}
-          </div>
-        </Stack>
-      ) : (
-        <Button
-          className="w-fit"
-          disabled={!security.data || setup.isPending}
-          onClick={() => setup.mutate()}
-        >
-          Email password setup link
-        </Button>
-      )}
-      {setup.isSuccess && <Alert tone="info">{setup.data.message}</Alert>}
-      {setup.isError && <Alert tone="danger">{authErrorMessage(setup.error)}</Alert>}
-      {mutation.isError && <Alert tone="danger">{authErrorMessage(mutation.error)}</Alert>}
-      {link.isError && <Alert tone="danger">{authErrorMessage(link.error)}</Alert>}
-      <div className="flex flex-wrap gap-2">
-        <Button variant="secondary" onClick={() => setConfirm('sign-out')}>
-          Sign out all sessions
-        </Button>
-        <Button variant="destructiveGhost" onClick={() => setConfirm('disconnect')}>
-          Sign out everywhere and disconnect integrations
-        </Button>
-      </div>
+              {canLinkGoogle && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={!current || link.isPending}
+                  onClick={() => link.mutate()}
+                >
+                  Connect Google
+                </Button>
+              )}
+            </div>
+          </Stack>
+        ) : (
+          <Button
+            className="w-fit"
+            disabled={!security.data || setup.isPending}
+            onClick={() => setup.mutate()}
+          >
+            Email password setup link
+          </Button>
+        )}
+        {setup.isSuccess && <Alert tone="info">{setup.data.message}</Alert>}
+        {setup.isError && <Alert tone="danger">{authErrorMessage(setup.error)}</Alert>}
+        {mutation.isError && <Alert tone="danger">{authErrorMessage(mutation.error)}</Alert>}
+        {link.isError && <Alert tone="danger">{authErrorMessage(link.error)}</Alert>}
+      </SettingsSection>
+      <SettingsSection title="Sessions" description="Sign out every device, including this one.">
+        <div className="flex flex-wrap gap-2">
+          <Button variant="secondary" onClick={() => setConfirm('sign-out')}>
+            Sign out all sessions
+          </Button>
+          <Button variant="destructiveGhost" onClick={() => setConfirm('disconnect')}>
+            Sign out everywhere and disconnect integrations
+          </Button>
+        </div>
+      </SettingsSection>
       <Dialog
         open={confirm === 'sign-out'}
         onOpenChange={(open) => setConfirm(open ? 'sign-out' : null)}
@@ -174,6 +188,6 @@ export default function AccountSecurity({
           until you connect them again.
         </p>
       </Dialog>
-    </Stack>
+    </>
   );
 }
