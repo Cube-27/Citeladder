@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 import { authApi } from '@/lib/api/auth';
 import { authFormPolicy, passwordHint } from '@/lib/config/auth';
 import { authErrorMessage } from '@/lib/auth/forms';
@@ -28,6 +28,36 @@ function SecurityIdentity({
         ['Email', data.email_verified ? 'Verified' : 'Not verified'],
       ]}
     />
+  );
+}
+
+function SignInSection({
+  security,
+}: Readonly<{ security: UseQueryResult<Awaited<ReturnType<typeof authApi.security>>> }>) {
+  return (
+    <SettingsSection title="Sign-in" description="How you sign in to CiteLadder.">
+      {security.isPending && <p className={textRole('body')}>Loading account security…</p>}
+      {security.isError && (
+        <Alert tone="danger">
+          {authErrorMessage(security.error)}{' '}
+          <Button className="w-fit" onClick={() => void security.refetch()}>
+            Retry
+          </Button>
+        </Alert>
+      )}
+      <SecurityIdentity data={security.data} />
+    </SettingsSection>
+  );
+}
+
+/** One danger alert per failed request, keyed by the request's name. */
+function ErrorAlerts({ errors }: Readonly<{ errors: Readonly<Record<string, Error | null>> }>) {
+  return Object.entries(errors).map(([name, error]) =>
+    error ? (
+      <Alert key={name} tone="danger">
+        {authErrorMessage(error)}
+      </Alert>
+    ) : null,
   );
 }
 
@@ -64,18 +94,7 @@ export default function AccountSecurity() {
   const canLinkGoogle = hasPassword && !security.data?.methods.includes('google');
   return (
     <>
-      <SettingsSection title="Sign-in" description="How you sign in to CiteLadder.">
-        {security.isPending && <p className={textRole('body')}>Loading account security…</p>}
-        {security.isError && (
-          <Alert tone="danger">
-            {authErrorMessage(security.error)}{' '}
-            <Button className="w-fit" onClick={() => void security.refetch()}>
-              Retry
-            </Button>
-          </Alert>
-        )}
-        <SecurityIdentity data={security.data} />
-      </SettingsSection>
+      <SignInSection security={security} />
       <SettingsSection
         title="Password"
         description={
@@ -142,9 +161,7 @@ export default function AccountSecurity() {
           </Button>
         )}
         {setup.isSuccess && <Alert tone="info">{setup.data.message}</Alert>}
-        {setup.isError && <Alert tone="danger">{authErrorMessage(setup.error)}</Alert>}
-        {mutation.isError && <Alert tone="danger">{authErrorMessage(mutation.error)}</Alert>}
-        {link.isError && <Alert tone="danger">{authErrorMessage(link.error)}</Alert>}
+        <ErrorAlerts errors={{ setup: setup.error, session: mutation.error, link: link.error }} />
       </SettingsSection>
       <SettingsSection title="Sessions" description="Sign out every device, including this one.">
         <div className="flex flex-wrap gap-2">
