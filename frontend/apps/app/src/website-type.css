@@ -233,12 +233,10 @@
   border-radius: var(--radius-full);
 }
 
-/* The flow sits on the website's stage: white paper, a faint dot lattice and
-   a soft accent wash, with the task sheet floating above it. */
+/* The flow sits on the website's flat stage: white paper and a faint dot
+   lattice, with the task sheet lying on it rather than floating. */
 :root:not([data-theme='dark']) [data-flow-surface] {
-  background:
-    radial-gradient(90% 60% at 50% 0%, var(--color-accent-soft), transparent 70%),
-    var(--color-panel);
+  background: var(--color-panel);
 }
 
 :root:not([data-theme='dark']) [data-flow-surface]::before {
@@ -252,11 +250,10 @@
   opacity: 0.5;
 }
 
-/* Opaque so a long step scrolls cleanly beneath it; the hairline makes the
-   bar read as the site header rather than a white strip across the stage. */
+/* Opaque so a long step scrolls cleanly beneath it. Like the site header it
+   has no rule in light mode; dark mode keeps one below. */
 .flow-bar {
   background: var(--color-panel);
-  border-bottom: 1px solid var(--color-border-subtle);
   position: sticky;
   top: 0;
   z-index: var(--z-index-sticky);
@@ -489,7 +486,6 @@
     align-content: center;
     gap: var(--flow-header-gap);
     padding: var(--flow-header-gap);
-    border-left: 1px solid var(--color-border-subtle);
     background: var(--color-accent-soft);
     overflow: clip;
   }
@@ -629,11 +625,14 @@
 
 .flow-actions {
   background: var(--color-panel);
-  border-top: 1px solid var(--color-border-subtle);
   position: sticky;
   bottom: 0;
   z-index: var(--z-index-sticky);
   padding: var(--flow-answer) var(--flow-gutter);
+}
+
+[data-theme='dark'] .flow-actions {
+  border-top: 1px solid var(--color-border);
 }
 
 .flow-actions.safe-bottom {
@@ -785,12 +784,12 @@
   max-width: 100%;
 }
 
-/* One decision per card. The card, not a rule, is what separates questions. */
+/* One decision per card. The card's tone step, not a rule, is what separates
+   questions. */
 .flow-review-card {
   padding: 1.25rem;
-  border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-card);
-  background: var(--color-panel);
+  background: var(--color-background-alt);
 }
 
 .flow-review-card .flow-help {
@@ -1266,5 +1265,13 @@
   .website-data-display {
     font-size: 2rem;
     line-height: 2.5rem;
+  }
+}
+
+/* Desktop holds the hero 4px under the tablet curve (owner, 2026-10-16).
+   900px, not 1024px: a desktop at 125% display scaling is ~980 CSS px wide. */
+@media (min-width: 900px) {
+  .website-hero-display {
+    font-size: clamp(2rem, 4.2vw + 0.35rem, 4.25rem);
   }
 }

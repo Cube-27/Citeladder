@@ -445,12 +445,21 @@
   }
 }
 
+/* Desktop sits 4px under the tablet rung (owner, 2026-10-16), from 900px so a
+   desktop at 125% display scaling (~980 CSS px) counts as desktop. */
+@media (min-width: 56.25rem) {
+  .website-page-title:not(.website-article-title, .mk-dive-title) {
+    --text-marketing-title: 2.5rem;
+    --text-marketing-title--line-height: 3rem;
+  }
+}
+
 /* From 1280px the marketing H1 is the first screen's one dominant element
    (owner decision, 2026-10-16): display size, near 5vw at 1440px. */
 @media (min-width: 80rem) {
   .website-page-title:not(.website-article-title, .mk-dive-title) {
-    --text-marketing-title: 4.25rem;
-    --text-marketing-title--line-height: 4.5rem;
+    --text-marketing-title: 4rem;
+    --text-marketing-title--line-height: 4.25rem;
   }
 }
 

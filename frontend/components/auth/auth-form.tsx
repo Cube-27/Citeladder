@@ -310,11 +310,7 @@ export function AuthFormShell({
               disabled={revisionPending}
               consentGiven={consentGiven}
             />
-            <div className="auth-form-divider flex items-center gap-3">
-              <span className="bg-border h-px flex-1" aria-hidden="true" />
-              <span className="flow-meta">or</span>
-              <span className="bg-border h-px flex-1" aria-hidden="true" />
-            </div>
+            <p className="auth-form-divider flow-meta m-0 text-center">or</p>
           </>
         )}
 
