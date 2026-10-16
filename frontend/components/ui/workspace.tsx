@@ -102,7 +102,15 @@ export function MetricGroup({
     <dl
       {...props}
       className={cn(
-        'divide-border-subtle grid divide-y sm:grid-cols-2 sm:divide-x-0 sm:divide-y-0 sm:[&>*]:border-b sm:[&>*]:border-border-subtle sm:[&>*:nth-child(odd)]:border-r sm:[&>*:nth-last-child(-n+2)]:border-b-0 sm:[&>*:nth-last-child(2):nth-child(even)]:border-b lg:grid-flow-col lg:auto-cols-fr lg:[&>*]:border-r lg:[&>*]:border-b-0 lg:[&>*:nth-last-child(2):nth-child(even)]:border-b-0 lg:[&>*:last-child]:border-r-0',
+        // One row from 768px: the sheet beside a 224px rail is still ~700px
+        // wide at a 980px desktop, room for five figures, and a two-column
+        // grid there strands an odd figure beside an empty cell.
+        // Each layout is scoped to its own range, so no rule has to undo the
+        // one below it (an undo that lost on source order left a rule after
+        // the last figure).
+        'divide-border-subtle grid divide-y',
+        'sm:max-md:grid-cols-2 sm:max-md:divide-y-0 sm:max-md:[&>*]:border-b sm:max-md:[&>*]:border-border-subtle sm:max-md:[&>*:nth-child(odd)]:border-r sm:max-md:[&>*:nth-last-child(-n+2)]:border-b-0 sm:max-md:[&>*:nth-last-child(2):nth-child(even)]:border-b',
+        'md:grid-flow-col md:auto-cols-fr md:divide-x md:divide-y-0',
         className,
       )}
     >
@@ -120,7 +128,7 @@ export function MetricGroup({
  * carry margins.
  */
 export const metricItemClasses =
-  'grid min-w-0 content-start gap-1 px-0 py-3 sm:px-4 sm:odd:ps-0 sm:even:pe-0 sm:last:pe-0 lg:px-4 lg:odd:ps-4 lg:even:pe-4 lg:first:ps-0 lg:last:pe-0';
+  'grid min-w-0 content-start gap-1 px-0 py-3 sm:max-md:odd:pe-4 sm:max-md:even:ps-4 md:px-4 md:first:ps-0 md:last:pe-0';
 
 export function MetricItem({
   label,

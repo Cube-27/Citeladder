@@ -49,18 +49,17 @@ export function StateMetric({
           label={availabilityLabel('not_measured')}
         />
       </dd>
-      {/* A missing value has no change to report; the section states why once. */}
-      <dd>
-        {value === null ? (
-          '\u00a0'
-        ) : (
+      {/* A missing value or a missing comparison has no change to report; the
+          Movement card states why once, rather than a dash under every figure. */}
+      {value !== null && delta !== null ? (
+        <dd>
           <Delta
             value={delta}
             policy={inverse ? 'lower-is-better' : 'higher-is-better'}
             {...VS_PREVIOUS_RUN}
           />
-        )}
-      </dd>
+        </dd>
+      ) : null}
     </div>
   );
 }

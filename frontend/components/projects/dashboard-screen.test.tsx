@@ -202,7 +202,7 @@ describe('DashboardScreen', () => {
     );
     expect(
       within(screen.getByRole('region', { name: 'Progress and report proof' })).getByText(
-        '2 action(s) resolved since the comparable run.',
+        '2 actions resolved since the comparable run.',
       ),
     ).toBeVisible();
     expect(screen.getByText('Evidence-first analytics')).toBeVisible();

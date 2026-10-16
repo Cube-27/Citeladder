@@ -30,26 +30,13 @@ import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project
 import { useSelectProject, workspaceDestination } from '@/lib/navigation/project-destination';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { textRole } from '@/components/ui/typography';
-import { Stack } from '@/components/ui/layout';
-import { EditorialSectionHeader, ledgerClasses, splitPaneClasses } from '@/components/ui/workspace';
+import {
+  SettingsFacts,
+  SettingsSection,
+  SettingsSections,
+} from '@/components/settings/settings-section';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayTimestamp } from '@/lib/format';
-
-/** One read-only account detail row: label + value. */
-function DetailRow({
-  label,
-  children,
-  numeric = false,
-}: Readonly<{ label: string; children: React.ReactNode; numeric?: boolean }>) {
-  return (
-    <div className="grid grid-cols-[minmax(0,180px)_1fr] items-center gap-4 py-3">
-      <dt className={textRole('label')}>{label}</dt>
-      <dd className={numeric ? 'type-caption tabular-nums' : 'type-body text-foreground'}>
-        {children}
-      </dd>
-    </div>
-  );
-}
 
 const SETTINGS_TABS = [
   { id: 'account', label: 'Account' },
@@ -123,11 +110,10 @@ function ProjectDeletionControls() {
   if (!hasCapability(PROJECT_DELETION_CAPABILITY) || !mayDelete) return null;
   return (
     <>
-      <Stack as="section" gap="workspace">
-        <EditorialSectionHeader
-          title="Danger zone"
-          description="Permanently delete the active project and everything inside it."
-        />
+      <SettingsSection
+        title="Danger zone"
+        description="Permanently delete the active project and everything inside it."
+      >
         {activeProject ? (
           <>
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -163,7 +149,7 @@ function ProjectDeletionControls() {
         ) : (
           <p className="type-body">No project selected.</p>
         )}
-      </Stack>
+      </SettingsSection>
       <Dialog
         open={confirmOpen}
         onOpenChange={(open) => {
@@ -251,47 +237,38 @@ export function SettingsScreen() {
         }
       >
         <TabPanel value="account" forceMount className="focus-ring data-[state=inactive]:hidden">
-          <Stack gap="section">
-            {/* Two columns from lg, not a narrow centred rail. These cards are
-            short, so a max-w-2xl column left most of a wide screen empty and
-            pushed everything below the fold for no reason. */}
-            <div className={splitPaneClasses('peers')}>
-              <Stack as="section" gap="workspace">
-                <div className="flex items-center gap-4">
-                  <Avatar name={user.email} size="md" />
-                  <div className="grid min-w-0 flex-1 gap-0.5">
-                    <div className={textRole('itemTitle', 'truncate')}>{user.email}</div>
-                    {activeWorkspace ? (
-                      <div className="type-body">
-                        {activeWorkspace.role === 'owner'
-                          ? `Owner of ${activeWorkspace.name}`
-                          : `${roleLabel(activeWorkspace.role)} in ${activeWorkspace.name}`}
-                      </div>
-                    ) : null}
-                  </div>
+          {/* One ruled list: every section names itself on the left and
+              starts its controls at the same edge on the right, so the page
+              reads top to bottom without the ragged gaps of two loose
+              columns. */}
+          <SettingsSections>
+            <SettingsSection title="Profile" description="Your sign-in email and workspace role.">
+              <div className="flex items-center gap-4">
+                <Avatar name={user.email} size="md" />
+                <div className="grid min-w-0 flex-1 gap-0.5">
+                  <div className={textRole('itemTitle', 'truncate')}>{user.email}</div>
+                  {activeWorkspace ? (
+                    <div className="type-body">
+                      {activeWorkspace.role === 'owner'
+                        ? `Owner of ${activeWorkspace.name}`
+                        : `${roleLabel(activeWorkspace.role)} in ${activeWorkspace.name}`}
+                    </div>
+                  ) : null}
                 </div>
-
-                <dl className={ledgerClasses('open', 'border-border-subtle border-t')}>
-                  {createdLabel ? (
-                    <DetailRow label="Account created" numeric>
-                      {createdLabel}
-                    </DetailRow>
-                  ) : null}
-                  {updatedLabel ? (
-                    <DetailRow label="Last updated" numeric>
-                      {updatedLabel}
-                    </DetailRow>
-                  ) : null}
-                </dl>
-              </Stack>
-              <Stack gap="section">
-                <TimeZoneSetting />
-                <AccountSecurity />
-              </Stack>
-            </div>
-
+              </div>
+              {createdLabel || updatedLabel ? (
+                <SettingsFacts
+                  facts={[
+                    ...(createdLabel ? [['Account created', createdLabel] as const] : []),
+                    ...(updatedLabel ? [['Last updated', updatedLabel] as const] : []),
+                  ]}
+                />
+              ) : null}
+            </SettingsSection>
+            <TimeZoneSetting />
+            <AccountSecurity />
             <ProjectDeletionControls />
-          </Stack>
+          </SettingsSections>
         </TabPanel>
 
         <TabPanel value="workspace" forceMount className="focus-ring data-[state=inactive]:hidden">

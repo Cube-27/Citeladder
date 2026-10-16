@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
 import { Select } from '@/components/ui/select';
-import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { textRole } from '@/components/ui/typography';
+
+import { SettingsSection } from './settings-section';
 import {
   saveTimeZonePreference,
   useDisplayTimeZone,
@@ -53,22 +54,16 @@ export function TimeZoneSetting() {
   };
 
   return (
-    <Stack
-      as="section"
-      gap="compact"
-      aria-labelledby="display-timezone-heading"
-      className="max-w-xl"
+    <SettingsSection
+      title="Display timezone"
+      description={`Timestamps currently display in ${displayZone}.`}
     >
-      <EditorialSectionHeader
-        title="Display timezone"
-        headingId="display-timezone-heading"
-        description={`Timestamps currently display in ${displayZone}.`}
-      />
       <Select
         value={choice}
         onValueChange={choose}
         options={CHOICES}
         ariaLabel="Display timezone preference"
+        className="max-w-sm"
       />
       {choice === 'custom' ? (
         <Stack gap="tight">
@@ -91,6 +86,6 @@ export function TimeZoneSetting() {
         </Stack>
       ) : null}
       {error ? <Alert tone="danger">{error}</Alert> : null}
-    </Stack>
+    </SettingsSection>
   );
 }

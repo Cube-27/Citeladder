@@ -22,5 +22,7 @@ export const cardClasses = (tone: CardTone = 'default') =>
   cn(
     cardVariants({}),
     tone === 'danger' && 'border border-danger-border',
-    tone === 'recommendation' && 'bg-accent-soft border border-accent-border',
+    // The wash alone marks the recommendation; a bright green outline on top
+    // of it shouted louder than the action inside.
+    tone === 'recommendation' && 'surface-card-recommendation bg-accent-soft',
   );

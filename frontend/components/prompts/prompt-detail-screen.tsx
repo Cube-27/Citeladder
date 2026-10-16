@@ -78,12 +78,15 @@ export function PromptDetailScreen() {
     <PageShell
       title={history.prompt.text}
       back={{ href: '/prompts', label: 'Back to Prompts' }}
+      // A single market has nothing to choose, so the band is not drawn empty.
       controls={
-        <MarketFilter
-          markets={markets}
-          market={market}
-          onChangeMarket={(next) => setMarket(next)}
-        />
+        markets.length > 1 ? (
+          <MarketFilter
+            markets={markets}
+            market={market}
+            onChangeMarket={(next) => setMarket(next)}
+          />
+        ) : undefined
       }
     >
       <Stack gap="section" aria-busy={query.isFetching}>

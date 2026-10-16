@@ -18,6 +18,7 @@ import { Alert } from '@/components/ui/alert';
 import { ShellFallback } from '@/components/layout/shell-fallback';
 import { Dialog } from '@/components/ui/dialog';
 import AccountSecurity from '@/components/settings/account-security';
+import { SettingsSections } from '@/components/settings/settings-section';
 import { RestorePlan } from '@/components/billing/restore-plan';
 
 function accessAllowed(access: z.infer<typeof accessSchema> | undefined, deadline: number | null) {
@@ -200,7 +201,9 @@ function AccessEnded({
           Account security
         </Button>
         <Dialog open={securityOpen} onOpenChange={setSecurityOpen} title="Account security">
-          <AccountSecurity showHeading={false} />
+          <SettingsSections>
+            <AccountSecurity />
+          </SettingsSections>
         </Dialog>
         <Button className="w-fit" variant="secondary" onClick={() => void signOut(client)}>
           Sign out

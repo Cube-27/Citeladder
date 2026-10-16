@@ -1,6 +1,6 @@
 'use client';
 
-import { Filter, Sparkles, Upload } from 'lucide-react';
+import { Bot, ChevronDown, Filter, Plus, Sparkles, Upload } from 'lucide-react';
 
 import { LaunchAuditButton } from '@/components/runs/launch-audit-button';
 import { ProjectLink } from '@/components/layout/scoped-link';
@@ -10,6 +10,7 @@ import {
   Dropdown,
   DropdownCheckboxItem,
   DropdownContent,
+  DropdownItem,
   DropdownLabel,
   DropdownSeparator,
   DropdownTrigger,
@@ -135,7 +136,11 @@ export function PromptFilterControls({
   );
 }
 
-/** The library's own actions, for `PageShell`'s identity band. */
+/**
+ * The library's own actions, for `PageShell`'s identity band: the four ways to
+ * add prompts share one menu, so the band holds one secondary and one primary
+ * action at every width instead of wrapping five buttons over the title.
+ */
 export function PromptActions({
   onImport,
   onAdd,
@@ -150,28 +155,42 @@ export function PromptActions({
 }>) {
   return (
     <>
-      <Button variant="secondary" size="sm" onClick={onImport}>
-        <Upload className="size-4" aria-hidden />
-        Bulk upload
-      </Button>
-      <Button variant="secondary" size="sm" onClick={onGenerate}>
-        <Sparkles className="size-4" aria-hidden />
-        Generate prompts
-      </Button>
-      <Button variant="secondary" size="sm" onClick={onAdd}>
-        Add prompt
-      </Button>
-      <Button asChild variant="secondary" size="sm">
-        <ProjectLink
-          href={agentHandoffHref({
-            skillId: 'prompt_discovery',
-            prompt:
-              'Build a portfolio of distinct buyer questions for this project. Keep the existing topics. Read the current prompt portfolio and business evidence, identify meaningful buying decisions and gaps, and prepare new unbranded questions for prompt review.',
-          })}
-        >
-          Build with Agent
-        </ProjectLink>
-      </Button>
+      <Dropdown>
+        <DropdownTrigger asChild>
+          <Button variant="secondary" size="sm">
+            <Plus className="size-4" aria-hidden />
+            Add prompts
+            <ChevronDown className="size-3.5 opacity-80" aria-hidden />
+          </Button>
+        </DropdownTrigger>
+        <DropdownContent align="end" className="w-56">
+          <DropdownItem onSelect={onAdd}>
+            <Plus className="size-4" aria-hidden />
+            Add prompt
+          </DropdownItem>
+          <DropdownItem onSelect={onGenerate}>
+            <Sparkles className="size-4" aria-hidden />
+            Generate prompts
+          </DropdownItem>
+          <DropdownItem onSelect={onImport}>
+            <Upload className="size-4" aria-hidden />
+            Bulk upload
+          </DropdownItem>
+          <DropdownSeparator />
+          <DropdownItem asChild>
+            <ProjectLink
+              href={agentHandoffHref({
+                skillId: 'prompt_discovery',
+                prompt:
+                  'Build a portfolio of distinct buyer questions for this project. Keep the existing topics. Read the current prompt portfolio and business evidence, identify meaningful buying decisions and gaps, and prepare new unbranded questions for prompt review.',
+              })}
+            >
+              <Bot className="size-4" aria-hidden />
+              Build with Agent
+            </ProjectLink>
+          </DropdownItem>
+        </DropdownContent>
+      </Dropdown>
       <LaunchAuditButton variant="primary" size="sm" disabled={!hasActivePrompts} />
     </>
   );

@@ -291,13 +291,9 @@
      soft ambient layer. Nothing glows and nothing carries an inset bevel; the
      only sheen is the primary action's faint top highlight. The ring is a
      shadow, so it never changes an object's box geometry. */
-  --surface-highlight: rgb(255 255 255 / 16%);
   --surface-ring: rgb(11 15 13 / 8%);
   --surface-drop: rgb(11 15 13 / 5%);
-  --surface-sheen: rgb(255 255 255 / 10%);
-  --elevation-sheet:
-    0 0 0 1px rgb(11 15 13 / 6%), 0 1px 2px rgb(11 15 13 / 4%),
-    0 8px 24px -12px rgb(11 15 13 / 8%);
+  --elevation-sheet: 0 0 0 1px var(--color-border);
   --elevation-track: inset 0 0 0 1px var(--color-border-subtle);
   --field-end-target: var(--control-height-sm);
   --menu-item-height: 32px;
@@ -322,6 +318,8 @@
   --page-header-padding-top: 24px;
   --page-header-padding-bottom: 24px;
   --page-header-gap: 16px;
+  /* The page title's floor beside a long action row. */
+  --page-title-min-width: 10rem;
   --table-row-height: 36px;
   --table-header-height: var(--control-height-md);
   --table-cell-padding-x: 12px;
@@ -361,23 +359,19 @@
   --value-placeholder: var(--color-muted);
 }
 
-/* The product material (docs/design.md §Colour): every raised object is a
-   hairline ring plus a close contact shadow, and larger objects add one long
-   soft ambient layer. The public website, sign-in and onboarding are flat
-   (owner decision, 2026-10-16), so they bind these to none; a coded product
-   view (`[data-ui]`) restates them and keeps the product's own material
-   inside its frame. */
+/* The product material (docs/design.md §Colour, 2026-10-16): crisp hairlines,
+   not lift. Cards and the workspace sheet are a one-pixel edge; secondary
+   controls add only a one-pixel contact shadow so they still read as pressable;
+   the primary action is one flat fill. The public website, sign-in and
+   onboarding are flat (owner decision, 2026-10-16), so they bind these to
+   none; a coded product view (`[data-ui]`) restates them and keeps the
+   product's own material inside its frame. */
 :root,
 [data-public-surface] [data-ui] {
-  --elevation-field: 0 1px 2px rgb(11 15 13 / 4%);
   --elevation-control:
-    0 0 0 1px var(--surface-ring), 0 1px 2px var(--surface-drop);
-  --elevation-primary:
-    0 0 0 1px var(--color-accent-active), inset 0 1px 0 var(--surface-highlight),
-    0 1px 2px rgb(11 15 13 / 16%), 0 2px 6px -2px rgb(20 83 45 / 35%);
-  --elevation-card:
-    0 0 0 1px rgb(11 15 13 / 7%), 0 1px 2px rgb(11 15 13 / 4%),
-    0 4px 12px -6px rgb(11 15 13 / 6%);
+    0 0 0 1px var(--color-border), 0 1px 1px var(--surface-drop);
+  --elevation-primary: 0 0 0 1px var(--color-accent);
+  --elevation-card: 0 0 0 1px var(--color-border);
   /* The workspace sheet and focused task sheets. */
   --elevation-flow:
     0 0 0 1px rgb(11 15 13 / 6%), 0 1px 2px rgb(11 15 13 / 4%),
@@ -390,7 +384,6 @@
    mode keeps its edge rings, which are the only edge a dark surface has. */
 [data-public-surface],
 :root:not([data-theme='dark']) [data-flow-surface] {
-  --elevation-field: none;
   --elevation-control: none;
   --elevation-primary: none;
   --elevation-card: none;
@@ -886,6 +879,11 @@ a.focus-ring:active .type-caption {
   box-shadow: var(--elevation-card);
 }
 
+/* A recommendation's hairline takes the wash's own tint, not a grey edge. */
+.surface-card.surface-card-recommendation {
+  box-shadow: 0 0 0 1px var(--color-accent-subtle);
+}
+
 /* A bare table's boundary on the white sheet: a hairline ring, no lift. A
    table inside a card or a sheet shares that container's edge instead. */
 .table-frame {
@@ -927,21 +925,17 @@ a.focus-ring:active .type-caption {
   box-shadow: var(--elevation-control);
 }
 
-/* Filled actions carry the public primary face: a faint top sheen, a ring in
-   the fill's own pressed shade and a shallow tinted contact shadow. */
+/* Filled actions are one flat fill whose edge is the fill itself, so they sit
+   on the same box as a ringed secondary beside them. */
 .control-raised:is([data-button-variant='primary'], [data-button-variant='destructive']):not(:disabled, [aria-disabled='true']) {
-  background-image: linear-gradient(var(--surface-sheen), transparent);
   box-shadow: var(--elevation-primary);
 }
 
 .control-raised[data-button-variant='destructive']:not(:disabled, [aria-disabled='true']) {
-  box-shadow:
-    0 0 0 1px var(--color-danger-solid-hover), inset 0 1px 0 var(--surface-highlight),
-    0 1px 2px rgb(11 15 13 / 16%);
+  box-shadow: 0 0 0 1px var(--color-danger-solid);
 }
 
 .control-raised:not(:disabled, [aria-disabled='true']):active {
-  background-image: none;
   box-shadow: 0 0 0 1px var(--surface-ring);
 }
 
@@ -963,20 +957,6 @@ a.focus-ring:active .type-caption {
   background-color: var(--color-panel);
 }
 
-.shell-link[aria-current='page'] {
-  background-color: var(--color-panel);
-  box-shadow: var(--elevation-control);
-}
-
-.shell-link[aria-current='page']:active {
-  background-color: var(--color-active);
-}
-
-.focus-input:not(:disabled),
-.focus-frame:has(:enabled) {
-  box-shadow: var(--elevation-field);
-}
-
 /* Public CTAs keep the shared control semantics with a compact, raised face. */
 [data-public-surface] .marketing-cta-button {
   height: auto;
@@ -996,12 +976,8 @@ a.focus-ring:active .type-caption {
   padding-inline: 1.25rem;
 }
 
-/* Public buttons are flat: one fill, no sheen, no ring. The alternate action
-   is a tone step from the page rather than an outline. */
-:is([data-public-surface], [data-flow-surface]) .control-raised:not([data-ui] *) {
-  background-image: none;
-}
-
+/* Public buttons are flat: one fill, no ring. The alternate action is a tone
+   step from the page rather than an outline. */
 :is([data-public-surface], :root:not([data-theme='dark']) [data-flow-surface])
   .control-raised[data-button-variant='secondary']:not([data-ui] *, :disabled, [aria-disabled='true']) {
   background-color: var(--color-background-alt);
@@ -1238,15 +1214,10 @@ input:-webkit-autofill:focus {
      a light hairline ring and keeps a deep shadow only for detached layers. */
   --shadow-overlay: 0 0 0 1px rgb(255 255 255 / 8%), 0 16px 40px -8px rgb(0 0 0 / 60%);
   --shadow-modal: 0 0 0 1px rgb(255 255 255 / 8%), 0 40px 80px -24px rgb(0 0 0 / 70%);
-  --surface-highlight: rgb(255 255 255 / 12%);
   --surface-ring: rgb(255 255 255 / 8%);
   --surface-drop: rgb(0 0 0 / 30%);
-  --surface-sheen: rgb(255 255 255 / 6%);
-  --elevation-card: 0 0 0 1px rgb(255 255 255 / 7%), 0 1px 2px rgb(0 0 0 / 30%);
   --elevation-flow: 0 0 0 1px rgb(255 255 255 / 7%), 0 24px 48px -24px rgb(0 0 0 / 60%);
-  --elevation-sheet: 0 0 0 1px rgb(255 255 255 / 6%), 0 1px 2px rgb(0 0 0 / 30%);
   --elevation-track: inset 0 0 0 1px var(--color-border-subtle);
-  --elevation-field: none;
 }
 
 /* Detached surfaces resolve their elevation in the current theme. */

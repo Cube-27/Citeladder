@@ -288,7 +288,9 @@ function Track({ data }: Readonly<{ data: CommandCenter }>) {
       <CardHeader
         actions={
           data.track.observed_at ? (
-            <span className={textRole('label')}>{data.track.engine_coverage} engine(s)</span>
+            <span className={textRole('label')}>
+              {pluralCount(data.track.engine_coverage, 'engine')}
+            </span>
           ) : null
         }
       >
@@ -304,7 +306,8 @@ function Track({ data }: Readonly<{ data: CommandCenter }>) {
           }
           label={availabilityLabel(data.track.observed_at ? 'unavailable' : 'not_run')}
         />
-        {data.track.observed_at ? (
+        {/* No comparable run means no change; the Movement card says so once. */}
+        {data.track.observed_at && data.track.citation_share.delta !== null ? (
           <div>
             <Delta value={data.track.citation_share.delta} {...VS_PREVIOUS_RUN} />
           </div>
@@ -397,7 +400,7 @@ export function ActionsAndProof({
         </CardHeader>
         <CardContent>
           <p className={textRole('body')}>
-            {data.resolved_actions.count} action(s) resolved since the comparable run.
+            {pluralCount(data.resolved_actions.count, 'action')} resolved since the comparable run.
           </p>
         </CardContent>
       </Card>

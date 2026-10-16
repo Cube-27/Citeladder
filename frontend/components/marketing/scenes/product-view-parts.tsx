@@ -96,7 +96,7 @@ const DASHBOARD_NAV = [
       ['Website', ICONS.site],
       ['Search Demand', ICONS.demand],
       ['Issues', ICONS.issues],
-      ['Search Intelligence', ICONS.analytics],
+      ['Search Intelligence', ICONS.searchIntelligence],
       ['Performance', ICONS.performance],
       ['Commerce Suite', ICONS.products],
     ],
@@ -107,7 +107,7 @@ const DASHBOARD_NAV = [
       ['Prompts', ICONS.prompts],
       ['AI Visibility', ICONS.visibility],
       ['Runs', ICONS.runs],
-      ['AI Traffic', ICONS.analytics],
+      ['AI Traffic', ICONS.aiTraffic],
     ],
   },
 ] as const;

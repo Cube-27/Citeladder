@@ -125,7 +125,10 @@ export function FilterTrigger({
       className={cn((active || showCount) && 'bg-selected', className)}
       {...props}
     >
-      {Icon ? <Icon className="text-muted size-4 shrink-0" aria-hidden /> : null}
+      {/* The glyph is a scanning aid, not the name: it shows from xl, where
+          the row has room, so a full filter row still fits one line on a
+          980px desktop. */}
+      {Icon ? <Icon className="text-muted hidden size-4 shrink-0 xl:block" aria-hidden /> : null}
       <FilterTriggerText label={label} value={value} hideLabel={hideLabel} />
       {showCount ? (
         <>
