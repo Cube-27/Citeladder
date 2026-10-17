@@ -24,7 +24,7 @@ type Movers = z.infer<typeof visibilitySourceMoversSchema>;
 type Mover = Movers['risers'][number];
 
 /** Each list reserves this many rows, so a short list never shortens the card. */
-export const MOVER_ROWS = 5;
+const MOVER_ROWS = 5;
 
 /**
  * Sources ranked by change in citation share against the dashboard's

@@ -79,7 +79,7 @@ function nearMissState(
  * The near-miss table: a page that reached the engine and still lost the
  * citation. Read and Cited count answers whose engine exposes what it read.
  */
-export function NearMissTable({
+function NearMissTable({
   query,
   pageSize,
   onOpenUrl,
@@ -143,12 +143,32 @@ export function NearMissTable({
   );
 }
 
+/** The near-miss list in the table's place, with a footer of the same footprint. */
+export function NearMissBody({
+  query,
+  pageSize,
+  onOpenUrl,
+  onPageSizeChange,
+}: Readonly<{
+  query: ReturnType<typeof useSourceNearMisses>;
+  pageSize: number;
+  onOpenUrl: (url: string) => void;
+  onPageSizeChange: (value: number) => void;
+}>) {
+  return (
+    <>
+      <NearMissTable query={query} pageSize={pageSize} onOpenUrl={onOpenUrl} />
+      <NearMissFooter data={query.data} pageSize={pageSize} onPageSizeChange={onPageSizeChange} />
+    </>
+  );
+}
+
 /**
  * The same pager footer as the source table, so switching to this view moves
  * nothing. The list is the most-missed pages up to the page size; it does not
  * page further.
  */
-export function NearMissFooter({
+function NearMissFooter({
   data,
   pageSize,
   onPageSizeChange,

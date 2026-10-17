@@ -16,11 +16,7 @@ import {
   type PageStandingFilter,
 } from '@/components/visibility/source-filters';
 import { TopMoversCard, useSourceMovers } from '@/components/visibility/source-movers';
-import {
-  NearMissFooter,
-  NearMissTable,
-  useSourceNearMisses,
-} from '@/components/visibility/source-near-misses';
+import { NearMissBody, useSourceNearMisses } from '@/components/visibility/source-near-misses';
 import { SourceTableToolbar } from '@/components/visibility/source-toolbar';
 import { TypesCard, UsageCard } from '@/components/visibility/source-charts';
 import { SourceUrlDetail } from '@/components/visibility/source-url-detail';
@@ -204,15 +200,9 @@ export function SourcesPanel({
   const [sourceType, setSourceType] = useUrlState('source_type', optionalStringUrlCodec, {
     clearKeys: ['source_cursor', 'source_offset', 'source_as_of'],
   });
-  // Only pages have a standing, so the standing filter applies to the URL table.
-  const [standing, setStanding] = useUrlState('source_standing', optionalStringUrlCodec, {
-    clearKeys: ['source_cursor', 'source_offset', 'source_as_of'],
-  });
-  const gapOnly = dimension === 'url' && standing === 'gap';
-  const nearMiss = dimension === 'url' && standing === 'near_miss';
-  let standingFilter: PageStandingFilter = null;
-  if (gapOnly) standingFilter = 'gap';
-  if (nearMiss) standingFilter = 'near_miss';
+  const { standingFilter, setStanding } = useStanding(dimension);
+  const gapOnly = standingFilter === 'gap';
+  const nearMiss = standingFilter === 'near_miss';
   const [pageSize, setPageSize] = useState<TablePageSize>(TABLE_DEFAULT_PAGE_SIZE);
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<SortState>(null);
@@ -330,14 +320,12 @@ export function SourcesPanel({
             cleared. The height is the toolbar plus a full page of rows. */}
         <CardContent className="flex min-h-[560px] flex-col justify-between p-0">
           {nearMiss ? (
-            <>
-              <NearMissTable query={nearMissQuery} pageSize={pageSize} onOpenUrl={onOpenUrl} />
-              <NearMissFooter
-                data={nearMissQuery.data}
-                pageSize={pageSize}
-                onPageSizeChange={onPageSizeChange}
-              />
-            </>
+            <NearMissBody
+              query={nearMissQuery}
+              pageSize={pageSize}
+              onOpenUrl={onOpenUrl}
+              onPageSizeChange={onPageSizeChange}
+            />
           ) : (
             <>
               <SourceTable
@@ -377,6 +365,17 @@ export function SourcesPanel({
       )}
     </Stack>
   );
+}
+
+/** Only pages have a standing, so the standing filter applies to the URL table. */
+function useStanding(dimension: 'domain' | 'url') {
+  const [standing, setStanding] = useUrlState('source_standing', optionalStringUrlCodec, {
+    clearKeys: ['source_cursor', 'source_offset', 'source_as_of'],
+  });
+  let standingFilter: PageStandingFilter = null;
+  if (dimension === 'url' && (standing === 'gap' || standing === 'near_miss'))
+    standingFilter = standing;
+  return { standingFilter, setStanding };
 }
 
 /**
