@@ -57,8 +57,8 @@ Dropped by the owner on 2026-10-16. Do not reopen without a new owner request:
 - Sources reads live in `src/visibility/sources.ts` and `source-series.ts`.
 - Overview is `components/projects/dashboard-screen.tsx` and
   `dashboard-sections.tsx`, fed by `GET /projects/{id}/command-center`
-  (`src/projects/command-center.ts`). The Executive PDF is
-  `src/projects/executive-report.ts`.
+  (`src/projects/command-center.ts`). The Executive PDF was
+  `src/projects/executive-report.ts` (deleted in PR 3).
 
 ## PRs
 
@@ -87,6 +87,8 @@ Shipped as #414. The items I12 moved out of it are in PR 2 under I13.
 - Sources Retrieved column and near-miss filter (I4).
 - Top movers read and panel (I5), comparable runs only, honouring the
   unbranded toggle.
+
+Shipped as #419.
 
 ### PR 3: editable Overview
 

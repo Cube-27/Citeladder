@@ -372,7 +372,7 @@ Every route assembles the same parts from `components/ui/` and `components/layou
 
 #### Screen-specific contracts
 
-**Overview.** Keep the page useful before any audit. Preserve reading order: compact project identity; warnings; Project State with Track context; Movement; one Next action; ranked actions and report proof; Company facts. Use the same DOM order at desktop and compact widths. Company facts are edited in Agent → Context, not in an Overview drawer. Do not restore a Product loop station strip. Track uses explicit availability labels; report actions require a persisted audit/report. Citation share uses separate shared heading/value roles, not an oversized combined sentence.
+**Overview.** Keep the page useful before any audit. Project identity and warnings lead; the widgets below follow the project's saved layout, whose default reading order is Project State with Track context; Movement; one Next action; where you're missing; ranked actions and report proof; Company facts. Widgets sit in a two-column grid (half or full width) in the same DOM order at desktop and compact widths. Editing lives in one Layout menu, and per-widget controls overlay the widget, so neither entering edit mode nor saving moves anything. Company facts are edited in Agent → Context, not in an Overview drawer. Do not restore a Product loop station strip. Track uses explicit availability labels. Citation share uses separate shared heading/value roles, not an oversized combined sentence.
 
 **AI Visibility.** Exactly three tabs: Trends (default), Sources, Query fanouts; no parallel Overview or page-local project switcher.
 

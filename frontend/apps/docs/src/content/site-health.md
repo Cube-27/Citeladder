@@ -6,7 +6,7 @@ order: 130
 updated: '2026-10-10'
 ---
 
-A Site Health crawl captures pages from your website and analyzes their technical and content properties. Begin with **Run new crawl**, then review the crawl's scope, progress and coverage.
+A Site Health crawl captures pages from your website and analyzes their technical and content properties. Begin with **Run new crawl**, then review the crawl's scope, progress and coverage. **Recrawl** reruns the shown crawl with the same scope and settings, so Changes compares like with like.
 
 ## Read the score with its coverage
 

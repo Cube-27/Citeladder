@@ -107,6 +107,29 @@ keeps each competitor's aliases across renames. Overview shows a read-only
 summary. Prompt generation and Site Health archetypes read the stored category
 and facets, so a correction there changes what later generation asks.
 
+## Overview layout
+
+Overview is a widget grid, one layout per project
+([layout](../frontend/services/api/src/projects/overview-layout.ts),
+`overview_layouts`). Until someone edits it, the project shows
+`overview_default_layout` (`config/projects.ts`): today's sections. Members and
+Admins edit through the Layout menu: edit, add a widget, or reset to the
+default. While editing, each widget can move, switch between half and full
+width, or be removed; the last widget stays. A save names the version it
+edited (`PUT /projects/{id}/overview/layout`), so a stale save fails with
+`overview_layout_conflict` and shows the layout that won. Viewers see the
+layout without the menu. Each widget appears once. Library widgets (visibility
+over time, share of voice, top movers, retrieved versus cited, perception, AI
+Traffic, Search Console) read their pages' persisted reads with the pages'
+defaults: latest run, organic prompts, default market. They keep a fixed
+footprint whether loading, empty or failed.
+
+Export PDF (`GET /projects/{id}/overview/report.pdf`,
+[report](../frontend/services/api/src/projects/overview-report.ts)) prints the
+saved layout widget by widget from the same reads, then the measurement scope
+and methodology. Before the first completed run a widget reads not available;
+an observed zero stays zero. It replaced the fixed Executive PDF.
+
 ## Brand facts
 
 In a workspace in the fact-checking pilot (the `fact_checking` grant), Agent →

@@ -13,8 +13,9 @@ are TypeScript-owned under frontend/services/api/src/projects/. Discovery runs
 in its TypeScript worker, whose runner lane recovers expired leases and retries.
 Interactive onboarding invokes that same worker through an
 awaited, bounded API mutation scoped to one authorized discovery; background
-execution remains its recovery path. Executive PDFs use the TypeScript command-center
-projection and shared PDF renderer; receipt list/download reads are also
+execution remains its recovery path. The Overview PDF prints the saved Overview
+layout from the command-center projection and the widgets' persisted reads with
+the shared PDF renderer; receipt list/download reads are also
 TypeScript-owned. Every operation's family is
 checked against the shared route-ownership manifest.
 
