@@ -109,6 +109,7 @@ const API_ERROR_CODES = [
   'opportunity_order_conflict',
   'out_of_scope',
   'output_conflict',
+  'overview_layout_conflict',
   'page_kind_filtered',
   'parse_error',
   'payload_too_large',

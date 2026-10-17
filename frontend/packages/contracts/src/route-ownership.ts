@@ -22,7 +22,7 @@ export const ROUTE_FAMILIES = [
   'performance-sync',
   'readiness',
   'projects',
-  'executive-report',
+  'overview',
   'prompt-generation',
   'prompts',
   'providers',
