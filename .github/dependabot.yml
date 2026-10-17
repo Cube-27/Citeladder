@@ -63,8 +63,12 @@ updates:
         update-types:
           - version-update:semver-major
 
+  # The composite actions pin their own action versions; `/` alone covers only
+  # .github/workflows.
   - package-ecosystem: github-actions
-    directory: /
+    directories:
+      - /
+      - /.github/actions/*
     schedule:
       interval: weekly
       day: monday
@@ -72,3 +76,26 @@ updates:
     groups:
       patch-and-minor:
         update-types: [patch, minor]
+
+  # Provider versions locked in infra/gcp/.terraform.lock.hcl.
+  - package-ecosystem: terraform
+    directory: /infra/gcp
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    groups:
+      patch-and-minor:
+        update-types: [patch, minor]
+
+  # The local stack's postgres image; the same major-version rule as the VM image.
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    ignore:
+      - dependency-name: postgres
+        update-types:
+          - version-update:semver-major

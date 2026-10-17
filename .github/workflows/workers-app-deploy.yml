@@ -3,8 +3,8 @@ name: Product Worker delivery
 on:
   workflow_dispatch:
 
-permissions:
-  contents: read
+# Deny by default; every job grants what it needs.
+permissions: {}
 
 concurrency:
   group: workers-app-production
@@ -14,6 +14,12 @@ jobs:
   build:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    # require-green-main reads ci.yml's run for this commit.
+    permissions:
+      actions: read
+      contents: read
+    # Up to 30 minutes waiting for CI (require-green-main), then the build.
+    timeout-minutes: 50
     outputs:
       fingerprint: ${{ steps.config.outputs.fingerprint }}
       artifact_digest: ${{ steps.upload.outputs.artifact-digest }}
@@ -21,15 +27,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-        with:
-          package_json_file: frontend/package.json
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 26
-          cache: pnpm
-          cache-dependency-path: frontend/pnpm-lock.yaml
-      - run: pnpm --dir frontend install --frozen-lockfile --ignore-scripts
+      - uses: ./.github/actions/require-green-main
+      - uses: ./.github/actions/setup-frontend
       - name: Check generated Worker bindings
         run: |
           pnpm --dir frontend types:app-worker
@@ -70,21 +69,16 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
     environment: workers-app-production
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-        with:
-          package_json_file: frontend/package.json
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 26
-          cache: pnpm
-          cache-dependency-path: frontend/pnpm-lock.yaml
-      - run: pnpm --dir frontend install --frozen-lockfile --ignore-scripts
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+      - uses: ./.github/actions/setup-frontend
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: app-${{ github.sha }}-${{ needs.build.outputs.fingerprint }}
           path: frontend/apps/app/dist/
@@ -109,12 +103,15 @@ jobs:
           pnpm deploy:app
       - name: Release record
         shell: bash
+        env:
+          ARTIFACT_DIGEST: ${{ needs.build.outputs.artifact_digest }}
+          FINGERPRINT: ${{ needs.build.outputs.fingerprint }}
         run: |
           {
             echo '## Product Worker release'
             echo 'Target: production'
-            echo 'Source: ${{ github.sha }}'
-            echo 'Artifact digest: ${{ needs.build.outputs.artifact_digest }}'
-            echo 'Public configuration fingerprint: ${{ needs.build.outputs.fingerprint }}'
+            echo "Source: $GITHUB_SHA"
+            echo "Artifact digest: $ARTIFACT_DIGEST"
+            echo "Public configuration fingerprint: $FINGERPRINT"
             echo 'Compatible backend and ingress verification: operator release record required'
           } >> "$GITHUB_STEP_SUMMARY"

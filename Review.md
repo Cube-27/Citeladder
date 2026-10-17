@@ -1,6 +1,8 @@
 # CiteLadder review checklist
 
-This is the review procedure for humans and agents. It points at the rule owners
+This is the review checklist for humans, for an author's check of their own diff,
+and for the `claude-review` CI review of a PR over 10 files
+([CLAUDE.md](CLAUDE.md#completion-and-review)). It points at the rule owners
 rather than restating them: [CLAUDE.md](CLAUDE.md#non-negotiable-guardrails)
 summarizes the guardrails, [invariants](docs/invariants.md) own the binding
 constraints and [design](docs/design.md) owns visual and interaction rules.

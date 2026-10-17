@@ -23,6 +23,7 @@ jobs:
       contents: read
     # Classification needs Node, Git and the GitHub API, not a full build VM.
     runs-on: ubuntu-slim
+    timeout-minutes: 5
     outputs:
       compose: ${{ steps.classify.outputs.compose }}
     steps:
@@ -50,6 +51,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       # No host toolchain and no host dependency install. The images install
       # their own dependencies with `pnpm install --frozen-lockfile`, so a stale

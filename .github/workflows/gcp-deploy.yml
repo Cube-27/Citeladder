@@ -23,6 +23,8 @@ jobs:
   deploy:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    # Up to 30 minutes waiting for CI, then Terraform, image builds and the migrate job.
+    timeout-minutes: 90
     environment: gcp-demo
     concurrency:
       group: gcp-deploy
@@ -74,39 +76,9 @@ jobs:
         with:
           fetch-depth: 2
           persist-credentials: false
-      - name: Verify exact main commit
-        shell: bash
-        run: test "$GITHUB_SHA" = "$(git rev-parse origin/main)"
       # This workflow publishes only the API (which also runs migrations) and PostgreSQL images;
-      # the Workers ship through their own workflows. ci.yml has already run
-      # every affected owner suite on this exact main commit, so the deploy
-      # requires that green record instead of repeating the suites.
-      - name: Require green CI for the deployed commit
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          # Bounded wait, so a deploy started right after merge still proceeds.
-          for _ in $(seq 60); do
-            run="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml --branch main \
-              --event push --commit "$GITHUB_SHA" --limit 1 --json status,conclusion,url)"
-            status="$(jq -r '.[0].status // "missing"' <<< "$run")"
-            url="$(jq -r '.[0].url // ""' <<< "$run")"
-            if [ "$status" = completed ]; then
-              conclusion="$(jq -r '.[0].conclusion' <<< "$run")"
-              if [ "$conclusion" != success ]; then
-                echo "::error::CI concluded '$conclusion' for $GITHUB_SHA: $url"
-                exit 1
-              fi
-              echo "CI passed for $GITHUB_SHA: $url"
-              exit 0
-            fi
-            echo "CI for $GITHUB_SHA is $status; waiting."
-            sleep 30
-          done
-          echo "::error::CI did not complete for $GITHUB_SHA within 30 minutes; re-run once it is green."
-          exit 1
+      # the Workers ship through their own workflows, behind the same gate.
+      - uses: ./.github/actions/require-green-main
       - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
         with:
           workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
