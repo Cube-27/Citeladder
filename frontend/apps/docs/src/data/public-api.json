@@ -4032,6 +4032,10 @@
             "default": "",
             "$ref": "#/components/schemas/PromptIntentDetail"
           },
+          "persona": {
+            "default": "",
+            "type": "string"
+          },
           "cohort": {
             "$ref": "#/components/schemas/PromptCohort"
           },
@@ -4066,6 +4070,7 @@
           "intent",
           "buyer_stage",
           "prompt_intent",
+          "persona",
           "cohort",
           "branded",
           "enabled",
@@ -4327,7 +4332,7 @@
             "additionalProperties": false
           },
           "cohort": {
-            "$ref": "#/components/schemas/PromptCohort"
+            "$ref": "#/components/schemas/VisibilityCohort"
           },
           "market_id": {
             "anyOf": [
@@ -6204,7 +6209,7 @@
           },
           "cohort": {
             "default": "core",
-            "$ref": "#/components/schemas/PromptCohort"
+            "$ref": "#/components/schemas/VisibilityCohort"
           },
           "coverage": {
             "default": {},
@@ -6758,6 +6763,10 @@
         ],
         "additionalProperties": false
       },
+      "VisibilityCohort": {
+        "type": "string",
+        "enum": ["core", "brand_diagnostic", "comparison", "commerce", "all"]
+      },
       "VisibilityComparison": {
         "type": "object",
         "properties": {
@@ -7158,7 +7167,7 @@
         "type": "object",
         "properties": {
           "cohort": {
-            "$ref": "#/components/schemas/PromptCohort"
+            "$ref": "#/components/schemas/VisibilityCohort"
           },
           "markets": {
             "type": "array",
@@ -7216,6 +7225,24 @@
           "comparison_status": {
             "type": "string"
           },
+          "retrieval": {
+            "type": "object",
+            "properties": {
+              "responses": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "unavailable_engines": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": ["responses", "unavailable_engines"],
+            "additionalProperties": false
+          },
           "items": {
             "type": "array",
             "items": {
@@ -7223,6 +7250,18 @@
               "properties": {
                 "key": {
                   "type": "string"
+                },
+                "retrieved": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
                 },
                 "responses": {
                   "type": "integer",
@@ -7371,6 +7410,7 @@
               },
               "required": [
                 "key",
+                "retrieved",
                 "responses",
                 "prompts",
                 "annotations",
@@ -7409,6 +7449,7 @@
           "next_cursor",
           "as_of",
           "comparison_status",
+          "retrieval",
           "items"
         ],
         "additionalProperties": false
@@ -8621,7 +8662,7 @@
             "schema": {
               "default": "core",
               "type": "string",
-              "enum": ["core", "comparison"]
+              "enum": ["core", "comparison", "all"]
             }
           },
           {
@@ -8784,7 +8825,7 @@
             "schema": {
               "default": "core",
               "type": "string",
-              "enum": ["core", "comparison"]
+              "enum": ["core", "comparison", "all"]
             }
           },
           {
@@ -8969,7 +9010,7 @@
             "schema": {
               "default": "core",
               "type": "string",
-              "enum": ["core", "comparison"]
+              "enum": ["core", "comparison", "all"]
             }
           }
         ],
@@ -9111,7 +9152,7 @@
             "schema": {
               "default": "core",
               "type": "string",
-              "enum": ["core", "comparison"]
+              "enum": ["core", "comparison", "all"]
             }
           }
         ],
@@ -9187,7 +9228,7 @@
               "anyOf": [
                 {
                   "type": "string",
-                  "enum": ["core", "comparison"]
+                  "enum": ["core", "comparison", "all"]
                 },
                 {
                   "type": "null"
@@ -9316,7 +9357,7 @@
             "schema": {
               "default": "core",
               "type": "string",
-              "enum": ["core", "comparison"]
+              "enum": ["core", "comparison", "all"]
             }
           }
         ],
@@ -9418,7 +9459,7 @@
             "schema": {
               "default": "core",
               "type": "string",
-              "enum": ["core", "comparison"]
+              "enum": ["core", "comparison", "all"]
             }
           },
           {
@@ -9599,7 +9640,7 @@
             "schema": {
               "default": "core",
               "type": "string",
-              "enum": ["core", "comparison"]
+              "enum": ["core", "comparison", "all"]
             }
           },
           {
@@ -9775,7 +9816,7 @@
             "schema": {
               "default": "core",
               "type": "string",
-              "enum": ["core", "comparison"]
+              "enum": ["core", "comparison", "all"]
             }
           }
         ],
@@ -10996,8 +11037,12 @@
                           "default": "",
                           "$ref": "#/components/schemas/BuyerStage"
                         },
+                        "persona": {
+                          "default": "",
+                          "type": "string",
+                          "maxLength": 120
+                        },
                         "cohort": {
-                          "default": "core",
                           "$ref": "#/components/schemas/PromptCohort"
                         },
                         "enabled": {
@@ -11229,6 +11274,17 @@
                     "anyOf": [
                       {
                         "$ref": "#/components/schemas/BuyerStage"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "persona": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 120
                       },
                       {
                         "type": "null"
@@ -12164,6 +12220,10 @@
                             "default": "",
                             "$ref": "#/components/schemas/PromptIntentDetail"
                           },
+                          "persona": {
+                            "default": "",
+                            "type": "string"
+                          },
                           "cohort": {
                             "$ref": "#/components/schemas/PromptCohort"
                           },
@@ -12246,6 +12306,7 @@
                           "intent",
                           "buyer_stage",
                           "prompt_intent",
+                          "persona",
                           "cohort",
                           "branded",
                           "enabled",
@@ -12446,8 +12507,16 @@
                           "type": "string",
                           "maxLength": 64
                         },
+                        "buyer_stage": {
+                          "default": "",
+                          "$ref": "#/components/schemas/BuyerStage"
+                        },
+                        "persona": {
+                          "default": "",
+                          "type": "string",
+                          "maxLength": 120
+                        },
                         "cohort": {
-                          "default": "core",
                           "$ref": "#/components/schemas/PromptCohort"
                         },
                         "enabled": {

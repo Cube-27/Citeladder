@@ -18,11 +18,7 @@ is required to select work; establish a current owner/code inventory when scopin
 The owner set these two as the top Site Health priorities on 17 October 2026
 ([decision](../decisions.md#site-health-crawler-parity-checks-and-apples-crawlers)).
 
-- **Recrawl.** The Changes view (`change_intel`) compares a crawl with the newest
-  comparable earlier crawl, but nothing produces that second crawl on purpose:
-  every start is a new crawl. Add a recrawl action that reruns an existing crawl
-  with the same origin, scope and settings, so the comparison always has a
-  comparable baseline. Keep plan grants and fetch budgets as they are.
+- **Recrawl** moved to [Insight parity](insight-parity.md) PR 3 (I13).
 - **Scheduled crawls.** Site Health has no schedule; `audits/schedules.ts` covers
   visibility audits only. Add a per-project recrawl cadence that runs through the
   existing PostgreSQL queue and tick, reserves the period's fetch budget like a
@@ -77,14 +73,6 @@ Owners: [Workspace access](../workspace-access.md), [MCP](../mcp.md),
 
 ### Integrations and AI Visibility
 
-- Prompt tags deferred by [Insight parity](insight-parity.md) I12 (no schema
-  change): a persisted, editable persona tag (generated prompts keep their
-  audience only in `generation_evidence`); an "All prompts" Visibility total,
-  which needs a new finalization aggregate; filing a manual or imported
-  prompt that names the brand as branded; and leaving tags (intent, buyer
-  stage, prompt intent, theme) out of the audit prompt-panel hash
-  (`audits/freeze.ts`), so correcting a tag no longer starts a new comparison
-  series. That changes every existing run's comparison key.
 - Improve evidence-backed Opportunity sorting/labels without another blended score;
   expose existing three-leg verification, gap changes, overlapping actions and
   the causality notice.
