@@ -71,7 +71,7 @@ function astroContentSecurityPolicy(
       "object-src 'none'",
       "base-uri 'none'",
       "font-src 'self'",
-      ["img-src 'self' data:", ...imageSources].join(' '),
+      `img-src ${["'self'", 'data:', ...imageSources].join(' ')}`,
       "form-action 'self'",
       ...directives,
     ],
