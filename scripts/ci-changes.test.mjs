@@ -136,6 +136,19 @@ test('external-service and deploy-only configuration runs only the security and 
   assert.equal(classifyPaths(['.github/workflows/ci.yml']).api, true);
 });
 
+test('the review workflow, the API host deploy and the deploy gate run no owner suite', () => {
+  for (const path of [
+    '.github/workflows/claude-review.yml',
+    '.github/workflows/workers-api-host-deploy.yml',
+    '.github/actions/require-green-main/action.yml',
+  ]) {
+    assert.equal(isOwnerFreeChange([path]), true, path);
+    assert.equal(classifyPaths([path]).api, false, path);
+  }
+  // The shared toolchain setup runs inside every owner job, so it escalates.
+  assert.equal(classifyPaths(['.github/actions/setup-frontend/action.yml']).api, true);
+});
+
 test('a shared contract change runs every E2E spec', () => {
   const paths = [
     'frontend/packages/contracts/src/search-intelligence.ts',

@@ -1,0 +1,39 @@
+name: Require green CI on the exact main commit
+description: >-
+  Fails unless the checked-out commit is the tip of main and ci.yml's push run
+  for it concluded success. Every deploy runs it before publishing anything:
+  ci.yml has already run each affected owner suite on that commit, so deploys
+  require that record instead of repeating the suites. Needs `actions: read`.
+
+runs:
+  using: composite
+  steps:
+    - name: Verify exact main commit
+      shell: bash
+      run: test "$GITHUB_SHA" = "$(git rev-parse origin/main)"
+    - name: Require green CI for the deployed commit
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        set -euo pipefail
+        # Bounded wait, so a deploy started right after merge still proceeds.
+        for _ in $(seq 60); do
+          run="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml --branch main \
+            --event push --commit "$GITHUB_SHA" --limit 1 --json status,conclusion,url)"
+          status="$(jq -r '.[0].status // "missing"' <<< "$run")"
+          url="$(jq -r '.[0].url // ""' <<< "$run")"
+          if [ "$status" = completed ]; then
+            conclusion="$(jq -r '.[0].conclusion' <<< "$run")"
+            if [ "$conclusion" != success ]; then
+              echo "::error::CI concluded '$conclusion' for $GITHUB_SHA: $url"
+              exit 1
+            fi
+            echo "CI passed for $GITHUB_SHA: $url"
+            exit 0
+          fi
+          echo "CI for $GITHUB_SHA is $status; waiting."
+          sleep 30
+        done
+        echo "::error::CI did not complete for $GITHUB_SHA within 30 minutes; re-run once it is green."
+        exit 1

@@ -24,7 +24,10 @@ const DOC_FILES = new Set([
 const INERT_CONFIG_FILES = new Set([
   '.sonarcloud.properties',
   '.github/dependabot.yml',
+  '.github/actions/require-green-main/action.yml',
+  '.github/workflows/claude-review.yml',
   '.github/workflows/gcp-deploy.yml',
+  '.github/workflows/workers-api-host-deploy.yml',
   '.github/workflows/workers-app-deploy.yml',
   '.github/workflows/workers-docs-deploy.yml',
   '.github/workflows/workers-marketing-deploy.yml',
