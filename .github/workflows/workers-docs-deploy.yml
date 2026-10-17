@@ -4,7 +4,6 @@ on:
   workflow_dispatch:
 
 permissions:
-  actions: read
   contents: read
 
 concurrency:
@@ -15,6 +14,10 @@ jobs:
   build:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    # require-green-main reads ci.yml's run for this commit.
+    permissions:
+      actions: read
+      contents: read
     # Up to 30 minutes waiting for CI (require-green-main), then the build.
     timeout-minutes: 50
     outputs:
