@@ -46,11 +46,15 @@ type AstroDirective = NonNullable<
   Exclude<AstroContentSecurityPolicy, boolean | undefined>['directives']
 >[number];
 
+// The marketing footer hotlinks the launch-directory badges from their hosts.
+const LAUNCH_BADGE_IMAGE_ORIGINS = ['https://www.codehype.ai', 'https://tools.launchllama.co'];
+
 // Astro hashes only its compiled framework/inline scripts. No runtime blanket
 // hashing/noncing of HTML.
 function astroContentSecurityPolicy(
   scriptSources: string[],
   directives: AstroDirective[],
+  imageSources: string[] = [],
 ): AstroContentSecurityPolicy {
   return {
     scriptDirective: {
@@ -67,7 +71,7 @@ function astroContentSecurityPolicy(
       "object-src 'none'",
       "base-uri 'none'",
       "font-src 'self'",
-      "img-src 'self' data:",
+      `img-src ${["'self'", 'data:', ...imageSources].join(' ')}`,
       "form-action 'self'",
       ...directives,
     ],
@@ -89,6 +93,7 @@ export function marketingContentSecurityPolicy(
         ? "connect-src 'self' https://cloudflareinsights.com/cdn-cgi/rum https://www.google-analytics.com https://region1.google-analytics.com"
         : "connect-src 'self' https://cloudflareinsights.com/cdn-cgi/rum",
     ],
+    LAUNCH_BADGE_IMAGE_ORIGINS,
   );
 }
 

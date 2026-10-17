@@ -125,6 +125,49 @@ export async function MarketingFooter() {
             <p className="website-body max-w-[30ch]">
               See what AI answers say about your brand, and what to fix next.
             </p>
+            {/* Launch-directory badges, in each directory's own embed markup. */}
+            <div className="flex flex-wrap items-center gap-3">
+              <a
+                href="https://www.codehype.ai/product/citeladder?utm_source=codehype_badge"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <img
+                  src="https://www.codehype.ai/badges/citeladder.svg?variant=find-us&v=20"
+                  alt="Featured on CodeHype"
+                  width={180}
+                  height={65}
+                  loading="lazy"
+                  decoding="async"
+                  className="block h-auto w-full max-w-45"
+                />
+              </a>
+              <span className="inline-flex flex-col items-center">
+                <a
+                  href="https://tools.launchllama.co/products/citeladder?utm_source=badge&utm_medium=referral"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <img
+                    src="https://tools.launchllama.co/featured-badge.png?v=2"
+                    alt="Featured on Launch"
+                    width={200}
+                    height={52}
+                    loading="lazy"
+                    decoding="async"
+                    className="block"
+                  />
+                </a>
+                <a
+                  href="https://launchmcp.co/?utm_source=badge&utm_medium=referral"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-muted hover:text-foreground text-xs font-semibold"
+                >
+                  Launch MCP
+                </a>
+              </span>
+            </div>
           </div>
 
           <nav aria-label="Footer" className="grid grid-cols-2 gap-x-8 gap-y-10 sm:grid-cols-4">

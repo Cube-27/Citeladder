@@ -90,6 +90,20 @@ describe('MarketingFooter', () => {
     );
   });
 
+  it('links the launch-directory badges to their CiteLadder listings', async () => {
+    render(await MarketingFooter());
+
+    const footer = screen.getByRole('contentinfo');
+    expect(within(footer).getByRole('link', { name: 'Featured on CodeHype' })).toHaveAttribute(
+      'href',
+      'https://www.codehype.ai/product/citeladder?utm_source=codehype_badge',
+    );
+    expect(within(footer).getByRole('link', { name: 'Featured on Launch' })).toHaveAttribute(
+      'href',
+      'https://tools.launchllama.co/products/citeladder?utm_source=badge&utm_medium=referral',
+    );
+  });
+
   it('links the CiteLadder social profiles by their domains', async () => {
     render(await MarketingFooter());
 
