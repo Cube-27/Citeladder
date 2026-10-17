@@ -288,13 +288,12 @@ function comparisonState(summary: ChangeSummary | undefined, pairAvailable: bool
     return (
       <Alert tone="warning">
         These crawls are not comparable (
-        {summary.reason_code?.replaceAll('_', ' ') ?? 'scope or version mismatch'}).
+        {summary.reason_code?.replaceAll('_', ' ') ?? 'scope or version mismatch'}). Recrawl to
+        compare the same scope and settings.
       </Alert>
     );
   return pairAvailable ? null : (
-    <Alert tone="danger">
-      This comparison is no longer available. Run a new crawl to compare again.
-    </Alert>
+    <Alert tone="danger">This comparison is no longer available. Recrawl to compare again.</Alert>
   );
 }
 

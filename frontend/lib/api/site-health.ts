@@ -79,6 +79,8 @@ export type CreateCrawlInput = {
   seed_urls?: string[];
   page_kinds?: string[];
 };
+/** A new crawl, or with `recrawl_of` a rerun of that crawl's frozen scope and settings. */
+export type StartCrawlInput = CreateCrawlInput & { recrawl_of?: string };
 export type UrlPreviewInput = Pick<
   CreateCrawlInput,
   'project_id' | 'include_globs' | 'exclude_globs'
@@ -143,8 +145,10 @@ export const siteHealthApi = {
     const res = await apiClient.get<SiteHealthEntitlement>('/entitlements', options);
     return strictValidate(siteHealthEntitlementSchema, res, 'siteHealth.getEntitlements');
   },
-  createCrawl: async (input: CreateCrawlInput, options?: ApiRequestOptions) => {
-    const res = await apiClient.post<SiteCrawl>('/site-crawls', input, options);
+  createCrawl: async ({ recrawl_of, ...input }: StartCrawlInput, options?: ApiRequestOptions) => {
+    const res = recrawl_of
+      ? await apiClient.post<SiteCrawl>(`/site-crawls/${recrawl_of}/recrawl`, undefined, options)
+      : await apiClient.post<SiteCrawl>('/site-crawls', input, options);
     const crawl = strictValidate(siteCrawlSchema, res, 'siteHealth.createCrawl');
     startInteractiveWork(`/site-crawls/${crawl.id}/run`, {
       ...options,
@@ -482,7 +486,7 @@ export const siteHealthQueries = {
 export const siteHealthMutations = {
   createCrawl: (workspaceId: string) =>
     mutationOptions({
-      mutationFn: (input: CreateCrawlInput) => siteHealthApi.createCrawl(input, { workspaceId }),
+      mutationFn: (input: StartCrawlInput) => siteHealthApi.createCrawl(input, { workspaceId }),
     }),
   cancelCrawl: (workspaceId: string) =>
     mutationOptions({

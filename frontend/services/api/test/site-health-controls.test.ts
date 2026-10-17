@@ -440,6 +440,7 @@ describe('crawl-control HTTP contracts', () => {
       ],
       [`/site-crawls?project_id=${foreign.projectId}`, 'GET'],
       [`/site-crawls/${foreign.crawlId}/cancel`, 'POST'],
+      [`/site-crawls/${foreign.crawlId}/recrawl`, 'POST'],
       [`/projects/${foreign.projectId}/monitored-urls`, 'GET'],
       [
         `/projects/${foreign.projectId}/monitored-urls`,
@@ -474,6 +475,9 @@ describe('crawl-control HTTP contracts', () => {
       (await request(reader, '/site-crawls', 'POST', { project_id: seed.projectId })).status,
     ).toBe(403);
     expect((await request(reader, `/site-crawls/${seed.crawlId}/cancel`, 'POST')).status).toBe(403);
+    expect((await request(reader, `/site-crawls/${seed.crawlId}/recrawl`, 'POST')).status).toBe(
+      403,
+    );
     vi.stubEnv('ABUSE_CRAWL_CREATE_LIMIT', '1');
     const first = await request(seed, '/site-crawls', 'POST', { project_id: randomUUID() });
     expect(first.status).toBe(404);
@@ -797,6 +801,54 @@ describe('crawl-control HTTP contracts', () => {
       await blocker;
       await impatient.destroy();
     }
+  });
+
+  it('recrawls with the source crawl scope and seed, and refuses while a crawl is active', async () => {
+    const tenant = await fixtures.tenant({ websiteUrl: 'https://example.test/' });
+    const created = await request(tenant, '/site-crawls', 'POST', {
+      project_id: tenant.projectId,
+      exclude_globs: ['/private/*'],
+      requested_page_limit: 5,
+      seed: '42',
+    });
+    expect(created.status).toBe(201);
+    const source = siteCrawlSchema.parse(await created.json());
+    const busy = await request(tenant, `/site-crawls/${source.id}/recrawl`, 'POST');
+    expect(busy.status).toBe(409);
+    await db
+      .updateTable('site_crawls')
+      .set({ status: 'completed' })
+      .where('id', '=', source.id)
+      .execute();
+
+    const rerun = await request(tenant, `/site-crawls/${source.id}/recrawl`, 'POST');
+    expect(rerun.status).toBe(201);
+    const next = siteCrawlSchema.parse(await rerun.json());
+    const scope = (id: string) =>
+      db
+        .selectFrom('site_crawls')
+        .select(['random_seed', 'configuration'])
+        .where('id', '=', id)
+        .executeTakeFirstOrThrow()
+        .then(({ random_seed, configuration }) => {
+          const frozen = record(configuration);
+          return {
+            random_seed,
+            exclude_globs: frozen.exclude_globs,
+            include_globs: frozen.include_globs,
+            input_mode: frozen.input_mode,
+            requested_page_limit: frozen.requested_page_limit,
+          };
+        });
+    expect(next.id).not.toBe(source.id);
+    expect(await scope(next.id)).toEqual({
+      random_seed: '42',
+      exclude_globs: ['/private/*'],
+      include_globs: [],
+      input_mode: 'auto',
+      requested_page_limit: 5,
+    });
+    expect(await scope(next.id)).toEqual(await scope(source.id));
   });
 
   it('serializes a terminal rerun with full-crawl admission and keeps one active run', async () => {

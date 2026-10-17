@@ -194,6 +194,29 @@ describe('SiteHealthScreen — loading failures', () => {
   });
 });
 
+describe('SiteHealthScreen — recrawl', () => {
+  it('reruns the shown crawl through its own recrawl route', async () => {
+    const user = userEvent.setup();
+    const recrawled: string[] = [];
+    mockRoutes();
+    mswServer.use(
+      http.post('/api/v1/site-crawls/:crawlId/recrawl', ({ params }) => {
+        recrawled.push(String(params.crawlId));
+        return HttpResponse.json(
+          crawl({ status: 'queued', discovery_status: 'pending', analysis_status: 'pending' }),
+        );
+      }),
+    );
+
+    renderScreen();
+
+    const button = await screen.findByRole('button', { name: 'Recrawl' });
+    await waitFor(() => expect(button).toBeEnabled());
+    await user.click(button);
+    await waitFor(() => expect(recrawled).toEqual([CRAWL]));
+  });
+});
+
 describe('SiteHealthScreen — before the first crawl', () => {
   it('shows one Run new crawl placeholder instead of empty metrics', async () => {
     const user = userEvent.setup();
