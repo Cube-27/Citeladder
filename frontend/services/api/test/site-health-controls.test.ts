@@ -849,6 +849,31 @@ describe('crawl-control HTTP contracts', () => {
       requested_page_limit: 5,
     });
     expect(await scope(next.id)).toEqual(await scope(source.id));
+
+    // After a one-page re-read, Recrawl reruns the site crawl, not the one page.
+    await db
+      .updateTable('site_crawls')
+      .set({ status: 'completed' })
+      .where('id', '=', next.id)
+      .execute();
+    const row = await db
+      .selectFrom('site_crawls')
+      .select(['profile_id', 'root_url'])
+      .where('id', '=', next.id)
+      .executeTakeFirstOrThrow();
+    const reread = await fixtures.sibling(
+      { ...tenant, profileId: row.profile_id, root: row.root_url, crawlId: '' },
+      {
+        random_seed: '7',
+        configuration: { page_rerun: true, requested_page_limit: 1, input_mode: 'auto' },
+        created_at: new Date(Date.now() + 1000),
+      },
+    );
+    const again = await request(tenant, `/site-crawls/${reread}/recrawl`, 'POST');
+    expect(again.status).toBe(201);
+    expect(await scope(siteCrawlSchema.parse(await again.json()).id)).toEqual(
+      await scope(source.id),
+    );
   });
 
   it('serializes a terminal rerun with full-crawl admission and keeps one active run', async () => {

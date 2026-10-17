@@ -546,6 +546,7 @@ the same origin, scope and analyzer/extractor versions. Recrawl
 the header's Recrawl button) rebuilds the create request from a crawl's frozen
 globs, input mode, page limit, seeds, page kinds and random seed and goes
 through ordinary admission, so the next crawl is comparable by construction.
+Recrawling a one-page re-read reruns the newest site crawl before it instead.
 Scheduled crawls are not built yet. Scope excludes the
 page limit, which is the fetch budget left at admission; the comparison reads
 only pages both crawls analyzed. Page reruns write no snapshot and are never a
