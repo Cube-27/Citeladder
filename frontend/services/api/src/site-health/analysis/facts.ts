@@ -329,6 +329,67 @@ function inlineScriptChars(root: HtmlNode) {
   return total;
 }
 
+/** A top-level navigation: assigning `location`/`location.href`, or `location.replace/assign(`. */
+const SCRIPT_NAVIGATION = /\blocation(?:\.href)?\s*=(?!=)|\blocation\.(?:replace|assign)\s*\(/u;
+
+/**
+ * `delay; url=target` as browsers read it: a delay, then an optional target
+ * (with or without `url=` and quotes). A bare delay only reloads the page.
+ */
+function refreshTarget(content: string) {
+  const separator = content.search(/[;,]/u);
+  const seconds = Number.parseFloat(separator === -1 ? content : content.slice(0, separator));
+  if (separator === -1 || !Number.isFinite(seconds)) return null;
+  let target = content.slice(separator + 1).trim();
+  if (/^url\s*=/iu.test(target)) target = target.slice(target.indexOf('=') + 1).trim();
+  target = target.replaceAll(/^["']|["']$/gu, '').trim();
+  return target ? { seconds, target } : null;
+}
+
+/**
+ * A meta refresh that sends the reader to another URL, and whether inline
+ * script navigates the window. A refresh to the page itself is a reload.
+ */
+function clientRedirect(root: HtmlNode, finalUrl: string) {
+  const refresh = metaRefresh(root, finalUrl);
+  return {
+    meta_refresh_url: refresh?.url ?? '',
+    meta_refresh_seconds: refresh?.seconds ?? null,
+    script_navigates: scriptNavigates(root),
+  };
+}
+
+/** The first meta refresh that leads to another URL, resolved against the page. */
+function metaRefresh(root: HtmlNode, finalUrl: string) {
+  for (const meta of elements(root, 'meta')) {
+    if (attribute(meta, 'http-equiv').trim().toLowerCase() !== 'refresh') continue;
+    const refresh = refreshTarget(attribute(meta, 'content'));
+    if (!refresh) continue;
+    try {
+      const target = new URL(refresh.target, finalUrl);
+      if (target.href !== new URL(finalUrl).href)
+        return { url: target.href.slice(0, limits.url_chars), seconds: refresh.seconds };
+    } catch {
+      // An unresolvable target sends the reader nowhere.
+    }
+  }
+  return null;
+}
+
+/** Whether inline JavaScript, within the scan budget, navigates the window. */
+function scriptNavigates(root: HtmlNode) {
+  let scanned = 0;
+  for (const script of elements(root, 'script')) {
+    const type = attribute(script, 'type').trim().toLowerCase();
+    if (attribute(script, 'src').trim() || (type && !JAVASCRIPT_TYPES.has(type))) continue;
+    const code = textContent(script).slice(0, limits.inline_script_chars - scanned);
+    scanned += code.length;
+    if (SCRIPT_NAVIGATION.test(code)) return true;
+    if (scanned >= limits.inline_script_chars) return false;
+  }
+  return false;
+}
+
 function blockingResources(root: HtmlNode, stylesheets: number) {
   const scripts = [...elements(root, 'script')].filter(
     (node) =>
@@ -399,6 +460,11 @@ function emptyFacts() {
     ...emptyContentFacts(),
     source_support: emptySourceSupport(),
     inline_script_chars: 0,
+    client_redirect: {
+      meta_refresh_url: '',
+      meta_refresh_seconds: null as number | null,
+      script_navigates: false,
+    },
     contact_points: [] as { channel: string; value: string }[],
     commerce: emptyCommerceFacts() as ReturnType<typeof emptyCommerceFacts> & {
       visible_price_context?: string;
@@ -499,6 +565,7 @@ function extractDocument(
     ...contentFacts(page),
     source_support: sourceSupportFacts(page, finalUrl),
     inline_script_chars: inlineScriptChars(root),
+    client_redirect: clientRedirect(root, finalUrl),
     blocking_resources: blockingResources(root, links.stylesheets.length),
     body: bodyText(root, settings.maxTextChars),
     ...authorshipFacts(page, sd.blocks, articleMeta, metaContent(root, 'author'), modifiedMeta),

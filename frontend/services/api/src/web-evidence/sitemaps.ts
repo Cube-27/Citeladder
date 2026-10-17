@@ -39,8 +39,28 @@ const loc = (entry: unknown) =>
   entry && typeof entry === 'object' && 'loc' in entry && typeof entry.loc === 'string'
     ? entry.loc.trim()
     : '';
+/** A W3C datetime is at most 29 characters; anything longer is kept bounded, not trusted. */
+const MAX_LASTMOD_CHARS = 64;
+const lastmodOf = (entry: unknown) =>
+  entry && typeof entry === 'object' && 'lastmod' in entry && typeof entry.lastmod === 'string'
+    ? entry.lastmod.trim().slice(0, MAX_LASTMOD_CHARS)
+    : '';
 
-/** One document: page URLs from a `<urlset>`, child references from a `<sitemapindex>`. */
+/** Declared `<lastmod>` values by page URL; the first declaration of a URL wins. */
+function lastmods(entries: unknown, maxUrls: number) {
+  const declared = new Map<string, string>();
+  for (const entry of (Array.isArray(entries) ? entries : []).slice(0, maxUrls)) {
+    const url = loc(entry);
+    const value = lastmodOf(entry);
+    if (url && value && !declared.has(url)) declared.set(url, value);
+  }
+  return declared;
+}
+
+/**
+ * One document: page URLs (and their declared `<lastmod>`) from a `<urlset>`,
+ * child references from a `<sitemapindex>`.
+ */
 export function parseSitemap(body: Buffer, contentType: string, limits: SitemapLimits) {
   const text = sitemapBytes(body, contentType, limits.maxDecodedBytes).toString('utf8');
   if (/<!ENTITY/iu.test(text)) throw new SitemapParseError('sitemap declares entities');
@@ -54,7 +74,11 @@ export function parseSitemap(body: Buffer, contentType: string, limits: SitemapL
   // A `<sitemap>` entry is a reference whichever root it appears under.
   const refs = take(children.sitemap);
   const urls = isIndex ? [] : take(children.url);
-  return { urls, refs: isIndex ? [...refs, ...take(children.url)].slice(0, limits.maxUrls) : refs };
+  return {
+    urls,
+    lastmod: isIndex ? new Map<string, string>() : lastmods(children.url, limits.maxUrls),
+    refs: isIndex ? [...refs, ...take(children.url)].slice(0, limits.maxUrls) : refs,
+  };
 }
 
 /** A sitemap reference as one fetchable identity (WHATWG-normalized, no fragment), or null. */
@@ -71,6 +95,8 @@ export function sitemapRef(value: string) {
 /** A bounded walk over one site's sitemap tree; it never fetches anything itself. */
 export class SitemapCollector {
   readonly urls: string[] = [];
+  /** Declared `<lastmod>` by collected URL, as the sitemap spells both. */
+  readonly lastmod = new Map<string, string>();
   readonly #visited = new Set<string>();
   readonly limits: SitemapLimits;
   constructor(limits: SitemapLimits) {
@@ -81,7 +107,12 @@ export class SitemapCollector {
     this.#visited.add(sitemapRef(source) ?? source);
     const document = parseSitemap(body, contentType, this.limits);
     const room = Math.max(0, this.limits.maxUrls - this.urls.length);
-    this.urls.push(...document.urls.slice(0, room));
+    const kept = document.urls.slice(0, room);
+    this.urls.push(...kept);
+    for (const url of kept) {
+      const declared = document.lastmod.get(url);
+      if (declared && !this.lastmod.has(url)) this.lastmod.set(url, declared);
+    }
     if (depth >= this.limits.maxIndexDepth) return [];
     const refs = document.refs.flatMap((ref) => sitemapRef(ref) ?? []);
     return [...new Set(refs)].filter((ref) => !this.#visited.has(ref));

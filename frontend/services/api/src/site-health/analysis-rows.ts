@@ -312,10 +312,13 @@ export async function pageAnalysisContext(
   const observation = await sitemapObservation(db, crawl, task.site_url_id);
   const observationId = observation?.id ?? null;
   const siteFacts = rootSiteFacts(crawl, task);
+  const lastmod = record(record(record(crawl.site_facts).sitemap).lastmod);
+  const declared = observation ? lastmod[observation.observed_url] : undefined;
   return {
     sitemapMember: observationId !== null,
     // The URL as the sitemap lists it: a redirect makes it differ from the final URL.
     sitemapUrl: observation?.observed_url ?? null,
+    sitemapLastmod: typeof declared === 'string' ? declared : null,
     siteFacts,
     auditTime: auditTime ? new Date(auditTime).toISOString() : null,
     // The crawl owns setup facts and audit time; the observation owns membership.

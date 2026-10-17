@@ -949,15 +949,95 @@ describe('unscored visibility checks', () => {
         sitemap_url: listed,
       });
     expect(outcome(sitemap(true, '/guides/setup/?utm_source=x'))).toEqual(['satisfied', undefined]);
-    // The sitemap lists a URL that redirects to the canonical page: still not canonical.
+    // A listed URL that redirects to a self-canonical page is the redirect check's finding.
     expect(outcome(sitemap(true, '/guides/setup', 'https://www.example.test/old-setup'))).toEqual([
-      'missing',
-      'sitemap_lists_non_canonical',
+      'satisfied',
+      undefined,
     ]);
     expect(outcome(sitemap(false, '/guides/other'))).toEqual(['not_applicable', 'not_in_sitemap']);
     const conflict = sitemap(true, '/guides/other');
     expect(outcome(conflict)).toEqual(['missing', 'sitemap_lists_non_canonical']);
     // Visible as an issue, never part of a score.
     expect([createsIssue(conflict), conflict.score_applicability]).toEqual([true, false]);
+  });
+
+  it('flags a sitemap URL that redirects, but not a reordered query string', () => {
+    const listed = (url?: string, member = true) =>
+      outcome(rule('technical.sitemap_redirect', { sitemap_member: member, sitemap_url: url }));
+    expect(listed('https://www.example.test/old-setup')).toEqual([
+      'missing',
+      'sitemap_lists_redirect',
+    ]);
+    expect(listed('https://example.test/guides/setup')).toEqual([
+      'missing',
+      'sitemap_lists_redirect',
+    ]);
+    expect(listed('https://www.example.test/guides/setup')).toEqual(['satisfied', undefined]);
+    expect(listed(undefined, false)).toEqual(['not_applicable', 'not_in_sitemap']);
+    const query = byRule(
+      evaluatePageRules({
+        has_html: true,
+        delivery: { final_url: 'https://www.example.test/list?b=2&a=1&utm_source=mail' },
+        sitemap_member: true,
+        sitemap_url: 'https://www.example.test/list?a=1&b=2',
+      }),
+    ).get('technical.sitemap_redirect')!;
+    expect(outcome(query)).toEqual(['satisfied', undefined]);
+  });
+
+  it('holds the sitemap lastmod against the audit time and the page dates', () => {
+    const audit = '2026-10-07T00:00:00Z';
+    const lastmod = (value: string | undefined, dates: Record<string, string>, member = true) =>
+      outcome(
+        rule('technical.sitemap_lastmod', {
+          sitemap_member: member,
+          sitemap_lastmod: value,
+          dates: { published: '', modified: '', ...dates },
+          audit_time: audit,
+        }),
+      );
+    expect(lastmod('2026-09-01', { modified: '2026-09-01T10:00:00+05:30' })).toEqual([
+      'satisfied',
+      undefined,
+    ]);
+    expect(lastmod('2025-01-01', { modified: '2026-09-01' })).toEqual([
+      'missing',
+      'sitemap_lastmod_stale',
+    ]);
+    expect(lastmod('2026-12-31', { modified: '2026-09-01' })).toEqual([
+      'missing',
+      'sitemap_lastmod_in_future',
+    ]);
+    expect(lastmod('last tuesday', {})).toEqual(['missing', 'sitemap_lastmod_unparseable']);
+    expect(lastmod('2026-09-01', {})).toEqual(['unknown', 'page_date_unavailable']);
+    expect(lastmod(undefined, { modified: '2026-09-01' })).toEqual([
+      'not_applicable',
+      'no_sitemap_lastmod',
+    ]);
+    expect(lastmod('2026-09-01', {}, false)).toEqual(['not_applicable', 'not_in_sitemap']);
+  });
+
+  it('flags meta refresh and script-only redirects from the page markup', () => {
+    const redirect = (html: string) => {
+      const row = evaluations(html).get('technical.client_side_redirect')!;
+      return [row.outcome, row.evidence.reason, row.evidence.target_url];
+    };
+    expect(
+      redirect('<html><head><meta http-equiv="Refresh" content="0; URL=\'/new\'"></head></html>'),
+    ).toEqual(['missing', 'meta_refresh_redirect', 'https://example.test/new']);
+    // A refresh with no target, or to the page itself, only reloads it.
+    expect(redirect('<html><head><meta http-equiv="refresh" content="300"></head></html>')).toEqual(
+      ['satisfied', undefined, undefined],
+    );
+    expect(
+      redirect('<html><head><meta http-equiv="refresh" content="5;url=/page"></head></html>'),
+    ).toEqual(['satisfied', undefined, undefined]);
+    expect(
+      redirect('<html><body><script>window.location.href = "/app";</script></body></html>'),
+    ).toEqual(['missing', 'script_redirect', undefined]);
+    // Script navigation on a page with real content is a click handler, not a redirect.
+    const article = `<html><body><p>${'Useful words about setup. '.repeat(20)}</p><script>
+      button.onclick = () => { location.assign('/next'); };</script></body></html>`;
+    expect(redirect(article)).toEqual(['satisfied', undefined, undefined]);
   });
 });

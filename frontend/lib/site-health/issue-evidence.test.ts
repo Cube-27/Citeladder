@@ -35,6 +35,51 @@ describe('evidenceFacts', () => {
       expect(evidenceFacts(rule, evidence)).toEqual(['https://example.test/gone → 404']);
   });
 
+  it('spells redirects as where they land, and an abandoned one as a loop', () => {
+    const evidence = {
+      failing_targets: [
+        { url: 'https://example.test/old', final_url: 'https://example.test/new', hops: 1 },
+        { url: 'https://example.test/older', final_url: 'https://example.test/new', hops: 3 },
+        { url: 'https://example.test/loop', reason: 'redirect_limit' },
+      ],
+    };
+    for (const rule of ['technical.internal_link_redirect', 'technical.redirect_chain'])
+      expect(evidenceFacts(rule, evidence)).toEqual([
+        'https://example.test/old → https://example.test/new',
+        'https://example.test/older → https://example.test/new (3 hops)',
+        'https://example.test/loop → redirect loop',
+      ]);
+  });
+
+  it('names the canonical target’s state and the duplicate pages', () => {
+    expect(
+      evidenceFacts('technical.canonical_integrity', {
+        reason: 'canonical_chain',
+        target_url: 'https://example.test/a',
+        target_canonical_url: 'https://example.test/b',
+      }),
+    ).toEqual(['https://example.test/a → canonical https://example.test/b']);
+    expect(
+      evidenceFacts('technical.duplicate_content', {
+        reason: 'exact_duplicate',
+        duplicates: [{ url: 'https://example.test/copy', match: 'exact', distance: 0 }],
+      }),
+    ).toEqual(['https://example.test/copy (exact)']);
+    expect(
+      evidenceFacts('technical.sitemap_lastmod', {
+        reason: 'sitemap_lastmod_stale',
+        sitemap_lastmod: '2025-01-01',
+        page_dates: ['2026-09-01'],
+      }),
+    ).toEqual(['lastmod 2025-01-01', 'page dated 2026-09-01']);
+    expect(
+      evidenceFacts('technical.client_side_redirect', {
+        reason: 'meta_refresh_redirect',
+        target_url: 'https://example.test/new',
+      }),
+    ).toEqual(['<meta http-equiv="refresh"> → https://example.test/new']);
+  });
+
   it('stays silent about the signal that passed', () => {
     expect(
       evidenceFacts('aeo.content_date_present', { has_published: true, has_modified: false }),

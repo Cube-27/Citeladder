@@ -3,14 +3,25 @@ import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
 import { record, strings } from '../db/json.ts';
+import { onlyOf } from '../lists.ts';
 import { compareText, scalarText } from '../text-order.ts';
 import { insertEvaluations } from './analysis-rows.ts';
+import {
+  contentFingerprint,
+  duplicateContent,
+  duplicateMatches,
+  type DuplicateComparison,
+  type Fingerprint,
+} from './analysis/duplicate-content.ts';
 import { hreflangConflict, sitemapOrphan } from './analysis/finalize.ts';
 import { crawlCoverage } from './coverage.ts';
 import {
   canonicalResolution,
   fetchResolutions,
+  linkRedirects,
+  redirectChains,
   resolutionSet,
+  type CanonicalTarget,
   type Resolution,
 } from './resolution-evidence.ts';
 import { publishFinalPageAnalyses } from './terminal-analysis.ts';
@@ -80,6 +91,63 @@ function canonicalDeclarations(facts: Facts) {
   return declarations.length || !single ? declarations : [single];
 }
 
+/** The page's one declared canonical in identity form; null for none or a conflicting set. */
+function declaredCanonical(finalUrl: string, facts: Facts) {
+  const unique = [...new Set(canonicalDeclarations(facts).map((value) => value.trim()))];
+  const only = onlyOf(unique.filter(Boolean));
+  return only === undefined ? null : canonicalUrl(only, finalUrl);
+}
+
+const canonicalTarget = (finalUrl: string, facts: Facts): CanonicalTarget => ({
+  noindex: record(facts.robots).noindex === true,
+  canonical: declaredCanonical(finalUrl, facts),
+});
+
+/**
+ * A page joins the duplicate comparison when it is a successful, indexable
+ * page that names no other canonical: noindex and canonicalised copies have
+ * already said which page should be indexed.
+ */
+function duplicateCandidate(
+  url: string | null,
+  finalUrl: string,
+  facts: Facts,
+): Fingerprint | { reason: string } {
+  if (!url) return { reason: 'insufficient_evidence' };
+  if (!facts.has_html) return { reason: 'no_html' };
+  const status = Number(record(facts.delivery).status_code);
+  if (!(status >= 200 && status < 300)) return { reason: 'unsuccessful_response' };
+  if (record(facts.robots).noindex === true) return { reason: 'intentional_non_indexing' };
+  const canonical = declaredCanonical(finalUrl, facts);
+  if (canonical && canonical !== url) return { reason: 'canonicalized_elsewhere' };
+  return contentFingerprint(scalarText(facts.primary_content_text)) ?? { reason: 'thin_content' };
+}
+
+/** Every analyzed page's duplicate comparison, keyed by its identity URL. */
+function duplicateComparisons(rows: { final_url: string; normalized_facts: unknown }[]) {
+  const fingerprints = new Map<string, Fingerprint>();
+  const excluded = new Map<string, string>();
+  for (const row of rows) {
+    const url = canonicalUrl(row.final_url);
+    if (!url || fingerprints.has(url) || excluded.has(url)) continue;
+    const candidate = duplicateCandidate(url, row.final_url, record(row.normalized_facts));
+    if ('reason' in candidate) excluded.set(url, candidate.reason);
+    else fingerprints.set(url, candidate);
+  }
+  const matches = duplicateMatches(fingerprints);
+  return (url: string | null): DuplicateComparison => {
+    const fingerprint = url ? fingerprints.get(url) : undefined;
+    if (!url || !fingerprint)
+      return { kind: 'excluded', reason: (url && excluded.get(url)) || 'insufficient_evidence' };
+    return {
+      kind: 'compared',
+      words: fingerprint.words,
+      compared: fingerprints.size - 1,
+      matches: matches.get(url) ?? [],
+    };
+  };
+}
+
 async function sitemapObservations(db: Database, crawl: Crawl) {
   const manifest = record(record(crawl.site_facts).sitemap);
   // Older saved crawls have only source observations, not a setup manifest.
@@ -119,6 +187,7 @@ async function rootEvaluations(
   return [
     sitemapOrphan(observed.length, orphans, coverage.state),
     resolutionSet(targets, resolutions, true),
+    redirectChains(resolutions),
   ];
 }
 
@@ -172,10 +241,15 @@ export async function finalizeCrawlAnalyses(db: Database, crawl: Crawl) {
   if (!rows.length) return;
   const resolutions = await fetchResolutions(db, crawl);
   const pages: Alternates = new Map();
+  const canonicalTargets = new Map<string, CanonicalTarget>();
   for (const row of rows) {
     const url = canonicalUrl(row.final_url);
-    if (url && !pages.has(url)) pages.set(url, alternatesOf(record(row.normalized_facts)));
+    if (!url || pages.has(url)) continue;
+    const facts = record(row.normalized_facts);
+    pages.set(url, alternatesOf(facts));
+    canonicalTargets.set(url, canonicalTarget(row.final_url, facts));
   }
+  const duplicates = duplicateComparisons(rows);
   const rootUrl = canonicalUrl(crawl.root_url);
   const rootHash = rootUrl ? canonicalIdentity(rootUrl).hash : '';
   // Admission checks each target in full, so each row's targets are found once.
@@ -190,10 +264,19 @@ export async function finalizeCrawlAnalyses(db: Database, crawl: Crawl) {
   );
   for (const row of rows) {
     const facts = record(row.normalized_facts);
+    const url = canonicalUrl(row.final_url);
+    const links = targets.get(row.id) ?? [];
     const evaluations = [
-      hreflang(canonicalUrl(row.final_url), facts, pages, resolutions),
-      canonicalResolution(canonicalDeclarations(facts), row.final_url, resolutions),
-      resolutionSet(targets.get(row.id) ?? [], resolutions),
+      hreflang(url, facts, pages, resolutions),
+      canonicalResolution(
+        canonicalDeclarations(facts),
+        row.final_url,
+        resolutions,
+        canonicalTargets,
+      ),
+      resolutionSet(links, resolutions),
+      linkRedirects(links, resolutions),
+      duplicateContent(duplicates(url)),
     ];
     if (row.url_hash === rootHash)
       evaluations.push(...(await rootEvaluations(db, crawl, linked, resolutions))); // NOSONAR: only the root page.

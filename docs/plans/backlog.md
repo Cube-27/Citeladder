@@ -13,6 +13,25 @@ is required to select work; establish a current owner/code inventory when scopin
 
 ## Remaining engineering
 
+### Site Health recrawl and scheduled crawls (top priority)
+
+The owner set these two as the top Site Health priorities on 17 October 2026
+([decision](../decisions.md#site-health-crawler-parity-checks-and-apples-crawlers)).
+
+- **Recrawl.** The Changes view (`change_intel`) compares a crawl with the newest
+  comparable earlier crawl, but nothing produces that second crawl on purpose:
+  every start is a new crawl. Add a recrawl action that reruns an existing crawl
+  with the same origin, scope and settings, so the comparison always has a
+  comparable baseline. Keep plan grants and fetch budgets as they are.
+- **Scheduled crawls.** Site Health has no schedule; `audits/schedules.ts` covers
+  visibility audits only. Add a per-project recrawl cadence that runs through the
+  existing PostgreSQL queue and tick, reserves the period's fetch budget like a
+  manual crawl, and skips a run while one is still active. Decide cadence options
+  and plan gating with the owner before building.
+
+Owners: [Site Health](../site-health.md) and
+[Billing and entitlements](../billing-entitlements.md) for budgets.
+
 ### Audit remediation and enterprise readiness
 
 PR 1 (#156) and partial PR 2 (#158) are implemented. Extend existing workspace,

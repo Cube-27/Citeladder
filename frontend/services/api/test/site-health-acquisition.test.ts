@@ -466,7 +466,10 @@ describe('site setup', () => {
               });
             },
           },
-          '/pages.xml': urlset(url('/a'), url('/cart'), 'https://other.test/b', url('/a')),
+          '/pages.xml': {
+            contentType: 'application/xml',
+            body: `<urlset><url><loc>${url('/a')}</loc><lastmod>2026-09-01</lastmod></url><url><loc>${url('/cart')}</loc><lastmod>2026-09-02</lastmod></url><url><loc>https://other.test/b</loc></url><url><loc>${url('/a')}</loc></url></urlset>`,
+          },
         },
         requests,
       ),
@@ -500,6 +503,8 @@ describe('site setup', () => {
       fetched: true,
       files: [url('/index.xml'), url('/pages.xml')],
       urls: [url('/a')],
+      // Only admitted URLs keep their declared lastmod; the cart URL is refused.
+      lastmod: { [url('/a')]: '2026-09-01' },
     });
     expect(requests).toEqual(['/robots.txt', '/llms.txt', '/index.xml', '/pages.xml']);
     const observations = await db
@@ -550,7 +555,12 @@ describe('site setup', () => {
       maxDocuments: 3,
     });
     const walked = record((await crawlRow(full)).site_facts);
-    expect(walked.sitemap).toEqual({ fetched: true, files: [url('/index.xml')], urls: [] });
+    expect(walked.sitemap).toEqual({
+      fetched: true,
+      files: [url('/index.xml')],
+      urls: [],
+      lastmod: {},
+    });
   });
 
   it('preserves an overlong sitemap declaration without fetching a truncated URL', async () => {

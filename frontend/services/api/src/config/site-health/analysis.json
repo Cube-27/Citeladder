@@ -625,6 +625,7 @@
         "no_required_properties",
         "no_schema_names",
         "no_sitemap",
+        "no_sitemap_lastmod",
         "not_in_sitemap",
         "not_site_root",
         "other_page_kind",
@@ -650,7 +651,14 @@
         "body_text_truncated"
       ],
       "content_recency_max_age_days": 365,
-      "content_recency_future_tolerance_days": 2
+      "content_recency_future_tolerance_days": 2,
+      "sitemap_lastmod_tolerance_days": 2,
+      "redirect_max_hops": 1,
+      "duplicate_content": {
+        "min_words": 50,
+        "shingle_words": 3,
+        "max_hamming_distance": 3
+      }
     },
     "acquisition": {
       "error_codes": {

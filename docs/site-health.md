@@ -186,7 +186,10 @@ against `max_sitemap_documents`. URLs are taken in queue order, so response
 timing cannot change what fits. Admissible URLs, up to
 `max_sitemap_admitted_urls`, enter the frontier at depth 1. They are also
 recorded in `site_facts.sitemap.urls`, the authority for sitemap membership;
-older crawls fall back to `source_kind = sitemap` observations.
+older crawls fall back to `source_kind = sitemap` observations. Each admitted
+URL's first declared `<lastmod>` is kept, as written, in
+`site_facts.sitemap.lastmod` (keyed by the admitted URL); a page's analysis
+reads its own as `sitemap_lastmod`.
 
 **Referrers and failed fetches.** Each discovered URL keeps the pages that
 linked it, first sighting first. The frontier row holds up to
@@ -369,7 +372,7 @@ Unscored checks:
 | Class | Checks |
 |---|---|
 | Advisory | Meta description, canonical present, structured data present, Open Graph, robots.txt present, entity profiles, content recency, recommended schema, source support, answer-first |
-| Defect | Form names, heading order, `technical.ai_crawler_access`, organization identity, trust path, listing item facts, question headings, sitemap canonical, broken internal links, sitemap URL unreachable, sitemap orphan, hreflang conflict, six `architecture.*` rules |
+| Defect | Form names, heading order, `technical.ai_crawler_access`, organization identity, trust path, listing item facts, question headings, sitemap canonical, sitemap redirect, sitemap lastmod, client-side redirect, broken internal links, internal links to redirects, redirect chains, duplicate content, sitemap URL unreachable, sitemap orphan, hreflang conflict, six `architecture.*` rules |
 | Diagnostic (no issue) | HSTS, TTFB band, llms.txt |
 
 Pillar weights (`readiness_dimension_weights`) sum to 1:
@@ -391,29 +394,57 @@ robots.txt the result is `unknown` (`robots_not_fetched`); a fetched but
 unreadable one with no observed block is `unknown` (`robots_unreadable`). Check membership is
 each bot's `checks` array:
 
-- `search.crawler_access` (scored) covers Googlebot, Bingbot, OAI-SearchBot,
-  PerplexityBot and Claude-SearchBot.
-- `technical.ai_crawler_access` (unscored defect) covers those five plus
-  GPTBot, ClaudeBot, Google-Extended, ChatGPT-User, Perplexity-User and
-  Claude-User. Blocking only training or user-fetch bots is visible but does
-  not move a score.
-- Applebot and Applebot-Extended are in neither check.
+- `search.crawler_access` (scored) covers Googlebot, Bingbot, Applebot,
+  OAI-SearchBot, PerplexityBot and Claude-SearchBot.
+- `technical.ai_crawler_access` (unscored defect) covers those six plus
+  GPTBot, ClaudeBot, Google-Extended, Applebot-Extended, ChatGPT-User,
+  Perplexity-User and Claude-User. Blocking only training or user-fetch bots is
+  visible but does not move a score.
+
+**Sitemap and redirect page checks** (`analysis/indexing.ts`, unscored
+defects). `technical.sitemap_redirect` fails when the URL the sitemap lists and
+the URL the crawler reached differ in identity form (`canonicalUrl`, so query
+order and tracking keys are not a redirect); `technical.sitemap_canonical` then
+judges the reached page's canonical. `technical.sitemap_lastmod` fails a
+`<lastmod>` that does not parse, is more than `sitemap_lastmod_tolerance_days`
+past the audit time, or is older than the page's newest declared publication
+or modification date by more than that tolerance; without a readable page date
+it is `unknown`. `technical.client_side_redirect` fails a meta refresh to
+another URL, or inline script that assigns `location` or calls
+`location.replace`/`assign` on a page with fewer than `server_rendered_min_words`
+visible words; on a page with content that script is a handler, not a redirect.
 
 **Crawl-finalize checks** (`lifecycle-finalize.ts`) evaluate canonical
-integrity, internal-link targets and hreflang return tags per page, and sitemap
-orphans and reachability on the root. They read only this crawl's persisted
-attempts; targets never fetched, or rate-limited with 429, stay unchecked and
-cannot pass. A link is internal when its host shares the page's registrable
-domain, the same scope the crawler admits, so `docs.`/`www.` links count. A
-401/403 link target is sign-in-gated, not broken; a 401/403 sitemap URL is
-still unreachable.
+integrity, internal-link targets, internal links to redirects, duplicate
+content and hreflang return tags per page, and sitemap orphans, sitemap
+reachability and redirect chains on the root. They read only this crawl's
+persisted attempts; targets never fetched, or rate-limited with 429, stay
+unchecked and cannot pass. A link is internal when its host shares the page's
+registrable domain, the same scope the crawler admits, so `docs.`/`www.` links
+count. A 401/403 link target is sign-in-gated, not broken; a 401/403 sitemap
+URL is still unreachable.
 
 | Canonical integrity outcome | When |
 |---|---|
 | `not_applicable` | no declaration |
-| `missing` | several, invalid or cross-origin declarations |
+| `missing` | several, invalid or cross-origin declarations; a target that returned 400 or above, redirected or hit the redirect limit; an analyzed target that is noindex or names a different canonical (`canonical_chain`) |
 | `unknown` | the target is unresolved |
-| `satisfied` | the target returned a status below 400 |
+| `satisfied` | the target answered directly below 400; a target fetched but not analyzed is judged on that response alone (`target_analyzed: false`) |
+
+**Redirects.** Each attempt's artifact keeps its `redirect_chain`, and a fetch
+abandoned at `max_redirects` ends with `redirect_limit`. A link to a target that
+redirected or hit the limit fails `technical.internal_link_redirect`.
+`technical.redirect_chain` lists every URL the crawl requested that took more
+than `redirect_max_hops` hops or hit the limit (a loop or an overlong chain).
+
+**Duplicate content** (`analysis/duplicate-content.ts`). A page joins the
+comparison when it is a 2xx HTML page, not noindex, whose one canonical (if
+any) names itself, with at least `duplicate_content.min_words` words of
+`primary_content_text`; otherwise the check is `not_applicable` with the
+reason. Exact copies share a SHA-256 of the lower-cased word sequence; near
+copies have 64-bit SimHashes over `shingle_words`-word shingles within
+`max_hamming_distance` bits. Pages are compared pairwise, without transitive
+clustering, and the evidence lists each page's matches.
 
 ```text
 role / pillar score = 100 * satisfied / (satisfied + missing), over applicable checks

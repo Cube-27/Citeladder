@@ -118,6 +118,83 @@ export class SiteFixtures extends VisibilityFixtures {
     return id;
   }
   /**
+   * A fetch of `from` as the crawler persists it: one attempt row per call,
+   * a 301 answered by `to` (whose final call links the artifact), or, with no
+   * `to`, a fetch abandoned at the redirect limit.
+   */
+  async redirect(seed: SiteSeed, from: string, to?: string) {
+    const requested = canonicalIdentity(from, seed.root).url;
+    const final = to ? canonicalIdentity(to, seed.root).url : null;
+    const taskId = await this.task(seed, 'discover');
+    await this.siteDb
+      .updateTable('site_crawl_tasks')
+      .set({ requested_url: requested, status: final ? 'succeeded' : 'failed' })
+      .where('id', '=', taskId)
+      .execute();
+    const now = new Date();
+    const artifactId = final ? randomUUID() : null;
+    if (artifactId)
+      await this.siteDb
+        .insertInto('site_fetch_artifacts')
+        .values({
+          id: artifactId,
+          workspace_id: seed.workspaceId,
+          crawl_id: seed.crawlId,
+          task_id: taskId,
+          requested_url: requested,
+          final_url: final!,
+          redirect_chain: JSON.stringify([
+            { from_url: requested, to_url: final, status_code: 301 },
+          ]),
+          status_code: 200,
+          content_type: 'text/html',
+          content_hash: randomUUID().replaceAll('-', ''),
+          normalized_facts: JSON.stringify({}),
+          extractor_version: policy.site_health.versions.extractor,
+          fetched_at: now,
+          created_at: now,
+          fetch_purpose: 'discover',
+          acquisition_policy_version: 'fixture',
+          acquisition_transport: 'recorded',
+          acquisition_trigger: 'fixture',
+          http_version: 'HTTP/1.1',
+          impersonation_profile: '',
+        })
+        .execute();
+    const call = (ordinal: number, status: number, errorCode: string, artifact: string | null) => ({
+      id: randomUUID(),
+      task_id: taskId,
+      crawl_id: seed.crawlId,
+      workspace_id: seed.workspaceId,
+      attempt_number: 1,
+      request_ordinal: ordinal,
+      method: 'GET',
+      target_host: 'example.test',
+      outcome: errorCode ? 'error' : 'success',
+      error_code: errorCode,
+      status_code: status,
+      latency_ms: 10,
+      wire_bytes: null,
+      decoded_bytes: null,
+      acquisition_transport: 'recorded',
+      acquisition_rung: null,
+      acquisition_trigger: 'fixture',
+      impersonation_profile: '',
+      acquisition_options: null,
+      acquisition_policy_version: 'fixture',
+      artifact_id: artifact,
+      created_at: now,
+    });
+    await this.siteDb
+      .insertInto('site_fetch_attempts')
+      .values(
+        final
+          ? [call(0, 301, '', null), call(1, 200, '', artifactId)]
+          : [call(0, 301, '', null), call(1, 301, 'redirect_limit', null)],
+      )
+      .execute();
+  }
+  /**
    * A worker held to the seed's crawl. The local database is shared with other
    * test runs, so an unscoped worker could claim and run their tasks.
    */

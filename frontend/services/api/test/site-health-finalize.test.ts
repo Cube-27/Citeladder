@@ -10,7 +10,14 @@ import {
   aggregateMeasurements,
 } from '../src/site-health/analysis/measurement-aggregation.ts';
 import {
+  contentFingerprint,
+  duplicateContent,
+  duplicateMatches,
+} from '../src/site-health/analysis/duplicate-content.ts';
+import {
   canonicalResolution,
+  linkRedirects,
+  redirectChains,
   resolutionSet,
   type Resolution,
 } from '../src/site-health/resolution-evidence.ts';
@@ -36,8 +43,125 @@ describe('terminal checks from persisted evidence', () => {
     expect(canonical(['/a', '/b']).reason_code).toBe('conflicting_declarations');
     expect(canonical(['https://elsewhere.test/a']).reason_code).toBe('cross_origin_canonical');
     expect(canonical(['/a'], { checked: false }).outcome).toBe('unknown');
-    expect(canonical(['https://example.test:443/a'], { redirected: true }).outcome).toBe(
+    expect(canonical(['https://example.test:443/a']).outcome).toBe('satisfied');
+  });
+
+  it('fails a canonical whose target redirects, is noindex or names another canonical', () => {
+    const target = 'https://example.test/target';
+    expect(canonical(['/target'], { redirected: true }).reason_code).toBe(
+      'canonical_target_redirects',
+    );
+    expect(canonical(['/target'], { statusCode: 404 }).reason_code).toBe('canonical_target_error');
+    expect(
+      canonical(['/target'], { target: { noindex: true, canonical: target } }).reason_code,
+    ).toBe('canonical_target_noindex');
+    const chain = canonical(['/target'], {
+      target: { noindex: false, canonical: 'https://example.test/final' },
+    });
+    expect([chain.outcome, chain.reason_code, chain.evidence.target_canonical_url]).toEqual([
+      'missing',
+      'canonical_chain',
+      'https://example.test/final',
+    ]);
+    const direct = canonical(['/target'], { target: { noindex: false, canonical: target } });
+    expect([direct.outcome, direct.evidence.target_page_checked]).toEqual(['satisfied', true]);
+    // A target fetched but not analyzed is judged on its response alone.
+    expect(canonical(['/target']).evidence.target_page_checked).toBe(false);
+  });
+
+  it('reads canonical targets, links and chains from persisted redirects', () => {
+    const resolution = (changes: Partial<Resolution>): Resolution => ({
+      status: 200,
+      finalUrl: '',
+      redirected: false,
+      hops: 0,
+      errorCode: '',
+      taskId: 'task',
+      attemptId: 'attempt',
+      artifactId: null,
+      ...changes,
+    });
+    const resolutions = new Map([
+      ['https://example.test/', resolution({ finalUrl: 'https://example.test/' })],
+      [
+        'https://example.test/old',
+        resolution({ finalUrl: 'https://example.test/new', redirected: true, hops: 1 }),
+      ],
+      [
+        'https://example.test/older',
+        resolution({ finalUrl: 'https://example.test/new', redirected: true, hops: 3 }),
+      ],
+      ['https://example.test/loop', resolution({ status: 301, errorCode: 'redirect_limit' })],
+    ]);
+    expect(
+      canonicalResolution(['/older'], 'https://example.test/page', resolutions).reason_code,
+    ).toBe('canonical_target_redirects');
+    // A noindex page naming itself is the indexability check's finding, not a canonical conflict.
+    const noindex = new Map([['https://example.test/', { noindex: true, canonical: null }]]);
+    expect(canonicalResolution(['/'], 'https://example.test/', resolutions, noindex).outcome).toBe(
       'satisfied',
+    );
+    expect(
+      canonicalResolution(['/'], 'https://example.test/page', resolutions, noindex).reason_code,
+    ).toBe('canonical_target_noindex');
+    const links = linkRedirects(
+      ['https://example.test/', 'https://example.test/old', 'https://example.test/loop'],
+      resolutions,
+    );
+    expect([links.outcome, links.evidence.failing_targets]).toEqual([
+      'partial',
+      [
+        { url: 'https://example.test/old', final_url: 'https://example.test/new', hops: 1 },
+        { url: 'https://example.test/loop', reason: 'redirect_limit' },
+      ],
+    ]);
+    // One hop is an ordinary redirect; three hops and a loop are chains to flatten.
+    const chains = redirectChains(resolutions);
+    expect([
+      chains.outcome,
+      chains.evidence.redirect_count,
+      chains.evidence.failing_targets,
+    ]).toEqual([
+      'missing',
+      3,
+      [
+        { url: 'https://example.test/loop', reason: 'redirect_limit' },
+        { url: 'https://example.test/older', final_url: 'https://example.test/new', hops: 3 },
+      ],
+    ]);
+    expect(redirectChains(new Map([['https://example.test/', resolution({})]])).outcome).toBe(
+      'satisfied',
+    );
+  });
+
+  it('matches exact and near-duplicate main content but not distinct pages', () => {
+    const words = (topic: string, count: number) =>
+      Array.from({ length: count }, (_, index) => `${topic}${index % 17} word${index}`).join(' ');
+    const base = words('garden', 120);
+    const pages = new Map(
+      Object.entries({
+        'https://example.test/a': base,
+        'https://example.test/b': base.toUpperCase(),
+        'https://example.test/c': `${base} closing`,
+        'https://example.test/d': words('invoice', 120),
+      }).map(([url, text]) => [url, contentFingerprint(text)!]),
+    );
+    const matches = duplicateMatches(pages);
+    expect(matches.get('https://example.test/a')).toEqual([
+      { url: 'https://example.test/b', match: 'exact', distance: 0 },
+      { url: 'https://example.test/c', match: 'near', distance: expect.any(Number) },
+    ]);
+    expect(matches.get('https://example.test/d')).toEqual([]);
+    expect(contentFingerprint('Too short to compare.')).toBeNull();
+    const flagged = duplicateContent({
+      kind: 'compared',
+      words: 240,
+      compared: 3,
+      matches: matches.get('https://example.test/a')!,
+    });
+    expect([flagged.outcome, flagged.reason_code]).toEqual(['missing', 'exact_duplicate']);
+    expect(duplicateContent({ kind: 'excluded', reason: 'canonicalized_elsewhere' }).outcome).toBe(
+      'not_applicable',
     );
   });
 
@@ -64,6 +188,8 @@ describe('terminal checks from persisted evidence', () => {
       status: 429,
       finalUrl: 'https://example.test/a',
       redirected: false,
+      hops: 0,
+      errorCode: '',
       taskId: 'task-a',
       attemptId: 'attempt-a',
       artifactId: null,
@@ -92,6 +218,8 @@ describe('terminal checks from persisted evidence', () => {
       status,
       finalUrl: '',
       redirected: false,
+      hops: 0,
+      errorCode: '',
       taskId: `task-${status}`,
       attemptId: `attempt-${status}`,
       artifactId: null,
@@ -342,6 +470,8 @@ it('resolves a canonical declared more than once as the one canonical it names',
     status: 200,
     finalUrl: 'https://example.test/a',
     redirected: false,
+    hops: 0,
+    errorCode: '',
     taskId: 'task',
     attemptId: 'attempt',
     artifactId: null,

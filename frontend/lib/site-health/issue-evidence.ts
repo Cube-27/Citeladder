@@ -150,6 +150,59 @@ function failingLinkTargets(evidence: Evidence): string[] {
     );
 }
 
+/** A redirecting URL and where it landed; an abandoned one is named a loop. */
+function redirectTargets(evidence: Evidence): string[] {
+  return records(evidence.failing_targets)
+    .filter((target) => text(target.url).length > 0)
+    .map((target) => {
+      if (target.reason === 'redirect_limit') return `${text(target.url)} → redirect loop`;
+      const hops =
+        typeof target.hops === 'number' && target.hops > 1 ? ` (${String(target.hops)} hops)` : '';
+      return `${text(target.url)} → ${text(target.final_url)}${hops}`;
+    });
+}
+
+/** Why the declared canonical is not the URL to index, spelled as the target's state. */
+function canonicalTarget(evidence: Evidence): string[] {
+  const target = text(evidence.target_url) || textList(evidence.declarations)[0] || '';
+  switch (evidence.reason) {
+    case 'canonical_target_redirects':
+      return [`${target} → redirects`];
+    case 'canonical_target_noindex':
+      return [`${target} → noindex`];
+    case 'canonical_chain':
+      return [`${target} → canonical ${text(evidence.target_canonical_url)}`];
+    case 'canonical_target_error':
+      return [`${target} → ${String(evidence.status_code)}`];
+    default: {
+      // Conflicting, invalid or cross-origin: the declarations are what to fix.
+      const declarations = textList(evidence.declarations);
+      return declarations.length ? declarations : reasonPhrase(evidence);
+    }
+  }
+}
+
+function duplicatePages(evidence: Evidence): string[] {
+  return records(evidence.duplicates)
+    .filter((duplicate) => text(duplicate.url).length > 0)
+    .map((duplicate) => `${text(duplicate.url)} (${text(duplicate.match)})`);
+}
+
+function sitemapLastmod(evidence: Evidence): string[] {
+  const lastmod = `lastmod ${text(evidence.sitemap_lastmod)}`;
+  if (evidence.reason === 'sitemap_lastmod_stale') {
+    const dates = textList(evidence.page_dates);
+    return dates.length ? [lastmod, `page dated ${dates.join(', ')}`] : [lastmod];
+  }
+  return evidence.reason === 'sitemap_lastmod_in_future' ? [`${lastmod} (future)`] : [lastmod];
+}
+
+function clientRedirect(evidence: Evidence): string[] {
+  return evidence.reason === 'meta_refresh_redirect'
+    ? [`<meta http-equiv="refresh"> → ${text(evidence.target_url)}`]
+    : ['location redirect in script'];
+}
+
 function ttfbBand(evidence: Evidence): string[] {
   const { ttfb_ms: measured, threshold_ms: budget } = evidence;
   if (typeof measured !== 'number') return [];
@@ -216,6 +269,15 @@ const FACTS_BY_RULE: Readonly<Record<string, (evidence: Evidence) => string[]>> 
       : reasonPhrase(evidence),
   'aeo.entity_profiles': () => ['sameAs'],
   'technical.sitemap_canonical': (evidence) => [`canonical ${text(evidence.canonical_url)}`],
+  'technical.sitemap_redirect': (evidence) => [
+    `${text(evidence.listed_url)} → ${text(evidence.final_url)}`,
+  ],
+  'technical.sitemap_lastmod': sitemapLastmod,
+  'technical.client_side_redirect': clientRedirect,
+  'technical.canonical_integrity': canonicalTarget,
+  'technical.internal_link_redirect': redirectTargets,
+  'technical.redirect_chain': redirectTargets,
+  'technical.duplicate_content': duplicatePages,
   'aeo.visible_attribution': (evidence) =>
     text(evidence.declared_name) ? ['visible author'] : ['author'],
   'aeo.source_support_present': () => ['citation'],
