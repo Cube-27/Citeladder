@@ -255,3 +255,27 @@ overlay shadow, and dark mode keeps its edge rings.
 Source: owner, 16 October 2026, asking for an audit and redesign of the app
 because it "doesn't really look professional enterprise grade yet", with the
 design choices left to the agent. [Design](design.md) owns the system.
+
+## Site Health crawler parity checks and Apple's crawlers
+
+Site Health gains the deterministic crawler checks a comparison with two
+open-source SEO crawlers (LibreCrawl and FreeCrawl) found missing: canonical
+targets that redirect, are noindex or chain to another canonical; redirect
+chains and loops; internal links to redirects; exact and near-duplicate main
+content; sitemap URLs that redirect and sitemap `lastmod` dates that contradict
+the page; and meta-refresh or script redirects. All run on evidence the crawl
+already fetches, so they add no fetch or infrastructure cost. Headless
+rendering, external-link checks and readability or pixel-width heuristics stay
+out.
+
+Applebot joins both crawler-access checks (Apple's search and Apple
+Intelligence crawler), and Applebot-Extended joins the AI-crawler check as a
+training control.
+
+Recrawling an existing crawl from the Changes view and scheduled Site Health
+crawls are the top Site Health backlog priorities.
+
+Source: owner, 17 October 2026, approving the crawler comparison report
+("proceed with implementation of 5 findings plus applebot"; recrawl and
+scheduled crawls "should go in backlog as top priority").
+[Site Health](site-health.md) owns the behavior.
