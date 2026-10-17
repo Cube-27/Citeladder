@@ -78,6 +78,13 @@ export function entitySetEvaluation(
   });
 }
 
+/**
+ * A canonical must name the URL search engines should index: one declaration,
+ * same origin, answering directly (no redirect), and, when this crawl analyzed
+ * another target page, one that is indexable and names itself canonical. A
+ * self-canonical, or a target fetched but not analyzed, is judged on its
+ * response alone (`target_page_checked: false`).
+ */
 export function canonicalIntegrity(input: {
   declarations: string[];
   finalUrl: string;
@@ -85,6 +92,7 @@ export function canonicalIntegrity(input: {
   checked: boolean;
   statusCode: number | null;
   redirected: boolean;
+  target?: { noindex: boolean; canonical: string | null } | null;
 }) {
   const unique = [...new Set(input.declarations.map((value) => value.trim()).filter(Boolean))];
   const evidence = {
@@ -109,14 +117,23 @@ export function canonicalIntegrity(input: {
   }
   if (!input.checked || input.statusCode === null)
     return result('unknown', 'insufficient_evidence');
-  return finalizeEvaluation(
-    'technical.canonical_integrity',
-    input.statusCode < 400 ? 'satisfied' : 'missing',
-    {
-      ...evidence,
-      status_code: input.statusCode,
-    },
-  );
+  const observed = { ...evidence, status_code: input.statusCode };
+  const failed = (reason: string) =>
+    finalizeEvaluation('technical.canonical_integrity', 'missing', { ...observed, reason });
+  if (input.statusCode >= 400) return failed('canonical_target_error');
+  if (input.redirected) return failed('canonical_target_redirects');
+  const target = input.target;
+  if (target?.noindex) return failed('canonical_target_noindex');
+  if (target?.canonical && target.canonical !== input.targetUrl)
+    return finalizeEvaluation('technical.canonical_integrity', 'missing', {
+      ...observed,
+      reason: 'canonical_chain',
+      target_canonical_url: target.canonical,
+    });
+  return finalizeEvaluation('technical.canonical_integrity', 'satisfied', {
+    ...observed,
+    target_page_checked: Boolean(target),
+  });
 }
 
 export function sitemapOrphan(count: number, orphans: string[], coverage: string) {

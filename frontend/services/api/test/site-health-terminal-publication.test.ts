@@ -250,6 +250,52 @@ describe('terminal analysis publication', () => {
     expect(await brokenLinks(withPage.analysisId)).toEqual(['unknown', 1]);
   });
 
+  it('judges duplicate content and redirects from the persisted crawl evidence', async () => {
+    const seed = await fixtures.crawl('running');
+    const text = Array.from({ length: 80 }, (_, i) => `topic${i % 13} detail${i}`).join(' ');
+    const page = (links: string[]) => ({
+      has_html: true,
+      delivery: { status_code: 200 },
+      robots: { noindex: false },
+      primary_content_text: text,
+      links: { anchors: links.map((url) => ({ url, is_internal: true })) },
+    });
+    const root = await fixtures.page(seed, '/', { has_html: true, links: { anchors: [] } });
+    const first = await fixtures.page(seed, '/a', page(['/old']));
+    const copy = await fixtures.page(seed, '/b', page([]));
+    await fixtures.redirect(seed, '/old', '/new');
+    await fixtures.redirect(seed, '/loop');
+    await finalize(seed);
+    const evaluation = async (analysisId: string, ruleId: string) => {
+      const row = await db
+        .selectFrom('site_rule_evaluations')
+        .select(['outcome', 'evidence'])
+        .where('analysis_id', '=', analysisId)
+        .where('rule_id', '=', ruleId)
+        .executeTakeFirstOrThrow();
+      const evidence = row.evidence as Record<string, unknown>;
+      return [row.outcome, evidence.duplicates ?? evidence.failing_targets];
+    };
+    const url = (path: string) => `https://example.test${path}`;
+    expect(await evaluation(first.analysisId, 'technical.duplicate_content')).toEqual([
+      'missing',
+      [{ url: url('/b'), match: 'exact', distance: 0 }],
+    ]);
+    expect(await evaluation(copy.analysisId, 'technical.duplicate_content')).toEqual([
+      'missing',
+      [{ url: url('/a'), match: 'exact', distance: 0 }],
+    ]);
+    expect(await evaluation(first.analysisId, 'technical.internal_link_redirect')).toEqual([
+      'missing',
+      [{ url: url('/old'), final_url: url('/new'), hops: 1 }],
+    ]);
+    // The crawl root carries the crawl-wide chain check: one hop passes, a loop fails.
+    expect(await evaluation(root.analysisId, 'technical.redirect_chain')).toEqual([
+      'missing',
+      [{ url: url('/loop'), reason: 'redirect_limit' }],
+    ]);
+  });
+
   it('does not publish another workspace through a mismatched crawl scope', async () => {
     const seed = await fixtures.crawl('running');
     const foreign = await fixtures.crawl('running');
