@@ -3,8 +3,8 @@ name: Product Worker delivery
 on:
   workflow_dispatch:
 
-permissions:
-  contents: read
+# Deny by default; every job grants what it needs.
+permissions: {}
 
 concurrency:
   group: workers-app-production
@@ -70,6 +70,8 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
     environment: workers-app-production
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
