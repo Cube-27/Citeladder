@@ -351,39 +351,43 @@ function refreshTarget(content: string) {
  * script navigates the window. A refresh to the page itself is a reload.
  */
 function clientRedirect(root: HtmlNode, finalUrl: string) {
-  const result = {
-    meta_refresh_url: '',
-    meta_refresh_seconds: null as number | null,
-    script_navigates: false,
+  const refresh = metaRefresh(root, finalUrl);
+  return {
+    meta_refresh_url: refresh?.url ?? '',
+    meta_refresh_seconds: refresh?.seconds ?? null,
+    script_navigates: scriptNavigates(root),
   };
+}
+
+/** The first meta refresh that leads to another URL, resolved against the page. */
+function metaRefresh(root: HtmlNode, finalUrl: string) {
   for (const meta of elements(root, 'meta')) {
     if (attribute(meta, 'http-equiv').trim().toLowerCase() !== 'refresh') continue;
     const refresh = refreshTarget(attribute(meta, 'content'));
     if (!refresh) continue;
-    let target: URL;
     try {
-      target = new URL(refresh.target, finalUrl);
-      if (target.href === new URL(finalUrl).href) continue;
+      const target = new URL(refresh.target, finalUrl);
+      if (target.href !== new URL(finalUrl).href)
+        return { url: target.href.slice(0, limits.url_chars), seconds: refresh.seconds };
     } catch {
-      continue;
+      // An unresolvable target sends the reader nowhere.
     }
-    result.meta_refresh_url = target.href.slice(0, limits.url_chars);
-    result.meta_refresh_seconds = refresh.seconds;
-    break;
   }
+  return null;
+}
+
+/** Whether inline JavaScript, within the scan budget, navigates the window. */
+function scriptNavigates(root: HtmlNode) {
   let scanned = 0;
   for (const script of elements(root, 'script')) {
     const type = attribute(script, 'type').trim().toLowerCase();
     if (attribute(script, 'src').trim() || (type && !JAVASCRIPT_TYPES.has(type))) continue;
     const code = textContent(script).slice(0, limits.inline_script_chars - scanned);
     scanned += code.length;
-    if (SCRIPT_NAVIGATION.test(code)) {
-      result.script_navigates = true;
-      break;
-    }
-    if (scanned >= limits.inline_script_chars) break;
+    if (SCRIPT_NAVIGATION.test(code)) return true;
+    if (scanned >= limits.inline_script_chars) return false;
   }
-  return result;
+  return false;
 }
 
 function blockingResources(root: HtmlNode, stylesheets: number) {
