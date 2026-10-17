@@ -212,7 +212,7 @@
         "method": "ip_ranges",
         "source_url": "https://search.developer.apple.com/applebot.json"
       },
-      "checks": []
+      "checks": ["ai_crawler_access", "search_crawler_access"]
     },
     {
       "bot_id": "apple_extended",
@@ -225,7 +225,7 @@
       "verification": {
         "method": "none"
       },
-      "checks": []
+      "checks": ["ai_crawler_access"]
     }
   ]
 }

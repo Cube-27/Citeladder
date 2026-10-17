@@ -132,6 +132,27 @@ it('fails answer-crawler access when every sampled page is closed, not when only
     { blocked: [], restricted: ['OAI-SearchBot'] },
   ]);
 });
+it('judges Apple’s search crawler in both checks and its training token in the AI check', () => {
+  const access = (body: string) => {
+    const robots = {
+      fetched: true,
+      bots: crawlerRootFacts(robotsPolicy(origin, 200, body), origin),
+    };
+    return [
+      DELIVERY_CHECKS['search.crawler_access']!({ site: { robots } }),
+      DELIVERY_CHECKS['technical.ai_crawler_access']!({ site: { robots } }),
+    ].map(([outcome, evidence]) => [outcome, evidence.blocked]);
+  };
+  expect(access('User-agent: Applebot\nDisallow: /')).toEqual([
+    ['missing', ['Applebot']],
+    ['missing', ['Applebot']],
+  ]);
+  // Opting out of Apple's model training does not hide the site from Apple search.
+  expect(access('User-agent: Applebot-Extended\nDisallow: /')).toEqual([
+    ['satisfied', []],
+    ['missing', ['Applebot-Extended']],
+  ]);
+});
 it('keeps crawler access unknown when robots.txt was fetched but could not be read', () => {
   const bots = crawlerRootFacts(robotsPolicy(origin, 503, ''), origin);
   expect(
