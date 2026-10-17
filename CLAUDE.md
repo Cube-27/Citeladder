@@ -140,7 +140,15 @@ rather than a new file per run. Report exit status and inspect failure tails fir
 ## Completion and review
 
 Inspect `git diff --check`, `git diff --stat` and `git diff --name-status`.
-Review the final diff using [Review.md](Review.md). Report changed behavior,
+Check your own final diff against [Review.md](Review.md). Report changed behavior,
 removals for replacements, exact verification commands/results, checks not run,
 and unresolved risks. Do not attribute unrelated dirty-tree failures to this work.
 For review-only requests, do not edit; report actionable findings with file evidence.
+
+A pull request that changes more than 10 files gets one review: the
+`claude-review` workflow (Anthropic's code-review plugin in CI). Start it once,
+on green CI, by commenting `/claude-review` on the PR; it posts inline comments
+on what it flags, or a `## Code review` comment when it finds nothing. Fix each
+finding, or reply on its thread why it is not a defect, in one push. A PR of 10
+files or fewer gets no review. There are no reviewer agents, no `/simplify`
+pass and no re-review. When you are the `claude-review` run, do the review.

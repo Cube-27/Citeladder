@@ -42,7 +42,7 @@ to resolve within the authorized scope, not permission to weaken a constraint.
 - [Invariants](invariants.md): durable correctness and safety constraints.
 - [API errors](api-error-contract.md): cross-stack error contract.
 - [Development](DEVELOPMENT.md): setup, isolation and validation commands.
-- [Review](../Review.md): compact review procedure.
+- [Review](../Review.md): review checklist; the `claude-review` CI review covers PRs over 10 files.
 
 ## Work and decisions
 
