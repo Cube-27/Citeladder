@@ -187,7 +187,7 @@ async function walkSitemaps(
   }
   return {
     files: walk.files.slice(0, settings.maxDocuments),
-    urls: admittedUrls(walk.collector, crawl, settings),
+    ...admittedUrls(walk.collector, crawl, settings),
   };
 }
 
@@ -218,10 +218,14 @@ function collect(
   }
 }
 
-/** The collected URLs that pass the crawl's admission, canonical and unique, up to the cap. */
+/**
+ * The collected URLs that pass the crawl's admission, canonical and unique, up
+ * to the cap, with each admitted URL's declared `<lastmod>`.
+ */
 function admittedUrls(collector: SitemapCollector, crawl: Crawl, settings: Settings) {
   const scope = crawlScope(crawl);
   const urls: string[] = [];
+  const lastmod: Record<string, string> = {};
   const seen = new Set<string>();
   for (const raw of collector.urls) {
     if (urls.length >= settings.maxAdmitted) break;
@@ -229,8 +233,10 @@ function admittedUrls(collector: SitemapCollector, crawl: Crawl, settings: Setti
     if (!admission.accepted || !admission.url || seen.has(admission.hash)) continue;
     seen.add(admission.hash);
     urls.push(admission.url);
+    const declared = collector.lastmod.get(raw);
+    if (declared) lastmod[admission.url] = declared;
   }
-  return urls;
+  return { urls, lastmod };
 }
 
 /** Sitemap URLs as depth-1 candidates in sitemap document order. */
@@ -486,7 +492,10 @@ export async function runSiteSetup(
         : crawlPolicy.sitemap_default_paths.map((path) => `${origin}${path}`);
     const walk = await walkSitemaps(ctx, crawl, seeds, settings);
     urls = walk.urls;
-    facts = { ...facts, sitemap: { fetched: walk.files.length > 0, files: walk.files, urls } };
+    facts = {
+      ...facts,
+      sitemap: { fetched: walk.files.length > 0, files: walk.files, urls, lastmod: walk.lastmod },
+    };
   }
   await persist(ctx, claimed, facts, urls, settings);
 }

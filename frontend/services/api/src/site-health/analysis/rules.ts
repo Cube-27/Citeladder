@@ -7,7 +7,14 @@
 import { policy } from '../../config.ts';
 import { contentChecks, type CompositeContract } from './content-checks.ts';
 import { DELIVERY_CHECKS, serverRenderSignals } from './delivery-checks.ts';
-import { checkIndexable, checkSitemapCanonical, type CheckResult } from './indexing.ts';
+import {
+  checkClientSideRedirect,
+  checkIndexable,
+  checkSitemapCanonical,
+  checkSitemapLastmod,
+  checkSitemapRedirect,
+  type CheckResult,
+} from './indexing.ts';
 import { analysisPolicy } from './policy.ts';
 import { record, text, textList, type Facts } from './read-facts.ts';
 import { SCHEMA_CHECKS } from './schema-checks.ts';
@@ -85,6 +92,9 @@ function composite(ruleId: string): CompositeContract {
 const CHECKS: Record<string, (facts: Facts) => CheckResult> = {
   'technical.indexable': checkIndexable,
   'technical.sitemap_canonical': checkSitemapCanonical,
+  'technical.sitemap_redirect': checkSitemapRedirect,
+  'technical.sitemap_lastmod': checkSitemapLastmod,
+  'technical.client_side_redirect': checkClientSideRedirect,
   ...DELIVERY_CHECKS,
   ...SCHEMA_CHECKS,
   ...contentChecks(composite),

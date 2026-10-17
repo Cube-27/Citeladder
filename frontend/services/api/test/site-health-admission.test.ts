@@ -219,6 +219,7 @@ describe('sitemaps', () => {
   it('reads page URLs and index references, and decodes gzip under the cap', () => {
     expect(parseSitemap(urlset('https://example.test/a?x=1&amp;y=2'), 'text/xml', limits)).toEqual({
       urls: ['https://example.test/a?x=1&y=2'],
+      lastmod: new Map(),
       refs: [],
     });
     const index = Buffer.from(
@@ -226,8 +227,25 @@ describe('sitemaps', () => {
     );
     expect(parseSitemap(gzipSync(index), 'application/gzip', limits)).toEqual({
       urls: [],
+      lastmod: new Map(),
       refs: ['https://example.test/s1.xml'],
     });
+  });
+
+  it('keeps each page URL’s first declared lastmod through the collector', () => {
+    const dated = Buffer.from(
+      `<urlset><url><loc>https://example.test/a</loc><lastmod> 2026-09-01 </lastmod></url>
+      <url><loc>https://example.test/b</loc></url>
+      <url><loc>https://example.test/a</loc><lastmod>2020-01-01</lastmod></url></urlset>`,
+    );
+    const collector = new SitemapCollector(limits);
+    collector.add('https://example.test/sitemap.xml', dated, 'text/xml', 0);
+    expect(collector.urls).toEqual([
+      'https://example.test/a',
+      'https://example.test/b',
+      'https://example.test/a',
+    ]);
+    expect(collector.lastmod).toEqual(new Map([['https://example.test/a', '2026-09-01']]));
   });
 
   it('refuses entity declarations, malformed XML and decompression bombs', () => {
