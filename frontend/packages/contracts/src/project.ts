@@ -77,6 +77,8 @@ export const promptSchema = responseObject({
   intent: promptIntentSchema,
   buyer_stage: buyerStageSchema.default(''),
   prompt_intent: promptIntentDetailSchema.default(''),
+  // The buyer the prompt is asked as; empty when none was planned or set.
+  persona: z.string().default(''),
   cohort: promptCohortSchema,
   branded: z.boolean(),
   enabled: z.boolean(),

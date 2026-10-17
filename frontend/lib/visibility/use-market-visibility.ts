@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import { retainPreviousDataForScope } from '@/lib/api/query-client';
 import { queryKeys } from '@/lib/api/query-keys';
-import { visibilityApi } from '@/lib/api/visibility';
+import { visibilityApi, type VisibilityCohortParam } from '@/lib/api/visibility';
 import type { ProjectRequestScope } from '@/lib/project/request-scope';
 import { useProjectMarkets } from '@/lib/project/use-project-markets';
 
@@ -14,7 +14,7 @@ import { useProjectMarkets } from '@/lib/project/use-project-markets';
  */
 export function useMarketVisibility(
   requestScope: ProjectRequestScope,
-  cohort: 'core' | 'comparison',
+  cohort: VisibilityCohortParam,
   onTrendsTab: boolean,
 ) {
   const { workspaceId, projectId } = requestScope;

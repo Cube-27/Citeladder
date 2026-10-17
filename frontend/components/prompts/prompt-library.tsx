@@ -25,7 +25,12 @@ import type {
   PromptStatus,
   Topic,
 } from '@/lib/api/types';
-import { emptyFilters, filterPrompts, type PromptFilters } from '@/lib/prompts/filter';
+import {
+  emptyFilters,
+  filterPrompts,
+  personaOptions,
+  type PromptFilters,
+} from '@/lib/prompts/filter';
 import {
   formValuesToPromptInput,
   formValuesToPromptUpdate,
@@ -277,6 +282,7 @@ export function PromptLibrary({
     () => filterPrompts(byTopic, search, filters),
     [byTopic, search, filters],
   );
+  const personas = useMemo(() => personaOptions(prompts), [prompts]);
 
   const statusCounts = useMemo(() => {
     const counts: Record<PromptStatus, number> = { active: 0, archived: 0 };
@@ -371,6 +377,7 @@ export function PromptLibrary({
           onSearchChange={setSearch}
           filters={filters}
           onFiltersChange={setFilters}
+          personas={personas}
         />
       }
     >

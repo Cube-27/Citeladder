@@ -118,7 +118,7 @@ async function historyPoints(
       .where('p.project_id', '=', scope.projectId)
       .where('a.project_id', '=', scope.projectId)
       .where('p.prompt_id', '=', query.promptId)
-      .where('p.cohort', '=', query.cohort)
+      .where('p.cohort', 'in', [...selectedCohorts(query.cohort)])
       .where('a.market_id', 'is not distinct from', marketOf(scope))
       .where('a.audit_scope', '=', visibility.brand_audit_scope)
       .where('a.status', 'in', visibility.dashboard_audit_statuses)

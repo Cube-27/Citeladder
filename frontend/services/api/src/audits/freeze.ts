@@ -455,14 +455,10 @@ export async function prepareAudit(
     answer_instruction: auditPolicy.constants.audit_answer_instruction,
     max_attempts: settings.max_attempts,
   };
-  const promptRows = prompts.map((prompt) => ({
-    text: prompt.text,
-    theme: prompt.theme,
-    intent: prompt.intent,
-    buyer_stage: prompt.buyer_stage,
-    prompt_intent: prompt.prompt_intent,
-    cohort: prompt.cohort,
-  }));
+  // The panel is what is asked and how it is counted. Tags (theme, intent,
+  // buyer stage, persona) describe a prompt without changing either, so
+  // correcting one never starts a new comparison series.
+  const promptRows = prompts.map((prompt) => ({ text: prompt.text, cohort: prompt.cohort }));
   const panelHash = promptPanelHash(promptRows);
   const seed = parseSeed(input.random_seed);
   const brandName = brand?.name ?? project.brand_name;

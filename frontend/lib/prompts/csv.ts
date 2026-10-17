@@ -7,9 +7,9 @@
  * only parsed rows, so this module is the one CSV reader.
  *
  * Users supply only `topic` and `prompt` ({@link PROMPT_CSV_COLUMNS}, which the
- * downloadable sample is also built from). Theme, intent, buyer stage, cohort
- * and enabled remain optional columns: unknown or oversized values fall back to
- * code defaults and never produce a row error.
+ * downloadable sample is also built from). Theme, intent, buyer stage,
+ * persona, cohort and enabled remain optional columns: unknown or oversized
+ * values fall back to code defaults and never produce a row error.
  *
  * A tiny hand-rolled parser (no dependency) handles quoted fields, escaped
  * quotes (`""`), and embedded newlines — enough for prompt CSVs.
@@ -17,7 +17,7 @@
 import type { PromptImportRow } from '@/lib/api/prompts';
 import { buyerStageSchema, promptIntentSchema } from '@citeladder/contracts/project';
 import type { BuyerStage, PromptIntent } from '@/lib/api/types';
-import { PROMPT_IMPORT_MAX_ROWS } from '@/lib/config/prompts';
+import { PERSONA_MAX_CHARS, PROMPT_IMPORT_MAX_ROWS } from '@/lib/config/prompts';
 
 /** The import's column contract, in the order the sample file uses. */
 export const PROMPT_CSV_COLUMNS = ['topic', 'prompt'] as const;
@@ -40,6 +40,7 @@ const COLUMN_KEYS: Record<PromptCsvColumn, ReadonlySet<string>> = {
 const THEME_KEYS = new Set(['theme']);
 const INTENT_KEYS = new Set(['intent']);
 const STAGE_KEYS = new Set(['buyer_stage', 'buyer stage', 'stage']);
+const PERSONA_KEYS = new Set(['persona', 'audience']);
 const COHORT_KEYS = new Set(['cohort']);
 const ENABLED_KEYS = new Set(['enabled', 'is_enabled', 'active']);
 
@@ -152,12 +153,20 @@ function normalizeStage(value: string | undefined): BuyerStage {
   return VALID_STAGES.has(normalized) ? (normalized as BuyerStage) : '';
 }
 
+/** An explicit cohort is kept; a blank or missing one is left to the backend. */
+function cohortOf(value: string | undefined): Pick<PromptImportRow, 'cohort'> {
+  const normalized = (value ?? '').trim().toLowerCase();
+  if (normalized === 'comparison') return { cohort: 'comparison' };
+  return normalized === 'core' ? { cohort: 'core' } : {};
+}
+
 type ColumnMap = {
   text: number;
   topic: number;
   theme: number;
   intent: number;
   stage: number;
+  persona: number;
   cohort: number;
   enabled: number;
 };
@@ -171,6 +180,7 @@ function detectColumns(headerCells: string[]): ColumnMap | null {
     theme: find(THEME_KEYS),
     intent: find(INTENT_KEYS),
     stage: find(STAGE_KEYS),
+    persona: find(PERSONA_KEYS),
     cohort: find(COHORT_KEYS),
     enabled: find(ENABLED_KEYS),
   };
@@ -185,6 +195,7 @@ const HEADERLESS_COLUMNS: ColumnMap = {
   theme: -1,
   intent: -1,
   stage: -1,
+  persona: -1,
   cohort: -1,
   enabled: -1,
 };
@@ -209,7 +220,12 @@ function parseRow(cells: string[], map: ColumnMap, line: number): ParsedPromptRo
         .join(''),
       intent: normalizeIntent(cell(map.intent)),
       buyer_stage: normalizeStage(cell(map.stage)),
-      cohort: cell(map.cohort)?.trim().toLowerCase() === 'comparison' ? 'comparison' : 'core',
+      persona: codePoints((cell(map.persona) ?? '').trim())
+        .slice(0, PERSONA_MAX_CHARS)
+        .join(''),
+      // No cohort column leaves filing to the backend, which files a prompt
+      // naming the brand as branded.
+      ...cohortOf(cell(map.cohort)),
       enabled: asBool(cell(map.enabled), true),
     },
     errors,

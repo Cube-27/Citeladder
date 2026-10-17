@@ -4,6 +4,9 @@ import { auditStatusSchema, modelProvenanceSchema } from './audits.ts';
 import { projectMarketSchema } from './markets.ts';
 import { buyerTypeSchema, marketScopeSchema, promptCohortSchema } from './project.ts';
 
+/** What a Visibility read counts: one prompt cohort, or `all` prompts together. */
+export const visibilityCohortSchema = z.enum([...promptCohortSchema.options, 'all']);
+
 const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(shape);
 const uuid = () => z.uuid();
 
@@ -83,7 +86,7 @@ export const visibilitySchema = responseObject({
   audit_status: auditStatusSchema,
   analyzer_version: z.string(),
   scoring_rule_version: z.string(),
-  cohort: promptCohortSchema.default('core'),
+  cohort: visibilityCohortSchema.default('core'),
   coverage: z.record(z.string(), z.number().nullable()).default({}),
   total_completed: z.number().int(),
   total_failed: z.number().int(),
@@ -223,7 +226,7 @@ export const promptHistorySchema = responseObject({
     topic_id: uuid().nullable(),
     status: z.string(),
   }),
-  cohort: promptCohortSchema,
+  cohort: visibilityCohortSchema,
   market_id: uuid().nullable(),
   logical_engine: z.string().nullable(),
   points: z.array(promptHistoryPointSchema),
@@ -351,7 +354,7 @@ export const visibilityMarketRowSchema = responseObject({
   share_of_voice_delta: z.number().nullable(),
 });
 export const visibilityMarketsSchema = responseObject({
-  cohort: promptCohortSchema,
+  cohort: visibilityCohortSchema,
   markets: z.array(visibilityMarketRowSchema),
 });
 export type VisibilityMarkets = z.infer<typeof visibilityMarketsSchema>;

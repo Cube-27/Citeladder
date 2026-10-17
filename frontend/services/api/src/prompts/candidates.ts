@@ -36,6 +36,13 @@ const P = policy.prompts;
 const C = P.candidate;
 const BRANDED = new Set(P.branded_cohorts);
 const HOUR_MS = 3_600_000;
+
+/** The audience the generation plan wrote the prompt for, from its planned cell. */
+function plannedPersona(refs: unknown[]): string {
+  const cell = refs.map(record).find((ref) => ref.kind === 'business_map_cell');
+  const audience = cell?.audience;
+  return typeof audience === 'string' ? audience.trim().slice(0, P.persona_max_chars) : '';
+}
 const setting = (name: keyof typeof P.generation_settings) =>
   resolveSettingSpec(P.generation_settings[name]) as number;
 
@@ -169,6 +176,9 @@ async function acceptedRows(
       intent: candidate.intent,
       buyer_stage: candidate.buyer_stage,
       prompt_intent: candidate.prompt_intent,
+      persona: plannedPersona(
+        Array.isArray(candidate.evidence_refs) ? candidate.evidence_refs : [],
+      ),
       cohort: candidate.cohort,
       branded: BRANDED.has(candidate.cohort),
       enabled: true,

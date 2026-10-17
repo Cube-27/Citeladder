@@ -6,7 +6,7 @@ export const analyticsSelectionSchema = z.strictObject({
   audit_id: z.uuid().nullish(),
   snapshot_id: z.uuid().nullish(),
   engine: z.string().trim().min(1).nullish(),
-  cohort: z.enum(['core', 'comparison']).default('core'),
+  cohort: z.enum(['core', 'comparison', 'all']).default('core'),
   from_at: z.iso.datetime({ offset: true }).nullish(),
   to_at: z.iso.datetime({ offset: true }).nullish(),
   transport_model: z.string().trim().min(1).nullish(),

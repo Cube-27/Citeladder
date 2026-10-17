@@ -176,6 +176,7 @@ export async function candidate(
     expiresAt?: Date;
     topicId?: string | null;
     cohort?: string;
+    evidenceRefs?: Record<string, unknown>[];
   } = {},
 ): Promise<string> {
   const id = randomUUID();
@@ -194,7 +195,7 @@ export async function candidate(
       prompt_intent: 'compare',
       cohort: options.cohort ?? 'core',
       slot_id: `slot-${id}`,
-      evidence_refs: JSON.stringify([{ kind: 'page' }]),
+      evidence_refs: JSON.stringify(options.evidenceRefs ?? [{ kind: 'page' }]),
       validation: JSON.stringify({ admission: 'passed' }),
       jev_decision: options.decision == null ? null : JSON.stringify(options.decision),
       disposition: 'pending',

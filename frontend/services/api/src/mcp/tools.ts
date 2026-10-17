@@ -62,7 +62,7 @@ const crawl_id = optional(
 );
 const project = { project_id: uuid };
 const engine = optional(z.enum(policy.visibility.logical_engines));
-const cohort = z.enum(['core', 'comparison']).default('core');
+const cohort = z.enum(['core', 'comparison', 'all']).default('core');
 /** A market id from the project context's markets; omitted is the default market. */
 const market_id = optional(uuid);
 const analyticsRange = optional(z.enum(Object.keys(policy.analytics.preset_range_days)));

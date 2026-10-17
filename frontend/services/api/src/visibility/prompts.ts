@@ -151,7 +151,7 @@ async function scoreRows(
     .where('workspace_id', '=', scope.workspaceId)
     .where('project_id', '=', scope.projectId)
     .where('audit_id', 'in', auditIds)
-    .where('cohort', '=', query.cohort)
+    .where('cohort', 'in', [...selectedCohorts(query.cohort)])
     .orderBy('composite_score', 'desc')
     .orderBy('prompt_index', 'asc')
     .execute();

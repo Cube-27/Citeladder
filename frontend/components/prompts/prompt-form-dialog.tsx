@@ -8,6 +8,7 @@ import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import type { Prompt, Topic } from '@/lib/api/types';
@@ -28,7 +29,7 @@ const STAGE_OPTIONS = buyerStageValues.map((value) => ({ value, label: buyerStag
 /**
  * Add / edit prompt dialog (F7). react-hook-form + zod; the same form serves
  * create (no `prompt`) and edit (prefilled from `prompt`). It asks for the
- * prompt and its topic, plus its intent and buyer stage tags when editing,
+ * prompt and its topic, plus its intent, buyer stage and persona tags when editing,
  * and hands the validated values to `onSubmit`, whose
  * owner maps them to a create or an update payload.
  */
@@ -173,12 +174,13 @@ export function PromptFormDialog({
                 />
               )}
             </Field>
-            {/* Tags are part of a run's frozen prompt panel, so a change
-                cannot be compared with runs measured before it. */}
-            <p className="type-caption text-secondary sm:col-span-2">
-              Changing a tag starts a new comparison series: later runs are not compared with
-              earlier ones.
-            </p>
+            {/* Tags are not part of a run's frozen prompt panel, so a
+                correction keeps the prompt's comparison series. */}
+            <Field label="Persona" error={errors.persona?.message} className="sm:col-span-2">
+              {(props) => (
+                <Input {...props} {...register('persona')} placeholder="Marathon runners" />
+              )}
+            </Field>
           </div>
         ) : null}
       </form>

@@ -33,6 +33,7 @@ import {
   loadVocabulary,
   type BindingFailure,
 } from './binding.ts';
+import { brandFiling } from './brand-filing.ts';
 import { acquireProjectLock, acquirePromptSetLock } from './locks.ts';
 import { promptTextHash } from './normalization.ts';
 import { readPromptSet, scopedPromptSet } from './prompt-sets.ts';
@@ -55,12 +56,16 @@ const DUPLICATE = 'An equivalent prompt already exists in this set';
 const text = z.string().trim().min(1).max(P.text_max_chars);
 const theme = z.string().max(P.theme_max_chars);
 const intent = z.string().max(P.intent_max_chars);
+const persona = z.string().trim().max(P.persona_max_chars);
 
+/** An omitted cohort is filed by whether the text names the brand (`brand-filing.ts`). */
 export const promptInput = z.strictObject({
   text,
   theme: theme.default(''),
   intent: intent.default(''),
-  cohort: promptCohortSchema.default('core'),
+  buyer_stage: buyerStageSchema.default(''),
+  persona: persona.default(''),
+  cohort: promptCohortSchema.optional(),
   enabled: z.boolean().default(true),
   topic_id: z.uuid().nullish(),
 });
@@ -72,6 +77,7 @@ export const promptUpdate = z.strictObject({
   theme: theme.nullish(),
   intent: intent.nullish(),
   buyer_stage: buyerStageSchema.nullish(),
+  persona: persona.nullish(),
   cohort: promptCohortSchema.nullish(),
   enabled: z.boolean().nullish(),
   status: promptStatusSchema.nullish(),
@@ -86,7 +92,8 @@ const importRow = z.strictObject({
   theme: theme.default(''),
   intent: intent.default(''),
   buyer_stage: buyerStageSchema.default(''),
-  cohort: promptCohortSchema.default('core'),
+  persona: persona.default(''),
+  cohort: promptCohortSchema.optional(),
   enabled: z.boolean().default(true),
   topic: z.string().trim().max(P.topic_name_max_chars).default(''),
 });
@@ -260,6 +267,7 @@ export async function createPrompts(
       if (screened.some((item) => item.problem !== null)) throw new ApiError(409, DUPLICATE);
       const planned = screened.map(({ input, hash }) => ({ input, id: randomUUID(), hash }));
       await admitPrompts(trx, workspaceId, inputs.length);
+      const filing = await brandFiling(trx, set.project_id);
       const now = new Date();
       const rows = await trx
         .insertInto('prompts')
@@ -272,7 +280,9 @@ export async function createPrompts(
             normalized_text_hash: hash,
             theme: input.theme.trim(),
             intent: normalizeIntent(input.intent),
-            ...cohortColumns(input.cohort),
+            buyer_stage: input.buyer_stage,
+            persona: input.persona,
+            ...cohortColumns(input.cohort ?? filing(input.text)),
             enabled: input.enabled,
             status: P.status_active,
             origin: P.origins.manual,
@@ -337,6 +347,7 @@ async function applyPromptUpdate(
     ...(input.theme == null ? {} : { theme: input.theme.trim() }),
     ...(input.intent == null ? {} : { intent: normalizeIntent(input.intent) }),
     ...(input.buyer_stage == null ? {} : { buyer_stage: input.buyer_stage }),
+    ...(input.persona == null ? {} : { persona: input.persona }),
     ...(input.cohort == null ? {} : cohortColumns(input.cohort)),
     ...(input.enabled == null ? {} : { enabled: input.enabled }),
     ...(input.status == null ? {} : { status: input.status }),
@@ -474,6 +485,7 @@ export async function importPrompts(
       [...byHash.values()].map((row) => row.topic),
     );
     const now = new Date();
+    const filing = await brandFiling(trx, set.project_id);
     await trx
       .insertInto('prompts')
       .values(
@@ -486,7 +498,8 @@ export async function importPrompts(
           theme: row.theme.trim(),
           intent: normalizeIntent(row.intent),
           buyer_stage: row.buyer_stage,
-          ...cohortColumns(row.cohort),
+          persona: row.persona,
+          ...cohortColumns(row.cohort ?? filing(row.text)),
           enabled: row.enabled,
           status: P.status_active,
           origin: P.origins.imported,

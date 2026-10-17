@@ -68,7 +68,7 @@ import { defineGetRoute } from './define.ts';
 
 const PROJECT_PATH = { project_id: { scalar: { kind: 'uuid' }, required: true } } as const;
 const COHORT = {
-  scalar: { kind: 'literal', values: ['core', 'comparison'] },
+  scalar: { kind: 'literal', values: ['core', 'comparison', 'all'] },
   default: 'core',
 } as const;
 /** The measurement market; omitted is the project default. Named runs imply their own. */

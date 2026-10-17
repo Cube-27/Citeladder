@@ -1,11 +1,12 @@
 /**
- * Which prompts Visibility reads: unbranded (`core`) or branded comparison
- * prompts. The choice is a device convenience remembered per project, so a
- * reader who works on branded prompts returns to them; the URL still wins.
+ * Which prompts Visibility reads: unbranded (`core`), branded comparison
+ * prompts, or all of them together. The choice is a device convenience
+ * remembered per project, so a reader who works on branded prompts returns to
+ * them; the URL still wins.
  */
 import type { UrlCodec } from '@/lib/navigation/url-state';
 
-export const PROMPT_COHORTS = ['core', 'comparison'] as const;
+export const PROMPT_COHORTS = ['core', 'comparison', 'all'] as const;
 export type PromptCohort = (typeof PROMPT_COHORTS)[number];
 
 const storageKey = (projectId: string) => `citeladder.prompt-cohort.${projectId}`;

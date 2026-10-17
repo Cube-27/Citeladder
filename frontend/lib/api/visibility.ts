@@ -52,11 +52,14 @@ import type {
 const promptMetricListSchema = z.array(promptMetricItemSchema);
 const observedCompetitorListSchema = z.array(observedCompetitorSchema);
 
+/** Which prompts a Visibility read counts: unbranded, branded, or all of them. */
+export type VisibilityCohortParam = 'core' | 'comparison' | 'all';
+
 /** Filters for the cross-run trend request (all optional; same-origin only). */
 type VisibilityTrendParams = {
   /** A non-default market's id; omitted reads the project default. */
   market?: string;
-  cohort?: 'core' | 'comparison';
+  cohort?: VisibilityCohortParam;
   /** Logical engine slice (`chatgpt` | `gemini` | `claude`); omit for all. */
   engine?: string;
   /** Inclusive UTC lower bound (ISO 8601) for the completion window. */
@@ -80,7 +83,7 @@ type VisibilityEvidenceParams = {
   competitor?: string;
   domain?: string;
   url?: string;
-  cohort?: 'core' | 'comparison';
+  cohort?: VisibilityCohortParam;
   /** Restrict to one audit in the authorized project. */
   audit_id?: string;
   /** Restrict by the source prompt frozen on `AuditPromptSnapshot.prompt_id`. */
@@ -100,7 +103,7 @@ export type ProjectVisibilityParams = {
   audit_id?: string;
   /** A non-default market's id; omitted reads the project default. */
   market?: string;
-  cohort?: 'core' | 'comparison';
+  cohort?: VisibilityCohortParam;
   engine?: string;
   baseline_id?: string;
   selection_mode?: string;

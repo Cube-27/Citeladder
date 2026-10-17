@@ -46,6 +46,7 @@ export function promptView(row: PromptRow, overLimit: ReadonlySet<string>): Prom
     intent: promptIntentSchema.parse(row.intent),
     buyer_stage: buyerStageSchema.parse(row.buyer_stage),
     prompt_intent: promptIntentDetailSchema.parse(row.prompt_intent),
+    persona: row.persona,
     cohort: promptCohortSchema.parse(row.cohort),
     branded: row.branded,
     enabled: row.enabled,

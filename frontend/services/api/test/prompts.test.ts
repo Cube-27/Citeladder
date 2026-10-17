@@ -128,6 +128,32 @@ describe('manual prompts', () => {
     expect((await post(`/prompt-sets/${t.setId}/prompts`, { text: '   ' })).status).toBe(422);
   });
 
+  it('files a prompt naming the brand as branded unless a cohort is chosen', async () => {
+    await fixtures.competitor(t.projectId, { name: 'Globex' });
+    const create = async (body: Record<string, unknown>) =>
+      (await post<Prompt>(`/prompt-sets/${t.setId}/prompts`, body)).body;
+    const filed = await Promise.all([
+      create({ text: 'Is Acme Running good for trail shoes?', persona: ' Trail runners ' }),
+      create({ text: 'Acme Running or Globex for running shoes?' }),
+      create({ text: 'Which running shoes last longest?' }),
+      create({ text: 'Acme Running shoes for flat feet?', cohort: 'core' }),
+    ]);
+    expect(filed.map((row) => [row.cohort, row.branded, row.persona])).toEqual([
+      ['brand_diagnostic', true, 'Trail runners'],
+      ['comparison', true, ''],
+      ['core', false, ''],
+      ['core', false, ''],
+    ]);
+    const imported = await post<PromptSet>(`/prompt-sets/${t.setId}/import`, {
+      prompts: [{ text: 'Is Acme Running sold online?', topic: '', persona: 'Shoppers' }],
+    });
+    expect(
+      imported.body.prompts
+        .filter((row) => row.text === 'Is Acme Running sold online?')
+        .map((row) => [row.cohort, row.persona, row.origin]),
+    ).toEqual([['brand_diagnostic', 'Shoppers', 'imported']]);
+  });
+
   it('binds against the prompt topic and refuses a topic from another project', async () => {
     const topicId = await topic(db, t.projectId, 'Trail gear', 'hydration packs');
     const filed = await post<Prompt>(`/prompt-sets/${t.setId}/prompts`, {
@@ -182,6 +208,9 @@ describe('prompt edits', () => {
     const kept = await patch<Prompt>(`/prompts/${id}`, { theme: 'trail' });
     expect(kept.body.buyer_stage).toBe('decision');
     expect((await patch(`/prompts/${id}`, { buyer_stage: 'someday' })).status).toBe(422);
+    const persona = await patch<Prompt>(`/prompts/${id}`, { persona: ' Trail runners ' });
+    expect([persona.body.persona, persona.body.buyer_stage]).toEqual(['Trail runners', 'decision']);
+    expect((await patch(`/prompts/${id}`, { persona: 'x'.repeat(121) })).status).toBe(422);
   });
 
   it('re-binds on activation against the prompt topic', async () => {
@@ -355,7 +384,11 @@ describe('candidate review', () => {
     const runId = await run();
     const scope = { workspaceId: t.workspaceId, setId: t.setId, runId };
     const topicId = await topic(db, t.projectId, 'Road');
-    const accept = await candidate(db, scope, 'acme road shoes', { topicId, cohort: 'comparison' });
+    const accept = await candidate(db, scope, 'acme road shoes', {
+      topicId,
+      cohort: 'comparison',
+      evidenceRefs: [{ kind: 'business_map_cell', audience: 'Road runners' }, { kind: 'page' }],
+    });
     const already = await candidate(db, scope, 'acme trail shoes');
     await prompt(db, t.setId, 'Acme trail shoes?');
     const judged = await candidate(db, scope, 'acme flats', {
@@ -378,6 +411,7 @@ describe('candidate review', () => {
       theme: 'Road',
       origin: 'generated',
       branded: true,
+      persona: 'Road runners',
     });
     // Views omit the evidence; the provenance stays on the stored prompt.
     expect(review.body.accepted[0]).not.toHaveProperty('generation_evidence');

@@ -28,6 +28,7 @@ import {
   type RankingRow,
 } from './metrics.ts';
 import { loadMeasuredRuns, type MeasuredRun, type RunScope } from './runs.ts';
+import { selectedCohorts } from './selection.ts';
 
 export type VisibilityComparison = z.input<typeof visibilityComparisonSchema>;
 
@@ -200,7 +201,7 @@ export async function loadComparisonCells(
     ])
     .where('ra.workspace_id', '=', current.workspaceId)
     .where('ra.audit_id', 'in', [current.auditId, previous.auditId])
-    .where('ra.cohort', '=', selector.cohort);
+    .where('ra.cohort', 'in', [...selectedCohorts(selector.cohort)]);
   if (selector.engine) query = query.where('ra.logical_engine', '=', selector.engine);
   const cells = new Map<string, Map<string, ComparisonCell>>([
     [current.auditId, new Map()],
@@ -380,7 +381,7 @@ export async function competitorGaps(
     .where('ra.workspace_id', '=', input.workspaceId)
     .where('ra.audit_id', 'in', [...input.auditIds])
     .where('ra.brand_mentioned', '=', false)
-    .where('ra.cohort', '=', input.cohort);
+    .where('ra.cohort', 'in', [...selectedCohorts(input.cohort)]);
   if (input.engine) query = query.where('ra.logical_engine', '=', input.engine);
   const rows = await query.groupBy('mention.competitor_name').execute();
   return new Map(rows.map((row) => [row.competitor_name, Number(row.gaps)]));

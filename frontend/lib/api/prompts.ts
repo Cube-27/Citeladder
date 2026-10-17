@@ -35,8 +35,9 @@ const promptCandidateListSchema = z.array(promptCandidateSchema);
 export type PromptInput = {
   text: string;
   // Theme, intent and cohort are internal vocabulary: users are never asked
-  // for them, and omitting them takes the backend's defaults. Backend
-  // `PromptInput.theme` is a non-null `str = ""` — create/import 422 on null.
+  // for them, and omitting them takes the backend's defaults. An omitted
+  // cohort is filed by the backend: branded when the text names the brand.
+  // Backend `PromptInput.theme` is a non-null `str = ""` — create/import 422 on null.
   theme?: string;
   intent?: Prompt['intent'];
   cohort?: Prompt['cohort'];
@@ -52,11 +53,13 @@ export type PromptInput = {
 export type PromptImportRow = PromptInput & {
   topic: string;
   buyer_stage?: BuyerStage;
+  persona?: string;
 };
 
 export type PromptUpdateInput = Partial<Omit<PromptInput, 'topic_id'>> & {
   status?: PromptStatus;
   buyer_stage?: BuyerStage;
+  persona?: string;
   // Explicit null detaches the prompt from its topic.
   topic_id?: string | null;
 };

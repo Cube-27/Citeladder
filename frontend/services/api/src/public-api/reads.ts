@@ -30,7 +30,10 @@ const latestMeasurementSchema = z.discriminatedUnion('state', [
   // A cohort with no per-prompt visibility reading (brand diagnostics).
   z.object({ state: z.literal('unavailable') }),
 ]);
-const MEASURED_COHORTS: readonly string[] = policy.visibility.requestable_cohorts;
+// A prompt's own cohort; "all" pools cohorts and is no prompt's measurement.
+const MEASURED_COHORTS: readonly string[] = policy.visibility.requestable_cohorts.filter(
+  (cohort) => cohort !== policy.visibility.all_cohort,
+);
 export const publicPromptSchema = promptSchema.extend({
   latest_measurement: latestMeasurementSchema,
 });

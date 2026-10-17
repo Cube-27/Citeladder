@@ -16,6 +16,7 @@ export function makePrompt(overrides: Partial<Prompt> = {}): Prompt {
     intent: 'discovery',
     buyer_stage: '',
     prompt_intent: '',
+    persona: '',
     cohort: 'core',
     branded: false,
     enabled: true,

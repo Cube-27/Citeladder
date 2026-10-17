@@ -17,6 +17,7 @@ it('navigates using server cursors and disables navigation while loading', () =>
     next_cursor: 'next',
     previous_cursor: 'previous',
     comparison_status: 'no_baseline',
+    retrieval: { responses: 0, unavailable_engines: [] },
     items: [],
   };
   const props = {

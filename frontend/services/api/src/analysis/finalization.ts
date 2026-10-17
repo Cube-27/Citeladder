@@ -240,7 +240,17 @@ export function finalizeAudit(
         rows.filter((r) => r.cohort === 'brand_diagnostic').length,
       ),
     };
-    const metrics = { ...organic, comparison, brand_diagnostic: diagnostic };
+    // Unbranded and branded prompts together: its own block, never a blend of
+    // the other two, so its rates are counted over the answers they share.
+    const all = cohortMetrics(
+      rows,
+      tasks,
+      config,
+      policy.visibility.all_cohorts,
+      policy.visibility.all_cohort,
+      engines,
+    );
+    const metrics = { ...organic, comparison, brand_diagnostic: diagnostic, all };
     const visibility = organic.per_prompt.length
       ? round(
           organic.per_prompt.reduce((sum, p) => sum + p.composite_score, 0) /

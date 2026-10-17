@@ -22,7 +22,7 @@ import { classifyCitation, scoringConfig } from '../analysis/scoring.ts';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { wireUtcOrNull, utcText } from '../db/timestamps.ts';
-import { authorizeRunSet, isLogicalEngine, unknownEngine } from './selection.ts';
+import { authorizeRunSet, isLogicalEngine, selectedCohorts, unknownEngine } from './selection.ts';
 import { compareText } from '../text-order.ts';
 
 type JsonObject = Record<string, unknown>;
@@ -235,7 +235,7 @@ function scopedObservations(db: Database, scope: RateScope) {
     .leftJoin('response_analyses as ra', 'ra.task_id', 'observation.task_id')
     .where('observation.workspace_id', '=', scope.workspaceId)
     .where('audit.project_id', '=', scope.projectId)
-    .where('snapshot.cohort', '=', scope.cohort);
+    .where('snapshot.cohort', 'in', [...selectedCohorts(scope.cohort)]);
   if (scope.auditIds?.length) query = query.where('observation.audit_id', 'in', scope.auditIds);
   else if (scope.auditId !== null) query = query.where('observation.audit_id', '=', scope.auditId);
   else query = query.where('audit.market_id', 'is not distinct from', scope.marketId);
