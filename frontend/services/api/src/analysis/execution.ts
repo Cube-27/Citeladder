@@ -16,6 +16,12 @@ import { fanoutProjection } from './fanout.ts';
 import { enqueuePerception } from '../perception/admission.ts';
 import { answerAds, persistAds } from './ads.ts';
 
+/** A retrieved URL is never provider-resolved, so it keeps no resolved URL. */
+function retrievedIdentity(url: string) {
+  const { resolved_url: _resolved, ...identity } = citationIdentity(url);
+  return identity;
+}
+
 function citationClassification(classified: ClassifiedCitation) {
   if (classified.is_owned) return 'owned';
   if (classified.is_unintended) return 'unintended';
@@ -51,6 +57,11 @@ export const analyzeExecution: DeriveExecution = async (db, task, audit, artifac
   const config = scoringConfig(audit.configuration),
     metadata = record(artifact.provider_metadata);
   const citations = jsonObjects(artifact.citations ?? [], 'artifact.citations');
+  // Null when the surface does not expose what it read.
+  const retrieved =
+    artifact.retrieved_sources === null
+      ? null
+      : jsonObjects(artifact.retrieved_sources, 'artifact.retrieved_sources');
   const score = {
     ...scoreExecution({
       config,
@@ -110,6 +121,7 @@ export const analyzeExecution: DeriveExecution = async (db, task, audit, artifac
       avg_position: score.brand_position,
       score: JSON.stringify(score),
       entity_assessments: JSON.stringify(assessments),
+      retrieval_observed: retrieved !== null,
       created_at: at,
     })
     .execute();
@@ -169,6 +181,25 @@ export const analyzeExecution: DeriveExecution = async (db, task, audit, artifac
             is_unintended: classified.is_unintended,
             matched_competitor: classified.matched_competitor,
             ...citationIdentity(resolved || scalarText(citation.url), Boolean(resolved)),
+          };
+        }),
+      )
+      .execute();
+  if (retrieved?.length)
+    await db
+      .insertInto('retrieved_sources')
+      .values(
+        retrieved.map((source, ordinal) => {
+          const classified = classifyCitation(source, config);
+          return {
+            ...provenance,
+            id: randomUUID(),
+            ordinal: typeof source.ordinal === 'number' ? source.ordinal : ordinal,
+            url: scalarText(source.url),
+            title: scalarText(source.title),
+            domain: classified.domain,
+            is_owned: classified.is_owned,
+            ...retrievedIdentity(scalarText(source.url)),
           };
         }),
       )

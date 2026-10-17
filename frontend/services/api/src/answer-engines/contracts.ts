@@ -58,6 +58,13 @@ export type Citation = {
   end_index: number | null;
   cited_text: string;
 };
+/** A page the engine read while answering, whether or not the answer cites it. */
+export type RetrievedSource = {
+  ordinal: number;
+  url: string;
+  title: string;
+  domain: string;
+};
 export type Answer = Pick<
   AnswerRequest,
   'logical_engine' | 'transport_provider' | 'transport_model'
@@ -66,6 +73,8 @@ export type Answer = Pick<
   search_used: boolean;
   search_events: SearchEvent[];
   citations: Citation[];
+  /** `null` when the surface does not expose what it read; `[]` is an observed empty read. */
+  retrieved_sources: RetrievedSource[] | null;
   finish_reason: FinishReason;
   raw_finish_reason: string;
   normalized_usage: Usage;

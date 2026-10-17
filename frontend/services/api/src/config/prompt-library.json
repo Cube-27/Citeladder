@@ -14,6 +14,7 @@
     "text_min_words": 2,
     "theme_max_chars": 255,
     "intent_max_chars": 64,
+    "persona_max_chars": 120,
     "topic_name_max_chars": 255,
     "import_max_rows": 500,
     "create_batch_max": 50,
@@ -305,7 +306,9 @@
   "cohorts": {
     "core_cohort": "core",
     "organic_cohorts": ["core"],
-    "requestable_cohorts": ["commerce", "comparison", "core"]
+    "all_cohort": "all",
+    "all_cohorts": ["comparison", "core"],
+    "requestable_cohorts": ["all", "commerce", "comparison", "core"]
   },
   "prompt_set_name": "AI Visibility"
 }

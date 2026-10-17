@@ -47,6 +47,7 @@ const METRICS_HELP_URL = '/faq';
 const COHORT_LABELS = {
   core: 'Unbranded prompts',
   comparison: 'Branded prompts',
+  all: 'All prompts',
 } as const satisfies Record<PromptCohort, string>;
 
 type ToolbarProps = Readonly<{

@@ -43,19 +43,28 @@ describe('parsePromptCsv', () => {
       theme: '',
       intent: '',
       buyer_stage: '',
-      cohort: 'core',
+      persona: '',
       enabled: true,
     });
   });
 
-  it('reads optional intent and buyer stage tags, leaving unknown stages unset', () => {
+  it('reads optional intent, buyer stage and persona tags, leaving unknown stages unset', () => {
     const parsed = parsePromptCsv(
-      'prompt,intent,buyer_stage\nBest shoes?,Purchase,Decision\nShoe care tips,discovery,someday',
+      'prompt,intent,buyer_stage,persona\nBest shoes?,Purchase,Decision, Marathon runners \nShoe care tips,discovery,someday,',
     );
-    expect(parsed.rows.map((row) => [row.input.intent, row.input.buyer_stage])).toEqual([
-      ['purchase', 'decision'],
-      ['discovery', ''],
+    expect(
+      parsed.rows.map((row) => [row.input.intent, row.input.buyer_stage, row.input.persona]),
+    ).toEqual([
+      ['purchase', 'decision', 'Marathon runners'],
+      ['discovery', '', ''],
     ]);
+  });
+
+  it('keeps an explicit cohort and leaves a blank one for the server to file', () => {
+    const parsed = parsePromptCsv(
+      'prompt,cohort\nAcme vs Rival?,comparison\nBest shoes?,core\nShoe care?,',
+    );
+    expect(parsed.rows.map((row) => row.input.cohort)).toEqual(['comparison', 'core', undefined]);
   });
 
   it('never rejects a row for its internal columns', () => {
@@ -63,7 +72,8 @@ describe('parsePromptCsv', () => {
       `question,category,intent,cohort,theme\nBest shoes?,,frobnicate,weird,${'t'.repeat(300)}`,
     );
     expect(parsed.rows[0]!.errors).toEqual([]);
-    expect(parsed.rows[0]!.input).toMatchObject({ topic: '', intent: '', cohort: 'core' });
+    expect(parsed.rows[0]!.input).toMatchObject({ topic: '', intent: '' });
+    expect(parsed.rows[0]!.input.cohort).toBeUndefined();
     expect(parsed.rows[0]!.input.theme).toHaveLength(255);
   });
 

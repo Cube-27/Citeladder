@@ -74,8 +74,12 @@ export function validateCohort(cohort: string): void {
   }
 }
 
-/** The cohorts a selection reads: core is every organic cohort. */
+/**
+ * The cohorts a selection reads: core is every organic cohort, and "all" is
+ * the unbranded and branded prompts together.
+ */
 export function selectedCohorts(cohort: string): readonly string[] {
+  if (cohort === visibility.all_cohort) return visibility.all_cohorts;
   return cohort === visibility.core_cohort ? visibility.organic_cohorts : [cohort];
 }
 

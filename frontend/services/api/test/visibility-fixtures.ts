@@ -60,6 +60,8 @@ export type ExecutionInput = {
     }[];
     brandMentions?: string[];
     competitorMentions?: string[];
+    /** Pages the answer read; omitted means the surface exposed no reads. */
+    retrieved?: { url: string; isOwned?: boolean; urlHash?: string | null }[];
   } | null;
   observation?: ObservationInput;
 };
@@ -70,6 +72,7 @@ const TABLES_BY_WORKSPACE = [
   'prompt_metric_snapshots',
   'aio_entity_links',
   'aio_observations',
+  'retrieved_sources',
   'citations',
   'brand_mentions',
   'competitor_mentions',
@@ -396,6 +399,7 @@ export class VisibilityFixtures extends Fixtures {
         }),
         entity_assessments: JSON.stringify([]),
         score: spec.score === undefined ? null : JSON.stringify(spec.score),
+        retrieval_observed: spec.retrieved !== undefined,
         created_at: spec.createdAt ?? now(),
       })
       .execute();
@@ -435,6 +439,21 @@ export class VisibilityFixtures extends Fixtures {
           is_owned: citation.isOwned ?? false,
           is_unintended: false,
           matched_competitor: citation.matched ?? null,
+        })
+        .execute();
+    }
+    for (const [ordinal, source] of (spec.retrieved ?? []).entries()) {
+      await this.database
+        .insertInto('retrieved_sources')
+        .values({
+          ...mention,
+          id: randomUUID(),
+          ordinal,
+          url: source.url,
+          domain: new URL(source.url).hostname,
+          title: '',
+          is_owned: source.isOwned ?? false,
+          url_hash: source.urlHash ?? null,
         })
         .execute();
     }

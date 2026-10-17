@@ -4,12 +4,13 @@
  * A small zod schema + helpers used by the add/edit dialog. Kept separate from
  * the component so the mapping to the API payloads is unit-testable and the
  * dialog stays presentational. A new prompt needs only its text and topic;
- * editing also corrects its intent and buyer stage tags. Theme and cohort stay
- * internal vocabulary with code defaults.
+ * editing also corrects its intent, buyer stage and persona tags. Theme and
+ * cohort stay internal vocabulary with code defaults.
  */
 import { z } from 'zod';
 
 import type { PromptInput, PromptUpdateInput } from '@/lib/api/prompts';
+import { PERSONA_MAX_CHARS } from '@/lib/config/prompts';
 import { buyerStageSchema, promptIntentSchema } from '@citeladder/contracts/project';
 import type { BuyerStage, Prompt, PromptIntent } from '@/lib/api/types';
 
@@ -19,6 +20,8 @@ export const promptFormSchema = z.object({
   topicId: z.string(),
   intent: promptIntentSchema,
   buyerStage: buyerStageSchema,
+  /** The buyer the prompt is asked as; '' for none. */
+  persona: z.string().trim().max(PERSONA_MAX_CHARS, 'Persona is too long.'),
 });
 
 export type PromptFormValues = z.infer<typeof promptFormSchema>;
@@ -49,7 +52,7 @@ export const buyerStageLabels: Record<BuyerStage, string> = {
 
 /** A blank add form, filed under the topic the reader is looking at. */
 export function emptyPromptForm(topicId: string | null = null): PromptFormValues {
-  return { text: '', topicId: topicId ?? '', intent: '', buyerStage: '' };
+  return { text: '', topicId: topicId ?? '', intent: '', buyerStage: '', persona: '' };
 }
 
 /** Prefill the form from an existing prompt (edit path). */
@@ -59,6 +62,7 @@ export function promptToFormValues(prompt: Prompt): PromptFormValues {
     topicId: prompt.topic_id ?? '',
     intent: prompt.intent,
     buyerStage: prompt.buyer_stage,
+    persona: prompt.persona,
   };
 }
 
@@ -79,5 +83,6 @@ export function formValuesToPromptUpdate(values: PromptFormValues): PromptUpdate
     topic_id: values.topicId || null,
     intent: values.intent,
     buyer_stage: values.buyerStage,
+    persona: values.persona.trim(),
   };
 }

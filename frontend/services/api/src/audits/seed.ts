@@ -61,6 +61,13 @@ export async function seedAudit(
         logical_engine: input.logical_engine,
         transport_provider: input.transport_provider,
         transport_model: input.transport_model,
+        // A fixture answer read exactly the pages it cites.
+        retrieved_sources: fixture.citations.map(({ ordinal, url, title, domain }) => ({
+          ordinal,
+          url,
+          title,
+          domain,
+        })),
         search_events: fixture.search_used
           ? [
               {

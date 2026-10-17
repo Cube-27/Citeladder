@@ -4,6 +4,7 @@ import type {
   AnswerRequest,
   Citation,
   FinishReason,
+  RetrievedSource,
   SearchEvent,
   Usage,
 } from './contracts.ts';
@@ -111,6 +112,33 @@ function events(calls: ObjectValue[], transport: string): SearchEvent[] {
       }));
     })
     .map((event, sequence) => ({ ...event, sequence }));
+}
+/**
+ * What the engine read: OpenAI's consulted sources on each search call and
+ * Anthropic's search results. Google does not expose them, so it stays unknown.
+ */
+function retrievedSources(
+  items: ObjectValue[],
+  calls: ObjectValue[],
+  transport: string,
+): RetrievedSource[] | null {
+  if (transport === 'google') return null;
+  const results =
+    transport === 'openai'
+      ? calls.flatMap((call) => objects(object(call.action).sources))
+      : items
+          .filter((item) => item.type === 'web_search_tool_result')
+          .flatMap((item) => objects(item.content))
+          .filter((result) => result.type === 'web_search_result');
+  const seen = new Set<string>();
+  const sources: RetrievedSource[] = [];
+  for (const result of results) {
+    const url = text(result.url);
+    if (!url || seen.has(url)) continue;
+    seen.add(url);
+    sources.push({ ordinal: sources.length, url, title: text(result.title), domain: domain(url) });
+  }
+  return sources;
 }
 const GOOGLE_FINISH: Record<string, FinishReason> = {
   STOP: 'stop',
@@ -263,6 +291,7 @@ export function parseAnswer(payload: unknown, request: AnswerRequest, latencyMs 
         : (usage.web_search_requests ?? 0) > 0,
     search_events: searchEvents,
     citations,
+    retrieved_sources: retrievedSources(items, calls, transport),
     finish_reason: finish,
     raw_finish_reason: rawFinish,
     normalized_usage: usage,

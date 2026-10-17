@@ -225,7 +225,7 @@ function TopicBadge({ name }: Readonly<{ name?: string }>) {
   );
 }
 
-/** Whether the prompt names a brand, then its intent and buyer stage when set. */
+/** Whether the prompt names a brand, then its intent, buyer stage and persona when set. */
 function PromptTags({ prompt }: Readonly<{ prompt: Prompt }>) {
   return (
     <span className="flex flex-wrap gap-1">
@@ -234,6 +234,7 @@ function PromptTags({ prompt }: Readonly<{ prompt: Prompt }>) {
       </Tag>
       {prompt.intent ? <Tag tone="outline">{intentLabels[prompt.intent]}</Tag> : null}
       {prompt.buyer_stage ? <Tag tone="outline">{buyerStageLabels[prompt.buyer_stage]}</Tag> : null}
+      {prompt.persona ? <Tag tone="outline">{prompt.persona}</Tag> : null}
     </span>
   );
 }

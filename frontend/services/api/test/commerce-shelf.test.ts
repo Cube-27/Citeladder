@@ -273,6 +273,7 @@ describe('frozen Commerce shelf projections', () => {
       raw_finish_reason: 'stop',
       latency_ms: 1,
       provider_metadata: {},
+      retrieved_sources: null,
       citations: [
         {
           ordinal: 1,

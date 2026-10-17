@@ -32,7 +32,11 @@ function openaiPayload(request: AnswerRequest): Record<string, unknown> {
     ...(request.system_instruction ? { instructions: request.system_instruction } : {}),
     ...openaiReasoning(request.reasoning_effort),
     ...(request.retrieval_enabled
-      ? { tools: [{ type: 'web_search', ...approximateLocation(request) }] }
+      ? {
+          tools: [{ type: 'web_search', ...approximateLocation(request) }],
+          // The sources each search consulted, cited or not.
+          include: ['web_search_call.action.sources'],
+        }
       : {}),
   };
 }

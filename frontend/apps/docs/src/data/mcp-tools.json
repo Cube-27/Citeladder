@@ -154,7 +154,7 @@
           "cohort": {
             "default": "core",
             "type": "string",
-            "enum": ["core", "comparison"]
+            "enum": ["core", "comparison", "all"]
           },
           "cursor": {
             "type": "string",
@@ -498,7 +498,7 @@
           "cohort": {
             "default": "core",
             "type": "string",
-            "enum": ["core", "comparison"]
+            "enum": ["core", "comparison", "all"]
           },
           "view": {
             "default": "summary",
@@ -587,7 +587,7 @@
           "cohort": {
             "default": "core",
             "type": "string",
-            "enum": ["core", "comparison"]
+            "enum": ["core", "comparison", "all"]
           },
           "view": {
             "default": "summary",
@@ -1019,7 +1019,7 @@
           "cohort": {
             "default": "core",
             "type": "string",
-            "enum": ["core", "comparison"]
+            "enum": ["core", "comparison", "all"]
           }
         },
         "required": ["project_id", "url"],
@@ -1064,7 +1064,7 @@
           "cohort": {
             "default": "core",
             "type": "string",
-            "enum": ["core", "comparison"]
+            "enum": ["core", "comparison", "all"]
           }
         },
         "required": ["project_id"],
@@ -1102,7 +1102,7 @@
           "cohort": {
             "default": "core",
             "type": "string",
-            "enum": ["core", "comparison"]
+            "enum": ["core", "comparison", "all"]
           },
           "prompt_id": {
             "type": "string",
@@ -1166,7 +1166,7 @@
           "cohort": {
             "default": "core",
             "type": "string",
-            "enum": ["core", "comparison"]
+            "enum": ["core", "comparison", "all"]
           },
           "level": {
             "default": "domain",
@@ -1230,7 +1230,7 @@
           "cohort": {
             "default": "core",
             "type": "string",
-            "enum": ["core", "comparison"]
+            "enum": ["core", "comparison", "all"]
           },
           "granularity": {
             "default": "run",
@@ -1302,7 +1302,7 @@
           "cohort": {
             "default": "core",
             "type": "string",
-            "enum": ["core", "comparison"]
+            "enum": ["core", "comparison", "all"]
           },
           "from_at": {
             "type": "string",

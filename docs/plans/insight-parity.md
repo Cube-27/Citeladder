@@ -23,6 +23,12 @@ local reset; no data migrations; versions stay at 1) and no back-compat.
 | I10 | Every feature here is on all plans, including the trial ([B57](../billing-decisions.md#insight-parity-2026-10-16)). |
 | I11 | Build order: tags, then sources, then Overview. |
 
+## Owner decisions (2026-10-17)
+
+| ID | Decision |
+|---|---|
+| I13 | I12 is lifted for this plan: PR 2 and PR 3 may change the schema, and the items I12 deferred join them: persona tags, the "All prompts" total, brand auto-filing, tags out of the panel hash, and Site Health Recrawl. Scheduled crawls stay in the backlog until their cadence and gating are decided. Source: owner, 2026-10-17, "u can proceed with implementation of PR 2 then PR 3 and u can also include the schema changes backlog which were deferred yesterday like persona, recrawl and change". |
+
 ## Not in scope
 
 Dropped by the owner on 2026-10-16. Do not reopen without a new owner request:
@@ -66,12 +72,13 @@ Dropped by the owner on 2026-10-16. Do not reopen without a new owner request:
   remembered per project on the device (I3). The API, public API and MCP
   already take the same `cohort` parameter, so no contract changes.
 
-Moved to the backlog by I12: persona tags (new column), an "All prompts"
-Visibility total (needs a new finalization aggregate, so existing runs would
-read as unavailable), and auto-filing manual prompts that name the brand as
-branded.
+Shipped as #414. The items I12 moved out of it are in PR 2 under I13.
 
-### PR 2: retrieved versus cited, and top movers
+### PR 2: retrieved versus cited, top movers and the deferred prompt items
+
+- Persona tag column (editable, filterable, CSV `persona`), brand auto-filing
+  of manual and imported prompts, tags out of the panel hash, and the "All
+  prompts" Visibility total (I13).
 
 - Measurement requests that support it ask for consulted sources; the parser
   records retrieved URLs as their own evidence kind, distinct from citations.
@@ -87,12 +94,14 @@ branded.
   sections; the library adds visibility, share of voice, top movers, retrieved
   versus cited, perception, AI Traffic and Search Console widgets.
 - One persisted layout per project (I6, I7): add, remove, reorder, resize and
-  reset, with an expected-revision check on save. Under I12 the layout must
-  fit existing storage; if it cannot, re-scope with the owner before coding.
+  reset, with an expected-revision check on save, in its own table (I13).
 - PDF export of the current layout (I8); delete `executive-report.ts`, its
   route, client call and tests under the
   [replacement gate](../invariants.md#replacement-and-retirement).
 - Widgets keep fixed footprints for loading, empty and error states.
+- Site Health Recrawl (I13): rerun a crawl with its frozen origin, scope and
+  settings so Changes always has a comparable baseline; plan grants and fetch
+  budgets unchanged.
 
 ## Done when
 
@@ -101,6 +110,8 @@ branded.
   toggle is remembered per project.
 - **PR 2:** Sources separates retrieved from cited per engine, with
   not-available engines labelled, and top movers show risers and fallers by
-  share change.
+  share change; prompts carry personas, brand-naming prompts file as branded,
+  and Visibility offers All prompts.
 - **PR 3:** Overview is editable, persists per project, resets to the old
-  layout and exports to PDF; the Executive PDF endpoint is gone.
+  layout and exports to PDF; the Executive PDF endpoint is gone; a crawl can
+  be rerun as a comparable recrawl.

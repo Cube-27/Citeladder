@@ -28,23 +28,27 @@ export function DomainFilter({
   );
 }
 
+export type PageStandingFilter = 'gap' | 'near_miss' | null;
+
 /**
- * Narrows the URL table to gaps: pages whose latest reading lists a tracked
- * competitor and not you. A page nobody has read is never a gap.
+ * Narrows the URL table to gaps -- pages whose latest reading lists a tracked
+ * competitor and not you; a page nobody has read is never a gap -- or to your
+ * own pages an engine read and still did not cite.
  */
-export function GapFilter({
+export function StandingFilter({
   value,
   onChange,
-}: Readonly<{ value: boolean; onChange: (gapOnly: boolean) => void }>) {
+}: Readonly<{ value: PageStandingFilter; onChange: (value: PageStandingFilter) => void }>) {
   return (
     <FilterChoice
       label="Filter by standing"
-      value={value ? 'gap' : 'all'}
+      value={value ?? 'all'}
       options={[
         { value: 'all', label: 'All pages' },
         { value: 'gap', label: 'Gaps: competitors listed, not you' },
+        { value: 'near_miss', label: 'Your pages read but not cited' },
       ]}
-      onChange={(next) => onChange(next === 'gap')}
+      onChange={(next) => onChange(next === 'gap' || next === 'near_miss' ? next : null)}
     />
   );
 }

@@ -52,34 +52,36 @@ export function PromptFilterControls({
   onSearchChange,
   filters,
   onFiltersChange,
+  personas = [],
 }: Readonly<{
   search: string;
   onSearchChange: (value: string) => void;
   filters: PromptFilters;
   onFiltersChange: (filters: PromptFilters) => void;
+  /** The personas the library uses; the menu lists them when there are any. */
+  personas?: readonly string[];
 }>) {
   const activeFilterCount =
     filters.intents.length +
     filters.stages.length +
+    filters.personas.length +
     (filters.enabled === 'all' ? 0 : 1) +
     (filters.branded === 'all' ? 0 : 1);
 
   // Set lookups: `checked` is computed per option in the render loops.
   const selectedIntents = new Set(filters.intents);
   const selectedStages = new Set(filters.stages);
+  const selectedPersonas = new Set(filters.personas);
 
-  const toggleIntent = (value: string) => {
-    const next = selectedIntents.has(value)
-      ? filters.intents.filter((intent) => intent !== value)
-      : [...filters.intents, value];
-    onFiltersChange({ ...filters, intents: next });
+  const toggle = (key: 'intents' | 'stages' | 'personas', value: string) => {
+    const current = filters[key];
+    const next = current.includes(value)
+      ? current.filter((entry) => entry !== value)
+      : [...current, value];
+    onFiltersChange({ ...filters, [key]: next });
   };
-  const toggleStage = (value: string) => {
-    const next = selectedStages.has(value)
-      ? filters.stages.filter((stage) => stage !== value)
-      : [...filters.stages, value];
-    onFiltersChange({ ...filters, stages: next });
-  };
+  const toggleIntent = (value: string) => toggle('intents', value);
+  const toggleStage = (value: string) => toggle('stages', value);
 
   const setEnabled = (value: EnabledFilter) => onFiltersChange({ ...filters, enabled: value });
   const setBranded = (value: EnabledFilter) => onFiltersChange({ ...filters, branded: value });
@@ -130,6 +132,24 @@ export function PromptFilterControls({
             </DropdownCheckboxItem>
           ))}
           <DropdownSeparator />
+          {personas.length ? (
+            <>
+              <DropdownLabel>Persona</DropdownLabel>
+              {personas.map((value) => (
+                <DropdownCheckboxItem
+                  key={value}
+                  checked={selectedPersonas.has(value)}
+                  onSelect={(event) => {
+                    event.preventDefault();
+                    toggle('personas', value);
+                  }}
+                >
+                  {value}
+                </DropdownCheckboxItem>
+              ))}
+              <DropdownSeparator />
+            </>
+          ) : null}
           <DropdownLabel>Enabled</DropdownLabel>
           {(['all', 'enabled', 'disabled'] as const).map((value) => (
             <DropdownCheckboxItem

@@ -94,6 +94,7 @@ const result: ExecutionResult = {
   search_used: true,
   search_events: [],
   citations: [],
+  retrieved_sources: [],
   finish_reason: 'stop',
   raw_finish_reason: 'completed',
   latency_ms: 30,
@@ -123,7 +124,18 @@ async function runs(taskId: string) {
 describe('atomic audit execution persistence', () => {
   it('commits evidence and the terminal queue state once, spending the task’s prompt run', async () => {
     const t = await seed(true);
-    const response = { ...result, transport_model: t.context.task.transport_model };
+    const response = {
+      ...result,
+      transport_model: t.context.task.transport_model,
+      retrieved_sources: [
+        {
+          ordinal: 0,
+          url: 'https://www.review.example/best',
+          title: 'Best',
+          domain: 'review.example',
+        },
+      ],
+    };
     const derive = analyzeExecution;
     const artifactId = await persistExecutionSuccess(
       db,
@@ -146,6 +158,20 @@ describe('atomic audit execution persistence', () => {
       reasoning_tokens: null,
       total_output_tokens: 5,
     });
+    // What the answer read is its own evidence, apart from what it cited.
+    const read = await db
+      .selectFrom('retrieved_sources as source')
+      .innerJoin('response_analyses as analysis', 'analysis.id', 'source.analysis_id')
+      .select(['source.url', 'source.domain', 'analysis.retrieval_observed'])
+      .where('source.artifact_id', '=', artifactId!)
+      .execute();
+    expect(read).toEqual([
+      {
+        url: 'https://www.review.example/best',
+        domain: 'review.example',
+        retrieval_observed: true,
+      },
+    ]);
     const attempt = await db
       .selectFrom('provider_attempts')
       .selectAll()
@@ -338,6 +364,12 @@ describe('atomic audit execution persistence', () => {
       not_run: 0,
       unavailable: 0,
       rate: 1 / 3,
+    });
+    // The core prompt also counts toward "All prompts", stored as its own block.
+    expect(record(record(metric!.metrics).all)).toMatchObject({
+      cohort: 'all',
+      total_completed: 1,
+      coverage: { requested: 3, completed: 1 },
     });
     const analysis = await db
       .selectFrom('response_analyses')

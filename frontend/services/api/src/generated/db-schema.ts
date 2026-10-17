@@ -2087,6 +2087,7 @@ export interface Prompts {
   intent: string;
   normalized_text_hash: string;
   origin: string;
+  persona: Generated<string>;
   prompt_intent: Generated<string>;
   prompt_set_id: string;
   status: Generated<string>;
@@ -2262,6 +2263,7 @@ export interface RawResponseArtifacts {
   logical_engine: string;
   provider_metadata: Json | null;
   raw_finish_reason: string | null;
+  retrieved_sources: Json | null;
   search_events: Json | null;
   search_used: boolean;
   task_id: string;
@@ -2332,6 +2334,7 @@ export interface ResponseAnalyses {
   prompt_class: string;
   prompt_index: number;
   repetition: number;
+  retrieval_observed: Generated<boolean>;
   score: Json | null;
   scoring_rule_version: string;
   search_query_count: number;
@@ -2340,6 +2343,25 @@ export interface ResponseAnalyses {
   transport_model: string;
   transport_provider: string;
   unintended_domain_cited: boolean;
+  workspace_id: string;
+}
+
+export interface RetrievedSources {
+  analysis_id: string;
+  analyzer_version: string;
+  artifact_id: string;
+  audit_id: string;
+  canonical_url: string | null;
+  created_at: Timestamp;
+  domain: string;
+  id: string;
+  is_owned: boolean;
+  ordinal: number;
+  title: string;
+  url: string;
+  url_hash: string | null;
+  url_identity_method: string | null;
+  url_identity_version: string | null;
   workspace_id: string;
 }
 
@@ -3339,6 +3361,7 @@ export interface DB {
   referral_classifications: ReferralClassifications;
   referral_events: ReferralEvents;
   response_analyses: ResponseAnalyses;
+  retrieved_sources: RetrievedSources;
   robots_snapshots: RobotsSnapshots;
   search_intelligence_calls: SearchIntelligenceCalls;
   search_intelligence_datasets: SearchIntelligenceDatasets;

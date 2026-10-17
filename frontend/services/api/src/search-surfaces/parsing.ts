@@ -2,7 +2,12 @@ import { getDomain } from 'tldts';
 import { z } from 'zod';
 import { record } from '../db/json.ts';
 import { scalarText } from '../text-order.ts';
-import { ProviderError, type Citation, type SearchEvent } from '../answer-engines/contracts.ts';
+import {
+  ProviderError,
+  type Citation,
+  type RetrievedSource,
+  type SearchEvent,
+} from '../answer-engines/contracts.ts';
 import type { ExecutionResult } from '../audits/result-persistence.ts';
 import { providerPolicy } from '../providers/config.ts';
 import { classifySourceOrigin } from '../analysis/opportunities/source-patterns.ts';
@@ -266,6 +271,8 @@ export function overviewAnswer(result: OverviewResult): ExecutionResult {
       end_index: null,
       cited_text: '',
     })),
+    // An AI Overview shows its references only; what it read is not exposed.
+    retrieved_sources: null,
     finish_reason: 'unknown',
     raw_finish_reason: '',
     latency_ms: 0,
@@ -291,6 +298,23 @@ function scraperSources(node: Record<string, unknown>, depth = 0): Record<string
     ...objects(node.sources),
     ...objects(node.items).flatMap((child) => scraperSources(child, depth + 1)),
   ];
+}
+/**
+ * The scraper's search results are what the engine read. A page without the
+ * field exposes no retrieval, which is unknown rather than an empty read.
+ */
+function scraperRetrieved(results: unknown): RetrievedSource[] | null {
+  if (!Array.isArray(results)) return null;
+  const sources: RetrievedSource[] = [],
+    seen = new Set<string>();
+  for (const result of objects(results)) {
+    if (isAd(result)) continue;
+    const url = citationIdentity(text(result.url)).canonical_url;
+    if (!url || seen.has(url)) continue;
+    seen.add(url);
+    sources.push({ ordinal: sources.length, url, title: text(result.title), domain: domain(url) });
+  }
+  return sources;
 }
 function adNodes(node: Record<string, unknown>, depth = 0): Record<string, unknown>[] {
   if (depth > 128) throw new ProviderError('parse_error');
@@ -447,6 +471,7 @@ export function parseScraper(
     ),
     search_events: events,
     citations,
+    retrieved_sources: scraperRetrieved(page!.search_results),
     finish_reason: 'stop',
     raw_finish_reason: '',
     latency_ms: 0,

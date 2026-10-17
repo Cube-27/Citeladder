@@ -267,12 +267,20 @@ dialog once per arrival and is then removed from the URL.
 
 Users are asked only for a prompt and its topic. Theme, intent and cohort are
 internal generation vocabulary: never required, never a user-facing validation
-error, and defaulted in code when absent. Editing a prompt changes only its text
-and topic, so generated classification survives.
+error, and defaulted in code when absent. The prompt table shows branding,
+intent, buyer stage and persona as tags with filters; editing a prompt can
+correct its text, topic, intent, buyer stage and persona (`persona_max_chars`),
+never its cohort. An accepted generated prompt takes its persona from the
+business-map cell's audience. A manual or imported prompt without an explicit
+cohort is filed by [brand filing](../frontend/services/api/src/prompts/brand-filing.ts):
+naming the brand files it as `brand_diagnostic`, or `comparison` when it also
+names a competitor; otherwise `core`. Tags are not part of the audit
+prompt-panel hash, so correcting one keeps the comparison series.
 
 CSV import reads `topic,prompt` (aliases `category`; `text`, `query`,
 `question`) in any order; a file without a recognized header is a list of
-prompts. Optional `theme`, `intent`, `cohort` and `enabled` columns are clipped
+prompts. Optional `theme`, `intent`, `buyer_stage`, `persona` (alias
+`audience`), `cohort` and `enabled` columns are clipped
 or defaulted rather than rejected; the upload's column, row and cell-size bounds
 still reject a file before parsing, and the browser rejects a file over the row
 limit before it previews as ready (`import_max_rows` in `config/prompt-library.json`). The
@@ -389,9 +397,15 @@ Scraper citations use root and nested sources, canonicalized and deduplicated.
 Ad items (`chat_gpt_ad`) are skipped by the source walker and the answer-text
 fallback, so a paid placement is never a citation or answer text; see
 [Ads in AI answers](#ads-in-ai-answers).
-Retrieved-but-uncited search results and provider brand entities remain raw
-supplementary evidence; the current citation projections do not represent a
-separate retrieval dataset or query-to-source associations. Query Fanouts uses
+Retrieved sources are their own evidence kind, distinct from citations: the
+artifact keeps `retrieved_sources` (null when the surface does not expose what it
+read) and analysis writes `retrieved_sources` rows with `retrieval_observed` on
+the response analysis. The OpenAI API requests `web_search_call.action.sources`;
+Anthropic reads its `web_search_result` blocks; the DataForSEO ChatGPT and
+Gemini scrapers read `search_results` (ads skipped). Gemini API grounding and
+AI Overview expose no retrieval and stay not available, never zero. Provider
+brand entities remain raw supplementary evidence, and nothing records
+query-to-source associations. Query Fanouts uses
 only returned query text, distinguishing unavailable evidence from an explicitly
 empty query list. Neither state claims that no search occurred. Accepted scraper
 submissions use their frozen recovery window even after the ordinary run deadline;
@@ -632,6 +646,17 @@ snapshot boundary. Original answers use /runs/{runId}?execution={taskId}.
 
 Citation rate is citations over the responses a source was RETRIEVED in, never
 over the responses in the selection, and never over a stored retrieval counter.
+A Retrieved column (read in, as a share of the answers whose engine exposes
+retrieval; `retrieval.unavailable_engines` names the others) sits beside Cited
+in; with no observed answer it reads not available. The URLs "Your pages read
+but not cited" filter (`/visibility/sources/near-misses`) lists owned pages engines read but
+did not cite. Top movers (`/visibility/sources/movers`, shown without a domain
+drill-down) rank domains or URLs by citation-share change in percentage points
+against the dashboard baseline, split into risers and fallers; without a
+comparable baseline it reports the comparison status instead.
+The cohort switch offers Unbranded prompts (`core`), Branded prompts
+(`comparison`) and All prompts (`all`, both together, computed at finalization
+like the others).
 A URL's brand list is co-occurrence in the answers that cited it: mentions are
 persisted against the response, so nothing links one to a citation.
 Browser history restores the analytical context. Competitor suggestions remain

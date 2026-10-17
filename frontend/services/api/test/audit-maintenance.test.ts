@@ -90,6 +90,7 @@ function answer(task: AuditTask): ExecutionResult {
     search_used: false,
     search_events: [],
     citations: [],
+    retrieved_sources: [],
     finish_reason: 'stop',
     raw_finish_reason: 'stop',
     latency_ms: 1,

@@ -29,6 +29,7 @@ describe('form mapping', () => {
       intent: 'purchase',
       buyer_stage: '',
       prompt_intent: '',
+      persona: 'Marathon runners',
       cohort: 'comparison',
       branded: true,
       enabled: false,
@@ -41,11 +42,12 @@ describe('form mapping', () => {
       topicId: TOPIC_ID,
       intent: 'purchase',
       buyerStage: '',
+      persona: 'Marathon runners',
     });
   });
 
   it('creates with only text and topic, leaving internal fields to their defaults', () => {
-    const tags = { intent: 'discovery', buyerStage: 'decision' } as const;
+    const tags = { intent: 'discovery', buyerStage: 'decision', persona: 'Runners' } as const;
     expect(
       formValuesToPromptInput({ text: '  Best shoes?  ', topicId: TOPIC_ID, ...tags }),
     ).toEqual({ text: 'Best shoes?', topic_id: TOPIC_ID });
@@ -61,12 +63,14 @@ describe('form mapping', () => {
         topicId: '',
         intent: 'comparison',
         buyerStage: 'consideration',
+        persona: ' Marathon runners ',
       }),
     ).toEqual({
       text: 'Best shoes?',
       topic_id: null,
       intent: 'comparison',
       buyer_stage: 'consideration',
+      persona: 'Marathon runners',
     });
   });
 });

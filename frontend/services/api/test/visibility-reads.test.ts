@@ -1201,4 +1201,103 @@ describe('GET /visibility/sources', () => {
       ['other.com', 100],
     ]);
   });
+
+  it('counts reads beside citations, and leaves engines that expose none unknown', async () => {
+    const tenant = await fixtures.tenant();
+    const auditId = await fixtures.audit(tenant);
+    await fixtures.execution(tenant, {
+      auditId,
+      engine: 'chatgpt',
+      analysis: {
+        citations: [{ url: 'https://other.com/x', urlHash: 'hash-x' }],
+        retrieved: [
+          { url: 'https://acme.example/pricing', isOwned: true, urlHash: 'hash-p' },
+          { url: 'https://other.com/x', urlHash: 'hash-x' },
+        ],
+      },
+    });
+    await fixtures.execution(tenant, {
+      auditId,
+      engine: 'chatgpt',
+      analysis: {
+        citations: [{ url: 'https://acme.example/pricing', isOwned: true, urlHash: 'hash-p' }],
+        retrieved: [{ url: 'https://acme.example/pricing', isOwned: true, urlHash: 'hash-p' }],
+      },
+    });
+    await fixtures.execution(tenant, {
+      auditId,
+      engine: 'gemini',
+      analysis: { citations: [{ url: 'https://other.com/x', urlHash: 'hash-x' }] },
+    });
+
+    const domains = await get(tenant, route(tenant, '/sources'), { audit_id: auditId });
+    expect(domains.body.retrieval).toEqual({ responses: 2, unavailable_engines: ['gemini'] });
+    expect(
+      (domains.body.items as Row[]).map((row) => [row.key, row.responses, row.retrieved]),
+    ).toEqual([
+      ['other.com', 2, 1],
+      ['acme.example', 1, 2],
+    ]);
+
+    const gemini = await get(tenant, route(tenant, '/sources'), {
+      audit_id: auditId,
+      engine: 'gemini',
+    });
+    expect((gemini.body.items as Row[]).map((row) => [row.key, row.retrieved])).toEqual([
+      ['other.com', null],
+    ]);
+
+    const misses = await get(tenant, route(tenant, '/sources/near-misses'), { audit_id: auditId });
+    expect(misses.body).toMatchObject({
+      responses: 2,
+      unavailable_engines: ['gemini'],
+      items: [{ url: 'https://acme.example/pricing', url_hash: 'hash-p', retrieved: 2, cited: 1 }],
+    });
+  });
+
+  it('ranks risers and fallers by change in citation share against a comparable baseline', async () => {
+    const tenant = await fixtures.tenant();
+    const complete = aggregate({ completed: 1, brand: 0 });
+    const baseline = await measuredRun(tenant, '2026-02-01T00:00:00Z', complete);
+    await fixtures.execution(tenant, {
+      auditId: baseline,
+      analysis: {
+        citations: [
+          { url: 'https://falling.example/a' },
+          { url: 'https://falling.example/b' },
+          { url: 'https://steady.example/a' },
+          { url: 'https://gone.example/a' },
+        ],
+      },
+    });
+    const current = await measuredRun(tenant, '2026-03-01T00:00:00Z', complete);
+    await fixtures.execution(tenant, {
+      auditId: current,
+      analysis: {
+        citations: [
+          { url: 'https://rising.example/a' },
+          { url: 'https://falling.example/a' },
+          { url: 'https://steady.example/a' },
+          { url: 'https://rising.example/b' },
+        ],
+      },
+    });
+
+    const { body } = await get(tenant, route(tenant, '/sources/movers'), {
+      audit_ids: [current],
+      baseline_audit_ids: [baseline],
+    });
+    expect(body).toEqual({
+      dimension: 'domain',
+      comparison_status: 'comparable',
+      risers: [{ key: 'rising.example', current_share: 0.5, previous_share: 0, delta: 50 }],
+      fallers: [
+        { key: 'falling.example', current_share: 0.25, previous_share: 0.5, delta: -25 },
+        { key: 'gone.example', current_share: 0, previous_share: 0.25, delta: -25 },
+      ],
+    });
+
+    const unpaired = await get(tenant, route(tenant, '/sources/movers'), { audit_ids: [current] });
+    expect(unpaired.body).toMatchObject({ comparison_status: 'no_baseline', risers: [] });
+  });
 });
