@@ -28,7 +28,7 @@ export const overviewWidgetKeySchema = z.enum([
 export type OverviewWidgetKey = z.infer<typeof overviewWidgetKeySchema>;
 
 /** Half takes one column of the two-column grid; full spans both. */
-export const overviewWidgetSizeSchema = z.enum(['half', 'full']);
+const overviewWidgetSizeSchema = z.enum(['half', 'full']);
 
 export const overviewWidgetSchema = z.object({
   key: overviewWidgetKeySchema,

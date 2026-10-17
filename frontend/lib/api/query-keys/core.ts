@@ -37,6 +37,7 @@ export const projectKeys = {
   list: (workspaceId: string) => ['projects', 'list', workspaceId] as const,
   detail: (projectId: string) => ['projects', 'detail', projectId] as const,
   commandCenter: (projectId: string) => ['projects', 'command-center', projectId] as const,
+  overviewLayout: (projectId: string) => ['projects', 'overview-layout', projectId] as const,
   brandProfile: (projectId: string) => ['projects', 'brand-profile', projectId] as const,
   businessMap: (projectId: string) => ['projects', 'business-map', projectId] as const,
   brandFacts: (projectId: string) => ['projects', 'brand-facts', projectId] as const,

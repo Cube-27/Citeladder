@@ -63,7 +63,7 @@ import type {
 } from './types';
 
 /** `POST /site-crawls` body. Workspace is resolved from `X-Workspace-Id`. */
-export type CreateCrawlInput = {
+type CreateCrawlInput = {
   project_id: string;
   include_globs?: string[];
   exclude_globs?: string[];
@@ -146,9 +146,8 @@ export const siteHealthApi = {
     return strictValidate(siteHealthEntitlementSchema, res, 'siteHealth.getEntitlements');
   },
   createCrawl: async ({ recrawl_of, ...input }: StartCrawlInput, options?: ApiRequestOptions) => {
-    const res = recrawl_of
-      ? await apiClient.post<SiteCrawl>(`/site-crawls/${recrawl_of}/recrawl`, undefined, options)
-      : await apiClient.post<SiteCrawl>('/site-crawls', input, options);
+    const path = recrawl_of ? `/site-crawls/${recrawl_of}/recrawl` : '/site-crawls';
+    const res = await apiClient.post<SiteCrawl>(path, recrawl_of ? undefined : input, options);
     const crawl = strictValidate(siteCrawlSchema, res, 'siteHealth.createCrawl');
     startInteractiveWork(`/site-crawls/${crawl.id}/run`, {
       ...options,

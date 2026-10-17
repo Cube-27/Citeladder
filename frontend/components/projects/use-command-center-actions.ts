@@ -86,10 +86,10 @@ async function downloadReport(
   setDownloading(true);
   setError(false);
   try {
-    const blob = await projectsApi.downloadExecutiveReport(project.id, {
+    const blob = await projectsApi.downloadOverviewReport(project.id, {
       workspaceId: project.workspace_id,
     });
-    saveBlob(blob, `citeladder-${project.brand_name || project.name}-report.pdf`);
+    saveBlob(blob, `citeladder-${project.brand_name || project.name}-overview.pdf`);
   } catch {
     setError(true);
   } finally {

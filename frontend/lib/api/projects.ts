@@ -14,6 +14,11 @@ import {
 } from '@citeladder/contracts/fact-checking';
 import { commandCenterSchema } from '@citeladder/contracts/opportunities';
 import {
+  overviewLayoutSchema,
+  type OverviewLayout,
+  type OverviewLayoutUpdate,
+} from '@citeladder/contracts/overview';
+import {
   brandProfileSchema,
   buyerTypeSchema,
   marketScopeSchema,
@@ -99,8 +104,28 @@ export const projectsApi = {
     );
     return strictValidate(commandCenterSchema, res, 'projects.getCommandCenter');
   },
-  downloadExecutiveReport: (projectId: string, options?: ApiRequestOptions) =>
-    apiClient.getBlob(`/projects/${projectId}/reports/executive.pdf`, options),
+  getOverviewLayout: async (projectId: string, options?: ApiRequestOptions) => {
+    const res = await apiClient.get<OverviewLayout>(
+      `/projects/${projectId}/overview/layout`,
+      options,
+    );
+    return strictValidate(overviewLayoutSchema, res, 'projects.getOverviewLayout');
+  },
+  /** `widgets: null` resets to the default layout. */
+  updateOverviewLayout: async (
+    projectId: string,
+    input: OverviewLayoutUpdate,
+    options?: ApiRequestOptions,
+  ) => {
+    const res = await apiClient.put<OverviewLayout>(
+      `/projects/${projectId}/overview/layout`,
+      input,
+      options,
+    );
+    return strictValidate(overviewLayoutSchema, res, 'projects.updateOverviewLayout');
+  },
+  downloadOverviewReport: (projectId: string, options?: ApiRequestOptions) =>
+    apiClient.getBlob(`/projects/${projectId}/overview/report.pdf`, options),
   createProject: async (input: ProjectInput, options?: ApiRequestOptions) => {
     const res = await apiClient.post<Project>('/projects', input, options);
     return strictValidate(projectSchema, res, 'projects.createProject');

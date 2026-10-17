@@ -22,7 +22,7 @@ import type { ProjectScope } from './brand-profile.ts';
 const CONFLICT = asApiErrorCode(policy.projects.CODE_OVERVIEW_LAYOUT_CONFLICT);
 const storedWidgets = z.array(overviewWidgetSchema);
 
-export function defaultOverviewLayout(): OverviewWidget[] {
+function defaultOverviewLayout(): OverviewWidget[] {
   return policy.projects.overview_default_layout.map((widget) => ({ ...widget }));
 }
 
