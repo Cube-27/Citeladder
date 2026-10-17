@@ -8,6 +8,7 @@ import { ProjectRequiredState } from '@/components/layout/project-required-state
 import { Button } from '@/components/ui/button';
 import { MutationNotice } from '@/components/ui/mutation-notice';
 import { TabsBar, TabsRoot } from '@/components/ui/tabs';
+import { Tooltip } from '@/components/ui/tooltip';
 import { PageShell } from '@/components/layout/page-shell';
 import { Stack } from '@/components/ui/layout';
 import { SiteHealthDashboardLayout } from '@/components/site-health/dashboard-layout';
@@ -60,6 +61,7 @@ function SiteHealthContent({
     startPending,
     cancelMutation,
     startCrawl,
+    recrawl,
     cancelCrawl,
     runExport,
     exporting,
@@ -89,6 +91,7 @@ function SiteHealthContent({
         onExport={() => runExport('csv', 'pages')}
         onCancel={cancelCrawl}
         onStart={startCrawl}
+        onRecrawl={recrawl}
       />
     ) : undefined;
   const prefetchTab = useSiteHealthTabPrefetch(workspaceId, projectId, crawl?.id, !active);
@@ -377,6 +380,7 @@ function CrawlActions({
   onExport,
   onCancel,
   onStart,
+  onRecrawl,
 }: Readonly<{
   active: boolean;
   exporting: boolean;
@@ -385,12 +389,19 @@ function CrawlActions({
   onExport: () => void;
   onCancel: () => void;
   onStart: () => void;
+  onRecrawl: () => void;
 }>) {
   return (
     <div className="flex items-center gap-2">
       <Button variant="secondary" size="sm" onClick={onExport} disabled={exporting}>
         {exporting ? 'Exporting…' : 'Export'}
       </Button>
+      {/* Always present, so starting a crawl never reflows the header. */}
+      <Tooltip content="Rerun this crawl's scope and settings, so Changes compares like with like.">
+        <Button variant="secondary" size="sm" onClick={onRecrawl} disabled={active || startPending}>
+          Recrawl
+        </Button>
+      </Tooltip>
       {active ? (
         <Button variant="destructive" size="sm" onClick={onCancel} disabled={cancelPending}>
           {cancelPending ? 'Stopping…' : 'Stop crawl'}

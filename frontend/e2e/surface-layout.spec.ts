@@ -53,6 +53,22 @@ const overview = {
   report_available: false,
   stale: false,
 };
+// The default layout, so Overview lays out today's sections.
+const layout = {
+  widgets: [
+    { key: 'project_state', size: 'half' },
+    { key: 'citation_share', size: 'half' },
+    { key: 'movement', size: 'half' },
+    { key: 'next_action', size: 'half' },
+    { key: 'missing_prompts', size: 'full' },
+    { key: 'ranked_actions', size: 'half' },
+    { key: 'progress_proof', size: 'half' },
+    { key: 'company_facts', size: 'full' },
+  ],
+  version: 0,
+  customized: false,
+  updated_at: null,
+};
 const catalog = {
   maximum_competitors: 5,
   industries: ['General'],
@@ -68,6 +84,7 @@ test('working surfaces preserve their actions without viewport overflow', async 
         page,
         [
           [`**/api/v1/projects/${FIXTURE_PROJECT.id}/command-center`, overview],
+          [`**/api/v1/projects/${FIXTURE_PROJECT.id}/overview/layout`, layout],
           ['**/api/v1/brand-discovery-catalog', catalog],
         ],
         route === '/onboarding' ? [] : [FIXTURE_PROJECT],
@@ -109,6 +126,7 @@ test('working surfaces preserve their actions without viewport overflow', async 
       page,
       [
         [`**/api/v1/projects/${FIXTURE_PROJECT.id}/command-center`, overview],
+        [`**/api/v1/projects/${FIXTURE_PROJECT.id}/overview/layout`, layout],
         ['**/api/v1/brand-discovery-catalog', catalog],
       ],
       route === '/onboarding' ? [] : [FIXTURE_PROJECT],

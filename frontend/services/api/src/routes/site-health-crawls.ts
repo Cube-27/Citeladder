@@ -20,6 +20,7 @@ import { readBody } from '../http/body.ts';
 import { InvalidCursorError } from '../http/keyset-cursor.ts';
 import { cancelCrawl, listCrawls } from '../site-health/controls.ts';
 import { createCrawl } from '../site-health/planner.ts';
+import { recrawlRequest } from '../site-health/recrawl.ts';
 import {
   createCrawlRequest,
   previewCrawlUrls,
@@ -117,6 +118,28 @@ export const siteHealthCrawlRoutes = [
         windowSeconds: Number(resolveSettingSpec(policy.abuse.crawl_create_window_seconds)),
       });
       const crawl = await db.transaction().execute((trx) => createCrawl(trx, workspaceId, request));
+      return siteCrawlSchema.parse(projectCrawl(crawl));
+    },
+  }),
+  definePostRoute({
+    family,
+    path: '/api/v1/site-crawls/{crawl_id}/recrawl',
+    params: { path: { crawl_id: uuid }, query: {} },
+    response: siteCrawlSchema,
+    status: 201,
+    capability: 'run',
+    async handle({ c, db }, { path }) {
+      const workspaceId = c.get('workspace').workspaceId;
+      await enforceWorkspaceRequest(db, workspaceId, {
+        operation: 'site_health.crawl_create',
+        limit: Number(resolveSettingSpec(policy.abuse.crawl_create_limit)),
+        windowSeconds: Number(resolveSettingSpec(policy.abuse.crawl_create_window_seconds)),
+      });
+      const crawl = await db
+        .transaction()
+        .execute(async (trx) =>
+          createCrawl(trx, workspaceId, await recrawlRequest(trx, workspaceId, path.crawl_id)),
+        );
       return siteCrawlSchema.parse(projectCrawl(crawl));
     },
   }),

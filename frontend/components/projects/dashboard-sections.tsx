@@ -1,10 +1,10 @@
 import { ArrowRight, Download, TrendingUp } from 'lucide-react';
+import type { ReactNode } from 'react';
 import {
   hairlineBandClasses,
   hairlineBandItemClasses,
   ledgerClasses,
   MetricGroup,
-  splitPaneClasses,
 } from '@/components/ui/workspace';
 import { ProjectLink } from '@/components/layout/scoped-link';
 
@@ -40,9 +40,6 @@ import {
   VS_PREVIOUS_RUN,
 } from './dashboard-primitives';
 import { Tooltip } from '@/components/ui/tooltip';
-
-/** Overview rows pair a primary card with an aside; both cards share the row's height. */
-const OVERVIEW_ROW = splitPaneClasses('main-aside', 'lg:items-stretch');
 
 function brandName(data: CommandCenter) {
   return data.project.brand_name || data.project.name;
@@ -101,7 +98,7 @@ export function CompanyFacts({ data }: Readonly<{ data: CommandCenter }>) {
   const facts = data.facts;
   const offerings = facts.products_services.filter((label) => label.trim());
   return (
-    <Card aria-labelledby="company-facts">
+    <Card aria-labelledby="company-facts" className="h-full">
       <CardHeader
         actions={
           <>
@@ -142,24 +139,24 @@ export function CompanyFacts({ data }: Readonly<{ data: CommandCenter }>) {
 }
 
 export function DashboardActions({
-  data,
   activeProject,
   onEditProject,
   downloading,
   onDownload,
+  layoutMenu,
 }: Readonly<{
-  data: CommandCenter;
   activeProject: Project;
   onEditProject?: (project: Project) => void;
   downloading: boolean;
   onDownload: () => void;
+  /** The layout menu, for members who can edit the Overview. */
+  layoutMenu?: ReactNode;
 }>) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <ProjectControls activeProject={activeProject} onEditProject={onEditProject} />
-      {data.report_available ? (
-        <PdfButton downloading={downloading} onDownload={onDownload} />
-      ) : null}
+      {layoutMenu}
+      <PdfButton downloading={downloading} onDownload={onDownload} />
     </div>
   );
 }
@@ -203,37 +200,27 @@ function PdfButton({
       className="gap-2"
     >
       <Download className="size-3.5" aria-hidden />
-      Executive PDF
+      Export PDF
     </Button>
   );
 }
 
-/** Current state beside citation share, then movement beside the next step. */
-export function SummarySections({ data }: Readonly<{ data: CommandCenter }>) {
+export function ProjectStateCard({ data }: Readonly<{ data: CommandCenter }>) {
   return (
-    <>
-      <div className={OVERVIEW_ROW}>
-        <Card aria-labelledby="project-state">
-          <CardHeader
-            actions={<Badge>{data.measurement ? 'Citation-capable audit' : 'Not run'}</Badge>}
-          >
-            <CardTitle id="project-state">Project state</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <MetricGroup>
-              <StateMetric label="Visibility" {...data.state.visibility} suffix="%" />
-              <StateMetric label="Share of voice" {...data.state.share_of_voice} suffix="%" />
-              <StateMetric label="Brand rank" {...data.state.brand_rank} inverse />
-            </MetricGroup>
-          </CardContent>
-        </Card>
-        <Track data={data} />
-      </div>
-      <div className={OVERVIEW_ROW}>
-        <Movement data={data} />
-        <NextAction data={data} />
-      </div>
-    </>
+    <Card aria-labelledby="project-state" className="h-full">
+      <CardHeader
+        actions={<Badge>{data.measurement ? 'Citation-capable audit' : 'Not run'}</Badge>}
+      >
+        <CardTitle id="project-state">Project state</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <MetricGroup>
+          <StateMetric label="Visibility" {...data.state.visibility} suffix="%" />
+          <StateMetric label="Share of voice" {...data.state.share_of_voice} suffix="%" />
+          <StateMetric label="Brand rank" {...data.state.brand_rank} inverse />
+        </MetricGroup>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -253,12 +240,12 @@ const NEXT_ACTION_COPY: Record<
   monitor: { status: 'Up to date', link: 'View trends' },
 };
 
-function NextAction({ data }: Readonly<{ data: CommandCenter }>) {
+export function NextAction({ data }: Readonly<{ data: CommandCenter }>) {
   return (
     <Card
       tone="recommendation"
       aria-labelledby="next-action"
-      className="text-foreground flex flex-col justify-between"
+      className="text-foreground flex h-full flex-col justify-between"
     >
       <CardHeader
         actions={
@@ -282,9 +269,9 @@ function NextAction({ data }: Readonly<{ data: CommandCenter }>) {
   );
 }
 
-function Track({ data }: Readonly<{ data: CommandCenter }>) {
+export function Track({ data }: Readonly<{ data: CommandCenter }>) {
   return (
-    <Card aria-labelledby="citation-share-track" className="flex flex-col justify-between">
+    <Card aria-labelledby="citation-share-track" className="flex h-full flex-col justify-between">
       <CardHeader
         actions={
           data.track.observed_at ? (
@@ -327,7 +314,7 @@ function Track({ data }: Readonly<{ data: CommandCenter }>) {
 }
 
 /** With nothing comparable yet the section is wholly empty, so the empty state stands alone. */
-function Movement({ data }: Readonly<{ data: CommandCenter }>) {
+export function Movement({ data }: Readonly<{ data: CommandCenter }>) {
   if (data.movements.length === 0)
     return (
       <EmptyState
@@ -335,10 +322,11 @@ function Movement({ data }: Readonly<{ data: CommandCenter }>) {
         icon={TrendingUp}
         heading="No comparable measurement yet"
         description="Needs a second run with the same prompts and engines."
+        className="h-full"
       />
     );
   return (
-    <Card aria-labelledby="movement">
+    <Card aria-labelledby="movement" className="h-full">
       <CardHeader>
         <CardTitle id="movement">Movement</CardTitle>
       </CardHeader>
@@ -349,62 +337,65 @@ function Movement({ data }: Readonly<{ data: CommandCenter }>) {
   );
 }
 
-/** The shared, reorderable action list beside what has been resolved since the comparable run. */
-export function ActionsAndProof({
-  data,
+/** The shared, reorderable action list. */
+export function RankedActionsCard({
   actions,
   pending,
   onMove,
 }: Readonly<{
-  data: CommandCenter;
   actions: CommandCenter['actions'];
   pending: boolean;
   onMove: (from: number, to: number) => void;
 }>) {
+  if (!actions.length)
+    return (
+      <EmptyState
+        variant="compact"
+        icon={ArrowRight}
+        heading="No open actions"
+        description="Run another audit to look for new opportunities."
+        action={<ViewAllActions />}
+        className="h-full"
+      />
+    );
   return (
-    <div className={OVERVIEW_ROW}>
-      {actions.length ? (
-        <Card aria-labelledby="ranked-actions">
-          <CardHeader actions={<ViewAllActions />}>
-            <CardTitle id="ranked-actions">Ranked actions</CardTitle>
-            <CardDescription>Shared order · drag or use the arrow controls.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ol className={ledgerClasses('open')}>
-              {actions.map((action, index) => (
-                <ActionRow
-                  key={action.id}
-                  action={action}
-                  index={index}
-                  total={actions.length}
-                  onMove={onMove}
-                  onDrop={onMove}
-                  reorderPending={pending}
-                />
-              ))}
-            </ol>
-          </CardContent>
-        </Card>
-      ) : (
-        <EmptyState
-          variant="compact"
-          icon={ArrowRight}
-          heading="No open actions"
-          description="Run another audit to look for new opportunities."
-          action={<ViewAllActions />}
-        />
-      )}
-      <Card aria-labelledby="progress-proof">
-        <CardHeader>
-          <CardTitle id="progress-proof">Progress and report proof</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className={textRole('body')}>
-            {pluralCount(data.resolved_actions.count, 'action')} resolved since the comparable run.
-          </p>
-        </CardContent>
-      </Card>
-    </div>
+    <Card aria-labelledby="ranked-actions" className="h-full">
+      <CardHeader actions={<ViewAllActions />}>
+        <CardTitle id="ranked-actions">Ranked actions</CardTitle>
+        <CardDescription>Shared order · drag or use the arrow controls.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <ol className={ledgerClasses('open')}>
+          {actions.map((action, index) => (
+            <ActionRow
+              key={action.id}
+              action={action}
+              index={index}
+              total={actions.length}
+              onMove={onMove}
+              onDrop={onMove}
+              reorderPending={pending}
+            />
+          ))}
+        </ol>
+      </CardContent>
+    </Card>
+  );
+}
+
+/** What has been resolved since the comparable run. */
+export function ProgressProofCard({ data }: Readonly<{ data: CommandCenter }>) {
+  return (
+    <Card aria-labelledby="progress-proof" className="h-full">
+      <CardHeader>
+        <CardTitle id="progress-proof">Progress and report proof</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className={textRole('body')}>
+          {pluralCount(data.resolved_actions.count, 'action')} resolved since the comparable run.
+        </p>
+      </CardContent>
+    </Card>
   );
 }
 

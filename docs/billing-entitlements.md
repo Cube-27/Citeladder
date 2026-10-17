@@ -126,10 +126,10 @@ workspace without an account reads as having no receipts; reads never
 provision one.
 Documents validate stored amounts and use local Noto Sans fonts with measured
 wrapping and pagination. Unsupported glyphs are printed as explicit Unicode
-code points instead of blank characters. Executive PDFs consume the existing
-[command-center projection](../frontend/services/api/src/projects/command-center.ts),
-including measurement versions, source identities and the non-causal action
-disclaimer. Rendering performs no acquisition or settlement.
+code points instead of blank characters. The Overview PDF consumes the existing
+[command-center projection](../frontend/services/api/src/projects/command-center.ts)
+and its widgets' persisted reads, including measurement versions and the
+non-causal action disclaimer. Rendering performs no acquisition or settlement.
 
 Base plans are recurring provider subscriptions. Add-ons, top-ups and an
 upgrade's prorated charge are one-time provider orders: the intent persists the

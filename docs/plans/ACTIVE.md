@@ -17,9 +17,8 @@ Remaining work is consolidated in the backlog; historical plans are not active a
   [decisions record](security-audit-2026-10-decisions.md).
 
 - [Insight parity](insight-parity.md) (owner decisions recorded 2026-10-16 and
-  2026-10-17): PR 1 shipped (#414); PR 2 adds retrieved versus cited sources,
-  top movers and the deferred prompt items; PR 3 adds the editable Overview and
-  Site Health Recrawl.
+  2026-10-17): PR 1 (#414) and PR 2 (#419) shipped; PR 3 adds the editable
+  Overview, its layout PDF and Site Health Recrawl.
 
 The feature review programme and the competitive feature tracker are complete
 and archived under [docs/archive](../archive/); their other unfinished items,

@@ -63,7 +63,7 @@ import type {
 } from './types';
 
 /** `POST /site-crawls` body. Workspace is resolved from `X-Workspace-Id`. */
-export type CreateCrawlInput = {
+type CreateCrawlInput = {
   project_id: string;
   include_globs?: string[];
   exclude_globs?: string[];
@@ -79,6 +79,8 @@ export type CreateCrawlInput = {
   seed_urls?: string[];
   page_kinds?: string[];
 };
+/** A new crawl, or with `recrawl_of` a rerun of that crawl's frozen scope and settings. */
+export type StartCrawlInput = CreateCrawlInput & { recrawl_of?: string };
 export type UrlPreviewInput = Pick<
   CreateCrawlInput,
   'project_id' | 'include_globs' | 'exclude_globs'
@@ -143,8 +145,9 @@ export const siteHealthApi = {
     const res = await apiClient.get<SiteHealthEntitlement>('/entitlements', options);
     return strictValidate(siteHealthEntitlementSchema, res, 'siteHealth.getEntitlements');
   },
-  createCrawl: async (input: CreateCrawlInput, options?: ApiRequestOptions) => {
-    const res = await apiClient.post<SiteCrawl>('/site-crawls', input, options);
+  createCrawl: async ({ recrawl_of, ...input }: StartCrawlInput, options?: ApiRequestOptions) => {
+    const path = recrawl_of ? `/site-crawls/${recrawl_of}/recrawl` : '/site-crawls';
+    const res = await apiClient.post<SiteCrawl>(path, recrawl_of ? undefined : input, options);
     const crawl = strictValidate(siteCrawlSchema, res, 'siteHealth.createCrawl');
     startInteractiveWork(`/site-crawls/${crawl.id}/run`, {
       ...options,
@@ -482,7 +485,7 @@ export const siteHealthQueries = {
 export const siteHealthMutations = {
   createCrawl: (workspaceId: string) =>
     mutationOptions({
-      mutationFn: (input: CreateCrawlInput) => siteHealthApi.createCrawl(input, { workspaceId }),
+      mutationFn: (input: StartCrawlInput) => siteHealthApi.createCrawl(input, { workspaceId }),
     }),
   cancelCrawl: (workspaceId: string) =>
     mutationOptions({

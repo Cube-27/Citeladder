@@ -24,6 +24,7 @@ import { MCP_CONNECTION_ROUTES } from './mcp-connections.ts';
 import { API_KEY_ROUTES } from './api-keys.ts';
 import { publicApiRoutes } from '../public-api/routes.ts';
 import { billingDocumentRoutes } from './billing-documents.ts';
+import { overviewRoutes } from './overview.ts';
 import { billingRoutes } from './billing.ts';
 import { auditScheduleRoutes } from './audit-schedules.ts';
 import { auditRoutes } from './audits.ts';
@@ -41,6 +42,7 @@ export const PRODUCT_ROUTES: readonly ProductRoute[] = [
   ...authRoutes,
   ...workspaceRoutes,
   ...billingDocumentRoutes,
+  ...overviewRoutes,
   ...internalLinkRoutes,
   ...siteHealthRoutes,
   ...siteHealthCrawlRoutes,

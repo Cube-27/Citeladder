@@ -7,7 +7,7 @@ import { queryKeys } from '@/lib/api/query-keys';
 import {
   siteHealthMutations,
   siteHealthQueries,
-  type CreateCrawlInput,
+  type StartCrawlInput,
 } from '@/lib/api/site-health';
 import type { SiteCrawl } from '@/lib/api/types';
 import {
@@ -223,8 +223,11 @@ export function useSiteHealthScreen(projectId: string | null) {
       });
     },
   });
-  const startCrawl = (input?: CreateCrawlInput) =>
+  const startCrawl = (input?: StartCrawlInput) =>
     requestScope.enabled && createMutation.mutate(input ?? { project_id: requestScope.projectId });
+  // Reruns the shown crawl's scope, so Changes always has a comparable baseline.
+  const recrawl = () =>
+    crawl && startCrawl({ project_id: requestScope.projectId, recrawl_of: crawl.id });
   const cancelCrawl = () => crawl && cancelMutation.mutate(crawl.id);
 
   // A create is genuinely in flight, or its projection refresh has not yet
@@ -265,6 +268,7 @@ export function useSiteHealthScreen(projectId: string | null) {
     createMutation,
     cancelMutation,
     startCrawl,
+    recrawl,
     cancelCrawl,
     runExport,
     exporting,

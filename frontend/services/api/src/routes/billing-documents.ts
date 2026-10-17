@@ -2,7 +2,6 @@ import { billingInvoiceListSchema } from '@citeladder/contracts/billing';
 import { z } from 'zod';
 
 import { listInvoices, readInvoice, renderInvoicePdf } from '../billing/invoices.ts';
-import { executiveReport } from '../projects/executive-report.ts';
 import { defineGetRoute } from './define.ts';
 
 const uuid = { scalar: { kind: 'uuid' }, required: true } as const;
@@ -37,21 +36,6 @@ export const billingDocumentRoutes = [
       const bytes = await renderInvoicePdf(invoice);
       const filename = `${invoice.receipt_number.replaceAll(/[^a-zA-Z0-9_-]/gu, '-')}.pdf`;
       return c.body(new Uint8Array(bytes).buffer, 200, attachmentHeaders(filename));
-    },
-  }),
-  defineGetRoute({
-    family: 'executive-report',
-    path: '/api/v1/projects/{project_id}/reports/executive.pdf',
-    params: { path: { project_id: uuid }, query: { audit_id: { scalar: { kind: 'uuid' } } } },
-    response: pdf,
-    raw: true,
-    async handle({ c, db }, { path, query }) {
-      const result = await executiveReport(
-        db,
-        { workspaceId: c.get('workspace').workspaceId, projectId: path.project_id },
-        query.audit_id,
-      );
-      return c.body(new Uint8Array(result.bytes).buffer, 200, attachmentHeaders(result.filename));
     },
   }),
 ];

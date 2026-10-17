@@ -1921,6 +1921,17 @@ CREATE TABLE public.opportunity_verification_events (
     created_at timestamp with time zone NOT NULL
 );
 
+CREATE TABLE public.overview_layouts (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    project_id uuid NOT NULL,
+    widgets jsonb,
+    version integer NOT NULL,
+    updated_by_user_id uuid NOT NULL,
+    created_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL
+);
+
 CREATE TABLE public.owned_domains (
     id uuid NOT NULL,
     project_id uuid NOT NULL,
@@ -3629,6 +3640,9 @@ ALTER TABLE ONLY public.opportunity_snapshots
 ALTER TABLE ONLY public.opportunity_verification_events
     ADD CONSTRAINT opportunity_verification_events_pkey PRIMARY KEY (id);
 
+ALTER TABLE ONLY public.overview_layouts
+    ADD CONSTRAINT overview_layouts_pkey PRIMARY KEY (id);
+
 ALTER TABLE ONLY public.owned_domains
     ADD CONSTRAINT owned_domains_pkey PRIMARY KEY (id);
 
@@ -4108,6 +4122,9 @@ ALTER TABLE ONLY public.opportunity_snapshots
 
 ALTER TABLE ONLY public.opportunity_verification_events
     ADD CONSTRAINT uq_opportunity_verification_ws_idem UNIQUE (workspace_id, idempotency_key);
+
+ALTER TABLE ONLY public.overview_layouts
+    ADD CONSTRAINT uq_overview_layouts_project UNIQUE (project_id);
 
 ALTER TABLE ONLY public.pending_activations
     ADD CONSTRAINT uq_pending_activation_account_idempotency UNIQUE (billing_account_id, idempotency_key);
@@ -4881,6 +4898,8 @@ CREATE INDEX ix_opportunity_verification_events_project_id ON public.opportunity
 CREATE INDEX ix_opportunity_verification_events_workspace_id ON public.opportunity_verification_events USING btree (workspace_id);
 
 CREATE INDEX ix_opportunity_verification_implementation_created ON public.opportunity_verification_events USING btree (implementation_event_id, created_at, id);
+
+CREATE INDEX ix_overview_layouts_workspace_id ON public.overview_layouts USING btree (workspace_id);
 
 CREATE INDEX ix_owned_domains_project_id ON public.owned_domains USING btree (project_id);
 
@@ -6260,6 +6279,15 @@ ALTER TABLE ONLY public.opportunity_verification_events
 
 ALTER TABLE ONLY public.opportunity_verification_events
     ADD CONSTRAINT opportunity_verification_events_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.overview_layouts
+    ADD CONSTRAINT overview_layouts_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.overview_layouts
+    ADD CONSTRAINT overview_layouts_updated_by_user_id_fkey FOREIGN KEY (updated_by_user_id) REFERENCES public.users(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.overview_layouts
+    ADD CONSTRAINT overview_layouts_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.owned_domains
     ADD CONSTRAINT owned_domains_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;

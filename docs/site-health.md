@@ -541,7 +541,13 @@ JEV judges pairs through the analytics queue. Limits are in
 ## Change intelligence
 
 `change_intel` compares a terminal crawl with the newest earlier crawl that has
-the same origin, scope and analyzer/extractor versions. Scope excludes the
+the same origin, scope and analyzer/extractor versions. Recrawl
+(`POST /api/v1/site-crawls/{crawl_id}/recrawl`, [recrawl](../frontend/services/api/src/site-health/recrawl.ts),
+the header's Recrawl button) rebuilds the create request from a crawl's frozen
+globs, input mode, page limit, seeds, page kinds and random seed and goes
+through ordinary admission, so the next crawl is comparable by construction.
+Recrawling a one-page re-read reruns the newest site crawl before it instead.
+Scheduled crawls are not built yet. Scope excludes the
 page limit, which is the fetch budget left at admission; the comparison reads
 only pages both crawls analyzed. Page reruns write no snapshot and are never a
 predecessor, and Changes never shows a snapshot an older rerun wrote. With no

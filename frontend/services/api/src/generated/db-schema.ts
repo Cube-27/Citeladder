@@ -1895,6 +1895,17 @@ export interface OpportunityVerificationEvents {
   workspace_id: string;
 }
 
+export interface OverviewLayouts {
+  created_at: Timestamp;
+  id: string;
+  project_id: string;
+  updated_at: Timestamp;
+  updated_by_user_id: string;
+  version: number;
+  widgets: Json | null;
+  workspace_id: string;
+}
+
 export interface OwnedDomains {
   created_at: Timestamp;
   domain: string;
@@ -3336,6 +3347,7 @@ export interface DB {
   opportunity_orders: OpportunityOrders;
   opportunity_snapshots: OpportunitySnapshots;
   opportunity_verification_events: OpportunityVerificationEvents;
+  overview_layouts: OverviewLayouts;
   owned_domains: OwnedDomains;
   pending_activations: PendingActivations;
   performance_dimension_stats: PerformanceDimensionStats;

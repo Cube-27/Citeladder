@@ -5,11 +5,8 @@ import { afterAll, describe, expect, it } from 'vitest';
 import type { Selectable } from 'kysely';
 
 import { createApp } from '../src/app.ts';
-import { commandCenterSchema } from '@citeladder/contracts/opportunities';
 import { renderInvoicePdf } from '../src/billing/invoices.ts';
 import type { BillingInvoices } from '../src/generated/db-schema.ts';
-import { commandCenter } from '../src/projects/command-center.ts';
-import { renderExecutivePdf } from '../src/projects/executive-report.ts';
 import { billingAccount } from './prompt-fixtures.ts';
 import { Fixtures, sessionToken, testConfig, testDatabase } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
@@ -288,7 +285,7 @@ describe('persisted billing documents', () => {
     });
     await expect(renderInvoicePdf(misfiled)).rejects.toThrow('inconsistent');
   });
-  it('requires a scoped completed audit and reports its persisted provenance', async () => {
+  it('exports the Overview layout in its saved order, with measurement provenance', async () => {
     const t = await measurements.tenant();
     await db
       .updateTable('projects')
@@ -296,27 +293,80 @@ describe('persisted billing documents', () => {
       .where('id', '=', t.projectId)
       .execute();
     const requestHeaders = await headers(t.userId, t.workspaceId);
-    const path = `/api/v1/projects/${t.projectId}/reports/executive.pdf`;
-    expect((await app.request(path, { headers: requestHeaders })).status).toBe(404);
+    const path = `/api/v1/projects/${t.projectId}/overview/report.pdf`;
+    const before = await app.request(path, { headers: requestHeaders });
+    expect(before.status).toBe(200);
+    const unmeasured = (await pdfText(new Uint8Array(await before.arrayBuffer()))).join(' ');
+    expect(unmeasured).toContain('No completed measurement yet.');
+    expect(unmeasured).toContain('Ranked actions');
+
     const auditId = await measurements.audit(t, { completedAt: paidAt });
     await measurements.metricSnapshot(t, auditId, { visibilityScore: 0, metrics: {} });
+    const saved = await app.request(`/api/v1/projects/${t.projectId}/overview/layout`, {
+      method: 'PUT',
+      headers: { ...requestHeaders, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        widgets: [
+          { key: 'company_facts', size: 'full' },
+          { key: 'project_state', size: 'half' },
+        ],
+        expected_version: 0,
+      }),
+    });
+    expect(saved.status).toBe(200);
     const response = await app.request(path, { headers: requestHeaders });
-    expect(response.status).toBe(200);
-    const bytes = new Uint8Array(await response.arrayBuffer());
-    const text = (await pdfText(bytes)).join(' ');
+    expect(response.headers.get('content-type')).toBe('application/pdf');
+    const text = (await pdfText(new Uint8Array(await response.arrayBuffer()))).join(' ');
     expect(text).toContain(auditId);
-    expect(text).toContain('does not establish causation');
-    expect(text).toContain('Evidence appendix');
-    const owner = await tenant();
+    expect(text.indexOf('Company facts')).toBeLessThan(text.indexOf('Project state'));
+    expect(text).not.toContain('Ranked actions');
+
+    const stranger = await tenant();
     expect(
-      (await app.request(path, { headers: await headers(owner.userId, owner.workspaceId) })).status,
+      (await app.request(path, { headers: await headers(stranger.userId, stranger.workspaceId) }))
+        .status,
     ).toBe(404);
-    expect(
-      (await app.request(`${path}?audit_id=${randomUUID()}`, { headers: requestHeaders })).status,
-    ).toBe(404);
-    const view = commandCenterSchema.parse(await commandCenter(db, t, null));
-    view.actions = [];
-    view.report_available = false;
-    await expect(renderExecutivePdf(view)).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('prints every library widget as not available before any measurement', async () => {
+    const t = await measurements.tenant();
+    await db
+      .updateTable('projects')
+      .set({ benchmark_mode: 'consumer_like' })
+      .where('id', '=', t.projectId)
+      .execute();
+    const requestHeaders = await headers(t.userId, t.workspaceId);
+    const keys = [
+      'visibility_trend',
+      'share_of_voice',
+      'top_movers',
+      'retrieval',
+      'perception',
+      'ai_traffic',
+      'search_console',
+    ];
+    await app.request(`/api/v1/projects/${t.projectId}/overview/layout`, {
+      method: 'PUT',
+      headers: { ...requestHeaders, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        widgets: keys.map((key) => ({ key, size: 'half' })),
+        expected_version: 0,
+      }),
+    });
+    const response = await app.request(`/api/v1/projects/${t.projectId}/overview/report.pdf`, {
+      headers: requestHeaders,
+    });
+    expect(response.status).toBe(200);
+    const text = (await pdfText(new Uint8Array(await response.arrayBuffer()))).join(' ');
+    for (const heading of [
+      'Visibility over time',
+      'Share of voice',
+      'Top movers',
+      'Retrieved versus cited',
+      'Perception',
+      'AI Traffic',
+      'Search Console',
+    ])
+      expect(text).toContain(heading);
   });
 });

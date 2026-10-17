@@ -3,34 +3,44 @@ import type { ReactElement, ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
-const { project, downloadExecutiveReport, queryResult, promptsResult } = vi.hoisted(() => ({
-  project: {
-    id: '00000000-0000-4000-8000-000000000001',
-    workspace_id: '00000000-0000-4000-8000-000000000002',
-    name: 'Acme',
-    brand_name: 'Acme',
-    website_url: 'https://acme.com',
-    brand: { aliases: [], logo_url: null },
-    competitors: [],
-  },
-  downloadExecutiveReport: vi.fn().mockResolvedValue(new Blob(['pdf'])),
-  queryResult: {
-    data: undefined as unknown,
-    error: null as unknown,
-    isLoading: false,
-    isError: false,
-    refetch: vi.fn(),
-  },
-  // The latest run's prompt results, read by "Where you're missing".
-  promptsResult: {
-    data: [] as unknown,
-    error: null as unknown,
-    isPending: false,
-    isError: false,
-    isFetching: false,
-    refetch: vi.fn(),
-  },
-}));
+const { project, downloadOverviewReport, queryResult, promptsResult, layoutResult, role } =
+  vi.hoisted(() => ({
+    project: {
+      id: '00000000-0000-4000-8000-000000000001',
+      workspace_id: '00000000-0000-4000-8000-000000000002',
+      name: 'Acme',
+      brand_name: 'Acme',
+      website_url: 'https://acme.com',
+      brand: { aliases: [], logo_url: null },
+      competitors: [],
+    },
+    downloadOverviewReport: vi.fn().mockResolvedValue(new Blob(['pdf'])),
+    // The project's saved Overview layout; the default until a test changes it.
+    layoutResult: {
+      data: undefined as unknown,
+      error: null as unknown,
+      isError: false,
+      isFetching: false,
+      refetch: () => undefined,
+    },
+    role: { canWrite: true },
+    queryResult: {
+      data: undefined as unknown,
+      error: null as unknown,
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    },
+    // The latest run's prompt results, read by "Where you're missing".
+    promptsResult: {
+      data: [] as unknown,
+      error: null as unknown,
+      isPending: false,
+      isError: false,
+      isFetching: false,
+      refetch: vi.fn(),
+    },
+  }));
 const commandCenter = {
   project,
   facts: {
@@ -120,8 +130,10 @@ vi.mock('@/lib/billing/entitlement-context', () => ({
   capabilityRemaining: () => 0,
 }));
 vi.mock('@tanstack/react-query', () => ({
-  useQuery: (options: { queryKey: readonly unknown[] }) =>
-    options.queryKey[0] === 'visibility' ? promptsResult : queryResult,
+  useQuery: (options: { queryKey: readonly unknown[] }) => {
+    if (options.queryKey[1] === 'overview-layout') return layoutResult;
+    return options.queryKey[0] === 'visibility' ? promptsResult : queryResult;
+  },
   useQueryClient: () => ({ invalidateQueries: vi.fn() }),
   useMutation: () => ({ mutate: vi.fn(), isPending: false }),
 }));
@@ -137,14 +149,14 @@ vi.mock('@/lib/project/project-context', () => {
     useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     // `ProjectControls` gates the create affordance on the caller's role as
     // well as on the remaining allowance; this fixture is an Owner.
-    useWorkspaceCapability: () => true,
+    useWorkspaceCapability: () => role.canWrite,
     useActiveProject: () => project,
     useOptionalProjectContext: context,
     useProjectContext: context,
   };
 });
 vi.mock('@/lib/api/projects', () => ({
-  projectsApi: { getCommandCenter: vi.fn(), downloadExecutiveReport },
+  projectsApi: { getCommandCenter: vi.fn(), downloadOverviewReport },
 }));
 vi.mock('@/lib/api/opportunities', () => ({
   opportunitiesApi: { updateOrder: vi.fn() },
@@ -159,6 +171,22 @@ function RouterTestWrapper({ children }: Readonly<{ children: ReactNode }>) {
 function renderDashboard(ui: ReactElement) {
   return raw(ui, { wrapper: RouterTestWrapper });
 }
+
+const DEFAULT_LAYOUT = {
+  widgets: [
+    { key: 'project_state', size: 'half' },
+    { key: 'citation_share', size: 'half' },
+    { key: 'movement', size: 'half' },
+    { key: 'next_action', size: 'half' },
+    { key: 'missing_prompts', size: 'full' },
+    { key: 'ranked_actions', size: 'half' },
+    { key: 'progress_proof', size: 'half' },
+    { key: 'company_facts', size: 'full' },
+  ],
+  version: 0,
+  customized: false,
+  updated_at: null,
+};
 describe('DashboardScreen', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -171,6 +199,8 @@ describe('DashboardScreen', () => {
     queryResult.isError = false;
     queryResult.refetch.mockReset();
     promptsResult.data = [];
+    layoutResult.data = DEFAULT_LAYOUT;
+    role.canWrite = true;
   });
   it('renders state, comparable movement, actions, and report proof', () => {
     renderDashboard(
@@ -339,7 +369,47 @@ describe('DashboardScreen', () => {
       'true',
     );
   });
-  it('downloads the authenticated executive PDF', async () => {
+  it('shows only the saved widgets, in the saved order', () => {
+    layoutResult.data = {
+      ...DEFAULT_LAYOUT,
+      widgets: [
+        { key: 'company_facts', size: 'full' },
+        { key: 'project_state', size: 'half' },
+      ],
+      version: 3,
+      customized: true,
+    };
+    const { container } = renderDashboard(
+      <TooltipProvider>
+        <DashboardScreen />
+      </TooltipProvider>,
+    );
+    expect(
+      [...container.querySelectorAll('[data-widget]')].map((cell) =>
+        cell.getAttribute('data-widget'),
+      ),
+    ).toEqual(['company_facts', 'project_state']);
+    expect(screen.queryByRole('heading', { name: 'Movement' })).not.toBeInTheDocument();
+  });
+  it('offers the layout menu to editors only', () => {
+    renderDashboard(
+      <TooltipProvider>
+        <DashboardScreen />
+      </TooltipProvider>,
+    );
+    expect(screen.getByRole('button', { name: 'Layout' })).toBeVisible();
+  });
+  it('hides the layout menu from viewers', () => {
+    role.canWrite = false;
+    renderDashboard(
+      <TooltipProvider>
+        <DashboardScreen />
+      </TooltipProvider>,
+    );
+    expect(screen.queryByRole('button', { name: 'Layout' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /export pdf/i })).toBeVisible();
+  });
+  it('downloads the authenticated Overview PDF', async () => {
     const user = userEvent.setup();
     const createObjectURL = vi.fn(() => 'blob:report');
     const revokeObjectURL = vi.fn();
@@ -358,9 +428,9 @@ describe('DashboardScreen', () => {
         <DashboardScreen />
       </TooltipProvider>,
     );
-    expect(screen.getAllByRole('button', { name: /executive pdf/i })).toHaveLength(1);
-    await user.click(screen.getByRole('button', { name: /executive pdf/i }));
-    expect(downloadExecutiveReport).toHaveBeenCalledWith(project.id, {
+    expect(screen.getAllByRole('button', { name: /export pdf/i })).toHaveLength(1);
+    await user.click(screen.getByRole('button', { name: /export pdf/i }));
+    expect(downloadOverviewReport).toHaveBeenCalledWith(project.id, {
       workspaceId: project.workspace_id,
     });
     expect(createObjectURL).toHaveBeenCalledOnce();
@@ -368,7 +438,7 @@ describe('DashboardScreen', () => {
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:report');
   });
   it('shows a recoverable error when report download fails', async () => {
-    downloadExecutiveReport.mockRejectedValueOnce(new Error('download failed'));
+    downloadOverviewReport.mockRejectedValueOnce(new Error('download failed'));
     vi.stubGlobal(
       'URL',
       class extends URL {
@@ -383,9 +453,9 @@ describe('DashboardScreen', () => {
         <DashboardScreen />
       </TooltipProvider>,
     );
-    await user.click(screen.getByRole('button', { name: /executive pdf/i }));
+    await user.click(screen.getByRole('button', { name: /export pdf/i }));
     expect(await screen.findByText('The report could not be downloaded. Try again.')).toBeVisible();
-    await user.click(screen.getByRole('button', { name: /executive pdf/i }));
+    await user.click(screen.getByRole('button', { name: /export pdf/i }));
     await waitFor(() =>
       expect(
         screen.queryByText('The report could not be downloaded. Try again.'),
@@ -433,7 +503,8 @@ describe('DashboardScreen', () => {
     expect(
       within(screen.getByRole('region', { name: 'Citation share' })).getByText('Not run'),
     ).toBeVisible();
-    expect(screen.queryByRole('button', { name: /executive pdf/i })).not.toBeInTheDocument();
+    // The PDF exports the layout, so it is available before the first audit too.
+    expect(screen.getByRole('button', { name: /export pdf/i })).toBeVisible();
   });
   it('asks a project with no active prompts to choose what to track', () => {
     queryResult.data = { ...commandCenter, active_prompt_count: 0 };

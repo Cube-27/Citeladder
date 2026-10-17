@@ -440,6 +440,7 @@ describe('crawl-control HTTP contracts', () => {
       ],
       [`/site-crawls?project_id=${foreign.projectId}`, 'GET'],
       [`/site-crawls/${foreign.crawlId}/cancel`, 'POST'],
+      [`/site-crawls/${foreign.crawlId}/recrawl`, 'POST'],
       [`/projects/${foreign.projectId}/monitored-urls`, 'GET'],
       [
         `/projects/${foreign.projectId}/monitored-urls`,
@@ -474,6 +475,9 @@ describe('crawl-control HTTP contracts', () => {
       (await request(reader, '/site-crawls', 'POST', { project_id: seed.projectId })).status,
     ).toBe(403);
     expect((await request(reader, `/site-crawls/${seed.crawlId}/cancel`, 'POST')).status).toBe(403);
+    expect((await request(reader, `/site-crawls/${seed.crawlId}/recrawl`, 'POST')).status).toBe(
+      403,
+    );
     vi.stubEnv('ABUSE_CRAWL_CREATE_LIMIT', '1');
     const first = await request(seed, '/site-crawls', 'POST', { project_id: randomUUID() });
     expect(first.status).toBe(404);
@@ -797,6 +801,79 @@ describe('crawl-control HTTP contracts', () => {
       await blocker;
       await impatient.destroy();
     }
+  });
+
+  it('recrawls with the source crawl scope and seed, and refuses while a crawl is active', async () => {
+    const tenant = await fixtures.tenant({ websiteUrl: 'https://example.test/' });
+    const created = await request(tenant, '/site-crawls', 'POST', {
+      project_id: tenant.projectId,
+      exclude_globs: ['/private/*'],
+      requested_page_limit: 5,
+      seed: '42',
+    });
+    expect(created.status).toBe(201);
+    const source = siteCrawlSchema.parse(await created.json());
+    const busy = await request(tenant, `/site-crawls/${source.id}/recrawl`, 'POST');
+    expect(busy.status).toBe(409);
+    await db
+      .updateTable('site_crawls')
+      .set({ status: 'completed' })
+      .where('id', '=', source.id)
+      .execute();
+
+    const rerun = await request(tenant, `/site-crawls/${source.id}/recrawl`, 'POST');
+    expect(rerun.status).toBe(201);
+    const next = siteCrawlSchema.parse(await rerun.json());
+    const scope = (id: string) =>
+      db
+        .selectFrom('site_crawls')
+        .select(['random_seed', 'configuration'])
+        .where('id', '=', id)
+        .executeTakeFirstOrThrow()
+        .then(({ random_seed, configuration }) => {
+          const frozen = record(configuration);
+          return {
+            random_seed,
+            exclude_globs: frozen.exclude_globs,
+            include_globs: frozen.include_globs,
+            input_mode: frozen.input_mode,
+            requested_page_limit: frozen.requested_page_limit,
+          };
+        });
+    expect(next.id).not.toBe(source.id);
+    expect(await scope(next.id)).toEqual({
+      random_seed: '42',
+      exclude_globs: ['/private/*'],
+      include_globs: [],
+      input_mode: 'auto',
+      requested_page_limit: 5,
+    });
+    expect(await scope(next.id)).toEqual(await scope(source.id));
+
+    // After a one-page re-read, Recrawl reruns the site crawl, not the one page.
+    await db
+      .updateTable('site_crawls')
+      .set({ status: 'completed' })
+      .where('id', '=', next.id)
+      .execute();
+    const row = await db
+      .selectFrom('site_crawls')
+      .select(['profile_id', 'root_url'])
+      .where('id', '=', next.id)
+      .executeTakeFirstOrThrow();
+    const reread = await fixtures.sibling(
+      { ...tenant, profileId: row.profile_id, root: row.root_url, crawlId: '' },
+      {
+        random_seed: '7',
+        configuration: { page_rerun: true, requested_page_limit: 1, input_mode: 'auto' },
+        created_at: new Date(Date.now() + 1000),
+      },
+    );
+    const again = await request(tenant, `/site-crawls/${reread}/recrawl`, 'POST');
+    expect(again.status).toBe(201);
+    expect(await scope(siteCrawlSchema.parse(await again.json()).id)).toEqual(
+      await scope(source.id),
+    );
   });
 
   it('serializes a terminal rerun with full-crawl admission and keeps one active run', async () => {

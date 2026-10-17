@@ -1,6 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 
 import { PageLoading } from '@/components/layout/page-loading';
 import { PageShell } from '@/components/layout/page-shell';
@@ -11,16 +12,13 @@ import { ReadError } from '@/components/ui/read-error';
 import { projectsApi } from '@/lib/api/projects';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { CommandCenter, Project } from '@/lib/api/types';
-import { useProjectContext } from '@/lib/project/project-context';
+import { useOverviewLayout } from '@/lib/overview/use-overview-layout';
+import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
 
-import {
-  ActionsAndProof,
-  CompanyFacts,
-  DashboardActions,
-  DashboardHeader,
-  SummarySections,
-} from './dashboard-sections';
-import { MissingPrompts } from './missing-prompts';
+import { DashboardActions, DashboardHeader } from './dashboard-sections';
+import { OverviewGrid } from './overview-grid';
+import { OverviewLayoutMenu } from './overview-layout-menu';
+import { OverviewWidgetView } from './overview-widget';
 import { PromptSetupCard } from './prompt-setup-card';
 import { useCommandCenterActions } from './use-command-center-actions';
 
@@ -87,15 +85,41 @@ function DashboardData({
   onEditProject?: (project: Project) => void;
 }>) {
   const actions = useCommandCenterActions(data, activeProject);
+  const layout = useOverviewLayout(activeProject);
+  const canEdit = useWorkspaceCapability('write');
+  const [editing, setEditing] = useState(false);
+  if (layout.query.isError)
+    return (
+      <PageShell>
+        <ReadError
+          error={layout.query.error}
+          fallback="The Overview layout could not be loaded."
+          onRetry={() => void layout.query.refetch()}
+          pending={layout.query.isFetching}
+        />
+      </PageShell>
+    );
+  if (!layout.query.data) return <DashboardLoading />;
+  const saved = layout.query.data;
   return (
     <PageShell
       actions={
         <DashboardActions
-          data={data}
           activeProject={activeProject}
           onEditProject={onEditProject}
           downloading={actions.downloading}
           onDownload={actions.download}
+          layoutMenu={
+            canEdit ? (
+              <OverviewLayoutMenu
+                layout={saved}
+                editing={editing}
+                pending={layout.pending}
+                onEditingChange={setEditing}
+                onSave={layout.save}
+              />
+            ) : null
+          }
         />
       }
     >
@@ -110,15 +134,25 @@ function DashboardData({
             The shared action order changed. Review the refreshed order and try again.
           </Alert>
         ) : null}
-        <SummarySections data={data} />
-        <MissingPrompts projectId={activeProject.id} workspaceId={activeProject.workspace_id} />
-        <ActionsAndProof
-          data={data}
-          actions={actions.actions}
-          pending={actions.reorderPending}
-          onMove={actions.move}
+        {layout.failed ? (
+          <Alert tone="warning">
+            Someone else changed this Overview. The latest layout is shown; make your change again.
+          </Alert>
+        ) : null}
+        <OverviewGrid
+          widgets={saved.widgets}
+          editing={canEdit && editing}
+          pending={layout.pending}
+          onChange={layout.save}
+          render={(widget) => (
+            <OverviewWidgetView
+              widgetKey={widget.key}
+              data={data}
+              project={activeProject}
+              actions={actions}
+            />
+          )}
         />
-        <CompanyFacts data={data} />
       </Stack>
     </PageShell>
   );
