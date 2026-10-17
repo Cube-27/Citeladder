@@ -2127,6 +2127,7 @@ CREATE TABLE public.prompts (
     intent character varying(32) NOT NULL,
     buyer_stage character varying(16) DEFAULT ''::character varying NOT NULL,
     prompt_intent character varying(16) DEFAULT ''::character varying NOT NULL,
+    persona character varying(120) DEFAULT ''::character varying NOT NULL,
     branded boolean NOT NULL,
     enabled boolean NOT NULL,
     cohort character varying(32) DEFAULT 'core'::character varying NOT NULL,
@@ -2295,6 +2296,7 @@ CREATE TABLE public.raw_response_artifacts (
     search_used boolean NOT NULL,
     search_events jsonb,
     citations jsonb,
+    retrieved_sources jsonb,
     provider_metadata jsonb,
     usage jsonb,
     finish_reason character varying(24) NOT NULL,
@@ -2373,6 +2375,26 @@ CREATE TABLE public.response_analyses (
     avg_position double precision,
     score jsonb,
     entity_assessments jsonb NOT NULL,
+    retrieval_observed boolean DEFAULT false NOT NULL,
+    created_at timestamp with time zone NOT NULL
+);
+
+CREATE TABLE public.retrieved_sources (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    audit_id uuid NOT NULL,
+    analysis_id uuid NOT NULL,
+    artifact_id uuid NOT NULL,
+    analyzer_version character varying(32) NOT NULL,
+    ordinal integer NOT NULL,
+    url text NOT NULL,
+    title text NOT NULL,
+    domain character varying(255) NOT NULL,
+    is_owned boolean NOT NULL,
+    canonical_url text,
+    url_hash character varying(64),
+    url_identity_method character varying(24),
+    url_identity_version character varying(32),
     created_at timestamp with time zone NOT NULL
 );
 
@@ -3688,6 +3710,9 @@ ALTER TABLE ONLY public.referral_events
 ALTER TABLE ONLY public.response_analyses
     ADD CONSTRAINT response_analyses_pkey PRIMARY KEY (id);
 
+ALTER TABLE ONLY public.retrieved_sources
+    ADD CONSTRAINT retrieved_sources_pkey PRIMARY KEY (id);
+
 ALTER TABLE ONLY public.robots_snapshots
     ADD CONSTRAINT robots_snapshots_pkey PRIMARY KEY (id);
 
@@ -4980,6 +5005,12 @@ CREATE INDEX ix_response_analyses_audit_id ON public.response_analyses USING btr
 CREATE INDEX ix_response_analyses_cohort ON public.response_analyses USING btree (cohort);
 
 CREATE INDEX ix_response_analyses_workspace_id ON public.response_analyses USING btree (workspace_id);
+
+CREATE INDEX ix_retrieved_sources_analysis_id ON public.retrieved_sources USING btree (analysis_id);
+
+CREATE INDEX ix_retrieved_sources_audit_id ON public.retrieved_sources USING btree (audit_id);
+
+CREATE INDEX ix_retrieved_sources_workspace_url_hash ON public.retrieved_sources USING btree (workspace_id, url_hash);
 
 CREATE INDEX ix_search_intelligence_calls_dataset_id ON public.search_intelligence_calls USING btree (dataset_id);
 
@@ -6388,6 +6419,18 @@ ALTER TABLE ONLY public.response_analyses
 
 ALTER TABLE ONLY public.response_analyses
     ADD CONSTRAINT response_analyses_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.retrieved_sources
+    ADD CONSTRAINT retrieved_sources_analysis_id_fkey FOREIGN KEY (analysis_id) REFERENCES public.response_analyses(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.retrieved_sources
+    ADD CONSTRAINT retrieved_sources_artifact_id_fkey FOREIGN KEY (artifact_id) REFERENCES public.raw_response_artifacts(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.retrieved_sources
+    ADD CONSTRAINT retrieved_sources_audit_id_fkey FOREIGN KEY (audit_id) REFERENCES public.audits(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.retrieved_sources
+    ADD CONSTRAINT retrieved_sources_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.robots_snapshots
     ADD CONSTRAINT robots_snapshots_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;

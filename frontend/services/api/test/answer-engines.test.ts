@@ -191,6 +191,66 @@ describe('frozen answer-engine execution', () => {
     expect(JSON.stringify(result)).not.toContain('private-reasoning');
   });
 
+  it('records what each engine read apart from what it cited, and unknown where unexposed', () => {
+    const openai = parseAnswer(
+      {
+        status: 'completed',
+        output: [
+          {
+            type: 'web_search_call',
+            action: {
+              query: 'options',
+              sources: [
+                { type: 'url', url: 'https://www.acme.example/pricing' },
+                { type: 'url', url: 'https://rival.example/' },
+                { type: 'url', url: 'https://www.acme.example/pricing' },
+              ],
+            },
+          },
+          {
+            type: 'message',
+            content: [
+              {
+                type: 'output_text',
+                text: 'Rival',
+                annotations: [{ type: 'url_citation', url: 'https://rival.example/' }],
+              },
+            ],
+          },
+        ],
+      },
+      request('chatgpt'),
+    );
+    expect(openai.retrieved_sources).toEqual([
+      { ordinal: 0, url: 'https://www.acme.example/pricing', title: '', domain: 'acme.example' },
+      { ordinal: 1, url: 'https://rival.example/', title: '', domain: 'rival.example' },
+    ]);
+    expect(openai.citations.map((citation) => citation.url)).toEqual(['https://rival.example/']);
+    const claude = parseAnswer(
+      {
+        content: [
+          {
+            type: 'web_search_tool_result',
+            content: [
+              { type: 'web_search_result', url: 'https://acme.example/a', title: 'Acme A' },
+            ],
+          },
+          { type: 'text', text: 'Answer' },
+        ],
+      },
+      request('claude'),
+    );
+    expect(claude.retrieved_sources).toEqual([
+      { ordinal: 0, url: 'https://acme.example/a', title: 'Acme A', domain: 'acme.example' },
+    ]);
+    expect(claude.citations).toEqual([]);
+    const gemini = parseAnswer({ steps: [] }, request('gemini'));
+    expect(gemini.retrieved_sources).toBeNull();
+    expect(answerPayload(request('chatgpt'))).toMatchObject({
+      include: ['web_search_call.action.sources'],
+    });
+  });
+
   it('keeps Google redirect identity and counts calls even without usable queries', () => {
     const result = parseAnswer(
       {

@@ -130,6 +130,40 @@ describe('observed surface parsing', () => {
     });
     expect(() => parseScraper(payload(), 'foreign', 'chatgpt_search')).toThrow('parse_error');
   });
+  it('reads scraper search results as retrieved, and a page without them as unknown', () => {
+    const payload = (searchResults?: unknown) => ({
+      status_code: 20000,
+      tasks: [
+        {
+          id: 'ours',
+          status_code: 20000,
+          result: [
+            {
+              markdown: 'Observed consumer answer',
+              search_results: searchResults,
+              sources: [{ url: 'https://publisher.example/a', title: 'A' }],
+            },
+          ],
+        },
+      ],
+    });
+    const read = parseScraper(
+      payload([
+        { url: 'https://acme.example/pricing?utm_source=engine', title: 'Pricing' },
+        { url: 'https://publisher.example/a' },
+      ]),
+      'ours',
+      'chatgpt_search',
+    );
+    if (typeof read === 'string') throw new Error('Expected terminal answer');
+    expect(read.retrieved_sources).toEqual([
+      { ordinal: 0, url: 'https://acme.example/pricing', title: 'Pricing', domain: 'acme.example' },
+      { ordinal: 1, url: 'https://publisher.example/a', title: '', domain: 'publisher.example' },
+    ]);
+    const unexposed = parseScraper(payload(), 'ours', 'gemini_consumer');
+    if (typeof unexposed === 'string') throw new Error('Expected terminal answer');
+    expect(unexposed.retrieved_sources).toBeNull();
+  });
   it('reads ChatGPT ads as their own items and never into the answer text or citations', () => {
     const parsed = parseScraper(adsEnvelope, 'ours', 'chatgpt_search');
     if (typeof parsed === 'string') throw new Error('Expected terminal answer');

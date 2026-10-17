@@ -94,6 +94,7 @@ const result: ExecutionResult = {
   search_used: true,
   search_events: [],
   citations: [],
+  retrieved_sources: [],
   finish_reason: 'stop',
   raw_finish_reason: 'completed',
   latency_ms: 30,

@@ -110,6 +110,8 @@ export function persistExecutionSuccess(
       search_used: result.search_used,
       search_events: JSON.stringify(result.search_events),
       citations: JSON.stringify(result.citations),
+      retrieved_sources:
+        result.retrieved_sources === null ? null : JSON.stringify(result.retrieved_sources),
       provider_metadata: JSON.stringify(metadata),
       usage: JSON.stringify(usage),
       finish_reason: result.finish_reason,
