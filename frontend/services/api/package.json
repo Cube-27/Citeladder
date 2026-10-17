@@ -50,7 +50,7 @@
     "@anthropic-ai/sdk": "0.133.0",
     "@citeladder/contracts": "workspace:*",
     "@fontsource/noto-sans": "^5.3.0",
-    "@hono/node-server": "^2.1.4",
+    "@hono/node-server": "^2.1.5",
     "@noble/hashes": "^2.4.0",
     "@node-rs/argon2": "^2.2.2",
     "csv-parse": "^7.0.3",
@@ -65,7 +65,7 @@
     "pg": "^8.23.1",
     "robots-parser": "^3.0.1",
     "tldts": "^7.4.18",
-    "zod": "^4.6.5"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/fontkit": "^2.0.9",
