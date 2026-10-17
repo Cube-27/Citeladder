@@ -196,6 +196,7 @@ export type SortState = { column: string; direction: SortDirection } | null;
 const SORT_VALUES: Record<string, (item: SourceItem) => number | string> = {
   key: (item) => item.key,
   responses: (item) => item.responses,
+  retrieved: (item) => item.retrieved ?? -1,
   response_rate: (item) => item.response_rate ?? -1,
   retrieval_rate: (item) => item.retrieval_rate ?? -1,
   annotations: (item) => item.annotations,

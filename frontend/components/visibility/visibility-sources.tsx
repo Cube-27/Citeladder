@@ -9,7 +9,18 @@ import { Stack } from '@/components/ui/layout';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { splitPaneClasses } from '@/components/ui/workspace';
 import { SourceDomainDetail } from '@/components/visibility/source-domain-detail';
-import { DomainFilter, GapFilter, TypeFilter } from '@/components/visibility/source-filters';
+import {
+  DomainFilter,
+  StandingFilter,
+  TypeFilter,
+  type PageStandingFilter,
+} from '@/components/visibility/source-filters';
+import { TopMoversCard, useSourceMovers } from '@/components/visibility/source-movers';
+import {
+  NearMissFooter,
+  NearMissTable,
+  useSourceNearMisses,
+} from '@/components/visibility/source-near-misses';
 import { SourceTableToolbar } from '@/components/visibility/source-toolbar';
 import { TypesCard, UsageCard } from '@/components/visibility/source-charts';
 import { SourceUrlDetail } from '@/components/visibility/source-url-detail';
@@ -193,11 +204,15 @@ export function SourcesPanel({
   const [sourceType, setSourceType] = useUrlState('source_type', optionalStringUrlCodec, {
     clearKeys: ['source_cursor', 'source_offset', 'source_as_of'],
   });
-  // Only pages have a standing, so the gap filter applies to the URL table.
+  // Only pages have a standing, so the standing filter applies to the URL table.
   const [standing, setStanding] = useUrlState('source_standing', optionalStringUrlCodec, {
     clearKeys: ['source_cursor', 'source_offset', 'source_as_of'],
   });
   const gapOnly = dimension === 'url' && standing === 'gap';
+  const nearMiss = dimension === 'url' && standing === 'near_miss';
+  let standingFilter: PageStandingFilter = null;
+  if (gapOnly) standingFilter = 'gap';
+  if (nearMiss) standingFilter = 'near_miss';
   const [pageSize, setPageSize] = useState<TablePageSize>(TABLE_DEFAULT_PAGE_SIZE);
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<SortState>(null);
@@ -229,6 +244,17 @@ export function SourcesPanel({
     domain: activeDomain,
     sourceType,
   });
+  const nearMissQuery = useSourceNearMisses(filters, queries, {
+    enabled: nearMiss,
+    limit: pageSize,
+  });
+  // Movement is an inventory question; a domain's own page has no peers to rank.
+  const moversQuery = useSourceMovers(filters, queries, { dimension, enabled: !domain });
+  const comparable = queries.visibilityQuery.data?.comparison?.status === 'comparable';
+  const onPageSizeChange = (value: number) => {
+    setPageSize(isTablePageSize(value) ? value : TABLE_DEFAULT_PAGE_SIZE);
+    setUrlParams({ source_cursor: null, source_offset: null, source_as_of: null });
+  };
 
   const data = sourceQuery.data;
   const types = useTypeOptions({
@@ -292,7 +318,7 @@ export function SourcesPanel({
                 onChange={setSourceType}
               />
               {dimension === 'url' ? (
-                <GapFilter value={gapOnly} onChange={(next) => setStanding(next ? 'gap' : null)} />
+                <StandingFilter value={standingFilter} onChange={setStanding} />
               ) : null}
             </>
           }
@@ -303,31 +329,41 @@ export function SourcesPanel({
             by seven rows -- and then pushed it back down when the filter was
             cleared. The height is the toolbar plus a full page of rows. */}
         <CardContent className="flex min-h-[560px] flex-col justify-between p-0">
-          <SourceTable
-            dimension={dimension}
-            query={sourceQuery}
-            rows={rows}
-            sort={sort}
-            onSort={onSort}
-            onOpenUrl={onOpenUrl}
-            onOpenDomain={onOpenDomain}
-            pageSize={pageSize}
-            narrowed={Boolean(search || sourceType)}
-            searching={Boolean(search)}
-            gapOnly={gapOnly}
-          />
-          <SourcePaging
-            data={data}
-            domain={activeDomain}
-            dimension={dimension}
-            offset={Math.max(0, Number.parseInt(offset ?? '0', 10) || 0)}
-            pageSize={pageSize}
-            busy={sourceQuery.isFetching}
-            onPageSizeChange={(value) => {
-              setPageSize(isTablePageSize(value) ? value : TABLE_DEFAULT_PAGE_SIZE);
-              setUrlParams({ source_cursor: null, source_offset: null, source_as_of: null });
-            }}
-          />
+          {nearMiss ? (
+            <>
+              <NearMissTable query={nearMissQuery} pageSize={pageSize} onOpenUrl={onOpenUrl} />
+              <NearMissFooter
+                data={nearMissQuery.data}
+                pageSize={pageSize}
+                onPageSizeChange={onPageSizeChange}
+              />
+            </>
+          ) : (
+            <>
+              <SourceTable
+                dimension={dimension}
+                query={sourceQuery}
+                rows={rows}
+                sort={sort}
+                onSort={onSort}
+                onOpenUrl={onOpenUrl}
+                onOpenDomain={onOpenDomain}
+                pageSize={pageSize}
+                narrowed={Boolean(search || sourceType)}
+                searching={Boolean(search)}
+                gapOnly={gapOnly}
+              />
+              <SourcePaging
+                data={data}
+                domain={activeDomain}
+                dimension={dimension}
+                offset={Math.max(0, Number.parseInt(offset ?? '0', 10) || 0)}
+                pageSize={pageSize}
+                busy={sourceQuery.isFetching}
+                onPageSizeChange={onPageSizeChange}
+              />
+            </>
+          )}
         </CardContent>
       </Card>
 
@@ -336,6 +372,9 @@ export function SourcesPanel({
         <UsageCard dimension={dimension} query={seriesQuery} />
         <TypesCard slices={slices} total={data?.total_citations ?? 0} query={sourceQuery} />
       </div>
+      {domain ? null : (
+        <TopMoversCard dimension={dimension} query={moversQuery} comparable={comparable} />
+      )}
     </Stack>
   );
 }
@@ -417,14 +456,23 @@ function SourceTable({
     );
   }
   const state = tableState({ query, rows, pageSize, narrowed, searching, gapOnly });
+  const retrieval = query.data?.retrieval;
   return dimension === 'url' ? (
-    <UrlTable rows={rows} sort={sort} onSort={onSort} onOpenUrl={onOpenUrl} state={state} />
+    <UrlTable
+      rows={rows}
+      sort={sort}
+      onSort={onSort}
+      onOpenUrl={onOpenUrl}
+      retrieval={retrieval}
+      state={state}
+    />
   ) : (
     <DomainTable
       rows={rows}
       sort={sort}
       onSort={onSort}
       onOpenDomain={onOpenDomain}
+      retrieval={retrieval}
       state={state}
     />
   );

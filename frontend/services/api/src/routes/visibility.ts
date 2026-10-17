@@ -24,6 +24,8 @@ import {
 import {
   visibilityEvidenceResponseSchema,
   visibilityFanoutSummarySchema,
+  visibilitySourceMoversSchema,
+  visibilitySourceNearMissesSchema,
   visibilitySourceSeriesSchema,
   visibilitySourcesSchema,
   visibilitySourceUrlSchema,
@@ -55,6 +57,8 @@ import {
   TrendQueryError,
   type RunSelection,
 } from '../visibility/selection.ts';
+import { getSourceMovers } from '../visibility/source-movers.ts';
+import { getSourceNearMisses } from '../visibility/source-retrieval.ts';
 import { getSourceSeries, SOURCE_SERIES_MAX_SERIES } from '../visibility/source-series.ts';
 import { getSourceUrlDetail } from '../visibility/source-url.ts';
 import { getVisibilitySources } from '../visibility/sources.ts';
@@ -536,6 +540,62 @@ export const visibilityRoutes = [
           domain: query.domain,
           url: query.url,
           sourceClass: query.source_type,
+          limit: query.limit,
+        }),
+      );
+    },
+  }),
+  defineGetRoute({
+    family: 'visibility',
+    path: '/api/v1/projects/{project_id}/visibility/sources/near-misses',
+    params: {
+      path: PROJECT_PATH,
+      query: {
+        ...RUNS,
+        engine: { scalar: { kind: 'str' } },
+        cohort: COHORT,
+        ...WINDOW,
+        limit: LIMIT,
+      },
+    },
+    response: visibilitySourceNearMissesSchema,
+    async handle({ c, db }, { path, query }) {
+      const workspace = c.get('workspace');
+      await requireProject(db, workspace, path.project_id);
+      return selectionErrors(() =>
+        getSourceNearMisses(db, runSelection(workspace.workspaceId, path.project_id, query), {
+          asOf: new Date().toISOString(),
+          limit: query.limit,
+        }),
+      );
+    },
+  }),
+  defineGetRoute({
+    family: 'visibility',
+    path: '/api/v1/projects/{project_id}/visibility/sources/movers',
+    params: {
+      path: PROJECT_PATH,
+      query: {
+        ...RUNS,
+        baseline_audit_ids: BASELINE_RUNS,
+        engine: { scalar: { kind: 'str' } },
+        cohort: COHORT,
+        dimension: { scalar: { kind: 'literal', values: ['domain', 'url'] }, default: 'domain' },
+        ...WINDOW,
+        limit: {
+          scalar: { kind: 'int', ge: 1, le: policy.visibility.source_movers_max_limit },
+          default: policy.visibility.source_movers_default_limit,
+        },
+      },
+    },
+    response: visibilitySourceMoversSchema,
+    async handle({ c, db }, { path, query }) {
+      const workspace = c.get('workspace');
+      await requireProject(db, workspace, path.project_id);
+      return selectionErrors(() =>
+        getSourceMovers(db, runSelection(workspace.workspaceId, path.project_id, query), {
+          dimension: query.dimension,
+          baselineAuditIds: query.baseline_audit_ids ?? [],
           limit: query.limit,
         }),
       );

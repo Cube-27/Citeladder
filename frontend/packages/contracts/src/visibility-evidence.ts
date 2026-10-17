@@ -118,9 +118,18 @@ export const visibilitySourcesSchema = responseObject({
   next_cursor: z.string().nullable(),
   as_of: z.string(),
   comparison_status: z.string(),
+  // Answers whose surface exposed what it read, and the engines in the
+  // selection that expose none: their reads are unknown, never zero.
+  retrieval: responseObject({
+    responses: z.number().int(),
+    unavailable_engines: z.array(z.string()),
+  }),
   items: z.array(
     responseObject({
       key: z.string(),
+      // Answers that read this source, cited or not; null when no answer in
+      // the selection exposes what it read.
+      retrieved: z.number().int().nullable(),
       responses: z.number().int(),
       prompts: z.number().int(),
       annotations: z.number().int(),
@@ -199,6 +208,45 @@ export const visibilitySourceSeriesSchema = responseObject({
       ),
     }),
   ),
+});
+
+/**
+ * The project's own pages an engine read but did not cite in the same answer.
+ * Only answers whose surface exposes what it read count; `responses` is that
+ * denominator.
+ */
+export const visibilitySourceNearMissesSchema = responseObject({
+  responses: z.number().int(),
+  unavailable_engines: z.array(z.string()),
+  items: z.array(
+    responseObject({
+      url: z.string(),
+      url_hash: z.string().nullable(),
+      domain: z.string(),
+      title: z.string(),
+      // Answers that read the page, and those of them that also cited it.
+      retrieved: z.number().int(),
+      cited: z.number().int(),
+      last_retrieved_at: z.string(),
+    }),
+  ),
+});
+
+const sourceMoverSchema = responseObject({
+  key: z.string(),
+  // Citation share in each period, as a fraction, and its change in
+  // percentage points. A source absent from one period has share 0 there.
+  current_share: z.number(),
+  previous_share: z.number(),
+  delta: z.number(),
+});
+
+/** Sources ranked by change in citation share against the previous comparable period. */
+export const visibilitySourceMoversSchema = responseObject({
+  dimension: z.enum(['domain', 'url']),
+  comparison_status: z.string(),
+  risers: z.array(sourceMoverSchema),
+  fallers: z.array(sourceMoverSchema),
 });
 
 /** One cited URL's own page: overview, engines, prompts and co-named brands. */

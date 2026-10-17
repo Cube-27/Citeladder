@@ -22,6 +22,10 @@ export const visibilityKeys = {
     ['visibility', 'source-series', projectId, filters] as const,
   sourceUrl: (projectId: string, filters: ListFilters = {}) =>
     ['visibility', 'source-url', projectId, filters] as const,
+  sourceNearMisses: (projectId: string, filters: ListFilters = {}) =>
+    ['visibility', 'source-near-misses', projectId, filters] as const,
+  sourceMovers: (projectId: string, filters: ListFilters = {}) =>
+    ['visibility', 'source-movers', projectId, filters] as const,
   fanout: (projectId: string, filters: ListFilters = {}) =>
     ['visibility', 'fanout', projectId, filters] as const,
   project: (projectId: string, auditId?: string, filters: ListFilters = {}) =>

@@ -28,6 +28,7 @@ import { brandIdentities, identityKey } from './brand-identities.ts';
 import { earnedPageActions, gapPageHashes, pageStanding } from './page-standing.ts';
 import { ratio } from './metrics.ts';
 import { runSetComparisonStatus } from './run-sets.ts';
+import { attachRetrieved, retrievalCoverage } from './source-retrieval.ts';
 import {
   authorizedSelection,
   authorizeRunSet,
@@ -255,6 +256,7 @@ export async function getVisibilitySources(
       values.filter((value): value is string => Boolean(value)).sort(compareText);
     return {
       key: row.key,
+      retrieved: null,
       url_hash: pages ? row.url_hash : null,
       // "Last seen" is asked of a page, never of a publisher.
       last_cited_at: pages ? wireUtcOrNull(row.last_cited_at) : null,
@@ -287,6 +289,8 @@ export async function getVisibilitySources(
   });
   await attachPageLinks(db, selection, items);
   if (pages) await attachRowMentions(db, selection, scope, items);
+  const retrieval = await retrievalCoverage(db, selection, asOf);
+  await attachRetrieved(db, selection, { asOf, pages, coverage: retrieval, items });
   const hasPrevious = backwards ? summary.rows.length > query.limit : Boolean(position);
   const response: SourcesResponse = {
     total,
@@ -314,6 +318,7 @@ export async function getVisibilitySources(
           ])
         : null,
     comparison_status: 'no_baseline',
+    retrieval,
     items,
   };
   if (query.baselineAuditIds?.length) {

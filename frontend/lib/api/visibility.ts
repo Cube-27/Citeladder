@@ -15,6 +15,8 @@ import { z } from 'zod';
 import {
   visibilityEvidenceResponseSchema,
   visibilityFanoutSummarySchema,
+  visibilitySourceMoversSchema,
+  visibilitySourceNearMissesSchema,
   visibilitySourceSeriesSchema,
   visibilitySourceUrlSchema,
   visibilitySourcesSchema,
@@ -245,6 +247,46 @@ export const visibilityApi = {
       options,
     );
     return strictValidate(visibilitySourceSeriesSchema, result, 'visibility.getSourceSeries');
+  },
+  getSourceNearMisses: async (
+    projectId: string,
+    params: {
+      audit_id?: string;
+      audit_ids?: string[];
+      engine?: string;
+      cohort?: string;
+      limit?: number;
+    },
+    options?: ApiRequestOptions,
+  ) => {
+    const result = await apiClient.get(
+      withQuery(`/projects/${projectId}/visibility/sources/near-misses`, definedQuery(params)),
+      options,
+    );
+    return strictValidate(
+      visibilitySourceNearMissesSchema,
+      result,
+      'visibility.getSourceNearMisses',
+    );
+  },
+  getSourceMovers: async (
+    projectId: string,
+    params: {
+      audit_id?: string;
+      audit_ids?: string[];
+      baseline_audit_ids?: string[];
+      engine?: string;
+      cohort?: string;
+      dimension?: 'domain' | 'url';
+      limit?: number;
+    },
+    options?: ApiRequestOptions,
+  ) => {
+    const result = await apiClient.get(
+      withQuery(`/projects/${projectId}/visibility/sources/movers`, definedQuery(params)),
+      options,
+    );
+    return strictValidate(visibilitySourceMoversSchema, result, 'visibility.getSourceMovers');
   },
   getSourceUrl: async (
     projectId: string,

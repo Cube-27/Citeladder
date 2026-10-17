@@ -1,9 +1,7 @@
 'use client';
 
 import { Badge } from '@/components/ui/badge';
-import { InlineEmpty } from '@/components/ui/inline-empty';
 import { Pressable } from '@/components/ui/pressable';
-import { Skeleton } from '@/components/ui/skeleton';
 import { TextLink } from '@/components/ui/text-link';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import {
@@ -29,50 +27,24 @@ import {
   typeLabel,
   type SortState,
   type SourceItem,
+  type SourcesData,
 } from '@/lib/visibility/sources';
+import {
+  NumericCell,
+  RetrievedCell,
+  retrievedHint,
+  SourceName,
+  sortProps,
+  StateRows,
+  type SourceTableState,
+} from '@/components/visibility/source-cells';
 import { HintedHead } from '@/components/visibility/source-heads';
 import { standingLabel } from '@/lib/visibility/source-pages';
 import { pageFormatBasis } from '@/lib/visibility/vocabulary';
 import type { useVisibilityFilters } from '@/lib/visibility/use-visibility-dashboard';
 
 export type SourceFilters = ReturnType<typeof useVisibilityFilters>;
-
-/** The source's own mark and name, with the favicon a reader recognises first. */
-function SourceName({
-  name,
-  host,
-  secondary,
-}: Readonly<{ name: string; host: string | null; secondary?: string | null }>) {
-  return (
-    <span className="flex min-w-0 items-center gap-2">
-      <BrandLogo name={name} websiteUrl={host ? `https://${host}` : null} size="sm" />
-      <span className="grid min-w-0">
-        <ClampText lines={secondary ? 1 : 2}>{name}</ClampText>
-        {secondary ? (
-          <ClampText lines={1} className={textRole('caption', 'text-secondary')}>
-            {secondary}
-          </ClampText>
-        ) : null}
-      </span>
-    </span>
-  );
-}
-
-/**
- * A numeric cell that marks an absent value rather than spelling it out.
- *
- * The formatters answer `null` for "nothing to show"; deciding what that MEANS
- * is the table's job, and every numeric column here means the same thing by it.
- * The reason is said once, on the column header, instead of once per row --
- * see `MissingValue` for why the mark is not simply blank.
- */
-function NumericCell({ value, className }: Readonly<{ value: string | null; className?: string }>) {
-  return (
-    <TableCell numeric className={className}>
-      {value ?? <MissingValue />}
-    </TableCell>
-  );
-}
+export type { SourceTableState } from '@/components/visibility/source-cells';
 
 /**
  * Each table's columns, as the classes that govern them.
@@ -84,82 +56,27 @@ function NumericCell({ value, className }: Readonly<{ value: string | null; clas
  * which is the movement this state exists to prevent.
  */
 const DOMAIN_COLUMNS = [
-  'w-[30%]',
-  'w-[15%]',
+  'w-[26%]',
+  'w-[13%]',
+  '',
   '',
   'hidden lg:table-cell',
   '',
   'hidden md:table-cell',
-  '',
+  'hidden md:table-cell',
 ] as const;
 
 const URL_COLUMNS = [
-  'w-[28%]',
-  'w-[12%]',
-  'hidden md:table-cell w-[14%]',
+  'w-[26%]',
+  'w-[11%]',
+  'hidden md:table-cell w-[13%]',
+  '',
   '',
   '',
   'hidden xl:table-cell',
   'hidden lg:table-cell',
   'hidden lg:table-cell',
 ] as const;
-
-/**
- * What a table shows INSTEAD of rows, without giving up its own structure.
- *
- * The states used to replace the whole table: a 160px skeleton, or a single
- * sentence, where ten 44px rows had been. That is a ~320px collapse on every
- * filter change, and the reader watched the page jump under the control they
- * had just clicked. Filling the existing `<tbody>` keeps the header, the
- * column widths and the footer exactly where they were.
- */
-export type SourceTableState =
-  | { kind: 'rows' }
-  | { kind: 'loading'; rows: number }
-  | { kind: 'empty'; message: string };
-
-function StateRows({
-  state,
-  columns,
-}: Readonly<{
-  state: Exclude<SourceTableState, { kind: 'rows' }>;
-  columns: readonly string[];
-}>) {
-  if (state.kind === 'loading') {
-    return (
-      <>
-        {Array.from({ length: state.rows }, (_, row) => (
-          <TableRow key={`loading-${row}`}>
-            {columns.map((columnClass, cell) => (
-              <TableCell
-                key={cell} // NOSONAR -- placeholder cells of a fixed column layout; the column position is the identity
-                className={columnClass || undefined}
-              >
-                <Skeleton className="h-4 w-full" />
-              </TableCell>
-            ))}
-          </TableRow>
-        ))}
-      </>
-    );
-  }
-  return (
-    <TableRow>
-      <TableCell colSpan={columns.length}>
-        <InlineEmpty>{state.message}</InlineEmpty>
-      </TableCell>
-    </TableRow>
-  );
-}
-
-/** One sortable column's header state, from the table's single sort. */
-function sortProps(sort: SortState, onSort: (column: string) => void, column: string) {
-  return {
-    active: sort?.column === column,
-    descending: sort?.direction === 'desc',
-    onSort: () => onSort(column),
-  };
-}
 
 /** A source's type, with the basis for the claim behind a tooltip and in hidden text. */
 function TypeChip({
@@ -188,26 +105,29 @@ function TypeChip({
 /**
  * The cited domains.
  *
- * Retrieved and Retrieval rate answer different questions and sit next to each
- * other on purpose: the first is whether a publisher showed up at all, the
- * second is how many of its pages did. A site quoted once in most answers and
- * one quoted deeply in a few are opposite situations with the same first
- * number.
+ * Cited in and Retrieved sit next to each other on purpose: the first is how
+ * often the engines cited the publisher, the second how often they read it.
+ * A publisher read far more than it is cited is reaching the engines and still
+ * losing the citation. Retrieved counts only answers whose engine exposes what
+ * it read, so its denominator is those answers, never the whole selection.
  */
 export function DomainTable({
   rows,
   sort,
   onSort,
   onOpenDomain,
+  retrieval,
   state = { kind: 'rows' },
 }: Readonly<{
   rows: readonly SourceItem[];
   sort: SortState;
   onSort: (column: string) => void;
   onOpenDomain?: (domain: string) => void;
+  retrieval?: SourcesData['retrieval'];
   /** Loading or empty fills the body; the header and footer stay put. */
   state?: SourceTableState;
 }>) {
+  const observed = retrieval?.responses ?? 0;
   return (
     // `table-fixed` with explicit column widths: without it every column sizes
     // to its own longest cell, so filtering to a shorter set of domains
@@ -226,17 +146,26 @@ export function DomainTable({
             className={DOMAIN_COLUMNS[1]}
           />
           <SortableTableHead
-            label="Retrieved"
+            label="Cited in"
             {...sortProps(sort, onSort, 'response_rate')}
             numeric
-            hint="Answers that retrieved at least one page from this domain, as a share of all answers in the selection."
+            hint="Answers that cited at least one page from this domain, as a share of all answers in the selection."
           />
           <SortableTableHead
-            label="Retrieval rate"
+            label="Retrieved"
+            {...sortProps(sort, onSort, 'retrieved')}
+            numeric
+            hint={retrievedHint(
+              'Answers that read at least one page from this domain, cited or not, as a share of the answers whose engine exposes what it read.',
+              retrieval,
+            )}
+          />
+          <SortableTableHead
+            label="Pages cited"
             {...sortProps(sort, onSort, 'retrieval_rate')}
             numeric
-            className={DOMAIN_COLUMNS[3]}
-            hint="Unique pages retrieved from this domain per answer in the selection."
+            className={DOMAIN_COLUMNS[4]}
+            hint="Unique pages cited from this domain per answer in the selection."
           />
           <SortableTableHead
             label="Citations"
@@ -248,14 +177,15 @@ export function DomainTable({
             label="Citation share"
             {...sortProps(sort, onSort, 'citation_share')}
             numeric
-            className={DOMAIN_COLUMNS[5]}
+            className={DOMAIN_COLUMNS[6]}
             hint="This domain's citations as a share of every citation in the current filtered view."
           />
           <SortableTableHead
             label="Citation rate"
             {...sortProps(sort, onSort, 'citation_rate')}
             numeric
-            hint="Citations per answer that actually retrieved this domain — not per answer in the selection."
+            className={DOMAIN_COLUMNS[7]}
+            hint="Citations per answer that cited this domain — not per answer in the selection."
           />
         </TableRow>
       </TableHeader>
@@ -277,10 +207,13 @@ export function DomainTable({
                   <TypeChip token={itemType(row)} dimension="domain" />
                 </TableCell>
                 <NumericCell value={percent(row.response_rate)} />
-                <NumericCell value={ratio(row.retrieval_rate)} className={DOMAIN_COLUMNS[3]} />
+                <RetrievedCell
+                  value={row.retrieved === null ? null : percent(row.retrieved / observed)}
+                />
+                <NumericCell value={ratio(row.retrieval_rate)} className={DOMAIN_COLUMNS[4]} />
                 <NumericCell value={count(row.annotations)} />
-                <NumericCell value={percent(row.citation_share, 1)} className={DOMAIN_COLUMNS[5]} />
-                <NumericCell value={ratio(row.citation_rate)} />
+                <NumericCell value={percent(row.citation_share, 1)} className={DOMAIN_COLUMNS[6]} />
+                <NumericCell value={ratio(row.citation_rate)} className={DOMAIN_COLUMNS[7]} />
               </TableRow>
             ))}
       </TableBody>
@@ -370,12 +303,14 @@ export function UrlTable({
   sort,
   onSort,
   onOpenUrl,
+  retrieval,
   state = { kind: 'rows' },
 }: Readonly<{
   rows: readonly SourceItem[];
   sort: SortState;
   onSort: (column: string) => void;
   onOpenUrl: (url: string) => void;
+  retrieval?: SourcesData['retrieval'];
   /** Loading or empty fills the body; the header and footer stay put. */
   state?: SourceTableState;
 }>) {
@@ -399,34 +334,43 @@ export function UrlTable({
             className={URL_COLUMNS[2]}
           />
           <SortableTableHead
-            label="Retrievals"
+            label="Cited in"
             {...sortProps(sort, onSort, 'responses')}
             numeric
-            hint="Answers that used this URL as a source."
+            hint="Answers that cited this URL."
+          />
+          <SortableTableHead
+            label="Retrieved"
+            {...sortProps(sort, onSort, 'retrieved')}
+            numeric
+            hint={retrievedHint(
+              'Answers that read this URL, cited or not, among those whose engine exposes what it read.',
+              retrieval,
+            )}
           />
           <SortableTableHead
             label="Citation rate"
             {...sortProps(sort, onSort, 'citation_rate')}
             numeric
-            hint="Citations of this URL per answer that used it as a source."
+            hint="Citations of this URL per answer that cited it."
           />
           <SortableTableHead
             label="Mentions"
             {...sortProps(sort, onSort, 'mentions')}
             numeric
-            className={URL_COLUMNS[5]}
+            className={URL_COLUMNS[6]}
             hint="Distinct brands named in the answers that cited this URL. Co-occurrence in the answer, not presence on the page."
           />
           <HintedHead
             label="Mentioned"
             hint="The brands named in the answers that cited this URL. Co-occurrence in the answer, not presence on the page."
-            className={URL_COLUMNS[6]}
+            className={URL_COLUMNS[7]}
           />
           <SortableTableHead
             label="Last seen"
             {...sortProps(sort, onSort, 'last_cited_at')}
             numeric
-            className={URL_COLUMNS[7]}
+            className={URL_COLUMNS[8]}
             hint="The most recent run in this selection whose answer used this URL as a source."
           />
         </TableRow>
@@ -460,12 +404,13 @@ export function UrlTable({
                   <PageStandingCell standing={row.standing} actionId={row.action_id} />
                 </TableCell>
                 <NumericCell value={count(row.responses)} />
+                <RetrievedCell value={row.retrieved === null ? null : count(row.retrieved)} />
                 <NumericCell value={ratio(row.citation_rate)} />
-                <NumericCell value={count(row.mentions)} className={URL_COLUMNS[5]} />
-                <TableCell className={URL_COLUMNS[6]}>
+                <NumericCell value={count(row.mentions)} className={URL_COLUMNS[6]} />
+                <TableCell className={URL_COLUMNS[7]}>
                   <MentionedChips brands={row.brands} total={row.mentions} />
                 </TableCell>
-                <NumericCell value={sinceLabel(row.last_cited_at)} className={URL_COLUMNS[7]} />
+                <NumericCell value={sinceLabel(row.last_cited_at)} className={URL_COLUMNS[8]} />
               </TableRow>
             ))}
       </TableBody>

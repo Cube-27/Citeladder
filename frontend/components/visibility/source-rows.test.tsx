@@ -12,6 +12,7 @@ const ACTION = '22222222-2222-4222-8222-222222222222';
 function page(key: string, overrides: Partial<SourceItem>): SourceItem {
   return {
     key,
+    retrieved: null,
     responses: 2,
     prompts: 1,
     annotations: 2,
@@ -40,6 +41,34 @@ function page(key: string, overrides: Partial<SourceItem>): SourceItem {
     ...overrides,
   };
 }
+
+it('shows reads beside citations, and an engine without exposed reads as unavailable', () => {
+  renderWithProviders(
+    <UrlTable
+      rows={[
+        page('https://acme.example/pricing', { responses: 1, retrieved: 3 }),
+        page('https://other.example/x', { responses: 2, retrieved: null }),
+      ]}
+      sort={null}
+      onSort={vi.fn()}
+      onOpenUrl={vi.fn()}
+      retrieval={{ responses: 4, unavailable_engines: ['gemini'] }}
+    />,
+    { projectSelection: { activeProjectId: PROJECT } },
+  );
+
+  const [header, read, unexposed] = screen.getAllByRole('row');
+  const columns = within(header!)
+    .getAllByRole('columnheader')
+    .map((cell) => cell.textContent);
+  const cell = (row: HTMLElement, label: string) =>
+    within(row).getAllByRole('cell')[columns.indexOf(label)]!.textContent;
+  expect([cell(read!, 'Cited in'), cell(read!, 'Retrieved')]).toEqual(['1', '3']);
+  expect([cell(unexposed!, 'Cited in'), cell(unexposed!, 'Retrieved')]).toEqual([
+    '2',
+    'Unavailable',
+  ]);
+});
 
 it('shows where you stand on each page and links a gap to its Action', () => {
   renderWithProviders(
