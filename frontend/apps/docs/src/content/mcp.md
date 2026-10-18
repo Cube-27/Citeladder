@@ -26,9 +26,9 @@ Use the [tool reference](/mcp/tools/) for the registered catalog and [example re
 
 ## What you can change
 
-With **Allow changes**, in workspaces where you are a Member or above, the assistant can add and edit topics and prompts, archive prompts, add competitors, launch and cancel audits, create audit schedules, update an Action's status and declare an Action implemented.
+With **Allow changes**, in workspaces where you are a Member or above, the assistant can add, rename and delete topics (a deleted topic's prompts stay, without a topic), add and edit prompts, archive prompts, add and remove competitors, launch and cancel audits, create audit schedules, update an Action's status and declare an Action implemented.
 
-Small edits, such as renaming a topic, run when the assistant calls them. Larger changes (adding or archiving prompts, launching an audit, creating a schedule, declaring an Action implemented) work in two steps: the assistant shows you a preview, such as the prompts to be added or the prompt runs an audit can use, and the change happens only after you agree. Added prompts are active at once. [Access](/mcp/access/#changes-and-confirmation) explains the rules.
+Small edits, such as renaming a topic or removing a competitor, run when the assistant calls them, after it has asked you. Larger changes (adding or archiving prompts, launching an audit, creating a schedule, declaring an Action implemented) work in two steps: the assistant shows you a preview, such as the prompts to be added or the prompt runs an audit can use, and the change happens only after you agree. Added prompts are active at once. [Access](/mcp/access/#changes-and-confirmation) explains the rules.
 
 ## How it differs from the Agent
 

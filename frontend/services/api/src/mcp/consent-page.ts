@@ -85,10 +85,11 @@ export type ConsentView = Readonly<{
   offerChanges: boolean;
 }>;
 
-/** What a write grant can do; every change is shown and confirmed first. */
+/** What a write grant can do; the assistant asks first, and larger changes need a confirmed preview. */
 const CHANGES = [
-  'Add and edit topics and prompts',
-  'Add competitors',
+  'Add, edit and archive prompts',
+  'Add, rename and delete topics',
+  'Add and remove competitors',
   'Launch and cancel audits',
   'Create audit schedules',
   'Update Action status and declare Actions implemented',

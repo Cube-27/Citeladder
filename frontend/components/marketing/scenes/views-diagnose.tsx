@@ -175,7 +175,7 @@ export function IntegrationsView() {
     ['Google Analytics 4', 'Zernovelle — Web', 'Connected', BarChart3],
     ['Bing Webmaster Tools', 'zernovelle.example', 'Connected', TrendingUp],
     ['DataForSEO', 'Explicit review per collection', 'Optional', FileText],
-    ['MCP clients', '2 authorized assistants', 'Read-only', Bot],
+    ['MCP clients', '2 authorized assistants', 'Read and change', Bot],
   ] as const;
   return (
     <div className="pv-view">

@@ -236,7 +236,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
     description:
       'Connect Claude, ChatGPT, Gemini, Grok, Cursor and other MCP clients to your CiteLadder visibility, site and search evidence, with changes only after you confirm them.',
     heading: 'Your CiteLadder evidence, in your AI assistant.',
-    lead: 'Ask Claude, ChatGPT and other assistants about your AI visibility, cited sources, Site Health and search performance. They answer from your saved CiteLadder records, for the workspaces you approve.',
+    lead: 'Ask Claude, ChatGPT and other assistants about your AI visibility, cited sources, Site Health and search performance, and let them manage your prompts, competitors and audits when you allow it. They answer from your saved CiteLadder records, for the workspaces you approve.',
     cta: 'mcp',
     visual: 'mcp',
     visualTitle: 'MCP client',
@@ -259,7 +259,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
         title: 'Ask questions grounded in recorded evidence.',
         body: 'Read visibility results and trends, perception, ads, cited sources, Actions, Site Health, performance, AI referrals, AI crawler logs, the AI Shelf, demand and saved Search Intelligence datasets. Every answer comes from a dated record, not a guess.',
         points: [
-          'Changes only if you allow them and agree to each; no crawls, purchases or publishing',
+          'Interactive visibility and Site Health views in assistants that show apps',
           'Unavailable data is reported as unavailable, never as zero',
           'Links back to the screen in CiteLadder that shows the record',
         ],
@@ -271,7 +271,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
         points: [
           'Weekly AI visibility brief across engines and competitors',
           'Site fix brief from the latest Site Health crawl',
-          'Cited-source review before outreach or content work',
+          'With Allow changes: add prompts, track or drop competitors, launch audits and schedules, and dismiss or mark Actions implemented, each after you agree; no crawls, purchases or publishing',
         ],
         visual: 'visibility',
       },
@@ -291,7 +291,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
       },
       {
         title: 'Ask',
-        body: 'Ask in plain language. The assistant lists your projects and reads the records it needs.',
+        body: 'Ask in plain language. The assistant lists your projects, reads the records it needs and, if you allowed changes, makes the ones you agree to.',
       },
     ],
     questions: [
@@ -300,11 +300,12 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
       'Which Site Health issues affect our most-cited pages?',
       'Which sources do AI answers cite for our top prompts?',
       'How much traffic did AI assistants send us last month?',
+      'Add five comparison prompts against our top competitor and launch an audit on ChatGPT.',
     ],
     faqs: [
       {
         q: 'What is the CiteLadder MCP server?',
-        a: `A hosted Model Context Protocol server at ${MCP_SERVER_URL}. It lets a compatible AI assistant read your CiteLadder project evidence so you can ask questions about it in plain language.`,
+        a: `A hosted Model Context Protocol server at ${MCP_SERVER_URL}. It lets a compatible AI assistant read your CiteLadder project evidence so you can ask questions about it in plain language, show interactive visibility and Site Health views, and, if you allow changes, manage your prompts, topics, competitors, audits and Actions.`,
       },
       {
         q: 'Which assistants does it work with?',
@@ -316,7 +317,7 @@ export const IMPROVE_PAGES: readonly PlatformPage[] = [
       },
       {
         q: 'Can an assistant change my website or my data through MCP?',
-        a: 'Only if you tick Allow changes when you connect it. Then it can add and edit prompts and topics, add competitors, launch and cancel audits, create schedules and update Actions. Your assistant asks before each change, and larger ones, such as adding prompts or launching an audit, run only after you confirm a preview. It never crawls, buys data, publishes or changes your site.',
+        a: 'Only if you tick Allow changes when you connect it. Then it can add, edit and archive prompts, add, rename and delete topics, add and remove competitors, launch and cancel audits, create schedules and update Actions. Your assistant asks before each change, and larger ones, such as adding prompts or launching an audit, run only after you confirm a preview. It never crawls, buys data, publishes or changes your site.',
       },
       {
         q: 'Does reading a tool refresh the data?',

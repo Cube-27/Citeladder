@@ -12,7 +12,7 @@ Every client connects to the same hosted server:
 https://api.citeladder.com/mcp
 ```
 
-The connection uses browser sign-in (OAuth) with the read scope `citeladder:read`. Do not paste a provider API key or a CiteLadder session cookie into the client.
+The connection uses browser sign-in (OAuth) with the read scope `citeladder:read`, plus `citeladder:write` when you tick **Allow changes** on the consent page. Do not paste a provider API key or a CiteLadder session cookie into the client.
 
 The quickest route is the **Connect** button in the CiteLadder app under **Settings → MCP connections**, or on the MCP product page. Selecting it opens Claude with CiteLadder's name and URL filled in. Hover over it to choose ChatGPT, Gemini or Grok instead; CiteLadder copies the URL for you to paste there. The steps below cover the same setup by hand.
 
