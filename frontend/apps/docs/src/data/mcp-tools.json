@@ -27,7 +27,8 @@
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
           },
           "sections": {
             "type": "array",
@@ -47,7 +48,8 @@
                 "integrations",
                 "search_intelligence"
               ]
-            }
+            },
+            "description": "The sections to read; omit for all of them."
           }
         },
         "required": ["project_id"],
@@ -69,7 +71,8 @@
           "limit": {
             "type": "integer",
             "minimum": 1,
-            "maximum": 200
+            "maximum": 200,
+            "description": "How many rows to return; omit for the default page size."
           }
         },
         "additionalProperties": false
@@ -79,7 +82,7 @@
     {
       "name": "open_analytics",
       "title": "Open CiteLadder",
-      "description": "Open the CiteLadder project picker.",
+      "description": "Show the user the CiteLadder project picker, in clients that display apps, so they can choose a project to view. Use list_projects to find projects yourself.",
       "input_schema": {
         "type": "object",
         "properties": {},
@@ -96,15 +99,18 @@
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
           },
           "action_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "An Action id from a previous list, to read that one Action in full."
           },
           "status": {
             "type": "string",
-            "enum": ["open", "in_progress", "implemented", "measuring", "done", "dismissed"]
+            "enum": ["open", "in_progress", "implemented", "measuring", "done", "dismissed"],
+            "description": "Keep only Actions with this status."
           },
           "cursor": {
             "type": "string",
@@ -113,7 +119,8 @@
           "limit": {
             "type": "integer",
             "minimum": 1,
-            "maximum": 200
+            "maximum": 200,
+            "description": "How many rows to return; omit for the default page size."
           }
         },
         "required": ["project_id"],
@@ -130,15 +137,18 @@
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
           },
           "market_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A market id from get_project_business_context; omit for the default market. Markets are never pooled."
           },
           "audit_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A run id (audit_id); omit for the latest run."
           },
           "engine": {
             "type": "string",
@@ -149,10 +159,12 @@
               "google_ai_overview",
               "chatgpt_search",
               "gemini_consumer"
-            ]
+            ],
+            "description": "Read one engine only; omit for every engine."
           },
           "cohort": {
             "default": "core",
+            "description": "core is the scored prompts (the default); comparison is the prompts that also name a competitor, reported separately; all is both.",
             "type": "string",
             "enum": ["core", "comparison", "all"]
           },
@@ -163,7 +175,8 @@
           "limit": {
             "type": "integer",
             "minimum": 1,
-            "maximum": 200
+            "maximum": 200,
+            "description": "How many rows to return; omit for the default page size."
           }
         },
         "required": ["project_id"],
@@ -180,7 +193,8 @@
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
           },
           "crawl_id": {
             "type": "string",
@@ -196,25 +210,29 @@
     {
       "name": "read_ai_referrals",
       "title": "Read AI referral traffic",
-      "description": "Visits from AI assistants (GA4): sessions, share of traffic, key events, landing pages.",
+      "description": "Visits that arrived from AI assistants such as ChatGPT, from GA4: sessions, share of all traffic, key events and top landing pages for a range. These are people clicking through; read_crawl_logs has crawler requests. An unavailable state means no referral data has been imported, which is not zero; read_integration_status says why.",
       "input_schema": {
         "type": "object",
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
           },
           "range": {
             "type": "string",
-            "enum": ["30d", "90d", "1y"]
+            "enum": ["30d", "90d", "1y"],
+            "description": "A preset window ending today; or pass start_date and end_date instead."
           },
           "start_date": {
             "type": "string",
-            "format": "date"
+            "format": "date",
+            "description": "First day of a custom window, inclusive."
           },
           "end_date": {
             "type": "string",
-            "format": "date"
+            "format": "date",
+            "description": "Last day of a custom window, inclusive."
           }
         },
         "required": ["project_id"],
@@ -231,15 +249,18 @@
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
           },
           "target_kind": {
             "type": "string",
-            "enum": ["category", "product"]
+            "enum": ["category", "product"],
+            "description": "Whether target_id is a category or a product."
           },
           "target_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A category or product id from the list this tool returns without one."
           }
         },
         "required": ["project_id"],
@@ -256,19 +277,23 @@
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
           },
           "range": {
             "type": "string",
-            "enum": ["30d", "90d", "1y"]
+            "enum": ["30d", "90d", "1y"],
+            "description": "A preset window ending today; or pass start_date and end_date instead."
           },
           "start_date": {
             "type": "string",
-            "format": "date"
+            "format": "date",
+            "description": "First day of a custom window, inclusive."
           },
           "end_date": {
             "type": "string",
-            "format": "date"
+            "format": "date",
+            "description": "Last day of a custom window, inclusive."
           }
         },
         "required": ["project_id"],
@@ -285,31 +310,38 @@
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
           },
           "range": {
             "type": "string",
-            "enum": ["30d", "90d", "1y"]
+            "enum": ["30d", "90d", "1y"],
+            "description": "A preset window ending today; or pass start_date and end_date instead."
           },
           "start_date": {
             "type": "string",
-            "format": "date"
+            "format": "date",
+            "description": "First day of a custom window, inclusive."
           },
           "end_date": {
             "type": "string",
-            "format": "date"
+            "format": "date",
+            "description": "Last day of a custom window, inclusive."
           },
           "folder": {
             "type": "string",
-            "maxLength": 2048
+            "maxLength": 2048,
+            "description": "A site path prefix such as /blog/ to read only pages under it."
           },
           "resource_class": {
             "type": "string",
-            "maxLength": 24
+            "maxLength": 24,
+            "description": "A resource_class a previous row returned, such as page, to read only that kind."
           },
           "verification": {
             "type": "string",
-            "enum": ["verified", "unverifiable", "failed_verification"]
+            "enum": ["verified", "unverifiable", "failed_verification"],
+            "description": "Keep only crawler requests whose claimed identity was verified, could not be verified, or failed verification."
           },
           "sort": {
             "type": "string",
@@ -319,15 +351,18 @@
               "key_events_desc",
               "citations_desc",
               "url_asc"
-            ]
+            ],
+            "description": "Row order; omit for the default."
           },
           "cursor": {
-            "type": ["string", "null"]
+            "type": "string",
+            "description": "The next_cursor a previous page returned."
           },
           "limit": {
             "type": "integer",
             "minimum": 1,
-            "maximum": 100
+            "maximum": 100,
+            "description": "How many rows to return; omit for the default page size."
           }
         },
         "required": ["project_id"],
@@ -344,24 +379,29 @@
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
           },
           "url": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 4096
+            "maxLength": 4096,
+            "description": "A page URL on the project site, as read_ai_traffic_pages listed it."
           },
           "range": {
             "type": "string",
-            "enum": ["30d", "90d", "1y"]
+            "enum": ["30d", "90d", "1y"],
+            "description": "A preset window ending today; or pass start_date and end_date instead."
           },
           "start_date": {
             "type": "string",
-            "format": "date"
+            "format": "date",
+            "description": "First day of a custom window, inclusive."
           },
           "end_date": {
             "type": "string",
-            "format": "date"
+            "format": "date",
+            "description": "Last day of a custom window, inclusive."
           }
         },
         "required": ["project_id", "url"],
@@ -378,7 +418,8 @@
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
           }
         },
         "required": ["project_id"],
@@ -395,52 +436,64 @@
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
           },
           "view": {
             "default": "summary",
+            "description": "summary is totals; crawlers is one row per AI crawler; coverage is how complete each day of logs is; requests lists individual requests, paged.",
             "type": "string",
             "enum": ["summary", "crawlers", "coverage", "requests"]
           },
           "range": {
             "type": "string",
-            "enum": ["30d", "90d", "1y"]
+            "enum": ["30d", "90d", "1y"],
+            "description": "A preset window ending today; or pass start_date and end_date instead."
           },
           "start_date": {
             "type": "string",
-            "format": "date"
+            "format": "date",
+            "description": "First day of a custom window, inclusive."
           },
           "end_date": {
             "type": "string",
-            "format": "date"
+            "format": "date",
+            "description": "Last day of a custom window, inclusive."
           },
           "verification": {
             "type": "string",
-            "enum": ["verified", "unverifiable", "failed_verification"]
+            "enum": ["verified", "unverifiable", "failed_verification"],
+            "description": "Keep only crawler requests whose claimed identity was verified, could not be verified, or failed verification."
           },
           "bot_id": {
-            "type": ["string", "null"]
+            "type": "string",
+            "description": "A bot_id the crawlers view returned; keep only that crawler."
           },
           "status": {
             "type": "integer",
             "minimum": 100,
-            "maximum": 599
+            "maximum": 599,
+            "description": "An HTTP status code; keep only requests answered with it."
           },
           "folder": {
             "type": "string",
-            "maxLength": 2048
+            "maxLength": 2048,
+            "description": "A site path prefix such as /blog/ to read only pages under it."
           },
           "resource_class": {
             "type": "string",
-            "maxLength": 24
+            "maxLength": 24,
+            "description": "A resource_class a previous row returned, such as page, to read only that kind."
           },
           "cursor": {
-            "type": ["string", "null"]
+            "type": "string",
+            "description": "The next_cursor a previous page returned."
           },
           "limit": {
             "type": "integer",
             "minimum": 1,
-            "maximum": 100
+            "maximum": 100,
+            "description": "How many rows to return; omit for the default page size."
           }
         },
         "required": ["project_id"],
@@ -457,7 +510,8 @@
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
           }
         },
         "required": ["project_id"],
@@ -474,15 +528,18 @@
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
           },
           "market_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A market id from get_project_business_context; omit for the default market. Markets are never pooled."
           },
           "audit_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A run id (audit_id); omit for the latest run."
           },
           "engine": {
             "type": "string",
@@ -493,15 +550,18 @@
               "google_ai_overview",
               "chatgpt_search",
               "gemini_consumer"
-            ]
+            ],
+            "description": "Read one engine only; omit for every engine."
           },
           "cohort": {
             "default": "core",
+            "description": "core is the scored prompts (the default); comparison is the prompts that also name a competitor, reported separately; all is both.",
             "type": "string",
             "enum": ["core", "comparison", "all"]
           },
           "view": {
             "default": "summary",
+            "description": "summary is accuracy and its coverage; claims lists the checked claims, paged.",
             "type": "string",
             "enum": ["summary", "claims"]
           },
@@ -516,11 +576,13 @@
               "policies",
               "specs",
               "company"
-            ]
+            ],
+            "description": "With view claims: keep only claims about this kind of fact."
           },
           "verdict": {
             "type": "string",
-            "enum": ["supported", "contradicted", "inconclusive", "not_covered"]
+            "enum": ["supported", "contradicted", "inconclusive", "not_covered"],
+            "description": "With view claims: keep only this verdict; contradicted finds the errors."
           },
           "cursor": {
             "type": "string",
@@ -529,7 +591,8 @@
           "limit": {
             "type": "integer",
             "minimum": 1,
-            "maximum": 200
+            "maximum": 200,
+            "description": "How many rows to return; omit for the default page size."
           }
         },
         "required": ["project_id"],
@@ -546,7 +609,8 @@
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
           }
         },
         "required": ["project_id"],
@@ -563,15 +627,18 @@
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
           },
           "market_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A market id from get_project_business_context; omit for the default market. Markets are never pooled."
           },
           "audit_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A run id (audit_id); omit for the latest run."
           },
           "engine": {
             "type": "string",
@@ -582,22 +649,26 @@
               "google_ai_overview",
               "chatgpt_search",
               "gemini_consumer"
-            ]
+            ],
+            "description": "Read one engine only; omit for every engine."
           },
           "cohort": {
             "default": "core",
+            "description": "core is the scored prompts (the default); comparison is the prompts that also name a competitor, reported separately; all is both.",
             "type": "string",
             "enum": ["core", "comparison", "all"]
           },
           "view": {
             "default": "summary",
+            "description": "summary is sentiment and themes per brand; quotes lists the verified quotes, paged.",
             "type": "string",
             "enum": ["summary", "quotes"]
           },
           "entity": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 255
+            "maxLength": 255,
+            "description": "With view quotes: a brand exactly as the summary names it, to quote only it."
           },
           "theme": {
             "type": "string",
@@ -618,11 +689,13 @@
               "returns_policy",
               "sustainability",
               "other"
-            ]
+            ],
+            "description": "With view quotes: keep only quotes about this theme."
           },
           "polarity": {
             "type": "string",
-            "enum": ["positive", "negative"]
+            "enum": ["positive", "negative"],
+            "description": "With view quotes: keep only praise or only criticism."
           },
           "cursor": {
             "type": "string",
@@ -631,7 +704,8 @@
           "limit": {
             "type": "integer",
             "minimum": 1,
-            "maximum": 200
+            "maximum": 200,
+            "description": "How many rows to return; omit for the default page size."
           }
         },
         "required": ["project_id"],
@@ -648,35 +722,43 @@
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
           },
           "range": {
             "type": "string",
-            "enum": ["3_months", "6_months", "custom", "day", "last_synced", "month", "week"]
+            "enum": ["3_months", "6_months", "custom", "day", "last_synced", "month", "week"],
+            "description": "The reporting window."
           },
           "start_date": {
             "type": "string",
-            "format": "date"
+            "format": "date",
+            "description": "First day of a custom window, inclusive."
           },
           "end_date": {
             "type": "string",
-            "format": "date"
+            "format": "date",
+            "description": "Last day of a custom window, inclusive."
           },
           "granularity": {
             "type": "string",
-            "enum": ["day", "month", "week"]
+            "enum": ["day", "month", "week"],
+            "description": "The bucket size of the totals over time."
           },
           "compare": {
             "type": "string",
-            "enum": ["custom", "none", "previous", "year_over_year"]
+            "enum": ["custom", "none", "previous", "year_over_year"],
+            "description": "The window to compare against; custom needs the compare dates."
           },
           "compare_start_date": {
             "type": "string",
-            "format": "date"
+            "format": "date",
+            "description": "First day of a custom comparison window, inclusive."
           },
           "compare_end_date": {
             "type": "string",
-            "format": "date"
+            "format": "date",
+            "description": "Last day of a custom comparison window, inclusive."
           },
           "dimension": {
             "type": "string",
@@ -689,17 +771,21 @@
               "day",
               "bing_query",
               "bing_page"
-            ]
+            ],
+            "description": "Break the totals down by this dimension, paged."
           },
           "sort": {
-            "type": ["string", "null"]
+            "type": "string",
+            "description": "With dimension: one of clicks, ctr, dimension_key, impressions, position; prefix - for descending, such as -clicks."
           },
           "cursor": {
-            "type": ["string", "null"]
+            "type": "string",
+            "description": "The next_cursor a previous page returned."
           },
           "limit": {
             "type": "number",
-            "enum": [10, 25, 50, 100]
+            "enum": [10, 25, 50, 100],
+            "description": "With dimension: rows per page."
           }
         },
         "required": ["project_id"],
@@ -716,18 +802,22 @@
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
           },
           "prompt_set_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "Read one prompt set only; omit for every set in the project."
           },
           "cohort": {
             "type": "string",
-            "enum": ["core", "comparison"]
+            "enum": ["core", "comparison"],
+            "description": "Keep only scored or only comparison prompts."
           },
           "active_only": {
             "default": false,
+            "description": "true keeps only the prompts audits measure now.",
             "type": "boolean"
           },
           "cursor": {
@@ -737,7 +827,8 @@
           "limit": {
             "type": "integer",
             "minimum": 1,
-            "maximum": 200
+            "maximum": 200,
+            "description": "How many rows to return; omit for the default page size."
           }
         },
         "required": ["project_id"],
@@ -754,25 +845,32 @@
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
           },
           "window_start": {
             "type": "string",
-            "format": "date"
+            "format": "date",
+            "description": "First day of the saved window, inclusive."
           },
           "window_end": {
             "type": "string",
-            "format": "date"
+            "format": "date",
+            "description": "Last day of the saved window, inclusive."
           },
           "query": {
-            "type": ["string", "null"]
+            "type": "string",
+            "description": "One search query, matched exactly ignoring case and spacing."
           },
           "site_url_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A page id from read_site_pages; keep only its queries."
           },
           "resolution_outcome": {
-            "type": ["string", "null"]
+            "type": "string",
+            "enum": ["exact", "resolved", "ambiguous", "unresolved"],
+            "description": "Keep only queries matched to a page in this way."
           },
           "cursor": {
             "type": "string",
@@ -781,7 +879,8 @@
           "limit": {
             "type": "integer",
             "minimum": 1,
-            "maximum": 200
+            "maximum": 200,
+            "description": "How many rows to return; omit for the default page size."
           }
         },
         "required": ["project_id", "window_start", "window_end"],
@@ -798,17 +897,21 @@
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
           },
           "dataset_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A dataset id that read_search_intelligence returned."
           },
           "sort": {
-            "type": ["string", "null"]
+            "type": "string",
+            "description": "The column to order by: one of backlinks, dataforseo_rank, difficulty, domain, etv, id, intent, keyword, owned_rank_group, rank_group, referring_main_domains, search_volume, url, backlinks_spam_score, broken_backlinks, broken_pages, cpc, organic_keywords, rank_absolute, referring_domains, referring_pages."
           },
           "direction": {
             "default": "asc",
+            "description": "Sort direction.",
             "type": "string",
             "enum": ["asc", "desc"]
           },
@@ -819,7 +922,8 @@
           "limit": {
             "type": "integer",
             "minimum": 1,
-            "maximum": 200
+            "maximum": 200,
+            "description": "How many rows to return; omit for the default page size."
           }
         },
         "required": ["project_id", "dataset_id"],
@@ -836,7 +940,8 @@
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
           }
         },
         "required": ["project_id"],
@@ -853,11 +958,13 @@
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
           },
           "snapshot_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A Site Health snapshot id; omit for the latest crawl."
           }
         },
         "required": ["project_id"],
@@ -874,7 +981,8 @@
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
           },
           "crawl_id": {
             "type": "string",
@@ -888,7 +996,8 @@
             "items": {
               "type": "string",
               "format": "uuid"
-            }
+            },
+            "description": "Page ids (site_url_id) from read_site_pages; omit to page through every page."
           },
           "cursor": {
             "type": "string",
@@ -897,7 +1006,8 @@
           "limit": {
             "type": "integer",
             "minimum": 1,
-            "maximum": 200
+            "maximum": 200,
+            "description": "How many rows to return; omit for the default page size."
           }
         },
         "required": ["project_id"],
@@ -914,7 +1024,8 @@
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
           },
           "crawl_id": {
             "type": "string",
@@ -949,7 +1060,8 @@
               "product",
               "service",
               "trust_policy"
-            ]
+            ],
+            "description": "Keep only pages of this type."
           },
           "status": {
             "type": "string",
@@ -964,7 +1076,8 @@
               "blocked",
               "cancelled",
               "error_or_blocked"
-            ]
+            ],
+            "description": "Keep only pages in this state."
           },
           "cursor": {
             "type": "string",
@@ -973,7 +1086,8 @@
           "limit": {
             "type": "integer",
             "minimum": 1,
-            "maximum": 200
+            "maximum": 200,
+            "description": "How many rows to return; omit for the default page size."
           }
         },
         "required": ["project_id"],
@@ -990,20 +1104,24 @@
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
           },
           "market_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A market id from get_project_business_context; omit for the default market. Markets are never pooled."
           },
           "url": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 8192
+            "maxLength": 8192,
+            "description": "A cited URL exactly as read_visibility_sources or an answer listed it."
           },
           "audit_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A run id (audit_id); omit for every run."
           },
           "engine": {
             "type": "string",
@@ -1014,10 +1132,12 @@
               "google_ai_overview",
               "chatgpt_search",
               "gemini_consumer"
-            ]
+            ],
+            "description": "Read one engine only; omit for every engine."
           },
           "cohort": {
             "default": "core",
+            "description": "core is the scored prompts (the default); comparison is the prompts that also name a competitor, reported separately; all is both.",
             "type": "string",
             "enum": ["core", "comparison", "all"]
           }
@@ -1036,19 +1156,23 @@
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
           },
           "market_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A market id from get_project_business_context; omit for the default market. Markets are never pooled."
           },
           "audit_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A run id (audit_id); omit for the latest run."
           },
           "baseline_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "An earlier run id (audit_id) to compare audit_id against."
           },
           "engine": {
             "type": "string",
@@ -1059,10 +1183,12 @@
               "google_ai_overview",
               "chatgpt_search",
               "gemini_consumer"
-            ]
+            ],
+            "description": "Read one engine only; omit for every engine."
           },
           "cohort": {
             "default": "core",
+            "description": "core is the scored prompts (the default); comparison is the prompts that also name a competitor, reported separately; all is both.",
             "type": "string",
             "enum": ["core", "comparison", "all"]
           }
@@ -1081,7 +1207,8 @@
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
           },
           "audit_id": {
             "type": "string",
@@ -1097,25 +1224,30 @@
               "google_ai_overview",
               "chatgpt_search",
               "gemini_consumer"
-            ]
+            ],
+            "description": "Read one engine only; omit for every engine."
           },
           "cohort": {
             "default": "core",
+            "description": "core is the scored prompts (the default); comparison is the prompts that also name a competitor, reported separately; all is both.",
             "type": "string",
             "enum": ["core", "comparison", "all"]
           },
           "prompt_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A prompt id from read_prompt_portfolio; keep only its answers."
           },
           "domain": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 253
+            "maxLength": 253,
+            "description": "A domain such as example.com; keep only rows citing it."
           },
           "url": {
             "type": "string",
-            "format": "uri"
+            "format": "uri",
+            "description": "Keep only answers that cite this exact URL."
           },
           "cursor": {
             "type": "string",
@@ -1124,7 +1256,8 @@
           "limit": {
             "type": "integer",
             "minimum": 1,
-            "maximum": 200
+            "maximum": 200,
+            "description": "How many rows to return; omit for the default page size."
           }
         },
         "required": ["project_id", "audit_id"],
@@ -1141,11 +1274,13 @@
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
           },
           "market_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A market id from get_project_business_context; omit for the default market. Markets are never pooled."
           },
           "audit_id": {
             "type": "string",
@@ -1161,22 +1296,26 @@
               "google_ai_overview",
               "chatgpt_search",
               "gemini_consumer"
-            ]
+            ],
+            "description": "Read one engine only; omit for every engine."
           },
           "cohort": {
             "default": "core",
+            "description": "core is the scored prompts (the default); comparison is the prompts that also name a competitor, reported separately; all is both.",
             "type": "string",
             "enum": ["core", "comparison", "all"]
           },
           "level": {
             "default": "domain",
+            "description": "domain counts publishers (the default); url counts individual pages.",
             "type": "string",
             "enum": ["domain", "url"]
           },
           "domain": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 253
+            "maxLength": 253,
+            "description": "A cited domain such as example.com; with level url, lists its pages."
           },
           "cursor": {
             "type": "string",
@@ -1185,7 +1324,8 @@
           "limit": {
             "type": "integer",
             "minimum": 1,
-            "maximum": 200
+            "maximum": 200,
+            "description": "How many rows to return; omit for the default page size."
           }
         },
         "required": ["project_id"],
@@ -1202,19 +1342,23 @@
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
           },
           "market_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A market id from get_project_business_context; omit for the default market. Markets are never pooled."
           },
           "from_at": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "Start of the window, with an offset."
           },
           "to_at": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "End of the window, with an offset."
           },
           "engine": {
             "type": "string",
@@ -1225,24 +1369,29 @@
               "google_ai_overview",
               "chatgpt_search",
               "gemini_consumer"
-            ]
+            ],
+            "description": "Read one engine only; omit for every engine."
           },
           "cohort": {
             "default": "core",
+            "description": "core is the scored prompts (the default); comparison is the prompts that also name a competitor, reported separately; all is both.",
             "type": "string",
             "enum": ["core", "comparison", "all"]
           },
           "granularity": {
             "default": "run",
+            "description": "One point per run (the default), or per day, week or month.",
             "type": "string",
             "enum": ["run", "day", "week", "month"]
           },
           "transport_model": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Keep only runs answered by this model, as a previous point named it."
           },
           "retrieval_enabled": {
-            "type": ["boolean", "null"]
+            "type": "boolean",
+            "description": "true keeps only runs with web search on; false only runs without it."
           }
         },
         "required": ["project_id", "from_at", "to_at"],
@@ -1253,17 +1402,19 @@
     {
       "name": "render_site_health",
       "title": "Show Site Health",
-      "description": "Show an interactive Site Health view for the latest or a chosen snapshot.",
+      "description": "Show the user an interactive Site Health view (scores, coverage and top issues) for the latest or a chosen snapshot, in clients that display apps. To reason over the data yourself, use read_site_health.",
       "input_schema": {
         "type": "object",
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
           },
           "snapshot_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A Site Health snapshot id; omit for the latest crawl."
           }
         },
         "required": ["project_id"],
@@ -1274,72 +1425,87 @@
     {
       "name": "render_visibility",
       "title": "Show AI visibility",
-      "description": "Show an interactive visibility view: overview, trends over a window, or cited sources for one run.",
+      "description": "Show the user an interactive visibility view, in clients that display apps: overview, trends over a window, or cited sources for one run. To reason over the numbers yourself, use read_visibility_overview, read_visibility_trends or read_visibility_sources.",
       "input_schema": {
         "type": "object",
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
           },
           "view": {
             "default": "overview",
+            "description": "Which view to show; each other field says the views it applies to.",
             "type": "string",
             "enum": ["overview", "trends", "sources"]
           },
           "audit_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "Overview or sources: a run id (audit_id); omit for the latest run."
           },
           "snapshot_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "Site Health only: a snapshot id; omit for the latest crawl."
           },
           "engine": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Show one engine only, such as chatgpt; omit for every engine."
           },
           "cohort": {
             "default": "core",
+            "description": "core is the scored prompts (the default); comparison is reported separately.",
             "type": "string",
             "enum": ["core", "comparison", "all"]
           },
           "from_at": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "Trends only, required there: start of the window."
           },
           "to_at": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "Trends only, required there: end of the window."
           },
           "transport_model": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Trends only: keep only runs answered by this model."
           },
           "retrieval_enabled": {
-            "type": ["boolean", "null"]
+            "type": "boolean",
+            "description": "Trends only: true keeps runs with web search on, false runs without it."
           },
           "competitor": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 200
+            "maxLength": 200,
+            "description": "Overview or trends: a competitor exactly as the rankings name it, to highlight."
           },
           "level": {
             "default": "domain",
+            "description": "Sources only: domain lists publishers (the default); url lists pages.",
             "type": "string",
             "enum": ["domain", "url"]
           },
           "domain": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 253
+            "maxLength": 253,
+            "description": "Sources only: a cited domain such as example.com, to list its pages."
           },
           "cursor": {
             "type": "string",
-            "maxLength": 8192
+            "maxLength": 8192,
+            "description": "Sources only: the next_cursor a previous page returned."
           },
           "limit": {
             "default": 50,
+            "description": "Sources only: rows per page.",
             "type": "integer",
             "minimum": 1,
             "maximum": 200
@@ -1359,14 +1525,17 @@
         "properties": {
           "query": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Words to look for, such as a prompt or brand."
           },
           "project_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "Search one project only; omit to search every project."
           },
           "limit": {
             "default": 10,
+            "description": "How many matches to return.",
             "type": "integer",
             "minimum": 1,
             "maximum": 20
@@ -1380,17 +1549,19 @@
     {
       "name": "add_competitor",
       "title": "Add a competitor",
-      "description": "Track one more competitor in AI answers. Runs at once.",
+      "description": "Track one more competitor, so visibility reads rank its mentions and citations in AI answers beside your brand. Runs at once; refused if the project already tracks that name or has reached its competitor limit. get_project_business_context lists the competitors tracked now.",
       "input_schema": {
         "type": "object",
         "properties": {
           "name": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 255
+            "maxLength": 255,
+            "description": "The brand name as buyers write it."
           },
           "aliases": {
             "default": [],
+            "description": "Other names AI answers use for the brand, such as a short form or old name.",
             "maxItems": 50,
             "type": "array",
             "items": {
@@ -1400,6 +1571,7 @@
           },
           "domains": {
             "default": [],
+            "description": "The brand's own domains, such as example.com, so its cited pages are attributed to it.",
             "type": "array",
             "items": {
               "type": "string",
@@ -1408,7 +1580,8 @@
           },
           "project_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
           }
         },
         "required": ["name", "project_id"],
@@ -1425,11 +1598,13 @@
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
           },
           "audit_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A queued or running audit id (audit_id) that read_visibility_overview or confirm_change returned."
           }
         },
         "required": ["project_id", "audit_id"],
@@ -1447,7 +1622,8 @@
           "confirmation_token": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 64
+            "maxLength": 64,
+            "description": "The confirmation_token the prepare tool returned, exactly as given."
           }
         },
         "required": ["confirmation_token"],
@@ -1458,22 +1634,49 @@
     {
       "name": "create_topic",
       "title": "Create a topic",
-      "description": "Add a topic to group prompts under. Runs at once.",
+      "description": "Add a topic, a named group of tracked prompts (for example \"Pricing\" or \"Integrations\") that visibility is broken down by. Runs at once and returns the topic id; pass it as topic_id to prepare_add_prompts to file new prompts under it. Topic names are unique in a project, ignoring case.",
       "input_schema": {
         "type": "object",
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
           },
           "name": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 255
+            "maxLength": 255,
+            "description": "The topic name, unique in the project."
           },
           "description": {
             "type": "string",
-            "maxLength": 1024
+            "maxLength": 1024,
+            "description": "What prompts under this topic ask about; optional."
+          }
+        },
+        "required": ["project_id", "name"],
+        "additionalProperties": false
+      },
+      "access": "write"
+    },
+    {
+      "name": "delete_topic",
+      "title": "Delete a topic",
+      "description": "Delete one topic by name. Its prompts are kept, still tracked, without a topic, and its subtopics become top-level; recorded answers are kept. Runs at once and cannot be undone.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "The topic name, ignoring case."
           }
         },
         "required": ["project_id", "name"],
@@ -1490,11 +1693,13 @@
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
           },
           "prompt_set_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A prompt set id from read_prompt_portfolio; omit when the project has only one prompt set."
           },
           "prompts": {
             "minItems": 1,
@@ -1506,24 +1711,29 @@
                 "text": {
                   "type": "string",
                   "minLength": 1,
-                  "maxLength": 300
+                  "maxLength": 300,
+                  "description": "A short question a buyer would ask an AI assistant, answerable by naming a business."
                 },
                 "topic_id": {
                   "type": "string",
-                  "format": "uuid"
+                  "format": "uuid",
+                  "description": "A topic id create_topic returned; omit for none."
                 },
                 "intent": {
                   "type": "string",
-                  "maxLength": 64
+                  "maxLength": 64,
+                  "description": "What the buyer is trying to do, in a few words; optional."
                 },
                 "cohort": {
                   "type": "string",
-                  "enum": ["core", "brand_diagnostic", "comparison", "commerce"]
+                  "enum": ["core", "brand_diagnostic", "comparison", "commerce"],
+                  "description": "core prompts are scored (the default); comparison prompts name competitors and are reported separately."
                 }
               },
               "required": ["text"],
               "additionalProperties": false
-            }
+            },
+            "description": "The prompts to add, each a short buyer question."
           }
         },
         "required": ["project_id", "prompts"],
@@ -1540,7 +1750,8 @@
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
           },
           "prompt_ids": {
             "minItems": 1,
@@ -1549,7 +1760,8 @@
             "items": {
               "type": "string",
               "format": "uuid"
-            }
+            },
+            "description": "Prompt ids from read_prompt_portfolio."
           }
         },
         "required": ["project_id", "prompt_ids"],
@@ -1566,15 +1778,18 @@
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
           },
           "action_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "An open Action id from read_actions."
           },
           "declared_implemented_at": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "When the work went live; omit for now. Evidence after it is checked."
           }
         },
         "required": ["project_id", "action_id"],
@@ -1591,11 +1806,13 @@
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
           },
           "prompt_set_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A prompt set id from read_prompt_portfolio; omit when the project has only one prompt set."
           },
           "prompt_ids": {
             "maxItems": 500,
@@ -1603,7 +1820,8 @@
             "items": {
               "type": "string",
               "format": "uuid"
-            }
+            },
+            "description": "Prompt ids from read_prompt_portfolio to audit only those; omit for every active prompt in the set."
           },
           "engines": {
             "minItems": 1,
@@ -1618,12 +1836,14 @@
                 "chatgpt_search",
                 "gemini_consumer"
               ]
-            }
+            },
+            "description": "The AI engines to ask; at least one."
           },
           "repetitions": {
             "type": "integer",
             "minimum": 1,
-            "maximum": 10
+            "maximum": 10,
+            "description": "How many times each prompt is asked per engine; omit for the project default."
           },
           "market_ids": {
             "minItems": 1,
@@ -1632,11 +1852,13 @@
             "items": {
               "type": "string",
               "format": "uuid"
-            }
+            },
+            "description": "Market ids from get_project_business_context; null is the default market. Omit for the default market only."
           },
           "max_attempts": {
             "type": "integer",
-            "minimum": 1
+            "minimum": 1,
+            "description": "The most provider attempts the user accepts; omit to use the estimate. The launch is refused if it needs more."
           }
         },
         "required": ["project_id", "engines"],
@@ -1653,15 +1875,18 @@
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
           },
           "prompt_set_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A prompt set id from read_prompt_portfolio; omit when the project has only one prompt set."
           },
           "cadence": {
             "type": "string",
-            "enum": ["one_time", "every_n_minutes", "hourly", "daily", "weekly"]
+            "enum": ["one_time", "every_n_minutes", "hourly", "daily", "weekly"],
+            "description": "How often the audit runs."
           },
           "engines": {
             "minItems": 1,
@@ -1676,24 +1901,29 @@
                 "chatgpt_search",
                 "gemini_consumer"
               ]
-            }
+            },
+            "description": "The AI engines to ask; at least one."
           },
           "timezone": {
             "type": "string",
-            "maxLength": 64
+            "maxLength": 64,
+            "description": "An IANA timezone such as Europe/London; omit for the default."
           },
           "repetitions": {
             "type": "integer",
             "minimum": 1,
-            "maximum": 10
+            "maximum": 10,
+            "description": "How many times each prompt is asked per engine; omit for the project default."
           },
           "interval_minutes": {
             "type": "integer",
-            "exclusiveMinimum": 0
+            "exclusiveMinimum": 0,
+            "description": "Minutes between runs; only for cadence every_n_minutes."
           },
           "next_run_at": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "When the first run starts; omit to start right away."
           },
           "market_ids": {
             "minItems": 1,
@@ -1702,7 +1932,8 @@
             "items": {
               "type": "string",
               "format": "uuid"
-            }
+            },
+            "description": "Market ids from get_project_business_context; null is the default market. Omit for the default market only."
           }
         },
         "required": ["project_id", "cadence", "engines"],
@@ -1711,24 +1942,51 @@
       "access": "write"
     },
     {
-      "name": "rename_topic",
-      "title": "Rename a topic",
-      "description": "Rename one topic. Runs at once.",
+      "name": "remove_competitor",
+      "title": "Stop tracking a competitor",
+      "description": "Stop tracking one competitor by name, as get_project_business_context lists it, so visibility reads no longer rank it. Recorded answers are kept. Runs at once and cannot be undone; add_competitor tracks it again but its aliases and domains must be given again.",
       "input_schema": {
         "type": "object",
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid"
-          },
-          "topic_id": {
-            "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
           },
           "name": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 255
+            "maxLength": 255,
+            "description": "The tracked competitor name, ignoring case."
+          }
+        },
+        "required": ["project_id", "name"],
+        "additionalProperties": false
+      },
+      "access": "write"
+    },
+    {
+      "name": "rename_topic",
+      "title": "Rename a topic",
+      "description": "Rename one topic. Its prompts and past results stay under it. Runs at once; refused if another topic in the project already has the name.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
+          },
+          "topic_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The topic id create_topic returned."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "The new name, unique in the project."
           }
         },
         "required": ["project_id", "topic_id", "name"],
@@ -1739,21 +1997,24 @@
     {
       "name": "update_action_status",
       "title": "Update an Action status",
-      "description": "Reopen or dismiss one Action. Runs at once.",
+      "description": "Dismiss one Action the user does not want to act on, or reopen a dismissed one. Runs at once. To record that the work was done, use prepare_declare_implemented instead.",
       "input_schema": {
         "type": "object",
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
           },
           "action_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "An Action id from read_actions."
           },
           "status": {
             "type": "string",
-            "enum": ["dismissed", "open"]
+            "enum": ["dismissed", "open"],
+            "description": "dismissed hides the Action from the open list; open restores it."
           }
         },
         "required": ["project_id", "action_id", "status"],
@@ -1770,16 +2031,19 @@
         "properties": {
           "project_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A project id that list_projects returned."
           },
           "prompt_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "A prompt id from read_prompt_portfolio."
           },
           "text": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 300
+            "maxLength": 300,
+            "description": "The new wording: a short question a buyer would ask an AI assistant."
           }
         },
         "required": ["project_id", "prompt_id", "text"],
