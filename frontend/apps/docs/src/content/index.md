@@ -33,7 +33,7 @@ You do not need every integration to get started. Begin with the question you ne
 
 ## Dashboard, Agent or MCP?
 
-**Dashboard** is where you inspect your project's measurements and underlying records. **Agent** is where you work through a question or Action and refine a saved deliverable. **MCP** lets an external AI client read the saved records your account can access.
+**Dashboard** is where you inspect your project's measurements and underlying records. **Agent** is where you work through a question or Action and refine a saved deliverable. **MCP** lets an external AI client read the saved records your account can access and, if you allow it, make the changes you agree to.
 
 The Agent and MCP both work with saved evidence. Opening a page or asking for a read does not refresh the underlying website, run an audit or buy a dataset.
 

@@ -125,7 +125,7 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
       },
       {
         q: 'Can I use CiteLadder from Claude or ChatGPT?',
-        a: 'Yes. The CiteLadder MCP server gives compatible assistants access to the workspaces you approve, so you can ask about your visibility, sources and site evidence in plain language. Changes happen only if you allow them and confirm each one.',
+        a: 'Yes. The CiteLadder MCP server gives compatible assistants access to the workspaces you approve, so you can ask about your visibility, sources and site evidence in plain language. With Allow changes it can also manage prompts, topics, competitors, audits and Actions; it asks before each change, and larger ones run only after you confirm a preview.',
       },
     ],
     closing: 'See what AI says about your brand.',

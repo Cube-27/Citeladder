@@ -129,8 +129,8 @@ function ConnectionList({ workspaceId }: Readonly<{ workspaceId?: string }>) {
         <Stack gap="compact">
           <p className={textRole('body')}>
             {adminView
-              ? 'The assistant stops reading this workspace at once. Its access to other workspaces is unchanged.'
-              : 'The assistant stops reading CiteLadder at once. Connect it again to restore access.'}
+              ? 'The assistant stops reading or changing this workspace at once. Its access to other workspaces is unchanged.'
+              : 'The assistant stops reading or changing CiteLadder at once. Connect it again to restore access.'}
           </p>
           {revoke.isError ? (
             <Alert tone="danger">{humanizeApiError(revoke.error).message}</Alert>

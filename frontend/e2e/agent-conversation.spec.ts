@@ -131,7 +131,10 @@ for (const width of [1280, 390]) {
     await expect(page.getByRole('combobox')).toHaveCount(1);
     await reply.fill('Explain the first recommendation.');
     await reply.press('Enter');
-    const followUp = page.getByText('Explain the first recommendation.', { exact: true });
+    // The composer keeps its text while the turn is pending; assert the sent message.
+    const followUp = page
+      .getByRole('paragraph')
+      .filter({ hasText: /^Explain the first recommendation\.$/ });
     await expect(followUp).toBeVisible();
     const result = page.getByRole('region', { name: 'Pricing page edits' });
     expect(

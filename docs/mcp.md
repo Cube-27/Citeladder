@@ -213,7 +213,7 @@ A record named by ID must belong to that project.
 
 | Kind | Tools |
 | --- | --- |
-| Direct (one call, one transaction with its security event) | `create_topic`, `rename_topic`, `update_prompt_text`, `add_competitor`, `update_action_status`, `cancel_audit` |
+| Direct (one call, one transaction with its security event) | `create_topic`, `rename_topic`, `delete_topic` (by name; its prompts stay, without a topic), `update_prompt_text`, `add_competitor`, `remove_competitor` (by name), `update_action_status`, `cancel_audit` |
 | Prepared | `prepare_add_prompts` (1–50; drops duplicates and binding failures with reasons; shows prompt slots after), `prepare_archive_prompts`, `prepare_launch_audit` (estimate shown; `max_attempts` frozen into the payload), `prepare_schedule`, `prepare_declare_implemented` |
 | Confirm | `confirm_change` |
 
@@ -234,8 +234,8 @@ this way are active immediately. Each executed change records an
 
 Write calls spend the normal tool budgets plus 30 a minute per grant. Tools
 carry their own annotations: reads `readOnlyHint: true`; writes
-`readOnlyHint: false`, `destructiveHint` on archive, cancel and
-`confirm_change`, `idempotentHint` on renames and status updates. The server
+`readOnlyHint: false`, `destructiveHint` on archive, cancel,
+`remove_competitor`, `delete_topic` and `confirm_change`, `idempotentHint` on renames and status updates. The server
 instructions require the user's yes before any change tool, and for a prepare
 tool its preview shown and `confirm_change` only after the user agrees to it. MCP elicitation is not offered: the transport is
 stateless HTTP and cannot hold a server-to-client request, so every client uses

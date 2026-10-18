@@ -3,10 +3,18 @@ title: 'Changelog'
 description: 'Product changes and what they mean for your workflow.'
 group: 'Updates'
 order: 400
-updated: '2026-10-12'
+updated: '2026-10-18'
 ---
 
 These notes describe implemented changes in the codebase. Dates are the recorded commit dates; availability in your workspace depends on deployment, access and configuration.
+
+## October 18, 2026: Remove competitors and delete topics through MCP
+
+A connection with **Allow changes** can now stop tracking a competitor and delete a topic, both by name; a deleted topic's prompts stay tracked without a topic. Every MCP tool parameter now describes what it takes and where its value comes from, so assistants pick the right tool and arguments the first time.
+
+**For your team:** ask your assistant to tidy your competitor list or topics directly; it asks before each change.
+
+[What you can change](/mcp/#what-you-can-change)
 
 ## October 12, 2026: A faster Agent that remembers the chat
 

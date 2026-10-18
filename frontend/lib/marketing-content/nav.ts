@@ -89,7 +89,7 @@ export const PLATFORM_GROUPS: readonly {
       },
       {
         title: 'MCP',
-        desc: 'Read CiteLadder evidence in compatible AI assistants.',
+        desc: 'Read CiteLadder evidence and make changes you approve from AI assistants.',
         href: '/platform/mcp',
       },
       {
