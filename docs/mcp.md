@@ -83,8 +83,10 @@ redirect-host allowlist; the protections are bounds and binding:
   and `code` must be among the response types. An omitted auth method is
   `client_secret_basic` (RFC 7591 §2); a confidential client may present its
   secret in the body or the header.
-- Unused registrations past the unused-client TTL are pruned in bounded batches
-  by later registrations. Identical re-registrations are not merged.
+- Unused registrations past the unused-client TTL (30 days by default; clients
+  such as ChatGPT keep their registration and never re-register) are pruned in
+  bounded batches by later registrations. Identical re-registrations are not
+  merged.
 - `/authorize` requires S256 PKCE and a registered redirect. A loopback redirect
   matches on any port (RFC 8252 §7.3) and the requested URI is the one bound;
   the token exchange rechecks it and the verifier. Unknown extra scopes (such as

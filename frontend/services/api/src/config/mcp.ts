@@ -42,9 +42,11 @@ export const mcp = {
     unused_client_ttl_seconds: {
       env: ['MCP_UNUSED_CLIENT_TTL_SECONDS'],
       type: 'int',
-      default: 86400,
+      // Assistants keep a registration indefinitely; ChatGPT never re-registers
+      // an app, and directory review can come weeks after submission.
+      default: 2592000,
       minimum: 3600,
-      maximum: 2592000,
+      maximum: 31536000,
     },
   },
   constants: {
