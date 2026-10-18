@@ -234,8 +234,8 @@ this way are active immediately. Each executed change records an
 
 Write calls spend the normal tool budgets plus 30 a minute per grant. Tools
 carry their own annotations: reads `readOnlyHint: true`; writes
-`readOnlyHint: false`, `destructiveHint` on archive, cancel and
-`confirm_change`, `idempotentHint` on renames and status updates. The server
+`readOnlyHint: false`, `destructiveHint` on archive, cancel,
+`remove_competitor`, `delete_topic` and `confirm_change`, `idempotentHint` on renames and status updates. The server
 instructions require the user's yes before any change tool, and for a prepare
 tool its preview shown and `confirm_change` only after the user agrees to it. MCP elicitation is not offered: the transport is
 stateless HTTP and cannot hold a server-to-client request, so every client uses
