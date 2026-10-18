@@ -205,6 +205,12 @@ describe('hosted MCP transport', () => {
       idempotentHint: true,
       openWorldHint: false,
     });
+    expect(hints.confirm_change).toEqual({
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: false,
+      openWorldHint: true,
+    });
     expect(hints.create_topic).toMatchObject({ readOnlyHint: false, destructiveHint: false });
     expect(hints.cancel_audit).toMatchObject({ readOnlyHint: false, destructiveHint: true });
   });

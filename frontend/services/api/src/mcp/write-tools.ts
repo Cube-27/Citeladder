@@ -48,7 +48,7 @@ type Annotations = {
   readOnlyHint: false;
   destructiveHint: boolean;
   idempotentHint: boolean;
-  openWorldHint: false;
+  openWorldHint: boolean;
 };
 type Definition<S extends z.ZodObject> = {
   title: string;
@@ -652,7 +652,8 @@ const writeDefinitions = {
         .max(64)
         .describe('The confirmation_token the prepare tool returned, exactly as given.'),
     }),
-    annotations: hints(true, false),
+    // A confirmed audit launch asks external AI engines.
+    annotations: { ...hints(true, false), openWorldHint: true },
     run: async ({ db, config, principal }, args) => {
       const { kind, result } = await confirmChange(
         db,
