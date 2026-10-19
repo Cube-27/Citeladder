@@ -11,7 +11,7 @@ import { Stack } from '@/components/ui/layout';
 import { panelClasses } from '@/components/ui/panel';
 import { QueryState } from '@/components/ui/query-state';
 import { textRole } from '@/components/ui/typography';
-import { EditorialSectionHeader } from '@/components/ui/workspace';
+import { EditorialSectionHeader, splitPaneClasses } from '@/components/ui/workspace';
 import { agentHandoffHref } from '@/lib/agent/handoff';
 import { skillGroupLabel } from '@/lib/agent/vocabulary';
 import { agentQueries, type AgentSkill } from '@/lib/api/agent';
@@ -69,7 +69,7 @@ function SkillGroups({ skills }: Readonly<{ skills: AgentSkill[] }>) {
             title={group}
             description={`${rows.length} ${rows.length === 1 ? 'skill' : 'skills'}`}
           />
-          <ul className="desktop:grid-cols-2 grid gap-3">
+          <ul className={splitPaneClasses('peers', 'items-stretch')}>
             {rows.map((skill) => (
               <Stack as="li" key={skill.id} className={panelClasses()}>
                 <Stack gap="tight">

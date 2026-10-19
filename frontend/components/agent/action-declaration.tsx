@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { DateField } from '@/components/ui/date-field';
 import { Dialog } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
+import { Stack } from '@/components/ui/layout';
 import { MutationNotice } from '@/components/ui/mutation-notice';
 import { ReadError } from '@/components/ui/read-error';
 import { textRole } from '@/components/ui/typography';
@@ -106,7 +107,7 @@ export function MarkImplementedButton({
             : 'Declare that this work is live, done outside CiteLadder.')
         }
         footer={
-          <div className="flex justify-end gap-2">
+          <>
             <Button variant="secondary" onClick={() => setOpen(false)}>
               Cancel
             </Button>
@@ -118,10 +119,10 @@ export function MarkImplementedButton({
             >
               Declare implemented
             </Button>
-          </div>
+          </>
         }
       >
-        <div className="grid gap-4">
+        <Stack gap="workspace">
           <Field
             label="When did it go live?"
             hint={`Any day from ${range.min} to today. Readings before this day are not counted.`}
@@ -161,7 +162,7 @@ export function MarkImplementedButton({
               onRetry={submit}
             />
           ) : null}
-        </div>
+        </Stack>
       </Dialog>
     </>
   );
@@ -191,27 +192,27 @@ export function MarkActionImplemented({
 function MeasurementPreview({ action }: Readonly<{ action: Declarable }>) {
   if (action.members.length === 0) return null;
   return (
-    <div className="grid gap-2">
+    <Stack gap="compact">
       <p className={textRole('label')}>What CiteLadder will check</p>
-      <ul className="grid gap-2">
+      <Stack as="ul" gap="compact">
         {action.members.map((member) => {
           const leg = action.member_measurement[member.id] ?? null;
           return (
-            <li key={member.id} className="grid gap-0.5">
+            <Stack as="li" gap="tight" key={member.id}>
               <span className={textRole('itemTitle')}>{member.title}</span>
               <span className={textRole('caption')}>
                 {leg
                   ? `Measured by ${measurementLegLabel(leg)?.toLowerCase() ?? 'the next reading'}.`
                   : 'Not measured automatically: no reading isolates this change.'}
               </span>
-            </li>
+            </Stack>
           );
         })}
-      </ul>
+      </Stack>
       <p className={textRole('caption')}>
         Nothing runs on its own, and an Action can be declared once.
       </p>
-    </div>
+    </Stack>
   );
 }
 

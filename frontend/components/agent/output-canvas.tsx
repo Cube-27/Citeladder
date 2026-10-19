@@ -2,11 +2,12 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Pencil, Sparkles } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Stack } from '@/components/ui/layout';
 import { Pressable } from '@/components/ui/pressable';
 import { Textarea } from '@/components/ui/textarea';
 import { textRole } from '@/components/ui/typography';
@@ -46,11 +47,11 @@ export function OutputCanvas({
   const [active, setActive] = useState<SectionMode>(null);
   const titled = sections.filter((section) => section.heading !== null);
   return (
-    <div className="grid gap-4">
+    <Stack gap="workspace">
       {titled.length >= CONTENTS_MIN_SECTIONS ? (
-        <nav aria-label="Contents" className="grid gap-1">
+        <Stack as="nav" gap="tight" aria-label="Contents">
           <span className={textRole('label')}>Contents</span>
-          <ol className="grid gap-1 ps-4">
+          <Stack as="ol" gap="tight" className="ps-4">
             {sections.map((section, index) =>
               section.heading === null ? null : (
                 <li key={section.start}>
@@ -67,8 +68,8 @@ export function OutputCanvas({
                 </li>
               ),
             )}
-          </ol>
-        </nav>
+          </Stack>
+        </Stack>
       ) : null}
       {sections.map((section, index) => (
         <SectionBlock
@@ -95,7 +96,7 @@ export function OutputCanvas({
           }
         />
       ))}
-    </div>
+    </Stack>
   );
 }
 
@@ -134,7 +135,7 @@ function SectionBlock({
   if (!section.text.trim()) return null;
   const name = sectionName(section);
   return (
-    <section id={id} aria-label={name} className="group grid scroll-mt-4 gap-2">
+    <Stack as="section" gap="compact" id={id} aria-label={name} className="group scroll-mt-4">
       {mode === 'edit' ? editor : <ContentMarkdown markdown={section.text} density="compact" />}
       {locked || mode === 'edit' ? null : (
         // Quiet until the section is hovered or focused; always shown on touch.
@@ -158,7 +159,7 @@ function SectionBlock({
       {mode === 'revise' ? (
         <ReviseForm name={name} onCancel={() => onMode(null)} onSubmit={onRevise} />
       ) : null}
-    </section>
+    </Stack>
   );
 }
 
@@ -231,9 +232,10 @@ function SectionEditor({
   const body = replaceSection(revision.body, index, text);
   const inputId = `section-editor-${revision.id}-${index}`;
   return (
-    <form
-      className="grid gap-2"
-      onSubmit={(event) => {
+    <Stack
+      as="form"
+      gap="compact"
+      onSubmit={(event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         save.mutate({ chatId, baseRevisionId: revision.id, title: revision.title, body });
       }}
@@ -256,6 +258,6 @@ function SectionEditor({
           Save section
         </Button>
       </div>
-    </form>
+    </Stack>
   );
 }

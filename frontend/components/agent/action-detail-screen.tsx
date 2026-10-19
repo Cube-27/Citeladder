@@ -232,10 +232,10 @@ function Diagnosis({
           <ul className={ledgerClasses()}>
             {action.members.map((member) => (
               <li key={member.id} className="flex flex-wrap items-start gap-3 py-3">
-                <span className="grid min-w-0 flex-1 gap-1">
+                <Stack as="span" gap="tight" className="min-w-0 flex-1">
                   <span className={textRole('itemTitle')}>{member.title}</span>
                   <span className={textRole('caption')}>{member.remediation}</span>
-                </span>
+                </Stack>
                 <Button variant="ghost" onClick={() => onOpenEvidence(member.id)}>
                   View evidence
                 </Button>
@@ -318,13 +318,13 @@ function TextList({ title, items }: Readonly<{ title: string; items: string[] }>
         <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent>
-        <ul className="grid list-disc gap-1 ps-5">
+        <Stack as="ul" gap="tight" className="list-disc ps-5">
           {items.map((item) => (
             <li key={item} className={textRole('body')}>
               {item}
             </li>
           ))}
-        </ul>
+        </Stack>
       </CardContent>
     </Card>
   );
@@ -349,9 +349,9 @@ function LinkedChats({
         <QueryState kind="empty" inline message="No chats have worked on this Action yet." />
       ) : null}
       {rows.length > 0 ? (
-        <ul className="grid gap-2">
+        <Stack as="ul" gap="compact">
           {rows.map((chat) => (
-            <li key={chat.id} className={panelClasses({}, 'grid gap-0.5')}>
+            <Stack as="li" gap="tight" key={chat.id} className={panelClasses()}>
               <TextLink
                 href={`/agent/chats/${chat.id}`}
                 text="itemTitle"
@@ -364,9 +364,9 @@ function LinkedChats({
                   {kindLabel(chat.output_kind)} · {OUTPUT_PHASE_LABEL[chat.output_phase]}
                 </span>
               ) : null}
-            </li>
+            </Stack>
           ))}
-        </ul>
+        </Stack>
       ) : null}
       {chats.hasNextPage ? (
         <Button
@@ -389,7 +389,7 @@ function ActionEvidence({ action }: Readonly<{ action: ActionDetail }>) {
   const supporting = families.filter(([, state]) => state === 'observed');
   const other = families.filter(([, state]) => state !== 'observed');
   const sources = (rows: typeof families) => (
-    <dl className="grid gap-3">
+    <Stack as="dl" gap="compact">
       {rows.map(([family, state]) => (
         <div key={family} className="flex flex-wrap items-center justify-between gap-2">
           <dt className={textRole(state === 'observed' ? 'itemTitle' : 'body')}>
@@ -398,7 +398,7 @@ function ActionEvidence({ action }: Readonly<{ action: ActionDetail }>) {
           <dd className={textRole('caption')}>{FAMILY_STATE_LABEL[state]}</dd>
         </div>
       ))}
-    </dl>
+    </Stack>
   );
   return (
     <Card>
