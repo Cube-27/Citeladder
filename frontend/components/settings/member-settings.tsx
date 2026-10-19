@@ -252,7 +252,7 @@ export function MemberSettings({ mayInvite }: Readonly<{ mayInvite: boolean }>) 
         }
         actions={
           mayInvite ? (
-            <Button type="button" size="sm" onClick={() => setInviteOpen(true)}>
+            <Button type="button" onClick={() => setInviteOpen(true)}>
               <UserPlus className="size-3.5" aria-hidden />
               Invite
             </Button>

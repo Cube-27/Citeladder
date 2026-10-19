@@ -54,7 +54,7 @@ export function MemberRoster({
     return (
       <Alert tone="danger">
         The member list could not be loaded.{' '}
-        <Button type="button" variant="ghost" size="sm" onClick={onRetry}>
+        <Button type="button" variant="ghost" onClick={onRetry}>
           Try again
         </Button>
       </Alert>
@@ -129,7 +129,6 @@ function MemberRow({
                 <Button
                   type="button"
                   variant="secondary"
-                  size="sm"
                   disabled={busy}
                   onClick={() => onTransfer(member)}
                 >

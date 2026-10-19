@@ -16,6 +16,10 @@ Remaining work is consolidated in the backlog; historical plans are not active a
   decision shipped in #384; the items needing the owner's decision are in the
   [decisions record](security-audit-2026-10-decisions.md).
 
+- [App geometry consistency](app-geometry-consistency.md) (owner decisions
+  recorded 2026-10-19): one 32px control height, one badge height, one box
+  recipe, one page recipe, one product breakpoint and a rendered-geometry CI
+  check, in three PRs.
 - [Insight parity](insight-parity.md) (owner decisions recorded 2026-10-16 and
   2026-10-17): PR 1 (#414) and PR 2 (#419) shipped; PR 3 adds the editable
   Overview, its layout PDF and Site Health Recrawl.

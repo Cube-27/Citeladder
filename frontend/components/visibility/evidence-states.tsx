@@ -63,7 +63,7 @@ export function EvidenceError({
             heading="Couldn't load this evidence"
             description="The request failed or timed out. Your filters are unchanged."
             action={
-              <Button variant="primary" size="sm" onClick={onRetry}>
+              <Button variant="primary" onClick={onRetry}>
                 <RefreshCw className="size-3.5" aria-hidden />
                 Retry
               </Button>
@@ -91,7 +91,7 @@ export function EvidenceEmpty({
             heading={heading}
             description={body}
             action={
-              <Button asChild variant="ghost" size="sm">
+              <Button asChild variant="ghost">
                 <ProjectLink href="/runs">View Runs</ProjectLink>
               </Button>
             }
@@ -119,7 +119,7 @@ export function EvidenceFilteredEmpty({
             description={body}
             action={
               onClear ? (
-                <Button variant="ghost" size="sm" onClick={onClear}>
+                <Button variant="ghost" onClick={onClear}>
                   Clear filters
                 </Button>
               ) : undefined

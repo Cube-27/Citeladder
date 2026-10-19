@@ -198,7 +198,6 @@ export function PendingInvitations({
                   <Button
                     type="button"
                     variant="secondary"
-                    size="sm"
                     disabled={busy}
                     onClick={() => onResend(invitation.id)}
                   >
@@ -207,7 +206,6 @@ export function PendingInvitations({
                   <Button
                     type="button"
                     variant="ghost"
-                    size="sm"
                     disabled={busy}
                     onClick={() => onRevoke(invitation)}
                   >
