@@ -357,15 +357,15 @@ Every route assembles the same parts from `components/ui/` and `components/layou
 
 | Need | Owner |
 | --- | --- |
-| Page frame, actions (`sm` buttons), detail back link | `PageShell` (`actions`, `back`, `measure="workflow"` for form pages) |
+| Page frame, actions, detail back link, section tabs, controls | `PageShell` (`actions`, `back`, `tabs` → `TabRow`, `controls` → `FilterBar`, `measure="workflow"` for form pages); its content stacks sections 24px apart |
 | Section header | `EditorialSectionHeader` for open sections; `CardHeader` with `actions` for cards — never a raw heading or a re-laid-out header |
 | Headline figures; dense facts | `MetricGroup`/`MetricItem` (3–5 figures); `StatGrid`/`StatItem` (fact grids, wells, pressable metric cards) |
 | Change | `Delta`: sign, arrow and outcome tone, with `policy` for lower-is-better metrics |
 | Usage, progress, distribution | `Meter` |
-| Loading, read error, empty, no project | `PageLoading`, `ReadError`, `EmptyState` / `InlineEmpty`, `ProjectRequiredState` |
+| Loading, read error, first-use empty, no project | `QueryState` (`kind` loading / error / empty): one 160px card footprint for all three; `ReadError` only for a section or refresh failure under content that is still shown; `ProjectRequiredState` |
 | Two columns | `splitPaneClasses(role)`, `ResizableSplitPane`, `stickyPaneClasses` |
 | Settings pages | `SettingsSections` / `SettingsSection` / `SettingsFacts` (`components/settings/settings-section.tsx`): a ruled list where each section's title and help sit in a narrow column and its controls start at one edge in the wide one; the columns stack in a narrow container such as a dialog |
-| Filters, paging | one `FilterRow` (+ `FilterTrigger`) and one `Pager` per list |
+| Filters, paging | one `FilterBar` (search, filters, status, actions; + `FilterTrigger`) in `PageShell` `controls`, or in a card-scoped table's `CardHeader`, and one `Pager` per list |
 | Links; selected rows | `TextLink` (internal, external, back); `listRowClasses` (neutral selected tint, never an accent wash) |
 | Tables, charts | `Table minWidth`, `SortableTableHead`; `ChartContainer size`, `LegendSwatch` |
 | People | `Avatar` |
@@ -511,4 +511,5 @@ Before merging a visual change, verify:
 - Existing token, primitive, typography, geometry, spacing, and ownership contracts are followed; no route-local design recipes or unapproved surface/motion changes.
 - Affected text, focus, status, loading, error, empty, keyboard, touch, mobile, reduced-motion, and forced-colours states remain usable; zero remains distinct from absence.
 - Factual content, claims, data, product behavior, transactions, and confirmation gates remain unchanged unless explicitly approved.
+- `e2e/geometry-census.spec.ts` passes: every product route at 982×900 renders one value per geometric role (controls 32, badges 20, text-control padding 12, section gap 24, card inset 16, query state 160, table row 36). Pages take geometry from the organisms, never their own utilities.
 - Repository-owned static, test, and appropriate visual commands pass under the existing workflow. External/manual tools are not acceptance gates unless a deterministic repository command owns them. Tests do not become a second visual authority.

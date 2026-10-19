@@ -207,13 +207,13 @@ up after onboarding creates a project and after a project edit.
 
 The Vite SPA preserves the authenticated shell while route content resolves.
 `shell-fallback` is the neutral pre-session structure only; after
-authentication, PageLoading and recoverable gate notices render in the shell's
+authentication, QueryState loading and recoverable gate notices render in the shell's
 content pane. In-place refresh retains data with scoped progress rather than
 collapsing the surface. Pointer or keyboard intent on a destination starts its
 route chunk and warms its primary read under the destination's exact query key.
 
 Route matching starts code downloads alongside session bootstrap. Pre-session
-loading uses the neutral shell; authenticated route loading uses PageLoading
+loading uses the neutral shell; authenticated route loading uses QueryState
 inside the persistent shell. A screen that fails to render, including a replaced
 build chunk, shows Reload and Go to Overview inside the shell; an unknown app
 address shows a not-found screen there. Failures before the shell mounts offer a

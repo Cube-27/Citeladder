@@ -174,6 +174,23 @@ PR 3 deletes the variants, so nothing is aliased or deprecated.
   band gap and card gap, and assert one value per role. Added to the E2E
   job's file list.
 
+Done in PR 2: the prop removal; `FilterBar` (replaces `FilterRow` and
+`pageToolbarClasses`; `PageShell` `controls` renders it), `TabRow` (replaces
+`TabsBar` and the `Tabs` `variant` prop; `PageShell` `tabs` renders it, padding
+12), `QueryState` (replaces `PageLoading` and every route-level loading,
+read-error and first-use empty, including `NoProjectState`'s body); `PageShell`
+content stacks sections 24 apart; badges render at 20; Runs status pills are
+32px secondary `Button`s with `aria-pressed`; the census spec, selected in CI by
+the organisms, `PageShell`, `globals.css` and the shell fixture.
+
+Moved to PR 3: `StatRow`, `DataTable` (whose header takes the card-scoped
+`FilterBar`s left in Visibility sources and fan-out, Search Intelligence
+datasets, Settings members, Site Health internal links and the Products catalog
+search), `ListScreen`/`DetailScreen`; deleting `EmptyState`, `InlineEmpty`,
+`screen-states` and `FilterChip` once their remaining section-level users move;
+segmented items' 12px badge text; a fixture with neighbouring cards so the
+census measures card→card gap.
+
 ### PR 3 — delete the menus, lock the recipes, one breakpoint, the layering check
 
 - Delete `sm`, `iconSm`, `iconRound` from `button-variants.ts`, `compact` from
