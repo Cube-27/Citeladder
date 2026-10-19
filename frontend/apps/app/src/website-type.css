@@ -16,6 +16,9 @@
   --tracking-wide: 0.02em;
   --tracking-wider: 0.06em;
   --leading-relaxed: 1.5;
+  /* The website's coded product views (apps/marketing/src/product-views.css)
+     draw a reduced app at 28. The product itself has no 28 rung. */
+  --control-height-sm: 28px;
 }
 
 /* Public pages set no font-size here: their attribute sits on <html>, where
