@@ -1,51 +1,11 @@
 {
   "format_version": 1,
   "files": {
-    "components/ai-traffic/traffic-controls.tsx": {
-      "layer-geometry": 2
-    },
-    "components/auth/auth-form.tsx": {
-      "layer-geometry": 5
-    },
-    "components/auth/policy-acceptance.tsx": {
-      "layer-geometry": 1
-    },
-    "components/auth/workspace-access-gate.tsx": {
-      "layer-geometry": 1
-    },
-    "components/auth/workspace-chooser.tsx": {
-      "layer-geometry": 3
-    },
     "components/layout/app-shell.tsx": {
       "tsx-size": 1
     },
     "components/marketing/pages/legal.tsx": {
       "tsx-size": 1
-    },
-    "components/mcp/connect-strip.tsx": {
-      "layer-geometry": 3
-    },
-    "components/onboarding/choice-controls.tsx": {
-      "layer-geometry": 1
-    },
-    "components/onboarding/onboarding-page-client.tsx": {
-      "layer-geometry": 1
-    },
-    "components/onboarding/onboarding-stages.tsx": {
-      "layer-geometry": 1
-    },
-    "components/onboarding/review-step.tsx": {
-      "layer-geometry": 2
-    },
-    "components/performance/metric-cards.tsx": {
-      "layer-geometry": 1,
-      "layer-size-prop": 1
-    },
-    "components/performance/performance-chrome.tsx": {
-      "layer-geometry": 1
-    },
-    "components/search-intelligence/search-intelligence-dataset-view.tsx": {
-      "layer-geometry": 1
     },
     "public/blog/editorial/article-audit.svg": {
       "svg-color": 46

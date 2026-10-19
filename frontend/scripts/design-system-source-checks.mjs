@@ -1125,11 +1125,13 @@ function componentFolder(label) {
 
 /**
  * Geometry a feature folder chose for itself: spacing, sized boxes and radii
- * as utilities, and `size=`/`padding=` props; and, in every product folder
- * including `ui/` and `layout/`, a breakpoint other than `desktop:`.
- * Ratcheted per file by check-design-system.mjs, so the debt can only fall.
+ * as utilities (`layer-geometry`), and `size=`/`padding=` props
+ * (`layer-size-prop`); and, in every product folder including `ui/` and
+ * `layout/`, a breakpoint other than `desktop:` (`layer-breakpoint`).
+ * Every one is a violation: the layering debt was burned to zero (app
+ * geometry PR 7), so none is ratcheted or baselined and none can regrow.
  */
-export function featureLayeringFindings(source, label) {
+export function featureLayeringViolations(source, label) {
   const folder = componentFolder(label);
   if (!folder || folder === 'marketing') return [];
   const feature = !LAYERING_OWNERS.has(folder);
@@ -1138,7 +1140,7 @@ export function featureLayeringFindings(source, label) {
   const program = parseSource(source, label);
   const lineOf = lineIndex(source);
   const findings = [];
-  const push = (rule, line, message) => findings.push({ rule, file: label, line, message });
+  const push = (rule, line, message) => findings.push(`${label}:${line}: ${message} [${rule}]`);
   for (const { token, line } of classTokens(program, lineOf)) {
     const { variants, utility } = splitVariants(token);
     if (

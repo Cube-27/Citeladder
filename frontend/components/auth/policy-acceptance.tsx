@@ -2,11 +2,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
-import { ShellFallback } from '@/components/layout/shell-fallback';
+import { GateScreen, ShellFallback } from '@/components/layout/shell-fallback';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Inline, Stack } from '@/components/ui/layout';
+import { Inline } from '@/components/ui/layout';
 import { policiesApi } from '@/lib/api/policies';
 import { queryKeys } from '@/lib/api/query-keys';
 import { humanizeApiError } from '@/lib/api/errors';
@@ -76,19 +76,17 @@ function WorkspacePolicy({
     pendingRevision !== null && hasSignupTermsConsent() && !accept.isError;
   if (query.isPending || recordingSignInConsent) return <ShellFallback />;
   return (
-    <ShellFallback>
-      <Stack as="main" gap="workspace" className="mx-auto w-full max-w-xl content-center p-8">
-        <TermsReview
-          revision={query.data?.terms_revision}
-          readError={query.error}
-          onRetry={() => void query.refetch()}
-          accepting={accept.isPending}
-          acceptError={accept.error}
-          onAccept={(revision) => accept.mutate(revision)}
-        />
-        <PolicyExits />
-      </Stack>
-    </ShellFallback>
+    <GateScreen>
+      <TermsReview
+        revision={query.data?.terms_revision}
+        readError={query.error}
+        onRetry={() => void query.refetch()}
+        accepting={accept.isPending}
+        acceptError={accept.error}
+        onAccept={(revision) => accept.mutate(revision)}
+      />
+      <PolicyExits />
+    </GateScreen>
   );
 }
 

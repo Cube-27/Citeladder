@@ -203,6 +203,18 @@ section-level skeletons, drawer and table width roles, accent check marks in
 dropdowns, and the blog illustration palette. Each names the owner to change
 first. Owner: [Design](../design.md).
 
+### App geometry remainder
+
+The [app geometry consistency plan](../archive/app-geometry-consistency.md)
+shipped in #434–#442 and PR 7 (zero layering debt, a hard-failing layering
+check). Left, found by the rendered census in PR 7: AI Traffic's Crawlers,
+Activity and Pages control bands hold more filters than fit one row at 982px,
+so the band wraps to 89px against the product's 49 (it fits at 1280). Those
+tabs stay out of `e2e/geometry-census.spec.ts` until the band fits, which
+also leaves `FilterField` (its only fixture-rendered users) unmeasured.
+Fixing it means choosing which filters leave the band. Owner:
+[Design](../design.md).
+
 ### App shell review remainder
 
 Deferred by the feature 15 review (2026-10-10, [plan](../archive/app-shell-improvement.md#deferred-to-the-backlog)):

@@ -282,7 +282,10 @@ interaction recipes live only in [`design.md`](design.md).
 | Offer and connection rows; identity rows | `frontend/components/ui/control-row.tsx` (`ControlRow`); `frontend/components/ui/workspace.tsx` (`IdentityRow`) |
 | Fact lists and fixed-height ledgers | `frontend/components/ui/facts.tsx` (`FactList`, `ValueLedger`) |
 | Settings sections | `frontend/components/ui/settings-section.tsx` (`SettingsSections`, `SettingsSection`) |
-| Tree rail, reorderable list, widget toolbar | `frontend/components/ui/rail.tsx`, `reorder-list.tsx`, `floating-toolbar.tsx` |
+| List rows: option, navigation and tree-rail rows | `frontend/components/ui/list-row.tsx` (`OptionRow`, `NavRow`, `RailItem`, `RailItemForm`) |
+| Reorderable list | `frontend/components/ui/reorder-list.tsx` (`ReorderList`; it replaced the Ranked actions list's own drag-and-move mechanics) |
+| Widget editing toolbar | `frontend/components/ui/workspace.tsx` (`FloatingToolbar`) |
+| Gate pages before the shell opens | `frontend/components/layout/shell-fallback.tsx` (`GateScreen`), `frontend/components/layout/gate-notice-frame.tsx` (`GateNoticeScreen`) |
 | Chat thread and composer dock | `frontend/components/ui/chat-dock.tsx` (`DockedThread`, `ComposerDock`, `ComposerFrame`, `RemovableChip`, `SuggestionList`) |
 | Panel (`panelClasses`) and card content (one box recipe) | `frontend/components/ui/panel.tsx`, `frontend/components/ui/card.tsx` |
 | Menu separator | `frontend/components/ui/dropdown.tsx` |

@@ -172,10 +172,13 @@ export function McpConnections() {
         />
         <ConnectStrip />
       </Stack>
-      <ConnectionList />
-      {mayManage && activeWorkspaceId ? (
-        <ConnectionList key={activeWorkspaceId} workspaceId={activeWorkspaceId} />
-      ) : null}
+      {/* Your approvals and the workspace's are peers in one section. */}
+      <Stack gap="workspace">
+        <ConnectionList />
+        {mayManage && activeWorkspaceId ? (
+          <ConnectionList key={activeWorkspaceId} workspaceId={activeWorkspaceId} />
+        ) : null}
+      </Stack>
     </Stack>
   );
 }

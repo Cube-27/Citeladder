@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { ChevronRight, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useEffect, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -13,8 +13,7 @@ import { Button } from '@/components/ui/button';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Icon } from '@/components/ui/icon';
 import { Stack } from '@/components/ui/layout';
-import { listRowClasses } from '@/components/ui/list-row';
-import { Pressable } from '@/components/ui/pressable';
+import { NavRow } from '@/components/ui/list-row';
 import { QueryState } from '@/components/ui/query-state';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { Workspace } from '@/lib/api/types';
@@ -22,7 +21,6 @@ import { workspacesApi } from '@/lib/api/workspaces';
 import { workspaceDestination } from '@/lib/navigation/project-destination';
 import { ownsWorkspace, WORKSPACE_SETUP_PATH } from '@/lib/project/bootstrap';
 import { useProjectContext } from '@/lib/project/project-context';
-import { cn } from '@/lib/utils';
 
 /**
  * Where a signed-in person goes next: their own workspace (or setting one up
@@ -61,22 +59,15 @@ export function WorkspaceChooser() {
       <Stack as="ul" gap="tight" aria-label="Your workspaces">
         {workspaces.map((workspace) => (
           <li key={workspace.id}>
-            <Pressable
-              className={cn(
-                listRowClasses(),
-                'flex w-full items-center gap-3 px-3 py-2.5 text-start',
-              )}
-              onClick={() => enter(workspace)}
+            <NavRow
+              onSelect={() => enter(workspace)}
+              trailing={<AccessBadge workspaceId={workspace.id} />}
             >
-              <span className="grid min-w-0 flex-1">
-                <span className="type-body-strong text-foreground truncate">{workspace.name}</span>
-                <span className="type-caption">
-                  {workspace.role === 'owner' ? 'Your workspace' : roleLabel(workspace.role)}
-                </span>
+              <span className="type-body-strong text-foreground truncate">{workspace.name}</span>
+              <span className="type-caption">
+                {workspace.role === 'owner' ? 'Your workspace' : roleLabel(workspace.role)}
               </span>
-              <AccessBadge workspaceId={workspace.id} />
-              <Icon icon={ChevronRight} />
-            </Pressable>
+            </NavRow>
           </li>
         ))}
       </Stack>
