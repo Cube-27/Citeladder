@@ -70,6 +70,47 @@ export function ledgerClasses(shell: LedgerShell = 'open', className?: string) {
 }
 
 /**
+ * One row of a ledger: 12 above and below the rule between rows, flush at
+ * the list's own edges so the first and last rows meet the container's inset.
+ * The row's inner layout (an `Inline` or a `Stack`) is the caller's anatomy;
+ * the rhythm between rows is this recipe's.
+ */
+export function ledgerItemClasses(className?: string) {
+  return cn('min-w-0 py-3 first:pt-0 last:pb-0', className);
+}
+
+/**
+ * The heading of a block inside a section or card: a label, one line of
+ * caption under it, and an optional trailing fact (a count) or control on the
+ * label's row. The label/caption pair is 4 apart, like every label and the
+ * value it names.
+ */
+export function SubsectionHeader({
+  title,
+  description,
+  trailing,
+  headingId,
+}: Readonly<{
+  title: ReactNode;
+  description?: ReactNode;
+  trailing?: ReactNode;
+  /** Target for the block's `aria-labelledby`. */
+  headingId?: string;
+}>) {
+  return (
+    <div className="grid min-w-0 gap-1">
+      <div className="flex min-w-0 items-center justify-between gap-2">
+        <span id={headingId} className={textRole('label')}>
+          {title}
+        </span>
+        {trailing}
+      </div>
+      {description ? <p className="type-caption">{description}</p> : null}
+    </div>
+  );
+}
+
+/**
  * The section header for an authenticated screen: an optional meta label, the
  * title, one line of description, and the section's actions on the same row.
  *
