@@ -167,7 +167,7 @@ Commands, environment, entitlement, migration, and the clean-clone runbook:
 
 | Document | What it covers |
 |---|---|
-| [`CLAUDE.md`](CLAUDE.md) | Mandatory implementation rules and the task-specific document map |
+| [`CLAUDE.md`](CLAUDE.md) | Mandatory agent rules for every task; situational ones are skills in `.claude/skills/` |
 | [`docs/architecture.md`](docs/architecture.md) | Canonical target product architecture |
 | [`docs/invariants.md`](docs/invariants.md) | The review-blocking rules |
 | [`docs/README.md`](docs/README.md) | Runtime owners, active work, operations, and historical evidence |

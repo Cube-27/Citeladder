@@ -12,6 +12,23 @@ feature owner below and only the shared contracts affected by the task.
 behavior and implementation boundaries. Code/document disagreement is a finding
 to resolve within the authorized scope, not permission to weaken a constraint.
 
+### Which document answers what
+
+| Question | Read |
+|---|---|
+| How does a feature behave today? | Its owner under [Feature owners](#feature-owners) |
+| What must never break? | [Invariants](invariants.md), affected sections only |
+| Why was a cross-feature choice made? | [Decisions](decisions.md) |
+| Any billing, pricing, credits or plan-gating decision | [Billing decision log](billing-decisions.md) (B-numbers) |
+| How billing, entitlements and usage accounting behave | [Billing and entitlements](billing-entitlements.md) |
+| Prices, allowances, add-ons and top-ups (the numbers) | `frontend/services/api/src/config/billing-authoring.ts`; documents never restate add-on or top-up numbers (B55) |
+| Provider token, search and DataForSEO rates (internal cost) | [Provider rate card](operations/CiteLadder_Launch_Config.md#7-provider-rate-card-internal-cost); runtime prices in `config/ai-credits.json`, `dataforseo.json`, `search-intelligence.json` |
+| Legal commitments, subprocessors, company details | [Legal decisions](operations/legal-decisions.md); page text in `frontend/lib/marketing-content/legal*.ts` |
+| What work is current, and what is queued | [Plan status](plans/ACTIVE.md), then the assigned plan; [backlog](plans/backlog.md) is queued, not assigned |
+| Setup, commands and validation | [Development](DEVELOPMENT.md) |
+| Deployment and operator procedures | [Operations](operations/) runbooks and the [billing operator guide](operations/billing-operator-guide.md) |
+| Product scope and positioning | [Product](../PRODUCT.md) |
+
 ## Feature owners
 
 | Feature | Canonical document |
@@ -32,7 +49,8 @@ to resolve within the authorized scope, not permission to weaken a constraint.
 
 ## Shared contracts
 
-- [Agent workflow](../CLAUDE.md): bootstrap and proportional validation.
+- [Agent workflow](../CLAUDE.md): rules for every task; situational workflow
+  rules are skills in `../.claude/skills/`.
 - [Contributing](../CONTRIBUTING.md): branch, PR and release participation.
 - [Product](../PRODUCT.md): users, purpose, positioning and non-goals.
 - [Architecture](architecture.md): cross-system ownership and evidence flow.
@@ -42,7 +60,7 @@ to resolve within the authorized scope, not permission to weaken a constraint.
 - [Invariants](invariants.md): durable correctness and safety constraints.
 - [API errors](api-error-contract.md): cross-stack error contract.
 - [Development](DEVELOPMENT.md): setup, isolation and validation commands.
-- [Review](../Review.md): review checklist; the `claude-review` CI review covers PRs over 10 files.
+- [Review](../Review.md): review checklist for an author's own diff.
 
 ## Work and decisions
 

@@ -25,7 +25,6 @@ const INERT_CONFIG_FILES = new Set([
   '.sonarcloud.properties',
   '.github/dependabot.yml',
   '.github/actions/require-green-main/action.yml',
-  '.github/workflows/claude-review.yml',
   '.github/workflows/gcp-deploy.yml',
   '.github/workflows/workers-api-host-deploy.yml',
   '.github/workflows/workers-app-deploy.yml',
@@ -272,28 +271,34 @@ function changedPaths(range) {
 
 export function hasTrustworthyJobEvidence(jobs, workflowFile) {
   if (!Array.isArray(jobs)) return false;
-  const expectedNames =
-    workflowFile === 'compose-smoke.yml'
-      ? ['Classify affected owners', 'Clean-clone Compose smoke']
-      : [
-          'Classify affected owners',
-          'Frontend (quality, coverage, build)',
-          'API contract and ingress',
-          'API service (TypeScript)',
-          'E2E (playwright)',
-          'Security (secrets scan)',
-          'Infra (Terraform and workflows)',
-        ];
-  const jobsByName = new Map(jobs.map((job) => [job.name, job]));
-  const classifier = jobsByName.get('Classify affected owners');
+  const compose = workflowFile === 'compose-smoke.yml';
+  const expectedNames = compose
+    ? ['Classify affected owners', 'Clean-clone Compose smoke']
+    : [
+        'Classify affected owners',
+        'Frontend (quality, docs)',
+        'API contract and ingress',
+        'API service (TypeScript)',
+        'E2E (playwright)',
+        'Security (secrets scan)',
+        'Infra (Terraform and workflows)',
+      ];
+  // Matrix jobs report one job per shard, named `<family> (<shard>/<count>)`; a
+  // skipped matrix reports a single job. Each family needs at least one job.
+  const matrixFamilies = compose ? [] : ['Frontend tests', 'API service tests'];
+  const familyOf = (name) =>
+    matrixFamilies.find((family) => typeof name === 'string' && name.startsWith(`${family} (`));
+  const singles = jobs.filter((job) => !familyOf(job.name));
+  const singlesByName = new Map(singles.map((job) => [job.name, job]));
+  const settled = (job) =>
+    job?.status === 'completed' && ['success', 'skipped'].includes(job.conclusion);
   return (
-    jobs.length === expectedNames.length &&
-    jobsByName.size === expectedNames.length &&
-    classifier?.conclusion === 'success' &&
-    expectedNames.every((name) => {
-      const job = jobsByName.get(name);
-      return job?.status === 'completed' && ['success', 'skipped'].includes(job.conclusion);
-    })
+    singles.length === expectedNames.length &&
+    singlesByName.size === expectedNames.length &&
+    singlesByName.get('Classify affected owners')?.conclusion === 'success' &&
+    expectedNames.every((name) => settled(singlesByName.get(name))) &&
+    matrixFamilies.every((family) => jobs.some((job) => familyOf(job.name) === family)) &&
+    jobs.every(settled)
   );
 }
 
