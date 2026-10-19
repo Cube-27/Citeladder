@@ -110,7 +110,7 @@ describe('siteHealthEntitlementSchema (quota authority)', () => {
 });
 
 describe('crawl admission and URL preview', () => {
-  beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
+  beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
   afterEach(() => mswServer.resetHandlers());
   afterAll(() => mswServer.close());
   it('starts execution in the creating workspace without holding up crawl admission', async () => {
@@ -197,7 +197,7 @@ describe('siteCrawlSchema (Free redaction / nullable totals)', () => {
 });
 
 describe('siteHealthApi.getCrawl site_facts (v2 P2 contract)', () => {
-  beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
+  beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
   afterEach(() => mswServer.resetHandlers());
   afterAll(() => mswServer.close());
 

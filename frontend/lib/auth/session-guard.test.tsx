@@ -37,7 +37,7 @@ function Protected() {
   return <div>signed in as {user.email}</div>;
 }
 
-beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
+beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
 afterEach(() => {
   mswServer.resetHandlers();
   navigate.mockReset();

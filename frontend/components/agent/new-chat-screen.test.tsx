@@ -42,7 +42,7 @@ function renderNewChat(search: string) {
   );
 }
 
-beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
+beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
 afterEach(() => {
   mswServer.resetHandlers();
   entitlement.agent = true;

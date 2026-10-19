@@ -53,7 +53,7 @@ function renderChat() {
   );
 }
 
-beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
+beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
 beforeEach(() =>
   mswServer.use(
     http.get(`/api/v1/projects/${PROJECT}/actions`, () =>
