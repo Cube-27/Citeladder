@@ -265,7 +265,12 @@ interaction recipes live only in [`design.md`](design.md).
 |---|---|
 | Button, Card, Input, Textarea, Field | `frontend/components/ui/` |
 | Dropdown Menu, Dialog, Drawer, Tooltip | `frontend/components/ui/` Radix wrappers |
-| Table, Badge, Alert, Skeleton, progress, empty state, pagination, segmented control | `frontend/components/ui/` |
+| Table, Badge, Alert, Skeleton, progress, pagination, segmented control | `frontend/components/ui/` |
+| Read states: loading, read error, empty (block and inline) | `frontend/components/ui/query-state.tsx` (`QueryState`) |
+| KPI and fact rows | `frontend/components/ui/stat-row.tsx` (`StatRow`) |
+| Record tables: header, toolbar, rows, pager, states | `frontend/components/ui/data-table.tsx` (`DataTable`) |
+| Screen templates (bands, band gaps, detail split) | `frontend/components/layout/page-shell.tsx` (`ListScreen`, `DetailScreen`) |
+| Router-level not-found and render-failure screens | `frontend/apps/app/src/route-error.tsx` |
 | Recoverable persisted-read failure | `frontend/components/ui/read-error.tsx`; domain owners supply the exact read and decide whether cached content remains usable |
 | Select, Search field, Tabs | `frontend/components/ui/select.tsx`, `frontend/components/ui/search-field.tsx`, `frontend/components/ui/tabs.tsx` |
 | Checkbox and radio group | `frontend/components/ui/checkbox.tsx`, `frontend/components/ui/radio-group.tsx` |
