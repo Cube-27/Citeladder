@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { Stack } from '@/components/ui/layout';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import type { Prompt, Topic } from '@/lib/api/types';
@@ -106,7 +107,7 @@ export function PromptFormDialog({
         </>
       }
     >
-      <form noValidate onSubmit={submit} className="grid gap-4">
+      <Stack as="form" gap="workspace" noValidate onSubmit={submit}>
         {error ? <Alert tone="danger">{error}</Alert> : null}
 
         <Field label="Topic">
@@ -139,7 +140,7 @@ export function PromptFormDialog({
 
         {/* Tags are set on generation or import; editing corrects them. */}
         {isEdit ? (
-          <div className="desktop:grid-cols-2 grid gap-4">
+          <Stack gap="workspace" className="desktop:grid-cols-2">
             <Field label="Intent">
               {(props) => (
                 <Controller
@@ -181,9 +182,9 @@ export function PromptFormDialog({
                 <Input {...props} {...register('persona')} placeholder="Marathon runners" />
               )}
             </Field>
-          </div>
+          </Stack>
         ) : null}
-      </form>
+      </Stack>
     </Dialog>
   );
 }
