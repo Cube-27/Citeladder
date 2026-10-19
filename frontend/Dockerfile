@@ -1,5 +1,6 @@
-# Node 26 bookworm-slim; preserve this image family when updating the digest.
-FROM node@sha256:86f07bc9c5dce4578cf37e5a418b7bfc7f817cda25cde66e2b66e95ed86c4567 AS dependencies
+# Node 26 bookworm-slim. The tag keeps Dependabot's digest updates on this
+# image family; a bare digest let it pick the full `node` image.
+FROM node:26-bookworm-slim@sha256:298992629d69bbd5b2b03ad57094d8e4fcb3a8eeb7c4e25d29de656519568913 AS dependencies
 
 ENV PNPM_HOME=/pnpm
 ENV PATH="${PNPM_HOME}:${PATH}"
@@ -20,7 +21,7 @@ FROM dependencies AS wrangler
 COPY frontend/scripts/copy-wrangler-runtime.mjs ./scripts/
 RUN node scripts/copy-wrangler-runtime.mjs /wrangler
 
-FROM node@sha256:86f07bc9c5dce4578cf37e5a418b7bfc7f817cda25cde66e2b66e95ed86c4567 AS builder
+FROM node:26-bookworm-slim@sha256:298992629d69bbd5b2b03ad57094d8e4fcb3a8eeb7c4e25d29de656519568913 AS builder
 
 ARG BUILD_REVISION=unknown
 ARG NEXT_PUBLIC_API_REQUEST_TIMEOUT_MS
@@ -52,7 +53,7 @@ COPY frontend/postcss.config.mjs frontend/tsconfig.json ./
 COPY frontend/services/api/src/config/crawlers.json ./services/api/src/config/crawlers.json
 RUN pnpm build:marketing
 
-FROM node@sha256:86f07bc9c5dce4578cf37e5a418b7bfc7f817cda25cde66e2b66e95ed86c4567 AS runtime
+FROM node:26-bookworm-slim@sha256:298992629d69bbd5b2b03ad57094d8e4fcb3a8eeb7c4e25d29de656519568913 AS runtime
 
 ARG BUILD_REVISION=unknown
 LABEL org.opencontainers.image.title="citeladder-marketing" \
