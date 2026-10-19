@@ -272,7 +272,7 @@ interaction recipes live only in [`design.md`](design.md).
 | Toast, Pressable, Clipboard action | `toast.tsx`, `pressable.tsx`, `copy-button.tsx` |
 | Text roles (`textRole`) | `frontend/components/ui/typography.tsx` |
 | Stack | `frontend/components/ui/layout.tsx` |
-| Panel (`panelClasses`) and flush card content | `frontend/components/ui/panel.tsx`, `frontend/components/ui/card.tsx` |
+| Panel (`panelClasses`) and card content (one box recipe) | `frontend/components/ui/panel.tsx`, `frontend/components/ui/card.tsx` |
 | Menu separator | `frontend/components/ui/dropdown.tsx` |
 | Pagination (`Pager`) | `frontend/components/ui/pager.tsx` |
 | Date field and calendar | `frontend/components/ui/date-field.tsx`, `frontend/components/ui/calendar.tsx` |
