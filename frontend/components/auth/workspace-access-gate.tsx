@@ -15,8 +15,7 @@ import { getBootstrapReadTimeoutMs } from '@/lib/config/operational';
 import { signOut } from '@/lib/auth/account-transition';
 import { Button } from '@/components/ui/button';
 import { Alert } from '@/components/ui/alert';
-import { Stack } from '@/components/ui/layout';
-import { ShellFallback } from '@/components/layout/shell-fallback';
+import { GateScreen, ShellFallback } from '@/components/layout/shell-fallback';
 import { Dialog } from '@/components/ui/dialog';
 import AccountSecurity from '@/components/settings/account-security';
 import { SettingsSections } from '@/components/ui/settings-section';
@@ -178,38 +177,36 @@ function AccessEnded({
   const client = useQueryClient();
   const [securityOpen, setSecurityOpen] = useState(false);
   return (
-    <ShellFallback>
-      <Stack as="main" gap="workspace" className="mx-auto w-full max-w-xl content-center p-8">
-        <h1>{title}</h1>
-        <Alert tone="info">
-          {canRestore
-            ? 'Your data is retained. Choose a plan to continue, contact support, or switch to another workspace.'
-            : 'Your data is retained. Contact support to restore access, or switch to another workspace.'}
-        </Alert>
-        {activeWorkspaceId && canRestore ? <RestorePlan workspaceId={activeWorkspaceId} /> : null}
-        <a href={contactSalesHref(undefined, websiteHref('/contact'))}>Contact support</a>
-        <Button className="w-fit" onClick={onRetry}>
-          Retry
-        </Button>
-        {workspaces
-          .filter((workspace) => workspace.id !== activeWorkspaceId)
-          .map((workspace) => (
-            <Link key={workspace.id} reloadDocument to={`/projects?workspace=${workspace.id}`}>
-              {workspace.name}
-            </Link>
-          ))}
-        <Button className="w-fit" variant="secondary" onClick={() => setSecurityOpen(true)}>
-          Account security
-        </Button>
-        <Dialog open={securityOpen} onOpenChange={setSecurityOpen} title="Account security">
-          <SettingsSections>
-            <AccountSecurity />
-          </SettingsSections>
-        </Dialog>
-        <Button className="w-fit" variant="secondary" onClick={() => void signOut(client)}>
-          Sign out
-        </Button>
-      </Stack>
-    </ShellFallback>
+    <GateScreen>
+      <h1>{title}</h1>
+      <Alert tone="info">
+        {canRestore
+          ? 'Your data is retained. Choose a plan to continue, contact support, or switch to another workspace.'
+          : 'Your data is retained. Contact support to restore access, or switch to another workspace.'}
+      </Alert>
+      {activeWorkspaceId && canRestore ? <RestorePlan workspaceId={activeWorkspaceId} /> : null}
+      <a href={contactSalesHref(undefined, websiteHref('/contact'))}>Contact support</a>
+      <Button className="w-fit" onClick={onRetry}>
+        Retry
+      </Button>
+      {workspaces
+        .filter((workspace) => workspace.id !== activeWorkspaceId)
+        .map((workspace) => (
+          <Link key={workspace.id} reloadDocument to={`/projects?workspace=${workspace.id}`}>
+            {workspace.name}
+          </Link>
+        ))}
+      <Button className="w-fit" variant="secondary" onClick={() => setSecurityOpen(true)}>
+        Account security
+      </Button>
+      <Dialog open={securityOpen} onOpenChange={setSecurityOpen} title="Account security">
+        <SettingsSections>
+          <AccountSecurity />
+        </SettingsSections>
+      </Dialog>
+      <Button className="w-fit" variant="secondary" onClick={() => void signOut(client)}>
+        Sign out
+      </Button>
+    </GateScreen>
   );
 }

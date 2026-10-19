@@ -4,7 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Suspense, useEffect, useState, type ReactNode } from 'react';
 
-import { GateNoticeFrame } from '@/components/layout/gate-notice-frame';
+import { GateNoticeScreen } from '@/components/layout/gate-notice-frame';
 import { ShellFallback } from '@/components/layout/shell-fallback';
 import { Button } from '@/components/ui/button';
 import { QueryState } from '@/components/ui/query-state';
@@ -156,26 +156,21 @@ function ProjectSetupBlocked({
   plans?: boolean;
 }>) {
   return (
-    <main
-      id="main"
-      className="bg-background grid min-h-dvh place-items-center p-[var(--page-section-gap)]"
-    >
-      <GateNoticeFrame title={title}>
-        <p>{children}</p>
-        {onRetry && (
-          <Button onClick={onRetry} className="w-fit">
-            Retry
-          </Button>
-        )}
-        {plans ? (
-          <Button asChild className="w-fit">
-            <Link to={PLANS_HREF}>See plans</Link>
-          </Button>
-        ) : null}
-        <Button asChild variant="secondary" className="w-fit">
-          <Link to={projectsHref}>Back to projects</Link>
+    <GateNoticeScreen title={title}>
+      <p>{children}</p>
+      {onRetry && (
+        <Button onClick={onRetry} className="w-fit">
+          Retry
         </Button>
-      </GateNoticeFrame>
-    </main>
+      )}
+      {plans ? (
+        <Button asChild className="w-fit">
+          <Link to={PLANS_HREF}>See plans</Link>
+        </Button>
+      ) : null}
+      <Button asChild variant="secondary" className="w-fit">
+        <Link to={projectsHref}>Back to projects</Link>
+      </Button>
+    </GateNoticeScreen>
   );
 }

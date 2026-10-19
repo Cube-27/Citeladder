@@ -9,7 +9,7 @@ import { CopyButton } from '@/components/ui/copy-button';
 import { Dropdown, DropdownContent, DropdownItem, DropdownTrigger } from '@/components/ui/dropdown';
 import { Icon } from '@/components/ui/icon';
 import { Inline } from '@/components/ui/layout';
-import { textRole } from '@/components/ui/typography';
+import { CodeToken, textRole } from '@/components/ui/typography';
 import { MCP_CLIENT_LINKS, MCP_SERVER_URL, type McpClientLink } from '@/lib/config/mcp-clients';
 import { cn } from '@/lib/utils';
 
@@ -156,14 +156,7 @@ export function ConnectStrip({ className }: Readonly<{ className?: string }>) {
       </Dropdown>
       <Inline>
         <span className={textRole('label', 'shrink-0')}>MCP URL</span>
-        <code
-          className={textRole(
-            'emphasis',
-            'bg-well min-w-0 truncate rounded-[var(--radius-xs)] px-2 py-1',
-          )}
-        >
-          {MCP_SERVER_URL}
-        </code>
+        <CodeToken>{MCP_SERVER_URL}</CodeToken>
         <CopyButton value={MCP_SERVER_URL} variant="ghost" copiedLabel="MCP URL copied">
           Copy
         </CopyButton>

@@ -305,6 +305,9 @@
      less its 2px border inset on each side. It is part of the field, not a
      control of its own. */
   --field-end-target: calc(var(--control-height-md) - 4px);
+  /* The one width of a filter field (FilterField): a typed or picked filter
+     value beside the band's triggers. */
+  --filter-width: 160px;
   --menu-item-height: 32px;
   --badge-height-sm: 20px;
   --textarea-min-height: 112px;

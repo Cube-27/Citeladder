@@ -6,12 +6,11 @@ import { type ComponentProps, type ReactNode, type Ref, useId, useState } from '
 
 import { Alert as MktAlert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Checkbox, CheckboxCaption } from '@/components/ui/checkbox';
 import { Field } from '@/components/ui/field';
-import { Icon } from '@/components/ui/icon';
-import { Input } from '@/components/ui/input';
+import { type BrandGlyph, Icon } from '@/components/ui/icon';
+import { FieldEndButton, Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
-import { Pressable } from '@/components/ui/pressable';
 import { authApi } from '@/lib/api/auth';
 import { safeAuthReturnPath } from '@/lib/auth/auth-return-path';
 import { ApiError } from '@/lib/api/errors';
@@ -22,9 +21,10 @@ import { cn } from '@/lib/utils';
 
 type InputProps = ComponentProps<typeof Input>;
 
-function GoogleIcon({ className = 'size-4 shrink-0' }: Readonly<{ className?: string }>) {
+/** The Google "G", a brand glyph `Icon` sizes. */
+const GoogleGlyph: BrandGlyph = (props) => {
   return (
-    <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
+    <svg viewBox="0 0 24 24" {...props}>
       <path
         fill="var(--color-brand-google-blue)"
         d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3h3.86c2.26-2.09 3.68-5.17 3.68-9.12z"
@@ -43,7 +43,7 @@ function GoogleIcon({ className = 'size-4 shrink-0' }: Readonly<{ className?: st
       />
     </svg>
   );
-}
+};
 
 export function AuthEmailField({
   error,
@@ -90,15 +90,13 @@ export function AuthPasswordField({
           type={visible ? 'text' : 'password'}
           autoComplete={autoComplete}
           placeholder={placeholder}
+          endContentFlush
           endContent={
-            <Pressable
-              type="button"
+            <FieldEndButton
+              icon={visible ? EyeOff : Eye}
+              label={`${visible ? 'Hide' : 'Show'} ${visibilityLabel}`}
               onClick={() => setVisible((current) => !current)}
-              className="text-muted hover:text-foreground grid size-7 place-items-center rounded-[var(--radius-control)] transition-colors"
-              aria-label={`${visible ? 'Hide' : 'Show'} ${visibilityLabel}`}
-            >
-              <Icon icon={visible ? EyeOff : Eye} />
-            </Pressable>
+            />
           }
         />
       )}
@@ -146,7 +144,7 @@ function TermsConsent({
           </>
         }
       />
-      <p id={noticeId} className="type-caption ps-[calc(var(--control-height-md)+0.5rem)]">
+      <CheckboxCaption id={noticeId}>
         Our{' '}
         <a
           href={websiteHref('/privacy')}
@@ -157,18 +155,10 @@ function TermsConsent({
           Privacy Policy
         </a>{' '}
         explains how we process your data.
-      </p>
-      <p
-        id={errorId}
-        role={missing ? 'alert' : undefined}
-        aria-hidden={!missing}
-        className={cn(
-          'type-caption text-danger-text ps-[calc(var(--control-height-md)+0.5rem)]',
-          !missing && 'invisible',
-        )}
-      >
+      </CheckboxCaption>
+      <CheckboxCaption id={errorId} tone="error" shown={missing}>
         Agree to the Terms of Service to continue.
-      </p>
+      </CheckboxCaption>
     </div>
   );
 }
@@ -222,7 +212,7 @@ function GoogleEntry({
         disabled={pending || disabled}
         onClick={() => void start()}
       >
-        <GoogleIcon />
+        <Icon icon={GoogleGlyph} />
         <span>{pending ? 'Starting Google sign-in…' : 'Continue with Google'}</span>
       </Button>
       {notice ? <MktAlert>{notice}</MktAlert> : null}

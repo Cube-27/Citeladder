@@ -1,5 +1,11 @@
 # App geometry consistency
 
+**Status: archived 2026-10-20.** PR 1–7 shipped (#434–#442 and PR 7). The
+layering debt is zero and the layering check hard-fails. Shipped visual rules
+are owned by [Design](../design.md), not by this plan. The one item left, AI
+Traffic's control band wrapping at 982px, is in the
+[backlog](../plans/backlog.md#app-geometry-remainder).
+
 Owner finding (2026-10-19): the authenticated app looks inconsistent and "vibe
 coded" next to a reference product whose design is boring and has no
 deviations. The grained ground and the floating sheet are not the problem; the
@@ -673,6 +679,63 @@ Done in PR 6a:
 Nothing is left in these five folders. The remaining 24 findings are PR 6b's
 list above, with `mcp/connect-strip` down to 3 (the inline code token).
 
+#### PR 7 — zero layering debt, a hard-failing layering check, the plan closed
+
+Done in PR 7:
+
+- The last 24 findings (23 `layer-geometry`, 1 `layer-size-prop`) in 13
+  files are gone, each onto an organism built once, as a role:
+  - `FilterField` (`ui/filter-bar.tsx`): the one filter width, 160 (the full
+    row below `desktop` inside a `FilterBar`). AI Traffic's folder (176) and
+    status-code (128) fields, the Performance bucket select (144) and the
+    Search Intelligence minimum-volume field (160) now render at 160.
+  - `MetricValue` has one form (the `figure` numeral; its `size` is deleted).
+    A `StatRow` segment takes a `comparison` (a hairline, the window's label,
+    its value as `ComparisonValue` at `figureSm`); the Performance metric
+    cards use it.
+  - `FieldEndButton` (`ui/input.tsx`): the field's end target (28 inside the
+    32 field, the 16px `Icon`). The search clear button and the password
+    reveal both draw it; the reveal is now flush with the field's end like
+    the clear button, and the clear glyph is 16 (was 14).
+  - `CheckboxCaption` (`ui/checkbox.tsx`): a caption aligned under a
+    checkbox's label, with an error tone that keeps its line while hidden.
+  - `Icon` takes a `BrandGlyph` (an SVG carrying its own fills): the Google
+    "G" is a 16px `Icon`.
+  - `GateScreen` (`layout/shell-fallback.tsx`) and `GateNoticeScreen`
+    (`layout/gate-notice-frame.tsx`): the Terms review, ended access and the
+    blocked project setup pages, inset by the content gutter (32; the
+    project setup notice was 24).
+  - `NavRow` (`ui/list-row.tsx`): the workspace chooser's row, on `OptionRow`'s
+    padding (12 × 8; it was 12 × 10).
+  - The flow surface owns its own: the stage results band
+    (`flow-stage-band`), the competitor edit row's rhythm (a 12 row gap in
+    place of the fields' 6px margins) and the 14px check inside the 20px
+    selection mark, in `website-type.css`.
+  - `CodeToken` (`ui/typography.tsx`): an inline literal on the well tint,
+    padded 8 × 4.
+- `layer-geometry`, `layer-size-prop` and `layer-breakpoint` are violations,
+  not ratcheted findings (`featureLayeringViolations` in
+  `scripts/design-system-source-checks.mjs`): no baseline entries, no ratchet,
+  and `--write-baseline` cannot record one.
+- Single-consumer `ui` modules, per `docs/frontend-architecture.md`'s rule (a
+  new shared module needs two consumers unless it replaces an owner):
+  `rail.tsx` folded into `list-row.tsx` and `floating-toolbar.tsx` into
+  `workspace.tsx`; `reorder-list.tsx` is kept, because it replaced the Ranked
+  actions list's own drag-and-move mechanics and owns that behaviour with its
+  own test.
+- The census found that the auth and onboarding flow still drew its buttons
+  at 36 beside its 32px fields: `website-type.css` lifted every `md` button on
+  the flow surface to the 36 rung. That lift is now the public website's
+  only, so flow buttons render 32 like their fields.
+- The Settings MCP connection tables were 24 apart; as peers in one section
+  they are 16 apart (the card→card gap).
+- Census: it also renders Settings Connections and a searched Prompts
+  library, and measures `field-end-target.size` (28) and `code-token`
+  padding (8 × 4). It passes at 982/1280, light and dark. AI Traffic's
+  Crawlers, Activity and Pages tabs are not in it: their control band wraps
+  to 89px at 982 (they fit at 1280), so `FilterField` is not measured. That
+  is in the [backlog](../plans/backlog.md#app-geometry-remainder).
+
 ## Acceptance
 
 At 982×900 and at 1280×900, light and dark, the census returns:
@@ -693,5 +756,10 @@ not against this list.
 ## Out of scope
 
 Palette, type faces, the ground and sheet, the sidebar grouping, copy, data,
-flows, the public website, docs, auth and onboarding geometry (their 36/44
-rungs stay), and dark-mode retuning.
+flows, the public website, docs, and dark-mode retuning.
+
+Auth and onboarding were listed here with their 36/44 rungs. PR 5c moved
+their buttons and fields to the 32px control instead, an implementor decision
+under the one-control-height rule (decision 1 allowed the flow its rungs but
+did not require them); PR 7 removed the flow-surface rule that still drew
+their buttons at 36. The flow action bar's 44px phone touch rung stays.
