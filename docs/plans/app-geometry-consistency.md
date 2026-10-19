@@ -257,6 +257,76 @@ Left for a follow-up (the plan stays active for these):
   `size=` props are `Avatar`, `BrandLogo`, `Spinner` and `ScoreRing` size
   menus (atoms with more than one form) and the `size="icon"` button form.
 
+### PR 4 — the organisms and templates
+
+Done in PR 4:
+
+- `StatRow` (`ui/stat-row.tsx`): one KPI row of equal segments divided by
+  hairlines (up to four a row, balanced beyond), segments padded 12 and 16
+  from their divider, flush with the card on every outer edge, one height per
+  row; label with icon and marker, caption, the `figure` value or a 48px
+  `ScoreRing`, delta, sub-line, one action, pressable toggles. It replaced,
+  with every user migrated and no alias: `ui/stat-grid.tsx` (`StatGrid`,
+  `StatItem`), `MetricGroup`/`MetricItem`/`metricItemClasses` and
+  `hairlineBandClasses`/`hairlineBandItemClasses` in `ui/workspace.tsx`,
+  `site-health/audit-metric-strip.tsx` (deleted; the Website scores are a
+  `StatRow` in a card from `overview-metrics.tsx`) and `StateMetric` in
+  `projects/dashboard-primitives.tsx`.
+- `DataTable` (`ui/data-table.tsx`): one card with a 49px header row (title
+  and the table's `FilterBar`), a fixed `Table` from column width roles, a
+  padded full page of rows, the framed `Pager`, and loading/error/empty inside
+  the body under the header. On it: Runs (`runs-table.tsx`), Visibility query
+  fanouts, Search Intelligence datasets, Settings members and Site Health
+  internal links. The Visibility Sources table keeps its `CardHeader`
+  toolbar (two column sets, hinted non-sortable headers, a near-miss body and
+  a cursor pager with a size control do not map onto `columns` mechanically);
+  the Products catalog is a navigation tree, not a record table, and keeps its
+  search.
+- `ListScreen` and `DetailScreen` (`layout/page-shell.tsx`): every route
+  screen is on one of them and `PageShell` is no longer exported.
+  `DetailScreen` requires `back` and takes an `aside` in a
+  `main-aside`/`list-detail` split (Action detail uses it); `ListScreen` takes
+  `measure` and `fill` (the two chat screens).
+- `QueryState` gained the `inline` empty presentation (one 32px row); the 16
+  `EmptyState` users, 39 `InlineEmpty` users and the router's
+  `screen-states` (now `NotFoundScreen`/`ScreenError` in
+  `apps/app/src/route-error.tsx`) are on it, and `ui/empty-state.tsx`,
+  `ui/inline-empty.tsx`, `layout/screen-states.tsx` and
+  `.empty-state-surface` are deleted.
+- Last size menus: `Spinner` (16) and `ScoreRing` (48) have one form;
+  `Avatar` (`inline` 24 / `identity` 40) and `BrandLogo` (`mark` 16 / `row` 20
+  / `identity` 40) take a `placement`, and neither takes a `className`.
+  `ledgerClasses('boxed')` is the panel recipe (padding 16).
+- The census also requires the `DataTable` header at 49, `StatRow` segment
+  padding 12 and a zero height spread within a row (a run's detail is now
+  rendered from a fixture), and excludes the inline state and a table's state
+  row from the block footprints. It passes at 982/1280, light and dark.
+
+Left for PR 5 (the plan stays active):
+
+- The ratcheted layering debt, 1,289 findings after PR 4 (`site-health` 178,
+  `agent` 144, `visibility` 106, `runs` 100, `projects` 94, `prompts` 89,
+  `settings` 88, `billing` 65, `search-intelligence` 52, `demand` 48,
+  `ai-traffic` 47, `opportunities` 45, `performance` 45, `products` 42,
+  `auth` 39, `knowledge-base` 36, `onboarding` 27, `integrations` 22,
+  `providers` 14, `mcp` 8), of which 42 are `size=` props (mostly
+  `size="icon"` buttons and `MetricValue`'s two value sizes).
+- Record tables still hand-built on `Table`: Visibility Sources
+  (`visibility-sources.tsx` and `source-*`), `source-near-misses`,
+  `source-prompts`, `ranking-rows`, `engine-comparison`, `source-movers`,
+  `source-url-cards`, `visibility-by-market`, the breakdown tables in
+  `visibility-accuracy`/`-ads`/`-perception`; Site Health
+  `aeo-readiness-panel`, `architecture-panel`, `changes-panel`,
+  `inventory-section`, `issue-detail-rail`, `issues-catalog`,
+  `overview-details`, `page-kind-scores`, `pages-table`, `robots-history`,
+  `site-facts-panel`, `url-detail`; `runs/executions-table`,
+  `runs/surface-evidence`; `search-intelligence-competitors`;
+  `demand-signal-table`; `agent/actions-screen`; AI Traffic
+  `crawl-log-connections`, `overview-signals`, `pages-view`,
+  `referral-details`, `referrals-dashboard`, `traffic-views`;
+  `performance/dimension-table`; `prompts/prompt-table`,
+  `prompt-answer-states`, `csv-import-dialog`; `settings/member-invitations`.
+
 ## Acceptance
 
 At 982×900 and at 1280×900, light and dark, the census returns:

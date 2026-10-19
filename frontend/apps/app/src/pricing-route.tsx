@@ -6,7 +6,7 @@ import { BillingDetailsForm } from '@/components/billing/billing-details-form';
 import { CheckoutConsent } from '@/components/billing/billing-policies';
 import { BillingQuoteSummary } from '@/components/billing/quote-summary';
 import { CheckoutStatus } from '@/components/billing/checkout-status';
-import { PageShell } from '@/components/layout/page-shell';
+import { ListScreen } from '@/components/layout/page-shell';
 import { Button } from '@/components/ui/button';
 import { Stack } from '@/components/ui/layout';
 import { panelClasses } from '@/components/ui/panel';
@@ -383,7 +383,7 @@ export default function PricingRoute() {
   const offered = hasSelectedOffer(catalog, selection);
 
   return (
-    <PageShell
+    <ListScreen
       title="Review your selection"
       measure="workflow"
       actions={
@@ -426,6 +426,6 @@ export default function PricingRoute() {
         <Notice error={purchase.error} fallback="Quote unavailable." shown={checkout.notice} />
         <Notice error={confirm.error} fallback="Checkout unavailable." shown={checkout.notice} />
       </Stack>
-    </PageShell>
+    </ListScreen>
   );
 }

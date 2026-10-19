@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { Alert } from '@/components/ui/alert';
-import { InlineEmpty } from '@/components/ui/inline-empty';
+import { QueryState } from '@/components/ui/query-state';
 import { Stack } from '@/components/ui/layout';
 import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -99,7 +99,9 @@ function UsageBody({
     );
   }
   if (query.data.items.length === 0) {
-    return <InlineEmpty>No measurable allowances on this account yet.</InlineEmpty>;
+    return (
+      <QueryState kind="empty" inline message="No measurable allowances on this account yet." />
+    );
   }
   return (
     <>

@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { MutationNotice } from '@/components/ui/mutation-notice';
 import { TabsRoot } from '@/components/ui/tabs';
 import { Tooltip } from '@/components/ui/tooltip';
-import { PageShell } from '@/components/layout/page-shell';
+import { ListScreen } from '@/components/layout/page-shell';
 import { Stack } from '@/components/ui/layout';
 import { SiteHealthDashboardLayout } from '@/components/site-health/dashboard-layout';
 import { AeoReadinessPanel } from '@/components/site-health/aeo-readiness-panel';
@@ -97,17 +97,17 @@ function SiteHealthContent({
   const prefetchTab = useSiteHealthTabPrefetch(workspaceId, projectId, crawl?.id, !active);
   if (blockingState) {
     return (
-      <PageShell>
+      <ListScreen>
         <Stack gap="section" className="min-w-0">
           {refreshFailures}
           {blockingState}
         </Stack>
-      </PageShell>
+      </ListScreen>
     );
   }
   return (
     <TabsRoot value={tab as AnalysisTab} onValueChange={selectTab}>
-      <PageShell
+      <ListScreen
         actions={headerActions}
         tabs={{ items: ANALYSIS_TABS, ariaLabel: 'Website analysis', onIntent: prefetchTab }}
       >
@@ -124,7 +124,7 @@ function SiteHealthContent({
             mutationsAllowed={mutationsAllowed}
           />
         </Stack>
-      </PageShell>
+      </ListScreen>
     </TabsRoot>
   );
 }

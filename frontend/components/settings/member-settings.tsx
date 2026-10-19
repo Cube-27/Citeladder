@@ -6,7 +6,6 @@ import { UserPlus } from 'lucide-react';
 
 import { ConfirmDialog, type ConfirmRequest } from '@/components/ui/confirm-dialog';
 import { Button } from '@/components/ui/button';
-import { FilterBar } from '@/components/ui/filter-bar';
 import { Stack } from '@/components/ui/layout';
 import { MutationNotice } from '@/components/ui/mutation-notice';
 import { SearchField } from '@/components/ui/search-field';
@@ -240,25 +239,6 @@ export function MemberSettings({ mayInvite }: Readonly<{ mayInvite: boolean }>) 
       <p className={textRole('body')}>
         Who can work in {workspaceName}, and what each of them may do.
       </p>
-      <FilterBar
-        search={
-          <SearchField
-            value={search}
-            onValueChange={setSearch}
-            placeholder="Search members…"
-            aria-label="Search members"
-          />
-        }
-        actions={
-          mayInvite ? (
-            <Button type="button" onClick={() => setInviteOpen(true)}>
-              <UserPlus className="size-3.5" aria-hidden />
-              Invite
-            </Button>
-          ) : undefined
-        }
-      />
-
       <MemberFailure failure={failure} onRetry={refresh} />
 
       <InviteDialog
@@ -271,28 +251,44 @@ export function MemberSettings({ mayInvite }: Readonly<{ mayInvite: boolean }>) 
         onInvite={(email, role) => invite.mutateAsync({ email, role })}
       />
 
-      {searchFindsNobody(needle, membersQuery.isSuccess, visibleMembers) ? (
-        <p className={textRole('body')}>No members match “{search.trim()}”.</p>
-      ) : (
-        <MemberRoster
-          members={visibleMembers}
-          isLoading={membersQuery.isLoading}
-          isError={membersQuery.isError}
-          busy={busy}
-          onRetry={refresh}
-          onChangeRole={(member, role) =>
-            confirmThen(confirmations.role(member.email, role), () =>
-              changeRole.mutateAsync({ memberId: member.id, role }),
-            )
-          }
-          onTransfer={transferIntent}
-          onRemove={(member) =>
-            confirmThen(confirmations.remove(member.email, workspaceName), () =>
-              remove.mutateAsync(member.id),
-            )
-          }
-        />
-      )}
+      <MemberRoster
+        members={visibleMembers}
+        toolbar={{
+          search: (
+            <SearchField
+              value={search}
+              onValueChange={setSearch}
+              placeholder="Search members…"
+              aria-label="Search members"
+            />
+          ),
+          actions: mayInvite ? (
+            <Button type="button" onClick={() => setInviteOpen(true)}>
+              <UserPlus className="size-3.5" aria-hidden />
+              Invite
+            </Button>
+          ) : undefined,
+        }}
+        noMatch={
+          searchFindsNobody(needle, membersQuery.isSuccess, visibleMembers) ? search.trim() : null
+        }
+        isLoading={membersQuery.isLoading}
+        isError={membersQuery.isError}
+        error={membersQuery.error}
+        busy={busy}
+        onRetry={refresh}
+        onChangeRole={(member, role) =>
+          confirmThen(confirmations.role(member.email, role), () =>
+            changeRole.mutateAsync({ memberId: member.id, role }),
+          )
+        }
+        onTransfer={transferIntent}
+        onRemove={(member) =>
+          confirmThen(confirmations.remove(member.email, workspaceName), () =>
+            remove.mutateAsync(member.id),
+          )
+        }
+      />
 
       <PendingInvitations
         invitations={invitationsQuery.data ?? []}
