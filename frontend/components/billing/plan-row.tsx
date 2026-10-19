@@ -73,7 +73,7 @@ export function PlanRow({
       </div>
       <div className="shrink-0">
         {plan.contact_only ? (
-          <Button asChild variant="secondary" size="sm">
+          <Button asChild variant="secondary">
             <ExternalHttpLink
               href={contactSalesHref(
                 plan.contact_url,
@@ -85,7 +85,6 @@ export function PlanRow({
           </Button>
         ) : (
           <Button
-            size="sm"
             disabled={!canCheckout || locked}
             onClick={() => selection.ok && onCheckout(selection.catalog_key, billingDetails)}
           >

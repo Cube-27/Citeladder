@@ -13,7 +13,7 @@ export function CheckoutStatus({
       <div className="grid justify-items-start gap-2">
         {checkout.testMode ? <p>Test mode — no real money is charged.</p> : null}
         {checkout.notice ? <output>{checkout.notice}</output> : null}
-        <Button variant="secondary" size="sm" onClick={() => void checkout.refresh()}>
+        <Button variant="secondary" onClick={() => void checkout.refresh()}>
           Refresh payment status
         </Button>
       </div>

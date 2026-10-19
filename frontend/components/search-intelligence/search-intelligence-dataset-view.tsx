@@ -132,7 +132,7 @@ export function SearchIntelligenceDatasetView({
               <>
                 <SearchIntelligenceExport dataset={dataset} params={params} />
                 {rows.length > 0 ? (
-                  <Button size="sm" variant="secondary" asChild>
+                  <Button variant="secondary" asChild>
                     <ProjectLink href={agentHandoffHref(rowsHandoff(dataset.id, rows, title))}>
                       Ask agent
                     </ProjectLink>
@@ -247,11 +247,11 @@ function EvidenceDrawer({
       {selected ? (
         <div className="flex flex-wrap gap-2">
           {selected.action_id ? (
-            <Button size="sm" asChild className="w-fit">
+            <Button asChild className="w-fit">
               <ProjectLink href={`/agent/actions/${selected.action_id}`}>Open Action</ProjectLink>
             </Button>
           ) : null}
-          <Button size="sm" variant="secondary" asChild className="w-fit">
+          <Button variant="secondary" asChild className="w-fit">
             <ProjectLink href={agentHandoffHref(rowsHandoff(selected.dataset_id, [selected]))}>
               Ask agent about this row
             </ProjectLink>
@@ -370,7 +370,7 @@ function filteredSavedCount(dataset: SearchIntelligenceDataset) {
 
 function DepthReviewAction({ onExpand }: Readonly<{ onExpand?: () => void }>) {
   return onExpand ? (
-    <Button variant="ghost" size="sm" onClick={onExpand}>
+    <Button variant="ghost" onClick={onExpand}>
       Review depth
     </Button>
   ) : null;

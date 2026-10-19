@@ -38,7 +38,7 @@ export function NoProjectState({
       className={className}
       action={
         createProjectHref ? (
-          <Button asChild size="sm">
+          <Button asChild>
             <Link to={createProjectHref}>
               <Plus className="size-4" aria-hidden />
               Create project

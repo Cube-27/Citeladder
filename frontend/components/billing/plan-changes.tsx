@@ -98,19 +98,13 @@ export function PlanChanges({
             </div>
             {option.direction === 'upgrade' ? (
               <Button
-                size="sm"
                 disabled={held || !option.plan.checkout_available}
                 onClick={() => controls.upgrade(option.key)}
               >
                 Upgrade to {option.plan.name}
               </Button>
             ) : (
-              <Button
-                size="sm"
-                variant="secondary"
-                disabled={held}
-                onClick={() => setDowngradeTo(option)}
-              >
+              <Button variant="secondary" disabled={held} onClick={() => setDowngradeTo(option)}>
                 Downgrade to {option.plan.name}
               </Button>
             )}

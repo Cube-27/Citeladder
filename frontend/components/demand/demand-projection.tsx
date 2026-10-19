@@ -127,7 +127,6 @@ function SearchDemandView({
       action={
         <Button
           variant="secondary"
-          size="sm"
           onClick={() => {
             setActiveTab('all');
             setSearchQuery('');
@@ -164,7 +163,6 @@ function SearchDemandView({
       actions={
         <Button
           variant="secondary"
-          size="sm"
           onClick={() => recomputeMutation.mutate()}
           pending={recomputeMutation.isPending}
           pendingLabel="Queueing…"
@@ -210,7 +208,7 @@ function SearchDemandView({
                   ? 'A recompute for this window is already queued.'
                   : 'Recompute queued. Signals refresh once the job finishes.'}
               </span>
-              <Button type="button" variant="ghost" size="sm" onClick={() => refreshSnapshot()}>
+              <Button type="button" variant="ghost" onClick={() => refreshSnapshot()}>
                 Check for the new snapshot
               </Button>
             </div>

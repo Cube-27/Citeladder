@@ -131,12 +131,7 @@ function CancellationControl({
 }: Readonly<{ subscription: Subscription; cancellation: BillingCancellation }>) {
   if (subscription.resumable_until)
     return (
-      <Button
-        variant="secondary"
-        size="sm"
-        disabled={cancellation.resuming}
-        onClick={cancellation.resume}
-      >
+      <Button variant="secondary" disabled={cancellation.resuming} onClick={cancellation.resume}>
         {cancellation.resuming ? 'Resuming…' : 'Resume plan'}
       </Button>
     );
@@ -148,7 +143,6 @@ function CancellationControl({
   return (
     <Button
       variant="secondary"
-      size="sm"
       disabled={cancellation.pending}
       onClick={() => cancellation.setOpen(true)}
     >

@@ -162,7 +162,7 @@ export function ConnectStrip({ className }: Readonly<{ className?: string }>) {
         >
           {MCP_SERVER_URL}
         </code>
-        <CopyButton value={MCP_SERVER_URL} variant="ghost" size="sm" copiedLabel="MCP URL copied">
+        <CopyButton value={MCP_SERVER_URL} variant="ghost" copiedLabel="MCP URL copied">
           Copy
         </CopyButton>
       </div>

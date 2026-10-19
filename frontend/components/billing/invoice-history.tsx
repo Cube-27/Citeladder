@@ -87,7 +87,6 @@ export function InvoiceHistory({
               </div>
               <Button
                 variant="secondary"
-                size="sm"
                 disabled={downloading === invoice.invoice_id}
                 onClick={() => void download(invoice)}
               >

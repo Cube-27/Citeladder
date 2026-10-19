@@ -61,7 +61,6 @@ export function BulkActions({
       </div>
       <div className="flex flex-wrap items-center gap-1">
         <Button
-          size="sm"
           disabled={!count || tooMany}
           pending={pending}
           pendingLabel="Finding…"
@@ -69,7 +68,7 @@ export function BulkActions({
         >
           Find competitors
         </Button>
-        <Button size="sm" variant="ghost" disabled={pending} onClick={onClear}>
+        <Button variant="ghost" disabled={pending} onClick={onClear}>
           Clear selection
         </Button>
       </div>

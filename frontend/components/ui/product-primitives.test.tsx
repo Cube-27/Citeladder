@@ -21,7 +21,7 @@ describe('CardHeader actions', () => {
   it('keeps the actions in the header beside the title', () => {
     render(
       <Card aria-label="Issues">
-        <CardHeader actions={<Button size="sm">Export</Button>}>
+        <CardHeader actions={<Button>Export</Button>}>
           <CardTitle>Issues</CardTitle>
         </CardHeader>
       </Card>,
@@ -172,7 +172,7 @@ describe('TextLink', () => {
 describe('FilterRow and FilterTrigger', () => {
   it('names the trigger by its visible value and announces the active count', () => {
     render(
-      <FilterRow actions={<Button size="sm">Export</Button>}>
+      <FilterRow actions={<Button>Export</Button>}>
         <FilterTrigger label="Surface" value="ChatGPT" hideLabel active />
         <FilterTrigger label="Filter" count={2} />
       </FilterRow>,
@@ -211,7 +211,7 @@ describe('Pager', () => {
 
 describe('InlineEmpty', () => {
   it('states the absence with its one action', () => {
-    render(<InlineEmpty action={<Button size="sm">Add rule</Button>}>No rules yet.</InlineEmpty>);
+    render(<InlineEmpty action={<Button>Add rule</Button>}>No rules yet.</InlineEmpty>);
     expect(screen.getByText('No rules yet.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add rule' })).toBeInTheDocument();
   });

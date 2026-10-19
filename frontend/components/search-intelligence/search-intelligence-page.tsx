@@ -344,22 +344,18 @@ function PageActions({
 }>) {
   return (
     <>
-      <Button variant="ghost" size="sm" onClick={onCost}>
+      <Button variant="ghost" onClick={onCost}>
         Cost details
       </Button>
       {hasDatasets ? (
         <>
-          <Button variant="secondary" size="sm" onClick={() => onReview('analysis')}>
+          <Button variant="secondary" onClick={() => onReview('analysis')}>
             New analysis
           </Button>
-          <Button size="sm" onClick={() => onReview('refresh')}>
-            Refresh
-          </Button>
+          <Button onClick={() => onReview('refresh')}>Refresh</Button>
         </>
       ) : (
-        <Button size="sm" onClick={() => onReview('analysis')}>
-          Review first analysis
-        </Button>
+        <Button onClick={() => onReview('analysis')}>Review first analysis</Button>
       )}
     </>
   );
@@ -382,7 +378,7 @@ function CollectionAction({
 }>) {
   if (tab === 'keywords')
     return (
-      <Button variant="secondary" size="sm" onClick={onSeed}>
+      <Button variant="secondary" onClick={onSeed}>
         Research a keyword
       </Button>
     );
@@ -393,7 +389,7 @@ function CollectionAction({
     referringLists(datasets).some((dataset) => dataset.target_origin === targetOrigin)
   )
     return (
-      <Button variant="secondary" size="sm" onClick={onMatch}>
+      <Button variant="secondary" onClick={onMatch}>
         Match with Visibility citations
       </Button>
     );
