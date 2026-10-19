@@ -15,6 +15,7 @@ import { getBootstrapReadTimeoutMs } from '@/lib/config/operational';
 import { signOut } from '@/lib/auth/account-transition';
 import { Button } from '@/components/ui/button';
 import { Alert } from '@/components/ui/alert';
+import { Stack } from '@/components/ui/layout';
 import { ShellFallback } from '@/components/layout/shell-fallback';
 import { Dialog } from '@/components/ui/dialog';
 import AccountSecurity from '@/components/settings/account-security';
@@ -178,7 +179,7 @@ function AccessEnded({
   const [securityOpen, setSecurityOpen] = useState(false);
   return (
     <ShellFallback>
-      <main className="mx-auto grid w-full max-w-xl content-center gap-4 p-8">
+      <Stack as="main" gap="workspace" className="mx-auto w-full max-w-xl content-center p-8">
         <h1>{title}</h1>
         <Alert tone="info">
           {canRestore
@@ -208,7 +209,7 @@ function AccessEnded({
         <Button className="w-fit" variant="secondary" onClick={() => void signOut(client)}>
           Sign out
         </Button>
-      </main>
+      </Stack>
     </ShellFallback>
   );
 }

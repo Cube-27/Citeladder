@@ -1,4 +1,4 @@
-import { LogoMark, type BrandLogoVariant } from '@/components/ui/logo-mark';
+import { LogoMark } from '@/components/ui/logo-mark';
 import { websiteHref } from '@/lib/config/app-link';
 
 /**
@@ -8,13 +8,7 @@ import { websiteHref } from '@/lib/config/app-link';
  * both bars share the same source of truth in LogoMark, ensuring complete
  * symmetry when navigating between marketing, auth, and onboarding flows.
  */
-export function AuthWordmark({
-  size,
-  variant,
-}: Readonly<{
-  size?: number;
-  variant?: BrandLogoVariant;
-}>) {
+export function AuthWordmark() {
   return (
     // The public home lives on the website origin; "/" on the app origin is
     // the product root, which a signed-out visitor cannot use.
@@ -23,7 +17,7 @@ export function AuthWordmark({
       aria-label="CiteLadder home"
       className="group inline-flex items-center no-underline transition-opacity hover:opacity-90"
     >
-      <LogoMark size={size} variant={variant} />
+      <LogoMark />
     </a>
   );
 }
