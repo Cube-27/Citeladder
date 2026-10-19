@@ -19,8 +19,8 @@ Read a plan only for work assigned to it. An entry in
 an old wave or fresh-chat protocol because a document mentions it.
 
 Situational workflow rules live in `.claude/skills/`, each in one place:
-`validate-change` (what to run and when), `record-owner-decision` (where owner
-answers go) and `pr-review` (the CI review). Skills never restate repository
+`validate-change` (what to run and when) and `record-owner-decision` (where
+owner answers go). Skills never restate repository
 policy owned by a document. Packaged Agent `SKILL.md` files are production
 inputs owned by the [Agent](docs/agents.md), not engineering skills.
 
@@ -94,4 +94,5 @@ Check your own final diff against [Review.md](Review.md). Report changed behavio
 removals for replacements, exact verification commands/results, checks not run,
 and unresolved risks. Do not attribute unrelated dirty-tree failures to this work.
 For review-only requests, do not edit; report actionable findings with file evidence.
-Before opening or updating a pull request, use the `pr-review` skill.
+Pull requests get no separate review: no CI review, reviewer agents, `/simplify`
+or re-review; your check against Review.md is the review.

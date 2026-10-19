@@ -1,8 +1,7 @@
 # CiteLadder review checklist
 
-This is the review checklist for humans, for an author's check of their own diff,
-and for the `claude-review` CI review of a PR over 10 files
-([`pr-review` skill](.claude/skills/pr-review/SKILL.md)). It points at the rule owners
+This is the review checklist for humans and for an author's check of their own
+diff; pull requests get no separate review. It points at the rule owners
 rather than restating them: [CLAUDE.md](CLAUDE.md#non-negotiable-guardrails)
 summarizes the guardrails, [invariants](docs/invariants.md) own the binding
 constraints and [design](docs/design.md) owns visual and interaction rules.

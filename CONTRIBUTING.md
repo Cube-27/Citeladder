@@ -62,9 +62,8 @@ Use conventional, scoped commit messages. Include a concise change summary,
 removals or intentional coexistence, and a `## Testing` section with exact
 commands, exit results, checks not run and unresolved limitations.
 The [`validate-change` skill](.claude/skills/validate-change/SKILL.md) defines when validation is required;
-[Review.md](Review.md) is the review checklist, and
-the [`pr-review` skill](.claude/skills/pr-review/SKILL.md) says when a PR gets the
-`claude-review` CI review (over 10 changed files). A file edit alone does not
+[Review.md](Review.md) is the checklist for checking your own diff; pull requests
+get no separate review. A file edit alone does not
 justify a new test, and a passing happy path does not excuse an invariant violation.
 Live sites, provider APIs and connected analytics remain explicitly authorized
 acceptance sources, not ordinary CI prerequisites.

@@ -136,9 +136,8 @@ test('external-service and deploy-only configuration runs only the security and 
   assert.equal(classifyPaths(['.github/workflows/ci.yml']).api, true);
 });
 
-test('the review workflow, the API host deploy and the deploy gate run no owner suite', () => {
+test('the API host deploy and the deploy gate run no owner suite', () => {
   for (const path of [
-    '.github/workflows/claude-review.yml',
     '.github/workflows/workers-api-host-deploy.yml',
     '.github/actions/require-green-main/action.yml',
   ]) {
