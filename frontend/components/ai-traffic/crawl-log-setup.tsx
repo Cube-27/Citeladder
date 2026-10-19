@@ -78,7 +78,7 @@ export function CrawlLogSetup({
           };
         })}
       />
-      <div className={panelClasses({ tone: 'well', pad: 'compact' }, 'grid gap-2')}>
+      <div className={panelClasses({ tone: 'well' }, 'grid gap-2')}>
         {steps ? <p className="type-body text-secondary">{steps}</p> : null}
         {firehose ? <FirehoseSteps interval={model.bufferInterval} /> : null}
         {gcp ? <GcpSteps /> : null}
@@ -86,8 +86,8 @@ export function CrawlLogSetup({
           Setup guide: {chosen.label}
         </TextLink>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Site origin" className="sm:col-span-2">
+      <div className="desktop:grid-cols-2 grid gap-4">
+        <Field label="Site origin" className="desktop:col-span-2">
           {(field) => (
             <Input {...field} value={origin} onChange={(e) => setOrigin(e.target.value)} />
           )}
@@ -151,7 +151,7 @@ function DeclaredFields({ model }: Readonly<{ model: ReturnType<typeof useCrawlC
         </Field>
       ) : null}
       {sampling === 'filtered' ? (
-        <Field label="Filtering limitations" className="sm:col-span-2">
+        <Field label="Filtering limitations" className="desktop:col-span-2">
           {(field) => (
             <Input {...field} value={filter} onChange={(e) => setFilter(e.target.value)} />
           )}
@@ -179,7 +179,7 @@ function FirehoseFields({ model }: Readonly<{ model: ReturnType<typeof useCrawlC
         )}
       </Field>
       <Checkbox
-        className="sm:col-span-2"
+        className="desktop:col-span-2"
         checked={declaredFiltered}
         onCheckedChange={(checked) => setDeclaredFiltered(checked === true)}
         label="The stream runs the CiteLadder filter Lambda (coverage stays partial)"

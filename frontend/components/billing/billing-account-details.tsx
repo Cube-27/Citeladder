@@ -12,8 +12,8 @@ export function BillingCountryInput({
   return (
     <div
       className={panelClasses(
-        { tone: 'tonal', pad: 'compact' },
-        'flex flex-col justify-between gap-2 sm:flex-row sm:items-center',
+        { tone: 'tonal' },
+        'flex flex-col justify-between gap-2 desktop:flex-row desktop:items-center',
       )}
     >
       <div className="min-w-0">

@@ -4,6 +4,7 @@ import { ChevronDown, ExternalLink } from 'lucide-react';
 import { useEffect, useRef, useState, type PointerEvent } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { cardClasses } from '@/components/ui/card-variants';
 import { CopyButton } from '@/components/ui/copy-button';
 import { Dropdown, DropdownContent, DropdownItem, DropdownTrigger } from '@/components/ui/dropdown';
 import { textRole } from '@/components/ui/typography';
@@ -85,10 +86,7 @@ export function ConnectStrip({ className }: Readonly<{ className?: string }>) {
   return (
     <section
       aria-label="Connect CiteLadder to an AI assistant"
-      className={cn(
-        'bg-panel surface-card flex w-fit max-w-full flex-wrap items-center gap-3 rounded-[var(--radius-card)] p-[var(--card-padding)]',
-        className,
-      )}
+      className={cn(cardClasses(), 'flex w-fit max-w-full flex-wrap items-center gap-3', className)}
     >
       <Dropdown open={menu.open} onOpenChange={menu.setOpen} modal={false}>
         {/* The menu anchors on this wrapper, so the button keeps its face while it is open. */}
