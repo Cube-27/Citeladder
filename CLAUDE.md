@@ -1,52 +1,28 @@
 # CLAUDE.md — CiteLadder
 
-> Mandatory bootstrap for coding agents. Read this file, then the smallest
-> applicable owner document from [the documentation index](docs/README.md).
+> Mandatory bootstrap for coding agents. This file holds only rules that apply
+> to every task. Read it, then the smallest applicable owner document from
+> [the documentation index](docs/README.md), which also says which document
+> answers what.
 
 ## Authority and routing
 
-This file owns agent workflow; test design follows the
-`principle-test-behavior-not-implementation` skill. [Invariants](docs/invariants.md)
-own review-blocking constraints; read the sections affected by the change.
-The index routes feature behavior, architecture, design, setup and operations
-without requiring a repository-wide documentation read.
-
-Current code and tests establish shipped behavior, not permission to violate an
-accepted constraint. Surface disagreements and repair them within the authorized
-scope; do not rewrite a safeguard merely to match a defect. The
-[architecture](docs/architecture.md) owns the product loop and capability map.
+[Invariants](docs/invariants.md) own review-blocking constraints; read the
+sections affected by the change. Current code and tests establish shipped
+behavior, not permission to violate an accepted constraint: surface
+disagreements and repair them within the authorized scope; do not rewrite a
+safeguard merely to match a defect. Test design follows the
+`principle-test-behavior-not-implementation` skill.
 
 Read a plan only for work assigned to it. An entry in
-[plan status](docs/plans/ACTIVE.md) is not execution authorization. Completed
-plans and archives are historical evidence; never resume an old wave or
-fresh-chat protocol because a document mentions it.
+[plan status](docs/plans/ACTIVE.md) is not execution authorization; never resume
+an old wave or fresh-chat protocol because a document mentions it.
 
-Coding-agent skills may supply tool-specific procedures, not a second copy of
-repository policy. Packaged Agent `SKILL.md` files are production inputs,
-not redundant engineering skills; their owner is the [Agent](docs/agents.md).
-
-### Which document answers what
-
-| Question | Read |
-|---|---|
-| How does a feature behave today? | Its feature owner in the [index](docs/README.md#feature-owners) |
-| What must never break? | [Invariants](docs/invariants.md), affected sections only |
-| Why was a cross-feature choice made? | [Decisions](docs/decisions.md) |
-| Any billing, pricing, credits or plan-gating decision | [Billing decision log](docs/billing-decisions.md) (B-numbers) |
-| How billing, entitlements and usage accounting behave | [Billing and entitlements](docs/billing-entitlements.md) |
-| Prices, allowances, add-ons and top-ups (the numbers) | `frontend/services/api/src/config/billing-authoring.ts`; documents never restate add-on or top-up numbers (B55) |
-| Provider token, search and DataForSEO rates (internal cost) | [Provider rate card](docs/operations/CiteLadder_Launch_Config.md#7-provider-rate-card-internal-cost); runtime prices in `config/ai-credits.json`, `dataforseo.json`, `search-intelligence.json` |
-| Legal commitments, subprocessors, company details | [Legal decisions](docs/operations/legal-decisions.md); page text in `frontend/lib/marketing-content/legal*.ts` |
-| What work is current, and what is queued | [Plan status](docs/plans/ACTIVE.md), then the assigned plan; [backlog](docs/plans/backlog.md) is queued, not assigned |
-| Setup, commands and validation | [Development](docs/DEVELOPMENT.md) |
-| Deployment and operator procedures | [Operations](docs/operations/) runbooks and the [billing operator guide](docs/operations/billing-operator-guide.md) |
-| Product scope and positioning | [Product](PRODUCT.md) |
-
-Owner decisions live only in `decisions.md`, `billing-decisions.md`,
-`operations/legal-decisions.md` and a plan's owner-decisions section, each with
-its date and source. Notes an agent wrote in a PR, plan or code comment are not
-owner decisions. A new owner answer is recorded in the matching log in the same
-pull request that relies on it.
+Situational workflow rules live in `.claude/skills/`, each in one place:
+`validate-change` (what to run and when), `record-owner-decision` (where owner
+answers go) and `pr-review` (the CI review). Skills never restate repository
+policy owned by a document. Packaged Agent `SKILL.md` files are production
+inputs owned by the [Agent](docs/agents.md), not engineering skills.
 
 ## Non-negotiable guardrails
 
@@ -87,37 +63,11 @@ These are reminders, not a replacement for the affected invariants.
 
 ## Validation
 
-Validation has three tiers; each one owns what the one before it skips.
-
-1. **While iterating**, run only the smallest relevant native tests for the
-   behavior at risk. The pre-commit hook formats and lints staged files.
-   Authorization, persistence, concurrency and shared runtime changes need
-   stronger affected-owner coverage.
-2. **For changes to contracts, persistence, authorization, concurrency, shared
-   runtime, dependencies or build configuration**, run `pnpm gate` (from
-   `frontend/`) once when the executable diff is complete. Add `--scope all
-   --builds all` only for shared-config changes or an explicitly requested
-   release check; `--mode check` is non-mutating.
-   Routine feature fixes use focused checks for the changed behavior instead.
-3. **CI** runs the full selected owner suites, every production build, E2E and
-   release validation. Do not reproduce it locally, including the full backend suite.
-
-Ordinary copy/documentation edits need only cheap whitespace/reference checks.
-Small styling and layout-only edits need `git diff --check` and the staged
-format/lint hook; inspect the affected view when layout is uncertain. Do not
-run behavior tests, production builds or the repository quality harness merely
-because a file changed. A commit, push, PR or previously changed branch file is
-not a reason to repeat validation. Broaden only for a concrete risk or failure
-in the current change, and explain that reason before running a costly check.
-Documentation consumed by the application as runtime or packaged input, including
-Agent skills and templates, needs validation of the affected consumer instead.
-
-Do not overlap test/check processes or repeat successful runs for a commit,
-handoff or milestone. If later executable changes invalidate the evidence, rerun
-what they affect before claiming completion. `pnpm gate` keeps its own bounded
-logs and waits for a machine-wide check slot; send native test output to one reusable log in the worktree's Git directory
-rather than a new file per run. Report exit status and inspect failure tails first.
-[Development](docs/DEVELOPMENT.md#repository-validation-harness) owns command details.
+Run only the smallest relevant native tests for the behavior at risk; CI runs
+the full selected owner suites, every build, E2E and release validation — never
+reproduce it locally. Never overlap test/check processes or repeat a successful
+run. Before running anything beyond focused tests (including `pnpm gate`), use
+the `validate-change` skill.
 
 ## Repository safety
 
@@ -137,18 +87,11 @@ rather than a new file per run. Report exit status and inspect failure tails fir
   scripts are Node, run through pnpm (`pnpm gate`, `pnpm test:api`); do not add
   PowerShell or bash scripts for them. Stage explicit paths and preserve user-owned changes.
 
-## Completion and review
+## Completion
 
 Inspect `git diff --check`, `git diff --stat` and `git diff --name-status`.
 Check your own final diff against [Review.md](Review.md). Report changed behavior,
 removals for replacements, exact verification commands/results, checks not run,
 and unresolved risks. Do not attribute unrelated dirty-tree failures to this work.
 For review-only requests, do not edit; report actionable findings with file evidence.
-
-A pull request that changes more than 10 files gets one review: the
-`claude-review` workflow (Anthropic's code-review plugin in CI). Start it once,
-on green CI, by commenting `/claude-review` on the PR; it posts inline comments
-on what it flags, or a `## Code review` comment when it finds nothing. Fix each
-finding, or reply on its thread why it is not a defect, in one push. A PR of 10
-files or fewer gets no review. There are no reviewer agents, no `/simplify`
-pass and no re-review. When you are the `claude-review` run, do the review.
+Before opening or updating a pull request, use the `pr-review` skill.

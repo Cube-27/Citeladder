@@ -61,9 +61,9 @@ shared, staging or production database.
 Use conventional, scoped commit messages. Include a concise change summary,
 removals or intentional coexistence, and a `## Testing` section with exact
 commands, exit results, checks not run and unresolved limitations.
-[CLAUDE.md](CLAUDE.md#validation) defines when validation is required;
+The [`validate-change` skill](.claude/skills/validate-change/SKILL.md) defines when validation is required;
 [Review.md](Review.md) is the review checklist, and
-[CLAUDE.md](CLAUDE.md#completion-and-review) says when a PR gets the
+the [`pr-review` skill](.claude/skills/pr-review/SKILL.md) says when a PR gets the
 `claude-review` CI review (over 10 changed files). A file edit alone does not
 justify a new test, and a passing happy path does not excuse an invariant violation.
 Live sites, provider APIs and connected analytics remain explicitly authorized

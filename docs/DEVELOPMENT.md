@@ -120,7 +120,7 @@ OAuth endpoints are served on the API host, which locally is the API itself
 
 CiteLadder's pinned frontend Playwright dependency also provides the
 token-efficient Playwright Agent CLI. The repository-local skill is under
-`.agents/skills/playwright-cli`; use the root command below so no global npm
+`.claude/skills/playwright-cli`; use the root command below so no global npm
 install is required:
 
 ```powershell
@@ -309,7 +309,7 @@ so a burst of writes cannot open one pool per execution. Locally, leave
 
 ### Repository validation harness
 
-[CLAUDE.md](../CLAUDE.md#validation) owns when each tier runs. This section
+The [`validate-change` skill](../.claude/skills/validate-change/SKILL.md) owns when each tier runs. This section
 covers the commands.
 
 These commands are available tools, not a per-edit checklist. Small styling or

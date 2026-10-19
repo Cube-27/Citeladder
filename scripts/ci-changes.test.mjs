@@ -243,21 +243,39 @@ test('previous CI evidence requires every owner to be successful or intentionall
   const complete = [
     { name: 'Classify affected owners', status: 'completed', conclusion: 'success' },
     ...[
-      'Frontend (quality, coverage, build)',
+      'Frontend (quality, docs)',
       'API contract and ingress',
       'API service (TypeScript)',
       'E2E (playwright)',
       'Security (secrets scan)',
       'Infra (Terraform and workflows)',
+      'Frontend tests (1/3)',
+      'Frontend tests (2/3)',
+      'Frontend tests (3/3)',
+      'API service tests (${{ matrix.shard }}/3)',
     ].map((name) => ({ name, status: 'completed', conclusion: 'skipped' })),
   ];
   assert.equal(hasTrustworthyJobEvidence(complete, 'ci.yml'), true);
   assert.equal(
     hasTrustworthyJobEvidence(
       complete.map((job) =>
-        job.name === 'Frontend (quality, coverage, build)'
-          ? { ...job, conclusion: 'failure' }
-          : job,
+        job.name === 'Frontend tests (2/3)' ? { ...job, conclusion: 'failure' } : job,
+      ),
+      'ci.yml',
+    ),
+    false,
+  );
+  assert.equal(
+    hasTrustworthyJobEvidence(
+      complete.filter((job) => !job.name.startsWith('API service tests (')),
+      'ci.yml',
+    ),
+    false,
+  );
+  assert.equal(
+    hasTrustworthyJobEvidence(
+      complete.map((job) =>
+        job.name === 'Frontend (quality, docs)' ? { ...job, conclusion: 'failure' } : job,
       ),
       'ci.yml',
     ),

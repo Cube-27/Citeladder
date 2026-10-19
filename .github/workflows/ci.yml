@@ -55,8 +55,9 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: node scripts/ci-changes.mjs
 
+  # Vitest runs in the frontend-tests shards below.
   frontend:
-    name: Frontend (quality, coverage, build)
+    name: Frontend (quality, docs)
     needs: changes
     if: needs.changes.outputs.frontend == 'true'
     env:
@@ -83,33 +84,6 @@ jobs:
         env:
           COMPLEXITY_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: pnpm quality:check -- --scope frontend
-      - name: Vitest with measured coverage
-        run: |
-          log="$RUNNER_TEMP/frontend-vitest.log"
-          if pnpm test:coverage > "$log" 2>&1; then
-            echo 'Frontend Vitest passed.'
-          else
-            status=$?
-            echo "Frontend Vitest failed (exit $status); last 120 log lines:"
-            tail -n 120 "$log"
-            exit "$status"
-          fi
-      - name: Publish failed frontend test log
-        if: failure()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: frontend-vitest-log
-          path: ${{ runner.temp }}/frontend-vitest.log
-          if-no-files-found: warn
-          retention-days: 7
-      - name: Publish frontend coverage
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        if: always()
-        with:
-          name: frontend-coverage
-          path: frontend/coverage/
-          if-no-files-found: error
-          retention-days: 7
       - name: Test duplication advisory
         run: pnpm report:duplicates:tests
       - name: Install docs test browser
@@ -124,6 +98,61 @@ jobs:
             tail -n 80 "$log"
             exit "$status"
           fi
+
+  # The whole Vitest suite, split by file across parallel runners: a private
+  # repository's runner has 2 vCPUs, which the config's 2 workers already fill,
+  # so more runners is the only way to more cores. Every shard runs the full
+  # config; together they run every file exactly once.
+  frontend-tests:
+    name: Frontend tests (${{ matrix.shard }}/3)
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-frontend
+      - name: Vitest with measured coverage
+        env:
+          SHARD: ${{ matrix.shard }}/3
+        run: |
+          log="$RUNNER_TEMP/frontend-vitest.log"
+          if pnpm test:coverage --shard="$SHARD" > "$log" 2>&1; then
+            echo "Frontend Vitest shard $SHARD passed."
+            tail -n 8 "$log"
+          else
+            status=$?
+            echo "Frontend Vitest shard $SHARD failed (exit $status); last 120 log lines:"
+            tail -n 120 "$log"
+            exit "$status"
+          fi
+      - name: Publish failed frontend test log
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: frontend-vitest-log-${{ matrix.shard }}
+          path: ${{ runner.temp }}/frontend-vitest.log
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Publish frontend coverage
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: frontend-coverage-${{ matrix.shard }}
+          path: frontend/coverage/
+          if-no-files-found: error
+          retention-days: 7
 
   contract:
     name: API contract and ingress
@@ -151,7 +180,54 @@ jobs:
     permissions:
       contents: read
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: citeladder
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      CITELADDER_DISABLE_DOTENV: '1'
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/citeladder
+      TYPES_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/citeladder
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-frontend
+      - name: Apply the SQL schema baseline
+        working-directory: frontend/services/api
+        run: pnpm migrate
+      - name: API service quality (types, schema authority, route ownership)
+        working-directory: frontend
+        run: node ../scripts/quality.mjs --mode check --scope api
+      - name: Generated database types match the migrated schema
+        working-directory: frontend/services/api
+        run: pnpm db:types:check
+
+  # The API suite runs its files one at a time against one database, so it is
+  # split by file across parallel runners, each with its own PostgreSQL. Every
+  # shard applies the same baseline; together they run every file exactly once.
+  api-tests:
+    name: API service tests (${{ matrix.shard }}/3)
+    needs: changes
+    if: needs.changes.outputs.api == 'true'
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     services:
       postgres:
         image: postgres:16-alpine
@@ -179,15 +255,9 @@ jobs:
       - name: Apply the SQL schema baseline
         working-directory: frontend/services/api
         run: pnpm migrate
-      - name: API service quality (types, schema authority, route ownership)
-        working-directory: frontend
-        run: node ../scripts/quality.mjs --mode check --scope api
-      - name: Generated database types match the migrated schema
-        working-directory: frontend/services/api
-        run: pnpm db:types:check
       - name: API service tests (PostgreSQL)
         working-directory: frontend/services/api
-        run: pnpm test
+        run: pnpm test --shard=${{ matrix.shard }}/3
 
   e2e:
     name: E2E (playwright)

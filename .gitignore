@@ -49,11 +49,13 @@ auth.json
 *-auth-state.json
 .auth/
 
-# Coding-agent config. `.claude/settings.json` is shared (it carries the
-# permission rules for the repository's own tooling) and stays tracked; the
-# rest is per-developer — a personal output style, a local launch profile.
+# Coding-agent config. `.claude/settings.json` (permission rules for the
+# repository's own tooling) and `.claude/skills/` (the repository's agent skills)
+# are shared and tracked; the rest is per-developer — a personal output style,
+# a local launch profile, agent worktrees.
 .claude/*
 !.claude/settings.json
+!.claude/skills/
 
 # Fonts: pulled from the private Cube-27/cube27-fonts repo by
 # `pnpm fonts:pull`, never committed (some licences forbid redistribution).
