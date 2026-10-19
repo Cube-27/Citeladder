@@ -108,7 +108,7 @@ export function CommerceWorkspace({ projectId }: Readonly<{ projectId: string }>
     });
   return (
     <PageShell actions={header.actions}>
-      <Stack gap="workspace">
+      <Stack gap="section">
         {header.stats}
         {header.notices}
         {checked.length ? (

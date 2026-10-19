@@ -7,7 +7,7 @@ import { ProjectLink } from '@/components/layout/scoped-link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Drawer } from '@/components/ui/drawer';
-import { FilterRow } from '@/components/ui/filter-row';
+import { FilterBar } from '@/components/ui/filter-bar';
 import { Pager } from '@/components/ui/pager';
 import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { SearchField } from '@/components/ui/search-field';
@@ -118,38 +118,40 @@ export function SearchIntelligenceDatasetView({
       <Card className="min-w-0">
         <DatasetHeader dataset={dataset} title={title} />
         <CardContent flush>
-          <FilterRow
-            className="border-border-subtle min-h-14 border-b px-[var(--table-cell-padding-x)] py-2"
-            search={
-              <SearchField
-                value={filter}
-                onValueChange={setFilter}
-                aria-label="Filter saved results"
-                placeholder="Filter saved results"
-              />
-            }
-            actions={
-              <>
-                <SearchIntelligenceExport dataset={dataset} params={params} />
-                {rows.length > 0 ? (
-                  <Button variant="secondary" asChild>
-                    <ProjectLink href={agentHandoffHref(rowsHandoff(dataset.id, rows, title))}>
-                      Ask agent
-                    </ProjectLink>
-                  </Button>
-                ) : null}
-                <DepthReviewAction onExpand={onExpand} />
-              </>
-            }
-          >
-            <KeywordFilters
-              enabled={keywordDataset}
-              minVolume={minVolume}
-              setMinVolume={setMinVolume}
-              intent={intent}
-              setIntent={setIntent}
+          <CardHeader bordered>
+            <FilterBar
+              search={
+                <SearchField
+                  value={filter}
+                  onValueChange={setFilter}
+                  aria-label="Filter saved results"
+                  placeholder="Filter saved results"
+                />
+              }
+              filters={
+                <KeywordFilters
+                  enabled={keywordDataset}
+                  minVolume={minVolume}
+                  setMinVolume={setMinVolume}
+                  intent={intent}
+                  setIntent={setIntent}
+                />
+              }
+              actions={
+                <>
+                  <SearchIntelligenceExport dataset={dataset} params={params} />
+                  {rows.length > 0 ? (
+                    <Button variant="secondary" asChild>
+                      <ProjectLink href={agentHandoffHref(rowsHandoff(dataset.id, rows, title))}>
+                        Ask agent
+                      </ProjectLink>
+                    </Button>
+                  ) : null}
+                  <DepthReviewAction onExpand={onExpand} />
+                </>
+              }
             />
-          </FilterRow>
+          </CardHeader>
           {query.isError ? (
             <ReadError
               {...readErrorProps(query)}

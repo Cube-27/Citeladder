@@ -7,13 +7,13 @@ import { Link, useNavigate } from 'react-router-dom';
 
 import { FlowShell } from '@/components/auth/flow-shell';
 import { FlowAccountControls } from '@/components/layout/flow-account-controls';
-import { PageLoading } from '@/components/layout/page-loading';
 import { roleLabel } from '@/components/settings/member-roles';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DisplayTime } from '@/components/ui/display-time';
 import { listRowClasses } from '@/components/ui/list-row';
 import { Pressable } from '@/components/ui/pressable';
+import { QueryState } from '@/components/ui/query-state';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { Workspace } from '@/lib/api/types';
 import { workspacesApi } from '@/lib/api/workspaces';
@@ -47,7 +47,8 @@ export function WorkspaceChooser() {
         <p className="flow-help">Your workspaces could not be loaded. Reload to try again.</p>
       </ChooserFrame>
     );
-  if (workspaces.length === 0 || only) return <PageLoading label="Loading your workspaces…" />;
+  if (workspaces.length === 0 || only)
+    return <QueryState kind="loading" label="Loading your workspaces…" />;
 
   const enter = (workspace: Workspace) => {
     setActiveWorkspaceId(workspace.id);
