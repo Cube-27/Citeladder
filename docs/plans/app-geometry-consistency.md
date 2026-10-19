@@ -62,6 +62,24 @@ Static cause, in `frontend/`:
   is off, so the layout the owner sees is not the layout the code reads as.
   The reference product has 30 prefixes and no `@media` in its globals.
 
+A second census the same day measured spacing. The shell is uniform: identity
+band 57 tall with 24 gutters and 16 title→actions, tabs 32 with a 4 gap,
+content gutter 24 on every route, sidebar rows 32 / padding 12 / gap 4. The
+variation is below the bands, where no organism owns the rhythm:
+
+| Role | Rendered | Intended |
+| --- | --- | --- |
+| Gap between content sections/cards | 0 (Demand, Settings) · 16 (Products, Prompts, Integrations) · 24 (Runs, Billing, Agent) | 24 |
+| Card → next card | 16 (Products) · 24 (Billing); horizontal 12 (Demand) · 16 (Settings) | 16 |
+| Heading → content | 4 · 8 · 12, three values on Billing alone | 12 |
+| Error / empty block | the same block at 20 · 32 · 88 · 120 · 152 tall | one footprint |
+| Card padding | 16 visible on 8 of 9 cards, but on the card element for only 4; Products error card 40 | 16 on the card |
+| Tab padding-x | 10 (off-grid) against button 12 | 12 |
+| Control band | 41 (Runs, 24px pills) · 45 (others) | one height |
+
+Tables and most cards did not render under the 404 fixture, so the PR 2 spec
+stubs at least one list route with fixture rows to measure cells and rows.
+
 The census artefacts (spec, config, summariser, records, screenshots) are in
 the session scratchpad and are reproduced by the PR 2 spec below.
 
@@ -181,6 +199,10 @@ At 982×900 and at 1280×900, light and dark, the census returns:
   switcher and account menu: **one** height, 32;
 - badges: one height, 20; boxes: one radius, 12, one padding, 16;
 - control font size 14 everywhere, badge 12, h1 20, h2 16, h3 14;
+- text-control padding-x 12 (tabs included), icon-only 0; section gap 24,
+  card→card 16, heading→content 12, card padding 16 on the card element;
+  one control-band height; loading, read-error and empty states in one
+  footprint per organism; table rows 36 with 6 cell padding-y;
 - no product component carries `sm:`/`md:`/`lg:`/`xl:`.
 
 The owner judges the result on their own screen against the reference product,
