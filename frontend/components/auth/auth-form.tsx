@@ -8,6 +8,7 @@ import { Alert as MktAlert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Field } from '@/components/ui/field';
+import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
 import { Pressable } from '@/components/ui/pressable';
@@ -96,11 +97,7 @@ export function AuthPasswordField({
               className="text-muted hover:text-foreground grid size-7 place-items-center rounded-[var(--radius-control)] transition-colors"
               aria-label={`${visible ? 'Hide' : 'Show'} ${visibilityLabel}`}
             >
-              {visible ? (
-                <EyeOff className="size-4" aria-hidden />
-              ) : (
-                <Eye className="size-4" aria-hidden />
-              )}
+              <Icon icon={visible ? EyeOff : Eye} />
             </Pressable>
           }
         />

@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { cardClasses } from '@/components/ui/card-variants';
 import { CopyButton } from '@/components/ui/copy-button';
 import { Dropdown, DropdownContent, DropdownItem, DropdownTrigger } from '@/components/ui/dropdown';
+import { Icon } from '@/components/ui/icon';
+import { Inline } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
 import { MCP_CLIENT_LINKS, MCP_SERVER_URL, type McpClientLink } from '@/lib/config/mcp-clients';
 import { cn } from '@/lib/utils';
@@ -84,9 +86,11 @@ export function ConnectStrip({ className }: Readonly<{ className?: string }>) {
   };
 
   return (
-    <section
+    <Inline
+      as="section"
+      gap="compact"
       aria-label="Connect CiteLadder to an AI assistant"
-      className={cn(cardClasses(), 'flex w-fit max-w-full flex-wrap items-center gap-3', className)}
+      className={cn(cardClasses(), 'w-fit max-w-full flex-wrap', className)}
     >
       <Dropdown open={menu.open} onOpenChange={menu.setOpen} modal={false}>
         {/* The menu anchors on this wrapper, so the button keeps its face while it is open. */}
@@ -114,9 +118,9 @@ export function ConnectStrip({ className }: Readonly<{ className?: string }>) {
                 }}
               >
                 Connect to {primary.label}
-                <ChevronDown
-                  className="size-4 transition-transform group-data-[state=open]:rotate-180 motion-reduce:transition-none"
-                  aria-hidden
+                <Icon
+                  icon={ChevronDown}
+                  className="transition-transform group-data-[state=open]:rotate-180 motion-reduce:transition-none"
                 />
               </a>
             </Button>
@@ -144,13 +148,13 @@ export function ConnectStrip({ className }: Readonly<{ className?: string }>) {
             >
               <a href={client.href} target="_blank" rel="noopener noreferrer" data-marketing-cta="">
                 <span className="flex-1">{client.label}</span>
-                <ExternalLink className="size-4 shrink-0" aria-hidden />
+                <Icon icon={ExternalLink} />
               </a>
             </DropdownItem>
           ))}
         </DropdownContent>
       </Dropdown>
-      <div className="flex min-w-0 items-center gap-2">
+      <Inline>
         <span className={textRole('label', 'shrink-0')}>MCP URL</span>
         <code
           className={textRole(
@@ -163,9 +167,9 @@ export function ConnectStrip({ className }: Readonly<{ className?: string }>) {
         <CopyButton value={MCP_SERVER_URL} variant="ghost" copiedLabel="MCP URL copied">
           Copy
         </CopyButton>
-      </div>
+      </Inline>
       {/* Read out, not shown: the assistant's own page is where the person pastes. */}
       <output className="sr-only">{notice}</output>
-    </section>
+    </Inline>
   );
 }
