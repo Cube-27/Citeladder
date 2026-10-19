@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { QueryState } from '@/components/ui/query-state';
 import { ReadError } from '@/components/ui/read-error';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Stack } from '@/components/ui/layout';
 import { StatRow } from '@/components/ui/stat-row';
 import { TrendChart } from '@/components/ui/trend-chart';
 import { textRole } from '@/components/ui/typography';
@@ -45,14 +45,16 @@ function WidgetCard({
         actions={
           <Button asChild variant="ghost">
             <ProjectLink href={href}>
-              Open <ArrowRight className="ms-1 size-3.5" aria-hidden />
+              Open <ArrowRight className="size-3.5" aria-hidden />
             </ProjectLink>
           </Button>
         }
       >
         <CardTitle id={`widget-${id}`}>{WIDGET_TITLES[id]}</CardTitle>
       </CardHeader>
-      <CardContent className="grid flex-1 content-start gap-3">{children}</CardContent>
+      <Stack as={CardContent} gap="compact" className="flex-1 content-start">
+        {children}
+      </Stack>
     </Card>
   );
 }
@@ -76,7 +78,7 @@ function Loaded<T>({
         pending={query.isFetching}
       />
     );
-  if (query.data === undefined) return <Skeleton className="h-32 w-full" />;
+  if (query.data === undefined) return <QueryState kind="loading" />;
   return children(query.data);
 }
 
