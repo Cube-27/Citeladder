@@ -348,7 +348,6 @@ function UploadForm({ model }: Readonly<{ model: ReturnType<typeof useCrawlConne
             <p>{upload.error.message}</p>
             {progress ? (
               <Button
-                size="sm"
                 variant="secondary"
                 className="w-fit"
                 onClick={() => upload.mutate(progress.uploadId)}

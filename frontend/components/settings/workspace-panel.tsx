@@ -60,7 +60,6 @@ export function WorkspacePanel() {
           <Button
             type="button"
             variant="destructiveGhost"
-            size="sm"
             className="w-fit"
             onClick={() => setConfirmLeave(true)}
           >
