@@ -213,7 +213,9 @@ export function DimensionTable({
       ...readErrorProps(query),
       fallback: `Could not load ${tab.noun}. Check your connection and try again.`,
     };
-  else if (query.isLoading) state = { kind: 'loading', label: `Loading ${tab.noun}…` };
+  // Empty is a settled successful read; a pending, paused or disabled query
+  // has not measured anything yet.
+  else if (!query.isSuccess) state = { kind: 'loading', label: `Loading ${tab.noun}…` };
   else if (rows.length === 0)
     state = { kind: 'empty', icon: SearchX, heading: `No ${tab.noun} measured for this range.` };
 
