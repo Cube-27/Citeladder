@@ -6,11 +6,12 @@ import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CopyButton } from '@/components/ui/copy-button';
-import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
+import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { Dialog } from '@/components/ui/dialog';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { readErrorProps, type RetryableRead } from '@/components/ui/read-error';
 import { Stack } from '@/components/ui/layout';
 import { Select } from '@/components/ui/select';
 import { ClampText, TableCell, TableRow } from '@/components/ui/table';
@@ -138,24 +139,29 @@ export function InviteDialog({
 
 /** Invitations still waiting to be accepted. Tokens are never listed. */
 export function PendingInvitations({
-  invitations,
-  isLoading,
+  read,
   busy,
   onResend,
   onRevoke,
 }: Readonly<{
-  invitations: readonly WorkspaceInvitation[];
-  isLoading: boolean;
+  read: RetryableRead &
+    Readonly<{
+      data: readonly WorkspaceInvitation[] | undefined;
+      isLoading: boolean;
+      isError: boolean;
+    }>;
   busy: boolean;
   onResend: (invitationId: string) => void;
   onRevoke: (invitation: WorkspaceInvitation) => void;
 }>) {
-  if (!isLoading && invitations.length === 0) return null;
+  const invitations = read.data ?? [];
+  // Hidden only once a read confirms there is nothing pending; a failed read says so.
+  if (!read.isLoading && !read.isError && invitations.length === 0) return null;
   return (
     <DataTable
       title="Pending invitations"
       columns={INVITATION_COLUMNS}
-      state={isLoading ? { kind: 'loading', label: 'Loading invitations…' } : undefined}
+      state={invitationsState(read)}
     >
       {invitations.map((invitation) => (
         <TableRow key={invitation.id}>
@@ -192,6 +198,19 @@ export function PendingInvitations({
       ))}
     </DataTable>
   );
+}
+
+function invitationsState(
+  read: RetryableRead & Readonly<{ isLoading: boolean; isError: boolean }>,
+): DataTableState | undefined {
+  if (read.isError)
+    return {
+      kind: 'error',
+      ...readErrorProps(read),
+      fallback: 'Pending invitations could not be loaded.',
+    };
+  if (read.isLoading) return { kind: 'loading', label: 'Loading invitations…' };
+  return undefined;
 }
 
 const INVITATION_COLUMNS: readonly DataTableColumn[] = [

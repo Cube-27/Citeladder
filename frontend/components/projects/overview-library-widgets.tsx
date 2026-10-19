@@ -59,23 +59,30 @@ function WidgetCard({
   );
 }
 
-/** Loading, failed or loaded, in the same footprint. */
+/**
+ * Loading, failed or loaded, in the same footprint. A read that waits on the
+ * latest run (`waitsOn`) stays disabled while that read fails, so the failure
+ * shown is the one that can be retried.
+ */
 function Loaded<T>({
   query,
+  waitsOn,
   fallback,
   children,
 }: Readonly<{
   query: UseQueryResult<T>;
+  waitsOn?: UseQueryResult<unknown>;
   fallback: string;
   children: (data: T) => ReactNode;
 }>) {
-  if (query.isError)
+  const failed = waitsOn?.isError ? waitsOn : query;
+  if (failed.isError)
     return (
       <ReadError
-        error={query.error}
+        error={failed.error}
         fallback={fallback}
-        onRetry={() => void query.refetch()}
-        pending={query.isFetching}
+        onRetry={() => void failed.refetch()}
+        pending={failed.isFetching}
       />
     );
   if (query.data === undefined) return <QueryState kind="loading" />;
@@ -194,7 +201,11 @@ export function RetrievalWidget({ project }: Readonly<{ project: Project }>) {
       {noRun ? (
         <QueryState kind="empty" inline message="No completed runs yet." />
       ) : (
-        <Loaded query={misses} fallback="Retrieved sources could not be loaded.">
+        <Loaded
+          query={misses}
+          waitsOn={visibility}
+          fallback="Retrieved sources could not be loaded."
+        >
           {(data) => (
             <>
               <p className={textRole('caption')}>
@@ -218,10 +229,16 @@ export function RetrievalWidget({ project }: Readonly<{ project: Project }>) {
 }
 
 export function PerceptionWidget({ project }: Readonly<{ project: Project }>) {
-  const { perception } = useLatestPerception(project);
+  const { visibility, perception } = useLatestPerception(project);
+  if (visibility.data !== undefined && !visibility.data.audit_id)
+    return (
+      <WidgetCard id="perception" href="/visibility?tab=perception">
+        <QueryState kind="empty" inline message="No completed runs yet." />
+      </WidgetCard>
+    );
   return (
     <WidgetCard id="perception" href="/visibility?tab=perception">
-      <Loaded query={perception} fallback="Perception could not be loaded.">
+      <Loaded query={perception} waitsOn={visibility} fallback="Perception could not be loaded.">
         {(data) => {
           const score = data.brand?.score ?? null;
           return (

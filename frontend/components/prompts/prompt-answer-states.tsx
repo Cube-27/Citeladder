@@ -95,7 +95,8 @@ function LatestRun({ latest }: Readonly<{ latest: PromptMetricItem }>) {
           message="No answer succeeded for this prompt in that run, so mentions and citations are unavailable rather than zero."
         />
       )}
-      {states && competitorGaps(outcomes).length === 0 ? (
+      {/* Only a measured, empty gap list is "none"; absent outcomes are unavailable. */}
+      {states && latest.outcomes && competitorGaps(latest.outcomes).length === 0 ? (
         <QueryState
           kind="empty"
           inline
