@@ -327,6 +327,87 @@ Left for PR 5 (the plan stays active):
   `performance/dimension-table`; `prompts/prompt-table`,
   `prompt-answer-states`, `csv-import-dialog`; `settings/member-invitations`.
 
+#### PR 5c — the remaining twelve feature folders
+
+Scope: `search-intelligence`, `demand`, `ai-traffic`, `opportunities`,
+`performance`, `products`, `auth`, `knowledge-base`, `onboarding`,
+`integrations`, `providers`, `mcp`; nothing in `ui/` or `layout/` changed.
+
+Done in PR 5c:
+
+- Everything an existing organism absorbs moved onto it: vertical rhythm onto
+  `Stack` (on its four rungs, so 8 → 12 and 2 → 4 where a page had picked its
+  own), hand-built boxes onto `panelClasses`, divided lists onto
+  `ledgerClasses`, skeleton loading blocks onto `QueryState` (Opportunities
+  evidence, Products target cards, business map, data sources, provider
+  list), label/control pairs onto `Field`, the Performance chart strip onto a
+  bordered `CardHeader` with the granularity select in `actions`, the
+  Search Intelligence metric definitions onto `Disclosure`.
+- The auth and onboarding flows are product screens: their buttons and inputs
+  render the one 32px control (`size="lg"`/`size="md"` deleted), and the
+  onboarding brand grid uses `splitPaneClasses('peers')` instead of `sm:`.
+- On `DataTable`: Search Intelligence competitive footprint, AI Traffic
+  requests by purpose and request activity.
+- Layering findings in these folders fell from 425 to 234; the whole layering
+  debt from 1,289 to 1,098 (1,073 `layer-geometry`, 25 `layer-size-prop`).
+
+Left (the plan stays active). Findings per folder: `demand` 34,
+`performance` 31, `search-intelligence` 29, `products` 26,
+`knowledge-base` 24, `auth` 20, `ai-traffic` 16, `integrations` 15,
+`opportunities` 12, `onboarding` 11, `providers` 8, `mcp` 8. They wait on
+organisms that do not exist in `ui/` yet:
+
+- An `Inline` (horizontal cluster) at the button's 8 gap — about 88: icon +
+  label, meta rows, button groups and chip wraps (`flex items-center gap-*`)
+  in every folder; `Stack` is vertical only and has no 8 rung.
+- An `Icon` atom with one size per role — about 39 lucide `size-3.5`/`size-4`/
+  `size-5` classes (lucide renders 24 without one), plus the 32px icon tile in
+  `integrations/data-source-setup`.
+- An `IconButton` (the `size="icon"` form without a size prop) — 7:
+  `knowledge-base/business-map-editor` ×3, `onboarding/choice-controls`,
+  `products/catalog-list`, the password-reveal `Pressable` in `auth/auth-form`.
+- A ledger row / list row that owns its padding — about 28 (`py-2`/`py-3`,
+  `first:pt-0 last:pb-0` rows in `opportunities`, `products`, `providers`,
+  `integrations`, `search-intelligence`, `ai-traffic/insight-strip`; the
+  workspace chooser's `listRowClasses` row).
+- `Tabs` owning its strip→panel gap — the `rootClassName="grid gap-*"` in
+  `performance/bing-panel`, `performance-breakdowns`, `date-range-dialog` and
+  `knowledge-base/brand-profile-panel`.
+- A filter width role in `FilterBar` (only search has one) —
+  `ai-traffic/traffic-controls` ×2, `search-intelligence-dataset-view`,
+  `performance-chrome`.
+- Skeleton, chart and status-mark sizes — skeleton heights in Search
+  Intelligence and `performance/dimension-table`, `referrals-dashboard` chart
+  height, `readiness-ladder` step marks; `MetricValue`'s two value sizes.
+- One-offs: a removable chip (`business-map-editor`), an inline code token
+  (`mcp/connect-strip`), a dropdown matching its trigger width
+  (`connect-strip`), a wide `Dialog` (`crawl-log-connections`), the checkbox
+  caption indent (`auth-form`), fallback/gate page padding
+  (`policy-acceptance`, `workspace-access-gate`, `onboarding-page-client`),
+  the flow stage band gap (`onboarding-stages`), the catalog tree row
+  (`products/catalog-list`), an equal-halves split (`splitPaneClasses` has
+  `peers` but `search-intelligence-history` sets its own gap).
+
+Record tables still on `Table`, with the `DataTable` gap that keeps them there:
+
+- `demand/demand-signal-table`: two-line rows need filler rows of the same
+  height, and its rank (`w-16`), signal (`w-44`), clicks/CTR (`w-20`) and
+  two-button action (`w-52`) columns have no width role; on the roles the
+  fixed columns would total ~1,024px and leave the text column no width at
+  982.
+- `performance/dimension-table`: a pinned first column, a caption under a
+  non-sortable header (`sublabel` renders only with `sort`), a proportional
+  first column and its own horizontal scroll frame.
+- `ai-traffic/pages-view` and the crawler table in `traffic-views`: numeric
+  headers wider than the `figure` role (a wider numeric role, wrapping
+  headers or an auto width); the coverage table in `traffic-views` also has an
+  h2 title and a cursor pager.
+- `ai-traffic/referral-details` (comparison, landing pages) and
+  `referrals-dashboard` (source totals): a description under the title; no
+  slot for one.
+- `ai-traffic/crawl-log-connections` (source diagnostics): sits inside a card
+  beside other content; `DataTable` would nest a card.
+
 ## Acceptance
 
 At 982×900 and at 1280×900, light and dark, the census returns:
