@@ -408,6 +408,64 @@ Record tables still on `Table`, with the `DataTable` gap that keeps them there:
 - `ai-traffic/crawl-log-connections` (source diagnostics): sits inside a card
   beside other content; `DataTable` would nest a card.
 
+#### PR 5b — agent, projects, prompts, settings and billing on the shared organisms
+
+Done in PR 5b (no `ui/` or `layout/` change):
+
+- Record tables on `DataTable`: Agent Actions (`actions-screen.tsx`), the
+  prompt library (`prompt-table.tsx`, its filtered-empty state now the
+  table's own), a prompt's engine coverage and competitor gaps
+  (`prompt-answer-states.tsx`) and its implemented work
+  (`prompt-detail-screen.tsx`), Settings pending invitations
+  (`member-invitations.tsx`), API keys (`api-keys.tsx`), MCP connections
+  (`mcp-connections.tsx`) and Billing invoices (`invoice-history.tsx`).
+- Vertical rhythm on `Stack`, labelled inputs on `Field`, loading skeletons
+  on `QueryState`, card grids on `splitPaneClasses('peers')`, revision and
+  property lists on `ledgerClasses`/`listRowClasses`; redundant geometry
+  (`size="md"`, `gap-2` on `Button`, `h-8` on `Input`, `size-8` on icon
+  buttons) removed. `BillingDetailsForm` lost its `idPrefix` prop.
+- Layering findings: `agent` 144 → 85, `projects` 94 → 60, `prompts` 89 →
+  52, `settings` 88 → 48, `billing` 65 → 19 (480 → 264); the whole layering
+  debt after PR 5c fell from 1,098 to 882. The census passes at
+  982/1280, light and dark.
+
+Remainder (264: `layer-geometry` agent 84, projects 52, prompts 48,
+settings 47, billing 19; `layer-size-prop` agent 1, projects 8, prompts 4,
+settings 1) needs organisms `ui/` does not have yet:
+
+- Icon size owned by placement: `size-3.5`/`size-4` on icons inside
+  `Button`, `DropdownItem`, badges and captions in every folder; `Button`
+  and menu items should size their `[&_svg]`.
+- An inline cluster (horizontal gap, wrap, `justify-between`): title + badge
+  rows, key/value rows, button groups and form actions
+  (`flex justify-end gap-2` in `output-editor`, `output-canvas`,
+  `context-screen`, `workflow-gallery`, `conversation`, billing
+  `plan-row`/`extra-purchases`, `member-roster`/`member-invitations` row
+  actions).
+- `IconButton`: every `size="icon"` button is a size-prop finding
+  (`member-roster`, `prompt-table`, `topic-rail`, `overview-grid`,
+  `dashboard-primitives`, `project-edit-panel`, `project-markets`,
+  `agent-panel-host`).
+- An offer row (tonal panel, text column, trailing controls, stacked below
+  desktop): billing `plan-row`, `plan-changes`, `extra-purchases`.
+- A padded ledger row: `missing-prompts`, `project-markets`,
+  `overview-library-widgets`, `candidate-review`, `output-history`,
+  `action-detail-screen` members.
+- A two-column settings section and facts list (`settings-section.tsx`,
+  `action-detail-screen` `ActionFacts`) and an identity row (logo/avatar,
+  title, caption: `settings-screen`, `dashboard-sections`).
+- Width roles: dialog widths (`w-130`/`w-155`/`w-200`/`w-205`), dropdown
+  content (`w-56`/`w-64`) and the quantity input (`w-16`).
+- `DataTable`: a row-actions cell, row selection (`candidate-review`), and a
+  preview mode so `csv-import-dialog`'s `CsvImportPreview` can pass columns
+  instead of framing a `Table`.
+- `Tabs` panel spacing (`pt-3` on `output-pane`'s `TabPanel`s), a static
+  chart legend key (`prompt-detail-screen`), a chat thread/composer dock
+  template (`agent-panel`, `chat-screen`, `composer`, `chat-thread`,
+  `command-menu`, `conversation`), a topic tree rail (`topic-rail`), a
+  reorderable list (`dashboard-sections`) and the overview widget toolbar
+  (`overview-grid`).
+
 ## Acceptance
 
 At 982×900 and at 1280×900, light and dark, the census returns:

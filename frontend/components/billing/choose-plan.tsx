@@ -7,6 +7,7 @@ import { BillingDetailsForm } from '@/components/billing/billing-details-form';
 import { PlanRow } from '@/components/billing/plan-row';
 import { Alert } from '@/components/ui/alert';
 import { ExternalHttpLink } from '@/components/ui/external-http-link';
+import { Stack } from '@/components/ui/layout';
 import { panelClasses } from '@/components/ui/panel';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
@@ -85,7 +86,12 @@ export function ChoosePlan({
     !catalog.plans.some((plan) => plan.funded_checkout_available)
   )
     return (
-      <section className={panelClasses({}, 'grid gap-4')} aria-labelledby="choose-plan-title">
+      <Stack
+        as="section"
+        gap="workspace"
+        className={panelClasses()}
+        aria-labelledby="choose-plan-title"
+      >
         <EditorialSectionHeader
           headingId="choose-plan-title"
           title="Choose a plan"
@@ -102,10 +108,15 @@ export function ChoosePlan({
             Contact us
           </ExternalHttpLink>
         </Alert>
-      </section>
+      </Stack>
     );
   return (
-    <section className={panelClasses({}, 'grid gap-4')} aria-labelledby="choose-plan-title">
+    <Stack
+      as="section"
+      gap="workspace"
+      className={panelClasses()}
+      aria-labelledby="choose-plan-title"
+    >
       <EditorialSectionHeader
         headingId="choose-plan-title"
         title="Choose a plan"
@@ -119,13 +130,8 @@ export function ChoosePlan({
         className="w-fit"
       />
       <BillingCountryInput country={country} setCountry={setCountry} />
-      <BillingDetailsForm
-        country={country}
-        details={details}
-        setDetails={setDetails}
-        idPrefix="settings"
-      />
-      <div className="grid gap-2">
+      <BillingDetailsForm country={country} details={details} setDetails={setDetails} />
+      <Stack gap="compact">
         {catalog.plans.map((plan) => (
           <PlanRow
             key={plan.key}
@@ -142,7 +148,7 @@ export function ChoosePlan({
             }}
           />
         ))}
-      </div>
-    </section>
+      </Stack>
+    </Stack>
   );
 }

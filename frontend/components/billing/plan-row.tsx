@@ -21,6 +21,7 @@ import { contactSalesHref } from '@/lib/config/contact';
 
 import { Button } from '@/components/ui/button';
 import { ExternalHttpLink } from '@/components/ui/external-http-link';
+import { Stack } from '@/components/ui/layout';
 import { panelClasses } from '@/components/ui/panel';
 import { textRole } from '@/components/ui/typography';
 
@@ -61,7 +62,7 @@ export function PlanRow({
       )}
       data-tier={plan.key}
     >
-      <div className="grid min-w-0 gap-0.5">
+      <Stack gap="tight" className="min-w-0">
         <div className="flex items-center gap-2">
           <span className={textRole('itemTitle')}>{plan.name}</span>
           <span className={textRole('label', 'tabular-nums')}>{priceLabel}</span>
@@ -70,7 +71,7 @@ export function PlanRow({
         {!selection.ok && !plan.contact_only && selection.reason ? (
           <p className="type-caption">{billingReasonMessage(selection.reason)}</p>
         ) : null}
-      </div>
+      </Stack>
       <div className="shrink-0">
         {plan.contact_only ? (
           <Button asChild variant="secondary">

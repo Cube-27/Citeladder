@@ -291,8 +291,7 @@ export function MemberSettings({ mayInvite }: Readonly<{ mayInvite: boolean }>) 
       />
 
       <PendingInvitations
-        invitations={invitationsQuery.data ?? []}
-        isLoading={invitationsQuery.isLoading}
+        read={invitationsQuery}
         busy={busy}
         onResend={(invitationId) => resend.mutate(invitationId)}
         onRevoke={(invitation) =>

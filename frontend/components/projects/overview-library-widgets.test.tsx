@@ -8,6 +8,7 @@ const reads = vi.hoisted(() => ({
   visibility: { data: undefined as unknown, isError: false },
   movers: { data: undefined as unknown, isError: false },
   misses: { data: undefined as unknown, isError: false },
+  perception: { data: undefined as unknown, isError: false },
 }));
 
 vi.mock('@/lib/overview/widget-queries', () => ({
@@ -21,9 +22,15 @@ vi.mock('@/lib/overview/widget-queries', () => ({
         ?.status === 'comparable',
   }),
   useLatestNearMisses: () => ({ visibility: reads.visibility, misses: reads.misses }),
+  useLatestPerception: () => ({ visibility: reads.visibility, perception: reads.perception }),
 }));
 
-import { RetrievalWidget, ShareOfVoiceWidget, TopMoversWidget } from './overview-library-widgets';
+import {
+  PerceptionWidget,
+  RetrievalWidget,
+  ShareOfVoiceWidget,
+  TopMoversWidget,
+} from './overview-library-widgets';
 
 const AUDIT = '11111111-1111-4111-8111-111111111111';
 const project = makeProject();
@@ -33,6 +40,24 @@ describe('Overview library widgets', () => {
     reads.visibility = { data: undefined, isError: false };
     reads.movers = { data: undefined, isError: false };
     reads.misses = { data: undefined, isError: false };
+    reads.perception = { data: undefined, isError: false };
+  });
+
+  it('says there is no run yet instead of loading perception forever', () => {
+    reads.visibility = { data: { audit_id: null }, isError: false };
+    renderWithProviders(<PerceptionWidget project={project} />);
+    const region = screen.getByRole('region', { name: 'Perception' });
+    expect(within(region).getByText('No completed runs yet.')).toBeVisible();
+  });
+
+  it('shows the latest-run read failure the perception widget waits on', () => {
+    reads.visibility = Object.assign(
+      { data: undefined, isError: true },
+      { error: new Error('down'), refetch: vi.fn(), isFetching: false },
+    );
+    renderWithProviders(<PerceptionWidget project={project} />);
+    const region = screen.getByRole('region', { name: 'Perception' });
+    expect(within(region).getByRole('button', { name: /retry/i })).toBeVisible();
   });
 
   it('says why top movers are empty before a comparable run', () => {

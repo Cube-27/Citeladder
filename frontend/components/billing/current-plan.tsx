@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { DisplayTime } from '@/components/ui/display-time';
+import { Stack } from '@/components/ui/layout';
 import { panelClasses } from '@/components/ui/panel';
 import { textRole } from '@/components/ui/typography';
 import type { BillingEntitlement, CatalogPlan } from '@/lib/api/billing';
@@ -96,9 +97,9 @@ export function CurrentPlan({
 }>) {
   const subscription = entitlement?.subscription ?? null;
   return (
-    <section className={panelClasses({}, 'grid gap-3')} aria-label="Current plan">
+    <Stack as="section" gap="compact" className={panelClasses()} aria-label="Current plan">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="grid min-w-0 gap-1">
+        <Stack gap="tight" className="min-w-0">
           <p className={textRole('label')}>Current plan</p>
           <div className="flex items-center gap-2">
             <p className={textRole('sectionTitle')}>
@@ -112,7 +113,7 @@ export function CurrentPlan({
             subscription={subscription}
             periodEnd={subscription?.current_period_end}
           />
-        </div>
+        </Stack>
         {canManage && subscription ? (
           <CancellationControl subscription={subscription} cancellation={cancellation} />
         ) : null}
@@ -120,7 +121,7 @@ export function CurrentPlan({
       <PlanNotices entitlement={entitlement} planName={planName} />
       <ResumeNotice subscription={subscription} cancellation={cancellation} />
       <CancelDialog cancellation={cancellation} />
-    </section>
+    </Stack>
   );
 }
 

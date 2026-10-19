@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { KeyRound } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -17,7 +18,9 @@ import { RadioGroup } from '@/components/ui/radio-group';
 import { ReadError } from '@/components/ui/read-error';
 import { TagGroup } from '@/components/ui/tag';
 import { textRole } from '@/components/ui/typography';
-import { EditorialSectionHeader, ledgerClasses } from '@/components/ui/workspace';
+import { EditorialSectionHeader } from '@/components/ui/workspace';
+import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
+import { ClampText, TableCell, TableRow } from '@/components/ui/table';
 import type { ApiKey, ApiKeyCreated, ApiKeyScope } from '@citeladder/contracts/api-keys';
 import { apiKeysApi } from '@/lib/api/api-keys';
 import { humanizeApiError } from '@/lib/api/errors';
@@ -58,42 +61,52 @@ function KeyRow({
       ? 'All projects'
       : apiKey.project_ids.map((id) => projectNames.get(id) ?? 'A deleted project').join(', ');
   return (
-    <li className="flex flex-wrap items-start justify-between gap-4 py-3">
-      <div className="grid min-w-0 gap-1">
-        <p className={textRole('itemTitle')}>
-          {apiKey.name}{' '}
-          <span className={textRole('caption')}>
-            · <code>{apiKey.prefix}…</code> · {STATE_LABELS[apiKey.state]}
-          </span>
-        </p>
+    <TableRow>
+      <TableCell>
+        <div className="grid min-w-0">
+          <ClampText lines={1} className={textRole('itemTitle')}>
+            {apiKey.name}
+          </ClampText>
+          <ClampText lines={1} className={textRole('caption')}>
+            <code>{apiKey.prefix}…</code> · {STATE_LABELS[apiKey.state]} ·{' '}
+            {apiKey.created_by_email ? `Created by ${apiKey.created_by_email} · ` : null}
+            Created <DisplayTime value={apiKey.created_at} dateOnly />
+            {apiKey.expires_at ? (
+              <>
+                {' '}
+                · Expires <DisplayTime value={apiKey.expires_at} dateOnly />
+              </>
+            ) : null}
+          </ClampText>
+        </div>
+      </TableCell>
+      <TableCell>
         <TagGroup labels={apiKey.scopes} />
-        <p className={textRole('body')}>{projects}</p>
-        <p className={textRole('caption')}>
-          {apiKey.created_by_email ? `Created by ${apiKey.created_by_email} · ` : null}
-          Created <DisplayTime value={apiKey.created_at} dateOnly /> ·{' '}
-          {apiKey.last_used_at ? (
-            <>
-              Last used <DisplayTime value={apiKey.last_used_at} />
-            </>
-          ) : (
-            'Not used yet'
-          )}
-          {apiKey.expires_at ? (
-            <>
-              {' '}
-              · Expires <DisplayTime value={apiKey.expires_at} dateOnly />
-            </>
-          ) : null}
-        </p>
-      </div>
-      {apiKey.state === 'active' ? (
-        <Button variant="secondary" onClick={onRevoke}>
-          Revoke
-        </Button>
-      ) : null}
-    </li>
+      </TableCell>
+      <TableCell>
+        <ClampText lines={1}>{projects}</ClampText>
+      </TableCell>
+      <TableCell>
+        {apiKey.last_used_at ? <DisplayTime value={apiKey.last_used_at} /> : 'Not used yet'}
+      </TableCell>
+      <TableCell numeric="end">
+        {apiKey.state === 'active' ? (
+          <Button variant="secondary" onClick={onRevoke}>
+            Revoke
+          </Button>
+        ) : null}
+      </TableCell>
+    </TableRow>
   );
 }
+
+const KEY_COLUMNS: readonly DataTableColumn[] = [
+  { key: 'key', label: 'Key' },
+  { key: 'scopes', label: 'Access', width: 'name' },
+  { key: 'projects', label: 'Projects', width: 'status' },
+  { key: 'used', label: 'Last used', width: 'date' },
+  { key: 'revoke', label: 'Revoke', width: 'action', numeric: 'end', hideLabel: true },
+];
 
 function CreateKeyDialog({
   open,
@@ -177,7 +190,7 @@ function CreateKeyDialog({
               />
             )}
           </Field>
-          <fieldset className="grid gap-1">
+          <Stack as="fieldset" gap="tight">
             <legend className={textRole('label')}>What the key can do</legend>
             {SCOPES.map((scope) => (
               <Checkbox
@@ -191,7 +204,7 @@ function CreateKeyDialog({
             <p className={textRole('caption')}>
               A key never does more than the role of the person who created it allows.
             </p>
-          </fieldset>
+          </Stack>
           <RadioGroup
             ariaLabel="Projects the key can reach"
             value={projectMode}
@@ -202,7 +215,7 @@ function CreateKeyDialog({
             ]}
           />
           {projectMode === 'chosen' ? (
-            <fieldset className="grid gap-1">
+            <Stack as="fieldset" gap="tight">
               <legend className={textRole('label')}>Projects</legend>
               {projects.map((project) => (
                 <Checkbox
@@ -212,7 +225,7 @@ function CreateKeyDialog({
                   onCheckedChange={(on) => setChosen(toggle(chosen, project.id, on === true))}
                 />
               ))}
-            </fieldset>
+            </Stack>
           ) : null}
           <Field label="Expires" hint="Optional. The key stops working at the end of this day.">
             {(props) => (
@@ -232,6 +245,22 @@ function CreateKeyDialog({
       )}
     </Dialog>
   );
+}
+
+/** Keys in use against the plan's limit, and the create action while under it. */
+function keysToolbar({
+  live,
+  limit,
+  onCreate,
+}: Readonly<{ live: number; limit: number | null; onCreate: () => void }>) {
+  return {
+    status: `${live} of ${limit ?? 0} keys in use`,
+    actions: (
+      <Button onClick={onCreate} disabled={limit !== null && live >= limit}>
+        Create key
+      </Button>
+    ),
+  };
 }
 
 export function ApiKeys() {
@@ -273,16 +302,7 @@ export function ApiKeys() {
           title="API keys"
           description={`Read your reports and manage prompts, competitors, audits and actions from your own code through the REST API at ${API_BASE_URL}.`}
         />
-        {available ? (
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className={textRole('caption')}>
-              {live} of {limit ?? 0} keys in use
-            </p>
-            <Button onClick={() => setCreating(true)} disabled={limit !== null && live >= limit}>
-              Create key
-            </Button>
-          </div>
-        ) : (
+        {available ? null : (
           <Alert tone="info">
             The REST API is included in paid plans.{' '}
             <Link
@@ -294,9 +314,19 @@ export function ApiKeys() {
           </Alert>
         )}
       </Stack>
-      {keys.length === 0 && available ? <p className={textRole('body')}>No API keys yet.</p> : null}
-      {keys.length === 0 ? null : (
-        <ul className={ledgerClasses('open')}>
+      {keys.length === 0 && !available ? null : (
+        <DataTable
+          title="Keys"
+          toolbar={
+            available ? keysToolbar({ live, limit, onCreate: () => setCreating(true) }) : undefined
+          }
+          columns={KEY_COLUMNS}
+          state={
+            keys.length === 0
+              ? { kind: 'empty', icon: KeyRound, headingLevel: 3, heading: 'No API keys yet.' }
+              : undefined
+          }
+        >
           {keys.map((key) => (
             <KeyRow
               key={key.id}
@@ -308,7 +338,7 @@ export function ApiKeys() {
               }}
             />
           ))}
-        </ul>
+        </DataTable>
       )}
       <CreateKeyDialog
         open={creating}

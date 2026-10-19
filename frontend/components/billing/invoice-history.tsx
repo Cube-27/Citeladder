@@ -8,13 +8,31 @@ import { DisplayTime } from '@/components/ui/display-time';
 
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { QueryState } from '@/components/ui/query-state';
+import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { Stack } from '@/components/ui/layout';
-import { Skeleton } from '@/components/ui/skeleton';
+import { ClampText, TableCell, TableRow } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
-import { EditorialSectionHeader, ledgerClasses } from '@/components/ui/workspace';
+import { ICONS } from '@/lib/icons';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import { saveBlob } from '@/lib/download';
+
+const COLUMNS: readonly DataTableColumn[] = [
+  { key: 'document', label: 'Document' },
+  { key: 'paid', label: 'Date', width: 'date' },
+  { key: 'amount', label: 'Amount', width: 'figure', numeric: true },
+  { key: 'download', label: 'Download', width: 'name', numeric: 'end', hideLabel: true },
+];
+
+function invoicesState(loading: boolean, count: number): DataTableState | undefined {
+  if (loading) return { kind: 'loading', label: 'Loading billing documents…' };
+  if (count > 0) return undefined;
+  return {
+    kind: 'empty',
+    icon: ICONS.billing,
+    headingLevel: 3,
+    heading: 'No invoices have been issued yet.',
+  };
+}
 
 function downloadLabel(invoice: BillingInvoice, downloading: string | null): string {
   if (downloading === invoice.invoice_id) return 'Preparing…';
@@ -50,52 +68,49 @@ export function InvoiceHistory({
   };
 
   return (
-    <Stack as="section" gap="compact" aria-label="Billing documents">
-      <Stack gap="tight">
-        <p className={textRole('label')}>Billing documents</p>
-        <EditorialSectionHeader title="Invoices, receipts and credit notes" />
-      </Stack>
+    <Stack gap="compact">
       {error ? <Alert tone="danger">Receipts could not be loaded.</Alert> : null}
       {downloadError ? <Alert tone="danger">Receipt download failed. Please retry.</Alert> : null}
-      {loading ? <Skeleton className="h-16 w-full" /> : null}
-      {!loading && !error && invoices.length === 0 ? (
-        <QueryState kind="empty" inline message="No invoices have been issued yet." />
-      ) : null}
-      {invoices.length > 0 ? (
-        <div className={ledgerClasses('boxed')}>
+      {error ? null : (
+        <DataTable
+          title="Invoices, receipts and credit notes"
+          columns={COLUMNS}
+          state={invoicesState(loading, invoices.length)}
+        >
           {invoices.map((invoice) => (
-            <div
-              key={invoice.invoice_id}
-              className="flex flex-wrap items-center justify-between gap-3 py-3"
-            >
-              <div className="type-body grid gap-1">
-                <span className={textRole('emphasis')}>
-                  {invoice.status === 'credited'
-                    ? `Credit note ${invoice.invoice_number} · Against ${invoice.original_invoice_number ?? ''}`
-                    : `Invoice ${invoice.invoice_number} · Receipt ${invoice.receipt_number}`}
-                </span>
-                <span className="text-muted">
-                  {invoice.status === 'credited' ? 'Credited' : 'Paid'}{' '}
-                  <DisplayTime value={invoice.paid_at} dateOnly /> ·{' '}
-                  {formatMoney(invoice.amount_paid, 2)}
-                </span>
-                <span className="type-caption">
-                  GST: {invoice.tax_treatment.replaceAll('_', ' ')} · CGST{' '}
-                  {formatMoney(invoice.cgst, 2)} · SGST {formatMoney(invoice.sgst, 2)} · IGST{' '}
-                  {formatMoney(invoice.igst, 2)}
-                </span>
-              </div>
-              <Button
-                variant="secondary"
-                disabled={downloading === invoice.invoice_id}
-                onClick={() => void download(invoice)}
-              >
-                {downloadLabel(invoice, downloading)}
-              </Button>
-            </div>
+            <TableRow key={invoice.invoice_id}>
+              <TableCell>
+                <div className="grid min-w-0">
+                  <ClampText lines={1} className={textRole('emphasis')}>
+                    {invoice.status === 'credited'
+                      ? `Credit note ${invoice.invoice_number} · Against ${invoice.original_invoice_number ?? ''}`
+                      : `Invoice ${invoice.invoice_number} · Receipt ${invoice.receipt_number}`}
+                  </ClampText>
+                  <ClampText lines={1} className={textRole('caption')}>
+                    GST: {invoice.tax_treatment.replaceAll('_', ' ')} · CGST{' '}
+                    {formatMoney(invoice.cgst, 2)} · SGST {formatMoney(invoice.sgst, 2)} · IGST{' '}
+                    {formatMoney(invoice.igst, 2)}
+                  </ClampText>
+                </div>
+              </TableCell>
+              <TableCell>
+                {invoice.status === 'credited' ? 'Credited' : 'Paid'}{' '}
+                <DisplayTime value={invoice.paid_at} dateOnly />
+              </TableCell>
+              <TableCell numeric>{formatMoney(invoice.amount_paid, 2)}</TableCell>
+              <TableCell numeric="end">
+                <Button
+                  variant="secondary"
+                  disabled={downloading === invoice.invoice_id}
+                  onClick={() => void download(invoice)}
+                >
+                  {downloadLabel(invoice, downloading)}
+                </Button>
+              </TableCell>
+            </TableRow>
           ))}
-        </div>
-      ) : null}
+        </DataTable>
+      )}
     </Stack>
   );
 }

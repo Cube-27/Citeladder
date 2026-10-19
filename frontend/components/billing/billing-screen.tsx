@@ -16,7 +16,6 @@ import { QueryState } from '@/components/ui/query-state';
 import { ListScreen } from '@/components/layout/page-shell';
 import { Alert } from '@/components/ui/alert';
 import { Stack } from '@/components/ui/layout';
-import { Skeleton } from '@/components/ui/skeleton';
 import { splitPaneClasses } from '@/components/ui/workspace';
 import {
   billingApi,
@@ -242,7 +241,7 @@ function PlanSection({
       <Alert tone="danger">Could not load the plan catalog. Check your connection and retry.</Alert>
     );
   }
-  if (catalogLoading || !catalog) return <Skeleton className="h-24 w-full" />;
+  if (catalogLoading || !catalog) return <QueryState kind="loading" label="Loading plans…" />;
   const subscription = entitlement?.subscription ?? null;
   const currentPlan = subscription ? catalogPlanByKey(catalog, subscription.catalog_key) : null;
   if (subscription && currentPlan && SUBSCRIBED_STATUSES.has(subscription.status)) {

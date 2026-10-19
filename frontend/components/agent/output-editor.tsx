@@ -1,10 +1,12 @@
 'use client';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { FormEvent } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Stack } from '@/components/ui/layout';
 import { Textarea } from '@/components/ui/textarea';
 import { agentWriteFailure } from '@/lib/agent/errors';
 import { agentMutations, type AgentRevision } from '@/lib/api/agent';
@@ -48,9 +50,10 @@ export function OutputEditor({
   const unchanged = title === revision.title && body === revision.body;
   const blank = !title.trim() || !body.trim();
   return (
-    <form
-      className="grid gap-3"
-      onSubmit={(event) => {
+    <Stack
+      as="form"
+      gap="compact"
+      onSubmit={(event: FormEvent) => {
         event.preventDefault();
         save.mutate({ chatId, baseRevisionId: draft.baseRevisionId, title, body });
       }}
@@ -82,6 +85,6 @@ export function OutputEditor({
           Save as new revision
         </Button>
       </div>
-    </form>
+    </Stack>
   );
 }

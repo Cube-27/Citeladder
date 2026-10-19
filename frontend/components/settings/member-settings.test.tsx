@@ -129,6 +129,15 @@ describe('Workspace panel', () => {
     expect(within(dialog).getByLabelText('Email')).toHaveValue('alex@example.test');
   });
 
+  it('says pending invitations could not be read instead of hiding them', async () => {
+    vi.spyOn(workspacesApi, 'listInvitations').mockRejectedValue(
+      new ApiError('Invitations are unavailable', 403, '', undefined, { code: 'forbidden' }),
+    );
+    renderPanel();
+    const region = await screen.findByRole('region', { name: 'Pending invitations' });
+    expect(await within(region).findByText('Invitations are unavailable')).toBeVisible();
+  });
+
   it('offers no invitations in a trial workspace and says why', async () => {
     plan.team = false;
     renderPanel();

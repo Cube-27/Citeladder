@@ -20,6 +20,7 @@ import { roleLabel } from '@/components/settings/member-roles';
 import AccountSecurity from '@/components/settings/account-security';
 import { TabPanel, TabsRoot } from '@/components/ui/tabs';
 import { ListScreen } from '@/components/layout/page-shell';
+import { Stack } from '@/components/ui/layout';
 import { projectsApi } from '@/lib/api/projects';
 import { humanizeApiError } from '@/lib/api/errors';
 import { queryKeys } from '@/lib/api/query-keys';
@@ -124,10 +125,10 @@ function ProjectDeletionControls() {
                   websiteUrl={activeProject.website_url}
                   placement="identity"
                 />
-                <div className="grid min-w-0 gap-0.5">
+                <Stack gap="tight" className="min-w-0">
                   <div className={textRole('itemTitle', 'truncate')}>{activeProject.name}</div>
                   <p className="type-caption">Brand: {activeProject.brand_name}</p>
-                </div>
+                </Stack>
               </div>
               <Button
                 variant="destructive"
@@ -242,7 +243,7 @@ export function SettingsScreen() {
             <SettingsSection title="Profile" description="Your sign-in email and workspace role.">
               <div className="flex items-center gap-4">
                 <Avatar name={user.email} placement="identity" />
-                <div className="grid min-w-0 flex-1 gap-0.5">
+                <Stack gap="tight" className="min-w-0 flex-1">
                   <div className={textRole('itemTitle', 'truncate')}>{user.email}</div>
                   {activeWorkspace ? (
                     <div className="type-body">
@@ -251,7 +252,7 @@ export function SettingsScreen() {
                         : `${roleLabel(activeWorkspace.role)} in ${activeWorkspace.name}`}
                     </div>
                   ) : null}
-                </div>
+                </Stack>
               </div>
               {createdLabel || updatedLabel ? (
                 <SettingsFacts

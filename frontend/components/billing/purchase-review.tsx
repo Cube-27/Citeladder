@@ -3,6 +3,7 @@
 import { CheckoutConsent } from '@/components/billing/billing-policies';
 import { BillingQuoteSummary } from '@/components/billing/quote-summary';
 import { Button } from '@/components/ui/button';
+import { Stack } from '@/components/ui/layout';
 import { panelClasses } from '@/components/ui/panel';
 import { textRole } from '@/components/ui/typography';
 import { DisplayTime } from '@/components/ui/display-time';
@@ -42,7 +43,12 @@ export function PurchaseReview({
   const upgradedPlan =
     prepared.kind === 'upgrade' ? catalogPlanByKey(catalog, prepared.catalog_key) : undefined;
   return (
-    <section className={panelClasses({}, 'grid gap-3')} aria-labelledby="purchase-review-title">
+    <Stack
+      as="section"
+      gap="compact"
+      className={panelClasses()}
+      aria-labelledby="purchase-review-title"
+    >
       <EditorialSectionHeader
         headingId="purchase-review-title"
         title={KIND_TITLE[prepared.kind]}
@@ -84,6 +90,6 @@ export function PurchaseReview({
           Not now
         </Button>
       </div>
-    </section>
+    </Stack>
   );
 }

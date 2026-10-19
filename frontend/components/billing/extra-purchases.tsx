@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Input } from '@/components/ui/input';
+import { Stack } from '@/components/ui/layout';
 import { panelClasses } from '@/components/ui/panel';
 import { textRole } from '@/components/ui/typography';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
@@ -51,7 +52,7 @@ function ExtraRow({
         'flex flex-col justify-between gap-3 desktop:flex-row desktop:items-center',
       )}
     >
-      <div className="grid min-w-0 gap-0.5">
+      <Stack gap="tight" className="min-w-0">
         <span className={textRole('itemTitle')}>{entry.name}</span>
         {entry.description ? <p className="type-caption">{entry.description}</p> : null}
         <span className={textRole('caption')}>
@@ -63,7 +64,7 @@ function ExtraRow({
         {!purchasable && entry.unavailable_reason ? (
           <span className="type-caption">{billingReasonMessage(entry.unavailable_reason)}</span>
         ) : null}
-      </div>
+      </Stack>
       <div className="flex shrink-0 items-center gap-2">
         <label htmlFor={inputId} className="sr-only">
           Quantity of {entry.name}
@@ -78,7 +79,7 @@ function ExtraRow({
           disabled={!purchasable || disabled}
           onChange={(event) => setTyped(event.target.value)}
           onBlur={() => setTyped(String(quantity))}
-          className="h-8 w-16 text-center tabular-nums"
+          className="w-16 text-center tabular-nums"
         />
         <Button
           disabled={!purchasable || disabled}
@@ -99,17 +100,17 @@ function ActiveExtras({ entitlement }: Readonly<{ entitlement: BillingEntitlemen
   );
   if (grants.length === 0) return null;
   return (
-    <div className="grid gap-2">
+    <Stack gap="compact">
       <h3 className={textRole('itemTitle')}>Active purchases</h3>
-      <ul className="grid gap-1">
+      <Stack as="ul" gap="tight">
         {grants.map((grant) => (
           <li key={grant.grant_id} className={textRole('caption')}>
             +{grant.value} {capabilityLabel(grant.key).toLowerCase()} · usable until{' '}
             <DisplayTime value={grant.effective_valid_until} dateOnly fallback="your plan ends" />
           </li>
         ))}
-      </ul>
-    </div>
+      </Stack>
+    </Stack>
   );
 }
 
@@ -134,13 +135,13 @@ export function ExtraPurchases({
   const { addons, topups } = extrasForPlan(catalog, planKey);
   if (addons.length === 0 && topups.length === 0) return null;
   return (
-    <section className={panelClasses({}, 'grid gap-3')} aria-labelledby="extras-title">
+    <Stack as="section" gap="compact" className={panelClasses()} aria-labelledby="extras-title">
       <EditorialSectionHeader
         headingId="extras-title"
         title="Add-ons and top-ups"
         description="One-time purchases. They work only while your paid plan is active and never renew."
       />
-      <div className="grid gap-2">
+      <Stack gap="compact">
         {addons.map((entry) => (
           <ExtraRow
             key={entry.key}
@@ -161,8 +162,8 @@ export function ExtraPurchases({
             onBuy={onBuy}
           />
         ))}
-      </div>
+      </Stack>
       <ActiveExtras entitlement={entitlement} />
-    </section>
+    </Stack>
   );
 }
