@@ -53,7 +53,7 @@ export function OutputEditor({
     <Stack
       as="form"
       gap="compact"
-      onSubmit={(event: FormEvent<HTMLFormElement>) => {
+      onSubmit={(event: FormEvent) => {
         event.preventDefault();
         save.mutate({ chatId, baseRevisionId: draft.baseRevisionId, title, body });
       }}

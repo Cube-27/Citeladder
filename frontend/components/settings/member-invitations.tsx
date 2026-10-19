@@ -62,7 +62,7 @@ export function InviteDialog({
 }>) {
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<AssignableWorkspaceRole>('member');
-  const submit = (event: FormEvent<HTMLFormElement>) => {
+  const submit = (event: FormEvent) => {
     event.preventDefault();
     const address = email.trim();
     if (!address || pending) return;

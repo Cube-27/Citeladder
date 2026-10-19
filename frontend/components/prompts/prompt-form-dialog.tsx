@@ -107,84 +107,86 @@ export function PromptFormDialog({
         </>
       }
     >
-      <Stack as="form" gap="workspace" noValidate onSubmit={submit}>
-        {error ? <Alert tone="danger">{error}</Alert> : null}
+      <form noValidate onSubmit={submit}>
+        <Stack gap="workspace">
+          {error ? <Alert tone="danger">{error}</Alert> : null}
 
-        <Field label="Topic">
-          {(props) => (
-            <Controller
-              control={control}
-              name="topicId"
-              render={({ field }) => (
-                <Select
-                  {...props}
-                  ariaLabel="Topic"
-                  value={field.value}
-                  onValueChange={field.onChange}
-                  options={topicOptions}
-                />
-              )}
-            />
-          )}
-        </Field>
+          <Field label="Topic">
+            {(props) => (
+              <Controller
+                control={control}
+                name="topicId"
+                render={({ field }) => (
+                  <Select
+                    {...props}
+                    ariaLabel="Topic"
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    options={topicOptions}
+                  />
+                )}
+              />
+            )}
+          </Field>
 
-        <Field label="Prompt" required error={errors.text?.message}>
-          {(props) => (
-            <Textarea
-              {...props}
-              {...register('text')}
-              placeholder="What are the best running shoes for flat feet?"
-            />
-          )}
-        </Field>
+          <Field label="Prompt" required error={errors.text?.message}>
+            {(props) => (
+              <Textarea
+                {...props}
+                {...register('text')}
+                placeholder="What are the best running shoes for flat feet?"
+              />
+            )}
+          </Field>
 
-        {/* Tags are set on generation or import; editing corrects them. */}
-        {isEdit ? (
-          <Stack gap="workspace" className="desktop:grid-cols-2">
-            <Field label="Intent">
-              {(props) => (
-                <Controller
-                  control={control}
-                  name="intent"
-                  render={({ field }) => (
-                    <Select
-                      {...props}
-                      ariaLabel="Intent"
-                      value={field.value}
-                      onValueChange={field.onChange}
-                      options={INTENT_OPTIONS}
-                    />
-                  )}
-                />
-              )}
-            </Field>
-            <Field label="Buyer stage">
-              {(props) => (
-                <Controller
-                  control={control}
-                  name="buyerStage"
-                  render={({ field }) => (
-                    <Select
-                      {...props}
-                      ariaLabel="Buyer stage"
-                      value={field.value}
-                      onValueChange={field.onChange}
-                      options={STAGE_OPTIONS}
-                    />
-                  )}
-                />
-              )}
-            </Field>
-            {/* Tags are not part of a run's frozen prompt panel, so a
+          {/* Tags are set on generation or import; editing corrects them. */}
+          {isEdit ? (
+            <Stack gap="workspace" className="desktop:grid-cols-2">
+              <Field label="Intent">
+                {(props) => (
+                  <Controller
+                    control={control}
+                    name="intent"
+                    render={({ field }) => (
+                      <Select
+                        {...props}
+                        ariaLabel="Intent"
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        options={INTENT_OPTIONS}
+                      />
+                    )}
+                  />
+                )}
+              </Field>
+              <Field label="Buyer stage">
+                {(props) => (
+                  <Controller
+                    control={control}
+                    name="buyerStage"
+                    render={({ field }) => (
+                      <Select
+                        {...props}
+                        ariaLabel="Buyer stage"
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        options={STAGE_OPTIONS}
+                      />
+                    )}
+                  />
+                )}
+              </Field>
+              {/* Tags are not part of a run's frozen prompt panel, so a
                 correction keeps the prompt's comparison series. */}
-            <Field label="Persona" error={errors.persona?.message} className="desktop:col-span-2">
-              {(props) => (
-                <Input {...props} {...register('persona')} placeholder="Marathon runners" />
-              )}
-            </Field>
-          </Stack>
-        ) : null}
-      </Stack>
+              <Field label="Persona" error={errors.persona?.message} className="desktop:col-span-2">
+                {(props) => (
+                  <Input {...props} {...register('persona')} placeholder="Marathon runners" />
+                )}
+              </Field>
+            </Stack>
+          ) : null}
+        </Stack>
+      </form>
     </Dialog>
   );
 }

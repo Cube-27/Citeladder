@@ -247,6 +247,22 @@ function CreateKeyDialog({
   );
 }
 
+/** Keys in use against the plan's limit, and the create action while under it. */
+function keysToolbar({
+  live,
+  limit,
+  onCreate,
+}: Readonly<{ live: number; limit: number | null; onCreate: () => void }>) {
+  return {
+    status: `${live} of ${limit ?? 0} keys in use`,
+    actions: (
+      <Button onClick={onCreate} disabled={limit !== null && live >= limit}>
+        Create key
+      </Button>
+    ),
+  };
+}
+
 export function ApiKeys() {
   const cache = useQueryClient();
   const { activeWorkspaceId, projects } = useProjectContext();
@@ -302,19 +318,7 @@ export function ApiKeys() {
         <DataTable
           title="Keys"
           toolbar={
-            available
-              ? {
-                  status: `${live} of ${limit ?? 0} keys in use`,
-                  actions: (
-                    <Button
-                      onClick={() => setCreating(true)}
-                      disabled={limit !== null && live >= limit}
-                    >
-                      Create key
-                    </Button>
-                  ),
-                }
-              : undefined
+            available ? keysToolbar({ live, limit, onCreate: () => setCreating(true) }) : undefined
           }
           columns={KEY_COLUMNS}
           state={

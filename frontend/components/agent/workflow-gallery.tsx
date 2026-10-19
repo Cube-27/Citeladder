@@ -112,50 +112,50 @@ export function WorkflowStart({
     if (missing.length === 0) onStart(workflowMessage(workflow, values));
   };
   return (
-    <Stack
-      as="form"
-      gap="workspace"
+    <form
       aria-labelledby="workflow-title"
       // One inline message per missing input instead of the browser's bubble.
       noValidate
       onSubmit={submit}
       className={panelClasses()}
     >
-      <Stack gap="tight">
-        <h3 id="workflow-title" className={textRole('itemTitle')}>
-          {workflow.label}
-        </h3>
-        <p className={textRole('caption')}>{workflow.description}</p>
+      <Stack gap="workspace">
+        <Stack gap="tight">
+          <h3 id="workflow-title" className={textRole('itemTitle')}>
+            {workflow.label}
+          </h3>
+          <p className={textRole('caption')}>{workflow.description}</p>
+        </Stack>
+        {workflow.inputs.map((input, index) => (
+          <Field
+            key={input.key}
+            label={input.label}
+            required={input.required}
+            error={attempted && missing.includes(input.key) ? 'Add this to start.' : undefined}
+          >
+            {(field) => (
+              <Input
+                {...field}
+                ref={index === 0 ? first : undefined}
+                value={values[input.key] ?? ''}
+                disabled={disabled || pending}
+                onChange={(event) =>
+                  setValues((current) => ({ ...current, [input.key]: event.target.value }))
+                }
+              />
+            )}
+          </Field>
+        ))}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <Button type="button" variant="ghost" onClick={onBack}>
+            <ArrowLeft aria-hidden className="size-4" />
+            All workflows
+          </Button>
+          <Button type="submit" disabled={disabled || pending}>
+            {pending ? 'Starting…' : 'Start'}
+          </Button>
+        </div>
       </Stack>
-      {workflow.inputs.map((input, index) => (
-        <Field
-          key={input.key}
-          label={input.label}
-          required={input.required}
-          error={attempted && missing.includes(input.key) ? 'Add this to start.' : undefined}
-        >
-          {(field) => (
-            <Input
-              {...field}
-              ref={index === 0 ? first : undefined}
-              value={values[input.key] ?? ''}
-              disabled={disabled || pending}
-              onChange={(event) =>
-                setValues((current) => ({ ...current, [input.key]: event.target.value }))
-              }
-            />
-          )}
-        </Field>
-      ))}
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <Button type="button" variant="ghost" onClick={onBack}>
-          <ArrowLeft aria-hidden className="size-4" />
-          All workflows
-        </Button>
-        <Button type="submit" disabled={disabled || pending}>
-          {pending ? 'Starting…' : 'Start'}
-        </Button>
-      </div>
-    </Stack>
+    </form>
   );
 }

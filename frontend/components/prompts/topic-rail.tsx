@@ -118,7 +118,7 @@ export function TopicRail({
             <Stack
               as="form"
               gap="compact"
-              onSubmit={(event: FormEvent<HTMLFormElement>) => {
+              onSubmit={(event: FormEvent) => {
                 event.preventDefault();
                 void submit();
               }}

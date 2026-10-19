@@ -119,7 +119,7 @@ function InstructionsEditor({
     <Stack
       as="form"
       gap="compact"
-      onSubmit={(event: FormEvent<HTMLFormElement>) => {
+      onSubmit={(event: FormEvent) => {
         event.preventDefault();
         save.mutate({ projectId, text: draft });
       }}
