@@ -51,7 +51,7 @@
     "gate": "node ../scripts/quality.mjs --mode fix --scope changed --builds affected"
   },
   "dependencies": {
-    "@astrojs/cloudflare": "14.4.0",
+    "@astrojs/cloudflare": "14.3.4",
     "@astrojs/react": "^7.1.0",
     "@citeladder/contracts": "workspace:*",
     "@hookform/resolvers": "^5.9.1",
