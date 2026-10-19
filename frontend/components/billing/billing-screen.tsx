@@ -13,7 +13,7 @@ import { ChoosePlan, subscribeWith, type NewSubscription } from '@/components/bi
 import { PurchaseReview } from '@/components/billing/purchase-review';
 import { UsageMeters } from '@/components/billing/usage-meters';
 import { QueryState } from '@/components/ui/query-state';
-import { PageShell } from '@/components/layout/page-shell';
+import { ListScreen } from '@/components/layout/page-shell';
 import { Alert } from '@/components/ui/alert';
 import { Stack } from '@/components/ui/layout';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -146,19 +146,19 @@ export function BillingScreen() {
 
   if (entitlementLoading || entitlementQuery.isLoading) {
     return (
-      <PageShell measure="workflow">
+      <ListScreen measure="workflow">
         <QueryState kind="loading" label="Loading billing…" />
-      </PageShell>
+      </ListScreen>
     );
   }
   if (entitlementQuery.isError) {
     return (
-      <PageShell measure="workflow">
+      <ListScreen measure="workflow">
         <Alert tone="danger">
           Your entitlement could not be resolved, so no billing change is offered. No paid
           capability is active until it does; reload the page or contact support.
         </Alert>
-      </PageShell>
+      </ListScreen>
     );
   }
   const entitlement = entitlementQuery.data ?? null;
@@ -166,7 +166,7 @@ export function BillingScreen() {
   const { buyExtra, subscribe } = purchaseActions(checkout, country);
 
   return (
-    <PageShell measure="workflow">
+    <ListScreen measure="workflow">
       <Stack gap="section">
         <CheckoutStatus checkout={checkout} />
         {canManage ? null : (
@@ -212,7 +212,7 @@ export function BillingScreen() {
         />
         <BillingSupport contact={catalog?.support_contact ?? null} />
       </Stack>
-    </PageShell>
+    </ListScreen>
   );
 }
 

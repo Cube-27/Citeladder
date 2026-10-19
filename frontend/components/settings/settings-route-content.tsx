@@ -2,7 +2,7 @@
 
 import { Suspense } from 'react';
 
-import { PageShell } from '@/components/layout/page-shell';
+import { ListScreen } from '@/components/layout/page-shell';
 
 import { AcceptInvitationScreen } from './accept-invitation-screen';
 import { SettingsScreen } from './settings-screen';
@@ -20,9 +20,9 @@ export function SettingsRouteContent() {
 export function AcceptInvitationRouteContent() {
   return (
     <Suspense>
-      <PageShell measure="workflow">
+      <ListScreen measure="workflow">
         <AcceptInvitationScreen />
-      </PageShell>
+      </ListScreen>
     </Suspense>
   );
 }

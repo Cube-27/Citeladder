@@ -19,7 +19,7 @@ import { TimeZoneSetting } from '@/components/settings/time-zone-setting';
 import { roleLabel } from '@/components/settings/member-roles';
 import AccountSecurity from '@/components/settings/account-security';
 import { TabPanel, TabsRoot } from '@/components/ui/tabs';
-import { PageShell } from '@/components/layout/page-shell';
+import { ListScreen } from '@/components/layout/page-shell';
 import { projectsApi } from '@/lib/api/projects';
 import { humanizeApiError } from '@/lib/api/errors';
 import { queryKeys } from '@/lib/api/query-keys';
@@ -122,7 +122,7 @@ function ProjectDeletionControls() {
                   name={activeProject.brand_name}
                   logoUrl={activeProject.brand?.logo_url}
                   websiteUrl={activeProject.website_url}
-                  size="md"
+                  placement="identity"
                 />
                 <div className="grid min-w-0 gap-0.5">
                   <div className={textRole('itemTitle', 'truncate')}>{activeProject.name}</div>
@@ -226,7 +226,7 @@ export function SettingsScreen() {
 
   return (
     <TabsRoot value={activeTab} onValueChange={setActiveTab}>
-      <PageShell
+      <ListScreen
         measure="workflow"
         tabs={{
           items: tabs.map((tab) => ({ value: tab.id, label: tab.label })),
@@ -241,7 +241,7 @@ export function SettingsScreen() {
           <SettingsSections>
             <SettingsSection title="Profile" description="Your sign-in email and workspace role.">
               <div className="flex items-center gap-4">
-                <Avatar name={user.email} size="md" />
+                <Avatar name={user.email} placement="identity" />
                 <div className="grid min-w-0 flex-1 gap-0.5">
                   <div className={textRole('itemTitle', 'truncate')}>{user.email}</div>
                   {activeWorkspace ? (
@@ -290,7 +290,7 @@ export function SettingsScreen() {
         <TabPanel value="api-keys" className="focus-ring">
           <ApiKeys />
         </TabPanel>
-      </PageShell>
+      </ListScreen>
     </TabsRoot>
   );
 }

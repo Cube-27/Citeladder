@@ -1,39 +1,73 @@
 'use client';
 
-import { Trash2 } from 'lucide-react';
+import { SearchX, Trash2 } from 'lucide-react';
 
-import { Alert } from '@/components/ui/alert';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
+import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { Select } from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
-import {
-  ClampText,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { ClampText, TableCell, TableRow } from '@/components/ui/table';
 import { Tooltip } from '@/components/ui/tooltip';
 import type { AssignableWorkspaceRole, WorkspaceMember } from '@/lib/api/workspaces';
 
 import { ROLE_OPTIONS, roleLabel } from './member-roles';
 
+const COLUMNS: readonly DataTableColumn[] = [
+  { key: 'member', label: 'Member' },
+  { key: 'role', label: 'Workspace role', width: 'name' },
+  { key: 'access', label: 'Access', width: 'name', numeric: 'end' },
+];
+
+/** What the roster shows instead of rows, if anything. */
+function rosterState({
+  isLoading,
+  isError,
+  error,
+  onRetry,
+  noMatch,
+}: Readonly<{
+  isLoading: boolean;
+  isError: boolean;
+  error: unknown;
+  onRetry: () => void;
+  noMatch: string | null;
+}>): DataTableState | undefined {
+  if (isLoading) return { kind: 'loading', label: 'Loading members…' };
+  if (isError)
+    return {
+      kind: 'error',
+      error,
+      fallback: 'The member list could not be loaded.',
+      onRetry,
+    };
+  if (noMatch !== null)
+    return {
+      kind: 'empty',
+      icon: SearchX,
+      heading: `No members match “${noMatch}”.`,
+      headingLevel: 3,
+    };
+  return undefined;
+}
+
 /**
- * The workspace roster. The Owner row is inert: the single designated Owner
- * changes only through a transfer, which swaps both roles in one server
- * transaction, so no control here can leave the workspace ownerless. Every
- * control reports an intent; the caller confirms it before anything changes.
- * Transfer is offered only to the Owner (`onTransfer` absent otherwise), and
- * your own row offers nothing: leaving is a workspace action, not a removal.
+ * The workspace roster, with its search and invite on the table's own header.
+ * The Owner row is inert: the single designated Owner changes only through a
+ * transfer, which swaps both roles in one server transaction, so no control
+ * here can leave the workspace ownerless. Every control reports an intent; the
+ * caller confirms it before anything changes. Transfer is offered only to the
+ * Owner (`onTransfer` absent otherwise), and your own row offers nothing:
+ * leaving is a workspace action, not a removal.
  */
 export function MemberRoster({
   members,
+  toolbar,
+  noMatch,
   isLoading,
   isError,
+  error,
   busy,
   onRetry,
   onChangeRole,
@@ -41,47 +75,37 @@ export function MemberRoster({
   onRemove,
 }: Readonly<{
   members: readonly WorkspaceMember[];
+  /** The roster's search and invite. */
+  toolbar: FilterBarProps;
+  /** The search text when it matches nobody; null otherwise. */
+  noMatch: string | null;
   isLoading: boolean;
   isError: boolean;
+  error: unknown;
   busy: boolean;
   onRetry: () => void;
   onChangeRole: (member: WorkspaceMember, role: AssignableWorkspaceRole) => void;
   onTransfer?: (member: WorkspaceMember) => void;
   onRemove: (member: WorkspaceMember) => void;
 }>) {
-  if (isLoading) return <Skeleton className="h-24 w-full" />;
-  if (isError) {
-    return (
-      <Alert tone="danger">
-        The member list could not be loaded.{' '}
-        <Button type="button" variant="ghost" onClick={onRetry}>
-          Try again
-        </Button>
-      </Alert>
-    );
-  }
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Member</TableHead>
-          <TableHead>Workspace role</TableHead>
-          <TableHead className="text-right">Access</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {members.map((member) => (
-          <MemberRow
-            key={member.id}
-            member={member}
-            busy={busy}
-            onChangeRole={onChangeRole}
-            onTransfer={onTransfer}
-            onRemove={onRemove}
-          />
-        ))}
-      </TableBody>
-    </Table>
+    <DataTable
+      label="Members"
+      toolbar={toolbar}
+      columns={COLUMNS}
+      state={rosterState({ isLoading, isError, error, onRetry, noMatch })}
+    >
+      {members.map((member) => (
+        <MemberRow
+          key={member.id}
+          member={member}
+          busy={busy}
+          onChangeRole={onChangeRole}
+          onTransfer={onTransfer}
+          onRemove={onRemove}
+        />
+      ))}
+    </DataTable>
   );
 }
 
@@ -103,7 +127,7 @@ function MemberRow({
     <TableRow>
       <TableCell>
         <div className="flex min-w-0 items-center gap-2">
-          <Avatar name={member.email} size="sm" />
+          <Avatar name={member.email} />
           <ClampText lines={1}>{member.email}</ClampText>
           {member.is_self ? <Badge variant="neutral">You</Badge> : null}
         </div>
