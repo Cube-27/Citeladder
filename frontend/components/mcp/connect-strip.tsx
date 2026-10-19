@@ -128,7 +128,7 @@ export function ConnectStrip({ className }: Readonly<{ className?: string }>) {
         </DropdownTrigger>
         <DropdownContent
           align="start"
-          className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-0"
+          width="trigger"
           onPointerEnter={menu.enter}
           onPointerLeave={menu.leave}
           onCloseAutoFocus={(event) => {

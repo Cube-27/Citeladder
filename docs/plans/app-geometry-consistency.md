@@ -545,7 +545,7 @@ Done in PR 6b:
   in a `TableActionsCell`). The referral trend cards draw their scale on
   `TrendChart`'s own axes (`countYLabels` deleted). The row-actions,
   selection and preview users (`candidate-review`, `csv-import-dialog`,
-  settings rows) are in PR 6a's folders and adopt them next.
+  settings rows) are in PR 6a's folders and adopted them there.
 - Everything else moved onto `Inline`, `Icon`, `IconButton`,
   `ledgerItemClasses`, `treeBranchClasses`, `splitPaneClasses`,
   `Tabs spaced`, `Dialog width="wide"`, `Skeleton shape` and `QueryState`.
@@ -586,20 +586,33 @@ Left in these folders (25), each waiting on an organism outside them:
   flow-entity edit row's height (`review-step` `my-1.5` ×2, which keeps the
   row from shrinking while it is edited) and the 20px selection mark's
   glyph (`choice-controls` `size-3.5`). 4.
-- `ui/dropdown.tsx` — content matching its trigger's width, and an inline
-  code token in `ui/typography` (`mcp/connect-strip`: `w-[var(--radix-…)]`,
-  `rounded-*`, `px-2`, `py-1`). 4.
+- An inline code token in `ui/typography` (`mcp/connect-strip`:
+  `rounded-*`, `px-2`, `py-1`). 3. The trigger-width menu there moved to
+  `DropdownContent width="trigger"` in PR 6a.
 
 #### PR 6a — agent, projects, prompts, settings and billing carry no geometry
 
 Done in PR 6a:
 
-- Layering findings: `agent` 85 → 0, `projects` 60 → 0, `prompts` 52 → 5,
-  `settings` 48 → 0, `billing` 19 → 0 (264 → 5). The whole layering debt
-  fell from 498 to 238 (232 `layer-geometry`, 6 `layer-size-prop`), all in
-  the folders PR 6b owns plus the five below. The crawl log dialog in
-  `ai-traffic` moved from `className="w-144"` to `width="wide"` (576 → 720),
-  because `Dialog` no longer takes `className`.
+- Layering findings: `agent` 85 → 0, `projects` 60 → 0, `prompts` 52 → 0,
+  `settings` 48 → 0, `billing` 19 → 0 (264 → 0). These folders have no
+  baseline entry. After PR 6b, the whole layering debt fell from 289 to 24
+  (23 `layer-geometry`, 1 `layer-size-prop`), all listed in PR 6b's
+  remainder.
+- Adopted PR 6b's `DataTable` additions:
+  - `candidate-review` is a nested `DataTable` with `selection`. Its rows
+    are two lines: the suggestion over its topic and quality status, then a
+    Checks column with the search-data tag and quality flags.
+    `TableSelectCell` gained `describedBy`, so each row's checkbox is still
+    described by its quality status.
+  - The CSV import preview is a nested `DataTable`.
+  - The member roster, pending invitations and prompt library put their row
+    actions in `TableActionsCell` (the two Settings tables on the
+    `rowActions` width).
+- `mcp/connect-strip` uses `DropdownContent width="trigger"`, which clears
+  one of PR 6b's four findings there. `DropdownContent` and `Dialog` no
+  longer take `className`. The crawl log dialog in `ai-traffic` moved from
+  `className="w-144"` to `width="wide"` (576 → 720).
 - New one-form organisms in `components/ui`, each with only placement or
   role props:
   - `ControlRow` (`ui/control-row.tsx`): an offer or connection row (an
@@ -657,19 +670,8 @@ Done in PR 6a:
   render under the shell fixture (they need overview, topic, run or chat
   data), so the census does not measure them.
 
-Left after PR 6a, in these five folders (5 `layer-geometry`, all one
-`DataTable` need PR 6b owns):
-
-- Row selection: `components/prompts/candidate-review.tsx`, the sticky
-  selection toolbar (`gap-2 py-2`), the select-all panel (`gap-3`) and the
-  selectable candidate row (`gap-2 py-3`). It becomes a `DataTable` with
-  row selection.
-- Row actions needed no `DataTable` change: the Settings member and
-  invitation tables and the prompt library put an `Inline` with
-  `justify-end` and `IconButton`s in their last column.
-- CSV preview: `csv-import-dialog.tsx`'s `CsvImportPreview` carries no
-  layering finding, but it still frames a `Table` by hand until `DataTable`
-  has a preview mode.
+Nothing is left in these five folders. The remaining 24 findings are PR 6b's
+list above, with `mcp/connect-strip` down to 3 (the inline code token).
 
 ## Acceptance
 

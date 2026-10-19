@@ -23,7 +23,7 @@
       "tsx-size": 1
     },
     "components/mcp/connect-strip.tsx": {
-      "layer-geometry": 4
+      "layer-geometry": 3
     },
     "components/onboarding/choice-controls.tsx": {
       "layer-geometry": 1
@@ -43,9 +43,6 @@
     },
     "components/performance/performance-chrome.tsx": {
       "layer-geometry": 1
-    },
-    "components/prompts/candidate-review.tsx": {
-      "layer-geometry": 5
     },
     "components/search-intelligence/search-intelligence-dataset-view.tsx": {
       "layer-geometry": 1

@@ -18,7 +18,7 @@ import {
   DropdownTrigger,
 } from '@/components/ui/dropdown';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
-import { TableCell, TableRow } from '@/components/ui/table';
+import { TableActionsCell, TableCell, TableRow } from '@/components/ui/table';
 import { pageNumberControls, useTablePage } from '@/components/ui/pager';
 import { Tooltip } from '@/components/ui/tooltip';
 import { Switch } from '@/components/ui/switch';
@@ -148,7 +148,7 @@ export function PromptTable({
               ) : null}
             </Inline>
           </TableCell>
-          <TableCell className="text-right">
+          <TableActionsCell>
             <Dropdown>
               <DropdownTrigger asChild>
                 <IconButton icon={MoreHorizontal} label="Prompt actions" />
@@ -180,7 +180,7 @@ export function PromptTable({
                 </DropdownItem>
               </DropdownContent>
             </Dropdown>
-          </TableCell>
+          </TableActionsCell>
         </TableRow>
       ))}
     </DataTable>

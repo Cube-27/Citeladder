@@ -49,7 +49,6 @@ const DROPDOWN_WIDTH = {
 export type DropdownWidth = keyof typeof DROPDOWN_WIDTH;
 
 export function DropdownContent({
-  className,
   align = 'start',
   sideOffset = 4,
   collisionPadding = 8,
@@ -57,7 +56,9 @@ export function DropdownContent({
   children,
   ...props
 }: Readonly<
-  ComponentPropsWithoutRef<typeof DropdownPrimitive.Content> & { width?: DropdownWidth }
+  Omit<ComponentPropsWithoutRef<typeof DropdownPrimitive.Content>, 'className'> & {
+    width?: DropdownWidth;
+  }
 >) {
   return (
     <DropdownPrimitive.Portal>
@@ -71,7 +72,6 @@ export function DropdownContent({
           // by it: Radix reports the space it actually has, so cap there.
           'max-h-[min(24rem,var(--radix-dropdown-menu-content-available-height))] min-w-40 overflow-auto',
           width ? DROPDOWN_WIDTH[width] : null,
-          className,
         )}
         {...props}
       >

@@ -6,18 +6,11 @@ import { useMemo } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { CsvImportFileInput, CsvImportPreview, useCsvImportFile } from '@/components/ui/csv-import';
+import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Dialog } from '@/components/ui/dialog';
 import { Icon } from '@/components/ui/icon';
 import { Stack } from '@/components/ui/layout';
-import {
-  ClampText,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { ClampText, TableCell, TableRow } from '@/components/ui/table';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import type { PromptImportRow } from '@/lib/api/prompts';
 import { downloadCsv } from '@/lib/csv/download';
@@ -41,6 +34,13 @@ function RowStatus({ errors }: Readonly<{ errors: readonly string[] }>) {
     return <ClampText className="type-caption text-danger-text">{errors.join(' ')}</ClampText>;
   return <span className="type-caption text-success-text">Ready</span>;
 }
+
+const PREVIEW_COLUMNS: readonly DataTableColumn[] = [
+  { key: 'line', label: 'Row', width: 'index', numeric: true },
+  { key: 'topic', label: 'Topic', width: 'name' },
+  { key: 'prompt', label: 'Prompt' },
+  { key: 'status', label: 'Status', width: 'status' },
+];
 
 function downloadSample() {
   downloadCsv('prompts-sample.csv', PROMPT_CSV_COLUMNS, PROMPT_CSV_SAMPLE_ROWS);
@@ -119,37 +119,23 @@ export function CsvImportDialog({
             fileName={fileName}
             rowCount={parsed.rows.length}
           >
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead numeric>Row</TableHead>
-                  <TableHead>Topic</TableHead>
-                  <TableHead>Prompt</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {parsed.rows.map((row) => {
-                  const invalid = row.errors.length > 0;
-                  return (
-                    <TableRow key={row.line} className={invalid ? 'opacity-60' : undefined}>
-                      <TableCell numeric className="text-muted">
-                        {row.line}
-                      </TableCell>
-                      <TableCell className="max-w-45">
-                        {row.input.topic || <UnavailableValue state="not_set" />}
-                      </TableCell>
-                      <TableCell className="max-w-90">
-                        {row.input.text || <UnavailableValue state="not_set" />}
-                      </TableCell>
-                      <TableCell>
-                        <RowStatus errors={row.errors} />
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+            <DataTable nested label="Parsed rows" columns={PREVIEW_COLUMNS}>
+              {parsed.rows.map((row) => {
+                const invalid = row.errors.length > 0;
+                return (
+                  <TableRow key={row.line} className={invalid ? 'opacity-60' : undefined}>
+                    <TableCell numeric className="text-muted">
+                      {row.line}
+                    </TableCell>
+                    <TableCell>{row.input.topic || <UnavailableValue state="not_set" />}</TableCell>
+                    <TableCell>{row.input.text || <UnavailableValue state="not_set" />}</TableCell>
+                    <TableCell>
+                      <RowStatus errors={row.errors} />
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </DataTable>
           </CsvImportPreview>
         ) : null}
       </Stack>
