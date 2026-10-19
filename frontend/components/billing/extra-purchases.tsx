@@ -47,8 +47,8 @@ function ExtraRow({
   return (
     <div
       className={panelClasses(
-        { tone: 'tonal', pad: 'compact' },
-        'flex flex-col justify-between gap-3 sm:flex-row sm:items-center',
+        { tone: 'tonal' },
+        'flex flex-col justify-between gap-3 desktop:flex-row desktop:items-center',
       )}
     >
       <div className="grid min-w-0 gap-0.5">

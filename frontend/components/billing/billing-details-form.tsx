@@ -33,9 +33,9 @@ export function BillingDetailsForm({
   const india = country.trim().toUpperCase() === 'IN';
 
   return (
-    <Stack as="fieldset" gap="compact" className={panelClasses({ pad: 'compact' })}>
+    <Stack as="fieldset" gap="compact" className={panelClasses()}>
       <legend className={textRole('label', 'px-1')}>Billing details</legend>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="desktop:grid-cols-2 grid gap-3">
         {addressFields.map(([key, label, autoComplete]) => (
           <label key={key} className="type-label grid gap-2">
             {label}

@@ -208,6 +208,55 @@ census measures card→card gap.
   single height, single padding, single badge, single breakpoint and the
   atomic layering; the review checklist points at the census.
 
+Done in PR 3:
+
+- Atom menus deleted, no aliases: `sm`, `iconSm`, `iconRound` from
+  `button-variants.ts` (the theme toggle is the 32px `icon` button);
+  `compact` from `Input`, and `SearchField` has no `size` at all;
+  `FilterChip` and the 24px interactive chip rung (`filter-chip.tsx`,
+  `filterChipClasses`; the market and engine toggles in the launch dialog are
+  secondary `Button`s with `aria-pressed`, the radio chip is the same face);
+  `filter-chip-variants.ts` is `tag-variants.ts` (tags only); the filter
+  trigger's wide-screen-only glyph; `--control-height-sm` and
+  `--badge-height-md` from the product ladder. The only 28 left is the
+  website's coded product views, scoped to `[data-public-surface]` /
+  `[data-flow-surface]` in `website-type.css`. The controls table in
+  `docs/design.md` is regenerated.
+- One box recipe: `cardClasses` and `panelClasses` are radius 12, a 1px
+  `border` and padding 16 on the box element; `Panel`'s `pad` and `edge`
+  options and `CardContent`'s `flush` are deleted, and every call site that
+  cancelled or re-added the inset (`p-0`, `pt-*`, `m-[var(--card-padding)]`)
+  is gone. Tinted panels keep a transparent border, so the geometry is one.
+  A `QueryState`/`EmptyState` nested in a box shares its inset.
+- The `desktop` variant (`@custom-variant`, ≥981px) and zero
+  `sm:`/`md:`/`lg:`/`xl:`/`min-[…]`/`max-[…]` in `components/` outside
+  `marketing/`, `auth/` and `onboarding/` (62 rules in `ui/` and `layout/`,
+  ~140 in features). Segmented items set control text (14).
+- `check:policy` layering rules (`featureLayeringFindings`):
+  `layer-breakpoint` in every product folder (count 0), and in feature
+  folders `layer-geometry` (spacing, sized-box and radius utilities) and
+  `layer-size-prop` (`size=`/`padding=`), ratcheted per file.
+- The census runs at 982×900 and 1280×900, light and dark, with the same
+  literals, and now also requires box padding 16 / radius 12 / border 1 and a
+  measured card→card gap (two Settings integration cards from a fixture).
+
+Left for a follow-up (the plan stays active for these):
+
+- The organisms and templates moved from PR 2: `StatRow`, `DataTable` (and
+  the five card-scoped `FilterBar`s onto its header), `ListScreen` /
+  `DetailScreen`, then deleting `EmptyState`, `InlineEmpty` and
+  `screen-states` once their 16 / 39 / 1 users are on `QueryState` and the
+  organisms. They did not fit: the four PR 3 parts alone touched ~125 files.
+- The ratcheted layering debt, 1,342 findings in every feature folder at the
+  time of PR 3 (`site-health` 188, `agent` 145, `visibility` 120, `runs` 100,
+  `projects` 99, `settings` 92, `prompts` 91, `performance` 48, `ai-traffic`
+  48, `demand` 48, `opportunities` 45, `products` 43, `billing` 66,
+  `search-intelligence` 59, `knowledge-base` 37, `auth` 39, `onboarding` 28,
+  `integrations` 23, `providers` 15, `mcp` 8). Most are icon sizes, row gaps
+  and the hand-built record tables that `DataTable` will own. The remaining
+  `size=` props are `Avatar`, `BrandLogo`, `Spinner` and `ScoreRing` size
+  menus (atoms with more than one form) and the `size="icon"` button form.
+
 ## Acceptance
 
 At 982×900 and at 1280×900, light and dark, the census returns:

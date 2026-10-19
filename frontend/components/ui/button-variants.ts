@@ -23,14 +23,14 @@ export const buttonVariants = cva(
         destructiveGhost:
           'bg-transparent text-danger-text shadow-none not-disabled:hover:bg-danger-bg active:bg-danger-bg',
       },
+      // The product has one text button (`md`) and one icon button (`icon`),
+      // both 32. `lg` (36) and `marketing` (44) are the public website and
+      // the auth/onboarding flow's rungs only.
       size: {
-        sm: 'h-[var(--control-height-sm)] px-3',
         md: 'h-[var(--control-height-md)] px-3',
         lg: 'h-[var(--control-height-lg)] px-4',
         marketing: 'min-h-[var(--control-height-xl)] px-5',
         icon: 'size-[var(--control-height-md)] px-0',
-        iconSm: 'size-[var(--control-height-sm)] px-0',
-        iconRound: 'size-[var(--control-height-md)] rounded-full px-0',
       },
     },
     defaultVariants: {
