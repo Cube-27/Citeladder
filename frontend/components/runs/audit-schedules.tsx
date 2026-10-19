@@ -145,7 +145,7 @@ function WorkspaceSchedules({
               ))}
             </ul>
           ) : null}
-          {!schedulesQuery.data?.length && !schedulesQuery.isLoading ? (
+          {schedulesQuery.isSuccess && schedulesQuery.data.length === 0 ? (
             <QueryState kind="empty" inline message="No scheduled audits yet." />
           ) : null}
           {promptSets.length === 0 ? (

@@ -95,10 +95,12 @@ export function EnginesCard({
 }>) {
   // A failed read shows no state of its own: "no engine used this page" and
   // "we could not find out" are different answers, and the page's own alert
-  // already reports the failure.
+  // already reports the failure, so rows kept from an earlier read are not
+  // shown as current either. Only a returned, empty list is "no engine".
+  const rows = errored ? [] : (engines ?? []);
   let state: DataTableState | undefined;
   if (!errored && loading) state = { kind: 'loading', label: 'Loading retrievals…' };
-  else if (!errored && !engines?.length) {
+  else if (!errored && engines?.length === 0) {
     state = {
       kind: 'empty',
       headingLevel: 3,
@@ -113,7 +115,7 @@ export function EnginesCard({
       state={state}
       footer="Which engines used this page as a source."
     >
-      {(engines ?? []).map((row) => (
+      {rows.map((row) => (
         <TableRow key={`${row.logical_engine}:${row.transport_model ?? ''}`}>
           <TableCell>
             <span className="grid min-w-0">
