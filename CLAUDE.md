@@ -94,5 +94,5 @@ Check your own final diff against [Review.md](Review.md). Report changed behavio
 removals for replacements, exact verification commands/results, checks not run,
 and unresolved risks. Do not attribute unrelated dirty-tree failures to this work.
 For review-only requests, do not edit; report actionable findings with file evidence.
-Pull requests get no separate review: no CI review, reviewer agents, `/simplify`
-or re-review; your check against Review.md is the review.
+Pull requests get no separate review: no CI review, reviewer agents or
+re-review; your check against Review.md is the review.
