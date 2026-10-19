@@ -6,7 +6,7 @@ import { UserPlus } from 'lucide-react';
 
 import { ConfirmDialog, type ConfirmRequest } from '@/components/ui/confirm-dialog';
 import { Button } from '@/components/ui/button';
-import { FilterRow } from '@/components/ui/filter-row';
+import { FilterBar } from '@/components/ui/filter-bar';
 import { Stack } from '@/components/ui/layout';
 import { MutationNotice } from '@/components/ui/mutation-notice';
 import { SearchField } from '@/components/ui/search-field';
@@ -240,8 +240,7 @@ export function MemberSettings({ mayInvite }: Readonly<{ mayInvite: boolean }>) 
       <p className={textRole('body')}>
         Who can work in {workspaceName}, and what each of them may do.
       </p>
-      <FilterRow
-        searchWidth="sm"
+      <FilterBar
         search={
           <SearchField
             value={search}

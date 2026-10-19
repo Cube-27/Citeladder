@@ -12,7 +12,7 @@ import { PlanChanges, type PlanChangeControls } from '@/components/billing/plan-
 import { ChoosePlan, subscribeWith, type NewSubscription } from '@/components/billing/choose-plan';
 import { PurchaseReview } from '@/components/billing/purchase-review';
 import { UsageMeters } from '@/components/billing/usage-meters';
-import { PageLoading } from '@/components/layout/page-loading';
+import { QueryState } from '@/components/ui/query-state';
 import { PageShell } from '@/components/layout/page-shell';
 import { Alert } from '@/components/ui/alert';
 import { Stack } from '@/components/ui/layout';
@@ -147,7 +147,7 @@ export function BillingScreen() {
   if (entitlementLoading || entitlementQuery.isLoading) {
     return (
       <PageShell measure="workflow">
-        <PageLoading label="Loading billing…" />
+        <QueryState kind="loading" label="Loading billing…" />
       </PageShell>
     );
   }

@@ -4,10 +4,10 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Suspense, useEffect, useState, type ReactNode } from 'react';
 
-import { PageLoading } from '@/components/layout/page-loading';
 import { GateNoticeFrame } from '@/components/layout/gate-notice-frame';
 import { ShellFallback } from '@/components/layout/shell-fallback';
 import { Button } from '@/components/ui/button';
+import { QueryState } from '@/components/ui/query-state';
 import { queryKeys } from '@/lib/api/query-keys';
 import { capabilityRemaining, useEntitlement } from '@/lib/billing/entitlement-context';
 import { PROJECT_SLOTS_CAPABILITY } from '@/lib/config/billing';
@@ -125,7 +125,7 @@ function ProjectSetupLoading({
     return () => window.clearTimeout(timer);
   }, [attempt]);
 
-  if (!stalled) return <PageLoading label="Loading your workspace…" />;
+  if (!stalled) return <QueryState kind="loading" label="Loading your workspace…" />;
   return (
     <ProjectSetupBlocked
       title="Your workspace is taking longer to load"

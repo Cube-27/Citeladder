@@ -81,7 +81,6 @@ function ExtraRow({
           className="h-8 w-16 text-center tabular-nums"
         />
         <Button
-          size="sm"
           disabled={!purchasable || disabled}
           onClick={() => onBuy(kind, entry.key, quantity)}
         >
