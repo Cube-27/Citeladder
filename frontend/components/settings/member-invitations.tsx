@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { readErrorProps, type RetryableRead } from '@/components/ui/read-error';
 import { Stack } from '@/components/ui/layout';
 import { Select } from '@/components/ui/select';
-import { ClampText, TableCell, TableRow } from '@/components/ui/table';
+import { ClampText, TableActionsCell, TableCell, TableRow } from '@/components/ui/table';
 import type { AssignableWorkspaceRole, WorkspaceInvitation } from '@/lib/api/workspaces';
 
 import { ROLE_OPTIONS, ROLE_SUMMARY, roleLabel } from './member-roles';
@@ -174,26 +174,24 @@ export function PendingInvitations({
           <TableCell numeric className="type-caption">
             <DisplayTime value={invitation.expires_at} />
           </TableCell>
-          <TableCell className="whitespace-nowrap">
-            <div className="flex items-center justify-end gap-2">
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={busy}
-                onClick={() => onResend(invitation.id)}
-              >
-                Resend
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                disabled={busy}
-                onClick={() => onRevoke(invitation)}
-              >
-                Revoke
-              </Button>
-            </div>
-          </TableCell>
+          <TableActionsCell>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={busy}
+              onClick={() => onResend(invitation.id)}
+            >
+              Resend
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={busy}
+              onClick={() => onRevoke(invitation)}
+            >
+              Revoke
+            </Button>
+          </TableActionsCell>
         </TableRow>
       ))}
     </DataTable>
@@ -217,5 +215,5 @@ const INVITATION_COLUMNS: readonly DataTableColumn[] = [
   { key: 'invitee', label: 'Invitee' },
   { key: 'role', label: 'Workspace role', width: 'status' },
   { key: 'expires', label: 'Link expires', width: 'date', numeric: true },
-  { key: 'access', label: 'Access', width: 'name', numeric: 'end' },
+  { key: 'access', label: 'Access', width: 'rowActions', numeric: 'end' },
 ];

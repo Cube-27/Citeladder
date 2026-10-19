@@ -4,11 +4,12 @@ import { SearchX, Trash2 } from 'lucide-react';
 
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Button, IconButton } from '@/components/ui/button';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import type { FilterBarProps } from '@/components/ui/filter-bar';
+import { Inline } from '@/components/ui/layout';
 import { Select } from '@/components/ui/select';
-import { ClampText, TableCell, TableRow } from '@/components/ui/table';
+import { ClampText, TableActionsCell, TableCell, TableRow } from '@/components/ui/table';
 import { Tooltip } from '@/components/ui/tooltip';
 import type { AssignableWorkspaceRole, WorkspaceMember } from '@/lib/api/workspaces';
 
@@ -17,7 +18,7 @@ import { ROLE_OPTIONS, roleLabel } from './member-roles';
 const COLUMNS: readonly DataTableColumn[] = [
   { key: 'member', label: 'Member' },
   { key: 'role', label: 'Workspace role', width: 'name' },
-  { key: 'access', label: 'Access', width: 'name', numeric: 'end' },
+  { key: 'access', label: 'Access', width: 'rowActions', numeric: 'end' },
 ];
 
 /** What the roster shows instead of rows, if anything. */
@@ -126,11 +127,11 @@ function MemberRow({
   return (
     <TableRow>
       <TableCell>
-        <div className="flex min-w-0 items-center gap-2">
+        <Inline>
           <Avatar name={member.email} />
           <ClampText lines={1}>{member.email}</ClampText>
           {member.is_self ? <Badge variant="neutral">You</Badge> : null}
-        </div>
+        </Inline>
       </TableCell>
       <TableCell className="whitespace-nowrap">
         {inert ? (
@@ -145,36 +146,31 @@ function MemberRow({
           />
         )}
       </TableCell>
-      <TableCell className="whitespace-nowrap">
-        <div className="flex items-center justify-end gap-2">
-          {inert ? null : (
-            <>
-              {onTransfer ? (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={busy}
-                  onClick={() => onTransfer(member)}
-                >
-                  Make owner
-                </Button>
-              ) : null}
-              <Tooltip content={`Remove ${member.email}`}>
-                <Button
-                  type="button"
-                  variant="destructiveGhost"
-                  size="icon"
-                  aria-label={`Remove ${member.email} from this workspace`}
-                  disabled={busy}
-                  onClick={() => onRemove(member)}
-                >
-                  <Trash2 className="size-4" aria-hidden />
-                </Button>
-              </Tooltip>
-            </>
-          )}
-        </div>
-      </TableCell>
+      <TableActionsCell>
+        {inert ? null : (
+          <>
+            {onTransfer ? (
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={busy}
+                onClick={() => onTransfer(member)}
+              >
+                Make owner
+              </Button>
+            ) : null}
+            <Tooltip content={`Remove ${member.email}`}>
+              <IconButton
+                icon={Trash2}
+                variant="destructiveGhost"
+                label={`Remove ${member.email} from this workspace`}
+                disabled={busy}
+                onClick={() => onRemove(member)}
+              />
+            </Tooltip>
+          </>
+        )}
+      </TableActionsCell>
     </TableRow>
   );
 }

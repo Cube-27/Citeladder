@@ -6,6 +6,7 @@ import { UserPlus } from 'lucide-react';
 
 import { ConfirmDialog, type ConfirmRequest } from '@/components/ui/confirm-dialog';
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
 import { Stack } from '@/components/ui/layout';
 import { MutationNotice } from '@/components/ui/mutation-notice';
 import { SearchField } from '@/components/ui/search-field';
@@ -264,7 +265,7 @@ export function MemberSettings({ mayInvite }: Readonly<{ mayInvite: boolean }>) 
           ),
           actions: mayInvite ? (
             <Button type="button" onClick={() => setInviteOpen(true)}>
-              <UserPlus className="size-3.5" aria-hidden />
+              <Icon icon={UserPlus} />
               Invite
             </Button>
           ) : undefined,

@@ -278,7 +278,12 @@ interaction recipes live only in [`design.md`](design.md).
 | Text roles (`textRole`) | `frontend/components/ui/typography.tsx` |
 | List beside its detail | `frontend/components/ui/list-detail.tsx` (`ListDetailCard`, `ListDetailRow`, `ListDetailPane`) |
 | Stack, Inline | `frontend/components/ui/layout.tsx` |
-| Icon, Dot | `frontend/components/ui/icon.tsx` |
+| Icon, Dot, IconTile | `frontend/components/ui/icon.tsx` |
+| Offer and connection rows; identity rows | `frontend/components/ui/control-row.tsx` (`ControlRow`); `frontend/components/ui/workspace.tsx` (`IdentityRow`) |
+| Fact lists and fixed-height ledgers | `frontend/components/ui/facts.tsx` (`FactList`, `ValueLedger`) |
+| Settings sections | `frontend/components/ui/settings-section.tsx` (`SettingsSections`, `SettingsSection`) |
+| Tree rail, reorderable list, widget toolbar | `frontend/components/ui/rail.tsx`, `reorder-list.tsx`, `floating-toolbar.tsx` |
+| Chat thread and composer dock | `frontend/components/ui/chat-dock.tsx` (`DockedThread`, `ComposerDock`, `ComposerFrame`, `RemovableChip`, `SuggestionList`) |
 | Panel (`panelClasses`) and card content (one box recipe) | `frontend/components/ui/panel.tsx`, `frontend/components/ui/card.tsx` |
 | Menu separator | `frontend/components/ui/dropdown.tsx` |
 | Pagination (`Pager`) | `frontend/components/ui/pager.tsx` |

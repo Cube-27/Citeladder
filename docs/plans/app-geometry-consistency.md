@@ -545,7 +545,7 @@ Done in PR 6b:
   in a `TableActionsCell`). The referral trend cards draw their scale on
   `TrendChart`'s own axes (`countYLabels` deleted). The row-actions,
   selection and preview users (`candidate-review`, `csv-import-dialog`,
-  settings rows) are in PR 6a's folders and adopt them next.
+  settings rows) are in PR 6a's folders and adopted them there.
 - Everything else moved onto `Inline`, `Icon`, `IconButton`,
   `ledgerItemClasses`, `treeBranchClasses`, `splitPaneClasses`,
   `Tabs spaced`, `Dialog width="wide"`, `Skeleton shape` and `QueryState`.
@@ -586,9 +586,92 @@ Left in these folders (25), each waiting on an organism outside them:
   flow-entity edit row's height (`review-step` `my-1.5` ×2, which keeps the
   row from shrinking while it is edited) and the 20px selection mark's
   glyph (`choice-controls` `size-3.5`). 4.
-- `ui/dropdown.tsx` — content matching its trigger's width, and an inline
-  code token in `ui/typography` (`mcp/connect-strip`: `w-[var(--radix-…)]`,
-  `rounded-*`, `px-2`, `py-1`). 4.
+- An inline code token in `ui/typography` (`mcp/connect-strip`:
+  `rounded-*`, `px-2`, `py-1`). 3. The trigger-width menu there moved to
+  `DropdownContent width="trigger"` in PR 6a.
+
+#### PR 6a — agent, projects, prompts, settings and billing carry no geometry
+
+Done in PR 6a:
+
+- Layering findings: `agent` 85 → 0, `projects` 60 → 0, `prompts` 52 → 0,
+  `settings` 48 → 0, `billing` 19 → 0 (264 → 0). These folders have no
+  baseline entry. After PR 6b, the whole layering debt fell from 289 to 24
+  (23 `layer-geometry`, 1 `layer-size-prop`), all listed in PR 6b's
+  remainder.
+- Adopted PR 6b's `DataTable` additions:
+  - `candidate-review` is a nested `DataTable` with `selection`. Its rows
+    are two lines: the suggestion over its topic and quality status, then a
+    Checks column with the search-data tag and quality flags.
+    `TableSelectCell` gained `describedBy`, so each row's checkbox is still
+    described by its quality status.
+  - The CSV import preview is a nested `DataTable`.
+  - The member roster, pending invitations and prompt library put their row
+    actions in `TableActionsCell` (the two Settings tables on the
+    `rowActions` width).
+- `mcp/connect-strip` uses `DropdownContent width="trigger"`, which clears
+  one of PR 6b's four findings there. `DropdownContent` and `Dialog` no
+  longer take `className`. The crawl log dialog in `ai-traffic` moved from
+  `className="w-144"` to `width="wide"` (576 → 720).
+- New one-form organisms in `components/ui`, each with only placement or
+  role props:
+  - `ControlRow` (`ui/control-row.tsx`): an offer or connection row (an
+    optional leading mark, the text column, trailing controls that drop
+    under the text below `desktop`); `boxed` puts it on the tonal panel.
+    Billing plan rows, plan changes, extra purchases and the integration
+    connection row use it.
+  - `IconTile` (`ui/icon.tsx`): the 32px recessed square that names a row's
+    kind.
+  - `FactList` with `layout` `ruled`/`inline`/`spread` (and `total` for a
+    quote) and `ValueLedger`, a fixed-row-count ledger (`ui/facts.tsx`).
+    `SettingsFacts` is deleted. Settings facts, an Action's facts and
+    evidence, the quote lines and the overview widgets' rows draw through
+    them.
+  - `SettingsSection`/`SettingsSections` moved from `components/settings`
+    to `ui/settings-section.tsx` and lost `className`. `IdentityRow` (logo
+    or avatar, title, caption, actions) and `MetaFooter trailing` were added
+    to `ui/workspace.tsx`.
+  - `RailItem`/`RailItemForm` (`ui/rail.tsx`): the topic tree rail.
+    `ReorderList` (`ui/reorder-list.tsx`): Ranked actions (drag, and move up
+    and down buttons).
+  - `FloatingToolbar` (`ui/floating-toolbar.tsx`): the overview widget
+    editing controls.
+  - `DockedThread`, `ComposerDock`, `ComposerFrame`, `RemovableChip` and
+    `SuggestionList` (`ui/chat-dock.tsx`): the chat thread/composer dock
+    template for the Agent panel and full-page chat.
+  - `ChartKey` (`ui/chart.tsx`): a static legend.
+  - `OptionRow` (`ui/list-row.tsx`): a selectable option with a check.
+  - `badgeLinkClasses`: an evidence chip that is a link.
+- Width and placement roles instead of classes:
+  - `Dialog width="review"` (820); `Dialog` lost `className` and its close
+    control is an `IconButton`.
+  - `DropdownContent width` `panel` (256) and `trigger` (the trigger's
+    width).
+  - `Input width="quantity"`, `Textarea placement="composer"`,
+    `Checkbox nested`, and `Drawer body="dock"` (replaces `bodyClassName`).
+- `Button`, `DropdownItem` and badges do not size a descendant `svg`:
+  `[&_svg]` would also resize logos and avatars inside a control, so every
+  glyph is the `Icon` atom instead.
+- Rendered changes, all onto the shared rungs:
+  - Dropdown menus: 224 → 256.
+  - Dialogs: the project edit dialog 620 → 720 (`wide`), generate setup
+    520 → 480 (`form`), review dialogs 800 → 820.
+  - Quote lines: 4 → 8 apart.
+  - Settings profile identity gap: 16 → 12.
+  - Project market ledger rows: 8 → 12 padding.
+  - Workflow cards: 8 → 16 apart.
+  - The composer chip's remove glyph: 12 → 16.
+  - Run step lists and an output's contents hang on the tree hairline;
+    run summaries are `Disclosure`s.
+- The census also measures `icon-tile.size` (32), `row-part.gap` (12,
+  ControlRow and IdentityRow) and `fact-row.padding-y` (8, ruled facts). It
+  passes at 982/1280, light and dark. `ValueLedger` rows, `RailItem`,
+  `ReorderList`, `FloatingToolbar`, `ChartKey` and the composer dock do not
+  render under the shell fixture (they need overview, topic, run or chat
+  data), so the census does not measure them.
+
+Nothing is left in these five folders. The remaining 24 findings are PR 6b's
+list above, with `mcp/connect-strip` down to 3 (the inline code token).
 
 ## Acceptance
 

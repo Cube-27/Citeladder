@@ -4,9 +4,9 @@ import type { BillingQuote } from '@/lib/api/billing';
 import { formatMoney } from '@/lib/billing/catalog';
 
 import { DisplayTime } from '@/components/ui/display-time';
+import { FactList } from '@/components/ui/facts';
 import { Stack } from '@/components/ui/layout';
 import { panelClasses } from '@/components/ui/panel';
-import { textRole } from '@/components/ui/typography';
 
 const TREATMENT_LABEL: Record<BillingQuote['tax_treatment'], string> = {
   CGST_SGST: 'GST within Maharashtra (CGST + SGST)',
@@ -48,18 +48,11 @@ export function BillingQuoteSummary({
         Quote · {TREATMENT_LABEL[quote.tax_treatment]} · valid until{' '}
         <DisplayTime value={quote.expires_at} />
       </span>
-      <Stack as="dl" gap="tight">
-        {lines.map(([label, value]) => (
-          <div key={label} className="flex justify-between gap-4">
-            <dt className="text-muted">{label}</dt>
-            <dd className="tabular-nums">{value}</dd>
-          </div>
-        ))}
-        <div className="border-border flex justify-between gap-4 border-t pt-1">
-          <dt className={textRole('emphasis')}>Total</dt>
-          <dd className={textRole('emphasis', 'tabular-nums')}>{money(quote.total_price)}</dd>
-        </div>
-      </Stack>
+      <FactList
+        layout="spread"
+        facts={lines.map(([label, value]) => ({ label, value }))}
+        total={{ label: 'Total', value: money(quote.total_price) }}
+      />
     </Stack>
   );
 }
