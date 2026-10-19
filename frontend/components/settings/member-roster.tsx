@@ -4,9 +4,10 @@ import { SearchX, Trash2 } from 'lucide-react';
 
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Button, IconButton } from '@/components/ui/button';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import type { FilterBarProps } from '@/components/ui/filter-bar';
+import { Inline } from '@/components/ui/layout';
 import { Select } from '@/components/ui/select';
 import { ClampText, TableCell, TableRow } from '@/components/ui/table';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -126,11 +127,11 @@ function MemberRow({
   return (
     <TableRow>
       <TableCell>
-        <div className="flex min-w-0 items-center gap-2">
+        <Inline>
           <Avatar name={member.email} />
           <ClampText lines={1}>{member.email}</ClampText>
           {member.is_self ? <Badge variant="neutral">You</Badge> : null}
-        </div>
+        </Inline>
       </TableCell>
       <TableCell className="whitespace-nowrap">
         {inert ? (
@@ -146,7 +147,7 @@ function MemberRow({
         )}
       </TableCell>
       <TableCell className="whitespace-nowrap">
-        <div className="flex items-center justify-end gap-2">
+        <Inline className="justify-end">
           {inert ? null : (
             <>
               {onTransfer ? (
@@ -160,20 +161,17 @@ function MemberRow({
                 </Button>
               ) : null}
               <Tooltip content={`Remove ${member.email}`}>
-                <Button
-                  type="button"
+                <IconButton
+                  icon={Trash2}
                   variant="destructiveGhost"
-                  size="icon"
-                  aria-label={`Remove ${member.email} from this workspace`}
+                  label={`Remove ${member.email} from this workspace`}
                   disabled={busy}
                   onClick={() => onRemove(member)}
-                >
-                  <Trash2 className="size-4" aria-hidden />
-                </Button>
+                />
               </Tooltip>
             </>
           )}
-        </div>
+        </Inline>
       </TableCell>
     </TableRow>
   );

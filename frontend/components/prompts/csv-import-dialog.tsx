@@ -7,6 +7,7 @@ import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { CsvImportFileInput, CsvImportPreview, useCsvImportFile } from '@/components/ui/csv-import';
 import { Dialog } from '@/components/ui/dialog';
+import { Icon } from '@/components/ui/icon';
 import { Stack } from '@/components/ui/layout';
 import {
   ClampText,
@@ -81,7 +82,7 @@ export function CsvImportDialog({
       onOpenChange={handleOpenChange}
       title="Import prompts from CSV"
       description="Columns: topic, prompt. New topic names are created; rows without a topic import without one."
-      className="w-205"
+      width="review"
       footer={
         <>
           <Button variant="ghost" onClick={() => handleOpenChange(false)}>
@@ -103,7 +104,7 @@ export function CsvImportDialog({
         <Stack gap="compact">
           <CsvImportFileInput inputRef={inputRef} onSelect={(file) => void selectFile(file)} />
           <Button variant="secondary" className="justify-self-start" onClick={downloadSample}>
-            <Download className="size-4" aria-hidden />
+            <Icon icon={Download} />
             Download sample CSV
           </Button>
         </Stack>

@@ -19,7 +19,7 @@ import { Stack } from '@/components/ui/layout';
 import { ShellFallback } from '@/components/layout/shell-fallback';
 import { Dialog } from '@/components/ui/dialog';
 import AccountSecurity from '@/components/settings/account-security';
-import { SettingsSections } from '@/components/settings/settings-section';
+import { SettingsSections } from '@/components/ui/settings-section';
 import { RestorePlan } from '@/components/billing/restore-plan';
 
 function accessAllowed(access: z.infer<typeof accessSchema> | undefined, deadline: number | null) {

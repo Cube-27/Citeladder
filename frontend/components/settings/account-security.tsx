@@ -9,10 +9,10 @@ import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { Alert } from '@/components/ui/alert';
 import { AuthPasswordField } from '@/components/auth/auth-form';
-import { Stack } from '@/components/ui/layout';
+import { FactList } from '@/components/ui/facts';
+import { Inline, Stack } from '@/components/ui/layout';
+import { SettingsSection } from '@/components/ui/settings-section';
 import { textRole } from '@/components/ui/typography';
-
-import { SettingsFacts, SettingsSection } from './settings-section';
 
 const METHOD_LABELS: Record<string, string> = { password: 'Email and password', google: 'Google' };
 
@@ -22,10 +22,14 @@ function SecurityIdentity({
   if (!data) return null;
   const methods = data.methods.map((method) => METHOD_LABELS[method] ?? method);
   return (
-    <SettingsFacts
+    <FactList
+      layout="ruled"
       facts={[
-        ['Sign in with', methods.length ? methods.join(' or ') : 'No sign-in method yet'],
-        ['Email', data.email_verified ? 'Verified' : 'Not verified'],
+        {
+          label: 'Sign in with',
+          value: methods.length ? methods.join(' or ') : 'No sign-in method yet',
+        },
+        { label: 'Email', value: data.email_verified ? 'Verified' : 'Not verified' },
       ]}
     />
   );
@@ -135,7 +139,7 @@ export default function AccountSecurity() {
                 maxLength: authFormPolicy.passwordMaxLength,
               }}
             />
-            <div className="flex flex-wrap gap-2">
+            <Inline className="flex-wrap">
               <Button type="submit" disabled={mutation.isPending}>
                 Change password and sign out
               </Button>
@@ -149,7 +153,7 @@ export default function AccountSecurity() {
                   Connect Google
                 </Button>
               )}
-            </div>
+            </Inline>
           </Stack>
         ) : (
           <Button
@@ -164,14 +168,14 @@ export default function AccountSecurity() {
         <ErrorAlerts errors={{ setup: setup.error, session: mutation.error, link: link.error }} />
       </SettingsSection>
       <SettingsSection title="Sessions" description="Sign out every device, including this one.">
-        <div className="flex flex-wrap gap-2">
+        <Inline className="flex-wrap">
           <Button variant="secondary" onClick={() => setConfirm('sign-out')}>
             Sign out all sessions
           </Button>
           <Button variant="destructiveGhost" onClick={() => setConfirm('disconnect')}>
             Sign out everywhere and disconnect integrations
           </Button>
-        </div>
+        </Inline>
       </SettingsSection>
       <Dialog
         open={confirm === 'sign-out'}

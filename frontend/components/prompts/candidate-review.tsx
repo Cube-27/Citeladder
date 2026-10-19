@@ -7,8 +7,9 @@ import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Icon } from '@/components/ui/icon';
 import { InfoHint } from '@/components/ui/info-hint';
-import { Stack } from '@/components/ui/layout';
+import { Inline, Stack } from '@/components/ui/layout';
 import { panelClasses } from '@/components/ui/panel';
 import { Tag } from '@/components/ui/tag';
 import { textRole } from '@/components/ui/typography';
@@ -78,13 +79,13 @@ export function CandidateReview({
         <h3 id="candidate-review-heading" className={textRole('itemTitle')}>
           Review {plural(candidates.length, 'suggestion')}
         </h3>
-        <div className="flex gap-2">
+        <Inline>
           <Button
             variant="ghost"
             onClick={() => review(onReject)}
             disabled={isReviewing || selected.length === 0}
           >
-            <X className="size-4" aria-hidden />
+            <Icon icon={X} />
             Reject selected
           </Button>
           <Button
@@ -92,10 +93,10 @@ export function CandidateReview({
             onClick={() => review(onAccept)}
             disabled={isReviewing || selected.length === 0}
           >
-            <Check className="size-4" aria-hidden />
+            <Icon icon={Check} />
             Accept selected
           </Button>
-        </div>
+        </Inline>
       </div>
       {error ? <Alert tone="danger">{error}</Alert> : null}
       {notice ? <Alert tone="success">{notice}</Alert> : null}
@@ -126,13 +127,13 @@ export function CandidateReview({
                 <span className="type-body text-foreground">{candidate.text}</span>
                 {topicName ? <span className="type-caption">{topicName}</span> : null}
                 {candidate.grounded ? (
-                  <span className="flex items-center gap-1">
+                  <Inline as="span" gap="tight">
                     <Tag>Informed by your search data</Tag>
                     <InfoHint label="About search data">
                       Phrasing was guided by queries from your connected Search Console or keyword
                       research. The prompt itself was written for AI assistants.
                     </InfoHint>
-                  </span>
+                  </Inline>
                 ) : null}
                 <span
                   id={`${descriptionId}-${candidate.id}`}
@@ -141,13 +142,13 @@ export function CandidateReview({
                   {qualityStatusLabel(candidate)}
                 </span>
                 {candidate.quality_flags.length ? (
-                  <span className="flex flex-wrap gap-1">
+                  <Inline as="span" gap="tight" className="flex-wrap">
                     {candidate.quality_flags.map((flag) => (
                       <Badge key={flag} variant="status" value="warning">
                         {qualityFlagLabel(flag)}
                       </Badge>
                     ))}
-                  </span>
+                  </Inline>
                 ) : null}
               </Stack>
             </li>
@@ -220,14 +221,14 @@ export function PendingReviewNotice({
   if (!count || hidden) return null;
   return (
     <Alert tone="info">
-      <span className="flex flex-wrap items-center justify-between gap-2">
+      <Inline as="span" className="flex-wrap justify-between">
         {count === 1
           ? '1 generated prompt is waiting for review.'
           : `${count} generated prompts are waiting for review.`}
         <Button variant="secondary" onClick={onReview}>
           Review suggestions
         </Button>
-      </span>
+      </Inline>
     </Alert>
   );
 }

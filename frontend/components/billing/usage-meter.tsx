@@ -4,7 +4,7 @@ import { USAGE_METER_CRITICAL_RATIO, USAGE_METER_WARNING_RATIO } from '@/lib/con
 import type { UsageItem } from '@/lib/api/billing';
 import type { DataTone } from '@/components/ui/data-tone';
 import { DisplayTime } from '@/components/ui/display-time';
-import { Stack } from '@/components/ui/layout';
+import { Inline, Stack } from '@/components/ui/layout';
 import { Meter } from '@/components/ui/meter';
 import { textRole } from '@/components/ui/typography';
 
@@ -31,10 +31,10 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
   if (item.limit_state === 'unknown') {
     return (
       <Stack gap="tight">
-        <div className="flex items-center justify-between gap-3">
+        <Inline gap="compact" className="justify-between">
           <span className={textRole('label')}>{label}</span>
           <span className={textRole('label')}>Not available</span>
-        </div>
+        </Inline>
         <p className="type-caption">This allowance could not be resolved, so no usage is shown.</p>
       </Stack>
     );
@@ -43,16 +43,16 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
   if (item.limit_state === 'unlimited') {
     return (
       <Stack gap="tight">
-        <div className="flex items-center justify-between gap-3">
+        <Inline gap="compact" className="justify-between">
           <span className={textRole('label')}>{label}</span>
           <span className={textRole('label', 'tabular-nums')}>
             {item.consumed ?? 0} {item.unit}
           </span>
-        </div>
-        <div className="flex items-center justify-between gap-3">
+        </Inline>
+        <Inline gap="compact" className="justify-between">
           <span className="type-caption">Unlimited</span>
           <ExpiryLine item={item} />
-        </div>
+        </Inline>
       </Stack>
     );
   }
@@ -65,12 +65,12 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
 
   return (
     <Stack gap="tight">
-      <div className="flex items-center justify-between gap-3">
+      <Inline gap="compact" className="justify-between">
         <span className={textRole('label')}>{label}</span>
         <span className={textRole('label', 'tabular-nums')}>
           {consumed} / {allowance} {item.unit}
         </span>
-      </div>
+      </Inline>
       <Meter
         label={`${label} usage`}
         value={consumed}
@@ -78,13 +78,13 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
         tone={usageTone(ratio)}
         valueText={`${consumed} of ${allowance} ${item.unit}`}
       />
-      <div className="flex items-center justify-between gap-3">
+      <Inline gap="compact" className="justify-between">
         <span className="type-caption">
           {remaining} remaining
           {item.reserved ? ` · ${item.reserved} reserved` : ''}
         </span>
         <ExpiryLine item={item} />
-      </div>
+      </Inline>
     </Stack>
   );
 }

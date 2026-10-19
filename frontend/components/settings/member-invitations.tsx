@@ -12,7 +12,7 @@ import { DisplayTime } from '@/components/ui/display-time';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { readErrorProps, type RetryableRead } from '@/components/ui/read-error';
-import { Stack } from '@/components/ui/layout';
+import { Inline, Stack } from '@/components/ui/layout';
 import { Select } from '@/components/ui/select';
 import { ClampText, TableCell, TableRow } from '@/components/ui/table';
 import type { AssignableWorkspaceRole, WorkspaceInvitation } from '@/lib/api/workspaces';
@@ -175,7 +175,7 @@ export function PendingInvitations({
             <DisplayTime value={invitation.expires_at} />
           </TableCell>
           <TableCell className="whitespace-nowrap">
-            <div className="flex items-center justify-end gap-2">
+            <Inline className="justify-end">
               <Button
                 type="button"
                 variant="secondary"
@@ -192,7 +192,7 @@ export function PendingInvitations({
               >
                 Revoke
               </Button>
-            </div>
+            </Inline>
           </TableCell>
         </TableRow>
       ))}

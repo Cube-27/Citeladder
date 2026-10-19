@@ -20,9 +20,10 @@ import { websiteHref } from '@/lib/config/app-link';
 import { contactSalesHref } from '@/lib/config/contact';
 
 import { Button } from '@/components/ui/button';
+import { ControlRow } from '@/components/ui/control-row';
 import { ExternalHttpLink } from '@/components/ui/external-http-link';
-import { Stack } from '@/components/ui/layout';
-import { panelClasses } from '@/components/ui/panel';
+import { Icon } from '@/components/ui/icon';
+import { Inline } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
 
 export function PlanRow({
@@ -55,25 +56,11 @@ export function PlanRow({
     pending,
   );
   return (
-    <div
-      className={panelClasses(
-        { tone: 'tonal' },
-        'flex flex-col justify-between gap-3 desktop:flex-row desktop:items-center',
-      )}
+    <ControlRow
+      boxed
       data-tier={plan.key}
-    >
-      <Stack gap="tight" className="min-w-0">
-        <div className="flex items-center gap-2">
-          <span className={textRole('itemTitle')}>{plan.name}</span>
-          <span className={textRole('label', 'tabular-nums')}>{priceLabel}</span>
-        </div>
-        {plan.description ? <p className="type-caption">{plan.description}</p> : null}
-        {!selection.ok && !plan.contact_only && selection.reason ? (
-          <p className="type-caption">{billingReasonMessage(selection.reason)}</p>
-        ) : null}
-      </Stack>
-      <div className="shrink-0">
-        {plan.contact_only ? (
+      controls={
+        plan.contact_only ? (
           <Button asChild variant="secondary">
             <ExternalHttpLink
               href={contactSalesHref(
@@ -81,7 +68,7 @@ export function PlanRow({
                 new URL(websiteHref('/contact'), 'https://citeladder.com').href,
               )}
             >
-              Contact sales <ExternalLink className="size-3.5" aria-hidden />
+              Contact sales <Icon icon={ExternalLink} />
             </ExternalHttpLink>
           </Button>
         ) : (
@@ -89,12 +76,21 @@ export function PlanRow({
             disabled={!canCheckout || locked}
             onClick={() => selection.ok && onCheckout(selection.catalog_key, billingDetails)}
           >
-            <CreditCard className="size-3.5" aria-hidden />
+            <Icon icon={CreditCard} />
             {planCheckoutLabel(pending, selection.ok, plan.name)}
           </Button>
-        )}
-      </div>
-    </div>
+        )
+      }
+    >
+      <Inline>
+        <span className={textRole('itemTitle')}>{plan.name}</span>
+        <span className={textRole('label', 'tabular-nums')}>{priceLabel}</span>
+      </Inline>
+      {plan.description ? <p className="type-caption">{plan.description}</p> : null}
+      {!selection.ok && !plan.contact_only && selection.reason ? (
+        <p className="type-caption">{billingReasonMessage(selection.reason)}</p>
+      ) : null}
+    </ControlRow>
   );
 }
 

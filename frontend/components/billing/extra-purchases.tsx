@@ -3,6 +3,7 @@
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { ControlRow } from '@/components/ui/control-row';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
@@ -46,49 +47,46 @@ function ExtraRow({
   const purchasable = isPurchasable(entry);
   const inputId = `extra-quantity-${entry.key}`;
   return (
-    <div
-      className={panelClasses(
-        { tone: 'tonal' },
-        'flex flex-col justify-between gap-3 desktop:flex-row desktop:items-center',
-      )}
+    <ControlRow
+      boxed
+      controls={
+        <>
+          <label htmlFor={inputId} className="sr-only">
+            Quantity of {entry.name}
+          </label>
+          <Input
+            id={inputId}
+            type="number"
+            inputMode="numeric"
+            min={entry.quantity_min}
+            max={entry.quantity_max}
+            value={typed}
+            disabled={!purchasable || disabled}
+            onChange={(event) => setTyped(event.target.value)}
+            onBlur={() => setTyped(String(quantity))}
+            width="quantity"
+          />
+          <Button
+            disabled={!purchasable || disabled}
+            onClick={() => onBuy(kind, entry.key, quantity)}
+          >
+            Buy {entry.name}
+          </Button>
+        </>
+      }
     >
-      <Stack gap="tight" className="min-w-0">
-        <span className={textRole('itemTitle')}>{entry.name}</span>
-        {entry.description ? <p className="type-caption">{entry.description}</p> : null}
-        <span className={textRole('caption')}>
-          {entry.unit_price
-            ? `${formatMoney(entry.unit_price, catalog.currency_minor_units)} each, one-time, before tax · `
-            : ''}
-          usable for {entry.expiry_days} days or until your plan ends, whichever is first
-        </span>
-        {!purchasable && entry.unavailable_reason ? (
-          <span className="type-caption">{billingReasonMessage(entry.unavailable_reason)}</span>
-        ) : null}
-      </Stack>
-      <div className="flex shrink-0 items-center gap-2">
-        <label htmlFor={inputId} className="sr-only">
-          Quantity of {entry.name}
-        </label>
-        <Input
-          id={inputId}
-          type="number"
-          inputMode="numeric"
-          min={entry.quantity_min}
-          max={entry.quantity_max}
-          value={typed}
-          disabled={!purchasable || disabled}
-          onChange={(event) => setTyped(event.target.value)}
-          onBlur={() => setTyped(String(quantity))}
-          className="w-16 text-center tabular-nums"
-        />
-        <Button
-          disabled={!purchasable || disabled}
-          onClick={() => onBuy(kind, entry.key, quantity)}
-        >
-          Buy {entry.name}
-        </Button>
-      </div>
-    </div>
+      <span className={textRole('itemTitle')}>{entry.name}</span>
+      {entry.description ? <p className="type-caption">{entry.description}</p> : null}
+      <span className={textRole('caption')}>
+        {entry.unit_price
+          ? `${formatMoney(entry.unit_price, catalog.currency_minor_units)} each, one-time, before tax · `
+          : ''}
+        usable for {entry.expiry_days} days or until your plan ends, whichever is first
+      </span>
+      {!purchasable && entry.unavailable_reason ? (
+        <span className="type-caption">{billingReasonMessage(entry.unavailable_reason)}</span>
+      ) : null}
+    </ControlRow>
   );
 }
 

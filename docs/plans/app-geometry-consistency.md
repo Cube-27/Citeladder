@@ -590,6 +590,87 @@ Left in these folders (25), each waiting on an organism outside them:
   code token in `ui/typography` (`mcp/connect-strip`: `w-[var(--radix-…)]`,
   `rounded-*`, `px-2`, `py-1`). 4.
 
+#### PR 6a — agent, projects, prompts, settings and billing carry no geometry
+
+Done in PR 6a:
+
+- Layering findings: `agent` 85 → 0, `projects` 60 → 0, `prompts` 52 → 5,
+  `settings` 48 → 0, `billing` 19 → 0 (264 → 5). The whole layering debt
+  fell from 498 to 238 (232 `layer-geometry`, 6 `layer-size-prop`), all in
+  the folders PR 6b owns plus the five below. The crawl log dialog in
+  `ai-traffic` moved from `className="w-144"` to `width="wide"` (576 → 720),
+  because `Dialog` no longer takes `className`.
+- New one-form organisms in `components/ui`, each with only placement or
+  role props:
+  - `ControlRow` (`ui/control-row.tsx`): an offer or connection row (an
+    optional leading mark, the text column, trailing controls that drop
+    under the text below `desktop`); `boxed` puts it on the tonal panel.
+    Billing plan rows, plan changes, extra purchases and the integration
+    connection row use it.
+  - `IconTile` (`ui/icon.tsx`): the 32px recessed square that names a row's
+    kind.
+  - `FactList` with `layout` `ruled`/`inline`/`spread` (and `total` for a
+    quote) and `ValueLedger`, a fixed-row-count ledger (`ui/facts.tsx`).
+    `SettingsFacts` is deleted. Settings facts, an Action's facts and
+    evidence, the quote lines and the overview widgets' rows draw through
+    them.
+  - `SettingsSection`/`SettingsSections` moved from `components/settings`
+    to `ui/settings-section.tsx` and lost `className`. `IdentityRow` (logo
+    or avatar, title, caption, actions) and `MetaFooter trailing` were added
+    to `ui/workspace.tsx`.
+  - `RailItem`/`RailItemForm` (`ui/rail.tsx`): the topic tree rail.
+    `ReorderList` (`ui/reorder-list.tsx`): Ranked actions (drag, and move up
+    and down buttons).
+  - `FloatingToolbar` (`ui/floating-toolbar.tsx`): the overview widget
+    editing controls.
+  - `DockedThread`, `ComposerDock`, `ComposerFrame`, `RemovableChip` and
+    `SuggestionList` (`ui/chat-dock.tsx`): the chat thread/composer dock
+    template for the Agent panel and full-page chat.
+  - `ChartKey` (`ui/chart.tsx`): a static legend.
+  - `OptionRow` (`ui/list-row.tsx`): a selectable option with a check.
+  - `badgeLinkClasses`: an evidence chip that is a link.
+- Width and placement roles instead of classes:
+  - `Dialog width="review"` (820); `Dialog` lost `className` and its close
+    control is an `IconButton`.
+  - `DropdownContent width` `panel` (256) and `trigger` (the trigger's
+    width).
+  - `Input width="quantity"`, `Textarea placement="composer"`,
+    `Checkbox nested`, and `Drawer body="dock"` (replaces `bodyClassName`).
+- `Button`, `DropdownItem` and badges do not size a descendant `svg`:
+  `[&_svg]` would also resize logos and avatars inside a control, so every
+  glyph is the `Icon` atom instead.
+- Rendered changes, all onto the shared rungs:
+  - Dropdown menus: 224 → 256.
+  - Dialogs: the project edit dialog 620 → 720 (`wide`), generate setup
+    520 → 480 (`form`), review dialogs 800 → 820.
+  - Quote lines: 4 → 8 apart.
+  - Settings profile identity gap: 16 → 12.
+  - Project market ledger rows: 8 → 12 padding.
+  - Workflow cards: 8 → 16 apart.
+  - The composer chip's remove glyph: 12 → 16.
+  - Run step lists and an output's contents hang on the tree hairline;
+    run summaries are `Disclosure`s.
+- The census also measures `icon-tile.size` (32), `row-part.gap` (12,
+  ControlRow and IdentityRow) and `fact-row.padding-y` (8, ruled facts). It
+  passes at 982/1280, light and dark. `ValueLedger` rows, `RailItem`,
+  `ReorderList`, `FloatingToolbar`, `ChartKey` and the composer dock do not
+  render under the shell fixture (they need overview, topic, run or chat
+  data), so the census does not measure them.
+
+Left after PR 6a, in these five folders (5 `layer-geometry`, all one
+`DataTable` need PR 6b owns):
+
+- Row selection: `components/prompts/candidate-review.tsx`, the sticky
+  selection toolbar (`gap-2 py-2`), the select-all panel (`gap-3`) and the
+  selectable candidate row (`gap-2 py-3`). It becomes a `DataTable` with
+  row selection.
+- Row actions needed no `DataTable` change: the Settings member and
+  invitation tables and the prompt library put an `Inline` with
+  `justify-end` and `IconButton`s in their last column.
+- CSV preview: `csv-import-dialog.tsx`'s `CsvImportPreview` carries no
+  layering finding, but it still frames a `Table` by hand until `DataTable`
+  has a preview mode.
+
 ## Acceptance
 
 At 982×900 and at 1280×900, light and dark, the census returns:

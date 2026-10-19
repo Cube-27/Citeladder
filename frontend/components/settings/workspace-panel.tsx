@@ -8,7 +8,8 @@ import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { Stack } from '@/components/ui/layout';
+import { Icon } from '@/components/ui/icon';
+import { Inline, Stack } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
 import { humanizeApiError } from '@/lib/api/errors';
 import { restartAt } from '@/lib/auth/account-transition';
@@ -45,12 +46,12 @@ export function WorkspacePanel() {
   return (
     <Stack gap="section">
       <Stack as="section" gap="compact" aria-labelledby="workspace-panel-title">
-        <div className="flex flex-wrap items-center gap-2">
+        <Inline className="flex-wrap">
           <h2 id="workspace-panel-title" className={textRole('sectionTitle')}>
             {activeWorkspace.name}
           </h2>
           <Badge variant="neutral">{roleLabel(activeWorkspace.role)}</Badge>
-        </div>
+        </Inline>
         <p className={textRole('body')}>{ROLE_SUMMARY[activeWorkspace.role]}</p>
         {isOwner ? (
           <p className={textRole('caption')}>
@@ -63,7 +64,7 @@ export function WorkspacePanel() {
             className="w-fit"
             onClick={() => setConfirmLeave(true)}
           >
-            <LogOut className="size-3.5" aria-hidden />
+            <Icon icon={LogOut} />
             Leave workspace
           </Button>
         )}

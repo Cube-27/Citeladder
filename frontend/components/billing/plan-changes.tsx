@@ -4,6 +4,7 @@ import { useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { ControlRow } from '@/components/ui/control-row';
 import { Dialog } from '@/components/ui/dialog';
 import { Stack } from '@/components/ui/layout';
 import { panelClasses } from '@/components/ui/panel';
@@ -86,35 +87,32 @@ export function PlanChanges({
       />
       <Stack gap="compact">
         {options.map((option) => (
-          <div
+          <ControlRow
             key={option.key}
-            className={panelClasses(
-              { tone: 'tonal' },
-              'flex flex-col justify-between gap-3 desktop:flex-row desktop:items-center',
-            )}
+            boxed
+            controls={
+              option.direction === 'upgrade' ? (
+                <Button
+                  disabled={held || !option.plan.checkout_available}
+                  onClick={() => controls.upgrade(option.key)}
+                >
+                  Upgrade to {option.plan.name}
+                </Button>
+              ) : (
+                <Button variant="secondary" disabled={held} onClick={() => setDowngradeTo(option)}>
+                  Downgrade to {option.plan.name}
+                </Button>
+              )
+            }
           >
-            <Stack gap="tight" className="min-w-0">
-              <span className={textRole('itemTitle')}>{option.plan.name}</span>
-              {option.plan.base_price ? (
-                <span className={textRole('caption')}>
-                  {formatMoney(option.plan.base_price, catalog.currency_minor_units)} / month before
-                  tax
-                </span>
-              ) : null}
-            </Stack>
-            {option.direction === 'upgrade' ? (
-              <Button
-                disabled={held || !option.plan.checkout_available}
-                onClick={() => controls.upgrade(option.key)}
-              >
-                Upgrade to {option.plan.name}
-              </Button>
-            ) : (
-              <Button variant="secondary" disabled={held} onClick={() => setDowngradeTo(option)}>
-                Downgrade to {option.plan.name}
-              </Button>
-            )}
-          </div>
+            <span className={textRole('itemTitle')}>{option.plan.name}</span>
+            {option.plan.base_price ? (
+              <span className={textRole('caption')}>
+                {formatMoney(option.plan.base_price, catalog.currency_minor_units)} / month before
+                tax
+              </span>
+            ) : null}
+          </ControlRow>
         ))}
       </Stack>
       {options.some(

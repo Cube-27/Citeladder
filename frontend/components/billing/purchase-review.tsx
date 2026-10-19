@@ -3,7 +3,7 @@
 import { CheckoutConsent } from '@/components/billing/billing-policies';
 import { BillingQuoteSummary } from '@/components/billing/quote-summary';
 import { Button } from '@/components/ui/button';
-import { Stack } from '@/components/ui/layout';
+import { Inline, Stack } from '@/components/ui/layout';
 import { panelClasses } from '@/components/ui/panel';
 import { textRole } from '@/components/ui/typography';
 import { DisplayTime } from '@/components/ui/display-time';
@@ -79,7 +79,7 @@ export function PurchaseReview({
         </p>
       ) : null}
       <CheckoutConsent recurring={prepared.kind === 'base'} />
-      <div className="flex flex-wrap gap-2">
+      <Inline className="flex-wrap">
         <Button
           disabled={checkout.confirming}
           onClick={() => void checkout.confirmPrepared().catch(() => undefined)}
@@ -89,7 +89,7 @@ export function PurchaseReview({
         <Button variant="secondary" disabled={checkout.confirming} onClick={checkout.resetPrepared}>
           Not now
         </Button>
-      </div>
+      </Inline>
     </Stack>
   );
 }
