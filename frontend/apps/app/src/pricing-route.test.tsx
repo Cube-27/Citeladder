@@ -36,7 +36,7 @@ const catalog = {
   providers: [],
 };
 
-beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
+beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
 afterEach(() => {
   mswServer.resetHandlers();
   globalThis.sessionStorage.clear();

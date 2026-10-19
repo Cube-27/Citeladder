@@ -225,7 +225,7 @@ const usageHandler = () => http.get('/api/v1/billing/usage', () => HttpResponse.
 const invoicesHandler = () =>
   http.get('/api/v1/billing/invoices', () => HttpResponse.json({ invoices: [] }));
 
-beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
+beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
 beforeEach(() => mswServer.use(invoicesHandler()));
 afterEach(() => {
   mswServer.resetHandlers();

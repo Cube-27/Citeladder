@@ -79,5 +79,3 @@ minimumReleaseAgeExclude:
   - '@oxfmt/*'
   - vitest
   - '@vitest/*'
-patchedDependencies:
-  astro@7.3.5: patches/astro@7.3.5.patch

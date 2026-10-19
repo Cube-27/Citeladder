@@ -7,9 +7,8 @@ ENV PATH="${PNPM_HOME}:${PATH}"
 WORKDIR /app
 
 # Keep this version in lockstep with packageManager in frontend/package.json.
-RUN npm install --global --ignore-scripts pnpm@12.10.1
+RUN npm install --global --ignore-scripts pnpm@12.14.0
 COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./
-COPY frontend/patches ./patches
 COPY frontend/packages/contracts/package.json ./packages/contracts/
 COPY frontend/services/api/package.json ./services/api/
 COPY frontend/packages/mcp-app/package.json ./packages/mcp-app/
@@ -43,7 +42,7 @@ ENV PUBLIC_DOCS_ORIGIN=${PUBLIC_DOCS_ORIGIN}
 ENV LOCAL_COMPOSE_BUILD=true
 WORKDIR /app
 
-RUN npm install --global --ignore-scripts pnpm@12.10.1
+RUN npm install --global --ignore-scripts pnpm@12.14.0
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY frontend ./
 RUN pnpm build:vite
