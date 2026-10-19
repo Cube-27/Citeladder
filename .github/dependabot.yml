@@ -33,8 +33,9 @@ updates:
           - version-update:semver-minor
           - version-update:semver-patch
 
-  # Keep frontend and API Node updates in one group. Their immutable base
-  # digest identifies Node 26 bookworm-slim; preserve that family on updates.
+  # Keep frontend and API Node updates in one group. The base images pin
+  # `node:26-bookworm-slim@sha256:...`: the tag keeps digest updates on that
+  # family (a bare digest let Dependabot move to the full `node` image, #428).
   #
   # The `node` group omits `update-types` on purpose. A digest bump is neither
   # patch nor minor, so `patch-and-minor` does not catch it — which is exactly
