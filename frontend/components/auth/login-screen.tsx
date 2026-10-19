@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 
 import { AuthEmailField, AuthFormShell, AuthPasswordField } from '@/components/auth/auth-form';
+import { Inline } from '@/components/ui/layout';
 import { authApi } from '@/lib/api/auth';
 import {
   authErrorMessage,
@@ -76,12 +77,12 @@ export function LoginScreen({
         autoComplete="current-password"
         placeholder="••••••••"
       />
-      <div className="auth-recovery-links flex flex-wrap justify-between gap-x-4 gap-y-2">
+      <Inline gap="meta" className="auth-recovery-links justify-between">
         <Link to={withAuthReturnPath('/forgot-password', returnTo)}>Forgot password?</Link>
         <Link to={withAuthReturnPath('/resend-verification', returnTo)}>
           Resend verification email
         </Link>
-      </div>
+      </Inline>
     </AuthFormShell>
   );
 }

@@ -6,7 +6,7 @@ import { ShellFallback } from '@/components/layout/shell-fallback';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Stack } from '@/components/ui/layout';
+import { Inline, Stack } from '@/components/ui/layout';
 import { policiesApi } from '@/lib/api/policies';
 import { queryKeys } from '@/lib/api/query-keys';
 import { humanizeApiError } from '@/lib/api/errors';
@@ -159,7 +159,7 @@ function PolicyExits() {
   const cache = useQueryClient();
   const { workspaces } = useProjectContext();
   return (
-    <div className="flex flex-wrap gap-2">
+    <Inline className="flex-wrap">
       {workspaces.length > 1 ? (
         <Button asChild variant="secondary" className="w-fit">
           <Link to={WORKSPACE_CHOOSER_PATH}>Switch workspace</Link>
@@ -168,6 +168,6 @@ function PolicyExits() {
       <Button variant="ghost" className="w-fit" onClick={() => void signOut(cache)}>
         Sign out
       </Button>
-    </div>
+    </Inline>
   );
 }

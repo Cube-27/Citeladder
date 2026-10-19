@@ -11,6 +11,7 @@ import { roleLabel } from '@/components/settings/member-roles';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DisplayTime } from '@/components/ui/display-time';
+import { Icon } from '@/components/ui/icon';
 import { Stack } from '@/components/ui/layout';
 import { listRowClasses } from '@/components/ui/list-row';
 import { Pressable } from '@/components/ui/pressable';
@@ -74,7 +75,7 @@ export function WorkspaceChooser() {
                 </span>
               </span>
               <AccessBadge workspaceId={workspace.id} />
-              <ChevronRight className="size-4 shrink-0" aria-hidden />
+              <Icon icon={ChevronRight} />
             </Pressable>
           </li>
         ))}
@@ -82,7 +83,7 @@ export function WorkspaceChooser() {
       {ownsOne ? null : (
         <Button asChild variant="secondary" className="w-fit">
           <Link to={WORKSPACE_SETUP_PATH}>
-            <Plus className="size-4" aria-hidden />
+            <Icon icon={Plus} />
             Set up your own workspace
           </Link>
         </Button>

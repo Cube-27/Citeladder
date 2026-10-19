@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { useId, type ReactNode } from 'react';
 import '@/apps/app/src/website-type.css';
 
+import { Icon } from '@/components/ui/icon';
+import { Inline } from '@/components/ui/layout';
 import { cn } from '@/lib/utils';
 
 import { AuthWordmark } from './brand-panel';
@@ -84,10 +86,10 @@ function FlowBar({
   ) : null;
   const exit: ReactNode =
     exitLink || trailing ? (
-      <div className="flex items-center justify-end gap-3 justify-self-end">
+      <Inline gap="compact" className="justify-end justify-self-end">
         {exitLink}
         {trailing}
-      </div>
+      </Inline>
     ) : (
       <span />
     );
@@ -128,7 +130,7 @@ function FlowProgress({
                 )}
                 aria-hidden="true"
               >
-                {isDone ? <Check className="size-3.5" /> : index + 1}
+                {isDone ? <Icon icon={Check} /> : index + 1}
               </span>
               <span className="flow-step-label">
                 <span className="flow-step-mobile-prefix">

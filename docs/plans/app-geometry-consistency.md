@@ -512,6 +512,84 @@ and 5c waited on now exists: `Inline` with its 8 rung, `Icon`,
 `IconButton`, `ledgerItemClasses`, `Tabs spaced`, `Dialog width="wide"`,
 `Skeleton shape` and `ChartFrame`.
 
+#### PR 6b — DataTable closes its gaps; twelve feature folders on the organisms
+
+Scope: `ui/data-table.tsx` and `ui/table.tsx`, and the twelve folders of
+PR 5c (`demand`, `performance`, `search-intelligence`, `products`,
+`knowledge-base`, `auth`, `ai-traffic`, `integrations`, `opportunities`,
+`onboarding`, `providers`, `mcp`).
+
+Done in PR 6b:
+
+- `DataTable` gained, as roles rather than numbers: the `metric` (a figure
+  whose header names its unit), `category` (a badge longer than a status)
+  and `rowActions` (up to two trailing buttons) width roles; plain headers
+  that wrap instead of overlapping in the fixed layout; `sublabel` under a
+  non-sortable header; a one-line `description` under the 49px header row;
+  `rowLines={2}`, which pads a short page with two-line blanks of the real
+  anatomy; `pinFirstColumn`; `selection` (a leading checkbox column with a
+  select-all box); `nested` (no card of its own inside a box that already
+  frames it — also the preview mode for `csv-import-dialog`); and the table
+  named by its title or label. `ui/table.tsx` gained `TableCellLines` (a
+  value over a caption, each cut to one line), `TableActionsCell` and
+  `TableSelectCell`. The cursor pager needed nothing new: a cursor table
+  passes its `Pager` controls as `pager`. Covered by
+  `ui/data-table.test.tsx`.
+- On `DataTable` now: `demand/demand-signal-table`, `performance/dimension-table`
+  (pinned lead column, captions under the comparison columns, its loading,
+  error and empty states in the table body), AI Traffic `pages-view`, the
+  crawler and coverage tables in `traffic-views` (coverage with its cursor
+  pager and states), the channel comparison and landing pages in
+  `referral-details`, the source totals in `referrals-dashboard` and the
+  source diagnostics in `crawl-log-connections` (nested in its card, actions
+  in a `TableActionsCell`). The referral trend cards draw their scale on
+  `TrendChart`'s own axes (`countYLabels` deleted). The row-actions,
+  selection and preview users (`candidate-review`, `csv-import-dialog`,
+  settings rows) are in PR 6a's folders and adopt them next.
+- Everything else moved onto `Inline`, `Icon`, `IconButton`,
+  `ledgerItemClasses`, `treeBranchClasses`, `splitPaneClasses`,
+  `Tabs spaced`, `Dialog width="wide"`, `Skeleton shape` and `QueryState`.
+  The readiness ladder's step marks are `Icon`s and a `Spinner`
+  (`--color-info-border` lost its last user and is deleted); the business
+  map's removable chips are list rows with `IconButton`s; the integration
+  rows lost their 32px icon tile for the `Icon`.
+- Layering findings in these folders fell from 234 to 25; the whole layering
+  debt from 498 to 289 (274 `layer-geometry`, 15 `layer-size-prop`). The
+  census passes at 982/1280, light and dark.
+
+Left in these folders (25), each waiting on an organism outside them:
+
+- `ui/filter-bar.tsx` — a filter width role (only search has one):
+  `ai-traffic/traffic-controls` (`desktop:w-44` folder input,
+  `desktop:w-32` status input), `performance/performance-chrome` (`w-36`
+  granularity select), `search-intelligence-dataset-view` (`w-40` volume
+  input). 4.
+- `ui/metric-value.tsx` — one form (or a comparison slot on `StatRow`):
+  `performance/metric-cards` `size="figureSm"` and the `border-t pt-1`
+  comparison line. 2.
+- `ui/input.tsx` — a shared end-of-field icon target (the one `SearchField`'s
+  clear button draws): the password-reveal `Pressable` in `auth/auth-form`
+  (`size-7`, `rounded-*`). 2.
+- `ui/checkbox.tsx` / `ui/field.tsx` — a caption aligned under a checkbox's
+  label: `auth/auth-form` Terms notice and error (`ps-[calc(…)]`). 2.
+- The Google brand glyph's size in `auth/auth-form` (`size-4` default) — a
+  brand-glyph role on `Icon` or `BrandLogo`. 1.
+- `layout/shell-fallback.tsx` / a gate template — the fallback and gate page
+  padding: `auth/policy-acceptance` and `auth/workspace-access-gate`
+  (`p-8`), `onboarding/onboarding-page-client`
+  (`p-[var(--page-section-gap)]`). 3.
+- `ui/list-row.tsx` — a padded navigation row (the chooser's
+  `listRowClasses` row with its own `gap-3 px-3 py-2.5`):
+  `auth/workspace-chooser`. 3.
+- The flow surface (`auth/flow-shell` + `website-type.css`): the onboarding
+  stage band gap (`onboarding-stages` `mt-[var(--flow-block)]`), the
+  flow-entity edit row's height (`review-step` `my-1.5` ×2, which keeps the
+  row from shrinking while it is edited) and the 20px selection mark's
+  glyph (`choice-controls` `size-3.5`). 4.
+- `ui/dropdown.tsx` — content matching its trigger's width, and an inline
+  code token in `ui/typography` (`mcp/connect-strip`: `w-[var(--radix-…)]`,
+  `rounded-*`, `px-2`, `py-1`). 4.
+
 ## Acceptance
 
 At 982×900 and at 1280×900, light and dark, the census returns:
