@@ -6,7 +6,7 @@ import type { ProjectMarket } from '@citeladder/contracts/markets';
 import type { VisibilityMarkets } from '@citeladder/contracts/visibility';
 
 import { Button } from '@/components/ui/button';
-import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
+import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { Delta } from '@/components/ui/delta';
 import { readErrorProps } from '@/components/ui/read-error';
 import { TableCell, TableRow } from '@/components/ui/table';
@@ -22,6 +22,13 @@ const COLUMNS: readonly DataTableColumn[] = [
   { key: 'voice-change', label: 'Change', width: 'figure', numeric: true },
   { key: 'net', label: 'Net sentiment', width: 'figure', numeric: true },
 ];
+
+function marketsState(query: UseQueryResult<VisibilityMarkets>): DataTableState | undefined {
+  if (query.isError)
+    return { kind: 'error', ...readErrorProps(query), fallback: 'Could not load the markets.' };
+  if (query.isPending) return { kind: 'loading', label: 'Loading markets…' };
+  return undefined;
+}
 
 /**
  * Each market's latest run side by side. Markets are measured apart and never
@@ -44,11 +51,7 @@ export function VisibilityByMarket({
       title="By market"
       columns={COLUMNS}
       footer="Each market's latest run, with the change since its previous comparable run."
-      state={
-        query.isError
-          ? { kind: 'error', ...readErrorProps(query), fallback: 'Could not load the markets.' }
-          : undefined
-      }
+      state={marketsState(query)}
     >
       {(query.data?.markets ?? []).map((row) => (
         <TableRow key={row.market.id ?? 'default'}>
