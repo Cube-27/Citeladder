@@ -276,7 +276,9 @@ interaction recipes live only in [`design.md`](design.md).
 | Checkbox and radio group | `frontend/components/ui/checkbox.tsx`, `frontend/components/ui/radio-group.tsx` |
 | Toast, Pressable, Clipboard action | `toast.tsx`, `pressable.tsx`, `copy-button.tsx` |
 | Text roles (`textRole`) | `frontend/components/ui/typography.tsx` |
-| Stack | `frontend/components/ui/layout.tsx` |
+| List beside its detail | `frontend/components/ui/list-detail.tsx` (`ListDetailCard`, `ListDetailRow`, `ListDetailPane`) |
+| Stack, Inline | `frontend/components/ui/layout.tsx` |
+| Icon, Dot | `frontend/components/ui/icon.tsx` |
 | Panel (`panelClasses`) and card content (one box recipe) | `frontend/components/ui/panel.tsx`, `frontend/components/ui/card.tsx` |
 | Menu separator | `frontend/components/ui/dropdown.tsx` |
 | Pagination (`Pager`) | `frontend/components/ui/pager.tsx` |

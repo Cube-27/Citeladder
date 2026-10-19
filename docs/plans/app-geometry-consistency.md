@@ -466,6 +466,52 @@ settings 1) needs organisms `ui/` does not have yet:
   reorderable list (`dashboard-sections`) and the overview widget toolbar
   (`overview-grid`).
 
+#### PR 5a — site-health, visibility and runs on the shared organisms
+
+Done in PR 5a:
+
+- The layering debt of `site-health` (178), `visibility` (106) and `runs`
+  (100) is gone: those folders carry no `h-*`, `p-*`, `gap-*`, `m-*`,
+  `rounded-*`, `size=` or responsive prefix and have no baseline entry.
+- New one-form atoms and organisms in `components/ui`, each built once:
+  `Inline` (a row on the gap ladder, plus `meta` for a wrapping caption row)
+  and an `item` (8) rung on `Stack`; `Icon` (the 16px glyph) and `Dot` (the
+  6px marker); `IconButton`; `ledgerItemClasses`, `SubsectionHeader`,
+  `MetaFooter`, `treeBranchClasses` and the `thirds` split role
+  (`ui/workspace.tsx`); `ListDetailCard`/`ListDetailRow`/`ListDetailPane`
+  (`ui/list-detail.tsx`); `MeterRow`; `ChartFrame`; `FilterDivider`;
+  `Skeleton shape`; `Dialog width` (`form`/`wide`); `Tabs spaced`; and in
+  `ui/table.tsx` `HintedTableHead`, `TableRowHeader`, `TableCell nested` and
+  `desktopOnly` columns. `TableRecordMetricCell` and `.type-label-before`
+  had no users left and are deleted.
+- `DataTable` gained the `lead` and `index` width roles, `desktopOnly`
+  columns, `hint` on unsortable columns, and the `footer` note band (a
+  table's description sits there, under the rows, so the header stays 49).
+- On `DataTable` now: Visibility Sources (both column sets, hinted headers,
+  the near-miss table and the cursor pager with rows per page;
+  `source-heads.tsx` is deleted), `source-prompts`, `ranking-rows`,
+  `engine-comparison`, `source-movers`, `source-url-cards`,
+  `visibility-by-market` and the accuracy, ads and perception breakdowns;
+  Site Health `aeo-readiness-panel`, `architecture-panel`, `changes-panel`,
+  `inventory-section`/`pages-table`, `overview-details`, `page-kind-scores`,
+  `robots-history` and `site-facts-panel`; `runs/executions-table` and the
+  `surface-evidence` presence table. `issues-catalog` and `issue-detail-rail`
+  are a list beside its detail (`ListDetail*`), not a record table, and the
+  URL detail history stays a ledger.
+- The census also requires the `Icon` atom at 16 in both axes. It passes at
+  982/1280, light and dark.
+
+Left after PR 5a, 5b and 5c (the plan stays active): 498 layering findings
+(478 `layer-geometry`, 20 `layer-size-prop`) in `agent` 85, `projects` 60,
+`prompts` 52, `settings` 48, `demand` 34, `performance` 31,
+`search-intelligence` 29, `products` 26, `knowledge-base` 24, `auth` 20,
+`billing` 19, `ai-traffic` 16, `integrations` 15, `opportunities` 12,
+`onboarding` 11, `mcp` 8 and `providers` 8, plus the hand-built tables
+listed under PR 4, 5b and 5c outside these three folders. Much of what PR 5b
+and 5c waited on now exists: `Inline` with its 8 rung, `Icon`,
+`IconButton`, `ledgerItemClasses`, `Tabs spaced`, `Dialog width="wide"`,
+`Skeleton shape` and `ChartFrame`.
+
 ## Acceptance
 
 At 982×900 and at 1280×900, light and dark, the census returns:
