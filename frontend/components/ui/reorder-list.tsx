@@ -35,6 +35,13 @@ export function ReorderList({
   pending: boolean;
   onMove: (from: number, to: number) => void;
 }>) {
+  // A drop carries the dragged row's position as text; anything else dropped
+  // on the list (a selection, a link from another page) is not a move.
+  const moveDropped = (dropped: string, to: number) => {
+    const from = Number(dropped);
+    if (dropped !== '' && Number.isInteger(from) && from >= 0 && from < items.length && from !== to)
+      onMove(from, to);
+  };
   return (
     <ol className={ledgerClasses('open')}>
       {items.map((item, index) => (
@@ -45,6 +52,7 @@ export function ReorderList({
           last={index === items.length - 1}
           pending={pending}
           onMove={onMove}
+          onDropped={(dropped) => moveDropped(dropped, index)}
         />
       ))}
     </ol>
@@ -57,12 +65,14 @@ function ReorderRow({
   last,
   pending,
   onMove,
+  onDropped,
 }: Readonly<{
   item: ReorderItem;
   index: number;
   last: boolean;
   pending: boolean;
   onMove: (from: number, to: number) => void;
+  onDropped: (dropped: string) => void;
 }>) {
   const [dragging, setDragging] = useState(false);
   return (
@@ -77,7 +87,7 @@ function ReorderRow({
       onDragOver={(event) => event.preventDefault()}
       onDrop={(event) => {
         event.preventDefault();
-        if (!pending) onMove(Number(event.dataTransfer.getData('text/plain')), index);
+        if (!pending) onDropped(event.dataTransfer.getData('text/plain'));
       }}
       className={cn(
         'hover:bg-hover active:bg-active desktop:grid-cols-[auto_minmax(0,1fr)_auto] desktop:items-center grid gap-3 py-3 transition-colors',

@@ -92,7 +92,12 @@ export function ValueLedger({
   items: ReadonlyArray<Readonly<{ key: string; label: ReactNode; value: ReactNode }>>;
   rows: number;
 }>) {
-  const padding = Array.from({ length: Math.max(0, rows - items.length) });
+  // Each empty slot is named by the row it fills, so it keeps its identity
+  // while the list above it grows or shrinks.
+  const padding = Array.from(
+    { length: Math.max(0, rows - items.length) },
+    (_, offset) => `slot-${items.length + offset}`,
+  );
   return (
     <ol className={ledgerClasses('open')}>
       {items.map((item) => (
@@ -104,8 +109,8 @@ export function ValueLedger({
           <span className={textRole('label', 'shrink-0 tabular-nums')}>{item.value}</span>
         </li>
       ))}
-      {padding.map((_, index) => (
-        <li key={`pad-${index}`} aria-hidden className="h-[var(--control-height-md)]" />
+      {padding.map((slot) => (
+        <li key={slot} aria-hidden className="h-[var(--control-height-md)]" />
       ))}
     </ol>
   );
