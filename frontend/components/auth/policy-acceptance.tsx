@@ -6,6 +6,7 @@ import { ShellFallback } from '@/components/layout/shell-fallback';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Stack } from '@/components/ui/layout';
 import { policiesApi } from '@/lib/api/policies';
 import { queryKeys } from '@/lib/api/query-keys';
 import { humanizeApiError } from '@/lib/api/errors';
@@ -76,7 +77,7 @@ function WorkspacePolicy({
   if (query.isPending || recordingSignInConsent) return <ShellFallback />;
   return (
     <ShellFallback>
-      <main className="mx-auto grid w-full max-w-xl content-center gap-4 p-8">
+      <Stack as="main" gap="workspace" className="mx-auto w-full max-w-xl content-center p-8">
         <TermsReview
           revision={query.data?.terms_revision}
           readError={query.error}
@@ -86,7 +87,7 @@ function WorkspacePolicy({
           onAccept={(revision) => accept.mutate(revision)}
         />
         <PolicyExits />
-      </main>
+      </Stack>
     </ShellFallback>
   );
 }

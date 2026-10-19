@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { Stack } from '@/components/ui/layout';
 import { Pressable } from '@/components/ui/pressable';
 import { authApi } from '@/lib/api/auth';
 import { safeAuthReturnPath } from '@/lib/auth/auth-return-path';
@@ -57,7 +58,6 @@ export function AuthEmailField({
           autoComplete="email"
           spellCheck={false}
           placeholder="hello@app.com"
-          size="lg"
         />
       )}
     </Field>
@@ -89,7 +89,6 @@ export function AuthPasswordField({
           type={visible ? 'text' : 'password'}
           autoComplete={autoComplete}
           placeholder={placeholder}
-          size="lg"
           endContent={
             <Pressable
               type="button"
@@ -130,7 +129,7 @@ function TermsConsent({
   const errorId = useId();
   const noticeId = useId();
   return (
-    <div ref={ref} className="auth-terms-consent grid gap-0.5">
+    <div ref={ref} className="auth-terms-consent grid">
       <Checkbox
         checked={agreed}
         onCheckedChange={(value) => onChange(value === true)}
@@ -222,8 +221,7 @@ function GoogleEntry({
     <>
       <Button
         variant="secondary"
-        size="lg"
-        className="w-full gap-2"
+        className="w-full"
         disabled={pending || disabled}
         onClick={() => void start()}
       >
@@ -296,13 +294,13 @@ export function AuthFormShell({
   };
 
   return (
-    <div className="auth-form-shell grid w-full gap-6">
-      <div className="auth-form-heading grid gap-2">
+    <Stack gap="section" className="auth-form-shell w-full">
+      <Stack gap="compact" className="auth-form-heading">
         <h1 className="flow-title">{title}</h1>
         <p className="flow-help">{description}</p>
-      </div>
+      </Stack>
 
-      <div className="auth-form-body grid gap-4">
+      <Stack gap="workspace" className="auth-form-body">
         {showOAuth && (
           <>
             <GoogleEntry
@@ -310,31 +308,32 @@ export function AuthFormShell({
               disabled={revisionPending}
               consentGiven={consentGiven}
             />
-            <p className="auth-form-divider flow-meta m-0 text-center">or</p>
+            <p className="auth-form-divider flow-meta text-center">or</p>
           </>
         )}
 
         {error ? <MktAlert>{error}</MktAlert> : null}
 
         {showForm ? (
-          <form noValidate onSubmit={handleSubmit} className="auth-email-form grid gap-4">
-            {children}
+          <form noValidate onSubmit={handleSubmit}>
+            <Stack gap="workspace" className="auth-email-form">
+              {children}
 
-            {requiresConsent && <TermsConsent {...consent.field} />}
+              {requiresConsent && <TermsConsent {...consent.field} />}
 
-            <Button
-              type="submit"
-              size="lg"
-              className="auth-form-submit mt-2 w-full"
-              disabled={pending || revisionPending}
-            >
-              {pending ? pendingLabel : submitLabel}
-            </Button>
+              <Button
+                type="submit"
+                className="auth-form-submit w-full"
+                disabled={pending || revisionPending}
+              >
+                {pending ? pendingLabel : submitLabel}
+              </Button>
+            </Stack>
           </form>
         ) : null}
 
         {showFooter ? (
-          <p className="auth-form-footer flow-help pt-2 text-center">
+          <p className="auth-form-footer flow-help text-center">
             {footerPrompt}{' '}
             <Link
               to={footerHref}
@@ -347,7 +346,7 @@ export function AuthFormShell({
             </Link>
           </p>
         ) : null}
-      </div>
-    </div>
+      </Stack>
+    </Stack>
   );
 }

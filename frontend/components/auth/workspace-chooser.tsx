@@ -11,6 +11,7 @@ import { roleLabel } from '@/components/settings/member-roles';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DisplayTime } from '@/components/ui/display-time';
+import { Stack } from '@/components/ui/layout';
 import { listRowClasses } from '@/components/ui/list-row';
 import { Pressable } from '@/components/ui/pressable';
 import { QueryState } from '@/components/ui/query-state';
@@ -56,7 +57,7 @@ export function WorkspaceChooser() {
   };
   return (
     <ChooserFrame>
-      <ul className="grid gap-1" aria-label="Your workspaces">
+      <Stack as="ul" gap="tight" aria-label="Your workspaces">
         {workspaces.map((workspace) => (
           <li key={workspace.id}>
             <Pressable
@@ -66,7 +67,7 @@ export function WorkspaceChooser() {
               )}
               onClick={() => enter(workspace)}
             >
-              <span className="grid min-w-0 flex-1 gap-0.5">
+              <span className="grid min-w-0 flex-1">
                 <span className="type-body-strong text-foreground truncate">{workspace.name}</span>
                 <span className="type-caption">
                   {workspace.role === 'owner' ? 'Your workspace' : roleLabel(workspace.role)}
@@ -77,7 +78,7 @@ export function WorkspaceChooser() {
             </Pressable>
           </li>
         ))}
-      </ul>
+      </Stack>
       {ownsOne ? null : (
         <Button asChild variant="secondary" className="w-fit">
           <Link to={WORKSPACE_SETUP_PATH}>
@@ -93,13 +94,13 @@ export function WorkspaceChooser() {
 function ChooserFrame({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <FlowShell mainLabel="Choose a workspace" align="center" trailing={<FlowAccountControls />}>
-      <div className="grid gap-5">
+      <Stack gap="workspace">
         <div className="flow-header">
           <h1 className="flow-title">Choose a workspace</h1>
           <p className="flow-help">You can switch between workspaces at any time.</p>
         </div>
         {children}
-      </div>
+      </Stack>
     </FlowShell>
   );
 }
