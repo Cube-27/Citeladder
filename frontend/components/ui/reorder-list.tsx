@@ -9,6 +9,9 @@ import { textRole } from '@/components/ui/typography';
 import { ledgerClasses } from '@/components/ui/workspace';
 import { cn } from '@/lib/utils';
 
+/** The drag type a row's position travels under; no other source sets it. */
+const ROW_DRAG_TYPE = 'application/x-citeladder-reorder-row';
+
 export type ReorderItem = Readonly<{
   key: string;
   /** Names the item in its move controls ("Move <name> up"). */
@@ -35,8 +38,9 @@ export function ReorderList({
   pending: boolean;
   onMove: (from: number, to: number) => void;
 }>) {
-  // A drop carries the dragged row's position as text; anything else dropped
-  // on the list (a selection, a link from another page) is not a move.
+  // A drop carries the dragged row's position under the list's own drag type;
+  // anything else dropped on the list (selected text, a row's visible number,
+  // a link from another page) carries none and is not a move.
   const moveDropped = (dropped: string, to: number) => {
     const from = Number(dropped);
     if (dropped !== '' && Number.isInteger(from) && from >= 0 && from < items.length && from !== to)
@@ -80,14 +84,14 @@ function ReorderRow({
     <li
       draggable={!pending}
       onDragStart={(event) => {
-        event.dataTransfer.setData('text/plain', String(index));
+        event.dataTransfer.setData(ROW_DRAG_TYPE, String(index));
         setDragging(true);
       }}
       onDragEnd={() => setDragging(false)}
       onDragOver={(event) => event.preventDefault()}
       onDrop={(event) => {
         event.preventDefault();
-        if (!pending) onDropped(event.dataTransfer.getData('text/plain'));
+        if (!pending) onDropped(event.dataTransfer.getData(ROW_DRAG_TYPE));
       }}
       className={cn(
         'hover:bg-hover active:bg-active desktop:grid-cols-[auto_minmax(0,1fr)_auto] desktop:items-center grid gap-3 py-3 transition-colors',
