@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
  *   `list-detail` — a selectable list beside the selected item's evidence.
  *   `main-aside`  — the primary surface beside supporting context.
  *   `peers`       — two equal surfaces read side by side (e.g. two tables).
+ *   `thirds`      — three equal summary cards side by side.
  *
  * All stack below the `desktop` breakpoint, with the first child first, and
  * share the workspace gap. Columns align to the top so a short aside never
@@ -34,6 +35,8 @@ const SPLIT_PANE = {
     'desktop:grid-cols-[var(--split-pane-list-width)_auto_minmax(0,1fr)] desktop:gap-0',
   'main-aside': 'desktop:grid-cols-[var(--pane-main-aside)]',
   peers: 'desktop:grid-cols-2',
+  /** Three equal summary cards read side by side. */
+  thirds: 'desktop:grid-cols-3',
 } as const;
 
 export type SplitPaneRole = keyof typeof SPLIT_PANE;
@@ -77,6 +80,29 @@ export function ledgerClasses(shell: LedgerShell = 'open', className?: string) {
  */
 export function ledgerItemClasses(className?: string) {
   return cn('min-w-0 py-3 first:pt-0 last:pb-0', className);
+}
+
+/**
+ * One level of a tree (a page hierarchy): its items 8 apart, hung off a
+ * hairline and indented 16 from their parent, so depth reads as indentation
+ * and the rule shows which parent a branch belongs to. Nest a branch inside
+ * an item for the next level.
+ */
+export function treeBranchClasses(className?: string) {
+  return cn('border-border-subtle grid min-w-0 gap-2 border-l pl-4', className);
+}
+
+/**
+ * The provenance line that closes a block: when it was captured, where, by
+ * what — caption facts on one wrapping line, 16 apart, under a hairline 12
+ * above them.
+ */
+export function MetaFooter({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <footer className="type-caption border-border-subtle flex flex-wrap items-center gap-x-4 gap-y-1 border-t pt-3">
+      {children}
+    </footer>
+  );
 }
 
 /**

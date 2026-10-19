@@ -36,6 +36,8 @@ const COLUMN_WIDTH = {
    * rest evenly whatever the viewport.
    */
   lead: 'w-1/4',
+  /** A row's ordinal on the page (#). */
+  index: 'w-12',
   /** A count, a rate or a short figure. */
   figure: 'w-28',
   /** A status badge or a short label. */
@@ -73,7 +75,7 @@ export type DataTableColumn = Readonly<{
 /** A table read's state when it has no rows to show: loading, error or empty. */
 export type DataTableState = Exclude<QueryStateProps, { inline: true }>;
 
-type DataTablePager = Omit<ComponentProps<typeof Pager>, 'frame' | 'className'>;
+export type DataTablePager = Omit<ComponentProps<typeof Pager>, 'frame' | 'className'>;
 
 /**
  * DataTable — the record table organism: a header, the rows, the pager and

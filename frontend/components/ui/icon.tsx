@@ -1,3 +1,4 @@
+import type { ComponentPropsWithoutRef } from 'react';
 import type { LucideIcon } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -10,6 +11,10 @@ import { cn } from '@/lib/utils';
  * same arrow next to a label. The atom has one form: the caller picks the
  * glyph and, through `className`, its ink — never its size. Decorative by
  * default; pass `label` when the glyph alone carries meaning.
+ *
+ * The glyph occupies one 20px body line (2 above and below), so in a row
+ * aligned to the top it sits centred on the first line of text beside it
+ * without a per-call nudge.
  */
 export function Icon({
   icon: Glyph,
@@ -18,7 +23,8 @@ export function Icon({
 }: Readonly<{ icon: LucideIcon; label?: string; className?: string }>) {
   return (
     <Glyph
-      className={cn('size-4 shrink-0', className)}
+      data-icon=""
+      className={cn('my-0.5 size-4 shrink-0', className)}
       aria-hidden={label ? undefined : true}
       aria-label={label}
       role={label ? 'img' : undefined}
@@ -32,8 +38,15 @@ export function Icon({
  * caller supplies the fill (`bg-info`) and any motion class; colour is never
  * the only signal, so the text beside it says the same thing.
  */
-export function Dot({ className }: Readonly<{ className?: string }>) {
+export function Dot({
+  className,
+  ...props
+}: Readonly<Omit<ComponentPropsWithoutRef<'span'>, 'children'>>) {
   return (
-    <span className={cn('inline-block size-1.5 shrink-0 rounded-full', className)} aria-hidden />
+    <span
+      {...props}
+      className={cn('inline-block size-1.5 shrink-0 rounded-full', className)}
+      aria-hidden
+    />
   );
 }

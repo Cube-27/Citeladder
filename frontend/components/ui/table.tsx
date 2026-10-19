@@ -297,10 +297,24 @@ export function TableCell({
   className,
   numeric,
   desktopOnly,
+  nested,
   ...props
-}: Readonly<TdHTMLAttributes<HTMLTableCellElement> & CellOptions>) {
+}: Readonly<
+  TdHTMLAttributes<HTMLTableCellElement> &
+    CellOptions & {
+      /** The first cell of a row grouped under a group-label row: inset one step. */
+      nested?: boolean;
+    }
+>) {
   return (
-    <td {...props} className={cn(cellClasses({ numeric, desktopOnly }), className)}>
+    <td
+      {...props}
+      className={cn(
+        cellClasses({ numeric, desktopOnly }),
+        nested && 'ps-[calc(var(--table-cell-padding-x)+16px)]',
+        className,
+      )}
+    >
       {!numeric && isPlainText(children) ? <ClampText>{children}</ClampText> : children}
     </td>
   );
@@ -318,29 +332,6 @@ export function TableRowHeader({
     <th scope="row" className={cn(cellClasses({}), 'type-item-title', className)}>
       {isPlainText(children) ? <ClampText>{children}</ClampText> : children}
     </th>
-  );
-}
-
-/** Numeric table cell that becomes a labelled key/value row below `md`. */
-export function TableRecordMetricCell({
-  children,
-  className,
-  label,
-  ...props
-}: Readonly<Omit<TdHTMLAttributes<HTMLTableCellElement>, 'data-label'> & { label: string }>) {
-  return (
-    <TableCell
-      {...props}
-      numeric
-      data-label={label}
-      className={cn(
-        'grid grid-cols-[1fr_auto] gap-3 border-b-0 px-4 py-1 type-label-before before:text-left before:content-[attr(data-label)]',
-        'desktop:table-cell desktop:border-b desktop:px-[var(--table-cell-padding-x)] desktop:py-[var(--table-cell-padding-y)] desktop:before:hidden',
-        className,
-      )}
-    >
-      {children}
-    </TableCell>
   );
 }
 
