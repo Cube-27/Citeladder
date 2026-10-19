@@ -1,5 +1,6 @@
 import type { BillingEntitlement } from '@/lib/api/billing';
 
+import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { panelClasses } from '@/components/ui/panel';
 import { textRole } from '@/components/ui/typography';
@@ -10,29 +11,21 @@ export function BillingCountryInput({
   setCountry,
 }: Readonly<{ country: string; setCountry: (country: string) => void }>) {
   return (
-    <div
-      className={panelClasses(
-        { tone: 'tonal' },
-        'flex flex-col justify-between gap-2 desktop:flex-row desktop:items-center',
-      )}
+    <Field
+      label="Billing country"
+      hint="Two-letter ISO code. The server resolves currency, tax and the exact amount from it."
+      className={panelClasses({ tone: 'tonal' })}
     >
-      <div className="min-w-0">
-        <label htmlFor="billing-country-input" className={textRole('label', 'block')}>
-          Billing country
-        </label>
-        <span id="billing-country-help" className="type-caption block">
-          Two-letter ISO code. The server resolves currency, tax and the exact amount from it.
-        </span>
-      </div>
-      <Input
-        id="billing-country-input"
-        value={country}
-        onChange={(event) => setCountry(event.target.value.toUpperCase().slice(0, 2))}
-        placeholder="US"
-        aria-describedby="billing-country-help"
-        className={textRole('label', 'h-8 w-20 text-center tabular-nums uppercase')}
-      />
-    </div>
+      {(field) => (
+        <Input
+          {...field}
+          value={country}
+          onChange={(event) => setCountry(event.target.value.toUpperCase().slice(0, 2))}
+          placeholder="US"
+          className="uppercase tabular-nums"
+        />
+      )}
+    </Field>
   );
 }
 

@@ -139,12 +139,7 @@ function CheckoutFields({
   return (
     <Stack gap="workspace">
       <BillingCountryInput country={country} setCountry={setCountry} />
-      <BillingDetailsForm
-        country={country}
-        details={details}
-        setDetails={setDetails}
-        idPrefix="pricing"
-      />
+      <BillingDetailsForm country={country} details={details} setDetails={setDetails} />
     </Stack>
   );
 }

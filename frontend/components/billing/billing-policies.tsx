@@ -3,6 +3,7 @@ import { websiteHref } from '@/lib/config/app-link';
 import { PARENT_COMPANY } from '@/lib/marketing-content/legal';
 import { contactSalesHref } from '@/lib/config/contact';
 
+import { Stack } from '@/components/ui/layout';
 import { panelClasses } from '@/components/ui/panel';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
@@ -54,7 +55,12 @@ export function BillingSupport({
   const email = contact?.email || PARENT_COMPANY.email;
   const url = contactSalesHref(contact?.contact_url, websiteHref('/contact'));
   return (
-    <section className={panelClasses({}, 'grid gap-2')} aria-labelledby="billing-support-title">
+    <Stack
+      as="section"
+      gap="compact"
+      className={panelClasses()}
+      aria-labelledby="billing-support-title"
+    >
       <EditorialSectionHeader title="Billing help" headingId="billing-support-title" />
       <p className={textRole('body')}>
         Questions about a charge, a refund or cancelling? Email{' '}
@@ -74,6 +80,6 @@ export function BillingSupport({
         <PolicyLink path="/cancellation-policy">Cancellation Policy</PolicyLink> ·{' '}
         <PolicyLink path="/terms">Terms of Service</PolicyLink>
       </p>
-    </section>
+    </Stack>
   );
 }

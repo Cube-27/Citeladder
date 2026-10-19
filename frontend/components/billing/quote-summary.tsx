@@ -4,6 +4,7 @@ import type { BillingQuote } from '@/lib/api/billing';
 import { formatMoney } from '@/lib/billing/catalog';
 
 import { DisplayTime } from '@/components/ui/display-time';
+import { Stack } from '@/components/ui/layout';
 import { panelClasses } from '@/components/ui/panel';
 import { textRole } from '@/components/ui/typography';
 
@@ -42,12 +43,12 @@ export function BillingQuoteSummary({
     }
   }
   return (
-    <output className={panelClasses({ tone: 'tonal' }, 'type-body grid gap-2')}>
+    <Stack as="output" gap="compact" className={panelClasses({ tone: 'tonal' }, 'type-body')}>
       <span className="text-muted">
         Quote · {TREATMENT_LABEL[quote.tax_treatment]} · valid until{' '}
         <DisplayTime value={quote.expires_at} />
       </span>
-      <dl className="grid gap-1">
+      <Stack as="dl" gap="tight">
         {lines.map(([label, value]) => (
           <div key={label} className="flex justify-between gap-4">
             <dt className="text-muted">{label}</dt>
@@ -58,7 +59,7 @@ export function BillingQuoteSummary({
           <dt className={textRole('emphasis')}>Total</dt>
           <dd className={textRole('emphasis', 'tabular-nums')}>{money(quote.total_price)}</dd>
         </div>
-      </dl>
-    </output>
+      </Stack>
+    </Stack>
   );
 }

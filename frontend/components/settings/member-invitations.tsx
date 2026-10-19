@@ -6,23 +6,14 @@ import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CopyButton } from '@/components/ui/copy-button';
+import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Dialog } from '@/components/ui/dialog';
 import { DisplayTime } from '@/components/ui/display-time';
+import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
 import { Select } from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
-import {
-  ClampText,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { textRole } from '@/components/ui/typography';
-import { EditorialSectionHeader } from '@/components/ui/workspace';
+import { ClampText, TableCell, TableRow } from '@/components/ui/table';
 import type { AssignableWorkspaceRole, WorkspaceInvitation } from '@/lib/api/workspaces';
 
 import { ROLE_OPTIONS, ROLE_SUMMARY, roleLabel } from './member-roles';
@@ -98,57 +89,47 @@ export function InviteDialog({
         </>
       }
     >
-      <form
-        id={INVITE_FORM_ID}
-        noValidate
-        onSubmit={submit}
-        className="grid gap-[var(--workspace-gap)]"
-      >
-        <Stack gap="tight">
-          <label htmlFor="invite-email" className={textRole('label')}>
-            Email
-          </label>
-          <Input
-            id="invite-email"
-            type="email"
-            required
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder="teammate@example.com"
-          />
-        </Stack>
-        <Stack gap="tight">
-          <label htmlFor="invite-role" className={textRole('label')}>
-            Workspace role
-          </label>
-          <Select
-            id="invite-role"
-            value={role}
-            onValueChange={setRole}
-            options={ROLE_OPTIONS}
-            ariaLabel="Invitation role"
-          />
-          <p className={textRole('caption')}>{ROLE_SUMMARY[role]}</p>
-        </Stack>
+      <Stack as="form" gap="workspace" id={INVITE_FORM_ID} noValidate onSubmit={submit}>
+        <Field label="Email">
+          {(field) => (
+            <Input
+              {...field}
+              type="email"
+              required
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="teammate@example.com"
+            />
+          )}
+        </Field>
+        <Field label="Workspace role" hint={ROLE_SUMMARY[role]}>
+          {(field) => (
+            <Select
+              {...field}
+              value={role}
+              onValueChange={setRole}
+              options={ROLE_OPTIONS}
+              ariaLabel="Invitation role"
+            />
+          )}
+        </Field>
         {error ? <Alert tone="danger">{error}</Alert> : null}
         {issuedToken ? (
           <Alert tone="info">
-            <div className="grid gap-2">
+            <Stack gap="compact" className="justify-items-start">
               <span>
                 {deliveryNotice(delivery)}
                 Share this one-time acceptance link. It is shown once and cannot be retrieved again
                 — resending issues a new link and invalidates this one.
               </span>
-              <div className="flex items-center gap-2">
-                <code className="type-caption min-w-0 flex-1 truncate tabular-nums">
-                  {acceptanceLink(issuedToken)}
-                </code>
-                <CopyButton value={acceptanceLink(issuedToken)}>Copy link</CopyButton>
-              </div>
-            </div>
+              <code className="type-caption min-w-0 justify-self-stretch truncate tabular-nums">
+                {acceptanceLink(issuedToken)}
+              </code>
+              <CopyButton value={acceptanceLink(issuedToken)}>Copy link</CopyButton>
+            </Stack>
           </Alert>
         ) : null}
-      </form>
+      </Stack>
     </Dialog>
   );
 }
@@ -167,56 +148,53 @@ export function PendingInvitations({
   onResend: (invitationId: string) => void;
   onRevoke: (invitation: WorkspaceInvitation) => void;
 }>) {
-  if (isLoading) return <Skeleton className="h-16 w-full" />;
-  if (invitations.length === 0) return null;
+  if (!isLoading && invitations.length === 0) return null;
   return (
-    <Stack as="section" gap="compact">
-      <EditorialSectionHeader title="Pending invitations" />
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Invitee</TableHead>
-            <TableHead>Workspace role</TableHead>
-            <TableHead numeric>Link expires</TableHead>
-            <TableHead className="text-right">Access</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {invitations.map((invitation) => (
-            <TableRow key={invitation.id}>
-              <TableCell>
-                <ClampText lines={1}>{invitation.email}</ClampText>
-              </TableCell>
-              <TableCell className="whitespace-nowrap">
-                <Badge variant="neutral">{roleLabel(invitation.role)}</Badge>
-              </TableCell>
-              <TableCell numeric className="type-caption">
-                <DisplayTime value={invitation.expires_at} />
-              </TableCell>
-              <TableCell className="whitespace-nowrap">
-                <div className="flex items-center justify-end gap-2">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    disabled={busy}
-                    onClick={() => onResend(invitation.id)}
-                  >
-                    Resend
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    disabled={busy}
-                    onClick={() => onRevoke(invitation)}
-                  >
-                    Revoke
-                  </Button>
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </Stack>
+    <DataTable
+      title="Pending invitations"
+      columns={INVITATION_COLUMNS}
+      state={isLoading ? { kind: 'loading', label: 'Loading invitations…' } : undefined}
+    >
+      {invitations.map((invitation) => (
+        <TableRow key={invitation.id}>
+          <TableCell>
+            <ClampText lines={1}>{invitation.email}</ClampText>
+          </TableCell>
+          <TableCell className="whitespace-nowrap">
+            <Badge variant="neutral">{roleLabel(invitation.role)}</Badge>
+          </TableCell>
+          <TableCell numeric className="type-caption">
+            <DisplayTime value={invitation.expires_at} />
+          </TableCell>
+          <TableCell className="whitespace-nowrap">
+            <div className="flex items-center justify-end gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={busy}
+                onClick={() => onResend(invitation.id)}
+              >
+                Resend
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={busy}
+                onClick={() => onRevoke(invitation)}
+              >
+                Revoke
+              </Button>
+            </div>
+          </TableCell>
+        </TableRow>
+      ))}
+    </DataTable>
   );
 }
+
+const INVITATION_COLUMNS: readonly DataTableColumn[] = [
+  { key: 'invitee', label: 'Invitee' },
+  { key: 'role', label: 'Workspace role', width: 'status' },
+  { key: 'expires', label: 'Link expires', width: 'date', numeric: true },
+  { key: 'access', label: 'Access', width: 'name', numeric: 'end' },
+];

@@ -1,15 +1,18 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 import { useState } from 'react';
 
 import { ConnectStrip } from '@/components/mcp/connect-strip';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { Dialog } from '@/components/ui/dialog';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Stack } from '@/components/ui/layout';
-import { ReadError } from '@/components/ui/read-error';
+import { readErrorProps } from '@/components/ui/read-error';
+import { TableCell, TableRow } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
-import { EditorialSectionHeader, ledgerClasses } from '@/components/ui/workspace';
+import { EditorialSectionHeader } from '@/components/ui/workspace';
+import { ICONS } from '@/lib/icons';
 import type { McpConnection } from '@citeladder/contracts/mcp';
 import { humanizeApiError } from '@/lib/api/errors';
 import { mcpConnectionsApi } from '@/lib/api/mcp-connections';
@@ -23,34 +26,67 @@ function ConnectionRow({
 }: Readonly<{ connection: McpConnection; adminView: boolean; onRevoke: () => void }>) {
   const workspaces = connection.workspaces.map((workspace) => workspace.name).join(', ');
   return (
-    <li className="flex flex-wrap items-start justify-between gap-4 py-3">
-      <div className="grid min-w-0 gap-1">
-        <p className={textRole('itemTitle')}>
-          {connection.client_name} <span className={textRole('caption')}>· name not verified</span>
-        </p>
-        <p className={textRole('body')}>
-          {connection.requires_consent
-            ? 'Reconnect to choose workspaces.'
-            : `Reads ${workspaces || 'no workspace you can still access'}.`}
-        </p>
-        <p className={textRole('caption')}>
-          {connection.access === 'read_and_change' ? 'Read and change · ' : 'Read · '}
-          {adminView && connection.user_email ? `Connected by ${connection.user_email} · ` : null}
-          Connected <DisplayTime value={connection.created_at} dateOnly /> ·{' '}
-          {connection.last_used_at ? (
-            <>
-              Last used <DisplayTime value={connection.last_used_at} />
-            </>
-          ) : (
-            'Not used yet'
-          )}
-        </p>
-      </div>
-      <Button variant="secondary" onClick={onRevoke}>
-        {adminView ? 'Remove workspace access' : 'Revoke'}
-      </Button>
-    </li>
+    <TableRow>
+      <TableCell>
+        <div className="grid min-w-0">
+          <p className={textRole('itemTitle')}>
+            {connection.client_name}{' '}
+            <span className={textRole('caption')}>· name not verified</span>
+          </p>
+          <p className={textRole('body')}>
+            {connection.requires_consent
+              ? 'Reconnect to choose workspaces.'
+              : `Reads ${workspaces || 'no workspace you can still access'}.`}
+          </p>
+          <p className={textRole('caption')}>
+            {connection.access === 'read_and_change' ? 'Read and change · ' : 'Read · '}
+            {adminView && connection.user_email ? `Connected by ${connection.user_email} · ` : null}
+            Connected <DisplayTime value={connection.created_at} dateOnly /> ·{' '}
+            {connection.last_used_at ? (
+              <>
+                Last used <DisplayTime value={connection.last_used_at} />
+              </>
+            ) : (
+              'Not used yet'
+            )}
+          </p>
+        </div>
+      </TableCell>
+      <TableCell numeric="end">
+        <Button variant="secondary" onClick={onRevoke}>
+          {adminView ? 'Remove workspace access' : 'Revoke'}
+        </Button>
+      </TableCell>
+    </TableRow>
   );
+}
+
+const COLUMNS: readonly DataTableColumn[] = [
+  { key: 'connection', label: 'Connection' },
+  { key: 'access', label: 'Access', width: 'name', numeric: 'end', hideLabel: true },
+];
+
+/** What the list shows instead of rows: the read's loading, error or empty. */
+function connectionsState(
+  query: UseQueryResult<McpConnection[]>,
+  adminView: boolean,
+): DataTableState | undefined {
+  if (query.isPending) return { kind: 'loading', label: 'Loading connections…' };
+  if (query.isError)
+    return {
+      kind: 'error',
+      ...readErrorProps(query),
+      fallback: 'Connections could not be loaded.',
+    };
+  if (query.data.length > 0) return undefined;
+  return {
+    kind: 'empty',
+    icon: ICONS.agent,
+    headingLevel: 3,
+    heading: adminView
+      ? 'No connection can read this workspace.'
+      : 'No assistant is connected yet. Use Connect above to add one.',
+  };
 }
 
 function ConnectionList({ workspaceId }: Readonly<{ workspaceId?: string }>) {
@@ -68,42 +104,25 @@ function ConnectionList({ workspaceId }: Readonly<{ workspaceId?: string }>) {
       return cache.invalidateQueries({ queryKey: queryKeys.mcpConnections.all });
     },
   });
-  if (query.isPending) return <output>Loading connections…</output>;
-  if (query.isError)
-    return (
-      <ReadError
-        error={query.error}
-        fallback="Connections could not be loaded."
-        onRetry={() => void query.refetch()}
-        pending={query.isFetching}
-      />
-    );
   return (
-    <Stack as="section" gap="compact">
-      <EditorialSectionHeader
+    <>
+      <DataTable
         title={adminView ? 'Connections that can read this workspace' : 'Your connections'}
-      />
-      {query.data.length === 0 ? (
-        <p className={textRole('body')}>
-          {adminView
-            ? 'No connection can read this workspace.'
-            : 'No assistant is connected yet. Use Connect above to add one.'}
-        </p>
-      ) : (
-        <ul className={ledgerClasses('open')}>
-          {query.data.map((connection) => (
-            <ConnectionRow
-              key={connection.id}
-              connection={connection}
-              adminView={adminView}
-              onRevoke={() => {
-                revoke.reset();
-                setPending(connection);
-              }}
-            />
-          ))}
-        </ul>
-      )}
+        columns={COLUMNS}
+        state={connectionsState(query, adminView)}
+      >
+        {query.data?.map((connection) => (
+          <ConnectionRow
+            key={connection.id}
+            connection={connection}
+            adminView={adminView}
+            onRevoke={() => {
+              revoke.reset();
+              setPending(connection);
+            }}
+          />
+        ))}
+      </DataTable>
       <Dialog
         open={pending !== null}
         onOpenChange={(open) => {
@@ -137,7 +156,7 @@ function ConnectionList({ workspaceId }: Readonly<{ workspaceId?: string }>) {
           ) : null}
         </Stack>
       </Dialog>
-    </Stack>
+    </>
   );
 }
 

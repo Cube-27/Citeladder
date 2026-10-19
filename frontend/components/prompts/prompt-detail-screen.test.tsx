@@ -168,7 +168,8 @@ it('charts the prompt over time with declared work marked, and hands off to its 
   expect(states.getByText('Neither').closest('div')).toHaveTextContent(
     'Neither1Did not name you or cite your site.',
   );
-  expect(screen.getByText('1 answer on ChatGPT API')).toBeInTheDocument();
+  const gaps = within(screen.getByRole('region', { name: 'Competitors named without you' }));
+  expect(gaps.getByRole('row', { name: /Globex/ })).toHaveTextContent('Globex1ChatGPT API');
   expect(screen.getByRole('link', { name: 'Open the Action' })).toHaveAttribute(
     'href',
     `/agent/actions/${ACTION}?project=${PROJECT}`,

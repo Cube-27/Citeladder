@@ -4,6 +4,7 @@ import { USAGE_METER_CRITICAL_RATIO, USAGE_METER_WARNING_RATIO } from '@/lib/con
 import type { UsageItem } from '@/lib/api/billing';
 import type { DataTone } from '@/components/ui/data-tone';
 import { DisplayTime } from '@/components/ui/display-time';
+import { Stack } from '@/components/ui/layout';
 import { Meter } from '@/components/ui/meter';
 import { textRole } from '@/components/ui/typography';
 
@@ -29,30 +30,30 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
 
   if (item.limit_state === 'unknown') {
     return (
-      <div className="border-border-subtle grid gap-1 border-b pb-3 last:border-b-0 last:pb-0">
+      <Stack gap="tight">
         <div className="flex items-center justify-between gap-3">
           <span className={textRole('label')}>{label}</span>
           <span className={textRole('label')}>Not available</span>
         </div>
         <p className="type-caption">This allowance could not be resolved, so no usage is shown.</p>
-      </div>
+      </Stack>
     );
   }
 
   if (item.limit_state === 'unlimited') {
     return (
-      <div className="border-border-subtle grid gap-1 border-b pb-3 last:border-b-0 last:pb-0">
+      <Stack gap="tight">
         <div className="flex items-center justify-between gap-3">
           <span className={textRole('label')}>{label}</span>
           <span className={textRole('label', 'tabular-nums')}>
             {item.consumed ?? 0} {item.unit}
           </span>
         </div>
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center justify-between gap-3">
           <span className="type-caption">Unlimited</span>
           <ExpiryLine item={item} />
         </div>
-      </div>
+      </Stack>
     );
   }
 
@@ -63,7 +64,7 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
   const ratio = allowance > 0 ? consumed / allowance : 0;
 
   return (
-    <div className="border-border-subtle grid gap-2 border-b pb-4 last:border-b-0 last:pb-0">
+    <Stack gap="tight">
       <div className="flex items-center justify-between gap-3">
         <span className={textRole('label')}>{label}</span>
         <span className={textRole('label', 'tabular-nums')}>
@@ -77,14 +78,14 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
         tone={usageTone(ratio)}
         valueText={`${consumed} of ${allowance} ${item.unit}`}
       />
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center justify-between gap-3">
         <span className="type-caption">
           {remaining} remaining
           {item.reserved ? ` · ${item.reserved} reserved` : ''}
         </span>
         <ExpiryLine item={item} />
       </div>
-    </div>
+    </Stack>
   );
 }
 

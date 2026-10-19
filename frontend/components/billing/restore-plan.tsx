@@ -7,7 +7,7 @@ import { ChoosePlan, subscribeWith } from '@/components/billing/choose-plan';
 import { PurchaseReview } from '@/components/billing/purchase-review';
 import { Alert } from '@/components/ui/alert';
 import { Stack } from '@/components/ui/layout';
-import { Skeleton } from '@/components/ui/skeleton';
+import { QueryState } from '@/components/ui/query-state';
 import { emptyBillingCustomerDetails } from '@/lib/api/billing';
 import { catalogItemName } from '@/lib/billing/catalog';
 import { useSubscriptionCheckout } from '@/lib/billing/use-subscription-checkout';
@@ -32,7 +32,7 @@ export function RestorePlan({ workspaceId }: Readonly<{ workspaceId: string }>) 
   if (catalogQuery.isError)
     return <Alert tone="danger">Plans could not be loaded. Retry, or contact support.</Alert>;
   const catalog = catalogQuery.data;
-  if (!catalog) return <Skeleton className="h-32 w-full" />;
+  if (!catalog) return <QueryState kind="loading" label="Loading plans…" />;
   return (
     <Stack gap="workspace">
       <CheckoutStatus checkout={checkout} />

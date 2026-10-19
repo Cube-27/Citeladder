@@ -6,7 +6,6 @@ import { Alert } from '@/components/ui/alert';
 import { QueryState } from '@/components/ui/query-state';
 import { Stack } from '@/components/ui/layout';
 import { ReadError, readErrorProps } from '@/components/ui/read-error';
-import { Skeleton } from '@/components/ui/skeleton';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { UsageMeter } from '@/components/billing/usage-meter';
 import { billingApi, type UsageItem } from '@/lib/api/billing';
@@ -55,15 +54,15 @@ export function UsageMeters({ enabled = true }: Readonly<{ enabled?: boolean }>)
   });
 
   return (
-    <div className={panelClasses({}, 'grid gap-3')}>
+    <Stack gap="compact" className={panelClasses()}>
       <EditorialSectionHeader
         title="Usage"
         description="Measured against the allowances your active grants provide."
       />
-      <Stack gap="compact">
+      <Stack gap="workspace">
         <UsageBody enabled={enabled} query={usageQuery} />
       </Stack>
-    </div>
+    </Stack>
   );
 }
 
@@ -75,12 +74,7 @@ function UsageBody({
   query: ReturnType<typeof useQuery<Awaited<ReturnType<typeof billingApi.usage>>>>;
 }>) {
   if (!enabled || query.isLoading) {
-    return (
-      <>
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-full" />
-      </>
-    );
+    return <QueryState kind="loading" label="Loading usage…" />;
   }
   if (query.isError || !query.data) {
     return (

@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
+import { Stack } from '@/components/ui/layout';
 import { panelClasses } from '@/components/ui/panel';
 import { textRole } from '@/components/ui/typography';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
@@ -72,13 +73,18 @@ export function PlanChanges({
       subscription.scheduled_change.state !== 'provider_rejected');
   if (options.length === 0) return null;
   return (
-    <section className={panelClasses({}, 'grid gap-3')} aria-labelledby="plan-changes-title">
+    <Stack
+      as="section"
+      gap="compact"
+      className={panelClasses()}
+      aria-labelledby="plan-changes-title"
+    >
       <EditorialSectionHeader
         headingId="plan-changes-title"
         title="Change plan"
         description="Upgrades start as soon as the prorated charge for the rest of this period is paid. Downgrades take effect at your next renewal, with no refund for the current period."
       />
-      <div className="grid gap-2">
+      <Stack gap="compact">
         {options.map((option) => (
           <div
             key={option.key}
@@ -87,7 +93,7 @@ export function PlanChanges({
               'flex flex-col justify-between gap-3 desktop:flex-row desktop:items-center',
             )}
           >
-            <div className="grid min-w-0 gap-0.5">
+            <Stack gap="tight" className="min-w-0">
               <span className={textRole('itemTitle')}>{option.plan.name}</span>
               {option.plan.base_price ? (
                 <span className={textRole('caption')}>
@@ -95,7 +101,7 @@ export function PlanChanges({
                   tax
                 </span>
               ) : null}
-            </div>
+            </Stack>
             {option.direction === 'upgrade' ? (
               <Button
                 disabled={held || !option.plan.checkout_available}
@@ -110,7 +116,7 @@ export function PlanChanges({
             )}
           </div>
         ))}
-      </div>
+      </Stack>
       {options.some(
         (option) => option.direction === 'upgrade' && !option.plan.checkout_available,
       ) ? (
@@ -147,6 +153,6 @@ export function PlanChanges({
           current period is not refunded.
         </p>
       </Dialog>
-    </section>
+    </Stack>
   );
 }

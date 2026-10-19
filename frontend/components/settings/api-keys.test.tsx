@@ -77,10 +77,11 @@ it('offers an upgrade instead of key creation when the plan lacks API access', a
 it('lists a key by name, prefix, scopes and projects without its ID', async () => {
   list.mockResolvedValue({ available: true, limit: 10, keys: [ciKey] });
   renderTab();
-  const row = (await screen.findByText('Acme')).closest('li');
-  expect(row).toHaveTextContent('CI export · cl_live_Ab12Cd34… · Active');
-  expect(row).toHaveTextContent('readaudits:run');
-  expect(row).toHaveTextContent('Created by ana@example.test · Created Oct 1, 2026 · Not used yet');
+  const row = (await screen.findByText('Acme')).closest('tr');
+  expect(row).toHaveTextContent(
+    'CI exportcl_live_Ab12Cd34… · Active · Created by ana@example.test · Created Oct 1, 2026',
+  );
+  expect(row).toHaveTextContent('readaudits:runAcmeNot used yet');
   expect(row?.textContent).not.toContain(KEY);
   expect(screen.getByText('1 of 10 keys in use')).toBeInTheDocument();
 });
