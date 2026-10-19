@@ -89,47 +89,49 @@ export function InviteDialog({
         </>
       }
     >
-      <Stack as="form" gap="workspace" id={INVITE_FORM_ID} noValidate onSubmit={submit}>
-        <Field label="Email">
-          {(field) => (
-            <Input
-              {...field}
-              type="email"
-              required
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="teammate@example.com"
-            />
-          )}
-        </Field>
-        <Field label="Workspace role" hint={ROLE_SUMMARY[role]}>
-          {(field) => (
-            <Select
-              {...field}
-              value={role}
-              onValueChange={setRole}
-              options={ROLE_OPTIONS}
-              ariaLabel="Invitation role"
-            />
-          )}
-        </Field>
-        {error ? <Alert tone="danger">{error}</Alert> : null}
-        {issuedToken ? (
-          <Alert tone="info">
-            <Stack gap="compact" className="justify-items-start">
-              <span>
-                {deliveryNotice(delivery)}
-                Share this one-time acceptance link. It is shown once and cannot be retrieved again
-                — resending issues a new link and invalidates this one.
-              </span>
-              <code className="type-caption min-w-0 justify-self-stretch truncate tabular-nums">
-                {acceptanceLink(issuedToken)}
-              </code>
-              <CopyButton value={acceptanceLink(issuedToken)}>Copy link</CopyButton>
-            </Stack>
-          </Alert>
-        ) : null}
-      </Stack>
+      <form id={INVITE_FORM_ID} noValidate onSubmit={submit}>
+        <Stack gap="workspace">
+          <Field label="Email">
+            {(field) => (
+              <Input
+                {...field}
+                type="email"
+                required
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="teammate@example.com"
+              />
+            )}
+          </Field>
+          <Field label="Workspace role" hint={ROLE_SUMMARY[role]}>
+            {(field) => (
+              <Select
+                {...field}
+                value={role}
+                onValueChange={setRole}
+                options={ROLE_OPTIONS}
+                ariaLabel="Invitation role"
+              />
+            )}
+          </Field>
+          {error ? <Alert tone="danger">{error}</Alert> : null}
+          {issuedToken ? (
+            <Alert tone="info">
+              <Stack gap="compact" className="justify-items-start">
+                <span>
+                  {deliveryNotice(delivery)}
+                  Share this one-time acceptance link. It is shown once and cannot be retrieved
+                  again — resending issues a new link and invalidates this one.
+                </span>
+                <code className="type-caption min-w-0 justify-self-stretch truncate tabular-nums">
+                  {acceptanceLink(issuedToken)}
+                </code>
+                <CopyButton value={acceptanceLink(issuedToken)}>Copy link</CopyButton>
+              </Stack>
+            </Alert>
+          ) : null}
+        </Stack>
+      </form>
     </Dialog>
   );
 }
