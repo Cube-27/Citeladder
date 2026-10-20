@@ -1,8 +1,8 @@
 ---
 title: 'How to Track Brand Mentions in ChatGPT: A Step-by-Step Method'
 slug: '/track-brand-mentions-chatgpt'
-meta_title: 'How to Track Brand Mentions in ChatGPT (Manual, API and Tools)'
-meta_description: 'A step-by-step method to track what ChatGPT says about your brand: buyer prompts, repeated runs, a logging template, GA4 referrals, OpenAI crawlers and an open-source tracker.'
+meta_title: 'How to Track Brand Mentions in ChatGPT'
+meta_description: 'A step-by-step method to track what ChatGPT says about your brand: buyer prompts, repeated runs, a logging template, GA4 referrals and OpenAI crawlers.'
 primary_keyword: 'how to track brand mentions in ChatGPT'
 secondary_keywords:
   [
@@ -14,6 +14,7 @@ secondary_keywords:
 search_intent: 'Informational how-to: set up brand mention tracking in ChatGPT'
 content_type: 'how-to guide'
 reviewed_at: '2026-10-20'
+related_guides: ['/llm-rank-tracker', '/blog/verify-improve-ai-search-visibility']
 publication_status: 'editorial_review'
 ---
 
@@ -27,7 +28,7 @@ No console lists every conversation in which ChatGPT names you. What you can bui
 
 ## Step 1: Write prompts a buyer would type
 
-Start with the questions people ask before they know your name. Good prompts describe a need, a comparison or a problem:
+Start with the [questions people ask before they know your name](/blog/ai-search-buyer-prompt-generation). Good prompts describe a need, a comparison or a problem:
 
 - "What is the best inventory software for a retailer with three warehouses?"
 - "Alternatives to [competitor] for a ten-person team"
@@ -100,13 +101,13 @@ Two caveats:
 
 ## Step 5: See ChatGPT visits in Google Analytics 4
 
-Mentions and clicks are different measurements. Most answers send no click at all, so zero referral sessions does not mean zero visibility. Where a click does happen, two things help you see it.
+Mentions and clicks are different measurements. Most answers send no click at all, so zero [referral sessions](/platform/ai-referral-analytics) does not mean zero visibility. Where a click does happen, two things help you see it.
 
 **utm_source=chatgpt.com.** OpenAI's publisher FAQ stated (as archived on 21 July 2026; the page has since been retired) that ChatGPT includes `utm_source=chatgpt.com` in referral URLs from ChatGPT search results, so publishers who allow OAI-SearchBot can track that traffic in analytics tools.[\[10\]](#source-10) OpenAI documents only the source parameter; do not assume a fixed medium or campaign value. Attribution is lost when the parameter is stripped, the URL is copied and pasted, or your analytics tag does not fire.
 
 **The AI Assistant channel.** GA4's default channel group now includes an AI Assistant channel for sessions arriving from sources such as ChatGPT, Gemini, DeepSeek, Copilot and Grok. It excludes Google's AI Overviews and AI Mode, and assigns the medium `ai-assistant` when the referrer matches Google's list.[\[11\]](#source-11) If you need a different definition, build a custom channel group with a referrer regex and move it above Referral so it matches first.[\[12\]](#source-12)
 
-Report referral sessions next to your mention rate, never as a substitute for it.
+Report [referral sessions](/blog/ai-referral-traffic-statistics-2026) next to your mention rate, never as a substitute for it.
 
 ## Make sure ChatGPT can read your site
 
@@ -116,7 +117,7 @@ OpenAI runs separate crawlers, each with its own purpose and robots.txt token.[\
 - **GPTBot** crawls content that may be used to train OpenAI's foundation models. Disallowing it signals that your content should not be used for training. It does not control search inclusion.
 - **ChatGPT-User** fetches pages for actions a user starts inside ChatGPT. OpenAI states it is not used for automatic crawling, that robots.txt rules may not apply because a user initiated the request, and that it is not used to decide whether content appears in search.
 
-The settings are independent: you can allow OAI-SearchBot and disallow GPTBot.[\[13\]](#source-13) Check that your CDN or firewall allows the published IP ranges. To keep a page out of search results, use a noindex meta tag the crawler is allowed to read; a blocked page whose URL is known may still surface as a link and title.[\[10\]](#source-10)
+The settings are independent: you can allow OAI-SearchBot and disallow GPTBot.[\[13\]](#source-13) Use the [AI crawler checker](/tools/ai-crawler-checker) to review your robots.txt rules, and check that your CDN or firewall allows the published IP ranges. To keep a page out of search results, use a noindex meta tag the crawler is allowed to read; a blocked page whose URL is known may still surface as a link and title.[\[10\]](#source-10)
 
 ## Step 6: Use a tracker
 

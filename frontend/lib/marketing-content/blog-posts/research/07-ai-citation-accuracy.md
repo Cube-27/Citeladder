@@ -14,12 +14,13 @@ secondary_keywords:
 search_intent: 'Assess citation reliability and verify a source before relying on it'
 content_type: 'research-backed guide'
 reviewed_at: '2026-10-06'
+related_guides: ['/ai-citation-tracking', '/blog/can-chatgpt-find-citations']
 publication_status: 'editorial_review'
 ---
 
 ## How accurate are AI citations?
 
-**AI citations are useful starting points, but a citation is not proof that an answer is correct.** Accuracy depends on whether the source exists, whether the link identifies the right source, whether the source supports the claim, and whether the answer omits important evidence. No single published percentage describes all of those checks across today's AI products.
+**[AI citations](/ai-citation-tracking) are useful starting points, but a citation is not proof that an answer is correct.** Accuracy depends on whether the source exists, whether the link identifies the right source, whether the source supports the claim, and whether the answer omits important evidence. No single published percentage describes all of those checks across today's AI products.
 
 A link can work and still be misleading. It may lead to a real page that discusses the topic without supporting the number, date or conclusion attached to it.
 
@@ -148,7 +149,7 @@ A citation to your website can still misrepresent your product. That makes accur
 
 Prioritise material errors: unavailable features, incorrect pricing, wrong markets, obsolete policies or misleading comparisons. Identify the source of the claim where visible, correct your own information where necessary, and document the issue before seeking a legitimate correction elsewhere.
 
-[AI citation tracking](/ai-citation-tracking) helps preserve the source and answer context. It does not replace the human judgement needed to decide whether a claim is supported.
+AI citation tracking helps preserve the source and answer context. It does not replace the human judgement needed to decide whether a claim is supported.
 
 ## Frequently asked questions
 

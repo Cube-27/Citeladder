@@ -18,8 +18,6 @@ export type Competitor = {
   whenBody: string;
   /** The vendor's source availability and deployment options, as its own site states them. */
   openSource: string;
-  /** A "{name} alternatives" guide, published only where one exists. */
-  alternativesPath?: string;
   conclusionHeading: string;
   conclusion: string;
 };
@@ -89,7 +87,6 @@ export const COMPETITORS: readonly Competitor[] = [
       'Include Profound in your evaluation if a broad AI marketing platform and agent-based marketing workflows are central to your requirements. Ask which capabilities are included in the plan you are considering and how the underlying observations can be inspected.',
     openSource:
       'Hosted service sold as a tailored Enterprise plan with a free trial. Its official site lists no public source code or self-hosted edition (reviewed 20 October 2026).',
-    alternativesPath: '/compare/profound-alternatives',
     conclusionHeading: 'A practical way to compare',
     conclusion:
       'Bring the same small prompt portfolio and one investigation to both demos. For example, ask how a team would examine a competitor mention, find the source behind it and document a next action. Compare the evidence, workflow effort and relevant commercial terms.',

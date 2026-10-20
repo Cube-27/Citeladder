@@ -9,6 +9,7 @@ secondary_keywords:
 search_intent: 'Comparison and prioritisation: decide which work deserves investment'
 content_type: 'comparison guide'
 reviewed_at: '2026-10-06'
+related_guides: ['/generative-engine-optimization', '/blog/will-ai-replace-seo']
 publication_status: 'editorial_review'
 ---
 
@@ -31,7 +32,7 @@ The useful comparison asks which activity will help the next customer make a bet
 | Common success measures | Relevant impressions, clicks and conversions                | Defined mention/citation outcomes plus separately measured business results |
 | Common failure          | Treating rankings as the whole business outcome             | Treating a sampled visibility score as market share                         |
 
-This is an operational distinction. Search results increasingly include generated answers, so the same visitor journey can involve both.
+This is an operational distinction. Search results [increasingly include generated answers](/blog/google-ai-overviews-statistics-2026), so the same visitor journey can involve both.
 
 ## Where the work overlaps
 

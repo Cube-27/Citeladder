@@ -2,19 +2,19 @@
 title: 'Open Source AI Visibility Tool: Self-Hosted LLM Tracking with CiteLadder'
 slug: '/open-source'
 meta_title: 'Open Source AI Visibility Tool, Self-Hosted'
-meta_description: 'CiteLadder is an AGPL-3.0 AI visibility tracker you can self-host. See what is open, how to run it with Docker, what the licence asks of you and how it compares to other open-source trackers.'
+meta_description: 'CiteLadder is an AGPL-3.0 AI visibility tracker you can self-host. What is open, how to run it with Docker, and what the licence asks of you.'
 primary_keyword: 'open source AI visibility tool'
 secondary_keywords:
   [
     'self-hosted LLM tracking',
     'open source AEO tool',
     'self-hosted AI visibility',
-    'open source Profound alternative',
     'AGPL AI visibility tracker',
   ]
 search_intent: 'Find and evaluate an open-source or self-hosted tool that tracks brand visibility in AI answers'
 content_type: 'product-led educational pillar'
 reviewed_at: '2026-10-20'
+related_guides: ['/compare/profound-alternatives', '/best-ai-visibility-platforms']
 publication_status: 'editorial_review'
 ---
 

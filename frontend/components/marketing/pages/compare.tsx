@@ -25,6 +25,16 @@ const GUIDES = [
     desc: 'A wider look at AI visibility platforms.',
   },
   {
+    href: '/llm-rank-tracker',
+    title: 'LLM rank tracker',
+    desc: 'How brand position inside AI answers is measured.',
+  },
+  {
+    href: '/enterprise',
+    title: 'Enterprise AEO',
+    desc: 'Evidence your security team can inspect, with public scoring code.',
+  },
+  {
     href: '/ai-citation-tracking',
     title: 'AI citation tracking',
     desc: 'How citation measurement works and how to read it.',

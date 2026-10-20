@@ -8,6 +8,7 @@ secondary_keywords: ['is SEO replaced by AI', 'is SEO dead', 'future of SEO', 'A
 search_intent: 'Understand disruption, traffic risk and changes to SEO work'
 content_type: 'evidence-led analysis'
 reviewed_at: '2026-10-06'
+related_guides: ['/blog/geo-vs-seo', '/generative-engine-optimization']
 publication_status: 'editorial_review'
 ---
 
@@ -128,7 +129,7 @@ For prioritising overlapping work, see [GEO vs SEO](/blog/geo-vs-seo).
 
 ### 5. Report business outcomes and uncertainty together
 
-A useful report might say: "Search visits to these explanatory pages declined, AI citation observations increased on this fixed panel, and qualified enquiries were unchanged." That is more informative than declaring either total collapse or total success from one metric.
+A useful report might say: "Search visits to these explanatory pages declined, [AI citation](/ai-citation-tracking) observations increased on this fixed panel, and qualified enquiries were unchanged." That is more informative than declaring either total collapse or total success from one metric.
 
 ## What would stronger evidence of replacement look like?
 

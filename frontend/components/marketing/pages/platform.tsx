@@ -150,6 +150,50 @@ const GUIDES: Readonly<Record<string, { title: string; desc: string }>> = {
     title: 'Ecommerce solutions',
     desc: 'Product and category answer evidence.',
   },
+  '/tools': {
+    title: 'Free tools',
+    desc: 'Check crawler rules and page markup before you change a page.',
+  },
+  '/blog/auditing-content-for-llms-ai-search': {
+    title: 'AI website readiness audit',
+    desc: 'A checklist for crawl access, indexing controls and public content.',
+  },
+  '/blog/ai-search-buyer-prompt-generation': {
+    title: 'Buyer prompt generation',
+    desc: 'How to build buyer questions worth tracking in AI search.',
+  },
+  '/blog/action-playbook-winning-ai-citations': {
+    title: 'AI citation action playbook',
+    desc: 'Investigate and improve the citation opportunities you find.',
+  },
+  '/blog/how-accurate-are-ai-citations': {
+    title: 'How accurate are AI citations?',
+    desc: 'What accuracy studies measure and how to verify a citation.',
+  },
+  '/blog/can-chatgpt-find-citations': {
+    title: 'Can ChatGPT find citations?',
+    desc: 'A verified-source workflow for discovering references.',
+  },
+  '/blog/ai-search-market-share-2026': {
+    title: 'AI search market share 2026',
+    desc: 'How ChatGPT, Gemini and Claude compare, and which engines to track.',
+  },
+  '/blog/ai-referral-traffic-statistics-2026': {
+    title: 'AI referral traffic statistics',
+    desc: 'What the data shows about visits sent by AI assistants.',
+  },
+  '/blog/google-ai-overviews-statistics-2026': {
+    title: 'Google AI Overviews statistics',
+    desc: 'What studies show about how often AI Overviews appear.',
+  },
+  '/blog/ads-in-ai-answers': {
+    title: 'Ads in AI answers',
+    desc: 'How ChatGPT ads and Google AI Mode ads differ from citations.',
+  },
+  '/blog/agentic-commerce-statistics-2026': {
+    title: 'Agentic commerce statistics',
+    desc: 'AI shopping data and what it means for product visibility.',
+  },
 };
 
 /** The page's primary and secondary actions, chosen by what a visitor can do today. */

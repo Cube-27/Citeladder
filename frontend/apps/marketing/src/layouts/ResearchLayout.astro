@@ -1,20 +1,28 @@
 ---
 import type { ResearchArticle as ResearchArticleData } from '../research-articles';
+import { researchFaqs, researchParent } from '../research-articles';
 import ResearchArticle from '../components/ResearchArticle.astro';
-import { breadcrumbJsonLd, researchArticleJsonLd } from '@/lib/seo/json-ld';
+import { breadcrumbJsonLd, faqPageJsonLd, researchArticleJsonLd } from '@/lib/seo/json-ld';
 import MarketingLayout from './MarketingLayout.astro';
 
 interface Props { article: ResearchArticleData }
 const { article } = Astro.props;
 const meta = article.frontmatter;
+const parent = researchParent(meta.slug);
 const breadcrumb = breadcrumbJsonLd([
   { name: 'Home', path: '/' },
-  { name: 'Guides', path: '/blog' },
+  { name: parent.label, path: parent.href },
   { name: meta.title, path: meta.slug },
 ]);
+// The visible FAQ section, mirrored as FAQPage data so the questions are machine-readable.
+const faqs = researchFaqs(article.markdown);
 // No person author or publication date is supplied, so the Article claims
 // neither: the organization authors it and the visible review date is its only date.
-const jsonLd = [researchArticleJsonLd(meta), breadcrumb].filter((data) => data !== null);
+const jsonLd = [
+  researchArticleJsonLd(meta),
+  breadcrumb,
+  faqs.length > 0 ? faqPageJsonLd(faqs) : null,
+].filter((data) => data !== null);
 ---
 
 <MarketingLayout title={`${meta.meta_title} · CiteLadder`} description={meta.meta_description} canonical={meta.slug} image={meta.image}

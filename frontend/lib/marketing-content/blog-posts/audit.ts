@@ -28,7 +28,7 @@ export const POST_AUDIT: BlogPost = {
   editorialNote:
     'Updated to clarify measurement definitions, evidence limits and practical checks.',
   closing: {
-    secondary: { href: '/solutions', label: 'Explore team workflows' },
+    secondary: { href: '/platform/site-health', label: 'Explore Site Health' },
     heading: 'Connect website findings with answer evidence.',
     body: 'Explore how CiteLadder helps your team investigate site readiness alongside AI visibility.',
   },
@@ -56,13 +56,18 @@ export const POST_AUDIT: BlogPost = {
     },
     { type: 'heading', text: 'Inspect crawl permissions' },
     {
-      type: 'paragraph',
-      text: 'Review the relevant robots.txt rules for the crawler in question. A rule affecting one user agent is not proof that all crawlers are blocked.',
+      type: 'richParagraph',
+      content: [
+        'Review the ',
+        { type: 'link', text: 'relevant robots.txt rules', href: '/tools/ai-crawler-checker' },
+        ' for the crawler in question. A rule affecting one user agent is not proof that all crawlers are blocked.',
+      ],
     },
     {
       type: 'richParagraph',
       content: [
-        "Robots.txt controls crawling behavior; it is not a secure way to protect confidential information and is not a dependable substitute for indexing controls. Google's documentation explains these distinctions. ",
+        { type: 'link', text: 'Robots.txt', href: '/tools/robots-txt-generator' },
+        " controls crawling behavior; it is not a secure way to protect confidential information and is not a dependable substitute for indexing controls. Google's documentation explains these distinctions. ",
         { type: 'link', text: 'Robots.txt guidance', href: BLOG_SOURCES.googleRobots.url },
         '.',
       ],
@@ -73,8 +78,12 @@ export const POST_AUDIT: BlogPost = {
     },
     { type: 'heading', text: 'Separate indexing controls from crawl access' },
     {
-      type: 'paragraph',
-      text: "Inspect the page's robots meta tag and relevant response headers. A public page can be crawlable while carrying a noindex directive.",
+      type: 'richParagraph',
+      content: [
+        "Inspect the page's ",
+        { type: 'link', text: 'robots meta tag', href: '/tools/meta-directive-checker' },
+        ' and relevant response headers. A public page can be crawlable while carrying a noindex directive.',
+      ],
     },
     {
       type: 'richParagraph',
@@ -135,7 +144,8 @@ export const POST_AUDIT: BlogPost = {
     {
       type: 'richParagraph',
       content: [
-        'Structured data should represent visible, accurate content and use an appropriate supported type. It is not a guarantee of a rich result or an AI citation. Do not add invented reviews, ratings or prices. ',
+        { type: 'link', text: 'Structured data', href: '/tools/structured-data-builder' },
+        ' should represent visible, accurate content and use an appropriate supported type. It is not a guarantee of a rich result or an AI citation. Do not add invented reviews, ratings or prices. ',
         {
           type: 'link',
           text: "Google's structured-data introduction",

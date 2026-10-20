@@ -15,7 +15,7 @@ import { FaqList } from './platform';
  * `lib/marketing-content/faq.ts`, the BYOK disclosure and the catalog's
  * currency note); they quote no price.
  */
-const PRICING_FAQS = [
+export const PRICING_FAQS = [
   {
     q: 'What does the free trial include?',
     a: 'Seven days of AI visibility tracking on ChatGPT for one project, with 20 prompts, 20 monitored URLs and 20 successful answers, one per prompt. Agent access and AI credits are not included. Contact us to continue after the trial.',

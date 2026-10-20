@@ -14,6 +14,7 @@ secondary_keywords:
 search_intent: 'Understand and implement brand and website citation monitoring'
 content_type: 'product-led educational pillar'
 reviewed_at: '2026-10-06'
+related_guides: ['/blog/how-accurate-are-ai-citations', '/blog/can-chatgpt-find-citations']
 image: '/blog/editorial/article-citations.png'
 publication_status: 'editorial_review'
 ---
@@ -194,4 +195,4 @@ No. Inspect the surrounding answer. Source use, brand mention and recommendation
 1. <span id="source-1"></span> Google, [Gemini sources and double-check links](https://support.google.com/gemini/answer/14143489?hl=en).
 2. <span id="source-2"></span> OpenAI, [Web search API guide](https://developers.openai.com/api/docs/guides/tools-web-search).
 3. <span id="source-3"></span> Google, [Gemini grounding with Google Search](https://ai.google.dev/gemini-api/docs/google-search).
-4. <span id="source-4"></span> [CiteLadder product information](https://citeladder.com/), reviewed 6 October 2026.
+4. <span id="source-4"></span> [CiteLadder product information](/), reviewed 6 October 2026.

@@ -61,9 +61,9 @@ export const SHARE_OF_VOICE_PAGE: CommercialPage = {
   context:
     'A visibility observation is not a sales result. Use it to identify questions, sources and pages worth investigating. Then examine referral visits and relevant business outcomes separately.',
   related: [
-    { label: 'Citation Intelligence', href: '/platform/citation-intelligence' },
+    { label: 'AI citation tracking guide', href: '/ai-citation-tracking' },
     { label: 'AI Referral Analytics', href: '/platform/ai-referral-analytics' },
-    { label: 'AI visibility tracker', href: '/platform/ai-visibility' },
+    { label: 'Track brand mentions in ChatGPT', href: '/track-brand-mentions-chatgpt' },
     { label: 'LLM rank tracker', href: '/llm-rank-tracker' },
     { label: 'Read the measurement guide', href: '/blog/verify-improve-ai-search-visibility' },
     { label: 'Compare AI visibility tools', href: '/compare' },

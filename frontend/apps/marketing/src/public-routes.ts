@@ -41,7 +41,7 @@ export const PUBLIC_ROUTES: readonly PublicRoute[] = [
   page('/entity-map', 'Entity Map', 'monthly', 0.5),
   page('/blog', 'Blog', 'weekly', 0.6),
   ...RESEARCH_ARTICLES.map(({ frontmatter }) =>
-    page(frontmatter.slug, frontmatter.title, 'yearly', 0.7),
+    page(frontmatter.slug, frontmatter.title, 'yearly', 0.7, frontmatter.reviewed_at),
   ),
   ...POSTS.map((post) =>
     page(`/blog/${post.slug}`, post.title, 'yearly', 0.7, post.dateModified ?? post.date),
@@ -52,8 +52,10 @@ export const PUBLIC_ROUTES: readonly PublicRoute[] = [
   ),
   page('/tools', 'Free tools', 'monthly', 0.8),
   ...FREE_TOOLS.map((tool) => page(`/tools/${tool.slug}`, tool.title, 'monthly', 0.7)),
-  ...FOOTER_LEGAL_LINKS.map((link) => ({
-    ...page(link.href, link.label, 'yearly', 0.3),
-    kind: 'policy' as const,
-  })),
+  // Contact shares the legal footer row but is a page, not a policy.
+  ...FOOTER_LEGAL_LINKS.map((link) =>
+    link.href === '/contact'
+      ? page(link.href, link.label, 'yearly', 0.3)
+      : { ...page(link.href, link.label, 'yearly', 0.3), kind: 'policy' as const },
+  ),
 ];
