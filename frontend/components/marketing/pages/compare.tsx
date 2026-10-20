@@ -10,6 +10,16 @@ import { Section, SectionHeader } from '../primitives/section';
 /** Related reading: CiteLadder's own guides and product pages. */
 const GUIDES = [
   {
+    href: '/compare/profound-alternatives',
+    title: 'Profound alternatives',
+    desc: 'Hosted and open-source options, compared by workflow and price.',
+  },
+  {
+    href: '/open-source',
+    title: 'Open source and self-hosted',
+    desc: 'Run CiteLadder yourself under AGPL-3.0, or use the hosted version.',
+  },
+  {
     href: '/best-ai-visibility-platforms',
     title: 'Seven-platform research comparison',
     desc: 'A wider look at AI visibility platforms.',

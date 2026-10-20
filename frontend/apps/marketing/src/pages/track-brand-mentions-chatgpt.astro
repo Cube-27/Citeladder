@@ -1,0 +1,12 @@
+---
+import { ProductModule } from '@/components/marketing/pages/platform';
+import { researchArticle } from '../research-articles';
+import ResearchLayout from '../layouts/ResearchLayout.astro';
+const article = researchArticle('/track-brand-mentions-chatgpt')!;
+---
+
+<ResearchLayout article={article}>
+  <ProductModule path="/platform/ai-visibility" heading="Track ChatGPT mentions without the spreadsheet">
+    CiteLadder AI Visibility runs your buyer prompts on a schedule, stores every ChatGPT answer, and separates mentions, citations and recommendations so you can see what changed and which sources the answer relied on.
+  </ProductModule>
+</ResearchLayout>

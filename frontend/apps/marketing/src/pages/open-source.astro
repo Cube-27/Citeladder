@@ -1,0 +1,6 @@
+---
+import { researchArticle } from '../research-articles';
+import ResearchLayout from '../layouts/ResearchLayout.astro';
+const article = researchArticle('/open-source')!;
+---
+<ResearchLayout article={article} />

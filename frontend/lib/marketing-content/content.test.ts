@@ -2,7 +2,7 @@
 //
 // Pure logic: no DOM, no window, no React render. The suite-wide jsdom
 // default costs a full environment per file and buys nothing here.
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vite-plus/test';
@@ -30,9 +30,8 @@ import { SOLUTION_SEGMENTS } from './solutions';
  * These are STRUCTURAL, not snapshots. A snapshot of 1,500 lines of marketing
  * copy fails on every deliberate wording change and proves nothing; what is
  * actually worth catching is a route that does not exist, a duplicate blog
- * slug, an empty section that renders as a blank block, and — the rule the
- * repository already enforces at E2E level — a commercial page claiming the
- * product is open source or self-hostable.
+ * slug, an empty section that renders as a blank block, and a commercial page
+ * misnaming the licence, the hosted product or the public repository.
  */
 /** Every policy this product publishes; each binds the parent company. */
 const ALL_LEGAL: readonly LegalDocument[] = [
@@ -402,12 +401,15 @@ describe('legal content', () => {
   });
 });
 
+const RESEARCH_DIR = resolve(import.meta.dirname, 'blog-posts/research');
+
 describe('commercial positioning', () => {
   const everyString = [
     ...POSTS.flatMap((post) => [post.title, post.excerpt, ...post.body.map(blockText)]),
     ...FAQ_GROUPS.flatMap((group) => group.items.flatMap((item) => [item.q, item.a])),
     ...Object.values(PLAN_PRESENTATION).map((plan) => plan.blurb),
     ...stringsIn(COMPETITORS),
+    ...readdirSync(RESEARCH_DIR).map((file) => readFileSync(resolve(RESEARCH_DIR, file), 'utf8')),
     ...ALL_LEGAL.flatMap((document) =>
       document.sections.flatMap((section) => [
         ...(section.paragraphs ?? []),
@@ -417,12 +419,11 @@ describe('commercial positioning', () => {
     ),
   ].join('\n');
 
-  it.each(['MIT license', 'open source', 'open-source', 'self-host', 'github.com'])(
+  it.each(['MIT license', 'CiteLadder Cloud', 'github.com/Cube-27'])(
     'makes no %j claim',
     (phrase) => {
-      // CiteLadder is a commercial product. The E2E suite asserts this on the
-      // rendered pages; this catches it in the content module, where it is
-      // cheaper to find and impossible to miss on a page nobody screenshots.
+      // The source is public under AGPL-3.0, not MIT; the hosted product is
+      // plain "CiteLadder"; and the old private repository returns 404.
       expect(everyString.toLowerCase()).not.toContain(phrase.toLowerCase());
     },
   );

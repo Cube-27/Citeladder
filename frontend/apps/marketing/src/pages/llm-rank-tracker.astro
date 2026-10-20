@@ -1,0 +1,12 @@
+---
+import { ProductModule } from '@/components/marketing/pages/platform';
+import { researchArticle } from '../research-articles';
+import ResearchLayout from '../layouts/ResearchLayout.astro';
+const article = researchArticle('/llm-rank-tracker')!;
+---
+
+<ResearchLayout article={article}>
+  <ProductModule path="/platform/ai-visibility" heading="Track brand position with the answer in view">
+    CiteLadder AI Visibility repeats each buyer prompt across ChatGPT, Claude, Gemini and Google AI Overviews, records where your brand and competitors appear, and keeps every position tied to the stored answer and its cited sources.
+  </ProductModule>
+</ResearchLayout>

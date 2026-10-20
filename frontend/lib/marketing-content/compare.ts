@@ -16,6 +16,10 @@ export type Competitor = {
   metaDescription: string;
   sources: readonly ComparisonSource[];
   whenBody: string;
+  /** The vendor's source availability and deployment options, as its own site states them. */
+  openSource: string;
+  /** A "{name} alternatives" guide, published only where one exists. */
+  alternativesPath?: string;
   conclusionHeading: string;
   conclusion: string;
 };
@@ -31,6 +35,8 @@ export const CITELADDER_POSITION = {
   focus:
     'Tracked AI answers, cited-source analysis and Site Health findings in one project workflow.',
   when: 'Your team needs to inspect a recorded answer, follow its cited sources and review the relevant website findings.',
+  openSource:
+    'The source, including the visibility scoring, is public under AGPL-3.0; run it yourself or use the hosted version.',
 } as const;
 
 export const COMPARISON_CHECKLIST = [
@@ -81,6 +87,9 @@ export const COMPETITORS: readonly Competitor[] = [
     ],
     whenBody:
       'Include Profound in your evaluation if a broad AI marketing platform and agent-based marketing workflows are central to your requirements. Ask which capabilities are included in the plan you are considering and how the underlying observations can be inspected.',
+    openSource:
+      'Hosted service sold as a tailored Enterprise plan with a free trial. Its official site lists no public source code or self-hosted edition (reviewed 20 October 2026).',
+    alternativesPath: '/compare/profound-alternatives',
     conclusionHeading: 'A practical way to compare',
     conclusion:
       'Bring the same small prompt portfolio and one investigation to both demos. For example, ask how a team would examine a competitor mention, find the source behind it and document a next action. Compare the evidence, workflow effort and relevant commercial terms.',
@@ -105,6 +114,8 @@ export const COMPETITORS: readonly Competitor[] = [
     ],
     whenBody:
       'Include Otterly AI in your evaluation when recurring AI search monitoring and related optimization work are the starting point. Confirm the exact engine selection, observation cadence, reporting and usage limits for the proposed plan.',
+    openSource:
+      'Hosted service with published subscription tiers. Its official site lists no public source code or self-hosted edition (reviewed 20 October 2026).',
     conclusionHeading: 'Test the investigation as well as the dashboard',
     conclusion:
       'Choose a prompt where your brand and a competitor appear differently. Ask to inspect the answer, citation details and the route from that observation to a specific task. Compare how much context survives when the finding is exported or shared.',
@@ -129,6 +140,8 @@ export const COMPETITORS: readonly Competitor[] = [
     ],
     whenBody:
       'Include Scrunch in your evaluation if agent traffic observability or agent-specific content delivery is an important part of the project. Ask what implementation is required, how content consistency is maintained and which capabilities are included in the selected plan.',
+    openSource:
+      'Hosted service, part of Sitecore since June 2026. Its official site lists no public source code or self-hosted edition (reviewed 20 October 2026).',
     conclusionHeading: 'Separate the observation from the intervention',
     conclusion:
       'Ask each vendor to show how it identifies a visibility issue and what it proposes changing. If the proposal affects delivery infrastructure, review rollout, verification and rollback requirements separately from reporting requirements.',
@@ -153,6 +166,8 @@ export const COMPETITORS: readonly Competitor[] = [
     ],
     whenBody:
       'Include Peec AI in your evaluation when AI search analytics and recurring reporting are central requirements. Confirm the collection sources, metric definitions and reporting integrations available in your selected plan.',
+    openSource:
+      'Hosted service with plans sized by prompts and models. Its official site lists no public source code or self-hosted edition (reviewed 20 October 2026).',
     conclusionHeading: 'Compare definitions before percentages',
     conclusion:
       'Use the same business question and inspect how each product defines visibility, position and competitor presence. Check the observation set, available source context and export format. A difference between dashboard percentages can reflect a different method rather than a different underlying business outcome.',

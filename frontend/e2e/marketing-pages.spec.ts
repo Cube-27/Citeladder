@@ -591,6 +591,13 @@ test.describe('marketing routes', () => {
       'href',
       'https://docs.citeladder.com/changelog/',
     );
-    await expect(footer.getByRole('link', { name: 'GitHub' })).toHaveCount(0);
+    await expect(footer.getByRole('link', { name: 'github.com' })).toHaveAttribute(
+      'href',
+      'https://github.com/abhij1306/CiteLadder',
+    );
+    await expect(page.getByRole('link', { name: 'CiteLadder on GitHub' })).toHaveAttribute(
+      'href',
+      'https://github.com/abhij1306/CiteLadder',
+    );
   });
 });

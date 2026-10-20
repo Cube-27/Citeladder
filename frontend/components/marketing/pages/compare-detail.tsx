@@ -66,6 +66,16 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
                 <td data-label={competitor.name}>{competitor.whenBody}</td>
               </tr>
               <tr>
+                <th scope="row">Open source / self-hostable</th>
+                <td data-label="CiteLadder">
+                  {CITELADDER_POSITION.openSource}{' '}
+                  <a className="ed-link" href="/open-source">
+                    Self-host or use the hosted version
+                  </a>
+                </td>
+                <td data-label={competitor.name}>{competitor.openSource}</td>
+              </tr>
+              <tr>
                 <th scope="row">Source</th>
                 <td data-label="CiteLadder">
                   <a className="ed-link" href="/platform">
@@ -139,6 +149,14 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
             </p>
           ))}
           <p className="website-body flex flex-wrap gap-x-5 gap-y-1">
+            {competitor.alternativesPath && (
+              <a className="ed-link" href={competitor.alternativesPath}>
+                {competitor.name} alternatives
+              </a>
+            )}
+            <a className="ed-link" href="/platform/ai-visibility">
+              AI visibility tracker
+            </a>
             <a className="ed-link" href="/pricing">
               CiteLadder pricing
             </a>

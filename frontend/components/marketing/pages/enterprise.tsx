@@ -13,8 +13,9 @@ import { AnswerView, ProductShot } from '../scenes/product-views';
 
 const EVIDENCE_POINTS = [
   'Raw answers are stored before any metric is calculated',
-  'Deterministic rules and versioned analysis show how each result was produced',
-  'Coverage gaps, unavailable and observed-zero results stay distinct',
+  'The scoring rules are deterministic, versioned and published in the open-source repository under AGPL-3.0',
+  'Mentions match on word boundaries; citations come only from engine citation metadata',
+  'Unavailable, not-configured and observed-zero results stay distinct from each other',
 ] as const;
 
 const GOVERNANCE = [
@@ -30,8 +31,8 @@ const GOVERNANCE = [
     title: 'Evidence',
     points: [
       'Projects, prompts, connections and history are scoped to the owning workspace',
-      'Each derived metric keeps the source answers it came from',
-      'No LLM-as-judge scoring',
+      'Each derived metric keeps the source answers and the processing version it came from',
+      'No LLM-as-judge scoring; the method is readable in the public code',
     ],
   },
   {
@@ -55,16 +56,16 @@ const DATA_FLOW = [
 
 const FIT = [
   {
-    title: 'Security-led evaluation',
-    body: 'Reviewers get a short map of credential handling, workspace authorization, evidence retention and the managed-cloud boundary.',
+    title: 'A security review',
+    body: 'Reviewers get a short map of credential handling, workspace authorization, evidence retention and the managed-cloud boundary, plus the public scoring code to read.',
   },
   {
     title: 'Several teams or brands',
-    body: 'Projects, prompts, provider connections and audit history stay with the workspace that owns them.',
+    body: 'Projects, prompts, provider connections and audit history stay with the workspace that owns them; one workspace cannot read another.',
   },
   {
     title: 'A measurement program',
-    body: 'A defined prompt portfolio, comparable audits and enough context to review every observation.',
+    body: 'A defined prompt portfolio, repeated runs, like-for-like comparisons and enough context to review every observation.',
   },
 ] as const;
 
@@ -72,12 +73,12 @@ const AGREEMENT = [
   {
     title: 'Monthly audit runs',
     unit: 'Prompt × engine × repetition',
-    desc: 'Sized to the brand topics you evaluate at the same time.',
+    desc: 'Sized to the brand topics you evaluate at the same time. Each prompt can be run up to 10 times per engine.',
   },
   {
     title: 'Monitored URLs',
     unit: 'Total monitored URL set',
-    desc: 'Brand, product and competitor pages in your site-health scope.',
+    desc: 'Brand, product and competitor pages in your Site Health scope.',
   },
   {
     title: 'Projects and seats',
@@ -105,8 +106,8 @@ export function EnterpriseHero() {
   return (
     <PageHero
       centered
-      title="AI visibility your security team can inspect."
-      lead="Measure how ChatGPT, Gemini, Claude and Google AI Overviews describe your brand, with an evidence trail scoped to your workspace. Ready for procurement and security review."
+      title="The AEO platform whose scoring you can audit."
+      lead="Enterprise AEO measurement for how ChatGPT, Gemini, Claude and Google AI Overviews describe your brand. Every score traces to a stored answer, the scoring code is public, and evidence stays inside your workspace."
     >
       <div className="mt-9 flex flex-wrap justify-center gap-3">
         <DemoButtonLink size="marketing">
@@ -127,11 +128,16 @@ export function EnterpriseEvidence() {
       <div className="mk-dive">
         <div className="mk-dive-copy">
           <h2 className="website-page-title mk-dive-title">
-            Every number traces to a stored answer.
+            Every number traces to a stored answer and a published rule.
           </h2>
           <p className="website-body">
-            Security, analytics and growth teams read the same evidence: the prompt, the engine, the
-            answer and the sources it cited.
+            Security, analytics and growth teams read the same{' '}
+            <a className="ed-link" href="/platform/ai-visibility">
+              AI visibility
+            </a>{' '}
+            evidence: the prompt, the engine, the answer and the sources it cited. The rules that
+            turn that evidence into a score are not a black box; they are in the open-source
+            repository, so a reviewer can check the method instead of taking a description of it.
           </p>
           <ul className="mk-checks">
             {EVIDENCE_POINTS.map((point) => (
@@ -156,7 +162,7 @@ export function EnterpriseGovernance() {
       <div className="mk-split">
         <SectionHeader
           title="Every boundary has one owner."
-          lead="Credentials, evidence and execution are each handled in one place, so a reviewer can check them one at a time."
+          lead="Credentials, evidence and execution are each handled in one place, so a security reviewer can check them one at a time and read the code behind each."
           headingId="enterprise-governance-title"
         />
         <div className="cm-groups">
@@ -181,7 +187,7 @@ export function EnterpriseDataFlow() {
     <Section aria-label="How a request travels">
       <SectionHeader
         title="How a request travels."
-        lead="CiteLadder runs in a managed cloud behind one same-origin boundary. Provider keys are resolved only when a worker calls an engine."
+        lead="The hosted platform runs in a managed cloud behind one same-origin boundary. Every read is checked against the workspace, and provider keys are resolved only when a worker calls an engine."
         headingId="enterprise-flow-title"
       />
       <ol className="cm-flow">
@@ -202,7 +208,7 @@ export function EnterpriseFit() {
     <Section id="fit" tone="soft" aria-label="Who Enterprise is for">
       <SectionHeader
         title="Who Enterprise is for."
-        lead="Enterprise fits when your program needs more scope and review than a self-serve plan provides."
+        lead="Enterprise fits when your AEO program needs more scope, more review and clearer boundaries than a self-serve plan provides."
         headingId="enterprise-fit-title"
       />
       <ul className="mk-highlights">
@@ -223,7 +229,7 @@ export function EnterpriseLimits() {
       <div className="mk-split">
         <SectionHeader
           title="Scope the agreement around the work."
-          lead="Six inputs set an Enterprise agreement. Each is quoted to fit your program."
+          lead="Six inputs set an Enterprise agreement. Each is quoted to fit your program, and none changes how a score is computed."
           headingId="enterprise-limits-title"
         />
         <dl className="cm-spec">
@@ -247,8 +253,8 @@ export function EnterpriseContactCta() {
     <Section id="contact" className="marketing-closing-band" aria-label="Contact sales">
       <div className="flex flex-col items-center gap-8 text-center" data-cta-placement="closing">
         <SectionHeader
-          title="Bring your volumes and your review process."
-          lead="Tell us about your constraints and provider setup. We will focus the demo on the evidence your team needs."
+          title="Bring your volumes and your review questions."
+          lead="Tell us your prompt volumes, engines and security requirements. We will walk your reviewers through the evidence trail and the code that scores it."
           align="center"
         />
         <div className="flex flex-wrap justify-center gap-3">

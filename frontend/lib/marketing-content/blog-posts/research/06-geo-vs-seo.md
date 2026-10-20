@@ -14,7 +14,7 @@ publication_status: 'editorial_review'
 
 ## Is GEO better than SEO?
 
-**GEO is not inherently better than SEO.** SEO supports discovery through search, while GEO focuses attention on how information appears in generated answers. The work often overlaps, but the measurements differ. Prioritise the channel and failure mode that matter to your customers instead of replacing one programme because the other has a newer name.
+**[GEO](/generative-engine-optimization) is not inherently better than SEO.** SEO supports discovery through search, while GEO focuses attention on how information appears in generated answers. The work often overlaps, but the measurements differ. Prioritise the channel and failure mode that matter to your customers instead of replacing one programme because the other has a newer name.
 
 A business with inaccessible product pages should not divert its entire budget into AI mention tracking. A business with strong search traffic but persistent misrepresentation in AI answers may need a new measurement and information-quality workstream.
 
@@ -129,7 +129,7 @@ Usually, start with one strong page for one distinct reader need. Do not produce
 
 A useful implementation guide can serve search visitors, AI-referred visitors and existing customers. Its evidence, examples and limitations should remain consistent wherever people encounter it.
 
-Different pages make sense when the decisions differ. A definition of GEO, a guide to measuring AI visibility and a comparison of software are distinct intents. Three articles repeating the same definition with slightly different keywords are not.
+Different pages make sense when the decisions differ. A definition of GEO, a guide to measuring [AI visibility](/platform/ai-visibility) and a comparison of software are distinct intents. Three articles repeating the same definition with slightly different keywords are not.
 
 ## What about backlinks, brand mentions and citations?
 
