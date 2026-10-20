@@ -1,7 +1,7 @@
 ---
 import { ArrowRight } from 'lucide-react';
 import type { ResearchArticle } from '../research-articles';
-import { RESEARCH_ARTICLES } from '../research-articles';
+import { moreGuides, researchParent } from '../research-articles';
 import { ResearchMarkdown, researchHeadings } from '@/components/marketing/blog/research-markdown';
 import { Container } from '@/components/marketing/primitives/section';
 import { formatBlogDate } from '@/lib/marketing-content/blog-index';
@@ -10,11 +10,9 @@ interface Props { article: ResearchArticle }
 const { article } = Astro.props;
 const { frontmatter } = article;
 const headings = researchHeadings(article.markdown);
-// The next guides in publication order, wrapping, so every guide ends with a way on.
-const position = RESEARCH_ARTICLES.findIndex((candidate) => candidate.frontmatter.slug === frontmatter.slug);
-const more = [1, 2]
-  .map((step) => RESEARCH_ARTICLES[(position + step) % RESEARCH_ARTICLES.length])
-  .filter((candidate) => candidate && candidate.frontmatter.slug !== frontmatter.slug);
+// Curated related guides, or the next ones in publication order, so every guide ends with a way on.
+const more = moreGuides(article);
+const parent = researchParent(frontmatter.slug);
 ---
 
 <Container>
@@ -23,7 +21,7 @@ const more = [1, 2]
       <nav aria-label="Breadcrumb" class="cp-crumbs">
         <ol>
           <li><a href="/" class="focus-ring rounded-xs">Home</a></li>
-          <li><a href="/blog" class="focus-ring rounded-xs">Guides</a></li>
+          <li><a href={parent.href} class="focus-ring rounded-xs">{parent.label}</a></li>
         </ol>
       </nav>
       <h1 class="website-page-title website-article-title">{frontmatter.title}</h1>

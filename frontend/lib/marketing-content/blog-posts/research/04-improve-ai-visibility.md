@@ -9,6 +9,7 @@ secondary_keywords:
 search_intent: 'Action: diagnose weak visibility and choose useful improvements'
 content_type: 'how-to'
 reviewed_at: '2026-10-06'
+related_guides: ['/blog/verify-improve-ai-search-visibility', '/generative-engine-optimization']
 publication_status: 'editorial_review'
 ---
 
@@ -175,7 +176,7 @@ Treat visibility as maintenance, not a one-time campaign. Review important produ
 
 CiteLadder can support the evidence side of that workflow by retaining answer and source observations. The improvement itself still requires a useful decision: what information, page or technical condition should change?
 
-Start with [checking your AI visibility](/blog/verify-improve-ai-search-visibility), then use [citation tracking](/ai-citation-tracking) to inspect the source pattern behind the result.
+Start with checking your AI visibility, then use [citation tracking](/ai-citation-tracking) to inspect the source pattern behind the result.
 
 ## Frequently asked questions
 

@@ -132,6 +132,8 @@ export const DIAGNOSE_PAGES: readonly PlatformPage[] = [
       '/platform/demand-intelligence',
       '/platform/agents',
       '/platform/ai-visibility',
+      '/tools',
+      '/blog/auditing-content-for-llms-ai-search',
     ],
   },
   {

@@ -1,8 +1,8 @@
 ---
 title: 'Profound Alternatives in 2026: Ten AI Visibility Tools Compared'
 slug: '/compare/profound-alternatives'
-meta_title: 'Profound Alternatives: 10 AI Visibility Tools Compared (2026)'
-meta_description: 'Profound dropped its self-serve plans in September 2026. Compare ten alternatives by entry price, engines, evidence and what happens after the score, with dated official sources.'
+meta_title: 'Profound Alternatives: 10 Tools Compared'
+meta_description: 'Profound dropped its self-serve plans in September 2026. Compare ten alternatives by entry price, engines and evidence, with dated official sources.'
 primary_keyword: 'Profound alternatives'
 secondary_keywords:
   [
@@ -10,17 +10,17 @@ secondary_keywords:
     'Profound competitors',
     'Profound pricing change',
     'open source Profound alternative',
-    'Profound vs',
   ]
 search_intent: 'Commercial investigation: shortlist a replacement or comparison for Profound after its plan change'
 content_type: 'comparison'
 reviewed_at: '2026-10-20'
+related_guides: ['/best-ai-visibility-platforms', '/open-source']
 publication_status: 'editorial_review'
 ---
 
 ## What are the best alternatives to Profound?
 
-**The closest alternatives to Profound depend on why you are looking: Otterly AI, Rankscale and AthenaHQ for a published entry price; Scrunch, Goodie and Peec AI for a mid-market platform; Semrush and Ahrefs for teams already inside an SEO suite; and CiteLadder or another open-source tracker if you want to read the scoring code or run it yourself.** Profound now sells a tailored Enterprise plan plus a free trial, so most searchers are either priced out of a contract or want a tool they can buy today.
+**The closest alternatives to Profound depend on why you are looking: Otterly AI, Rankscale and AthenaHQ for a published entry price; Scrunch, Goodie and Peec AI for a mid-market platform; Semrush and Ahrefs for teams already inside an SEO suite; and CiteLadder or another [open-source](/open-source) tracker if you want to read the scoring code or run it yourself.** Profound now sells a tailored Enterprise plan plus a free trial, so most searchers are either priced out of a contract or want a tool they can buy today.
 
 This guide gives the dated facts about what changed at Profound, a criteria table, one short section per alternative with its official positioning and verified price, and the questions to ask before a pilot. CiteLadder's own [AI visibility](/platform/ai-visibility) product is included and labelled as ours.
 
@@ -105,7 +105,7 @@ Rankscale's pricing page is headed "Plans that scale with your ambition". On 20 
 
 If the reason you are leaving is seat pricing, data location or a wish to read the scoring code, several trackers publish their source. Elmo is an MIT-licensed AEO and GEO platform that runs on Docker Compose with your own PostgreSQL and is also sold as a cloud service. Limelit Open is an Apache-2.0 single-binary tracker that its README marks as pre-release. OneGlanse is MIT-licensed and captures answers through the real product interfaces in a browser. CiteLadder is AGPL-3.0 and is covered below.[\[20\]](#source-20)
 
-Open-source trackers do not come with SOC 2 reports or SSO; you provide identity and hosting yourself, and you pay providers directly for each call. The [open source](/open-source) page explains the self-hosted and hosted options, the Docker quickstart and the licence in plain language.
+Open-source trackers do not come with SOC 2 reports or SSO; you provide identity and hosting yourself, and you pay providers directly for each call. The open source page explains the self-hosted and hosted options, the Docker quickstart and the licence in plain language.
 
 ## CiteLadder (our product)
 
@@ -175,5 +175,5 @@ No. Trackers report observed change between comparable runs. Attributing a chang
 18. <span id="source-18"></span> [Goodie pricing](https://higoodie.com/pricing/), read 20 October 2026.
 19. <span id="source-19"></span> [Rankscale pricing](https://rankscale.ai/pricing), read 20 October 2026.
 20. <span id="source-20"></span> GitHub repositories, read 20 October 2026: [elmohq/elmo](https://github.com/elmohq/elmo), [limelit-co/open](https://github.com/limelit-co/open), [oneglanse/oneglanse](https://github.com/oneglanse/oneglanse).
-21. <span id="source-21"></span> [CiteLadder repository README](https://github.com/abhij1306/CiteLadder), read 20 October 2026, and [CiteLadder pricing](https://citeladder.com/pricing).
+21. <span id="source-21"></span> [CiteLadder repository README](https://github.com/abhij1306/CiteLadder), read 20 October 2026, and [CiteLadder pricing](/pricing).
 22. <span id="source-22"></span> [Semrush AI Visibility Toolkit pricing](https://www.semrush.com/pricing/ai) and [knowledge base](https://www.semrush.com/kb/1493-ai-seo-toolkit), read 20 October 2026.

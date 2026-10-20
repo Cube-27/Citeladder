@@ -296,6 +296,11 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
       '/ai-search-share-of-voice',
       '/ai-citation-tracking',
       '/platform/site-health',
+      '/platform/commerce-intelligence',
+      '/blog/ai-search-buyer-prompt-generation',
+      '/blog/ai-search-market-share-2026',
+      '/blog/google-ai-overviews-statistics-2026',
+      '/blog/ads-in-ai-answers',
     ],
   },
   {
@@ -417,6 +422,10 @@ export const MEASURE_PAGES: readonly PlatformPage[] = [
       '/platform/site-health',
       '/platform/ai-referral-analytics',
       '/platform/content-intelligence',
+      '/platform/commerce-intelligence',
+      '/blog/action-playbook-winning-ai-citations',
+      '/blog/how-accurate-are-ai-citations',
+      '/blog/can-chatgpt-find-citations',
     ],
   },
 ];

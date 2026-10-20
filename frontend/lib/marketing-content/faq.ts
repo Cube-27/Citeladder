@@ -51,7 +51,7 @@ export const FAQ_GROUPS: readonly FaqGroup[] = [
       faqItem(
         'Do these observations represent every answer a consumer will see?',
         'No. Results reflect the prompts, source and conditions used for the observation. Consumer experiences can differ because of factors such as account context, location, conversation history and collection method.',
-        [{ label: 'Understand AI share of voice', href: '/ai-search-share-of-voice' }],
+        [{ label: 'Read the AI citation tracking guide', href: '/ai-citation-tracking' }],
       ),
       faqItem(
         'How is the product organized?',

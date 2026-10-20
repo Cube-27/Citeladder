@@ -121,6 +121,7 @@ export const OUTCOME_PAGES: readonly PlatformPage[] = [
       '/platform/citation-intelligence',
       '/platform/site-health',
       '/platform/demand-intelligence',
+      '/blog/ai-referral-traffic-statistics-2026',
     ],
   },
   {
@@ -224,6 +225,7 @@ export const OUTCOME_PAGES: readonly PlatformPage[] = [
       '/platform/citation-intelligence',
       '/platform/content-intelligence',
       '/solutions#commerce',
+      '/blog/agentic-commerce-statistics-2026',
     ],
   },
 ];

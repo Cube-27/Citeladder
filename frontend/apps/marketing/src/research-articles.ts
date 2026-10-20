@@ -10,11 +10,65 @@ type ResearchMetadata = {
   search_intent: string;
   content_type: string;
   reviewed_at: string;
+  /** Curated "More guides" slugs; guides without them fall back to publication order. */
+  related_guides?: readonly string[];
   /** Social card image; guides without one use the site image. */
   image?: string;
 };
 
 export type ResearchArticle = { frontmatter: ResearchMetadata; markdown: string };
+
+/** Inline Markdown reduced to the plain text a search engine reads as an answer. */
+function plainText(markdown: string) {
+  return markdown
+    .replace(/\[\\\[\d+\\\]\]\(#source-\d+\)/g, '')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/[*_`]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * The guide's "Frequently asked questions" section as question/answer pairs:
+ * each `### ` heading is a question and the prose under it, up to the next
+ * heading, its answer. Guides without the section have none.
+ */
+export function researchFaqs(markdown: string): { q: string; a: string }[] {
+  const section = /^## Frequently asked questions\s*$([\s\S]*?)(?=^## |(?![\s\S]))/m.exec(
+    markdown,
+  )?.[1];
+  if (!section) return [];
+  return section
+    .split(/^### /m)
+    .slice(1)
+    .map((block) => {
+      const [question = '', ...answer] = block.split('\n');
+      return { q: plainText(question), a: plainText(answer.join(' ')) };
+    })
+    .filter((item) => item.q && item.a);
+}
+
+/** The breadcrumb parent: comparison guides sit under Compare, every other guide under Guides. */
+export function researchParent(slug: string) {
+  return slug.startsWith('/compare/')
+    ? { label: 'Compare', href: '/compare' }
+    : { label: 'Guides', href: '/blog' };
+}
+
+/** The two guides shown under "More guides": curated when set, else the next two published. */
+export function moreGuides(article: ResearchArticle): ResearchArticle[] {
+  const slug = article.frontmatter.slug;
+  const curated = (article.frontmatter.related_guides ?? [])
+    .map((path) => researchArticle(path))
+    .filter(
+      (guide): guide is ResearchArticle => guide !== undefined && guide.frontmatter.slug !== slug,
+    );
+  if (curated.length > 0) return curated.slice(0, 2);
+  const position = RESEARCH_ARTICLES.indexOf(article);
+  return [1, 2]
+    .map((step) => RESEARCH_ARTICLES[(position + step) % RESEARCH_ARTICLES.length]!)
+    .filter((guide) => guide.frontmatter.slug !== slug);
+}
 
 // The existing Markdown renderer serves crawlable HTML. Frontmatter is the
 // single metadata owner for routes, the resource listing and the sitemap.

@@ -149,11 +149,12 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
             </p>
           ))}
           <p className="website-body flex flex-wrap gap-x-5 gap-y-1">
-            {competitor.alternativesPath && (
-              <a className="ed-link" href={competitor.alternativesPath}>
-                {competitor.name} alternatives
-              </a>
-            )}
+            <a className="ed-link" href="/compare/profound-alternatives">
+              Profound alternatives
+            </a>
+            <a className="ed-link" href="/best-ai-visibility-platforms">
+              AI visibility platforms compared
+            </a>
             <a className="ed-link" href="/platform/ai-visibility">
               AI visibility tracker
             </a>

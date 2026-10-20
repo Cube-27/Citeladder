@@ -2,7 +2,7 @@
 title: 'Can ChatGPT Find Citations? How AI Citation Discovery Actually Works'
 slug: '/blog/can-chatgpt-find-citations'
 meta_title: 'Can ChatGPT Find Citations? A Verified-Source Workflow'
-meta_description: 'Use ChatGPT to discover sources without trusting invented references. Learn when to use search, how to verify a DOI, and how source discovery differs from tracking.'
+meta_description: 'Use ChatGPT to discover sources without trusting invented references. Learn when to use search, how to verify a DOI, and how discovery differs from tracking.'
 primary_keyword: 'can ChatGPT find citations'
 secondary_keywords:
   [
@@ -14,6 +14,7 @@ secondary_keywords:
 search_intent: 'Find credible references or understand where AI answers get source links'
 content_type: 'how-to explainer'
 reviewed_at: '2026-10-06'
+related_guides: ['/blog/how-accurate-are-ai-citations', '/ai-citation-tracking']
 publication_status: 'editorial_review'
 ---
 

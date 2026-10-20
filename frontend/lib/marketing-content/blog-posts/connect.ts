@@ -19,7 +19,11 @@ export const POST_CONNECT: BlogPost = {
   authorRole: FOUNDER.role,
   authorUrl: FOUNDER.linkedin,
   tags: ['AEO Foundations', 'Evidence Systems', 'Data Integration'],
-  relatedSlugs: ['auditing-content-for-llms-ai-search', 'action-playbook-winning-ai-citations'],
+  relatedSlugs: [
+    'auditing-content-for-llms-ai-search',
+    'action-playbook-winning-ai-citations',
+    'ai-search-buyer-prompt-generation',
+  ],
   sources: [BLOG_SOURCES.gaAiAssistant, BLOG_SOURCES.gscAiReport, BLOG_SOURCES.openaiCrawlers],
   body: [
     { type: 'heading', text: 'Start with evidence boundaries' },

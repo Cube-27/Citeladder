@@ -1,7 +1,7 @@
 ---
 title: 'LLM Rank Tracker: Track Brand Position in ChatGPT, Claude, Gemini and AI Overviews'
 slug: '/llm-rank-tracker'
-meta_title: 'LLM Rank Tracker for ChatGPT, Claude, Gemini and AI Overviews'
+meta_title: 'LLM Rank Tracker for ChatGPT, Claude and Gemini'
 meta_description: 'What an LLM rank tracker measures, how position inside an AI answer is defined, why one answer is not a rank, and how to set up tracking you can defend.'
 primary_keyword: 'LLM rank tracker'
 secondary_keywords:
@@ -14,6 +14,7 @@ secondary_keywords:
 search_intent: 'Commercial investigation: understand what an LLM rank tracker measures and choose one'
 content_type: 'product-led landing page'
 reviewed_at: '2026-10-20'
+related_guides: ['/track-brand-mentions-chatgpt', '/best-ai-visibility-platforms']
 publication_status: 'editorial_review'
 ---
 
@@ -78,7 +79,7 @@ OpenAI's and Anthropic's web search tools accept a user location with country, c
 
 ### 1. Build a prompt set that reads like a buyer
 
-Write the questions a buyer would type before they know your name: "best X for Y", "X vs Y for a team of ten", "how do I solve Z". Keep branded prompts in a separate group, because a prompt that names you measures your own typing. Organise by topic, intent and buying stage so you can read the results by segment. Freeze the wording; if a prompt changes, start a new series for it.
+Write the [questions a buyer would type](/blog/ai-search-buyer-prompt-generation) before they know your name: "best X for Y", "X vs Y for a team of ten", "how do I solve Z". Keep branded prompts in a separate group, because a prompt that names you measures your own typing. Organise by topic, intent and buying stage so you can read the results by segment. Freeze the wording; if a prompt changes, start a new series for it.
 
 ### 2. Choose repetitions
 
@@ -86,7 +87,7 @@ Decide how many times each prompt is asked per run and keep that number constant
 
 ### 3. Pick engines and surfaces, and label them
 
-Decide which assistants matter to your buyers and, for each, whether you are measuring the API, the consumer surface or both. Record grounding state, country and language with each engine. Compare an engine only with itself.
+Decide which [assistants matter to your buyers](/blog/ai-search-market-share-2026) and, for each, whether you are measuring the API, the consumer surface or both. Record grounding state, country and language with each engine. Compare an engine only with itself.
 
 ### 4. Name your competitors and their aliases
 
@@ -98,18 +99,18 @@ Daily, weekly or on demand: the cadence matters less than consistency. Compare r
 
 ## What to look for in an LLM rank tracker
 
-| Question to ask                           | What a good answer looks like                                                                     |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| How is position defined?                  | Stated precisely: first mention among tracked brands, or list position, with the rule for absence |
-| How many answers is each number based on? | The sample size is shown next to the rate or average                                              |
-| Is each prompt repeated within a run?     | Yes, with a fixed count, and the per-prompt count is visible                                      |
-| Which surface was measured?               | Every result is labeled API or consumer surface, with grounding state                             |
-| Can I open the raw answer?                | Every trend point opens the recorded answer, engine, date and cited sources                       |
-| Are mentions and citations separate?      | A brand can be named without a cited page and the reverse; both are tracked on their own          |
-| What happens when a collection fails?     | Failed, unavailable and not-configured states are kept apart from an observed zero                |
-| Are sponsored placements counted?         | Ads are recorded separately and never counted as mentions, citations or position                  |
-| Can I export and recompute one metric?    | Raw rows with prompt, engine, date, mention, position and sources                                 |
-| Can I run it myself?                      | An open-source build you can self-host, or a hosted version, with the method the same in both     |
+| Question to ask                           | What a good answer looks like                                                                               |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| How is position defined?                  | Stated precisely: first mention among tracked brands, or list position, with the rule for absence           |
+| How many answers is each number based on? | The sample size is shown next to the rate or average                                                        |
+| Is each prompt repeated within a run?     | Yes, with a fixed count, and the per-prompt count is visible                                                |
+| Which surface was measured?               | Every result is labeled API or consumer surface, with grounding state                                       |
+| Can I open the raw answer?                | Every trend point opens the recorded answer, engine, date and cited sources                                 |
+| Are mentions and citations separate?      | A brand can be named without a cited page and the reverse; both are tracked on their own                    |
+| What happens when a collection fails?     | Failed, unavailable and not-configured states are kept apart from an observed zero                          |
+| Are sponsored placements counted?         | [Ads](/blog/ads-in-ai-answers) are recorded separately and never counted as mentions, citations or position |
+| Can I export and recompute one metric?    | Raw rows with prompt, engine, date, mention, position and sources                                           |
+| Can I run it myself?                      | An open-source build you can self-host, or a hosted version, with the method the same in both               |
 
 ## How CiteLadder tracks rank
 
@@ -186,5 +187,5 @@ Yes. The self-hosted build is published under AGPL-3.0 at github.com/abhij1306/C
 12. <span id="source-12"></span> Google, [Grounding with Google Search](https://ai.google.dev/gemini-api/docs/generate-content/google-search).
 13. <span id="source-13"></span> arXiv 2609.05059, [Repeated Queries Exhaust an LLM's Brand Recommendations but Not Its Sources](https://arxiv.org/pdf/2609.05059).
 14. <span id="source-14"></span> OpenAI Help, [ChatGPT search](https://help.openai.com/en/articles/9237897-chatgpt-search).
-15. <span id="source-15"></span> [CiteLadder product information](https://citeladder.com/), reviewed 20 October 2026.
+15. <span id="source-15"></span> [CiteLadder product information](/), reviewed 20 October 2026.
 16. <span id="source-16"></span> [CiteLadder on GitHub](https://github.com/abhij1306/CiteLadder), README and SECURITY.md, reviewed 20 October 2026.

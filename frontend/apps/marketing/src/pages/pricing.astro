@@ -1,9 +1,10 @@
 ---
-import { PricingCta, PricingFaq } from '@/components/marketing/pages/pricing';
+import { PRICING_FAQS, PricingCta, PricingFaq } from '@/components/marketing/pages/pricing';
 import { PublicPricingCatalog } from '@/components/marketing/pricing/public-pricing-catalog';
 import { PageHero } from '@/components/marketing/primitives/page-hero';
 import { Section, SectionHeader } from '@/components/marketing/primitives/section';
 import { selfServeCheckoutComingSoon } from '@/lib/billing/catalog';
+import { faqPageJsonLd } from '@/lib/seo/json-ld';
 import { displayCountry, publicCatalog } from '../public-catalog';
 import { workerApexEnv } from '../worker-env';
 import MarketingLayout from '../layouts/MarketingLayout.astro';
@@ -30,6 +31,7 @@ if (!catalog) Astro.response.status = 503;
   description={description}
   canonical="/pricing"
   robots={catalog ? undefined : 'noindex'}
+  jsonLd={[faqPageJsonLd(PRICING_FAQS)]}
 >
   <main id="main" class="w-full max-w-full min-w-0 overflow-x-clip">
     <PageHero

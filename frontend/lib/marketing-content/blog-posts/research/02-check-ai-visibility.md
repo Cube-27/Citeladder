@@ -9,13 +9,14 @@ secondary_keywords:
 search_intent: 'Practical measurement: check current presence and interpret the result'
 content_type: 'measurement guide'
 reviewed_at: '2026-10-06'
+related_guides: ['/ai-citation-tracking', '/track-brand-mentions-chatgpt']
 image: '/blog/editorial/article-verify.png'
 publication_status: 'editorial_review'
 ---
 
 ## How can I check my AI visibility?
 
-**Check AI visibility by testing a defined set of customer questions, saving the answers, and recording whether your brand is mentioned, recommended or linked as a source.** Repeat comparable checks over time and separate results by engine. Use available publisher reports and referral analytics as additional evidence, not as interchangeable versions of the same visibility score.
+**Check [AI visibility](/platform/ai-visibility) by testing a defined set of customer questions, saving the answers, and recording whether your brand is mentioned, recommended or linked as a source.** Repeat comparable checks over time and separate results by engine. Use available publisher reports and referral analytics as additional evidence, not as interchangeable versions of the same visibility score.
 
 You can start manually. What matters is that another person could repeat your check and understand what the result means.
 
@@ -129,7 +130,7 @@ All numbers in this example are illustrative. The example shows why a report sho
 
 Google's current dedicated generative AI report documents impressions for AI Overviews and AI Mode, with page, country, date and device breakdowns. Property-level and page-level totals may differ because they aggregate appearances differently.[\[2\]](#source-2)
 
-Use it for the Google surfaces it covers. It is not a report of every mention in ChatGPT or Gemini Apps. Do not relabel its documented impressions as visits or conversions.
+Use it for the Google surfaces it covers. It is not a report of every [mention in ChatGPT](/track-brand-mentions-chatgpt) or Gemini Apps. Do not relabel its documented impressions as visits or conversions.
 
 ### Bing Webmaster Tools
 
@@ -185,19 +186,19 @@ Absence tells you what happened in the observation. It does not tell you whether
 
 ## Manual checks or an AI visibility platform?
 
-To build an inspectable baseline from collected answers, explore [CiteLadder AI Visibility](/platform/ai-visibility). For identifiable visits reported by GA4, use [AI Referral Analytics](/platform/ai-referral-analytics); those sessions are separate from answer visibility.
+To build an inspectable baseline from collected answers, explore CiteLadder AI Visibility. For identifiable visits reported by GA4, use [AI Referral Analytics](/platform/ai-referral-analytics); those sessions are separate from answer visibility.
 
-Manual checks are useful for validating your definitions and inspecting answer quality. A platform becomes more useful when the cost of retaining and comparing evidence exceeds the cost of automation.
+Manual checks are useful for validating your definitions and inspecting answer quality. A platform becomes more useful when the cost of retaining and comparing evidence exceeds the cost of automation. For repeated prompt runs, see the [LLM rank tracker guide](/llm-rank-tracker).
 
 Before choosing one, ask whether it preserves raw answers, identifies the engine and run conditions, exposes source URLs, separates mentions from citations, and lets you export the underlying observations. See our [AI visibility platform comparison](/best-ai-visibility-platforms) for a buying framework.
 
 CiteLadder's workflow centres on retained answers, prompt/run context and inspectable source references.[\[4\]](#source-4) Use those records to investigate a result, not just to report a score.
 
-[Explore AI citation tracking](/ai-citation-tracking) and then [learn how to improve AI visibility](/blog/how-to-improve-ai-visibility) based on what your baseline reveals.
+Explore AI citation tracking and then [learn how to improve AI visibility](/blog/how-to-improve-ai-visibility) based on what your baseline reveals.
 
 ## Sources
 
 1. <span id="source-1"></span> OpenAI, [Searching the web with ChatGPT](https://help.openai.com/en/articles/9237897-searching-the-web-with-chatgpt).
 2. <span id="source-2"></span> Google, [Generative AI performance report](https://support.google.com/webmasters/answer/16984139).
 3. <span id="source-3"></span> Microsoft Bing, [AI visibility reporting updates](https://blogs.bing.com/search/2026/6/New-AI-Visibility-Insights-in-Bing-Webmaster-Tools-Intents-Topics-Citation-Share-Compare/), 16 June 2026.
-4. <span id="source-4"></span> [CiteLadder](https://citeladder.com/), product information reviewed 6 October 2026.
+4. <span id="source-4"></span> [CiteLadder](/), product information reviewed 6 October 2026.
