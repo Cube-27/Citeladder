@@ -52,21 +52,21 @@ One answer tells you very little. OpenAI documents that responses are non-determ
 
 Use this template. One row is one answer, never one prompt.
 
-| Column            | What to record                                                           |
-| ----------------- | ------------------------------------------------------------------------ |
-| prompt_id         | Stable ID for the frozen prompt wording                                  |
-| date              | Date and time of the run                                                 |
-| engine            | ChatGPT (app) or ChatGPT (API), with model name                          |
-| location_language | Country and language used                                                |
-| web_search        | Yes, no, or unknown                                                      |
-| named             | Yes or no: your brand appears in the answer text                         |
-| position          | Order of first mention among the brands you track; blank if not named   |
-| sentiment         | Positive, neutral, negative, with the quote that supports it             |
+| Column            | What to record                                                             |
+| ----------------- | -------------------------------------------------------------------------- |
+| prompt_id         | Stable ID for the frozen prompt wording                                    |
+| date              | Date and time of the run                                                   |
+| engine            | ChatGPT (app) or ChatGPT (API), with model name                            |
+| location_language | Country and language used                                                  |
+| web_search        | Yes, no, or unknown                                                        |
+| named             | Yes or no: your brand appears in the answer text                           |
+| position          | Order of first mention among the brands you track; blank if not named      |
+| sentiment         | Positive, neutral, negative, with the quote that supports it               |
 | recommended       | Yes or no: the answer suggests you for the stated need, not just names you |
-| competitors_named | Every tracked competitor in the answer, in order                         |
-| cited_domains     | Every source domain shown, and whether any is yours                      |
-| status            | Answer, refusal, error or no answer                                      |
-| raw_answer        | The full text, saved before you open any link                            |
+| competitors_named | Every tracked competitor in the answer, in order                           |
+| cited_domains     | Every source domain shown, and whether any is yours                        |
+| status            | Answer, refusal, error or no answer                                        |
+| raw_answer        | The full text, saved before you open any link                              |
 
 Keep the raw answer. Scores can be recomputed from text; they cannot be recomputed from a score. Record refusals and errors as their own status so they never count as "not named".
 
@@ -87,7 +87,7 @@ A 2x2 of mention and owned citation gives four states per answer: named and cite
 - **Share of voice:** your mentions divided by all tracked-brand mentions in the same answers. Read the [share of voice](/ai-search-share-of-voice) guide before comparing it across prompt sets.
 - **Owned citation rate:** answers citing at least one of your pages divided by all valid answers.
 
-Small samples carry wide uncertainty. Three mentions in ten runs gives a 95 percent Wilson interval of roughly 11 to 60 percent; three in three gives roughly 44 to 100 percent.[\[6\]](#source-6) Treat a change as real only when the intervals from two periods do not overlap, and say how many answers each number is based on.
+Small samples carry wide uncertainty. Three mentions in ten runs gives a 95 percent Wilson interval of roughly 11 to 60 percent; three in three gives roughly 44 to 100 percent.[\[6\]](#source-6) When the intervals from two periods do not overlap, the change is very unlikely to be noise. Overlapping intervals do not prove there was no change, so collect more runs before you decide. Either way, say how many answers each number is based on.
 
 ## Step 4: Automate with the API, with care
 
@@ -102,7 +102,7 @@ Two caveats:
 
 Mentions and clicks are different measurements. Most answers send no click at all, so zero referral sessions does not mean zero visibility. Where a click does happen, two things help you see it.
 
-**utm_source=chatgpt.com.** OpenAI's publisher FAQ states that ChatGPT includes `utm_source=chatgpt.com` in referral URLs from ChatGPT search results, so publishers who allow OAI-SearchBot can track that traffic in analytics tools.[\[10\]](#source-10) OpenAI documents only the source parameter; do not assume a fixed medium or campaign value. Attribution is lost when the parameter is stripped, the URL is copied and pasted, or your analytics tag does not fire.
+**utm_source=chatgpt.com.** OpenAI's publisher FAQ stated (as archived on 21 July 2026; the page has since been retired) that ChatGPT includes `utm_source=chatgpt.com` in referral URLs from ChatGPT search results, so publishers who allow OAI-SearchBot can track that traffic in analytics tools.[\[10\]](#source-10) OpenAI documents only the source parameter; do not assume a fixed medium or campaign value. Attribution is lost when the parameter is stripped, the URL is copied and pasted, or your analytics tag does not fire.
 
 **The AI Assistant channel.** GA4's default channel group now includes an AI Assistant channel for sessions arriving from sources such as ChatGPT, Gemini, DeepSeek, Copilot and Grok. It excludes Google's AI Overviews and AI Mode, and assigns the medium `ai-assistant` when the referrer matches Google's list.[\[11\]](#source-11) If you need a different definition, build a custom channel group with a referrer regex and move it above Referral so it matches first.[\[12\]](#source-12)
 
@@ -196,7 +196,7 @@ No. A tracker observes change between comparable runs. Attributing it to a conte
 7. <span id="source-7"></span> OpenAI, [Web search tool guide](https://platform.openai.com/docs/guides/tools-web-search).
 8. <span id="source-8"></span> Surfer SEO, [LLM scraped AI answers vs API results](https://surferseo.com/blog/llm-scraped-ai-answers-vs-api-results/).
 9. <span id="source-9"></span> Brandlight Research, [UI vs API](https://research.brandlight.ai/ui-vs-api.html).
-10. <span id="source-10"></span> OpenAI Help, [Publishers and developers FAQ](https://help.openai.com/en/articles/12627856-publishers-and-developers-faq).
+10. <span id="source-10"></span> OpenAI Help, [Publishers and developers FAQ](https://web.archive.org/web/20260721063426/https://help.openai.com/en/articles/12627856-publishers-and-developers-faq), Internet Archive snapshot of 21 July 2026; the live URL now redirects to an unrelated article.
 11. <span id="source-11"></span> Google, [GA4 default channel group](https://support.google.com/analytics/answer/9756891?hl=en).
 12. <span id="source-12"></span> Google, [GA4 custom channel groups](https://support.google.com/analytics/answer/13051316).
 13. <span id="source-13"></span> OpenAI, [Overview of OpenAI crawlers](https://platform.openai.com/docs/bots).

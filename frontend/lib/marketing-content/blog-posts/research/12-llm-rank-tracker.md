@@ -98,18 +98,18 @@ Daily, weekly or on demand: the cadence matters less than consistency. Compare r
 
 ## What to look for in an LLM rank tracker
 
-| Question to ask                                     | What a good answer looks like                                                                    |
-| --------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| How is position defined?                            | Stated precisely: first mention among tracked brands, or list position, with the rule for absence |
-| How many answers is each number based on?           | The sample size is shown next to the rate or average                                             |
-| Is each prompt repeated within a run?               | Yes, with a fixed count, and the per-prompt count is visible                                     |
-| Which surface was measured?                         | Every result is labeled API or consumer surface, with grounding state                            |
-| Can I open the raw answer?                          | Every trend point opens the recorded answer, engine, date and cited sources                       |
-| Are mentions and citations separate?                | A brand can be named without a cited page and the reverse; both are tracked on their own          |
-| What happens when a collection fails?               | Failed, unavailable and not-configured states are kept apart from an observed zero                |
-| Are sponsored placements counted?                   | Ads are recorded separately and never counted as mentions, citations or position                  |
-| Can I export and recompute one metric?              | Raw rows with prompt, engine, date, mention, position and sources                                  |
-| Can I run it myself?                                | An open-source build you can self-host, or a hosted version, with the method the same in both |
+| Question to ask                           | What a good answer looks like                                                                     |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| How is position defined?                  | Stated precisely: first mention among tracked brands, or list position, with the rule for absence |
+| How many answers is each number based on? | The sample size is shown next to the rate or average                                              |
+| Is each prompt repeated within a run?     | Yes, with a fixed count, and the per-prompt count is visible                                      |
+| Which surface was measured?               | Every result is labeled API or consumer surface, with grounding state                             |
+| Can I open the raw answer?                | Every trend point opens the recorded answer, engine, date and cited sources                       |
+| Are mentions and citations separate?      | A brand can be named without a cited page and the reverse; both are tracked on their own          |
+| What happens when a collection fails?     | Failed, unavailable and not-configured states are kept apart from an observed zero                |
+| Are sponsored placements counted?         | Ads are recorded separately and never counted as mentions, citations or position                  |
+| Can I export and recompute one metric?    | Raw rows with prompt, engine, date, mention, position and sources                                 |
+| Can I run it myself?                      | An open-source build you can self-host, or a hosted version, with the method the same in both     |
 
 ## How CiteLadder tracks rank
 
@@ -129,14 +129,14 @@ The open-source build at [github.com/abhij1306/CiteLadder](https://github.com/ab
 
 ## LLM rank tracker vs SEO rank tracker
 
-| Aspect             | SEO rank tracker                          | LLM rank tracker                                                  |
-| ------------------ | ----------------------------------------- | ----------------------------------------------------------------- |
-| Unit tracked       | A keyword                                 | A prompt, usually a full question                                  |
-| Position means     | Your URL among ranked results             | Your brand among the brands named in one generated answer          |
-| Possible outcomes  | Ranked at N, or not in the top N          | Named, cited, named and cited, absent, or collection failed        |
-| Stability          | One result page per query and location    | A distribution; the same prompt gives different answers            |
-| Sources            | The result itself is the URL              | Cited pages are a separate signal from the brand mention           |
-| Engines            | Google, Bing                              | ChatGPT, Claude, Gemini, Google AI Overviews, each on its own terms |
+| Aspect            | SEO rank tracker                       | LLM rank tracker                                                    |
+| ----------------- | -------------------------------------- | ------------------------------------------------------------------- |
+| Unit tracked      | A keyword                              | A prompt, usually a full question                                   |
+| Position means    | Your URL among ranked results          | Your brand among the brands named in one generated answer           |
+| Possible outcomes | Ranked at N, or not in the top N       | Named, cited, named and cited, absent, or collection failed         |
+| Stability         | One result page per query and location | A distribution; the same prompt gives different answers             |
+| Sources           | The result itself is the URL           | Cited pages are a separate signal from the brand mention            |
+| Engines           | Google, Bing                           | ChatGPT, Claude, Gemini, Google AI Overviews, each on its own terms |
 
 Rank tracking is one input to [generative engine optimization](/generative-engine-optimization). For a broader shortlist of [AI visibility platforms](/best-ai-visibility-platforms), see our comparison.
 

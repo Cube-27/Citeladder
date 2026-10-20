@@ -1,7 +1,7 @@
 ---
 title: 'Open Source AI Visibility Tool: Self-Hosted LLM Tracking with CiteLadder'
 slug: '/open-source'
-meta_title: 'Open Source AI Visibility Tool, Self-Hosted | CiteLadder'
+meta_title: 'Open Source AI Visibility Tool, Self-Hosted'
 meta_description: 'CiteLadder is an AGPL-3.0 AI visibility tracker you can self-host. See what is open, how to run it with Docker, what the licence asks of you and how it compares to other open-source trackers.'
 primary_keyword: 'open source AI visibility tool'
 secondary_keywords:
@@ -44,15 +44,15 @@ Because the scoring code is public, you can read how a metric is produced rather
 
 ## Self-hosted vs the hosted version (citeladder.com)
 
-| Topic          | Self-hosted                                                                         | Hosted version (citeladder.com)                                    |
-| -------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| Setup          | Docker Compose, or Node.js 26+, pnpm 12 and PostgreSQL 16                           | Sign in and create a project                                       |
-| Login and users| No login. Anyone who can reach the port can use the workspace                       | Accounts and team workspaces                                       |
-| Workspaces     | One workspace per installation                                                      | Workspace-scoped projects, prompts and history                     |
-| Provider keys  | Bring your own OpenAI, Anthropic, Google and DataForSEO keys                        | Set per workspace; see the pricing page for what plans include     |
-| Maintenance    | You run upgrades, backups and the reverse proxy                                     | Operated by CiteLadder                                             |
-| Cost           | Free software; you pay your providers for each call                                 | Subscription; 7-day free trial on ChatGPT answers. Trial limits apply |
-| Who it suits   | Engineers, agencies with their own infrastructure, teams with data-locality rules   | Marketing and SEO teams that want results without operating a server |
+| Topic           | Self-hosted                                                                       | Hosted version (citeladder.com)                                       |
+| --------------- | --------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| Setup           | Docker Compose, or Node.js 26+, pnpm 12 and PostgreSQL 16                         | Sign in and create a project                                          |
+| Login and users | No login. Anyone who can reach the port can use the workspace                     | Accounts and team workspaces                                          |
+| Workspaces      | One workspace per installation                                                    | Workspace-scoped projects, prompts and history                        |
+| Provider keys   | Bring your own OpenAI, Anthropic, Google and DataForSEO keys                      | Set per workspace; see the pricing page for what plans include        |
+| Maintenance     | You run upgrades, backups and the reverse proxy                                   | Operated by CiteLadder                                                |
+| Cost            | Free software; you pay your providers for each call                               | Subscription; 7-day free trial on ChatGPT answers. Trial limits apply |
+| Who it suits    | Engineers, agencies with their own infrastructure, teams with data-locality rules | Marketing and SEO teams that want results without operating a server  |
 
 The self-hosted build is described in the README as "a single-workspace, self-hosted tool with no login".[\[1\]](#source-1) If several people need separate workspaces, or you want someone else to carry the operations work, use the hosted version and [compare the plans](/pricing).
 
@@ -130,16 +130,16 @@ If you prefer not to think about any of this, run the unmodified release or use 
 
 CiteLadder is not the only open-source tracker, and the right choice depends on the engines you need, the licence your organisation accepts and whether you want a full platform or a script. The table lists projects that track AI answers, with licence and stars from the GitHub API on 20 October 2026.[\[8\]](#source-8)
 
-| Project                            | Licence                                    | Stars | What it is                                                                                              |
-| ---------------------------------- | ------------------------------------------ | ----- | ------------------------------------------------------------------------------------------------------- |
-| Elmo (elmohq/elmo)                 | MIT                                        | 472   | AEO and GEO platform. Docker Compose with your own PostgreSQL. Also sold as a cloud service              |
-| GEO/AEO Tracker (danishashko)      | MIT                                        | 299   | Local-first Next.js dashboard that stores data in the browser. Collects answers through Bright Data     |
-| OneGlanse (oneglanse/oneglanse)    | MIT                                        | 222   | Captures answers through the real product interfaces in a browser rather than APIs. Docker, PostgreSQL and ClickHouse |
-| Limelit Open (limelit-co/open)     | Apache-2.0                                 | 218   | Single binary with SQLite, described by its README as pre-release. Open core of the Limelit service     |
-| Canonry (Canonry/canonry)          | Reported as MIT by GitHub; verify the file | 187   | Agent-first, self-hosted AEO that ingests server logs and connects search and analytics accounts        |
-| Ansvisor (ansvisor/ansvisor)       | MIT                                        | 148   | AI visibility platform that self-hosts on Supabase or runs on the vendor's cloud                        |
-| Gego (AI2HU/gego)                  | GPL-3.0                                    | 106   | Go tracker with scheduled prompts, a dashboard, a CLI and a REST API                                    |
-| CiteLadder (abhij1306/CiteLadder)  | AGPL-3.0                                   | 4     | Full platform: audits, Site Health, Actions, Agent, crawl-log analytics, MCP server and public API      |
+| Project                           | Licence                                    | Stars | What it is                                                                                                            |
+| --------------------------------- | ------------------------------------------ | ----- | --------------------------------------------------------------------------------------------------------------------- |
+| Elmo (elmohq/elmo)                | MIT                                        | 472   | AEO and GEO platform. Docker Compose with your own PostgreSQL. Also sold as a cloud service                           |
+| GEO/AEO Tracker (danishashko)     | MIT                                        | 299   | Local-first Next.js dashboard that stores data in the browser. Collects answers through Bright Data                   |
+| OneGlanse (oneglanse/oneglanse)   | MIT                                        | 222   | Captures answers through the real product interfaces in a browser rather than APIs. Docker, PostgreSQL and ClickHouse |
+| Limelit Open (limelit-co/open)    | Apache-2.0                                 | 218   | Single binary with SQLite, described by its README as pre-release. Open core of the Limelit service                   |
+| Canonry (Canonry/canonry)         | Reported as MIT by GitHub; verify the file | 187   | Agent-first, self-hosted AEO that ingests server logs and connects search and analytics accounts                      |
+| Ansvisor (ansvisor/ansvisor)      | MIT                                        | 148   | AI visibility platform that self-hosts on Supabase or runs on the vendor's cloud                                      |
+| Gego (AI2HU/gego)                 | GPL-3.0                                    | 106   | Go tracker with scheduled prompts, a dashboard, a CLI and a REST API                                                  |
+| CiteLadder (abhij1306/CiteLadder) | AGPL-3.0                                   | 4     | Full platform: audits, Site Health, Actions, Agent, crawl-log analytics, MCP server and public API                    |
 
 Some notes for choosing:
 
@@ -173,7 +173,7 @@ Partly. Any OpenAI-compatible endpoint, including Ollama, can power the Agent, b
 
 ### Do I have to publish my changes?
 
-Only if you modify the code and let other people use the modified version over a network. Running it unchanged, or modifying it for your own private use, triggers no obligation. Read the licence section above, and ask a lawyer for anything that sits between those cases.
+Only in two cases: you let other people use a modified version over a network, or you distribute the software (modified or not) to someone else. In both cases the recipients or users are entitled to the corresponding source under the same licence. Running it unchanged, or modifying it for your own private use, triggers no obligation. Read the licence section above, and ask a lawyer for anything that sits between those cases.
 
 ### Is the project maintained?
 

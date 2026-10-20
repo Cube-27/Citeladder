@@ -42,16 +42,16 @@ We did not find an Enterprise price on any official page. Figures circulating on
 
 Use the same brief for every vendor: 50 unbranded prompts, three named engines, one country, daily for 30 days, with raw answers and cited URLs exported.
 
-| Criterion                     | What to check                                                                                           |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------- |
-| Published entry price         | Can you buy it today without a sales call, and what does that tier include?                            |
-| Engines on that tier          | Which engines are in the entry plan, and which are add-ons or Enterprise-only?                          |
-| Prompt and refresh limits     | Prompts per plan, runs per day, repetitions per prompt                                                  |
-| Evidence                      | Can you open the raw answer and the cited URLs behind a score?                                          |
-| Method transparency           | Does the vendor state how mentions are matched, how runs are repeated and whether the API or app is measured? |
-| Enterprise controls           | SSO, SOC 2, API access, audit log, if your procurement needs them                                       |
-| What happens after the score  | Site diagnostics, ranked actions, content tools, agent access                                           |
-| Source availability           | Is the code public, and can you self-host?                                                              |
+| Criterion                    | What to check                                                                                                 |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Published entry price        | Can you buy it today without a sales call, and what does that tier include?                                   |
+| Engines on that tier         | Which engines are in the entry plan, and which are add-ons or Enterprise-only?                                |
+| Prompt and refresh limits    | Prompts per plan, runs per day, repetitions per prompt                                                        |
+| Evidence                     | Can you open the raw answer and the cited URLs behind a score?                                                |
+| Method transparency          | Does the vendor state how mentions are matched, how runs are repeated and whether the API or app is measured? |
+| Enterprise controls          | SSO, SOC 2, API access, audit log, if your procurement needs them                                             |
+| What happens after the score | Site diagnostics, ranked actions, content tools, agent access                                                 |
+| Source availability          | Is the code public, and can you self-host?                                                                    |
 
 ## Otterly AI
 
@@ -79,7 +79,7 @@ AthenaHQ positions itself as "Control How AI Search Perceives Your Brand with At
 
 ## Semrush
 
-Semrush does not sell a separate AI product line; AI visibility is bundled into its "SEO & AI Search" plans. On 20 October 2026 the plan page listed Starter at US$165.17 per month billed annually, with 50 prompts tracked daily on one domain, then Pro+ at US$248.17 and Advanced at US$455.67. Coverage is described as Google Search, ChatGPT, Perplexity, Gemini and more.[\[15\]](#source-15) Semrush has been owned by Adobe since April 2026.[\[16\]](#source-16)
+Semrush sells AI visibility two ways. The standalone AI Visibility Toolkit is listed at US$99 per month per domain, with 25 tracked prompts.[\[22\]](#source-22) It is also bundled with the SEO toolkit in the "SEO & AI Search" (Semrush One) plans. On 20 October 2026 the bundled plan page listed Starter at US$165.17 per month billed annually, with 50 prompts tracked daily on one domain, then Pro+ at US$248.17 and Advanced at US$455.67. Coverage is described as Google Search, ChatGPT, Perplexity, Gemini and more.[\[15\]](#source-15) Semrush has been owned by Adobe since April 2026.[\[16\]](#source-16)
 
 **Shortlist it for** an SEO team that wants AI reporting inside a toolset it already pays for. **Check** that the module you are quoted includes custom prompt tracking and not only pre-collected database reports.
 
@@ -117,13 +117,13 @@ CiteLadder tracks what ChatGPT, Claude, Gemini and Google AI Overviews say for a
 
 ## Which alternative for which reason
 
-| If you are leaving Profound because...    | Start with                                                                 |
-| ----------------------------------------- | -------------------------------------------------------------------------- |
-| You need a price you can pay by card today| Otterly AI, Rankscale, AthenaHQ                                            |
-| You want a mid-market platform            | Scrunch, Goodie, Peec AI                                                   |
-| You already pay for an SEO suite          | Semrush, Ahrefs Brand Radar                                                |
-| You want to read the scoring code         | CiteLadder, Elmo, Limelit Open                                             |
-| You need the broadest engine list         | Stay with Profound Enterprise, or compare Goodie and AthenaHQ Enterprise   |
+| If you are leaving Profound because...     | Start with                                                               |
+| ------------------------------------------ | ------------------------------------------------------------------------ |
+| You need a price you can pay by card today | Otterly AI, Rankscale, AthenaHQ                                          |
+| You want a mid-market platform             | Scrunch, Goodie, Peec AI                                                 |
+| You already pay for an SEO suite           | Semrush, Ahrefs Brand Radar                                              |
+| You want to read the scoring code          | CiteLadder, Elmo, Limelit Open                                           |
+| You need the broadest engine list          | Stay with Profound Enterprise, or compare Goodie and AthenaHQ Enterprise |
 
 Whatever you shortlist, ask each vendor for the denominator behind its visibility score and for an export of one week's raw answers. A number computed only over answers that mention your brand is not comparable with a rate over all valid answers. The guide to [share of voice](/ai-search-share-of-voice) explains the definitions to insist on.
 
@@ -176,3 +176,4 @@ No. Trackers report observed change between comparable runs. Attributing a chang
 19. <span id="source-19"></span> [Rankscale pricing](https://rankscale.ai/pricing), read 20 October 2026.
 20. <span id="source-20"></span> GitHub repositories, read 20 October 2026: [elmohq/elmo](https://github.com/elmohq/elmo), [limelit-co/open](https://github.com/limelit-co/open), [oneglanse/oneglanse](https://github.com/oneglanse/oneglanse).
 21. <span id="source-21"></span> [CiteLadder repository README](https://github.com/abhij1306/CiteLadder), read 20 October 2026, and [CiteLadder pricing](https://citeladder.com/pricing).
+22. <span id="source-22"></span> [Semrush AI Visibility Toolkit pricing](https://www.semrush.com/pricing/ai) and [knowledge base](https://www.semrush.com/kb/1493-ai-seo-toolkit), read 20 October 2026.
