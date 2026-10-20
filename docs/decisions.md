@@ -279,3 +279,20 @@ Source: owner, 17 October 2026, approving the crawler comparison report
 ("proceed with implementation of 5 findings plus applebot"; recrawl and
 scheduled crawls "should go in backlog as top priority").
 [Site Health](site-health.md) owns the behavior.
+
+## The public site presents CiteLadder as open source
+
+The public website says CiteLadder's source is public under AGPL-3.0 at
+`https://github.com/abhij1306/CiteLadder` (exact casing). Open source is a
+supporting pillar, not the lead: the hosted product keeps the name
+"CiteLadder" (never "CiteLadder Cloud"), the homepage carries no added
+open-source line, and the GitHub mark sits in the header and footer instead.
+`/open-source` compares self-hosted with hosted; the compare pages carry an
+open-source row; `/enterprise` cites public, auditable scoring code but does
+not pitch self-hosting, because the self-hosted build is single-workspace
+with no login. This replaces the earlier rule that commercial pages make no
+open-source or self-hosting claim.
+
+Source: owner, 20 October 2026, approving the SEO and open-source plan with
+the caveats "dont add a line in landing page instead your github logo with
+link on the header" and "no citeladder cloud".

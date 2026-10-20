@@ -30,7 +30,7 @@ You may also encounter:
 
 - **SEO:** search engine optimization, including making content discoverable and useful in search.
 - **AEO:** answer engine optimization, often used for work focused on direct answers.
-- **AI visibility:** the observable presence of a brand or website across defined AI-answer surfaces.
+- **[AI visibility](/platform/ai-visibility):** the observable presence of a brand or website across defined AI-answer surfaces.
 
 These labels overlap. They are not three independent switches you can turn on in your website.
 

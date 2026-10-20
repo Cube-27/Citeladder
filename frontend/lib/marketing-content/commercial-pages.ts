@@ -63,6 +63,8 @@ export const SHARE_OF_VOICE_PAGE: CommercialPage = {
   related: [
     { label: 'Citation Intelligence', href: '/platform/citation-intelligence' },
     { label: 'AI Referral Analytics', href: '/platform/ai-referral-analytics' },
+    { label: 'AI visibility tracker', href: '/platform/ai-visibility' },
+    { label: 'LLM rank tracker', href: '/llm-rank-tracker' },
     { label: 'Read the measurement guide', href: '/blog/verify-improve-ai-search-visibility' },
     { label: 'Compare AI visibility tools', href: '/compare' },
     { label: 'Explore team workflows', href: '/solutions' },

@@ -14,7 +14,7 @@ publication_status: 'editorial_review'
 
 ## How do you improve AI visibility?
 
-**Improve AI visibility by identifying the questions you should appear for, checking the answers and sources currently shown, and fixing the most important information or access gaps.** Publish evidence that helps readers make decisions, keep your business facts consistent, and measure comparable results over time. The right improvement depends on the failure you actually observe.
+**Improve [AI visibility](/platform/ai-visibility) by identifying the questions you should appear for, checking the answers and sources currently shown, and fixing the most important information or access gaps.** Publish evidence that helps readers make decisions, keep your business facts consistent, and measure comparable results over time. The right improvement depends on the failure you actually observe.
 
 If an assistant cannot access a page, publishing more pages may not solve the problem. If it can access the page but the answer needs a capability comparison you never explain, a crawler change is unlikely to be the whole answer.
 

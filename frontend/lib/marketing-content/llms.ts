@@ -46,7 +46,7 @@ export function llmsTxt({ pages }: { pages: readonly LlmsPage[] }) {
     '- Not a claim that a content change caused rankings, traffic, or revenue.',
     '- The public trial is limited AI visibility access for seven days, not access to the whole platform. Agent access is not included.',
     "- AI crawler analytics need the site's own logs, sent from a Cloudflare Worker, Cloudflare Logpush, an Amazon CloudFront log stream, Google Cloud load balancer and Cloud Run logs, a webhook or a file upload; CiteLadder does not observe crawlers on its own. Commerce requires eligible projects. Optional external research requires scope-and-cost review and separate confirmation.",
-    '- Not an open-source or self-hosted product.',
+    '- Not closed: the source is public under AGPL-3.0 at https://github.com/abhij1306/CiteLadder. The self-hosted build is single-workspace with no login and binds to localhost, so it must sit behind an authenticating proxy before anyone else can reach it; the hosted version runs at citeladder.com with accounts and workspace authorization.',
     '',
     '## When to use CiteLadder',
     '',

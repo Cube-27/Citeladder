@@ -43,7 +43,7 @@ That observation contains:
 - A citation to the review publisher.
 - No citation to ExampleStock's own website.
 
-If the answer links to ExampleStock's documentation but does not name the company in its visible prose, it contains an owned-domain citation without the same kind of brand mention.
+If the answer links to ExampleStock's documentation but does not name the company in its visible prose, it contains an owned-domain citation without the same kind of brand mention. For a step-by-step method focused on ChatGPT, see [how to track brand mentions in ChatGPT](/track-brand-mentions-chatgpt).
 
 Neither result should be forced into one generic "brand visibility" count. You may care about both, but they support different actions.
 

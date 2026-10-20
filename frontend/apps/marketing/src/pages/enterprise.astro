@@ -12,7 +12,7 @@ import { absoluteUrl } from '@/lib/seo/site';
 import MarketingLayout from '../layouts/MarketingLayout.astro';
 
 const description =
-  'AI visibility measurement your security team can inspect: workspace-scoped evidence, your own provider keys, deterministic scores and an audit trail.';
+  'Enterprise AEO platform with auditable scoring: every result traces to a stored answer, the scoring code is public under AGPL-3.0, keys are yours and evidence stays in your workspace.';
 const enterpriseUrl = absoluteUrl('/enterprise');
 const serviceJsonLd = {
   '@context': 'https://schema.org',
@@ -26,7 +26,7 @@ const serviceJsonLd = {
 ---
 
 <MarketingLayout
-  title="Enterprise AI visibility measurement · CiteLadder"
+  title="Enterprise AEO platform with auditable scoring | CiteLadder"
   description={description}
   canonical="/enterprise"
   jsonLd={[serviceJsonLd]}

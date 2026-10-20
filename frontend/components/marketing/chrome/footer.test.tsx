@@ -45,7 +45,8 @@ describe('MarketingFooter', () => {
   it('links to public documentation but not the private repository', async () => {
     render(await MarketingFooter());
 
-    expect(screen.queryByRole('link', { name: /github/i })).toBeNull();
+    const hrefs = screen.getAllByRole('link').map((link) => link.getAttribute('href') ?? '');
+    expect(hrefs.filter((href) => /github\.com\/cube-27/i.test(href))).toEqual([]);
     const footerNav = screen.getByRole('navigation', { name: 'Footer' });
     expect(within(footerNav).getByRole('link', { name: 'Documentation' })).toHaveAttribute(
       'href',
@@ -115,6 +116,10 @@ describe('MarketingFooter', () => {
     expect(within(footerNav).getByRole('link', { name: 'linkedin.com' })).toHaveAttribute(
       'href',
       'https://www.linkedin.com/company/citeladder',
+    );
+    expect(within(footerNav).getByRole('link', { name: 'github.com' })).toHaveAttribute(
+      'href',
+      'https://github.com/abhij1306/CiteLadder',
     );
   });
 });

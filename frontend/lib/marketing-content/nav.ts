@@ -188,6 +188,21 @@ export const NAV_DROPS: readonly NavDrop[] = [
             href: docsHref('/changelog/'),
             external: true,
           },
+          {
+            title: 'Open source',
+            desc: 'Self-host CiteLadder or use the hosted version',
+            href: '/open-source',
+          },
+          {
+            title: 'LLM rank tracker',
+            desc: 'Where your brand ranks inside AI answers',
+            href: '/llm-rank-tracker',
+          },
+          {
+            title: 'ChatGPT brand mentions guide',
+            desc: 'Track what ChatGPT says about your brand',
+            href: '/track-brand-mentions-chatgpt',
+          },
           { title: 'FAQ', desc: 'Answers on AEO, evidence, security, and billing', href: '/faq' },
           {
             title: 'Compare',

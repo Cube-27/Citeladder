@@ -126,6 +126,26 @@ const GUIDES: Readonly<Record<string, { title: string; desc: string }>> = {
     title: 'AI share of voice',
     desc: 'Compare brand presence across AI answers.',
   },
+  '/llm-rank-tracker': {
+    title: 'LLM rank tracker',
+    desc: 'Where your brand ranks inside AI answers, run after run.',
+  },
+  '/track-brand-mentions-chatgpt': {
+    title: 'Brand mentions in ChatGPT',
+    desc: 'A step-by-step method for tracking what ChatGPT says about you.',
+  },
+  '/compare/profound-alternatives': {
+    title: 'Profound alternatives',
+    desc: 'Hosted and open-source options, compared by workflow and price.',
+  },
+  '/open-source': {
+    title: 'Open source and self-hosted',
+    desc: 'Run CiteLadder yourself under AGPL-3.0, or use the hosted version.',
+  },
+  '/enterprise': {
+    title: 'Enterprise AEO',
+    desc: 'Evidence your security team can inspect, with public scoring code.',
+  },
   '/solutions#commerce': {
     title: 'Ecommerce solutions',
     desc: 'Product and category answer evidence.',

@@ -10,9 +10,11 @@ import {
   PLATFORM_OVERVIEW,
   type NavDropKey,
 } from '@/lib/marketing-content/nav';
+import { CITELADDER_GITHUB } from '@/lib/marketing-content/social';
 import { cn } from '@/lib/utils';
 
 import { buttonLinkAttributes } from '../primitives/button';
+import { GitHubMark } from '../primitives/github-mark';
 import { DROP_LAYOUT } from './marketing-nav';
 import NavRow from './NavRow.astro';
 
@@ -142,6 +144,17 @@ function panelStyle(key: NavDropKey) {
     </div>
 
     <div class="flex shrink-0 items-center gap-2 justify-self-end">
+      {/* The open-source repository, beside the account actions on every width. */}
+      <a
+        href={CITELADDER_GITHUB}
+        target="_blank"
+        rel="noreferrer"
+        aria-label="CiteLadder on GitHub"
+        title="CiteLadder on GitHub"
+        class="nav-link grid size-10 place-items-center rounded-[var(--radius-control)]"
+      >
+        <GitHubMark className="size-5" />
+      </a>
       <div class="flex items-center gap-2" data-nav-actions>
         <a
           href={appHref('/login')}
