@@ -125,10 +125,7 @@ export function PromptTable({
                   {prompt.text}
                 </ProjectLink>
               }
-              secondary={promptCaption(
-                prompt,
-                prompt.topic_id ? topicNames.get(prompt.topic_id) : undefined,
-              )}
+              secondary={promptCaption(prompt, topicNames)}
             />
           </TableCell>
           {measured ? <MeasuredCells measurement={measurements?.get(prompt.id)} /> : null}
@@ -212,13 +209,17 @@ const MEASURED_COLUMNS: readonly DataTableColumn[] = [
 ];
 
 /**
- * The prompt's topic (a prompt without one, or with a since-deleted one, says
- * so), whether it names a brand, then its intent, buyer stage and persona
- * when set: one caption line.
+ * The prompt's topic, whether it names a brand, then its intent, buyer stage
+ * and persona when set: one caption line. A prompt filed under a topic the
+ * list cannot name (not loaded, or since deleted) says the topic is
+ * unavailable, apart from a prompt filed under none.
  */
-function promptCaption(prompt: Prompt, topic: string | undefined): string {
+function promptCaption(prompt: Prompt, topicNames: ReadonlyMap<string, string>): string {
+  const topic = prompt.topic_id
+    ? (topicNames.get(prompt.topic_id) ?? 'Topic unavailable')
+    : 'No topic';
   return [
-    topic ?? 'No topic',
+    topic,
     prompt.branded ? 'Branded' : 'Unbranded',
     prompt.intent ? intentLabels[prompt.intent] : null,
     prompt.buyer_stage ? buyerStageLabels[prompt.buyer_stage] : null,

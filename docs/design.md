@@ -273,7 +273,7 @@ The product has one control height, 32 (generated below): buttons, icon buttons,
 | `--table-header-height` | `32px` |
 <!-- generated:controls:end -->
 
-Metric columns retain centred tabular figures with `numeric`; ordinary numeric columns can use `numeric="end"` for trailing alignment. Headers and cells use the same shared alignment option. Text columns stay left-aligned.
+A figure column (and a trailing control column) passes `numeric`: right-aligned tabular figures, so digits line up place by place. Headers and cells use the same shared alignment option. Text columns stay left-aligned.
 
 Every table shares one row rhythm: `--table-row-height` (36px) is the floor and every cell carries the same 6px `--table-cell-padding-y`, so a row is one line or two and never more. `TableCell` clamps plain text at two lines; JSX cells use `ClampText` (`lines={1}` for each half of a title-over-URL stack). Cut text shows in full in a tooltip. There are no density variants. Numeric cells never wrap. Wide tables use the shared scroll wrapper.
 

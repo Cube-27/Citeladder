@@ -108,9 +108,16 @@ describe('PromptTable pagination', () => {
   });
 
   it('names each row by its topic rather than its internal theme', () => {
-    renderTable([makePrompt(1, { topic_id: TOPICS[0]!.id }), makePrompt(2, { topic_id: null })]);
+    renderTable([
+      makePrompt(1, { topic_id: TOPICS[0]!.id }),
+      makePrompt(2, { topic_id: null }),
+      makePrompt(3, { topic_id: '33333333-3333-4333-8333-333333333333' }),
+    ]);
 
-    const [, filed, unassigned] = screen.getAllByRole('row');
+    const [, filed, unassigned, unresolved] = screen.getAllByRole('row');
+    expect(within(unresolved!).getAllByRole('cell')[0]!.textContent).toBe(
+      'Prompt number 3Topic unavailable · Unbranded · Discovery',
+    );
     expect(within(filed!).getAllByRole('cell')[0]!.textContent).toBe(
       'Prompt number 1Running shoes · Unbranded · Discovery',
     );

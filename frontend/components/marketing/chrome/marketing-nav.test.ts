@@ -50,11 +50,11 @@ describe('the announcement strip', () => {
     renderChrome('mcp-connect');
     document.querySelector<HTMLButtonElement>('[data-announcement-close]')?.click();
 
-    expect(strip()).toBe(null);
+    expect(strip()).toBeNull();
     expect(document.activeElement?.getAttribute('aria-label')).toBe('CiteLadder home');
 
     renderChrome('mcp-connect');
-    expect(strip()).toBe(null);
+    expect(strip()).toBeNull();
   });
 
   it('shows a new announcement after an earlier one was closed', () => {
