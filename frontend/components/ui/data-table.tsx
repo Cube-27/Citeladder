@@ -8,9 +8,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { FilterBar, type FilterBarProps } from '@/components/ui/filter-bar';
 import { Pager } from '@/components/ui/pager';
 import { QueryState, type QueryStateProps } from '@/components/ui/query-state';
+import { HintedTableHead, SortableTableHead } from '@/components/ui/table-heads';
 import {
-  HintedTableHead,
-  SortableTableHead,
   Table,
   TableBody,
   TableCell,
