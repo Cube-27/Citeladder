@@ -1,4 +1,6 @@
 import {
+  useEffect,
+  useRef,
   useState,
   type HTMLAttributes,
   type ReactNode,
@@ -17,18 +19,18 @@ import { cn } from '@/lib/utils';
  * Dense analytics table — the shared semantic ledger treatment:
  *  - the wrapper is the table's shell: the elevated panel fill at the card
  *    radius, borderless, so a bare table reads as a card the way a Card does
- *  - sticky header (--table-header-height) on a tonal panel fill with a
- *    single object-rung under-rule, so the labels separate from the rows by
- *    the hairline alone; no vertical column-separator hairlines, which made
- *    the tables read as spreadsheets rather than designed surfaces
+ *  - sticky header (--table-header-height) on the panel itself, no fill band,
+ *    with a single object-rung under-rule, so the labels separate from the
+ *    rows by the hairline alone; no vertical column-separator hairlines, which
+ *    made the tables read as spreadsheets rather than designed surfaces
  *  - one row rhythm everywhere: --table-row-height is the floor, every cell
  *    carries the same --table-cell-padding-y, and text never runs past two
  *    lines — `ClampText` cuts it there and moves the rest into a tooltip, so
  *    a row is either one line or two, never a three-line outlier
  *  - --text-sm cells, subtle ROW hairlines only
- *  - data columns are centre-aligned and tabular; text columns stay left.
- *    The header centres with its values, so a column reads as one block
- *    rather than a label floating off the numbers beneath it
+ *  - data columns are right-aligned and tabular, so digits line up place by
+ *    place; text columns stay left. The header ends on its values' edge, so a
+ *    column reads as one block rather than a label floating off its numbers
  *  - hover uses the surface's hover tint; `highlight` uses the distinct
  *    selected tint for the user's own row
  * The wrapper is scroll-capable so the sticky header pins on vertical scroll;
@@ -174,7 +176,7 @@ export function TableFillerRows({
  */
 const desktopOnlyClasses = 'hidden desktop:table-cell';
 
-type CellOptions = { numeric?: boolean | 'end'; desktopOnly?: boolean };
+type CellOptions = { numeric?: boolean; desktopOnly?: boolean };
 
 export function TableHead({
   children,
@@ -189,9 +191,8 @@ export function TableHead({
       className={cn(
         tableHeadClasses,
         'aria-[sort=ascending]:text-foreground aria-[sort=descending]:text-foreground',
-        'border-border bg-panel-tonal sticky top-0 z-10 h-[var(--table-header-height)] border-b px-[var(--table-cell-padding-x)] text-left align-middle',
-        numeric && 'tabular-nums',
-        numeric === 'end' ? 'text-right' : numeric && 'text-center',
+        'border-border bg-panel sticky top-0 z-10 h-[var(--table-header-height)] border-b px-[var(--table-cell-padding-x)] text-left align-middle',
+        numeric && 'tabular-nums text-right',
         desktopOnly && desktopOnlyClasses,
         className,
       )}
@@ -262,14 +263,26 @@ export function ClampText({
   // The full text as plain text: styled children (a title role, a caption)
   // would carry their own ink onto the inverse tooltip chip.
   const [fullText, setFullText] = useState<string | null>(null);
+  const textRef = useRef<HTMLSpanElement>(null);
+  // Mounting the tooltip remounts the text, and a focused link or button in
+  // it with it; a keyboard reach hands focus back to the new control.
+  const refocus = useRef(false);
+  useEffect(() => {
+    if (fullText === null || !refocus.current) return;
+    refocus.current = false;
+    textRef.current?.querySelector<HTMLElement>('a, button, [tabindex]')?.focus();
+  }, [fullText]);
   const check =
     fullText === null
-      ? (event: { currentTarget: HTMLElement }) => {
-          if (isCut(event.currentTarget)) setFullText(event.currentTarget.textContent ?? '');
+      ? (event: { currentTarget: HTMLElement; type: string }) => {
+          if (!isCut(event.currentTarget)) return;
+          refocus.current = event.type === 'focus';
+          setFullText(event.currentTarget.textContent ?? '');
         }
       : undefined;
   const text = (
     <span
+      ref={textRef}
       onPointerEnter={check}
       onFocus={check}
       className={cn(
@@ -296,8 +309,7 @@ const cellClasses = ({ numeric, desktopOnly }: CellOptions) =>
     // Row rule, dropped on the last row.
     'border-b [tr:last-child>&]:border-b-0',
     // A value never wraps: "Not measured" split over two lines read as two values.
-    numeric && 'whitespace-nowrap tabular-nums',
-    numeric === 'end' ? 'text-right' : numeric && 'text-center',
+    numeric && 'whitespace-nowrap tabular-nums text-right',
     desktopOnly && desktopOnlyClasses,
   );
 
@@ -415,7 +427,6 @@ export function TableRowHeader({
 /** The header aligns with its column's values, as `TableHead` does. */
 const SORT_ALIGN = {
   start: { column: 'items-start', row: 'justify-start text-left' },
-  center: { column: 'items-center', row: 'justify-center text-center' },
   end: { column: 'items-end', row: 'justify-end text-right' },
 } as const;
 
@@ -447,7 +458,7 @@ export function SortableTableHead({
   /** The current order; read only when `active`. */
   descending: boolean;
   onSort: () => void;
-  numeric?: boolean | 'end';
+  numeric?: boolean;
   /** A qualifier under the label, e.g. the comparison window. */
   sublabel?: string;
   /** The column's shared caveat, behind a tooltip on the header. */
@@ -462,9 +473,7 @@ export function SortableTableHead({
     ariaSort = descending ? 'descending' : 'ascending';
     Icon = descending ? ArrowDown : ArrowUp;
   }
-  let align: (typeof SORT_ALIGN)[keyof typeof SORT_ALIGN] = SORT_ALIGN.start;
-  if (numeric === 'end') align = SORT_ALIGN.end;
-  else if (numeric) align = SORT_ALIGN.center;
+  const align = numeric ? SORT_ALIGN.end : SORT_ALIGN.start;
   const button = (
     <button
       type="button"

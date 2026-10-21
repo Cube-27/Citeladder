@@ -429,10 +429,48 @@ function mountHomeLogo(chrome: HTMLElement, closeMenu: () => void) {
   });
 }
 
+/** Where a closed announcement is remembered, by the announcement's id. */
+const DISMISSED_ANNOUNCEMENT_KEY = 'citeladder.dismissed-announcement';
+
+/**
+ * The homepage announcement strip: its close button removes it, and the
+ * visitor's browser remembers which announcement was closed, so the next
+ * announcement (a new id) still shows. Storage can be unavailable (a private
+ * window, blocked site data); the strip then simply shows on every visit.
+ */
+function mountAnnouncement(chrome: HTMLElement) {
+  const strip = chrome.querySelector<HTMLElement>('[data-announcement]');
+  const id = strip?.dataset.announcement;
+  if (!strip || !id) return;
+  if (readDismissedAnnouncement() === id) {
+    strip.remove();
+    return;
+  }
+  strip.querySelector('[data-announcement-close]')?.addEventListener('click', () => {
+    strip.remove();
+    // The closed button took focus with it; hand focus to the bar's first stop.
+    chrome.querySelector<HTMLAnchorElement>('a[aria-label="CiteLadder home"]')?.focus();
+    try {
+      window.localStorage.setItem(DISMISSED_ANNOUNCEMENT_KEY, id);
+    } catch {
+      // Not remembered: the strip returns on the next visit.
+    }
+  });
+}
+
+function readDismissedAnnouncement(): string | null {
+  try {
+    return window.localStorage.getItem(DISMISSED_ANNOUNCEMENT_KEY);
+  } catch {
+    return null;
+  }
+}
+
 /** Attach the navigation's behaviour to its server-rendered markup. */
 export function mountMarketingNav(chrome: HTMLElement) {
   const nav = chrome.querySelector<HTMLElement>('nav[aria-label="Main navigation"]');
   const links = chrome.querySelector<HTMLElement>('[data-nav-links]');
+  mountAnnouncement(chrome);
   watchScrolled(chrome);
   if (nav && links) mountDesktopDropdowns(nav, links);
   mountHomeLogo(chrome, mountMobileSheet(chrome));

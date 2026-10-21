@@ -343,13 +343,6 @@
   gap: 0.75rem;
 }
 
-.cm-list li {
-  padding-block: 0.5rem;
-  color: var(--color-secondary);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
-}
-
 .cm-flow {
   display: grid;
   gap: 0 2rem;

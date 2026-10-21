@@ -169,9 +169,12 @@ export function EnterpriseGovernance() {
           {GOVERNANCE.map((group) => (
             <div key={group.title} className="cm-group">
               <h3 className="website-feature-heading text-foreground">{group.title}</h3>
-              <ul className="cm-list">
+              <ul className="mk-checks">
                 {group.points.map((point) => (
-                  <li key={point}>{point}</li>
+                  <li key={point}>
+                    <Check aria-hidden className="size-4" />
+                    {point}
+                  </li>
                 ))}
               </ul>
             </div>

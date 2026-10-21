@@ -279,6 +279,24 @@
   opacity: 0.5;
 }
 
+/* On a phone the closing actions share one row at equal widths (owner,
+   2026-10-21), as the homepage's do; a lone action keeps its own width. */
+@media (max-width: 39.99rem) {
+  .marketing-closing-band
+    [data-cta-placement='closing']
+    > :has(> .marketing-cta-button + .marketing-cta-button) {
+    display: grid;
+    grid-auto-columns: minmax(0, 1fr);
+    grid-auto-flow: column;
+    width: 100%;
+  }
+
+  .marketing-closing-band [data-cta-placement='closing'] > * > .marketing-cta-button {
+    align-self: stretch;
+    width: 100%;
+  }
+}
+
 /* ── Shared page parts ───────────────────────────────────────────────── */
 
 .mk-text-link {
@@ -478,7 +496,14 @@
   line-height: var(--text-base--line-height);
 }
 
-.mk-checks svg,
+/* The check marks the point: it holds its size beside a wrapping line and
+   sits on the first line's x-height. */
+.mk-checks svg {
+  flex: none;
+  margin-top: 0.25rem;
+  color: var(--color-accent-text);
+}
+
 .mk-highlights {
   display: grid;
   gap: 2rem;
