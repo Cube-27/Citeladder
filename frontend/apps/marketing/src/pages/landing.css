@@ -29,7 +29,7 @@
   align-items: center;
   height: 2.25rem;
   padding-inline: var(--site-gutter);
-  background: var(--color-accent-subtle);
+  background: var(--color-field-lime);
 }
 
 .lp-announcement a {
@@ -37,7 +37,7 @@
   align-items: center;
   gap: 0.5rem;
   min-width: 0;
-  color: var(--color-accent-text);
+  color: var(--color-foreground);
 }
 
 .lp-announcement a:hover {
@@ -95,16 +95,16 @@
 
 /* Hero ───────────────────────────────────────────────────────────────────── */
 
-/* One flat field of the soft forest tint from behind the top bar to the foot
-   of the product, with fine grain that fades out toward the product. The hero
-   runs up under the transparent nav, so the bar sits on the field. */
+/* One flat mint field from behind the top bar to the foot of the product,
+   with fine grain that fades out toward the product. The hero runs up under
+   the transparent nav, so the bar sits on the field. */
 .lp-hero {
   position: relative;
   isolation: isolate;
   margin-top: calc(var(--marketing-nav-offset) * -1);
-  padding-top: calc(var(--marketing-nav-offset) + clamp(3.5rem, 8vw, 6.5rem));
+  padding-top: calc(var(--marketing-nav-offset) + clamp(3rem, 6vw, 5rem));
   padding-bottom: clamp(2rem, 4vw, 3rem);
-  background: var(--color-accent-soft);
+  background: var(--color-field-mint);
 }
 
 .lp-hero::before {
@@ -219,7 +219,7 @@
   overflow-x: auto;
   padding: 0.25rem;
   border-radius: var(--radius-full);
-  background: var(--color-accent-subtle);
+  background: var(--color-panel);
   scrollbar-width: none;
 }
 
@@ -227,7 +227,7 @@
   flex: none;
   padding: 0.5rem 1rem;
   border-radius: var(--radius-full);
-  color: var(--color-muted);
+  color: var(--color-secondary);
   font-size: var(--text-sm);
   line-height: var(--text-sm--line-height);
   font-weight: 500;
@@ -240,9 +240,10 @@
   color: var(--color-foreground);
 }
 
+/* The current view is the one inverse chip on the field. */
 .lp-tour-tabs button[aria-selected='true'] {
-  background: var(--color-panel);
-  color: var(--color-foreground);
+  background: var(--color-surface-inverse);
+  color: var(--color-on-inverse);
 }
 
 .lp-hero-stage {
@@ -704,4 +705,117 @@
 
 .lp-closing .lp-actions {
   margin-top: 0.75rem;
+}
+
+/* The hero's product sits one tone step up from the mint field. */
+.lp-hero .lp-hero-stage {
+  background: var(--color-accent-soft);
+}
+
+/* Phone ──────────────────────────────────────────────────────────────────── */
+
+/* A phone gets its own composition, not the desktop one shrunk (owner,
+   2026-10-21): the copy reads left-aligned with thumb-width actions, the tour
+   tabs become a strip of chips the thumb can scroll, and the product runs
+   edge to edge without the app's sidebar, at a scale whose text can be read. */
+@media (max-width: 39.99rem) {
+  .lp-hero {
+    padding-top: calc(var(--marketing-nav-offset) + 2rem);
+    padding-bottom: 1.5rem;
+  }
+
+  .lp-hero-copy {
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .lp-hero-lead {
+    margin-top: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  /* `stretch`, not the desktop `center`: a centred grid sizes its one column
+     to the button and the button cannot fill the thumb's width. */
+  .lp-actions {
+    display: grid;
+    justify-content: stretch;
+    width: 100%;
+  }
+
+  /* Outranks the shared phone rule that sizes public CTAs to their label. */
+  .lp .lp-actions .marketing-cta-button {
+    align-self: stretch;
+    justify-self: stretch;
+    width: 100%;
+  }
+
+  .lp-tour {
+    margin-top: 2rem;
+  }
+
+  .lp-tour-tabs {
+    justify-self: stretch;
+    gap: 0.5rem;
+    margin-inline: calc(var(--site-gutter) * -1);
+    padding: 0 var(--site-gutter);
+    border-radius: 0;
+    background: transparent;
+    scroll-snap-type: x proximity;
+    scroll-padding-inline: var(--site-gutter);
+  }
+
+  .lp-tour-tabs button {
+    background: var(--color-panel);
+    scroll-snap-align: start;
+  }
+
+  .lp-hero .lp-hero-stage {
+    margin-inline: calc(var(--site-gutter) * -1);
+    padding: 0.75rem 0.75rem 0;
+    border-radius: 0;
+  }
+
+  .lp-hero-frame.product-fit {
+    --product-fit-width: 460px;
+  }
+
+  .lp-hero-frame .pv-shell {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+    padding: 0.5rem;
+  }
+
+  .lp-hero-frame .pv-sidebar {
+    display: none;
+  }
+
+  .lp-engines {
+    padding-block: 2rem 0;
+  }
+
+  .lp-engines-inner {
+    justify-items: start;
+  }
+
+  .lp-engines ul {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    width: 100%;
+  }
+
+  .lp-engines li {
+    font-size: var(--text-base);
+    line-height: var(--text-base--line-height);
+  }
+
+  .lp-statement-text {
+    font-size: var(--text-xl);
+    line-height: var(--text-xl--line-height);
+  }
+
+  .lp-closing {
+    justify-items: start;
+    text-align: left;
+  }
 }

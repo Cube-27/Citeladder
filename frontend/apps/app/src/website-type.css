@@ -9,7 +9,7 @@
    baseline here exactly as in the product; 12 is the one rung below it. */
 :where([data-public-surface], [data-flow-surface]) {
   /* The public and focused-flow type world (docs/design.md §Typography):
-     Switzer carries body, UI and data, IBM Plex Sans the display headings, as in
+     General Sans carries body, UI and data, Sora the display headings, as in
      the product. The scale is the product's (globals.css @theme), unchanged;
      being "roomier" is a job for measure and rhythm, not for resizing rungs. */
   --tracking-tight: -0.02em;
@@ -102,9 +102,9 @@
    travel as one contract. The low-specificity colour defaults let explicit
    semantic utilities override them for warnings and evidence states.
 
-   Display rungs set in IBM Plex Sans at 500, and tracking closes as size
-   grows, as a grotesk wants at display sizes. The feature heading and body
-   rungs set in Switzer at 400/500. */
+   Display rungs set in Sora at 500, and tracking closes as size grows: Sora
+   is a wide geometric face, so it tracks tighter than a grotesk would. The
+   feature heading and body rungs set in General Sans at 400/500. */
 .website-hero-display,
 .website-page-title,
 .website-section-heading {
@@ -122,13 +122,13 @@
 .website-hero-display {
   font-size: clamp(1.5rem, 6.7vw, 1.625rem);
   line-height: 1.1;
-  letter-spacing: -0.025em;
+  letter-spacing: -0.032em;
 }
 
 .website-page-title {
   font-size: clamp(1.5rem, 6.4vw, 1.75rem);
   line-height: 1.2;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.026em;
 }
 
 .website-article-title {
@@ -138,7 +138,7 @@
 .website-section-heading {
   font-size: 1.5rem;
   line-height: 2rem;
-  letter-spacing: -0.018em;
+  letter-spacing: -0.022em;
 }
 
 .website-feature-heading {
@@ -492,7 +492,7 @@
     align-content: center;
     gap: var(--flow-header-gap);
     padding: var(--flow-header-gap);
-    background: var(--color-accent-soft);
+    background: var(--color-field-mint);
     overflow: clip;
   }
 
@@ -613,6 +613,62 @@
 .auth-brand-chart span[data-step='5'] {
   height: 100%;
   background: var(--color-accent);
+}
+
+/* The scene assembles once on arrival: the answer card rises, the cited
+   source lights, then the citation share grows bar by bar. Only `from`
+   frames, so every part rests on its own style. */
+@media (prefers-reduced-motion: no-preference) {
+  .auth-brand-card {
+    animation: auth-brand-rise var(--motion-reveal) var(--ease-out-expo) both var(--motion-fast);
+  }
+
+  .auth-brand-sources span[data-cited='true'] {
+    animation: auth-brand-light var(--motion-reveal) var(--ease-out-expo) both
+      calc(var(--motion-stagger) * 6);
+  }
+
+  .auth-brand-chart span {
+    transform-origin: bottom;
+    animation: auth-brand-grow var(--motion-reveal) var(--ease-out-expo) both
+      calc(var(--motion-stagger) * (6 + var(--auth-bar, 0)));
+  }
+
+  .auth-brand-chart span[data-step='2'] {
+    --auth-bar: 1;
+  }
+
+  .auth-brand-chart span[data-step='3'] {
+    --auth-bar: 2;
+  }
+
+  .auth-brand-chart span[data-step='4'] {
+    --auth-bar: 3;
+  }
+
+  .auth-brand-chart span[data-step='5'] {
+    --auth-bar: 4;
+  }
+}
+
+@keyframes auth-brand-rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+@keyframes auth-brand-light {
+  from {
+    background: var(--color-track);
+    border-color: var(--color-border-subtle);
+  }
+}
+
+@keyframes auth-brand-grow {
+  from {
+    transform: scaleY(0);
+  }
 }
 
 /* The task column is the white paper (it carries `app-pane` at its call site);
@@ -1255,12 +1311,12 @@
    641–767px band ended up with a hierarchy nothing else on the page shared. */
 @media (min-width: 768px) {
   .website-hero-display {
-    font-size: clamp(2rem, 4.2vw + 0.6rem, 4.5rem);
+    font-size: clamp(2rem, 3.9vw + 0.5rem, 4rem);
   }
 
   .website-page-title {
-    font-size: 2.5rem;
-    line-height: 3rem;
+    font-size: 2.25rem;
+    line-height: 2.75rem;
   }
 
   .website-article-title {
@@ -1289,10 +1345,12 @@
   }
 }
 
-/* Desktop holds the hero 4px under the tablet curve (owner, 2026-10-16).
-   900px, not 1024px: a desktop at 125% display scaling is ~980 CSS px wide. */
+/* Desktop holds the hero under the tablet curve, and the 2026-10-21 refresh
+   set it a step smaller again (owner): about 52px at 1280 and never past
+   60px. 900px, not 1024px: a desktop at 125% display scaling is ~980 CSS px
+   wide. */
 @media (min-width: 900px) {
   .website-hero-display {
-    font-size: clamp(2rem, 4.2vw + 0.35rem, 4.25rem);
+    font-size: clamp(2rem, 3.8vw + 0.25rem, 3.75rem);
   }
 }

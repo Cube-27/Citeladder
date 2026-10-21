@@ -8,21 +8,21 @@ Tests verify shared ownership, accessibility, and product correctness—not exac
 
 ## Direction and identity
 
-One system covers every surface (owner decision, 2026-10-07): the public site, docs, auth, onboarding and the authenticated app share the light B2B SaaS system executed at Attio/Linear craft. The product's material is crisp hairlines, not lift ([decision](decisions.md#the-product-app-uses-hairlines-not-lift), 2026-10-16): cards and the workspace sheet are a one-pixel `border` edge, secondary controls add only a one-pixel contact shadow, and the primary action is one flat fill; nothing glows, carries a bevel or a sheen. CiteLadder retains its forest accent, self-hosted type, content, routes and workflows. The public website and docs are the exception: they are flat ([decision](decisions.md#the-public-website-is-flat), 2026-10-16; see Public website below).
+One system covers every surface (owner decision, 2026-10-07): the public site, docs, auth, onboarding and the authenticated app share the light B2B SaaS system executed at Attio/Linear craft. The product's material is crisp hairlines, not lift ([decision](decisions.md#the-product-app-uses-hairlines-not-lift), 2026-10-16): cards and the workspace sheet are a one-pixel `border` edge, secondary controls add only a one-pixel contact shadow, and the primary action is one flat fill; nothing glows, carries a bevel or a sheen. CiteLadder keeps its content, routes and workflows; since the brighter refresh ([decision](decisions.md#the-brighter-refresh-signal-green-sora-and-general-sans), 2026-10-21) its one accent is signal green and its self-hosted type is Sora over General Sans. The public website and docs are the exception: they are flat ([decision](decisions.md#the-public-website-is-flat), 2026-10-16; see Public website below).
 
-CiteLadder (`citeladder.com`) is an evidence-led enterprise system. The app puts a quiet green-tinted neutral ground behind the chrome and floats the work on one white sheet, using near-black green-tinted ink, forest actions, semantic evidence washes, useful density, and deliberate negative space. Prioritise current state → movement → next action → evidence, not equal-weight KPI cards. Voice is direct, confident, specific, and evidence-led: one idea per sentence.
+CiteLadder (`citeladder.com`) is an evidence-led enterprise system. The app puts a quiet green-tinted neutral ground behind the chrome and floats the work on one white sheet, using near-black green-tinted ink, signal-green actions, semantic evidence washes, useful density, and deliberate negative space. Prioritise current state → movement → next action → evidence, not equal-weight KPI cards. Voice is direct, confident, specific, and evidence-led: one idea per sentence.
 
-- **Logo:** `frontend/components/ui/logo-mark.tsx` owns every surface's lockup and draws it inline from `logo-glyphs.ts` in exactly two tokens: ink (`currentColor`, the speech bubble and "Ladder") and the forest accent (the bars and "Cite"). Both forms therefore follow the theme without a filter, and the mark-only glyph always matches the lockup. `frontend/public/citeladder-logo.svg` is the same drawing in the light values (ink `#0b0f0d`, forest `#14532d`) for structured data and the docs build; the policy check maps each of its fills to its token. `BRAND_LOGO_SIZES` owns standard heights; explicit `size` supports exceptional layouts; non-empty `alt` supplies the accessible name. `frontend/public/citeladder-favicon.ico` owns browser/installable-app icons with the same ink silhouette.
-- **Typography:** self-hosted Switzer (`--font-text`) on every surface for body, UI, data and small headings, and self-hosted IBM Plex Sans (`--font-heading`, a grotesk; OFL-licensed, Latin-1 subset) for display headings: the product page title, public hero, page and section headings, the flow title and Markdown `h2` (owner decisions, 2026-10-09 and 2026-10-11). Both are capped at weight 500 by their `@font-face` ranges, with `font-synthesis-weight: none` so a bold request never renders a faux bold; 14px working baseline, except reading copy on the website and docs, which is 16px. Each semantic role owns size, leading, weight, tracking, and ink together. In the product, hierarchy comes from size and weight together through the closed `.type-*` roles (see Product app ladder); shared fields and dropdowns use the 14px `--text-field` role on every surface.
+- **Logo:** `frontend/components/ui/logo-mark.tsx` owns every surface's lockup and draws it inline from `logo-glyphs.ts` in exactly two tokens: ink (`currentColor`, the speech bubble and "Ladder") and the accent (the bars and "Cite"). Both forms therefore follow the theme without a filter, and the mark-only glyph always matches the lockup. `frontend/public/citeladder-logo.svg` is the same drawing in the light values (ink `#0b0f0d`, signal green `#00a650`) for structured data and the docs build; the policy check maps each of its fills to its token. `BRAND_LOGO_SIZES` owns standard heights; explicit `size` supports exceptional layouts; non-empty `alt` supplies the accessible name. `frontend/public/citeladder-favicon.ico` owns browser/installable-app icons with the same ink silhouette.
+- **Typography:** self-hosted General Sans (`--font-text`, a grotesk) on every surface for body, UI, data and small headings, and self-hosted Sora (`--font-heading`, a geometric sans; OFL-licensed) for display headings: the product page title, public hero, page and section headings, the flow title and Markdown `h2` (owner decision, 2026-10-21). Both are capped at weight 500 by their `@font-face` ranges, with `font-synthesis-weight: none` so a bold request never renders a faux bold; 14px working baseline, except reading copy on the website and docs, which is 16px. Each semantic role owns size, leading, weight, tracking, and ink together. In the product, hierarchy comes from size and weight together through the closed `.type-*` roles (see Product app ladder); shared fields and dropdowns use the 14px `--text-field` role on every surface.
 - **Icons:** Lucide only; import concepts from `frontend/lib/icons.ts` where available. Call sites set size only: `size-3`/`size-3.5` for dense tables, toolbars, and chips; `size-4` for chrome; `size-5` for empty states and marketing wells; larger only for decorative marks. The global stroke ladder derives approximately 1.3px stems from size. Keep `currentColor`; do not override stroke weight locally.
-- **Surface identity:** Light is the default. The app header carries a one-click circular light/dark toggle beside the account menu (`frontend/lib/theme/theme.ts` owns the per-device preference; the semantic tokens rebind under `[data-theme='dark']`). There is no automatic system-theme following. Marketing is light-only and never applies the preference. Forest is the sole action accent on public and product surfaces, and the logo is drawn in the same ink and forest. Provider marks retain their own brand colours. The app's sidebar shares the neutral shell ground, and the work floats beside it on one white workspace sheet. Auth and onboarding share the public website's light world (white stage, public palette, flat task sheet); in dark mode they keep the app's dark rebinds. Dark mode keeps the same tonal order in near-black neutrals with the same slight green tint, and its material leads with light hairline rings. Controls retain white fills and distinct edges in light mode. Marketing and docs remain light-only.
+- **Surface identity:** Light is the default. The app header carries a one-click circular light/dark toggle beside the account menu (`frontend/lib/theme/theme.ts` owns the per-device preference; the semantic tokens rebind under `[data-theme='dark']`). There is no automatic system-theme following. Marketing is light-only and never applies the preference. Signal green is the sole action accent on public and product surfaces, and the logo is drawn in the same ink and green. Provider marks retain their own brand colours. The app's sidebar shares the neutral shell ground, and the work floats beside it on one white workspace sheet. Auth and onboarding share the public website's light world (white stage, public palette, flat task sheet); in dark mode they keep the app's dark rebinds. Dark mode keeps the same tonal order in near-black neutrals with the same slight green tint, and its material leads with light hairline rings. Controls retain white fills and distinct edges in light mode. Marketing and docs remain light-only.
 
 ## Source of truth and implementation rules
 
 | Owner | Responsibility |
 | --- | --- |
 | `frontend/apps/app/src/globals.css` | Global tokens, shared geometry, interaction rules, animations, and the single `@theme` definition |
-| `frontend/apps/app/index.html` and `frontend/components/marketing/chrome/PublicFonts.astro` | Self-hosted Switzer (`--font-text`) and IBM Plex Sans (`--font-heading`) loading and their metric-matched fallbacks in each runtime |
+| `frontend/apps/app/index.html` and `frontend/components/marketing/chrome/PublicFonts.astro` | Self-hosted General Sans (`--font-text`) and Sora (`--font-heading`) loading and their metric-matched fallbacks in each runtime |
 | `frontend/scripts/pull-licensed-fonts.mjs` | The licensed font list; copies the binaries from the private `Cube-27/cube27-fonts` repo, which the public repo must never contain |
 | `frontend/apps/app/src/website-type.css` | Imported public/auth/onboarding type roles and focused-flow geometry; same font and semantic palette |
 | `frontend/components/ui/` | Shared controls, typography, layout, panels, and overlays |
@@ -45,7 +45,7 @@ Consume semantic roles, never page-local values. Every neutral keeps the same sl
 | Ink | `foreground`; `secondary`; `muted`; `ink-faint`; `brand-ink` | Exactly three text inks (owner decision, 2026-10-09): a softened ~80% black for titles and values, a very dark grey for sentences and labels, a light grey for captions and metadata, mirrored in white for dark mode. The website, docs and light-mode sign-in and onboarding rebind the same three inks darker (owner decision, 2026-10-11): near-black `#151a17`, dark-grey `#3d4541` and mid-grey `#4e5450`, each at least 20% darker than the product's, spaced like IBM Carbon and GitHub Primer, so no light grey carries text there. `ink-faint` is decorative only and never carries text; `brand-ink` is the logo and inverse surface, kept at full strength |
 | Boundaries | `border-subtle`; `border`; `border-strong`; `border-bold` | A rule inside one surface; the edge of a control, inset panel or overlay; deliberate emphasis; small choice controls and edges on tinted fills |
 | Neutral states | `hover`, `selected`, `active`, `disabled` | The receiving surface mixed with `state-ink` (a green-tinted ink) at 4%, 8%, 12% and 3%, so they stay in the neutral family |
-| Action | `accent`, `accent-hover`, `accent-active`, `accent-fg`, `accent-text`, `accent-soft`, `accent-subtle`, `accent-border`, `selection` | Forest: primary actions, links, tab underlines, checked indicators, focus, the bars of the logo. Never success, never a chart series |
+| Action | `accent`, `accent-hover`, `accent-active`, `accent-fg`, `accent-text`, `accent-soft`, `accent-subtle`, `accent-border`, `selection` | Signal green: primary actions, tab underlines, checked indicators, the bars of the logo. The fill is bright, so filled controls carry the near-black `accent-fg`; links and focus use the deeper `accent-text`. Never success, never a chart series |
 | Outcome scale | `success`, `warning`, `danger`, `info`, `neutral`, each with `-text` and `-bg` | Every state in the product (see below) |
 | Series | `chart-1..8`; `citation-*` aliases | Categorical identity in charts and legends only |
 | Identity | `brand-google-*`, `brand-claude`, `brand-gemini` | Google's own mark (sign-in, engine logo) and the Claude and Gemini marks in the homepage engine rotor; never state |
@@ -71,7 +71,7 @@ status dots and their meanings remain separate.
 
 Reading text must meet 4.5:1 contrast. Use primary ink on selected surfaces when secondary ink would lose contrast. Accent denotes action, never success or positive metric deltas. Metrics use data-viz or neutral signed/directional treatments. Decorative icons and category labels use neutral ink. Dark mode keeps colour concentrated in actions and meaningful evidence. Never communicate meaning through colour alone.
 
-The public website, login and onboarding follow the B2B SaaS category standard at Attio/Linear craft (owner decision, 2026-10-07). `[data-flow-surface]` in light mode rebinds only the ground, to white; ink, edges, bands and material are the product's own. The public website and docs (`[data-public-surface]`), and in light mode sign-in and onboarding, are flat, Lattice-style ([decision](decisions.md#the-public-website-is-flat), 2026-10-16): nothing at rest casts a shadow, there are no gradients and no button sheen, and surfaces separate by a tone step (white, `background-alt`, `well`) or by space; a section may change its whole field colour. Only detached layers (menus, the consent bar) keep their overlay shadow. There is no dark band. The shared dot lattice (`--lattice`, 16px) sits behind product stages, the closing band and the auth stage, masked so it never sits behind text. The homepage hero and the closing band are flat `accent-soft` fields; the hero carries fine grain (`--grain`) fading out toward the product and runs up under the transparent nav, so the bar sits on the field until the page scrolls. No other surface carries grain. The flow bar and action bar carry no rule, the "or" between Google and email sign-in is a word without lines, and onboarding review cards are `background-alt` tiles. Account access (sign-in, sign-up and the mailbox screens) is one flat sheet split into the form column and a flat `accent-soft` brand panel carrying the site tagline over a decorative answer-and-citation illustration; below 900px the panel drops away and the sheet is the form alone. Evidence colour lives only inside product views.
+The public website, login and onboarding follow the B2B SaaS category standard at Attio/Linear craft (owner decision, 2026-10-07). `[data-flow-surface]` in light mode rebinds only the ground, to white; ink, edges, bands and material are the product's own. The public website and docs (`[data-public-surface]`), and in light mode sign-in and onboarding, are flat, Lattice-style ([decision](decisions.md#the-public-website-is-flat), 2026-10-16): nothing at rest casts a shadow, there are no gradients and no button sheen, and surfaces separate by a tone step (white, `background-alt`, `well`) or by space; a section may change its whole field colour. Only detached layers (menus, the consent bar) keep their overlay shadow. There is no dark band. The shared dot lattice (`--lattice`, 16px) sits behind product stages, the closing band and the auth stage, masked so it never sits behind text. The homepage hero and the closing band are flat `field-mint` fields, and the homepage announcement strip is `field-lime`; the hero carries fine grain (`--grain`) fading out toward the product and runs up under the transparent nav, so the bar sits on the field until the page scrolls. Below 640px the homepage takes its own composition rather than the desktop one shrunk (owner, 2026-10-21): left-aligned copy with full-width actions, the tour tabs as a strip of scrollable chips, the product edge to edge without the app sidebar at a readable scale, the engines as a two-column list and a left-aligned close. No other surface carries grain. The flow bar and action bar carry no rule, the "or" between Google and email sign-in is a word without lines, and onboarding review cards are `background-alt` tiles. Account access (sign-in, sign-up and the mailbox screens) is one flat sheet split into the form column and a flat `field-mint` brand panel carrying the site tagline over a decorative answer-and-citation illustration that assembles once on arrival; below 900px the panel drops away and the sheet is the form alone. Evidence colour lives only inside product views.
 
 Geometry is one ladder on every surface: 4 / 8 / 12 / 16 / full (see Data and geometry). The public container measure (`max-w-7xl` plus `--site-gutter`) is shared by navigation, hero, sections and footer.
 
@@ -93,14 +93,14 @@ the Colour section above. Every token must have a consumer.
 <!-- generated:tokens:start -->
 | Token | Light | Dark |
 | --- | --- | --- |
-| `--color-accent` | `#14532d` | `#76df9c` |
-| `--color-accent-active` | `#0b3d20` | `#b2f4c6` |
-| `--color-accent-border` | `#86efac` | `rgb(118 223 156 / 45%)` |
-| `--color-accent-fg` | `#ffffff` | `#0d2618` |
-| `--color-accent-hover` | `#166534` | `#94ebb0` |
-| `--color-accent-soft` | `#f0fdf4` | `rgb(118 223 156 / 12%)` |
-| `--color-accent-subtle` | `#dcfce7` | `rgb(118 223 156 / 18%)` |
-| `--color-accent-text` | `#14532d` | `#86e5a6` |
+| `--color-accent` | `#00a650` | `#76df9c` |
+| `--color-accent-active` | `#009447` | `#b2f4c6` |
+| `--color-accent-border` | `#7fdca7` | `rgb(118 223 156 / 45%)` |
+| `--color-accent-fg` | `#04170c` | `#0d2618` |
+| `--color-accent-hover` | `#00b85a` | `#94ebb0` |
+| `--color-accent-soft` | `#edfbf2` | `rgb(118 223 156 / 12%)` |
+| `--color-accent-subtle` | `#d3f6df` | `rgb(118 223 156 / 18%)` |
+| `--color-accent-text` | `#08773b` | `#86e5a6` |
 | `--color-active` | `#e4e8e6` | `#2a2d2b` |
 | `--color-background` | `#f4f5f4` | `#0b0d0c` |
 | `--color-background-alt` | `#f6f7f6` | `#181b19` |
@@ -135,6 +135,8 @@ the Colour section above. Every token must have a consumer.
 | `--color-danger-text` | `#b42332` | `#f6abb1` |
 | `--color-disabled` | `#f8f9f9` | `#191c1a` |
 | `--color-elevated` | `#ffffff` | `#1b1f1d` |
+| `--color-field-lime` | `#e4fb9b` | `rgb(228 251 155 / 12%)` |
+| `--color-field-mint` | `#c6f4d6` | `rgb(118 223 156 / 16%)` |
 | `--color-foreground` | `#2f3431` | `#d3d8d5` |
 | `--color-hover` | `#f6f7f7` | `#1b1e1c` |
 | `--color-info` | `#2f6fdb` | `#7aa7f5` |
@@ -151,7 +153,7 @@ the Colour section above. Every token must have a consumer.
 | `--color-panel-tonal` | `#f8f9f8` | `#171a18` |
 | `--color-secondary` | `#4e5551` | `#a9b0ac` |
 | `--color-selected` | `#edefee` | `#222623` |
-| `--color-selection` | `#bbf7d0` | `rgb(118 223 156 / 35%)` |
+| `--color-selection` | `#b5efca` | `rgb(118 223 156 / 35%)` |
 | `--color-selection-fg` | `#2f3431` | `#f1f4f2` |
 | `--color-state-ink` | `#1c3d2c` | `#d3d8d5` |
 | `--color-success` | `#0d9488` | `#2ec4b0` |
@@ -167,9 +169,9 @@ the Colour section above. Every token must have a consumer.
 
 ## Typography
 
-Public display headings (hero, page title, section heading) set in IBM Plex Sans at weight 500 with tracking that tightens as size grows (about −0.018em to −0.025em); the feature heading sets in Switzer 500 at about −0.005em. Product-app headings keep normal tracking.
+Public display headings (hero, page title, section heading) set in Sora at weight 500 with tracking that tightens as size grows (about −0.022em to −0.032em, tighter than a grotesk because Sora is wide); the feature heading sets in General Sans 500 at about −0.005em. Product-app headings keep normal tracking.
 
-Use Switzer for text, figures, labels and small headings on every surface, and IBM Plex Sans only for display headings; metrics, dates, ranks, and percentages explicitly use tabular numerals, not monospace. Numbers retain their data roles rather than display roles. Weights are 400 (sentences) and 500 (labels, controls, badges, titles, figures); there is no heavier rung, so titles separate from labels by size. Product titles and figures tighten their tracking as size grows (page title −0.01em, figure −0.02em, section title −0.011em). Do not assemble page-local size/weight/ink hierarchies.
+Use General Sans for text, figures, labels and small headings on every surface, and Sora only for display headings; metrics, dates, ranks, and percentages explicitly use tabular numerals, not monospace. Numbers retain their data roles rather than display roles. Weights are 400 (sentences) and 500 (labels, controls, badges, titles, figures); there is no heavier rung, so titles separate from labels by size. Product titles and figures tighten their tracking as size grows (page title −0.01em, figure −0.02em, section title −0.011em). Do not assemble page-local size/weight/ink hierarchies.
 
 There is one scale for every surface in `globals.css` (12 · 14 · 16 · 18 · 20 · 24 · 28 · 32, plus the public display roles at 40, 44, 64 and 68), and no surface rebinds it. 14px is the baseline on every surface: body, controls, navigation and labels. The one exception is reading copy on the website and docs (`.website-body`, the marketing checklist, and blog article prose and callouts), which is 16px (owner decision, 2026-10-11); sign-in, onboarding and every non-reading role there keep their rungs. 12px is the one rung below it (captions, badges, deltas, eyebrows, flow meta) and is used sparingly; 10px is reserved and currently unused. There is no 13px rung. Above 14px, adjacent rungs differ by at least 2px. The rungs follow the 4px rhythm that Atlassian, Primer and Carbon share. No stylesheet sets a literal `font-size` or `line-height` outside the role definitions; everything else uses `var(--text-*)`.
 
@@ -197,11 +199,11 @@ The sizes below are generated from the role definitions in `globals.css` and `we
 | `.website-body` | public | `16px / 26px` | — |
 | `.website-data-display` | public | `28px / 36px` | `32px / 40px` |
 | `.website-feature-heading` | public | `16px / 24px` | `18px / 28px` |
-| `.website-hero-display` | public | `clamp(24px, 6.7vw, 26px) / 1.1` | `clamp(32px, 4.2vw + 9.6px, 72px) / inherit` |
+| `.website-hero-display` | public | `clamp(24px, 6.7vw, 26px) / 1.1` | `clamp(32px, 3.9vw + 8px, 64px) / inherit` |
 | `.website-label` | public | `14px / 20px` | — |
 | `.website-lead` | public | `16px / 24px` | `18px / 28px` |
 | `.website-nav` | public | `14px / 20px` | — |
-| `.website-page-title` | public | `clamp(24px, 6.4vw, 28px) / 1.2` | `40px / 48px` |
+| `.website-page-title` | public | `clamp(24px, 6.4vw, 28px) / 1.2` | `36px / 44px` |
 | `.website-section-heading` | public | `24px / 32px` | `32px / 40px` |
 <!-- generated:type:end -->
 
@@ -222,7 +224,7 @@ Roles own all typography properties. The ladder is mobile-first with one step at
 | Data display | `website-data-display` | Pricing figures only; tabular |
 | Flow rungs | `flow-title`, `flow-group-title`, `flow-help`, `flow-meta` | The focused flow: title (24→28), group title (16), help (14) and meta (12) |
 
-Display rungs track the viewport on phones so headlines stay short: the hero and page titles hold two lines from 360px, and long article titles three. The hero tops out at 26px on phones (its long second line holds two lines at 390px) and 68px on desktop (from 900px it runs 4px under the tablet curve); the page title tops out at 40px (44px on marketing pages from 768px, 40px from 900px and 64px from 1280px, `marketing.css`, so it leads the first screen; docs and articles keep their rungs); leads are 16px on phones and 18px from 768px, and body copy is 16px. Embedded product previews (`.app-type-scale`) reset to the product ladder below.
+Display rungs track the viewport on phones so headlines stay short: the hero and page titles hold two lines from 360px, and long article titles three. The hero tops out at 26px on phones (its long second line holds two lines at 390px) and 60px on desktop (about 52px at 1280px); the page title tops out at 36px (40px on marketing pages from 768px, 36px from 900px and 56px from 1280px, `marketing.css`, so it leads the first screen; docs and articles keep their rungs); leads are 16px on phones and 18px from 768px, and body copy is 16px. Embedded product previews (`.app-type-scale`) reset to the product ladder below.
 
 ### Product app ladder
 
@@ -428,7 +430,7 @@ Shared public objects use one flat card recipe: link cards, plan cards, the revi
 ### Documentation
 
 The docs subdomain is a Read surface using the existing public light palette,
-Switzer and IBM Plex Sans, semantic tokens and shared controls. Its desktop shell has
+General Sans and Sora, semantic tokens and shared controls. Its desktop shell has
 grouped guide navigation, a measured reading column and an on-page contents
 rail. Mobile uses inline navigation and contents disclosures. Guides, Agent,
 MCP and Changelog are the top-level entry points; Updates is the final sidebar
@@ -436,7 +438,7 @@ group. Public font loading is shared through `PublicFonts.astro`.
 Search uses the shared dialog, input and buttons with keyboard access and
 focus restoration. Articles are server-built HTML and remain readable without
 JavaScript. It wears the website's chrome: one compact header row (wordmark
-with a Docs tag, section tabs with a forest underline, a field-style search,
+with a lime Docs tag, section tabs with a green underline, a field-style search,
 the marketing Open app button) and compact 32px navigation rows. No decorative
 motion or alternate design system is introduced.
 

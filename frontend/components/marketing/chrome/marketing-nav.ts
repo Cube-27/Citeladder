@@ -9,6 +9,20 @@ import type { NavDropKey } from '@/lib/marketing-content/nav';
  * listeners, so content pages ship no framework runtime.
  */
 
+/**
+ * The route a request pathname names. The site builds with
+ * `build.format: 'file'`, so a prerendered page sees `/index.html` or
+ * `/pricing.html` where the browser shows `/` and `/pricing`; every
+ * current-page and homepage check compares against the route form.
+ */
+export function routePath(pathname: string): string {
+  const route = pathname
+    .replace(/\.html$/, '')
+    .replace(/\/index$/, '')
+    .replace(/\/+$/, '');
+  return route === '' ? '/' : route;
+}
+
 /** Panel widths in px; the panel is centred under its trigger within the bar. */
 export const DROP_LAYOUT: Readonly<Record<NavDropKey, { width: number }>> = {
   platform: { width: 820 },
