@@ -52,7 +52,7 @@ function ConnectionRow({
           </p>
         </div>
       </TableCell>
-      <TableCell numeric="end">
+      <TableCell numeric>
         <Button variant="secondary" onClick={onRevoke}>
           {adminView ? 'Remove workspace access' : 'Revoke'}
         </Button>
@@ -63,7 +63,7 @@ function ConnectionRow({
 
 const COLUMNS: readonly DataTableColumn[] = [
   { key: 'connection', label: 'Connection' },
-  { key: 'access', label: 'Access', width: 'name', numeric: 'end', hideLabel: true },
+  { key: 'access', label: 'Access', width: 'name', numeric: true, hideLabel: true },
 ];
 
 /** What the list shows instead of rows: the read's loading, error or empty. */

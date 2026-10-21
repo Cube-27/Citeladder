@@ -279,6 +279,22 @@ brand green to change, then chose the first of three first-screen mocks with
 Sora replacing Cabinet Grotesk, a 500 weight limit, slightly smaller H1s and
 special treatment for mobile. [Design](design.md) owns the system.
 
+On a phone, a pair of calls to action shares one row at equal widths, in the
+hero and in every closing band; the hero's product picture keeps its title,
+its one action and its filter bar to one line each, dropping its secondary
+header controls and the widest filter; and the announcement strip can be
+closed, which the visitor's browser remembers for that announcement. In the
+app, record tables give the row's identity the width (a prompt's topic and tags
+are a caption line under it), set figures right-aligned with no header band,
+and start at the card's top edge.
+
+Source: owner, 21 October 2026, follow-up requests on the shipped refresh: the
+hero and closing CTAs "on the same row", the hero picture's title, action and
+filters "overflowing to two rows" ("u can remove one filter"), a cross to close
+the top strip, the prompt column "too less width", provider names wrapping, the
+padding above table headers, and the app improved with the taste-skill v2.1
+dashboard rules.
+
 ## Site Health crawler parity checks and Apple's crawlers
 
 Site Health gains the deterministic crawler checks a comparison with two

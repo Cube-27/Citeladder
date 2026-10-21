@@ -20,7 +20,7 @@ const COLUMNS: readonly DataTableColumn[] = [
   { key: 'document', label: 'Document' },
   { key: 'paid', label: 'Date', width: 'date' },
   { key: 'amount', label: 'Amount', width: 'figure', numeric: true },
-  { key: 'download', label: 'Download', width: 'name', numeric: 'end', hideLabel: true },
+  { key: 'download', label: 'Download', width: 'name', numeric: true, hideLabel: true },
 ];
 
 function invoicesState(loading: boolean, count: number): DataTableState | undefined {
@@ -98,7 +98,7 @@ export function InvoiceHistory({
                 <DisplayTime value={invoice.paid_at} dateOnly />
               </TableCell>
               <TableCell numeric>{formatMoney(invoice.amount_paid, 2)}</TableCell>
-              <TableCell numeric="end">
+              <TableCell numeric>
                 <Button
                   variant="secondary"
                   disabled={downloading === invoice.invoice_id}

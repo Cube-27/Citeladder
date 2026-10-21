@@ -62,11 +62,23 @@ function panelStyle(key: NavDropKey) {
 >
   {
     home && (
-      <div class="lp-announcement" data-cta-placement="announcement">
+      <div
+        class="lp-announcement"
+        data-announcement="mcp-connect"
+        data-cta-placement="announcement"
+      >
         <a href="/platform/mcp" class="website-label" data-marketing-cta="">
           <span class="truncate">New: connect CiteLadder to Claude, ChatGPT and more</span>
           <ArrowRight aria-hidden className="size-4 shrink-0" />
         </a>
+        <button
+          type="button"
+          class="lp-announcement-close focus-ring"
+          aria-label="Dismiss announcement"
+          data-announcement-close
+        >
+          <X aria-hidden className="size-4" />
+        </button>
       </div>
     )
   }

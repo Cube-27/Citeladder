@@ -215,5 +215,5 @@ const INVITATION_COLUMNS: readonly DataTableColumn[] = [
   { key: 'invitee', label: 'Invitee' },
   { key: 'role', label: 'Workspace role', width: 'status' },
   { key: 'expires', label: 'Link expires', width: 'date', numeric: true },
-  { key: 'access', label: 'Access', width: 'rowActions', numeric: 'end' },
+  { key: 'access', label: 'Access', width: 'rowActions', numeric: true },
 ];

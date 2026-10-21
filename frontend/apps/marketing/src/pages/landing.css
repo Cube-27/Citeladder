@@ -18,18 +18,38 @@
 }
 
 /* A thin band above the nav bar; the link is the whole message. It rides in
-   the fixed chrome, so the page clears it through the nav offset. */
+   the fixed chrome, so the page clears it through the nav offset, and a
+   dismissed band is removed, so the offset falls back with it. */
 :root:has(.lp-announcement) {
   --marketing-nav-offset: calc(4rem + 2.25rem + env(safe-area-inset-top, 0px));
 }
 
+/* Both sides reserve the close button's width, so the message stays centred
+   and never runs under it. */
 .lp-announcement {
+  position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
   height: 2.25rem;
-  padding-inline: var(--site-gutter);
+  padding-inline: calc(var(--site-gutter) + 2.25rem);
   background: var(--color-field-lime);
+}
+
+.lp-announcement-close {
+  position: absolute;
+  top: 0.125rem;
+  right: calc(var(--site-gutter) - 0.5rem);
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-control);
+  color: var(--color-foreground);
+}
+
+.lp-announcement-close:hover {
+  background: var(--color-panel);
 }
 
 .lp-announcement a {
@@ -734,12 +754,19 @@
     margin-bottom: 1.5rem;
   }
 
-  /* `stretch`, not the desktop `center`: a centred grid sizes its one column
-     to the button and the button cannot fill the thumb's width. */
+  /* Both actions share one row at half the width each (owner, 2026-10-21).
+     `stretch`, not the desktop `center`: a centred grid sizes its columns to
+     the buttons and they cannot fill the row. */
   .lp-actions {
     display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     justify-content: stretch;
     width: 100%;
+  }
+
+  /* With self-serve signup closed the demo is the one action: the full row. */
+  .lp-actions > :only-child {
+    grid-column: 1 / -1;
   }
 
   /* Outranks the shared phone rule that sizes public CTAs to their label. */
@@ -786,6 +813,31 @@
   }
 
   .lp-hero-frame .pv-sidebar {
+    display: none;
+  }
+
+  /* The sheet's title and its one action each hold one line at this width;
+     the secondary header controls give up their room to them. */
+  .lp-hero-frame .pv-sheet-head :is(.pv-main-title, .pv-button) {
+    white-space: nowrap;
+  }
+
+  .lp-hero-frame .pv-sheet-head :is(.pv-button-quiet, .pv-icon-button) {
+    display: none;
+  }
+
+  /* The filter bar holds one row: the prompt-set filter, the widest, gives
+     way (owner, 2026-10-21). */
+  .lp-hero-frame .pv-filters {
+    flex-wrap: nowrap;
+    overflow: hidden;
+  }
+
+  .lp-hero-frame .pv-filter {
+    white-space: nowrap;
+  }
+
+  .lp-hero-frame .pv-filter-group + .pv-filter-group .pv-filter:first-child {
     display: none;
   }
 
