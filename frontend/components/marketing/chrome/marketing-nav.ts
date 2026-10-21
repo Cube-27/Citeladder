@@ -16,10 +16,12 @@ import type { NavDropKey } from '@/lib/marketing-content/nav';
  * current-page and homepage check compares against the route form.
  */
 export function routePath(pathname: string): string {
-  const route = pathname
-    .replace(/\.html$/, '')
-    .replace(/\/index$/, '')
-    .replace(/\/+$/, '');
+  let route = pathname.replace(/\.html$/, '').replace(/\/index$/, '');
+  // Trailing slashes are trimmed by scanning, not a `/+$` pattern, which
+  // backtracks on a long run of slashes.
+  let end = route.length;
+  while (end > 0 && route[end - 1] === '/') end -= 1;
+  route = route.slice(0, end);
   return route === '' ? '/' : route;
 }
 
