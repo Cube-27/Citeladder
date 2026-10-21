@@ -295,6 +295,21 @@ the top strip, the prompt column "too less width", provider names wrapping, the
 padding above table headers, and the app improved with the taste-skill v2.1
 dashboard rules.
 
+The text face becomes Geist in place of General Sans on every surface, with
+Sora kept for display headings. General Sans read light, and it has no
+tabular figures, so numeric columns never lined up; Geist has them. Geist
+Mono is not in the font repository, so figures set in Geist's tabular digits
+rather than a monospace. Records with fewer rows than a page show no pager
+and no blank padding rows; the competitor table, which never exceeds six
+brands, is not paged at all.
+
+Source: owner, 21 October 2026: "general sans doesnt look very good and is a
+lighter font ... maybe geist is a better choice and geist mono for numbers? ...
+if it requires a lot of file to change ignore and just use geist instead";
+"rpp and pagination only appears on 11th row and above, we dont show blank
+rows"; "the competitor table will never be more than 6 so no point in rpp and
+paginatiosn".
+
 ## Site Health crawler parity checks and Apple's crawlers
 
 Site Health gains the deterministic crawler checks a comparison with two

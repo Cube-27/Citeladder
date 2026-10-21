@@ -6,11 +6,12 @@ import { Play } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { pageNumberControls, useTablePage } from '@/components/ui/pager';
-import { TableCell, TableRow } from '@/components/ui/table';
+import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import type { Audit } from '@/lib/api/types';
 import { marketLabel } from '@citeladder/contracts/markets';
-import { auditBadgeValue, auditStatusLabel, formatDateTime } from '@/lib/runs/status';
+import { formatDisplayDate, formatDisplayTime } from '@/lib/format';
+import { auditBadgeValue, auditStatusLabel } from '@/lib/runs/status';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 
 /** A launch's per-market runs arrive together; later rows point back to the first. */
@@ -39,7 +40,7 @@ function runsColumns(showMarket: boolean): DataTableColumn[] {
  * Runs (audits) list table (F10, design.md §9.7), on the shared `DataTable`.
  *
  * One row per audit: a run-status badge, the requested/completed/failed
- * counts, and the created timestamp. Each row links to the run detail page.
+ * counts, and the created date over its time. Each row links to the run detail page.
  * A status filter that matches nothing keeps the header and the page's
  * footprint and states the absence inside the table.
  */
@@ -68,6 +69,7 @@ export function RunsTable({
       columns={runsColumns(showMarket)}
       pageSize={PAGE_SIZE}
       rowCount={pagedAudits.length}
+      rowLines={2}
       state={
         audits.length === 0
           ? { kind: 'empty', headingLevel: 3, icon: Play, heading: emptyHeading }
@@ -95,9 +97,14 @@ export function RunsTable({
           <TableCell numeric>{audit.completed_count}</TableCell>
           <TableCell numeric>{audit.failed_count}</TableCell>
           <TableCell numeric className="text-secondary">
-            {sameLaunch(audit, pagedAudits[index - 1])
-              ? 'Same launch'
-              : formatDateTime(audit.created_at, timeZone)}
+            {sameLaunch(audit, pagedAudits[index - 1]) ? (
+              'Same launch'
+            ) : (
+              <TableCellLines
+                primary={formatDisplayDate(audit.created_at, timeZone)}
+                secondary={formatDisplayTime(audit.created_at, timeZone)}
+              />
+            )}
           </TableCell>
           <TableCell>
             <TextLink href={`/runs/${audit.id}`} text="itemTitle">
