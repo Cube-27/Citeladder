@@ -160,8 +160,8 @@ test.describe('marketing routes', () => {
         await page.evaluate(() =>
           Promise.allSettled(
             [
-              '400 14px "General Sans Variable"',
-              '500 14px "General Sans Variable"',
+              '400 14px "Geist Variable"',
+              '500 14px "Geist Variable"',
               '500 32px "Sora Variable"',
             ].map((font) => document.fonts.load(font)),
           ),

@@ -9,7 +9,7 @@
    baseline here exactly as in the product; 12 is the one rung below it. */
 :where([data-public-surface], [data-flow-surface]) {
   /* The public and focused-flow type world (docs/design.md §Typography):
-     General Sans carries body, UI and data, Sora the display headings, as in
+     Geist carries body, UI and data, Sora the display headings, as in
      the product. The scale is the product's (globals.css @theme), unchanged;
      being "roomier" is a job for measure and rhythm, not for resizing rungs. */
   --tracking-tight: -0.02em;
@@ -104,7 +104,7 @@
 
    Display rungs set in Sora at 500, and tracking closes as size grows: Sora
    is a wide geometric face, so it tracks tighter than a grotesk would. The
-   feature heading and body rungs set in General Sans at 400/500. */
+   feature heading and body rungs set in Geist at 400/500. */
 .website-hero-display,
 .website-page-title,
 .website-section-heading {
