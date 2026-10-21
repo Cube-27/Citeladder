@@ -256,6 +256,29 @@ Source: owner, 16 October 2026, asking for an audit and redesign of the app
 because it "doesn't really look professional enterprise grade yet", with the
 design choices left to the agent. [Design](design.md) owns the system.
 
+## The brighter refresh: signal green, Sora and General Sans
+
+Every surface (website, docs, sign-in, onboarding and the app) moves to a
+brighter look. The brand and action colour becomes a vivid signal green
+(`#00a650`) in place of forest; because it is bright, a filled control carries
+near-black ink, and links and focus take a deeper green. The logo keeps its
+drawing and its two-tone split, with the bars and "Cite" in the new green. The
+homepage hero, the closing band and the sign-in brand panel are whole mint
+fields, and the announcement strip is lime. Display headings set in Sora and
+text in General Sans, both capped at weight 500; editorial serif display faces
+were rejected, as were the faces of the reference site the owner showed. The
+public H1s are a step smaller than before: the hero tops out at 60px (about
+52px at 1280px) and the marketing page title is 36px, then 56px from 1280px.
+Phones get their own homepage composition rather than the desktop one shrunk.
+Motion stays subtle: copy arrives in sequence, and product pictures assemble
+themselves (lines draw, bars grow). Website copy is unchanged.
+
+Source: owner, 21 October 2026. The owner asked for "a brand new look ... brighter
+colors", left the design free except content and logo, allowed the app and the
+brand green to change, then chose the first of three first-screen mocks with
+Sora replacing Cabinet Grotesk, a 500 weight limit, slightly smaller H1s and
+special treatment for mobile. [Design](design.md) owns the system.
+
 ## Site Health crawler parity checks and Apple's crawlers
 
 Site Health gains the deterministic crawler checks a comparison with two

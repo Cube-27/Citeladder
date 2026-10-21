@@ -7,8 +7,9 @@
 @source '../../../components/marketing/primitives/button.tsx';
 
 /* The docs subdomain wears the public site's system (docs/design.md, Public
-   website): white paper, hairline chrome, compact rows, forest accent for the
-   current place only. Reading comfort comes from measure and rhythm. */
+   website): white paper, hairline chrome, compact rows, signal green for the
+   current place only and the site's lime on the brand tag. Reading comfort
+   comes from measure and rhythm. */
 
 :root {
   --docs-header-height: 3.75rem;
@@ -51,8 +52,8 @@
   min-height: 1.25rem;
   padding-inline: 0.5rem;
   border-radius: var(--radius-full);
-  background: var(--color-accent-soft);
-  color: var(--color-accent-text);
+  background: var(--color-field-lime);
+  color: var(--color-foreground);
   font-size: var(--text-xs);
   line-height: var(--text-xs--line-height);
   font-weight: 500;
@@ -226,7 +227,7 @@
 }
 
 .docs-nav a[aria-current] {
-  background: var(--color-accent-soft);
+  background: var(--color-accent-subtle);
   color: var(--color-accent-text);
   font-weight: 500;
 }

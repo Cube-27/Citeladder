@@ -261,12 +261,12 @@
 
 /* ── Closing band ───────────────────────────────────────────────────────── */
 
-/* The close is a whole field of the soft forest tint, not a wash. */
+/* The close returns to the hero's whole mint field, not a wash. */
 .marketing-closing-band {
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  background: var(--color-accent-soft);
+  background: var(--color-field-mint);
 }
 
 .marketing-closing-band::before {
@@ -433,8 +433,8 @@
   /* Marketing page H1s sit one step above the shared 40px title on desktop
      (owner decision, 2026-10-10); docs keep 40px, articles their own rung. */
   .website-page-title:not(.website-article-title) {
-    --text-marketing-title: 2.75rem;
-    --text-marketing-title--line-height: 3.25rem;
+    --text-marketing-title: 2.5rem;
+    --text-marketing-title--line-height: 3rem;
     font-size: var(--text-marketing-title);
     line-height: var(--text-marketing-title--line-height);
   }
@@ -449,17 +449,18 @@
    desktop at 125% display scaling (~980 CSS px) counts as desktop. */
 @media (min-width: 56.25rem) {
   .website-page-title:not(.website-article-title, .mk-dive-title) {
-    --text-marketing-title: 2.5rem;
-    --text-marketing-title--line-height: 3rem;
+    --text-marketing-title: 2.25rem;
+    --text-marketing-title--line-height: 2.75rem;
   }
 }
 
 /* From 1280px the marketing H1 is the first screen's one dominant element
-   (owner decision, 2026-10-16): display size, near 5vw at 1440px. */
+   (owner decision, 2026-10-16), set a step smaller in the 2026-10-21
+   refresh (owner). */
 @media (min-width: 80rem) {
   .website-page-title:not(.website-article-title, .mk-dive-title) {
-    --text-marketing-title: 4rem;
-    --text-marketing-title--line-height: 4.25rem;
+    --text-marketing-title: 3.5rem;
+    --text-marketing-title--line-height: 3.875rem;
   }
 }
 

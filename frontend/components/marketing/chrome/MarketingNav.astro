@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 
 import { buttonLinkAttributes } from '../primitives/button';
 import { GitHubMark } from '../primitives/github-mark';
-import { DROP_LAYOUT } from './marketing-nav';
+import { DROP_LAYOUT, routePath } from './marketing-nav';
 import NavRow from './NavRow.astro';
 
 /**
@@ -31,7 +31,7 @@ interface Props {
   path: string;
 }
 
-const { path } = Astro.props;
+const path = routePath(Astro.props.path);
 const home = path === '/';
 const signupOpen = selfServeSignupOpen();
 
