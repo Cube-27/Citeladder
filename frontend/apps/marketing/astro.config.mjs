@@ -35,7 +35,7 @@ const publicDefines = Object.fromEntries(
 
 export default defineConfig({
   // Pages are built once and served as free static assets. Only routes that
-  // read the request (pricing, contact, the 404 negotiation and the apex
+  // read the request (pricing, contact and the apex
   // proxy in middleware) opt out with `prerender = false`.
   output: 'static',
   build: { format: 'file' },

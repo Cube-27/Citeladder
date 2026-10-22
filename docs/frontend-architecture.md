@@ -30,10 +30,13 @@ so content pages ship no framework JavaScript; React islands hydrate only on
 pages with interactive tools, such as the homepage tour, blog explorer,
 contact form, pricing and the free tools.
 Only routes that read the request opt out with `prerender = false`: `/pricing`,
-the contact intake, `/health` and the 404 page, which answers
-`Accept: text/markdown` with a Markdown body. The middleware runs only for
-those, proxies only the exact apex webhook path and keeps the retired
-research redirects; a generated `_redirects` file sends each page's trailing-slash
+the contact intake and `/health`. The 404 page is prerendered so scanner
+traffic never renders on demand (the free Workers plan stops a request past
+10 ms of CPU). Astro serves that page without running middleware, so the
+Worker entry (`apps/marketing/src/edge.ts`) runs first: it proxies only the
+exact apex webhook path, keeps the retired research redirects and answers
+`Accept: text/markdown` 404s with a Markdown body; the middleware only adds
+headers to on-demand pages. A generated `_redirects` file sends each page's trailing-slash
 variant to it with a 301. `/pricing`
 reads the public catalog through protected origin transport without visitor
 credentials. It serves a per-country copy from the edge cache for ten minutes
