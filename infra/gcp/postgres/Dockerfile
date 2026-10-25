@@ -3,5 +3,9 @@
 # The bookworm variant carries the openssl CLI used for the VM's TLS key.
 FROM postgres:16-bookworm@sha256:efedf3595f1d6f415c08568ba171029bf54052e754cc9f030e3f2412b21f3d67
 
+# The entrypoint calls gosu only when started as root, which this image never
+# is. Its bundled Go runtime carried every vulnerability finding on the VM.
+RUN rm /usr/local/bin/gosu
+
 # The entrypoint and server run as the image's postgres account (uid 999).
 USER postgres
