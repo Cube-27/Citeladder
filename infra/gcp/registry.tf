@@ -1,14 +1,16 @@
 resource "google_artifact_registry_repository" "images" {
   location      = var.region
   repository_id = local.name
-  description   = "Immutable CiteLadder API and PostgreSQL images"
+  description   = "CiteLadder API and PostgreSQL images, deployed by digest"
   format        = "DOCKER"
+  # Deploys pin digests, so tags carry no guarantee. Immutable tags would also
+  # stop the cleanup policy deleting any tagged version.
   docker_config {
-    immutable_tags = true
+    immutable_tags = false
   }
 
-  # Every deploy pushes new immutable tags. Keep the last three versions of each
-  # image for rollback and delete anything else after a week. KEEP wins.
+  # Every deploy pushes new tags. Keep the last three versions of each image
+  # for rollback and delete anything else after a week. KEEP wins.
   cleanup_policy_dry_run = false
 
   cleanup_policies {
