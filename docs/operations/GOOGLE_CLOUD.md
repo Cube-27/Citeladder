@@ -54,8 +54,9 @@ Docs Worker (static, no origin)                            │ starts runner aft
   Cloud Run references them by name, so values are absent from state,
   arguments, logs and outputs.
 - **Images.** Every image is deployed by immutable digest from one Artifact
-  Registry repository with immutable tags. A cleanup policy keeps the last
-  three versions of each image and deletes others after seven days.
+  Registry repository. Tags stay mutable because immutable tags block the
+  cleanup policy, which keeps the last three versions of each image and
+  deletes others after seven days.
 - **Scale-to-zero.** Nothing except PostgreSQL runs continuously, and nothing
   except PostgreSQL runs on the VM. The API starts a runner execution only
   after committed queue or billing work. Leases make duplicate executions
