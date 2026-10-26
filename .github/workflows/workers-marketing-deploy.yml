@@ -2,6 +2,11 @@ name: Marketing Worker delivery
 
 on:
   workflow_dispatch:
+    inputs:
+      indexnow_all:
+        description: Submit every sitemap URL to IndexNow instead of only the changed ones
+        type: boolean
+        default: false
 
 # Deny by default; every job grants what it needs.
 permissions: {}
@@ -87,6 +92,12 @@ jobs:
         run: |
           test -n "$GH_TOKEN"
           node frontend/scripts/pull-licensed-fonts.mjs frontend/apps/marketing/dist/client/fonts
+      # The live sitemap before this deploy is the baseline for IndexNow's changed URLs.
+      - name: Save live sitemap
+        id: live_sitemap
+        continue-on-error: true
+        shell: bash
+        run: curl --fail --silent --show-error --max-time 30 -o "$RUNNER_TEMP/live-sitemap.xml" https://citeladder.com/sitemap.xml
       - name: Deploy marketing Worker
         working-directory: frontend
         env:
@@ -97,6 +108,23 @@ jobs:
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
           pnpm deploy:marketing
+      # A failed submission never fails a deploy that is already live.
+      - name: Submit changed URLs to IndexNow
+        continue-on-error: true
+        shell: bash
+        env:
+          SUBMIT_ALL: ${{ inputs.indexnow_all }}
+          LIVE_SITEMAP_SAVED: ${{ steps.live_sitemap.outcome == 'success' }}
+        run: |
+          previous=()
+          if [[ "$SUBMIT_ALL" != 'true' ]]; then
+            if [[ "$LIVE_SITEMAP_SAVED" != 'true' ]]; then
+              echo '::warning::No live sitemap baseline; skipping IndexNow. Rerun with indexnow_all to submit every URL.'
+              exit 0
+            fi
+            previous=("$RUNNER_TEMP/live-sitemap.xml")
+          fi
+          node frontend/scripts/ping-indexnow.mjs frontend/apps/marketing/dist/client/sitemap.xml "${previous[@]}"
       - name: Release record
         shell: bash
         env:
