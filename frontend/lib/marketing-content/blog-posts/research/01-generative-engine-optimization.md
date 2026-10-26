@@ -164,7 +164,7 @@ Start with distinct measurements rather than a single unexplained score:
 
 Define the denominator, prompt set, engine, location and time window. Report unavailable or failed observations separately; do not quietly count them as absence.
 
-For Google's current reporting options, consult its dedicated [Generative AI performance report documentation](https://support.google.com/webmasters/answer/16984139). It describes impressions and aggregation rules; do not assume that every metric available in another Search Console report is available there.[\[7\]](#source-7)
+For Google's current reporting options, consult its dedicated [Generative AI performance report documentation](https://support.google.com/webmasters/answer/16984139). It describes impressions and aggregation rules; do not assume that every metric available in another Search Console report is available there.[\[7\]](#source-7) For how often AI Overviews appear and what they do to clicks, see our [Google AI Overviews statistics](/blog/google-ai-overviews-statistics-2026).
 
 Our [AI visibility measurement guide](/blog/verify-improve-ai-search-visibility) provides a repeatable workflow. The [AI citation tracking guide](/ai-citation-tracking) explains how to keep source links separate from mentions. Teams that repeat the same prompts across engines can read the [LLM rank tracker guide](/llm-rank-tracker), and the [ChatGPT brand mention guide](/track-brand-mentions-chatgpt) covers manual and API routes. To compare tools, see [AI visibility platforms compared](/best-ai-visibility-platforms).
 

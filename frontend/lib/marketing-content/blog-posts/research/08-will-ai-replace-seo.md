@@ -8,7 +8,7 @@ secondary_keywords: ['is SEO replaced by AI', 'is SEO dead', 'future of SEO', 'A
 search_intent: 'Understand disruption, traffic risk and changes to SEO work'
 content_type: 'evidence-led analysis'
 reviewed_at: '2026-10-06'
-related_guides: ['/blog/geo-vs-seo', '/generative-engine-optimization']
+related_guides: ['/blog/ai-referral-traffic-statistics-2026', '/blog/geo-vs-seo']
 publication_status: 'editorial_review'
 ---
 
@@ -32,7 +32,7 @@ A study about one row cannot settle the others. A citation-error benchmark does 
 
 ## What the click data shows
 
-Pew Research Center's 2025 analysis of browsing from 900 US adults reported traditional-result clicks on 8% of visits with an AI summary versus 15% without one. Search-result content was collected after the March browsing period, which limits interpretation.[\[1\]](#source-1)
+Pew Research Center's 2025 analysis of browsing from 900 US adults reported traditional-result clicks on 8% of visits with an AI summary versus 15% without one. Search-result content was collected after the March browsing period, which limits interpretation.[\[1\]](#source-1) Our [Google AI Overviews statistics](/blog/google-ai-overviews-statistics-2026) compare the other published click studies.
 
 Our recalculation makes the difference easier to read:
 
@@ -135,7 +135,7 @@ A useful report might say: "Search visits to these explanatory pages declined, [
 
 It would require comparable longitudinal behaviour, clear definitions of a search or task, separation of website visits from active search activity, and enough detail to assess differences by audience and intent.
 
-It would also need to distinguish adoption from substitution. A person starting to use an AI assistant does not necessarily stop using search engines.
+It would also need to distinguish adoption from substitution. A person starting to use an AI assistant does not necessarily stop using search engines. Our [AI search market share analysis](/blog/ai-search-market-share-2026) compares assistant usage across five yardsticks.
 
 For staffing claims, the evidence would need to measure completed work, quality, oversight and costs. Demonstrating that a tool can generate a draft is not the same as demonstrating that it can own a search programme.
 

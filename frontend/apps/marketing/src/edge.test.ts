@@ -37,6 +37,31 @@ describe('marketing Worker edge', () => {
     expect(render).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ['/mcp', 'https://api.citeladder.com/mcp'],
+    ['/docs/mcp', 'https://docs.citeladder.com/mcp/'],
+    ['/docs/mcp/connect/', 'https://docs.citeladder.com/mcp/'],
+  ])('permanently redirects the former apex MCP address %s off the site', async (path, target) => {
+    const render = vi.fn(async () => notFoundPage());
+    const response = await serveMarketingRequest(get(path), env, render);
+    expect(response.status).toBe(301);
+    expect(response.headers.get('location')).toBe(target);
+    expect(render).not.toHaveBeenCalled();
+  });
+
+  it('answers retired Next.js build files with 410 Gone and unknown pages with 404', async () => {
+    const render = vi.fn(async () => notFoundPage());
+    const gone = await serveMarketingRequest(
+      get('/_next/static/media/Geist_Variable-s.p.20f3xrkj613ah.woff2'),
+      env,
+      render,
+    );
+    expect(gone.status).toBe(410);
+    expect(render).not.toHaveBeenCalled();
+    const missing = await serveMarketingRequest(get('/static/media/font.woff2'), env, render);
+    expect(missing.status).toBe(404);
+  });
+
   it('serves the prerendered 404 page as Markdown to agents and as HTML to browsers', async () => {
     const agent = await serveMarketingRequest(
       get('/wp-login.php', 'text/markdown'),

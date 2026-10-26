@@ -9,7 +9,7 @@ secondary_keywords:
 search_intent: 'Comparison and prioritisation: decide which work deserves investment'
 content_type: 'comparison guide'
 reviewed_at: '2026-10-06'
-related_guides: ['/generative-engine-optimization', '/blog/will-ai-replace-seo']
+related_guides: ['/blog/ai-search-market-share-2026', '/blog/will-ai-replace-seo']
 publication_status: 'editorial_review'
 ---
 

@@ -4,6 +4,7 @@ import { CrawlerChecker, RobotsGenerator } from './robots-tools';
 import { MetaChecker, StructuredDataBuilder } from './markup-tools';
 import { SitemapComparison } from './sitemap-tool';
 import { SocialPreview } from './social-tool';
+import { ToolNotes } from './tools-index';
 const bots = [{ label: 'GPTBot', purpose: 'ai_training', tokens: ['GPTBot'] }];
 
 describe('free tools user workflows', () => {
@@ -65,5 +66,21 @@ describe('free tools user workflows', () => {
     expect(screen.getByLabelText<HTMLTextAreaElement>('Generated output').value).toContain(
       'Removed (1)',
     );
+  });
+});
+
+describe('tool page notes', () => {
+  it('explains a guided tool with its checks, reading notes and questions, and leaves others without', () => {
+    const { unmount } = render(<ToolNotes slug="sitemap-comparison" />);
+    expect(screen.getByRole('heading', { name: 'What it checks' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'How to read the results' })).toBeInTheDocument();
+    expect(screen.getByText('Can I compare sitemap index files?')).toBeInTheDocument();
+    unmount();
+
+    render(<ToolNotes slug="social-preview" />);
+    expect(screen.queryByRole('heading', { name: 'What it checks' })).toBeNull();
+    expect(
+      screen.getByRole('heading', { name: 'What this tool can tell you' }),
+    ).toBeInTheDocument();
   });
 });

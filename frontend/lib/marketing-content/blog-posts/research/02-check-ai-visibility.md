@@ -16,7 +16,7 @@ publication_status: 'editorial_review'
 
 ## How can I check my AI visibility?
 
-**Check [AI visibility](/platform/ai-visibility) by testing a defined set of customer questions, saving the answers, and recording whether your brand is mentioned, recommended or linked as a source.** Repeat comparable checks over time and separate results by engine. Use available publisher reports and referral analytics as additional evidence, not as interchangeable versions of the same visibility score.
+**Check [AI visibility](/platform/ai-visibility) by testing a defined set of customer questions, saving the answers, and recording whether your brand is mentioned, recommended or linked as a source.** Repeat comparable checks over time and separate results by engine. Use available publisher reports and referral analytics as additional evidence, not as interchangeable versions of the same visibility score. Keep paid placements apart from organic mentions; [ads in AI answers](/blog/ads-in-ai-answers) explains where they now appear.
 
 You can start manually. What matters is that another person could repeat your check and understand what the result means.
 
@@ -140,7 +140,7 @@ Microsoft defines citation share against citations for the same grounding query 
 
 ### Your analytics platform
 
-Referral reports can show identifiable visits from AI services. They cannot show a person who read an answer and never clicked, and attribution can be lost or changed along the journey.
+Referral reports can show identifiable visits from AI services; our [AI referral traffic statistics](/blog/ai-referral-traffic-statistics-2026) compare how much each assistant sends. They cannot show a person who read an answer and never clicked, and attribution can be lost or changed along the journey.
 
 Use landing-page and conversion analysis to ask whether the traffic was useful. Do not multiply a mention rate by website sessions to manufacture an estimate of AI impressions.
 

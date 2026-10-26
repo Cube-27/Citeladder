@@ -25,6 +25,19 @@ describe('MarketingFooter', () => {
     }
   });
 
+  it('links the research guides from the footer with descriptive labels', async () => {
+    render(await MarketingFooter());
+
+    const footerNav = screen.getByRole('navigation', { name: 'Footer' });
+    expect(
+      within(footerNav).getByRole('link', { name: 'Google AI Overviews statistics' }),
+    ).toHaveAttribute('href', '/blog/google-ai-overviews-statistics-2026');
+    expect(within(footerNav).getByRole('link', { name: 'Profound alternatives' })).toHaveAttribute(
+      'href',
+      '/compare/profound-alternatives',
+    );
+  });
+
   it('carries no account or demo actions, only destinations and references', async () => {
     render(await MarketingFooter());
 

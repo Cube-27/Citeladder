@@ -15,7 +15,7 @@ secondary_keywords:
 search_intent: 'Informational: find reliable, dated figures on AI Overview prevalence, clicks and citations'
 content_type: 'research roundup'
 reviewed_at: '2026-10-20'
-related_guides: ['/generative-engine-optimization', '/blog/ai-search-market-share-2026']
+related_guides: ['/blog/ads-in-ai-answers', '/blog/ai-search-market-share-2026']
 publication_status: 'editorial_review'
 ---
 

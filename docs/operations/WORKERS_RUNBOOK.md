@@ -34,8 +34,9 @@ downloaded artifact immediately before deployment, not committed or uploaded.
 Deploy and verify the docs Worker before releasing app/marketing links to it.
 Check the Custom Domain and TLS, a deep guide URL, search, the changelog,
 `/sitemap.xml`, `/robots.txt`, and an unknown URL's 404 response. The old
-apex `/docs/mcp` page is intentionally removed without a redirect. MCP
-protocol/OAuth endpoints are on the API host.
+apex `/docs/mcp` and `/mcp` addresses 301 to the docs MCP guide and the API
+host's `/mcp`; MCP protocol/OAuth endpoints are on the API host, whose bare
+`/` 301s to the API docs.
 
 Worker/DNS provisioning and live acceptance remain explicit release operations;
 adding this configuration does not claim that the subdomain has been deployed.
