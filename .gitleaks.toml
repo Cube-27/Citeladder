@@ -11,4 +11,6 @@ regexes = [
   '''PENDING_PRICING_INTENT_KEY = 'citeladder\.''',
   '''_KEY: '[a-z-]*fixture[a-z0-9-]*',''',
   '''"AuthenticationCode": "ABC123DEF456"''',
+  # The IndexNow key is public by design: the site serves it at /<key>.txt.
+  '''eb663a4c6fa24ab18251bd8138bd467a''',
 ]
