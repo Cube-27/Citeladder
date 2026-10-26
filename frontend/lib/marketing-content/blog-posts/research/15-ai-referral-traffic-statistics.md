@@ -14,7 +14,7 @@ secondary_keywords:
 search_intent: 'Informational: validate the size and value of AI referral traffic before investing'
 content_type: 'research'
 reviewed_at: '2026-10-20'
-related_guides: ['/track-brand-mentions-chatgpt', '/blog/ai-search-market-share-2026']
+related_guides: ['/blog/agentic-commerce-statistics-2026', '/blog/ai-search-market-share-2026']
 publication_status: 'editorial_review'
 ---
 

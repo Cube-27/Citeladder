@@ -16,6 +16,8 @@ export interface ApiHostEnv {
 }
 
 const OPENAI_APPS_CHALLENGE_PATH = '/.well-known/openai-apps-challenge';
+// A literal: this Worker has no build-time env, and the docs host is the same in every deploy.
+const API_DOCS_URL = 'https://docs.citeladder.com/api/';
 
 const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
 /**
@@ -62,6 +64,9 @@ export async function routeApiHostRequest(request: Request, env: ApiHostEnv): Pr
           headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' },
         })
       : notFound();
+  // The bare host has no API of its own; readers who land there want the docs.
+  if (url.pathname === '/' && (request.method === 'GET' || request.method === 'HEAD'))
+    return Response.redirect(API_DOCS_URL, 301);
   if (!allowed(request.method, url.pathname)) return notFound();
   const headers = new Headers(request.headers);
   headers.delete('cookie');

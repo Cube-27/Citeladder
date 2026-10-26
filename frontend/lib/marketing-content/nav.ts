@@ -215,6 +215,16 @@ export const NAV_DROPS: readonly NavDrop[] = [
   },
 ];
 
+/** Data-led guides the footer links from every page; too many for the Resources menu. */
+export const RESEARCH_LINKS = [
+  { title: 'AI search market share 2026', href: '/blog/ai-search-market-share-2026' },
+  { title: 'AI referral traffic statistics', href: '/blog/ai-referral-traffic-statistics-2026' },
+  { title: 'Google AI Overviews statistics', href: '/blog/google-ai-overviews-statistics-2026' },
+  { title: 'Agentic commerce statistics', href: '/blog/agentic-commerce-statistics-2026' },
+  { title: 'Ads in AI answers', href: '/blog/ads-in-ai-answers' },
+  { title: 'Profound alternatives', href: '/compare/profound-alternatives' },
+] as const;
+
 /** Plain links that sit after the dropdown triggers. */
 export const NAV_LINKS = [
   { label: 'Enterprise', href: '/enterprise' },

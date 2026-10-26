@@ -3,7 +3,12 @@ import { ArrowUpRight } from 'lucide-react';
 import { LogoMark } from '@/components/ui/logo-mark';
 
 import { FOOTER_LEGAL_LINKS, PARENT_COMPANY } from '@/lib/marketing-content/legal';
-import { NAV_DROPS, PLATFORM_GROUPS, PLATFORM_OVERVIEW } from '@/lib/marketing-content/nav';
+import {
+  NAV_DROPS,
+  PLATFORM_GROUPS,
+  PLATFORM_OVERVIEW,
+  RESEARCH_LINKS,
+} from '@/lib/marketing-content/nav';
 import {
   CITELADDER_GITHUB,
   CITELADDER_LINKEDIN,
@@ -68,6 +73,11 @@ const FOOTER_COLUMNS: readonly FooterColumn[] = [
       })),
     ),
   })),
+  {
+    key: 'research',
+    label: 'Research',
+    links: RESEARCH_LINKS.map((item) => ({ label: item.title, href: item.href })),
+  },
   {
     key: 'company',
     label: 'Company',
@@ -177,7 +187,10 @@ export async function MarketingFooter() {
             </div>
           </div>
 
-          <nav aria-label="Footer" className="grid grid-cols-2 gap-x-8 gap-y-10 sm:grid-cols-4">
+          <nav
+            aria-label="Footer"
+            className="grid grid-cols-2 gap-x-8 gap-y-10 sm:grid-cols-3 lg:grid-cols-5"
+          >
             {FOOTER_COLUMNS.map((column) => (
               <div key={column.key} className="min-w-0">
                 <h2 className="footer-heading">{column.label}</h2>

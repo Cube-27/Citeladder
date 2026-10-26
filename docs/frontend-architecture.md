@@ -183,7 +183,8 @@ Its validated metadata drives navigation, static routes, search and the sitemap.
 The final navigation group is Updates, containing the changelog. Search runs
 locally over a static index; it has no backend, session or provider dependency.
 The MCP reference consumes the existing generated tool catalog. The former
-marketing `/docs/mcp` page is removed; all owned links use the public docs origin.
+marketing `/docs/mcp` page is removed and 301s to the docs MCP guide; all owned
+links use the public docs origin.
 
 One authenticated layout retains the session, query client, workspace/project
 context and entitlement providers across app and onboarding navigation.

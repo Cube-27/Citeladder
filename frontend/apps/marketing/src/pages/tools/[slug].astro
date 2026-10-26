@@ -3,7 +3,8 @@ import type { GetStaticPaths } from 'astro';
 import MarketingLayout from '../../layouts/MarketingLayout.astro';
 import { PageHero } from '@/components/marketing/primitives/page-hero';
 import { Section } from '@/components/marketing/primitives/section';
-import { FREE_TOOLS } from '@/lib/marketing-content/tools';
+import { FREE_TOOLS, TOOL_GUIDES } from '@/lib/marketing-content/tools';
+import { faqPageJsonLd } from '@/lib/seo/json-ld';
 import { ToolNotes } from '@/components/marketing/tools/tools-index';
 import { CrawlerChecker, RobotsGenerator } from '@/components/marketing/tools/robots-tools';
 import { MetaChecker, StructuredDataBuilder } from '@/components/marketing/tools/markup-tools';
@@ -15,10 +16,11 @@ export const getStaticPaths = (() =>
   FREE_TOOLS.map((tool) => ({ params: { slug: tool.slug }, props: { tool } }))) satisfies GetStaticPaths;
 
 const { tool } = Astro.props;
+const guide = TOOL_GUIDES[tool.slug];
 // Project only the public catalog fields; no server configuration enters the browser.
 const bots = catalog.bots.map((bot) => ({ label: bot.label, purpose: bot.purpose, tokens: bot.robots_tokens }));
 ---
-<MarketingLayout title={`Free ${tool.title} | CiteLadder`} description={tool.description} canonical={`/tools/${tool.slug}`}>
+<MarketingLayout title={`Free ${tool.title} | CiteLadder`} description={tool.description} canonical={`/tools/${tool.slug}`} jsonLd={guide ? [faqPageJsonLd(guide.faqs)] : []}>
   <main id="main">
     <PageHero title={tool.title} lead={tool.description} breadcrumb={[{ label: 'Free tools', href: '/tools' }, { label: tool.title }]}>
       <p class="cp-privacy">Your input is processed in this browser. Text and files are not uploaded or saved by this tool. Use up to 200,000 characters per text area.</p>

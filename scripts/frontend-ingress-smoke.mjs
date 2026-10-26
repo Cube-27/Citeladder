@@ -57,15 +57,14 @@ const home = await get(marketing, '/');
 assert.equal(home.status, 200, 'Marketing homepage');
 assert.match(await home.text(), /<h1[\s>]/, 'Marketing renders its content on the server');
 await Promise.all(
-  [
-    '/not-a-real-page',
-    '/login',
-    '/api/v1/brand-discovery-catalog',
-    MACHINE_PATH,
-    '/mcp',
-    MCP_METADATA,
-  ].map(apexRejects),
+  ['/not-a-real-page', '/login', '/api/v1/brand-discovery-catalog', MACHINE_PATH, MCP_METADATA].map(
+    apexRejects,
+  ),
 );
+// The former apex MCP address only points at the API host; it is never proxied.
+const formerMcp = await get(marketing, '/mcp');
+assert.equal(formerMcp.status, 301, 'The apex redirects /mcp');
+assert.equal(formerMcp.headers.get('location'), 'https://api.citeladder.com/mcp');
 // Machine routes belong to the API host alone.
 assert.equal((await get(app, MACHINE_PATH)).status, 404, 'The app host refuses /v1 machine paths');
 async function apiHostRejects(path) {
@@ -75,8 +74,11 @@ async function apiHostRejects(path) {
 }
 if (api) {
   await Promise.all(
-    ['/', '/pricing', '/api/v1/brand-discovery-catalog', '/mcp/oauth/consent'].map(apiHostRejects),
+    ['/pricing', '/api/v1/brand-discovery-catalog', '/mcp/oauth/consent'].map(apiHostRejects),
   );
+  const root = await get(api, '/');
+  assert.equal(root.status, 301, 'The API host root redirects to its docs');
+  assert.equal(root.headers.get('location'), 'https://docs.citeladder.com/api/');
   // MCP lives on the API host: its issuer is that origin.
   const metadata = await get(api, MCP_METADATA);
   assert.equal(metadata.status, 200, 'The API host serves MCP metadata');

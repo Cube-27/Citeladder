@@ -131,7 +131,7 @@ describe('API host route ownership', () => {
     const sent = captureUpstream();
     for (const [method, path] of [
       ['GET', '/pricing'],
-      ['GET', '/'],
+      ['POST', '/'],
       ['GET', '/api/v1/auth/me'],
       ['POST', '/api/v1/crawl-logs/ingest/' + SOURCE],
       ['GET', '/v1/crawl-logs/ingest/' + SOURCE],
@@ -150,6 +150,13 @@ describe('API host route ownership', () => {
       expect(response.status).toBe(404);
       expect(await response.json()).toEqual({ error: { code: 'not_found' } });
     }
+    expect(sent).toHaveLength(0);
+  });
+  it('permanently redirects a reader on the bare host to the API docs', async () => {
+    const sent = captureUpstream();
+    const response = await routeApiHostRequest(new Request('https://api.citeladder.com/'), env);
+    expect(response.status).toBe(301);
+    expect(response.headers.get('location')).toBe('https://docs.citeladder.com/api/');
     expect(sent).toHaveLength(0);
   });
   it('answers the OpenAI apps challenge from its setting without reaching the origin', async () => {

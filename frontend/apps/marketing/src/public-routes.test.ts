@@ -24,4 +24,19 @@ describe('public route listings', () => {
     expect(locations).toContain('https://example.com/generative-engine-optimization');
     for (const link of links) expect(link.title, link.url).not.toBe(link.url);
   });
+
+  it('dates every sitemap page, and each index page no earlier than the pages it lists', async () => {
+    const entries = [
+      ...(await sitemap().text()).matchAll(/<url>\s*<loc>([^<]+)<\/loc>\s*(?:<lastmod>([^<]+))?/g),
+    ].map(([, url, lastmod]) => ({ path: new URL(url!).pathname, lastmod }));
+
+    for (const { path, lastmod } of entries) expect(lastmod, path).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    const dated = new Map(entries.map(({ path, lastmod }) => [path, lastmod!]));
+    for (const index of ['/blog', '/compare', '/tools']) {
+      const children = entries.filter(({ path }) => path.startsWith(`${index}/`));
+      expect(children.length, index).toBeGreaterThan(0);
+      for (const child of children)
+        expect(dated.get(index)! >= child.lastmod!, child.path).toBe(true);
+    }
+  });
 });

@@ -1,5 +1,6 @@
 import {
   ArrowRight,
+  Check,
   FileCode2,
   ListFilter,
   Route,
@@ -9,8 +10,9 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
-import { FREE_TOOLS } from '@/lib/marketing-content/tools';
+import { FREE_TOOLS, TOOL_GUIDES, type ToolGuide } from '@/lib/marketing-content/tools';
 
+import { FaqList } from '../pages/platform';
 import { ButtonLink } from '../primitives/button';
 import { PageHero } from '../primitives/page-hero';
 import { Section, SectionHeader } from '../primitives/section';
@@ -140,12 +142,52 @@ export function ToolsIndex() {
  * The band under a tool: what the result can and cannot establish, then the
  * other tools. Rendered by `/tools/[slug]`.
  */
+function ToolGuideSections({ guide }: Readonly<{ guide: ToolGuide }>) {
+  return (
+    <>
+      <Section aria-labelledby="tool-checks-title">
+        <div className="mk-split">
+          <SectionHeader headingId="tool-checks-title" title="What it checks" />
+          <ul className="mk-checks content-start">
+            {guide.checks.map((check) => (
+              <li key={check}>
+                <Check aria-hidden className="size-4" />
+                {check}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </Section>
+      <Section tone="soft" aria-labelledby="tool-reading-title">
+        <div className="mk-split">
+          <SectionHeader headingId="tool-reading-title" title="How to read the results" />
+          <div className="grid content-start gap-5">
+            {guide.reading.map((paragraph) => (
+              <p key={paragraph} className="website-body max-w-[60ch]">
+                {paragraph}
+              </p>
+            ))}
+          </div>
+        </div>
+      </Section>
+      <Section aria-labelledby="tool-faq-title">
+        <div className="mk-split">
+          <SectionHeader headingId="tool-faq-title" title="Questions, answered" />
+          <FaqList faqs={guide.faqs} />
+        </div>
+      </Section>
+    </>
+  );
+}
+
 export function ToolNotes({ slug }: Readonly<{ slug: FreeTool['slug'] }>) {
   const tool = FREE_TOOLS.find((entry) => entry.slug === slug);
   if (!tool) return null;
   const others = FREE_TOOLS.filter((entry) => entry.slug !== slug);
+  const guide = TOOL_GUIDES[slug];
   return (
     <>
+      {guide && <ToolGuideSections guide={guide} />}
       <Section aria-labelledby="tool-limits-title">
         <div className="mk-split">
           <SectionHeader headingId="tool-limits-title" title="What this tool can tell you" />

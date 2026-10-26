@@ -566,7 +566,6 @@ test.describe('marketing routes', () => {
     for (const path of [
       '/blog/hello-citeladder',
       '/blog/does-not-exist',
-      '/docs/mcp',
       '/compare/does-not-exist',
     ]) {
       const response = await page.goto(path);
