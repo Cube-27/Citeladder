@@ -74,7 +74,7 @@ const LEGAL_UPDATED = new Map(
 const latest = (dates: readonly (string | undefined)[]) =>
   dates
     .filter((date): date is string => date !== undefined)
-    .sort()
+    .sort((left, right) => left.localeCompare(right))
     .at(-1);
 
 const researchUnder = (prefix: string) =>
