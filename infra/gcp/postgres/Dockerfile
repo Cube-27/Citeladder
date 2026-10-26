@@ -2,7 +2,7 @@
 # so the VM pulls it over Private Google Access (no NAT, no public address).
 # The bookworm variant carries the openssl CLI used for the VM's TLS key.
 # Pinned by digest alone; this is postgres:16-bookworm.
-FROM postgres@sha256:efedf3595f1d6f415c08568ba171029bf54052e754cc9f030e3f2412b21f3d67
+FROM postgres@sha256:edb0c08dc33befd0262ab3b5cf1c4f3f8cfd8b09e88c05b45adee29d6761ddb6
 
 # The entrypoint calls gosu only when started as root, which this image never
 # is. Its bundled Go runtime carried every vulnerability finding on the VM.
