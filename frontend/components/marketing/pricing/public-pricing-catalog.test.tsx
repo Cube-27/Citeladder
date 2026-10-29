@@ -49,6 +49,7 @@ describe('public pricing handoff', () => {
       'href',
       'https://app.citeladder.com/pricing?kind=checkout&catalog_key=tier_1&quantity=1&byok=1',
     );
+    expect(screen.getByRole('link', { name: 'Choose Starter' })).toHaveAttribute('rel', 'nofollow');
     expect(screen.queryByRole('link', { name: 'Request early access' })).not.toBeInTheDocument();
   });
 

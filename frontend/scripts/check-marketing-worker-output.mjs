@@ -71,6 +71,15 @@ for (const file of files) {
 const server = await readFile(new URL('server/entry.mjs', root), 'utf8');
 if (!server) throw new Error('Marketing Worker entry is empty.');
 const headers = await readFile(new URL('client/_headers', root), 'utf8');
+// Research datasets and the web manifest are machine files that search
+// results should never list; the articles that link them stay indexable.
+const unindexed = [
+  ...files
+    .map((file) => file.split(sep).join('/'))
+    .filter((file) => file.startsWith('research/') && file.endsWith('.json'))
+    .map((file) => `/${file}`),
+  '/manifest.webmanifest',
+];
 // Prerendered pages are served as assets and never reach the middleware, so
 // their security headers live here. Fonts and the favicon keep stable names, so
 // they are cached for a month instead of revalidating on every page view.
@@ -80,6 +89,7 @@ await writeFile(
     headersRule('/*', SECURITY_HEADERS),
     headersRule('/fonts/*', { 'Cache-Control': STABLE_ASSET_CACHE_CONTROL }),
     headersRule('/citeladder-favicon.ico', { 'Cache-Control': STABLE_ASSET_CACHE_CONTROL }),
+    ...unindexed.map((path) => headersRule(path, { 'X-Robots-Tag': 'noindex' })),
     headers,
   ].join('\n'),
 );

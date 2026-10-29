@@ -73,6 +73,10 @@ function cardFacts(plan: CatalogPlan): CardFact[] {
   });
 }
 
+// Checkout handoffs start a purchase on the app host, which crawlers may not
+// fetch; this page is the crawlable pricing URL.
+const CHECKOUT_REL = 'nofollow';
+
 function PlanAction({
   plan,
   href,
@@ -82,6 +86,7 @@ function PlanAction({
     return (
       <ButtonLink
         href={href}
+        rel={CHECKOUT_REL}
         variant={highlighted ? 'primary' : 'soft'}
         size="marketing"
         className="w-full"
@@ -200,7 +205,7 @@ function ExtraRow({
       </div>
       <div className="cm-extra-action">
         {href ? (
-          <a className="mk-text-link" href={href}>
+          <a className="mk-text-link" href={href} rel={CHECKOUT_REL}>
             Choose {entry.name}
           </a>
         ) : (
