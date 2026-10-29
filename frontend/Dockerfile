@@ -62,6 +62,11 @@ ENV NODE_ENV=production \
     HOST=0.0.0.0
 WORKDIR /app
 
+# workerd refuses to start without a system CA store, which the slim image omits.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
 # This image runs the marketing Worker in local Compose only. Protected GCP
 # delivery keeps the captured pre-cutover image digest for rollback.
 COPY --from=wrangler --chown=node:node /wrangler/node_modules ./node_modules
