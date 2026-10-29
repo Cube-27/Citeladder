@@ -9,11 +9,11 @@ export const interactiveExecution = {
 };
 
 const defaults = {
-  budgetSeconds: 300,
+  // Each successor execution costs a one-to-three-minute Cloud Run cold start.
+  budgetSeconds: 600,
   poolSize: 4,
   wakeTimeoutMs: 5000,
   wakeMinIntervalMs: 5000,
-  laneConcurrency: 1,
   drainLockWaitMs: 15_000,
   drainLockPollMs: 250,
 };
@@ -64,7 +64,6 @@ export function executionSettings(env: Record<string, string | undefined>) {
     protectOrigin,
     originToken,
     previousOriginToken,
-    laneConcurrency: defaults.laneConcurrency,
     // How long a later execution waits for an active drain before leaving it the work.
     drainLockWaitMs: defaults.drainLockWaitMs,
     drainLockPollMs: defaults.drainLockPollMs,

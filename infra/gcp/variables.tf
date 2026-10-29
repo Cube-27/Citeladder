@@ -159,7 +159,7 @@ variable "public_signup_enabled" {
 
 variable "runner_budget_seconds" {
   type    = number
-  default = 300
+  default = 600
   validation {
     condition     = var.runner_budget_seconds >= 60 && var.runner_budget_seconds <= 3000
     error_message = "runner_budget_seconds must be between 60 and 3000."
