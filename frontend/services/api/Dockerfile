@@ -9,7 +9,7 @@ ENV PATH="${PNPM_HOME}:${PATH}"
 WORKDIR /app
 
 # Keep this version in lockstep with packageManager in frontend/package.json.
-RUN npm install --global --ignore-scripts pnpm@12.14.0
+RUN npm install --global --ignore-scripts pnpm@12.16.1
 COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./
 COPY frontend/packages/contracts/package.json ./packages/contracts/
 COPY frontend/services/api/package.json ./services/api/
