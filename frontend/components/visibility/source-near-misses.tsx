@@ -69,7 +69,7 @@ function nearMissState(query: ReturnType<typeof useSourceNearMisses>): DataTable
   if (query.isLoading) return { kind: 'loading', label: 'Loading your pages read but not cited…' };
   const data = query.data;
   if (data?.items.length) return undefined;
-  if (data && data.responses === 0)
+  if (data?.responses === 0)
     return {
       kind: 'empty',
       headingLevel: 3,

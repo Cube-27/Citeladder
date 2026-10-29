@@ -67,15 +67,10 @@ async function seed() {
   const [task] = await queue.claim('worker', 1, { workspaceId: t.workspaceId, auditId });
   await queue.markRunning(task!, 'worker');
   tasks.push(task!.id);
-  const context = await loadExecutionContext(
-    db,
-    task!,
-    'worker',
-    runtime,
-    auditTestKey,
-    new Date(),
-    {},
-  );
+  const context = await loadExecutionContext(db, task!, 'worker', runtime, auditTestKey, {
+    at: new Date(),
+    env: {},
+  });
   const intent = await commitSubmissionIntent(db, context!, 'worker');
   return { ...t, task: intent!.task };
 }

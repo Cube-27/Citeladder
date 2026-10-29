@@ -46,7 +46,7 @@ export function SearchIntelligenceCollection({
   competitors,
   selected,
   onSelect,
-  action,
+  renderAction,
   onExpand,
 }: Readonly<{
   tab: keyof typeof VIEWS;
@@ -55,7 +55,7 @@ export function SearchIntelligenceCollection({
   selected: SearchIntelligenceDataset | null;
   onSelect: (dataset: SearchIntelligenceDataset | null) => void;
   /** The tab's next step, given the website the reader is looking at. */
-  action?: (targetOrigin: string | undefined) => ReactNode;
+  renderAction?: (targetOrigin: string | undefined) => ReactNode;
   onExpand?: () => void;
 }>) {
   const [kind, setKind] = useState(VIEWS[tab][0].value);
@@ -159,7 +159,7 @@ export function SearchIntelligenceCollection({
             />
           ) : null}
         </Inline>
-        {action?.(activeTarget)}
+        {renderAction?.(activeTarget)}
       </Inline>
       <CollectionResult
         dataset={dataset}

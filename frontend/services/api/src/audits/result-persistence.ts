@@ -251,52 +251,76 @@ export function persistExecutionFailure(
     const attempt = locked.task.attempt_count + (spendsAttempt(options) ? 1 : 0);
     const retry =
       !options.preCall && !options.surface && error.retryable && attempt < locked.task.max_attempts;
-    const failureArtifactId = options.scraperFailure ? randomUUID() : null;
-    const metadata = failureMetadata(locked.task.provider_metadata, options.scraperFailure);
-    if (failureArtifactId)
-      await insertFailureArtifact(trx, claimed, failureArtifactId, metadata, at);
-    const task = await trx
-      .updateTable('audit_tasks')
-      .set({
-        attempt_count: attempt,
-        error_code: error.code,
-        error_detail: `Provider execution failed: ${error.code}`,
-        updated_at: at,
-        ...(failureArtifactId
-          ? { result_artifact_id: failureArtifactId, provider_metadata: JSON.stringify(metadata) }
-          : {}),
-      })
-      .where('id', '=', claimed.id)
-      .where('workspace_id', '=', claimed.workspace_id)
-      .returningAll()
-      .executeTakeFirstOrThrow();
-    if (!options.preCall && options.recordAttempt !== false)
-      await appendProviderAttempt(trx, task, at, {
-        error,
-        ...(failureArtifactId ? { artifactId: failureArtifactId } : {}),
-      });
-    if (failureArtifactId) await appendCostProjection(trx, task.workspace_id, failureArtifactId);
+    const failure = { error, attempt, retry };
+    const task = await recordFailedAttempt(trx, claimed, locked.task, failure, options, at);
     await options.evidence?.(trx, task, locked.audit);
-    if (!retry) await settlePromptRun(trx, task, false, at);
-    if (error.code === 'auth_failure' && options.context)
-      await pauseExecutionCredential(trx, options.context, runtime, at);
-    if (retry)
-      await parkAuditTask(
-        trx,
-        task,
-        'retry_wait',
-        new Date(at.getTime() + retryDelay(runtime, attempt, error.retryAfterSeconds) * 1000),
-        at,
-      );
-    else await markTaskFailed(trx, task, at);
-    await auditEvent(
-      trx,
-      task.audit_id,
-      retry ? auditPolicy.constants.event_task_retry : auditPolicy.constants.event_task_failed,
-      retry ? 'task retry' : 'task failed',
-      { task_id: task.id, error_code: error.code },
-      at,
-    );
+    await settleFailedTask(trx, task, failure, runtime, options, at);
     return { retry, attempt };
   });
+}
+type Failure = { error: ProviderError; attempt: number; retry: boolean };
+/** Writes the failed attempt: optional scraper artifact, task row, attempt and cost projection. */
+async function recordFailedAttempt(
+  trx: Database,
+  claimed: AuditTask,
+  current: AuditTask,
+  { error, attempt }: Failure,
+  options: FailureOptions,
+  at: Date,
+) {
+  const failureArtifactId = options.scraperFailure ? randomUUID() : null;
+  const metadata = failureMetadata(current.provider_metadata, options.scraperFailure);
+  if (failureArtifactId) await insertFailureArtifact(trx, claimed, failureArtifactId, metadata, at);
+  const task = await trx
+    .updateTable('audit_tasks')
+    .set({
+      attempt_count: attempt,
+      error_code: error.code,
+      error_detail: `Provider execution failed: ${error.code}`,
+      updated_at: at,
+      ...(failureArtifactId
+        ? { result_artifact_id: failureArtifactId, provider_metadata: JSON.stringify(metadata) }
+        : {}),
+    })
+    .where('id', '=', claimed.id)
+    .where('workspace_id', '=', claimed.workspace_id)
+    .returningAll()
+    .executeTakeFirstOrThrow();
+  if (!options.preCall && options.recordAttempt !== false)
+    await appendProviderAttempt(trx, task, at, {
+      error,
+      ...(failureArtifactId ? { artifactId: failureArtifactId } : {}),
+    });
+  if (failureArtifactId) await appendCostProjection(trx, task.workspace_id, failureArtifactId);
+  return task;
+}
+/** Settles the run, pauses a failed credential, then parks for retry or terminalizes. */
+async function settleFailedTask(
+  trx: Database,
+  task: AuditTask,
+  { error, attempt, retry }: Failure,
+  runtime: AuditRuntime,
+  options: FailureOptions,
+  at: Date,
+) {
+  if (!retry) await settlePromptRun(trx, task, false, at);
+  if (error.code === 'auth_failure' && options.context)
+    await pauseExecutionCredential(trx, options.context, runtime, at);
+  if (retry)
+    await parkAuditTask(
+      trx,
+      task,
+      'retry_wait',
+      new Date(at.getTime() + retryDelay(runtime, attempt, error.retryAfterSeconds) * 1000),
+      at,
+    );
+  else await markTaskFailed(trx, task, at);
+  await auditEvent(
+    trx,
+    task.audit_id,
+    retry ? auditPolicy.constants.event_task_retry : auditPolicy.constants.event_task_failed,
+    retry ? 'task retry' : 'task failed',
+    { task_id: task.id, error_code: error.code },
+    at,
+  );
 }

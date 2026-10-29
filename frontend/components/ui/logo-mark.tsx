@@ -46,11 +46,11 @@ export function LogoMark({
   const viewWidth = wordmark ? LOGO_VIEWBOX_WIDTH : LOGO_MARK_WIDTH;
 
   return (
-    <span
+    <span // NOSONAR -- role img: an inline SVG painted with currentColor theme tokens, which an <img> cannot inherit
       className={cn('text-brand-ink inline-flex shrink-0 items-center select-none', className)}
       aria-hidden={alt ? undefined : 'true'}
       aria-label={alt || undefined}
-      role={alt ? 'img' : undefined} // NOSONAR -- an inline SVG painted with currentColor theme tokens, which an <img> cannot inherit
+      role={alt ? 'img' : undefined}
     >
       <svg
         viewBox={`0 0 ${viewWidth} 100`}

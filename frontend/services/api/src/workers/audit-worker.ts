@@ -258,16 +258,11 @@ export class AuditWorker {
   }
   async #loadContext(claimed: AuditTask) {
     try {
-      return await loadExecutionContext(
-        this.#db,
-        claimed,
-        this.owner,
-        this.#runtime,
-        this.#key,
-        this.#now(),
-        this.#env,
-        this.#access,
-      );
+      return await loadExecutionContext(this.#db, claimed, this.owner, this.#runtime, this.#key, {
+        at: this.#now(),
+        env: this.#env,
+        access: this.#access,
+      });
     } catch (error) {
       const safe =
         error instanceof ProviderError
@@ -413,19 +408,16 @@ export class AuditWorker {
         this.#now(),
       );
     else if (engine === 'google_ai_overview')
-      await persistOverview(
-        this.#db,
-        task,
-        this.owner,
-        result as OverviewResult,
-        this.#runtime,
-        this.#now(),
-        true,
-        false,
-        searchPolicy.surface.successful_outcomes.includes((result as OverviewResult).outcome)
+      await persistOverview(this.#db, task, this.owner, result as OverviewResult, this.#runtime, {
+        at: this.#now(),
+        actualExchange: true,
+        paidSurface: false,
+        derive: searchPolicy.surface.successful_outcomes.includes(
+          (result as OverviewResult).outcome,
+        )
           ? await this.#prepare(context, overviewAnswer(result as OverviewResult))
           : this.#projections.execution,
-      );
+      });
     else
       await persistExecutionSuccess(
         this.#db,
@@ -574,16 +566,11 @@ export class AuditWorker {
               error_code: error?.code ?? code,
             }
           : surfaceFailure(code);
-      await persistOverview(
-        this.#db,
-        task,
-        this.owner,
-        result,
-        this.#runtime,
-        this.#now(),
+      await persistOverview(this.#db, task, this.owner, result, this.#runtime, {
+        at: this.#now(),
         actualExchange,
         paidSurface,
-      );
+      });
     } else
       await persistExecutionFailure(
         this.#db,

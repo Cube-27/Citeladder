@@ -234,11 +234,11 @@ async function importRow(
     field_sources: sources,
   });
   for (const name of categories)
-    await addMembership(
+    await /* NOSONAR -- One import transaction: statements run in order. */ addMembership(
       db,
       scope,
       product.id,
-      await index.category(db, scope, name),
+      await index.category(db, scope, name), // NOSONAR -- Index creates missing categories on the import transaction.
       observationId,
     );
   if (!matches.length) return outcome(rowNumber, 'created', product.id);
@@ -296,7 +296,7 @@ export function importCatalog(
     const index = await ProductIndex.load(trx, scope);
     const outcomes: Outcome[] = [];
     for (const [position, row] of rows.entries())
-      outcomes.push(await importRow(trx, scope, index, id, position + 2, row));
+      outcomes.push(await importRow(trx, scope, index, id, position + 2, row)); // NOSONAR -- One transaction; rows share the product index in file order.
     const counts = { created: 0, updated: 0, unchanged: 0, rejected: 0 };
     for (const row of outcomes) counts[row.status]++;
     await trx

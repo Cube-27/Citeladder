@@ -69,7 +69,7 @@ export const classifyReferrals: Executor = async (task, { db, checkCancelled, ma
       .execute();
     if (events.length === 0) break;
     const now = new Date();
-    await db
+    await db // NOSONAR -- The next batch reads only events this insert has not classified.
       .insertInto('referral_classifications')
       .values(
         events.map((event) => {

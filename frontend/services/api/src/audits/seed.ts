@@ -108,7 +108,7 @@ export async function seedAudit(
     if (['completed', 'partially_completed'].includes(audit.status)) return auditId;
     if (['failed', 'cancelled'].includes(audit.status))
       throw new Error(`Seed audit ended ${audit.status}`);
-    if (advanced === 0) await waitForPoll(runtime.audits.poll_interval_seconds * 1000, signal);
+    if (advanced === 0) await waitForPoll(runtime.audits.poll_interval_seconds * 1000, signal); // NOSONAR -- Bounded drain polls until the audit settles.
   }
   throw new Error('Development audit did not finish within its bounded drain');
 }

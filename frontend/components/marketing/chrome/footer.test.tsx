@@ -7,12 +7,12 @@ import { PUBLISHED_PLATFORM } from '@/lib/marketing-content/nav';
 import { MarketingFooter } from './footer';
 
 /**
- * The footer is a cached async server component with no islands, so resolve it
- * before rendering. Cover published destinations, account entry and legal links.
+ * The footer is a static server-rendered component with no islands. Cover
+ * published destinations, account entry and legal links.
  */
 describe('MarketingFooter', () => {
-  it('makes published platform destinations reachable from the footer', async () => {
-    render(await MarketingFooter());
+  it('makes published platform destinations reachable from the footer', () => {
+    render(<MarketingFooter />);
 
     const footer = screen.getByRole('contentinfo');
     const footerNav = within(footer).getByRole('navigation', { name: 'Footer' });
@@ -25,8 +25,8 @@ describe('MarketingFooter', () => {
     }
   });
 
-  it('links the research guides from the footer with descriptive labels', async () => {
-    render(await MarketingFooter());
+  it('links the research guides from the footer with descriptive labels', () => {
+    render(<MarketingFooter />);
 
     const footerNav = screen.getByRole('navigation', { name: 'Footer' });
     expect(
@@ -38,8 +38,8 @@ describe('MarketingFooter', () => {
     );
   });
 
-  it('carries no account or demo actions, only destinations and references', async () => {
-    render(await MarketingFooter());
+  it('carries no account or demo actions, only destinations and references', () => {
+    render(<MarketingFooter />);
 
     expect(screen.queryByRole('link', { name: /book a demo/i })).toBeNull();
     expect(screen.queryByRole('link', { name: /log in/i })).toBeNull();
@@ -55,8 +55,8 @@ describe('MarketingFooter', () => {
     );
   });
 
-  it('links to public documentation but not the private repository', async () => {
-    render(await MarketingFooter());
+  it('links to public documentation but not the private repository', () => {
+    render(<MarketingFooter />);
 
     const hrefs = screen.getAllByRole('link').map((link) => link.getAttribute('href') ?? '');
     expect(hrefs.filter((href) => /github\.com\/cube-27/i.test(href))).toEqual([]);
@@ -67,8 +67,8 @@ describe('MarketingFooter', () => {
     );
   });
 
-  it('links every CiteLadder policy exactly once, in the same tab', async () => {
-    render(await MarketingFooter());
+  it('links every CiteLadder policy exactly once, in the same tab', () => {
+    render(<MarketingFooter />);
 
     // The policies are CiteLadder's own pages on this domain, so none of them
     // may leave the site the way the former parent-company links did.
@@ -84,8 +84,8 @@ describe('MarketingFooter', () => {
     }
   });
 
-  it('names the parent company in the ownership line', async () => {
-    render(await MarketingFooter());
+  it('names the parent company in the ownership line', () => {
+    render(<MarketingFooter />);
 
     // The line reads "© 2026 CiteLadder. A Cube27 product." with Cube27 as a
     // link, so the text is split across nodes — match the paragraph's own
@@ -104,8 +104,8 @@ describe('MarketingFooter', () => {
     );
   });
 
-  it('links the launch-directory badges to their CiteLadder listings', async () => {
-    render(await MarketingFooter());
+  it('links the launch-directory badges to their CiteLadder listings', () => {
+    render(<MarketingFooter />);
 
     const footer = screen.getByRole('contentinfo');
     expect(within(footer).getByRole('link', { name: 'Featured on CodeHype' })).toHaveAttribute(
@@ -118,8 +118,8 @@ describe('MarketingFooter', () => {
     );
   });
 
-  it('links the CiteLadder social profiles by their domains', async () => {
-    render(await MarketingFooter());
+  it('links the CiteLadder social profiles by their domains', () => {
+    render(<MarketingFooter />);
 
     const footerNav = screen.getByRole('navigation', { name: 'Footer' });
     expect(within(footerNav).getByRole('link', { name: 'x.com' })).toHaveAttribute(

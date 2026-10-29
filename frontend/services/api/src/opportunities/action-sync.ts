@@ -103,7 +103,7 @@ async function updateActions(
   now: Date,
 ) {
   for (let start = 0; start < updates.length; start += UPDATE_BATCH_ROWS) {
-    await updateActionBatch(trx, scope, updates.slice(start, start + UPDATE_BATCH_ROWS), now);
+    await updateActionBatch(trx, scope, updates.slice(start, start + UPDATE_BATCH_ROWS), now); // NOSONAR -- One transaction: batches run in order.
   }
 }
 

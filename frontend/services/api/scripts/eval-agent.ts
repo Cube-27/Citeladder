@@ -127,7 +127,7 @@ async function live() {
     const write = (record: object) => appendFile(log, `${JSON.stringify({ label, ...record })}\n`);
     const context: CaseContext = { db, client, project, vars, write };
     for (const item of cases) {
-      if (!values.case || item.id.startsWith(values.case)) await runCase(context, item);
+      if (!values.case || item.id.startsWith(values.case)) await runCase(context, item); // NOSONAR -- Cases drive one agent session and one log, one at a time.
     }
     console.log(`Recorded ${log}`);
   } finally {

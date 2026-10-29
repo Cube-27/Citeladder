@@ -68,7 +68,6 @@ type MetricContext = {
   selected: number;
   active: boolean;
 };
-type MetricModel = AuditMetric;
 
 function percentRatio(value: number | null | undefined): number | null {
   return value === null || value === undefined ? null : value * 100;
@@ -109,7 +108,7 @@ function metricContext(
   };
 }
 
-function technicalMetric(context: MetricContext): MetricModel {
+function technicalMetric(context: MetricContext): AuditMetric {
   const source = context.overview ?? context.summary;
   const score = source?.web_fundamentals_score;
   const coverage = source?.web_fundamentals_coverage;
@@ -123,7 +122,7 @@ function technicalMetric(context: MetricContext): MetricModel {
   };
 }
 
-function aeoMetric(context: MetricContext): MetricModel {
+function aeoMetric(context: MetricContext): AuditMetric {
   const source = context.overview ?? context.summary;
   const score = source?.aeo_readiness_score;
   const coverage = source?.aeo_measurement_coverage;
@@ -137,7 +136,7 @@ function aeoMetric(context: MetricContext): MetricModel {
   };
 }
 
-function measurementMetric(context: MetricContext): MetricModel {
+function measurementMetric(context: MetricContext): AuditMetric {
   const source = context.overview ?? context.summary;
   const coverage = source?.aeo_measurement_coverage;
   const state = source?.aeo_measurement_state;
@@ -168,7 +167,7 @@ function coverageCounts(coverage: SiteHealthOverview['crawl_coverage'] | undefin
   };
 }
 
-function crawlMetric(context: MetricContext): MetricModel {
+function crawlMetric(context: MetricContext): AuditMetric {
   const terminalCoverage = context.overview?.crawl_coverage;
   const counts = coverageCounts(terminalCoverage);
   // Share of the pages the crawl found, not of the pages it chose: 20 of 100 is not 100%.

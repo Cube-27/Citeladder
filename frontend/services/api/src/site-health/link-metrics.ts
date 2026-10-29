@@ -116,7 +116,7 @@ export async function persistLinkMetrics(db: Database, crawl: Crawl) {
   const chunk = first ? Math.floor(65_535 / Object.keys(first).length) : 1;
   let inserted = 0;
   for (let start = 0; start < rows.length; start += chunk) {
-    const written = await db
+    const written = await db // NOSONAR -- Large chunks insert one at a time to keep the pool free.
       .insertInto('site_page_link_metrics')
       .values(rows.slice(start, start + chunk))
       .onConflict((conflict) => conflict.constraint('uq_site_page_link_metric').doNothing())

@@ -159,7 +159,7 @@ async function ensureTransport(
   const result = await ensureConnection(db, workspaceId, transport, reference, now);
   for (const [engine, approved] of Object.entries(providerPolicy.routes)) {
     if (approved.transport_provider !== transport) continue;
-    const changed = await ensureRoute(db, result.connection, engine, approved, now);
+    const changed = await ensureRoute(db, result.connection, engine, approved, now); // NOSONAR -- One operator transaction: routes write in order.
     if (changed && result.status === 'unchanged') result.status = 'updated';
   }
   return {
@@ -193,7 +193,7 @@ export function provisionPlatformConnections(
     const reports = [];
     for (const transport of Object.keys(references).sort(compareText)) {
       reports.push(
-        await ensureTransport(trx, workspace.id, transport, references[transport]!.trim(), now),
+        await ensureTransport(trx, workspace.id, transport, references[transport]!.trim(), now), // NOSONAR -- One operator transaction: transports provision in sorted order.
       );
     }
     return reports;

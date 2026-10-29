@@ -201,27 +201,26 @@ export function runPlatformAccountManager(actor: string) {
       try {
         // Every read and mutation below rechecks the operator's live authority.
         if (choice === '1') {
-          display(await platformAccountInventory(db, session));
+          display(await platformAccountInventory(db, session)); // NOSONAR -- Interactive menu: one operator choice at a time.
           continue;
         }
-        const action = await collectPlatformAction(db, session, choice);
+        const action = await collectPlatformAction(db, session, choice); // NOSONAR -- Prompts the operator for this choice.
         if (!action) {
           console.log('Choose 0-8. No changes.');
           continue;
         }
-        const reason = await accountPrompt('Reason');
+        const reason = await accountPrompt('Reason'); // NOSONAR -- Operator answers before the preview runs.
         const request = { reason, key: `account-manager:${randomUUID()}`, at: new Date() };
-        const preview = await managePlatformAccounts(db, session, action, request);
+        const preview = await managePlatformAccounts(db, session, action, request); // NOSONAR -- Preview precedes confirmation.
         console.log('Preview only — no changes committed:');
         display(preview);
         const confirmation = action.kind === 'delete' ? `delete ${action.email}` : 'yes';
-        if (
-          (await accountPrompt(`Commit this operation (type ${confirmation})`)) !== confirmation
-        ) {
+        const confirmed = await accountPrompt(`Commit this operation (type ${confirmation})`); // NOSONAR -- Confirmation gates the commit.
+        if (confirmed !== confirmation) {
           console.log('Cancelled. No changes.');
           continue;
         }
-        display(await managePlatformAccounts(db, session, action, { ...request, apply: true }));
+        display(await managePlatformAccounts(db, session, action, { ...request, apply: true })); // NOSONAR -- Commits only after confirmation.
       } catch (error) {
         console.log(`No change: ${operatorDiagnostic(error)}`);
       }

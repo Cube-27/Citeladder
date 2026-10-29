@@ -347,17 +347,29 @@ export async function prepareShelfExecution(
         ? `${resolved.title} ${resolved.brand} ${resolved.product_url}`
         : span.text;
       const matched = matchRecommendation(identity, catalog);
-      const candidate = await observedCandidate(trx, ctx, item, matched, {
-        answerText: artifact.answer_text,
-        sourceUrls,
-      });
-      await recordObservation(trx, ctx, item, {
-        matched,
-        candidate,
-        artifactId,
-        answerText: artifact.answer_text,
-        citations,
-      });
+      const candidate =
+        await /* NOSONAR -- One transaction: statements run in order. */ observedCandidate(
+          trx,
+          ctx,
+          item,
+          matched,
+          {
+            answerText: artifact.answer_text,
+            sourceUrls,
+          },
+        );
+      await /* NOSONAR -- One transaction: statements run in order. */ recordObservation(
+        trx,
+        ctx,
+        item,
+        {
+          matched,
+          candidate,
+          artifactId,
+          answerText: artifact.answer_text,
+          citations,
+        },
+      );
     }
   };
 }

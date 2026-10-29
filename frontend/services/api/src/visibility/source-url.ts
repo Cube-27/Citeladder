@@ -151,7 +151,12 @@ async function brands(
 ): Promise<SourceUrlDetail['brands']> {
   const found: { kind: 'brand' | 'competitor'; name: string; responses: number }[] = [];
   for (const kind of ['brand', 'competitor'] as const) {
-    for (const row of await mentionCounts(db, selection.workspaceId, cited, kind)) {
+    for (const row of await /* NOSONAR -- Detail reads run one at a time, like the rest of this read. */ mentionCounts(
+      db,
+      selection.workspaceId,
+      cited,
+      kind,
+    )) {
       if (row.name) found.push({ kind, ...row });
     }
   }

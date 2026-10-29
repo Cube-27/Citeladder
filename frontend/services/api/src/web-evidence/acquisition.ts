@@ -90,19 +90,21 @@ export class HostPacer {
   async #acquire(state: HostState, signal?: AbortSignal) {
     signal?.throwIfAborted();
     while (state.active >= this.concurrency) {
-      await new Promise<void>((resolve, reject) => {
-        const wake = () => {
-          signal?.removeEventListener('abort', abort);
-          resolve();
-        };
-        const abort = () => {
-          const index = state.waiting.indexOf(wake);
-          if (index >= 0) state.waiting.splice(index, 1);
-          reject(signal!.reason);
-        };
-        state.waiting.push(wake);
-        signal?.addEventListener('abort', abort, { once: true });
-      }); // NOSONAR: wait for a slot, then re-check; waiters resume one at a time.
+      await /* NOSONAR -- Wait for a slot, then re-check; waiters resume one at a time. */ new Promise<void>(
+        (resolve, reject) => {
+          const wake = () => {
+            signal?.removeEventListener('abort', abort);
+            resolve();
+          };
+          const abort = () => {
+            const index = state.waiting.indexOf(wake);
+            if (index >= 0) state.waiting.splice(index, 1);
+            reject(signal!.reason);
+          };
+          state.waiting.push(wake);
+          signal?.addEventListener('abort', abort, { once: true });
+        },
+      );
       if (signal?.aborted) {
         state.waiting.shift()?.();
         signal.throwIfAborted();

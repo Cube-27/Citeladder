@@ -81,7 +81,7 @@ export class Fixtures {
           'commerce',
           'search_intelligence',
         ])
-          await grant(trx, account, { key, value: 1, sourceKind: 'override' });
+          await grant(trx, account, { key, value: 1, sourceKind: 'override' }); // NOSONAR -- one transaction connection; grants serialize.
         // Generous defaults; a test that sets one of these limits replaces it (see grant()).
         for (const [key, value] of [
           ['prompt_runs_per_period', 100_000],

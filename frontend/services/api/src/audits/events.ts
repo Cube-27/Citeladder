@@ -55,22 +55,26 @@ export async function* auditEventFrames(
       if (terminalPolls >= runtime.audits.sse_terminal_grace_polls) return;
     }
     // Never wait past the stream's deadline, whatever the poll interval.
-    await waitForPoll(
-      Math.min(runtime.audits.sse_poll_seconds * 1000, Math.max(0, deadline - Date.now())),
-      signal,
+    const delay = Math.min(
+      runtime.audits.sse_poll_seconds * 1000,
+      Math.max(0, deadline - Date.now()),
     );
+    await waitForPoll(delay, signal); // NOSONAR -- Poll interval between event pages.
   }
 }
 export function eventStreamResponse(
   db: Database,
-  workspaceId: string,
-  auditId: string,
-  after: string | undefined,
+  stream: {
+    workspaceId: string;
+    auditId: string;
+    after: string | undefined;
+    initial: Awaited<ReturnType<typeof auditEvents>>;
+  },
   runtime: AuditRuntime,
   requestSignal: AbortSignal,
-  initial: Awaited<ReturnType<typeof auditEvents>>,
   owner: StreamOwner,
 ) {
+  const { workspaceId, auditId, after, initial } = stream;
   const cancellation = new AbortController(),
     signal = AbortSignal.any([cancellation.signal, requestSignal]);
   const encoder = new TextEncoder();

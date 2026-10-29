@@ -143,7 +143,7 @@ async function replaceStats(
     'traffic_query_stats',
     'performance_dimension_stats',
   ] as const)
-    await db
+    await db // NOSONAR -- Caller's transaction: statements run in order.
       .deleteFrom(table)
       .where('workspace_id', '=', task.workspace_id)
       .where('project_id', '=', projectId)
@@ -153,7 +153,7 @@ async function replaceStats(
   const size = p.TRAFFIC_METRIC_ROW_BATCH_SIZE;
   const ids = new Map<string, string>();
   for (let i = 0; i < projection.pages.length; i += size)
-    for (const r of await new WorkspaceScope(task.workspace_id)
+    for (const r of await new WorkspaceScope(task.workspace_id) // NOSONAR -- Caller's transaction: statements run in order.
       .selectFrom(db, 'site_urls')
       .select(['id', 'url_hash'])
       .where('project_id', '=', projectId)
@@ -165,7 +165,7 @@ async function replaceStats(
       .execute())
       ids.set(r.url_hash, r.id);
   for (let i = 0; i < projection.pages.length; i += size)
-    await db
+    await db // NOSONAR -- Caller's transaction: statements run in order.
       .insertInto('traffic_page_stats')
       .values(
         projection.pages.slice(i, i + size).map((r) => ({
@@ -177,7 +177,7 @@ async function replaceStats(
       )
       .execute();
   for (let i = 0; i < projection.queries.length; i += size)
-    await db
+    await db // NOSONAR -- Caller's transaction: statements run in order.
       .insertInto('traffic_query_stats')
       .values(
         projection.queries
@@ -186,7 +186,7 @@ async function replaceStats(
       )
       .execute();
   for (let i = 0; i < projection.dimensions.length; i += size)
-    await db
+    await db // NOSONAR -- Caller's transaction: statements run in order.
       .insertInto('performance_dimension_stats')
       .values(
         projection.dimensions.slice(i, i + size).map((r) => ({

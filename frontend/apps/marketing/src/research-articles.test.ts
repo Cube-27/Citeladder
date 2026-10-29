@@ -34,6 +34,23 @@ describe('research guide FAQs', () => {
     ]);
   });
 
+  it('unwraps a link from its first bracket and keeps malformed brackets as written', () => {
+    const markdown = [
+      '## Frequently asked questions  ',
+      '',
+      '### Which [AEO [guide](/aeo) wins?',
+      '',
+      'Neither [](/empty) nor [blank]() nor [open](/never-closed',
+    ].join('\n');
+
+    expect(researchFaqs(markdown)).toEqual([
+      {
+        q: 'Which AEO [guide wins?',
+        a: 'Neither [](/empty) nor [blank]() nor [open](/never-closed',
+      },
+    ]);
+  });
+
   it('finds the FAQ section when it is the last one in the guide', () => {
     expect(researchFaqs('## Frequently asked questions\n\n### Why?\n\nBecause.\n')).toEqual([
       { q: 'Why?', a: 'Because.' },

@@ -145,9 +145,9 @@ export async function measurementLegs(
   ];
   const result: Leg[] = [];
   for (const leg of legs) {
-    if (leg === a.LEG_CRAWL) result.push(await crawlLeg(db, row, observations));
-    else if (leg === a.LEG_VISIBILITY_RUN) result.push(await visibilityLeg(db, row, observations));
-    else if (leg === a.LEG_SEARCH_CONSOLE_WINDOW) result.push(await searchLeg(db, row, now));
+    if (leg === a.LEG_CRAWL) result.push(await crawlLeg(db, row, observations)); // NOSONAR -- At most three legs; the caller's connection may be a transaction.
+    else if (leg === a.LEG_VISIBILITY_RUN) result.push(await visibilityLeg(db, row, observations)); // NOSONAR -- At most three legs; the caller's connection may be a transaction.
+    else if (leg === a.LEG_SEARCH_CONSOLE_WINDOW) result.push(await searchLeg(db, row, now)); // NOSONAR -- At most three legs; the caller's connection may be a transaction.
   }
   return result;
 }

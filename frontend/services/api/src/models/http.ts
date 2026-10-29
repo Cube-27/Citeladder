@@ -147,8 +147,8 @@ export async function postModel(
     } catch (error) {
       requireRetryableConnection(error, policy, attempt + 1 === policy.attempts, signal);
     }
-    await response?.body?.cancel();
-    await backoff(transport, retryDelay(response, attempt, policy), signal);
+    await response?.body?.cancel(); // NOSONAR -- Release this attempt's body before retrying.
+    await backoff(transport, retryDelay(response, attempt, policy), signal); // NOSONAR -- Retry backoff.
   }
   throw new ModelError('connection');
 }

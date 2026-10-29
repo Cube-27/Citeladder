@@ -204,7 +204,7 @@ export async function buildQueryEvidence(db: Database, scope: DemandScope) {
   if (!snapshot) return existingQuery().executeTakeFirstOrThrow();
   const size = policy.traffic.TRAFFIC_METRIC_ROW_BATCH_SIZE;
   for (let i = 0; i < selected.length; i += size)
-    await db
+    await db // NOSONAR -- Bounded insert batches run one at a time on the caller's connection.
       .insertInto('query_evidence_rows')
       .values(
         selected.slice(i, i + size).map((item) => {

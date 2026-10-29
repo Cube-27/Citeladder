@@ -215,7 +215,7 @@ async function insertOpportunities(
   createdAt: string,
 ) {
   for (let start = 0; start < rows.length; start += INSERT_BATCH) {
-    await trx
+    await trx // NOSONAR -- One transaction: batches run in order.
       .insertInto('opportunities')
       .values(
         rows.slice(start, start + INSERT_BATCH).map((row) => ({

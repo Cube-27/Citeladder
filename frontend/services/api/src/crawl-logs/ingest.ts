@@ -381,7 +381,7 @@ async function insertRequests(
 ) {
   if (admitted.length) {
     for (let start = 0; start < admitted.length; start += crawlLogs.insert_rows_per_statement) {
-      const inserted = await trx
+      const inserted = await trx // NOSONAR -- One transaction: bounded inserts run in order.
         .insertInto('bot_requests')
         .values(
           admitted

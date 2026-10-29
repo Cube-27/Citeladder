@@ -74,7 +74,7 @@ export class IntegrationDispatcher {
       )
         continue;
       try {
-        await enqueueSyncRun(this.#db, {
+        await /* NOSONAR -- Admission is checked before each enqueue. */ enqueueSyncRun(this.#db, {
           workspaceId: target.workspace_id,
           connectionId: target.connection_id,
           mappingId: target.mapping_id,

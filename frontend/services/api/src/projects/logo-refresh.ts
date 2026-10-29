@@ -89,7 +89,7 @@ async function attach(db: Database, scope: ProjectScope, target: Target, assetId
       .execute();
   // The caller holds the project lock on one transaction connection; keep reads and writes ordered.
   for (const id of target.competitorIds) {
-    const competitor = await db
+    const competitor = await db // NOSONAR -- One locked transaction: statements run in order.
       .selectFrom('competitors')
       .select(['id', 'domains'])
       .where('id', '=', id)
@@ -103,7 +103,7 @@ async function attach(db: Database, scope: ProjectScope, target: Target, assetId
       )
     )
       continue;
-    await db
+    await db // NOSONAR -- One locked transaction: statements run in order.
       .updateTable('competitors')
       .set({ logo_asset_id: assetId, updated_at: new Date() })
       .where('id', '=', id)
@@ -164,7 +164,7 @@ export async function refreshLogos(db: Database, scope: ProjectScope, fetcher = 
     for (const target of targets.values()) {
       const asset = cached.find((item) => item.domain === target.domain);
       if (asset?.status === cfg.status_ready && asset.image_data) {
-        await attach(trx, scope, target, asset.id);
+        await attach(trx, scope, target, asset.id); // NOSONAR -- One locked transaction: statements run in order.
         if (
           !asset.fetched_at ||
           now.getTime() - asset.fetched_at.getTime() >= cfg.success_cache_seconds * 1000
@@ -177,46 +177,51 @@ export async function refreshLogos(db: Database, scope: ProjectScope, fetcher = 
   // Batch to enforce the configured concurrency while sharing one deadline.
   for (let offset = 0; offset < missing.length; offset += cfg.fetch_concurrency) {
     if (signal.aborted) break;
-    const outcomes = await Promise.all(
-      missing
-        .slice(offset, offset + cfg.fetch_concurrency)
-        .map(async (target) => ({ target, logo: await fetchLogo(target.url, fetcher, signal) })),
-    );
-    await db.transaction().execute(async (trx) => {
-      await acquireProjectLock(trx, scope.projectId);
-      // Persist each asset before reading its ID and attaching it on this transaction connection.
-      for (const { target, logo } of outcomes) {
-        // A miss under this request's own deadline says nothing about the host;
-        // it must not become a shared failure that blocks every tenant's retry.
-        if (!logo && signal.aborted) continue;
-        const at = new Date();
-        const values = {
-          status: logo ? cfg.status_ready : cfg.status_failed,
-          source_url: logo?.url ?? '',
-          content_type: logo?.contentType ?? '',
-          image_data: logo?.body ?? null,
-          byte_size: logo?.body.length ?? 0,
-          sha256: logo ? createHash('sha256').update(logo.body).digest('hex') : '',
-          fetched_at: at,
-          retry_after: logo ? null : new Date(at.getTime() + cfg.failure_cache_seconds * 1000),
-          updated_at: at,
-        };
-        await trx
-          .insertInto('brand_logo_assets')
-          .values({ id: randomUUID(), domain: target.domain, ...values, created_at: at })
-          .onConflict((conflict) => {
-            const update = conflict.column('domain').doUpdateSet(values);
-            return logo ? update : update.where('brand_logo_assets.status', '!=', cfg.status_ready);
-          })
-          .execute();
-        const asset = await trx
-          .selectFrom('brand_logo_assets')
-          .select(['id', 'status'])
-          .where('domain', '=', target.domain)
-          .executeTakeFirstOrThrow();
-        if (asset.status === cfg.status_ready) await attach(trx, scope, target, asset.id);
-      }
-    });
+    const outcomes =
+      await /* NOSONAR -- Batches cap fetch concurrency under one deadline. */ Promise.all(
+        missing
+          .slice(offset, offset + cfg.fetch_concurrency)
+          .map(async (target) => ({ target, logo: await fetchLogo(target.url, fetcher, signal) })),
+      );
+    await /* NOSONAR -- Persist each batch before fetching the next. */ db
+      .transaction()
+      .execute(async (trx) => {
+        await acquireProjectLock(trx, scope.projectId);
+        // Persist each asset before reading its ID and attaching it on this transaction connection.
+        for (const { target, logo } of outcomes) {
+          // A miss under this request's own deadline says nothing about the host;
+          // it must not become a shared failure that blocks every tenant's retry.
+          if (!logo && signal.aborted) continue;
+          const at = new Date();
+          const values = {
+            status: logo ? cfg.status_ready : cfg.status_failed,
+            source_url: logo?.url ?? '',
+            content_type: logo?.contentType ?? '',
+            image_data: logo?.body ?? null,
+            byte_size: logo?.body.length ?? 0,
+            sha256: logo ? createHash('sha256').update(logo.body).digest('hex') : '',
+            fetched_at: at,
+            retry_after: logo ? null : new Date(at.getTime() + cfg.failure_cache_seconds * 1000),
+            updated_at: at,
+          };
+          await trx // NOSONAR -- One locked transaction: statements run in order.
+            .insertInto('brand_logo_assets')
+            .values({ id: randomUUID(), domain: target.domain, ...values, created_at: at })
+            .onConflict((conflict) => {
+              const update = conflict.column('domain').doUpdateSet(values);
+              return logo
+                ? update
+                : update.where('brand_logo_assets.status', '!=', cfg.status_ready);
+            })
+            .execute();
+          const asset = await trx // NOSONAR -- Reads the asset this transaction just wrote.
+            .selectFrom('brand_logo_assets')
+            .select(['id', 'status'])
+            .where('domain', '=', target.domain)
+            .executeTakeFirstOrThrow();
+          if (asset.status === cfg.status_ready) await attach(trx, scope, target, asset.id); // NOSONAR -- One locked transaction: statements run in order.
+        }
+      });
   }
   return readProject(db, scope);
 }

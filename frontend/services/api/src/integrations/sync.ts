@@ -292,15 +292,18 @@ export async function enqueueHistoryBackfill(db: Database, input: BackfillInput)
   // Preserve per-window conflict handling and commit order during backfill.
   for (const [windowStart, windowEnd] of candidates) {
     try {
-      await enqueueSyncRun(db, {
-        workspaceId: input.workspaceId,
-        connectionId: input.connectionId,
-        mappingId: input.mappingId,
-        projectId: input.projectId,
-        windowStart,
-        windowEnd,
-        syncKind: 'backfill',
-      });
+      await /* NOSONAR -- Windows commit in order with per-window conflict handling. */ enqueueSyncRun(
+        db,
+        {
+          workspaceId: input.workspaceId,
+          connectionId: input.connectionId,
+          mappingId: input.mappingId,
+          projectId: input.projectId,
+          windowStart,
+          windowEnd,
+          syncKind: 'backfill',
+        },
+      );
     } catch (error) {
       if (error instanceof ApiError && error.code === 'sync_active_window_conflict') continue;
       throw error;

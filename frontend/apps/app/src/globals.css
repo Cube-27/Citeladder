@@ -408,13 +408,28 @@
 /* Flat public website, sign-in and onboarding: nothing at rest casts a
    shadow, fields included. Surfaces separate by a tone step or by space; only
    detached layers (menus, the consent bar) keep their overlay shadow. Dark
-   mode keeps its edge rings, which are the only edge a dark surface has. */
+   mode keeps its edge rings, which are the only edge a dark surface has.
+
+   The public surface also prints on white rather than the app's tinted
+   ground; every other token is the product's own, so the site, auth,
+   onboarding and the app share one ink, one edge ladder and one material.
+   Auth and onboarding take the white ground in light mode too, so signing up
+   never changes visual world. Dark mode keeps the app's own rebinds. */
 [data-public-surface],
 :root:not([data-theme='dark']) [data-flow-surface] {
   --elevation-control: none;
   --elevation-primary: none;
   --elevation-card: none;
   --elevation-flow: none;
+  --color-background: #ffffff;
+  /* Darker reading inks for the website, docs, sign-in and onboarding (owner
+     decision, 2026-10-11), each at least 20% darker than the product's and
+     spaced like IBM Carbon and GitHub Primer: near-black foreground (17.6:1
+     on white), dark-grey secondary for sentences (9.9:1) and a mid-grey
+     muted for captions and metadata (7.7:1). No light grey carries text. */
+  --color-foreground: #151a17;
+  --color-secondary: #3d4541;
+  --color-muted: #4e5450;
 }
 
 /* State tints are derived from the surface receiving the interaction. */
@@ -1113,24 +1128,6 @@ input:-webkit-autofill:focus {
   -webkit-box-shadow: 0 0 0 1000px var(--color-input) inset;
   caret-color: var(--color-foreground);
   transition: background-color 9999s ease-out;
-}
-
-/* The public surface prints on white rather than the app's tinted ground;
-   every other token is the product's own, so the site, auth, onboarding and
-   the app share one ink, one edge ladder and one material. Auth and
-   onboarding take the white ground in light mode too, so signing up never
-   changes visual world. Dark mode keeps the app's own rebinds. */
-[data-public-surface],
-:root:not([data-theme='dark']) [data-flow-surface] {
-  --color-background: #ffffff;
-  /* Darker reading inks for the website, docs, sign-in and onboarding (owner
-     decision, 2026-10-11), each at least 20% darker than the product's and
-     spaced like IBM Carbon and GitHub Primer: near-black foreground (17.6:1
-     on white), dark-grey secondary for sentences (9.9:1) and a mid-grey
-     muted for captions and metadata (7.7:1). No light grey carries text. */
-  --color-foreground: #151a17;
-  --color-secondary: #3d4541;
-  --color-muted: #4e5450;
 }
 
 /* Light is the default. Dark is a per-device reader preference applied to the

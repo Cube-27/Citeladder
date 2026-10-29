@@ -80,7 +80,7 @@ function sharedTools(db: Database): ReadTool[] {
             while (JSON.stringify(outcome(data).data).length > maxChars && limit > 1) {
               limit = Math.max(1, Math.floor(limit / 2));
               input.limit = limit;
-              data = await dispatch();
+              data = await dispatch(); // NOSONAR -- Each smaller page depends on the previous result's size.
             }
           }
           const result = outcome(data);

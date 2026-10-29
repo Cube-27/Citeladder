@@ -30,7 +30,7 @@ export async function drainSeed(
     if (successful.includes(current)) return;
     if (['failed', 'cancelled', 'partially_completed'].includes(current))
       throw new Error('seed_terminal_failure');
-    await waitForPoll(50, signal);
+    await waitForPoll(50, signal); // NOSONAR -- Polling interval between drain passes.
   }
   throw new Error('seed_drain_timeout');
 }
@@ -77,7 +77,7 @@ export async function seedSiteHealth(
   const recorded = await fetcher;
   let last = '';
   for (const seed of ['99', '100', '101']) {
-    last = await seedCrawl(db, project.workspaceId, project.projectId, seed);
+    last = await seedCrawl(db, project.workspaceId, project.projectId, seed); // NOSONAR -- Crawls seed as an ordered history.
     const worker = new SiteHealthWorker(db, {
       taskScope: { workspaceId: project.workspaceId, crawlId: last },
       settings: {
@@ -96,7 +96,7 @@ export async function seedSiteHealth(
         }),
       ),
     });
-    await drainSeed(
+    await /* NOSONAR -- Each crawl completes before the next starts. */ drainSeed(
       [{ name: 'site-health', run: () => worker.runOnce(1) }],
       async () =>
         (
@@ -109,7 +109,7 @@ export async function seedSiteHealth(
         ).status,
       ['completed'],
     );
-    if (seed === '99') await seedSelection(db, project.workspaceId, project.projectId, last);
+    if (seed === '99') await seedSelection(db, project.workspaceId, project.projectId, last); // NOSONAR -- Selection belongs to the first completed crawl.
   }
   return last;
 }

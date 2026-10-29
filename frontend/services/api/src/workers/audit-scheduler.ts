@@ -165,7 +165,7 @@ export class AuditScheduler {
     if (canAdmit) return this.planUntilBudget(at, canAdmit);
     const claims = await this.claimDue(at);
     let created = 0;
-    for (const claim of claims) if (await this.planClaim(claim, this.now())) created++;
+    for (const claim of claims) if (await this.planClaim(claim, this.now())) created++; // NOSONAR -- Leased claims plan one at a time to keep the shared pool free.
     return created;
   }
   private async planUntilBudget(at: Date, canAdmit: () => boolean) {

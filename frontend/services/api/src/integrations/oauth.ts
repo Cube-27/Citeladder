@@ -250,7 +250,7 @@ export async function completeOAuth(
       .filter(([, value]) => value === transport)
       .map(([provider]) => provider);
     for (const provider of providers) {
-      await trx
+      await trx // NOSONAR -- One transaction: inserts run in order.
         .insertInto('integration_connections')
         .values({
           id: randomUUID(),

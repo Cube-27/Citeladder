@@ -125,10 +125,7 @@ function FooterColumnLink({ link }: Readonly<{ link: FooterLink }>) {
 const COPYRIGHT_YEAR = Number(process.env.PUBLIC_BUILD_YEAR) || new Date().getFullYear();
 
 /** Shared footer: every published destination, the ownership line and each policy. */
-export async function MarketingFooter() {
-  // NOSONAR -- 'use cache' requires an async function
-  'use cache';
-
+export function MarketingFooter() {
   const year = COPYRIGHT_YEAR;
 
   return (

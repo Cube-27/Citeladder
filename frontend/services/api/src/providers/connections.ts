@@ -137,7 +137,7 @@ async function replaceRoutes(
     const old = prior.find((item) => item.logical_engine === input.logical_engine);
     if (append && old) continue;
     const now = new Date();
-    await db
+    await db // NOSONAR -- One transaction: routes validate and insert in order.
       .insertInto('provider_routes')
       .values({
         id: randomUUID(),

@@ -114,7 +114,7 @@ export async function resolveOwnedPages(
     { id: string; normalized_url: string; latest_source_kind: string | null }
   >();
   for (let i = 0; i < all.length; i += p.PAGE_EQUIVALENCE_QUERY_CHUNK_SIZE) {
-    const batch = await scope
+    const batch = await scope // NOSONAR -- Chunked lookups run one at a time on the caller's connection.
       .selectFrom(db, 'site_urls')
       .select(['id', 'normalized_url', 'latest_source_kind'])
       .where('project_id', '=', projectId)
