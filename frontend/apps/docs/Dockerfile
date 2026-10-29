@@ -43,6 +43,11 @@ FROM node:26-bookworm-slim@sha256:298992629d69bbd5b2b03ad57094d8e4fcb3a8eeb7c4e2
 ENV NODE_ENV=production     HOME=/tmp     WRANGLER_SEND_METRICS=false
 WORKDIR /app
 
+# workerd refuses to start without a system CA store, which the slim image omits.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
 # Copy dependencies first so this layer is shared with the other Worker images.
 COPY --from=wrangler --chown=node:node /wrangler/node_modules ./node_modules
 # Wrangler keeps its local state under the working directory.
