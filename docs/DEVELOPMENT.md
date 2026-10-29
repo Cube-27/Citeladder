@@ -277,7 +277,7 @@ new admission and lets claimed work finish before destroying the pool.
 | `CLOUD_RUN_RUNNER_JOB`             | API                                     | Unset disables wake-up; otherwise `projects/<project>/locations/us-central1/jobs/<job>`                                |
 | `CITELADDER_ORIGIN_TOKEN`          | Cloud Run API                           | Existing secret matching both Workers' `ORIGIN_TOKEN`; at least 32 characters                                          |
 | `CITELADDER_ORIGIN_TOKEN_PREVIOUS` | Cloud Run API                           | Optional previous token during rotation                                                                                |
-| `RUNNER_BUDGET_SECONDS`            | Runner/tick                             | 600; 1–3600 seconds, shared across phases and lanes                                                                    |
+| `RUNNER_BUDGET_SECONDS`            | Runner/tick                             | 600; 1–3600 seconds (Terraform allows 60–3000), shared across phases and lanes                                         |
 | `RUNNER_DB_POOL_SIZE`              | Runner/tick and API with configured job | 4; 1–4 pooled connections, independent of the API's `DB_POOL_SIZE`/`DB_MAX_OVERFLOW`; a draining execution also holds one lock session |
 | `RUNNER_WAKE_TIMEOUT_MS`           | API                                     | 5000; 1–30000 milliseconds for metadata plus job-start requests                                                        |
 | `RUNNER_WAKE_MIN_INTERVAL_MS`      | API                                     | 5000; 1–60000 milliseconds between job-start attempts per instance                                                     |
