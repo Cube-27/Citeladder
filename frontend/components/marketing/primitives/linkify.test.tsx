@@ -19,3 +19,14 @@ it('links URLs and internal paths and leaves trailing sentence punctuation in th
     'Read https://example.com/policy?). Then see /pricing, or ask us.',
   );
 });
+
+it('leaves a slash inside a word as prose and still links a path after punctuation', () => {
+  const { container } = render(
+    <Linkify text="Use either and/or both (see /docs/setup) at 60 km/h." />,
+  );
+
+  expect([...container.querySelectorAll('a')].map((link) => link.getAttribute('href'))).toEqual([
+    '/docs/setup',
+  ]);
+  expect(container.textContent).toBe('Use either and/or both (see /docs/setup) at 60 km/h.');
+});

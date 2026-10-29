@@ -11,11 +11,11 @@ import type { ReactNode } from 'react';
  * then has to retype it. This is the one transform that fixes that, shared by
  * the FAQ answers and the legal documents so both behave the same way.
  *
- * Internal paths are matched narrowly — a leading slash, then lowercase word
- * segments — so ordinary prose containing a slash, like "and/or", is left
- * alone.
+ * Internal paths are matched narrowly — a leading slash that no word character
+ * precedes, then lowercase word segments — so ordinary prose containing a
+ * slash, like "and/or", is left alone.
  */
-const INLINE_TOKEN_RE = /https?:\/\/\S+|\/[a-z][a-z0-9-]*(?:\/[a-z0-9-]+)*/g; // NOSONAR -- each segment starts at a literal '/', which no class repeats, so matching is linear
+const INLINE_TOKEN_RE = /https?:\/\/\S+|(?<![\w/])\/[a-z][a-z0-9-]*(?:\/[a-z0-9-]+)*/g; // NOSONAR -- each segment starts at a literal '/', which no class repeats, so matching is linear
 
 /** Sentence punctuation straight after a URL belongs to the prose, not the href. */
 const TRAILING_PUNCT = new Set(['.', ',', ';', ':', '!', '?', ')']);
