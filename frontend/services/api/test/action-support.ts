@@ -121,9 +121,9 @@ async function seed(db: Database, content: boolean): Promise<ActionSeed> {
         member_opportunity_ids: JSON.stringify(rows.map((row) => row.id)),
         opportunity_snapshot_id: snapshot.id,
       });
-      await trx.insertInto('actions').values(action).execute();
+      await trx.insertInto('actions').values(action).execute(); // NOSONAR -- One transaction: fixture statements run in order.
       for (const row of rows) {
-        await trx
+        await trx // NOSONAR -- One transaction: fixture statements run in order.
           .updateTable('opportunities')
           .set({ action_id: action.id })
           .where('id', '=', row.id)

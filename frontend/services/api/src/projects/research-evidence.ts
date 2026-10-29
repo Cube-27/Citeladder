@@ -299,13 +299,14 @@ export async function collectIdentityResearch(
   const selected = searches.slice(0, settings.identity_fetch_max_pages);
   // Await each batch so provider requests never exceed the configured concurrency.
   for (let offset = 0; offset < selected.length; offset += settings.keenable_concurrency) {
-    const fetched = await Promise.allSettled(
-      selected
-        .slice(offset, offset + settings.keenable_concurrency)
-        .map((item) =>
-          client.page(item, new URL(item.source_url).hostname.replace(/^www\./u, '') === domain),
-        ),
-    );
+    const fetched =
+      await /* NOSONAR -- Batches cap provider requests at the configured concurrency. */ Promise.allSettled(
+        selected
+          .slice(offset, offset + settings.keenable_concurrency)
+          .map((item) =>
+            client.page(item, new URL(item.source_url).hostname.replace(/^www\./u, '') === domain),
+          ),
+      );
     for (const result of fetched) if (result.status === 'fulfilled') pages.push(result.value);
   }
   return {

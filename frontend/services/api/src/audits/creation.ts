@@ -66,7 +66,7 @@ export async function createAuditsInTransaction(
   const create = (market: Market) =>
     createMarketAudit(trx, workspaceId, input, { market, launchId }, launch, runtime, at);
   const ids: [string, ...string[]] = [await create(first)];
-  for (const market of rest) ids.push(await create(market));
+  for (const market of rest) ids.push(await create(market)); // NOSONAR -- One transaction: markets are created in order.
   return ids;
 }
 
@@ -282,7 +282,7 @@ async function persistTasks(
       engine = snapshots.engines.get(slot.engine)!;
     const taskId = randomUUID();
     inserted.push({ taskId, slot, route, engine });
-    await db
+    await db // NOSONAR -- One transaction: task inserts run in order.
       .insertInto('audit_tasks')
       .values({
         id: taskId,
@@ -344,17 +344,15 @@ async function persistTasks(
     at,
   });
   for (const [index, { taskId, slot, route, engine }] of inserted.entries()) {
-    const binding = await bindTask(options, taskId, route, {
-      accountId: runs.accountId,
-      reservationId: runs.reservationIds[index]!,
-    });
-    await db
+    const run = { accountId: runs.accountId, reservationId: runs.reservationIds[index]! };
+    const binding = await bindTask(options, taskId, route, run); // NOSONAR -- One transaction: each binding reads and writes in order.
+    await db // NOSONAR -- One transaction: statements run in order.
       .updateTable('audit_tasks')
       .set({ status: 'queued', provider_route_snapshot: JSON.stringify(binding) })
       .where('workspace_id', '=', scope.workspaceId)
       .where('id', '=', taskId)
       .execute();
-    await db
+    await db // NOSONAR -- One transaction: statements run in order.
       .updateTable('audit_engine_snapshots')
       .set({ connection_id: binding.connection_id, base_url: binding.base_url })
       .where('id', '=', engine.id)

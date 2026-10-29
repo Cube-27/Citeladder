@@ -151,7 +151,7 @@ export const recomputeDemand: Executor = async (task, { db, maxAttempts, checkCa
       .execute();
     const size = policy.traffic.TRAFFIC_METRIC_ROW_BATCH_SIZE;
     for (let i = 0; i < candidates.length; i += size)
-      await trx
+      await trx // NOSONAR -- One transaction: bounded inserts run in order.
         .insertInto('demand_signals')
         .values(
           candidates.slice(i, i + size).map((c) => ({

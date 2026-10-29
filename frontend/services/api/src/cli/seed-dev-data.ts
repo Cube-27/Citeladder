@@ -35,8 +35,8 @@ await operatorMain(async () => {
       const crawlId = await seedSiteHealth(db, seeded.primary);
       await seedOpportunityRefresh(db, seeded.primary, 'site_crawl', crawlId);
       for (const generation of [1, 2]) {
-        const auditId = await seedProjectAudit(db, seeded.primary, encryptionKey, generation);
-        await seedOpportunityRefresh(db, seeded.primary, 'audit', auditId);
+        const auditId = await seedProjectAudit(db, seeded.primary, encryptionKey, generation); // NOSONAR -- Generations seed in order.
+        await seedOpportunityRefresh(db, seeded.primary, 'audit', auditId); // NOSONAR -- Refresh reads the audit just seeded.
       }
     }
     console.log(JSON.stringify(seeded));

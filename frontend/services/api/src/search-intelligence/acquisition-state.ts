@@ -534,7 +534,7 @@ export class AcquisitionState {
       }
       // Bound SQL parameters even when a provider returns more than the requested page.
       for (let offset = 0; offset < normalized.rows.length; offset += si.page_size)
-        await trx
+        await trx // NOSONAR -- One transaction: pages insert in order.
           .insertInto('search_intelligence_rows')
           .values(
             normalized.rows.slice(offset, offset + si.page_size).map((row) => ({

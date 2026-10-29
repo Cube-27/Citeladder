@@ -202,12 +202,9 @@ export const auditRoutes = [
       return query.stream
         ? eventStreamResponse(
             db,
-            workspace,
-            path.audit_id,
-            after,
+            { workspaceId: workspace, auditId: path.audit_id, after, initial: events },
             runtime,
             c.req.raw.signal,
-            events,
             { userId: c.get('user').id, limits: config.auth.limits },
           )
         : c.json(events);

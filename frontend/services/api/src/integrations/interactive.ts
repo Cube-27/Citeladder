@@ -46,6 +46,6 @@ export async function executeInteractiveSyncs(
         freshAccessToken(database, grantId, workspace, client, rejected),
       { workspaceId, runId: row.id },
     );
-    await worker.runOnce(signal);
+    await worker.runOnce(signal); // NOSONAR -- Deadline and abort are checked before each provider run.
   }
 }

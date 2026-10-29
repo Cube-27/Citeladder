@@ -180,9 +180,9 @@ export async function seedVerification(db: Database): Promise<VerificationSeed> 
         target_label: name,
         status: 'implemented',
       });
-      await trx.insertInto('actions').values(action).execute();
+      await trx.insertInto('actions').values(action).execute(); // NOSONAR -- One transaction: fixture statements run in order.
       const id = randomUUID();
-      await trx
+      await trx // NOSONAR -- One transaction: fixture statements run in order.
         .insertInto('opportunity_implementation_events')
         .values({
           ...scope,

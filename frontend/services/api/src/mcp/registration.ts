@@ -144,7 +144,7 @@ async function admitBudgets(
   ])[],
 ) {
   for (const [kind, subject, operation, limit, windowSeconds] of budgets)
-    await enforceSubjectRequest(db, kind, subject, { operation, limit, windowSeconds });
+    await enforceSubjectRequest(db, kind, subject, { operation, limit, windowSeconds }); // NOSONAR -- A refused budget stops before the next is charged.
 }
 
 export async function registerClient(db: Database, mcp: McpConfig, input: unknown) {

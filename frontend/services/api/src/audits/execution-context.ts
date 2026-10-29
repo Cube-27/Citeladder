@@ -115,10 +115,13 @@ export async function loadExecutionContext(
   owner: string,
   runtime: AuditRuntime,
   encryptionKey: string,
-  at = new Date(),
-  env: Record<string, string | undefined> = process.env,
-  access?: (workspaceId: string) => Promise<unknown>,
+  options: {
+    at?: Date;
+    env?: Record<string, string | undefined>;
+    access?: (workspaceId: string) => Promise<unknown>;
+  } = {},
 ) {
+  const { at = new Date(), env = process.env, access } = options;
   // A cached check reads outside the transaction, so it must run before taking the
   // transaction's connection: with a one-connection pool it would otherwise wait on itself.
   if (access) await access(claimed.workspace_id);

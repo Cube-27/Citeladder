@@ -66,7 +66,7 @@ export async function enqueuePostSyncProjections(
   const referralExtraDatasets = new Set(policy.traffic.AI_REFERRALS_REFRESH_TRIGGER_DATASETS);
   for (const artifact of artifacts) {
     if (!referralDatasets.has(artifact.dataset)) continue;
-    await enqueueTask(trx, {
+    await /* NOSONAR -- One transaction: enqueues run in order. */ enqueueTask(trx, {
       workspaceId: run.workspace_id,
       projectId: run.project_id,
       kind: 'ingest_referrals',

@@ -377,8 +377,8 @@ export function TrendChart({
   const ariaLabel = `${described}${scaleNote}${eventNote}`;
 
   return (
-    <svg
-      role={data.some((entry) => entry.href) ? 'group' : 'img'} // NOSONAR -- an <svg> chart has no native grouping tag; fieldset/details cannot wrap SVG content
+    <svg // NOSONAR -- an <svg> chart has no native grouping tag; fieldset/details cannot wrap SVG content
+      role={data.some((entry) => entry.href) ? 'group' : 'img'}
       aria-label={ariaLabel}
       width={width}
       height={height}

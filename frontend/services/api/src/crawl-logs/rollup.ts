@@ -130,7 +130,7 @@ export async function refreshCrawlLogs(
     );
     // Bound statements and serialize them on the same transaction connection.
     for (let i = 0; i < coverage.length; i += crawlLogs.insert_rows_per_statement)
-      await trx
+      await trx // NOSONAR -- One transaction: bounded inserts run in order.
         .insertInto('crawl_log_coverage_daily')
         .values(coverage.slice(i, i + crawlLogs.insert_rows_per_statement))
         .execute();

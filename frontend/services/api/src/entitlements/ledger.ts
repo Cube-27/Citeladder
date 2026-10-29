@@ -126,17 +126,84 @@ export async function reserveUsages(
   const subjects = holds.map((hold) => hold.subject);
   if (await missingSubject(db, subjects)) throw new LedgerError('subject_not_found');
   const state = await accountState(db, workspaceId, accountId, at);
-  const fingerprint = ({ subject, units }: Hold) =>
-    subject.kind === 'audit'
-      ? auditFingerprint({
-          account_id: accountId,
-          capability_key: capability,
-          subject_kind: 'audit',
-          audit_id: subject.auditId,
-          task_id: subject.id,
-          units,
-        })
-      : digest({ accountId, subject, units, capability });
+  const fingerprint = (hold: Hold) => holdFingerprint(accountId, capability, hold);
+  const priors = await priorHolds(db, accountId, holds, fingerprint);
+  const fresh = holds.filter((hold) => !priors.has(hold.key));
+  const ids = fresh.length
+    ? await reserveFresh(db, { accountId, capability, at, state, fingerprint }, fresh)
+    : new Map<string, string>();
+  return holds.map((hold) => priors.get(hold.key)?.reservation_id ?? ids.get(hold.key)!);
+}
+
+/**
+ * Allocates and records the holds no prior entry covers, in order, so each
+ * draws against what the earlier ones reserved. Any shortfall refuses them
+ * all. Returns each hold's new reservation id by idempotency key.
+ */
+async function reserveFresh(
+  db: Database,
+  {
+    accountId,
+    capability,
+    at,
+    state,
+    fingerprint,
+  }: {
+    accountId: string;
+    capability: string;
+    at: Date;
+    state: Awaited<ReturnType<typeof accountState>>;
+    fingerprint: (hold: Hold) => string;
+  },
+  fresh: readonly Hold[],
+) {
+  const ids = new Map<string, string>();
+  const order = await lockedDrawOrder(db, { accountId, capability, state });
+  const balances = await ledgerBalances(db, accountId);
+  const rows = [];
+  for (const hold of fresh) {
+    const { allocations, left } = allocate(order, balances, hold.units);
+    if (left) {
+      logger.info('billing.consumable_credits_exhausted', {
+        account_id: accountId,
+        capability_key: capability,
+        requested: hold.units,
+        shortfall: left,
+      });
+      throw new LedgerError('funded_credits_exhausted');
+    }
+    const reservationId = randomUUID();
+    ids.set(hold.key, reservationId);
+    const context = { accountId, capability, at, reservationId, fingerprint: fingerprint(hold) };
+    for (const [index, allocation] of allocations.entries())
+      rows.push(reservationRow(hold, allocation, index, context));
+  }
+  for (const chunk of chunksOf(rows, CHUNK))
+    await db.insertInto('consumable_ledger').values(chunk).execute(); // NOSONAR -- chunks share the transaction and its lock.
+  return ids;
+}
+
+/** The request fingerprint an idempotent replay of this hold must repeat. */
+function holdFingerprint(accountId: string, capability: string, { subject, units }: Hold) {
+  return subject.kind === 'audit'
+    ? auditFingerprint({
+        account_id: accountId,
+        capability_key: capability,
+        subject_kind: 'audit',
+        audit_id: subject.auditId,
+        task_id: subject.id,
+        units,
+      })
+    : digest({ accountId, subject, units, capability });
+}
+
+/** Holds already recorded under their idempotency keys; a key reused for another request throws. */
+async function priorHolds(
+  db: Database,
+  accountId: string,
+  holds: readonly Hold[],
+  fingerprint: (hold: Hold) => string,
+) {
   const priors = new Map<string, Entry>();
   for (const keys of chunksOf(
     holds.map((hold) => hold.key),
@@ -154,75 +221,83 @@ export async function reserveUsages(
     if (prior && prior.request_fingerprint !== fingerprint(hold))
       throw new LedgerError('idempotency_key_reused');
   }
-  const fresh = holds.filter((hold) => !priors.has(hold.key));
-  const ids = new Map<string, string>();
-  if (fresh.length) {
-    if (state.error) throw new LedgerError('entitlement_unresolved');
-    const candidates = state.selected.filter((grant) => grant.key === capability);
-    if (
-      policy.entitlements.capabilities[capability as keyof typeof policy.entitlements.capabilities]
-        ?.type !== 'counter.consumable'
-    )
-      throw new LedgerError('capability_not_consumable');
-    // Lock UUID order, allocate expiry order.
-    const grantIds = candidates.map((grant) => grant.id).sort((a, b) => a.localeCompare(b));
-    if (grantIds.length)
-      await db
-        .selectFrom('account_grants')
-        .select('id')
-        .where('billing_account_id', '=', accountId)
-        .where('id', 'in', grantIds)
-        .orderBy('id')
-        .forUpdate()
-        .execute();
-    const order = drawOrder(candidates, state.end);
-    const balances = await ledgerBalances(db, accountId);
-    const rows = [];
-    for (const hold of fresh) {
-      const { subject, units, key } = hold;
-      const { allocations, left } = allocate(order, balances, units);
-      if (left) {
-        logger.info('billing.consumable_credits_exhausted', {
-          account_id: accountId,
-          capability_key: capability,
-          requested: units,
-          shortfall: left,
-        });
-        throw new LedgerError('funded_credits_exhausted');
-      }
-      const reservationId = randomUUID();
-      ids.set(key, reservationId);
-      for (const [index, allocation] of allocations.entries()) {
-        rows.push({
-          id: randomUUID(),
-          billing_account_id: accountId,
-          workspace_id: subject.workspaceId,
-          grant_id: allocation.grantId,
-          capability_key: capability,
-          units: allocation.units,
-          entry_kind: 'reservation',
-          reservation_id: reservationId,
-          subject_kind: subject.kind,
-          subject_id: subject.id,
-          audit_id: subject.kind === 'audit' ? subject.auditId : null,
-          task_id: subject.kind === 'audit' ? subject.id : null,
-          agent_run_id: subject.kind === 'agent' ? subject.id : null,
-          site_crawl_id: subject.kind === 'site_crawl' ? subject.id : null,
-          platform_call_id: subject.kind === 'platform_call' ? subject.id : null,
-          dispatch_key: 'reservation',
-          allocation_order: index,
-          request_fingerprint: fingerprint(hold),
-          refund_of_id: null,
-          attempt: null,
-          idempotency_key: index === 0 ? key : `${key}#${allocation.grantId}`,
-          created_at: at,
-        });
-      }
-    }
-    for (const chunk of chunksOf(rows, CHUNK))
-      await db.insertInto('consumable_ledger').values(chunk).execute(); // NOSONAR -- chunks share the transaction and its lock.
-  }
-  return holds.map((hold) => priors.get(hold.key)?.reservation_id ?? ids.get(hold.key)!);
+  return priors;
+}
+
+/** The capability's grants locked in UUID order and returned in draw (expiry) order. */
+async function lockedDrawOrder(
+  db: Database,
+  {
+    accountId,
+    capability,
+    state,
+  }: { accountId: string; capability: string; state: Awaited<ReturnType<typeof accountState>> },
+) {
+  if (state.error) throw new LedgerError('entitlement_unresolved');
+  const candidates = state.selected.filter((grant) => grant.key === capability);
+  if (
+    policy.entitlements.capabilities[capability as keyof typeof policy.entitlements.capabilities]
+      ?.type !== 'counter.consumable'
+  )
+    throw new LedgerError('capability_not_consumable');
+  // Lock UUID order, allocate expiry order.
+  const grantIds = candidates.map((grant) => grant.id).sort((a, b) => a.localeCompare(b));
+  if (grantIds.length)
+    await db
+      .selectFrom('account_grants')
+      .select('id')
+      .where('billing_account_id', '=', accountId)
+      .where('id', 'in', grantIds)
+      .orderBy('id')
+      .forUpdate()
+      .execute();
+  return drawOrder(candidates, state.end);
+}
+
+/** One grant's share of a reservation as a ledger row. */
+function reservationRow(
+  { subject, key }: Hold,
+  allocation: { grantId: string; units: number },
+  index: number,
+  context: {
+    accountId: string;
+    capability: string;
+    at: Date;
+    reservationId: string;
+    fingerprint: string;
+  },
+) {
+  return {
+    id: randomUUID(),
+    billing_account_id: context.accountId,
+    workspace_id: subject.workspaceId,
+    grant_id: allocation.grantId,
+    capability_key: context.capability,
+    units: allocation.units,
+    entry_kind: 'reservation',
+    reservation_id: context.reservationId,
+    subject_kind: subject.kind,
+    subject_id: subject.id,
+    ...subjectColumns(subject),
+    dispatch_key: 'reservation',
+    allocation_order: index,
+    request_fingerprint: context.fingerprint,
+    refund_of_id: null,
+    attempt: null,
+    idempotency_key: index === 0 ? key : `${key}#${allocation.grantId}`,
+    created_at: context.at,
+  };
+}
+
+/** The typed subject reference columns; only the subject's own kind is set. */
+function subjectColumns(subject: Subject) {
+  return {
+    audit_id: subject.kind === 'audit' ? subject.auditId : null,
+    task_id: subject.kind === 'audit' ? subject.id : null,
+    agent_run_id: subject.kind === 'agent' ? subject.id : null,
+    site_crawl_id: subject.kind === 'site_crawl' ? subject.id : null,
+    platform_call_id: subject.kind === 'platform_call' ? subject.id : null,
+  };
 }
 
 /** Units a reservation still holds: reserved minus released (debits release their units). */

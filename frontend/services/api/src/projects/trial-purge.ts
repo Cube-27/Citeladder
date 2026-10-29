@@ -86,25 +86,27 @@ export async function purgeExpiredTrialProjects(
   let purged = 0;
   for (const { workspace_id: workspaceId } of workspaces) {
     if (!canAdmit()) break;
-    const projects = await db
+    const projects = await db // NOSONAR -- Admission is rechecked before each workspace.
       .selectFrom('projects')
       .select('id')
       .where('workspace_id', '=', workspaceId)
       .execute();
     for (const { id: projectId } of projects) {
       const scope = { workspaceId, projectId };
-      const removed = await db.transaction().execute(async (trx) => {
-        await acquireProjectLock(trx, projectId);
-        if (!(await stillPurgeable(trx, workspaceId, now, cutoff))) return false;
-        if (await projectHoldsReservations(trx, workspaceId, projectId)) return false;
-        await removeProject(trx, scope);
-        return true;
-      });
+      const removed = await /* NOSONAR -- One project lock at a time keeps the pool free. */ db
+        .transaction()
+        .execute(async (trx) => {
+          await acquireProjectLock(trx, projectId);
+          if (!(await stillPurgeable(trx, workspaceId, now, cutoff))) return false;
+          if (await projectHoldsReservations(trx, workspaceId, projectId)) return false;
+          await removeProject(trx, scope);
+          return true;
+        });
       if (!removed) continue;
       purged += 1;
       logger.info('project.trial_purged', { workspace_id: workspaceId, project_id: projectId });
     }
-    const discoveries = await purgeIncompleteDiscoveries(db, workspaceId, now, cutoff);
+    const discoveries = await purgeIncompleteDiscoveries(db, workspaceId, now, cutoff); // NOSONAR -- Admission is rechecked before each workspace.
     if (discoveries === 0) continue;
     purged += discoveries;
     logger.info('brand_discovery.trial_purged', { workspace_id: workspaceId, discoveries });

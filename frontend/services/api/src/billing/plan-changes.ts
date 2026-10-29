@@ -134,6 +134,34 @@ async function replayedPlanChange(db: Database, accountId: string, key: string, 
   return null;
 }
 
+/**
+ * A repeat request for the downgrade already scheduled replays that schedule;
+ * any other live (not provider-rejected) schedule blocks a new change.
+ */
+function replayedScheduledDowngrade(scheduledChange: unknown, subId: string, targetKey: string) {
+  if (!scheduledChange) return null;
+  const scheduled = scheduledSchema.parse(scheduledChange);
+  if (
+    scheduled.direction === 'downgrade' &&
+    scheduled.catalog_key === targetKey &&
+    scheduled.state !== 'provider_rejected'
+  )
+    return {
+      pending: null,
+      fresh: false,
+      subId,
+      response: planChangeSchema.parse({
+        direction: 'downgrade',
+        catalog_key: targetKey,
+        status: scheduled.state,
+        effective_at: scheduled.effective_at,
+        activation: null,
+      }),
+    };
+  if (scheduled.state !== 'provider_rejected') conflict('plan_change_pending');
+  return null;
+}
+
 export async function changePlan(
   db: Database,
   config: ServiceConfig,
@@ -164,27 +192,8 @@ export async function changePlan(
       sub.provider_mode !== config.razorpay.mode
     )
       conflict('plan_change_unavailable');
-    if (sub.scheduled_change) {
-      const scheduled = scheduledSchema.parse(sub.scheduled_change);
-      if (
-        scheduled.direction === 'downgrade' &&
-        scheduled.catalog_key === targetKey &&
-        scheduled.state !== 'provider_rejected'
-      )
-        return {
-          pending: null,
-          fresh: false,
-          subId: sub.id,
-          response: planChangeSchema.parse({
-            direction: 'downgrade',
-            catalog_key: targetKey,
-            status: scheduled.state,
-            effective_at: scheduled.effective_at,
-            activation: null,
-          }),
-        };
-      if (scheduled.state !== 'provider_rejected') conflict('plan_change_pending');
-    }
+    const scheduledReplay = replayedScheduledDowngrade(sub.scheduled_change, sub.id, targetKey);
+    if (scheduledReplay) return scheduledReplay;
     if (
       await trx
         .selectFrom('pending_activations')

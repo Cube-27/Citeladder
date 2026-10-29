@@ -123,7 +123,7 @@ export function StatRow({
 }>) {
   const { rows, columns } = rowsOf(segments);
   return (
-    <div
+    <div // NOSONAR -- a <fieldset> would add form-group semantics and its own border, padding and min-width to a grid of figures
       role={label ? 'group' : undefined}
       aria-label={label}
       data-testid={testId}

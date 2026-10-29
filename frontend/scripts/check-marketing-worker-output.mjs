@@ -37,7 +37,7 @@ const privateNames = new Set([
 ]);
 for (const file of files) {
   if (/\.(js|html)$/.test(file)) {
-    const content = await readFile(new URL(`client/${file.split(sep).join('/')}`, root), 'utf8');
+    const content = await readFile(new URL(`client/${file.split(sep).join('/')}`, root), 'utf8'); // NOSONAR -- Stops at the first leaking file, in a stable order.
     const urls = content.match(/https?:\/\/[^\s"'`<>\\]+/gu) ?? [];
     const hasMailEndpoint = urls.some((value) => {
       try {

@@ -50,10 +50,15 @@ const runs: Record<ConfirmedKind, Run> = {
   archive_prompts: async (trx, _config, actor, change) => {
     const payload = payloads.archive_prompts.parse(change.payload);
     for (const group of payload.groups)
-      await setPromptStatuses(trx, actor, group.prompt_set_id, {
-        prompt_ids: group.prompt_ids,
-        status: 'archived',
-      });
+      await /* NOSONAR -- One transaction: groups apply in order. */ setPromptStatuses(
+        trx,
+        actor,
+        group.prompt_set_id,
+        {
+          prompt_ids: group.prompt_ids,
+          status: 'archived',
+        },
+      );
     const count = payload.groups.reduce((total, group) => total + group.prompt_ids.length, 0);
     return { summary: `Archived ${count} prompt(s).` };
   },

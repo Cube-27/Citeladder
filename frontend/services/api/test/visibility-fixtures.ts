@@ -412,19 +412,19 @@ export class VisibilityFixtures extends Fixtures {
       created_at: now(),
     };
     for (const name of spec.brandMentions ?? []) {
-      await this.database
+      await this.database // NOSONAR -- Fixture rows insert in a fixed order.
         .insertInto('brand_mentions')
         .values({ ...mention, id: randomUUID(), brand_name: name })
         .execute();
     }
     for (const name of spec.competitorMentions ?? []) {
-      await this.database
+      await this.database // NOSONAR -- Fixture rows insert in a fixed order.
         .insertInto('competitor_mentions')
         .values({ ...mention, id: randomUUID(), competitor_name: name })
         .execute();
     }
     for (const [ordinal, citation] of citations.entries()) {
-      await this.database
+      await this.database // NOSONAR -- Fixture rows insert in a fixed order.
         .insertInto('citations')
         .values({
           ...mention,
@@ -443,7 +443,7 @@ export class VisibilityFixtures extends Fixtures {
         .execute();
     }
     for (const [ordinal, source] of (spec.retrieved ?? []).entries()) {
-      await this.database
+      await this.database // NOSONAR -- Fixture rows insert in a fixed order.
         .insertInto('retrieved_sources')
         .values({
           ...mention,
@@ -488,7 +488,7 @@ export class VisibilityFixtures extends Fixtures {
       })
       .execute();
     for (const [index, url] of (input.links ?? []).entries()) {
-      await this.database
+      await this.database // NOSONAR -- Fixture rows insert in a fixed order.
         .insertInto('aio_entity_links')
         .values({
           id: randomUUID(),
@@ -665,7 +665,7 @@ export class VisibilityFixtures extends Fixtures {
     const workspaces = this.tenants.map((tenant) => tenant.workspaceId);
     if (workspaces.length) {
       for (const table of TABLES_BY_WORKSPACE) {
-        await this.database.deleteFrom(table).where('workspace_id', 'in', workspaces).execute();
+        await this.database.deleteFrom(table).where('workspace_id', 'in', workspaces).execute(); // NOSONAR -- Child tables delete before their parents.
       }
       const audits = this.database
         .selectFrom('audits')

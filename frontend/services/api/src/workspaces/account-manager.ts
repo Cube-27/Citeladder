@@ -296,16 +296,22 @@ async function createAccounts(
   const shared = await resolveSharedWorkspace(db, action);
   const created = [];
   for (const email of emails) {
-    const user = await createIdentity(db, email, encoded);
+    const user = await createIdentity(db, email, encoded); // NOSONAR -- One transaction: statements run in order.
     if (!user) throw new Error('user_already_exists');
-    const { personal, target } = await placeAccount(db, session.actorId, shared, user);
-    await recordSecurityEvent(db, 'account.create', session.actorId, target.workspaceId, user.id);
+    const { personal, target } = await placeAccount(db, session.actorId, shared, user); // NOSONAR -- One transaction: statements run in order.
+    await recordSecurityEvent(db, 'account.create', session.actorId, target.workspaceId, user.id); // NOSONAR -- One transaction: statements run in order.
     const access =
       personal && action.access
-        ? await grantAccess(db, session, personal, action.access, {
-            ...request,
-            key: `${request.key}:${user.id}`,
-          })
+        ? await /* NOSONAR -- One transaction: statements run in order. */ grantAccess(
+            db,
+            session,
+            personal,
+            action.access,
+            {
+              ...request,
+              key: `${request.key}:${user.id}`,
+            },
+          )
         : undefined;
     created.push({
       email,
@@ -373,7 +379,7 @@ async function lockMemberships(
       .execute();
   const memberships = await loadMemberships();
   for (const member of memberships)
-    await db
+    await db // NOSONAR -- Row locks are taken in workspace order on one transaction.
       .selectFrom('workspaces')
       .select('id')
       .where('id', '=', member.workspace_id)
@@ -410,28 +416,36 @@ async function deleteUnusedAccount(db: Database, session: PlatformSession, email
   ]);
   for (const member of memberships) {
     if (member.role !== 'owner') continue;
-    const members = await db
+    const members = await db // NOSONAR -- One transaction: checks run in order and stop at the first refusal.
       .selectFrom('workspace_members')
       .select('id')
       .where('workspace_id', '=', member.workspace_id)
       .execute();
     if (members.length !== 1) throw new Error('transfer_ownership_first');
-    await requireUnused(db, 'workspaces', member.workspace_id, [
-      'public.workspace_members.workspace_id',
-      'public.billing_accounts.workspace_id',
-      'public.workspace_site_health_runtime.workspace_id',
-    ]);
-    const account = await db
+    await /* NOSONAR -- One transaction: checks run in order. */ requireUnused(
+      db,
+      'workspaces',
+      member.workspace_id,
+      [
+        'public.workspace_members.workspace_id',
+        'public.billing_accounts.workspace_id',
+        'public.workspace_site_health_runtime.workspace_id',
+      ],
+    );
+    const account = await db // NOSONAR -- Locks the billing row on one transaction.
       .selectFrom('billing_accounts')
       .select('id')
       .where('workspace_id', '=', member.workspace_id)
       .forUpdate()
       .executeTakeFirst();
     if (!account) continue;
-    await requireUnused(db, 'billing_accounts', account.id, [
-      'public.account_grants.billing_account_id',
-    ]);
-    const extra = await db
+    await /* NOSONAR -- One transaction: checks run in order. */ requireUnused(
+      db,
+      'billing_accounts',
+      account.id,
+      ['public.account_grants.billing_account_id'],
+    );
+    const extra = await db // NOSONAR -- One transaction: checks run in order.
       .selectFrom('account_grants')
       .select('id')
       .where('billing_account_id', '=', account.id)
@@ -449,9 +463,9 @@ async function deleteUnusedAccount(db: Database, session: PlatformSession, email
   );
   for (const member of memberships) {
     if (member.role === 'owner')
-      await db.deleteFrom('workspaces').where('id', '=', member.workspace_id).execute();
+      await db.deleteFrom('workspaces').where('id', '=', member.workspace_id).execute(); // NOSONAR -- One transaction: statements run in order.
     else
-      await recordSecurityEvent(
+      await /* NOSONAR -- One transaction: statements run in order. */ recordSecurityEvent(
         db,
         'membership.remove',
         session.actorId,

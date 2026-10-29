@@ -22,7 +22,7 @@ export async function cleanupMcpProtocol(db: Database, now = new Date(), canAdmi
     'mcp_confirmations',
     'mcp_oauth_grants',
   ] as const)
-    deleted += await cleanup(db, table, now, retained, canAdmit);
+    deleted += await cleanup(db, table, now, retained, canAdmit); // NOSONAR -- Tables share one admission budget.
   return deleted;
 }
 

@@ -234,7 +234,7 @@ async function planDatasets(
     };
     const first = buildRequest(o),
       hash = scopeHash(o, first.payload);
-    const snapshot = reuse ? await reusableSnapshot(trx, scope, { hash, depth, at }) : undefined;
+    const snapshot = reuse ? await reusableSnapshot(trx, scope, { hash, depth, at }) : undefined; // NOSONAR -- One transaction connection.
     if (snapshot) {
       reused.push({
         dataset_id: snapshot.id,
@@ -297,7 +297,7 @@ export async function createReview(
     if (item.competitor_id) saved.set(item.competitor_id, comparison(initial, item.competitor_id));
   const resolved = new Map<string, CanonicalTarget>();
   for (const [id, target] of saved)
-    resolved.set(id, await (options.resolve ?? resolveCompetitor)(target));
+    resolved.set(id, await (options.resolve ?? resolveCompetitor)(target)); // NOSONAR -- A failed site stops before the next is fetched.
   return db.transaction().execute(async (trx) => {
     await scope.workspace
       .selectFrom(trx, 'projects')

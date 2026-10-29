@@ -294,14 +294,14 @@ async function replaceCollections(
     ['unintended_domains', input.unintended_domains],
   ] as const) {
     if (values === undefined) continue;
-    await db.deleteFrom(table).where('project_id', '=', projectId).execute();
+    await db.deleteFrom(table).where('project_id', '=', projectId).execute(); // NOSONAR -- One transaction: delete before its replacement rows.
     const rows = cleanList(values).map((domain) => ({
       id: randomUUID(),
       project_id: projectId,
       domain,
       created_at: now,
     }));
-    if (rows.length) await db.insertInto(table).values(rows).execute();
+    if (rows.length) await db.insertInto(table).values(rows).execute(); // NOSONAR -- One transaction: statements run in order.
   }
   if (input.competitors !== undefined) {
     await db.deleteFrom('competitors').where('project_id', '=', projectId).execute();

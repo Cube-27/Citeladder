@@ -18,11 +18,41 @@ type ResearchMetadata = {
 
 export type ResearchArticle = { frontmatter: ResearchMetadata; markdown: string };
 
+/**
+ * Each `[label](target)` link reduced to its label, in one forward pass. A
+ * match starts at the leftmost `[` whose first following `]` closes a
+ * non-empty label and is followed by `(`, a non-empty target and `)`. Every
+ * `[` before the same `]` shares that verdict, so a failed candidate resumes
+ * at the `]` instead of rescanning the label from each bracket.
+ */
+function linkLabels(markdown: string) {
+  let out = '';
+  let copied = 0;
+  let from = 0;
+  for (;;) {
+    const open = markdown.indexOf('[', from);
+    if (open === -1) break;
+    const close = markdown.indexOf(']', open + 1);
+    if (close === -1) break;
+    if (close > open + 1 && markdown.charAt(close + 1) === '(') {
+      const end = markdown.indexOf(')', close + 2);
+      // No `)` after this point means no later link can close either.
+      if (end === -1) break;
+      if (end > close + 2) {
+        out += markdown.slice(copied, open) + markdown.slice(open + 1, close);
+        copied = end + 1;
+        from = end + 1;
+        continue;
+      }
+    }
+    from = close + 1;
+  }
+  return out + markdown.slice(copied);
+}
+
 /** Inline Markdown reduced to the plain text a search engine reads as an answer. */
 function plainText(markdown: string) {
-  return markdown
-    .replace(/\[\\\[\d+\\\]\]\(#source-\d+\)/g, '')
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+  return linkLabels(markdown.replace(/\[\\\[\d+\\\]\]\(#source-\d+\)/g, ''))
     .replace(/[*_`]/g, '')
     .replace(/\s+/g, ' ')
     .trim();
@@ -34,9 +64,10 @@ function plainText(markdown: string) {
  * heading, its answer. Guides without the section have none.
  */
 export function researchFaqs(markdown: string): { q: string; a: string }[] {
-  const section = /^## Frequently asked questions\s*$([\s\S]*?)(?=^## |(?![\s\S]))/m.exec(
-    markdown,
-  )?.[1];
+  const heading = /^## Frequently asked questions[^\S\n]*$/m.exec(markdown);
+  if (!heading) return [];
+  const rest = markdown.slice(heading.index + heading[0].length);
+  const section = rest.slice(0, /^## /m.exec(rest)?.index ?? rest.length);
   if (!section) return [];
   return section
     .split(/^### /m)

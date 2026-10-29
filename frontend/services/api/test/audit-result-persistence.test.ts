@@ -51,15 +51,10 @@ async function seed(funded = false) {
   );
   const [claimed] = await queue.claim('worker', 1, { workspaceId: t.workspaceId, auditId });
   const running = await queue.markRunning(claimed!, 'worker');
-  const context = await loadExecutionContext(
-    db,
-    running!.task,
-    'worker',
-    runtime,
-    auditTestKey,
-    new Date(),
-    {},
-  );
+  const context = await loadExecutionContext(db, running!.task, 'worker', runtime, auditTestKey, {
+    at: new Date(),
+    env: {},
+  });
   tasks.push(context!.task.id);
   let accountId = '';
   if (funded) {

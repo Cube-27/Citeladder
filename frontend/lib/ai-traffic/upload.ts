@@ -224,11 +224,11 @@ export async function uploadCrawlFile(input: {
       batchBytes += wireSize;
       matched++;
     }
-    for (const line of sample) await consume(line);
+    for (const line of sample) await consume(line); // NOSONAR -- Lines batch in file order; a full batch flushes before the next line.
     for (;;) {
       const next = await iterator.next();
       if (next.done) break;
-      await consume(next.value);
+      await consume(next.value); // NOSONAR -- Streamed lines batch in order; a full batch flushes first.
     }
     if (!scan.first)
       throw new Error(`No log lines from the last ${catalog.max_backdate_days} days to upload`);

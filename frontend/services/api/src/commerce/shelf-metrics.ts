@@ -112,7 +112,7 @@ export async function finalizeCommerceShelf(db: Database, audit: Selectable<Audi
     .where('id', 'in', ids)
     .execute();
   for (const target of targets) {
-    const exists = await db
+    const exists = await db // NOSONAR -- Runs on the caller's audit-lock transaction.
       .selectFrom('commerce_shelf_snapshots')
       .select('id')
       .where('workspace_id', '=', audit.workspace_id)
@@ -123,7 +123,7 @@ export async function finalizeCommerceShelf(db: Database, audit: Selectable<Audi
       .where('formula_version', '=', versions.formula_version!)
       .executeTakeFirst();
     if (exists) continue;
-    const tasks = await db
+    const tasks = await db // NOSONAR -- Runs on the caller's audit-lock transaction.
       .selectFrom('audit_tasks as t')
       .innerJoin('audit_prompt_snapshots as s', 's.id', 't.prompt_snapshot_id')
       .innerJoin('commerce_prompt_targets as c', 'c.prompt_id', 's.prompt_id')
@@ -139,7 +139,7 @@ export async function finalizeCommerceShelf(db: Database, audit: Selectable<Audi
       .where('c.target_kind', '=', target.target_kind)
       .where('c.target_id', '=', target.target_id)
       .execute();
-    const observations = await db
+    const observations = await db // NOSONAR -- Runs on the caller's audit-lock transaction.
       .selectFrom('commerce_recommendation_observations')
       .selectAll()
       .where('workspace_id', '=', audit.workspace_id)
@@ -152,7 +152,7 @@ export async function finalizeCommerceShelf(db: Database, audit: Selectable<Audi
       .orderBy('created_at')
       .orderBy('id')
       .execute();
-    await db
+    await db // NOSONAR -- Runs on the caller's audit-lock transaction.
       .insertInto('commerce_shelf_snapshots')
       .values({
         id: randomUUID(),

@@ -262,7 +262,7 @@ async function insertBuyerPrompt(
 function persist(db: Database, scope: CommerceScope, batches: Batch[]) {
   return db.transaction().execute(async (trx) => {
     const contexts = [];
-    for (const batch of batches) contexts.push(await targetContext(trx, scope, batch.target));
+    for (const batch of batches) contexts.push(await targetContext(trx, scope, batch.target)); // NOSONAR -- One transaction: statements run in order.
     // Capacity is the only advisory lock; never acquire a project/set lock after it.
     await admitPrompts(
       trx,
@@ -278,10 +278,10 @@ function persist(db: Database, scope: CommerceScope, batches: Batch[]) {
         .slice(0, policy.prompts.topic_name_max_chars)
         .trim();
       if (!name) throw unavailable();
-      const topic = await commerceTopic(trx, scope.projectId, name, now);
+      const topic = await commerceTopic(trx, scope.projectId, name, now); // NOSONAR -- One transaction: statements run in order.
       for (const text of batch.texts)
         ids.push(
-          await insertBuyerPrompt(
+          await /* NOSONAR -- One transaction; ids keep generation order. */ insertBuyerPrompt(
             trx,
             scope,
             { set: set.id, topic: topic.id, name },
@@ -335,7 +335,7 @@ export async function generateBuyerPrompts(
   meter: Meter = meterFor(db, scope.workspaceId),
 ) {
   const contexts = [];
-  for (const target of input.targets) contexts.push(await targetContext(db, scope, target));
+  for (const target of input.targets) contexts.push(await targetContext(db, scope, target)); // NOSONAR -- The first unavailable target, in request order, is the error.
   // Skip already tracked texts so a repeat generation is not a 409; the
   // unique normalized hash still guards writes that race this read.
   const tracked = await trackedHashes(db, scope.projectId);

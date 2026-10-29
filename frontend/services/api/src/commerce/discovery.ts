@@ -151,17 +151,21 @@ async function validate(
         const item = candidates[next++]!;
         attempted.add(item.canonical!);
         try {
-          const page = await acquirer.fetch(item.canonical!, {
-            maxBytes: setting('max_response_wire_bytes'),
-            maxDecodedBytes: setting('max_response_decoded_bytes'),
-            timeoutSeconds: p.verify_timeout_seconds,
-            redirects: setting('max_redirects'),
-            contentTypes: ['text/html'],
-            signal: AbortSignal.timeout(p.verify_timeout_seconds * 1000),
-            admit: (url) => {
-              if (exclusion(url.href, '', owned)) throw new Error('Excluded destination');
-            },
-          });
+          const page =
+            await /* NOSONAR -- One page per pool consumer keeps acquisition concurrency bounded. */ acquirer.fetch(
+              item.canonical!,
+              {
+                maxBytes: setting('max_response_wire_bytes'),
+                maxDecodedBytes: setting('max_response_decoded_bytes'),
+                timeoutSeconds: p.verify_timeout_seconds,
+                redirects: setting('max_redirects'),
+                contentTypes: ['text/html'],
+                signal: AbortSignal.timeout(p.verify_timeout_seconds * 1000),
+                admit: (url) => {
+                  if (exclusion(url.href, '', owned)) throw new Error('Excluded destination');
+                },
+              },
+            );
           if (verifyPage(page, kind, owned)) verified.add(item.canonical!);
         } catch {
           /* A rejected or unavailable page never fails its siblings. */

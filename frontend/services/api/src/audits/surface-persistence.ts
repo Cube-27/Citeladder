@@ -63,11 +63,19 @@ export function persistOverview(
   owner: string,
   result: OverviewResult,
   runtime: AuditRuntime,
-  at = new Date(),
-  actualExchange = true,
-  paidSurface = false,
-  derive: DeriveExecution = analyzeExecution,
+  options: {
+    at?: Date;
+    actualExchange?: boolean;
+    paidSurface?: boolean;
+    derive?: DeriveExecution;
+  } = {},
 ) {
+  const {
+    at = new Date(),
+    actualExchange = true,
+    paidSurface = false,
+    derive = analyzeExecution,
+  } = options;
   if (searchPolicy.surface.successful_outcomes.includes(result.outcome))
     return persistExecutionSuccess(
       db,

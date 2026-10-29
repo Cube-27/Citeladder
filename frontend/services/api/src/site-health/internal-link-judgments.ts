@@ -137,7 +137,7 @@ function prepare(db: Database, task: QueueTask, client: JevClient | null) {
         );
         continue;
       }
-      await trx
+      await trx // NOSONAR -- One transaction: dispatch events write in order.
         .insertInto('site_internal_link_events')
         .values(
           open.map(({ id }) => ({
@@ -270,7 +270,7 @@ export function internalLinkJudge(
         buffer = [];
         if (written - published >= settings.publish_every) {
           published = written;
-          await publish(db, task, String(written));
+          await publish(db, task, String(written)); // NOSONAR -- Progress publishes in order as outcomes land.
         }
       }
       await publish(db, task, 'complete');

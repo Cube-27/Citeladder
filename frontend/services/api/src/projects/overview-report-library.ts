@@ -171,9 +171,10 @@ const retrieval: Section = async (context) => {
     asOf: new Date().toISOString(),
     limit: ROWS,
   });
-  report.text(
-    `${misses.responses} answer(s) exposed what the engine read.${misses.unavailable_engines.length ? ` Not available for ${misses.unavailable_engines.join(', ')}.` : ''}`,
-  );
+  const unavailable = misses.unavailable_engines.length
+    ? ` Not available for ${misses.unavailable_engines.join(', ')}.`
+    : '';
+  report.text(`${misses.responses} answer(s) exposed what the engine read.${unavailable}`);
   if (misses.items.length)
     report.table(
       ['Your page read but not cited', 'Read in', 'Cited in'],

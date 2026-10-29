@@ -220,7 +220,7 @@ export const refreshAiReferralsSnapshot: Executor = async (task, { db, checkCanc
         analyzer_version: analytics.ai_referral_analyzer_version,
         formula_version: analytics.ai_referral_formula_version,
       };
-      await trx
+      await trx // NOSONAR -- One transaction: window snapshots write in order.
         .insertInto('ai_referrals_snapshots')
         .values({
           id: randomUUID(),

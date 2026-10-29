@@ -53,8 +53,8 @@ export async function compensateTerminalTasks(db: Database, scope?: ClaimScope) 
   for (const task of tasks) {
     const now = new Date().toISOString();
     try {
-      await compensators[task.task_kind]!(db, task);
-      await mark(db, task, { terminal_compensated_at: now });
+      await compensators[task.task_kind]!(db, task); // NOSONAR -- One task at a time; each is marked before the next.
+      await mark(db, task, { terminal_compensated_at: now }); // NOSONAR -- Marked only after its compensation succeeds.
     } catch (error) {
       const failures = Number(record(task.payload).terminal_compensation_failures ?? 0) + 1;
       const abandoned = failures >= maxFailures;
@@ -63,11 +63,15 @@ export async function compensateTerminalTasks(db: Database, scope?: ClaimScope) 
         error,
         { task_id: task.id, failures },
       );
-      await mark(db, task, {
-        terminal_compensation_failures: failures,
-        terminal_compensation_failed_at: now,
-        ...(abandoned ? { terminal_compensated_at: now } : {}),
-      });
+      await /* NOSONAR -- One task at a time; each failure is recorded before the next. */ mark(
+        db,
+        task,
+        {
+          terminal_compensation_failures: failures,
+          terminal_compensation_failed_at: now,
+          ...(abandoned ? { terminal_compensated_at: now } : {}),
+        },
+      );
     }
   }
 }

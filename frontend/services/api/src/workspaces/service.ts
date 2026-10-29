@@ -109,7 +109,7 @@ export async function provisionAccount(
     createdId = created.id;
     owned = [created];
   }
-  for (const workspace of owned) await ensureWorkspaceBilling(db, workspace.id, user, options);
+  for (const workspace of owned) await ensureWorkspaceBilling(db, workspace.id, user, options); // NOSONAR -- One locked transaction: statements run in order.
   return createdId;
 }
 

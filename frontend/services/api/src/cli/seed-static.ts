@@ -82,14 +82,14 @@ async function project(db: Database, workspaceId: string, userId: string, agency
     ? devSeed.agencyPrompts.map(([text, intent]) => [text, intent, 'active', 'manual'] as const)
     : devSeed.prompts;
   for (const [text, intent, status, origin] of specs) {
-    const present = await db
+    const present = await db // NOSONAR -- Prompts seed in fixture order.
       .selectFrom('prompts')
       .select('id')
       .where('prompt_set_id', '=', setId)
       .where('text', '=', text)
       .executeTakeFirst();
     if (present) continue;
-    const prompt = await createPrompt(
+    const prompt = await /* NOSONAR -- Prompts are created in fixture order. */ createPrompt(
       db,
       workspaceId,
       setId,
@@ -101,7 +101,7 @@ async function project(db: Database, workspaceId: string, userId: string, agency
       }),
     );
     // Proposed/archived/imported rows are explicit fixtures; activation is never inferred.
-    await db
+    await db // NOSONAR -- Status applies to the prompt just created.
       .updateTable('prompts')
       .set({ status, origin })
       .where('id', '=', prompt.id)
@@ -122,14 +122,14 @@ async function providers(
   const transport = { chatgpt: 'openai', claude: 'anthropic', gemini: 'google' } as const;
   for (const engine of engines) {
     const label = `${engine} (dev key)`;
-    const existing = await db
+    const existing = await db // NOSONAR -- Connections seed in engine order.
       .selectFrom('provider_connections')
       .select('id')
       .where('workspace_id', '=', workspaceId)
       .where('label', '=', label)
       .executeTakeFirst();
     if (existing) continue;
-    const row = await createConnection(
+    const row = await /* NOSONAR -- Connections are created in engine order. */ createConnection(
       db,
       workspaceId,
       userId,
@@ -143,7 +143,7 @@ async function providers(
       providerSettings({}),
     );
     // Fixture readiness only: all execution below has an explicit recorded transport.
-    await db
+    await db // NOSONAR -- Readiness applies to the connection just created.
       .updateTable('provider_connections')
       .set({ last_test_status: 'ok', last_tested_at: new Date() })
       .where('workspace_id', '=', workspaceId)
@@ -168,7 +168,7 @@ export async function seedStatic(db: Database, config: ServiceConfig, encryption
     [main, devSeed.workspace],
     [agency, devSeed.agencyWorkspace],
   ] as const)
-    await db
+    await db // NOSONAR -- Two fixture renames; the seed runs in order.
       .updateTable('workspaces')
       .set({ name, updated_at: new Date() })
       .where('id', '=', identity.workspace_id)

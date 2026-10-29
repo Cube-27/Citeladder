@@ -53,7 +53,7 @@ export async function freezeCommerceContext(
   for (const target of distinct.values()) {
     const category =
       target.target_kind === 'category'
-        ? await db
+        ? await db // NOSONAR -- Runs on the audit admission transaction.
             .selectFrom('commerce_categories')
             .select(['id', 'name'])
             .where('workspace_id', '=', scope.workspaceId)
@@ -65,7 +65,7 @@ export async function freezeCommerceContext(
       throw unavailable('Selected Commerce category is unavailable');
     let products;
     if (target.target_kind === 'product') {
-      products = await db
+      products = await db // NOSONAR -- Runs on the audit admission transaction.
         .selectFrom('commerce_products')
         .selectAll()
         .where('workspace_id', '=', scope.workspaceId)
@@ -74,7 +74,7 @@ export async function freezeCommerceContext(
         .where('lifecycle_state', '=', 'active')
         .execute();
     } else if (target.target_kind === 'category') {
-      products = await db
+      products = await db // NOSONAR -- Runs on the audit admission transaction.
         .selectFrom('commerce_products as p')
         .innerJoin('commerce_product_categories as m', 'm.product_id', 'p.id')
         .selectAll('p')
@@ -89,7 +89,7 @@ export async function freezeCommerceContext(
     } else throw unavailable('Selected Commerce target kind is unsupported');
     if (!products.length)
       throw unavailable('Selected Commerce target has no active product evidence');
-    const competitors = await db
+    const competitors = await db // NOSONAR -- Runs on the audit admission transaction.
       .selectFrom('commerce_competitor_candidates')
       .select(['id', 'canonical_url', 'product_name', 'brand_name'])
       .where('workspace_id', '=', scope.workspaceId)

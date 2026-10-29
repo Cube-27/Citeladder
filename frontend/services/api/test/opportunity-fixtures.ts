@@ -178,38 +178,42 @@ export function seedOpportunityScenario(
       .execute();
     for (const [index, text] of texts.entries()) {
       const intent = index === 0 ? 'purchase' : 'discovery';
-      const promptId = await prompt(trx, setId, text);
+      const promptId = await prompt(trx, setId, text); // NOSONAR -- One transaction: fixture statements run in order.
       promptIds.push(promptId);
-      await trx
+      await trx // NOSONAR -- One transaction: fixture statements run in order.
         .updateTable('prompts')
         .set({ theme: 'crm', intent })
         .where('id', '=', promptId)
         .execute();
-      const execution = await fixtures.execution(seed, {
-        auditId,
-        promptIndex: index,
-        promptText: text,
-        theme: 'crm',
-        engine: 'gemini',
-        transportModel: 'gemini-flash-latest',
-        transportProvider: 'google',
-        answerText: 'fixture answer',
-        analysis: {
-          competitorMentions: index === 0 ? ['Globex'] : [],
-          citations:
-            index === 0
-              ? [{ url: 'https://globex.com/crm', title: 'Globex CRM', matched: 'Globex' }]
-              : [{ url: 'https://acme.com/guide', title: 'Acme guide', isOwned: true }],
-        },
-      });
+      const execution =
+        await /* NOSONAR -- One transaction: fixture statements run in order. */ fixtures.execution(
+          seed,
+          {
+            auditId,
+            promptIndex: index,
+            promptText: text,
+            theme: 'crm',
+            engine: 'gemini',
+            transportModel: 'gemini-flash-latest',
+            transportProvider: 'google',
+            answerText: 'fixture answer',
+            analysis: {
+              competitorMentions: index === 0 ? ['Globex'] : [],
+              citations:
+                index === 0
+                  ? [{ url: 'https://globex.com/crm', title: 'Globex CRM', matched: 'Globex' }]
+                  : [{ url: 'https://acme.com/guide', title: 'Acme guide', isOwned: true }],
+            },
+          },
+        );
       analysisIds.push(execution.analysisId!);
-      await trx
+      await trx // NOSONAR -- One transaction: fixture statements run in order.
         .updateTable('audit_prompt_snapshots')
         .set({ prompt_id: promptId, intent })
         .where('audit_id', '=', auditId)
         .where('prompt_index', '=', index)
         .execute();
-      await trx
+      await trx // NOSONAR -- One transaction: fixture statements run in order.
         .updateTable('response_analyses')
         .set({
           analyzer_version: 'b6-analysis-1',
@@ -217,7 +221,7 @@ export function seedOpportunityScenario(
         })
         .where('id', '=', execution.analysisId!)
         .execute();
-      await trx
+      await trx // NOSONAR -- One transaction: fixture statements run in order.
         .updateTable('citations')
         .set({
           analyzer_version: 'b6-analysis-1',
@@ -226,7 +230,7 @@ export function seedOpportunityScenario(
         })
         .where('analysis_id', '=', execution.analysisId!)
         .execute();
-      await trx
+      await trx // NOSONAR -- One transaction: fixture statements run in order.
         .updateTable('competitor_mentions')
         .set({ analyzer_version: 'b6-analysis-1' })
         .where('analysis_id', '=', execution.analysisId!)

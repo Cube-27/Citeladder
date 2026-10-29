@@ -43,7 +43,7 @@ async function registrationBody(request: Request): Promise<unknown> {
   if (reader) {
     try {
       for (;;) {
-        const next = await reader.read();
+        const next = await reader.read(); // NOSONAR -- A stream yields chunks in order; the size cap stops early.
         if (next.done) break;
         size += next.value.byteLength;
         if (size > limit) {

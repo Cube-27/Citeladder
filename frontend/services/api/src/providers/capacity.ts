@@ -93,7 +93,7 @@ async function lockBuckets(
   // Both runtimes acquire this exact order: transport, connection, funded-global, funded-account.
   for (const pool of pools(request)) {
     if (create)
-      await db
+      await db // NOSONAR -- Buckets lock in a fixed order on one transaction.
         .insertInto('provider_capacity_buckets')
         .values({
           id: randomUUID(),
@@ -113,10 +113,10 @@ async function lockBuckets(
         })
         .onConflict((conflict) => conflict.doNothing())
         .execute();
-    let bucket = await bucketQuery(db, request, pool).executeTakeFirst();
+    let bucket = await bucketQuery(db, request, pool).executeTakeFirst(); // NOSONAR -- Buckets lock in a fixed order on one transaction.
     if (!bucket) continue;
     if (create)
-      bucket = await db
+      bucket = await db // NOSONAR -- Buckets lock in a fixed order on one transaction.
         .updateTable('provider_capacity_buckets')
         .set({
           capacity: String(ceiling(pool, route, runtime)),
@@ -209,7 +209,7 @@ export async function acquireCapacity(
     if (blocked) return blocked;
     const leaseIds: string[] = [];
     for (const { bucket } of rows) {
-      const prior = await trx
+      const prior = await trx // NOSONAR -- One transaction: leases follow the bucket lock order.
         .selectFrom('provider_capacity_leases')
         .select('id')
         .where('bucket_id', '=', bucket.id)
@@ -224,7 +224,7 @@ export async function acquireCapacity(
         .executeTakeFirst();
       const expiry = new Date(at.getTime() + runtime.audits.capacity_lease_ttl_seconds * 1000);
       if (prior) {
-        await trx
+        await trx // NOSONAR -- One transaction: leases follow the bucket lock order.
           .updateTable('provider_capacity_leases')
           .set({ units: '1', released_at: null, expires_at: expiry, updated_at: at })
           .where('id', '=', prior.id)
@@ -232,7 +232,7 @@ export async function acquireCapacity(
         leaseIds.push(prior.id);
       } else {
         const id = randomUUID();
-        await trx
+        await trx // NOSONAR -- One transaction: leases follow the bucket lock order.
           .insertInto('provider_capacity_leases')
           .values({
             id,

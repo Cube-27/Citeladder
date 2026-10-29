@@ -107,7 +107,7 @@ export const ingestReferrals: Executor = async (task, { db, maxAttempts }) => {
       ];
     });
     for (let start = 0; start < events.length; start += INSERT_CHUNK) {
-      await trx
+      await trx // NOSONAR -- One transaction: bounded inserts run in order.
         .insertInto('referral_events')
         .values(events.slice(start, start + INSERT_CHUNK))
         .onConflict((conflict) => conflict.columns(['import_id', 'content_hash']).doNothing())

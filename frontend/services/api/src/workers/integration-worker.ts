@@ -503,7 +503,7 @@ export class IntegrationWorker {
       // batched so a 25,000-row page is a few statements rather than one per row.
       const createdAt = new Date();
       for (let index = 0; index < rows.length; index += METRIC_INSERT_BATCH) {
-        await trx
+        await trx // NOSONAR -- One page transaction: batches insert in order.
           .insertInto('integration_metric_rows')
           .values(
             rows.slice(index, index + METRIC_INSERT_BATCH).map((row) => ({

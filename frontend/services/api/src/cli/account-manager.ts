@@ -86,7 +86,12 @@ else {
     );
     console.log(`Managing ${workspaceId} as ${actor}`);
     // A choice includes prompts and confirmation; finish it before asking for another.
-    while (await manageChoice(db, session)) {
+    while (
+      await /* NOSONAR -- Interactive menu: one operator choice at a time. */ manageChoice(
+        db,
+        session,
+      )
+    ) {
       /* interactive session */
     }
   });

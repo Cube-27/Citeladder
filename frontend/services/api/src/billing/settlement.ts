@@ -245,6 +245,21 @@ async function settlePack(
   });
 }
 
+/** Settles an upgrade or pack payment; false while the evidence carries no payment yet. */
+async function settleOneOff(
+  db: Database,
+  pending: Pending,
+  evidence: Extract<Evidence, { kind: 'payment' }>,
+  context: { quote: Quote; frozen: Frozen; workspaceId: string },
+) {
+  if (pending.activation_kind === 'base') conflict('provider_record_kind_mismatch');
+  if (!evidence.payment) return false;
+  if (pending.activation_kind === 'upgrade')
+    await settleUpgrade(db, pending, evidence, context.workspaceId);
+  else await settlePack(db, pending, evidence.payment, context);
+  return true;
+}
+
 export async function settlePending(
   db: Database,
   pendingId: string,
@@ -285,15 +300,11 @@ export async function settlePending(
   const quote = resolvedQuoteSchema.parse(pending.quote);
   if (quote.catalog_revision !== pending.catalog_revision) conflict('catalog_revision_mismatch');
   const frozen = await catalog(db, pending.catalog_revision);
-  if (evidence.kind === 'base') {
-    if (!(await settleBase(db, pending, evidence, { quote, frozen, ref, workspaceId }))) return;
-  } else {
-    if (pending.activation_kind === 'base') conflict('provider_record_kind_mismatch');
-    if (!evidence.payment) return;
-    if (pending.activation_kind === 'upgrade')
-      await settleUpgrade(db, pending, evidence, workspaceId);
-    else await settlePack(db, pending, evidence.payment, { quote, frozen, workspaceId });
-  }
+  const settled =
+    evidence.kind === 'base'
+      ? await settleBase(db, pending, evidence, { quote, frozen, ref, workspaceId })
+      : await settleOneOff(db, pending, evidence, { quote, frozen, workspaceId });
+  if (!settled) return;
   await db
     .updateTable('pending_activations')
     .set({

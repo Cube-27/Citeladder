@@ -122,7 +122,7 @@ export function claimPages(db: Database, scope: SourceScope, now = new Date(), t
         ? 'recheck'
         : 'page';
       if (
-        !(await spend(
+        !(await /* NOSONAR -- One transaction: each claim spends the budget in order. */ spend(
           trx,
           scope,
           kind,
@@ -132,7 +132,7 @@ export function claimPages(db: Database, scope: SourceScope, now = new Date(), t
         ))
       )
         continue;
-      await trx
+      await trx // NOSONAR -- One transaction: each claim spends the budget in order.
         .updateTable('source_pages')
         .set({ inspection_state: v.INSPECTION_QUEUED, claim_expires_at: lease, updated_at: now })
         .where('workspace_id', '=', scope.workspaceId)

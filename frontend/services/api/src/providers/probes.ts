@@ -180,7 +180,7 @@ export async function probeConnection(
     let errorCode = '';
     let model = item.model;
     try {
-      model = await attemptProbe({
+      model = await /* NOSONAR -- Provider probes run one at a time. */ attemptProbe({
         connection,
         item,
         engine,
@@ -195,10 +195,18 @@ export async function probeConnection(
     const testedAt = new Date();
     const latency = Math.round(performance.now() - started);
     const outcome = { status, errorCode, model };
-    const result = await recordProbe(db, workspaceId, connection, item, outcome, {
-      latency,
-      testedAt,
-    });
+    const result =
+      await /* NOSONAR -- Each probe is recorded before the next is sent. */ recordProbe(
+        db,
+        workspaceId,
+        connection,
+        item,
+        outcome,
+        {
+          latency,
+          testedAt,
+        },
+      );
     results.push(result);
   }
   if (!isNonEmpty(results)) throw new Error('Expected at least one probe result');

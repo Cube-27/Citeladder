@@ -321,7 +321,7 @@ export function refreshDifferentiation(
         report: JSON.stringify(report),
         created_at: new Date(),
       };
-      await trx
+      await trx // NOSONAR -- One transaction: reports upsert in order.
         .insertInto('content_differentiation_reports')
         .values(values)
         .onConflict((oc) =>

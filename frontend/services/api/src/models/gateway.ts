@@ -297,7 +297,7 @@ function openAICompletion(
         legacy = true;
       else if (strict) strict = false;
       else break;
-      response = await send(legacy, strict);
+      response = await send(legacy, strict); // NOSONAR -- Each fallback depends on the previous rejection.
     }
     if (response.ok) {
       legacyCap = legacy;

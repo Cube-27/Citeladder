@@ -462,10 +462,15 @@ const writeDefinitions = {
       );
       await rehearse(context.db, async (trx) => {
         for (const group of groups)
-          await setPromptStatuses(trx, actor, group.prompt_set_id, {
-            ...group,
-            status: 'archived',
-          });
+          await /* NOSONAR -- One rehearsal transaction: groups apply in order. */ setPromptStatuses(
+            trx,
+            actor,
+            group.prompt_set_id,
+            {
+              ...group,
+              status: 'archived',
+            },
+          );
       });
       const skipped = rows.length - active.length;
       const skippedNote = skipped ? ` ${skipped} already archived.` : '';

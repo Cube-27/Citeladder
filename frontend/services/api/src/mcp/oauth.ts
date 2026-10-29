@@ -278,12 +278,15 @@ export function completeConsent(
       const shareable = await consentWorkspaces(trx, userId);
       const needTerms = validateConsentSelection(unique, shareable, decision);
       for (const workspaceId of needTerms)
-        await recordPolicyAcceptance(trx, {
-          workspaceId,
-          actorId: userId,
-          revision: policy.mcp.terms_revision,
-          context: 'mcp_consent',
-        });
+        await /* NOSONAR -- One transaction: acceptances record in order. */ recordPolicyAcceptance(
+          trx,
+          {
+            workspaceId,
+            actorId: userId,
+            revision: policy.mcp.terms_revision,
+            context: 'mcp_consent',
+          },
+        );
       const changes =
         decision.allowChanges &&
         shareable.some((w) => w.canChange && unique.includes(w.id)) &&
@@ -310,7 +313,7 @@ export function completeConsent(
           created_at: new Date(),
         })
         .execute();
-      for (const id of unique) await recordSecurityEvent(trx, 'mcp.consent', userId, id);
+      for (const id of unique) await recordSecurityEvent(trx, 'mcp.consent', userId, id); // NOSONAR -- One transaction: events record in order.
       destination.searchParams.set('code', code);
     }
     await trx

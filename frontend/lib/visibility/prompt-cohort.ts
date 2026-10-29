@@ -11,8 +11,11 @@ export type PromptCohort = (typeof PROMPT_COHORTS)[number];
 
 const storageKey = (projectId: string) => `citeladder.prompt-cohort.${projectId}`;
 
+/** The cohorts widened for membership tests against untrusted stored text. */
+const COHORT_VALUES: readonly (string | null)[] = PROMPT_COHORTS;
+
 const isPromptCohort = (value: string | null): value is PromptCohort =>
-  PROMPT_COHORTS.some((cohort) => cohort === value);
+  COHORT_VALUES.includes(value);
 
 /** The project's remembered cohort; unbranded when none is stored or storage fails. */
 function readStoredCohort(projectId: string | null): PromptCohort {

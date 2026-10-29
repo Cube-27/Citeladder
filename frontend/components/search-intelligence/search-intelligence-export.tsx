@@ -35,12 +35,13 @@ export function SearchIntelligenceExport({
       const exported: SearchIntelligenceRow[] = [];
       let cursor: string | undefined;
       do {
-        const saved = await searchIntelligenceApi.rows(
-          activeProject.id,
-          dataset.id,
-          { workspaceId: activeProject.workspace_id, signal },
-          { ...params, cursor, limit: 200 },
-        );
+        const saved =
+          await /* NOSONAR -- Each page needs the previous page's cursor. */ searchIntelligenceApi.rows(
+            activeProject.id,
+            dataset.id,
+            { workspaceId: activeProject.workspace_id, signal },
+            { ...params, cursor, limit: 200 },
+          );
         exported.push(...saved.rows);
         cursor = saved.next_cursor ?? undefined;
       } while (cursor);

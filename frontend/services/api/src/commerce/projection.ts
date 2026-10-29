@@ -211,8 +211,8 @@ async function projectProduct(
     projector_version: policy.commerce.projector_version,
   });
   for (const name of productCategories(facts, url, [source.final_url, source.requested_url])) {
-    const category = await categoryByName(db, scope, name.slice(0, 255));
-    await addMembership(db, scope, product.id, category.id, observation);
+    const category = await categoryByName(db, scope, name.slice(0, 255)); // NOSONAR -- One projection transaction: statements run in order.
+    await addMembership(db, scope, product.id, category.id, observation); // NOSONAR -- One projection transaction: statements run in order.
   }
   return { productId: product.id };
 }
@@ -299,7 +299,7 @@ async function linkShelves(db: Database, scope: CommerceScope, crawlId: string, 
   );
   for (const shelf of shelves)
     for (const productId of listedProducts(shelf.links, identities, productsByUrl))
-      await addMembership(db, scope, productId, shelf.id, null);
+      await addMembership(db, scope, productId, shelf.id, null); // NOSONAR -- One projection transaction: statements run in order.
 }
 
 export const projectCatalog: Executor = async (task, { db, checkCancelled }) => {
