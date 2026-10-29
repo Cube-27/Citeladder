@@ -8,6 +8,7 @@ import { sql } from 'kysely';
 import { policy } from '../config.ts';
 import { ApiError } from '../errors.ts';
 import { advisoryXactLock } from '../db/advisory-lock.ts';
+import { hasDevelopmentWorkspace } from '../auth/development-access.ts';
 import type { Database } from '../db/database.ts';
 import { debitUsage, ledgerBalances, releaseUsage, reserveUsage } from '../entitlements/ledger.ts';
 import { accountState } from '../entitlements/state.ts';
@@ -22,13 +23,17 @@ export const unresolvedEntitlement = () =>
     retryable: false,
   });
 
-/** Capacity stays locked through reservation and the caller's admission commit. */
+/**
+ * Capacity stays locked through reservation and the caller's admission commit.
+ * The configured development operator's workspace crawls unmetered.
+ */
 export async function budgetedPageLimit(
   db: Database,
   workspaceId: string,
   requested: number,
   at: Date,
 ) {
+  if (await hasDevelopmentWorkspace(db, workspaceId)) return { limit: requested, accountId: null };
   const account = await db
     .selectFrom('billing_accounts')
     .select('id')

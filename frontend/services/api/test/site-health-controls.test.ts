@@ -243,6 +243,30 @@ describe('crawl control admission', () => {
     ).toBe(3);
   });
 
+  it('crawls the development operator workspace past an exhausted fetch allowance, unreserved', async () => {
+    const seed = await fixtures.crawl();
+    const other = await otherProject(seed);
+    await allow(seed, 4, 0);
+    await expect(create(other)).rejects.toMatchObject({ code: 'site_health_fetches_exhausted' });
+    const email = `dev-${seed.userId}@example.test`;
+    vi.stubEnv('DEV_LOGIN_EMAIL', email);
+    vi.stubEnv('DEV_LOGIN_PASSWORD', 'test-only-development-password');
+    await db
+      .updateTable('users')
+      .set({ email, role: 'admin' })
+      .where('id', '=', seed.userId)
+      .execute();
+    const crawl = await create(other);
+    expect(crawl.discovery_requested_count).toBe(100);
+    expect(
+      await db
+        .selectFrom('consumable_ledger')
+        .select('entry_kind')
+        .where('site_crawl_id', '=', crawl.id)
+        .execute(),
+    ).toEqual([]);
+  });
+
   it.each(['global', 'development'])(
     'freezes exact seeds when advanced controls are enabled by %s access',
     async (access) => {
