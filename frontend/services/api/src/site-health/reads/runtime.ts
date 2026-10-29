@@ -54,16 +54,22 @@ export async function entitlementView(
   };
 }
 
+/** Active monitored URLs across the workspace: what `monitored_urls` occupancy counts. */
+export async function monitoredUrlCount(db: Database, workspaceId: string) {
+  const row = await db
+    .selectFrom('monitored_site_urls')
+    .select((eb) => eb.fn.countAll<string>().as('count'))
+    .where('workspace_id', '=', workspaceId)
+    .where('active', '=', true)
+    .executeTakeFirstOrThrow();
+  return Number(row.count);
+}
+
 /** Active monitored URLs across the workspace against its monitored allowance. */
 export async function monitoredQuota(db: Database, workspaceId: string, at: Date) {
   const [{ runtime }, used] = await Promise.all([
     runtimeState(db, workspaceId, at),
-    db
-      .selectFrom('monitored_site_urls')
-      .select((eb) => eb.fn.countAll<string>().as('count'))
-      .where('workspace_id', '=', workspaceId)
-      .where('active', '=', true)
-      .executeTakeFirstOrThrow(),
+    monitoredUrlCount(db, workspaceId),
   ]);
-  return { used: Number(used.count), limit: runtime.monitored_url_limit };
+  return { used, limit: runtime.monitored_url_limit };
 }

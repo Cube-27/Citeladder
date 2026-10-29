@@ -16,6 +16,9 @@ import { credentialModeOf, type CredentialMode } from './credential-mode.ts';
 import { checkoutAvailable } from './razorpay.ts';
 import { cancellationHeldUntil } from './cancellation.ts';
 import { scheduledSchema } from './settlement.ts';
+import { apiKeyCount, marketCount } from '../entitlements/occupancy.ts';
+import { manualRunUsage } from '../audits/admission.ts';
+import { monitoredUrlCount } from '../site-health/reads/runtime.ts';
 
 const UNITS: Record<string, string> = {
   'counter.consumable': 'credits',
@@ -132,11 +135,12 @@ export async function publicCatalog(
   });
 }
 
-async function occupancyHints(
+/** What each occupancy counter has in use, counted as its admission check counts it. */
+async function occupancyCounts(
   db: Database,
   workspaceId: string,
-  values: ReadonlyMap<string, number>,
-) {
+  at: Date,
+): Promise<ReadonlyMap<string, number>> {
   const projects = await db
     .selectFrom('projects')
     .select(sql<string>`count(*)`.as('count'))
@@ -149,21 +153,27 @@ async function occupancyHints(
     .select(sql<string>`count(*)`.as('count'))
     .where('projects.workspace_id', '=', workspaceId)
     .executeTakeFirstOrThrow();
-  return [
-    ['project_slots', Number(projects.count)],
-    ['prompt_slots', Number(prompts.count)],
-  ].flatMap(([key, consumed]) => {
-    const allowance = values.get(String(key));
+  const { entitlements } = policy;
+  return new Map([
+    [entitlements.project_slots, Number(projects.count)],
+    [entitlements.prompt_slots, Number(prompts.count)],
+    ['monitored_urls', await monitoredUrlCount(db, workspaceId)],
+    [entitlements.api_keys, await apiKeyCount(db, workspaceId, at)],
+    [entitlements.market_slots, await marketCount(db, workspaceId)],
+  ]);
+}
+
+async function occupancyHints(
+  db: Database,
+  workspaceId: string,
+  values: ReadonlyMap<string, number>,
+  at: Date,
+) {
+  return [...(await occupancyCounts(db, workspaceId, at))].flatMap(([key, consumed]) => {
+    const allowance = values.get(key);
     return allowance === undefined
       ? []
-      : [
-          {
-            key: String(key),
-            allowance,
-            consumed: Number(consumed),
-            remaining: Math.max(0, allowance - Number(consumed)),
-          },
-        ];
+      : [{ key, allowance, consumed, remaining: Math.max(0, allowance - consumed) }];
   });
 }
 
@@ -249,7 +259,50 @@ export async function usageRead(db: Database, workspaceId: string, at: Date) {
   const account = await workspaceAccount(db, workspaceId);
   const state = await accountState(db, workspaceId, account.id, at);
   const balances = await ledgerBalances(db, account.id);
-  const occupancy = await occupancyHints(db, workspaceId, state.values);
+  const occupancy = await occupancyCounts(db, workspaceId, at);
+  const manualRuns = await manualRunUsage(db, account.id, { at, launchId: null });
+  const rates = new Map([['manual_runs_per_day', manualRuns]]);
+  /**
+   * A consumable sums its grants' ledger balances. Occupancy and rate counters
+   * count what is in use as admission does: no occupancy grant admits none,
+   * and no rate grant means no rate limit.
+   */
+  const aggregate = (
+    key: string,
+    type: string,
+    grants: readonly { allowance: number; consumed: number; reserved: number }[],
+  ) => {
+    const sum = (field: 'allowance' | 'consumed' | 'reserved') =>
+      grants.reduce((total, grant) => total + grant[field], 0);
+    const rate = rates.get(key);
+    const used = type === 'counter.rate' ? rate?.used : occupancy.get(key);
+    const unknown = {
+      limit_state: 'unknown',
+      allowance: null,
+      consumed: null,
+      reserved: null,
+      remaining: null,
+      resets_at: null,
+    };
+    if (state.error) return unknown;
+    if (type === 'counter.consumable') {
+      const [allowance, consumed, reserved] = [sum('allowance'), sum('consumed'), sum('reserved')];
+      const remaining = Math.max(0, allowance - consumed - reserved);
+      return { ...unknown, limit_state: 'finite', allowance, consumed, reserved, remaining };
+    }
+    if (used === undefined) return unknown;
+    const allowance = state.values.get(key);
+    if (type === 'counter.rate' && allowance === undefined)
+      return { ...unknown, limit_state: 'unlimited', consumed: used, reserved: 0 };
+    return {
+      limit_state: 'finite',
+      allowance: allowance ?? 0,
+      consumed: used,
+      reserved: 0,
+      remaining: Math.max(0, (allowance ?? 0) - used),
+      resets_at: rate?.resetsAt?.toISOString() ?? null,
+    };
+  };
   const items = Object.entries(policy.entitlements.capabilities)
     .filter(([, definition]) => definition.public && definition.type.startsWith('counter.'))
     .map(([key, definition]) => {
@@ -268,25 +321,12 @@ export async function usageRead(db: Database, workspaceId: string, at: Date) {
       const expiries = grants
         .flatMap((grant) => (grant.effective_valid_until ? [grant.effective_valid_until] : []))
         .sort((a, b) => a.localeCompare(b));
-      const known = definition.type === 'counter.consumable' && !state.error;
-      const allowance = known ? grants.reduce((sum, grant) => sum + grant.allowance, 0) : null;
-      const consumed = known ? grants.reduce((sum, grant) => sum + grant.consumed, 0) : null;
-      const reserved = known ? grants.reduce((sum, grant) => sum + grant.reserved, 0) : null;
-      const hint = occupancy.find((row) => row.key === key);
       return {
         key,
         capability_type: definition.type,
         unit: UNITS[definition.type] ?? 'runs',
-        limit_state: known || hint ? 'finite' : 'unknown',
-        allowance: hint?.allowance ?? allowance,
-        consumed: hint?.consumed ?? consumed,
-        reserved: hint ? 0 : reserved,
-        remaining:
-          hint?.remaining ?? (known ? Math.max(0, allowance! - consumed! - reserved!) : null),
+        ...aggregate(key, definition.type, grants),
         window_started_at: null,
-        resets_at: definition.rolling_window_seconds
-          ? new Date(at.getTime() + definition.rolling_window_seconds * 1000).toISOString()
-          : null,
         earliest_expiry: expiries[0] ?? null,
         grants,
       };
@@ -324,6 +364,6 @@ export async function workspaceEntitlementRead(db: Database, workspaceId: string
           provenance: 'effective_grant',
         }))
       : [],
-    occupancy: state ? await occupancyHints(db, workspaceId, state.values) : [],
+    occupancy: state ? await occupancyHints(db, workspaceId, state.values, at) : [],
   });
 }

@@ -60,13 +60,18 @@ export async function reserveAuditCapacity(
   );
 }
 
-async function assertManualRunAllowance(
+const MANUAL_RUN_WINDOW_SECONDS =
+  policy.entitlements.capabilities.manual_runs_per_day.rolling_window_seconds;
+
+/**
+ * Manual launches in the account's rolling window, other than `launchId`, and
+ * when the window frees its oldest one: what `manual_runs_per_day` counts.
+ */
+export async function manualRunUsage(
   db: Database,
   accountId: string,
-  allowance: number,
   { at, launchId }: { at: Date; launchId: string | null },
 ) {
-  const seconds = policy.entitlements.capabilities.manual_runs_per_day.rolling_window_seconds;
   // One launch is one manual run, whatever its market count.
   let launches = db
     .selectFrom('audits as a')
@@ -77,20 +82,28 @@ async function assertManualRunAllowance(
     ])
     .where('b.id', '=', accountId)
     .where('a.trigger', '=', 'manual')
-    .where('a.created_at', '>', new Date(at.getTime() - seconds * 1000));
+    .where('a.created_at', '>', new Date(at.getTime() - MANUAL_RUN_WINDOW_SECONDS * 1000));
   if (launchId) launches = launches.where('a.launch_id', 'is distinct from', launchId);
   const recent = await launches.executeTakeFirstOrThrow();
-  if (Number(recent.count) >= allowance)
+  return {
+    used: Number(recent.count),
+    resetsAt: recent.oldest
+      ? new Date(recent.oldest.getTime() + MANUAL_RUN_WINDOW_SECONDS * 1000)
+      : null,
+  };
+}
+
+async function assertManualRunAllowance(
+  db: Database,
+  accountId: string,
+  allowance: number,
+  window: { at: Date; launchId: string | null },
+) {
+  const { used, resetsAt } = await manualRunUsage(db, accountId, window);
+  if (used >= allowance)
     throw new ApiError(429, 'The account manual run allowance is exhausted', {
       code: 'manual_run_rate_exceeded',
-      details: {
-        allowance,
-        used: Number(recent.count),
-        remaining: 0,
-        reset_at: recent.oldest
-          ? new Date(recent.oldest.getTime() + seconds * 1000).toISOString()
-          : null,
-      },
+      details: { allowance, used, remaining: 0, reset_at: resetsAt?.toISOString() ?? null },
     });
 }
 /**

@@ -94,14 +94,7 @@ export async function admitApiKey(db: Database, workspaceId: string, now: Date):
       code: 'api_access_not_in_plan',
     });
   const allowance = resolved.values.get(policy.entitlements.api_keys) ?? 0;
-  const row = await db
-    .selectFrom('api_keys')
-    .select(sql<string>`count(*)`.as('count'))
-    .where('workspace_id', '=', workspaceId)
-    .where('revoked_at', 'is', null)
-    .where((eb) => eb.or([eb('expires_at', 'is', null), eb('expires_at', '>', now)]))
-    .executeTakeFirstOrThrow();
-  const current = Number(row.count);
+  const current = await apiKeyCount(db, workspaceId, now);
   if (current + 1 > allowance)
     throw new ApiError(409, `This workspace already has ${current} of ${allowance} API keys`, {
       code: 'api_key_limit_reached',
@@ -125,12 +118,7 @@ export async function admitMarket(db: Database, workspaceId: string): Promise<vo
     });
   const key = policy.entitlements.market_slots;
   const allowance = resolved.values.get(key) ?? 0;
-  const row = await db
-    .selectFrom('project_markets')
-    .select(sql<string>`count(*)`.as('count'))
-    .where('workspace_id', '=', workspaceId)
-    .executeTakeFirstOrThrow();
-  const current = Number(row.count);
+  const current = await marketCount(db, workspaceId);
   if (current + 1 > allowance)
     throw new ApiError(
       403,
@@ -139,6 +127,28 @@ export async function admitMarket(db: Database, workspaceId: string): Promise<vo
         : "Additional markets are not included in this workspace's plan",
       { code: LIMIT_EXCEEDED, details: { key, allowance, current, requested: 1 } },
     );
+}
+
+/** The workspace's unrevoked, unexpired API keys: what `api_keys` occupancy counts. */
+export async function apiKeyCount(db: Database, workspaceId: string, now: Date): Promise<number> {
+  const row = await db
+    .selectFrom('api_keys')
+    .select(sql<string>`count(*)`.as('count'))
+    .where('workspace_id', '=', workspaceId)
+    .where('revoked_at', 'is', null)
+    .where((eb) => eb.or([eb('expires_at', 'is', null), eb('expires_at', '>', now)]))
+    .executeTakeFirstOrThrow();
+  return Number(row.count);
+}
+
+/** The workspace's additional measurement markets: what `market_slots` occupancy counts. */
+export async function marketCount(db: Database, workspaceId: string): Promise<number> {
+  const row = await db
+    .selectFrom('project_markets')
+    .select(sql<string>`count(*)`.as('count'))
+    .where('workspace_id', '=', workspaceId)
+    .executeTakeFirstOrThrow();
+  return Number(row.count);
 }
 
 /**

@@ -1545,6 +1545,43 @@ describe('billing money and access owner', () => {
       (await entitlementRead(db, config, t.workspaceId, new Date())).capabilities.length,
     ).toBeGreaterThan(0);
   });
+  it('reads occupancy and rate usage as admission counts it, not as unresolved', async () => {
+    const t = await fixtures.tenant();
+    await grant(db, t.accountId, { key: 'api_keys', value: 3 });
+    const keyId = randomUUID();
+    await db
+      .insertInto('api_keys')
+      .values({
+        id: keyId,
+        workspace_id: t.workspaceId,
+        name: 'automation',
+        prefix: keyId.slice(0, 8),
+        secret_hmac: Buffer.from(randomUUID()),
+        scopes: ['read'],
+        project_ids: null,
+        created_by_user_id: t.userId,
+        created_at: new Date(),
+        expires_at: null,
+        last_used_at: null,
+        rejection_logged_at: null,
+        revoked_at: null,
+        revoke_reason: null,
+      })
+      .execute();
+    try {
+      const usage = await usageRead(db, t.workspaceId, new Date());
+      const item = (key: string) => {
+        const row = usage.items.find((candidate) => candidate.key === key);
+        return row && [row.limit_state, row.allowance, row.consumed, row.remaining];
+      };
+      expect(item('api_keys')).toEqual(['finite', 3, 1, 2]);
+      expect(item('market_slots')).toEqual(['finite', 0, 0, 0]);
+      expect(item('monitored_urls')).toEqual(['finite', 0, 0, 0]);
+      expect(item('manual_runs_per_day')).toEqual(['unlimited', null, 0, null]);
+    } finally {
+      await db.deleteFrom('api_keys').where('id', '=', keyId).execute();
+    }
+  });
   it('reads checkout and verifies a browser callback without provider I/O or paid access', async () => {
     const t = await fixtures.tenant();
     const before = await db
