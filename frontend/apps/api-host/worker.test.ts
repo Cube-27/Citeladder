@@ -159,6 +159,16 @@ describe('API host route ownership', () => {
     expect(response.headers.get('location')).toBe('https://docs.citeladder.com/api/');
     expect(sent).toHaveLength(0);
   });
+  it('disallows every crawler from robots.txt without reaching the origin', async () => {
+    const sent = captureUpstream();
+    const response = await routeApiHostRequest(
+      new Request('https://api.citeladder.com/robots.txt'),
+      env,
+    );
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe('User-agent: *\nDisallow: /\n');
+    expect(sent).toHaveLength(0);
+  });
   it('answers the OpenAI apps challenge from its setting without reaching the origin', async () => {
     const sent = captureUpstream();
     const challenge = (method: string, config: ApiHostEnv) =>

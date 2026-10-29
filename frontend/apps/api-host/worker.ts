@@ -64,6 +64,14 @@ export async function routeApiHostRequest(request: Request, env: ApiHostEnv): Pr
           headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' },
         })
       : notFound();
+  // Nothing on this host is a page; crawlers are told so instead of meeting a 404.
+  if (url.pathname === '/robots.txt' && (request.method === 'GET' || request.method === 'HEAD'))
+    return new Response('User-agent: *\nDisallow: /\n', {
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'public, max-age=86400',
+      },
+    });
   // The bare host has no API of its own; readers who land there want the docs.
   if (url.pathname === '/' && (request.method === 'GET' || request.method === 'HEAD'))
     return Response.redirect(API_DOCS_URL, 301);
