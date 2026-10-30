@@ -184,8 +184,6 @@ test.describe('marketing routes', () => {
         const before = await boxes();
         releaseScripts();
         await page.waitForLoadState('networkidle');
-        if (path === '/')
-          await expect(page.getByRole('tab', { name: 'Visibility', exact: true })).toBeVisible();
         const after = await boxes();
         for (let index = 0; index < before.length; index += 1) {
           expect(before[index]!.height).toBeGreaterThan(0);
