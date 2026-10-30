@@ -149,11 +149,11 @@ export function MarketingFooter() {
                 <img
                   src="https://www.codehype.ai/badges/citeladder.svg?variant=find-us&v=20"
                   alt="Featured on CodeHype"
-                  width={180}
-                  height={65}
+                  width={112}
+                  height={40}
                   loading="lazy"
                   decoding="async"
-                  className="block h-auto w-full max-w-45"
+                  className="block h-auto w-full max-w-28"
                 />
               </a>
               <span className="inline-flex flex-col items-center">
@@ -165,18 +165,18 @@ export function MarketingFooter() {
                   <img
                     src="https://tools.launchllama.co/featured-badge.png?v=2"
                     alt="Featured on Launch"
-                    width={200}
-                    height={52}
+                    width={112}
+                    height={29}
                     loading="lazy"
                     decoding="async"
-                    className="block"
+                    className="block h-auto w-28"
                   />
                 </a>
                 <a
                   href="https://launchmcp.co/?utm_source=badge&utm_medium=referral"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-muted hover:text-foreground text-xs font-semibold"
+                  className="text-muted hover:text-foreground text-xs font-medium"
                 >
                   Launch MCP
                 </a>

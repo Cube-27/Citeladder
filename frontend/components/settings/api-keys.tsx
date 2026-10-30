@@ -323,7 +323,7 @@ export function ApiKeys() {
           columns={KEY_COLUMNS}
           state={
             keys.length === 0
-              ? { kind: 'empty', icon: KeyRound, headingLevel: 3, heading: 'No API keys yet.' }
+              ? { kind: 'empty', icon: KeyRound, headingLevel: 3, heading: 'No API keys yet' }
               : undefined
           }
         >

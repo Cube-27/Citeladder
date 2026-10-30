@@ -162,7 +162,7 @@ test.describe('marketing routes', () => {
             [
               '400 14px "Geist Variable"',
               '500 14px "Geist Variable"',
-              '500 32px "Sora Variable"',
+              '500 32px "Uncut Sans Variable"',
             ].map((font) => document.fonts.load(font)),
           ),
         );
@@ -184,8 +184,6 @@ test.describe('marketing routes', () => {
         const before = await boxes();
         releaseScripts();
         await page.waitForLoadState('networkidle');
-        if (path === '/')
-          await expect(page.getByRole('tab', { name: 'Visibility', exact: true })).toBeVisible();
         const after = await boxes();
         for (let index = 0; index < before.length; index += 1) {
           expect(before[index]!.height).toBeGreaterThan(0);
@@ -476,9 +474,7 @@ test.describe('marketing routes', () => {
     expect((await request.get('/ai-citation-tracking/does-not-exist')).status()).toBe(404);
     await context.close();
   });
-  test('public paper surfaces and long tabs stay usable across viewport sizes', async ({
-    page,
-  }) => {
+  test('public paper surfaces stay usable across viewport sizes', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     for (const width of [1440, 1024, 390]) {
       await page.setViewportSize({ width, height: 1000 });
@@ -488,12 +484,6 @@ test.describe('marketing routes', () => {
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
         true,
       );
-      const strip = page.getByRole('tablist', { name: 'Product tour' });
-      await strip.scrollIntoViewIfNeeded();
-      const last = strip.getByRole('tab').last();
-      await last.focus();
-      await expect(last).toBeInViewport();
-      await page.evaluate(() => window.scrollTo(0, 0));
       await page.screenshot({
         path: test.info().outputPath(`marketing-${width}.png`),
         fullPage: true,

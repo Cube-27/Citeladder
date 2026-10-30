@@ -195,33 +195,26 @@
 
 /* ── Product frames ─────────────────────────────────────────────────────── */
 
-/* A product view sits in a white frame on a flat pale stage: the tone step is
-   the frame's edge. The stage's fine dot lattice is the only texture on the
-   public site; it never sits behind text. */
+/* A product view's window sits straight on the page: the stage is only a
+   wrapper, with no tone of its own and no clipping, so the lift shows. */
 .product-stage {
   position: relative;
   isolation: isolate;
-  overflow: hidden;
-  border-radius: var(--radius-lg);
-  background: var(--color-background-alt);
 }
 
-.product-stage::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: var(--lattice);
-  mask-image: radial-gradient(90% 70% at 50% 30%, black, transparent);
-  opacity: 0.55;
+/* Every product view on the public site, hero, shot or tile, is the same
+   window: a hairline ring and a soft lift, so it never merges with the page.
+   The frame is a coded product view (`data-ui`) and keeps the product's
+   material inside. */
+.product-frame,
+.lp-tile-visual {
+  background: var(--color-panel);
+  box-shadow: var(--shadow-overlay);
 }
 
-/* The frame is a coded product view (`data-ui`): its contents keep the
-   product's material, the frame itself stays flat on the stage. */
 .product-frame {
   overflow: hidden;
   border-radius: var(--radius-lg);
-  background: var(--color-panel);
 }
 
 /* A product view keeps its desktop layout at every width. Below its design
@@ -555,7 +548,7 @@
   color: var(--color-accent-text);
   font-size: var(--text-sm);
   line-height: var(--text-sm--line-height);
-  font-weight: 600;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
 
@@ -669,7 +662,7 @@
 /* Arrow glyphs in calls to action lean toward where they go. */
 [data-public-surface] .marketing-cta-button svg:is(.lucide-arrow-right, .lucide-arrow-up-right),
 .mk-text-link svg {
-  transition: transform var(--motion-slow) var(--ease-out-expo);
+  transition: transform var(--motion-slow) var(--ease-standard);
 }
 
 [data-public-surface] .marketing-cta-button:hover svg.lucide-arrow-right {
@@ -681,15 +674,9 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  /* The dot lattice drifts very slowly, so a stage reads as a live surface
-     without anything competing with the product shown on it. */
-  .product-stage::before {
-    animation: product-stage-drift var(--motion-drift) var(--ease-linear) infinite;
-  }
-
   /* Page heroes arrive in reading order: title, lead, then actions. */
   .mk-hero-in > * {
-    animation: mk-rise-in var(--motion-reveal) var(--ease-out-expo) both;
+    animation: mk-rise-in var(--motion-reveal) var(--ease-standard) both;
   }
 
   /* The title is the page's largest paint, so it never starts invisible: it
@@ -711,30 +698,13 @@
   }
 
   @supports (animation-timeline: view()) {
-    /* Section openers, product stages, cards, rows and an article's headings
-       and figures rise as they scroll in. */
+    /* Only section headings rise as they scroll in; everything else is static. */
     .mk-reveal,
-    .lp-head,
-    main .product-stage:not(.lp-hero-stage),
-    .mk-capability,
-    .mk-related-card,
-    .mk-faq-list details,
-    .cm-plan,
-    .cm-access,
-    .cm-extra,
-    .cp-tool-row,
-    .cp-facts li,
-    .cp-prose > :is(h2, h3, figure, blockquote, .cp-table, .cp-figure, .cp-checklist) {
+    .lp-head {
       animation: mk-reveal-in var(--ease-linear) both;
       animation-timeline: view();
       animation-range: entry 0% entry 55%;
     }
-  }
-}
-
-@keyframes product-stage-drift {
-  to {
-    background-position: 16px 32px;
   }
 }
 

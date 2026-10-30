@@ -197,7 +197,7 @@ function ShellSidebar({
 }
 
 /** One filter bar: groups of chips, separated by a hairline as in the app. */
-export type ShellFilters = readonly (readonly string[])[];
+type ShellFilters = readonly (readonly string[])[];
 
 type DashboardLabel = (typeof DASHBOARD_NAV)[number]['items'][number][0];
 type AgentLabel = (typeof AGENT_NAV)[number][0] | (typeof AGENT_CHATS)[number];
@@ -303,7 +303,7 @@ export function ProductShot({
 }: Readonly<{ title: string; children: ReactNode; className?: string }>) {
   return (
     <figure className={cn('min-w-0', className)}>
-      <div className="product-stage product-fit p-4 sm:p-8 lg:p-10">
+      <div className="product-stage product-fit">
         <div className="product-frame app-type-scale" data-ui>
           <div className="product-frame-bar">
             <span className="inline-flex items-center gap-2">

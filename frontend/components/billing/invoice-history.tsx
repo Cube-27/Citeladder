@@ -30,7 +30,7 @@ function invoicesState(loading: boolean, count: number): DataTableState | undefi
     kind: 'empty',
     icon: ICONS.billing,
     headingLevel: 3,
-    heading: 'No invoices have been issued yet.',
+    heading: 'No invoices have been issued yet',
   };
 }
 

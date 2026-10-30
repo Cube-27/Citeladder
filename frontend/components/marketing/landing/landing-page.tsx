@@ -11,6 +11,7 @@ import { CapabilityGrid, FaqList } from '../pages/platform';
 import {
   AgentView,
   AnswerView,
+  AppShellFrame,
   DemandView,
   ProductShot,
   SiteHealthView,
@@ -40,7 +41,33 @@ function PrimaryActions({ size = 'marketing' }: Readonly<{ size?: 'lg' | 'market
 
 /* ── Hero ───────────────────────────────────────────────────────────────── */
 
-function Hero({ tour, rotor }: Readonly<{ tour?: ReactNode; rotor?: ReactNode }>) {
+/* The real AI Visibility page, still: its tabs and filter bar as shipped. */
+function HeroShot() {
+  return (
+    <div className="lp-hero-shot">
+      <div className="lp-hero-stage product-stage">
+        <div className="lp-hero-frame product-fit">
+          <AppShellFrame
+            active="AI Visibility"
+            title="AI Visibility"
+            action="Launch audit"
+            tabs={['Trends', 'Sources', 'Query fanouts']}
+            activeTab="Trends"
+            filters={[
+              ['Latest run', 'Last 90 days', 'Per run'],
+              ['Visibility prompts', 'All surfaces'],
+            ]}
+          >
+            <VisibilityView />
+          </AppShellFrame>
+        </div>
+      </div>
+      <p className="product-caption text-center">Engine availability depends on your plan.</p>
+    </div>
+  );
+}
+
+function Hero({ rotor }: Readonly<{ rotor?: ReactNode }>) {
   return (
     <header className="lp-hero">
       <div className="lp-wrap lp-hero-copy mk-hero-in">
@@ -63,7 +90,9 @@ function Hero({ tour, rotor }: Readonly<{ tour?: ReactNode; rotor?: ReactNode }>
           <p className="lp-hero-note">7-day free trial on ChatGPT answers. Trial limits apply.</p>
         )}
       </div>
-      <div className="lp-wrap lp-wrap-wide">{tour}</div>
+      <div className="lp-wrap lp-wrap-wide">
+        <HeroShot />
+      </div>
     </header>
   );
 }
@@ -321,14 +350,13 @@ function Closing() {
 }
 
 /**
- * Server-rendered; `tour` and `rotor` are the hydrated product tour and
- * headline rotor (see `HeroTour`, `EngineRotor`). Without `rotor` the
- * headline renders its static first engine.
+ * Server-rendered; `rotor` is the hydrated headline rotor (see
+ * `EngineRotor`). Without it the headline renders its static first engine.
  */
-export function LandingPage({ tour, rotor }: Readonly<{ tour?: ReactNode; rotor?: ReactNode }>) {
+export function LandingPage({ rotor }: Readonly<{ rotor?: ReactNode }>) {
   return (
     <div className="lp">
-      <Hero tour={tour} rotor={rotor} />
+      <Hero rotor={rotor} />
       <EngineStrip />
       <Statement />
       <Loop />

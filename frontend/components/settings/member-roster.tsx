@@ -47,7 +47,7 @@ function rosterState({
     return {
       kind: 'empty',
       icon: SearchX,
-      heading: `No members match “${noMatch}”.`,
+      heading: `No members match “${noMatch}”`,
       headingLevel: 3,
     };
   return undefined;

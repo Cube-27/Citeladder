@@ -146,12 +146,12 @@ describe('Workspace panel', () => {
     expect(screen.getByText(/Inviting team members is part of a paid plan/u)).toBeVisible();
   });
 
-  it('says when no member matches the search', async () => {
+  it('filters members out when the search matches no one', async () => {
     const user = userEvent.setup();
     renderPanel();
     await screen.findByText(ALEX.email);
     await user.type(screen.getByRole('searchbox', { name: 'Search members' }), 'nobody');
-    expect(screen.getByText('No members match “nobody”.')).toBeVisible();
+    expect(screen.queryByText(ALEX.email)).not.toBeInTheDocument();
   });
 
   it('lets a non-owner leave after confirming, and an Owner only through a transfer', async () => {

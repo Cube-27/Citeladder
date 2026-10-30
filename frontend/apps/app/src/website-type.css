@@ -9,7 +9,7 @@
    baseline here exactly as in the product; 12 is the one rung below it. */
 :where([data-public-surface], [data-flow-surface]) {
   /* The public and focused-flow type world (docs/design.md §Typography):
-     Geist carries body, UI and data, Sora the display headings, as in
+     Geist carries body, UI and data, Uncut Sans the display headings, as in
      the product. The scale is the product's (globals.css @theme), unchanged;
      being "roomier" is a job for measure and rhythm, not for resizing rungs. */
   --tracking-tight: -0.02em;
@@ -102,9 +102,9 @@
    travel as one contract. The low-specificity colour defaults let explicit
    semantic utilities override them for warnings and evidence states.
 
-   Display rungs set in Sora at 500, and tracking closes as size grows: Sora
-   is a wide geometric face, so it tracks tighter than a grotesk would. The
-   feature heading and body rungs set in Geist at 400/500. */
+   Display rungs set in Uncut Sans at 500, and tracking closes as size grows,
+   as display type does. The feature heading and body rungs set in Geist at
+   400/500. */
 .website-hero-display,
 .website-page-title,
 .website-section-heading {
@@ -391,8 +391,8 @@
 }
 
 .flow-step-mark-current {
-  border-color: var(--color-accent);
-  background: var(--color-accent);
+  border-color: var(--color-accent-fill);
+  background: var(--color-accent-fill);
   color: var(--color-accent-fg);
 }
 
@@ -620,17 +620,17 @@
    frames, so every part rests on its own style. */
 @media (prefers-reduced-motion: no-preference) {
   .auth-brand-card {
-    animation: auth-brand-rise var(--motion-reveal) var(--ease-out-expo) both var(--motion-fast);
+    animation: auth-brand-rise var(--motion-reveal) var(--ease-standard) both var(--motion-fast);
   }
 
   .auth-brand-sources span[data-cited='true'] {
-    animation: auth-brand-light var(--motion-reveal) var(--ease-out-expo) both
+    animation: auth-brand-light var(--motion-reveal) var(--ease-standard) both
       calc(var(--motion-stagger) * 6);
   }
 
   .auth-brand-chart span {
     transform-origin: bottom;
-    animation: auth-brand-grow var(--motion-reveal) var(--ease-out-expo) both
+    animation: auth-brand-grow var(--motion-reveal) var(--ease-standard) both
       calc(var(--motion-stagger) * (6 + var(--auth-bar, 0)));
   }
 
@@ -984,8 +984,8 @@
 }
 
 .flow-entity-row[aria-pressed='true'] .flow-entity-mark {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
+  background: var(--color-accent-fill);
+  border-color: var(--color-accent-fill);
 }
 
 /* The mark sizes its own check: 14 inside the 20 box. A 16px glyph filled

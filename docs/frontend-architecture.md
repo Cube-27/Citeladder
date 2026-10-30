@@ -27,7 +27,7 @@ The shared chrome (navigation, cookie consent banner and the consent-gated
 Google tag) is Astro markup with small module scripts in
 `frontend/components/marketing/chrome/` and `frontend/components/analytics/`,
 so content pages ship no framework JavaScript; React islands hydrate only on
-pages with interactive tools, such as the homepage tour, blog explorer,
+pages with interactive tools, such as the homepage engine rotor, blog explorer,
 contact form, pricing and the free tools.
 Only routes that read the request opt out with `prerender = false`: `/pricing`,
 the contact intake and `/health`. The 404 page is prerendered so scanner
