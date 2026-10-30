@@ -383,3 +383,15 @@ so no motion", then "the green background used in landing page and above
 footer section can u make it much lighter" and "there is background in product
 UI visibility which u can remove too", including "backgrounds from solutions
 product UI".
+
+## Uncut Sans replaces Sora for display headings
+
+Display headings on every surface (the product page title, the public hero,
+page and section headings, the flow title and Markdown `h2`) set in Uncut Sans
+instead of Sora, still capped at weight 500. Geist stays the text face. Uncut
+Sans comes from the private Cube27 font repository like every other face, so
+no font binary enters this repository; the pinned font revision moves to the
+one that adds it.
+
+Source: owner, 30 October 2026: "replace the display font to uncut sans its
+already present in github" ("cube27 fonts repo").

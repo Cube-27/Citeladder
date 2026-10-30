@@ -13,7 +13,7 @@
     <link rel="manifest" href="/site.webmanifest" />
     <title>CiteLadder · AI visibility with evidence you can open</title>
     <!-- Discover the faces at first paint instead of after the stylesheet
-        loads. Geist and Sora are not in this repository: `pnpm fonts:pull`
+        loads. Geist and Uncut Sans are not in this repository: `pnpm fonts:pull`
         copies them into public/fonts from the private Cube27 font repo, and
         delivery does the same. A build without them renders in the fallbacks
         below. -->
@@ -26,7 +26,7 @@
     />
     <link
       rel="preload"
-      href="/fonts/Sora-Variable.woff2"
+      href="/fonts/UncutSans-Variable.woff2"
       as="font"
       type="font/woff2"
       crossorigin="anonymous"
@@ -59,8 +59,8 @@
       }
 
       @font-face {
-        font-family: 'Sora Variable';
-        src: url('/fonts/Sora-Variable.woff2') format('woff2');
+        font-family: 'Uncut Sans Variable';
+        src: url('/fonts/UncutSans-Variable.woff2') format('woff2');
         font-weight: 300 500;
         font-style: normal;
         font-display: fallback;
@@ -79,25 +79,25 @@
         line-gap-override: 0%;
       }
 
-      /* Match Arial's x-height to Sora's (0.534em vs 0.519em). Vertical
-         overrides use Sora's 970/-290/0 hhea metrics (1000 UPM), divided by
-         size-adjust. */
+      /* Match Arial's x-height to Uncut Sans's (0.500em vs 0.519em). Vertical
+         overrides use Uncut Sans's 965/-235/0 hhea metrics (1000 UPM), divided
+         by size-adjust. */
       @font-face {
-        font-family: 'Sora Fallback';
+        font-family: 'Uncut Sans Fallback';
         src: local('Arial');
         font-weight: 100 500;
-        size-adjust: 102.89%;
-        ascent-override: 94.28%;
-        descent-override: 28.19%;
+        size-adjust: 96.34%;
+        ascent-override: 100.17%;
+        descent-override: 24.39%;
         line-gap-override: 0%;
       }
 
       :root {
         font-synthesis-weight: none;
         /* Geist carries body, UI and data (its tabular figures line up
-           columns); Sora carries display headings. */
+           columns); Uncut Sans carries display headings. */
         --font-text: 'Geist Variable', 'Geist Fallback', Arial;
-        --font-heading: 'Sora Variable', 'Sora Fallback', Arial;
+        --font-heading: 'Uncut Sans Variable', 'Uncut Sans Fallback', Arial;
       }
     </style>
   </head>
