@@ -350,3 +350,36 @@ open-source or self-hosting claim.
 Source: owner, 20 October 2026, approving the SEO and open-source plan with
 the caveats "dont add a line in landing page instead your github logo with
 link on the header" and "no citeladder cloud".
+
+## Filled controls carry white ink; product views are windows
+
+Anything that carries ink on green (buttons, the selected calendar day, a
+checked mark, the current onboarding step) has white ink on a deeper green
+fill (`#00873f`, 4.6:1) instead of near-black ink on signal green. Signal
+green itself, the logo, tab underlines and tracks are unchanged; dark mode
+keeps its bright fill and dark ink. This replaces the near-black ink of the
+brighter refresh.
+
+Every coded product view on the public site (hero, product shots and the
+homepage tiles) is the same window: a white panel with the overlay ring and
+soft lift, so it never merges with the page. This is an exception to the flat
+public website. Product stages lose their dot lattice and its drift, and on
+the public site only section headings rise on scroll; cards, stages, rows and
+article blocks are static. The homepage hero drops its four-tab product tour
+(Visibility, Citations, Site Health, Agent) and its entrance animations for
+one still AI Visibility page. No product window sits on a tinted stage:
+hero, solutions, platform and deep-dive shots sit straight on the page. The mint field (hero, closing band, sign-in brand panel) is much
+lighter (`#e8f9ee`). Weight stays capped at 500 on the public site too.
+
+Source: owner, 30 October 2026, after an unslop review: "the font in buttons is
+black on green background should be white" (choosing a deeper fill over white
+on the current green), "for product UI images in the landing page and
+elsewhere use a common style like iOS so they dont look merged with
+background", the stage lattice "is not very good", "scroll reveal actually
+doesnt work apart from main headings of pages so apart from that u can remove
+scroll reveals", "500 is the limit" and "remove the 4 tabs and designs
+completely from landing page product UI and just keep a static visibility page
+so no motion", then "the green background used in landing page and above
+footer section can u make it much lighter" and "there is background in product
+UI visibility which u can remove too", including "backgrounds from solutions
+product UI".

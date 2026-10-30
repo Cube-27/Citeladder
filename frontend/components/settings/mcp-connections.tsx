@@ -84,8 +84,8 @@ function connectionsState(
     icon: ICONS.agent,
     headingLevel: 3,
     heading: adminView
-      ? 'No connection can read this workspace.'
-      : 'No assistant is connected yet. Use Connect above to add one.',
+      ? 'No connection can read this workspace'
+      : 'No assistant is connected yet. Use Connect above to add one',
   };
 }
 

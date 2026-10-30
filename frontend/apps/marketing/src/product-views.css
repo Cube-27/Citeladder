@@ -832,7 +832,7 @@
 }
 
 li[data-own] .pv-rank {
-  background: var(--color-accent);
+  background: var(--color-accent-fill);
   color: var(--color-accent-fg);
 }
 
@@ -865,7 +865,7 @@ li[data-own] .pv-rank {
   width: 100%;
   padding: 0.25rem 0.75rem;
   border-radius: var(--radius-control);
-  background: var(--color-accent);
+  background: var(--color-accent-fill);
   color: var(--color-accent-fg);
   font-size: var(--text-sm);
   font-weight: 500;

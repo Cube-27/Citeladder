@@ -184,7 +184,7 @@
 
 @media (prefers-reduced-motion: no-preference) {
   .lp-rotor-item[data-state='in'] {
-    animation: lp-rotor-in var(--motion-reveal) var(--ease-out-expo) both;
+    animation: lp-rotor-in var(--motion-reveal) var(--ease-standard) both;
   }
 
   .lp-rotor-item[data-state='out'] {
@@ -226,48 +226,11 @@
   line-height: var(--text-sm--line-height);
 }
 
-.lp-tour {
+/* The hero's product is one still AI Visibility page: no tabs, no motion. */
+.lp-hero-shot {
   display: grid;
   gap: 1rem;
   margin-top: clamp(3rem, 6vw, 4.5rem);
-}
-
-.lp-tour-tabs {
-  display: inline-flex;
-  justify-self: center;
-  max-width: 100%;
-  overflow-x: auto;
-  padding: 0.25rem;
-  border-radius: var(--radius-full);
-  background: var(--color-panel);
-  scrollbar-width: none;
-}
-
-.lp-tour-tabs button {
-  flex: none;
-  padding: 0.5rem 1rem;
-  border-radius: var(--radius-full);
-  color: var(--color-secondary);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
-  font-weight: 500;
-  transition:
-    color var(--motion-fast) var(--ease-standard),
-    background-color var(--motion-fast) var(--ease-standard);
-}
-
-.lp-tour-tabs button:hover {
-  color: var(--color-foreground);
-}
-
-/* The current view is the one inverse chip on the field. */
-.lp-tour-tabs button[aria-selected='true'] {
-  background: var(--color-surface-inverse);
-  color: var(--color-on-inverse);
-}
-
-.lp-hero-stage {
-  padding: clamp(0.75rem, 3vw, 2.5rem) clamp(0.75rem, 3vw, 2.5rem) 0;
 }
 
 .lp-hero-frame {
@@ -276,176 +239,6 @@
 
 .lp-hero-frame.product-fit {
   --product-fit-width: 768px;
-}
-
-.lp-hero-frame > .product-frame {
-  border-bottom-right-radius: 0;
-  border-bottom-left-radius: 0;
-}
-
-/* The page's one authored motion: the product rises into place on arrival. */
-@media (prefers-reduced-motion: no-preference) {
-  .lp-hero-stage {
-    animation: lp-frame-in var(--motion-reveal) var(--ease-out-expo) both var(--motion-fast);
-  }
-}
-
-/* Switching a tour tab cross-fades the view inside the same frame, so the
-   window stays put and only its content changes. */
-@media (prefers-reduced-motion: no-preference) {
-  .lp-hero-frame .pv-main > :last-child {
-    animation: lp-view-in var(--motion-menu) var(--ease-out-expo) both;
-  }
-}
-
-/* Each tour view assembles itself when it arrives: tiles rise, chart lines
-   draw, bars grow and rows follow in a short stagger. The panel is keyed by
-   tab, so this replays on every switch. Only `from` frames and backwards fill
-   are used, so every element rests on its own unchanged style. The whole
-   block sits behind no-preference: the global reduced-motion clamp shortens
-   durations but not delays, which would hold staggered rows hidden. */
-@media (prefers-reduced-motion: no-preference) {
-  .lp-tour :is(.pv-stat, .pv-kpi, tbody tr, .pv-list li):nth-child(2) {
-    --lp-i: 1;
-  }
-
-  .lp-tour :is(.pv-stat, .pv-kpi, tbody tr, .pv-list li):nth-child(3) {
-    --lp-i: 2;
-  }
-
-  .lp-tour :is(.pv-stat, .pv-kpi, tbody tr, .pv-list li):nth-child(4) {
-    --lp-i: 3;
-  }
-
-  .lp-tour :is(.pv-stat, .pv-kpi, tbody tr, .pv-list li):nth-child(5) {
-    --lp-i: 4;
-  }
-
-  /* Start of each group, in stagger steps after the view arrives. */
-  .lp-tour :is(.pv-table, .pv-list) {
-    --lp-enter: 3;
-  }
-
-  .lp-tour .pv-split > :nth-child(2) .pv-list {
-    --lp-enter: 5;
-  }
-
-  .lp-tour .pv-chart {
-    --lp-enter: 2;
-  }
-
-  .lp-tour .pv-chart-end {
-    --lp-enter: 9;
-  }
-
-  .lp-tour .pv-bar-track {
-    --lp-enter: 5;
-  }
-
-  .lp-tour .pv-agent-name {
-    --lp-enter: 4;
-  }
-
-  .lp-tour .pv-step {
-    --lp-enter: 7;
-  }
-
-  .lp-tour .pv-step + .pv-step {
-    --lp-enter: 11;
-  }
-
-  .lp-tour .pv-agent .pv-message > p {
-    --lp-enter: 15;
-  }
-
-  .lp-tour .pv-doc {
-    --lp-enter: 17;
-  }
-
-  .lp-tour
-    :is(
-      .pv-stat,
-      .pv-kpi,
-      tbody tr,
-      .pv-list li,
-      .pv-chart-end,
-      .pv-message-user,
-      .pv-agent-name,
-      .pv-step,
-      .pv-agent .pv-message > p,
-      .pv-doc
-    ) {
-    animation: lp-view-in var(--motion-reveal) var(--ease-out-expo) backwards;
-  }
-
-  .lp-tour .pv-chart polyline {
-    animation: lp-draw-in var(--motion-reveal) var(--ease-out-expo) backwards;
-  }
-
-  .lp-tour :is(.pv-stack-bar, .pv-bar-track i) {
-    animation: lp-grow-in var(--motion-reveal) var(--ease-out-expo) backwards;
-  }
-
-  /* One delay for every entrance: its group's start plus its place in the
-     stagger. After the shorthands, which would otherwise reset it. */
-  .lp-tour
-    :is(
-      .pv-stat,
-      .pv-kpi,
-      tbody tr,
-      .pv-list li,
-      .pv-chart-end,
-      .pv-message-user,
-      .pv-agent-name,
-      .pv-step,
-      .pv-agent .pv-message > p,
-      .pv-doc,
-      .pv-chart polyline,
-      .pv-stack-bar,
-      .pv-bar-track i
-    ) {
-    animation-delay: calc(var(--motion-stagger) * (var(--lp-enter, 0) + var(--lp-i, 0)));
-  }
-}
-
-/* The polylines carry no pathLength, so the dash spans more than the longest
-   line in either user or screen units; it exists only while drawing. */
-@keyframes lp-draw-in {
-  from {
-    stroke-dasharray: 1000;
-    stroke-dashoffset: 1000;
-  }
-
-  to {
-    stroke-dasharray: 1000;
-    stroke-dashoffset: 0;
-  }
-}
-
-@keyframes lp-grow-in {
-  from {
-    transform: scaleX(0);
-    transform-origin: left;
-  }
-
-  to {
-    transform-origin: left;
-  }
-}
-
-@keyframes lp-view-in {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-}
-
-@keyframes lp-frame-in {
-  from {
-    opacity: 0;
-    transform: translateY(24px);
-    filter: blur(6px);
-  }
 }
 
 /* Engines ────────────────────────────────────────────────────────────────── */
@@ -557,16 +350,15 @@
   max-width: 44ch;
 }
 
-/* The tile shows a cropped corner of a real view, faded into the tile. */
+/* The tile shows a cropped corner of a real view, faded into the tile. Its
+   window material is the shared product frame's (marketing.css). */
 .lp-tile-visual {
   position: relative;
   height: 17rem;
   margin-left: 1.5rem;
   padding: 1rem 1rem 0;
   overflow: hidden;
-  border-top-left-radius: var(--radius-card);
-  background: var(--color-panel);
-  mask-image: linear-gradient(to bottom, black 70%, transparent);
+  border-top-left-radius: var(--radius-lg);
   pointer-events: none;
 }
 
@@ -727,17 +519,12 @@
   margin-top: 0.75rem;
 }
 
-/* The hero's product sits one tone step up from the mint field. */
-.lp-hero .lp-hero-stage {
-  background: var(--color-accent-soft);
-}
-
 /* Phone ──────────────────────────────────────────────────────────────────── */
 
 /* A phone gets its own composition, not the desktop one shrunk (owner,
-   2026-10-21): the copy reads left-aligned with thumb-width actions, the tour
-   tabs become a strip of chips the thumb can scroll, and the product runs
-   edge to edge without the app's sidebar, at a scale whose text can be read. */
+   2026-10-21): the copy reads left-aligned with thumb-width actions, and the
+   product runs edge to edge without the app's sidebar, at a scale whose text
+   can be read. */
 @media (max-width: 39.99rem) {
   .lp-hero {
     padding-top: calc(var(--marketing-nav-offset) + 2rem);
@@ -776,30 +563,13 @@
     width: 100%;
   }
 
-  .lp-tour {
+  .lp-hero-shot {
     margin-top: 2rem;
-  }
-
-  .lp-tour-tabs {
-    justify-self: stretch;
-    gap: 0.5rem;
-    margin-inline: calc(var(--site-gutter) * -1);
-    padding: 0 var(--site-gutter);
-    border-radius: 0;
-    background: transparent;
-    scroll-snap-type: x proximity;
-    scroll-padding-inline: var(--site-gutter);
-  }
-
-  .lp-tour-tabs button {
-    background: var(--color-panel);
-    scroll-snap-align: start;
   }
 
   .lp-hero .lp-hero-stage {
     margin-inline: calc(var(--site-gutter) * -1);
-    padding: 0.75rem 0.75rem 0;
-    border-radius: 0;
+    padding: 0 0.75rem;
   }
 
   .lp-hero-frame.product-fit {

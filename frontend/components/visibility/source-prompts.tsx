@@ -135,7 +135,7 @@ function promptsState(
     kind: 'empty',
     headingLevel: 3,
     icon: MessageSquare,
-    heading: 'No tracked answers in this selection used this source.',
+    heading: 'No tracked answers in this selection used this source',
   };
 }
 

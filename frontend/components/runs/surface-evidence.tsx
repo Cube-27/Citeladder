@@ -109,7 +109,7 @@ function PresenceTable({ entities }: Readonly<{ entities: readonly SurfaceEntity
               kind: 'empty',
               headingLevel: 3,
               icon: Users,
-              heading: 'No tracked brands were configured for this run.',
+              heading: 'No tracked brands were configured for this run',
             }
           : undefined
       }
@@ -152,7 +152,7 @@ function InlineLinks({ links }: Readonly<{ links: SearchSurfaceEvidence['links']
           kind="empty"
           headingLevel={3}
           icon={Link2}
-          heading="The overview’s text carried no inline links."
+          heading="The overview’s text carried no inline links"
         />
       ) : (
         <ul className={ledgerClasses('boxed')}>

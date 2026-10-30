@@ -414,10 +414,10 @@ function tableState({
 }
 
 function emptyHeading(searching: boolean, gapOnly: boolean, narrowed: boolean): string {
-  if (searching) return 'No sources on this page match your search.';
-  if (gapOnly) return 'No read page in this selection lists competitors without you.';
-  if (narrowed) return 'No sources of this type in this selection.';
-  return 'No cited sources in this selection.';
+  if (searching) return 'No sources on this page match your search';
+  if (gapOnly) return 'No read page in this selection lists competitors without you';
+  if (narrowed) return 'No sources of this type in this selection';
+  return 'No cited sources in this selection';
 }
 
 /** Whichever table the dimension calls for, carrying its own state inside it. */

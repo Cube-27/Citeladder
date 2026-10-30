@@ -1,14 +1,11 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
 import { LandingPage } from './landing-page';
 import { EngineRotor } from './landing-rotor';
-import { HeroTour } from './landing-tour';
 
 afterEach(() => {
   vi.unstubAllEnvs();
-  vi.useRealTimers();
 });
 
 describe('LandingPage', () => {
@@ -18,74 +15,26 @@ describe('LandingPage', () => {
   ])('routes the hero action with self-serve signup %s', (enabled, label, href) => {
     vi.stubEnv('NEXT_PUBLIC_SELF_SERVE_SIGNUP', enabled);
     vi.stubEnv('PUBLIC_APP_ORIGIN', 'https://app.citeladder.com');
-    render(<LandingPage tour={<HeroTour />} />);
+    render(<LandingPage />);
 
     const hero = screen.getByRole('banner');
     expect(within(hero).getAllByRole('link', { name: label })[0]).toHaveAttribute('href', href);
   });
 
-  it('names the hero by its full sentence and leads with what the product shows', () => {
-    render(<LandingPage tour={<HeroTour />} rotor={<EngineRotor />} />);
+  it('names the hero by its full sentence while the rotor cycles', () => {
+    render(<LandingPage rotor={<EngineRotor />} />);
 
-    const heading = screen.getByRole('heading', { level: 1 });
-    expect(heading).toHaveAccessibleName(
+    expect(screen.getByRole('heading', { level: 1 })).toHaveAccessibleName(
       'Analyze what ChatGPT, Gemini and Claude tell your buyers about you.',
     );
-    expect(
-      within(screen.getByRole('banner')).getByText(
-        'See which brands AI recommends, which pages it cites, and what to fix to improve visibility.',
-      ),
-    ).toBeVisible();
-  });
-
-  it('autoplays the product tour until the reader picks a tab', () => {
-    vi.useFakeTimers();
-    render(<HeroTour />);
-    const tabs = screen.getByRole('tablist', { name: 'Product tour' });
-
-    act(() => vi.advanceTimersByTime(8000));
-    expect(screen.getByRole('tabpanel')).toHaveAccessibleName('Citations');
-
-    fireEvent.click(within(tabs).getByRole('tab', { name: 'Agent' }));
-    act(() => vi.advanceTimersByTime(24_000));
-    expect(screen.getByRole('tabpanel')).toHaveAccessibleName('Agent');
-  });
-
-  it('stops autoplay once keyboard focus enters the tour tabs', () => {
-    vi.useFakeTimers();
-    render(<HeroTour />);
-    const tabs = screen.getByRole('tablist', { name: 'Product tour' });
-
-    act(() => within(tabs).getByRole('tab', { name: 'Visibility' }).focus());
-    act(() => vi.advanceTimersByTime(24_000));
-    expect(screen.getByRole('tabpanel')).toHaveAccessibleName('Visibility');
   });
 
   it('labels API collection apart from consumer answer surfaces', () => {
-    render(<LandingPage tour={<HeroTour />} />);
+    render(<LandingPage />);
 
     const engines = screen.getByRole('region', { name: 'Monitored answer engines' });
     for (const name of ['OpenAI API', 'Gemini API', 'Claude API', 'Google AI Overviews']) {
       expect(within(engines).getByText(name)).toBeVisible();
     }
-  });
-
-  it('switches the product tour with clicks and arrow keys', async () => {
-    const user = userEvent.setup();
-    render(<LandingPage tour={<HeroTour />} />);
-
-    const tabs = screen.getByRole('tablist', { name: 'Product tour' });
-    const visibility = within(tabs).getByRole('tab', { name: 'Visibility' });
-    expect(visibility).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('tabpanel')).toHaveAccessibleName('Visibility');
-
-    await user.click(within(tabs).getByRole('tab', { name: 'Site Health' }));
-    expect(screen.getByRole('tabpanel')).toHaveAccessibleName('Site Health');
-    expect(within(screen.getByRole('tabpanel')).getByText('AI crawler access')).toBeVisible();
-
-    await user.keyboard('{ArrowRight}');
-    const agent = within(tabs).getByRole('tab', { name: 'Agent' });
-    expect(agent).toHaveFocus();
-    expect(agent).toHaveAttribute('aria-selected', 'true');
   });
 });

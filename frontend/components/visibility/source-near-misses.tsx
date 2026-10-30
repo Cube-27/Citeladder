@@ -74,13 +74,13 @@ function nearMissState(query: ReturnType<typeof useSourceNearMisses>): DataTable
       kind: 'empty',
       headingLevel: 3,
       icon: Link2Off,
-      heading: 'No engine in this selection exposes the pages it read.',
+      heading: 'No engine in this selection exposes the pages it read',
     };
   return {
     kind: 'empty',
     headingLevel: 3,
     icon: Link2Off,
-    heading: 'Every page of yours that an engine read, it also cited.',
+    heading: 'Every page of yours that an engine read, it also cited',
   };
 }
 
