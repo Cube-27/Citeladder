@@ -39,6 +39,7 @@ import {
   useSourceAnalysis,
   useSourceDomains,
   useSourceSeries,
+  selectionHasNoRun,
   type SourceQueries,
 } from '@/lib/visibility/use-source-analysis';
 
@@ -309,6 +310,7 @@ export function SourcesPanel({
       {nearMiss ? (
         <NearMissTable
           query={nearMissQuery}
+          noRun={selectionHasNoRun(queries)}
           pageSize={pageSize}
           toolbar={toolbar}
           onOpenUrl={onOpenUrl}
@@ -329,6 +331,7 @@ export function SourcesPanel({
             busy: { active: sourceQuery.isFetching, label: 'Updating sources' },
             state: tableState({
               query: sourceQuery,
+              noRun: selectionHasNoRun(queries),
               rows,
               narrowed: Boolean(search || sourceType),
               searching: Boolean(search),
@@ -381,12 +384,14 @@ function useStanding(dimension: 'domain' | 'url') {
  */
 function tableState({
   query,
+  noRun,
   rows,
   narrowed,
   searching,
   gapOnly,
 }: Readonly<{
   query: ReturnType<typeof useSourceAnalysis>['sourceQuery'];
+  noRun: boolean;
   rows: ReturnType<typeof sortItems>;
   narrowed: boolean;
   searching: boolean;
@@ -403,7 +408,12 @@ function tableState({
       pending: query.isFetching,
     };
   }
-  if (query.isLoading) return { kind: 'loading', label: 'Loading sources…' };
+  // No data yet is a read waiting on its run, never an empty finding.
+  if (!query.data) {
+    return noRun
+      ? { kind: 'empty', headingLevel: 3, icon: Globe, heading: 'No run selected' }
+      : { kind: 'loading', label: 'Loading sources…' };
+  }
   if (rows.length) return undefined;
   return {
     kind: 'empty',
