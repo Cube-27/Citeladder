@@ -424,7 +424,7 @@ export const definitions = {
   read_prompt_portfolio: projectTool({
     title: 'Read prompts',
     description:
-      'List the prompts the project tracks, so you know what is measured before reading results or changing prompts. Each row has the prompt id, text, topic, intent, buyer stage, cohort (core prompts are scored; comparison prompts name a competitor and are reported separately), status and whether audits measure it now, plus its prompt set. Rows come oldest first, 50 per page by default; pass next_cursor for more. To find one prompt by its wording use search; to see what engines answered for a prompt use read_visibility_results with its prompt_id. Prompt ids feed update_prompt_text, prepare_archive_prompts and prepare_launch_audit.',
+      'List the prompts the project tracks, so you know what is measured before reading results or changing prompts. Each row has the prompt id, text, topic, intent, buyer stage, cohort (core prompts are scored; comparison prompts name a competitor and are reported separately), status and whether audits measure it now, plus its prompt set and topic_id. topics lists every project topic (id, name, description), including topics with no prompts yet; topics_truncated says the list is partial. Rows come oldest first, 50 per page by default; pass next_cursor for more. To find one prompt by its wording use search; to see what engines answered for a prompt use read_visibility_results with its prompt_id. Prompt ids feed update_prompt_text, prepare_archive_prompts and prepare_launch_audit.',
     schema: z.strictObject({
       ...project,
       prompt_set_id: optional(
