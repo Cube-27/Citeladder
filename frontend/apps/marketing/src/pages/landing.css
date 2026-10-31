@@ -238,7 +238,7 @@
 }
 
 .lp-hero-frame.product-fit {
-  --product-fit-width: 768px;
+  --product-fit-width: 1264px;
 }
 
 /* Engines ────────────────────────────────────────────────────────────────── */
@@ -350,11 +350,13 @@
   max-width: 44ch;
 }
 
-/* The tile shows a cropped corner of a real view, faded into the tile. Its
-   window material is the shared product frame's (marketing.css). */
+/* The tile shows a cropped top corner of a real view, clipped at the tile's
+   bottom edge. Its window material is the shared product frame's (marketing.css). The crop
+   sits on the view, inside the product-fit zoom, so a scaled-down tile shows
+   the same corner of the view as the desktop one. */
 .lp-tile-visual {
   position: relative;
-  height: 17rem;
+  align-self: start;
   margin-left: 1.5rem;
   padding: 1rem 1rem 0;
   overflow: hidden;
@@ -362,12 +364,17 @@
   pointer-events: none;
 }
 
+.lp-tile-visual > * {
+  height: 16rem;
+  overflow: hidden;
+}
+
 .lp-tile-visual.product-fit {
-  --product-fit-width: 304px;
+  --product-fit-width: 414px;
 }
 
 .lp-tile-wide .lp-tile-visual.product-fit {
-  --product-fit-width: 480px;
+  --product-fit-width: 658px;
 }
 
 /* Deep dives ─────────────────────────────────────────────────────────────── */
@@ -521,10 +528,10 @@
 
 /* Phone ──────────────────────────────────────────────────────────────────── */
 
-/* A phone gets its own composition, not the desktop one shrunk (owner,
-   2026-10-21): the copy reads left-aligned with thumb-width actions, and the
-   product runs edge to edge without the app's sidebar, at a scale whose text
-   can be read. */
+/* A phone gets its own copy composition (owner, 2026-10-21): the copy reads
+   left-aligned with thumb-width actions, and the product runs edge to edge.
+   The product view itself is the desktop picture scaled down, sidebar and
+   all (`.product-fit`, marketing.css); nothing here reshapes it. */
 @media (max-width: 39.99rem) {
   .lp-hero {
     padding-top: calc(var(--marketing-nav-offset) + 2rem);
@@ -570,45 +577,6 @@
   .lp-hero .lp-hero-stage {
     margin-inline: calc(var(--site-gutter) * -1);
     padding: 0 0.75rem;
-  }
-
-  .lp-hero-frame.product-fit {
-    --product-fit-width: 460px;
-  }
-
-  .lp-hero-frame .pv-shell {
-    grid-template-columns: minmax(0, 1fr);
-    min-height: 0;
-    padding: 0.5rem;
-  }
-
-  .lp-hero-frame .pv-sidebar {
-    display: none;
-  }
-
-  /* The sheet's title and its one action each hold one line at this width;
-     the secondary header controls give up their room to them. */
-  .lp-hero-frame .pv-sheet-head :is(.pv-main-title, .pv-button) {
-    white-space: nowrap;
-  }
-
-  .lp-hero-frame .pv-sheet-head :is(.pv-button-quiet, .pv-icon-button) {
-    display: none;
-  }
-
-  /* The filter bar holds one row: the prompt-set filter, the widest, gives
-     way (owner, 2026-10-21). */
-  .lp-hero-frame .pv-filters {
-    flex-wrap: nowrap;
-    overflow: hidden;
-  }
-
-  .lp-hero-frame .pv-filter {
-    white-space: nowrap;
-  }
-
-  .lp-hero-frame .pv-filter-group + .pv-filter-group .pv-filter:first-child {
-    display: none;
   }
 
   .lp-engines {

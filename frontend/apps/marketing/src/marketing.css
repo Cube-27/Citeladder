@@ -217,20 +217,36 @@
   border-radius: var(--radius-lg);
 }
 
-/* A product view keeps its desktop layout at every width. Below its design
-   width the view lays out at that width and `zoom` shrinks it to fit, so a
-   phone sees the same picture as a laptop rather than a reflowed column that
-   ran several screens tall. tan(atan2(a, b)) is the unitless ratio a / b.
-   Design widths are in px, not rem: a larger root font size then enlarges the
-   text inside the frame instead of widening the frame and zooming it back. */
+/* A product view keeps its desktop composition at every width. On a desktop
+   viewport it fills its frame. Below that the view lays out at its design
+   width, the width it renders at on a 1440px desktop, and `zoom` scales it
+   down to fit, so a phone sees a smaller copy of the desktop picture rather
+   than a reflowed or trimmed one. It never scales up: a frame wider than the
+   design width (a tablet) lays the view out at the frame's width.
+   tan(atan2(a, b)) is the unitless ratio a / b. Design widths are in px, not
+   rem: a larger root font size then enlarges the text inside the frame
+   instead of widening the frame and zooming it back. Nothing inside a view
+   may step by viewport; it resolves against this width. */
 .product-fit {
-  --product-fit-width: 432px;
+  --product-fit-width: 677px;
   container-type: inline-size;
 }
 
 .product-fit > * {
-  width: max(100cqi, var(--product-fit-width));
-  zoom: min(1, tan(atan2(100cqi, var(--product-fit-width))));
+  width: 100cqi;
+}
+
+/* A platform page's preview shot spans the content column above its
+   highlights. */
+figure:has(+ .mk-highlights) > .product-fit {
+  --product-fit-width: 1200px;
+}
+
+@media (max-width: 980px) {
+  .product-fit > * {
+    width: max(100cqi, var(--product-fit-width));
+    zoom: min(1, tan(atan2(100cqi, var(--product-fit-width))));
+  }
 }
 
 .product-frame-bar {

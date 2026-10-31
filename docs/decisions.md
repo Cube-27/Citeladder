@@ -269,7 +269,10 @@ text in General Sans, both capped at weight 500; editorial serif display faces
 were rejected, as were the faces of the reference site the owner showed. The
 public H1s are a step smaller than before: the hero tops out at 60px (about
 52px at 1280px) and the marketing page title is 36px, then 56px from 1280px.
-Phones get their own homepage composition rather than the desktop one shrunk.
+Phones get their own homepage composition rather than the desktop one shrunk
+(superseded for product views on 31 October 2026: see
+[Product views scale down on phones](#product-views-scale-down-on-phones);
+the copy, actions and engine list keep their phone composition).
 Motion stays subtle: copy arrives in sequence, and product pictures assemble
 themselves (lines draw, bars grow). Website copy is unchanged.
 
@@ -282,7 +285,10 @@ special treatment for mobile. [Design](design.md) owns the system.
 On a phone, a pair of calls to action shares one row at equal widths, in the
 hero and in every closing band; the hero's product picture keeps its title,
 its one action and its filter bar to one line each, dropping its secondary
-header controls and the widest filter; and the announcement strip can be
+header controls and the widest filter (superseded on 31 October 2026: the
+picture now keeps every control, see
+[Product views scale down on phones](#product-views-scale-down-on-phones));
+and the announcement strip can be
 closed, which the visitor's browser remembers for that announcement. In the
 app, record tables give the row's identity the width (a prompt's topic and tags
 are a caption line under it), set figures right-aligned with no header band,
@@ -404,3 +410,21 @@ variable subset (`Outfit-Variable.woff2`), added to the private Cube27 font
 repository; the pinned font revision moves to the one that adds it.
 
 Source: owner, 31 October 2026: Outfit should replace "Uncut Sans (headings)".
+
+## Product views scale down on phones
+
+On a phone or tablet every coded product view on the public website (the
+homepage hero picture, the homepage tiles and every product shot) shows its
+desktop layout scaled down, sidebar and every control included. Nothing in a
+view is hidden, trimmed or reflowed for a small screen. Each view lays out at
+the width its frame has on a 1440px desktop and scales down to fit, never up;
+desktop renders are unchanged. Text inside a view gets very small at phone
+widths (about a quarter of its size in the hero picture), and that is
+accepted. This replaces the 21 October phone treatment of the hero picture
+(no sidebar, dropped header controls and filter, a larger readable scale);
+the phone composition of the surrounding copy, actions and engine list stays.
+
+Source: owner, 31 October 2026, via the marketing-site design brief: product
+UI mocks on mobile should be scaled, not reflowed, keeping the desktop
+composition with the sidebar visible and no hidden controls, with small text
+on phones accepted. [Design](design.md) owns the system.
