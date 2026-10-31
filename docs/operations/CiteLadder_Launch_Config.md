@@ -439,8 +439,8 @@ to fix, not a reason to edit this card.
 | Claude Haiku 5.5 (prompt ≤100K) | Agent default, gateway calls (prompt generation, research, commerce) | 0.10 | 0.125 | 0.01 | 0.50 | 1-hour cache write 0.20 |
 | Claude Haiku 5.5 (prompt >100K) | — (the Agent stays below this tier) | 0.50 | 0.625 | 0.05 | 2.50 | 5× the lower tier |
 | Claude Sonnet 5.5 | Claude answer engine (`claude-sonnet-5-5`); Agent option on Growth and Scale (B54) | 2.00 | 2.50 | 0.10 | 10.00 | 1-hour cache write 4.00; one rate across the full context |
-| OpenAI gpt-6.1-sol (≤272K input) | ChatGPT answer engine | 2.00 | — | 0.10 | 10.00 | Automatic caching |
-| OpenAI gpt-6.1-sol (>272K input) | — | 4.00 | — | 0.20 | 15.00 | |
+| OpenAI gpt-6.1-terra (≤272K input) | ChatGPT answer engine | 1.00 | — | 0.05 | 5.00 | Automatic caching |
+| OpenAI gpt-6.1-terra (>272K input) | — | 2.00 | — | 0.10 | 7.50 | Higher rate applies to the whole request |
 | Google gemini-3.6-flash | Gemini answer engine | 0.75 | — | 0.075 | 3.75 | Through 2026-12-31; 1.50 / 0.15 / 7.50 from 2027-01-01. Output includes thinking. Cache storage 0.50 per million tokens per hour (1.00 from 2027) |
 
 Thinking (reasoning) tokens are billed as output by every provider above.
