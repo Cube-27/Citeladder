@@ -441,9 +441,10 @@ homepage's cards and chips and for public type and ink.
   homepage draws no wireframe lines: no section rails, band rules or column
   dividers. No copy, section order or product view changes, and the whole
   treatment is one stylesheet that can be switched off.
-- **Neutral fields:** the homepage hero and closing band lose their mint and
-  lime fields and take the same `#f7f7f7` ground. The accent stays on
-  buttons, links and the logo.
+- **Neutral fields:** the homepage hero and announcement strip lose their
+  mint and lime fields and take the same `#f7f7f7` ground. The homepage
+  closing band keeps its mint field and lattice, like every other page's. The
+  accent stays on buttons, links and the logo.
 - **Type and ink (every public page, docs included):** hero 64/48/32px at
   weight 400, section heading 39/32/26px, subtitle under a heading 24/18/15px
   at 500 in a lighter ink, card titles 18/18/16px at 600, body 16/14/17px
@@ -451,7 +452,7 @@ homepage's cards and chips and for public type and ink.
   phone; inks are `#171717` headings, `#707070` sentences, 60% ink navigation,
   footer links and subtitles, and 55% black lead-in labels. These lighter
   inks are deliberately lighter than the headings but meet 4.5:1 on white,
-  the ground, the footer's band and the mint closing band of the subpages.
+  the ground, the footer's band and the mint closing band.
   The feature heading beside a product shot keeps its earlier size. The font
   families stay Outfit and Geist.
 
@@ -465,5 +466,6 @@ heading size is good currently, so don't change it."; body ink is `#707070`;
 the navigation, subtitle and lead-in inks darken just enough to pass 4.5:1
 everywhere they render. The first version also drew faded section rails,
 full-bleed band rules and column dividers; the owner removed them after
-seeing it live ("remove the lines, they look pretty bad, rest is fine").
+seeing it live ("remove the lines, they look pretty bad, rest is fine") and put the mint
+closing band back on the homepage "like all other pages".
 [Design](design.md) owns the system.

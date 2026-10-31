@@ -11,16 +11,16 @@
 
 /* Bands ──────────────────────────────────────────────────────────────────── */
 
-/* Every band is the one neutral ground, the hero and closing band included:
-   their brand fields, grain and lattice give way to it, and so does the
-   announcement strip above the bar. The accent stays on buttons, links and
-   the logo. */
-.lp :is(.lp-soft, .lp-hero, .marketing-closing-band),
+/* Every band is the one neutral ground, the hero included: its brand field
+   and grain give way to it, and so does the announcement strip above the
+   bar. The closing band keeps its mint field and lattice, as on every other
+   page. The accent stays on buttons, links and the logo. */
+.lp :is(.lp-soft, .lp-hero),
 body .lp-announcement {
   background-color: var(--color-site-ground);
 }
 
-.lp :is(.lp-hero, .marketing-closing-band)::before {
+.lp .lp-hero::before {
   content: none;
 }
 
