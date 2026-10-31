@@ -269,7 +269,10 @@ text in General Sans, both capped at weight 500; editorial serif display faces
 were rejected, as were the faces of the reference site the owner showed. The
 public H1s are a step smaller than before: the hero tops out at 60px (about
 52px at 1280px) and the marketing page title is 36px, then 56px from 1280px.
-Phones get their own homepage composition rather than the desktop one shrunk.
+Phones get their own homepage composition rather than the desktop one shrunk
+(superseded for product views on 31 October 2026: see
+[Product views scale down on phones](#product-views-scale-down-on-phones);
+the copy, actions and engine list keep their phone composition).
 Motion stays subtle: copy arrives in sequence, and product pictures assemble
 themselves (lines draw, bars grow). Website copy is unchanged.
 
@@ -282,7 +285,10 @@ special treatment for mobile. [Design](design.md) owns the system.
 On a phone, a pair of calls to action shares one row at equal widths, in the
 hero and in every closing band; the hero's product picture keeps its title,
 its one action and its filter bar to one line each, dropping its secondary
-header controls and the widest filter; and the announcement strip can be
+header controls and the widest filter (superseded on 31 October 2026: the
+picture now keeps every control, see
+[Product views scale down on phones](#product-views-scale-down-on-phones));
+and the announcement strip can be
 closed, which the visitor's browser remembers for that announcement. In the
 app, record tables give the row's identity the width (a prompt's topic and tags
 are a caption line under it), set figures right-aligned with no header band,
@@ -404,3 +410,60 @@ variable subset (`Outfit-Variable.woff2`), added to the private Cube27 font
 repository; the pinned font revision moves to the one that adds it.
 
 Source: owner, 31 October 2026: Outfit should replace "Uncut Sans (headings)".
+
+## Product views scale down on phones
+
+On a phone or tablet every coded product view on the public website (the
+homepage hero picture, the homepage tiles and every product shot) shows its
+desktop layout scaled down, sidebar and every control included. Nothing in a
+view is hidden, trimmed or reflowed for a small screen. Each view lays out at
+the width its frame has on a 1440px desktop and scales down to fit, never up;
+desktop renders are unchanged. Text inside a view gets very small at phone
+widths (about a quarter of its size in the hero picture), and that is
+accepted. This replaces the 21 October phone treatment of the hero picture
+(no sidebar, dropped header controls and filter, a larger readable scale);
+the phone composition of the surrounding copy, actions and engine list stays.
+
+Source: owner, 31 October 2026, via the marketing-site design brief: product
+UI mocks on mobile should be scaled, not reflowed, keeping the desktop
+composition with the sidebar visible and no hidden controls, with small text
+on phones accepted. [Design](design.md) owns the system.
+
+## The public site gets a wireframe grid and neutral inks
+
+The public site's direction changes: only CiteLadder's content, its signal
+green accent (buttons, links, badges) and its logo stay its own; the rest
+follows a neutral wireframe system. This replaces the flat rule above for the
+homepage's lines and cards and for public type and ink.
+
+- **Wireframe (homepage):** every band sits on one `#f7f7f7` ground between a
+  pair of faded 1px vertical rails just outside the content edge, each band
+  drawing its own pair; a faded 1px rule runs across the full viewport at each
+  band boundary; side-by-side columns split on a solid `#e5e5e5` hairline that
+  turns horizontal when they stack; cards and tiles are white, fitted about
+  6px inside the rails; existing labels become small white chips. No copy,
+  section order or product view changes, and the whole wireframe is one
+  stylesheet that can be switched off.
+- **Neutral fields:** the homepage hero and closing band lose their mint and
+  lime fields and take the same `#f7f7f7` ground. The accent stays on
+  buttons, links and the logo.
+- **Type and ink (every public page, docs included):** hero 64/48/32px at
+  weight 400, section heading 39/32/26px, subtitle under a heading 24/18/15px
+  at 500 in a lighter ink, card titles 18/18/16px at 600, body 16/14/17px
+  (larger on a phone), across desktop (≥1200px), tablet (810–1199px) and
+  phone; inks are `#171717` headings, `#707070` sentences, 60% ink navigation,
+  footer links and subtitles, and 55% black lead-in labels. These lighter
+  inks are deliberately lighter than the headings but meet 4.5:1 on white,
+  the ground, the footer's band and the mint closing band of the subpages.
+  The feature heading beside a product shot keeps its earlier size. The font
+  families stay Outfit and Geist.
+
+Source: owner, 31 October 2026, via the design brief for this change
+(wireframe grid skeleton; type scale and colour hierarchy), with the follow-up
+to adopt the neutral ground, white fitted cards, chips, dividers and line
+colours, and to keep the current font families. Owner answers the same day:
+the hero and closing band fields become the neutral ground with the accent
+kept on buttons, links and the logo; docs takes the new type scale; "Feature
+heading size is good currently, so don't change it."; body ink is `#707070`;
+the navigation, subtitle and lead-in inks darken just enough to pass 4.5:1
+everywhere they render. [Design](design.md) owns the system.

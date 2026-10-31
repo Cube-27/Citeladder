@@ -33,13 +33,14 @@
      long after the reader started reading. `fallback` bounds that to ~3s
      — enough for a preloaded, same-origin file on any connection that
      was going to succeed at all. */
-  /* 500 is the design ceiling: a heavier request, including the browser's
-     own bold for strong, b and th, clamps to it, and `font-synthesis-weight:
+  /* 500 is the display ceiling and 600 the text one, kept for the card and
+     feature title role alone (strong, b and th are set to 500 in globals.css):
+     a heavier request clamps to the ceiling, and `font-synthesis-weight:
      none` below stops a faux bold on top. */
   @font-face {
     font-family: 'Geist Variable';
     src: url('/fonts/Geist-Variable.woff2') format('woff2');
-    font-weight: 300 500;
+    font-weight: 300 600;
     font-style: normal;
     font-display: fallback;
   }
@@ -58,7 +59,7 @@
   @font-face {
     font-family: 'Geist Fallback';
     src: local('Arial');
-    font-weight: 100 500;
+    font-weight: 100 600;
     size-adjust: 102.12%;
     ascent-override: 98.41%;
     descent-override: 28.89%;

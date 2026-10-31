@@ -28,7 +28,7 @@
 /* ── Header ─────────────────────────────────────────────────────────────── */
 
 .nav-link {
-  color: var(--color-secondary);
+  color: var(--color-site-nav);
   transition:
     color var(--motion-fast) var(--ease-standard),
     background-color var(--motion-fast) var(--ease-standard);
@@ -38,7 +38,15 @@
 .nav-link[data-open],
 .nav-link[aria-current='page'],
 .nav-link[data-current] {
-  color: var(--color-foreground);
+  color: var(--color-site-ink);
+}
+
+/* "Log in" is a header button, a step firmer than the links beside it. */
+[data-nav-actions] .website-nav {
+  font-size: var(--text-site-control);
+  line-height: var(--text-site-control--line-height);
+  font-weight: 500;
+  letter-spacing: -0.02em;
 }
 
 .nav-link:hover,
@@ -144,7 +152,7 @@
 }
 
 .footer-heading {
-  color: var(--color-foreground);
+  color: var(--color-site-ink);
   font-family: var(--font-sans);
   font-size: var(--text-sm);
   line-height: var(--text-sm--line-height);
@@ -152,29 +160,33 @@
   letter-spacing: 0;
 }
 
+/* Footer links take the nav grey; on a phone they read larger, in the
+   footer grey. */
+.footer-link,
+.footer-legal-link {
+  color: var(--color-site-footer);
+  font-size: var(--text-site-footer);
+  line-height: var(--text-site-footer--line-height);
+  font-weight: 400;
+  transition: color var(--motion-fast) var(--ease-standard);
+}
+
 .footer-link {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  color: var(--color-muted);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
-  transition: color var(--motion-fast) var(--ease-standard);
 }
 
-.footer-link:hover {
-  color: var(--color-foreground);
+@media (min-width: 810px) {
+  .footer-link,
+  .footer-legal-link {
+    color: var(--color-site-nav);
+  }
 }
 
-.footer-legal-link {
-  color: var(--color-muted);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
-  transition: color var(--motion-fast) var(--ease-standard);
-}
-
+.footer-link:hover,
 .footer-legal-link:hover {
-  color: var(--color-foreground);
+  color: var(--color-site-ink);
 }
 
 /* ── Consent bar ────────────────────────────────────────────────────────── */
@@ -217,20 +229,36 @@
   border-radius: var(--radius-lg);
 }
 
-/* A product view keeps its desktop layout at every width. Below its design
-   width the view lays out at that width and `zoom` shrinks it to fit, so a
-   phone sees the same picture as a laptop rather than a reflowed column that
-   ran several screens tall. tan(atan2(a, b)) is the unitless ratio a / b.
-   Design widths are in px, not rem: a larger root font size then enlarges the
-   text inside the frame instead of widening the frame and zooming it back. */
+/* A product view keeps its desktop composition at every width. On a desktop
+   viewport it fills its frame. Below that the view lays out at its design
+   width, the width it renders at on a 1440px desktop, and `zoom` scales it
+   down to fit, so a phone sees a smaller copy of the desktop picture rather
+   than a reflowed or trimmed one. It never scales up: a frame wider than the
+   design width (a tablet) lays the view out at the frame's width.
+   tan(atan2(a, b)) is the unitless ratio a / b. Design widths are in px, not
+   rem: a larger root font size then enlarges the text inside the frame
+   instead of widening the frame and zooming it back. Nothing inside a view
+   may step by viewport; it resolves against this width. */
 .product-fit {
-  --product-fit-width: 432px;
+  --product-fit-width: 677px;
   container-type: inline-size;
 }
 
 .product-fit > * {
-  width: max(100cqi, var(--product-fit-width));
-  zoom: min(1, tan(atan2(100cqi, var(--product-fit-width))));
+  width: 100cqi;
+}
+
+/* A platform page's preview shot spans the content column above its
+   highlights. */
+figure:has(+ .mk-highlights) > .product-fit {
+  --product-fit-width: 1200px;
+}
+
+@media (max-width: 980px) {
+  .product-fit > * {
+    width: max(100cqi, var(--product-fit-width));
+    zoom: min(1, tan(atan2(100cqi, var(--product-fit-width))));
+  }
 }
 
 .product-frame-bar {
@@ -247,9 +275,9 @@
 }
 
 .product-caption {
-  color: var(--color-muted);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  color: var(--color-site-body);
+  font-size: var(--text-site-secondary);
+  line-height: var(--text-site-secondary--line-height);
 }
 
 /* ── Closing band ───────────────────────────────────────────────────────── */
@@ -330,10 +358,11 @@
 
 .mk-group-label {
   margin-bottom: 0.5rem;
-  color: var(--color-muted);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  color: var(--color-site-ink);
+  font-size: var(--text-site-control);
+  line-height: var(--text-site-control--line-height);
   font-weight: 500;
+  letter-spacing: -0.2px;
 }
 
 .mk-capability-group ul {
@@ -361,18 +390,18 @@
 
 .mk-capability-title {
   display: block;
-  color: var(--color-foreground);
-  font-size: var(--text-base);
-  line-height: var(--text-base--line-height);
-  font-weight: 500;
-  letter-spacing: -0.006em;
+  color: var(--color-site-ink);
+  font-size: var(--text-site-card-compact);
+  line-height: var(--text-site-card-compact--line-height);
+  font-weight: 600;
+  letter-spacing: 0;
 }
 
 .mk-capability-desc {
   display: block;
-  color: var(--color-secondary);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  color: var(--color-site-body);
+  font-size: var(--text-site-secondary);
+  line-height: var(--text-site-secondary--line-height);
 }
 
 /* Questions are separated by space, not rules. */
@@ -383,10 +412,11 @@
   justify-content: space-between;
   gap: 1.5rem;
   padding-block: 1.25rem;
-  color: var(--color-foreground);
-  font-size: var(--text-base);
-  line-height: var(--text-base--line-height);
+  color: var(--color-site-ink-strong);
+  font-size: var(--text-site-question);
+  line-height: var(--text-site-question--line-height);
   font-weight: 500;
+  letter-spacing: -0.02em;
   list-style: none;
 }
 
@@ -407,6 +437,13 @@
 .mk-faq-list details p {
   max-width: 62ch;
   padding-bottom: 1.25rem;
+}
+
+/* An answer is secondary text, a step under the page's body copy. */
+.mk-faq-list details .website-body {
+  font-size: var(--text-site-secondary);
+  line-height: var(--text-site-secondary--line-height);
+  letter-spacing: 0;
 }
 
 .mk-dive {
@@ -436,8 +473,11 @@
   gap: 1.25rem;
 }
 
+/* The feature heading beside a product shot keeps the page title's phone
+   size and the 32px rung from 768px, in the site ink. */
 .mk-dive-title {
   max-width: 24ch;
+  color: var(--color-site-ink);
 }
 
 @media (min-width: 48rem) {
@@ -484,9 +524,10 @@
 .mk-checks li {
   display: flex;
   gap: 0.5rem;
-  color: var(--color-secondary);
-  font-size: var(--text-base);
-  line-height: var(--text-base--line-height);
+  color: var(--color-site-body);
+  font-size: var(--text-site-body);
+  line-height: var(--text-site-body--line-height);
+  letter-spacing: -0.2px;
 }
 
 /* The check marks the point: it holds its size beside a wrapping line and

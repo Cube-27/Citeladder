@@ -1,0 +1,189 @@
+/* The homepage wireframe (owner decision, 2026-10-31): every band sits on one
+   neutral ground inside a pair of faded vertical rails, a faded rule marks
+   each band boundary across the whole viewport, side-by-side columns split
+   on a hairline, and cards are white tiles fitted just inside the rails.
+   Lines only: no element is added, and removing this file's import from
+   index.astro removes the wireframe whole. Colours are the `--color-site-*`
+   tokens in globals.css. */
+
+.lp {
+  /* The rails sit one card inset outside the content edge of `.lp-wrap`, so
+     cards and tiles stand just inside them. */
+  --wf-inset: 6px;
+  --wf-rail-x: calc(max(0px, (100% - 80rem) / 2) + var(--site-gutter) - var(--wf-inset) - 1px);
+  --wf-rail: linear-gradient(
+    180deg,
+    var(--color-site-rail-end) 0%,
+    var(--color-site-rail-mid) 51%,
+    var(--color-site-rail-end) 100%
+  );
+  --wf-rule: linear-gradient(
+    90deg,
+    var(--color-site-rule-end) 0%,
+    var(--color-site-rule-mid) 48%,
+    var(--color-site-rule-end) 100%
+  );
+
+  background: var(--color-site-ground);
+}
+
+/* The rules run past both viewport edges; nothing may scroll sideways. */
+html,
+body {
+  overflow-x: clip;
+}
+
+/* Bands ──────────────────────────────────────────────────────────────────── */
+
+.lp-engines,
+.lp-section {
+  position: relative;
+  isolation: isolate;
+}
+
+/* Every band is the one neutral ground, the hero and closing band included:
+   their brand fields, grain and lattice give way to it, and so does the
+   announcement strip above the bar. The accent stays on buttons, links and
+   the logo. */
+.lp :is(.lp-soft, .lp-hero, .marketing-closing-band),
+body .lp-announcement {
+  background-color: var(--color-site-ground);
+}
+
+.lp :is(.lp-hero, .marketing-closing-band)::before {
+  content: none;
+}
+
+/* Each band draws its own pair of rails, so the fade restarts per band. */
+.lp :is(.lp-hero, .lp-engines, .lp-section)::after {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline: var(--wf-rail-x);
+  z-index: -1;
+  background:
+    var(--wf-rail) left / 1px 100% no-repeat,
+    var(--wf-rail) right / 1px 100% no-repeat;
+  pointer-events: none;
+}
+
+/* A rule on each band's top edge: the gradient is twice the viewport wide and
+   centred, so the visible part fades toward both edges without overflowing.
+   The statement and the loop below it read as one band and share a rule. */
+.lp :is(.lp-engines, .lp-section) {
+  background-image: var(--wf-rule);
+  background-position: 50% 0;
+  background-size: 200% 1px;
+  background-repeat: no-repeat;
+}
+
+.lp .lp-statement + .lp-section {
+  background-image: none;
+}
+
+/* The closing band also closes the page above the footer. */
+.lp .lp-section.marketing-closing-band {
+  background-image: var(--wf-rule), var(--wf-rule);
+  background-position:
+    50% 0,
+    50% 100%;
+  background-size: 200% 1px;
+  background-repeat: no-repeat;
+}
+
+/* Fitted cards ───────────────────────────────────────────────────────────── */
+
+.lp :is(.lp-tile, .lp-team) {
+  border-radius: var(--radius-card);
+  background: var(--color-panel);
+}
+
+/* A capability row lifts into a card on hover, so it stays inside the content
+   edge, one inset from the rails, like the tiles; elsewhere it bleeds into
+   the margin. */
+.lp .mk-capability {
+  margin-inline: 0;
+}
+
+.lp :is(.lp-tile, .lp-team):hover,
+.lp .mk-capability:hover {
+  background: var(--color-panel);
+  box-shadow: 0 0 0 1px var(--color-site-divider);
+}
+
+/* Label chips: the capability group labels become chips. */
+.lp .mk-group-label {
+  width: fit-content;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-xs);
+  background: var(--color-panel);
+  box-shadow:
+    var(--shadow-site-chip),
+    0 0 0 1px var(--color-border-subtle);
+}
+
+/* Column dividers ────────────────────────────────────────────────────────── */
+
+/* Side by side (from 1024px) a hairline runs down the middle of the column
+   gap; stacked, it runs across the gap between copy and picture. */
+.lp
+  :is(
+    .mk-dive,
+    .mk-dive-copy,
+    .lp-integrations,
+    .lp-integrations > .lp-head,
+    .lp-faq,
+    .lp-faq > .lp-head
+  ) {
+  position: relative;
+}
+
+.lp :is(.mk-dive-copy, .lp-integrations > .lp-head, .lp-faq > .lp-head)::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  bottom: -1.25rem;
+  height: 1px;
+  background: var(--color-site-divider);
+  pointer-events: none;
+}
+
+.lp .lp-integrations > .lp-head::after {
+  bottom: -1.5rem;
+}
+
+@media (min-width: 64rem) {
+  .lp :is(.mk-dive-copy, .lp-integrations > .lp-head, .lp-faq > .lp-head)::after {
+    content: none;
+  }
+
+  /* `--wf-pad` is the box's own inline padding: the integrations and FAQ
+     boxes are `.lp-wrap`s and carry the site gutter, a deep dive none. */
+  .lp :is(.mk-dive, .lp-integrations, .lp-faq) {
+    --wf-split: 0.4;
+    --wf-pad: 0px;
+  }
+
+  .lp .mk-dive-reverse {
+    --wf-split: 0.6;
+  }
+
+  .lp :is(.lp-integrations, .lp-faq) {
+    --wf-pad: var(--site-gutter);
+  }
+
+  .lp .lp-integrations {
+    --wf-split: 0.45;
+  }
+
+  /* The column gap is 4.5rem in all three; the line sits in its middle. */
+  .lp :is(.mk-dive, .lp-integrations, .lp-faq)::before {
+    content: '';
+    position: absolute;
+    inset-block: 0;
+    left: calc(var(--wf-pad) + (100% - 2 * var(--wf-pad) - 4.5rem) * var(--wf-split) + 2.25rem);
+    width: 1px;
+    background: var(--color-site-divider);
+    pointer-events: none;
+  }
+}

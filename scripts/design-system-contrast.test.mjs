@@ -24,16 +24,32 @@ const TAGS = [
 function palette(ink, paper, marks, charts) {
   return {
     ...Object.fromEntries(
-      ['panel', 'background', 'background-alt', 'well', 'panel-tonal'].map((role) => [
-        `--color-${role}`,
-        paper,
-      ]),
+      [
+        'panel',
+        'background',
+        'background-alt',
+        'well',
+        'panel-tonal',
+        'site-ground',
+        'field-mint',
+      ].map((role) => [`--color-${role}`, paper]),
     ),
     ...Object.fromEntries(
-      ['foreground', 'secondary', 'muted', 'brand-ink', 'border-bold', 'state-ink'].map((role) => [
-        `--color-${role}`,
-        ink,
-      ]),
+      [
+        'foreground',
+        'secondary',
+        'muted',
+        'brand-ink',
+        'border-bold',
+        'state-ink',
+        'site-ink',
+        'site-ink-strong',
+        'site-body',
+        'site-footer',
+        'site-nav',
+        'site-ink-soft',
+        'site-lead-in',
+      ].map((role) => [`--color-${role}`, ink]),
     ),
     '--color-hover': 'color-mix(in srgb, var(--color-panel), var(--color-state-ink) 4%)',
     '--color-selected': 'color-mix(in srgb, var(--color-panel), var(--color-state-ink) 8%)',

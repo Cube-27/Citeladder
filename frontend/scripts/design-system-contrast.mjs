@@ -46,6 +46,29 @@ const CONTRAST_PAIRS = [
     minimum: 4.5,
     scopes: ALL_SCOPES,
   },
+  // The public site's own inks on its paper, its wireframe ground and the
+  // footer's band; body, navigation, subtitle and lead-in inks also on
+  // the mint closing band of the subpages.
+  {
+    inks: [
+      'site-ink',
+      'site-ink-strong',
+      'site-body',
+      'site-footer',
+      'site-nav',
+      'site-ink-soft',
+      'site-lead-in',
+    ].map(color),
+    surfaces: ['panel', 'site-ground', 'background-alt'].map(color),
+    minimum: 4.5,
+    scopes: [PUBLIC],
+  },
+  {
+    inks: ['site-body', 'site-nav', 'site-ink-soft', 'site-lead-in'].map(color),
+    surfaces: [color('field-mint')],
+    minimum: 4.5,
+    scopes: [PUBLIC],
+  },
   ...STATUSES.map((status) => ({
     inks: [color(`${status}-text`)],
     surfaces: [color(`${status}-bg`), color('panel')],
