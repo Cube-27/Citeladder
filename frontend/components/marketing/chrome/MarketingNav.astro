@@ -38,6 +38,8 @@ const signupOpen = selfServeSignupOpen();
 const NAV_LINK =
   'nav-link website-nav relative inline-flex items-center gap-1 whitespace-nowrap ' +
   'rounded-[var(--radius-control)] px-3 py-2';
+// Log in is the secondary button atom at the 14px control type, on every width.
+const { className: logInClass, ...logInData } = buttonLinkAttributes({ variant: 'soft' });
 const { className: signUpClass, ...signUpData } = buttonLinkAttributes({
   className: 'hidden sm:inline-flex',
 });
@@ -84,7 +86,7 @@ function panelStyle(key: NavDropKey) {
   }
   <nav
     aria-label="Main navigation"
-    class="mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-4 px-[var(--site-gutter)] lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]"
+    class="mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-2 sm:gap-4 px-[var(--site-gutter)] lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]"
   >
     <a
       href="/"
@@ -125,7 +127,7 @@ function panelStyle(key: NavDropKey) {
                         role="group"
                         aria-labelledby={`desktop-nav-${key}-section-${index}`}
                       >
-                        <p id={`desktop-nav-${key}-section-${index}`} class="nav-section-label">
+                        <p id={`desktop-nav-${key}-section-${index}`} class="nav-group-label">
                           {group.label}
                         </p>
                         {group.items.map((item) => (
@@ -178,7 +180,7 @@ function panelStyle(key: NavDropKey) {
       }
     </div>
 
-    <div class="flex shrink-0 items-center gap-2 justify-self-end">
+    <div class="flex shrink-0 items-center gap-1 justify-self-end sm:gap-2">
       {/* The open-source repository, beside the account actions on every width. */}
       <a
         href={CITELADDER_GITHUB}
@@ -191,12 +193,7 @@ function panelStyle(key: NavDropKey) {
         <GitHubMark className="size-5" />
       </a>
       <div class="flex items-center gap-2" data-nav-actions>
-        <a
-          href={appHref('/login')}
-          class="nav-link website-nav rounded-[var(--radius-control)] px-3 py-2"
-        >
-          Log in
-        </a>
+        <a href={appHref('/login')} class={logInClass} {...logInData}>Log in</a>
         {
           signupOpen && (
             <a href={appHref('/register')} class={signUpClass} {...signUpData}>

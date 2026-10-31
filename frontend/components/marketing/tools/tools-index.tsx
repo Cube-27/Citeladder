@@ -204,7 +204,7 @@ export function ToolNotes({ slug }: Readonly<{ slug: FreeTool['slug'] }>) {
           </div>
         </div>
       </Section>
-      <Section tone="soft" rhythm="tight" aria-labelledby="tool-related-title">
+      <Section tone="soft" aria-labelledby="tool-related-title">
         <SectionHeader headingId="tool-related-title" title="More free tools" size="h3" />
         <nav aria-labelledby="tool-related-title">
           <ul className="cp-tool-list">

@@ -41,8 +41,8 @@ export function LegalDocumentView({ document }: Readonly<{ document: LegalDocume
         </p>
       </PageHero>
 
-      <div>
-        <Container className="py-[calc(var(--section-y)*0.75)]">
+      <div className="site-band">
+        <Container>
           <div className={cn('ed-doc', !rail && 'ed-doc-single')}>
             {rail && (
               <nav aria-label="On this page" className="ed-rail">

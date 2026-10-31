@@ -38,8 +38,8 @@ export function CommercialEntryPage({
         </div>
       </PageHero>
 
-      <section aria-label="Guide">
-        <Container className="py-[var(--section-y)]">
+      <section aria-label="Guide" className="site-band">
+        <Container>
           <div className="ed-doc">
             <nav aria-label="On this page" className="ed-rail">
               <p className="website-label ed-rail-title">On this page</p>

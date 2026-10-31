@@ -233,7 +233,7 @@ function DeepDive({
   children: ReactNode;
 }>) {
   return (
-    <div className={cn('mk-dive site-split', reverse && 'mk-dive-reverse site-split-reverse')}>
+    <div className={cn('mk-dive', reverse && 'mk-dive-reverse')}>
       <div className="mk-dive-copy">
         <h3 className="website-page-title mk-dive-title">{title}</h3>
         <p className="website-body">{body}</p>
@@ -266,7 +266,7 @@ function DeepDives() {
           ]}
           link={{ href: '/platform/citation-intelligence', label: 'Explore Citation Intelligence' }}
         >
-          <ProductShot title="Answer record" className="site-cell-card">
+          <ProductShot title="Answer record">
             <AnswerView />
           </ProductShot>
         </DeepDive>
@@ -281,7 +281,7 @@ function DeepDives() {
           ]}
           link={{ href: '/platform/site-health', label: 'Explore Site Health' }}
         >
-          <ProductShot title="Site Health" className="site-cell-card">
+          <ProductShot title="Site Health">
             <SiteHealthView />
           </ProductShot>
         </DeepDive>
@@ -295,7 +295,7 @@ function DeepDives() {
           ]}
           link={{ href: '/platform/demand-intelligence', label: 'Explore Demand Intelligence' }}
         >
-          <ProductShot title="Search Demand" className="site-cell-card">
+          <ProductShot title="Search Demand">
             <DemandView />
           </ProductShot>
         </DeepDive>
@@ -355,7 +355,7 @@ function Closing() {
  */
 export function LandingPage({ rotor }: Readonly<{ rotor?: ReactNode }>) {
   return (
-    <div className="lp site-frame">
+    <div className="lp">
       <Hero rotor={rotor} />
       <EngineStrip />
       <Statement />

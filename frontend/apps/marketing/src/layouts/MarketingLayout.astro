@@ -23,6 +23,7 @@ import '@/apps/marketing/src/product-views.css';
 import '@/apps/marketing/src/styles/commerce-pages.css';
 import '@/apps/marketing/src/styles/content-pages.css';
 import '@/apps/marketing/src/styles/editorial-pages.css';
+import '@/apps/marketing/src/styles/site-grid.css';
 
 interface Props {
   title?: string;
@@ -114,7 +115,8 @@ const sharedJsonLd = [organizationJsonLd(), websiteJsonLd(), softwareApplication
     {gaMeasurementId && <GoogleAnalytics />}
     <a href="#main" class="skip-link">Skip to main content</a>
     <MarketingNav path={Astro.url.pathname} />
-    <div class="relative z-1 pt-[var(--marketing-nav-offset)]"><slot /></div>
+    {/* Every marketing page sits on the site grid (marketing.css). */}
+    <div class="site-frame relative z-1 pt-[var(--marketing-nav-offset)]"><slot /></div>
     <div class="relative z-1"><MarketingFooter /></div>
     <CookieBanner />
   </body>

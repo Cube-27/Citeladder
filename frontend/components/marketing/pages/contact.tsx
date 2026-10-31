@@ -216,7 +216,7 @@ export function ContactPage() {
   return (
     <main id="main">
       <Section className="cm-contact">
-        <div className="cm-contact-grid">
+        <div className="cm-contact-grid site-split">
           <div className="cm-contact-copy">
             <header className="grid gap-5">
               <h1 className="website-page-title text-foreground">Talk to the CiteLadder team.</h1>

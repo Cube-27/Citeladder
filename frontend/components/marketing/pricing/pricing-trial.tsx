@@ -80,7 +80,7 @@ export function PricingTrial({
 
   if (!signupOpen) {
     return (
-      <Section tone="paper" rhythm="tight" className="pt-0" aria-label="Early access">
+      <Section tone="paper" aria-label="Early access">
         <div className="cm-access">
           <SectionHeader
             title="Paid plans are not open for self-serve checkout."
@@ -99,7 +99,7 @@ export function PricingTrial({
   }
 
   return (
-    <Section tone="paper" rhythm="tight" className="pt-0" aria-label="Free trial">
+    <Section tone="paper" aria-label="Free trial">
       <div className="cm-access">
         <div className="cm-access-copy">
           <SectionHeader

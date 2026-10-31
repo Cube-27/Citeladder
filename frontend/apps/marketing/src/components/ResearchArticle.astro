@@ -15,7 +15,7 @@ const more = moreGuides(article);
 const parent = researchParent(frontmatter.slug);
 ---
 
-<Container>
+<div class="site-band"><Container>
   <div class="cp-article">
     <header class="cp-article-head">
       <nav aria-label="Breadcrumb" class="cp-crumbs">
@@ -30,7 +30,10 @@ const parent = researchParent(frontmatter.slug);
         <span>Research reviewed <time datetime={frontmatter.reviewed_at}>{formatBlogDate(frontmatter.reviewed_at)}</time></span>
       </p>
     </header>
-    <div class="cp-article-grid">
+  </div>
+</Container></div>
+<div class="site-band"><Container>
+    <div class="cp-article cp-article-grid">
       <aside>
         <nav aria-label="On this page" class="cp-toc">
           <p class="website-label">On this page</p>
@@ -63,5 +66,4 @@ const parent = researchParent(frontmatter.slug);
         )}
       </article>
     </div>
-  </div>
-</Container>
+</Container></div>

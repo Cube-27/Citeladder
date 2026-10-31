@@ -1,0 +1,228 @@
+/* The site grid: the public website's layout system (owner, 2026-10-31).
+
+   Every marketing page is one grid of cells, frame columns by band rows,
+   and every element sits in a cell with the same spacing and padding. The
+   geometry is the `--site-*` tokens in globals.css and the lines are
+   `--color-site-line`: subtle and solid, never dark, faded or gradient.
+   MarketingLayout puts `.site-frame` on every page, so every rule here sits
+   under it and the docs site, which has no frame, is untouched.
+
+   - `.site-frame`: the page root, on the neutral ground. A line runs down
+     each frame edge (the header logo's left and the last header action's
+     right) from the header's foot, where a full-bleed rule also crosses the
+     page.
+   - `.site-band`: a band that opens with a full-bleed rule and pads its
+     content one cell height (`--site-cell-y`) from its rules, top and
+     bottom. `Section` and `PageHero` are bands; the band that opens a page
+     sits under the header's rule and draws none of its own. A band that
+     ends on a row of cards closes a card gap under them, so the cards sit
+     against the rule as they sit against the frame.
+   - `.site-wrap`: a band's content, its copy a cell inset inside the frame
+     (`Container`). `.site-wrap-cards`: content that is itself a card or
+     product view, a card gap inside the frame.
+   - `.site-cards`: a grid of cards reaching out to a card gap from the frame
+     lines; `.site-card`: one white card, padded `--site-card-pad`.
+   - `.site-split` (and the shared `.mk-split` and `.mk-dive`): side-by-side
+     cells with a divider down the middle of the gap from 64rem, stacked
+     below it with a frame-wide rule between them. The divider is drawn on
+     the grid's second column line, so it holds when the cells swap order.
+   - `.site-rows`: a stack of rows (usually splits) with a frame-wide rule
+     between rows, each row a cell height from its rules.
+   - `.site-cell-card`: a cell that holds a card or product view, a card gap
+     from its lines instead of a cell inset (`ProductShot`).
+   - `.site-chip`: a small white label chip aligned with the copy. */
+
+.site-frame {
+  /* The page's content starts under the fixed header bar. */
+  --site-frame-top: var(--marketing-nav-offset);
+
+  position: relative;
+  overflow-x: clip;
+  background: var(--color-site-ground);
+}
+
+.site-frame::before,
+.site-frame::after {
+  content: '';
+  position: absolute;
+  top: var(--site-frame-top);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.site-frame::before {
+  right: 0;
+  left: 0;
+  border-top: 1px solid var(--color-site-line);
+}
+
+.site-frame::after {
+  bottom: 0;
+  inset-inline: max(var(--site-frame-inset), calc(50% - 40rem + var(--site-frame-inset)));
+  border-inline: 1px solid var(--color-site-line);
+}
+
+/* Bands ──────────────────────────────────────────────────────────────────── */
+
+.site-frame .site-band {
+  padding-block: var(--site-cell-y);
+  border-top: 1px solid var(--color-site-line);
+}
+
+/* Structured-data scripts can precede it, so "first" skips them. */
+.site-frame main > .site-band:nth-child(1 of :not(script)) {
+  border-top: 0;
+}
+
+.site-frame .site-band:has(> * > :is(.site-cards, .mk-related):last-child) {
+  padding-bottom: var(--site-card-gap);
+}
+
+/* Every band is the one neutral ground; the closing band keeps its mint
+   field and lattice. */
+.site-frame [data-citeladder-section='soft']:not(.marketing-closing-band) {
+  background-color: var(--color-site-ground);
+}
+
+.site-frame :is(.site-wrap, .site-wrap-cards) {
+  width: 100%;
+  max-width: 80rem;
+  margin-inline: auto;
+  padding-inline: calc(var(--site-frame-inset) + var(--site-cell-inset));
+}
+
+.site-frame .site-wrap-cards {
+  padding-inline: calc(var(--site-frame-inset) + var(--site-card-gap));
+}
+
+/* Cards ──────────────────────────────────────────────────────────────────── */
+
+.site-frame :is(.site-cards, .mk-related, .mk-questions) {
+  gap: calc(var(--site-card-gap) * 2);
+  margin-inline: calc(var(--site-card-gap) - var(--site-cell-inset));
+}
+
+/* The shared page parts that are cards take the one card: white on the
+   ground, the card radius, a line ring and the chip's soft lift. */
+.site-frame
+  :is(
+    .site-card,
+    .mk-related-card,
+    .mk-questions li,
+    .ed-ledger a,
+    .cp-tool-row,
+    .cp-tool,
+    .cp-feature,
+    .cm-plan,
+    .cm-access,
+    .cm-contact-panel
+  ) {
+  border-radius: var(--radius-card);
+  background: var(--color-panel);
+  box-shadow:
+    0 0 0 1px var(--color-site-line),
+    var(--shadow-site-chip);
+}
+
+.site-frame
+  :is(
+    .site-card,
+    .mk-related-card,
+    .mk-questions li,
+    .ed-ledger a,
+    .cp-tool-row,
+    .cm-plan,
+    .cm-access,
+    .cm-contact-panel
+  ) {
+  padding: var(--site-card-pad);
+}
+
+/* Cards stay white on hover; the ring darkens a step instead. */
+.site-frame :is(a.site-card, .mk-related-card, .ed-ledger a, .cp-tool-row):hover {
+  background: var(--color-panel);
+  box-shadow:
+    0 0 0 1px var(--color-site-divider),
+    var(--shadow-site-chip);
+}
+
+/* A mark inside a white card steps down to the soft tone. */
+.site-frame :is(.mk-related-card, .cp-tool-row) .nav-row-icon {
+  background: var(--color-background-alt);
+}
+
+.site-frame .site-cell-card {
+  margin-inline: calc(var(--site-card-gap) - var(--site-cell-inset));
+}
+
+.site-frame .site-chip {
+  width: fit-content;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-xs);
+  background: var(--color-panel);
+  box-shadow:
+    var(--shadow-site-chip),
+    0 0 0 1px var(--color-site-line);
+}
+
+/* Splits and rows ────────────────────────────────────────────────────────── */
+
+/* Cells and rows are a cell height from every rule, so stacked cells and
+   rows sit two cell heights apart with the rule midway, and side-by-side
+   cells a cell inset either side of the divider. Cell content starts at
+   the top of its cell. */
+.site-frame :is(.site-split, .mk-split, .mk-dive) {
+  position: relative;
+  gap: calc(var(--site-cell-y) * 2) calc(var(--site-cell-inset) * 2);
+  align-items: stretch;
+}
+
+.site-frame :is(.site-split, .mk-split, .mk-dive) > * {
+  align-content: start;
+}
+
+/* Stacked, the rule sits on the second row's line and spans the frame. */
+.site-frame :is(.site-split, .mk-split, .mk-dive)::after {
+  content: '';
+  position: absolute;
+  grid-row: 2;
+  grid-column: 1 / -1;
+  top: calc(var(--site-cell-y) * -1);
+  right: calc(var(--site-cell-inset) * -1);
+  left: calc(var(--site-cell-inset) * -1);
+  border-top: 1px solid var(--color-site-line);
+  pointer-events: none;
+}
+
+/* Side by side, the divider sits on the second column's line, midway
+   through the gap, and runs a cell height past the cells to the rules. */
+@media (min-width: 64rem) {
+  .site-frame :is(.site-split, .mk-split, .mk-dive)::after {
+    grid-row: 1;
+    grid-column: 2;
+    top: calc(var(--site-cell-y) * -1);
+    right: auto;
+    bottom: calc(var(--site-cell-y) * -1);
+    left: calc(var(--site-cell-inset) * -1);
+    border-top: 0;
+    border-left: 1px solid var(--color-site-line);
+  }
+}
+
+.site-frame .site-rows {
+  gap: calc(var(--site-cell-y) * 2);
+}
+
+.site-frame .site-rows > * {
+  position: relative;
+}
+
+.site-frame .site-rows > * + *::before {
+  content: '';
+  position: absolute;
+  top: calc(var(--site-cell-y) * -1);
+  right: calc(var(--site-cell-inset) * -1);
+  left: calc(var(--site-cell-inset) * -1);
+  border-top: 1px solid var(--color-site-line);
+  pointer-events: none;
+}

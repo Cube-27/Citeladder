@@ -381,7 +381,6 @@
   /* Fine film grain: tiled fractal noise, laid over a wash at low opacity. */
   --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.6 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E") 0 0 / 160px 160px;
   --site-gutter: 20px;
-  --section-y: 72px;
   --marketing-nav-offset: calc(4rem + env(safe-area-inset-top, 0px));
   --skeleton-base: var(--color-well);
   --value-placeholder: var(--color-muted);
@@ -1071,25 +1070,37 @@ a.focus-ring:active .type-caption {
   line-height: var(--text-site-cta--line-height);
 }
 
-/* Public buttons are flat: one fill, no ring. The alternate action is a tone
-   step from the page rather than an outline. */
-:is([data-public-surface], :root:not([data-theme='dark']) [data-flow-surface])
+/* The public alternate action is a white button with a visible line ring and
+   the chip's small contact shadow (owner, 2026-10-31). A tone step from the
+   page stopped reading as a button once the header and the site grid's
+   ground took that same tone, so it reads on every public background: the
+   header, the ground, white cards and the mint fields. The primary action
+   stays one flat fill. Sign-in and onboarding keep their flat tone step. */
+[data-public-surface]
+  .control-raised[data-button-variant='secondary']:not([data-ui] *, :disabled, [aria-disabled='true']) {
+  background-color: var(--color-panel);
+  color: var(--color-foreground);
+  border-color: transparent;
+  box-shadow:
+    0 0 0 1px var(--color-site-divider),
+    var(--shadow-site-chip);
+}
+
+[data-public-surface]
+  .control-raised[data-button-variant='secondary']:not([data-ui] *, :disabled, [aria-disabled='true']):hover {
+  background-color: var(--color-background-alt);
+}
+
+:root:not([data-theme='dark']) [data-flow-surface]
   .control-raised[data-button-variant='secondary']:not([data-ui] *, :disabled, [aria-disabled='true']) {
   background-color: var(--color-background-alt);
   color: var(--color-foreground);
   border-color: transparent;
 }
 
-:is([data-public-surface], :root:not([data-theme='dark']) [data-flow-surface])
+:root:not([data-theme='dark']) [data-flow-surface]
   .control-raised[data-button-variant='secondary']:not([data-ui] *, :disabled, [aria-disabled='true']):hover {
   background-color: var(--color-well);
-}
-
-/* On the soft band and the mint fields the alternate action steps back up to
-   paper. */
-:is([data-citeladder-section='soft'], .lp-hero, .marketing-closing-band)
-  .control-raised[data-button-variant='secondary']:not([data-ui] *, :disabled, [aria-disabled='true']) {
-  background-color: var(--color-panel);
 }
 
 [data-public-surface] .marketing-cta-button:not([aria-disabled='true']):active {
@@ -1546,22 +1557,13 @@ samp {
 @media (min-width: 768px) {
   :root {
     --site-gutter: 32px;
-    --section-y: 104px;
   }
 }
 
 @media (min-width: 1280px) {
   :root {
     --site-gutter: 40px;
-    --section-y: 128px;
   }
-}
-
-/* Two public sections of the same tone read as one band, so they share a single
-   rhythm rather than stacking both paddings. This is the rule the
-   data-citeladder-section hook in marketing/primitives/section.tsx was written for. */
-[data-citeladder-section="paper"] + [data-citeladder-section="paper"]:not(.marketing-closing-band) {
-  padding-top: 0;
 }
 
 /* Live-activity marker. Owned here so features never hand-roll a pulse.

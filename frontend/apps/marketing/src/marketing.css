@@ -70,29 +70,23 @@
   box-shadow: var(--shadow-overlay);
 }
 
+/* The one label over a group of rows in every dropdown and the phone sheet
+   (owner, 2026-10-31): 14px at 400 in the navigation ink. */
 .nav-group-label {
   padding: 0.75rem 0.75rem 0.5rem;
-  color: var(--color-muted);
-  font-size: var(--text-xs);
-  line-height: var(--text-xs--line-height);
-  font-weight: 500;
+  color: var(--color-site-nav);
+  font-size: var(--text-site-label);
+  line-height: var(--text-site-label--line-height);
+  font-weight: 400;
 }
 
-/* Resources: labelled sections side by side, each a muted label over plain
+/* Resources: labelled sections side by side, each a group label over plain
    title-and-description rows that wrap within the column. */
 .nav-sections {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0 1rem;
-  padding: 1rem;
-}
-
-.nav-section-label {
-  padding: 0 0.75rem 0.5rem;
-  color: var(--color-site-nav);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
-  font-weight: 400;
+  padding: 0.5rem;
 }
 
 .nav-row-icon {
@@ -116,8 +110,8 @@
 .nav-row-title {
   display: block;
   color: var(--color-foreground);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  font-size: var(--text-site-label);
+  line-height: var(--text-site-label--line-height);
   font-weight: 500;
 }
 
@@ -126,8 +120,8 @@
 .nav-row-desc {
   display: block;
   color: var(--color-muted);
-  font-size: var(--text-xs);
-  line-height: var(--text-xs--line-height);
+  font-size: var(--text-site-caption);
+  line-height: var(--text-site-caption--line-height);
 }
 
 .nav-row .nav-row-title + .nav-row-desc {
@@ -158,8 +152,8 @@
   justify-content: space-between;
   padding-block: 1rem;
   color: var(--color-foreground);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  font-size: var(--text-site-label);
+  line-height: var(--text-site-label--line-height);
   font-weight: 500;
   text-align: left;
 }
@@ -173,8 +167,8 @@
 .footer-heading {
   color: var(--color-site-ink);
   font-family: var(--font-sans);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  font-size: var(--text-site-label);
+  line-height: var(--text-site-label--line-height);
   font-weight: 500;
   letter-spacing: 0;
 }
@@ -210,18 +204,10 @@
 
 /* ── Consent bar ────────────────────────────────────────────────────────── */
 
-/* The notice reads at the 14px rung on phones so the bar stays short; from
-   640px it takes the website body size. */
+/* The notice is body text (the site's body role). */
 .consent-copy {
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
-}
-
-@media (min-width: 40rem) {
-  .consent-copy {
-    font-size: var(--text-base);
-    line-height: var(--text-base--line-height);
-  }
+  font-size: var(--text-site-body);
+  line-height: var(--text-site-body--line-height);
 }
 
 /* ── Product frames ─────────────────────────────────────────────────────── */
@@ -248,36 +234,28 @@
   border-radius: var(--radius-lg);
 }
 
-/* A product view keeps its desktop composition at every width. On a desktop
-   viewport it fills its frame. Below that the view lays out at its design
-   width, the width it renders at on a 1440px desktop, and `zoom` scales it
-   down to fit, so a phone sees a smaller copy of the desktop picture rather
-   than a reflowed or trimmed one. It never scales up: a frame wider than the
-   design width (a tablet) lays the view out at the frame's width.
+/* Every product view is a snapshot of the app at the app's own dimensions
+   (owner, 2026-10-31): a scaled-down snapshot, a whole view laid out at its
+   app width and zoomed down to fit its frame, or a focused snapshot, a crop
+   of a real-width view (the homepage tiles). It never reflows to a narrower
+   layout, wraps, or hides a control: the design width is the app's layout
+   width for that view, and the frame only decides the zoom and the crop.
+   A content view's app width is 960px, the content column beside the app's
+   240px sidebar on a 1200px screen; the whole app window (the homepage
+   hero, sidebar included) is 1184px. A frame wider than its design width
+   lays the view out at the frame's width; it never scales up.
    tan(atan2(a, b)) is the unitless ratio a / b. Design widths are in px, not
    rem: a larger root font size then enlarges the text inside the frame
    instead of widening the frame and zooming it back. Nothing inside a view
    may step by viewport; it resolves against this width. */
 .product-fit {
-  --product-fit-width: 677px;
+  --product-fit-width: 960px;
   container-type: inline-size;
 }
 
 .product-fit > * {
-  width: 100cqi;
-}
-
-/* A platform page's preview shot spans the content column above its
-   highlights. */
-figure:has(+ .mk-highlights) > .product-fit {
-  --product-fit-width: 1200px;
-}
-
-@media (max-width: 980px) {
-  .product-fit > * {
-    width: max(100cqi, var(--product-fit-width));
-    zoom: min(1, tan(atan2(100cqi, var(--product-fit-width))));
-  }
+  width: max(100cqi, var(--product-fit-width));
+  zoom: min(1, tan(atan2(100cqi, var(--product-fit-width))));
 }
 
 .product-frame-bar {
@@ -289,196 +267,14 @@ figure:has(+ .mk-highlights) > .product-fit {
   padding: 0 1rem;
   border-bottom: 1px solid var(--color-border-subtle);
   color: var(--color-muted);
-  font-size: var(--text-xs);
-  line-height: var(--text-xs--line-height);
+  font-size: var(--text-site-caption);
+  line-height: var(--text-site-caption--line-height);
 }
 
 .product-caption {
   color: var(--color-site-body);
   font-size: var(--text-site-secondary);
   line-height: var(--text-site-secondary--line-height);
-}
-
-/* ── Site grid ──────────────────────────────────────────────────────────── */
-
-/* A page that opts in is one grid of cells (owner, 2026-10-31): frame
-   columns by band rows, every cell with the same inset and padding. The
-   geometry is the `--site-*` tokens in globals.css and the lines are
-   `--color-site-line`: subtle and solid, never dark, faded or gradient.
-   Every rule here sits under `.site-frame`, so a page opts in by putting
-   that class on its root and the classes below on its parts:
-
-   - `.site-frame`: the page root. A line runs down each frame edge (the
-     header logo's left and the last header action's right) from
-     `--site-frame-top`, where a full-bleed rule also crosses the page.
-   - `.site-band`: a band that opens with a full-bleed rule and pads its
-     copy a cell height (`--site-cell-y`) from its rules.
-   - `.site-wrap`: a band's content, its copy a cell inset inside the frame.
-   - `.site-wrap-cards`: content that is itself a card or product view,
-     a card gap inside the frame.
-   - `.site-cards`: a grid of cards inside a `.site-wrap`, reaching out to a
-     card gap from the frame lines; `.site-card` is one white card.
-   - `.site-split`: two side-by-side cells with a divider between them, from
-     64rem; stacked below it with a rule between them. The first cell in
-     source order draws the divider; `.site-split-reverse` when that cell is
-     shown second. Its band's rules and the divider meet.
-   - `.site-rows`: a stack of rows (usually splits) with a frame-wide rule
-     between rows.
-   - `.site-cell-card`: a cell that holds a card or product view, a card gap
-     from its lines instead of a cell inset.
-   - `.site-chip`: a small white label chip aligned with the copy. */
-
-.site-frame {
-  --site-frame-top: 0px;
-
-  position: relative;
-}
-
-.site-frame::before,
-.site-frame::after {
-  content: '';
-  position: absolute;
-  top: var(--site-frame-top);
-  z-index: 1;
-  pointer-events: none;
-}
-
-.site-frame::before {
-  right: 0;
-  left: 0;
-  border-top: 1px solid var(--color-site-line);
-}
-
-.site-frame::after {
-  bottom: 0;
-  inset-inline: max(var(--site-frame-inset), calc(50% - 40rem + var(--site-frame-inset)));
-  border-inline: 1px solid var(--color-site-line);
-}
-
-/* Every band is one row of cells: its copy starts and ends a cell height
-   from its rules. A band that ends on a row of cards closes a card gap
-   under them, so the cards sit against the rule as they do the frame. */
-.site-frame .site-band {
-  padding-block: var(--site-cell-y);
-  border-top: 1px solid var(--color-site-line);
-}
-
-.site-frame .site-band:has(> * > .site-cards:last-child) {
-  padding-bottom: var(--site-card-gap);
-}
-
-.site-frame :is(.site-wrap, .site-wrap-cards) {
-  width: 100%;
-  max-width: 80rem;
-  margin-inline: auto;
-  padding-inline: calc(var(--site-frame-inset) + var(--site-cell-inset));
-}
-
-.site-frame .site-wrap-cards {
-  padding-inline: calc(var(--site-frame-inset) + var(--site-card-gap));
-}
-
-.site-frame .site-cards {
-  gap: calc(var(--site-card-gap) * 2);
-  margin-inline: calc(var(--site-card-gap) - var(--site-cell-inset));
-}
-
-.site-frame .site-card {
-  padding: var(--site-card-pad);
-  border-radius: var(--radius-card);
-  background: var(--color-panel);
-  box-shadow:
-    0 0 0 1px var(--color-site-line),
-    var(--shadow-site-chip);
-}
-
-.site-frame a.site-card:hover {
-  box-shadow:
-    0 0 0 1px var(--color-site-divider),
-    var(--shadow-site-chip);
-}
-
-.site-frame .site-cell-card {
-  margin-inline: calc(var(--site-card-gap) - var(--site-cell-inset));
-}
-
-/* Cells and rows are a cell height from every rule, so stacked cells and
-   rows sit two cell heights apart with the rule midway. Cell content
-   starts at the top of its cell. Stacked, the first cell's rule spans the
-   frame. */
-.site-frame .site-split {
-  gap: calc(var(--site-cell-y) * 2);
-}
-
-.site-frame .site-split > * {
-  align-content: start;
-}
-
-.site-frame .site-split > :first-child {
-  position: relative;
-}
-
-.site-frame .site-split > :first-child::after {
-  content: '';
-  position: absolute;
-  right: calc(var(--site-cell-inset) * -1);
-  bottom: calc(var(--site-cell-y) * -1);
-  left: calc(var(--site-cell-inset) * -1);
-  border-top: 1px solid var(--color-site-line);
-  pointer-events: none;
-}
-
-/* Side by side, the divider runs down the middle of the gap from rule to
-   rule, a cell height past the cells at each end. */
-@media (min-width: 64rem) {
-  .site-frame .site-split {
-    align-items: stretch;
-    column-gap: calc(var(--site-cell-inset) * 2);
-  }
-
-  .site-frame .site-split > :first-child::after {
-    top: calc(var(--site-cell-y) * -1);
-    right: calc(var(--site-cell-inset) * -1);
-    bottom: calc(var(--site-cell-y) * -1);
-    left: auto;
-    border-top: 0;
-    border-inline-end: 1px solid var(--color-site-line);
-  }
-
-  .site-frame .site-split-reverse > :first-child::after {
-    right: auto;
-    left: calc(var(--site-cell-inset) * -1);
-    border-inline-start: 1px solid var(--color-site-line);
-    border-inline-end: 0;
-  }
-}
-
-.site-frame .site-rows {
-  gap: calc(var(--site-cell-y) * 2);
-}
-
-.site-frame .site-rows > * {
-  position: relative;
-}
-
-.site-frame .site-rows > * + *::before {
-  content: '';
-  position: absolute;
-  top: calc(var(--site-cell-y) * -1);
-  right: calc(var(--site-cell-inset) * -1);
-  left: calc(var(--site-cell-inset) * -1);
-  border-top: 1px solid var(--color-site-line);
-  pointer-events: none;
-}
-
-.site-frame .site-chip {
-  width: fit-content;
-  padding: 0.25rem 0.5rem;
-  border-radius: var(--radius-xs);
-  background: var(--color-panel);
-  box-shadow:
-    var(--shadow-site-chip),
-    0 0 0 1px var(--color-border-subtle);
 }
 
 /* ── Closing band ───────────────────────────────────────────────────────── */
@@ -527,8 +323,8 @@ figure:has(+ .mk-highlights) > .product-fit {
   gap: 0.25rem;
   width: fit-content;
   color: var(--color-foreground);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  font-size: var(--text-site-label);
+  line-height: var(--text-site-label--line-height);
   font-weight: 500;
   transition: color var(--motion-fast) var(--ease-standard);
 }
@@ -647,16 +443,14 @@ figure:has(+ .mk-highlights) > .product-fit {
   letter-spacing: 0;
 }
 
+/* A split of the site grid (`site-grid.css` spaces and divides it). */
 .mk-dive {
   display: grid;
-  align-items: center;
-  gap: 2.5rem;
 }
 
 @media (min-width: 64rem) {
   .mk-dive {
     grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
-    gap: 4.5rem;
   }
 
   .mk-dive-reverse {
@@ -674,46 +468,24 @@ figure:has(+ .mk-highlights) > .product-fit {
   gap: 1.25rem;
 }
 
-/* The feature heading beside a product shot keeps the page title's phone
-   size and the 32px rung from 768px, in the site ink. */
+/* The feature heading beside a product shot is the feature role, in the
+   site ink. */
 .mk-dive-title {
   max-width: 24ch;
   color: var(--color-site-ink);
 }
 
-@media (min-width: 48rem) {
-  /* Marketing page H1s sit one step above the shared 40px title on desktop
-     (owner decision, 2026-10-10); docs keep 40px, articles their own rung. */
-  .website-page-title:not(.website-article-title) {
-    --text-marketing-title: 2.5rem;
-    --text-marketing-title--line-height: 3rem;
-    font-size: var(--text-marketing-title);
-    line-height: var(--text-marketing-title--line-height);
-  }
-
-  .mk-dive-title.website-page-title {
-    font-size: var(--text-4xl);
-    line-height: var(--text-4xl--line-height);
-  }
+/* Marketing page H1s are the title role (website-type.css), scaled with the
+   viewport like every role; docs keep their own page title rung and
+   articles theirs. */
+.website-page-title:not(.website-article-title, .mk-dive-title) {
+  font-size: var(--text-site-title);
+  line-height: var(--text-site-title--line-height);
 }
 
-/* Desktop sits 4px under the tablet rung (owner, 2026-10-16), from 900px so a
-   desktop at 125% display scaling (~980 CSS px) counts as desktop. */
-@media (min-width: 56.25rem) {
-  .website-page-title:not(.website-article-title, .mk-dive-title) {
-    --text-marketing-title: 2.25rem;
-    --text-marketing-title--line-height: 2.75rem;
-  }
-}
-
-/* From 1280px the marketing H1 is the first screen's one dominant element
-   (owner decision, 2026-10-16), set a step smaller in the 2026-10-21
-   refresh (owner). */
-@media (min-width: 80rem) {
-  .website-page-title:not(.website-article-title, .mk-dive-title) {
-    --text-marketing-title: 3.5rem;
-    --text-marketing-title--line-height: 3.875rem;
-  }
+.mk-dive-title.website-page-title {
+  font-size: var(--text-site-feature);
+  line-height: var(--text-site-feature--line-height);
 }
 
 .mk-checks {
@@ -788,8 +560,8 @@ figure:has(+ .mk-highlights) > .product-fit {
   border-radius: var(--radius-full);
   background: var(--color-accent-subtle);
   color: var(--color-accent-text);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  font-size: var(--text-site-label);
+  line-height: var(--text-site-label--line-height);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
@@ -813,24 +585,23 @@ figure:has(+ .mk-highlights) > .product-fit {
   border-radius: var(--radius-lg);
   background: var(--color-panel);
   color: var(--color-foreground);
-  font-size: var(--text-base);
-  line-height: var(--text-base--line-height);
+  font-size: var(--text-site-card-compact);
+  line-height: var(--text-site-card-compact--line-height);
 }
 
+/* Rows of the site grid (`.site-rows`), which spaces them. */
 .mk-features {
   display: grid;
-  gap: clamp(4rem, 9vw, 7rem);
 }
 
+/* A split of the site grid (`site-grid.css` spaces and divides it). */
 .mk-split {
   display: grid;
-  gap: 2.5rem;
 }
 
 @media (min-width: 64rem) {
   .mk-split {
     grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
-    gap: 4.5rem;
   }
 }
 

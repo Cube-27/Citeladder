@@ -31,7 +31,7 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
         <p className="website-body mt-5 max-w-[60ch]">{competitor.context}</p>
       </PageHero>
 
-      <Section rhythm="tight" className="pt-0" aria-labelledby="compare-table-title">
+      <Section aria-labelledby="compare-table-title">
         <h2 id="compare-table-title" className="sr-only">
           Side-by-side comparison
         </h2>
@@ -133,7 +133,7 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
         </div>
       </Section>
 
-      <Section rhythm="tight" aria-label="Comparison sources and disclosure">
+      <Section aria-label="Comparison sources and disclosure">
         <div className="grid max-w-[68ch] gap-3">
           <p className="website-body">{COMPARISON_DISCLOSURE}</p>
           {competitor.sources.map((item) => (

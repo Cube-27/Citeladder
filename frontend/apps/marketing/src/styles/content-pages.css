@@ -13,8 +13,8 @@
   /* The well step reads on paper and on the soft tiles chips sit in. */
   background: var(--color-well);
   color: var(--color-secondary);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  font-size: var(--text-site-label);
+  line-height: var(--text-site-label--line-height);
   font-weight: 500;
   white-space: nowrap;
 }
@@ -26,8 +26,8 @@
   column-gap: 0.5rem;
   row-gap: 0.25rem;
   color: var(--color-muted);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  font-size: var(--text-site-label);
+  line-height: var(--text-site-label--line-height);
   font-variant-numeric: tabular-nums;
 }
 
@@ -71,7 +71,7 @@
   align-content: start;
   justify-items: start;
   gap: 1.25rem;
-  padding: clamp(1.5rem, 4vw, 3rem);
+  padding: var(--site-card-pad);
 }
 
 .cp-feature-title {
@@ -82,7 +82,7 @@
   display: grid;
   align-content: start;
   gap: 0.75rem;
-  padding: clamp(1.5rem, 4vw, 3rem);
+  padding: var(--site-card-pad);
   background: var(--color-well);
 }
 
@@ -100,8 +100,8 @@
   gap: 0.75rem;
   padding-block: 0.75rem;
   color: var(--color-secondary);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  font-size: var(--text-site-label);
+  line-height: var(--text-site-label--line-height);
   transition: color var(--motion-fast) var(--ease-standard);
 }
 
@@ -140,8 +140,8 @@
   border-radius: var(--radius-full);
   background: var(--color-panel);
   color: var(--color-secondary);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  font-size: var(--text-site-label);
+  line-height: var(--text-site-label--line-height);
   font-weight: 500;
   cursor: pointer;
   transition:
@@ -178,8 +178,8 @@
 .cp-row-date {
   padding-top: 0.25rem;
   color: var(--color-muted);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  font-size: var(--text-site-label);
+  line-height: var(--text-site-label--line-height);
   font-variant-numeric: tabular-nums;
 }
 
@@ -252,8 +252,8 @@
 
 .cp-link-title {
   color: var(--color-foreground);
-  font-size: var(--text-base);
-  line-height: var(--text-base--line-height);
+  font-size: var(--text-site-card-compact);
+  line-height: var(--text-site-card-compact--line-height);
   font-weight: 500;
   letter-spacing: -0.006em;
   transition: color var(--motion-fast) var(--ease-standard);
@@ -261,15 +261,16 @@
 
 .cp-link-desc {
   color: var(--color-secondary);
-  font-size: var(--text-base);
-  line-height: var(--text-base--line-height);
+  font-size: var(--text-site-body);
+  line-height: var(--text-site-body--line-height);
 }
 
 /* ── Article layout (blog posts and research guides) ────────────────────── */
 
 /* The article spans the site container like every other page: the header runs
    its full width, and the text column fills everything up to the contents
-   rail, so no empty band opens between them. */
+   rail, so no empty band opens between them. The head and the body are two
+   bands of the site grid, which owns their padding. */
 .cp-article {
   width: 100%;
   max-width: 80rem;
@@ -280,8 +281,6 @@
   display: grid;
   justify-items: start;
   gap: 1.25rem;
-  padding-top: clamp(3.5rem, 7vw, 6rem);
-  padding-bottom: 2rem;
 }
 
 .cp-crumbs ol {
@@ -290,8 +289,8 @@
   align-items: center;
   gap: 0.5rem;
   color: var(--color-muted);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  font-size: var(--text-site-label);
+  line-height: var(--text-site-label--line-height);
 }
 
 .cp-crumbs li + li::before {
@@ -316,7 +315,6 @@
 .cp-article-grid {
   display: grid;
   gap: 2.5rem;
-  padding-bottom: clamp(3rem, 7vw, 5rem);
 }
 
 @media (min-width: 64rem) {
@@ -356,8 +354,8 @@
   display: block;
   padding-block: 0.25rem;
   color: var(--color-muted);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  font-size: var(--text-site-label);
+  line-height: var(--text-site-label--line-height);
   transition: color var(--motion-fast) var(--ease-standard);
 }
 
@@ -391,8 +389,8 @@
 .cp-prose > ol {
   max-width: 68ch;
   margin-block: 0 1.25rem;
-  font-size: var(--text-base);
-  line-height: var(--text-base--line-height);
+  font-size: var(--text-site-body);
+  line-height: var(--text-site-body--line-height);
 }
 
 /* Only article lists: diagrams, checklists and the related list are lists too,
@@ -458,8 +456,8 @@
 }
 
 .cp-prose-h2.website-section-heading {
-  font-size: var(--text-2xl);
-  line-height: var(--text-2xl--line-height);
+  font-size: var(--text-site-prose-heading);
+  line-height: var(--text-site-prose-heading--line-height);
   letter-spacing: -0.02em;
 }
 
@@ -474,8 +472,8 @@
 }
 
 .cp-prose-h3.website-feature-heading {
-  font-size: var(--text-lg);
-  line-height: var(--text-lg--line-height);
+  font-size: var(--text-site-card);
+  line-height: var(--text-site-card--line-height);
 }
 
 .cp-prose > blockquote {
@@ -488,8 +486,8 @@
 
 .cp-prose > blockquote p {
   margin: 0;
-  font-size: var(--text-base);
-  line-height: var(--text-base--line-height);
+  font-size: var(--text-site-body);
+  line-height: var(--text-site-body--line-height);
 }
 
 .cp-prose > pre {
@@ -499,14 +497,14 @@
   border-radius: var(--radius-card);
   background: var(--color-background-alt);
   font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  font-size: var(--text-site-label);
+  line-height: var(--text-site-label--line-height);
 }
 
 .cp-cite {
   margin-left: 0.25rem;
   color: var(--color-accent-text);
-  font-size: var(--text-xs);
+  font-size: var(--text-site-caption);
   font-weight: 500;
   vertical-align: super;
   line-height: 0;
@@ -527,8 +525,8 @@
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  font-size: var(--text-site-label);
+  line-height: var(--text-site-label--line-height);
   font-variant-numeric: tabular-nums;
 }
 
@@ -536,8 +534,8 @@
   caption-side: top;
   padding: 0.75rem 0;
   color: var(--color-foreground);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  font-size: var(--text-site-label);
+  line-height: var(--text-site-label--line-height);
   font-weight: 500;
   text-align: left;
 }
@@ -546,8 +544,8 @@
   padding: 0.75rem 1rem 0.5rem 0;
   border-bottom: 1px solid var(--color-border);
   color: var(--color-muted);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  font-size: var(--text-site-label);
+  line-height: var(--text-site-label--line-height);
   font-weight: 500;
   vertical-align: bottom;
 }
@@ -576,7 +574,7 @@
 /* Figures: a pale tone field, white objects inside. */
 .cp-figure {
   margin-block: 2.25rem;
-  padding: clamp(1.25rem, 3vw, 1.75rem);
+  padding: var(--site-card-pad);
   border-radius: var(--radius-lg);
   background: var(--color-background-alt);
 }
@@ -600,23 +598,23 @@
 
 .cp-node-title {
   color: var(--color-foreground);
-  font-size: var(--text-base);
-  line-height: var(--text-base--line-height);
+  font-size: var(--text-site-card-compact);
+  line-height: var(--text-site-card-compact--line-height);
   font-weight: 500;
 }
 
 .cp-node-text {
   color: var(--color-muted);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  font-size: var(--text-site-label);
+  line-height: var(--text-site-label--line-height);
 }
 
 .cp-node-list {
   display: grid;
   gap: 0.5rem;
   color: var(--color-secondary);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  font-size: var(--text-site-label);
+  line-height: var(--text-site-label--line-height);
 }
 
 .cp-node-list li {
@@ -640,8 +638,8 @@
 
 .cp-step {
   color: var(--color-muted);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  font-size: var(--text-site-label);
+  line-height: var(--text-site-label--line-height);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
@@ -681,8 +679,8 @@
 
 .cp-callout p {
   color: var(--color-secondary);
-  font-size: var(--text-base);
-  line-height: var(--text-base--line-height);
+  font-size: var(--text-site-body);
+  line-height: var(--text-site-body--line-height);
 }
 
 /* ── Article end: sources, related, previous/next ──────────────────────── */
@@ -700,8 +698,8 @@
   gap: 0.5rem;
   padding-left: 1.25rem;
   color: var(--color-muted);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  font-size: var(--text-site-label);
+  line-height: var(--text-site-label--line-height);
   list-style: decimal;
 }
 
@@ -817,8 +815,8 @@
 .cp-tool-row-input {
   display: none;
   color: var(--color-muted);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  font-size: var(--text-site-label);
+  line-height: var(--text-site-label--line-height);
 }
 
 @media (min-width: 48rem) {
@@ -855,8 +853,8 @@
   max-width: 60ch;
   margin-top: 1.75rem;
   color: var(--color-muted);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  font-size: var(--text-site-label);
+  line-height: var(--text-site-label--line-height);
 }
 
 /* The tool itself: one pale panel, input pane and a deeper result pane. */
@@ -879,7 +877,7 @@
   min-width: 0;
   flex-direction: column;
   gap: 1.25rem;
-  padding: clamp(1.25rem, 3vw, 2rem);
+  padding: var(--site-card-pad);
 }
 
 .cp-tool-result {
@@ -901,7 +899,7 @@
 .cp-tool-extra {
   display: grid;
   gap: 0.75rem;
-  padding: clamp(1.25rem, 3vw, 2rem);
+  padding: var(--site-card-pad);
   border-radius: var(--radius-lg);
   background: var(--color-background-alt);
 }
@@ -913,8 +911,8 @@
   background: var(--color-background-alt);
   color: var(--color-secondary);
   font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  font-size: var(--text-site-label);
+  line-height: var(--text-site-label--line-height);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }

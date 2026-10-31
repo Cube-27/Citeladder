@@ -1,27 +1,15 @@
-/* The homepage's neutral ground and site grid (owner decisions, 2026-10-31):
-   every band sits on one neutral ground, and the page opts into the site
-   grid (`.site-*` in marketing.css, `--site-*` tokens in globals.css), so
-   every band, card and product view sits in a cell with the same insets.
-   This file keeps only what is the homepage's own: its ground, where the
-   frame starts, and how its tiles and product views fill their cells.
-   Removing its import from index.astro removes the ground and these fits;
-   the grid itself is the `site-*` classes in the markup. */
-
-.lp.site-frame {
-  /* The hero runs up under the fixed bar, so the frame starts at its foot. */
-  --site-frame-top: var(--marketing-nav-offset);
-
-  background: var(--color-site-ground);
-}
-
-/* Bands ──────────────────────────────────────────────────────────────────── */
+/* The homepage's own fits on the site grid (owner decisions, 2026-10-31).
+   The grid itself (frame, ground, bands, cells, cards) is the shared
+   `.site-*` classes in styles/site-grid.css and the `--site-*` tokens in
+   globals.css, which every marketing page uses; this file keeps only what
+   is the homepage's own: its hero on the ground and how its tiles fill
+   their cards. */
 
 /* Every band is the one neutral ground, the hero included: its brand field
-   and grain give way to it, and so does the announcement strip above the
-   bar. The closing band keeps its mint field and lattice, as on every other
-   page. The accent stays on buttons, links and the logo. */
-.lp :is(.lp-soft, .lp-hero),
-body .lp-announcement {
+   and grain give way to it. The closing band keeps its mint field and
+   lattice, as on every other page, and the announcement strip above the bar
+   takes the same mint. The accent stays on buttons, links and the logo. */
+.lp :is(.lp-soft, .lp-hero) {
   background-color: var(--color-site-ground);
 }
 
@@ -29,32 +17,9 @@ body .lp-announcement {
   content: none;
 }
 
-/* The hero is the first row of cells: its copy starts a cell height under
-   the header rule, its product view follows a cell height later, and the
-   band closes a cell height under the caption. */
-.lp.site-frame .lp-hero {
-  padding-top: calc(var(--marketing-nav-offset) + var(--site-cell-y));
-  padding-bottom: var(--site-cell-y);
-}
-
-.lp.site-frame .lp-hero-shot {
-  margin-top: var(--site-cell-y);
-}
-
-/* On a phone the hero's product view is a card in the frame like every
-   other width, not edge to edge. */
-@media (max-width: 39.99rem) {
-  .lp .lp-hero .lp-hero-stage {
-    margin-inline: 0;
-    padding: 0;
-  }
-}
-
-/* Cards and product views ────────────────────────────────────────────────── */
-
 /* A bento tile pads its copy, not its product view, which runs to the
    tile's right and bottom edges. */
-.lp.site-frame .lp-tile {
+.site-frame .lp .lp-tile {
   padding: 0;
 }
 

@@ -12,12 +12,17 @@ export type NavDropItem =
 
 type NavDropGroup = { label?: string; items: readonly NavDropItem[] };
 
-export type NavDrop = {
-  key: NavDropKey;
-  label: string;
-  href: string;
-  groups: readonly NavDropGroup[];
-};
+/** Resources renders each group as a named section, so every group has a label. */
+type LabelledNavDropGroup = { label: string; items: readonly NavDropItem[] };
+
+type NavDropBase = { label: string; href: string };
+
+export type NavDrop =
+  | (NavDropBase & {
+      key: Exclude<NavDropKey, 'resources'>;
+      groups: readonly NavDropGroup[];
+    })
+  | (NavDropBase & { key: 'resources'; groups: readonly LabelledNavDropGroup[] });
 
 export const PLATFORM_OVERVIEW = {
   title: 'Platform overview',

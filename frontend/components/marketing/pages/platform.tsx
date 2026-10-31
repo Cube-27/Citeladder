@@ -311,7 +311,7 @@ export function PlatformPageContent({ page }: Readonly<{ page: PlatformPage }>) 
         </div>
       </PageHero>
 
-      <Section rhythm="tight" className="pt-0" aria-label={`${label} preview`}>
+      <Section aria-label={`${label} preview`}>
         <Shot visual={page.visual} title={page.visualTitle} />
         <ul className="mk-highlights">
           {page.highlights.map((highlight) => (
@@ -325,7 +325,7 @@ export function PlatformPageContent({ page }: Readonly<{ page: PlatformPage }>) 
 
       {page.features.length > 0 && (
         <Section tone="soft">
-          <div className="mk-features">
+          <div className="mk-features site-rows">
             {page.features.map((feature, index) => (
               <div
                 key={feature.title}

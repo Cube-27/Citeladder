@@ -256,7 +256,7 @@ export function PublicPricingCatalog({
   const origin = new URL(appOrigin);
   return (
     <>
-      <Section tone="paper" rhythm="tight" className="pt-0" aria-label="Plans">
+      <Section tone="paper" aria-label="Plans">
         <div className="cm-plans-bar">
           <ByokSwitch
             byok={byok}

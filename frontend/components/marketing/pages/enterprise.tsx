@@ -124,7 +124,7 @@ export function EnterpriseHero() {
 
 export function EnterpriseEvidence() {
   return (
-    <Section rhythm="tight" aria-label="Evidence trail">
+    <Section aria-label="Evidence trail">
       <div className="mk-dive">
         <div className="mk-dive-copy">
           <h2 className="website-page-title mk-dive-title">
