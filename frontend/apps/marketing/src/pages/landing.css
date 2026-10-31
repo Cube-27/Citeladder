@@ -213,17 +213,24 @@
   }
 }
 
-.lp-hero-lead {
+/* The hero lead is body copy, not the subtitle the lead role sets under a
+   section heading. */
+.lp-hero-lead.website-lead {
   max-width: 54rem;
   margin-top: 1.5rem;
   margin-bottom: 2.25rem;
+  color: var(--color-site-body);
+  font-size: var(--text-site-body);
+  line-height: var(--text-site-body--line-height);
+  font-weight: 400;
+  letter-spacing: -0.2px;
 }
 
 .lp-hero-note {
   margin-top: 1rem;
-  color: var(--color-muted);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  color: var(--color-site-body);
+  font-size: var(--text-site-secondary);
+  line-height: var(--text-site-secondary--line-height);
 }
 
 /* The hero's product is one still AI Visibility page: no tabs, no motion. */
@@ -254,9 +261,11 @@
 }
 
 .lp-engines-label {
-  color: var(--color-muted);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  color: var(--color-site-lead-in);
+  font-size: var(--text-site-lead-in);
+  line-height: var(--text-site-lead-in--line-height);
+  font-weight: 500;
+  letter-spacing: -0.02em;
 }
 
 .lp-engines ul {
@@ -284,7 +293,7 @@
 }
 
 .lp-statement-text {
-  color: var(--color-foreground);
+  color: var(--color-site-ink);
   font-family: var(--font-display);
   font-size: var(--text-2xl);
   line-height: var(--text-2xl--line-height);
@@ -301,7 +310,7 @@
 }
 
 .lp-statement-text span {
-  color: var(--color-muted);
+  color: var(--color-site-ink-soft);
 }
 
 /* Bento ──────────────────────────────────────────────────────────────────── */

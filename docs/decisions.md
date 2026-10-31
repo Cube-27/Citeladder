@@ -428,3 +428,32 @@ Source: owner, 31 October 2026, via the marketing-site design brief: product
 UI mocks on mobile should be scaled, not reflowed, keeping the desktop
 composition with the sidebar visible and no hidden controls, with small text
 on phones accepted. [Design](design.md) owns the system.
+
+## The public site gets a wireframe grid and neutral inks
+
+The public site's direction changes: only CiteLadder's content, its signal
+green accent (buttons, links, badges) and its logo stay its own; the rest
+follows a neutral wireframe system. This replaces the flat rule above for the
+homepage's lines and cards and for public type and ink.
+
+- **Wireframe (homepage):** every band sits on one `#f7f7f7` ground between a
+  pair of faded 1px vertical rails just outside the content edge, each band
+  drawing its own pair; a faded 1px rule runs across the full viewport at each
+  band boundary; side-by-side columns split on a solid `#e5e5e5` hairline that
+  turns horizontal when they stack; cards and tiles are white, fitted about
+  6px inside the rails; existing labels become small white chips. No copy,
+  section order or product view changes, and the whole wireframe is one
+  stylesheet that can be switched off.
+- **Type and ink (every public page and docs):** hero 64/48/32px at weight
+  400, section heading 39/32/26px, large feature heading 48/38/32px, subtitle
+  under a heading 24/18/15px at 500 in half ink, card titles 18/18/16px at
+  600, body 16/14/17px (larger on a phone), across desktop (≥1200px), tablet
+  (810–1199px) and phone; inks are `#171717` headings, `#737373` sentences,
+  56% ink navigation, 50% ink subtitles and 30% ink lead-in labels. The font
+  families stay Outfit and Geist.
+
+Source: owner, 31 October 2026, via the design brief for this change
+(wireframe grid skeleton; type scale and colour hierarchy), with the follow-up
+to adopt the neutral ground, white fitted cards, chips, dividers and line
+colours, and to keep the current font families. [Design](design.md) owns the
+system.

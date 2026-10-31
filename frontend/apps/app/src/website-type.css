@@ -19,6 +19,66 @@
   /* The website's coded product views (apps/marketing/src/product-views.css)
      draw a reduced app at 28. The product itself has no 28 rung. */
   --control-height-sm: 28px;
+  /* The public site's type tokens (owner, 2026-10-31), phone first; the two
+     blocks below step them at 810px (tablet) and 1200px (desktop). The roles
+     below and the marketing stylesheets read these, never a literal. Weight,
+     tracking and ink live on each role. A size on the shared scale reads its
+     rung; the rest (15, 17, 26, 38, 39, 48, 64) are the site's own. */
+  --text-site-hero: var(--text-4xl);
+  --text-site-hero--line-height: 1;
+  --text-site-feature: var(--text-4xl);
+  --text-site-feature--line-height: 1.1;
+  --text-site-section: 1.625rem;
+  --text-site-section--line-height: 1.05;
+  --text-site-subtitle: 0.9375rem;
+  --text-site-subtitle--line-height: 1.2;
+  --text-site-card: var(--text-base);
+  --text-site-card--line-height: 1.2;
+  --text-site-body: 1.0625rem;
+  --text-site-body--line-height: 1.4;
+  --text-site-footer: 1.0625rem;
+  --text-site-footer--line-height: 1.4;
+  --text-site-lead-in: var(--text-xs);
+  --text-site-lead-in--line-height: 1.375rem;
+  /* One size at every width. */
+  --text-site-card-compact: var(--text-base);
+  --text-site-card-compact--line-height: 1.2;
+  --text-site-question: var(--text-base);
+  --text-site-question--line-height: 1;
+  --text-site-secondary: var(--text-sm);
+  --text-site-secondary--line-height: 1.6;
+  --text-site-cta: 0.9375rem;
+  --text-site-cta--line-height: 1rem;
+  --text-site-control: var(--text-sm);
+  --text-site-control--line-height: 1rem;
+  --text-site-nav: var(--text-sm);
+  --text-site-nav--line-height: 1.2;
+}
+
+@media (min-width: 810px) {
+  :where([data-public-surface]) {
+    --text-site-hero: 3rem;
+    --text-site-feature: 2.375rem;
+    --text-site-section: var(--text-4xl);
+    --text-site-subtitle: var(--text-lg);
+    --text-site-subtitle--line-height: 1;
+    --text-site-card: var(--text-lg);
+    --text-site-body: var(--text-sm);
+    --text-site-footer: var(--text-sm);
+    --text-site-footer--line-height: 1.2;
+    --text-site-lead-in: var(--text-sm);
+  }
+}
+
+@media (min-width: 1200px) {
+  :where([data-public-surface]) {
+    --text-site-hero: 4rem;
+    --text-site-feature: 3rem;
+    --text-site-section: 2.4375rem;
+    --text-site-subtitle: var(--text-2xl);
+    --text-site-subtitle--line-height: 1.2;
+    --text-site-body: var(--text-base);
+  }
 }
 
 /* Public pages set no font-size here: their attribute sits on <html>, where
@@ -114,15 +174,15 @@
   text-wrap: balance;
 }
 
-/* The display ladder is mobile-first and steps at 768px below. On a phone the
-   display rungs track the viewport so a page title holds two lines (an article
-   title, which runs twice as long, three) from 360px up; a fixed 32px wrapped
-   them to four and five. The homepage hero's second line is its longest, so
-   it tops out at 26px to stay on two lines at 390px. */
+/* The hero and section headings read the site tokens above (phone, 810px,
+   1200px). The page title keeps its own ladder: on a phone it tracks the
+   viewport so it holds two lines (an article title, which runs twice as long,
+   three) from 360px up, and steps at 768px below. */
 .website-hero-display {
-  font-size: clamp(1.5rem, 6.7vw, 1.625rem);
-  line-height: 1.1;
-  letter-spacing: -0.032em;
+  font-size: var(--text-site-hero);
+  line-height: var(--text-site-hero--line-height);
+  font-weight: 400;
+  letter-spacing: -0.02em;
 }
 
 .website-page-title {
@@ -136,17 +196,19 @@
 }
 
 .website-section-heading {
-  font-size: 1.5rem;
-  line-height: 2rem;
-  letter-spacing: -0.022em;
+  font-size: var(--text-site-section);
+  line-height: var(--text-site-section--line-height);
+  letter-spacing: -0.02em;
 }
 
+/* Card and feature titles are the one public role at 600: the public Geist
+   face runs to 600 (PublicFonts.astro) for this role alone. */
 .website-feature-heading {
   font-family: var(--font-sans);
-  font-size: 1rem;
-  line-height: 1.5rem;
-  font-weight: 500;
-  letter-spacing: -0.005em;
+  font-size: var(--text-site-card);
+  line-height: var(--text-site-card--line-height);
+  font-weight: 600;
+  letter-spacing: 0;
   text-wrap: balance;
 }
 
@@ -166,53 +228,58 @@
   font-variant-numeric: tabular-nums;
 }
 
-:where(
-  .website-hero-display,
-  .website-page-title,
-  .website-section-heading,
-  .website-feature-heading,
-  .website-nav,
-  .website-data-display
-) {
+:where(.website-page-title, .website-data-display) {
   color: var(--color-foreground);
 }
 
-:where(.website-lead, .website-body) {
-  color: var(--color-secondary);
+/* The public inks (globals.css `--color-site-*`): headings and titles in the
+   ink, the subtitle under a heading at half ink, sentences in the body grey,
+   navigation in the nav grey. */
+:where(.website-hero-display, .website-section-heading, .website-feature-heading) {
+  color: var(--color-site-ink);
+}
+
+:where(.website-lead) {
+  color: var(--color-site-ink-soft);
+}
+
+:where(.website-body) {
+  color: var(--color-site-body);
+}
+
+:where(.website-nav) {
+  color: var(--color-site-nav);
 }
 
 :where(.website-label) {
   color: var(--color-muted);
 }
 
-/* Body rungs are mobile-first too. `lead` steps up at 768px (below); the rest
-   hold one size across breakpoints, because body copy that grows with the
-   viewport just makes the measure fight the column. */
+/* The lead is the subtitle under a heading. A hero lead is body copy and
+   takes the body role where it is set (landing.css). */
 .website-lead {
-  font-size: 1rem;
-  line-height: 1.5rem;
-  font-weight: 400;
-  letter-spacing: -0.005em;
+  font-size: var(--text-site-subtitle);
+  line-height: var(--text-site-subtitle--line-height);
+  font-weight: 500;
+  letter-spacing: -0.02em;
   text-wrap: pretty;
 }
 
-/* Reading text is 16px on the website and docs (owner decision, 2026-10-11),
-   the size every leading marketing system reads at. Only reading copy moves:
-   nav, labels, controls and meta keep their 14px and 12px rungs, and the
-   focused flow does not use this role. */
+/* Reading text: 17px on a phone, 14px on a tablet and 16px from 1200px (the
+   site tokens). The focused flow does not use this role. */
 .website-body {
-  font-size: 1rem;
-  line-height: 1.625rem;
+  font-size: var(--text-site-body);
+  line-height: var(--text-site-body--line-height);
   font-weight: 400;
-  letter-spacing: 0;
+  letter-spacing: -0.2px;
   text-wrap: pretty;
 }
 
 .website-nav {
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-  font-weight: 500;
-  letter-spacing: 0;
+  font-size: var(--text-site-nav);
+  line-height: var(--text-site-nav--line-height);
+  font-weight: 400;
+  letter-spacing: -0.2px;
 }
 
 .website-label {
@@ -1304,16 +1371,9 @@
   line-height: var(--text-sm--line-height);
 }
 
-/* Two steps, not three. The ladder above is the phone; this is the tablet-and-up
-   step, and 1024px lifts only the hero. There is deliberately no `max-width:640px`
-   block any more — it existed to walk back two rungs that the base ladder had
-   set too large for a phone, and patching two of five rungs is exactly how the
-   641–767px band ended up with a hierarchy nothing else on the page shared. */
+/* The page title, article title and data display step once at 768px; the
+   hero, section, card, lead and body roles step through the site tokens. */
 @media (min-width: 768px) {
-  .website-hero-display {
-    font-size: clamp(2rem, 3.9vw + 0.5rem, 4rem);
-  }
-
   .website-page-title {
     font-size: 2.25rem;
     line-height: 2.75rem;
@@ -1324,33 +1384,8 @@
     line-height: 2.5rem;
   }
 
-  .website-section-heading {
-    font-size: 2rem;
-    line-height: 2.5rem;
-  }
-
-  .website-feature-heading {
-    font-size: 1.125rem;
-    line-height: 1.75rem;
-  }
-
-  .website-lead {
-    font-size: 1.125rem;
-    line-height: 1.75rem;
-  }
-
   .website-data-display {
     font-size: 2rem;
     line-height: 2.5rem;
-  }
-}
-
-/* Desktop holds the hero under the tablet curve, and the 2026-10-21 refresh
-   set it a step smaller again (owner): about 52px at 1280 and never past
-   60px. 900px, not 1024px: a desktop at 125% display scaling is ~980 CSS px
-   wide. */
-@media (min-width: 900px) {
-  .website-hero-display {
-    font-size: clamp(2rem, 3.8vw + 0.25rem, 3.75rem);
   }
 }
