@@ -9,7 +9,7 @@
    baseline here exactly as in the product; 12 is the one rung below it. */
 :where([data-public-surface], [data-flow-surface]) {
   /* The public and focused-flow type world (docs/design.md §Typography):
-     Geist carries body, UI and data, Uncut Sans the display headings, as in
+     Geist carries body, UI and data, Outfit the display headings, as in
      the product. The scale is the product's (globals.css @theme), unchanged;
      being "roomier" is a job for measure and rhythm, not for resizing rungs. */
   --tracking-tight: -0.02em;
@@ -102,7 +102,7 @@
    travel as one contract. The low-specificity colour defaults let explicit
    semantic utilities override them for warnings and evidence states.
 
-   Display rungs set in Uncut Sans at 500, and tracking closes as size grows,
+   Display rungs set in Outfit at 500, and tracking closes as size grows,
    as display type does. The feature heading and body rungs set in Geist at
    400/500. */
 .website-hero-display,
