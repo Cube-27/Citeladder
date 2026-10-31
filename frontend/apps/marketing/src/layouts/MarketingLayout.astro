@@ -72,10 +72,13 @@ const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 const sharedJsonLd = [organizationJsonLd(), websiteJsonLd(), softwareApplicationJsonLd()].filter(
   (data): data is JsonLdObject => data !== null,
 );
+// `data-marketing-surface` on <html> keys the marketing-only type roles and
+// secondary button (website-type.css, globals.css); docs carries
+// `data-public-surface` alone.
 ---
 
 <!doctype html>
-<html lang="en" data-public-surface>
+<html lang="en" data-public-surface data-marketing-surface>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />

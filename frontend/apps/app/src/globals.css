@@ -1075,8 +1075,9 @@ a.focus-ring:active .type-caption {
    page stopped reading as a button once the header and the site grid's
    ground took that same tone, so it reads on every public background: the
    header, the ground, white cards and the mint fields. The primary action
-   stays one flat fill. Sign-in and onboarding keep their flat tone step. */
-[data-public-surface]
+   stays one flat fill. Docs, sign-in and onboarding keep their flat tone
+   step. */
+[data-marketing-surface]
   .control-raised[data-button-variant='secondary']:not([data-ui] *, :disabled, [aria-disabled='true']) {
   background-color: var(--color-panel);
   color: var(--color-foreground);
@@ -1086,19 +1087,25 @@ a.focus-ring:active .type-caption {
     var(--shadow-site-chip);
 }
 
-[data-public-surface]
+[data-marketing-surface]
   .control-raised[data-button-variant='secondary']:not([data-ui] *, :disabled, [aria-disabled='true']):hover {
   background-color: var(--color-background-alt);
 }
 
-:root:not([data-theme='dark']) [data-flow-surface]
+:is(
+    [data-public-surface]:not([data-marketing-surface]),
+    :root:not([data-theme='dark']) [data-flow-surface]
+  )
   .control-raised[data-button-variant='secondary']:not([data-ui] *, :disabled, [aria-disabled='true']) {
   background-color: var(--color-background-alt);
   color: var(--color-foreground);
   border-color: transparent;
 }
 
-:root:not([data-theme='dark']) [data-flow-surface]
+:is(
+    [data-public-surface]:not([data-marketing-surface]),
+    :root:not([data-theme='dark']) [data-flow-surface]
+  )
   .control-raised[data-button-variant='secondary']:not([data-ui] *, :disabled, [aria-disabled='true']):hover {
   background-color: var(--color-well);
 }

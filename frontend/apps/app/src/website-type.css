@@ -2,13 +2,13 @@
    product ladder. Both surfaces share the product palette and geometry
    (globals.css); this scope changes type scale only.
 
-   The public ladder (docs/design.md §Typography) is a set of roles defined at
-   their desktop size and scaled down by one rule for the tablet (810–1199px)
-   and phone (below 810px) bands, through the `--text-site-*` tokens below.
-   Display roles scale with the viewport (hero 64→48→32); reading roles keep
-   their desktop size on a tablet and sit on the 14px floor on a phone. The
-   docs page title, article title and data display keep one step at 768px;
-   labels hold 14, and 12 is the one rung below it. */
+   Two public ladders read the same `--text-site-*` names (docs/design.md
+   §Typography). Docs (`[data-public-surface]` alone) keeps fixed steps, phone
+   first, at 810px and 1200px. The marketing site (`[data-marketing-surface]`,
+   which also carries `data-public-surface`) redefines them as roles set at
+   their desktop size and scaled down by one rule. The page title, article
+   title and data display keep one step at 768px; labels hold 14, and 12 is
+   the one rung below it. */
 :where([data-public-surface], [data-flow-surface]) {
   /* The public and focused-flow type world (docs/design.md §Typography):
      Geist carries body, UI and data, Outfit the display headings, as in
@@ -21,6 +21,65 @@
   /* The website's coded product views (apps/marketing/src/product-views.css)
      draw a reduced app at 28. The product itself has no 28 rung. */
   --control-height-sm: 28px;
+  /* The docs ladder (owner, 2026-10-31), phone first; the two blocks below
+     step it at 810px (tablet) and 1200px (desktop). The marketing site
+     overrides every size with its roles further down. The roles below read
+     these, never a literal. Weight,
+     tracking and ink live on each role. A size on the shared scale reads its
+     rung; the rest (15, 17, 26, 39, 48, 64) are the site's own. */
+  --text-site-hero: var(--text-4xl);
+  --text-site-hero--line-height: 1;
+  --text-site-section: 1.625rem;
+  --text-site-section--line-height: 1.05;
+  --text-site-card: var(--text-base);
+  --text-site-card--line-height: 1.2;
+  --text-site-body: 1.0625rem;
+  --text-site-body--line-height: 1.4;
+  --text-site-footer: 1.0625rem;
+  --text-site-footer--line-height: 1.4;
+  --text-site-lead-in: var(--text-xs);
+  --text-site-lead-in--line-height: 1.375rem;
+  /* One size at every width. Every subtitle and page intro is 16px (owner,
+     2026-10-31). */
+  --text-site-subtitle: var(--text-base);
+  --text-site-subtitle--line-height: 1.4;
+  --text-site-card-compact: var(--text-base);
+  --text-site-card-compact--line-height: 1.2;
+  --text-site-question: var(--text-base);
+  --text-site-question--line-height: 1;
+  --text-site-secondary: var(--text-sm);
+  --text-site-secondary--line-height: 1.6;
+  --text-site-cta: 0.9375rem;
+  --text-site-cta--line-height: 1rem;
+  --text-site-control: var(--text-sm);
+  --text-site-control--line-height: 1rem;
+  --text-site-nav: var(--text-sm);
+  --text-site-nav--line-height: 1.2;
+  --text-site-label: var(--text-sm);
+  --text-site-label--line-height: 1.25rem;
+}
+
+@media (min-width: 810px) {
+  :where([data-public-surface]) {
+    --text-site-hero: 3rem;
+    --text-site-section: var(--text-4xl);
+    --text-site-card: var(--text-lg);
+    --text-site-body: var(--text-sm);
+    --text-site-footer: var(--text-sm);
+    --text-site-footer--line-height: 1.2;
+    --text-site-lead-in: var(--text-sm);
+  }
+}
+
+@media (min-width: 1200px) {
+  :where([data-public-surface]) {
+    --text-site-hero: 4rem;
+    --text-site-section: 2.4375rem;
+    --text-site-body: var(--text-base);
+  }
+}
+
+:where([data-marketing-surface]) {
   /* The public site's type roles (owner, 2026-10-31): "keep the desktop as
      reference and then apply a rule for every size so we dont have to change
      multiple places, define roles not individual arbitrary values". The
@@ -31,7 +90,7 @@
      width. A smaller viewport scales the part of each size above the 14px
      reading floor by one factor per band (the 810px and 1200px blocks below):
 
-       size = floor + (desktop − floor) × factor
+       size = floor + (desktop − floor) × factor, rounded to a whole pixel
 
        display roles (headings, titles)  1 desktop · 0.68 tablet · 0.36 phone
        reading roles (text, controls)    1 desktop · 1 tablet    · 0 phone
@@ -66,97 +125,169 @@
   --site-role-control: var(--text-sm);
   --site-role-nav: var(--text-sm);
 
-  --text-site-hero: calc(
-    var(--site-type-floor) + (var(--site-role-hero) - var(--site-type-floor)) *
-      var(--site-type-display)
+  --text-site-hero: round(
+    nearest,
+    calc(
+      var(--site-type-floor) + (var(--site-role-hero) - var(--site-type-floor)) *
+        var(--site-type-display)
+    ),
+    1px
   );
   --text-site-hero--line-height: 1;
-  --text-site-title: calc(
-    var(--site-type-floor) + (var(--site-role-title) - var(--site-type-floor)) *
-      var(--site-type-display)
+  --text-site-title: round(
+    nearest,
+    calc(
+      var(--site-type-floor) + (var(--site-role-title) - var(--site-type-floor)) *
+        var(--site-type-display)
+    ),
+    1px
   );
   --text-site-title--line-height: 1.1;
-  --text-site-section: calc(
-    var(--site-type-floor) + (var(--site-role-section) - var(--site-type-floor)) *
-      var(--site-type-display)
+  --text-site-section: round(
+    nearest,
+    calc(
+      var(--site-type-floor) + (var(--site-role-section) - var(--site-type-floor)) *
+        var(--site-type-display)
+    ),
+    1px
   );
   --text-site-section--line-height: 1.05;
   /* The feature heading beside a product shot. */
-  --text-site-feature: calc(
-    var(--site-type-floor) + (var(--site-role-feature) - var(--site-type-floor)) *
-      var(--site-type-display)
+  --text-site-feature: round(
+    nearest,
+    calc(
+      var(--site-type-floor) + (var(--site-role-feature) - var(--site-type-floor)) *
+        var(--site-type-display)
+    ),
+    1px
   );
   --text-site-feature--line-height: 1.25;
-  --text-site-statement: calc(
-    var(--site-type-floor) + (var(--site-role-statement) - var(--site-type-floor)) *
-      var(--site-type-display)
+  --text-site-statement: round(
+    nearest,
+    calc(
+      var(--site-type-floor) + (var(--site-role-statement) - var(--site-type-floor)) *
+        var(--site-type-display)
+    ),
+    1px
   );
   --text-site-statement--line-height: 1.3;
   /* Article and document section headings: a step above body copy, where the
      full section rung would shout on every section. */
-  --text-site-prose-heading: calc(
-    var(--site-type-floor) + (var(--site-role-prose-heading) - var(--site-type-floor)) *
-      var(--site-type-display)
+  --text-site-prose-heading: round(
+    nearest,
+    calc(
+      var(--site-type-floor) + (var(--site-role-prose-heading) - var(--site-type-floor)) *
+        var(--site-type-display)
+    ),
+    1px
   );
   --text-site-prose-heading--line-height: 1.3;
-  --text-site-card: calc(
-    var(--site-type-floor) + (var(--site-role-card) - var(--site-type-floor)) *
-      var(--site-type-display)
+  --text-site-card: round(
+    nearest,
+    calc(
+      var(--site-type-floor) + (var(--site-role-card) - var(--site-type-floor)) *
+        var(--site-type-display)
+    ),
+    1px
   );
   --text-site-card--line-height: 1.2;
-  --text-site-card-compact: calc(
-    var(--site-type-floor) + (var(--site-role-card-compact) - var(--site-type-floor)) *
-      var(--site-type-display)
+  --text-site-card-compact: round(
+    nearest,
+    calc(
+      var(--site-type-floor) + (var(--site-role-card-compact) - var(--site-type-floor)) *
+        var(--site-type-display)
+    ),
+    1px
   );
   --text-site-card-compact--line-height: 1.2;
-  --text-site-question: calc(
-    var(--site-type-floor) + (var(--site-role-question) - var(--site-type-floor)) *
-      var(--site-type-display)
+  --text-site-question: round(
+    nearest,
+    calc(
+      var(--site-type-floor) + (var(--site-role-question) - var(--site-type-floor)) *
+        var(--site-type-display)
+    ),
+    1px
   );
   --text-site-question--line-height: 1;
-  --text-site-subtitle: calc(
-    var(--site-type-floor) + (var(--site-role-subtitle) - var(--site-type-floor)) *
-      var(--site-type-reading)
+  --text-site-subtitle: round(
+    nearest,
+    calc(
+      var(--site-type-floor) + (var(--site-role-subtitle) - var(--site-type-floor)) *
+        var(--site-type-reading)
+    ),
+    1px
   );
   --text-site-subtitle--line-height: 1.4;
-  --text-site-body: calc(
-    var(--site-type-floor) + (var(--site-role-body) - var(--site-type-floor)) *
-      var(--site-type-reading)
+  --text-site-body: round(
+    nearest,
+    calc(
+      var(--site-type-floor) + (var(--site-role-body) - var(--site-type-floor)) *
+        var(--site-type-reading)
+    ),
+    1px
   );
   --text-site-body--line-height: 1.4;
-  --text-site-label: calc(
-    var(--site-type-floor) + (var(--site-role-label) - var(--site-type-floor)) *
-      var(--site-type-reading)
+  --text-site-label: round(
+    nearest,
+    calc(
+      var(--site-type-floor) + (var(--site-role-label) - var(--site-type-floor)) *
+        var(--site-type-reading)
+    ),
+    1px
   );
   --text-site-label--line-height: 1.43;
-  --text-site-secondary: calc(
-    var(--site-type-floor) + (var(--site-role-secondary) - var(--site-type-floor)) *
-      var(--site-type-reading)
+  --text-site-secondary: round(
+    nearest,
+    calc(
+      var(--site-type-floor) + (var(--site-role-secondary) - var(--site-type-floor)) *
+        var(--site-type-reading)
+    ),
+    1px
   );
   --text-site-secondary--line-height: 1.6;
-  --text-site-footer: calc(
-    var(--site-type-floor) + (var(--site-role-footer) - var(--site-type-floor)) *
-      var(--site-type-reading)
+  --text-site-footer: round(
+    nearest,
+    calc(
+      var(--site-type-floor) + (var(--site-role-footer) - var(--site-type-floor)) *
+        var(--site-type-reading)
+    ),
+    1px
   );
   --text-site-footer--line-height: 1.2;
-  --text-site-lead-in: calc(
-    var(--site-type-floor) + (var(--site-role-lead-in) - var(--site-type-floor)) *
-      var(--site-type-reading)
+  --text-site-lead-in: round(
+    nearest,
+    calc(
+      var(--site-type-floor) + (var(--site-role-lead-in) - var(--site-type-floor)) *
+        var(--site-type-reading)
+    ),
+    1px
   );
   --text-site-lead-in--line-height: 1.57;
-  --text-site-cta: calc(
-    var(--site-type-floor) + (var(--site-role-cta) - var(--site-type-floor)) *
-      var(--site-type-reading)
+  --text-site-cta: round(
+    nearest,
+    calc(
+      var(--site-type-floor) + (var(--site-role-cta) - var(--site-type-floor)) *
+        var(--site-type-reading)
+    ),
+    1px
   );
   --text-site-cta--line-height: 1.07;
-  --text-site-control: calc(
-    var(--site-type-floor) + (var(--site-role-control) - var(--site-type-floor)) *
-      var(--site-type-reading)
+  --text-site-control: round(
+    nearest,
+    calc(
+      var(--site-type-floor) + (var(--site-role-control) - var(--site-type-floor)) *
+        var(--site-type-reading)
+    ),
+    1px
   );
   --text-site-control--line-height: 1.15;
-  --text-site-nav: calc(
-    var(--site-type-floor) + (var(--site-role-nav) - var(--site-type-floor)) *
-      var(--site-type-reading)
+  --text-site-nav: round(
+    nearest,
+    calc(
+      var(--site-type-floor) + (var(--site-role-nav) - var(--site-type-floor)) *
+        var(--site-type-reading)
+    ),
+    1px
   );
   --text-site-nav--line-height: 1.2;
   /* The caption: the 12px minimum, one size at every width. */
@@ -165,14 +296,14 @@
 }
 
 @media (min-width: 810px) {
-  :where([data-public-surface]) {
+  :where([data-marketing-surface]) {
     --site-type-display: 0.68;
     --site-type-reading: 1;
   }
 }
 
 @media (min-width: 1200px) {
-  :where([data-public-surface]) {
+  :where([data-marketing-surface]) {
     --site-type-display: 1;
   }
 }

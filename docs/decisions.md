@@ -238,7 +238,9 @@ screens and onboarding (`[data-flow-surface]`, light mode only: dark mode keeps
 its edge rings), applying only the changes relevant to a form flow, and set the
 desktop marketing H1 4px smaller from 900px (so a desktop at 125% display
 scaling counts as desktop): the hero tops out at 68px and the page title is
-40px, then 64px from 1280px.
+40px, then 64px from 1280px (marketing page-title ladder superseded on 31
+October 2026 by the scaled type roles; see
+[The public site gets a neutral ground and inks](#the-public-site-gets-a-neutral-ground-and-inks)).
 
 Source: owner, 16 October 2026 (design-taste-frontend inspection of the public
 pages; "prefer skill over design system"). [Design](design.md) owns the system.
@@ -269,6 +271,9 @@ text in General Sans, both capped at weight 500; editorial serif display faces
 were rejected, as were the faces of the reference site the owner showed. The
 public H1s are a step smaller than before: the hero tops out at 60px (about
 52px at 1280px) and the marketing page title is 36px, then 56px from 1280px.
+(The marketing page-title steps are superseded on 31 October 2026 by the
+scaled type roles; see
+[The public site gets a neutral ground and inks](#the-public-site-gets-a-neutral-ground-and-inks).)
 Phones get their own homepage composition rather than the desktop one shrunk
 (superseded for product views on 31 October 2026: see
 [Product views scale down on phones](#product-views-scale-down-on-phones);
@@ -499,8 +504,14 @@ homepage's cards and chips and for public type and ink.
   phone (the hero's own 64/48/32), reading text 1 on a tablet and 0 on a
   phone, so leads and body are 16px on desktop and tablet and 14px on a
   phone. The 14px floor exists because pure scaling would put reading text
-  under the 12px minimum on a phone. This replaces the earlier fixed steps
-  (section heading 39/32/26, subtitles 16px at every width, body 16/14/17).
+  under the 12px minimum on a phone. Sizes round to whole pixels. This
+  replaces, on marketing pages, the earlier fixed steps (section heading
+  39/32/26, subtitles 16px at every width, body 16/14/17) and the marketing
+  page-title ladder of [The public website is flat](#the-public-website-is-flat)
+  and [The brighter refresh](#the-brighter-refresh-signal-green-sora-and-general-sans)
+  (36px from 900px, 56px from 1280px, with desktop starting at 900px):
+  desktop now starts at 1200px, so the owner's 982px desktop is the tablet
+  band and its page title is 43px, up from 36px. Docs keeps the fixed steps.
   Inks are `#171717` headings, `#707070` sentences, 60% ink navigation,
   footer links and subtitles, and 55% black lead-in labels. These lighter
   inks are deliberately lighter than the headings but meet 4.5:1 on white,

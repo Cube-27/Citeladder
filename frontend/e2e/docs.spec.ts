@@ -140,3 +140,28 @@ test('contents omit step numbering without changing article anchors and follow t
     .evaluate((node) => node.getBoundingClientRect().bottom);
   expect(headingTop).toBeGreaterThanOrEqual(headerBottom);
 });
+
+// Docs is its own design: the marketing site's scaled type roles and white
+// secondary button must not reach it, although both share the public surface.
+test('docs keeps its own reading type and a field-like search trigger', async ({ page }) => {
+  const reading = async () =>
+    page.evaluate(() => {
+      const size = (selector: string) =>
+        getComputedStyle(document.querySelector(selector) as Element).fontSize;
+      const search = getComputedStyle(
+        document.querySelector('.docs-search [aria-haspopup="dialog"]') as Element,
+      );
+      return {
+        body: size('.website-body'),
+        lead: size('.website-lead'),
+        searchShadow: search.boxShadow,
+      };
+    });
+  await page.setViewportSize({ width: 375, height: 800 });
+  await page.goto('/');
+  expect(await reading()).toEqual({ body: '17px', lead: '16px', searchShadow: 'none' });
+  await page.setViewportSize({ width: 982, height: 800 });
+  expect(await reading()).toEqual({ body: '14px', lead: '16px', searchShadow: 'none' });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  expect(await reading()).toEqual({ body: '16px', lead: '16px', searchShadow: 'none' });
+});
