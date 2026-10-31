@@ -29,16 +29,21 @@ export function PageHero({
   centered?: boolean;
 }>) {
   return (
-    <header className="relative pt-14 pb-12 md:pt-24 md:pb-16">
+    <header className="site-band relative">
       <Container
-        className={cn('mk-hero-in gap-0 md:gap-0', centered && 'items-center text-center')}
+        className={cn(
+          // Centred on a phone on every page (owner, 2026-10-31); from 640px only
+          // a centred hero stays centred.
+          'mk-hero-in items-center gap-0 text-center md:gap-0',
+          !centered && 'sm:items-start sm:text-start',
+        )}
       >
         {breadcrumb && breadcrumb.length > 0 && (
           <nav aria-label="Breadcrumb" className="mb-6">
             <ol
               className={cn(
-                'website-label text-muted flex flex-wrap items-center gap-1.5',
-                centered && 'justify-center',
+                'website-label text-muted flex flex-wrap items-center justify-center gap-1.5',
+                !centered && 'sm:justify-start',
               )}
             >
               {breadcrumb.map((crumb, index) => (
@@ -60,14 +65,16 @@ export function PageHero({
         )}
         <h1
           className={cn(
-            'website-page-title text-foreground max-w-[30ch] text-balance',
-            centered && 'mx-auto',
+            'website-page-title text-foreground mx-auto max-w-[30ch] text-balance',
+            !centered && 'sm:mx-0',
           )}
         >
           {title}
         </h1>
         {lead && (
-          <p className={cn('website-lead mt-5 max-w-[72ch]', centered && 'mx-auto')}>{lead}</p>
+          <p className={cn('website-hero-lead mx-auto mt-5 max-w-[72ch]', !centered && 'sm:mx-0')}>
+            {lead}
+          </p>
         )}
         {children}
       </Container>

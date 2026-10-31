@@ -294,15 +294,17 @@ export function AppShellFrame({
   );
 }
 
-/** A single product view in a titled window, on the public stage. */
-
+/**
+ * A single product view in a titled window, on the public stage. On the site
+ * grid it is a card cell: a card gap from the lines around it.
+ */
 export function ProductShot({
   title,
   children,
   className,
 }: Readonly<{ title: string; children: ReactNode; className?: string }>) {
   return (
-    <figure className={cn('min-w-0', className)}>
+    <figure className={cn('site-cell-card min-w-0', className)}>
       <div className="product-stage product-fit">
         <div className="product-frame app-type-scale" data-ui>
           <div className="product-frame-bar">

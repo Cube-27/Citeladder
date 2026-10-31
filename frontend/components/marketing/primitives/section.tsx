@@ -10,29 +10,16 @@ const SECTION_HEADING_CLASSES = {
   h3: 'website-feature-heading',
 } as const;
 
-/** Shared public section rhythm resolves through the central responsive token. */
-const RHYTHM = {
-  base: 'py-[var(--section-y)]',
-  tight: 'py-[calc(var(--section-y)*0.6)]',
-} as const;
-
-type Rhythm = keyof typeof RHYTHM;
-
 /**
- * Public grounds: white paper, or the soft neutral band. Space separates
- * same-tone sections; the tone change itself is the edge between different
- * ones.
+ * Every section is a band of the site grid (`site-grid.css`): a rule above
+ * it and one cell height of padding top and bottom, on the one neutral
+ * ground. `tone` survives only as the hook a control reads to step its fill
+ * (`data-citeladder-section`).
  */
-const TONE = {
-  paper: '',
-  soft: 'bg-background-alt',
-} as const;
-
-type Tone = keyof typeof TONE;
+type Tone = 'paper' | 'soft';
 
 type SectionProps = Readonly<{
   children: ReactNode;
-  rhythm?: Rhythm;
   tone?: Tone;
   /** Full-bleed: skips the container so the child owns its width. */
   bleed?: boolean;
@@ -46,7 +33,6 @@ type SectionProps = Readonly<{
 
 export function Section({
   children,
-  rhythm = 'base',
   tone = 'paper',
   bleed = false,
   dense = false,
@@ -57,17 +43,8 @@ export function Section({
   return (
     <section
       id={id}
-      // Two same-tone neighbours would stack bottom + top padding into a gap
-      // twice the intended rhythm. `data-citeladder-section` lets globals.css
-      // collapse that seam; a tone change keeps both, because there the fill
-      // edge is the boundary and needs the room.
-      data-citeladder-section={tone === 'soft' ? 'soft' : 'paper'}
-      className={cn(
-        'relative w-full scroll-mt-[var(--marketing-nav-offset)]',
-        TONE[tone],
-        RHYTHM[rhythm],
-        className,
-      )}
+      data-citeladder-section={tone}
+      className={cn('site-band relative w-full scroll-mt-[var(--marketing-nav-offset)]', className)}
       {...aria}
     >
       {bleed ? children : <Container dense={dense}>{children}</Container>}
@@ -75,7 +52,11 @@ export function Section({
   );
 }
 
-/** Shared public content measure and responsive gutters. */
+/**
+ * Shared public content measure. Inside the site grid `.site-wrap` insets
+ * the content one cell from the frame line; outside it (the footer) the
+ * plain gutters apply.
+ */
 export function Container({
   children,
   dense = false,
@@ -84,7 +65,7 @@ export function Container({
   return (
     <div
       className={cn(
-        'relative z-1 mx-auto flex w-full max-w-7xl min-w-0 flex-col px-[var(--site-gutter)]',
+        'site-wrap relative z-1 mx-auto flex w-full max-w-7xl min-w-0 flex-col px-[var(--site-gutter)]',
         dense ? 'gap-4' : 'gap-10 md:gap-14',
         className,
       )}

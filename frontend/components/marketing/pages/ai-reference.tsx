@@ -48,8 +48,8 @@ function ReferencePage({
           </nav>
         </div>
       </PageHero>
-      <div>
-        <Container className="py-[calc(var(--section-y)*0.75)]">
+      <div className="site-band">
+        <Container>
           <div className="ed-doc">
             <nav aria-label="On this page" className="ed-rail">
               <p className="website-label ed-rail-title">On this page</p>

@@ -68,7 +68,7 @@ function FeaturedPost({ post }: Readonly<{ post: BlogPost }>) {
   const outline = postHeadings(post).slice(0, 5);
   const href = `/blog/${post.slug}`;
   return (
-    <Section rhythm="tight" className="pt-0" aria-label="Featured article">
+    <Section aria-label="Featured article">
       <article className="cp-feature">
         <div className="cp-feature-copy">
           <h2 className="website-section-heading cp-feature-title">
@@ -178,13 +178,7 @@ export function BlogIndex({
 
       {featured && <FeaturedPost post={featured} />}
 
-      {summaries.length ? (
-        <Section rhythm="tight" aria-label="Blog articles">
-          {explorer}
-        </Section>
-      ) : (
-        <EmptyBlog />
-      )}
+      {summaries.length ? <Section aria-label="Blog articles">{explorer}</Section> : <EmptyBlog />}
 
       <StartPaths />
 
@@ -239,7 +233,7 @@ function PostHeader({ post }: Readonly<{ post: BlogPost }>) {
         </ol>
       </nav>
       <h1 className="website-page-title website-article-title">{post.title}</h1>
-      <p className="website-lead">{post.excerpt}</p>
+      <p className="website-hero-lead">{post.excerpt}</p>
       {post.tags.length > 0 && (
         <ul className="flex flex-wrap gap-2" aria-label="Topics">
           {post.tags.map((tag) => (
@@ -390,10 +384,16 @@ export function BlogPostView({ post }: Readonly<{ post: BlogPost }>) {
           keywords: post.tags,
         }}
       />
-      <Container>
-        <div className="cp-article">
-          <PostHeader post={post} />
-          <div className="cp-article-grid">
+      <div className="site-band">
+        <Container>
+          <div className="cp-article">
+            <PostHeader post={post} />
+          </div>
+        </Container>
+      </div>
+      <div className="site-band">
+        <Container>
+          <div className="cp-article cp-article-grid">
             <PostAside post={post} />
             <article aria-label="Post content" className="cp-prose">
               {withOccurrenceKeys(post.body, blockIdentity).map(({ key, value }) => (
@@ -406,8 +406,8 @@ export function BlogPostView({ post }: Readonly<{ post: BlogPost }>) {
               </div>
             </article>
           </div>
-        </div>
-      </Container>
+        </Container>
+      </div>
 
       <BlogCta
         title={post.closing?.heading ?? 'Make AI visibility measurable.'}

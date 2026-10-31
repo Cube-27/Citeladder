@@ -120,3 +120,16 @@ test('the radius table lists the ladder from CSS in size order', () => {
   assert.deepEqual(rows, ['`--radius-xs`', '`--radius-card`', '`--radius-full`']);
   assert.match(radii, /`--radius-card` \| `12px`/);
 });
+
+test('a public role scaled from a desktop size is documented as that desktop size', () => {
+  const type = generatedBlocks(
+    '@theme { --text-sm: 0.875rem; }',
+    `:where([data-public-surface], [data-flow-surface]) {
+      --site-type-floor: var(--text-sm);
+      --site-role-body: 1rem;
+      --text-site-body: calc(var(--site-type-floor) + (var(--site-role-body) - var(--site-type-floor)) * var(--site-type-reading));
+    }
+    .website-body { font-size: var(--text-site-body); line-height: 1.4; }`,
+  ).get('type');
+  assert.match(type, /\| `\.website-body` \| public \| `16px desktop, scaled \/ 1\.4` \| — \|/);
+});

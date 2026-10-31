@@ -23,6 +23,7 @@ import '@/apps/marketing/src/product-views.css';
 import '@/apps/marketing/src/styles/commerce-pages.css';
 import '@/apps/marketing/src/styles/content-pages.css';
 import '@/apps/marketing/src/styles/editorial-pages.css';
+import '@/apps/marketing/src/styles/site-grid.css';
 
 interface Props {
   title?: string;
@@ -71,10 +72,13 @@ const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 const sharedJsonLd = [organizationJsonLd(), websiteJsonLd(), softwareApplicationJsonLd()].filter(
   (data): data is JsonLdObject => data !== null,
 );
+// `data-marketing-surface` on <html> keys the marketing-only type roles and
+// secondary button (website-type.css, globals.css); docs carries
+// `data-public-surface` alone.
 ---
 
 <!doctype html>
-<html lang="en" data-public-surface>
+<html lang="en" data-public-surface data-marketing-surface>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -114,7 +118,8 @@ const sharedJsonLd = [organizationJsonLd(), websiteJsonLd(), softwareApplication
     {gaMeasurementId && <GoogleAnalytics />}
     <a href="#main" class="skip-link">Skip to main content</a>
     <MarketingNav path={Astro.url.pathname} />
-    <div class="relative z-1 pt-[var(--marketing-nav-offset)]"><slot /></div>
+    {/* Every marketing page sits on the site grid (marketing.css). */}
+    <div class="site-frame relative z-1 pt-[var(--marketing-nav-offset)]"><slot /></div>
     <div class="relative z-1"><MarketingFooter /></div>
     <CookieBanner />
   </body>

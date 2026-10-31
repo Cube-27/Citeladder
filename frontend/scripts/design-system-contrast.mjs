@@ -47,8 +47,9 @@ const CONTRAST_PAIRS = [
     scopes: ALL_SCOPES,
   },
   // The public site's own inks on its paper, its wireframe ground and the
-  // footer's band; body, navigation, subtitle and lead-in inks also on
-  // the mint closing band of the subpages.
+  // footer's band; the reading inks, the heading ink and the announcement
+  // strip's foreground also on the mint field the closing band and the
+  // homepage announcement strip share.
   {
     inks: [
       'site-ink',
@@ -64,7 +65,9 @@ const CONTRAST_PAIRS = [
     scopes: [PUBLIC],
   },
   {
-    inks: ['site-body', 'site-nav', 'site-ink-soft', 'site-lead-in'].map(color),
+    inks: ['foreground', 'site-ink', 'site-body', 'site-nav', 'site-ink-soft', 'site-lead-in'].map(
+      color,
+    ),
     surfaces: [color('field-mint')],
     minimum: 4.5,
     scopes: [PUBLIC],

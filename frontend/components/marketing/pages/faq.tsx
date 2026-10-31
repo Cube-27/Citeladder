@@ -45,7 +45,7 @@ function groupAnchor(group: FaqGroup): string {
 
 export function FaqGroups() {
   return (
-    <Section rhythm="tight" className="pt-0">
+    <Section>
       <div className="cm-faq">
         <nav aria-label="FAQ groups" className="cm-faq-index">
           <ul>

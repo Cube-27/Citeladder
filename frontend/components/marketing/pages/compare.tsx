@@ -70,7 +70,7 @@ export function CompareIndex() {
         </p>
       </PageHero>
 
-      <Section rhythm="tight" className="pt-0" aria-labelledby="compare-list-title">
+      <Section aria-labelledby="compare-list-title">
         <h2 id="compare-list-title" className="sr-only">
           Comparisons
         </h2>

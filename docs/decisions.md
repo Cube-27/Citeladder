@@ -238,7 +238,9 @@ screens and onboarding (`[data-flow-surface]`, light mode only: dark mode keeps
 its edge rings), applying only the changes relevant to a form flow, and set the
 desktop marketing H1 4px smaller from 900px (so a desktop at 125% display
 scaling counts as desktop): the hero tops out at 68px and the page title is
-40px, then 64px from 1280px.
+40px, then 64px from 1280px (marketing page-title ladder superseded on 31
+October 2026 by the scaled type roles; see
+[The public site gets a neutral ground and inks](#the-public-site-gets-a-neutral-ground-and-inks)).
 
 Source: owner, 16 October 2026 (design-taste-frontend inspection of the public
 pages; "prefer skill over design system"). [Design](design.md) owns the system.
@@ -269,10 +271,15 @@ text in General Sans, both capped at weight 500; editorial serif display faces
 were rejected, as were the faces of the reference site the owner showed. The
 public H1s are a step smaller than before: the hero tops out at 60px (about
 52px at 1280px) and the marketing page title is 36px, then 56px from 1280px.
+(The marketing page-title steps are superseded on 31 October 2026 by the
+scaled type roles; see
+[The public site gets a neutral ground and inks](#the-public-site-gets-a-neutral-ground-and-inks).)
 Phones get their own homepage composition rather than the desktop one shrunk
 (superseded for product views on 31 October 2026: see
 [Product views scale down on phones](#product-views-scale-down-on-phones);
-the copy, actions and engine list keep their phone composition).
+the left-aligned phone copy and close are superseded on 31 October 2026 too:
+see [The public site gets a neutral ground and inks](#the-public-site-gets-a-neutral-ground-and-inks),
+where phones keep the centred composition and the full-width action row).
 Motion stays subtle: copy arrives in sequence, and product pictures assemble
 themselves (lines draw, bars grow). Website copy is unchanged.
 
@@ -436,21 +443,76 @@ green accent (buttons, links, badges) and its logo stay its own; the rest
 follows a neutral system. This replaces the flat rule above for the
 homepage's cards and chips and for public type and ink.
 
-- **Homepage ground:** every band sits on one `#f7f7f7` ground; cards and
-  tiles are white; the capability group labels become small white chips. The
-  homepage draws no wireframe lines: no section rails, band rules or column
-  dividers. No copy, section order or product view changes, and the whole
-  treatment is one stylesheet that can be switched off.
-- **Neutral fields:** the homepage hero and announcement strip lose their
-  mint and lime fields and take the same `#f7f7f7` ground. The homepage
-  closing band keeps its mint field and lattice, like every other page's. The
-  accent stays on buttons, links and the logo.
-- **Type and ink (every public page, docs included):** hero 64/48/32px at
-  weight 400, section heading 39/32/26px, every subtitle under a heading and
-  every page intro (the homepage hero lead included) 16px at every width, at
-  500 in a lighter ink (the homepage hero lead at 400 in the body ink), card titles 18/18/16px at 600, body 16/14/17px
-  (larger on a phone), across desktop (≥1200px), tablet (810–1199px) and
-  phone; inks are `#171717` headings, `#707070` sentences, 60% ink navigation,
+- **Ground:** every band sits on one `#f7f7f7` ground; cards and tiles are
+  white; the capability group labels become small white chips. No copy or
+  section order changes. The grid itself lives in the shared site-grid
+  classes, not in a homepage stylesheet.
+- **Site grid:** the homepage is divided into cells, frame columns by band
+  rows, and every element sits in a cell with the same spacing and padding.
+  The frame's edges meet the header logo and the right-most header action.
+  Subtle 1px solid light-grey lines run down each frame edge, under the
+  header bar, between bands and between side-by-side cells. Copy is inset
+  about 30px from a line (less on a phone, where the frame lines sit just
+  inside the screen edge); cards and every product view sit a few pixels
+  inside the lines, never wider than the frame, with about 30px of padding.
+  One set of tokens and classes defines the grid. After reviewing the
+  homepage the owner rolled it out to every marketing page ("overall looks
+  good … implement on all other pages"); docs is excluded because it has no
+  grid structure.
+- **The homepage defines, every page inherits:** "we define the design for
+  landing page components and values and then everything else should just
+  inherit it; docs is a different design". Other marketing pages compose the
+  homepage's components and values and set no type, spacing, width or colour
+  of their own; anything missing becomes a shared component or role. So the
+  homepage hero lead (400, body ink) is the hero-lead role every page's
+  opening lead inherits, and the subtitle under a section heading keeps the
+  section-subtitle role (500, soft ink).
+- **Product views are snapshots:** "every product UI display in marketing is
+  either a scaled down snapshot or a focussed snapshot, the dimensions will
+  always remain like the main app UI". A view lays out at the app's own
+  width; the frame decides only zoom and crop.
+- **Secondary buttons:** the alternate action (Log in, Book a demo beside a
+  primary) did not read as a button on the header or the ground, which had
+  taken its tone. It becomes white with a visible 1px ring and a small contact
+  shadow on every public background; Log in in the header is that button on
+  every width.
+- **Phones centre the opening and closing:** the homepage hero and closing,
+  and every page hero, are centred on a phone as on desktop. This supersedes
+  the 21 October left-aligned phone copy ("left-aligned copy with full-width
+  actions … a left-aligned close"); the homepage keeps its full-width action
+  row.
+- **Header dropdowns:** a row's description is 12px under its 14px title on
+  every public page. Resources becomes three labelled columns, Learn (GEO
+  guide, AI citation tracking guide, ChatGPT brand mentions guide, Blog &
+  guides), Product (Documentation, Changelog, FAQ, Open source) and Tools
+  (Free tools, LLM rank tracker, Compare), with no item icons and every item
+  otherwise unchanged. The footer and the phone menu sheet follow the same
+  order. Every dropdown's group labels share one style, 14px at 400 in the
+  navigation ink.
+- **Neutral fields:** the homepage hero loses its mint field and takes the
+  same `#f7f7f7` ground. The homepage closing band keeps its mint field and
+  lattice, like every other page's, and the announcement strip takes that
+  same mint. The accent stays on buttons, links and the logo.
+- **Type is roles scaled by one rule (every marketing page):** "once the
+  design is fixed shouldnt every viewport be just a scaled down version",
+  then "keep the desktop as reference and then apply a rule for every size so
+  we dont have to change multiple places, define roles not individual
+  arbitrary values". Each role is defined once at its desktop size (hero 64,
+  page title 56, section heading 39, card title 18, lead and body 16, labels,
+  navigation and controls 14) and smaller viewports scale the part above a
+  14px floor by one factor per band: headings 0.68 on a tablet and 0.36 on a
+  phone (the hero's own 64/48/32), reading text 1 on a tablet and 0 on a
+  phone, so leads and body are 16px on desktop and tablet and 14px on a
+  phone. The 14px floor exists because pure scaling would put reading text
+  under the 12px minimum on a phone. Sizes round to whole pixels. This
+  replaces, on marketing pages, the earlier fixed steps (section heading
+  39/32/26, subtitles 16px at every width, body 16/14/17) and the marketing
+  page-title ladder of [The public website is flat](#the-public-website-is-flat)
+  and [The brighter refresh](#the-brighter-refresh-signal-green-sora-and-general-sans)
+  (36px from 900px, 56px from 1280px, with desktop starting at 900px):
+  desktop now starts at 1200px, so the owner's 982px desktop is the tablet
+  band and its page title is 43px, up from 36px. Docs keeps the fixed steps.
+  Inks are `#171717` headings, `#707070` sentences, 60% ink navigation,
   footer links and subtitles, and 55% black lead-in labels. These lighter
   inks are deliberately lighter than the headings but meet 4.5:1 on white,
   the ground, the footer's band and the mint closing band.
@@ -470,5 +532,19 @@ full-bleed band rules and column dividers; the owner removed them after
 seeing it live ("remove the lines, they look pretty bad, rest is fine") and put the mint
 closing band back on the homepage "like all other pages". The subtitles
 first stepped 15/18/24px while the homepage hero lead followed body copy; the
-owner asked for one size, "lets do 16px for all".
+owner asked for one size, "lets do 16px for all". Later the same day the
+owner sent a reference screenshot and asked for "the padding for text and
+cards and the subtle lines not dark lines", adding that "all the text in the
+page will have a padding compared to topbar logo as the starting point":
+lines return as the site grid above because they are now subtle and solid,
+where the rejected ones were dark and faded. The owner then described the
+grid of cells, asked that the product views fit inside it too, and set the
+dropdown description size and the Resources sections the same day. Later
+still, after approving the homepage, the owner asked for the grid on every
+marketing page, stated the snapshot rule for product views, and, reviewing
+phones, asked that the header and alternate actions read as buttons, that
+the opening and closing sections centre on a phone, that the announcement
+strip take the closing band's mint, and that type follow the desktop roles
+and one scaling rule; the "16px for all" subtitle answer becomes 16px on
+desktop and tablet under that rule.
 [Design](design.md) owns the system.

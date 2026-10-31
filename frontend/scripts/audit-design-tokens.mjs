@@ -291,6 +291,13 @@ function resolveLength(value, declarations, seen = new Set()) {
   if (alias && !seen.has(alias) && declarations.has(alias)) {
     return resolveLength(declarations.get(alias), declarations, new Set([...seen, alias]));
   }
+  // A size computed from one desktop role by the viewport scale rule
+  // (website-type.css) is documented as that role's desktop size.
+  const roles = new Set(value.match(/--site-role-[\w-]+/g) ?? []);
+  if (/^(?:calc|max|min|clamp)\(/.test(value.trim()) && roles.size === 1) {
+    const [role] = roles;
+    return `${resolveLength(`var(${role})`, declarations, seen)} desktop, scaled`;
+  }
   // Convert whole rem words; splitting first keeps the match linear.
   return value
     .split(/([\s,()/]+)/)

@@ -121,8 +121,8 @@
 /* Document section heading: a step above body copy for dense policies and
    references, where the full section rung would shout on every section. */
 .ed-h2.website-feature-heading {
-  font-size: var(--text-xl);
-  line-height: var(--text-xl--line-height);
+  font-size: var(--text-site-prose-heading);
+  line-height: var(--text-site-prose-heading--line-height);
   letter-spacing: -0.012em;
 }
 
@@ -206,8 +206,8 @@
   padding-block: 0.5rem;
   border-bottom-color: var(--color-border);
   color: var(--color-muted);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  font-size: var(--text-site-label);
+  line-height: var(--text-site-label--line-height);
   font-weight: 500;
 }
 
@@ -280,8 +280,8 @@
   grid-row: span 2;
   padding-top: 0.25rem;
   color: var(--color-muted);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  font-size: var(--text-site-label);
+  line-height: var(--text-site-label--line-height);
   font-variant-numeric: tabular-nums;
 }
 
@@ -374,8 +374,8 @@
 
 .ed-compare thead th {
   color: var(--color-foreground);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  font-size: var(--text-site-label);
+  line-height: var(--text-site-label--line-height);
   font-weight: 500;
 }
 
@@ -387,8 +387,8 @@
 
 .ed-compare tbody th {
   color: var(--color-muted);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  font-size: var(--text-site-label);
+  line-height: var(--text-site-label--line-height);
   font-weight: 500;
 }
 
@@ -432,8 +432,8 @@
     content: attr(data-label);
     display: block;
     color: var(--color-foreground);
-    font-size: var(--text-sm);
-    line-height: var(--text-sm--line-height);
+    font-size: var(--text-site-label);
+    line-height: var(--text-site-label--line-height);
     font-weight: 500;
   }
 }

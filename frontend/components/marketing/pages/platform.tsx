@@ -233,7 +233,7 @@ export function CapabilityGrid() {
     <div className="mk-capabilities">
       {PLATFORM_GROUPS.map((group) => (
         <div key={group.label} className="mk-capability-group">
-          <p className="mk-group-label">{group.label}</p>
+          <p className="mk-group-label site-chip">{group.label}</p>
           <ul>
             {group.items.map((item) => {
               return (
@@ -311,7 +311,7 @@ export function PlatformPageContent({ page }: Readonly<{ page: PlatformPage }>) 
         </div>
       </PageHero>
 
-      <Section rhythm="tight" className="pt-0" aria-label={`${label} preview`}>
+      <Section aria-label={`${label} preview`}>
         <Shot visual={page.visual} title={page.visualTitle} />
         <ul className="mk-highlights">
           {page.highlights.map((highlight) => (
@@ -325,7 +325,7 @@ export function PlatformPageContent({ page }: Readonly<{ page: PlatformPage }>) 
 
       {page.features.length > 0 && (
         <Section tone="soft">
-          <div className="mk-features">
+          <div className="mk-features site-rows">
             {page.features.map((feature, index) => (
               <div
                 key={feature.title}

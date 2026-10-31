@@ -70,7 +70,7 @@ function HeroShot() {
 function Hero({ rotor }: Readonly<{ rotor?: ReactNode }>) {
   return (
     <header className="lp-hero">
-      <div className="lp-wrap lp-hero-copy mk-hero-in">
+      <div className="lp-wrap site-wrap lp-hero-copy mk-hero-in">
         <h1 className="website-hero-display">
           <span className="sr-only">
             Analyze what ChatGPT, Gemini and Claude tell your buyers about you.
@@ -81,7 +81,7 @@ function Hero({ rotor }: Readonly<{ rotor?: ReactNode }>) {
             tells your buyers about you.
           </span>
         </h1>
-        <p className="website-lead lp-hero-lead">
+        <p className="website-hero-lead lp-hero-lead">
           See which brands AI recommends, which pages it cites, and what to fix to improve
           visibility.
         </p>
@@ -90,7 +90,7 @@ function Hero({ rotor }: Readonly<{ rotor?: ReactNode }>) {
           <p className="lp-hero-note">7-day free trial on ChatGPT answers. Trial limits apply.</p>
         )}
       </div>
-      <div className="lp-wrap lp-wrap-wide">
+      <div className="lp-wrap site-wrap-cards">
         <HeroShot />
       </div>
     </header>
@@ -106,8 +106,8 @@ const ENGINES: readonly [OfficialEngineKey, string][] = [
 
 function EngineStrip() {
   return (
-    <section className="lp-engines" aria-label="Monitored answer engines">
-      <div className="lp-wrap lp-engines-inner">
+    <section className="lp-engines site-band" aria-label="Monitored answer engines">
+      <div className="lp-wrap site-wrap lp-engines-inner">
         <p className="lp-engines-label">Answers collected from</p>
         <ul>
           {ENGINES.map(([engine, name]) => (
@@ -126,8 +126,8 @@ function EngineStrip() {
 
 function Statement() {
   return (
-    <section className="lp-section lp-statement">
-      <div className="lp-wrap">
+    <section className="lp-section lp-statement site-band">
+      <div className="lp-wrap site-wrap">
         <p className="lp-statement-text">
           Buyers ask AI before they ask you.{' '}
           <span>
@@ -154,7 +154,7 @@ function BentoTile({
   children: ReactNode;
 }>) {
   return (
-    <a href={href} className={cn('lp-tile', className)}>
+    <a href={href} className={cn('lp-tile site-card', className)}>
       <div className="lp-tile-copy">
         <h3 className="website-feature-heading">{title}</h3>
         <p className="website-body">{body}</p>
@@ -168,9 +168,9 @@ function BentoTile({
 
 function Loop() {
   return (
-    <section className="lp-section" id="how-it-works">
+    <section className="lp-section site-band" id="how-it-works">
       <span id="see-it" className="lp-anchor" aria-hidden />
-      <div className="lp-wrap lp-stack">
+      <div className="lp-wrap site-wrap lp-stack">
         <div className="lp-head">
           <h2 className="website-section-heading">From an AI answer to the fix that moves it.</h2>
           <p className="website-lead">
@@ -178,7 +178,7 @@ function Loop() {
             you find into reviewable work. Then measure again.
           </p>
         </div>
-        <div className="lp-bento">
+        <div className="lp-bento site-cards">
           <BentoTile
             className="lp-tile-wide"
             title="Track your share of the answer"
@@ -254,8 +254,8 @@ function DeepDive({
 
 function DeepDives() {
   return (
-    <section className="lp-section lp-soft" id="why">
-      <div className="lp-wrap lp-dives">
+    <section className="lp-section lp-soft site-band" id="why">
+      <div className="lp-wrap site-wrap lp-dives site-rows">
         <DeepDive
           title="Every number opens the answer behind it."
           body="Click any metric and read the recorded answer: the engine, the prompt, the date, where your brand appeared and which sources it cited."
@@ -308,8 +308,8 @@ function DeepDives() {
 
 function PlatformGrid() {
   return (
-    <section className="lp-section" id="platform">
-      <div className="lp-wrap lp-stack">
+    <section className="lp-section site-band" id="platform">
+      <div className="lp-wrap site-wrap lp-stack">
         <div className="lp-head lp-head-split">
           <h2 className="website-section-heading">Everything in one project.</h2>
           <TextLink href="/platform">See the whole platform</TextLink>
@@ -322,8 +322,8 @@ function PlatformGrid() {
 
 function Faq() {
   return (
-    <section className="lp-section" id="landing-faq">
-      <div className="lp-wrap lp-faq">
+    <section className="lp-section site-band" id="landing-faq">
+      <div className="lp-wrap site-wrap lp-faq site-split">
         <div className="lp-head">
           <h2 className="website-section-heading">Questions, answered.</h2>
           <TextLink href="/faq">All questions</TextLink>
@@ -336,8 +336,8 @@ function Faq() {
 
 function Closing() {
   return (
-    <section className="lp-section marketing-closing-band" id="get-started">
-      <div className="lp-wrap lp-closing">
+    <section className="lp-section marketing-closing-band site-band" id="get-started">
+      <div className="lp-wrap site-wrap lp-closing">
         <h2 className="website-section-heading">See what AI says about you today.</h2>
         <p className="website-lead">
           Add your site and a few questions your buyers ask. Get your first baseline, then decide

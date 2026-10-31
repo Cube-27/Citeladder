@@ -12,12 +12,17 @@ export type NavDropItem =
 
 type NavDropGroup = { label?: string; items: readonly NavDropItem[] };
 
-export type NavDrop = {
-  key: NavDropKey;
-  label: string;
-  href: string;
-  groups: readonly NavDropGroup[];
-};
+/** Resources renders each group as a named section, so every group has a label. */
+type LabelledNavDropGroup = { label: string; items: readonly NavDropItem[] };
+
+type NavDropBase = { label: string; href: string };
+
+export type NavDrop =
+  | (NavDropBase & {
+      key: Exclude<NavDropKey, 'resources'>;
+      groups: readonly NavDropGroup[];
+    })
+  | (NavDropBase & { key: 'resources'; groups: readonly LabelledNavDropGroup[] });
 
 export const PLATFORM_OVERVIEW = {
   title: 'Platform overview',
@@ -153,8 +158,35 @@ export const NAV_DROPS: readonly NavDrop[] = [
     key: 'resources',
     label: 'Resources',
     href: '/blog',
+    // Labelled sections, shown side by side as columns (owner, 2026-10-31).
     groups: [
       {
+        label: 'Learn',
+        items: [
+          {
+            title: 'GEO guide',
+            desc: 'Understand generated answers and where to start',
+            href: '/generative-engine-optimization',
+          },
+          {
+            title: 'AI citation tracking guide',
+            desc: 'Learn citation measurement and interpretation',
+            href: '/ai-citation-tracking',
+          },
+          {
+            title: 'ChatGPT brand mentions guide',
+            desc: 'Track what ChatGPT says about your brand',
+            href: '/track-brand-mentions-chatgpt',
+          },
+          {
+            title: 'Blog & guides',
+            desc: 'Practical guides to AI visibility and site evidence',
+            href: '/blog',
+          },
+        ],
+      },
+      {
+        label: 'Product',
         items: [
           {
             title: 'Documentation',
@@ -163,47 +195,32 @@ export const NAV_DROPS: readonly NavDrop[] = [
             external: true,
           },
           {
-            title: 'Blog & guides',
-            desc: 'Practical guides to AI visibility and site evidence',
-            href: '/blog',
+            title: 'Changelog',
+            desc: 'Product updates',
+            href: docsHref('/changelog/'),
+            external: true,
           },
+          { title: 'FAQ', desc: 'Answers on AEO, evidence, security, and billing', href: '/faq' },
           {
-            title: 'GEO guide',
-            desc: 'Understand generated answers and where to start',
-            href: '/generative-engine-optimization',
+            title: 'Open source',
+            desc: 'Self-host CiteLadder or use the hosted version',
+            href: '/open-source',
           },
+        ],
+      },
+      {
+        label: 'Tools',
+        items: [
           {
             title: 'Free tools',
             desc: 'Crawler rules, markup and sitemap utilities',
             href: '/tools',
           },
           {
-            title: 'AI citation tracking guide',
-            desc: 'Learn citation measurement and interpretation',
-            href: '/ai-citation-tracking',
-          },
-          {
-            title: 'Changelog',
-            desc: 'Product updates',
-            href: docsHref('/changelog/'),
-            external: true,
-          },
-          {
-            title: 'Open source',
-            desc: 'Self-host CiteLadder or use the hosted version',
-            href: '/open-source',
-          },
-          {
             title: 'LLM rank tracker',
             desc: 'Where your brand ranks inside AI answers',
             href: '/llm-rank-tracker',
           },
-          {
-            title: 'ChatGPT brand mentions guide',
-            desc: 'Track what ChatGPT says about your brand',
-            href: '/track-brand-mentions-chatgpt',
-          },
-          { title: 'FAQ', desc: 'Answers on AEO, evidence, security, and billing', href: '/faq' },
           {
             title: 'Compare',
             desc: 'Evidence-led notes on AI visibility platforms',

@@ -42,7 +42,7 @@ if (!catalog) Astro.response.status = 503;
     {catalog ? (
       <PublicPricingCatalog catalog={catalog} appOrigin={env.PUBLIC_APP_ORIGIN} initialByok={initialByok} client:load />
     ) : (
-      <Section rhythm="tight" className="pt-0" aria-label="Plans">
+      <Section aria-label="Plans">
         <SectionHeader
           title="Plans are temporarily unavailable."
           lead="Please try again shortly. No price is shown while the public catalog is unavailable."
