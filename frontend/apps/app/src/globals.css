@@ -439,10 +439,12 @@
 [data-public-surface] {
   --color-site-ink: #171717;
   --color-site-ink-strong: #000000;
-  --color-site-ink-soft: rgb(23 23 23 / 50%);
-  --color-site-body: #737373;
-  --color-site-nav: rgb(23 23 23 / 56%);
-  --color-site-lead-in: rgb(0 0 0 / 30%);
+  /* The lighter inks sit just past 4.5:1 on white, the ground, the footer's
+     `background-alt` and the mint closing band. */
+  --color-site-ink-soft: rgb(23 23 23 / 60%);
+  --color-site-body: #707070;
+  --color-site-nav: rgb(23 23 23 / 60%);
+  --color-site-lead-in: rgb(0 0 0 / 55%);
   --color-site-footer: #6d6d6d;
   --color-site-ground: #f7f7f7;
   --color-site-divider: #e5e5e5;

@@ -473,23 +473,26 @@ figure:has(+ .mk-highlights) > .product-fit {
   gap: 1.25rem;
 }
 
-/* The large feature heading beside a product shot. */
-.mk-dive-title.website-page-title {
+/* The feature heading beside a product shot keeps the page title's phone
+   size and the 32px rung from 768px, in the site ink. */
+.mk-dive-title {
   max-width: 24ch;
   color: var(--color-site-ink);
-  font-size: var(--text-site-feature);
-  line-height: var(--text-site-feature--line-height);
-  letter-spacing: -0.02em;
 }
 
 @media (min-width: 48rem) {
   /* Marketing page H1s sit one step above the shared 40px title on desktop
      (owner decision, 2026-10-10); docs keep 40px, articles their own rung. */
-  .website-page-title:not(.website-article-title, .mk-dive-title) {
+  .website-page-title:not(.website-article-title) {
     --text-marketing-title: 2.5rem;
     --text-marketing-title--line-height: 3rem;
     font-size: var(--text-marketing-title);
     line-height: var(--text-marketing-title--line-height);
+  }
+
+  .mk-dive-title.website-page-title {
+    font-size: var(--text-4xl);
+    line-height: var(--text-4xl--line-height);
   }
 }
 

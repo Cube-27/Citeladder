@@ -41,8 +41,17 @@ body {
   isolation: isolate;
 }
 
-.lp .lp-soft {
+/* Every band is the one neutral ground, the hero and closing band included:
+   their brand fields, grain and lattice give way to it, and so does the
+   announcement strip above the bar. The accent stays on buttons, links and
+   the logo. */
+.lp :is(.lp-soft, .lp-hero, .marketing-closing-band),
+body .lp-announcement {
   background-color: var(--color-site-ground);
+}
+
+.lp :is(.lp-hero, .marketing-closing-band)::before {
+  content: none;
 }
 
 /* Each band draws its own pair of rails, so the fade restarts per band. */
@@ -87,6 +96,13 @@ body {
 .lp :is(.lp-tile, .lp-team) {
   border-radius: var(--radius-card);
   background: var(--color-panel);
+}
+
+/* A capability row lifts into a card on hover, so it stays inside the content
+   edge, one inset from the rails, like the tiles; elsewhere it bleeds into
+   the margin. */
+.lp .mk-capability {
+  margin-inline: 0;
 }
 
 .lp :is(.lp-tile, .lp-team):hover,
@@ -141,12 +157,19 @@ body {
     content: none;
   }
 
+  /* `--wf-pad` is the box's own inline padding: the integrations and FAQ
+     boxes are `.lp-wrap`s and carry the site gutter, a deep dive none. */
   .lp :is(.mk-dive, .lp-integrations, .lp-faq) {
     --wf-split: 0.4;
+    --wf-pad: 0px;
   }
 
   .lp .mk-dive-reverse {
     --wf-split: 0.6;
+  }
+
+  .lp :is(.lp-integrations, .lp-faq) {
+    --wf-pad: var(--site-gutter);
   }
 
   .lp .lp-integrations {
@@ -158,7 +181,7 @@ body {
     content: '';
     position: absolute;
     inset-block: 0;
-    left: calc((100% - 4.5rem) * var(--wf-split) + 2.25rem);
+    left: calc(var(--wf-pad) + (100% - 2 * var(--wf-pad) - 4.5rem) * var(--wf-split) + 2.25rem);
     width: 1px;
     background: var(--color-site-divider);
     pointer-events: none;

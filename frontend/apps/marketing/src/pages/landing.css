@@ -213,12 +213,15 @@
   }
 }
 
-/* The hero lead is body copy, not the subtitle the lead role sets under a
-   section heading. */
-.lp-hero-lead.website-lead {
+.lp-hero-lead {
   max-width: 54rem;
   margin-top: 1.5rem;
   margin-bottom: 2.25rem;
+}
+
+/* The hero lead is body copy, not the subtitle the lead role sets under a
+   section heading. */
+.lp-hero-lead.website-lead {
   color: var(--color-site-body);
   font-size: var(--text-site-body);
   line-height: var(--text-site-body--line-height);

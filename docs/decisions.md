@@ -444,16 +444,26 @@ homepage's lines and cards and for public type and ink.
   6px inside the rails; existing labels become small white chips. No copy,
   section order or product view changes, and the whole wireframe is one
   stylesheet that can be switched off.
-- **Type and ink (every public page and docs):** hero 64/48/32px at weight
-  400, section heading 39/32/26px, large feature heading 48/38/32px, subtitle
-  under a heading 24/18/15px at 500 in half ink, card titles 18/18/16px at
-  600, body 16/14/17px (larger on a phone), across desktop (≥1200px), tablet
-  (810–1199px) and phone; inks are `#171717` headings, `#737373` sentences,
-  56% ink navigation, 50% ink subtitles and 30% ink lead-in labels. The font
+- **Neutral fields:** the homepage hero and closing band lose their mint and
+  lime fields and take the same `#f7f7f7` ground. The accent stays on
+  buttons, links and the logo.
+- **Type and ink (every public page, docs included):** hero 64/48/32px at
+  weight 400, section heading 39/32/26px, subtitle under a heading 24/18/15px
+  at 500 in a lighter ink, card titles 18/18/16px at 600, body 16/14/17px
+  (larger on a phone), across desktop (≥1200px), tablet (810–1199px) and
+  phone; inks are `#171717` headings, `#707070` sentences, 60% ink navigation,
+  footer links and subtitles, and 55% black lead-in labels. These lighter
+  inks are deliberately lighter than the headings but meet 4.5:1 on white,
+  the ground, the footer's band and the mint closing band of the subpages.
+  The feature heading beside a product shot keeps its earlier size. The font
   families stay Outfit and Geist.
 
 Source: owner, 31 October 2026, via the design brief for this change
 (wireframe grid skeleton; type scale and colour hierarchy), with the follow-up
 to adopt the neutral ground, white fitted cards, chips, dividers and line
-colours, and to keep the current font families. [Design](design.md) owns the
-system.
+colours, and to keep the current font families. Owner answers the same day:
+the hero and closing band fields become the neutral ground with the accent
+kept on buttons, links and the logo; docs takes the new type scale; "Feature
+heading size is good currently, so don't change it."; body ink is `#707070`;
+the navigation, subtitle and lead-in inks darken just enough to pass 4.5:1
+everywhere they render. [Design](design.md) owns the system.

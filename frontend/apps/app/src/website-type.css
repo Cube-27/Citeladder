@@ -2,11 +2,12 @@
    product ladder. Both surfaces share the product palette and geometry
    (globals.css); this scope changes type scale only.
 
-   The public ladder (docs/design.md §Typography), phone → ≥768px, every
-   size a rung of the one globals.css scale: meta 12 · body, nav and
-   label 14 · feature heading 16→18 · lead 16→18 · section heading 24→32 ·
-   data display 28→32 · page title 24–28→40 · hero 28–32→60. 14 is the
-   baseline here exactly as in the product; 12 is the one rung below it. */
+   The public ladder (docs/design.md §Typography) runs in three bands, phone
+   (below 810px) → tablet (810–1199px) → desktop (1200px and up), through the
+   `--text-site-*` tokens below: hero 32→48→64 · section heading 26→32→39 ·
+   lead (subtitle) 15→18→24 · card title 16→18→18 · body 17→14→16. The page
+   title, article title and data display keep one step at 768px; nav, labels,
+   controls and captions hold 14, and 12 is the one rung below it. */
 :where([data-public-surface], [data-flow-surface]) {
   /* The public and focused-flow type world (docs/design.md §Typography):
      Geist carries body, UI and data, Outfit the display headings, as in
@@ -23,11 +24,9 @@
      blocks below step them at 810px (tablet) and 1200px (desktop). The roles
      below and the marketing stylesheets read these, never a literal. Weight,
      tracking and ink live on each role. A size on the shared scale reads its
-     rung; the rest (15, 17, 26, 38, 39, 48, 64) are the site's own. */
+     rung; the rest (15, 17, 26, 39, 48, 64) are the site's own. */
   --text-site-hero: var(--text-4xl);
   --text-site-hero--line-height: 1;
-  --text-site-feature: var(--text-4xl);
-  --text-site-feature--line-height: 1.1;
   --text-site-section: 1.625rem;
   --text-site-section--line-height: 1.05;
   --text-site-subtitle: 0.9375rem;
@@ -58,7 +57,6 @@
 @media (min-width: 810px) {
   :where([data-public-surface]) {
     --text-site-hero: 3rem;
-    --text-site-feature: 2.375rem;
     --text-site-section: var(--text-4xl);
     --text-site-subtitle: var(--text-lg);
     --text-site-subtitle--line-height: 1;
@@ -73,7 +71,6 @@
 @media (min-width: 1200px) {
   :where([data-public-surface]) {
     --text-site-hero: 4rem;
-    --text-site-feature: 3rem;
     --text-site-section: 2.4375rem;
     --text-site-subtitle: var(--text-2xl);
     --text-site-subtitle--line-height: 1.2;
@@ -233,7 +230,7 @@
 }
 
 /* The public inks (globals.css `--color-site-*`): headings and titles in the
-   ink, the subtitle under a heading at half ink, sentences in the body grey,
+   ink, the subtitle under a heading in the soft ink, sentences in the body grey,
    navigation in the nav grey. */
 :where(.website-hero-display, .website-section-heading, .website-feature-heading) {
   color: var(--color-site-ink);
