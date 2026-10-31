@@ -47,7 +47,7 @@ const CONTRAST_PAIRS = [
     scopes: ALL_SCOPES,
   },
   // The public site's own inks on its paper, its wireframe ground and the
-  // footer's band; the lighter navigation, subtitle and lead-in inks also on
+  // footer's band; body, navigation, subtitle and lead-in inks also on
   // the mint closing band of the subpages.
   {
     inks: [
@@ -64,7 +64,7 @@ const CONTRAST_PAIRS = [
     scopes: [PUBLIC],
   },
   {
-    inks: ['site-nav', 'site-ink-soft', 'site-lead-in'].map(color),
+    inks: ['site-body', 'site-nav', 'site-ink-soft', 'site-lead-in'].map(color),
     surfaces: [color('field-mint')],
     minimum: 4.5,
     scopes: [PUBLIC],
