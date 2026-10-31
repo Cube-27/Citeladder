@@ -405,7 +405,11 @@ each bot's `checks` array:
 defects). `technical.sitemap_redirect` fails when the URL the sitemap lists and
 the URL the crawler reached differ in identity form (`canonicalUrl`, so query
 order and tracking keys are not a redirect); `technical.sitemap_canonical` then
-judges the reached page's canonical. `technical.sitemap_lastmod` fails a
+judges the reached page's canonical. `technical.sitemap_noindex` fails a listed
+page that carries noindex; the noindex itself stays the site's choice, since
+`technical.indexable` only blocks one the owner's indexing policy marks for
+indexing, and the snapshot gate counts that page, like a 404 or 410, as
+excluded. `technical.sitemap_lastmod` fails a
 `<lastmod>` that does not parse, is more than `sitemap_lastmod_tolerance_days`
 past the audit time, or is older than the page's newest declared publication
 or modification date by more than that tolerance; without a readable page date
