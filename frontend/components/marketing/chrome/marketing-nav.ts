@@ -29,7 +29,7 @@ export function routePath(pathname: string): string {
 export const DROP_LAYOUT: Readonly<Record<NavDropKey, { width: number }>> = {
   platform: { width: 820 },
   solutions: { width: 320 },
-  resources: { width: 620 },
+  resources: { width: 760 },
 };
 
 /** What asked for a dropdown: a resting pointer, or an explicit focus move. */

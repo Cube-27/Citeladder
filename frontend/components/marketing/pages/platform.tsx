@@ -233,7 +233,7 @@ export function CapabilityGrid() {
     <div className="mk-capabilities">
       {PLATFORM_GROUPS.map((group) => (
         <div key={group.label} className="mk-capability-group">
-          <p className="mk-group-label">{group.label}</p>
+          <p className="mk-group-label site-chip">{group.label}</p>
           <ul>
             {group.items.map((item) => {
               return (

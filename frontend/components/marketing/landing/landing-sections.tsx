@@ -18,8 +18,8 @@ export function TextLink({ href, children }: Readonly<{ href: string; children: 
 
 export function Integrations() {
   return (
-    <section className="lp-section lp-soft" id="integrations">
-      <div className="lp-wrap lp-integrations">
+    <section className="lp-section lp-soft site-band" id="integrations">
+      <div className="lp-wrap site-wrap lp-integrations site-split">
         <div className="lp-head">
           <h2 className="website-section-heading">Works with the data you already have.</h2>
           <p className="website-lead">
@@ -49,17 +49,17 @@ export function Integrations() {
 export function Teams() {
   const solutions = NAV_DROPS.find((drop) => drop.key === 'solutions')?.groups[0]?.items ?? [];
   return (
-    <section className="lp-section" id="teams">
-      <div className="lp-wrap lp-stack">
+    <section className="lp-section site-band" id="teams">
+      <div className="lp-wrap site-wrap lp-stack">
         <div className="lp-head lp-head-split">
           <h2 className="website-section-heading">Built for the teams responsible for search.</h2>
           <TextLink href="/solutions">Explore solutions</TextLink>
         </div>
-        <ul className="lp-teams">
+        <ul className="lp-teams site-cards">
           {solutions.map((item) => {
             return (
               <li key={item.href}>
-                <a href={item.href} className="lp-team">
+                <a href={item.href} className="lp-team site-card">
                   <span className="mk-capability-title">{item.title}</span>
                   <span className="mk-capability-desc">{item.desc}</span>
                 </a>
@@ -84,8 +84,8 @@ const TRUST = [
 
 export function Trust() {
   return (
-    <section className="lp-section lp-soft" id="trust">
-      <div className="lp-wrap lp-stack">
+    <section className="lp-section lp-soft site-band" id="trust">
+      <div className="lp-wrap site-wrap lp-stack">
         <div className="lp-head lp-head-split">
           <h2 className="website-section-heading">How CiteLadder handles your data.</h2>
           <TextLink href="/enterprise">Enterprise</TextLink>

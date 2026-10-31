@@ -78,6 +78,23 @@
   font-weight: 500;
 }
 
+/* Resources: labelled sections side by side, each a muted label over plain
+   title-and-description rows that wrap within the column. */
+.nav-sections {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0 1rem;
+  padding: 1rem;
+}
+
+.nav-section-label {
+  padding: 0 0.75rem 0.5rem;
+  color: var(--color-site-nav);
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
+  font-weight: 400;
+}
+
 .nav-row-icon {
   display: grid;
   flex: none;
@@ -104,11 +121,13 @@
   font-weight: 500;
 }
 
+/* A row's description reads a step under its 14px title (owner,
+   2026-10-31). */
 .nav-row-desc {
   display: block;
   color: var(--color-muted);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  font-size: var(--text-xs);
+  line-height: var(--text-xs--line-height);
 }
 
 .nav-row .nav-row-title + .nav-row-desc {
@@ -278,6 +297,184 @@ figure:has(+ .mk-highlights) > .product-fit {
   color: var(--color-site-body);
   font-size: var(--text-site-secondary);
   line-height: var(--text-site-secondary--line-height);
+}
+
+/* ── Site grid ──────────────────────────────────────────────────────────── */
+
+/* A page that opts in is one grid of cells (owner, 2026-10-31): frame
+   columns by band rows, every cell with the same inset and padding. The
+   geometry is the `--site-*` tokens in globals.css and the lines are
+   `--color-site-line`: subtle and solid, never dark, faded or gradient.
+   Every rule here sits under `.site-frame`, so a page opts in by putting
+   that class on its root and the classes below on its parts:
+
+   - `.site-frame`: the page root. A line runs down each frame edge (the
+     header logo's left and the last header action's right) from
+     `--site-frame-top`, where a full-bleed rule also crosses the page.
+   - `.site-band`: a band that opens with a full-bleed rule.
+   - `.site-wrap`: a band's content, its copy a cell inset inside the frame.
+   - `.site-wrap-cards`: content that is itself a card or product view,
+     a card gap inside the frame.
+   - `.site-cards`: a grid of cards inside a `.site-wrap`, reaching out to a
+     card gap from the frame lines; `.site-card` is one white card.
+   - `.site-split`: two side-by-side cells with a divider between them, from
+     64rem; stacked below it with a rule between them. The first cell in
+     source order draws the divider; `.site-split-reverse` when that cell is
+     shown second. Its band's rules and the divider meet.
+   - `.site-rows`: a stack of rows (usually splits) with a frame-wide rule
+     between rows.
+   - `.site-cell-card`: a cell that holds a card or product view, a card gap
+     from its lines instead of a cell inset.
+   - `.site-chip`: a small white label chip aligned with the copy. */
+
+.site-frame {
+  --site-frame-top: 0px;
+
+  position: relative;
+}
+
+.site-frame::before,
+.site-frame::after {
+  content: '';
+  position: absolute;
+  top: var(--site-frame-top);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.site-frame::before {
+  right: 0;
+  left: 0;
+  border-top: 1px solid var(--color-site-line);
+}
+
+.site-frame::after {
+  bottom: 0;
+  inset-inline: max(var(--site-frame-inset), calc(50% - 40rem + var(--site-frame-inset)));
+  border-inline: 1px solid var(--color-site-line);
+}
+
+.site-frame .site-band {
+  border-top: 1px solid var(--color-site-line);
+}
+
+.site-frame :is(.site-wrap, .site-wrap-cards) {
+  width: 100%;
+  max-width: 80rem;
+  margin-inline: auto;
+  padding-inline: calc(var(--site-frame-inset) + var(--site-cell-inset));
+}
+
+.site-frame .site-wrap-cards {
+  padding-inline: calc(var(--site-frame-inset) + var(--site-card-gap));
+}
+
+.site-frame .site-cards {
+  gap: calc(var(--site-card-gap) * 2);
+  margin-inline: calc(var(--site-card-gap) - var(--site-cell-inset));
+}
+
+.site-frame .site-card {
+  padding: var(--site-card-pad);
+  border-radius: var(--radius-card);
+  background: var(--color-panel);
+  box-shadow:
+    0 0 0 1px var(--color-site-line),
+    var(--shadow-site-chip);
+}
+
+.site-frame a.site-card:hover {
+  box-shadow:
+    0 0 0 1px var(--color-site-divider),
+    var(--shadow-site-chip);
+}
+
+.site-frame .site-cell-card {
+  margin-inline: calc(var(--site-card-gap) - var(--site-cell-inset));
+}
+
+/* Stacked, the first cell's rule sits midway between the cells and spans
+   the frame. */
+.site-frame .site-split {
+  gap: var(--site-stack-gap);
+}
+
+.site-frame .site-split > :first-child {
+  position: relative;
+}
+
+.site-frame .site-split > :first-child::after {
+  content: '';
+  position: absolute;
+  right: calc(var(--site-cell-inset) * -1);
+  bottom: calc(var(--site-stack-gap) / -2);
+  left: calc(var(--site-cell-inset) * -1);
+  border-top: 1px solid var(--color-site-line);
+  pointer-events: none;
+}
+
+/* Side by side, the divider runs down the middle of the gap from rule to
+   rule: through the band's padding, or half a row gap inside `.site-rows`. */
+@media (min-width: 64rem) {
+  .site-frame .site-split {
+    align-items: stretch;
+    column-gap: calc(var(--site-cell-inset) * 2);
+  }
+
+  .site-frame .site-split > :first-child::after {
+    top: calc(var(--site-reach-start, var(--section-y)) * -1);
+    right: calc(var(--site-cell-inset) * -1);
+    bottom: calc(var(--site-reach-end, var(--section-y)) * -1);
+    left: auto;
+    border-top: 0;
+    border-inline-end: 1px solid var(--color-site-line);
+  }
+
+  .site-frame .site-split-reverse > :first-child::after {
+    right: auto;
+    left: calc(var(--site-cell-inset) * -1);
+    border-inline-start: 1px solid var(--color-site-line);
+    border-inline-end: 0;
+  }
+}
+
+.site-frame .site-rows {
+  gap: var(--section-y);
+}
+
+.site-frame .site-rows > * {
+  --site-reach-start: calc(var(--section-y) / 2);
+  --site-reach-end: calc(var(--section-y) / 2);
+
+  position: relative;
+}
+
+.site-frame .site-rows > :first-child {
+  --site-reach-start: var(--section-y);
+}
+
+.site-frame .site-rows > :last-child {
+  --site-reach-end: var(--section-y);
+}
+
+.site-frame .site-rows > * + *::before {
+  content: '';
+  position: absolute;
+  top: calc(var(--section-y) / -2);
+  right: calc(var(--site-cell-inset) * -1);
+  left: calc(var(--site-cell-inset) * -1);
+  border-top: 1px solid var(--color-site-line);
+  pointer-events: none;
+}
+
+.site-frame .site-chip {
+  width: fit-content;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-xs);
+  background: var(--color-panel);
+  box-shadow:
+    var(--shadow-site-chip),
+    0 0 0 1px var(--color-border-subtle);
 }
 
 /* ── Closing band ───────────────────────────────────────────────────────── */

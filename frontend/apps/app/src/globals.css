@@ -448,7 +448,33 @@
   --color-site-footer: #6d6d6d;
   --color-site-ground: #f7f7f7;
   --color-site-divider: #e5e5e5;
+  /* The site grid's frame lines, band rules, cell dividers and card rings
+     (marketing.css): barely visible, about #ebebeb on the ground, and
+     translucent so they read on the mint band. */
+  --color-site-line: rgb(0 0 0 / 5%);
   --shadow-site-chip: 0 4px 4px rgb(23 23 23 / 4%);
+  /* The site grid's geometry (owner, 2026-10-31). The frame line sits this
+     far inside the shared 80rem container, so it meets the header's logo and
+     its right-most action; copy sits a cell inset from any line; cards and
+     product views sit a card gap from any line and pad their copy by the
+     card padding; stacked cells are a stack gap apart. */
+  --site-frame-inset: var(--site-gutter);
+  --site-cell-inset: 32px;
+  --site-card-gap: 8px;
+  --site-card-pad: 32px;
+  --site-stack-gap: 64px;
+}
+
+/* A phone keeps the frame lines just inside the screen edge, and the copy
+   at the header's gutter. */
+@media (max-width: 39.99rem) {
+  [data-public-surface] {
+    --site-frame-inset: 4px;
+    --site-cell-inset: 16px;
+    --site-card-gap: 4px;
+    --site-card-pad: 20px;
+    --site-stack-gap: 48px;
+  }
 }
 
 /* State tints are derived from the surface receiving the interaction. */

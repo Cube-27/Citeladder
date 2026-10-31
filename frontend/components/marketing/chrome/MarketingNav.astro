@@ -115,20 +115,43 @@ function panelStyle(key: NavDropKey) {
               style={panelStyle(key)}
               class="nav-panel absolute top-full mt-1.5 overflow-auto"
             >
-              <div
-                class={cn('grid gap-x-2 p-2', key === 'platform' ? 'grid-cols-3' : 'grid-cols-1')}
-              >
-                {groups.map((group) => (
-                  <div
-                    class={cn('min-w-0', key === 'resources' && 'grid grid-cols-2 gap-x-2')}
-                  >
-                    {group.label && <p class="nav-group-label">{group.label}</p>}
-                    {group.items.map((item) => (
-                      <NavRow item={item} path={path} />
+              {
+                key === 'resources' ? (
+                  /* Resources is labelled sections side by side, each a named group of plain rows. */
+                  <div class="nav-sections">
+                    {groups.map((group, index) => (
+                      <div
+                        class="min-w-0"
+                        role="group"
+                        aria-labelledby={`desktop-nav-${key}-section-${index}`}
+                      >
+                        <p id={`desktop-nav-${key}-section-${index}`} class="nav-section-label">
+                          {group.label}
+                        </p>
+                        {group.items.map((item) => (
+                          <NavRow item={item} path={path} plain />
+                        ))}
+                      </div>
                     ))}
                   </div>
-                ))}
-              </div>
+                ) : (
+                  <div
+                    class={cn(
+                      'grid gap-x-2 p-2',
+                      key === 'platform' ? 'grid-cols-3' : 'grid-cols-1',
+                    )}
+                  >
+                    {groups.map((group) => (
+                      <div class="min-w-0">
+                        {group.label && <p class="nav-group-label">{group.label}</p>}
+                        {group.items.map((item) => (
+                          <NavRow item={item} path={path} />
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                )
+              }
               {
                 key === 'platform' && (
                   <a class="nav-panel-footer" href={PLATFORM_OVERVIEW.href}>
@@ -231,7 +254,7 @@ function panelStyle(key: NavDropKey) {
                   {items.map(({ label: groupLabel, item }) => (
                     <>
                       {groupLabel && <p class="nav-group-label">{groupLabel}</p>}
-                      <NavRow item={item} path={path} compact />
+                      <NavRow item={item} path={path} compact plain={key === 'resources'} />
                     </>
                   ))}
                 </div>

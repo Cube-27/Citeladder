@@ -437,10 +437,25 @@ follows a neutral system. This replaces the flat rule above for the
 homepage's cards and chips and for public type and ink.
 
 - **Homepage ground:** every band sits on one `#f7f7f7` ground; cards and
-  tiles are white; the capability group labels become small white chips. The
-  homepage draws no wireframe lines: no section rails, band rules or column
-  dividers. No copy, section order or product view changes, and the whole
-  treatment is one stylesheet that can be switched off.
+  tiles are white; the capability group labels become small white chips. No
+  copy, section order or product view changes, and the whole treatment is
+  one stylesheet that can be switched off.
+- **Site grid:** the homepage is divided into cells, frame columns by band
+  rows, and every element sits in a cell with the same spacing and padding.
+  The frame's edges meet the header logo and the right-most header action.
+  Subtle 1px solid light-grey lines run down each frame edge, under the
+  header bar, between bands and between side-by-side cells. Copy is inset
+  about 30px from a line (less on a phone, where the frame lines sit just
+  inside the screen edge); cards and every product view sit a few pixels
+  inside the lines, never wider than the frame, with about 30px of padding.
+  One set of tokens and classes defines the grid so the other marketing
+  pages can adopt it after the homepage is reviewed; docs is unchanged.
+- **Header dropdowns:** a row's description is 12px under its 14px title on
+  every public page. Resources becomes three labelled columns, Learn (GEO
+  guide, AI citation tracking guide, ChatGPT brand mentions guide, Blog &
+  guides), Product (Documentation, Changelog, FAQ, Open source) and Tools
+  (Free tools, LLM rank tracker, Compare), with no item icons and every item
+  otherwise unchanged.
 - **Neutral fields:** the homepage hero and announcement strip lose their
   mint and lime fields and take the same `#f7f7f7` ground. The homepage
   closing band keeps its mint field and lattice, like every other page's. The
@@ -470,5 +485,12 @@ full-bleed band rules and column dividers; the owner removed them after
 seeing it live ("remove the lines, they look pretty bad, rest is fine") and put the mint
 closing band back on the homepage "like all other pages". The subtitles
 first stepped 15/18/24px while the homepage hero lead followed body copy; the
-owner asked for one size, "lets do 16px for all".
+owner asked for one size, "lets do 16px for all". Later the same day the
+owner sent a reference screenshot and asked for "the padding for text and
+cards and the subtle lines not dark lines", adding that "all the text in the
+page will have a padding compared to topbar logo as the starting point":
+lines return as the site grid above because they are now subtle and solid,
+where the rejected ones were dark and faded. The owner then described the
+grid of cells, asked that the product views fit inside it too, and set the
+dropdown description size and the Resources sections the same day.
 [Design](design.md) owns the system.

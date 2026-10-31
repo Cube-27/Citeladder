@@ -19,10 +19,13 @@ interface Props {
   path: string;
   /** The mobile sheet shows titles only. */
   compact?: boolean;
+  /** Resources rows are text only: a title and its description, no icon. */
+  plain?: boolean;
 }
 
-const { item, path, compact = false } = Astro.props;
+const { item, path, compact = false, plain = false } = Astro.props;
 const external = 'external' in item && item.external === true;
+const icon = !plain && hasNavIcon(item.href);
 const ROW =
   'nav-row group flex items-start gap-3 rounded-[var(--radius-control)] px-3 py-2.5 ' +
   'transition-colors duration-[var(--motion-normal)] hover:bg-background-alt focus-visible:bg-background-alt';
@@ -32,7 +35,7 @@ const ROW =
   external ? (
     <a class={cn(ROW, 'justify-between')} href={item.href} target="_blank" rel="noopener">
       <span class="flex items-start gap-3">
-        {hasNavIcon(item.href) && (
+        {icon && (
           <span class="nav-row-icon" aria-hidden="true">
             <NavIcon href={item.href} className="size-4" />
           </span>
@@ -47,7 +50,7 @@ const ROW =
     </a>
   ) : (
     <a class={ROW} href={item.href} aria-current={path === item.href ? 'page' : undefined}>
-      {hasNavIcon(item.href) && (
+      {icon && (
         <span class="nav-row-icon" aria-hidden="true">
           <NavIcon href={item.href} className="size-4" />
         </span>

@@ -101,6 +101,23 @@ test.describe('marketing navigation (real-engine CSS contract)', () => {
     await expect(page.locator('#desktop-nav-panel-platform')).toBeHidden();
   });
 
+  test('Resources opens as named sections of links', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/faq');
+    await page
+      .getByRole('navigation', { name: 'Main navigation' })
+      .getByRole('button', { name: 'Resources', exact: true })
+      .click();
+    const panel = page.locator('#desktop-nav-panel-resources');
+    await expect(panel.getByRole('group')).toHaveText([/^Learn/, /^Product/, /^Tools/]);
+    await expect(
+      panel.getByRole('group', { name: 'Product' }).getByRole('link', { name: /Open source/ }),
+    ).toHaveAttribute('href', '/open-source');
+    await expect(
+      panel.getByRole('group', { name: 'Tools' }).getByRole('link', { name: /LLM rank tracker/ }),
+    ).toHaveAttribute('href', '/llm-rank-tracker');
+  });
+
   test('Escape closes a hover-opened menu without taking focus from a field', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('/faq');

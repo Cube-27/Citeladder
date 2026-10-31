@@ -1,11 +1,16 @@
-/* The homepage's neutral ground (owner decisions, 2026-10-31): every band sits
-   on one neutral ground, cards are white tiles and the capability group
-   labels are chips. No lines: the rails, band rules and column dividers were
-   removed. No element is added, and removing this file's import from
-   index.astro removes the treatment whole. Colours are the `--color-site-*`
-   tokens in globals.css. */
+/* The homepage's neutral ground and site grid (owner decisions, 2026-10-31):
+   every band sits on one neutral ground, and the page opts into the site
+   grid (`.site-*` in marketing.css, `--site-*` tokens in globals.css), so
+   every band, card and product view sits in a cell with the same insets.
+   This file keeps only what is the homepage's own: its ground, where the
+   frame starts, and how its tiles and product views fill their cells.
+   Removing its import from index.astro removes the ground and these fits;
+   the grid itself is the `site-*` classes in the markup. */
 
-.lp {
+.lp.site-frame {
+  /* The hero runs up under the fixed bar, so the frame starts at its foot. */
+  --site-frame-top: var(--marketing-nav-offset);
+
   background: var(--color-site-ground);
 }
 
@@ -24,32 +29,43 @@ body .lp-announcement {
   content: none;
 }
 
-/* Cards ──────────────────────────────────────────────────────────────────── */
-
-.lp :is(.lp-tile, .lp-team) {
-  border-radius: var(--radius-card);
-  background: var(--color-panel);
+/* On a phone the hero's product view is a card in the frame like every
+   other width, not edge to edge. */
+@media (max-width: 39.99rem) {
+  .lp .lp-hero .lp-hero-stage {
+    margin-inline: 0;
+    padding: 0;
+  }
 }
 
-/* A capability row lifts into a card on hover, so it stays inside the content
-   edge like the tiles; elsewhere it bleeds into the margin. */
-.lp .mk-capability {
-  margin-inline: 0;
+/* Cards and product views ────────────────────────────────────────────────── */
+
+/* A bento tile pads its copy, not its product view, which runs to the
+   tile's right and bottom edges. */
+.lp.site-frame .lp-tile {
+  padding: 0;
 }
 
+.lp .lp-tile-copy {
+  padding: var(--site-card-pad) var(--site-card-pad) 1.25rem;
+}
+
+.lp .lp-tile-visual {
+  margin-left: var(--site-card-pad);
+}
+
+/* A deep dive's copy and product shot centre in their stretched cells. */
+.lp .mk-dive > * {
+  align-content: center;
+}
+
+/* Cards stay white on hover; the ring darkens a step instead. A capability
+   row lifts into the same card on hover; it reaches just past the copy so
+   its own text stays aligned with the label chip. */
 .lp :is(.lp-tile, .lp-team):hover,
 .lp .mk-capability:hover {
   background: var(--color-panel);
-  box-shadow: 0 0 0 1px var(--color-site-divider);
-}
-
-/* Label chips: the capability group labels become chips. */
-.lp .mk-group-label {
-  width: fit-content;
-  padding: 0.25rem 0.5rem;
-  border-radius: var(--radius-xs);
-  background: var(--color-panel);
   box-shadow:
-    var(--shadow-site-chip),
-    0 0 0 1px var(--color-border-subtle);
+    0 0 0 1px var(--color-site-divider),
+    var(--shadow-site-chip);
 }

@@ -13,10 +13,6 @@
   padding-inline: var(--site-gutter);
 }
 
-.lp-wrap-wide {
-  max-width: 84rem;
-}
-
 /* A thin band above the nav bar; the link is the whole message. It rides in
    the fixed chrome, so the page clears it through the nav offset, and a
    dismissed band is removed, so the offset falls back with it. */
@@ -244,8 +240,11 @@
   min-width: 0;
 }
 
+/* Design widths are each view's width at 1440px inside the site grid's
+   frame (a card gap from the frame lines), so a desktop lays it out as
+   rendered and narrower screens scale it down. */
 .lp-hero-frame.product-fit {
-  --product-fit-width: 1264px;
+  --product-fit-width: 1184px;
 }
 
 /* Engines ────────────────────────────────────────────────────────────────── */
@@ -379,14 +378,19 @@
 }
 
 .lp-tile-visual.product-fit {
-  --product-fit-width: 414px;
+  --product-fit-width: 400px;
 }
 
 .lp-tile-wide .lp-tile-visual.product-fit {
-  --product-fit-width: 658px;
+  --product-fit-width: 640px;
 }
 
 /* Deep dives ─────────────────────────────────────────────────────────────── */
+
+/* A deep dive's shot fills its grid cell, wider than the shared shot. */
+.mk-dive .product-fit {
+  --product-fit-width: 691px;
+}
 
 .lp-dives {
   display: grid;
