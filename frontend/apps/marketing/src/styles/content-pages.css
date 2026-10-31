@@ -277,10 +277,28 @@
   margin-inline: auto;
 }
 
+/* An article opens like every opening band: centred on a phone, from the
+   start from 640px. */
 .cp-article-head {
   display: grid;
-  justify-items: start;
+  justify-items: center;
   gap: 1.25rem;
+  text-align: center;
+}
+
+.cp-article-head :is(.cp-crumbs ol, .cp-meta) {
+  justify-content: center;
+}
+
+@media (min-width: 40rem) {
+  .cp-article-head {
+    justify-items: start;
+    text-align: start;
+  }
+
+  .cp-article-head :is(.cp-crumbs ol, .cp-meta) {
+    justify-content: flex-start;
+  }
 }
 
 .cp-crumbs ol {

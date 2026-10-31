@@ -218,9 +218,10 @@ export function ContactPage() {
       <Section className="cm-contact">
         <div className="cm-contact-grid site-split">
           <div className="cm-contact-copy">
-            <header className="grid gap-5">
+            {/* Centred on a phone like every opening band (owner, 2026-10-31). */}
+            <header className="grid justify-items-center gap-5 text-center sm:justify-items-start sm:text-start">
               <h1 className="website-page-title text-foreground">Talk to the CiteLadder team.</h1>
-              <p className="website-lead">
+              <p className="website-hero-lead">
                 Ask a question, book a demo or check whether CiteLadder fits your team.
               </p>
             </header>

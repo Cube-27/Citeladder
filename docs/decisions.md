@@ -458,7 +458,10 @@ homepage's cards and chips and for public type and ink.
   landing page components and values and then everything else should just
   inherit it; docs is a different design". Other marketing pages compose the
   homepage's components and values and set no type, spacing, width or colour
-  of their own; anything missing becomes a shared component or role.
+  of their own; anything missing becomes a shared component or role. So the
+  homepage hero lead (400, body ink) is the hero-lead role every page's
+  opening lead inherits, and the subtitle under a section heading keeps the
+  section-subtitle role (500, soft ink).
 - **Product views are snapshots:** "every product UI display in marketing is
   either a scaled down snapshot or a focussed snapshot, the dimensions will
   always remain like the main app UI". A view lays out at the app's own

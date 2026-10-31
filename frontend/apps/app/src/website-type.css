@@ -309,6 +309,7 @@
 }
 
 .website-lead,
+.website-hero-lead,
 .website-body,
 .website-nav,
 .website-label {
@@ -339,7 +340,7 @@
   color: var(--color-site-ink-soft);
 }
 
-:where(.website-body) {
+:where(.website-hero-lead, .website-body) {
   color: var(--color-site-body);
 }
 
@@ -351,13 +352,24 @@
   color: var(--color-muted);
 }
 
-/* The lead is the subtitle under a heading or a page intro (the subtitle
-   role). The homepage hero lead keeps the body ink and weight (landing.css). */
+/* The section subtitle under a section heading (the subtitle role), at 500
+   in the soft ink. */
 .website-lead {
   font-size: var(--text-site-subtitle);
   line-height: var(--text-site-subtitle--line-height);
   font-weight: 500;
   letter-spacing: -0.02em;
+  text-wrap: pretty;
+}
+
+/* The hero lead: the intro under a page's opening heading on every page
+   (the homepage hero, page heroes, article and contact heads). The subtitle
+   size at 400 in the body ink, as the homepage hero defines it. */
+.website-hero-lead {
+  font-size: var(--text-site-subtitle);
+  line-height: var(--text-site-subtitle--line-height);
+  font-weight: 400;
+  letter-spacing: -0.2px;
   text-wrap: pretty;
 }
 

@@ -218,13 +218,6 @@
   margin-bottom: 2.25rem;
 }
 
-/* The hero lead is the lead's 16px in body ink and weight. */
-.lp-hero-lead.website-lead {
-  color: var(--color-site-body);
-  font-weight: 400;
-  letter-spacing: -0.2px;
-}
-
 .lp-hero-note {
   margin-top: 1rem;
   color: var(--color-site-body);

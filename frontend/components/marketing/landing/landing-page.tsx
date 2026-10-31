@@ -81,7 +81,7 @@ function Hero({ rotor }: Readonly<{ rotor?: ReactNode }>) {
             tells your buyers about you.
           </span>
         </h1>
-        <p className="website-lead lp-hero-lead">
+        <p className="website-hero-lead lp-hero-lead">
           See which brands AI recommends, which pages it cites, and what to fix to improve
           visibility.
         </p>

@@ -233,7 +233,7 @@ function PostHeader({ post }: Readonly<{ post: BlogPost }>) {
         </ol>
       </nav>
       <h1 className="website-page-title website-article-title">{post.title}</h1>
-      <p className="website-lead">{post.excerpt}</p>
+      <p className="website-hero-lead">{post.excerpt}</p>
       {post.tags.length > 0 && (
         <ul className="flex flex-wrap gap-2" aria-label="Topics">
           {post.tags.map((tag) => (
