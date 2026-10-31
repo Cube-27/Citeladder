@@ -429,32 +429,31 @@ UI mocks on mobile should be scaled, not reflowed, keeping the desktop
 composition with the sidebar visible and no hidden controls, with small text
 on phones accepted. [Design](design.md) owns the system.
 
-## The public site gets a wireframe grid and neutral inks
+## The public site gets a neutral ground and inks
 
 The public site's direction changes: only CiteLadder's content, its signal
 green accent (buttons, links, badges) and its logo stay its own; the rest
-follows a neutral wireframe system. This replaces the flat rule above for the
-homepage's lines and cards and for public type and ink.
+follows a neutral system. This replaces the flat rule above for the
+homepage's cards and chips and for public type and ink.
 
-- **Wireframe (homepage):** every band sits on one `#f7f7f7` ground between a
-  pair of faded 1px vertical rails just outside the content edge, each band
-  drawing its own pair; a faded 1px rule runs across the full viewport at each
-  band boundary; side-by-side columns split on a solid `#e5e5e5` hairline that
-  turns horizontal when they stack; cards and tiles are white, fitted about
-  6px inside the rails; existing labels become small white chips. No copy,
-  section order or product view changes, and the whole wireframe is one
-  stylesheet that can be switched off.
-- **Neutral fields:** the homepage hero and closing band lose their mint and
-  lime fields and take the same `#f7f7f7` ground. The accent stays on
-  buttons, links and the logo.
+- **Homepage ground:** every band sits on one `#f7f7f7` ground; cards and
+  tiles are white; the capability group labels become small white chips. The
+  homepage draws no wireframe lines: no section rails, band rules or column
+  dividers. No copy, section order or product view changes, and the whole
+  treatment is one stylesheet that can be switched off.
+- **Neutral fields:** the homepage hero and announcement strip lose their
+  mint and lime fields and take the same `#f7f7f7` ground. The homepage
+  closing band keeps its mint field and lattice, like every other page's. The
+  accent stays on buttons, links and the logo.
 - **Type and ink (every public page, docs included):** hero 64/48/32px at
-  weight 400, section heading 39/32/26px, subtitle under a heading 24/18/15px
-  at 500 in a lighter ink, card titles 18/18/16px at 600, body 16/14/17px
+  weight 400, section heading 39/32/26px, every subtitle under a heading and
+  every page intro (the homepage hero lead included) 16px at every width, at
+  500 in a lighter ink (the homepage hero lead at 400 in the body ink), card titles 18/18/16px at 600, body 16/14/17px
   (larger on a phone), across desktop (≥1200px), tablet (810–1199px) and
   phone; inks are `#171717` headings, `#707070` sentences, 60% ink navigation,
   footer links and subtitles, and 55% black lead-in labels. These lighter
   inks are deliberately lighter than the headings but meet 4.5:1 on white,
-  the ground, the footer's band and the mint closing band of the subpages.
+  the ground, the footer's band and the mint closing band.
   The feature heading beside a product shot keeps its earlier size. The font
   families stay Outfit and Geist.
 
@@ -466,4 +465,10 @@ the hero and closing band fields become the neutral ground with the accent
 kept on buttons, links and the logo; docs takes the new type scale; "Feature
 heading size is good currently, so don't change it."; body ink is `#707070`;
 the navigation, subtitle and lead-in inks darken just enough to pass 4.5:1
-everywhere they render. [Design](design.md) owns the system.
+everywhere they render. The first version also drew faded section rails,
+full-bleed band rules and column dividers; the owner removed them after
+seeing it live ("remove the lines, they look pretty bad, rest is fine") and put the mint
+closing band back on the homepage "like all other pages". The subtitles
+first stepped 15/18/24px while the homepage hero lead followed body copy; the
+owner asked for one size, "lets do 16px for all".
+[Design](design.md) owns the system.

@@ -5,7 +5,7 @@
    The public ladder (docs/design.md §Typography) runs in three bands, phone
    (below 810px) → tablet (810–1199px) → desktop (1200px and up), through the
    `--text-site-*` tokens below: hero 32→48→64 · section heading 26→32→39 ·
-   lead (subtitle) 15→18→24 · card title 16→18→18 · body 17→14→16. The page
+   lead (subtitle) 16 at every width · card title 16→18→18 · body 17→14→16. The page
    title, article title and data display keep one step at 768px; nav, labels,
    controls and captions hold 14, and 12 is the one rung below it. */
 :where([data-public-surface], [data-flow-surface]) {
@@ -29,8 +29,6 @@
   --text-site-hero--line-height: 1;
   --text-site-section: 1.625rem;
   --text-site-section--line-height: 1.05;
-  --text-site-subtitle: 0.9375rem;
-  --text-site-subtitle--line-height: 1.2;
   --text-site-card: var(--text-base);
   --text-site-card--line-height: 1.2;
   --text-site-body: 1.0625rem;
@@ -39,7 +37,10 @@
   --text-site-footer--line-height: 1.4;
   --text-site-lead-in: var(--text-xs);
   --text-site-lead-in--line-height: 1.375rem;
-  /* One size at every width. */
+  /* One size at every width. Every subtitle and page intro is 16px (owner,
+     2026-10-31). */
+  --text-site-subtitle: var(--text-base);
+  --text-site-subtitle--line-height: 1.4;
   --text-site-card-compact: var(--text-base);
   --text-site-card-compact--line-height: 1.2;
   --text-site-question: var(--text-base);
@@ -58,8 +59,6 @@
   :where([data-public-surface]) {
     --text-site-hero: 3rem;
     --text-site-section: var(--text-4xl);
-    --text-site-subtitle: var(--text-lg);
-    --text-site-subtitle--line-height: 1;
     --text-site-card: var(--text-lg);
     --text-site-body: var(--text-sm);
     --text-site-footer: var(--text-sm);
@@ -72,8 +71,6 @@
   :where([data-public-surface]) {
     --text-site-hero: 4rem;
     --text-site-section: 2.4375rem;
-    --text-site-subtitle: var(--text-2xl);
-    --text-site-subtitle--line-height: 1.2;
     --text-site-body: var(--text-base);
   }
 }
@@ -252,8 +249,8 @@
   color: var(--color-muted);
 }
 
-/* The lead is the subtitle under a heading. A hero lead is body copy and
-   takes the body role where it is set (landing.css). */
+/* The lead is the subtitle under a heading or a page intro, 16px at every
+   width. The homepage hero lead keeps the body ink and weight (landing.css). */
 .website-lead {
   font-size: var(--text-site-subtitle);
   line-height: var(--text-site-subtitle--line-height);

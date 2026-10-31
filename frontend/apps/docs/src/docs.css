@@ -264,11 +264,6 @@
   color: var(--color-muted);
 }
 
-.docs-article-header .website-lead {
-  font-size: var(--text-base);
-  line-height: var(--text-base--line-height);
-}
-
 .docs-prose {
   color: var(--color-secondary);
   overflow-wrap: anywhere;
