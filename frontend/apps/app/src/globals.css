@@ -457,12 +457,19 @@
      far inside the shared 80rem container, so it meets the header's logo and
      its right-most action; copy sits a cell inset from any line; cards and
      product views sit a card gap from any line and pad their copy by the
-     card padding; stacked cells are a stack gap apart. */
+     card padding; copy starts and ends a cell height from any rule. */
   --site-frame-inset: var(--site-gutter);
   --site-cell-inset: 32px;
+  --site-cell-y: 64px;
   --site-card-gap: 8px;
   --site-card-pad: 32px;
-  --site-stack-gap: 64px;
+}
+
+/* Below the desktop layout the cells pad less vertically. */
+@media (max-width: 63.99rem) {
+  [data-public-surface] {
+    --site-cell-y: 48px;
+  }
 }
 
 /* A phone keeps the frame lines just inside the screen edge, and the copy
@@ -471,9 +478,9 @@
   [data-public-surface] {
     --site-frame-inset: 4px;
     --site-cell-inset: 16px;
+    --site-cell-y: 40px;
     --site-card-gap: 4px;
     --site-card-pad: 20px;
-    --site-stack-gap: 48px;
   }
 }
 

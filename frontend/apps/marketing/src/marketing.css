@@ -311,7 +311,8 @@ figure:has(+ .mk-highlights) > .product-fit {
    - `.site-frame`: the page root. A line runs down each frame edge (the
      header logo's left and the last header action's right) from
      `--site-frame-top`, where a full-bleed rule also crosses the page.
-   - `.site-band`: a band that opens with a full-bleed rule.
+   - `.site-band`: a band that opens with a full-bleed rule and pads its
+     copy a cell height (`--site-cell-y`) from its rules.
    - `.site-wrap`: a band's content, its copy a cell inset inside the frame.
    - `.site-wrap-cards`: content that is itself a card or product view,
      a card gap inside the frame.
@@ -354,8 +355,16 @@ figure:has(+ .mk-highlights) > .product-fit {
   border-inline: 1px solid var(--color-site-line);
 }
 
+/* Every band is one row of cells: its copy starts and ends a cell height
+   from its rules. A band that ends on a row of cards closes a card gap
+   under them, so the cards sit against the rule as they do the frame. */
 .site-frame .site-band {
+  padding-block: var(--site-cell-y);
   border-top: 1px solid var(--color-site-line);
+}
+
+.site-frame .site-band:has(> * > .site-cards:last-child) {
+  padding-bottom: var(--site-card-gap);
 }
 
 .site-frame :is(.site-wrap, .site-wrap-cards) {
@@ -393,10 +402,16 @@ figure:has(+ .mk-highlights) > .product-fit {
   margin-inline: calc(var(--site-card-gap) - var(--site-cell-inset));
 }
 
-/* Stacked, the first cell's rule sits midway between the cells and spans
-   the frame. */
+/* Cells and rows are a cell height from every rule, so stacked cells and
+   rows sit two cell heights apart with the rule midway. Cell content
+   starts at the top of its cell. Stacked, the first cell's rule spans the
+   frame. */
 .site-frame .site-split {
-  gap: var(--site-stack-gap);
+  gap: calc(var(--site-cell-y) * 2);
+}
+
+.site-frame .site-split > * {
+  align-content: start;
 }
 
 .site-frame .site-split > :first-child {
@@ -407,14 +422,14 @@ figure:has(+ .mk-highlights) > .product-fit {
   content: '';
   position: absolute;
   right: calc(var(--site-cell-inset) * -1);
-  bottom: calc(var(--site-stack-gap) / -2);
+  bottom: calc(var(--site-cell-y) * -1);
   left: calc(var(--site-cell-inset) * -1);
   border-top: 1px solid var(--color-site-line);
   pointer-events: none;
 }
 
 /* Side by side, the divider runs down the middle of the gap from rule to
-   rule: through the band's padding, or half a row gap inside `.site-rows`. */
+   rule, a cell height past the cells at each end. */
 @media (min-width: 64rem) {
   .site-frame .site-split {
     align-items: stretch;
@@ -422,9 +437,9 @@ figure:has(+ .mk-highlights) > .product-fit {
   }
 
   .site-frame .site-split > :first-child::after {
-    top: calc(var(--site-reach-start, var(--section-y)) * -1);
+    top: calc(var(--site-cell-y) * -1);
     right: calc(var(--site-cell-inset) * -1);
-    bottom: calc(var(--site-reach-end, var(--section-y)) * -1);
+    bottom: calc(var(--site-cell-y) * -1);
     left: auto;
     border-top: 0;
     border-inline-end: 1px solid var(--color-site-line);
@@ -439,28 +454,17 @@ figure:has(+ .mk-highlights) > .product-fit {
 }
 
 .site-frame .site-rows {
-  gap: var(--section-y);
+  gap: calc(var(--site-cell-y) * 2);
 }
 
 .site-frame .site-rows > * {
-  --site-reach-start: calc(var(--section-y) / 2);
-  --site-reach-end: calc(var(--section-y) / 2);
-
   position: relative;
-}
-
-.site-frame .site-rows > :first-child {
-  --site-reach-start: var(--section-y);
-}
-
-.site-frame .site-rows > :last-child {
-  --site-reach-end: var(--section-y);
 }
 
 .site-frame .site-rows > * + *::before {
   content: '';
   position: absolute;
-  top: calc(var(--section-y) / -2);
+  top: calc(var(--site-cell-y) * -1);
   right: calc(var(--site-cell-inset) * -1);
   left: calc(var(--site-cell-inset) * -1);
   border-top: 1px solid var(--color-site-line);

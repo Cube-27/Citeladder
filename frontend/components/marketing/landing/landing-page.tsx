@@ -126,7 +126,7 @@ function EngineStrip() {
 
 function Statement() {
   return (
-    <section className="lp-section lp-statement">
+    <section className="lp-section lp-statement site-band">
       <div className="lp-wrap site-wrap">
         <p className="lp-statement-text">
           Buyers ask AI before they ask you.{' '}
@@ -168,7 +168,7 @@ function BentoTile({
 
 function Loop() {
   return (
-    <section className="lp-section" id="how-it-works">
+    <section className="lp-section site-band" id="how-it-works">
       <span id="see-it" className="lp-anchor" aria-hidden />
       <div className="lp-wrap site-wrap lp-stack">
         <div className="lp-head">

@@ -29,6 +29,18 @@ body .lp-announcement {
   content: none;
 }
 
+/* The hero is the first row of cells: its copy starts a cell height under
+   the header rule, its product view follows a cell height later, and the
+   band closes a cell height under the caption. */
+.lp.site-frame .lp-hero {
+  padding-top: calc(var(--marketing-nav-offset) + var(--site-cell-y));
+  padding-bottom: var(--site-cell-y);
+}
+
+.lp.site-frame .lp-hero-shot {
+  margin-top: var(--site-cell-y);
+}
+
 /* On a phone the hero's product view is a card in the frame like every
    other width, not edge to edge. */
 @media (max-width: 39.99rem) {
@@ -52,11 +64,6 @@ body .lp-announcement {
 
 .lp .lp-tile-visual {
   margin-left: var(--site-card-pad);
-}
-
-/* A deep dive's copy and product shot centre in their stretched cells. */
-.lp .mk-dive > * {
-  align-content: center;
 }
 
 /* Cards stay white on hover; the ring darkens a step instead. A capability
