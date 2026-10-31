@@ -219,12 +219,9 @@
   margin-bottom: 2.25rem;
 }
 
-/* The hero lead is body copy, not the subtitle the lead role sets under a
-   section heading. */
+/* The hero lead is the lead's 16px in body ink and weight. */
 .lp-hero-lead.website-lead {
   color: var(--color-site-body);
-  font-size: var(--text-site-body);
-  line-height: var(--text-site-body--line-height);
   font-weight: 400;
   letter-spacing: -0.2px;
 }

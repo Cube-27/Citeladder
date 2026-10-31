@@ -446,8 +446,9 @@ homepage's cards and chips and for public type and ink.
   closing band keeps its mint field and lattice, like every other page's. The
   accent stays on buttons, links and the logo.
 - **Type and ink (every public page, docs included):** hero 64/48/32px at
-  weight 400, section heading 39/32/26px, subtitle under a heading 24/18/15px
-  at 500 in a lighter ink, card titles 18/18/16px at 600, body 16/14/17px
+  weight 400, section heading 39/32/26px, every subtitle under a heading and
+  every page intro (the homepage hero lead included) 16px at every width, at
+  500 in a lighter ink (the homepage hero lead at 400 in the body ink), card titles 18/18/16px at 600, body 16/14/17px
   (larger on a phone), across desktop (≥1200px), tablet (810–1199px) and
   phone; inks are `#171717` headings, `#707070` sentences, 60% ink navigation,
   footer links and subtitles, and 55% black lead-in labels. These lighter
@@ -467,5 +468,7 @@ the navigation, subtitle and lead-in inks darken just enough to pass 4.5:1
 everywhere they render. The first version also drew faded section rails,
 full-bleed band rules and column dividers; the owner removed them after
 seeing it live ("remove the lines, they look pretty bad, rest is fine") and put the mint
-closing band back on the homepage "like all other pages".
+closing band back on the homepage "like all other pages". The subtitles
+first stepped 15/18/24px while the homepage hero lead followed body copy; the
+owner asked for one size, "lets do 16px for all".
 [Design](design.md) owns the system.
