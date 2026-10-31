@@ -1717,7 +1717,7 @@
                 "topic_id": {
                   "type": "string",
                   "format": "uuid",
-                  "description": "A topic id create_topic returned; omit for none."
+                  "description": "A topic id from read_prompt_portfolio topics or create_topic; omit for none."
                 },
                 "intent": {
                   "type": "string",
@@ -1980,7 +1980,7 @@
           "topic_id": {
             "type": "string",
             "format": "uuid",
-            "description": "The topic id create_topic returned."
+            "description": "A topic id from read_prompt_portfolio topics or create_topic."
           },
           "name": {
             "type": "string",
