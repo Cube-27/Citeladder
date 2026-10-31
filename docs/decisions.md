@@ -395,3 +395,12 @@ one that adds it.
 
 Source: owner, 30 October 2026: "replace the display font to uncut sans its
 already present in github" ("cube27 fonts repo").
+
+## Outfit replaces Uncut Sans for display headings
+
+Display headings on every surface set in Outfit instead of Uncut Sans, still
+capped at weight 500. Geist stays the text face. The face is Outfit's Latin
+variable subset (`Outfit-Variable.woff2`), added to the private Cube27 font
+repository; the pinned font revision moves to the one that adds it.
+
+Source: owner, 31 October 2026: Outfit should replace "Uncut Sans (headings)".
