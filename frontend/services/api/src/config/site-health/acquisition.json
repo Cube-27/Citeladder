@@ -202,8 +202,7 @@
     "qv",
     "srsltid",
     "variant",
-    "variant_id",
-    "view"
+    "variant_id"
   ],
   "ts_owned_task_kinds": [
     "analyze",

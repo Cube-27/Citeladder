@@ -131,11 +131,12 @@ seed, root and page redirect hop, in order:
 1. Reject scheme-less absolute references and join artifacts (`invalid_url`).
 2. Reject hard-excluded query keys (`page`, `q`, `sort`, `filter`, …).
 3. Canonicalize (`url-identity.ts`): drop tracking, variant and template keys
-   (`ignored_query_keys`: quick view `qv`, `variant`, Shopify's alternate
-   template `view`, …), sort the query, normalize escapes, then hash with
-   SHA-256. A tagged link therefore admits its clean target, the same identity
-   the link checks judge, and a `?view=` A/B variant is never fetched apart
-   from its page.
+   (`ignored_query_keys`: quick view `qv`, `variant`, …), sort the query,
+   normalize escapes, then hash with SHA-256. A tagged link therefore admits
+   its clean target, the same identity the link checks judge. `view` stays: it
+   names an A/B template on Shopify but selects content elsewhere (Joomla's
+   `?option=…&view=article`), and a template variant's canonical already keeps
+   it out of analysis.
 4. Apply hard exclusions: the host's first label; login, account, cart,
    checkout and search paths; asset extensions (sitemaps excepted); URL length.
 5. Apply scope: the root registrable domain and its subdomains, then

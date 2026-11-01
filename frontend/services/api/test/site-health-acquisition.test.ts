@@ -602,14 +602,12 @@ describe('site setup', () => {
 });
 
 describe('frontier admission', () => {
-  it('folds storefront quick-view, template and search-tracking params into the page they decorate', () => {
+  it('folds storefront quick-view and search-tracking params into the page they decorate', () => {
     const page = canonicalIdentity('https://shop.example/products/net');
     for (const decorated of [
       'https://shop.example/products/net?qv=wtOxjLNNI',
       'https://shop.example/products/net?_pos=1&_psq=net&_ss=e&_v=1.0&_sid=abc',
       'https://shop.example/products/net?srsltid=AfmBOo',
-      // A Shopify alternate template (an A/B test) canonicalizes to the page itself.
-      'https://shop.example/products/net?view=cro-002-test',
     ])
       expect(canonicalIdentity(decorated)).toEqual(page);
     // A parameter that selects different content still names a different page.
