@@ -18,6 +18,9 @@ Remaining work is consolidated in the backlog; historical plans are not active a
 - [Insight parity](insight-parity.md) (owner decisions recorded 2026-10-16 and
   2026-10-17): PR 1 (#414) and PR 2 (#419) shipped; PR 3 adds the editable
   Overview, its layout PDF and Site Health Recrawl.
+- [Prompt Builder](prompt-builder.md) (owner decisions recorded 2026-11-01):
+  generation quality, then the Prompt Builder sheet, then the Context page and
+  Agent rebuilt on its endpoints, in three PRs.
 
 The feature review programme, the competitive feature tracker and the app
 geometry consistency plan are complete and archived under

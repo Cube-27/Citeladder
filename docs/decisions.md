@@ -562,3 +562,27 @@ path over the observed link graph.
 Source: owner decisions of 1 November 2026, reviewing the thenetreturn.com
 crawl ("drop the defect word and keep occurences the same as now"; "for pages
 buried too deeply we can go with option a").
+
+## Generated prompts are short buyer questions under user control
+
+Four decisions for the [Prompt Builder plan](plans/prompt-builder.md):
+
+- **A. Word cap.** Admission drops a generated or proposed prompt over 16 words,
+  and the run result reports those drops under their own reason. The owner
+  cited query-length data: traditional search averages about 4 words and
+  conversational AI queries about 7, so drafting examples centre on 6–12 words.
+- **B. Topics are buyer-facing categories**, not product-line names. A topic
+  proposed from the business's confirmed offerings is the category a buyer
+  would ask about ("golf nets"), never a product line, model name, size or
+  the brand.
+- **C. The Agent keeps `prompt_discovery`** for MCP use, rebuilt to follow the
+  Prompt Builder's steps through the same endpoints (plan PR 3).
+- **D. Users control generation end to end** in the Prompt Builder: topics,
+  search queries and their source, distribution (branded or unbranded share,
+  intent mix, cohort) and context (personas, services). This supersedes the
+  earlier rule that users are asked only for a prompt and its topic and never
+  for theme, intent or cohort.
+
+Source: owner answers of 1 November 2026 in the CiteLadder session reviewing
+the thenetreturn.com prompts.
+[Prompts and Visibility](visibility-prompt.md) owns the shipped behavior.
