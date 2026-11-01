@@ -1,6 +1,7 @@
 import { Badge } from '@/components/ui/badge';
 import { QueryState } from '@/components/ui/query-state';
-import { StatRow } from '@/components/ui/stat-row';
+import { FactList } from '@/components/ui/facts';
+import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { TextLink } from '@/components/ui/text-link';
 import { Label, textRole } from '@/components/ui/typography';
 import type { PageDetail } from '@/lib/api/types';
@@ -53,7 +54,12 @@ export function InternalLinksCard({
     },
     {
       label: 'Depth from home',
-      value: links.depth_from_home,
+      value:
+        links.depth_from_home === null ? (
+          <UnavailableValue state="not_measured" />
+        ) : (
+          links.depth_from_home
+        ),
     },
   ];
   return (
@@ -61,7 +67,7 @@ export function InternalLinksCard({
       <p className={textRole('caption')}>
         {`Modelled over ${links.source_page_count} observed crawl page${links.source_page_count === 1 ? '' : 's'}${links.observed_crawl_incomplete ? '; this crawl is incomplete or sampled' : ''}`}
       </p>
-      <StatRow segments={metrics.map((metric) => ({ key: metric.label, ...metric }))} />
+      <FactList layout="ruled" label="Internal link measurements" facts={metrics} />
       <div className={splitPaneClasses('peers')}>
         <NeighbourList
           heading="Top linking pages"

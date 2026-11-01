@@ -150,6 +150,72 @@ function failingLinkTargets(evidence: Evidence): string[] {
     );
 }
 
+/** A URL without its query string or fragment: `?qv=…` quick-view links are one link. */
+function withoutQuery(url: string): string {
+  return url.replace(/[?#].*$/u, '');
+}
+
+function parsedUrl(url: string): URL | null {
+  try {
+    return new URL(url);
+  } catch {
+    return null;
+  }
+}
+
+/** A same-site link reads as its path; another host keeps its full URL. */
+function sitePath(url: string, origin: string | null): string {
+  const parsed = parsedUrl(url);
+  if (!parsed || (origin !== null && parsed.origin !== origin)) return url;
+  return parsed.pathname;
+}
+
+/**
+ * Links found ON this page, one fact per distinct link. The same link with
+ * different query strings (a theme's `?qv=` quick-view variants) is one thing
+ * to fix, so it collapses into one fact with a variant count.
+ */
+function pageLinks(
+  evidence: Evidence,
+  outcome: (target: Evidence, origin: string | null) => string,
+): string[] {
+  const groups = new Map<string, { fact: string; variants: number }>();
+  for (const target of records(evidence.failing_targets)) {
+    const url = text(target.url);
+    if (!url) continue;
+    const origin = parsedUrl(url)?.origin ?? null;
+    const link = sitePath(withoutQuery(url), origin);
+    const fact = `${link} → ${outcome(target, origin)}`;
+    const group = groups.get(fact);
+    if (group) group.variants += 1;
+    else groups.set(fact, { fact, variants: 0 });
+  }
+  return [...groups.values()].map(({ fact, variants }) =>
+    variants > 0
+      ? `${fact} (+${String(variants)} ${variants === 1 ? 'variant' : 'variants'})`
+      : fact,
+  );
+}
+
+/** Where a redirecting link on this page lands; a link back to this page says so. */
+function linkRedirects(evidence: Evidence, pageUrl: string | null): string[] {
+  const page = pageUrl ? withoutQuery(pageUrl) : null;
+  return pageLinks(evidence, (target, origin) => {
+    if (target.reason === 'redirect_limit') return 'redirect loop';
+    const final = withoutQuery(text(target.final_url));
+    const hops =
+      typeof target.hops === 'number' && target.hops > 1 ? ` (${String(target.hops)} hops)` : '';
+    const landing = page !== null && final === page ? 'this page' : sitePath(final, origin);
+    return `${landing}${hops}`;
+  });
+}
+
+function brokenLinks(evidence: Evidence): string[] {
+  return pageLinks(evidence, (target) =>
+    typeof target.status_code === 'number' ? String(target.status_code) : 'unreachable',
+  );
+}
+
 /** A redirecting URL and where it landed; an abandoned one is named a loop. */
 function redirectTargets(evidence: Evidence): string[] {
   return records(evidence.failing_targets)
@@ -232,12 +298,113 @@ function offerFreshness(evidence: Evidence): string[] {
     : reasonPhrase(evidence);
 }
 
+/** A noindex directive, and the signal that says the page was meant to be indexed. */
+function indexable(evidence: Evidence): string[] {
+  if (evidence.noindex !== true) return reasonPhrase(evidence);
+  const directives = evidence.nofollow === true ? 'noindex, nofollow' : 'noindex';
+  const intent: Readonly<Record<string, string>> = {
+    sitemap_membership: 'listed in sitemap.xml',
+    explicit_user_policy: 'marked for indexing in project settings',
+  };
+  const why = intent[text(evidence.intent_source)];
+  return why ? [directives, why] : [directives];
+}
+
+// ---------------------------------------------------------------------------
+// Site-level architecture findings
+// ---------------------------------------------------------------------------
+
+/**
+ * Architecture findings are judged over the whole crawl and persisted ONCE,
+ * against the homepage, with the pages (or page kinds) they found in the
+ * evidence. Shown as an occurrence they read as "the homepage is buried too
+ * deeply"; the pages in the evidence are the affected pages.
+ */
+const PAGE_LIST_RULES = new Set([
+  'architecture.excessive_depth',
+  'architecture.breadcrumb_hierarchy_conflict',
+  'architecture.orphan_pages',
+  'architecture.parentless_detail_pages',
+]);
+const PAGE_KIND_RULES = new Set([
+  'architecture.duplicate_metadata_in_page_kind',
+  'architecture.unhubbed_page_kind',
+]);
+
+export type EvidencePage = Readonly<{
+  siteUrlId: string;
+  url: string;
+  title: string | null;
+  pageKind: string | null;
+  /** Shortest click path from the homepage, only where depth is the finding. */
+  clicksFromHome: number | null;
+}>;
+
+export type SiteLevelEvidence =
+  | Readonly<{ kind: 'pages'; total: number; pages: readonly EvidencePage[] }>
+  | Readonly<{
+      kind: 'page_kinds';
+      pageKinds: readonly Readonly<{ pageKind: string; pageCount: number | null }>[];
+    }>;
+
+function evidencePages(ruleId: string, evidence: Evidence): EvidencePage[] {
+  const depthIsTheFinding = ruleId === 'architecture.excessive_depth';
+  return records(evidence.pages).flatMap((page) => {
+    const siteUrlId = text(page.site_url_id);
+    const url = text(page.url);
+    if (!siteUrlId || !url) return [];
+    const depth = page.depth_from_home;
+    return [
+      {
+        siteUrlId,
+        url,
+        title: text(page.title) || null,
+        pageKind: text(page.page_kind) || null,
+        clicksFromHome: depthIsTheFinding && typeof depth === 'number' ? depth : null,
+      },
+    ];
+  });
+}
+
+/** The pages or page kinds a site-level finding names; `null` for a per-page rule. */
+export function siteLevelEvidence(ruleId: string, evidence: Evidence): SiteLevelEvidence | null {
+  if (PAGE_LIST_RULES.has(ruleId)) {
+    const pages = evidencePages(ruleId, evidence);
+    const count = evidence.count;
+    return { kind: 'pages', total: typeof count === 'number' ? count : pages.length, pages };
+  }
+  if (PAGE_KIND_RULES.has(ruleId)) {
+    const pageKinds = records(evidence.page_kinds).flatMap((row) => {
+      const pageKind = text(row.page_kind);
+      const count =
+        ruleId === 'architecture.duplicate_metadata_in_page_kind'
+          ? row.duplicate_metadata_count
+          : row.page_count;
+      return pageKind ? [{ pageKind, pageCount: typeof count === 'number' ? count : null }] : [];
+    });
+    return { kind: 'page_kinds', pageKinds };
+  }
+  return null;
+}
+
+function architecturePages(ruleId: string) {
+  return (evidence: Evidence): string[] =>
+    evidencePages(ruleId, evidence).map((page) => {
+      const path = sitePath(page.url, null);
+      return page.clicksFromHome === null
+        ? path
+        : `${path} (${String(page.clicksFromHome)} clicks)`;
+    });
+}
+
 /**
  * Rules whose evidence has a native notation. Anything absent from this table
  * falls through to `reasonPhrase` and then to bounded scalars, so a new rule
  * still renders something honest before it gets a spelling of its own.
  */
-const FACTS_BY_RULE: Readonly<Record<string, (evidence: Evidence) => string[]>> = {
+const FACTS_BY_RULE: Readonly<
+  Record<string, (evidence: Evidence, pageUrl: string | null) => string[]>
+> = {
   'technical.title_present': () => ['<title>'],
   'technical.meta_description_present': () => ['<meta name="description">'],
   'technical.canonical_present': () => ['<link rel="canonical">'],
@@ -275,7 +442,8 @@ const FACTS_BY_RULE: Readonly<Record<string, (evidence: Evidence) => string[]>> 
   'technical.sitemap_lastmod': sitemapLastmod,
   'technical.client_side_redirect': clientRedirect,
   'technical.canonical_integrity': canonicalTarget,
-  'technical.internal_link_redirect': redirectTargets,
+  'technical.internal_link_redirect': linkRedirects,
+  'technical.indexable': indexable,
   'technical.redirect_chain': redirectTargets,
   'technical.duplicate_content': duplicatePages,
   'aeo.visible_attribution': (evidence) =>
@@ -297,10 +465,30 @@ const FACTS_BY_RULE: Readonly<Record<string, (evidence: Evidence) => string[]>> 
   'web.accessibility_document_language': () => ['<html lang>'],
   'web.mobile_viewport': () => ['<meta name="viewport">'],
   'web.security_mixed_content': (evidence) => textList(evidence.assets),
-  'technical.broken_internal_link': failingLinkTargets,
+  'technical.broken_internal_link': brokenLinks,
   'technical.sitemap_url_unreachable': failingLinkTargets,
   'architecture.duplicate_metadata_in_page_kind': duplicateMetadataKinds,
+  'architecture.unhubbed_page_kind': duplicateMetadataKinds,
+  ...Object.fromEntries([...PAGE_LIST_RULES].map((rule) => [rule, architecturePages(rule)])),
 };
+
+/**
+ * The words before the facts, for rules whose facts are not about the page's
+ * own markup. A redirecting link is named under the page that CONTAINS it;
+ * without "Links on this page" the line reads as the page itself redirecting.
+ */
+const LEAD_BY_RULE: Readonly<Record<string, string>> = {
+  'technical.internal_link_redirect': 'Links on this page that redirect:',
+  'technical.broken_internal_link': 'Broken links on this page:',
+  ...Object.fromEntries([...PAGE_LIST_RULES].map((rule) => [rule, 'Affected pages:'])),
+  'architecture.duplicate_metadata_in_page_kind': 'Affected page kinds:',
+  'architecture.unhubbed_page_kind': 'Affected page kinds:',
+};
+
+/** The label to print before a rule's facts, when the facts need one. */
+export function evidenceLead(ruleId: string): string | null {
+  return LEAD_BY_RULE[ruleId] ?? null;
+}
 
 /**
  * The evaluator's own reason code, spelled as words. Used only when a rule has
@@ -341,9 +529,13 @@ function scalarFacts(evidence: Evidence): string[] {
  * caller then renders nothing at all rather than a placeholder, because the
  * title plus "how to fix" already stand on their own.
  */
-export function evidenceFacts(ruleId: string, evidence: Evidence): string[] {
+export function evidenceFacts(
+  ruleId: string,
+  evidence: Evidence,
+  context: Readonly<{ pageUrl?: string }> = {},
+): string[] {
   const formatter = FACTS_BY_RULE[ruleId];
-  const facts = formatter ? formatter(evidence) : [];
+  const facts = formatter ? formatter(evidence, context.pageUrl ?? null) : [];
   const resolved = facts.length > 0 ? facts : [...reasonPhrase(evidence), ...scalarFacts(evidence)];
   return resolved.slice(0, MAX_FACTS).map((fact) => fact.slice(0, MAX_FACT_CHARS));
 }

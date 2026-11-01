@@ -5,6 +5,7 @@ import { architectureRules } from '../src/site-health/architecture-rules.ts';
 import { siteWorkerSettings } from '../src/site-health/runtime.ts';
 import { policy } from '../src/config.ts';
 import { record } from '../src/db/json.ts';
+import { issueDetail, issues as readIssues } from '../src/site-health/reads/issues.ts';
 import { testDatabase } from './support.ts';
 import { SiteFixtures } from './site-health-fixtures.ts';
 
@@ -309,6 +310,7 @@ it('complete coverage creates actionable root findings without borrowing foreign
   await fixtures.snapshot(other, 'complete');
   const home = await fixtures.page(seed, '/', {});
   await fixtures.page(seed, '/orphan/product', {});
+  await fixtures.page(seed, '/orphan/other', {});
   await fixtures.page(other, '/', {});
   await derive(seed);
   const issues = await db
@@ -318,6 +320,31 @@ it('complete coverage creates actionable root findings without borrowing foreign
     .execute();
   expect(issues.some((row) => row.rule_id === 'architecture.orphan_pages')).toBe(true);
   expect(issues.every((row) => row.site_url_id === home.id)).toBe(true);
+  // Filed once against the homepage, the finding still counts the pages it names.
+  const catalog = await readIssues(
+    db,
+    seed.workspaceId,
+    seed.crawlId,
+    {
+      query: null,
+      severity: null,
+      category: null,
+      dimension: null,
+      rule: null,
+      siteUrlId: null,
+      pageKind: null,
+      findingClass: 'defect',
+    },
+    { limit: 50, cursor: null },
+  );
+  const orphans = catalog.items.find((item) => item.rule_id === 'architecture.orphan_pages')!;
+  expect(orphans.affected_url_count).toBe(2);
+  expect(orphans.page_kinds).not.toContain('homepage');
+  const detail = await issueDetail(db, seed.workspaceId, seed.crawlId, orphans.group_id, {
+    limit: 10,
+    cursor: null,
+  });
+  expect(detail.affected_url_count).toBe(2);
   expect(
     await db
       .selectFrom('site_observed_architectures')

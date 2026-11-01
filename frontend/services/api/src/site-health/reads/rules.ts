@@ -63,6 +63,45 @@ export function issueGroupId(crawlId: string, ruleId: string, findingClass: stri
   return uuidV5(crawlId, `site-issue-group:${ruleId}${suffix}`);
 }
 
+/**
+ * A site-level architecture finding is persisted once, against the homepage,
+ * and names the pages (or page kinds) it found in its evidence. Its group
+ * counts and page kinds come from that evidence, not from the one row, so
+ * "Pages buried too deeply" reads 11 pages rather than the homepage. `null`
+ * for every per-page rule.
+ */
+export function siteLevelScope(
+  ruleId: string,
+  evidence: unknown,
+): { affected: number; pageKinds: string[] } | null {
+  if (!ruleId.startsWith('architecture.')) return null;
+  const facts = record(evidence);
+  const rows = (value: unknown) =>
+    Array.isArray(value) ? value.map(record).filter((row) => Object.keys(row).length > 0) : [];
+  const kindsOf = (items: Record<string, unknown>[]) =>
+    [
+      ...new Set(items.map((row) => row.page_kind).filter((kind): kind is string => Boolean(kind))),
+    ].sort(compareText);
+  if (Array.isArray(facts.pages)) {
+    const pages = rows(facts.pages);
+    const count = typeof facts.count === 'number' ? facts.count : pages.length;
+    return { affected: count, pageKinds: kindsOf(pages) };
+  }
+  if (Array.isArray(facts.page_kinds)) {
+    const kinds = rows(facts.page_kinds);
+    const key =
+      ruleId === 'architecture.duplicate_metadata_in_page_kind'
+        ? 'duplicate_metadata_count'
+        : 'page_count';
+    const affected = kinds.reduce((sum, row) => {
+      const value = row[key];
+      return sum + (typeof value === 'number' ? value : 0);
+    }, 0);
+    return { affected, pageKinds: kindsOf(kinds) };
+  }
+  return null;
+}
+
 export type IssueRow = {
   id: string;
   evaluation_id: string;

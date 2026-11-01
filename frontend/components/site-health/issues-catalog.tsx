@@ -300,23 +300,18 @@ function IssueSummary({
   summary,
   findingView,
 }: Readonly<{ summary: IssuesSummary; findingView: FindingClass }>) {
-  const typeCount =
-    findingView === 'defect' ? summary.defect_issue_type_count : summary.advisory_issue_type_count;
+  const defects = findingView === 'defect';
+  const typeCount = defects ? summary.defect_issue_type_count : summary.advisory_issue_type_count;
+  const singular = defects ? 'problem' : 'advisory';
+  const plural = defects ? 'problems' : 'advisories';
+  const pages = summary.affected_url_count;
   return (
-    <Inline gap="meta">
-      <SummaryMeasure value={typeCount} label={`${findingView} issue types`} />
-      <SummaryMeasure value={summary.occurrence_count} label={`${findingView} occurrences`} />
-      <SummaryMeasure value={summary.affected_url_count} label="affected URLs" />
-    </Inline>
-  );
-}
-
-function SummaryMeasure({ value, label }: Readonly<{ value: number; label: string }>) {
-  return (
-    <Inline as="span" className="items-baseline">
-      <span className={textRole('sectionTitle', 'tabular-nums')}>{value}</span>{' '}
-      <span className="type-caption">{label}</span>
-    </Inline>
+    <p className="type-body">
+      <span className={textRole('emphasis', 'tabular-nums')}>{typeCount}</span>{' '}
+      {typeCount === 1 ? singular : plural} on{' '}
+      <span className={textRole('emphasis', 'tabular-nums')}>{pages}</span>{' '}
+      {pages === 1 ? 'page' : 'pages'}
+    </p>
   );
 }
 
@@ -364,7 +359,6 @@ function IssueGroupList({
           {issue.affected_url_count} {issue.affected_url_count === 1 ? 'page' : 'pages'}
         </span>
       </Inline>
-      <span className="type-caption line-clamp-2">{issue.description}</span>
     </ListDetailRow>
   ));
 }

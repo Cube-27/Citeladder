@@ -34,6 +34,7 @@ import {
   remediationRoute,
   ruleTitle,
   severityRank,
+  siteLevelScope,
   type IssueRow,
 } from './rules.ts';
 
@@ -115,6 +116,8 @@ async function issueGroups(db: Database, crawl: Crawl, filters: IssueFilters): P
   return rows
     .map((row) => ({
       ...row,
+      affected_url_count:
+        siteLevelScope(row.rule_id, row.evidence)?.affected ?? row.affected_url_count,
       group_id: issueGroupId(crawl.id, row.rule_id, filters.findingClass),
     }))
     .sort(compareGroups);
@@ -251,7 +254,8 @@ export async function issues(
       group_id: group.group_id,
       crawl_id: crawl.id,
       rule_id: group.rule_id,
-      page_kinds: kinds.get(group.rule_id) ?? [],
+      page_kinds:
+        siteLevelScope(group.rule_id, group.evidence)?.pageKinds ?? kinds.get(group.rule_id) ?? [],
       dimension: group.dimension,
       category: group.category,
       severity: group.severity,
@@ -344,7 +348,8 @@ export async function issueDetail(
     remediation_route: remediationRoute(representative.rule_id),
     occurrences: page.map((row) => issueOccurrence(row, row)),
     occurrence_count: total.occurrences,
-    affected_url_count: total.affected,
+    affected_url_count:
+      siteLevelScope(representative.rule_id, representative.evidence)?.affected ?? total.affected,
     analyzer_version: representative.analyzer_version,
     rule_version: representative.rule_version,
     created_at: representative.created_at.toISOString(),
