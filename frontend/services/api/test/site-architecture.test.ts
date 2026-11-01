@@ -345,6 +345,15 @@ it('complete coverage creates actionable root findings without borrowing foreign
     cursor: null,
   });
   expect(detail.affected_url_count).toBe(2);
+  const snapshot = await db
+    .selectFrom('site_health_snapshots')
+    .select('top_issues')
+    .where('crawl_id', '=', seed.crawlId)
+    .executeTakeFirstOrThrow();
+  const top = (snapshot.top_issues as { rule_id: string; affected_pages: number }[]).find(
+    (item) => item.rule_id === 'architecture.orphan_pages',
+  );
+  expect(top?.affected_pages).toBe(2);
   expect(
     await db
       .selectFrom('site_observed_architectures')

@@ -184,15 +184,43 @@ function dropMentions(supplied: SuppliedManifest, over: () => boolean) {
     supplied.omissions.push(`mentioned_action:${removed.id}`);
   }
 }
+/** Summary keys that stay in the run's manifest and never reach the model. */
+const MANIFEST_ONLY_SUMMARY_KEYS = [
+  // Record IDs, hashes and processor versions: the model cannot use them and
+  // must never repeat them.
+  'provenance',
+  'site_url_ids',
+  'artifact_ids',
+  'crawl_urls',
+  // The context selector's own trimming. A `page_limit` count here was read as
+  // "the crawl did not analyse N URLs"; it is said below, unambiguously.
+  'omissions',
+] as const;
+
+/**
+ * The context summary as the model sees it. The only selector omission it
+ * keeps is how many crawl pages were left out of ITS context, under a name
+ * that cannot be mistaken for a crawl coverage figure.
+ */
+function modelSummary(summary: Record<string, Json>): Record<string, Json> {
+  const supplied = { ...summary };
+  for (const key of MANIFEST_ONLY_SUMMARY_KEYS) delete supplied[key];
+  const omissions = Array.isArray(summary.omissions) ? summary.omissions : [];
+  const omitted = omissions.reduce<number>((total, item) => {
+    const row: Record<string, Json> =
+      item !== null && typeof item === 'object' && !Array.isArray(item) ? item : {};
+    return row.reason === 'page_limit' && typeof row.count === 'number' ? total + row.count : total;
+  }, 0);
+  if (omitted > 0) supplied.agent_context_pages_omitted = omitted;
+  return supplied;
+}
+
 export function suppliedManifest(
   manifest: Manifest,
   limit = agentPolicy.context_package_max_chars,
 ) {
   const omissions: string[] = [];
-  // Provenance (record IDs, hashes, processor versions) stays in the run's
-  // manifest; the model cannot use it and must never repeat it.
-  const summary = { ...manifest.package.summary };
-  delete summary.provenance;
+  const summary = modelSummary(manifest.package.summary);
   const supplied: SuppliedManifest = {
     instructions: manifest.instructions,
     package: { ...manifest.package, summary, sections: { ...manifest.package.sections } },
