@@ -18,9 +18,11 @@ Remaining work is consolidated in the backlog; historical plans are not active a
 - [Insight parity](insight-parity.md) (owner decisions recorded 2026-10-16 and
   2026-10-17): PR 1 (#414) and PR 2 (#419) shipped; PR 3 adds the editable
   Overview, its layout PDF and Site Health Recrawl.
-- [Prompt Builder](prompt-builder.md) (owner decisions recorded 2026-11-01):
-  PR 1 (generation quality, #483) shipped; PR 2 adds the Prompt Builder sheet;
-  PR 3 fixes the Context page and rebuilds the Agent on the builder's endpoints.
+
+The [Prompt Builder](prompt-builder.md) plan (owner decisions recorded
+2026-11-01) is complete: generation quality (#483), the Prompt Builder sheet
+(#487), and the Context page with Prompt discovery rebuilt on the builder's
+endpoints (PR 3). Its calibration follow-ups are in the backlog.
 
 The feature review programme, the competitive feature tracker and the app
 geometry consistency plan are complete and archived under

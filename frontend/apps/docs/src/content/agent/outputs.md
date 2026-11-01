@@ -3,7 +3,7 @@ title: 'Outputs and revisions'
 description: 'Review, edit and export Agent work while preserving the history of what changed.'
 group: 'Improve with Agent'
 order: 230
-updated: '2026-10-12'
+updated: '2026-11-01'
 ---
 
 The output is the working document for a chat. It appears in the conversation right after the reply that produced it, so you can refine the deliverable without losing the discussion around it. While the Agent writes, the reply and the document fill in as they are generated; the saved version replaces them when the turn finishes. The document is saved together with the reply, so a turn that stops early saves neither.
@@ -16,7 +16,7 @@ Ask for a focused revision when necessary: "Keep the structure, remove the unsup
 
 ## Approve an outline before drafting
 
-Long-form content, such as articles, web pages and YouTube scripts, and prompt portfolios are outline-first. Short formats, such as social posts and forum answers, are drafted directly. Review the outline's scope, structure and factual assumptions, then explicitly approve the outline revision you want to use.
+Long-form content, such as articles, web pages and YouTube scripts, is outline-first. Short formats, such as social posts and forum answers, are drafted directly. Review the outline's scope, structure and factual assumptions, then explicitly approve the outline revision you want to use.
 
 Approval allows the draft to be written. It does not publish the draft or declare an Action implemented.
 

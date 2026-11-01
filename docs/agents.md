@@ -62,9 +62,9 @@ work belongs in a new chat.
 
 Long-form content formats (marked `[long-form]` in
 [`content_formats.md`](../frontend/services/api/assets/agent-skills/content_formats.md))
-and prompt portfolios are outline-first: a draft is written only after the user
-approves an outline revision. Short formats (social posts, definitions, forum
-answers) are drafted directly. Approval is a turn tied to the approved
+are outline-first: a draft is written only after the user approves an outline
+revision. Short formats (social posts, definitions, forum answers) and every
+other deliverable kind are drafted directly. Approval is a turn tied to the approved
 revision, and the completion line states the saved phase and format. Approving
 or generating an output is not an implementation declaration: **Mark
 implemented** declares the attached Action implemented with the revision on
@@ -166,8 +166,9 @@ only this turn's reads are its sources.
 
 The model never writes record references for the user. Before saving, the
 runtime removes `citeladder://` references and UUIDs from the reply and the
-document's title and body; a fenced block is left exact, because a skill's
-machine-readable submission may need its IDs. The UI groups sources in plain
+document's title and body, fenced blocks included: no deliverable carries a
+machine-readable submission, so Copy and Export never carry an ID. The UI
+groups sources in plain
 words (for example "Search Console query · 3") with links to the screen that
 shows them.
 
@@ -237,8 +238,8 @@ unavailable is not zero, no record references in user text). They do not
 require evidence manifests or per-claim labels. Where a public plugin skill
 mirrors an in-app methodology (`ai-visibility-review` ↔ `ai_visibility`,
 `ai-search-change-review` ↔ `measure`, `technical-seo-triage` ↔
-`technical_health`), a methodology change lands in both, adapted to the tools
-each surface has.
+`technical_health`, `prompt-discovery` ↔ `prompt_discovery`), a methodology
+change lands in both, adapted to the tools each surface has.
 
 The catalog endpoint projects only each skill's ID, label, group, output kind
 and description, plus the workflow catalog; skill bodies and format guidance
@@ -381,11 +382,18 @@ the screen already holds through the
 [panel context](../frontend/lib/agent/panel-context.tsx) and continues in
 `/agent/chats/:chatId`.
 
-Prompt discovery covers a niche the user names; Prompts itself steers generation
-in its Prompt Builder and has no Agent entry point. `read_prompt_portfolio` returns the canonical topics, and a
-saved portfolio's rows are tied to those topic IDs. **Review in Prompts**
-submits the saved revision to the Prompts owner's admission and quality checks;
-the Agent gains no write tool.
+Prompts steers generation in its Prompt Builder and has no Agent entry point.
+Prompt discovery ([decision C](decisions.md#generated-prompts-are-short-buyer-questions-under-user-control))
+follows the builder's four steps and never writes prompt text: in the Agent it
+reads business context, `read_prompt_portfolio` and `read_seed_queries` and
+saves a short `prompt_plan` (facts to fix, topics, mix and search data), whose
+**Open Prompt Builder** link (`/prompts?generate=1`) is where a person applies
+it; the Agent gains no write tool. Its public plugin twin, `prompt-discovery`,
+runs the same steps for MCP clients through the builder's owners
+(`preview_topics`, `confirm_topics`, `read_seed_queries`, `generate_prompts`;
+see [MCP](mcp.md#changes)) and ends at the review link. In both, candidates stay
+staged and only a person's Accept in Prompts activates them; every wording rule
+lives in the generation configuration.
 
 ## Worker and funding
 
@@ -458,5 +466,6 @@ In the browser, `chat-screen.test.tsx` covers the streamed-then-saved reply,
 thinking and parallel reads, Regenerate, Stop, section edits, sources and next
 steps; `live-turns.test.ts` the stream reducer; `conversation.test.tsx` the run
 summary; `new-chat-screen.test.tsx`
-the workflow form, pinned next steps, handoffs and commands; and
+the workflow form, pinned next steps, handoffs and commands;
+`output-pane.test.tsx` the prompt plan's Prompt Builder handoff; and
 `agent-panel.test.tsx` the panel.

@@ -3,7 +3,7 @@ title: 'MCP tool reference'
 description: 'Choose the narrowest registered read tool that answers your question, and see which tools make changes.'
 group: 'Connect with MCP'
 order: 320
-updated: '2026-10-11'
+updated: '2026-11-01'
 ---
 
 Start with project discovery, inspect available evidence, then ask for the concrete record or dataset you need. List tools are bounded; follow returned cursors instead of assuming the first page is complete.
@@ -51,7 +51,9 @@ Clients that support MCP prompts list `business_health_review`, which starts a g
 
 ## Make changes
 
-A connection approved with **Allow changes** also lists change tools, marked **Changes** in the catalog below. `create_topic`, `rename_topic`, `delete_topic`, `update_prompt_text`, `add_competitor`, `remove_competitor`, `update_action_status` and `cancel_audit` run when called. `prepare_add_prompts`, `prepare_archive_prompts`, `prepare_launch_audit`, `prepare_schedule` and `prepare_declare_implemented` return a preview and a confirmation token; nothing changes until the assistant calls `confirm_change` with that token after you agree.
+A connection approved with **Allow changes** also lists change tools, marked **Changes** in the catalog below. `create_topic`, `rename_topic`, `delete_topic`, `confirm_topics`, `update_prompt_text`, `add_competitor`, `remove_competitor`, `update_action_status` and `cancel_audit` run when called. `prepare_add_prompts`, `prepare_archive_prompts`, `prepare_launch_audit`, `prepare_schedule` and `prepare_declare_implemented` return a preview and a confirmation token; nothing changes until the assistant calls `confirm_change` with that token after you agree.
+
+To generate prompts, the assistant follows the Prompt Builder's steps: it checks your business facts with `get_project_business_context`, proposes topics with `preview_topics` and saves the ones you agree to with `confirm_topics`, offers your search data with `read_seed_queries`, then runs `generate_prompts` once you agree to the run. Topic previews and generation spend AI credits. Generated prompts wait in **Prompts** for your review; only the ones you accept are tracked.
 
 ## Read records and windows precisely
 
