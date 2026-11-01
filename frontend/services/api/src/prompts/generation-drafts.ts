@@ -30,6 +30,7 @@ import {
   modelSlot,
   namesPlace,
   planSlots,
+  topicOfferings,
   type Slot,
 } from './generation-plan.ts';
 import { promptTextHash } from './normalization.ts';
@@ -156,11 +157,11 @@ export function admitDrafts(
   ): PromptAdmissionDropReason | null => {
     if (!slot || usedSlots.has(slot.slot_id)) return 'unplanned_slot';
     if (!slot.allowed_prompt_intents.includes(row.prompt_intent)) return 'intent';
-    // A planned core row keeps to the planned stages, and its intent must suit
-    // the stage the model labelled it with; Agent rows keep the labels the
-    // user reviewed in the portfolio.
+    // Every planned row keeps to the planned stages, and a core row's intent
+    // must suit the stage the model labelled it with; Agent rows keep the
+    // labels the user reviewed in the portfolio.
     const plannedCore = quick && slot.cohort === 'core';
-    const stages: readonly string[] = plannedCore ? G.planned_stages : G.stages;
+    const stages: readonly string[] = quick ? G.planned_stages : G.stages;
     if (!stages.includes(row.buyer_stage)) return 'stage';
     const coherent = G.stage_intents[row.buyer_stage]?.includes(row.prompt_intent);
     return plannedCore && !coherent ? 'intent' : null;
@@ -244,9 +245,15 @@ async function suggestMaps(
   context: GenerationContext,
   deadline: AbortSignal,
 ): Promise<OfferingMap[]> {
+  const business = record(context.context.business_context);
+  const covered = new Set(
+    context.selected.flatMap((topic) =>
+      topicOfferings(business, topic).map((name) => name.toLowerCase()),
+    ),
+  );
   const wanted = context.offerings.filter(
     (name) =>
-      context.selected.some((topic) => topic.name.toLowerCase() === name.toLowerCase()) &&
+      covered.has(name.toLowerCase()) &&
       !context.maps.some(
         (map) =>
           map.offering.toLowerCase() === name.toLowerCase() &&
@@ -428,8 +435,10 @@ export function planBatches(slots: readonly Slot[], size: number): Slot[][] {
     );
     // A stable sort: equal groups keep plan order.
     for (const group of groups.toSorted((a, b) => b.length - a.length)) {
-      const lightest = batches.reduce((best, batch) => (batch.length < best.length ? batch : best));
-      lightest.push(...group);
+      let lightest: Slot[] | undefined;
+      for (const batch of batches)
+        if (!lightest || batch.length < lightest.length) lightest = batch;
+      lightest?.push(...group);
     }
     return batches.filter((batch) => batch.length);
   });

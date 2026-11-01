@@ -16,6 +16,7 @@ import {
   wantedTopics,
   type GenerationInput,
 } from './generation-input.ts';
+import { topicLinks } from './generation-plan.ts';
 import { acquireProjectLock } from './locks.ts';
 import { loadObservedQueries } from './observed-queries.ts';
 import { scopedPromptSet } from './prompt-sets.ts';
@@ -80,6 +81,36 @@ function recoveryInput(db: Database, workspaceId: string, setId: string) {
   });
 }
 
+/** Records which saved offerings each recovered topic covers (`topicOfferings`). */
+async function linkTopicOfferings(
+  trx: Database,
+  workspaceId: string,
+  projectId: string,
+  topics: readonly { id: string; offerings: string[] }[],
+  now: Date,
+) {
+  const profile = await trx
+    .selectFrom('brand_profiles')
+    .select(['id', 'business_context'])
+    .where('project_id', '=', projectId)
+    .where('workspace_id', '=', workspaceId)
+    .executeTakeFirst();
+  if (!profile) return;
+  const business = record(profile.business_context);
+  const links = {
+    ...topicLinks.parse(business.topic_offerings ?? {}),
+    ...Object.fromEntries(topics.map((topic) => [topic.id, topic.offerings])),
+  };
+  await trx
+    .updateTable('brand_profiles')
+    .set({
+      business_context: JSON.stringify({ ...business, topic_offerings: links }),
+      updated_at: now,
+    })
+    .where('id', '=', profile.id)
+    .execute();
+}
+
 /**
  * A project without topics gets buyer-facing topics proposed from its
  * saved offerings before generation (`proposeTopics`). The proposal's
@@ -117,11 +148,12 @@ export async function recoverTopics(
     if (!proposal.topics.length)
       throw generationInvalid('No buyer-facing topic could be proposed from the offerings');
     const now = new Date();
+    const created = proposal.topics.map((topic) => ({ ...topic, id: randomUUID() }));
     await trx
       .insertInto('topics')
       .values(
-        proposal.topics.map((topic) => ({
-          id: randomUUID(),
+        created.map((topic) => ({
+          id: topic.id,
           project_id: set.project_id,
           parent_id: null,
           name: topic.name,
@@ -132,6 +164,7 @@ export async function recoverTopics(
         })),
       )
       .execute();
+    await linkTopicOfferings(trx, scope.workspaceId, set.project_id, created, now);
     return {
       source: proposal.source,
       model: proposal.model,

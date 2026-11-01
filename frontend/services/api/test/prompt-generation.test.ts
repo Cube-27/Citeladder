@@ -177,6 +177,47 @@ const oneSlotBatches = () => {
   vi.stubEnv('GENERATION_MODEL_BATCH_SIZE', '1');
   vi.stubEnv('GENERATION_DRAFT_CONCURRENCY', '1');
 };
+/** A tenant whose project has a brand profile but no topics, and its prompt set. */
+async function topiclessProject(business: Record<string, unknown>, offerings: string[] = []) {
+  const other = await fixtures.tenant();
+  await fixtures.brand(other.projectId, 'Strider');
+  const brand = await db
+    .selectFrom('brands')
+    .select('id')
+    .where('project_id', '=', other.projectId)
+    .executeTakeFirstOrThrow();
+  const otherSet = await promptSet(db, other.projectId);
+  const now = new Date();
+  await db
+    .insertInto('brand_profiles')
+    .values({
+      id: randomUUID(),
+      workspace_id: other.workspaceId,
+      project_id: other.projectId,
+      brand_id: brand.id,
+      business_context: JSON.stringify(business),
+      description: '',
+      positioning: '',
+      target_audience: '',
+      products_services: JSON.stringify(offerings),
+      sources: JSON.stringify({
+        products_services: { origin: 'ai_suggested', review_state: 'unreviewed' },
+      }),
+      source_artifact_ids: '{}',
+      created_at: now,
+      updated_at: now,
+    })
+    .execute();
+  return { other, otherSet };
+}
+const mapEntry = (value: string) => ({
+  value,
+  origin: 'manual',
+  review_state: 'confirmed',
+  reviewed_by: null,
+  reviewed_at: null,
+  source: {},
+});
 const input = () => generationInput.parse({ count: 2 });
 const generate = (deps: Parameters<typeof generatePrompts>[4] = dependencies()) =>
   generatePrompts(db, tenant.workspaceId, setId, input(), deps);
@@ -515,42 +556,63 @@ describe('prompt generation at the PostgreSQL boundary', () => {
     ).rejects.toMatchObject({ status: 422 });
     expect(deps.io.fetch).not.toHaveBeenCalled();
   });
+  it('never recovers topics for a request naming topics, and checks they are owned first', async () => {
+    const { other, otherSet } = await topiclessProject({ category_terms: ['running shoes'] }, [
+      'Trail running shoes',
+    ]);
+    const deps = echoDependencies({
+      topics: [{ name: 'Trail running shoes', offerings: ['Trail running shoes'] }],
+    });
+    // Another project's topic and an unknown id both fail before any model call or write.
+    for (const id of [await selectedTopic(), randomUUID()])
+      await expect(
+        generatePrompts(
+          db,
+          other.workspaceId,
+          otherSet,
+          generationInput.parse({ count: 2, topic_ids: [id] }),
+          deps,
+        ),
+      ).rejects.toMatchObject({ status: 422 });
+    expect(deps.io.fetch).not.toHaveBeenCalled();
+    expect(
+      await db
+        .selectFrom('topics')
+        .select('id')
+        .where('project_id', '=', other.projectId)
+        .execute(),
+    ).toEqual([]);
+  });
   it('proposes buyer-facing topics from the saved offerings, before drafting', async () => {
-    const other = await fixtures.tenant();
-    await fixtures.brand(other.projectId, 'Strider');
-    const brand = await db
-      .selectFrom('brands')
-      .select('id')
-      .where('project_id', '=', other.projectId)
-      .executeTakeFirstOrThrow();
-    const otherSet = await promptSet(db, other.projectId);
     const offerings = ['Pro Series running shoes', 'Strider trail shoes (sizes 9-13)'];
-    const now = new Date();
-    await db
-      .insertInto('brand_profiles')
-      .values({
-        id: randomUUID(),
-        workspace_id: other.workspaceId,
-        project_id: other.projectId,
-        brand_id: brand.id,
-        business_context: JSON.stringify({ category_terms: ['running shoes'] }),
-        description: '',
-        positioning: '',
-        target_audience: '',
-        products_services: JSON.stringify([]),
-        sources: JSON.stringify({
-          products_services: { origin: 'ai_suggested', review_state: 'unreviewed' },
-        }),
-        source_artifact_ids: '{}',
-        created_at: now,
-        updated_at: now,
-      })
-      .execute();
+    const { other, otherSet } = await topiclessProject({
+      category_terms: ['running shoes'],
+      business_map: {
+        offerings: [
+          {
+            offering: offerings[0],
+            attributes: [mapEntry('carbon plate')],
+            situations: [],
+            audiences: [],
+            exclusions: [],
+          },
+          {
+            offering: offerings[1],
+            attributes: [],
+            situations: [mapEntry('muddy trails')],
+            audiences: [],
+            exclusions: [],
+          },
+        ],
+      },
+    });
+    const requests: DraftRequest[] = [];
     const deps = echoDependencies({
       topics: [
         { name: 'Road running shoes', offerings: [offerings[0]!] },
         { name: 'Strider trail shoes', offerings: [offerings[1]!] },
       ],
+      onRequest: (sent) => requests.push(sent),
     });
     const run = () =>
       generatePrompts(db, other.workspaceId, otherSet, generationInput.parse({ count: 2 }), deps);
@@ -592,6 +654,18 @@ describe('prompt generation at the PostgreSQL boundary', () => {
         dropped: [],
       },
     });
+    // Each category keeps the business-map facets of the offering it was
+    // proposed from, under its own buyer-facing name.
+    const needs = requests
+      .flatMap((sent) => sent.slots)
+      .map((slot) => slot.buyer_need)
+      .toSorted((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+    expect(needs).toEqual([
+      { offering: 'Road running shoes', attribute: 'carbon plate' },
+      { offering: 'Road running shoes', attribute: 'carbon plate' },
+      { offering: 'Trail shoes', situation_or_constraint: 'muddy trails' },
+      { offering: 'Trail shoes', situation_or_constraint: 'muddy trails' },
+    ]);
   });
   it('serializes concurrent staging on the same set and drops newly pending duplicates', async () => {
     const deps = dependencies();

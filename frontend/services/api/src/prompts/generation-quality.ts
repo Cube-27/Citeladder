@@ -319,6 +319,9 @@ export function selectDrafts(
   const used = (key: string) => usage.get(key) ?? 0;
   const quality = (draft: Draft) =>
     draft.decision?.mode === 'gate' && draft.decision.verdict === 'pass' ? 0 : 1;
+  // A facet a person confirmed in the map or requested for this run comes first.
+  const chosenByPerson = (draft: Draft) =>
+    ['confirmed', 'requested'].includes(String(draft.slot.evidence_ref.review_state));
   while (remaining.length && selected.length < count) {
     remaining.sort(
       (a, b) =>
@@ -326,8 +329,7 @@ export function selectDrafts(
         used(`topic:${a.slot.topic_id}`) - used(`topic:${b.slot.topic_id}`) ||
         features(a).reduce((sum, key) => sum + used(key), 0) -
           features(b).reduce((sum, key) => sum + used(key), 0) ||
-        Number(a.slot.evidence_ref.review_state !== 'confirmed') -
-          Number(b.slot.evidence_ref.review_state !== 'confirmed'),
+        Number(chosenByPerson(b)) - Number(chosenByPerson(a)),
     );
     const best = remaining.shift()!;
     selected.push(best);

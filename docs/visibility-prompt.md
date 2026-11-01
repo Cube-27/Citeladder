@@ -77,8 +77,9 @@ Brand knowledge and stored in `BusinessContext.business_map`, lists per
 confirmed offering its attributes, situations/constraints and audiences, plus
 excluded pairs that never combine. Entries carry origin and review state: a
 model suggestion stays `suggested` until a person confirms it, and edits keep
-each surviving entry's provenance. When a Generate request selects confirmed
-offerings with absent or facet-empty map entries, one bounded model call
+each surviving entry's provenance. When a Generate request selects topics
+covering offerings (by name, or by the offerings a recovered topic was proposed
+from) with absent or facet-empty map entries, one bounded model call
 ([map suggestions](../frontend/services/api/src/prompts/generation-drafts.ts)) proposes
 them; they ground that run and are stored `suggested` with model identity and
 the generation run id, only for offerings still empty at write time, and never
@@ -90,7 +91,9 @@ empty prompt set and the user chooses what to track. Generation uses existing
 topics; a quick run in a project with none first recovers starting topics from
 the saved products/services, whatever their review state (onboarding saves the
 ones its reader just reviewed as unreviewed). No saved offerings fails before
-provider I/O, and an agent portfolio never recovers topics.
+provider I/O. An agent portfolio, or a request naming `topic_ids`, never
+recovers topics: named topics must already belong to the project, which the
+context read checks before any model call.
 
 Onboarding research keeps a bounded offering harvest of things a customer buys,
 hires, books or enrolls in as reviewable evidence. [Topic
@@ -110,7 +113,10 @@ inserted under the project lock only while the project still has none, at most
 `topic_max`; the rest are reported as overflow, and the source,
 model identity, created, overflow and dropped proposals (with reasons
 `unsupported`, `empty`, `branded`, `existing`, `merged`) are frozen in run
-provenance as `topic_recovery`. Topic names must be bounded and brand-neutral,
+provenance as `topic_recovery`. The same transaction records which saved
+offerings each created topic covers in `business_context.topic_offerings` (by
+topic id), so the planner gives a category its offerings' business-map facets
+whatever it is named. Topic names must be bounded and brand-neutral,
 and admitted topics receive canonical UUIDs.
 
 Topic distinctness uses singular-normalized token identity, not character
@@ -135,7 +141,13 @@ bare cells, never invented facts. Because a cell holds one facet, an excluded
 pair never combines. A market attaches only to the reviewed
 `market_scope`'s `location_policy` share (local 0.5, regional 0.25, national,
 global and unknown 0), drawn from `service_areas`; a national business's service
-areas never become wording. A subtopic uses its parent's offering map.
+areas never become wording. A topic draws facets from the map named like it
+(whose offering labels its cells), else from the maps of the offerings it was
+recovered from (its cells keep the topic's own name), else from its parent's.
+Each cell's evidence records where its facet came from: `confirmed` by a person
+in the map, `suggested` by a model or inferred buyer roles, `requested` as a
+persona for this run, or `not_applicable` without a facet. Selection prefers
+confirmed and requested facets.
 
 The buyer stage is a label over `planned_stages` (awareness, consideration,
 decision; `implementation` stays in the stage vocabulary for manual prompts but

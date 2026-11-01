@@ -51,15 +51,25 @@ const logger = getLogger('app.domain.prompts.topic_proposals');
 
 const wordsOf = (text: string) => text.trim().split(/\s+/u).filter(Boolean);
 const escape = (text: string) => text.replaceAll(/[.*+?^${}()|[\]\\]/gu, String.raw`\$&`);
+/** What may separate a phrase's words in text: whitespace or punctuation. */
+const WORD_GAP = String.raw`[\s\p{P}]+`;
 /** `text` without whole-word occurrences of `phrase`, case-insensitively. */
 function removePhrase(text: string, phrase: string): string {
   const parts = wordsOf(phrase).map(escape);
   if (!parts.length) return text;
-  const pattern = new RegExp(
-    String.raw`(?<![\p{L}\p{N}])${parts.join(String.raw`[\s\p{P}]+`)}(?![\p{L}\p{N}])`,
-    'giu',
-  );
+  const body = parts.join(WORD_GAP);
+  const pattern = new RegExp(String.raw`(?<![\p{L}\p{N}])${body}(?![\p{L}\p{N}])`, 'giu');
   return text.replaceAll(pattern, ' ');
+}
+
+const EDGE = /[\s\p{P}]/u;
+/** `text` without leading and trailing whitespace or punctuation. */
+function trimEdges(text: string): string {
+  let start = 0,
+    end = text.length;
+  while (start < end && EDGE.test(text.charAt(start))) start++;
+  while (end > start && EDGE.test(text.charAt(end - 1))) end--;
+  return text.slice(start, end);
 }
 
 /** Words that never make a product-line name on their own: category and common vocabulary. */
@@ -82,22 +92,27 @@ export function productLineTerms(
   categoryTerms: readonly string[],
 ): string[] {
   const common = commonVocabulary(categoryTerms);
-  const terms = new Set<string>();
-  for (const segment of offerings.flatMap((offering) => offering.split(/[(),:;/|–—]+/u))) {
-    const tokens = wordsOf(segment);
-    let start = -1;
-    for (let index = 0; index <= tokens.length; index++) {
-      const capital = index < tokens.length && /^\p{Lu}/u.test(tokens[index]!);
-      if (capital && start < 0) start = index;
-      if (capital || start < 0) continue;
-      const run = tokens.slice(start, index);
-      const sentenceCase = start === 0 && run.length === 1;
-      const generic = run.every((token) => [...promptTokens(token)].every((t) => common.has(t)));
-      if (!sentenceCase && !generic) terms.add(run.join(' '));
-      start = -1;
-    }
-  }
-  return [...terms];
+  const generic = (run: readonly string[]) =>
+    run.every((token) => [...promptTokens(token)].every((t) => common.has(t)));
+  const terms = offerings
+    .flatMap((offering) => offering.split(/[(),:;/|–—]+/u))
+    .flatMap((segment) => capitalRuns(wordsOf(segment)))
+    // A lone sentence-initial capital is ordinary sentence case.
+    .filter(({ start, run }) => !(start === 0 && run.length === 1) && !generic(run))
+    .map(({ run }) => run.join(' '));
+  return [...new Set(terms)];
+}
+
+/** Each maximal run of capitalised tokens, with the index it starts at. */
+function capitalRuns(tokens: readonly string[]): { start: number; run: string[] }[] {
+  const runs: { start: number; run: string[] }[] = [];
+  tokens.forEach((token, index) => {
+    if (!/^\p{Lu}/u.test(token)) return;
+    const last = runs.at(-1);
+    if (last && last.start + last.run.length === index) last.run.push(token);
+    else runs.push({ start: index, run: [token] });
+  });
+  return runs;
 }
 
 /**
@@ -108,11 +123,12 @@ export function productLineTerms(
 function categoryName(name: string, banned: readonly string[]): string | null {
   let text = name.replaceAll(/\([^)]*\)?/gu, ' ');
   for (const phrase of banned) text = removePhrase(text, phrase);
-  const kept = wordsOf(text)
-    .filter((word) => !/\d/u.test(word))
-    .join(' ')
-    .replaceAll(/^[\s\p{P}]+|[\s\p{P}]+$/gu, '')
-    .replaceAll(/\s+([,.;:])/gu, '$1');
+  // Words are joined by single spaces, so one space before punctuation is all there is.
+  const kept = trimEdges(
+    wordsOf(text)
+      .filter((word) => !/\d/u.test(word))
+      .join(' '),
+  ).replaceAll(/ ([,.;:])/gu, '$1');
   const tokens = promptTokens(kept);
   if (!tokens.size) return null;
   // A stripped name left with one word ("net") no longer names a category.
@@ -125,11 +141,7 @@ function categoryName(name: string, banned: readonly string[]): string | null {
     if (last === undefined || promptTokens(last).size) break;
     capped.pop();
   }
-  const category = capped
-    .join(' ')
-    .replaceAll(/[\s\p{P}]+$/gu, '')
-    .slice(0, policy.prompts.topic_name_max_chars)
-    .trim();
+  const category = trimEdges(capped.join(' ')).slice(0, policy.prompts.topic_name_max_chars).trim();
   return category.charAt(0).toUpperCase() + category.slice(1);
 }
 

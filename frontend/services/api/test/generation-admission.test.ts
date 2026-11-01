@@ -226,6 +226,35 @@ it('admits only planned stages for quick core rows, never after-purchase questio
   );
   expect(result.admitted.map((row) => row.text)).toEqual(['Best maxi dresses for a beach holiday']);
   expect(result.drops).toEqual({ stage: 1 });
+  // Branded and comparison rows keep to the planned stages too.
+  const branded = planSlots(
+    context,
+    generationInput.parse({ count: 1, cohort: 'brand_diagnostic' }),
+    [],
+  );
+  const diagnostic = admitDrafts(
+    [
+      {
+        text: 'How do I care for my Red Dress maxi dress after washing?',
+        slot_id: branded[0]!.slot_id,
+        buyer_stage: 'implementation',
+        prompt_intent: 'validate',
+      },
+      {
+        text: 'Does Red Dress sell maxi dresses for beach holidays?',
+        slot_id: branded[1]!.slot_id,
+        buyer_stage: 'consideration',
+        prompt_intent: 'validate',
+      },
+    ],
+    branded,
+    context,
+    [],
+  );
+  expect(diagnostic.admitted.map((row) => row.text)).toEqual([
+    'Does Red Dress sell maxi dresses for beach holidays?',
+  ]);
+  expect(diagnostic.drops).toEqual({ stage: 1 });
 });
 
 /** Every yes/no question a core draft is asked, shared and core-only. */

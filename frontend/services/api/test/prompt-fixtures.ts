@@ -252,9 +252,10 @@ export function echoDependencies({
     // Two words unique to the slot, so no two answers are near duplicates; a
     // branded batch names the brand it was given.
     const brand = user.reference_evidence.brand_name;
+    const named = typeof brand === 'string' && brand ? brand + ' ' : '';
     const prompts = user.slots.map((slot) => ({
       slot_id: slot.slot_id,
-      text: `Which ${brand ? `${String(brand)} ` : ''}running shoes suit ${slot.slot_id}style runners on ${slot.slot_id}grade trails?`,
+      text: `Which ${named}running shoes suit ${slot.slot_id}style runners on ${slot.slot_id}grade trails?`,
       buyer_stage: 'consideration',
       prompt_intent: 'recommend',
     }));

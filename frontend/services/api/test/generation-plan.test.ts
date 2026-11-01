@@ -132,14 +132,12 @@ describe('universe planner', () => {
         business_context: { ...plain.context.business_context, buyer_roles: [] },
       },
     } as GenerationContext;
-    expect(planSlots(roleless, generationInput.parse({ count: 3 }), []).map(facetOf)).toEqual([
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-    ]);
+    const bare = planSlots(roleless, generationInput.parse({ count: 3 }), []);
+    expect(bare.map(facetOf)).toEqual([null, null, null, null, null, null]);
+    // A cell without a facet claims no review at all.
+    expect(new Set(bare.map((slot) => slot.evidence_ref.review_state))).toEqual(
+      new Set(['not_applicable']),
+    );
   });
 
   it('gives every cell of a default ten-topic run a facet (the thenetreturn.com shape)', () => {
@@ -172,7 +170,7 @@ describe('universe planner', () => {
     } as GenerationContext;
     const slots = planSlots(context, generationInput.parse({ count: 20 }), []);
     expect(slots).toHaveLength(40);
-    expect(slots.filter((slot) => facetOf(slot)).length).toBe(40);
+    expect(slots.filter((slot) => facetOf(slot))).toHaveLength(40);
     expect(slots.filter((slot) => slot.buyer_need.offering === 'Golf net 9').map(facetOf)).toEqual([
       [['audience', 'home golfers']],
       [['audience', 'golf coaches']],
@@ -253,6 +251,54 @@ describe('distribution-aware planning', () => {
       [['audience', 'military families']],
       [['audience', 'grandparents']],
       [['audience', 'military families']],
+    ]);
+    // A requested persona is this run's choice, not evidence a person confirmed in the map.
+    const states = (offering: string) =>
+      new Set(
+        slots
+          .filter((slot) => slot.buyer_need.offering === offering)
+          .map((slot) => [slot.buyer_need.audience ?? '-', slot.evidence_ref.review_state].join()),
+      );
+    expect(states('Day school')).toEqual(
+      new Set(['grandparents,requested', 'military families,requested']),
+    );
+    expect(states('Boarding school')).toEqual(
+      new Set(['-,confirmed', 'grandparents,requested', 'military families,requested']),
+    );
+  });
+
+  it('plans a recovered category with the business maps of the offerings it covers', () => {
+    const base = fixtureContext(school, schoolMaps);
+    const category = {
+      id: fixtureTopicId(7),
+      name: 'Residential schooling',
+      description: '',
+      parent_id: null,
+    };
+    const context = {
+      ...base,
+      selected: [category],
+      topics: [category],
+      context: {
+        ...base.context,
+        business_context: {
+          ...base.context.business_context,
+          topic_offerings: { [category.id]: ['Boarding school'] },
+        },
+      },
+    } as GenerationContext;
+    const slots = planSlots(context, generationInput.parse({ count: 2 }), []);
+    expect(
+      slots.map((slot) => [
+        slot.buyer_need.offering,
+        facetOf(slot),
+        slot.evidence_ref.review_state,
+      ]),
+    ).toEqual([
+      ['Residential schooling', [['attribute', 'co-educational']], 'confirmed'],
+      ['Residential schooling', [['situation_or_constraint', 'first-time boarder']], 'confirmed'],
+      ['Residential schooling', [['audience', 'working parents']], 'confirmed'],
+      ['Residential schooling', [['attribute', 'sports facilities']], 'confirmed'],
     ]);
   });
 

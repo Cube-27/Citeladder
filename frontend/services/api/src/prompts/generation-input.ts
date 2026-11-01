@@ -99,14 +99,12 @@ export function requestKey(input: GenerationInput) {
   });
 }
 
-export function validateSelection(input: GenerationInput, topics: readonly { id: string }[]) {
-  const wanted = wantedTopics(input);
+/** The request's own shape, checked before any read: no topics are needed. */
+export function validateRequest(input: GenerationInput) {
   if (input.count > generationSetting('max_count'))
     throw generationInvalid('Requested count exceeds generation limit');
-  if (wanted.length > generationSetting('max_topic_ids'))
+  if (wantedTopics(input).length > generationSetting('max_topic_ids'))
     throw generationInvalid('Too many topics selected');
-  if (wanted.some((id) => !topics.some((topic) => topic.id === id)))
-    throw generationInvalid('Selected topic is unavailable in this project');
   if (input.agent_revision_id && input.cohort !== 'core')
     throw generationInvalid('Agent portfolios require the core cohort');
   if (
@@ -118,4 +116,11 @@ export function validateSelection(input: GenerationInput, topics: readonly { id:
     throw generationInvalid('A distribution plans its own cohorts; leave the cohort as core');
   if (input.seed_query_ids.length && (!input.seed_source || input.seed_source === 'none'))
     throw generationInvalid('Seed queries need their search data source');
+}
+
+/** The request's shape plus every selected topic belonging to the project's `topics`. */
+export function validateSelection(input: GenerationInput, topics: readonly { id: string }[]) {
+  validateRequest(input);
+  if (wantedTopics(input).some((id) => !topics.some((topic) => topic.id === id)))
+    throw generationInvalid('Selected topic is unavailable in this project');
 }

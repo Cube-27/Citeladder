@@ -33,6 +33,7 @@ import {
   generationInvalid,
   generationSetting,
   requestKey,
+  validateRequest,
   validateSelection,
   wantedTopics,
   type GenerationInput,
@@ -146,15 +147,19 @@ async function mergeMapSuggestions(
     .execute();
 }
 
+type StageInput = {
+  workspaceId: string;
+  context: GenerationContext;
+  input: GenerationInput;
+  idempotencyKey: string | null;
+  output: Awaited<ReturnType<typeof generateDrafts>>;
+  gate: Awaited<ReturnType<typeof judgeDrafts>>;
+  recovery: TopicRecovery;
+};
+
 function stage(
   db: Database,
-  workspaceId: string,
-  context: GenerationContext,
-  input: GenerationInput,
-  idempotencyKey: string | null,
-  output: Awaited<ReturnType<typeof generateDrafts>>,
-  gate: Awaited<ReturnType<typeof judgeDrafts>>,
-  recovery: TopicRecovery,
+  { workspaceId, context, input, idempotencyKey, output, gate, recovery }: StageInput,
 ) {
   return db.transaction().execute(async (trx) => {
     await acquireProjectLock(trx, context.project.id);
@@ -402,38 +407,39 @@ export async function generatePrompts(
     const prior = await replay(db, workspaceId, setId, input, idempotencyKey);
     if (prior) return prior;
   }
-  // Request-shape checks need no topics; topic ownership is checked with them.
-  validateSelection(
-    input,
-    wantedTopics(input).map((id) => ({ id })),
-  );
+  // Request-shape checks need no topics; ownership of named topics is checked
+  // with the project's topics in the context read, before any model call.
+  validateRequest(input);
   const meter = (dependencies.meter ?? meterFor)(db, workspaceId);
   // Configured only once the set is authorized: an Agent portfolio drafts nothing.
   let metered: ModelGateway | undefined;
-  const gatewayFor = () =>
-    input.agent_revision_id
-      ? null
-      : (metered ??= meter.gateway(dependencies.gateway(), 'prompt_generation'));
+  const gatewayFor = () => {
+    if (input.agent_revision_id) return null;
+    metered ??= meter.gateway(dependencies.gateway(), 'prompt_generation');
+    return metered;
+  };
   const deadline = (dependencies.deadline ?? draftDeadline)();
   try {
-    // An Agent portfolio files rows under existing topics; only quick
-    // generation proposes topics for a project that has none.
-    const recovery = input.agent_revision_id
-      ? null
-      : await recoverTopics(
-          db,
-          { workspaceId, setId },
-          {
-            gateway: gatewayFor,
-            deadline,
-            reserve: () =>
-              enforceWorkspaceRequest(
-                db,
-                workspaceId,
-                agentCallLimit(policy.prompts.generation.topic_calls),
-              ),
-          },
-        );
+    // Only a quick run over every topic proposes topics for a project that
+    // has none: an Agent portfolio files rows under existing topics, and a
+    // request naming topics needs them to exist already.
+    const recovery =
+      input.agent_revision_id || wantedTopics(input).length
+        ? null
+        : await recoverTopics(
+            db,
+            { workspaceId, setId },
+            {
+              gateway: gatewayFor,
+              deadline,
+              reserve: () =>
+                enforceWorkspaceRequest(
+                  db,
+                  workspaceId,
+                  agentCallLimit(policy.prompts.generation.topic_calls),
+                ),
+            },
+          );
     const context = await generationContext(db, workspaceId, setId, input);
     if (cohortShares(input).comparison > 0 && !context.context.competitors.length)
       throw generationInvalid('Add a competitor before generating comparison prompts');
@@ -466,7 +472,15 @@ export async function generatePrompts(
       output.drafts,
       judge ? meter.jev(judge, 'prompt_quality_judge') : null,
     );
-    return await stage(db, workspaceId, context, input, idempotencyKey, output, gate, recovery);
+    return await stage(db, {
+      workspaceId,
+      context,
+      input,
+      idempotencyKey,
+      output,
+      gate,
+      recovery,
+    });
   } catch (error) {
     throw error instanceof ModelError ? generationFailure(error) : error;
   }

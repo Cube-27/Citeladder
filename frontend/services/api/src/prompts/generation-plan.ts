@@ -6,6 +6,8 @@
 import { DENSE_SCRIPT } from '../analysis/aliases.ts';
 import { policy } from '../config.ts';
 import { record, strings } from '../db/json.ts';
+import { z } from 'zod';
+
 import type { GenerationContext, OfferingMap } from './generation-context.ts';
 import {
   cohortShares,
@@ -43,12 +45,39 @@ type Grounding = Pick<
   ObservedQuery,
   'id' | 'source' | 'text' | 'classifier_version' | 'override_id'
 >;
-type Facet = { dimension: number; value: string; suggested: boolean };
+/**
+ * Where a facet value comes from: `confirmed` by a person in the business map,
+ * `suggested` by a model or inferred buyer roles, or `requested` as a persona
+ * for this run only.
+ */
+type FacetSource = 'confirmed' | 'suggested' | 'requested';
+type Facet = { dimension: number; value: string; source: FacetSource };
+/** A cell's evidence review state; `not_applicable` when it carries no facet. */
+type CellReviewState = FacetSource | 'not_applicable';
 type PlanContext = Pick<GenerationContext, 'selected' | 'topics' | 'maps' | 'observed'> & {
   context: Pick<GenerationContext['context'], 'business_context'>;
 };
 
 const business = (context: PlanContext) => record(context.context.business_context);
+
+/**
+ * `business_context.topic_offerings`: the saved offerings each recovered topic
+ * was proposed from, by topic id, so a buyer-facing category keeps its
+ * offerings' business-map facets whatever it is named.
+ */
+export const topicLinks = z.record(z.string(), z.array(z.string())).catch({});
+
+/**
+ * The offerings a topic covers: those it was proposed from, else the offering
+ * it is named after.
+ */
+export function topicOfferings(
+  values: Record<string, unknown>,
+  topic: { id: string; name: string },
+): string[] {
+  const linked = topicLinks.parse(values.topic_offerings ?? {})[topic.id] ?? [];
+  return linked.length ? linked : [topic.name];
+}
 
 /** The reviewed market scope's share of cells that may name a market. */
 function locationShare(context: PlanContext): number {
@@ -109,10 +138,10 @@ const entryFacets = (dimension: number, entries: OfferingMap[(typeof dimensions)
   entries.map((entry) => ({
     dimension,
     value: entry.value,
-    suggested: entry.review_state !== 'confirmed',
+    source: entry.review_state === 'confirmed' ? ('confirmed' as const) : ('suggested' as const),
   }));
-const personaFacets = (values: readonly string[], suggested: boolean) =>
-  values.map((value) => ({ dimension: PERSONA, value, suggested }));
+const personaFacets = (values: readonly string[], source: FacetSource) =>
+  values.map((value) => ({ dimension: PERSONA, value, source }));
 /** Facets with case-insensitively repeated values removed, first spelling kept. */
 const distinctFacets = (facets: readonly Facet[]) => [
   ...new Map(facets.map((facet) => [facet.value.toLowerCase(), facet])).values(),
@@ -120,7 +149,8 @@ const distinctFacets = (facets: readonly Facet[]) => [
 
 type Planner = {
   topic: GenerationContext['selected'][number];
-  map: OfferingMap | undefined;
+  /** The offering label cells carry. */
+  offering: string;
   /** The topic's facet options; every cell takes exactly one when any exist. */
   options: Facet[];
   cells: number;
@@ -129,12 +159,40 @@ type Planner = {
 };
 
 /**
- * Each selected topic's facet options: its offering map's (or its parent's)
- * attributes, situations and audiences. The run's personas, when requested,
- * replace the audiences; otherwise inferred buyer roles stand in for missing
- * confirmed audiences. A topic without map facets falls back to those
- * personas and every audience the business map lists; only a business
- * without any of them plans bare cells.
+ * The offering maps a topic draws facets from: the map named like the topic,
+ * else the maps of the offerings it was proposed from (`topicOfferings`),
+ * else its parent's. A map named like the topic lends its offering label; a
+ * category proposed from offerings keeps its own buyer-facing name.
+ */
+function topicMaps(
+  context: PlanContext,
+  maps: readonly OfferingMap[],
+  topic: GenerationContext['selected'][number],
+): { maps: OfferingMap[]; offering: string } {
+  const values = business(context);
+  const withFacets = (name: string) =>
+    maps.filter(
+      (map) =>
+        map.offering.toLowerCase() === name.toLowerCase() &&
+        dimensions.some((dimension) => map[dimension].length),
+    );
+  const parent = context.topics.find((item) => item.id === topic.parent_id);
+  for (const owner of parent ? [topic, parent] : [topic]) {
+    const named = withFacets(owner.name);
+    if (named[0]) return { maps: named.slice(0, 1), offering: named[0].offering };
+    const linked = topicOfferings(values, owner).flatMap(withFacets);
+    if (linked.length) return { maps: linked, offering: topic.name };
+  }
+  return { maps: [], offering: topic.name };
+}
+
+/**
+ * Each selected topic's facet options: its offering maps' attributes,
+ * situations and audiences. The run's personas, when requested, replace the
+ * audiences; otherwise inferred buyer roles stand in for missing confirmed
+ * audiences. A topic without map facets falls back to those personas and
+ * every audience the business map lists; only a business without any of them
+ * plans bare cells.
  */
 function planners(
   context: PlanContext,
@@ -142,34 +200,32 @@ function planners(
   input: GenerationInput,
 ): Planner[] {
   const maps = [...context.maps, ...suggestions];
-  const requested = personaFacets(input.distribution?.personas ?? [], false);
-  const roles = personaFacets(strings(business(context).buyer_roles), true);
+  const requested = personaFacets(input.distribution?.personas ?? [], 'requested');
+  const roles = personaFacets(strings(business(context).buyer_roles), 'suggested');
   const audiences = maps.flatMap((map) => entryFacets(PERSONA, map.audiences));
   const fallback = distinctFacets(requested.length ? requested : [...roles, ...audiences]);
   return context.selected.map((topic) => {
-    const parent = context.topics.find((item) => item.id === topic.parent_id);
-    const match = (name: string) =>
-      maps.find(
-        (map) =>
-          map.offering.toLowerCase() === name.toLowerCase() &&
-          dimensions.some((dimension) => map[dimension].length),
-      );
-    const map = match(topic.name) ?? (parent ? match(parent.name) : undefined);
-    const confirmedAudience = map?.audiences.some((entry) => entry.review_state === 'confirmed');
+    const { maps: own, offering } = topicMaps(context, maps, topic);
+    const confirmedAudience = own.some((map) =>
+      map.audiences.some((entry) => entry.review_state === 'confirmed'),
+    );
     let people = requested;
     if (!requested.length)
-      people = [...entryFacets(PERSONA, map?.audiences ?? []), ...(confirmedAudience ? [] : roles)];
-    const own = map
+      people = [
+        ...own.flatMap((map) => entryFacets(PERSONA, map.audiences)),
+        ...(confirmedAudience ? [] : roles),
+      ];
+    const options = own.length
       ? distinctFacets([
-          ...entryFacets(dimensions.indexOf('attributes'), map.attributes),
-          ...entryFacets(dimensions.indexOf('situations'), map.situations),
+          ...own.flatMap((map) => entryFacets(dimensions.indexOf('attributes'), map.attributes)),
+          ...own.flatMap((map) => entryFacets(dimensions.indexOf('situations'), map.situations)),
           ...people,
         ])
       : [];
     return {
       topic,
-      map,
-      options: own.length ? own : fallback,
+      offering,
+      options: options.length ? options : fallback,
       cells: 0,
       located: 0,
       usage: new Map(),
@@ -189,7 +245,7 @@ function nextFacet(plan: Planner, options: NonEmpty<Facet>): Facet {
   const compare = (a: Facet, b: Facet) =>
     used(facetKey(a)) - used(facetKey(b)) ||
     used(`dimension:${a.dimension}`) - used(`dimension:${b.dimension}`) ||
-    Number(a.suggested) - Number(b.suggested);
+    Number(a.source === 'suggested') - Number(b.source === 'suggested');
   // The first of the least: the head of a stable sort.
   return options.reduce((best, facet) => (compare(facet, best) < 0 ? facet : best));
 }
@@ -324,7 +380,8 @@ export function planSlots(
         count(plan.usage, key);
       count(run, `stage:${stage}`);
       count(run, `cohort:${cohort}`);
-      const need: Record<string, string> = { offering: plan.map?.offering ?? plan.topic.name };
+      const need: Record<string, string> = { offering: plan.offering };
+      const reviewState: CellReviewState = facet?.source ?? 'not_applicable';
       if (facet) need[facets[facet.dimension]!] = facet.value;
       if (market) need.market = market;
       const grounding = groundingFor(searches.get(plan.topic.id) ?? [], need);
@@ -343,7 +400,7 @@ export function planSlots(
           kind: 'business_map_cell',
           ...need,
           target_buyer_stage: stage,
-          review_state: facet?.suggested ? 'suggested' : 'confirmed',
+          review_state: reviewState,
           evidence_type: 'hypothesis',
         },
         ...(grounding.length ? { grounding } : {}),
