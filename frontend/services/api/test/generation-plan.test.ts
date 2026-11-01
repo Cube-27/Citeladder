@@ -2,12 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { policy } from '../src/config.ts';
 import type { GenerationContext } from '../src/prompts/generation-context.ts';
-import {
-  admitDrafts,
-  draftCallLimit,
-  generateDrafts,
-  planBatches,
-} from '../src/prompts/generation-drafts.ts';
+import { admitDrafts, draftCallLimit, planBatches } from '../src/prompts/generation-drafts.ts';
 import { generationInput, validateSelection } from '../src/prompts/generation-input.ts';
 import {
   observedLikeness,
@@ -569,57 +564,5 @@ describe('observed likeness', () => {
         observed,
       ),
     ).toBe(0.25);
-  });
-});
-
-describe('Agent portfolio rows', () => {
-  const school = fixture('regional-school');
-  const portfolio = (rows: Record<string, unknown>[]) => ({
-    ...fixtureContext(school),
-    revision: {
-      id: 'revision',
-      output_id: 'output',
-      run_id: null,
-      source_refs: [],
-      body: ['```json', JSON.stringify({ prompts: rows }), '```'].join('\n'),
-    },
-  });
-  const row = (text: string, extra: Record<string, unknown> = {}) => ({
-    topic_id: fixtureTopicId(0),
-    text,
-    buyer_stage: 'decision',
-    prompt_intent: 'buy',
-    ...extra,
-  });
-
-  it('keeps a targeted place as the cell market and admits untargeted rows as before', async () => {
-    const result = await generateDrafts(
-      portfolio([
-        row('Which boarding schools in Dehradun take first-time boarders?', {
-          targeting: { place: 'Dehradun', persona: 'working parents' },
-        }),
-        row('Which boarding schools suit a child who struggles with homesickness?'),
-      ]) as GenerationContext,
-      generationInput.parse({ count: 2 }),
-      null,
-      new AbortController().signal,
-    );
-    expect(result.drafts.map((draft) => draft.slot.buyer_need)).toEqual([
-      { offering: 'Boarding school', market: 'Dehradun', audience: 'working parents' },
-      { offering: 'Boarding school' },
-    ]);
-  });
-
-  it('refuses a portfolio with an unknown targeting key', async () => {
-    await expect(
-      generateDrafts(
-        portfolio([
-          row('Which boarding schools take day scholars?', { targeting: { city: 'X' } }),
-        ]) as GenerationContext,
-        generationInput.parse({ count: 1 }),
-        null,
-        new AbortController().signal,
-      ),
-    ).rejects.toMatchObject({ status: 422 });
   });
 });

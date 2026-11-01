@@ -121,14 +121,14 @@
   },
   {
     "id": "s12-prompt-discovery",
-    "kind": "skill deliverable, outline first",
+    "kind": "skill deliverable, drafted directly",
     "turns": [
       {
-        "message": "Suggest more buyer prompts we should track for our main product categories.",
+        "message": "Plan our next prompt run for our main product categories.",
         "skill_id": "prompt_discovery"
       }
     ],
-    "review": "Saves an outline first; prompts are short buyer questions answerable by naming a business."
+    "review": "Saves a prompt plan following the Prompt Builder's steps; buyer-facing topics, no prompt wording or IDs, and it sends the user to the Prompt Builder."
   },
   {
     "id": "s13-content-action",

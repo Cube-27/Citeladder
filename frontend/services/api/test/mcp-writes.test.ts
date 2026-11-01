@@ -69,7 +69,7 @@ async function connection(
   return principal;
 }
 const call = (principal: McpPrincipal, name: Parameters<typeof dispatchWrite>[1], args: unknown) =>
-  dispatchWrite({ db, config, principal }, name, args);
+  dispatchWrite({ db, config, principal, origin: 'https://app.example.test' }, name, args);
 const failure = (promise: Promise<unknown>) =>
   promise.then(
     () => 'succeeded',
@@ -354,6 +354,87 @@ it('stops tracking a competitor and deletes a topic by name, keeping its prompts
       .where('prompt_set_id', '=', tenant.setId)
       .execute(),
   ).toEqual([{ text: 'Which running shoes suit road use?', topic_id: null, status: 'active' }]);
+});
+
+it('saves a reviewed topic plan as one change and refuses a topic from another project', async () => {
+  const tenant = await auditTenant(db, fixtures);
+  const principal = await connection(tenant);
+  const nets = await topic(db, tenant.projectId, 'Golf net');
+  const mats = await topic(db, tenant.projectId, 'Hitting mats');
+  const sibling = await fixtures.project(tenant.workspaceId);
+  const foreign = await topic(db, sibling, 'Putting greens');
+  expect(
+    await failure(
+      call(principal, 'confirm_topics', { project_id: tenant.projectId, delete: [foreign] }),
+    ),
+  ).toBe('Topic not found');
+  const saved = await call(principal, 'confirm_topics', {
+    project_id: tenant.projectId,
+    create: [{ name: 'Golf simulator enclosures' }],
+    rename: [{ id: nets, name: 'Golf nets' }],
+    delete: [mats],
+  });
+  expect(saved).toMatchObject({ state: 'changed', change: 'confirm_topics' });
+  expect((saved.topics as { name: string }[]).map((item) => item.name).toSorted()).toEqual([
+    'Golf nets',
+    'Golf simulator enclosures',
+  ]);
+  expect(
+    (
+      await db
+        .selectFrom('topics')
+        .select('name')
+        .where('project_id', 'in', [tenant.projectId, sibling])
+        .orderBy('name')
+        .execute()
+    ).map((row) => row.name),
+  ).toEqual(['Golf nets', 'Golf simulator enclosures', 'Putting greens']);
+  expect(
+    await db
+      .selectFrom('security_events')
+      .select('event')
+      .where('actor_id', '=', tenant.userId)
+      .where('event', 'like', 'mcp.write.%')
+      .execute(),
+  ).toEqual([{ event: 'mcp.write.confirm_topics' }]);
+});
+
+it('refuses topic previews and generation runs the owner refuses, before any model call', async () => {
+  const tenant = await auditTenant(db, fixtures);
+  const principal = await connection(tenant);
+  // No saved offerings: there is nothing to propose a topic from.
+  expect(await failure(call(principal, 'preview_topics', { project_id: tenant.projectId }))).toBe(
+    'Add at least one offering before proposing topics',
+  );
+  await topic(db, tenant.projectId, 'Road running');
+  // The distribution reaches the owner: a competitor share needs a competitor.
+  expect(
+    await failure(
+      call(principal, 'generate_prompts', {
+        project_id: tenant.projectId,
+        distribution: { comparison_share: 0.2 },
+      }),
+    ),
+  ).toBe('Add a competitor before generating comparison prompts');
+  expect(
+    await failure(
+      call(principal, 'generate_prompts', {
+        project_id: tenant.projectId,
+        seed_query_ids: [randomUUID()],
+      }),
+    ),
+  ).toBe('Seed queries need their search data source');
+  expect(
+    await db
+      .selectFrom('prompt_generation_runs')
+      .select('id')
+      .where('project_id', '=', tenant.projectId)
+      .execute(),
+  ).toEqual([]);
+  await setRole(tenant, 'viewer');
+  expect(await failure(call(principal, 'generate_prompts', { project_id: tenant.projectId }))).toBe(
+    'Workspace member access is required',
+  );
 });
 
 it('launches an audit only on confirmation, within the frozen estimate', async () => {
