@@ -272,5 +272,65 @@ describe('BrandProfilePanel', () => {
     expect(screen.getByText('Northstar').parentElement?.querySelector('img')).toBeInTheDocument();
     expect(screen.getByText('Contoso')).toBeVisible();
     expect(screen.getByText('Observed candidate')).toBeVisible();
+    // Brand facts is a tab only inside the pilot.
+    expect(screen.queryByRole('tab', { name: 'Brand facts' })).not.toBeInTheDocument();
+  });
+
+  it('shows the business map read-only, linked to the Prompt Builder that edits it', async () => {
+    const user = userEvent.setup({ delay: null });
+    const offering = 'Golf practice net';
+    mswServer.use(
+      http.get(`/api/v1/projects/${projectId}/business-map`, () =>
+        HttpResponse.json({
+          available_offerings: [offering],
+          offerings: [
+            {
+              offering,
+              attributes: [],
+              situations: [
+                {
+                  value: 'Small garden',
+                  origin: 'model',
+                  review_state: 'suggested',
+                  reviewed_by: null,
+                  reviewed_at: null,
+                  source: {},
+                },
+              ],
+              audiences: [],
+              exclusions: [],
+            },
+          ],
+        }),
+      ),
+    );
+    renderWithProviders(
+      <BrandProfilePanel
+        projectId={projectId}
+        profile={{
+          ...profile,
+          products_services: [offering],
+          business_context: { buyer_roles: ['Club coach'], business_model: 'd2c_product' },
+        }}
+        brandFacts={<p>Pricing starts at £99</p>}
+      />,
+    );
+
+    await user.click(screen.getByRole('tab', { name: 'Business map' }));
+    const details = await screen.findByLabelText('Business details');
+    expect(details).toHaveTextContent('Buyer rolesClub coach');
+    expect(details).toHaveTextContent('Business modelProducts sold direct');
+    expect(screen.getByRole('region', { name: offering })).toHaveTextContent(
+      'Situations and constraintsSmall garden (suggested)',
+    );
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Edit in Prompt Builder' })).toHaveAttribute(
+      'href',
+      expect.stringContaining('/prompts?generate=1'),
+    );
+
+    await user.click(screen.getByRole('tab', { name: 'Brand facts' }));
+    expect(screen.getByText('Pricing starts at £99')).toBeVisible();
+    expect(screen.queryByLabelText('Business details')).not.toBeInTheDocument();
   });
 });
