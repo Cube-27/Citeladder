@@ -196,6 +196,18 @@ function BrandFactsTab({
   );
 }
 
+/** The Brand facts tab: the pilot's facts, the gate's read error, or none outside the pilot. */
+function brandFactsTab(
+  facts: ReturnType<typeof useBrandFacts>,
+  workspaceId: string,
+  projectId: string,
+): ReactNode {
+  if (facts.isError)
+    return <ReadError {...readErrorProps(facts)} fallback="Brand facts could not be loaded." />;
+  if (!facts.data?.enabled) return undefined;
+  return <BrandFactsTab workspaceId={workspaceId} projectId={projectId} list={facts.data} />;
+}
+
 /** Company facts and competitors, moved here from the Overview facts drawer. */
 function CompanyFacts({
   workspaceId,
@@ -207,7 +219,7 @@ function CompanyFacts({
     queryFn: ({ signal }) => projectsApi.getBrandProfile(project.id, { signal, workspaceId }),
   });
   // The pilot gate is known before the panel renders, so its tab never appears
-  // late; outside the pilot, or when the gate cannot be read, there is no tab.
+  // late. Outside the pilot there is no tab; an unreadable gate shows its error there.
   const facts = useBrandFacts(project.id, workspaceId);
   const ready = facts.isPending ? null : profile.data;
   const suggestions = useQuery({
@@ -233,11 +245,7 @@ function CompanyFacts({
           competitorSuggestions={
             <CompetitorSuggestions projectId={project.id} suggestionsQuery={suggestions} />
           }
-          brandFacts={
-            facts.data?.enabled ? (
-              <BrandFactsTab workspaceId={workspaceId} projectId={project.id} list={facts.data} />
-            ) : undefined
-          }
+          brandFacts={brandFactsTab(facts, workspaceId, project.id)}
           onSaved={() =>
             void queryClient.invalidateQueries({
               queryKey: queryKeys.projects.commandCenter(project.id),

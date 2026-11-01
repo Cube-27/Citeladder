@@ -42,8 +42,9 @@ Accept in CiteLadder tracks them.
 ## 4. Generate and review
 
 1. Summarize the run (number, topics, mix, search data, any note) and wait for
-   the user's yes. Then call `generate_prompts` once. Each run spends AI
-   credits: never repeat a call that returned.
+   the user's yes. Then call `generate_prompts` once, with a new random
+   `run_key`. Each run spends AI credits: never repeat a call that returned,
+   and resend the same `run_key` if you must retry one that failed to reply.
 2. Report how many suggestions were staged, a few of them as written, and any
    shortfall or dropped reasons in plain words. Send the user to the returned
    review link to accept or reject them. Never say the prompts are tracked.

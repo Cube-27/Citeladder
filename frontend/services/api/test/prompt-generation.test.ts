@@ -245,7 +245,11 @@ describe('prompt generation at the PostgreSQL boundary', () => {
     // The day's window is now exactly spent, so the next run's judging is
     // refused; clearing the staged drafts lets the same drafts be admitted again.
     vi.stubEnv('ABUSE_PROMPT_JUDGE_CALLS_PER_WORKSPACE_DAILY', String(judged));
-    await db.deleteFrom('prompt_candidates').where('prompt_set_id', '=', setId).execute();
+    await db
+      .deleteFrom('prompt_candidates')
+      .where('workspace_id', '=', tenant.workspaceId)
+      .where('prompt_set_id', '=', setId)
+      .execute();
     await expect(generate(deps)).rejects.toMatchObject({ status: 429 });
     expect(deps.judgeFetch).toHaveBeenCalledTimes(judged);
     const runs = await db

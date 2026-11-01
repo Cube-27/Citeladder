@@ -333,4 +333,30 @@ describe('BrandProfilePanel', () => {
     expect(screen.getByText('Pricing starts at £99')).toBeVisible();
     expect(screen.queryByLabelText('Business details')).not.toBeInTheDocument();
   });
+
+  it('tells an unrecognized saved business model apart from none', async () => {
+    const user = userEvent.setup({ delay: null });
+    mswServer.use(
+      http.get(`/api/v1/projects/${projectId}/business-map`, () =>
+        HttpResponse.json({ available_offerings: [], offerings: [] }),
+      ),
+    );
+    const view = renderWithProviders(
+      <BrandProfilePanel
+        projectId={projectId}
+        profile={{ ...profile, business_context: { business_model: 'franchise' } }}
+      />,
+    );
+    await user.click(screen.getByRole('tab', { name: 'Business map' }));
+    expect(await screen.findByLabelText('Business details')).toHaveTextContent(
+      'Business modelUnknown',
+    );
+    view.unmount();
+
+    renderWithProviders(<BrandProfilePanel projectId={projectId} profile={profile} />);
+    await user.click(screen.getByRole('tab', { name: 'Business map' }));
+    expect(await screen.findByLabelText('Business details')).toHaveTextContent(
+      'Business modelNot set',
+    );
+  });
 });

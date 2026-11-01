@@ -26,6 +26,13 @@ import { PROMPTS_GENERATE_HREF } from '@/lib/prompts/routes';
 function listValue(values: readonly string[]) {
   return values.length ? values.join(', ') : <UnavailableValue state="not_set" />;
 }
+/** The saved business model's label; a saved value this app does not recognize stays distinct from none. */
+function businessModelValue(profile: BrandProfile) {
+  const saved = profile.business_context.business_model;
+  const choice = BUSINESS_MODEL_CHOICES.find((option) => option.value === saved);
+  if (choice) return choice.label;
+  return <UnavailableValue state={saved == null || saved === '' ? 'not_set' : 'unknown'} />;
+}
 const entryValues = (entries: readonly MapEntryDraft[]) =>
   entries.map((entry) =>
     entry.review_state === 'suggested' ? `${entry.value} (suggested)` : entry.value,
@@ -54,7 +61,6 @@ export function BusinessMapSummary({
       />
     );
   const draft = businessDraft(profile, query.data);
-  const model = BUSINESS_MODEL_CHOICES.find((choice) => choice.value === draft.businessModel);
   const facts: Fact[] = [
     { label: 'Buyer roles', value: listValue(draft.buyerRoles) },
     ...(showsServiceAreas(profile.business_context)
@@ -62,7 +68,7 @@ export function BusinessMapSummary({
       : []),
     { label: 'Category terms', value: listValue(draft.categoryTerms) },
     { label: 'Jobs to be done', value: listValue(draft.jobs) },
-    { label: 'Business model', value: model?.label ?? <UnavailableValue state="not_set" /> },
+    { label: 'Business model', value: businessModelValue(profile) },
   ];
   return (
     <Stack gap="workspace">

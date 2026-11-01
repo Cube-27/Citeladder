@@ -225,7 +225,10 @@ The Prompt Builder tools call the same command owners as the builder's routes
 holds and owner errors. A model call cannot be rehearsed inside a rolled-back
 transaction, so they are not prepared: the server instructions and the
 `prompt-discovery` plugin skill require the user's yes before each, and
-`generate_prompts` activates nothing (only Accept in Prompts does).
+`generate_prompts` activates nothing (only Accept in Prompts does). Its required
+`run_key` is the generation owner's idempotency key: a retry with the same key
+and request replays the persisted run instead of spending a second one, and the
+same key for a different request is refused.
 
 A prepare tool runs its command as a **dry run** (`rehearse` in the write
 catalogue, over the operator rollback transaction): every check, admission and
@@ -245,7 +248,7 @@ this way are active immediately. Each executed change records an
 Write calls spend the normal tool budgets plus 30 a minute per grant. Tools
 carry their own annotations: reads `readOnlyHint: true`; writes
 `readOnlyHint: false`, `destructiveHint` on archive, cancel,
-`remove_competitor`, `delete_topic`, `confirm_topics` and `confirm_change`, `idempotentHint` on renames and status updates.
+`remove_competitor`, `delete_topic`, `confirm_topics` and `confirm_change`, `idempotentHint` on renames, status updates and `generate_prompts` (by `run_key`).
 Only `confirm_change` carries `openWorldHint: true`: a confirmed audit launch
 asks external AI engines. The server
 instructions require the user's yes before any change tool, and for a prepare

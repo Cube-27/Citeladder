@@ -1781,7 +1781,7 @@
     {
       "name": "generate_prompts",
       "title": "Generate prompts",
-      "description": "Run CiteLadder's prompt generator for the project, as the Prompt Builder's Generate step does, once the user agreed to the run. The suggestions are staged for review and never tracked: only the user's Accept in CiteLadder's Prompts review (review_url) activates them. Spends AI credits, so call it once per agreed run and never repeat a call that returned. distribution sets the branded and competitor-alternative shares, intent mix and personas; seed_source and seed_query_ids come from read_seed_queries; run_context is a note for this run only. A shortfall is reported with its reasons, never filled.",
+      "description": "Run CiteLadder's prompt generator for the project, as the Prompt Builder's Generate step does, once the user agreed to the run. The suggestions are staged for review and never tracked: only the user's Accept in CiteLadder's Prompts review (review_url) activates them. Spends AI credits, so call it once per agreed run: choose a new run_key for each agreed run and resend the same run_key on a retry, which returns the staged result instead of running again. distribution sets the branded and competitor-alternative shares, intent mix and personas; seed_source and seed_query_ids come from read_seed_queries; run_context is a note for this run only. A shortfall is reported with its reasons, never filled.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -1794,6 +1794,12 @@
             "type": "string",
             "format": "uuid",
             "description": "A prompt set id from read_prompt_portfolio; omit when the project has only one prompt set."
+          },
+          "run_key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "A key you choose once for this agreed run, such as a new random UUID. Resend it unchanged on a retry; a new run needs a new key."
           },
           "count": {
             "default": 10,
@@ -1901,7 +1907,7 @@
             }
           }
         },
-        "required": ["project_id"],
+        "required": ["project_id", "run_key"],
         "additionalProperties": false
       },
       "access": "write"

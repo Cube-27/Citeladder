@@ -43,7 +43,7 @@ const PROFILE_TABS = [
 
 type ProfileTab = (typeof PROFILE_TABS)[number]['id'];
 /** Tabs that save on their own or not at all; the profile's Save keeps its box there. */
-const SELF_SAVING_TABS: readonly ProfileTab[] = ['map', 'brand-facts'];
+const SELF_SAVING_TABS: ReadonlySet<ProfileTab> = new Set(['map', 'brand-facts']);
 type TrackedCompetitor = Pick<Project['competitors'][number], 'name' | 'logo_url' | 'domains'>;
 
 function profileDraft(profile: BrandProfile): BrandProfileDraft {
@@ -163,7 +163,7 @@ export function BrandProfilePanel({
         actions={
           <Button
             variant="primary"
-            className={SELF_SAVING_TABS.includes(activeTab) ? 'invisible' : undefined}
+            className={SELF_SAVING_TABS.has(activeTab) ? 'invisible' : undefined}
             onClick={() => saveMutation.mutate()}
             disabled={!workspaceId || saveMutation.isPending}
           >
@@ -193,7 +193,7 @@ export function BrandProfilePanel({
             <BusinessMapTab projectId={projectId} workspaceId={workspaceId} profile={profile} />
           ) : null}
           {activeTab === 'brand-facts' ? brandFacts : null}
-          {SELF_SAVING_TABS.includes(activeTab) ? null : (
+          {SELF_SAVING_TABS.has(activeTab) ? null : (
             <ProfileTabPanel
               activeTab={activeTab}
               draft={draft}

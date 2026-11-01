@@ -431,10 +431,18 @@ const writeDefinitions = {
   generate_prompts: tool({
     title: 'Generate prompts',
     description:
-      "Run CiteLadder's prompt generator for the project, as the Prompt Builder's Generate step does, once the user agreed to the run. The suggestions are staged for review and never tracked: only the user's Accept in CiteLadder's Prompts review (review_url) activates them. Spends AI credits, so call it once per agreed run and never repeat a call that returned. distribution sets the branded and competitor-alternative shares, intent mix and personas; seed_source and seed_query_ids come from read_seed_queries; run_context is a note for this run only. A shortfall is reported with its reasons, never filled.",
+      "Run CiteLadder's prompt generator for the project, as the Prompt Builder's Generate step does, once the user agreed to the run. The suggestions are staged for review and never tracked: only the user's Accept in CiteLadder's Prompts review (review_url) activates them. Spends AI credits, so call it once per agreed run: choose a new run_key for each agreed run and resend the same run_key on a retry, which returns the staged result instead of running again. distribution sets the branded and competitor-alternative shares, intent mix and personas; seed_source and seed_query_ids come from read_seed_queries; run_context is a note for this run only. A shortfall is reported with its reasons, never filled.",
     schema: z.strictObject({
       ...project,
       prompt_set_id: promptSet,
+      run_key: z
+        .string()
+        .trim()
+        .min(1)
+        .max(policy.prompts.generation.idempotency_key_max_chars)
+        .describe(
+          'A key you choose once for this agreed run, such as a new random UUID. Resend it unchanged on a retry; a new run needs a new key.',
+        ),
       count: generationInput.shape.count.describe(
         'How many suggestions to stage; omit for the default.',
       ),
@@ -454,9 +462,10 @@ const writeDefinitions = {
         'The read_seed_queries ids the user kept for that source; omit for all of them.',
       ),
     }),
-    annotations: hints(false, false),
+    // A retry with the same run_key replays the persisted run.
+    annotations: hints(false, true),
     run: async (context, args) => {
-      const { project_id: projectId, prompt_set_id: setId, ...request } = args;
+      const { project_id: projectId, prompt_set_id: setId, run_key: runKey, ...request } = args;
       const actor = await writeActor(context.db, context.principal, projectId);
       const set = await promptSetOf(context.db, projectId, setId);
       const result = await startGeneration(
@@ -464,7 +473,7 @@ const writeDefinitions = {
         actor,
         set.id,
         generationInput.parse(request),
-        { idempotencyKey: null },
+        { idempotencyKey: runKey },
       );
       await recordSecurityEvent(
         context.db,

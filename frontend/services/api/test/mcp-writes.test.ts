@@ -412,6 +412,7 @@ it('refuses topic previews and generation runs the owner refuses, before any mod
     await failure(
       call(principal, 'generate_prompts', {
         project_id: tenant.projectId,
+        run_key: 'run-1',
         distribution: { comparison_share: 0.2 },
       }),
     ),
@@ -420,6 +421,7 @@ it('refuses topic previews and generation runs the owner refuses, before any mod
     await failure(
       call(principal, 'generate_prompts', {
         project_id: tenant.projectId,
+        run_key: 'run-2',
         seed_query_ids: [randomUUID()],
       }),
     ),
@@ -432,9 +434,58 @@ it('refuses topic previews and generation runs the owner refuses, before any mod
       .execute(),
   ).toEqual([]);
   await setRole(tenant, 'viewer');
-  expect(await failure(call(principal, 'generate_prompts', { project_id: tenant.projectId }))).toBe(
-    'Workspace member access is required',
-  );
+  expect(
+    await failure(
+      call(principal, 'generate_prompts', { project_id: tenant.projectId, run_key: 'run-3' }),
+    ),
+  ).toBe('Workspace member access is required');
+});
+
+it('replays a retried generation run by its run key instead of generating again', async () => {
+  const tenant = await auditTenant(db, fixtures);
+  const principal = await connection(tenant);
+  // A run this client already made with run key "agreed-run", staging nothing.
+  await db
+    .insertInto('prompt_generation_runs')
+    .values({
+      id: randomUUID(),
+      workspace_id: tenant.workspaceId,
+      project_id: tenant.projectId,
+      prompt_set_id: tenant.setId,
+      generator_version: '1',
+      request: JSON.stringify({ count: 10, idempotency_key: 'agreed-run' }),
+      provenance: JSON.stringify({ candidates_generated: 0 }),
+      created_at: new Date(),
+    })
+    .execute();
+  const retried = await call(principal, 'generate_prompts', {
+    project_id: tenant.projectId,
+    run_key: 'agreed-run',
+    count: 10,
+  });
+  expect(retried).toMatchObject({
+    state: 'changed',
+    suggestions: [],
+    summary:
+      'Staged 0 of 10 requested suggestion(s) for review. Nothing is tracked until the user accepts them in CiteLadder.',
+  });
+  // The same key for a different run is refused rather than replayed or run.
+  expect(
+    await failure(
+      call(principal, 'generate_prompts', {
+        project_id: tenant.projectId,
+        run_key: 'agreed-run',
+        count: 5,
+      }),
+    ),
+  ).toBe('Idempotency-Key was used for another generation request');
+  expect(
+    await db
+      .selectFrom('prompt_generation_runs')
+      .select('id')
+      .where('workspace_id', '=', tenant.workspaceId)
+      .execute(),
+  ).toHaveLength(1);
 });
 
 it('launches an audit only on confirmation, within the frozen estimate', async () => {
