@@ -2,12 +2,15 @@
 
 import { useMemo, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { X } from 'lucide-react';
 
 import { ListScreen } from '@/components/layout/page-shell';
 import { Inline, Stack } from '@/components/ui/layout';
 import { IssueDetailRail } from '@/components/site-health/issue-detail-rail';
 import { IssueMetadata } from '@/components/site-health/issue-metadata';
 import { PageKindSelect } from '@/components/site-health/page-kind-select';
+import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
 import { ListDetailCard, ListDetailRow } from '@/components/ui/list-detail';
 import { Pager } from '@/components/ui/pager';
 import { QueryState } from '@/components/ui/query-state';
@@ -69,9 +72,11 @@ function useIssuesCatalogQueries(
   const rows = issuesQuery.data?.items ?? [];
   const selected = rows.find((issue) => issue.group_id === selectedGroupId) ?? rows[0] ?? null;
   const detailQuery = useQuery({
+    // The rail lists the pages its row counted, so it takes the row's page-kind filter.
     ...siteHealthQueries.issue(workspaceId, crawlId, selected?.group_id ?? '', {
       cursor: occurrenceCursor,
       limit: ISSUE_OCCURRENCE_LIMIT,
+      page_kind: filters.page_kind || undefined,
     }),
     enabled: selected !== null,
   });
@@ -143,6 +148,13 @@ export function IssuesCatalog({
             />
           ) : null;
         })}
+        {/* Last in the strip, so clearing it moves no other control. */}
+        {filters.rule_id ? (
+          <RuleFilterChip
+            title={ruleFilterTitle(rows, filters.rule_id)}
+            onClear={() => updateFilters({ rule_id: '' })}
+          />
+        ) : null}
       </>
     ),
   };
@@ -224,6 +236,23 @@ export function IssuesCatalog({
         ) : null}
       </Stack>
     </ListScreen>
+  );
+}
+
+/** The deep-linked issue's title, from the rows it filtered to; never its rule id. */
+function ruleFilterTitle(rows: SiteIssue[], ruleId: string): string {
+  const row = rows.find((issue) => issue.rule_id === ruleId);
+  return row ? issueTitle(row) : 'one issue';
+}
+
+/** A deep link's one-issue filter, visible and removable rather than silent. */
+function RuleFilterChip({ title, onClear }: Readonly<{ title: string; onClear: () => void }>) {
+  return (
+    <Button variant="secondary" onClick={onClear}>
+      Showing: {title}
+      <Icon icon={X} />
+      <span className="sr-only">(show all issues)</span>
+    </Button>
   );
 }
 

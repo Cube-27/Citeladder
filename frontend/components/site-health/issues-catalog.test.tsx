@@ -320,10 +320,15 @@ describe('IssuesCatalog', () => {
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
     await screen.findAllByText('WebSite schema is missing');
 
+    // The deep link's one-issue filter is shown, and any other filter ends it.
+    expect(
+      screen.getByRole('button', { name: /^Showing: WebSite schema is missing/ }),
+    ).toBeInTheDocument();
     await user.click(screen.getByRole('radio', { name: 'Medium (23)' }));
     await waitFor(() => expect(currentUrl()).toContain('severity=medium'));
-    expect(currentUrl()).toContain('rule=aeo.website_schema');
+    expect(currentUrl()).not.toContain('rule=');
     expect(currentUrl()).toContain('campaign=overview');
+    expect(screen.queryByRole('button', { name: /^Showing:/ })).not.toBeInTheDocument();
 
     window.history.back();
     await waitFor(() =>
@@ -362,6 +367,41 @@ describe('IssuesCatalog', () => {
     await waitFor(() => expect(currentUrl()).toContain('page_kind=article'));
     expect(currentUrl()).not.toContain('cursor=');
     expect(currentUrl()).toContain('campaign=overview');
+  });
+
+  it('clears a deep-linked issue filter from its chip', async () => {
+    window.history.replaceState(null, '', '/issues?rule=aeo.website_schema');
+    mswServer.use(
+      http.get(`/api/v1/site-crawls/${CRAWL}/issues`, () =>
+        HttpResponse.json({ items: [issue()], next_cursor: null, summary }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderIssues(<IssuesCatalog crawlId={CRAWL} />);
+
+    await user.click(
+      await screen.findByRole('button', { name: /^Showing: WebSite schema is missing/ }),
+    );
+    await waitFor(() => expect(currentUrl()).not.toContain('rule='));
+  });
+
+  it('narrows the rail to the page kind the list is filtered to', async () => {
+    window.history.replaceState(null, '', '/issues?page_kind=product');
+    const detailKinds: Array<string | null> = [];
+    mswServer.use(
+      http.get(`/api/v1/site-crawls/${CRAWL}/issues`, () =>
+        HttpResponse.json({ items: [issue()], next_cursor: null, summary }),
+      ),
+      http.get(`/api/v1/site-crawls/${CRAWL}/issues/${ISSUE_A}`, ({ request }) => {
+        detailKinds.push(new URL(request.url).searchParams.get('page_kind'));
+        return HttpResponse.json(issueDetail());
+      }),
+    );
+
+    renderIssues(<IssuesCatalog crawlId={CRAWL} />);
+
+    await screen.findByRole('link', { name: /Homepage/ });
+    expect(detailKinds).toEqual(['product']);
   });
 
   it('renders the API-owned summary and grouped issue rows', async () => {

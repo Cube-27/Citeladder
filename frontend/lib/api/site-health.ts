@@ -128,7 +128,7 @@ export type IssuesParams = {
 };
 
 /** Keyset params for a grouped issue's affected-URL page. */
-type IssueDetailParams = { cursor?: string; limit?: number };
+type IssueDetailParams = { cursor?: string; limit?: number; page_kind?: string };
 
 /** Keyset params for a URL's crawl-bounded issue history. */
 type IssueHistoryParams = { cursor?: string; limit?: number };
@@ -458,6 +458,7 @@ export const siteHealthQueries = {
       queryKey: queryKeys.siteHealth.issue(crawlId, groupId, {
         cursor: params?.cursor ?? null,
         limit: params?.limit ?? null,
+        page_kind: params?.page_kind ?? null,
       }),
       queryFn: ({ signal }) =>
         siteHealthApi.getIssue(crawlId, groupId, params, { signal, workspaceId }),
