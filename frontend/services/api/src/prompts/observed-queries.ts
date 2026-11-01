@@ -86,7 +86,7 @@ export type ObservedScope = {
   competitors: readonly { aliases: readonly string[]; rule: EntityPolicy | undefined }[];
 };
 
-const baseLanguage = (code: string) => code.trim().toLowerCase().split(/[-_]/u)[0] ?? '';
+export const baseLanguage = (code: string) => code.trim().toLowerCase().split(/[-_]/u)[0] ?? '';
 
 /** Search Console queries of the latest query snapshot within the window, summed per query. */
 async function searchConsoleQueries(db: Database, scope: ObservedScope): Promise<Sourced[]> {

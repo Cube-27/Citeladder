@@ -32,7 +32,7 @@ import {
   type Slot,
 } from './generation-plan.ts';
 import { promptTextHash } from './normalization.ts';
-import { observedRef } from './observed-queries.ts';
+import { baseLanguage, observedRef } from './observed-queries.ts';
 
 const G = policy.prompts.generation;
 const containsName = (text: string, names: readonly string[]) =>
@@ -137,6 +137,12 @@ export function admitDrafts(
   ]);
   const brands = brandTerms(context);
   const geo = geoTerms(context);
+  const disjunctions = new Set(
+    G.disjunction_words[baseLanguage(context.context.language_code || 'en')] ?? [],
+  );
+  /** Two alternatives joined into one prompt; comparisons ask "X or Y" by design. */
+  const joinsTwoNeeds = (text: string, cohort: GenerationCohort) =>
+    cohort !== 'comparison' && words(text).some((word) => disjunctions.has(word));
   // Names count under the project's matching policy, so a common-word brand
   // in ordinary language ("target audience") is not a branded draft.
   const brandRule = context.matching[entityKey(context.context.brand_name)];
@@ -189,6 +195,7 @@ export function admitDrafts(
       return 'length';
     if (words(text).length > G.text_max_words) return 'too_many_words';
     if (hasPlaceholder(text)) return 'placeholder';
+    if (joinsTwoNeeds(text, slot.cohort)) return 'two_needs';
     if (observed.has(hash)) return 'observed_copy';
     if (bindingFailure(text, context.vocabulary)) return 'off_topic';
     if (!slot.buyer_need.market && namesPlace(text, geo)) return 'location_unplanned';
