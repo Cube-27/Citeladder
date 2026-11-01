@@ -548,3 +548,17 @@ strip take the closing band's mint, and that type follow the desktop roles
 and one scaling rule; the "16px for all" subtitle answer becomes 16px on
 desktop and tablet under that rule.
 [Design](design.md) owns the system.
+
+## Site Health says "issues", not "defects"; page depth needs complete coverage
+
+User-visible Site Health text calls findings "issues" and never "defects":
+the word is too strong for findings such as heading hierarchy. The internal
+`finding_class` value stays `defect`, occurrences keep being counted as they
+are, and the two heading-hierarchy rules are not merged. "Pages buried too
+deeply" (`architecture.excessive_depth`) reports unknown unless crawl coverage
+is complete, like its sibling architecture rules, because depth is a shortest
+path over the observed link graph.
+
+Source: owner decisions of 1 November 2026, reviewing the thenetreturn.com
+crawl ("drop the defect word and keep occurences the same as now"; "for pages
+buried too deeply we can go with option a").

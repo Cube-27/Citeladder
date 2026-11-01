@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vite-plus/test';
 
-import { evidenceFacts } from './issue-evidence';
+import { evidenceFacts, evidenceLead } from './issue-evidence';
+import { siteLevelEvidence } from './site-level-evidence';
 
 // Every evidence blob below is a verbatim row from a real persisted crawl
 // (hiutdenim.co.uk, 200 pages) — the shapes these formatters have to survive.
@@ -31,8 +32,132 @@ describe('evidenceFacts', () => {
       failing_targets: [{ url: 'https://example.test/gone', status_code: 404 }],
       rate_limited_targets: [],
     };
-    for (const rule of ['technical.broken_internal_link', 'technical.sitemap_url_unreachable'])
-      expect(evidenceFacts(rule, evidence)).toEqual(['https://example.test/gone → 404']);
+    expect(evidenceFacts('technical.sitemap_url_unreachable', evidence)).toEqual([
+      'https://example.test/gone → 404',
+    ]);
+    // A link on the page reads as its path, under a lead naming where it is.
+    expect(evidenceFacts('technical.broken_internal_link', evidence)).toEqual(['/gone → 404']);
+    expect(evidenceLead('technical.broken_internal_link')).toBe('Broken links on this page:');
+  });
+
+  it('collapses quick-view query variants of one link into one fact', () => {
+    // thenetreturn.com/pages/testimonials: each product link also appears as `?qv=…`.
+    const broken = {
+      failing_targets: [
+        { url: 'https://www.thenetreturn.com/products/garmin-approach-r10-copy', status_code: 404 },
+        {
+          url: 'https://www.thenetreturn.com/products/garmin-approach-r10-copy?qv=wtOxjLNNI',
+          status_code: 404,
+        },
+        {
+          url: 'https://www.thenetreturn.com/products/replacement-tubes-pro-series-v2',
+          status_code: 404,
+        },
+      ],
+    };
+    expect(evidenceFacts('technical.broken_internal_link', broken)).toEqual([
+      '/products/garmin-approach-r10-copy → 404 (+1 variant)',
+      '/products/replacement-tubes-pro-series-v2 → 404',
+    ]);
+  });
+
+  it('labels a redirecting link as a link on the page, naming a link back to the page itself', () => {
+    const page = 'https://www.thenetreturn.com/products/pro-series-golf-net';
+    const evidence = {
+      failing_targets: [
+        {
+          url: 'https://www.thenetreturn.com/products/pro-series-v2-8w-x-7-6h',
+          final_url: page,
+          hops: 1,
+        },
+        {
+          url: 'https://www.thenetreturn.com/products/pro-series-v2-8w-x-7-6h?qv=2OzuEOe-o',
+          final_url: `${page}?qv=2OzuEOe-o`,
+          hops: 1,
+        },
+        {
+          url: 'https://www.thenetreturn.com/products/pro-series-v2-8w-x-7-6h?qv=3YGN4AHYY',
+          final_url: `${page}?qv=3YGN4AHYY`,
+          hops: 1,
+        },
+        {
+          url: 'https://www.thenetreturn.com/collections/old',
+          final_url: 'https://www.thenetreturn.com/collections/new',
+          hops: 2,
+        },
+      ],
+    };
+    expect(evidenceFacts('technical.internal_link_redirect', evidence, { pageUrl: page })).toEqual([
+      '/products/pro-series-v2-8w-x-7-6h → this page (+2 variants)',
+      '/collections/old → /collections/new (2 hops)',
+    ]);
+    expect(evidenceLead('technical.internal_link_redirect')).toBe(
+      'Links on this page that redirect:',
+    );
+    expect(evidenceLead('technical.redirect_chain')).toBeNull();
+  });
+
+  it('names a noindex directive and why the page was meant to be indexed', () => {
+    // thenetreturn.com/collections/all-store-products, verbatim minus context ids.
+    expect(
+      evidenceFacts('technical.indexable', {
+        noindex: true,
+        nofollow: false,
+        canonical_url: 'https://www.thenetreturn.com/collections/all-store-products',
+        intent_source: 'sitemap_membership',
+        indexing_intent: 'intended_index',
+        canonical_matches_final_url: true,
+      }),
+    ).toEqual(['noindex', 'listed in sitemap.xml']);
+    expect(
+      evidenceFacts('technical.indexable', {
+        noindex: true,
+        nofollow: true,
+        intent_source: 'page_directive',
+      }),
+    ).toEqual(['noindex, nofollow']);
+  });
+
+  it('reads a site-level architecture finding as the pages it names', () => {
+    const evidence = {
+      count: 11,
+      pages: [
+        {
+          url: 'https://www.thenetreturn.com/blogs/news/june-win-a-net-contest-winner-announced',
+          title: 'June - "Win-a-Net" Contest Winner Announced',
+          page_kind: 'article',
+          site_url_id: 'a80abae1-a069-4f97-a5bd-76d3fc7d041a',
+          depth_from_home: 5,
+        },
+      ],
+      coverage_state: 'complete',
+    };
+    expect(evidenceFacts('architecture.excessive_depth', evidence)).toEqual([
+      '/blogs/news/june-win-a-net-contest-winner-announced (5 clicks)',
+    ]);
+    expect(evidenceFacts('architecture.orphan_pages', evidence)).toEqual([
+      '/blogs/news/june-win-a-net-contest-winner-announced',
+    ]);
+    expect(siteLevelEvidence('architecture.excessive_depth', evidence)).toEqual({
+      kind: 'pages',
+      total: 11,
+      pages: [
+        {
+          siteUrlId: 'a80abae1-a069-4f97-a5bd-76d3fc7d041a',
+          url: 'https://www.thenetreturn.com/blogs/news/june-win-a-net-contest-winner-announced',
+          title: 'June - "Win-a-Net" Contest Winner Announced',
+          pageKind: 'article',
+          clicksFromHome: 5,
+        },
+      ],
+    });
+    expect(
+      siteLevelEvidence('architecture.unhubbed_page_kind', {
+        count: 1,
+        page_kinds: [{ page_kind: 'product', page_count: 40, site_url_ids: [] }],
+      }),
+    ).toEqual({ kind: 'page_kinds', pageKinds: [{ pageKind: 'product', pageCount: 40 }] });
+    expect(siteLevelEvidence('technical.indexable', { noindex: true })).toBeNull();
   });
 
   it('spells redirects as where they land, and an abandoned one as a loop', () => {
@@ -43,12 +168,16 @@ describe('evidenceFacts', () => {
         { url: 'https://example.test/loop', reason: 'redirect_limit' },
       ],
     };
-    for (const rule of ['technical.internal_link_redirect', 'technical.redirect_chain'])
-      expect(evidenceFacts(rule, evidence)).toEqual([
-        'https://example.test/old → https://example.test/new',
-        'https://example.test/older → https://example.test/new (3 hops)',
-        'https://example.test/loop → redirect loop',
-      ]);
+    expect(evidenceFacts('technical.redirect_chain', evidence)).toEqual([
+      'https://example.test/old → https://example.test/new',
+      'https://example.test/older → https://example.test/new (3 hops)',
+      'https://example.test/loop → redirect loop',
+    ]);
+    expect(evidenceFacts('technical.internal_link_redirect', evidence)).toEqual([
+      '/old → /new',
+      '/older → /new (3 hops)',
+      '/loop → redirect loop',
+    ]);
   });
 
   it('names the canonical target’s state and the duplicate pages', () => {
