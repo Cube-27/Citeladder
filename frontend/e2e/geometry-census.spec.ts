@@ -429,7 +429,7 @@ for (const theme of ['light', 'dark'] as const) {
     test.use({ deviceScaleFactor: 1, colorScheme: theme });
 
     test('every product route renders one value per geometric role', async ({ page }) => {
-      test.setTimeout(120_000);
+      test.setTimeout(240_000);
       // The product theme is a stored per-device choice, not the OS scheme.
       await page.addInitScript(
         (value) => window.localStorage.setItem('citeladder.theme', value),

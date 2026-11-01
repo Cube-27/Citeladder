@@ -15,9 +15,8 @@ export default defineConfig({
   fullyParallel: true,
   workers: process.env.CI ? 4 : undefined,
   retries: 1,
-  // `dot` keeps a readable summary, including the slowest files, in CI's log.
-  reporter: [['dot'], ['html', { outputFolder: 'playwright-report', open: 'never' }]],
-  reportSlowTests: { max: 10, threshold: 10_000 },
+  // `list` records every test's duration, so CI's log shows where time goes.
+  reporter: [['list'], ['html', { outputFolder: 'playwright-report', open: 'never' }]],
   outputDir: 'test-results',
   use: {
     baseURL: `http://127.0.0.1:${e2ePort}`,
