@@ -29,6 +29,7 @@ function palette(ink, paper, marks, charts) {
         'background',
         'background-alt',
         'well',
+        'sheet',
         'panel-tonal',
         'site-ground',
         'field-mint',
