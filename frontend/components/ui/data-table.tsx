@@ -199,14 +199,15 @@ export function DataTable({
       data-data-table=""
       // The card's first row (the title band, else the column header) is its
       // own top inset: card padding above it read as a gap over the header.
+      // The card clips, so the bleeding header fill takes its corners.
       className={cn(
         !nested && cardClasses(),
-        !nested && 'pt-0',
+        !nested && 'overflow-hidden pt-0',
         'relative grid min-w-0 content-start',
       )}
     >
       {busy ? <BusyBar active={busy.active} label={busy.label} /> : null}
-      <DataTableHeader title={title} headingId={headingId} toolbar={toolbar} />
+      <DataTableHeader title={title} headingId={headingId} toolbar={toolbar} nested={nested} />
       {description ? (
         <p data-data-table-description="" className={textRole('caption', 'py-3')}>
           {description}
@@ -216,7 +217,8 @@ export function DataTable({
         fixed
         minWidth={minWidth}
         {...naming}
-        className={pinFirstColumn ? PINNED_FIRST_COLUMN : undefined}
+        wrapperClassName={nested ? undefined : CARD_BLEED_FRAME}
+        className={cn(!nested && CARD_BLEED_CELLS, pinFirstColumn && PINNED_FIRST_COLUMN)}
       >
         <DataTableColumns columns={columns} selection={selection} />
         <DataTableBody
@@ -229,9 +231,16 @@ export function DataTable({
           {children}
         </DataTableBody>
       </Table>
-      {paging.pager ? <Pager frame="table" {...paging.pager} /> : null}
+      {paging.pager ? (
+        <Pager frame="table" className={nested ? undefined : CARD_BLEED_ROW} {...paging.pager} />
+      ) : null}
       {footer ? (
-        <div className="type-caption border-border-subtle grid gap-1 border-t px-[var(--table-cell-padding-x)] py-2">
+        <div
+          className={cn(
+            'type-caption border-border-subtle grid gap-1 border-t px-[var(--table-cell-padding-x)] py-2',
+            !nested && CARD_BLEED_ROW,
+          )}
+        >
           {footer}
         </div>
       ) : null}
@@ -266,6 +275,18 @@ function pagingLayout(
   if (pager === undefined) return { pageSize };
   return hasMorePages(pager) ? { pager, pageSize } : {};
 }
+
+/**
+ * In a card, the table runs to the card's edges so the header fill and row
+ * rules span it, rather than reading as a second surface inset on the card.
+ * The outer cells keep the card's padding, so text stays on the title's line.
+ */
+const CARD_BLEED_FRAME =
+  '-mx-[var(--card-padding)] w-[calc(100%+2*var(--card-padding))] max-w-none rounded-none';
+/** The pager and footer rules span the card too, their text on the same line. */
+const CARD_BLEED_ROW = '-mx-[var(--card-padding)] px-[var(--card-padding)]';
+const CARD_BLEED_CELLS =
+  '[&_tr>:first-child]:ps-[var(--card-padding)] [&_tr>:last-child]:pe-[var(--card-padding)]';
 
 /** The first column stays in view while a wide table scrolls in its frame. */
 const PINNED_FIRST_COLUMN =
@@ -306,12 +327,16 @@ function DataTableHeader({
   title,
   headingId,
   toolbar,
-}: Readonly<{ title?: string; headingId: string; toolbar?: FilterBarProps }>) {
+  nested,
+}: Readonly<{ title?: string; headingId: string; toolbar?: FilterBarProps; nested?: boolean }>) {
   if (!title && !toolbar) return null;
   return (
     <header
       data-data-table-header=""
-      className="border-border-subtle flex min-h-[var(--data-table-header-height)] min-w-0 flex-wrap items-center gap-x-4 border-b"
+      className={cn(
+        'border-border-subtle flex min-h-[var(--data-table-header-height)] min-w-0 flex-wrap items-center gap-x-4 border-b',
+        !nested && CARD_BLEED_ROW,
+      )}
     >
       {title ? (
         <h3 id={headingId} className={textRole('sectionTitle', 'min-w-0 truncate')}>
