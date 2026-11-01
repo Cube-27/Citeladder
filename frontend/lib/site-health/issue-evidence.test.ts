@@ -150,6 +150,7 @@ describe('evidenceFacts', () => {
           clicksFromHome: 5,
         },
       ],
+      sections: [],
     });
     expect(
       siteLevelEvidence('architecture.unhubbed_page_kind', {
@@ -158,6 +159,87 @@ describe('evidenceFacts', () => {
       }),
     ).toEqual({ kind: 'page_kinds', pageKinds: [{ pageKind: 'product', pageCount: 40 }] });
     expect(siteLevelEvidence('technical.indexable', { noindex: true })).toBeNull();
+  });
+
+  it('reads unreachable pages as the sections they sit in', () => {
+    const evidence = {
+      count: 159,
+      pages: [],
+      sections: [
+        {
+          path_prefix: '/blogs/testimonials',
+          page_count: 158,
+          example_url: 'https://www.thenetreturn.com/blogs/testimonials',
+        },
+        {
+          path_prefix: '/collections/junior',
+          page_count: 1,
+          example_url: 'https://www.thenetreturn.com/collections/junior',
+        },
+      ],
+    };
+    expect(evidenceFacts('architecture.unreachable_from_home', evidence)).toEqual([
+      '/blogs/testimonials (158 pages)',
+      '/collections/junior (1 page)',
+    ]);
+    expect(evidenceLead('architecture.unreachable_from_home')).toBe('Unreachable sections:');
+  });
+
+  it('reads a sitewide link finding as each link, where it lands, and the pages carrying it', () => {
+    const page = {
+      site_url_id: 'a80abae1-a069-4f97-a5bd-76d3fc7d041a',
+      url: 'https://www.thenetreturn.com/',
+      title: 'The Net Return',
+      page_kind: 'homepage',
+      artifact_id: '0b1c6a42-5a50-4f3c-9d8e-2f6f1f0c0e11',
+    };
+    const evidence = {
+      count: 438,
+      targets: [
+        {
+          url: 'https://www.thenetreturn.com/collections/golf-simulator-screens',
+          final_url: 'https://www.thenetreturn.com/collections/simulation/',
+          hops: 1,
+          linking_page_count: 438,
+          pages: [page],
+        },
+      ],
+    };
+    expect(evidenceFacts('technical.sitewide_link_redirect', evidence)).toEqual([
+      '/collections/golf-simulator-screens → /collections/simulation/ (on 438 pages)',
+    ]);
+    expect(
+      evidenceFacts('technical.sitewide_broken_link', {
+        count: 6,
+        targets: [
+          { url: 'https://example.test/gone', status_code: 404, linking_page_count: 6, pages: [] },
+        ],
+      }),
+    ).toEqual(['/gone → 404 (on 6 pages)']);
+    expect(siteLevelEvidence('technical.sitewide_link_redirect', evidence)).toEqual({
+      kind: 'link_targets',
+      total: 438,
+      targets: [
+        {
+          url: 'https://www.thenetreturn.com/collections/golf-simulator-screens',
+          outcome: {
+            kind: 'redirect',
+            finalUrl: 'https://www.thenetreturn.com/collections/simulation/',
+            hops: 1,
+          },
+          pageCount: 438,
+          pages: [
+            {
+              siteUrlId: 'a80abae1-a069-4f97-a5bd-76d3fc7d041a',
+              url: 'https://www.thenetreturn.com/',
+              title: 'The Net Return',
+              pageKind: 'homepage',
+              clicksFromHome: null,
+            },
+          ],
+        },
+      ],
+    });
   });
 
   it('spells redirects as where they land, and an abandoned one as a loop', () => {

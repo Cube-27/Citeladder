@@ -130,9 +130,12 @@ seed, root and page redirect hop, in order:
 
 1. Reject scheme-less absolute references and join artifacts (`invalid_url`).
 2. Reject hard-excluded query keys (`page`, `q`, `sort`, `filter`, …).
-3. Canonicalize (`url-identity.ts`): drop tracking and variant keys, sort the
-   query, normalize escapes, then hash with SHA-256. A tagged link therefore
-   admits its clean target, the same identity the link checks judge.
+3. Canonicalize (`url-identity.ts`): drop tracking, variant and template keys
+   (`ignored_query_keys`: quick view `qv`, `variant`, Shopify's alternate
+   template `view`, …), sort the query, normalize escapes, then hash with
+   SHA-256. A tagged link therefore admits its clean target, the same identity
+   the link checks judge, and a `?view=` A/B variant is never fetched apart
+   from its page.
 4. Apply hard exclusions: the host's first label; login, account, cart,
    checkout and search paths; asset extensions (sitemaps excepted); URL length.
 5. Apply scope: the root registrable domain and its subdomains, then
@@ -371,8 +374,8 @@ Unscored checks:
 
 | Class | Checks |
 |---|---|
-| Advisory | Meta description, canonical present, structured data present, Open Graph, robots.txt present, entity profiles, content recency, recommended schema, source support, answer-first |
-| Defect | Form names, heading order, `technical.ai_crawler_access`, organization identity, trust path, listing item facts, question headings, sitemap canonical, sitemap redirect, sitemap lastmod, client-side redirect, broken internal links, internal links to redirects, redirect chains, duplicate content, sitemap URL unreachable, sitemap orphan, hreflang conflict, six `architecture.*` rules |
+| Advisory | Meta description, canonical present, structured data present, Open Graph, robots.txt present, entity profiles, content recency, recommended schema, source support, answer-first, sitemap noindex |
+| Defect | Form names, heading order, `technical.ai_crawler_access`, organization identity, trust path, listing item facts, question headings, sitemap canonical, sitemap redirect, sitemap lastmod, client-side redirect, broken internal links, internal links to redirects, broken sitewide links, sitewide links to redirects, redirect chains, duplicate content, sitemap URL unreachable, sitemap orphan, hreflang conflict, seven `architecture.*` rules |
 | Diagnostic (no issue) | HSTS, TTFB band, llms.txt |
 
 Pillar weights (`readiness_dimension_weights`) sum to 1:
@@ -401,15 +404,16 @@ each bot's `checks` array:
   Perplexity-User and Claude-User. Blocking only training or user-fetch bots is
   visible but does not move a score.
 
-**Sitemap and redirect page checks** (`analysis/indexing.ts`, unscored
-defects). `technical.sitemap_redirect` fails when the URL the sitemap lists and
+**Sitemap and redirect page checks** (`analysis/indexing.ts`, unscored).
+`technical.sitemap_redirect` fails when the URL the sitemap lists and
 the URL the crawler reached differ in identity form (`canonicalUrl`, so query
 order and tracking keys are not a redirect); `technical.sitemap_canonical` then
-judges the reached page's canonical. `technical.sitemap_noindex` fails a listed
-page that carries noindex. The noindex itself stays the site's choice:
-sitemap membership is not indexing intent (Shopify lists every collection), so
-`technical.indexable` is not applicable there, and the snapshot gate counts
-that page, like a 404 or 410, as excluded. `technical.sitemap_lastmod` fails a
+judges the reached page's canonical. `technical.sitemap_noindex`, an advisory,
+fails a listed page that carries noindex. The noindex itself stays the site's
+choice: sitemap membership is not indexing intent (Shopify lists every
+collection), so `technical.indexable` is not applicable there, and the snapshot
+gate counts that page, like a 404 or 410, as excluded. The listing is sitemap
+hygiene that hides nothing from search, so it is advice, not an issue. `technical.sitemap_lastmod` fails a
 `<lastmod>` that does not parse, is more than `sitemap_lastmod_tolerance_days`
 past the audit time, or is older than the page's newest declared publication
 or modification date by more than that tolerance; without a readable page date
@@ -421,7 +425,7 @@ visible words; on a page with content that script is a handler, not a redirect.
 **Crawl-finalize checks** (`lifecycle-finalize.ts`) evaluate canonical
 integrity, internal-link targets, internal links to redirects, duplicate
 content and hreflang return tags per page, and sitemap orphans, sitemap
-reachability and redirect chains on the root. They read only this crawl's
+reachability, redirect chains and sitewide links on the root. They read only this crawl's
 persisted attempts; targets never fetched, or rate-limited with 429, stay
 unchecked and cannot pass. A link is internal when its host shares the page's
 registrable domain, the same scope the crawler admits, so `docs.`/`www.` links
@@ -444,6 +448,32 @@ abandoned at `max_redirects` ends with `redirect_limit`. A link to a target that
 redirected or hit the limit fails `technical.internal_link_redirect`.
 `technical.redirect_chain` lists every URL the crawl requested that took more
 than `redirect_max_hops` hops or hit the limit (a loop or an overlong chain).
+
+**Sitewide links.** A link target is sitewide when at least
+`sitewide_link.min_linking_pages` analyzed pages, and `min_page_share` of all
+of them, link it: template navigation, header and footer links. A broken or
+redirecting sitewide target is one fix, so it is judged once, on the crawl
+root, by `technical.sitewide_broken_link` or `technical.sitewide_link_redirect`
+(site scope, unscored defects). Their evidence names each failing target, where
+it lands, how many pages link it and a sample of those pages (with their
+artifact IDs), plus the target's resolution source IDs; the Issues group counts
+the distinct linking pages, and the rail lists the targets. On each page that
+target leaves the broken-link and link-redirect sets, as excluded targets do,
+and stays named under `sitewide_targets`; the page's own failing links keep
+their per-page issues. Without the root in the finalize pass, every page keeps
+judging its sitewide links itself.
+
+**Architecture rules** (`architecture-rules.ts`) run on the observed link graph
+after terminalization and file one finding against the homepage, naming the
+pages they found. `architecture.orphan_pages` names pages no analyzed page
+links. `architecture.unreachable_from_home` names pages that do have internal
+inbound links but that no followed link path from the homepage reaches (a
+section linked only from itself), grouped into sections by their first two path
+segments; true orphans never repeat there. It is an unscored defect like the
+orphan rule: crawlers that discover by following links never reach those pages,
+and they receive no link authority from the rest of the site, so they rely on
+the sitemap alone. Both need complete coverage, and without an observed
+homepage the unreachable rule is `unknown` (`homepage_not_observed`).
 
 **Duplicate content** (`analysis/duplicate-content.ts`). A page joins the
 comparison when it is a 2xx HTML page, not noindex, whose one canonical (if
