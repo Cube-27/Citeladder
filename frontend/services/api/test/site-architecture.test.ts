@@ -109,7 +109,7 @@ it('counts in-content links apart from the links that menus repeat on every page
   const { internal_linking } = buildArchitecture(pages, 'complete', context);
   expect(internal_linking).toMatchObject({ internal_link_count: 22, content_link_count: 5 });
 });
-it('keeps observed orphan and duplicate counts under partial coverage but gates absence findings', () => {
+it('keeps observed orphan and duplicate counts under partial coverage but gates absence and depth findings', () => {
   const pages = [
     page('home', '/', 'homepage', { depth: 0, inbound: 1 }),
     ...['a', 'b', 'c'].map((id) =>
@@ -126,13 +126,15 @@ it('keeps observed orphan and duplicate counts under partial coverage but gates 
     model.page_kinds.find((row) => row.page_kind === 'product')!.duplicate_metadata_count,
   ).toBe(3);
   const partial = architectureRules(model, pages, 'partial');
-  expect(partial.find((row) => row.rule.rule_id.endsWith('excessive_depth'))!.outcome).toBe(
-    'missing',
-  );
+  // Depth over a partly observed graph is an upper bound, not a finding.
+  expect(partial.find((row) => row.rule.rule_id.endsWith('excessive_depth'))).toMatchObject({
+    outcome: 'unknown',
+    reason: 'coverage_not_complete',
+  });
   expect(
     partial.find((row) => row.rule.rule_id.endsWith('duplicate_metadata_in_page_kind'))!.outcome,
   ).toBe('missing');
-  expect(partial.filter((row) => row.reason === 'coverage_not_complete')).toHaveLength(3);
+  expect(partial.filter((row) => row.reason === 'coverage_not_complete')).toHaveLength(4);
   const complete = architectureRules(
     buildArchitecture(pages, 'complete', context),
     pages,
@@ -226,8 +228,9 @@ it('downgrades complete coverage when architecture evidence reaches its source c
       .select(['outcome', 'reason_code'])
       .where('source_architecture_id', '=', architecture.id)
       .execute();
+    // Orphans, parentless details, unhubbed kinds and depth all need complete coverage.
     expect(evaluations.filter((row) => row.reason_code === 'coverage_not_complete')).toHaveLength(
-      3,
+      4,
     );
   } finally {
     policy.site_health.architecture.max_pages = previous;
@@ -284,7 +287,7 @@ it('persists exact source IDs, six root evaluations and replay-safe architecture
     .execute();
   expect(evaluations).toHaveLength(6);
   expect(evaluations.every((row) => row.analysis_id === home.analysisId)).toBe(true);
-  expect(evaluations.filter((row) => row.outcome === 'unknown')).toHaveLength(3);
+  expect(evaluations.filter((row) => row.outcome === 'unknown')).toHaveLength(4);
   expect(record(architecture.archetype).archetype).toBe('commerce');
   await fixtures.task(seed, 'architecture');
   expect(await fixtures.worker(seed, { settings }).runOnce()).toBe(1);

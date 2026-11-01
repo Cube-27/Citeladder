@@ -543,14 +543,23 @@ describe('IssuesCatalog', () => {
     const user = userEvent.setup();
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
     expect(
-      await screen.findByText((_, element) => element?.textContent === '47 problems on 50 pages'),
+      await screen.findByText(
+        (_, element) =>
+          element?.tagName === 'P' &&
+          element.textContent === '47 issues · 94 occurrences · 50 pages',
+      ),
     ).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Issues (47)' })).toBeInTheDocument();
 
     await user.click(screen.getByRole('radio', { name: 'Advisories (2)' }));
     expect(await screen.findAllByText('Title length outside recommended band')).not.toHaveLength(0);
     expect(screen.getAllByText('Advisory')).toHaveLength(2);
     expect(
-      screen.getByText((_, element) => element?.textContent === '2 advisories on 50 pages'),
+      screen.getByText(
+        (_, element) =>
+          element?.tagName === 'P' &&
+          element.textContent === '2 advisories · 94 occurrences · 50 pages',
+      ),
     ).toBeInTheDocument();
     expect(screen.queryByRole('radio', { name: /High/ })).not.toBeInTheDocument();
     expect(seen).toContain('advisory');

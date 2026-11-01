@@ -701,7 +701,7 @@ describe('UrlDetail', () => {
 
     renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
 
-    const heading = await screen.findByRole('heading', { name: 'What to fix on this page (2)' });
+    const heading = await screen.findByRole('heading', { name: 'Issues on this page (2)' });
     const order = [
       'WebSite schema is missing',
       'FAQ schema not present',
@@ -731,7 +731,7 @@ describe('UrlDetail', () => {
     renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
 
     expect(
-      await screen.findByRole('heading', { name: 'What to fix on this page (0)' }),
+      await screen.findByRole('heading', { name: 'Issues on this page (0)' }),
     ).toBeInTheDocument();
     expect(screen.getByText('Nothing to fix — this page passed every check.')).toBeInTheDocument();
   });

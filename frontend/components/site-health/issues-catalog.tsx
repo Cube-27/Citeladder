@@ -43,7 +43,7 @@ const FILTER_GROUP_KEYS: Record<'All issues' | 'Severity' | 'Category', readonly
 /** The toggle's label, with the count only once a summary has landed. */
 function findingViewLabel(view: FindingClass, summary: IssuesSummary | null): string {
   const defects = view === 'defect';
-  const label = defects ? 'Defects' : 'Advisories';
+  const label = defects ? 'Issues' : 'Advisories';
   if (!summary) return label;
   const count = defects ? summary.defect_issue_type_count : summary.advisory_issue_type_count;
   return `${label} (${count})`;
@@ -331,16 +331,31 @@ function IssueSummary({
 }: Readonly<{ summary: IssuesSummary; findingView: FindingClass }>) {
   const defects = findingView === 'defect';
   const typeCount = defects ? summary.defect_issue_type_count : summary.advisory_issue_type_count;
-  const singular = defects ? 'problem' : 'advisory';
-  const plural = defects ? 'problems' : 'advisories';
-  const pages = summary.affected_url_count;
   return (
     <p className="type-body">
-      <span className={textRole('emphasis', 'tabular-nums')}>{typeCount}</span>{' '}
-      {typeCount === 1 ? singular : plural} on{' '}
-      <span className={textRole('emphasis', 'tabular-nums')}>{pages}</span>{' '}
-      {pages === 1 ? 'page' : 'pages'}
+      <SummaryCount
+        value={typeCount}
+        singular={defects ? 'issue' : 'advisory'}
+        plural={defects ? 'issues' : 'advisories'}
+      />
+      <span aria-hidden> · </span>
+      <SummaryCount value={summary.occurrence_count} singular="occurrence" plural="occurrences" />
+      <span aria-hidden> · </span>
+      <SummaryCount value={summary.affected_url_count} singular="page" plural="pages" />
     </p>
+  );
+}
+
+function SummaryCount({
+  value,
+  singular,
+  plural,
+}: Readonly<{ value: number; singular: string; plural: string }>) {
+  return (
+    <span>
+      <span className={textRole('emphasis', 'tabular-nums')}>{value}</span>{' '}
+      {value === 1 ? singular : plural}
+    </span>
   );
 }
 

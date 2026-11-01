@@ -148,7 +148,7 @@ function PageIssues({ issues }: Readonly<{ issues: IssueOccurrence[] }>) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>What to fix on this page ({defects.length})</CardTitle>
+        <CardTitle>Issues on this page ({defects.length})</CardTitle>
       </CardHeader>
       <CardContent>
         <Stack gap="workspace">
@@ -159,7 +159,7 @@ function PageIssues({ issues }: Readonly<{ issues: IssueOccurrence[] }>) {
               message={
                 advisories.length === 0
                   ? 'Nothing to fix — this page passed every check.'
-                  : 'No problems found on this page.'
+                  : 'No issues found on this page.'
               }
             />
           ) : (
@@ -169,7 +169,7 @@ function PageIssues({ issues }: Readonly<{ issues: IssueOccurrence[] }>) {
             <Stack as="section" gap="item">
               <SubsectionHeader
                 title={`Advisories (${advisories.length})`}
-                description="Recommendations, not defects."
+                description="Recommendations to consider."
               />
               <IssueRows issues={advisories} />
             </Stack>
