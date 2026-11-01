@@ -169,8 +169,10 @@ function CoverageLine({ data }: Readonly<{ data: z.infer<typeof aiTrafficPagesSc
     ([key]) =>
       data.items.length > 0 && data.items.every((row) => row[key].state === 'not_connected'),
   );
-  // Disconnected crawler logs already say why coverage is unknown.
-  let crawlCoverage: string | null = 'Crawl coverage unavailable';
+  // Unknown (logs connected, nothing to measure against) and unavailable stay
+  // distinct; disconnected crawler logs already say why coverage is missing.
+  let crawlCoverage: string | null =
+    coverage.state === 'unknown' ? 'Crawl coverage unknown' : 'Crawl coverage unavailable';
   if (coverage.share !== null)
     crawlCoverage = `${coverage.label}: ${(coverage.share * 100).toFixed(1)}%`;
   else if (disconnected.some(([key]) => key === 'crawl')) crawlCoverage = null;
