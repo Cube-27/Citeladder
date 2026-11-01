@@ -38,6 +38,15 @@ const MAX_HOPS = policy.site_health.page_analysis.rules.redirect_max_hops;
 const REDIRECT_LIMIT = policy.site_health.page_analysis.acquisition.error_codes.redirect_limit;
 /** Statuses that mean "sign in first", not "this link is broken". */
 const ACCESS_RESTRICTED = new Set([401, 403]);
+/**
+ * Targets the crawler deliberately did not fetch (robots-denied, refused by
+ * admission). They answered no HTTP request, so they are neither broken nor
+ * redirecting, but they are checked: left unchecked, one robots-denied footer
+ * link made every page's link checks unknown.
+ */
+const EXCLUDED_ERRORS = new Set<string>(policy.site_health.reads.corpus_exclusion_error_codes);
+const isExcludedTarget = (resolution: Resolution) =>
+  resolution.status === null && EXCLUDED_ERRORS.has(resolution.errorCode);
 
 export async function fetchResolutions(db: Database, crawl: Crawl) {
   const rows = await db
@@ -160,6 +169,10 @@ export function resolutionSet(
       limited.push(target);
       continue;
     }
+    if (resolution && isExcludedTarget(resolution)) {
+      checked.push(target);
+      continue;
+    }
     if (resolution?.status === undefined || resolution.status === null) continue;
     checked.push(target);
     if (isBroken(resolution.status, sitemap)) broken.push(target);
@@ -205,6 +218,10 @@ export function linkRedirects(targets: string[], resolutions: Map<string, Resolu
   for (const target of targets) {
     const resolution = resolutions.get(target);
     if (!resolution || resolution.status === 429) continue;
+    if (isExcludedTarget(resolution)) {
+      checked.push(target);
+      continue;
+    }
     if (resolution.status === null && resolution.errorCode !== REDIRECT_LIMIT) continue;
     checked.push(target);
     if (redirects(resolution)) failing.push(target);
