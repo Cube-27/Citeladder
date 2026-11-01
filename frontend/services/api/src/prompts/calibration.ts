@@ -71,7 +71,7 @@ export function calibrationReport(rows: Row[]) {
               answered_rejected: r.length,
               false_flag_rate: rate(below(a, flagBelow), a.length),
               false_reject_rate: rate(falseFails, a.length),
-              rejected_caught_by_flag: rate(below(r, thresholds.flag_below), r.length),
+              rejected_caught_by_flag: rate(below(r, flagBelow), r.length),
               rejected_caught_by_fail: rate(failed, r.length),
               fail_precision: rate(failed, failed + falseFails),
             },
