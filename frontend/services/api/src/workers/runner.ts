@@ -146,8 +146,12 @@ class LaneTurns {
   wakeIdle() {
     for (const state of this.#states) if (state.phase === 'idle') state.phase = 'ready';
   }
-  hasIdle() {
-    return this.#states.some((state) => state.phase === 'idle');
+  /** Record the next lane to settle; while admitting, idle lanes wake each poll interval. */
+  async next(admitting: boolean, pollMs: number, pause: Pause, signal: AbortSignal) {
+    const polling = admitting && this.#states.some((state) => state.phase === 'idle');
+    const settled = await nextSettlement(this.running, polling ? pollMs : null, pause, signal);
+    if (settled) this.record(settled);
+    else this.wakeIdle();
   }
   lanes(phase?: LaneState['phase']) {
     return this.#states
@@ -193,18 +197,12 @@ export async function drainLanes(lanes: readonly RunnerLane[], options: DrainOpt
     options.firstLane ?? randomInt(Math.max(1, lanes.length)),
     canAdmit,
   );
+  const remaining = () => options.deadline - now();
   for (;;) {
     turns.startReady();
-    if (turns.running.size) {
-      const poll = canAdmit() && turns.hasIdle() ? pollMs : null;
-      const settled = await nextSettlement(turns.running, poll, pause, options.signal); // NOSONAR -- Wait for the next lane or poll.
-      if (settled) turns.record(settled);
-      else turns.wakeIdle();
-    } else if (!canAdmit()) break;
-    else {
-      const remaining = () => options.deadline - now();
-      if (!(await waitForDue(turns, remaining, pollMs, pause, options.signal))) break; // NOSONAR -- Idle until deferred work is due.
-    }
+    if (turns.running.size) await turns.next(canAdmit(), pollMs, pause, options.signal); // NOSONAR -- Wait for the next lane or poll.
+    else if (!canAdmit() || !(await waitForDue(turns, remaining, pollMs, pause, options.signal)))
+      break; // NOSONAR -- Idle until deferred work is due.
   }
   if (turns.failures.length)
     throw new LaneFailures({
