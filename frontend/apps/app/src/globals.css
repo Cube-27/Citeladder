@@ -37,11 +37,11 @@
                      tonal panels, the step a selected row sits on.
      Light tints the sheet and nested steps against white cards; dark lifts
      each step lighter than the one below it. */
-  --color-background: #f0f2f1;
+  --color-background: #eaedeb;
   --color-background-alt: #f6f7f6;
-  --color-sheet: #f7f8f7;
+  --color-sheet: #f2f4f3;
   --color-panel: #ffffff;
-  --color-panel-tonal: #f2f4f3;
+  --color-panel-tonal: #edf0ee;
   --color-elevated: #ffffff;
   --color-well: #eff1f0;
   /* Interaction tints mix a green-tinted ink into the surface that receives
@@ -53,7 +53,7 @@
   --color-active: color-mix(in srgb, var(--color-panel), var(--color-state-ink) 12%);
   --color-disabled: color-mix(in srgb, var(--color-panel), var(--color-state-ink) 3%);
   /* Recessed selection track; state tints follow their enclosing surface. */
-  --color-track: #eceeed;
+  --color-track: #e6e9e7;
   --color-input: #ffffff;
   --color-surface-inverse: var(--color-brand-ink);
 

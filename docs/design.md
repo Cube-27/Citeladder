@@ -109,7 +109,7 @@ the Colour section above. Every token must have a consumer.
 | `--color-accent-subtle` | `#d3f6df` | `rgb(118 223 156 / 18%)` |
 | `--color-accent-text` | `#08773b` | `#86e5a6` |
 | `--color-active` | `#e4e8e6` | `#303432` |
-| `--color-background` | `#f0f2f1` | `#0b0d0c` |
+| `--color-background` | `#eaedeb` | `#0b0d0c` |
 | `--color-background-alt` | `#f6f7f6` | `#1f2421` |
 | `--color-border` | `#e1e4e2` | `#2b302d` |
 | `--color-border-bold` | `#858d88` | `#737b76` |
@@ -157,18 +157,18 @@ the Colour section above. Every token must have a consumer.
 | `--color-on-inverse` | `#ffffff` | `#0b0d0c` |
 | `--color-overlay-scrim` | `rgb(11 15 13 / 32%)` | `rgb(0 0 0 / 72%)` |
 | `--color-panel` | `#ffffff` | `#1a1e1c` |
-| `--color-panel-tonal` | `#f2f4f3` | `#252a27` |
+| `--color-panel-tonal` | `#edf0ee` | `#252a27` |
 | `--color-secondary` | `#4e5551` | `#a9b0ac` |
 | `--color-selected` | `#edefee` | `#292d2b` |
 | `--color-selection` | `#b5efca` | `rgb(118 223 156 / 35%)` |
 | `--color-selection-fg` | `#2f3431` | `#f1f4f2` |
-| `--color-sheet` | `#f7f8f7` | `#101311` |
+| `--color-sheet` | `#f2f4f3` | `#101311` |
 | `--color-state-ink` | `#1c3d2c` | `#d3d8d5` |
 | `--color-success` | `#0d9488` | `#2ec4b0` |
 | `--color-success-bg` | `#ecf8f5` | `rgb(46 196 176 / 13%)` |
 | `--color-success-text` | `#0f766e` | `#7fe0d0` |
 | `--color-surface-inverse` | `#0b0f0d` | `#e1e5e2` |
-| `--color-track` | `#eceeed` | `#252a27` |
+| `--color-track` | `#e6e9e7` | `#252a27` |
 | `--color-warning` | `#e0900f` | `#f2c879` |
 | `--color-warning-bg` | `#fff5db` | `rgb(242 200 121 / 13%)` |
 | `--color-warning-text` | `#8a4600` | `#f7d99e` |
