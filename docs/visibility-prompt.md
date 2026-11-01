@@ -459,8 +459,16 @@ The [audit worker](../frontend/services/api/src/workers/audit-worker.ts) claims 
 tasks with leases, commits before I/O and records immutable response artifacts,
 attempts and citation evidence. Cancellation, retries and reconciliation use
 the existing audit/task state owners; failed answers remain failures, not
-negative brand observations. Provider costs and successful-answer billing are
-different projections.
+negative brand observations. An API exchange with no answer text fails its
+attempt in the shared [answer execution](../frontend/services/api/src/answer-engines/execute.ts)
+for every engine: `truncated_before_answer` (budget spent before any text) and
+`empty_answer` retry under the transient policy, `content_filter` does not, and
+an exhausted task stays failed. Non-empty text cut off by the budget is still an
+observation and keeps its `length` finish reason. All engines share the frozen
+`audit_max_output_tokens`; Anthropic thinking counts against it, so the
+Claude route's `anthropic_thinking` (provider config) turns thinking off for
+answer capture instead of raising the budget. Provider costs and
+successful-answer billing are different projections.
 
 The audit runner lane wakes for the earliest due retry, capacity wait or
 provider poll (`AuditQueue.nextDue`), not only on its idle tick. A task with a

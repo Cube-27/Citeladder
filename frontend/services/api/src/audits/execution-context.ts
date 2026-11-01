@@ -31,6 +31,7 @@ const routeSchema = z.object({
   base_url: z.string(),
   reservation_id: z.uuid().nullable(),
   reasoning_effort: z.string().nullable(),
+  anthropic_thinking: z.string().nullish(),
   funding: fundingSchema.optional(),
 });
 const unavailable = () => new ProviderError(auditPolicy.constants.error_no_connection);
@@ -199,6 +200,7 @@ export function directRequest(context: ExecutionContext) {
     max_output_tokens: measurement.max_output_tokens,
     retrieval_enabled: measurement.retrieval_enabled,
     reasoning_effort: record(context.route).reasoning_effort,
+    anthropic_thinking: context.route.anthropic_thinking ?? null,
     country_code: config.country_code ?? '',
     anthropic_max_uses: config.anthropic_max_uses ?? 0,
     openai_max_tool_calls: config.openai_max_tool_calls ?? 0,
