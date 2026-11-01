@@ -470,8 +470,12 @@ Claude route's `anthropic_thinking` (provider config) turns thinking off for
 answer capture instead of raising the budget. Provider costs and
 successful-answer billing are different projections.
 
-The audit runner lane wakes for the earliest due retry, capacity wait or
-provider poll (`AuditQueue.nextDue`), not only on its idle tick. A task with a
+The audit runner lane keeps `min(worker_concurrency, RUNNER_DB_POOL_SIZE)`
+tasks in flight, refilling each slot as a task settles until a claim finds
+nothing, the runner stops admitting or `claim_window_seconds` ends; it runs
+alongside Site Health rather than after its claim window. It wakes for the
+earliest due retry, capacity wait or provider poll (`AuditQueue.nextDue`), not
+only on its idle tick. A task with a
 submitted paid search-surface request is bounded by its poll ceiling or recovery
 deadline, never the run cap, since retrieval is free and the query is already
 paid. The worker caches the workspace access check for a short TTL
