@@ -176,7 +176,7 @@ export function topicCoverage(
   });
 }
 
-export type Segment = 'core' | 'brand_diagnostic' | 'comparison';
+type Segment = 'core' | 'brand_diagnostic' | 'comparison';
 const SEGMENTS: readonly { key: Segment; label: string }[] = [
   { key: 'core', label: 'Unbranded' },
   { key: 'brand_diagnostic', label: 'Branded' },

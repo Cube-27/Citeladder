@@ -32,11 +32,12 @@ binding and generation settings; `config/api.json` owns HTTP admission limits.
 Native prompt normalization owns persisted identity. Generation defaults
 resolve at use time.
 
-**Quick generate** (the Generate dialog) samples the broad market: the
+The **Prompt Builder** (a right-hand sheet on Prompts, below) is where people
+shape generation: business facts, topics, distribution, search seeds and count,
+each prefilled from saved data. It samples the broad market by default: the
 category's buyer questions across offerings, stages, intents and personas, with
-places only where the market scope calls for them. **Build with Agent** is the
-niche dive (a place, persona, constraint or intent the user names). Both stage
-into the same candidate review.
+places only where the market scope calls for them. The Agent's Prompt discovery
+skill still stages an agent portfolio into the same candidate review.
 
 A request asks for at most `GENERATION_MAX_COUNT` (50) questions. Draft batches
 run with bounded concurrency (`GENERATION_DRAFT_CONCURRENCY`) under a request
@@ -62,7 +63,7 @@ admission record, no question text) for calibrating the judge. An
 over-allowance accept writes nothing. Unreviewed candidates expire after
 `GENERATION_CANDIDATE_RETENTION_HOURS` and outcome records after
 `GENERATION_REJECTED_OUTCOME_RETENTION_DAYS`; expired rows are hidden and
-purged by the next generation or review. The Generate dialog shows the pending list with
+purged by the next generation or review. The Prompt Builder's review step shows the pending list with
 select-all and **Accept selected** / **Reject selected**; within a run, rows
 the quality judge flagged are listed last with advisory labels and stay
 selectable.
@@ -73,7 +74,7 @@ The topic rail adds a subtopic under a chosen top-level topic and renames a
 topic in place (Enter saves, Escape cancels, a failed save keeps the typed name).
 
 The [business map](../frontend/services/api/src/projects/business-map.ts), edited under
-Brand knowledge and stored in `BusinessContext.business_map`, lists per
+Brand knowledge and in the Prompt Builder, and stored in `BusinessContext.business_map`, lists per
 confirmed offering its attributes, situations/constraints and audiences, plus
 excluded pairs that never combine. Entries carry origin and review state: a
 model suggestion stays `suggested` until a person confirms it, and edits keep
@@ -118,6 +119,17 @@ offerings each created topic covers in `business_context.topic_offerings` (by
 topic id), so the planner gives a category its offerings' business-map facets
 whatever it is named. Topic names must be bounded and brand-neutral,
 and admitted topics receive canonical UUIDs.
+
+The Prompt Builder previews proposals without writing:
+`POST /projects/{id}/topics/preview` (run capability, metered and reserving
+`topic_calls` like recovery) runs the same proposal beside the existing topics,
+so it fills gaps and never replaces them, and returns the kept proposals with
+the offerings each covers plus the overflow past `topic_max`. A project without
+saved offerings is a 422 before provider I/O. `POST /projects/{id}/topics/confirm`
+(write capability) applies the reviewed plan, deletes, renames and creates, in
+one transaction under the project lock: every named topic must belong to the
+project, a name collision fails the whole plan, and created topics record their
+offerings in `business_context.topic_offerings` exactly as recovery does.
 
 Topic distinctness uses singular-normalized token identity, not character
 similarity: men's and women's departments must not merge because their spellings
@@ -196,7 +208,11 @@ searches; they are never AI prompt volume. Each planned slot gets up to
 `observed.examples_per_slot` same-topic searches, closest to its cell first,
 sent as `buyer_search_examples` text (no row identities) with a rule that they
 are examples to learn buyer wording from, not to copy. Without search data the
-plan, brief and request are unchanged. The model writes a natural question per cell, names a place
+plan, brief and request are unchanged. `GET /projects/{id}/seed-queries` lists,
+per source with persisted data (a Search Console query snapshot, or a published
+grounding dataset in the project language), the searches this loader would
+keep, each with its topic and no impressions or volume; the Prompt Builder
+shows them so people can untick any. The model writes a natural question per cell, names a place
 only in a cell with a market, and labels buyer stage, prompt intent and
 `names_place`. Generated buyer scenarios are hypotheses, not observed demand or
 new business facts; cell provenance records that distinction. Map suggestions
@@ -238,7 +254,7 @@ is the operator-only live calibration over the business-context fixtures; it
 calls the configured provider and never runs in CI. `candidates_generated` counts what passed
 admission and is never a market size. Every dropped row is counted under the
 first admission rule it broke (`admission_drops`, also frozen in run
-provenance), and the Generate dialog and agent handoff show that breakdown.
+provenance), and the Prompt Builder and agent handoff show that breakdown.
 Run provenance also records each dropped row's slot, normalized text hash,
 batch/index and admission phase alongside the generator and buyer-query policy versions.
 Drafts are written in the project's `language_code`, using English when it is blank. Each candidate keeps its cell in
@@ -303,8 +319,8 @@ rewritten by a newer generator.
 
 ## Prompts page, manual entry and CSV import
 
-**Build with Agent** opens a project-scoped chat with Prompt discovery selected.
-Its saved portfolio has an explicit **Review in Prompts** action. The existing
+The Agent's Prompt discovery skill (in the Agent or over MCP) saves a portfolio.
+The saved portfolio has an explicit **Review in Prompts** action. The existing
 generation endpoint accepts `agent_revision_id`, loads that authorized project's
 saved portfolio, validates its bounded core rows, and applies the same
 admission, JEV and candidate staging path without another text generation call.
@@ -325,8 +341,30 @@ trims an approved plan to the default, and opens
 and an empty or expired batch is explained rather than opening generation setup.
 Prompt-set creation waits for its list read and serializes local attempts per project.
 
-Generation setup and candidate review are separate dialog states; review offers
-accept/reject and an explicit Generate more action. Each row distinguishes judged
+The Prompt Builder is a right-hand sheet with four steps; each open is a fresh
+session, and nothing it edits is written until its step saves or confirms.
+
+1. **About your business**: offerings, buyer roles, each offering's audiences
+   and situations/constraints, service areas (only for a local or regional
+   `market_scope`), category terms, jobs to be done and business model, as
+   chips and choices; plus a one-line `run_context` for this run only. Save
+   sends only changed fields to the brand-profile update, then the business-map
+   update.
+2. **Topics**: the existing topics plus proposals from the preview, with
+   "+N more" for the overflow. People rename, remove or add; Confirm sends one
+   plan.
+3. **Distribution**: count, branded share (default 20%), competitor-alternative
+   share (disabled, saying why, without a tracked competitor), intent mix
+   (default 25/50/25), personas from step 1, and the search source (each source
+   with persisted data, or none) with its seed queries grouped by topic and
+   untickable. Edits not yet saved or confirmed are named as unused by this run.
+   Generate sends every field for all topics.
+4. **Review**: the candidate review with a coverage line per topic and per
+   segment (cohort) against the request, on target, short or empty, counting
+   what this session drafted. "Generate more" on a short or empty line reuses
+   the request narrowed to that topic's `topic_ids` or that segment's share.
+
+Each review row distinguishes judged
 (checked or flagged), checking off, unchecked and unavailable states, including
 after reopening; its quality description is associated with its checkbox. The library
 prioritizes question text, topic, measurement and enabled state; classification
@@ -335,18 +373,18 @@ is secondary detail on the question, available on keyboard focus and to screen r
 `/prompts` opens directly on the prompt library: topics rail, Active/Archived
 tabs, and each prompt's topic, latest measured visibility and owned citation
 rate. A prompt's question opens its detail view (below). Its actions are
-Bulk upload, Generate prompts, Add prompt and **Launch audit**, which reuses the
+Bulk upload, Prompt Builder, Add prompt and **Launch audit**, which reuses the
 shared launch dialog and its admission/funding checks and stays disabled until
-the project has an active prompt. `/prompts?generate=1` opens the Generate
-dialog once per arrival and is then removed from the URL.
+the project has an active prompt. `/prompts?generate=1` opens the Prompt
+Builder at its first step and `/prompts?review=1` at review, once per arrival,
+and the parameter is then removed from the URL.
 
-Users are asked only for a prompt and its topic. (Owner decision D of
-1 November 2026 in the [decision log](decisions.md) puts topics, search queries
-and their source, distribution and context under user control; it supersedes
-this rule once the Prompt Builder ships in the Prompts page, per the [Prompt
-Builder plan](plans/prompt-builder.md). The generation request already accepts
-those inputs.) Theme,
-intent and cohort are internal generation vocabulary: never required, never a user-facing validation
+People control generation end to end in the Prompt Builder: topics, search
+queries and their source, distribution (branded share, competitor-alternative
+share, intent mix) and context (personas, services), per owner decision D of
+1 November 2026 in the [decision log](decisions.md). Outside the builder, a
+manual or imported prompt asks only for its text and topic: theme,
+intent and cohort are never required, never a user-facing validation
 error, and defaulted in code when absent. The prompt table shows branding,
 intent, buyer stage and persona as tags with filters; editing a prompt can
 correct its text, topic, intent, buyer stage and persona (`persona_max_chars`),

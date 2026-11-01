@@ -101,7 +101,11 @@ Company facts are edited in Agent → Context
 ([brand profile panel](../frontend/components/knowledge-base/brand-profile-panel.tsx)):
 category, buyer type and market scope (saved into the business context as
 `reviewed`), description, positioning, audience, offerings and the business
-map. Competitors, domains and market are edited in the
+map. The Prompts screen's Prompt Builder edits the offerings, the business map's
+audiences and situations, and the five fields onboarding infers (service areas,
+buyer roles, business model, category terms, jobs to be done) through the same
+brand-profile update, which marks each sent field `reviewed`; a changed category
+still clears the fields derived from the old one. Competitors, domains and market are edited in the
 [project editor](../frontend/components/projects/project-edit-panel.tsx), which
 keeps each competitor's aliases across renames. Overview shows a read-only
 summary. Prompt generation and Site Health archetypes read the stored category
