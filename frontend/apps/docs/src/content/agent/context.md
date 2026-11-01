@@ -18,7 +18,7 @@ A crawl can capture what a website says; that does not automatically make every 
 
 ## Write useful standing instructions
 
-Describe requirements that apply across tasks:
+The **Agent instructions** tab holds them. Describe requirements that apply across tasks:
 
 - The audience and its level of expertise.
 - Voice and terminology your team uses.

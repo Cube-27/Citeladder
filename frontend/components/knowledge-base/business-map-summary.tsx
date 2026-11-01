@@ -4,8 +4,10 @@ import { useQuery } from '@tanstack/react-query';
 
 import { ProjectLink } from '@/components/layout/scoped-link';
 import { Button } from '@/components/ui/button';
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ChipList } from '@/components/ui/chip-list-field';
 import { FactList, type Fact } from '@/components/ui/facts';
-import { Inline, Stack } from '@/components/ui/layout';
+import { Stack } from '@/components/ui/layout';
 import { panelClasses } from '@/components/ui/panel';
 import { QueryState } from '@/components/ui/query-state';
 import { readErrorProps } from '@/components/ui/read-error';
@@ -22,10 +24,19 @@ import {
 import { BUSINESS_MODEL_CHOICES } from '@/lib/project/identity-facets';
 import { PROMPTS_GENERATE_HREF } from '@/lib/prompts/routes';
 
-/** A list as one line of text; a suggestion says so until a person confirms it. */
-function listValue(values: readonly string[]) {
-  return values.length ? values.join(', ') : <UnavailableValue state="not_set" />;
-}
+/** A list's values as chips. */
+const chips = (values: readonly string[]) => (
+  <ChipList items={values.map((value) => ({ value }))} />
+);
+/** A map's entries as chips; a suggestion says so until a person confirms it. */
+const entryChips = (entries: readonly MapEntryDraft[]) => (
+  <ChipList
+    items={entries.map((entry) => ({
+      value: entry.value,
+      suggested: entry.review_state === 'suggested',
+    }))}
+  />
+);
 /** The saved business model's label; a saved value this app does not recognize stays distinct from none. */
 function businessModelValue(profile: BrandProfile) {
   const saved = profile.business_context.business_model;
@@ -33,16 +44,37 @@ function businessModelValue(profile: BrandProfile) {
   if (choice) return choice.label;
   return <UnavailableValue state={saved == null || saved === '' ? 'not_set' : 'unknown'} />;
 }
-const entryValues = (entries: readonly MapEntryDraft[]) =>
-  entries.map((entry) =>
-    entry.review_state === 'suggested' ? `${entry.value} (suggested)` : entry.value,
-  );
 
 /**
- * The business facts that steer prompt generation, read-only: the Prompt
- * Builder's first step owns editing them, and this links there.
+ * The business facts that steer prompt generation, read-only on one card: the
+ * Prompt Builder's first step owns editing them, and the card links there.
+ * Each offering's map is a nested panel inside the card.
  */
 export function BusinessMapSummary({
+  projectId,
+  workspaceId,
+  profile,
+}: Readonly<{ projectId: string; workspaceId: string; profile: BrandProfile }>) {
+  return (
+    <Card aria-labelledby="business-map">
+      <CardHeader
+        actions={
+          <Button asChild variant="secondary">
+            <ProjectLink href={PROMPTS_GENERATE_HREF}>Edit in Prompt Builder</ProjectLink>
+          </Button>
+        }
+      >
+        <CardTitle id="business-map">Business map</CardTitle>
+        <CardDescription>
+          These details steer prompt generation. Edit them in the Prompt Builder.
+        </CardDescription>
+      </CardHeader>
+      <BusinessMapBody projectId={projectId} workspaceId={workspaceId} profile={profile} />
+    </Card>
+  );
+}
+
+function BusinessMapBody({
   projectId,
   workspaceId,
   profile,
@@ -62,24 +94,16 @@ export function BusinessMapSummary({
     );
   const draft = businessDraft(profile, query.data);
   const facts: Fact[] = [
-    { label: 'Buyer roles', value: listValue(draft.buyerRoles) },
+    { label: 'Buyer roles', value: chips(draft.buyerRoles) },
     ...(showsServiceAreas(profile.business_context)
-      ? [{ label: 'Service areas', value: listValue(draft.serviceAreas) }]
+      ? [{ label: 'Service areas', value: chips(draft.serviceAreas) }]
       : []),
-    { label: 'Category terms', value: listValue(draft.categoryTerms) },
-    { label: 'Jobs to be done', value: listValue(draft.jobs) },
+    { label: 'Category terms', value: chips(draft.categoryTerms) },
+    { label: 'Jobs to be done', value: chips(draft.jobs) },
     { label: 'Business model', value: businessModelValue(profile) },
   ];
   return (
     <Stack gap="workspace">
-      <Inline className="flex-wrap justify-between">
-        <p className={textRole('body', 'text-secondary')}>
-          These details steer prompt generation. Edit them in the Prompt Builder.
-        </p>
-        <Button asChild variant="secondary">
-          <ProjectLink href={PROMPTS_GENERATE_HREF}>Edit in Prompt Builder</ProjectLink>
-        </Button>
-      </Inline>
       <FactList layout="ruled" label="Business details" facts={facts} />
       {draft.maps.map((map) => (
         <Stack
@@ -87,18 +111,15 @@ export function BusinessMapSummary({
           key={map.offering}
           aria-label={map.offering}
           gap="compact"
-          className={panelClasses({ tone: 'well' })}
+          className={panelClasses({ tone: 'tonal' })}
         >
-          <h3 className={textRole('itemTitle')}>{map.offering}</h3>
+          <h4 className={textRole('itemTitle')}>{map.offering}</h4>
           <FactList
             layout="ruled"
             facts={[
-              { label: 'Who buys it', value: listValue(entryValues(map.audiences)) },
-              {
-                label: 'Situations and constraints',
-                value: listValue(entryValues(map.situations)),
-              },
-              { label: 'Attributes', value: listValue(entryValues(map.attributes)) },
+              { label: 'Who buys it', value: entryChips(map.audiences) },
+              { label: 'Situations and constraints', value: entryChips(map.situations) },
+              { label: 'Attributes', value: entryChips(map.attributes) },
             ]}
           />
         </Stack>
