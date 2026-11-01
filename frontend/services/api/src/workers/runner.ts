@@ -195,19 +195,16 @@ export async function drainLanes(lanes: readonly RunnerLane[], options: DrainOpt
   );
   for (;;) {
     turns.startReady();
-    if (!turns.running.size) {
-      if (!canAdmit()) break;
-      const wait = await nextDueDelay(turns.lanes()); // NOSONAR -- Probed only when every lane is idle.
-      const ms = idlePause(wait, options.deadline - now(), pollMs);
-      if (ms === null) break;
-      await pause(ms, options.signal); // NOSONAR -- Idle until deferred work is due.
-      turns.wakeIdle();
-      continue;
+    if (turns.running.size) {
+      const poll = canAdmit() && turns.hasIdle() ? pollMs : null;
+      const settled = await nextSettlement(turns.running, poll, pause, options.signal); // NOSONAR -- Wait for the next lane or poll.
+      if (settled) turns.record(settled);
+      else turns.wakeIdle();
+    } else if (!canAdmit()) break;
+    else {
+      const remaining = () => options.deadline - now();
+      if (!(await waitForDue(turns, remaining, pollMs, pause, options.signal))) break; // NOSONAR -- Idle until deferred work is due.
     }
-    const poll = canAdmit() && turns.hasIdle() ? pollMs : null;
-    const settled = await nextSettlement(turns.running, poll, pause, options.signal); // NOSONAR -- Wait for the next lane or poll.
-    if (settled) turns.record(settled);
-    else turns.wakeIdle();
   }
   if (turns.failures.length)
     throw new LaneFailures({
@@ -217,6 +214,22 @@ export async function drainLanes(lanes: readonly RunnerLane[], options: DrainOpt
       message: 'Runner lanes failed',
     });
   return turns.tasks;
+}
+
+/** Every lane is idle: pause until deferred work is due within the budget; false to exit. */
+async function waitForDue(
+  turns: LaneTurns,
+  remaining: () => number,
+  pollMs: number,
+  pause: Pause,
+  signal: AbortSignal,
+) {
+  const wait = await nextDueDelay(turns.lanes());
+  const ms = idlePause(wait, remaining(), pollMs);
+  if (ms === null) return false;
+  await pause(ms, signal);
+  turns.wakeIdle();
+  return true;
 }
 
 async function settle(state: LaneState, canAdmit: () => boolean): Promise<Settlement> {
