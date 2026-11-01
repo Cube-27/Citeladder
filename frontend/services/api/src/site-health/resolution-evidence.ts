@@ -336,11 +336,17 @@ export function sitewideTargets(linksByPage: readonly (readonly string[])[]): Se
  */
 function sitewideFinding(
   ruleId: string,
-  failing: readonly string[],
+  { failing, unchecked }: { failing: readonly string[]; unchecked: readonly string[] },
   linkers: ReadonlyMap<string, readonly LinkingPage[]>,
   resolutions: Map<string, Resolution>,
   outcome: (url: string, resolution: Resolution) => Record<string, unknown>,
 ) {
+  // Like a page's link checks, an unfetched or rate-limited target cannot pass.
+  if (!failing.length && unchecked.length)
+    return finalizeEvaluation(ruleId, 'unknown', {
+      reason: 'unchecked_targets',
+      unchecked_targets: unchecked.slice(0, limit),
+    });
   if (!failing.length) return finalizeEvaluation(ruleId, 'satisfied', { count: 0, targets: [] });
   const pages = new Map<string, LinkingPage>();
   for (const url of failing)
@@ -382,8 +388,21 @@ export function sitewideLinks(
   resolutions: Map<string, Resolution>,
 ) {
   const targets = [...sitewide].toSorted(compareText);
-  const broken = targets.filter((url) => isBrokenLink(resolutions.get(url)));
-  const redirecting = targets.filter((url) => isRedirectingLink(resolutions.get(url)));
+  // The same targets a page's link checks leave unchecked: no answer, or a 429.
+  const unanswered = (resolution: Resolution | undefined, loopAnswers: boolean) =>
+    resolution === undefined ||
+    resolution.status === 429 ||
+    (resolution.status === null &&
+      !isExcludedTarget(resolution) &&
+      !(loopAnswers && resolution.errorCode === REDIRECT_LIMIT));
+  const broken = {
+    failing: targets.filter((url) => isBrokenLink(resolutions.get(url))),
+    unchecked: targets.filter((url) => unanswered(resolutions.get(url), false)),
+  };
+  const redirecting = {
+    failing: targets.filter((url) => isRedirectingLink(resolutions.get(url))),
+    unchecked: targets.filter((url) => unanswered(resolutions.get(url), true)),
+  };
   return [
     sitewideFinding('technical.sitewide_broken_link', broken, linkers, resolutions, (url, row) => ({
       url,

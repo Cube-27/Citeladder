@@ -457,7 +457,11 @@ root, by `technical.sitewide_broken_link` or `technical.sitewide_link_redirect`
 (site scope, unscored defects). Their evidence names each failing target, where
 it lands, how many pages link it and a sample of those pages (with their
 artifact IDs), plus the target's resolution source IDs; the Issues group counts
-the distinct linking pages, and the rail lists the targets. On each page that
+the distinct linking pages, and the rail lists the targets. With no failing
+target, an unfetched or rate-limited sitewide target leaves them `unknown`
+(`unchecked_targets`), never satisfied. The Issues summary's page total is at
+least the largest site-level group's count, since those findings record a count
+and a sample rather than every page. On each page that
 target leaves the broken-link and link-redirect sets, as excluded targets do,
 and stays named under `sitewide_targets`; the page's own failing links keep
 their per-page issues. Without the root in the finalize pass, every page keeps

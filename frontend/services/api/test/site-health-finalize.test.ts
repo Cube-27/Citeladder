@@ -373,6 +373,16 @@ describe('terminal checks from persisted evidence', () => {
     expect(
       sitewideLinks(new Set([url('/')]), linkers, resolutions).map((row) => row.outcome),
     ).toEqual(['satisfied', 'satisfied']);
+    // A shared link the crawl never fetched, or that was rate-limited, cannot pass.
+    resolutions.set(url('/busy'), resolution({ status: 429 }));
+    expect(
+      sitewideLinks(new Set([url('/'), url('/never'), url('/busy')]), linkers, resolutions).map(
+        (row) => [row.outcome, row.evidence.unchecked_targets],
+      ),
+    ).toEqual([
+      ['unknown', [url('/busy'), url('/never')]],
+      ['unknown', [url('/busy'), url('/never')]],
+    ]);
   });
 
   it('weights pages equally and keeps missing measurements out of the score denominator', () => {

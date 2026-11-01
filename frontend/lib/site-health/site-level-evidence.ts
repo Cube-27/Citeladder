@@ -65,7 +65,12 @@ export type SiteLevelEvidence =
       kind: 'page_kinds';
       pageKinds: readonly Readonly<{ pageKind: string; pageCount: number | null }>[];
     }>
-  | Readonly<{ kind: 'link_targets'; total: number; targets: readonly LinkTarget[] }>;
+  | Readonly<{
+      kind: 'link_targets';
+      /** Distinct pages carrying a failing link; `null` when the evidence did not record it. */
+      total: number | null;
+      targets: readonly LinkTarget[];
+    }>;
 
 function pagesOf(value: unknown, depthIsTheFinding: boolean): EvidencePage[] {
   return records(value).flatMap((page) => {
@@ -142,7 +147,7 @@ export function siteLevelEvidence(ruleId: string, evidence: Evidence): SiteLevel
   if (LINK_TARGET_RULES.has(ruleId)) {
     const targets = linkTargets(evidence);
     const count = evidence.count;
-    return { kind: 'link_targets', total: typeof count === 'number' ? count : 0, targets };
+    return { kind: 'link_targets', total: typeof count === 'number' ? count : null, targets };
   }
   return null;
 }

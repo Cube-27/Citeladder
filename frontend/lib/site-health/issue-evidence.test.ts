@@ -240,6 +240,10 @@ describe('evidenceFacts', () => {
         },
       ],
     });
+    // An unrecorded count stays unknown rather than reading as no pages.
+    expect(
+      siteLevelEvidence('technical.sitewide_broken_link', { reason: 'unchecked_targets' }),
+    ).toEqual({ kind: 'link_targets', total: null, targets: [] });
   });
 
   it('spells redirects as where they land, and an abandoned one as a loop', () => {

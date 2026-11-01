@@ -356,7 +356,8 @@ describe('terminal analysis publication', () => {
       ['technical.sitewide_link_redirect', 6],
       ['technical.internal_link_redirect', 1],
     ]);
-    expect(catalog.summary.occurrence_count).toBe(2);
+    // Two rows, but the summary's pages are at least the six the shared link is on.
+    expect([catalog.summary.occurrence_count, catalog.summary.affected_url_count]).toEqual([2, 6]);
   });
 
   it('does not publish another workspace through a mismatched crawl scope', async () => {

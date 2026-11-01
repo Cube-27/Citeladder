@@ -73,10 +73,11 @@ export function issueGroupId(crawlId: string, ruleId: string, findingClass: stri
 }
 
 /** Link problems judged once on the crawl root for every page that carries the link. */
-const SITEWIDE_LINK_RULES = new Set([
+export const sitewideLinkRules: readonly string[] = [
   'technical.sitewide_broken_link',
   'technical.sitewide_link_redirect',
-]);
+];
+const SITEWIDE_LINK_RULES = new Set(sitewideLinkRules);
 
 /**
  * A site-level finding (an architecture rule or a sitewide link) is persisted
@@ -91,9 +92,11 @@ export function siteLevelScope(
 ): { affected: number; pageKinds: string[] } | null {
   const facts = record(evidence);
   if (SITEWIDE_LINK_RULES.has(ruleId)) {
+    // Without a recorded count the group falls back to its own rows, never to zero.
+    if (typeof facts.count !== 'number') return null;
     const kinds = Array.isArray(facts.linking_page_kinds) ? facts.linking_page_kinds : [];
     return {
-      affected: typeof facts.count === 'number' ? facts.count : 0,
+      affected: facts.count,
       pageKinds: kinds.filter((kind): kind is string => typeof kind === 'string'),
     };
   }

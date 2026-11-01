@@ -359,7 +359,17 @@ function LinkTargetList({
   crawlId: string;
 }>) {
   if (evidence.targets.length === 0)
-    return <QueryState kind="empty" inline message="No affected links found." />;
+    return (
+      <QueryState
+        kind="empty"
+        inline
+        message={
+          evidence.total === 0
+            ? 'No affected links found.'
+            : 'This finding did not record which links it affects.'
+        }
+      />
+    );
   return (
     <ul className={ledgerClasses('open')}>
       {evidence.targets.map((target) => {
