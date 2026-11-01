@@ -173,7 +173,7 @@ catalogue (below).
 | Area | Tools |
 | --- | --- |
 | Start | `list_projects`, `get_project_business_context` (profile, competitors, active prompts, latest visibility, top Actions, Site Health, connected data; sections run in parallel), `search` and `fetch` |
-| AI visibility | Each market is measured apart: the project context lists `markets`, and `read_visibility_overview`, `read_visibility_trends`, `read_perception`, `read_fact_checks`, `read_ai_ads` and `read_source_url` take `market_id` (omitted is the default market). `read_visibility_overview` (mention rate, citation rate, rankings and the run's status), `read_visibility_trends`, `read_visibility_results` (answers), `read_visibility_sources`, `read_source_url` (one cited page: prompts, engines, brands listed, your presence), `read_perception` (net sentiment with coverage, themes, verified quotes, sources cited alongside criticism, recommended rate; `view: quotes` pages the quotes), `read_fact_checks` (fact-checking pilot: accuracy with coverage, contradicted claims with the fact they contradict, sources cited alongside; `view: claims` pages the claims; `not_enabled` outside the pilot), `read_ai_ads` (ChatGPT Search ad presence, advertisers, creatives and prompts; other engines are not applicable; ads never count as citations), `read_prompt_portfolio` |
+| AI visibility | Each market is measured apart: the project context lists `markets`, and `read_visibility_overview`, `read_visibility_trends`, `read_perception`, `read_fact_checks`, `read_ai_ads` and `read_source_url` take `market_id` (omitted is the default market). `read_visibility_overview` (mention rate, citation rate, rankings and the run's status), `read_visibility_trends`, `read_visibility_results` (answers), `read_visibility_sources`, `read_source_url` (one cited page: prompts, engines, brands listed, your presence), `read_perception` (net sentiment with coverage, themes, verified quotes, sources cited alongside criticism, recommended rate; `view: quotes` pages the quotes), `read_fact_checks` (fact-checking pilot: accuracy with coverage, contradicted claims with the fact they contradict, sources cited alongside; `view: claims` pages the claims; `not_enabled` outside the pilot), `read_ai_ads` (ChatGPT Search ad presence, advertisers, creatives and prompts; other engines are not applicable; ads never count as citations), `read_prompt_portfolio`, `read_seed_queries` (the non-branded, question-like searches each persisted source would ground a generation run on, by topic; never volume) |
 | Work | `read_actions` (active Actions in priority order, or one Action with findings, remediation, go-live and measured outcome), `read_content_differentiation`, `read_ai_shelf` (Commerce) |
 | Site | `read_site_health`, `read_site_pages`, `read_site_links`, `read_ai_crawlability` |
 | Traffic | `read_performance` (totals with comparison, or a `dimension` breakdown), `read_query_evidence`, `read_demand`, `read_ai_referrals`, `read_crawl_logs` (summary, crawlers, coverage or individual requests), `read_ai_traffic_pages`, `read_ai_traffic_url`, `read_ai_traffic_insights`, `read_integration_status` |
@@ -215,9 +215,17 @@ A record named by ID must belong to that project.
 
 | Kind | Tools |
 | --- | --- |
-| Direct (one call, one transaction with its security event) | `create_topic`, `rename_topic`, `delete_topic` (by name; its prompts stay, without a topic), `update_prompt_text`, `add_competitor`, `remove_competitor` (by name), `update_action_status`, `cancel_audit` |
+| Direct (one call, one transaction with its security event) | `create_topic`, `rename_topic`, `delete_topic` (by name; its prompts stay, without a topic), `confirm_topics` (the Prompt Builder's topic plan: create with offering links, rename and delete in one change), `update_prompt_text`, `add_competitor`, `remove_competitor` (by name), `update_action_status`, `cancel_audit` |
+| Prompt Builder runs (metered; no dry run) | `preview_topics` (one model call, writes nothing; existing and proposed topics), `generate_prompts` (the builder's distribution-aware generate; candidates stay staged for review, the result links to `/prompts?review=1`, and the run records `mcp.write.generate_prompts`) |
 | Prepared | `prepare_add_prompts` (1–50; drops duplicates and binding failures with reasons; shows prompt slots after), `prepare_archive_prompts`, `prepare_launch_audit` (estimate shown; `max_attempts` frozen into the payload), `prepare_schedule`, `prepare_declare_implemented` |
 | Confirm | `confirm_change` |
+
+The Prompt Builder tools call the same command owners as the builder's routes
+(`commands/prompts.ts`), with the same `run` capability, metering, AI-credit
+holds and owner errors. A model call cannot be rehearsed inside a rolled-back
+transaction, so they are not prepared: the server instructions and the
+`prompt-discovery` plugin skill require the user's yes before each, and
+`generate_prompts` activates nothing (only Accept in Prompts does).
 
 A prepare tool runs its command as a **dry run** (`rehearse` in the write
 catalogue, over the operator rollback transaction): every check, admission and
@@ -237,7 +245,7 @@ this way are active immediately. Each executed change records an
 Write calls spend the normal tool budgets plus 30 a minute per grant. Tools
 carry their own annotations: reads `readOnlyHint: true`; writes
 `readOnlyHint: false`, `destructiveHint` on archive, cancel,
-`remove_competitor`, `delete_topic` and `confirm_change`, `idempotentHint` on renames and status updates.
+`remove_competitor`, `delete_topic`, `confirm_topics` and `confirm_change`, `idempotentHint` on renames and status updates.
 Only `confirm_change` carries `openWorldHint: true`: a confirmed audit launch
 asks external AI engines. The server
 instructions require the user's yes before any change tool, and for a prepare

@@ -100,11 +100,12 @@ URL starts at the first step, while a discovery URL resumes that draft.
 Company facts are edited in Agent → Context
 ([brand profile panel](../frontend/components/knowledge-base/brand-profile-panel.tsx)):
 category, buyer type and market scope (saved into the business context as
-`reviewed`), description, positioning, audience, offerings and the business
-map. The Prompts screen's Prompt Builder edits the offerings, the business map's
-audiences and situations, and the five fields onboarding infers (service areas,
+`reviewed`), description, positioning, audience and offerings. The Prompts
+screen's Prompt Builder edits the offerings, the business map's audiences,
+situations and attributes, and the five fields onboarding infers (service areas,
 buyer roles, business model, category terms, jobs to be done) through the same
-brand-profile update, which marks each sent field `reviewed`; a changed category
+brand-profile update, which marks each sent field `reviewed`; Context's Business
+map tab shows those read-only with an **Edit in Prompt Builder** link. A changed category
 still clears the fields derived from the old one. Competitors, domains and market are edited in the
 [project editor](../frontend/components/projects/project-edit-panel.tsx), which
 keeps each competitor's aliases across renames. Overview shows a read-only
@@ -137,7 +138,7 @@ an observed zero stays zero. It replaced the fixed Executive PDF.
 ## Brand facts
 
 In a workspace in the fact-checking pilot (the `fact_checking` grant), Agent →
-Context also lists **brand facts**: short statements of record on a closed set
+Context's Company facts panel has a **Brand facts** tab: short statements of record on a closed set
 of topics (pricing, plans, integrations, availability, markets, policies,
 specifications, company), each with an optional source page. The
 [brand facts owner](../frontend/services/api/src/projects/brand-facts.ts) creates

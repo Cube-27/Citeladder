@@ -37,7 +37,8 @@ shape generation: business facts, topics, distribution, search seeds and count,
 each prefilled from saved data. It samples the broad market by default: the
 category's buyer questions across offerings, stages, intents and personas, with
 places only where the market scope calls for them. The Agent's Prompt discovery
-skill still stages an agent portfolio into the same candidate review.
+skill writes no prompts: it plans a run for the builder, and over MCP it runs
+the builder's steps through the same endpoints (below).
 
 A request asks for at most `GENERATION_MAX_COUNT` (50) questions. Draft batches
 run with bounded concurrency (`GENERATION_DRAFT_CONCURRENCY`) under a request
@@ -73,10 +74,12 @@ subtopic cannot have children, and deleting a parent promotes its subtopics.
 The topic rail adds a subtopic under a chosen top-level topic and renames a
 topic in place (Enter saves, Escape cancels, a failed save keeps the typed name).
 
-The [business map](../frontend/services/api/src/projects/business-map.ts), edited under
-Brand knowledge and in the Prompt Builder, and stored in `BusinessContext.business_map`, lists per
-confirmed offering its attributes, situations/constraints and audiences, plus
-excluded pairs that never combine. Entries carry origin and review state: a
+The [business map](../frontend/services/api/src/projects/business-map.ts), edited only in
+the Prompt Builder (Agent → Context shows it read-only with a link there), and
+stored in `BusinessContext.business_map`, lists per confirmed offering its
+attributes, situations/constraints and audiences, plus excluded pairs that never
+combine. Generation reads no excluded pair, and no screen edits them; the
+builder keeps saved ones and drops a pair when an entry it names is removed. Entries carry origin and review state: a
 model suggestion stays `suggested` until a person confirms it, and edits keep
 each surviving entry's provenance. When a Generate request selects topics
 covering offerings (by name, or by the offerings a recovered topic was proposed
@@ -92,9 +95,9 @@ empty prompt set and the user chooses what to track. Generation uses existing
 topics; a quick run in a project with none first recovers starting topics from
 the saved products/services, whatever their review state (onboarding saves the
 ones its reader just reviewed as unreviewed). No saved offerings fails before
-provider I/O. An agent portfolio, or a request naming `topic_ids`, never
-recovers topics: named topics must already belong to the project, which the
-context read checks before any model call.
+provider I/O. A request naming `topic_ids` never recovers topics: named topics
+must already belong to the project, which the context read checks before any
+model call.
 
 Onboarding research keeps a bounded offering harvest of things a customer buys,
 hires, books or enrolls in as reviewable evidence. [Topic
@@ -178,8 +181,7 @@ fails before provider I/O. `run_context` (at most `run_context_max_chars`) is a
 note for this run only, sent as reference data and never a business fact.
 `seed_source` (`search_console`, `search_intelligence` or `none`) and optional
 `seed_query_ids` restrict which persisted searches ground slots; omitted, every
-source grounds. An agent portfolio takes none of these. They are part of the
-idempotency request and frozen in run provenance (`run_context`,
+source grounds. They are part of the idempotency request and frozen in run provenance (`run_context`,
 `requested_distribution`, `cohort_quotas`, `seed_source`, `seed_query_ids`).
 
 Draft batches receive a narrow brief (category, category terms, offerings,
@@ -319,33 +321,29 @@ rewritten by a newer generator.
 
 ## Prompts page, manual entry and CSV import
 
-The Agent's Prompt discovery skill (in the Agent or over MCP) saves a portfolio.
-The saved portfolio has an explicit **Review in Prompts** action. The existing
-generation endpoint accepts `agent_revision_id`, loads that authorized project's
-saved portfolio, validates its bounded core rows, and applies the same
-admission, JEV and candidate staging path without another text generation call.
-The block's fence is matched case-insensitively; a row filed under an unknown
-topic is dropped as `unknown_topic` rather than failing the portfolio. A row may
-carry `targeting` (`place`, `persona`, `constraint`; any other key fails the
-proposal), which becomes its cell's market, audience and situation facets.
-Location and stage-intent admission do not apply to Agent rows: targeting is the
-point, and an untargeted row admits as before. New runs record
-`generation_mode` `quick` or `agent_proposal`. The report
-hides the block only when there is exactly one closed JSON block with valid topic UUIDs
-and a nonempty row count within the UI generation ceiling. The API also enforces
-its configured runtime limit. Run provenance retains the exact output/revision/run references.
-It never activates prompts. Repeated submission drops tracked or pending copies.
-The handoff requests the portfolio's own question count, so selection never
-trims an approved plan to the default, and opens
-`/prompts?review=1`. Review intent survives loading; failed reads offer retry,
-and an empty or expired batch is explained rather than opening generation setup.
-Prompt-set creation waits for its list read and serializes local attempts per project.
+Every generated prompt comes from the generator, so all wording rules live in
+the generation configuration. The Agent's Prompt discovery skill never writes
+prompt text or a proposal of its own:
+
+- In the Agent it saves a **prompt plan** following the builder's steps (facts
+  to fix, topics to keep or change, mix and search data) and offers **Open
+  Prompt Builder** (`/prompts?generate=1`); the Agent stays read-only.
+- Over [MCP](mcp.md), a connection with Allow changes runs the steps through
+  the builder's own owners: `get_project_business_context`, then
+  `preview_topics` and `confirm_topics`, then `read_seed_queries`, then
+  `generate_prompts` with the agreed distribution and seeds. Candidates stay
+  staged; the result links to `/prompts?review=1`, where only a person's Accept
+  activates them.
+
+Review intent survives loading; failed reads offer retry, and an empty or
+expired batch is explained rather than opening generation setup. Prompt-set
+creation waits for its list read and serializes local attempts per project.
 
 The Prompt Builder is a right-hand sheet with four steps; each open is a fresh
 session, and nothing it edits is written until its step saves or confirms.
 
-1. **About your business**: offerings, buyer roles, each offering's audiences
-   and situations/constraints, service areas (only for a local or regional
+1. **About your business**: offerings, buyer roles, each offering's audiences,
+   situations/constraints and attributes, service areas (only for a local or regional
    `market_scope`), category terms, jobs to be done and business model, as
    chips and choices; plus a one-line `run_context` for this run only. Save
    sends only changed fields to the brand-profile update, then the business-map

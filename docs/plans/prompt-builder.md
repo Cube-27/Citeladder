@@ -1,9 +1,12 @@
 # Prompt Builder
 
-Status: proposed on 1 November 2026. The owner settled decisions A–D the same day
-(see [Owner decisions](#owner-decisions)). PR 1 (generation quality, #483) is
-merged. PR 2 (Prompt Builder) is in review; it also makes the five
-onboarding-only fields editable in the builder, ahead of PR 3. PR 3 follows.
+Status: complete. Proposed on 1 November 2026; the owner settled decisions A–D
+the same day (see [Owner decisions](#owner-decisions)). PR 1 (generation
+quality, #483) and PR 2 (Prompt Builder, #487, which also made the five
+onboarding-only fields editable in the builder) are merged; PR 3 (Context page
+and Agent) completes it. The [follow-ups](#follow-ups) are in the backlog.
+[Prompts and Visibility](../visibility-prompt.md), [Agent](../agents.md) and
+[MCP](../mcp.md) own the shipped behavior.
 
 ## Why
 
@@ -159,9 +162,13 @@ only from `service_areas`.
 ## Context page
 
 - Company facts moves above Agent instructions.
-- Brand facts moves inside the tabbed panel as its own tab. It currently sits
-  after the panel, so it appears under every tab.
-- Business map editing moves to the Prompt Builder.
+- Brand facts moves inside the tabbed panel as its own tab. It sat after the
+  panel, so it appeared under every tab.
+- Business map editing moves to the Prompt Builder, which gains the map's
+  attributes beside audiences and situations. Context's Business map tab is a
+  read-only summary of the map and the five onboarding-only fields, linking to
+  the builder; the Context-side map editor is deleted. Excluded pairs are read
+  by no generation step, so no screen edits them; the builder keeps saved ones.
 - The five onboarding-only fields become editable in the builder.
 
 ## Agent and MCP
@@ -178,6 +185,16 @@ The skill no longer writes prompt text or a JSON proposal of its own. That
 retires the proposal parser, its "Portfolio requires one JSON proposal" failure,
 and the topic-ID leak in Copy/Export. All wording rules then live in one place,
 the generation config. Plugin twins stay at parity.
+
+As shipped: the in-app Agent stays read-only, so its `prompt_discovery` saves a
+short prompt plan (output kind `prompt_plan`) that follows the four steps and
+links to the Prompt Builder. The new plugin twin `prompt-discovery` runs the
+steps for MCP clients through new MCP tools over the same owners:
+`read_seed_queries`, `preview_topics`, `confirm_topics` and `generate_prompts`.
+Lasting business-fact edits stay in the builder; over MCP a correction for one
+run goes in `run_context`. Generation's `agent_revision_id` input, the
+proposal parser, the Review in Prompts action and the scrubber's fenced-block
+exception are removed.
 
 ## PRs
 
