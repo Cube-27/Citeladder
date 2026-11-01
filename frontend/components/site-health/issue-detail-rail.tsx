@@ -21,7 +21,7 @@ import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import { agentHandoffHref } from '@/lib/agent/handoff';
 import { useAgentPanelSeed } from '@/lib/agent/panel-context';
 import type { SiteIssue, SiteIssueDetail } from '@/lib/api/types';
-import { siteLevelEvidence, type SiteLevelEvidence } from '@/lib/site-health/issue-evidence';
+import { siteLevelEvidence, type SiteLevelEvidence } from '@/lib/site-health/site-level-evidence';
 import { dimensionLabel, issueTitle, severityLabel } from '@/lib/site-health/issues';
 import { pageKindLabel } from '@/lib/site-health/page-kinds';
 import { pageDisplayTitle } from '@/lib/site-health/status';

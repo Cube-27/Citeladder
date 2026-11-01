@@ -25,25 +25,20 @@
  * and mean different things.
  */
 
-type Evidence = Record<string, unknown>;
+import {
+  originOf,
+  records,
+  sitePath,
+  text,
+  textList,
+  withoutQuery,
+  type Evidence,
+} from './evidence-values';
+import { architecturePageFacts, pageListRules } from './site-level-evidence';
 
 /** More than this and the reader is scanning, not reading. */
 const MAX_FACTS = 8;
 const MAX_FACT_CHARS = 140;
-
-function text(value: unknown): string {
-  return typeof value === 'string' ? value.trim() : '';
-}
-
-function textList(value: unknown): string[] {
-  return Array.isArray(value) ? value.map(text).filter((item) => item.length > 0) : [];
-}
-
-function records(value: unknown): Evidence[] {
-  return Array.isArray(value)
-    ? value.filter((item): item is Evidence => typeof item === 'object' && item !== null)
-    : [];
-}
 
 /**
  * The notations the page does NOT have. A check that fails on two of three
@@ -150,26 +145,6 @@ function failingLinkTargets(evidence: Evidence): string[] {
     );
 }
 
-/** A URL without its query string or fragment: `?qv=…` quick-view links are one link. */
-function withoutQuery(url: string): string {
-  return url.replace(/[?#].*$/u, '');
-}
-
-function parsedUrl(url: string): URL | null {
-  try {
-    return new URL(url);
-  } catch {
-    return null;
-  }
-}
-
-/** A same-site link reads as its path; another host keeps its full URL. */
-function sitePath(url: string, origin: string | null): string {
-  const parsed = parsedUrl(url);
-  if (!parsed || (origin !== null && parsed.origin !== origin)) return url;
-  return parsed.pathname;
-}
-
 /**
  * Links found ON this page, one fact per distinct link. The same link with
  * different query strings (a theme's `?qv=` quick-view variants) is one thing
@@ -183,7 +158,7 @@ function pageLinks(
   for (const target of records(evidence.failing_targets)) {
     const url = text(target.url);
     if (!url) continue;
-    const origin = parsedUrl(url)?.origin ?? null;
+    const origin = originOf(url);
     const link = sitePath(withoutQuery(url), origin);
     const fact = `${link} → ${outcome(target, origin)}`;
     const group = groups.get(fact);
@@ -310,93 +285,6 @@ function indexable(evidence: Evidence): string[] {
   return why ? [directives, why] : [directives];
 }
 
-// ---------------------------------------------------------------------------
-// Site-level architecture findings
-// ---------------------------------------------------------------------------
-
-/**
- * Architecture findings are judged over the whole crawl and persisted ONCE,
- * against the homepage, with the pages (or page kinds) they found in the
- * evidence. Shown as an occurrence they read as "the homepage is buried too
- * deeply"; the pages in the evidence are the affected pages.
- */
-const PAGE_LIST_RULES = new Set([
-  'architecture.excessive_depth',
-  'architecture.breadcrumb_hierarchy_conflict',
-  'architecture.orphan_pages',
-  'architecture.parentless_detail_pages',
-]);
-const PAGE_KIND_RULES = new Set([
-  'architecture.duplicate_metadata_in_page_kind',
-  'architecture.unhubbed_page_kind',
-]);
-
-export type EvidencePage = Readonly<{
-  siteUrlId: string;
-  url: string;
-  title: string | null;
-  pageKind: string | null;
-  /** Shortest click path from the homepage, only where depth is the finding. */
-  clicksFromHome: number | null;
-}>;
-
-export type SiteLevelEvidence =
-  | Readonly<{ kind: 'pages'; total: number; pages: readonly EvidencePage[] }>
-  | Readonly<{
-      kind: 'page_kinds';
-      pageKinds: readonly Readonly<{ pageKind: string; pageCount: number | null }>[];
-    }>;
-
-function evidencePages(ruleId: string, evidence: Evidence): EvidencePage[] {
-  const depthIsTheFinding = ruleId === 'architecture.excessive_depth';
-  return records(evidence.pages).flatMap((page) => {
-    const siteUrlId = text(page.site_url_id);
-    const url = text(page.url);
-    if (!siteUrlId || !url) return [];
-    const depth = page.depth_from_home;
-    return [
-      {
-        siteUrlId,
-        url,
-        title: text(page.title) || null,
-        pageKind: text(page.page_kind) || null,
-        clicksFromHome: depthIsTheFinding && typeof depth === 'number' ? depth : null,
-      },
-    ];
-  });
-}
-
-/** The pages or page kinds a site-level finding names; `null` for a per-page rule. */
-export function siteLevelEvidence(ruleId: string, evidence: Evidence): SiteLevelEvidence | null {
-  if (PAGE_LIST_RULES.has(ruleId)) {
-    const pages = evidencePages(ruleId, evidence);
-    const count = evidence.count;
-    return { kind: 'pages', total: typeof count === 'number' ? count : pages.length, pages };
-  }
-  if (PAGE_KIND_RULES.has(ruleId)) {
-    const pageKinds = records(evidence.page_kinds).flatMap((row) => {
-      const pageKind = text(row.page_kind);
-      const count =
-        ruleId === 'architecture.duplicate_metadata_in_page_kind'
-          ? row.duplicate_metadata_count
-          : row.page_count;
-      return pageKind ? [{ pageKind, pageCount: typeof count === 'number' ? count : null }] : [];
-    });
-    return { kind: 'page_kinds', pageKinds };
-  }
-  return null;
-}
-
-function architecturePages(ruleId: string) {
-  return (evidence: Evidence): string[] =>
-    evidencePages(ruleId, evidence).map((page) => {
-      const path = sitePath(page.url, null);
-      return page.clicksFromHome === null
-        ? path
-        : `${path} (${String(page.clicksFromHome)} clicks)`;
-    });
-}
-
 /**
  * Rules whose evidence has a native notation. Anything absent from this table
  * falls through to `reasonPhrase` and then to bounded scalars, so a new rule
@@ -469,7 +357,7 @@ const FACTS_BY_RULE: Readonly<
   'technical.sitemap_url_unreachable': failingLinkTargets,
   'architecture.duplicate_metadata_in_page_kind': duplicateMetadataKinds,
   'architecture.unhubbed_page_kind': duplicateMetadataKinds,
-  ...Object.fromEntries([...PAGE_LIST_RULES].map((rule) => [rule, architecturePages(rule)])),
+  ...Object.fromEntries(pageListRules.map((rule) => [rule, architecturePageFacts(rule)])),
 };
 
 /**
@@ -480,7 +368,7 @@ const FACTS_BY_RULE: Readonly<
 const LEAD_BY_RULE: Readonly<Record<string, string>> = {
   'technical.internal_link_redirect': 'Links on this page that redirect:',
   'technical.broken_internal_link': 'Broken links on this page:',
-  ...Object.fromEntries([...PAGE_LIST_RULES].map((rule) => [rule, 'Affected pages:'])),
+  ...Object.fromEntries(pageListRules.map((rule) => [rule, 'Affected pages:'])),
   'architecture.duplicate_metadata_in_page_kind': 'Affected page kinds:',
   'architecture.unhubbed_page_kind': 'Affected page kinds:',
 };

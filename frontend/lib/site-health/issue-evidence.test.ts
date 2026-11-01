@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vite-plus/test';
 
-import { evidenceFacts, evidenceLead, siteLevelEvidence } from './issue-evidence';
+import { evidenceFacts, evidenceLead } from './issue-evidence';
+import { siteLevelEvidence } from './site-level-evidence';
 
 // Every evidence blob below is a verbatim row from a real persisted crawl
 // (hiutdenim.co.uk, 200 pages) — the shapes these formatters have to survive.
