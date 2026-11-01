@@ -1,6 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import { z } from 'zod';
 
 import { ProjectLink } from '@/components/layout/scoped-link';
 import { Button } from '@/components/ui/button';
@@ -24,9 +25,21 @@ import {
 import { BUSINESS_MODEL_CHOICES } from '@/lib/project/identity-facets';
 import { PROMPTS_GENERATE_HREF } from '@/lib/prompts/routes';
 
-/** A list's values as chips. */
-const chips = (values: readonly string[]) => (
-  <ChipList items={values.map((value) => ({ value }))} />
+const fieldSourcesSchema = z.record(z.string(), z.unknown());
+
+/**
+ * Whether a business-context field still holds what discovery inferred: only a
+ * field a person has saved is `reviewed` in the context's `field_sources`.
+ */
+function inferredFields(profile: BrandProfile) {
+  const parsed = fieldSourcesSchema.safeParse(profile.business_context.field_sources);
+  const sources = parsed.success ? parsed.data : {};
+  return (field: string) => sources[field] !== 'reviewed';
+}
+
+/** A list's values as chips; an inferred list reads as suggestions until a person saves it. */
+const chips = (values: readonly string[], suggested: boolean) => (
+  <ChipList items={values.map((value) => ({ value, suggested }))} />
 );
 /** A map's entries as chips; a suggestion says so until a person confirms it. */
 const entryChips = (entries: readonly MapEntryDraft[]) => (
@@ -38,10 +51,10 @@ const entryChips = (entries: readonly MapEntryDraft[]) => (
   />
 );
 /** The saved business model's label; a saved value this app does not recognize stays distinct from none. */
-function businessModelValue(profile: BrandProfile) {
+function businessModelValue(profile: BrandProfile, suggested: boolean) {
   const saved = profile.business_context.business_model;
   const choice = BUSINESS_MODEL_CHOICES.find((option) => option.value === saved);
-  if (choice) return choice.label;
+  if (choice) return <ChipList items={[{ value: choice.label, suggested }]} />;
   return <UnavailableValue state={saved == null || saved === '' ? 'not_set' : 'unknown'} />;
 }
 
@@ -93,14 +106,23 @@ function BusinessMapBody({
       />
     );
   const draft = businessDraft(profile, query.data);
+  const inferred = inferredFields(profile);
   const facts: Fact[] = [
-    { label: 'Buyer roles', value: chips(draft.buyerRoles) },
+    { label: 'Buyer roles', value: chips(draft.buyerRoles, inferred('buyer_roles')) },
     ...(showsServiceAreas(profile.business_context)
-      ? [{ label: 'Service areas', value: chips(draft.serviceAreas) }]
+      ? [
+          {
+            label: 'Service areas',
+            value: chips(draft.serviceAreas, inferred('service_areas')),
+          },
+        ]
       : []),
-    { label: 'Category terms', value: chips(draft.categoryTerms) },
-    { label: 'Jobs to be done', value: chips(draft.jobs) },
-    { label: 'Business model', value: businessModelValue(profile) },
+    { label: 'Category terms', value: chips(draft.categoryTerms, inferred('category_terms')) },
+    { label: 'Jobs to be done', value: chips(draft.jobs, inferred('jobs_to_be_done')) },
+    {
+      label: 'Business model',
+      value: businessModelValue(profile, inferred('business_model')),
+    },
   ];
   return (
     <Stack gap="workspace">

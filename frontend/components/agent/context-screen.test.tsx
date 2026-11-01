@@ -427,7 +427,12 @@ describe('Business map', () => {
       profile: {
         ...emptyProfile,
         products_services: [offering],
-        business_context: { buyer_roles: ['Club coach', 'Parent'], business_model: 'd2c_product' },
+        business_context: {
+          buyer_roles: ['Club coach', 'Parent'],
+          business_model: 'd2c_product',
+          // Discovery inferred the roles; a person has saved the business model.
+          field_sources: { buyer_roles: 'inferred', business_model: 'reviewed' },
+        },
       },
       tab: 'map',
     });
@@ -439,8 +444,9 @@ describe('Business map', () => {
       within(roles)
         .getAllByRole('listitem')
         .map((item) => item.textContent),
-    ).toEqual(['Club coach', 'Parent']);
+    ).toEqual(['Club coachSuggested', 'ParentSuggested']);
     expect(details).toHaveTextContent('Business modelProducts sold direct');
+    expect(details).not.toHaveTextContent('Products sold directSuggested');
     expect(screen.getByRole('region', { name: offering })).toHaveTextContent(
       'Situations and constraintsSmall gardenSuggested',
     );
