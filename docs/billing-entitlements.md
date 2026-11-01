@@ -124,12 +124,18 @@ the commercial mutations. Reads require the active workspace's billing
 permission and select its account, independently of owner-user metadata. A
 workspace without an account reads as having no receipts; reads never
 provision one.
-Documents validate stored amounts and use local Noto Sans fonts with measured
-wrapping and pagination. Unsupported glyphs are printed as explicit Unicode
-code points instead of blank characters. The Overview PDF consumes the existing
+Documents validate stored amounts and are set in the brand faces (Outfit and
+Geist, from OFL font packages) with Noto Sans behind them for other scripts,
+with measured wrapping and pagination; ligatures are off so copied and
+searched text stays intact. The [renderer](../frontend/services/api/src/billing/pdf.ts)
+draws the logo from the app's shared outline data and paints with the light
+values of the app's design tokens, read from `globals.css` (the API image
+packages a copy). Unsupported glyphs are
+printed as explicit Unicode code points instead of blank characters. The
+Overview PDF consumes the existing
 [command-center projection](../frontend/services/api/src/projects/command-center.ts)
-and its widgets' persisted reads, including measurement versions and the
-non-causal action disclaimer. Rendering performs no acquisition or settlement.
+and its widgets' persisted reads, including the non-causal action disclaimer.
+Rendering performs no acquisition or settlement.
 
 Base plans are recurring provider subscriptions. Add-ons, top-ups and an
 upgrade's prorated charge are one-time provider orders: the intent persists the

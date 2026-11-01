@@ -132,10 +132,17 @@ defaults: latest run, organic prompts, default market. They keep a fixed
 footprint whether loading, empty or failed.
 
 Export PDF (`GET /projects/{id}/overview/report.pdf`,
-[report](../frontend/services/api/src/projects/overview-report.ts)) prints the
-saved layout widget by widget from the same reads, then the measurement scope
-and methodology. Before the first completed run a widget reads not available;
-an observed zero stays zero. It replaced the fixed Executive PDF.
+[report](../frontend/services/api/src/projects/overview-report.ts)) opens with a
+branded cover (logo, brand, website, measurement date in UTC, engines by their
+catalogue names and prompt count), prints the saved layout widget by widget
+from the same reads under the widgets' own titles, then a plain-English guide
+to the metrics. Project state and Citation share share one stat strip when both
+are shown; a run with no comparable predecessor says so once instead of under
+every figure. Actions print their target and priority band; no internal ID or
+processing-version code is printed (the [decision](decisions.md#the-overview-pdf-is-a-branded-deliverable)).
+Before the first completed run a widget reads not available; a missing value
+prints the app's dash and an observed zero stays zero. It replaced the fixed
+Executive PDF.
 
 ## Brand facts
 
