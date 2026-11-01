@@ -39,31 +39,37 @@ function TopicRowEditor({
 }>) {
   const removed = row.kind === 'existing' && row.removed;
   return (
-    <Inline as="li">
-      <Input
-        aria-label={`Topic name: ${row.name || 'unnamed'}`}
-        value={row.name}
-        maxLength={TOPIC_NAME_MAX}
-        disabled={disabled || removed}
-        onChange={(event) => onChange({ ...row, name: event.target.value })}
-      />
-      <Tag>{removed ? 'Removing' : rowTag(row)}</Tag>
-      {removed ? (
-        <IconButton
-          icon={RotateCcw}
-          label={`Keep ${row.savedName}`}
-          disabled={disabled}
-          onClick={() => onChange({ ...row, removed: false })}
+    <Stack as="li" gap="tight">
+      <Inline>
+        <Input
+          aria-label={`Topic name: ${row.name || 'unnamed'}`}
+          value={row.name}
+          maxLength={TOPIC_NAME_MAX}
+          disabled={disabled || removed}
+          onChange={(event) => onChange({ ...row, name: event.target.value })}
         />
-      ) : (
-        <IconButton
-          icon={Trash2}
-          label={`Remove ${row.name || 'topic'}`}
-          disabled={disabled}
-          onClick={onRemove}
-        />
-      )}
-    </Inline>
+        <Tag>{removed ? 'Removing' : rowTag(row)}</Tag>
+        {removed ? (
+          <IconButton
+            icon={RotateCcw}
+            label={`Keep ${row.savedName}`}
+            disabled={disabled}
+            onClick={() => onChange({ ...row, removed: false })}
+          />
+        ) : (
+          <IconButton
+            icon={Trash2}
+            label={`Remove ${row.name || 'topic'}`}
+            disabled={disabled}
+            onClick={onRemove}
+          />
+        )}
+      </Inline>
+      {/* A proposal's offering links are saved on confirm; say which, so nothing is hidden. */}
+      {row.kind === 'proposed' && row.offerings.length ? (
+        <span className="type-caption">Covers {row.offerings.join('; ')}</span>
+      ) : null}
+    </Stack>
   );
 }
 

@@ -79,10 +79,18 @@ function seedFields(
   return { seed_source: source, seed_query_ids: ticked };
 }
 
-/** The generate request for every topic, or why the settings cannot make one. */
+/**
+ * The generate request for every topic, or why the settings cannot make one.
+ * `seeds` is null until the seed-query read has loaded, so a pending or failed
+ * read never passes for "no search data". Only personas still offered count.
+ */
 export function runRequest(
   settings: RunSettings,
-  context: { seeds: SeedQueries; hasCompetitors: boolean },
+  context: {
+    seeds: SeedQueries | null;
+    hasCompetitors: boolean;
+    personaChoices: readonly string[];
+  },
 ): Built {
   const count = whole(settings.count, 1, MAX_GENERATION_COUNT);
   if (count === null)
@@ -94,11 +102,13 @@ export function runRequest(
   if (branded + comparison > 100)
     return { ok: false, problem: 'Branded and competitor shares cannot pass 100%.' };
   const mix = INTENT_KEYS.map((key) => whole(settings.intent[key], 0, 100));
-  if (mix.some((value) => value === null))
+  if (mix.includes(null))
     return { ok: false, problem: 'Intent weights are whole numbers from 0 to 100.' };
   const [informational = 0, commercial = 0, transactional = 0] = mix.map((value) => value ?? 0);
   if (informational + commercial + transactional === 0)
     return { ok: false, problem: 'Give at least one intent a weight.' };
+  if (!context.seeds)
+    return { ok: false, problem: 'Your search data has to load before a run can start.' };
   const seeds = seedFields(settings, context.seeds);
   if (typeof seeds === 'string') return { ok: false, problem: seeds };
   const note = settings.runContext.trim();
@@ -112,7 +122,7 @@ export function runRequest(
         branded_share: branded / 100,
         comparison_share: comparison / 100,
         intent_mix: { informational, commercial, transactional },
-        personas: settings.personas,
+        personas: settings.personas.filter((persona) => context.personaChoices.includes(persona)),
       },
       ...seeds,
     },

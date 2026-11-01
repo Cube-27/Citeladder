@@ -178,6 +178,25 @@ describe('topic confirm', () => {
     expect(detached.topic_id).toBeNull();
   });
 
+  it('swaps two topic names in one plan', async () => {
+    const boots = await topic(db, t.projectId, 'Boots');
+    const shoes = await topic(db, t.projectId, 'Shoes');
+    const result = await call<Topic[]>(`/projects/${t.projectId}/topics/confirm`, {
+      method: 'POST',
+      body: {
+        rename: [
+          { id: boots, name: 'Shoes' },
+          { id: shoes, name: 'Boots' },
+        ],
+      },
+    });
+    expect(result.status).toBe(200);
+    expect(result.body.map((row) => [row.id, row.name])).toEqual([
+      [shoes, 'Boots'],
+      [boots, 'Shoes'],
+    ]);
+  });
+
   it('applies nothing when a name collides or a topic belongs elsewhere', async () => {
     await topic(db, t.projectId, 'Boots');
     const duplicate = await call(`/projects/${t.projectId}/topics/confirm`, {

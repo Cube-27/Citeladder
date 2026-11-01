@@ -26,7 +26,7 @@ const seeds: SeedQueries = {
     },
   ],
 };
-const context = { seeds, hasCompetitors: false };
+const context = { seeds, hasCompetitors: false, personaChoices: ['Parent', 'Club coach'] };
 
 const topic = (id: string, name: string): Topic => ({
   id,
@@ -112,6 +112,21 @@ describe('runRequest', () => {
   it('plans no competitor share without a tracked competitor', () => {
     const built = runRequest({ ...defaultRunSettings(), comparisonPercent: '30' }, context);
     expect(built.ok && built.request.distribution?.comparison_share).toBe(0);
+  });
+
+  it('waits for search data rather than treating an unloaded read as none', () => {
+    expect(runRequest(defaultRunSettings(), { ...context, seeds: null })).toEqual({
+      ok: false,
+      problem: 'Your search data has to load before a run can start.',
+    });
+  });
+
+  it('sends only personas step 1 still offers', () => {
+    const built = runRequest(
+      { ...defaultRunSettings(), personas: ['Parent', 'Removed role'] },
+      context,
+    );
+    expect(built.ok && built.request.distribution?.personas).toEqual(['Parent']);
   });
 
   it('seeds from the first connected source until the person picks one', () => {

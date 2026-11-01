@@ -93,11 +93,13 @@ function BuilderSheet(props: Readonly<PromptBuilderProps>) {
       await queryClient.invalidateQueries({ queryKey: queryKeys.topics.seedQueries(projectId) });
     },
   });
-  const [edited, setSettings] = useState<RunSettings | null>(null);
+  const [edited, setEdited] = useState<RunSettings | null>(null);
   const settings = edited ?? defaultRunSettings();
+  const personas = business.draft ? personaChoices(business.draft) : [];
   const built = runRequest(settings, {
-    seeds: seedsQuery.data ?? { sources: [] },
+    seeds: seedsQuery.data ?? null,
     hasCompetitors,
+    personaChoices: personas,
   });
   const [run, setRun] = useState<Session | null>(null);
 
@@ -157,7 +159,7 @@ function BuilderSheet(props: Readonly<PromptBuilderProps>) {
           <BuilderBusinessStep
             business={business}
             runContext={settings.runContext}
-            onRunContextChange={(runContext) => setSettings({ ...settings, runContext })}
+            onRunContextChange={(runContext) => setEdited({ ...settings, runContext })}
           />
         </TabPanel>
         <TabPanel value="topics">
@@ -166,9 +168,9 @@ function BuilderSheet(props: Readonly<PromptBuilderProps>) {
         <TabPanel value="distribution">
           <BuilderDistributionStep
             settings={settings}
-            onChange={setSettings}
+            onChange={setEdited}
             hasCompetitors={hasCompetitors}
-            personaChoices={business.draft ? personaChoices(business.draft) : []}
+            personaChoices={personas}
             seeds={{
               data: seedsQuery.data,
               status: seedsQuery.isError ? (
@@ -186,7 +188,10 @@ function BuilderSheet(props: Readonly<PromptBuilderProps>) {
               <>
                 {runNotices}
                 <UnsavedNotice business={business} topics={topicStep} />
-                {built.ok ? null : <Alert tone="warning">{built.problem}</Alert>}
+                {/* Until search data loads, its own loading or error state says why Generate waits. */}
+                {built.ok || !seedsQuery.data ? null : (
+                  <Alert tone="warning">{built.problem}</Alert>
+                )}
               </>
             }
           />

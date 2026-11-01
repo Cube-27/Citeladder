@@ -312,12 +312,26 @@ export async function confirmTopics(
       const now = new Date();
       if (input.delete.length)
         await trx.deleteFrom('topics').where('id', 'in', input.delete).execute();
-      for (const item of input.rename)
+      if (input.rename.length) {
+        // The unique name index is checked row by row, so a swap or a chain of
+        // renames would collide midway: park every renamed topic on its own id
+        // first, then apply the final names in one statement.
+        const ids = input.rename.map((item) => item.id);
         await trx
           .updateTable('topics')
-          .set({ name: item.name, updated_at: now })
-          .where('id', '=', item.id)
+          .set({ name: sql<string>`id::text` })
+          .where('id', 'in', ids)
           .execute();
+        const names = sql.join(
+          input.rename.map((item) => sql`WHEN ${item.id}::uuid THEN ${item.name}`),
+          sql` `,
+        );
+        await trx
+          .updateTable('topics')
+          .set({ name: sql<string>`CASE id ${names} END`, updated_at: now })
+          .where('id', 'in', ids)
+          .execute();
+      }
       const created = input.create.map((item) => ({ ...item, id: randomUUID() }));
       if (created.length)
         await trx
