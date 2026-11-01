@@ -161,7 +161,7 @@ describe('persisted billing documents', () => {
     const pages = await pdfText(bytes);
     const text = pages.join(' ');
     expect(text).toContain('INR 1,180.00');
-    // Amount digits are set in the JetBrains Mono figure face, the labels in Lexend Deca.
+    // Amount digits are set in the figure face, the labels in Lexend Deca.
     const embedded = Buffer.from(bytes).toString('latin1');
     expect(embedded).toMatch(/\/BaseFont \/[A-Z]{6}\+JetBrainsMono-Regular/u);
     expect(embedded).toMatch(/\/BaseFont \/[A-Z]{6}\+LexendDeca-Regular/u);
