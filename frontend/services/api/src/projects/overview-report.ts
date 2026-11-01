@@ -95,7 +95,7 @@ function citationStat({ view }: ReportContext): Stat {
     view,
     'Citation share',
     view.track.citation_share,
-    `of answers cite your site, across ${plural(view.track.engine_coverage, 'engine')}`,
+    `of answers cite you · ${plural(view.track.engine_coverage, 'engine')}`,
   );
 }
 
@@ -211,13 +211,14 @@ function guide({ view, report, prompts }: ReportContext, brand: string) {
     report.text('No run has completed yet, so there are no figures to report.');
     return;
   }
-  const asked = prompts
-    ? `${plural(prompts.length, 'tracked prompt')} asked of `
-    : 'Prompts asked of ';
+  // Prompt scores exist only for prompts the run measured, so the count says "measured".
+  const scope = prompts ? `${measuredPrompts(prompts.length)} across` : 'answers from';
   report.text(
-    `This report covers ${asked}${engines(measurement.logical_engines)}, in the run completed ${dateTime(measurement.completed_at)}. Changes compare it with the previous run that used the same prompts and engines. A dash (${MISSING}) means there is no value or no comparison yet; it never stands for zero.`,
+    `This report covers the run completed ${dateTime(measurement.completed_at)}: ${scope} ${engines(measurement.logical_engines)}. Changes compare it with the previous run that used the same prompts and engines. A dash (${MISSING}) means there is no value or no comparison yet; it never stands for zero.`,
   );
 }
+
+const measuredPrompts = (count: number) => `${plural(count, 'prompt')} measured`;
 
 /** Reads a run-scoped projection, or null before the first completed run. */
 async function beforeFirstRun<T>(read: () => Promise<T>): Promise<T | null> {
@@ -241,7 +242,8 @@ export async function overviewReport(db: Database, scope: ProjectScope) {
             db,
             { ...scope, marketId: null },
             {
-              auditId: null,
+              // The command center's run, so every section describes the same audit.
+              auditId: measurement.audit_id,
               auditIds: null,
               baselineAuditIds: null,
               logicalEngine: null,
@@ -265,10 +267,7 @@ export async function overviewReport(db: Database, scope: ProjectScope) {
     lines: measurement
       ? [
           [website, `Measured ${dateTime(measurement.completed_at)}`].filter(Boolean).join('  ·  '),
-          [
-            engines(measurement.logical_engines),
-            prompts ? plural(prompts.length, 'tracked prompt') : null,
-          ]
+          [engines(measurement.logical_engines), prompts ? measuredPrompts(prompts.length) : null]
             .filter(Boolean)
             .join('  ·  '),
         ]

@@ -213,7 +213,8 @@ describe('Overview PDF', () => {
     expect(text).toContain('Medium priority');
     expect(text).toContain('2nd');
     expect(text).toContain('of 2 brands');
-    expect(text).toContain('across 2 engines');
+    expect(text).toContain('of answers cite you · 2 engines');
+    expect(text).toContain('1 prompt measured');
     expect(text).toContain('0 actions resolved so far.');
     // Ligatures stay out of the text layer, so "first" and "Offerings" copy and search intact.
     expect(text).toContain('first-time investors');

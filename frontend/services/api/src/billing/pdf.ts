@@ -312,14 +312,17 @@ export class PdfReport {
   /** Headline figures in a row of equal cells under a signal-green rule. */
   stats(stats: readonly Stat[]): void {
     if (!stats.length) return;
-    const height = 84;
+    const cell = this.width / stats.length;
+    const room = (index: number) => cell - (index ? 12 : 0) - 8;
+    // Every note line prints; the strip grows to the longest note.
+    const notes = stats.map((stat, index) => this.wrap(stat.note, 8, 'text', room(index)));
+    const height = 74 + Math.max(...notes.map((lines) => lines.length)) * 10.5;
     this.ensure(height + 10);
     const top = this.y;
-    const cell = this.width / stats.length;
     this.rule(top, 'accent', 1.5);
     stats.forEach((stat, index) => {
       const x = MARGIN + index * cell + (index ? 12 : 0);
-      const room = cell - (index ? 12 : 0) - 8;
+      const width = room(index);
       if (index)
         this.document
           .moveTo(MARGIN + index * cell, top + 12)
@@ -327,21 +330,19 @@ export class PdfReport {
           .lineWidth(0.6)
           .strokeColor(this.palette.border)
           .stroke();
-      this.draw(this.fit(stat.label, 8.5, 'medium', room), x, top + 20, {
+      this.draw(this.fit(stat.label, 8.5, 'medium', width), x, top + 20, {
         size: 8.5,
         style: 'medium',
         tone: 'secondary',
       });
-      const width = this.measure(stat.value, 24, 'display');
-      const size = width > room ? Math.max(12, (24 * room) / width) : 24;
+      const figure = this.measure(stat.value, 24, 'display');
+      const size = figure > width ? Math.max(12, (24 * width) / figure) : 24;
       this.draw(stat.value, x, top + 50, { size, style: 'display', tone: 'brandInk' });
-      this.wrap(stat.note, 8, 'text', room)
-        .slice(0, 2)
-        .forEach((line, row) =>
-          this.draw(line, x, top + 66 + row * 10.5, { size: 8, style: 'text', tone: 'muted' }),
-        );
+      notes[index]?.forEach((line, row) =>
+        this.draw(line, x, top + 66 + row * 10.5, { size: 8, style: 'text', tone: 'muted' }),
+      );
     });
-    this.y = top + height + 8;
+    this.y = top + height + 4;
   }
 
   table({
