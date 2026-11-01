@@ -240,10 +240,6 @@ test.describe('marketing routes', () => {
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
         true,
       );
-      await page.screenshot({
-        path: test.info().outputPath(`contact-${width}.png`),
-        fullPage: true,
-      });
       await page.getByRole('button', { name: 'Send message', exact: true }).click();
       const name = page.getByRole('textbox', { name: /^Name/ });
       await expect(name).toHaveAttribute('aria-invalid', 'true');
@@ -351,10 +347,6 @@ test.describe('marketing routes', () => {
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
           true,
         );
-        await page.screenshot({
-          path: test.info().outputPath(`${path.slice(1)}-${width}.png`),
-          fullPage: true,
-        });
       }
     }
     await context.close();
@@ -459,36 +451,12 @@ test.describe('marketing routes', () => {
           await expect(link).toBeAttached();
           await expectLinkServed(request, target);
         }
-        await page.evaluate(() => {
-          if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
-          window.scrollTo(0, 0);
-        });
-        await page.screenshot({
-          path: test.info().outputPath(`${path.slice(1)}-${width}.png`),
-          fullPage: true,
-        });
       }
       await page.goto('/compare');
       await expect(page.locator(`main a[href="${path}"]`)).toBeVisible();
     }
     expect((await request.get('/ai-citation-tracking/does-not-exist')).status()).toBe(404);
     await context.close();
-  });
-  test('public paper surfaces stay usable across viewport sizes', async ({ page }) => {
-    await page.emulateMedia({ reducedMotion: 'reduce' });
-    for (const width of [1440, 1024, 390]) {
-      await page.setViewportSize({ width, height: 1000 });
-      await page.goto('/');
-      await expect(page.locator('h1')).toBeVisible();
-      await page.evaluate(() => document.fonts.ready);
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
-        true,
-      );
-      await page.screenshot({
-        path: test.info().outputPath(`marketing-${width}.png`),
-        fullPage: true,
-      });
-    }
   });
   test('Google Analytics waits for an explicit cookie acceptance', async ({ page }) => {
     const tagRequests: string[] = [];
@@ -524,7 +492,7 @@ test.describe('marketing routes', () => {
   });
 
   test('product frames fit the viewport on the landing and Solutions pages', async ({ page }) => {
-    for (const width of [375, 760, 1280]) {
+    for (const width of [375, 760, 1024, 1280, 1440]) {
       await page.setViewportSize({ width, height: 900 });
       for (const path of ['/', '/solutions']) {
         await page.goto(path);
