@@ -87,7 +87,9 @@ from) with absent or facet-empty map entries, one bounded model call
 ([map suggestions](../frontend/services/api/src/prompts/generation-drafts.ts)) proposes
 them; they ground that run and are stored `suggested` with model identity and
 the generation run id, only for offerings still empty at write time, and never
-naming the brand or a competitor. A failed suggestion call leaves the
+naming the brand or a competitor. Each suggested value names one property,
+circumstance or audience: a suggested value containing a comma or a
+`disjunction_words` entry is dropped. A failed suggestion call leaves the
 planner's fallback facets (below).
 
 Onboarding creates no prompts or topics; a created project starts with an
@@ -143,11 +145,20 @@ provider-only labels are rejected. Configuration and native onboarding topic adm
 own these decisions, not a copied vocabulary list in documentation.
 
 The [universe planner](../frontend/services/api/src/prompts/generation-plan.ts)
-plans `count × GENERATION_OVERGENERATE_FACTOR` cells round-robin over the
-selected topics. Every cell carries exactly one buyer constraint from the first
+plans `count × GENERATION_OVERGENERATE_FACTOR` cells over the selected topics.
+Within each cohort every topic gets a cell before any gets a second; then
+topics share cells by weight (highest averages), a topic's weight being the
+number of saved offerings it covers (`business_context.topic_offerings`, one
+when none are recorded), so the category holding most of the catalogue gets
+the most cells. Equal weights plan round-robin. Every cell carries exactly one buyer constraint from the first
 cell on: the topic's least-used attribute, situation/constraint or persona
 (least-used value, then least-used dimension, confirmed values before
-suggestions). Personas are the run's requested personas, else the map's
+suggestions). A branded (`brand_diagnostic` or `comparison`) cell asserts
+something about the business, so it never takes an attribute only a model
+suggested: it takes confirmed attributes, situations and personas. A
+`brand_diagnostic` cell also carries `grounded_attributes` (the topic's
+offerings and confirmed attributes) for the judge; drafters do not receive
+that list. Personas are the run's requested personas, else the map's
 audiences plus inferred buyer roles (as suggestions) while the map has no
 confirmed audience. A topic without map facets, including a subtopic whose
 parent has none, falls back to the requested personas, else the buyer roles and
@@ -224,7 +235,10 @@ Admission runs before any quality judgment: known slots, topic ownership,
 allowed labels (a planned core row's intent must suit the stage it is labelled
 with, and a quick core row's stage must be a planned stage), cohort identity,
 normalized exact duplicates, the shared length bound, at most `text_max_words`
-(16) words (`too_many_words`), topical binding (service areas do not bind
+(16) words (`too_many_words`), one need per prompt (`two_needs`: a core or
+diagnostic draft containing a `disjunction_words` entry of the project's base
+language, English "or"; comparisons ask "X or Y" by design, and other
+languages rely on the judge), topical binding (service areas do not bind
 generated or proposed text), a place named in a cell without a market
 (`location_unplanned`, decided on the project's geography vocabulary with the
 model's `names_place` label recorded beside it), texts already tracked or
@@ -241,8 +255,9 @@ not the business's service areas.
 [Selection](../frontend/services/api/src/prompts/generation-quality.ts)
 keeps at most `count` after judgment, split into per-cohort quotas by largest
 remainder with no cross-filling between cohorts, preferring passing judgments
-while treating uncertain and unjudged candidates equally, then spread across
-topic, stage (not when an intent mix sets the stage proportions), intent,
+while treating uncertain and unjudged candidates equally, then every topic
+once before any twice, then topics by the planner's weights, then spread
+across stage (not when an intent mix sets the stage proportions), intent,
 audience, situation, attribute and market; a
 shortfall is reported, never filled. Run provenance records `distribution`
 (counts by cohort, stage, intent, offering and persona, and located and bare
@@ -277,12 +292,21 @@ The [quality judge](../frontend/services/api/src/prompts/generation-quality.ts) 
 through the [JEV connector](../frontend/services/api/src/models/jev.ts) when
 `JEV_API_KEY` is set (blank is off; the TypeSafe subprocessor and privacy
 revision was published on 28 September 2026 and production carries the key).
-It judges the admitted draft pool within the configured call cap: yes/no fit, buyer relevance, decision value,
-naturalness, standalone and sensibility, plus for core candidates whether
-naming a business answers the question (`names_a_business`); intent
-and stage labels recorded beside the model's; and a per-topic duplicate choice
-among tracked and earlier candidates. Its state omits the brand and
-competitors. Each decision stores model, question-schema and policy versions,
+It judges the admitted draft pool within the configured call cap, one call per
+draft: yes/no fit, buyer relevance, decision value, naturalness, standalone,
+sensibility and one need (`single_need`: no two settings, audiences or
+requirements joined or stacked), plus for core candidates whether naming a
+business answers the question (`names_a_business`) and for brand diagnostics
+(not comparisons, whose competitor the judge's state cannot tell apart)
+whether the question attributes to the business only what its cell's
+`grounded_attributes` state (`grounded_claims`); intent and stage labels
+recorded beside the model's; a per-topic duplicate choice among tracked and
+earlier candidates; and, when the run spans several topics, which selected
+topic the question is about. In gate mode a draft the judge places under
+another selected topic with at least `topic_refile_at` (0.6, provisional)
+probability is filed there, keeping its planned cell, and its decision records
+`refiled_from_topic_id`; shadow mode only records the choice. Its state omits
+the brand and competitors. Each decision stores model, question-schema and policy versions,
 the thresholds it was judged under and a state hash, so an identical judgment
 already recorded in the set is reused (re-flagged for the new candidate under
 the current policy; the stored decision is never rewritten).

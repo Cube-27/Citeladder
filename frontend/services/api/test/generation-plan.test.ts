@@ -2,7 +2,13 @@ import { describe, expect, it } from 'vitest';
 
 import { policy } from '../src/config.ts';
 import type { GenerationContext } from '../src/prompts/generation-context.ts';
-import { admitDrafts, draftCallLimit, planBatches } from '../src/prompts/generation-drafts.ts';
+import {
+  admitDrafts,
+  draftCallLimit,
+  planBatches,
+  type Draft,
+} from '../src/prompts/generation-drafts.ts';
+import { selectRun } from '../src/prompts/generation-quality.ts';
 import { generationInput, validateSelection } from '../src/prompts/generation-input.ts';
 import {
   observedLikeness,
@@ -14,6 +20,7 @@ import {
   modelSlot,
   namesPlace,
   planSlots,
+  topicWeights,
   type Slot,
 } from '../src/prompts/generation-plan.ts';
 import {
@@ -330,6 +337,111 @@ describe('distribution-aware planning', () => {
   });
 });
 
+describe('topic weights and branded claims (the thenetreturn.com run)', () => {
+  const suggested = (value: string) => ({ ...entry(value), review_state: 'suggested' as const });
+  const names = [
+    'Golf practice nets',
+    'Football kicking nets',
+    'Golf net packages',
+    'Golf simulators',
+    'Hitting mats',
+    'Training aids',
+  ];
+  const topics = names.map((name, index) => ({
+    id: fixtureTopicId(index),
+    name,
+    description: '',
+    parent_id: null,
+  }));
+  // The offerings each topic was proposed from: the core category covers four.
+  const covered: Record<string, string[]> = {
+    [topics[0]!.id]: ['Pro net', 'Home net', 'Mini net', 'Junior net'],
+    [topics[1]!.id]: ['Extra Point net', 'Custom Extra Point net'],
+    [topics[2]!.id]: ['Net packages', 'Side barriers'],
+    [topics[3]!.id]: ['Launch monitor packages', 'Simulator bays'],
+    [topics[4]!.id]: ['Hitting mats'],
+    [topics[5]!.id]: ['Training aids'],
+  };
+  const base = fixtureContext(fixture('national-d2c-apparel'));
+  const context = {
+    ...base,
+    selected: topics,
+    topics,
+    maps: [
+      {
+        offering: 'Simulator bays',
+        attributes: [suggested('Portable bay design'), entry('Impact screen')],
+        situations: [suggested('Indoor simulator build')],
+        audiences: [suggested('Golf facility operators')],
+        exclusions: [],
+      },
+    ],
+    context: {
+      ...base.context,
+      business_context: {
+        ...base.context.business_context,
+        buyer_roles: ['home golfers'],
+        topic_offerings: covered,
+      },
+    },
+  } as GenerationContext;
+  const input = generationInput.parse({ count: 20, distribution: { branded_share: 0.2 } });
+  const perTopic = (slots: readonly Slot[]) =>
+    names.map((name) => slots.filter((slot) => slot.topic_name === name).length);
+
+  it('plans and selects each topic in proportion to the offerings it covers', () => {
+    const slots = planSlots(context, input, []);
+    const core = slots.filter((slot) => slot.cohort === 'core');
+    expect(perTopic(core)).toEqual([11, 5, 5, 5, 3, 3]);
+    const drafts: Draft[] = slots.map((slot) => ({
+      slot,
+      text: slot.slot_id,
+      hash: slot.slot_id,
+      intent: 'purchase',
+      buyer_stage: slot.target_buyer_stage,
+      prompt_intent: 'recommend',
+    }));
+    const selected = selectRun(drafts, input, topicWeights(context));
+    expect(
+      perTopic(selected.filter((draft) => draft.slot.cohort === 'core').map((d) => d.slot)),
+    ).toEqual([5, 3, 3, 3, 1, 1]);
+  });
+
+  it('never gives a branded cell an attribute only a model suggested, and bounds its claims', () => {
+    const simulators = (cohort: 'core' | 'brand_diagnostic') =>
+      planSlots(context, generationInput.parse({ count: 20, cohort }), []).filter(
+        (slot) => slot.topic_name === 'Golf simulators',
+      );
+    const facets = (slots: Slot[]) => new Set(slots.map((slot) => facetOf(slot)?.[0]?.join(': ')));
+    expect(facets(simulators('core'))).toEqual(
+      new Set([
+        'attribute: Portable bay design',
+        'attribute: Impact screen',
+        'situation_or_constraint: Indoor simulator build',
+        'audience: Golf facility operators',
+        'audience: home golfers',
+      ]),
+    );
+    expect(facets(simulators('brand_diagnostic'))).toEqual(
+      new Set([
+        'attribute: Impact screen',
+        'situation_or_constraint: Indoor simulator build',
+        'audience: Golf facility operators',
+        'audience: home golfers',
+      ]),
+    );
+    const branded = simulators('brand_diagnostic')[0]!;
+    expect(branded.grounded_attributes).toEqual([
+      'Launch monitor packages',
+      'Simulator bays',
+      'Impact screen',
+    ]);
+    // The drafter never receives them; core cells carry none.
+    expect(modelSlot(branded)).not.toHaveProperty('grounded_attributes');
+    expect(simulators('core')[0]).not.toHaveProperty('grounded_attributes');
+  });
+});
+
 describe('draft batches', () => {
   it("keeps each topic's cells in one batch, one cohort per batch, within the call limit", () => {
     const offerings = Array.from({ length: 7 }, (_, index) => `Offering ${index + 1}`);
@@ -343,8 +455,8 @@ describe('draft batches', () => {
     const context = { ...base, selected: topics, topics } as GenerationContext;
     const input = generationInput.parse({ count: 20, distribution: { branded_share: 0.25 } });
     const batches = planBatches(planSlots(context, input, []), 20);
-    // 30 core cells in two batches of seven whole topics, 10 branded in one.
-    expect(batches.map((batch) => batch.length)).toEqual([14, 16, 10]);
+    // 30 core cells (five or four per topic) in two batches of whole topics, 10 branded in one.
+    expect(batches.map((batch) => batch.length)).toEqual([17, 13, 10]);
     for (const batch of batches) expect(new Set(batch.map((slot) => slot.cohort)).size).toBe(1);
     const topicBatches = Map.groupBy(
       batches.flatMap((batch, index) =>
