@@ -18,6 +18,10 @@ Accept in CiteLadder tracks them.
    right. Never invent a fact.
 3. A correction for this run only goes into `run_context` at step 4. Lasting
    changes are made in CiteLadder's Prompt Builder; give the user the app link.
+4. If no offering is saved, topics and prompts cannot be proposed yet: ask the
+   user to add what they sell in the Prompt Builder, and stop.
+5. If the project has several prompt sets, page `read_prompt_portfolio`, ask
+   which set by name, and pass its `prompt_set_id` to `generate_prompts`.
 
 ## 2. Topics
 
