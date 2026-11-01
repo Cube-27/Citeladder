@@ -134,6 +134,14 @@ describe('frozen answer-engine execution', () => {
       { code: 'content_filter', retryable: false },
     ],
     [
+      'chatgpt',
+      {
+        status: 'completed',
+        output: [{ type: 'message', content: [{ type: 'refusal', refusal: 'I cannot help.' }] }],
+      },
+      { code: 'content_filter', retryable: false },
+    ],
+    [
       'claude',
       { stop_reason: 'end_turn', content: [{ type: 'text', text: '  ' }] },
       { code: 'empty_answer', retryable: true },
