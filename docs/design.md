@@ -8,14 +8,14 @@ Tests verify shared ownership, accessibility, and product correctness—not exac
 
 ## Direction and identity
 
-One system covers every surface (owner decision, 2026-10-07): the public site, docs, auth, onboarding and the authenticated app share the light B2B SaaS system executed at Attio/Linear craft. The product's material is crisp hairlines, not lift ([decision](decisions.md#the-product-app-uses-hairlines-not-lift), 2026-10-16): cards and the workspace sheet are a one-pixel `border` edge, secondary controls add only a one-pixel contact shadow, and the primary action is one flat fill; nothing glows, carries a bevel or a sheen. CiteLadder keeps its content, routes and workflows; since the brighter refresh ([decision](decisions.md#the-brighter-refresh-signal-green-sora-and-general-sans), 2026-10-21) its one accent is signal green and its self-hosted type is Sora over Geist. The public website and docs are the exception: they are flat ([decision](decisions.md#the-public-website-is-flat), 2026-10-16; see Public website below).
+One system covers every surface (owner decision, 2026-10-07): the public site, docs, auth, onboarding and the authenticated app share the light B2B SaaS system executed at Attio/Linear craft. The product's material is crisp hairlines, not lift ([decision](decisions.md#the-product-app-uses-hairlines-not-lift), 2026-10-16), over a ladder of fills (owner, 2026-11-01): each surface is a visible tone step from the one it sits on, so cards carry only a subtle one-pixel edge and the workspace sheet a one-pixel `border` edge, secondary controls add only a one-pixel contact shadow, and the primary action is one flat fill; nothing glows, carries a bevel or a sheen. CiteLadder keeps its content, routes and workflows; since the brighter refresh ([decision](decisions.md#the-brighter-refresh-signal-green-sora-and-general-sans), 2026-10-21) its one accent is signal green and its self-hosted type is Sora over Geist. The public website and docs are the exception: they are flat ([decision](decisions.md#the-public-website-is-flat), 2026-10-16; see Public website below).
 
-CiteLadder (`citeladder.com`) is an evidence-led enterprise system. The app puts a quiet green-tinted neutral ground behind the chrome and floats the work on one white sheet, using near-black green-tinted ink, signal-green actions, semantic evidence washes, useful density, and deliberate negative space. Prioritise current state → movement → next action → evidence, not equal-weight KPI cards. Voice is direct, confident, specific, and evidence-led: one idea per sentence.
+CiteLadder (`citeladder.com`) is an evidence-led enterprise system. The app puts a quiet green-tinted neutral ground behind the chrome and floats the work on one sheet that holds white cards, using near-black green-tinted ink, signal-green actions, semantic evidence washes, useful density, and deliberate negative space. Prioritise current state → movement → next action → evidence, not equal-weight KPI cards. Voice is direct, confident, specific, and evidence-led: one idea per sentence.
 
 - **Logo:** `frontend/components/ui/logo-mark.tsx` owns every surface's lockup and draws it inline from `logo-glyphs.ts` in exactly two tokens: ink (`currentColor`, the speech bubble and "Ladder") and the accent (the bars and "Cite"). Both forms therefore follow the theme without a filter, and the mark-only glyph always matches the lockup. `frontend/public/citeladder-logo.svg` is the same drawing in the light values (ink `#0b0f0d`, signal green `#00a650`) for structured data and the docs build; the policy check maps each of its fills to its token. `BRAND_LOGO_SIZES` owns standard heights; explicit `size` supports exceptional layouts; non-empty `alt` supplies the accessible name. `frontend/public/citeladder-favicon.ico` owns browser/installable-app icons with the same ink silhouette.
 - **Typography:** self-hosted Geist (`--font-text`, a grotesk with true tabular figures; OFL-licensed) on every surface for body, UI, data and small headings, and self-hosted Outfit (`--font-heading`, from the private Cube27 font repository) for display headings: the product page title, public hero, page and section headings, the flow title and Markdown `h2` (owner decisions, 2026-10-21 and [2026-10-31](decisions.md#outfit-replaces-uncut-sans-for-display-headings)). Both are capped at weight 500 by their `@font-face` ranges (the public Geist face at 600, for card titles), with `font-synthesis-weight: none` so a bold request never renders a faux bold; 14px working baseline, except on the website and docs, whose type steps through the `--text-site-*` tokens. Each semantic role owns size, leading, weight, tracking, and ink together. In the product, hierarchy comes from size and weight together through the closed `.type-*` roles (see Product app ladder); shared fields and dropdowns use the 14px `--text-field` role on every surface.
 - **Icons:** Lucide only; import concepts from `frontend/lib/icons.ts` where available. Call sites set size only: `size-3`/`size-3.5` for dense tables, toolbars, and chips; `size-4` for chrome; `size-5` for empty states and marketing wells; larger only for decorative marks. The global stroke ladder derives approximately 1.3px stems from size. Keep `currentColor`; do not override stroke weight locally.
-- **Surface identity:** Light is the default. The app header carries a one-click circular light/dark toggle beside the account menu (`frontend/lib/theme/theme.ts` owns the per-device preference; the semantic tokens rebind under `[data-theme='dark']`). There is no automatic system-theme following. Marketing is light-only and never applies the preference. Signal green is the sole action accent on public and product surfaces, and the logo is drawn in the same ink and green. Provider marks retain their own brand colours. The app's sidebar shares the neutral shell ground, and the work floats beside it on one white workspace sheet. Auth and onboarding share the public website's light world (white stage, public palette, flat task sheet); in dark mode they keep the app's dark rebinds. Dark mode keeps the same tonal order in near-black neutrals with the same slight green tint, and its material leads with light hairline rings. Controls retain white fills and distinct edges in light mode. Marketing and docs remain light-only.
+- **Surface identity:** Light is the default. The app header carries a one-click circular light/dark toggle beside the account menu (`frontend/lib/theme/theme.ts` owns the per-device preference; the semantic tokens rebind under `[data-theme='dark']`). There is no automatic system-theme following. Marketing is light-only and never applies the preference. Signal green is the sole action accent on public and product surfaces, and the logo is drawn in the same ink and green. Provider marks retain their own brand colours. The app's sidebar shares the neutral shell ground, and the work floats beside it on one workspace sheet. Auth and onboarding share the public website's light world (white stage, public palette, flat task sheet); in dark mode they keep the app's dark rebinds. Dark mode keeps the same tonal order in near-black neutrals with the same slight green tint, each surface lighter than the one it sits on (ground → sheet → card → nested), with hairlines secondary. Controls retain white fills and distinct edges in light mode. Marketing and docs remain light-only.
 
 ## Source of truth and implementation rules
 
@@ -40,8 +40,9 @@ Consume semantic roles, never page-local values. Every neutral keeps the same sl
 | Role | Tokens | Use |
 | --- | --- | --- |
 | Ground | `background` | One neutral ground behind the rail and around the workspace sheet; white on public and light flow surfaces |
-| Structure | `background-alt`; `panel-tonal`; `well`; `track` | Tonal bands and panels, recessed wells, the segmented-control track |
-| Paper | `panel`, `input`, `elevated`, `surface-inverse` | The workspace sheet, inputs, semantic objects, overlays, tooltips |
+| Sheet | `sheet` | The workspace sheet and its page bands (identity, tabs, controls, the compact topbar); one step below the cards on it |
+| Structure | `panel-tonal`; `background-alt`; `well`; `track` | The nested step inside a card (table header rows, tonal panels and boxed control rows), tonal bands and secondary fills, recessed wells, the segmented-control track (the nested step in dark) |
+| Paper | `panel`, `input`, `elevated`, `surface-inverse` | Cards, tables and panels on the sheet, inputs, overlays, tooltips |
 | Ink | `foreground`; `secondary`; `muted`; `ink-faint`; `brand-ink` | Exactly three text inks (owner decision, 2026-10-09): a softened ~80% black for titles and values, a very dark grey for sentences and labels, a light grey for captions and metadata, mirrored in white for dark mode. The website, docs and light-mode sign-in and onboarding rebind the same three inks darker (owner decision, 2026-10-11): near-black `#151a17`, dark-grey `#3d4541` and mid-grey `#4e5450`, each at least 20% darker than the product's, spaced like IBM Carbon and GitHub Primer, so no light grey carries text there. `ink-faint` is decorative only and never carries text; `brand-ink` is the logo and inverse surface, kept at full strength |
 | Boundaries | `border-subtle`; `border`; `border-strong`; `border-bold` | A rule inside one surface; the edge of a control, inset panel or overlay; deliberate emphasis; small choice controls and edges on tinted fills |
 | Neutral states | `hover`, `selected`, `active`, `disabled` | The receiving surface mixed with `state-ink` (a green-tinted ink) at 4%, 8%, 12% and 3%, so they stay in the neutral family |
@@ -54,7 +55,7 @@ Consume semantic roles, never page-local values. Every neutral keeps the same sl
 
 **Series.** `chart-1..8` is purely categorical and never equals an action or outcome value. Each step holds 3:1 on paper in both themes, and each neighbour stays separable under red–green colour-vision loss, so series are assigned in order. Citation classes are series with fixed meanings in both themes: owned `chart-1`, competitor `chart-2`, third party `chart-8`.
 
-Hierarchy combines the ground and paper fills with hairlines. Cards and the workspace sheet are a one-pixel `border` ring with no drop; secondary controls are the same ring plus a one-pixel contact shadow; primary and destructive buttons are one flat fill ringed in their own colour. Fields carry their border and no shadow. The current sidebar destination and a selected list row take the neutral `selected` tint of the surface they sit on, not a raised face; segmented controls keep their raised segment. A recommendation card is the `accent-soft` wash with an `accent-subtle` hairline. `[data-public-surface]` and light-mode `[data-flow-surface]` bind `--elevation-control`, `--elevation-primary`, `--elevation-card` and `--elevation-flow` to `none`, and a coded product view (`[data-ui]`) restates them so its contents keep the product's material. There, a secondary button takes the `background-alt` fill (`panel` on a soft band) instead of its ring. In dark mode the ring is 6–8% white, because a drop shadow carries no edge on near-black. Detached menus and dialogs retain their own elevation roles.
+Hierarchy is carried by the fills, with hairlines secondary (owner, 2026-11-01). The product's surface ladder is ground (`background`) → sheet (`sheet`) → card (`panel`) → nested (`panel-tonal`), and each rung is a step a reader sees without its edge: in light the ground and sheet are tinted and the cards white, with the nested step tinted again inside a card; in dark each rung is about five L* lighter than the one it sits on. A table's header row is the nested step inside its table, a tonal panel and a boxed `ControlRow` are nested, a selected row takes the `selected` tint of its surface and a dark segmented track is the nested step. Every ink role, and each status `-text`, holds 4.5:1 on the sheet, a card and the nested step in both themes (checked by `pnpm check:policy`). The workspace sheet is a one-pixel `border` ring; cards and bare tables keep only a one-pixel `border-subtle` edge, with no drop; secondary controls are the same ring plus a one-pixel contact shadow; primary and destructive buttons are one flat fill ringed in their own colour. Fields carry their border and no shadow. The current sidebar destination and a selected list row take the neutral `selected` tint of the surface they sit on, not a raised face; segmented controls keep their raised segment. A recommendation card is the `accent-soft` wash with an `accent-subtle` hairline. `[data-public-surface]` and light-mode `[data-flow-surface]` bind `--elevation-control`, `--elevation-primary`, `--elevation-card` and `--elevation-flow` to `none`, and a coded product view (`[data-ui]`) restates them so its contents keep the product's material. There, a secondary button takes the `background-alt` fill (`panel` on a soft band) instead of its ring. In dark mode the ring is 6–8% white, because a drop shadow carries no edge on near-black. Detached menus and dialogs retain their own elevation roles.
 
 Category tags use ten independent `--tag-{tone}-{bg,border,text}` triples in
 `globals.css`: blue, purple, green, moss, red, orange, amber, teal, yellow and
@@ -67,7 +68,7 @@ blue and company offerings use purple; colors label categories, never status.
 keyboard/touch support and `aria-expanded`; long labels wrap. Semantic `Badge`
 status dots and their meanings remain separate.
 
-**Borders.** Controls, inset panels, overlays and status objects retain semantic edges. Default cards use an inset hairline without changing their box geometry; table wrappers remain fill-separated. Selected sidebar destinations and list rows take the neutral selected tint; segments use a raised neutral face. Tinted inset boxes use their fill as the boundary; status cards retain a hairline to carry meaning. Sections are separated by space. Lines use semantic tokens; transparent layers belong only to the centralized elevation recipes. On the public website there are no dividers or 1px outlined boxes outside real tables, form fields, controls and the marketing site grid's frame lines, card rings and secondary-button ring (every marketing page; see the public website below): rows and lists separate by space, and objects by a tone step from the band they sit on.
+**Borders.** Controls, inset panels, overlays and status objects retain semantic edges. Default cards and table wrappers separate from the sheet by their fill and keep a subtle hairline without changing their box geometry; a table header row separates from its rows by the nested fill over a subtle rule. Selected sidebar destinations and list rows take the neutral selected tint; segments use a raised neutral face. Tinted inset boxes use their fill as the boundary; status cards retain a hairline to carry meaning. Sections are separated by space. Lines use semantic tokens; transparent layers belong only to the centralized elevation recipes. On the public website there are no dividers or 1px outlined boxes outside real tables, form fields, controls and the marketing site grid's frame lines, card rings and secondary-button ring (every marketing page; see the public website below): rows and lists separate by space, and objects by a tone step from the band they sit on.
 
 Reading text must meet 4.5:1 contrast. Use primary ink on selected surfaces when secondary ink would lose contrast. Accent denotes action, never success or positive metric deltas. Metrics use data-viz or neutral signed/directional treatments. Decorative icons and category labels use neutral ink. Dark mode keeps colour concentrated in actions and meaningful evidence. Never communicate meaning through colour alone.
 
@@ -77,8 +78,11 @@ Geometry is one ladder on every surface: 4 / 8 / 12 / 16 / full (see Data and ge
 
 ## Token contract
 
-The surface ladder is ground → resting panel → recessed well, with `elevated`
-reserved for detached floating surfaces. State tints follow the surface they
+The surface ladder is ground → sheet → resting panel → nested panel, with
+recessed wells and fields below it and `elevated` reserved for detached
+floating surfaces. A page band is the sheet's own fill, never a card's, and a
+sticky layer that must match its container (a docked composer) paints
+`.surface-fill`, the fill of the surface it sits on. State tints follow the surface they
 modify: mix `state-ink` into that surface at 4% for hover, 8% for selection,
 12% for pressed feedback, and 3% for disabled fill. The source surface classes
 own this derivation in `globals.css`. Selected and pressed labels use primary
@@ -104,13 +108,13 @@ the Colour section above. Every token must have a consumer.
 | `--color-accent-soft` | `#edfbf2` | `rgb(118 223 156 / 12%)` |
 | `--color-accent-subtle` | `#d3f6df` | `rgb(118 223 156 / 18%)` |
 | `--color-accent-text` | `#08773b` | `#86e5a6` |
-| `--color-active` | `#e4e8e6` | `#2a2d2b` |
-| `--color-background` | `#f4f5f4` | `#0b0d0c` |
-| `--color-background-alt` | `#f6f7f6` | `#181b19` |
+| `--color-active` | `#e4e8e6` | `#303432` |
+| `--color-background` | `#f0f2f1` | `#0b0d0c` |
+| `--color-background-alt` | `#f6f7f6` | `#1f2421` |
 | `--color-border` | `#e1e4e2` | `#2b302d` |
 | `--color-border-bold` | `#858d88` | `#737b76` |
 | `--color-border-strong` | `#cfd4d1` | `#3d433f` |
-| `--color-border-subtle` | `#eceeed` | `#212522` |
+| `--color-border-subtle` | `#eceeed` | `#222724` |
 | `--color-brand-claude` | `#d97757` | `#d97757` |
 | `--color-brand-gemini` | `#3186ff` | `#3186ff` |
 | `--color-brand-google-blue` | `#4285f4` | `#4285f4` |
@@ -136,34 +140,35 @@ the Colour section above. Every token must have a consumer.
 | `--color-danger-solid` | `#b42332` | `#d95767` |
 | `--color-danger-solid-hover` | `#8f1d29` | `#eb7481` |
 | `--color-danger-text` | `#b42332` | `#f6abb1` |
-| `--color-disabled` | `#f8f9f9` | `#191c1a` |
-| `--color-elevated` | `#ffffff` | `#1b1f1d` |
+| `--color-disabled` | `#f8f9f9` | `#202422` |
+| `--color-elevated` | `#ffffff` | `#202522` |
 | `--color-field-lime` | `#e4fb9b` | `rgb(228 251 155 / 12%)` |
 | `--color-field-mint` | `#e8f9ee` | `rgb(118 223 156 / 16%)` |
 | `--color-foreground` | `#2f3431` | `#d3d8d5` |
-| `--color-hover` | `#f6f7f7` | `#1b1e1c` |
+| `--color-hover` | `#f6f7f7` | `#212523` |
 | `--color-info` | `#2f6fdb` | `#7aa7f5` |
 | `--color-info-bg` | `#eef4fd` | `rgb(122 167 245 / 13%)` |
 | `--color-info-text` | `#1d4fae` | `#a9c6f8` |
 | `--color-ink-faint` | `#8e9690` | `#6d746f` |
 | `--color-input` | `#ffffff` | `#0f1210` |
-| `--color-muted` | `#616964` | `#939a96` |
+| `--color-muted` | `#616964` | `#969d99` |
 | `--color-neutral` | `#aab2ad` | `#5f6762` |
-| `--color-neutral-bg` | `#eff1f0` | `#212523` |
+| `--color-neutral-bg` | `#eff1f0` | `#2a2f2c` |
 | `--color-on-inverse` | `#ffffff` | `#0b0d0c` |
 | `--color-overlay-scrim` | `rgb(11 15 13 / 32%)` | `rgb(0 0 0 / 72%)` |
-| `--color-panel` | `#ffffff` | `#131614` |
-| `--color-panel-tonal` | `#f8f9f8` | `#171a18` |
+| `--color-panel` | `#ffffff` | `#1a1e1c` |
+| `--color-panel-tonal` | `#f2f4f3` | `#252a27` |
 | `--color-secondary` | `#4e5551` | `#a9b0ac` |
-| `--color-selected` | `#edefee` | `#222623` |
+| `--color-selected` | `#edefee` | `#292d2b` |
 | `--color-selection` | `#b5efca` | `rgb(118 223 156 / 35%)` |
 | `--color-selection-fg` | `#2f3431` | `#f1f4f2` |
+| `--color-sheet` | `#f7f8f7` | `#101311` |
 | `--color-state-ink` | `#1c3d2c` | `#d3d8d5` |
 | `--color-success` | `#0d9488` | `#2ec4b0` |
 | `--color-success-bg` | `#ecf8f5` | `rgb(46 196 176 / 13%)` |
 | `--color-success-text` | `#0f766e` | `#7fe0d0` |
 | `--color-surface-inverse` | `#0b0f0d` | `#e1e5e2` |
-| `--color-track` | `#eceeed` | `#0f1210` |
+| `--color-track` | `#eceeed` | `#252a27` |
 | `--color-warning` | `#e0900f` | `#f2c879` |
 | `--color-warning-bg` | `#fff5db` | `rgb(242 200 121 / 13%)` |
 | `--color-warning-text` | `#8a4600` | `#f7d99e` |
@@ -344,7 +349,7 @@ State a shared reason once, on the column header or the section, not in every ce
 
 Use sections, ledgers, tables, and split workspaces. Cards support architecture; they do not replace it. Recommendations show impact, deterministic priority factors, scope, status, and persisted evidence; never invent confidence, effort, ownership, or causality.
 
-The app uses a floating sheet (owner decision, 2026-10-07). The desktop sidebar shares the shell ground and draws no edge; `.app-pane-workspace` is one white sheet inset `--workspace-inset` (8px) from the viewport and the rail, with the 16px `--radius-lg` on all four corners and a hairline edge. The rail starts one inset down so its rows line up with the sheet's bands. Current destinations take the neutral selected tint; the Dashboard/Agent selector shares the recessed segment recipe. Metric rows (`StatRow`, up to four segments) sit on one row on desktop, because the sheet beside the rail is still about 700px wide on a 981px desktop; a page's action row never squeezes its title below `--page-title-min-width`, and a route with more than two actions groups the secondary ones in one menu. Cards use the `panel` fill and shared elevation; bare tables carry the `table-frame` hairline ring, which drops inside a card or dialog. Below 981px the workspace runs edge-to-edge without radius, inset or shadow, under a paper topbar with a hairline. Document scrolling and content overflow stay unchanged; the sheet clips its corners without becoming a scroll container. Auth and onboarding use one rounded, flat paper task column with unboxed internal groups, including at mobile widths where gutters remain.
+The app uses a floating sheet (owner decision, 2026-10-07). The desktop sidebar shares the shell ground and draws no edge; `.app-pane-workspace` is one `sheet`-filled sheet inset `--workspace-inset` (8px) from the viewport and the rail, with the 16px `--radius-lg` on all four corners and a hairline edge. The rail starts one inset down so its rows line up with the sheet's bands. Current destinations take the neutral selected tint; the Dashboard/Agent selector shares the recessed segment recipe. Metric rows (`StatRow`, up to four segments) sit on one row on desktop, because the sheet beside the rail is still about 700px wide on a 981px desktop; a page's action row never squeezes its title below `--page-title-min-width`, and a route with more than two actions groups the secondary ones in one menu. Cards use the `panel` fill, one step above the sheet, with a subtle edge; bare tables carry the same fill and the `table-frame` subtle hairline ring, which drops inside a card or dialog. Below 981px the workspace runs edge-to-edge without radius, inset or shadow, under a paper topbar with a hairline. Document scrolling and content overflow stay unchanged; the sheet clips its corners without becoming a scroll container. Auth and onboarding use one rounded, flat paper task column with unboxed internal groups, including at mobile widths where gutters remain.
 
 Overview sections, Website metric cards/page tables, Actions lists, and Prompts tables consume their existing shared owners; only semantic cards acquire the card elevation. The desktop account trigger sits on the route's first row; below 981px the 56px compact topbar adds the menu trigger, route title and focus-managed off-canvas drawer. Retain every critical mobile action; tables become labelled records, and filters/evidence use full-height sheets.
 
