@@ -15,7 +15,14 @@ import { ModelError, providerErrorCode } from '../models/http.ts';
 import type { ModelGateway } from '../models/gateway.ts';
 import { bindingFailure } from './binding.ts';
 import type { GenerationContext, OfferingMap } from './generation-context.ts';
-import { generationInvalid, generationSetting, type GenerationInput } from './generation-input.ts';
+import {
+  cohortShares,
+  generationInvalid,
+  generationSetting,
+  type GenerationCohort,
+  type GenerationInput,
+} from './generation-input.ts';
+import { hasPlaceholder, nearDuplicate, promptTokens, words } from './generation-metrics.ts';
 import {
   dimensions,
   generationBrief,
@@ -29,9 +36,6 @@ import { promptTextHash } from './normalization.ts';
 import { observedRef } from './observed-queries.ts';
 
 const G = policy.prompts.generation;
-export const words = (text: string) => text.toLowerCase().match(/[\p{L}\p{N}\p{M}]+/gu) ?? [];
-/** An unfilled template slot such as `[city]` or `{product}`. */
-export const hasPlaceholder = (text: string) => /[[{<][^[\]{}<>]*[\]}>]/u.test(text);
 const containsName = (text: string, names: readonly string[]) =>
   names.some((name) => namesAlias(text, name));
 const stem = (token: string) => token.replace(/(?<=[sxz]|ch|sh)es$/u, '').replace(/(?<!s)s$/u, '');
@@ -105,23 +109,24 @@ function mergeDrops(into: Drops, from: Drops) {
 /**
  * Admit rows in order, recording one reason per dropped row. Planning checks
  * (slot, labels, duplicates) run before content checks, so a row is reported
- * under the first rule it breaks.
+ * under the first rule it breaks. The near-duplicate check runs last, against
+ * tracked prompts, pending candidates and every earlier draft of the run
+ * across all topics.
  */
 export function admitDrafts(
   rows: z.infer<typeof generatedRow>[],
   slots: Slot[],
   context: GenerationContext,
-  input: GenerationInput,
   prior: Draft[],
   batch = 0,
 ) {
+  const pending = context.candidates.filter((row) => row.disposition === 'pending');
   const seen = new Set([
     ...context.prompts.map((row) => row.normalized_text_hash),
-    ...context.candidates
-      .filter((row) => row.disposition === 'pending')
-      .map((row) => row.normalized_text_hash),
+    ...pending.map((row) => row.normalized_text_hash),
     ...prior.map((row) => row.hash),
   ]);
+  const near = [...context.prompts, ...pending, ...prior].map((row) => promptTokens(row.text));
   const usedSlots = new Set(prior.map((row) => row.slot.slot_id));
   // Every observed search the run read, not only the top demand signals: a
   // draft repeating one is a search, not a question written for an assistant.
@@ -151,22 +156,26 @@ export function admitDrafts(
   ): PromptAdmissionDropReason | null => {
     if (!slot || usedSlots.has(slot.slot_id)) return 'unplanned_slot';
     if (!slot.allowed_prompt_intents.includes(row.prompt_intent)) return 'intent';
-    if (!G.stages.includes(row.buyer_stage)) return 'stage';
-    // A planned core row's intent must suit the stage the model labelled it
-    // with; Agent rows keep the labels the user reviewed in the portfolio.
+    // A planned core row keeps to the planned stages, and its intent must suit
+    // the stage the model labelled it with; Agent rows keep the labels the
+    // user reviewed in the portfolio.
+    const plannedCore = quick && slot.cohort === 'core';
+    const stages: readonly string[] = plannedCore ? G.planned_stages : G.stages;
+    if (!stages.includes(row.buyer_stage)) return 'stage';
     const coherent = G.stage_intents[row.buyer_stage]?.includes(row.prompt_intent);
-    return quick && input.cohort === 'core' && !coherent ? 'intent' : null;
+    return plannedCore && !coherent ? 'intent' : null;
   };
   /** Identity checks: who the row names, by cohort. */
   const cohortReason = (
     row: z.infer<typeof generatedRow>,
+    cohort: GenerationCohort,
     text: string,
   ): PromptAdmissionDropReason | null => {
-    if (input.cohort === 'core')
+    if (cohort === 'core')
       return namesEntity(text, brands, brandRule) || namesCompetitor(text) ? 'branded_core' : null;
     if (!namesEntity(text, [context.context.brand_name], brandRule)) return 'brand_missing';
     const compares = namesCompetitor(text) && row.prompt_intent === 'compare';
-    return input.cohort === 'comparison' && !compares ? 'competitor_missing' : null;
+    return cohort === 'comparison' && !compares ? 'competitor_missing' : null;
   };
   const reason = (
     row: z.infer<typeof generatedRow>,
@@ -183,11 +192,15 @@ export function admitDrafts(
       words(text).length < policy.prompts.text_min_words
     )
       return 'length';
+    if (words(text).length > G.text_max_words) return 'too_many_words';
     if (hasPlaceholder(text)) return 'placeholder';
     if (observed.has(hash)) return 'observed_copy';
     if (bindingFailure(text, context.vocabulary)) return 'off_topic';
     if (!slot.buyer_need.market && namesPlace(text, geo)) return 'location_unplanned';
-    return cohortReason(row, text);
+    const identity = cohortReason(row, slot.cohort, text);
+    if (identity) return identity;
+    const tokens = promptTokens(text);
+    return near.some((other) => nearDuplicate(tokens, other)) ? 'near_duplicate' : null;
   };
   const admitted: Draft[] = [];
   const drops: Drops = {};
@@ -211,6 +224,7 @@ export function admitDrafts(
       continue;
     }
     seen.add(hash);
+    near.push(promptTokens(text));
     usedSlots.add(slot.slot_id);
     admitted.push({
       slot,
@@ -356,6 +370,7 @@ function proposal(context: GenerationContext) {
     const need = agentNeed(topic.name, row.targeting);
     return {
       slot_id,
+      cohort: 'core',
       topic_id: topic.id,
       topic_name: topic.name,
       topic_description: topic.description,
@@ -379,11 +394,46 @@ function proposal(context: GenerationContext) {
   };
 }
 
-/** Model calls for one request's slots: every batch plus one refill batch. */
-export const draftCallLimit = (count: number) =>
-  Math.ceil(
-    (count * generationSetting('overgenerate_factor')) / generationSetting('model_batch_size'),
-  ) + 1;
+/**
+ * Model calls for one request's slots: each planned cohort's batches plus one
+ * refill batch. A batch drafts one cohort, so each cohort rounds up apart.
+ */
+export function draftCallLimit(input: Pick<GenerationInput, 'count' | 'cohort' | 'distribution'>) {
+  const cells = input.count * generationSetting('overgenerate_factor'),
+    size = generationSetting('model_batch_size');
+  const batches = Object.values(cohortShares(input))
+    .filter((share) => share > 0)
+    .reduce((sum, share) => sum + Math.ceil((cells * share) / size), 0);
+  return Math.max(1, batches) + 1;
+}
+
+/**
+ * The run's first batches: each cohort's cells in `ceil(cells / batch size)`
+ * batches, every topic's cells together in one batch so the drafter sees its
+ * siblings. Topic groups go largest first to the least-loaded batch, so a
+ * batch may run a little over the batch size rather than split a topic; only
+ * a topic larger than a whole batch is split.
+ */
+export function planBatches(slots: readonly Slot[], size: number): Slot[][] {
+  return [...Map.groupBy(slots, (slot) => slot.cohort).values()].flatMap((cohortSlots) => {
+    const groups = [...Map.groupBy(cohortSlots, (slot) => slot.topic_id).values()].flatMap(
+      (group) =>
+        Array.from({ length: Math.ceil(group.length / size) }, (_, at) =>
+          group.slice(at * size, (at + 1) * size),
+        ),
+    );
+    const batches: Slot[][] = Array.from(
+      { length: Math.ceil(cohortSlots.length / size) },
+      () => [],
+    );
+    // A stable sort: equal groups keep plan order.
+    for (const group of groups.toSorted((a, b) => b.length - a.length)) {
+      const lightest = batches.reduce((best, batch) => (batch.length < best.length ? batch : best));
+      lightest.push(...group);
+    }
+    return batches.filter((batch) => batch.length);
+  });
+}
 
 /** Why a run stopped before every planned slot had a chance at admission. */
 type Stop = z.infer<typeof promptGenerateResponseSchema.shape.shortfall_reason>;
@@ -403,12 +453,9 @@ async function draftBatches(
   deadline: AbortSignal,
 ) {
   const batchSize = generationSetting('model_batch_size'),
-    limit = draftCallLimit(input.count);
-  const system = generationSystemPrompt(
-    String(record(context.context.business_context).business_model),
-    input.cohort,
-    slots.some((slot) => slot.grounding?.length),
-  );
+    limit = draftCallLimit(input);
+  const grounded = slots.some((slot) => slot.grounding?.length);
+  const businessModel = String(record(context.context.business_context).business_model);
   const drafts: Draft[] = [],
     models: unknown[] = [],
     drops: Drops = {},
@@ -416,7 +463,7 @@ async function draftBatches(
   const inFlight = new Set<string>();
   // The brief and tracked texts are fixed for the run: earlier drafts are not
   // fed back, so a first batch's register cannot set the whole run's.
-  const brief = generationBrief(context);
+  const brief = generationBrief(context, input);
   const tracked = context.prompts
     .map((row) => row.text)
     .slice(-generationSetting('existing_prompt_context_limit'));
@@ -425,18 +472,32 @@ async function draftBatches(
     failure: ModelError | null = null,
     crashed = false,
     cut = false;
+  const planned = planBatches(slots, batchSize);
+  // After the planned batches, a refill takes one cohort's open slots, whole
+  // topics together, up to the batch size.
   const nextBatch = () => {
+    const first = planned.shift();
+    if (first) return first;
     const accepted = new Set(drafts.map((row) => row.slot.slot_id));
-    return slots
-      .filter((slot) => !accepted.has(slot.slot_id) && !inFlight.has(slot.slot_id))
+    const open = slots.filter((slot) => !accepted.has(slot.slot_id) && !inFlight.has(slot.slot_id));
+    const cohort = open[0]?.cohort;
+    return [...Map.groupBy(open, (slot) => slot.topic_id).values()]
+      .flat()
+      .filter((slot) => slot.cohort === cohort)
       .slice(0, batchSize);
   };
   const draftOne = async (call: number, batch: Slot[]) => {
+    const cohort = batch[0]?.cohort ?? 'core';
     try {
       const response = await gateway.structured(
-        system,
+        generationSystemPrompt({
+          businessModel,
+          cohort,
+          grounded,
+          runContext: Boolean(input.run_context),
+        }),
         JSON.stringify({
-          reference_evidence: brief,
+          reference_evidence: cohort === 'core' ? brief : generationBrief(context, input, cohort),
           slots: batch.map(modelSlot),
           existing_prompts: tracked,
         }),
@@ -445,7 +506,7 @@ async function draftBatches(
       );
       const { content: _content, ...identity } = response.result;
       models.push({ ...identity, batch: call });
-      const result = admitDrafts(response.value.prompts, batch, context, input, drafts, call);
+      const result = admitDrafts(response.value.prompts, batch, context, drafts, call);
       drafts.push(...result.admitted);
       mergeDrops(drops, result.drops);
       dropRecords.push(...result.dropRecords);
@@ -519,7 +580,7 @@ export async function generateDrafts(
 ) {
   if (context.revision) {
     const { slots, rows, drops, dropRecords } = proposal(context);
-    const admitted = admitDrafts(rows, slots, context, input, []);
+    const admitted = admitDrafts(rows, slots, context, []);
     mergeDrops(drops, admitted.drops);
     return {
       drafts: admitted.admitted,

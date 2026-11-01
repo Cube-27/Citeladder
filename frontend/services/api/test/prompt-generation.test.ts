@@ -10,7 +10,14 @@ import { reviewCandidates } from '../src/prompts/candidates.ts';
 import { generationInput } from '../src/prompts/generation-input.ts';
 import { promptTextHash } from '../src/prompts/normalization.ts';
 import { generatePrompts } from '../src/prompts/generation.ts';
-import { billingAccount, echoDependencies, grant, promptSet, topic } from './prompt-fixtures.ts';
+import {
+  billingAccount,
+  echoDependencies,
+  grant,
+  promptSet,
+  topic,
+  type DraftRequest,
+} from './prompt-fixtures.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
 
@@ -72,10 +79,10 @@ function dependencies(judgeProbability?: number) {
     Response.json({
       model: 'test-judge',
       answers: Object.fromEntries(
-        Object.keys(policy.models.quality.noul_questions).map((key) => [
-          key,
-          { noul: judgeProbability },
-        ]),
+        Object.keys({
+          ...policy.models.quality.noul_questions,
+          ...policy.models.quality.core_noul_questions,
+        }).map((key) => [key, { noul: judgeProbability }]),
       ),
     }),
   );
@@ -433,6 +440,161 @@ describe('prompt generation at the PostgreSQL boundary', () => {
       generatePrompts(db, other.workspaceId, setId, input(), deps, 'retry-key'),
     ).rejects.toMatchObject({ status: 404 });
     expect(deps.io.fetch).not.toHaveBeenCalled();
+  });
+  it('plans a requested distribution: cohort quotas, the run note, and idempotency over all of it', async () => {
+    const requests: DraftRequest[] = [];
+    const request = generationInput.parse({
+      count: 4,
+      run_context: 'Spring marathon season',
+      distribution: { branded_share: 0.5 },
+    });
+    const result = await generatePrompts(
+      db,
+      tenant.workspaceId,
+      setId,
+      request,
+      echoDependencies({ onRequest: (sent) => requests.push(sent) }),
+      'distribution-key',
+    );
+    expect(result.candidates.map((row) => row.cohort).toSorted()).toEqual([
+      'brand_diagnostic',
+      'brand_diagnostic',
+      'core',
+      'core',
+    ]);
+    const briefs = Object.fromEntries(
+      requests.map((sent) => [String(sent.slots[0]!.cohort), sent.reference]),
+    );
+    expect(briefs.core).toMatchObject({ run_context: 'Spring marathon season' });
+    expect(briefs.core).not.toHaveProperty('brand_name');
+    expect(briefs.brand_diagnostic).toMatchObject({ brand_name: 'Acme' });
+    const run = await db
+      .selectFrom('prompt_generation_runs')
+      .select('provenance')
+      .where('id', '=', result.candidates[0]!.run_id)
+      .executeTakeFirstOrThrow();
+    expect(run.provenance).toMatchObject({
+      run_context: 'Spring marathon season',
+      requested_distribution: { branded_share: 0.5, comparison_share: 0, personas: [] },
+      cohort_quotas: { core: 2, brand_diagnostic: 2, comparison: 0 },
+      seed_source: null,
+      seed_query_ids: [],
+      topic_recovery: null,
+    });
+    const deps = echoDependencies();
+    const again = await generatePrompts(
+      db,
+      tenant.workspaceId,
+      setId,
+      request,
+      deps,
+      'distribution-key',
+    );
+    expect(again.candidates.map((row) => row.id).toSorted()).toEqual(
+      result.candidates.map((row) => row.id).toSorted(),
+    );
+    await expect(
+      generatePrompts(
+        db,
+        tenant.workspaceId,
+        setId,
+        generationInput.parse({ ...request, distribution: { branded_share: 0.25 } }),
+        deps,
+        'distribution-key',
+      ),
+    ).rejects.toMatchObject({ status: 409 });
+    expect(deps.io.fetch).not.toHaveBeenCalled();
+    await expect(
+      generatePrompts(
+        db,
+        tenant.workspaceId,
+        setId,
+        generationInput.parse({ count: 2, distribution: { comparison_share: 0.5 } }),
+        deps,
+      ),
+    ).rejects.toMatchObject({ status: 422 });
+    expect(deps.io.fetch).not.toHaveBeenCalled();
+  });
+  it('proposes buyer-facing topics from confirmed offerings only, before drafting', async () => {
+    const other = await fixtures.tenant();
+    await fixtures.brand(other.projectId, 'Strider');
+    const brand = await db
+      .selectFrom('brands')
+      .select('id')
+      .where('project_id', '=', other.projectId)
+      .executeTakeFirstOrThrow();
+    const otherSet = await promptSet(db, other.projectId);
+    const offerings = ['Pro Series running shoes', 'Strider trail shoes (sizes 9-13)'];
+    const now = new Date();
+    await db
+      .insertInto('brand_profiles')
+      .values({
+        id: randomUUID(),
+        workspace_id: other.workspaceId,
+        project_id: other.projectId,
+        brand_id: brand.id,
+        business_context: JSON.stringify({ category_terms: ['running shoes'] }),
+        description: '',
+        positioning: '',
+        target_audience: '',
+        products_services: JSON.stringify(offerings),
+        sources: JSON.stringify({
+          products_services: { origin: 'ai_suggested', review_state: 'unreviewed' },
+        }),
+        source_artifact_ids: '{}',
+        created_at: now,
+        updated_at: now,
+      })
+      .execute();
+    const deps = echoDependencies({
+      topics: [
+        { name: 'Road running shoes', offerings: [offerings[0]!] },
+        { name: 'Strider trail shoes', offerings: [offerings[1]!] },
+      ],
+    });
+    const run = () =>
+      generatePrompts(db, other.workspaceId, otherSet, generationInput.parse({ count: 2 }), deps);
+    // Unconfirmed offerings never become topics, and nothing reaches the model.
+    await expect(run()).rejects.toMatchObject({ status: 422 });
+    expect(deps.io.fetch).not.toHaveBeenCalled();
+    await db
+      .updateTable('brand_profiles')
+      .set({
+        sources: JSON.stringify({
+          products_services: { origin: 'ai_suggested', review_state: 'confirmed' },
+        }),
+      })
+      .where('project_id', '=', other.projectId)
+      .execute();
+    const result = await run();
+    expect(
+      await db
+        .selectFrom('topics')
+        .select(['name', 'origin'])
+        .where('project_id', '=', other.projectId)
+        .orderBy('name')
+        .execute(),
+    ).toEqual([
+      { name: 'Road running shoes', origin: 'generated' },
+      { name: 'Trail shoes', origin: 'generated' },
+    ]);
+    expect(result.candidates).toHaveLength(2);
+    const provenance = await db
+      .selectFrom('prompt_generation_runs')
+      .select('provenance')
+      .where('id', '=', result.candidates[0]!.run_id)
+      .executeTakeFirstOrThrow();
+    expect(provenance.provenance).toMatchObject({
+      topic_recovery: {
+        source: 'model',
+        created: [
+          { name: 'Road running shoes', offerings: [offerings[0]] },
+          { name: 'Trail shoes', offerings: [offerings[1]] },
+        ],
+        overflow: [],
+        dropped: [],
+      },
+    });
   });
   it('serializes concurrent staging on the same set and drops newly pending duplicates', async () => {
     const deps = dependencies();

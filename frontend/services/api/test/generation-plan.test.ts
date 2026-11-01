@@ -2,14 +2,25 @@ import { describe, expect, it } from 'vitest';
 
 import { policy } from '../src/config.ts';
 import type { GenerationContext } from '../src/prompts/generation-context.ts';
-import { admitDrafts, generateDrafts } from '../src/prompts/generation-drafts.ts';
-import { generationInput } from '../src/prompts/generation-input.ts';
+import {
+  admitDrafts,
+  draftCallLimit,
+  generateDrafts,
+  planBatches,
+} from '../src/prompts/generation-drafts.ts';
+import { generationInput, validateSelection } from '../src/prompts/generation-input.ts';
 import {
   observedLikeness,
   setMetrics,
   thresholdFailures,
 } from '../src/prompts/generation-metrics.ts';
-import { geoTerms, modelSlot, namesPlace, planSlots } from '../src/prompts/generation-plan.ts';
+import {
+  geoTerms,
+  modelSlot,
+  namesPlace,
+  planSlots,
+  type Slot,
+} from '../src/prompts/generation-plan.ts';
 import {
   fixtureContext,
   fixtureTopicId,
@@ -18,6 +29,28 @@ import {
 
 const G = policy.prompts.generation;
 const fixture = (name: string) => generationFixtures.find((item) => item.name === name)!;
+const entry = (value: string) => ({
+  value,
+  origin: 'manual' as const,
+  review_state: 'confirmed' as const,
+  reviewed_by: null,
+  reviewed_at: null,
+  source: {},
+});
+const schoolMaps = [
+  {
+    offering: 'Boarding school',
+    attributes: [entry('co-educational'), entry('sports facilities')],
+    situations: [entry('first-time boarder')],
+    audiences: [entry('working parents')],
+    exclusions: [],
+  },
+];
+/** A cell's facets as `[key, value]` pairs, or null for a bare cell. */
+const facetOf = (slot: Slot) => {
+  const keys = Object.keys(slot.buyer_need).filter((key) => !['offering', 'market'].includes(key));
+  return keys.length ? keys.map((key) => [key, slot.buyer_need[key]]) : null;
+};
 
 describe('universe planner', () => {
   it.each(generationFixtures)(
@@ -43,7 +76,7 @@ describe('universe planner', () => {
               .filter((slot) => slot.buyer_need.offering === offering)
               .map((slot) => slot.target_buyer_stage),
           ),
-        ).toEqual(new Set(G.stages));
+        ).toEqual(new Set(['awareness', 'consideration', 'decision']));
     },
   );
 
@@ -56,38 +89,231 @@ describe('universe planner', () => {
     expect(slots.some((slot) => slot.buyer_need.market)).toBe(false);
   });
 
-  it('covers stages bare before facets, then keeps facets to their share of cells', () => {
-    const entry = (value: string) => ({
-      value,
-      origin: 'manual' as const,
-      review_state: 'confirmed' as const,
-      reviewed_by: null,
-      reviewed_at: null,
-      source: {},
-    });
-    const school = fixture('regional-school');
-    const maps = [
-      {
-        offering: 'Boarding school',
-        attributes: [entry('co-educational'), entry('sports facilities')],
-        situations: [entry('first-time boarder')],
-        audiences: [entry('working parents')],
-        exclusions: [],
-      },
-    ];
+  const school = fixture('regional-school');
+
+  it('gives every cell exactly one facet from the first, alternating dimensions least-used first', () => {
     const slots = planSlots(
-      fixtureContext(school, maps),
+      fixtureContext(school, schoolMaps),
       generationInput.parse({ count: 30 }),
       [],
     ).filter((slot) => slot.buyer_need.offering === 'Boarding school');
-    const faceted = (slot: (typeof slots)[number]) =>
-      Object.keys(slot.buyer_need).some((key) => key !== 'offering' && key !== 'market');
-    expect(slots.slice(0, G.stages.length).some(faceted)).toBe(false);
-    expect(slots.filter(faceted).length).toBeGreaterThan(0);
-    expect(slots.filter(faceted).length).toBeLessThanOrEqual(G.facet_cell_share * slots.length);
+    expect(slots.slice(0, 5).map(facetOf)).toEqual([
+      [['attribute', 'co-educational']],
+      [['situation_or_constraint', 'first-time boarder']],
+      [['audience', 'working parents']],
+      [['attribute', 'sports facilities']],
+      [['situation_or_constraint', 'first-time boarder']],
+    ]);
+    expect(slots.every((slot) => facetOf(slot)?.length === 1)).toBe(true);
     // Core cells suggest the intents coherent with their stage.
     for (const slot of slots)
       expect(slot.target_prompt_intents).toEqual(G.stage_intents[slot.target_buyer_stage]);
+  });
+
+  it('falls back to buyer roles and the business map audiences, and plans bare cells only without any', () => {
+    const day = planSlots(
+      fixtureContext(school, schoolMaps),
+      generationInput.parse({ count: 9 }),
+      [],
+    ).filter((slot) => slot.buyer_need.offering === 'Day school');
+    expect(day.map((slot) => [slot.buyer_need.audience, slot.evidence_ref.review_state])).toEqual([
+      ['working parents', 'confirmed'],
+      ['parents', 'suggested'],
+      ['guardians', 'suggested'],
+      ['working parents', 'confirmed'],
+      ['parents', 'suggested'],
+      ['guardians', 'suggested'],
+    ]);
+    const plain = fixtureContext(school);
+    const roleless = {
+      ...plain,
+      context: {
+        ...plain.context,
+        business_context: { ...plain.context.business_context, buyer_roles: [] },
+      },
+    } as GenerationContext;
+    expect(planSlots(roleless, generationInput.parse({ count: 3 }), []).map(facetOf)).toEqual([
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+    ]);
+  });
+
+  it('gives every cell of a default ten-topic run a facet (the thenetreturn.com shape)', () => {
+    const offerings = Array.from({ length: 10 }, (_, index) => `Golf net ${index + 1}`);
+    const topics = offerings.map((name, index) => ({
+      id: fixtureTopicId(index),
+      name,
+      description: '',
+      parent_id: null,
+    }));
+    const base = fixtureContext(fixture('national-d2c-apparel'));
+    const context = {
+      ...base,
+      selected: topics,
+      topics,
+      maps: offerings.slice(0, 8).map((offering) => ({
+        offering,
+        attributes: [entry('automatic ball return')],
+        situations: [entry('small garage')],
+        audiences: [],
+        exclusions: [],
+      })),
+      context: {
+        ...base.context,
+        business_context: {
+          ...base.context.business_context,
+          buyer_roles: ['home golfers', 'golf coaches'],
+        },
+      },
+    } as GenerationContext;
+    const slots = planSlots(context, generationInput.parse({ count: 20 }), []);
+    expect(slots).toHaveLength(40);
+    expect(slots.filter((slot) => facetOf(slot)).length).toBe(40);
+    expect(slots.filter((slot) => slot.buyer_need.offering === 'Golf net 9').map(facetOf)).toEqual([
+      [['audience', 'home golfers']],
+      [['audience', 'golf coaches']],
+      [['audience', 'home golfers']],
+      [['audience', 'golf coaches']],
+    ]);
+    const stages = Map.groupBy(slots, (slot) => slot.target_buyer_stage);
+    expect(Object.fromEntries([...stages].map(([stage, items]) => [stage, items.length]))).toEqual({
+      awareness: 14,
+      consideration: 13,
+      decision: 13,
+    });
+  });
+});
+
+describe('distribution-aware planning', () => {
+  const school = fixture('regional-school');
+  const tally = (values: string[]) =>
+    Object.fromEntries(
+      [...Map.groupBy(values, (value) => value)].map(([key, items]) => [key, items.length]),
+    );
+
+  it('defaults to a core-only run with stages balanced across the run', () => {
+    const slots = planSlots(fixtureContext(school), generationInput.parse({ count: 15 }), []);
+    expect(tally(slots.map((slot) => slot.cohort))).toEqual({ core: 30 });
+    expect(tally(slots.map((slot) => slot.target_buyer_stage))).toEqual({
+      awareness: 10,
+      consideration: 10,
+      decision: 10,
+    });
+  });
+
+  it('allocates cohorts by share and stage labels by the intent mix', () => {
+    const slots = planSlots(
+      fixtureContext(school),
+      generationInput.parse({
+        count: 20,
+        distribution: {
+          branded_share: 0.2,
+          comparison_share: 0.1,
+          intent_mix: { informational: 25, commercial: 50, transactional: 25 },
+        },
+      }),
+      [],
+    );
+    expect(tally(slots.map((slot) => slot.cohort))).toEqual({
+      core: 28,
+      brand_diagnostic: 8,
+      comparison: 4,
+    });
+    expect(tally(slots.map((slot) => slot.target_buyer_stage))).toEqual({
+      awareness: 10,
+      consideration: 20,
+      decision: 10,
+    });
+    expect(
+      slots
+        .filter((slot) => slot.cohort === 'comparison')
+        .map((slot) => slot.allowed_prompt_intents),
+    ).toEqual(Array.from({ length: 4 }, () => ['compare']));
+  });
+
+  it("uses the run's personas as the audience facets", () => {
+    const slots = planSlots(
+      fixtureContext(school, schoolMaps),
+      generationInput.parse({
+        count: 9,
+        distribution: { personas: ['grandparents', 'military families'] },
+      }),
+      [],
+    );
+    const audiences = new Set(slots.flatMap((slot) => slot.buyer_need.audience ?? []));
+    expect(audiences).toEqual(new Set(['grandparents', 'military families']));
+    expect(slots.filter((slot) => slot.buyer_need.offering === 'Day school').map(facetOf)).toEqual([
+      [['audience', 'grandparents']],
+      [['audience', 'military families']],
+      [['audience', 'grandparents']],
+      [['audience', 'military families']],
+      [['audience', 'grandparents']],
+      [['audience', 'military families']],
+    ]);
+  });
+
+  it('grounds only on the chosen seed source and ids, and on nothing for none', () => {
+    const context = fixtureContext(school, [], { grounded: true });
+    const [first, second] = context.observed;
+    const grounding = (input: Record<string, unknown>) =>
+      new Set(
+        planSlots(context, generationInput.parse({ count: 6, ...input }), []).flatMap(
+          (slot) => slot.grounding?.map((search) => search.id) ?? [],
+        ),
+      );
+    expect(grounding({ seed_source: 'search_console', seed_query_ids: [second!.id] })).toEqual(
+      new Set([second!.id]),
+    );
+    expect(grounding({ seed_source: 'none' })).toEqual(new Set());
+    expect(grounding({ seed_source: 'search_intelligence' })).toEqual(new Set());
+    expect(grounding({})).toContain(first!.id);
+  });
+
+  it('refuses distributions that cannot be planned before any model call', () => {
+    expect(() =>
+      generationInput.parse({ distribution: { branded_share: 0.7, comparison_share: 0.4 } }),
+    ).toThrow('Branded and comparison shares cannot exceed the whole run');
+    expect(() =>
+      validateSelection(
+        generationInput.parse({ cohort: 'comparison', distribution: { branded_share: 0.2 } }),
+        [],
+      ),
+    ).toThrow(expect.objectContaining({ status: 422 }));
+    expect(() =>
+      validateSelection(generationInput.parse({ seed_query_ids: [fixtureTopicId(1)] }), []),
+    ).toThrow('Seed queries need their search data source');
+  });
+});
+
+describe('draft batches', () => {
+  it("keeps each topic's cells in one batch, one cohort per batch, within the call limit", () => {
+    const offerings = Array.from({ length: 7 }, (_, index) => `Offering ${index + 1}`);
+    const topics = offerings.map((name, index) => ({
+      id: fixtureTopicId(index),
+      name,
+      description: '',
+      parent_id: null,
+    }));
+    const base = fixtureContext(fixture('global-b2b-saas'));
+    const context = { ...base, selected: topics, topics } as GenerationContext;
+    const input = generationInput.parse({ count: 20, distribution: { branded_share: 0.25 } });
+    const batches = planBatches(planSlots(context, input, []), 20);
+    // 30 core cells in two batches of seven whole topics, 10 branded in one.
+    expect(batches.map((batch) => batch.length)).toEqual([14, 16, 10]);
+    for (const batch of batches) expect(new Set(batch.map((slot) => slot.cohort)).size).toBe(1);
+    const topicBatches = Map.groupBy(
+      batches.flatMap((batch, index) =>
+        batch.map((slot) => [`${slot.cohort}:${slot.topic_id}`, index] as const),
+      ),
+      ([key]) => key,
+    );
+    for (const placements of topicBatches.values())
+      expect(new Set(placements.map(([, index]) => index)).size).toBe(1);
+    expect(batches.length).toBeLessThan(draftCallLimit(input));
   });
 });
 
@@ -190,7 +416,6 @@ describe('location admission', () => {
       ],
       [bare, located],
       school,
-      input,
       [],
     );
     expect(result.admitted.map((draft) => draft.slot.slot_id)).toEqual([located.slot_id]);
@@ -224,9 +449,26 @@ describe('set metrics', () => {
   const texts = [
     'Which jeans stay comfortable through a long workday at a desk?',
     'My jeans keep ripping at the pockets, what should I buy instead?',
-    'Which stretch jeans keep their shape after many washes at home?',
+    'Stretch jeans that keep their shape after many washes at home',
     'What jeans suit tall men who struggle to find a long inseam?',
   ];
+
+  it('measures openings by their first word', () => {
+    const metrics = setMetrics({
+      ...base,
+      offeringOf: ['Jeans', 'Jeans', 'Jeans', 'Jeans'],
+      texts: [
+        'Which jeans suit long days of desk work?',
+        'Which stores sell jeans for very tall men?',
+        'Best jeans for cycling to work every day',
+        'Where can I buy raw denim jeans online?',
+      ],
+    });
+    expect(metrics.opening_concentration).toBe(0.5);
+    expect(thresholdFailures(metrics, { market_scope: 'national', requested: 4 })).toEqual([
+      'opening_concentration',
+    ]);
+  });
 
   it('passes a varied unlocated national set and fails one that leaks places', () => {
     const offeringOf = texts.map(() => 'Jeans');
@@ -235,7 +477,7 @@ describe('set metrics', () => {
     const located = [
       ...texts.slice(0, 2),
       'Where can I buy jeans in Bengaluru that fit well?',
-      'Which jeans brands in India last longest for daily wear?',
+      'Jeans brands in India that last longest for daily wear',
     ];
     const leaky = setMetrics({ ...base, texts: located, offeringOf });
     expect(leaky.located_share).toBe(0.5);
