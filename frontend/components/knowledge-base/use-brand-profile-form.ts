@@ -116,6 +116,8 @@ export function useBrandProfileForm({
       ),
     onSuccess: (next) => {
       queryClient.setQueryData(queryKeys.projects.brandProfile(projectId), next);
+      // Seed queries carry the category and offerings, so the builder rereads them.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.topics.seedQueries(projectId) });
       onSaved?.();
       setEdits(NO_EDITS);
       setNotice('Brand knowledge saved. These details now inform assisted features.');
