@@ -32,6 +32,22 @@ export function* elements(root: HtmlNode, tag?: string): Generator<HtmlElement> 
     if ('childNodes' in node) pending.push(...node.childNodes.toReversed());
   }
 }
+const isTemplate = (node: HtmlElement): node is DefaultTreeAdapterTypes.Template =>
+  node.tagName === 'template' && 'content' in node;
+/**
+ * Every anchor in document order, template content included, flagged when it
+ * sits in template content. Crawlers follow these links, so discovery and the
+ * link graph both read this one list.
+ */
+export function* anchorElements(
+  root: HtmlNode,
+  inTemplate = false,
+): Generator<{ anchor: HtmlElement; inTemplate: boolean }> {
+  for (const element of elements(root)) {
+    if (element.tagName === 'a') yield { anchor: element, inTemplate };
+    if (isTemplate(element)) yield* anchorElements(element.content, true);
+  }
+}
 /** Text nodes in document order. */
 export function* textNodes(root: HtmlNode): Generator<HtmlText> {
   const pending: HtmlNode[] = [root];
