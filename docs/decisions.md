@@ -586,3 +586,15 @@ Four decisions for the [Prompt Builder plan](plans/prompt-builder.md):
 Source: owner answers of 1 November 2026 in the CiteLadder session reviewing
 the thenetreturn.com prompts.
 [Prompts and Visibility](visibility-prompt.md) owns the shipped behavior.
+
+## Table headers are white; tables abbreviate share of voice
+
+A table's header row has no fill of its own: it sits on the table's paper,
+separated by its rule. A tinted header matched the selected-row tint and read
+as a selected row. Table columns label share of voice "S.O.V.", with a tooltip
+that names it; metric cards keep the full name.
+
+Source: owner, 1 November 2026, reviewing the AI Visibility brand table
+("share of voice u can say S.O.V."; "table header doesnt need a separate color
+it can be just white").
+[Design system](design.md) owns the shipped behavior.
