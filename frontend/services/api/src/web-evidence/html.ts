@@ -37,15 +37,20 @@ const isTemplate = (node: HtmlElement): node is DefaultTreeAdapterTypes.Template
 /**
  * Every anchor in document order, template content included, flagged when it
  * sits in template content. Crawlers follow these links, so discovery and the
- * link graph both read this one list.
+ * link graph both read this one list. Iterative, so nesting depth never
+ * reaches the call stack.
  */
 export function* anchorElements(
   root: HtmlNode,
-  inTemplate = false,
 ): Generator<{ anchor: HtmlElement; inTemplate: boolean }> {
-  for (const element of elements(root)) {
-    if (element.tagName === 'a') yield { anchor: element, inTemplate };
-    if (isTemplate(element)) yield* anchorElements(element.content, true);
+  const pending: { node: HtmlNode; inTemplate: boolean }[] = [{ node: root, inTemplate: false }];
+  while (pending.length) {
+    const { node, inTemplate } = pending.pop()!;
+    if (isElement(node) && node.tagName === 'a') yield { anchor: node, inTemplate };
+    const content = isElement(node) && isTemplate(node) ? node.content : null;
+    const children = content ? content.childNodes : 'childNodes' in node ? node.childNodes : [];
+    const nested = inTemplate || content !== null;
+    pending.push(...children.toReversed().map((child) => ({ node: child, inTemplate: nested })));
   }
 }
 /** Text nodes in document order. */
