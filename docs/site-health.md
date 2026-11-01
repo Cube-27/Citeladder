@@ -129,10 +129,10 @@ Stop (`controls.ts`) commits only the cancellation and fetch settlement.
 seed, root and page redirect hop, in order:
 
 1. Reject scheme-less absolute references and join artifacts (`invalid_url`).
-2. Reject hard-excluded query keys (`page`, `q`, `sort`, `filter`, …) and
-   tracking keys.
+2. Reject hard-excluded query keys (`page`, `q`, `sort`, `filter`, …).
 3. Canonicalize (`url-identity.ts`): drop tracking and variant keys, sort the
-   query, normalize escapes, then hash with SHA-256.
+   query, normalize escapes, then hash with SHA-256. A tagged link therefore
+   admits its clean target, the same identity the link checks judge.
 4. Apply hard exclusions: the host's first label; login, account, cart,
    checkout and search paths; asset extensions (sitemaps excepted); URL length.
 5. Apply scope: the root registrable domain and its subdomains, then
@@ -425,7 +425,11 @@ reachability and redirect chains on the root. They read only this crawl's
 persisted attempts; targets never fetched, or rate-limited with 429, stay
 unchecked and cannot pass. A link is internal when its host shares the page's
 registrable domain, the same scope the crawler admits, so `docs.`/`www.` links
-count. A 401/403 link target is sign-in-gated, not broken; a 401/403 sitemap
+count. Links in hidden markup or template content (a collapsed menu) are links
+crawlers follow, as discovery does: page facts keep them as
+`links.unrendered_anchors`, and these checks and the link graph count them for
+targets, inbound links and depth, never for anchor text or main content. A
+401/403 link target is sign-in-gated, not broken; a 401/403 sitemap
 URL is still unreachable.
 
 | Canonical integrity outcome | When |
