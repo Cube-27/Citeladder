@@ -77,24 +77,47 @@ Brand knowledge and stored in `BusinessContext.business_map`, lists per
 confirmed offering its attributes, situations/constraints and audiences, plus
 excluded pairs that never combine. Entries carry origin and review state: a
 model suggestion stays `suggested` until a person confirms it, and edits keep
-each surviving entry's provenance. When a Generate request selects confirmed
-offerings with absent or facet-empty map entries, one bounded model call
+each surviving entry's provenance. When a Generate request selects topics
+covering offerings (by name, or by the offerings a recovered topic was proposed
+from) with absent or facet-empty map entries, one bounded model call
 ([map suggestions](../frontend/services/api/src/prompts/generation-drafts.ts)) proposes
 them; they ground that run and are stored `suggested` with model identity and
 the generation run id, only for offerings still empty at write time, and never
-naming the brand or a competitor. A failed suggestion call only means cells
-without facets.
+naming the brand or a competitor. A failed suggestion call leaves the
+planner's fallback facets (below).
 
 Onboarding creates no prompts or topics; a created project starts with an
 empty prompt set and the user chooses what to track. Generation uses existing
-topics; when a project has none, it can recover starting topics from confirmed
-products/services before generation. Missing confirmed offerings fail before provider I/O.
+topics; a quick run in a project with none first recovers starting topics from
+the saved products/services, whatever their review state (onboarding saves the
+ones its reader just reviewed as unreviewed). No saved offerings fails before
+provider I/O. An agent portfolio, or a request naming `topic_ids`, never
+recovers topics: named topics must already belong to the project, which the
+context read checks before any model call.
 
 Onboarding research keeps a bounded offering harvest of things a customer buys,
-hires, books or enrolls in as reviewable evidence. Recovered starting topics
-describe confirmed offerings rather than restate the provider's category;
-unsupported topics are not invented. Topic names must be bounded and
-brand-neutral, and admitted topics receive canonical UUIDs.
+hires, books or enrolls in as reviewable evidence. [Topic
+proposals](../frontend/services/api/src/prompts/topic-proposals.ts) turn the
+saved offerings into the buyer-facing categories they fall into, never
+product-line or model names: one bounded model call (`topic_calls`, reserved
+from the agent-call bucket and made outside any transaction) proposes
+categories, and deterministic code keeps only those naming a saved offering
+and sharing a word with its offerings or category vocabulary. It strips
+parenthetical qualifiers, specifications (any word with a digit), the brand, its
+aliases and product-line names (capitalised runs in the offerings that are not
+category vocabulary), caps names at `topic_name_max_words`, and merges
+proposals or drops repeats of existing topics at `topic_merge_jaccard` token
+overlap. An offering no kept category covers is proposed from its own cleaned
+name; a model failure or deadline falls back to the offerings alone. Topics are
+inserted under the project lock only while the project still has none, at most
+`topic_max`; the rest are reported as overflow, and the source,
+model identity, created, overflow and dropped proposals (with reasons
+`unsupported`, `empty`, `branded`, `existing`, `merged`) are frozen in run
+provenance as `topic_recovery`. The same transaction records which saved
+offerings each created topic covers in `business_context.topic_offerings` (by
+topic id), so the planner gives a category its offerings' business-map facets
+whatever it is named. Topic names must be bounded and brand-neutral,
+and admitted topics receive canonical UUIDs.
 
 Topic distinctness uses singular-normalized token identity, not character
 similarity: men's and women's departments must not merge because their spellings
@@ -106,22 +129,60 @@ own these decisions, not a copied vocabulary list in documentation.
 
 The [universe planner](../frontend/services/api/src/prompts/generation-plan.ts)
 plans `count × GENERATION_OVERGENERATE_FACTOR` cells round-robin over the
-selected topics. Each offering covers every buyer stage with a bare cell before
-any facet; afterwards at most `facet_cell_share` of its cells carry an
-attribute, situation/constraint or persona (confirmed audiences, else inferred
-buyer roles as suggestions), confirmed values before suggestions,
-least-used-first, never an excluded pair. A market attaches only to the reviewed
+selected topics. Every cell carries exactly one buyer constraint from the first
+cell on: the topic's least-used attribute, situation/constraint or persona
+(least-used value, then least-used dimension, confirmed values before
+suggestions). Personas are the run's requested personas, else the map's
+audiences plus inferred buyer roles (as suggestions) while the map has no
+confirmed audience. A topic without map facets, including a subtopic whose
+parent has none, falls back to the requested personas, else the buyer roles and
+every audience the business map lists; only a business with none of these plans
+bare cells, never invented facts. Because a cell holds one facet, an excluded
+pair never combines. A market attaches only to the reviewed
 `market_scope`'s `location_policy` share (local 0.5, regional 0.25, national,
 global and unknown 0), drawn from `service_areas`; a national business's service
-areas never become wording. A subtopic uses its parent's offering map; a topic
-without one gets bare cells, never invented facts. Each slot carries its cell
-as `buyer_need` and the intents that suit its stage as `target_prompt_intents`.
+areas never become wording. A topic draws facets from the map named like it
+(whose offering labels its cells), else from the maps of the offerings it was
+recovered from (its cells keep the topic's own name), else from its parent's.
+Each cell's evidence records where its facet came from: `confirmed` by a person
+in the map, `suggested` by a model or inferred buyer roles, `requested` as a
+persona for this run, or `not_applicable` without a facet. Selection prefers
+confirmed and requested facets.
+
+The buyer stage is a label over `planned_stages` (awareness, consideration,
+decision; `implementation` stays in the stage vocabulary for manual prompts but
+is never planned): each topic first covers every weighted stage once, then the
+run keeps the stages' proportions. Each slot carries its cell as `buyer_need`
+and the intents that suit its stage as `target_prompt_intents`.
+
+A Generate request may carry a `distribution`: `branded_share` and
+`comparison_share` (summing to at most 1; core takes the rest) plan
+`brand_diagnostic` and `comparison` cells beside core ones, an `intent_mix`
+(informational, commercial, transactional weights) weights the awareness,
+consideration and decision labels, and up to `distribution_personas_max`
+personas replace the audience facets. A distribution keeps the request's
+cohort as core; a comparison share in a project without accepted competitors
+fails before provider I/O. `run_context` (at most `run_context_max_chars`) is a
+note for this run only, sent as reference data and never a business fact.
+`seed_source` (`search_console`, `search_intelligence` or `none`) and optional
+`seed_query_ids` restrict which persisted searches ground slots; omitted, every
+source grounds. An agent portfolio takes none of these. They are part of the
+idempotency request and frozen in run provenance (`run_context`,
+`requested_distribution`, `cohort_quotas`, `seed_source`, `seed_query_ids`).
 
 Draft batches receive a narrow brief (category, category terms, offerings,
 business model, buyer type, market scope, language and country, with their
-review provenance), the batch's cells and tracked texts for de-duplication
-only: no profile prose, knowledge-base sources, demand signals, competitors or
-earlier drafts. The one exception is grounding: the
+review provenance, plus any `run_context`), the batch's cells and tracked texts
+for de-duplication only: no profile prose, knowledge-base sources, demand
+signals or earlier drafts. Only a `brand_diagnostic` batch's brief carries the
+brand name, and only a `comparison` batch's also carries the accepted
+competitors. Each batch holds one cohort, and a topic's cells travel in the
+same batch, so siblings are drafted against each other: a batch may run a
+little over the batch size rather than split a topic, and only a topic with
+more cells than a whole batch is split. The agent-call budget a run needs is the sum,
+over cohorts with a share, of its cells divided by the batch size (rounded up),
+plus one refill and the map call. The one exception to the narrow brief is
+grounding: the
 [observed-query loader](../frontend/services/api/src/prompts/observed-queries.ts)
 reads the project's persisted Search Console queries (latest query snapshot,
 `observed.gsc_window_days`, summed impressions at least
@@ -143,26 +204,36 @@ never keep a value that names the project's places.
 
 Admission runs before any quality judgment: known slots, topic ownership,
 allowed labels (a planned core row's intent must suit the stage it is labelled
-with), cohort identity, normalized exact duplicates, the shared length bound,
-topical binding (service areas do not bind generated or proposed text), a place
-named in a cell without a market (`location_unplanned`, decided on the project's
-geography vocabulary with the model's `names_place` label recorded beside it),
-texts already tracked or pending, and exact copies of any observed search the
-run read (demand-signal queries and every grounding search).
+with, and a quick core row's stage must be a planned stage), cohort identity,
+normalized exact duplicates, the shared length bound, at most `text_max_words`
+(16) words (`too_many_words`), topical binding (service areas do not bind
+generated or proposed text), a place named in a cell without a market
+(`location_unplanned`, decided on the project's geography vocabulary with the
+model's `names_place` label recorded beside it), texts already tracked or
+pending, exact copies of any observed search the run read (demand-signal
+queries and every grounding search), and last `near_duplicate`: a text whose
+content-word overlap (Jaccard over singular-folded non-stopword tokens) with a
+tracked, pending or earlier admitted text reaches `near_duplicate_jaccard`.
+Staging rechecks near duplicates against tracked and pending texts written
+after the context read.
 Core queries cannot name the tracked brand, aliases or supplied competitors
 under the project's mention rules (below); diagnostics name the brand and
 comparisons also name an accepted competitor. The judge sees the planned cell,
 not the business's service areas.
 [Selection](../frontend/services/api/src/prompts/generation-quality.ts)
-keeps at most `count` after judgment, preferring passing judgments while treating
-uncertain and unjudged candidates equally, then spread across topic, stage, intent,
+keeps at most `count` after judgment, split into per-cohort quotas by largest
+remainder with no cross-filling between cohorts, preferring passing judgments
+while treating uncertain and unjudged candidates equally, then spread across
+topic, stage (not when an intent mix sets the stage proportions), intent,
 audience, situation, attribute and market; a
 shortfall is reported, never filled. Run provenance records `distribution`
-(counts by stage, intent, offering and persona, and located and bare drafts) for
+(counts by cohort, stage, intent, offering and persona, and located and bare
+drafts, bare meaning no facet besides offering and market) for
 admitted and selected drafts, measured by
 [generation metrics](../frontend/services/api/src/prompts/generation-metrics.ts);
 the same module scores fixture and live calibration sets against
-`eval_thresholds` in `config/prompt-generation.ts`. `pnpm prompts:eval --live`
+`eval_thresholds` in `config/prompt-generation.ts` (mean words within 6–12,
+openings compared by first word, stage coverage over the planned stages). `pnpm prompts:eval --live`
 is the operator-only live calibration over the business-context fixtures; it
 calls the configured provider and never runs in CI. `candidates_generated` counts what passed
 admission and is never a market size. Every dropped row is counted under the
@@ -189,7 +260,8 @@ through the [JEV connector](../frontend/services/api/src/models/jev.ts) when
 `JEV_API_KEY` is set (blank is off; the TypeSafe subprocessor and privacy
 revision was published on 28 September 2026 and production carries the key).
 It judges the admitted draft pool within the configured call cap: yes/no fit, buyer relevance, decision value,
-naturalness, standalone and sensibility; intent
+naturalness, standalone and sensibility, plus for core candidates whether
+naming a business answers the question (`names_a_business`); intent
 and stage labels recorded beside the model's; and a per-topic duplicate choice
 among tracked and earlier candidates. Its state omits the brand and
 competitors. Each decision stores model, question-schema and policy versions,
@@ -202,7 +274,9 @@ decision a verdict. **Fail**: a yes/no answer below `JEV_FAIL_BELOW` or a
 duplicate choice at or above `JEV_DUPLICATE_FAIL_AT`. **Uncertain**: an answer
 below `JEV_FLAG_BELOW`, a duplicate at or above `JEV_DUPLICATE_FLAG_AT`, or a
 missing answer (`incomplete`); the row is shown flagged. **Pass**: everything
-else. With `JEV_MODE=gate` (the default) a failed candidate never reaches
+else. `names_a_business` uses its own provisional thresholds
+(`JEV_ANSWERABLE_FAIL_BELOW`, `JEV_ANSWERABLE_FLAG_BELOW`), recorded with the
+decision's thresholds. With `JEV_MODE=gate` (the default) a failed candidate never reaches
 review: it is stored only as a text-free `gate_rejected` outcome record and
 counted in `quality_rejected`. Selection can use other surviving drafts from
 the same pool; any remaining shortfall is reported without a rewrite loop.
@@ -216,9 +290,10 @@ still gated, and generation still succeeds. A duplicate choice that was not
 offered, or an answer outside [0, 1], counts as unavailable (`incomplete`). JEV calls are bounded by
 `JEV_MAX_CALLS_PER_GENERATION`, not the agent-call bucket. Exhausting that cap
 reports partial unavailability; unjudged rows never claim to be checked.
-Commercial relevance and distinct needs remain human review criteria; there
-are no word-count windows, opening quotas or automatic rewrite loops. Batching,
-bounded technical retries and partial-result behavior remain.
+Commercial relevance and distinct needs remain human review criteria. Length
+is a 16-word admission cap with a 6–12 word calibration target; there are no
+opening quotas or automatic rewrite loops. Batching, bounded technical retries
+and partial-result behavior remain.
 
 Prompt generation retains its requested-count, topic, cohort and
 batching semantics. Saving/activation retains explicit user-action
@@ -265,8 +340,13 @@ shared launch dialog and its admission/funding checks and stays disabled until
 the project has an active prompt. `/prompts?generate=1` opens the Generate
 dialog once per arrival and is then removed from the URL.
 
-Users are asked only for a prompt and its topic. Theme, intent and cohort are
-internal generation vocabulary: never required, never a user-facing validation
+Users are asked only for a prompt and its topic. (Owner decision D of
+1 November 2026 in the [decision log](decisions.md) puts topics, search queries
+and their source, distribution and context under user control; it supersedes
+this rule once the Prompt Builder ships in the Prompts page, per the [Prompt
+Builder plan](plans/prompt-builder.md). The generation request already accepts
+those inputs.) Theme,
+intent and cohort are internal generation vocabulary: never required, never a user-facing validation
 error, and defaulted in code when absent. The prompt table shows branding,
 intent, buyer stage and persona as tags with filters; editing a prompt can
 correct its text, topic, intent, buyer stage and persona (`persona_max_chars`),

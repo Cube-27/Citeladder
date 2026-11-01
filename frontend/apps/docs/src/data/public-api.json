@@ -4257,13 +4257,15 @@
                 "stage",
                 "duplicate",
                 "length",
+                "too_many_words",
                 "placeholder",
                 "observed_copy",
                 "off_topic",
                 "location_unplanned",
                 "branded_core",
                 "brand_missing",
-                "competitor_missing"
+                "competitor_missing",
+                "near_duplicate"
               ]
             },
             "additionalProperties": {
@@ -10909,7 +10911,101 @@
                   "cohort": {
                     "default": "core",
                     "type": "string",
-                    "enum": ["core", "comparison", "brand_diagnostic"]
+                    "enum": ["core", "brand_diagnostic", "comparison"]
+                  },
+                  "run_context": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 280
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "distribution": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "branded_share": {
+                            "default": 0,
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1
+                          },
+                          "comparison_share": {
+                            "default": 0,
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1
+                          },
+                          "intent_mix": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "informational": {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "maximum": 100
+                                  },
+                                  "commercial": {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "maximum": 100
+                                  },
+                                  "transactional": {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "maximum": 100
+                                  }
+                                },
+                                "required": ["informational", "commercial", "transactional"]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "personas": {
+                            "default": [],
+                            "maxItems": 8,
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 120
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "seed_source": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": ["search_console", "search_intelligence", "none"]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "seed_query_ids": {
+                    "default": [],
+                    "maxItems": 200,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    }
                   }
                 }
               }
