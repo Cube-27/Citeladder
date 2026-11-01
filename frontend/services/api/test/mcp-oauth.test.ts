@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { Hono } from 'hono';
 import { parse, type DefaultTreeAdapterMap } from 'parse5';
-import { afterAll, beforeEach, expect, it } from 'vitest';
+import { afterAll, beforeEach, expect, it, onTestFinished, vi } from 'vitest';
 import { createApp } from '../src/app.ts';
 import { configEnvironment, policy } from '../src/config.ts';
 import type { AppEnv } from '../src/context.ts';
@@ -651,6 +651,11 @@ it('lets workspace admins remove only their authorization while users cannot rev
 it('meters malformed and oversized registrations, exempts preflight, and serializes concurrent budgets', async () => {
   const identity = randomUUID();
   identities.push(identity);
+  // Budgets are fixed clock windows; a held clock keeps every request in one of them.
+  vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-11-01T10:00:15Z') });
+  onTestFinished(() => {
+    vi.useRealTimers();
+  });
   const outcomes = await Promise.allSettled(
     Array.from({ length: 5 }, () => admitRegistration(db, identity, configEnvironment(config))),
   );
@@ -693,7 +698,7 @@ it('meters malformed and oversized registrations, exempts preflight, and seriali
     headers: { 'x-forwarded-for': '203.0.113.50' },
   });
   expect(limited.status).toBe(429);
-  expect(Number(limited.headers.get('retry-after'))).toBeGreaterThan(0);
+  expect(limited.headers.get('retry-after')).toBe('45');
 });
 
 it('prunes expired unused clients while preserving a live authorization request', async () => {
@@ -717,8 +722,13 @@ it('prunes expired unused clients while preserving a live authorization request'
   ).toEqual([live.client_id]);
 });
 
-it('caps tool calls per connection and refuses the next with a retry time', async () => {
+it('caps tool calls per connection and refuses the next until the window ends', async () => {
   const { principal } = await grant();
+  // Budgets are fixed clock windows; a held clock keeps every call in one of them.
+  vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-11-01T10:00:15Z') });
+  onTestFinished(() => {
+    vi.useRealTimers();
+  });
   for (let call = 0; call < mcpPolicy.tool_call_grant_limit; call++)
     await admitToolCall(db, principal.grantId, principal.userId);
   const refused = await admitToolCall(db, principal.grantId, principal.userId).catch(
@@ -726,7 +736,7 @@ it('caps tool calls per connection and refuses the next with a retry time', asyn
   );
   expect(refused).toBeInstanceOf(ApiError);
   expect((refused as ApiError).status).toBe(429);
-  expect(Number((refused as ApiError).headers?.['retry-after'])).toBeGreaterThan(0);
+  expect((refused as ApiError).headers?.['retry-after']).toBe('45');
 });
 
 /** What a person sees on a consent page: its form inputs and its visible text. */
