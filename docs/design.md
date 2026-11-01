@@ -282,7 +282,7 @@ The product has one control height, 32 (generated below): buttons, icon buttons,
 | `--table-header-height` | `32px` |
 <!-- generated:controls:end -->
 
-A figure column (and a trailing control column) passes `numeric`: right-aligned, with its digits in the figure face so they line up place by place (a word in the cell, such as a missing state's text, stays in Lexend Deca). Headers and cells use the same shared alignment option. Text columns stay left-aligned.
+A figure column passes `numeric`: centred under a centred header ([owner decision](decisions.md#table-figures-are-centred)), with its digits in the figure face so they line up place by place (a word in the cell, such as a missing state's text, stays in the text face). A trailing control column passes `trailing` and its cells are `TableActionsCell`, so header and controls end on the column's right edge. A date-time in a table cell is `TableTime`: the date over its time and zone, which fits the date column. Text columns stay left-aligned.
 
 Every table shares one row rhythm: `--table-row-height` (36px) is the floor and every cell carries the same 6px `--table-cell-padding-y`, so a row is one line or two and never more. `TableCell` clamps plain text at two lines; JSX cells use `ClampText` (`lines={1}` for each half of a title-over-URL stack). Cut text shows in full in a tooltip. There are no density variants. Numeric cells never wrap. Wide tables use the shared scroll wrapper.
 

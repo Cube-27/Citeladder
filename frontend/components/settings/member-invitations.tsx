@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { CopyButton } from '@/components/ui/copy-button';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { Dialog } from '@/components/ui/dialog';
-import { DisplayTime } from '@/components/ui/display-time';
+import { TableTime } from '@/components/ui/display-time';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { readErrorProps, type RetryableRead } from '@/components/ui/read-error';
@@ -172,7 +172,7 @@ export function PendingInvitations({
             <Badge variant="neutral">{roleLabel(invitation.role)}</Badge>
           </TableCell>
           <TableCell numeric className="type-caption">
-            <DisplayTime value={invitation.expires_at} />
+            <TableTime value={invitation.expires_at} />
           </TableCell>
           <TableActionsCell>
             <Button
@@ -215,5 +215,5 @@ const INVITATION_COLUMNS: readonly DataTableColumn[] = [
   { key: 'invitee', label: 'Invitee' },
   { key: 'role', label: 'Workspace role', width: 'status' },
   { key: 'expires', label: 'Link expires', width: 'date', numeric: true },
-  { key: 'access', label: 'Access', width: 'rowActions', numeric: true },
+  { key: 'access', label: 'Access', width: 'rowActions', trailing: true },
 ];

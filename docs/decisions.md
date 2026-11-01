@@ -681,3 +681,13 @@ Source: owner, 1 November 2026: "u can replace geist mono with jetbrains mono
 in main itself without using agent
 https://github.com/Cube-27/cube27-fonts/blob/main/JetBrainsMono-Variable.woff2"
 [Design system](design.md) owns the shipped behavior.
+
+## Table figures are centred
+
+Figure columns in every product table are centred, with their header
+centred on the same axis, instead of right-aligned. Text columns stay
+left-aligned and trailing row controls stay at the right edge.
+
+Source: owner, 1 November 2026: "in all table columns number should be center
+sligned not right aligned". [Design system](design.md) owns the shipped
+behavior.

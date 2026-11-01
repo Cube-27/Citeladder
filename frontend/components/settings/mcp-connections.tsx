@@ -9,7 +9,7 @@ import { Dialog } from '@/components/ui/dialog';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Stack } from '@/components/ui/layout';
 import { readErrorProps } from '@/components/ui/read-error';
-import { TableCell, TableRow } from '@/components/ui/table';
+import { TableActionsCell, TableCell, TableRow } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { ICONS } from '@/lib/icons';
@@ -52,18 +52,18 @@ function ConnectionRow({
           </p>
         </div>
       </TableCell>
-      <TableCell numeric>
+      <TableActionsCell>
         <Button variant="secondary" onClick={onRevoke}>
           {adminView ? 'Remove workspace access' : 'Revoke'}
         </Button>
-      </TableCell>
+      </TableActionsCell>
     </TableRow>
   );
 }
 
 const COLUMNS: readonly DataTableColumn[] = [
   { key: 'connection', label: 'Connection' },
-  { key: 'access', label: 'Access', width: 'name', numeric: true, hideLabel: true },
+  { key: 'access', label: 'Access', width: 'name', trailing: true, hideLabel: true },
 ];
 
 /** What the list shows instead of rows: the read's loading, error or empty. */
