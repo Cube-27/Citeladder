@@ -645,3 +645,23 @@ aligns digits set in the text face.
 Source: owner, 1 November 2026: "Replace the body font from Geist to
 LexendDeca-Variable, I have already uploaded it in cube27-fonts repo."
 [Design system](design.md) owns the shipped behavior.
+
+## Geist Mono sets figures in data roles
+
+Geist Mono sets the digits of figures in data roles on every surface: the
+product's figure, small-figure and delta roles, numeric table cells, KPI and
+stat values, meter, chart-axis and count figures, ranked-list indexes and
+quote amounts, the public pricing figure and the product scenes' KPI figures,
+the MCP app (from an installed copy, since its host loads no web font), and
+the PDF documents' right-aligned amounts, headline figures and ranks. This
+replaces the earlier rule that figures request tabular numerals rather than
+monospace: Lexend Deca has no `tnum`, so its digits cannot align. The face
+covers only digits and the marks inside a number, so a unit, a word or a
+digit inside a sentence stays in Lexend Deca. The web face is
+`GeistMono-Variable.woff2` from the private Cube27 font repository, capped at
+weight 500 like the others; PDF documents embed the OFL Geist Mono package.
+
+Source: owner, 1 November 2026, answering how figures should be handled: "u
+can use geist mono for numbers
+https://github.com/Cube-27/cube27-fonts/blob/main/GeistMono-Variable.woff2"
+[Design system](design.md) owns the shipped behavior.

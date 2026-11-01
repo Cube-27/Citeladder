@@ -161,6 +161,10 @@ describe('persisted billing documents', () => {
     const pages = await pdfText(bytes);
     const text = pages.join(' ');
     expect(text).toContain('INR 1,180.00');
+    // Amount digits are set in the Geist Mono figure face, the labels in Lexend Deca.
+    const embedded = Buffer.from(bytes).toString('latin1');
+    expect(embedded).toMatch(/\/BaseFont \/[A-Z]{6}\+GeistMono-Regular/u);
+    expect(embedded).toMatch(/\/BaseFont \/[A-Z]{6}\+LexendDeca-Regular/u);
     expect(text).toContain('IGST (18%)');
     expect(text).toContain(`Document ${receipt.id}`);
     expect(text).toContain('9 September 2026');
