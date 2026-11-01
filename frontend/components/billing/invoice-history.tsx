@@ -10,7 +10,7 @@ import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { Stack } from '@/components/ui/layout';
-import { ClampText, TableCell, TableRow } from '@/components/ui/table';
+import { ClampText, TableActionsCell, TableCell, TableRow } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
 import { ICONS } from '@/lib/icons';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
@@ -20,7 +20,7 @@ const COLUMNS: readonly DataTableColumn[] = [
   { key: 'document', label: 'Document' },
   { key: 'paid', label: 'Date', width: 'date' },
   { key: 'amount', label: 'Amount', width: 'figure', numeric: true },
-  { key: 'download', label: 'Download', width: 'name', numeric: true, hideLabel: true },
+  { key: 'download', label: 'Download', width: 'name', trailing: true, hideLabel: true },
 ];
 
 function invoicesState(loading: boolean, count: number): DataTableState | undefined {
@@ -98,7 +98,7 @@ export function InvoiceHistory({
                 <DisplayTime value={invoice.paid_at} dateOnly />
               </TableCell>
               <TableCell numeric>{formatMoney(invoice.amount_paid, 2)}</TableCell>
-              <TableCell numeric>
+              <TableActionsCell>
                 <Button
                   variant="secondary"
                   disabled={downloading === invoice.invoice_id}
@@ -106,7 +106,7 @@ export function InvoiceHistory({
                 >
                   {downloadLabel(invoice, downloading)}
                 </Button>
-              </TableCell>
+              </TableActionsCell>
             </TableRow>
           ))}
         </DataTable>
