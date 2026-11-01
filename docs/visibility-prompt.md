@@ -88,16 +88,17 @@ planner's fallback facets (below).
 Onboarding creates no prompts or topics; a created project starts with an
 empty prompt set and the user chooses what to track. Generation uses existing
 topics; a quick run in a project with none first recovers starting topics from
-products/services a person confirmed or edited. Missing confirmed offerings
-fail before provider I/O, and an agent portfolio never recovers topics.
+the saved products/services, whatever their review state (onboarding saves the
+ones its reader just reviewed as unreviewed). No saved offerings fails before
+provider I/O, and an agent portfolio never recovers topics.
 
 Onboarding research keeps a bounded offering harvest of things a customer buys,
 hires, books or enrolls in as reviewable evidence. [Topic
 proposals](../frontend/services/api/src/prompts/topic-proposals.ts) turn the
-confirmed offerings into the buyer-facing categories they fall into, never
+saved offerings into the buyer-facing categories they fall into, never
 product-line or model names: one bounded model call (`topic_calls`, reserved
 from the agent-call bucket and made outside any transaction) proposes
-categories, and deterministic code keeps only those naming a confirmed offering
+categories, and deterministic code keeps only those naming a saved offering
 and sharing a word with its offerings or category vocabulary. It strips
 parenthetical qualifiers, specifications (any word with a digit), the brand, its
 aliases and product-line names (capitalised runs in the offerings that are not

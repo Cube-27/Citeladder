@@ -515,7 +515,7 @@ describe('prompt generation at the PostgreSQL boundary', () => {
     ).rejects.toMatchObject({ status: 422 });
     expect(deps.io.fetch).not.toHaveBeenCalled();
   });
-  it('proposes buyer-facing topics from confirmed offerings only, before drafting', async () => {
+  it('proposes buyer-facing topics from the saved offerings, before drafting', async () => {
     const other = await fixtures.tenant();
     await fixtures.brand(other.projectId, 'Strider');
     const brand = await db
@@ -537,7 +537,7 @@ describe('prompt generation at the PostgreSQL boundary', () => {
         description: '',
         positioning: '',
         target_audience: '',
-        products_services: JSON.stringify(offerings),
+        products_services: JSON.stringify([]),
         sources: JSON.stringify({
           products_services: { origin: 'ai_suggested', review_state: 'unreviewed' },
         }),
@@ -554,16 +554,13 @@ describe('prompt generation at the PostgreSQL boundary', () => {
     });
     const run = () =>
       generatePrompts(db, other.workspaceId, otherSet, generationInput.parse({ count: 2 }), deps);
-    // Unconfirmed offerings never become topics, and nothing reaches the model.
+    // With no saved offerings there is nothing to ground topics in, and nothing reaches the model.
     await expect(run()).rejects.toMatchObject({ status: 422 });
     expect(deps.io.fetch).not.toHaveBeenCalled();
+    // Onboarding saves the offerings its reader reviewed as unreviewed; they ground topics.
     await db
       .updateTable('brand_profiles')
-      .set({
-        sources: JSON.stringify({
-          products_services: { origin: 'ai_suggested', review_state: 'confirmed' },
-        }),
-      })
+      .set({ products_services: JSON.stringify(offerings) })
       .where('project_id', '=', other.projectId)
       .execute();
     const result = await run();

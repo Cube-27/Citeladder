@@ -32,18 +32,6 @@ const topicColumns = ['id', 'name', 'description', 'parent_id'] as const;
 const promptColumns = ['id', 'topic_id', 'text', 'normalized_text_hash'] as const;
 const candidateColumns = ['text', 'normalized_text_hash', 'disposition', 'jev_decision'] as const;
 
-const REVIEWED = new Set([
-  policy.brand_identity.profile_review_confirmed,
-  policy.brand_identity.profile_review_edited,
-]);
-/** The profile's offerings when a person confirmed or edited them; none otherwise. */
-const confirmedOfferings = (
-  profile: { products_services: unknown; sources: unknown } | undefined,
-) =>
-  REVIEWED.has(String(record(record(profile?.sources).products_services).review_state))
-    ? strings(profile?.products_services)
-    : [];
-
 /** What a topic proposal reads, authorized; null when the project already has topics. */
 function recoveryInput(db: Database, workspaceId: string, setId: string) {
   return db.transaction().execute(async (trx) => {
@@ -62,7 +50,7 @@ function recoveryInput(db: Database, workspaceId: string, setId: string) {
       .executeTakeFirstOrThrow();
     const profile = await trx
       .selectFrom('brand_profiles')
-      .select(['products_services', 'sources', 'business_context'])
+      .select(['products_services', 'business_context'])
       .where('project_id', '=', set.project_id)
       .where('workspace_id', '=', workspaceId)
       .executeTakeFirst();
@@ -80,7 +68,10 @@ function recoveryInput(db: Database, workspaceId: string, setId: string) {
       : [];
     const business = record(profile?.business_context);
     return {
-      offerings: confirmedOfferings(profile),
+      // The saved offerings, whatever their review state: onboarding saves the
+      // ones its reader just reviewed as unreviewed, and the proposal filter
+      // keeps only buyer-facing names grounded in them.
+      offerings: strings(profile?.products_services),
       brandNames: [brand?.name ?? project.brand_name, ...aliases.map((row) => row.alias)],
       categoryTerms: [...strings(business.category_terms), ...strings(business.category_aliases)],
       existing: [],
@@ -91,7 +82,7 @@ function recoveryInput(db: Database, workspaceId: string, setId: string) {
 
 /**
  * A project without topics gets buyer-facing topics proposed from its
- * confirmed offerings before generation (`proposeTopics`). The proposal's
+ * saved offerings before generation (`proposeTopics`). The proposal's
  * model call runs outside any transaction after `reserve` admits it; the
  * topics are written under the project lock only if the project still has
  * none. Returns what was created, what the cap left out and what was dropped,
@@ -110,7 +101,7 @@ export async function recoverTopics(
   const input = await recoveryInput(db, scope.workspaceId, scope.setId);
   if (!input) return null;
   if (!input.offerings.length)
-    throw generationInvalid('Confirm at least one offering before generating prompts');
+    throw generationInvalid('Add at least one offering before generating prompts');
   const gateway = model.gateway();
   if (gateway) await model.reserve();
   const proposal = await proposeTopics(input, gateway, model.deadline);

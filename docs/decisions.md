@@ -572,7 +572,7 @@ Four decisions for the [Prompt Builder plan](plans/prompt-builder.md):
   cited query-length data: traditional search averages about 4 words and
   conversational AI queries about 7, so drafting examples centre on 6–12 words.
 - **B. Topics are buyer-facing categories**, not product-line names. A topic
-  proposed from the business's confirmed offerings is the category a buyer
+  proposed from the business's offerings is the category a buyer
   would ask about ("golf nets"), never a product line, model name, size or
   the brand.
 - **C. The Agent keeps `prompt_discovery`** for MCP use, rebuilt to follow the

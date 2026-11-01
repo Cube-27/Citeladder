@@ -1,8 +1,8 @@
 /**
- * Topic proposals: the buyer-facing categories a business's confirmed
+ * Topic proposals: the buyer-facing categories a business's saved
  * offerings fall into (owner decision B), never product-line names. One
  * bounded model call proposes them; deterministic code then keeps only
- * categories grounded in a confirmed offering, strips the brand, its aliases,
+ * categories grounded in a saved offering, strips the brand, its aliases,
  * product-line names and specifications, merges near-duplicates and caps the
  * list, reporting everything it did not keep. Nothing here writes: generation
  * creates the topics, and a preview can show the same result.
@@ -20,7 +20,7 @@ import { jaccard, promptTokens } from './generation-metrics.ts';
 const G = policy.prompts.generation;
 
 export type TopicProposalInput = {
-  /** Confirmed offerings only; proposals never reach beyond them. */
+  /** The saved offerings; proposals never reach beyond them. */
   offerings: readonly string[];
   /** Names of the project's existing topics: a proposal repeating one is dropped. */
   existing: readonly string[];
@@ -164,8 +164,8 @@ async function rawProposals(
 }
 
 /**
- * Buyer-facing topics for confirmed offerings. Every kept proposal names at
- * least one confirmed offering and shares a word with its offerings or the
+ * Buyer-facing topics for the saved offerings. Every kept proposal names at
+ * least one saved offering and shares a word with its offerings or the
  * category vocabulary, so nothing is invented; an offering no kept proposal
  * covers is proposed from its own cleaned name. Model failure falls back to
  * the offerings themselves, cleaned the same way.
