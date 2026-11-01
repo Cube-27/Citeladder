@@ -55,7 +55,11 @@ export function useBuilderBusiness({
         queryClient.setQueryData(queryKeys.projects.businessMap(projectId), next);
       }
     },
-    onSuccess: () => setEdited(null),
+    onSuccess: () => {
+      setEdited(null);
+      // Offerings and category terms decide which searches seed a run.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.topics.seedQueries(projectId) });
+    },
   });
 
   const retry = () => {

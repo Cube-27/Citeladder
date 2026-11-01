@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useEffectEvent, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { ProjectRequiredState } from '@/components/layout/project-required-state';
 import { QueryState } from '@/components/ui/query-state';
@@ -230,19 +230,19 @@ export function PromptLibrary({
     // after staging), so the review list is re-read rather than assumed empty.
     onError: () => void review.refresh(),
   });
-  const { reset: resetGenerate } = generateMutation;
+  // A fresh open clears the last run's outcome, but never a run still in
+  // flight: resetting it would drop `isPending` and allow a second paid run.
   const openBuilder = (step: BuilderStep) => {
-    resetGenerate();
+    if (!generateMutation.isPending) generateMutation.reset();
     setBuilderStep(step);
     setBuilderOpen(true);
   };
+  const openFromUrl = useEffectEvent((step: BuilderStep) => openBuilder(step));
   useEffect(() => {
     if (generateRequest === 0) return;
-    resetGenerate();
     // oxlint-disable-next-line react-hooks/set-state-in-effect -- open the builder for a URL request.
-    setBuilderStep(reviewRequest ? 'review' : 'business');
-    setBuilderOpen(true);
-  }, [generateRequest, reviewRequest, resetGenerate]);
+    openFromUrl(reviewRequest ? 'review' : 'business');
+  }, [generateRequest, reviewRequest]);
 
   const topicMutations = useTopicMutations({
     projectId: requestScope.projectId,

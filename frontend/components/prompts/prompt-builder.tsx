@@ -72,7 +72,8 @@ export function PromptBuilder(props: Readonly<PromptBuilderProps>) {
     setPreviousOpen(props.open);
     if (props.open) setSession((count) => count + 1);
   }
-  return <BuilderSheet key={session} {...props} />;
+  // A project switch is a new session too, so no draft saves against another project.
+  return <BuilderSheet key={`${props.projectId}:${session}`} {...props} />;
 }
 
 function BuilderSheet(props: Readonly<PromptBuilderProps>) {
