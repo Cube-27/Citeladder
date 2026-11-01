@@ -62,4 +62,5 @@ auth.json
 frontend/public/fonts/
 # Bundled MCP App HTML is generated from source, including in the API image.
 frontend/services/api/assets/mcp-app/
+frontend/services/api/assets/design-tokens.css
 frontend/packages/mcp-app/dist/

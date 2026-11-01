@@ -614,3 +614,18 @@ how information is displayed; most is just kept on the page, and even the
 competitors' names can probably fit in a single row. Agent instructions can
 also become a tab. Same issue of semantic colors in surfaces").
 [Design system](design.md) owns the shipped behavior.
+
+## The Overview PDF is a branded deliverable
+
+The Overview PDF a customer downloads carries CiteLadder's identity and reads
+as a formatted report, not running text: the logo on a mint cover band,
+Outfit headings and Geist text (both at weight 500 or lighter), signal-green
+section marks, a stat strip for the headline figures, ruled tables and a
+branded footer. It prints plain words for what the data says (readable dates,
+engine names, the target of each action) and leaves internal identifiers and
+processing-version codes off the page; they stay in the persisted projection.
+
+Source: owner, 1 November 2026: "The current PDF report is pretty bad, there
+is no formatting, just text. Make it better with proper formatting and
+CiteLadder branding."
+[Onboarding](onboarding.md) owns the shipped report.

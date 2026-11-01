@@ -215,34 +215,47 @@ export async function renderInvoicePdf(invoice: Invoice): Promise<Uint8Array> {
     throw new TypeError('Credit note has no original invoice');
   const money = (amount: number) =>
     `${amounts.currency} ${(amount / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  const report = await PdfReport.create(
-    `${credit ? 'Credit note' : 'Receipt'} ${invoice.receipt_number}`,
-    value.seller.legal_name ?? undefined,
-  );
-  report.title(credit ? 'Credit note' : 'Receipt');
+  const kind = credit ? 'Credit note' : 'Receipt';
+  const report = await PdfReport.create({
+    title: `${kind} ${invoice.receipt_number}`,
+    author: value.seller.legal_name ?? undefined,
+    footer: `${kind} ${invoice.receipt_number}`,
+  });
+  report.title(kind);
   report.text(
     `Invoice: ${invoice.invoice_number}\nReceipt: ${invoice.receipt_number}\n${credit ? 'Issued' : 'Paid'}: ${date(invoice.paid_at)}`,
   );
   if (credit) report.text(`Against invoice: ${value.original_invoice_number}`);
   report.heading('Seller and customer');
-  report.table(
-    ['Seller', 'Bill to'],
-    [[address(value.seller), address(value.customer, true)]],
-    [1, 1],
-  );
+  report.table({
+    columns: [
+      { header: 'Seller', width: 1 },
+      { header: 'Bill to', width: 1 },
+    ],
+    rows: [[address(value.seller), address(value.customer, true)]],
+  });
   report.heading(`${money(invoice.total_amount_minor)} ${credit ? 'credited' : 'paid'}`);
   const line = value.line;
   const description = lineDescription(line);
-  report.table(
-    ['Description', 'Qty', 'Unit price', 'Amount'],
-    [[description, String(line.quantity), money(line.unit_price_minor), money(line.amount_minor)]],
-    [6, 1, 2, 2],
-  );
+  report.table({
+    columns: [
+      { header: 'Description', width: 6 },
+      { header: 'Qty', width: 1, align: 'right' },
+      { header: 'Unit price', width: 2, align: 'right' },
+      { header: 'Amount', width: 2, align: 'right' },
+    ],
+    rows: [
+      [description, String(line.quantity), money(line.unit_price_minor), money(line.amount_minor)],
+    ],
+  });
   const taxes = taxRows(amounts, money);
   report.heading('Totals');
-  report.table(
-    ['Description', 'Amount'],
-    [
+  report.table({
+    columns: [
+      { header: 'Description', width: 3 },
+      { header: 'Amount', width: 1, align: 'right' },
+    ],
+    rows: [
       ['Subtotal', money(amounts.subtotal_minor)],
       ['Discount', money(amounts.discount_minor)],
       ['Taxable value', money(amounts.taxable_minor)],
@@ -250,12 +263,16 @@ export async function renderInvoicePdf(invoice: Invoice): Promise<Uint8Array> {
       ['Total', money(amounts.total_minor)],
       [credit ? 'Amount credited' : 'Amount paid', money(invoice.total_amount_minor)],
     ],
-    [3, 1],
-  );
+  });
   report.heading(credit ? 'Refund' : 'Payment history');
-  report.table(
-    ['Method', 'Date', 'Amount', 'Receipt'],
-    [
+  report.table({
+    columns: [
+      { header: 'Method', width: 2 },
+      { header: 'Date', width: 3 },
+      { header: 'Amount', width: 2, align: 'right' },
+      { header: 'Receipt', width: 3 },
+    ],
+    rows: [
       [
         value.payment.method,
         date(invoice.paid_at),
@@ -263,8 +280,7 @@ export async function renderInvoicePdf(invoice: Invoice): Promise<Uint8Array> {
         invoice.receipt_number,
       ],
     ],
-    [2, 3, 2, 3],
-  );
+  });
   if (invoice.document_kind === 'export_receipt' && value.seller.lut_reference)
     report.text(`Export under LUT reference: ${value.seller.lut_reference}`);
   report.text(`Document ${invoice.id} · tax policy version ${invoice.tax_policy_version}`, {

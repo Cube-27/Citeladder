@@ -28,7 +28,8 @@ COPY frontend/apps/app/src/globals.css ./apps/app/src/globals.css
 COPY frontend/apps/app/src/ui-motion.css ./apps/app/src/ui-motion.css
 RUN pnpm --filter @citeladder/mcp-app build \
     && mkdir -p services/api/assets/mcp-app/v1 \
-    && cp packages/mcp-app/dist/analytics.html services/api/assets/mcp-app/v1/analytics.html
+    && cp packages/mcp-app/dist/analytics.html services/api/assets/mcp-app/v1/analytics.html \
+    && cp apps/app/src/globals.css services/api/assets/design-tokens.css
 # Export only this service's production graph, not the workspace-wide store.
 RUN pnpm --filter @citeladder/api deploy --prod --ignore-scripts /runtime
 # Node strips our workspace TypeScript only outside node_modules. Keep the

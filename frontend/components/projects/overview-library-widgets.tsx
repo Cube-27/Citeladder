@@ -4,6 +4,8 @@ import type { UseQueryResult } from '@tanstack/react-query';
 import { ArrowRight } from 'lucide-react';
 import type { ReactNode } from 'react';
 
+import { overviewWidgetTitles, type OverviewWidgetKey } from '@citeladder/contracts/overview';
+
 import { ProjectLink } from '@/components/layout/scoped-link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,7 +20,6 @@ import { ValueLedger } from '@/components/ui/facts';
 import { Icon } from '@/components/ui/icon';
 import type { Project } from '@/lib/api/types';
 import { formatCount, formatPercent } from '@/lib/format';
-import { WIDGET_TITLES } from '@/lib/overview/layout';
 import {
   useLatestMovers,
   useLatestNearMisses,
@@ -39,7 +40,7 @@ function WidgetCard({
   id,
   href,
   children,
-}: Readonly<{ id: keyof typeof WIDGET_TITLES; href: string; children: ReactNode }>) {
+}: Readonly<{ id: OverviewWidgetKey; href: string; children: ReactNode }>) {
   return (
     <Card aria-labelledby={`widget-${id}`} className="flex h-full min-h-64 flex-col">
       <CardHeader
@@ -51,7 +52,7 @@ function WidgetCard({
           </Button>
         }
       >
-        <CardTitle id={`widget-${id}`}>{WIDGET_TITLES[id]}</CardTitle>
+        <CardTitle id={`widget-${id}`}>{overviewWidgetTitles[id]}</CardTitle>
       </CardHeader>
       <Stack as={CardContent} gap="compact" className="flex-1 content-start">
         {children}
