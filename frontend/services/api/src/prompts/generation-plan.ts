@@ -41,9 +41,9 @@ export type Slot = {
   /** Same-topic searches that steer phrasing; absent when the project has none. */
   grounding?: Grounding[];
   /**
-   * A branded cell's only claimable attributes: the topic's offerings and the
-   * attributes a person confirmed in its business map. The judge checks a
-   * branded draft against them; core cells, which claim nothing, carry none.
+   * A brand diagnostic cell's only claimable attributes: the topic's
+   * offerings and the attributes a person confirmed in its business map. The
+   * judge checks the draft against them; other cells carry none.
    */
   grounded_attributes?: string[];
 };
@@ -458,7 +458,7 @@ export function planSlots(
           evidence_type: 'hypothesis',
         },
         ...(grounding.length ? { grounding } : {}),
-        ...(cohort === 'core' ? {} : { grounded_attributes: plan.claims }),
+        ...(cohort === 'brand_diagnostic' ? { grounded_attributes: plan.claims } : {}),
       };
     },
   );

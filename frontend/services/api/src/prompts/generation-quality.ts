@@ -24,12 +24,14 @@ const logger = getLogger('app.domain.prompts.quality_judge');
 
 /**
  * The yes/no questions a draft of `cohort` is asked: core drafts add the
- * core-only ones, branded drafts (diagnostics and comparisons) the brand-only ones.
+ * core-only ones, brand diagnostics the brand-only ones. A comparison names a
+ * competitor too, and the judge's state names neither business, so it could
+ * hold a competitor's feature against the tracked brand's attributes.
  */
 export const noulQuestions = (cohort: unknown) => ({
   ...Q.noul_questions,
   ...(cohort === 'core' ? Q.core_noul_questions : {}),
-  ...(cohort === 'brand_diagnostic' || cohort === 'comparison' ? Q.brand_noul_questions : {}),
+  ...(cohort === 'brand_diagnostic' ? Q.brand_noul_questions : {}),
 });
 
 export function applyQualityPolicy(decision: Record<string, unknown>) {

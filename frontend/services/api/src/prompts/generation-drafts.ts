@@ -66,6 +66,10 @@ function brandTerms(context: GenerationContext): string[] {
   ];
 }
 
+/** The project language's words that join alternatives (`disjunction_words`). */
+const disjunctionsOf = (context: GenerationContext) =>
+  new Set(G.disjunction_words[baseLanguage(context.context.language_code || 'en')] ?? []);
+
 export type Draft = {
   slot: Slot;
   text: string;
@@ -137,9 +141,7 @@ export function admitDrafts(
   ]);
   const brands = brandTerms(context);
   const geo = geoTerms(context);
-  const disjunctions = new Set(
-    G.disjunction_words[baseLanguage(context.context.language_code || 'en')] ?? [],
-  );
+  const disjunctions = disjunctionsOf(context);
   /** Two alternatives joined into one prompt; comparisons ask "X or Y" by design. */
   const joinsTwoNeeds = (text: string, cohort: GenerationCohort) =>
     cohort !== 'comparison' && words(text).some((word) => disjunctions.has(word));
@@ -280,6 +282,11 @@ async function suggestMaps(
       deadline,
     );
     const places = geoTerms(context);
+    const disjunctions = disjunctionsOf(context);
+    // A suggested value is one facet: a comma or an "or" lists several, which
+    // would hand a cell two needs.
+    const listsSeveral = (value: string) =>
+      value.includes(',') || words(value).some((word) => disjunctions.has(word));
     const banned = [
       context.context.brand_name,
       ...context.context.brand_aliases,
@@ -301,7 +308,13 @@ async function suggestMaps(
               ),
           ),
         ]
-          .filter((value) => value && !containsName(value, banned) && !namesPlace(value, places))
+          .filter(
+            (value) =>
+              value &&
+              !listsSeveral(value) &&
+              !containsName(value, banned) &&
+              !namesPlace(value, places),
+          )
           .map((value) => ({
             value,
             origin: 'model' as const,

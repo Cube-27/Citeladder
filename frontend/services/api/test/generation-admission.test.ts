@@ -414,6 +414,19 @@ describe('JEV judgments', () => {
     expect(seen[0]!.state).toMatchObject({ grounded_attributes: ['Dresses'] });
     expect(seen[0]!.questions).toEqual(expect.arrayContaining(['single_need', 'grounded_claims']));
     expect(seen[0]!.questions).not.toContain('names_a_business');
+    // A comparison also names a competitor the judge cannot tell apart, so its claims go unasked.
+    const comparison = planSlots(
+      context,
+      generationInput.parse({ count: 1, cohort: 'comparison' }),
+      [],
+    )[0]!;
+    await judgeDrafts(
+      context,
+      [{ ...draft(), slot: comparison, text: 'Red Dress or Rival for waterproof maxi dresses?' }],
+      ungrounded,
+    );
+    expect(seen[1]!.questions).not.toContain('grounded_claims');
+    expect(seen[1]!.state).not.toHaveProperty('grounded_attributes');
     // A core draft is asked whether it carries one need, and gated when it carries two.
     const core = [{ ...draft(), text: 'Maxi dresses for petite women and tall women' }];
     await judgeDrafts(

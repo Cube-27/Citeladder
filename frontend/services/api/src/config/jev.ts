@@ -184,8 +184,9 @@ export const quality = {
     },
   },
   /**
-   * Asked of branded drafts only (brand diagnostics and comparisons), which
-   * name the business and so can assert things about it.
+   * Asked of brand diagnostics only, which name the business and so can
+   * assert things about it. Comparisons also name a competitor, which the
+   * judge's state cannot tell apart from the tracked brand.
    */
   brand_noul_questions: {
     grounded_claims: {

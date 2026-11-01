@@ -88,7 +88,8 @@ from) with absent or facet-empty map entries, one bounded model call
 them; they ground that run and are stored `suggested` with model identity and
 the generation run id, only for offerings still empty at write time, and never
 naming the brand or a competitor. Each suggested value names one property,
-circumstance or audience, never alternatives joined by "or". A failed suggestion call leaves the
+circumstance or audience: a suggested value containing a comma or a
+`disjunction_words` entry is dropped. A failed suggestion call leaves the
 planner's fallback facets (below).
 
 Onboarding creates no prompts or topics; a created project starts with an
@@ -154,9 +155,10 @@ cell on: the topic's least-used attribute, situation/constraint or persona
 (least-used value, then least-used dimension, confirmed values before
 suggestions). A branded (`brand_diagnostic` or `comparison`) cell asserts
 something about the business, so it never takes an attribute only a model
-suggested: it takes confirmed attributes, situations and personas, and carries
-`grounded_attributes` (the topic's offerings and confirmed attributes) for the
-judge; drafters do not receive that list. Personas are the run's requested personas, else the map's
+suggested: it takes confirmed attributes, situations and personas. A
+`brand_diagnostic` cell also carries `grounded_attributes` (the topic's
+offerings and confirmed attributes) for the judge; drafters do not receive
+that list. Personas are the run's requested personas, else the map's
 audiences plus inferred buyer roles (as suggestions) while the map has no
 confirmed audience. A topic without map facets, including a subtopic whose
 parent has none, falls back to the requested personas, else the buyer roles and
@@ -294,7 +296,8 @@ It judges the admitted draft pool within the configured call cap, one call per
 draft: yes/no fit, buyer relevance, decision value, naturalness, standalone,
 sensibility and one need (`single_need`: no two settings, audiences or
 requirements joined or stacked), plus for core candidates whether naming a
-business answers the question (`names_a_business`) and for branded candidates
+business answers the question (`names_a_business`) and for brand diagnostics
+(not comparisons, whose competitor the judge's state cannot tell apart)
 whether the question attributes to the business only what its cell's
 `grounded_attributes` state (`grounded_claims`); intent and stage labels
 recorded beside the model's; a per-topic duplicate choice among tracked and
