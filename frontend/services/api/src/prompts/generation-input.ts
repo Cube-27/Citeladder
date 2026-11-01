@@ -15,7 +15,7 @@ const weight = z.number().min(0).max(100);
  * (`comparison`) shares, the rest core; an intent mix that weights the stage
  * labels; and personas that become the run's audience facets.
  */
-export const generationDistribution = z
+const generationDistribution = z
   .object({
     branded_share: share.default(0),
     comparison_share: share.default(0),
@@ -33,9 +33,8 @@ export const generationDistribution = z
   .refine((value) => value.branded_share + value.comparison_share <= 1, {
     message: 'Branded and comparison shares cannot exceed the whole run',
   });
-export type GenerationDistribution = z.infer<typeof generationDistribution>;
 /** Which persisted searches may steer wording; omitted reads every source. */
-export const seedSources = ['search_console', 'search_intelligence', 'none'] as const;
+const seedSources = ['search_console', 'search_intelligence', 'none'] as const;
 /** Prompt cohorts a run can plan, core first so it wins ties. */
 export const generationCohorts = ['core', 'brand_diagnostic', 'comparison'] as const;
 

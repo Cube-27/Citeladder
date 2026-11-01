@@ -31,8 +31,8 @@ export type TopicProposalInput = {
   /** How many proposals may be kept; the rest are reported as overflow. */
   limit: number;
 };
-export type TopicProposal = { name: string; offerings: string[] };
-export type TopicDropReason = 'unsupported' | 'empty' | 'branded' | 'existing' | 'merged';
+type TopicProposal = { name: string; offerings: string[] };
+type TopicDropReason = 'unsupported' | 'empty' | 'branded' | 'existing' | 'merged';
 export type TopicProposals = {
   /** `model` when the model's proposal was used, `offerings` for the deterministic fallback. */
   source: 'model' | 'offerings';
