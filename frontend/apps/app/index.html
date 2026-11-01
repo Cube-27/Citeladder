@@ -13,10 +13,10 @@
     <link rel="manifest" href="/site.webmanifest" />
     <title>CiteLadder · AI visibility with evidence you can open</title>
     <!-- Discover the faces at first paint instead of after the stylesheet
-        loads. Lexend Deca and Outfit are not in this repository: `pnpm
-        fonts:pull` copies them into public/fonts from the private Cube27 font
-        repo, and delivery does the same. A build without them renders in the
-        fallbacks below. -->
+        loads. Lexend Deca, Outfit and Geist Mono are not in this repository:
+        `pnpm fonts:pull` copies them into public/fonts from the private
+        Cube27 font repo, and delivery does the same. A build without them
+        renders in the fallbacks below. -->
     <link
       rel="preload"
       href="/fonts/LexendDeca-Variable.woff2"
@@ -27,6 +27,13 @@
     <link
       rel="preload"
       href="/fonts/Outfit-Variable.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="preload"
+      href="/fonts/GeistMono-Variable.woff2"
       as="font"
       type="font/woff2"
       crossorigin="anonymous"
@@ -66,6 +73,21 @@
         font-display: fallback;
       }
 
+      /* The figure face sets numbers only: digits and the marks that sit
+         inside a number (. , : % + - −). Letters and spaces fall through to
+         Lexend Deca, so a figure's unit or a "Not measured" in a figure cell
+         stays in the text face, and the line box keeps Lexend Deca's metrics
+         (the first family that covers the space). Keep this range in step
+         with the fallback below and both other runtimes. */
+      @font-face {
+        font-family: 'Geist Mono Variable';
+        src: url('/fonts/GeistMono-Variable.woff2') format('woff2');
+        font-weight: 300 500;
+        font-style: normal;
+        font-display: fallback;
+        unicode-range: U+0025, U+002B-002E, U+0030-003A, U+2212;
+      }
+
       /* Match Arial's x-height to Lexend Deca's (0.525em vs 0.519em). Vertical
          overrides use Lexend Deca's 1000/-250/0 hhea metrics (1000 UPM),
          divided by size-adjust. */
@@ -92,13 +114,30 @@
         line-gap-override: 0%;
       }
 
+      /* Scale Arial's tabular digits (0.556em) to Geist Mono's 0.600em
+         advance, so a figure column keeps its width when the face swaps in.
+         Vertical overrides use Geist Mono's 1005/-295/0 hhea metrics (1000
+         UPM), divided by size-adjust. */
+      @font-face {
+        font-family: 'Geist Mono Fallback';
+        src: local('Arial');
+        font-weight: 100 500;
+        size-adjust: 107.88%;
+        ascent-override: 93.16%;
+        descent-override: 27.34%;
+        line-gap-override: 0%;
+        unicode-range: U+0025, U+002B-002E, U+0030-003A, U+2212;
+      }
+
       :root {
         font-synthesis-weight: none;
         /* Lexend Deca carries body, UI and data; Outfit carries display
-           headings. Lexend Deca has no tabular figures (no `tnum`), so
-           `tabular-nums` does not align its digits. */
+           headings; Geist Mono sets the digits of figures in data roles
+           (`--font-numeric` in globals.css), because Lexend Deca has no
+           tabular figures (no `tnum`). */
         --font-text: 'Lexend Deca Variable', 'Lexend Deca Fallback', Arial;
         --font-heading: 'Outfit Variable', 'Outfit Fallback', Arial;
+        --font-figure: 'Geist Mono Variable', 'Geist Mono Fallback';
       }
     </style>
   </head>
