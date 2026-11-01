@@ -197,21 +197,33 @@ const MANIFEST_ONLY_SUMMARY_KEYS = [
   'omissions',
 ] as const;
 
+/** Selector reasons that drop crawl pages from the Agent's context, not from the crawl. */
+const CONTEXT_PAGE_OMISSIONS = new Set(['page_limit', 'character_budget']);
+
 /**
- * The context summary as the model sees it. The only selector omission it
- * keeps is how many crawl pages were left out of ITS context, under a name
- * that cannot be mistaken for a crawl coverage figure.
+ * The context summary as the model sees it. Selector omissions are restated
+ * under names that cannot be mistaken for crawl coverage: how many crawl pages
+ * were left out of ITS context, and whether there was no usable crawl at all
+ * (so a zero page count reads as unavailable, not as measured zero).
  */
 function modelSummary(summary: Record<string, Json>): Record<string, Json> {
   const supplied = { ...summary };
   for (const key of MANIFEST_ONLY_SUMMARY_KEYS) delete supplied[key];
-  const omissions = Array.isArray(summary.omissions) ? summary.omissions : [];
-  const omitted = omissions.reduce<number>((total, item) => {
-    const row: Record<string, Json> =
-      item !== null && typeof item === 'object' && !Array.isArray(item) ? item : {};
-    return row.reason === 'page_limit' && typeof row.count === 'number' ? total + row.count : total;
-  }, 0);
+  const omissions = (Array.isArray(summary.omissions) ? summary.omissions : []).map(
+    (item): Record<string, Json> =>
+      item !== null && typeof item === 'object' && !Array.isArray(item) ? item : {},
+  );
+  const omitted = omissions.reduce<number>(
+    (total, row) =>
+      typeof row.reason === 'string' &&
+      CONTEXT_PAGE_OMISSIONS.has(row.reason) &&
+      typeof row.count === 'number'
+        ? total + row.count
+        : total,
+    0,
+  );
   if (omitted > 0) supplied.agent_context_pages_omitted = omitted;
+  if (omissions.some((row) => row.reason === 'no_usable_crawl')) supplied.crawl_unavailable = true;
   return supplied;
 }
 

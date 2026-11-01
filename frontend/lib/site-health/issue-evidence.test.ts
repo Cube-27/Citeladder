@@ -130,7 +130,7 @@ describe('evidenceFacts', () => {
           depth_from_home: 5,
         },
       ],
-      coverage_state: 'unknown',
+      coverage_state: 'complete',
     };
     expect(evidenceFacts('architecture.excessive_depth', evidence)).toEqual([
       '/blogs/news/june-win-a-net-contest-winner-announced (5 clicks)',

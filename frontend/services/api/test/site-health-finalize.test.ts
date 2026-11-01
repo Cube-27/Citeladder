@@ -257,8 +257,15 @@ describe('terminal checks from persisted evidence', () => {
       ['https://example.test/timeout', resolution(null, 'timeout')],
     ]);
     const passing = ['https://example.test/ok', 'https://example.test/policies/privacy-policy'];
-    expect(resolutionSet(passing, resolutions).outcome).toBe('satisfied');
-    expect(linkRedirects(passing, resolutions).outcome).toBe('satisfied');
+    const excluded = [
+      { url: 'https://example.test/policies/privacy-policy', reason: 'robots_denied' },
+    ];
+    const links = resolutionSet(passing, resolutions);
+    expect(links.outcome).toBe('satisfied');
+    expect(links.evidence.excluded_targets).toEqual(excluded);
+    const redirects = linkRedirects(passing, resolutions);
+    expect(redirects.outcome).toBe('satisfied');
+    expect(redirects.evidence.excluded_targets).toEqual(excluded);
     // A target that failed for another reason is still unchecked.
     const timedOut = [...passing, 'https://example.test/timeout'];
     expect(resolutionSet(timedOut, resolutions).outcome).toBe('unknown');

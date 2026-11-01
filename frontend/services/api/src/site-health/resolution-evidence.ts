@@ -47,6 +47,9 @@ const ACCESS_RESTRICTED = new Set([401, 403]);
 const EXCLUDED_ERRORS = new Set<string>(policy.site_health.reads.corpus_exclusion_error_codes);
 const isExcludedTarget = (resolution: Resolution) =>
   resolution.status === null && EXCLUDED_ERRORS.has(resolution.errorCode);
+/** Excluded targets stay named in the evidence, distinct from the ones that answered. */
+const excludedTargets = (urls: string[], resolutions: Map<string, Resolution>) =>
+  urls.slice(0, limit).map((url) => ({ url, reason: resolutions.get(url)!.errorCode }));
 
 export async function fetchResolutions(db: Database, crawl: Crawl) {
   const rows = await db
@@ -163,6 +166,7 @@ export function resolutionSet(
   const checked: string[] = [];
   const limited: string[] = [];
   const broken: string[] = [];
+  const excluded: string[] = [];
   for (const target of targets) {
     const resolution = resolutions.get(target);
     if (resolution?.status === 429) {
@@ -171,6 +175,7 @@ export function resolutionSet(
     }
     if (resolution && isExcludedTarget(resolution)) {
       checked.push(target);
+      excluded.push(target);
       continue;
     }
     if (resolution?.status === undefined || resolution.status === null) continue;
@@ -192,6 +197,7 @@ export function resolutionSet(
       .slice(0, limit)
       .map((url) => ({ url, status_code: resolutions.get(url)!.status })),
     rate_limited_targets: limited.slice(0, limit).map((url) => ({ url, status_code: 429 })),
+    excluded_targets: excludedTargets(excluded, resolutions),
     resolution_source_ids: [
       ...new Set([...checked, ...limited].flatMap((url) => sourceIds(resolutions.get(url)!))),
     ]
@@ -215,11 +221,13 @@ const redirectTarget = (url: string, resolution: Resolution) =>
 export function linkRedirects(targets: string[], resolutions: Map<string, Resolution>) {
   const checked: string[] = [];
   const failing: string[] = [];
+  const excluded: string[] = [];
   for (const target of targets) {
     const resolution = resolutions.get(target);
     if (!resolution || resolution.status === 429) continue;
     if (isExcludedTarget(resolution)) {
       checked.push(target);
+      excluded.push(target);
       continue;
     }
     if (resolution.status === null && resolution.errorCode !== REDIRECT_LIMIT) continue;
@@ -239,6 +247,7 @@ export function linkRedirects(targets: string[], resolutions: Map<string, Resolu
     failing_targets: failing
       .slice(0, limit)
       .map((url) => redirectTarget(url, resolutions.get(url)!)),
+    excluded_targets: excludedTargets(excluded, resolutions),
     resolution_source_ids: [...new Set(checked.flatMap((url) => sourceIds(resolutions.get(url)!)))]
       .toSorted(compareText)
       .slice(0, limit),

@@ -90,7 +90,24 @@ describe('structurally bounded Agent context and tool results', () => {
     });
     expect(JSON.parse(supplied.text).package.summary).toEqual({
       page_count: 10,
-      agent_context_pages_omitted: 429,
+      agent_context_pages_omitted: 432,
+    });
+  });
+  it('says a crawl was unavailable rather than leaving a zero page count to read as measured', () => {
+    const supplied = suppliedManifest({
+      version: 'agent-context-1',
+      refs: {},
+      instructions: null,
+      action: null,
+      mentions: [],
+      package: {
+        ...emptyPackage,
+        summary: { page_count: 0, omissions: [{ reason: 'no_usable_crawl' }] },
+      },
+    });
+    expect(JSON.parse(supplied.text).package.summary).toEqual({
+      page_count: 0,
+      crawl_unavailable: true,
     });
   });
   it('drops oversized company background without trimming the selected issue or page', () => {
