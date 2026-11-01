@@ -126,7 +126,7 @@ workspace without an account reads as having no receipts; reads never
 provision one.
 Documents validate stored amounts and are set in the brand faces (Outfit and
 Lexend Deca, from OFL font packages, with the digits of right-aligned amounts,
-headline figures and ranks in Geist Mono) with Noto Sans behind them for other scripts,
+headline figures and ranks in the figure face) with Noto Sans behind them for other scripts,
 with measured wrapping and pagination; ligatures are off so copied and
 searched text stays intact. The [renderer](../frontend/services/api/src/billing/pdf.ts)
 draws the logo from the app's shared outline data and paints with the light

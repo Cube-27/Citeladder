@@ -687,7 +687,7 @@ body {
     letter-spacing: 0;
     color: var(--color-muted);
   }
-  /* Figures and deltas set their digits in the figure face (Geist Mono), whose
+  /* Figures and deltas set their digits in the figure face, whose
      digits share one width, so stacked metrics align place by place; a unit
      or word beside them stays in the text face. */
   .type-figure {
