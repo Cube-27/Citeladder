@@ -1,8 +1,9 @@
 # Prompt Builder
 
 Status: proposed on 1 November 2026. The owner settled decisions A–D the same day
-(see [Owner decisions](#owner-decisions)). PR 1 (generation quality) is in
-progress; PRs 2 and 3 follow it in order.
+(see [Owner decisions](#owner-decisions)). PR 1 (generation quality, #483) is
+merged. PR 2 (Prompt Builder) is in review; it also makes the five
+onboarding-only fields editable in the builder, ahead of PR 3. PR 3 follows.
 
 ## Why
 
@@ -190,8 +191,8 @@ the generation config. Plugin twins stay at parity.
    - coverage and segment "Generate more" in review;
    - removes the Generate dialog and the "Build with Agent" menu item.
 3. **Context page and Agent:**
-   - the Context layout fixes;
-   - the editable onboarding-only fields;
+   - the Context layout fixes, with Context's read-only summary of the
+     onboarding-only fields that PR 2 made editable in the builder;
    - `prompt_discovery` rebuilt on the builder endpoints, with plugin parity.
 
 ## Follow-ups

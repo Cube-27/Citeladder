@@ -1,3 +1,4 @@
+import { businessModelSchema } from '@citeladder/contracts/project';
 import { describe, expect, it, vi } from 'vitest';
 import auditRuntime from '../src/config/audits.json' with { type: 'json' };
 import trafficRuntime from '../src/config/traffic.json' with { type: 'json' };
@@ -14,6 +15,10 @@ import { razorpaySettings } from '../src/billing/config.ts';
 import { productionEnv } from './production-config.ts';
 
 const STRONG_KEY = 'a-deployment-grade-session-key-with-enough-entropy-9';
+
+it('lets the brand profile edit every business model discovery can resolve', () => {
+  expect(businessModelSchema.options).toEqual(policy.discovery.constants.business_models);
+});
 
 it('applies production and test-key aliases to Razorpay credential admission', () => {
   const env = {

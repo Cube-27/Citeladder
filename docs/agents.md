@@ -381,8 +381,8 @@ the screen already holds through the
 [panel context](../frontend/lib/agent/panel-context.tsx) and continues in
 `/agent/chats/:chatId`.
 
-Prompts offers **Build with Agent**, preselecting Prompt discovery for a niche
-the user names. `read_prompt_portfolio` returns the canonical topics, and a
+Prompt discovery covers a niche the user names; Prompts itself steers generation
+in its Prompt Builder and has no Agent entry point. `read_prompt_portfolio` returns the canonical topics, and a
 saved portfolio's rows are tied to those topic IDs. **Review in Prompts**
 submits the saved revision to the Prompts owner's admission and quality checks;
 the Agent gains no write tool.
