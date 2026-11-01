@@ -598,3 +598,19 @@ Source: owner, 1 November 2026, reviewing the AI Visibility brand table
 ("share of voice u can say S.O.V."; "table header doesnt need a separate color
 it can be just white").
 [Design system](design.md) owns the shipped behavior.
+
+## Context is one tabbed page of cards; Agent instructions is a tab
+
+Agent → Context follows the page grammar: its tabs (Company, Audience &
+Offerings, Business map, Competitors, the pilot's Brand facts, Agent
+instructions) are the route's tab row, and the active tab's save is the
+identity band's action. Agent instructions is a tab of that row, not a
+section under it. Every tab's content sits on a card, with the nested tone
+only inside a card; short values (tracked competitors, business-map lists,
+offerings) are compact chips rather than tiles or comma-joined prose.
+
+Source: owner, 1 November 2026, reviewing the Context page ("check every tab
+how information is displayed; most is just kept on the page, and even the
+competitors' names can probably fit in a single row. Agent instructions can
+also become a tab. Same issue of semantic colors in surfaces").
+[Design system](design.md) owns the shipped behavior.

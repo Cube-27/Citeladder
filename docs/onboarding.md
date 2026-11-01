@@ -97,8 +97,9 @@ URL starts at the first step, while a discovery URL resumes that draft.
 
 ## After onboarding
 
-Company facts are edited in Agent → Context
-([brand profile panel](../frontend/components/knowledge-base/brand-profile-panel.tsx)):
+Company facts are edited on Agent → Context's Company and Audience & Offerings
+tabs ([brand profile cards](../frontend/components/knowledge-base/brand-profile-cards.tsx),
+one save for both through the [profile form](../frontend/components/knowledge-base/use-brand-profile-form.ts)):
 category, buyer type and market scope (saved into the business context as
 `reviewed`), description, positioning, audience and offerings. The Prompts
 screen's Prompt Builder edits the offerings, the business map's audiences,
@@ -107,7 +108,8 @@ buyer roles, business model, category terms, jobs to be done) through the same
 brand-profile update, which marks each sent field `reviewed`; Context's Business
 map tab shows those read-only with an **Edit in Prompt Builder** link. A changed category
 still clears the fields derived from the old one. Competitors, domains and market are edited in the
-[project editor](../frontend/components/projects/project-edit-panel.tsx), which
+[project editor](../frontend/components/projects/project-edit-panel.tsx) (Context's
+Competitors tab opens it from **Edit competitors**), which
 keeps each competitor's aliases across renames. Overview shows a read-only
 summary. Prompt generation and Site Health archetypes read the stored category
 and facets, so a correction there changes what later generation asks.
@@ -138,7 +140,7 @@ an observed zero stays zero. It replaced the fixed Executive PDF.
 ## Brand facts
 
 In a workspace in the fact-checking pilot (the `fact_checking` grant), Agent →
-Context's Company facts panel has a **Brand facts** tab: short statements of record on a closed set
+Context has a **Brand facts** tab: short statements of record on a closed set
 of topics (pricing, plans, integrations, availability, markets, policies,
 specifications, company), each with an optional source page. The
 [brand facts owner](../frontend/services/api/src/projects/brand-facts.ts) creates
