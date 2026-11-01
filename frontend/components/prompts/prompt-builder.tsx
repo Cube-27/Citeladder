@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 import { ArrowLeft, ArrowRight, Check, Sparkles } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 
@@ -15,7 +15,7 @@ import { TabPanel, Tabs } from '@/components/ui/tabs';
 import type { PromptGenerateInput } from '@/lib/api/prompts';
 import { queryKeys } from '@/lib/api/query-keys';
 import { topicsApi } from '@/lib/api/topics';
-import type { PromptGenerateResponse, Topic } from '@/lib/api/types';
+import type { PromptGenerateResponse, SeedQueries, Topic } from '@/lib/api/types';
 import { personaChoices } from '@/lib/prompts/builder-business';
 import { defaultRunSettings, runRequest, type RunSettings } from '@/lib/prompts/builder-run';
 
@@ -172,27 +172,14 @@ function BuilderSheet(props: Readonly<PromptBuilderProps>) {
             onChange={setEdited}
             hasCompetitors={hasCompetitors}
             personaChoices={personas}
-            seeds={{
-              data: seedsQuery.data,
-              status: seedsQuery.isError ? (
-                <QueryState
-                  kind="error"
-                  {...readErrorProps(seedsQuery)}
-                  fallback="Your search data could not be loaded."
-                />
-              ) : (
-                <QueryState kind="loading" label="Loading your search data" />
-              ),
-            }}
+            seeds={{ data: seedsQuery.data, status: <SeedsReadState read={seedsQuery} /> }}
             topics={topics}
             notices={
               <>
                 {runNotices}
                 <UnsavedNotice business={business} topics={topicStep} />
                 {/* Until search data loads, its own loading or error state says why Generate waits. */}
-                {built.ok || !seedsQuery.data ? null : (
-                  <Alert tone="warning">{built.problem}</Alert>
-                )}
+                {seedsQuery.data ? <RunProblem built={built} /> : null}
               </>
             }
           />
@@ -222,6 +209,24 @@ function BuilderSheet(props: Readonly<PromptBuilderProps>) {
       </Tabs>
     </Drawer>
   );
+}
+
+/** The seed-query read before it has data: loading, or failed with a retry. */
+function SeedsReadState({ read }: Readonly<{ read: UseQueryResult<SeedQueries> }>) {
+  return read.isError ? (
+    <QueryState
+      kind="error"
+      {...readErrorProps(read)}
+      fallback="Your search data could not be loaded."
+    />
+  ) : (
+    <QueryState kind="loading" label="Loading your search data" />
+  );
+}
+
+/** Why the distribution settings cannot make a run, if they cannot. */
+function RunProblem({ built }: Readonly<{ built: ReturnType<typeof runRequest> }>) {
+  return built.ok ? null : <Alert tone="warning">{built.problem}</Alert>;
 }
 
 /** Edits from earlier steps that this run will not see until they are saved. */
