@@ -53,20 +53,20 @@ test('browser-sensitive frontend paths select E2E without escalating every front
   assert.equal(classifyPaths(['scripts/quality.mjs', '.github/workflows/ci.yml']).e2e, false);
 });
 
-test('billing and browser configuration select existing browser suites', () => {
+test('billing selects existing browser suites and browser configuration runs every suite', () => {
   const available = new Set(
     readdirSync(new URL('../frontend/e2e/', import.meta.url))
       .filter((name) => name.endsWith('.spec.ts'))
       .map((name) => `e2e/${name}`),
   );
-  for (const path of [
-    'frontend/lib/billing/entitlement-context.tsx',
-    'frontend/playwright.config.ts',
-  ]) {
-    const selected = selectE2EFiles([path]);
-    assert.ok(selected.length > 0, `${path} must retain browser coverage`);
-    for (const spec of selected) assert.ok(available.has(spec), `${path} selected missing ${spec}`);
-  }
+  const path = 'frontend/lib/billing/entitlement-context.tsx';
+  const selected = selectE2EFiles([path]);
+  assert.ok(selected.length > 0, `${path} must retain browser coverage`);
+  for (const spec of selected) assert.ok(available.has(spec), `${path} selected missing ${spec}`);
+
+  // The global configuration shapes every spec, so it runs the complete suite.
+  assert.equal(classifyPaths(['frontend/playwright.config.ts']).e2e, true);
+  assert.deepEqual(e2eSpecArgs(['frontend/playwright.config.ts']), []);
 });
 
 test('native contracts select API and browser checks without schema checks', () => {

@@ -206,8 +206,9 @@ pnpm build:vite       # Vite+ authenticated SPA build
 pnpm test:e2e         # Playwright (needs a browser + a running stack)
 ```
 
-The default Playwright suite uses mocked browser fixtures. Its `app` project
-targets Vite on 3100; its `marketing` project targets Astro on 3101. It is not
+The default Playwright suite uses mocked browser fixtures and runs its tests in
+parallel. Its `app` project targets the built SPA (`vp preview`) on 3100; its
+`marketing` project targets the built Astro Worker on 3101. It is not
 evidence of live provider acceptance; those checks remain explicit release work.
 
 For browser enforcement of production Worker CSP, build `pnpm build:app` and

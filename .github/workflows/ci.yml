@@ -288,7 +288,8 @@ jobs:
           read -r -a e2e_files <<< "$E2E_FILES"
           log="$RUNNER_TEMP/playwright.log"
           if pnpm exec playwright test --config playwright.config.ts "${e2e_files[@]}" > "$log" 2>&1; then
-            echo 'Playwright passed.'
+            echo 'Playwright passed. Per-test durations:'
+            grep -E '\[(app|marketing)\] › |^ +[0-9]+ (passed|flaky|skipped)' "$log" || true
           else
             status=$?
             echo "Playwright failed (exit $status); first server errors:"
