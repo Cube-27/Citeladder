@@ -282,7 +282,17 @@ function SiteLevelList({
     );
   }
   if (evidence.pages.length === 0)
-    return <QueryState kind="empty" inline message="No affected URLs found." />;
+    return (
+      <QueryState
+        kind="empty"
+        inline
+        message={
+          evidence.total > 0
+            ? 'This finding did not record which pages it affects.'
+            : 'No affected URLs found.'
+        }
+      />
+    );
   const hidden = evidence.total - evidence.pages.length;
   return (
     <Stack gap="item">

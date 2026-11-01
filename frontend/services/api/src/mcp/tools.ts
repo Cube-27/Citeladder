@@ -504,7 +504,7 @@ export const definitions = {
   read_site_pages: projectTool({
     title: 'Read site pages',
     description:
-      "Pages from a crawl, paged: URL, title, page type, status, scores, issue count and the rule ids of each page's issues by finding class. Pass rule_id (from read_site_health top_issues or an issue group) to list exactly the pages affected by that issue, each with rule_evidence: what that check found on that page; filter by page_kind or status to find pages by type or status. read_site_health gives the totals.",
+      "Pages from a crawl, paged: URL, title, page type, status, scores, issue count and the rule ids of each page's issues by finding class. Pass rule_id (from read_site_health top_issues or an issue group) to list exactly the pages affected by that issue, each with rule_evidence: what that check found on that page (a site-level architecture issue is recorded once on the home page, and its rule_evidence names the affected pages); filter by page_kind or status to find pages by type or status. read_site_health gives the totals.",
     schema: z.strictObject({
       ...project,
       crawl_id,
@@ -529,7 +529,7 @@ export const definitions = {
   read_site_links: projectTool({
     title: 'Read internal links',
     description:
-      'Read the internal links of crawled pages: per page, inbound and outbound link counts (overall and in main content) and nofollow inbound links, click depth from the home page, a bounded sample of the pages linking to it and linked from it with their anchors, and anchor diagnostics. Use it to find orphaned or buried pages. Pass up to 10 site_url_ids from read_site_pages to read those pages in one call (with smaller neighbor samples and anchor diagnostics counted by kind); missing_site_url_ids lists any not found. Otherwise rows come 50 per page; pass next_cursor for more. unavailable no_site_crawl means no crawl exists. Use read_site_pages for page scores and issues.',
+      'Read the internal links of crawled pages: per page, inbound and outbound link counts (overall and in main content) and nofollow inbound links, click depth from the home page, a bounded sample of the pages linking to it and linked from it with their anchors, and anchor diagnostics. Use it to find orphaned or buried pages. Pass up to 10 site_url_ids from read_site_pages to read those pages in one call (with smaller neighbor samples and anchor diagnostics counted by kind); missing_site_url_ids lists any without link metrics in this crawl (for example a page that was not analyzed). Otherwise rows come 50 per page; pass next_cursor for more. unavailable no_site_crawl means no crawl exists. Use read_site_pages for page scores and issues.',
     schema: z.strictObject({
       ...project,
       crawl_id,

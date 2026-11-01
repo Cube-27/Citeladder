@@ -41,8 +41,9 @@ const ACCESS_RESTRICTED = new Set([401, 403]);
 /**
  * Targets the crawler deliberately did not fetch (robots-denied, refused by
  * admission). They answered no HTTP request, so they are neither broken nor
- * redirecting, but they are checked: left unchecked, one robots-denied footer
- * link made every page's link checks unknown.
+ * redirecting. They leave the judged set (named as excluded_targets) instead
+ * of staying unchecked: unchecked, one robots-denied footer link made every
+ * page's link checks unknown.
  */
 const EXCLUDED_ERRORS = new Set<string>(policy.site_health.reads.corpus_exclusion_error_codes);
 const isExcludedTarget = (resolution: Resolution) =>
@@ -174,7 +175,6 @@ export function resolutionSet(
       continue;
     }
     if (resolution && isExcludedTarget(resolution)) {
-      checked.push(target);
       excluded.push(target);
       continue;
     }
@@ -182,10 +182,11 @@ export function resolutionSet(
     checked.push(target);
     if (isBroken(resolution.status, sitemap)) broken.push(target);
   }
+  // Excluded targets are outside the set this rule judges, not passes within it.
   const evaluation =
     sitemap && !targets.length
       ? finalizeEvaluation(rule, 'not_applicable', { reason: 'no_sitemap' })
-      : entitySetEvaluation(rule, targets.length, checked.length, broken);
+      : entitySetEvaluation(rule, targets.length - excluded.length, checked.length, broken);
   if (limited.length && !broken.length) {
     evaluation.outcome = 'unknown';
     evaluation.reason_code = 'rate_limited_targets';
@@ -226,7 +227,6 @@ export function linkRedirects(targets: string[], resolutions: Map<string, Resolu
     const resolution = resolutions.get(target);
     if (!resolution || resolution.status === 429) continue;
     if (isExcludedTarget(resolution)) {
-      checked.push(target);
       excluded.push(target);
       continue;
     }
@@ -236,7 +236,7 @@ export function linkRedirects(targets: string[], resolutions: Map<string, Resolu
   }
   const evaluation = entitySetEvaluation(
     'technical.internal_link_redirect',
-    targets.length,
+    targets.length - excluded.length,
     checked.length,
     failing,
   );

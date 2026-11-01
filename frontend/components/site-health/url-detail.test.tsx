@@ -733,6 +733,17 @@ describe('UrlDetail', () => {
     expect(
       await screen.findByRole('heading', { name: 'Issues on this page (0)' }),
     ).toBeInTheDocument();
-    expect(screen.getByText('Nothing to fix — this page passed every check.')).toBeInTheDocument();
+    expect(screen.getByText('No issues found on this page.')).toBeInTheDocument();
+  });
+
+  it('does not call a page clean before its audit finishes', async () => {
+    mswServer.use(...handlers(detail({ issues: [], analysis_status: 'pending' })));
+
+    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
+
+    expect(
+      await screen.findByText('Issues appear here once this page’s audit finishes.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('No issues found on this page.')).not.toBeInTheDocument();
   });
 });

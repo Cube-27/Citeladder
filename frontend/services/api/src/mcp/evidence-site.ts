@@ -233,7 +233,21 @@ function ruleEvidenceSummary(value: unknown): Record<string, string | number | b
     const lines = [...distinct];
     return {
       failing_targets: lines.slice(0, mcpPolicy.rule_evidence_items),
+      // Distinct within the persisted (bounded) sample; failure_count is the check's own total.
       distinct_failing_target_count: lines.length,
+      ...(typeof evidence.failure_count === 'number'
+        ? { failure_count: evidence.failure_count }
+        : {}),
+    };
+  }
+  // A site-level architecture finding sits on the homepage and names its pages.
+  if (Array.isArray(evidence.pages)) {
+    const urls = evidence.pages
+      .map((page) => record(page).url)
+      .filter((url): url is string => typeof url === 'string');
+    return {
+      affected_pages: urls.slice(0, mcpPolicy.rule_evidence_items),
+      affected_page_count: typeof evidence.count === 'number' ? evidence.count : urls.length,
     };
   }
   const facts: Record<string, string | number | boolean> = {};

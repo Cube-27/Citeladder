@@ -74,7 +74,7 @@ export function UrlDetailView({
         <PageMetaLine detail={detail} />
         {children}
         <LinkedFrom detail={detail} />
-        <PageIssues issues={detail.issues} />
+        <PageIssues issues={detail.issues} audited={detail.analysis_status === 'completed'} />
         <UrlScoreSummary detail={detail} />
         <TechnicalDetails detail={detail} />
       </Stack>
@@ -140,7 +140,14 @@ function LinkedFrom({ detail }: Readonly<{ detail: PageDetail }>) {
  * as the catalog labels them, so a recommendation never reads as a rated
  * defect.
  */
-function PageIssues({ issues }: Readonly<{ issues: IssueOccurrence[] }>) {
+function PageIssues({
+  issues,
+  audited,
+}: Readonly<{
+  issues: IssueOccurrence[];
+  /** No issues before the audit finishes means "not checked yet", not "clean". */
+  audited: boolean;
+}>) {
   const defects = issues
     .filter((issue) => issue.finding_class === 'defect')
     .sort((a, b) => severityRank(a.severity) - severityRank(b.severity));
@@ -157,9 +164,9 @@ function PageIssues({ issues }: Readonly<{ issues: IssueOccurrence[] }>) {
               kind="empty"
               inline
               message={
-                advisories.length === 0
-                  ? 'Nothing to fix — this page passed every check.'
-                  : 'No issues found on this page.'
+                audited
+                  ? 'No issues found on this page.'
+                  : 'Issues appear here once this page’s audit finishes.'
               }
             />
           ) : (
