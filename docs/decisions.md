@@ -664,4 +664,20 @@ weight 500 like the others; PDF documents embed the OFL Geist Mono package.
 Source: owner, 1 November 2026, answering how figures should be handled: "u
 can use geist mono for numbers
 https://github.com/Cube-27/cube27-fonts/blob/main/GeistMono-Variable.woff2"
+Superseded the same day by
+[JetBrains Mono as the figure face](#jetbrains-mono-replaces-geist-mono-as-the-figure-face).
+
+## JetBrains Mono replaces Geist Mono as the figure face
+
+JetBrains Mono sets the figures in data roles everywhere Geist Mono did, with
+the same digit-and-number-marks range and the same weight-500 cap. The web
+face is `JetBrainsMono-Variable.woff2` from the private Cube27 font
+repository at the revision that adds it; PDF documents embed the OFL
+JetBrains Mono package. Its digits share Geist Mono's 0.600em advance, so the
+Arial fallback keeps its size adjustment and only the vertical overrides
+change.
+
+Source: owner, 1 November 2026: "u can replace geist mono with jetbrains mono
+in main itself without using agent
+https://github.com/Cube-27/cube27-fonts/blob/main/JetBrainsMono-Variable.woff2"
 [Design system](design.md) owns the shipped behavior.
