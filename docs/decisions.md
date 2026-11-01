@@ -629,3 +629,19 @@ Source: owner, 1 November 2026: "The current PDF report is pretty bad, there
 is no formatting, just text. Make it better with proper formatting and
 CiteLadder branding."
 [Onboarding](onboarding.md) owns the shipped report.
+
+## Lexend Deca replaces Geist as the text face
+
+Lexend Deca sets body, UI, data and small headings on every surface (the app,
+the website and docs, the MCP app and the PDF documents) instead of Geist;
+Outfit stays the display face. The weight ceilings are unchanged: 500 in the
+product, 600 for the public card title. The web face is Lexend Deca's
+variable file (`LexendDeca-Variable.woff2`) from the private Cube27 font
+repository, and the pinned font revision moves to the one that adds it; PDF
+documents embed the OFL Lexend Deca package, as they did Geist's. Lexend Deca
+has no tabular figures (no `tnum` feature), so `tabular-nums` no longer
+aligns digits set in the text face.
+
+Source: owner, 1 November 2026: "Replace the body font from Geist to
+LexendDeca-Variable, I have already uploaded it in cube27-fonts repo."
+[Design system](design.md) owns the shipped behavior.
