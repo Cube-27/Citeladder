@@ -89,16 +89,21 @@ metered surfaces:
 
 The bounded `runner.ts` process composes all six native task lanes and billing
 recovery with one PostgreSQL pool (at most four connections) plus one session
-holding the drain lock. Each pass gives every lane one admission (Site Health
-keeps a pool-bounded batch in flight; billing and Agent recovery take a bounded
-batch) and revisits earlier lanes for successors. Its time budget stops new
-admission; claimed work finishes before the pool closes, except integration
-syncs, which yield at the deadline and resume from their committed pages. A
-randomized starting lane avoids systematically delaying the same owner across
-executions. A failed lane is skipped for the rest of the drain while independent
+holding the drain lock. Lanes run concurrently, each bounded by its own batch
+(Site Health and audits keep a pool-bounded set in flight; billing and Agent
+recovery take a bounded batch), so one owner's claim window never holds
+another's queued work. A lane that made progress runs again at once; an idle
+lane runs again after progress elsewhere (successors) or each
+`runnerLanes.idlePollMs` while others are busy. Lanes that fetch public
+websites (analytics, discovery, Site Health) share one group and take turns,
+least recently started first, preserving publisher pacing. Its time budget
+stops new admission; claimed work finishes before the pool closes, except
+integration syncs, which yield at the deadline and resume from their committed
+pages. A randomized starting lane avoids systematically favouring the same
+owner across executions. A failed lane is skipped for the rest of the drain while independent
 owners continue; the job still fails, and the error is logged with the lane.
 
-Every lane reclaims its own expired leases on each pass, including idle ones,
+Every lane reclaims its own expired leases on each run, including idle ones,
 and reports when its next task is due: the earliest claimable row or lease
 expiry (Agent: when an unclaimed turn passes its grace). Billing has no probe;
 its retries wait for tick. Analytics, discovery, integrations and Site Health
