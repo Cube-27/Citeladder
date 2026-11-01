@@ -373,7 +373,7 @@ Every route assembles the same parts from `components/ui/` and `components/layou
 
 | Need | Owner |
 | --- | --- |
-| Page frame, actions, section tabs, controls | `ListScreen` (identity band → `tabs` → `TabRow` → `controls` → `FilterBar` → content; `measure="workflow"` for form pages, `fill` for a chat column) or `DetailScreen` (the same with the required `back` link above the title, and an optional `aside` in a `main-aside` / `list-detail` split). Both live in `components/layout/page-shell.tsx`, own every band and band gap, and stack content sections 24px apart; `PageShell` itself is internal |
+| Page frame, actions, section tabs, controls | `ListScreen` (identity band → `tabs` → `TabRow` → `controls` → `FilterBar` → content; `measure="workflow"` for form pages, `fill` for a chat column) or `DetailScreen` (the same with the required `back`, drawn as the round `BackButton` before the title, and an optional `aside` in a `main-aside` / `list-detail` split). Both live in `components/layout/page-shell.tsx`, own every band and band gap, and stack content sections 24px apart; `PageShell` itself is internal |
 | Section header | `EditorialSectionHeader` for open sections; `CardHeader` with `actions` for cards — never a raw heading or a re-laid-out header |
 | Headline figures; dense facts | `StatRow` (`segments`: label, value or `score`, `sub`, `delta`, `action`; pressable with `onSelect`) |
 | Record tables | `DataTable` (title, `description`, `toolbar` → `FilterBar`, `columns` with width roles, `hint`, `sublabel` and `desktopOnly`, `pageSize`/`rowCount`/`rowLines`, `pager`, `state`, `pinFirstColumn`, `selection`, `nested`, `footer`; cells `TableCellLines`, `TableActionsCell`, `TableSelectCell`); a list beside its detail is `ListDetailCard` |
