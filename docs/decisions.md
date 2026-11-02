@@ -419,3 +419,15 @@ public API's dashboard schema follows the shared contract.
 Source: owner, 2 November 2026, asked "Remove the provenance ID lists from the
 Site Health responses the browser gets? They stay in the database", answered
 "yes". [Site Health](site-health.md) owns the shipped behavior.
+
+## Site Health always opens on Pages
+
+The Website screen opens on its Pages tab every time, its loading frame
+included, and never switches tab by itself: not when a crawl starts, is polled
+or finishes. A tab the reader picks, or a `?tab=` link, stays as chosen. The
+default no longer follows the crawl phase, which had sent a finished crawl to
+Overview and moved the selection whenever a crawl started.
+
+Source: owner, 2 November 2026: "site health should always open on pages not
+overview — currently it switches to overview on starting crawl which is
+wrong." [Site Health](site-health.md) owns the shipped behavior.

@@ -265,7 +265,11 @@ fields. Application documents use `no-store` and missing fingerprinted
 assets return 404.
 Each domain has one API module and query-key owner. Workspace/project identity
 belongs in both requests and cache keys. Retained placeholder data may survive
-filter/pagination changes only within the same owning project/crawl.
+filter/pagination changes only within the same owning project/crawl. A
+cursor-paged table reads through `useCursorTableQuery`
+(`lib/table/use-cursor-table-query.ts`): it owns the cursor stack, keeps the
+previous page only within the same workspace and project, and returns the `DataTable` state, busy and
+pager props, so screens do not rebuild them.
 
 Typed shareable tabs, filters, cursors and selected IDs belong to
 lib/navigation/url-state.ts, with explicit push/replace semantics. Component

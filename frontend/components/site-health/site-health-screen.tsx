@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { Alert } from '@/components/ui/alert';
@@ -55,7 +55,6 @@ function SiteHealthContent({
 }>) {
   const {
     entitlementQuery,
-    phase,
     crawl,
     active,
     startPending,
@@ -66,20 +65,7 @@ function SiteHealthContent({
     runExport,
     exporting,
   } = screen;
-  // While the phase resolves only the loading frame's tab row reads this; it
-  // assumes the usual answer (a finished crawl) so the selected tab does not
-  // hop from Pages to Overview as the page arrives.
-  const defaultTab: AnalysisTab =
-    phase === 'dashboard' || phase === 'resolving' ? 'overview' : 'pages';
-  const tabCodec = useMemo(
-    () =>
-      stringUrlCodec(
-        ANALYSIS_TABS.map((item) => item.value),
-        defaultTab,
-      ),
-    [defaultTab],
-  );
-  const [tab, selectTab] = useUrlState('tab', tabCodec, {
+  const [tab, selectTab] = useUrlState('tab', TAB_CODEC, {
     clearKeys: ['cursor', 'sort'],
   });
   const blocking = projectBlockingState(projectId, projectLoading, screen);
@@ -112,7 +98,7 @@ function SiteHealthContent({
   // one loading box where the panel will be, so the work arrives without the
   // tabs pushing it down a band.
   return (
-    <TabsRoot value={tab as AnalysisTab} onValueChange={selectTab}>
+    <TabsRoot value={tab} onValueChange={selectTab}>
       <ListScreen
         actions={headerActions}
         tabs={{ items: ANALYSIS_TABS, ariaLabel: 'Website analysis', onIntent: prefetchTab }}
@@ -275,6 +261,16 @@ const ANALYSIS_TABS: ReadonlyArray<{ value: AnalysisTab; label: string }> = [
   { value: 'internal-links', label: 'Internal links' },
   { value: 'changes', label: 'Changes' },
 ];
+
+/**
+ * Site Health always opens on Pages and never changes tab by itself: not
+ * while the crawl resolves, starts, runs or finishes (owner, 2026-11-02). A
+ * tab the reader picks, or a `?tab=` link, stays as chosen.
+ */
+const TAB_CODEC = stringUrlCodec<AnalysisTab>(
+  ANALYSIS_TABS.map((item) => item.value),
+  'pages',
+);
 
 function AnalysisPanel({
   tab,
