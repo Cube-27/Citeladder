@@ -781,6 +781,20 @@ counts, average position and model provenance across its runs and omits citation
 totals. Overview reads one run's persisted projection without a baseline
 comparison, from completed and partially completed runs, like the Visibility page.
 
+A run's comparable baseline follows one rule, the comparison walk
+(`visibility/comparison.ts`): the nearest earlier run in the same market whose
+versions match and whose frozen identity matches exactly, or shares the context
+its like-for-like cells can be matched in. Audit finalization runs that walk in
+its transaction for every requestable cohort, for all engines and for each
+engine the run measured, and persists the baseline, the comparison status and
+the runs passed over (`audit_comparison_baselines`, `visibility/baselines.ts`).
+Visibility's run comparison and Overview's change figures both read that row, so
+they name the same baseline; no read walks the history. A reader-named baseline
+is compared directly. Overview shows changes against the baseline only when its
+status is `comparable` and otherwise reports the status
+(`measurement.comparison_status`). A finalized run with no persisted row reads
+`baseline_pending`, distinct from `no_baseline`.
+
 A coverage strip under the headline tiles states the answers and engines behind
 the numbers, failed and not-run counts, the comparison baseline and, when a
 change is missing, why. Each failed execution shows a plain reason and next step
@@ -805,6 +819,10 @@ queries settle on each response analysis, retaining its artifact/task provenance
 and fanout projection version. Source/fanout totals are server aggregates over
 the full selection; source, fanout and answer keyset cursors bind filters and the
 snapshot boundary. Original answers use /runs/{runId}?execution={taskId}.
+The Sources table still aggregates `citations` over the selection per request
+(its denominator, totals and page of rows in one statement), then fills page
+facts, co-cited brands and retrieval coverage concurrently; per-run source
+aggregates are not persisted yet.
 
 Citation rate is citations over the responses a source was RETRIEVED in, never
 over the responses in the selection, and never over a stored retrieval counter.

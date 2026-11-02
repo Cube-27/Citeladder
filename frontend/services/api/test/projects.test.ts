@@ -16,6 +16,7 @@ import {
 import { reserveUsage } from '../src/entitlements/ledger.ts';
 import { advisoryXactLock } from '../src/db/advisory-lock.ts';
 import { commandCenter } from '../src/projects/command-center.ts';
+import { getVisibility } from '../src/visibility/dashboard.ts';
 import { purgeExpiredTrialProjects } from '../src/projects/trial-purge.ts';
 import { createDiscovery } from '../src/projects/discovery.ts';
 import { discoveryCreate } from '../src/projects/discovery-inputs.ts';
@@ -662,12 +663,6 @@ describe('project owner', () => {
       return id;
     }
     const baseline = await measured('2026-03-01T00:00:00Z', 0, 0);
-    for (let index = 0; index < policy.projects.command_center_max_audits; index++) {
-      await measurements.audit(t, {
-        completedAt: new Date(Date.UTC(2025, 0, 1) + index * 86400000),
-        configuration: { ...configuration, panel_hash: 'older-panel' },
-      });
-    }
     await measured('2026-03-02T00:00:00Z', 1, 20, {
       ...configuration,
       panel_hash: 'different-panel',
@@ -709,6 +704,124 @@ describe('project owner', () => {
     });
     await expect(
       commandCenter(db, { ...t, workspaceId: randomUUID() }, null),
+    ).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('overview and visibility compare a run with the one baseline finalization persisted', async () => {
+    const t = await measurements.tenant();
+    await measurements.brand(t.projectId, 'Acme Corp');
+    const configuration = {
+      brand_name: 'Acme Corp',
+      brand_aliases: [],
+      owned_domains: ['acme.example'],
+      competitors: [],
+      country_code: 'US',
+      language_code: 'en',
+      benchmark_mode: 'consumer_like',
+      panel_hash: 'panel-1',
+      engine_routes: { chatgpt: { transport_provider: 'test', transport_model: 'test' } },
+      measurement_policy: {
+        retrieval_enabled: true,
+        max_output_tokens: 1000,
+        answer_instruction: '',
+      },
+    };
+    const aggregate = (count: number) => {
+      const metrics = {
+        total_completed: 2,
+        brand_mention_count: count,
+        owned_citation_response_count: 0,
+        brand_mention_rate: count / 2,
+        owned_citation_rate: 0,
+        competitor_mention_rate: {},
+        competitor_citation_rate: {},
+        share_of_voice: { mention_counts: { 'Acme Corp': count } },
+        coverage: { requested: 2, failed: 0, not_run: 0 },
+      };
+      return { ...metrics, per_engine: { chatgpt: metrics } };
+    };
+    const run = async (at: string, count: number) => {
+      const id = await measurements.audit(t, { completedAt: new Date(at), configuration });
+      await measurements.metricSnapshot(t, id, { metrics: aggregate(count) });
+      return id;
+    };
+    /** A snapshot no finalization wrote: nothing persisted its baseline. */
+    const raw = async (at: string, count: number) => {
+      const id = await measurements.audit(t, { completedAt: new Date(at), configuration });
+      await db
+        .insertInto('metric_snapshots')
+        .values({
+          id: randomUUID(),
+          workspace_id: t.workspaceId,
+          project_id: t.projectId,
+          audit_id: id,
+          analyzer_version: 'test',
+          scoring_rule_version: 'test',
+          total_completed: 2,
+          total_failed: 0,
+          visibility_score: 0,
+          metrics: JSON.stringify(aggregate(count)),
+          source_analysis_ids: '[]',
+          source_artifact_ids: '[]',
+          owned_citation_count: 0,
+          owned_citation_ids: '[]',
+          created_at: new Date(),
+        })
+        .execute();
+      return id;
+    };
+    const visibilityOf = (auditId: string | null) =>
+      getVisibility(db, t, {
+        auditId,
+        logicalEngine: null,
+        baselineId: null,
+        selectionMode: auditId ? 'run' : 'latest',
+        fromAt: null,
+        toAt: null,
+        configurationKey: null,
+        cohort: 'core',
+      });
+    const baseline = await run('2026-04-01T00:00:00Z', 0);
+    const current = await run('2026-04-03T00:00:00Z', 2);
+    const stored = await db
+      .selectFrom('audit_comparison_baselines')
+      .select(['status', 'baseline_audit_id'])
+      .where('audit_id', '=', current)
+      .where('cohort', '=', 'core')
+      .where('logical_engine', 'is', null)
+      .executeTakeFirstOrThrow();
+    expect(stored).toEqual({ status: 'comparable', baseline_audit_id: baseline });
+    // A compatible run between them that no finalization saw changes neither read.
+    await raw('2026-04-02T00:00:00Z', 1);
+    const overview = await commandCenter(db, t, null);
+    const dashboard = await visibilityOf(null);
+    expect(overview.measurement).toMatchObject({
+      audit_id: current,
+      comparable_audit_id: baseline,
+      comparison_status: 'comparable',
+    });
+    expect(dashboard.comparison).toMatchObject({
+      status: 'comparable',
+      baseline_audit_id: baseline,
+    });
+    expect(overview.state.visibility).toEqual({ value: 100, delta: 100 });
+    // A finalized run whose baseline is not persisted yet is pending, not baseline-less.
+    const pending = await raw('2026-04-04T00:00:00Z', 2);
+    expect((await commandCenter(db, t, null)).measurement).toMatchObject({
+      audit_id: pending,
+      comparable_audit_id: null,
+      comparison_status: 'baseline_pending',
+    });
+    expect((await visibilityOf(pending)).comparison).toMatchObject({ status: 'baseline_pending' });
+    // The first run has nothing before it.
+    expect((await commandCenter(db, t, baseline)).measurement).toMatchObject({
+      comparable_audit_id: null,
+      comparison_status: 'no_baseline',
+    });
+    // Another workspace reads none of it.
+    const outsider = await measurements.tenant();
+    await expect(
+      commandCenter(db, { workspaceId: outsider.workspaceId, projectId: t.projectId }, current),
     ).rejects.toMatchObject({ status: 404 });
   });
 });

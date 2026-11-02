@@ -69,7 +69,14 @@ function instantOperand(value: Instant) {
 export async function loadMeasuredRuns(
   db: Database,
   scope: RunScope,
-  window: { fromAt: Instant | null; toAt: Instant | null; newest?: number; olderThan?: string },
+  window: {
+    fromAt: Instant | null;
+    toAt: Instant | null;
+    newest?: number;
+    olderThan?: string;
+    /** Only this run, still under every scope condition. */
+    auditId?: string;
+  },
 ): Promise<MeasuredRun[]> {
   let query = db
     .selectFrom('metric_snapshots as snapshot')
@@ -94,6 +101,7 @@ export async function loadMeasuredRuns(
     .where('audit.audit_scope', '=', visibility.brand_audit_scope)
     .where('audit.status', 'in', visibility.dashboard_audit_statuses)
     .where('audit.completed_at', 'is not', null);
+  if (window.auditId !== undefined) query = query.where('audit.id', '=', window.auditId);
   if (window.fromAt) query = query.where('audit.completed_at', '>=', instantOperand(window.fromAt));
   if (window.toAt) query = query.where('audit.completed_at', '<=', instantOperand(window.toAt));
   if (window.olderThan !== undefined)

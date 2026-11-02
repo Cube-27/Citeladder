@@ -116,7 +116,7 @@ The refresh adopts an Agent row on the same key instead of opening a second one.
 The [TypeScript Action routes](../frontend/services/api/src/routes/actions.ts)
 own workflow updates and declarations. The
 [Agent target adapter](../frontend/services/api/src/agent/target-adapter.ts) uses
-the same Action owner. MCP and command-center reads use the shared
+the same Action owner. MCP and command-center reads use the shared, persisted
 [effective status](../frontend/services/api/src/opportunities/action-status.ts).
 
 An Action's identity and origin never change. When no live Opportunity targets
@@ -133,13 +133,18 @@ its remediation, the reading that would measure each finding once declared
 The Action, not the Opportunity, owns workflow status. A user stores only `open`
 or `dismissed` through `PATCH /api/v1/actions/{action_id}`, and each change
 appends an [ActionStatusEvent](../frontend/services/api/src/opportunities/actions.ts).
-`in_progress` is never stored: an open Action reads as in progress while a
-linked chat has an output, so the Agent sets no status. A declaration stores
-`implemented` (with its status event); `measuring` and `done` are derived from
-the verifier's observations of that declaration — the latest observation
+`in_progress` is never a stored decision: an open Action reads as in progress
+while a linked chat has an output, so the Agent sets no status. A declaration
+stores `implemented` (with its status event); `measuring` and `done` are derived
+from the verifier's observations of that declaration — the latest observation
 decides: one that verified every expected check reads as done, any other reads
 as measuring, so a later contradiction reopens measurement — and the verifier
-never writes Action status. A user cannot overwrite a declared state.
+never writes the stored decision. A user cannot overwrite a declared state.
+The status readers see is persisted on `actions.effective_status` (indexed with
+the project for the list filter and the shell's status counts): the status
+decision and declaration, the Agent output writer and the verifier each
+recompute it in their own transaction (`refreshActionStatus`), and every read,
+filter and count selects that column instead of deriving it per request.
 Recompute stamps each Opportunity's `action_id`; the Opportunity list and MCP
 `status` filter resolve through that Action, and the command center counts an
 Action resolved at its first verified observation. Action sync restamps live

@@ -464,3 +464,19 @@ Source: owner, 2 November 2026, approving the proposed client error reporting
 and the AI Traffic export change with "ok proceed and include the two items".
 The [API error contract](api-error-contract.md#6-browser-error-reports) owns
 the shipped behavior.
+
+## One comparable-baseline rule
+
+A run has one comparable baseline, chosen by the Visibility comparison rule
+(the nearest earlier compatible run in the same market) and persisted per run,
+cohort and engine selector when the audit is finalized. Overview's change
+figures and Visibility's comparison both read it, so they never name different
+baselines for the same run. Overview's private rule (same frozen key, analyzer,
+benchmark mode, engines and core prompts) is deleted. Comparison statuses stay
+distinct (`no_baseline`, `changed_context`, `partial_coverage`,
+`matched_subset`, `baseline_pending`, ...), and Overview shows changes only
+against a `comparable` baseline.
+
+Source: owner, 2 November 2026, approving the read-projection work that
+included unifying the baseline rule: "ok proceed and include the two items".
+[Visibility](visibility-prompt.md) owns the shipped behavior.

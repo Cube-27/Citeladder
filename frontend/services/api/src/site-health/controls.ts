@@ -15,6 +15,7 @@ import { crawlSetting } from './planner-policy.ts';
 import { requireProject } from '../projects/access.ts';
 import { isTerminal, projectCrawl } from './reads/crawl.ts';
 import { recordCrawlEvent } from './site-task.ts';
+import { persistTerminalCounters } from './terminal-counters.ts';
 
 export async function listCrawls(
   db: Database,
@@ -99,6 +100,8 @@ function cancelOnce(db: Database, workspaceId: string, crawlId: string) {
       .where('crawl_id', '=', crawlId)
       .where('status', 'not in', ['succeeded', 'failed', 'cancelled'])
       .execute();
+    // Every task is settled now, so the stopped crawl's counters are final.
+    await persistTerminalCounters(trx, { ...crawl, status: 'cancelled' });
     // Task mutation precedes capacity/account locks taken by reservation release.
     await settleCrawlFetches(trx, crawl);
     await recordCrawlEvent(trx, crawl, 'crawl.cancelled', 'crawl cancelled', {});
