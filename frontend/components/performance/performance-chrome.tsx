@@ -220,7 +220,7 @@ export function performanceNotices({
   projecting: boolean;
   selectedMissing: boolean;
   comparisonMissing: boolean;
-  /** Some imported GA4 partitions are missing, flagged or on a prior revision. */
+  /** Some imported days of a mapped provider are missing, flagged or on a prior revision. */
   qualityFlagged: boolean;
   readinessFailed: boolean;
 }>): StatusMessage[] {
@@ -264,7 +264,7 @@ export function performanceNotices({
     messages.push({
       key: 'quality',
       tone: 'info',
-      text: 'Some imported partitions are missing, flagged or using a prior complete revision. Zero-valued observations are unavailable for those extracts.',
+      text: 'Some imported days are missing, flagged or using a prior complete revision, so totals for this range are partial. Days without a usable partition show no value, not zero.',
     });
   return messages;
 }

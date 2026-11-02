@@ -164,7 +164,7 @@ export async function buildQueryEvidence(db: Database, scope: DemandScope) {
   else if (
     artifacts.length &&
     rows.length === material.length &&
-    quality.every((q) => q.revision !== null && q.flags.length === 0)
+    quality.every((q) => q.revision !== null && q.flags.length === 0 && !q.not_yet_reported)
   )
     state = p.QUERY_EVIDENCE_STATE_OBSERVED_ZERO;
   const snapshot = await db

@@ -137,8 +137,12 @@ resync_seq increases across overlapping windows, with a target-identity floor
 so a remapped property remains comparable across connections. Readers select the
 latest complete, untruncated revision of each project/property/provider/dataset/day
 partition, including empty successful extracts, and never sum revisions. A row
-missing from a replacement is removed; a failed or truncated partition uses the
-prior complete revision with `partition_fallback`. History is imported once per
+missing from a replacement is removed; a successful run whose extract is
+truncated or incompatible leaves the prior complete revision selected with
+`partition_fallback`. A run still in flight, failed or cancelled before it
+completed a dataset does not supersede that dataset's selected revision, so it
+raises no flag. A fallback revision is complete evidence: its zeros stay
+observed. History is imported once per
 project/property when it is first mapped and resumes failed chunks. It is bounded
 by the resolved history_window allowance and capped at the configured maximum
 (480 days, inside Search Console's retention); a later plan upgrade does not yet
@@ -152,7 +156,10 @@ GA4 reports retain property `timeZone`, `currencyCode`, thresholding,
 other-row loss and sampling metadata on every immutable artifact. The mapping
 exposes the latest timezone/currency by revision, including when an older sync
 finishes later. Quality flags travel with projections;
-flagged or unavailable evidence cannot establish zero.
+flagged or unavailable evidence cannot establish zero. Traffic snapshots record
+per-day partition quality only for providers with an active property mapping
+into the project; another provider's datasets are not applicable and omitted,
+not reported unavailable.
 Legacy landing extracts with incompatible recorded dimensions are excluded from
 complete partition selection and disclose `extract_contract_mismatch`; a compatible
 prior revision is retained where available. Otherwise the landing leg remains
@@ -192,10 +199,19 @@ Each dimension table reads its own dataset. No date-only evidence means null
 headline values, not a zero reconstructed from dimensions.
 
 Refresh materializes configured presets anchored to the latest date with
-selected Search Console day rows. Search Console finalizes data days late, so
-days after that anchor are unavailable, not zero; a property that has never
-reported a row keeps the window-end anchor, so a genuinely silent property
-reads as measured zero. Refresh writes under a per-project advisory lock. A separate performance_range_projection task creates a custom/comparison
+selected Search Console day rows. Search Console imports final data only and
+finalizes days late, so days after that anchor are not yet reported
+(`not_yet_reported` in the persisted day quality): neither zero nor a quality
+flag. A property that has never reported a row keeps the window-end anchor, so a
+genuinely silent property reads as measured zero. Zero against missing is
+decided per day: a total, series bucket or table row keeps its zeros when any
+of its days has a partition that can observe one, and only a range with no
+such day reads null. Unreported, missing or flagged days otherwise leave the
+range partial, as its per-day quality records, without nulling it.
+Refresh writes under a per-project advisory lock and also re-projects every
+persisted non-preset window (earlier sync windows, Demand windows and custom
+ranges) overlapping its trigger window, so a revised day never leaves a custom
+range stale. A separate performance_range_projection task creates a custom/comparison
 display snapshot from stored evidence only; it does not sync providers, refresh
 Demand or enqueue verification. Exact windows cannot fall back to an unrelated
 snapshot. A custom end after the latest imported date is clamped to it, a range
@@ -285,7 +301,9 @@ first) and coverage-qualified adjacent-window trends anchored on the latest
 observed day.
 Branded query classification uses canonical brand/alias/domain vocabulary;
 the newest append-only override for an exact normalized query wins.
-Detector availability and limitations persist with the snapshot.
+Detector availability and limitations persist with the snapshot, one entry per
+detector including the low-CTR detector. Every signal carries the
+impression-weighted position of its evidence where one was reported.
 
 Prompt generation reads the latest query snapshot's non-branded queries, and
 the latest published Search Intelligence keyword datasets in the project
@@ -353,8 +371,9 @@ The browser resets cursor history when those inputs change.
 Search Demand is one /demand surface; the AI Traffic Referrals tab exposes
 persisted referral volume/share/source totals. Search Demand
 shows each fact once. Like every page, its search and filter chips sit in the
-top control strip; each chip carries its type's count and, when its detector
-did not run in full, that detector's status, with the rule and limitations in
+top control strip; each chip carries its type's count and, when the detectors
+it counts did not run in full, their status (partial when they disagree, as CTR
+gaps counts both CTR-gap and low-CTR signals), with each rule and limitation in
 an info hint beside the chip. Below, a summary line (signal count, window,
 latent demand) leads one flat table, a row
 per signal in priority order: its query, its landing page beneath, and a signal

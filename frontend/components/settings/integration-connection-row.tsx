@@ -1,12 +1,12 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import type { LucideIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { BackfillHistory } from '@/components/settings/backfill-progress';
 import { PROVIDER_META, type GrantModel } from '@/components/settings/grant-model';
-import { useRefreshAfterMapping } from '@/components/integrations/data-sources';
+import { useRefreshImportedReads } from '@/components/integrations/data-sources';
 import { useProjectContext } from '@/lib/project/project-context';
 import { PropertyPicker, useActiveMapping } from '@/components/settings/property-picker';
 import { Badge } from '@/components/ui/badge';
@@ -326,10 +326,9 @@ export function ConnectionRow({
   connection,
   grant,
 }: Readonly<{ connection: IntegrationConnection; grant: GrantModel }>) {
-  const queryClient = useQueryClient();
   const [testState, setTestState] = useState<{ ok: boolean; message: string } | null>(null);
   const { activeProject } = useProjectContext();
-  const refreshAfterMapping = useRefreshAfterMapping();
+  const refreshImportedReads = useRefreshImportedReads();
   const mapping = useActiveMapping(
     connection.workspace_id,
     connection.id,
@@ -357,7 +356,7 @@ export function ConnectionRow({
     },
     onError: (error) => setTestState({ ok: false, message: humanizeApiError(error).message }),
   });
-  // The terminal sync poll invalidates integrations; enqueueing alone persists no projection.
+  // The terminal sync poll refreshes every imported read; enqueueing alone persists no projection.
   // react-doctor-disable-next-line
   const syncMutation = useMutation({
     // Name the project: a connection serving several projects needs it.
@@ -390,10 +389,8 @@ export function ConnectionRow({
   const runTerminal = activeRun !== null && !runInFlight;
 
   useEffect(() => {
-    if (runTerminal) {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.integrations.all });
-    }
-  }, [queryClient, runTerminal]);
+    if (runTerminal) void refreshImportedReads();
+  }, [refreshImportedReads, runTerminal]);
 
   // Stops importing this property into the project; imported data stays.
   const removeMutation = useMutation({
@@ -402,7 +399,7 @@ export function ConnectionRow({
       if (mapping)
         await integrationsApi.deleteMapping(mapping.id, { workspaceId: connection.workspace_id });
     },
-    onSuccess: () => refreshAfterMapping(),
+    onSuccess: () => refreshImportedReads(),
   });
   const busy = testMutation.isPending || syncMutation.isPending || removeMutation.isPending;
   const hasProperty = mapping !== null;
