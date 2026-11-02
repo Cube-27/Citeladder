@@ -221,7 +221,11 @@ content pane. In-place refresh retains data with scoped progress rather than
 collapsing the surface. Pointer or keyboard intent on a destination starts its
 route chunk and warms its primary read under the destination's exact query key;
 Overview warms its command center and layout together, then the reads of the
-widgets that layout names. A read whose 404 means "nothing measured yet" (the
+widgets that layout names. Command Palette warms the destination of its
+highlighted row the same way. A prefetcher that files one read's answer under
+another key (Website and Issues seed the crawl-keyed page from the
+project-scoped newest-crawl read) still reads it through its own cache key, so
+repeated intent joins one request. A read whose 404 means "nothing measured yet" (the
 Visibility projection's `visibility_not_measured`, the latest Search Demand
 snapshot) caches that answer as `null` rather than as an error, so a warmed
 answer is not re-asked on mount. Metrics still being written
@@ -269,7 +273,10 @@ filter/pagination changes only within the same owning project/crawl. A
 cursor-paged table reads through `useCursorTableQuery`
 (`lib/table/use-cursor-table-query.ts`): it owns the cursor stack, keeps the
 previous page only within the same workspace and project, and returns the `DataTable` state, busy and
-pager props, so screens do not rebuild them.
+pager props, so screens do not rebuild them. Its key therefore holds the
+workspace; a read waiting on a prerequisite passes `enabled`, and a persisted
+exact count passes `total` so the pager and a full page are reserved from the
+first frame.
 
 Typed shareable tabs, filters, cursors and selected IDs belong to
 lib/navigation/url-state.ts, with explicit push/replace semantics. Component

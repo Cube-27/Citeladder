@@ -20,7 +20,9 @@ export function InsightStrip({
     enabled: !!projectId && !!workspaceId,
   });
   const data = query.isError ? undefined : query.data;
-  if (data && !data.patterns.length && !data.coverage.notice) return null;
+  // The card keeps its slot when nothing was observed: dropping it after the
+  // loading line would pull the Overview content up under the reader.
+  const nothingObserved = data !== undefined && !data.patterns.length && !data.coverage.notice;
   return (
     <Card>
       <CardHeader>
@@ -32,6 +34,9 @@ export function InsightStrip({
         ) : null}
         {query.isLoading ? (
           <p className="type-body text-secondary">Loading persisted insights…</p>
+        ) : null}
+        {nothingObserved ? (
+          <p className="type-body text-secondary">No patterns were observed in this window.</p>
         ) : null}
         {data?.coverage.notice ? <Alert tone="info">{data.coverage.notice}</Alert> : null}
         {data ? (

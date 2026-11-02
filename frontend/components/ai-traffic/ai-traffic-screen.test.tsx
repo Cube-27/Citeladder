@@ -248,7 +248,7 @@ describe('AI Traffic state and navigation', () => {
     expect(screen.getByRole('button', { name: 'Upload recognized requests' })).toBeEnabled();
   });
   it.each([null, 'Coverage is incomplete.'])(
-    'retains only meaningful empty insights (%s)',
+    'keeps the insights card in place when nothing was observed (%s)',
     async (notice) => {
       mswServer.use(
         http.get(root + '/ai-traffic/insights', () =>
@@ -268,8 +268,10 @@ describe('AI Traffic state and navigation', () => {
       await waitFor(() =>
         expect(screen.queryByText('Loading persisted insights…')).not.toBeInTheDocument(),
       );
+      // The card holds its slot either way, so the Overview below never jumps up.
+      expect(screen.getByText('Observed patterns')).toBeVisible();
       if (notice) expect(screen.getByText(notice)).toBeVisible();
-      else expect(screen.queryByText('Observed patterns')).not.toBeInTheDocument();
+      else expect(screen.getByText('No patterns were observed in this window.')).toBeVisible();
     },
   );
   it('creates an Amazon CloudFront source with its buffer interval and shows the Firehose endpoint', async () => {

@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
-import { promptsApi } from '@/lib/api/prompts';
+import { promptsQueries } from '@/lib/api/prompts';
 import { providersApi } from '@/lib/api/providers';
 import { useManagedPlan } from '@/lib/billing/entitlement-context';
 import { queryKeys } from '@/lib/api/query-keys';
@@ -118,8 +118,7 @@ export function LaunchDialog({
   const queryClient = useQueryClient();
   const workspaceId = useActiveWorkspaceId();
   const promptSetsQuery = useQuery({
-    queryKey: queryKeys.prompts.sets(projectId),
-    queryFn: ({ signal }) => promptsApi.listPromptSets(projectId, { signal, workspaceId }),
+    ...promptsQueries.sets(workspaceId, projectId),
     enabled: open && workspaceId !== null,
   });
   const { configuredEngines, unverifiedEngines, enginesReady } = useLaunchEngines(

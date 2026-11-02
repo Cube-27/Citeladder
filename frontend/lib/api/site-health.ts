@@ -112,6 +112,7 @@ export type PagesParams = {
   /** Ordering. Part of the cursor fingerprint, so changing it resets paging. */
   sort?: PagesSort;
 };
+type ChangesPageRequest = Parameters<typeof queryKeys.siteHealth.changes>[2];
 export type IssuesParams = {
   cursor?: string;
   limit?: number;
@@ -357,25 +358,18 @@ export const siteHealthQueries = {
       queryKey: queryKeys.siteHealth.changesSummary(projectId),
       queryFn: ({ signal }) => siteHealthApi.getChangesSummary(projectId, { signal, workspaceId }),
     }),
-  changes: (
-    workspaceId: string,
-    projectId: string,
-    crawlAId?: string,
-    crawlBId?: string,
-    cursor?: string,
-    limit?: number,
-  ) =>
+  /** One page of a compared pair's changes; the summary names the pair. */
+  changes: (workspaceId: string, projectId: string, page: ChangesPageRequest) =>
     queryOptions({
-      queryKey: queryKeys.siteHealth.changes(projectId, crawlAId, crawlBId, cursor, limit),
+      queryKey: queryKeys.siteHealth.changes(workspaceId, projectId, page),
       queryFn: ({ signal }) => {
+        const { crawlAId, crawlBId, cursor, limit } = page;
         if (!crawlAId || !crawlBId) throw new Error('A persisted crawl pair is required');
         return siteHealthApi.getChanges(projectId, crawlAId, crawlBId, cursor, limit, {
           signal,
           workspaceId,
         });
       },
-      placeholderData: (previousData, previousQuery) =>
-        retainPreviousDataForScope(projectId, previousData, previousQuery),
     }),
   crawls: (workspaceId: string, params: CrawlListParams) =>
     queryOptions({
@@ -394,7 +388,7 @@ export const siteHealthQueries = {
     }),
   inventory: (workspaceId: string, crawlId: string, params?: InventoryParams) =>
     queryOptions({
-      queryKey: queryKeys.siteHealth.inventory(crawlId, {
+      queryKey: queryKeys.siteHealth.inventory(crawlId, workspaceId, {
         cursor: params?.cursor ?? null,
         limit: params?.limit ?? null,
         query: params?.query ?? null,
@@ -413,7 +407,7 @@ export const siteHealthQueries = {
     }),
   pages: (workspaceId: string, crawlId: string, params?: PagesParams) =>
     queryOptions({
-      queryKey: queryKeys.siteHealth.pages(crawlId, {
+      queryKey: queryKeys.siteHealth.pages(crawlId, workspaceId, {
         cursor: params?.cursor ?? null,
         limit: params?.limit ?? null,
         status: params?.status ?? null,
@@ -471,7 +465,7 @@ export const siteHealthQueries = {
     params?: IssueHistoryParams,
   ) =>
     queryOptions({
-      queryKey: queryKeys.siteHealth.issueHistory(crawlId, siteUrlId, {
+      queryKey: queryKeys.siteHealth.issueHistory(crawlId, siteUrlId, workspaceId, {
         cursor: params?.cursor ?? null,
         limit: params?.limit ?? null,
       }),

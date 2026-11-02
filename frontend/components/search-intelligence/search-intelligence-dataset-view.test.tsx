@@ -303,21 +303,21 @@ it('uses shared pagination and resets its cursor when sorting or changing rows p
   expect(requests.at(-1)?.has('cursor')).toBe(false);
 });
 
-it('hides a previous page while a different sort is pending', async () => {
+it('keeps the rows and the pager on screen while the next page loads', async () => {
   mswServer.use(
     http.get(
       `/api/v1/projects/${project.id}/search-intelligence/datasets/${dataset.id}/rows`,
       async ({ request }) => {
-        const sorted = new URL(request.url).searchParams.get('sort') === 'keyword';
-        if (sorted) await delay(500);
+        const next = new URL(request.url).searchParams.has('cursor');
+        if (next) await delay(500);
         return HttpResponse.json({
           dataset,
           rows: [
-            sorted
-              ? row('55555555-5555-4555-8555-555555555555', 'Sorted keyword')
+            next
+              ? row('55555555-5555-4555-8555-555555555555', 'Later keyword')
               : row('44444444-4444-4444-8444-444444444444', 'First keyword'),
           ],
-          next_cursor: null,
+          next_cursor: next ? null : 'page-2',
         });
       },
     ),
@@ -326,9 +326,37 @@ it('hides a previous page while a different sort is pending', async () => {
     projectSelection: testProjectSelection({ activeProject: project, activeProjectId: project.id }),
   });
   expect(await screen.findByText('First keyword')).toBeInTheDocument();
-  await userEvent.click(screen.getByRole('button', { name: 'Keyword' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Next page' }));
+  // The previous page stays behind the busy bar, and the pager stays put.
+  expect(screen.getByText('First keyword')).toBeInTheDocument();
+  expect(screen.getByRole('region', { name: 'Ranking keywords' })).toHaveAttribute(
+    'aria-busy',
+    'true',
+  );
+  expect(screen.getByRole('button', { name: 'Previous page' })).toBeInTheDocument();
+  expect(await screen.findByText('Later keyword')).toBeInTheDocument();
   expect(screen.queryByText('First keyword')).not.toBeInTheDocument();
-  expect(await screen.findByText('Sorted keyword')).toBeInTheDocument();
+});
+
+it('draws the first load inside the table, under its header', async () => {
+  mswServer.use(
+    http.get(
+      `/api/v1/projects/${project.id}/search-intelligence/datasets/${dataset.id}/rows`,
+      async () => {
+        await delay('infinite');
+        return HttpResponse.json({});
+      },
+    ),
+  );
+  renderWithProviders(<SearchIntelligenceDatasetView dataset={dataset} />, {
+    projectSelection: testProjectSelection({ activeProject: project, activeProjectId: project.id }),
+  });
+  const table = screen.getByRole('region', { name: 'Ranking keywords' });
+  expect(within(table).getByRole('searchbox', { name: 'Filter saved results' })).toBeVisible();
+  expect(within(table).getByRole('columnheader', { name: 'Keyword' })).toBeVisible();
+  expect(
+    await within(table).findByRole('status', { name: 'Loading saved rows…' }),
+  ).toBeInTheDocument();
 });
 
 it('does not show a previous query page after a sort read fails', async () => {
