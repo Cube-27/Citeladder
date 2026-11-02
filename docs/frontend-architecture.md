@@ -215,6 +215,10 @@ authentication, QueryState loading and recoverable gate notices render in the sh
 content pane. In-place refresh retains data with scoped progress rather than
 collapsing the surface. Pointer or keyboard intent on a destination starts its
 route chunk and warms its primary read under the destination's exact query key.
+A cold load of an address naming only its project starts the same warm from the
+route loader once the project resolves, beside the access, entitlement and Terms
+reads; those gates still decide what renders. No shell provider prefetches
+another screen's reads.
 
 Route matching starts code downloads alongside session bootstrap. Pre-session
 loading uses the neutral shell; authenticated route loading uses QueryState

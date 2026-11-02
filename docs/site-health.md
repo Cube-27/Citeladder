@@ -193,7 +193,9 @@ recorded in `site_facts.sitemap.urls`, the authority for sitemap membership;
 older crawls fall back to `source_kind = sitemap` observations. Each admitted
 URL's first declared `<lastmod>` is kept, as written, in
 `site_facts.sitemap.lastmod` (keyed by the admitted URL); a page's analysis
-reads its own as `sitemap_lastmod`.
+reads its own as `sitemap_lastmod`. Crawl reads (dashboard, crawl and crawl
+list) project neither map: they carry the manifest's size as
+`site_facts.sitemap.url_count`, and page detail reports each page's membership.
 
 **Referrers and failed fetches.** Each discovered URL keeps the pages that
 linked it, first sighting first. The frontier row holds up to
