@@ -7,7 +7,7 @@ import { QueryState } from '@/components/ui/query-state';
 import { policiesApi } from '@/lib/api/policies';
 import { queryKeys } from '@/lib/api/query-keys';
 import { signOutForChangedTerms } from '@/lib/auth/account-transition';
-import { termsChanged } from '@/lib/auth/terms-consent';
+import { revisionChanged, sessionLacksTerms } from '@/lib/auth/terms-consent';
 import { isWorkspaceFreeRoute } from '@/lib/project/bootstrap';
 import { useProjectContext } from '@/lib/project/project-context';
 
@@ -50,6 +50,11 @@ function WorkspacePolicy({
   const accept = useMutation({
     mutationFn: (revision: string) => policiesApi.accept(workspaceId, revision),
     onSuccess: (data) => cache.setQueryData(queryKey, data),
+    // Republished between the read and the record: read the new revision,
+    // which records it (or ends the session if it predates it).
+    onError: (error) => {
+      if (revisionChanged(error)) void query.refetch();
+    },
   });
   const leave = useMutation({ mutationFn: () => signOutForChangedTerms(cache) });
 
@@ -63,7 +68,7 @@ function WorkspacePolicy({
     record(pendingRevision);
   }, [record, pendingRevision]);
 
-  const sessionPredatesTerms = termsChanged(accept.error);
+  const sessionPredatesTerms = sessionLacksTerms(accept.error);
   const { mutate: signOut } = leave;
   // Once: leaving clears the cache, and the re-read must not sign out again.
   const leaving = useRef(false);
@@ -74,7 +79,9 @@ function WorkspacePolicy({
   }, [signOut, sessionPredatesTerms]);
 
   if (query.data?.accepted_at) return children;
-  const failure = query.error ?? leave.error ?? (sessionPredatesTerms ? null : accept.error);
+  // Leaving, or re-reading a republished revision, is still loading.
+  const settling = sessionPredatesTerms || revisionChanged(accept.error);
+  const failure = query.error ?? leave.error ?? (settling ? null : accept.error);
   if (!failure) return <ShellFallback />;
   const retry = () => {
     if (query.error) void query.refetch();

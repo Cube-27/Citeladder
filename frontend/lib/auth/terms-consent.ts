@@ -18,16 +18,34 @@ export function usePublishedTerms(enabled = true) {
     staleTime: Number.POSITIVE_INFINITY,
     enabled,
   });
-  return { revision: terms.data?.terms_revision, error: terms.error };
+  const { refetch } = terms;
+  return {
+    revision: terms.data?.terms_revision,
+    error: terms.error,
+    /**
+     * Pass a refused request through: when the Terms were republished after
+     * this form loaded, read the new revision so the next attempt carries it.
+     */
+    refreshOnRevisionChange: (error: unknown) => {
+      if (isApiCode(error, 'policy_revision_changed')) void refetch();
+      throw error;
+    },
+  };
 }
 
 /**
  * Whether the server refused a workspace step because this session holds no
  * Terms decision on the published revision (the Terms changed after sign-in).
  */
-export function termsChanged(error: unknown): boolean {
-  return (
-    error instanceof ApiError &&
-    (error.code === 'terms_decision_required' || error.code === 'policy_revision_changed')
-  );
+export function sessionLacksTerms(error: unknown): boolean {
+  return isApiCode(error, 'terms_decision_required');
+}
+
+/** Whether a request named a Terms revision the server no longer publishes. */
+export function revisionChanged(error: unknown): boolean {
+  return isApiCode(error, 'policy_revision_changed');
+}
+
+function isApiCode(error: unknown, code: string): boolean {
+  return error instanceof ApiError && error.code === code;
 }

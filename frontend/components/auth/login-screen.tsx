@@ -47,7 +47,8 @@ export function LoginScreen({
   });
   const terms = usePublishedTerms();
   const { mutation, submit } = useAuthMutation(
-    (values: LoginFormValues & { termsRevision: string }) => authApi.login(values),
+    (values: LoginFormValues & { termsRevision: string }) =>
+      authApi.login(values).catch(terms.refreshOnRevisionChange),
     returnTo,
   );
   const signIn = (values: LoginFormValues) =>

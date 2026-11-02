@@ -65,6 +65,22 @@ it('ends a session that predates the published Terms and sends the person to sig
   expect(screen.queryByRole('checkbox')).toBeNull();
 });
 
+it('records the republished revision when the Terms change between the read and the record', async () => {
+  vi.mocked(policiesApi.status)
+    .mockResolvedValueOnce(UNACCEPTED)
+    .mockResolvedValueOnce({ ...UNACCEPTED, terms_revision: 'published-2' });
+  vi.mocked(policiesApi.accept).mockRejectedValueOnce(
+    new ApiError('The Terms changed.', 409, '', undefined, { code: 'policy_revision_changed' }),
+  );
+  renderGate();
+  expect(await screen.findByText('Workspace content')).toBeInTheDocument();
+  expect(vi.mocked(policiesApi.accept).mock.calls).toEqual([
+    ['workspace-a', 'published-1'],
+    ['workspace-a', 'published-2'],
+  ]);
+  expect(authApi.logout).not.toHaveBeenCalled();
+});
+
 it('keeps product content behind a retryable error when recording fails for another reason', async () => {
   vi.mocked(policiesApi.accept).mockRejectedValueOnce(new ApiError('Server error', 500, ''));
   const user = userEvent.setup();

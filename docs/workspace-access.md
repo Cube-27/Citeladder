@@ -115,9 +115,12 @@ without that account decision on the revision they name, so the request flag
 alone is never consent. The shell's policy gate records the acceptance for a
 workspace the person opens without one (one they joined) behind the shell's
 loading frame. A session older than the published revision holds no decision
-on it: the gate and workspace setup end that session and send the person to
-sign in with a notice (`/login?error=terms_changed`), where the checkbox takes
-the decision. The chooser and workspace setup never wait on the selected
+on it: the gate and workspace setup sign the person out (which ends every
+session of theirs, all of which predate the revision) and send them to sign in
+with a notice (`/login?error=terms_changed`), where the checkbox takes the
+decision. A revision republished between the gate's read and its record is
+re-read, not treated as a missing decision; a sign-in or sign-up form that names
+a superseded revision is refused (409) and re-reads the published one. The chooser and workspace setup never wait on the selected
 workspace's Terms or access. PostgreSQL stores
 actor, workspace, immutable revision, context and timestamp; repeated acceptance
 of one revision is idempotent. Updating the approved Terms revision requires

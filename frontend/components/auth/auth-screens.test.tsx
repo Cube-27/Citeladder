@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
 import { authApi } from '@/lib/api/auth';
+import { ApiError } from '@/lib/api/errors';
 import { renderWithProviders } from '@/test/render';
 
 import { LoginScreen } from './login-screen';
@@ -107,6 +108,35 @@ describe('account entry', () => {
         email: 'reader@example.com',
         password: 'correct horse',
         termsRevision: '2026-09-24',
+      }),
+    );
+  });
+
+  it('reads the republished Terms revision after a sign-in names a stale one', async () => {
+    vi.mocked(authApi.policies)
+      .mockResolvedValueOnce(PUBLISHED)
+      .mockResolvedValue({ ...PUBLISHED, terms_revision: '2026-11-02' });
+    const login = vi
+      .spyOn(authApi, 'login')
+      .mockRejectedValueOnce(
+        new ApiError('The Terms changed.', 409, '', undefined, { code: 'policy_revision_changed' }),
+      )
+      .mockReturnValue(new Promise(() => {}));
+    const user = userEvent.setup();
+    renderWithProviders(<LoginScreen demoMode={false} signupOpen searchParams={noParams} />);
+
+    await user.type(screen.getByLabelText(/^Email address/), 'reader@example.com');
+    await user.type(screen.getByLabelText(/^Password/), 'correct horse');
+    await user.click(await screen.findByRole('checkbox', TERMS_BOX));
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('The Terms changed.');
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+
+    await waitFor(() =>
+      expect(login).toHaveBeenLastCalledWith({
+        email: 'reader@example.com',
+        password: 'correct horse',
+        termsRevision: '2026-11-02',
       }),
     );
   });

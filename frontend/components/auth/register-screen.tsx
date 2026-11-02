@@ -48,12 +48,14 @@ export function RegisterScreen({
   });
   const mutation = useMutation({
     mutationFn: (values: RegisterFormValues & { termsRevision: string }) =>
-      authApi.register({
-        email: values.email,
-        password: values.password,
-        termsRevision: values.termsRevision,
-        returnTo,
-      }),
+      authApi
+        .register({
+          email: values.email,
+          password: values.password,
+          termsRevision: values.termsRevision,
+          returnTo,
+        })
+        .catch(terms.refreshOnRevisionChange),
     onSuccess: () => replace(withAuthReturnPath('/login?registered=1', returnTo)),
   });
   const submit = (values: RegisterFormValues) =>
