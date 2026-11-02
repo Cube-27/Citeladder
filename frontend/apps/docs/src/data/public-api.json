@@ -248,16 +248,6 @@
                   "additionalProperties": false
                 }
               },
-              "families": {
-                "type": "object",
-                "propertyNames": {
-                  "type": "string"
-                },
-                "additionalProperties": {
-                  "type": "string",
-                  "enum": ["observed", "no_finding", "unavailable"]
-                }
-              },
               "approach": {
                 "type": "string"
               },
