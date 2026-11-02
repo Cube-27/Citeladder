@@ -9,6 +9,7 @@ import type { SiteHealthDashboard } from '@/lib/api/types';
 import { queryKeys } from '@/lib/api/query-keys';
 import {
   CRAWL,
+  ENTITLEMENT_PATH,
   PROJECT,
   crawl,
   entitlement,
@@ -199,7 +200,7 @@ describe('SiteHealthScreen — loading failures', () => {
     let entitlementAvailable = true;
     mockRoutes();
     mswServer.use(
-      http.get('/api/v1/entitlements', () =>
+      http.get(ENTITLEMENT_PATH, () =>
         entitlementAvailable
           ? HttpResponse.json(entitlement)
           : HttpResponse.json(
@@ -214,7 +215,7 @@ describe('SiteHealthScreen — loading failures', () => {
 
     entitlementAvailable = false;
     void queryClient.invalidateQueries({
-      queryKey: queryKeys.siteHealth.entitlements(project.workspace_id),
+      queryKey: queryKeys.billing.workspaceEntitlement(project.workspace_id),
     });
 
     expect(await screen.findByText('Entitlement refresh failed')).toBeVisible();
@@ -225,7 +226,7 @@ describe('SiteHealthScreen — loading failures', () => {
   it('shows an error instead of an endless skeleton when entitlement loading fails', async () => {
     mockRoutes();
     mswServer.use(
-      http.get('/api/v1/entitlements', () =>
+      http.get(ENTITLEMENT_PATH, () =>
         HttpResponse.json({ error: { message: 'Access unavailable' } }, { status: 403 }),
       ),
     );
@@ -239,8 +240,8 @@ describe('SiteHealthScreen — loading failures', () => {
   it('shows a recoverable warning when entitlement resolution fails closed', async () => {
     mockRoutes();
     mswServer.use(
-      http.get('/api/v1/entitlements', () =>
-        HttpResponse.json({ ...entitlement, resolver_status: 'entitlement_unresolved' }),
+      http.get(ENTITLEMENT_PATH, () =>
+        HttpResponse.json({ ...entitlement, status: 'entitlement_unresolved' }),
       ),
     );
 
@@ -487,7 +488,7 @@ describe('SiteHealthScreen — canonical single-screen flow (regression)', () =>
 
     mswServer.use(
       http.get('/api/v1/projects', () => HttpResponse.json([project])),
-      http.get('/api/v1/entitlements', () => HttpResponse.json(entitlement)),
+      http.get(ENTITLEMENT_PATH, () => HttpResponse.json(entitlement)),
       http.get(`/api/v1/projects/${PROJECT}/site-health`, () =>
         HttpResponse.json({
           project_id: PROJECT,

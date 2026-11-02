@@ -101,6 +101,7 @@ function entitlement() {
     credential_mode: 'byok',
     capabilities: [],
     occupancy: [{ key: 'project_slots', allowance: 1, consumed: 1 - remaining, remaining }],
+    site_health: { sample_url_limit: 10, count_disclosure: false },
   };
 }
 

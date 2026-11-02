@@ -24,6 +24,7 @@ import { httpErrorStatus } from '@/lib/api/errors';
 import { warmQuery } from '@/lib/api/query-client';
 import { siteHealthQueries } from '@/lib/api/site-health';
 import { internalLinksQuery } from '@/lib/api/site-health-internal-links';
+import type { SiteHealthEntitlement } from '@/lib/api/types';
 import { useProjectContext } from '@/lib/project/project-context';
 import { useSiteHealthScreen } from '@/lib/site-health/use-site-health-screen';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
@@ -115,7 +116,7 @@ function SiteHealthContent({
               projectId={projectId!}
               workspaceId={workspaceId!}
               screen={screen}
-              entitlement={entitlementQuery.data!}
+              entitlement={entitlementQuery.data!.site_health}
               mutationsAllowed={mutationsAllowed}
             />
           </Stack>
@@ -140,7 +141,7 @@ function projectBlockingState(
   return screenBlockingState({
     entitlement: screen.entitlementQuery,
     dashboard: screen.dashboardQuery,
-    resolverStatus: screen.entitlementQuery.data?.resolver_status,
+    resolverStatus: screen.entitlementQuery.data?.status,
     phase: screen.phase,
   });
 }
@@ -286,7 +287,7 @@ function AnalysisPanel({
   projectId: string;
   workspaceId: string;
   screen: ReturnType<typeof useSiteHealthScreen>;
-  entitlement: NonNullable<ReturnType<typeof useSiteHealthScreen>['entitlementQuery']['data']>;
+  entitlement: SiteHealthEntitlement;
   mutationsAllowed: boolean;
 }>) {
   if (tab === 'pages')

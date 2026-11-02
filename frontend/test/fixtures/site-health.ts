@@ -13,6 +13,7 @@
  * Reach for an override rather than a second builder: a divergent default here
  * is a drift the type checker cannot catch.
  */
+import type { WorkspaceEntitlement } from '@/lib/api/billing';
 import type { PageSummary, SiteCrawl, SiteHealthEntitlement } from '@/lib/api/types';
 
 export const SITE_HEALTH_UUID = '11111111-1111-4111-8111-111111111111';
@@ -100,21 +101,27 @@ export function makeSiteFacts(overrides: Partial<SiteFactsFixture> = {}): SiteFa
   };
 }
 
+/** A workspace's Site Health runtime: its sample size and count disclosure. */
 export function makeSiteHealthEntitlement(
   overrides: Partial<SiteHealthEntitlement> = {},
 ): SiteHealthEntitlement {
+  return { sample_url_limit: 10, count_disclosure: true, ...overrides };
+}
+
+/** A resolved workspace entitlement carrying that Site Health runtime. */
+export function makeWorkspaceEntitlement(
+  overrides: Partial<WorkspaceEntitlement> = {},
+): WorkspaceEntitlement {
   return {
     workspace_id: SITE_HEALTH_WORKSPACE,
-    access_mode: 'full',
-    sample_url_limit: 10,
-    monitored_url_limit: 50,
-    count_disclosure: true,
-    resolver_status: 'resolved',
+    status: 'resolved',
     registry_revision: 'reg-1',
     entitlement_lifecycle_version: 1,
     valid_until: null,
-    contributing_grant_ids: [],
-    advanced_controls_enabled: false,
+    credential_mode: 'byok',
+    capabilities: [],
+    occupancy: [],
+    site_health: makeSiteHealthEntitlement(),
     ...overrides,
   };
 }

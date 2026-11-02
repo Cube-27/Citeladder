@@ -177,6 +177,13 @@ export const workspaceEntitlementSchema = responseObject({
       remaining: z.number().int(),
     }),
   ),
+  // The Site Health runtime the same grants resolve to. An unresolved account
+  // gets the sample runtime: a server-selected sample and no count disclosure.
+  // `count_disclosure` gates every discovered-count disclosure.
+  site_health: responseObject({
+    sample_url_limit: z.number().int().nonnegative(),
+    count_disclosure: z.boolean(),
+  }),
 });
 
 export const noCardOfferSchema = responseObject({

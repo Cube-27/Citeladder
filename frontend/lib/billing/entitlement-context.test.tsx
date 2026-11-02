@@ -31,6 +31,7 @@ function entitlement(capabilities: readonly unknown[]) {
     credential_mode: 'byok',
     capabilities,
     occupancy: [],
+    site_health: { sample_url_limit: 10, count_disclosure: false },
   };
 }
 

@@ -3,10 +3,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 
-import { billingApi, type BillingUsage, type WorkspaceEntitlement } from '@/lib/api/billing';
-import { queryKeys } from '@/lib/api/query-keys';
+import { billingQueries, type BillingUsage, type WorkspaceEntitlement } from '@/lib/api/billing';
 import { AGENT_CAPABILITY } from '@/lib/config/billing';
-import { getBootstrapReadTimeoutMs } from '@/lib/config/operational';
 import { useProjectContext } from '@/lib/project/project-context';
 
 type EntitlementContextValue = {
@@ -61,21 +59,11 @@ export function EntitlementProvider({ children }: Readonly<{ children: ReactNode
   // cover what the shell actually needs.
   const canReadBilling = activeWorkspace?.capabilities.includes('manage_billing') ?? false;
   const entitlementQuery = useQuery({
-    queryKey: queryKeys.billing.workspaceEntitlement(workspaceId),
-    // The empty-workspace gate blocks on this read; it carries the bounded
-    // bootstrap timeout so a stall reaches the retry notice in seconds. The
-    // usage read below is not a gate input and keeps the ordinary default.
-    queryFn: ({ signal }) =>
-      billingApi.workspaceEntitlement(String(workspaceId), {
-        signal,
-        workspaceId,
-        timeoutMs: getBootstrapReadTimeoutMs(),
-      }),
+    ...billingQueries.workspaceEntitlement(workspaceId ?? ''),
     enabled: workspaceId !== null,
   });
   const usageQuery = useQuery({
-    queryKey: queryKeys.billing.usage(workspaceId ?? 'unresolved'),
-    queryFn: ({ signal }) => billingApi.usage({ signal, workspaceId }),
+    ...billingQueries.usage(workspaceId ?? ''),
     enabled: workspaceId !== null && canReadBilling,
   });
 

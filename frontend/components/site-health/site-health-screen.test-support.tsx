@@ -9,7 +9,7 @@ import {
   EMPTY_WEB_FUNDAMENTALS,
   UNCHANGED_COHORT_COMPOSITION,
 } from '@/test/site-health-fixtures';
-import { makeSiteCrawl, makeSiteHealthEntitlement } from '@/test/fixtures/site-health';
+import { makeSiteCrawl, makeWorkspaceEntitlement } from '@/test/fixtures/site-health';
 import { ProjectProvider } from '@/lib/project/project-context';
 import type { SiteHealthDashboard } from '@/lib/api/types';
 import { SiteHealthScreen } from './site-health-screen';
@@ -24,7 +24,8 @@ const CRAWL = '22222222-2222-4222-8222-222222222222';
 
 const project = makeProject({ id: PROJECT, workspace_id: WORKSPACE });
 
-const entitlement = makeSiteHealthEntitlement({ workspace_id: WORKSPACE });
+const entitlement = makeWorkspaceEntitlement({ workspace_id: WORKSPACE });
+const ENTITLEMENT_PATH = `/api/v1/workspaces/${WORKSPACE}/entitlements`;
 
 /** A crawl that discovered its three pages but failed the analysis pass. */
 function crawl(overrides: Record<string, unknown> = {}) {
@@ -155,7 +156,7 @@ function mockRoutes(
     http.post('/api/v1/site-crawls/:id/run', ({ params }) =>
       HttpResponse.json(crawl({ ...crawlOverrides, id: params.id })),
     ),
-    http.get('/api/v1/entitlements', () => HttpResponse.json(entitlement)),
+    http.get(ENTITLEMENT_PATH, () => HttpResponse.json(entitlement)),
     http.get(`/api/v1/projects/${PROJECT}/site-health`, () =>
       HttpResponse.json({
         project_id: PROJECT,
@@ -206,6 +207,7 @@ afterAll(() => mswServer.close());
 
 export {
   CRAWL,
+  ENTITLEMENT_PATH,
   PROJECT,
   crawl,
   entitlement,

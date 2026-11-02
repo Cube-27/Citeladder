@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { billingQueries } from '@/lib/api/billing';
 import { queryKeys } from '@/lib/api/query-keys';
 import { TABLE_DEFAULT_PAGE_SIZE } from '@/lib/config/tables';
 import {
@@ -88,7 +89,12 @@ export function useSiteHealthScreen(projectId: string | null) {
   const [exportError, setExportError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
 
-  const entitlementQuery = useQuery(siteHealthQueries.entitlements(workspaceId));
+  // The shell's own workspace entitlement: it resolves the Site Health runtime
+  // from the same grants, and the route loader has already asked for it.
+  const entitlementQuery = useQuery({
+    ...billingQueries.workspaceEntitlement(workspaceId ?? ''),
+    enabled: workspaceId !== null,
+  });
 
   const dashboardQuery = useQuery({
     ...siteHealthQueries.dashboard(requestScope.workspaceId, requestScope.projectId),

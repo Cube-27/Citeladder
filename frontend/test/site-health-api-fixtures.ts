@@ -12,20 +12,6 @@
 export const SITE_HEALTH_UUID = '11111111-1111-4111-8111-111111111111';
 export const SITE_HEALTH_UUID_2 = '22222222-2222-4222-8222-222222222222';
 
-export const SITE_HEALTH_ENTITLEMENT = {
-  workspace_id: SITE_HEALTH_UUID,
-  access_mode: 'full' as const,
-  sample_url_limit: 10,
-  monitored_url_limit: 50,
-  count_disclosure: true,
-  resolver_status: 'resolved' as const,
-  registry_revision: 'registry-v8',
-  entitlement_lifecycle_version: 3,
-  valid_until: null,
-  contributing_grant_ids: [SITE_HEALTH_UUID_2],
-  advanced_controls_enabled: false,
-};
-
 export const SITE_HEALTH_SITE_FACTS = {
   robots: {
     observed_at: '2026-10-03T00:00:00Z',

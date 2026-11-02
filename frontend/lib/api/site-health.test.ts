@@ -12,7 +12,6 @@ import {
   rerunPageResponseSchema,
   robotsFactsSchema,
   siteCrawlSchema,
-  siteHealthEntitlementSchema,
   siteHealthErrorSchema,
   siteIssueSchema,
   urlPreviewResponseSchema,
@@ -22,7 +21,6 @@ import { siteHealthApi } from './site-health';
 import { mswServer } from '@/test/msw-server';
 import {
   SITE_HEALTH_CRAWL as crawl,
-  SITE_HEALTH_ENTITLEMENT as entitlement,
   SITE_HEALTH_SITE_FACTS as siteFacts,
   SITE_HEALTH_UUID as UUID,
   SITE_HEALTH_UUID_2 as UUID2,
@@ -52,62 +50,6 @@ const inventoryRow = {
   last_audited: null,
   page_kind: null,
 };
-
-describe('siteHealthEntitlementSchema (quota authority)', () => {
-  it('accepts a valid entitlement and exposes monitored_url_limit', () => {
-    const parsed = strictValidate(siteHealthEntitlementSchema, entitlement, 'ent');
-    expect(parsed.monitored_url_limit).toBe(50);
-  });
-
-  it('strips an additive key (tolerant-on-unknown)', () => {
-    const parsed = strictValidate(
-      siteHealthEntitlementSchema,
-      { ...entitlement, hardcoded_50: true },
-      'ent',
-    );
-    expect('hardcoded_50' in parsed).toBe(false);
-  });
-
-  it('rejects a missing required field', () => {
-    const { monitored_url_limit: _omit, ...rest } = entitlement;
-    expect(() => strictValidate(siteHealthEntitlementSchema, rest, 'ent')).toThrow();
-  });
-
-  // Site Health carries NO commercial vocabulary. A retired plan-shaped
-  // payload must fail rather than parse into a neutral entitlement.
-  it('rejects a retired plan-shaped entitlement', () => {
-    const { access_mode: _drop, ...planShaped } = entitlement;
-    expect(() =>
-      strictValidate(siteHealthEntitlementSchema, { ...planShaped, plan_key: 'starter' }, 'ent'),
-    ).toThrow();
-  });
-
-  it('rejects an unknown resolver status', () => {
-    expect(() =>
-      strictValidate(
-        siteHealthEntitlementSchema,
-        { ...entitlement, resolver_status: 'trial' },
-        'ent',
-      ),
-    ).toThrow();
-  });
-
-  it('accepts the backend fail-closed access mode', () => {
-    const parsed = strictValidate(
-      siteHealthEntitlementSchema,
-      {
-        ...entitlement,
-        access_mode: 'unresolved',
-        monitored_url_limit: 0,
-        count_disclosure: false,
-        resolver_status: 'entitlement_unresolved',
-        contributing_grant_ids: [],
-      },
-      'ent',
-    );
-    expect(parsed.access_mode).toBe('unresolved');
-  });
-});
 
 describe('crawl admission and URL preview', () => {
   beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
@@ -622,20 +564,6 @@ describe('siteIssueSchema + siteHealthErrorSchema', () => {
 });
 
 describe('query key isolation (project / crawl / filter)', () => {
-  it('isolates entitlements from everything else', () => {
-    expect(queryKeys.siteHealth.entitlements(null)).toEqual([
-      'site-health',
-      'entitlements',
-      'default',
-    ]);
-  });
-
-  it('isolates entitlements by workspace id', () => {
-    expect(queryKeys.siteHealth.entitlements('ws-1')).not.toEqual(
-      queryKeys.siteHealth.entitlements('ws-2'),
-    );
-  });
-
   it('isolates inventory by crawl', () => {
     expect(queryKeys.siteHealth.inventory('c1', 'ws-1')).not.toEqual(
       queryKeys.siteHealth.inventory('c2', 'ws-1'),

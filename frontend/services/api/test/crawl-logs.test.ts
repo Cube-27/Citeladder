@@ -22,7 +22,7 @@ import { pagesRead } from '../src/crawl-logs/pages.ts';
 import { dispatchTool } from '../src/mcp/tools.ts';
 import { verifyBot } from '../src/crawl-logs/identity.ts';
 import { sourceList } from '../src/crawl-logs/source-reads.ts';
-import { entitlementView } from '../src/site-health/reads/runtime.ts';
+import { hasDevelopmentWorkspace } from '../src/auth/development-access.ts';
 import { createCrawl } from '../src/site-health/planner.ts';
 import {
   logLines,
@@ -115,9 +115,7 @@ describe('bounded formats', () => {
         .set({ email, role: 'admin' })
         .where('id', '=', tenant.userId)
         .execute();
-      expect((await entitlementView(db, tenant.workspaceId, now)).advanced_controls_enabled).toBe(
-        true,
-      );
+      expect(await hasDevelopmentWorkspace(db, tenant.workspaceId)).toBe(true);
       await transfer
         .selectFrom('workspaces')
         .select('id')

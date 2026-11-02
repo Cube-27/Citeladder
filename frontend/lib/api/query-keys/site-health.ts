@@ -23,12 +23,6 @@ export const siteHealthKeys = {
   internalLinks: (workspaceId: string, projectId: string, analysisId?: string) =>
     ['site-health', 'internal-links', workspaceId, projectId, analysisId ?? 'latest'] as const,
   all: ['site-health'] as const,
-  // Entitlement data depends on the `X-Workspace-Id` header (F5's active
-  // workspace), so the workspace id must be part of the key — otherwise a
-  // workspace switch would silently serve the previous workspace's cached
-  // plan/quota until an unrelated invalidation happened to evict it.
-  entitlements: (workspaceId: string | null) =>
-    ['site-health', 'entitlements', workspaceId ?? 'default'] as const,
   dashboard: (projectId: string, crawlId?: string) =>
     ['site-health', 'dashboard', projectId, crawlId ?? 'latest'] as const,
   overview: (projectId: string, crawlId?: string) =>

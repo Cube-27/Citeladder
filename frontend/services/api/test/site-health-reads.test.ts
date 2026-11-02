@@ -11,11 +11,11 @@ import {
   siteCrawlEventSchema,
   siteCrawlSchema,
   siteHealthDashboardSchema,
-  siteHealthEntitlementSchema,
   siteHealthOverviewSchema,
   siteIssueDetailSchema,
   siteIssuesPageSchema,
 } from '@citeladder/contracts/site-health';
+import { workspaceEntitlementSchema } from '@citeladder/contracts/billing';
 import { sql } from 'kysely';
 import { afterAll, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
@@ -1294,11 +1294,17 @@ describe('workspace authorization', () => {
   it('resolves an account-less workspace’s entitlement as unresolved', async () => {
     const seed = await fixtures.crawl();
     await db.deleteFrom('billing_accounts').where('workspace_id', '=', seed.workspaceId).execute();
-    expect(await json(seed, '/entitlements', siteHealthEntitlementSchema)).toMatchObject({
-      access_mode: 'unresolved',
-      resolver_status: 'entitlement_unresolved',
-      monitored_url_limit: 0,
-      count_disclosure: false,
+    const entitlement = await json(
+      seed,
+      `/workspaces/${seed.workspaceId}/entitlements`,
+      workspaceEntitlementSchema,
+    );
+    expect({ status: entitlement.status, site_health: entitlement.site_health }).toEqual({
+      status: 'entitlement_unresolved',
+      site_health: {
+        sample_url_limit: 10,
+        count_disclosure: false,
+      },
     });
   });
 });

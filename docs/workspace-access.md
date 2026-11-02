@@ -317,7 +317,11 @@ authorization. Conflicting project/workspace URL parameters are rejected.
 A cold load of a project address asks the remembered workspace's project list
 first; a listed project needs no separate detail read, and any other project is
 still authorized by its own detail read. Every project list seeds the details
-of the projects it returns.
+of the projects it returns. The same round as the session read also asks for
+the addressed or remembered workspace's access, entitlement, Terms status and
+project list, and for the addressed or remembered project's shell and screen
+reads. A project that turns out to belong to another workspace has its
+unanswered reads withdrawn before its own workspace's reads start.
 
 Project lists, provider state, usage and entitlements carry workspace identity
 in both query key and request. Late responses cannot answer for a workspace
