@@ -418,6 +418,39 @@ export async function catalogItems(
   return siteIssuesPageSchema.shape.items.parse(items);
 }
 
+const catalogSourcesSchema = z.array(
+  z.object({
+    group_id: z.string(),
+    issue_ids: z.array(z.string()),
+    evaluation_ids: z.array(z.string()),
+  }),
+);
+type CatalogSources = z.infer<typeof catalogSourcesSchema>;
+
+/**
+ * Each group's exact source rows in the unfiltered catalog: the current
+ * issues it folds and the rule evaluations they came from. The catalog writer
+ * persists them beside the groups; no read returns them.
+ */
+export async function catalogSources(
+  db: Database,
+  crawl: Crawl,
+  findingClass: string,
+): Promise<CatalogSources> {
+  const { rows } = await sql<{ rule_id: string; issue_ids: unknown; evaluation_ids: unknown }>`
+    select i.rule_id, jsonb_agg(i.id order by i.id) as issue_ids,
+      jsonb_agg(distinct i.evaluation_id) as evaluation_ids
+    from site_issues i where ${currentIssues(crawl)} and i.finding_class = ${findingClass}
+    group by i.rule_id order by i.rule_id`.execute(db);
+  return catalogSourcesSchema.parse(
+    rows.map((row) => ({
+      group_id: issueGroupId(crawl.id, row.rule_id, findingClass),
+      issue_ids: row.issue_ids,
+      evaluation_ids: row.evaluation_ids,
+    })),
+  );
+}
+
 const catalogSchema = z.object({
   items: siteIssuesPageSchema.shape.items,
   summary: siteIssuesPageSchema.shape.summary.omit({ monitored_affected_url_count: true }),

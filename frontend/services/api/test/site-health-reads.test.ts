@@ -27,6 +27,7 @@ import { issueDetail } from '../src/site-health/reads/issues.ts';
 import { refreshIssueCurrency } from '../src/site-health/issue-currency.ts';
 import { loadCrawl } from '../src/site-health/reads/crawl.ts';
 import { record } from '../src/db/json.ts';
+import { compareText } from '../src/text-order.ts';
 import { encodeKeysetCursor } from '../src/http/keyset-cursor.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 import { SiteFixtures, type SiteSeed } from './site-health-fixtures.ts';
@@ -656,15 +657,38 @@ describe('issue catalog', () => {
     const catalog = async () =>
       db
         .selectFrom('site_issue_catalogs')
-        .select(['finding_class', 'items', 'summary'])
+        .select(['finding_class', 'items', 'summary', 'sources'])
         .where('crawl_id', '=', seed.crawlId)
         .orderBy('finding_class')
         .execute();
     // Issues the publication has not refreshed yet: nothing is persisted, not a zero catalog.
-    await issue(seed, home, 'technical.indexable', {}, false);
+    const homeEvaluation = await issue(seed, home, 'technical.indexable', {}, false);
     expect(await catalog()).toEqual([]);
     // The currency refresh writes both classes' catalogs in its transaction.
-    await issue(seed, product, 'technical.indexable');
+    const productEvaluation = await issue(seed, product, 'technical.indexable');
+    const evaluations = [homeEvaluation, productEvaluation].sort(compareText);
+    const issueIds = (
+      await db
+        .selectFrom('site_issues')
+        .select('id')
+        .where('evaluation_id', 'in', evaluations)
+        .execute()
+    )
+      .map((row) => row.id)
+      .sort(compareText);
+    // Each group keeps the exact issues and evaluations it folds.
+    expect(
+      Object.fromEntries((await catalog()).map((row) => [row.finding_class, row.sources])),
+    ).toEqual({
+      advisory: [],
+      defect: [
+        {
+          group_id: issueGroupId(seed.crawlId, 'technical.indexable', 'defect'),
+          issue_ids: issueIds,
+          evaluation_ids: evaluations,
+        },
+      ],
+    });
     expect(
       (await catalog()).map((row) => [
         row.finding_class,

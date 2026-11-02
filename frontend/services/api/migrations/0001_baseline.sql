@@ -2881,6 +2881,7 @@ CREATE TABLE public.site_issue_catalogs (
     finding_class character varying(16) NOT NULL,
     items jsonb NOT NULL,
     summary jsonb NOT NULL,
+    sources jsonb NOT NULL,
     analyzer_version character varying(32) NOT NULL,
     rule_catalog_version character varying(32) NOT NULL,
     created_at timestamp with time zone NOT NULL,

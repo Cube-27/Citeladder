@@ -8,11 +8,13 @@
  * retiring analyses) and the site-level architecture findings. Each write
  * replaces the crawl's rows with the groups and summary computed from the
  * current issues, so the read never recomputes them. The issues stay as
- * written and the rows name the crawl and versions they were computed from.
+ * written; each row names the crawl and versions it was computed from, and
+ * `sources` keeps every group's exact issue and evaluation IDs (never served).
  */
 import type { Database } from '../db/database.ts';
 import {
   catalogItems,
+  catalogSources,
   ISSUE_FINDING_CLASSES,
   issueSummary,
   unfilteredIssues,
@@ -26,6 +28,7 @@ export async function persistIssueCatalog(db: Database, crawl: Crawl): Promise<v
     // One transaction connection: the class's two reads, then its write.
     const items = await catalogItems(db, crawl, filters); // NOSONAR -- In order on the writer's connection.
     const summary = await issueSummary(db, crawl, filters); // NOSONAR -- In order on the writer's connection.
+    const sources = await catalogSources(db, crawl, findingClass); // NOSONAR -- In order on the writer's connection.
     await db // NOSONAR -- In order on the writer's connection.
       .insertInto('site_issue_catalogs')
       .values({
@@ -35,6 +38,7 @@ export async function persistIssueCatalog(db: Database, crawl: Crawl): Promise<v
         finding_class: findingClass,
         items: JSON.stringify(items),
         summary: JSON.stringify(summary),
+        sources: JSON.stringify(sources),
         analyzer_version: crawl.analyzer_version,
         rule_catalog_version: crawl.rule_catalog_version,
         created_at: now,
@@ -44,6 +48,7 @@ export async function persistIssueCatalog(db: Database, crawl: Crawl): Promise<v
         conflict.columns(['crawl_id', 'finding_class']).doUpdateSet((eb) => ({
           items: eb.ref('excluded.items'),
           summary: eb.ref('excluded.summary'),
+          sources: eb.ref('excluded.sources'),
           analyzer_version: eb.ref('excluded.analyzer_version'),
           rule_catalog_version: eb.ref('excluded.rule_catalog_version'),
           updated_at: eb.ref('excluded.updated_at'),

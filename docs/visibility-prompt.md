@@ -788,7 +788,10 @@ its like-for-like cells can be matched in. Audit finalization runs that walk in
 its transaction for every requestable cohort, for all engines and for each
 engine the run measured, and persists the baseline, the comparison status and
 the runs passed over (`audit_comparison_baselines`, `visibility/baselines.ts`).
-Visibility's run comparison and Overview's change figures both read that row, so
+Each finalization writes under a per-project transaction lock, once the run
+reads as measured, and then rewrites the rows of the later runs whose walk can
+reach it, so two runs finalizing together still name each other in either
+commit order. Visibility's run comparison and Overview's change figures both read that row, so
 they name the same baseline; no read walks the history. A reader-named baseline
 is compared directly. Overview shows changes against the baseline only when its
 status is `comparable` and otherwise reports the status

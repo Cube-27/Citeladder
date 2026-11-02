@@ -17,6 +17,7 @@ import { reserveUsage } from '../src/entitlements/ledger.ts';
 import { advisoryXactLock } from '../src/db/advisory-lock.ts';
 import { commandCenter } from '../src/projects/command-center.ts';
 import { getVisibility } from '../src/visibility/dashboard.ts';
+import { persistComparisonBaselines } from '../src/visibility/baselines.ts';
 import { purgeExpiredTrialProjects } from '../src/projects/trial-purge.ts';
 import { createDiscovery } from '../src/projects/discovery.ts';
 import { discoveryCreate } from '../src/projects/discovery-inputs.ts';
@@ -829,4 +830,129 @@ describe('project owner', () => {
       commandCenter(db, { workspaceId: outsider.workspaceId, projectId: t.projectId }, current),
     ).rejects.toMatchObject({ status: 404 });
   });
+
+  it('two runs finalizing together still name each other, in either commit order', async () => {
+    const configuration = {
+      brand_name: 'Acme Corp',
+      brand_aliases: [],
+      owned_domains: ['acme.example'],
+      competitors: [],
+      country_code: 'US',
+      language_code: 'en',
+      benchmark_mode: 'consumer_like',
+      panel_hash: 'panel-1',
+      engine_routes: { chatgpt: { transport_provider: 'test', transport_model: 'test' } },
+      measurement_policy: {
+        retrieval_enabled: true,
+        max_output_tokens: 1000,
+        answer_instruction: '',
+      },
+    };
+    const aggregate = (count: number) => {
+      const metrics = {
+        total_completed: 2,
+        brand_mention_count: count,
+        owned_citation_response_count: 0,
+        brand_mention_rate: count / 2,
+        owned_citation_rate: 0,
+        competitor_mention_rate: {},
+        competitor_citation_rate: {},
+        share_of_voice: { mention_counts: { 'Acme Corp': count } },
+        coverage: { requested: 2, failed: 0, not_run: 0 },
+      };
+      return { ...metrics, per_engine: { chatgpt: metrics } };
+    };
+    for (const laterCommitsFirst of [true, false]) {
+      const t = await measurements.tenant();
+      await measurements.brand(t.projectId, 'Acme Corp');
+      const first = await measurements.audit(t, {
+        completedAt: new Date('2026-04-01T00:00:00Z'),
+        configuration,
+      });
+      await measurements.metricSnapshot(t, first, { metrics: aggregate(0) });
+      const unsettled = { completedAt: null, status: 'analyzing', configuration };
+      const earlier = await measurements.audit(t, unsettled);
+      const later = await measurements.audit(t, unsettled);
+      // One finalization's measured run and baselines, uncommitted until its transaction ends.
+      const finalize = async (
+        trx: typeof db,
+        { auditId, at, count }: { auditId: string; at: string; count: number },
+      ) => {
+        await trx
+          .updateTable('audits')
+          .set({ status: 'completed', completed_at: new Date(at) })
+          .where('id', '=', auditId)
+          .execute();
+        await trx
+          .insertInto('metric_snapshots')
+          .values({
+            id: randomUUID(),
+            workspace_id: t.workspaceId,
+            project_id: t.projectId,
+            audit_id: auditId,
+            analyzer_version: 'test',
+            scoring_rule_version: 'test',
+            total_completed: 2,
+            total_failed: 0,
+            visibility_score: 0,
+            metrics: JSON.stringify(aggregate(count)),
+            source_analysis_ids: '[]',
+            source_artifact_ids: '[]',
+            owned_citation_count: 0,
+            owned_citation_ids: '[]',
+            created_at: new Date(),
+          })
+          .execute();
+        await persistComparisonBaselines(trx, { workspaceId: t.workspaceId, auditId });
+      };
+      const runs = [
+        { auditId: earlier, at: '2026-04-02T00:00:00Z', count: 1 },
+        { auditId: later, at: '2026-04-03T00:00:00Z', count: 2 },
+      ];
+      const [opening, closing] = laterCommitsFirst ? [runs[1]!, runs[0]!] : [runs[0]!, runs[1]!];
+      let release = () => {};
+      const held = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      let written = () => {};
+      const holding = new Promise<void>((resolve) => {
+        written = resolve;
+      });
+      const one = db.transaction().execute(async (trx) => {
+        await finalize(trx, opening);
+        written();
+        await held;
+      });
+      await holding;
+      let waiter: number | null = null;
+      const two = db.transaction().execute(async (trx) => {
+        const { rows } = await sql<{ pid: number }>`select pg_backend_pid() as pid`.execute(trx);
+        waiter = rows[0]!.pid;
+        await finalize(trx, closing);
+      });
+      // The second finalization waits on the first's baseline lock, not past it.
+      await vi.waitFor(
+        async () => {
+          const { rows } = await sql<{ waiting: number }>`
+            select count(*)::int as waiting from pg_locks
+            where pid = ${waiter} and locktype = 'advisory' and not granted`.execute(db);
+          expect(rows[0]?.waiting).toBe(1);
+        },
+        { timeout: 10_000, interval: 50 },
+      );
+      release();
+      await Promise.all([one, two]);
+      const stored = await db
+        .selectFrom('audit_comparison_baselines')
+        .select(['audit_id', 'status', 'baseline_audit_id'])
+        .where('audit_id', 'in', [earlier, later])
+        .where('cohort', '=', 'core')
+        .where('logical_engine', 'is', null)
+        .execute();
+      expect(Object.fromEntries(stored.map((row) => [row.audit_id, row]))).toEqual({
+        [earlier]: { audit_id: earlier, status: 'comparable', baseline_audit_id: first },
+        [later]: { audit_id: later, status: 'comparable', baseline_audit_id: earlier },
+      });
+    }
+  }, 60_000);
 });

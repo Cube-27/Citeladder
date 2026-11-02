@@ -315,11 +315,13 @@ export function finalizeAudit(
       .where('workspace_id', '=', workspaceId)
       .where('id', '=', auditId)
       .execute();
-    // The run's comparable baseline, by the one comparison rule, for every surface that reads it.
-    await persistComparisonBaselines(trx, { workspaceId, auditId, engines });
     await transitionAudit(trx, workspaceId, auditId, 'reporting', at, 'aggregating metrics');
     const status = metric.total_failed ? 'partially_completed' : 'completed';
     await transitionAudit(trx, workspaceId, auditId, status, at, `audit ${status}`);
+    // The run's comparable baseline, by the one comparison rule, for every
+    // surface that reads it. It runs once the run reads as measured, so later
+    // runs it refreshes find it among their candidates.
+    await persistComparisonBaselines(trx, { workspaceId, auditId });
     await enqueueTrafficInsights(trx, { workspaceId, projectId: audit.project_id }, at);
     await auditEvent(
       trx,

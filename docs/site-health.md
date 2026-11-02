@@ -637,7 +637,8 @@ are otherwise never rewritten.
 The same refresh, and the architecture writer after its findings, persists the
 crawl's unfiltered Issues catalog per finding class (`site_issue_catalogs`,
 `issue-catalog.ts`): the ranked groups as the list shows them and the summary
-tiles. An unfiltered Issues read pages that persisted list. A filtered read
+tiles, plus each group's exact source issue and evaluation IDs (`sources`,
+kept for provenance and never served). An unfiltered Issues read pages that persisted list. A filtered read
 (search, severity, category, dimension, rule, page or page kind) computes its
 groups and summary from the current issues, as does a crawl whose catalog is
 not written yet (nothing is final before the terminal publication). The
