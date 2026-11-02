@@ -145,6 +145,7 @@ leaves checkout closed. The deploy refuses a name ending in `SECRET`,
 | `DEMO_LOGIN_PASSWORD` | keep, required | 8–128 characters; password of `DEMO_LOGIN_EMAIL` |
 | `CITELADDER_ORIGIN_TOKEN` | keep, required | at least 32 characters; must equal the Workers' `ORIGIN_TOKEN` |
 | `CITELADDER_ORIGIN_TOKEN_PREVIOUS` | optional | only during a token rotation |
+| `TURNSTILE_SECRET_KEY` | **new**, required | secret of the Turnstile widget whose site key is the `APP_TURNSTILE_SITE_KEY` repository variable; API only (`citeladder-turnstile-secret`). Without it sign-up and email-link requests answer 503 |
 | `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET` | keep, required | one client for sign-in and GSC/GA4 connect |
 | `DEFAULT_AGENT_API_KEY` | keep | platform Agent features |
 | `KEENABLE_API_KEY` | keep | brand-discovery research |

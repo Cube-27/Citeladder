@@ -12,8 +12,10 @@ import {
   authErrorMessage,
   oauthSignInErrorMessage,
   registerFormSchema,
+  signupEmailFieldError,
   type RegisterFormValues,
 } from '@/lib/auth/forms';
+import { useTurnstile } from '@/lib/turnstile/use-turnstile';
 import { safeAuthReturnPath, withAuthReturnPath } from '@/lib/auth/auth-return-path';
 
 type SearchParams = Pick<URLSearchParams, 'get'>;
@@ -38,6 +40,7 @@ export function RegisterScreen({
   const oauthNotice = oauthSignInErrorMessage(searchParams.get('error'));
   const terms = usePublishedTerms(!demoMode && signupOpen);
   const termsRevision = terms.revision;
+  const verification = useTurnstile('signup');
   const {
     register,
     handleSubmit,
@@ -53,11 +56,16 @@ export function RegisterScreen({
           email: values.email,
           password: values.password,
           termsRevision: values.termsRevision,
+          turnstileToken: verification.token(),
           returnTo,
         })
         .catch(terms.refreshOnRevisionChange),
     onSuccess: () => replace(withAuthReturnPath('/login?registered=1', returnTo)),
+    // The token is single-use, spent or not: a retry solves a fresh one.
+    onSettled: () => verification.reset(),
   });
+  // A refused domain belongs under the email field, not in the form's alert.
+  const emailRefusal = mutation.isError ? signupEmailFieldError(mutation.error) : undefined;
   const submit = (values: RegisterFormValues) =>
     termsRevision
       ? mutation.mutateAsync({ ...values, termsRevision }).catch(() => undefined)
@@ -90,7 +98,11 @@ export function RegisterScreen({
     <AuthFormShell
       title="Create your account"
       description="Verify your email, then set up your workspace to start your trial. No card required."
-      error={registerError(mutation.isError ? mutation.error : null, terms.error, oauthNotice)}
+      error={registerError(
+        mutation.isError && !emailRefusal ? mutation.error : null,
+        terms.error,
+        oauthNotice,
+      )}
       onSubmit={handleSubmit(submit)}
       pending={isSubmitting || mutation.isPending}
       submitLabel="Create account"
@@ -99,8 +111,12 @@ export function RegisterScreen({
       footerHref={withAuthReturnPath('/login', returnTo)}
       footerLabel="Sign in"
       terms={{ revision: termsRevision, signup: true }}
+      verification={verification}
     >
-      <AuthEmailField error={errors.email?.message} inputProps={register('email')} />
+      <AuthEmailField
+        error={errors.email?.message ?? emailRefusal}
+        inputProps={register('email')}
+      />
       <AuthPasswordField
         label="Password"
         error={errors.password?.message}

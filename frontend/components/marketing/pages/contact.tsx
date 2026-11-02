@@ -15,7 +15,7 @@ import { trackContactSubmitted } from '@/components/analytics/google-analytics';
 import { CONTACT_PAGE } from '@/lib/marketing-content/legal-billing';
 import { Linkify } from '../primitives/linkify';
 import { Section } from '../primitives/section';
-import { useTurnstile } from './contact-turnstile';
+import { useTurnstile } from '@/lib/turnstile/use-turnstile';
 
 /** What each failed send tells the visitor; every one ends with the email fallback. */
 const FAILURE_COPY = {

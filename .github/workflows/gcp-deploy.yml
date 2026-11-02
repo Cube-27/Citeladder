@@ -212,6 +212,7 @@ jobs:
           DEMO_LOGIN_PASSWORD: ${{ secrets.DEMO_LOGIN_PASSWORD }}
           CITELADDER_ORIGIN_TOKEN: ${{ secrets.CITELADDER_ORIGIN_TOKEN }}
           CITELADDER_ORIGIN_TOKEN_PREVIOUS: ${{ secrets.CITELADDER_ORIGIN_TOKEN_PREVIOUS }}
+          TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
           GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
           GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
@@ -290,6 +291,8 @@ jobs:
           fi
           sync_value citeladder-demo-password "$DEMO_LOGIN_PASSWORD"
           sync_value citeladder-worker-origin-token "$CITELADDER_ORIGIN_TOKEN"
+          # Without it, sign-up and email-link requests answer 503 (fail closed).
+          sync_value citeladder-turnstile-secret "$TURNSTILE_SECRET_KEY"
           # Without the Google pair, sign-in and every Google connect button 503.
           sync_value citeladder-google-oauth-client-id "$GOOGLE_OAUTH_CLIENT_ID"
           sync_value citeladder-google-oauth-client-secret "$GOOGLE_OAUTH_CLIENT_SECRET"

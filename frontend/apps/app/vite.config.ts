@@ -5,9 +5,29 @@ import { defineConfig, type ViteUserConfig, loadEnv } from 'vite-plus';
 
 import { createServerProxy } from './server-proxy.ts';
 import { publicApiOrigin, publicOrigins } from '../../lib/config/public-origins.ts';
+import { TURNSTILE_TEST_SITE_KEY } from '../../lib/config/turnstile.ts';
 
 const appRoot = fileURLToPath(new URL('.', import.meta.url));
 const frontendRoot = fileURLToPath(new URL('../..', import.meta.url));
+
+/**
+ * The baked Turnstile site key. Local serving and Compose fall back to
+ * Cloudflare's always-pass test key, which the development API accepts; any
+ * other build must name the real key, reported like every empty public value.
+ */
+function turnstileSiteKey(
+  serving: boolean,
+  environment: Record<string, string>,
+  publicValue: (name: string) => string,
+): string {
+  if (!serving && process.env.LOCAL_COMPOSE_BUILD !== 'true')
+    return publicValue('PUBLIC_TURNSTILE_SITE_KEY');
+  return JSON.stringify(
+    process.env.PUBLIC_TURNSTILE_SITE_KEY ||
+      environment.PUBLIC_TURNSTILE_SITE_KEY ||
+      TURNSTILE_TEST_SITE_KEY,
+  );
+}
 
 // Explicit return type: without it, tsc compares the inferred literal against
 // every defineConfig overload and dies with TS2321 "Excessive stack depth".
@@ -79,6 +99,12 @@ export default defineConfig(({ command, isPreview, mode }): ViteUserConfig => {
         process.env.PUBLIC_DOCS_ORIGIN ?? environment.PUBLIC_DOCS_ORIGIN ?? '',
       ),
       'process.env.LOCAL_COMPOSE_BUILD': JSON.stringify(process.env.LOCAL_COMPOSE_BUILD ?? ''),
+      // Sign-up and email-link forms; workers-app-deploy.yml names the real key.
+      'process.env.PUBLIC_TURNSTILE_SITE_KEY': turnstileSiteKey(
+        command === 'serve',
+        environment,
+        publicValue,
+      ),
     },
     resolve: {
       alias: {

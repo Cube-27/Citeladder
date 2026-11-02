@@ -7,6 +7,7 @@ import { authApi } from '@/lib/api/auth';
 import { authFormPolicy, passwordHint } from '@/lib/config/auth';
 import { authErrorMessage } from '@/lib/auth/forms';
 import { routePath } from '@/lib/navigation/route-path';
+import { useTurnstile } from '@/lib/turnstile/use-turnstile';
 import { safeAuthReturnPath, withAuthReturnPath } from '@/lib/auth/auth-return-path';
 
 type MailboxOperation =
@@ -58,14 +59,23 @@ export default function MailboxScreen() {
   }, []);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  // Asking for an email link is challenged; confirming one (its token proves the mailbox) is not.
+  const verification = useTurnstile(operation);
   const mutation = useMutation({
     mutationFn: () =>
       authApi.mailbox(
         operation,
         confirmation
           ? { token: secrets.token, password }
-          : { email, return_to: secrets.returnTo ?? '' },
+          : {
+              email,
+              return_to: secrets.returnTo ?? '',
+              turnstile_token: verification.token(),
+            },
       ),
+    onSettled: () => {
+      if (!confirmation) verification.reset();
+    },
   });
   const title = MAILBOX_TITLES[operation];
   // A link opened without its token (cut short by a mail client, say) cannot
@@ -89,6 +99,7 @@ export default function MailboxScreen() {
         {...mailboxFooter(operation, incomplete, secrets.returnTo)}
         showForm={!mutation.isSuccess && !incomplete}
         error={mutation.isError ? authErrorMessage(mutation.error) : undefined}
+        verification={confirmation ? undefined : verification}
       >
         {confirmation ? (
           <AuthPasswordField

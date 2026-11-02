@@ -18,6 +18,9 @@ const password = 'password123';
 const createdUsers: string[] = [];
 // The Terms decision every sign-up and sign-in request has to carry.
 const decision = { terms_revision: policy.auth.terms_revision, accept_terms: true };
+// Sign-up also carries a Turnstile token: the dummy one Cloudflare's always-pass
+// test secret accepts, which a test environment uses when none is configured.
+const signUp = { ...decision, turnstile_token: 'XXXX.DUMMY.TOKEN.XXXX' };
 let cookie: string;
 let userId: string;
 let workspaceId: string;
@@ -43,7 +46,7 @@ async function clearClientBudget() {
 
 beforeAll(async () => {
   await clearClientBudget();
-  const response = await call('/auth/register', { email, password, ...decision });
+  const response = await call('/auth/register', { email, password, ...signUp });
   expect(response.status).toBe(202);
   const user = await db
     .selectFrom('users')
@@ -109,8 +112,8 @@ describe('password auth routes', () => {
   it('serializes registration races into one identity that owns nothing yet', async () => {
     const address = `${prefix}-raced@example.test`;
     const responses = await Promise.all([
-      call('/auth/register', { email: address, password, ...decision }),
-      call('/auth/register', { email: address, password, ...decision }),
+      call('/auth/register', { email: address, password, ...signUp }),
+      call('/auth/register', { email: address, password, ...signUp }),
     ]);
     expect(responses.map((response) => response.status)).toEqual([202, 202]);
     const user = await db
@@ -197,7 +200,7 @@ describe('password auth routes', () => {
     const ordinary = `${prefix}-ordinary@fixtures.citeladder.com`;
     const admitted = await call(
       '/auth/register',
-      { email: ordinary, password, ...decision },
+      { email: ordinary, password, ...signUp },
       undefined,
       guarded,
     );
@@ -297,7 +300,7 @@ describe('password auth routes', () => {
   });
 
   it('keeps duplicate registration generic, session-free and trial provisioning idempotent', async () => {
-    const duplicate = await call('/auth/register', { email, password, ...decision });
+    const duplicate = await call('/auth/register', { email, password, ...signUp });
     expect(duplicate.status).toBe(202);
     expect(duplicate.headers.get('set-cookie')).toBeNull();
     const account = await db
@@ -339,7 +342,7 @@ describe('password auth routes', () => {
       (
         await call(
           '/auth/register',
-          { email, password, ...decision },
+          { email, password, ...signUp },
           undefined,
           createApp(testConfig(), db),
         )
@@ -719,7 +722,7 @@ describe('Google sign-in', () => {
 
   // Every start carries the Terms decision; a sign-up start may also create an account.
   const signInStart = `?accept_terms=true&terms_revision=${policy.auth.terms_revision}`;
-  const signUpStart = `${signInStart}&signup=true`;
+  const signUpStart = `${signInStart}&signup=true&turnstile_token=XXXX.DUMMY.TOKEN.XXXX`;
 
   async function start(service = oauthApp, query = signInStart) {
     const response = await call(`/auth/oauth/google/start${query}`, undefined, undefined, service);

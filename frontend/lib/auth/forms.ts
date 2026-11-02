@@ -43,6 +43,18 @@ export function authErrorMessage(error: unknown): string {
   return humanizeApiError(error).message;
 }
 
+/** Sign-up refusals the API attaches to the email field (`details.field`), not the form. */
+const EMAIL_FIELD_CODES: ReadonlySet<string> = new Set([
+  'email_domain_reserved',
+  'disposable_email_domain',
+]);
+
+/** The server's email-field refusal for a sign-up, shown under the field. */
+export function signupEmailFieldError(error: unknown): string | undefined {
+  const { code, message } = humanizeApiError(error);
+  return code && EMAIL_FIELD_CODES.has(code) ? message : undefined;
+}
+
 /**
  * Messages for the coded `?error=` the Google sign-in callback redirects with.
  *
@@ -79,6 +91,10 @@ const OAUTH_SIGNIN_ERRORS = new Map<string, string>([
     'No account uses that Google address. Agree to the Terms to create one.',
   ],
   ['oauth_signin_email_reserved', 'That Google address cannot receive mail. Use another account.'],
+  [
+    'oauth_signin_email_disposable',
+    'Disposable addresses cannot sign up. Use a Google account with a permanent address.',
+  ],
   ['oauth_signin_disabled', 'Google sign-in is unavailable right now. Please use email below.'],
   ['oauth_signin_failed', OAUTH_SIGNIN_FALLBACK],
   // Not Google's: the app ended a session that predates the published Terms.

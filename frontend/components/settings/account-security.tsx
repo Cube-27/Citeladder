@@ -88,7 +88,7 @@ export default function AccountSecurity() {
     onSuccess: () => restartAt(client, '/login'),
   });
   const setup = useMutation({
-    mutationFn: () => authApi.mailbox('forgot-password', { email: security.data!.email }),
+    mutationFn: () => authApi.passwordLink(),
   });
   const link = useMutation({
     mutationFn: () => authApi.linkGoogle(current),

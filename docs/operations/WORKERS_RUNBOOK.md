@@ -279,7 +279,11 @@ environment. Put the least-privilege
 `ORIGIN_TOKEN` as a Cloudflare Worker secret before
 deployment. Set the repository variable `LOGO_DEV_PUBLISHABLE` to the same
 non-secret publishable key used by the GCP app build; the workflow refuses to
-bake an empty key. Set protected environment reviewers and main-only deployment
+bake an empty key. Set the repository variable `APP_TURNSTILE_SITE_KEY` to the
+public site key of a Turnstile widget that lists `app.citeladder.com` (the
+contact widget with that hostname added, or a dedicated one); the workflow
+refuses to bake an empty key. Its secret is the API's `TURNSTILE_SECRET_KEY`
+(GCP runbook section 1.4), never a product Worker secret. Set protected environment reviewers and main-only deployment
 rules. Record the resulting Worker version/deployment ID, artifact digest,
 fingerprint, compatible backend revision and secret version reference in the
 protected release record. The workflow summary does not claim backend or

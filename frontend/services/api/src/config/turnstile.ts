@@ -1,0 +1,32 @@
+/**
+ * Cloudflare Turnstile on sign-up and the public "email me a link" requests.
+ * Sign-in is never challenged (owner decision of 2 November 2026).
+ */
+export const turnstile = {
+  verify_url: 'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+  verify_timeout_ms: 5_000,
+  /** Cloudflare's documented maximum token length. */
+  token_max_length: 2_048,
+  /** The widget `action` each challenged request must have been solved for. */
+  actions: {
+    signup: 'signup',
+    'resend-verification': 'resend-verification',
+    'forgot-password': 'forgot-password',
+  },
+  /**
+   * Cloudflare's documented test secrets and the outcome each always gives.
+   * They are answered here without a network call, and only in a development
+   * or test environment: anywhere else a test secret counts as unconfigured.
+   */
+  test_secrets: new Map<string, 'pass' | 'fail'>([
+    ['1x0000000000000000000000000000000AA', 'pass'],
+    ['2x0000000000000000000000000000000AA', 'fail'],
+    ['3x0000000000000000000000000000000AA', 'fail'],
+  ]),
+  /** The only token Cloudflare's test secrets accept. */
+  test_token: 'XXXX.DUMMY.TOKEN.XXXX',
+  /** The secret a development or test environment uses when none is set: always passes. */
+  development_secret: '1x0000000000000000000000000000000AA',
+} as const;
+
+export type TurnstileAction = keyof typeof turnstile.actions;
