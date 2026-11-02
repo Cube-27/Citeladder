@@ -225,8 +225,9 @@ export function DimensionTable({
 
   // Every value the server binds the cursor to participates in the scope, so
   // switching any of them drops the stack instead of replaying a refused
-  // cursor. It holds the raw `sort` so hiding a column drops the stack too —
-  // the page it points at was ordered by the column just removed. A page
+  // cursor. It holds the applied sort and the shown metrics, so hiding the
+  // sorted column drops the stack too — the page it points at was ordered by
+  // the column just removed, and the server refuses its cursor. A page
   // turn, a sort or a new range keeps the rows on screen until the next page
   // replaces them. The snapshot's persisted per-dimension count is the exact
   // total, known before the first page lands, so a freshly opened tab
@@ -234,7 +235,14 @@ export function DimensionTable({
   const { page, table } = useCursorTableQuery({
     workspaceId,
     scopeId: projectId,
-    scope: [snapshotId, compareSnapshotId, dimension, sort],
+    scope: [
+      snapshotId,
+      compareSnapshotId,
+      dimension,
+      sort,
+      activeSort,
+      displayedMetrics.map((card) => card.key),
+    ],
     query: (request) =>
       performanceQueries.table(
         workspaceId,

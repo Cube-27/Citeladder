@@ -4,7 +4,6 @@ import { useQuery, type QueryKey, type UseQueryOptions } from '@tanstack/react-q
 
 import type { DataTablePager, DataTableState } from '@/components/ui/data-table';
 import { readErrorProps } from '@/components/ui/read-error';
-import { retainPreviousDataForScope } from '@/lib/api/query-client';
 import { cursorControls, pageRange, useCursorTable } from './use-cursor-table';
 
 /** A keyset page as the API returns it. */
@@ -32,8 +31,10 @@ type CursorTableQueryOptions<TPage extends CursorPage, TKey extends QueryKey> = 
   /**
    * The project (or crawl) the rows belong to. Rows carry over to the next
    * page or filter only inside it too; the query key holds it at index 2.
+   * Rows bound to more than one record (a compared crawl pair) name each id,
+   * and carry over only while the key holds every one of them.
    */
-  scopeId: string;
+  scopeId: string | readonly [string, ...string[]];
   /**
    * Every other value the server binds the cursor to (filters, sort). A
    * change drops the cursor stack back to page one.
@@ -97,10 +98,15 @@ export function useCursorTableQuery<TPage extends CursorPage, TKey extends Query
     enabled: enabled && workspaceId !== null,
     // Another workspace's rows never stand in for this one's, even under the
     // same project id: a workspace switch draws the loading state.
-    placeholderData: (previousData, previousQuery) =>
-      workspaceId !== null && previousQuery?.queryKey.includes(workspaceId)
-        ? retainPreviousDataForScope(scopeId, previousData, previousQuery)
-        : undefined,
+    placeholderData: (previousData, previousQuery) => {
+      const key = previousQuery?.queryKey;
+      const ids = typeof scopeId === 'string' ? [scopeId] : scopeId;
+      return workspaceId !== null &&
+        key?.includes(workspaceId) &&
+        ids.every((id) => key.includes(id))
+        ? previousData
+        : undefined;
+    },
   });
   const page = query.data;
   let state: DataTableState | undefined;
