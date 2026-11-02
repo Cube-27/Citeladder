@@ -856,21 +856,7 @@
             "$ref": "#/components/schemas/AiReferrals"
           },
           "citations": {
-            "type": "object",
-            "properties": {
-              "unit": {
-                "type": "string",
-                "const": "tracked_citations"
-              },
-              "count": {
-                "type": ["number", "null"]
-              },
-              "label": {
-                "type": "string"
-              }
-            },
-            "required": ["unit", "count", "label"],
-            "additionalProperties": false
+            "$ref": "#/components/schemas/TrackedCitations"
           }
         },
         "required": ["crawl", "referrals", "citations"],
@@ -6223,6 +6209,75 @@
           "updated_at"
         ],
         "additionalProperties": false
+      },
+      "TrackedCitations": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "unit": {
+                "type": "string",
+                "const": "tracked_citations"
+              },
+              "label": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string",
+                "const": "measured"
+              },
+              "count": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "sources": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "audit_id": {
+                      "type": "string"
+                    },
+                    "analyzer_version": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["audit_id", "analyzer_version"],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": ["unit", "label", "state", "count", "sources"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "unit": {
+                "type": "string",
+                "const": "tracked_citations"
+              },
+              "label": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string",
+                "const": "not_available"
+              },
+              "reason": {
+                "type": "string",
+                "enum": ["no_completed_run", "not_computed"]
+              },
+              "count": {
+                "type": "null"
+              }
+            },
+            "required": ["unit", "label", "state", "reason", "count"],
+            "additionalProperties": false
+          }
+        ]
       },
       "TrafficLeg": {
         "type": "object",
