@@ -62,12 +62,12 @@ const credentialsSchema = z.object({
   email: z.email().trim().max(255),
   password: passwordSchema,
 });
-// Creating an account is a Terms decision: the request must carry it.
+// Signing up and signing in are both Terms decisions: the request must carry it.
 const termsDecisionSchema = z.object({
   terms_revision: z.string().min(1).max(64),
   accept_terms: z.literal(true),
 });
-const registrationSchema = credentialsSchema.extend(termsDecisionSchema.shape);
+const signInSchema = credentialsSchema.extend(termsDecisionSchema.shape);
 const base = { family: 'auth', authorize: 'public', params: { path: {}, query: {} } } as const;
 const oauthPath = { provider: { scalar: { kind: 'str' }, required: true } } as const;
 const oauth = policy.auth.oauth;
@@ -189,27 +189,6 @@ export const authRoutes = [
     response: policyStatusSchema,
     handle: ({ c, db }) => accountTermsStatus(db, c.get('user').id),
   }),
-  definePostRoute({
-    ...base,
-    authorize: 'session',
-    // A person without a recorded decision (an operator- or invitation-made
-    // account) reviews the Terms before creating their own workspace.
-    path: '/api/v1/auth/terms',
-    response: policyStatusSchema,
-    body: termsDecisionSchema,
-    async handle({ c, db }) {
-      const { terms_revision } = await readBody(c, termsDecisionSchema);
-      const actorId = c.get('user').id;
-      return db.transaction().execute(async (trx) => {
-        await recordAccountTermsDecision(trx, {
-          actorId,
-          revision: terms_revision,
-          context: 'review',
-        });
-        return accountTermsStatus(trx, actorId);
-      });
-    },
-  }),
   defineGetRoute({
     ...base,
     authorize: 'session',
@@ -303,11 +282,11 @@ export const authRoutes = [
     path: '/api/v1/auth/register',
     response: registrationResponseSchema,
     status: 202,
-    body: registrationSchema,
+    body: signInSchema,
     async handle({ c, db, config }) {
       if (config.demo.enabled || !config.auth.publicSignup)
         throw new ApiError(403, 'Registration is disabled');
-      const payload = await readBody(c, registrationSchema);
+      const payload = await readBody(c, signInSchema);
       await meter(db, c, config, true);
       await mailboxMeter(db, c, config, payload.email);
       await registerUser(db, payload.email, payload.password, payload.terms_revision);
@@ -319,10 +298,12 @@ export const authRoutes = [
     ...base,
     path: '/api/v1/auth/login',
     response: authResponseSchema,
-    body: credentialsSchema,
+    body: signInSchema,
     async handle({ c, db, config }) {
       if (demoAccessExpired(config)) throw new ApiError(401, 'Demo access has expired');
-      const payload = await readBody(c, credentialsSchema);
+      const payload = await readBody(c, signInSchema);
+      // A form opened before the Terms changed must be reloaded, not accepted.
+      requireCurrentRevision(payload.terms_revision);
       await meter(db, c, config);
       // Every attempt spends a unit before hashing, so concurrent guesses cannot
       // outrun the budget; success hands its unit and earlier failures back. An
@@ -332,6 +313,12 @@ export const authRoutes = [
       const user = await authenticateUser(db, payload.email, payload.password);
       if (!user) throw new ApiError(401, 'Invalid credentials');
       await releaseSubjectBudget(db, 'email', payload.email, LOGIN_FAILURE_OPERATION);
+      // The box ticked on the sign-in form, recorded once per revision with the account.
+      await recordAccountTermsDecision(db, {
+        actorId: user.id,
+        revision: payload.terms_revision,
+        context: 'signin',
+      });
       clearOAuthCookies(c, config);
       setSessionCookie(c, config, await issueSession(config, user));
       return { user: sessionView(user) };
@@ -401,22 +388,23 @@ export const authRoutes = [
       path: oauthPath,
       query: {
         return_to: { scalar: { kind: 'str' }, default: '' },
-        // A signup start carries the visitor's Terms decision; sign-in does not.
+        // Every start carries the visitor's Terms decision; only a sign-up
+        // start may create an account.
         accept_terms: { scalar: { kind: 'str' }, default: '' },
         terms_revision: { scalar: { kind: 'str' }, default: '' },
+        signup: { scalar: { kind: 'str' }, default: '' },
       },
     },
     response: oauthStartResponseSchema,
     async handle({ c, db, config }, { path, query }) {
       await mailboxMeter(db, c, config);
-      const signup = query.accept_terms === 'true';
-      if (signup !== Boolean(query.terms_revision))
-        throw new ApiError(422, 'A Google sign-up needs the Terms decision and its revision.');
-      if (signup) requireCurrentRevision(query.terms_revision);
+      if (query.accept_terms !== 'true' || !query.terms_revision)
+        throw new ApiError(422, 'Google sign-in needs the Terms decision and its revision.');
+      requireCurrentRevision(query.terms_revision);
       const { authorize_url, state, nonce } = await startSignIn(
         config,
         knownProvider(path.provider),
-        signup ? query.terms_revision : undefined,
+        { termsRevision: query.terms_revision, signup: query.signup === 'true' },
       );
       setCookie(c, oauth.cookie_name, nonce, {
         ...cookieOptions(config),

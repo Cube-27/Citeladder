@@ -265,7 +265,7 @@ describe('request ids and the error envelope', () => {
     const cookie = `${config.session.cookieName}=${await sessionToken({ sub: user, ver: 0 })}`;
     const app = createApp(config, db);
     const post = async (contentType: string | null, body: string) => {
-      const response = await app.request('/api/v1/auth/terms', {
+      const response = await app.request('/api/v1/workspaces', {
         method: 'POST',
         headers: { cookie, ...(contentType ? { 'Content-Type': contentType } : {}) },
         body,
@@ -280,7 +280,7 @@ describe('request ids and the error envelope', () => {
       'unsupported_media_type',
     ]);
     expect(await post(null, json)).toEqual([415, 'unsupported_media_type']);
-    // A declared JSON body reaches validation, which refuses the missing decision.
+    // A declared JSON body reaches validation, which refuses the incomplete workspace.
     expect(await post('application/json', json)).toEqual([422, 'validation_error']);
     expect(await post('application/json; charset=utf-8', json)).toEqual([422, 'validation_error']);
   });

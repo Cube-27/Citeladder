@@ -87,7 +87,6 @@ export default function MailboxScreen() {
         submitLabel={confirmation ? 'Confirm' : 'Request email'}
         pendingLabel="Working…"
         {...mailboxFooter(operation, incomplete, secrets.returnTo)}
-        showOAuth={false}
         showForm={!mutation.isSuccess && !incomplete}
         error={mutation.isError ? authErrorMessage(mutation.error) : undefined}
       >

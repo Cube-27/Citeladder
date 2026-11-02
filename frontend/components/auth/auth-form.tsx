@@ -2,7 +2,7 @@
 
 import { Eye, EyeOff } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { type ComponentProps, type ReactNode, type Ref, useId, useState } from 'react';
+import { type ComponentProps, type ReactNode, useId, useState } from 'react';
 
 import { Alert as MktAlert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,6 @@ import { Stack } from '@/components/ui/layout';
 import { authApi } from '@/lib/api/auth';
 import { safeAuthReturnPath } from '@/lib/auth/auth-return-path';
 import { ApiError } from '@/lib/api/errors';
-import { recordSignupTermsConsent, useTermsConsent } from '@/lib/auth/terms-consent';
 import { websiteHref } from '@/lib/config/app-link';
 import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import { cn } from '@/lib/utils';
@@ -105,31 +104,31 @@ export function AuthPasswordField({
 }
 
 /**
- * The Terms decision, made once on the signup form for both email and Google.
+ * The Terms decision, made on the sign-in and sign-up forms for email and
+ * Google alike, so no screen after sign-in asks again.
  *
  * Unticked by default and required. The Privacy Policy is linked as notice,
  * not bundled into the agreement: processing does not rest on this consent.
+ * While unticked, a hint (which the disabled ways in point to) says why they
+ * wait; ticked, it keeps its line invisibly, so nothing moves.
  */
 function TermsConsent({
-  ref,
   agreed,
-  missing,
   onChange,
+  hintId,
 }: Readonly<{
-  ref: Ref<HTMLDivElement>;
   agreed: boolean;
-  missing: boolean;
   onChange: (agreed: boolean) => void;
+  hintId: string;
 }>) {
-  const errorId = useId();
   const noticeId = useId();
   return (
-    <div ref={ref} className="auth-terms-consent grid">
+    <div className="auth-terms-consent grid">
       <Checkbox
         checked={agreed}
         onCheckedChange={(value) => onChange(value === true)}
         required
-        aria-describedby={missing ? `${errorId} ${noticeId}` : noticeId}
+        aria-describedby={agreed ? noticeId : `${noticeId} ${hintId}`}
         label={
           <>
             I agree to the{' '}
@@ -156,7 +155,7 @@ function TermsConsent({
         </a>{' '}
         explains how we process your data.
       </CheckboxCaption>
-      <CheckboxCaption id={errorId} tone="error" shown={missing}>
+      <CheckboxCaption id={hintId} shown={!agreed}>
         Agree to the Terms of Service to continue.
       </CheckboxCaption>
     </div>
@@ -164,17 +163,24 @@ function TermsConsent({
 }
 
 /**
- * Continue with Google. A sign-up start carries the Terms revision, so only it
- * can create an account; `consentGiven` holds it until the box is ticked.
+ * The Terms decision the form sends with every way in: the published revision
+ * (undefined while it loads) and whether this form creates an account.
+ */
+type TermsDecision = { revision: string | undefined; signup: boolean };
+
+/**
+ * Continue with Google. The start carries the Terms decision, sealed in the
+ * signed state for the callback to record; only a sign-up start can create an
+ * account. `consentHint` points the disabled button at why it waits.
  */
 function GoogleEntry({
-  signupTermsRevision,
-  disabled,
-  consentGiven,
+  revision,
+  signup,
+  consentHint,
 }: Readonly<{
-  signupTermsRevision: string | undefined;
-  disabled: boolean;
-  consentGiven: () => boolean;
+  revision: string | undefined;
+  signup: boolean;
+  consentHint: string | undefined;
 }>) {
   const [notice, setNotice] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -182,13 +188,14 @@ function GoogleEntry({
   async function start() {
     // The button stays live for the whole round trip otherwise, and a second
     // click starts a second authorization before the first can redirect.
-    if (pending || !consentGiven()) return;
+    if (pending || consentHint || !revision) return;
     setPending(true);
     setNotice(null);
     try {
       const { authorize_url } = await authApi.oauthStart('google', {
         returnTo: safeAuthReturnPath(new URLSearchParams(window.location.search).get('return_to')),
-        signupTermsRevision,
+        termsRevision: revision,
+        signup,
       });
       hardNavigate(authorize_url);
     } catch (err) {
@@ -209,7 +216,8 @@ function GoogleEntry({
       <Button
         variant="secondary"
         className="w-full"
-        disabled={pending || disabled}
+        disabled={pending || Boolean(consentHint) || !revision}
+        aria-describedby={consentHint}
         onClick={() => void start()}
       >
         <Icon icon={GoogleGlyph} />
@@ -232,10 +240,9 @@ export function AuthFormShell({
   footerHref,
   footerLabel,
   footerLinkVariant = 'default',
-  showOAuth = true,
   showForm = true,
   showFooter = true,
-  signup,
+  terms,
   children,
 }: Readonly<{
   title: string;
@@ -249,31 +256,26 @@ export function AuthFormShell({
   footerHref: string;
   footerLabel: string;
   footerLinkVariant?: 'default' | 'emphasis';
-  showOAuth?: boolean;
   showForm?: boolean;
   showFooter?: boolean;
   /**
-   * Sign-up: both ways in create an account, so both wait for the Terms box
-   * and carry the published revision (undefined while it loads). Sign-in
-   * omits it and asks nothing.
+   * Sign-in and sign-up: the required Terms box, and Continue with Google.
+   * Every way in stays disabled until the box is ticked and the published
+   * revision has loaded. Mailbox and unavailable screens authenticate no one
+   * and omit it.
    */
-  signup?: { termsRevision: string | undefined };
+  terms?: TermsDecision;
   children: ReactNode;
 }>) {
-  const consent = useTermsConsent();
-  const requiresConsent = Boolean(signup) && (showForm || showOAuth);
-  const revisionPending = requiresConsent && !signup?.termsRevision;
-
-  /** Hold any way in until the Terms box is ticked; remember the decision once it is. */
-  function consentGiven(): boolean {
-    if (!requiresConsent) return true;
-    if (revisionPending || !consent.confirm()) return false;
-    recordSignupTermsConsent();
-    return true;
-  }
+  const [agreed, setAgreed] = useState(false);
+  const hintId = useId();
+  const requiresConsent = Boolean(terms) && showForm;
+  // Why the ways in wait, for the disabled buttons to point at.
+  const consentHint = requiresConsent && !agreed ? hintId : undefined;
+  const revisionPending = requiresConsent && !terms?.revision;
 
   const handleSubmit: NonNullable<ComponentProps<'form'>['onSubmit']> = (event) => {
-    if (!consentGiven()) {
+    if (consentHint || revisionPending) {
       event.preventDefault();
       return;
     }
@@ -288,16 +290,16 @@ export function AuthFormShell({
       </Stack>
 
       <Stack gap="workspace" className="auth-form-body">
-        {showOAuth && (
+        {requiresConsent && terms ? (
           <>
             <GoogleEntry
-              signupTermsRevision={signup?.termsRevision}
-              disabled={revisionPending}
-              consentGiven={consentGiven}
+              revision={terms.revision}
+              signup={terms.signup}
+              consentHint={consentHint}
             />
             <p className="auth-form-divider flow-meta text-center">or</p>
           </>
-        )}
+        ) : null}
 
         {error ? <MktAlert>{error}</MktAlert> : null}
 
@@ -306,12 +308,15 @@ export function AuthFormShell({
             <Stack gap="workspace" className="auth-email-form">
               {children}
 
-              {requiresConsent && <TermsConsent {...consent.field} />}
+              {requiresConsent && (
+                <TermsConsent agreed={agreed} onChange={setAgreed} hintId={hintId} />
+              )}
 
               <Button
                 type="submit"
                 className="auth-form-submit w-full"
-                disabled={pending || revisionPending}
+                disabled={pending || revisionPending || Boolean(consentHint)}
+                aria-describedby={consentHint}
               >
                 {pending ? pendingLabel : submitLabel}
               </Button>

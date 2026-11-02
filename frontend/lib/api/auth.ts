@@ -20,7 +20,7 @@ import type {
 } from './types';
 
 export const authApi = {
-  /** The published Terms revision the signup form asks a visitor to accept. */
+  /** The published Terms revision the sign-in and sign-up forms ask a visitor to accept. */
   policies: async () =>
     strictValidate(policyRevisionSchema, await apiClient.get('/auth/policies'), 'auth.policies'),
   /** The signed-in person's own Terms decision on the published revision. */
@@ -29,13 +29,6 @@ export const authApi = {
       policyStatusSchema,
       await apiClient.get('/auth/terms', { signal }),
       'auth.terms',
-    ),
-  /** Record that decision when the person has none (review before creating a workspace). */
-  acceptTerms: async (termsRevision: string) =>
-    strictValidate(
-      policyStatusSchema,
-      await apiClient.post('/auth/terms', { terms_revision: termsRevision, accept_terms: true }),
-      'auth.acceptTerms',
     ),
   security: async () =>
     strictValidate(authSecuritySchema, await apiClient.get('/auth/security'), 'auth.security'),
@@ -75,8 +68,21 @@ export const authApi = {
     );
     return strictValidate(registrationResponseSchema, res, 'auth.register');
   },
-  login: async (email: string, password: string, options?: ApiRequestOptions) => {
-    const res = await apiClient.post<AuthResponse>('/auth/login', { email, password }, options);
+  /** Sign in; the request carries the Terms decision made on the form. */
+  login: async (
+    input: { email: string; password: string; termsRevision: string },
+    options?: ApiRequestOptions,
+  ) => {
+    const res = await apiClient.post<AuthResponse>(
+      '/auth/login',
+      {
+        email: input.email,
+        password: input.password,
+        terms_revision: input.termsRevision,
+        accept_terms: true,
+      },
+      options,
+    );
     return strictValidate(authResponseSchema, res, 'auth.login').user;
   },
   logout: (options?: ApiRequestOptions) => apiClient.post<void>('/auth/logout', undefined, options),
@@ -88,22 +94,22 @@ export const authApi = {
   // (`detail.code = 'oauth_provider_not_configured'`), which callers surface
   // as a coming-soon notice rather than an error.
   //
-  // Only a sign-up start carries the Terms decision, and only it may create an
-  // account; a sign-in start for an unknown address lands on sign-up instead.
+  // Every start carries the Terms decision made on the form; only a sign-up
+  // start may create an account, and a sign-in start for an unknown address
+  // lands on sign-up instead.
   oauthStart: async (
     provider: OAuthProvider,
-    input: { returnTo?: string; signupTermsRevision?: string } = {},
+    input: { returnTo?: string; termsRevision: string; signup: boolean },
     options?: ApiRequestOptions,
   ) => {
-    const query = new URLSearchParams();
+    const query = new URLSearchParams({
+      accept_terms: 'true',
+      terms_revision: input.termsRevision,
+    });
+    if (input.signup) query.set('signup', 'true');
     if (input.returnTo) query.set('return_to', input.returnTo);
-    if (input.signupTermsRevision) {
-      query.set('accept_terms', 'true');
-      query.set('terms_revision', input.signupTermsRevision);
-    }
-    const suffix = query.size ? `?${query}` : '';
     const res = await apiClient.get<OAuthStartResponse>(
-      `/auth/oauth/${provider}/start${suffix}`,
+      `/auth/oauth/${provider}/start?${query}`,
       options,
     );
     return strictValidate(oauthStartResponseSchema, res, 'auth.oauthStart');

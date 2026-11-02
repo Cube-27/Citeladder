@@ -3,6 +3,7 @@ import { beforeAll, afterAll, describe, it, expect } from 'vitest';
 import { createApp } from '../src/app.ts';
 import { policy } from '../src/config.ts';
 import { hashInvitationToken } from '../src/workspaces/invitations.ts';
+import { recordAccountTermsDecision } from '../src/workspaces/policies.ts';
 import { sql } from 'kysely';
 import { billingAccount, grant } from './prompt-fixtures.ts';
 import { Fixtures, sessionToken, testConfig, testDatabase } from './support.ts';
@@ -57,6 +58,7 @@ beforeAll(async () => {
 afterAll(async () => {
   await db.deleteFrom('security_events').where('workspace_id', '=', workspace).execute();
   await db.deleteFrom('security_events').where('actor_id', 'in', actors).execute();
+  await db.deleteFrom('account_policy_acceptances').where('actor_id', 'in', actors).execute();
   await fixtures.cleanup();
   await db.destroy();
 });
@@ -88,18 +90,17 @@ describe('workspace authorization and root allocation', () => {
     actors.push(user);
     const cookie = await userCookie(user);
     const terms = { terms_revision: policy.auth.terms_revision, accept_terms: true };
-    // A fixture account made no signup decision; it reviews the Terms first.
-    const refused = await request('', 'POST', { name: 'Unreviewed', ...terms }, cookie);
+    // A session without a sign-in or sign-up decision on the published revision is refused.
+    const refused = await request('', 'POST', { name: 'Undecided', ...terms }, cookie);
     expect(refused.status).toBe(409);
     expect(((await refused.json()) as { error: { code: string } }).error.code).toBe(
       'terms_decision_required',
     );
-    const reviewed = await app.request('/api/v1/auth/terms', {
-      method: 'POST',
-      headers: { Cookie: cookie, 'Content-Type': 'application/json' },
-      body: JSON.stringify(terms),
+    await recordAccountTermsDecision(db, {
+      actorId: user,
+      revision: policy.auth.terms_revision,
+      context: 'signin',
     });
-    expect(((await reviewed.json()) as { accepted_at: string | null }).accepted_at).not.toBeNull();
     const results = await Promise.all([
       request('', 'POST', { name: 'First', ...terms }, cookie),
       request('', 'POST', { name: 'Second', ...terms }, cookie),
@@ -654,6 +655,18 @@ describe('Terms', () => {
       ).accepted_at,
     ).toBeNull();
     const body = { terms_revision: policy.auth.terms_revision, accept_terms: true };
+    // The request flag alone is not consent: the decision made on the sign-in
+    // form must already be on the account.
+    const undecided = await request(`/${workspace}/policies`, 'POST', body);
+    expect(undecided.status).toBe(409);
+    expect(((await undecided.json()) as { error: { code: string } }).error.code).toBe(
+      'terms_decision_required',
+    );
+    await recordAccountTermsDecision(db, {
+      actorId: owner,
+      revision: policy.auth.terms_revision,
+      context: 'signin',
+    });
     const first = await request(`/${workspace}/policies`, 'POST', body).then((response) =>
       response.json(),
     );

@@ -1,6 +1,7 @@
 import type { QueryClient } from '@tanstack/react-query';
 
 import { authApi } from '@/lib/api/auth';
+import { TERMS_CHANGED_CODE } from '@/lib/auth/forms';
 import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import { clearActiveProjectSelection } from '@/lib/project/active-project-storage';
 
@@ -34,4 +35,14 @@ export async function restartAt(queryClient: QueryClient, path: string) {
 export async function signOut(queryClient: QueryClient) {
   await authApi.logout();
   await restartAt(queryClient, '/login');
+}
+
+/**
+ * End a session that predates the published Terms revision: the sign-in form
+ * says why and asks for the decision on its required box. No consent screen
+ * inside the app asks instead.
+ */
+export async function signOutForChangedTerms(queryClient: QueryClient) {
+  await authApi.logout();
+  await restartAt(queryClient, `/login?error=${TERMS_CHANGED_CODE}`);
 }

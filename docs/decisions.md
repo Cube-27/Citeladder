@@ -327,3 +327,22 @@ note twice for one page of drift (Category 52 to 53 of about 200, all deltas 0),
 which the owner judged meaningless for a new crawl or a recrawl. The share rule
 and its 10-point default are the implementer's, not an owner choice; the owner
 may retune the threshold. [Site Health](site-health.md) owns the shipped behavior.
+
+## Terms are accepted on the sign-in and sign-up forms, never on a later screen
+
+The Terms of Service and Privacy Policy decision is one required checkbox on
+the sign-in and sign-up pages themselves; there is no separate acceptance
+screen after login. Every way in on those pages waits for the box, and the
+server records the decision against the published revision when the person
+authenticates. A session that predates a new revision is ended and the person
+signs in again, ticking the box, rather than being shown an in-app consent
+screen (the implementer's choice for that edge case, as the least intrusive
+behaviour that is not a separate screen; there are no customers yet).
+
+Source: owner, 2 November 2026: "This was fixed first and then again ruined:
+the TOS and privacy policy acceptance should not be a separate screen post
+login, but there should be a check mark on the signup/login page itself — no
+need to add a separate screen." The earlier fix was #198 (Terms on the sign-in
+form); #348 and #367 moved it to sign-up only, which brought back the review
+screen for sign-ins. [Workspace access](workspace-access.md) owns the shipped
+behavior.

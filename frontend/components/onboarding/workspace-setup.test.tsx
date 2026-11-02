@@ -5,9 +5,12 @@ import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
 import { authApi } from '@/lib/api/auth';
 import { workspacesApi } from '@/lib/api/workspaces';
+import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import { renderWithProviders } from '@/test/render';
 
 import { WorkspaceSetup } from './workspace-setup';
+
+vi.mock('@/lib/navigation/hard-navigate', () => ({ hardNavigate: vi.fn() }));
 
 const CREATED = {
   id: '33333333-3333-4333-8333-333333333333',
@@ -56,7 +59,7 @@ describe('WorkspaceSetup', () => {
     await waitFor(() => expect(submit).toBeEnabled());
     await user.click(submit);
     expect(screen.getByText('Name your workspace.')).toBeVisible();
-    // The Terms were agreed on the signup form; setup asks for nothing more.
+    // The Terms were agreed on the sign-in or sign-up form; setup asks for nothing more.
     expect(screen.queryByRole('checkbox')).toBeNull();
 
     await user.type(screen.getByLabelText(/^Workspace name/), '  Acme ');
@@ -77,17 +80,13 @@ describe('WorkspaceSetup', () => {
 describe('WorkspaceSetup without a recorded Terms decision', () => {
   afterEach(() => vi.restoreAllMocks());
 
-  it('reviews the Terms first, records the decision, then asks for the name', async () => {
-    const undecided = {
+  it('ends a session that predates the published Terms instead of showing a consent screen', async () => {
+    vi.spyOn(authApi, 'terms').mockResolvedValue({
       terms_revision: '2026-09-24',
       privacy_notice_revision: '2026-09-24',
       accepted_at: null,
-    };
-    vi.spyOn(authApi, 'terms').mockResolvedValue(undecided);
-    const acceptTerms = vi
-      .spyOn(authApi, 'acceptTerms')
-      .mockResolvedValue({ ...undecided, accepted_at: '2026-10-11T00:00:00Z' });
-    const user = userEvent.setup();
+    });
+    const logout = vi.spyOn(authApi, 'logout').mockResolvedValue(undefined);
     renderWithProviders(<WorkspaceSetup />, {
       initialEntries: ['/onboarding?setup=workspace'],
       projectSelection: {
@@ -99,13 +98,9 @@ describe('WorkspaceSetup without a recorded Terms decision', () => {
       },
     });
 
-    const accept = await screen.findByRole('button', { name: 'Accept and continue' });
-    expect(accept).toBeDisabled();
+    await waitFor(() => expect(hardNavigate).toHaveBeenCalledWith('/login?error=terms_changed'));
+    expect(logout).toHaveBeenCalledTimes(1);
     expect(screen.queryByLabelText(/^Workspace name/)).toBeNull();
-    await user.click(screen.getByRole('checkbox', { name: 'I agree to the Terms of Service.' }));
-    await user.click(accept);
-
-    await waitFor(() => expect(acceptTerms).toHaveBeenCalledWith('2026-09-24'));
-    expect(await screen.findByLabelText(/^Workspace name/)).toBeVisible();
+    expect(screen.queryByRole('checkbox')).toBeNull();
   });
 });

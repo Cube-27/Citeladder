@@ -1,18 +1,19 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { FlowActions, FlowShell } from '@/components/auth/flow-shell';
-import { TermsReview } from '@/components/auth/policy-acceptance';
 import { FlowAccountControls } from '@/components/layout/flow-account-controls';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
+import { QueryState } from '@/components/ui/query-state';
 import { authApi } from '@/lib/api/auth';
+import { signOutForChangedTerms } from '@/lib/auth/account-transition';
 import { humanizeApiError } from '@/lib/api/errors';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { Workspace } from '@/lib/api/types';
@@ -24,9 +25,10 @@ const FORM_ID = 'workspace-setup-form';
 
 /**
  * Create the person's own workspace before its first project. This is where
- * their trial starts. A person who signed up made their Terms decision on the
- * signup form and goes straight to naming the workspace; one without a recorded
- * decision (an operator- or invitation-made account) reviews the Terms first.
+ * their trial starts. The Terms decision was made on the sign-in or sign-up
+ * form and recorded with the account, so the person goes straight to naming
+ * the workspace. A session older than the published revision holds no
+ * decision on it: it ends, and the sign-in form asks for the decision.
  */
 export function WorkspaceSetup() {
   const queryClient = useQueryClient();
@@ -34,27 +36,31 @@ export function WorkspaceSetup() {
     queryKey: queryKeys.auth.terms(),
     queryFn: ({ signal }) => authApi.terms(signal),
   });
-  const accept = useMutation({
-    mutationFn: (revision: string) => authApi.acceptTerms(revision),
-    onSuccess: (status) => queryClient.setQueryData(queryKeys.auth.terms(), status),
-  });
+  const leave = useMutation({ mutationFn: () => signOutForChangedTerms(queryClient) });
+  const sessionPredatesTerms = terms.isSuccess && !terms.data.accepted_at;
+  const { mutate: signOut } = leave;
+  // Once: leaving clears the cache, and the re-read must not sign out again.
+  const leaving = useRef(false);
+  useEffect(() => {
+    if (!sessionPredatesTerms || leaving.current) return;
+    leaving.current = true;
+    signOut();
+  }, [signOut, sessionPredatesTerms]);
 
-  if (terms.isPending) return <FlowShell mainLabel="Workspace setup">{null}</FlowShell>;
-  if (!terms.data?.accepted_at)
+  const failure = terms.error ?? leave.error;
+  if (failure)
     return (
-      <FlowShell mainLabel="Terms review" trailing={<FlowAccountControls />}>
-        <Stack gap="workspace">
-          <TermsReview
-            revision={terms.data?.terms_revision}
-            readError={terms.error}
-            onRetry={() => void terms.refetch()}
-            accepting={accept.isPending}
-            acceptError={accept.error}
-            onAccept={(revision) => accept.mutate(revision)}
-          />
-        </Stack>
+      <FlowShell mainLabel="Workspace setup" trailing={<FlowAccountControls />}>
+        <QueryState
+          kind="error"
+          error={failure}
+          fallback="We could not load workspace setup."
+          onRetry={() => (terms.error ? void terms.refetch() : signOut())}
+          pending={terms.isFetching || leave.isPending}
+        />
       </FlowShell>
     );
+  if (!terms.data?.accepted_at) return <FlowShell mainLabel="Workspace setup">{null}</FlowShell>;
   return <NameWorkspace termsRevision={terms.data.terms_revision} />;
 }
 
@@ -74,8 +80,8 @@ function NameWorkspace({ termsRevision }: Readonly<{ termsRevision: string }>) {
       setActiveWorkspaceId(workspace.id);
       navigate(workspaceDestination('/onboarding', null, workspace.id), { replace: true });
     },
-    // The decision was revoked or the Terms changed: read it again, which
-    // brings back the review.
+    // The Terms may have changed since sign-in: read the decision again, which
+    // ends a session that holds none on the published revision.
     onError: () => void queryClient.invalidateQueries({ queryKey: queryKeys.auth.terms() }),
   });
 

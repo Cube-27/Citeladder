@@ -1,13 +1,13 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 
 import { AuthEmailField, AuthFormShell, AuthPasswordField } from '@/components/auth/auth-form';
 import { authApi } from '@/lib/api/auth';
+import { usePublishedTerms } from '@/lib/auth/terms-consent';
 import { passwordHint } from '@/lib/config/auth';
-import { queryKeys } from '@/lib/api/query-keys';
 import {
   authErrorMessage,
   oauthSignInErrorMessage,
@@ -36,14 +36,8 @@ export function RegisterScreen({
   const returnTo = safeAuthReturnPath(searchParams.get('return_to'));
   // Google sign-in found no account: the address arrives here to sign up.
   const oauthNotice = oauthSignInErrorMessage(searchParams.get('error'));
-  const terms = useQuery({
-    queryKey: queryKeys.auth.policies(),
-    queryFn: () => authApi.policies(),
-    // The published revision changes only with a deployment.
-    staleTime: Number.POSITIVE_INFINITY,
-    enabled: !demoMode && signupOpen,
-  });
-  const termsRevision = terms.data?.terms_revision;
+  const terms = usePublishedTerms(!demoMode && signupOpen);
+  const termsRevision = terms.revision;
   const {
     register,
     handleSubmit,
@@ -83,7 +77,6 @@ export function RegisterScreen({
         footerPrompt={demoMode ? 'Already have the demo account?' : 'Already have an account?'}
         footerHref={withAuthReturnPath('/login', returnTo)}
         footerLabel="Sign in"
-        showOAuth={false}
         showForm={false}
       >
         {null}
@@ -103,7 +96,7 @@ export function RegisterScreen({
       footerPrompt="Already have an account?"
       footerHref={withAuthReturnPath('/login', returnTo)}
       footerLabel="Sign in"
-      signup={{ termsRevision }}
+      terms={{ revision: termsRevision, signup: true }}
     >
       <AuthEmailField error={errors.email?.message} inputProps={register('email')} />
       <AuthPasswordField

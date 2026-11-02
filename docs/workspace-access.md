@@ -18,9 +18,10 @@ until mailbox verification; operator-created identities retain their explicit
 access policy without invented verification timestamps. Every identity names its
 origin (`public` or `operator`); any other origin requires verification. Google sign-in is gated
 by `OAUTH_GOOGLE_ENABLED`; new Google identities also require `PUBLIC_SIGNUP_ENABLED`
-and a sign-up start. Only Google started from the signup form carries the Terms
-decision (`accept_terms` and the published `terms_revision`, sealed in the signed
-state) and may create an account. Google started from sign-in never creates one:
+and a sign-up start. Every Google start carries the Terms decision made on the
+sign-in or sign-up form (`accept_terms` and the published `terms_revision`,
+sealed in the signed state); a start without it is refused. Only a start from the
+signup form (`signup=true`) may create an account. Google started from sign-in never creates one:
 an unknown address is redirected to `/register` with the address prefilled and a
 `oauth_signin_no_account` notice.
 Once a public identity's mailbox is verified (mailed link, reset or Google), the
@@ -35,7 +36,7 @@ session-version checks invalidate stale sessions. Neither signing up nor signing
 in creates a workspace. Onboarding creates the person's own workspace
 (`POST /workspaces`) before its first project; that request carries the
 published Terms revision, is refused (`terms_decision_required`) unless the
-creator has a recorded account Terms decision on it, records the workspace
+creator's account holds the Terms decision recorded at sign-up or sign-in, records the workspace
 acceptance, spends the shared
 daily trial budget for a public identity, and starts the trial. A person has one
 trial: a workspace created after handing ownership away inherits the window of
@@ -96,21 +97,28 @@ authorized to publish the global billing catalog or administer other workspaces.
 
 Every workspace a person opens needs their acceptance of the current Terms
 revision (`/workspaces/{id}/policies`). This covers password, Google-created and
-operator-created identities. Creating an account is itself a Terms decision:
-`POST /auth/register` and a Google sign-up start refuse a request without
-`accept_terms` and the published revision (`GET /auth/policies`, public), and
-record it in `account_policy_acceptances` (actor, revision, context `signup`,
-timestamp; append-only, idempotent per revision) with the account. The signup
-form's unticked, required checkbox gates both ways in, so normal signup has no
-second consent step and signing in asks nothing. A person without a recorded
-account decision (an operator- or invitation-made account, or a new revision)
-sees the same review screen at workspace setup before naming the workspace;
-`GET/POST /auth/terms` read and record it (context `review`). A signup decision made in the same tab
-is recorded for a workspace the person then joins. Otherwise, for a workspace
-joined without that decision or after a new revision, the explicit review screen
-appears, with sign-out and, when there is another workspace, a switch to the
-chooser. The chooser and workspace setup never wait on the selected workspace's
-Terms or access. PostgreSQL stores
+operator-created identities. There is no consent screen after sign-in: the
+sign-in and sign-up forms carry one unticked, required checkbox (the Terms
+agreement, with the Privacy Policy linked as notice), and every way in on them
+(email and password, Google) stays disabled until it is ticked, with a hint the
+disabled buttons point to. `POST /auth/register`, `POST /auth/login` and every
+Google start refuse a request without `accept_terms` and the published revision
+(`GET /auth/policies`, public). The decision is recorded in
+`account_policy_acceptances` (actor, revision, context `signup` or `signin`,
+timestamp; append-only, the first decision on a revision kept and repeats inert)
+when the person authenticates: with the new account at registration or a Google
+sign-up, on a successful password sign-in, and in the Google callback's
+transaction when it issues a session. `GET /auth/terms` reads it. Creating a
+workspace and recording a workspace acceptance (`POST /workspaces`,
+`POST /workspaces/{id}/policies`) are refused (`terms_decision_required`)
+without that account decision on the revision they name, so the request flag
+alone is never consent. The shell's policy gate records the acceptance for a
+workspace the person opens without one (one they joined) behind the shell's
+loading frame. A session older than the published revision holds no decision
+on it: the gate and workspace setup end that session and send the person to
+sign in with a notice (`/login?error=terms_changed`), where the checkbox takes
+the decision. The chooser and workspace setup never wait on the selected
+workspace's Terms or access. PostgreSQL stores
 actor, workspace, immutable revision, context and timestamp; repeated acceptance
 of one revision is idempotent. Updating the approved Terms revision requires
 renewed acceptance and never overwrites an earlier row. Privacy is a notice;

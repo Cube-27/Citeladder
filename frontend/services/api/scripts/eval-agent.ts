@@ -23,7 +23,7 @@ import { z } from 'zod';
 import { agentChatDetailSchema, agentTurnAcceptedSchema } from '@citeladder/contracts/agent';
 import { requireLocalDevelopment } from '../src/auth/bootstrap.ts';
 import { localEnvironment } from '../src/cli/local-environment.ts';
-import { loadConfig } from '../src/config.ts';
+import { loadConfig, policy } from '../src/config.ts';
 import { createDatabase, type Database } from '../src/db/database.ts';
 import { stripTrailing } from '../src/text-order.ts';
 import { gitDirectory } from './git-directory.ts';
@@ -263,10 +263,16 @@ async function session(
   password: string,
   workspaceId: string,
 ): Promise<Client> {
+  // Signing in is a Terms decision on the published revision, as on the form.
   const response = await fetch(`${api}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({
+      email,
+      password,
+      terms_revision: policy.auth.terms_revision,
+      accept_terms: true,
+    }),
   });
   if (!response.ok) throw new Error(`Login failed: ${response.status}`);
   const cookie = response.headers
