@@ -8,7 +8,7 @@ export function GET() {
       short_name: SITE_NAME,
       description: SITE_TAGLINE,
       start_url: '/',
-      icons: [{ src: '/citeladder-favicon.ico', type: 'image/x-icon', sizes: '256x256' }],
+      icons: [{ src: '/favicon.ico', type: 'image/x-icon', sizes: '256x256' }],
     }),
     {
       headers: {

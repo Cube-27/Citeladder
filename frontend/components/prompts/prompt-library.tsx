@@ -346,8 +346,11 @@ export function PromptLibrary({
   }
 
   // The library's search and filters ride a control band once it loads; the
-  // first load holds that band so the table starts where the box stood.
-  if (isLoading) {
+  // first load holds that band so the table starts where the box stood. The
+  // prompts often arrive with the project, before the latest run's figures:
+  // the table waits for those too, because a run adds four columns, and
+  // adding them to rows already on screen moved every cell sideways.
+  if (isLoading || (hasPrompts && measurements === undefined)) {
     return (
       <ListScreen controls={RESERVED_CONTROLS}>
         <QueryState kind="loading" />

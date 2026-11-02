@@ -88,7 +88,7 @@ await writeFile(
   [
     headersRule('/*', SECURITY_HEADERS),
     headersRule('/fonts/*', { 'Cache-Control': STABLE_ASSET_CACHE_CONTROL }),
-    headersRule('/citeladder-favicon.ico', { 'Cache-Control': STABLE_ASSET_CACHE_CONTROL }),
+    headersRule('/favicon.ico', { 'Cache-Control': STABLE_ASSET_CACHE_CONTROL }),
     ...unindexed.map((path) => headersRule(path, { 'X-Robots-Tag': 'noindex' })),
     headers,
   ].join('\n'),

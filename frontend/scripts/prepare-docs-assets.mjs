@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 const publicRoot = new URL('../public/', import.meta.url);
 const docsPublic = new URL('../apps/docs/public/', import.meta.url);
 await mkdir(docsPublic, { recursive: true });
-for (const name of ['citeladder-logo.svg', 'citeladder-favicon.ico', 'fonts']) {
+for (const name of ['citeladder-logo.svg', 'favicon.ico', 'fonts']) {
   try {
     await cp(new URL(name, publicRoot), new URL(name, docsPublic), { recursive: true }); // NOSONAR -- Three small copies; a missing-fonts fallback is reported per item.
   } catch (error) {
