@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
-import { authApi } from '@/lib/api/auth';
+import { authApi, authQueries } from '@/lib/api/auth';
 import { authFormPolicy, passwordHint } from '@/lib/config/auth';
 import { authErrorMessage } from '@/lib/auth/forms';
 import { hardNavigate } from '@/lib/navigation/hard-navigate';
@@ -74,10 +74,7 @@ export default function AccountSecurity() {
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState<'sign-out' | 'disconnect' | null>(null);
   const client = useQueryClient();
-  const security = useQuery({
-    queryKey: ['auth', 'security'],
-    queryFn: authApi.security,
-  });
+  const security = useQuery(authQueries.security());
   const mutation = useMutation({
     // All end every session, this device's included (a sign-out is always everywhere).
     mutationFn: async (operation: 'change-password' | 'sign-out' | 'disconnect') => {

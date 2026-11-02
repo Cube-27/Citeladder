@@ -13,6 +13,7 @@ const { mailbox, logout, logoutAndDisconnect, security, hardNavigate } = vi.hois
 }));
 vi.mock('@/lib/api/auth', () => ({
   authApi: { mailbox, logout, logoutAndDisconnect, security },
+  authQueries: { security: () => ({ queryKey: ['auth', 'security'], queryFn: () => security() }) },
 }));
 vi.mock('@/lib/navigation/hard-navigate', () => ({ hardNavigate }));
 

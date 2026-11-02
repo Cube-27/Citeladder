@@ -15,7 +15,10 @@ const { security, passwordLink } = vi.hoisted(() => ({
   security: vi.fn(),
   passwordLink: vi.fn(),
 }));
-vi.mock('@/lib/api/auth', () => ({ authApi: { security, passwordLink } }));
+vi.mock('@/lib/api/auth', () => ({
+  authApi: { security, passwordLink },
+  authQueries: { security: () => ({ queryKey: ['auth', 'security'], queryFn: () => security() }) },
+}));
 
 // Session is mocked per test so the screen renders without a real SessionGuard.
 const user: SessionUser = {

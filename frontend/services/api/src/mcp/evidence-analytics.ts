@@ -47,6 +47,16 @@ const runs = (scope: ReadScope, args: Selection): RunSelection => ({
   toAt: null,
 });
 
+/**
+ * The default selection with nothing to read yet: `no_completed_run`, or
+ * `metrics_pending` while the latest run's results are still being written.
+ * A missing run the caller named is the caller's error, so it is rethrown.
+ */
+function notYetMeasured(error: unknown, named: boolean): Evidence {
+  if (named || !(error instanceof AnalysisNotFoundError)) throw error;
+  return unavailable(error.reason === 'metrics_pending' ? 'metrics_pending' : 'no_completed_run');
+}
+
 export async function visibilityTrends(
   { db, scope }: ProjectRead,
   args: Selection & {
@@ -130,9 +140,7 @@ export async function perceptionRead(
       artifact_refs: summary.source_audit_ids.map((id) => reference('audit', id)),
     };
   } catch (error) {
-    if (error instanceof AnalysisNotFoundError && !args.audit_id)
-      return unavailable('no_completed_run');
-    throw error;
+    return notYetMeasured(error, Boolean(args.audit_id));
   }
 }
 
@@ -178,9 +186,7 @@ export async function factChecksRead(
       artifact_refs: summary.source_audit_ids.map((id) => reference('audit', id)),
     };
   } catch (error) {
-    if (error instanceof AnalysisNotFoundError && !args.audit_id)
-      return unavailable('no_completed_run');
-    throw error;
+    return notYetMeasured(error, Boolean(args.audit_id));
   }
 }
 
@@ -209,9 +215,7 @@ export async function adsRead(
       artifact_refs: summary.source_audit_ids.map((id) => reference('audit', id)),
     };
   } catch (error) {
-    if (error instanceof AnalysisNotFoundError && !args.audit_id)
-      return unavailable('no_completed_run');
-    throw error;
+    return notYetMeasured(error, Boolean(args.audit_id));
   }
 }
 
@@ -254,9 +258,7 @@ export async function visibilityOverview(
       artifact_refs: [reference('audit', projection.audit_id)],
     };
   } catch (error) {
-    if (error instanceof AnalysisNotFoundError && !args.audit_id && !args.baseline_id)
-      return unavailable('no_completed_run');
-    throw error;
+    return notYetMeasured(error, Boolean(args.audit_id || args.baseline_id));
   }
 }
 
@@ -304,9 +306,7 @@ export async function visibilitySources(
     // One run, as the description promises: the named run or the market's latest.
     selection = await scopedSelection(db, runs(scope, args));
   } catch (error) {
-    if (error instanceof AnalysisNotFoundError && !args.audit_id)
-      return unavailable('no_completed_run');
-    throw error;
+    return notYetMeasured(error, Boolean(args.audit_id));
   }
   const auditId = selection.auditId;
   if (auditId === null) throw new Error('A sources read selects exactly one run');
