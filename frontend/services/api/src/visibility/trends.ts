@@ -11,7 +11,7 @@ import { toUtc, type ParsedDatetime } from '../http/datetimes.ts';
 import { applyMarks, rankingMarks } from './ranking-marks.ts';
 import { loadMeasuredRuns, trendSource, type RunScope } from './runs.ts';
 import { TrendQueryError, validateEngineAndRange, validateCohort } from './selection.ts';
-import { bucketPoints, rawPoint, type TrendPoint } from './trend-folding.ts';
+import { bucketPoints, bucketStart, rawPoint, type TrendPoint } from './trend-folding.ts';
 
 const visibility = policy.visibility;
 
@@ -24,6 +24,26 @@ export type TrendQuery = {
   retrievalEnabled: boolean | null;
   cohort: string;
 };
+
+/**
+ * The newest `trend_max_runs` measured runs in the window, oldest first. The
+ * read takes one run more to see where history was cut: that run leaves the
+ * trend and, in a bucketed view, so does every run sharing its bucket, so no
+ * point folds part of a bucket.
+ */
+async function newestRuns(db: Database, scope: RunScope, query: TrendQuery) {
+  const bound = visibility.trend_max_runs;
+  const loaded = await loadMeasuredRuns(db, scope, {
+    fromAt: query.fromAt && toUtc(query.fromAt),
+    toAt: query.toAt && toUtc(query.toAt),
+    newest: bound + 1,
+  });
+  const [cut, ...kept] = loaded;
+  if (cut === undefined || loaded.length <= bound) return loaded;
+  if (query.granularity === 'run') return kept;
+  const cutBucket = bucketStart(cut.completedAt, query.granularity);
+  return kept.filter((run) => bucketStart(run.completedAt, query.granularity) > cutBucket);
+}
 
 export async function getVisibilityTrends(
   db: Database,
@@ -38,10 +58,7 @@ export async function getVisibilityTrends(
   }
   validateEngineAndRange(query);
   validateCohort(query.cohort);
-  const runs = await loadMeasuredRuns(db, scope, {
-    fromAt: query.fromAt && toUtc(query.fromAt),
-    toAt: query.toAt && toUtc(query.toAt),
-  });
+  const runs = await newestRuns(db, scope, query);
   const sources = runs
     .map((run) => trendSource(run, query.logicalEngine, query.cohort))
     .filter((source) => source !== null)
@@ -53,8 +70,8 @@ export async function getVisibilityTrends(
         (query.retrievalEnabled === null || source.retrievalEnabled === query.retrievalEnabled),
     );
   if (sources.length === 0) return [];
-  // Cap points, not runs: capping runs first would silently drop whole
-  // weeks or months from a bucketed view. The newest points stay, in order.
+  // Cap points after folding, so a run-heavy week is still one point and
+  // never crowds out the weeks before it. The newest points stay, in order.
   const points = (
     query.granularity === 'run' ? sources.map(rawPoint) : bucketPoints(sources, query.granularity)
   ).slice(-visibility.trend_max_points);

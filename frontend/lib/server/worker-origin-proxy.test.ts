@@ -79,4 +79,36 @@ describe('Worker origin transport', () => {
     expect(response.status).toBe(200);
     expect(transport).toHaveBeenCalledOnce();
   });
+
+  it("keeps the origin's private cache policy and validator, and stores nothing else", async () => {
+    const tag = 'W/"snapshot-tag"';
+    const transport = vi.fn(async (request: Request) =>
+      request.headers.get('if-none-match') === tag
+        ? new Response(null, {
+            status: 304,
+            headers: { etag: tag, 'cache-control': 'private, no-cache' },
+          })
+        : new Response(request.url.endsWith('/overview') ? '{}' : 'plain', {
+            headers: {
+              etag: tag,
+              'cache-control': request.url.endsWith('/overview') ? 'private, no-cache' : 'no-store',
+            },
+          }),
+    );
+    const send = (path: string, headers: Record<string, string> = {}) =>
+      proxyWorkerRequest(
+        new Request(`https://app.citeladder.com${path}`, { headers }),
+        config,
+        transport,
+      );
+
+    const snapshot = await send('/api/v1/overview');
+    expect([snapshot.headers.get('cache-control'), snapshot.headers.get('etag')]).toEqual([
+      'private, no-cache',
+      tag,
+    ]);
+    const revalidated = await send('/api/v1/overview', { 'If-None-Match': tag });
+    expect([revalidated.status, await revalidated.text()]).toEqual([304, '']);
+    expect((await send('/api/v1/other')).headers.get('cache-control')).toBe('private, no-store');
+  });
 });

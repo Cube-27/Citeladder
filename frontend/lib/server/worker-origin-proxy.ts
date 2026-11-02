@@ -106,7 +106,13 @@ function originResponse(upstreamResponse: Response): Response {
   for (const cookie of upstreamResponse.headers.getSetCookie()) {
     responseHeaders.append('Set-Cookie', cookie);
   }
-  responseHeaders.set('Cache-Control', 'private, no-store');
+  // The origin's own private policy (a revalidated snapshot read, a logo's
+  // max-age) reaches the browser; any other response is never stored.
+  const upstreamPolicy = upstreamResponse.headers.get('cache-control') ?? '';
+  responseHeaders.set(
+    'Cache-Control',
+    /^private\s*,/i.test(upstreamPolicy) ? upstreamPolicy : 'private, no-store',
+  );
   return new Response(
     [204, 205, 304].includes(upstreamResponse.status) ? null : upstreamResponse.body,
     {

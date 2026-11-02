@@ -29,7 +29,8 @@ import { ApiError } from '../errors.ts';
 import { InvalidCursorError } from '../http/keyset-cursor.ts';
 import { slottedEventStream } from '../http/stream-slots.ts';
 import { parseUuid } from '../http/uuid.ts';
-import { loadCrawl, projectCrawl, rootFailure } from '../site-health/reads/crawl.ts';
+import { revalidatable } from '../http/revalidate.ts';
+import { isTerminal, loadCrawl, projectCrawl, rootFailure } from '../site-health/reads/crawl.ts';
 import { dashboard } from '../site-health/reads/dashboard.ts';
 import { eventReplay, eventStream } from '../site-health/reads/events.ts';
 import {
@@ -252,26 +253,33 @@ export const siteHealthRoutes = [
       },
     },
     response: siteIssuesPageSchema,
-    handle: ({ c, db }, { path, query }) =>
-      withCursor(
-        issues(
-          db,
-          c.get('workspace').workspaceId,
-          path.crawl_id,
-          {
-            query: query.query || null,
-            severity: query.severity || null,
-            category: query.category || null,
-            dimension: query.dimension || null,
-            rule: query.rule || null,
-            siteUrlId: query.site_url_id,
-            pageKind: query.page_kind || null,
-            findingClass: query.finding_class,
-          },
-          query,
-          query.detail_limit ?? null,
+    async handle({ c, db }, { path, query }) {
+      const workspaceId = c.get('workspace').workspaceId;
+      const [page, crawl] = await Promise.all([
+        withCursor(
+          issues(
+            db,
+            workspaceId,
+            path.crawl_id,
+            {
+              query: query.query || null,
+              severity: query.severity || null,
+              category: query.category || null,
+              dimension: query.dimension || null,
+              rule: query.rule || null,
+              siteUrlId: query.site_url_id,
+              pageKind: query.page_kind || null,
+              findingClass: query.finding_class,
+            },
+            query,
+            query.detail_limit ?? null,
+          ),
         ),
-      ),
+        loadCrawl(db, workspaceId, path.crawl_id),
+      ]);
+      // A crawl still running grows its issues; only a terminal one is revalidated.
+      return isTerminal(crawl) ? revalidatable(c, page) : page;
+    },
   }),
   defineGetRoute({
     family,
@@ -341,16 +349,28 @@ export const siteHealthRoutes = [
     path: `${projectRoot}/overview`,
     params: { path: projectPath, query: { crawl_id: optionalUuid } },
     response: siteHealthOverviewSchema,
-    handle: ({ c, db }, { path, query }) =>
-      overview(db, c.get('workspace').workspaceId, path.project_id, query.crawl_id),
+    // Served only from a persisted snapshot (404 otherwise).
+    handle: async ({ c, db }, { path, query }) =>
+      revalidatable(
+        c,
+        await overview(db, c.get('workspace').workspaceId, path.project_id, query.crawl_id),
+      ),
   }),
   defineGetRoute({
     family,
     path: `${projectRoot}/aeo-readiness`,
     params: { path: projectPath, query: { crawl_id: optionalUuid } },
     response: aeoReadinessSchema,
-    handle: ({ c, db }, { path, query }) =>
-      aeoReadiness(db, c.get('workspace').workspaceId, path.project_id, query.crawl_id),
+    async handle({ c, db }, { path, query }) {
+      const readiness = await aeoReadiness(
+        db,
+        c.get('workspace').workspaceId,
+        path.project_id,
+        query.crawl_id,
+      );
+      // Until a snapshot carries the diagnostic, the next analysis replaces this answer.
+      return readiness.state === 'not_measured' ? readiness : revalidatable(c, readiness);
+    },
   }),
   defineGetRoute({
     family,

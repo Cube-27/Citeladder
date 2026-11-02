@@ -1,6 +1,7 @@
 'use client';
 
-import { capabilityRemaining, useEntitlement } from '@/lib/billing/entitlement-context';
+import { capabilityRemaining } from '@/lib/billing/entitlement-capability';
+import { useEntitlement } from '@/lib/billing/entitlement-context';
 import { PROJECT_SLOTS_CAPABILITY } from '@/lib/config/billing';
 import { newProjectDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';

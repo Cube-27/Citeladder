@@ -6,7 +6,8 @@ import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 import { queryKeys } from '@/lib/api/query-keys';
 
-import { EntitlementProvider, useEntitlement, capabilityRemaining } from './entitlement-context';
+import { capabilityRemaining } from './entitlement-capability';
+import { EntitlementProvider, useEntitlement } from './entitlement-context';
 
 const WORKSPACE = '22222222-2222-4222-8222-222222222222';
 
