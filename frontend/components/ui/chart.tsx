@@ -1,7 +1,6 @@
 'use client';
 
-import type { ReactElement, ReactNode } from 'react';
-import { ResponsiveContainer } from 'recharts';
+import { Suspense, type ReactNode } from 'react';
 
 import { dataFillClass, type DataTone } from '@/components/ui/data-tone';
 import { textRole } from '@/components/ui/typography';
@@ -67,6 +66,15 @@ function seriesVariables(config: ChartConfig): Record<string, string> {
   );
 }
 
+/**
+ * The plot's box: the description, the series tokens and the plot's height.
+ *
+ * Nothing here imports Recharts. The drawing is a lazy `ChartPlot` module
+ * (`chart-plot.tsx` and the per-chart plots beside it), so the chart library
+ * is fetched when a chart is drawn, not with every screen that shows one. The
+ * box is sized by its height role before that code arrives, so the plot fills
+ * a space already held and nothing around it moves.
+ */
 export function ChartContainer({
   config,
   children,
@@ -75,8 +83,8 @@ export function ChartContainer({
   description,
 }: Readonly<{
   config: ChartConfig;
-  /** One Recharts chart element. */
-  children: ReactElement;
+  /** The lazy plot: a component that renders one Recharts chart in a `ChartPlot`. */
+  children: ReactNode;
   className?: string;
   /** The plot's height role. */
   size?: ChartHeight;
@@ -93,9 +101,7 @@ export function ChartContainer({
     <div className={cn('w-full', className)} style={seriesVariables(config)}>
       <p className="sr-only">{description}</p>
       <div aria-hidden className={chartHeightClasses[size]}>
-        <ResponsiveContainer width="100%" height="100%">
-          {children}
-        </ResponsiveContainer>
+        <Suspense fallback={null}>{children}</Suspense>
       </div>
     </div>
   );

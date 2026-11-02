@@ -1,9 +1,8 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import type { ReactNode } from 'react';
+import { lazy, Suspense, useEffect, type ReactNode } from 'react';
 
-import { EvidenceCard } from '@/components/runs/evidence-card';
 import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { Drawer } from '@/components/ui/drawer';
 import { Stack } from '@/components/ui/layout';
@@ -11,6 +10,16 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { queryKeys } from '@/lib/api/query-keys';
 import { runsApi } from '@/lib/api/runs';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
+
+/**
+ * The evidence card and the markdown renderer behind it are fetched when a
+ * drawer opens, not with every screen that can open one: Visibility lists
+ * source rows on every visit, and few of those visits open an answer.
+ */
+const loadEvidenceCard = () => import('@/components/runs/evidence-card');
+const EvidenceCard = lazy(() =>
+  loadEvidenceCard().then(({ EvidenceCard }) => ({ default: EvidenceCard })),
+);
 
 /**
  * What the drawer needs from whatever row opened it.
@@ -94,6 +103,10 @@ export function ExecutionEvidenceDrawer({
     enabled: open && execution !== null && workspaceId !== null,
   });
   const answer = useResolvedAnswer(execution, open);
+  // Start the card's download beside the evidence read rather than after it.
+  useEffect(() => {
+    if (open) void loadEvidenceCard().catch(() => {});
+  }, [open]);
 
   let evidenceBody: ReactNode;
   if (evidenceQuery.isError) {
@@ -107,14 +120,16 @@ export function ExecutionEvidenceDrawer({
     evidenceBody = <EvidenceLoading />;
   } else {
     evidenceBody = (
-      <EvidenceCard
-        evidence={evidenceQuery.data}
-        answerText={answer.answerText}
-        promptText={execution?.prompt_text}
-        promptIndex={execution?.prompt_index}
-        isSearchSurface={execution?.logical_engine === 'google_ai_overview'}
-        outcome={answer.outcome}
-      />
+      <Suspense fallback={<EvidenceLoading />}>
+        <EvidenceCard
+          evidence={evidenceQuery.data}
+          answerText={answer.answerText}
+          promptText={execution?.prompt_text}
+          promptIndex={execution?.prompt_index}
+          isSearchSurface={execution?.logical_engine === 'google_ai_overview'}
+          outcome={answer.outcome}
+        />
+      </Suspense>
     );
   }
 
