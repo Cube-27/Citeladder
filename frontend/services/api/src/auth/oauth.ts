@@ -12,6 +12,7 @@ import { issueSession } from './service.ts';
 import { recordSecurityEvent } from './security-events.ts';
 import { requiresEmailVerification } from './eligibility.ts';
 import { requestChallenge } from './challenges.ts';
+import { inReservedDomain } from './reserved-domains.ts';
 import type { LinkProof } from './continuation.ts';
 import { recordAccountTermsDecision } from '../workspaces/policies.ts';
 
@@ -25,6 +26,7 @@ export class SignInError extends Error {
     | 'oauth_signin_email_unverified'
     | 'oauth_signin_link_required'
     | 'oauth_signin_no_account'
+    | 'oauth_signin_email_reserved'
     | 'oauth_signin_disabled';
   /** The Google address that has no account, for the signup form to prefill. */
   readonly email: string | undefined;
@@ -323,6 +325,8 @@ async function accountForEmail(
   if (config.demo.enabled || !config.auth.publicSignup)
     throw new SignInError('oauth_signin_disabled');
   if (!decision?.signup) throw new SignInError('oauth_signin_no_account', identity.email);
+  if (inReservedDomain(identity.email, config.auth.signupReservedDomains))
+    throw new SignInError('oauth_signin_email_reserved');
   const now = new Date();
   const inserted = await db
     .insertInto('users')

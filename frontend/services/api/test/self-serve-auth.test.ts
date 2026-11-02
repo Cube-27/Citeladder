@@ -1,7 +1,7 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { afterAll, describe, expect, it } from 'vitest';
 import { policy } from '../src/config.ts';
-import { testConfig, testDatabase } from './support.ts';
+import { signupTestConfig, testDatabase } from './support.ts';
 import { registerUser, authenticateUser, issueSession } from '../src/auth/service.ts';
 import { requestChallenge, consumeChallenge } from '../src/auth/challenges.ts';
 import { createWorkspace, provisionAccount } from '../src/workspaces/service.ts';
@@ -10,7 +10,8 @@ import { startSignIn, completeSignIn } from '../src/auth/oauth.ts';
 import { createApp } from '../src/app.ts';
 import { authorizedWorkspaceIds } from '../src/mcp/data.ts';
 
-const config = testConfig({
+// Signs up reserved `example.test` fixtures; mail and signup notices still skip them.
+const config = signupTestConfig({
   PUBLIC_SIGNUP_ENABLED: 'true',
   RESEND_API_KEY: 'test-only-resend',
   AUTH_MAIL_TIMEOUT_MS: '10',
@@ -21,9 +22,9 @@ const config = testConfig({
 const db = testDatabase(config);
 const users: string[] = [];
 const password = 'test-password-secure';
-const messages: { text: string; to: string[] }[] = [];
+const mailed: string[] = [];
 config.auth.fetch = async (_url, init) => {
-  messages.push(JSON.parse(String(init?.body)));
+  mailed.push(String(init?.body));
   return new Response('{}', { status: 200 });
 };
 
@@ -45,10 +46,20 @@ async function pending() {
     .execute((trx) => createWorkspace(trx, user.id, 'Fixture workspace'));
   return { user, email, workspaceId: workspace.id };
 }
-function mailedToken(email: string) {
-  const message = messages.findLast((row) => row.to[0] === email)!;
-  const url = new URL(message.text.split('\n')[1]!);
-  return new URLSearchParams(url.hash.slice(1)).get('token')!;
+/**
+ * The link token of the challenge just issued to a fixture. Mail to a reserved
+ * fixture address is refused, so nothing is mailed: the test sets the token.
+ */
+async function issuedToken(userId: string, purpose: 'verification' | 'password_reset') {
+  expect(mailed).toEqual([]);
+  const token = randomUUID();
+  await db
+    .updateTable('auth_challenges')
+    .set({ token_digest: createHash('sha256').update(token).digest('hex') })
+    .where('user_id', '=', userId)
+    .where('purpose', '=', purpose)
+    .executeTakeFirstOrThrow();
+  return token;
 }
 afterAll(async () => {
   for (const id of users) {
@@ -131,7 +142,7 @@ describe('verified self-serve lifecycle', () => {
       ).status,
     ).toBe(401);
     await requestChallenge(db, config, email, 'verification');
-    const token = mailedToken(email);
+    const token = await issuedToken(user.id, 'verification');
     expect((await app.request(`/api/v1/auth/verify-email?token=${token}`)).status).toBe(405);
     await expect(
       consumeChallenge(db, token, 'wrong-password', 'verification'),
@@ -170,7 +181,7 @@ describe('verified self-serve lifecycle', () => {
       })
       .execute();
     await requestChallenge(db, config, email, 'password_reset');
-    const token = mailedToken(email);
+    const token = await issuedToken(user.id, 'password_reset');
     await consumeChallenge(db, token, 'new-owner-password', 'password_reset');
     expect(
       await db
@@ -271,7 +282,7 @@ describe('verified self-serve lifecycle', () => {
   });
 
   it('Google signup respects the public gate while existing subject login survives it', async () => {
-    const email = `${randomUUID()}@gmail.com`;
+    const email = `${randomUUID()}@example.test`;
     const subject = randomUUID();
     const google = {
       ...config,
@@ -281,7 +292,7 @@ describe('verified self-serve lifecycle', () => {
           new Response(
             JSON.stringify(
               String(url).includes('userinfo')
-                ? { sub: subject, email, email_verified: true }
+                ? { sub: subject, email, email_verified: true, hd: 'example.test' }
                 : { access_token: 'test' },
             ),
           )) as typeof fetch,

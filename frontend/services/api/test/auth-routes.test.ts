@@ -5,9 +5,10 @@ import { createApp } from '../src/app.ts';
 import { policy } from '../src/config.ts';
 import { hashPassword } from '../src/auth/password.ts';
 import { billingAccount, grant } from './prompt-fixtures.ts';
-import { Fixtures, sessionToken, testConfig, testDatabase } from './support.ts';
+import { Fixtures, sessionToken, signupTestConfig, testConfig, testDatabase } from './support.ts';
 
-const config = testConfig({ PUBLIC_SIGNUP_ENABLED: 'true' });
+// Signs up reserved `example.test` fixtures; mail and signup notices still skip them.
+const config = signupTestConfig({ PUBLIC_SIGNUP_ENABLED: 'true' });
 const db = testDatabase(config);
 const fixtures = new Fixtures(db);
 const app = createApp(config, db);
@@ -156,6 +157,58 @@ describe('password auth routes', () => {
       terms_revision: policy.auth.terms_revision,
       accepted_at: expect.any(String),
     });
+  });
+
+  it('refuses sign-up in a reserved mail domain before writing anything, but admits an ordinary one', async () => {
+    await clearClientBudget();
+    const guarded = createApp(testConfig({ PUBLIC_SIGNUP_ENABLED: 'true' }), db);
+    const reserved = [
+      `${prefix}-reserved@example.test`,
+      `${prefix}-reserved@mail.example.invalid`,
+      `${prefix}-reserved@example.com`,
+      `${prefix}-reserved@Team.Example.ORG`,
+    ];
+    const refusals = [];
+    for (const address of reserved) {
+      const response = await call(
+        '/auth/register',
+        { email: address, password, ...decision },
+        undefined,
+        guarded,
+      );
+      const body = (await response.json()) as { error: { code: string; details: object } };
+      refusals.push([response.status, body.error.code, body.error.details]);
+    }
+    expect(refusals).toEqual(
+      reserved.map(() => [422, 'email_domain_reserved', { field: 'email' }]),
+    );
+    expect(
+      await db
+        .selectFrom('users')
+        .select('email')
+        .where(
+          'email',
+          'in',
+          reserved.map((address) => address.toLowerCase()),
+        )
+        .execute(),
+    ).toEqual([]);
+    // Unverified, so no signup notice; no mail key, so no verification mail.
+    const ordinary = `${prefix}-ordinary@fixtures.citeladder.com`;
+    const admitted = await call(
+      '/auth/register',
+      { email: ordinary, password, ...decision },
+      undefined,
+      guarded,
+    );
+    expect(admitted.status).toBe(202);
+    const user = await db
+      .selectFrom('users')
+      .select(['id', 'registration_origin'])
+      .where('email', '=', ordinary)
+      .executeTakeFirstOrThrow();
+    createdUsers.push(user.id);
+    expect(user.registration_origin).toBe('public');
   });
 
   it('creates the owned workspace once, with the Terms decision and a trial from that moment', async () => {
@@ -638,13 +691,14 @@ describe('sign out everywhere and disconnect integrations', () => {
 });
 
 describe('Google sign-in', () => {
-  const oauthConfig = testConfig({
+  const oauthEnv = {
     PUBLIC_SIGNUP_ENABLED: 'true',
     OAUTH_GOOGLE_ENABLED: 'true',
     OAUTH_GOOGLE_CLIENT_ID: 'recorded-client',
     OAUTH_GOOGLE_CLIENT_SECRET: 'recorded-secret',
     FRONTEND_URL: 'https://app.example.test',
-  });
+  };
+  const oauthConfig = signupTestConfig(oauthEnv);
   let subject = 'google-subject';
   let identityEmail = `${prefix}-google@example.test`;
   let verified = true;
@@ -770,6 +824,27 @@ describe('Google sign-in', () => {
         (await call(`/auth/oauth/google/start${query}`, undefined, undefined, oauthApp)).status,
       );
     expect(statuses).toEqual([422, 422, 422, 422, 409]);
+  });
+
+  it('refuses a Google sign-up whose verified address is in a reserved mail domain', async () => {
+    await clearClientBudget();
+    const reserved = `${prefix}-google@team.example.com`;
+    const guarded = testConfig(oauthEnv);
+    guarded.auth.fetch = async (input) =>
+      Response.json(
+        String(input).includes('/token')
+          ? { access_token: 'recorded-token' }
+          : { sub: 'reserved-subject', email: reserved, email_verified: true, hd: 'example.com' },
+      );
+    const guardedApp = createApp(guarded, db);
+    const { data, nonceCookie } = await start(guardedApp, signUpStart);
+    const refused = await callback(data.state, nonceCookie, guardedApp);
+    expect(refused.headers.get('location')).toBe(
+      'https://app.example.test/login?error=oauth_signin_email_reserved',
+    );
+    expect(
+      await db.selectFrom('users').select('id').where('email', '=', reserved).execute(),
+    ).toEqual([]);
   });
 
   it('creates and reuses a passwordless account with its login receipt, landing on the workspace chooser', async () => {

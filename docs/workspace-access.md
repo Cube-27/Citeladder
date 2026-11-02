@@ -24,6 +24,16 @@ sealed in the signed state); a start without it is refused. Only a start from th
 signup form (`signup=true`) may create an account. Google started from sign-in never creates one:
 an unknown address is redirected to `/register` with the address prefilled and a
 `oauth_signin_no_account` notice.
+Domains reserved by RFC 2606 and RFC 6761 (`mailbox.reserved_domains`: `.test`,
+`.example`, `.invalid`, `.localhost`, `example.com`, `example.net`,
+`example.org`, and names under them) can never receive mail
+([reserved domains](../frontend/services/api/src/auth/reserved-domains.ts)).
+Public sign-up refuses them before writing or mailing anything:
+`POST /auth/register` answers 422 `email_domain_reserved` (details
+`field: email`), and a Google sign-up redirects with
+`oauth_signin_email_reserved`. Operator and test fixtures may still hold such
+addresses; no auth or invitation mail is sent to them and no signup notice
+reports them.
 Once a public identity's mailbox is verified (mailed link, reset or Google), the
 runner tick's `signup-notices` phase
 ([signup notifications](../frontend/services/api/src/auth/signup-notifications.ts))

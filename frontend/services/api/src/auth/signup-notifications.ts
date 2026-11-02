@@ -2,12 +2,14 @@
  * Tells the owner about each verified public signup, once. An address counts
  * as verified however it got there (mailed link, password reset or Google), so
  * the notice never reaches a mistyped or unowned mailbox. Reply-To is the new
- * user, so a reply to the notice reaches them directly.
+ * user, so a reply to the notice reaches them directly. Addresses in reserved
+ * domains (test fixtures) are never selected.
  */
 import { policy, type ServiceConfig } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { getLogger } from '../logging.ts';
 import { sendAuthMail } from './mail.ts';
+import { inReservedDomainSql } from './reserved-domains.ts';
 import { recordSecurityEvent } from './security-events.ts';
 
 const NOTIFIED = 'auth.signup_notified';
@@ -53,6 +55,8 @@ export async function notifyVerifiedSignups(
     .where('registration_origin', '=', 'public')
     .where('is_active', '=', true)
     .where('email_verified_at', '>', since)
+    // A reserved-domain address is a test fixture, never a person: never notified.
+    .where(({ not }) => not(inReservedDomainSql('users.email')))
     .where(({ exists, not, selectFrom }) =>
       not(
         exists(

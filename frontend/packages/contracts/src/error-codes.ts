@@ -46,6 +46,7 @@ const API_ERROR_CODES = [
   'demand_window_not_saved',
   'discovery_limit_exceeded',
   'duplicate',
+  'email_domain_reserved',
   'email_verification_required',
   'entitlement_unresolved',
   'evidence_not_found',

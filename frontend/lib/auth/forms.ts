@@ -78,6 +78,7 @@ const OAUTH_SIGNIN_ERRORS = new Map<string, string>([
     'oauth_signin_no_account',
     'No account uses that Google address. Agree to the Terms to create one.',
   ],
+  ['oauth_signin_email_reserved', 'That Google address cannot receive mail. Use another account.'],
   ['oauth_signin_disabled', 'Google sign-in is unavailable right now. Please use email below.'],
   ['oauth_signin_failed', OAUTH_SIGNIN_FALLBACK],
   // Not Google's: the app ended a session that predates the published Terms.

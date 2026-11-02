@@ -23,10 +23,12 @@ config.auth.fetch = async (_url, init) => {
   sent.push(JSON.parse(String(init?.body)));
   return new Response('{}', { status: 200 });
 };
+// Fixed in the past: a local runner ticking on the shared database looks only
+// at the last few days, so it never notifies these ordinary-domain fixtures.
 const now = new Date('2026-10-15T10:00:00Z');
 
-async function signup(verifiedAt: Date | null) {
-  const email = `${randomUUID()}@example.test`;
+async function signup(verifiedAt: Date | null, domain = 'fixtures.citeladder.com') {
+  const email = `${randomUUID()}@${domain}`;
   await registerUser(db, email, 'test-password-secure', policy.auth.terms_revision);
   const user = await db
     .updateTable('users')
@@ -72,6 +74,34 @@ it('tells the owner once about a recent verified signup, never an unverified or 
   expect(noticesFor(verified.email)[0]!.text).toContain('Verified: 2026-10-15T09:30:00.000Z');
   expect(noticesFor(unverified.email)).toEqual([]);
   expect(noticesFor(old.email)).toEqual([]);
+});
+
+it('never notifies or marks a verified signup in a reserved domain, and still notifies an ordinary one', async () => {
+  const reserved = await Promise.all(
+    ['example.test', 'team.example.com', 'example.net'].map((domain) =>
+      signup(new Date('2026-10-15T09:40:00Z'), domain),
+    ),
+  );
+  const ordinary = await signup(new Date('2026-10-15T09:40:00Z'));
+
+  await tickUntilIdle();
+
+  expect(noticesFor(ordinary.email).map((mail) => mail.subject)).toEqual([
+    `New CiteLadder signup: ${ordinary.email}`,
+  ]);
+  expect(reserved.flatMap((user) => noticesFor(user.email))).toEqual([]);
+  expect(
+    await db
+      .selectFrom('security_events')
+      .select('target_id')
+      .where('event', '=', 'auth.signup_notified')
+      .where(
+        'target_id',
+        'in',
+        [...reserved, ordinary].map((user) => user.id),
+      )
+      .execute(),
+  ).toEqual([{ target_id: ordinary.id }]);
 });
 
 it('retries a notice the provider refused on the next tick', async () => {
