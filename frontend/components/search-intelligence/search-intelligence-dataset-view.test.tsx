@@ -234,22 +234,21 @@ it('links a missing keyword that became an Action', async () => {
   );
 });
 
-it('explains a paid empty scope', async () => {
+// `empty` is what acquisition records when the provider answered with no rows.
+it.each(['empty', 'complete'])('explains a paid empty scope (%s coverage)', (coverage) => {
   const empty = {
     ...dataset,
     dataset_kind: 'referring_domains',
+    coverage,
     unique_rows_saved: 0,
     provider_total: 0,
   };
-  mswServer.use(
-    http.get(`/api/v1/projects/${project.id}/search-intelligence/datasets/${dataset.id}/rows`, () =>
-      HttpResponse.json({ dataset: empty, rows: [], next_cursor: null }),
-    ),
-  );
   renderWithProviders(<SearchIntelligenceDatasetView dataset={empty} title="Referring domains" />, {
     projectSelection: testProjectSelection({ activeProject: project, activeProjectId: project.id }),
   });
-  expect(await screen.findByText(/provider returned no data/i)).toBeInTheDocument();
+  expect(
+    screen.getByText('The provider returned no data for this saved scope.'),
+  ).toBeInTheDocument();
 });
 
 it('uses shared pagination and resets its cursor when sorting or changing rows per page', async () => {

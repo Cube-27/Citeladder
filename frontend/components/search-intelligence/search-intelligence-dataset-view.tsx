@@ -269,11 +269,14 @@ function EmptyDataset({
 }
 
 /**
- * What a dataset that saved no rows means. Only complete coverage is a
- * measured "no data"; partial or unknown coverage is incomplete evidence.
+ * What a dataset that saved no rows means, by the coverage acquisition
+ * recorded: `empty` (the provider answered with no rows) and `complete` are
+ * a measured "no data"; `unknown` is unavailable evidence; `partial` is
+ * incomplete evidence, never "no data".
  */
 function emptyDatasetHeading(coverage: string) {
-  if (coverage === 'complete') return 'The provider returned no data for this saved scope.';
+  if (coverage === 'empty' || coverage === 'complete')
+    return 'The provider returned no data for this saved scope.';
   if (coverage === 'unknown') return 'Provider evidence is unavailable for this saved scope.';
   return 'Provider evidence for this saved scope is incomplete, and no rows were saved.';
 }
