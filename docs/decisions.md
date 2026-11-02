@@ -299,3 +299,16 @@ Four decisions for the [Prompt Builder plan](plans/prompt-builder.md):
 Source: owner answers of 1 November 2026 in the CiteLadder session reviewing
 the thenetreturn.com prompts.
 [Prompts and Visibility](visibility-prompt.md) owns the shipped behavior.
+
+## Search Console imports final data only
+
+The Search Console import requests final data only (the Search Analytics API
+default; no `dataState: "all"`). Google finalizes a day roughly two to three
+days late, so the newest days of a range that ends with GA4's latest date have
+no Search Console rows yet. Those trailing days are "not yet reported", a
+state distinct from zero, unavailable and quality-flagged partitions, and they
+never null or flag the rest of the window. Preliminary ("fresh") data is not
+imported or shown.
+
+Source: owner, 2 November 2026, choosing "Final data only" over importing
+preliminary Search Console data.
