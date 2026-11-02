@@ -1290,6 +1290,102 @@ describe('GET /visibility/sources', () => {
     ]);
   });
 
+  it("compares a named run with its baseline in the runs' own market", async () => {
+    const tenant = await fixtures.tenant();
+    const marketId = randomUUID();
+    await db
+      .insertInto('project_markets')
+      .values({
+        id: marketId,
+        workspace_id: tenant.workspaceId,
+        project_id: tenant.projectId,
+        label: 'United Kingdom',
+        country_code: 'GB',
+        language_code: 'en',
+        created_at: new Date(),
+      })
+      .execute();
+    const complete = aggregate({ completed: 1, brand: 0 });
+    const baseline = await measuredRun(tenant, '2026-02-01T00:00:00Z', complete);
+    await fixtures.execution(tenant, {
+      auditId: baseline,
+      analysis: { citations: [{ url: 'https://other.com/y' }] },
+    });
+    const current = await measuredRun(tenant, '2026-03-01T00:00:00Z', complete);
+    await fixtures.execution(tenant, {
+      auditId: current,
+      analysis: { citations: [{ url: 'https://other.com/x' }] },
+    });
+    await db
+      .updateTable('audits')
+      .set({ market_id: marketId })
+      .where('id', 'in', [baseline, current])
+      .execute();
+    await fixtures.sourceAggregates(tenant, baseline);
+    await fixtures.sourceAggregates(tenant, current);
+
+    const { body } = await get(tenant, route(tenant, '/sources'), {
+      audit_ids: [current],
+      baseline_audit_ids: [baseline],
+    });
+
+    expect(body.comparison_status).toBe('comparable');
+    expect((body.items as Row[]).map((row) => [row.key, row.response_delta])).toEqual([
+      ['other.com', 0],
+    ]);
+  });
+
+  it('moves a filtered row against the same source type in the baseline', async () => {
+    const tenant = await fixtures.tenant();
+    const complete = aggregate({ completed: 1, brand: 0 });
+    const baseline = await measuredRun(tenant, '2026-02-01T00:00:00Z', complete);
+    await fixtures.execution(tenant, {
+      auditId: baseline,
+      analysis: { citations: [{ url: 'https://other.com/y', sourceClass: 'forum' }] },
+    });
+    const current = await measuredRun(tenant, '2026-03-01T00:00:00Z', complete);
+    await fixtures.execution(tenant, {
+      auditId: current,
+      analysis: { citations: [{ url: 'https://other.com/x', sourceClass: 'news' }] },
+    });
+    await fixtures.sourceAggregates(tenant, baseline);
+    await fixtures.sourceAggregates(tenant, current);
+    const delta = async (query: Record<string, string>) =>
+      (
+        (
+          await get(tenant, route(tenant, '/sources'), {
+            audit_ids: [current],
+            baseline_audit_ids: [baseline],
+            ...query,
+          })
+        ).body.items as Row[]
+      ).map((row) => [row.key, row.response_delta]);
+
+    // Unfiltered, the domain was cited in both runs; as news, only now.
+    expect(await delta({})).toEqual([['other.com', 0]]);
+    expect(await delta({ source_type: 'news' })).toEqual([['other.com', 100]]);
+  });
+
+  it('leaves a named commerce run out of the sources a brand run shows', async () => {
+    const tenant = await fixtures.tenant();
+    const brand = await fixtures.audit(tenant);
+    const commerce = await fixtures.audit(tenant, { scope: 'commerce' });
+    for (const auditId of [brand, commerce]) {
+      await fixtures.execution(tenant, {
+        auditId,
+        analysis: { citations: [{ url: 'https://shelf.example/p' }] },
+      });
+      await fixtures.sourceAggregates(tenant, auditId);
+    }
+    const read = async (auditId: string) => {
+      const { body } = await get(tenant, route(tenant, '/sources'), { audit_id: auditId });
+      return [body.responses, (body.items as Row[]).map((row) => [row.key, row.responses])];
+    };
+
+    expect(await read(brand)).toEqual([1, [['shelf.example', 1]]]);
+    expect(await read(commerce)).toEqual([0, []]);
+  });
+
   it('counts reads beside citations, and leaves engines that expose none unknown', async () => {
     const tenant = await fixtures.tenant();
     const auditId = await fixtures.audit(tenant);

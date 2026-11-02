@@ -69,8 +69,14 @@ type RowFilters = Pick<SourceQuery, 'domain' | 'sourceClass' | 'standing'>;
 const UNFILTERED: RowFilters = { domain: null, sourceClass: null, standing: null };
 
 /** The selected runs, each with when it was observed. */
+/**
+ * The selected brand runs, each with when it was observed. A commerce run
+ * measures something else, so even when named it contributes no sources.
+ */
 const runsOf = (db: Database, selection: RunSelection) =>
-  selectedRuns(db, selection).select(['audit.id', observedAt.as('observed_at')]);
+  selectedRuns(db, selection)
+    .where('audit.audit_scope', '=', policy.visibility.brand_audit_scope)
+    .select(['audit.id', observedAt.as('observed_at')]);
 type Runs = ReturnType<typeof runsOf>;
 
 function sourcePosition(query: SourceQuery, filters: Record<string, unknown>) {
@@ -364,7 +370,7 @@ export async function getVisibilitySources(
   if (query.baselineAuditIds?.length) {
     response.comparison_status = await applySourceComparison(db, selection, response, {
       baselineIds: query.baselineAuditIds,
-      domain: query.domain,
+      filters: query,
       pages,
       asOf,
     });
@@ -520,7 +526,7 @@ async function applySourceComparison(
   db: Database,
   selection: RunSelection,
   response: SourcesResponse,
-  input: { baselineIds: string[]; domain: string | null; pages: boolean; asOf: string },
+  input: { baselineIds: string[]; filters: RowFilters; pages: boolean; asOf: string },
 ): Promise<string> {
   await authorizeRunSet(db, selection, input.baselineIds);
   let currentIds: string[] = selection.auditId ? [selection.auditId] : [];
@@ -535,8 +541,17 @@ async function applySourceComparison(
   // A comparable baseline has its metric snapshots, written in the same
   // finalization transaction as its persisted source facts.
   if (status !== 'comparable') return status;
-  const baseline = { ...selection, auditId: null, auditIds: null, fromAt: null, toAt: null };
-  const runs = runsOf(db, baseline).where('audit.id', 'in', input.baselineIds);
+  // The named baseline runs, in whatever market they measured: named runs
+  // bring their own market, and the comparison status already proved the two
+  // sets share one frozen identity.
+  const baseline = {
+    ...selection,
+    auditId: null,
+    auditIds: input.baselineIds,
+    fromAt: null,
+    toAt: null,
+  };
+  const runs = runsOf(db, baseline);
   const answers = answerRows(db, baseline, runs, input.asOf);
   const { answered } = await db
     .selectFrom(answers.as('answer'))
@@ -549,7 +564,9 @@ async function applySourceComparison(
     runs,
     asOf: input.asOf,
     pages: input.pages,
-    filters: { ...UNFILTERED, domain: input.domain },
+    // The rows' own filters, so a row moves against the same source type,
+    // domain and page standing it was counted under.
+    filters: input.filters,
   }).where('source.key', 'in', keys);
   const { rows: counted } = await sql<{ key: string; answers: number }>`
     select cited.key, count(distinct answer.id)::int as answers
