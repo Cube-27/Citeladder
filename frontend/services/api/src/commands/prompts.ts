@@ -8,6 +8,7 @@ import { enforceWorkspaceRequest } from '../abuse/usage.ts';
 import { requireCapability, type Actor } from '../auth/actor.ts';
 import { policy, resolveSettingSpec } from '../config.ts';
 import type { Database } from '../db/database.ts';
+import { WorkspaceEntitlements } from '../entitlements/access.ts';
 import { ApiError } from '../errors.ts';
 import { isNonEmpty } from '../lists.ts';
 import * as candidates from '../prompts/candidates.ts';
@@ -44,14 +45,16 @@ export function createPrompt(
   return prompts.createPrompt(db, actor.workspaceId, promptSetId, input);
 }
 
+/** A request passes its own entitlements; MCP builds them from its transaction. */
 export function updatePrompt(
   db: Database,
   actor: Actor,
   promptId: string,
   input: z.infer<typeof prompts.promptUpdate>,
+  entitlements = new WorkspaceEntitlements(db, actor.workspaceId),
 ) {
   authorize(actor);
-  return prompts.updatePrompt(db, actor.workspaceId, promptId, input);
+  return prompts.updatePrompt(db, actor.workspaceId, promptId, input, entitlements);
 }
 
 export function deletePrompt(db: Database, actor: Actor, promptId: string) {
@@ -64,9 +67,10 @@ export function setPromptStatuses(
   actor: Actor,
   promptSetId: string,
   input: z.infer<typeof prompts.promptBulkStatus>,
+  entitlements = new WorkspaceEntitlements(db, actor.workspaceId),
 ) {
   authorize(actor);
-  return prompts.bulkSetStatus(db, actor.workspaceId, promptSetId, input);
+  return prompts.bulkSetStatus(db, actor.workspaceId, promptSetId, input, entitlements);
 }
 
 /**
@@ -79,6 +83,7 @@ export async function importPrompts(
   actor: Actor,
   promptSetId: string,
   body: { bytes: number; read: () => Promise<z.infer<typeof prompts.promptImport>> },
+  entitlements = new WorkspaceEntitlements(db, actor.workspaceId),
 ) {
   authorize(actor);
   await enforceWorkspaceRequest(db, actor.workspaceId, {
@@ -88,7 +93,7 @@ export async function importPrompts(
   });
   if (body.bytes > policy.prompts.import_max_bytes)
     throw new ApiError(413, 'Import body too large');
-  return prompts.importPrompts(db, actor.workspaceId, promptSetId, await body.read());
+  return prompts.importPrompts(db, actor.workspaceId, promptSetId, await body.read(), entitlements);
 }
 
 export function createTopic(

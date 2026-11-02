@@ -82,7 +82,7 @@ export const brandIdentityRoutes = [
     params: { path: projectPath, query: {} },
     response: brandFactListSchema,
     async handle({ c, db }, { path }) {
-      return listBrandFacts(db, scopeOf(c, path.project_id));
+      return listBrandFacts(db, scopeOf(c, path.project_id), c.get('entitlements'));
     },
   }),
   definePostRoute({
@@ -94,7 +94,8 @@ export const brandIdentityRoutes = [
     response: brandFactSchema,
     async handle({ c, db }, { path }) {
       const scope = scopeOf(c, path.project_id);
-      return createBrandFact(db, scope, c.get('user').id, await readBody(c, brandFactCreate));
+      const input = await readBody(c, brandFactCreate);
+      return createBrandFact(db, scope, c.get('user').id, input, c.get('entitlements'));
     },
   }),
   definePatchRoute({
@@ -107,7 +108,14 @@ export const brandIdentityRoutes = [
     async handle({ c, db }, { path }) {
       const scope = scopeOf(c, path.project_id);
       const update = await readBody(c, brandFactUpdate);
-      return updateBrandFact(db, scope, c.get('user').id, path.fact_id, update);
+      return updateBrandFact(
+        db,
+        scope,
+        c.get('user').id,
+        path.fact_id,
+        update,
+        c.get('entitlements'),
+      );
     },
   }),
   defineGetRoute({

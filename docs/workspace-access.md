@@ -120,9 +120,15 @@ declare their project rule, never trusting the ID alone:
 `authorize: 'active-project'` requires the active workspace (resolved as for a
 flat route) to hold the project, and `authorize: 'project'`, for the detail read
 a link opens and for logos an `<img>` requests, resolves membership through the
-project ID without reading the header. Handlers never re-check the project. A
-project ID from a body, a query or an API key's path goes through the one
-[project guard](../frontend/services/api/src/projects/access.ts).
+project ID without reading the header. Handlers and the reads they call never
+re-check the project. An Agent chat route (`/agent/chats/{chat_id}`) reads the
+chat once in the active workspace, which names its project; the Agent's own
+[access re-check](../frontend/services/api/src/agent/access.ts) runs only inside
+admission and output-write transactions and at each step of a running turn, so a
+revocation that commits first still stops them. A project ID from a body, a
+query, an API key's path, an MCP tool or a worker goes through the one
+[project guard](../frontend/services/api/src/projects/access.ts) or its owner's
+equivalent.
 Foreign and missing objects do not reveal product data.
 
 Each browser request authorizes in two round trips

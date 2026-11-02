@@ -304,14 +304,18 @@ export async function createPrompts(
   }
 }
 
+/** A request passes its own entitlements, so the over-limit view reuses the access read. */
 export async function updatePrompt(
   db: Database,
   workspaceId: string,
   promptId: string,
   input: z.infer<typeof promptUpdate>,
+  entitlements = new WorkspaceEntitlements(db, workspaceId),
 ): Promise<PromptView> {
   try {
-    return await inTransaction(db, (trx) => applyPromptUpdate(trx, workspaceId, promptId, input));
+    return await inTransaction(db, (trx) =>
+      applyPromptUpdate(trx, workspaceId, promptId, input, entitlements),
+    );
   } catch (error) {
     if (isUniqueViolation(error, UNIQUE_TEXT)) throw new ApiError(409, DUPLICATE);
     throw error;
@@ -327,6 +331,7 @@ async function applyPromptUpdate(
   workspaceId: string,
   promptId: string,
   input: z.infer<typeof promptUpdate>,
+  entitlements: WorkspaceEntitlements,
 ): Promise<PromptView> {
   const prompt = await scopedPrompt(db, workspaceId, promptId);
   await acquireProjectLock(db, prompt.project_id);
@@ -360,7 +365,7 @@ async function applyPromptUpdate(
     .where('id', '=', prompt.id)
     .returningAll()
     .executeTakeFirstOrThrow();
-  return promptView(row, await overLimitPromptIds(db, new WorkspaceEntitlements(db, workspaceId)));
+  return promptView(row, await overLimitPromptIds(db, entitlements));
 }
 
 export async function deletePrompt(
@@ -388,6 +393,7 @@ export async function bulkSetStatus(
   workspaceId: string,
   promptSetId: string,
   input: z.infer<typeof promptBulkStatus>,
+  entitlements = new WorkspaceEntitlements(db, workspaceId),
 ): Promise<PromptSetView> {
   const ids = [...new Set(input.prompt_ids)];
   await inTransaction(db, async (trx) => {
@@ -430,7 +436,7 @@ export async function bulkSetStatus(
       throw new ApiError(404, 'Prompt(s) not found in this set');
     }
   });
-  return readPromptSet(db, new WorkspaceEntitlements(db, workspaceId), promptSetId);
+  return readPromptSet(db, entitlements, promptSetId);
 }
 
 /**
@@ -445,6 +451,7 @@ export async function importPrompts(
   workspaceId: string,
   promptSetId: string,
   input: z.infer<typeof promptImport>,
+  entitlements = new WorkspaceEntitlements(db, workspaceId),
 ): Promise<PromptSetView> {
   await db.transaction().execute(async (trx) => {
     const set = await scopedPromptSet(trx, workspaceId, promptSetId);
@@ -511,5 +518,5 @@ export async function importPrompts(
       .onConflict((conflict) => conflict.constraint(UNIQUE_TEXT).doNothing())
       .execute();
   });
-  return readPromptSet(db, new WorkspaceEntitlements(db, workspaceId), promptSetId);
+  return readPromptSet(db, entitlements, promptSetId);
 }
