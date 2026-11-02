@@ -360,3 +360,16 @@ Source: owner, 2 November 2026, answering "Reject reserved domains like `.test`
 at sign-up? Tests can still create these users directly." with "yes", after
 signup notices for `@example.test` test fixtures reached the owner's inbox.
 [Workspace access](workspace-access.md) owns the shipped behavior.
+
+## Product charts stay on Recharts
+
+Line charts (`SeriesChart`, the Performance chart, Search Intelligence history)
+keep Recharts rather than moving to the app's own `TrendChart`. Its weight is
+kept off the critical path instead: the drawing is a lazy module inside a
+`ChartContainer` box that already holds the plot's height, so no screen
+downloads the chart library before it draws a chart and nothing moves when the
+drawing arrives. [Frontend architecture](frontend-architecture.md) owns the
+chunk graph.
+
+Source: owner, 2 November 2026, answering "Replace Recharts with the app's own
+chart component?" with "no replace".
