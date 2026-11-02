@@ -139,7 +139,7 @@ from the same reads under the widgets' own titles, then a plain-English guide
 to the metrics. Project state and Citation share share one stat strip when both
 are shown; a run with no comparable predecessor says so once instead of under
 every figure. Actions print their target and priority band; no internal ID or
-processing-version code is printed (the [decision](decisions.md#the-overview-pdf-is-a-branded-deliverable)).
+processing-version code is printed (owner, 2026-11-01).
 Before the first completed run a widget reads not available; a missing value
 prints the app's dash and an observed zero stays zero. It replaced the fixed
 Executive PDF.
