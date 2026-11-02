@@ -250,11 +250,7 @@ function EmptyDataset({
       </CardHeader>
       <CardContent>
         <Stack gap="compact">
-          <p className={textRole('itemTitle')}>
-            {dataset.coverage === 'unknown'
-              ? 'Provider evidence is unavailable for this saved scope.'
-              : 'The provider returned no data for this saved scope.'}
-          </p>
+          <p className={textRole('itemTitle')}>{emptyDatasetHeading(dataset.coverage)}</p>
           <p className={textRole('body')}>
             Requests can incur charges even when no results are returned. Check the website and
             market before reviewing another analysis.
@@ -270,6 +266,16 @@ function EmptyDataset({
       </CardContent>
     </Card>
   );
+}
+
+/**
+ * What a dataset that saved no rows means. Only complete coverage is a
+ * measured "no data"; partial or unknown coverage is incomplete evidence.
+ */
+function emptyDatasetHeading(coverage: string) {
+  if (coverage === 'complete') return 'The provider returned no data for this saved scope.';
+  if (coverage === 'unknown') return 'Provider evidence is unavailable for this saved scope.';
+  return 'Provider evidence for this saved scope is incomplete, and no rows were saved.';
 }
 
 function KeywordFilters({

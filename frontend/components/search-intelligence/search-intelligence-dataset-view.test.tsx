@@ -338,6 +338,52 @@ it('keeps the rows and the pager on screen while the next page loads', async () 
   expect(screen.queryByText('First keyword')).not.toBeInTheDocument();
 });
 
+it('keeps the previous order on screen, marked busy, until a different sort lands', async () => {
+  mswServer.use(
+    http.get(
+      `/api/v1/projects/${project.id}/search-intelligence/datasets/${dataset.id}/rows`,
+      async ({ request }) => {
+        const sorted = new URL(request.url).searchParams.get('sort') === 'keyword';
+        if (sorted) await delay(500);
+        return HttpResponse.json({
+          dataset,
+          rows: [
+            sorted
+              ? row('55555555-5555-4555-8555-555555555555', 'Sorted keyword')
+              : row('44444444-4444-4444-8444-444444444444', 'First keyword'),
+          ],
+          next_cursor: null,
+        });
+      },
+    ),
+  );
+  renderWithProviders(<SearchIntelligenceDatasetView dataset={dataset} />, {
+    projectSelection: testProjectSelection({ activeProject: project, activeProjectId: project.id }),
+  });
+  expect(await screen.findByText('First keyword')).toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: 'Keyword' }));
+  expect(screen.getByText('First keyword')).toBeInTheDocument();
+  expect(screen.getByRole('region', { name: 'Ranking keywords' })).toHaveAttribute(
+    'aria-busy',
+    'true',
+  );
+  expect(await screen.findByText('Sorted keyword')).toBeInTheDocument();
+  expect(screen.queryByText('First keyword')).not.toBeInTheDocument();
+});
+
+it('does not call partial coverage with no saved rows an empty provider answer', async () => {
+  const partial = { ...dataset, coverage: 'partial', unique_rows_saved: 0 };
+  renderWithProviders(<SearchIntelligenceDatasetView dataset={partial} />, {
+    projectSelection: testProjectSelection({ activeProject: project, activeProjectId: project.id }),
+  });
+  expect(
+    screen.getByText(
+      'Provider evidence for this saved scope is incomplete, and no rows were saved.',
+    ),
+  ).toBeInTheDocument();
+  expect(screen.queryByText(/provider returned no data/i)).not.toBeInTheDocument();
+});
+
 it('draws the first load inside the table, under its header', async () => {
   mswServer.use(
     http.get(

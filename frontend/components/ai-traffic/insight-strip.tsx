@@ -10,6 +10,13 @@ import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import { TrafficUrlButton } from './url-panel';
 import { patternLabel } from '@/lib/ai-traffic/vocabulary';
 
+/** Nothing observed is a measured absence only when both sources were complete. */
+function nothingObservedLine(coverage: Readonly<{ crawl: string; ga4_complete: boolean }>) {
+  return coverage.crawl === 'complete' && coverage.ga4_complete
+    ? 'No patterns were observed in this window.'
+    : 'No patterns were observed in the data covered so far; coverage is incomplete.';
+}
+
 export function InsightStrip({
   projectId,
   workspaceId,
@@ -36,7 +43,7 @@ export function InsightStrip({
           <p className="type-body text-secondary">Loading persisted insights…</p>
         ) : null}
         {nothingObserved ? (
-          <p className="type-body text-secondary">No patterns were observed in this window.</p>
+          <p className="type-body text-secondary">{nothingObservedLine(data.coverage)}</p>
         ) : null}
         {data?.coverage.notice ? <Alert tone="info">{data.coverage.notice}</Alert> : null}
         {data ? (

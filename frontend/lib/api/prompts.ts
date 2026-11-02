@@ -210,7 +210,7 @@ export const promptsQueries = {
   /** The project's prompt sets: the Prompts screen, its create guard and the launch dialog. */
   sets: (workspaceId: string | null, projectId: string) =>
     queryOptions({
-      queryKey: queryKeys.prompts.sets(projectId),
+      queryKey: queryKeys.prompts.sets(workspaceId, projectId),
       queryFn: ({ signal }) => promptsApi.listPromptSets(projectId, { signal, workspaceId }),
     }),
 };

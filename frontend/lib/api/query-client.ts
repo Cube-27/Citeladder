@@ -49,11 +49,11 @@ export function warmQuery<TOptions extends { queryKey: readonly unknown[] }>(
  * `warmQuery`, a key that already failed is left as it is; any failure
  * answers `null`, because intent never surfaces an error.
  */
-export async function readFromIntent<TData, TKey extends QueryKey>(
+export function readFromIntent<TData, TKey extends QueryKey>(
   client: QueryClient,
   options: FetchQueryOptions<TData, Error, TData, TKey>,
 ): Promise<TData | null> {
-  if (client.getQueryState(options.queryKey)?.status === 'error') return null;
+  if (client.getQueryState(options.queryKey)?.status === 'error') return Promise.resolve(null);
   return client.fetchQuery(options).catch(() => null);
 }
 

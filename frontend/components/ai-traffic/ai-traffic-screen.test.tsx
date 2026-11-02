@@ -247,9 +247,18 @@ describe('AI Traffic state and navigation', () => {
     await user.upload(screen.getByLabelText('Log file'), new File(['{}'], 'requests.ndjson'));
     expect(screen.getByRole('button', { name: 'Upload recognized requests' })).toBeEnabled();
   });
-  it.each([null, 'Coverage is incomplete.'])(
-    'keeps the insights card in place when nothing was observed (%s)',
-    async (notice) => {
+  it.each([
+    [null, 'complete', true, 'No patterns were observed in this window.'],
+    [
+      null,
+      'partial',
+      false,
+      'No patterns were observed in the data covered so far; coverage is incomplete.',
+    ],
+    ['Coverage is incomplete.', 'partial', false, 'Coverage is incomplete.'],
+  ])(
+    'keeps the insights card in place when nothing was observed (%s, %s crawl)',
+    async (notice, crawl, ga4Complete, shown) => {
       mswServer.use(
         http.get(root + '/ai-traffic/insights', () =>
           HttpResponse.json({
@@ -258,7 +267,7 @@ describe('AI Traffic state and navigation', () => {
             window_end: '2026-10-04',
             formula_version: '1',
             patterns: [],
-            coverage: { crawl: 'partial', ga4_complete: false, notice },
+            coverage: { crawl, ga4_complete: ga4Complete, notice },
           }),
         ),
       );
@@ -270,8 +279,7 @@ describe('AI Traffic state and navigation', () => {
       );
       // The card holds its slot either way, so the Overview below never jumps up.
       expect(screen.getByText('Observed patterns')).toBeVisible();
-      if (notice) expect(screen.getByText(notice)).toBeVisible();
-      else expect(screen.getByText('No patterns were observed in this window.')).toBeVisible();
+      expect(screen.getByText(shown)).toBeVisible();
     },
   );
   it('creates an Amazon CloudFront source with its buffer interval and shows the Firehose endpoint', async () => {
