@@ -342,12 +342,7 @@ export function AuthFormShell({
                 />
               ) : null}
 
-              {consent.verification ? (
-                <HumanCheck
-                  container={consent.verification.container}
-                  failed={consent.verification.failed}
-                />
-              ) : null}
+              {consent.verification ? <HumanCheck widget={consent.verification} /> : null}
 
               <FlowButton
                 type="submit"
@@ -376,11 +371,14 @@ export function AuthFormShell({
 /**
  * The Turnstile widget's slot. Its height is reserved before the widget loads
  * and kept after it completes, so nothing below it moves; if no widget can
- * render, a notice takes the same footprint.
+ * render, a notice takes the same footprint. A slot too narrow for the flexible
+ * widget holds the taller compact one.
  */
-function HumanCheck({ container, failed }: Readonly<Pick<Turnstile, 'container' | 'failed'>>) {
+function HumanCheck({
+  widget: { container, failed, size },
+}: Readonly<{ widget: Pick<Turnstile, 'container' | 'failed' | 'size'> }>) {
   return (
-    <fieldset className="auth-human-check" aria-label="Verification">
+    <fieldset className="auth-human-check" data-size={size} aria-label="Verification">
       <div ref={container} />
       {failed ? (
         <p className="flow-meta">Verification could not load. Refresh the page to try again.</p>

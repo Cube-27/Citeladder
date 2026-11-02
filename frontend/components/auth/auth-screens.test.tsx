@@ -17,12 +17,14 @@ const TERMS_BOX = { name: 'I agree to the Terms of Service' };
 // the form a token when the test "solves" it.
 let solveChallenge: (token: string) => void = () => {};
 let widgetHost: HTMLElement | null = null;
+let widgetSize = '';
 beforeEach(() => {
   vi.spyOn(authApi, 'policies').mockResolvedValue(PUBLISHED);
   vi.stubEnv('PUBLIC_TURNSTILE_SITE_KEY', 'test-site-key');
   window.turnstile = {
     render: (container, options) => {
       widgetHost = container;
+      widgetSize = options.size;
       solveChallenge = (token) => act(() => options.callback(token));
       return 'widget';
     },
@@ -35,6 +37,7 @@ afterEach(() => {
   vi.unstubAllEnvs();
   delete window.turnstile;
   widgetHost = null;
+  widgetSize = '';
 });
 
 describe('account entry', () => {
@@ -235,6 +238,31 @@ describe('account entry', () => {
     // The same reserved element holds the completed widget; nothing appeared around it.
     expect(screen.getByRole('group', { name: 'Verification' })).toBe(slot);
     expect([...slot.parentElement!.children]).toEqual(rows);
+  });
+
+  it.each([
+    // A 320px phone with 16px gutters leaves 288px: the flexible widget needs 300.
+    [288, 'compact'],
+    [300, 'flexible'],
+  ])('asks for the widget size a %ipx slot fits: %s', async (width, size) => {
+    // jsdom lays nothing out, so the slot reports the width a browser would.
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      width,
+      height: 0,
+      top: 0,
+      right: width,
+      bottom: 0,
+      left: 0,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+    renderWithProviders(
+      <RegisterScreen demoMode={false} signupOpen replace={vi.fn()} searchParams={noParams} />,
+    );
+
+    await waitFor(() => expect(widgetHost).not.toBeNull());
+    expect(widgetSize).toBe(size);
   });
 
   it('shows a refused disposable address under the email field, not as a form alert', async () => {

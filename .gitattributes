@@ -17,3 +17,6 @@
 *.woff binary
 *.woff2 binary
 *.pdf binary
+
+# Vendored data: GitHub collapses it in pull request diffs.
+frontend/services/api/src/config/disposable-email-domains.json linguist-generated=true
