@@ -279,7 +279,7 @@ describe('PerformanceScreen evidence states', () => {
     flagged = true;
     renderWithProviders(<PerformanceScreen />);
     expect(await screen.findByTestId('performance-status')).toHaveTextContent(
-      'Some imported days are missing, flagged or using a prior complete revision, so totals for this range are partial. Days without a usable partition show no value, not zero.',
+      'Some imported days are missing or flagged, or come from an earlier complete import. Days without a usable import show no value, not zero.',
     );
     expect(screen.queryAllByRole('alert')).toHaveLength(0);
   });

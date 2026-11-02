@@ -98,23 +98,29 @@ export type QueryClass = Pick<
  * Low-CTR targets with enough impressions. A query must classify as
  * non-branded (branded and ambiguous cohorts are never actionable); pages
  * carry no brand class. The highest-impression targets fill a bounded set.
- * Available whenever the traffic snapshot supplied rows to evaluate.
+ * A query with no classification abstains (it can be neither admitted nor
+ * ruled branded), which makes the evaluation partial, like the detectors'.
  */
 export function detectSearchSignals(
   rows: SearchInput[],
   queryClass: (query: string) => QueryClass | undefined,
 ): Evaluation {
   const counts: Record<string, number> = { branded: 0, non_branded: 0, ambiguous: 0 };
+  let abstained = 0;
   for (const row of rows) {
-    const classification = row.target_kind === 'query' ? queryClass(row.target) : undefined;
+    if (row.target_kind !== 'query') continue;
+    const classification = queryClass(row.target);
     if (classification)
       counts[classification.classification] = (counts[classification.classification] ?? 0) + 1;
+    else abstained++;
   }
+  const limitations = rows.length ? [] : ['No Search Console query or page rows in this window.'];
+  if (abstained) limitations.push(`${abstained} queries abstained with no query classification.`);
   return {
-    state: collectionState(0, rows.length),
+    state: collectionState(abstained, rows.length),
     candidates: lowCtrCandidates(rows, queryClass),
     counts_by_classification: counts,
-    limitations: rows.length ? [] : ['No Search Console query or page rows in this window.'],
+    limitations,
   };
 }
 function lowCtrCandidates(

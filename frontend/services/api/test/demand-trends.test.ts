@@ -183,6 +183,24 @@ describe('search signal detection', () => {
     expect(targets).toContain(`widget ${cap - 1}`);
   });
 
+  it('reports partial and names the abstentions when a query has no classification', () => {
+    const evaluation = detectSearchSignals(
+      [
+        search('query', 'unclassified query', 5_000),
+        search('query', 'widget', p.DEMAND_MIN_IMPRESSIONS + 1),
+      ],
+      (query) => (query === 'unclassified query' ? undefined : queryClass(query)),
+    );
+    expect(evaluation.state).toBe('partial');
+    expect(evaluation.counts_by_classification).toEqual({
+      branded: 0,
+      non_branded: 1,
+      ambiguous: 0,
+    });
+    expect(evaluation.limitations).toEqual(['1 queries abstained with no query classification.']);
+    expect(evaluation.candidates.map((s) => s.evidence.target)).toEqual(['widget']);
+  });
+
   it('reports the detector unavailable when the window has no rows to evaluate', () => {
     expect(detectSearchSignals([], queryClass)).toMatchObject({
       state: 'unavailable',

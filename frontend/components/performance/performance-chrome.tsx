@@ -264,7 +264,7 @@ export function performanceNotices({
     messages.push({
       key: 'quality',
       tone: 'info',
-      text: 'Some imported days are missing, flagged or using a prior complete revision, so totals for this range are partial. Days without a usable partition show no value, not zero.',
+      text: 'Some imported days are missing or flagged, or come from an earlier complete import. Days without a usable import show no value, not zero.',
     });
   return messages;
 }
