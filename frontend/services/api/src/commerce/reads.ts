@@ -13,7 +13,7 @@ import { z } from 'zod';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { jsonObject } from '../db/json.ts';
-import { sellsCatalog, UNCATEGORIZED_KEY } from './projection-facts.ts';
+import { catalogApplicability, UNCATEGORIZED_KEY } from './projection-facts.ts';
 import { holderIdentity, orderedRank } from './shelf-metrics.ts';
 import { ApiError } from '../errors.ts';
 
@@ -35,13 +35,18 @@ export async function catalog(db: Database, scope: CommerceScope) {
     .selectFrom('commerce_products')
     .where('workspace_id', '=', scope.workspaceId)
     .where('project_id', '=', scope.projectId);
-  const [products, total, categories, memberships, projection] = await Promise.all([
-    ownedProducts
-      .select(['id', 'canonical_url', 'name', 'brand'])
-      .orderBy('name')
-      .orderBy('canonical_url')
-      .limit(policy.commerce.catalog_product_limit)
-      .execute(),
+  // The listed products, first by name; memberships are read for these only.
+  const listed = ownedProducts
+    .orderBy('name')
+    .orderBy('canonical_url')
+    .orderBy('id')
+    .limit(policy.commerce.catalog_product_limit);
+  const ownedMemberships = db
+    .selectFrom('commerce_product_categories')
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('project_id', '=', scope.projectId);
+  const [products, total, categories, memberships, categoryCounts, projection] = await Promise.all([
+    listed.select(['id', 'canonical_url', 'name', 'brand']).execute(),
     ownedProducts.select(db.fn.countAll<string>().as('count')).executeTakeFirstOrThrow(),
     // A row named "Uncategorized" (the platform default) is no category: its
     // products read as uncategorized.
@@ -52,22 +57,26 @@ export async function catalog(db: Database, scope: CommerceScope) {
       .where('project_id', '=', scope.projectId)
       .where('normalized_name', '!=', UNCATEGORIZED_KEY)
       .execute(),
-    db
-      .selectFrom('commerce_product_categories')
+    ownedMemberships
       .select(['product_id', 'category_id'])
-      .where('workspace_id', '=', scope.workspaceId)
-      .where('project_id', '=', scope.projectId)
+      .where('product_id', 'in', listed.select('id'))
+      .execute(),
+    // Category counts cover every product, listed or not.
+    ownedMemberships
+      .select((eb) => ['category_id', eb.fn.countAll<string>().as('count')])
+      .groupBy('category_id')
       .execute(),
     catalogProjection(db, scope),
   ]);
   const shown = new Set(categories.map((row) => row.id));
   const byProduct = new Map<string, string[]>();
-  const counts = new Map<string, number>();
   for (const row of memberships) {
     if (!shown.has(row.category_id)) continue;
-    byProduct.set(row.product_id, [...(byProduct.get(row.product_id) ?? []), row.category_id]);
-    counts.set(row.category_id, (counts.get(row.category_id) ?? 0) + 1);
+    const ids = byProduct.get(row.product_id);
+    if (ids) ids.push(row.category_id);
+    else byProduct.set(row.product_id, [row.category_id]);
   }
+  const counts = new Map(categoryCounts.map((row) => [row.category_id, Number(row.count)]));
   return commerceCatalogSchema.parse({
     products: products.map((row) => ({
       ...row,
@@ -127,7 +136,7 @@ export async function catalogProjection(db: Database, scope: CommerceScope) {
         .executeTakeFirstOrThrow()
     : { count: '0' };
   return commerceProjectionSchema.parse({
-    applies: sellsCatalog(profile?.business_context),
+    applicability: catalogApplicability(profile?.business_context),
     in_flight: Number(inFlight.count),
     failed: Number(failed.count),
   });

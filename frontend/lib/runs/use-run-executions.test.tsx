@@ -13,11 +13,14 @@ import { useRunExecutions } from './use-run-executions';
 const RUN = '11111111-1111-4111-8111-111111111111';
 const EXECUTION = '22222222-2222-4222-8222-222222222222';
 
-function wrapper(client: QueryClient) {
+const WORKSPACE_A = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+const WORKSPACE_B = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+
+function wrapper(client: QueryClient, activeWorkspaceId = WORKSPACE_A) {
   function Wrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={client}>
-        <ProjectSelectionProvider value={testProjectSelection()}>
+        <ProjectSelectionProvider value={testProjectSelection({ activeWorkspaceId })}>
           {children}
         </ProjectSelectionProvider>
       </QueryClientProvider>
@@ -38,6 +41,40 @@ afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
 describe('useRunExecutions', () => {
+  it('never shows a list read under another workspace from the shared cache', async () => {
+    mswServer.use(
+      http.get(`/api/v1/audits/${RUN}/executions`, ({ request }) =>
+        HttpResponse.json([
+          {
+            id: EXECUTION,
+            prompt_index: 0,
+            logical_engine: 'chatgpt',
+            transport_provider: 'openai',
+            status: 'succeeded',
+            prompt_text: `asked in ${request.headers.get('x-workspace-id')}`,
+            error_code: '',
+            latency_ms: null,
+          },
+        ]),
+      ),
+    );
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const inA = renderHook(() => useRunExecutions(RUN, progress(0)), {
+      wrapper: wrapper(client, WORKSPACE_A),
+    });
+    await waitFor(() =>
+      expect(inA.result.current.data?.[0]?.prompt_text).toBe(`asked in ${WORKSPACE_A}`),
+    );
+
+    const inB = renderHook(() => useRunExecutions(RUN, progress(0)), {
+      wrapper: wrapper(client, WORKSPACE_B),
+    });
+    expect(inB.result.current.data).toBeUndefined();
+    await waitFor(() =>
+      expect(inB.result.current.data?.[0]?.prompt_text).toBe(`asked in ${WORKSPACE_B}`),
+    );
+  });
+
   it('re-reads the executions only when the run’s progress moves', async () => {
     const statuses = ['running', 'succeeded'];
     let reads = 0;

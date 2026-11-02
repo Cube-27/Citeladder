@@ -244,7 +244,8 @@ describe('CSV evidence and catalog', () => {
       ],
       product_total: 1,
       categories: [{ id: catalog.body.categories[0]!.id, name: 'Tools', product_count: 1 }],
-      projection: { applies: false, in_flight: 0, failed: 0 },
+      // No brand profile confirms a business model yet.
+      projection: { applicability: 'unknown', in_flight: 0, failed: 0 },
     });
     const artifacts = await db
       .selectFrom('commerce_csv_imports')
@@ -291,7 +292,11 @@ describe('CSV evidence and catalog', () => {
     policy.commerce.catalog_product_limit = 2;
     try {
       const { body } = await call<CommerceCatalog>('/catalog');
-      expect(body.products.map((row) => row.name)).toEqual(['Ash', 'Birch']);
+      const wood = body.categories[0]!.id;
+      expect(body.products.map((row) => [row.name, row.category_ids])).toEqual([
+        ['Ash', [wood]],
+        ['Birch', [wood]],
+      ]);
       expect(body.product_total).toBe(3);
       expect(body.categories.map((row) => [row.name, row.product_count])).toEqual([['Wood', 3]]);
     } finally {
@@ -308,7 +313,7 @@ describe('CSV evidence and catalog', () => {
     const projection = await call('/catalog/projection');
     expect(projection).toEqual({
       status: 200,
-      body: { applies: false, in_flight: 1, failed: 0 },
+      body: { applicability: 'unknown', in_flight: 1, failed: 0 },
     });
     expect((await call<CommerceCatalog>('/catalog')).body.projection).toEqual(projection.body);
     const otherWorkspace = await fixtures.joinedWorkspace(t.userId);

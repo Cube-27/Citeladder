@@ -25,7 +25,10 @@ export function useRunExecutions(runId: string, audit: RunProgress | undefined) 
   const workspaceId = useActiveWorkspaceId();
   const client = useQueryClient();
   const query = useQuery({
-    queryKey: queryKeys.runs.executions(runId),
+    // The workspace is part of the cache identity, so a switch never shows a
+    // list read under another workspace; invalidating the run's key prefix
+    // still reaches every workspace's copy.
+    queryKey: [...queryKeys.runs.executions(runId), workspaceId],
     queryFn: ({ signal }) => runsApi.listExecutions(runId, { signal, workspaceId }),
     enabled: workspaceId !== null,
   });

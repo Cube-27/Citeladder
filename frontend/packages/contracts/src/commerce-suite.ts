@@ -31,8 +31,12 @@ export const commerceProductSchema = z.strictObject({
 });
 /** Projection progress, read alone while projections are in flight. */
 export const commerceProjectionSchema = z.strictObject({
-  /** Whether crawled pages project into the catalog: only catalog-selling business models. */
-  applies: z.boolean(),
+  /**
+   * Whether crawled pages project into the catalog: only catalog-selling
+   * business models. `unknown` when no recognized model is confirmed yet;
+   * projection fails closed then, but the state is not "not applicable".
+   */
+  applicability: z.enum(['applicable', 'not_applicable', 'unknown']),
   in_flight: z.number().int(),
   /** Failed or cancelled projections of the latest projected crawl. */
   failed: z.number().int(),

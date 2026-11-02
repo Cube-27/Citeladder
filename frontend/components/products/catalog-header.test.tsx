@@ -52,7 +52,7 @@ const catalogQuery = (overrides: Record<string, unknown> = {}) =>
       products: [{ id: 'p1' }, { id: 'p2' }],
       product_total: 7,
       categories: [{ id: 'c1' }],
-      projection: { applies: true, in_flight: 0, failed: 0 },
+      projection: { applicability: 'applicable', in_flight: 0, failed: 0 },
     },
     ...overrides,
   }) as never;
@@ -114,15 +114,19 @@ describe('CatalogHeader', () => {
         products: [],
         product_total: 0,
         categories: [],
-        projection: { applies: true, in_flight: 3, failed: 0 },
+        projection: { applicability: 'applicable', in_flight: 3, failed: 0 },
       },
     });
-    const host = (in_flight: number, failed: number) => (
+    const host = (
+      in_flight: number,
+      failed: number,
+      applicability: 'applicable' | 'not_applicable' | 'unknown' = 'applicable',
+    ) => (
       <CatalogHeaderHost
         workspaceId={WORKSPACE_ID}
         projectId={PROJECT_ID}
         query={query}
-        projection={{ applies: true, in_flight, failed }}
+        projection={{ applicability, in_flight, failed }}
       />
     );
     const { rerender } = renderWithProviders(host(1, 1));
@@ -133,6 +137,14 @@ describe('CatalogHeader', () => {
 
     rerender(host(0, 0));
     expect(screen.queryByText('Projection')).not.toBeInTheDocument();
+
+    // A business that does not sell a catalog, and one whose model is not yet
+    // confirmed, each say so rather than reading as a clean projection.
+    rerender(host(0, 0, 'not_applicable'));
+    expect(statValue('Projection')).toHaveTextContent('Not applicable');
+
+    rerender(host(0, 0, 'unknown'));
+    expect(statValue('Projection')).toHaveTextContent('Business model unconfirmed');
   });
 
   it('never prints a progress fraction that reads backwards', async () => {
@@ -158,7 +170,7 @@ describe('CatalogHeader', () => {
       products: [{ id: 'p1' }],
       product_total: 1,
       categories: [],
-      projection: { applies: true, in_flight: 0, failed: 0 },
+      projection: { applicability: 'applicable', in_flight: 0, failed: 0 },
     }));
     function LiveScreen() {
       const query = useQuery({

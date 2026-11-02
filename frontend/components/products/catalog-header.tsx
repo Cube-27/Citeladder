@@ -40,28 +40,31 @@ function analyzedLabel(crawl: SiteHealthCrawl): string | null {
   return `${crawl.analyzed_count}/${Math.max(known, crawl.analyzed_count)}`;
 }
 
-type Projection = CommerceProjection;
-
 /** When the cached catalog was read, and the crawl's analyzed count it was read beside. */
 type CatalogReadCount = { readAt: number; count: number };
 
 /**
  * Pages still being turned into catalog rows, then pages of the latest crawl
- * that could not be. A finished, clean projection shows nothing.
+ * that could not be. When crawls do not project at all, it says whether the
+ * business does not sell a catalog or its model is not confirmed yet. A
+ * finished, clean projection shows nothing.
  */
-function projectionBadge(projection: Projection | undefined) {
-  if (projection?.in_flight)
+function projectionBadge(projection: CommerceProjection | undefined) {
+  if (!projection) return null;
+  if (projection.in_flight)
     return (
       <Badge variant="status" value="info">
         {projection.in_flight} projecting
       </Badge>
     );
-  if (projection?.failed)
+  if (projection.failed)
     return (
       <Badge variant="status" value="danger">
         {pluralCount(projection.failed, 'page')} not projected
       </Badge>
     );
+  if (projection.applicability === 'not_applicable') return <Badge>Not applicable</Badge>;
+  if (projection.applicability === 'unknown') return <Badge>Business model unconfirmed</Badge>;
   return null;
 }
 
@@ -72,7 +75,7 @@ function CatalogStats({
   crawl,
 }: Readonly<{
   counts: CommerceQueries['catalog']['data'];
-  projection: Projection | undefined;
+  projection: CommerceProjection | undefined;
   crawl: SiteHealthCrawl;
 }>) {
   const items: StatSegment[] = [
@@ -127,7 +130,7 @@ export function useCatalogHeader({
   projectId: string;
   query: CommerceQueries['catalog'];
   /** The newest projection progress known (`useCatalogProjection`). */
-  projection: Projection | undefined;
+  projection: CommerceProjection | undefined;
 }>) {
   const client = useQueryClient();
   const [result, setResult] = useState('');

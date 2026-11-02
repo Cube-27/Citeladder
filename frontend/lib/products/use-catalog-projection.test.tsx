@@ -46,27 +46,32 @@ function useScreen() {
   return { catalog, projection: useCatalogProjection(PROJECT, catalog) };
 }
 
-/** Serves the catalog reads in order (the last repeats) and the projection polls likewise. */
+/**
+ * Serves the catalog reads in order (the last repeats; `null` is a failed
+ * read) and the projection polls likewise.
+ */
 function serve(
-  catalogs: { products: (typeof WIDGET)[]; in_flight: number }[],
+  catalogs: ({ products: (typeof WIDGET)[]; in_flight: number } | null)[],
   projections: number[],
 ) {
   const reads = { catalog: 0, projection: 0 };
   mswServer.use(
     http.get(`/api/v1/projects/${PROJECT}/commerce/catalog`, () => {
-      const { products, in_flight } = catalogs[Math.min(reads.catalog, catalogs.length - 1)]!;
+      const served = catalogs[Math.min(reads.catalog, catalogs.length - 1)]!;
       reads.catalog += 1;
+      if (served === null)
+        return HttpResponse.json({ error: { message: 'unavailable' } }, { status: 503 });
       return HttpResponse.json({
-        products,
-        product_total: products.length,
+        products: served.products,
+        product_total: served.products.length,
         categories: [],
-        projection: { applies: true, in_flight, failed: 0 },
+        projection: { applicability: 'applicable', in_flight: served.in_flight, failed: 0 },
       });
     }),
     http.get(`/api/v1/projects/${PROJECT}/commerce/catalog/projection`, () => {
       const in_flight = projections[Math.min(reads.projection, projections.length - 1)]!;
       reads.projection += 1;
-      return HttpResponse.json({ applies: true, in_flight, failed: 0 });
+      return HttpResponse.json({ applicability: 'applicable', in_flight, failed: 0 });
     }),
   );
   return reads;
@@ -104,9 +109,35 @@ describe('useCatalogProjection', () => {
         'Widget',
       ]),
     );
-    expect(result.current.projection).toEqual({ applies: true, in_flight: 0, failed: 0 });
+    expect(result.current.projection).toEqual({
+      applicability: 'applicable',
+      in_flight: 0,
+      failed: 0,
+    });
     expect(reads).toEqual({ catalog: 2, projection: 1 });
   });
+
+  it('asks for the catalog again on the next poll when the read after terminalizing fails', async () => {
+    const reads = serve(
+      [{ products: [WIDGET], in_flight: 2 }, null, { products: [GADGET, WIDGET], in_flight: 0 }],
+      [0],
+    );
+    const { result } = renderHook(useScreen, { wrapper: wrapper(client()) });
+
+    // The failed read is visible as the catalog's error, over its stale rows.
+    await waitFor(() => expect(result.current.catalog.isError).toBe(true));
+    expect(result.current.catalog.data?.products.map((row) => row.name)).toEqual(['Widget']);
+    // The next poll asks again, and the fresh catalog lands.
+    await waitFor(
+      () =>
+        expect(result.current.catalog.data?.products.map((row) => row.name)).toEqual([
+          'Gadget',
+          'Widget',
+        ]),
+      { timeout: 8_000 },
+    );
+    expect(reads.catalog).toBe(3);
+  }, 15_000);
 
   it('never polls the projection for a catalog read with nothing in flight', async () => {
     const reads = serve([{ products: [WIDGET], in_flight: 0 }], [0]);

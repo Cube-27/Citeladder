@@ -321,7 +321,11 @@ describe('catalog projection outcomes', () => {
   }, 20_000);
   it("reports live projections, then only the latest crawl's failures", async () => {
     const s = await seed();
-    expect((await catalog(db, s)).projection).toEqual({ applies: true, in_flight: 2, failed: 0 });
+    expect((await catalog(db, s)).projection).toEqual({
+      applicability: 'applicable',
+      in_flight: 2,
+      failed: 0,
+    });
     await db
       .updateTable('analytics_tasks')
       .set({ status: 'failed' })
@@ -332,9 +336,18 @@ describe('catalog projection outcomes', () => {
       .set({ status: 'succeeded' })
       .where('id', '=', s.tasks[1]!)
       .execute();
-    expect((await catalog(db, s)).projection).toEqual({ applies: true, in_flight: 0, failed: 1 });
+    expect((await catalog(db, s)).projection).toEqual({
+      applicability: 'applicable',
+      in_flight: 0,
+      failed: 1,
+    });
     await businessContext(s, { business_model: 'b2b_saas' });
-    expect((await catalog(db, s)).projection.applies).toBe(false);
+    expect((await catalog(db, s)).projection.applicability).toBe('not_applicable');
+    // No confirmed model, or one we do not recognize, is unknown, not "does not apply".
+    await businessContext(s, {});
+    expect((await catalog(db, s)).projection.applicability).toBe('unknown');
+    await businessContext(s, { business_model: 'subscription_box' });
+    expect((await catalog(db, s)).projection.applicability).toBe('unknown');
   }, 20_000);
 });
 

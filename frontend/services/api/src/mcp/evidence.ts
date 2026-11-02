@@ -104,7 +104,8 @@ export async function shelfRead(
   if (args.target_kind || args.target_id)
     throw new McpInputError('target_kind and target_id are given together');
   const { products, product_total, categories, projection } = await catalog(db, scope);
-  if (!projection.applies && !product_total) return unavailable('no_product_catalog');
+  if (projection.applicability !== 'applicable' && !product_total)
+    return unavailable('no_product_catalog');
   const shown = products.slice(0, mcpPolicy.max_list_limit);
   return {
     state: 'available',

@@ -14,8 +14,10 @@ Site Health's config-versioned extractor, analyzer and classifier emit generic
 category and PDP facts. The config-versioned Commerce projector creates catalog
 rows from crawled pages only for brands whose confirmed business model, primary
 or secondary, sells a catalog; unknown context fails closed. Any business can
-import a CSV. The catalog read reports whether crawl projection applies, and the
-empty catalog says so instead of telling every business to run a crawl.
+import a CSV. The catalog read reports whether crawl projection is applicable,
+not applicable (a recognized model that sells no catalog) or unknown (no
+recognized model confirmed); the header and the empty catalog say which instead
+of telling every business to run a crawl.
 
 Structured Product price is preferred; when it is absent, a validated visible
 PDP price is retained with its evidence path. The normalized, in-scope declared
