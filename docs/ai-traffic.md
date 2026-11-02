@@ -35,6 +35,21 @@ never as zero. Explicit dates are arbitrary, so the implementer chose per-run
 facts over per-window projections. Selecting the run is a fixed ordering over
 persisted keys, so the read resolves no ambiguity.
 
+Pages and the URL panel read the same runs (one selector,
+[`citation-runs.ts`](../frontend/services/api/src/crawl-logs/citation-runs.ts))
+and the same snapshot's `owned_citation_pages`: per cited page identity
+(`url_hash`), its canonical URL and the exact owned citation IDs, written in the
+same finalizing transaction. A page's citation leg sums those facts across the
+selected runs and keeps the IDs and source audit IDs as provenance. A window
+without a completed run is `not_connected`; a selected run without its fact is
+`unavailable` with reason `not_computed`; a measured page without citations is
+`zero`. Neither read counts citation rows.
+
+A Pages cursor carries the window its first page resolved, so every page of a
+preset reads the same dates even when the reporting day rolls over between
+requests; a cursor whose window does not span the request's preset (or equal
+its explicit dates) is refused.
+
 Crawl collection is **available** when ingestion is enabled for the workspace or
 the project already has a source. When it is not, the screen opens on Referrals,
 the Crawlers and Activity tabs, connect buttons and the verification control are
