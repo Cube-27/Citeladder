@@ -408,7 +408,7 @@
 .website-hero-display {
   font-size: var(--text-site-hero);
   line-height: var(--text-site-hero--line-height);
-  font-weight: 400;
+  font-weight: 500;
   letter-spacing: 0;
 }
 
