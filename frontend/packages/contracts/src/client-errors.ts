@@ -6,7 +6,7 @@
  */
 import { z } from 'zod';
 
-export const CLIENT_ERROR_KINDS = ['chunk_load', 'render', 'route', 'unhandled'] as const;
+const CLIENT_ERROR_KINDS = ['chunk_load', 'render', 'route', 'unhandled'] as const;
 export type ClientErrorKind = (typeof CLIENT_ERROR_KINDS)[number];
 
 /** Field lengths, in characters; the reporter truncates to them before sending. */
