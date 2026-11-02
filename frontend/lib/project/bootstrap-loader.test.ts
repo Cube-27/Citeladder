@@ -390,7 +390,7 @@ describe('bootstrapPrivateRoutes', () => {
         ),
       );
       const requests = recordRequests();
-      const started = () => requests.paths.map((path) => path.split('?')[0]);
+      const started = () => requests.paths.map((path) => path.replace(/\?.*$/u, ''));
 
       const pending = run(`/site?project=${PROJECT}`);
       const firstRound = [

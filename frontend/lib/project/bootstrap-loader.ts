@@ -192,6 +192,24 @@ async function settleGuess(client: QueryClient, guess: Guess | null, actual: Pro
 }
 
 /**
+ * Settle the guess against the project a bare address selected. An address
+ * naming its project settled the guess when that project resolved.
+ */
+function settleSelectedGuess(
+  client: QueryClient,
+  guess: Guess | null,
+  { requestedProjectId, workspaceId }: Scope,
+  activeProjectId: string | null,
+) {
+  if (requestedProjectId) return Promise.resolve();
+  return settleGuess(
+    client,
+    guess,
+    activeProjectId ? { projectId: activeProjectId, workspaceId } : null,
+  );
+}
+
+/**
  * The explicitly requested project, in as few reads as possible.
  *
  * A returning reader's address names a project in the workspace they last
@@ -441,13 +459,7 @@ export async function bootstrapPrivateRoutes({ request }: { request: Request }) 
   if (!listed) return null;
 
   const { activeProjectId, status } = resolveSelection(scope, listed);
-  // An address naming its project settled the guess when the project resolved.
-  if (!requestedProjectId)
-    await settleGuess(
-      client,
-      guess,
-      activeProjectId ? { projectId: activeProjectId, workspaceId } : null,
-    );
+  await settleSelectedGuess(client, guess, scope, activeProjectId);
   const projectRequired = !isWorkspaceOnlyRoute(url.pathname);
   const decision = resolveGate(status, {
     projectRequired,
