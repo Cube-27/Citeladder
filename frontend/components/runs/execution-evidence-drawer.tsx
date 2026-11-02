@@ -1,10 +1,11 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { lazy, Suspense, useEffect, type ReactNode } from 'react';
+import { lazy, useEffect, type ReactNode } from 'react';
 
 import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { Drawer } from '@/components/ui/drawer';
+import { IslandUnavailable, LazyIsland } from '@/components/ui/lazy-island';
 import { Stack } from '@/components/ui/layout';
 import { Skeleton } from '@/components/ui/skeleton';
 import { queryKeys } from '@/lib/api/query-keys';
@@ -120,7 +121,10 @@ export function ExecutionEvidenceDrawer({
     evidenceBody = <EvidenceLoading />;
   } else {
     evidenceBody = (
-      <Suspense fallback={<EvidenceLoading />}>
+      <LazyIsland
+        loading={<EvidenceLoading />}
+        failed={<IslandUnavailable message="Couldn't load evidence." />}
+      >
         <EvidenceCard
           evidence={evidenceQuery.data}
           answerText={answer.answerText}
@@ -129,7 +133,7 @@ export function ExecutionEvidenceDrawer({
           isSearchSurface={execution?.logical_engine === 'google_ai_overview'}
           outcome={answer.outcome}
         />
-      </Suspense>
+      </LazyIsland>
     );
   }
 

@@ -1,8 +1,9 @@
 'use client';
 
-import { lazy, Suspense } from 'react';
+import { lazy } from 'react';
 import { Link } from 'react-router-dom';
 
+import { LazyIsland } from '@/components/ui/lazy-island';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
@@ -64,9 +65,10 @@ export function NavLink({
       />
       <span className="min-w-0 flex-1 truncate">{item.label}</span>
       {item.badge === 'open-actions' ? (
-        <Suspense fallback={null}>
+        // A count that cannot load leaves the row as it was, never the shell.
+        <LazyIsland failed={null}>
           <OpenActionCount />
-        </Suspense>
+        </LazyIsland>
       ) : null}
     </Link>
   );

@@ -1,8 +1,9 @@
 'use client';
 
-import { Suspense, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 import { dataFillClass, type DataTone } from '@/components/ui/data-tone';
+import { IslandUnavailable, LazyIsland } from '@/components/ui/lazy-island';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
@@ -73,7 +74,8 @@ function seriesVariables(config: ChartConfig): Record<string, string> {
  * (`chart-plot.tsx` and the per-chart plots beside it), so the chart library
  * is fetched when a chart is drawn, not with every screen that shows one. The
  * box is sized by its height role before that code arrives, so the plot fills
- * a space already held and nothing around it moves.
+ * a space already held and nothing around it moves. A drawing that cannot
+ * load leaves a quiet notice in the same box rather than failing the screen.
  */
 export function ChartContainer({
   config,
@@ -101,7 +103,9 @@ export function ChartContainer({
     <div className={cn('w-full', className)} style={seriesVariables(config)}>
       <p className="sr-only">{description}</p>
       <div aria-hidden className={chartHeightClasses[size]}>
-        <Suspense fallback={null}>{children}</Suspense>
+        <LazyIsland failed={<IslandUnavailable message="Couldn't load chart." />}>
+          {children}
+        </LazyIsland>
       </div>
     </div>
   );
