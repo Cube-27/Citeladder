@@ -656,7 +656,7 @@ describe('issue catalog', () => {
     const catalog = async () =>
       db
         .selectFrom('site_issue_catalogs')
-        .select(['finding_class', 'summary'])
+        .select(['finding_class', 'items', 'summary'])
         .where('crawl_id', '=', seed.crawlId)
         .orderBy('finding_class')
         .execute();
@@ -666,10 +666,17 @@ describe('issue catalog', () => {
     // The currency refresh writes both classes' catalogs in its transaction.
     await issue(seed, product, 'technical.indexable');
     expect(
-      (await catalog()).map((row) => [row.finding_class, record(row.summary).issue_count]),
+      (await catalog()).map((row) => [
+        row.finding_class,
+        z
+          .array(z.object({ rule_id: z.string() }))
+          .parse(row.items)
+          .map((item) => item.rule_id),
+        record(row.summary).affected_url_count,
+      ]),
     ).toEqual([
-      ['advisory', 0],
-      ['defect', 1],
+      ['advisory', [], 0],
+      ['defect', ['technical.indexable'], 2],
     ]);
     // A current issue no writer refreshed changes no unfiltered read.
     const late = await issue(seed, home, 'technical.title_present', {}, false);

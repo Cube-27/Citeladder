@@ -709,6 +709,11 @@ describe('project owner', () => {
 
   it('overview and visibility compare a run with the one baseline finalization persisted', async () => {
     const t = await measurements.tenant();
+    await db
+      .updateTable('projects')
+      .set({ benchmark_mode: 'consumer_like' })
+      .where('id', '=', t.projectId)
+      .execute();
     await measurements.brand(t.projectId, 'Acme Corp');
     const configuration = {
       brand_name: 'Acme Corp',
