@@ -155,7 +155,7 @@ describe('CatalogHeader', () => {
       categories: [],
       projection: { applies: true, in_flight: 0, failed: 0 },
     }));
-    function LiveHost() {
+    function LiveScreen() {
       const query = useQuery({
         queryKey: queryKeys.commerce.catalog(PROJECT_ID),
         queryFn: readCatalog,
@@ -168,7 +168,8 @@ describe('CatalogHeader', () => {
         />
       );
     }
-    const { queryClient } = renderWithProviders(<LiveHost />);
+    const LiveHost = ({ mounted }: { mounted: boolean }) => (mounted ? <LiveScreen /> : null);
+    const { queryClient, rerender } = renderWithProviders(<LiveHost mounted />);
 
     await waitFor(() => expect(screen.getByText('49/50')).toBeInTheDocument());
     await act(async () => {});
@@ -180,6 +181,18 @@ describe('CatalogHeader', () => {
     );
     await waitFor(() => expect(screen.getByText('50/50')).toBeInTheDocument());
     await waitFor(() => expect(readCatalog).toHaveBeenCalledTimes(2));
+
+    // Away from Products the dashboard moves on while the catalog stays fresh
+    // in the cache; coming back re-reads the catalog for the newer count.
+    rerender(<LiveHost mounted={false} />);
+    getDashboard.mockResolvedValue(crawl({ analyzed_count: 51 }));
+    queryClient.setQueryData(
+      ['site-health', 'dashboard', PROJECT_ID],
+      crawl({ analyzed_count: 51 }),
+    );
+    rerender(<LiveHost mounted />);
+    expect(screen.getByText('51/51')).toBeInTheDocument();
+    await waitFor(() => expect(readCatalog).toHaveBeenCalledTimes(3));
   });
 
   it('offers the crawl as the primary action until one exists', async () => {

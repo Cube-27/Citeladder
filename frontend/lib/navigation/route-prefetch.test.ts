@@ -41,10 +41,14 @@ const DASHBOARD = siteHealthDashboardSchema.parse({
   root_errors: [],
 });
 /** A response held back so the read it races clearly answers first. */
-const answerLate = () =>
-  new Promise<void>((resolve) => {
-    setTimeout(resolve, 50);
+/** A response held until the test lets it go, so "answers last" is a fact, not a timing race. */
+function heldAnswer() {
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
   });
+  return { held, release: () => release() };
+}
 // The Website page browser's first Monitored page, as the screen asks for it.
 const previewKey = siteHealthQueries.pages(PROJECT.workspaceId, CRAWL_ID, {
   limit: 10,
@@ -111,11 +115,12 @@ describe('prefetchRoute', () => {
   it('asks for a cold Website preview beside the dashboard and files it under the crawl it names', async () => {
     const asked: string[] = [];
     const page = { items: [], next_cursor: null, root_errors: [] };
+    const dashboard = heldAnswer();
     mswServer.use(
       http.get(`/api/v1/projects/${PROJECT_ID}/site-health`, async () => {
         asked.push('dashboard');
-        // Answers last: the preview must not wait for it.
-        await answerLate();
+        // Held until the preview is filed: the preview must not wait for it.
+        await dashboard.held;
         return HttpResponse.json(DASHBOARD);
       }),
       http.get(`/api/v1/projects/${PROJECT_ID}/site-health/pages`, ({ request }) => {
@@ -130,6 +135,7 @@ describe('prefetchRoute', () => {
       'dashboard',
       'latest pages ?limit=10&monitored=true&sort=status',
     ]);
+    dashboard.release();
   });
 
   it('files a cold issue catalog under the crawl the project read names, before the dashboard lands', async () => {
@@ -147,11 +153,11 @@ describe('prefetchRoute', () => {
         monitored_affected_url_count: 0,
       },
     };
-    let dashboardAnswered = false;
+    // Held until the catalog is filed: the catalog must not wait for it.
+    const dashboard = heldAnswer();
     mswServer.use(
       http.get(`/api/v1/projects/${PROJECT_ID}/site-health`, async () => {
-        await answerLate();
-        dashboardAnswered = true;
+        await dashboard.held;
         return HttpResponse.json(DASHBOARD);
       }),
       http.get(`/api/v1/projects/${PROJECT_ID}/site-health/issues`, () =>
@@ -168,7 +174,7 @@ describe('prefetchRoute', () => {
           .map((query) => query.state.data),
       ).toEqual([page]),
     );
-    expect(dashboardAnswered).toBe(false);
+    dashboard.release();
   });
 
   it('warms the Overview layout beside the command center, then the reads its widgets make', async () => {

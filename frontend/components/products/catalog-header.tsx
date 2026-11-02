@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { Alert } from '@/components/ui/alert';
@@ -41,6 +41,9 @@ function analyzedLabel(crawl: SiteHealthCrawl): string | null {
 }
 
 type Projection = CommerceCatalog['projection'];
+
+/** When the cached catalog was read, and the crawl's analyzed count it was read beside. */
+type CatalogReadCount = { readAt: number; count: number };
 
 /**
  * Pages still being turned into catalog rows, then pages of the latest crawl
@@ -134,18 +137,23 @@ export function useCatalogHeader({
     },
   });
   // A running crawl enqueues projections as pages are analyzed; re-read the
-  // catalog as that count moves, so its own polling starts with the first task.
-  // The first count only records where it stands: the catalog was just read,
-  // and re-reading it then loaded it twice on every visit.
+  // catalog when that count has moved past the one its cached read was taken
+  // beside, so its own polling starts with the first task. The count is kept
+  // in the cache next to the catalog, so a remount over a fresh catalog still
+  // sees a count that moved meanwhile, and a catalog read just now is not read
+  // again for a count it already reflects.
   const analyzed = dashboard.data?.crawl?.analyzed_count;
-  const seenAnalyzed = useRef<{ projectId: string; count: number } | null>(null);
+  const catalogReadAt = query.dataUpdatedAt;
+  const hasCatalog = query.data !== undefined;
   useEffect(() => {
-    if (analyzed === undefined) return;
-    const previous = seenAnalyzed.current;
-    seenAnalyzed.current = { projectId, count: analyzed };
-    if (previous?.projectId === projectId && previous.count !== analyzed)
+    if (analyzed === undefined || !hasCatalog) return;
+    const key = queryKeys.commerce.catalogReadCount(projectId);
+    const recorded = client.getQueryData<CatalogReadCount>(key);
+    if (!recorded || recorded.readAt !== catalogReadAt)
+      client.setQueryData<CatalogReadCount>(key, { readAt: catalogReadAt, count: analyzed });
+    else if (recorded.count !== analyzed)
       void client.invalidateQueries({ queryKey: queryKeys.commerce.catalog(projectId) });
-  }, [analyzed, client, projectId]);
+  }, [analyzed, catalogReadAt, hasCatalog, client, projectId]);
   const invalidateCatalog = () =>
     client.invalidateQueries({
       queryKey: queryKeys.commerce.catalog(projectId),
