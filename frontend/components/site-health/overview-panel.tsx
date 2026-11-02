@@ -35,15 +35,7 @@ export function OverviewPanel({
     enabled: terminal,
   });
   const data = overview.data;
-  // The panel's first paint waits for a finished crawl's snapshot as one
-  // loading box. Drawn early, the score row came up from the live dashboard
-  // with a loading box under it, and only then the details: a second loader
-  // between the page's first one and the data. Once the scores have been on
-  // screen they stay — a recrawl finishing loads its snapshot under them.
-  const [scoresShown, setScoresShown] = useState(false);
-  const awaitingFirstSnapshot = terminal && overview.isPending && !scoresShown;
-  if (!awaitingFirstSnapshot && !scoresShown) setScoresShown(true);
-  if (awaitingFirstSnapshot)
+  if (useAwaitingFirstSnapshot(terminal && overview.isPending))
     return (
       <Stack gap="workspace" className="min-w-0" data-testid="site-health-overview">
         <QueryState kind="loading" label="Loading Overview" />
@@ -79,4 +71,17 @@ export function OverviewPanel({
       {overviewBody}
     </Stack>
   );
+}
+
+/**
+ * The panel's first paint waits for a finished crawl's snapshot as one loading
+ * box. Drawn early, the score row came up from the live dashboard with a
+ * loading box under it, and only then the details: a second loader between
+ * the page's first one and the data. Once the scores have been on screen they
+ * stay — a recrawl finishing loads its snapshot under them.
+ */
+function useAwaitingFirstSnapshot(snapshotPending: boolean): boolean {
+  const [scoresShown, setScoresShown] = useState(false);
+  if (!snapshotPending && !scoresShown) setScoresShown(true);
+  return snapshotPending && !scoresShown;
 }
