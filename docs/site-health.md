@@ -272,8 +272,10 @@ workspace, project, origin and the full-body SHA-256. The stored body is cut at
 `robots_observed_at`.
 
 `GET /api/v1/projects/{project_id}/site-health/robots-history` keyset-pages the
-observations (default 5, maximum 20). MCP `read_ai_crawlability` takes an
-optional `crawl_id`.
+observations (default 5, maximum 20). The screen asks for
+`ROBOTS_HISTORY_PAGE_SIZE` (5, `lib/config/site-health.ts`) and keeps the
+current observations and pager on screen while the next page loads. MCP
+`read_ai_crawlability` takes an optional `crawl_id`.
 
 ## Page analysis
 
@@ -645,6 +647,11 @@ it (`crawl_id`, and the pages read's `crawl_status`). The Website and Issues
 route prefetchers use them on a cold load, beside the dashboard rather than
 after it, and file the answer under that crawl's key; a cached dashboard warms
 the crawl-scoped reads directly.
+
+The Website screen (`site-health-screen.tsx`) always opens on its Pages tab,
+the loading frame included, and never changes tab by itself: not while the
+crawl resolves, starts, runs or finishes. A tab the reader picks, or a
+`?tab=` link, stays selected ([decision](decisions.md#site-health-always-opens-on-pages)).
 
 A URL's issue history lists only resolved issues: rules recorded on the page in
 the selected crawl's superseded analyses or the project's earlier crawls that its
