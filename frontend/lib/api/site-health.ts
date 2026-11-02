@@ -103,6 +103,8 @@ export type InventoryParams = {
 type CrawlListParams = { project_id: string; limit?: number; cursor?: string };
 /** Server-backed orderings of the pages list (keyset, never a client sort). */
 export type PagesSort = 'status' | 'url' | 'inbound' | 'main_content_inbound' | 'depth';
+/** The ordering the pages endpoint applies when none is named. */
+export const DEFAULT_PAGES_SORT = 'status' satisfies PagesSort;
 export type PagesParams = {
   cursor?: string;
   limit?: number;
@@ -125,6 +127,8 @@ export type IssuesParams = {
   finding_class?: 'defect' | 'advisory';
   /** v2 P1: filter to issues affecting one classified page type. */
   page_kind?: string;
+  /** Embed the first row's detail (`first_issue`) with this many occurrences. */
+  detail_limit?: number;
 };
 
 /** Keyset params for a grouped issue's affected-URL page and a URL's issue history. */
@@ -411,23 +415,28 @@ export const siteHealthQueries = {
       queryKey: queryKeys.siteHealth.monitored(projectId),
       queryFn: ({ signal }) => siteHealthApi.getMonitoredUrls(projectId, { signal, workspaceId }),
     }),
-  pages: (workspaceId: string, crawlId: string, params?: PagesParams) =>
-    queryOptions({
+  pages: (workspaceId: string, crawlId: string, params?: PagesParams) => {
+    // An omitted sort IS the default sort, so it is named in both the key and
+    // the request: a caller that leaves it out shares the page browser's
+    // first-page entry instead of fetching the same rows a second time.
+    const request = { ...params, sort: params?.sort ?? DEFAULT_PAGES_SORT };
+    return queryOptions({
       queryKey: queryKeys.siteHealth.pages(crawlId, {
-        cursor: params?.cursor ?? null,
-        limit: params?.limit ?? null,
-        status: params?.status ?? null,
-        monitored: params?.monitored ?? null,
-        page_kind: params?.page_kind ?? null,
+        cursor: request.cursor ?? null,
+        limit: request.limit ?? null,
+        status: request.status ?? null,
+        monitored: request.monitored ?? null,
+        page_kind: request.page_kind ?? null,
         // The sort changes the server's ordering, so it must be part of the
         // cache identity — otherwise two sorts share one entry and the table
         // renders the previous ordering's rows.
-        sort: params?.sort ?? null,
+        sort: request.sort,
       }),
-      queryFn: ({ signal }) => siteHealthApi.getPages(crawlId, params, { signal, workspaceId }),
+      queryFn: ({ signal }) => siteHealthApi.getPages(crawlId, request, { signal, workspaceId }),
       placeholderData: (previousData, previousQuery) =>
         retainPreviousDataForScope(crawlId, previousData, previousQuery),
-    }),
+    });
+  },
   page: (workspaceId: string, crawlId: string, siteUrlId: string) =>
     queryOptions({
       queryKey: queryKeys.siteHealth.page(crawlId, siteUrlId),
@@ -446,6 +455,7 @@ export const siteHealthQueries = {
         site_url_id: params?.site_url_id ?? null,
         finding_class: params?.finding_class ?? 'defect',
         page_kind: params?.page_kind ?? null,
+        detail_limit: params?.detail_limit ?? null,
       }),
       queryFn: ({ signal }) => siteHealthApi.getIssues(crawlId, params, { signal, workspaceId }),
       placeholderData: (previousData, previousQuery) =>

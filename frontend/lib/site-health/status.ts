@@ -59,9 +59,6 @@ export function internalLinkStateNotice(analysis: InternalLinkAnalysis) {
 /** The not-yet-analysed / not-applicable placeholder (matches visibility UI). */
 export const PLACEHOLDER = availabilityLabel('not_measured');
 
-/** Rows per cursor page across the Site Health inventory/pages lists. */
-export const PAGE_LIMIT = 10;
-
 /** Poll cadence for the Site Health screen's active-crawl queries. */
 export const POLL_INTERVAL_MS = 4_000;
 

@@ -206,6 +206,73 @@ describe('IssuesCatalog', () => {
     ).toBeInTheDocument();
   });
 
+  it('starts an addressed issue’s occurrences while the list is still loading', async () => {
+    const OTHER = 'bbbbbbbb-2222-4222-8222-222222222222';
+    let releaseIssues!: () => void;
+    const issuesSettled = new Promise<void>((resolve) => {
+      releaseIssues = resolve;
+    });
+    let detailRequested = false;
+    mswServer.use(
+      http.get(`/api/v1/site-crawls/${CRAWL}/issues`, async () => {
+        await issuesSettled;
+        return HttpResponse.json({
+          items: [issue(), issue({ group_id: OTHER, title: 'Canonical tag is missing' })],
+          next_cursor: null,
+          summary,
+        });
+      }),
+      http.get(`/api/v1/site-crawls/${CRAWL}/issues/${OTHER}`, () => {
+        detailRequested = true;
+        return HttpResponse.json(
+          issueDetail({
+            group_id: OTHER,
+            title: 'Canonical tag is missing',
+            occurrences: [occurrence({ title: 'Pricing page' })],
+          }),
+        );
+      }),
+    );
+
+    renderIssues(<IssuesCatalog crawlId={CRAWL} />, `/issues?issue=${OTHER}`);
+
+    await screen.findByRole('status', { name: 'Loading issues…' });
+    await waitFor(() => expect(detailRequested).toBe(true));
+
+    act(() => releaseIssues());
+
+    expect(
+      await screen.findByRole('heading', { name: 'Canonical tag is missing', level: 2 }),
+    ).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: /Pricing page/ })).toBeInTheDocument();
+  });
+
+  it('shows the first issue’s occurrences from the list response alone', async () => {
+    const listRequests: string[] = [];
+    let detailRequests = 0;
+    mswServer.use(
+      http.get(`/api/v1/site-crawls/${CRAWL}/issues`, ({ request }) => {
+        listRequests.push(new URL(request.url).searchParams.get('detail_limit') ?? 'none');
+        return HttpResponse.json({
+          items: [issue()],
+          next_cursor: null,
+          summary,
+          first_issue: issueDetail({ occurrences: [occurrence({ title: 'Embedded page' })] }),
+        });
+      }),
+      http.get(`/api/v1/site-crawls/${CRAWL}/issues/${ISSUE_A}`, () => {
+        detailRequests += 1;
+        return HttpResponse.json(issueDetail());
+      }),
+    );
+
+    renderIssues(<IssuesCatalog crawlId={CRAWL} />);
+
+    expect(await screen.findByRole('link', { name: /Embedded page/ })).toBeInTheDocument();
+    expect(listRequests).toEqual(['25']);
+    expect(detailRequests).toBe(0);
+  });
+
   /**
    * The counterpart to the gate above: it must close only ONCE. Selecting a
    * second issue re-keys the detail query, and `siteHealthQueries.issue`

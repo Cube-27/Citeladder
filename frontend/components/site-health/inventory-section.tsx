@@ -14,7 +14,12 @@ import { PageKindSelect } from '@/components/site-health/page-kind-select';
 import { PagesTable } from '@/components/site-health/pages-table';
 import { RootErrorsBlock } from '@/components/site-health/root-errors-block';
 import { warmQuery } from '@/lib/api/query-client';
-import { siteHealthQueries, type PagesParams, type PagesSort } from '@/lib/api/site-health';
+import {
+  DEFAULT_PAGES_SORT,
+  siteHealthQueries,
+  type PagesParams,
+  type PagesSort,
+} from '@/lib/api/site-health';
 import type { PagesPage, SiteCrawl } from '@/lib/api/types';
 import { Tabs } from '@/components/ui/tabs';
 import { cursorControls, pageRange, useCursorTable } from '@/lib/table/use-cursor-table';
@@ -359,5 +364,5 @@ function initialPagesSort(value: string | null): PagesSort {
     'main_content_inbound',
     'depth',
   ];
-  return supported.includes(value as PagesSort) ? (value as PagesSort) : 'status';
+  return supported.includes(value as PagesSort) ? (value as PagesSort) : DEFAULT_PAGES_SORT;
 }
