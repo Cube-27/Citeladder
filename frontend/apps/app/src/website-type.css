@@ -95,13 +95,16 @@
        display roles (headings, titles)  1 desktop · 0.68 tablet · 0.36 phone
        reading roles (text, controls)    1 desktop · 1 tablet    · 0 phone
 
-     The display factors are the hero's own steps, 64 → 48 → 32. Reading text
+     The display factors give the hero 64 → 48 → 32; the hero alone takes its
+     own phone factor (0.32, so 30px) so it does not wrap to a fourth line
+     on a phone (owner, 2026-11-02). Reading text
      keeps its desktop size until a phone, where it sits on the floor: pure
      scaling would put it under the 12px minimum there (16 × 0.5 = 8). The
      caption is that 12px minimum at every width. Components read the
      `--text-site-*` sizes, never a literal; change a desktop size or a factor
      and every viewport follows. Weight, tracking and ink live on each role. */
   --site-type-display: 0.36;
+  --site-type-hero: 0.32;
   --site-type-reading: 0;
   --site-type-floor: var(--text-sm);
   /* Display roles. */
@@ -129,7 +132,7 @@
     nearest,
     calc(
       var(--site-type-floor) + (var(--site-role-hero) - var(--site-type-floor)) *
-        var(--site-type-display)
+        var(--site-type-hero)
     ),
     1px
   );
@@ -298,6 +301,7 @@
 @media (min-width: 810px) {
   :where([data-marketing-surface]) {
     --site-type-display: 0.68;
+    --site-type-hero: 0.68;
     --site-type-reading: 1;
   }
 }
@@ -305,6 +309,7 @@
 @media (min-width: 1200px) {
   :where([data-marketing-surface]) {
     --site-type-display: 1;
+    --site-type-hero: 1;
   }
 }
 
@@ -428,13 +433,12 @@
   letter-spacing: 0;
 }
 
-/* Card and feature titles are the one public role at 600: the public Lexend
-   Deca face runs to 600 (PublicFonts.astro) for this role alone. */
+/* Card and feature titles: Lexend Deca at the 500 ceiling. */
 .website-feature-heading {
   font-family: var(--font-sans);
   font-size: var(--text-site-card);
   line-height: var(--text-site-card--line-height);
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0;
   text-wrap: balance;
 }

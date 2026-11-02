@@ -390,7 +390,7 @@
   color: var(--color-site-ink);
   font-size: var(--text-site-card-compact);
   line-height: var(--text-site-card-compact--line-height);
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0;
 }
 
