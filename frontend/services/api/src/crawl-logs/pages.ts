@@ -333,7 +333,11 @@ export async function pagesExport(db: Database, scope: CrawlScope, input: PageOp
     scope,
     await withReportingTimezone(db, scope, input),
   );
-  const { cursor: _cursor, limit: _limit, ...filters } = options,
+  // A preset is pinned to its dates once, so the rows and their context read
+  // the same window even if the reporting day rolls over between the reads.
+  const w = crawlWindow(options),
+    { cursor: _cursor, limit: _limit, ...rest } = options,
+    filters = { ...rest, range: null, start_date: w.start, end_date: w.end },
     max = crawlLogs.max_export_rows;
   const [data, context] = await Promise.all([
     pageDataset(db, scope, { ...filters, url_hashes: urlHashes, dataset_limit: max + 1 }),
