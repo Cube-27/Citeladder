@@ -415,6 +415,34 @@ describe('GET /visibility/trends', () => {
     }
   });
 
+  it('applies the slice before the run bound, so a narrow slice reaches its older runs', async () => {
+    const tenant = await fixtures.tenant();
+    const metrics = aggregate({ completed: 2, brand: 1 });
+    const retrievalOff = frozen({
+      measurement_policy: {
+        retrieval_enabled: false,
+        max_output_tokens: 1000,
+        answer_instruction: '',
+      },
+    });
+    const off: string[] = [];
+    for (const day of ['2026-02-02', '2026-02-03'])
+      off.push(
+        await measuredRun(tenant, `${day}T09:00:00Z`, metrics, { configuration: retrievalOff }),
+      );
+    // More default runs than the bound, all newer than the slice's runs.
+    for (const day of ['2026-03-02', '2026-03-03', '2026-03-04', '2026-03-05'])
+      await measuredRun(tenant, `${day}T09:00:00Z`, metrics);
+    const bound = policy.visibility.trend_max_runs;
+    policy.visibility.trend_max_runs = 3;
+    try {
+      const { body } = await get(tenant, route(tenant, '/trends'), { retrieval_enabled: 'false' });
+      expect(body.map((point) => point.audit_id)).toEqual(off);
+    } finally {
+      policy.visibility.trend_max_runs = bound;
+    }
+  });
+
   it('folds each analyzer version into its own point, never one blend', async () => {
     const tenant = await fixtures.tenant();
     await measuredRun(tenant, '2026-03-02T09:00:00Z', aggregate({ completed: 4, brand: 2 }), {

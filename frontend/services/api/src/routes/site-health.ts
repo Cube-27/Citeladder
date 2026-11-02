@@ -255,30 +255,30 @@ export const siteHealthRoutes = [
     response: siteIssuesPageSchema,
     async handle({ c, db }, { path, query }) {
       const workspaceId = c.get('workspace').workspaceId;
-      const [page, crawl] = await Promise.all([
-        withCursor(
-          issues(
-            db,
-            workspaceId,
-            path.crawl_id,
-            {
-              query: query.query || null,
-              severity: query.severity || null,
-              category: query.category || null,
-              dimension: query.dimension || null,
-              rule: query.rule || null,
-              siteUrlId: query.site_url_id,
-              pageKind: query.page_kind || null,
-              findingClass: query.finding_class,
-            },
-            query,
-            query.detail_limit ?? null,
-          ),
+      // Read the status first: a crawl that was terminal before the page read
+      // has published its issues, so the page cannot hold pre-publication
+      // rows. One still running (or finalizing mid-read) is not revalidated.
+      const settled = isTerminal(await loadCrawl(db, workspaceId, path.crawl_id));
+      const page = await withCursor(
+        issues(
+          db,
+          workspaceId,
+          path.crawl_id,
+          {
+            query: query.query || null,
+            severity: query.severity || null,
+            category: query.category || null,
+            dimension: query.dimension || null,
+            rule: query.rule || null,
+            siteUrlId: query.site_url_id,
+            pageKind: query.page_kind || null,
+            findingClass: query.finding_class,
+          },
+          query,
+          query.detail_limit ?? null,
         ),
-        loadCrawl(db, workspaceId, path.crawl_id),
-      ]);
-      // A crawl still running grows its issues; only a terminal one is revalidated.
-      return isTerminal(crawl) ? revalidatable(c, page) : page;
+      );
+      return settled ? revalidatable(c, page) : page;
     },
   }),
   defineGetRoute({

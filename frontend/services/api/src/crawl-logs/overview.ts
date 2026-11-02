@@ -66,21 +66,24 @@ export async function aiTrafficOverview(
   query: CrawlReadOptions,
 ): Promise<z.input<typeof aiTrafficOverviewSchema>> {
   const options = await withReportingTimezone(db, scope, query);
-  // An invalid window is the caller's 422 before any read starts.
-  const bounds = windowBounds(crawlWindow(options), options);
+  // One window for all three reads, resolved before any starts (an invalid
+  // one is the caller's 422): explicit dates win over a preset, as
+  // `crawlWindow` decides, so referrals never read a preset beside them.
+  const window = crawlWindow(options);
+  const explicit = Boolean(options.start_date && options.end_date);
   const [crawl, referrals, citations] = await Promise.all([
     crawlSummary(db, scope, options),
     getAiReferrals(db, {
       ...scope,
-      rangeToken: query.range ?? null,
-      fromDate: query.start_date ?? null,
-      toDate: query.end_date ?? null,
+      rangeToken: explicit ? null : (options.range ?? null),
+      fromDate: explicit ? window.start : null,
+      toDate: explicit ? window.end : null,
       granularity: 'day',
     }).catch((error: unknown) => {
       if (error instanceof AiReferralsQueryError) throw new ApiError(422, error.message);
       throw error;
     }),
-    trackedCitations(db, scope, bounds),
+    trackedCitations(db, scope, windowBounds(window, options)),
   ]);
   return {
     crawl,
