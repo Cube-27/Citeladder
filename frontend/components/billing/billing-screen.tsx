@@ -187,18 +187,21 @@ export function BillingScreen() {
             renewsOn={entitlement?.subscription?.current_period_end ?? null}
           />
         ) : null}
-        <UsageMeters />
-        <PlanSection
-          catalog={catalog}
-          catalogLoading={catalogQuery.isLoading}
-          catalogError={catalogQuery.isError}
-          entitlement={entitlement}
-          canManage={canManage}
-          checkout={checkout}
-          planChanges={planChanges}
-          onBuyExtra={buyExtra}
-          newSubscription={{ country, setCountry, details, setDetails, subscribe }}
-        />
+        {/* Usage and plan cards are neighbours: the workspace gap, not the section gap. */}
+        <Stack gap="workspace">
+          <UsageMeters />
+          <PlanSection
+            catalog={catalog}
+            catalogLoading={catalogQuery.isLoading}
+            catalogError={catalogQuery.isError}
+            entitlement={entitlement}
+            canManage={canManage}
+            checkout={checkout}
+            planChanges={planChanges}
+            onBuyExtra={buyExtra}
+            newSubscription={{ country, setCountry, details, setDetails, subscribe }}
+          />
+        </Stack>
         <InvoiceHistory
           invoices={invoiceQuery.data ?? []}
           loading={invoiceQuery.isLoading}
