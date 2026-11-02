@@ -267,15 +267,10 @@ export function AuthFormShell({
   terms?: TermsDecision;
   children: ReactNode;
 }>) {
-  const [agreed, setAgreed] = useState(false);
-  const hintId = useId();
-  const requiresConsent = Boolean(terms) && showForm;
-  // Why the ways in wait, for the disabled buttons to point at.
-  const consentHint = requiresConsent && !agreed ? hintId : undefined;
-  const revisionPending = requiresConsent && !terms?.revision;
+  const consent = useConsentGate(showForm ? terms : undefined);
 
   const handleSubmit: NonNullable<ComponentProps<'form'>['onSubmit']> = (event) => {
-    if (consentHint || revisionPending) {
+    if (consent.held) {
       event.preventDefault();
       return;
     }
@@ -290,12 +285,12 @@ export function AuthFormShell({
       </Stack>
 
       <Stack gap="workspace" className="auth-form-body">
-        {requiresConsent && terms ? (
+        {consent.terms ? (
           <>
             <GoogleEntry
-              revision={terms.revision}
-              signup={terms.signup}
-              consentHint={consentHint}
+              revision={consent.terms.revision}
+              signup={consent.terms.signup}
+              consentHint={consent.hint}
             />
             <p className="auth-form-divider flow-meta text-center">or</p>
           </>
@@ -308,15 +303,19 @@ export function AuthFormShell({
             <Stack gap="workspace" className="auth-email-form">
               {children}
 
-              {requiresConsent && (
-                <TermsConsent agreed={agreed} onChange={setAgreed} hintId={hintId} />
-              )}
+              {consent.terms ? (
+                <TermsConsent
+                  agreed={consent.agreed}
+                  onChange={consent.setAgreed}
+                  hintId={consent.hintId}
+                />
+              ) : null}
 
               <Button
                 type="submit"
                 className="auth-form-submit w-full"
-                disabled={pending || revisionPending || Boolean(consentHint)}
-                aria-describedby={consentHint}
+                disabled={pending || consent.held}
+                aria-describedby={consent.hint}
               >
                 {pending ? pendingLabel : submitLabel}
               </Button>
@@ -325,20 +324,45 @@ export function AuthFormShell({
         ) : null}
 
         {showFooter ? (
-          <p className="auth-form-footer flow-help text-center">
-            {footerPrompt}{' '}
-            <Link
-              to={footerHref}
-              className={cn(
-                'flow-exit',
-                footerLinkVariant === 'emphasis' && 'flow-auth-switch-link',
-              )}
-            >
-              {footerLabel}
-            </Link>
-          </p>
+          <AuthFormFooter
+            prompt={footerPrompt}
+            href={footerHref}
+            label={footerLabel}
+            emphasis={footerLinkVariant === 'emphasis'}
+          />
         ) : null}
       </Stack>
     </Stack>
+  );
+}
+
+/**
+ * The Terms box's state for a form that authenticates (`terms` given), or
+ * nothing to hold for one that does not. `hint` is the id the disabled ways in
+ * point to while the box is unticked; `held` stays true until it is ticked
+ * and the published revision has loaded.
+ */
+function useConsentGate(terms: TermsDecision | undefined) {
+  const [agreed, setAgreed] = useState(false);
+  const hintId = useId();
+  const hint = terms && !agreed ? hintId : undefined;
+  const held = Boolean(hint) || (terms !== undefined && !terms.revision);
+  return { terms, agreed, setAgreed, hintId, hint, held };
+}
+
+/** The line under the form that switches between sign-in and sign-up, or back to sign-in. */
+function AuthFormFooter({
+  prompt,
+  href,
+  label,
+  emphasis,
+}: Readonly<{ prompt: string; href: string; label: string; emphasis: boolean }>) {
+  return (
+    <p className="auth-form-footer flow-help text-center">
+      {prompt}{' '}
+      <Link to={href} className={cn('flow-exit', emphasis && 'flow-auth-switch-link')}>
+        {label}
+      </Link>
+    </p>
   );
 }
