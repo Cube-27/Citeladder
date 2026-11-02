@@ -1,6 +1,6 @@
 /**
  * CiteLadder's identity in PDF documents: the light design tokens read from
- * the app's token owner, the brand faces (Outfit display, Lexend Deca text,
+ * the app's token owner, the brand faces (Syne display, Lexend Deca text,
  * a monospace figure face for digits, all capped at weight 500) with Noto Sans behind
  * them for scripts the brand faces lack, and the logo drawn from the same
  * outline data as the app's `LogoMark`.
@@ -44,7 +44,7 @@ export type Tone = keyof typeof TOKENS;
 export type Palette = Readonly<Record<Tone, string>>;
 
 /**
- * `display` sets headings in Outfit; `text` and `medium` set Lexend Deca;
+ * `display` sets headings in Syne; `text` and `medium` set Lexend Deca;
  * `figure` (a figure cell) and `figureMedium` (a headline figure, a rank) set
  * their digits in the figure face and everything else in Lexend Deca, as the app's
  * figure roles do.
@@ -82,8 +82,8 @@ type Source = {
 const SOURCES: readonly Source[] = [
   {
     family: 'display',
-    directory: fontDirectory(require.resolve('@fontsource/outfit/package.json')),
-    prefix: 'outfit',
+    directory: fontDirectory(require.resolve('@fontsource/syne/package.json')),
+    prefix: 'syne',
     weights: [500],
   },
   {
@@ -249,7 +249,7 @@ export async function registerFaces(
  * fontkit applies the faces' standard ligatures by default, and the text layer
  * then maps an fi, ff or fl glyph back to its first letter only, so copied or
  * searched text reads "frst". Tabular figures keep any digit in a heading's
- * Outfit aligned; figures in data roles use the `figure` styles,
+ * Syne aligned; figures in data roles use the `figure` styles,
  * whose digits are one width already (Lexend Deca has no `tnum`).
  * @types/pdfkit types only the tag-list form; pdfkit hands the value to
  * fontkit, whose tag-to-boolean form is the only way to turn a default off.

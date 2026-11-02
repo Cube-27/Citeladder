@@ -127,7 +127,7 @@ the commercial mutations. Reads require the active workspace's billing
 permission and select its account, independently of owner-user metadata. A
 workspace without an account reads as having no receipts; reads never
 provision one.
-Documents validate stored amounts and are set in the brand faces (Outfit and
+Documents validate stored amounts and are set in the brand faces (Syne and
 Lexend Deca, from OFL font packages, with the digits of right-aligned amounts,
 headline figures and ranks in the figure face) with Noto Sans behind them for other scripts,
 with measured wrapping and pagination; ligatures are off so copied and

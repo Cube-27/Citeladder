@@ -476,7 +476,6 @@
 .cp-prose-h2.website-section-heading {
   font-size: var(--text-site-prose-heading);
   line-height: var(--text-site-prose-heading--line-height);
-  letter-spacing: -0.02em;
 }
 
 .cp-prose > .cp-prose-h2:first-child {
