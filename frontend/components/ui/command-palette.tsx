@@ -25,6 +25,7 @@ import {
 } from '@/lib/navigation/project-destination';
 import { cn } from '@/lib/utils';
 import { OPEN_COMMAND_PALETTE_EVENT } from '@/lib/navigation/shell-events';
+import { useRouteIntent } from '@/lib/navigation/use-route-intent';
 
 /**
  * CommandPalette — ⌘K / Ctrl+K navigation for the authed shell.
@@ -51,6 +52,8 @@ type Command = {
   icon?: LucideIcon;
   logoUrl?: string | null;
   hint?: string;
+  /** A destination's address, warmed when its row is highlighted. */
+  href?: string;
   run: () => void;
 };
 
@@ -202,21 +205,22 @@ export function CommandPalette() {
 
   const commands = useMemo<Command[]>(() => {
     const navigation = resolveCommandGroups({ managed }).flatMap((group) =>
-      group.items.map((item) => ({
-        id: `nav:${item.href}`,
-        label: item.label,
-        group: group.title,
-        icon: item.icon,
-        run: () =>
-          router(
-            scopedNavigationDestination(
-              item.href,
-              item.scope ?? 'project',
-              activeProjectId,
-              activeWorkspaceId,
-            ),
-          ),
-      })),
+      group.items.map((item) => {
+        const href = scopedNavigationDestination(
+          item.href,
+          item.scope ?? 'project',
+          activeProjectId,
+          activeWorkspaceId,
+        );
+        return {
+          id: `nav:${item.href}`,
+          label: item.label,
+          group: group.title,
+          icon: item.icon,
+          href,
+          run: () => router(href),
+        };
+      }),
     );
 
     // Switching project re-scopes the API client's workspace header, so this
@@ -259,6 +263,16 @@ export function CommandPalette() {
     }
   }, [activeIndex]);
 
+  // Highlighting a destination is the palette's pointer or keyboard intent:
+  // it warms the route's code and primary read, as hovering a nav link does.
+  const onIntent = useRouteIntent();
+  function highlight(index: number) {
+    if (index === activeIndex) return;
+    setActive(index);
+    const href = results[index]?.href;
+    if (href) onIntent(href);
+  }
+
   const runCommand = useCallback((command: Command | undefined) => {
     if (!command) return;
     setOpen(false);
@@ -271,10 +285,10 @@ export function CommandPalette() {
     if (!results.length) return;
     if (event.key === 'ArrowDown') {
       event.preventDefault();
-      setActive((activeIndex + 1) % results.length);
+      highlight((activeIndex + 1) % results.length);
     } else if (event.key === 'ArrowUp') {
       event.preventDefault();
-      setActive((activeIndex - 1 + results.length) % results.length);
+      highlight((activeIndex - 1 + results.length) % results.length);
     } else if (event.key === 'Enter') {
       event.preventDefault();
       runCommand(results[activeIndex]);
@@ -369,7 +383,7 @@ export function CommandPalette() {
                           tabIndex={-1}
                           aria-selected={isActive}
                           data-active={isActive}
-                          onMouseMove={() => setActive(index)}
+                          onMouseMove={() => highlight(index)}
                           onClick={() => runCommand(command)}
                           className={cn(
                             ROW,
