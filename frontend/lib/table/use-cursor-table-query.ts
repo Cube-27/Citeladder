@@ -24,13 +24,18 @@ type CursorTableProps = Readonly<{
 
 type CursorTableQueryOptions<TPage extends CursorPage, TKey extends QueryKey> = Readonly<{
   /**
+   * The active workspace. Rows carry over only inside it; the query key holds
+   * it as one of its top-level parts.
+   */
+  workspaceId: string;
+  /**
    * The project (or crawl) the rows belong to. Rows carry over to the next
-   * page or filter only inside it; the query key holds it at index 2.
+   * page or filter only inside it too; the query key holds it at index 2.
    */
   scopeId: string;
   /**
-   * Every other value the server binds the cursor to (workspace, filters,
-   * sort). A change drops the cursor stack back to page one.
+   * Every other value the server binds the cursor to (filters, sort). A
+   * change drops the cursor stack back to page one.
    */
   scope: unknown;
   /** The read for one page; the hook supplies its cursor and limit. */
@@ -59,6 +64,7 @@ type CursorTableQueryOptions<TPage extends CursorPage, TKey extends QueryKey> = 
  * render inside the table in the footprint of a full page of rows.
  */
 export function useCursorTableQuery<TPage extends CursorPage, TKey extends QueryKey>({
+  workspaceId,
   scopeId,
   scope,
   query: pageQuery,
@@ -68,12 +74,16 @@ export function useCursorTableQuery<TPage extends CursorPage, TKey extends Query
   empty,
   fixedPageSize,
 }: CursorTableQueryOptions<TPage, TKey>) {
-  const cursor = useCursorTable(JSON.stringify([scopeId, scope]));
+  const cursor = useCursorTable(JSON.stringify([workspaceId, scopeId, scope]));
   const pageSize = fixedPageSize ?? cursor.pageSize;
   const query = useQuery({
     ...pageQuery({ cursor: cursor.cursor, limit: pageSize }),
+    // Another workspace's rows never stand in for this one's, even under the
+    // same project id: a workspace switch draws the loading state.
     placeholderData: (previousData, previousQuery) =>
-      retainPreviousDataForScope(scopeId, previousData, previousQuery),
+      previousQuery?.queryKey.includes(workspaceId)
+        ? retainPreviousDataForScope(scopeId, previousData, previousQuery)
+        : undefined,
   });
   const page = query.data;
   let state: DataTableState | undefined;

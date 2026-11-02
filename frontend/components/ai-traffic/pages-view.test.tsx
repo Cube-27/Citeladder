@@ -1,14 +1,22 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { afterAll, afterEach, beforeAll, expect, it } from 'vite-plus/test';
+import { afterAll, afterEach, beforeAll, expect, it, vi } from 'vite-plus/test';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
+import { makeProject } from '@/test/fixtures/project';
 import { TrafficPages } from './pages-view';
 
 const WORKSPACE = '11111111-1111-4111-8111-111111111111';
 const PROJECT = '88888888-8888-4888-8888-888888888888';
 const PAGES = `/api/v1/projects/${PROJECT}/ai-traffic/pages`;
+const project = makeProject({ id: PROJECT, workspace_id: WORKSPACE });
+vi.mock('@/lib/project/project-context', () => ({
+  useProjectContext: () => ({ activeProject: project, isLoading: false }),
+  useOptionalProjectContext: () => ({ activeProjectId: project.id }),
+  useWorkspaceCapability: () => true,
+  useActiveWorkspaceId: () => project.workspace_id,
+}));
 
 beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
 afterEach(() => mswServer.resetHandlers());
@@ -149,4 +157,71 @@ it('keeps the rows and the pager on screen while the next page loads', async () 
   expect(within(table).queryByRole('row', { name: /first-1\b/ })).not.toBeInTheDocument();
   expect(screen.getByText('11–11 paths')).toBeVisible();
   expect(screen.getByRole('button', { name: 'Previous page' })).toBeEnabled();
+});
+
+it('never shows one workspace’s rows while another workspace’s page loads', async () => {
+  const OTHER_WORKSPACE = '22222222-2222-4222-8222-222222222222';
+  let releaseOther!: () => void;
+  const otherHeld = new Promise<void>((resolve) => {
+    releaseOther = resolve;
+  });
+  mswServer.use(
+    http.get(PAGES, async ({ request }) => {
+      if (request.headers.get('x-workspace-id') !== OTHER_WORKSPACE)
+        return HttpResponse.json(pagesBody([pathRow('first-workspace')]));
+      await otherHeld;
+      return HttpResponse.json(pagesBody([pathRow('other-workspace')]));
+    }),
+  );
+  const view = renderPages();
+  const table = await screen.findByRole('table', {
+    name: 'Path-level AI Traffic with separate signal units',
+  });
+  expect(await within(table).findByRole('row', { name: /first-workspace/ })).toBeVisible();
+
+  // The same project id under another workspace: the old rows must not stand in.
+  view.rerender(
+    <TrafficPages workspaceId={OTHER_WORKSPACE} projectId={PROJECT} filters={{ range: '30d' }} />,
+  );
+  expect(within(table).queryByRole('row', { name: /first-workspace/ })).not.toBeInTheDocument();
+  expect(within(table).queryByRole('row', { name: /other-workspace/ })).not.toBeInTheDocument();
+
+  releaseOther();
+  expect(await within(table).findByRole('row', { name: /other-workspace/ })).toBeVisible();
+});
+
+it('keeps the drawer’s crawler when a path is opened from it', async () => {
+  let detailParams: URLSearchParams | null = null;
+  const row = pathRow('guide');
+  mswServer.use(
+    http.get(PAGES, () => HttpResponse.json(pagesBody([row]))),
+    http.get(`${PAGES}/${row.url_hash}`, ({ request }) => {
+      detailParams = new URL(request.url).searchParams;
+      return HttpResponse.json({
+        page: row,
+        window_start: '2026-01-01',
+        window_end: '2026-01-28',
+        crawls: [],
+        referrals: [],
+        citations: [],
+        provenance: { crawl_id: null, formula_version: '1', bounded: false },
+      });
+    }),
+  );
+  const user = userEvent.setup();
+  renderWithProviders(
+    <TrafficPages
+      workspaceId={WORKSPACE}
+      projectId={PROJECT}
+      filters={{ range: '30d', bot_id: 'openai_oai_searchbot' }}
+    />,
+  );
+  await user.click(
+    await screen.findByRole('button', { name: 'View AI Traffic for https://example.test/guide' }),
+  );
+  await waitFor(() => expect(detailParams).not.toBeNull());
+  expect(Object.fromEntries(detailParams!)).toEqual({
+    range: '30d',
+    bot_id: 'openai_oai_searchbot',
+  });
 });

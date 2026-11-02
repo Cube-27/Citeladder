@@ -46,6 +46,8 @@ remain folder aggregates. A newer extract awaiting referral publication is
 The shared URL panel opens from Pages, referral landing
 pages, crawler drill-downs and Site Health detail, with first/last bot observations,
 first referrals, citation dates and provenance. Units link to their owning views.
+Opened from a crawler drill-down, the panel keeps that crawler (`bot_id`): its
+crawl leg and bot observations cover the selected bot only.
 
 Observed crawl coverage is the share of known URLs in the latest terminal Site
 Health inventory requested by an AI search/user-fetch bot in the selected window.

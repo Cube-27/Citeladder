@@ -268,7 +268,7 @@ belongs in both requests and cache keys. Retained placeholder data may survive
 filter/pagination changes only within the same owning project/crawl. A
 cursor-paged table reads through `useCursorTableQuery`
 (`lib/table/use-cursor-table-query.ts`): it owns the cursor stack, keeps the
-previous page within the project, and returns the `DataTable` state, busy and
+previous page only within the same workspace and project, and returns the `DataTable` state, busy and
 pager props, so screens do not rebuild them.
 
 Typed shareable tabs, filters, cursors and selected IDs belong to

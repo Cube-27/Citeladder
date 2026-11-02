@@ -29,8 +29,9 @@ export function RobotsHistory({
   // A page turn keeps the rows and the pager on screen until the next
   // observations land; loading and errors draw inside the table.
   const { page, cursor, table } = useCursorTableQuery({
+    workspaceId,
     scopeId: projectId,
-    scope: workspaceId,
+    scope: null,
     query: (request) => siteHealthQueries.robotsHistory(workspaceId, projectId, request),
     noun: 'observations',
     loading: 'Loading robots.txt observations…',

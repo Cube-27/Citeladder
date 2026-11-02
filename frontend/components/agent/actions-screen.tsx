@@ -116,8 +116,9 @@ function ActionsList({
   targetKind?: string;
 }>) {
   const { page, table } = useCursorTableQuery({
+    workspaceId,
     scopeId: projectId,
-    scope: [workspaceId, status, targetKind],
+    scope: [status, targetKind],
     query: (request) =>
       actionsQueries.list(workspaceId, projectId, { status, target_kind: targetKind, ...request }),
     noun: 'Actions',

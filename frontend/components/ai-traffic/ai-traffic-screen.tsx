@@ -138,7 +138,7 @@ function TrafficTabContent({
   model: ReturnType<typeof useTrafficData>;
   crawlAvailable: boolean;
 }>) {
-  const { projectId, workspaceId, summary, catalog, filters } = model;
+  const { projectId, workspaceId, summary, filters } = model;
   const scope = { workspaceId, projectId, filters };
   return (
     <Stack gap="workspace">
@@ -154,9 +154,7 @@ function TrafficTabContent({
       ) : null}
       {/* Without a project there is nothing to page; the status says why. */}
       {projectId && tab === 'crawlers' ? <TrafficCrawlers {...scope} /> : null}
-      {projectId && tab === 'activity' ? (
-        <TrafficActivity {...scope} catalog={catalog.data} />
-      ) : null}
+      {projectId && tab === 'activity' ? <TrafficActivity {...scope} /> : null}
       {projectId && tab === 'pages' ? (
         <TabPanel value="pages">
           <TrafficPages {...scope} />

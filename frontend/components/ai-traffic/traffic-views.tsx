@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import type { z } from 'zod';
 import type {
   aiTrafficOverviewSchema,
@@ -19,6 +20,7 @@ import { TabPanel } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Stack } from '@/components/ui/layout';
 import { TableTime } from '@/components/ui/display-time';
+import { readErrorProps } from '@/components/ui/read-error';
 import { TableRow, TableCell, TableCellLines } from '@/components/ui/table';
 import { CrawlLogConnections } from './crawl-log-connections';
 import { InsightStrip } from './insight-strip';
@@ -113,8 +115,9 @@ function windowFilters(filters: TrafficFilters): TrafficFilters {
 export function TrafficCrawlers({ workspaceId, projectId, filters }: TrafficTableScope) {
   const [botId, setBotId] = useState<string | null>(null);
   const { page, table } = useCursorTableQuery({
+    workspaceId,
     scopeId: projectId,
-    scope: [workspaceId, filters],
+    scope: filters,
     query: (request) =>
       aiTrafficQueries.crawlers(workspaceId, projectId, { ...filters, ...request }),
     noun: 'crawlers',
@@ -181,15 +184,30 @@ export function TrafficCrawlers({ workspaceId, projectId, filters }: TrafficTabl
     </TabPanel>
   );
 }
-export function TrafficActivity({
-  workspaceId,
-  projectId,
-  filters,
-  catalog,
-}: TrafficTableScope & Readonly<{ catalog?: z.infer<typeof crawlCatalogSchema> }>) {
+/**
+ * What the activity table shows while the crawler catalog cannot name its
+ * bots: rows of raw bot ids would read as findings, so the catalog's own
+ * loading or failure takes the table's place, in the same footprint.
+ */
+function catalogState(
+  catalog: UseQueryResult<z.infer<typeof crawlCatalogSchema>>,
+): DataTableState | undefined {
+  if (catalog.isError && !catalog.data)
+    return {
+      kind: 'error',
+      ...readErrorProps(catalog),
+      fallback: 'Could not read the crawler catalog, so bots cannot be named',
+    };
+  if (catalog.isPending) return { kind: 'loading', label: 'Loading the crawler catalog…' };
+  return undefined;
+}
+export function TrafficActivity({ workspaceId, projectId, filters }: TrafficTableScope) {
+  // The screen's controls read the same entry, so this adds no request.
+  const catalog = useQuery(aiTrafficQueries.catalog(workspaceId, projectId));
   const { page, table } = useCursorTableQuery({
+    workspaceId,
     scopeId: projectId,
-    scope: [workspaceId, filters],
+    scope: filters,
     query: (request) =>
       aiTrafficQueries.activity(workspaceId, projectId, { ...filters, ...request }),
     noun: 'requests',
@@ -210,6 +228,7 @@ export function TrafficActivity({
           minWidth="md"
           rowLines={2}
           {...table}
+          state={catalogState(catalog) ?? table.state}
         >
           {page?.items.map((r) => (
             <TableRow key={r.id}>
@@ -217,7 +236,7 @@ export function TrafficActivity({
                 <TableTime value={r.occurred_at} />
               </TableCell>
               <TableCell>
-                {catalog?.bots.find((b) => b.bot_id === r.bot_id)?.label ?? r.bot_id}
+                {catalog.data?.bots.find((b) => b.bot_id === r.bot_id)?.label ?? r.bot_id}
               </TableCell>
               <TableCell>
                 <CellLines
@@ -281,8 +300,9 @@ function CoverageTable({
   range,
 }: Readonly<{ projectId: string; workspaceId: string; range: string }>) {
   const { page: data, table } = useCursorTableQuery({
+    workspaceId,
     scopeId: projectId,
-    scope: [workspaceId, range],
+    scope: range,
     query: (request) => aiTrafficQueries.coverage(workspaceId, projectId, { range, ...request }),
     noun: 'reporting days',
     loading: 'Loading coverage…',

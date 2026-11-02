@@ -36,8 +36,9 @@ const PAGE_COLUMNS: readonly DataTableColumn[] = [
 export function TrafficPages({ workspaceId, projectId, filters }: TrafficTableScope) {
   const [urlHash, setUrlHash] = useState<string | null>(null);
   const { page, table } = useCursorTableQuery({
+    workspaceId,
     scopeId: projectId,
-    scope: [workspaceId, filters],
+    scope: filters,
     query: (request) => aiTrafficQueries.pages(workspaceId, projectId, { ...filters, ...request }),
     noun: 'paths',
     loading: 'Loading paths…',
@@ -65,7 +66,12 @@ export function TrafficPages({ workspaceId, projectId, filters }: TrafficTableSc
       <UrlPanel
         urlHash={urlHash}
         onClose={() => setUrlHash(null)}
-        filters={{ range: filters.range, verification: filters.verification }}
+        // A path opened from the crawler drawer keeps that crawler's evidence.
+        filters={{
+          range: filters.range,
+          verification: filters.verification,
+          bot_id: filters.bot_id,
+        }}
       />
     </Stack>
   );

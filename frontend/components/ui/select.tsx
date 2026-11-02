@@ -108,8 +108,9 @@ export function Select<T extends string>({
           <span className="col-start-1 row-start-1 min-w-0 truncate">
             <SelectPrimitive.Value placeholder={placeholder} />
           </span>
-          {[placeholder, ...options.map((option) => option.label)].map((label, index) => (
-            <SizerLabel key={index} label={label} />
+          <SizerLabel label={placeholder} />
+          {options.map((option) => (
+            <SizerLabel key={option.value} label={option.label} />
           ))}
         </span>
         <SelectPrimitive.Icon asChild>
