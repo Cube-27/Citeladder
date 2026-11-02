@@ -15,6 +15,9 @@ export interface WorkerOriginConfig {
 }
 type WorkerTransport = (request: Request) => Promise<Response>;
 
+/** The origin's revalidated-read policy (`services/api/src/http/revalidate.ts`). */
+const REVALIDATED = 'private, no-cache';
+
 const HOP_HEADERS = new Set([
   'connection',
   'keep-alive',
@@ -106,13 +109,11 @@ function originResponse(upstreamResponse: Response): Response {
   for (const cookie of upstreamResponse.headers.getSetCookie()) {
     responseHeaders.append('Set-Cookie', cookie);
   }
-  // The origin's own private policy (a revalidated snapshot read, a logo's
-  // max-age) reaches the browser; any other response is never stored.
-  const upstreamPolicy = upstreamResponse.headers.get('cache-control') ?? '';
-  responseHeaders.set(
-    'Cache-Control',
-    /^private\s*,/i.test(upstreamPolicy) ? upstreamPolicy : 'private, no-store',
-  );
+  // Only a response the browser revalidates on every use (a snapshot read or
+  // a logo, with its ETag) may be stored, so every use re-checks access; any
+  // other policy, a private max-age included, becomes no-store.
+  const revalidated = upstreamResponse.headers.get('cache-control') === REVALIDATED;
+  responseHeaders.set('Cache-Control', revalidated ? REVALIDATED : 'private, no-store');
   return new Response(
     [204, 205, 304].includes(upstreamResponse.status) ? null : upstreamResponse.body,
     {

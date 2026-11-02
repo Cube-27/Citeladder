@@ -80,18 +80,23 @@ describe('Worker origin transport', () => {
     expect(transport).toHaveBeenCalledOnce();
   });
 
-  it("keeps the origin's private cache policy and validator, and stores nothing else", async () => {
+  it("keeps the origin's revalidated policy and validator, and stores nothing else", async () => {
     const tag = 'W/"snapshot-tag"';
+    const policies: Record<string, string> = {
+      overview: 'private, no-cache',
+      cached: 'private, max-age=86400',
+      other: 'no-store',
+    };
     const transport = vi.fn(async (request: Request) =>
       request.headers.get('if-none-match') === tag
         ? new Response(null, {
             status: 304,
             headers: { etag: tag, 'cache-control': 'private, no-cache' },
           })
-        : new Response(request.url.endsWith('/overview') ? '{}' : 'plain', {
+        : new Response('{}', {
             headers: {
               etag: tag,
-              'cache-control': request.url.endsWith('/overview') ? 'private, no-cache' : 'no-store',
+              'cache-control': policies[new URL(request.url).pathname.split('/').at(-1)!]!,
             },
           }),
     );
@@ -109,6 +114,8 @@ describe('Worker origin transport', () => {
     ]);
     const revalidated = await send('/api/v1/overview', { 'If-None-Match': tag });
     expect([revalidated.status, await revalidated.text()]).toEqual([304, '']);
-    expect((await send('/api/v1/other')).headers.get('cache-control')).toBe('private, no-store');
+    // A private max-age would serve a cached copy without re-checking access.
+    for (const path of ['/api/v1/cached', '/api/v1/other'])
+      expect((await send(path)).headers.get('cache-control')).toBe('private, no-store');
   });
 });

@@ -52,7 +52,8 @@ export function conditionalReads(): MiddlewareHandler<AppEnv> {
     await next();
     if (c.req.method !== 'GET' || c.res.status !== 200) return;
     if (c.res.headers.get('cache-control') !== REVALIDATE_CACHE_CONTROL) return;
-    const tag = bodyTag(await c.res.clone().arrayBuffer());
+    // A route's own validator (a logo's content hash) stands; otherwise hash the body.
+    const tag = c.res.headers.get('etag') ?? bodyTag(await c.res.clone().arrayBuffer());
     if (!matches(c.req.header('if-none-match'), tag)) {
       c.res.headers.set('etag', tag);
       return;
