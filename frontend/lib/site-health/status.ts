@@ -24,6 +24,7 @@ import type {
   SiteCrawl,
   SiteHealthEntitlement,
 } from '@/lib/api/types';
+import type { PagesSort } from '@/lib/api/site-health';
 import type { RunStatusValue, StatusValue } from '@/components/ui/badge-variants';
 import type { InternalLinkAnalysis } from '@citeladder/contracts/site-health';
 import { availabilityLabel, formatCount, formatDisplayTimestamp } from '@/lib/format';
@@ -58,6 +59,13 @@ export function internalLinkStateNotice(analysis: InternalLinkAnalysis) {
 
 /** The not-yet-analysed / not-applicable placeholder (matches visibility UI). */
 export const PLACEHOLDER = availabilityLabel('not_measured');
+
+/**
+ * The page browser's default ordering, which is also the pages endpoint's
+ * default. Every first-page request names it, so the progress strip's preview
+ * and the browser share one cache entry instead of fetching the same rows.
+ */
+export const DEFAULT_PAGES_SORT = 'status' satisfies PagesSort;
 
 /** Poll cadence for the Site Health screen's active-crawl queries. */
 export const POLL_INTERVAL_MS = 4_000;

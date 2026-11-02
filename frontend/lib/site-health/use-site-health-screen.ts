@@ -23,6 +23,7 @@ import { useCrawlEvents } from '@/lib/site-health/use-crawl-events';
 import {
   crawlPollInterval,
   crawlProgressVersion,
+  DEFAULT_PAGES_SORT,
   inventoryModeForPhase,
   isCrawlStalled,
   shouldPollCrawl,
@@ -36,6 +37,7 @@ function monitoredPagePreviewParams(active: boolean) {
     limit: TABLE_DEFAULT_PAGE_SIZE,
     monitored: true,
     status: active ? 'completed' : undefined,
+    sort: DEFAULT_PAGES_SORT,
   };
 }
 
