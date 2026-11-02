@@ -26,7 +26,7 @@ function usageTone(ratio: number): DataTone {
 }
 
 export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
-  const label = humanizeKey(item.key);
+  const { label, unit } = usageLabel(item);
 
   if (item.limit_state === 'unknown') {
     return (
@@ -46,12 +46,12 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
         <Inline gap="compact" className="justify-between">
           <span className={textRole('label')}>{label}</span>
           <span className={textRole('label', 'tabular-nums')}>
-            {item.consumed ?? 0} {item.unit}
+            {item.consumed ?? 0} {unit}
           </span>
         </Inline>
         <Inline gap="compact" className="justify-between">
-          <span className="type-caption">Unlimited</span>
-          <ExpiryLine item={item} />
+          <span className="type-caption whitespace-nowrap">Unlimited</span>
+          <ExpiryLine item={item} unit={unit} />
         </Inline>
       </Stack>
     );
@@ -63,12 +63,23 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
   const remaining = item.remaining ?? 0;
   const ratio = allowance > 0 ? consumed / allowance : 0;
 
+  // A real zero limit with nothing used: the plan does not include it. An
+  // empty "0 / 0" bar would read like an exhausted allowance.
+  if (allowance === 0 && consumed === 0) {
+    return (
+      <Inline gap="compact" className="justify-between">
+        <span className={textRole('label')}>{label}</span>
+        <span className="type-caption">Not included</span>
+      </Inline>
+    );
+  }
+
   return (
     <Stack gap="tight">
       <Inline gap="compact" className="justify-between">
         <span className={textRole('label')}>{label}</span>
         <span className={textRole('label', 'tabular-nums')}>
-          {consumed} / {allowance} {item.unit}
+          {consumed} / {allowance} {unit}
         </span>
       </Inline>
       <Meter
@@ -76,14 +87,14 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
         value={consumed}
         max={allowance}
         tone={usageTone(ratio)}
-        valueText={`${consumed} of ${allowance} ${item.unit}`}
+        valueText={`${consumed} of ${allowance} ${unit}`}
       />
       <Inline gap="compact" className="justify-between">
-        <span className="type-caption">
+        <span className="type-caption whitespace-nowrap">
           {remaining} remaining
           {item.reserved ? ` · ${item.reserved} reserved` : ''}
         </span>
-        <ExpiryLine item={item} />
+        <ExpiryLine item={item} unit={unit} />
       </Inline>
     </Stack>
   );
@@ -93,27 +104,41 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
  * Reset and expiry copy. Consumable balances forfeit at expiry, so that has to
  * be visible next to the balance rather than only at purchase.
  */
-function ExpiryLine({ item }: Readonly<{ item: UsageItem }>) {
+function ExpiryLine({ item, unit }: Readonly<{ item: UsageItem; unit: string }>) {
   if (item.resets_at) {
     return (
-      <p className="type-caption">
+      <p className="type-caption text-right">
         Resets <DisplayTime value={item.resets_at} dateOnly />.
       </p>
     );
   }
-  if (item.earliest_expiry) {
-    return (
-      <p className="type-caption">
-        Earliest expiry <DisplayTime value={item.earliest_expiry} dateOnly /> — unused credits are
-        forfeited then.
-      </p>
-    );
-  }
-  return null;
+  if (!item.earliest_expiry) return null;
+  // Only a consumable balance is forfeited; a slot allowance simply ends.
+  return (
+    <p className="type-caption text-right">
+      {item.capability_type === 'counter.consumable' ? `Unused ${unit} expire` : 'Ends'}{' '}
+      <DisplayTime value={item.earliest_expiry} dateOnly />.
+    </p>
+  );
 }
 
-/** `prompt_slots` → `Prompt slots`. The key is the backend's, the label is ours. */
-function humanizeKey(key: string) {
-  const words = key.replaceAll('_', ' ');
-  return words.charAt(0).toUpperCase() + words.slice(1);
+/** Reader-facing names for the backend's counter keys. The key is the backend's, the label is ours. */
+const USAGE_LABELS: Readonly<Record<string, { label: string; unit: string }>> = {
+  prompt_slots: { label: 'Prompts', unit: 'prompts' },
+  project_slots: { label: 'Projects', unit: 'projects' },
+  monitored_urls: { label: 'Monitored URLs', unit: 'URLs' },
+  manual_runs_per_day: { label: 'Manual runs today', unit: 'runs' },
+  prompt_runs_per_period: { label: 'Prompt runs', unit: 'runs' },
+  ai_credits: { label: 'AI credits', unit: 'credits' },
+  api_keys: { label: 'API keys', unit: 'keys' },
+  market_slots: { label: 'Extra markets', unit: 'markets' },
+  site_health_page_fetches_per_period: { label: 'Site Health page fetches', unit: 'fetches' },
+};
+
+/** A key this map does not name still renders: `new_counter` → `New counter`. */
+function usageLabel(item: UsageItem) {
+  const known = USAGE_LABELS[item.key];
+  if (known) return known;
+  const words = item.key.replaceAll('_', ' ');
+  return { label: words.charAt(0).toUpperCase() + words.slice(1), unit: item.unit };
 }
