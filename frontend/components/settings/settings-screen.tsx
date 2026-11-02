@@ -227,7 +227,6 @@ export function SettingsScreen() {
   return (
     <TabsRoot value={activeTab} onValueChange={setActiveTab}>
       <ListScreen
-        measure="workflow"
         tabs={{
           items: tabs.map((tab) => ({ value: tab.id, label: tab.label })),
           ariaLabel: 'Settings sections',

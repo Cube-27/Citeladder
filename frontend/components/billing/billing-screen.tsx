@@ -144,14 +144,14 @@ export function BillingScreen() {
 
   if (entitlementLoading || entitlementQuery.isLoading) {
     return (
-      <ListScreen measure="workflow">
+      <ListScreen>
         <QueryState kind="loading" label="Loading billing…" />
       </ListScreen>
     );
   }
   if (entitlementQuery.isError) {
     return (
-      <ListScreen measure="workflow">
+      <ListScreen>
         <Alert tone="danger">
           Your entitlement could not be resolved, so no billing change is offered. No paid
           capability is active until it does; reload the page or contact support.
@@ -164,7 +164,7 @@ export function BillingScreen() {
   const { buyExtra, subscribe } = purchaseActions(checkout, country);
 
   return (
-    <ListScreen measure="workflow">
+    <ListScreen>
       <Stack gap="section">
         <CheckoutStatus checkout={checkout} />
         {canManage ? null : (

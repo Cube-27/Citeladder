@@ -380,7 +380,6 @@ export default function PricingRoute() {
   return (
     <ListScreen
       title="Review your selection"
-      measure="workflow"
       actions={
         <a className="type-control text-accent-text underline" href={websitePricing}>
           View public pricing
