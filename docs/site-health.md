@@ -108,7 +108,8 @@ analysis drain, one locked transaction:
 3. appends a final analysis per page (`supersedes_analysis_id`);
 4. persists the snapshot and score summary;
 5. sets `completed`, `partially_completed` (with `partial_reason`) or `failed`,
-   and settles the fetch reservation;
+   persists the terminal dashboard counters (`site_crawls.terminal_counters`,
+   `terminal-counters.ts`), and settles the fetch reservation;
 6. for a crawl that did not fail, enqueues `change_intel` and `link_metrics`
    if any analysis succeeded, otherwise hands off to the analytics refresh.
 
@@ -633,6 +634,25 @@ finalized one, and a duplicate alias retiring analyses recompute it in their own
 transaction; architecture findings are written current. Issues and evaluations
 are otherwise never rewritten.
 
+The same refresh, and the architecture writer after its findings, persists the
+crawl's unfiltered Issues catalog per finding class (`site_issue_catalogs`,
+`issue-catalog.ts`): the ranked groups as the list shows them and the summary
+tiles, plus each group's exact source issue and evaluation IDs (`sources`,
+kept for provenance and never served). An unfiltered Issues read pages that persisted list. A filtered read
+(search, severity, category, dimension, rule, page or page kind) computes its
+groups and summary from the current issues, as does a crawl whose catalog is
+not written yet (nothing is final before the terminal publication). The
+monitored affected count is read per request in both: the monitored selection
+is live configuration.
+
+The dashboard counters of an active crawl count its tasks and analyses live. A
+terminal crawl's are the ones persisted with its terminal status: by
+terminalization, by Stop in the cancelling transaction, again when the
+cancelled crawl is published and when an analysis is appended over a finalized
+one. Only the monitored selection count is read live. A terminal crawl without
+persisted counters reads its row's own persisted counts; no read rescans its
+tasks.
+
 The Issues page-kind filter (`page_kind`) files a per-page finding under its own
 page's current, finalized analysis kind; every analysis names the crawl's site
 checks, so those sources alone would file a site check under every kind. A
@@ -715,6 +735,6 @@ All paths are under `frontend/services/api/src/`.
 | Crawl, stop, selection | `site-health/planner.ts`, `controls.ts`, `selection.ts` |
 | Admission | `site-health/url-admission.ts`, `url-identity.ts`, `frontier.ts` |
 | Executors | `site-health/site-setup-task.ts`, `discover-task.ts`, `analyze-task.ts`, `page-fetch.ts` |
-| Terminal and measurement | `site-health/lifecycle*.ts`, `terminal-analysis.ts`, `issue-currency.ts`, `canonical-alias.ts`, `score-summary.ts`, `coverage.ts` |
+| Terminal and measurement | `site-health/lifecycle*.ts`, `terminal-analysis.ts`, `terminal-counters.ts`, `issue-currency.ts`, `issue-catalog.ts`, `canonical-alias.ts`, `score-summary.ts`, `coverage.ts` |
 | Analysis | `site-health/analysis/` (`page-kinds.ts`, `rules.ts`, `*-checks.ts`, `scoring.ts`) |
 | Policy | `config/site-health.ts`, `config/site-health/*.json`, `config/crawlers.json` |
