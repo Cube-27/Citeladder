@@ -127,7 +127,9 @@ function hasQualityFlags(quality: PerformanceDashboard['coverage']['analytics_qu
 
 /** The status line at rest: the history the dashboard can draw from. */
 function coverageSummary(coverage: PerformanceDashboard['coverage']): string {
-  if (!coverage.earliest_date || !coverage.latest_date) return 'No imported history yet.';
+  // The extent spans the imported metric rows, so no dates means no rows —
+  // which is not the same as no import having run.
+  if (!coverage.earliest_date || !coverage.latest_date) return 'No imported search rows yet.';
   return `Imported history ${formatWindowDate(coverage.earliest_date)} – ${formatWindowDate(
     coverage.latest_date,
   )} · ${formatCount(coverage.covered_days)} days`;

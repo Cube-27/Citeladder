@@ -265,8 +265,11 @@ export function signalSubject(signal: DemandSignal): { primary: string; secondar
     return { primary: page ? pagePath(page) : signalTarget(signal), secondary: 'Page' };
   }
   const landing = signalPageLine(signal);
+  // "Query" only when the evidence says so; a snapshot that never recorded
+  // the kind keeps that unknown visible rather than passing as a query.
+  const kind = signal.evidence.target_kind === 'query' ? 'Query' : 'Kind not reported';
   return {
     primary: signalTarget(signal),
-    secondary: landing ? `Query · ${landing}` : 'Query',
+    secondary: landing ? `${kind} · ${landing}` : kind,
   };
 }
