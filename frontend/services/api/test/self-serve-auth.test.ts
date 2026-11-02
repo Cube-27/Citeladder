@@ -288,7 +288,10 @@ describe('verified self-serve lifecycle', () => {
       },
     };
     const closed = { ...google, auth: { ...google.auth, publicSignup: false } };
-    const start = await startSignIn(google, 'google', policy.auth.terms_revision);
+    const start = await startSignIn(google, 'google', {
+      termsRevision: policy.auth.terms_revision,
+      signup: true,
+    });
     await expect(
       completeSignIn(db, closed, 'google', 'code', start.state, start.nonce),
     ).rejects.toMatchObject({ code: 'oauth_signin_disabled' });

@@ -13,6 +13,7 @@ import {
   type LoginFormValues,
 } from '@/lib/auth/forms';
 import { safeAuthReturnPath, withAuthReturnPath } from '@/lib/auth/auth-return-path';
+import { usePublishedTerms } from '@/lib/auth/terms-consent';
 import { Link } from 'react-router-dom';
 import { useAuthMutation } from '@/lib/auth/use-auth-mutation';
 
@@ -44,17 +45,22 @@ export function LoginScreen({
     resolver: zodResolver(loginFormSchema),
     defaultValues: { email: '', password: '' },
   });
+  const terms = usePublishedTerms();
   const { mutation, submit } = useAuthMutation(
-    (values: LoginFormValues) => authApi.login(values.email, values.password),
+    (values: LoginFormValues & { termsRevision: string }) =>
+      authApi.login(values).catch(terms.refreshOnRevisionChange),
     returnTo,
   );
+  const signIn = (values: LoginFormValues) =>
+    terms.revision ? submit({ ...values, termsRevision: terms.revision }) : undefined;
+  const failure = mutation.isError ? mutation.error : terms.error;
 
   return (
     <AuthFormShell
       title="Sign in"
       description={description}
-      error={mutation.isError ? authErrorMessage(mutation.error) : oauthError}
-      onSubmit={handleSubmit(submit)}
+      error={failure ? authErrorMessage(failure) : oauthError}
+      onSubmit={handleSubmit(signIn)}
       pending={isSubmitting || mutation.isPending}
       submitLabel="Continue"
       pendingLabel="Signing in…"
@@ -64,9 +70,10 @@ export function LoginScreen({
       footerHref={withAuthReturnPath('/register', returnTo)}
       footerLabel="Sign up"
       footerLinkVariant="emphasis"
-      // Sign-in asks no Terms decision, so Google here never creates an
-      // account: an unknown address is sent to sign up.
-      showOAuth
+      // Signing in records the Terms decision with the account, so no screen
+      // after sign-in asks again. Google from here never creates an account:
+      // an unknown address is sent to sign up.
+      terms={{ revision: terms.revision, signup: false }}
       showFooter={!demoMode && signupOpen}
     >
       <AuthEmailField error={errors.email?.message} inputProps={register('email')} />

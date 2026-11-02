@@ -4,64 +4,96 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, expect, it, vi } from 'vite-plus/test';
 
+import { authApi } from '@/lib/api/auth';
+import { ApiError } from '@/lib/api/errors';
 import { policiesApi } from '@/lib/api/policies';
-import { recordSignupTermsConsent } from '@/lib/auth/terms-consent';
+import { hardNavigate } from '@/lib/navigation/hard-navigate';
 
 import { PolicyAcceptanceGate } from './policy-acceptance';
 
 vi.mock('@/lib/api/policies', () => ({ policiesApi: { status: vi.fn(), accept: vi.fn() } }));
+vi.mock('@/lib/api/auth', () => ({ authApi: { logout: vi.fn() } }));
+vi.mock('@/lib/navigation/hard-navigate', () => ({ hardNavigate: vi.fn() }));
 vi.mock('@/lib/project/project-context', () => ({
   useProjectContext: () => ({ activeWorkspaceId: 'workspace-a', workspaces: [] }),
 }));
 
+const UNACCEPTED = {
+  terms_revision: 'published-1',
+  privacy_notice_revision: 'notice-1',
+  accepted_at: null,
+};
+const ACCEPTED = { ...UNACCEPTED, accepted_at: '2026-09-26T00:00:00Z' };
+
 beforeEach(() => {
-  window.sessionStorage.clear();
   vi.mocked(policiesApi.status).mockReset();
   vi.mocked(policiesApi.accept).mockReset();
-  vi.mocked(policiesApi.status).mockResolvedValue({
-    terms_revision: 'published-1',
-    privacy_notice_revision: 'notice-1',
-    accepted_at: null,
-  });
-  vi.mocked(policiesApi.accept).mockResolvedValue({
-    terms_revision: 'published-1',
-    privacy_notice_revision: 'notice-1',
-    accepted_at: '2026-09-26T00:00:00Z',
-  });
+  vi.mocked(authApi.logout).mockReset();
+  vi.mocked(hardNavigate).mockReset();
+  vi.mocked(policiesApi.status).mockResolvedValue(UNACCEPTED);
+  vi.mocked(policiesApi.accept).mockResolvedValue(ACCEPTED);
+  vi.mocked(authApi.logout).mockResolvedValue(undefined);
 });
 
-it('requires an explicit Terms decision before onboarding without turning privacy into consent', async () => {
-  const user = userEvent.setup();
+it('opens a workspace already accepted on the current revision without recording again', async () => {
+  vi.mocked(policiesApi.status).mockResolvedValue(ACCEPTED);
   renderGate();
-  const accept = await screen.findByRole('button', { name: 'Accept and continue' });
-  expect(accept).toBeDisabled();
-  expect(screen.queryByText('Workspace content')).not.toBeInTheDocument();
-  expect(screen.getAllByRole('checkbox')).toHaveLength(1);
-  await user.click(screen.getByRole('checkbox', { name: 'I agree to the Terms of Service.' }));
-  await user.click(accept);
-  await waitFor(() =>
-    expect(policiesApi.accept).toHaveBeenCalledWith('workspace-a', 'published-1'),
-  );
   expect(await screen.findByText('Workspace content')).toBeInTheDocument();
+  expect(policiesApi.accept).not.toHaveBeenCalled();
+  expect(screen.queryByRole('checkbox')).toBeNull();
 });
 
-it('records the decision made at sign-in without a second consent screen', async () => {
-  recordSignupTermsConsent();
+it('records the sign-in decision for a workspace without asking on a second screen', async () => {
   renderGate();
   expect(await screen.findByText('Workspace content')).toBeInTheDocument();
   expect(policiesApi.accept).toHaveBeenCalledWith('workspace-a', 'published-1');
-  expect(screen.queryByRole('heading', { name: /Terms of Service/ })).not.toBeInTheDocument();
+  expect(screen.queryByRole('checkbox')).toBeNull();
+  expect(screen.queryByRole('heading', { name: /Terms of Service/ })).toBeNull();
 });
 
-it('falls back to the explicit screen when recording the sign-in decision is refused', async () => {
-  recordSignupTermsConsent();
-  vi.mocked(policiesApi.accept).mockRejectedValueOnce(new Error('revision changed'));
+it('ends a session that predates the published Terms and sends the person to sign in', async () => {
+  vi.mocked(policiesApi.accept).mockRejectedValue(
+    new ApiError('The Terms of Service changed.', 409, '', undefined, {
+      code: 'terms_decision_required',
+    }),
+  );
   renderGate();
-  expect(await screen.findByRole('button', { name: 'Accept and continue' })).toBeInTheDocument();
+  await waitFor(() => expect(hardNavigate).toHaveBeenCalledWith('/login?error=terms_changed'));
+  expect(authApi.logout).toHaveBeenCalledTimes(1);
   expect(policiesApi.accept).toHaveBeenCalledTimes(1);
+  expect(screen.queryByText('Workspace content')).toBeNull();
+  expect(screen.queryByRole('checkbox')).toBeNull();
 });
 
-it('never shows the consent screen while an accepted status is still loading', async () => {
+it('records the republished revision when the Terms change between the read and the record', async () => {
+  vi.mocked(policiesApi.status)
+    .mockResolvedValueOnce(UNACCEPTED)
+    .mockResolvedValueOnce({ ...UNACCEPTED, terms_revision: 'published-2' });
+  vi.mocked(policiesApi.accept).mockRejectedValueOnce(
+    new ApiError('The Terms changed.', 409, '', undefined, { code: 'policy_revision_changed' }),
+  );
+  renderGate();
+  expect(await screen.findByText('Workspace content')).toBeInTheDocument();
+  expect(vi.mocked(policiesApi.accept).mock.calls).toEqual([
+    ['workspace-a', 'published-1'],
+    ['workspace-a', 'published-2'],
+  ]);
+  expect(authApi.logout).not.toHaveBeenCalled();
+});
+
+it('keeps product content behind a retryable error when recording fails for another reason', async () => {
+  vi.mocked(policiesApi.accept).mockRejectedValueOnce(new ApiError('Server error', 500, ''));
+  const user = userEvent.setup();
+  renderGate();
+  const retry = await screen.findByRole('button', { name: 'Retry' });
+  expect(screen.queryByText('Workspace content')).toBeNull();
+  expect(hardNavigate).not.toHaveBeenCalled();
+  await user.click(retry);
+  expect(await screen.findByText('Workspace content')).toBeInTheDocument();
+  expect(policiesApi.accept).toHaveBeenCalledTimes(2);
+});
+
+it('shows only the loading frame while an accepted status is still loading', async () => {
   let resolve!: (value: Awaited<ReturnType<typeof policiesApi.status>>) => void;
   vi.mocked(policiesApi.status).mockReturnValue(
     new Promise((settle) => {
@@ -69,13 +101,8 @@ it('never shows the consent screen while an accepted status is still loading', a
     }),
   );
   renderGate();
-  expect(screen.queryByRole('heading', { name: /Terms of Service/ })).not.toBeInTheDocument();
-  expect(screen.queryByText('Workspace content')).not.toBeInTheDocument();
-  resolve({
-    terms_revision: 'published-1',
-    privacy_notice_revision: 'notice-1',
-    accepted_at: '2026-09-26T00:00:00Z',
-  });
+  expect(screen.queryByText('Workspace content')).toBeNull();
+  resolve(ACCEPTED);
   expect(await screen.findByText('Workspace content')).toBeInTheDocument();
   expect(policiesApi.accept).not.toHaveBeenCalled();
 });

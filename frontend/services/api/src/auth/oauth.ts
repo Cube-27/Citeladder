@@ -89,13 +89,21 @@ function requireProviderConfigured(config: ServiceConfig, provider: OAuthProvide
 }
 
 /**
- * Start Google sign-in. Only a signup start carries a Terms decision (the
- * published revision the visitor accepted), and only it may create an account.
+ * The Terms decision a sign-in or sign-up form made before starting Google:
+ * the published revision the visitor accepted, and whether the start may
+ * create an account. Sealed in the signed state so the callback can trust it.
+ */
+type OAuthTermsDecision = { termsRevision: string; signup: boolean };
+
+/**
+ * Start Google sign-in. A start from the sign-in or sign-up form carries its
+ * Terms decision; only a sign-up start may create an account. Linking Google
+ * from Account security carries none: that person is already signed in.
  */
 export async function startSignIn(
   config: ServiceConfig,
   provider: OAuthProvider,
-  signupTermsRevision?: string,
+  decision?: OAuthTermsDecision,
 ) {
   requireProviderConfigured(config, provider);
   const nonce = randomBytes(32).toString('base64url');
@@ -104,7 +112,7 @@ export async function startSignIn(
     sub: 'oauth-state',
     provider,
     session_nonce: nonce,
-    ...(signupTermsRevision ? { terms_revision: signupTermsRevision } : {}),
+    ...(decision ? { terms_revision: decision.termsRevision, signup: decision.signup } : {}),
   })
     .setProtectedHeader({ alg: config.session.algorithm })
     .setExpirationTime(Math.floor(Date.now() / 1000) + ttl)
@@ -125,7 +133,7 @@ async function verifyState(
   provider: OAuthProvider,
   state: string,
   nonce: string,
-): Promise<{ signupTermsRevision: string | undefined }> {
+): Promise<OAuthTermsDecision | undefined> {
   try {
     const { payload } = await jwtVerify(state, new TextEncoder().encode(config.session.secretKey), {
       algorithms: [config.session.algorithm],
@@ -143,10 +151,9 @@ async function verifyState(
       !timingSafeEqual(received, expected)
     )
       throw new SignInError('oauth_signin_state_invalid');
-    return {
-      signupTermsRevision:
-        typeof payload.terms_revision === 'string' ? payload.terms_revision : undefined,
-    };
+    return typeof payload.terms_revision === 'string'
+      ? { termsRevision: payload.terms_revision, signup: payload.signup === true }
+      : undefined;
   } catch (error) {
     if (error instanceof joseErrors.JOSEError) throw new SignInError('oauth_signin_state_invalid');
     throw error;
@@ -306,7 +313,7 @@ async function accountForEmail(
   config: ServiceConfig,
   identity: SignInIdentity,
   proof?: LinkProof,
-  signupTermsRevision?: string,
+  decision?: OAuthTermsDecision,
 ): Promise<{ user: User; event: SignInEvent }> {
   const byEmail = db.selectFrom('users').selectAll().where('email', '=', identity.email);
   const existing = await byEmail.executeTakeFirst();
@@ -315,10 +322,7 @@ async function accountForEmail(
   if (existing) return claimExistingAccount(db, existing, identity, authoritative, proof);
   if (config.demo.enabled || !config.auth.publicSignup)
     throw new SignInError('oauth_signin_disabled');
-  if (!signupTermsRevision) throw new SignInError('oauth_signin_no_account', identity.email);
-  // The Terms changed while the visitor was at Google: they start again.
-  if (signupTermsRevision !== policy.auth.terms_revision)
-    throw new SignInError('oauth_signin_state_invalid');
+  if (!decision?.signup) throw new SignInError('oauth_signin_no_account', identity.email);
   const now = new Date();
   const inserted = await db
     .insertInto('users')
@@ -341,7 +345,7 @@ async function accountForEmail(
   if (inserted) {
     await recordAccountTermsDecision(db, {
       actorId: inserted.id,
-      revision: signupTermsRevision,
+      revision: decision.termsRevision,
       context: 'signup',
     });
     return { user: inserted, event: 'auth.oauth_registered' };
@@ -388,7 +392,7 @@ async function resolveAccount(
   provider: OAuthProvider,
   identity: SignInIdentity,
   proof?: LinkProof,
-  signupTermsRevision?: string,
+  decision?: OAuthTermsDecision,
 ) {
   // Stable subject and normalized address serialize linking; every path takes
   // "auth.email:" before "oauth:" so the two locks never invert.
@@ -411,7 +415,7 @@ async function resolveAccount(
     if (!owner) throw new SignInError('oauth_signin_state_invalid');
     user = owner;
   } else {
-    ({ user, event } = await accountForEmail(db, config, identity, proof, signupTermsRevision));
+    ({ user, event } = await accountForEmail(db, config, identity, proof, decision));
     await linkIdentity(db, provider, identity, user.id);
   }
   if (!user.is_active) throw new SignInError('oauth_signin_state_invalid');
@@ -443,7 +447,10 @@ export async function completeSignIn(
   nonce: string,
   continuation?: { returnTo?: string; proof?: LinkProof },
 ) {
-  const { signupTermsRevision } = await verifyState(config, provider, state, nonce);
+  const decision = await verifyState(config, provider, state, nonce);
+  // The Terms changed while the visitor was at Google: they start again.
+  if (decision && decision.termsRevision !== policy.auth.terms_revision)
+    throw new SignInError('oauth_signin_state_invalid');
   const identity = await identify(config, provider, code);
   const resolved = await db.transaction().execute(async (trx) => {
     const account = await resolveAccount(
@@ -452,11 +459,20 @@ export async function completeSignIn(
       provider,
       identity,
       continuation?.proof,
-      signupTermsRevision,
+      decision,
     );
     // Only a sign-in that issues a session is a login; an unverified mailbox is sent recovery mail.
-    if (!requiresEmailVerification(account.user))
+    if (!requiresEmailVerification(account.user)) {
       await recordSecurityEvent(trx, 'auth.google_login', account.user.id);
+      // The box ticked before starting Google, recorded once per revision.
+      // A new account already holds it from sign-up; repeating it is inert.
+      if (decision)
+        await recordAccountTermsDecision(trx, {
+          actorId: account.user.id,
+          revision: decision.termsRevision,
+          context: 'signin',
+        });
+    }
     return account;
   });
   const fields = { user_id: resolved.user.id, provider };

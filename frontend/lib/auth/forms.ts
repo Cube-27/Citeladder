@@ -53,6 +53,9 @@ export function authErrorMessage(error: unknown): string {
  */
 const OAUTH_SIGNIN_FALLBACK = 'Google sign-in did not complete. Please try again.';
 
+/** The sign-in notice for a session ended because the published Terms changed. */
+export const TERMS_CHANGED_CODE = 'terms_changed';
+
 // A Map, not an object literal: the code comes straight off the query string,
 // and a plain-object lookup of `__proto__` or `constructor` returns an
 // INHERITED value rather than undefined. `?? fallback` does not catch that, so
@@ -77,6 +80,8 @@ const OAUTH_SIGNIN_ERRORS = new Map<string, string>([
   ],
   ['oauth_signin_disabled', 'Google sign-in is unavailable right now. Please use email below.'],
   ['oauth_signin_failed', OAUTH_SIGNIN_FALLBACK],
+  // Not Google's: the app ended a session that predates the published Terms.
+  [TERMS_CHANGED_CODE, 'Our Terms of Service changed. Agree to them to sign in again.'],
 ]);
 
 export function oauthSignInErrorMessage(code: string | null): string | undefined {

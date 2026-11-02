@@ -1,9 +1,9 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vite-plus/test';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
 import { authApi } from '@/lib/api/auth';
-import { hasSignupTermsConsent } from '@/lib/auth/terms-consent';
+import { ApiError } from '@/lib/api/errors';
 import { renderWithProviders } from '@/test/render';
 
 import { LoginScreen } from './login-screen';
@@ -11,6 +11,12 @@ import { RegisterScreen } from './register-screen';
 
 const noParams = new URLSearchParams();
 const PUBLISHED = { terms_revision: '2026-09-24', privacy_notice_revision: '2026-09-24' };
+const TERMS_BOX = { name: 'I agree to the Terms of Service' };
+
+beforeEach(() => {
+  vi.spyOn(authApi, 'policies').mockResolvedValue(PUBLISHED);
+});
+afterEach(() => vi.restoreAllMocks());
 
 describe('account entry', () => {
   it('guides an existing account to credential-authorized Google linking', () => {
@@ -25,6 +31,19 @@ describe('account entry', () => {
     expect(screen.getByRole('link', { name: 'Forgot password?' })).toHaveAttribute(
       'href',
       '/forgot-password',
+    );
+  });
+
+  it('says why a session ended when the Terms changed', () => {
+    renderWithProviders(
+      <LoginScreen
+        demoMode={false}
+        signupOpen
+        searchParams={new URLSearchParams({ error: 'terms_changed' })}
+      />,
+    );
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Our Terms of Service changed. Agree to them to sign in again.',
     );
   });
 
@@ -48,8 +67,6 @@ describe('account entry', () => {
       />,
     );
 
-    expect(screen.getByRole('button', { name: 'Continue' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Google/ })).toBeInTheDocument();
     const destination = new URL(
       screen.getByRole('link', { name: 'Sign up' }).getAttribute('href')!,
       'https://app.example.com',
@@ -63,23 +80,85 @@ describe('account entry', () => {
     expect(screen.queryByRole('link', { name: 'Sign up' })).not.toBeInTheDocument();
   });
 
-  it('signs in without asking for the Terms again', async () => {
+  it('holds every way to sign in until the Terms box is ticked, then sends the decision', async () => {
     const login = vi.spyOn(authApi, 'login').mockReturnValue(new Promise(() => {}));
     const user = userEvent.setup();
     renderWithProviders(<LoginScreen demoMode={false} signupOpen searchParams={noParams} />);
 
-    expect(screen.queryByRole('checkbox')).toBeNull();
+    const box = await screen.findByRole('checkbox', TERMS_BOX);
+    expect(box).not.toBeChecked();
+    const email = screen.getByRole('button', { name: 'Continue' });
+    const google = screen.getByRole('button', { name: 'Continue with Google' });
+    for (const way of [email, google]) {
+      expect(way).toBeDisabled();
+      expect(way).toHaveAccessibleDescription('Agree to the Terms of Service to continue.');
+    }
+
     await user.type(screen.getByLabelText(/^Email address/), 'reader@example.com');
     await user.type(screen.getByLabelText(/^Password/), 'correct horse');
-    await user.click(screen.getByRole('button', { name: 'Continue' }));
+    await user.click(box);
+    for (const way of [email, google]) {
+      expect(way).toBeEnabled();
+      expect(way).toHaveAccessibleDescription('');
+    }
+    await user.click(email);
 
-    await waitFor(() => expect(login).toHaveBeenCalledWith('reader@example.com', 'correct horse'));
-    login.mockRestore();
+    await waitFor(() =>
+      expect(login).toHaveBeenCalledWith({
+        email: 'reader@example.com',
+        password: 'correct horse',
+        termsRevision: '2026-09-24',
+      }),
+    );
   });
 
-  it('takes the Terms decision before an account is created', async () => {
-    window.sessionStorage.clear();
-    const policies = vi.spyOn(authApi, 'policies').mockResolvedValue(PUBLISHED);
+  it('reads the republished Terms revision after a sign-in names a stale one', async () => {
+    vi.mocked(authApi.policies)
+      .mockResolvedValueOnce(PUBLISHED)
+      .mockResolvedValue({ ...PUBLISHED, terms_revision: '2026-11-02' });
+    const login = vi
+      .spyOn(authApi, 'login')
+      .mockRejectedValueOnce(
+        new ApiError('The Terms changed.', 409, '', undefined, { code: 'policy_revision_changed' }),
+      )
+      .mockReturnValue(new Promise(() => {}));
+    const user = userEvent.setup();
+    renderWithProviders(<LoginScreen demoMode={false} signupOpen searchParams={noParams} />);
+
+    await user.type(screen.getByLabelText(/^Email address/), 'reader@example.com');
+    await user.type(screen.getByLabelText(/^Password/), 'correct horse');
+    await user.click(await screen.findByRole('checkbox', TERMS_BOX));
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('The Terms changed.');
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+
+    await waitFor(() =>
+      expect(login).toHaveBeenLastCalledWith({
+        email: 'reader@example.com',
+        password: 'correct horse',
+        termsRevision: '2026-11-02',
+      }),
+    );
+  });
+
+  it('starts Google from sign-in with the Terms decision, as a sign-in that cannot create an account', async () => {
+    const oauthStart = vi.spyOn(authApi, 'oauthStart').mockReturnValue(new Promise(() => {}));
+    const user = userEvent.setup();
+    renderWithProviders(<LoginScreen demoMode={false} signupOpen searchParams={noParams} />);
+
+    await user.click(await screen.findByRole('checkbox', TERMS_BOX));
+    await user.click(screen.getByRole('button', { name: 'Continue with Google' }));
+
+    await waitFor(() =>
+      expect(oauthStart).toHaveBeenCalledWith('google', {
+        returnTo: undefined,
+        termsRevision: '2026-09-24',
+        signup: false,
+      }),
+    );
+  });
+
+  it('holds account creation until the Terms box is ticked, then sends the decision', async () => {
     const registerAccount = vi.spyOn(authApi, 'register').mockReturnValue(new Promise(() => {}));
     const user = userEvent.setup();
     renderWithProviders(
@@ -89,13 +168,12 @@ describe('account entry', () => {
     await user.type(screen.getByLabelText(/^Email address/), 'reader@example.com');
     await user.type(screen.getByLabelText(/^Password/), 'correct horse battery');
     await user.type(screen.getByLabelText(/^Confirm password/), 'correct horse battery');
-    await user.click(screen.getByRole('button', { name: 'Create account' }));
+    const create = screen.getByRole('button', { name: 'Create account' });
+    expect(create).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Continue with Google' })).toBeDisabled();
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Agree to the Terms of Service');
-    expect(registerAccount).not.toHaveBeenCalled();
-
-    await user.click(screen.getByRole('checkbox', { name: 'I agree to the Terms of Service' }));
-    await user.click(screen.getByRole('button', { name: 'Create account' }));
+    await user.click(screen.getByRole('checkbox', TERMS_BOX));
+    await user.click(create);
 
     await waitFor(() =>
       expect(registerAccount).toHaveBeenCalledWith({
@@ -105,58 +183,30 @@ describe('account entry', () => {
         returnTo: undefined,
       }),
     );
-    expect(hasSignupTermsConsent()).toBe(true);
-    registerAccount.mockRestore();
-    policies.mockRestore();
   });
 
-  it('takes the same Terms decision before a Google sign-up starts', async () => {
-    window.sessionStorage.clear();
-    const policies = vi.spyOn(authApi, 'policies').mockResolvedValue(PUBLISHED);
+  it('starts a Google sign-up with the same Terms decision', async () => {
     const oauthStart = vi.spyOn(authApi, 'oauthStart').mockReturnValue(new Promise(() => {}));
     const user = userEvent.setup();
     renderWithProviders(
       <RegisterScreen demoMode={false} signupOpen replace={vi.fn()} searchParams={noParams} />,
     );
 
+    await user.click(screen.getByRole('checkbox', TERMS_BOX));
     const google = screen.getByRole('button', { name: 'Continue with Google' });
     await waitFor(() => expect(google).toBeEnabled());
     await user.click(google);
-    expect(await screen.findByRole('alert')).toHaveTextContent('Agree to the Terms of Service');
-    expect(oauthStart).not.toHaveBeenCalled();
-
-    await user.click(screen.getByRole('checkbox', { name: 'I agree to the Terms of Service' }));
-    await user.click(screen.getByRole('button', { name: 'Continue with Google' }));
 
     await waitFor(() =>
       expect(oauthStart).toHaveBeenCalledWith('google', {
         returnTo: undefined,
-        signupTermsRevision: '2026-09-24',
+        termsRevision: '2026-09-24',
+        signup: true,
       }),
     );
-    expect(hasSignupTermsConsent()).toBe(true);
-    oauthStart.mockRestore();
-    policies.mockRestore();
   });
 
-  it('starts Google from sign-in without a Terms decision, so it cannot create an account', async () => {
-    const oauthStart = vi.spyOn(authApi, 'oauthStart').mockReturnValue(new Promise(() => {}));
-    const user = userEvent.setup();
-    renderWithProviders(<LoginScreen demoMode={false} signupOpen searchParams={noParams} />);
-
-    await user.click(screen.getByRole('button', { name: 'Continue with Google' }));
-
-    await waitFor(() =>
-      expect(oauthStart).toHaveBeenCalledWith('google', {
-        returnTo: undefined,
-        signupTermsRevision: undefined,
-      }),
-    );
-    oauthStart.mockRestore();
-  });
-
-  it('prefills a Google address that has no account and says so', async () => {
-    const policies = vi.spyOn(authApi, 'policies').mockResolvedValue(PUBLISHED);
+  it('prefills a Google address that has no account and says so', () => {
     renderWithProviders(
       <RegisterScreen
         demoMode={false}
@@ -170,10 +220,7 @@ describe('account entry', () => {
 
     expect(screen.getByLabelText(/^Email address/)).toHaveValue('new@gmail.com');
     expect(screen.getByText(/No account uses that Google address/)).toBeVisible();
-    expect(
-      screen.getByRole('checkbox', { name: 'I agree to the Terms of Service' }),
-    ).not.toBeChecked();
-    policies.mockRestore();
+    expect(screen.getByRole('checkbox', TERMS_BOX)).not.toBeChecked();
   });
 
   it('shows no registration form on a direct visit to the sign-up page', () => {
@@ -188,6 +235,7 @@ describe('account entry', () => {
 
     expect(screen.getByRole('heading', { name: 'Registration unavailable' })).toBeInTheDocument();
     expect(screen.queryByLabelText(/Password/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Sign in' })).toBeInTheDocument();
   });
 });

@@ -62,8 +62,7 @@ function DestinationLoading() {
 
 /**
  * GateScreen — a page the app shows instead of the workspace, in the
- * fallback frame, before the shell can open: the Terms review, a workspace
- * whose access ended. One narrow column (the form measure), its parts 16
+ * fallback frame, before the shell can open: a workspace whose access ended. One narrow column (the form measure), its parts 16
  * apart, centred in the pane and inset by the content gutter. The caller
  * passes the content; the page owns every number.
  */
