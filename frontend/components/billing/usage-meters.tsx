@@ -26,16 +26,8 @@ const PREFERRED_ORDER = [
   'ai_credits',
 ];
 
-/**
- * A finite allowance of zero with nothing used is not something the grants
- * provide, so it is left out rather than drawn as an empty meter.
- */
-function provided(item: UsageItem) {
-  return !(item.limit_state === 'finite' && item.allowance === 0 && !item.consumed);
-}
-
 function ordered(items: readonly UsageItem[]): UsageItem[] {
-  return items.filter(provided).sort((a, b) => {
+  return [...items].sort((a, b) => {
     const ai = PREFERRED_ORDER.indexOf(a.key);
     const bi = PREFERRED_ORDER.indexOf(b.key);
     if (ai === -1 && bi === -1) return a.key.localeCompare(b.key);

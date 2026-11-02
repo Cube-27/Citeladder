@@ -63,6 +63,17 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
   const remaining = item.remaining ?? 0;
   const ratio = allowance > 0 ? consumed / allowance : 0;
 
+  // A real zero limit with nothing used: the plan does not include it. An
+  // empty "0 / 0" bar would read like an exhausted allowance.
+  if (allowance === 0 && consumed === 0) {
+    return (
+      <Inline gap="compact" className="justify-between">
+        <span className={textRole('label')}>{label}</span>
+        <span className="type-caption">Not included</span>
+      </Inline>
+    );
+  }
+
   return (
     <Stack gap="tight">
       <Inline gap="compact" className="justify-between">

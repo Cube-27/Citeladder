@@ -98,12 +98,21 @@ describe('UsageMeter', () => {
     expect(screen.getByText(/75 remaining/)).toBeVisible();
   });
 
-  it('does not divide by a zero allowance', () => {
-    render(<UsageMeter item={item({ allowance: 0, consumed: 0, remaining: 0 })} />);
+  it('says an unused zero allowance is not included instead of drawing an empty bar', () => {
+    render(
+      <UsageMeter item={item({ key: 'market_slots', allowance: 0, consumed: 0, remaining: 0 })} />,
+    );
 
-    const bar = screen.getByRole('meter');
-    expect(bar).toHaveAttribute('aria-valuemax', '0');
-    expect(bar.firstElementChild).toHaveStyle({ width: '0%' });
+    expect(screen.getByText('Extra markets')).toBeVisible();
+    expect(screen.getByText('Not included')).toBeVisible();
+    expect(screen.queryByRole('meter')).not.toBeInTheDocument();
+  });
+
+  it('still meters usage held over a zero allowance', () => {
+    render(<UsageMeter item={item({ allowance: 0, consumed: 2, remaining: 0 })} />);
+
+    expect(screen.getByRole('meter')).toHaveAttribute('aria-valuemax', '0');
+    expect(screen.getByText('2 / 0 prompts')).toBeVisible();
   });
 
   it('never overfills the bar past full', () => {
