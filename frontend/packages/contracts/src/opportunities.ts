@@ -192,7 +192,7 @@ export const commandCenterSchema = responseObject({
     // The persisted baseline comparison's status for the core cohort, all
     // engines (`comparable`, `no_baseline`, `matched_subset`, `baseline_pending`, ...);
     // changes are shown against `comparable_audit_id` only when `comparable`.
-    comparison_status: z.string().default('no_baseline'),
+    comparison_status: z.string(),
     metric_snapshot_id: uuid().nullable().default(null),
     analyzer_version: z.string().nullable().default(null),
     scoring_rule_version: z.string().nullable().default(null),

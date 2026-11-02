@@ -54,7 +54,10 @@ function derivedStatus(): RawBuilder<string> {
  * Recompute one Action's persisted effective status inside the caller's
  * transaction. The row is locked first so the recompute, a separate
  * statement, reads every input committed before it, including a concurrent
- * writer's that held the lock.
+ * writer's that held the lock. `FOR NO KEY UPDATE` serializes refreshers
+ * without conflicting with the key-share lock a writer's own foreign key to
+ * the Action already holds (an output or event linked to it), so upgrading
+ * from that lock cannot deadlock behind a queued status update.
  */
 export async function refreshActionStatus(
   db: Database,
@@ -66,7 +69,7 @@ export async function refreshActionStatus(
     .select('id')
     .where('workspace_id', '=', workspaceId)
     .where('id', '=', actionId)
-    .forUpdate()
+    .forNoKeyUpdate()
     .execute();
   await db
     .updateTable('actions')
@@ -84,12 +87,18 @@ export async function refreshActionStatus(
 export function opportunityStatusClause(status: string | null): RawBuilder<SqlBool> {
   if (status) {
     return sql<SqlBool>`opportunities.action_id in (
-      select actions.id from actions where actions.effective_status = ${status}
+      select actions.id from actions
+      where actions.workspace_id = opportunities.workspace_id
+        and actions.project_id = opportunities.project_id
+        and actions.effective_status = ${status}
     )`;
   }
   const active = [...a.ACTION_ACTIVE_STATUSES].sort(compareText);
   return sql<SqlBool>`(opportunities.action_id is null or opportunities.action_id in (
-    select actions.id from actions where actions.effective_status in (${sql.join(active)})
+    select actions.id from actions
+    where actions.workspace_id = opportunities.workspace_id
+      and actions.project_id = opportunities.project_id
+      and actions.effective_status in (${sql.join(active)})
   ))`;
 }
 
