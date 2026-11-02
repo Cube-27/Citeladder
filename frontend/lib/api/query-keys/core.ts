@@ -5,6 +5,9 @@ export const authKeys = {
   me: () => ['auth', 'me'] as const,
   policies: () => ['auth', 'policies'] as const,
   terms: () => ['auth', 'terms'] as const,
+  // Under `auth` on purpose: the access gate keeps `auth` reads when it clears a
+  // workspace without access, and Account security is offered on that screen.
+  security: () => ['auth', 'security'] as const,
 };
 
 export const workspaceKeys = {

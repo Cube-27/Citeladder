@@ -90,6 +90,107 @@ describe('prefetchRoute', () => {
     );
   });
 
+  it('warms the Overview layout beside the command center, then the reads its widgets make', async () => {
+    const root = `/api/v1/projects/${PROJECT_ID}`;
+    const asked: string[] = [];
+    mswServer.use(
+      // Never answers: everything else must already have been asked for.
+      http.get(`${root}/command-center`, () => {
+        asked.push('command-center');
+        return new Promise<never>(() => {});
+      }),
+      http.get(`${root}/overview/layout`, () => {
+        asked.push('layout');
+        return HttpResponse.json({
+          widgets: [
+            { key: 'project_state', size: 'half' },
+            { key: 'missing_prompts', size: 'full' },
+            { key: 'visibility_trend', size: 'half' },
+            { key: 'ai_traffic', size: 'half' },
+            { key: 'search_console', size: 'half' },
+          ],
+          version: 0,
+          customized: true,
+          updated_at: null,
+        });
+      }),
+      http.get(`${root}/visibility/prompts`, () => {
+        asked.push('prompts');
+        return HttpResponse.json([]);
+      }),
+      http.get(`${root}/visibility/trends`, ({ request }) => {
+        asked.push('trends ' + new URL(request.url).search);
+        return HttpResponse.json([]);
+      }),
+      http.get(`${root}/ai-traffic/overview`, ({ request }) => {
+        asked.push('traffic ' + new URL(request.url).search);
+        return HttpResponse.json({});
+      }),
+      http.get(`${root}/performance`, () => {
+        asked.push('performance');
+        return HttpResponse.json({});
+      }),
+    );
+
+    prefetchRoute(client, '/projects', PROJECT);
+
+    await vi.waitFor(() =>
+      expect([...asked].sort()).toEqual([
+        'command-center',
+        'layout',
+        'performance',
+        'prompts',
+        'traffic ?range=30d',
+        'trends ?cohort=core',
+      ]),
+    );
+  });
+
+  it('does not ask for a widget read that needs a measured run when there is none', async () => {
+    const root = `/api/v1/projects/${PROJECT_ID}`;
+    const asked: string[] = [];
+    mswServer.use(
+      http.get(`${root}/command-center`, () => new Promise<never>(() => {})),
+      http.get(`${root}/overview/layout`, () =>
+        HttpResponse.json({
+          widgets: [{ key: 'perception', size: 'half' }],
+          version: 0,
+          customized: true,
+          updated_at: null,
+        }),
+      ),
+      http.get(`${root}/visibility`, () => {
+        asked.push('visibility');
+        return HttpResponse.json(
+          { error: { message: 'No visibility metrics available for the selected measurement' } },
+          { status: 404 },
+        );
+      }),
+      http.get(`${root}/visibility/perception`, () => {
+        asked.push('perception');
+        return HttpResponse.json({});
+      }),
+    );
+
+    prefetchRoute(client, '/projects', PROJECT);
+
+    await vi.waitFor(() =>
+      expect(
+        client.getQueryData([
+          'visibility',
+          'project',
+          PROJECT_ID,
+          'latest',
+          { cohort: 'core', selection_mode: 'latest' },
+        ]),
+      ).toBe(null),
+    );
+    await new Promise((resolve) => {
+      setTimeout(resolve, 0);
+    });
+    expect(asked).toEqual(['visibility']);
+  });
+
   it('leaves an already-failed query untouched so a settled error cannot flicker', async () => {
     vi.mocked(demandApi.getLatest).mockRejectedValueOnce(new Error('404'));
     await client

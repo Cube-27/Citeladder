@@ -8,7 +8,7 @@ import { promptsApi } from '@/lib/api/prompts';
 import { providersApi } from '@/lib/api/providers';
 import { useManagedPlan } from '@/lib/billing/entitlement-context';
 import { queryKeys } from '@/lib/api/query-keys';
-import { runsApi } from '@/lib/api/runs';
+import { runsApi, runsQueries } from '@/lib/api/runs';
 import type { Audit, LogicalEngine, PromptSet } from '@/lib/api/types';
 import { ENGINE_ORDER, isConfigured, isVerified, isConsumerEngine } from '@/lib/providers/catalog';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
@@ -202,9 +202,8 @@ export function LaunchDialog({
   };
   const ready = workspaceId !== null && canLaunch(selection);
   const estimateQuery = useQuery({
-    queryKey: ['audit-estimate', selection],
-    queryFn: () => runsApi.estimateAudit(buildLaunchPayload(selection), { workspaceId }),
-    enabled: open && ready && workspaceId !== null,
+    ...runsQueries.estimate(workspaceId, ready ? buildLaunchPayload(selection) : null),
+    enabled: open,
   });
   const reset = () => {
     setEngines([]);

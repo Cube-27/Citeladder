@@ -23,6 +23,7 @@ import {
 } from '@citeladder/contracts/visibility-evidence';
 
 import { apiClient, type ApiRequestOptions } from './client';
+import { httpErrorStatus } from './errors';
 import { queryKeys } from './query-keys';
 import { competitorSchema } from '@citeladder/contracts/project';
 import { strictValidate } from '@citeladder/contracts/validation';
@@ -432,15 +433,72 @@ export const visibilityApi = {
   },
 };
 
+type NearMissParams = Parameters<typeof visibilityApi.getSourceNearMisses>[1];
+type MoverParams = Parameters<typeof visibilityApi.getSourceMovers>[1];
+type PerceptionParams = Parameters<typeof visibilityApi.getPerception>[1];
+
 /**
- * Project projection read options, so the screen and navigation intent request
- * the SAME key from one definition instead of each assembling its own.
+ * Visibility read options, so a screen, an Overview widget and navigation
+ * intent request the SAME key from one definition instead of each assembling
+ * its own.
  */
 export const visibilityQueries = {
+  /**
+   * The selected measurement's projection, or `null` when the selection has no
+   * metrics: no dashboard-ready run yet, a range that pooled none, or a run
+   * whose snapshot is still being written. The server answers those with 404.
+   *
+   * That 404 is a settled answer, so it is cached as `null` rather than as an
+   * error. TanStack treats an errored query as stale whatever its age, so every
+   * mount re-sent it: the route warmup asked, the screen mounted and asked
+   * again for the identical 404, and each Overview widget mount did the same.
+   * A run arriving or finishing invalidates `visibility.all`, which is what
+   * replaces the `null` with the written projection.
+   */
   project: (workspaceId: string, projectId: string, params: ProjectVisibilityParams) =>
     queryOptions({
       queryKey: queryKeys.visibility.project(projectId, params.audit_id, params),
+      queryFn: async ({ signal }: { signal: AbortSignal }): Promise<Visibility | null> => {
+        try {
+          return await visibilityApi.getProjectVisibility(projectId, params, {
+            signal,
+            workspaceId,
+          });
+        } catch (error) {
+          if (httpErrorStatus(error) === 404) return null;
+          throw error;
+        }
+      },
+    }),
+  trends: (workspaceId: string, projectId: string, params: VisibilityTrendParams) =>
+    queryOptions({
+      queryKey: queryKeys.visibility.trends(projectId, params),
       queryFn: ({ signal }: { signal: AbortSignal }) =>
-        visibilityApi.getProjectVisibility(projectId, params, { signal, workspaceId }),
+        visibilityApi.getVisibilityTrends(projectId, params, { signal, workspaceId }),
+    }),
+  sourceNearMisses: (workspaceId: string, projectId: string, params: NearMissParams) =>
+    queryOptions({
+      queryKey: queryKeys.visibility.sourceNearMisses(projectId, params),
+      queryFn: ({ signal }: { signal: AbortSignal }) =>
+        visibilityApi.getSourceNearMisses(projectId, params, { signal, workspaceId }),
+    }),
+  sourceMovers: (workspaceId: string, projectId: string, params: MoverParams) =>
+    queryOptions({
+      queryKey: queryKeys.visibility.sourceMovers(projectId, params),
+      queryFn: ({ signal }: { signal: AbortSignal }) =>
+        visibilityApi.getSourceMovers(projectId, params, { signal, workspaceId }),
+    }),
+  perception: (workspaceId: string, projectId: string, params: PerceptionParams) =>
+    queryOptions({
+      queryKey: queryKeys.visibility.perception(projectId, params),
+      queryFn: ({ signal }: { signal: AbortSignal }) =>
+        visibilityApi.getPerception(projectId, params, { signal, workspaceId }),
+    }),
+  /** The latest default-market run's prompt rows (Prompts table and Overview). */
+  latestPrompts: (workspaceId: string, projectId: string) =>
+    queryOptions({
+      queryKey: queryKeys.visibility.prompts(projectId),
+      queryFn: ({ signal }: { signal: AbortSignal }) =>
+        visibilityApi.getPromptMetrics(projectId, undefined, { signal, workspaceId }),
     }),
 };

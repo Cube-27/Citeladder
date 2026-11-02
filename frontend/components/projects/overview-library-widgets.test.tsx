@@ -44,10 +44,18 @@ describe('Overview library widgets', () => {
   });
 
   it('says there is no run yet instead of loading perception forever', () => {
-    reads.visibility = { data: { audit_id: null }, isError: false };
+    // The latest projection is `null` when the project has no measured run.
+    reads.visibility = { data: null, isError: false };
     renderWithProviders(<PerceptionWidget project={project} />);
     const region = screen.getByRole('region', { name: 'Perception' });
-    expect(within(region).getByText('No completed runs yet.')).toBeVisible();
+    expect(within(region).getByText('No measured run yet.')).toBeVisible();
+  });
+
+  it('says there is no run yet instead of loading top movers forever', () => {
+    reads.visibility = { data: null, isError: false };
+    renderWithProviders(<TopMoversWidget project={project} />);
+    const region = screen.getByRole('region', { name: 'Top movers' });
+    expect(within(region).getByText('No measured run yet.')).toBeVisible();
   });
 
   it('shows the latest-run read failure the perception widget waits on', () => {

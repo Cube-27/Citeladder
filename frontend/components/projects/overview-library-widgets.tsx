@@ -92,6 +92,8 @@ function Loaded<T>({
 }
 
 const unavailable = <UnavailableValue state="unavailable" />;
+/** The latest projection is `null`: no run has been measured yet, or its results are still being written. */
+const noMeasuredRun = <QueryState kind="empty" inline message="No measured run yet." />;
 const valueOr = (value: string | null) => value ?? unavailable;
 const count = (value: number | null) => (value === null ? null : formatCount(value));
 
@@ -126,8 +128,9 @@ export function ShareOfVoiceWidget({ project }: Readonly<{ project: Project }>) 
   return (
     <WidgetCard id="share_of_voice" href="/visibility?tab=trends">
       <Loaded query={query} fallback="Share of voice could not be loaded.">
-        {(visibility) =>
-          visibility.rankings.length ? (
+        {(visibility) => {
+          if (!visibility) return noMeasuredRun;
+          return visibility.rankings.length ? (
             <Rows
               rows={visibility.rankings.slice(0, WIDGET_ROWS).map((row) => ({
                 key: row.name,
@@ -137,8 +140,8 @@ export function ShareOfVoiceWidget({ project }: Readonly<{ project: Project }>) 
             />
           ) : (
             <QueryState kind="empty" inline message="No brands measured in the latest run." />
-          )
-        }
+          );
+        }}
       </Loaded>
     </WidgetCard>
   );
@@ -146,17 +149,21 @@ export function ShareOfVoiceWidget({ project }: Readonly<{ project: Project }>) 
 
 export function TopMoversWidget({ project }: Readonly<{ project: Project }>) {
   const { visibility, movers, comparable } = useLatestMovers(project);
-  if (visibility.isError || (visibility.data && !comparable))
+  if (visibility.isError || (visibility.data !== undefined && !comparable))
     return (
       <WidgetCard id="top_movers" href="/visibility?tab=sources">
         <Loaded query={visibility} fallback="Top movers could not be loaded.">
-          {() => (
-            <QueryState
-              kind="empty"
-              inline
-              message="No comparable earlier run to compare with yet."
-            />
-          )}
+          {(latest) =>
+            latest ? (
+              <QueryState
+                kind="empty"
+                inline
+                message="No comparable earlier run to compare with yet."
+              />
+            ) : (
+              noMeasuredRun
+            )
+          }
         </Loaded>
       </WidgetCard>
     );
@@ -184,11 +191,10 @@ export function TopMoversWidget({ project }: Readonly<{ project: Project }>) {
 
 export function RetrievalWidget({ project }: Readonly<{ project: Project }>) {
   const { visibility, misses } = useLatestNearMisses(project);
-  const noRun = visibility.data !== undefined && !visibility.data.audit_id;
   return (
     <WidgetCard id="retrieval" href="/visibility?tab=sources&source_standing=near_miss">
-      {noRun ? (
-        <QueryState kind="empty" inline message="No completed runs yet." />
+      {visibility.data === null ? (
+        noMeasuredRun
       ) : (
         <Loaded
           query={misses}
@@ -219,10 +225,10 @@ export function RetrievalWidget({ project }: Readonly<{ project: Project }>) {
 
 export function PerceptionWidget({ project }: Readonly<{ project: Project }>) {
   const { visibility, perception } = useLatestPerception(project);
-  if (visibility.data !== undefined && !visibility.data.audit_id)
+  if (visibility.data === null)
     return (
       <WidgetCard id="perception" href="/visibility?tab=perception">
-        <QueryState kind="empty" inline message="No completed runs yet." />
+        {noMeasuredRun}
       </WidgetCard>
     );
   return (

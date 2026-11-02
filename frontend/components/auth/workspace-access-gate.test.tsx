@@ -10,7 +10,10 @@ const { access, project, security, capability } = vi.hoisted(() => ({
   security: vi.fn(),
   capability: vi.fn(),
 }));
-vi.mock('@/lib/api/auth', () => ({ authApi: { security } }));
+vi.mock('@/lib/api/auth', () => ({
+  authApi: { security },
+  authQueries: { security: () => ({ queryKey: ['auth', 'security'], queryFn: () => security() }) },
+}));
 vi.mock('@/lib/api/workspaces', () => ({ workspacesApi: { access } }));
 vi.mock('@/lib/project/project-context', () => ({
   useProjectContext: project,

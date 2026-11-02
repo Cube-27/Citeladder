@@ -23,14 +23,7 @@ type RoutePrefetcher = (client: QueryClient, scope: ProjectScope) => Promise<voi
  * and the chunk is already warm by the second hover.
  */
 const ROUTE_PREFETCHERS: Readonly<Record<string, RoutePrefetcher>> = {
-  '/projects': async (client, { projectId, workspaceId }) => {
-    const { projectsApi } = await import('@/lib/api/projects');
-    warmQuery(client, {
-      queryKey: queryKeys.projects.commandCenter(projectId),
-      queryFn: ({ signal }: { signal: AbortSignal }) =>
-        projectsApi.getCommandCenter(projectId, { signal, workspaceId }),
-    });
-  },
+  '/projects': prefetchOverview,
   '/site': prefetchSiteHealth,
   '/issues': prefetchIssues,
   '/demand': async (client, { projectId, workspaceId }) => {
@@ -97,6 +90,26 @@ const ROUTE_PREFETCHERS: Readonly<Record<string, RoutePrefetcher>> = {
     warmQuery(client, aiTrafficQueries.insights(workspaceId, projectId, range));
   },
 };
+
+/**
+ * Warm the Overview's two independent reads side by side — the command center
+ * and the layout — and, once the layout names its widgets, the reads those
+ * widgets make. The screen used to ask for each of these only after the one
+ * before it had rendered: three or four round trips in a row.
+ */
+async function prefetchOverview(client: QueryClient, { projectId, workspaceId }: ProjectScope) {
+  const [{ projectQueries }, { warmOverviewWidgets }] = await Promise.all([
+    import('@/lib/api/projects'),
+    import('@/lib/overview/widget-queries'),
+  ]);
+  warmQuery(client, projectQueries.commandCenter(workspaceId, projectId));
+  const layoutQuery = projectQueries.overviewLayout(workspaceId, projectId);
+  warmQuery(client, layoutQuery);
+  if (client.getQueryState(layoutQuery.queryKey)?.status === 'error') return;
+  const layout = await client.ensureQueryData(layoutQuery).catch(() => null);
+  if (layout)
+    await warmOverviewWidgets(client, { id: projectId, workspace_id: workspaceId }, layout.widgets);
+}
 
 /**
  * Warm the Website screen's dashboard and, once it names the crawl, the page

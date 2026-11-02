@@ -345,6 +345,38 @@ describe('NewChatScreen', () => {
     ]);
   });
 
+  it('loads the wider mention pool only once @ is typed', async () => {
+    // Twelve Actions: the last two are past the table's first page of ten.
+    const queue = Array.from({ length: 12 }, (_, index) =>
+      actionItem(`77777777-7777-4777-8777-${String(index).padStart(12, '0')}`, `Guide${index + 1}`),
+    );
+    const limits: string[] = [];
+    mswServer.use(
+      // Ahead of the base handlers, so it answers the Actions reads.
+      http.get(`/api/v1/projects/${PROJECT}/actions`, ({ request }) => {
+        const limit = new URL(request.url).searchParams.get('limit') ?? 'none';
+        limits.push(limit);
+        return HttpResponse.json({
+          items: queue.slice(0, Number(limit)),
+          next_cursor: null,
+          status_counts: {},
+        });
+      }),
+      ...baseHandlers(),
+    );
+    const user = userEvent.setup();
+    renderNewChat('');
+
+    const message = await screen.findByLabelText('Message the agent');
+    await user.type(message, 'Compare ');
+    // The page's own Top Actions read the shared first page; nothing wider yet.
+    await vi.waitFor(() => expect(limits).toEqual(['10']));
+
+    await user.type(message, '@Guide12');
+    expect(await screen.findByRole('option', { name: /Guide12/ })).toBeVisible();
+    expect(limits).toEqual(['10', '50']);
+  });
+
   it('restores the insertion point after a slash skill pick', async () => {
     mswServer.use(...baseHandlers());
     const user = userEvent.setup();

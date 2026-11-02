@@ -2,7 +2,10 @@
  * Auth domain endpoints (F2). Cookie-session; `credentials:'include'` is set by
  * the transport. Every response passes through `strictValidate`.
  */
+import { queryOptions } from '@tanstack/react-query';
+
 import { apiClient, type ApiRequestOptions } from './client';
+import { queryKeys } from './query-keys';
 import {
   authResponseSchema,
   authSecuritySchema,
@@ -30,8 +33,12 @@ export const authApi = {
       await apiClient.get('/auth/terms', { signal }),
       'auth.terms',
     ),
-  security: async () =>
-    strictValidate(authSecuritySchema, await apiClient.get('/auth/security'), 'auth.security'),
+  security: async (options?: ApiRequestOptions) =>
+    strictValidate(
+      authSecuritySchema,
+      await apiClient.get('/auth/security', options),
+      'auth.security',
+    ),
   linkGoogle: async (password: string) =>
     strictValidate(
       oauthStartResponseSchema,
@@ -141,4 +148,13 @@ export const authApi = {
     const res = await apiClient.get<AuthResponse>('/auth/me', options);
     return strictValidate(authResponseSchema, res, 'auth.me').user;
   },
+};
+
+export const authQueries = {
+  /** The signed-in account's sign-in methods, for Account security. */
+  security: () =>
+    queryOptions({
+      queryKey: queryKeys.auth.security(),
+      queryFn: ({ signal }) => authApi.security({ signal }),
+    }),
 };
