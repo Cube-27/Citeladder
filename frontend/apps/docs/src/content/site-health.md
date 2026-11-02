@@ -12,7 +12,7 @@ A Site Health crawl captures pages from your website and analyzes their technica
 
 **Web** summarizes scored website checks. **AEO** summarizes scored checks across answerability, structure, evidence, machine readability, provenance, freshness and crawlability.
 
-A higher score does not promise rankings, indexing or citations. "No observed blocker" means the captured evidence did not reveal a blocker; it is not confirmation that an engine indexed the page.
+A higher score does not promise rankings, indexing or citations.
 
 A **Partial audit** can still show a score. Read the accompanying coverage to understand how many pages were scored and which applicable checks remain unresolved.
 
