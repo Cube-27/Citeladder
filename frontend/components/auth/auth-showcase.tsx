@@ -149,13 +149,13 @@ export function AuthShowcase() {
           {AUTH_SHOWCASE_SLIDES.map((slide, index) => {
             const current = index === active;
             return (
-              <div
+              // A labelled section is a region: the APG carousel's named slide,
+              // announced with its "slide" role description.
+              <section
                 key={slide.id}
                 className="auth-showcase-slide"
                 data-slide={slide.id}
                 data-current={current}
-                // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- The APG carousel names each slide a group with a "slide" role description; fieldset is for form controls.
-                role="group"
                 aria-roledescription="slide"
                 aria-label={`${index + 1} of ${count}: ${slide.name}`}
                 aria-hidden={!current}
@@ -173,7 +173,7 @@ export function AuthShowcase() {
                   <p className="auth-showcase-caption">{slide.caption}</p>
                   <p className="auth-showcase-line">{slide.line}</p>
                 </div>
-              </div>
+              </section>
             );
           })}
         </div>
