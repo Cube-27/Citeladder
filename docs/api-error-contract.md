@@ -126,3 +126,47 @@ is measured for the selection yet (no completed run, or a period with no
 measurement) and 404 `visibility_metrics_pending` when the run exists but its
 metrics are not written yet; a named run or project that does not exist stays
 `not_found`.
+
+## 6. Browser error reports
+
+The other direction: the browser reports its own failures to
+`POST /api/v1/client-errors` (family `client-errors`,
+`frontend/services/api/src/routes/client-errors.ts`), same-origin like every
+browser call, so the content security policy's `connect-src 'self'` already
+covers it. The body is the strict `clientErrorReportSchema` from
+`@citeladder/contracts/client-errors`: `kind` (`chunk_load`, `render`, `route`
+or `unhandled`), `message`, a truncated `stack`, `route` (a path with no query
+string or fragment), `release` (the build's commit, or `development`) and an
+optional `component` label. Any other field is refused with 422, and a body over
+`config/client-errors.ts` `max_body_bytes` with 413 before it is parsed. Each
+client has `client_error_client_limit` reports per
+`client_error_window_seconds` (`config/abuse.ts`), then 429 with `Retry-After`.
+
+It works signed in or out. The reporting user comes only from the session; a
+missing or stale session reports no user. The workspace is the
+`X-Workspace-Id` the browser sends, as on any other call, recorded only when
+the session's membership resolution accepts it: a request without the header,
+or naming a workspace the user is not a member of, records no workspace and
+never falls back to the user's earliest one. The API answers 204 and writes one
+structured `client.error` record on the `api.client_errors` logger (a `warning`
+for `chunk_load`, an `error` otherwise). Before logging, it removes the query
+string and fragment from every URL in the message and stack: absolute,
+root-relative (`/projects?q=…`) and relative (`../report?token=…`), where a
+word counts as a URL when the part before its `?` or `#` holds a `/` or a
+scheme, or what follows is a `key=value` query. A stack frame keeps its
+`:line:column`. Cloud Logging collects the record; nothing is stored in
+PostgreSQL and nothing is sent to a third party.
+
+`frontend/lib/client-errors.ts` sends the reports: fire-and-forget with
+`keepalive`, one report per error per page load, and at most
+`CLIENT_ERROR_REPORTS_PER_SESSION` (`lib/config/operational.ts`) per tab. It
+reads the release at report time from the `<meta name="citeladder-release">`
+the app build writes into `index.html`, so no hashed script chunk changes with
+the commit. The project context hands it the active workspace. The callers are
+`LazyIsland`, `ScreenError` and `RouteError`, and the window `error` and
+`unhandledrejection` listeners the app installs once at start. Every
+`LazyIsland` shows its quiet fallback for a chunk that cannot load, and its
+caller chooses what any other error does: `defects="surface"` (charts,
+execution evidence) hands it to the screen's boundary, and `defects="contain"`
+(the navigation's open-actions count) reports it and renders the fallback in
+place, so shell chrome never takes the shell down.

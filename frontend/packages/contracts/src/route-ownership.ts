@@ -12,6 +12,7 @@ export const ROUTE_FAMILIES = [
   'billing-documents',
   'brand-identity',
   'brand-discoveries',
+  'client-errors',
   'commerce',
   'demand',
   'executions',

@@ -6,6 +6,7 @@ import { defineConfig, type ViteUserConfig, loadEnv } from 'vite-plus';
 import { createServerProxy } from './server-proxy.ts';
 import { publicApiOrigin, publicOrigins } from '../../lib/config/public-origins.ts';
 import { TURNSTILE_TEST_SITE_KEY } from '../../lib/config/turnstile.ts';
+import { RELEASE_META_NAME } from '../../lib/config/operational.ts';
 
 const appRoot = fileURLToPath(new URL('.', import.meta.url));
 const frontendRoot = fileURLToPath(new URL('../..', import.meta.url));
@@ -27,6 +28,12 @@ function turnstileSiteKey(
       environment.PUBLIC_TURNSTILE_SITE_KEY ||
       TURNSTILE_TEST_SITE_KEY,
   );
+}
+
+/** The build's commit, when CI names one; the reporter treats absence as `development`. */
+function releaseId(): string {
+  const value = process.env.PUBLIC_APP_RELEASE || process.env.GITHUB_SHA || '';
+  return /^[\w.-]{1,64}$/u.test(value) ? value : '';
 }
 
 // Explicit return type: without it, tsc compares the inferred literal against
@@ -76,6 +83,24 @@ export default defineConfig(({ command, isPreview, mode }): ViteUserConfig => {
             `[citeladder] Building with empty public values: ${emptyPublicValues.join(', ')}. ` +
               'They are baked in at build time, so this image will behave as if they are unset.',
           );
+        },
+      },
+      {
+        // The commit error reports name (lib/client-errors.ts), written into the
+        // unhashed index.html rather than a script chunk: a value in a chunk would
+        // change that chunk's hash, and the boot cache with it, on every deploy.
+        name: 'citeladder:release-meta',
+        transformIndexHtml() {
+          const release = releaseId();
+          return release
+            ? [
+                {
+                  tag: 'meta',
+                  attrs: { name: RELEASE_META_NAME, content: release },
+                  injectTo: 'head',
+                },
+              ]
+            : [];
         },
       },
     ],
