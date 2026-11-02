@@ -520,6 +520,12 @@ schedule row. The [maintenance owner](../frontend/services/api/src/audits/mainte
 independently reconciles expired leases and unused funding. DataForSEO submission
 intent commits before the paid request; uncertain submissions remain uncertain
 and are never automatically resubmitted. Known task IDs use free result polling.
+A DataForSEO refusal of the account itself (paused, unfunded or unsubscribed:
+`account_unavailable_status_codes` in `dataforseo.json`) fails that answer as
+`provider_account_unavailable` and pauses the connection for
+`DATAFORSEO_ACCOUNT_PAUSE_MINUTES` (default 60). Until then its queued answers
+fail with the same code before any provider call, other engines in the run
+continue, and the connection resumes on its own once the pause ends.
 
 Manual launch offers six independent engines: ChatGPT Search (`chatgpt_search`),
 Gemini (`gemini_consumer`), Google AI Overview, ChatGPT API, Gemini API, and
