@@ -400,6 +400,8 @@ describe('GET /projects/{project_id}/visibility/sources/*', () => {
         citations: [{ url: 'https://unselected.example/', domain: 'unselected.example' }],
       },
     });
+    await fixtures.sourceAggregates(tenant, selected);
+    await fixtures.sourceAggregates(tenant, unselected);
   });
 
   it('draws one dense line per leading source over the selected runs', async () => {

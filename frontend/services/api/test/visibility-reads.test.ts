@@ -1147,6 +1147,7 @@ describe('GET /visibility/sources', () => {
           ],
         },
       });
+      await fixtures.sourceAggregates(tenant, auditId);
     }
     const first = await get(tenant, route(tenant, '/sources'), { audit_ids: runs, limit: '1' });
     expect(first.body).toMatchObject({
@@ -1220,6 +1221,7 @@ describe('GET /visibility/sources', () => {
         ],
       },
     });
+    await fixtures.sourceAggregates(tenant, auditId);
     const action = randomUUID();
     await fixtures.sourcePage(tenant, { urlHash: 'hash-a', url: 'https://example.com/a', action });
 
@@ -1274,6 +1276,8 @@ describe('GET /visibility/sources', () => {
       auditId: current,
       analysis: { citations: [{ url: 'https://other.com/x' }] },
     });
+    await fixtures.sourceAggregates(tenant, baseline);
+    await fixtures.sourceAggregates(tenant, current);
 
     const { body } = await get(tenant, route(tenant, '/sources'), {
       audit_ids: [current],
@@ -1313,6 +1317,7 @@ describe('GET /visibility/sources', () => {
       engine: 'gemini',
       analysis: { citations: [{ url: 'https://other.com/x', urlHash: 'hash-x' }] },
     });
+    await fixtures.sourceAggregates(tenant, auditId);
 
     const domains = await get(tenant, route(tenant, '/sources'), { audit_id: auditId });
     expect(domains.body.retrieval).toEqual({ responses: 2, unavailable_engines: ['gemini'] });
