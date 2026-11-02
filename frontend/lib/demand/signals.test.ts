@@ -8,6 +8,7 @@ import {
   detectorStates,
   safePageUrl,
   signalPageLine,
+  signalSubject,
   signalTarget,
 } from './signals';
 
@@ -124,6 +125,24 @@ describe('demandSignalHandoffHref', () => {
     expect(handoff(signal({ page_url: 'javascript:alert(1)' })).context).toEqual({
       demand_signal_id: signal().id,
     });
+  });
+});
+
+describe('signalSubject', () => {
+  it('names a page signal by path over "Page", and a query over its landing path', () => {
+    const pricing = 'https://example.com/pricing?plan=team';
+
+    expect(
+      [
+        signal({ page_url: '', evidence: { target_kind: 'page', target: pricing } }),
+        signal({ page_url: pricing, evidence: { target: 'crm pricing' } }),
+        signal({ page_url: '', evidence: { target: 'crm tools' } }),
+      ].map(signalSubject),
+    ).toEqual([
+      { primary: '/pricing?plan=team', secondary: 'Page' },
+      { primary: 'crm pricing', secondary: 'Query · /pricing?plan=team' },
+      { primary: 'crm tools', secondary: 'Query' },
+    ]);
   });
 });
 
