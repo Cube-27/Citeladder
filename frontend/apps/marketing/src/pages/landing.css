@@ -283,7 +283,7 @@
   font-size: var(--text-site-statement);
   line-height: var(--text-site-statement--line-height);
   font-weight: 500;
-  letter-spacing: -0.025em;
+  letter-spacing: 0;
   text-wrap: pretty;
 }
 

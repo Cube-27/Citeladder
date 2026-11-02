@@ -11,7 +11,7 @@
    the one rung below it. */
 :where([data-public-surface], [data-flow-surface]) {
   /* The public and focused-flow type world (docs/design.md §Typography):
-     Lexend Deca carries body, UI and data, Outfit the display headings, as in
+     Lexend Deca carries body, UI and data, Syne the display headings, as in
      the product. The scale is the product's (globals.css @theme), unchanged;
      being "roomier" is a job for measure and rhythm, not for resizing rungs. */
   --tracking-tight: -0.02em;
@@ -344,7 +344,7 @@
   font-size: 1.75rem;
   line-height: 2.25rem;
   font-weight: 500;
-  letter-spacing: -0.015em;
+  letter-spacing: 0;
   color: var(--color-foreground);
 }
 
@@ -382,15 +382,15 @@
   :where(h1, h2, h3, h4, h5, h6):not(.app-type-scale *) {
   font-family: var(--font-display);
   font-weight: 500;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
 }
 
 /* Named website/auth roles. Size, leading, weight, tracking, and default colour
    travel as one contract. The low-specificity colour defaults let explicit
    semantic utilities override them for warnings and evidence states.
 
-   Display rungs set in Outfit at 500, and tracking closes as size grows,
-   as display type does. The feature heading and body rungs set in Lexend Deca
+   Display rungs set in Syne at 500 with no tracking: the face's own
+   spacing holds at every size. The feature heading and body rungs set in Lexend Deca
    at 400/500. */
 .website-hero-display,
 .website-page-title,
@@ -409,13 +409,13 @@
   font-size: var(--text-site-hero);
   line-height: var(--text-site-hero--line-height);
   font-weight: 400;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 
 .website-page-title {
   font-size: clamp(1.5rem, 6.4vw, 1.75rem);
   line-height: 1.2;
-  letter-spacing: -0.026em;
+  letter-spacing: 0;
 }
 
 .website-article-title {
@@ -425,7 +425,7 @@
 .website-section-heading {
   font-size: var(--text-site-section);
   line-height: var(--text-site-section--line-height);
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 
 /* Card and feature titles are the one public role at 600: the public Lexend
@@ -993,7 +993,7 @@
   font-size: var(--text-2xl);
   line-height: var(--text-2xl--line-height);
   font-weight: 500;
-  letter-spacing: -0.015em;
+  letter-spacing: 0;
   color: var(--color-foreground);
   text-wrap: balance;
 }

@@ -162,7 +162,7 @@ test.describe('marketing routes', () => {
             [
               '400 14px "Lexend Deca Variable"',
               '500 14px "Lexend Deca Variable"',
-              '500 32px "Outfit Variable"',
+              '500 32px "Syne Variable"',
             ].map((font) => document.fonts.load(font)),
           ),
         );

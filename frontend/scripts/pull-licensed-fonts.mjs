@@ -21,10 +21,10 @@ const GH_EXECUTABLE =
   process.platform === 'win32' ? String.raw`C:\Program Files\GitHub CLI\gh.exe` : '/usr/bin/gh';
 const repository = 'Cube-27/cube27-fonts';
 // Pinned so every deploy ships the same bytes; bump it to adopt a font change.
-const revision = '54f5101676bdfeae3c59d900bf51b3f6cd0f3361';
+const revision = '8b0146c1033075d3a7092b1ce2ec71ee6f93be17';
 const licensedFonts = [
   'LexendDeca-Variable.woff2',
-  'Outfit-Variable.woff2',
+  'Syne-Variable.woff2',
   'JetBrainsMono-Variable.woff2',
 ];
 
