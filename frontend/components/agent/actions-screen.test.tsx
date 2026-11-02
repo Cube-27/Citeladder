@@ -75,7 +75,7 @@ describe('Actions', () => {
     // The counts sit in the menu beside each status; the trigger names the
     // status alone, so loading or dropping the counts never resizes it.
     const status = screen.getByRole('combobox', { name: 'Status' });
-    expect(status).toHaveTextContent(/^Open and in progress$/);
+    expect(status.textContent).toBe('Open and in progress');
     await user.click(status);
     expect(
       await screen.findByRole('option', { name: 'Open and in progress', description: '3' }),
@@ -84,7 +84,7 @@ describe('Actions', () => {
 
     expect(await screen.findByText('No Actions match these filters')).toBeVisible();
     expect(searches).toEqual(['queue:10', 'dismissed:10']);
-    expect(status).toHaveTextContent(/^Dismissed$/);
+    expect(status.textContent).toBe('Dismissed');
 
     // Counts cover every target type, so a target filter drops them.
     await user.click(screen.getByRole('combobox', { name: 'Target type' }));
