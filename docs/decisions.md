@@ -312,3 +312,18 @@ imported or shown.
 
 Source: owner, 2 November 2026, choosing "Final data only" over importing
 preliminary Search Console data.
+
+## Site Health flags only material scored-cohort changes
+
+Consecutive snapshots carry the composition-change reason only when a page kind
+joined or left the scored cohort, or a kind's share of it moved by at least the
+configured threshold (`overview_cohort_share_shift_points`, 10 percentage
+points). Plain count drift below that is an ordinary comparable snapshot. The
+note explains score movement, so it appears once, in the Change summary, and
+omits an empty added or removed kind list rather than printing "None".
+
+Source: owner report of 2 November 2026 on a new crawl whose Overview showed the
+note twice for one page of drift (Category 52 to 53 of about 200, all deltas 0),
+which the owner judged meaningless for a new crawl or a recrawl. The share rule
+and its 10-point default are the implementer's, not an owner choice; the owner
+may retune the threshold. [Site Health](site-health.md) owns the shipped behavior.

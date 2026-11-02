@@ -545,6 +545,15 @@ is absence from the crawl, not proof of absence from the site.
 `coverage-by-kind.tsx` shows "Pages analyzed by type" separately from "Not
 found on the site", and omits `root` and `other`.
 
+**Scored cohort composition.** Trend and Change summary compare against the
+newest earlier comparable snapshot (`snapshot.ts`). `cohort-composition.ts`
+sets `cohort_composition_changed` only when a page kind joined or left the
+scored cohort, or a kind's share moved by at least
+`overview_cohort_share_shift_points` (`reads.json`); smaller count drift is
+`comparable_snapshot`. The note renders once, in the Change summary
+(`cohort-composition-context.tsx`), with both counts by kind and only the
+non-empty added or removed lists.
+
 ## Versions and provenance
 
 | Version | Source |

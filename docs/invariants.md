@@ -93,9 +93,10 @@ snapshot. Classification coverage, checklist completion, scored-page coverage,
 and crawl coverage are distinct persisted facts with exact provenance.
 
 Measurement comparison requires compatible persisted classification and scored
-page-kind composition provenance. A changed kind set or count by kind remains
-comparable only with the bounded composition-change reason and both
-compositions; missing projection or incompatible scope/version is
+page-kind composition provenance. A changed kind set, or a kind share moved by
+at least the configured threshold, remains comparable only with the bounded
+composition-change reason and both compositions; smaller count drift is plainly
+comparable; missing projection or incompatible scope/version is
 non-comparable.
 
 ## 7. Unknown states remain distinct
