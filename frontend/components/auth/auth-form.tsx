@@ -1,15 +1,15 @@
 'use client';
 
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, LockKeyhole, Mail } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { type ComponentProps, type ReactNode, useId, useState } from 'react';
 
 import { Alert as MktAlert } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
 import { Checkbox, CheckboxCaption } from '@/components/ui/checkbox';
 import { Field } from '@/components/ui/field';
+import { FlowButton, FlowInput } from '@/components/ui/flow-controls';
 import { type BrandGlyph, Icon } from '@/components/ui/icon';
-import { FieldEndButton, Input } from '@/components/ui/input';
+import { FieldEndButton } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
 import { authApi } from '@/lib/api/auth';
 import { safeAuthReturnPath } from '@/lib/auth/auth-return-path';
@@ -18,7 +18,7 @@ import { websiteHref } from '@/lib/config/app-link';
 import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import { cn } from '@/lib/utils';
 
-type InputProps = ComponentProps<typeof Input>;
+type InputProps = Omit<ComponentProps<typeof FlowInput>, 'icon'>;
 
 /** The Google "G", a brand glyph `Icon` sizes. */
 const GoogleGlyph: BrandGlyph = (props) => {
@@ -51,9 +51,10 @@ export function AuthEmailField({
   return (
     <Field label="Email address" required error={error}>
       {(props) => (
-        <Input
+        <FlowInput
           {...props}
           {...inputProps}
+          icon={Mail}
           type="email"
           autoComplete="email"
           spellCheck={false}
@@ -83,9 +84,10 @@ export function AuthPasswordField({
   return (
     <Field label={label} required error={error}>
       {(props) => (
-        <Input
+        <FlowInput
           {...props}
           {...inputProps}
+          icon={LockKeyhole}
           type={visible ? 'text' : 'password'}
           autoComplete={autoComplete}
           placeholder={placeholder}
@@ -213,16 +215,15 @@ function GoogleEntry({
 
   return (
     <>
-      <Button
+      <FlowButton
         variant="secondary"
-        className="w-full"
         disabled={pending || Boolean(consentHint) || !revision}
         aria-describedby={consentHint}
         onClick={() => void start()}
       >
         <Icon icon={GoogleGlyph} />
         <span>{pending ? 'Starting Google sign-in…' : 'Continue with Google'}</span>
-      </Button>
+      </FlowButton>
       {notice ? <MktAlert>{notice}</MktAlert> : null}
     </>
   );
@@ -311,14 +312,13 @@ export function AuthFormShell({
                 />
               ) : null}
 
-              <Button
+              <FlowButton
                 type="submit"
-                className="auth-form-submit w-full"
                 disabled={pending || consent.held}
                 aria-describedby={consent.hint}
               >
                 {pending ? pendingLabel : submitLabel}
-              </Button>
+              </FlowButton>
             </Stack>
           </form>
         ) : null}

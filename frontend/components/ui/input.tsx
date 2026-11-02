@@ -14,8 +14,8 @@ const raisedClasses = 'border border-border-strong enabled:hover:border-border-s
 
 /**
  * The roomier field of the public website's forms. The product field —
- * auth and onboarding included — is the 32px `md` everywhere; `lg` is the
- * website's rung only.
+ * onboarding included — is the 32px `md` everywhere; `lg` is the website's
+ * rung only. Account access composes the 44px `FlowInput` (flow-controls.tsx).
  */
 const inputSizes = {
   md: '',

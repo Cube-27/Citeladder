@@ -991,12 +991,6 @@ a.focus-ring:active .type-caption {
    padding 16. `.surface-card` and `.surface-panel` only mark a container for
    the nested rules below. */
 
-/* The sign-in brand cards are the flow's, not the product's box: they keep the
-   flow's own edge, none at rest in light and the ring in dark. */
-.auth-brand-card.surface-card {
-  box-shadow: var(--elevation-card);
-}
-
 /* A recommendation's hairline takes the wash's own tint, not a grey edge. */
 .surface-card.surface-card-recommendation {
   border-color: var(--color-accent-subtle);
