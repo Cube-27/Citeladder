@@ -268,7 +268,7 @@ describe('A3 persisted Pages join', () => {
       bot_id: 'openai_oai_searchbot',
     });
     expect(detail.crawls.map((r) => [r.bot_id, r.requests])).toEqual([['openai_oai_searchbot', 3]]);
-    expect(detail.page.crawl).toMatchObject({ state: 'value', value: 3 });
+    expect(detail.page?.crawl).toMatchObject({ state: 'value', value: 3 });
   });
   it('aggregates bots, sources and citations independently, gates inventory coverage and preserves detail totals', async () => {
     const result = await pagesRead(db, scope(), filters),
