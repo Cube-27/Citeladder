@@ -47,7 +47,11 @@ Permanent projection failures (missing source analysis, unreadable facts, no
 usable URL) end the task at once with a specific code instead of retrying.
 
 The header shows projections in flight, then failed or cancelled projections of
-the latest projected crawl only, and polls only while work is in flight. The
+the latest projected crawl only. While work is in flight it polls only the
+projection state, then re-reads the catalog once when that reports nothing in
+flight. The catalog read is navigation: product and category names, memberships
+and counts, never a row's evidence; products are listed first by name up to the
+configured `catalog_product_limit`, beside the full product count. The
 rail renders products beneath every category they belong to, keeps products
 without a category under `Uncategorized`, and keeps catalog search pinned while
 the list scrolls. Categories are ordered by descending product count, then
