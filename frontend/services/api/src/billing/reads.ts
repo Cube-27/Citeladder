@@ -10,6 +10,7 @@ import type { ServiceConfig } from '../config.ts';
 import { policy } from '../config.ts';
 import { accountState, drawOrder, grantExpiry } from '../entitlements/state.ts';
 import { ledgerBalances } from '../entitlements/ledger.ts';
+import { runtimeProjection } from '../entitlements/grants.ts';
 import { workspaceAccount } from './purchases.ts';
 import { catalog, capabilityValue } from './catalog.ts';
 import { credentialModeOf, type CredentialMode } from './credential-mode.ts';
@@ -355,6 +356,7 @@ export async function workspaceEntitlementRead(db: Database, workspaceId: string
     .where('workspace_id', '=', workspaceId)
     .executeTakeFirst();
   const state = account ? await accountState(db, workspaceId, account.id, at) : null;
+  const runtime = runtimeProjection(state);
   return workspaceEntitlementSchema.parse({
     workspace_id: workspaceId,
     status: !state || state.error ? 'entitlement_unresolved' : 'resolved',
@@ -374,5 +376,9 @@ export async function workspaceEntitlementRead(db: Database, workspaceId: string
         }))
       : [],
     occupancy: state ? await occupancyHints(db, workspaceId, state.values, at) : [],
+    site_health: {
+      sample_url_limit: runtime.sample_url_limit,
+      count_disclosure: runtime.count_disclosure,
+    },
   });
 }

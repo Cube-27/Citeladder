@@ -1,12 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { makeSiteHealthEntitlement } from '../test/fixtures/site-health';
-import {
-  FIXTURE_PROJECT,
-  FIXTURE_WORKSPACE_ID,
-  fixtureProjectPath,
-  stubAuthedShell,
-} from './helpers/app-fixture';
+import { FIXTURE_PROJECT, fixtureProjectPath, stubAuthedShell } from './helpers/app-fixture';
 
 const PROJECT = FIXTURE_PROJECT.id;
 
@@ -17,11 +11,6 @@ test('Site Health retries only its failed initial read inside the authenticated 
   let dashboardReads = 0;
   let crawlCreates = 0;
   await stubAuthedShell(page);
-  await page.route('**/api/v1/entitlements', (route) =>
-    route.fulfill({
-      json: makeSiteHealthEntitlement({ workspace_id: FIXTURE_WORKSPACE_ID }),
-    }),
-  );
   await page.route(`**/api/v1/projects/${PROJECT}/site-health`, (route) => {
     dashboardReads += 1;
     return available

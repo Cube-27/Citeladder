@@ -15,24 +15,31 @@
  *
  * Everything it warms lands in the query cache under the keys the providers
  * below already read, so nothing downstream changes shape — the providers just
- * find their answers already there.
+ * find their answers already there. A reload of an address the device
+ * recognises asks for the session, the workspace's gates, the shell's reads
+ * and the screen's in one round; only reads that need another read's answer
+ * wait for it.
  */
-import type { QueryClient } from '@tanstack/react-query';
+import { queryOptions, type Query, type QueryClient } from '@tanstack/react-query';
 import { redirect } from 'react-router-dom';
 
-import { billingApi } from '@/lib/api/billing';
+import { billingQueries } from '@/lib/api/billing';
 import { authApi } from '@/lib/api/auth';
 import { safeAuthReturnPath, withAuthReturnPath } from '@/lib/auth/auth-return-path';
 import { httpErrorStatus } from '@/lib/api/client';
 import { policiesApi } from '@/lib/api/policies';
 import { projectQueries, projectsApi } from '@/lib/api/projects';
 import { workspacesApi } from '@/lib/api/workspaces';
-import { getAppQueryClient } from '@/lib/api/query-client';
+import { getAppQueryClient, warmQuery } from '@/lib/api/query-client';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { Project, Workspace } from '@/lib/api/types';
 import { getBootstrapReadTimeoutMs } from '@/lib/config/operational';
 import { projectDestination, workspaceDestination } from '@/lib/navigation/project-destination';
-import { prefetchRoute } from '@/lib/navigation/route-prefetch';
+import {
+  prefetchProjectShell,
+  prefetchRoute,
+  type ProjectScope,
+} from '@/lib/navigation/route-prefetch';
 import { routePath } from '@/lib/navigation/route-path';
 import {
   readStoredActiveProjectId,
@@ -101,24 +108,105 @@ type Scope = {
 };
 
 /**
- * Start the landing screen's primary read as soon as its project is known.
- *
- * A cache warm under the screen's own query key, never a render: the session,
- * access and Terms gates still decide whether anything mounts, the access gate
- * clears product queries for a workspace without access, and the backend
- * authorizes every read. Only an address naming nothing but its scope is
- * warmed — the prefetchers warm each screen's default view, and filters in the
- * address ask for a different key.
+ * The workspace, and the project in it, that the loader started reading
+ * before confirming them, and when the project's reads had all been issued.
  */
-function warmScreen(client: QueryClient, url: URL, project: Project) {
+type Guess = Readonly<{
+  workspaceId: string;
+  project: Readonly<{ id: string; issued: Promise<unknown> }> | null;
+}>;
+
+/**
+ * Start a project's reads: the landing screen's and the shell's own.
+ *
+ * Cache warms under each consumer's own query key, never a render: the
+ * session, access and Terms gates still decide whether anything mounts, the
+ * access gate clears product queries for a workspace without access, and the
+ * backend authorizes every read. The screen is warmed only for an address
+ * naming nothing but its scope — the prefetchers warm each screen's default
+ * view, and filters in the address ask for a different key.
+ */
+function warmProject(client: QueryClient, url: URL, scope: ProjectScope) {
   const scopeOnly = [...url.searchParams.keys()].every(
     (key) => key === 'project' || key === 'workspace',
   );
-  if (!scopeOnly) return;
-  prefetchRoute(client, url.pathname, {
-    projectId: project.id,
-    workspaceId: project.workspace_id,
-  });
+  return Promise.all([
+    prefetchProjectShell(client, scope),
+    scopeOnly ? prefetchRoute(client, url.pathname, scope) : null,
+  ]);
+}
+
+/**
+ * Start, beside `me`, every read the address lets the loader predict.
+ *
+ * A returning reader's workspace is the one the address names or the device
+ * remembers, and their project the one the address names or the device
+ * remembers. Waiting for the membership list to confirm either before asking
+ * for the workspace's gates and the screen's reads cost a full round trip per
+ * wait on every hard refresh, though none of those reads needs the list's
+ * answer: the backend authorizes each one, and the gates still decide what
+ * renders. A guess the loader later finds wrong is withdrawn by `settleGuess`.
+ */
+function guessScope(client: QueryClient, url: URL): Guess | null {
+  if (isWorkspaceFreeRoute(url.pathname, url.search)) return null;
+  const urlWorkspaceId = url.searchParams.get('workspace') || null;
+  const workspaceId = urlWorkspaceId ?? readStoredActiveWorkspaceId();
+  if (!workspaceId) return null;
+  warmWorkspaceState(client, workspaceId, url.pathname);
+  // A remembered project belongs to the remembered workspace, not to one the
+  // address names.
+  const projectId =
+    url.searchParams.get('project') || (urlWorkspaceId ? null : readStoredActiveProjectId());
+  if (!projectId || isWorkspaceOnlyRoute(url.pathname)) return { workspaceId, project: null };
+  const issued = warmProject(client, url, { projectId, workspaceId });
+  return { workspaceId, project: { id: projectId, issued } };
+}
+
+/** An unanswered read of one project, other than the detail read that resolves the project itself. */
+function unansweredProjectRead(projectId: string) {
+  return (query: Query) =>
+    query.state.data === undefined &&
+    query.queryKey.includes(projectId) &&
+    !(query.queryKey[0] === 'projects' && query.queryKey[1] === 'detail');
+}
+
+/**
+ * Withdraw what a wrong guess started, before the right reads begin.
+ *
+ * A read the backend scopes by workspace answers a project from another
+ * workspace with `Project not found`, filed under the project's own key. Left
+ * in flight, the screen's real read would join that request and render its
+ * failure, so every unanswered read of the guessed project is cancelled and
+ * dropped — once they have all been issued, since a read whose code was still
+ * loading would otherwise start after the withdrawal. The guessed workspace's
+ * own reads are keyed by that workspace and stay out of the way by themselves.
+ */
+async function settleGuess(client: QueryClient, guess: Guess | null, actual: ProjectScope | null) {
+  if (!guess?.project) return;
+  const { id, issued } = guess.project;
+  if (actual?.projectId === id && actual.workspaceId === guess.workspaceId) return;
+  await issued;
+  const predicate = unansweredProjectRead(id);
+  await client.cancelQueries({ predicate });
+  client.removeQueries({ predicate });
+}
+
+/**
+ * Settle the guess against the project a bare address selected. An address
+ * naming its project settled the guess when that project resolved.
+ */
+function settleSelectedGuess(
+  client: QueryClient,
+  guess: Guess | null,
+  { requestedProjectId, workspaceId }: Scope,
+  activeProjectId: string | null,
+) {
+  if (requestedProjectId) return Promise.resolve();
+  return settleGuess(
+    client,
+    guess,
+    activeProjectId ? { projectId: activeProjectId, workspaceId } : null,
+  );
 }
 
 /**
@@ -147,24 +235,36 @@ async function findRequestedProject(
 }
 
 /**
- * Resolve the requested project and, once it names its workspace, start its
- * screen's reads beside the gate reads rather than after the shell mounts. A
- * project contradicting the address's workspace is rejected by the caller and
- * warms nothing.
+ * Resolve the requested project and, once it names its workspace, settle the
+ * guess and make sure its reads are running. A guess that named the project's
+ * own workspace already started them, and repeating the warm joins those
+ * requests. A project contradicting the address's workspace is rejected by
+ * the caller and warms nothing.
  */
 async function requestedProject(
   client: QueryClient,
   url: URL,
-  projectId: string,
-  urlWorkspaceId: string | null,
+  {
+    projectId,
+    urlWorkspaceId,
+    guess,
+  }: Readonly<{
+    projectId: string;
+    urlWorkspaceId: string | null;
+    guess: Guess | null;
+  }>,
 ): Promise<Project | null> {
   const project = await findRequestedProject(
     client,
     projectId,
     urlWorkspaceId ?? readStoredActiveWorkspaceId(),
   );
-  if (project && (!urlWorkspaceId || project.workspace_id === urlWorkspaceId))
-    warmScreen(client, url, project);
+  const scope =
+    project && (!urlWorkspaceId || project.workspace_id === urlWorkspaceId)
+      ? { projectId: project.id, workspaceId: project.workspace_id }
+      : null;
+  await settleGuess(client, guess, scope);
+  if (scope) void warmProject(client, url, scope);
   return project;
 }
 
@@ -176,7 +276,11 @@ async function requestedProject(
  * a workspace to be guessed first is what made a freshly created project look
  * like it belonged somewhere else.
  */
-async function resolveScope(client: QueryClient, url: URL): Promise<Scope | null> {
+async function resolveScope(
+  client: QueryClient,
+  url: URL,
+  guess: Guess | null,
+): Promise<Scope | null> {
   const requestedProjectId = url.searchParams.get('project') || null;
   const urlWorkspaceId = url.searchParams.get('workspace') || null;
 
@@ -195,7 +299,7 @@ async function resolveScope(client: QueryClient, url: URL): Promise<Scope | null
     }),
   );
   const projectPending = requestedProjectId
-    ? requestedProject(client, url, requestedProjectId, urlWorkspaceId)
+    ? requestedProject(client, url, { projectId: requestedProjectId, urlWorkspaceId, guess })
     : null;
   const workspaces = await workspacesPending;
   if (!workspaces) return null;
@@ -224,34 +328,18 @@ async function resolveScope(client: QueryClient, url: URL): Promise<Scope | null
 }
 
 /**
- * The workspace's projects, remaining allowance and access, asked together.
- *
- * The Terms status rides along only to warm the policy gate's cache: without
- * it the gate had nothing to answer from on a reload and held the page on a
- * loader for one more round trip. Its outcome decides nothing here.
+ * The workspace's gate reads: its projects, remaining allowance and access,
+ * and its Terms status. Accepting an invitation never waits on the selected
+ * workspace's access, so that route does not ask for it.
  */
-function readWorkspaceState(client: QueryClient, workspaceId: string, pathname: string) {
-  void client.prefetchQuery({
-    queryKey: queryKeys.policies.workspace(workspaceId),
-    queryFn: ({ signal }) => policiesApi.status(workspaceId, signal),
-    staleTime: Number.POSITIVE_INFINITY,
-  });
-  return Promise.all([
-    settle<Project[]>(client.ensureQueryData(projectQueries.list(workspaceId))),
-    settle(
-      client.ensureQueryData({
-        queryKey: queryKeys.billing.workspaceEntitlement(workspaceId),
-        queryFn: ({ signal }) =>
-          billingApi.workspaceEntitlement(workspaceId, {
-            signal,
-            timeoutMs: getBootstrapReadTimeoutMs(),
-          }),
-      }),
-    ),
-    routePath(pathname) === '/invitations/accept'
-      ? null
-      : settle(
-          client.ensureQueryData({
+function workspaceStateQueries(workspaceId: string, pathname: string) {
+  return {
+    projects: projectQueries.list(workspaceId),
+    entitlement: billingQueries.workspaceEntitlement(workspaceId),
+    access:
+      routePath(pathname) === '/invitations/accept'
+        ? null
+        : queryOptions({
             queryKey: queryKeys.workspaces.access(workspaceId),
             queryFn: ({ signal }) =>
               workspacesApi.access(workspaceId, {
@@ -259,8 +347,50 @@ function readWorkspaceState(client: QueryClient, workspaceId: string, pathname: 
                 timeoutMs: getBootstrapReadTimeoutMs(),
               }),
           }),
-        ),
+    policies: queryOptions({
+      queryKey: queryKeys.policies.workspace(workspaceId),
+      queryFn: ({ signal }) => policiesApi.status(workspaceId, signal),
+      staleTime: Number.POSITIVE_INFINITY,
+    }),
+  };
+}
+
+/** Start a workspace's gate reads without waiting for any of them. */
+function warmWorkspaceState(client: QueryClient, workspaceId: string, pathname: string) {
+  const queries = workspaceStateQueries(workspaceId, pathname);
+  void client.prefetchQuery(queries.projects);
+  void client.prefetchQuery(queries.entitlement);
+  if (queries.access) void client.prefetchQuery(queries.access);
+  void client.prefetchQuery(queries.policies);
+}
+
+/**
+ * The workspace's projects, remaining allowance and access, asked together —
+ * or, for a workspace the loader guessed right, joined where they already are.
+ *
+ * The Terms status rides along only to warm the policy gate's cache: without
+ * it the gate had nothing to answer from on a reload and held the page on a
+ * loader for one more round trip. Its outcome decides nothing here.
+ */
+function readWorkspaceState(client: QueryClient, workspaceId: string, pathname: string) {
+  const queries = workspaceStateQueries(workspaceId, pathname);
+  void client.prefetchQuery(queries.policies);
+  return Promise.all([
+    settle<Project[]>(client.ensureQueryData(queries.projects)),
+    settle(client.ensureQueryData(queries.entitlement)),
+    queries.access ? settle(client.ensureQueryData(queries.access)) : null,
   ]);
+}
+
+/**
+ * The owner-private usage the shell shows, asked as soon as the membership
+ * list says the reader may see it. A Member or Viewer would get a guaranteed
+ * 403, so it waits for the role rather than being guessed.
+ */
+function warmUsage(client: QueryClient, workspaceId: string, workspaces: readonly Workspace[]) {
+  const workspace = workspaces.find((candidate) => candidate.id === workspaceId);
+  if (workspace?.capabilities.includes('manage_billing'))
+    warmQuery(client, billingQueries.usage(workspaceId));
 }
 
 /**
@@ -310,22 +440,26 @@ export async function bootstrapPrivateRoutes({ request }: { request: Request }) 
 
   // `me` and the membership list need only the session cookie — the tree's own
   // providers already issue them in parallel, and the loader pays for every
-  // round trip it serializes. A 401 still rejects first: Promise.all settles
-  // on the earliest rejection, so the sign-in redirect is not held up by the
-  // reads it makes moot.
+  // round trip it serializes. The guessed workspace's gate reads and the
+  // guessed project's reads go out in the same round. A 401 still rejects
+  // first: Promise.all settles on the earliest rejection, so the sign-in
+  // redirect is not held up by the reads it makes moot.
+  const guess = guessScope(client, url);
   const [sessionResolved, scope] = await Promise.all([
     requireSession(client),
-    resolveScope(client, url),
+    resolveScope(client, url, guess),
   ]);
   if (!sessionResolved || !scope) return null;
 
   // The chooser and workspace setup read nothing of the selected workspace.
   if (isWorkspaceFreeRoute(url.pathname, url.search)) return null;
   const { workspaceId, workspaces, requestedProjectId } = scope;
+  warmUsage(client, workspaceId, workspaces);
   const [listed, entitlement] = await readWorkspaceState(client, workspaceId, url.pathname);
   if (!listed) return null;
 
   const { activeProjectId, status } = resolveSelection(scope, listed);
+  await settleSelectedGuess(client, guess, scope, activeProjectId);
   const projectRequired = !isWorkspaceOnlyRoute(url.pathname);
   const decision = resolveGate(status, {
     projectRequired,

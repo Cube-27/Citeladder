@@ -1,7 +1,7 @@
 /**
  * Site Health domain endpoints + query/mutation options (F2).
  *
- * Owns transport for the Site Health slice: entitlements, crawl create/list/
+ * Owns transport for the Site Health slice: crawl create/list/
  * get/cancel, progressive keyset inventory, the persistent monitored set,
  * analyzed pages, issues, events, per-URL rerun, and same-origin export/stream
  * URLs. Every JSON response passes through `strictValidate` (fail loud on any
@@ -31,7 +31,6 @@ import {
   siteCrawlListPageSchema,
   siteCrawlSchema,
   siteHealthDashboardSchema,
-  siteHealthEntitlementSchema,
   siteHealthOverviewSchema,
   siteIssueDetailSchema,
   siteIssuesPageSchema,
@@ -55,7 +54,6 @@ import type {
   SiteCrawlListPage,
   SiteHealthDashboard,
   SiteHealthOverview,
-  SiteHealthEntitlement,
   SiteIssueDetail,
   SiteIssuesPage,
   UrlPreviewResponse,
@@ -139,10 +137,6 @@ export const siteHealthApi = {
       options,
     );
     return strictValidate(robotsHistoryPageSchema, res, 'siteHealth.getRobotsHistory');
-  },
-  getEntitlements: async (options?: ApiRequestOptions) => {
-    const res = await apiClient.get<SiteHealthEntitlement>('/entitlements', options);
-    return strictValidate(siteHealthEntitlementSchema, res, 'siteHealth.getEntitlements');
   },
   createCrawl: async ({ recrawl_of, ...input }: StartCrawlInput, options?: ApiRequestOptions) => {
     const path = recrawl_of ? `/site-crawls/${recrawl_of}/recrawl` : '/site-crawls';
@@ -322,12 +316,6 @@ export const siteHealthQueries = {
       refetchOnMount: 'always',
       queryFn: ({ signal }) =>
         siteHealthApi.getRobotsHistory(projectId, page, { signal, workspaceId }),
-    }),
-  /** Site Health entitlement keyed and requested for one explicit workspace. */
-  entitlements: (workspaceId: string | null) =>
-    queryOptions({
-      queryKey: queryKeys.siteHealth.entitlements(workspaceId),
-      queryFn: ({ signal }) => siteHealthApi.getEntitlements({ signal, workspaceId }),
     }),
   dashboard: (workspaceId: string, projectId: string, crawlId?: string) =>
     queryOptions({

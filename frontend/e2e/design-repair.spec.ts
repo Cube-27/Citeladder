@@ -130,6 +130,7 @@ for (const additionalAllowed of [false, true]) {
           occupancy: [
             { key: 'project_slots', allowance, consumed, remaining: allowance - consumed },
           ],
+          site_health: { sample_url_limit: 10, count_disclosure: false },
         },
       });
     });

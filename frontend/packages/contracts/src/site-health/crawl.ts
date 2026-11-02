@@ -2,32 +2,6 @@ import { z } from 'zod';
 
 import { responseObject, uuid } from './core.ts';
 
-// Capability access mode: a zero-allowance account gets a server-selected
-// `sample`; an account with a monitored allowance gets `full` discovery plus
-// user selection of a persistent monitored set. `unresolved` is the explicit
-// fail-closed state. This is a NEUTRAL capability, not a plan name — there is
-// deliberately no `plan_key` here to branch on.
-const siteHealthAccessModeSchema = z.enum(['sample', 'full', 'unresolved']);
-
-// `GET /entitlements` — the workspace's neutral Site Health runtime
-// projection. `monitored_url_limit` is the ONLY authority for the selection
-// quota (never hard-code 50); `count_disclosure` gates every discovered-count
-// disclosure. `resolver_status` is the fail-closed signal: anything other than
-// `resolved` must enable no crawl or selection action.
-export const siteHealthEntitlementSchema = responseObject({
-  workspace_id: uuid(),
-  access_mode: siteHealthAccessModeSchema,
-  sample_url_limit: z.number().int(),
-  monitored_url_limit: z.number().int(),
-  count_disclosure: z.boolean(),
-  resolver_status: z.enum(['resolved', 'entitlement_unresolved']),
-  registry_revision: z.string(),
-  entitlement_lifecycle_version: z.number().int(),
-  valid_until: z.string().nullable(),
-  contributing_grant_ids: z.array(uuid()),
-  advanced_controls_enabled: z.boolean(),
-});
-
 // Independent crawl lifecycle sub-states (plan §Persistence lifecycle states).
 export const crawlOverallStatusSchema = z.enum([
   'draft',

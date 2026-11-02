@@ -215,7 +215,7 @@ describe('StatusStrip — lifecycle content', () => {
   it('renders discovery mode from the persisted crawl rather than the current entitlement', () => {
     renderStrip({
       phase: 'discovering',
-      entitlement: { ...entitlement, access_mode: 'sample' },
+      entitlement: { ...entitlement, count_disclosure: false },
       crawl: crawl({
         status: 'running',
         discovery_status: 'running',

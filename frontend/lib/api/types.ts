@@ -8,6 +8,7 @@
 import type { z } from 'zod';
 
 import type {
+  workspaceEntitlementSchema,
   aeoReadinessSchema,
   architecturePageKindSchema,
   architectureNodeSchema,
@@ -96,7 +97,6 @@ import type {
   urlPreviewResponseSchema,
   siteHealthDashboardSchema,
   siteHealthOverviewSchema,
-  siteHealthEntitlementSchema,
   siteIssueDetailSchema,
   siteIssueSchema,
   siteIssuesPageSchema,
@@ -165,7 +165,8 @@ export type RankingRow = z.infer<typeof rankingRowSchema>;
 export type Visibility = z.infer<typeof visibilitySchema>;
 
 // --- Site Health ---
-export type SiteHealthEntitlement = z.infer<typeof siteHealthEntitlementSchema>;
+/** The Site Health runtime the workspace entitlement resolves. */
+export type SiteHealthEntitlement = z.infer<typeof workspaceEntitlementSchema>['site_health'];
 export type CrawlOverallStatus = z.infer<typeof crawlOverallStatusSchema>;
 export type CrawlDiscoveryStatus = z.infer<typeof crawlDiscoveryStatusSchema>;
 export type CrawlAnalysisStatus = z.infer<typeof crawlAnalysisStatusSchema>;

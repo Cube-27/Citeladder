@@ -11,9 +11,13 @@
  * `Idempotency-Key` and a retry of the same key replays the stored response
  * rather than charging twice.
  */
+import { queryOptions } from '@tanstack/react-query';
 import type { z } from 'zod';
 
+import { getBootstrapReadTimeoutMs } from '@/lib/config/operational';
+
 import { apiClient, type ApiRequestOptions } from './client';
+import { queryKeys } from './query-keys';
 import {
   activationSchema,
   billingCatalogSchema,
@@ -274,4 +278,32 @@ export const billingApi = {
     const response = await apiClient.post<unknown>('/billing/subscription/resume', {}, options);
     return strictValidate(subscriptionChangeSchema, response, 'billing.resumeSubscription');
   },
+};
+
+/**
+ * The shell's billing reads, one definition each for the route loader that
+ * warms them and the provider and screens that read them.
+ */
+export const billingQueries = {
+  /**
+   * What the workspace may do, its allowance hints and its Site Health
+   * runtime. The empty-workspace gate blocks on this read, so it carries the
+   * bounded bootstrap timeout: a stall reaches the retry notice in seconds.
+   */
+  workspaceEntitlement: (workspaceId: string) =>
+    queryOptions({
+      queryKey: queryKeys.billing.workspaceEntitlement(workspaceId),
+      queryFn: ({ signal }) =>
+        billingApi.workspaceEntitlement(workspaceId, {
+          signal,
+          workspaceId,
+          timeoutMs: getBootstrapReadTimeoutMs(),
+        }),
+    }),
+  /** Owner/Admin-private usage; not a gate input, so it keeps the default timeout. */
+  usage: (workspaceId: string) =>
+    queryOptions({
+      queryKey: queryKeys.billing.usage(workspaceId),
+      queryFn: ({ signal }) => billingApi.usage({ signal, workspaceId }),
+    }),
 };

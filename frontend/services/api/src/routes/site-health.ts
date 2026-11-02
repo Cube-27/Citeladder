@@ -18,7 +18,6 @@ import {
   siteCrawlEventSchema,
   siteCrawlSchema,
   siteHealthDashboardSchema,
-  siteHealthEntitlementSchema,
   siteHealthOverviewSchema,
   siteIssueDetailSchema,
   siteIssuesPageSchema,
@@ -59,7 +58,6 @@ import {
   changesSummary,
   overview,
 } from '../site-health/reads/projections.ts';
-import { entitlementView } from '../site-health/reads/runtime.ts';
 import { robotsHistory } from '../site-health/reads/robots-history.ts';
 import { defineGetRoute } from './define.ts';
 
@@ -219,14 +217,6 @@ export const siteHealthRoutes = [
           cursor: query.cursor,
         }),
       ),
-  }),
-  defineGetRoute({
-    family,
-    path: '/api/v1/entitlements',
-    recovery: true,
-    params: { path: {}, query: {} },
-    response: siteHealthEntitlementSchema,
-    handle: ({ c, db }) => entitlementView(db, c.get('workspace').workspaceId, new Date()),
   }),
   defineGetRoute({
     family,

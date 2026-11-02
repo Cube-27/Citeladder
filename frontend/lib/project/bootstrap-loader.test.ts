@@ -1,4 +1,4 @@
-import { http, HttpResponse, type DefaultBodyType } from 'msw';
+import { delay, http, HttpResponse, type DefaultBodyType } from 'msw';
 import { waitFor } from '@testing-library/react';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vite-plus/test';
 
@@ -72,6 +72,7 @@ function entitlement(remainingProjectSlots: number) {
         remaining: remainingProjectSlots,
       },
     ],
+    site_health: { sample_url_limit: 10, count_disclosure: false },
   };
 }
 
@@ -84,6 +85,15 @@ function stub({ projects, slots = 1 }: { projects: unknown[]; slots?: number }) 
       HttpResponse.json(entitlement(slots)),
     ),
   );
+}
+
+/** A response the test releases when it chooses. */
+function deferred() {
+  let answer!: (response: HttpResponse<DefaultBodyType>) => void;
+  const response = new Promise<HttpResponse<DefaultBodyType>>((resolve) => {
+    answer = resolve;
+  });
+  return { response, answer };
 }
 
 /** What the loader did: a redirect's destination, or null for "let it render". */
@@ -346,8 +356,13 @@ describe('bootstrapPrivateRoutes', () => {
         settled = true;
         return location;
       });
+      // The shell's Actions badge read rides along on every screen; this test
+      // is about the screen's own reads.
       const screenReads = () =>
-        requests.paths.filter((path) => path.startsWith(`/api/v1/projects/${PROJECT}/`)).sort();
+        requests.paths
+          .filter((path) => path.startsWith(`/api/v1/projects/${PROJECT}/`))
+          .filter((path) => !path.startsWith(`/api/v1/projects/${PROJECT}/actions`))
+          .sort();
       await waitFor(() =>
         expect(screenReads()).toEqual([
           `/api/v1/projects/${PROJECT}/ai-traffic/insights?range=30d`,
@@ -360,6 +375,93 @@ describe('bootstrapPrivateRoutes', () => {
       answer(HttpResponse.json({ status: 'active', expires_at: null }));
       expect(await pending).toBeNull();
       requests.stop();
+    });
+
+    it('asks for the gates, the shell’s reads and the screen’s in the same round as the session', async () => {
+      window.localStorage.setItem(ACTIVE_WORKSPACE_STORAGE_KEY, WORKSPACE);
+      stub({ projects: [PROJECT_ROW] });
+      const me = deferred();
+      const memberships = deferred();
+      mswServer.use(
+        http.get('/api/v1/auth/me', () => me.response),
+        http.get('/api/v1/workspaces', () => memberships.response),
+        http.get(`/api/v1/projects/${PROJECT}/*`, () =>
+          HttpResponse.json({ error: { message: 'not here' } }, { status: 404 }),
+        ),
+      );
+      const requests = recordRequests();
+      const started = () => requests.paths.map((path) => path.replace(/\?.*$/u, ''));
+
+      const pending = run(`/site?project=${PROJECT}`);
+      const firstRound = [
+        '/api/v1/projects',
+        `/api/v1/workspaces/${WORKSPACE}/access`,
+        `/api/v1/workspaces/${WORKSPACE}/entitlements`,
+        `/api/v1/workspaces/${WORKSPACE}/policies`,
+        `/api/v1/projects/${PROJECT}/actions`,
+        `/api/v1/projects/${PROJECT}/monitored-urls`,
+        `/api/v1/projects/${PROJECT}/site-health`,
+      ];
+      // `me` and the membership list are unanswered by construction.
+      await waitFor(() =>
+        expect(firstRound.filter((path) => started().includes(path))).toEqual(firstRound),
+      );
+      // Site Health reads the workspace entitlement; its own copy is gone.
+      expect(started().filter((path) => path.endsWith('/entitlements'))).toEqual([
+        `/api/v1/workspaces/${WORKSPACE}/entitlements`,
+      ]);
+      expect(started()).not.toContain('/api/v1/billing/usage');
+
+      me.answer(HttpResponse.json({ user: USER }));
+      memberships.answer(HttpResponse.json([WORKSPACE_ROW]));
+      expect(await pending).toBeNull();
+      // An Owner's usage waits only for the membership list to name the role.
+      await waitFor(() => expect(started()).toContain('/api/v1/billing/usage'));
+      requests.stop();
+    });
+
+    it('withdraws a remembered workspace’s guess and reads the project in its own', async () => {
+      const OTHER = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+      window.localStorage.setItem(ACTIVE_WORKSPACE_STORAGE_KEY, OTHER);
+      const empty = {
+        project_id: PROJECT,
+        crawl: null,
+        score_summary: null,
+        phase: 'empty',
+        snapshot_id: null,
+        quota: { used: 0, limit: 50 },
+        root_errors: [],
+      };
+      stub({ projects: [] });
+      mswServer.use(
+        http.get('/api/v1/workspaces', () =>
+          HttpResponse.json([WORKSPACE_ROW, { ...WORKSPACE_ROW, id: OTHER, name: 'Other' }]),
+        ),
+        http.get('/api/v1/projects', ({ request }) =>
+          HttpResponse.json(
+            request.headers.get('x-workspace-id') === WORKSPACE ? [PROJECT_ROW] : [],
+          ),
+        ),
+        http.get(`/api/v1/projects/${PROJECT}`, () => HttpResponse.json(PROJECT_ROW)),
+        // Asked under the wrong workspace, the dashboard is still answering
+        // `Project not found` when the project names its own.
+        http.get(`/api/v1/projects/${PROJECT}/site-health`, async ({ request }) => {
+          if (request.headers.get('x-workspace-id') === WORKSPACE) return HttpResponse.json(empty);
+          await delay(200);
+          return HttpResponse.json({ error: { message: 'Project not found' } }, { status: 404 });
+        }),
+        http.get(`/api/v1/projects/${PROJECT}/*`, () =>
+          HttpResponse.json({ error: { message: 'not here' } }, { status: 404 }),
+        ),
+      );
+      const client = createAppQueryClient();
+      setAppQueryClient(client);
+
+      expect(await run(`/site?project=${PROJECT}`)).toBeNull();
+
+      await waitFor(() =>
+        expect(client.getQueryData(queryKeys.siteHealth.dashboard(PROJECT))).toEqual(empty),
+      );
     });
   });
 
