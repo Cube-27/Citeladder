@@ -229,11 +229,14 @@ describe('AI Traffic Pages citations', () => {
   it('reads each scope’s newest run in the window, so an older run’s citations drop out', async () => {
     const t = await tenant();
     const older = await finalizedRun(t, ['https://acme.example/guide']);
-    const [guide] = await ownedRows(t, older, 'https://acme.example/guide');
-    const path = `pages/${guide!.url_hash}?range=30d`;
-    expect((await trafficRead<UrlDetail>(t, t.projectId, path)).body!.citations).toEqual([
-      expect.objectContaining({ citation_id: guide!.id, audit_id: older }),
-    ]);
+    const guide = await ownedRows(t, older, 'https://acme.example/guide');
+    const path = `pages/${guide[0]!.url_hash}?range=30d`;
+    expect(
+      (await trafficRead<UrlDetail>(t, t.projectId, path)).body!.citations.map((c) => [
+        c.citation_id,
+        c.audit_id,
+      ]),
+    ).toEqual(guide.map((r) => [r.id, older]));
     await finalizedRun(t, ['https://competitor.test/review']);
     const detail = await trafficRead<UrlDetail>(t, t.projectId, path);
     expect(detail.body).toMatchObject({ page: null, citations: [] });
@@ -246,14 +249,17 @@ describe('AI Traffic Pages citations', () => {
     const t = await tenant(),
       other = await tenant();
     const auditId = await finalizedRun(other, ['https://acme.example/guide']);
-    const [guide] = await ownedRows(other, auditId, 'https://acme.example/guide');
+    const guide = await ownedRows(other, auditId, 'https://acme.example/guide');
     expect((await trafficRead(t, other.projectId, 'pages?range=30d')).status).toBe(404);
+    expect(
+      (await trafficRead(t, other.projectId, `pages/${guide[0]!.url_hash}?range=30d`)).status,
+    ).toBe(404);
     const own = await trafficRead<UrlDetail>(
       other,
       other.projectId,
-      `pages/${guide!.url_hash}?range=30d`,
+      `pages/${guide[0]!.url_hash}?range=30d`,
     );
-    expect(own.body!.citations.map((c) => c.citation_id)).toEqual([guide!.id]);
+    expect(own.body!.citations.map((c) => c.citation_id)).toEqual(guide.map((r) => r.id));
   });
 });
 
