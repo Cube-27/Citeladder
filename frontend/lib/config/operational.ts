@@ -99,6 +99,12 @@ export const WORKSPACE_LOADING_STALL_MS = 8_000;
  */
 export const LOADING_INDICATOR_DELAY_MS = 300;
 
+/**
+ * Browser error reports one tab sends to `/client-errors` before it stops
+ * reporting; repeats of one error are dropped per page load before this count.
+ */
+export const CLIENT_ERROR_REPORTS_PER_SESSION = 10;
+
 // Evidence request/display bounds.
 export const EVIDENCE_LIMIT = 100;
 export const FANOUT_SEARCH_DEBOUNCE_MS = 300;

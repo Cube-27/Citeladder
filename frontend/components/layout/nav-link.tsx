@@ -66,7 +66,7 @@ export function NavLink({
       <span className="min-w-0 flex-1 truncate">{item.label}</span>
       {item.badge === 'open-actions' ? (
         // A count that cannot load leaves the row as it was, never the shell.
-        <LazyIsland failed={null}>
+        <LazyIsland failed={null} label="open-action-count">
           <OpenActionCount />
         </LazyIsland>
       ) : null}

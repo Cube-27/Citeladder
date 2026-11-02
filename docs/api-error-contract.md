@@ -126,3 +126,34 @@ is measured for the selection yet (no completed run, or a period with no
 measurement) and 404 `visibility_metrics_pending` when the run exists but its
 metrics are not written yet; a named run or project that does not exist stays
 `not_found`.
+
+## 6. Browser error reports
+
+The other direction: the browser reports its own failures to
+`POST /api/v1/client-errors` (family `client-errors`,
+`frontend/services/api/src/routes/client-errors.ts`), same-origin like every
+browser call, so the content security policy's `connect-src 'self'` already
+covers it. The body is the strict `clientErrorReportSchema` from
+`@citeladder/contracts/client-errors`: `kind` (`chunk_load`, `render`, `route`
+or `unhandled`), `message`, a truncated `stack`, `route` (a path with no query
+string or fragment), `release` (the build's commit, or `development`) and an
+optional `component` label. Any other field is refused with 422, and a body over
+`config/client-errors.ts` `max_body_bytes` with 413 before it is parsed. Each
+client has `client_error_client_limit` reports per
+`client_error_window_seconds` (`config/abuse.ts`), then 429 with `Retry-After`.
+
+It works signed in or out. The reporting user and workspace come only from the
+session (the active workspace as a flat route resolves it); a missing or stale
+session reports with neither. The API answers 204 and writes one structured
+`client.error` record on the `api.client_errors` logger (a `warning` for
+`chunk_load`, an `error` otherwise) after removing query strings and fragments
+from any URL in the message and stack. Cloud Logging collects it; nothing is
+stored in PostgreSQL and nothing is sent to a third party.
+
+`frontend/lib/client-errors.ts` sends the reports: fire-and-forget with
+`keepalive`, one report per error per page load, and at most
+`CLIENT_ERROR_REPORTS_PER_SESSION` (`lib/config/operational.ts`) per tab. The
+callers are `LazyIsland` (which keeps its quiet fallback for a chunk that cannot
+load and hands any other error on to the screen's boundary), `ScreenError` and
+`RouteError`, and the window `error` and `unhandledrejection` listeners the app
+installs once at start.

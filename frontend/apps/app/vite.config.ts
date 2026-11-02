@@ -99,6 +99,10 @@ export default defineConfig(({ command, isPreview, mode }): ViteUserConfig => {
         process.env.PUBLIC_DOCS_ORIGIN ?? environment.PUBLIC_DOCS_ORIGIN ?? '',
       ),
       'process.env.LOCAL_COMPOSE_BUILD': JSON.stringify(process.env.LOCAL_COMPOSE_BUILD ?? ''),
+      // Optional: the commit an error report names; empty reports as `development`.
+      'process.env.PUBLIC_APP_RELEASE': JSON.stringify(
+        process.env.PUBLIC_APP_RELEASE ?? process.env.GITHUB_SHA ?? '',
+      ),
       // Sign-up and email-link forms; workers-app-deploy.yml names the real key.
       'process.env.PUBLIC_TURNSTILE_SITE_KEY': turnstileSiteKey(
         command === 'serve',
