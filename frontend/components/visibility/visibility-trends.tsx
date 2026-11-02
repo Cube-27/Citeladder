@@ -22,6 +22,7 @@ import { RankingRowsTable } from '@/components/visibility/ranking-rows';
 import { EngineComparison } from '@/components/visibility/engine-comparison';
 import { SurfaceRatesPanel } from '@/components/visibility/surface-rates';
 import type { SurfaceRates, Visibility, VisibilityTrendPoint } from '@/lib/api/types';
+import { isMetricsPending } from '@/lib/api/visibility-queries';
 import {
   formatPosition,
   formatPositionExact,
@@ -55,7 +56,7 @@ export function VisibilityTrends({
   onEvidence,
 }: Readonly<{
   query: UseQueryResult<VisibilityTrendPoint[], unknown>;
-  /** `null` data: the selection has no metrics yet. */
+  /** `null` data: nothing measured for the selection (see `visibilityQueries.project`). */
   visibilityQuery: UseQueryResult<Visibility | null, unknown>;
   engineFilter: VisibilityFilters['engine'];
   surfaceRatesQuery: UseQueryResult<SurfaceRates, unknown>;
@@ -70,11 +71,13 @@ export function VisibilityTrends({
   // URL-held so a focused comparison survives a reload and can be linked to.
   const [focused, setFocused] = useUrlState('brand', optionalStringUrlCodec);
   const selected = visibilityQuery.data;
-  // No metrics for the selection is not a failure: the run exists but its
-  // results have not been written yet, which is the normal state for the
-  // seconds after a run ends. Reporting that as an error told readers their
+  // Nothing measured, results still being written and a failed read are three
+  // different answers. Metrics not written yet is the normal state for the
+  // seconds after a run ends; reporting it as an error told readers their
   // results were lost.
   if (selected === null)
+    return <QueryState kind="empty" inline message="No measured run for this selection yet." />;
+  if (isMetricsPending(visibilityQuery.error))
     return (
       <Alert tone="info">
         Results for this run are still being prepared. They appear here as soon as they are ready.

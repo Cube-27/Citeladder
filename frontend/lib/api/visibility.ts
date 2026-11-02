@@ -10,7 +10,6 @@
  * `VisibilityTrendPoint`s over persisted `MetricSnapshot` rows, filtered by
  * engine/date and bucketed by run/week/month. Same-origin `/api/v1` only.
  */
-import { queryOptions } from '@tanstack/react-query';
 import { z } from 'zod';
 import {
   visibilityEvidenceResponseSchema,
@@ -23,8 +22,6 @@ import {
 } from '@citeladder/contracts/visibility-evidence';
 
 import { apiClient, type ApiRequestOptions } from './client';
-import { httpErrorStatus } from './errors';
-import { queryKeys } from './query-keys';
 import { competitorSchema } from '@citeladder/contracts/project';
 import { strictValidate } from '@citeladder/contracts/validation';
 import {
@@ -431,68 +428,4 @@ export const visibilityApi = {
     );
     return strictValidate(competitorSchema, res, 'visibility.acceptCompetitorSuggestion');
   },
-};
-
-type NearMissParams = Parameters<typeof visibilityApi.getSourceNearMisses>[1];
-type MoverParams = Parameters<typeof visibilityApi.getSourceMovers>[1];
-type PerceptionParams = Parameters<typeof visibilityApi.getPerception>[1];
-
-/**
- * Visibility read options, so a screen, an Overview widget and navigation
- * intent request the SAME key from one definition instead of each assembling
- * its own.
- */
-export const visibilityQueries = {
-  /**
-   * The selection's projection, or `null` for the server's 404 "no metrics yet"
-   * (no dashboard-ready run, an empty range, a snapshot still being written).
-   * Cached as an error it was always stale, so every mount re-asked for the
-   * same 404; a run arriving or finishing invalidates `visibility.all` instead.
-   */
-  project: (workspaceId: string, projectId: string, params: ProjectVisibilityParams) =>
-    queryOptions({
-      queryKey: queryKeys.visibility.project(projectId, params.audit_id, params),
-      queryFn: async ({ signal }: { signal: AbortSignal }): Promise<Visibility | null> => {
-        try {
-          return await visibilityApi.getProjectVisibility(projectId, params, {
-            signal,
-            workspaceId,
-          });
-        } catch (error) {
-          if (httpErrorStatus(error) === 404) return null;
-          throw error;
-        }
-      },
-    }),
-  trends: (workspaceId: string, projectId: string, params: VisibilityTrendParams) =>
-    queryOptions({
-      queryKey: queryKeys.visibility.trends(projectId, params),
-      queryFn: ({ signal }: { signal: AbortSignal }) =>
-        visibilityApi.getVisibilityTrends(projectId, params, { signal, workspaceId }),
-    }),
-  sourceNearMisses: (workspaceId: string, projectId: string, params: NearMissParams) =>
-    queryOptions({
-      queryKey: queryKeys.visibility.sourceNearMisses(projectId, params),
-      queryFn: ({ signal }: { signal: AbortSignal }) =>
-        visibilityApi.getSourceNearMisses(projectId, params, { signal, workspaceId }),
-    }),
-  sourceMovers: (workspaceId: string, projectId: string, params: MoverParams) =>
-    queryOptions({
-      queryKey: queryKeys.visibility.sourceMovers(projectId, params),
-      queryFn: ({ signal }: { signal: AbortSignal }) =>
-        visibilityApi.getSourceMovers(projectId, params, { signal, workspaceId }),
-    }),
-  perception: (workspaceId: string, projectId: string, params: PerceptionParams) =>
-    queryOptions({
-      queryKey: queryKeys.visibility.perception(projectId, params),
-      queryFn: ({ signal }: { signal: AbortSignal }) =>
-        visibilityApi.getPerception(projectId, params, { signal, workspaceId }),
-    }),
-  /** The latest default-market run's prompt rows (Prompts table and Overview). */
-  latestPrompts: (workspaceId: string, projectId: string) =>
-    queryOptions({
-      queryKey: queryKeys.visibility.prompts(projectId),
-      queryFn: ({ signal }: { signal: AbortSignal }) =>
-        visibilityApi.getPromptMetrics(projectId, undefined, { signal, workspaceId }),
-    }),
 };

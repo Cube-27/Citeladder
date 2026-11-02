@@ -7310,7 +7310,7 @@
           },
           "state": {
             "type": "string",
-            "enum": ["measured", "no_run"]
+            "enum": ["measured", "no_run", "metrics_pending"]
           },
           "audit_id": {
             "anyOf": [

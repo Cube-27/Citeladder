@@ -63,10 +63,12 @@ const ROUTE_PREFETCHERS: Readonly<Record<string, RoutePrefetcher>> = {
     });
   },
   '/visibility': async (client, { projectId, workspaceId }) => {
-    const [{ runsQueries }, { INITIAL_VISIBILITY_PARAMS, visibilityQueries }] = await Promise.all([
-      import('@/lib/api/runs'),
-      import('@/lib/api/visibility'),
-    ]);
+    const [{ runsQueries }, { INITIAL_VISIBILITY_PARAMS }, { visibilityQueries }] =
+      await Promise.all([
+        import('@/lib/api/runs'),
+        import('@/lib/api/visibility'),
+        import('@/lib/api/visibility-queries'),
+      ]);
     warmQuery(client, runsQueries.list(workspaceId, projectId));
     // The landing selection, built from the screen's own defaults. A key
     // spelled out here drifted from the one the screen reads and warmed an

@@ -14,7 +14,8 @@ import { aiTrafficQueries } from '@/lib/api/ai-traffic';
 import { performanceQueries } from '@/lib/api/performance';
 import { warmQuery } from '@/lib/api/query-client';
 import type { Project, Visibility } from '@/lib/api/types';
-import { INITIAL_VISIBILITY_PARAMS, visibilityQueries } from '@/lib/api/visibility';
+import { INITIAL_VISIBILITY_PARAMS } from '@/lib/api/visibility';
+import { visibilityQueries } from '@/lib/api/visibility-queries';
 import { TRAFFIC_RANGES } from '@/lib/config/crawl-logs';
 import { INITIAL_DASHBOARD_PARAMS } from '@/lib/performance/performance';
 
@@ -81,7 +82,9 @@ export function useLatestMovers(project: Project) {
     ...visibilityQueries.sourceMovers(project.workspace_id, project.id, params),
     enabled: moversReady(params),
   });
-  return { visibility, movers, comparable: params.baseline_audit_ids.length > 0 };
+  // The projection's own comparison, so the widget can say WHY nothing moved
+  // (no earlier run, changed settings, incomplete coverage) rather than one "not comparable".
+  return { visibility, movers, comparison: visibility.data?.comparison ?? null };
 }
 
 export function useLatestNearMisses(project: Project) {

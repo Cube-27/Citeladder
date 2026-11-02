@@ -121,3 +121,8 @@ The [public API](public-api.md) returns 401 `invalid_api_key` (with
 409 `idempotency_conflict` for a reused Idempotency-Key with another body or
 while its first request runs (retryable); and 409 `estimate_exceeds_limit`
 (details `maximum_attempt_count`, `max_attempts`) for a refused launch.
+Visibility selection reads return 404 `visibility_not_measured` when nothing
+is measured for the selection yet (no completed run, or a period with no
+measurement) and 404 `visibility_metrics_pending` when the run exists but its
+metrics are not written yet; a named run or project that does not exist stays
+`not_found`.

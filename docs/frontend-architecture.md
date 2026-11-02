@@ -222,9 +222,11 @@ collapsing the surface. Pointer or keyboard intent on a destination starts its
 route chunk and warms its primary read under the destination's exact query key;
 Overview warms its command center and layout together, then the reads of the
 widgets that layout names. A read whose 404 means "nothing measured yet" (the
-latest Visibility projection, the latest Search Demand snapshot) caches that
-answer as `null` rather than as an error, so a warmed answer is not re-asked on
-mount.
+Visibility projection's `visibility_not_measured`, the latest Search Demand
+snapshot) caches that answer as `null` rather than as an error, so a warmed
+answer is not re-asked on mount. Metrics still being written
+(`visibility_metrics_pending`) are their own "being prepared" state, and any
+other 404 stays an error.
 A cold load of an address naming only its project starts the same warm from the
 route loader once the project resolves, beside the access, entitlement and Terms
 reads; those gates still decide what renders. No shell provider prefetches

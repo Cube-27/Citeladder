@@ -164,6 +164,8 @@ const API_ERROR_CODES = [
   'unsupported_scope',
   'unsupported_target',
   'validation_error',
+  'visibility_metrics_pending',
+  'visibility_not_measured',
   'workspace_invitation_invalid',
   'workspace_invitation_limit_exceeded',
   'workspace_limit_exceeded',

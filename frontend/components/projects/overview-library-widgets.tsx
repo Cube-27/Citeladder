@@ -19,6 +19,7 @@ import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { ValueLedger } from '@/components/ui/facts';
 import { Icon } from '@/components/ui/icon';
 import type { Project } from '@/lib/api/types';
+import { isMetricsPending } from '@/lib/api/visibility-queries';
 import { formatCount, formatPercent } from '@/lib/format';
 import {
   useLatestMovers,
@@ -64,7 +65,8 @@ function WidgetCard({
 /**
  * Loading, failed or loaded, in the same footprint. A read that waits on the
  * latest run (`waitsOn`) stays disabled while that read fails, so the failure
- * shown is the one that can be retried.
+ * shown is the one that can be retried. A run whose metrics are not written
+ * yet is not a failure: it says so instead.
  */
 function Loaded<T>({
   query,
@@ -78,6 +80,7 @@ function Loaded<T>({
   children: (data: T) => ReactNode;
 }>) {
   const failed = waitsOn?.isError ? waitsOn : query;
+  if (isMetricsPending(failed.error)) return metricsPending;
   if (failed.isError)
     return (
       <ReadError
@@ -92,8 +95,36 @@ function Loaded<T>({
 }
 
 const unavailable = <UnavailableValue state="unavailable" />;
-/** The latest projection is `null`: no run has been measured yet, or its results are still being written. */
+/** The latest projection is `null`: no run has been measured yet. */
 const noMeasuredRun = <QueryState kind="empty" inline message="No measured run yet." />;
+const metricsPending = (
+  <QueryState kind="empty" inline message="Results are still being prepared." />
+);
+
+const DIFFERENT_SETTINGS = 'The earlier run used different settings, so sources are not compared.';
+
+/** Why the latest run has no source movement to rank, by its comparison status. */
+const NOT_COMPARED: Readonly<Record<string, string>> = {
+  changed_context: DIFFERENT_SETTINGS,
+  matched_subset: DIFFERENT_SETTINGS,
+  identity_unavailable: "This run's settings could not be identified, so it is not compared.",
+  partial_coverage:
+    'The latest or earlier run did not finish every answer, so shares would mislead.',
+  coverage_unavailable:
+    'The latest or earlier run has no expected-answer count, so its coverage cannot be checked.',
+  no_observations: 'The latest or earlier run recorded no answers to compare.',
+  invalid_baseline: 'The earlier run does not finish before the latest one starts.',
+};
+
+function notCompared(status: string, skippedRuns = 0) {
+  let message = NOT_COMPARED[status] ?? 'The latest run cannot be compared with an earlier one.';
+  if (status === 'no_baseline')
+    message = skippedRuns
+      ? 'No earlier run used the same settings and scoring to compare with.'
+      : 'No earlier run to compare with yet.';
+  return <QueryState kind="empty" inline message={message} />;
+}
+
 const valueOr = (value: string | null) => value ?? unavailable;
 const count = (value: number | null) => (value === null ? null : formatCount(value));
 
@@ -148,22 +179,13 @@ export function ShareOfVoiceWidget({ project }: Readonly<{ project: Project }>) 
 }
 
 export function TopMoversWidget({ project }: Readonly<{ project: Project }>) {
-  const { visibility, movers, comparable } = useLatestMovers(project);
-  if (visibility.isError || (visibility.data !== undefined && !comparable))
+  const { visibility, movers, comparison } = useLatestMovers(project);
+  const status = comparison?.status ?? 'no_baseline';
+  if (visibility.isError || (visibility.data !== undefined && status !== 'comparable'))
     return (
       <WidgetCard id="top_movers" href="/visibility?tab=sources">
         <Loaded query={visibility} fallback="Top movers could not be loaded.">
-          {(latest) =>
-            latest ? (
-              <QueryState
-                kind="empty"
-                inline
-                message="No comparable earlier run to compare with yet."
-              />
-            ) : (
-              noMeasuredRun
-            )
-          }
+          {(latest) => (latest ? notCompared(status, comparison?.skipped_runs) : noMeasuredRun)}
         </Loaded>
       </WidgetCard>
     );
@@ -171,6 +193,7 @@ export function TopMoversWidget({ project }: Readonly<{ project: Project }>) {
     <WidgetCard id="top_movers" href="/visibility?tab=sources">
       <Loaded query={movers} fallback="Top movers could not be loaded.">
         {(data) => {
+          if (data.comparison_status !== 'comparable') return notCompared(data.comparison_status);
           const rows = [...data.risers, ...data.fallers].slice(0, WIDGET_ROWS);
           return rows.length ? (
             <Rows

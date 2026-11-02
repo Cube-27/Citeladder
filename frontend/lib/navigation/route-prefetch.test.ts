@@ -130,7 +130,9 @@ describe('prefetchRoute', () => {
       http.get(`/api/v1/projects/${PROJECT_ID}/visibility`, () => {
         asked.push('visibility');
         return HttpResponse.json(
-          { error: { message: 'No visibility metrics available for the selected measurement' } },
+          {
+            error: { code: 'visibility_not_measured', message: 'No completed audit for project' },
+          },
           { status: 404 },
         );
       }),

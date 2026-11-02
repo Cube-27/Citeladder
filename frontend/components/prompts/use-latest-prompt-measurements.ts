@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
-import { visibilityQueries } from '@/lib/api/visibility';
+import { visibilityQueries } from '@/lib/api/visibility-queries';
 import type { ProjectRequestScope } from '@/lib/project/request-scope';
 
 import type { PromptMeasurement } from './prompt-table';

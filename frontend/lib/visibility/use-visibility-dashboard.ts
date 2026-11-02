@@ -15,7 +15,8 @@ import { resolveProjectRequestScope, type ProjectRequestScope } from '@/lib/proj
 import { runsQueries } from '@/lib/api/runs';
 import { useMarketVisibility } from '@/lib/visibility/use-market-visibility';
 import { useSurfaceRates } from '@/lib/visibility/use-surface-rates';
-import { visibilityApi, visibilityQueries } from '@/lib/api/visibility';
+import { visibilityApi } from '@/lib/api/visibility';
+import { visibilityQueries } from '@/lib/api/visibility-queries';
 import {
   findActiveRun,
   isEvidenceTab,
